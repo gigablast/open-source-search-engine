@@ -39,6 +39,7 @@ class Msg39Request {
 		m_debug                   = 0;
 		m_getDocIdScoringInfo     = true;
 		m_doSiteClustering        = true;
+		m_hideAllClustered        = false;
 		//m_doIpClustering          = true;
 		m_doDupContentRemoval     = true;
 		m_restrictPosdbForQuery   = false;
@@ -105,6 +106,7 @@ class Msg39Request {
 	char    m_seoDebug;
 	char    m_useSeoResultsCache;
 	char    m_doSiteClustering;
+	char    m_hideAllClustered;
 	//char    m_doIpClustering;
 	char    m_doDupContentRemoval;
 	char    m_restrictPosdbForQuery;

@@ -29740,7 +29740,7 @@ Summary *XmlDoc::getSummary () {
 			  // . Summary::getDisplayLen() will return the
 			  //   length of the summary to display
 			  m_req->m_numSummaryLines         ,
-			  cr->m_summaryMaxNumCharsPerLine,
+			  m_req->m_summaryMaxNumCharsPerLine,
 			  m_req->m_ratInSummary            ,
 			  getFirstUrl()                    ,
 			  //&reply->m_queryProximityScore ,

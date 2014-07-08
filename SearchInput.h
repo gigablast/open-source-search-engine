@@ -207,6 +207,8 @@ class SearchInput {
 	long   m_imgWidth;
 	long   m_imgHeight;
 
+	long   m_titleMaxLen;
+
 	// for limiting results by score in the widget
 	double    m_maxSerpScore;
 	long long m_minSerpDocId;
@@ -231,6 +233,8 @@ class SearchInput {
 	char   m_doSiteClustering;        // msg40
 	char   m_doDupContentRemoval;     // msg40
 	char   m_getDocIdScoringInfo;
+
+	char   m_hideAllClustered;
 
 	// ranking algos
 	char   m_useMinAlgo;
@@ -306,6 +310,8 @@ class SearchInput {
 	// general parameters
 	long   m_numLinesInSummary;           // msg40
 	long   m_summaryMaxWidth;             // msg40
+	long   m_summaryMaxNumCharsPerLine;
+
 	long   m_docsWanted;                  // msg40
 	long   m_firstResultNum;              // msg40
 	long   m_boolFlag;                    // msg40

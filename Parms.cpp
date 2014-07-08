@@ -6073,6 +6073,20 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_SI;
 	m++;
 
+	m->m_title = "hide all clustered results";
+	m->m_desc  = "Only display at most one result per site.";
+	m->m_cgi   = "hacr";
+	m->m_off   = (char *)&si.m_hideAllClustered - y;
+	m->m_defOff= (char *)&cr.m_hideAllClustered - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m++;
+
+
 	m->m_title = "dedup results";
 	m->m_desc  = "Should duplicate search results be removed? This is "
 		"based on a content hash of the entire document. "
@@ -6096,8 +6110,8 @@ void Parms::init ( ) {
 		"dr=1 for this to work.";
 	m->m_cgi   = "pss";
 	m->m_off   = (char *)&si.m_percentSimilarSummary - y;
+	m->m_defOff= (char *)&cr.m_percentSimilarSummary - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "0"; //90
 	m->m_group = 0;
 	m->m_smin  = 0;
 	m->m_smax  = 100;
@@ -7980,6 +7994,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "max title len";
+	m->m_desc  = "What is the maximum number of "
+		"characters allowed in titles displayed in the search "
+		"results?";
+	m->m_cgi   = "tml";
+	m->m_defOff= (char *)&cr.m_titleMaxLen - x;
+	m->m_off   = (char *)&si.m_titleMaxLen - y;
+	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	/*
 	m->m_title = "use new summary generator";
 	m->m_desc  = "Also used for gigabits and titles.";
@@ -8041,6 +8068,18 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "max summary excerpt length";
+	m->m_desc = "What is the maximum number of "
+		"characters allowed per summary excerpt?";
+	m->m_cgi   = "smxcpl";
+	m->m_off   = (char *)&si.m_summaryMaxNumCharsPerLine - y;
+	m->m_defOff= (char *)&cr.m_summaryMaxNumCharsPerLine - x;
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
 	/*
 	m->m_title = "enable page turk";
 	m->m_desc  = "If enabled, search results shall feed the page turk "
@@ -8161,8 +8200,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "show images";
-	m->m_desc  = "Should we return or show the images in the search "
-		"results?";
+	m->m_desc  = "Should we return or show the thumbnail images in the "
+		"search results?";
 	m->m_cgi   = "showimages";
 	m->m_off   = (char *)&si.m_showImages - y;
 	m->m_type  = TYPE_BOOL;
@@ -14281,6 +14320,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
 	m->m_title = "max title len";
 	m->m_desc  = "What is the maximum number of "
 		"characters allowed in titles displayed in the search "
@@ -14325,8 +14365,7 @@ void Parms::init ( ) {
 
 	// buzz
 	m->m_title = "hide all clustered results";
-	m->m_desc  = "Hide all clustered results instead of displaying two "
-		"results from each site.";
+	m->m_desc  = "Only display at most one result per site.";
 	m->m_cgi   = "hacr";
 	m->m_off   = (char *)&cr.m_hideAllClustered - x;
 	m->m_type  = TYPE_BOOL;

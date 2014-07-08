@@ -87,6 +87,7 @@ class Msg20Request {
 	char       m_boolFlag                  ;
 	long       m_titleMaxLen               ;
 	long       m_summaryMaxLen             ;
+	long       m_summaryMaxNumCharsPerLine ;
 	long       m_maxNumCharsPerLine        ;
 	long       m_bigSampleRadius           ;
 	long       m_bigSampleMaxLen           ;
