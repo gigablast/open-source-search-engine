@@ -4310,6 +4310,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 		if (qt->m_fieldCode == FIELD_GBNUMBERMAXINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBNUMBEREQUALINT )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 
 		if (qt->m_fieldCode == FIELD_GBFACETSTR )
@@ -4678,6 +4680,11 @@ inline bool isInRange( char *p , QueryTerm *qt ) {
 		return ( score2 <= qt->m_qword->m_int );
 	}
 
+	if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) {
+		long score2 = g_posdb.getInt ( p );
+		return ( score2 == qt->m_qword->m_int );
+	}
+
 	// how did this happen?
 	char *xx=NULL;*xx=0;
 	return true;
@@ -4720,6 +4727,8 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) 
 		isRangeTerm = true;
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) 
+		isRangeTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) 
 		isRangeTerm = true;
 
 	// . just scan each sublist vs. the docid list
@@ -6889,6 +6898,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			// it might have multiple sections that have
 			// the same gbxpathsitehash...
 			bool firstTime = true;
+			long lastVal;
 			for ( ; ; ) {
 				// do not breach sublist
 				if ( p >= miniMergedEnd[i] ) break;
@@ -6901,8 +6911,13 @@ void PosdbTable::intersectLists10_r ( ) {
 				//   using it for the innerHtml sentence 
 				//   content hash32
 				long val32 = g_posdb.getFacetVal32 ( p );
-				// add it. count occurences of it per docid
-				qt->m_facetHashTable.addTerm32 ( &val32 );
+				// don't allow the same docid to vote on the
+				// same value twice!
+				if ( val32 != lastVal || firstTime )
+					// add it
+					qt->m_facetHashTable.addTerm32(&val32);
+				// to avoid dupage...
+				lastVal = val32;
 				// skip over 6 or 12 byte key
 				if ( firstTime ) p += 12;
 				else             p += 6;
@@ -7370,6 +7385,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) 
 			isRangeTerm = true;
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) 
+			isRangeTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) 
 			isRangeTerm = true;
 
 		// . make it consistent with Query::isTruth()

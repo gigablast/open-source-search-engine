@@ -2248,6 +2248,8 @@ bool Query::setQWords ( char boolFlag ,
 			ph = hash64 ("gbsortbyint", 11);
 		if ( fieldCode == FIELD_GBNUMBERMAXINT )
 			ph = hash64 ("gbsortbyint", 11);
+		if ( fieldCode == FIELD_GBNUMBEREQUALINT )
+			ph = hash64 ("gbsortbyint", 11);
 
 		// ptr to field, if any
 
@@ -2280,6 +2282,7 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_GBREVSORTBYINT ||
 		     fieldCode == FIELD_GBNUMBERMININT ||
 		     fieldCode == FIELD_GBNUMBERMAXINT ||
+		     fieldCode == FIELD_GBNUMBEREQUALINT ||
 		     fieldCode == FIELD_GBFACETSTR ||
 		     fieldCode == FIELD_GBFACETINT ||
 		     fieldCode == FIELD_GBFACETFLOAT ||
@@ -2336,6 +2339,7 @@ bool Query::setQWords ( char boolFlag ,
 			if ( lastColonLen>0 &&
 			     ( fieldCode == FIELD_GBNUMBERMIN ||
 			       fieldCode == FIELD_GBNUMBERMAX ||
+			       fieldCode == FIELD_GBNUMBEREQUALINT ||
 			       fieldCode == FIELD_GBNUMBERMININT ||
 			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
 				// record the field
@@ -3251,6 +3255,14 @@ struct QueryField g_fields[] = {
 	{"gbmaxint", FIELD_GBNUMBERMAXINT, false,
 	 "Example: 'gbmaxint:gbspiderdate:1391749680' "
 	 "'gbmaxint:count:99'. Numeric "
+	 "fields can be in JSON or in meta tag. "
+	 "Use 'gbspiderdate' field for the last time the page was "
+	 "spidered in seconds since the epoch in UTC."
+	},
+
+	{"gbequalint", FIELD_GBNUMBEREQUALINT, false,
+	 "Example: 'gbequalint:gbspiderdate:1391749680' "
+	 "'gbequalint:count:99'. Numeric "
 	 "fields can be in JSON or in meta tag. "
 	 "Use 'gbspiderdate' field for the last time the page was "
 	 "spidered in seconds since the epoch in UTC."
