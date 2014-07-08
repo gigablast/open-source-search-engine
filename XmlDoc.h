@@ -911,6 +911,10 @@ class XmlDoc {
 			   class HashInfo *hi ,
 			   char *gbsortByStr ) ;
 
+	bool storeFacetValues     ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesHtml ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesJSON ( char *qs , class SafeBuf *sb ) ;
+
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
 	bool printMenu ( class SafeBuf *pbuf );
@@ -1063,6 +1067,9 @@ class XmlDoc {
 	RdbList m_secdbList;
 	long m_sectiondbRecall;
 	SafeBuf m_tmpBuf3;
+
+	bool m_gotFacets;
+	SafeBuf m_tmpBuf2;
 
 	SafeBuf m_inlineSectionVotingBuf;
 

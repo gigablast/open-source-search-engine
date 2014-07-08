@@ -186,6 +186,9 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_tmpBuf2.purge();
+	m_gotFacets = false;
+
 	m_bodyStartPos = 0;
 
 	m_mcastArray = NULL;
@@ -28641,6 +28644,63 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		return reply;
 	}
 
+	// if they provided a query with gbfacet*: terms then we have
+	// to get those facet values.
+	if ( ! m_gotFacets ) {
+		// need this for storeFacetValues() if we are json
+		if ( m_contentType == CT_JSON ) {
+			Json *jp = getParsedJson();
+			if ( ! jp || jp == (void *)-1)return (Msg20Reply *)jp;
+		}
+		if ( m_contentType == CT_HTML ) {
+			Xml *xml = getXml();
+			if ( ! xml || xml==(void *)-1)return (Msg20Reply *)xml;
+		}
+		// only do this once
+		m_gotFacets = true;
+		// get facet term
+		char *qs = m_req->ptr_qbuf;
+	facetPrintLoop:
+		for ( ; *qs ; qs++ ) {
+			if ( qs[0] != 'g' ) continue;
+			if ( qs[1] != 'b' ) continue;
+			if ( qs[2] != 'f' ) continue;
+			if ( strncasecmp(qs,"gbfacet",7) ) continue;
+			qs += 7;
+			// gbfacetstr: gbfacetint: gbfacetfloat:
+			if      ( strncasecmp(qs,"str:"  ,4) == 0 ) qs += 4;
+			else if ( strncasecmp(qs,"int:"  ,4) == 0 ) qs += 4;
+			else if ( strncasecmp(qs,"float:",6) == 0 ) qs += 6;
+		}
+		// if we had a facet, get the values it has in the doc
+		if ( *qs ) {
+			// find end of it
+			char *e = qs;
+			for ( ; *e && ! is_wspace_a(*e) ; e++ );
+			// tmp null it
+			char c = *e; *e = '\0';
+			// . this will store facetField/facetValue pairs
+			// . stores into safebuf, m_tmpBuf2
+			// . it will terminate all stored strings with \0
+			// . we check meta tags for html docs
+			// . otherwise we check xml/json doc fields
+			// . returns false with g_errno set on error
+			bool ret = storeFacetValues ( qs , &m_tmpBuf2 ) ;
+			// revert the \0
+			*e = c;
+			// return NULL with g_errno set on error
+			if ( ! ret ) return NULL;
+			// advance
+			qs = e;
+			// do another one
+			goto facetPrintLoop;
+		}
+		// assign
+		reply-> ptr_facetBuf = m_tmpBuf2.getBufStart();
+		reply->size_facetBuf = m_tmpBuf2.length();
+	}
+
+
 	if ( m_req->m_getTermListBuf ) {
 		// ensure content is recycled from title rec
 		m_recycleContent = true;
@@ -47983,3 +48043,81 @@ char *XmlDoc::getDiffbotParentUrl( char *myUrl ) {
 	return NULL;
 }
 
+bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
+
+	// sanity
+	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
+
+	// if a json doc, get json field
+	if ( m_contentType == CT_JSON ) 
+		return storeFacetValuesJSON ( qs , sb );
+
+	if ( m_contentType == CT_HTML ) 
+		return storeFacetValuesHtml ( qs , sb );
+
+	return true;
+}
+
+bool XmlDoc::storeFacetValuesHtml ( char *qs , SafeBuf *sb ) {
+
+	Xml *xml = getXml();
+	long len = 0;
+	char *str = xml->getMetaContentPointer(qs,gbstrlen(qs),"name",&len);
+	if ( ! str ) return true;
+	if ( len <= 0 ) return true;
+
+	// otherwise add facet FIELD to our buf
+	if ( ! sb->safeStrcpy(qs) ) return false;
+	if ( ! sb->pushChar('\0') ) return false;
+
+	// then add facet VALUE
+	if ( ! sb->safeMemcpy(str,len) ) return false;
+	if ( ! sb->pushChar('\0') ) return false;
+	return true;
+}
+
+bool XmlDoc::storeFacetValuesJSON ( char *qs , SafeBuf *sb ) {
+
+	// use new json parser
+	Json *jp = getParsedJson();
+		
+	JsonItem *ji = jp->getFirstItem();
+
+	char nb[1024];
+	SafeBuf nameBuf(nb,1024);
+
+	for ( ; ji ; ji = ji->m_next ) {
+
+		QUICKPOLL(m_niceness);
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
+			continue;
+
+		// reset, but don't free mem etc. just set m_length to 0
+		nameBuf.reset();
+
+		// get its full compound name like "meta.twitter.title"
+		ji->getCompoundName ( nameBuf );
+
+		// skip if not for us
+		if ( strcmp(nameBuf.getBufStart(),qs) ) continue;
+
+		// otherwise add facet FIELD to our buf
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+
+		//
+		// now Json.cpp decodes and stores the value into
+		// a buffer, so ji->getValue() should be decoded completely
+		//
+		long vlen;
+		char *val = ji->getValueAsString( &vlen );
+
+		// then add facet VALUE
+		if ( val && vlen && ! sb->safeMemcpy(val,vlen) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+	}
+
+	return true;
+}
