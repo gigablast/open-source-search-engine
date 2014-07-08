@@ -15088,6 +15088,7 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 	if ( m_deleteFromIndex ) {
 		m_downloadEndTime = 0;
 		m_downloadEndTimeValid = true;
+		return &m_downloadEndTime;
 	}
 
 	// if recycling content use its download end time
