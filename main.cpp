@@ -130,6 +130,8 @@
 //#include "Accessdb.h"
 
 // from qa.cpp
+bool qaspider ( ) ;
+bool qainject ( ) ;
 bool qatest ( ) ;
 
 // call this to shut everything down
@@ -1459,7 +1461,9 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	// run our smoketests
 	//
-	if ( strcmp ( cmd, "qa" ) == 0 ) {
+	if ( strcmp ( cmd, "qa" ) == 0 ||
+	     strcmp ( cmd, "qainject" ) == 0 ||
+	     strcmp ( cmd, "qaspider" ) == 0 ) {
 		// let's ensure our core file can dump
 		struct rlimit lim;
 		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
@@ -1506,7 +1510,13 @@ int main2 ( int argc , char *argv[] ) {
 		//
 		// beging the qaloop
 		//
-		qatest();
+		if ( strcmp(cmd,"qa") == 0 )
+			qatest();
+		else if ( strcmp(cmd,"qaspider") == 0 )
+			qaspider();
+		else if ( strcmp(cmd,"qainject") == 0 )
+			qainject();
+
 		//
 		// wait for some i/o signals
 		//
@@ -4807,7 +4817,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			File f;
 			char *target = "gb.new";
-			f.set(h2->m_dir,target);
+			f.set(g_hostdb.m_myHost->m_dir,target);
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,

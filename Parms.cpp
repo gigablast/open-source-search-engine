@@ -309,6 +309,45 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	return true;
 }
 
+// after we add a new coll, or at anytime after we can clone it
+bool CommandCloneColl ( char *rec ) {
+
+	// the collnum we want to affect.
+	collnum_t dstCollnum = getCollnumFromParmRec ( rec );
+
+	// . data is the collnum in ascii.
+	// . from "&restart=467" for example
+	char *data = rec + sizeof(key96_t) + 4;
+	long dataSize = *(long *)(rec + sizeof(key96_t));
+	//if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
+	// copy parm settings from this collection name
+	char *srcColl = data;
+	
+	// return if none to clone from
+	if ( dataSize <= 0 ) return true;
+	// avoid defaulting to main collection
+	if ( ! data[0]  ) return true;
+
+	CollectionRec *srcRec = NULL;
+	CollectionRec *dstRec = NULL;
+	srcRec = g_collectiondb.getRec ( srcColl    ); // get from name
+	dstRec = g_collectiondb.getRec ( dstCollnum ); // get from #
+	
+	if ( ! srcRec ) 
+		return log("parms: invalid coll %s to clone from",
+			   srcColl);
+	if ( ! dstRec ) 
+		return log("parms: invalid collnum %li to clone to",
+			   (long)dstCollnum);
+
+	log ("parms: cloning parms from collection %s to %s",
+	      srcRec->m_coll,dstRec->m_coll);
+
+	g_parms.cloneCollRec ( (char *)dstRec , (char *)srcRec );
+
+	return true;
+}
+
 // customCrawl:
 // 0 for regular collection
 // 1 for custom crawl
@@ -4522,6 +4561,7 @@ void Parms::init ( ) {
 
 	GigablastRequest gr;
 
+	/*
 	m->m_title = "delete collection";
 	m->m_desc  = "A collection name to delete. You can specify multiple "
 		"&delColl= parms in the request to delete multiple "
@@ -4531,7 +4571,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
-	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_flags = 0;//PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -4545,7 +4585,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -4570,6 +4610,18 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
 	m->m_flags = PF_HIDDEN;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+	*/
+
+	m->m_title = "collection";
+	m->m_desc  = "Clone settings INTO this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_CLONECOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -5338,6 +5390,20 @@ void Parms::init ( ) {
 	//m->m_type  = TYPE_BOOL;
 	//m++;
 
+	m->m_title = "qa build mode";
+	m->m_desc  = "When on Msg13.cpp saves docs in the qatest123 coll "
+		"to qa/ subdir, when off "
+		"if downloading a doc for qatest123 coll and not in "
+		"qa subdir then it returns a 404.";
+	m->m_cgi   = "qabuildmode";
+	m->m_off   = (char *)&g_conf.m_qaBuildMode - g;
+	m->m_def   = "0"; 
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_CONF;
+	m->m_flags = PF_NOAPI | PF_HIDDEN;
+	m++;
+
 	m->m_title = "read only mode";
 	m->m_desc  = "Read only mode does not allow spidering.";
 	m->m_cgi   = "readonlymode";
@@ -5843,15 +5909,28 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
-	m->m_title = "delete collection 2";
-	m->m_desc  = "delete the specified collection";
+	m->m_title = "delete collection";
+	m->m_desc  = "Delete the specified collection.";
 	// lowercase as opposed to camelcase above
 	m->m_cgi   = "delcoll";
 	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_DELCOLL;
 	m->m_obj   = OBJ_COLL;
 	m->m_func2 = CommandDeleteColl2;
 	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m++;
+
+	// arg is the collection # to clone from
+	m->m_title = "clone collection";
+	m->m_desc  = "Clone collection settings FROM this collection.";
+	m->m_cgi   = "clonecoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_CLONECOLL;
+	m->m_obj   = OBJ_COLL;
+	m->m_func  = CommandCloneColl;
+	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
 	m->m_title = "add collection";
@@ -5866,14 +5945,16 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "add collection";
-	m->m_desc  = "add a new collection";
+	m->m_desc  = "Add a new collection with this name. No spaces "
+		"allowed or strange characters allowed. Max of 64 characters.";
 	// lower case support
 	m->m_cgi   = "addcoll";
 	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_ADDCOLL;
 	m->m_obj   = OBJ_COLL;
 	m->m_func  = CommandAddColl0;
 	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
 	m->m_title = "add custom crawl";
@@ -19460,10 +19541,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			return false;
 	}
 
-
-
-
-
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
@@ -21565,7 +21642,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 // . returns false and sets g_errno on error
 // . if doing this after creating a new collection on host #0 we have to call
 //   syncParmsWithHost0() to get all the shards in sync.
-bool Parms::copyCollRec ( char *srcCR , char *dstCR ) {
+bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 
 	// now set THIS based on the parameters in the xml file
 	for ( long i = 0 ; i < m_numParms ; i++ ) {

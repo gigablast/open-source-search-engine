@@ -57,6 +57,7 @@ bool sendPageParser   ( TcpSocket *s , HttpRequest *r );
 bool sendPageSecurity ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddColl  ( TcpSocket *s , HttpRequest *r );
 bool sendPageDelColl  ( TcpSocket *s , HttpRequest *r );
+bool sendPageCloneColl( TcpSocket *s , HttpRequest *r );
 //bool sendPageOverview ( TcpSocket *s , HttpRequest *r );
 bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r );
 bool sendPageFilters  ( TcpSocket *s , HttpRequest *r );
@@ -331,6 +332,7 @@ enum {
 	PAGE_SECURITY    ,
 	PAGE_ADDCOLL     ,	
 	PAGE_DELCOLL     , 
+	PAGE_CLONECOLL   ,
 	PAGE_REPAIR      ,
 	//PAGE_SITES , // site filters
 	PAGE_FILTERS     ,
