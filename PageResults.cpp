@@ -3677,6 +3677,33 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
+	///////////
+	//
+	// print facet field/values
+	//
+	// if there was a gbfacet*: term (gbfacetstr, gbfacetfloat, gbfacetint)
+	// this should be non-NULL and have the facet field/value pairs
+	// and every string ends in a \0
+	//
+	//////////
+	char *fp    =      mr->ptr_facetBuf;
+	char *fpEnd = fp + mr->size_facetBuf;
+	for ( ; fp && fp < fpEnd ; ) {
+		// print first one
+		sb->safePrintf("<i><font color=maroon>");
+		sb->safeStrcpy(fp);
+		sb->safePrintf("</font></i>");
+		sb->safePrintf(" &nbsp; : &nbsp; ");
+		sb->safePrintf("<b>");
+		fp += gbstrlen(fp) + 1;
+		sb->htmlEncode(fp);
+		// begin a new pair
+		sb->safePrintf("</b>");
+		sb->safeStrcpy("<br>\n");
+		fp += gbstrlen(fp) + 1;		
+	}
+		      
+
 	////////////
 	//
 	// print the URL

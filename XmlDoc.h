@@ -911,9 +911,10 @@ class XmlDoc {
 			   class HashInfo *hi ,
 			   char *gbsortByStr ) ;
 
-	bool storeFacetValues     ( char *qs , class SafeBuf *sb ) ;
-	bool storeFacetValuesHtml ( char *qs , class SafeBuf *sb ) ;
-	bool storeFacetValuesJSON ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValues         ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesSections ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesHtml     ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesJSON     ( char *qs , class SafeBuf *sb ) ;
 
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );

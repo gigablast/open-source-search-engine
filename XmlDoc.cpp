@@ -28671,6 +28671,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 			if      ( strncasecmp(qs,"str:"  ,4) == 0 ) qs += 4;
 			else if ( strncasecmp(qs,"int:"  ,4) == 0 ) qs += 4;
 			else if ( strncasecmp(qs,"float:",6) == 0 ) qs += 6;
+			else continue;
+			break;
 		}
 		// if we had a facet, get the values it has in the doc
 		if ( *qs ) {
@@ -48048,6 +48050,12 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
 	// sanity
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 
+	// if "qa" is a gbxpathsitehash123456 type of beastie then we
+	// gotta scan the sections
+	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
+		return storeFacetValuesSections ( qs , sb );
+
+
 	// if a json doc, get json field
 	if ( m_contentType == CT_JSON ) 
 		return storeFacetValuesJSON ( qs , sb );
@@ -48057,6 +48065,55 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
 
 	return true;
 }
+
+bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ) {
+
+	// scan all sections
+	Sections *ss = getSections();
+	if ( ! ss ) return false;
+	if ( ss == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
+	Words *ww = getWords();
+	if ( ! ww ) return false;
+	if ( ww == (void *)-1 ) { char *xx=NULL;*xx=0; }
+	
+	long siteHash32 = *getSiteHash32();
+
+	// qs is like gbxpathsitehash1234567
+	// so get the digit part
+	char *p = qs;
+	for ( ; *p && ! is_digit(*p); p++ );
+	uint64_t xsh = (unsigned long long)atoll(p);
+
+	Section *si = ss->m_rootSection;
+	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
+	for ( ; si ; si = si->m_next ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// is it a match?
+		uint64_t mod;
+		mod = (unsigned long)si->m_turkTagHash32;
+		mod ^= (unsigned long)siteHash32;
+		if ( mod != xsh ) continue;
+		// . then add facet VALUE
+		// . hash of the innerhtml of sentence
+		// . get hash of sentences this tag contains indirectly
+		unsigned long val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) continue;
+		// got one print the facet field
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+		if ( ! sb->safePrintf("%lu,",val32) ) return false;
+		// put ALSO print the string somewhat
+		char *a = m_words.m_words[si->m_next->m_a];
+		char *b = m_words.m_words[si->m_next->m_b-1];
+		b += m_words.m_wordLens  [si->m_next->m_b-1];
+		if ( ! sb->safeTruncateEllipsis (a,b-a,160) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+	}
+	return true;
+}
+
 
 bool XmlDoc::storeFacetValuesHtml ( char *qs , SafeBuf *sb ) {
 
