@@ -15669,8 +15669,9 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// some voting stats
 		SectionStats *ss = &sk->m_stats;
 		if ( ss->m_totalMatches )
-			m_sbuf->safePrintf("_s=%lim%lin%liu "
+			m_sbuf->safePrintf("_s=M%liD%lin%liu%li "
 					   ,(long)ss->m_totalMatches
+					   ,(long)ss->m_totalDocIds
 					   ,(long)ss->m_totalEntries
 					   ,(long)ss->m_numUniqueVals
 					   );

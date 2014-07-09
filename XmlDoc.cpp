@@ -6911,7 +6911,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 	// "matches" is how many docids with this facet field had our facet val
 	long matches = 0;
 	// "totalDocIds" is how many docids had this facet field
-	long totalDocIds = 0;
+	long totalFields = 0;
 
 	if ( p ) {
 		// first is the termid
@@ -6931,7 +6931,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 				matches += *(long *)(p+4);
 			p += 4;
 			// now how many docids had this facet value?
-			totalDocIds += *(long *)p;
+			totalFields += *(long *)p;
 			p += 4;
 		}
 	}
@@ -6940,8 +6940,11 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 	// hash were there?
 	m_sectionStats.m_numUniqueVals = nh;//ft->m_numSlotsUsed;
 
-	// how many docids had this same facet field?
-	m_sectionStats.m_totalEntries = totalDocIds;
+	// how many xpaths existsed over all docs. doc can have multiple.
+	m_sectionStats.m_totalEntries = totalFields;
+
+	// total # unique docids that had this facet
+	m_sectionStats.m_totalDocIds = mr->m_estimatedHits;//totalHits;
 
 	// how many had the same inner html content hash for
 	// this xpath/site as we did? 
@@ -34639,21 +34642,30 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		for ( ; *e && *e != '>' && ! is_wspace_a(*e) ; e++);
 		// copy that
 		sb->safeMemcpy ( a , e-a);
+
+		// the hash of the turktaghash and sitehash32 combined
+		// so you can do gbfacetstr:gbxpathsitehash12345
+		// where the 12345 is this h32 value.
+		unsigned long h32 = sa->m_turkTagHash32 ^ siteHash32;
+
 		// insert our stuff into the tag
 		//sb->safePrintf("<!--");
 		//sb->safePrintf("<font color=red>");
 		SectionStats *sx = &sa->m_stats;
 		// # docs from our site had the same innerHTML?
-		sb->safePrintf(" _s=%lim",(long)sx->m_totalMatches);
-		// # total docs from our site had the same X-path?
-		sb->safePrintf("%lin",(long)sx->m_totalEntries);
-		// unique values in the xpath innerhtml
-		sb->safePrintf("%liu",(long)sx->m_numUniqueVals);
-		// the hash of the turktaghash and sitehash32 combined
-		// so you can do gbfacetstr:gbxpathsitehash12345
-		// where the 12345 is this h32 value.
-		unsigned long h32 = sa->m_turkTagHash32 ^ siteHash32;
-		sb->safePrintf("%luh",h32);
+		sb->safePrintf(" _s=M%liD%lin%liu%lih%lu",
+			       // total # of docs that had an xpath with
+			       // our same innerHtml
+			       (long)sx->m_totalMatches,
+			       // # of of docids with this facet
+			       (long)sx->m_totalDocIds,
+			       // . total # of times this xpath occurred
+			       // . can be multiple times per doc
+			       (long)sx->m_totalEntries,
+			       // unique values in the xpath innerhtml
+			       (long)sx->m_numUniqueVals,
+			       // xpathsitehash
+			       h32 );
 		// copy the rest of the tag
 		sb->safeMemcpy( e, wlens[i]-(e-a) );
 		//sb->safePrintf("-->");
