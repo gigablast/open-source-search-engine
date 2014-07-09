@@ -3340,6 +3340,14 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	gotSquidProxiedContent ( sqs );
 }
 
+#include "PageInject.h" // Msg7
+
+void doneInjectingProxyReply ( void *state ) {
+	Msg7 *msg7 = (Msg7 *)state;
+	mdelete ( msg7 , sizeof(Msg7) , "dm7");
+	delete ( msg7 );
+}
+
 void gotSquidProxiedContent ( void *state ) {
 	SquidState *sqs = (SquidState *)state;
 
@@ -3349,6 +3357,11 @@ void gotSquidProxiedContent ( void *state ) {
 	long replyAllocSize = sqs->m_msg13.m_replyBufAllocSize;
 
 	TcpSocket *sock = sqs->m_sock;
+
+	if ( ! reply ) {
+		log("proxy: got empty reply from webserver. setting g_errno.");
+		g_errno = EBADREPLY;
+	}
 
 	// if it timed out or something...
 	if ( g_errno ) {
@@ -3373,14 +3386,51 @@ void gotSquidProxiedContent ( void *state ) {
 	// don't let Msg13::reset() free it
 	sqs->m_msg13.m_replyBuf = NULL;
 
+	// now inject this url into the main or GLOBAL-INDEX collection
+	// so we can start accumulating sectiondb vote/markup stats
+	// but do not wait for the injection to complete before sending
+	// it back to the requester.
+	Msg7 *msg7;
+	try { msg7 = new (Msg7); }
+	catch ( ... ) { 
+		g_errno = ENOMEM;
+		log("squid: msg7 new(%i): %s",
+		    sizeof(Msg7),mstrerror(g_errno));
+		char *msg = mstrerror(g_errno);
+		g_httpServer.sendErrorReply(sock,500,msg);
+		return;
+	}
+	mnew ( msg7, sizeof(Msg7), "m7st" );
+
+	Msg13Request *mr = &sqs->m_request;
+
+	// . this may or may not block, we give it a callback that
+	//   just delete the msg7. we do not want this to hold up us returning
+	//   the proxied reply to the client browser.
+	// . so frequently hit sites will accumulate useful voting info 
+	//   since we inject each one
+	// . if we hit the page cache above we won't make it this far though
+	// . but i think that cache is only for 60 seconds
+	if ( msg7->inject ( "main", // put in main collection
+			    mr->m_proxiedUrl,//url,
+			    mr->m_proxiedUrlLen,
+			    reply,
+			    msg7 ,
+			    doneInjectingProxyReply ) ) {
+		log("msg7: inject error: %s",mstrerror(g_errno));
+		mdelete ( msg7 , sizeof(Msg7) , "dm7");
+		delete ( msg7 );
+	}
+
 	// sanity, this should be exact... since TcpServer.cpp needs that
 	//if ( replySize != replyAllocSize ) { char *xx=NULL;*xx=0; }
 
 	mdelete ( sqs, sizeof(SquidState), "sqs");
-	delete (sqs);
+	delete  ( sqs );
 
-	// the reply should already have a mime at the top since we are
-	// acting like a squid proxy, send it back...
+	// . the reply should already have a mime at the top since we are
+	//   acting like a squid proxy, send it back...
+	// . this should free the reply when done
 	TcpServer *tcp = &g_httpServer.m_tcp;
 	tcp->sendMsg ( sock ,
 		       reply ,  // sendbuf

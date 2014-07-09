@@ -28661,7 +28661,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// get facet term
 		char *qs = m_req->ptr_qbuf;
 	facetPrintLoop:
-		for ( ; *qs ; qs++ ) {
+		for ( ; qs && *qs ; qs++ ) {
 			if ( qs[0] != 'g' ) continue;
 			if ( qs[1] != 'b' ) continue;
 			if ( qs[2] != 'f' ) continue;
@@ -28675,7 +28675,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 			break;
 		}
 		// if we had a facet, get the values it has in the doc
-		if ( *qs ) {
+		if ( qs && *qs ) {
 			// find end of it
 			char *e = qs;
 			for ( ; *e && ! is_wspace_a(*e) ; e++ );

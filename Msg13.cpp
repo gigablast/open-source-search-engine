@@ -849,11 +849,11 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 		// get time now
 		long long nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
-		log("spider: adding new time for %s %s = %lli",
+		log("spider: adding new time to hammercache for %s %s = %lli",
 		    iptoa(r->m_firstIp),r->m_url,nowms);
 	}
 	else {
-		log("spider: not adding new time for %s %s",
+		log("spider: not adding new time to hammer cache for %s %s",
 		    iptoa(r->m_firstIp),r->m_url);
 	}
 
@@ -3021,10 +3021,12 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 
 	xd->m_skipIframeExpansion = true;
 
-	// try to use the global index for this
-	CollectionRec *cr = g_collectiondb.getRec ( "GLOBAL-INDEX" );
+	// . try to use the global index for this
+	// . the main collection will now hold the html only, no json, and
+	//   the section markup is done on the html, not the json
+	CollectionRec *cr = g_collectiondb.getRec ( "main");//"GLOBAL-INDEX" );
 	//if ( ! cr ) cr = g_collectiondb.getRec ( "test" ); // tmp hack
-	if ( ! cr ) cr = g_collectiondb.getRec ( "main" );
+	//if ( ! cr ) cr = g_collectiondb.getRec ( "main" );
 	if ( cr ) {
 		xd->m_collnum = cr->m_collnum;
 		xd->m_collnumValid = true;
