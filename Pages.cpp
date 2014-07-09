@@ -144,6 +144,10 @@ static WebPage s_pages[] = {
 	  //USER_MASTER , 
 	  "delete a collection using this page",
 	  sendPageDelColl  , 0 ,NULL,NULL,0},
+	{ PAGE_CLONECOLL, "admin/clonecoll" , 0 , "clone collection" ,  1 ,0,
+	  //USER_MASTER , 
+	  "clone one collection's settings to another",
+	  sendPageCloneColl  , 0 ,NULL,NULL,0},
 	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
 	  //USER_MASTER ,
 	  "repair page",
@@ -1846,6 +1850,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// move these links to the coll nav bar on the left
 		if ( i == PAGE_ADDCOLL ) continue;
 		if ( i == PAGE_DELCOLL ) continue;
+		if ( i == PAGE_CLONECOLL ) continue;
 		if ( i == PAGE_HOSTS ) continue;
 
 		// print "url download" before "inject url"
@@ -2013,9 +2018,11 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	sb->safePrintf( "<center>"
 			"<font size=-1>"
 			"<a href=/admin/addcoll?c=%s>add</a> &nbsp; &nbsp; "
-			"<a href=/admin/delcoll?c=%s>delete</a>"
+			"<a href=/admin/delcoll?c=%s>delete</a> &nbsp; &nbsp; "
+			"<a href=/admin/clonecoll?c=%s>clone</a>"
 			"</font>"
 			"</center>"
+			, coll
 			, coll
 			, coll
 			);

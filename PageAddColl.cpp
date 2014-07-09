@@ -120,10 +120,14 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 			  "</td></tr>\n"
 
 			  "<tr bgcolor=#%s>"
-			  "<td><b>clone settings from this collection</td>\n"
+			  "<td><b>clone settings from this collection</b>"
+			  "<br><font size=1>Copy settings from this "
+			  "pre-existing collection. Leave blank to "
+			  "accept default values.</font></td>\n"
 			  "<td><input type=text name=clonecoll size=30>"
 			  "</td>"
 			  "</tr>"
+
 			  , LIGHT_BLUE
 			  , LIGHT_BLUE
 			      );
@@ -184,3 +188,69 @@ skip:
 	long bufLen = p.length();
 	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 }
+
+bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
+
+	char format = r->getReplyFormat();
+
+	char *coll = r->getString("c");
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		if ( ! coll ) {
+			g_errno = EBADENGINEER;
+			char *msg = "no c parm provided";
+			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
+		}
+		return g_httpServer.sendSuccessReply(s,format);
+	}
+
+	char  buf [ 64*1024 ];
+	SafeBuf p(buf, 64*1024);
+
+	// print standard header
+	g_pages.printAdminTop ( &p , s , r );
+
+	char *msg = NULL;
+	if ( g_errno ) msg = mstrerror(g_errno);
+
+	if ( msg ) {
+		p.safePrintf (
+			  "<center>\n"
+			  "<font color=red>"
+			  "<b>Error cloning collection: %s. "
+			  "See log file for details.</b>"
+			  "</font>"
+			  "</center><br>\n",msg);
+	}
+
+	// print the clone box
+
+	p.safePrintf (
+		      "<center>\n<table %s>\n"
+		      "<tr class=hdrow><td colspan=2>"
+		      "<center><b>Clone Collection</b></center>"
+		      "</td></tr>\n",
+		      TABLE_STYLE);
+
+	p.safePrintf (
+		      "<tr bgcolor=#%s>"
+		      "<td><b>clone settings from this collection</b>"
+		      "<br><font size=1>Copy settings from this "
+		      "pre-existing collection. Leave blank to "
+		      "accept default values.</font></td>\n"
+		      "<td><input type=text name=clonecoll size=30>"
+		      "</td>"
+		      "</tr>"
+
+		      , LIGHT_BLUE
+		      );
+
+	p.safePrintf ( "</table></center><br>\n");
+	// wrap up the form started by printAdminTop
+	g_pages.printAdminBottom ( &p );
+	long bufLen = p.length();
+	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
+
+}
+
+
