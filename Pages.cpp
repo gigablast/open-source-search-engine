@@ -2724,7 +2724,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		//parm->m_pstr = NULL;
 		// skip if hidden
 		if ( parm->m_flags & PF_HIDDEN ) continue;
-		if ( parm->m_type == TYPE_CMD ) continue;
+		//if ( parm->m_type == TYPE_CMD ) continue;
 		if ( parm->m_type == TYPE_COMMENT ) continue;
 
 		if ( parm->m_flags & PF_DUP ) continue;
@@ -2743,7 +2743,9 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		SafeBuf tmp;
 		char diff = 0;
 		bool printVal = false;
-		if ( (parm->m_obj == OBJ_COLL && cr) ||parm->m_obj==OBJ_CONF) {
+		if ( parm->m_type != TYPE_CMD &&
+		     ((parm->m_obj == OBJ_COLL && cr) ||
+		      parm->m_obj==OBJ_CONF) ) {
 			printVal = true;
 			parm->printVal ( &tmp , cr->m_collnum , 0 );
 			char *def = parm->m_def;
@@ -2772,6 +2774,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 		sb->safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
+		case TYPE_CMD: sb->safePrintf("STRING"); break;
 		case TYPE_BOOL: sb->safePrintf ( "BOOL (0 or 1)" ); break;
 		case TYPE_BOOL2: sb->safePrintf ( "BOOL (0 or 1)" ); break;
 		case TYPE_CHECKBOX: sb->safePrintf ( "BOOL (0 or 1)" ); break;

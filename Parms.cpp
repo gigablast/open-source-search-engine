@@ -4552,6 +4552,7 @@ void Parms::init ( ) {
 
 	GigablastRequest gr;
 
+	/*
 	m->m_title = "delete collection";
 	m->m_desc  = "A collection name to delete. You can specify multiple "
 		"&delColl= parms in the request to delete multiple "
@@ -4561,7 +4562,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
-	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_flags = 0;//PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -4575,7 +4576,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -4600,6 +4601,18 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
 	m->m_flags = PF_HIDDEN;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+	*/
+
+	m->m_title = "collection";
+	m->m_desc  = "Clone settings INTO this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_CLONECOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -5887,26 +5900,28 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
-	m->m_title = "delete collection 2";
-	m->m_desc  = "delete the specified collection";
+	m->m_title = "delete collection";
+	m->m_desc  = "Delete the specified collection.";
 	// lowercase as opposed to camelcase above
 	m->m_cgi   = "delcoll";
 	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_DELCOLL;
 	m->m_obj   = OBJ_COLL;
 	m->m_func2 = CommandDeleteColl2;
 	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
 	// arg is the collection # to clone from
 	m->m_title = "clone collection";
-	m->m_desc  = "clone collection settings from another collection";
+	m->m_desc  = "Clone collection settings FROM this collection.";
 	m->m_cgi   = "clonecoll";
 	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_CLONECOLL;
 	m->m_obj   = OBJ_COLL;
 	m->m_func  = CommandCloneColl;
 	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
 	m->m_title = "add collection";
@@ -5921,14 +5936,16 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "add collection";
-	m->m_desc  = "add a new collection";
+	m->m_desc  = "Add a new collection with this name. No spaces "
+		"allowed or strange characters allowed. Max of 64 characters.";
 	// lower case support
 	m->m_cgi   = "addcoll";
 	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_ADDCOLL;
 	m->m_obj   = OBJ_COLL;
 	m->m_func  = CommandAddColl0;
 	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
 	m->m_title = "add custom crawl";

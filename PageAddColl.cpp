@@ -235,9 +235,10 @@ bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf (
 		      "<tr bgcolor=#%s>"
 		      "<td><b>clone settings from this collection</b>"
-		      "<br><font size=1>Copy settings from this "
-		      "pre-existing collection. Leave blank to "
-		      "accept default values.</font></td>\n"
+		      "<br><font size=1>Copy settings FROM this "
+		      "pre-existing collection into the currently "
+		      "selected collection."
+		      "</font></td>\n"
 		      "<td><input type=text name=clonecoll size=30>"
 		      "</td>"
 		      "</tr>"
