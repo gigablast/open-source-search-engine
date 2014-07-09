@@ -134,6 +134,11 @@ bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 	return true;
 }
 
+#define RT_GET 0
+#define RT_HEAD 1
+#define RT_POST 2
+#define RT_CONNECT 3
+
 // TODO: ensure not sent to a proxy server since it will expect us to close it
 // TODO: use chunked transfer encodings to do HTTP/1.1
 
@@ -183,7 +188,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	//if ( url->getUrlLen() + 400 >= MAX_REQ_LEN ) { 
 	//	g_errno = EURLTOOBIG; return false;}
 	// assume request type is a GET
-	m_requestType = 0;
+	m_requestType = RT_GET;//0;
 	// get the host NULL terminated
 	char host[1024+8];
 	//long hlen = url->getHostLen();
@@ -260,7 +265,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 
 	 if ( size == 0 ) {
 		 // 1 for HEAD requests
-		 m_requestType = 1; 
+		 m_requestType = RT_HEAD; 
 		 m_reqBuf.safePrintf (
 			   "%s %s %s\r\n" 
 			   "Host: %s\r\n"
@@ -441,15 +446,34 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 g_errno = EBADREQUEST; 
 		 return false; 
 	 }
+
+	 long cmdLen = 0;
+
 	 // or if first line too long
 	 //if ( i >= 1024 )  { g_errno = EBADREQUEST; return false; }
 	 // get the type, must be GET or HEAD
-	 if      ( strncmp ( req , "GET "  , 4 ) == 0 ) m_requestType = 0;
+	 if      ( strncmp ( req , "GET "  , 4 ) == 0 ) {
+		 m_requestType = RT_GET;
+		 cmdLen = 3;
+	 }
 	 // these means a compressed reply was requested. use by query
 	 // compression proxies.
-	 else if ( strncmp ( req , "ZET "  , 4 ) == 0 ) m_requestType = 0;
-	 else if ( strncmp ( req , "HEAD " , 5 ) == 0 ) m_requestType = 1;
-	 else if ( strncmp ( req , "POST " , 5 ) == 0 ) m_requestType = 2;
+	 else if ( strncmp ( req , "ZET "  , 4 ) == 0 ) {
+		 m_requestType = RT_GET;
+		 cmdLen = 3;
+	 }
+	 else if ( strncmp ( req , "HEAD " , 5 ) == 0 ) {
+		 m_requestType = RT_HEAD;
+		 cmdLen = 4;
+	 }
+	 else if ( strncmp ( req , "POST " , 5 ) == 0 )  {
+		 m_requestType = RT_POST;
+		 cmdLen = 4;
+	 }
+	 else if ( strncmp ( req , "CONNECT " , 8 ) == 0 ) {
+		 m_requestType = RT_CONNECT;
+		 cmdLen = 7;
+	 }
 	 else { 
 		 log("http: got bad request cmd: %s",req);
 		 g_errno = EBADREQUEST; 
@@ -458,18 +482,17 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // . NULL terminate the request (a destructive operation!)
 	 // . this removes the last \n in the trailing \r\n 
 	 // . shit, but it fucks up POST requests
-	 if ( m_requestType != 2 ) { req [ reqLen - 1 ] = '\0'; reqLen--; }
-
-	 long cmdLen = 0;
-	 if ( m_requestType == 0 ) cmdLen = 3;
-	 if ( m_requestType >= 1 ) cmdLen = 4;
+	 if ( m_requestType != RT_POST ) { 
+		 req [ reqLen - 1 ] = '\0'; 
+		 reqLen--; 
+	 }
 
 	 // POST requests can be absolutely huge if you are injecting a 100MB
 	 // file, so limit our strstrs to the end of the mime
 	 char *d = NULL;
 	 char  dc;
 	 // check for body if it was a POST request
-	 if ( m_requestType == 2 ) {
+	 if ( m_requestType == RT_POST ) {
 		 d = strstr ( req , "\r\n\r\n" );
 		 if ( d ) { dc = *d; *d = '\0'; }
 		 else log("http: Got POST request without \\r\\n\\r\\n.");
@@ -558,7 +581,8 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // . skip over the "GET "
 	 long filenameStart = 4 ;
 	 // skip over extra char if it's a "HEAD " request
-	 if ( m_requestType == 1 || m_requestType == 2 ) filenameStart++;
+	 if ( m_requestType == RT_HEAD || m_requestType == RT_POST ) 
+		 filenameStart++;
 
 	 // are we a redirect?
 	 long i = filenameStart;
@@ -862,7 +886,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // . look after the mime
 	 //char *d = NULL;
 	 // check for body if it was a POST request
-	 //if ( m_requestType == 2 ) d = strstr ( req , "\r\n\r\n" );
+	 //if ( m_requestType == RT_POST ) d = strstr ( req , "\r\n\r\n" );
 
 	 // now put d's char back, just in case... does it really matter?
 	 if ( d ) *d = dc;
