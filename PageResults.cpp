@@ -2017,6 +2017,23 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "qlang=%s&q=%s\">"
 			       "[show banned results]</a></b>"
 			       "</font> ", coll , langStr , st->m_qe );
+
+		sb->safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/admin/api?&c=%s>api</a></b>"
+				coll );
+		sb->safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/search?format=xml&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[xml]</a></b>"
+			       "</font> ", coll , langStr , st->m_qe );
+		sb->safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/search?format=json&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[json]</a></b>"
+			       "</font> ", coll , langStr , st->m_qe );
 	}
 
 	// if its an ip: or site: query, print ban link
