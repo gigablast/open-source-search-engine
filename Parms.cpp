@@ -308,6 +308,45 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	return true;
 }
 
+// after we add a new coll, or at anytime after we can clone it
+bool CommandCloneColl ( char *rec ) {
+
+	// the collnum we want to affect.
+	collnum_t dstCollnum = getCollnumFromParmRec ( rec );
+
+	// . data is the collnum in ascii.
+	// . from "&restart=467" for example
+	char *data = rec + sizeof(key96_t) + 4;
+	long dataSize = *(long *)(rec + sizeof(key96_t));
+	//if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
+	// copy parm settings from this collection name
+	char *srcColl = data;
+	
+	// return if none to clone from
+	if ( dataSize <= 0 ) return true;
+	// avoid defaulting to main collection
+	if ( ! data[0]  ) return true;
+
+	CollectionRec *srcRec = NULL;
+	CollectionRec *dstRec = NULL;
+	srcRec = g_collectiondb.getRec ( srcColl    ); // get from name
+	dstRec = g_collectiondb.getRec ( dstCollnum ); // get from #
+	
+	if ( ! srcRec ) 
+		return log("parms: invalid coll %s to clone from",
+			   srcColl);
+	if ( ! dstRec ) 
+		return log("parms: invalid collnum %li to clone to",
+			   (long)dstCollnum);
+
+	log ("parms: cloning parms from collection %s to %s",
+	      srcRec->m_coll,dstRec->m_coll);
+
+	g_parms.cloneCollRec ( (char *)dstRec , (char *)srcRec );
+
+	return true;
+}
+
 // customCrawl:
 // 0 for regular collection
 // 1 for custom crawl
@@ -5856,6 +5895,17 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_func2 = CommandDeleteColl2;
+	m->m_cast  = 1;
+	m++;
+
+	// arg is the collection # to clone from
+	m->m_title = "clone collection";
+	m->m_desc  = "clone collection settings from another collection";
+	m->m_cgi   = "clonecoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_func  = CommandCloneColl;
 	m->m_cast  = 1;
 	m++;
 
@@ -19353,10 +19403,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			return false;
 	}
 
-
-
-
-
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
@@ -21449,7 +21495,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 // . returns false and sets g_errno on error
 // . if doing this after creating a new collection on host #0 we have to call
 //   syncParmsWithHost0() to get all the shards in sync.
-bool Parms::copyCollRec ( char *srcCR , char *dstCR ) {
+bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 
 	// now set THIS based on the parameters in the xml file
 	for ( long i = 0 ; i < m_numParms ; i++ ) {

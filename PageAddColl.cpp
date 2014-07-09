@@ -118,6 +118,13 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 			  "<td><b>name of new collection to add</td>\n"
 			  "<td><input type=text name=addcoll size=30>"
 			  "</td></tr>\n"
+
+			  "<tr bgcolor=#%s>"
+			  "<td><b>clone settings from this collection</td>\n"
+			  "<td><input type=text name=clonecoll size=30>"
+			  "</td>"
+			  "</tr>"
+			  , LIGHT_BLUE
 			  , LIGHT_BLUE
 			      );
 		// now list collections from which to copy the config

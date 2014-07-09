@@ -464,7 +464,7 @@ class Parms {
 	bool addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) ;
 	bool updateParm ( char *rec , class WaitEntry *we ) ;
 
-	bool copyCollRec ( char *srcCR , char *dstCR ) ;
+	bool cloneCollRec ( char *srcCR , char *dstCR ) ;
 
 	//
 	// end new functions

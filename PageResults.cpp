@@ -2021,7 +2021,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/admin/api?&c=%s>api</a></b>"
-				coll );
+				, coll );
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/search?format=xml&c=%s&"
