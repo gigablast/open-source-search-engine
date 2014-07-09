@@ -34601,6 +34601,12 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
 	sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
 
+	// but hack the Content-Length: field to something alien
+	// because we markup the html and the lenght will be different...
+	sb->nullTerm();
+	char *cl = strstr(sb->getBufStart(),"\nContent-Length:");
+	if ( cl ) cl[1] = 'Z';
+
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 
 	Section *si = sections->m_rootSection;

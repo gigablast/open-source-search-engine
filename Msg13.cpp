@@ -356,6 +356,8 @@ bool Msg13::gotForwardedReply ( UdpSlot *slot ) {
 	return gotFinalReply ( reply , replySize , replyAllocSize );
 }
 
+#include "PageInject.h"
+
 bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 
 	// how is this happening? ah from image downloads...
@@ -461,7 +463,6 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	m_replyBufSize      = uncompressedLen;
 	m_replyBufAllocSize = unzippedLen;
 
-
 	// log it for now
 	if ( g_conf.m_logDebugSpider )
 		log("http: got doc %s %li to %li",
@@ -524,13 +525,18 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 				      r->m_maxCacheAge , // 24*60*60 ,
 				      true             ); // stats?
 
+	r->m_foundInCache = false;
+
 	// . an empty rec is a cached not found (no robot.txt file)
 	// . therefore it's allowed, so set *reply to 1 (true)
 	if ( inCache ) {
 		// log debug?
 		//if ( r->m_isSquidProxiedUrl )
-			log("proxy: found %li bytes in cache for %s",
-			    recSize,r->m_url);
+		log("proxy: found %li bytes in cache for %s",
+		    recSize,r->m_url);
+
+		r->m_foundInCache = true;
+
 		// helpful for debugging. even though you may see a robots.txt
 		// redirect and think we are downloading that each time,
 		// we are not... the redirect is cached here as well.
@@ -1144,6 +1150,15 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	gotHttpReply( state , ts );
 }
 
+static void doneInjectingProxyReply ( void *state ) {
+	Msg7 *msg7 = (Msg7 *)state;
+	if ( g_errno )
+		log("msg13: got error injecting proxied req: %s",
+		    mstrerror(g_errno));
+	g_errno = 0;
+	mdelete ( msg7 , sizeof(Msg7) , "dm7");
+	delete ( msg7 );
+}
 
 static bool markupServerReply ( Msg13Request *r , TcpSocket *ts );
 
@@ -1152,12 +1167,73 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
  	// cast it
 	Msg13Request *r = (Msg13Request *)state;
 
+	//////////
+	//
+	// before we mark it up, let's inject it!!
+	// if a squid proxied request.
+	// now inject this url into the main or GLOBAL-INDEX collection
+	// so we can start accumulating sectiondb vote/markup stats
+	// but do not wait for the injection to complete before sending
+	// it back to the requester.
+	//
+	//////////
+	if ( ! r->m_foundInCache && 
+	     r->m_isSquidProxiedUrl ) {
+		// make a new msg7 to inject it
+		Msg7 *msg7;
+		try { msg7 = new (Msg7); }
+		catch ( ... ) { 
+			g_errno = ENOMEM;
+			log("squid: msg7 new(%i): %s",
+			    sizeof(Msg7),mstrerror(g_errno));
+			return;
+		}
+		mnew ( msg7, sizeof(Msg7), "m7st" );
+
+		long httpReplyLen = ts->m_readOffset;
+
+		// parse out the http mime
+		HttpMime hm;
+		hm.set ( ts->m_readBuf , httpReplyLen , NULL );
+		if ( hm.getHttpStatus() != 200 ) 
+			goto skipInject;
+
+		// inject requires content be null terminated. sanity check
+		if ( ts->m_readBuf && httpReplyLen > 0 &&
+		     ts->m_readBuf[httpReplyLen] ) { char *xx=NULL;*xx=0;}
+
+		// . this may or may not block, we give it a callback that
+		//   just delete the msg7. we do not want this to hold up us 
+		//   returning the proxied reply to the client browser.
+		// . so frequently hit sites will accumulate useful voting 
+		//   info  since we inject each one
+		// . if we hit the page cache above we won't make it this far 
+		//   though
+		// . but i think that cache is only for 60 seconds
+		if ( msg7->inject ( "main", // put in main collection
+				    r->m_proxiedUrl,//url,
+				    r->m_proxiedUrlLen,
+				    ts->m_readBuf,
+				    msg7 ,
+				    doneInjectingProxyReply ) ) {
+			log("msg7: inject error: %s",mstrerror(g_errno));
+			mdelete ( msg7 , sizeof(Msg7) , "dm7");
+			delete ( msg7 );
+			// we can't return here we have to pass the request
+			// on to the browser client...
+			g_errno = 0;
+			//return;
+		}
+	}
+
+ skipInject:
+
 	// now markup the reply with the sectiondb info
 	// . it can block reading the disk
 	// . returns false if blocked
 	// . only do markup if its a proxied request
 	// . our squid proxy simulator is only a markup simulator
-	if ( r->m_isSquidProxiedUrl ) {
+	if ( ! r->m_foundInCache && r->m_isSquidProxiedUrl ) {
 		// . now transform the html to include sectiondb data
 		// . this will also send the reply back so no need to
 		//   have a callback here

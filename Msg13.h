@@ -96,6 +96,8 @@ public:
 	// this happens when gigablast is being used like a squid proxy.
 	long  m_isSquidProxiedUrl:1;
 
+	long  m_foundInCache:1;
+
 	//long  m_testParserEnabled:1;
 	//long  m_testSpiderEnabled:1;
 	//long  m_isPageParser:1;
