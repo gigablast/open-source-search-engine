@@ -34609,35 +34609,40 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 
-	Section *si = sections->m_rootSection;
-	for ( ; si ; si = si->m_next ) {
-		// breathe
-		QUICKPOLL(m_niceness);
-		// print it out
-		char *byte1 = words->m_words[si->m_a];
-		long b = words->m_numWords;
-		// start of next section
-		if ( si->m_next ) b = si->m_next->m_a;
-		char *byte2 = words->m_words[b-1] + words->m_wordLens[b-1];
-		//long off1 = byte1 - words->m_words[0];
-		long size = byte2 - byte1;
-		// straight copy if no stats
-		if ( ! si->m_stats.m_totalEntries ) {
-			sb->safeMemcpy ( byte1 , size );
+	// just print out each word
+	// map the word to a section. 
+	// if it s the first time we've printed the section then we
+	// can inject the stuff
+	// set a printed bit to indicate when we print out a section so
+	// we do not re-print it...
+
+	// these are 1-1 with words
+	Section **sptrs = sections->m_sectionPtrs;
+	long nw = words->getNumWords();
+	char **wptrs = words->m_words;
+	long *wlens = words->m_wordLens;
+
+	for ( long i = 0 ; i < nw ; i++ ) {
+		char *a = wptrs[i];
+		if ( *a != '<' ) {
+			sb->safeMemcpy(a,wlens[i]);
 			continue;
 		}
-		// skip if not tag
-		if ( ! si->m_tagId ) continue;
+		Section *sa = sptrs[i];
+		// straight copy if no stats
+		if ( ! sa || ! sa->m_stats.m_totalEntries ) {
+			sb->safeMemcpy ( a , wlens[i] );
+			continue;
+		}
 		// should be tag then
-		char *t = byte1;
-		char *e = t;
+		char *e = a;
 		for ( ; *e && *e != '>' && ! is_wspace_a(*e) ; e++);
 		// copy that
-		sb->safeMemcpy ( t , e-t);
+		sb->safeMemcpy ( a , e-a);
 		// insert our stuff into the tag
 		//sb->safePrintf("<!--");
 		//sb->safePrintf("<font color=red>");
-		SectionStats *sx = &si->m_stats;
+		SectionStats *sx = &sa->m_stats;
 		// # docs from our site had the same innerHTML?
 		sb->safePrintf(" _s=%lim",(long)sx->m_totalMatches);
 		// # total docs from our site had the same X-path?
@@ -34647,10 +34652,10 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		// the hash of the turktaghash and sitehash32 combined
 		// so you can do gbfacetstr:gbxpathsitehash12345
 		// where the 12345 is this h32 value.
-		unsigned long h32 = si->m_turkTagHash32 ^ siteHash32;
+		unsigned long h32 = sa->m_turkTagHash32 ^ siteHash32;
 		sb->safePrintf("%luh",h32);
 		// copy the rest of the tag
-		sb->safeMemcpy( e, size-(e-t) );
+		sb->safeMemcpy( e, wlens[i]-(e-a) );
 		//sb->safePrintf("-->");
 		//sb->safePrintf("</font>");
 		// print it here
