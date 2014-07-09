@@ -2915,7 +2915,9 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 	char *start = r->m_proxiedUrl;
 	// skip http:// or https://
 	// skip forward
-	char *s = start + 8;
+	char *s = start;
+	if ( strncmp(s,"http://",7) == 0 ) s += 7;
+	if ( strncmp(s,"https://",8) == 0 ) s += 8;
 	// skip till we hit end of url
 	// skip until / or space or \r or \n or \0
 	char *cgi = NULL;

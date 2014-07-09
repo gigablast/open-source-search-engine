@@ -471,8 +471,16 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 cmdLen = 4;
 	 }
 	 else if ( strncmp ( req , "CONNECT " , 8 ) == 0 ) {
-		 m_requestType = RT_CONNECT;
-		 cmdLen = 7;
+		 //m_requestType = RT_CONNECT;
+		 //cmdLen = 7;
+		 // we do not proxy https requests because we can't
+		 // decrypt the page contents to cache them or to insert
+		 // the sectiondb voting markup, so it's kinda pointless...
+		 // and i'm not aiming to be a full-fledge squid proxy.
+		 log("http: CONNECT request not supported because we "
+		     "can't insert section markup and we can't cache: %s",req);
+		 g_errno = EBADREQUEST; 
+		 return false; 
 	 }
 	 else { 
 		 log("http: got bad request cmd: %s",req);
@@ -513,7 +521,17 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 // that's the length of it
 		 m_squidProxiedUrlLen = p - m_squidProxiedUrl;
 	 }
-		 
+	 else if ( m_requestType == RT_CONNECT ) {
+		 m_isSquidProxyRequest = true;
+		 // set url parms for it
+		 m_squidProxiedUrl = req + cmdLen + 1;
+		 // usually its like CONNECT diffbot.com:443
+		 char *p = m_squidProxiedUrl;
+		 // stop at whitespace or \0
+		 for ( ; *p && ! is_wspace_a(*p) ; p++ );
+		 // that's the length of it
+		 m_squidProxiedUrlLen = p - m_squidProxiedUrl;
+	 }
 
 	 // check authentication
 	 char *auth = NULL;
