@@ -5329,6 +5329,20 @@ void Parms::init ( ) {
 	//m->m_type  = TYPE_BOOL;
 	//m++;
 
+	m->m_title = "qa build mode";
+	m->m_desc  = "When on Msg13.cpp saves docs in the qatest123 coll "
+		"to qa/ subdir, when off "
+		"if downloading a doc for qatest123 coll and not in "
+		"qa subdir then it returns a 404.";
+	m->m_cgi   = "qabuildmode";
+	m->m_off   = (char *)&g_conf.m_qaBuildMode - g;
+	m->m_def   = "0"; 
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_CONF;
+	m->m_flags = PF_NOAPI | PF_HIDDEN;
+	m++;
+
 	m->m_title = "read only mode";
 	m->m_desc  = "Read only mode does not allow spidering.";
 	m->m_cgi   = "readonlymode";

@@ -78,6 +78,7 @@ long qa_hash32 ( char *s ) {
 
 long s_replyCRC = 0;
 TcpSocket *s_sock = NULL;
+static bool (*s_callback)() = NULL;
 
 void qatestWrapper ( void *state , TcpSocket *sock ) { 
 	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
@@ -111,8 +112,8 @@ void qatestWrapper ( void *state , TcpSocket *sock ) {
 	s_sock = sock;
 
 	// continue qa loop
-	qatest(); 
-
+	//qatest(); 
+	s_callback();
 }	
 
 // first inject a set list of urls
@@ -378,6 +379,8 @@ void checkCRC ( long needCRC ) {
 //
 bool qainject () {
 
+	if ( ! s_callback ) s_callback = qainject;
+
 	static bool s_x1 = false;
 	if ( ! s_x1 ) {
 		s_x1 = true;
@@ -576,10 +579,182 @@ bool qainject () {
 	if ( ! s_fee2 ) {
 		s_fee2 = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED QA TEST\n\n\n");
-		exit(0);
+		return true;
 	}
 
 
+	return true;
+}
+
+
+static char *s_urls1 =
+	"+cisco.com"
+	"+t7online.com"
+	"+sonyericsson.com"
+	"+netsh.com"
+	"+allegro.pl"
+	"+hotscripts.com"
+	"+sitepoint.com"
+	"+so-net.net.tw"
+	"+aol.co.uk"
+	"+sbs.co.kr"
+	"+chinaacc.com"
+	"+eyou.com"
+	"+spray.se"
+	"+carview.co.jp"
+	"+xcar.com.cn"
+	"+united.com"
+	"+raaga.com"
+	"+primaryads.com"
+	"+szonline.net"
+	"+icbc.com.cn"
+	"+instantbuzz.com"
+	"+sz.net.cn"
+	"+6to23.com"
+	"+seesaa.net"
+	"+tracking101.com"
+	"+jubii.dk"
+	"+5566.net"
+	"+prikpagina.nl"
+	"+7xi.net"
+	"+91.com"
+	"+jjwxc.com"
+	"+adbrite.com"
+	"+hoplay.com"
+	"+questionmarket.com"
+	"+telegraph.co.uk"
+	"+trendmicro.com"
+	"+google.fi"
+	"+ebay.es"
+	"+tfol.com"
+	"+sleazydream.com"
+	"+websearch.com"
+	"+freett.com"
+	"+dayoo.com"
+	"+interia.pl"
+	"+yymp3.com"
+	"+stanford.edu"
+	"+time.gr.jp"
+	"+telia.com"
+	"+madthumbs.com"
+	"+chinamp3.com"
+	"+oldgames.se"
+	"+buy.com"
+	"+singpao.com"
+	"+cbsnews.com"
+	"+corriere.it"
+	"+cbs.com"
+	"+flickr.com"
+	"+theglobeandmail.com"
+	"+incredifind.com"
+	"+mit.edu"
+	"+chase.com"
+	"+ktv666.com"
+	"+oldnavy.com"
+	"+lego.com"
+	"+eniro.se"
+	"+bloomberg.com"
+	"+ft.com"
+	"+odn.ne.jp"
+	"+pcpop.com"
+	"+ugameasia.com"
+	"+cantv.net"
+	"+allinternal.com"
+	"+aventertainments.com"
+	"+invisionfree.com"
+	"+hangzhou.com.cn"
+	"+zhaopin.com"
+	"+bcentral.com"
+	"+lowes.com"
+	"+adprofile.net"
+	"+yninfo.com"
+	"+jeeran.com"
+	"+twbbs.net.tw"
+	"+yousendit.com"
+	"+aavalue.com"
+	"+google.com.co"
+	"+mysearch.com"
+	"+worldsex.com"
+	"+navisearch.net"
+	"+lele.com"
+	"+msn.co.in"
+	"+officedepot.com"
+	"+xintv.com"
+	"+204.177.92.193"
+	"+travelzoo.com"
+	"+bol.com.br"
+	"+dtiserv2.com"
+	"+optonline.net"
+	"+hitslink.com"
+	"+freechal.com"
+	"+infojobs.net"
+	;
+
+bool qaspider ( ) {
+
+	if ( ! s_callback ) s_callback = qaspider;
+
+	static bool s_x1 = false;
+	if ( ! s_x1 ) {
+		s_x1 = true;
+		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" , 
+			 qatestWrapper );
+		return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	static bool s_x2 = false;
+	if ( ! s_x2 ) {
+		s_x2 = true;
+		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+			 qatestWrapper );
+		return false;
+	}
+
+	//
+	// check addcoll reply
+	//
+	static bool s_x3 = false;
+	if ( ! s_x3 ) {
+		s_x3 = true;
+		checkCRC ( 238170006 );
+	}
+
+	// . TODO: turn this off later once we've built up an archive
+	//   of several hundred docs or so.
+	// . enter qa build for for now. when this is off it will return 404
+	//   for docs not stored in qa/ subdir
+	static bool s_x4 = false;
+	if ( ! s_x4 ) {
+		s_x4 = true;
+		getUrl("/admin/master?qabuildmode=1",qatestWrapper);
+		return false;
+	}
+	
+
+	//
+	// use the add url interface now
+	//
+	static bool s_y2 = false;
+	if ( ! s_y2 ) {
+		s_y2 = true;
+		SafeBuf sb;
+		// delim=+++URL:
+		sb.safePrintf("&c=qatest123"
+			      "&format=json"
+			      "&strip=1"
+			      "&spiderlinks=1"
+			      "&urls="
+			      );
+		// . now a list of websites we want to spider
+		// . the space is already encoded as +
+		sb.safeStrcpy(s_urls1);
+		getUrl ( "/admin/addurl",qatestWrapper,sb.getBufStart());
+		return false;
+	}
+	
 	return true;
 }
 
@@ -588,7 +763,12 @@ bool qainject () {
 //   ensure consistency between tests for exact replays
 bool qatest ( ) {
 
-	return qainject();
+	if ( ! s_callback ) s_callback = qatest;
 
+	qainject();
+
+	qaspider();
+
+	return true;
 }
 

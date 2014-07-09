@@ -129,6 +129,8 @@
 //#include "Accessdb.h"
 
 // from qa.cpp
+bool qaspider ( ) ;
+bool qainject ( ) ;
 bool qatest ( ) ;
 
 // call this to shut everything down
@@ -1458,7 +1460,9 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	// run our smoketests
 	//
-	if ( strcmp ( cmd, "qa" ) == 0 ) {
+	if ( strcmp ( cmd, "qa" ) == 0 ||
+	     strcmp ( cmd, "qainject" ) == 0 ||
+	     strcmp ( cmd, "qaspider" ) == 0 ) {
 		// let's ensure our core file can dump
 		struct rlimit lim;
 		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
@@ -1505,7 +1509,13 @@ int main2 ( int argc , char *argv[] ) {
 		//
 		// beging the qaloop
 		//
-		qatest();
+		if ( strcmp(cmd,"qa") == 0 )
+			qatest();
+		else if ( strcmp(cmd,"qaspider") == 0 )
+			qaspider();
+		else if ( strcmp(cmd,"qainject") == 0 )
+			qainject();
+
 		//
 		// wait for some i/o signals
 		//
