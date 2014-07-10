@@ -62,28 +62,17 @@ bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 
 	char format = hr->getReplyFormat();
 
-	char showParms = hr->getLong("showparms",0);
-	if ( showParms && (format == FORMAT_XML || format == FORMAT_JSON) ) {
-		SafeBuf sb;
-		g_parms.printParmTable ( &sb , sock , hr );
-		return g_httpServer.sendDynamicPage (sock, 
-						     sb.getBufStart(), 
-						     sb.length(),
-						     -1 ); // cachetime
-	}
-
-
 	char *c = hr->getString("c");
 	
 	if ( ! c && (format == FORMAT_XML || format == FORMAT_JSON) ) {
 		g_errno = EMISSINGINPUT;
-		char *msg = "missing c parm";
+		char *msg = "missing c parm. See /admin/api to see parms.";
 		return g_httpServer.sendErrorReply(sock,500,msg);
 	}
 
 	if ( ! urls && (format == FORMAT_XML || format == FORMAT_JSON) ) {
 		g_errno = EMISSINGINPUT;
-		char *msg = "missing urls parm";
+		char *msg = "missing urls parm. See /admin/api to see parms.";
 		return g_httpServer.sendErrorReply(sock,500,msg);
 	}
 

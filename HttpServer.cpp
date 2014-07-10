@@ -1003,14 +1003,14 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 
 	//////////
 	//
-	// if they say &showparms=1 on any page we show the input parms
+	// if they say &showinput=1 on any page we show the input parms
 	//
 	//////////
 	char format = r->getReplyFormat();
-	long showInputParms = r->getLong("showinputparms",0);
+	long showInput = r->getLong("showinput",0);
 	WebPage *wp = g_pages.getPage(n);
-	if ( wp && (wp->m_pgflags & PG_NOAPI) ) showInputParms = false;
-	if ( showInputParms ) {
+	if ( wp && (wp->m_pgflags & PG_NOAPI) ) showInput = false;
+	if ( showInput ) {
 		SafeBuf sb;
 		CollectionRec *cr = g_collectiondb.getRec ( r );
 		printApiForPage ( &sb , n , cr );

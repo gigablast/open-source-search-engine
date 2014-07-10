@@ -1184,13 +1184,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	if ( res )
 		sb->safeStrcpy ( res );
 	
-	// do not show the parms and their current values unless showparms=1
+	// do not show the parms and their current values unless showsettings=1
 	// was explicitly given for the xml/json feeds
-	long showParms = 1;
+	long showSettings = 1;
 	if ( format != FORMAT_HTML )
-		showParms = r->getLong("showparms",0);
+		showSettings = r->getLong("showsettings",1);
 
-	if ( showParms )
+	if ( showSettings )
 		printParmTable ( sb , s , r );
 
 	// xml/json tail
@@ -4678,6 +4678,23 @@ void Parms::init ( ) {
 	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
+
+	// //
+	// // more global-ish parms
+	// //
+
+	// m->m_title = "show settings";
+	// m->m_desc  = "show settings or values for this page.";
+	// m->m_cgi   = "showsettings";
+	// m->m_page  = PAGE_MASTER;
+	// m->m_obj   = OBJ_NONE;
+	// m->m_type  = TYPE_BOOL;
+	// m->m_def   = "1";
+	// // do not show in html controls
+	// m->m_flags = PF_API | PF_NOHTML;
+	// m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	// m++;
+
 
 
 	////////////
