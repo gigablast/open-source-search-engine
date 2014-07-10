@@ -1560,9 +1560,9 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news","chinese"};
+	char *items[] = {"custom","web","news","chinese","shallow"};
 	char *s;
-	for ( long i = 0 ; i < 4 ; i++ ) {
+	for ( long i = 0 ; i < 5 ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
 		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
@@ -12162,6 +12162,9 @@ void Parms::init ( ) {
 		"new sites. "
 		"Selecting <i>chinese</i> makes the spider prioritize the "
 		"spidering of chinese pages, etc. "
+		"Selecting <i>shallow</i> makes the spider go deep on "
+		"all sites unless they are tagged <i>shallow</i> in the "
+		"site list. "
 		"Important: "
 		"If you select a profile other than <i>custom</i> "
 		"then your changes "
@@ -21501,6 +21504,17 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "Does the url have a media or css related "
 			  "extension. Like gif, jpg, mpeg, css, etc.? "
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>tag:<i>tagname</i></td>"
+			  "<td>"
+			  "This is true if the url is tagged with this "
+			  "<i>tagname</i> in the site list. Read about tags "
+			  "on the <a href=/admin/settings>"//#examples>"
+			  "site list</a> "
+			  "page."
+			  "</td></tr>"
+
 
 
 			  "</td></tr></table><br><br>\n",

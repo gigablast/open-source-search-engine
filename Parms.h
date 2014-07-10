@@ -23,7 +23,8 @@ enum {
 	UFP_NONE   = 0 ,
 	UFP_WEB    = 1 ,
 	UFP_NEWS   = 2 ,
-	UFP_CHINESE = 3
+	UFP_CHINESE = 3,
+	UFP_SHALLOW = 4
 };
 
 // special priorities for the priority drop down 
