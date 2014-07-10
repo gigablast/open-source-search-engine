@@ -4,6 +4,8 @@
 
 static long s_expectedCRC = 0;
 
+bool qatest ( ) ;
+
 // after we got the reply and verified expected crc, call the callback
 static bool (*s_callback)() = NULL;
 
@@ -47,6 +49,7 @@ long qa_hash32 ( char *s ) {
 	return h;
 }
 
+static char *s_reply = NULL;
 
 // come here after receiving ANY reply from the gigablast server
 static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
@@ -68,6 +71,8 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 	if ( content[contentLen] ) { char *xx=NULL;*xx=0; }
 
 	char *reply = sock->m_readBuf;
+
+	s_reply = reply;
 
 	// take out <responseTimeMS>
 	markOut ( reply , "<currentTimeUTC>");
@@ -386,107 +391,107 @@ bool qainject ( ) {
 
 
 static char *s_urls1 =
-	"+walmart.com"
-	"+cisco.com"
-	"+t7online.com"
-	"+sonyericsson.com"
-	"+netsh.com"
-	"+allegro.pl"
-	"+hotscripts.com"
-	"+sitepoint.com"
-	"+so-net.net.tw"
-	"+aol.co.uk"
-	"+sbs.co.kr"
-	"+chinaacc.com"
-	"+eyou.com"
-	"+spray.se"
-	"+carview.co.jp"
-	"+xcar.com.cn"
-	"+united.com"
-	"+raaga.com"
-	"+primaryads.com"
-	"+szonline.net"
-	"+icbc.com.cn"
-	"+instantbuzz.com"
-	"+sz.net.cn"
-	"+6to23.com"
-	"+seesaa.net"
-	"+tracking101.com"
-	"+jubii.dk"
-	"+5566.net"
-	"+prikpagina.nl"
-	"+7xi.net"
-	"+91.com"
-	"+jjwxc.com"
-	"+adbrite.com"
-	"+hoplay.com"
-	"+questionmarket.com"
-	"+telegraph.co.uk"
-	"+trendmicro.com"
-	"+google.fi"
-	"+ebay.es"
-	"+tfol.com"
-	"+sleazydream.com"
-	"+websearch.com"
-	"+freett.com"
-	"+dayoo.com"
-	"+interia.pl"
-	"+yymp3.com"
-	"+stanford.edu"
-	"+time.gr.jp"
-	"+telia.com"
-	"+madthumbs.com"
-	"+chinamp3.com"
-	"+oldgames.se"
-	"+buy.com"
-	"+singpao.com"
-	"+cbsnews.com"
-	"+corriere.it"
-	"+cbs.com"
-	"+flickr.com"
-	"+theglobeandmail.com"
-	"+incredifind.com"
-	"+mit.edu"
-	"+chase.com"
-	"+ktv666.com"
-	"+oldnavy.com"
-	"+lego.com"
-	"+eniro.se"
-	"+bloomberg.com"
-	"+ft.com"
-	"+odn.ne.jp"
-	"+pcpop.com"
-	"+ugameasia.com"
-	"+cantv.net"
-	"+allinternal.com"
-	"+aventertainments.com"
-	"+invisionfree.com"
-	"+hangzhou.com.cn"
-	"+zhaopin.com"
-	"+bcentral.com"
-	"+lowes.com"
-	"+adprofile.net"
-	"+yninfo.com"
-	"+jeeran.com"
-	"+twbbs.net.tw"
-	"+yousendit.com"
-	"+aavalue.com"
-	"+google.com.co"
-	"+mysearch.com"
-	"+worldsex.com"
-	"+navisearch.net"
-	"+lele.com"
-	"+msn.co.in"
-	"+officedepot.com"
-	"+xintv.com"
-	"+204.177.92.193"
-	"+travelzoo.com"
-	"+bol.com.br"
-	"+dtiserv2.com"
-	"+optonline.net"
-	"+hitslink.com"
-	"+freechal.com"
-	"+infojobs.net"
+	" walmart.com"
+	" cisco.com"
+	" t7online.com"
+	" sonyericsson.com"
+	" netsh.com"
+	" allegro.pl"
+	" hotscripts.com"
+	" sitepoint.com"
+	" so-net.net.tw"
+	" aol.co.uk"
+	" sbs.co.kr"
+	" chinaacc.com"
+	" eyou.com"
+	" spray.se"
+	" carview.co.jp"
+	" xcar.com.cn"
+	" united.com"
+	" raaga.com"
+	" primaryads.com"
+	" szonline.net"
+	" icbc.com.cn"
+	" instantbuzz.com"
+	" sz.net.cn"
+	" 6to23.com"
+	" seesaa.net"
+	" tracking101.com"
+	" jubii.dk"
+	" 5566.net"
+	" prikpagina.nl"
+	" 7xi.net"
+	" 91.com"
+	" jjwxc.com"
+	" adbrite.com"
+	" hoplay.com"
+	" questionmarket.com"
+	" telegraph.co.uk"
+	" trendmicro.com"
+	" google.fi"
+	" ebay.es"
+	" tfol.com"
+	" sleazydream.com"
+	" websearch.com"
+	" freett.com"
+	" dayoo.com"
+	" interia.pl"
+	" yymp3.com"
+	" stanford.edu"
+	" time.gr.jp"
+	" telia.com"
+	" madthumbs.com"
+	" chinamp3.com"
+	" oldgames.se"
+	" buy.com"
+	" singpao.com"
+	" cbsnews.com"
+	" corriere.it"
+	" cbs.com"
+	" flickr.com"
+	" theglobeandmail.com"
+	" incredifind.com"
+	" mit.edu"
+	" chase.com"
+	" ktv666.com"
+	" oldnavy.com"
+	" lego.com"
+	" eniro.se"
+	" bloomberg.com"
+	" ft.com"
+	" odn.ne.jp"
+	" pcpop.com"
+	" ugameasia.com"
+	" cantv.net"
+	" allinternal.com"
+	" aventertainments.com"
+	" invisionfree.com"
+	" hangzhou.com.cn"
+	" zhaopin.com"
+	" bcentral.com"
+	" lowes.com"
+	" adprofile.net"
+	" yninfo.com"
+	" jeeran.com"
+	" twbbs.net.tw"
+	" yousendit.com"
+	" aavalue.com"
+	" google.com.co"
+	" mysearch.com"
+	" worldsex.com"
+	" navisearch.net"
+	" lele.com"
+	" msn.co.in"
+	" officedepot.com"
+	" xintv.com"
+	" 204.177.92.193"
+	" travelzoo.com"
+	" bol.com.br"
+	" dtiserv2.com"
+	" optonline.net"
+	" hitslink.com"
+	" freechal.com"
+	" infojobs.net"
 	;
 
 bool qaspider ( ) {
@@ -532,7 +537,7 @@ bool qaspider ( ) {
 			      );
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
-		sb.safeStrcpy(s_urls1);
+		sb.urlEncode(s_urls1);
 		getUrl ( "/admin/addurl",0,sb.getBufStart());
 		return false;
 	}
@@ -559,7 +564,7 @@ bool qaspider ( ) {
 // html with _s= tag attributes inserted
 bool qasquid ( ) {
 
-	if ( ! s_callback ) s_callback = qaspider;
+	if ( ! s_callback ) s_callback = qasquid;
 
 	//
 	// delete the 'qatest123' collection
@@ -612,15 +617,38 @@ bool qasquid ( ) {
 			      );
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
-		sb.safeStrcpy(s_urls1);
+		sb.urlEncode(s_urls1);
 		getUrl ( "/admin/addurl",0,sb.getBufStart());
 		return false;
 	}
 
+ checkagain:
+
+	// wait until spider finishes. check the spider status page
+	// in json to see when completed
+	static bool s_k1 = false;
+	if ( ! s_k1 ) {
+		usleep(5000000); // 5 seconds
+		s_k1 = true;
+		getUrl ( "/admin/status?c=qatest123q=gbhopcount%%3A2",0);
+		return false;
+	}
+
+	static bool s_k2 = false;
+	if ( ! s_k2 ) {
+		// ensure spiders are done
+		if ( s_reply && ! strstr(s_reply,"Job has completed") ) {
+			s_k1 = false;
+			goto checkagain;
+		}
+		s_k2 = true;
+	}
+
+		
+
 	// verify no 2 hopcounts in results
 	static bool s_y4 = false;
 	if ( ! s_y4 ) {
-		usleep(1500000);
 		s_y4 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 			 "q=gbhopcount%%3A2",
@@ -667,7 +695,8 @@ bool qasquid ( ) {
 		s_fee2 = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
 			"QA SQUID TEST\n\n\n");
-		return true;
+		if ( s_callback == qatest ) return true;
+		exit(0);
 	}
 		
 	return true;

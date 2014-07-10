@@ -45,7 +45,7 @@ static void addedUrlsToSpiderdbWrapper ( void *state ) {
 bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// or if in read-only mode
-	if ( g_conf.m_readOnlyMode  ) {
+	if ( g_conf.m_readOnlyMode ) {
 		g_errno = EREADONLYMODE;
 		char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,500,msg);
