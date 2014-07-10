@@ -8,184 +8,199 @@
 
 static bool sendReply        ( void *state  , bool addUrlEnabled );
 
-static void addedStuff ( void *state );
+//static void addedStuff ( void *state );
 
-class State1 {
-public:
-	Msg4       m_msg4;
-	TcpSocket *m_socket;
 
-	HttpRequest m_hr;
+// class State1 {
+// public:
+// 	Msg4       m_msg4;
+// 	//TcpSocket *m_socket;
+// 	//HttpRequest m_hr;
+// 	//long       m_urlLen;
+// 	//char       m_url[MAX_URL_LEN];
+// 	//bool       m_strip;
+// 	//bool       m_spiderLinks;
+// 	long       m_numSent;
+// 	long       m_numReceived;
+// 	SpiderRequest m_sreq;
+// };
 
-	long       m_urlLen;
-	char       m_url[MAX_URL_LEN];
+// from PageCrawlBot.cpp:
+bool getSpiderRequestMetaList ( char *doc , 
+				SafeBuf *listBuf ,
+				bool spiderLinks ,
+				CollectionRec *cr ) ;
 
-	bool       m_strip;
-	bool       m_spiderLinks;
 
-	long       m_numSent;
-	long       m_numReceived;
-	SpiderRequest m_sreq;
-};
+static void addedUrlsToSpiderdbWrapper ( void *state ) {
+	//gr *st1 = (gr *)state;
+	// otherwise call gotResults which returns false if blocked, true else
+	// and sets g_errno on error
+	sendReply ( state , true );
+}
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 // . add url page for admin, users use sendPageAddUrl() in PageRoot.cpp
-bool sendPageAddUrl2 ( TcpSocket *s , HttpRequest *r ) {
+bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
+
+	// or if in read-only mode
+	if ( g_conf.m_readOnlyMode  ) {
+		g_errno = EREADONLYMODE;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,500,msg);
+	}
+
 	// . get fields from cgi field of the requested url
 	// . get the search query
 	long  urlLen = 0;
-	char *url = r->getString ( "u" , &urlLen , NULL /*default*/);
+	char *urls = hr->getString ( "urls" , &urlLen , NULL /*default*/);
 	// also try "url" and "urls"
-	if ( ! url ) url = r->getString ( "url" , &urlLen , NULL );
-	if ( ! url ) url = r->getString ( "urls" , &urlLen , NULL );
+	//if ( ! url ) url = r->getString ( "url" , &urlLen , NULL );
+	//if ( ! url ) url = r->getString ( "urls" , &urlLen , NULL );
 
-	// see if they provided a url of a file of urls if they did not
-	// provide a url to add directly
 
-	// can't be too long, that's obnoxious
-	if ( urlLen > MAX_URL_LEN ) {
-		g_errno = EBUFTOOSMALL;
-		g_msg = " (error: url too long)";
-		return g_httpServer.sendErrorReply(s,500,"url too long");
+	char format = hr->getReplyFormat();
+
+	char *c = hr->getString("c");
+	
+	if ( ! c && (format == FORMAT_XML || format == FORMAT_JSON) ) {
+		g_errno = EMISSINGINPUT;
+		char *msg = "missing c parm. See /admin/api to see parms.";
+		return g_httpServer.sendErrorReply(sock,500,msg);
 	}
 
+	if ( ! urls && (format == FORMAT_XML || format == FORMAT_JSON) ) {
+		g_errno = EMISSINGINPUT;
+		char *msg = "missing urls parm. See /admin/api to see parms.";
+		return g_httpServer.sendErrorReply(sock,500,msg);
+	}
+
+
 	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( r );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
-		g_msg = " (error: no collection)";
-		return g_httpServer.sendErrorReply(s,500,"no coll rec");
+		//g_msg = " (error: no collection)";
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,500,msg);
 	}
 
 
 	// make a new state
-	State1 *st1 ;
-	try { st1 = new (State1); }
+	GigablastRequest *gr;
+	try { gr = new (GigablastRequest); }
 	catch ( ... ) { 
 		g_errno = ENOMEM;
 		log("PageAddUrl: new(%i): %s", 
-		    sizeof(State1),mstrerror(g_errno));
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); }
-	mnew ( st1 , sizeof(State1) , "PageAddUrl" );
-
-
-	st1->m_socket  = s;
-
-	st1->m_hr.copy ( r );
-
-	// assume no url buf yet, set below
-	//st1->m_ubuf      = NULL;
-	//st1->m_ubufAlloc = NULL;
-	//st1->m_metaList  = NULL;
-
-	// save the url
-	st1->m_url[0] = '\0';
-	if ( url ) {
-		// normalize and add www. if it needs it
-		Url uu;
-		// do not convert xyz.com to www.xyz.com because sometimes
-		// people want xyz.com exactly
-		uu.set ( url , gbstrlen(url) , false ); // true );
-		// remove >'s i guess and store in st1->m_url[] buffer
-		st1->m_urlLen=cleanInput ( st1->m_url,
-					   MAX_URL_LEN, 
-					   uu.getUrl(),
-					   uu.getUrlLen() );
-		// point to that as the url "buf" to add
-		//st1->m_ubuf      = st1->m_url;
-		//st1->m_ubufSize  = urlLen;
-		//st1->m_ubufAlloc = NULL; // do not free it!
+		    sizeof(GigablastRequest),mstrerror(g_errno));
+		return g_httpServer.sendErrorReply(sock,500,
+						   mstrerror(g_errno)); 
 	}
+	mnew ( gr , sizeof(GigablastRequest) , "PageAddUrl" );
 
-	st1->m_spiderLinks = true;
-	st1->m_strip   = true;
 
-	// or if in read-only mode
-	if ( g_conf.m_readOnlyMode  ) return sendReply ( st1 , false );
-
-	st1->m_strip = r->getLong("strip",0);
-	// Remember, for cgi, if the box is not checked, then it is not 
-	// reported in the request, so set default return value to 0
-	long spiderLinks = r->getLong("spiderLinks",-1);
-	// also support all lowercase like PageInject.cpp uses
-	if ( spiderLinks == -1 )
-		spiderLinks = r->getLong("spiderlinks",0);
-
-	// . should we force it into spiderdb even if already in there
-	// . use to manually update spider times for a url
-	// . however, will not remove old scheduled spider times
-	// . mdw: made force on the default
-	// . mdw: don't use this anymore, use url filters, it has
-	//   a "isaddurl" directive you can use where you can set the
-	//   respider frequency to basically 0 to simulate this parm.
-	//st1->m_forceRespider = r->getLong("force",1); // 0);
+	// this will fill in GigablastRequest so all the parms we need are set
+	// set this. also sets gr->m_hr
+	g_parms.setGigablastRequest ( sock , hr , gr );
 
 	// if no url given, just print a blank page
-	if ( ! url ) return sendReply (  st1 , true );
+	if ( ! urls ) return sendReply (  gr , true );
+
+		
 
 
-	//
-	// make a SpiderRequest
-	//
+	bool status = true;
 
-	SpiderRequest *sreq = &st1->m_sreq;
-	// set the SpiderRequest from this add url
-	if ( ! sreq->setFromAddUrl ( st1->m_url ) ) {
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
-		// send reply back with g_errno set if this returned false
-		return sendReply ( st1 , true );
+	// do not spider links for spots
+	if ( ! getSpiderRequestMetaList ( urls,
+					  // a safebuf
+					  &gr->m_listBuf ,
+					  gr->m_harvestLinks, // spiderLinks?
+					  NULL ) )
+		status = false;
+
+	// empty?
+	long size = gr->m_listBuf.length();
+	
+	// error?
+	if ( ! status ) {
+		// nuke it
+		mdelete ( gr , sizeof(gr) , "PageAddUrl" );
+		delete (gr);
+		return g_httpServer.sendErrorReply(gr);
+	}
+	// if not list
+	if ( ! size ) {
+		// nuke it
+		mdelete ( gr , sizeof(gr) , "PageAddUrl" );
+		delete (gr);
+		g_errno = EMISSINGINPUT;
+		return g_httpServer.sendErrorReply(gr);
 	}
 
-	if ( spiderLinks )
-		sreq->m_avoidSpiderLinks = 0;
-	else
-		sreq->m_avoidSpiderLinks = 1;
-
-	// shortcut
-	Msg4 *m = &st1->m_msg4;
-	// now add that to spiderdb using msg4
-	if ( ! m->addMetaList ( (char *)sreq    ,
-				sreq->getRecSize() ,
-				cr->m_coll            ,
-				st1             , // state
-				addedStuff      ,
-				MAX_NICENESS    ,
-				RDB_SPIDERDB    ) )
-		// we blocked
+	// add to spiderdb
+	if ( ! gr->m_msg4.addMetaList( gr->m_listBuf.getBufStart() ,
+				       gr->m_listBuf.length(),
+				       cr->m_coll,
+				       gr ,
+				       addedUrlsToSpiderdbWrapper,
+				       0 // niceness
+				       ) )
+		// blocked!
 		return false;
 
-	// send back the reply
-	return sendReply ( st1 , true );
-}
+	// did not block, print page!
+	//addedUrlsToSpiderdbWrapper(gr);
+	sendReply ( gr , true );
+	return true;
 
-void addedStuff ( void *state ) {
-	State1 *st1 = (State1 *)state;
-	// otherwise call gotResults which returns false if blocked, true else
-	// and sets g_errno on error
-	sendReply ( st1 , true );
+	// send back the reply
+	//return sendReply ( gr , true );
 }
 
 bool sendReply ( void *state , bool addUrlEnabled ) {
 	// allow others to add now
 	//s_inprogress = false;
 	// get the state properly
-	State1 *st1 = (State1 *) state;
+	//gr *st1 = (gr *) state;
+	GigablastRequest *gr = (GigablastRequest *)state;
 	// in order to see what sites are being added log it, then we can
 	// more easily remove sites from sitesearch.gigablast.com that are
 	// being added but not being searched
-	log(LOG_INFO,"http: add url %s (%s)",st1->m_url ,mstrerror(g_errno));
-	// extract info from state
-	TcpSocket *s       = st1->m_socket;
-	char      *url     = NULL;
-	if ( st1->m_urlLen ) url = st1->m_url;
+	SafeBuf xb;
+	if ( gr->m_urlsBuf ) {
+		xb.safeTruncateEllipsis ( gr->m_urlsBuf , 200 );
+		log(LOG_INFO,"http: add url %s (%s)",
+		    xb.getBufStart(),mstrerror(g_errno));
+	}
+
+	char format = gr->m_hr.getReplyFormat();
+	TcpSocket *sock    = gr->m_socket;
+
+	if ( format == FORMAT_JSON || format == FORMAT_XML ) {
+		bool status = g_httpServer.sendSuccessReply ( gr );
+		// nuke state
+		mdelete ( gr , sizeof(gr) , "PageAddUrl" );
+		delete (gr);
+		return status;
+	}
+
+
+	long ulen = 0;
+	char *url = gr->m_urlsBuf;
+	if ( url ) ulen = gbstrlen (url);
+
 	// re-null it out if just http://
 	bool printUrl = true;
-	if ( st1->m_urlLen == 0 ) printUrl = false;
-	if ( ! st1->m_url       ) printUrl = false;
-	if (st1->m_urlLen==7&&st1->m_url&&!strncasecmp(st1->m_url,"http://",7))
+	if ( ulen == 0 ) printUrl = false;
+	if ( ! gr->m_urlsBuf       ) printUrl = false;
+	if ( ulen==7 && printUrl && !strncasecmp(gr->m_url,"http://",7))
 		printUrl = false;
+	if ( ulen==8 && printUrl && !strncasecmp(gr->m_url,"https://",8))
+		printUrl = false;
+
 	// page is not more than 32k
 	char buf[1024*32+MAX_URL_LEN*2];
 	SafeBuf sb(buf, 1024*32+MAX_URL_LEN*2);
@@ -194,43 +209,56 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 	//SafeBuf rb(rawbuf, 1024*8);	
 	//rb.safePrintf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
 	//rb.safePrintf("<status>\n");
-	//CollectionRec *cr = g_collectiondb.getRec ( st1->m_coll );
+	//CollectionRec *cr = g_collectiondb.getRec ( gr->m_coll );
 	
 	// collection name
 
 	char tt [ 128 ];
 	tt[0] = '\0';
 
-	g_pages.printAdminTop ( &sb , st1->m_socket , &st1->m_hr );
+	g_pages.printAdminTop ( &sb , sock , &gr->m_hr );
+
+	// display url
+	//char *url = gr->m_urlsBuf;
+	//if ( url && ! url[0] ) url = NULL;
 
 	// watch out for NULLs
 	if ( ! url ) url = "http://";
 
 	// if there was an error let them know
-	char msg[MAX_URL_LEN + 1024];
-	char *pm = "";
+	//char msg[MAX_URL_LEN + 1024];
+	SafeBuf mbuf;
+	//char *pm = "";
 	if ( g_errno ) {
-		sprintf ( msg ,"Error adding url(s): <b>%s[%i]</b>", 
-			  mstrerror(g_errno) , g_errno);
-		pm = msg;
+		mbuf.safePrintf("<center><font color=red>");
+		mbuf.safePrintf("Error adding url(s): <b>%s[%i]</b>", 
+				mstrerror(g_errno) , g_errno);
+		mbuf.safePrintf("</font></center>");
+		//pm = msg;
 		//rb.safePrintf("Error adding url(s): %s[%i]", 
 		//	      mstrerror(g_errno) , g_errno);
 	}
-	else if ( url && printUrl && url[0] ) {
-		sprintf ( msg ,"<b><u>%s</u></b> added to spider "
-			  "queue "
-			  "successfully<br><br>", url );
+	else if ( printUrl ) {
+		mbuf.safePrintf("<center><font color=red>");
+		mbuf.safePrintf("<b><u>");
+		mbuf.safeTruncateEllipsis(gr->m_urlsBuf,200);
+		mbuf.safePrintf("</u></b> added to spider "
+				 "queue "
+				 "successfully<br><br>");
+		mbuf.safePrintf("</font></center>");
 		//rb.safePrintf("%s added to spider "
 		//	      "queue successfully", url );
-		pm = msg;
-		url = "http://";
+		//pm = msg;
+		//url = "http://";
 		//else
 		//	pm = "Don't forget to <a href=/gigaboost.html>"
 		//		"Gigaboost</a> your URL.";
 	}
-	
 
-	g_parms.printParmTable ( &sb , st1->m_socket , &st1->m_hr );
+
+	if ( mbuf.length() ) sb.safeStrcpy ( mbuf.getBufStart() );
+
+	g_parms.printParmTable ( &sb , sock , &gr->m_hr );
 
 	// print the final tail
 	g_pages.printTail ( &sb, true ); // admin?
@@ -238,10 +266,10 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 	g_errno = 0;
 
 	// nuke state
-	mdelete ( st1 , sizeof(State1) , "PageAddUrl" );
-	delete (st1);
+	mdelete ( gr , sizeof(GigablastRequest) , "PageAddUrl" );
+	delete (gr);
 
-	return g_httpServer.sendDynamicPage (s, 
+	return g_httpServer.sendDynamicPage (sock, 
 					     sb.getBufStart(), 
 					     sb.length(),
 					     -1 ); // cachetime

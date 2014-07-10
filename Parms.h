@@ -23,7 +23,8 @@ enum {
 	UFP_NONE   = 0 ,
 	UFP_WEB    = 1 ,
 	UFP_NEWS   = 2 ,
-	UFP_CHINESE = 3
+	UFP_CHINESE = 3,
+	UFP_SHALLOW = 4
 };
 
 // special priorities for the priority drop down 
@@ -89,6 +90,8 @@ class Page {
 	char *m_title;    // browser title bar
 };
 
+#include "Msg4.h"
+
 // generic gigablast request. for all apis offered.
 class GigablastRequest {
  public:
@@ -151,7 +154,9 @@ class GigablastRequest {
 	///////////
 	char *m_urlsBuf;
 	char  m_stripBox;
-	char  m_harvestLinksBox;
+	char  m_harvestLinks;
+	SafeBuf m_listBuf;
+	Msg4 m_msg4;
 
 	/////////////
 	//

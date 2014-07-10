@@ -759,32 +759,33 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "things down and are confusing to use."
 		      "</td>"
 		      "</tr>"
-		      
+		      */
 
 		      // tag match
 		      "<tr><td>"
 		      //"<td>tag:boots contains:boots<br>"
 		      "<nobr>tag:boots site:www.westernfootwear."
 		      "</nobr>com<br>"
-		      "tag:boots site:www.cowboyshop.com<br>"
+		      "tag:boots cowboyshop.com<br>"
+		      "tag:boots contains:/boots<br>"
 		      "tag:boots site:www.moreboots.com<br>"
-		      "<nobr>tag:boots site:www.lotsoffootwear.com"
+		      "<nobr>tag:boots http://lotsoffootwear.com/"
 		      "</nobr><br>"
 		      //"<td>t:boots -contains:www.cowboyshop.com/shoes/</td>"
 		      "</td><td>"
 		      "Advance users only. "
-		      "Tag any urls matching these 4 url patterns "
+		      "Tag any urls matching these 5 url patterns "
 		      "so we can use "
 		      "the expression <i>tag:boots</i> in the "
-		      "<a href=/scheduler>spider scheduler</a> and perhaps "
-		      "give such urls higher spider priority."
+		      "<a href=/admin/filters>url filters</a> and perhaps "
+		      "give such urls higher spider priority. "
 		      "For more "
 		      "precise spidering control over url subsets. "
 		      "Preceed any pattern with the tagname followed by "
 		      "space to tag it."
 		      "</td>"
 		      "</tr>"
-		      */
+
 
 		      "<tr>"
 		      "<td># This line is a comment.</td>"

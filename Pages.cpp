@@ -2464,8 +2464,6 @@ int parmcmp ( const void *a, const void *b ) {
 #define LIGHT_YELLOW "ffcccc"
 
 
-bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
-
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
 // the xml output table and the json output table
@@ -2617,18 +2615,43 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		       ,pageStr,pageStr);
 	sb->safePrintf("</a>");
 
-	// description of page
-	sb->safePrintf("<font size=-0> - %s "
-		       " &nbsp; "
-		       "[ <b>output response in</b> "
-		       "<a href=/%s?showparms=1&format=xml>xml</a> "
-		       "or <a href=/%s?showparms=1&format=json>json</a> "
-		       "or <a href=/%s>html</a> ] "
-		       "</font><br>",
-		       s_pages[PAGENUM].m_desc,
-		       pageStr,
-		       pageStr,
-		       pageStr);
+	// show settings?
+	if ( PAGENUM == PAGE_MASTER ||
+	     PAGENUM == PAGE_SEARCH ||
+	     PAGENUM == PAGE_SPIDER )
+		sb->safePrintf("<font size=-0> - %s "
+			       " &nbsp; "
+			       "[ <b>show settings in</b> "
+			       "<a href=/%s?showsettings=1&format=xml>"
+			       "xml</a> "
+			       "or "
+			       "<a href=/%s?showsettings=1&format=json>"
+			       "json</a> "
+			       "or <a href=/%s>html</a> ] "
+			       "</font><br>",
+			       s_pages[PAGENUM].m_desc,
+			       pageStr,
+			       pageStr,
+			       pageStr);
+
+	// show input parms to provide
+	if ( PAGENUM == PAGE_ADDURL2 )
+		sb->safePrintf("<font size=-0> - %s "
+			       " &nbsp; "
+			       "[ <b>show input in</b> "
+			       "<a href=/%s?showinput=1&format=xml>"
+			       "xml</a> "
+			       "or "
+			       "<a href=/%s?showinput=1&format=json>"
+			       "json</a> "
+			       "or <a href=/%s>html</a> ] "
+			       "</font><br>",
+			       s_pages[PAGENUM].m_desc,
+			       pageStr,
+			       pageStr,
+			       pageStr);
+
+
 	sb->safePrintf("</div><br>");
 	
 	// begin new list of centered tables
@@ -2638,7 +2661,17 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>Input</b></tr></tr>"
+			"<center><b>Input</b>"
+
+			// show input parms in these formats
+			// " &nbsp; [ "
+			// "<a href=/%s?showinput=1&format=xml>xml</a> "
+			// "<a href=/%s?showinput=1&format=json>json</a> "
+			// "<a href=/%s?showinput=1&format=html>html</a> "
+			//  "]"
+
+			"</td>"
+			"</tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>#</b></td>"
 			"<td><b>parm</b></td>"
@@ -2648,6 +2681,9 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			"<td><b>Default Value</b></td>"
 			"<td><b>Description</b></td></tr>\n"
 			, TABLE_STYLE
+			// , pageStr
+			// , pageStr
+			// , pageStr
 			, DARK_BLUE );
 	
 	const char *blues[] = {DARK_BLUE,LIGHT_BLUE};
@@ -2656,7 +2692,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//
 	// every page supports the:
 	// 1) &format=xml|html|json 
-	// 2) &showparms=0|1
+	// 2) &showsettings=0|1
 	// 3) &c=<collectionName>
 	// parms. we support them in sendPageGeneric() for pages like
 	// /admin/master /admin/search /admin/spider so you can see
@@ -2686,11 +2722,12 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	     PAGENUM == PAGE_SPIDER ) {
 		sb->safePrintf("<tr bgcolor=%s>"
 			       "<td>%li</td>\n"
-			       "<td><b>showparms</b></td>"
+			       "<td><b>showsettings</b></td>"
 			       "<td>BOOL (0 or 1)</td>"
-			       "<td>show parms</td>"
-			       "<td></td>"
-			       "<td>Display the values of all settings.</td>"
+			       "<td>show settings</td>"
+			       "<td>1</td>"
+			       "<td>Display the values of all settings on "
+			       "this page.</td>"
 			       "</tr>"
 			       , blues[count%2]
 			       , count

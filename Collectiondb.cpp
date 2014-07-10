@@ -1949,6 +1949,9 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	if ( m_urlFiltersProfile == UFP_CHINESE )
 		return rebuildChineseRules();
 
+	if ( m_urlFiltersProfile == UFP_SHALLOW )
+		return rebuildShallowRules();
+
 	long n = 0;
 
 	/*
@@ -2568,6 +2571,224 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_numRegExs8  = n;
 
 	// done rebuilding CHINESE rules
+	return true;
+}
+
+bool CollectionRec::rebuildShallowRules ( ) {
+
+	long n = 0;
+
+	m_regExs[n].set("isreindex");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 80;
+	n++;
+
+	m_regExs[n].set("ismedia");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
+	// if not in the site list then nuke it
+	m_regExs[n].set("!ismanualadd && !insitelist");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
+	m_regExs[n].set("errorcount>=3 && hastmperror");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 1; // 30 days default
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 3;
+	n++;
+
+	m_regExs[n].set("errorcount>=1 && hastmperror");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 1; // 30 days default
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 45;
+	n++;
+
+	m_regExs[n].set("isaddurl");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 85;
+	n++;
+
+
+
+
+	//
+	// stop if hopcount>=2 for things tagged shallow in sitelist
+	//
+	m_regExs[n].set("tag:shallow && hopcount>=2");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 0; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+
+	// if # of pages in this site indexed is >= 10 then stop as well...
+	m_regExs[n].set("tag:shallow && sitepages>=10");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 0; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==0 && iswww && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 50;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0; // days b4 respider
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 48;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==0 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 49;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==0");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 10.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 47;
+	n++;
+
+
+
+
+
+	m_regExs[n].set("hopcount==1 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 40;
+	n++;
+
+
+	m_regExs[n].set("hopcount==1");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 39;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==2 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+	m_regExs[n].set("hopcount==2");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 29;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount>=3 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 22;
+	n++;
+
+	m_regExs[n].set("hopcount>=3");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 21;
+	n++;
+
+
+
+	m_regExs[n].set("default");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 1;
+	n++;
+
+	m_numRegExs   = n;
+	m_numRegExs2  = n;
+	m_numRegExs3  = n;
+	m_numRegExs10 = n;
+	m_numRegExs5  = n;
+	m_numRegExs6  = n;
+	m_numRegExs8  = n;
+
+	// done rebuilding SHALLOW rules
 	return true;
 }
 

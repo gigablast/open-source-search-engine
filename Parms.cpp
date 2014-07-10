@@ -1037,6 +1037,9 @@ unsigned long Parms::calcChecksum() {
 }
 */
 
+// from Pages.cpp
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+
 // returns false and sets g_errno on error
 bool Parms::setGigablastRequest ( TcpSocket *socket ,
 				  HttpRequest *hrArg ,
@@ -1045,12 +1048,15 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	long page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
+
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
 		log("admin: THIS is null for page %li.",page);
 		return false;
 	}
+
+	gr->m_socket = socket;
 
 	// make a copy of the httprequest because the original is on the stack
 	// in HttpServer::requestHandler()
@@ -1062,8 +1068,6 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 
 	// use the one we copied which won't disappear/beFreed on us
 	HttpRequest *hr = &gr->m_hr;
-
-	gr->m_socket = socket;
 
 	// need this
 	long obj = OBJ_GBREQUEST;
@@ -1181,13 +1185,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	if ( res )
 		sb->safeStrcpy ( res );
 	
-	// do not show the parms and their current values unless showparms=1
+	// do not show the parms and their current values unless showsettings=1
 	// was explicitly given for the xml/json feeds
-	long showParms = 1;
+	long showSettings = 1;
 	if ( format != FORMAT_HTML )
-		showParms = r->getLong("showparms",0);
+		showSettings = r->getLong("showsettings",1);
 
-	if ( showParms )
+	if ( showSettings )
 		printParmTable ( sb , s , r );
 
 	// xml/json tail
@@ -1565,9 +1569,9 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news","chinese"};
+	char *items[] = {"custom","web","news","chinese","shallow"};
 	char *s;
-	for ( long i = 0 ; i < 4 ; i++ ) {
+	for ( long i = 0 ; i < 5 ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
 		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
@@ -4683,6 +4687,23 @@ void Parms::init ( ) {
 	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
+
+	// //
+	// // more global-ish parms
+	// //
+
+	// m->m_title = "show settings";
+	// m->m_desc  = "show settings or values for this page.";
+	// m->m_cgi   = "showsettings";
+	// m->m_page  = PAGE_MASTER;
+	// m->m_obj   = OBJ_NONE;
+	// m->m_type  = TYPE_BOOL;
+	// m->m_def   = "1";
+	// // do not show in html controls
+	// m->m_flags = PF_API | PF_NOHTML;
+	// m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	// m++;
+
 
 
 	////////////
@@ -12249,6 +12270,9 @@ void Parms::init ( ) {
 		"new sites. "
 		"Selecting <i>chinese</i> makes the spider prioritize the "
 		"spidering of chinese pages, etc. "
+		"Selecting <i>shallow</i> makes the spider go deep on "
+		"all sites unless they are tagged <i>shallow</i> in the "
+		"site list. "
 		"Important: "
 		"If you select a profile other than <i>custom</i> "
 		"then your changes "
@@ -14033,7 +14057,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_off   = (char *)&gr.m_harvestLinksBox - (char *)&gr;
+	m->m_off   = (char *)&gr.m_harvestLinks - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "1";
 	m->m_flags = PF_API;
@@ -21610,6 +21634,17 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "Does the url have a media or css related "
 			  "extension. Like gif, jpg, mpeg, css, etc.? "
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>tag:<i>tagname</i></td>"
+			  "<td>"
+			  "This is true if the url is tagged with this "
+			  "<i>tagname</i> in the site list. Read about tags "
+			  "on the <a href=/admin/settings>"//#examples>"
+			  "site list</a> "
+			  "page."
+			  "</td></tr>"
+
 
 
 			  "</td></tr></table><br><br>\n",

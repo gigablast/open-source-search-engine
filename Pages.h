@@ -387,4 +387,6 @@ enum {
 	PAGE_NONE     	};
 	
 
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+
 #endif
