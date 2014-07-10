@@ -874,7 +874,7 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 
 
 	// flag this
-	r->m_addToTestCache = true;
+	//if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
 	// note it here
 	//if ( g_conf.m_logDebugSpider )
 		log("spider: downloading %s (%s) (skiphammercheck=%li)",
@@ -1321,6 +1321,7 @@ void gotHttpReply2 ( void *state ,
 	// . add the reply to our test cache
 	// . if g_errno is set to something like "TCP Timed Out" then
 	//   we end up saving a blank robots.txt or doc here...
+	
 	if ( r->m_useTestCache && r->m_addToTestCache )
 		addTestDoc ( r->m_urlHash64,reply,replySize,
 			     savedErr , r );

@@ -2,9 +2,6 @@
 #include "SafeBuf.h"
 #include "HttpServer.h"
 
-// this is in main.cpp
-extern long g_buildMode;
-
 static long s_expectedCRC = 0;
 
 // after we got the reply and verified expected crc, call the callback
@@ -257,22 +254,6 @@ bool qainject ( ) {
 	}
 
 	//
-	// set buildmode
-	//
-	// enter qa build for for now. when this is off it will return 404
-	// for docs not stored in qa/ subdir
-	static bool s_x3 = false;
-	if ( ! s_x3 ) {
-		s_x3 = true;
-		if ( g_buildMode )
-			getUrl("/admin/master?qabuildmode=1");
-		else
-			getUrl("/admin/master?qabuildmode=0");
-		return false;
-	}
-		
-
-	//
 	// inject urls, return false if not done yet
 	//
 	static bool s_x4 = false;
@@ -405,6 +386,7 @@ bool qainject ( ) {
 
 
 static char *s_urls1 =
+	"+walmart.com"
 	"+cisco.com"
 	"+t7online.com"
 	"+sonyericsson.com"
@@ -533,21 +515,6 @@ bool qaspider ( ) {
 		return false;
 	}
 
-	//
-	// set buildmode
-	//
-	// enter qa build for for now. when this is off it will return 404
-	// for docs not stored in qa/ subdir
-	static bool s_x3 = false;
-	if ( ! s_x3 ) {
-		s_x3 = true;
-		if ( g_buildMode )
-			getUrl("/admin/master?qabuildmode=1");
-		else
-			getUrl("/admin/master?qabuildmode=0");
-		return false;
-	}
-
 
 	//
 	// use the add url interface now
@@ -616,24 +583,83 @@ bool qasquid ( ) {
 		return false;
 	}
 
-	//
-	// set buildmode
-	//
-	// enter qa build for for now. when this is off it will return 404
-	// for docs not stored in qa/ subdir
-	static bool s_x3 = false;
-	if ( ! s_x3 ) {
-		s_x3 = true;
-		if ( g_buildMode )
-			getUrl("/admin/master?qabuildmode=1");
-		else
-			getUrl("/admin/master?qabuildmode=0");
+	// 
+	// restrict hopcount to 0 or 1 in url filters so we do not spider
+	// too deep
+	static bool s_z1 = false;
+	if ( ! s_z1 ) {
+		s_z1 = true;
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123&ufp=0&fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=99&mspi=1&xg=1000&fsp=-3&fe1=hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=5&mspi1=1&xg1=1000&fsp1=3&fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&fe3=&hspl3=0&fsf3=0.000000&mspr3=0&mspi3=0&xg3=0&fsp3=0&action=submit");
+		getUrl ( "/admin/filters",0,sb.getBufStart());
 		return false;
 	}
 
 
-	// to the squid test here...
+	//
+	// spider some websites using addurl to hopcount 0 and 1.
+	//
+	static bool s_y2 = false;
+	if ( ! s_y2 ) {
+		s_y2 = true;
+		SafeBuf sb;
+		// delim=+++URL:
+		sb.safePrintf("&c=qatest123"
+			      "&format=json"
+			      "&strip=1"
+			      "&spiderlinks=1"
+			      "&urls="
+			      );
+		// . now a list of websites we want to spider
+		// . the space is already encoded as +
+		sb.safeStrcpy(s_urls1);
+		getUrl ( "/admin/addurl",0,sb.getBufStart());
+		return false;
+	}
 
+	// verify no 2 hopcounts in results
+	static bool s_y4 = false;
+	if ( ! s_y4 ) {
+		usleep(1500000);
+		s_y4 = true;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+			 "q=gbhopcount%%3A2",
+			 123456 );
+		return false;
+	}
+	
+	// check facet sections query for walmart
+	static bool s_y5 = false;
+	if ( ! s_y5 ) {
+		s_y5 = true;
+		getUrl ( "/search?c=qatest123&format=json&"
+			 "q=gbfacetstr%%3Agbxpathsitehash2492664135",
+			 123456 );
+		return false;
+	}
+
+	static bool s_y6 = false;
+	if ( ! s_y6 ) {
+		s_y6 = true;
+		getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 123456 );
+		return false;
+	}
+
+	// in xml
+	static bool s_y7 = false;
+	if ( ! s_y7 ) {
+		s_y7 = true;
+		getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 123456 );
+		return false;
+	}
+
+	// and json
+	static bool s_y8 = false;
+	if ( ! s_y8 ) {
+		s_y8 = true;
+		getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 123456 );
+		return false;
+	}
 
 
 	static bool s_fee2 = false;
