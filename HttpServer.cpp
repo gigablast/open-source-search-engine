@@ -3340,15 +3340,23 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	gotSquidProxiedContent ( sqs );
 }
 
+#include "PageInject.h" // Msg7
+
 void gotSquidProxiedContent ( void *state ) {
 	SquidState *sqs = (SquidState *)state;
 
 	// send back the reply
-	char *reply = sqs->m_msg13.m_replyBuf;
-	long  replySize = sqs->m_msg13.m_replyBufSize;
-	long replyAllocSize = sqs->m_msg13.m_replyBufAllocSize;
+	Msg13 *msg13 = &sqs->m_msg13;
+	char *reply = msg13->m_replyBuf;
+	long  replySize = msg13->m_replyBufSize;
+	long replyAllocSize = msg13->m_replyBufAllocSize;
 
 	TcpSocket *sock = sqs->m_sock;
+
+	if ( ! reply ) {
+		log("proxy: got empty reply from webserver. setting g_errno.");
+		g_errno = EBADREPLY;
+	}
 
 	// if it timed out or something...
 	if ( g_errno ) {
@@ -3377,10 +3385,11 @@ void gotSquidProxiedContent ( void *state ) {
 	//if ( replySize != replyAllocSize ) { char *xx=NULL;*xx=0; }
 
 	mdelete ( sqs, sizeof(SquidState), "sqs");
-	delete (sqs);
+	delete  ( sqs );
 
-	// the reply should already have a mime at the top since we are
-	// acting like a squid proxy, send it back...
+	// . the reply should already have a mime at the top since we are
+	//   acting like a squid proxy, send it back...
+	// . this should free the reply when done
 	TcpServer *tcp = &g_httpServer.m_tcp;
 	tcp->sendMsg ( sock ,
 		       reply ,  // sendbuf

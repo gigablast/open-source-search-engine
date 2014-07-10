@@ -3212,6 +3212,10 @@ bool SafeBuf::uncompress() {
 
 bool SafeBuf::safeTruncateEllipsis ( char *src , long maxLen ) {
 	long  srcLen = gbstrlen(src);
+	return safeTruncateEllipsis ( src , srcLen , maxLen );
+}
+
+bool SafeBuf::safeTruncateEllipsis ( char *src , long srcLen , long maxLen ) {
 	long  printLen = srcLen;
 	if ( printLen > maxLen ) printLen = maxLen;
 	if ( ! safeMemcpy ( src , printLen ) )

@@ -498,7 +498,9 @@ long getContentTypeFromStr ( char *s ) {
 	else if (!strcasecmp(s,"text"                    ) ) ct = CT_TEXT;
 	else if (!strcasecmp(s,"txt"                     ) ) ct = CT_TEXT;
 	else if (!strcasecmp(s,"application/xml"         ) ) ct = CT_XML;
-	else if (!strcasecmp(s,"application/xhtml+xml"   ) ) ct = CT_XML;
+	// we were not able to spider links on an xhtml doc because
+	// this was set to CT_XML, so try CT_HTML
+	else if (!strcasecmp(s,"application/xhtml+xml"   ) ) ct = CT_HTML;
 	else if (!strcasecmp(s,"application/rss+xml"     ) ) ct = CT_XML;
 	else if (!strcasecmp(s,"rss"                     ) ) ct = CT_XML;
 	else if (!strcasecmp(s,"application/rdf+xml"     ) ) ct = CT_XML;

@@ -303,6 +303,35 @@ void doneInjectingWrapper9 ( void *state ) {
 	msg7->m_callback ( msg7->m_state );
 }
 
+bool Msg7::inject ( char *coll ,
+		    char *proxiedUrl ,
+		    long  proxiedUrlLen ,
+		    char *content ,
+		    void *state ,
+		    void (*callback)(void *state) ) {
+
+	GigablastRequest *gr = &m_gr;
+	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
+	g_parms.setToDefault ( (char *)gr , OBJ_GBREQUEST , NULL);
+
+	// copy into safebufs in case the underlying data gets deleted.
+	gr->m_tmpBuf1.safeStrcpy ( coll );
+	gr->m_coll = gr->m_tmpBuf1.getBufStart();
+	
+	// copy into safebufs in case the underlying data gets deleted.
+	gr->m_tmpBuf2.safeMemcpy ( proxiedUrl , proxiedUrlLen );
+	gr->m_tmpBuf2.nullTerm();
+
+	gr->m_url = gr->m_tmpBuf2.getBufStart();
+
+	// copy into safebufs in case the underlying data gets deleted.
+	gr->m_tmpBuf3.safeStrcpy ( content );
+	gr->m_content = gr->m_tmpBuf3.getBufStart();
+	
+	gr->m_hasMime = true;
+
+	return inject ( state , callback );
+}
 
 bool Msg7::inject ( void *state ,
 		    void (*callback)(void *state) 

@@ -163,6 +163,11 @@ class GigablastRequest {
 	long  m_ern;
 	char *m_qlang;
         bool  m_forceDel;
+
+	// useful bufs to copy data over
+	SafeBuf m_tmpBuf1;
+	SafeBuf m_tmpBuf2;
+	SafeBuf m_tmpBuf3;
 };
 
 
@@ -467,7 +472,7 @@ class Parms {
 	bool addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) ;
 	bool updateParm ( char *rec , class WaitEntry *we ) ;
 
-	bool copyCollRec ( char *srcCR , char *dstCR ) ;
+	bool cloneCollRec ( char *srcCR , char *dstCR ) ;
 
 	//
 	// end new functions

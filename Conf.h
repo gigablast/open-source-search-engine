@@ -337,6 +337,10 @@ class Conf {
 	long  m_datedbMinFilesToMerge;
 	bool  m_datedbSaveCache;
 	// for caching exact quotas in Msg36.cpp
+
+	// used by qa.cpp and Msg13.cpp
+	bool  m_qaBuildMode;
+
 	//long  m_quotaTableMaxMem;
 
 	//bool  m_useBuckets;

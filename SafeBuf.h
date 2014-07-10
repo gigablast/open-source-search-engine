@@ -67,6 +67,8 @@ struct SafeBuf {
 	void filterQuotes();
 	bool truncateLongWords ( char *src, long srcLen , long minmax );
 	bool safeTruncateEllipsis ( char *src , long maxLen );
+	bool safeTruncateEllipsis ( char *src , long srcLen, long maxLen );
+
 	bool convertJSONtoXML ( long niceness , long startConvertPos );
 
 	bool safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness);

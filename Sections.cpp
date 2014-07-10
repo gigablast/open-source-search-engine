@@ -2020,6 +2020,36 @@ bool Sections::set ( Words     *w                       ,
 			p->m_indirectSentHash64 ^= sc64;
 	}
 
+	/////
+	//
+	// set SEC_HASHXPATH
+	//
+	/////
+	for ( Section *sn = m_firstSent ; sn ; sn = sn->m_nextSent ) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// sanity check
+		long long sc64 = sn->m_sentenceContentHash64;
+		if ( ! sc64 ) { char *xx=NULL;*xx=0; }
+		// propagate it upwards
+		Section *p = sn->m_parent;
+		// parent of sentence always gets it i guess
+		unsigned long long lastVal = 0x7fffffffffffffffLL;
+		// TODO: because we use XOR for speed we might end up with
+		// a 0 if two sentence are repeated, they cancel out..
+		for ( ; p ; p = p->m_parent ) {
+			// how can this be a text node?
+			if ( p->m_tagId == TAG_TEXTNODE ) continue;
+			// if parent's hash is same as its kid then do not
+			// hash it separately in order to save index space
+			// from adding gbxpathsitehash1234567 terms
+			if ( p->m_indirectSentHash64 == lastVal ) continue;
+			// update this for deduping
+			lastVal = p->m_indirectSentHash64;
+			// this parent should be hashed with gbxpathsitehash123
+			p->m_flags |= SEC_HASHXPATH;
+		}
+	}
 
 	//
 	// set Section::m_alnumPosA/m_alnumPosB
@@ -15644,7 +15674,8 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 
 		// show this stuff for tags that contain sentences indirectly,
 		// that is what we hash in XmlDoc::hashSections()
-		if ( sk->m_indirectSentHash64 && sk->m_tagId != TAG_TEXTNODE) {
+		//if(sk->m_indirectSentHash64 && sk->m_tagId != TAG_TEXTNODE) {
+		if ( sk->m_flags & SEC_HASHXPATH ) {
 			uint64_t mod;
 			mod = (unsigned long)sk->m_turkTagHash32;
 			mod ^= (unsigned long)(unsigned long long)m_siteHash64;
@@ -15669,8 +15700,9 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// some voting stats
 		SectionStats *ss = &sk->m_stats;
 		if ( ss->m_totalMatches )
-			m_sbuf->safePrintf("_m=%li _n=%li _u=%li "
+			m_sbuf->safePrintf("_s=M%liD%lin%liu%li "
 					   ,(long)ss->m_totalMatches
+					   ,(long)ss->m_totalDocIds
 					   ,(long)ss->m_totalEntries
 					   ,(long)ss->m_numUniqueVals
 					   );

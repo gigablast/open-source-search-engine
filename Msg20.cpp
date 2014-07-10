@@ -706,6 +706,8 @@ long Msg20Reply::deserialize ( ) {
 		*strPtr = p;
 		// make it NULL if size is 0 though
 		if ( *sizePtr == 0 ) *strPtr = NULL;
+		// null str?
+		if ( ! p ) *sizePtr = 0;
 		// sanity check
 		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
 		// advance our destination ptr

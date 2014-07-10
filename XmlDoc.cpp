@@ -6449,9 +6449,15 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 
-		// skip if sentence, only hash tags now i guess for diffbot
-		if ( m_si->m_sentenceContentHash64 ) 
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( m_si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( m_si->m_sentenceContentHash64 ) 
+		//	continue;
 
 		// get hash of sentences this tag contains indirectly
 		uint32_t val32 = (unsigned long)m_si->m_indirectSentHash64;
@@ -6524,9 +6530,15 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// skip if no content to hash
 		//if ( ! si->m_sentenceContentHash64 ) continue;
 
-		// skip if sentence, only hash tags now i guess for diffbot
-		if ( si->m_sentenceContentHash64 ) 
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( si->m_sentenceContentHash64 ) 
+		//	continue;
 
 		// get hash of sentences this tag contains indirectly
 		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
@@ -6911,7 +6923,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 	// "matches" is how many docids with this facet field had our facet val
 	long matches = 0;
 	// "totalDocIds" is how many docids had this facet field
-	long totalDocIds = 0;
+	long totalFields = 0;
 
 	if ( p ) {
 		// first is the termid
@@ -6931,7 +6943,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 				matches += *(long *)(p+4);
 			p += 4;
 			// now how many docids had this facet value?
-			totalDocIds += *(long *)p;
+			totalFields += *(long *)p;
 			p += 4;
 		}
 	}
@@ -6940,8 +6952,11 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 	// hash were there?
 	m_sectionStats.m_numUniqueVals = nh;//ft->m_numSlotsUsed;
 
-	// how many docids had this same facet field?
-	m_sectionStats.m_totalEntries = totalDocIds;
+	// how many xpaths existsed over all docs. doc can have multiple.
+	m_sectionStats.m_totalEntries = totalFields;
+
+	// total # unique docids that had this facet
+	m_sectionStats.m_totalDocIds = mr->m_estimatedHits;//totalHits;
 
 	// how many had the same inner html content hash for
 	// this xpath/site as we did? 
@@ -26933,9 +26948,15 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		//   big enought!
 		//uint64_t ih64 = si->m_sentenceContentHash64;
 
-		// skip if sentence, only hash tags now i guess for diffbot
-		if ( si->m_sentenceContentHash64 ) 
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( si->m_sentenceContentHash64 ) 
+		//	continue;
 
 		// get hash of sentences this tag contains indirectly
 		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
@@ -28671,6 +28692,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 			if      ( strncasecmp(qs,"str:"  ,4) == 0 ) qs += 4;
 			else if ( strncasecmp(qs,"int:"  ,4) == 0 ) qs += 4;
 			else if ( strncasecmp(qs,"float:",6) == 0 ) qs += 6;
+			else continue;
+			break;
 		}
 		// if we had a facet, get the values it has in the doc
 		if ( qs && *qs ) {
@@ -34599,50 +34622,70 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
 	sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
 
+	// but hack the Content-Length: field to something alien
+	// because we markup the html and the lenght will be different...
+	sb->nullTerm();
+	char *cl = strstr(sb->getBufStart(),"\nContent-Length:");
+	if ( cl ) cl[1] = 'Z';
+
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 
-	Section *si = sections->m_rootSection;
-	for ( ; si ; si = si->m_next ) {
-		// breathe
-		QUICKPOLL(m_niceness);
-		// print it out
-		char *byte1 = words->m_words[si->m_a];
-		long b = words->m_numWords;
-		// start of next section
-		if ( si->m_next ) b = si->m_next->m_a;
-		char *byte2 = words->m_words[b-1] + words->m_wordLens[b-1];
-		//long off1 = byte1 - words->m_words[0];
-		long size = byte2 - byte1;
-		// straight copy if no stats
-		if ( ! si->m_stats.m_totalEntries ) {
-			sb->safeMemcpy ( byte1 , size );
+	// just print out each word
+	// map the word to a section. 
+	// if it s the first time we've printed the section then we
+	// can inject the stuff
+	// set a printed bit to indicate when we print out a section so
+	// we do not re-print it...
+
+	// these are 1-1 with words
+	Section **sptrs = sections->m_sectionPtrs;
+	long nw = words->getNumWords();
+	char **wptrs = words->m_words;
+	long *wlens = words->m_wordLens;
+
+	for ( long i = 0 ; i < nw ; i++ ) {
+		char *a = wptrs[i];
+		if ( *a != '<' ) {
+			sb->safeMemcpy(a,wlens[i]);
 			continue;
 		}
-		// skip if not tag
-		if ( ! si->m_tagId ) continue;
+		Section *sa = sptrs[i];
+		// straight copy if no stats
+		if ( ! sa || ! sa->m_stats.m_totalEntries ) {
+			sb->safeMemcpy ( a , wlens[i] );
+			continue;
+		}
 		// should be tag then
-		char *t = byte1;
-		char *e = t;
+		char *e = a;
 		for ( ; *e && *e != '>' && ! is_wspace_a(*e) ; e++);
 		// copy that
-		sb->safeMemcpy ( t , e-t);
-		// insert our stuff into the tag
-		//sb->safePrintf("<!--");
-		//sb->safePrintf("<font color=red>");
-		SectionStats *sx = &si->m_stats;
-		// # docs from our site had the same innerHTML?
-		sb->safePrintf(" _s=%lim",(long)sx->m_totalMatches);
-		// # total docs from our site had the same X-path?
-		sb->safePrintf("%lin",(long)sx->m_totalEntries);
-		// unique values in the xpath innerhtml
-		sb->safePrintf("%liu",(long)sx->m_numUniqueVals);
+		sb->safeMemcpy ( a , e-a);
+
 		// the hash of the turktaghash and sitehash32 combined
 		// so you can do gbfacetstr:gbxpathsitehash12345
 		// where the 12345 is this h32 value.
-		unsigned long h32 = si->m_turkTagHash32 ^ siteHash32;
-		sb->safePrintf("%luh",h32);
+		unsigned long h32 = sa->m_turkTagHash32 ^ siteHash32;
+
+		// insert our stuff into the tag
+		//sb->safePrintf("<!--");
+		//sb->safePrintf("<font color=red>");
+		SectionStats *sx = &sa->m_stats;
+		// # docs from our site had the same innerHTML?
+		sb->safePrintf(" _s=M%liD%lin%liu%lih%lu",
+			       // total # of docs that had an xpath with
+			       // our same innerHtml
+			       (long)sx->m_totalMatches,
+			       // # of of docids with this facet
+			       (long)sx->m_totalDocIds,
+			       // . total # of times this xpath occurred
+			       // . can be multiple times per doc
+			       (long)sx->m_totalEntries,
+			       // unique values in the xpath innerhtml
+			       (long)sx->m_numUniqueVals,
+			       // xpathsitehash
+			       h32 );
 		// copy the rest of the tag
-		sb->safeMemcpy( e, size-(e-t) );
+		sb->safeMemcpy( e, wlens[i]-(e-a) );
 		//sb->safePrintf("-->");
 		//sb->safePrintf("</font>");
 		// print it here
@@ -48048,6 +48091,12 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
 	// sanity
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 
+	// if "qa" is a gbxpathsitehash123456 type of beastie then we
+	// gotta scan the sections
+	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
+		return storeFacetValuesSections ( qs , sb );
+
+
 	// if a json doc, get json field
 	if ( m_contentType == CT_JSON ) 
 		return storeFacetValuesJSON ( qs , sb );
@@ -48057,6 +48106,55 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
 
 	return true;
 }
+
+bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ) {
+
+	// scan all sections
+	Sections *ss = getSections();
+	if ( ! ss ) return false;
+	if ( ss == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
+	Words *ww = getWords();
+	if ( ! ww ) return false;
+	if ( ww == (void *)-1 ) { char *xx=NULL;*xx=0; }
+	
+	long siteHash32 = *getSiteHash32();
+
+	// qs is like gbxpathsitehash1234567
+	// so get the digit part
+	char *p = qs;
+	for ( ; *p && ! is_digit(*p); p++ );
+	uint64_t xsh = (unsigned long long)atoll(p);
+
+	Section *si = ss->m_rootSection;
+	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
+	for ( ; si ; si = si->m_next ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// is it a match?
+		uint64_t mod;
+		mod = (unsigned long)si->m_turkTagHash32;
+		mod ^= (unsigned long)siteHash32;
+		if ( mod != xsh ) continue;
+		// . then add facet VALUE
+		// . hash of the innerhtml of sentence
+		// . get hash of sentences this tag contains indirectly
+		unsigned long val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) continue;
+		// got one print the facet field
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+		if ( ! sb->safePrintf("%lu,",val32) ) return false;
+		// put ALSO print the string somewhat
+		char *a = m_words.m_words[si->m_next->m_a];
+		char *b = m_words.m_words[si->m_next->m_b-1];
+		b += m_words.m_wordLens  [si->m_next->m_b-1];
+		if ( ! sb->safeTruncateEllipsis (a,b-a,160) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+	}
+	return true;
+}
+
 
 bool XmlDoc::storeFacetValuesHtml ( char *qs , SafeBuf *sb ) {
 

@@ -113,6 +113,7 @@
 #define SEC_HASDATEHEADERROW        0x0002000000000000LL
 #define SEC_HASDATEHEADERCOL        0x0004000000000000LL
 #define SEC_MULTIDIMS               0x0008000000000000LL
+#define SEC_HASHXPATH               0x0010000000000000LL
 
 //#define SEC_HAS_ADDRESS        0x08000000
 //#define SEC_ADDRESS_CONTAINER  0x40000000
@@ -311,13 +312,18 @@ class SectionStats {
  public:
 	SectionStats() { reset(); }
 	void reset ( ) {
-		m_totalMatches = 0; // posdb key "val" matches ours
-		m_totalEntries = 0; // total posdb keys
+		m_totalMatches  = 0; // posdb key "val" matches ours
+		m_totalEntries  = 0; // total posdb keys
 		m_numUniqueVals = 0; // # of unique "vals"
+		m_totalDocIds   = 0;
 	};
+	// # of times xpath innerhtml matched ours. 1 count per docid max.
 	long long m_totalMatches;
+	// # of times this xpath occurred. doc can have multiple times.
 	long long m_totalEntries;
+	// # of unique vals this xpath had. doc can have multiple counts.
 	long long m_numUniqueVals;
+	long long m_totalDocIds;
 };
 
 
