@@ -588,6 +588,8 @@ bool qaspider ( ) {
 	return true;
 }
 
+// test ability for gb to act as a squid proxy that returns
+// html with _s= tag attributes inserted
 bool qasquid ( ) {
 
 	if ( ! s_callback ) s_callback = qaspider;

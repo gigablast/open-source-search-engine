@@ -15675,8 +15675,8 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// show this stuff for tags that contain sentences indirectly,
 		// that is what we hash in XmlDoc::hashSections()
 		//if(sk->m_indirectSentHash64 && sk->m_tagId != TAG_TEXTNODE) {
+		uint64_t mod = 0;
 		if ( sk->m_flags & SEC_HASHXPATH ) {
-			uint64_t mod;
 			mod = (unsigned long)sk->m_turkTagHash32;
 			mod ^= (unsigned long)(unsigned long long)m_siteHash64;
 			m_sbuf->safePrintf("<a style=decoration:none; "
@@ -15700,11 +15700,12 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// some voting stats
 		SectionStats *ss = &sk->m_stats;
 		if ( ss->m_totalMatches )
-			m_sbuf->safePrintf("_s=M%liD%lin%liu%li "
+			m_sbuf->safePrintf("_s=M%liD%lin%liu%lih%lu "
 					   ,(long)ss->m_totalMatches
 					   ,(long)ss->m_totalDocIds
 					   ,(long)ss->m_totalEntries
 					   ,(long)ss->m_numUniqueVals
+					   ,(unsigned long)mod
 					   );
 
 		// take this out for now... MDW 7/7/2014
