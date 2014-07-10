@@ -15677,6 +15677,10 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		//if(sk->m_indirectSentHash64 && sk->m_tagId != TAG_TEXTNODE) {
 		uint64_t mod = 0;
 		if ( sk->m_flags & SEC_HASHXPATH ) {
+		// show for all tags now because diffbot wants to see
+		// markup on all tags
+		//if ( sk->m_indirectSentHash64 && sk->m_tagId !=TAG_TEXTNODE){
+		//if ( sk->m_stats.m_totalDocIds ) {
 			mod = (unsigned long)sk->m_turkTagHash32;
 			mod ^= (unsigned long)(unsigned long long)m_siteHash64;
 			m_sbuf->safePrintf("<a style=decoration:none; "
@@ -15691,14 +15695,18 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 					   ,m_coll
 					   ,mod
 					   ,mod);
-			// also the value of the inner html hashed
+		}
+
+		SectionStats *ss = &sk->m_stats;
+
+		// also the value of the inner html hashed
+		if ( ss->m_totalMatches ) {
 			unsigned long val ;
 			val = (unsigned long) sk->m_indirectSentHash64 ;
 			m_sbuf->safePrintf("xpathsitehashval=%lu ", val );
 		}
 
 		// some voting stats
-		SectionStats *ss = &sk->m_stats;
 		if ( ss->m_totalMatches )
 			m_sbuf->safePrintf("_s=M%liD%lin%liu%lih%lu "
 					   ,(long)ss->m_totalMatches

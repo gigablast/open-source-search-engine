@@ -6451,7 +6451,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 		// don't bother with the section if it doesn't have this set
 		// because this eliminates parent dupage to reduce amount
-		// of gbxpathsitehash123456 terms we index
+		// of gbxpathsitehash123456 terms we index.
 		if ( ! ( m_si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
 
@@ -6567,6 +6567,37 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		if ( ! stats ) continue;
 		// copy
 		memcpy ( &si->m_stats , stats, sizeof(SectionStats) );
+	}
+
+	//
+	// now if a section has no stats but has the same 
+	// m_indirectSentHash64 as a kid, take his stats
+	//
+	Section *sx = ss->m_rootSection;
+	for ( ; sx ; sx = sx->m_next ) { 
+		// breathe
+		QUICKPOLL(m_niceness);
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( sx->m_flags & SEC_HASHXPATH ) ) 
+			continue;
+		// scan up parents and set their stats to ours as long as
+		// they have the same indirect sent hash64
+		Section *p = sx->m_parent;
+		for ( ; p ; p = p->m_parent ) {
+
+			// if parent is like an img tag, skip it
+			if ( p->m_tagId == TAG_IMG )
+				continue;
+
+			if ( p ->m_indirectSentHash64 !=
+			     sx->m_indirectSentHash64 ) 
+				break;
+
+			// copy it to parent with the same inner html hash
+			memcpy (&p->m_stats,&sx->m_stats,sizeof(SectionStats));
+		}
 	}
 
 	// now free the table's mem
@@ -34645,7 +34676,8 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 
 	for ( long i = 0 ; i < nw ; i++ ) {
 		char *a = wptrs[i];
-		if ( *a != '<' ) {
+		// skip if not a front tag
+		if ( *a != '<' || a[1] == '/' ) {
 			sb->safeMemcpy(a,wlens[i]);
 			continue;
 		}
