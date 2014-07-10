@@ -2711,8 +2711,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		return s;
 	}
 	char *pnew = newBuf;
-	char *pold = s->m_readBuf;
-	char *mimeEnd = pold + mime.getMimeLen();
+	char *mimeEnd = s->m_readBuf + mime.getMimeLen();
 
 	// copy header to the new buffer, do it in two parts, since we
 	// have to modify the encoding and content length as we go.
@@ -2720,9 +2719,8 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// so we need to rewrite the Content-Length: and the 
 	// Content-Encoding: http mime field values so they are no longer
 	// "gzip" and use the uncompressed content-length.
-	char *ptr;
-	char *ptr1;
-	char *ptr2;
+	char *ptr1 = NULL;
+	char *ptr2 = NULL;
 	if(mime.getContentEncodingPos() &&
 	   mime.getContentEncodingPos() < mime.getContentLengthPos()) {
 		ptr1 = mime.getContentEncodingPos();
@@ -2732,54 +2730,69 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		ptr1 = mime.getContentLengthPos();
 		ptr2 = mime.getContentEncodingPos();
 	}
-	ptr = ptr1;
 
-	while(ptr) {
-		long segLen = ptr - pold;
-		memcpy(pnew, pold, segLen);
-		pold += segLen;
-		pnew += segLen;
-		if(ptr == mime.getContentEncodingPos())
+	
+	if ( ! ptr1 )
+		ptr1 = s->m_readBuf;
+
+
+	char *src = s->m_readBuf;
+
+	// sometimes they are missing Content-Length:
+	if ( ptr1 ) {
+		// copy ptr1 to src
+		memcpy ( pnew, src, ptr1 - src );
+		pnew += ptr1 - src;
+		src  += ptr1 - src;
+		// store either the new content encoding or new length
+		if(ptr1 == mime.getContentEncodingPos())
 			pnew += sprintf(pnew, " identity");
-		else	pnew += sprintf(pnew, " %li",newSize);
-		// scan to end of mime field line so we skip the value
-		while(*pold != '\r' && *pold != '\n') pold++;
-		// then skip the \r\n at end of line
-		//if (*pold == '\r' && pold[1] == '\n') {
-		//	*pnew++ = *pold++;
-		//	*pnew++ = *pold++;
-		//}
-		// if we just got done with the 2nd field, then stop.
-		// we will copy the rest with "restLen" below
-		if(ptr == ptr2) break;//ptr = NULL;
-		// otherwise, point to the 2nd mime field and remove its
-		// value and replace it with the new content-length or
-		// "identity"
-		else ptr = ptr2;
+		else	
+			pnew += sprintf(pnew, " %li",newSize);
+		// scan to \r\n at end of that line we replace
+		while ( *src != '\r' && *src != '\n') src++;
 	}
 
+	if ( ptr2 ) {
+		// copy ptr2 to src
+		memcpy ( pnew , src , ptr2 - src );
+		pnew += ptr2 - src;
+		src  += ptr2 - src;
+		// now insert the new shit
+		if(ptr2 == mime.getContentEncodingPos())
+			pnew += sprintf(pnew, " identity");
+		else	
+			pnew += sprintf(pnew, " %li",newSize);
+		// scan to \r\n at end of that line we replace
+		while ( *src != '\r' && *src != '\n') src++;
+	}
 
-	long restLen = mimeEnd - pold;
+	// copy the rest
+	memcpy ( pnew , src , mimeEnd - src );
+	pnew += mimeEnd - src;
+	src  += mimeEnd - src;
+
 
 	// before restLen was negative because we were skipping over
 	// leading \n's in the document body because the while loop above
 	// was bad logic
-	if ( restLen < 0 || ! ptr1 ) {
-		log("http: got bad gzipped reply2 of size=%li.",
-		    newSize );
-		mfree (newBuf, need, "HttpUnzipError");
-		g_errno = ECORRUPTHTTPGZIP;
-		return s;
-	}
+	// if ( restLen < 0 || ! ptr1 ) {
+	// 	log("http: got bad gzipped reply2 of size=%li.",
+	// 	    newSize );
+	// 	mfree (newBuf, need, "HttpUnzipError");
+	// 	g_errno = ECORRUPTHTTPGZIP;
+	// 	return s;
+	// }
 		
-	memcpy(pnew, pold, restLen);
- 	pold += restLen;
- 	pnew += restLen;
+	// memcpy(pnew, pold, restLen);
+ 	// pold += restLen;
+ 	// pnew += restLen;
+
 	long unsigned int uncompressedLen = newSize;
 	long compressedLen = s->m_readOffset-mime.getMimeLen();
 
 	int zipErr = gbuncompress((unsigned char*)pnew, &uncompressedLen,
-				  (unsigned char*)pold, 
+				  (unsigned char*)src, 
 				  compressedLen);
 	
 
