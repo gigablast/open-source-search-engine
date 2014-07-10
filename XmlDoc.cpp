@@ -6449,9 +6449,15 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 
-		// skip if sentence, only hash tags now i guess for diffbot
-		if ( m_si->m_sentenceContentHash64 ) 
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( m_si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( m_si->m_sentenceContentHash64 ) 
+		//	continue;
 
 		// get hash of sentences this tag contains indirectly
 		uint32_t val32 = (unsigned long)m_si->m_indirectSentHash64;
@@ -6524,9 +6530,15 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// skip if no content to hash
 		//if ( ! si->m_sentenceContentHash64 ) continue;
 
-		// skip if sentence, only hash tags now i guess for diffbot
-		if ( si->m_sentenceContentHash64 ) 
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( si->m_sentenceContentHash64 ) 
+		//	continue;
 
 		// get hash of sentences this tag contains indirectly
 		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
@@ -26936,9 +26948,15 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		//   big enought!
 		//uint64_t ih64 = si->m_sentenceContentHash64;
 
-		// skip if sentence, only hash tags now i guess for diffbot
-		if ( si->m_sentenceContentHash64 ) 
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( si->m_flags & SEC_HASHXPATH ) ) 
 			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( si->m_sentenceContentHash64 ) 
+		//	continue;
 
 		// get hash of sentences this tag contains indirectly
 		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
