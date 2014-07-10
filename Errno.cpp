@@ -185,6 +185,7 @@ case EDIFFBOTUNKNOWNERROR: return "Diffbot unknown error";
 case EMISSINGINPUT: return "Missing required input parms";
 case EDMOZNOTREADY: return "Dmoz is not setup, follow instructions in "
 			"admin.html to setup";
+case EREADONLYMODE: return "In read only mode. Failed.";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

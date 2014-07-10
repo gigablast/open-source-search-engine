@@ -1036,6 +1036,9 @@ unsigned long Parms::calcChecksum() {
 }
 */
 
+// from Pages.cpp
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+
 // returns false and sets g_errno on error
 bool Parms::setGigablastRequest ( TcpSocket *socket ,
 				  HttpRequest *hrArg ,
@@ -1044,12 +1047,15 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	long page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
+
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
 		log("admin: THIS is null for page %li.",page);
 		return false;
 	}
+
+	gr->m_socket = socket;
 
 	// make a copy of the httprequest because the original is on the stack
 	// in HttpServer::requestHandler()
@@ -1061,8 +1067,6 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 
 	// use the one we copied which won't disappear/beFreed on us
 	HttpRequest *hr = &gr->m_hr;
-
-	gr->m_socket = socket;
 
 	// need this
 	long obj = OBJ_GBREQUEST;
@@ -13925,7 +13929,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_off   = (char *)&gr.m_harvestLinksBox - (char *)&gr;
+	m->m_off   = (char *)&gr.m_harvestLinks - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "1";
 	m->m_flags = PF_API;

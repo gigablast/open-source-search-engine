@@ -89,6 +89,8 @@ class Page {
 	char *m_title;    // browser title bar
 };
 
+#include "Msg4.h"
+
 // generic gigablast request. for all apis offered.
 class GigablastRequest {
  public:
@@ -151,7 +153,9 @@ class GigablastRequest {
 	///////////
 	char *m_urlsBuf;
 	char  m_stripBox;
-	char  m_harvestLinksBox;
+	char  m_harvestLinks;
+	SafeBuf m_listBuf;
+	Msg4 m_msg4;
 
 	/////////////
 	//

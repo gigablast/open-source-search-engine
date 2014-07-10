@@ -838,7 +838,7 @@ bool endsWith(char *haystack, int haystackLen, char *needle, int needleLen) {
     return haystackLen >= needleLen && !strncmp(haystack + haystackLen - needleLen, needle, needleLen);
 }
 
-#include "Pages.h" // sendPageAPI
+#include "Pages.h" // sendPageAPI, printApiForPage()
 
 // . reply to a GET (including partial get) or HEAD request
 // . HEAD just returns the MIME header for the file requested
@@ -1000,6 +1000,33 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//   which ended up calling sendPageEvents() on the proxy!!
 	if ( isProxy && ( n == PAGE_RESULTS || n == PAGE_ROOT ) )
 		n = -1;
+
+	//////////
+	//
+	// if they say &showparms=1 on any page we show the input parms
+	//
+	//////////
+	char format = r->getReplyFormat();
+	long showInputParms = r->getLong("showinputparms",0);
+	WebPage *wp = g_pages.getPage(n);
+	if ( wp && (wp->m_pgflags & PG_NOAPI) ) showInputParms = false;
+	if ( showInputParms ) {
+		SafeBuf sb;
+		CollectionRec *cr = g_collectiondb.getRec ( r );
+		printApiForPage ( &sb , n , cr );
+		char *ct = "text/html";
+		if ( format == FORMAT_JSON ) ct = "application/json";
+		if ( format == FORMAT_XML  ) ct = "text/xml";
+		return g_httpServer.sendDynamicPage(s,
+						    sb.getBufStart(),
+						    sb.length(),
+						    0, false, 
+						    ct,
+						    -1, NULL,
+						    "UTF-8");
+	}
+
+
 
 	// map to new events page if we are eventguru.com
 	//if ( isNewSite && ( n == PAGE_RESULTS || n == PAGE_ROOT ) )
@@ -1494,6 +1521,12 @@ void cleanUp ( void *state , TcpSocket *s ) {
 	if ( s && s->m_state == f ) s->m_state = NULL;
 }
 
+bool HttpServer::sendSuccessReply ( GigablastRequest *gr , char *addMsg ) {
+	return sendSuccessReply ( gr->m_socket ,
+				  gr->m_hr.getReplyFormat() ,
+				  addMsg );
+}
+
 bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
 	// get time in secs since epoch
 	time_t now ;
@@ -1564,6 +1597,71 @@ bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
 	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
 }
 
+bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
+
+	long error = g_errno;
+	char *errmsg = mstrerror(error);
+
+	time_t now ;//= getTimeGlobal();
+	if ( isClockInSync() ) now = getTimeGlobal();
+	else                   now = getTimeLocal();
+
+	long format = gr->m_hr.getReplyFormat();
+	char msg[1024];
+	SafeBuf sb(msg,1024,0,false);
+	char *tt = asctime(gmtime ( &now ));
+	tt [ gbstrlen(tt) - 1 ] = '\0';
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+
+	SafeBuf xb;
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		xb.safePrintf("<html><b>Error = %s</b></html>",errmsg );
+
+	if ( format == FORMAT_XML ) {
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>%li</statusCode>\n"
+			      "\t<statusMsg><![CDATA[", error );
+		xb.cdataEncode(errmsg );
+		xb.safePrintf("]]></statusMsg>\n"
+			      "</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		xb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":%li,\n"
+			      "\t\"statusMsg\":\"", error );
+		xb.jsonEncode(errmsg );
+		xb.safePrintf("\"\n"
+			      "}\n"
+			      "}\n");
+	}
+
+	sb.safePrintf(
+		      "HTTP/1.0 %li (%s)\r\n"
+		      "Content-Length: %li\r\n"
+		      "Connection: Close\r\n"
+		      "Content-Type: %s\r\n"
+		      "Date: %s UTC\r\n\r\n"
+		      ,
+		      error  ,
+		      errmsg ,
+
+		      xb.length(),
+
+		      ct ,
+		      tt ); // ctime ( &now ) ,
+
+
+	sb.safeMemcpy ( &xb );
+
+	// use this new function that will compress the reply now if the
+	// request was a ZET instead of a GET
+	return sendReply2 ( msg , sb.length() , NULL , 0 , gr->m_socket );
+}
 
 // . send an error reply, like "HTTP/1.1 404 Not Found"
 // . returns false if blocked, true otherwise

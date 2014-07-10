@@ -2460,8 +2460,6 @@ int parmcmp ( const void *a, const void *b ) {
 #define LIGHT_YELLOW "ffcccc"
 
 
-bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
-
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
 // the xml output table and the json output table
@@ -2634,7 +2632,17 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>Input</b></tr></tr>"
+			"<center><b>Input</b>"
+
+			// show input parms in these formats
+			" &nbsp; [ "
+			"<a href=/%s?showinputparms=1&format=xml>xml</a> "
+			"<a href=/%s?showinputparms=1&format=json>json</a> "
+			"<a href=/%s?showinputparms=1&format=html>html</a> "
+			 "]"
+
+			"</td>"
+			"</tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>#</b></td>"
 			"<td><b>parm</b></td>"
@@ -2644,6 +2652,9 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			"<td><b>Default Value</b></td>"
 			"<td><b>Description</b></td></tr>\n"
 			, TABLE_STYLE
+			, pageStr
+			, pageStr
+			, pageStr
 			, DARK_BLUE );
 	
 	const char *blues[] = {DARK_BLUE,LIGHT_BLUE};
