@@ -2,46 +2,20 @@
 #include "SafeBuf.h"
 #include "HttpServer.h"
 
-static long s_failures = 0;
+// this is in main.cpp
+extern long g_buildMode;
 
-bool getUrl( char *path , 
-	     void (* callback) (void *state, TcpSocket *sock) ,
-	     char *post = NULL ) {
-	SafeBuf sb;
-	sb.safePrintf ( "http://%s:%li%s"
-			, iptoa(g_hostdb.m_myHost->m_ip)
-			, (long)g_hostdb.m_myHost->m_httpPort
-			, path
-			);
-	Url u;
-	u.set ( sb.getBufStart() );
-	log("qa: getting %s",sb.getBufStart());
-	if ( ! g_httpServer.getDoc ( u.getUrl() ,
-				     0 , // ip
-				     0 , // offset
-				     -1 , // size
-				     0 , // ifmodsince
-				     NULL ,
-				     callback ,
-				     60*1000, // timeout
-				     0, // proxyip
-				     0, // proxyport
-				     -1, // maxtextdoclen
-				     -1, // maxotherdoclen
-				     NULL , // useragent
-				     "HTTP/1.0" , // protocol
-				     true , // doPost
-				     NULL , // cookie
-				     NULL , // additionalHeader
-				     NULL , // fullRequest
-				     post ) )
-		return false;
-	// error?
-	log("qa: getUrl error: %s",mstrerror(g_errno));
-	return true;
-}	
+static long s_expectedCRC = 0;
 
-bool qatest ( ) ;
+// after we got the reply and verified expected crc, call the callback
+static bool (*s_callback)() = NULL;
+
+// first inject a set list of urls
+static char  **s_urlPtrs = NULL;
+static char  **s_contentPtrs = NULL;
+static SafeBuf s_ubuf1;
+static SafeBuf s_ubuf2;
+static SafeBuf s_cbuf2;
 
 void markOut ( char *reply , char *needle ) {
 
@@ -76,11 +50,16 @@ long qa_hash32 ( char *s ) {
 	return h;
 }
 
-long s_replyCRC = 0;
-TcpSocket *s_sock = NULL;
-static bool (*s_callback)() = NULL;
 
-void qatestWrapper ( void *state , TcpSocket *sock ) { 
+// come here after receiving ANY reply from the gigablast server
+static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
+
+	// store our current reply
+	SafeBuf fb2;
+	fb2.safeMemcpy(sock->m_readBuf,sock->m_readOffset);
+	fb2.nullTerm();
+
+	// log that we got the reply
 	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
 
 	// get mime
@@ -106,23 +85,97 @@ void qatestWrapper ( void *state , TcpSocket *sock ) {
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
-	s_replyCRC = qa_hash32 ( content );
+	long replyCRC = qa_hash32 ( content );
 
-	// this too is used for recording the reply into a file on disk
-	s_sock = sock;
+	// if what we expected, save to disk if not there yet, then
+	// call s_callback() to resume the qa pipeline
+	if ( replyCRC == s_expectedCRC ) {
+		// save reply if good
+		char fn3[1024];
+		sprintf(fn3,"%sqa/reply.%li",g_hostdb.m_dir,replyCRC);
+		File ff; ff.set ( fn3 );
+		if ( ! ff.doesExist() ) {
+			// if not there yet then save it
+			fb2.save(fn3);
+		}
+		// . continue on with the qa process
+		// . which qa function that may be
+		s_callback();
+		return;
+	}
 
-	// continue qa loop
-	//qatest(); 
+
+	//
+	// if crc of reply does not match what was expected then do a diff
+	// so we can see why not
+	//
+
+	const char *emsg = "qa: bad replyCRC of %li should be %li "
+		"\n";//"phase=%li\n";
+	fprintf(stderr,emsg,replyCRC,s_expectedCRC);//,s_phase-1);
+	// get response on file
+	SafeBuf fb1;
+	char fn1[1024];
+	sprintf(fn1,"%sqa/reply.%li",g_hostdb.m_dir,s_expectedCRC);
+	fb1.load(fn1);
+	fb1.nullTerm();
+	// break up into lines
+	char fn2[1024];
+	sprintf(fn2,"/tmp/reply.%li",replyCRC);
+	fb2.save ( fn2 );
+
+	// do the diff between the two replies so we can see what changed
+	char cmd[1024];
+	sprintf(cmd,"diff %s %s",fn1,fn2);
+	fprintf(stderr,"%s\n",cmd);
+	system(cmd);
+	// if this is zero allow it to slide by. it is learning mode i guess.
+	// so we can learn what crc we need to use.
+	// otherwise, stop right there for debugging
+	if ( s_expectedCRC != 0 ) exit(1);
+
+	// keep on going
 	s_callback();
+}
+
+bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
+
+	SafeBuf sb;
+	sb.safePrintf ( "http://%s:%li%s"
+			, iptoa(g_hostdb.m_myHost->m_ip)
+			, (long)g_hostdb.m_myHost->m_httpPort
+			, path
+			);
+
+	s_expectedCRC = expectedCRC;
+
+	Url u;
+	u.set ( sb.getBufStart() );
+	log("qa: getting %s",sb.getBufStart());
+	if ( ! g_httpServer.getDoc ( u.getUrl() ,
+				     0 , // ip
+				     0 , // offset
+				     -1 , // size
+				     0 , // ifmodsince
+				     NULL ,
+				     gotReplyWrapper,
+				     60*1000, // timeout
+				     0, // proxyip
+				     0, // proxyport
+				     -1, // maxtextdoclen
+				     -1, // maxotherdoclen
+				     NULL , // useragent
+				     "HTTP/1.0" , // protocol
+				     true , // doPost
+				     NULL , // cookie
+				     NULL , // additionalHeader
+				     NULL , // fullRequest
+				     post ) )
+		return false;
+	// error?
+	log("qa: getUrl error: %s",mstrerror(g_errno));
+	return true;
 }	
-
-// first inject a set list of urls
-static char  **s_urlPtrs = NULL;
-static char  **s_contentPtrs = NULL;
-static SafeBuf s_ubuf1;
-static SafeBuf s_ubuf2;
-static SafeBuf s_cbuf2;
-
 
 bool loadUrls ( ) {
 	static bool s_loaded = false;
@@ -172,220 +225,23 @@ static char *s_queries[] = {
 };
 */
 
-#include "Msg0.h"
-static Msg0 s_msg0;
-static RdbList s_list;
-
-void gotList33 ( void *state ) {
-	long *rdbId = (long *)state;
-	if ( ! s_list.isEmpty() ) {
-		log("qa: delete failed. list is not empty rdbid=%li.",*rdbId);
-		s_failures++;
-	}
-	// resume main loop
-	qatest();
-}
-
-// scan all Rdb databases and ensure no recs (it was a clean delete)
-bool checkRdbLists ( long *rdbId ) {
-	CollectionRec *cr = g_collectiondb.getRec("qatest123");
-	if ( ! cr ) return true;
-	collnum_t cn = cr->m_collnum;
-	for ( ; *rdbId < RDB_END ; ) {
-		// pre-inc it
-		*rdbId = *rdbId + 1;
-		char minKey[MAX_KEY_BYTES];
-		char maxKey[MAX_KEY_BYTES];
-	        KEYMIN(minKey,MAX_KEY_BYTES);
-	        KEYMAX(maxKey,MAX_KEY_BYTES);
-		if ( ! s_msg0.getList ( 0 , // hostid
-					0 , // ip
-					0 , // port
-					0 , // cacheage
-					false, // addtocache
-					*rdbId , // rdbid
-					cn , // collnum
-					&s_list ,
-					minKey ,
-					maxKey ,
-					1000 , // minrecsizes
-					rdbId , // state
-					gotList33,
-					0 // niceness
-					) )
-			return false;
-	}
-	return true;
-}
-
-// once we have triggered the dump this will cause all rdbs to tightmerge
-void doneDumping ( void *state , TcpSocket *sock ) {
-	CollectionRec *cr = g_collectiondb.getRec("qatest123");
-	if ( ! cr ) { qatest(); return; }
-	// tight merge the rdb that was dumped
-	for ( long i = 0 ; i < RDB_END ; i++ ) {
-		Rdb *rdb = getRdbFromId ( i );
-		if ( ! rdb ) continue;
-		RdbBase *base = rdb->getBase ( cr->m_collnum );
-		if ( ! base ) continue;
-		// . force a tight merge as soon as dump completes
-		// . the dump should already be going
-		base->m_nextMergeForced = true;
-	}
-	// wait for tight merges to complete now
-	qatest();
-}
-
-bool dumpTreesToDisk () {
-	static bool s_done = false;
-	if ( s_done ) return true;
-	s_done = true;
-	// force dump data to disk. dumps all rdbs.
-	return getUrl("/admin/master?dump=1",doneDumping );
-}
-
-void doneAddingUrls ( void *state ) {
-	qatest();
-}
-
-void sleepCallback ( int fd , void *state ) {
-	qatest();
-}
-
-// check every second to see if merges are done
-bool waitForMergeToFinish ( ) {
-	// if registered
-	static bool s_registered = false;
-	if ( s_registered ) {
-		g_loop.unregisterSleepCallback ( NULL , sleepCallback );
-		s_registered = false;
-	}
-	CollectionRec *cr = g_collectiondb.getRec("qatest123");
-	if ( ! cr ) { qatest(); return true; }
-	// tight merge the rdb that was dumped
-	long i; for ( i = 0 ; i < RDB_END ; i++ ) {
-		Rdb *rdb = getRdbFromId ( i );
-		if ( ! rdb ) continue;
-		RdbBase *base = rdb->getBase ( cr->m_collnum );
-		if ( ! base ) continue;
-		// . force a tight merge as soon as dump completes
-		// . the dump should already be going
-		if ( base->m_nextMergeForced ) return false;
-		// still waiting on this merge
-		break;
-	}
-	// if not still waiting return true
-	if ( i >= RDB_END ) return true;
-	// sleep for 1 second
-	g_loop.registerSleepCallback ( 1000 , // 1000 ms
-				       NULL , // state
-				       sleepCallback ,
-				       0 ); // niceness
-	s_registered = true;
-	return false;
-}
-
-bool resetColl ( ) {
-	static bool s_flag = false;
-	if ( s_flag ) return true;
-	s_flag = true;
-	// also turn spiders on
-	return getUrl("/admin/master?reset=qatest123&se=1", qatestWrapper );
-}
-	
-bool addUrlTest ( ) {
-	static bool s_flag = false;
-	if ( s_flag ) return true;
-	s_flag = true;
-	return getUrl ( "/admin/addurl"
-			"?c=qatest123&u=www.dmoz.org+www.ibm.com+"
-			"www.diffbot.com"
-			, qatestWrapper );
-}
-
-// check every second to see if spidering phase is completed
-bool checkSpidersDone ( ) {
-	// if registered
-	static bool s_registered = false;
-	if ( s_registered ) {
-		g_loop.unregisterSleepCallback ( NULL , sleepCallback );
-		s_registered = false;
-	}
-	// we have to adjust this once we know how many pages we'll archive
-	CollectionRec *cr = g_collectiondb.getRec("qatest123");
-	if ( ! cr ) { qatest(); return true; }
-	// return true if all done
-	if ( cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >= 200 )
-		return true;
-	// sleep for 1 second
-	g_loop.registerSleepCallback ( 1000 , // 1000 ms
-				       NULL , // state
-				       sleepCallback ,
-				       0 ); // niceness
-	s_registered = true;
-	return false;
-}
-
-//static long s_phase = -1;
-
-void checkCRC ( long needCRC ) {
-
-	// and our current reply
-	SafeBuf fb2;
-	fb2.safeMemcpy(s_sock->m_readBuf,s_sock->m_readOffset);
-	fb2.nullTerm();
-
-	if ( s_replyCRC == needCRC ) {
-		// save reply if good
-		char fn3[1024];
-		sprintf(fn3,"%sqa/reply.%li",g_hostdb.m_dir,needCRC);
-		File ff; ff.set ( fn3 );
-		if ( ff.doesExist() ) return;
-		// if not there yet then save it
-		fb2.save(fn3);
-		return;
-	}
-
-	const char *emsg = "qa: bad replyCRC of %li should be %li "
-		"\n";//"phase=%li\n";
-	fprintf(stderr,emsg,s_replyCRC,needCRC);//,s_phase-1);
-	// get response on file
-	SafeBuf fb1;
-	char fn1[1024];
-	sprintf(fn1,"%sqa/reply.%li",g_hostdb.m_dir,needCRC);
-	fb1.load(fn1);
-	fb1.nullTerm();
-	// break up into lines
-	char fn2[1024];
-	sprintf(fn2,"/tmp/reply.%li",s_replyCRC);
-	fb2.save ( fn2 );
-
-	// do the diff between the two replies so we can see what changed
-	char cmd[1024];
-	sprintf(cmd,"diff %s %s",fn1,fn2);
-	fprintf(stderr,"%s\n",cmd);
-	system(cmd);
-	// if this is zero allow it to slide by. it is learning mode i guess.
-	// so we can learn what crc we need to use.
-	if ( needCRC == 0 ) return;
-	// otherwise, stop right there for debugging
-	exit(1);
-}
-
 #undef usleep
 
 //
 // the injection qa test suite
 //
-bool qainject () {
+bool qainject ( ) {
 
 	if ( ! s_callback ) s_callback = qainject;
 
+	//
+	// delete the 'qatest123' collection
+	//
 	static bool s_x1 = false;
 	if ( ! s_x1 ) {
 		s_x1 = true;
-		return getUrl ( "/admin/delcoll?delcoll=qatest123" , 
-				qatestWrapper );
+		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
+		return false;
 	}
 
 	//
@@ -394,19 +250,27 @@ bool qainject () {
 	static bool s_x2 = false;
 	if ( ! s_x2 ) {
 		s_x2 = true;
-		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
-				qatestWrapper ) )
-			return false;
+		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+			 // checksum of reply expected
+			 238170006 );
+		return false;
 	}
 
 	//
-	// check addcoll reply
+	// set buildmode
 	//
+	// enter qa build for for now. when this is off it will return 404
+	// for docs not stored in qa/ subdir
 	static bool s_x3 = false;
 	if ( ! s_x3 ) {
 		s_x3 = true;
-		checkCRC ( 238170006 );
+		if ( g_buildMode )
+			getUrl("/admin/master?qabuildmode=1");
+		else
+			getUrl("/admin/master?qabuildmode=0");
+		return false;
 	}
+		
 
 	//
 	// inject urls, return false if not done yet
@@ -429,7 +293,9 @@ bool qainject () {
 			sb.nullTerm();
 			// pre-inc it in case getUrl() blocks
 			s_ii++;
-			getUrl("/admin/inject",qatestWrapper,sb.getBufStart());
+			getUrl("/admin/inject",
+			       0, // no idea what crc to expect
+			       sb.getBufStart());
 			return false;
 		}
 		s_x4 = true;
@@ -441,25 +307,18 @@ bool qainject () {
 		usleep(1500000);
 		s_x5 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-			 qatestWrapper );
+			 -1452050577 );
 		return false;
 	}
-
-	static bool s_x6 = false;
-	if ( ! s_x6 ) { s_x6 = true ; checkCRC ( -1452050577 ); }
-
 
 	// sports news
 	static bool s_x7 = false;
 	if ( ! s_x7 ) {
 		s_x7 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports+news",
-			 qatestWrapper );
+			 -1586622518 );
 		return false;
 	}
-
-	static bool s_x8 = false;
-	if ( ! s_x8 ) { s_x8 = true; checkCRC ( -1586622518 ); }
 
 	//
 	// eject/delete the urls
@@ -474,7 +333,7 @@ bool qainject () {
 		sb.nullTerm();
 		// pre-inc it in case getUrl() blocks
 		s_ii2++;
-		getUrl ( sb.getBufStart() , qatestWrapper );
+		getUrl ( sb.getBufStart() , 0 );
 		return false;
 	}
 
@@ -486,13 +345,9 @@ bool qainject () {
 		usleep(1500000);
 		s_x9 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-			 qatestWrapper );
+			 -1672870556 );
 		return false;
 	}
-
-	// seems to have <docsInCollection>2</>
-	static bool s_y1 = false;
-	if ( ! s_y1 ) { s_y1 = true; checkCRC ( -1672870556 ); }
 
 	//
 	// try delimeter based injecting
@@ -509,13 +364,12 @@ bool qainject () {
 		SafeBuf ubuf;
 		ubuf.load("./injectme3");
 		sb.urlEncode(ubuf.getBufStart());
-		getUrl ( "/admin/inject",qatestWrapper,sb.getBufStart());
+		getUrl ( "/admin/inject",
+			 // check reply, seems to have only a single docid init
+			 -1970198487,
+			 sb.getBufStart());
 		return false;
 	}
-
-	// check the reply, seems to have only a single docid in it...
-	static bool s_y3 = false;
-	if ( ! s_y3 ) { s_y3 = true; checkCRC ( -1970198487 ); }
 
 	// now query check
 	static bool s_y4 = false;
@@ -523,62 +377,25 @@ bool qainject () {
 		usleep(1500000);
 		s_y4 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-			 qatestWrapper );
+			 -480078278 );
 		return false;
 	}
 
-	// check search results crc
-	static bool s_y5 = false;
-	if ( ! s_y5 ) { s_y5 = true; checkCRC ( -480078278 ); }
-
-
-
-
-
-
-	// now get rdblist for every rdb for this coll and make sure all zero!
-	//if ( ! checkRdbLists ( &s_rdbId1 ) ) return false;
-
-	// dump, tight merge and ensure no data in our rdbs for this coll
-	//if ( ! dumpTreesToDisk() ) return false;
-
-	// wait for tight merge to complete
-	//if ( ! waitForMergeToFinish() ) return false;
-
-	// now get rdblist for every rdb for this coll and make sure all zero!
-	//if ( ! checkRdbLists ( &s_rdbId2 ) ) return false;
-
-	// reset the collection so we can test spidering
-	//if ( ! resetColl ( ) ) return false;
-
-	// add urls to seed spider with. make msg13.cpp recognize qatest123
-	// collection and return 404 on urls not in our official list so
-	// we can ensure search result consistency. msg13.cpp will initially
-	// store the pages in a file, like the first 1,000 or so pages.
-	//if ( ! addUrlTest () ) return false;
-
-	// wait for spidering to complete. sleep callback. # of spidered urls
-	// will be x, so we know when to stop
-	//if ( ! checkSpidersDone() ) return false;
-
-	// try a query delete
-	//if ( ! queryDeleteTest() ) return false;
-
-	// ensure empty
-	//if ( ! checkRdbLists ( &s_rdbId3 ) ) return false;
-
-	// delete the collection
-	static bool s_fee = false;
-	if ( ! s_fee ) {
-		s_fee = true;
-		return getUrl ( "/admin/delcoll?delcoll=qatest123" , 
-				qatestWrapper );
+	//
+	// delete the 'qatest123' collection
+	//
+	if ( ! s_x1 ) {
+		s_x1 = true;
+		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
+		return false;
 	}
+
 
 	static bool s_fee2 = false;
 	if ( ! s_fee2 ) {
 		s_fee2 = true;
-		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED QA TEST\n\n\n");
+		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
+			"QA INJECT TEST\n\n\n");
 		return true;
 	}
 
@@ -694,11 +511,13 @@ bool qaspider ( ) {
 
 	if ( ! s_callback ) s_callback = qaspider;
 
+	//
+	// delete the 'qatest123' collection
+	//
 	static bool s_x1 = false;
 	if ( ! s_x1 ) {
 		s_x1 = true;
-		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" , 
-			 qatestWrapper );
+		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
 		return false;
 	}
 
@@ -709,30 +528,26 @@ bool qaspider ( ) {
 	if ( ! s_x2 ) {
 		s_x2 = true;
 		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
-			 qatestWrapper );
+			 // checksum of reply expected
+			 238170006 );
 		return false;
 	}
 
 	//
-	// check addcoll reply
+	// set buildmode
 	//
+	// enter qa build for for now. when this is off it will return 404
+	// for docs not stored in qa/ subdir
 	static bool s_x3 = false;
 	if ( ! s_x3 ) {
 		s_x3 = true;
-		checkCRC ( 238170006 );
-	}
-
-	// . TODO: turn this off later once we've built up an archive
-	//   of several hundred docs or so.
-	// . enter qa build for for now. when this is off it will return 404
-	//   for docs not stored in qa/ subdir
-	static bool s_x4 = false;
-	if ( ! s_x4 ) {
-		s_x4 = true;
-		getUrl("/admin/master?qabuildmode=1",qatestWrapper);
+		if ( g_buildMode )
+			getUrl("/admin/master?qabuildmode=1");
+		else
+			getUrl("/admin/master?qabuildmode=0");
 		return false;
 	}
-	
+
 
 	//
 	// use the add url interface now
@@ -751,10 +566,82 @@ bool qaspider ( ) {
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
 		sb.safeStrcpy(s_urls1);
-		getUrl ( "/admin/addurl",qatestWrapper,sb.getBufStart());
+		getUrl ( "/admin/addurl",0,sb.getBufStart());
 		return false;
 	}
 	
+	// delete the collection
+	static bool s_fee = false;
+	if ( ! s_fee ) {
+		s_fee = true;
+		return getUrl ( "/admin/delcoll?delcoll=qatest123" );
+	}
+
+	static bool s_fee2 = false;
+	if ( ! s_fee2 ) {
+		s_fee2 = true;
+		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
+			"QA SPIDER TEST\n\n\n");
+		return true;
+	}
+
+	return true;
+}
+
+bool qasquid ( ) {
+
+	if ( ! s_callback ) s_callback = qaspider;
+
+	//
+	// delete the 'qatest123' collection
+	//
+	static bool s_x1 = false;
+	if ( ! s_x1 ) {
+		s_x1 = true;
+		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
+		return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	static bool s_x2 = false;
+	if ( ! s_x2 ) {
+		s_x2 = true;
+		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+			 // checksum of reply expected
+			 238170006 );
+		return false;
+	}
+
+	//
+	// set buildmode
+	//
+	// enter qa build for for now. when this is off it will return 404
+	// for docs not stored in qa/ subdir
+	static bool s_x3 = false;
+	if ( ! s_x3 ) {
+		s_x3 = true;
+		if ( g_buildMode )
+			getUrl("/admin/master?qabuildmode=1");
+		else
+			getUrl("/admin/master?qabuildmode=0");
+		return false;
+	}
+
+
+	// to the squid test here...
+
+
+
+	static bool s_fee2 = false;
+	if ( ! s_fee2 ) {
+		s_fee2 = true;
+		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
+			"QA SQUID TEST\n\n\n");
+		return true;
+	}
+		
 	return true;
 }
 
@@ -765,9 +652,11 @@ bool qatest ( ) {
 
 	if ( ! s_callback ) s_callback = qatest;
 
-	qainject();
+	qainject ( );
 
-	qaspider();
+	qaspider ( );
+
+	qasquid  ( );
 
 	return true;
 }

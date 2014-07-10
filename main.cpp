@@ -132,7 +132,9 @@
 // from qa.cpp
 bool qaspider ( ) ;
 bool qainject ( ) ;
-bool qatest ( ) ;
+bool qasquid  ( ) ;
+bool qatest   ( ) ;
+long g_buildMode = 0;
 
 // call this to shut everything down
 bool mainShutdown ( bool urgent ) ;
@@ -1463,12 +1465,18 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	if ( strcmp ( cmd, "qa" ) == 0 ||
 	     strcmp ( cmd, "qainject" ) == 0 ||
+	     strcmp ( cmd, "qasquid" ) == 0 ||
 	     strcmp ( cmd, "qaspider" ) == 0 ) {
 		// let's ensure our core file can dump
 		struct rlimit lim;
 		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
 		if ( setrlimit(RLIMIT_CORE,&lim) )
 			log("qa::setrlimit: %s", mstrerror(errno) );
+		// in build mode we store downloaded http replies in the
+		// /qa subdir
+		g_buildMode = 0;
+		if (  cmdarg+1 < argc )
+			g_buildMode = atoi(argv[cmdarg+1]);
 		// 50MB
 		g_conf.m_maxMem = 50000000;
 		// init our table for doing zobrist hashing
@@ -1516,6 +1524,8 @@ int main2 ( int argc , char *argv[] ) {
 			qaspider();
 		else if ( strcmp(cmd,"qainject") == 0 )
 			qainject();
+		else if ( strcmp(cmd,"qasquid") == 0 )
+			qasquid();
 
 		//
 		// wait for some i/o signals
