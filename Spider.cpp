@@ -9986,7 +9986,7 @@ bool isAggregator ( long siteHash32,long domHash32,char *url,long urlLen ) {
 #define SIGN_LE 6
 
 // from PageBasic.cpp
-char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) ;
+char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq, char *tag);
 
 // . this is called by SpiderCache.cpp for every url it scans in spiderdb
 // . we must skip certain rules in getUrlFilterNum() when doing to for Msg20
@@ -10405,7 +10405,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				// only do once for speed
 				checkedRow = true;
 				// this function is in PageBasic.cpp
-				row = getMatchingUrlPattern ( sc, sreq );
+				row = getMatchingUrlPattern ( sc, sreq ,NULL);
 			}
 			// if we are not submitted from the add url api, skip
 			if ( (bool)row == val ) continue;
@@ -10418,7 +10418,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
-		
 
 		// . was it submitted from PageAddUrl.cpp?
 		// . replaces the "add url priority" parm
@@ -10850,6 +10849,41 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		// . this line must ALWAYS exist!
 		if ( *p=='d' && ! strcmp(p,"default" ) )
 			return i;
+
+		// is it in the big list of sites?
+		if ( *p == 't' && strncmp(p,"tag:",4) == 0 ) {
+			// skip for msg20
+			//if ( isForMsg20 ) continue;
+			// if only seeds in the sitelist and no
+
+			// if there is no domain or url explicitly listed
+			// then assume user is spidering the whole internet
+			// and we basically ignore "insitelist"
+			if ( sc->m_siteListIsEmpty &&
+			     sc->m_siteListIsEmptyValid ) {
+				row = NULL;// no row
+			}
+			else if ( ! checkedRow ) {
+				// only do once for speed
+				checkedRow = true;
+				// this function is in PageBasic.cpp
+				// . it also has to match "tag" at (p+4)
+				row = getMatchingUrlPattern ( sc, sreq ,p+4);
+			}
+			// if we are not submitted from the add url api, skip
+			if ( (bool)row == val ) continue;
+			// skip tag:
+			p += 4;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+		
+
+
 
 		// set the sign
 		char *s = p;

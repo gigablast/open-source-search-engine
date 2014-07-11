@@ -67,6 +67,9 @@ public:
 	// offset of the url path in the pattern, 0 means none
 	short m_pathOff; 
 	short m_pathLen;
+	// offset into buffer. for 'tag:shallow site:walmart.com' type stuff
+	long  m_tagOff;
+	short m_tagLen;
 };
 
 
@@ -180,7 +183,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		// skip to end of line marker
 		for ( ; *pn && *pn != '\n' ; pn++ ) ;
 
-		char *start = s;
+		// point to the pattern (skips over "tag:xxx " if there)
+		char *patternStart = s;
 
 		// back p up over spaces in case ended in spaces
 	        char *pe = pn;
@@ -197,12 +201,14 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		bool isNeg = false;
 		bool isFilter = true;
 
-	innerLoop:
 		// skip spaces at start of line
-		if ( *s == ' ' ) s++;
+		for ( ; *s && *s == ' ' ; s++ );
 
 		// comment?
 		if ( *s == '#' ) continue;
+
+		// empty line?
+		if ( s[0] == '\r' && s[1] == '\n' ) { s++; continue; }
 
 		// empty line?
 		if ( *s == '\n' ) continue;
@@ -213,11 +219,11 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		//	continue;
 		//}
 
-		if ( *s == '-' ) {
-			sc->m_siteListHasNegatives = true;
-			isNeg = true;
-			s++;
-		}
+	innerLoop:
+
+		// skip spaces
+		for ( ; *s && *s == ' ' ; s++ );
+
 
 		// exact:?
 		//if ( strncmp(s,"exact:",6) == 0 ) {
@@ -231,6 +237,30 @@ bool updateSiteListBuf ( collnum_t collnum ,
 			s += 5;
 			isFilter = false;
 			goto innerLoop;
+		}
+
+
+		// does it start with "tag:xxxxx "?
+		char *tag = NULL;
+		long tagLen = 0;
+		if ( *s == 't' && 
+		     s[1] == 'a' &&
+		     s[2] == 'g' &&
+		     s[3] == ':' ) {
+			tag = s+4;
+			for ( ; *s && ! is_wspace_a(*s) ; s++ );
+			tagLen = s - tag;
+			// skip over white space after tag:xxxx so "s"
+			// point to the url or contains: or whatever
+			for ( ; *s && is_wspace_a(*s) ; s++ );
+			// set pattern start to AFTER the tag stuff
+			patternStart = s;
+		}
+
+		if ( *s == '-' ) {
+			sc->m_siteListHasNegatives = true;
+			isNeg = true;
+			s++;
 		}
 
 		if ( strncmp(s,"site:",5) == 0 ) {
@@ -252,19 +282,34 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		if ( slen <= 0 ) 
 			continue;
 
+		// add to string buffers
+		if ( ! isUrl && isNeg ) {
+			if ( !sc->m_negSubstringBuf.safeMemcpy(s,slen))
+				return true;
+			if ( !sc->m_negSubstringBuf.pushChar('\0') )
+				return true;
+			if ( ! tagLen ) continue;
+			// append tag
+			if ( !sc->m_negSubstringBuf.safeMemcpy("tag:",4))
+				return true;
+			if ( !sc->m_negSubstringBuf.safeMemcpy(tag,tagLen) ) 
+				return true;
+			if ( !sc->m_negSubstringBuf.pushChar('\0') )
+				return true;
+		}
 		if ( ! isUrl ) {
-			// add to string buffers
-			if (   isNeg ) {
-				if ( !sc->m_negSubstringBuf.safeMemcpy(s,slen))
-					return true;
-				if ( !sc->m_negSubstringBuf.pushChar('\0') )
-					return true;
-				continue;
-			}
 			// add to string buffers
 			if ( ! sc->m_posSubstringBuf.safeMemcpy(s,slen) )
 				return true;
 			if ( ! sc->m_posSubstringBuf.pushChar('\0') )
+				return true;
+			if ( ! tagLen ) continue;
+			// append tag
+			if ( !sc->m_posSubstringBuf.safeMemcpy("tag:",4))
+				return true;
+			if ( !sc->m_posSubstringBuf.safeMemcpy(tag,tagLen) ) 
+				return true;
+			if ( !sc->m_posSubstringBuf.pushChar('\0') )
 				return true;
 			continue;
 		}
@@ -288,6 +333,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		     // a "site:" directive mean no seeding
 		     // a "contains:" directive mean no seeding
 		     seedMe &&
+		     // do not seed stuff after tag:xxx directives
+		     ! tag &&
 		     ! dedup.isInTable ( &h32 ) ) {
 			// make spider request
 			SpiderRequest sreq;
@@ -316,9 +363,18 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		// . store offset since CommandUpdateSiteList() passes us
 		//   a temp buf that will be freed before copying the buf
 		//   over to its permanent place at cr->m_siteListBuf
-		pd.m_patternStrOff = start - siteListArg;
+		pd.m_patternStrOff = patternStart - siteListArg;
 		// offset of the url path in the pattern, 0 means none
 		pd.m_pathOff = 0;
+		// did we have a tag?
+		if ( tag ) {
+			pd.m_tagOff = tag - siteListArg;
+			pd.m_tagLen = tagLen;
+		}
+		else {
+			pd.m_tagOff = -1;
+			pd.m_tagLen = 0;
+		}
 		// scan url pattern, it should start at "s"
 		char *x = s;
 		// go all the way to the end
@@ -337,7 +393,7 @@ bool updateSiteListBuf ( collnum_t collnum ,
 			if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
 			// calc length from "start" of line so we can
 			// jump to the path quickly for compares. inc "/"
-			pd.m_pathOff = (x-1) - start;
+			pd.m_pathOff = (x-1) - patternStart;
 			pd.m_pathLen = pe - (x-1);
 			break;
 		}
@@ -384,7 +440,9 @@ bool updateSiteListBuf ( collnum_t collnum ,
 // . the url patterns all contain a domain now, so this can use the domain
 //   hash to speed things up
 // . return ptr to the start of the line in case it has "tag:" i guess
-char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
+char *getMatchingUrlPattern ( SpiderColl *sc , 
+			      SpiderRequest *sreq ,
+			      char *tagArg ) { // tagArg can be NULL
 
 	// if it has * and no negatives, we are in!
 	//if ( sc->m_siteListAsteriskLine && ! sc->m_siteListHasNegatives )
@@ -484,6 +542,25 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 			continue;
 		}
  nomatch:		
+
+
+		// if caller also gave a tag we'll want to see if this
+		// "pd" has an entry for this domain that has that tag
+		if ( tagArg ) {
+			// skip if entry has no tag
+			if ( pd->m_tagLen <= 0 ) continue;
+			// skip if does not match domain or host
+			if ( pd->m_thingHash32 != sreq->m_domHash32 &&
+			     pd->m_thingHash32 != sreq->m_hostHash32 )
+				continue;
+			// compare tags
+			char *pdtag = pd->m_tagOff + buf;
+			if ( strncmp(tagArg,pdtag,pd->m_tagLen) ) continue;
+			// must be nothing after
+			if ( is_alnum_a(tagArg[pd->m_tagLen]) ) continue;
+			// that's a match
+			return patternStr;
+		}
 
 		// was the line just a domain and not a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_domHash32 )
