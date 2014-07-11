@@ -2165,7 +2165,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// HACK: set isOutlink to true here since we don't know if we have sre
 	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr,
 				true,//isoutlink? HACK!
-				NULL); // quota table
+				NULL); // quota table quotatable
 	// sanity check
 	//if ( ufn < 0 ) { 
 	//	log("spider: failed to add spider request for %s because "
@@ -10040,6 +10040,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	//SpiderColl *sc = cr->m_spiderColl;
 	SpiderColl *sc = g_spiderCache.getSpiderColl(cr->m_collnum);
 
+	if ( ! quotaTable ) quotaTable = &sc->m_localTable;
+
 	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");
 
@@ -11025,8 +11027,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[8] == 's' ) {
 			// need a quota table for this
 			if ( ! quotaTable ) continue;
-			long *valPtr = (long *)quotaTable->
-				getValue(&sreq->m_siteHash32);
+			long *valPtr ;
+		       valPtr=(long*)quotaTable->getValue(&sreq->m_siteHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
 			long a;
@@ -11063,9 +11065,14 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[8] == 'g' &&
 		     p[9] == 'e' &&
 		     p[10] == 's' ) {
-			// need a quota table for this
-			if ( ! quotaTable ) continue;
-			long *valPtr ;
+			// need a quota table for this. this only happens
+			// when trying to shortcut things to avoid adding
+			// urls to spiderdb... like XmlDoc.cpp calls
+			// getUrlFtilerNum() to see if doc is banned or
+			// if it should harvest links.
+			if ( ! quotaTable )
+				return -1;
+			long *valPtr;
 			valPtr=(long*)quotaTable->getValue(&sreq->m_domHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???

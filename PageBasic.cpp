@@ -221,6 +221,9 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		//	continue;
 		//}
 
+		char *tag = NULL;
+		long tagLen = 0;
+
 	innerLoop:
 
 		// skip spaces
@@ -243,8 +246,6 @@ bool updateSiteListBuf ( collnum_t collnum ,
 
 
 		// does it start with "tag:xxxxx "?
-		char *tag = NULL;
-		long tagLen = 0;
 		if ( *s == 't' && 
 		     s[1] == 'a' &&
 		     s[2] == 'g' &&
@@ -878,7 +879,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 }
 
 
-// from pagecrawlbot.cpp for printCrawlDetailsInJson()
+// from pagecrawlbot.cpp for printCrawlDetailsInJson2()
 #include "PageCrawlBot.h"
 
 ///////////
@@ -907,7 +908,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( fmt == FMT_JSON ) {
-		printCrawlDetailsInJson ( &sb , cr , getVersionFromRequest(hr) );
+		printCrawlDetailsInJson2 ( &sb , cr );
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),

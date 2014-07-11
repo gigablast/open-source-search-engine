@@ -2591,6 +2591,59 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 	return true;
 }
 
+bool printCrawlDetailsInJson2 (SafeBuf *sb , CollectionRec *cx ) {
+
+	SafeBuf tmp;
+	long crawlStatus = -1;
+	getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
+	CrawlInfo *ci = &cx->m_localCrawlInfo;
+	long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+	if ( sentAlert ) sentAlert = 1;
+
+	// don't print completed time if spidering is going on
+	time_t completed = cx->m_diffbotCrawlEndTime;
+	// if not yet done, make this zero
+	if ( crawlStatus == SP_INITIALIZING ) completed = 0;
+	if ( crawlStatus == SP_NOURLS ) completed = 0;
+	//if ( crawlStatus == SP_PAUSED ) completed = 0;
+	//if ( crawlStatus == SP_ADMIN_PAUSED ) completed = 0;
+	if ( crawlStatus == SP_INPROGRESS ) completed = 0;
+
+	sb->safePrintf("\n\n{"
+
+		       "\"statusCode\":%li,\n"
+		       "\"statusMsg\":\"%s\",\n"
+		       
+		       "\"jobCreationTimeUTC\":%li,\n"
+		       "\"jobCompletionTimeUTC\":%li,\n"
+
+		      "\"sentJobDoneNotification\":%li,\n"
+
+		      "\"urlsHarvested\":%lli,\n"
+		      "\"pageCrawlAttempts\":%lli,\n"
+		      "\"pageCrawlSuccesses\":%lli,\n"
+
+		      , crawlStatus
+		      , tmp.getBufStart()
+
+		       , cx->m_diffbotCrawlStartTime
+		       , completed
+
+
+		      , sentAlert
+		      , cx->m_globalCrawlInfo.m_urlsHarvested
+		      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+		      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+		      );
+	sb->safePrintf("\"currentTime\":%lu,\n",
+		      getTimeGlobal() );
+	sb->safePrintf("\"currentTimeUTC\":%lu,\n",
+		      getTimeGlobal() );
+
+	sb->safePrintf("}\n");
+	return true;
+}
+
 bool printCrawlBotPage2 ( TcpSocket *socket , 
 			  HttpRequest *hr ,
 			  char fmt, // format
@@ -2819,7 +2872,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//long paused = 1;
 
 			//if ( cx->m_spideringEnabled ) paused = 0;
-			printCrawlDetailsInJson ( &sb , cx , getVersionFromRequest(hr) );
+			if ( cx->m_isCustomCrawl )
+				printCrawlDetailsInJson ( &sb , cx , 
+						  getVersionFromRequest(hr) );
+			else
+				printCrawlDetailsInJson2 ( &sb , cx );
+
 			// print the next one out
 			continue;
 		}

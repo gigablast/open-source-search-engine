@@ -132,7 +132,6 @@
 // from qa.cpp
 bool qaspider ( ) ;
 bool qainject ( ) ;
-bool qasquid  ( ) ;
 bool qatest   ( ) ;
 
 // call this to shut everything down
@@ -1464,7 +1463,6 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	if ( strcmp ( cmd, "qa" ) == 0 ||
 	     strcmp ( cmd, "qainject" ) == 0 ||
-	     strcmp ( cmd, "qasquid" ) == 0 ||
 	     strcmp ( cmd, "qaspider" ) == 0 ) {
 		// let's ensure our core file can dump
 		struct rlimit lim;
@@ -1523,8 +1521,6 @@ int main2 ( int argc , char *argv[] ) {
 			qaspider();
 		else if ( strcmp(cmd,"qainject") == 0 )
 			qainject();
-		else if ( strcmp(cmd,"qasquid") == 0 )
-			qasquid();
 
 		//
 		// wait for some i/o signals

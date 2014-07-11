@@ -2721,6 +2721,9 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// sanity
 	if ( ! r->m_udpSlot ) { char *xx=NULL;*xx=0; }
 
+	// skip if not needed
+	if ( r->m_skipHammerCheck ) return false;
+
 	// . make sure we are not hammering an ip
 	// . returns 0 if currently downloading a url from that ip
 	// . returns -1 if not found
@@ -2786,8 +2789,9 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		// collection
 		// for now disable it seems like 99.9% good... but
 		// still cores on some wierd stuff...
-		//if(r->m_useTestCache && r->m_firstIp!=-1944679785 ) {
-		//	char*xx = NULL; *xx = 0; }
+		// if doing this on qatest123 then core
+		if(r->m_useTestCache ) { // && r->m_firstIp!=-1944679785 ) {
+			char*xx = NULL; *xx = 0; }
 	}
 	// store time now
 	//s_hammerCache.addLongLong(0,r->m_firstIp,nowms);

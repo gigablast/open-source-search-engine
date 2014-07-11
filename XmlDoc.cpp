@@ -18483,8 +18483,8 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	if ( ufn < 0 ) {
 		log("build: failed to get url filter for xmldoc %s",
 		    m_firstUrl.m_url);
-		g_errno = EBADENGINEER;
-		return NULL;
+		//g_errno = EBADENGINEER;
+		//return NULL;
 	}
 
 
@@ -25431,6 +25431,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// ptr to term = 4 + score = 4 + ptr to sec = 4
 	if ( m_wts && m_wts->m_ds!=sizeof(TermDebugInfo)){char *xx=NULL;*xx=0;}
 
+	unsigned char *hc = (unsigned char *)getHopCount();
+	if ( ! hc || hc == (void *)-1 ) return (char *)hc;
+
 	// need this for hashing
 	HashTableX *cnt = getCountTable(); 
 	if ( ! cnt ) return (char *)cnt;
@@ -25822,6 +25825,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	// try to get an available docid, preferring "d" if available
 	long long *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
+
+	unsigned char *hc = (unsigned char *)getHopCount();
+	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
 	// reset just in case
 	m_spiderReplyMetaList.reset();
@@ -26722,6 +26728,22 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	// hash gbpathdepth:X
 	if ( ! hashString ( buf,blen,&hi) ) return false;
+
+
+
+	//
+	// HASH gbhopcount:X
+	//
+	setStatus ( "hashing gbhopcount");
+	if ( ! m_hopCountValid ) { char *xx=NULL;*xx=0; }
+	blen = sprintf(buf,"%li",(long)m_hopCount);
+	// update parms
+	hi.m_prefix    = "gbhopcount";
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	// hash gbpathdepth:X
+	if ( ! hashString ( buf,blen,&hi) ) return false;
+
+
 
 	setStatus ( "hashing gbhasfilename");
 

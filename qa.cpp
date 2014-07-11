@@ -520,89 +520,47 @@ bool qaspider ( ) {
 		return false;
 	}
 
-
-	//
-	// use the add url interface now
-	//
-	static bool s_y2 = false;
-	if ( ! s_y2 ) {
-		s_y2 = true;
-		SafeBuf sb;
-		// delim=+++URL:
-		sb.safePrintf("&c=qatest123"
-			      "&format=json"
-			      "&strip=1"
-			      "&spiderlinks=1"
-			      "&urls="
-			      );
-		// . now a list of websites we want to spider
-		// . the space is already encoded as +
-		sb.urlEncode(s_urls1);
-		getUrl ( "/admin/addurl",0,sb.getBufStart());
-		return false;
-	}
-	
-	// delete the collection
-	static bool s_fee = false;
-	if ( ! s_fee ) {
-		s_fee = true;
-		return getUrl ( "/admin/delcoll?delcoll=qatest123" );
-	}
-
-	static bool s_fee2 = false;
-	if ( ! s_fee2 ) {
-		s_fee2 = true;
-		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA SPIDER TEST\n\n\n");
-		return true;
-	}
-
-	return true;
-}
-
-// test ability for gb to act as a squid proxy that returns
-// html with _s= tag attributes inserted
-bool qasquid ( ) {
-
-	if ( ! s_callback ) s_callback = qasquid;
-
-	//
-	// delete the 'qatest123' collection
-	//
-	static bool s_x1 = false;
-	if ( ! s_x1 ) {
-		s_x1 = true;
-		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
-		return false;
-	}
-
-	//
-	// add the 'qatest123' collection
-	//
-	static bool s_x2 = false;
-	if ( ! s_x2 ) {
-		s_x2 = true;
-		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
-			 // checksum of reply expected
-			 238170006 );
-		return false;
-	}
-
-	// 
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
 	// too deep
 	static bool s_z1 = false;
 	if ( ! s_z1 ) {
 		s_z1 = true;
 		SafeBuf sb;
-		sb.safePrintf("&c=qatest123&ufp=0&fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=99&mspi=1&xg=1000&fsp=-3&fe1=hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=5&mspi1=1&xg1=1000&fsp1=3&fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&fe3=&hspl3=0&fsf3=0.000000&mspr3=0&mspi3=0&xg3=0&fsp3=0&action=submit");
+		sb.safePrintf("&c=qatest123&"
+			      // make it the custom filter
+			      "ufp=0&"
+
+	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
+
+			      // take out hopcount for now, just test quotas
+			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
+
+	       "fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+
+	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
+
+		);
 		getUrl ( "/admin/filters",0,sb.getBufStart());
 		return false;
 	}
 
-
+	// set the site list to 
+	// a few sites
+	static bool s_z2 = false;
+	if ( ! s_z2 ) {
+		s_z2 = true;
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123&format=xml&sitelist=");
+		sb.urlEncode("tag:shallow www.walmart.com\r\n"
+			     "tag:shallow http://www.ibm.com/\r\n");
+		sb.nullTerm();
+		getUrl ("/admin/settings",0,sb.getBufStart() );
+	}
+		
 	//
-	// spider some websites using addurl to hopcount 0 and 1.
+	// use the add url interface now
+	// walmart.com above was not seeded because of the site: directive
+	// so this will seed it.
 	//
 	static bool s_y2 = false;
 	if ( ! s_y2 ) {
@@ -613,15 +571,18 @@ bool qasquid ( ) {
 			      "&format=json"
 			      "&strip=1"
 			      "&spiderlinks=1"
-			      "&urls="
+			      "&urls=www.walmart.com+ibm.com"
 			      );
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
-		sb.urlEncode(s_urls1);
+		//sb.urlEncode(s_urls1);
 		getUrl ( "/admin/addurl",0,sb.getBufStart());
 		return false;
 	}
 
+	//
+	// wait for spidering to stop
+	//
  checkagain:
 
 	// wait until spider finishes. check the spider status page
@@ -630,7 +591,7 @@ bool qasquid ( ) {
 	if ( ! s_k1 ) {
 		usleep(5000000); // 5 seconds
 		s_k1 = true;
-		getUrl ( "/admin/status?c=qatest123q=gbhopcount%%3A2",0);
+		getUrl ( "/admin/status?format=json&c=qatest123",0);
 		return false;
 	}
 
@@ -644,7 +605,8 @@ bool qasquid ( ) {
 		s_k2 = true;
 	}
 
-		
+
+
 
 	// verify no 2 hopcounts in results
 	static bool s_y4 = false;
@@ -690,18 +652,23 @@ bool qasquid ( ) {
 	}
 
 
+	// delete the collection
+	static bool s_fee = false;
+	if ( ! s_fee ) {
+		s_fee = true;
+		return getUrl ( "/admin/delcoll?delcoll=qatest123" );
+	}
+
 	static bool s_fee2 = false;
 	if ( ! s_fee2 ) {
 		s_fee2 = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA SQUID TEST\n\n\n");
-		if ( s_callback == qatest ) return true;
-		exit(0);
+			"QA SPIDER TEST\n\n\n");
+		return true;
 	}
-		
+
 	return true;
 }
-
 // . run a series of tests to ensure that gb is functioning properly
 // . uses the ./qa subdirectory to hold archive pages, ips, spider dates to
 //   ensure consistency between tests for exact replays
@@ -712,8 +679,6 @@ bool qatest ( ) {
 	qainject ( );
 
 	qaspider ( );
-
-	qasquid  ( );
 
 	return true;
 }

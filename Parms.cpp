@@ -21223,11 +21223,25 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "Used for doing quotas."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>domainpages</td>"
-			  "<td>The number of pages that are currently indexed "
-			  "for the domain of the URL. "
-			  "Used for doing quotas."
-			  "</td></tr>"
+
+			  // MDW: 7/11/2014 take this out until it works.
+			  // problem is that the quota table m_localTable
+			  // in Spider.cpp gets reset for each firstIp scan,
+			  // and we have a.walmart.com and b.walmart.com
+			  // with different first ips even though on same 
+			  // domain. perhaps we should use the domain as the
+			  // key to getting the firstip for and subdomain.
+			  // but out whole selection algo in spider.cpp is
+			  // firstIp based, so it scans all the spiderrequests
+			  // from a single firstip to get the winner for that
+			  // firstip. 
+			  
+
+			  // "<tr class=poo><td>domainpages</td>"
+			  // "<td>The number of pages that are currently indexed "
+			  // "for the domain of the URL. "
+			  // "Used for doing quotas."
+			  // "</td></tr>"
 
 			  "<tr class=poo><td>siteadds</td>"
 			  "<td>The number URLs manually added to the "
@@ -21235,11 +21249,13 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "popularity."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>domainadds</td>"
-			  "<td>The number URLs manually added to the "
-			  "domain of the URL. Used to guage a domain's "
-			  "popularity."
-			  "</td></tr>"
+			  // taken out for the same reason as domainpages
+			  // above was taken out. see expanation up there.
+			  // "<tr class=poo><td>domainadds</td>"
+			  // "<td>The number URLs manually added to the "
+			  // "domain of the URL. Used to guage a domain's "
+			  // "popularity."
+			  // "</td></tr>"
 
 
 

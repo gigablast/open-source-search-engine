@@ -758,7 +758,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 			  //"Expires: -1\r\n"
 			  "Connection: Close\r\n"
 			  "%s"
-			  "Content-Type: %s\r\n\r\n",
+			  "Content-Type: %s\r\n",
 			  //"Connection: Keep-Alive\r\n"
 			  //"%s"
 			  //"Location: fuck\r\n"
