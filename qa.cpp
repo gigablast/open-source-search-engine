@@ -112,6 +112,13 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 	// so we can see why not
 	//
 
+	// this means caller does not care about the response
+	if ( s_expectedCRC == 0 ) {
+		fprintf(stderr,"qa: got replyCRC of %li\n",replyCRC);
+		s_callback();
+		return;
+	}
+
 	const char *emsg = "qa: bad replyCRC of %li should be %li "
 		"\n";//"phase=%li\n";
 	fprintf(stderr,emsg,replyCRC,s_expectedCRC);//,s_phase-1);
@@ -597,8 +604,9 @@ bool qaspider ( ) {
 
 	static bool s_k2 = false;
 	if ( ! s_k2 ) {
-		// ensure spiders are done
-		if ( s_reply && ! strstr(s_reply,"Job has completed") ) {
+		// ensure spiders are done. 
+		// "Nothing currently available to spider"
+		if ( s_reply && ! strstr(s_reply,"Nothing currently avail") ) {
 			s_k1 = false;
 			goto checkagain;
 		}
@@ -613,7 +621,7 @@ bool qaspider ( ) {
 	if ( ! s_y4 ) {
 		s_y4 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-			 "q=gbhopcount%%3A2",
+			 "q=gbhopcount%3A2",
 			 123456 );
 		return false;
 	}
@@ -623,7 +631,7 @@ bool qaspider ( ) {
 	if ( ! s_y5 ) {
 		s_y5 = true;
 		getUrl ( "/search?c=qatest123&format=json&"
-			 "q=gbfacetstr%%3Agbxpathsitehash2492664135",
+			 "q=gbfacetstr%3Agbxpathsitehash2492664135",
 			 123456 );
 		return false;
 	}
