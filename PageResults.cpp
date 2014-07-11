@@ -3706,18 +3706,48 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	char *fp    =      mr->ptr_facetBuf;
 	char *fpEnd = fp + mr->size_facetBuf;
 	for ( ; fp && fp < fpEnd ; ) {
-		// print first one
-		sb->safePrintf("<i><font color=maroon>");
-		sb->safeStrcpy(fp);
-		sb->safePrintf("</font></i>");
-		sb->safePrintf(" &nbsp; : &nbsp; ");
-		sb->safePrintf("<b>");
-		fp += gbstrlen(fp) + 1;
-		sb->htmlEncode(fp);
-		// begin a new pair
-		sb->safePrintf("</b>");
-		sb->safeStrcpy("<br>\n");
-		fp += gbstrlen(fp) + 1;		
+		if ( si->m_format == FORMAT_HTML ) {
+			// print first one
+			sb->safePrintf("<i><font color=maroon>");
+			sb->safeStrcpy(fp);
+			sb->safePrintf("</font></i>");
+			sb->safePrintf(" &nbsp; : &nbsp; ");
+			sb->safePrintf("<b>");
+			fp += gbstrlen(fp) + 1;
+			sb->htmlEncode(fp);
+			// begin a new pair
+			sb->safePrintf("</b>");
+			sb->safeStrcpy("<br>\n");
+			fp += gbstrlen(fp) + 1;		
+		}
+		else if ( si->m_format == FORMAT_XML ) {
+			// print first one
+			sb->safePrintf("\t\t<facet>\n"
+				       "\t\t\t<field><![CDATA[");
+			sb->cdataEncode(fp);
+			sb->safePrintf("]]></field>\n");
+			fp += gbstrlen(fp) + 1;
+			sb->safePrintf("\t\t\t<value><![CDATA[");
+			sb->cdataEncode(fp);
+			sb->safePrintf("]]></value>\n");
+			sb->safePrintf("\t\t</facet>\n");
+			fp += gbstrlen(fp) + 1;
+		}
+		else if ( si->m_format == FORMAT_JSON ) {
+			// print first one
+			sb->safePrintf("\t\t\"facet\":{\n");
+			sb->safePrintf("\t\t\t\"field\":\"");
+			sb->jsonEncode(fp);
+			sb->safePrintf("\",\n");
+			fp += gbstrlen(fp) + 1;
+			sb->safePrintf("\t\t\t\"value\":\"");
+			sb->jsonEncode(fp);
+			sb->safePrintf("\"\n");
+			fp += gbstrlen(fp) + 1;
+			sb->safePrintf("\t\t},\n");
+		}
+
+
 	}
 		      
 

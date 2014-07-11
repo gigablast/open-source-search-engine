@@ -6,9 +6,6 @@ static long s_expectedCRC = 0;
 
 bool qatest ( ) ;
 
-// after we got the reply and verified expected crc, call the callback
-static bool (*s_callback)() = NULL;
-
 // first inject a set list of urls
 static char  **s_urlPtrs = NULL;
 static char  **s_contentPtrs = NULL;
@@ -51,26 +48,29 @@ long qa_hash32 ( char *s ) {
 
 static char *s_reply = NULL;
 
-// come here after receiving ANY reply from the gigablast server
-static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
+void processReply ( char *reply , long replyLen ) {
 
 	// store our current reply
 	SafeBuf fb2;
-	fb2.safeMemcpy(sock->m_readBuf,sock->m_readOffset);
+	fb2.safeMemcpy(reply,replyLen );
 	fb2.nullTerm();
 
 	// log that we got the reply
-	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
+	log("qa: got reply(len=%li)(errno=%s)=%s",
+	    replyLen,mstrerror(g_errno),reply);
+
+	char *content = "";
+	long  contentLen = 0;
 
 	// get mime
-	HttpMime mime;
-	mime.set ( sock->m_readBuf , sock->m_readOffset , NULL );
-	// only hash content since mime has a timestamp in it
-	char *content = mime.getContent();
-	long  contentLen = mime.getContentLen();
-	if ( content[contentLen] ) { char *xx=NULL;*xx=0; }
-
-	char *reply = sock->m_readBuf;
+	if ( reply ) {
+		HttpMime mime;
+		mime.set ( reply, replyLen , NULL );
+		// only hash content since mime has a timestamp in it
+		content = mime.getContent();
+		contentLen = mime.getContentLen();
+		if ( content[contentLen] ) { char *xx=NULL;*xx=0; }
+	}
 
 	s_reply = reply;
 
@@ -102,7 +102,7 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 		}
 		// . continue on with the qa process
 		// . which qa function that may be
-		s_callback();
+		//s_callback();
 		return;
 	}
 
@@ -115,7 +115,7 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 	// this means caller does not care about the response
 	if ( s_expectedCRC == 0 ) {
 		fprintf(stderr,"qa: got replyCRC of %li\n",replyCRC);
-		s_callback();
+		//s_callback();
 		return;
 	}
 
@@ -144,9 +144,21 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 	if ( s_expectedCRC != 0 ) exit(1);
 
 	// keep on going
-	s_callback();
+	//s_callback();
 }
 
+// after we got the reply and verified expected crc, call the callback
+static bool (*s_callback)() = NULL;
+
+// come here after receiving ANY reply from the gigablast server
+static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
+
+	processReply ( sock->m_readBuf , sock->m_readOffset );
+
+	s_callback ();
+}
+
+// returns false if blocked, true otherwise, like on quick connect error
 bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 
 	SafeBuf sb;
@@ -182,7 +194,8 @@ bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 				     post ) )
 		return false;
 	// error?
-	log("qa: getUrl error: %s",mstrerror(g_errno));
+	processReply ( NULL , 0 );
+	//log("qa: getUrl error: %s",mstrerror(g_errno));
 	return true;
 }	
 
@@ -249,8 +262,8 @@ bool qainject ( ) {
 	static bool s_x1 = false;
 	if ( ! s_x1 ) {
 		s_x1 = true;
-		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
-		return false;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
 	}
 
 	//
@@ -259,10 +272,10 @@ bool qainject ( ) {
 	static bool s_x2 = false;
 	if ( ! s_x2 ) {
 		s_x2 = true;
-		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
-			 // checksum of reply expected
-			 238170006 );
-		return false;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
 	}
 
 	//
@@ -286,10 +299,10 @@ bool qainject ( ) {
 			sb.nullTerm();
 			// pre-inc it in case getUrl() blocks
 			s_ii++;
-			getUrl("/admin/inject",
-			       0, // no idea what crc to expect
-			       sb.getBufStart());
-			return false;
+			if ( ! getUrl("/admin/inject",
+				      0, // no idea what crc to expect
+				      sb.getBufStart()) )
+				return false;
 		}
 		s_x4 = true;
 	}
@@ -299,18 +312,18 @@ bool qainject ( ) {
 	if ( ! s_x5 ) {
 		usleep(1500000);
 		s_x5 = true;
-		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-			 -1452050577 );
-		return false;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+				-1452050577 ) )
+			return false;
 	}
 
 	// sports news
 	static bool s_x7 = false;
 	if ( ! s_x7 ) {
 		s_x7 = true;
-		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports+news",
-			 -1586622518 );
-		return false;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=sports+news",-1586622518 ) )
+		     return false;
 	}
 
 	//
@@ -326,8 +339,8 @@ bool qainject ( ) {
 		sb.nullTerm();
 		// pre-inc it in case getUrl() blocks
 		s_ii2++;
-		getUrl ( sb.getBufStart() , 0 );
-		return false;
+		if ( ! getUrl ( sb.getBufStart() , 0 ) )
+			return false;
 	}
 
 	//
@@ -337,9 +350,9 @@ bool qainject ( ) {
 	if ( ! s_x9 ) {
 		usleep(1500000);
 		s_x9 = true;
-		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-			 -1672870556 );
-		return false;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+				-1672870556 ) )
+			return false;
 	}
 
 	//
@@ -357,11 +370,11 @@ bool qainject ( ) {
 		SafeBuf ubuf;
 		ubuf.load("./injectme3");
 		sb.urlEncode(ubuf.getBufStart());
-		getUrl ( "/admin/inject",
-			 // check reply, seems to have only a single docid init
-			 -1970198487,
-			 sb.getBufStart());
-		return false;
+		if ( ! getUrl ( "/admin/inject",
+				// check reply, seems to have only a single 
+				// docid in it
+				-1970198487, sb.getBufStart()) )
+			return false;
 	}
 
 	// now query check
@@ -369,9 +382,9 @@ bool qainject ( ) {
 	if ( ! s_y4 ) {
 		usleep(1500000);
 		s_y4 = true;
-		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-			 -480078278 );
-		return false;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+				-480078278 ) )
+			return false;
 	}
 
 	//
@@ -379,8 +392,8 @@ bool qainject ( ) {
 	//
 	if ( ! s_x1 ) {
 		s_x1 = true;
-		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
-		return false;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
 	}
 
 
@@ -511,8 +524,8 @@ bool qaspider ( ) {
 	static bool s_x1 = false;
 	if ( ! s_x1 ) {
 		s_x1 = true;
-		getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" );
-		return false;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
 	}
 
 	//
@@ -521,10 +534,10 @@ bool qaspider ( ) {
 	static bool s_x2 = false;
 	if ( ! s_x2 ) {
 		s_x2 = true;
-		getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
-			 // checksum of reply expected
-			 238170006 );
-		return false;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
 	}
 
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
@@ -547,8 +560,8 @@ bool qaspider ( ) {
 	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
 
 		);
-		getUrl ( "/admin/filters",0,sb.getBufStart());
-		return false;
+		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
+			return false;
 	}
 
 	// set the site list to 
@@ -561,7 +574,8 @@ bool qaspider ( ) {
 		sb.urlEncode("tag:shallow www.walmart.com\r\n"
 			     "tag:shallow http://www.ibm.com/\r\n");
 		sb.nullTerm();
-		getUrl ("/admin/settings",0,sb.getBufStart() );
+		if ( ! getUrl ("/admin/settings",0,sb.getBufStart() ) )
+			return false;
 	}
 		
 	//
@@ -583,8 +597,8 @@ bool qaspider ( ) {
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
 		//sb.urlEncode(s_urls1);
-		getUrl ( "/admin/addurl",0,sb.getBufStart());
-		return false;
+		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+			return false;
 	}
 
 	//
@@ -598,8 +612,8 @@ bool qaspider ( ) {
 	if ( ! s_k1 ) {
 		usleep(5000000); // 5 seconds
 		s_k1 = true;
-		getUrl ( "/admin/status?format=json&c=qatest123",0);
-		return false;
+		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
+			return false;
 	}
 
 	static bool s_k2 = false;
@@ -616,47 +630,57 @@ bool qaspider ( ) {
 
 
 
-	// verify no 2 hopcounts in results
+	// verify no results for gbhopcount:2 query
 	static bool s_y4 = false;
 	if ( ! s_y4 ) {
 		s_y4 = true;
-		getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-			 "q=gbhopcount%3A2",
-			 123456 );
-		return false;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbhopcount%3A2",
+				-1672870556 ) )
+			return false;
+	}
+
+	// but some for gbhopcount:0 query
+	static bool s_t0 = false;
+	if ( ! s_t0 ) {
+		s_t0 = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbhopcount%3A0",
+				1688650594 ) )
+			return false;
 	}
 	
 	// check facet sections query for walmart
 	static bool s_y5 = false;
 	if ( ! s_y5 ) {
 		s_y5 = true;
-		getUrl ( "/search?c=qatest123&format=json&"
-			 "q=gbfacetstr%3Agbxpathsitehash2492664135",
-			 123456 );
-		return false;
+		if ( ! getUrl ( "/search?c=qatest123&format=json&"
+				"q=gbfacetstr%3Agbxpathsitehash2492664135",
+				-1018518330 ) )
+			return false;
 	}
 
 	static bool s_y6 = false;
 	if ( ! s_y6 ) {
 		s_y6 = true;
-		getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 123456 );
-		return false;
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+			return false;
 	}
 
 	// in xml
 	static bool s_y7 = false;
 	if ( ! s_y7 ) {
 		s_y7 = true;
-		getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 123456 );
-		return false;
+		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+			return false;
 	}
 
 	// and json
 	static bool s_y8 = false;
 	if ( ! s_y8 ) {
 		s_y8 = true;
-		getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 123456 );
-		return false;
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+			return false;
 	}
 
 
@@ -664,7 +688,8 @@ bool qaspider ( ) {
 	static bool s_fee = false;
 	if ( ! s_fee ) {
 		s_fee = true;
-		return getUrl ( "/admin/delcoll?delcoll=qatest123" );
+		if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
+			return false;
 	}
 
 	static bool s_fee2 = false;
