@@ -3212,6 +3212,10 @@ bool SafeBuf::uncompress() {
 
 bool SafeBuf::safeTruncateEllipsis ( char *src , long maxLen ) {
 	long  srcLen = gbstrlen(src);
+	return safeTruncateEllipsis ( src , srcLen , maxLen );
+}
+
+bool SafeBuf::safeTruncateEllipsis ( char *src , long srcLen , long maxLen ) {
 	long  printLen = srcLen;
 	if ( printLen > maxLen ) printLen = maxLen;
 	if ( ! safeMemcpy ( src , printLen ) )
@@ -3388,4 +3392,136 @@ bool SafeBuf::base64Encode ( char *sx , long len , long niceness ) {
 	nullTerm();
 
 	return true;
+}
+
+
+bool SafeBuf::base64Decode ( char *src , long srcLen , long niceness ) {
+
+	// make the map
+	static unsigned char s_bmap[256];
+	static bool s_init = false;
+	if ( ! s_init ) {
+		s_init = true;
+		memset ( s_bmap , 0 , 256 );
+		unsigned char val = 0;
+		for ( unsigned char c = 'A' ; c <= 'Z'; c++ ) 
+			s_bmap[c] = val++;
+		for ( unsigned char c = 'a' ; c <= 'z'; c++ ) 
+			s_bmap[c] = val++;
+		for ( unsigned char c = '0' ; c <= '9'; c++ ) 
+			s_bmap[c] = val++;
+		if ( val != 62 ) { char *xx=NULL;*xx=0; }
+		s_bmap['+'] = 62;
+		s_bmap['/'] = 63;
+	}
+
+	// reserve twice as much space i guess
+	if ( ! reserve ( srcLen * 2 + 1 ) ) return false;
+		
+	// leave room for \0
+	char *dst = getBuf();
+	char *dstEnd = getBufEnd(); // dst + dstSize - 5;
+	nullTerm();
+	unsigned char *p    = (unsigned char *)src;
+	unsigned char val;
+	for ( ; ; ) {
+		QUICKPOLL(niceness);
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 6 bits
+		*dst <<= 6;
+		*dst |= val;
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 2 bits
+		*dst <<= 2;
+		*dst |= (val>>4);
+		dst++;
+		// copy 4 bits
+		*dst = val & 0xf;
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 4 bits
+		*dst <<= 4;
+		*dst |= (val>>2);
+		dst++;
+		// copy 2 bits
+		*dst = (val&0x3);
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 6 bits
+		*dst <<= 6;
+		*dst |= val;
+		dst++;
+		// sanity
+		if ( dst >= dstEnd ) {
+			log("safebuf: bas64decode breach");
+			//char *xx=NULL;*xx=0;
+			*dst = '\0';
+			return false;
+		}
+		if ( ! *p ) break;
+	}
+	// update
+	m_length = dst - m_buf;
+	// null term just in case
+	//dst[1] = '\0';
+	nullTerm();
+	return true;
+}
+
+
+// "ts" is a delta-t in seconds
+bool SafeBuf::printTimeAgo ( long ago , long now , bool shorthand ) {
+	// Jul 23, 1971
+	if ( ! reserve2x(200) ) return false;
+	// for printing
+	long secs = 1000;
+	long mins = 1000;
+	long hrs  = 1000;
+	long days ;
+	if ( ago > 0 ) {
+		secs = (long)((ago)/1);
+		mins = (long)((ago)/60);
+		hrs  = (long)((ago)/3600);
+		days = (long)((ago)/(3600*24));
+		if ( mins < 0 ) mins = 0;
+		if ( hrs  < 0 ) hrs  = 0;
+		if ( days < 0 ) days = 0;
+	}
+	bool printed = false;
+	// print the time ago
+	if ( shorthand ) {
+		if ( mins==0 ) safePrintf("%li secs ago",secs);
+		else if ( mins ==1)safePrintf("%li min ago",mins);
+		else if (mins<60)safePrintf ( "%li mins ago",mins);
+		else if ( hrs == 1 )safePrintf ( "%li hr ago",hrs);
+		else if ( hrs < 24 )safePrintf ( "%li hrs ago",hrs);
+		else if ( days == 1 )safePrintf ( "%li day ago",days);
+		else if (days< 7 )safePrintf ( "%li days ago",days);
+		printed = true;
+	}
+	else {
+		if ( mins==0 ) safePrintf("%li seconds ago",secs);
+		else if ( mins ==1)safePrintf("%li minute ago",mins);
+		else if (mins<60)safePrintf ( "%li minutes ago",mins);
+		else if ( hrs == 1 )safePrintf ( "%li hour ago",hrs);
+		else if ( hrs < 24 )safePrintf ( "%li hours ago",hrs);
+		else if ( days == 1 )safePrintf ( "%li day ago",days);
+		else if (days< 7 )safePrintf ( "%li days ago",days);
+		printed = true;
+	}
+	// do not show if more than 1 wk old! we want to seem as
+	// fresh as possible
+	if ( ! printed && ago > 0 ) { // && si->m_isAdmin ) {
+		long ts = now - ago;
+		struct tm *timeStruct = localtime ( &ts );
+		char tmp[100];
+		strftime(tmp,100,"%b %d %Y",timeStruct);
+		safeStrcpy(tmp);
+	}
+	return true;
+}
+
+bool SafeBuf::hasDigits() {
+	if ( m_length <= 0 ) return false;
+	for ( long i = 0 ; i < m_length ; i++ )
+		if ( is_digit(m_buf[i]) ) return true;
+	return false;
 }

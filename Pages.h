@@ -327,16 +327,17 @@ enum {
 	PAGE_MASTER      , 
 	PAGE_SEARCH      ,  
 	PAGE_SPIDER      ,
+	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
 	PAGE_SECURITY    ,
-	PAGE_ADDCOLL     ,	
+	PAGE_ADDCOLL     ,	 // 20
 	PAGE_DELCOLL     , 
 	PAGE_CLONECOLL   ,
 	PAGE_REPAIR      ,
 	//PAGE_SITES , // site filters
 	PAGE_FILTERS     ,
 	PAGE_INJECT      , 
-	PAGE_ADDURL2     ,
+	PAGE_ADDURL2     , // 26
 	PAGE_REINDEX     ,	
 
 	PAGE_HOSTS       ,

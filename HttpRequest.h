@@ -54,7 +54,8 @@ class HttpRequest {
 		   bool doPost = false ,
 		   char *cookie = NULL ,
 		   char *additionalHeader = NULL , // does not incl \r\n
-		   long postContentLen = -1 ); // for content-length of POST
+		   long postContentLen = -1 , // for content-length of POST
+		   long proxyIp = 0 );
 
 	// use this
 	SafeBuf m_reqBuf;
@@ -100,6 +101,11 @@ class HttpRequest {
 	// . returns false and set errno on error
 	// . may alloc mem for m_cgiBuf to hold cgi vars from GET or POST op
 	bool set ( char *req , long reqSize , TcpSocket *s );
+
+	// for gigablast's own rendering of squid
+	bool m_isSquidProxyRequest;
+	char *m_squidProxiedUrl;
+	long m_squidProxiedUrlLen;
 
 	// is it this type of request?
 	bool isGETRequest  () { return (m_requestType == 0); };

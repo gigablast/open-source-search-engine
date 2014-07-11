@@ -31,6 +31,7 @@
 #include "hash.h"
 #include "Test.h"
 #include "Rebalance.h"
+#include "SpiderProxy.h" // buildProxyTable()
 #include "PageInject.h"
 
 // width of input box in characters for url filter expression
@@ -1366,6 +1367,14 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 
 	// this must be outside of table, submit button follows
 	sb->safePrintf ( "<br>\n" );
+
+	if ( page == PAGE_SPIDERPROXIES ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
+		printSpiderProxyTable ( sb );
+		// do not print another submit button
+		return true;
+	}
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS ) {
@@ -3135,7 +3144,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
 		// what is this?
-		//if ( m->m_obj == OBJ_CONF ) {
+		//if ( m->m_obj == OBJ_COLL ) {
 		//	CollectionRec *cr = (CollectionRec *)THIS;
 		//	if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
 		//}
@@ -8285,6 +8294,96 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_SI;
 	m++;
 
+	///////////////////////////////////////////
+	//  SPIDER PROXY CONTROLS
+	//  
+	///////////////////////////////////////////
+
+	m->m_title = "use spider proxies";
+	m->m_desc  = "Use the spider proxies listed below. If none are "
+		"listed then gb will not use any.";
+	m->m_cgi   = "useproxyips";
+	m->m_xml   = "useSpiderProxies";
+	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "spider proxy ips";
+	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
+		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>. "
+		"If a proxy itself times out when downloading through it "
+		"it will be perceived as a normal download timeout and the "
+		"page will be retried according to the url filters table, so "
+		"you  might want to modify the url filters to retry network "
+		"errors more aggressively. Search for 'private proxies' on "
+		"google to find proxy providers. Try to ensure all your "
+		"proxies are on different class C IPs if possible. "
+		"That is, the first 3 numbers in the IP addresses are all "
+		"different.";
+	m->m_cgi   = "proxyips";
+	m->m_xml   = "proxyIps";
+	m->m_off   = (char *)&g_conf.m_proxyIps - g;
+	m->m_type  = TYPE_SAFEBUF; // TYPE_IP;
+	m->m_def   = "";
+	m->m_flags = PF_TEXTAREA | PF_REBUILDPROXYTABLE;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "spider proxy test url";
+	m->m_desc  = "Download this url every minute through each proxy "
+		"listed above to ensure they are up. Typically you should "
+		"make this a URL you own so you do not aggravate another "
+		"webmaster.";
+	m->m_xml   = "proxyTestUrl";
+	m->m_cgi   = "proxytesturl";
+	m->m_off   = (char *)&g_conf.m_proxyTestUrl - g;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "http://www.gigablast.com/";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "mix up user agents";
+	m->m_desc  = "Use random user-agents when downloading to "
+		"protecting gb's anonymity. The User-Agent used is a function "
+		"of the proxy IP/port and IP of the url being downloaded. "
+		"That way it is consistent when downloading the same website "
+		"through the same proxy.";
+	m->m_cgi   = "userandagents";
+	m->m_xml   = "useRandAgents";
+	m->m_off   = (char *)&g_conf.m_useRandAgents - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "squid proxy authorized users";
+	m->m_desc  = "Gigablast can also simulate a squid proxy, "
+		"complete with "
+		"caching. It will forward your request to the proxies you "
+		"list above, if any. This list consists of space-separated "
+		"<i>username:password</i> items. Leave this list empty "
+		"to disable squid caching behaviour. The default cache "
+		"size for this is 10MB per shard. Use item *:* to allow "
+		"anyone access.";
+	m->m_xml   = "proxyAuth";
+	m->m_cgi   = "proxyAuth";
+	m->m_off   = (char *)&g_conf.m_proxyAuth - g;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = PF_TEXTAREA;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 
 	m->m_title = "max words per gigabit (related topic) by default";
@@ -10990,6 +11089,15 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandReloadLanguagePages;
 	m->m_cast  = 0;
+	m++;
+
+	m->m_title = "proxy port";
+	m->m_desc  = "Retrieve pages from the proxy on "
+		"this port.";
+	m->m_cgi   = "proxyport";
+	m->m_off   = (char *)&cr.m_proxyPort - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
 	m++;
 
 	m->m_title = "all reload language pages";
@@ -16754,6 +16862,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
+	/*
 	m->m_title = "proxy ip";
 	m->m_desc  = "Retrieve pages from the proxy at this IP address.";
 	m->m_cgi   = "proxyip";
@@ -16777,6 +16886,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
 	m++;
+	*/
 
 	m->m_title = "make image thumbnails";
 	m->m_desc  = "Try to find the best image on each page and "
@@ -18387,6 +18497,16 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "log debug spider proxies";
+	m->m_cgi   = "ldspr";
+	m->m_off   = (char *)&g_conf.m_logDebugProxies - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 	m->m_title = "log debug url attempts";
 	m->m_cgi   = "ldspua";
 	m->m_off   = (char *)&g_conf.m_logDebugUrlAttempts - g;
@@ -18706,7 +18826,8 @@ void Parms::init ( ) {
 			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s."
 			    " (%li,%li,%li). Did you FORGET to include "
 			    "an & before the cr.myVariable when setting "
-			    "m_off for this parm?",
+			    "m_off for this parm? Or subtract  'x' instead "
+			    "of 'g' or vice versa.",
 			    i,m_parms[i].m_title,
 			    mm,
 			    m_parms[i].m_off,
@@ -20181,6 +20302,9 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_flags & PF_REBUILDURLFILTERS )
 			we->m_doRebuilds = true;
 
+		if ( parm->m_flags & PF_REBUILDPROXYTABLE )
+			we->m_doProxyRebuild = true;
+
 		// get collnum i guess
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
@@ -20258,6 +20382,11 @@ void handleRequest3fLoop ( void *weArg ) {
 		cx->rebuildUrlFilters();
 	}
 
+	// if user changed the list of proxy ips rebuild the binary
+	// array representation of the proxy ips we have
+	if ( we->m_doProxyRebuild )
+		buildProxyTable();
+		
 	// note it
 	if ( ! we->m_sentReply )
 		log("parms: sending parm update reply");
@@ -20299,6 +20428,7 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
 	we->m_updatedRound = false;
+	we->m_doProxyRebuild = false;
 	we->m_collnum = -1;
 	we->m_sentReply = 0;
 

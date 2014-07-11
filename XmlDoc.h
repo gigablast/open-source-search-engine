@@ -185,7 +185,8 @@ bool storeTerm ( char             *s        ,
                  class SafeBuf    *wbuf     ,
                  class HashTableX *wts      ,
 		 char              synSrc   ,
-		 char              langId   ) ;
+		 char              langId   ,
+		 POSDBKEY key ) ;
 
 // tell zlib to use our malloc/free functions
 int gbuncompress ( unsigned char *dest      ,
@@ -298,7 +299,7 @@ class XmlDoc {
 	//uint16_t  m_reserved3;//urlPathWeight;
 	uint8_t   m_metaListCheckSum8; // bring it back!!
 	char      m_reserved3b;
-	uint16_t  m_reserved4;//externalLinkTextWeight;
+	uint16_t  m_bodyStartPos;//m_reserved4;//externalLinkTextWeight;
 	uint16_t  m_reserved5;//internalLinkTextWeight;
 
 	// a new parm from reserved6. need to know the count so we can
@@ -544,8 +545,11 @@ class XmlDoc {
 	class Sections *getImpliedSections ( ) ;
 	class Sections *getSections ( ) ;
 	class Sections *getSectionsWithDupStats ( );
-	bool gotSectionStats( class Msg3a *msg3a );
-	class SectionStats *getSectionStats ( long long secHash64 );
+	class SafeBuf  *getInlineSectionVotingBuf();
+	bool gotSectionFacets( class Multicast *mcast );
+	class SectionStats *getSectionStats ( unsigned long secHash32 ,
+					      unsigned long sentHash32 ,
+					      bool cacheOnly );
 	class SectionVotingTable *getOldSectionVotingTable();
 	class SectionVotingTable *getNewSectionVotingTable();
 	char **getSectionsReply ( ) ;
@@ -884,6 +888,16 @@ class XmlDoc {
 			  long              niceness       );
 
 
+	//bool hashSectionTerm ( char *term , 
+	//		       class HashInfo *hi , 
+	//		       long sentHash32 ) ;
+
+	bool hashFacet1 ( char *term, class Words *words , HashTableX *dt) ;
+
+	bool hashFacet2 ( char *prefix,char *term,long val32, HashTableX *dt,
+			  bool shardByTermId = false ) ;
+
+
 	bool hashNumber ( char *beginBuf ,
 			  char *buf , 
 			  long bufLen , 
@@ -896,6 +910,11 @@ class XmlDoc {
 	bool hashNumber3 ( long x,
 			   class HashInfo *hi ,
 			   char *gbsortByStr ) ;
+
+	bool storeFacetValues         ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesSections ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesHtml     ( char *qs , class SafeBuf *sb ) ;
+	bool storeFacetValuesJSON     ( char *qs , class SafeBuf *sb ) ;
 
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
@@ -1007,24 +1026,28 @@ class XmlDoc {
 	//Weights    m_weights;
 	Sections   m_sections;
 
+	// a hack storage thing used by Msg13.cpp
+	class Msg13Request *m_hsr;
+
 	Section *m_si;
 	//Section *m_nextSection;
 	//Section *m_lastSection;
-	long m_msg3aRequestsOut;
-	long m_msg3aRequestsIn;
+	long m_mcastRequestsOut;
+	long m_mcastRequestsIn;
+	long m_secStatsErrno;
 	char *m_queryBuf;
 	Msg39Request *m_msg39RequestArray;
-	SafeBuf m_msg3aBuf;
-	Msg3a *m_msg3aArray;
-	char  *m_inUse;
-	Query *m_queryArray;
-	long long *m_secHash64Array;
+	SafeBuf m_mcastBuf;
+	Multicast *m_mcastArray;
+	//char  *m_inUse;
+	//Query *m_queryArray;
+	//Query *m_sharedQuery;
 	bool     m_gotDupStats;
-	//long     m_secHash64;
 	//Query    m_q4;
 	//Msg3a    m_msg3a;
 	//Msg39Request m_r39;
 	Msg39Request m_mr2;
+	SectionStats m_sectionStats;
 	HashTableX m_sectionStatsTable;
 	//char m_sectionHashQueryBuf[128];
 
@@ -1045,6 +1068,11 @@ class XmlDoc {
 	RdbList m_secdbList;
 	long m_sectiondbRecall;
 	SafeBuf m_tmpBuf3;
+
+	bool m_gotFacets;
+	SafeBuf m_tmpBuf2;
+
+	SafeBuf m_inlineSectionVotingBuf;
 
 	//HashTableX m_rvt;
 	//Msg17 m_msg17;
@@ -1118,6 +1146,7 @@ class XmlDoc {
 	char     m_filteredRootTitleBufValid;
 	char     m_titleBufValid;
 	char     m_fragBufValid;
+	char     m_inlineSectionVotingBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
 	char     m_matchingQueryBufValid;
@@ -1208,6 +1237,7 @@ class XmlDoc {
 	bool m_wasInIndexValid;
 	bool m_outlinksAddedDateValid;
 	bool m_countryIdValid;
+	bool m_bodyStartPosValid;
 	/*
 	bool m_titleWeightValid;
 	bool m_headerWeightValid;
@@ -2151,6 +2181,8 @@ class XmlDoc {
 	//bool m_forceDelete;
 	bool m_didDelete;
 
+	bool m_skipIframeExpansion;
+
 	// this is non-zero if we decided not to index the doc
 	long m_indexCode;
 
@@ -2356,10 +2388,15 @@ class TermDebugInfo {
 	char      m_hashGroup;
 	long      m_wordNum;
 	long      m_wordPos;
+	POSDBKEY  m_key; // key144_t
 	//bool      m_isSynonym;
 	// 0 = not a syn, 1 = syn from presets,2=wikt,3=generated
 	char      m_synSrc;
 	long long  m_langBitVec64;
+	// used for gbsectionhash:xxxx terms to hack in the inner content
+	// hash, aka sentHash32 for doing xpath histograms on a site
+	//long m_sentHash32;
+	//long m_facetVal32;
 	// this is copied from Weights::m_rvw or m_rvp
 	//float     m_rv[MAX_RULES];
 };
@@ -2383,7 +2420,9 @@ public:
 		m_useCountTable = true;
 		m_useSections = true;
 		m_startDist = 0;
-		m_siteHash32 = 0;
+		//	m_facetVal32 = 0;
+		// used for sectiondb stuff, but stored in posdb
+		//m_sentHash32 = 0;
 	};
 	class HashTableX *m_tt;
 	char             *m_prefix;
@@ -2396,7 +2435,7 @@ public:
 	char              m_useSynonyms;
 	char              m_hashGroup;
 	long              m_startDist;
-	long              m_siteHash32;
+	//long              m_facetVal32;
 	bool              m_useCountTable;
 	bool              m_useSections;
 };

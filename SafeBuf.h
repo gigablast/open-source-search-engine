@@ -67,6 +67,8 @@ struct SafeBuf {
 	void filterQuotes();
 	bool truncateLongWords ( char *src, long srcLen , long minmax );
 	bool safeTruncateEllipsis ( char *src , long maxLen );
+	bool safeTruncateEllipsis ( char *src , long srcLen, long maxLen );
+
 	bool convertJSONtoXML ( long niceness , long startConvertPos );
 
 	bool safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness);
@@ -114,6 +116,7 @@ struct SafeBuf {
 	bool  csvEncode ( char *s , long len , long niceness = 0 );
 
 	bool  base64Encode ( char *s , long len , long niceness = 0 );
+	bool  base64Decode ( char *src , long srcLen , long niceness = 0 ) ;
 
 	//bool  pushLong ( long val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
@@ -181,8 +184,14 @@ struct SafeBuf {
 
 	bool fixIsolatedPeriods ( ) ;
 
+	bool hasDigits();
+
 	// treat safebuf as an array of signed longs and sort them
 	void sortLongs ( long niceness );
+
+	// . like "1 minute ago" "5 hours ago" "3 days ago" etc.
+	// . "ts" is the delta-t in seconds
+	bool printTimeAgo ( long ts , long now , bool shorthand = false ) ;
 
 	// . a function for adding Tags to buffer, like from Tagdb.cpp
 	// . if safebuf is a buffer of Tags from Tagdb.cpp

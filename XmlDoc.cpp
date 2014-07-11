@@ -144,7 +144,7 @@ XmlDoc::XmlDoc() {
 	m_ahrefsDoc = NULL;
 	m_wikiqbuf = NULL;
 	//m_cr = NULL;
-	m_msg3aArray = NULL;
+	//m_msg3aArray = NULL;
 	m_msg3a = NULL;
 	m_query3a = NULL;
 	//m_numMsg99Replies = 0;
@@ -186,6 +186,14 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_tmpBuf2.purge();
+	m_gotFacets = false;
+
+	m_bodyStartPos = 0;
+
+	m_mcastArray = NULL;
+
+	m_skipIframeExpansion = false;
 	m_indexedTime = 0;
 
 	m_didDelete = false;
@@ -616,7 +624,7 @@ void XmlDoc::reset ( ) {
 
 	m_hashedMetas = false;
 
-	m_msg3aBuf.purge();
+	m_mcastBuf.purge();
 	m_serpBuf.purge();
 
 	// Doc.cpp:
@@ -6338,12 +6346,13 @@ Sections *XmlDoc::getSections ( ) {
 		if ( ! si->m_sentenceContentHash64 ) { char *xx=NULL;*xx=0; }
 		// how many pages from this site have this taghash for
 		// a sentence
-		float nt=osvt->getNumSampled(si->m_turkTagHash,SV_TURKTAGHASH);
+		float nt;
+		nt = osvt->getNumSampled(si->m_turkTagHash32,SV_TURKTAGHASH);
 		// skip if nobody! (except us)
 		if ( nt <= 0.0 ) continue;
 		// . get out tag content hash
 		// . for some reason m_contentHash is 0 for like menu-y sectns
-		long modified = si->m_turkTagHash ^ si->m_sentenceContentHash64;
+		long modified =si->m_turkTagHash32^si->m_sentenceContentHash64;
 		// . now how many pages also had same content in that tag?
 		// . TODO: make sure numsampled only counts a docid once!
 		//   and this is not each time it occurs on that page.
@@ -6391,6 +6400,8 @@ SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	//   from the root, since we add those from the root voting table
 	//   into m_osvt directly!
 	// . we no longer have root voting table!
+	// . this adds keys of the hash of each tag xpath
+	// . and it adds keys of the hash of each tag path PLUS its innerhtml
 	if ( ! ss->addVotes ( &m_nsvt , *tph ) ) return NULL;
 	// tally the section votes from the dates
 	if ( ! dp->addVotes ( &m_nsvt ) ) return NULL;
@@ -6412,6 +6423,10 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 	if ( m_gotDupStats ) return ss;
 
+	long *sh32 = getSiteHash32();
+	if ( ! sh32 || sh32 == (long *)-1 ) return (Sections *)sh32;
+	unsigned long siteHash32 = (unsigned long)*sh32;
+
 	//long long *shp64 = getSiteHash64();
 	//if ( ! shp64 || shp64 == (void *)-1 ) return (Sections *)shp64;
 	//long long siteHash48 = *shp64 & 0x0000ffffffffffffLL;
@@ -6421,45 +6436,77 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 	// if this is -1, we are called for the first time
 	if ( m_si == (void *)-1 ) {
-		m_si = ss->m_rootSection;
-		m_msg3aRequestsIn = 0;
-		m_msg3aRequestsOut = 0;
+		m_si  = ss->m_rootSection;
+		m_mcastRequestsIn = 0;
+		m_mcastRequestsOut = 0;
+		m_secStatsErrno = 0;
 	}
 
-	sec_t menuFlags = SEC_MENU | SEC_MENU_SENTENCE | SEC_MENU_HEADER   ;
+
+	//sec_t menuFlags = SEC_MENU | SEC_MENU_SENTENCE | SEC_MENU_HEADER   ;
 
 	for ( ; m_si ; m_si = m_si->m_next ) { 
 		// breathe
 		QUICKPOLL(m_niceness);
-		// get section CONTENT hash
-		uint64_t secHash64 = m_si->m_sentenceContentHash64;
+
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index.
+		if ( ! ( m_si->m_flags & SEC_HASHXPATH ) ) 
+			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( m_si->m_sentenceContentHash64 ) 
+		//	continue;
+
+		// get hash of sentences this tag contains indirectly
+		uint32_t val32 = (unsigned long)m_si->m_indirectSentHash64;
+		if ( ! val32 ) 
+			continue;
+
+		// skip if menu!
+		//if ( m_si->m_flags & menuFlags ) continue;
+
+		// get section xpath hash combined with sitehash
+		uint32_t secHash32 = m_si->m_turkTagHash32 ^ siteHash32;
+
+		// convert this to 32 bits
+		unsigned long innerHash32 ;
+		//sentHash32 = (unsigned long)m_si->m_sentenceContentHash64;
+		innerHash32 = (unsigned long)m_si->m_indirectSentHash64;
+
 		// save in case we need to read more than 5MB
 		//m_lastSection = si;
-		// skip if no content to hash
-		if ( ! secHash64 ) continue;
-		// skip if menu!
-		if ( m_si->m_flags & menuFlags ) continue;
-		// use our new msg class
-		SectionStats *stats = getSectionStats ( secHash64 );
-		// count it
+		// . does a gbfacets:gbxpathsitehashxxxxxx query on secHash32
+		// . we hack the "sentContentHash32" into each posdb key 
+		//   as the "value" so we can do a facet-like histogram
+		//   over all the possible values this xpath has for this site
+		SectionStats *stats = getSectionStats ( secHash32, 
+							innerHash32,
+							false ); // cache only?
+		// it returns -1 if would block
 		if ( stats == (void *)-1 ) {
 			// count it as outstanding
-			m_msg3aRequestsOut++;
+			//m_mcastRequestsOut++;
 			// launch more if we have room
-			if ( m_msg3aRequestsOut - m_msg3aRequestsIn < 32)
+			if ( m_mcastRequestsOut - m_mcastRequestsIn < 32)
 				continue;
 			// advance m_si so we do not repeat
 			m_si = m_si->m_next;
 			// otherwise, return -1 to indicate blocked
 			return (Sections *)-1;
 		}
-		// return -1 if this blocked
+		// NULL means g_errno
 		if ( ! stats ) {
-			// if still waiting though return -1
-			if ( m_msg3aRequestsOut > m_msg3aRequestsIn )
-				return (Sections *)-1;
 			// ensure g_errno is set
 			if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+			// save it
+			m_secStatsErrno = g_errno;
+			// clear it
+			g_errno = 0;
+			// if still waiting though return -1
+			if ( m_mcastRequestsOut > m_mcastRequestsIn )
+				return (Sections *)-1;
 			// otherwise, all done i guess
 			return NULL;
 		}
@@ -6467,27 +6514,90 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	}
 
 	// waiting for more replies to come back?
-	if ( m_msg3aRequestsOut > m_msg3aRequestsIn )
+	if ( m_mcastRequestsOut > m_mcastRequestsIn )
 		return (Sections *) -1;
 
 	// now scan the sections and copy the stats from the table
-	// into Section::m_stats of each sentence section
+	// into Section::m_stats of each sentence section.
+	// use the key hash as the the hash of the tag/xpath and the innerhtml
+	// and the val instead of being site hash will be hash of the
+	// content. then we can get the histogram of our content hash
+	// for this xpath on our site.
 	Section *si = ss->m_rootSection;
 	for ( ; si ; si = si->m_next ) { 
 		// breathe
 		QUICKPOLL(m_niceness);
-		// get section CONTENT hash
-		uint64_t secHash64 = si->m_sentenceContentHash64;
 		// skip if no content to hash
-		if ( ! secHash64 ) continue;
+		//if ( ! si->m_sentenceContentHash64 ) continue;
+
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( si->m_flags & SEC_HASHXPATH ) ) 
+			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( si->m_sentenceContentHash64 ) 
+		//	continue;
+
+		// get hash of sentences this tag contains indirectly
+		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) 
+			continue;
+
 		// skip if menu!
-		if ( si->m_flags & menuFlags ) continue;
-		// use our new msg class
-		SectionStats *stats = getSectionStats ( secHash64 );
+		//if ( si->m_flags & menuFlags ) continue;
+
+
+		// get section xpath hash combined with sitehash
+		uint32_t secHash32 = si->m_turkTagHash32 ^ siteHash32;
+
+		// convert this to 32 bits
+		unsigned long innerHash32 ;
+		innerHash32 = (unsigned long)si->m_indirectSentHash64;
+
+		// the "stats" class should be in the table from
+		// the lookups above!!
+		SectionStats *stats = getSectionStats ( secHash32, 
+							innerHash32,
+							true ); // cache only?
 		// sanity
-		if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0; }
+		//if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0;}
+		// must have had a network error or something
+		if ( ! stats ) continue;
 		// copy
 		memcpy ( &si->m_stats , stats, sizeof(SectionStats) );
+	}
+
+	//
+	// now if a section has no stats but has the same 
+	// m_indirectSentHash64 as a kid, take his stats
+	//
+	Section *sx = ss->m_rootSection;
+	for ( ; sx ; sx = sx->m_next ) { 
+		// breathe
+		QUICKPOLL(m_niceness);
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( sx->m_flags & SEC_HASHXPATH ) ) 
+			continue;
+		// scan up parents and set their stats to ours as long as
+		// they have the same indirect sent hash64
+		Section *p = sx->m_parent;
+		for ( ; p ; p = p->m_parent ) {
+
+			// if parent is like an img tag, skip it
+			if ( p->m_tagId == TAG_IMG )
+				continue;
+
+			if ( p ->m_indirectSentHash64 !=
+			     sx->m_indirectSentHash64 ) 
+				break;
+
+			// copy it to parent with the same inner html hash
+			memcpy (&p->m_stats,&sx->m_stats,sizeof(SectionStats));
+		}
 	}
 
 	// now free the table's mem
@@ -6497,44 +6607,22 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	return ss;
 }
 
-static void gotDocIdsWrapper ( void *state ) {
+static void gotReplyWrapper39 ( void *state1 , void *state2 ) {
 	//XmlDoc *THIS = (XmlDoc *)state;
-	Msg3a *msg3a = (Msg3a *)state;
-	XmlDoc *THIS = (XmlDoc *)msg3a->m_hack;
-	THIS->gotSectionStats ( msg3a );
+	XmlDoc *THIS = (XmlDoc *)state1;
+	Multicast *mcast = (Multicast *)state2;
+	THIS->gotSectionFacets ( mcast );
+	// this will end up calling getSectionsWithDupStats() again
+	// which will call getSectionStats() some more on new sections
+	// until m_gotDupStats is set to true.
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
-bool XmlDoc::gotSectionStats ( Msg3a *msg3a ) {
-	SectionStats *stats = &msg3a->m_sectionStats;
-	// count it as returned
-	m_msg3aRequestsIn++;
-	// mark it as available now
-	long num = msg3a - m_msg3aArray;
-	// sanity
-	if ( ! m_inUse[num] ) { char *xx=NULL;*xx=0; }
-	// grab the section hash
-	long long secHash64 = m_secHash64Array[num];
-	// cache them
-	if ( ! m_sectionStatsTable.addKey ( &secHash64 , stats ) )
-		log("xmldoc: failed to add sections stats: %s",
-		    mstrerror(g_errno));
-	// reset that msg3a to free its data
-	//msg3a->reset();
-	// free query Query::m_qwords array etc. to stop mem leaks
-	m_msg3aArray       [num].reset();
-	m_msg39RequestArray[num].reset();
-	m_queryArray       [num].reset();
-	// . make it available again
-	// . do this after all in case we were in quickpoll interruptting
-	//   the getSectionStats() function below
-	m_inUse[num] = 0;
-	// now when the master loop calls getSectionsWithDupStats() it
-	// should find the stats class in the cache!
-	return true;
-}
 
-SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
+// . launch a single msg3a::getDocIds() for a section hash, secHash32
+SectionStats *XmlDoc::getSectionStats ( unsigned long secHash32 , 
+					unsigned long innerHash32 ,
+					bool cacheOnly ) {
 
 	// init cache?
 	if ( m_sectionStatsTable.m_numSlots == 0 &&
@@ -6550,92 +6638,104 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 
 	// check in cache...
 	SectionStats *stats ;
-	stats = (SectionStats *)m_sectionStatsTable.getValue ( &secHash64 );
+	stats = (SectionStats *)m_sectionStatsTable.getValue ( &secHash32 );
 	// if there, return it
 	if ( stats ) return stats;
 
-	// save it
-	//m_secHash64 = secHash64;
+	// if cache only do not launch
+	if ( cacheOnly ) return NULL;
 
-	long *sh32 = getSiteHash32();
-	if ( ! sh32 || sh32 == (long *)-1 ) return (SectionStats *)sh32;
+	//
+	// TODO: shard gbxpathsitehashxxxxx by termid
+	// and make sure msg3a only sends to that single shard and sends
+	// the stats back. should make us much faster to sectionize
+	// a web page. but for now try without it...
+	//
+
+	//long *sh32 = getSiteHash32();
+	//if ( ! sh32 || sh32 == (long *)-1 ) return (SectionStats *)sh32;
 
 	long maxOut = 32;
 
-	// need to make new msg39Request and a new Msg3a arrays
-	if ( ! m_msg3aArray ) {
+	// . need to make new msg39Request and a new Multicast arrays
+	// . only need multicast since these gbfacetstr:gbxpathsitehash123456
+	//   terms are sharded by termid, otherwise we'd have to use msg3a
+	if ( ! m_mcastArray ) {
 		// how much mem to alloc?
 		long need = 0;
-		need += sizeof(Msg3a);
+		need += sizeof(Multicast);
 		need += sizeof(Msg39Request);
-		need += sizeof(Query);
-		need += 1;
-		need += 8;
+		// query buf str
 		need += 100;
 		need *= maxOut;
+		// a single query now to be shared
+		//need += sizeof(Query);
+		// just in case we are being re-used
+		m_mcastBuf.reset();
 		// alloc space
-		if ( ! m_msg3aBuf.reserve(need) ) return NULL;
+		if ( ! m_mcastBuf.reserve(need) ) return NULL;
 		// point to buf
-		char *p = m_msg3aBuf.getBufStart();
+		char *p = m_mcastBuf.getBufStart();
 		// set them up
-		m_msg3aArray = (Msg3a *)p;
-		p += sizeof(Msg3a) * maxOut;
+		m_mcastArray = (Multicast *)p;
+		p += sizeof(Multicast) * maxOut;
 		m_msg39RequestArray = (Msg39Request *)p;
 		p += sizeof(Msg39Request) * maxOut;
-		m_queryArray = (Query *)p;
-		p += sizeof(Query) * maxOut;
+		//m_queryArray = (Query *)p;
+		//p += sizeof(Query) * maxOut;
+		//m_sharedQuery = (Query *)p;
+		//p += sizeof(Query);
 		// for holding the query string
 		// assume query will not exceed 100 bytes incuding \0
 		m_queryBuf = p;
 		p += 100 * maxOut;
-		// for the section hashes
-		m_secHash64Array = (long long *)p;
-		p += 8 * maxOut;
-		// is 1 if msg3a is in use
-		m_inUse = p;
-		p += maxOut;
 		// initialize all!
 		for ( long i = 0 ; i < maxOut ; i++ ) {
-			m_msg3aArray       [i].constructor();
+			m_mcastArray       [i].constructor();
 			m_msg39RequestArray[i].reset();//constructor();
-			m_queryArray       [i].constructor();
+			//m_queryArray       [i].constructor();
 			m_queryBuf[100*i] = '\0';
-			m_inUse[i] = 0;
+			//m_inUse[i] = 0;
 		}
 	}
 
 	// get first available
 	long i; 
 	for ( i = 0 ; i < maxOut ; i++ ) 
-		if ( ! m_inUse[i] ) break;
+		if ( ! m_mcastArray[i].m_inUse ) break;
 
 	// wtf?
 	if ( i >= maxOut ) { char *xx=NULL;*xx=0; }
 
+	// and our vehicle
+	Multicast *mcast = &m_mcastArray[i];
+
 	// mark as in use up here in case we quickpoll into this same code?!
 	// yeah, i guess set2() calls quickpoll?
-	m_inUse[i] = 1;
+	//mcast->m_inUse = 1;
+
+	// save this for reply
+	//mcast->m_hack = this;
+
+	char *qbuf = m_queryBuf + 100 * i;
+
+	// . hash this special term (was gbsectionhash)
+	// . the wordbits etc will be a number though, the hash of the content
+	//   of the xpath, the inner html hash
+	// . preceeding this term with gbfacet: will make gigablast return
+	//   the statistics for all the values in the posdb keys of this 
+	//   termlist, which happen to be innerHTML hashes for all pages
+	//   with this same xpath and on this same site.
+	sprintf(qbuf,"gbfacetstr:gbxpathsitehash%lu",secHash32);
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
 
 	// set the msg39 request
 	Msg39Request *r = &m_msg39RequestArray[i];
 
 	// reset all to defaults
 	r->reset();
-
-	// and our vehicle
-	Msg3a *msg3a = &m_msg3aArray[i];
-
-	// save this for reply
-	msg3a->m_hack = this;
-
-	char *qbuf = m_queryBuf + 100 * i;
-
-	m_secHash64Array[i] = secHash64;
-
-	sprintf(qbuf,"gbsectionhash:%llu",secHash64);
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	//r-> ptr_coll             = cr->m_coll;
 	//r->size_coll             = gbstrlen(cr->m_coll)+1;
@@ -6656,34 +6756,273 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	r->m_timeout             = 3600; //-1;// auto-determine based on #terms
 	r->m_maxQueryTerms       = 10;
 
+	// how much of each termlist to read in bytes
+	long readList     = 10000;
+	r-> ptr_readSizes = (char *)&readList;
+	r->size_readSizes = 4;
+
+	// term freqs
+	float tfw = 1.0;
+	r-> ptr_termFreqWeights = (char *)&tfw;
+	r->size_termFreqWeights = 4;
+
+	// speed it up some with this flag
+	r->m_forSectionStats = true;
+
+	// only do a single read of docids... do not split up
+	r->m_numDocIdSplits  = 1;
+
+	// 1 query term
+	r->m_nqt = 1;
+
+	///////////////////////
+	//
 	// this tells msg3a/msg39/posdbtable its a hack! no need to do this
-	// because it's implied by the query
-	r->m_getSectionStats     = true;
+	// because it's implied by the query.
+	// BUT REALLY let's eliminate this and just make our queries like
+	// gbfacet:gbxpathsitehash1234567 where 1234567 is the hash of
+	// the section's xpath with the site. the values of that term in
+	// the posdb key will be 32-bit hashes of the innerHtml for such
+	// sections from all pages with the same xpath on the same site.
+	// so no need for this now, comment out.
+	//
+	//r->m_getFacetStats     = true;
+	//
+	/////////////////////////
+
+
 	// we need to know what site is the base site so the section stats
 	// can set m_onSiteDocIds and m_offSiteDocIds correctly
-	r->m_siteHash32          = *sh32;
+	//r->m_siteHash32          = *sh32;
+
+	// . now we use the hash of the innerHtml of the xpath
+	// . this is our value for the facet field of gbxpathsitehash12345678
+	//   which is the hash of the innerHTML for that xpath on this site.
+	//   12345678 is the hash of the xpath and the site.
+	//r->m_myFacetVal32 = sentHash32;
 
 
-	Query *qq = &m_queryArray[i];
+	//Query *qq = &m_queryArray[i];
 	// set query for msg3a. queryExpansion=false
-	qq->set2 ( r->ptr_query , langUnknown , false );
+	//qq->set2 ( r->ptr_query , langUnknown , false );
 
-	// . get the docIds
-	// . this sets m_msg3a.m_clusterLevels[] for us
-	if ( ! msg3a->getDocIds ( r,  qq , msg3a , gotDocIdsWrapper)) {
-		// we blocked?
-		return (SectionStats *)-1;
-	}
+	Query qq;
+	qq.set2 ( r->ptr_query , langUnknown , false );
 
-	// back!
-	m_inUse[i] = 0;
+	// TODO: ensure this just hits the one host since it is sharded
+	// by termid...
+
+	// what shard owns this termlist. we shard these 
+	// gbfacetstr:gbxpathsitehash123456 terms by termid.
+	long long termId = qq.getTermId(0);
+	long shardNum = getShardNumFromTermId ( termId );
+
+	// hack in our inner html content hash for this xpath
+	mcast->m_hack32 = innerHash32;
+	mcast->m_hack64 = secHash32;
+
+	// malloc and store the request. mcast will free it when done.
+	long reqSize;
+	char *req = serializeMsg ( sizeof(Msg39Request),
+				   &r->size_readSizes,
+				   &r->size_whiteList,
+				   &r->ptr_readSizes,
+				   r,
+				   &reqSize,
+				   NULL,
+				   0,
+				   false);
+
+	// . send out a msg39 request to each shard
+	// . multicasts to a host in group "groupId"
+	// . we always block waiting for the reply with a multicast
+	// . returns false and sets g_errno on error
+	// . sends the request to fastest host in group "groupId"
+	// . if that host takes more than about 5 secs then sends to
+	//   next host
+	// . key should be largest termId in group we're sending to
+	bool status;
+	status = mcast->send ( req               , // m_rbufPtr         ,
+			       reqSize           , // request size
+			       0x39              , // msgType 0x39
+			       true              , // mcast owns m_request?
+			       shardNum          , // group to send to
+			       false             , // send to whole group?
+			       0,//(long)qh          , // 0 // startKey.n1
+			       this              , // state1 data
+			       mcast             , // state2 data
+			       gotReplyWrapper39 ,
+			       30                , //timeout in secs
+			       m_niceness,//m_r->m_niceness   ,
+			       false             , // realtime?
+			       -1, // firstHostId, // -1// bestHandlingHostId ,
+			       NULL              , // m_replyBuf   ,
+			       0                 , // MSG39REPLYSIZE,
+			       // this is true if multicast should free the
+			       // reply, otherwise caller is responsible
+			       // for freeing it after calling
+			       // getBestReply().
+			       // actually, this should always be false,
+			       // there is a bug in Multicast.cpp.
+			       // no, if we error out and never steal
+			       // the buffers then they will go unfreed
+			       // so they are freed by multicast by default
+			       // then we steal control explicitly
+			       true             );
+
+	m_mcastRequestsOut++;
+
+	// if successfully launch, wait...
+	if ( status ) return (SectionStats *) -1;
 
 	// error?
-	if ( g_errno ) return NULL;
+	if ( g_errno ) return NULL;//{ mcast->m_inUse = 0; return NULL; }
+
+	// sets &m_sectionStats and adds to the table
+	gotSectionFacets ( mcast );
 
 	// i guess did not block...
-	return &msg3a->m_sectionStats;
+	//return &msg3a->m_sectionStats;
+	return &m_sectionStats;
 }
+
+// . come here when msg39 got the ptr_faceHashList for our single
+//   gbfacet:gbxpathsitehash
+// . returns false and sets g_errno on error
+bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
+	//SectionStats *stats = &msg39->m_sectionStats;
+
+	if ( mcast->m_inUse ) { char *xx=NULL;*xx=0;}
+
+	// count it as returned
+	m_mcastRequestsIn++;
+	// mark it as available now
+	long num = mcast - m_mcastArray;
+	// sanity
+	//if ( ! msg39->m_inUse ) { char *xx=NULL;*xx=0; }
+
+	// grab the xpath/site hash
+	uint32_t secHash32 = mcast->m_hack64;
+
+	// and our innher html for that xpath
+	long myFacetVal32 = mcast->m_hack32;
+
+	// sanity. should only be a gbfacet:gbxpathsitehash12345567 term.
+	//if ( mcast->m_q->m_numTerms != 1 ) { char *xx=NULL;*xx=0; }
+
+	// reset all counts to 0
+	m_sectionStats.reset();
+	
+	//////
+	//
+	// compile m_sectionStats
+	//
+	///////
+
+	// set m_sectionStats from the list of facet values for this
+	// gbfacet:xpathsitehash term...
+	// Query::m_queryTerm.m_facetHashTable has the facets merged
+	// from all the shards. so now compute the stats from them.
+	// set the section stats.
+	//QueryTerm *qt = &msg3a->m_q->m_qterms[0];
+	//HashTableX *ft = &qt->m_facetHashTable;
+
+	// . get the list of facet field/value pairs.
+	// . see how Msg3a.cpp merges these to see how they are stored
+	Msg39Reply *mr = (Msg39Reply *)mcast->m_readBuf;//getBestReply();
+
+	// this is NULL with g_errno set on error
+	if ( ! mr ) {
+		log("xmldoc: got error from sec stats mcast: %s",
+		    mstrerror(g_errno));
+		return false;
+	}
+
+	deserializeMsg ( sizeof(Msg39Reply) ,
+			 &mr->size_docIds,
+			 &mr->size_clusterRecs,
+			 &mr->ptr_docIds,
+			 mr->m_buf );
+
+	char *p = (char *)(mr->ptr_facetHashList);
+	//char *pfinal = p + mr->size_facetHashList;
+
+	//
+	// should only be one termid of facets in here, so no need to re-loop
+	//
+	long nh = 0;
+	// "matches" is how many docids with this facet field had our facet val
+	long matches = 0;
+	// "totalDocIds" is how many docids had this facet field
+	long totalFields = 0;
+
+	if ( p ) {
+		// first is the termid
+		//long long termId = *(long long *)p;
+		// skip that
+		p += 8;
+		// the # of unique 32-bit facet values
+		nh = *(long *)p;
+		p += 4;
+		// the end point 
+		char *pend = p + (8 * nh);
+		// now compile the facet hash list into there 
+		for ( ; p < pend ; ) {
+			// does this facet value match ours? 
+			// (i.e. same inner html?)
+			if ( *(long *)p == myFacetVal32 )
+				matches += *(long *)(p+4);
+			p += 4;
+			// now how many docids had this facet value?
+			totalFields += *(long *)p;
+			p += 4;
+		}
+	}
+
+	// how many unique inner html content hashes for this xpath/site
+	// hash were there?
+	m_sectionStats.m_numUniqueVals = nh;//ft->m_numSlotsUsed;
+
+	// how many xpaths existsed over all docs. doc can have multiple.
+	m_sectionStats.m_totalEntries = totalFields;
+
+	// total # unique docids that had this facet
+	m_sectionStats.m_totalDocIds = mr->m_estimatedHits;//totalHits;
+
+	// how many had the same inner html content hash for
+	// this xpath/site as we did? 
+	m_sectionStats.m_totalMatches = matches;
+
+	////////
+	//
+	// store m_sectionStats in cache
+	//
+	////////
+
+	// cache them. this does a copy of m_sectionStats
+	if ( ! m_sectionStatsTable.addKey ( &secHash32 , &m_sectionStats ) )
+		log("xmldoc: failed to add sections stats: %s",
+		    mstrerror(g_errno));
+
+	// reset that msg39 to free its data
+	//msg39->reset();
+
+	if ( mcast != &m_mcastArray[num] ) { char *xx=NULL;*xx=0; }
+
+	// . make it available again
+	// . do this after all in case we were in quickpoll interruptting
+	//   the getSectionStats() function below
+	//mcast->m_inUse = 0;
+
+	// free query Query::m_qwords array etc. to stop mem leaks
+	m_mcastArray       [num].reset();
+	m_msg39RequestArray[num].reset();
+	//m_queryArray       [num].reset();
+	// now when the master loop calls getSectionsWithDupStats() it
+	// should find the stats class in the cache!
+	return true;
+}
+
 
 // . for all urls from this subdomain...
 // . EXCEPT root url since we use msg17 to cache that, etc.
@@ -12719,8 +13058,8 @@ bool *XmlDoc::getIsAllowed ( ) {
 		m_isAllowedValid = true;
 		m_crawlDelayValid = true;
 		m_crawlDelay      = -1;
-		log("xmldoc: skipping robots.txt lookup for %s",
-		    m_firstUrl.m_url);
+		//log("xmldoc: skipping robots.txt lookup for %s",
+		//    m_firstUrl.m_url);
 		return &m_isAllowed;
 	}
 
@@ -14723,6 +15062,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
 
+	if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
+	else                        r->m_addToTestCache = false;
 
 	// . this is -1 if unknown. none found in robots.txt or provided
 	//   in the custom crawl parms.
@@ -14801,6 +15142,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( strncmp(cu->m_url,"http://api.ahrefs.com/",22) == 0 )
 		r->m_skipHammerCheck = 1;		
 
+	if ( r->m_skipHammerCheck )
+		log("skipping hammer check");
+
 	// if we had already spidered it... try to save bandwidth and time
 	if ( od ) {
 		// sanity check
@@ -14824,6 +15168,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 		//r->m_requireGoodDate = false;
 		// no frames within frames
 		r->m_attemptedIframeExpansion = 1;
+		log("skipping hammer check 2");
+
 	}
 
 	// . use msg13 to download the file, robots.txt
@@ -16629,6 +16975,15 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		return &m_expandedUtf8Content;
 	}
 
+	// or if this is set to true
+	if ( m_skipIframeExpansion ) {
+		m_expandedUtf8Content     = m_rawUtf8Content;
+		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
+		m_expandedUtf8ContentValid = true;
+		return &m_expandedUtf8Content;
+	}
+
+
 	uint8_t *ct = getContentType();
 	if ( ! ct || ct == (void *)-1 ) return (char **)ct;
 
@@ -16746,6 +17101,7 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// . no, use 5 seconds since we often have the same iframe
 		//   in the root doc that we have in the  main doc, like a
 		//   facebook iframe or something.
+		// . use a m_maxCacheAge of 5 seconds now!
 		ped = getExtraDoc ( furl.m_url , 5 );
 		// should never block
 		if ( ! ped ) { 
@@ -26584,6 +26940,14 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 
 	return true;
 }
+/////////////
+// 
+// CHROME DETECTION
+//
+// we search for these terms we hash here in getSectionsWithDupStats()
+// so we can remove chrome.
+//
+/////////////
 
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
@@ -26602,8 +26966,10 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt        = tt;
-	hi.m_prefix    = "gbsectionhash";
-	hi.m_siteHash32 = siteHash32;
+	// the prefix is custom set for each section below
+	//hi.m_prefix    = "gbsectionhash";
+	// put all guys with the same xpath/site on the same shard
+	hi.m_shardByTermId = true;
 
 	Section *si = ss->m_rootSection;
 
@@ -26613,13 +26979,58 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		// . skip if empty
 		// . this needs to be like 48 bits because 32 bits is not
 		//   big enought!
-		uint64_t ch64 = si->m_sentenceContentHash64;
-		if ( ! ch64 ) continue;
-		// get section CONTENT hash
-		char sbuf[64];
-		sprintf(sbuf,"%llu",ch64);
-		if ( ! hashSingleTerm(sbuf,gbstrlen(sbuf),&hi) ) 
-			return false;
+		//uint64_t ih64 = si->m_sentenceContentHash64;
+
+		// don't bother with the section if it doesn't have this set
+		// because this eliminates parent dupage to reduce amount
+		// of gbxpathsitehash123456 terms we index
+		if ( ! ( si->m_flags & SEC_HASHXPATH ) ) 
+			continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		//if ( si->m_sentenceContentHash64 ) 
+		//	continue;
+
+		// get hash of sentences this tag contains indirectly
+		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) 
+			continue;
+
+		// the termid is now the xpath and the sitehash, the "value"
+		// will be the hash of the innerhtml, m_sentenceContentHash64
+		uint64_t thash64 = (unsigned long)si->m_turkTagHash32;
+		// combine with site hash
+		thash64 ^= (unsigned long)siteHash32;
+
+		// this is a special hack we need to make it the
+		// hash of the inner html
+		//hi.m_sentHash32 = (unsigned long)ih64;
+
+		// . get section xpath & site hash
+		// . now if user does a gbfacets:gbxpathsitehashxxxxxx query
+		//   he will get back a histogram of the values it hash,
+		//   which are 32-bit hashes of the innerhtml for that 
+		//   xpath on this site.
+		char prefix[96];
+		sprintf(prefix,"gbxpathsitehash%llu",thash64);
+
+		// like a normal key but we store "ih64" the innerHTML hash
+		// of the section into the key instead of wordbits etc.
+		// similar to hashNumber*() functions.
+		//if ( ! hashSectionTerm ( term , &hi, (unsigned long)ih64 ) ) 
+		//	return false;
+
+		// i guess use facets
+		hi.m_prefix = prefix;
+
+		// we already have the hash of the inner html of the section
+		hashFacet2 ( "gbfacetstr",
+			     prefix, 
+			     //(long)(unsigned long)ih64 , 
+			     val32,
+			     hi.m_tt ,
+			     // shard by termId?
+			     true );
 	}
 
 	return true;
@@ -27112,6 +27523,10 @@ bool XmlDoc::hashBody2 ( HashTableX *tt ) {
 	//long mp = getY ( *getSiteNumInlinks8() , x , y , 5 );
 
 	//long nw = m_words.getNumWords();
+
+	// record this
+	m_bodyStartPos = m_dist;
+	m_bodyStartPosValid = true;
 
 	HashInfo hi;
 	hi.m_tt         = tt;
@@ -28282,6 +28697,65 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		m_replyValid = true;
 		return reply;
 	}
+
+	// if they provided a query with gbfacet*: terms then we have
+	// to get those facet values.
+	if ( ! m_gotFacets ) {
+		// need this for storeFacetValues() if we are json
+		if ( m_contentType == CT_JSON ) {
+			Json *jp = getParsedJson();
+			if ( ! jp || jp == (void *)-1)return (Msg20Reply *)jp;
+		}
+		if ( m_contentType == CT_HTML ) {
+			Xml *xml = getXml();
+			if ( ! xml || xml==(void *)-1)return (Msg20Reply *)xml;
+		}
+		// only do this once
+		m_gotFacets = true;
+		// get facet term
+		char *qs = m_req->ptr_qbuf;
+	facetPrintLoop:
+		for ( ; qs && *qs ; qs++ ) {
+			if ( qs[0] != 'g' ) continue;
+			if ( qs[1] != 'b' ) continue;
+			if ( qs[2] != 'f' ) continue;
+			if ( strncasecmp(qs,"gbfacet",7) ) continue;
+			qs += 7;
+			// gbfacetstr: gbfacetint: gbfacetfloat:
+			if      ( strncasecmp(qs,"str:"  ,4) == 0 ) qs += 4;
+			else if ( strncasecmp(qs,"int:"  ,4) == 0 ) qs += 4;
+			else if ( strncasecmp(qs,"float:",6) == 0 ) qs += 6;
+			else continue;
+			break;
+		}
+		// if we had a facet, get the values it has in the doc
+		if ( qs && *qs ) {
+			// find end of it
+			char *e = qs;
+			for ( ; *e && ! is_wspace_a(*e) ; e++ );
+			// tmp null it
+			char c = *e; *e = '\0';
+			// . this will store facetField/facetValue pairs
+			// . stores into safebuf, m_tmpBuf2
+			// . it will terminate all stored strings with \0
+			// . we check meta tags for html docs
+			// . otherwise we check xml/json doc fields
+			// . returns false with g_errno set on error
+			bool ret = storeFacetValues ( qs , &m_tmpBuf2 ) ;
+			// revert the \0
+			*e = c;
+			// return NULL with g_errno set on error
+			if ( ! ret ) return NULL;
+			// advance
+			qs = e;
+			// do another one
+			goto facetPrintLoop;
+		}
+		// assign
+		reply-> ptr_facetBuf = m_tmpBuf2.getBufStart();
+		reply->size_facetBuf = m_tmpBuf2.length();
+	}
+
 
 	if ( m_req->m_getTermListBuf ) {
 		// ensure content is recycled from title rec
@@ -30688,7 +31162,8 @@ bool storeTerm ( char       *s        ,
 		 SafeBuf    *wbuf     ,
 		 HashTableX *wts      ,
 		 char        synSrc   ,
-		 char        langId ) {
+		 char        langId ,
+		 POSDBKEY key ) {
 
 	// store prefix
 	long poff = wbuf->length();
@@ -30732,6 +31207,10 @@ bool storeTerm ( char       *s        ,
 	ti.m_wordNum   = wordNum;
 	ti.m_wordPos   = wordPos;
 	ti.m_langId = langId;
+	ti.m_key   = key;
+
+	// was sitehash32
+	//ti.m_facetVal32 = hi->m_facetVal32;//sentHash32 = hi->m_sentHash32;
 
 	// save for printing out an asterisk
 	ti.m_synSrc = synSrc; // isSynonym = isSynonym;
@@ -30837,11 +31316,16 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 
 	//
 	// HACK: mangle the key if its a gbsitehash:xxxx term
+	// used for doing "facets" like stuff on section xpaths.
 	//
-	static long long s_gbsectionhash = 0LL;
-	if ( ! s_gbsectionhash ) s_gbsectionhash = hash64b("gbsectionhash");
-	if ( prefixHash == s_gbsectionhash ) 
-		g_posdb.setSectionSiteHash32 ( &k, hi->m_siteHash32 );
+	// no longer do this because we just hash the term 
+	// gbxpathsitehash1234567 where 1234567 is that hash.
+	// but
+	//
+	//static long long s_gbsectionhash = 0LL;
+	//if ( ! s_gbsectionhash ) s_gbsectionhash = hash64b("gbsectionhash");
+	//if ( prefixHash == s_gbsectionhash ) 
+	//	g_posdb.setSectionSentHash32 ( &k, hi->m_sentHash32 );
 
 	// . otherwise, add a new slot
 	// . key should NEVER collide since we are always 
@@ -30860,7 +31344,8 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 				    &m_wbuf,
 				    m_wts,
 				    SOURCE_NONE, // synsrc
-				    langUnknown) )
+				    langUnknown,
+				    k) )
 		return false;
 
 	return true;
@@ -31323,7 +31808,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					   wbuf,
 					   wts,
 					   SOURCE_NONE, // synsrc
-					   langId ))
+					   langId ,
+					   k))
 				return false;
 		}
 
@@ -31374,7 +31860,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					 wbuf,
 					 wts,
 					 SOURCE_GENERATED,
-					 langId) )
+					 langId,
+					 k) )
 				return false;
 		}
 			
@@ -31497,7 +31984,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					   wbuf,
 					   wts,
 					   SOURCE_BIGRAM, // synsrc
-					   langId) )
+					   langId,
+					   k) )
 				return false;
 		}
 		
@@ -31585,12 +32073,182 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 			return false;
 	}
 
+	// hash a single term so they can do gbfacet:ext or
+	// gbfacet:siterank or gbfacet:price. a field on a field.
+	if ( prefixHash && words->m_numWords )
+		// hash gbfacet:price with and store the price in the key
+		hashFacet1 ( hi->m_prefix, words ,hi->m_tt);//, hi );
+
 	// between calls? i.e. hashTitle() and hashBody()
 	//if ( wc > 0 ) m_dist = wposvec[wc-1] + 100;
 	if ( i > 0 ) m_dist = wposvec[i-1] + 100;
 
 	return true;
 }
+
+// just like hashNumber*() functions but we use "gbfacet" as the
+// primary prefix, NOT gbminint, gbmin, gbmax, gbmaxint, gbsortby,
+// gbsortbyint, gbrevsortby, gbrevsortbyint
+bool XmlDoc::hashFacet1 ( char *term , 
+			  Words *words ,
+			  HashTableX *tt ) {
+
+	// need a prefix
+	//if ( ! hi->m_prefix ) return true;
+
+	// hash the ENTIRE content, all words as one blob
+	long nw = words->getNumWords();
+	char *a = words->m_words[0];
+	char *b = words->m_words[nw-1]+words->m_wordLens[nw-1];
+	// hash the whole string as one value, the value of the facet
+	long val32 = hash32 ( a , b - a );
+
+	if ( ! hashFacet2 ( "gbfacetstr",term, val32 , tt ) ) return false;
+
+	// if it's a number hash as float and int
+	if ( nw != 1 ) return true;
+	char **wptrs = words->m_words;
+	if ( ! is_digit ( wptrs[0][0] ) ) return true;
+
+	// hash with a float val
+	float f = atof(wptrs[0]);
+	long vf32 = *(long *)&f;
+	if ( ! hashFacet2 ( "gbfacetfloat",term, vf32 , tt ) ) return false;
+
+	// and an int val
+	long vi32 = atoi(wptrs[0]);
+	if ( ! hashFacet2 ( "gbfacetint",term, vi32 , tt ) ) return false;
+
+	return true;
+}
+
+bool XmlDoc::hashFacet2 ( char *prefix,
+			  char *term ,
+			  long val32 ,
+			  HashTableX *tt ,
+			  // we only use this for gbxpathsitehash terms:
+			  bool shardByTermId ) {
+
+	// need a prefix
+	//if ( ! hi->m_prefix ) return true;
+	//long plen = gbstrlen ( hi->m_prefix );
+	//if ( plen <= 0 ) return true;
+	// we gotta make this case insensitive, and skip spaces
+	// because if it is 'focal length' we can't search
+	// 'focal length:10' because that comes across as TWO terms.
+	//long long prefixHash =hash64Lower_utf8_nospaces ( hi->m_prefix,plen);
+
+	// now any field has to support gbfacet:thatfield
+	// and store the 32-bit termid into where we normally put
+	// the word position bits, etc.
+	//static long long s_facetPrefixHash = 0LL;
+	//if ( ! s_facetPrefixHash )
+	//	s_facetPrefixHash = hash64n ( "gbfacet" );
+	long long prefixHash = hash64n ( prefix );
+
+	long long termId64 = hash64n ( term );
+
+	// combine with the "gbfacet" prefix. old prefix hash on right.
+	// like "price" on left and "gbfacetfloat" on left... see Query.cpp
+	long long ph2 = hash64 ( termId64, prefixHash );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  shardByTermId );
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	g_posdb.setInt ( &k , val32 );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	HashTableX *dt = tt;//hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	bool isFloat = false;
+	if ( strcmp(prefix,"gbfacetfloat")==0 ) isFloat = true;
+
+	// store in buffer for display on pageparser.cpp output
+	char buf[128];
+	long bufLen;
+	if ( isFloat )
+		bufLen=sprintf(buf,"facetField=%s facetVal32=%f",term,
+			       *(float *)&val32);
+	else
+		bufLen=sprintf(buf,"facetField=%s facetVal32=%lu",term,val32);
+
+	// make a special hashinfo for this facet
+	HashInfo hi;
+	hi.m_tt = tt;
+	hi.m_prefix = prefix;//"gbfacet";
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   prefixHash, // s_facetPrefixHash,
+			   &hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ,
+			   k) )
+		return false;
+
+	return true;
+}
+
 
 // . we store numbers as floats in the top 4 bytes of the lower 6 bytes of the 
 //   posdb key
@@ -31653,6 +32311,114 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 
 	return true;
 }
+
+// . THIS IS NOW replaced by ::hashFacet2() being called by hashSections()
+//   above. it is a more generic, faceted approch.
+// . the term is gbxpathsite123456 the prefix is gbfacet the val32 
+//   stored in the posdb key is the inner html hash of the section, and
+//   the "123456" is the hash of the xpath and site. so the field names
+//   are very custom, not your typical "ext" or "title"
+// . CHROME DETECTION
+// . hash a special "gbxpathsitehash12345678" term which has the hash of the
+//   innerHTML content embedded in it.
+// . we do this for doing gbfacetstr:gbxpathsitehash12345678 etc. on every
+//   section with innerHTML so we can figure out the histogram of each
+//   section on this page relative to its subdomain. like the distriubtion
+//   of the innerHTML for this section as it appears on other pages from
+//   this site. this allows killer CHROME DETECTION!!!!
+/*
+bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
+
+        long long termId = hash64 ( term , gbstrlen(term) );
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  termId,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  hi->m_shardByTermId );
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	g_posdb.setInt ( &k , sentHash32 );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	// sanity
+	int t = g_posdb.getInt ( &k );
+	if ( t != sentHash32 ) { char *xx=NULL;*xx=0; }
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	//char buf[128];
+	//long bufLen = sprintf(buf,"%lu",sentHash32);
+
+	// if no gbmin or gbmax or gbsorty or gbrevsortby we need gbfacet
+	//long long truePrefix64 = hash64n ( "gbfacet" );
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( term,//buf,
+			   gbstrlen(term),//bufLen,
+			   0LL,//truePrefix64,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ,
+			   k))
+		return false;
+
+	return true;
+}
+*/
+
+
 
 bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
@@ -31734,7 +32500,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	long bufLen = sprintf(buf,"%f",f);
+	long bufLen = sprintf(buf,"%s:%s float32=%f",sortByStr,hi->m_prefix,f);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -31753,7 +32519,8 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 			   m_wts,
 			   // a hack for display in wts:
 			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
-			   langUnknown ) )
+			   langUnknown ,
+			   k) )
 		return false;
 
 	return true;
@@ -31841,7 +32608,7 @@ bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	long bufLen = sprintf(buf,"%li",n);
+	long bufLen = sprintf(buf,"%s:%s int32=%li",sortByStr,hi->m_prefix,n);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -31860,7 +32627,8 @@ bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
 			   m_wts,
 			   // a hack for display in wts:
 			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
-			   langUnknown ) )
+			   langUnknown ,
+			   k ) )
 		return false;
 
 	return true;
@@ -32907,6 +33675,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 
 	// print out the rules in Weights.cpp
+	/*
 	sb->safePrintf ("<br>"
 			"<table border=1 cellpadding=0>"
 
@@ -32984,7 +33753,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"</table>\n"
 			"<br>"
 			);
-
+	*/
 
 
 	//
@@ -33022,7 +33791,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	// set this for cmptp
 	s_wbuf = &m_wbuf;
 
-	// sort them alphabetically
+	// sort them alphabetically by Term
 	gbsort ( tp , nt , sizeof(TermDebugInfo *), cmptp , m_niceness );
 
 	// determine how many non 1.0 weight fields we got in the vectors
@@ -33061,8 +33830,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		//"<td><b>Spam</b></td>"
 		
 		"<td><b>Desc</b></td>"
-		"<td><b>TermId</b></td>"
+		"<td><b>TermId/TermHash48</b></td>"
 		"<td><b>ShardByTermId?</b></td>"
+		"<td><b>Note</b></td>"
 		"</tr>\n"
 		//,fbuf
 		);
@@ -33082,13 +33852,26 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		char *prefix = "&nbsp;";
 		if ( tp[i]->m_prefixOff >= 0 ) 
 			prefix = start + tp[i]->m_prefixOff;
+
+		bool isFacet = false;
+		if ( prefix && 
+		     prefix[0]=='g' && 
+		     strncmp(prefix,"gbfacet",7)== 0 )
+			isFacet = true;
+
 		sb->safePrintf ( "<tr>"
 				 //"<td><b>%li</b></td>" 
 				 "<td>%s</td>" 
-				 "<td>%li</td>" 
 				 //i ,
 				 , prefix
-				 , tp[i]->m_wordNum );
+				 );
+
+		if ( isFacet )
+			sb->safePrintf("<td>--</td>");
+		else
+			sb->safePrintf( "<td>%li</td>" 
+					, tp[i]->m_wordNum );
+
 
 		// print lang
 		//char langId = tp[i]->m_langId;
@@ -33098,7 +33881,10 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		// resolve some ambiguity, but not all, so print out
 		// the possible langs here
 		sb->safePrintf("<td>");
-		printLangBits ( sb , tp[i] );
+		if ( isFacet )
+			sb->safePrintf("--");
+		else
+			printLangBits ( sb , tp[i] );
 		sb->safePrintf("</td>");
 
 
@@ -33108,7 +33894,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		if ( tp[i]->m_synSrc )
 			sb->pushChar('*');
 
-		sb->safeMemcpy ( start + tp[i]->m_termOff , tp[i]->m_termLen );
+		char *term = start + tp[i]->m_termOff;
+		long  termLen = tp[i]->m_termLen;
+		sb->safeMemcpy ( term , termLen );
 
 		/*
 		char *dateStr = "&nbsp;";
@@ -33193,6 +33981,35 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 		if ( tp[i]->m_shardByTermId ) sb->safePrintf("<td><b>1</b></td>" );
 		else                    sb->safePrintf("<td>0</td>" );
+
+
+		sb->safePrintf("<td>");
+
+		// there is no prefix for such terms now
+		// TODO: store actual key in there i guess?? or just this bit.
+		long val32 = 0;
+		if ( strncmp(prefix,"gbfacet",7) == 0 )
+			val32 = g_posdb.getInt(&tp[i]->m_key);
+
+		// . this is like gbxpathsitehash1234567
+		// . the number following it is the hash
+		// . the value stored in the posdb key is the hash of the
+		//   inner html content of that xpath/site for this page
+		if ( strncmp(term,"facetField=gbxpathsitehash",26)==0)
+			sb->safePrintf("<b>Term</b> is a 32-bit hash of the "
+				       "X-path of "
+				       "a section XOR'ed with the 32-bit "
+				       "hash of this document's subdomain. "
+				       "[%lu] is the 32-bit hash of the "
+				       "Inner HTML of this section stored "
+				       "in the posdb key instead of "
+				       "the usual stuff. This is also "
+				       "sharded by termId!",
+				       val32//(long)tp[i]->m_sentHash32
+				       );
+
+		sb->safePrintf("</td>");
+
 
 		sb->safePrintf("</tr>\n");
 	}
@@ -33783,6 +34600,134 @@ bool XmlDoc::printPageInlinks ( SafeBuf *sb , HttpRequest *hr ) {
 	return true;
 }
 
+static void getInlineSectionVotingBufWrapper ( void *state ) {
+	XmlDoc *xd = (XmlDoc *)state;
+	SafeBuf *vb = xd->getInlineSectionVotingBuf();
+	// return if blocked
+	if ( vb == (void *)-1 ) return;
+	// error?
+	if ( ! vb ) log("xmldoc: error getting inline section votes: %s",
+			mstrerror(g_errno));
+	// all done then. call original entry callback
+	log("xmldoc: returning control to original caller");
+	xd->m_callback1 ( xd->m_state );
+}
+
+// . returns false if blocked, true otherwise
+// . returns true with g_errno set on error
+// . this actually returns the page content with inserted information
+//   based on sectiondb data
+// . for example, <div id=poo> --> <div id=poo d=5 n=20> 
+//   means that the section is repeated on 20 pages from this site and 5 of
+//   which have the same innerHtml as us
+SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// . if we block anywhere below we want to come back here until done
+	// . this can be a main entry point, so set m_masterLoop
+	if ( ! m_masterLoop ) {
+		m_masterLoop  = getInlineSectionVotingBufWrapper;
+		m_masterState = this;
+		log("xmldoc: getting section voting info from coll=%s",
+		    cr->m_coll);
+	}
+
+	if ( m_inlineSectionVotingBufValid )
+		return &m_inlineSectionVotingBuf;
+
+	Sections *sections = getSectionsWithDupStats();
+	if ( ! sections || sections == (void *)-1 ) return (SafeBuf *)sections;
+	Words *words = getWords();
+	if ( ! words || words == (void *)-1 ) return (SafeBuf *)words;
+	HttpMime *mime = getMime();
+	if ( ! mime || mime == (void *)-1 ) return (SafeBuf *)mime;
+
+	long siteHash32 = *getSiteHash32();
+
+	//long nw = words->getNumWords();
+	//long long *wids = words->getWordIds();
+
+	SafeBuf *sb = &m_inlineSectionVotingBuf;
+
+	// store mime first then content
+	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
+	sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
+
+	// but hack the Content-Length: field to something alien
+	// because we markup the html and the lenght will be different...
+	sb->nullTerm();
+	char *cl = strstr(sb->getBufStart(),"\nContent-Length:");
+	if ( cl ) cl[1] = 'Z';
+
+	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
+
+	// just print out each word
+	// map the word to a section. 
+	// if it s the first time we've printed the section then we
+	// can inject the stuff
+	// set a printed bit to indicate when we print out a section so
+	// we do not re-print it...
+
+	// these are 1-1 with words
+	Section **sptrs = sections->m_sectionPtrs;
+	long nw = words->getNumWords();
+	char **wptrs = words->m_words;
+	long *wlens = words->m_wordLens;
+
+	for ( long i = 0 ; i < nw ; i++ ) {
+		char *a = wptrs[i];
+		// skip if not a front tag
+		if ( *a != '<' || a[1] == '/' ) {
+			sb->safeMemcpy(a,wlens[i]);
+			continue;
+		}
+		Section *sa = sptrs[i];
+		// straight copy if no stats
+		if ( ! sa || ! sa->m_stats.m_totalEntries ) {
+			sb->safeMemcpy ( a , wlens[i] );
+			continue;
+		}
+		// should be tag then
+		char *e = a;
+		for ( ; *e && *e != '>' && ! is_wspace_a(*e) ; e++);
+		// copy that
+		sb->safeMemcpy ( a , e-a);
+
+		// the hash of the turktaghash and sitehash32 combined
+		// so you can do gbfacetstr:gbxpathsitehash12345
+		// where the 12345 is this h32 value.
+		unsigned long h32 = sa->m_turkTagHash32 ^ siteHash32;
+
+		// insert our stuff into the tag
+		//sb->safePrintf("<!--");
+		//sb->safePrintf("<font color=red>");
+		SectionStats *sx = &sa->m_stats;
+		// # docs from our site had the same innerHTML?
+		sb->safePrintf(" _s=M%liD%lin%liu%lih%lu",
+			       // total # of docs that had an xpath with
+			       // our same innerHtml
+			       (long)sx->m_totalMatches,
+			       // # of of docids with this facet
+			       (long)sx->m_totalDocIds,
+			       // . total # of times this xpath occurred
+			       // . can be multiple times per doc
+			       (long)sx->m_totalEntries,
+			       // unique values in the xpath innerhtml
+			       (long)sx->m_numUniqueVals,
+			       // xpathsitehash
+			       h32 );
+		// copy the rest of the tag
+		sb->safeMemcpy( e, wlens[i]-(e-a) );
+		//sb->safePrintf("-->");
+		//sb->safePrintf("</font>");
+		// print it here
+	}
+	m_inlineSectionVotingBufValid = true;
+	return &m_inlineSectionVotingBuf;
+}
+
 bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 
 	// what wordposition to scroll to and blink?
@@ -33854,12 +34799,18 @@ bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 	if(!getDiversityVec(words,phrases,cnt,&dwbuf,m_niceness))return true;
 	char *diversityVec = dwbuf.getBufStart();
 
+	// hack fack debug
+	//m_bodyStartPos =2136;
+
 	SafeBuf wpos;
 	if ( ! getWordPosVec ( words , 
 			       sections,
 			       //wordStart,
 			       //wordEnd,
-			       0, // hi->m_startDist,
+			       // we save this in the titlerec, when we
+			       // start hashing the body. we have the url
+			       // terms before the body, so this is necessary.
+			       m_bodyStartPos,//0, // hi->m_startDist,
 			       fragVec,
 			       m_niceness,
 			       &wpos) ) return true;
@@ -33972,6 +34923,9 @@ bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 			sb->safePrintf("\t</section>\n");
 			continue;
 		}
+		/* take this out for now it is not quite right any more.
+		   we now use the xpath hash and site hash as the key
+		   and the "value" is the sentence/innerHtml hash
 		sb->safePrintf("\t\t<numOnSitePagesThatDuplicateContent>%li"
 			       "</numOnSitePagesThatDuplicateContent>\n",
 			       (long)si->m_stats.m_onSiteDocIds);
@@ -33981,6 +34935,7 @@ bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 		sb->safePrintf("\t\t<numSitesThatDuplicateContent>%li"
 			       "</numSitesThatDuplicateContent>\n",
 			       (long)si->m_stats.m_numUniqueSites);
+		*/
 		// you can do a sitehash:xxxxx this number to see who the
 		// dups are!
 		sb->safePrintf("\t\t<innerContentHash64>%llu"
@@ -47165,3 +48120,136 @@ char *XmlDoc::getDiffbotParentUrl( char *myUrl ) {
 	return NULL;
 }
 
+bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
+
+	// sanity
+	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
+
+	// if "qa" is a gbxpathsitehash123456 type of beastie then we
+	// gotta scan the sections
+	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
+		return storeFacetValuesSections ( qs , sb );
+
+
+	// if a json doc, get json field
+	if ( m_contentType == CT_JSON ) 
+		return storeFacetValuesJSON ( qs , sb );
+
+	if ( m_contentType == CT_HTML ) 
+		return storeFacetValuesHtml ( qs , sb );
+
+	return true;
+}
+
+bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ) {
+
+	// scan all sections
+	Sections *ss = getSections();
+	if ( ! ss ) return false;
+	if ( ss == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
+	Words *ww = getWords();
+	if ( ! ww ) return false;
+	if ( ww == (void *)-1 ) { char *xx=NULL;*xx=0; }
+	
+	long siteHash32 = *getSiteHash32();
+
+	// qs is like gbxpathsitehash1234567
+	// so get the digit part
+	char *p = qs;
+	for ( ; *p && ! is_digit(*p); p++ );
+	uint64_t xsh = (unsigned long long)atoll(p);
+
+	Section *si = ss->m_rootSection;
+	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
+	for ( ; si ; si = si->m_next ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// is it a match?
+		uint64_t mod;
+		mod = (unsigned long)si->m_turkTagHash32;
+		mod ^= (unsigned long)siteHash32;
+		if ( mod != xsh ) continue;
+		// . then add facet VALUE
+		// . hash of the innerhtml of sentence
+		// . get hash of sentences this tag contains indirectly
+		unsigned long val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) continue;
+		// got one print the facet field
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+		if ( ! sb->safePrintf("%lu,",val32) ) return false;
+		// put ALSO print the string somewhat
+		char *a = m_words.m_words[si->m_next->m_a];
+		char *b = m_words.m_words[si->m_next->m_b-1];
+		b += m_words.m_wordLens  [si->m_next->m_b-1];
+		if ( ! sb->safeTruncateEllipsis (a,b-a,160) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+	}
+	return true;
+}
+
+
+bool XmlDoc::storeFacetValuesHtml ( char *qs , SafeBuf *sb ) {
+
+	Xml *xml = getXml();
+	long len = 0;
+	char *str = xml->getMetaContentPointer(qs,gbstrlen(qs),"name",&len);
+	if ( ! str ) return true;
+	if ( len <= 0 ) return true;
+
+	// otherwise add facet FIELD to our buf
+	if ( ! sb->safeStrcpy(qs) ) return false;
+	if ( ! sb->pushChar('\0') ) return false;
+
+	// then add facet VALUE
+	if ( ! sb->safeMemcpy(str,len) ) return false;
+	if ( ! sb->pushChar('\0') ) return false;
+	return true;
+}
+
+bool XmlDoc::storeFacetValuesJSON ( char *qs , SafeBuf *sb ) {
+
+	// use new json parser
+	Json *jp = getParsedJson();
+		
+	JsonItem *ji = jp->getFirstItem();
+
+	char nb[1024];
+	SafeBuf nameBuf(nb,1024);
+
+	for ( ; ji ; ji = ji->m_next ) {
+
+		QUICKPOLL(m_niceness);
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
+			continue;
+
+		// reset, but don't free mem etc. just set m_length to 0
+		nameBuf.reset();
+
+		// get its full compound name like "meta.twitter.title"
+		ji->getCompoundName ( nameBuf );
+
+		// skip if not for us
+		if ( strcmp(nameBuf.getBufStart(),qs) ) continue;
+
+		// otherwise add facet FIELD to our buf
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+
+		//
+		// now Json.cpp decodes and stores the value into
+		// a buffer, so ji->getValue() should be decoded completely
+		//
+		long vlen;
+		char *val = ji->getValueAsString( &vlen );
+
+		// then add facet VALUE
+		if ( val && vlen && ! sb->safeMemcpy(val,vlen) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+	}
+
+	return true;
+}

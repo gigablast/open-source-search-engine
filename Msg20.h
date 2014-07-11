@@ -433,6 +433,7 @@ public:
 	char       *ptr_gbvecbuf             ; // gigabit vector
 	char       *ptr_imgUrl               ; // youtube/metacafe vid thumb
 	char       *ptr_imgData              ; // for encoded images
+	char       *ptr_facetBuf             ;
 	//char       *ptr_eventEnglishTime     ; // "every saturday [[]] jan"
 	//char       *ptr_eventDateIntervals   ;
 	char       *ptr_likedbList           ;
@@ -530,7 +531,8 @@ public:
 	long       size_tvbuf                ;
 	long       size_gbvecbuf             ;
 	long       size_imgUrl               ; // youtube/metacafe vid thumb
-	long       size_imgData;
+	long       size_imgData              ;
+	long       size_facetBuf             ;
 	//long       size_eventEnglishTime     ;
 	//long       size_eventDateIntervals   ;
 	long       size_likedbList           ;

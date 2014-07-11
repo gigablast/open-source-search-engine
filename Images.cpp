@@ -741,7 +741,7 @@ bool Images::downloadImage ( ) {
 	r->m_urlIp = m_latestIp;
 	if ( ! strcmp(cr->m_coll,"qatest123")) {
 		r->m_useTestCache   = 1;
-		r->m_addToTestCache = 1;
+		if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = 1;
 	}
 	// url is the most important
 	strcpy(r->m_url,m_imageUrl.getUrl());

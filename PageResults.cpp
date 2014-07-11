@@ -2162,10 +2162,80 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<table cellpadding=0 cellspacing=0>"
 			      "<tr><td valign=top>");
 
+	//
+	// BEGIN FACET PRINTING
+	//
+	// 
+	// . print out one table for each gbfacet: term in the query
+	// . LATER: show the text string corresponding to the hash
+	//   by looking it up in the titleRec
+	//
+	for ( long i = 0 ; i < si->m_q.getNumTerms() ; i++ ) {
+		// only for html for now i guess
+		if ( si->m_format != FORMAT_HTML ) break;
+		QueryTerm *qt = &si->m_q.m_qterms[i];
+		// skip if not facet
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+		HashTableX *fht = &qt->m_facetHashTable;
+		// a new table for each facet query term
+		bool needTable = true;
+		// print out the dumps
+		for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
+			// skip empty slots
+			if ( ! fht->m_flags[j] ) continue;
+			long val32 = *(long *)fht->getKeyFromSlot(j);
+			long count = *(long *)fht->getValFromSlot(j);
+			// print that out
+			if ( needTable ) {
+				needTable = false;
+				sb->safePrintf("<table cellspacing=7 "
+					       "bgcolor=lightgray>"
+					       "<tr><td width=200px;>"
+					       "FACET %s</td></tr>"
+					       ,qt->m_term);
+			}
+			// print the facet in its numeric form
+			// we will have to lookup based on its docid
+			// and get it from the cached page later
+			sb->safePrintf("<tr><td width=200px; valign=top>"
+				       //"<a href=?search="//gbfacet%3A"
+				       //"%s:%lu"
+				       // make a search to just show those
+				       // docs from this facet with that
+				       // value. actually gbmin/max would work
+				       "<a href=/search?c=%s&q="
+				       "gbequalint%%3A%s:%lu"
+				       //"+gbmaxint%%3A%s:%lu>"
+				       ">"
+				       "%lu (%lu)"
+				       "</a>"
+				       "</td></tr>\n"
+				       ,coll
+				       ,qt->m_term // for query
+				       ,val32 // for query
+				       //,qt->m_term // for query
+				       //,val32 // for query
+				       ,val32 // stat for printing
+				       ,count); // count for printing
+		}
+		if ( ! needTable ) 
+			sb->safePrintf("</table>\n");
+	}
+	//
+	// END FACET PRINTING
+	//
+
+
+
+
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
 	if ( si->m_format != FORMAT_HTML ) numGigabits = 0;
+
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
@@ -3624,6 +3694,33 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
+	///////////
+	//
+	// print facet field/values
+	//
+	// if there was a gbfacet*: term (gbfacetstr, gbfacetfloat, gbfacetint)
+	// this should be non-NULL and have the facet field/value pairs
+	// and every string ends in a \0
+	//
+	//////////
+	char *fp    =      mr->ptr_facetBuf;
+	char *fpEnd = fp + mr->size_facetBuf;
+	for ( ; fp && fp < fpEnd ; ) {
+		// print first one
+		sb->safePrintf("<i><font color=maroon>");
+		sb->safeStrcpy(fp);
+		sb->safePrintf("</font></i>");
+		sb->safePrintf(" &nbsp; : &nbsp; ");
+		sb->safePrintf("<b>");
+		fp += gbstrlen(fp) + 1;
+		sb->htmlEncode(fp);
+		// begin a new pair
+		sb->safePrintf("</b>");
+		sb->safeStrcpy("<br>\n");
+		fp += gbstrlen(fp) + 1;		
+	}
+		      
+
 	////////////
 	//
 	// print the URL
@@ -3962,6 +4059,26 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
 	}
 
+	//
+	// show rainbow sections link
+	//
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a href=\""
+				 "/get?"
+				 // show rainbow sections
+				 "page=4&"
+				 "q=%s&"
+				 "qlang=%s&"
+				 "c=%s&"
+				 "d=%lli&"
+				 "cnsp=0\">"
+				 "sections</a>", 
+				 st->m_qe , 
+				 // "qlang" parm
+				 si->m_defaultSortLang,
+				 coll , 
+				 mr->m_docId ); 
+	}
 
 	// this stuff is secret just for local guys!
 	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
@@ -5092,17 +5209,19 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( g_conf.m_isMattWells )
 		sb->safePrintf("<a href=\"/seo?d=");
 	else
-		sb->safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+		sb->safePrintf("<a href=\"/get?d=");
 
 	sb->safePrintf("%lli"
-		      "&page=sections&"
-		      "hipos=%li&c=%s\">"
-		      "%li</a></td>"
-		      "</a></td>"
-		      ,mr->m_docId
-		      ,(long)ps->m_wordPos1
-		      ,si->m_cr->m_coll
-		      ,(long)ps->m_wordPos1);
+		       "&page=4"
+		       //"&page=sections&"
+		       "&hipos=%li"
+		       "&c=%s#hipos\">"
+		       "%li</a></td>"
+		       "</a></td>"
+		       ,mr->m_docId
+		       ,(long)ps->m_wordPos1
+		       ,si->m_cr->m_coll
+		       ,(long)ps->m_wordPos1);
 	// is synonym?
 	//if ( sw1 != 1.00 )
 		sb->safePrintf("<td>%s <font color=blue>%.02f"
@@ -5175,11 +5294,11 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( g_conf.m_isMattWells )
 		sb->safePrintf("<a href=\"/seo?d=");
 	else
-		sb->safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+		sb->safePrintf("<a href=\"/get?d=");
 
 	sb->safePrintf("%lli"
-		      "&page=sections&"
-		      "hipos=%li&c=%s\">"
+		      "&page=4&"
+		      "hipos=%li&c=%s#hipos\">"
 		      "%li</a></td>"
 		      "</a></td>"
 		      ,mr->m_docId
@@ -5602,15 +5721,15 @@ bool printSingleScore ( SafeBuf *sb ,
 		      "</font></td>"
 		      // wordpos
 		      "<td>"
-		      "<a href=\"https://www.gigablast.com/seo?d=" 
+		      "<a href=\"/get?d=" 
 		      , ss->m_finalScore
 		      , getHashGroupString(ss->m_hashGroup)
 		      , hgw
 		      );
 	//sb->urlEncode( mr->ptr_ubuf );
 	sb->safePrintf("%lli",mr->m_docId );
-	sb->safePrintf("&page=sections&"
-		      "hipos=%li&c=%s\">"
+	sb->safePrintf("&page=4&"
+		      "hipos=%li&c=%s#hipos\">"
 		      ,(long)ss->m_wordPos
 		      ,si->m_cr->m_coll);
 	sb->safePrintf("%li</a></td>"

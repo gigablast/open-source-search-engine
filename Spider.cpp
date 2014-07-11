@@ -8284,6 +8284,18 @@ bool sendPage ( State11 *st ) {
 	// and coll rec
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 
+	if ( ! cr ) {
+		// get the socket
+		TcpSocket *s = st->m_socket;
+		// then we can nuke the state
+		mdelete ( st , sizeof(State11) , "PageSpiderdb" );
+		delete (st);
+		// erase g_errno for sending
+		g_errno = 0;
+		// now encapsulate it in html head/tail and send it off
+		return g_httpServer.sendDynamicPage (s, sb.getBufStart(),
+						     sb.length() );
+	}
 
 	// print reason why spiders are not active for this collection
 	long tmp2;
@@ -10396,7 +10408,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// if there is no domain or url explicitly listed
 			// then assume user is spidering the whole internet
 			// and we basically ignore "insitelist"
-			if ( sc->m_siteListIsEmpty &&
+			if ( sc->m_siteListIsEmpty && 
 			     sc->m_siteListIsEmptyValid ) {
 				// use a dummy row match
 				row = (char *)1;

@@ -125,13 +125,15 @@
 #include "Test.h"
 #include "seo.h"
 #include "Json.h"
+#include "SpiderProxy.h"
 //#include "Facebook.h"
 //#include "Accessdb.h"
 
 // from qa.cpp
 bool qaspider ( ) ;
 bool qainject ( ) ;
-bool qatest ( ) ;
+bool qasquid  ( ) ;
+bool qatest   ( ) ;
 
 // call this to shut everything down
 bool mainShutdown ( bool urgent ) ;
@@ -1462,12 +1464,18 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	if ( strcmp ( cmd, "qa" ) == 0 ||
 	     strcmp ( cmd, "qainject" ) == 0 ||
+	     strcmp ( cmd, "qasquid" ) == 0 ||
 	     strcmp ( cmd, "qaspider" ) == 0 ) {
 		// let's ensure our core file can dump
 		struct rlimit lim;
 		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
 		if ( setrlimit(RLIMIT_CORE,&lim) )
 			log("qa::setrlimit: %s", mstrerror(errno) );
+		// in build mode we store downloaded http replies in the
+		// /qa subdir
+		g_conf.m_qaBuildMode = 0;
+		if (  cmdarg+1 < argc )
+			g_conf.m_qaBuildMode = atoi(argv[cmdarg+1]);
 		// 50MB
 		g_conf.m_maxMem = 50000000;
 		// init our table for doing zobrist hashing
@@ -1515,6 +1523,8 @@ int main2 ( int argc , char *argv[] ) {
 			qaspider();
 		else if ( strcmp(cmd,"qainject") == 0 )
 			qainject();
+		else if ( strcmp(cmd,"qasquid") == 0 )
+			qasquid();
 
 		//
 		// wait for some i/o signals
@@ -5488,6 +5498,8 @@ bool registerMsgHandlers ( ) {
 	//if ( ! Msg9a::registerHandler() ) return false;
 	if ( ! g_pingServer.registerHandler() ) return false;
 	//if ( ! g_accessdb.registerHandler () ) return false;
+	// in SpiderProxy.cpp...
+	initSpiderProxyStuff();
 	return true;
 }
 
@@ -13016,7 +13028,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       "densrank=%02li "
 			       //"outlnktxt=%01li "
 			       "mult=%02li "
-			       "sh32=0x%08lx "
+			       //"senth32=0x%08lx "
 			       "recSize=%li "
 			       "dh=0x%02lx%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
@@ -13032,7 +13044,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       (long)g_posdb.getDensityRank(&k),
 			       //(long)g_posdb.getIsOutlinkText(&k),
 			       (long)g_posdb.getMultiplier(&k),
-			       (long)g_posdb.getSectionSiteHash32(&k),
+			       //(long)g_posdb.getSectionSentHash32(&k),
 			       recSize,
 			       
 			       (long)dh, 

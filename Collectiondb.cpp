@@ -371,6 +371,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// register the mem
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
+	// get copy collection
 	//CollectionRec *cpcrec = NULL;
 	//if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
 	//if ( cpc && cpc[0] && ! cpcrec )
@@ -383,6 +384,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// . get the default.conf from working dir if there
 	// . i think this calls CollectionRec::reset() which resets all of its
 	//   rdbbase classes for its collnum so m_collnum needs to be right
+	//g_parms.setToDefault( (char *)cr );
+	// get the default.conf from working dir if there
+	//g_parms.setToDefault( (char *)cr , OBJ_COLL );
 	g_parms.setToDefault( (char *)cr , OBJ_COLL , cr );
 
 	/*

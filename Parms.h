@@ -168,6 +168,11 @@ class GigablastRequest {
 	long  m_ern;
 	char *m_qlang;
         bool  m_forceDel;
+
+	// useful bufs to copy data over
+	SafeBuf m_tmpBuf1;
+	SafeBuf m_tmpBuf2;
+	SafeBuf m_tmpBuf3;
 };
 
 
@@ -202,7 +207,10 @@ class GigablastRequest {
 #define PF_COLLDEFAULT 0x1000
 #define PF_NOAPI       0x2000
 #define PF_REQUIRED    0x4000
-#define PF_NOHTML      0x8000
+#define PF_REBUILDPROXYTABLE 0x8000
+
+#define PF_NOHTML      0x10000
+
 
 #define PF_CLONE       0x20000
 

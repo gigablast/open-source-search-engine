@@ -147,6 +147,12 @@ class Conf {
 	long m_wikiProxyIp;
 	long m_wikiProxyPort;
 
+	SafeBuf m_proxyIps;
+	SafeBuf m_proxyTestUrl;
+	bool    m_useRandAgents;
+	bool    m_useProxyIps;
+	SafeBuf m_proxyAuth;
+
 	// built-in dns parameters using name servers
 	char  m_askRootNameservers;
 	long  m_numRns;
@@ -641,6 +647,7 @@ class Conf {
 	bool  m_logDebugMerge   ;
 	bool  m_logDebugNet     ;
 	bool  m_logDebugPQR     ; // post query rerank
+	bool  m_logDebugProxies ;
 	bool  m_logDebugQuery   ;
 	bool  m_logDebugQuota   ;
 	bool  m_logDebugRobots	;

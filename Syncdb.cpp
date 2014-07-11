@@ -879,7 +879,7 @@ bool Syncdb::registerHandlers ( ) {
 	if ( ! g_udpServer.registerHandler ( 0x5d, handleRequest5d ) )
 		return false;
 	// register ourselves with the udp server
-	if ( ! g_udpServer.registerHandler ( 0x55, handleRequest55 ) )
+	if ( ! g_udpServer.registerHandler ( 0x59, handleRequest55 ) )
 		return false;
 	return true;
 }
@@ -1121,7 +1121,7 @@ bool Syncdb::syncHost ( long syncHostId ) {
 		// use that guy
 		if ( us->sendRequest ( (char *)&tmp      ,
 				       4                 ,
-				       0x55              , // SYNCDB REQUEST
+				       0x59              , // SYNCDB REQUEST
 				       0                 , // ip
 				       0                 , // port
 				       h->m_hostId       , // hostId

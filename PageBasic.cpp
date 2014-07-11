@@ -159,6 +159,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	
 	sc->m_siteListIsEmptyValid = true;
 
+	sc->m_siteListIsEmptyValid = true;
+
 	// use this so it will be free automatically when msg4 completes!
 	SafeBuf *spiderReqBuf = &sc->m_msg4x.m_tmpBuf;
 

@@ -1,7 +1,7 @@
 // Matt Wells, copyright Nov 2002
 
-#ifndef _SPIDER_H_
-#define _SPIDER_H_
+#ifndef SPIDERH
+#define SPIDERH
 
 #define MAX_SPIDER_PRIORITIES 128
 #define MAX_DAYS 365

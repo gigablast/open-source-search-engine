@@ -46,7 +46,6 @@ class Msg39Request {
 		m_addToCache              = false;
 		m_familyFilter            = false;
 		m_timeout                 = -1; // -1 means auto-compute
-		m_getSectionStats         = false;
 		//m_useMinAlgo              = false;
 		//m_fastIntersection        = -1;
 		m_stripe                  = 0;
@@ -61,7 +60,7 @@ class Msg39Request {
 		ptr_query                 = NULL; // in utf8?
 		ptr_whiteList             = NULL;
 		//ptr_coll                  = NULL;
-
+		m_forSectionStats         = false;
 		size_readSizes            = 0;
 		size_query                = 0;
 		size_whiteList            = 0;
@@ -119,8 +118,10 @@ class Msg39Request {
 	//char    m_useNewAlgo;
 	char    m_doMaxScoreAlgo;
 
-	char    m_getSectionStats;
-	long    m_siteHash32;// for m_getSectionStats
+	char    m_forSectionStats;
+
+	// Msg3a still uses this
+	//long    m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
 
 	//char    m_useMinAlgo;
 	//char    m_fastIntersection;
@@ -140,12 +141,16 @@ class Msg39Request {
 
 	time_t  m_nowUTC;
 
+	// do not add new string parms before ptr_readSizes or
+	// after ptr_whiteList so serializeMsg() calls still work
 	char   *ptr_readSizes;
 	char   *ptr_termFreqWeights;
 	char   *ptr_query; // in utf8?
 	char   *ptr_whiteList;
 	//char   *ptr_coll;
 	
+	// do not add new string parms before size_readSizes or
+	// after size_whiteList so serializeMsg() calls still work
 	long    size_readSizes;
 	long    size_termFreqWeights;
 	long    size_query;
@@ -168,25 +173,28 @@ public:
 	long   m_nqt;
 	// # of estimated hits we had
 	long   m_estimatedHits;
-	// for when m_getSectionStats is true
-	SectionStats m_sectionStats;
 	// error code
 	long   m_errno;
 
+	// do not add new string parms before ptr_docIds or
+	// after ptr_clusterRecs so serializeMsg() calls still work
 	char  *ptr_docIds         ; // the results, long long
 	char  *ptr_scores;        ; // now doubles! so we can have intScores
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
 	char  *ptr_singleScoreBuf ; // transparency info
-	char  *ptr_siteHashList   ; // for m_getSectionStats
+	// this is now 1-1 with # of query terms!
+	char  *ptr_facetHashList   ; // list of all the facet values in serps
 	char  *ptr_clusterRecs    ; // key_t (might be empty)
 	
+	// do not add new string parms before size_docIds or
+	// after size_clusterRecs so serializeMsg() calls still work
 	long   size_docIds;
 	long   size_scores;
 	long   size_scoreInfo;
 	long   size_pairScoreBuf  ;
 	long   size_singleScoreBuf;
-	long   size_siteHashList;
+	long   size_facetHashList;
 	long   size_clusterRecs;
 
 	// . this is the "string buffer" and it is a variable size
