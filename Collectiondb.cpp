@@ -832,7 +832,9 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		// cr will be invalid shortly after this
 		// MDW: this is causing the core...
 		// use fake ptrs for easier debugging
-		sc->m_cr = (CollectionRec *)0x99999;//NULL;
+		//sc->m_cr = (CollectionRec *)0x99999;//NULL;
+		//sc->m_cr = NULL;
+		sc->setCollectionRec ( NULL );
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
 		tryToDeleteSpiderColl ( sc ,"10");
@@ -840,7 +842,8 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		//delete ( sc );
 		// don't let cr reference us anymore, sc is on deathrow
 		// and "cr" is delete below!
-		cr->m_spiderColl = (SpiderColl *)0x8888;//NULL;
+		//cr->m_spiderColl = (SpiderColl *)0x8888;//NULL;
+		cr->m_spiderColl = NULL;
 	}
 
 
@@ -1658,7 +1661,7 @@ void CollectionRec::reset() {
 
 	SpiderColl *sc = m_spiderColl;
 	// debug hack thing
-	if ( sc == (SpiderColl *)0x8888 ) return;
+	//if ( sc == (SpiderColl *)0x8888 ) return;
 	// if never made one, we are done
 	if ( ! sc ) return;
 

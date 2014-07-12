@@ -1067,6 +1067,9 @@ class SpiderColl {
 	~SpiderColl ( );
 	SpiderColl  ( ) ;
 
+	void setCollectionRec ( class CollectionRec *cr );
+	class CollectionRec *getCollectionRec ( );
+
 	void clearLocks();
 
 	// called by main.cpp on exit to free memory
@@ -1207,7 +1210,6 @@ class SpiderColl {
 	collnum_t m_collnum;
 	char  m_coll [ MAX_COLL_LEN + 1 ] ;
 	class CollectionRec *getCollRec();
-	class CollectionRec *m_cr;
 	char *getCollName();
 	bool     m_isTestColl;
 
@@ -1286,6 +1288,9 @@ class SpiderColl {
 	long m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
 
 	bool printStats ( SafeBuf &sb ) ;
+
+ private:
+	class CollectionRec *m_cr;
 };
 
 class SpiderCache {
