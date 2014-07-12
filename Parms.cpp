@@ -8165,8 +8165,10 @@ void Parms::init ( ) {
 	m->m_title = "max summary line width";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
+		"Also affects title. "
 		"Strings without spaces that exceed this "
-		"width are not split.";
+		"width are not split. Has no affect on xml or json feed, "
+		"only works on html.";
 	m->m_cgi   = "sw";
 	//m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
 	m->m_off   = (char *)&si.m_summaryMaxWidth - y;
@@ -14773,8 +14775,10 @@ void Parms::init ( ) {
 	m->m_title = "max summary line width by default";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
+		"Also affects title. "
 		"Strings without spaces that exceed this "
-		"width are not split.";
+		"width are not split. Has no affect on xml or json feed, "
+		"only works on html.";
 	m->m_cgi   = "smw";
 	m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
 	m->m_type  = TYPE_LONG;

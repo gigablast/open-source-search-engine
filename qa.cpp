@@ -397,6 +397,37 @@ bool qainject ( ) {
 			return false;
 	}
 
+	static bool s_y5 = false;
+	if ( ! s_y5 ) {
+		s_y5 = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
+				"+news&ns=1&tml=20&smxcpl=30&"
+				"sw=10&showimages=1"
+				,1707718509 ) )
+			return false;
+	}
+
+	static bool s_y6 = false;
+	if ( ! s_y6 ) {
+		s_y6 = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
+				"+news&ns=1&tml=20&smxcpl=30&"
+				"sw=10&showimages=0&hacr=1"
+				,1098495613 ) )
+			return false;
+	}
+
+	static bool s_y7 = false;
+	if ( ! s_y7 ) {
+		s_y7 = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
+				"+news&ns=1&tml=20&smxcpl=30&"
+				"sw=10&showimages=0&sc=1"
+				,810978859 ) )
+			return false;
+	}
+
+
 	//
 	// delete the 'qatest123' collection
 	//

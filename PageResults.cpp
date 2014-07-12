@@ -3482,6 +3482,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
 	long cols = 80;
+	cols = si->m_summaryMaxWidth;
 
 	SafeBuf hb;
 	if ( str && strLen && si->m_doQueryHighlighting ) {
@@ -3775,7 +3776,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ("<font color=gray>" );
 		//sb->htmlEncode ( url , gbstrlen(url) , false );
 		// 20 for the date after it
-		sb->safeTruncateEllipsis ( url , cols - 30 );
+		sb->safeTruncateEllipsis ( url , 50 ); // cols - 30 );
 		// turn off the color
 		sb->safePrintf ( "</font>\n" );
 	}
