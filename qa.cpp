@@ -323,7 +323,7 @@ bool qainject ( ) {
 		usleep(1500000);
 		s_x5 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-				-1452050577 ) )
+				838663174 ) )
 			return false;
 	}
 
@@ -332,7 +332,7 @@ bool qainject ( ) {
 	if ( ! s_x7 ) {
 		s_x7 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=sports+news",-1586622518 ) )
+				"q=sports+news",-1013701120 ) )
 		     return false;
 	}
 
@@ -393,7 +393,7 @@ bool qainject ( ) {
 		usleep(1500000);
 		s_y4 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-				-480078278 ) )
+				1604983811 ) )
 			return false;
 	}
 
@@ -412,6 +412,7 @@ bool qainject ( ) {
 		s_fee2 = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
 			"QA INJECT TEST\n\n\n");
+		if ( s_callback == qainject ) exit(0);
 		return true;
 	}
 
