@@ -15143,7 +15143,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 		r->m_skipHammerCheck = 1;		
 
 	if ( r->m_skipHammerCheck )
-		log("skipping hammer check");
+		log(LOG_DEBUG,"build: skipping hammer check");
 
 	// if we had already spidered it... try to save bandwidth and time
 	if ( od ) {
@@ -15168,7 +15168,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 		//r->m_requireGoodDate = false;
 		// no frames within frames
 		r->m_attemptedIframeExpansion = 1;
-		log("skipping hammer check 2");
+		log(LOG_DEBUG,"build: skipping hammer check 2");
 
 	}
 

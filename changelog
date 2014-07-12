@@ -1,6 +1,9 @@
-gb (1.1-1) unstable; urgency=low
+gb (1.2-1) unstable; urgency=low
 
   * Lots of bug fixes
-  * API updates.
+  * API updates
+  * Added sections support
+  * Added clone collection settings support
+  * Added some QA testing functionality
 
- -- mwells <gigablast@mail.com>  Sat, 05 Jul 2014 18:38:35 -0700
+ -- mwells <gigablast@mail.com>  Sat, 12 Jul 2014 17:38:35 -0700
