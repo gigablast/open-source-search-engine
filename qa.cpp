@@ -13,11 +13,11 @@ static SafeBuf s_ubuf1;
 static SafeBuf s_ubuf2;
 static SafeBuf s_cbuf2;
 
-void markOut ( char *reply , char *needle ) {
+void markOut ( char *content , char *needle ) {
 
-	if ( ! reply ) return;
+	if ( ! content ) return;
 
-	char *s = strstr ( reply , needle );
+	char *s = strstr ( content , needle );
 	if ( ! s ) return;
 
 	for ( ; *s && ! is_digit(*s); s++ );
@@ -46,7 +46,7 @@ long qa_hash32 ( char *s ) {
 	return h;
 }
 
-static char *s_reply = NULL;
+static char *s_content = NULL;
 
 void processReply ( char *reply , long replyLen ) {
 
@@ -59,7 +59,7 @@ void processReply ( char *reply , long replyLen ) {
 	log("qa: got reply(len=%li)(errno=%s)=%s",
 	    replyLen,mstrerror(g_errno),reply);
 
-	char *content = "";
+	char *content = NULL;
 	long  contentLen = 0;
 
 	// get mime
@@ -69,32 +69,43 @@ void processReply ( char *reply , long replyLen ) {
 		// only hash content since mime has a timestamp in it
 		content = mime.getContent();
 		contentLen = mime.getContentLen();
-		if ( content[contentLen] ) { char *xx=NULL;*xx=0; }
+		if ( content && contentLen>0 && content[contentLen] ) { 
+			char *xx=NULL;*xx=0; }
 	}
 
-	s_reply = reply;
+	if ( ! content ) {
+		content = "";
+		contentLen = 0;
+	}
+
+	s_content = content;
 
 	// take out <responseTimeMS>
-	markOut ( reply , "<currentTimeUTC>");
+	markOut ( content , "<currentTimeUTC>");
 
-	markOut ( reply , "<responseTimeMS>");
-
-	// until i figure this one out, take it out
-	markOut ( reply , "<docsInCollection>");
+	markOut ( content , "<responseTimeMS>");
 
 	// until i figure this one out, take it out
-	markOut ( reply , "<hits>");
+	markOut ( content , "<docsInCollection>");
+
+	// until i figure this one out, take it out
+	markOut ( content , "<hits>");
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
-	long replyCRC = qa_hash32 ( content );
+	long contentCRC = 0; 
+	if ( content ) contentCRC = qa_hash32 ( content );
+
+	// note it
+	fprintf(stderr,"qa: got contentCRC of %li\n",contentCRC);
+
 
 	// if what we expected, save to disk if not there yet, then
 	// call s_callback() to resume the qa pipeline
-	if ( replyCRC == s_expectedCRC ) {
-		// save reply if good
+	if ( contentCRC == s_expectedCRC ) {
+		// save content if good
 		char fn3[1024];
-		sprintf(fn3,"%sqa/reply.%li",g_hostdb.m_dir,replyCRC);
+		sprintf(fn3,"%sqa/content.%li",g_hostdb.m_dir,contentCRC);
 		File ff; ff.set ( fn3 );
 		if ( ! ff.doesExist() ) {
 			// if not there yet then save it
@@ -108,29 +119,28 @@ void processReply ( char *reply , long replyLen ) {
 
 
 	//
-	// if crc of reply does not match what was expected then do a diff
+	// if crc of content does not match what was expected then do a diff
 	// so we can see why not
 	//
 
 	// this means caller does not care about the response
 	if ( s_expectedCRC == 0 ) {
-		fprintf(stderr,"qa: got replyCRC of %li\n",replyCRC);
 		//s_callback();
 		return;
 	}
 
-	const char *emsg = "qa: bad replyCRC of %li should be %li "
+	const char *emsg = "qa: bad contentCRC of %li should be %li "
 		"\n";//"phase=%li\n";
-	fprintf(stderr,emsg,replyCRC,s_expectedCRC);//,s_phase-1);
+	fprintf(stderr,emsg,contentCRC,s_expectedCRC);//,s_phase-1);
 	// get response on file
 	SafeBuf fb1;
 	char fn1[1024];
-	sprintf(fn1,"%sqa/reply.%li",g_hostdb.m_dir,s_expectedCRC);
+	sprintf(fn1,"%sqa/content.%li",g_hostdb.m_dir,s_expectedCRC);
 	fb1.load(fn1);
 	fb1.nullTerm();
 	// break up into lines
 	char fn2[1024];
-	sprintf(fn2,"/tmp/reply.%li",replyCRC);
+	sprintf(fn2,"/tmp/content.%li",contentCRC);
 	fb2.save ( fn2 );
 
 	// do the diff between the two replies so we can see what changed
@@ -620,7 +630,7 @@ bool qaspider ( ) {
 	if ( ! s_k2 ) {
 		// ensure spiders are done. 
 		// "Nothing currently available to spider"
-		if ( s_reply && ! strstr(s_reply,"Nothing currently avail") ) {
+		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
 			s_k1 = false;
 			goto checkagain;
 		}
@@ -646,7 +656,7 @@ bool qaspider ( ) {
 		s_t0 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A0",
-				1688650594 ) )
+				1516804233 ) )
 			return false;
 	}
 	

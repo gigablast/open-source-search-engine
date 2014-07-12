@@ -20336,6 +20336,7 @@ void handleRequest3fLoop ( void *weArg ) {
 				log("parms: failed to reg sleeper");
 				return;
 			}
+			log("parms: updateParm blocked. waiting.");
 			return;
 		}
 

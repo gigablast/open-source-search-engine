@@ -1054,8 +1054,9 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	// . make sure nobody has it
 	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
 	//   have nuked it
-	CollectionRec *cr = sc->m_cr;
-	if ( cr ) cr->m_spiderColl = NULL;
+	//CollectionRec *cr = sc->m_cr;
+	// use fake ptrs for easier debugging
+	//if ( cr ) cr->m_spiderColl = (SpiderColl *)0x987654;//NULL;
 	mdelete ( sc , sizeof(SpiderColl),"postdel1");
 	delete ( sc );
 	return true;
@@ -2710,6 +2711,8 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	// skip if in repair mode
 	if ( g_repairMode ) return;
+	// sanity
+	if ( m_deleteMyself ) { char *xx=NULL;*xx=0; }
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
 	// if entering for the first time, we need to read list from spiderdb

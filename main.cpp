@@ -1471,9 +1471,9 @@ int main2 ( int argc , char *argv[] ) {
 			log("qa::setrlimit: %s", mstrerror(errno) );
 		// in build mode we store downloaded http replies in the
 		// /qa subdir
-		g_conf.m_qaBuildMode = 0;
-		if (  cmdarg+1 < argc )
-			g_conf.m_qaBuildMode = atoi(argv[cmdarg+1]);
+		//g_conf.m_qaBuildMode = 0;
+		//if (  cmdarg+1 < argc )
+		//	g_conf.m_qaBuildMode = atoi(argv[cmdarg+1]);
 		// 50MB
 		g_conf.m_maxMem = 50000000;
 		// init our table for doing zobrist hashing

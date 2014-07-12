@@ -556,7 +556,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	if ( r->m_parent ) { char *xx=NULL;*xx=0; }
 
 	// assume we do not add it!
-	r->m_addToTestCache = false;
+	//r->m_addToTestCache = false;
 
 	if ( ! s_flag ) {
 		s_flag = true;
@@ -2095,8 +2095,8 @@ bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
 	// open it
 	f.open ( O_RDWR | O_CREAT );
 	// log it for now
-	if ( g_conf.m_logDebugSpider )
-		log("test: ADDING doc to test cache: %llu",urlHash64);
+	//if ( g_conf.m_logDebugSpider )
+	log("test: ADDING doc to test cache: %llu",urlHash64);
 
 	// write error only?
 	if ( err ) {
