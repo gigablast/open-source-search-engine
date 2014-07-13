@@ -37,6 +37,14 @@ bool sendPageHosts ( TcpSocket *s , HttpRequest *r ) {
 	//char *p    = buf;
 	//char *pend = buf + 64*1024;
 	SafeBuf sb(buf, 64*1024);
+
+
+	// XML OR JSON
+	 char format = r->getReplyFormat();
+	// if ( format == FORMAT_XML || format == FORMAT_JSON )
+	// 	return sendPageHostsInXmlOrJson( s , r );
+
+
 	// check for a sort request
 	long sort  = r->getLong ( "sort", -1 );
 	// sort by hostid with dead on top by default
@@ -103,7 +111,7 @@ bool sendPageHosts ( TcpSocket *s , HttpRequest *r ) {
 skipReplaceHost:
 
 	long refreshRate = r->getLong("rr", 0);
-	if(refreshRate > 0) 
+	if(refreshRate > 0 && format == FORMAT_HTML ) 
 		sb.safePrintf("<META HTTP-EQUIV=\"refresh\" "
 			      "content=\"%li\"\\>", 
 			      refreshRate);
@@ -121,14 +129,14 @@ skipReplaceHost:
 	// 	char *pp    = sb.getBuf();
 	// 	char *ppend = sb.getBufEnd();
 	// 	if ( pp ) {
-	g_pages.printAdminTop ( &sb , s , r );
+	if ( format == FORMAT_HTML ) g_pages.printAdminTop ( &sb , s , r );
 	//	sb.incrementLength ( pp - sb.getBuf() );
 	//	}
 	char *colspan = "30";
 	//char *shotcol = "";
 	char shotcol[1024];
 	shotcol[0] = '\0';
-	if ( g_conf.m_useShotgun ) {
+	if ( g_conf.m_useShotgun && format == FORMAT_HTML ) {
 		colspan = "31";
 		//shotcol = "<td><b>ip2</b></td>";
 		sprintf ( shotcol, "<td><a href=\"/admin/hosts?c=%s"
@@ -138,131 +146,132 @@ skipReplaceHost:
 	}
 
 	// print host table
-	sb.safePrintf ( 
-		  "<table %s>"
-		  "<tr><td colspan=%s><center>"
-		  //"<font size=+1>"
-		  "<b>Hosts "
-		  "(<a href=\"/admin/hosts?c=%s&sort=%li&reset=1\">"
-		  "reset)</b>"
-		  //"</font>"
-		  "</td></tr>" 
-		  "<tr bgcolor=#%s>"
-		  "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
+	if ( format == FORMAT_HTML )
+		sb.safePrintf ( 
+			       "<table %s>"
+			       "<tr><td colspan=%s><center>"
+			       //"<font size=+1>"
+			       "<b>Hosts "
+			       "(<a href=\"/admin/hosts?c=%s&sort=%li&reset=1\">"
+			       "reset)</b>"
+			       //"</font>"
+			       "</td></tr>" 
+			       "<tr bgcolor=#%s>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
 
-		  "<b>hostId</b></td>"
-		  "<td><b>host ip</b></td>"
-		  "<td><b>shard</b></td>"
-		  "<td><b>mirror</b></td>" // mirror # within the shard
+			       "<b>hostId</b></td>"
+			       "<td><b>host ip</b></td>"
+			       "<td><b>shard</b></td>"
+			       "<td><b>mirror</b></td>" // mirror # within the shard
 
-		  // i don't remember the last time i used this, so let's
-		  // just comment it out to save space
-		  //"<td><b>group mask</td>"
+			       // i don't remember the last time i used this, so let's
+			       // just comment it out to save space
+			       //"<td><b>group mask</td>"
 
-		  //"<td><b>ip1</td>"
-		  //"<td><b>ip2</td>"
-		  //"<td><b>udp port</td>"
+			       //"<td><b>ip1</td>"
+			       //"<td><b>ip2</td>"
+			       //"<td><b>udp port</td>"
 
-		  // this is now more or less obsolete
-		  //"<td><b>priority udp port</td>"
+			       // this is now more or less obsolete
+			       //"<td><b>priority udp port</td>"
 
-		  //"<td><b>dns client port</td>"
-		  "<td><b>http port</td>"
+			       //"<td><b>dns client port</td>"
+			       "<td><b>http port</td>"
 
-		  // this is now obsolete since ide channel is. it was used
-		  // so that only the guy with the token could merge,
-		  // and it made sure that only one merge per ide channel
-		  // and per group was going on at any one time for performance
-		  // reasons.
-		  //"<td><b>token group</td>"
+			       // this is now obsolete since ide channel is. it was used
+			       // so that only the guy with the token could merge,
+			       // and it made sure that only one merge per ide channel
+			       // and per group was going on at any one time for performance
+			       // reasons.
+			       //"<td><b>token group</td>"
 
-		  //"<td><b>best switch id</td>"
-		  //"<td><b>actual switch id</td>"
-		  //"<td><b>switch id</td>"
+			       //"<td><b>best switch id</td>"
+			       //"<td><b>actual switch id</td>"
+			       //"<td><b>switch id</td>"
 
-		  // this is now fairly obsolete
-		  //"<td><b>ide channel</td>"
+			       // this is now fairly obsolete
+			       //"<td><b>ide channel</td>"
 
-		  "<td><b>HD temps (C)</b></td>"
+			       "<td><b>HD temps (C)</b></td>"
 
-		  //"<td><b>resends sent</td>"
-		  //"<td><b>errors recvd</td>"
-		  //"<td><b>ETRYAGAINS recvd</td>"
-		  "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
-		  "<b>dgrams resent</a></td>"
-		  "<td><a href=\"/admin/hosts?c=%s&sort=4\">"
-		  "<b>errors recvd</a></td>"
-		  "<td><a href=\"/admin/hosts?c=%s&sort=5\">"
-		  "<b>ETRY AGAINS recvd</a></td>"
+			       //"<td><b>resends sent</td>"
+			       //"<td><b>errors recvd</td>"
+			       //"<td><b>ETRYAGAINS recvd</td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
+			       "<b>dgrams resent</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=4\">"
+			       "<b>errors recvd</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=5\">"
+			       "<b>ETRY AGAINS recvd</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=6\">"
-		  "<b>dgrams to</a></td>"
-		  "<td><a href=\"/admin/hosts?c=%s&sort=7\">"
-		  "<b>dgrams from</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=6\">"
+			       "<b>dgrams to</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=7\">"
+			       "<b>dgrams from</a></td>"
 
-		  //"<td><a href=\"/admin/hosts?c=%s&sort=8\">"
-		  //"<b>loadavg</a></td>"
+			       //"<td><a href=\"/admin/hosts?c=%s&sort=8\">"
+			       //"<b>loadavg</a></td>"
 
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
-		  "<b>avg split time</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
+			       "<b>avg split time</a></td>"
 
-		  "<td><b>splits done</a></td>"
+			       "<td><b>splits done</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
-		  "<b>status</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
+			       "<b>status</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
-		  "<b>slow reads</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
+			       "<b>slow reads</a></td>"
 
-		  "<td><b>docs indexed</a></td>"
+			       "<td><b>docs indexed</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=9\">"
-		  "<b>mem used</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=9\">"
+			       "<b>mem used</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
-		  "<b>cpu</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
+			       "<b>cpu</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
-		  "<b>disk</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
+			       "<b>disk</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
-		  "<b>max ping1</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
+			       "<b>max ping1</a></td>"
 
-		  "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
-		  "<b>ping1 age</a></td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
+			       "<b>ping1 age</a></td>"
 
-		  //"<td><b>ip1</td>"
-		  "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
-		  "<b>ping1</a></td>"
+			       //"<td><b>ip1</td>"
+			       "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
+			       "<b>ping1</a></td>"
 
-		  "%s"// "<td><b>ip2</td>"
-		  //"<td><b>inSync</td>",
-		  //"<td>avg roundtrip</td>"
-		  //"<td>std. dev.</td></tr>"
-		  "<td><b>note</td>",
-		  TABLE_STYLE ,
-		  colspan    ,
+			       "%s"// "<td><b>ip2</td>"
+			       //"<td><b>inSync</td>",
+			       //"<td>avg roundtrip</td>"
+			       //"<td>std. dev.</td></tr>"
+			       "<td><b>note</td>",
+			       TABLE_STYLE ,
+			       colspan    ,
 
-		  coll, sort,
-		  DARK_BLUE  ,
+			       coll, sort,
+			       DARK_BLUE  ,
 
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  coll,
-		  shotcol    );
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       coll,
+			       shotcol    );
 
 	// loop through each host we know and print it's stats
 	long nh = g_hostdb.getNumHosts();
@@ -312,6 +321,18 @@ skipReplaceHost:
 	}
 	*/
 
+	if ( format == FORMAT_XML ) {
+		sb.safePrintf("<response>\n");
+		sb.safePrintf("\t<statusCode>0</statusCode>\n");
+		sb.safePrintf("\t<statusMsg>Success</statusMsg>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb.safePrintf("{\"response\":{\n");
+		sb.safePrintf("\t\"statusCode\":0,\n");
+		sb.safePrintf("\t\"statusMsg\":\"Success\",\n");
+	}
+
 	long long nowmsLocal = gettimeofdayInMillisecondsLocal();
 
 	// print it
@@ -346,7 +367,7 @@ skipReplaceHost:
 		char *hp = hdbuf;
 		for ( long k = 0 ; k < 4 ; k++ ) {
 			long temp = h->m_hdtemps[k];
-			if ( temp > 50 )
+			if ( temp > 50 && format == FORMAT_HTML )
 				hp += sprintf(hp,"<font color=red><b>%li"
 					      "</b></font>",
 					      temp);
@@ -376,7 +397,7 @@ skipReplaceHost:
 
 		char *fontTagFront = "";
 		char *fontTagBack  = "";
-		if ( h->m_percentMemUsed >= 98.0 ) {
+		if ( h->m_percentMemUsed >= 98.0 && format == FORMAT_HTML ) {
 			fontTagFront = "<font color=red>";
 			fontTagBack  = "</font>";
 		}
@@ -389,7 +410,7 @@ skipReplaceHost:
 		sprintf(diskUsageMsg,"%.1f%%",h->m_diskUsage);
 		if ( h->m_diskUsage < 0.0 )
 			sprintf(diskUsageMsg,"???");
-		if ( h->m_diskUsage >= 98.0 )
+		if ( h->m_diskUsage >= 98.0 && format == FORMAT_HTML )
 			sprintf(diskUsageMsg,"<font color=red><b>%.1f%%"
 				"</b></font>",h->m_diskUsage);
 
@@ -407,49 +428,251 @@ skipReplaceHost:
 
 		// does its hosts.conf file disagree with ours?
 		if ( h->m_hostsConfCRC &&
+		     format == FORMAT_HTML &&
 		     h->m_hostsConfCRC != g_hostdb.getCRC() )
 			fb.safePrintf("<font color=red><b title=\"Hosts.conf "
 				      "in disagreement with ours.\">H"
 				      "</b></font>");
+		if ( h->m_hostsConfCRC &&
+		     format != FORMAT_HTML &&
+		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+			fb.safePrintf("Hosts.conf in disagreement with ours");
+
 		// recovery mode? reocvered from coring?
-		if ( h->m_flags & PFLAG_RECOVERYMODE )
+		if ((h->m_flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML )
 			fb.safePrintf("<b title=\"Recovered from core"
 				      "\">x</b>");
+		if ((h->m_flags & PFLAG_RECOVERYMODE)&& format != FORMAT_HTML )
+			fb.safePrintf("Recovered from core");
+
 		// rebalancing?
-		if ( h->m_flags & PFLAG_REBALANCING )
+		if ( (h->m_flags & PFLAG_REBALANCING)&& format == FORMAT_HTML )
 			fb.safePrintf("<b title=\"Currently "
 				      "rebalancing\">R</b>");
+		if ( (h->m_flags & PFLAG_REBALANCING)&& format != FORMAT_HTML )
+			fb.safePrintf("Currently rebalancing");
+
 		// has recs that should be in another shard? indicates
 		// we need to rebalance or there is a bad hosts.conf
-		if ( h->m_flags & PFLAG_FOREIGNRECS )
-			fb.safePrintf("<font color=red><b title=\"Foreign data "
+		if ((h->m_flags & PFLAG_FOREIGNRECS) && format == FORMAT_HTML )
+			fb.safePrintf("<font color=red><b title=\"Foreign "
+				      "data "
 				      "detected. Needs rebalance.\">F"
 				      "</b></font>");
+		if ((h->m_flags & PFLAG_FOREIGNRECS) && format != FORMAT_HTML )
+			fb.safePrintf("Foreign data detected. "
+				      "Needs rebalance.");
+
 		// if it has spiders going on say "S"
-		if ( h->m_flags & PFLAG_HASSPIDERS )
+		if ((h->m_flags & PFLAG_HASSPIDERS) && format == FORMAT_HTML )
 			fb.safePrintf ( "<span title=\"Spidering\">S</span>");
+		if ((h->m_flags & PFLAG_HASSPIDERS) && format != FORMAT_HTML )
+			fb.safePrintf ( "Spidering");
+
 		// say "M" if merging
-		if (   h->m_flags & PFLAG_MERGING )
+		if ( (h->m_flags & PFLAG_MERGING) && format == FORMAT_HTML )
 			fb.safePrintf ( "<span title=\"Merging\">M</span>");
+		if ( (h->m_flags & PFLAG_MERGING) && format != FORMAT_HTML )
+			fb.safePrintf ( "Merging");
+
 		// say "D" if dumping
-		if (   h->m_flags & PFLAG_DUMPING )
+		if (   (h->m_flags & PFLAG_DUMPING) && format == FORMAT_HTML )
 			fb.safePrintf ( "<span title=\"Dumping\">D</span>");
+		if (   (h->m_flags & PFLAG_DUMPING) && format != FORMAT_HTML )
+			fb.safePrintf ( "Dumping");
+
+
 		// say "y" if doing the daily merge
 		if (  !(h->m_flags & PFLAG_MERGEMODE0) )
 			fb.safePrintf ( "y");
+
 		// clear it if it is us, this is invalid
 		if ( ! h->m_gotPingReply ) {
 			fb.reset();
 			fb.safePrintf("??");
 		}
-		if ( fb.length() == 0 )
+		if ( fb.length() == 0 && format == FORMAT_HTML )
 			fb.safePrintf("&nbsp;");
+
+		fb.nullTerm();
 
 		char *bg = LIGHT_BLUE;
 		if ( h->m_ping >= g_conf.m_deadHostTimeout ) 
 			bg = "ffa6a6";
 
-		// print it
+
+		//
+		// BEGIN XML OUTPUT
+		//
+		if ( format == FORMAT_XML ) {
+			
+			sb.safePrintf("\t<host>\n"
+				      "\t\t<name><![CDATA["
+				      );
+			sb.cdataEncode (h->m_hostname);
+			sb.safePrintf("]]></name>\n");
+			sb.safePrintf("\t\t<shard>%li</shard>\n",
+				      h->m_shardNum);
+			sb.safePrintf("\t\t<mirror>%li</mirror>\n",
+				      h->m_stripe);
+
+			sb.safePrintf("\t\t<ip1>%s</ip1>\n",
+				      iptoa(h->m_ip));
+			sb.safePrintf("\t\t<ip2>%s</ip2>\n",
+				      iptoa(h->m_ipShotgun));
+
+			sb.safePrintf("\t\t<httpPort>%li</httpPort>\n",
+				      (long)h->m_httpPort);
+			sb.safePrintf("\t\t<udpPort>%li</udpPort>\n",
+				      (long)h->m_port);
+			sb.safePrintf("\t\t<dnsPort>%li</dnsPort>\n",
+				      (long)h->m_dnsClientPort);
+
+			sb.safePrintf("\t\t<hdTemp>%s</hdTemp>\n",hdbuf);
+
+			sb.safePrintf("\t\t<resends>%li</resends>\n",
+				      h->m_totalResends);
+
+			sb.safePrintf("\t\t<errorReplies>%li</errorReplies>\n",
+				      h->m_errorReplies);
+
+			sb.safePrintf("\t\t<errorTryAgains>%li"
+				      "</errorTryAgains>\n",
+				      h->m_etryagains);
+
+			sb.safePrintf("\t\t<dgramsTo>%lli</dgramsTo>\n",
+				      h->m_dgramsTo);
+			sb.safePrintf("\t\t<dgramsFrom>%lli</dgramsFrom>\n",
+				      h->m_dgramsFrom);
+
+			sb.safePrintf("\t\t<splitTime>%li</splitTime>\n",
+				      splitTime);
+			sb.safePrintf("\t\t<splitsDone>%li</splitsDone>\n",
+				      h->m_splitsDone);
+			
+			sb.safePrintf("\t\t<status><![CDATA[%s]]></status>\n",
+				      fb.getBufStart());
+
+			sb.safePrintf("\t\t<slowDiskReads>%li"
+				      "</slowDiskReads>\n",
+				      h->m_slowDiskReads);
+
+			sb.safePrintf("\t\t<docsIndexed>%li"
+				      "</docsIndexed>\n",
+				      h->m_docsIndexed);
+
+			sb.safePrintf("\t\t<percentMemUsed>%.1f"
+				      "</percentMemUsed>",
+				      h->m_percentMemUsed); // float
+
+			sb.safePrintf("\t\t<cpuUsage>%.1f"
+				      "</cpuUsage>",
+				      cpu );
+
+			sb.safePrintf("\t\t<percentDiskUsed><![CDATA[%s]]>"
+				      "</percentDiskUsed>",
+				      diskUsageMsg);
+
+			sb.safePrintf("\t\t<maxPing1>%s</maxPing1>\n",
+				      pms );
+
+			sb.safePrintf("\t\t<maxPingAge1>%li</maxPingAge1>\n",
+				      pingAge );
+
+			sb.safePrintf("\t\t<ping1>%s</ping1>\n",
+				      ptr );
+
+			sb.safePrintf("\t\t<note>%s</note>\n",
+				      h->m_note );
+
+			sb.safePrintf("\t</host>\n");
+
+			continue;
+		}
+		//
+		// END XML OUTPUT
+		//
+
+
+		//
+		// BEGIN JSON OUTPUT
+		//
+		if ( format == FORMAT_JSON ) {
+			
+			sb.safePrintf("\t\"host\":\"%s\",\n",h->m_hostname);
+			sb.safePrintf("\t\t\"shard\":%li,\n",
+				      h->m_shardNum);
+			sb.safePrintf("\t\t\"mirror\":%li,\n", h->m_stripe);
+
+			sb.safePrintf("\t\t\"ip1\":\"%s\",\n",iptoa(h->m_ip));
+			sb.safePrintf("\t\t\"ip2\":\"%s\",\n",
+				      iptoa(h->m_ipShotgun));
+
+			sb.safePrintf("\t\t\"httpPort\":%li,\n",
+				      (long)h->m_httpPort);
+			sb.safePrintf("\t\t\"udpPort\":%li,\n",
+				      (long)h->m_port);
+			sb.safePrintf("\t\t\"dnsPort\":%li,\n",
+				      (long)h->m_dnsClientPort);
+
+			sb.safePrintf("\t\t\"hdTemp\":\"%s\",\n",hdbuf);
+
+			sb.safePrintf("\t\t\"resends\":%li,\n",
+				      h->m_totalResends);
+
+			sb.safePrintf("\t\t\"errorReplies\":%li,\n",
+				      h->m_errorReplies);
+
+			sb.safePrintf("\t\t\"errorTryAgains\":%li,\n",
+				      h->m_etryagains);
+
+			sb.safePrintf("\t\t\"dgramsTo\":%lli,\n",
+				      h->m_dgramsTo);
+			sb.safePrintf("\t\t\"dgramsFrom\":%lli,\n",
+				      h->m_dgramsFrom);
+
+			sb.safePrintf("\t\t\"splitTime\":%li,\n",
+				      splitTime);
+			sb.safePrintf("\t\t\"splitsDone\":%li,\n",
+				      h->m_splitsDone);
+			
+			sb.safePrintf("\t\t\"status\":\"%s\",\n",
+				      fb.getBufStart());
+
+			sb.safePrintf("\t\t\"slowDiskReads\":%li,\n",
+				      h->m_slowDiskReads);
+
+			sb.safePrintf("\t\t\"docsIndexed\":%li,\n",
+				      h->m_docsIndexed);
+
+			sb.safePrintf("\t\t\"percentMemUsed\":%.1f,\n",
+				      h->m_percentMemUsed); // float
+
+			sb.safePrintf("\t\t\"cpuUsage\":%.1f,\n",cpu);
+
+			sb.safePrintf("\t\t\"percentDiskUsed\":\"%s\",\n",
+				      diskUsageMsg);
+
+			sb.safePrintf("\t\t\"maxPing1\":\"%s\",\n",pms);
+
+			sb.safePrintf("\t\t\"maxPingAge1\":%li,\n",
+				      pingAge );
+
+			sb.safePrintf("\t\t\"ping1\":\"%s\",\n",
+				      ptr );
+
+			sb.safePrintf("\t\t\"note\":\"%s\"\n",
+				      h->m_note );
+
+			sb.safePrintf("\t},\n");
+
+			continue;
+		}
+		//
+		// END JSON OUTPUT
+		//
+
+
 		sb.safePrintf (
 			  "<tr bgcolor=#%s>"
 			  "<td><a href=\"http://%s:%hi/admin/hosts?"
@@ -578,6 +801,30 @@ skipReplaceHost:
 			  //ptr2 ,
 			  h->m_note );
 	}
+
+	if ( format == FORMAT_XML ) {
+		sb.safePrintf("</response>\n");
+		return g_httpServer.sendDynamicPage ( s , 
+						      sb.getBufStart(),
+						      sb.length() ,
+						      0, 
+						      false, 
+						      "text/xml");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		// remove last \n, from json host{}
+		sb.m_length -= 2;
+		sb.safePrintf("\n}\n");
+		return g_httpServer.sendDynamicPage ( s , 
+						      sb.getBufStart(),
+						      sb.length() ,
+						      0, 
+						      false, 
+						      "application/json");
+	}
+
+
 	// end the table now
 	sb.safePrintf ( "</table><br>\n" );
 
@@ -1257,3 +1504,6 @@ int diskUsageSort ( const void *i1, const void *i2 ) {
 	if ( h1->m_diskUsage < h2->m_diskUsage ) return  1;
 	return 0;
 }
+
+//bool sendPageHostsInXmlOrJson ( TcpSocket *s , HttpRequest *r ) {
+//}
