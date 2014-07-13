@@ -1075,13 +1075,36 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//
 	//////////
 	char format = r->getReplyFormat();
-	long showInput = r->getLong("showinput",0);
+	long show = r->getLong("showinput",0);
 	WebPage *wp = g_pages.getPage(n);
-	if ( wp && (wp->m_pgflags & PG_NOAPI) ) showInput = false;
-	if ( showInput ) {
+	if ( wp && (wp->m_pgflags & PG_NOAPI) ) show = false;
+	if ( show ) {
 		SafeBuf sb;
-		CollectionRec *cr = g_collectiondb.getRec ( r );
-		printApiForPage ( &sb , n , cr );
+		//CollectionRec *cr = g_collectiondb.getRec ( r );
+		//printApiForPage ( &sb , n , cr );
+		// xml/json header
+		char *res = NULL;
+		if ( format == FORMAT_XML )
+			res = "<response>\n"
+				"\t<statusCode>0</statusCode>\n"
+				"\t<statusMsg>Success</statusMsg>\n";
+		if ( format == FORMAT_JSON )
+			res = "{ \"response:\"{\n"
+				"\t\"statusCode\":0,\n"
+				"\t\"statusMsg\":\"Success\"\n";
+		if ( res )
+			sb.safeStrcpy ( res );
+		//
+		// this is it
+		//
+		g_parms.printParmTable ( &sb , s , r );
+		// xml/json tail
+		if ( format == FORMAT_XML )
+			res = "</response>\n";
+		if ( format == FORMAT_JSON )
+			res = "\t}\n}\n";
+		if ( res )
+			sb.safeStrcpy ( res );
 		char *ct = "text/html";
 		if ( format == FORMAT_JSON ) ct = "application/json";
 		if ( format == FORMAT_XML  ) ct = "text/xml";

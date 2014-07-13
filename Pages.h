@@ -95,6 +95,7 @@ bool sendPageGraph      ( TcpSocket *s , HttpRequest *r );
 
 // values for WebPage::m_flags
 #define PG_NOAPI 0x01
+#define PG_STATUS 0x02
 
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp

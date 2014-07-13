@@ -2591,7 +2591,7 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 	return true;
 }
 
-bool printCrawlDetailsInJson2 (SafeBuf *sb , CollectionRec *cx ) {
+bool printCrawlDetails2 (SafeBuf *sb , CollectionRec *cx , char format ) {
 
 	SafeBuf tmp;
 	long crawlStatus = -1;
@@ -2609,38 +2609,74 @@ bool printCrawlDetailsInJson2 (SafeBuf *sb , CollectionRec *cx ) {
 	//if ( crawlStatus == SP_ADMIN_PAUSED ) completed = 0;
 	if ( crawlStatus == SP_INPROGRESS ) completed = 0;
 
-	sb->safePrintf("\n\n{"
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("{"
+			       "\"response:{\n"
+			       "\t\"statusCode\":%li,\n"
+			       "\t\"statusMsg\":\"%s\",\n"
+			       "\t\"jobCreationTimeUTC\":%li,\n"
+			       "\t\"jobCompletionTimeUTC\":%li,\n"
+			       "\t\"sentJobDoneNotification\":%li,\n"
+			       "\t\"urlsHarvested\":%lli,\n"
+			       "\t\"pageCrawlAttempts\":%lli,\n"
+			       "\t\"pageCrawlSuccesses\":%lli,\n"
+			       , crawlStatus
+			       , tmp.getBufStart()
+			       , cx->m_diffbotCrawlStartTime
+			       , completed
+			       , sentAlert
+			       , cx->m_globalCrawlInfo.m_urlsHarvested
+			       , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+			       , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			       );
+		sb->safePrintf("\t\"currentTime\":%lu,\n",
+			       getTimeGlobal() );
+		sb->safePrintf("\t\"currentTimeUTC\":%lu,\n",
+			       getTimeGlobal() );
+		sb->safePrintf("\t}\n");
+		sb->safePrintf("}\n");
+	}
 
-		       "\"statusCode\":%li,\n"
-		       "\"statusMsg\":\"%s\",\n"
-		       
-		       "\"jobCreationTimeUTC\":%li,\n"
-		       "\"jobCompletionTimeUTC\":%li,\n"
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("<response>\n"
+			       "\t<statusCode>%li</statusCode>\n"
+			       , crawlStatus
+			       );
+		sb->safePrintf(
+			       "\t<statusMsg><![CDATA[%s]]></statusMsg>\n"
+			       "\t<jobCreationTimeUTC>%li"
+			       "</jobCreationTimeUTC>\n"
+			       , (char *)tmp.getBufStart()
+			       , (long)cx->m_diffbotCrawlStartTime
+			       );
+		sb->safePrintf(
+			       "\t<jobCompletionTimeUTC>%li"
+			       "</jobCompletionTimeUTC>\n"
 
-		      "\"sentJobDoneNotification\":%li,\n"
+			       "\t<sentJobDoneNotification>%li"
+			       "</sentJobDoneNotification>\n"
 
-		      "\"urlsHarvested\":%lli,\n"
-		      "\"pageCrawlAttempts\":%lli,\n"
-		      "\"pageCrawlSuccesses\":%lli,\n"
+			       "\t<urlsHarvested>%lli</urlsHarvested>\n"
 
-		      , crawlStatus
-		      , tmp.getBufStart()
+			       "\t<pageCrawlAttempts>%lli"
+			       "</pageCrawlAttempts>\n"
 
-		       , cx->m_diffbotCrawlStartTime
-		       , completed
+			       "\t<pageCrawlSuccesses>%lli"
+			       "</pageCrawlSuccesses>\n"
 
+			       , completed
+			       , sentAlert
+			       , cx->m_globalCrawlInfo.m_urlsHarvested
+			       , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+			       , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			       );
+		sb->safePrintf("\t<currentTime>%lu</currentTime>\n",
+			       getTimeGlobal() );
+		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
+			       getTimeGlobal() );
+		sb->safePrintf("</response>\n");
+	}
 
-		      , sentAlert
-		      , cx->m_globalCrawlInfo.m_urlsHarvested
-		      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
-		      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
-		      );
-	sb->safePrintf("\"currentTime\":%lu,\n",
-		      getTimeGlobal() );
-	sb->safePrintf("\"currentTimeUTC\":%lu,\n",
-		      getTimeGlobal() );
-
-	sb->safePrintf("}\n");
 	return true;
 }
 
@@ -2876,7 +2912,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				printCrawlDetailsInJson ( &sb , cx , 
 						  getVersionFromRequest(hr) );
 			else
-				printCrawlDetailsInJson2 ( &sb , cx );
+				printCrawlDetails2 ( &sb,cx,FORMAT_JSON );
 
 			// print the next one out
 			continue;

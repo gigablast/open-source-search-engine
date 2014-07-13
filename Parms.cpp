@@ -1187,12 +1187,11 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	
 	// do not show the parms and their current values unless showsettings=1
 	// was explicitly given for the xml/json feeds
-	long showSettings = 1;
-	if ( format != FORMAT_HTML )
-		showSettings = r->getLong("showsettings",1);
-
-	if ( showSettings )
-		printParmTable ( sb , s , r );
+	// long showSettings = 1;
+	// if ( format != FORMAT_HTML )
+	// 	showSettings = r->getLong("showsettings",1);
+	// if ( showSettings )
+	// 	printParmTable ( sb , s , r );
 
 	// xml/json tail
 	if ( format == FORMAT_XML )
@@ -1867,6 +1866,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) return true;
 	}
 
+	long page = m->m_page;
+
 	if ( format == FORMAT_XML ) {
 		sb->safePrintf ( "\t<parm>\n");
 		sb->safePrintf ( "\t\t<title>");
@@ -1875,6 +1876,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "\t\t<desc>");
 		sb->htmlEncode ( m->m_desc );
 		sb->safePrintf ( "</desc>\n");
+		if ( m->m_flags & PF_REQUIRED )
+			sb->safePrintf("\t\t<required>1</required>\n");
 		sb->safePrintf ( "\t\t<cgi>%s</cgi>\n",m->m_cgi);
 		// and default value if it exists
 		char *def = m->m_def;
@@ -1882,11 +1885,20 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "\t\t<defaultValue>");
 		sb->htmlEncode ( def );
 		sb->safePrintf ( "</defaultValue>\n");
-		sb->safePrintf ( "\t\t<currentValue>");
-		SafeBuf xb;
-		m->printVal ( &xb , collnum , 0 );//occNum
-		sb->htmlEncode ( xb.getBufStart() );
-		sb->safePrintf ( "</currentValue>\n");
+		if ( page == PAGE_MASTER ||
+		     page == PAGE_SEARCH ||
+		     page == PAGE_SPIDER ||
+		     page == PAGE_SPIDERPROXIES ||
+		     page == PAGE_FILTERS ||
+		     page == PAGE_SECURITY ||
+		     page == PAGE_REPAIR ||
+		     page == PAGE_LOG ) {
+			sb->safePrintf ( "\t\t<currentValue>");
+			SafeBuf xb;
+			m->printVal ( &xb , collnum , 0 );//occNum
+			sb->htmlEncode ( xb.getBufStart() );
+			sb->safePrintf ( "</currentValue>\n");
+		}
 		sb->safePrintf ( "\t</parm>\n");
 		return true;
 	}
@@ -1897,6 +1909,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "\t\t\"desc\":\"");
 		sb->jsonEncode ( m->m_desc );
 		sb->safePrintf("\",\n");
+		if ( m->m_flags & PF_REQUIRED )
+			sb->safePrintf("\t\t\"required\":1,\n");
 		sb->safePrintf ( "\t\t\"cgi\":\"%s\",\n",m->m_cgi);
 		// and default value if it exists
 		char *def = m->m_def;
@@ -1904,11 +1918,20 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "\t\t\"defaultValue\":\"");
 		sb->jsonEncode(def);
 		sb->safePrintf("\",\n");
-		sb->safePrintf ( "\t\t\"currentValue\":\"");
-		SafeBuf js;
-		m->printVal ( &js , collnum , 0 );//occNum );
-		sb->jsonEncode(js.getBufStart());
-		sb->safePrintf("\"\n");
+		if ( page == PAGE_MASTER ||
+		     page == PAGE_SEARCH ||
+		     page == PAGE_SPIDER ||
+		     page == PAGE_SPIDERPROXIES ||
+		     page == PAGE_FILTERS ||
+		     page == PAGE_SECURITY ||
+		     page == PAGE_REPAIR ||
+		     page == PAGE_LOG ) {
+			sb->safePrintf ( "\t\t\"currentValue\":\"");
+			SafeBuf js;
+			m->printVal ( &js , collnum , 0 );//occNum );
+			sb->jsonEncode(js.getBufStart());
+			sb->safePrintf("\"\n");
+		}
 		sb->safePrintf("\t}\n");
 		return true;
 	}
@@ -5931,7 +5954,9 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "delete collection";
-	m->m_desc  = "Delete the specified collection.";
+	m->m_desc  = "Delete the specified collection. You can specify "
+		"multiple &delcoll= parms in a single request to delete "
+		"multiple collections at once.";
 	// lowercase as opposed to camelcase above
 	m->m_cgi   = "delcoll";
 	m->m_type  = TYPE_CMD;

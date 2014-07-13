@@ -879,7 +879,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 }
 
 
-// from pagecrawlbot.cpp for printCrawlDetailsInJson2()
+// from pagecrawlbot.cpp for printCrawlDetails()
 #include "PageCrawlBot.h"
 
 ///////////
@@ -893,11 +893,12 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	SafeBuf sb(buf,128000);
 	sb.reset();
 
-	char *fs = hr->getString("format",NULL,NULL);
-	char fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
+	// char *fs = hr->getString("format",NULL,NULL);
+	// char format = FORMAT_HTML;
+	// if ( fs && strcmp(fs,"html") == 0 ) format = FORMAT_HTML;
+	// if ( fs && strcmp(fs,"json") == 0 ) format = FORMAT_JSON;
+	// if ( fs && strcmp(fs,"xml") == 0 ) format = FORMAT_XML;
+	char format = hr->getReplyFormat();
 
 
 	// true = usedefault coll?
@@ -907,22 +908,26 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
-	if ( fmt == FMT_JSON ) {
-		printCrawlDetailsInJson2 ( &sb , cr );
+	if ( format == FORMAT_JSON || format == FORMAT_XML) {
+		// this is in PageCrawlBot.cpp
+		printCrawlDetails2 ( &sb , cr , format );
+		char *ct = "text/xml";
+		if ( format == FORMAT_JSON ) ct = "application/json";
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
-						     0); // cachetime
+						     0, // cachetime
+						     false,//POSTReply        ,
+						     ct);
 	}
 
-
 	// print standard header 
-	if ( fmt == FORMAT_HTML )
+	if ( format == FORMAT_HTML )
 		// this prints the <form tag as well
 		g_pages.printAdminTop ( &sb , socket , hr );
 
 	// table to split between widget and stats in left and right panes
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("<TABLE id=pane>"
 			      "<TR><TD valign=top>");
 	}
@@ -939,7 +944,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	// you and we try to maintain your current visual state even though
 	// the scrollbar position will change.
 	//
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 
 		// save position so we can output the widget code
 		// so user can embed it into their own web page
@@ -1372,7 +1377,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// the right table pane is the crawl stats
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("</TD><TD valign=top>");
 	}
 
@@ -1380,7 +1385,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	// show stats
 	//
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 
 		char *seedStr = cr->m_diffbotSeeds.getBufStart();
 		if ( ! seedStr ) seedStr = "";
@@ -1540,12 +1545,12 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// end the right table pane
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("</TD></TR></TABLE>");
 	}
 
 
-	//if ( fmt != FORMAT_JSON )
+	//if ( format != FORMAT_JSON )
 	//	// wrap up the form, print a submit button
 	//	g_pages.printAdminBottom ( &sb );
 
