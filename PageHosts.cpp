@@ -561,11 +561,11 @@ skipReplaceHost:
 				      "</docsIndexed>\n",
 				      h->m_docsIndexed);
 
-			sb.safePrintf("\t\t<percentMemUsed>%.1f"
+			sb.safePrintf("\t\t<percentMemUsed>%.1f%%"
 				      "</percentMemUsed>",
 				      h->m_percentMemUsed); // float
 
-			sb.safePrintf("\t\t<cpuUsage>%.1f"
+			sb.safePrintf("\t\t<cpuUsage>%.1f%%"
 				      "</cpuUsage>",
 				      cpu );
 
@@ -576,7 +576,7 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<maxPing1>%s</maxPing1>\n",
 				      pms );
 
-			sb.safePrintf("\t\t<maxPingAge1>%li</maxPingAge1>\n",
+			sb.safePrintf("\t\t<maxPingAge1>%lims</maxPingAge1>\n",
 				      pingAge );
 
 			sb.safePrintf("\t\t<ping1>%s</ping1>\n",
@@ -645,17 +645,17 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"docsIndexed\":%li,\n",
 				      h->m_docsIndexed);
 
-			sb.safePrintf("\t\t\"percentMemUsed\":%.1f,\n",
+			sb.safePrintf("\t\t\"percentMemUsed\":\"%.1f%%\",\n",
 				      h->m_percentMemUsed); // float
 
-			sb.safePrintf("\t\t\"cpuUsage\":%.1f,\n",cpu);
+			sb.safePrintf("\t\t\"cpuUsage\":\"%.1f%%\",\n",cpu);
 
 			sb.safePrintf("\t\t\"percentDiskUsed\":\"%s\",\n",
 				      diskUsageMsg);
 
 			sb.safePrintf("\t\t\"maxPing1\":\"%s\",\n",pms);
 
-			sb.safePrintf("\t\t\"maxPingAge1\":%li,\n",
+			sb.safePrintf("\t\t\"maxPingAge1\":\"%lims\",\n",
 				      pingAge );
 
 			sb.safePrintf("\t\t\"ping1\":\"%s\",\n",
