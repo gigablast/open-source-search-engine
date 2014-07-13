@@ -99,58 +99,108 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//if ( pwdLen > 0 ) strncpy ( pbuf , pwd , pwdLen );
 	//pbuf[pwdLen]='\0';
 
+	char format = r->getReplyFormat();
+
 	// print standard header
 	// 	char *ss = p.getBuf();
 	// 	char *ssend = p.getBufEnd();
-	g_pages.printAdminTop ( &p , s , r );
+	if ( format == FORMAT_HTML ) g_pages.printAdminTop ( &p , s , r );
 	//      p.incrementLength(sss - ss);
 
 	struct rusage ru;
 	if ( getrusage ( RUSAGE_SELF , &ru ) )
 		log("admin: getrusage: %s.",mstrerror(errno));
 
-	p.safePrintf(
-		     "<style>"
-		     ".poo { background-color:#%s;}\n"
-		     "</style>\n" ,
-		     LIGHT_BLUE );
+	if ( format == FORMAT_HTML )
+		p.safePrintf(
+			     "<style>"
+			     ".poo { background-color:#%s;}\n"
+			     "</style>\n" ,
+			     LIGHT_BLUE );
 
 	// memory in general table
-	p.safePrintf (
-		  "<table %s>"
-		  "<tr class=hdrow>"
-		  "<td colspan=2>"
-		  "<center><b>Memory</b></td></tr>\n"
-		  "<tr class=poo><td><b>memory allocated</b></td><td>%lli</td></tr>\n"
-		  "<tr class=poo><td><b>max memory limit</b></td><td>%lli</td></tr>\n" 
-		  //"<tr class=poo><td>mem available</td><td>%lli</td></tr>\n"
-		  "<tr class=poo><td>max allocated</td><td>%lli</td></tr>\n"
-		  "<tr class=poo><td>max single alloc</td><td>%lli</td></tr>\n"
-		  "<tr class=poo><td>max single alloc by</td><td>%s</td></tr>\n" 
-		  "<tr class=poo><td>shared mem used</td><td>%lli</td></tr>\n"
-		  "<tr class=poo><td>swaps</td><td>%lli</td></tr>\n",
-		  //"<tr class=poo><td>num alloc chunks</td><td>%li</td></tr>\n",
-		  TABLE_STYLE ,
-		  g_mem.getUsedMem() ,
-		  g_mem.getMaxMem() ,
-		  //g_mem.getAvailMem(),
-		  g_mem.getMaxAlloced() ,
-		  g_mem.getMaxAlloc(),
-		  g_mem.getMaxAllocBy() ,
-		  g_mem.m_sharedUsed,
-		  (long long)ru.ru_nswap); // idrss,
-	          //g_mem.getNumChunks());
+	if ( format == FORMAT_HTML ) {
+		p.safePrintf (
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=2>"
+			      "<center><b>Memory</b></td></tr>\n"
+			      "<tr class=poo><td><b>memory allocated</b>"
+			      "</td><td>%lli</td></tr>\n"
+			      "<tr class=poo><td><b>max memory limit</b>"
+			      "</td><td>%lli</td></tr>\n" 
+			      //"<tr class=poo><td>mem available</td>"
+			      //"<td>%lli</td></tr>\n"
+			      "<tr class=poo><td>max allocated</td>"
+			      "<td>%lli</td></tr>\n",
+			      TABLE_STYLE ,
+			      g_mem.getUsedMem() ,
+			      g_mem.getMaxMem() ,
+			      //g_mem.getAvailMem(),
+			      g_mem.getMaxAlloced()
+			      );
+		p.safePrintf (
+			      "<tr class=poo><td>max single alloc</td>"
+			      "<td>%lli</td></tr>\n"
+			      "<tr class=poo><td>max single alloc by</td>"
+			      "<td>%s</td></tr>\n" 
+			      "<tr class=poo><td>shared mem used</td>"
+			      "<td>%lli</td></tr>\n"
+			      "<tr class=poo><td>swaps</td>"
+			      "<td>%lli</td></tr>\n",
+			      //"<tr class=poo><td>num alloc chunks</td>
+			      //<td>%li</td></tr>\n",
+			      g_mem.getMaxAlloc(),
+			      g_mem.getMaxAllocBy() ,
+			      g_mem.m_sharedUsed,
+			      (long long)ru.ru_nswap); // idrss,
+		p.safePrintf (
+			      "<tr class=poo><td><b>current allocations</b>"
+			      "</td>"
+			      "<td>%li</td></tr>\n" 
+			      "<tr class=poo><td><b>total allocations</b></td>"
+			      "<td>%lli</td></tr>\n" ,
+			      g_mem.getNumAllocated() ,
+			      (long long)g_mem.getNumTotalAllocated() );
+	}
 
-	p.safePrintf (
-		       "<tr class=poo><td><b>current allocations</b></td>"
-		       "<td>%li</td></tr>\n" 
-		       "<tr class=poo><td><b>total allocations</b></td>"
-		       "<td>%lli</td></tr>\n" ,
-		       g_mem.getNumAllocated() ,
-		       (long long)g_mem.getNumTotalAllocated() );
+
+
+	if ( format == FORMAT_XML ) 
+		p.safePrintf("<response>\n"
+			     "\t<statusCode>0</statusCode>\n"
+			     "\t<statusMsg>Success</statusMsg>\n");
+
+	if ( format == FORMAT_JSON ) 
+		p.safePrintf("{\"response\":{\n"
+			     "\t\"statusCode\":0,\n"
+			     "\t\"statusMsg\":\"Success\",\n");
+
+
+	if ( format == FORMAT_XML ) 
+		p.safePrintf ("\t<memoryStats>\n"
+			      "\t\t<allocated>%lli</allocated>\n"
+			      "\t\t<max>%lli</max>\n" 
+			      "\t\t<maxAllocated>%lli</maxAllocated>\n"
+			      "\t\t<maxSingleAlloc>%lli</maxSingleAlloc>\n"
+			      "\t\t<maxSingleAllocBy>%s</maxSingleAllocBy>\n"
+			      "\t\t<currentAllocations>%li"
+			      "</currentAllocations>\n"
+			      "\t\t<totalAllocations>%lli</totalAllocations>\n"
+			      "\t</memoryStats>\n"
+			      , g_mem.getUsedMem()
+			      , g_mem.getMaxMem() 
+			      , g_mem.getMaxAlloced() 
+			      , g_mem.getMaxAlloc()
+			      , g_mem.getMaxAllocBy() 
+			      , g_mem.getNumAllocated() 
+			      , (long long)g_mem.getNumTotalAllocated() );
+
+
+			     
 
 	// end table
-	p.safePrintf ( "</table><br>" );
+	if ( format == FORMAT_HTML ) p.safePrintf ( "</table><br>" );
 
 	//Query performance stats
 	g_stats.calcQueryStats();
@@ -178,68 +228,163 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( g_stats.m_tierHits[2] > 0 )
 		avgTier2Time = g_stats.m_tierTimes[2] /
 			(long long)g_stats.m_tierHits[2];
-	p.safePrintf ( 
-		       "<br>"
-		       "<table %s>"
-		       "<tr class=hdrow>"
-		       "<td colspan=2>"
-		       "<center><b>Queries</b></td></tr>\n"
 
-		       "<tr class=poo><td><b>Average Query Latency for last %li queries"
-		       ,TABLE_STYLE
-		       ,g_stats.m_numQueries
-		       );
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( 
+			      "<br>"
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=2>"
+			      "<center><b>Queries</b></td></tr>\n"
+
+			      "<tr class=poo><td><b>"
+			      "Average Query Latency for last %li queries"
+			      ,TABLE_STYLE
+			      ,g_stats.m_numQueries
+			       );
 
 
-	p.safePrintf(
-		       "</b></td><td>%f seconds</td></tr>\n"
+	if ( format == FORMAT_XML ) {
+		p.safePrintf("\t<queryStats>\n"
+			     "\t\t<sample>\n"
+			     "\t\t\t<size>last %li queries</size>\n"
+			     ,g_stats.m_numQueries
+			     );
 
-		       "<tr class=poo><td><b>Average queries/sec. for last %li queries"
-		       "</b></td><td>%f queries/sec.</td></tr>\n"
+		if ( g_stats.m_numQueries == 0 )
+		p.safePrintf("\t\t\t<averageLatency></averageLatency>\n"
+			     );
+		else
+		p.safePrintf("\t\t\t<averageLatency>%.1f ms</averageLatency>\n"
+			     ,g_stats.m_avgQueryTime
+			     );
 
-		       "<tr class=poo><td><b>Query Success Rate for last %li queries"
-		       "</b></td><td>%f"
 
-		       "<tr class=poo><td><b>Total Queries Served</b></td><td>%li"
-		       "<tr class=poo><td><b>Total Successful Queries</b></td><td>%li"
-		       "<tr class=poo><td><b>Total Failed Queries</b></td><td>%li"
-		       "<tr class=poo><td><b>Total Query Success Rate</b></td><td>%f"
-		       "</td></tr>"
-		       "<tr class=poo><td><b>Uptime</b></td><td>%li days %li hrs %li min %li sec"
-		       "</td></tr>"
-		       "<tr class=poo><td><b>Sockets Closed Because We Hit the Limit"
-		       "</b></td><td>%li"
-		       "</td></tr>",
+		p.safePrintf("\t\t\t<queriesPerSecond>%f"
+			     "</queriesPerSecond>\n"
+			     "\t\t</sample>\n"
+			     ,g_stats.m_avgQueriesPerSec
+			     );
 
-		       g_stats.m_avgQueryTime, 
+		p.safePrintf(
+			     "\t\t<total>\n"
+			     "\t\t\t<numQueries>%li</numQueries>\n"
+			     "\t\t\t<numSuccesses>%li</numSuccesses>\n"
+			     "\t\t\t<numFailures>%li</numFailures>\n"
+			     "\t\t\t<successRate>%.01f%%</successRate>\n"
+			     "\t\t</total>\n"
+			     "\t</queryStats>\n"
+
+			     "\t\t<socketsClosedFromOverload>%li"
+			     "</socketsClosedFromOverload>\n"
+
+			     // total
+			     , g_stats.m_totalNumQueries +
+			       g_stats.m_numSuccess + 
+			       g_stats.m_numFails
+			     // total successes
+			     ,g_stats.m_totalNumSuccess + g_stats.m_numSuccess
+			     // total failures
+			     ,g_stats.m_totalNumFails   + g_stats.m_numFails
+			     // total success rate
+			     , (float)g_stats.m_totalNumSuccess / 
+			       (float)(g_stats.m_totalNumSuccess + 
+				       g_stats.m_totalNumFails)
+
+			     //days, hours, minutes, secs,
+			     , g_stats.m_closedSockets );
+	}
+
+	if ( format == FORMAT_HTML ) {
+		if ( g_stats.m_numQueries == 0 )
+			p.safePrintf("</b></td><td></td></tr>\n");
+		else
+			p.safePrintf("</b></td><td>%f seconds</td></tr>\n"
+				     ,g_stats.m_avgQueryTime);
+	}
+			     
+	if ( format == FORMAT_HTML )
+		p.safePrintf(
+
+			     "<tr class=poo><td><b>Average queries/sec. for "
+			     "last %li queries"
+			     "</b></td><td>%f queries/sec.</td></tr>\n"
+
+			     "<tr class=poo><td><b>Query Success Rate "
+			     "for last "
+			     "%li queries"
+			     "</b></td><td>%f"
+
+			     "<tr class=poo><td><b>Total Queries "
+			     "Served</b></td>"
+			     "<td>%li"
+			     "<tr class=poo><td><b>Total Successful "
+			     "Queries</b></td>"
+			     "<td>%li"
+			     "<tr class=poo><td><b>Total Failed "
+			     "Queries</b></td>"
+			     "<td>%li"
+			     "<tr class=poo><td><b>Total Query "
+			     "Success Rate</b></td>"
+			     "<td>%f"
+			     "</td></tr>"
+			     "<tr class=poo><td><b>Uptime"
+			     "</b></td><td>%li days %li "
+			     "hrs %li min %li sec"
+			     "</td></tr>"
+			     "<tr class=poo><td><b>"
+			     "Sockets Closed Because We Hit "
+			     "the Limit"
+			     "</b></td><td>%li"
+			     "</td></tr>",
+
+			     //g_stats.m_avgQueryTime, 
 	
-		       g_stats.m_numQueries,
-		       g_stats.m_avgQueriesPerSec, 
+			     g_stats.m_numQueries,
+			     g_stats.m_avgQueriesPerSec, 
 
-		       g_stats.m_numQueries,
-		       g_stats.m_successRate,
-		       g_stats.m_totalNumQueries + g_stats.m_numSuccess + 
-		       g_stats.m_numFails,
-		       g_stats.m_totalNumSuccess + g_stats.m_numSuccess ,
-		       g_stats.m_totalNumFails   + g_stats.m_numFails   ,
-		       (float)g_stats.m_totalNumSuccess / 
-		       (float)(g_stats.m_totalNumSuccess + 
-			       g_stats.m_totalNumFails),
-		       days, hours, minutes, secs,
-		       g_stats.m_closedSockets );
+			     g_stats.m_numQueries,
+			     g_stats.m_successRate,
+			     g_stats.m_totalNumQueries + g_stats.m_numSuccess+ 
+			     g_stats.m_numFails,
+			     g_stats.m_totalNumSuccess + g_stats.m_numSuccess ,
+			     g_stats.m_totalNumFails   + g_stats.m_numFails   ,
+			     (float)g_stats.m_totalNumSuccess / 
+			     (float)(g_stats.m_totalNumSuccess + 
+				     g_stats.m_totalNumFails),
+			     days, hours, minutes, secs,
+			     g_stats.m_closedSockets );
 
 	long long total = 0;
 	for ( long i = 0 ; i <= CR_OK ; i++ )
 		total += g_stats.m_filterStats[i];
 
-	p.safePrintf ( "<tr class=poo><td><b>Total DocIds Generated</b></td><td>%lli"
-		       "</td></tr>\n" , total );
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( "<tr class=poo><td><b>Total DocIds Generated"
+			       "</b></td><td>%lli"
+			       "</td></tr>\n" , total );
+
+
+	if ( format == FORMAT_XML )
+		p.safePrintf ( "\t<totalDocIdsGenerated>%lli"
+			       "</totalDocIdsGenerated>\n" , total );
+
 
 	// print each filter stat
-	for ( long i = 0 ; i < CR_END ; i++ )
-		p.safePrintf("<tr class=poo><td>&nbsp;&nbsp;%s</td>"
-			     "<td>%li</td></tr>\n" , 
-			     g_crStrings[i],g_stats.m_filterStats[i] );
+	for ( long i = 0 ; i < CR_END ; i++ ) {
+		if ( format == FORMAT_HTML )
+			p.safePrintf("<tr class=poo><td>&nbsp;&nbsp;%s</td>"
+				     "<td>%li</td></tr>\n" , 
+				     g_crStrings[i],g_stats.m_filterStats[i] );
+		if ( format == FORMAT_XML )
+			p.safePrintf("\t<queryStat>\n"
+				     "\t\t<status><![CDATA[%s]]>"
+				     "</status>\n"
+				     "\t\t<count>%li</count>\n"
+				     "\t</queryStat>\n"
+				     ,g_crStrings[i],g_stats.m_filterStats[i]);
+	}
 
 	// unless we bring indexdb back, don't need these
 	/*
@@ -281,7 +426,15 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		     g_stats.m_msg3aRecalls[4], g_stats.m_msg3aRecalls[5]);
 	*/
 
-	p.safePrintf("</table><br><br>\n");
+	if ( format == FORMAT_HTML ) p.safePrintf("</table><br><br>\n");
+
+	if ( format == FORMAT_XML ) {
+		p.safePrintf("</response>\n");
+		long bufLen = p.length();
+		return g_httpServer.sendDynamicPage(s,p.getBufStart(),bufLen,
+						    0,false,"text/xml");
+	}
+
 
 	// stripe loads
 	if ( g_hostdb.m_myHost->m_isProxy ) {
