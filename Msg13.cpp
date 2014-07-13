@@ -532,8 +532,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	if ( inCache ) {
 		// log debug?
 		//if ( r->m_isSquidProxiedUrl )
-		log("proxy: found %li bytes in cache for %s",
-		    recSize,r->m_url);
+		if ( g_conf.m_logDebugSpider )
+			log("proxy: found %li bytes in cache for %s",
+			    recSize,r->m_url);
 
 		r->m_foundInCache = true;
 
@@ -855,11 +856,13 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 		// get time now
 		long long nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
-		log("spider: adding new time to hammercache for %s %s = %lli",
+		log(LOG_DEBUG,
+		    "spider: adding new time to hammercache for %s %s = %lli",
 		    iptoa(r->m_firstIp),r->m_url,nowms);
 	}
 	else {
-		log("spider: not adding new time to hammer cache for %s %s",
+		log(LOG_DEBUG,
+		    "spider: not adding new time to hammer cache for %s %s",
 		    iptoa(r->m_firstIp),r->m_url);
 	}
 
@@ -876,7 +879,7 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	// flag this
 	//if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
 	// note it here
-	//if ( g_conf.m_logDebugSpider )
+	if ( g_conf.m_logDebugSpider )
 		log("spider: downloading %s (%s) (skiphammercheck=%li)",
 		    r->m_url,iptoa(r->m_urlIp) ,
 		    (long)r->m_skipHammerCheck);
