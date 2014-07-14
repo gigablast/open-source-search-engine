@@ -556,10 +556,7 @@ static char *s_urls1 =
 	" infojobs.net"
 	;
 
-bool qaspider ( ) {
-
-	if ( ! s_callback ) s_callback = qaspider;
-
+bool qaspider1 ( ) {
 	//
 	// delete the 'qatest123' collection
 	//
@@ -613,8 +610,8 @@ bool qaspider ( ) {
 		s_z2 = true;
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&format=xml&sitelist=");
-		sb.urlEncode("tag:shallow www.walmart.com\r\n"
-			     "tag:shallow http://www.ibm.com/\r\n");
+		sb.urlEncode("tag:shallow site:www.walmart.com\r\n"
+			     "tag:shallow site:http://www.ibm.com/\r\n");
 		sb.nullTerm();
 		if ( ! getUrl ("/admin/settings",0,sb.getBufStart() ) )
 			return false;
@@ -738,9 +735,187 @@ bool qaspider ( ) {
 	if ( ! s_fee2 ) {
 		s_fee2 = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA SPIDER TEST\n\n\n");
+			"QA SPIDER1 TEST\n\n\n");
 		return true;
 	}
+
+	return true;
+}
+
+bool qaspider2 ( ) {
+	//
+	// delete the 'qatest123' collection
+	//
+	static bool s_x1 = false;
+	if ( ! s_x1 ) {
+		s_x1 = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	static bool s_x2 = false;
+	if ( ! s_x2 ) {
+		s_x2 = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// restrict hopcount to 0 or 1 in url filters so we do not spider
+	// too deep
+	static bool s_z1 = false;
+	if ( ! s_z1 ) {
+		s_z1 = true;
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123&"
+			      // make it the custom filter
+			      "ufp=0&"
+
+	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
+
+			      // take out hopcount for now, just test quotas
+			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
+
+	       "fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+
+	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
+
+		);
+		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
+			return false;
+	}
+
+	// set the site list to 
+	// a few sites
+	// these should auto seed so no need to use addurl
+	static bool s_z2 = false;
+	if ( ! s_z2 ) {
+		s_z2 = true;
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123&format=xml&sitelist=");
+		sb.urlEncode("tag:shallow www.walmart.com\r\n"
+			     "tag:shallow http://www.ibm.com/\r\n");
+		sb.nullTerm();
+		if ( ! getUrl ("/admin/settings",0,sb.getBufStart() ) )
+			return false;
+	}
+		
+
+	//
+	// wait for spidering to stop
+	//
+ checkagain:
+
+	// wait until spider finishes. check the spider status page
+	// in json to see when completed
+	static bool s_k1 = false;
+	if ( ! s_k1 ) {
+		usleep(5000000); // 5 seconds
+		s_k1 = true;
+		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
+			return false;
+	}
+
+	static bool s_k2 = false;
+	if ( ! s_k2 ) {
+		// ensure spiders are done. 
+		// "Nothing currently available to spider"
+		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
+			s_k1 = false;
+			goto checkagain;
+		}
+		s_k2 = true;
+	}
+
+
+
+
+	// verify no results for gbhopcount:2 query
+	static bool s_y4 = false;
+	if ( ! s_y4 ) {
+		s_y4 = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbhopcount%3A2",
+				-1672870556 ) )
+			return false;
+	}
+
+	// but some for gbhopcount:0 query
+	static bool s_t0 = false;
+	if ( ! s_t0 ) {
+		s_t0 = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbhopcount%3A0",
+				1516804233 ) )
+			return false;
+	}
+	
+	// check facet sections query for walmart
+	static bool s_y5 = false;
+	if ( ! s_y5 ) {
+		s_y5 = true;
+		if ( ! getUrl ( "/search?c=qatest123&format=json&"
+				"q=gbfacetstr%3Agbxpathsitehash2492664135",
+				-1018518330 ) )
+			return false;
+	}
+
+	static bool s_y6 = false;
+	if ( ! s_y6 ) {
+		s_y6 = true;
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+			return false;
+	}
+
+	// in xml
+	static bool s_y7 = false;
+	if ( ! s_y7 ) {
+		s_y7 = true;
+		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+			return false;
+	}
+
+	// and json
+	static bool s_y8 = false;
+	if ( ! s_y8 ) {
+		s_y8 = true;
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+			return false;
+	}
+
+
+	// delete the collection
+	static bool s_fee = false;
+	if ( ! s_fee ) {
+		s_fee = true;
+		if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
+			return false;
+	}
+
+	static bool s_fee2 = false;
+	if ( ! s_fee2 ) {
+		s_fee2 = true;
+		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
+			"QA SPIDER2 TEST\n\n\n");
+		return true;
+	}
+
+	return true;
+}
+
+bool qaspider ( ) {
+
+	if ( ! s_callback ) s_callback = qaspider;
+
+	// do first qa test for spider
+	//qaspider1();
+
+	// do second qa test for spider
+	qaspider2();
 
 	return true;
 }

@@ -337,7 +337,10 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		     // a "contains:" directive mean no seeding
 		     seedMe &&
 		     // do not seed stuff after tag:xxx directives
-		     ! tag &&
+		     // no, we need to seed it to avoid confusion. if
+		     // they don't want it seeded they can use site: after
+		     // the tag:
+		     //! tag &&
 		     ! dedup.isInTable ( &h32 ) ) {
 			// make spider request
 			SpiderRequest sreq;
