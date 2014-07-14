@@ -196,6 +196,24 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      , g_mem.getNumAllocated() 
 			      , (long long)g_mem.getNumTotalAllocated() );
 
+	if ( format == FORMAT_JSON ) 
+		p.safePrintf ("\t\"memoryStats\":{\n"
+			      "\t\t\"allocated\":%lli,\n"
+			      "\t\t\"max\":%lli,\n" 
+			      "\t\t\"maxAllocated\":%lli,\n"
+			      "\t\t\"maxSingleAlloc\":%lli,\n"
+			      "\t\t\"maxSingleAllocBy\":\"%s\",\n"
+			      "\t\t\"currentAllocations\":%li,\n"
+			      "\t\t\"totalAllocations\":%lli\n"
+			      "\t},\n"
+			      , g_mem.getUsedMem()
+			      , g_mem.getMaxMem() 
+			      , g_mem.getMaxAlloced() 
+			      , g_mem.getMaxAlloc()
+			      , g_mem.getMaxAllocBy() 
+			      , g_mem.getNumAllocated() 
+			      , (long long)g_mem.getNumTotalAllocated() );
+
 
 			     
 
@@ -271,13 +289,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			     "\t\t\t<numQueries>%li</numQueries>\n"
 			     "\t\t\t<numSuccesses>%li</numSuccesses>\n"
 			     "\t\t\t<numFailures>%li</numFailures>\n"
-			     "\t\t\t<successRate>%.01f%%</successRate>\n"
-			     "\t\t</total>\n"
-			     "\t</queryStats>\n"
-
-			     "\t\t<socketsClosedFromOverload>%li"
-			     "</socketsClosedFromOverload>\n"
-
 			     // total
 			     , g_stats.m_totalNumQueries +
 			       g_stats.m_numSuccess + 
@@ -286,14 +297,85 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			     ,g_stats.m_totalNumSuccess + g_stats.m_numSuccess
 			     // total failures
 			     ,g_stats.m_totalNumFails   + g_stats.m_numFails
-			     // total success rate
-			     , (float)g_stats.m_totalNumSuccess / 
-			       (float)(g_stats.m_totalNumSuccess + 
-				       g_stats.m_totalNumFails)
+			     );
+
+		if ( g_stats.m_totalNumSuccess + g_stats.m_totalNumFails )
+			p.safePrintf("\t\t\t<successRate>%.01f%%"
+				     "</successRate>\n"
+				     // total success rate
+				     , (float)g_stats.m_totalNumSuccess / 
+				       (float)(g_stats.m_totalNumSuccess + 
+					     g_stats.m_totalNumFails)
+				     );
+		else
+			p.safePrintf("\t\t\t<successRate>"
+				     "</successRate>\n");
+
+		p.safePrintf("\t\t</total>\n"
+			     "\t</queryStats>\n"
+
+			     "\t<socketsClosedFromOverload>%li"
+			     "</socketsClosedFromOverload>\n"
 
 			     //days, hours, minutes, secs,
 			     , g_stats.m_closedSockets );
 	}
+
+
+	if ( format == FORMAT_JSON ) {
+		p.safePrintf("\t\"queryStats\":{\n"
+			     "\t\t\"sample\":{\n"
+			     "\t\t\t\"size\":\"last %li queries\",\n"
+			     ,g_stats.m_numQueries
+			     );
+
+		if ( g_stats.m_numQueries == 0 )
+		p.safePrintf("\t\t\t\"averageLatency\":\"\",\n"
+			     );
+		else
+		p.safePrintf("\t\t\t\"averageLatency\":\"%.1f ms\",\n"
+			     ,g_stats.m_avgQueryTime
+			     );
+
+
+		p.safePrintf("\t\t\t\"queriesPerSecond\":%f\n"
+			     "\t\t}\n," // sample
+			     ,g_stats.m_avgQueriesPerSec
+			     );
+
+		p.safePrintf(
+			     "\t\t\"total\":{\n"
+			     "\t\t\t\"numQueries\":%li,\n"
+			     "\t\t\t\"numSuccesses\":%li,\n"
+			     "\t\t\t\"numFailures\":%li,\n"
+			     // total
+			     , g_stats.m_totalNumQueries +
+			       g_stats.m_numSuccess + 
+			       g_stats.m_numFails
+			     // total successes
+			     ,g_stats.m_totalNumSuccess + g_stats.m_numSuccess
+			     // total failures
+			     ,g_stats.m_totalNumFails   + g_stats.m_numFails
+			     );
+
+		if ( g_stats.m_totalNumSuccess + g_stats.m_totalNumFails )
+			p.safePrintf("\t\t\t\"successRate\":\"%.01f%%\"\n"
+				     // total success rate
+				     , (float)g_stats.m_totalNumSuccess / 
+				       (float)(g_stats.m_totalNumSuccess + 
+					     g_stats.m_totalNumFails)
+				     );
+		else
+			p.safePrintf("\t\t\t\"successRate\":\"\"\n");
+
+		p.safePrintf("\t\t}\n" // total
+			     "\t},\n" // querystats
+
+			     "\t\"socketsClosedFromOverload\":%li,\n"
+			     //days, hours, minutes, secs,
+			     , g_stats.m_closedSockets );
+	}
+
 
 	if ( format == FORMAT_HTML ) {
 		if ( g_stats.m_numQueries == 0 )
@@ -370,6 +452,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf ( "\t<totalDocIdsGenerated>%lli"
 			       "</totalDocIdsGenerated>\n" , total );
 
+	if ( format == FORMAT_JSON )
+		p.safePrintf ( "\t\"totalDocIdsGenerated\":%lli,\n",total);
 
 	// print each filter stat
 	for ( long i = 0 ; i < CR_END ; i++ ) {
@@ -383,6 +467,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 				     "</status>\n"
 				     "\t\t<count>%li</count>\n"
 				     "\t</queryStat>\n"
+				     ,g_crStrings[i],g_stats.m_filterStats[i]);
+		if ( format == FORMAT_JSON )
+			p.safePrintf("\t\"queryStat\":{\n"
+				     "\t\t\"status\":\"%s\",\n"
+				     "\t\t\"count\":%li\n"
+				     "\t},\n"
 				     ,g_crStrings[i],g_stats.m_filterStats[i]);
 	}
 
@@ -427,14 +517,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	*/
 
 	if ( format == FORMAT_HTML ) p.safePrintf("</table><br><br>\n");
-
-	if ( format == FORMAT_XML ) {
-		p.safePrintf("</response>\n");
-		long bufLen = p.length();
-		return g_httpServer.sendDynamicPage(s,p.getBufStart(),bufLen,
-						    0,false,"text/xml");
-	}
-
 
 	// stripe loads
 	if ( g_hostdb.m_myHost->m_isProxy ) {
@@ -492,7 +574,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//caches[10] = &g_tagdb.m_listCache;
 	long numCaches = 5;
 
-	p.safePrintf (
+	if ( format == FORMAT_HTML )
+		p.safePrintf (
 		  "<table %s>"
 		  "<tr class=hdrow>"
 		  "<td colspan=%li>"
@@ -509,7 +592,67 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//g_msg20Cache.m_dbname = "parser";
 	//g_tagdb.m_listCache.m_dbname = "tagdbList";
 
-	p.safePrintf ("<tr class=poo><td>&nbsp;</td>");  // 1st column is empty
+	if ( format == FORMAT_HTML )
+		// 1st column is empty
+		p.safePrintf ("<tr class=poo><td>&nbsp;</td>");  
+
+	for ( long i = 0 ; format == FORMAT_XML && i < numCaches ; i++ ) {
+		p.safePrintf("\t<cacheStats>\n");
+		p.safePrintf("\t\t<name>%s</name>\n",caches[i]->getDbname());
+		long long a = caches[i]->getNumHits();
+		long long b = caches[i]->getNumMisses();
+		double r = 100.0 * (double)a / (double)(a+b);
+		p.safePrintf("\t\t<hitRatio>");
+		if ( a+b > 0.0 ) p.safePrintf("%.1f%%",r);
+		p.safePrintf("</hitRatio>\n");
+		p.safePrintf("\t\t<numHits>%lli</numHits>\n",a);
+		p.safePrintf("\t\t<numMisses>%lli</numMisses>\n",b);
+		p.safePrintf("\t\t<numTries>%lli</numTries>\n",a+b);
+
+		p.safePrintf("\t\t<numUsedSlots>%li</numUsedSlots>\n",
+			     caches[i]->getNumUsedNodes());
+		p.safePrintf("\t\t<numTotalSlots>%li</numTotalSlots>\n",
+			     caches[i]->getNumTotalNodes());
+		p.safePrintf("\t\t<bytesUsed>%li</bytesUsed>\n",
+			     caches[i]->getMemOccupied());
+		p.safePrintf("\t\t<maxBytes>%li</maxBytes>\n",
+			     caches[i]->getMaxMem());
+		p.safePrintf("\t\t<saveToDisk>%li</saveToDisk>\n",
+			     (long)caches[i]->useDisk());
+		p.safePrintf("\t</cacheStats>\n");
+	}
+
+	for ( long i = 0 ; format == FORMAT_JSON && i < numCaches ; i++ ) {
+		p.safePrintf("\t\"cacheStats\":{\n");
+		p.safePrintf("\t\t\"name\":\"%s\",\n",caches[i]->getDbname());
+		long long a = caches[i]->getNumHits();
+		long long b = caches[i]->getNumMisses();
+		double r = 100.0 * (double)a / (double)(a+b);
+		p.safePrintf("\t\t\"hitRatio\":\"");
+		if ( a+b > 0.0 ) p.safePrintf("%.1f%%",r);
+		p.safePrintf("\",\n");
+		p.safePrintf("\t\t\"numHits\":%lli,\n",a);
+		p.safePrintf("\t\t\"numMisses\":%lli,\n",b);
+		p.safePrintf("\t\t\"numTries\":%lli,\n",a+b);
+
+		p.safePrintf("\t\t\"numUsedSlots\":%li,\n",
+			     caches[i]->getNumUsedNodes());
+		p.safePrintf("\t\t\"numTotalSlots\":%li,\n",
+			     caches[i]->getNumTotalNodes());
+		p.safePrintf("\t\t\"bytesUsed\":%li,\n",
+			     caches[i]->getMemOccupied());
+		p.safePrintf("\t\t\"maxBytes\":%li,\n",
+			     caches[i]->getMaxMem());
+		p.safePrintf("\t\t\"saveToDisk\":%li\n",
+			     (long)caches[i]->useDisk());
+		p.safePrintf("\t},\n");
+	}
+
+
+	// do not print any more if xml or json
+	if ( format == FORMAT_XML || format == FORMAT_JSON )
+		goto skip1;
+
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		p.safePrintf("<td><b>%s</b></td>",caches[i]->getDbname() );
 	}
@@ -622,6 +765,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("</table><br><br>\n");
 	*/
 
+ skip1:
 
 	// 
 	// General Info Table
@@ -641,47 +785,132 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	char nowStr[64];
 	sprintf ( nowStr , "%s UTC", asctime(gmtime(&now)) );
 
+	// replace \n in nowstr with space
+	char *nn = strstr(nowStr,"\n");
+	if ( nn ) *nn = ' ';
+
+
 	//
 	// get the uptime as a string
 	//
 	SafeBuf ubuf;
 	printUptime ( ubuf );
-	
-	p.safePrintf (
-		  "<table %s>"
-		  "<tr class=hdrow>"
-		  "<td colspan=2>"
-		  "<center><b>General Info</b></td></tr>\n"
-		  "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
-		  "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
-		  "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
-		  "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
-		  "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
-		  //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
-		  "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
-		  "<tr class=poo><td><b>Index Shards</b></td><td>%li</td>\n"
-		  "<tr class=poo><td><b>Hosts per Shard</b></td><td>%li</td>\n"
-		  //"<tr class=poo><td><b>Fully Split</b></td><td>%li</td>\n"
-		  //"<tr class=poo><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
-		  "</tr>\n"
-		  "<tr class=poo><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
-                  "<tr class=poo><td><b>Local Time</b></td><td>%s (%li)</td></tr>\n",
-		  TABLE_STYLE ,
-		  ubuf.getBufStart(),
-		  g_numCorrupt,
-		  g_numAlarms,
-		  g_numQuickPolls,
-		  kv , 
-		  //GBPROJECTNAME,
-		  //GBVersion ,
-		  g_stats.m_parsingInconsistencies ,
-		  (long)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
-		  (long)g_hostdb.getNumHostsPerShard(),
-		  g_spiderLoop.m_lockTable.m_numSlotsUsed,
-		  //(long)g_conf.m_fullSplit,
-		  //(long)g_conf.m_tfndbExtBits,
-                  nowStr,
-		  (long)now);//ctime(&time));
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf (
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=2>"
+			      "<center><b>General Info</b></td></tr>\n"
+			      "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
+			      "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
+			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
+			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
+			      "<tr class=poo><td><b>Index Shards</b></td><td>%li</td>\n"
+			      "<tr class=poo><td><b>Hosts per Shard</b></td><td>%li</td>\n"
+			      //"<tr class=poo><td><b>Fully Split</b></td><td>%li</td>\n"
+			      //"<tr class=poo><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
+			      "</tr>\n"
+			      "<tr class=poo><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>Local Time</b></td><td>%s (%li)</td></tr>\n",
+			      TABLE_STYLE ,
+			      ubuf.getBufStart(),
+			      g_numCorrupt,
+			      g_numAlarms,
+			      g_numQuickPolls,
+			      kv , 
+			      //GBPROJECTNAME,
+			      //GBVersion ,
+			      g_stats.m_parsingInconsistencies ,
+			      (long)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
+			      (long)g_hostdb.getNumHostsPerShard(),
+			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
+			      //(long)g_conf.m_fullSplit,
+			      //(long)g_conf.m_tfndbExtBits,
+			      nowStr,
+			      (long)now);//ctime(&time));
+
+	if ( format == FORMAT_XML ) 
+		p.safePrintf (
+			      "\t<generalStats>\n"
+			      "\t\t<uptime>%s</uptime>\n"
+
+			      "\t\t<corruptedDiskReads>%li"
+			      "</corruptedDiskReads>\n"
+
+			      "\t\t<SIGVTALARMS>%li</SIGVTALARMS>\n"
+			      "\t\t<quickpolls>%li</quickpolls>\n"
+
+			      "\t\t<kernelVersion><![CDATA[%s]]>"
+			      "</kernelVersion>\n"
+
+			      "\t\t<parsingInconsistencies>%li"
+			      "</parsingInconsistencies>\n"
+
+			      "\t\t<numShards>%li</numShards>\n"
+
+			      "\t\t<hostsPerShard>%li</hostsPerShard>\n"
+
+			      "\t\t<spiderLocks>%li</spiderLocks>\n"
+
+			      "\t\t<localTimeStr>%s</localTimeStr>\n"
+			      "\t\t<localTime>%li</localTime>\n"
+			      ,
+			      ubuf.getBufStart(),
+			      g_numCorrupt,
+			      g_numAlarms,
+			      g_numQuickPolls,
+			      kv , 
+			      g_stats.m_parsingInconsistencies ,
+			      (long)g_hostdb.getNumShards(),
+			      (long)g_hostdb.getNumHostsPerShard(),
+			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
+			      nowStr,
+			      (long)now);
+
+	if ( format == FORMAT_JSON ) {
+		p.safePrintf (
+			      "\t\"generalStats\":{\n"
+			      "\t\t\"uptime\":\"%s\",\n"
+
+			      "\t\t\"corruptedDiskReads\":%li,\n"
+
+			      "\t\t\"SIGVTALARMS\":%li,\n"
+			      "\t\t\"quickpolls\":%li,\n"
+
+			      "\t\t\"kernelVersion\":\""
+			      ,
+			      ubuf.getBufStart(),
+			      g_numCorrupt,
+			      g_numAlarms,
+			      g_numQuickPolls);
+		// this has quotes in it
+		p.jsonEncode(kv);
+		p.safePrintf( "\",\n"
+
+			      "\t\t\"parsingInconsistencies\":%li,\n"
+
+			      "\t\t\"numShards\":%li,\n"
+
+			      "\t\t\"hostsPerShard\":%li,\n"
+
+			      "\t\t\"spiderLocks\":%li,\n"
+
+			      "\t\t\"localTimeStr\":\"%s\",\n"
+			      "\t\t\"localTime\":%li,\n"
+			      ,
+			      g_stats.m_parsingInconsistencies ,
+			      (long)g_hostdb.getNumShards(),
+			      (long)g_hostdb.getNumHostsPerShard(),
+			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
+			      nowStr,
+			      (long)now);
+	}
+
+
 
 	long nowg = 0;
 
@@ -693,59 +922,173 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		nowg = getTimeGlobal();
 		sprintf ( nowStr , "%s UTC", asctime(gmtime(&nowg)) );
 	}
-	p.safePrintf ( "<tr class=poo><td><b>Global Time</b></td><td>%s (%li)</td></tr>\n" 
-                       "</table><br><br>", nowStr,nowg);//ctime(&time));
+
+	// replace \n in nowstr with space
+	char *sn = strstr(nowStr,"\n");
+	if ( sn ) *sn = ' ';
+
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( "<tr class=poo><td><b>Global Time</b></td>"
+			       "<td>%s (%li)</td></tr>\n" 
+			       "</table><br><br>", nowStr,nowg);//ctime(&time))
+
+	if ( format == FORMAT_XML )
+		p.safePrintf ( "\t\t<globalTimeStr>%s</globalTimeStr>\n"
+			       "\t\t<globalTime>%li</globalTime>\n"
+			       "\t</generalStats>\n"
+			       ,nowStr,nowg);
+
+	if ( format == FORMAT_JSON )
+		p.safePrintf ( "\t\t\"globalTimeStr\":\"%s\",\n"
+			       "\t\t\"globalTime\":%li\n"
+			       "\t},\n"
+			       ,nowStr,nowg);
 
 
 	//
 	// print network stats
 	//
-	p.safePrintf ( 
-		       "<table %s>"
-		       "<tr class=hdrow>"
-		       "<td colspan=2 class=hdrow>"
-		       "<center><b>Network</b></td></tr>\n"
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( 
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=2 class=hdrow>"
+			      "<center><b>Network</b></td></tr>\n"
 
-		       "<tr class=poo><td><b>ip1 bytes/packets in</b>"
-		       "</td><td>%llu / %llu</td></tr>\n" 
+			      "<tr class=poo><td><b>ip1 bytes/packets in</b>"
+			      "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr class=poo><td><b>ip1 bytes/packets out</b>"
-		       "</td><td>%llu / %llu</td></tr>\n" 
+			      "<tr class=poo><td><b>ip1 bytes/packets out</b>"
+			      "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr class=poo><td><b>ip2 bytes/packets in</b>"
-		       "</td><td>%llu / %llu</td></tr>\n" 
+			      "<tr class=poo><td><b>ip2 bytes/packets in</b>"
+			      "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr class=poo><td><b>ip2 bytes/packets out</b>"
-		       "</td><td>%llu / %llu</td></tr>\n" 
+			      "<tr class=poo><td><b>ip2 bytes/packets out</b>"
+			      "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr class=poo><td><b>cancel acks sent</b>"
-		       "</td><td>%li</td></tr>\n" 
-		       "<tr class=poo><td><b>cancel acks read</b>"
-		       "</td><td>%li</td></tr>\n" 
-		       "<tr class=poo><td><b>dropped dgrams</b>"
-		       "</td><td>%li</td></tr>\n" 
-		       "<tr class=poo><td><b>corrupt dns reply dgrams</b>"
-		       "</td><td>%li</td></tr>\n" 
+			      "<tr class=poo><td><b>cancel acks sent</b>"
+			      "</td><td>%li</td></tr>\n" 
+			      "<tr class=poo><td><b>cancel acks read</b>"
+			      "</td><td>%li</td></tr>\n" 
+			      "<tr class=poo><td><b>dropped dgrams</b>"
+			      "</td><td>%li</td></tr>\n" 
+			      "<tr class=poo><td><b>corrupt dns reply "
+			      "dgrams</b>"
+			      "</td><td>%li</td></tr>\n" 
 
-		       ,
-		       TABLE_STYLE,
-		       g_udpServer.m_eth0BytesIn,
-		       g_udpServer.m_eth0PacketsIn,
+			      ,
+			      TABLE_STYLE,
+			      g_udpServer.m_eth0BytesIn,
+			      g_udpServer.m_eth0PacketsIn,
 
-		       g_udpServer.m_eth0BytesOut,
-		       g_udpServer.m_eth0PacketsOut,
+			      g_udpServer.m_eth0BytesOut,
+			      g_udpServer.m_eth0PacketsOut,
 
-		       g_udpServer.m_eth1BytesIn,
-		       g_udpServer.m_eth1PacketsIn,
+			      g_udpServer.m_eth1BytesIn,
+			      g_udpServer.m_eth1PacketsIn,
 
-		       g_udpServer.m_eth1BytesOut,
-		       g_udpServer.m_eth1PacketsOut ,
+			      g_udpServer.m_eth1BytesOut,
+			      g_udpServer.m_eth1PacketsOut ,
 
-		       g_cancelAcksSent,
-		       g_cancelAcksRead,
-		       g_dropped,
-		       g_corruptPackets
-		       );
+			      g_cancelAcksSent,
+			      g_cancelAcksRead,
+			      g_dropped,
+			      g_corruptPackets
+			       );
+
+
+	if ( format == FORMAT_XML )
+		p.safePrintf ( 
+			      "\t<networkStats>\n"
+
+			      "\t\t<ip1BytesIn>%llu</ip1BytesIn>\n"
+			      "\t\t<ip1PacketsIn>%llu</ip1PacketsIn>\n"
+
+			      "\t\t<ip1BytesOut>%llu</ip1BytesOut>\n"
+			      "\t\t<ip1PacketsOut>%llu</ip1PacketsOut>\n"
+
+			      "\t\t<ip2BytesIn>%llu</ip2BytesIn>\n"
+			      "\t\t<ip2PacketsIn>%llu</ip2PacketsIn>\n"
+
+			      "\t\t<ip2BytesOut>%llu</ip2BytesOut>\n"
+			      "\t\t<ip2PacketsOut>%llu</ip2PacketsOut>\n"
+
+			      "\t\t<cancelAcksSent>%li</cancelAcksSent>\n"
+
+			      "\t\t<cancelAcksRead>%li</cancelAcksRead>\n"
+
+			      "\t\t<droppedDgrams>%li</droppedDgrams>\n"
+
+			      "\t\t<corruptDnsReplyDgrams>%li"
+			      "</corruptDnsReplyDgrams>\n"
+			      "\t</networkStats>\n"
+
+			      ,
+			      g_udpServer.m_eth0BytesIn,
+			      g_udpServer.m_eth0PacketsIn,
+
+			      g_udpServer.m_eth0BytesOut,
+			      g_udpServer.m_eth0PacketsOut,
+
+			      g_udpServer.m_eth1BytesIn,
+			      g_udpServer.m_eth1PacketsIn,
+
+			      g_udpServer.m_eth1BytesOut,
+			      g_udpServer.m_eth1PacketsOut ,
+
+			      g_cancelAcksSent,
+			      g_cancelAcksRead,
+			      g_dropped,
+			      g_corruptPackets
+			       );
+
+	if ( format == FORMAT_JSON )
+		p.safePrintf ( 
+			      "\t\"networkStats\":{\n"
+
+			      "\t\t\"ip1BytesIn\":%llu,\n"
+			      "\t\t\"ip1PacketsIn\":%llu,\n"
+
+			      "\t\t\"ip1BytesOut\":%llu,\n"
+			      "\t\t\"ip1PacketsOut\":%llu,\n"
+
+			      "\t\t\"ip2BytesIn\":%llu,\n"
+			      "\t\t\"ip2PacketsIn\":%llu,\n"
+
+			      "\t\t\"ip2BytesOut\":%llu,\n"
+			      "\t\t\"ip2PacketsOut\":%llu,\n"
+
+			      "\t\t\"cancelAcksSent\":%li,\n"
+
+			      "\t\t\"cancelAcksRead\":%li,\n"
+
+			      "\t\t\"droppedDgrams\":%li,\n"
+
+			      "\t\t\"corruptDnsReplyDgrams\":%li\n"
+
+			      "\t},\n"
+
+			      ,
+			      g_udpServer.m_eth0BytesIn,
+			      g_udpServer.m_eth0PacketsIn,
+
+			      g_udpServer.m_eth0BytesOut,
+			      g_udpServer.m_eth0PacketsOut,
+
+			      g_udpServer.m_eth1BytesIn,
+			      g_udpServer.m_eth1PacketsIn,
+
+			      g_udpServer.m_eth1BytesOut,
+			      g_udpServer.m_eth1PacketsOut ,
+
+			      g_cancelAcksSent,
+			      g_cancelAcksRead,
+			      g_dropped,
+			      g_corruptPackets
+			       );
+
 
 	// break dropped dgrams down by msg type
 	//for ( long i = 0 ; i < 128 ; i++ ) {
@@ -762,7 +1105,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//}
 
 
-	p.safePrintf ( "</table><br><br>\n" );
+	if ( format == FORMAT_HTML ) 
+		p.safePrintf ( "</table><br><br>\n" );
 
 
 	if ( g_hostdb.m_myHost->m_isProxy ) {
@@ -975,105 +1319,200 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	// print msg re-routes
 	//
-	p.safePrintf ( 
-		       "<table %s>"
-		       "<tr class=hdrow>"
-		       "<td colspan=50>"
-		       "<center><b>Message Stats</b> "
+	if ( format == FORMAT_HTML ) {
+		p.safePrintf ( 
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=50>"
+			      "<center><b>Message Stats</b> "
 
-		       " &nbsp; [<a href=\"/admin/stats?reset=1\">"
-		       "reset</a>]</td></tr>\n"
+			      " &nbsp; [<a href=\"/admin/stats?reset=1\">"
+			      "reset</a>]</td></tr>\n"
 
-		       "<tr class=poo>"
-		       "<td><b>niceness</td>\n"
-		       "<td><b>msgtype</td>\n"
+			      "<tr class=poo>"
+			      "<td><b>niceness</td>\n"
+			      "<td><b>msgtype</td>\n"
 
-		       "<td><b>packets in</td>\n"
-		       "<td><b>packets out</td>\n"
+			      "<td><b>packets in</td>\n"
+			      "<td><b>packets out</td>\n"
 
-		       "<td><b>acks in</td>\n"
-		       "<td><b>acks out</td>\n"
+			      "<td><b>acks in</td>\n"
+			      "<td><b>acks out</td>\n"
 
-		       "<td><b>reroutes</td>\n"
-		       "<td><b>dropped</td>\n"
-		       "<td><b>cancels read</td>\n"
-		       "<td><b>errors</td>\n"
-		       "<td><b>timeouts</td>\n" 
-		       "<td><b>no mem</td>\n" 
-		       ,
-		       TABLE_STYLE);
-	p.safePrintf("</tr>\n");
+			      "<td><b>reroutes</td>\n"
+			      "<td><b>dropped</td>\n"
+			      "<td><b>cancels read</td>\n"
+			      "<td><b>errors</td>\n"
+			      "<td><b>timeouts</td>\n" 
+			      "<td><b>no mem</td>\n" 
+			      ,
+			      TABLE_STYLE);
+		p.safePrintf("</tr>\n");
+	}
+
+	// if ( format == FORMAT_XML )
+	// 	p.safePrintf("\t<messageStats>\n");
+
+	// if ( format == FORMAT_JSON )
+	// 	p.safePrintf("\t\"messageStats\":{\n");
+
 	// loop over niceness
 	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
 	// print each msg stat
 	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
-	// skip it if has no handler
-	if ( ! g_udpServer.m_handlers[i1] ) continue;
-	if ( ! g_stats.m_reroutes   [i1][i3] &&
-	     ! g_stats.m_packetsIn  [i1][i3] &&
-	     ! g_stats.m_packetsOut [i1][i3] &&
-	     ! g_stats.m_errors     [i1][i3] &&
-	     ! g_stats.m_timeouts   [i1][i3] &&
-	     ! g_stats.m_nomem      [i1][i3] &&
-	     ! g_stats.m_dropped    [i1][i3] &&
-	     ! g_stats.m_cancelRead [i1][i3]  )
-		continue;
+		// skip it if has no handler
+		if ( ! g_udpServer.m_handlers[i1] ) continue;
+		if ( ! g_stats.m_reroutes   [i1][i3] &&
+		     ! g_stats.m_packetsIn  [i1][i3] &&
+		     ! g_stats.m_packetsOut [i1][i3] &&
+		     ! g_stats.m_errors     [i1][i3] &&
+		     ! g_stats.m_timeouts   [i1][i3] &&
+		     ! g_stats.m_nomem      [i1][i3] &&
+		     ! g_stats.m_dropped    [i1][i3] &&
+		     ! g_stats.m_cancelRead [i1][i3]  )
+			continue;
 		// print it all out.
-		p.safePrintf( 
-			     "<tr class=poo>"
-			      "<td>%li</td>"    // niceness, 0 or 1
-			     "<td>0x%hhx</td>" // msgType
-			      //"<td>%li</td>"    // request?
-			      "<td>%li</td>" // packets in
-			      "<td>%li</td>" // packets out
-			      "<td>%li</td>" // acks in
-			      "<td>%li</td>" // acks out
-			      "<td>%li</td>" // reroutes
-			      "<td>%li</td>" // dropped
-			      "<td>%li</td>" // cancel read
-			      "<td>%li</td>" // errors
-			      "<td>%li</td>" // timeouts
-			      "<td>%li</td>" // nomem
-			      ,
-			      i3, // niceness
-			      (unsigned char)i1, // msgType
-			      //i2, // request?
-			      g_stats.m_packetsIn [i1][i3],
-			      g_stats.m_packetsOut[i1][i3],
-			      g_stats.m_acksIn [i1][i3],
-			      g_stats.m_acksOut[i1][i3],
-			      g_stats.m_reroutes[i1][i3],
-			      g_stats.m_dropped[i1][i3],
-			      g_stats.m_cancelRead[i1][i3],
-			      g_stats.m_errors[i1][i3],
-			      g_stats.m_timeouts[i1][i3],
-			      g_stats.m_nomem[i1][i3]
-			      );
+		if ( format == FORMAT_HTML )
+			p.safePrintf( 
+				     "<tr class=poo>"
+				     "<td>%li</td>"    // niceness, 0 or 1
+				     "<td>0x%hhx</td>" // msgType
+				     //"<td>%li</td>"    // request?
+				     "<td>%li</td>" // packets in
+				     "<td>%li</td>" // packets out
+				     "<td>%li</td>" // acks in
+				     "<td>%li</td>" // acks out
+				     "<td>%li</td>" // reroutes
+				     "<td>%li</td>" // dropped
+				     "<td>%li</td>" // cancel read
+				     "<td>%li</td>" // errors
+				     "<td>%li</td>" // timeouts
+				     "<td>%li</td>" // nomem
+				     ,
+				     i3, // niceness
+				     (unsigned char)i1, // msgType
+				     //i2, // request?
+				     g_stats.m_packetsIn [i1][i3],
+				     g_stats.m_packetsOut[i1][i3],
+				     g_stats.m_acksIn [i1][i3],
+				     g_stats.m_acksOut[i1][i3],
+				     g_stats.m_reroutes[i1][i3],
+				     g_stats.m_dropped[i1][i3],
+				     g_stats.m_cancelRead[i1][i3],
+				     g_stats.m_errors[i1][i3],
+				     g_stats.m_timeouts[i1][i3],
+				     g_stats.m_nomem[i1][i3]
+				      );
+		if ( format == FORMAT_XML )
+			p.safePrintf(
+				     "\t<messageStat>\n"
+				     "\t\t<niceness>%li</niceness>\n"
+				     "\t\t<msgType>0x%hhx</msgType>\n"
+				     "\t\t<packetsIn>%li</packetsIn>\n"
+				     "\t\t<packetsOut>%li</packetsOut>\n"
+				     "\t\t<acksIn>%li</acksIn>\n"
+				     "\t\t<acksOut>%li</acksOut>\n"
+				     "\t\t<reroutes>%li</reroutes>\n"
+				     "\t\t<dropped>%li</dropped>\n"
+				     "\t\t<cancelsRead>%li</cancelsRead>\n"
+				     "\t\t<errors>%li</errors>\n"
+				     "\t\t<timeouts>%li</timeouts>\n"
+				     "\t\t<noMem>%li</noMem>\n"
+				     "\t</messageStat>\n"
+				     ,i3, // niceness
+				     (unsigned char)i1, // msgType
+				     g_stats.m_packetsIn [i1][i3],
+				     g_stats.m_packetsOut[i1][i3],
+				     g_stats.m_acksIn [i1][i3],
+				     g_stats.m_acksOut[i1][i3],
+				     g_stats.m_reroutes[i1][i3],
+				     g_stats.m_dropped[i1][i3],
+				     g_stats.m_cancelRead[i1][i3],
+				     g_stats.m_errors[i1][i3],
+				     g_stats.m_timeouts[i1][i3],
+				     g_stats.m_nomem[i1][i3]
+				      );
+		if ( format == FORMAT_JSON )
+			p.safePrintf(
+				     "\t\"messageStat\":{\n"
+				     "\t\t\"niceness\":%li,\n"
+				     "\t\t\"msgType\":\"0x%hhx\",\n"
+				     "\t\t\"packetsIn\":%li,\n"
+				     "\t\t\"packetsOut\":%li,\n"
+				     "\t\t\"acksIn\":%li,\n"
+				     "\t\t\"acksOut\":%li,\n"
+				     "\t\t\"reroutes\":%li,\n"
+				     "\t\t\"dropped\":%li,\n"
+				     "\t\t\"cancelsRead\":%li,\n"
+				     "\t\t\"errors\":%li,\n"
+				     "\t\t\"timeouts\":%li,\n"
+				     "\t\t\"noMem\":%li\n"
+				     "\t},\n"
+				     ,i3, // niceness
+				     (unsigned char)i1, // msgType
+				     g_stats.m_packetsIn [i1][i3],
+				     g_stats.m_packetsOut[i1][i3],
+				     g_stats.m_acksIn [i1][i3],
+				     g_stats.m_acksOut[i1][i3],
+				     g_stats.m_reroutes[i1][i3],
+				     g_stats.m_dropped[i1][i3],
+				     g_stats.m_cancelRead[i1][i3],
+				     g_stats.m_errors[i1][i3],
+				     g_stats.m_timeouts[i1][i3],
+				     g_stats.m_nomem[i1][i3]
+				      );
 	}
 	}
-	p.safePrintf ( "</table><br><br>\n" );
+
+
+	//if ( format == FORMAT_XML )
+	//	p.safePrintf("\t</messageStats>\n");
+
+	if ( format == FORMAT_XML ) {
+		p.safePrintf("</response>\n");
+		return g_httpServer.sendDynamicPage(s,p.getBufStart(),
+						    p.length(),
+						    0,false,"text/xml");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		// remove last ,\n
+		p.m_length -= 2;
+		p.safePrintf("\n}\n}\n");
+		return g_httpServer.sendDynamicPage(s,p.getBufStart(),
+						    p.length(),
+						   0,false,"application/json");
+	}
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( "</table><br><br>\n" );
 
 
 	//
 	// print msg send times
 	//
-	p.safePrintf ( 
-		       "<table %s>"
-		       "<tr class=hdrow>"
-		       "<td colspan=50>"
-		       "<center><b>Message Send Times</b></td></tr>\n"
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( 
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=50>"
+			      "<center><b>Message Send Times</b></td></tr>\n"
 
-		       "<tr class=poo>"
-		       "<td><b>niceness</td>\n"
-		       "<td><b>request?</td>\n"
-		       "<td><b>msgtype</td>\n"
-		       "<td><b>total sent</td>\n"
-		       "<td><b>avg send time</td>\n" ,
-		       TABLE_STYLE);
-	// print bucket headers
-	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
-		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
-	p.safePrintf("</tr>\n");
+			      "<tr class=poo>"
+			      "<td><b>niceness</td>\n"
+			      "<td><b>request?</td>\n"
+			      "<td><b>msgtype</td>\n"
+			      "<td><b>total sent</td>\n"
+			      "<td><b>avg send time</td>\n" ,
+			      TABLE_STYLE);
+
+	if ( format == FORMAT_HTML ) {
+		// print bucket headers
+		for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
+			p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
+		p.safePrintf("</tr>\n");
+	}
+
 	// loop over niceness
 	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
 	// loop over isRequest?
@@ -1082,6 +1521,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
 	// skip it if has no handler
 	if ( ! g_udpServer.m_handlers[i1] ) continue;
+	// skip if xml
+	if ( format != FORMAT_HTML ) continue;
 		// print it all out.
 		// careful, second index is the nicenss, and third is
 		// the isReply. our loops are reversed.
@@ -1113,35 +1554,42 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	}
 	}
 	}
-	p.safePrintf ( "</table><br><br>\n" );
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( "</table><br><br>\n" );
 
 
 	//
 	// print msg queued times
 	//
-	p.safePrintf ( 
-		       "<table %s>"
-		       "<tr class=hdrow>"
-		       "<td colspan=50>"
-		       "<center><b>Message Queued Times</b></td></tr>\n"
+	if ( format == FORMAT_HTML ) {
+		p.safePrintf ( 
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=50>"
+			      "<center><b>Message Queued Times</b></td></tr>\n"
 
-		       "<tr class=poo>"
-		       //"<td>request?</td>\n"
-		       "<td><b>niceness</td>\n"
-		       "<td><b>msgtype</td>\n"
-		       "<td><b>total queued</td>\n"
-		       "<td><b>avg queued time</td>\n" ,
-		       TABLE_STYLE);
-	// print bucket headers
-	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
-		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
-	p.safePrintf("</tr>\n");
+			      "<tr class=poo>"
+			      //"<td>request?</td>\n"
+			      "<td><b>niceness</td>\n"
+			      "<td><b>msgtype</td>\n"
+			      "<td><b>total queued</td>\n"
+			      "<td><b>avg queued time</td>\n" ,
+			      TABLE_STYLE);
+		// print bucket headers
+		for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
+			p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
+		p.safePrintf("</tr>\n");
+	}
+
 	// loop over niceness
 	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
 	// print each msg stat
 	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
-	// skip it if has no handler
-	if ( ! g_udpServer.m_handlers[i1] ) continue;
+		// only html
+		if ( format != FORMAT_HTML ) break;
+		// skip it if has no handler
+		if ( ! g_udpServer.m_handlers[i1] ) continue;
 		// print it all out
 		long long total = g_stats.m_msgTotalOfQueuedTimes[i1][i3];
 		long long nt    = g_stats.m_msgTotalQueued       [i1][i3];
@@ -1170,34 +1618,41 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("</tr>\n");
 	}
 	}
-	p.safePrintf ( "</table><br><br>\n" );
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( "</table><br><br>\n" );
 
 
 	//
 	// print msg handler times
 	//
-	p.safePrintf ( 
-		       "<table %s>"
-		       "<tr class=hdrow>"
-		       "<td colspan=50>"
-		       "<center><b>Message Reply Generation Times</b>"
-		       "</td></tr>\n"
+	if ( format == FORMAT_HTML ) {
+		p.safePrintf ( 
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=50>"
+			      "<center><b>Message Reply Generation Times</b>"
+			      "</td></tr>\n"
 
-		       "<tr class=poo>"
-		       //"<td>request?</td>\n"
-		       "<td><b>niceness</td>\n"
-		       "<td><b>msgtype</td>\n"
-		       "<td><b>total replies</td>\n"
-		       "<td><b>avg gen time</td>\n" ,
-		       TABLE_STYLE);
-	// print bucket headers
-	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
-		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
-	p.safePrintf("</tr>\n");
+			      "<tr class=poo>"
+			      //"<td>request?</td>\n"
+			      "<td><b>niceness</td>\n"
+			      "<td><b>msgtype</td>\n"
+			      "<td><b>total replies</td>\n"
+			      "<td><b>avg gen time</td>\n" ,
+			      TABLE_STYLE);
+		// print bucket headers
+		for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
+			p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
+		p.safePrintf("</tr>\n");
+	}
+
 	// loop over niceness
 	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
 	// print each msg stat
 	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
+		// only hyml
+		if ( format != FORMAT_HTML ) break;
 		// skip it if has no handler
 		if ( i1 != 0x41 && ! g_udpServer.m_handlers[i1] ) continue;
 		// print it all out
@@ -1228,7 +1683,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("</tr>\n");
 	}
 	}
-	p.safePrintf ( "</table><br><br>\n" );
+
+
+	if ( format == FORMAT_HTML )
+		p.safePrintf ( "</table><br><br>\n" );
 
 	// print out whos is using the most mem
 // 	ss = p.getBuf();
@@ -1743,6 +2201,15 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// calculate buffer length
 	//long bufLen = p - buf;
 	long bufLen = p.length();
+
+	if ( format == FORMAT_XML ) {
+		p.safePrintf("</response>\n");
+		return g_httpServer.sendDynamicPage(s,p.getBufStart(),bufLen,
+						    0,false,"text/xml");
+	}
+
+
+
 	// . send this page
 	// . encapsulates in html header and tail
 	// . make a Mime
