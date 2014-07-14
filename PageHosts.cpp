@@ -599,7 +599,8 @@ skipReplaceHost:
 		//
 		if ( format == FORMAT_JSON ) {
 			
-			sb.safePrintf("\t\"host\":\"%s\",\n",h->m_hostname);
+			sb.safePrintf("\t\"host\":{\n");
+			sb.safePrintf("\t\t\"name\":\"%s\",\n",h->m_hostname);
 			sb.safePrintf("\t\t\"shard\":%li,\n",
 				      h->m_shardNum);
 			sb.safePrintf("\t\t\"mirror\":%li,\n", h->m_stripe);
@@ -815,7 +816,7 @@ skipReplaceHost:
 	if ( format == FORMAT_JSON ) {
 		// remove last \n, from json host{}
 		sb.m_length -= 2;
-		sb.safePrintf("\n}\n");
+		sb.safePrintf("\n}\n}");
 		return g_httpServer.sendDynamicPage ( s , 
 						      sb.getBufStart(),
 						      sb.length() ,
