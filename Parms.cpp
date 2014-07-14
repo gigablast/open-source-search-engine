@@ -6324,8 +6324,8 @@ void Parms::init ( ) {
 	m->m_desc  = "If enabled, query expansion will expand your query "
 		"to include the various forms and "
 		"synonyms of the query terms.";
-	m->m_def   = "1";
 	m->m_off   = (char *)&si.m_queryExpansion - y;
+	m->m_defOff= (char *)&cr.m_queryExpansion - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi  = "qe";
 	m->m_flags = PF_API;
