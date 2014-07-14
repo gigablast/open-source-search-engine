@@ -816,6 +816,17 @@ void addedList ( UdpSlot *slot , Rdb *rdb ) {
 	     g_repairMode > 0 )
 	     //g_repair.m_fullRebuild )
 		g_errno = ETRYAGAIN;
+
+	// it seems like someone can delete a collection and there can
+	// be adds in transit to doledb and it logs
+	// "doledb bad collnum of 30110"
+	// so just absorb those
+	if ( g_errno == ENOCOLLREC ) {
+		log("msg1: missing collrec to add to to %s. just dropping.",
+		    rdb->m_dbname);
+		g_errno = 0;
+	}
+
 	// . if we got a ETRYAGAIN cuz the buffer we add to was full
 	//   then we should sleep and try again!
 	// . return false cuz this blocks for a period of time
