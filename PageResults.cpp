@@ -3585,28 +3585,32 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	/////
 	unsigned char ctype = mr->m_contentType;
-	if ( ctype != CT_HTML && ctype != CT_UNKNOWN ){//&&ctype <= CT_JSON ) {
-		char *cs = g_contentTypeStrings[ctype];
-		if ( si->m_format == FORMAT_XML )
-			sb->safePrintf("\t\t<contentType>"
-				      "<![CDATA["
-				      "%s"
-				      "]]>"
-				      "</contentType>\n",
-				      cs);
-		else if ( si->m_format == FORMAT_JSON )
-			sb->safePrintf("\t\t\"contentType\":\"%s\",\n",cs);
-		else if ( si->m_format == FORMAT_HTML && ctype != CT_HTML ) {
-			sb->safePrintf(" <b><font style=color:white;"
-				      "background-color:maroon;>");
-			char *p = cs;
-			for ( ; *p ; p++ ) {
-				char c = to_upper_a(*p);
-				sb->pushChar(c);
-			}
-			sb->safePrintf("</font></b> &nbsp;");
+	char *cs = g_contentTypeStrings[ctype];
+
+	if ( si->m_format == FORMAT_XML )
+		sb->safePrintf("\t\t<contentType>"
+			       "<![CDATA["
+			       "%s"
+			       "]]>"
+			       "</contentType>\n",
+			       cs);
+
+	if ( si->m_format == FORMAT_JSON )
+		sb->safePrintf("\t\t\"contentType\":\"%s\",\n",cs);
+
+	if ( si->m_format == FORMAT_HTML &&
+	     ctype != CT_HTML && 
+	     ctype != CT_UNKNOWN ){
+		sb->safePrintf(" <b><font style=color:white;"
+			       "background-color:maroon;>");
+		char *p = cs;
+		for ( ; *p ; p++ ) {
+			char c = to_upper_a(*p);
+			sb->pushChar(c);
 		}
+		sb->safePrintf("</font></b> &nbsp;");
 	}
+	
 
 	////////////
 	//
@@ -3791,6 +3795,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("\",\n");
 	}
 
+	if ( si->m_format == FORMAT_XML )
+		sb->safePrintf("\t\t<hopCount>%li</hopCount>\n",
+			       (long)mr->m_hopcount);
+
+	if ( si->m_format == FORMAT_JSON )
+		sb->safePrintf("\t\t\"hopCount\":%li,\n",(long)mr->m_hopcount);
 
 	// now the last spidered date of the document
 	time_t ts = mr->m_lastSpidered;
@@ -4107,6 +4117,24 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 st->m_qe , 
 				 // "qlang" parm
 				 si->m_defaultSortLang,
+				 coll , 
+				 mr->m_docId ); 
+	}
+
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a href=\""
+				 "/get?"
+				 // show rainbow sections
+				 "page=1&"
+				 //"q=%s&"
+				 //"qlang=%s&"
+				 "c=%s&"
+				 "d=%lli&"
+				 "cnsp=0\">"
+				 "info</a>", 
+				 //st->m_qe , 
+				 // "qlang" parm
+				 //si->m_defaultSortLang,
 				 coll , 
 				 mr->m_docId ); 
 	}

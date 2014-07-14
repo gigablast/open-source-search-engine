@@ -185,6 +185,10 @@ XmlDoc::~XmlDoc() {
 static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
+	
+	// for hashing CT_STATUS docs consistently, this might be invalid
+	// so call it 0
+	m_pubDate = 0;
 
 	m_tmpBuf2.purge();
 	m_gotFacets = false;
@@ -25818,8 +25822,12 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	//   as a separate document
 	// . use the same url, but use a different docid.
 	// . use now to mix it up
-	long now = getTimeGlobal();
-	long long h = hash64(m_docId, now );
+	//long now = getTimeGlobal();
+	//long long h = hash64(m_docId, now );
+	// to keep qa test consistent this docid should be consistent
+	// so base it on spidertime of parent doc
+	if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
+	long long h = hash64(m_docId, m_spideredTime );
 	// mask it out
 	long long d = h & DOCID_MASK;
 	// try to get an available docid, preferring "d" if available
@@ -25853,6 +25861,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 
 	// sanity
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
+
+	// why isn't gbhopcount: being indexed consistently?
+	if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
 
 	// hash like gbstatus:"Tcp Timed out" or gbstatus:"Doc unchanged"
 	HashInfo hi;
@@ -25974,7 +25985,11 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 
 	// override spider time in case we had error to be consistent
 	// with the actual SpiderReply record
-	xd->m_spideredTime = reply->m_spideredTime;
+	//xd->m_spideredTime = reply->m_spideredTime;
+	//xd->m_spideredTimeValid = true;
+	// sanity
+	//if ( reply->m_spideredTime != m_spideredTime ) {char *xx=NULL;*xx=0;}
+
 	// this will cause the maroon box next to the search result to
 	// say "STATUS" similar to "PDF" "DOC" etc.
 	xd->m_contentType  = CT_STATUS;

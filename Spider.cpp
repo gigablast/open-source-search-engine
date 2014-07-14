@@ -12596,6 +12596,13 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		//
 		/////////
 
+		// speed up qa pipeline
+		long spiderDoneTimer = (long)SPIDER_DONE_TIMER;
+		if ( cr->m_coll[0] == 'q' &&
+		     cr->m_coll[1] == 'a' &&
+		     strcmp(cr->m_coll,"qatest123")==0)
+			spiderDoneTimer = 10;
+
 		// if we haven't spidered anything in 1 min assume the
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
@@ -12606,7 +12613,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		     // will increment the round # and wait just
 		     // SPIDER_DONE_TIMER seconds and end up setting
 		     // hasUrlsReadyToSpider to false!
-		     now > cr->m_spiderRoundStartTime + SPIDER_DONE_TIMER &&
+		     now > cr->m_spiderRoundStartTime + spiderDoneTimer &&
 		     // no spiders currently out. i've seen a couple out
 		     // waiting for a diffbot reply. wait for them to
 		     // return before ending the round...
@@ -12618,7 +12625,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		     //cr->m_spideringEnabled &&
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
-		     (long) SPIDER_DONE_TIMER ) {
+		     spiderDoneTimer ) {
 			// this is the MOST IMPORTANT variable so note it
 			log("spider: coll %s has no more urls to spider",
 			    cr->m_coll);

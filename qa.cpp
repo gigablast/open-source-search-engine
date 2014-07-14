@@ -82,7 +82,6 @@ void processReply ( char *reply , long replyLen ) {
 
 	// take out <responseTimeMS>
 	markOut ( content , "<currentTimeUTC>");
-
 	markOut ( content , "<responseTimeMS>");
 
 	// until i figure this one out, take it out
@@ -90,6 +89,10 @@ void processReply ( char *reply , long replyLen ) {
 
 	// until i figure this one out, take it out
 	markOut ( content , "<hits>");
+
+	// for json
+	markOut ( content , "\"currentTimeUTC\":" );
+	markOut ( content , "\"responseTimeMS\":");
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
@@ -685,7 +688,7 @@ bool qaspider1 ( ) {
 		s_t0 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A0",
-				1516804233 ) )
+				304539772 ) )
 			return false;
 	}
 	
@@ -695,7 +698,7 @@ bool qaspider1 ( ) {
 		s_y5 = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
-				-1018518330 ) )
+				-638832233 ) )
 			return false;
 	}
 
@@ -780,7 +783,10 @@ bool qaspider2 ( ) {
 			      // take out hopcount for now, just test quotas
 			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
 
-	       "fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+			      // sitepages is a little fuzzy so take it
+			      // out for this test and use hopcount!!!
+			      //"fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+			      "fe1=tag%%3Ashallow+%%26%%26+hopcount<%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
 
 	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
 
@@ -840,7 +846,7 @@ bool qaspider2 ( ) {
 		s_y4 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A2",
-				-1672870556 ) )
+				-1310551262 ) )
 			return false;
 	}
 
@@ -850,7 +856,7 @@ bool qaspider2 ( ) {
 		s_t0 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A0",
-				1516804233 ) )
+				0 ) )
 			return false;
 	}
 	
@@ -860,7 +866,7 @@ bool qaspider2 ( ) {
 		s_y5 = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
-				-1018518330 ) )
+				0 ) )
 			return false;
 	}
 
@@ -912,10 +918,12 @@ bool qaspider ( ) {
 	if ( ! s_callback ) s_callback = qaspider;
 
 	// do first qa test for spider
-	//qaspider1();
+	// returns true when done, false when blocked
+	//if ( ! qaspider1() ) return false;
 
 	// do second qa test for spider
-	qaspider2();
+	// returns true when done, false when blocked
+	if ( ! qaspider2() ) return false;
 
 	return true;
 }
@@ -926,9 +934,11 @@ bool qatest ( ) {
 
 	if ( ! s_callback ) s_callback = qatest;
 
-	qainject ( );
+	// returns true when done, false when blocked
+	if ( ! qainject ( ) ) return false;
 
-	qaspider ( );
+	// returns true when done, false when blocked
+	if ( ! qaspider ( ) ) return false;
 
 	return true;
 }
