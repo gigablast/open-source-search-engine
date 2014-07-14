@@ -21743,18 +21743,53 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 		char *src = srcCR + m->m_off;
 		char *dst = dstCR + m->m_off;
 
-		if ( m->m_type == TYPE_SAFEBUF ) {
-			SafeBuf *a = (SafeBuf *)src;
-			SafeBuf *b = (SafeBuf *)dst;
-			b->safeMemcpy ( a );
+		// if not an array use this
+		if ( ! m->isArray() ) {
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *a = (SafeBuf *)src;
+				SafeBuf *b = (SafeBuf *)dst;
+				b->reset();
+				b->safeMemcpy ( a );
+				b->nullTerm();
+			}
+			else {
+				// this should work for most types
+				memcpy ( dst , src , m->m_size );
+			}
 			continue;
 		}
 
-		// array? like "fe" (url filters)
+		//
+		// arrays only below here
+		//
 
+		// for arrays only
+		long *srcNum = (long *)(src-4);
+		long *dstNum = (long *)(dst-4);
 
-		// this should work for most types
-		memcpy ( dst , src , m->m_size );
+		// array can have multiple values
+		for ( long j = 0 ; j < *srcNum ; j++ ) {
+
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *a = (SafeBuf *)src;
+				SafeBuf *b = (SafeBuf *)dst;
+				b->reset();
+				b->safeMemcpy ( a );
+				b->nullTerm();
+			}
+			else {
+				// this should work for most types
+				memcpy ( dst , src , m->m_size );
+			}
+
+			src += m->m_size;
+			dst += m->m_size;
+
+		}
+
+		// update # elements in array
+		*dstNum = *srcNum;
+
 	}
 	return true;
 }
