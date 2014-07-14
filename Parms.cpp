@@ -1187,11 +1187,11 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	
 	// do not show the parms and their current values unless showsettings=1
 	// was explicitly given for the xml/json feeds
-	// long showSettings = 1;
-	// if ( format != FORMAT_HTML )
-	// 	showSettings = r->getLong("showsettings",1);
-	// if ( showSettings )
-	// 	printParmTable ( sb , s , r );
+	long show = 1;
+	if ( format != FORMAT_HTML )
+	 	show = r->getLong("show",0);
+	if ( show )
+	 	printParmTable ( sb , s , r );
 
 	// xml/json tail
 	if ( format == FORMAT_XML )
@@ -21749,6 +21749,9 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 			b->safeMemcpy ( a );
 			continue;
 		}
+
+		// array? like "fe" (url filters)
+
 
 		// this should work for most types
 		memcpy ( dst , src , m->m_size );
