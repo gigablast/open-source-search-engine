@@ -339,18 +339,41 @@ bool Xml::set ( char  *s             ,
 		char *pend   = &m_xml[0] + m_xmlLen;
 		// scan -- 5 continues -- node 1570 is text of script
 		for ( ; p < pend ; p++ ) {
-			if (            p[0]  != '<' ) continue;
-			if ( to_lower_a(p[1]) != '/' ) continue;
-			if ( to_lower_a(p[2]) != 's' ) continue;
-			if ( to_lower_a(p[3]) != 'c' ) continue;
-			if ( to_lower_a(p[4]) != 'r' ) continue;
-			if ( to_lower_a(p[5]) != 'i' ) continue;
-			if ( to_lower_a(p[6]) != 'p' ) continue;
-			if ( to_lower_a(p[7]) != 't' ) continue;
-			break;
+			// breathe
+			QUICKPOLL(m_niceness);
+			// keep going if not a tag
+			if ( p[0]  != '<' ) continue;
+			// </script> or </gbframe> stops it
+			if ( p[1] == '/' ) {
+				if ( to_lower_a(p[2]) == 's' &&
+				     to_lower_a(p[3]) == 'c' &&
+				     to_lower_a(p[4]) == 'r' &&
+				     to_lower_a(p[5]) == 'i' &&
+				     to_lower_a(p[6]) == 'p' &&
+				     to_lower_a(p[7]) == 't' ) 
+					break;
+				if ( to_lower_a(p[2]) == 'g' &&
+				     to_lower_a(p[3]) == 'b' &&
+				     to_lower_a(p[4]) == 'f' &&
+				     to_lower_a(p[5]) == 'r' &&
+				     to_lower_a(p[6]) == 'a' &&
+				     to_lower_a(p[7]) == 'm' ) 
+					break;
+			}
+			// another <script> stops it
+			if ( to_lower_a(p[1]) == 's' &&
+			     to_lower_a(p[2]) == 'c' &&
+			     to_lower_a(p[3]) == 'r' &&
+			     to_lower_a(p[4]) == 'i' &&
+			     to_lower_a(p[5]) == 'p' &&
+			     to_lower_a(p[6]) == 't' ) 
+				break;
 		}
 		// make sure we do not breach! i saw this happen once!
 		if ( m_numNodes >= m_maxNumNodes ) break;
+		// was it like <script></script> then no scripttext tag?
+		if ( p - pstart == 0 )
+			continue;
 		XmlNode *xn      = &m_nodes[m_numNodes++];
 		xn->m_nodeId     = TAG_SCRIPTTEXT;//0; // TEXT NODE
 		xn->m_node       =     pstart;
@@ -361,7 +384,7 @@ bool Xml::set ( char  *s             ,
 		xn->m_hash       = 0;
 		xn->m_isVisible  = false;
 		xn->m_isBreaking = false;
-		// advance i to get to the </script>
+		// advance i to get to the </script> or <gbframe> etc.
 		i = p - &m_xml[0] ;
 	}
 	// sanity
