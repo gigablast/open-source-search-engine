@@ -1054,8 +1054,9 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	// . make sure nobody has it
 	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
 	//   have nuked it
-	CollectionRec *cr = sc->m_cr;
-	if ( cr ) cr->m_spiderColl = NULL;
+	//CollectionRec *cr = sc->m_cr;
+	// use fake ptrs for easier debugging
+	//if ( cr ) cr->m_spiderColl = NULL;
 	mdelete ( sc , sizeof(SpiderColl),"postdel1");
 	delete ( sc );
 	return true;
@@ -1094,7 +1095,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	//m_spiderColls [ collnum ] = sc;
 	cr->m_spiderColl = sc;
 	// note it
-	log(LOG_DEBUG,"spider: made spidercoll=%lx for cr=%lx",
+	logf(LOG_DEBUG,"spider: made spidercoll=%lx for cr=%lx",
 	    (long)sc,(long)cr);
 	// update this
 	//if ( m_numSpiderColls < collnum + 1 )
@@ -1107,8 +1108,16 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	if ( ! strcmp ( cr->m_coll,"qatest123" ) ) sc->m_isTestColl = true;
 	else                                  sc->m_isTestColl = false;
 	
+	// set this
+	sc->setCollectionRec ( cr ); // sc->m_cr = cr;
+
 	// set first doledb scan key
 	sc->m_nextDoledbKey.setMin();
+
+	// turn off quickpolling while loading incase a parm update comes in
+	bool saved = g_conf.m_useQuickpoll;
+	g_conf.m_useQuickpoll = false;
+
 	// mark it as loading so it can't be deleted while loading
 	sc->m_isLoading = true;
 	// . load its tables from disk
@@ -1117,12 +1126,16 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	sc->load();
 	// mark it as loading
 	sc->m_isLoading = false;
-	// set this
-	sc->m_cr = cr;
+
+	// restore
+	g_conf.m_useQuickpoll = saved;
+
 	// did crawlbottesting delete it right away?
 	if ( tryToDeleteSpiderColl( sc ,"1") ) return NULL;
 	// sanity check
-	if ( ! cr ) { char *xx=NULL;*xx=0; }
+	//if ( ! cr ) { char *xx=NULL;*xx=0; }
+	// deleted right away?
+	//if ( sc->getCollectionRec() == NULL ) { char *xx=NULL;*xx=0; }
 	// note it!
 	log(LOG_DEBUG,"spider: adding new spider collection for %s",
 	    cr->m_coll);
@@ -1133,6 +1146,17 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 /////////////////////////
 /////////////////////////      SpiderColl
 /////////////////////////
+
+void SpiderColl::setCollectionRec ( CollectionRec *cr ) {
+	m_cr = cr;
+	// this was useful for debugging a null m_cr bug
+	//log("sc: sc 0x%lx setting cr to 0x%lx",(long)this,(long)cr);
+}
+
+CollectionRec *SpiderColl::getCollectionRec ( ) {
+	//log("sc: sc 0x%lx getting cr of 0x%lx",(long)this,(long)m_cr);
+	return m_cr;
+}
 
 SpiderColl::SpiderColl () {
 	m_deleteMyself = false;
@@ -1145,6 +1169,7 @@ SpiderColl::SpiderColl () {
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
 	m_siteListIsEmptyValid = false;
+	m_cr = NULL;
 	//m_lastSpiderAttempt = 0;
 	//m_lastSpiderCouldLaunch = 0;
 	//m_numRoundsDone = 0;
@@ -5882,7 +5907,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// shortcut
 	//CollectionRec *cr = m_sc->m_cr;
 	// sanity
-	if ( cr != m_sc->m_cr ) { char *xx=NULL;*xx=0; }
+	if ( cr != m_sc->getCollectionRec() ) { char *xx=NULL;*xx=0; }
 	// skip the priority if we already have enough spiders on it
 	long out = m_sc->m_outstandingSpiders[m_sc->m_pri2];
 	// how many spiders can we have out?
@@ -6035,7 +6060,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	m_gettingDoledbList = false;
 
 	// shortcuts
-	CollectionRec *cr = m_sc->m_cr;
+	CollectionRec *cr = m_sc->getCollectionRec();
 	CrawlInfo *ci = &cr->m_localCrawlInfo;
 
 	// update m_msg5StartKey for next read
@@ -6521,7 +6546,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	//char *coll = m_sc->m_cr->m_coll;
 	// sometimes the spider coll is reset/deleted while we are
 	// trying to get the lock in spiderUrl9() so let's use collnum
-	collnum_t collnum = m_sc->m_cr->m_collnum;
+	collnum_t collnum = m_sc->getCollectionRec()->m_collnum;
 
 	// . spider that. we don't care wheter it blocks or not
 	// . crap, it will need to block to get the locks!
