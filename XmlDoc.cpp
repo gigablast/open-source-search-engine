@@ -16824,7 +16824,7 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		//m_esbuf.safeMemcpy ( "</iframe>", 9 );
 		// use our own special tag so Sections.cpp can set
 		// Section::m_gbFrameNum which it uses internally
-		m_esbuf.safePrintf("<gbframe>");
+		m_esbuf.safePrintf("<gbframe>"); // gbiframe
 		// identify javascript
 		bool javascript = false;
 		if ( *ed->getContentType() == CT_JS ) javascript = true;
