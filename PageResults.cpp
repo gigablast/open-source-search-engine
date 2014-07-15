@@ -2874,38 +2874,41 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 					   State0 *st ) {
 
 	char format = si->m_format;
+	// these are handled in the <dmozEntry> logic below now
+	if ( format == FORMAT_XML ) return true;
+	if ( format == FORMAT_JSON ) return true;
 
-	if ( format == FORMAT_XML ) {
-		sb->safePrintf("\t\t<dmozCat>\n"
-			       "\t\t\t<dmozCatId>%li</dmozCatId>\n"
-			       "\t\t\t<dmozCatStr><![CDATA["
-			       ,catid);
-		// print the name of the dmoz category
-		char xbuf[256];
-		SafeBuf xb(xbuf,256,0,false);
-		g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
-		sb->cdataEncode(xb.getBufStart());
-		sb->safePrintf("]]></dmozCatStr>\n"
-			       "\t\t</dmozCat>\n");
-		return true;
-	}
+	// if ( format == FORMAT_XML ) {
+	// 	sb->safePrintf("\t\t<dmozCat>\n"
+	// 		       "\t\t\t<dmozCatId>%li</dmozCatId>\n"
+	// 		       "\t\t\t<dmozCatStr><![CDATA["
+	// 		       ,catid);
+	// 	// print the name of the dmoz category
+	// 	char xbuf[256];
+	// 	SafeBuf xb(xbuf,256,0,false);
+	// 	g_categories->printPathFromId(&xb, catid, false,si->m_isRTL); 
+	// 	sb->cdataEncode(xb.getBufStart());
+	// 	sb->safePrintf("]]></dmozCatStr>\n");
+	// 	sb->safePrintf("\t\t</dmozCat>\n");
+	// 	return true;
+	// }
 
-	if ( format == FORMAT_JSON ) {
-		sb->safePrintf("\t\t\"dmozCat\":{\n"
-			       "\t\t\t\"dmozCatId\":%li,\n"
-			       "\t\t\t\"dmozCatStr\":\""
-			       ,catid);
-		// print the name of the dmoz category
-		char xbuf[256];
-		SafeBuf xb(xbuf,256,0,false);
-		g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
-		sb->jsonEncode(xb.getBufStart());
-		sb->safePrintf("\"\n"
-			       "\t\t},\n");
+	// if ( format == FORMAT_JSON ) {
+	// 	sb->safePrintf("\t\t\"dmozCat\":{\n"
+	// 		       "\t\t\t\"dmozCatId\":%li,\n"
+	// 		       "\t\t\t\"dmozCatStr\":\""
+	// 		       ,catid);
+	// 	// print the name of the dmoz category
+	// 	char xbuf[256];
+	// 	SafeBuf xb(xbuf,256,0,false);
+	// 	g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
+	// 	sb->jsonEncode(xb.getBufStart());
+	// 	sb->safePrintf("\"\n"
+	// 		       "\t\t},\n");
 
 
-		return true;
-	}
+	// 	return true;
+	// }
 
 	//uint8_t queryLanguage = langUnknown;
 	uint8_t queryLanguage = si->m_queryLangId;
@@ -3454,14 +3457,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	/////
 
-	char *dmozSummary = NULL;
+	char *dmozSummary2 = NULL;
 	// TODO: just get the catid from httprequest directly?
 	if ( si->m_catId > 0 ) { // si->m_cat_dirId > 0) {
 		// . get the dmoz title and summary
 		// . if empty then just a bunch of \0s, except for catIds
 	        Msg20Reply *mr = m20->getReply();
 		char *dmozTitle  = mr->ptr_dmozTitles;
-		dmozSummary = mr->ptr_dmozSumms;
+		dmozSummary2 = mr->ptr_dmozSumms;
 		char *dmozAnchor = mr->ptr_dmozAnchors;
 		long *catIds     = mr->ptr_catIds;
 		long numCats = mr->size_catIds / 4;
@@ -3470,7 +3473,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			// assign shit if we match the dmoz cat we are showing
 			if ( catIds[i] ==  si->m_catId) break;
 			dmozTitle +=gbstrlen(dmozTitle)+1;
-			dmozSummary +=gbstrlen(dmozSummary)+1;
+			dmozSummary2 +=gbstrlen(dmozSummary2)+1;
 			dmozAnchor += gbstrlen(dmozAnchor)+1;
 		}
 		// now make the title the dmoz title
@@ -3592,6 +3595,76 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		hp += gbstrlen(hp) + 1;
 	}
 
+	// print all dmoz info for xml/json. 
+	// seems like both direct and indirect dmoz entries here.
+	if ( mr->size_dmozTitles > 1 &&
+	     ( si->m_format == FORMAT_JSON ||
+	       si->m_format == FORMAT_XML ) ) {
+		char *dmozTitle  = mr->ptr_dmozTitles;
+		char *dmozSummary = mr->ptr_dmozSumms;
+		char *dmozAnchor = mr->ptr_dmozAnchors;
+		long *catIds     = mr->ptr_catIds;
+		long numCats = mr->size_catIds / 4;
+		// loop through looking for the right ID
+		for (long i = 0; i < numCats ; i++ ) {
+			// assign shit if we match the dmoz cat we are showing
+			//if ( catIds[i] ==  si->m_catId) break;
+			if ( si->m_format == FORMAT_XML ) {
+				sb->safePrintf("\t\t<dmozEntry>\n");
+				sb->safePrintf("\t\t\t<dmozCatId>%li"
+					       "</dmozCatId>\n",catIds[i]);
+				// print the name of the dmoz category
+				sb->safePrintf("\t\t\t<dmozCatStr><![CDATA[");
+				char xbuf[256];
+				SafeBuf xb(xbuf,256,0,false);
+				g_categories->printPathFromId(&xb, 
+							      catIds[i], 
+							      false,
+							      si->m_isRTL); 
+				sb->cdataEncode(xb.getBufStart());
+				sb->safePrintf("]]></dmozCatStr>\n");
+				sb->safePrintf("\t\t\t<dmozTitle><![CDATA[");
+				sb->cdataEncode(dmozTitle);
+				sb->safePrintf("]]></dmozTitle>\n");
+				sb->safePrintf("\t\t\t<dmozSum><![CDATA[");
+				sb->cdataEncode(dmozSummary);
+				sb->safePrintf("]]></dmozSum>\n");
+				sb->safePrintf("\t\t\t<dmozAnchor><![CDATA[");
+				sb->cdataEncode(dmozAnchor);
+				sb->safePrintf("]]></dmozAnchor>\n");
+				sb->safePrintf("\t\t</dmozEntry>\n");
+			}
+			if ( si->m_format == FORMAT_JSON ) {
+				sb->safePrintf("\t\t\"dmozEntry\":{\n");
+				sb->safePrintf("\t\t\t\"dmozCatId\":%li,\n",
+					       catIds[i]);
+				// print the name of the dmoz category
+				sb->safePrintf("\t\t\t\"dmozCatStr\":\"");
+				char xbuf[256];
+				SafeBuf xb(xbuf,256,0,false);
+				g_categories->printPathFromId(&xb, 
+							      catIds[i], 
+							      false,
+							      si->m_isRTL); 
+				sb->jsonEncode(xb.getBufStart());
+				sb->safePrintf("\",\n");
+				sb->safePrintf("\t\t\t\"dmozTitle\":\"");
+				sb->jsonEncode(dmozTitle);
+				sb->safePrintf("\",\n");
+				sb->safePrintf("\t\t\t\"dmozSum\":\"");
+				sb->jsonEncode(dmozSummary);
+				sb->safePrintf("\",\n");
+				sb->safePrintf("\t\t\t\"dmozAnchor\":\"");
+				sb->jsonEncode(dmozAnchor);
+				sb->safePrintf("\"\n");
+				sb->safePrintf("\t\t},\n");
+			}
+			dmozTitle +=gbstrlen(dmozTitle)+1;
+			dmozSummary +=gbstrlen(dmozSummary)+1;
+			dmozAnchor += gbstrlen(dmozAnchor)+1;
+		}
+	}
+
 
 	/////
 	//
@@ -3648,9 +3721,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//send = str + strLen;
 
 	// dmoz summary might override if we are showing a dmoz topic page
-	if ( dmozSummary ) {
-		str = dmozSummary;
-		strLen = gbstrlen(dmozSummary);
+	if ( dmozSummary2 && (si->m_catId>0 || strLen<=0) ) {
+		str = dmozSummary2;
+		strLen = gbstrlen(dmozSummary2);
 	}
 
 	bool printSummary = true;
