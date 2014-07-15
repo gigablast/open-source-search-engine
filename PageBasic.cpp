@@ -409,7 +409,7 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	HashTableX *dt = &sc->m_siteListDomTable;
 
 	// get this
-	CollectionRec *cr = sc->m_cr;
+	CollectionRec *cr = sc->getCollectionRec();
 
 	// need to build dom table for pattern matching?
 	if ( dt->getNumSlotsUsed() == 0 && cr ) {
