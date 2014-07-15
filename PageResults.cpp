@@ -47,6 +47,14 @@ bool printScoresHeader ( SafeBuf *sb ) ;
 bool printSingleScore ( SafeBuf *sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
 
+bool printDmozEntry ( SafeBuf *sb ,
+		      long catId ,
+		      bool direct ,
+		      char *dmozTitle ,
+		      char *dmozSummary ,
+		      char *dmozAnchor ,
+		      SearchInput *si );
+
 bool sendReply ( State0 *st , char *reply ) {
 
 	long savedErr = g_errno;
@@ -3597,72 +3605,63 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// print all dmoz info for xml/json. 
 	// seems like both direct and indirect dmoz entries here.
-	if ( mr->size_dmozTitles > 1 &&
+	if ( mr->size_catIds > 0 &&
 	     ( si->m_format == FORMAT_JSON ||
 	       si->m_format == FORMAT_XML ) ) {
-		char *dmozTitle  = mr->ptr_dmozTitles;
+
+		char *dmozTitle   = mr->ptr_dmozTitles;
 		char *dmozSummary = mr->ptr_dmozSumms;
-		char *dmozAnchor = mr->ptr_dmozAnchors;
-		long *catIds     = mr->ptr_catIds;
-		long numCats = mr->size_catIds / 4;
+		char *dmozAnchor  = mr->ptr_dmozAnchors;
+		long *catIds      = mr->ptr_catIds;
+		long  numCats     = mr->size_catIds / 4;
 		// loop through looking for the right ID
 		for (long i = 0; i < numCats ; i++ ) {
-			// assign shit if we match the dmoz cat we are showing
-			//if ( catIds[i] ==  si->m_catId) break;
-			if ( si->m_format == FORMAT_XML ) {
-				sb->safePrintf("\t\t<dmozEntry>\n");
-				sb->safePrintf("\t\t\t<dmozCatId>%li"
-					       "</dmozCatId>\n",catIds[i]);
-				// print the name of the dmoz category
-				sb->safePrintf("\t\t\t<dmozCatStr><![CDATA[");
-				char xbuf[256];
-				SafeBuf xb(xbuf,256,0,false);
-				g_categories->printPathFromId(&xb, 
-							      catIds[i], 
-							      false,
-							      si->m_isRTL); 
-				sb->cdataEncode(xb.getBufStart());
-				sb->safePrintf("]]></dmozCatStr>\n");
-				sb->safePrintf("\t\t\t<dmozTitle><![CDATA[");
-				sb->cdataEncode(dmozTitle);
-				sb->safePrintf("]]></dmozTitle>\n");
-				sb->safePrintf("\t\t\t<dmozSum><![CDATA[");
-				sb->cdataEncode(dmozSummary);
-				sb->safePrintf("]]></dmozSum>\n");
-				sb->safePrintf("\t\t\t<dmozAnchor><![CDATA[");
-				sb->cdataEncode(dmozAnchor);
-				sb->safePrintf("]]></dmozAnchor>\n");
-				sb->safePrintf("\t\t</dmozEntry>\n");
-			}
-			if ( si->m_format == FORMAT_JSON ) {
-				sb->safePrintf("\t\t\"dmozEntry\":{\n");
-				sb->safePrintf("\t\t\t\"dmozCatId\":%li,\n",
-					       catIds[i]);
-				// print the name of the dmoz category
-				sb->safePrintf("\t\t\t\"dmozCatStr\":\"");
-				char xbuf[256];
-				SafeBuf xb(xbuf,256,0,false);
-				g_categories->printPathFromId(&xb, 
-							      catIds[i], 
-							      false,
-							      si->m_isRTL); 
-				sb->jsonEncode(xb.getBufStart());
-				sb->safePrintf("\",\n");
-				sb->safePrintf("\t\t\t\"dmozTitle\":\"");
-				sb->jsonEncode(dmozTitle);
-				sb->safePrintf("\",\n");
-				sb->safePrintf("\t\t\t\"dmozSum\":\"");
-				sb->jsonEncode(dmozSummary);
-				sb->safePrintf("\",\n");
-				sb->safePrintf("\t\t\t\"dmozAnchor\":\"");
-				sb->jsonEncode(dmozAnchor);
-				sb->safePrintf("\"\n");
-				sb->safePrintf("\t\t},\n");
-			}
-			dmozTitle +=gbstrlen(dmozTitle)+1;
-			dmozSummary +=gbstrlen(dmozSummary)+1;
-			dmozAnchor += gbstrlen(dmozAnchor)+1;
+			printDmozEntry ( sb,
+					 catIds[i],
+					 true,
+					 dmozTitle,
+					 dmozSummary,
+					 dmozAnchor ,
+					 si );
+			dmozTitle   += gbstrlen(dmozTitle  ) + 1;
+			dmozSummary += gbstrlen(dmozSummary) + 1;
+			dmozAnchor  += gbstrlen(dmozAnchor ) + 1;
 		}
+	}
+
+	if ( mr->size_indCatIds > 0 &&
+	     ( si->m_format == FORMAT_JSON ||
+	       si->m_format == FORMAT_XML ) ) {
+		// print INDIRECT dmoz entries as well
+		long nIndCatids = mr->size_indCatIds / 4;
+		 for ( long i = 0; i < nIndCatids; i++ ) {
+		 	long catId = ((long *)(mr->ptr_indCatIds))[i];
+			if ( si->m_format == FORMAT_XML )
+				sb->safePrintf("\t\t<indirectDmozCatId>"
+					       "%li</indirectDmozCatId>\n",
+					       catId);
+			if ( si->m_format == FORMAT_JSON )
+				sb->safePrintf("\t\t\"indirectDmozCatId\":"
+					       "%li,\n",catId);
+		 }
+		// print INDIRECT dmoz entries as well
+		// long nIndCatids = mr->size_indCatIds / 4;
+		// dmozTitle   = mr->ptr_indDmozTitles;
+		// dmozSummary = mr->ptr_dmozSumms;
+		// dmozAnchor  = mr->ptr_dmozAnchors;
+		// for ( long i = 0; i < nIndCatids; i++ ) {
+		// 	long catId = ((long *)(mr->ptr_indCatIds))[i];
+		// 	printDmozEntry ( sb ,
+		// 			 catId ,
+		// 			 false,
+		// 			 dmozTitle,
+		// 			 dmozSummary,
+		// 			 dmozAnchor ,
+		// 			 si );
+		// 	dmozTitle   += gbstrlen(dmozTitle  ) + 1;
+		// 	dmozSummary += gbstrlen(dmozSummary) + 1;
+		// 	dmozAnchor  += gbstrlen(dmozAnchor ) + 1;
+		// }
 	}
 
 
@@ -7475,3 +7474,72 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 					    "UTF-8"); // charset
 }
 */
+
+
+bool printDmozEntry ( SafeBuf *sb ,
+		      long catId ,
+		      bool direct ,
+		      char *dmozTitle ,
+		      char *dmozSummary ,
+		      char *dmozAnchor ,
+		      SearchInput *si ) {
+
+	// assign shit if we match the dmoz cat we are showing
+	//if ( catIds[i] ==  si->m_catId) break;
+	if ( si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<dmozEntry>\n");
+		sb->safePrintf("\t\t\t<dmozCatId>%li"
+			       "</dmozCatId>\n",catId);
+		sb->safePrintf("\t\t\t<directCatId>%li</directCatId>\n",
+			       (long)direct);
+		// print the name of the dmoz category
+		sb->safePrintf("\t\t\t<dmozCatStr><![CDATA[");
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, 
+					      catId,
+					      false,
+					      si->m_isRTL); 
+		sb->cdataEncode(xb.getBufStart());
+		sb->safePrintf("]]></dmozCatStr>\n");
+		sb->safePrintf("\t\t\t<dmozTitle><![CDATA[");
+		sb->cdataEncode(dmozTitle);
+		sb->safePrintf("]]></dmozTitle>\n");
+		sb->safePrintf("\t\t\t<dmozSum><![CDATA[");
+		sb->cdataEncode(dmozSummary);
+		sb->safePrintf("]]></dmozSum>\n");
+		sb->safePrintf("\t\t\t<dmozAnchor><![CDATA[");
+		sb->cdataEncode(dmozAnchor);
+		sb->safePrintf("]]></dmozAnchor>\n");
+		sb->safePrintf("\t\t</dmozEntry>\n");
+		return true;
+	}
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"dmozEntry\":{\n");
+		sb->safePrintf("\t\t\t\"dmozCatId\":%li,\n",
+			       catId);
+		sb->safePrintf("\t\t\t\"directCatId\":%li,\n",(long)direct);
+		// print the name of the dmoz category
+		sb->safePrintf("\t\t\t\"dmozCatStr\":\"");
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, 
+					      catId,
+					      false,
+					      si->m_isRTL); 
+		sb->jsonEncode(xb.getBufStart());
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\t\"dmozTitle\":\"");
+		sb->jsonEncode(dmozTitle);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\t\"dmozSum\":\"");
+		sb->jsonEncode(dmozSummary);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\t\"dmozAnchor\":\"");
+		sb->jsonEncode(dmozAnchor);
+		sb->safePrintf("\"\n");
+		sb->safePrintf("\t\t},\n");
+		return true;
+	}
+	return true;
+}

@@ -3557,14 +3557,15 @@ bool XmlDoc::setDmozInfo () {
 		ds += dslen;
 		da += dalen;
 		// null terminate
-		if ( dtlen>0 && dt[dtlen-1]!='\0' ) { *dt++=0; dtlen++; }
-		if ( dslen>0 && ds[dslen-1]!='\0' ) { *ds++=0; dslen++; }
-		if ( dalen>0 && da[dalen-1]!='\0' ) { *da++=0; dalen++; }
-		// must always be something!
-		if ( dtlen==0 ) {*dt++=0; dtlen++;}
-		if ( dslen==0 ) {*ds++=0; dslen++;}
-		if ( dalen==0 ) {*da++=0; dalen++;}
+		*dt++ = 0;
+		*ds++ = 0;
+		*ds++ = 0;
 	}
+
+	// if empty, make it a \0 to keep in sync with the rest
+	if ( dt == titles  ) *dt++ = '\0';
+	if ( ds == summs   ) *ds++ = '\0';
+	if ( da == anchors ) *da++ = '\0';
 
 	// set these
 	ptr_dmozTitles   = titles;
@@ -29083,9 +29084,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		Title *ti = getTitle();
 		if ( ! ti || ti == (Title *)-1 ) return (Msg20Reply *)ti;
 		char *tit = ti->getTitle();
-		long  titLen = ti->getTitleSize();
+		long  titLen = ti->getTitleLen();
 		reply-> ptr_tbuf = tit;
 		reply->size_tbuf = titLen + 1; // include \0
+		// sanity
+		if ( tit[titLen] != '\0' ) { char *xx=NULL;*xx=0; }
 		if ( ! tit || titLen <= 0 ) {
 			reply->ptr_tbuf = NULL;
 			reply->size_tbuf = 0;
@@ -29783,7 +29786,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		Title *ti = getTitle();
 		if ( ! ti || ti == (Title *)-1 ) return (Msg20Reply *)ti;
 		char *tit = ti->getTitle();
-		long  titLen = ti->getTitleSize();
+		long  titLen = ti->getTitleLen();
 		reply-> ptr_tbuf = tit;
 		reply->size_tbuf = titLen + 1; // include \0
 		if ( ! tit || titLen <= 0 ) {

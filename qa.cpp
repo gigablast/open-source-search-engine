@@ -326,7 +326,7 @@ bool qainject ( ) {
 		usleep(1500000);
 		s_x5 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-				838663174 ) )
+				702467314 ) )
 			return false;
 	}
 
@@ -335,7 +335,7 @@ bool qainject ( ) {
 	if ( ! s_x7 ) {
 		s_x7 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=sports+news",-1013701120 ) )
+				"q=sports+news",2009472889 ) )
 		     return false;
 	}
 
@@ -396,7 +396,7 @@ bool qainject ( ) {
 		usleep(1500000);
 		s_y4 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
-				1604983811 ) )
+				-1804253505 ) )
 			return false;
 	}
 
@@ -406,7 +406,7 @@ bool qainject ( ) {
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
 				"+news&ns=1&tml=20&smxcpl=30&"
 				"sw=10&showimages=1"
-				,1707718509 ) )
+				,-1874756636 ) )
 			return false;
 	}
 
@@ -416,7 +416,7 @@ bool qainject ( ) {
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
 				"+news&ns=1&tml=20&smxcpl=30&"
 				"sw=10&showimages=0&hacr=1"
-				,1098495613 ) )
+				,1651330319 ) )
 			return false;
 	}
 
@@ -426,7 +426,7 @@ bool qainject ( ) {
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
 				"+news&ns=1&tml=20&smxcpl=30&"
 				"sw=10&showimages=0&sc=1"
-				,810978859 ) )
+				,-1405546537 ) )
 			return false;
 	}
 
@@ -688,7 +688,7 @@ bool qaspider1 ( ) {
 		s_t0 = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A0",
-				304539772 ) )
+				908338607 ) )
 			return false;
 	}
 	
@@ -698,7 +698,7 @@ bool qaspider1 ( ) {
 		s_y5 = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
-				-638832233 ) )
+				55157060 ) )
 			return false;
 	}
 
@@ -854,7 +854,7 @@ bool qaspider2 ( ) {
 	static bool s_t0 = false;
 	if ( ! s_t0 ) {
 		s_t0 = true;
-		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&n=500&"
 				"q=gbhopcount%3A0",
 				0 ) )
 			return false;
@@ -919,7 +919,7 @@ bool qaspider ( ) {
 
 	// do first qa test for spider
 	// returns true when done, false when blocked
-	//if ( ! qaspider1() ) return false;
+	if ( ! qaspider1() ) return false;
 
 	// do second qa test for spider
 	// returns true when done, false when blocked
