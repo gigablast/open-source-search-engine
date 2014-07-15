@@ -2404,6 +2404,12 @@ bool printSearchResultsTail ( State0 *st ) {
 	//}
 
 	if ( si->m_format == FORMAT_JSON ) {	
+		// remove last },\n if there and replace with just \n
+		char *e = sb->getBuf() - 2;
+		if ( e[0]==',' && e[1]=='\n') {
+			sb->m_length -= 2;
+			sb->safePrintf("\n");
+		}
 		// print ending ] for json
 		sb->safePrintf("]\n");
 		if ( st->m_header ) sb->safePrintf("}\n");
@@ -2974,11 +2980,19 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	long long d = msg40->getDocId(ix);
 
+
+
 	if ( si->m_docIdsOnly ) {
 		if ( si->m_format == FORMAT_XML )
-			sb->safePrintf("\t\t<docId>%lli</docId>\n"
-				      "\t</result>\n", 
-				      d );
+			sb->safePrintf("\t<result>\n"
+				       "\t\t<docId>%lli</docId>\n"
+				       "\t</result>\n", 
+				       d );
+		else if ( si->m_format == FORMAT_JSON )
+			sb->safePrintf("\t\{\n"
+				       "\t\t\"docId\":%lli\n"
+				       "\t},\n",
+				       d );
 		else
 			sb->safePrintf("%lli<br/>\n", 
 				      d );
