@@ -396,7 +396,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 			// empty path besides the /?
 			if (  x >= pe   ) break;
 			// ok, we got something here i think
-			if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
+			// no, might be like http://xyz.com/?poo
+			//if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
 			// calc length from "start" of line so we can
 			// jump to the path quickly for compares. inc "/"
 			pd.m_pathOff = (x-1) - patternStart;
