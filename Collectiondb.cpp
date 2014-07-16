@@ -32,6 +32,7 @@ HashTableX g_collTable;
 Collectiondb g_collectiondb;
 
 Collectiondb::Collectiondb ( ) {
+	m_wrapped = 0;
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
 	//m_lastUpdateTime = 0LL;
@@ -1503,8 +1504,13 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 	}
 
 	// search for an empty slot
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
-		if ( ! m_recs[i] ) return (collnum_t)i;
+	for ( long i = m_wrapped ; i < m_numRecs ; i++ ) {
+		if ( m_recs[i] ) continue;
+		// start after this one next time
+		m_wrapped = i+1;
+		// note it
+		log("colldb: returning wrapped collnum of %li",(long)i);
+		return (collnum_t)i;
 	}
 
 	log("colldb: no new collnum available. consider upping collnum_t");

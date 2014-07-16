@@ -168,6 +168,8 @@ class Collectiondb  {
 	//long long       m_lastUpdateTime [ MAX_COLLS ];
 	long            m_numRecs;
 	long            m_numRecsUsed;
+	
+	long m_wrapped;
 
 	//long long            m_lastUpdateTime;
 };
