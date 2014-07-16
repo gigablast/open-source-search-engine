@@ -3411,8 +3411,8 @@ bool SafeBuf::base64Decode ( char *src , long srcLen , long niceness ) {
 		for ( unsigned char c = '0' ; c <= '9'; c++ ) 
 			s_bmap[c] = val++;
 		if ( val != 62 ) { char *xx=NULL;*xx=0; }
-		s_bmap['+'] = 62;
-		s_bmap['/'] = 63;
+		s_bmap[(unsigned char)'+'] = 62;
+		s_bmap[(unsigned char)'/'] = 63;
 	}
 
 	// reserve twice as much space i guess

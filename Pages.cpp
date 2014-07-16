@@ -2602,6 +2602,11 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	if ( PAGENUM == PAGE_NONE ) return true;
 
+	if ( ! cr ) {
+		log("api: no collection provided");
+		return true;
+	}
+
 	char *pageStr = s_pages[PAGENUM].m_filename;
 	
 	// unknown?

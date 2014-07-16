@@ -4553,8 +4553,12 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// i'm feeling if a boolean query put this in there too, the
 	// hashtable that maps each docid to its boolean bit vector
 	// where each bit stands for an operand so we can quickly evaluate
-	// the bit vector in a truth table
-	long maxSlots = maxDocIds * 2;
+	// the bit vector in a truth table.
+	// CRAP, can't use min list size because it might be behind a
+	// NOT operator!!! then we core trying to realloc m_bt in a thread
+	// below when trying to grow it. they could all be OR'd together
+	// so alloc the most!
+	long maxSlots = (grand/12) * 2;
 	// get total operands we used
 	//long numOperands = m_q->m_numWords;//Operands;
 	// a quoted phrase counts as a single operand

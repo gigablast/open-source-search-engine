@@ -706,7 +706,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		goto redo;
 	}
 
-	long long oldest = 0x7fffffffffffffff;
+	long long oldest = 0x7fffffffffffffffLL;
 	SpiderProxy *winnersp = NULL;
 	// now find the best proxy wih the minCount
 	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
