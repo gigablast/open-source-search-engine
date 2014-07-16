@@ -13187,12 +13187,12 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		if ( g_errno ) return NULL;
 		// panic! what the fuck? why did it return true and then
 		// call our callback???
-		if ( g_conf.m_logDebugBuild ) {
-			log("build: xmldoc call to msg25 did not block");
-			// must now block since it uses multicast now to
-			// send the request onto the network
-			char *xx=NULL;*xx=0; 
-		}
+		//if ( g_conf.m_logDebugBuild ) {
+		log("build: xmldoc call to msg25 did not block");
+		// must now block since it uses multicast now to
+		// send the request onto the network
+		char *xx=NULL;*xx=0; 
+		//}
 	}
 
 	// at this point assume its valid
