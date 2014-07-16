@@ -20491,6 +20491,11 @@ long *XmlDoc::nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) {
 	// if none, we are done
 	if ( m_diffbotJSONCount <= 0 ) return &s_return;
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	if ( ! cr->m_isCustomCrawl ) return &s_return;
+
 	// already did it?
 	if ( m_joc >= m_diffbotJSONCount ) return &s_return;
 
@@ -20504,9 +20509,6 @@ long *XmlDoc::nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) {
 		}
 		mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
 	}
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	//
 	// index the hashes of the latest diffbot json items for this parent
@@ -29088,7 +29090,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		reply-> ptr_tbuf = tit;
 		reply->size_tbuf = titLen + 1; // include \0
 		// sanity
-		if ( tit[titLen] != '\0' ) { char *xx=NULL;*xx=0; }
+		if ( tit && tit[titLen] != '\0' ) { char *xx=NULL;*xx=0; }
 		if ( ! tit || titLen <= 0 ) {
 			reply->ptr_tbuf = NULL;
 			reply->size_tbuf = 0;

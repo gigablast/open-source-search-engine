@@ -16,6 +16,9 @@ static void startSpidering ( ) ;
 static void gotDocWrapper ( void *state , TcpSocket *s ) ;
 static void sleepWrapper ( int fd , void *state ) ;
 
+bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
+bool g_recoveryMode;
+
 static long  s_maxNumThreads = 1 ;
 static long  s_launched   = 0;
 static long  s_total      = 0;
@@ -105,14 +108,15 @@ int main ( int argc , char *argv[] ) {
 
 	if ( argc != 4 && argc != 5 && argc !=6 ) {
 	printUsage:
-		log("USAGE: blaster [fileOfUrls | -r<num random words><server>] [maxNumThreads] [wait in ms] " 
-		    "<lines to skip> <string to append>");
-		log("USAGE: examples:");
-		log("USAGE:  ./blaster queries.fromlog 10 1");
-		log("USAGE:  ./blaster -r3http://www.gigablast.com/index.php?q= 1 100\n");
+		fprintf(stderr,"USAGE: blaster [fileOfUrls | -r<num random words><server>] [maxNumThreads] [wait in ms] " 
+		    "<lines to skip> <string to append>\n");
+		fprintf(stderr,"USAGE: examples:\n");
+		fprintf(stderr,"USAGE:  ./blaster queries.fromlog 10 1\n");
+		fprintf(stderr,"USAGE:  ./blaster -r3http://www.gigablast.com/index.php?q= 1 100\n");
 		return 1; 
 	}
 
+	fprintf(stderr,"Logging to /tmp/blasterLog\n");
 
 	// init the loop
 	if ( ! g_loop.init() ) {
@@ -318,7 +322,8 @@ void startSpidering ( ) {
 		// count it
 		s_launched++;
 		// get it
-		bool status = g_httpServer.getDoc ( &u , // url
+		bool status = g_httpServer.getDoc ( u.getUrl() , // url
+						    0, // ip
 						    0 ,  // offset
 						    -1 ,  // size
 						    0 , // ifModifiedSince

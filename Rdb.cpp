@@ -2853,7 +2853,7 @@ long getDataSizeFromRdbId ( uint8_t rdbId ) {
 			     i == RDB_INDEXDB ||
 			     i == RDB_TFNDB ||
 			     i == RDB_CLUSTERDB ||
-			     //i == RDB_DATEDB ||
+			     i == RDB_DATEDB ||
 			     //i == RDB_FAKEDB ||
 			     i == RDB_LINKDB )
 				ds = 0;
@@ -2878,9 +2878,8 @@ long getDataSizeFromRdbId ( uint8_t rdbId ) {
 				  i == RDB2_INDEXDB2 ||
 				  i == RDB2_TFNDB2 ||
 				  i == RDB2_CLUSTERDB2 ||
-				  i == RDB2_LINKDB2 
-				  //i == RDB2_DATEDB2 )
-				  )
+				  i == RDB2_LINKDB2 ||
+				  i == RDB2_DATEDB2 )
 				ds = 0;
 			else if ( i == RDB2_TITLEDB2 ||
 				  i == RDB2_REVDB2   ||
