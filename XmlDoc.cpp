@@ -13032,6 +13032,9 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	// change status
 	setStatus ( "getting local inlinkers" );
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
 	XmlDoc **od = getOldXmlDoc ( );
 	if ( ! od || od == (XmlDoc **)-1 ) return (LinkInfo *)od;
 	long *sni = getSiteNumInlinks();
@@ -13052,11 +13055,20 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	}
 	char *mysite = getSite();
 	if ( ! mysite || mysite == (void *)-1 ) return (LinkInfo *)mysite;
+
+	// no linkinfo for diffbot custom crawls to speed up
+	if ( cr->m_isCustomCrawl ) {
+		m_linkInfo1Valid = true;
+		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
+		s_dummy2.m_size = sizeof(LinkInfo);
+		ptr_linkInfo1  = &s_dummy2;
+		size_linkInfo1 = sizeof(LinkInfo);
+		return ptr_linkInfo1;
+	}
+
 	// grab a ptr to the LinkInfo contained in our Doc class
 	LinkInfo  *oldLinkInfo1 = NULL;
 	if ( *od ) oldLinkInfo1 = (*od)->getLinkInfo1();
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	// if ip does not exist, make it 0
 	if ( *ip == 0 ) {
