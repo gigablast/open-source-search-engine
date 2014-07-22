@@ -154,6 +154,7 @@ bool sendReply ( void *state ) {
 
 	char abuf[320];
 	SafeBuf am(abuf,320,0,false);
+	am.setLabel("injbuf");
 	char *ct = NULL;
 
 	// a success reply, include docid and url i guess
