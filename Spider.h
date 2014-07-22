@@ -794,6 +794,8 @@ class SpiderRequest {
 	// returns false and sets g_errno on error
 	bool setFromAddUrl ( char *url ) ;
 	bool setFromInject ( char *url ) ;
+
+	bool isCorrupt ( );
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url

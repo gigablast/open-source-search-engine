@@ -722,6 +722,14 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 			    //key_t startKey , key_t endKey , bool freeData ) {
 			    char *startKey , char *endKey , bool freeData ) {
 
+	// sanity check
+	if ( ! m_isWritable ) {
+		log("db: Can not delete record from tree because "
+		    "not writable 2. name=%s",m_dbname);
+		return;
+		//char *xx = NULL; *xx = 0;
+	}
+
 	// protect it all from writes again
 	if ( m_useProtection ) unprotect ( );
 
@@ -749,8 +757,9 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// sanity check
 	if ( ! m_isWritable ) {
 		log("db: Can not delete record from tree because "
-		    "not writable.");
-		char *xx = NULL; *xx = 0;
+		    "not writable. name=%s",m_dbname);
+		return;
+		//char *xx = NULL; *xx = 0;
 	}
 	// must be saved from interrupts lest i be changed
 	//if(g_intOff <= 0 && g_globalNiceness == 0 ) { char *xx=NULL;*xx=0; }
