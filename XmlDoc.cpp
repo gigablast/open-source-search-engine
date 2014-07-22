@@ -9990,6 +9990,14 @@ Url **XmlDoc::getRedirUrl() {
 		// login page ... so add this check here
 		if ( ! f->isRoot() )
 			simplifiedRedir = true;
+
+	bool allowSimplifiedRedirs = m_allowSimplifiedRedirs;
+
+	// follow redirects if injecting so we do not return 
+	// EDOCSIMPLIFIEDREDIR
+	if ( getIsInjecting ( ) )
+		allowSimplifiedRedirs = true;
+
 	// . if the redir url is simpler, but has no hostname we
 	//   prepend a "www." to it
 	// . this should avoids www.russ.ru and russ.ru from being
@@ -10010,7 +10018,7 @@ Url **XmlDoc::getRedirUrl() {
 	// . 301 means moved PERMANENTLY...
 	// . many people use 301 on their root pages though, so treat
 	//   it like a temporary redirect, like exclusivelyequine.com
-	if ( simplifiedRedir && ! m_allowSimplifiedRedirs &&
+	if ( simplifiedRedir && ! allowSimplifiedRedirs &&
 	     // for custom BULK clients don't like this i guess
 	     // AND for custom crawl it was messing up the processing
 	     // url format for a nytimes blog subsite which was redirecting
@@ -34710,13 +34718,16 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 
 	// store mime first then content
 	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
-	sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
-
+	
+	// we no longer use this through a proxy, so take this out
+	//sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
 	// but hack the Content-Length: field to something alien
 	// because we markup the html and the lenght will be different...
-	sb->nullTerm();
-	char *cl = strstr(sb->getBufStart(),"\nContent-Length:");
-	if ( cl ) cl[1] = 'Z';
+	//sb->nullTerm();
+
+	// we no longer use this through a proxy so take this out
+	//char *cl = strstr(sb->getBufStart(),"\nContent-Length:");
+	//if ( cl ) cl[1] = 'Z';
 
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 
@@ -34781,6 +34792,7 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		//sb->safePrintf("</font>");
 		// print it here
 	}
+	sb->nullTerm();
 	m_inlineSectionVotingBufValid = true;
 	return &m_inlineSectionVotingBuf;
 }
