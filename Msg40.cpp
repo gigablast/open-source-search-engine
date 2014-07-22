@@ -1652,6 +1652,8 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 		THIS->m_socketHadError = g_errno;
 		log("msg40: streaming socket had error: %s",
 		    mstrerror(g_errno));
+		// i guess destroy the socket here so we don't get called again?
+
 	}
 	// clear it so we don't think it was a msg20 error below
 	g_errno = 0;

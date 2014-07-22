@@ -730,6 +730,14 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		}
 		// ok, we got a spider request
 		sreq = (SpiderRequest *)rec;
+		
+		if ( sreq->isCorrupt() ) {
+			log("spider: encountered a corrupt spider req "
+			    "when dumping cn=%li. skipping.",
+			    (long)cr->m_collnum);
+			continue;
+		}
+
 		// sanity check
 		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48()){
 			badCount++;

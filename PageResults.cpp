@@ -1021,6 +1021,16 @@ bool gotResults ( void *state ) {
 
 	SearchInput *si = &st->m_si;
 
+	// if in streaming mode and we never sent anything and we had
+	// an error, then send that back. we never really entered streaming
+	// mode in that case. this happens when someone deletes a coll
+	// and queries it immediately, then each shard reports ENOCOLLREC.
+	// it was causing a socket to be permanently stuck open.
+	if ( g_errno &&
+	     si->m_streamResults &&
+	     st->m_socket->m_totalSent == 0 )
+	       return sendReply(st,NULL);
+
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
 		// this will be our final send

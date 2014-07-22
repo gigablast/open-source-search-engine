@@ -10012,7 +10012,10 @@ Url **XmlDoc::getRedirUrl() {
 	//   it like a temporary redirect, like exclusivelyequine.com
 	if ( simplifiedRedir && ! m_allowSimplifiedRedirs &&
 	     // for custom BULK clients don't like this i guess
-	     cr->m_isCustomCrawl != 2 ) {
+	     // AND for custom crawl it was messing up the processing
+	     // url format for a nytimes blog subsite which was redirecting
+	     // to the proper nytimes.com site...
+	     ! cr->m_isCustomCrawl ) {
 		// returns false if blocked, true otherwise
 		//return addSimplifiedRedirect();
 		m_redirError = EDOCSIMPLIFIEDREDIR;
@@ -13379,6 +13382,9 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	// change status
 	setStatus ( "getting local inlinkers" );
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
 	XmlDoc **od = getOldXmlDoc ( );
 	if ( ! od || od == (XmlDoc **)-1 ) return (LinkInfo *)od;
 	long *sni = getSiteNumInlinks();
@@ -13399,11 +13405,20 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	}
 	char *mysite = getSite();
 	if ( ! mysite || mysite == (void *)-1 ) return (LinkInfo *)mysite;
+
+	// no linkinfo for diffbot custom crawls to speed up
+	if ( cr->m_isCustomCrawl ) {
+		m_linkInfo1Valid = true;
+		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
+		s_dummy2.m_size = sizeof(LinkInfo);
+		ptr_linkInfo1  = &s_dummy2;
+		size_linkInfo1 = sizeof(LinkInfo);
+		return ptr_linkInfo1;
+	}
+
 	// grab a ptr to the LinkInfo contained in our Doc class
 	LinkInfo  *oldLinkInfo1 = NULL;
 	if ( *od ) oldLinkInfo1 = (*od)->getLinkInfo1();
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	// if ip does not exist, make it 0
 	if ( *ip == 0 ) {
@@ -13534,12 +13549,12 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		if ( g_errno ) return NULL;
 		// panic! what the fuck? why did it return true and then
 		// call our callback???
-		if ( g_conf.m_logDebugBuild ) {
-			log("build: xmldoc call to msg25 did not block");
-			// must now block since it uses multicast now to
-			// send the request onto the network
-			char *xx=NULL;*xx=0; 
-		}
+		//if ( g_conf.m_logDebugBuild ) {
+		log("build: xmldoc call to msg25 did not block");
+		// must now block since it uses multicast now to
+		// send the request onto the network
+		char *xx=NULL;*xx=0; 
+		//}
 	}
 
 	// at this point assume its valid

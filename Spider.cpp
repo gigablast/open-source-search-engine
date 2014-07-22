@@ -35,7 +35,9 @@ void testWinnerTreeKey ( ) ;
 // try 45 to prevent false revivals
 //#define SPIDER_DONE_TIMER 45
 // try 30 again since we have new localcrawlinfo update logic much faster
-#define SPIDER_DONE_TIMER 30
+//#define SPIDER_DONE_TIMER 30
+// neo under heavy load go to 60
+#define SPIDER_DONE_TIMER 60
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
@@ -3907,7 +3909,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		     // might be a docid from a pagereindex.cpp
 		     ! is_digit(sreq->m_url[0]) ) { 
 			log("spider: got corrupt 1 spiderRequest in scan "
-			    "because url is %s",sreq->m_url);
+			    "because url is %s (cn=%li)",sreq->m_url,(long)m_collnum);
 			continue;
 		}
 
@@ -3939,12 +3941,14 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// this is -1 on corruption
 		if ( srep && srep->m_httpStatus >= 1000 ) {
-			log("spider: got corrupt 3 spiderReply in scan");
+			log("spider: got corrupt 3 spiderReply in scan (cn=%li)",
+			    (long)m_collnum);
 			srep = NULL;
 		}
 		// bad langid?
 		if ( srep && ! getLanguageAbbr (srep->m_langId) ) {
-			log("spider: got corrupt 4 spiderReply in scan");
+			log("spider: got corrupt 4 spiderReply in scan (cn=%li)",
+			    (long)m_collnum);
 			srep = NULL;
 		}
 
@@ -3991,9 +3995,17 @@ bool SpiderColl::scanListForWinners ( ) {
 		//long maxSpidersPerIp = m_cr->m_spiderIpMaxSpiders[ufn];
 		// sanity
 		if ( (long long)spiderTimeMS < 0 ) { 
-			log("spider: got corrupt 2 spiderRequest in scan");
+			log("spider: got corrupt 2 spiderRequest in scan (cn=%li)",
+			    (long)m_collnum);
 			continue;
 		}
+		// more corruption detection
+		if ( sreq->m_hopCount < -1 ) {
+			log("spider: got corrupt 5 spiderRequest in scan (cn=%li)",
+			    (long)m_collnum);
+			continue;
+		}
+
 
 		// save this shit for storing in doledb
 		sreq->m_ufn = ufn;
@@ -13022,3 +13034,22 @@ bool SpiderRequest::setFromInject ( char *url ) {
 	return true;
 }
 
+
+bool SpiderRequest::isCorrupt ( ) {
+
+	// more corruption detection
+	if ( m_hopCount < -1 ) {
+		log("spider: got corrupt 5 spiderRequest");
+		return true;
+	}
+
+	// sanity check. check for http(s)://
+	if ( m_url[0] != 'h' &&
+	     // might be a docid from a pagereindex.cpp
+	     ! is_digit(m_url[0]) ) { 
+		log("spider: got corrupt 1 spiderRequest");
+		return true;
+	}
+
+	return false;
+}
