@@ -9665,7 +9665,10 @@ Url **XmlDoc::getRedirUrl() {
 	//   it like a temporary redirect, like exclusivelyequine.com
 	if ( simplifiedRedir && ! m_allowSimplifiedRedirs &&
 	     // for custom BULK clients don't like this i guess
-	     cr->m_isCustomCrawl != 2 ) {
+	     // AND for custom crawl it was messing up the processing
+	     // url format for a nytimes blog subsite which was redirecting
+	     // to the proper nytimes.com site...
+	     ! cr->m_isCustomCrawl ) {
 		// returns false if blocked, true otherwise
 		//return addSimplifiedRedirect();
 		m_redirError = EDOCSIMPLIFIEDREDIR;
