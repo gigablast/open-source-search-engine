@@ -135,6 +135,8 @@ class GigablastRequest {
 	char  m_dedup;
 	char  m_hasMime;
 	char  m_doConsistencyTesting;
+	char  m_getSections;
+	char  m_gotSections;
 	long  m_charset;
 	long  m_hopCount;
 

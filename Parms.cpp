@@ -14413,6 +14413,16 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;
 
+	m->m_title = "get sectiondb voting info";
+	m->m_desc = "Used exclusively by diffbot. Do not use.";
+	m->m_cgi   = "sections";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHAR;
+	m->m_def   = "0";
+	m->m_flags = PF_API|PF_HIDDEN; // do not show in our api
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_getSections - (char *)&gr;
+	m++;
 
 	///////////////////
 	//
