@@ -562,7 +562,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			p->safePrintf (	"<td>0x%hhx</td>"  // msgtype
 					"<td><nobr>%s</nobr></td>"  // desc
 					"<td><nobr>%s <a href=http://%s:%hu/"
-					"master/sockets?"
+					"admin/sockets?"
 					"c=%s>%s</a></nobr></td>"
 					"<td>%s%li%s</td>" , // niceness
 					s->m_msgType ,
