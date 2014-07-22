@@ -12978,3 +12978,22 @@ bool SpiderRequest::setFromInject ( char *url ) {
 	return true;
 }
 
+
+bool SpiderRequest::isCorrupt ( ) {
+
+	// more corruption detection
+	if ( m_hopCount < -1 ) {
+		log("spider: got corrupt 5 spiderRequest");
+		return true;
+	}
+
+	// sanity check. check for http(s)://
+	if ( m_url[0] != 'h' &&
+	     // might be a docid from a pagereindex.cpp
+	     ! is_digit(m_url[0]) ) { 
+		log("spider: got corrupt 1 spiderRequest");
+		return true;
+	}
+
+	return false;
+}
