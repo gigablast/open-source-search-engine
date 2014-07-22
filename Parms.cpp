@@ -19037,7 +19037,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//   time (current time) and the new round # as the args.
 		// . this will call CommandForceNextSpiderRound() function
 		//   on every shard with these args, "tmpVal".
-		if ( strcmp(m->m_cgi,"roundStart") == 0 ) {
+		if ( cr && strcmp(m->m_cgi,"roundStart") == 0 ) {
 			// use the current time so anything spidered before
 			// this time (the round start time) will be respidered
 			//sprintf(tmp,"%lu",getTimeGlobalNoCore());
