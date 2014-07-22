@@ -14540,8 +14540,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_queryExpansion - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi  = "qe";
-	m->m_flags = PF_API;
-	m->m_page  = PAGE_SEARCH | PF_CLONE;
+	m->m_page  = PAGE_SEARCH;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_obj   = OBJ_COLL;
 	m++;
 

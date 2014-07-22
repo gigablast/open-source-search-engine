@@ -1174,7 +1174,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	long sn = 0;
 	Synonyms syn;
 	// loop over all words in query and process its synonyms list
-	if ( m_langId != langUnknown && m_queryExpansion ) 
+	//if ( m_langId != langUnknown && m_queryExpansion ) 
+	// if lang is "xx" unknown we still do synonyms it just does
+	// a loop over all languages starting with english
+	if ( m_queryExpansion ) 
 		sn = m_numWords;
 
 	long long to = hash64n("to",0LL);
