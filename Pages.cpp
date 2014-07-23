@@ -2786,7 +2786,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		Parm *parm = &g_parms.m_parms[i];
 		// assume do not print
 		//parm->m_pstr = NULL;
-		// skip if hidden
+		// skip if hidden, unless PF_API given!
+		if ( parm->m_flags & PF_API ) goto force;
 		if ( parm->m_flags & PF_HIDDEN ) continue;
 		//if ( parm->m_type == TYPE_CMD ) continue;
 		if ( parm->m_type == TYPE_COMMENT ) continue;
@@ -2796,6 +2797,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		if ( parm->m_flags & PF_DIFFBOT ) continue;
 		//if ( ! (parm->m_flags & PF_API) ) continue;
 		//if ( parm->m_page == PAGE_FILTERS ) continue;
+
+	force:
 
 		long pageNum = parm->m_page;
 
