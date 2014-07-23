@@ -242,7 +242,7 @@ struct SafeBuf {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
 	//bool  utf32Encode(UChar32 c);
 	bool  htmlEncode(char *s, long len,bool encodePoundSign,
-			 long niceness=0);
+			 long niceness=0 , long truncateLen = -1 );
 	bool  javascriptEncode(char *s, long len );
 
 	bool  htmlEncode(char *s) ;

@@ -2641,20 +2641,21 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	// show input parms to provide
 	//if ( PAGENUM == PAGE_ADDURL2 )
-	sb->safePrintf("<font size=-0> - %s "
-		       " &nbsp; "
-		       "[ <b>show input in</b> "
-		       "<a href=/%s?showinput=1&format=xml>"
-		       "xml</a> "
-		       "or "
-		       "<a href=/%s?showinput=1&format=json>"
-		       "json</a> "
-		       "or <a href=/%s>html</a> ] "
-		       "</font>",
-		       s_pages[PAGENUM].m_desc,
-		       pageStr,
-		       pageStr,
-		       pageStr);
+	if ( ! (s_pages[PAGENUM].m_pgflags & PG_STATUS) )
+		sb->safePrintf("<font size=-0> - %s "
+			       " &nbsp; "
+			       "[ <b>show parms in</b> "
+			       "<a href=/%s?showinput=1&format=xml>"
+			       "xml</a> "
+			       "or "
+			       "<a href=/%s?showinput=1&format=json>"
+			       "json</a> "
+			       "or <a href=/%s>html</a> ] "
+			       "</font>",
+			       s_pages[PAGENUM].m_desc,
+			       pageStr,
+			       pageStr,
+			       pageStr);
 
 	// status pages. if its a status page with no input parms
 	if ( s_pages[PAGENUM].m_pgflags & PG_STATUS )
@@ -2786,19 +2787,17 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		Parm *parm = &g_parms.m_parms[i];
 		// assume do not print
 		//parm->m_pstr = NULL;
-		// skip if hidden, unless PF_API given!
-		if ( parm->m_flags & PF_API ) goto force;
 		if ( parm->m_flags & PF_HIDDEN ) continue;
 		//if ( parm->m_type == TYPE_CMD ) continue;
 		if ( parm->m_type == TYPE_COMMENT ) continue;
 
 		if ( parm->m_flags & PF_DUP ) continue;
+		// do not show on html page?
+		if ( parm->m_flags & PF_NOHTML ) continue;
 		if ( parm->m_flags & PF_NOAPI ) continue;
 		if ( parm->m_flags & PF_DIFFBOT ) continue;
 		//if ( ! (parm->m_flags & PF_API) ) continue;
 		//if ( parm->m_page == PAGE_FILTERS ) continue;
-
-	force:
 
 		long pageNum = parm->m_page;
 
@@ -2872,7 +2871,9 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			sb->safePrintf("<br><b><nobr>Current value:</nobr> ");
 			// print in red if not default value
 			if ( diff ) sb->safePrintf("<font color=red>");
-			sb->safeTruncateEllipsis(tmp.getBufStart(),80);
+			// truncate to 80 chars
+			sb->htmlEncode(tmp.getBufStart(),tmp.length(),
+					   false,0,80); //niceness=0
 			if ( diff ) sb->safePrintf("</font>");
 			sb->safePrintf("</b>");
 		}

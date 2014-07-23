@@ -1675,6 +1675,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
 
+
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
@@ -1697,7 +1698,10 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		// name of the collection, the "c" parm we do not show
 		// generally on the html page even though it is a required parm
 		// we have it in a hidden html input tag in Pages.cpp.
-		if ( m->m_flags & PF_NOHTML ) continue;
+		if ( (m->m_flags & PF_NOHTML) && 
+		     format != FORMAT_JSON &&
+		     format != FORMAT_XML )
+			continue;
 
 		// get right ptr
 		char *THIS = NULL;
@@ -6133,7 +6137,7 @@ void Parms::init ( ) {
 		"See the <a href=#qops>query operators</a> below for "
 		"more info.";
 	m->m_obj   = OBJ_SI;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_off   = (char *)&si.m_query - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "q";
@@ -6158,7 +6162,7 @@ void Parms::init ( ) {
 	m->m_desc  = "The number of results returned per page.";
 	// make it 25 not 50 since we only have like 26 balloons
 	m->m_def   = "10";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_docsWanted - y;
 	m->m_type  = TYPE_LONG;
@@ -6173,7 +6177,7 @@ void Parms::init ( ) {
 		"separated by a whitespace to search multiple collections at "
 		"once.";
 	m->m_cgi   = "c";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
@@ -6184,7 +6188,7 @@ void Parms::init ( ) {
 	m->m_title = "first result num";
 	m->m_desc  = "Start displaying at search result #X. Starts at 0.";
 	m->m_def   = "0";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_firstResultNum - y;
 	m->m_type  = TYPE_LONG;
@@ -6205,7 +6209,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6215,7 +6219,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_hideAllClustered - y;
 	m->m_defOff= (char *)&cr.m_hideAllClustered - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "0";
 	m->m_group = 0;
@@ -6234,7 +6238,7 @@ void Parms::init ( ) {
 	m->m_group = 1;
 	m->m_cgi   = "dr";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6252,7 +6256,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_smax  = 100;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;       
 
@@ -6266,7 +6270,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6279,7 +6283,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "spell";
 	m->m_off   = (char *)&si.m_spellCheck - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "1";
 	m->m_flags = PF_API;
@@ -6290,7 +6294,7 @@ void Parms::init ( ) {
 		"Useful when thousands/millions of search results are "
 		"requested. Required when doing such things otherwise "
 		"Gigablast could run out of memory.";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_streamResults - y;
 	m->m_type  = TYPE_CHAR;
@@ -6310,7 +6314,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "scores"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_getDocIdScoringInfo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = NULL;
 	m->m_flags = PF_API;
@@ -6329,7 +6333,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi  = "qe";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6390,7 +6394,7 @@ void Parms::init ( ) {
 	m->m_desc  = "The ip address of the searcher. We can pass back "
 		"for use in the autoban technology which bans abusive IPs.";
 	m->m_obj   = OBJ_SI;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_off   = (char *)&si.m_userIpStr - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "uip";
@@ -6405,7 +6409,7 @@ void Parms::init ( ) {
 	//m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_off   = (char *)&si.m_useMinAlgo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	// seems, good, default it on
 	m->m_def   = "1";
@@ -6420,7 +6424,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Only score up to this many inlink text term pairs";
 	m->m_off   = (char *)&si.m_realMaxTop - y;
 	m->m_type  = TYPE_LONG;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "10";
 	m->m_cgi   = "rmt";
@@ -6431,7 +6435,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Should search results be ranked using this new algo?";
 	m->m_off   = (char *)&si.m_useNewAlgo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	// seems, good, default it on
 	m->m_def   = "1";
@@ -6443,7 +6447,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Quickly eliminated docids using max score algo";
 	m->m_off   = (char *)&si.m_doMaxScoreAlgo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "1";
 	m->m_cgi   = "dmsa";
@@ -6455,7 +6459,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Should we try to speed up search results generation?";
 	m->m_off   = (char *)&si.m_fastIntersection - y;
 	m->m_type  = TYPE_CHAR;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	// turn off until we debug
 	m->m_def   = "-1";
@@ -6524,7 +6528,7 @@ void Parms::init ( ) {
 	m->m_def   = "xx";//_US";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6541,7 +6545,7 @@ void Parms::init ( ) {
 	m->m_def   = "us";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6619,7 +6623,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7472,7 +7476,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8139,7 +8143,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_titleMaxLen - y;
 	m->m_type  = TYPE_LONG;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8182,7 +8186,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_off   = (char *)&si.m_numLinesInSummary - y;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8201,7 +8205,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8215,7 +8219,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	/*
@@ -8238,7 +8242,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_defOff= (char *)&cr.m_docsToScanForTopics - x;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8252,7 +8256,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8270,7 +8274,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8284,7 +8288,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8300,7 +8304,7 @@ void Parms::init ( ) {
 	m->m_def   = "2";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8317,7 +8321,7 @@ void Parms::init ( ) {
 	m->m_def   = "80";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8423,7 +8427,7 @@ void Parms::init ( ) {
 	m->m_def   = "6";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8437,7 +8441,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_flags = PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8452,7 +8456,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_flags = PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8463,7 +8467,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_useCache - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_cgi   = "usecache";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8474,7 +8478,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_wcache - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_cgi   = "wcache";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8490,7 +8494,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8506,7 +8510,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8518,7 +8522,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "url";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8530,7 +8534,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "link";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8542,7 +8546,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "quotea";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8554,7 +8558,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "quoteb";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8567,7 +8571,7 @@ void Parms::init ( ) {
 	m->m_size  = 1024; // MAX_SITE_LEN;
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8581,7 +8585,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	//m->m_size  = 32*1024; // MAX_SITES_LEN;
 	m->m_cgi   = "sites";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
@@ -8596,7 +8600,7 @@ void Parms::init ( ) {
 	//m->m_size  = 500;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8608,7 +8612,7 @@ void Parms::init ( ) {
 	//m->m_size  = 500;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8618,7 +8622,7 @@ void Parms::init ( ) {
 	m->m_def   = "html";
 	m->m_off   = (char *)&si.m_formatStr - y;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "format";
 	m++;
@@ -8628,7 +8632,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_familyFilter - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "ff";
 	m++;
@@ -8646,7 +8650,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 1; // turn off for now
 	m->m_sprpp = 1;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8662,7 +8666,7 @@ void Parms::init ( ) {
 	//m->m_size  = 1000;
 	m->m_sprpg = 0; // no need to propagate this one
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8677,7 +8681,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_smax  = 8;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8703,7 +8707,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmo";
 	m->m_smin  = 0;
 	m->m_smax  = 2;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8716,7 +8720,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "bq";
 	m->m_smin  = 0;
 	m->m_smax  = 2;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8738,7 +8742,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_cgi   = "dt";
 	//m->m_size  = 3000;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	
@@ -8820,7 +8824,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rdc";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8831,7 +8835,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_returnDocIds - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rd";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8843,7 +8847,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rp";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8856,7 +8860,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "niceness";
 	m->m_smin  = 0;
 	m->m_smax  = 1;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8879,7 +8883,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "debug";
 	//m->m_priv  = 1;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8889,7 +8893,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_debugGigabits - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "debug";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8899,7 +8903,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_docIdsOnly - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "dio";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8911,7 +8915,7 @@ void Parms::init ( ) {
 	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "iu";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8923,7 +8927,7 @@ void Parms::init ( ) {
 	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "ix";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8932,7 +8936,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_imgWidth - y;
 	m->m_type  = TYPE_LONG;
 	m->m_cgi   = "iw";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
 	m++;
@@ -8943,7 +8947,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_imgHeight - y;
 	m->m_type  = TYPE_LONG;
 	m->m_cgi   = "ih";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
 	m++;
@@ -8955,7 +8959,7 @@ void Parms::init ( ) {
 	// m->m_cgi   = "pwd";
 	// m->m_size  = 32;
 	// m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	// m->m_page  = PAGE_NONE;
+	// m->m_page  = PAGE_RESULTS;
 	// m->m_obj   = OBJ_SI;
 	// m++;
 
@@ -8967,7 +8971,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "admin";
 	m->m_sprpg = 1; // propagate on GET request
         m->m_sprpp = 1; // propagate on POST request
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8995,7 +8999,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "gblang";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -9007,7 +9011,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_cgi   = "prepend";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9019,7 +9023,7 @@ void Parms::init ( ) {
 	m->m_def   = NULL;
 	//m->m_def   = "iso-8859-1";
 	m->m_cgi   = "gbcountry";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9053,7 +9057,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_cgi   = "sb";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9064,7 +9068,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_cgi   = "apip";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9076,7 +9080,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "uafn";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -9090,7 +9094,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "bd";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -9107,7 +9111,7 @@ void Parms::init ( ) {
         m->m_def   = NULL;
 	m->m_size  = MAX_QUERY_LEN;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -9120,7 +9124,7 @@ void Parms::init ( ) {
 	m->m_def   = "utf-8";
 	//m->m_def   = "iso-8859-1";
 	m->m_cgi   = "qcs";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9131,7 +9135,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "inlinks";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9144,7 +9148,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "outlinks";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9156,7 +9160,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "tf";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9169,7 +9173,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "spiderresults";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9182,7 +9186,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "spiderresultroots";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9195,7 +9199,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "jmcl";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -9206,7 +9210,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "icc";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_flags = PF_API;
 	m++;
@@ -9217,7 +9221,7 @@ void Parms::init ( ) {
 	// m->m_type  = TYPE_CHAR;
 	// m->m_def   = "0";
 	// m->m_cgi   = "sectionvotes";
-	// m->m_page  = PAGE_NONE;
+	// m->m_page  = PAGE_RESULTS;
 	// m->m_obj   = OBJ_SI;
 	// m->m_flags = PF_API;
 	// m++;
@@ -14409,7 +14413,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_API|PF_HIDDEN; // do not show in our api
+	m->m_flags = PF_API|PF_NOHTML;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_getSections - (char *)&gr;
 	m++;
@@ -14420,7 +14424,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API|PF_TEXTAREA|PF_HIDDEN; // do not show in our api
+	m->m_flags = PF_API|PF_TEXTAREA|PF_NOHTML; // do not show in our api
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;

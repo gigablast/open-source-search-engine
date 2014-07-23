@@ -1017,20 +1017,34 @@ bool  SafeBuf::safeCdataMemcpy ( char *s, long len ) {
 	return true;
 }
 
-bool  SafeBuf::htmlEncode(char *s, long len, bool encodePoundSign ,
-			  long niceness ) {
+bool  SafeBuf::htmlEncode(char *s, long lenArg, bool encodePoundSign ,
+			  long niceness , long truncateLen ) {
 	//bool convertUtf8CharsToEntity ) {
 	// . we assume we are encoding into utf8
 	// . sanity check
 	if ( m_encoding == csUTF16 ) { char *xx = NULL; *xx = 0; }
+
+	// the new truncation logic
+	long len = lenArg;
+	bool truncate = false;
+	long extra = 0;
+	if ( truncateLen > 0 && lenArg > truncateLen ) {
+		len = truncateLen;
+		truncate = true;
+		extra = 4;
+	}
+
 	// alloc some space if we need to. add a byte for NULL termination.
-	if(m_length+len+1>=m_capacity && !reserve(m_capacity+len+1))
+	if( m_length+len+1+extra>=m_capacity&&!reserve(m_capacity+len+1+extra))
 		return false;
 	// tmp vars
 	char *t    = m_buf + m_length;
 	char *tend = m_buf + m_capacity;
 	// scan through all 
 	char *send = s + len;
+
+	
+
 	for ( ; s < send ; s++ ) {
 		// breathe
 		QUICKPOLL ( niceness );
@@ -1108,6 +1122,12 @@ bool  SafeBuf::htmlEncode(char *s, long len, bool encodePoundSign ,
 		}
 		*t++ = *s;		
 	}
+
+	if ( truncate ) {
+		memcpy ( t , "... " , 4 );
+		t += 4;
+	}
+
 	*t = '\0';
 	// update the used buf length
 	m_length = t - m_buf ;
