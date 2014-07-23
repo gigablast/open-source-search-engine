@@ -6494,7 +6494,8 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 			// count it as outstanding
 			//m_mcastRequestsOut++;
 			// launch more if we have room
-			if ( m_mcastRequestsOut - m_mcastRequestsIn < 32)
+			// UdpServer.cpp has a limit of 10 on 0x39 requests
+			if ( m_mcastRequestsOut - m_mcastRequestsIn < 10)
 				continue;
 			// advance m_si so we do not repeat
 			m_si = m_si->m_next;
@@ -34717,7 +34718,7 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 	SafeBuf *sb = &m_inlineSectionVotingBuf;
 
 	// store mime first then content
-	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_utf8ContentValid ) { char *xx=NULL;*xx=0; }
 	
 	// we no longer use this through a proxy, so take this out
 	//sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
