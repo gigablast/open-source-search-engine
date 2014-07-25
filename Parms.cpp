@@ -3194,6 +3194,9 @@ bool Parms::setFromFile ( void *THIS        ,
 			//continue;
 		}
 
+		// now use proper cdata
+		// we can't do this and be backwards compatible right now
+		//nb = cdataDecode ( v , v , 0 );//, vlen , false ,0);
 		// now decode it into itself
 		nb = htmlDecode ( v , v , vlen , false ,0);
 		v[nb] = '\0';
@@ -3680,23 +3683,27 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 	else if ( t == TYPE_LONG_LONG )
 		sb->safePrintf("%lli",*(long long *)s);
 	else if ( t == TYPE_SAFEBUF ) {
-		SafeBuf *sb = (SafeBuf *)s;
-		char *buf = sb->getBufStart();
-		long blen = 0;
-		if ( buf ) blen = gbstrlen(buf);
+		SafeBuf *sb2 = (SafeBuf *)s;
+		char *buf = sb2->getBufStart();
+		//long blen = 0;
+		//if ( buf ) blen = gbstrlen(buf);
 		//p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
-		sb->htmlEncode ( buf , blen , true ); // #?*
+		// we can't do proper cdata and be backwards compatible
+		//sb->cdataEncode ( buf );//, blen );//, true ); // #?*
+		sb->htmlEncode ( buf );
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
 		  t == TYPE_STRINGNONEMPTY ||
 		  t == TYPE_TIME) {
-		long slen = gbstrlen ( s );
+		//long slen = gbstrlen ( s );
 		// this returns the length of what was written, it may
 		// not have converted everything if pend-p was too small...
 		//p += saftenTags2 ( p , pend - p , s , len );
 		//p = htmlEncode ( p , pend , s , s + slen , true /*#?*/);
-		sb->htmlEncode ( s , slen , true /*#?*/);
+		// we can't do proper cdata and be backwards compatible
+		//sb->cdataEncode ( s );//, slen );//, true /*#?*/);
+		sb->htmlEncode ( s );
 	}
 	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
 		// time is stored as long
