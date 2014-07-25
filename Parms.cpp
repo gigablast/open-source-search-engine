@@ -144,6 +144,10 @@ bool CommandUpdateSiteList ( char *rec ) {
 	}
 	// need this
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( ! cr ) {
+		log("parms: no cr for collnum %li to update",(long)collnum);
+		return true;
+	}
 	// get the sitelist
 	char *data = getDataFromParmRec ( rec );
 	// update the table that maps site to whether we should spider it
