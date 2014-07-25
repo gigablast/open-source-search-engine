@@ -406,7 +406,7 @@ class Parms {
 	// get the parm with the associated cgi name. must be NULL terminated.
 	Parm *getParm ( char *cgi ) ;
 
-	char *getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s );
+	bool getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s );
 
 	bool setGigablastRequest ( class TcpSocket *s ,
 				   class HttpRequest *hr ,

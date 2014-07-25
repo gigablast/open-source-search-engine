@@ -1573,7 +1573,7 @@ int main2 ( int argc , char *argv[] ) {
 			char replaceCmd[256];
 			sprintf(replaceCmd, "replacehost=1&rhost=%li&rspare=%li",
 				hostId, spareId);
-			return doCmd ( replaceCmd, -1, "master/hosts" ,
+			return doCmd ( replaceCmd, -1, "admin/hosts" ,
 				       false,//sendtohosts 
 				       true);//sendtoproxies
 		}
@@ -2381,7 +2381,7 @@ int main2 ( int argc , char *argv[] ) {
 		char setnoteCmd[256];
 		sprintf(setnoteCmd, "setnote=1&host=%li&note=%s",
 				    hostId, urlnote);
-		return doCmd ( setnoteCmd, -1, "master/hosts" ,
+		return doCmd ( setnoteCmd, -1, "admin/hosts" ,
 			       true , //sendtohosts
 			       false );//sendtoproxies
 	}
@@ -2400,7 +2400,7 @@ int main2 ( int argc , char *argv[] ) {
 		char setnoteCmd[256];
 		sprintf(setnoteCmd, "setsparenote=1&spare=%li&note=%s",
 				    spareId, urlnote);
-		return doCmd ( setnoteCmd, -1, "master/hosts" ,
+		return doCmd ( setnoteCmd, -1, "admin/hosts" ,
 			       true , //sendtohosts
 			       false );//sendtoproxies
 	}
@@ -2414,7 +2414,7 @@ int main2 ( int argc , char *argv[] ) {
 		char replaceCmd[256];
 		sprintf(replaceCmd, "replacehost=1&rhost=%li&rspare=%li",
 				    hostId, spareId);
-		return doCmd ( replaceCmd, -1, "master/hosts" ,
+		return doCmd ( replaceCmd, -1, "admin/hosts" ,
 			       true , //sendtohosts
 			       true );//sendtoproxies
 	}
@@ -2426,7 +2426,7 @@ int main2 ( int argc , char *argv[] ) {
 		else return false;
 		char syncCmd[256];
 		sprintf(syncCmd, "synchost=1&shost=%li", hostId);
-		return doCmd ( syncCmd, g_hostdb.m_hostId, "master/hosts" ,
+		return doCmd ( syncCmd, g_hostdb.m_hostId, "admin/hosts" ,
 			       true , //sendtohosts
 			       false );//sendtoproxies
 	}
@@ -2436,7 +2436,7 @@ int main2 ( int argc , char *argv[] ) {
 		else return false;
 		char syncCmd[256];
 		sprintf(syncCmd, "synchost=2&shost=%li", hostId);
-		return doCmd ( syncCmd, g_hostdb.m_hostId, "master/hosts" ,
+		return doCmd ( syncCmd, g_hostdb.m_hostId, "admin/hosts" ,
 		true, //sendToHosts
 		false );// sendtoproxies
 	}
@@ -2462,7 +2462,7 @@ int main2 ( int argc , char *argv[] ) {
 			sprintf(classifierCmd, "startclassifier=1&c=%s"
 					       "&ruleset=%s&sitelistfile=%s",
 					       coll, ruleset, siteListFile );
-		return doCmd(classifierCmd , hostId , "master/tagdb" ,
+		return doCmd(classifierCmd , hostId , "admin/tagdb" ,
 			     true , //sendtohosts
 			     false );//sendtoproxies
 	}
@@ -2476,7 +2476,7 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg + 2 < argc ) hostId = atoi ( argv[cmdarg+2] );
 		char classifierCmd[512];
 		sprintf(classifierCmd, "stopclassifier=1&c=%s", coll );
-		return doCmd(classifierCmd , hostId , "master/tagdb" ,
+		return doCmd(classifierCmd , hostId , "admin/tagdb" ,
 			     true , //sendtohosts
 			     false );//sendtoproxies
 	}

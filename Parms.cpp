@@ -145,6 +145,10 @@ bool CommandUpdateSiteList ( char *rec ) {
 	}
 	// need this
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( ! cr ) {
+		log("parms: no cr for collnum %li to update",(long)collnum);
+		return true;
+	}
 	// get the sitelist
 	char *data = getDataFromParmRec ( rec );
 	// update the table that maps site to whether we should spider it
@@ -3385,6 +3389,9 @@ bool Parms::setFromFile ( void *THIS        ,
 			//continue;
 		}
 
+		// now use proper cdata
+		// we can't do this and be backwards compatible right now
+		//nb = cdataDecode ( v , v , 0 );//, vlen , false ,0);
 		// now decode it into itself
 		nb = htmlDecode ( v , v , vlen , false ,0);
 		v[nb] = '\0';
@@ -3562,15 +3569,17 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize){
 			  CT_XML  );
 }
 
-#define MAX_CONF_SIZE 200000
+//#define MAX_CONF_SIZE 200000
 
 // returns false and sets g_errno on error
 bool Parms::saveToXml ( char *THIS , char *f , char objType ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// print into buffer
-	char  buf[MAX_CONF_SIZE];
-	char *p    = buf;
-	char *pend = buf + MAX_CONF_SIZE;
+	// "seeds" can be pretty big so go with safebuf now
+	//char  buf[MAX_CONF_SIZE];
+	SafeBuf sb;
+	//char *p    = buf;
+	//char *pend = buf + MAX_CONF_SIZE;
 	long  len ;
 	long  n   ;
 	File  ff  ;
@@ -3652,8 +3661,9 @@ skip2:
 		char *start;
 		// just print tag if it has no description
 		if ( ! *d ) goto skip;
-		if ( p + gbstrlen(d)+5 >= pend ) goto hadError;
-		if ( p > buf ) *p++='\n';
+		//if ( p + gbstrlen(d)+5 >= pend ) goto hadError;
+		//if ( p > buf ) *p++='\n';
+		if ( sb.length() ) sb.pushChar('\n');
 	loop:
 		dend  = d + 77;
 		if ( dend > END ) dend = END;
@@ -3665,11 +3675,14 @@ skip2:
 			d++; 
 		}
 		if ( ! *d ) last = d;
-		memcpy ( p , "# " , 2 ); 
-		p += 2;
-		memcpy ( p , start , last - start );
-		p += last - start;
-		*p++='\n';
+		//memcpy ( p , "# " , 2 ); 
+		//p += 2;
+		sb.safeMemcpy("# ",2);
+		//memcpy ( p , start , last - start );
+		//p += last - start;
+		sb.safeMemcpy(start,last-start);
+		//*p++='\n';
+		sb.pushChar('\n');
 		d = last + 1;
 		if ( d < END && *d ) goto loop;
 		// bail if comment
@@ -3702,16 +3715,19 @@ skip2:
 		// loop over all in this potential array
 		for ( j = 0 ; j < count ; j++ ) {
 			// the xml
-			if ( p + gbstrlen(m->m_xml) >= pend ) goto hadError;
-			sprintf ( p , "<%s>" , m->m_xml );
-			p += gbstrlen ( p );
+			//if ( p + gbstrlen(m->m_xml) >= pend ) goto hadError;
+			if ( g_errno ) goto hadError;
+			//sprintf ( p , "<%s>" , m->m_xml );
+			//p += gbstrlen ( p );
+			sb.safePrintf("<%s>" , m->m_xml );
 			// print CDATA if string
 			if ( m->m_type == TYPE_STRING         || 
 			     m->m_type == TYPE_STRINGBOX      ||
 			     m->m_type == TYPE_SAFEBUF        ||
 			     m->m_type == TYPE_STRINGNONEMPTY   ) {
-				sprintf ( p , "<![CDATA[" );
-				p += gbstrlen ( p );
+				//sprintf ( p , "<![CDATA[" );
+				//p += gbstrlen ( p );
+				sb.safeStrcpy( "<![CDATA[" );
 			}
 			// break point
 			//if (strcmp ( m->m_xml , "filterRulesetDefault")==0)
@@ -3719,26 +3735,32 @@ skip2:
 			// . represent it in ascii form
 			// . this escapes out <'s and >'s
 			// . this ALSO encodes #'s (xml comment indicators)
-			p = getParmHtmlEncoded(p,pend,m,s);
+			//p = getParmHtmlEncoded(p,pend,m,s);
+			getParmHtmlEncoded(&sb,m,s);
 			// print CDATA if string
 			if ( m->m_type == TYPE_STRING         || 
 			     m->m_type == TYPE_STRINGBOX      ||
 			     m->m_type == TYPE_SAFEBUF        ||
 			     m->m_type == TYPE_STRINGNONEMPTY   ) {
-				sprintf ( p , "]]>" );
-				p += gbstrlen ( p );
+				//sprintf ( p , "]]>" );
+				//p += gbstrlen ( p );
+				sb.safeStrcpy("]]>" );
 			}
 			// this is NULL if it ran out of room
-			if ( ! p ) goto hadError;
+			//if ( ! p ) goto hadError;
+			if ( g_errno ) goto hadError;
 			// advance to next element in array, if it is one
 			s = s + m->m_size;
 			// close the xml tag
-			if ( p + 4 >= pend ) goto hadError;
-			sprintf ( p , "</>\n" );
-			p += gbstrlen ( p );
+			//if ( p + 4 >= pend ) goto hadError;
+			//sprintf ( p , "</>\n" );
+			//p += gbstrlen ( p );
+			sb.safeStrcpy("</>\n" );
+			if ( g_errno ) goto hadError;
 		}
 	}
-	*p = '\0';
+	//*p = '\0';
+	sb.nullTerm();
 
 	ff.set ( f );
 	if ( ! ff.open ( O_RDWR | O_CREAT | O_TRUNC ) )
@@ -3746,17 +3768,20 @@ skip2:
 			   ff.getFilename(),mstrerror(g_errno));
 
 	// save the parm to the file
-	len = gbstrlen(buf);
+	//len = gbstrlen(buf);
+	len = sb.length();
 	// use -1 for offset so we do not use pwrite() so it will not leave
 	// garbage at end of file
-	n    = ff.write ( buf , len , -1 );
+	//n    = ff.write ( buf , len , -1 );
+	n    = ff.write ( sb.getBufStart() , len , -1 );
 	ff.close();
 	if ( n == len ) return true;
 	return log("admin: Could not write to file %s.",ff.getFilename());
  hadError:
-	return log("admin: File bigger than %li bytes."
-		   "  Please increase #define in Parms.cpp.",
-		   (long)MAX_CONF_SIZE);
+	return log("admin: Error writing coll.conf buf: %s",mstrerror(g_errno));
+	//File bigger than %li bytes."
+	//	   "  Please increase #define in Parms.cpp.",
+	//	   (long)MAX_CONF_SIZE);
 }
 
 Parm *Parms::getParm ( char *cgi ) {
@@ -3829,9 +3854,9 @@ skipMakeTable:
 }
 */
 
-char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
+bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 	// do not breech the buffer
-	if ( p + 100 >= pend ) return p;
+	//if ( p + 100 >= pend ) return p;
 	// print it out
 	char t = m->m_type;
 	if ( t == TYPE_CHAR           || t == TYPE_BOOL           ||
@@ -3842,32 +3867,38 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	     t == TYPE_PRIORITY_BOXES || t == TYPE_RETRIES        ||
 	     t == TYPE_RETRIES        || t == TYPE_FILTER         ||
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
-		sprintf (p,"%li",(long)*s);
+		sb->safePrintf("%li",(long)*s);
 	else if ( t == TYPE_FLOAT )
-		sprintf (p,"%f",*(float *)s);
+		sb->safePrintf("%f",*(float *)s);
 	else if ( t == TYPE_IP ) 
-		sprintf (p,"%s",iptoa(*(long *)s));
+		sb->safePrintf("%s",iptoa(*(long *)s));
 	else if ( t == TYPE_LONG || t == TYPE_LONG_CONST || t == TYPE_RULESET||
 		  t == TYPE_SITERULE ) 
-		sprintf (p,"%li",*(long *)s);
+		sb->safePrintf("%li",*(long *)s);
 	else if ( t == TYPE_LONG_LONG )
-		sprintf (p,"%lli",*(long long *)s);
+		sb->safePrintf("%lli",*(long long *)s);
 	else if ( t == TYPE_SAFEBUF ) {
-		SafeBuf *sb = (SafeBuf *)s;
-		char *buf = sb->getBufStart();
-		long blen = 0;
-		if ( buf ) blen = gbstrlen(buf);
-		p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
+		SafeBuf *sb2 = (SafeBuf *)s;
+		char *buf = sb2->getBufStart();
+		//long blen = 0;
+		//if ( buf ) blen = gbstrlen(buf);
+		//p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
+		// we can't do proper cdata and be backwards compatible
+		//sb->cdataEncode ( buf );//, blen );//, true ); // #?*
+		sb->htmlEncode ( buf );
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
 		  t == TYPE_STRINGNONEMPTY ||
 		  t == TYPE_TIME) {
-		long slen = gbstrlen ( s );
+		//long slen = gbstrlen ( s );
 		// this returns the length of what was written, it may
 		// not have converted everything if pend-p was too small...
 		//p += saftenTags2 ( p , pend - p , s , len );
-		p = htmlEncode ( p , pend , s , s + slen , true /*#?*/);
+		//p = htmlEncode ( p , pend , s , s + slen , true /*#?*/);
+		// we can't do proper cdata and be backwards compatible
+		//sb->cdataEncode ( s );//, slen );//, true /*#?*/);
+		sb->htmlEncode ( s );
 	}
 	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
 		// time is stored as long
@@ -3875,10 +3906,13 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 		// get the time struct
 		struct tm *tp = localtime ( (time_t *)&ct ) ;
 		// set the "selected" month for the drop down
-		strftime ( p , 100 , "%d %b %Y %H:%M UTC" , tp );
+		char tmp[100];
+		strftime ( tmp , 100 , "%d %b %Y %H:%M UTC" , tp );
+		sb->safeStrcpy ( tmp );
 	}
-	p += gbstrlen ( p );
-	return p;
+	//p += gbstrlen ( p );
+	//return p;
+	return true;
 }
 /*
 // returns the size needed to serialize parms

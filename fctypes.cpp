@@ -1316,6 +1316,38 @@ long htmlDecode ( char *dst , char *src , long srcLen , bool doSpecial ,
 	return dst - start;
 }
 
+// cdata 
+long cdataDecode ( char *dst , char *src , long niceness ) {
+	if ( ! src ) return 0;
+	char *start  = dst;
+	for ( ; *src ; ) {
+		// breathe
+		QUICKPOLL(niceness);
+		// utf8 support?
+		char size = getUtf8CharSize(src);
+		// see SafeBuf::cdataEncode() we do the opposite here
+		if ( src[0] != ']' ||
+		     src[1] != ']' ||
+		     src[2] != '&' ||
+		     src[3] != 'g' ||
+		     src[4] != 't' ) {
+			if ( size == 1 ) { *dst++ = *src++; continue; }
+			memcpy ( dst , src , size );
+			src += size;
+			dst += size;
+			continue;
+			//*dst++ = *src++; continue; }
+		}
+		// make it ]]>
+		memcpy ( dst , "]]>" , 3 );
+		src += 5;
+		dst += 3;
+	}
+	// NULL term
+	*dst = '\0';
+	return dst - start;
+}
+
 // . make something safe as an form input value by translating the quotes
 // . store "t" into "s" and return bytes stored
 // . does not do bounds checking
