@@ -130,9 +130,8 @@
 //#include "Accessdb.h"
 
 // from qa.cpp
-bool qaspider ( ) ;
-bool qainject ( ) ;
-bool qatest   ( ) ;
+//bool qainject ( ) ;
+//bool qatest   ( ) ;
 
 // call this to shut everything down
 bool mainShutdown ( bool urgent ) ;
@@ -1461,6 +1460,7 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	// run our smoketests
 	//
+	/*
 	if ( strcmp ( cmd, "qa" ) == 0 ||
 	     strcmp ( cmd, "qainject" ) == 0 ||
 	     strcmp ( cmd, "qaspider" ) == 0 ) {
@@ -1532,7 +1532,7 @@ int main2 ( int argc , char *argv[] ) {
 		// no error, return 0
 		return 0;
 	}
-
+	*/
 
 
 	// log the version

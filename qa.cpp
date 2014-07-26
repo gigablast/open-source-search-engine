@@ -17,6 +17,8 @@ static SafeBuf s_ubuf1;
 static SafeBuf s_ubuf2;
 static SafeBuf s_cbuf2;
 
+static Url s_url;
+
 void markOut ( char *content , char *needle ) {
 
 	if ( ! content ) return;
@@ -152,13 +154,25 @@ void processReply ( char *reply , long replyLen ) {
 
 	// do the diff between the two replies so we can see what changed
 	char cmd[1024];
-	sprintf(cmd,"diff %s %s",fn1,fn2);
+	sprintf(cmd,"diff %s %s > /tmp/diffout",fn1,fn2);
 	fprintf(stderr,"%s\n",cmd);
 	system(cmd);
+
+	g_qaOutput.safePrintf("FAILED TEST<br>%s<br><hr><pre>",
+			      s_url.getUrl());
+
+
+	// store in output
+	SafeBuf sb;
+	sb.load("/tmp/diffout");
+	g_qaOutput.htmlEncode ( sb.getBufStart() );
+
+	g_qaOutput.safePrintf("</pre><br>");
+
 	// if this is zero allow it to slide by. it is learning mode i guess.
 	// so we can learn what crc we need to use.
 	// otherwise, stop right there for debugging
-	if ( s_expectedCRC != 0 ) exit(1);
+	//if ( s_expectedCRC != 0 ) exit(1);
 
 	// keep on going
 	//s_callback();
@@ -187,10 +201,10 @@ bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 
 	s_expectedCRC = expectedCRC;
 
-	Url u;
-	u.set ( sb.getBufStart() );
+	//Url u;
+	s_url.set ( sb.getBufStart() );
 	log("qa: getting %s",sb.getBufStart());
-	if ( ! g_httpServer.getDoc ( u.getUrl() ,
+	if ( ! g_httpServer.getDoc ( s_url.getUrl() ,
 				     0 , // ip
 				     0 , // offset
 				     -1 , // size
@@ -266,19 +280,22 @@ static char *s_queries[] = {
 
 #undef usleep
 
+// nw use this
+static long *s_flags = NULL;
+
 //
 // the injection qa test suite
 //
-bool qainject ( ) {
+bool qainject1 ( ) {
 
-	if ( ! s_callback ) s_callback = qainject;
+	//if ( ! s_callback ) s_callback = qainject1;
 
 	//
 	// delete the 'qatest123' collection
 	//
-	static bool s_x1 = false;
-	if ( ! s_x1 ) {
-		s_x1 = true;
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
 		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
 			return false;
 	}
@@ -286,24 +303,29 @@ bool qainject ( ) {
 	//
 	// add the 'qatest123' collection
 	//
-	static bool s_x2 = false;
-	if ( ! s_x2 ) {
-		s_x2 = true;
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
 		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
 				// checksum of reply expected
 				238170006 ) )
 			return false;
 	}
 
+
+	long max = s_ubuf2.length()/(long)sizeof(char *);
+	// hack
+	max = 1;
+
 	//
 	// inject urls, return false if not done yet
 	//
-	static bool s_x4 = false;
-	if ( ! s_x4 ) {
+	//static bool s_x4 = false;
+	if ( ! s_flags[2] ) {
 		// TODO: try delimeter based injection too
 		loadUrls();
 		static long s_ii = 0;
-		for ( ; s_ii < s_ubuf2.length()/(long)sizeof(char *) ; ) {
+		for ( ; s_ii < max ; ) {
 			// inject using html api
 			SafeBuf sb;
 			sb.safePrintf("&c=qatest123&deleteurl=0&"
@@ -321,23 +343,23 @@ bool qainject ( ) {
 				      sb.getBufStart()) )
 				return false;
 		}
-		s_x4 = true;
+		s_flags[2] = true;
 	}
 
 	// +the
-	static bool s_x5 = false;
-	if ( ! s_x5 ) {
+	//static bool s_x5 = false;
+	if ( ! s_flags[3] ) {
 		usleep(1500000);
-		s_x5 = true;
+		s_flags[3] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 				702467314 ) )
 			return false;
 	}
 
 	// sports news
-	static bool s_x7 = false;
-	if ( ! s_x7 ) {
-		s_x7 = true;
+	//static bool s_x7 = false;
+	if ( ! s_flags[4] ) {
+		s_flags[4] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=sports+news",2009472889 ) )
 		     return false;
@@ -346,16 +368,17 @@ bool qainject ( ) {
 	//
 	// eject/delete the urls
 	//
-	static long s_ii2 = 0;
-	for ( ; s_ii2 < s_ubuf2.length()/(long)sizeof(char *) ; ) {
+	//static long s_ii2 = 0;
+	for ( ; s_flags[5] < max ; ) {
 		// reject using html api
 		SafeBuf sb;
 		sb.safePrintf( "/admin/inject?c=qatest123&deleteurl=1&"
 			       "format=xml&u=");
-		sb.urlEncode ( s_urlPtrs[s_ii2] );
+		sb.urlEncode ( s_urlPtrs[s_flags[5]] );
 		sb.nullTerm();
 		// pre-inc it in case getUrl() blocks
-		s_ii2++;
+		//s_ii2++;
+		s_flags[5]++;
 		if ( ! getUrl ( sb.getBufStart() , 0 ) )
 			return false;
 	}
@@ -363,21 +386,51 @@ bool qainject ( ) {
 	//
 	// make sure no results left, +the
 	//
-	static bool s_x9 = false;
-	if ( ! s_x9 ) {
+	//static bool s_x9 = false;
+	if ( ! s_flags[6] ) {
 		usleep(1500000);
-		s_x9 = true;
+		s_flags[6] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 				-1672870556 ) )
 			return false;
 	}
 
+	return true;
+}
+
+bool qainject2 ( ) {
+
+	//if ( ! s_callback ) s_callback = qainject2;
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
 	//
 	// try delimeter based injecting
 	//
-	static bool s_y2 = false;
-	if ( ! s_y2 ) {
-		s_y2 = true;
+	//static bool s_y2 = false;
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
 		SafeBuf sb;
 		// delim=+++URL:
 		sb.safePrintf("&c=qatest123&deleteurl=0&"
@@ -395,18 +448,18 @@ bool qainject ( ) {
 	}
 
 	// now query check
-	static bool s_y4 = false;
-	if ( ! s_y4 ) {
+	//static bool s_y4 = false;
+	if ( ! s_flags[8] ) {
 		usleep(1500000);
-		s_y4 = true;
+		s_flags[8] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 				-1804253505 ) )
 			return false;
 	}
 
-	static bool s_y5 = false;
-	if ( ! s_y5 ) {
-		s_y5 = true;
+	//static bool s_y5 = false;
+	if ( ! s_flags[9] ) {
+		s_flags[9] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
 				"+news&ns=1&tml=20&smxcpl=30&"
 				"sw=10&showimages=1"
@@ -414,9 +467,9 @@ bool qainject ( ) {
 			return false;
 	}
 
-	static bool s_y6 = false;
-	if ( ! s_y6 ) {
-		s_y6 = true;
+	//static bool s_y6 = false;
+	if ( ! s_flags[10] ) {
+		s_flags[10] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
 				"+news&ns=1&tml=20&smxcpl=30&"
 				"sw=10&showimages=0&hacr=1"
@@ -424,9 +477,9 @@ bool qainject ( ) {
 			return false;
 	}
 
-	static bool s_y7 = false;
-	if ( ! s_y7 ) {
-		s_y7 = true;
+	//static bool s_y7 = false;
+	if ( ! s_flags[11] ) {
+		s_flags[11] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
 				"+news&ns=1&tml=20&smxcpl=30&"
 				"sw=10&showimages=0&sc=1"
@@ -438,19 +491,19 @@ bool qainject ( ) {
 	//
 	// delete the 'qatest123' collection
 	//
-	if ( ! s_x1 ) {
-		s_x1 = true;
+	if ( ! s_flags[12] ) {
+		s_flags[12] = true;
 		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
 			return false;
 	}
 
 
-	static bool s_fee2 = false;
-	if ( ! s_fee2 ) {
-		s_fee2 = true;
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
 			"QA INJECT TEST\n\n\n");
-		if ( s_callback == qainject ) exit(0);
+		//if ( s_callback == qainject ) exit(0);
 		return true;
 	}
 
@@ -567,9 +620,9 @@ bool qaspider1 ( ) {
 	//
 	// delete the 'qatest123' collection
 	//
-	static bool s_x1 = false;
-	if ( ! s_x1 ) {
-		s_x1 = true;
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
 		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
 			return false;
 	}
@@ -577,9 +630,9 @@ bool qaspider1 ( ) {
 	//
 	// add the 'qatest123' collection
 	//
-	static bool s_x2 = false;
-	if ( ! s_x2 ) {
-		s_x2 = true;
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
 		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
 				// checksum of reply expected
 				238170006 ) )
@@ -588,9 +641,9 @@ bool qaspider1 ( ) {
 
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
 	// too deep
-	static bool s_z1 = false;
-	if ( ! s_z1 ) {
-		s_z1 = true;
+	//static bool s_z1 = false;
+	if ( ! s_flags[2] ) {
+		s_flags[2] = true;
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&"
 			      // make it the custom filter
@@ -612,9 +665,9 @@ bool qaspider1 ( ) {
 
 	// set the site list to 
 	// a few sites
-	static bool s_z2 = false;
-	if ( ! s_z2 ) {
-		s_z2 = true;
+	//static bool s_z2 = false;
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&format=xml&sitelist=");
 		sb.urlEncode("tag:shallow site:www.walmart.com\r\n"
@@ -629,9 +682,9 @@ bool qaspider1 ( ) {
 	// walmart.com above was not seeded because of the site: directive
 	// so this will seed it.
 	//
-	static bool s_y2 = false;
-	if ( ! s_y2 ) {
-		s_y2 = true;
+	//static bool s_y2 = false;
+	if ( ! s_flags[4] ) {
+		s_flags[4] = true;
 		SafeBuf sb;
 		// delim=+++URL:
 		sb.safePrintf("&c=qatest123"
@@ -654,32 +707,32 @@ bool qaspider1 ( ) {
 
 	// wait until spider finishes. check the spider status page
 	// in json to see when completed
-	static bool s_k1 = false;
-	if ( ! s_k1 ) {
+	//static bool s_k1 = false;
+	if ( ! s_flags[5] ) {
 		usleep(5000000); // 5 seconds
-		s_k1 = true;
+		s_flags[5] = true;
 		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
 			return false;
 	}
 
-	static bool s_k2 = false;
-	if ( ! s_k2 ) {
+	//static bool s_k2 = false;
+	if ( ! s_flags[6] ) {
 		// ensure spiders are done. 
 		// "Nothing currently available to spider"
 		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
-			s_k1 = false;
+			s_flags[5] = false;
 			goto checkagain;
 		}
-		s_k2 = true;
+		s_flags[6] = true;
 	}
 
 
 
 
 	// verify no results for gbhopcount:2 query
-	static bool s_y4 = false;
-	if ( ! s_y4 ) {
-		s_y4 = true;
+	//static bool s_y4 = false;
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A2",
 				-1672870556 ) )
@@ -687,9 +740,9 @@ bool qaspider1 ( ) {
 	}
 
 	// but some for gbhopcount:0 query
-	static bool s_t0 = false;
-	if ( ! s_t0 ) {
-		s_t0 = true;
+	//static bool s_t0 = false;
+	if ( ! s_flags[8] ) {
+		s_flags[8] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A0",
 				908338607 ) )
@@ -697,50 +750,50 @@ bool qaspider1 ( ) {
 	}
 	
 	// check facet sections query for walmart
-	static bool s_y5 = false;
-	if ( ! s_y5 ) {
-		s_y5 = true;
+	//static bool s_y5 = false;
+	if ( ! s_flags[9] ) {
+		s_flags[9] = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
 				55157060 ) )
 			return false;
 	}
 
-	static bool s_y6 = false;
-	if ( ! s_y6 ) {
-		s_y6 = true;
+	//static bool s_y6 = false;
+	if ( ! s_flags[10] ) {
+		s_flags[10] = true;
 		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
 			return false;
 	}
 
 	// in xml
-	static bool s_y7 = false;
-	if ( ! s_y7 ) {
-		s_y7 = true;
+	//static bool s_y7 = false;
+	if ( ! s_flags[11] ) {
+		s_flags[11] = true;
 		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
 			return false;
 	}
 
 	// and json
-	static bool s_y8 = false;
-	if ( ! s_y8 ) {
-		s_y8 = true;
+	//static bool s_y8 = false;
+	if ( ! s_flags[12] ) {
+		s_flags[12] = true;
 		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
 			return false;
 	}
 
 
 	// delete the collection
-	static bool s_fee = false;
-	if ( ! s_fee ) {
-		s_fee = true;
+	//static bool s_fee = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
 		if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
 			return false;
 	}
 
-	static bool s_fee2 = false;
-	if ( ! s_fee2 ) {
-		s_fee2 = true;
+	//static bool s_fee2 = false;
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
 			"QA SPIDER1 TEST\n\n\n");
 		return true;
@@ -753,9 +806,9 @@ bool qaspider2 ( ) {
 	//
 	// delete the 'qatest123' collection
 	//
-	static bool s_x1 = false;
-	if ( ! s_x1 ) {
-		s_x1 = true;
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
 		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
 			return false;
 	}
@@ -763,9 +816,9 @@ bool qaspider2 ( ) {
 	//
 	// add the 'qatest123' collection
 	//
-	static bool s_x2 = false;
-	if ( ! s_x2 ) {
-		s_x2 = true;
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
 		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
 				// checksum of reply expected
 				238170006 ) )
@@ -774,9 +827,9 @@ bool qaspider2 ( ) {
 
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
 	// too deep
-	static bool s_z1 = false;
-	if ( ! s_z1 ) {
-		s_z1 = true;
+	//static bool s_z1 = false;
+	if ( ! s_flags[2] ) {
+		s_flags[2] = true;
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&"
 			      // make it the custom filter
@@ -802,9 +855,9 @@ bool qaspider2 ( ) {
 	// set the site list to 
 	// a few sites
 	// these should auto seed so no need to use addurl
-	static bool s_z2 = false;
-	if ( ! s_z2 ) {
-		s_z2 = true;
+	//static bool s_z2 = false;
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&format=xml&sitelist=");
 		sb.urlEncode("tag:shallow www.walmart.com\r\n"
@@ -822,32 +875,32 @@ bool qaspider2 ( ) {
 
 	// wait until spider finishes. check the spider status page
 	// in json to see when completed
-	static bool s_k1 = false;
-	if ( ! s_k1 ) {
+	//static bool s_k1 = false;
+	if ( ! s_flags[4] ) {
 		usleep(5000000); // 5 seconds
-		s_k1 = true;
+		s_flags[4] = true;
 		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
 			return false;
 	}
 
-	static bool s_k2 = false;
-	if ( ! s_k2 ) {
+	//static bool s_k2 = false;
+	if ( ! s_flags[5] ) {
 		// ensure spiders are done. 
 		// "Nothing currently available to spider"
 		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
-			s_k1 = false;
+			s_flags[4] = false;
 			goto checkagain;
 		}
-		s_k2 = true;
+		s_flags[5] = true;
 	}
 
 
 
 
 	// verify no results for gbhopcount:2 query
-	static bool s_y4 = false;
-	if ( ! s_y4 ) {
-		s_y4 = true;
+	//static bool s_y4 = false;
+	if ( ! s_flags[6] ) {
+		s_flags[6] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
 				"q=gbhopcount%3A2",
 				-1310551262 ) )
@@ -855,9 +908,9 @@ bool qaspider2 ( ) {
 	}
 
 	// but some for gbhopcount:0 query
-	static bool s_t0 = false;
-	if ( ! s_t0 ) {
-		s_t0 = true;
+	//static bool s_t0 = false;
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&n=500&"
 				"q=gbhopcount%3A0",
 				0 ) )
@@ -865,50 +918,50 @@ bool qaspider2 ( ) {
 	}
 	
 	// check facet sections query for walmart
-	static bool s_y5 = false;
-	if ( ! s_y5 ) {
-		s_y5 = true;
+	//static bool s_y5 = false;
+	if ( ! s_flags[8] ) {
+		s_flags[8] = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
 				0 ) )
 			return false;
 	}
 
-	static bool s_y6 = false;
-	if ( ! s_y6 ) {
-		s_y6 = true;
+	//static bool s_y6 = false;
+	if ( ! s_flags[9] ) {
+		s_flags[9] = true;
 		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
 			return false;
 	}
 
 	// in xml
-	static bool s_y7 = false;
-	if ( ! s_y7 ) {
-		s_y7 = true;
+	//static bool s_y7 = false;
+	if ( ! s_flags[10] ) {
+		s_flags[10] = true;
 		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
 			return false;
 	}
 
 	// and json
-	static bool s_y8 = false;
-	if ( ! s_y8 ) {
-		s_y8 = true;
+	//static bool s_y8 = false;
+	if ( ! s_flags[11] ) {
+		s_flags[11] = true;
 		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
 			return false;
 	}
 
 
 	// delete the collection
-	static bool s_fee = false;
-	if ( ! s_fee ) {
-		s_fee = true;
+	//static bool s_fee = false;
+	if ( ! s_flags[12] ) {
+		s_flags[12] = true;
 		if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
 			return false;
 	}
 
-	static bool s_fee2 = false;
-	if ( ! s_fee2 ) {
-		s_fee2 = true;
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
 			"QA SPIDER2 TEST\n\n\n");
 		return true;
@@ -916,7 +969,7 @@ bool qaspider2 ( ) {
 
 	return true;
 }
-
+/*
 bool qaspider ( ) {
 
 	if ( ! s_callback ) s_callback = qaspider;
@@ -931,19 +984,26 @@ bool qaspider ( ) {
 
 	return true;
 }
-
+*/
 class QATest {
 public:
 	bool (* m_func)();
 	char *m_testName;
 	char *m_testDesc;
+	char  m_doTest;
+	// we set s_flags to this
+	long  m_flags[30];
 };
 
 static QATest s_qatests[] = {
 
-	{qainject,
-	 "injectTest",
-	 "Test injection api."},
+	{qainject1,
+	 "injectTest1",
+	 "Test injection api. Test injection of multiple urls with content."},
+
+	{qainject2,
+	 "injectTest2",
+	 "Test injection api. Test delimeter-based injection of single file."},
 
 	{qaspider1,
 	 "spiderSitePagesTest",
@@ -954,6 +1014,14 @@ static QATest s_qatests[] = {
 	 "Test spidering walmart.com and ibm.com using hopcount limit."}
 
 };
+
+void resetFlags() {
+	long n = sizeof(s_qatests)/sizeof(QATest);
+	for ( long i = 0 ; i < n ; i++ ) {
+		QATest *qt = &s_qatests[i];
+		memset(qt->m_flags,0,4*30);
+	}
+}
 
 // . run a series of tests to ensure that gb is functioning properly
 // . uses the ./qa subdirectory to hold archive pages, ips, spider dates to
@@ -971,8 +1039,11 @@ bool qatest ( ) {
 	long n = sizeof(s_qatests)/sizeof(QATest);
 	for ( long i = 0 ; i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
+		if ( ! qt->m_doTest ) continue;
+		// point to flags
+		s_flags = qt->m_flags;
 		// call the qatest
-		if ( ! qt->m_func ) return false;
+		if ( ! qt->m_func() ) return false;
 	}
 
 	if ( ! g_qaSock ) return true;
@@ -1007,13 +1078,29 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	// if they hit the submit button, begin the tests
 	long submit = hr->hasField("action");
 
+	long n = sizeof(s_qatests)/sizeof(QATest);
+
+
+	if ( submit && g_qaInProgress ) {
+		g_errno = EINPROGRESS;
+		g_httpServer.sendErrorReply(sock,g_errno,mstrerror(g_errno));
+		return true;
+	}
+
+	// set m_doTest
+	for ( long i = 0 ; submit && i < n ; i++ ) {
+		QATest *qt = &s_qatests[i];
+		char tmp[10];
+		sprintf(tmp,"test%li",i);
+		qt->m_doTest = hr->getLong(tmp,0);
+	}
+
 	if ( submit ) {
-		if ( g_qaInProgress ) {
-			g_errno = EINPROGRESS;
-			g_httpServer.sendErrorReply(sock,g_errno,mstrerror(g_errno));
-			return true;
-		}
+		// reset all the static thingies
+		resetFlags();
+		// save socket
 		g_qaSock = sock;
+		// and run the qa test loop
 		if ( ! qatest( ) ) return false;
 		// what happened?
 		log("qa: qatest completed without blocking");
@@ -1039,8 +1126,6 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	sb.safePrintf("<tr class=hdrow><td colspan=2>"
 		      "<center><b>QA Tests</b></center>"
 		      "</td></tr>");
-
-	long n = sizeof(s_qatests)/sizeof(QATest);
 
 	// header row
 	sb.safePrintf("<tr><td><b>Do Test?</b> <a style=cursor:hand;cursor:pointer; "

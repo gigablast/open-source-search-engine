@@ -1217,7 +1217,7 @@ bool SpiderColl::load ( ) {
 	m_msg1Avail    = true;
 	m_isPopulating = false;
 
-	if ( ! m_lastDownloadCache.init ( 35000      , // maxcachemem,
+	if ( ! m_lastDownloadCache.init ( 15000      , // maxcachemem,
 					  8          , // fixed data size (MS)
 					  false      , // support lists?
 					  500        , // max nodes
