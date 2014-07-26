@@ -90,7 +90,8 @@ static WebPage s_pages[] = {
 	{ PAGE_DIRECTORY , "dir"           , 0 , "directory" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "directory",
-	  sendPageDirectory , 0 ,NULL,NULL,0},
+	  // until api is ready, take this out of the menu
+	  sendPageDirectory , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_REPORTSPAM , "reportspam"   , 0 , "report spam" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN |  USER_PROXY | USER_CLIENT, 
 	  "report spam",
@@ -155,7 +156,7 @@ static WebPage s_pages[] = {
 	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
 	  //USER_MASTER ,
 	  "repair data",
-	  sendPageGeneric   , 0 ,NULL,NULL,0},
+	  sendPageGeneric   , 0 ,NULL,NULL,PG_NOAPI},
 	// { PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
 	//   "what sites can be spidered",
 	//   sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI}, // sendPageBasicSettings
@@ -195,22 +196,22 @@ static WebPage s_pages[] = {
 	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
 	  "query stats graph",
-	  sendPageGraph  , 2 /*niceness*/ ,NULL,NULL,PG_STATUS},
+	  sendPageGraph  , 2 /*niceness*/ ,NULL,NULL,PG_STATUS|PG_NOAPI},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "function performance graph",
-	  sendPagePerf     , 0 ,NULL,NULL,PG_STATUS},
+	  sendPagePerf     , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "sockets",
-	  sendPageSockets  , 0 ,NULL,NULL,PG_STATUS},
+	  sendPageSockets  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
 
 	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
 	  //USER_MASTER ,  
 	  "logview",
-	  sendPageLogView  , 0 ,NULL,NULL,PG_STATUS},
+	  sendPageLogView  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
 //	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
 //	  //USER_MASTER , 
 //	  "sync",
@@ -219,7 +220,7 @@ static WebPage s_pages[] = {
 	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , M_POST ,
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
-	  sendPageAutoban   , 0 ,NULL,NULL,0},
+	  sendPageAutoban   , 0 ,NULL,NULL,PG_NOAPI},
 	  /*
 	{ PAGE_SPIDERLOCKS,"admin/spiderlocks" , 0 , "spider locks" ,  0 , 0 ,
 	  USER_MASTER , sendPageSpiderLocks , 0 ,NULL,NULL,PG_NOAPI},
@@ -231,7 +232,7 @@ static WebPage s_pages[] = {
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads",
-	  sendPageThreads  , 0 ,NULL,NULL,PG_STATUS},
+	  sendPageThreads  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
 	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
 	//  "thesaurus",
@@ -243,10 +244,14 @@ static WebPage s_pages[] = {
 	//  //USER_MASTER | USER_ADMIN ,
 	//  "overview",
 	//  sendPageOverview  , 0 ,NULL,NULL,PG_NOAPI},
+
+	{ PAGE_QA , "admin/qa"         , 0 , "qa" , 0 , 0 ,
+	  "quality assurance", sendPageQA , 0 ,NULL,NULL,PG_NOAPI},
+
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
-	  "api",
-	  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},
+	  "api",  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},
+
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules",
@@ -268,7 +273,7 @@ static WebPage s_pages[] = {
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "spider queue",
-	  sendPageSpiderdb , 0 ,NULL,NULL,PG_STATUS},
+	  sendPageSpiderdb , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
 	//  "spider priorities",
@@ -303,7 +308,7 @@ static WebPage s_pages[] = {
 	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "add/remove/get tags for sites/urls",
-	  sendPageTagdb ,  0 ,NULL,NULL,0},	  
+	  sendPageTagdb ,  0 ,NULL,NULL,PG_NOAPI},	  
 	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb",
@@ -2616,8 +2621,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 
 	sb->safePrintf("<div style=padding-left:10%%>"
-		       "<font size=+2><b><a href=/%s>/%s</a></b></font>"
-		       ,pageStr,pageStr);
+		       "<font size=+2><b><a href=/%s?c=%s>/%s</a></b></font>"
+		       ,pageStr,cr->m_coll,pageStr);
 	sb->safePrintf("</a>");
 
 	// show settings?
@@ -2641,7 +2646,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	// show input parms to provide
 	//if ( PAGENUM == PAGE_ADDURL2 )
-	if ( ! (s_pages[PAGENUM].m_pgflags & PG_STATUS) )
+	//if ( ! (s_pages[PAGENUM].m_pgflags & PG_STATUS) )
 		sb->safePrintf("<font size=-0> - %s "
 			       " &nbsp; "
 			       "[ <b>show parms in</b> "
@@ -2792,8 +2797,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		if ( parm->m_type == TYPE_COMMENT ) continue;
 
 		if ( parm->m_flags & PF_DUP ) continue;
-		// do not show on html page?
-		if ( parm->m_flags & PF_NOHTML ) continue;
+		// do not show on html page? this isn't the html page...
+		//if ( parm->m_flags & PF_NOHTML ) continue;
 		if ( parm->m_flags & PF_NOAPI ) continue;
 		if ( parm->m_flags & PF_DIFFBOT ) continue;
 		//if ( ! (parm->m_flags & PF_API) ) continue;

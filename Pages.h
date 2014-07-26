@@ -87,6 +87,7 @@ bool sendPageWordVec   ( TcpSocket *s , HttpRequest *r );
 bool sendPageQualityAgent   ( TcpSocket *s , HttpRequest *r );
 bool sendPageThesaurus  ( TcpSocket *s , HttpRequest *r );
 bool sendPageGraph      ( TcpSocket *s , HttpRequest *r );
+bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) ;
 
 // values for m_usePost:
 #define M_GET   0x00
@@ -355,6 +356,8 @@ enum {
 	PAGE_THREADS     ,
 
 //	PAGE_THESAURUS   , 
+
+	PAGE_QA,
 
 	// . non master-admin pages (collection controls)
 	// . PAGE_OVERVIEW acts as a cutoff point (search Parms.cpp for it)

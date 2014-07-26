@@ -15091,8 +15091,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
 
-	if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
-	else                        r->m_addToTestCache = false;
+	//if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
+	//else                        r->m_addToTestCache = false;
+	r->m_addToTestCache = (bool)useTestCache;
 
 	// . this is -1 if unknown. none found in robots.txt or provided
 	//   in the custom crawl parms.

@@ -927,6 +927,30 @@ bool qaspider ( ) {
 
 	return true;
 }
+
+class QATest {
+public:
+	bool (* m_func)();
+	char *m_testName;
+	char *m_testDesc;
+};
+
+static QATest s_qatests[] = {
+
+	{qainject,
+	 "injectTest",
+	 "test injection code"},
+
+	{qaspider1,
+	 "spiderSitePagesTest",
+	 "test spidering walmart.com and ibm.com using sitepages quota"},
+
+	{qaspider2,
+	 "spiderHopCountTest",
+	 "test spidering walmart.com and ibm.com using hopcount limit"}
+
+};
+
 // . run a series of tests to ensure that gb is functioning properly
 // . uses the ./qa subdirectory to hold archive pages, ips, spider dates to
 //   ensure consistency between tests for exact replays
@@ -935,11 +959,106 @@ bool qatest ( ) {
 	if ( ! s_callback ) s_callback = qatest;
 
 	// returns true when done, false when blocked
-	if ( ! qainject ( ) ) return false;
+	//if ( ! qainject ( ) ) return false;
 
 	// returns true when done, false when blocked
-	if ( ! qaspider ( ) ) return false;
+	//if ( ! qaspider ( ) ) return false;
+
+	long n = sizeof(s_qatests)/sizeof(QATest);
+	for ( long i = 0 ; i < n ; i++ ) {
+		QATest *qt = &s_qatests[i];
+		// call the qatest
+		if ( ! qt->m_func ) return false;
+	}
 
 	return true;
 }
+
+#include "Parms.h"
+#include "Pages.h"
+
+bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
+	char pbuf[32768];
+	SafeBuf sb(pbuf, 32768);
+
+	//char format = hr->getReplyFormat();
+
+	// set this. also sets gr->m_hr
+	GigablastRequest gr;
+	// this will fill in GigablastRequest so all the parms we need are set
+	g_parms.setGigablastRequest ( sock , hr , &gr );
+
+	// get collection rec
+	CollectionRec *cr = g_collectiondb.getRec ( gr.m_coll );
+	// bitch if no collection rec found
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		//log("build: Injection from %s failed. "
+		//    "Collection \"%s\" does not exist.",
+		//    iptoa(s->m_ip),coll);
+		// g_errno should be set so it will return an error response
+		return g_httpServer.sendErrorReply (sock,g_errno,mstrerror(g_errno));
+	}
+
+	// show tests, all checked by default, to perform
+
+	g_pages.printAdminTop ( &sb , sock , hr );
+
+	sb.safePrintf("<SCRIPT LANGUAGE=\"javascript\">"
+		     "function checkAll(name, num) "
+		      "{ "
+		      "    for (var i = 0; i < num; i++) {"
+		      "      var e = document.getElementById(name + i);"
+		      //"alert(name+i);"
+		      "      e.checked = !e.checked ; "
+		      "}"
+		      "} "
+		      "</SCRIPT> ");
+	//sb.safePrintf("<form name=\"fo\">");
+
+	sb.safePrintf("\n<table %s>\n",TABLE_STYLE);
+	sb.safePrintf("<tr class=hdrow><td colspan=2>"
+		      "<center><b>QA Tests</b></center>"
+		      "</td></tr>");
+
+	long n = sizeof(s_qatests)/sizeof(QATest);
+
+	// header row
+	sb.safePrintf("<tr><td><input type=\"button\" value=\"X\" "
+		      "onclick=\"checkAll('test', %li);\">",n);
+	sb.safePrintf("</td><td>qa test name</td></tr>\n");
+	
+	// . we keep the ptr to each test in an array
+	// . print out each qa function
+	for ( long i = 0 ; i < n ; i++ ) {
+		QATest *qt = &s_qatests[i];
+		char *bg;
+		if ( i % 2 == 0 ) bg = LIGHT_BLUE;
+		else              bg = DARK_BLUE;
+		sb.safePrintf("<tr bgcolor=#%s>"
+			      "<td><input type=checkbox name=test%li "
+			      "id=test%li checked></td>"
+			      "<td>%s</td>"
+			      "</tr>\n"
+			      , bg
+			      , i
+			      , i
+			      , qt->m_testName
+			      );
+	}
+
+	sb.safePrintf("</table>\n");
+	//	      "</form>\n");
+
+	g_pages.printAdminBottom ( &sb , hr );
+
+
+	g_httpServer.sendDynamicPage(sock,
+				     sb.getBufStart(),
+				     sb.length(),
+				     -1/*cachetime*/);
+
+	return true;
+}
+
 

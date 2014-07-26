@@ -1878,21 +1878,21 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	if ( format == FORMAT_XML ) {
 		sb->safePrintf ( "\t<parm>\n");
-		sb->safePrintf ( "\t\t<title>");
-		sb->htmlEncode ( m->m_title );
-		sb->safePrintf ( "</title>\n");
-		sb->safePrintf ( "\t\t<desc>");
-		sb->htmlEncode ( m->m_desc );
-		sb->safePrintf ( "</desc>\n");
+		sb->safePrintf ( "\t\t<title><![CDATA[");
+		sb->cdataEncode ( m->m_title );
+		sb->safePrintf ( "]]></title>\n");
+		sb->safePrintf ( "\t\t<desc><![CDATA[");
+		sb->cdataEncode ( m->m_desc );
+		sb->safePrintf ( "]]></desc>\n");
 		if ( m->m_flags & PF_REQUIRED )
 			sb->safePrintf("\t\t<required>1</required>\n");
 		sb->safePrintf ( "\t\t<cgi>%s</cgi>\n",m->m_cgi);
 		// and default value if it exists
 		char *def = m->m_def;
 		if ( ! def ) def = "";
-		sb->safePrintf ( "\t\t<defaultValue>");
-		sb->htmlEncode ( def );
-		sb->safePrintf ( "</defaultValue>\n");
+		sb->safePrintf ( "\t\t<defaultValue><![CDATA[");
+		sb->cdataEncode ( def );
+		sb->safePrintf ( "]]></defaultValue>\n");
 		if ( page == PAGE_MASTER ||
 		     page == PAGE_SEARCH ||
 		     page == PAGE_SPIDER ||
@@ -1901,11 +1901,11 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SECURITY ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
-			sb->safePrintf ( "\t\t<currentValue>");
+			sb->safePrintf ( "\t\t<currentValue><![CDATA[");
 			SafeBuf xb;
 			m->printVal ( &xb , collnum , 0 );//occNum
-			sb->htmlEncode ( xb.getBufStart() );
-			sb->safePrintf ( "</currentValue>\n");
+			sb->cdataEncode ( xb.getBufStart() );
+			sb->safePrintf ( "]]></currentValue>\n");
 		}
 		sb->safePrintf ( "\t</parm>\n");
 		return true;
@@ -4749,6 +4749,18 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
+	m->m_title = "collection";
+	m->m_desc  = "Inject into this collection.";
+	m->m_cgi   = "c";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
 	// //
 	// // more global-ish parms
 	// //
@@ -5472,6 +5484,7 @@ void Parms::init ( ) {
 	//m->m_type  = TYPE_BOOL;
 	//m++;
 
+	/*
 	m->m_title = "qa build mode";
 	m->m_desc  = "When on Msg13.cpp saves docs in the qatest123 coll "
 		"to qa/ subdir, when off "
@@ -5485,6 +5498,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_flags = PF_NOAPI | PF_HIDDEN;
 	m++;
+	*/
 
 	m->m_title = "read only mode";
 	m->m_desc  = "Read only mode does not allow spidering.";
@@ -14257,18 +14271,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
 	m++;
 	
-	m->m_title = "collection";
-	m->m_desc  = "Inject into this collection.";
-	m->m_cgi   = "c";
-	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = NULL;
-	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
-	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
-	m++;
-
 	m->m_title = "short reply";
 	m->m_desc  = "Should the injection response be short and simple?";
 	m->m_cgi   = "quick";
