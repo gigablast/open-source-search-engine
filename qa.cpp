@@ -2,6 +2,10 @@
 #include "SafeBuf.h"
 #include "HttpServer.h"
 
+TcpSocket *g_qaSock = NULL;
+SafeBuf g_qaOutput;
+bool g_qaInProgress = false;
+
 static long s_expectedCRC = 0;
 
 bool qatest ( ) ;
@@ -939,15 +943,15 @@ static QATest s_qatests[] = {
 
 	{qainject,
 	 "injectTest",
-	 "test injection code"},
+	 "Test injection api."},
 
 	{qaspider1,
 	 "spiderSitePagesTest",
-	 "test spidering walmart.com and ibm.com using sitepages quota"},
+	 "Test spidering walmart.com and ibm.com using sitepages quota."},
 
 	{qaspider2,
 	 "spiderHopCountTest",
-	 "test spidering walmart.com and ibm.com using hopcount limit"}
+	 "Test spidering walmart.com and ibm.com using hopcount limit."}
 
 };
 
@@ -971,6 +975,17 @@ bool qatest ( ) {
 		if ( ! qt->m_func ) return false;
 	}
 
+	if ( ! g_qaSock ) return true;
+
+	// . print the output
+	// . the result of each test is stored in the g_qaOutput safebuf
+	g_httpServer.sendDynamicPage(g_qaSock,
+				     g_qaOutput.getBufStart(),
+				     g_qaOutput.length(),
+				     -1/*cachetime*/);
+
+	g_qaOutput.purge();
+
 	return true;
 }
 
@@ -988,16 +1003,20 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	// this will fill in GigablastRequest so all the parms we need are set
 	g_parms.setGigablastRequest ( sock , hr , &gr );
 
-	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( gr.m_coll );
-	// bitch if no collection rec found
-	if ( ! cr ) {
-		g_errno = ENOCOLLREC;
-		//log("build: Injection from %s failed. "
-		//    "Collection \"%s\" does not exist.",
-		//    iptoa(s->m_ip),coll);
-		// g_errno should be set so it will return an error response
-		return g_httpServer.sendErrorReply (sock,g_errno,mstrerror(g_errno));
+
+	// if they hit the submit button, begin the tests
+	long submit = hr->hasField("action");
+
+	if ( submit ) {
+		if ( g_qaInProgress ) {
+			g_errno = EINPROGRESS;
+			g_httpServer.sendErrorReply(sock,g_errno,mstrerror(g_errno));
+			return true;
+		}
+		g_qaSock = sock;
+		if ( ! qatest( ) ) return false;
+		// what happened?
+		log("qa: qatest completed without blocking");
 	}
 
 	// show tests, all checked by default, to perform
@@ -1024,9 +1043,9 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	long n = sizeof(s_qatests)/sizeof(QATest);
 
 	// header row
-	sb.safePrintf("<tr><td><input type=\"button\" value=\"X\" "
-		      "onclick=\"checkAll('test', %li);\">",n);
-	sb.safePrintf("</td><td>qa test name</td></tr>\n");
+	sb.safePrintf("<tr><td><b>Do Test?</b> <a style=cursor:hand;cursor:pointer; "
+		      "onclick=\"checkAll('test', %li);\">(toggle)</a>",n);
+	sb.safePrintf("</td><td><b>Test Name</b></td></tr>\n");
 	
 	// . we keep the ptr to each test in an array
 	// . print out each qa function
@@ -1036,18 +1055,22 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		if ( i % 2 == 0 ) bg = LIGHT_BLUE;
 		else              bg = DARK_BLUE;
 		sb.safePrintf("<tr bgcolor=#%s>"
-			      "<td><input type=checkbox name=test%li "
+			      "<td><input type=checkbox value=1 name=test%li "
 			      "id=test%li checked></td>"
-			      "<td>%s</td>"
+			      "<td>%s"
+			      "<br>"
+			      "<font color=gray size=-1>%s</font>"
+			      "</td>"
 			      "</tr>\n"
 			      , bg
 			      , i
 			      , i
 			      , qt->m_testName
+			      , qt->m_testDesc
 			      );
 	}
 
-	sb.safePrintf("</table>\n");
+	sb.safePrintf("</table>\n<br>\n");
 	//	      "</form>\n");
 
 	g_pages.printAdminBottom ( &sb , hr );

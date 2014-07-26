@@ -1115,7 +1115,7 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 		}
 		// bail if the cgi field is not in the parms list
 		if ( j >= m_numParms ) {
-			log("parms: missing cgi parm %s",field);
+			//log("parms: missing cgi parm %s",field);
 			continue;
 		}
 		// value of cgi parm (null terminated)
