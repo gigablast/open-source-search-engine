@@ -52,8 +52,19 @@ long qa_hash32 ( char *s ) {
 	return h;
 }
 
+class QATest {
+public:
+	bool (* m_func)();
+	char *m_testName;
+	char *m_testDesc;
+	char  m_doTest;
+	// we set s_flags to this
+	long  m_flags[30];
+};
+
 static char *s_content = NULL;
 static HashTableX s_ht;
+static QATest *s_qt = NULL;
 
 void processReply ( char *reply , long replyLen ) {
 
@@ -147,6 +158,12 @@ void processReply ( char *reply , long replyLen ) {
 	// hash url
 	long urlHash32 = hash32n ( s_url.getUrl() );
 
+	// combine test function too since two tests may use the same url
+	long nameHash = hash32n ( s_qt->m_testName );
+
+	// combine together
+	urlHash32 = hash32h ( nameHash , urlHash32 );
+
 	static bool s_init = false;
 	if ( ! s_init ) {
 		s_init = true;
@@ -199,19 +216,22 @@ void processReply ( char *reply , long replyLen ) {
 	fprintf(stderr,"%s\n",cmd);
 	system(cmd);
 
-	//long urlHash32 = hash32n ( s_url.getUrl() );
+	g_qaOutput.safePrintf("FAILED TEST<br>%s (urlhash=%lu)<br>"
 
-	g_qaOutput.safePrintf("FAILED TEST<br>%s (%lu)<br>"
 			      "<input type=checkbox name=urlhash%lu value=%lu> "
 			      "Accept changes"
+
 			      "<br>"
 			      "original on left, new on right. "
-			      "old = %lu != %lu = new"
+			      "oldcrc = <a href=/qa/content.%lu>%lu</a>"
+			      " != <a href=/qa/content.%lu>%lu</a> = newcrc"
 			      "<hr><pre>",
 			      s_url.getUrl(),
 			      urlHash32,
 
 			      urlHash32,
+			      urlHash32,
+			      *val,
 			      *val,
 
 			      *val,
@@ -267,7 +287,7 @@ bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 				     0 , // ifmodsince
 				     NULL ,
 				     gotReplyWrapper,
-				     60*1000, // timeout
+				     999999*1000, // timeout ms
 				     0, // proxyip
 				     0, // proxyport
 				     -1, // maxtextdoclen
@@ -566,8 +586,8 @@ bool qainject2 ( ) {
 	//static bool s_fee2 = false;
 	if ( ! s_flags[13] ) {
 		s_flags[13] = true;
-		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA INJECT TEST 2\n\n\n");
+		log("qa: SUCCESSFULLY COMPLETED "
+			"QA INJECT TEST 2");
 		//if ( s_callback == qainject ) exit(0);
 		return true;
 	}
@@ -1050,21 +1070,13 @@ bool qaspider ( ) {
 	return true;
 }
 */
-class QATest {
-public:
-	bool (* m_func)();
-	char *m_testName;
-	char *m_testDesc;
-	char  m_doTest;
-	// we set s_flags to this
-	long  m_flags[30];
-};
 
 static QATest s_qatests[] = {
 
 	{qainject1,
 	 "injectTest1",
-	 "Test injection api. Test injection of multiple urls with content."},
+	 "Test injection api. Test injection of multiple urls with content. Test "
+	 "deletion of urls via inject api."},
 
 	{qainject2,
 	 "injectTest2",
@@ -1095,6 +1107,8 @@ bool qatest ( ) {
 
 	if ( ! s_callback ) s_callback = qatest;
 
+	if ( ! g_qaSock ) return true;
+
 	// returns true when done, false when blocked
 	//if ( ! qainject ( ) ) return false;
 
@@ -1105,13 +1119,13 @@ bool qatest ( ) {
 	for ( long i = 0 ; i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
 		if ( ! qt->m_doTest ) continue;
+		// store that
+		s_qt = qt;
 		// point to flags
 		s_flags = qt->m_flags;
 		// call the qatest
 		if ( ! qt->m_func() ) return false;
 	}
-
-	if ( ! g_qaSock ) return true;
 
 	// save this
 	if ( s_ht.m_numSlotsUsed ) {
