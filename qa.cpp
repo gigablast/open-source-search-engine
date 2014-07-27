@@ -180,14 +180,23 @@ void processReply ( char *reply , long replyLen ) {
 	if ( ! val ) {
 		// add it so we know
 		s_ht.addKey ( &urlHash32 , &contentCRC );
+		g_qaOutput.safePrintf("first time testing<br>%s : %s (urlhash=%lu "
+				      "crc=<a href=/qa/content.%li>%lu</a>)<br>"
+				      "<hr>",
+				      s_qt->m_testName,
+				      s_url.getUrl(),
+				      urlHash32,
+				      contentCRC,
+				      contentCRC);
 		return;
 	}
 
 	// just return if the same
 	if ( contentCRC == *val ) {
-		g_qaOutput.safePrintf("passed test<br>%s (urlhash=%lu "
+		g_qaOutput.safePrintf("passed test<br>%s : %s (urlhash=%lu "
 				      "crc=<a href=/qa/content.%li>%lu</a>)<br>"
 				      "<hr>",
+				      s_qt->m_testName,
 				      s_url.getUrl(),
 				      urlHash32,
 				      contentCRC,
@@ -216,7 +225,7 @@ void processReply ( char *reply , long replyLen ) {
 	fprintf(stderr,"%s\n",cmd);
 	system(cmd);
 
-	g_qaOutput.safePrintf("FAILED TEST<br>%s (urlhash=%lu)<br>"
+	g_qaOutput.safePrintf("FAILED TEST<br>%s : %s (urlhash=%lu)<br>"
 
 			      "<input type=checkbox name=urlhash%lu value=%lu> "
 			      "Accept changes"
@@ -226,6 +235,7 @@ void processReply ( char *reply , long replyLen ) {
 			      "oldcrc = <a href=/qa/content.%lu>%lu</a>"
 			      " != <a href=/qa/content.%lu>%lu</a> = newcrc"
 			      "<hr><pre>",
+			      s_qt->m_testName,
 			      s_url.getUrl(),
 			      urlHash32,
 
@@ -277,6 +287,10 @@ bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 
 	s_expectedCRC = expectedCRC;
 
+	bool doPost = true;
+	if ( strncmp ( path , "/search" , 7 ) == 0 )
+		doPost = false;
+
 	//Url u;
 	s_url.set ( sb.getBufStart() );
 	log("qa: getting %s",sb.getBufStart());
@@ -294,7 +308,7 @@ bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 				     -1, // maxotherdoclen
 				     NULL , // useragent
 				     "HTTP/1.0" , // protocol
-				     true , // doPost
+				     doPost , // doPost
 				     NULL , // cookie
 				     NULL , // additionalHeader
 				     NULL , // fullRequest
@@ -794,7 +808,9 @@ bool qaspider1 ( ) {
 	// in json to see when completed
 	//static bool s_k1 = false;
 	if ( ! s_flags[5] ) {
-		usleep(5000000); // 5 seconds
+		// wait 5 seconds, call sleep timer... then call qatest()
+		wait(5.0);
+		//usleep(5000000); // 5 seconds
 		s_flags[5] = true;
 		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
 			return false;

@@ -3240,8 +3240,15 @@ bool SafeBuf::safeTruncateEllipsis ( char *src , long srcLen , long maxLen ) {
 	if ( printLen > maxLen ) printLen = maxLen;
 	if ( ! safeMemcpy ( src , printLen ) )
 		return false;
-	if ( srcLen < maxLen ) return true;
-	return safeMemcpy("...",3);
+	if ( srcLen < maxLen ) {
+		if ( ! nullTerm() ) return false;
+		return true;
+	}
+	if ( ! safeMemcpy("...",3) )
+		return false;
+	if ( ! nullTerm() )
+		return false;
+	return true;
 }
 
 #include "sort.h"
