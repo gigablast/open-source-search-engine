@@ -53,6 +53,7 @@ long qa_hash32 ( char *s ) {
 }
 
 static char *s_content = NULL;
+static HashTableX s_ht;
 
 void processReply ( char *reply , long replyLen ) {
 
@@ -106,15 +107,16 @@ void processReply ( char *reply , long replyLen ) {
 	if ( content ) contentCRC = qa_hash32 ( content );
 
 	// note it
-	fprintf(stderr,"qa: got contentCRC of %li\n",contentCRC);
+	log("qa: got contentCRC of %lu",contentCRC);
 
 
 	// if what we expected, save to disk if not there yet, then
 	// call s_callback() to resume the qa pipeline
+	/*
 	if ( contentCRC == s_expectedCRC ) {
 		// save content if good
 		char fn3[1024];
-		sprintf(fn3,"%sqa/content.%li",g_hostdb.m_dir,contentCRC);
+		sprintf(fn3,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
 		File ff; ff.set ( fn3 );
 		if ( ! ff.doesExist() ) {
 			// if not there yet then save it
@@ -125,7 +127,7 @@ void processReply ( char *reply , long replyLen ) {
 		//s_callback();
 		return;
 	}
-
+	*/
 
 	//
 	// if crc of content does not match what was expected then do a diff
@@ -138,18 +140,57 @@ void processReply ( char *reply , long replyLen ) {
 		return;
 	}
 
-	const char *emsg = "qa: bad contentCRC of %li should be %li "
-		"\n";//"phase=%li\n";
-	fprintf(stderr,emsg,contentCRC,s_expectedCRC);//,s_phase-1);
+	//const char *emsg = "qa: bad contentCRC of %li should be %li "
+	//	"\n";//"phase=%li\n";
+	//fprintf(stderr,emsg,contentCRC,s_expectedCRC);//,s_phase-1);
+
+	// hash url
+	long urlHash32 = hash32n ( s_url.getUrl() );
+
+	static bool s_init = false;
+	if ( ! s_init ) {
+		s_init = true;
+		s_ht.set(4,4,1024,NULL,0,false,0,"qaht");
+		// try to load from disk
+		SafeBuf fn;
+		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
+		s_ht.load ( fn.getBufStart() , "crctable.dat" );
+	}
+
+	// look up in hashtable to see what reply crc should be
+	long *val = (long *)s_ht.getValue ( &urlHash32 );
+
+	if ( ! val ) {
+		// add it so we know
+		s_ht.addKey ( &urlHash32 , &contentCRC );
+		return;
+	}
+
+	// just return if the same
+	if ( contentCRC == *val ) {
+		g_qaOutput.safePrintf("passed test<br>%s (urlhash=%lu "
+				      "crc=<a href=/qa/content.%li>%lu</a>)<br>"
+				      "<hr>",
+				      s_url.getUrl(),
+				      urlHash32,
+				      contentCRC,
+				      contentCRC);
+		return;
+	}
+
+	log("qa: crc changed for url %s from %li to %li",
+	    s_url.getUrl(),*val,contentCRC);
+
 	// get response on file
 	SafeBuf fb1;
 	char fn1[1024];
-	sprintf(fn1,"%sqa/content.%li",g_hostdb.m_dir,s_expectedCRC);
+	sprintf(fn1,"%sqa/content.%lu",g_hostdb.m_dir, *val);
 	fb1.load(fn1);
 	fb1.nullTerm();
+
 	// break up into lines
 	char fn2[1024];
-	sprintf(fn2,"/tmp/content.%li",contentCRC);
+	sprintf(fn2,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
 	fb2.save ( fn2 );
 
 	// do the diff between the two replies so we can see what changed
@@ -158,8 +199,23 @@ void processReply ( char *reply , long replyLen ) {
 	fprintf(stderr,"%s\n",cmd);
 	system(cmd);
 
-	g_qaOutput.safePrintf("FAILED TEST<br>%s<br><hr><pre>",
-			      s_url.getUrl());
+	//long urlHash32 = hash32n ( s_url.getUrl() );
+
+	g_qaOutput.safePrintf("FAILED TEST<br>%s (%lu)<br>"
+			      "<input type=checkbox name=urlhash%lu value=%lu> "
+			      "Accept changes"
+			      "<br>"
+			      "original on left, new on right. "
+			      "old = %lu != %lu = new"
+			      "<hr><pre>",
+			      s_url.getUrl(),
+			      urlHash32,
+
+			      urlHash32,
+			      *val,
+
+			      *val,
+			      contentCRC);
 
 
 	// store in output
@@ -312,10 +368,10 @@ bool qainject1 ( ) {
 			return false;
 	}
 
-
+	// this only loads once
+	loadUrls();
 	long max = s_ubuf2.length()/(long)sizeof(char *);
-	// hack
-	max = 1;
+	//max = 1;
 
 	//
 	// inject urls, return false if not done yet
@@ -323,21 +379,20 @@ bool qainject1 ( ) {
 	//static bool s_x4 = false;
 	if ( ! s_flags[2] ) {
 		// TODO: try delimeter based injection too
-		loadUrls();
-		static long s_ii = 0;
-		for ( ; s_ii < max ; ) {
+		//static long s_ii = 0;
+		for ( ; s_flags[20] < max ; ) {
 			// inject using html api
 			SafeBuf sb;
 			sb.safePrintf("&c=qatest123&deleteurl=0&"
 				      "format=xml&u=");
-			sb.urlEncode ( s_urlPtrs[s_ii] );
+			sb.urlEncode ( s_urlPtrs[s_flags[20]] );
 			// the content
 			sb.safePrintf("&hasmime=1");
 			sb.safePrintf("&content=");
-			sb.urlEncode(s_contentPtrs[s_ii] );
+			sb.urlEncode(s_contentPtrs[s_flags[20]] );
 			sb.nullTerm();
 			// pre-inc it in case getUrl() blocks
-			s_ii++;
+			s_flags[20]++;//ii++;
 			if ( ! getUrl("/admin/inject",
 				      0, // no idea what crc to expect
 				      sb.getBufStart()) )
@@ -390,10 +445,20 @@ bool qainject1 ( ) {
 	if ( ! s_flags[6] ) {
 		usleep(1500000);
 		s_flags[6] = true;
-		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+		if ( ! getUrl ( "/search?c=qatest123&qa=2&format=xml&q=%2Bthe",
 				-1672870556 ) )
 			return false;
 	}
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+			"QA INJECT TEST 1");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
 
 	return true;
 }
@@ -502,7 +567,7 @@ bool qainject2 ( ) {
 	if ( ! s_flags[13] ) {
 		s_flags[13] = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA INJECT TEST\n\n\n");
+			"QA INJECT TEST 2\n\n\n");
 		//if ( s_callback == qainject ) exit(0);
 		return true;
 	}
@@ -1048,6 +1113,17 @@ bool qatest ( ) {
 
 	if ( ! g_qaSock ) return true;
 
+	// save this
+	if ( s_ht.m_numSlotsUsed ) {
+		SafeBuf fn;
+		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
+		s_ht.save ( fn.getBufStart() , "crctable.dat" );
+		s_ht.reset();
+	}
+
+
+	g_qaOutput.safePrintf("<br>DONE RUNNING QA TESTS<br>");
+
 	// . print the output
 	// . the result of each test is stored in the g_qaOutput safebuf
 	g_httpServer.sendDynamicPage(g_qaSock,
@@ -1056,6 +1132,8 @@ bool qatest ( ) {
 				     -1/*cachetime*/);
 
 	g_qaOutput.purge();
+
+	g_qaSock = NULL;
 
 	return true;
 }
