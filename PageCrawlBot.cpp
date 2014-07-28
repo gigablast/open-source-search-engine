@@ -3937,10 +3937,22 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</form>"
 			      "</td>"
 
+			      // restart collection form
+			      "<td>"
+			      "<form method=get action=/crawlbot>"
+			      "%s"
+			      "<input type=hidden name=roundStart value=1>"
+			      "<input type=submit name=button value=\""
+			      "Restart spider round\">"
+			      "</form>"
+			      "</td>"
+
+
 			      "</tr>"
 			      "</table>"
 
 			      //, (long)cr->m_collnum
+			      , hb.getBufStart()
 			      , hb.getBufStart()
 			      //, (long)cr->m_collnum
 			      );

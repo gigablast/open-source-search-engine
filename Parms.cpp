@@ -9555,7 +9555,7 @@ void Parms::init ( ) {
 	m++;
 
 	// DIFFBOT:
-	// . this is sent to each shard by issuing a "restartRound=" cmd
+	// . this is sent to each shard by issuing a "&roundStart=1" cmd
 	// . similar to the "addcoll" cmd we add args to it and make it
 	//   the "forceround" cmd parm and add THAT to the parmlist.
 	//   so "roundStart=1" is really an alias for us.
