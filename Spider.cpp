@@ -37,7 +37,9 @@ void testWinnerTreeKey ( ) ;
 // try 30 again since we have new localcrawlinfo update logic much faster
 //#define SPIDER_DONE_TIMER 30
 // neo under heavy load go to 60
-#define SPIDER_DONE_TIMER 60
+//#define SPIDER_DONE_TIMER 60
+// super overloaded
+#define SPIDER_DONE_TIMER 90
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
@@ -1217,10 +1219,10 @@ bool SpiderColl::load ( ) {
 	m_msg1Avail    = true;
 	m_isPopulating = false;
 
-	if ( ! m_lastDownloadCache.init ( 35000      , // maxcachemem,
+	if ( ! m_lastDownloadCache.init ( 1000       , // maxcachemem,
 					  8          , // fixed data size (MS)
 					  false      , // support lists?
-					  500        , // max nodes
+					  100        , // max nodes
 					  false      , // use half keys?
 					  "downcache", // dbname
 					  false      , // load from disk?
@@ -1242,7 +1244,7 @@ bool SpiderColl::load ( ) {
 	if(!m_doleIpTable.set(4,4,numSlots,NULL,0,false,MAX_NICENESS,"doleip"))
 		return false;
 	// this should grow dynamically...
-	if (!m_waitingTable.set (4,8,3000,NULL,0,false,MAX_NICENESS,"waittbl"))
+	if (!m_waitingTable.set (4,8,100,NULL,0,false,MAX_NICENESS,"waittbl"))
 		return false;
 	// . a tree of keys, key is earliestSpiderTime|ip (key=12 bytes)
 	// . earliestSpiderTime is 0 if unknown
@@ -3397,8 +3399,8 @@ bool SpiderColl::evalIpLoop ( ) {
 
 	// if we started reading, then assume we got a fresh list here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read2 of %li bytes",
-		    m_list.m_listSize);
+		log("spider: back from msg5 spiderdb read2 of %li bytes (cn=%li)",
+		    m_list.m_listSize,(long)m_collnum);
 
 
 	// . set the winning request for all lists we read so far
@@ -3551,8 +3553,9 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 			       ,KEYSTR(&m_endKey,sizeof(key128_t)));
 		tmp.safePrintf("nextKey=%s "
 			       ,KEYSTR(&m_nextKey,sizeof(key128_t)));
-		tmp.safePrintf("firstip=%s"
+		tmp.safePrintf("firstip=%s "
 			       ,iptoa(m_scanningIp));
+		tmp.safePrintf("(cn=%li)",(long)m_collnum);
 		log(LOG_DEBUG,"%s",tmp.getBufStart());
 	}
 	// log this better
@@ -3976,6 +3979,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( priority == -1 ) { char *xx=NULL;*xx=0; }
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
+		if ( g_conf.m_logDebugSpider )
+			log("spider: got ufn=%li for %s",ufn,sreq->m_url);
+		
 		// spiders disabled for this row in url filteres?
 		//if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
 		if ( m_cr->m_maxSpidersPerRule[ufn] <= 0 ) continue;

@@ -428,6 +428,10 @@ bool CommandForceNextSpiderRound ( char *rec ) {
 	cr->m_spiderRoundStartTime = roundStartTime;
 	cr->m_spiderRoundNum = newRoundNum;
 
+	// if we don't have this is prints  out "skipping0 ... " for urls
+	// we try to spider in Spider.cpp.
+	cr->m_spiderStatus = SP_INPROGRESS;
+
 	// reset the round counts. this will log a msg. resetting the
 	// round counts will prevent maxToProcess/maxToCrawl from holding
 	// us back...
@@ -20256,6 +20260,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// sets g_errno on error
 		if ( parm->m_func ) {
 			parm->m_func ( rec );
+			return true;
+		}
+
+		// fix core from using "roundstart=1" on non-existent coll
+		if ( ! parm->m_func2 ) {
 			return true;
 		}
 
