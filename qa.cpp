@@ -5,10 +5,35 @@
 TcpSocket *g_qaSock = NULL;
 SafeBuf g_qaOutput;
 bool g_qaInProgress = false;
+long g_numErrors;
 
 static long s_expectedCRC = 0;
 
+static bool s_registered = false;
+
 bool qatest ( ) ;
+
+void qatestWrapper ( int fd , void *state ) {
+	qatest();
+}
+
+// wait X seconds, call sleep timer... then call qatest()
+void wait( float seconds ) {
+	// put into milliseconds
+	long delay = seconds * 1000;
+
+	if ( g_loop.registerSleepCallback ( delay         ,
+					    NULL , // state
+					    qatestWrapper,//m_masterLoop
+					    0    )) {// niceness
+		s_registered = true;
+		// wait for it, return -1 since we blocked
+		return;
+	}
+
+	log("qa: could not register callback!");
+	return;
+}
 
 // first inject a set list of urls
 static char  **s_urlPtrs = NULL;
@@ -171,6 +196,7 @@ void processReply ( char *reply , long replyLen ) {
 		// try to load from disk
 		SafeBuf fn;
 		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
+		log("qa: loading crctable.dat");
 		s_ht.load ( fn.getBufStart() , "crctable.dat" );
 	}
 
@@ -225,27 +251,46 @@ void processReply ( char *reply , long replyLen ) {
 	fprintf(stderr,"%s\n",cmd);
 	system(cmd);
 
+	g_numErrors++;
+	
 	g_qaOutput.safePrintf("FAILED TEST<br>%s : %s (urlhash=%lu)<br>"
 
-			      "<input type=checkbox name=urlhash%lu value=%lu> "
+			      "<input type=checkbox name=urlhash%lu value=1 "
+			      // use ajax to update test crc. if you undo your
+			      // check then it should put the old val back.
+			      // when you first click the checkbox it should
+			      // gray out the diff i guess.
+			      "onclick=submitchanges(%lu,%lu);> "
 			      "Accept changes"
 
 			      "<br>"
 			      "original on left, new on right. "
 			      "oldcrc = <a href=/qa/content.%lu>%lu</a>"
+
 			      " != <a href=/qa/content.%lu>%lu</a> = newcrc"
-			      "<hr><pre>",
+			      "<br>diff output follows:<br>"
+			      "<hr><pre id=%lu style=background-color:0xffffff;>",
 			      s_qt->m_testName,
 			      s_url.getUrl(),
 			      urlHash32,
 
+			      // input checkbox name field
 			      urlHash32,
-			      urlHash32,
+
+			      // submitchanges() parms
+			      urlHash32, 
+			      contentCRC,
+
+			      // original/old content.%lu
 			      *val,
 			      *val,
 
-			      *val,
-			      contentCRC);
+			      // new content.%lu
+			      contentCRC,
+			      contentCRC,
+
+			      // for the pre tag id:
+			      urlHash32);
 
 
 	// store in output
@@ -368,7 +413,7 @@ static char *s_queries[] = {
 };
 */
 
-#undef usleep
+//#undef usleep
 
 // nw use this
 static long *s_flags = NULL;
@@ -438,8 +483,14 @@ bool qainject1 ( ) {
 	// +the
 	//static bool s_x5 = false;
 	if ( ! s_flags[3] ) {
-		usleep(1500000);
+		//usleep(1500000);
+		wait(1.5);
 		s_flags[3] = true;
+		return false;
+	}
+
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 				702467314 ) )
 			return false;
@@ -477,8 +528,14 @@ bool qainject1 ( ) {
 	//
 	//static bool s_x9 = false;
 	if ( ! s_flags[6] ) {
-		usleep(1500000);
+		//usleep(1500000);
+		wait(1.5);
 		s_flags[6] = true;
+		return false;
+	}
+
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=2&format=xml&q=%2Bthe",
 				-1672870556 ) )
 			return false;
@@ -549,8 +606,14 @@ bool qainject2 ( ) {
 	// now query check
 	//static bool s_y4 = false;
 	if ( ! s_flags[8] ) {
-		usleep(1500000);
+		//usleep(1500000);
+		wait(1.5);
 		s_flags[8] = true;
+		return false;
+	}
+
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 				-1804253505 ) )
 			return false;
@@ -610,7 +673,7 @@ bool qainject2 ( ) {
 	return true;
 }
 
-
+/*
 static char *s_urls1 =
 	" walmart.com"
 	" cisco.com"
@@ -714,6 +777,7 @@ static char *s_urls1 =
 	" freechal.com"
 	" infojobs.net"
 	;
+*/
 
 bool qaspider1 ( ) {
 	//
@@ -809,9 +873,14 @@ bool qaspider1 ( ) {
 	//static bool s_k1 = false;
 	if ( ! s_flags[5] ) {
 		// wait 5 seconds, call sleep timer... then call qatest()
-		wait(5.0);
 		//usleep(5000000); // 5 seconds
+		wait(5.0);
 		s_flags[5] = true;
+		return false;
+	}
+
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
 		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
 			return false;
 	}
@@ -822,6 +891,7 @@ bool qaspider1 ( ) {
 		// "Nothing currently available to spider"
 		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
 			s_flags[5] = false;
+			s_flags[15] = false;
 			goto checkagain;
 		}
 		s_flags[6] = true;
@@ -978,8 +1048,14 @@ bool qaspider2 ( ) {
 	// in json to see when completed
 	//static bool s_k1 = false;
 	if ( ! s_flags[4] ) {
-		usleep(5000000); // 5 seconds
+		//usleep(5000000); // 5 seconds
 		s_flags[4] = true;
+		wait(5.0);
+		return false;
+	}
+
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
 		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
 			return false;
 	}
@@ -990,6 +1066,7 @@ bool qaspider2 ( ) {
 		// "Nothing currently available to spider"
 		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
 			s_flags[4] = false;
+			s_flags[14] = false;
 			goto checkagain;
 		}
 		s_flags[5] = true;
@@ -1121,9 +1198,15 @@ void resetFlags() {
 //   ensure consistency between tests for exact replays
 bool qatest ( ) {
 
+	if ( s_registered ) {
+		g_loop.unregisterSleepCallback(NULL,qatestWrapper);
+		s_registered = false;
+	}
+
 	if ( ! s_callback ) s_callback = qatest;
 
 	if ( ! g_qaSock ) return true;
+
 
 	// returns true when done, false when blocked
 	//if ( ! qainject ( ) ) return false;
@@ -1147,12 +1230,17 @@ bool qatest ( ) {
 	if ( s_ht.m_numSlotsUsed ) {
 		SafeBuf fn;
 		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
+		log("qa: saving crctable.dat");
 		s_ht.save ( fn.getBufStart() , "crctable.dat" );
-		s_ht.reset();
+		// do not reset since we don't reload it above!
+		//s_ht.reset();
 	}
 
+	//if ( g_numErrors )
+	//	g_qaOutput.safePrintf("<input type=submit value=submit><br>");
 
 	g_qaOutput.safePrintf("<br>DONE RUNNING QA TESTS<br>");
+
 
 	// . print the output
 	// . the result of each test is stored in the g_qaOutput safebuf
@@ -1183,6 +1271,29 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	g_parms.setGigablastRequest ( sock , hr , &gr );
 
 
+	//
+	// . handle a request to update the crc for this test
+	// . test id identified by "ajaxUrlHash" which is the hash of the test's url
+	//   and the test name, QATest::m_testName
+	long ajax = hr->getLong("ajax",0);
+	unsigned long ajaxUrlHash = (unsigned long long)hr->getLongLong("uh",0LL);
+	unsigned long ajaxCrc = (unsigned long long)hr->getLongLong("crc",0LL);
+	if ( ajax ) {
+		// overwrite current value with provided one because the user
+		// click on an override checkbox to update the crc
+		s_ht.addKey ( &ajaxUrlHash , &ajaxCrc );
+		// send back the urlhash so the checkbox can turn the
+		// bg color of the "diff" gray
+		SafeBuf sb3;
+		sb3.safePrintf("%lu",ajaxUrlHash);
+		g_httpServer.sendDynamicPage(sock,
+					     sb3.getBufStart(),
+					     sb3.length(),
+					     -1/*cachetime*/);
+		return true;
+	}
+		
+
 	// if they hit the submit button, begin the tests
 	long submit = hr->hasField("action");
 
@@ -1208,6 +1319,40 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		resetFlags();
 		// save socket
 		g_qaSock = sock;
+		g_numErrors = 0;
+		g_qaOutput.reset();
+		g_qaOutput.safePrintf("<html><body>"
+				      "<title>QA Test Results</title>\n");
+
+		g_qaOutput.safePrintf("<SCRIPT LANGUAGE=\"javascript\">\n"
+				      // update s_ht with the new crc for this test
+				      "function submitchanges(urlhash,crc) "
+				      "{\n "
+				      "var client=new XMLHttpRequest();\n"
+				      "client.onreadystatechange=gotsubmitreplyhandler;"
+				      "var "
+				      "u='/admin/qa?ajax=1&uh='+urlhash+'&crc='+crc;\n"
+				      "client.open('GET',u);\n"
+				      "client.send();\n"
+				      // gear spinning after checkbox
+				      "}\n\n "
+
+				      // call this when we got the reply that the 
+				      // checkbox went through
+				      "function gotsubmitreplyhandler() {\n"
+				      // return if reply is not fully ready
+				      "if(this.readyState != 4 )return;\n"
+				      // if error or empty reply then do nothing
+				      "if(!this.responseText)return;\n"
+				      // response text is the urlhash32, unsigned long
+				      "var id=this.responseText;\n"
+				      // use that to fix background to gray
+				      "var w=document.getElementById(id);\n"
+				      // set background color
+				      "w.style.backgroundColor = '0xe0e0e0';\n"
+				      "}\n\n"
+
+				      "</SCRIPT> ");
 		// and run the qa test loop
 		if ( ! qatest( ) ) return false;
 		// what happened?
@@ -1218,16 +1363,18 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 
 	g_pages.printAdminTop ( &sb , sock , hr );
 
-	sb.safePrintf("<SCRIPT LANGUAGE=\"javascript\">"
-		     "function checkAll(name, num) "
+	sb.safePrintf("<SCRIPT LANGUAGE=\"javascript\">\n"
+		     "function checkAll(name, num)\n "
 		      "{ "
-		      "    for (var i = 0; i < num; i++) {"
-		      "      var e = document.getElementById(name + i);"
+		      "    for (var i = 0; i < num; i++) {\n"
+		      "      var e = document.getElementById(name + i);\n"
 		      //"alert(name+i);"
-		      "      e.checked = !e.checked ; "
-		      "}"
-		      "} "
+		      "      e.checked = !e.checked ;\n "
+		      "  }\n"
+		      "}\n\n "
+
 		      "</SCRIPT> ");
+
 	//sb.safePrintf("<form name=\"fo\">");
 
 	sb.safePrintf("\n<table %s>\n",TABLE_STYLE);
