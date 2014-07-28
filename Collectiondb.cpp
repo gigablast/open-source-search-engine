@@ -3126,16 +3126,20 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ucp && upp ) {
 		m_regExs[i].set("matchesucp && matchesupp");
 		m_spiderPriorities   [i] = 55;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		i++;
 		// just process, do not spider links if does not match ucp
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		m_harvestLinks       [i] = false;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
@@ -3145,7 +3149,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// functionality which sets m_spiderRoundStartTime
 		// to the current time works
 		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
-		// in the future and we can't force the rounce
+		// in the future and we can't force the round
 		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
@@ -3154,6 +3158,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ucp && ! upp ) {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		// process everything since upp is empty
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
@@ -3173,6 +3178,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( upp && ! ucp ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		//m_harvestLinks       [i] = false;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;

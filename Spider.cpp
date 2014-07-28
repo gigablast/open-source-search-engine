@@ -37,9 +37,9 @@ void testWinnerTreeKey ( ) ;
 // try 30 again since we have new localcrawlinfo update logic much faster
 //#define SPIDER_DONE_TIMER 30
 // neo under heavy load go to 60
-//#define SPIDER_DONE_TIMER 60
+#define SPIDER_DONE_TIMER 60
 // super overloaded
-#define SPIDER_DONE_TIMER 90
+//#define SPIDER_DONE_TIMER 90
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
