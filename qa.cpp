@@ -204,8 +204,17 @@ void processReply ( char *reply , long replyLen ) {
 		s_ht.set(4,4,1024,NULL,0,false,0,"qaht");
 		// make symlink
 		//char cmd[512];
-		//snprintf(cmd,"cd %s/html ; ln -s ../qa ./qa", g_hostdb.m_dir);
+		//snprintf(cmd,"cd %s/html ;ln -s ../qa ./qa", g_hostdb.m_dir);
 		//system(cmd);
+		char dir[1024];
+		snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
+		long status = ::mkdir ( dir ,
+					S_IRUSR | S_IWUSR | S_IXUSR | 
+					S_IRGRP | S_IWGRP | S_IXGRP | 
+					S_IROTH | S_IXOTH );
+	        if ( status == -1 && errno != EEXIST && errno )
+			log("qa: Failed to make directory %s: %s.",
+			    dir,mstrerror(errno));
 		// try to load from disk
 		SafeBuf fn;
 		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
