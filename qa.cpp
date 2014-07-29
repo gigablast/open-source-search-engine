@@ -271,7 +271,7 @@ void processReply ( char *reply , long replyLen ) {
 	// do the diff between the two replies so we can see what changed
 	char cmd[1024];
 	sprintf(cmd,"diff %s %s > /tmp/diffout",fn1,fn2);
-	fprintf(stderr,"%s\n",cmd);
+	log("qa: %s\n",cmd);
 	system(cmd);
 
 	g_numErrors++;
@@ -1220,7 +1220,7 @@ static QATest s_qatests[] = {
 
 	{qaspider2,
 	 "spiderHopCountTest",
-	 "Test spidering walmart.com and ibm.com using hopcount limit."}
+	 "Test spidering ibm.com using hopcount limit."}
 
 };
 
