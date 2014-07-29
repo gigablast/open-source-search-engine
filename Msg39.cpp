@@ -1457,10 +1457,15 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			for ( long k = 0 ; k < ft->m_numSlots ; k++ ) {
 				// skip empty buckets
 				if ( ! ft->m_flags[k] ) continue;
-				// store key
+				// store key. the hash of the facet value.
 				*(long *)p = ft->getKey32FromSlot(k); p += 4;
 				// then store count
-				*(long *)p = ft->getVal32FromSlot(k); p += 4;
+				//*(long *)p = ft->getVal32FromSlot(k); p += 4;
+				// now this has a docid on it so we can
+				// lookup the text of the facet in Msg40.cpp
+				FacetEntry *fe;
+				fe = (FacetEntry *)ft->getValFromSlot(k);
+				memcpy ( p , fe , sizeof(fe) );
 				// do not breach
 				if ( ++count >= (long)MAX_FACETS ) break;
 			}

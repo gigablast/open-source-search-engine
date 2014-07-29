@@ -396,6 +396,14 @@ class Posdb {
 	DiskPageCache m_pc;
 };
 
+class FacetEntry {
+ public:
+	long m_count;
+	long long m_docId;
+};
+
+
+
 #define MAX_SUBLISTS 50
 
 // . each QueryTerm has this attached additional info now:

@@ -2846,7 +2846,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 		sb->safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
-		case TYPE_CMD: sb->safePrintf("STRING"); break;
+		case TYPE_CMD: sb->safePrintf("UNARY CMD (set to 1)"); break;
 		case TYPE_BOOL: sb->safePrintf ( "BOOL (0 or 1)" ); break;
 		case TYPE_BOOL2: sb->safePrintf ( "BOOL (0 or 1)" ); break;
 		case TYPE_CHECKBOX: sb->safePrintf ( "BOOL (0 or 1)" ); break;

@@ -825,7 +825,8 @@ bool PosdbTable::allocTopTree ( ) {
 		//   back to msg3a so it can merge them and compute the final
 		//   stats. it really makes no sense for a shard to compute
 		//   stats. it has to be done at the aggregator node.
-		if ( ! qt->m_facetHashTable.set ( 4,4,128,NULL,0,false,
+		if ( ! qt->m_facetHashTable.set ( 4,sizeof(FacetEntry),
+						  slots,NULL,0,false,
 						  0,"qfht" ) )
 			return false;
 	}
@@ -6917,9 +6918,25 @@ void PosdbTable::intersectLists10_r ( ) {
 				long val32 = g_posdb.getFacetVal32 ( p );
 				// don't allow the same docid to vote on the
 				// same value twice!
-				if ( val32 != lastVal || firstTime )
+				if ( val32 != lastVal || firstTime ) {
 					// add it
-					qt->m_facetHashTable.addTerm32(&val32);
+					//qt->m_facetHashTable.addTerm32(&val32
+					// get it
+					HashTableX *ft = &qt->m_facetHashTable;
+					FacetEntry *fe;
+					fe=(FacetEntry *)ft->getValue(&val32);
+					// if there, augment it
+					if ( fe ) {
+						fe->m_count++;
+					}
+					// if not there, init it
+					else {
+						FacetEntry ff;
+						ff.m_count = 1;
+						ff.m_docId = m_docId;
+						ft->addKey(&val32,&ff);
+					}
+				}
 				// to avoid dupage...
 				lastVal = val32;
 				// skip over 6 or 12 byte key

@@ -101,6 +101,8 @@ class Msg20Request {
 	long m_ourHostHash32;
 	long m_ourDomHash32;
 	
+	char       m_justGetFacets : 1         ;
+
 
 	// for sending msg20 request to another network
 	//long       m_hostIP;

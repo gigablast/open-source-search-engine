@@ -28860,6 +28860,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		reply->size_facetBuf = m_tmpBuf2.length();
 	}
 
+	if ( m_req->m_justGetFacets ) {
+		m_replyValid = true;
+		return reply;
+	}
 
 	if ( m_req->m_getTermListBuf ) {
 		// ensure content is recycled from title rec

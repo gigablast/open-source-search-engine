@@ -949,7 +949,7 @@ bool qaspider1 ( ) {
 	//static bool s_y5 = false;
 	if ( ! s_flags[9] ) {
 		s_flags[9] = true;
-		if ( ! getUrl ( "/search?c=qatest123&format=json&"
+		if ( ! getUrl ( "/search?c=qatest123&format=json&stream=1&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
 				55157060 ) )
 			return false;
@@ -1136,7 +1136,7 @@ bool qaspider2 ( ) {
 	//static bool s_y5 = false;
 	if ( ! s_flags[8] ) {
 		s_flags[8] = true;
-		if ( ! getUrl ( "/search?c=qatest123&format=json&"
+		if ( ! getUrl ( "/search?c=qatest123&format=json&stream=0&"
 				"q=gbfacetstr%3Agbxpathsitehash3311332088",
 				999 ) )
 			return false;

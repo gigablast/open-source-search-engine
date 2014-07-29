@@ -2188,60 +2188,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// . LATER: show the text string corresponding to the hash
 	//   by looking it up in the titleRec
 	//
-	for ( long i = 0 ; i < si->m_q.getNumTerms() ; i++ ) {
-		// only for html for now i guess
-		if ( si->m_format != FORMAT_HTML ) break;
-		QueryTerm *qt = &si->m_q.m_qterms[i];
-		// skip if not facet
-		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
-		     qt->m_fieldCode != FIELD_GBFACETINT &&
-		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
-			continue;
-		HashTableX *fht = &qt->m_facetHashTable;
-		// a new table for each facet query term
-		bool needTable = true;
-		// print out the dumps
-		for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
-			// skip empty slots
-			if ( ! fht->m_flags[j] ) continue;
-			long val32 = *(long *)fht->getKeyFromSlot(j);
-			long count = *(long *)fht->getValFromSlot(j);
-			// print that out
-			if ( needTable ) {
-				needTable = false;
-				sb->safePrintf("<table cellspacing=7 "
-					       "bgcolor=lightgray>"
-					       "<tr><td width=200px;>"
-					       "FACET %s</td></tr>"
-					       ,qt->m_term);
-			}
-			// print the facet in its numeric form
-			// we will have to lookup based on its docid
-			// and get it from the cached page later
-			sb->safePrintf("<tr><td width=200px; valign=top>"
-				       //"<a href=?search="//gbfacet%3A"
-				       //"%s:%lu"
-				       // make a search to just show those
-				       // docs from this facet with that
-				       // value. actually gbmin/max would work
-				       "<a href=/search?c=%s&q="
-				       "gbequalint%%3A%s:%lu"
-				       //"+gbmaxint%%3A%s:%lu>"
-				       ">"
-				       "%lu (%lu)"
-				       "</a>"
-				       "</td></tr>\n"
-				       ,coll
-				       ,qt->m_term // for query
-				       ,val32 // for query
-				       //,qt->m_term // for query
-				       //,val32 // for query
-				       ,val32 // stat for printing
-				       ,count); // count for printing
-		}
-		if ( ! needTable ) 
-			sb->safePrintf("</table>\n");
-	}
+	msg40->printFacetTables ( sb );
 	//
 	// END FACET PRINTING
 	//
