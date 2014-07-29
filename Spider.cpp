@@ -286,8 +286,10 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		collnum_t collnum = xd->m_collnum;
 		CollectionRec *cr = g_collectiondb.getRec(collnum);
 		char *cs = ""; if ( cr ) cs = cr->m_coll;
-		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
-			       cs,(long)collnum);
+		// sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
+		// 	       cs,(long)collnum);
+		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
+			       cs,cs);
 	}
 
 	sb->safePrintf(" <td><nobr>");

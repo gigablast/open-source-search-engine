@@ -5,6 +5,7 @@
 #include "Parms.h"
 #include "Spider.h"
 #include "PageResults.h" // for RESULT_HEIGHT
+#include "Stats.h"
 
 // 5 seconds
 #define DEFAULT_WIDGET_RELOAD 1000
@@ -1476,6 +1477,37 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
 			      );
+
+
+		//
+		// begin status code breakdown
+		//
+		for ( long i = 0 ; i < 65536 ; i++ ) {
+			if ( g_stats.m_allErrorsNew[i] == 0 &&
+			     g_stats.m_allErrorsOld[i] == 0 )
+				continue;
+			sb.safePrintf (
+				       "<tr>"
+				       "<td><b> &nbsp; <a href=/search?c=%s&q="
+				       "gbstatusmsg%%3A"
+				       "%%22"
+				       ,
+				       cr->m_coll );
+			sb.urlEncode(mstrerror(i));
+			sb.safePrintf ("%%22>"
+				       "%s"
+				       "</a>"
+				       "</b></td>"
+				       "<td>%lli</td>"
+				       "</tr>\n" ,
+				       mstrerror(i),
+				       g_stats.m_allErrorsNew[i] +
+				       g_stats.m_allErrorsOld[i] );
+		}
+		//
+		// end status code breakdown
+		//
+
 
 		char tmp3[64];
 		struct tm *timeStruct;
