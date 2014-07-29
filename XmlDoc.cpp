@@ -13928,8 +13928,27 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	//if ( ! cr ) return;
 
+	bool countIt = true;
+	if ( ! cr ) countIt = false;
+	if ( THIS->m_diffbotReplyError ) countIt = false;
+
+	/*
+	// if doing /vxxx/analzye?mode=xxxx then ensure matches
+	bool isAnalyze = false;
+	if ( countIt && 
+	     m_diffbotApiUrlValid &&
+	     strstr ( m_diffbotApiUrl.getBufStart(), "/analyze?") )
+		isAnalyze = true;
+
+	char *mode = NULL;
+	if ( isAnalyze ) {
+		mode = strstr (m_diffbotApiUrl.getBufStart(), "mode=");
+		if ( mode ) mode += 5;
+		// find end of it
+	*/
+
 	// increment this counter on a successful reply from diffbot
-	if ( ! THIS->m_diffbotReplyError && cr ) {
+	if ( countIt ) { // ! THIS->m_diffbotReplyError && cr ) {
 		// mark this flag
 		THIS->m_gotDiffbotSuccessfulReply = 1;
 		// count it for stats
