@@ -77,6 +77,8 @@ class TcpSocket {
 
 	long        m_numDestroys;
 
+	char m_tunnelMode;
+
 	// . getMsgPiece() is called when we need more to send
 	char       *m_sendBuf;
 	long        m_sendBufSize;

@@ -126,7 +126,8 @@ class TcpServer {
 		       void  (* callback )( void *state , TcpSocket *s ) ,
 		       long   timeout   , // 60*1000 
 		       long   maxTextDocLen ,  // -1 for no max
-		       long   maxOtherDocLen );
+		       long   maxOtherDocLen ,
+		       bool   useHttpTunnel = false );
 
 	// . send request over an available (pre-connected) TcpSocket
 	// . destroys the socket on error
@@ -186,6 +187,8 @@ class TcpServer {
 	TcpSocket *wrapSocket         ( int sd , long niceness, bool incoming);
 	bool       closeLeastUsed     ( long maxIdleTime = -1 ) ;
 	bool       setTotalToRead     ( TcpSocket *s ) ;
+
+	int sslHandshake ( TcpSocket *s ) ;
 
 	// . we call this to try to figure out the size of the WHOLE msg
 	//   being read so that we might pre-allocate memory for it

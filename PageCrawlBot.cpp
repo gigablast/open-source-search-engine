@@ -730,6 +730,14 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		}
 		// ok, we got a spider request
 		sreq = (SpiderRequest *)rec;
+		
+		if ( sreq->isCorrupt() ) {
+			log("spider: encountered a corrupt spider req "
+			    "when dumping cn=%li. skipping.",
+			    (long)cr->m_collnum);
+			continue;
+		}
+
 		// sanity check
 		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48()){
 			badCount++;
@@ -803,6 +811,14 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		if ( srep && srep->m_hadDiffbotError )
 			msg = "Diffbot processing error";
+
+		// indicate specific diffbot error if we have it
+		if ( srep && 
+		     srep->m_hadDiffbotError && 
+		     srep->m_errCode &&
+		     // stick with "diffbot processing error" for these...
+		     srep->m_errCode != EDIFFBOTINTERNALERROR )
+			msg = mstrerror(srep->m_errCode);
 
 		// matching url filter, print out the expression
 		long ufn ;
@@ -1868,6 +1884,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// i guess bail if not there?
 	if ( ! cr ) {
+		log("crawlbot: missing coll rec for coll %s",collName);
 		char *msg = "invalid or missing collection rec";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -2127,7 +2144,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		    seeds,coll,(long)st->m_collnum);
 
 	char bulkurlsfile[1024];
-	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
+	// when a collection is restarted the collnum changes to avoid
+	// adding any records destined for that collnum that might be on 
+	// the wire. so just put these in the root dir
+	snprintf(bulkurlsfile, 1024, "%sbulkurls-%s.txt", 
+		 g_hostdb.m_dir , coll );//, (long)st->m_collnum );
 	if ( spots && cr && cr->m_isCustomCrawl == 2 ) {
 	    long spotsLen = (long)gbstrlen(spots);
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
@@ -2162,8 +2183,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		bb.load(bulkurlsfile);
 		bb.nullTerm();
 		spots = bb.getBufStart();
-		log("crawlbot: restarting bulk job bufsize=%li for %s",
-		    bb.length(), cr->m_coll);
+		log("crawlbot: restarting bulk job file=%s bufsize=%li for %s",
+		    bulkurlsfile,bb.length(), cr->m_coll);
 	}
 	/*
 	    FILE *f = fopen(bulkurlsfile, "r");
@@ -2578,6 +2599,95 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 	return true;
 }
 
+bool printCrawlDetails2 (SafeBuf *sb , CollectionRec *cx , char format ) {
+
+	SafeBuf tmp;
+	long crawlStatus = -1;
+	getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
+	CrawlInfo *ci = &cx->m_localCrawlInfo;
+	long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+	if ( sentAlert ) sentAlert = 1;
+
+	// don't print completed time if spidering is going on
+	time_t completed = cx->m_diffbotCrawlEndTime;
+	// if not yet done, make this zero
+	if ( crawlStatus == SP_INITIALIZING ) completed = 0;
+	if ( crawlStatus == SP_NOURLS ) completed = 0;
+	//if ( crawlStatus == SP_PAUSED ) completed = 0;
+	//if ( crawlStatus == SP_ADMIN_PAUSED ) completed = 0;
+	if ( crawlStatus == SP_INPROGRESS ) completed = 0;
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("{"
+			       "\"response:{\n"
+			       "\t\"statusCode\":%li,\n"
+			       "\t\"statusMsg\":\"%s\",\n"
+			       "\t\"jobCreationTimeUTC\":%li,\n"
+			       "\t\"jobCompletionTimeUTC\":%li,\n"
+			       "\t\"sentJobDoneNotification\":%li,\n"
+			       "\t\"urlsHarvested\":%lli,\n"
+			       "\t\"pageCrawlAttempts\":%lli,\n"
+			       "\t\"pageCrawlSuccesses\":%lli,\n"
+			       , crawlStatus
+			       , tmp.getBufStart()
+			       , cx->m_diffbotCrawlStartTime
+			       , completed
+			       , sentAlert
+			       , cx->m_globalCrawlInfo.m_urlsHarvested
+			       , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+			       , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			       );
+		sb->safePrintf("\t\"currentTime\":%lu,\n",
+			       getTimeGlobal() );
+		sb->safePrintf("\t\"currentTimeUTC\":%lu,\n",
+			       getTimeGlobal() );
+		sb->safePrintf("\t}\n");
+		sb->safePrintf("}\n");
+	}
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("<response>\n"
+			       "\t<statusCode>%li</statusCode>\n"
+			       , crawlStatus
+			       );
+		sb->safePrintf(
+			       "\t<statusMsg><![CDATA[%s]]></statusMsg>\n"
+			       "\t<jobCreationTimeUTC>%li"
+			       "</jobCreationTimeUTC>\n"
+			       , (char *)tmp.getBufStart()
+			       , (long)cx->m_diffbotCrawlStartTime
+			       );
+		sb->safePrintf(
+			       "\t<jobCompletionTimeUTC>%li"
+			       "</jobCompletionTimeUTC>\n"
+
+			       "\t<sentJobDoneNotification>%li"
+			       "</sentJobDoneNotification>\n"
+
+			       "\t<urlsHarvested>%lli</urlsHarvested>\n"
+
+			       "\t<pageCrawlAttempts>%lli"
+			       "</pageCrawlAttempts>\n"
+
+			       "\t<pageCrawlSuccesses>%lli"
+			       "</pageCrawlSuccesses>\n"
+
+			       , completed
+			       , sentAlert
+			       , cx->m_globalCrawlInfo.m_urlsHarvested
+			       , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+			       , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			       );
+		sb->safePrintf("\t<currentTime>%lu</currentTime>\n",
+			       getTimeGlobal() );
+		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
+			       getTimeGlobal() );
+		sb->safePrintf("</response>\n");
+	}
+
+	return true;
+}
+
 bool printCrawlBotPage2 ( TcpSocket *socket , 
 			  HttpRequest *hr ,
 			  char fmt, // format
@@ -2806,7 +2916,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//long paused = 1;
 
 			//if ( cx->m_spideringEnabled ) paused = 0;
-			printCrawlDetailsInJson ( &sb , cx , getVersionFromRequest(hr) );
+			if ( cx->m_isCustomCrawl )
+				printCrawlDetailsInJson ( &sb , cx , 
+						  getVersionFromRequest(hr) );
+			else
+				printCrawlDetails2 ( &sb,cx,FORMAT_JSON );
+
 			// print the next one out
 			continue;
 		}
@@ -3916,10 +4031,22 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</form>"
 			      "</td>"
 
+			      // restart collection form
+			      "<td>"
+			      "<form method=get action=/crawlbot>"
+			      "%s"
+			      "<input type=hidden name=roundStart value=1>"
+			      "<input type=submit name=button value=\""
+			      "Restart spider round\">"
+			      "</form>"
+			      "</td>"
+
+
 			      "</tr>"
 			      "</table>"
 
 			      //, (long)cr->m_collnum
+			      , hb.getBufStart()
 			      , hb.getBufStart()
 			      //, (long)cr->m_collnum
 			      );

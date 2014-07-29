@@ -1,7 +1,7 @@
 // Matt Wells, copyright Nov 2002
 
-#ifndef _SPIDER_H_
-#define _SPIDER_H_
+#ifndef SPIDERH
+#define SPIDERH
 
 #define MAX_SPIDER_PRIORITIES 128
 #define MAX_DAYS 365
@@ -40,7 +40,7 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
-bool tryToDeleteSpiderColl ( SpiderColl *sc ) ;
+bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) ;
 void spiderRoundIncremented ( class CollectionRec *cr ) ;
 bool testPatterns ( ) ;
 bool doesStringContainPattern ( char *content , char *pattern ) ;
@@ -794,6 +794,8 @@ class SpiderRequest {
 	// returns false and sets g_errno on error
 	bool setFromAddUrl ( char *url ) ;
 	bool setFromInject ( char *url ) ;
+
+	bool isCorrupt ( );
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url
@@ -1067,6 +1069,9 @@ class SpiderColl {
 	~SpiderColl ( );
 	SpiderColl  ( ) ;
 
+	void setCollectionRec ( class CollectionRec *cr );
+	class CollectionRec *getCollectionRec ( );
+
 	void clearLocks();
 
 	// called by main.cpp on exit to free memory
@@ -1134,6 +1139,10 @@ class SpiderColl {
 	long      m_tailHopCount;
 	long long m_minFutureTimeMS;
 
+	// . do not re-send CrawlInfoLocal for a coll if not update
+	// . we store the flags in here as true if we should send our
+	//   CrawlInfoLocal for this coll to this hostId
+	char m_sendLocalCrawlInfoToHost[MAX_HOSTS];
 
 	Msg4 m_msg4x;
 	Msg4 m_msg4;
@@ -1203,7 +1212,6 @@ class SpiderColl {
 	collnum_t m_collnum;
 	char  m_coll [ MAX_COLL_LEN + 1 ] ;
 	class CollectionRec *getCollRec();
-	class CollectionRec *m_cr;
 	char *getCollName();
 	bool     m_isTestColl;
 
@@ -1282,6 +1290,9 @@ class SpiderColl {
 	long m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
 
 	bool printStats ( SafeBuf &sb ) ;
+
+ private:
+	class CollectionRec *m_cr;
 };
 
 class SpiderCache {

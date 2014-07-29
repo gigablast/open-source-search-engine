@@ -50,7 +50,11 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	// if /Top print the directory homepage
 	if ( catId == 1 || catId <= 0 ) {
 		// this is in PageRoot.cpp
-		printDirHomePage(sb,r);
+		if ( ! printDirHomePage(sb,r) )
+			// this will be an error if dmoz not set up and
+			// it and xml or json reply format requested
+			return g_httpServer.sendErrorReply(s,500, 
+							   mstrerror(g_errno));
 	}
 	//
 	// try printing this shit out not as search results right now
@@ -58,7 +62,7 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	//
 	else {
 		// search box
-		printLogoAndSearchBox(&sb,r,catId);
+		printLogoAndSearchBox(&sb,r,catId,NULL);
 		// radio buttons for search dmoz. no, this is printed
 		// from call to printLogoAndSearchBox()
 		//printDmozRadioButtons(sb,catId);

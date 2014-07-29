@@ -36,6 +36,13 @@ public:
 
 	bool scrapeQuery ( );
 
+	bool inject ( char *coll,
+		      char *proxiedUrl,
+		      long  proxiedUrlLen,
+		      char *content,
+		      void *state ,
+		      void (*callback)(void *state) );
+
 	bool inject ( void *state ,
 		      void (*callback)(void *state) );
 

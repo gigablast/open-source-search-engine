@@ -32,6 +32,7 @@ HashTableX g_collTable;
 Collectiondb g_collectiondb;
 
 Collectiondb::Collectiondb ( ) {
+	m_wrapped = 0;
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
 	//m_lastUpdateTime = 0LL;
@@ -371,6 +372,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// register the mem
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
+	// get copy collection
 	//CollectionRec *cpcrec = NULL;
 	//if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
 	//if ( cpc && cpc[0] && ! cpcrec )
@@ -383,6 +385,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// . get the default.conf from working dir if there
 	// . i think this calls CollectionRec::reset() which resets all of its
 	//   rdbbase classes for its collnum so m_collnum needs to be right
+	//g_parms.setToDefault( (char *)cr );
+	// get the default.conf from working dir if there
+	//g_parms.setToDefault( (char *)cr , OBJ_COLL );
 	g_parms.setToDefault( (char *)cr , OBJ_COLL , cr );
 
 	/*
@@ -479,6 +484,8 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_collectiveRespiderFrequency = 0.0;
 		//cr->m_restrictDomain = true;
 		// reset the crawl stats
+		// always turn off gigabits so &s=1000 can do summary skipping
+		cr->m_docsToScanForTopics = 0;
 	}
 
 	// . this will core if a host was dead and then when it came
@@ -729,6 +736,7 @@ void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 }
 */
 
+/// this deletes the collection, not just part of a reset.
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
 	if ( g_repair.isRepairActive() && g_repair.m_collnum == collnum ) {
@@ -823,14 +831,33 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		// actually have a shot at deleting it
 		sc->m_deleteMyself = true;
 		// cr will be invalid shortly after this
-		sc->m_cr = NULL;
+		// MDW: this is causing the core...
+		// use fake ptrs for easier debugging
+		//sc->m_cr = (CollectionRec *)0x99999;//NULL;
+		//sc->m_cr = NULL;
+		sc->setCollectionRec ( NULL );
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		tryToDeleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc ,"10");
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
+		// don't let cr reference us anymore, sc is on deathrow
+		// and "cr" is delete below!
+		//cr->m_spiderColl = (SpiderColl *)0x8888;//NULL;
 		cr->m_spiderColl = NULL;
 	}
+
+
+	// the bulk urls file too i guess
+	if ( cr->m_isCustomCrawl == 2 && g_hostdb.m_hostId == 0 ) {
+		SafeBuf bu;
+		bu.safePrintf("%sbulkurls-%s.txt", 
+			      g_hostdb.m_dir , cr->m_coll );
+		File bf;
+		bf.set ( bu.getBufStart() );
+		if ( bf.doesExist() ) bf.unlink();
+	}
+	
 
 	//////
 	//
@@ -1083,6 +1110,8 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	// in case of bulk job, be sure to save list of spots
 	// copy existing list to a /tmp, where they will later be transferred back to the new folder
+	// now i just store in the root working dir... MDW
+	/*
 	char oldbulkurlsname[1036];
 	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)oldCollnum);
 	char newbulkurlsname[1036];
@@ -1092,6 +1121,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	if (cr->m_isCustomCrawl == 2)
 	    mv( oldbulkurlsname , tmpbulkurlsname );
+	*/
 
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
@@ -1105,7 +1135,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		//sc->reset();
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		tryToDeleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc,"11" );
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
@@ -1182,9 +1212,10 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		    "%s.", dname,mstrerror(g_errno));
 	}
 
-    // be sure to copy back the bulk urls for bulk jobs
-    if (cr->m_isCustomCrawl == 2)
-        mv( tmpbulkurlsname, newbulkurlsname );
+	// be sure to copy back the bulk urls for bulk jobs
+	// MDW: now i just store that file in the root working dir
+	//if (cr->m_isCustomCrawl == 2)
+	//	mv( tmpbulkurlsname, newbulkurlsname );
 
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
@@ -1473,8 +1504,13 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 	}
 
 	// search for an empty slot
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
-		if ( ! m_recs[i] ) return (collnum_t)i;
+	for ( long i = m_wrapped ; i < m_numRecs ; i++ ) {
+		if ( m_recs[i] ) continue;
+		// start after this one next time
+		m_wrapped = i+1;
+		// note it
+		log("colldb: returning wrapped collnum of %li",(long)i);
+		return (collnum_t)i;
 	}
 
 	log("colldb: no new collnum available. consider upping collnum_t");
@@ -1507,6 +1543,7 @@ static CollectionRec g_default;
 CollectionRec::CollectionRec() {
 	m_collnum = -1;
 	m_coll[0] = '\0';
+	m_updateRoundNum = 0;
 	//m_numSearchPwds = 0;
 	//m_numBanIps     = 0;
 	//m_numSearchIps  = 0;
@@ -1629,6 +1666,8 @@ void CollectionRec::reset() {
 	}
 
 	SpiderColl *sc = m_spiderColl;
+	// debug hack thing
+	//if ( sc == (SpiderColl *)0x8888 ) return;
 	// if never made one, we are done
 	if ( ! sc ) return;
 
@@ -1636,7 +1675,7 @@ void CollectionRec::reset() {
 	sc->m_deleteMyself = true;
 
 	// if not currently being accessed nuke it now
-	tryToDeleteSpiderColl ( sc );
+	tryToDeleteSpiderColl ( sc ,"12");
 
 	// if ( ! sc->m_msg5.m_waitingForList &&
 	//      ! sc->m_msg5b.m_waitingForList &&
@@ -1783,8 +1822,11 @@ bool CollectionRec::load ( char *coll , long i ) {
 	g_errno = 0;
 
 
-	// fix for diffbot
+	// fix for diffbot, spider time deduping
 	if ( m_isCustomCrawl ) m_dedupingEnabled = true;
+
+	// always turn off gigabits so &s=1000 can do summary skipping
+	if ( m_isCustomCrawl ) m_docsToScanForTopics = 0;
 
 	// always turn on distributed spider locking because otherwise
 	// we end up calling Msg50 which calls Msg25 for the same root url
@@ -1922,6 +1964,9 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	if ( m_urlFiltersProfile == UFP_CHINESE )
 		return rebuildChineseRules();
 
+	if ( m_urlFiltersProfile == UFP_SHALLOW )
+		return rebuildShallowRules();
+
 	long n = 0;
 
 	/*
@@ -1935,7 +1980,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks[n] = 1;
 	*/
 
-	m_regExs[n].set("isdocidbased");
+	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 0; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
@@ -2171,7 +2216,7 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 	long n = 0;
 
-	m_regExs[n].set("isdocidbased");
+	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 0; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
@@ -2541,6 +2586,224 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_numRegExs8  = n;
 
 	// done rebuilding CHINESE rules
+	return true;
+}
+
+bool CollectionRec::rebuildShallowRules ( ) {
+
+	long n = 0;
+
+	m_regExs[n].set("isreindex");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 80;
+	n++;
+
+	m_regExs[n].set("ismedia");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
+	// if not in the site list then nuke it
+	m_regExs[n].set("!ismanualadd && !insitelist");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
+	m_regExs[n].set("errorcount>=3 && hastmperror");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 1; // 30 days default
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 3;
+	n++;
+
+	m_regExs[n].set("errorcount>=1 && hastmperror");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 1; // 30 days default
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 45;
+	n++;
+
+	m_regExs[n].set("isaddurl");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 85;
+	n++;
+
+
+
+
+	//
+	// stop if hopcount>=2 for things tagged shallow in sitelist
+	//
+	m_regExs[n].set("tag:shallow && hopcount>=2");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 0; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+
+	// if # of pages in this site indexed is >= 10 then stop as well...
+	m_regExs[n].set("tag:shallow && sitepages>=10");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 0; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==0 && iswww && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 50;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0; // days b4 respider
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 48;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==0 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 49;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==0");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 10.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 47;
+	n++;
+
+
+
+
+
+	m_regExs[n].set("hopcount==1 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 40;
+	n++;
+
+
+	m_regExs[n].set("hopcount==1");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 39;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==2 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+	m_regExs[n].set("hopcount==2");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 29;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount>=3 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 22;
+	n++;
+
+	m_regExs[n].set("hopcount>=3");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 21;
+	n++;
+
+
+
+	m_regExs[n].set("default");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 1;
+	n++;
+
+	m_numRegExs   = n;
+	m_numRegExs2  = n;
+	m_numRegExs3  = n;
+	m_numRegExs10 = n;
+	m_numRegExs5  = n;
+	m_numRegExs6  = n;
+	m_numRegExs8  = n;
+
+	// done rebuilding SHALLOW rules
 	return true;
 }
 
@@ -3002,7 +3265,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	long i = 0;
 
 	// 1st one! for query reindex/ query delete
-	m_regExs[i].set("isdocidbased");
+	m_regExs[i].set("isreindex");
 	m_spiderIpMaxSpiders [i] = 10;
 	m_spiderPriorities   [i] = 70;
 	i++;
@@ -3090,16 +3353,20 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ucp && upp ) {
 		m_regExs[i].set("matchesucp && matchesupp");
 		m_spiderPriorities   [i] = 55;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		i++;
 		// just process, do not spider links if does not match ucp
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		m_harvestLinks       [i] = false;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
@@ -3109,7 +3376,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// functionality which sets m_spiderRoundStartTime
 		// to the current time works
 		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
-		// in the future and we can't force the rounce
+		// in the future and we can't force the round
 		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
@@ -3118,6 +3385,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ucp && ! upp ) {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		// process everything since upp is empty
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
@@ -3137,6 +3405,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( upp && ! ucp ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		//m_harvestLinks       [i] = false;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
@@ -3240,3 +3509,31 @@ void testRegex ( ) {
 	exit(0);
 }
 
+long long CollectionRec::getNumDocsIndexed() {
+	RdbBase *base = m_bases[RDB_TITLEDB];
+	if ( ! base ) return 0LL;
+	return base->getNumGlobalRecs();
+}
+
+// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
+// so we do not have to keep sending this huge msg!
+bool CollectionRec::shouldSendLocalCrawlInfoToHost ( long hostId ) {
+	if ( ! m_spiderColl ) return false;
+	if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
+	if ( hostId >= g_hostdb.m_numHosts ) { char *xx=NULL;*xx=0; }
+	// sanity
+	return m_spiderColl->m_sendLocalCrawlInfoToHost[hostId];
+}
+
+void CollectionRec::localCrawlInfoUpdate() {
+	if ( ! m_spiderColl ) return;
+	// turn on all the flags
+	memset(m_spiderColl->m_sendLocalCrawlInfoToHost,1,g_hostdb.m_numHosts);
+}
+
+// right after we send copy it for sending we set this so we do not send
+// again unless localCrawlInfoUpdate() is called
+void CollectionRec::sentLocalCrawlInfoToHost ( long hostId ) {
+	if ( ! m_spiderColl ) return;
+	m_spiderColl->m_sendLocalCrawlInfoToHost[hostId] = 0;
+}

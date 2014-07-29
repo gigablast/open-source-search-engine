@@ -59,6 +59,8 @@ long htmlDecode    ( char *dst, char *src, long srcLen,
 		     bool doSpecial ,//=false);
 		     long niceness);
 
+long cdataDecode ( char *dst , char *src , long niceness ) ;
+
 // . convert " to %22 , & to %26, is that it?
 // . urlEncode() stores the encoded, NULL-terminated URL in "dest"
 // . requestPath leaves \0 and ? characters intact, for encoding requests

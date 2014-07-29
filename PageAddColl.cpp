@@ -53,6 +53,29 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	if ( ! add && ! cast ) g_collectiondb.deleteRecs ( r )   ;
 	*/
 
+	char format = r->getReplyFormat();
+
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		// no addcoll given?
+		long  page = g_pages.getDynamicPageNumber ( r );
+		char *addcoll = r->getString("addcoll",NULL);
+		char *delcoll = r->getString("delcoll",NULL);
+		if ( ! addcoll ) addcoll = r->getString("addColl",NULL);
+		if ( ! delcoll ) delcoll = r->getString("delColl",NULL);
+		if ( page == PAGE_ADDCOLL && ! addcoll ) {
+			g_errno = EBADENGINEER;
+			char *msg = "no addcoll parm provided";
+			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
+		}
+		if ( page == PAGE_DELCOLL && ! delcoll ) {
+			g_errno = EBADENGINEER;
+			char *msg = "no delcoll parm provided";
+			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
+		}
+		return g_httpServer.sendSuccessReply(s,format);
+	}
+
 	char  buf [ 64*1024 ];
 	SafeBuf p(buf, 64*1024);
 	// print standard header
@@ -93,8 +116,19 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		p.safePrintf (
 			  "<tr bgcolor=#%s>"
 			  "<td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=addColl size=30>"
+			  "<td><input type=text name=addcoll size=30>"
 			  "</td></tr>\n"
+
+			  "<tr bgcolor=#%s>"
+			  "<td><b>clone settings from this collection</b>"
+			  "<br><font size=1>Copy settings from this "
+			  "pre-existing collection. Leave blank to "
+			  "accept default values.</font></td>\n"
+			  "<td><input type=text name=clonecoll size=30>"
+			  "</td>"
+			  "</tr>"
+
+			  , LIGHT_BLUE
 			  , LIGHT_BLUE
 			      );
 		// now list collections from which to copy the config
@@ -142,7 +176,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! cr ) continue;
 		p.safePrintf (
 			  "<tr bgcolor=#%s><td>"
-			  "<input type=checkbox name=delColl value=\"%s\"> "
+			  "<input type=checkbox name=delcoll value=\"%s\"> "
 			  "%s</td></tr>\n",
 			  DARK_BLUE,
 			  cr->m_coll,cr->m_coll);
@@ -154,3 +188,70 @@ skip:
 	long bufLen = p.length();
 	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 }
+
+bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
+
+	char format = r->getReplyFormat();
+
+	char *coll = r->getString("c");
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		if ( ! coll ) {
+			g_errno = EBADENGINEER;
+			char *msg = "no c parm provided";
+			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
+		}
+		return g_httpServer.sendSuccessReply(s,format);
+	}
+
+	char  buf [ 64*1024 ];
+	SafeBuf p(buf, 64*1024);
+
+	// print standard header
+	g_pages.printAdminTop ( &p , s , r );
+
+	char *msg = NULL;
+	if ( g_errno ) msg = mstrerror(g_errno);
+
+	if ( msg ) {
+		p.safePrintf (
+			  "<center>\n"
+			  "<font color=red>"
+			  "<b>Error cloning collection: %s. "
+			  "See log file for details.</b>"
+			  "</font>"
+			  "</center><br>\n",msg);
+	}
+
+	// print the clone box
+
+	p.safePrintf (
+		      "<center>\n<table %s>\n"
+		      "<tr class=hdrow><td colspan=2>"
+		      "<center><b>Clone Collection</b></center>"
+		      "</td></tr>\n",
+		      TABLE_STYLE);
+
+	p.safePrintf (
+		      "<tr bgcolor=#%s>"
+		      "<td><b>clone settings from this collection</b>"
+		      "<br><font size=1>Copy settings FROM this "
+		      "pre-existing collection into the currently "
+		      "selected collection."
+		      "</font></td>\n"
+		      "<td><input type=text name=clonecoll size=30>"
+		      "</td>"
+		      "</tr>"
+
+		      , LIGHT_BLUE
+		      );
+
+	p.safePrintf ( "</table></center><br>\n");
+	// wrap up the form started by printAdminTop
+	g_pages.printAdminBottom ( &p );
+	long bufLen = p.length();
+	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
+
+}
+
+

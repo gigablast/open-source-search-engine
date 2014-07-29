@@ -1157,7 +1157,17 @@ void handleRequest4 ( UdpSlot *slot , long netnice ) {
 
 	// sanity check
 	if ( used != readBufSize ) {
-		us->sendErrorReply(slot,ECORRUPTDATA);return;}
+		// if we send back a g_errno then multicast retries forever
+		// so just absorb it!
+		log("msg4: got corrupted request from hostid %li "
+		    "used=%li != %li=readBufSize",
+		    slot->m_host->m_hostId,
+		    used,
+		    readBufSize);
+		us->sendReply_ass ( NULL , 0 , NULL , 0 , slot ) ;
+		//us->sendErrorReply(slot,ECORRUPTDATA);return;}
+		return;
+	}
 
 	bool skipSyncdb = false;
 

@@ -442,10 +442,11 @@ bool gotReplyWrapperxd ( void *state ) {
 	// and can take a long time.
 	if ( (req->m_isDebug || took > 100) && req->m_niceness == 0 )
 		log("query: Took %lli ms to compute summary for d=%lli u=%s "
-		    "niceness=%li",
+		    "niceness=%li status=%s",
 		    took,
 		    xd->m_docId,xd->m_firstUrl.m_url,
-		    xd->m_niceness );
+		    xd->m_niceness ,
+		    mstrerror(g_errno));
 	if ( (req->m_isDebug || took2 > 100) &&
 	     xd->m_cpuSummaryStartTime &&
 	     req->m_niceness == 0 )
@@ -496,6 +497,8 @@ void Msg20Reply::destructor ( ) {
 	//mfree ( p , m_tmp , "merge20buf" );
 	//m_tmp = 0;
 }
+
+#include "Stats.h"
 
 // . return ptr to the buffer we serialize into
 // . return NULL and set g_errno on error
@@ -703,6 +706,8 @@ long Msg20Reply::deserialize ( ) {
 		*strPtr = p;
 		// make it NULL if size is 0 though
 		if ( *sizePtr == 0 ) *strPtr = NULL;
+		// null str?
+		if ( ! p ) *sizePtr = 0;
 		// sanity check
 		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
 		// advance our destination ptr

@@ -48,7 +48,7 @@ class Title {
 
 
 	char *getTitle     ( ) { return m_title; };
-	long  getTitleSize ( ) { return m_titleBytes; }; // does NOT include \0
+	long  getTitleLen ( ) { return m_titleBytes; }; // does NOT include \0
 
 
 	bool copyTitle ( class Words *words, class Pos *pos,

@@ -2,6 +2,8 @@
 #ifndef CRAWLBOT_H
 #define CRAWLBOT_H
 
+bool printCrawlDetails2(class SafeBuf *sb,class CollectionRec *cx,char format);
+
 bool printCrawlDetailsInJson ( class SafeBuf *sb , class CollectionRec *cx ) ;
 
 bool printCrawlDetailsInJson ( class SafeBuf *sb , class CollectionRec *cx, int version ) ;

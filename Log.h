@@ -143,6 +143,8 @@ class Log {
 
 	bool m_logTimestamps;
 
+	char *getFilename() { return m_filename; };
+
  private:
 
 	bool dumpLog ( ); // make room for the new ones

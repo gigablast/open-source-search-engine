@@ -8,6 +8,8 @@
 #include "Url.h"
 #include "Clusterdb.h" // g_clusterdb.getNumGlobalRecs()
 #include "StopWords.h" // isQueryStopWord()
+#include "Sections.h"
+#include "Msg1.h"
 #include "Speller.h"
 //#include "Thesaurus.h"
 #include "Mem.h"
@@ -1172,7 +1174,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	long sn = 0;
 	Synonyms syn;
 	// loop over all words in query and process its synonyms list
-	if ( m_langId != langUnknown && m_queryExpansion ) 
+	//if ( m_langId != langUnknown && m_queryExpansion ) 
+	// if lang is "xx" unknown we still do synonyms it just does
+	// a loop over all languages starting with english
+	if ( m_queryExpansion ) 
 		sn = m_numWords;
 
 	long long to = hash64n("to",0LL);
@@ -2246,6 +2251,8 @@ bool Query::setQWords ( char boolFlag ,
 			ph = hash64 ("gbsortbyint", 11);
 		if ( fieldCode == FIELD_GBNUMBERMAXINT )
 			ph = hash64 ("gbsortbyint", 11);
+		if ( fieldCode == FIELD_GBNUMBEREQUALINT )
+			ph = hash64 ("gbsortbyint", 11);
 
 		// ptr to field, if any
 
@@ -2278,6 +2285,10 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_GBREVSORTBYINT ||
 		     fieldCode == FIELD_GBNUMBERMININT ||
 		     fieldCode == FIELD_GBNUMBERMAXINT ||
+		     fieldCode == FIELD_GBNUMBEREQUALINT ||
+		     fieldCode == FIELD_GBFACETSTR ||
+		     fieldCode == FIELD_GBFACETINT ||
+		     fieldCode == FIELD_GBFACETFLOAT ||
 
 		     fieldCode == FIELD_GBAD  ) {
 			// . find 1st space -- that terminates the field value
@@ -2287,6 +2298,8 @@ bool Query::setQWords ( char boolFlag ,
 				 words.m_wordLens[words.m_numWords-1]);
 			// use this for gbmin:price:1.99 etc.
 			long firstColonLen = -1;
+			long lastColonLen = -1;
+			long colonCount = 0;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2296,7 +2309,12 @@ bool Query::setQWords ( char boolFlag ,
 				// stop at first white space
 				if ( is_wspace_utf8(w+wlen) ) break;
 				// in case of gbmin:price:1.99 record first ':'
-				if ( w[wlen]==':' ) firstColonLen = wlen;
+				if ( w[wlen]==':' ) {
+					lastColonLen = wlen;
+					if ( firstColonLen == -1 )
+						firstColonLen = wlen;
+					colonCount++;
+				}
 				wlen++;
 			}
 			// ignore following words until we hit a space
@@ -2321,16 +2339,32 @@ bool Query::setQWords ( char boolFlag ,
 
 
 			// gbmin:price:1.23
-			if ( firstColonLen>0 &&
+			if ( lastColonLen>0 &&
 			     ( fieldCode == FIELD_GBNUMBERMIN ||
 			       fieldCode == FIELD_GBNUMBERMAX ||
+			       fieldCode == FIELD_GBNUMBEREQUALINT ||
 			       fieldCode == FIELD_GBNUMBERMININT ||
 			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
 				// record the field
-				wid = hash64Lower_utf8(w,firstColonLen , 0LL );
+				wid = hash64Lower_utf8(w,lastColonLen , 0LL );
+				// fix gbminint:gbfacetstr:gbxpath...:165004297
+				if ( colonCount == 2 ) {
+					long long wid1;
+					long long wid2;
+					char *a = w;
+					char *b = w + firstColonLen;
+					wid1 = hash64Lower_utf8(a,b-a);
+					a = w + firstColonLen+1;
+					b = w + lastColonLen;
+					wid2 = hash64Lower_utf8(a,b-a);
+					// keep prefix as 2nd arg to this
+					wid = hash64 ( wid2 , wid1 );
+					// we need this for it to work
+					ph = 0LL;
+				}
 				// and also the floating point after that
-				qw->m_float = atof ( w + firstColonLen + 1 );
-				qw->m_int = (long)atoll( w + firstColonLen+1);
+				qw->m_float = atof ( w + lastColonLen + 1 );
+				qw->m_int = (long)atoll( w + lastColonLen+1);
 			}
 
 
@@ -3115,14 +3149,28 @@ static bool       s_isInitialized = false;
 struct QueryField g_fields[] = {
 	{"url", FIELD_URL, true,"Match the exact url. Example: url:www.gigablast.com/addurl.htm"},
 	{"ext", FIELD_EXT, true,"Match the url extension. Example: ext:htm or ext:mpeg to find urls ending in .htm or .mpeg respectively."},
+
+	{"url2", FIELD_URL, true,"Match the exact url. Example: url:www.gigablast.com/addurl.htm"},
+	{"ext2", FIELD_EXT, true,"Match the url extension. Example: ext:htm or ext:mpeg to find urls ending in .htm or .mpeg respectively."},
+
+
 	{"link", FIELD_LINK, true,"Match pages that link to the given url. Example: link:www.gigablast.com will return all pages linking to the www.gigablast.com page."},
 	{"links", FIELD_LINKS, true,"Same as link:."},
 	{"ilink", FIELD_ILINK, true,"Similar to above."},
 	{"sitelink", FIELD_SITELINK, true,"Matches all pages that link to the given site. Example:sitelink:www.gigablast.com matches all pages that link to some page on the www.gigablast.com site."},
+
 	{"site", FIELD_SITE, true,"Matches all pages from the given site. Example: site:www.gigablast.com will return all the pages on the gigablast site"},
 	//{"coll", FIELD_COLL, true,"Not sure if this works."},
 	{"ip", FIELD_IP, true,"Matches all pages with the given ip. Example:1.2.3.4 will match all pages whose urls have that IP address."},
 	{"inurl", FIELD_SUBURL, true,"Matches all pages that have the given terms in the url. Example inurl:water will match all pages whose url has the word water in it, but the word must be delineated by punctuation."},
+
+
+	{"site2", FIELD_SITE, true,"Matches all pages from the given site. Example: site:www.gigablast.com will return all the pages on the gigablast site"},
+	//{"coll", FIELD_COLL, true,"Not sure if this works."},
+	{"ip2", FIELD_IP, true,"Matches all pages with the given ip. Example:1.2.3.4 will match all pages whose urls have that IP address."},
+	{"inurl2", FIELD_SUBURL, true,"Matches all pages that have the given terms in the url. Example inurl:water will match all pages whose url has the word water in it, but the word must be delineated by punctuation."},
+
+
 	{"suburl", FIELD_SUBURL, true,"Same as inurl."},
 	{"intitle", FIELD_TITLE, false,"Matches all pages that have pages that have the given term in their title. Example: title:web returns all pages that have the word web in their title."},
 	{"title", FIELD_TITLE, false,"Same as intitle:"},
@@ -3152,11 +3200,22 @@ struct QueryField g_fields[] = {
 	{"gblinktextout",FIELD_LINKTEXTOUT,true,""},
 	{"gbkeyword",FIELD_KEYWORD,true,""},
 	{"gbcharset", FIELD_CHARSET, false,""},
-	{"gbpathdepth", FIELD_GBOTHER, false,"the path depth of the url"},
+	{"gbpathdepth", FIELD_GBOTHER, false,"the path depth of the url's path."},
+	{"gbhopcount", FIELD_GBOTHER, false,"the hop count of the url. roots are 0."},
 	{"gbhasfilename", FIELD_GBOTHER, false,""},
 	{"gbiscgi", FIELD_GBOTHER, false,""},
 	{"gbhasext", FIELD_GBOTHER, false,""},
 	{"gbsubmiturl", FIELD_GBOTHER, false,""},
+
+
+	// for content type CT_STATUS documents (Spider status docs)
+	{"gbpathdepth2", FIELD_GBOTHER, false,"the path depth of the url's path."},
+	{"gbhopcount2", FIELD_GBOTHER, false,"the hop count of the url. roots are 0."},
+	{"gbhasfilename2", FIELD_GBOTHER, false,""},
+	{"gbiscgi2", FIELD_GBOTHER, false,""},
+	{"gbhasext2", FIELD_GBOTHER, false,""},
+
+
 
 	//{"qdom", FIELD_QUOTA, false,""},
 	//{"qhost", FIELD_QUOTA, false,""},
@@ -3179,9 +3238,20 @@ struct QueryField g_fields[] = {
 	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
 
 
-	{"gbspiderdate",FIELD_GENERIC,false,
+	{"gbdocspiderdate",FIELD_GENERIC,false,
 	 "Example: gbspiderdate:1400081479 will return results that have "
 	 "that spider date timestamp (UTC)"},
+
+	{"gbspiderdate",FIELD_GENERIC,false,
+	 "Similar to above but includes spider reply \"documents\"."},
+
+
+	{"gbdocindexdate",FIELD_GENERIC,false,
+	 "Similar to above but when document was indexed. Time is "
+	 "slightly greater than or equal to the spider date."},
+
+	{"gbindexdate",FIELD_GENERIC,false,
+	 "Similar to above but includes spider reply \"documents\"."},
 
 	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
@@ -3218,13 +3288,41 @@ struct QueryField g_fields[] = {
 	 "spidered in seconds since the epoch in UTC."
 	},
 
+	{"gbequalint", FIELD_GBNUMBEREQUALINT, false,
+	 "Example: 'gbequalint:gbspiderdate:1391749680' "
+	 "'gbequalint:count:99'. Numeric "
+	 "fields can be in JSON or in meta tag. "
+	 "Use 'gbspiderdate' field for the last time the page was "
+	 "spidered in seconds since the epoch in UTC."
+	},
+
+	{"gbfacetstr", FIELD_GBFACETSTR, false,
+	 "Example: 'gbfacetstr:color' will return facets in "
+	 "the search results "
+	 "by their color field. Any other "
+	 "field name can follow the gbfacetstr: operator."
+	},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "Example: 'gbfacetint:numReviews' will return "
+	 "facets in the search results "
+	 "with the # of documents for each number of reviews. Any other "
+	 "field name can follow the gbfacetint: operator."
+	},
+
+	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
+	 "Example: 'gbfacetfloat:price' will return facets in the "
+	 "search results "
+	 "with the # of documents that have certain price ranges. Any other "
+	 "field name can follow the gbfacetfloat: operator."
+	},
+
 
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
 	{"gbad",FIELD_GBAD,false,""},
 
 
-	{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
-
+	//{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
 
 	{"gbduphash"                ,FIELD_GBOTHER,false,"Internal use only."},
 	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"Internal use only."},

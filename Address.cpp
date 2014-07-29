@@ -13380,7 +13380,7 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 		if ( sn ) parent = sn->m_parent;
 		if ( parent ) parentSecNum = (long)(parent - sp[0]);
 		long secHash = 0;
-		if ( sn ) secHash = sn->m_turkTagHash;
+		if ( sn ) secHash = sn->m_turkTagHash32;
 		// print the address we are in or the address we alias
 		Address *myaddr = NULL;
 		if ( pi->m_address ) myaddr = pi->m_address;

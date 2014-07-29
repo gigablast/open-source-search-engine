@@ -794,6 +794,7 @@ public:
 	bool m_isSiteRoot ;
 };
 
+
 // now time zones
 struct TimeZone {
 	char m_name[16];
@@ -802,6 +803,13 @@ struct TimeZone {
         long m_minMod;
         long m_modType;
 };
+
+#define BADTIMEZONE 999999
+
+// "s" is the timezone, like "EDT" and we return # of secs to add to UTC
+// to get the current time in that time zone.
+// returns BADTIMEZONE if "s" is unknown timezone
+long getTimeZone ( char *s ) ;
 
 // . returns how many words starting at i are in the time zone
 // . 0 means not a timezone

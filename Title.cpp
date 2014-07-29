@@ -1868,6 +1868,8 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 		      (srcEnd[-1] == ':' || 
 		       srcEnd[-1] == ' ' ||
 		       srcEnd[-1] == '-' ||
+		       srcEnd[-1] == '\n' ||
+		       srcEnd[-1] == '\r' ||
 		       srcEnd[-1] == '|'   )    ; 
 	      srcEnd-- );
 
@@ -1878,15 +1880,18 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 	// size of character in bytes, usually 1
 	char cs ;
 	// point to last punct char
-	char *lastp = NULL;
+	char *lastp = dst;//NULL;
 	// convert them always for now
 	bool convertHtmlEntities = true;
+	long charCount = 0;
 	// copy the node @p into "dst"
 	for ( ; src < srcEnd ; src += cs , dst += cs ) {
 		// get src size
 		cs = getUtf8CharSize ( src );
 		// break if we are full!
 		if ( dst + cs >= dstEnd ) break;
+		// or hit our max char limit
+		if ( charCount++ >= m_maxTitleChars ) break;
 		// remember last punct for cutting purposes
 		if ( ! is_alnum_utf8 ( src ) ) lastp = dst;
 		// encode it as an html entity if asked to

@@ -113,6 +113,7 @@
 #define SEC_HASDATEHEADERROW        0x0002000000000000LL
 #define SEC_HASDATEHEADERCOL        0x0004000000000000LL
 #define SEC_MULTIDIMS               0x0008000000000000LL
+#define SEC_HASHXPATH               0x0010000000000000LL
 
 //#define SEC_HAS_ADDRESS        0x08000000
 //#define SEC_ADDRESS_CONTAINER  0x40000000
@@ -294,22 +295,37 @@ class Sectiondb {
 extern class Sectiondb g_sectiondb;
 extern class Sectiondb g_sectiondb2;
 
-// . for sectionhash:xxxx posdb query stats compilation to
-//   show how many sites/pages duplicate your section's content
+
+// this is only needed for sections, not facets in general i don think.
+// facets has the whole QueryTerm::m_facetHashTable array with more info
+//
+// . for gbfacet:gbxpathsite1234567 posdb query stats compilation to
+//   show how many pages duplicate your section's content on your site
+//   at the same xpath. the hash of the innerHTML for that xpath is 
+//   embedded into the posdb key like a number in a number key, so the
+//   wordpos bits etc are sacrificed to hold that 32-bit number.
 // . used by XmlDoc::getSectionsWithDupStats() for display in
 //   XmlDoc::printRainbowSections()
+// . these are in QueryTerm::m_facetStats and computed from
+//   QueryTerm::m_facetHashTable
 class SectionStats {
-public:
+ public:
 	SectionStats() { reset(); }
 	void reset ( ) {
-		m_onSiteDocIds   = 0;
-		m_offSiteDocIds  = 0;
-		m_numUniqueSites = 0;
+		m_totalMatches  = 0; // posdb key "val" matches ours
+		m_totalEntries  = 0; // total posdb keys
+		m_numUniqueVals = 0; // # of unique "vals"
+		m_totalDocIds   = 0;
 	};
-	long long m_onSiteDocIds;
-	long long m_offSiteDocIds;
-	long long m_numUniqueSites;
+	// # of times xpath innerhtml matched ours. 1 count per docid max.
+	long long m_totalMatches;
+	// # of times this xpath occurred. doc can have multiple times.
+	long long m_totalEntries;
+	// # of unique vals this xpath had. doc can have multiple counts.
+	long long m_numUniqueVals;
+	long long m_totalDocIds;
 };
+
 
 class Section {
 public:
@@ -354,6 +370,8 @@ public:
 	// are a sentence section then this points to itself.
 	class Section *m_sentenceSection;
 
+	// . set in XmlDoc::getSectionsWithDupStats()
+	// . voting info for this section over all indexed pages from this site
 	SectionStats m_stats;
 
 	// this (minus -1) references into Addresses::m_sorted[] which is
@@ -428,8 +446,9 @@ public:
 	// hash of this tag's baseHash and all its parents baseHashes combined
 	uint32_t  m_tagHash;
 
-	// like above but for turk voting
-	unsigned long m_turkTagHash;
+	// like above but for turk voting. includes hash of the class tag attr
+	// from m_turkBaseHash, whereas m_tagHash uses m_baseHash of parent.
+	unsigned long m_turkTagHash32;
 
 	// for debug output display of color coded nested sections
 	unsigned long m_colorHash;
@@ -499,6 +518,10 @@ public:
 	// . sometimes the "(more)" link is combined into the last sentence
 	//   so we have to treat the last link kinda like its own sentence too!
 	uint32_t  m_lastLinkContentHash32;
+
+	// hash of all sentences contained indirectly or directly.
+	// uses m_sentenceContentHash64 (for sentences)
+	uint64_t m_indirectSentHash64;
 
 	// for voting! we basically ignore numbers and dates, months, etc.
 	// for doing this hash so that if the date changes from page to page

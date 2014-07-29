@@ -40,6 +40,11 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br>
 <br>
 
+<a href=#multisetup>Setting up a Cluster</a> - how to run multiple gb instances in a sharded cluster.
+<br>
+<br>
+
+
 <a href=#scaling>Scaling the Cluster</a> - how to add more gb instances.
 <br>
 <br>
@@ -367,6 +372,27 @@ Each directory should have the following files and subdirectories:<br><br>
 <br>
 -->
 
+<a name=multisetup></a>
+<table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
+<tr><td><center><b><font color=#ffffff size=+1>Setting up a Cluster</td></tr></table>
+<br>
+&lt;<i>Last Updated July 2014</i>&gt;
+<br>
+<br>
+1. Locate the hosts.conf file. If installing from binaries it should be in the /var/gigablast/data0/ directory. If it does not exist yet then run <b>gb</b> or <b>./gb</b> which will create one. You will then have to exit gb after it does.
+<br><br>
+2. Update the <b>num-mirrors</b> in the hosts.conf file. Leave it as 0 if you do not want redundancy. If you want each shard to be mirrored by one other gb instance, then set this to 1. I find that 1 is typically good enough, provided that the twin is on a different physical server. So if one server gets trashed there is another to serve that shard. The sole advantage in not mirroring your cluster is that you will have twice the disk space for storing documents. Query speed should be unaffected because Gigablast is smart enough to split the load evenly between mirrors when processing queries. You can send your queries to any shard and it will communicate with all the other shards to aggregate the results. If one shard fails and you are not mirroring then you will lose that part of the index, unfortunately.
+
+<br><br>
+3. Make one entry in the hosts.conf per physical core you have on your server.  If an entry is on the same server as another, then it will need a completely different set of ports.  Each gb instance also requires 4GB of ram, so you may be limited by your RAM before being limited by your cores. You can of course run multiple gb instances on a single core if you have the RAM, but performance will not be optimal.
+
+<br><br>
+4. Continue following the instructions for <a href=#scaling>Scaling the Cluster</a> below in order to get the other shards set up and running.
+
+
+<br>
+<br>
+<br>
 
 
 <a name=scaling></a>
@@ -376,11 +402,11 @@ Each directory should have the following files and subdirectories:<br><br>
 &lt;<i>Last Updated June 2014</i>&gt;
 <br>
 <br>
-1. Turn off spidering in the <a href=/admin/master>master controls</a>.
+1. If your spiders are active, then turn off spidering in the <a href=/admin/master>master controls</a>.
 <br><br>
-2. Shut down the clustering by doing a <b>gb stop</b> command on the command line OR by clicking on "save & exit" in the <a href=/admin/master>master controls</a>
+2. If your cluster is running, shut down the clustering by doing a <b>gb stop</b> command on the command line OR by clicking on "save & exit" in the <a href=/admin/master>master controls</a>
 <br><br>
-3. Edit the hosts.conf file in the working directory to add the new hosts. (<a href=/hosts.conf.txt>sample hosts.conf</a>)
+3. Edit the hosts.conf file in the working directory of host #0 (the first host entry in the hosts.conf file) to add the new hosts. (<a href=/hosts.conf.txt>sample hosts.conf</a>)
 <br><br>
 4. Ensure you can do passwordless ssh from host #0 to each new IP address you added. This generally requires running <b>ssh-keygen -t dsa</b> on host #0 to create the files <i>~/.ssh/id_dsa</i> and <i>~/.ssh/id_dsa.pub</i>. Then you need to insert the key in <i>~/.ssh/id_dsa.pub</i> into the <i>~/.ssh/authorized_keys2</i> file on every host, including host #0, in your cluster. Furthermore, you must do a <b>chmod 700 ~/.ssh/authorized_keys2</b> on each one otherwise the passwordless ssh will not work.
 <br><br>
@@ -388,7 +414,7 @@ Each directory should have the following files and subdirectories:<br><br>
 <br><br>
 6. Run <b>gb start</b> on the command line to start up all gb instances/processes in the cluster.
 <br><br>
-7. Click on <b>rebalance shards</b> in the <a href=/admin/master>master controls</a> to begin moving data from the old shards to the new shards. The <a href=/admin/hosts>hosts table</a> will let you know when the rebalance operation is complete. It should be able to serve queries during the rebalancing, but spidering can not resume until it is completed.
+7. If your index was not empty, then click on <b>rebalance shards</b> in the <a href=/admin/master>master controls</a> to begin moving data from the old shards to the new shards. The <a href=/admin/hosts>hosts table</a> will let you know when the rebalance operation is complete. It should be able to serve queries during the rebalancing, but spidering can not resume until it is completed.
 <br>
 <br>
 <br>
@@ -835,7 +861,7 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Building a DMOZ Based Directory</td></tr></table>
 <br>
-&lt;<i>Last Updated October 2013</i>&gt;
+&lt;<i>Last Updated July 2014</i>&gt;
 <br>
 <br>
 
@@ -849,9 +875,9 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <br>           $ wget http://rdf.dmoz.org/rdf/structure.rdf.u8.gz
 <br>           $ gunzip structure.rdf.u8.gz</b>
 <br>    
-<li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb dat files.<br>        <b>$ dmozparse new</b><br>    
+<li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb dat files.<br>        <b>$ ./dmozparse new</b><br>    
 
-<li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp/rcp from host 0 to the other hosts listed in <a href=#hosts>hosts.conf</a>.<br>        <b>$ gb installcat</b><br>
+<li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp/rcp from host 0 to the other hosts listed in <a href=#hosts>hosts.conf</a>.<br>        <b>$ ./gb installcat</b><br>
 
     <li>Make sure all spiders are stopped and inactive.<br>
 
@@ -865,7 +891,7 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <li>Gigablast provides the unique ability to search the content of the pages in the DMOZ directory. But in order to search the pages in DMOZ we have to index them. 
 So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html/gbdmoz.urls.txt.* files which contain all the URLs in DMOZ. (Excluding URLs that contained hashtags, '#'.)
 
-<br><b>$ dmozparse urldump -s</b>
+<br><b>$ ./dmozparse urldump -s</b>
 
 <br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>main</i>. You can use the <a href=/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl (or wget) like:
 <br>

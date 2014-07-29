@@ -71,16 +71,16 @@ Hostdb::~Hostdb () {
 
 void Hostdb::reset ( ) {
 
-	for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
-		Host *h = &m_hosts[i];
-		// if nothing do not try to free it
-		if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
-		mfree ( h->m_lastKnownGoodCrawlInfoReply ,
-			h->m_replyAllocSize , 
-			"lknown" );
-		// do not re-free
-		h->m_lastKnownGoodCrawlInfoReply = NULL;
-	}
+	// for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
+	// 	Host *h = &m_hosts[i];
+	// 	// if nothing do not try to free it
+	// 	if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
+	// 	mfree ( h->m_lastKnownGoodCrawlInfoReply ,
+	// 		h->m_replyAllocSize , 
+	// 		"lknown" );
+	// 	// do not re-free
+	// 	h->m_lastKnownGoodCrawlInfoReply = NULL;
+	// }
 
 	if ( m_hosts ) 
 		mfree ( m_hosts, m_allocSize,"Hostdb" );
@@ -1595,6 +1595,15 @@ Host *Hostdb::getLiveHostInShard ( long shardNum ) {
 	return &shard[0];
 }
 
+// if all are dead just return host #0
+Host *Hostdb::getFirstAliveHost ( ) {
+	for ( long i = 0 ; i < m_numHosts ; i++ )
+		// if host #i is alive, return her
+		if ( ! isDead ( i ) ) return getHost(i);
+	// if all are dead just return host #0
+	return getHost(0);
+}
+
 /*
 // . get the Hosts in group with "groupId"
 Host *Hostdb::getGroup ( unsigned long groupId , long *numHosts ) {
@@ -2345,13 +2354,13 @@ uint32_t Hostdb::getShardNumByTermId ( void *k ) {
 	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 }
 
-// uint32_t Hostdb::getShardNumFromTermId ( long long termId ) {
-// 	key144_t sk;
-// 	// make fake posdb key
-// 	makeStartKey ( &sk, termId );
-// 	// and use this
-// 	return getShardNumByTermId ( &sk );
-// }
+long getShardNumFromTermId ( long long termId ) {
+ 	key144_t sk;
+ 	// make fake posdb key
+ 	g_posdb.makeStartKey ( &sk, termId );
+ 	// and use this
+ 	return g_hostdb.getShardNumByTermId ( &sk );
+}
 
 // . if false, we don't split index and date lists, other dbs are unaffected
 // . this obsolets the g_*.getGroupId() functions

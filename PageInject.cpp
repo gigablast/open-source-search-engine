@@ -44,6 +44,15 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	mnew ( msg7, sizeof(Msg7) , "PageInject" );
 
 
+	char format = hr->getReplyFormat();
+
+	// no url parm?
+	if ( format != FORMAT_HTML && ! hr->getString("c",NULL) ) {
+		g_errno = ENOCOLLREC;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	}
+
 	// set this. also sets gr->m_hr
 	GigablastRequest *gr = &msg7->m_gr;
 	// this will fill in GigablastRequest so all the parms we need are set
@@ -61,6 +70,9 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	if ( gr->m_contentDelim && ! gr->m_contentDelim[0] )
 		gr->m_contentDelim = NULL;
 
+	// set this to  false
+	gr->m_gotSections = false;
+
 	// if we had a delimeter but not content, zero it out...
 	char *content = gr->m_content;
 	if ( ! content ) content = gr->m_contentFile;
@@ -77,6 +89,9 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 		// g_errno should be set so it will return an error response
 		return sendReply ( msg7 );
 	}
+
+
+
 
 	// a scrape request?
 	if ( gr->m_queryToScrape && gr->m_queryToScrape[0] ) {
@@ -117,7 +132,81 @@ bool sendReply ( void *state ) {
 	//long      hostId = msg7->m_msg7.m_hostId;
 	long long docId  = xd->m_docId;
 	long      hostId = 0;//msg7->m_msg7.m_hostId;
-	
+
+	// set g_errno to index code
+	if ( xd->m_indexCodeValid && xd->m_indexCode && ! g_errno )
+		g_errno = xd->m_indexCode;
+
+	char format = gr->m_hr.getReplyFormat();
+
+	// no url parm?
+	if ( ! g_errno && ! gr->m_url && format != FORMAT_HTML )
+		g_errno = EMISSINGINPUT;
+
+	if ( g_errno && g_errno != EDOCUNCHANGED ) {
+		long save = g_errno;
+		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+		delete (msg7);
+		g_errno = save;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,save,msg,NULL);
+	}
+
+	char abuf[320];
+	SafeBuf am(abuf,320,0,false);
+	am.setLabel("injbuf");
+	char *ct = NULL;
+
+	// a success reply, include docid and url i guess
+	if ( format == FORMAT_XML ) {
+		am.safePrintf("<response>\n");
+		am.safePrintf("\t<statusCode>%li</statusCode>\n",
+			      (long)g_errno);
+		am.safePrintf("\t<statusMsg><![CDATA[");
+		am.cdataEncode(mstrerror(g_errno));
+		am.safePrintf("]]></statusMsg>\n");
+		am.safePrintf("\t<docId>%lli</docId>\n",xd->m_docId);
+		if ( gr->m_getSections ) {
+			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
+			am.safePrintf("\t<htmlSrc><![CDATA[");
+			if ( secBuf->length() ) 
+				am.cdataEncode(secBuf->getBufStart());
+			am.safePrintf("]]></htmlSrc>\n");
+		}
+		am.safePrintf("</response>\n");
+		ct = "text/xml";
+	}
+
+	if ( format == FORMAT_JSON ) {
+		am.safePrintf("{\"response\":{\n");
+		am.safePrintf("\t\"statusCode\":%li,\n",(long)g_errno);
+		am.safePrintf("\t\"statusMsg\":\"");
+		am.jsonEncode(mstrerror(g_errno));
+		am.safePrintf("\",\n");
+		am.safePrintf("\t\"docId\":%lli,\n",xd->m_docId);
+		if ( gr->m_getSections ) {
+			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
+			am.safePrintf("\t\"htmlSrc\":\"");
+			if ( secBuf->length() ) 
+				am.jsonEncode(secBuf->getBufStart());
+			am.safePrintf("\",\n");
+		}
+		// subtract ",\n"
+		am.m_length -= 2;
+		am.safePrintf("\n}\n}\n");
+		ct = "application/json";
+	}
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+		delete (msg7);
+		return g_httpServer.sendDynamicPage(sock,
+						    am.getBufStart(),
+						    am.length(),
+						    0,
+						    false,
+						    ct );
+	}
 
 	//
 	// debug
@@ -159,11 +248,6 @@ bool sendReply ( void *state ) {
 	if ( url && gr->m_shortReply ) {
 		char buf[1024*32];
 		char *p = buf;
-		// set g_errno to index code
-		if ( xd->m_indexCodeValid &&
-		     xd->m_indexCode &&
-		     ! g_errno )
-			g_errno = xd->m_indexCode;
 		// return docid and hostid
 		if ( ! g_errno ) p += sprintf ( p , 
 					   "0,docId=%lli,hostId=%li," , 
@@ -227,6 +311,7 @@ Msg7::Msg7 () {
 	m_firstTime = true;
 	m_fixMe = false;
 	m_injectCount = 0;
+	m_start = NULL;
 }
 
 Msg7::~Msg7 () {
@@ -235,13 +320,34 @@ Msg7::~Msg7 () {
 // when XmlDoc::inject() complets it calls this
 void doneInjectingWrapper9 ( void *state ) {
 
-	
 	Msg7 *msg7 = (Msg7 *)state;
+
+	// shortcut
+	XmlDoc *xd = &msg7->m_xd;
+
+	GigablastRequest *gr = &msg7->m_gr;
+
+	if ( gr->m_getSections && ! gr->m_gotSections ) {
+		// do not re-call
+		gr->m_gotSections = true;
+		// new callback now, same state
+		xd->m_callback1 = doneInjectingWrapper9;
+		// and if it blocks internally, it will call 
+		// getInlineSectionVotingBuf until it completes then it will 
+		// call xd->m_callback
+		xd->m_masterLoop = NULL;
+		// get sections
+		SafeBuf *buf = xd->getInlineSectionVotingBuf();
+		// if it returns -1 wait for it to call wrapper10 when done
+		if ( buf == (void *)-1 ) return;
+		// error?
+		if ( ! buf ) log("inject: error getting sections: %s",
+				 mstrerror(g_errno));
+	}
 
  loop:
 
 	// if we were injecting delimterized documents...
-	GigablastRequest *gr = &msg7->m_gr;
 	char *delim = gr->m_contentDelim;
 	if ( delim && ! delim[0] ) delim = NULL;
 	if ( delim && msg7->m_start ) {
@@ -250,13 +356,42 @@ void doneInjectingWrapper9 ( void *state ) {
 			return;
 	}
 
-	if ( delim && msg7->m_start ) 
+	if ( msg7->m_start && delim ) 
 		goto loop;
 
 	// and we call the original caller
 	msg7->m_callback ( msg7->m_state );
 }
 
+bool Msg7::inject ( char *coll ,
+		    char *proxiedUrl ,
+		    long  proxiedUrlLen ,
+		    char *content ,
+		    void *state ,
+		    void (*callback)(void *state) ) {
+
+	GigablastRequest *gr = &m_gr;
+	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
+	g_parms.setToDefault ( (char *)gr , OBJ_GBREQUEST , NULL);
+
+	// copy into safebufs in case the underlying data gets deleted.
+	gr->m_tmpBuf1.safeStrcpy ( coll );
+	gr->m_coll = gr->m_tmpBuf1.getBufStart();
+	
+	// copy into safebufs in case the underlying data gets deleted.
+	gr->m_tmpBuf2.safeMemcpy ( proxiedUrl , proxiedUrlLen );
+	gr->m_tmpBuf2.nullTerm();
+
+	gr->m_url = gr->m_tmpBuf2.getBufStart();
+
+	// copy into safebufs in case the underlying data gets deleted.
+	gr->m_tmpBuf3.safeStrcpy ( content );
+	gr->m_content = gr->m_tmpBuf3.getBufStart();
+	
+	gr->m_hasMime = true;
+
+	return inject ( state , callback );
+}
 
 bool Msg7::inject ( void *state ,
 		    void (*callback)(void *state) 
@@ -271,6 +406,12 @@ bool Msg7::inject ( void *state ,
 
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
+		return true;
+	}
+
+	if ( ! gr->m_url ) {
+		log("inject: no url provied to inject");
+		g_errno = EBADURL;
 		return true;
 	}
 

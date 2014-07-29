@@ -257,6 +257,10 @@ bool Msg1c::reindexQuery ( char *query ,
 
 	//CollectionRec *cr = g_collectiondb.getRec ( collnum );
 
+	// sanity fix
+	if ( endNum - startNum > MAXDOCIDSTOCOMPUTE )
+		endNum = startNum + MAXDOCIDSTOCOMPUTE;
+
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// reset again just in case
 	m_req.reset();

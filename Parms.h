@@ -23,7 +23,8 @@ enum {
 	UFP_NONE   = 0 ,
 	UFP_WEB    = 1 ,
 	UFP_NEWS   = 2 ,
-	UFP_CHINESE = 3
+	UFP_CHINESE = 3,
+	UFP_SHALLOW = 4
 };
 
 // special priorities for the priority drop down 
@@ -89,6 +90,8 @@ class Page {
 	char *m_title;    // browser title bar
 };
 
+#include "Msg4.h"
+
 // generic gigablast request. for all apis offered.
 class GigablastRequest {
  public:
@@ -132,6 +135,8 @@ class GigablastRequest {
 	char  m_dedup;
 	char  m_hasMime;
 	char  m_doConsistencyTesting;
+	char  m_getSections;
+	char  m_gotSections;
 	long  m_charset;
 	long  m_hopCount;
 
@@ -151,8 +156,9 @@ class GigablastRequest {
 	///////////
 	char *m_urlsBuf;
 	char  m_stripBox;
-	char  m_harvestLinksBox;
-	char  m_forceRespiderBox;
+	char  m_harvestLinks;
+	SafeBuf m_listBuf;
+	Msg4 m_msg4;
 
 	/////////////
 	//
@@ -164,6 +170,11 @@ class GigablastRequest {
 	long  m_ern;
 	char *m_qlang;
         bool  m_forceDel;
+
+	// useful bufs to copy data over
+	SafeBuf m_tmpBuf1;
+	SafeBuf m_tmpBuf2;
+	SafeBuf m_tmpBuf3;
 };
 
 
@@ -198,6 +209,12 @@ class GigablastRequest {
 #define PF_COLLDEFAULT 0x1000
 #define PF_NOAPI       0x2000
 #define PF_REQUIRED    0x4000
+#define PF_REBUILDPROXYTABLE 0x8000
+
+#define PF_NOHTML      0x10000
+
+
+#define PF_CLONE       0x20000
 
 class Parm {
  public:
@@ -316,7 +333,7 @@ class Parms {
 			  long nc , 
 			  long pd ,
 			  bool isCrawlbot ,
-			  bool isJSON,
+			  char format, //bool isJSON,
 			  TcpSocket *sock
 			  );
 
@@ -352,7 +369,7 @@ class Parms {
 			 long  pd   ,
 			 bool lastRow ,
 			 bool isCrawlbot = false,
-			 bool isJSON = false ) ;
+			 char format = FORMAT_HTML);//bool isJSON = false ) ;
 
 	char *getTHIS ( HttpRequest *r , long page );
 
@@ -378,14 +395,18 @@ class Parms {
 			   char *filenameDef ,
 			   char  objType ) ;
 
+	bool setParmsFromXml ( Xml &xml , void *THIS, char objType ) ;
+
 	bool setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize);
 
 	bool saveToXml ( char *THIS , char *f , char objType ) ;
 
+	bool convertToXml ( char *buf , char *THIS , char objType ) ;
+
 	// get the parm with the associated cgi name. must be NULL terminated.
 	Parm *getParm ( char *cgi ) ;
 
-	char *getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s );
+	bool getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s );
 
 	bool setGigablastRequest ( class TcpSocket *s ,
 				   class HttpRequest *hr ,
@@ -457,6 +478,8 @@ class Parms {
 	long getNumInArray ( collnum_t collnum ) ;
 	bool addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) ;
 	bool updateParm ( char *rec , class WaitEntry *we ) ;
+
+	bool cloneCollRec ( char *srcCR , char *dstCR ) ;
 
 	//
 	// end new functions

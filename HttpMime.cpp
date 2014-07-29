@@ -237,6 +237,8 @@ time_t atotime ( char *s ) {
 	return atotime3 ( s );
 }
 
+#include "Dates.h" // for getTimeZone()
+
 // #1: Sun, 06 Nov 1994 08:49:37 GMT  ;RFC 822, updated by RFC 1123
 time_t atotime1 ( char *s ) {
 	// this time structure, once filled, will help yield a time_t
@@ -258,8 +260,20 @@ time_t atotime1 ( char *s ) {
 	getTime ( s , &t.tm_sec , &t.tm_min , &t.tm_hour );
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
+
 	// translate using mktime
-	time_t local = mktime ( &t );
+	time_t global = timegm ( &t );
+
+	// skip HH:MM:SS
+	while ( ! isspace (*s) ) s++;	
+	// skip spaces
+	while ( isspace (*s) ) s++;
+	// convert local time to "utc" or whatever timezone "s" points to,
+	// which is usually gmt or utc
+	long tzoff = getTimeZone ( s ) ;
+	if ( tzoff != BADTIMEZONE ) global += tzoff;
+	return global;
+
 	// now, convert to utc
 	//time_t utc  = time(NULL);
 	// get time here locally
@@ -268,7 +282,6 @@ time_t atotime1 ( char *s ) {
 	//long delta = here - utc;
 	// modify our time to make it into utc
 	//return local - delta;
-	return local;
 }
 
 // #2: Sunday, 06-Nov-94 08:49:37 GMT ;RFC 850,obsoleted by RFC1036
@@ -293,7 +306,17 @@ time_t atotime2 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	return mktime ( &t );
+	time_t global = timegm ( &t );
+
+	// skip HH:MM:SS
+	while ( ! isspace (*s) ) s++;	
+	// skip spaces
+	while ( isspace (*s) ) s++;
+	// convert local time to "utc" or whatever timezone "s" points to,
+	// which is usually gmt or utc
+	long tzoff = getTimeZone ( s ) ;
+	if ( tzoff != BADTIMEZONE ) global += tzoff;
+	return global;
 }
 
 // #3: Sun Nov  6 08:49:37 1994       ;ANSI C's asctime() format
@@ -319,7 +342,7 @@ time_t atotime3 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	time_t tt = mktime ( &t );
+	time_t tt = timegm ( &t );
 	return tt;
 }
 
@@ -346,7 +369,17 @@ time_t atotime4 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	return mktime ( &t );
+	time_t global = timegm ( &t );
+
+	// skip HH:MM:SS
+	while ( ! isspace (*s) ) s++;	
+	// skip spaces
+	while ( isspace (*s) ) s++;
+	// convert local time to "utc" or whatever timezone "s" points to,
+	// which is usually gmt or utc
+	long tzoff = getTimeZone ( s ) ;
+	if ( tzoff != BADTIMEZONE ) global += tzoff;
+	return global;
 }
 
 // 2007-12-31
@@ -387,7 +420,7 @@ time_t atotime5 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	return mktime ( &t );
+	return timegm ( &t );
 }
 
 
@@ -465,7 +498,9 @@ long getContentTypeFromStr ( char *s ) {
 	else if (!strcasecmp(s,"text"                    ) ) ct = CT_TEXT;
 	else if (!strcasecmp(s,"txt"                     ) ) ct = CT_TEXT;
 	else if (!strcasecmp(s,"application/xml"         ) ) ct = CT_XML;
-	else if (!strcasecmp(s,"application/xhtml+xml"   ) ) ct = CT_XML;
+	// we were not able to spider links on an xhtml doc because
+	// this was set to CT_XML, so try CT_HTML
+	else if (!strcasecmp(s,"application/xhtml+xml"   ) ) ct = CT_HTML;
 	else if (!strcasecmp(s,"application/rss+xml"     ) ) ct = CT_XML;
 	else if (!strcasecmp(s,"rss"                     ) ) ct = CT_XML;
 	else if (!strcasecmp(s,"application/rdf+xml"     ) ) ct = CT_XML;
@@ -568,6 +603,19 @@ bool s_init = false;
 void resetHttpMime ( ) {
 	s_mimeTable.reset();
 }
+
+const char *HttpMime::getContentTypeFromExtension ( char *ext , long elen) {
+	// assume text/html if no extension provided
+	if ( ! ext || ! ext[0] ) return "text/html";
+	if ( elen <= 0 ) return "text/html";
+	// get hash for table look up
+	long key = hash32 ( ext , elen );
+	char *ptr = (char *)s_mimeTable.getValue ( key );
+	if ( ptr ) return ptr;
+	// if not found in table, assume text/html
+	return "text/html";
+}
+
 
 // . list of types is on: http://www.duke.edu/websrv/file-extensions.html
 // . i copied it to the bottom of this file though
@@ -710,7 +758,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 			  //"Expires: -1\r\n"
 			  "Connection: Close\r\n"
 			  "%s"
-			  "Content-Type: %s\r\n\r\n",
+			  "Content-Type: %s\r\n",
 			  //"Connection: Keep-Alive\r\n"
 			  //"%s"
 			  //"Location: fuck\r\n"

@@ -278,9 +278,9 @@ class Host {
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
 
-	char *m_lastKnownGoodCrawlInfoReply;
-	char *m_lastKnownGoodCrawlInfoReplyEnd;
-	long  m_replyAllocSize;
+	//char *m_lastKnownGoodCrawlInfoReply;
+	//char *m_lastKnownGoodCrawlInfoReplyEnd;
+	//long  m_replyAllocSize;
 
 	// . used by Parms.cpp for broadcasting parm change requests
 	// . each parm change request has an id
@@ -397,6 +397,10 @@ class Hostdb {
 
 	//Host *getLiveHostInGroup ( long groupId );
 	Host *getLiveHostInShard ( long shardNum );
+
+	// in the entire cluster. return host #0 if its alive, otherwise
+	// host #1, etc.
+	Host *getFirstAliveHost ();
 
 	// . returns false if blocks and will call your callback later
 	// . returns true if doesn't block
@@ -682,7 +686,7 @@ inline uint32_t getShardNumFromDocId ( long long d ) {
 	return g_hostdb.getShardNumFromDocId ( d );
 };
 
-//inline uint32_t getShardNumFromTermId ( long long termId );
+long getShardNumFromTermId ( long long termId );
 
 //inline uint32_t getGroupId ( char rdbId, void *key,bool split = true) {
 //	return g_hostdb.getGroupId ( rdbId , key , split );

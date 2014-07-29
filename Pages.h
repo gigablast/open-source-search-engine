@@ -57,6 +57,7 @@ bool sendPageParser   ( TcpSocket *s , HttpRequest *r );
 bool sendPageSecurity ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddColl  ( TcpSocket *s , HttpRequest *r );
 bool sendPageDelColl  ( TcpSocket *s , HttpRequest *r );
+bool sendPageCloneColl( TcpSocket *s , HttpRequest *r );
 //bool sendPageOverview ( TcpSocket *s , HttpRequest *r );
 bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r );
 bool sendPageFilters  ( TcpSocket *s , HttpRequest *r );
@@ -85,7 +86,8 @@ bool sendPageAPI        ( TcpSocket *s , HttpRequest *r );
 bool sendPageWordVec   ( TcpSocket *s , HttpRequest *r );
 bool sendPageQualityAgent   ( TcpSocket *s , HttpRequest *r );
 bool sendPageThesaurus  ( TcpSocket *s , HttpRequest *r );
-bool sendPageStatsdb   ( TcpSocket *s , HttpRequest *r );
+bool sendPageGraph      ( TcpSocket *s , HttpRequest *r );
+bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) ;
 
 // values for m_usePost:
 #define M_GET   0x00
@@ -94,6 +96,7 @@ bool sendPageStatsdb   ( TcpSocket *s , HttpRequest *r );
 
 // values for WebPage::m_flags
 #define PG_NOAPI 0x01
+#define PG_STATUS 0x02
 
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
@@ -110,8 +113,8 @@ class WebPage {
 	char *m_desc; // page description
 	bool (* m_function)(TcpSocket *s , HttpRequest *r);
 	long  m_niceness;
-	char *m_xmlOutputDesc;
-	char *m_jsonOutputDesc;
+	char *m_reserved1;
+	char *m_reserved2;
 	char  m_pgflags;
 };
 
@@ -326,20 +329,22 @@ enum {
 	PAGE_MASTER      , 
 	PAGE_SEARCH      ,  
 	PAGE_SPIDER      ,
+	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
 	PAGE_SECURITY    ,
-	PAGE_ADDCOLL     ,	
+	PAGE_ADDCOLL     ,	 // 20
 	PAGE_DELCOLL     , 
+	PAGE_CLONECOLL   ,
 	PAGE_REPAIR      ,
 	//PAGE_SITES , // site filters
 	PAGE_FILTERS     ,
 	PAGE_INJECT      , 
-	PAGE_ADDURL2     ,
+	PAGE_ADDURL2     , // 26
 	PAGE_REINDEX     ,	
 
 	PAGE_HOSTS       ,
 	PAGE_STATS       , // 10
-	PAGE_STATSDB	 ,
+	PAGE_GRAPH       , // PAGE_STATSDB	 ,
 	PAGE_PERF        ,
 	PAGE_SOCKETS     ,
 
@@ -351,6 +356,8 @@ enum {
 	PAGE_THREADS     ,
 
 //	PAGE_THESAURUS   , 
+
+	PAGE_QA,
 
 	// . non master-admin pages (collection controls)
 	// . PAGE_OVERVIEW acts as a cutoff point (search Parms.cpp for it)
@@ -383,5 +390,7 @@ enum {
 	PAGE_INFO        , 
 	PAGE_NONE     	};
 	
+
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
 
 #endif

@@ -125,8 +125,13 @@
 #include "Test.h"
 #include "seo.h"
 #include "Json.h"
+#include "SpiderProxy.h"
 //#include "Facebook.h"
 //#include "Accessdb.h"
+
+// from qa.cpp
+//bool qainject ( ) ;
+//bool qatest   ( ) ;
 
 // call this to shut everything down
 bool mainShutdown ( bool urgent ) ;
@@ -1452,6 +1457,84 @@ int main2 ( int argc , char *argv[] ) {
 	g_conf.m_save = false;
 	
 
+	//
+	// run our smoketests
+	//
+	/*
+	if ( strcmp ( cmd, "qa" ) == 0 ||
+	     strcmp ( cmd, "qainject" ) == 0 ||
+	     strcmp ( cmd, "qaspider" ) == 0 ) {
+		// let's ensure our core file can dump
+		struct rlimit lim;
+		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
+		if ( setrlimit(RLIMIT_CORE,&lim) )
+			log("qa::setrlimit: %s", mstrerror(errno) );
+		// in build mode we store downloaded http replies in the
+		// /qa subdir
+		//g_conf.m_qaBuildMode = 0;
+		//if (  cmdarg+1 < argc )
+		//	g_conf.m_qaBuildMode = atoi(argv[cmdarg+1]);
+		// 50MB
+		g_conf.m_maxMem = 50000000;
+		// init our table for doing zobrist hashing
+		if ( ! hashinit() ) {
+			log("qa::hashinit failed" ); return 0; }
+		// init memory class after conf since it gets maxMem from Conf
+		if ( ! g_mem.init ( 200000000 ) ) {
+			log("qa::Mem init failed" ); return 0; }
+		if (!ucInit(g_hostdb.m_dir)) {
+			log("Unicode initialization failed!");
+			return 1;
+		}
+		g_conf.m_askRootNameservers = true;
+		//g_conf.m_dnsIps  [0]    = atoip ( "192.168.0.1", 11 );
+		//g_conf.m_dnsClientPort  = 9909;
+		g_conf.m_dnsMaxCacheMem = 1024*10;
+		// hack http server port to -1 (none)
+		//g_conf.m_httpPort           = 0;
+		g_conf.m_httpMaxSockets     = 200;
+		//g_conf.m_httpMaxReadBufSize = 102*1024*1024;
+		g_conf.m_httpMaxSendBufSize = 16*1024;
+		// init the loop
+		if ( ! g_loop.init() ) {
+			log("qa::Loop init failed" ); return 0; }
+		// . then dns client
+		// . server should listen to a socket and register with g_loop
+		if ( ! g_dns.init(14834)        ) {
+			log("qa::Dns client init failed" ); return 0; }
+		// . then webserver
+		// . server should listen to a socket and register with g_loop
+		// . use -1 for both http and https ports to mean do not
+		//   listen on any ports. we are a client only.
+		if ( ! g_httpServer.init( -1 , -1 ) ) {
+			log("qa::HttpServer init failed" ); return 0; }
+		// set our new pid
+		g_mem.setPid();
+		g_threads.setPid();
+		g_log.setPid();
+		//
+		// beging the qaloop
+		//
+		if ( strcmp(cmd,"qa") == 0 )
+			qatest();
+		else if ( strcmp(cmd,"qaspider") == 0 )
+			qaspider();
+		else if ( strcmp(cmd,"qainject") == 0 )
+			qainject();
+
+		//
+		// wait for some i/o signals
+		//
+		if ( ! g_loop.runLoop()    ) {
+			log("db: runLoop failed." ); 
+			return 1; 
+		}
+		// no error, return 0
+		return 0;
+	}
+	*/
+
+
 	// log the version
 	//log(LOG_INIT,"conf: Gigablast Server %s",GBVersion);
 
@@ -1490,7 +1573,7 @@ int main2 ( int argc , char *argv[] ) {
 			char replaceCmd[256];
 			sprintf(replaceCmd, "replacehost=1&rhost=%li&rspare=%li",
 				hostId, spareId);
-			return doCmd ( replaceCmd, -1, "master/hosts" ,
+			return doCmd ( replaceCmd, -1, "admin/hosts" ,
 				       false,//sendtohosts 
 				       true);//sendtoproxies
 		}
@@ -2298,7 +2381,7 @@ int main2 ( int argc , char *argv[] ) {
 		char setnoteCmd[256];
 		sprintf(setnoteCmd, "setnote=1&host=%li&note=%s",
 				    hostId, urlnote);
-		return doCmd ( setnoteCmd, -1, "master/hosts" ,
+		return doCmd ( setnoteCmd, -1, "admin/hosts" ,
 			       true , //sendtohosts
 			       false );//sendtoproxies
 	}
@@ -2317,7 +2400,7 @@ int main2 ( int argc , char *argv[] ) {
 		char setnoteCmd[256];
 		sprintf(setnoteCmd, "setsparenote=1&spare=%li&note=%s",
 				    spareId, urlnote);
-		return doCmd ( setnoteCmd, -1, "master/hosts" ,
+		return doCmd ( setnoteCmd, -1, "admin/hosts" ,
 			       true , //sendtohosts
 			       false );//sendtoproxies
 	}
@@ -2331,7 +2414,7 @@ int main2 ( int argc , char *argv[] ) {
 		char replaceCmd[256];
 		sprintf(replaceCmd, "replacehost=1&rhost=%li&rspare=%li",
 				    hostId, spareId);
-		return doCmd ( replaceCmd, -1, "master/hosts" ,
+		return doCmd ( replaceCmd, -1, "admin/hosts" ,
 			       true , //sendtohosts
 			       true );//sendtoproxies
 	}
@@ -2343,7 +2426,7 @@ int main2 ( int argc , char *argv[] ) {
 		else return false;
 		char syncCmd[256];
 		sprintf(syncCmd, "synchost=1&shost=%li", hostId);
-		return doCmd ( syncCmd, g_hostdb.m_hostId, "master/hosts" ,
+		return doCmd ( syncCmd, g_hostdb.m_hostId, "admin/hosts" ,
 			       true , //sendtohosts
 			       false );//sendtoproxies
 	}
@@ -2353,7 +2436,7 @@ int main2 ( int argc , char *argv[] ) {
 		else return false;
 		char syncCmd[256];
 		sprintf(syncCmd, "synchost=2&shost=%li", hostId);
-		return doCmd ( syncCmd, g_hostdb.m_hostId, "master/hosts" ,
+		return doCmd ( syncCmd, g_hostdb.m_hostId, "admin/hosts" ,
 		true, //sendToHosts
 		false );// sendtoproxies
 	}
@@ -2379,7 +2462,7 @@ int main2 ( int argc , char *argv[] ) {
 			sprintf(classifierCmd, "startclassifier=1&c=%s"
 					       "&ruleset=%s&sitelistfile=%s",
 					       coll, ruleset, siteListFile );
-		return doCmd(classifierCmd , hostId , "master/tagdb" ,
+		return doCmd(classifierCmd , hostId , "admin/tagdb" ,
 			     true , //sendtohosts
 			     false );//sendtoproxies
 	}
@@ -2393,7 +2476,7 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg + 2 < argc ) hostId = atoi ( argv[cmdarg+2] );
 		char classifierCmd[512];
 		sprintf(classifierCmd, "stopclassifier=1&c=%s", coll );
-		return doCmd(classifierCmd , hostId , "master/tagdb" ,
+		return doCmd(classifierCmd , hostId , "admin/tagdb" ,
 			     true , //sendtohosts
 			     false );//sendtoproxies
 	}
@@ -4739,7 +4822,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			File f;
 			char *target = "gb.new";
-			f.set(h2->m_dir,target);
+			f.set(g_hostdb.m_myHost->m_dir,target);
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
@@ -5043,7 +5126,19 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_installcat ) {
 			// . copy catdb files to all hosts
 			// don't copy to ourselves
-			if ( h2->m_hostId == 0 ) continue;
+			if ( h2->m_hostId == 0 ) {
+				sprintf(tmp,
+					"cp "
+					"content.rdf.u8 "
+					"structure.rdf.u8 "
+					"gbdmoz.structure.dat "
+					"gbdmoz.content.dat "
+					"%scatdb/",
+					h2->m_dir);
+				log(LOG_INIT,"admin: %s", tmp);
+				system ( tmp );
+				continue;
+			}
 			sprintf(tmp,
 				"rcp "
 				"%scatdb/content.rdf.u8 "
@@ -5399,6 +5494,8 @@ bool registerMsgHandlers ( ) {
 	//if ( ! Msg9a::registerHandler() ) return false;
 	if ( ! g_pingServer.registerHandler() ) return false;
 	//if ( ! g_accessdb.registerHandler () ) return false;
+	// in SpiderProxy.cpp...
+	initSpiderProxyStuff();
 	return true;
 }
 
@@ -12927,7 +13024,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       "densrank=%02li "
 			       //"outlnktxt=%01li "
 			       "mult=%02li "
-			       "sh32=0x%08lx "
+			       //"senth32=0x%08lx "
 			       "recSize=%li "
 			       "dh=0x%02lx%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
@@ -12943,7 +13040,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       (long)g_posdb.getDensityRank(&k),
 			       //(long)g_posdb.getIsOutlinkText(&k),
 			       (long)g_posdb.getMultiplier(&k),
-			       (long)g_posdb.getSectionSiteHash32(&k),
+			       //(long)g_posdb.getSectionSentHash32(&k),
 			       recSize,
 			       
 			       (long)dh, 

@@ -47,6 +47,14 @@ bool printScoresHeader ( SafeBuf *sb ) ;
 bool printSingleScore ( SafeBuf *sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
 
+bool printDmozEntry ( SafeBuf *sb ,
+		      long catId ,
+		      bool direct ,
+		      char *dmozTitle ,
+		      char *dmozSummary ,
+		      char *dmozAnchor ,
+		      SearchInput *si );
+
 bool sendReply ( State0 *st , char *reply ) {
 
 	long savedErr = g_errno;
@@ -149,6 +157,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	mdelete(st, sizeof(State0), "PageResults2");
 	delete st;
 
+	/*
 	if ( format == FORMAT_XML ) {
 		SafeBuf sb;
 		sb.safePrintf("<?xml version=\"1.0\" "
@@ -174,6 +183,7 @@ bool sendReply ( State0 *st , char *reply ) {
 					     charset );
 		return true;
 	}
+	*/
 
 	long status = 500;
 	if (savedErr == ETOOMANYOPERANDS ||
@@ -244,7 +254,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//long xml = hr->getLong("xml",0);
 
 	// what format should search results be in? default is html
-	char format = getFormatFromRequest ( hr );
+	char format = hr->getReplyFormat();//getFormatFromRequest ( hr );
 
 	// get the dmoz catid if given
 	//long searchingDmoz = hr->getLong("dmoz",0);
@@ -403,7 +413,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// 
 		// logo header
 		//
-		printLogoAndSearchBox ( &sb , hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( &sb , hr , -1,NULL ); // catId = -1
 		//
 		// script to populate search results
 		//
@@ -542,6 +552,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save collnum now
 	if ( cr ) st->m_collnum = cr->m_collnum;
 	else      st->m_collnum = -1;
+
+	// turn this on for json output, unless diffbot collection
+	if ( format == FORMAT_JSON && ! cr->m_isCustomCrawl )
+		st->m_header = 1;
 
 	// take this out here as well!
 	// limit here
@@ -1007,8 +1021,23 @@ bool gotResults ( void *state ) {
 
 	SearchInput *si = &st->m_si;
 
+	// if in streaming mode and we never sent anything and we had
+	// an error, then send that back. we never really entered streaming
+	// mode in that case. this happens when someone deletes a coll
+	// and queries it immediately, then each shard reports ENOCOLLREC.
+	// it was causing a socket to be permanently stuck open.
+	if ( g_errno &&
+	     si->m_streamResults &&
+	     st->m_socket->m_totalSent == 0 )
+	       return sendReply(st,NULL);
+
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
+		// this will be our final send
+		if ( st->m_socket->m_streamingMode ) {
+			log("res: socket still in streaming mode. wtf?");
+			st->m_socket->m_streamingMode = false;
+		}
 		log("msg40: done streaming. nuking state.");
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
@@ -1019,12 +1048,12 @@ bool gotResults ( void *state ) {
 	//char        *coll    = si->m_coll2;
 	//long         collLen = si->m_collLen2;
 
-	collnum_t collnum = si->m_firstCollnum;
+	//collnum_t collnum = si->m_firstCollnum;
 
 	// collection rec must still be there since SearchInput references 
 	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( collnum );
-	if ( ! cr || cr != si->m_cr ) {
+	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
+	if ( ! cr ) { // || cr != si->m_cr ) {
 	       g_errno = ENOCOLLREC;
 	       return sendReply(st,NULL);
 	}
@@ -1385,6 +1414,17 @@ bool gotResults ( void *state ) {
 	return true;
 }
 
+// defined in PageRoot.cpp
+bool expandHtml (  SafeBuf& sb,
+		   char *head , 
+		   long hlen ,
+		   char *q    , 
+		   long qlen ,
+		   HttpRequest *r ,
+		   SearchInput *si,
+		   char *method ,
+		   CollectionRec *cr ) ;
+
 bool printSearchResultsHeader ( State0 *st ) {
 
 	SearchInput *si = &st->m_si;
@@ -1409,6 +1449,29 @@ bool printSearchResultsHeader ( State0 *st ) {
 		else                sb->safePrintf("[\n");
 	}
 
+	CollectionRec *cr = si->m_cr;
+	HttpRequest *hr = &st->m_hr;
+
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
+
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlHead.length() ) {
+		return expandHtml ( *sb ,
+				    cr->m_htmlHead.getBufStart(),
+				    cr->m_htmlHead.length(),
+				    q,
+				    qlen,
+				    hr,
+				    si,
+				    method,
+				    cr);
+	}
+				 
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
@@ -1421,8 +1484,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body style=padding:0px;margin:0px;>");
 	}
-
-	HttpRequest *hr = &st->m_hr;
 
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ) {
 		long refresh = hr->getLong("refresh",0);
@@ -1440,11 +1501,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
-		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( sb,&st->m_hr,-1,si); // catId = -1
 	}
 
 	// the calling function checked this so it should be non-null
-	CollectionRec *cr = si->m_cr;
 	char *coll = cr->m_coll;
 	long collLen = gbstrlen(coll);
 
@@ -1674,12 +1734,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 				       (long)moreFollow);
 	}
 
-
-	if ( st->m_header && si->m_format == FORMAT_JSON ) {
-		sb->safePrintf("\"objects\":[\n");
-		return true;
-	}
-
 	// . did he get a spelling recommendation?
 	// . do not use htmlEncode() on this anymore since receiver
 	//   of the XML feed usually does not want that.
@@ -1687,6 +1741,27 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf ("\t<spell><![CDATA[");
 		sb->safeStrcpy(st->m_spell);
 		sb->safePrintf ("]]></spell>\n");
+	}
+
+	if ( si->m_format == FORMAT_JSON && st->m_spell[0] ) {
+		sb->safePrintf ("\t\"spell\":\"");
+		sb->jsonEncode(st->m_spell);
+		sb->safePrintf ("\"\n,");
+	}
+
+
+	// for diffbot collections only...
+	if ( st->m_header && 
+	     si->m_format == FORMAT_JSON &&
+	     cr->m_isCustomCrawl ) {
+		sb->safePrintf("\"objects\":[\n");
+		return true;
+	}
+
+	if ( si->m_format == FORMAT_JSON &&
+	     ! cr->m_isCustomCrawl ) {
+		sb->safePrintf("\"results\":[\n");
+		return true;
 	}
 
 	// debug
@@ -1960,6 +2035,23 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "qlang=%s&q=%s\">"
 			       "[show banned results]</a></b>"
 			       "</font> ", coll , langStr , st->m_qe );
+
+		sb->safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/admin/api?&c=%s\">[api]</a></b>"
+				, coll );
+		sb->safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/search?format=xml&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[xml]</a></b>"
+			       "</font> ", coll , langStr , st->m_qe );
+		sb->safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/search?format=json&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[json]</a></b>"
+			       "</font> ", coll , langStr , st->m_qe );
 	}
 
 	// if its an ip: or site: query, print ban link
@@ -2088,10 +2180,80 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<table cellpadding=0 cellspacing=0>"
 			      "<tr><td valign=top>");
 
+	//
+	// BEGIN FACET PRINTING
+	//
+	// 
+	// . print out one table for each gbfacet: term in the query
+	// . LATER: show the text string corresponding to the hash
+	//   by looking it up in the titleRec
+	//
+	for ( long i = 0 ; i < si->m_q.getNumTerms() ; i++ ) {
+		// only for html for now i guess
+		if ( si->m_format != FORMAT_HTML ) break;
+		QueryTerm *qt = &si->m_q.m_qterms[i];
+		// skip if not facet
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+		HashTableX *fht = &qt->m_facetHashTable;
+		// a new table for each facet query term
+		bool needTable = true;
+		// print out the dumps
+		for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
+			// skip empty slots
+			if ( ! fht->m_flags[j] ) continue;
+			long val32 = *(long *)fht->getKeyFromSlot(j);
+			long count = *(long *)fht->getValFromSlot(j);
+			// print that out
+			if ( needTable ) {
+				needTable = false;
+				sb->safePrintf("<table cellspacing=7 "
+					       "bgcolor=lightgray>"
+					       "<tr><td width=200px;>"
+					       "FACET %s</td></tr>"
+					       ,qt->m_term);
+			}
+			// print the facet in its numeric form
+			// we will have to lookup based on its docid
+			// and get it from the cached page later
+			sb->safePrintf("<tr><td width=200px; valign=top>"
+				       //"<a href=?search="//gbfacet%3A"
+				       //"%s:%lu"
+				       // make a search to just show those
+				       // docs from this facet with that
+				       // value. actually gbmin/max would work
+				       "<a href=/search?c=%s&q="
+				       "gbequalint%%3A%s:%lu"
+				       //"+gbmaxint%%3A%s:%lu>"
+				       ">"
+				       "%lu (%lu)"
+				       "</a>"
+				       "</td></tr>\n"
+				       ,coll
+				       ,qt->m_term // for query
+				       ,val32 // for query
+				       //,qt->m_term // for query
+				       //,val32 // for query
+				       ,val32 // stat for printing
+				       ,count); // count for printing
+		}
+		if ( ! needTable ) 
+			sb->safePrintf("</table>\n");
+	}
+	//
+	// END FACET PRINTING
+	//
+
+
+
+
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
 	if ( si->m_format != FORMAT_HTML ) numGigabits = 0;
+
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
@@ -2260,12 +2422,24 @@ bool printSearchResultsTail ( State0 *st ) {
 	//}
 
 	if ( si->m_format == FORMAT_JSON ) {	
+		// remove last },\n if there and replace with just \n
+		char *e = sb->getBuf() - 2;
+		if ( e[0]==',' && e[1]=='\n') {
+			sb->m_length -= 2;
+			sb->safePrintf("\n");
+		}
 		// print ending ] for json
 		sb->safePrintf("]\n");
 		if ( st->m_header ) sb->safePrintf("}\n");
 		// all done for json
 		return true;
 	}
+
+	// grab the query
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
+	HttpRequest *hr = &st->m_hr;
 
 	// get some result info from msg40
 	long firstNum   = msg40->getFirstResultNum() ;
@@ -2476,6 +2650,19 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->pushChar('\n');
 		sb->nullTerm();
 	}
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlTail.length() &&
+	     ! expandHtml ( *sb ,
+			    cr->m_htmlTail.getBufStart(),
+			    cr->m_htmlTail.length(),
+			    q,
+			    qlen,
+			    hr,
+			    si,
+			    NULL, // method,
+			    cr) )
+			return false;
 
 	return true;
 }
@@ -2704,6 +2891,43 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 					   long catid ,
 					   State0 *st ) {
 
+	char format = si->m_format;
+	// these are handled in the <dmozEntry> logic below now
+	if ( format == FORMAT_XML ) return true;
+	if ( format == FORMAT_JSON ) return true;
+
+	// if ( format == FORMAT_XML ) {
+	// 	sb->safePrintf("\t\t<dmozCat>\n"
+	// 		       "\t\t\t<dmozCatId>%li</dmozCatId>\n"
+	// 		       "\t\t\t<dmozCatStr><![CDATA["
+	// 		       ,catid);
+	// 	// print the name of the dmoz category
+	// 	char xbuf[256];
+	// 	SafeBuf xb(xbuf,256,0,false);
+	// 	g_categories->printPathFromId(&xb, catid, false,si->m_isRTL); 
+	// 	sb->cdataEncode(xb.getBufStart());
+	// 	sb->safePrintf("]]></dmozCatStr>\n");
+	// 	sb->safePrintf("\t\t</dmozCat>\n");
+	// 	return true;
+	// }
+
+	// if ( format == FORMAT_JSON ) {
+	// 	sb->safePrintf("\t\t\"dmozCat\":{\n"
+	// 		       "\t\t\t\"dmozCatId\":%li,\n"
+	// 		       "\t\t\t\"dmozCatStr\":\""
+	// 		       ,catid);
+	// 	// print the name of the dmoz category
+	// 	char xbuf[256];
+	// 	SafeBuf xb(xbuf,256,0,false);
+	// 	g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
+	// 	sb->jsonEncode(xb.getBufStart());
+	// 	sb->safePrintf("\"\n"
+	// 		       "\t\t},\n");
+
+
+	// 	return true;
+	// }
+
 	//uint8_t queryLanguage = langUnknown;
 	uint8_t queryLanguage = si->m_queryLangId;
 	// Don't print category if not in native language category
@@ -2777,11 +3001,19 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	long long d = msg40->getDocId(ix);
 
+
+
 	if ( si->m_docIdsOnly ) {
 		if ( si->m_format == FORMAT_XML )
-			sb->safePrintf("\t\t<docId>%lli</docId>\n"
-				      "\t</result>\n", 
-				      d );
+			sb->safePrintf("\t<result>\n"
+				       "\t\t<docId>%lli</docId>\n"
+				       "\t</result>\n", 
+				       d );
+		else if ( si->m_format == FORMAT_JSON )
+			sb->safePrintf("\t\{\n"
+				       "\t\t\"docId\":%lli\n"
+				       "\t},\n",
+				       d );
 		else
 			sb->safePrintf("%lli<br/>\n", 
 				      d );
@@ -2894,7 +3126,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t<result>\n" );
+	if ( si->m_format == FORMAT_XML ) 
+		sb->safePrintf("\t<result>\n" );
+
+	if ( si->m_format == FORMAT_JSON ) {
+		if ( *numPrintedSoFar != 0 ) sb->safePrintf(",\n");
+		sb->safePrintf("\t{\n" );
+	}
 
 	Highlight hi;
 
@@ -2925,7 +3163,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("<blockquote>"); 
 
 	// print the rank. it starts at 0 so add 1
-	if ( si->m_format == FORMAT_HTML )
+	if ( si->m_format == FORMAT_HTML && si->m_streamResults )
+		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+			       ix+1 );
+	else if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
 			      ix+1 + si->m_firstResultNum );
 
@@ -2992,9 +3233,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// if we have a thumbnail show it next to the search result,
 	// base64 encoded
-	if ( (si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
+	if ( //(si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
-	     mr->ptr_imgData ) {
+	    si->m_showImages && mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 		if ( si->m_format == FORMAT_XML )
@@ -3008,9 +3249,31 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 					   si->m_format );
 		if ( si->m_format == FORMAT_XML ) {
 			sb->safePrintf("\t\t<imageHeight>%li</imageHeight>\n",
-				       ti->m_dx);
-			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
 				       ti->m_dy);
+			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
+				       ti->m_dx);
+			sb->safePrintf("\t\t<origImageHeight>%li"
+				       "</origImageHeight>\n",
+				       ti->m_origDY);
+			sb->safePrintf("\t\t<origImageWidth>%li"
+				       "</origImageWidth>\n",
+				       ti->m_origDX);
+			sb->safePrintf("\t\t<imageUrl><![CDATA[");
+			sb->cdataEncode(ti->getUrl());
+			sb->safePrintf("]]></imageUrl>\n");
+		}
+		if ( si->m_format == FORMAT_JSON ) {
+			sb->safePrintf("\t\t\"imageHeight\":%li,\n",
+				       ti->m_dy);
+			sb->safePrintf("\t\t\"imageWidth\":%li,\n",
+				       ti->m_dx);
+			sb->safePrintf("\t\t\"origImageHeight\":%li,\n",
+				       ti->m_origDY);
+			sb->safePrintf("\t\t\"origImageWidth\":%li,\n",
+				       ti->m_origDX);
+			sb->safePrintf("\t\t\"imageUrl\":\"");
+			sb->jsonEncode(ti->getUrl());
+			sb->safePrintf("\",\n");
 		}
 	}
 
@@ -3212,14 +3475,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	/////
 
-	char *dmozSummary = NULL;
+	char *dmozSummary2 = NULL;
 	// TODO: just get the catid from httprequest directly?
 	if ( si->m_catId > 0 ) { // si->m_cat_dirId > 0) {
 		// . get the dmoz title and summary
 		// . if empty then just a bunch of \0s, except for catIds
 	        Msg20Reply *mr = m20->getReply();
 		char *dmozTitle  = mr->ptr_dmozTitles;
-		dmozSummary = mr->ptr_dmozSumms;
+		dmozSummary2 = mr->ptr_dmozSumms;
 		char *dmozAnchor = mr->ptr_dmozAnchors;
 		long *catIds     = mr->ptr_catIds;
 		long numCats = mr->size_catIds / 4;
@@ -3228,7 +3491,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			// assign shit if we match the dmoz cat we are showing
 			if ( catIds[i] ==  si->m_catId) break;
 			dmozTitle +=gbstrlen(dmozTitle)+1;
-			dmozSummary +=gbstrlen(dmozSummary)+1;
+			dmozSummary2 +=gbstrlen(dmozSummary2)+1;
 			dmozAnchor += gbstrlen(dmozAnchor)+1;
 		}
 		// now make the title the dmoz title
@@ -3236,7 +3499,6 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		strLen = gbstrlen(str);
 	}
 	
-
 
 	long hlen;
 	//copy all summary and title excerpts for this result into here
@@ -3255,8 +3517,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
 	long cols = 80;
-	if ( si->m_format == FORMAT_XML ) 
-		sb->safePrintf("\t\t<title><![CDATA[");
+	cols = si->m_summaryMaxWidth;
+
 	SafeBuf hb;
 	if ( str && strLen && si->m_doQueryHighlighting ) {
 		hlen = hi.set ( &hb,
@@ -3273,29 +3535,55 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				backTag,
 				0,
 				0 ); // niceness
+		// reassign!
+		str = hb.getBufStart();
+		strLen = hb.getLength();
 		//if (!sb->utf8Encode2(tt, hlen)) return false;
-		if ( ! sb->brify ( hb.getBufStart(),
-				  hb.getLength(),
-				  0,
-				  cols) ) return false;
+		// if ( si->m_format != FORMAT_JSON )
+		// 	if ( ! sb->brify ( hb.getBufStart(),
+		// 			   hb.getLength(),
+		// 			   0,
+		// 			   cols) ) return false;
 	}
-	else if ( str && strLen ) {
+
+	// . use "UNTITLED" if no title
+	// . msg20 should supply the dmoz title if it can
+	if ( strLen == 0 && 
+	     si->m_format != FORMAT_XML && 
+	     si->m_format != FORMAT_JSON ) {
+		str = "<i>UNTITLED</i>";
+		strLen = gbstrlen(str);
+	}
+
+	if ( str && 
+	     strLen && 
+	     ( si->m_format == FORMAT_HTML ||
+	       si->m_format == FORMAT_WIDGET_IFRAME ||
+	       si->m_format == FORMAT_WIDGET_APPEND ||
+	       si->m_format == FORMAT_WIDGET_AJAX ) 
+	     ) {
 		// determine if TiTle wraps, if it does add a <br> count for
 		// each wrap
 		//if (!sb->utf8Encode2(str , strLen )) return false;
 		if ( ! sb->brify ( str,strLen,0,cols) ) return false;
 	}
-	// . use "UNTITLED" if no title
-	// . msg20 should supply the dmoz title if it can
-	if ( strLen == 0 ) {
-		if(!sb->safePrintf("<i>UNTITLED</i>"))
-			return false;
-	}
+
 	// close up the title tag
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("]]></title>\n");
+	if ( si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<title><![CDATA[");
+		if ( str ) sb->cdataEncode(str);
+		sb->safePrintf("]]></title>\n");
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"title\":\"");
+		if ( str ) sb->jsonEncode(str);
+		sb->safePrintf("\",\n");
+	}
 
 
-	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ("</a><br>\n" ) ;
+	if ( si->m_format == FORMAT_HTML ) 
+		sb->safePrintf ("</a><br>\n" ) ;
 
 
 	// close the title tag stuf
@@ -3304,6 +3592,88 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     si->m_format == FORMAT_WIDGET_AJAX ) 
 		sb->safePrintf("</b></a>\n");
 
+	//
+	// print <h1> tag contents. hack for client.
+	//
+	char *hp = mr->ptr_htag;
+	char *hpend = hp + mr->size_htag;
+	for ( ; hp && hp < hpend ; ) {
+		if ( si->m_format == FORMAT_XML ) {
+			sb->safePrintf("\t\t<h1Tag><![CDATA[");
+			sb->cdataEncode(hp);
+			sb->safePrintf("]]></h1Tag>\n");
+		}
+		if ( si->m_format == FORMAT_JSON ) {
+			sb->safePrintf("\t\t\"h1Tag\":\"");
+			sb->jsonEncode(hp);
+			sb->safePrintf("\",\n");
+		}
+		// it is a \0 separated list of headers generated from
+		// XmlDoc::getHeaderTagBuf()
+		hp += gbstrlen(hp) + 1;
+	}
+
+	// print all dmoz info for xml/json. 
+	// seems like both direct and indirect dmoz entries here.
+	if ( mr->size_catIds > 0 &&
+	     ( si->m_format == FORMAT_JSON ||
+	       si->m_format == FORMAT_XML ) ) {
+
+		char *dmozTitle   = mr->ptr_dmozTitles;
+		char *dmozSummary = mr->ptr_dmozSumms;
+		char *dmozAnchor  = mr->ptr_dmozAnchors;
+		long *catIds      = mr->ptr_catIds;
+		long  numCats     = mr->size_catIds / 4;
+		// loop through looking for the right ID
+		for (long i = 0; i < numCats ; i++ ) {
+			printDmozEntry ( sb,
+					 catIds[i],
+					 true,
+					 dmozTitle,
+					 dmozSummary,
+					 dmozAnchor ,
+					 si );
+			dmozTitle   += gbstrlen(dmozTitle  ) + 1;
+			dmozSummary += gbstrlen(dmozSummary) + 1;
+			dmozAnchor  += gbstrlen(dmozAnchor ) + 1;
+		}
+	}
+
+	if ( mr->size_indCatIds > 0 &&
+	     ( si->m_format == FORMAT_JSON ||
+	       si->m_format == FORMAT_XML ) ) {
+		// print INDIRECT dmoz entries as well
+		long nIndCatids = mr->size_indCatIds / 4;
+		 for ( long i = 0; i < nIndCatids; i++ ) {
+		 	long catId = ((long *)(mr->ptr_indCatIds))[i];
+			if ( si->m_format == FORMAT_XML )
+				sb->safePrintf("\t\t<indirectDmozCatId>"
+					       "%li</indirectDmozCatId>\n",
+					       catId);
+			if ( si->m_format == FORMAT_JSON )
+				sb->safePrintf("\t\t\"indirectDmozCatId\":"
+					       "%li,\n",catId);
+		 }
+		// print INDIRECT dmoz entries as well
+		// long nIndCatids = mr->size_indCatIds / 4;
+		// dmozTitle   = mr->ptr_indDmozTitles;
+		// dmozSummary = mr->ptr_dmozSumms;
+		// dmozAnchor  = mr->ptr_dmozAnchors;
+		// for ( long i = 0; i < nIndCatids; i++ ) {
+		// 	long catId = ((long *)(mr->ptr_indCatIds))[i];
+		// 	printDmozEntry ( sb ,
+		// 			 catId ,
+		// 			 false,
+		// 			 dmozTitle,
+		// 			 dmozSummary,
+		// 			 dmozAnchor ,
+		// 			 si );
+		// 	dmozTitle   += gbstrlen(dmozTitle  ) + 1;
+		// 	dmozSummary += gbstrlen(dmozSummary) + 1;
+		// 	dmozAnchor  += gbstrlen(dmozAnchor ) + 1;
+		// }
+	}
+
 
 	/////
 	//
@@ -3311,26 +3681,32 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	/////
 	unsigned char ctype = mr->m_contentType;
-	if ( ctype != CT_HTML && ctype != CT_UNKNOWN ){//&&ctype <= CT_JSON ) {
-		char *cs = g_contentTypeStrings[ctype];
-		if ( si->m_format == FORMAT_XML )
-			sb->safePrintf("\t\t<contentType>"
-				      "<![CDATA["
-				      "%s"
-				      "]]>"
-				      "</contentType>\n",
-				      cs);
-		else if ( si->m_format == FORMAT_HTML && ctype != CT_HTML ) {
-			sb->safePrintf(" <b><font style=color:white;"
-				      "background-color:maroon;>");
-			char *p = cs;
-			for ( ; *p ; p++ ) {
-				char c = to_upper_a(*p);
-				sb->pushChar(c);
-			}
-			sb->safePrintf("</font></b> &nbsp;");
+	char *cs = g_contentTypeStrings[ctype];
+
+	if ( si->m_format == FORMAT_XML )
+		sb->safePrintf("\t\t<contentType>"
+			       "<![CDATA["
+			       "%s"
+			       "]]>"
+			       "</contentType>\n",
+			       cs);
+
+	if ( si->m_format == FORMAT_JSON )
+		sb->safePrintf("\t\t\"contentType\":\"%s\",\n",cs);
+
+	if ( si->m_format == FORMAT_HTML &&
+	     ctype != CT_HTML && 
+	     ctype != CT_UNKNOWN ){
+		sb->safePrintf(" <b><font style=color:white;"
+			       "background-color:maroon;>");
+		char *p = cs;
+		for ( ; *p ; p++ ) {
+			char c = to_upper_a(*p);
+			sb->pushChar(c);
 		}
+		sb->safePrintf("</font></b> &nbsp;");
 	}
+	
 
 	////////////
 	//
@@ -3340,21 +3716,24 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// . then the summary
 	// . "s" is a string of null terminated strings
-	char *send;
+	//char *send;
 	// do the normal summary
-	str    = mr->ptr_sum;
-	strLen = mr->size_sum-1;
+	str    = mr->ptr_displaySum;
+	// sometimes the summary is longer than requested because for
+	// summary deduping purposes (see "pss" parm in Parms.cpp) we do not
+	// get it as short as request. so use mr->m_sumPrintSize here
+	// not mr->size_sum
+	strLen = mr->size_displaySum - 1;//-1;
+
 	// this includes the terminating \0 or \0\0 so back up
 	if ( strLen < 0 ) strLen  = 0;
-	send = str + strLen;
+	//send = str + strLen;
 
 	// dmoz summary might override if we are showing a dmoz topic page
-	if ( dmozSummary ) {
-		str = dmozSummary;
-		strLen = gbstrlen(dmozSummary);
+	if ( dmozSummary2 && (si->m_catId>0 || strLen<=0) ) {
+		str = dmozSummary2;
+		strLen = gbstrlen(dmozSummary2);
 	}
-
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t\t<sum><![CDATA[");
 
 	bool printSummary = true;
 	// do not print summaries for widgets by default unless overridden
@@ -3365,13 +3744,25 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     hr->getLong("summaries",0) == 0 )
 		printSummary = false;
 
-	if ( printSummary )
+	if ( printSummary && si->m_format == FORMAT_HTML )
 		sb->brify ( str , strLen, 0 , cols ); // niceness = 0
 
-	// close xml tag
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("]]></sum>\n");
+	if ( si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<sum><![CDATA[");
+		sb->cdataEncode(str);
+		sb->safePrintf("]]></sum>\n");
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"sum\":\"");
+		sb->jsonEncode(str);
+		sb->safePrintf("\",\n");
+	}
+
+
 	// new line if not xml
-	else if ( strLen ) sb->safePrintf("<br>\n");
+	if ( si->m_format == FORMAT_HTML && strLen ) 
+		sb->safePrintf("<br>\n");
 
 	////////////
 	//
@@ -3404,6 +3795,63 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
+	///////////
+	//
+	// print facet field/values
+	//
+	// if there was a gbfacet*: term (gbfacetstr, gbfacetfloat, gbfacetint)
+	// this should be non-NULL and have the facet field/value pairs
+	// and every string ends in a \0
+	//
+	//////////
+	char *fp    =      mr->ptr_facetBuf;
+	char *fpEnd = fp + mr->size_facetBuf;
+	for ( ; fp && fp < fpEnd ; ) {
+		if ( si->m_format == FORMAT_HTML ) {
+			// print first one
+			sb->safePrintf("<i><font color=maroon>");
+			sb->safeStrcpy(fp);
+			sb->safePrintf("</font></i>");
+			sb->safePrintf(" &nbsp; : &nbsp; ");
+			sb->safePrintf("<b>");
+			fp += gbstrlen(fp) + 1;
+			sb->htmlEncode(fp);
+			// begin a new pair
+			sb->safePrintf("</b>");
+			sb->safeStrcpy("<br>\n");
+			fp += gbstrlen(fp) + 1;		
+		}
+		else if ( si->m_format == FORMAT_XML ) {
+			// print first one
+			sb->safePrintf("\t\t<facet>\n"
+				       "\t\t\t<field><![CDATA[");
+			sb->cdataEncode(fp);
+			sb->safePrintf("]]></field>\n");
+			fp += gbstrlen(fp) + 1;
+			sb->safePrintf("\t\t\t<value><![CDATA[");
+			sb->cdataEncode(fp);
+			sb->safePrintf("]]></value>\n");
+			sb->safePrintf("\t\t</facet>\n");
+			fp += gbstrlen(fp) + 1;
+		}
+		else if ( si->m_format == FORMAT_JSON ) {
+			// print first one
+			sb->safePrintf("\t\t\"facet\":{\n");
+			sb->safePrintf("\t\t\t\"field\":\"");
+			sb->jsonEncode(fp);
+			sb->safePrintf("\",\n");
+			fp += gbstrlen(fp) + 1;
+			sb->safePrintf("\t\t\t\"value\":\"");
+			sb->jsonEncode(fp);
+			sb->safePrintf("\"\n");
+			fp += gbstrlen(fp) + 1;
+			sb->safePrintf("\t\t},\n");
+		}
+
+
+	}
+		      
+
 	////////////
 	//
 	// print the URL
@@ -3428,7 +3876,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ("<font color=gray>" );
 		//sb->htmlEncode ( url , gbstrlen(url) , false );
 		// 20 for the date after it
-		sb->safeTruncateEllipsis ( url , cols - 30 );
+		sb->safeTruncateEllipsis ( url , 50 ); // cols - 30 );
 		// turn off the color
 		sb->safePrintf ( "</font>\n" );
 	}
@@ -3437,7 +3885,18 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safeMemcpy ( url , urlLen );
 		sb->safePrintf("]]></url>\n");
 	}
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"url\":\"");
+		sb->jsonEncode ( url , urlLen );
+		sb->safePrintf("\",\n");
+	}
 
+	if ( si->m_format == FORMAT_XML )
+		sb->safePrintf("\t\t<hopCount>%li</hopCount>\n",
+			       (long)mr->m_hopcount);
+
+	if ( si->m_format == FORMAT_JSON )
+		sb->safePrintf("\t\t\"hopCount\":%li,\n",(long)mr->m_hopcount);
 
 	// now the last spidered date of the document
 	time_t ts = mr->m_lastSpidered;
@@ -3497,6 +3956,49 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 					datedbDate);
 	}
 
+	if ( si->m_format == FORMAT_JSON ) {
+		// doc size in Kilobytes
+		sb->safePrintf ( "\t\t\"size\":\"%4.0fk\",\n",
+				(float)mr->m_contentLen/1024.0);
+		// . docId for possible cached link
+		// . might have merged a bunch together
+		sb->safePrintf("\t\t\"docId\":%lli,\n",mr->m_docId );
+		// . show the site root
+		// . for hompages.com/users/fred/mypage.html this will be
+		//   homepages.com/users/fred/
+		// . for www.xyz.edu/~foo/burp/ this will be
+		//   www.xyz.edu/~foo/ etc.
+		long  siteLen = 0;
+		char *site = NULL;
+		// seems like this isn't the way to do it, cuz Tagdb.cpp
+		// adds the "site" tag itself and we do not always have it
+		// in the XmlDoc::ptr_tagRec... so do it this way:
+		site    = mr->ptr_site;
+		siteLen = mr->size_site-1;
+		//char *site=uu.getSite( &siteLen , si->m_coll, false, tagRec);
+		sb->safePrintf("\t\t\"site\":\"");
+		if ( site && siteLen > 0 ) sb->safeMemcpy ( site , siteLen );
+		sb->safePrintf("\",\n");
+		//long sh = hash32 ( site , siteLen );
+		//sb->safePrintf ("\t\t<siteHash32>%lu</siteHash32>\n",sh);
+		//long dh = uu.getDomainHash32 ();
+		//sb->safePrintf ("\t\t<domainHash32>%lu</domainHash32>\n",dh);
+		// spider date
+		sb->safePrintf ( "\t\t\"spidered\":%lu,\n",
+				mr->m_lastSpidered);
+		// backwards compatibility for buzz
+		sb->safePrintf ( "\t\t\"firstIndexedDateUTC\":%lu,\n"
+				 , mr->m_firstIndexedDate);
+		sb->safePrintf( "\t\t\"contentHash32\":%lu,\n"
+				, mr->m_contentHash32);
+		// pub date
+		long datedbDate = mr->m_datedbDate;
+		// show the datedb date as "<pubDate>" for now
+		if ( datedbDate != -1 )
+			sb->safePrintf ( "\t\t\"pubdate\":%lu,\n",
+					datedbDate);
+	}
+
 
 
 	// . we also store the outlinks in a linkInfo structure
@@ -3522,6 +4024,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      k->m_ip, // hostHash, but use ip for now
 			      (long)k->m_firstIndexedDate ,
 			      (long)k->m_datedbDate );
+
 	if ( si->m_format == FORMAT_XML ) {
 		// result
 		sb->safePrintf("\t\t<language><![CDATA[%s]]>"
@@ -3532,6 +4035,16 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if(charset)
 			sb->safePrintf("\t\t<charset><![CDATA[%s]]>"
 				      "</charset>\n", charset);
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {
+		// result
+		sb->safePrintf("\t\t\"language\":\"%s\",\n",
+			      getLanguageString(mr->m_language));
+		
+		char *charset = get_charset_str(mr->m_charset);
+		if(charset)
+			sb->safePrintf("\t\t\"charset\":\"%s\",\n",charset);
 	}
 
 	//
@@ -3677,12 +4190,50 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       ,ix
 			       );
 		// reindex
-		sb->safePrintf(" - <a style=color:red; href=\"/addurl?u=");
+		sb->safePrintf(" - <a style=color:red; href=\"/addurl?urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu&force=1\">respider</a>",rand64);
+		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
 	}
 
+	//
+	// show rainbow sections link
+	//
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a href=\""
+				 "/get?"
+				 // show rainbow sections
+				 "page=4&"
+				 "q=%s&"
+				 "qlang=%s&"
+				 "c=%s&"
+				 "d=%lli&"
+				 "cnsp=0\">"
+				 "sections</a>", 
+				 st->m_qe , 
+				 // "qlang" parm
+				 si->m_defaultSortLang,
+				 coll , 
+				 mr->m_docId ); 
+	}
+
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a href=\""
+				 "/get?"
+				 // show rainbow sections
+				 "page=1&"
+				 //"q=%s&"
+				 //"qlang=%s&"
+				 "c=%s&"
+				 "d=%lli&"
+				 "cnsp=0\">"
+				 "info</a>", 
+				 //st->m_qe , 
+				 // "qlang" parm
+				 //si->m_defaultSortLang,
+				 coll , 
+				 mr->m_docId ); 
+	}
 
 	// this stuff is secret just for local guys!
 	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
@@ -3921,6 +4472,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( ! dp ) {
 		if ( si->m_format == FORMAT_XML ) 
 			sb->safePrintf ("\t</result>\n\n");
+		if ( si->m_format == FORMAT_JSON ) {
+			// remove last ,\n
+			sb->m_length -= 2;
+			sb->safePrintf ("\n\t}\n\n");
+		}
 		// wtf?
 		//char *xx=NULL;*xx=0;
 		// at least close up the table
@@ -4006,7 +4562,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( minScore < 0.0 || totalPairScore < minScore )
 			minScore = totalPairScore;
 		// we need to set "ft" for xml stuff below
-		if ( si->m_format == FORMAT_XML ) continue;
+		if ( si->m_format != FORMAT_HTML ) continue;
 		//sb->safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
 		//long qtn1 = fps->m_qtermNum1;
@@ -4089,7 +4645,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( minScore < 0.0 || totalSingleScore < minScore )
 			minScore = totalSingleScore;
 		// we need to set "ft" for xml stuff below
-		if ( si->m_format == FORMAT_XML ) continue;
+		if ( si->m_format != FORMAT_HTML ) continue;
 		//sb->safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
 		//long qtn = fss->m_qtermNum;
@@ -4808,17 +5364,19 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( g_conf.m_isMattWells )
 		sb->safePrintf("<a href=\"/seo?d=");
 	else
-		sb->safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+		sb->safePrintf("<a href=\"/get?d=");
 
 	sb->safePrintf("%lli"
-		      "&page=sections&"
-		      "hipos=%li&c=%s\">"
-		      "%li</a></td>"
-		      "</a></td>"
-		      ,mr->m_docId
-		      ,(long)ps->m_wordPos1
-		      ,si->m_cr->m_coll
-		      ,(long)ps->m_wordPos1);
+		       "&page=4"
+		       //"&page=sections&"
+		       "&hipos=%li"
+		       "&c=%s#hipos\">"
+		       "%li</a></td>"
+		       "</a></td>"
+		       ,mr->m_docId
+		       ,(long)ps->m_wordPos1
+		       ,si->m_cr->m_coll
+		       ,(long)ps->m_wordPos1);
 	// is synonym?
 	//if ( sw1 != 1.00 )
 		sb->safePrintf("<td>%s <font color=blue>%.02f"
@@ -4891,11 +5449,11 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( g_conf.m_isMattWells )
 		sb->safePrintf("<a href=\"/seo?d=");
 	else
-		sb->safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+		sb->safePrintf("<a href=\"/get?d=");
 
 	sb->safePrintf("%lli"
-		      "&page=sections&"
-		      "hipos=%li&c=%s\">"
+		      "&page=4&"
+		      "hipos=%li&c=%s#hipos\">"
 		      "%li</a></td>"
 		      "</a></td>"
 		      ,mr->m_docId
@@ -5318,15 +5876,15 @@ bool printSingleScore ( SafeBuf *sb ,
 		      "</font></td>"
 		      // wordpos
 		      "<td>"
-		      "<a href=\"https://www.gigablast.com/seo?d=" 
+		      "<a href=\"/get?d=" 
 		      , ss->m_finalScore
 		      , getHashGroupString(ss->m_hashGroup)
 		      , hgw
 		      );
 	//sb->urlEncode( mr->ptr_ubuf );
 	sb->safePrintf("%lli",mr->m_docId );
-	sb->safePrintf("&page=sections&"
-		      "hipos=%li&c=%s\">"
+	sb->safePrintf("&page=4&"
+		      "hipos=%li&c=%s#hipos\">"
 		      ,(long)ss->m_wordPos
 		      ,si->m_cr->m_coll);
 	sb->safePrintf("%li</a></td>"
@@ -5888,7 +6446,8 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
 // if catId >= 1 then print the dmoz radio button
-bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
+bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
+			     SearchInput *si ) {
 
 	char *root = "";
 	if ( g_conf.m_isMattWells )
@@ -5956,6 +6515,13 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
 	char *coll = hr->getString("c");
 	if ( ! coll ) coll = "";
 
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si && si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
+
+
 	sb->safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
 		      
 		      // i'm not sure why this was removed. perhaps
@@ -5992,10 +6558,11 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
 		      //
 		      // search box
 		      //
-		      "<form name=f method=GET action=/search>\n\n" 
+		      "<form name=f method=%s action=/search>\n\n" 
 
 		      // propagate the collection if they re-search
 		      "<input name=c type=hidden value=\"%s\">"
+		       , method
 		      , coll
 		      );
 
@@ -6917,3 +7484,72 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 					    "UTF-8"); // charset
 }
 */
+
+
+bool printDmozEntry ( SafeBuf *sb ,
+		      long catId ,
+		      bool direct ,
+		      char *dmozTitle ,
+		      char *dmozSummary ,
+		      char *dmozAnchor ,
+		      SearchInput *si ) {
+
+	// assign shit if we match the dmoz cat we are showing
+	//if ( catIds[i] ==  si->m_catId) break;
+	if ( si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<dmozEntry>\n");
+		sb->safePrintf("\t\t\t<dmozCatId>%li"
+			       "</dmozCatId>\n",catId);
+		sb->safePrintf("\t\t\t<directCatId>%li</directCatId>\n",
+			       (long)direct);
+		// print the name of the dmoz category
+		sb->safePrintf("\t\t\t<dmozCatStr><![CDATA[");
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, 
+					      catId,
+					      false,
+					      si->m_isRTL); 
+		sb->cdataEncode(xb.getBufStart());
+		sb->safePrintf("]]></dmozCatStr>\n");
+		sb->safePrintf("\t\t\t<dmozTitle><![CDATA[");
+		sb->cdataEncode(dmozTitle);
+		sb->safePrintf("]]></dmozTitle>\n");
+		sb->safePrintf("\t\t\t<dmozSum><![CDATA[");
+		sb->cdataEncode(dmozSummary);
+		sb->safePrintf("]]></dmozSum>\n");
+		sb->safePrintf("\t\t\t<dmozAnchor><![CDATA[");
+		sb->cdataEncode(dmozAnchor);
+		sb->safePrintf("]]></dmozAnchor>\n");
+		sb->safePrintf("\t\t</dmozEntry>\n");
+		return true;
+	}
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"dmozEntry\":{\n");
+		sb->safePrintf("\t\t\t\"dmozCatId\":%li,\n",
+			       catId);
+		sb->safePrintf("\t\t\t\"directCatId\":%li,\n",(long)direct);
+		// print the name of the dmoz category
+		sb->safePrintf("\t\t\t\"dmozCatStr\":\"");
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, 
+					      catId,
+					      false,
+					      si->m_isRTL); 
+		sb->jsonEncode(xb.getBufStart());
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\t\"dmozTitle\":\"");
+		sb->jsonEncode(dmozTitle);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\t\"dmozSum\":\"");
+		sb->jsonEncode(dmozSummary);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\t\"dmozAnchor\":\"");
+		sb->jsonEncode(dmozAnchor);
+		sb->safePrintf("\"\n");
+		sb->safePrintf("\t\t},\n");
+		return true;
+	}
+	return true;
+}

@@ -260,6 +260,7 @@ enum {
 	TAG_TAB,
 	TAG_TABLE,
 	TAG_TBODY,
+
 	TAG_TD,
 	TAG_TEXTAREA,
 	TAG_TEXTFLOW,
@@ -269,12 +270,14 @@ enum {
 	TAG_TITLE,
 	TAG_TR,
 	TAG_TT,
+
 	TAG_U,
 	TAG_UL,
 	TAG_VAR,
 	TAG_WBR,
 	TAG_XMP,
 	TAG_COMMENT,
+
 	TAG_OPTION, // 110
 	TAG_STYLE,
 	TAG_DOCTYPE,
@@ -284,6 +287,7 @@ enum {
 	TAG_SPAN,
 	TAG_LEGEND,
 	TAG_S,
+
 	TAG_ABBR,
 	TAG_CDATA, // 120
 	TAG_NOSCRIPT,
@@ -313,11 +317,15 @@ enum {
 	// . do not parse this up into words!! it is text in <script> tags
 	// . consider it a whole tag i guess
 	TAG_SCRIPTTEXT,
+	TAG_BUTTON,
+	TAG_URLFROM, // for ahrefs.com
+
+	//
+	// fake tags below here
+	//
 	// a fake tag used by Sections.cpp
 	TAG_SENTENCE,
-	TAG_BUTTON,
 
-	TAG_URLFROM, // for ahrefs.com
 
 	LAST_TAG
 };

@@ -102,6 +102,7 @@ Msg40::Msg40() {
 	m_numDisplayed  = 0;
 	m_numPrintedSoFar = 0;
 	m_lastChunk     = false;
+	m_didSummarySkip = false;
 	//m_numGigabitInfos = 0;
 }
 
@@ -155,6 +156,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 
 
 	m_lastProcessedi = -1;
+	m_didSummarySkip = false;
 
 	m_si             = si;
 	m_state          = state;
@@ -270,7 +272,18 @@ bool Msg40::getResults ( SearchInput *si      ,
 	if ( m_si->m_doDupContentRemoval ) get = (get*120LL)/100LL;
 	// . get 30% more for what reason? i dunno, just cuz...
 	// . well, for "missing query terms" filtering... errors (not founds)
-	get = (get*130LL)/100LL;
+	//get = (get*130LL)/100LL;
+	// make it 10% because we are getting too many summaries some times
+	// no, this is bad when not doing site clustering or dup removal
+	// we need to skip directly to the 1000th result sometimes to show
+	// those results and we do not want to lookup the first 1000
+	// summaries, so we don't, and this makes us end up looking up 100
+	// more summaries. well, leave this in, just limit the max out
+	// for summaries below then to what we want to show.
+	// crap, Msg40::gotSummary() has a m_numRequests < m_numDocIds
+	// condition, so take this out...
+	//get = (get*110LL)/100LL;
+
 	// get at least 50 since we need a good sample that explicitly has all 
 	// query terms in order to calculate reliable affinities
 	//if ( get < MIN_AFFINITY_SAMPLE ) get = MIN_AFFINITY_SAMPLE;
@@ -534,6 +547,7 @@ bool Msg40::getDocIds ( bool recall ) {
 	mr.m_debug                     = m_si->m_debug          ;
 	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
 	mr.m_doSiteClustering          = m_si->m_doSiteClustering    ;
+	mr.m_hideAllClustered          = m_si->m_hideAllClustered;
 	mr.m_familyFilter              = m_si->m_familyFilter;
 	//mr.m_useMinAlgo                = m_si->m_useMinAlgo;
 	//mr.m_useNewAlgo                = m_si->m_useNewAlgo;
@@ -1258,6 +1272,39 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	if ( g_udpServer.getNumUsedSlots() > 500 ) maxOut = 10;
 	if ( g_udpServer.getNumUsedSlots() > 800 ) maxOut = 1;
 
+	// if not deduping or site clustering or getting gigabits, then
+	// just skip over docids for speed.
+	// don't bother with summaries we do not need
+	if ( m_si && 
+	     ! m_si->m_doDupContentRemoval &&
+	     ! m_si->m_doSiteClustering &&
+	     // gigabits required the first X summaries to be computed
+	     m_docsToScanForTopics <= 0 &&
+	     m_lastProcessedi == -1 ) {
+		// start getting summaries with the result # they want
+		m_lastProcessedi = m_si->m_firstResultNum-1;
+		// assume we printed the summaries before
+		m_printi = m_si->m_firstResultNum;
+		m_numDisplayed = m_si->m_firstResultNum;
+		// fake this so Msg40::gotSummary() can let us finish
+		// because it checks m_numRequests <  m_msg3a.m_numDocIds
+		m_numRequests = m_si->m_firstResultNum;
+		m_numReplies  = m_si->m_firstResultNum;
+		m_didSummarySkip = true;
+		log("query: skipping summary generation of first %li docs",
+		    m_si->m_firstResultNum);
+	}
+
+	// if not doing deduping or site clustering, let's not get like
+	// 100 summaries at a time when we only wanted 10 results
+	// for performance reasons
+	// if ( m_si && 
+	//      ! m_si->m_doDupContentRemoval &&
+	//      ! m_si->m_doSiteClustering &&
+	//       maxOut > m_si->m_docsWanted ) 
+	// 	maxOut = m_si->m_docsWanted;
+
+
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
 	for ( long i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1279,20 +1326,56 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 			break;
 
 		// if we have printed enough summaries then do not launch
-		// any more, wait for them to come back in
-		if ( m_printi >= m_docsToGetVisible ) {
-			logf(LOG_DEBUG,"query: got %li summaries. done. "
-			     "waiting on remaining "
-			     "%li to return."
-			     , m_printi
-			     , m_numRequests-m_numReplies);
-			break;
-		}
+		// any more, wait for them to come back in.
+		/// this is causing problems because we have a bunch of
+		// m_printi < m_msg3a.m_numDocIds checks that kinda expect
+		// us to get all summaries for every docid. but when we
+		// do federated search we can get a ton of docids.
+		// if ( m_printi >= m_docsToGetVisible ) {
+		// 	logf(LOG_DEBUG,"query: got %li >= %li "
+		// 	     "summaries. done. "
+		// 	     "waiting on remaining "
+		// 	     "%li to return."
+		// 	     , m_printi
+		// 	     , m_docsToGetVisible
+		// 	     , m_numRequests-m_numReplies);
+		// 	// wait for all msg20 replies to come in
+		// 	if ( m_numRequests != m_numReplies ) break;
+		// 	// then let's hack fix this then so we can call
+		// 	// printSearchResultsTail()
+		// 	m_printi   = m_msg3a.m_numDocIds;
+		// 	// set these to max so they do not launch another
+		// 	// summary request, just in case, below
+		// 	m_numRequests = m_msg3a.m_numDocIds;
+		// 	m_numReplies  = m_msg3a.m_numDocIds;
+		// 	break;
+		// }
 
 		// do not double count!
 		//if ( i <= m_lastProcessedi ) continue;
 		// do not repeat for this i
 		m_lastProcessedi = i;
+
+
+		// if we have printed enough summaries then do not launch
+		// any more, wait for them to come back in.
+		/// this is causing problems because we have a bunch of
+		// m_printi < m_msg3a.m_numDocIds checks that kinda expect
+		// us to get all summaries for every docid. but when we
+		// do federated search we can get a ton of docids.
+		// if ( m_printi >= m_docsToGetVisible ) {
+		// 	logf(LOG_DEBUG,"query: got %li >= %li "
+		// 	     "summaries. done. "
+		// 	     "waiting on remaining "
+		// 	     "%li to return."
+		// 	     , m_printi
+		// 	     , m_docsToGetVisible
+		// 	     , m_numRequests-m_numReplies);
+		// 	m_numRequests++;
+		// 	m_numReplies++;
+		// 	continue;
+		// }
+
 
 		// start up a Msg20 to get the summary
 		Msg20 *m = NULL;
@@ -1429,8 +1512,20 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_getSummaryVector   = true;
 		req.m_bigSampleRadius    = bigSampleRadius;
 		req.m_bigSampleMaxLen    = bigSampleMaxLen;
-		req.m_titleMaxLen        = 256;
-		req.m_titleMaxLen = cr->m_titleMaxLen;
+		//req.m_titleMaxLen        = 256;
+		req.m_titleMaxLen = m_si->m_titleMaxLen; // cr->
+		req.m_summaryMaxLen = cr->m_summaryMaxLen;
+
+		// Line means excerpt 
+		req.m_summaryMaxNumCharsPerLine = 
+			m_si->m_summaryMaxNumCharsPerLine;
+
+		// a special undocumented thing for getting <h1> tag
+		req.m_getHeaderTag       = m_si->m_hr.getLong("geth1tag",0);
+		//req.m_numSummaryLines = cr->m_summaryMaxNumLines;
+		// let "ns" parm override
+		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
+
 		if(m_si->m_isAdmin && m_si->m_format == FORMAT_HTML )
 			req.m_getGigabitVector   = true;
 		else    req.m_getGigabitVector   = false;
@@ -1489,7 +1584,8 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	// do not re-call gotSummary() to avoid a possible recursive stack
 	// explosion. this is only true if we are being called from 
 	// gotSummary() already, so do not call it again!!
-	if ( recalled ) return true;
+	if ( recalled ) 
+		return true;
 	// if we got nothing, that's it
 	if ( m_msg3a.m_numDocIds <= 0 ) {
 		// but if in streaming mode we still have to stream the
@@ -1556,6 +1652,8 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 		THIS->m_socketHadError = g_errno;
 		log("msg40: streaming socket had error: %s",
 		    mstrerror(g_errno));
+		// i guess destroy the socket here so we don't get called again?
+
 	}
 	// clear it so we don't think it was a msg20 error below
 	g_errno = 0;
@@ -1769,12 +1867,9 @@ bool Msg40::gotSummary ( ) {
 			continue;
 		}
 
-		log("msg40: printing #%li (%lu)(d=%lli)",
-		    m_printi,mr->m_contentHash32,mr->m_docId);
-
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
-		printSearchResult9 ( m_printi , &m_numPrintedSoFar );
+		printSearchResult9 ( m_printi , &m_numPrintedSoFar , mr );
 
 		//m_numPrintedSoFar++;
 		//log("msg40: printedsofar=%li",m_numPrintedSoFar);
@@ -1850,7 +1945,9 @@ bool Msg40::gotSummary ( ) {
 
 	// . wrap it up with Next 10 etc.
 	// . this is in PageResults.cpp
-	if ( m_si && m_si->m_streamResults && ! m_printedTail &&
+	if ( m_si && 
+	     m_si->m_streamResults && 
+	     ! m_printedTail &&
 	     m_printi >= m_msg3a.m_numDocIds ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
@@ -1901,7 +1998,19 @@ bool Msg40::gotSummary ( ) {
 		if ( ! launchMsg20s ( true ) ) return false; 
 		// it won't launch now if we are bottlnecked waiting for
 		// m_printi's summary to come in
-		if ( m_si->m_streamResults ) return false;
+		if ( m_si->m_streamResults ) {
+			// it won't launch any if we printed out enough as well
+			// and it printed "waiting on remaining 0 to return".
+			// we shouldn't be waiting for more to come in b/c
+			// we are in gotSummart() so one just came in 
+			// freeing up a msg20 to launch another, so assume
+			// this means we are basically done. and it
+			// set m_numRequests=m_msg3a.m_numDocIds etc.
+			//if ( m_numRequests == m_msg3a.m_numDocIds )
+			//	goto printTail;
+			// otherwise, keep chugging
+			goto complete;
+		}
 		// maybe some were cached?
 		//goto refilter;
 		// it returned true, so m_numRequests == m_numReplies and
@@ -1914,6 +2023,8 @@ bool Msg40::gotSummary ( ) {
 		goto doAgain;
 		//char *xx=NULL; *xx=0;
 	}
+
+ complete:
 
 	// . ok, now i wait for everybody.
 	// . TODO: evaluate if this hurts us
@@ -2025,6 +2136,10 @@ bool Msg40::gotSummary ( ) {
 
 	// loop over each clusterLevel and set it
 	for ( long i = 0 ; i < m_numReplies ; i++ ) {
+		// did we skip the first X summaries because we were
+		// not deduping/siteclustering/gettingGigabits?
+		if ( m_didSummarySkip && i < m_si->m_firstResultNum )
+			continue;
 		// get current cluster level
 		char *level = &m_msg3a.m_clusterLevels[i];
 		// sanity check -- this is a transistional value msg3a should 
@@ -3125,6 +3240,9 @@ static int gigabitCmp ( const void *a, const void *b ) {
 //
 
 bool Msg40::computeGigabits( TopicGroup *tg ) {
+
+	// not if we skipped the first X summariest
+	if ( m_didSummarySkip ) { char *xx=NULL;*xx=0; }return true;
 
 	//long long start = gettimeofdayInMilliseconds();
 
@@ -5330,7 +5448,8 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 
 
 // . printSearchResult into "sb"
-bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
+bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ,
+				 Msg20Reply *mr ) {
 
 	// . we stream results right onto the socket
 	// . useful for thousands of results... and saving mem
@@ -5350,6 +5469,9 @@ bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
 	if ( m_numPrinted >= msg40->getDocsWanted() ) {
 		// i guess we can print "Next 10" link
 		m_moreToCome = true;
+		// hide if above limit
+		log("msg40: hiding above docsWanted #%li (%lu)(d=%lli)",
+		    m_printi,mr->m_contentHash32,mr->m_docId);
 		// do not exceed what the user asked for
 		return true;
 	}
@@ -5366,6 +5488,10 @@ bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
 		log("query: had error: %s",mstrerror(g_errno));
 		m_hadPrintError = true;
 	}
+
+
+	log("msg40: printing #%li (%lu)(d=%lli)",
+	    m_printi,mr->m_contentHash32,mr->m_docId);
 
 	// count it
 	m_numPrinted++;

@@ -58,6 +58,13 @@ bool RdbDump::set ( //char     *coll          ,
 	// use 0 for collectionless
 	if ( rdb && rdb->m_isCollectionLess ) m_collnum = 0;
 
+	// are we like catdb/statsdb etc.?
+	m_doCollCheck = true;
+	if ( rdb && rdb->m_isCollectionLess ) m_doCollCheck = false;
+	// RdbMerge also calls us but rdb is always set to NULL and it was
+	// causing a merge on catdb (collectionless) to screw up
+	if ( ! rdb ) m_doCollCheck = false;
+
 	/*
 	if ( ! coll && g_catdb.getRdb() == rdb )
 		strcpy(m_coll, "catdb");
@@ -1023,14 +1030,18 @@ void RdbDump::continueDumping() {
 
 	// if someone reset/deleted the collection we were dumping...
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
-	if ( ! cr ) {
+	// . do not do this for statsdb/catdb which always use collnum of 0
+	// . RdbMerge also calls us but gives a NULL m_rdb so we can't
+	//   set m_isCollectionless to false
+	if ( ! cr && m_doCollCheck ) {
 		g_errno = ENOCOLLREC;
 		// m_file is invalid if collrec got nuked because so did
 		// the Rdbbase which has the files
 		log("db: continue dumping lost collection");
 	}
+
 	// bitch about errors
-	else if (g_errno)log("db: Dump to %s had error writing: %s.",
+	if (g_errno)log("db: Dump to %s had error writing: %s.",
 			     m_file->getFilename(),mstrerror(g_errno));
 
 	// go back now if we were NOT dumping a tree

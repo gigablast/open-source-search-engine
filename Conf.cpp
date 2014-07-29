@@ -248,6 +248,8 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	// hack this off until the overrun bug is fixed
 	g_conf.m_datedbMaxCacheMem = 0;
 
+	//g_conf.m_qaBuildMode = true;// false
+
 	// force on for now
 	g_conf.m_useStatsdb = true;
 

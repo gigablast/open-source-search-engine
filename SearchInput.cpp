@@ -12,7 +12,7 @@
 #include "Timedb.h"
 #include "PageResults.h"
 
-char getFormatFromRequest ( class HttpRequest *hr ) ;
+//char getFormatFromRequest ( class HttpRequest *hr ) ;
 
 SearchInput::SearchInput() {
 	reset();
@@ -208,7 +208,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// set this to the collrec of the first valid collnum we encounter
 	CollectionRec *cr = NULL;
 	// now convert list of space-separated coll names into list of collnums
-	char *p = coll;
+	char *p = r->getString("c",NULL);
 	// if no collection list was specified look for "token=" and
 	// use those to make collections. hack for diffbot.
 	char *token = r->getString("token",NULL);
@@ -257,7 +257,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 			return false;
 		}
 		// add to our list
-		if (!m_collnumBuf.safeMemcpy(&cr->m_collnum,sizeof(collnum_t)))
+		if (!m_collnumBuf.safeMemcpy(&tmpcr->m_collnum,
+					     sizeof(collnum_t)))
 			return false;
 		// restore the \0 character we wrote in there
 		*end = c;
@@ -268,6 +269,19 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		// now add it's collection # to m_collnumBuf if there
 		if ( *p ) goto loop;
 	}
+
+	// use default collection if none provided
+	if ( ! p && ! token && m_collnumBuf.length() <= 0 ) {
+		// get default collection rec
+		cr = g_collectiondb.getRec (coll);
+		// add to our list
+		if ( cr &&
+		     !m_collnumBuf.safeMemcpy(&cr->m_collnum,
+					      sizeof(collnum_t)))
+			return false;
+	}
+		
+
 
 	/////
 	//
@@ -281,9 +295,9 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	// must have had one
 	if ( ! cr ) {
-		log("si: collection does not exist");
-		g_errno = ENOCOLLREC;
-		return false;
+		log("si: si. collection does not exist");
+		//g_errno = ENOCOLLREC;
+		//return false;
 	}
 
 	// and set from the http request. will set m_coll, etc.
@@ -297,7 +311,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//////
 
 	// get the format. "xml" "html" "json" --> FORMAT_HTML, FORMAT_CSV ...
-	char tmpFormat = getFormatFromRequest ( &m_hr );
+	char tmpFormat = m_hr.getReplyFormat();//getFormatFromRequest ( &m_hr);
 	// now override automatic defaults for special cases
 	if ( tmpFormat != FORMAT_HTML ) {
 		m_familyFilter            = 0;
@@ -472,10 +486,14 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	}
 
 	if ( m_q.m_truncated && m_q.m_isBoolean ) {
-		g_errno = ETOOMANYOPERANDS;
-		g_msg = " (error: query has too many operands)";
+		g_errno = EQUERYTOOBIG;
+		g_msg = " (error: query is too long)";
 		return false;
 	}
+
+
+	if ( m_hideAllClustered )
+		m_doSiteClustering = true;
 
 	// turn off some parms
 	if ( m_q.m_hasUrlField  ) 
@@ -491,6 +509,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_doDupContentRemoval = false;
 	}
 
+	if ( ! m_doSiteClustering )
+		m_hideAllClustered = false;
 
 	// sanity check
 	if(m_firstResultNum < 0) m_firstResultNum = 0;
@@ -947,51 +967,6 @@ uint8_t SearchInput::detectQueryLanguage(void) {
 }
 */
 
-char getFormatFromRequest ( HttpRequest *r ) {
-
-	char *formatStr = r->getString("format");
-
-	//if ( ! formatStr ) return FORMAT_HTML;
-
-	char format = FORMAT_HTML;
-
-	// what format should search results be in? default is html
-	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
-	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
-	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
-	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
-	if ( formatStr && strcmp(formatStr,"iframe")==0)
-		format=FORMAT_WIDGET_IFRAME;
-	if ( formatStr && strcmp(formatStr,"ajax")==0)
-		format=FORMAT_WIDGET_AJAX;
-	if ( formatStr && strcmp(formatStr,"append")==0)
-		format=FORMAT_WIDGET_APPEND;
-
-	// support old api &xml=1 to mean &format=1
-	if ( r->getLong("xml",0) ) {
-		format = FORMAT_XML;
-	}
-
-	// also support &json=1
-	if ( r->getLong("json",0) ) {
-		format = FORMAT_JSON;
-	}
-
-	if ( r->getLong("csv",0) ) {
-		format = FORMAT_CSV;
-	}
-
-	if ( r->getLong("iframe",0) ) {
-		format = FORMAT_WIDGET_IFRAME;
-	}
-
-	if ( r->getLong("ajax",0) ) {
-		format = FORMAT_WIDGET_AJAX;
-	}
-
-	if ( r->getLong("append",0) ) {
-		format = FORMAT_WIDGET_APPEND;
-	}
-
-	return format;
-}
+//char getFormatFromRequest ( HttpRequest *r ) {
+//
+//}

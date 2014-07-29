@@ -302,7 +302,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 
 	// add the title in
 	if ( ! addMatches ( tt->getTitle()      , 
-			    tt->getTitleSize()  ,
+			    tt->getTitleLen()  ,
 			    MF_TITLEGEN         ,
 			    xd->m_docId         ,
 			    niceness            ))

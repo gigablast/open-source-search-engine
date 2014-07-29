@@ -170,8 +170,24 @@ case	EDOCNONCANONICAL: return "Url was dup of canonical page";
 case    ECUSTOMCRAWLMISMATCH: return "Job name/type mismatch. Job name has already been used for a crawl or bulk job.";
 case    ENOTOKEN: return "Missing token";
 case    EBADIMG: return "Bad image";
-case	EREINDEXREDIR: return "Not parent url to reindex";
+case	EREINDEXREDIR: return "Not a reindexable doc";
 case	ETOOMANYPARENS: return "Too many nested parentheses in boolean query";
+case EDIFFBOTUNABLETOAPPLYRULES: return "Diffbot unable to apply rules";
+case EDIFFBOTCOULDNOTPARSE: return "Diffbot could not parse page";
+case EDIFFBOTCOULDNOTDOWNLOAD: return "Diffbot could not download page";
+case EDIFFBOTINVALIDAPI: return "Diffbot invalid API";
+case EDIFFBOTVERSIONREQ: return "Diffbot version required";
+case EDIFFBOTEMPTYCONTENT: return "Diffbot empty content";
+case EDIFFBOTREQUESTTIMEDOUT: return "Diffbot request timed out";
+case EDIFFBOTURLPROCESSERROR: return "Diffbot error processing url";
+case EDIFFBOTTOKENEXPIRED: return "Diffbot token expired";
+case EDIFFBOTUNKNOWNERROR: return "Diffbot unknown error";
+case EMISSINGINPUT: return "Missing required input parms";
+case EDMOZNOTREADY: return "Dmoz is not setup, follow instructions in "
+			"admin.html to setup";
+case EPROXYSSLCONNECTFAILED: return "SSL tunnel through HTTP proxy failed";
+case EINLINESECTIONS: return "Error generating section votes";
+case EREADONLYMODE: return "In read only mode. Failed.";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

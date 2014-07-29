@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_doProxyRebuild;
 	bool m_updatedRound;
 	collnum_t m_collnum;
 	bool m_registered;
@@ -167,6 +168,8 @@ class Collectiondb  {
 	//long long       m_lastUpdateTime [ MAX_COLLS ];
 	long            m_numRecs;
 	long            m_numRecsUsed;
+	
+	long m_wrapped;
 
 	//long long            m_lastUpdateTime;
 };
@@ -330,6 +333,14 @@ class CollectionRec {
 	// is this ip from a spam assassin?
 	bool isAssassin ( long ip );
 
+	long long getNumDocsIndexed();
+
+	// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
+	// so we do not have to keep sending this huge msg!
+	bool shouldSendLocalCrawlInfoToHost ( long hostId );
+	void sentLocalCrawlInfoToHost ( long hostId );
+	void localCrawlInfoUpdate();
+
 	// . can this ip perform a search or add url on this collection?
 	// . mamma.com provides encapsulated ips of their queriers so we
 	//   can ban them by ip
@@ -376,6 +387,8 @@ class CollectionRec {
 
 	bool rebuildChineseRules();
 
+	bool rebuildShallowRules();
+
 	bool m_urlFiltersHavePageCounts;
 
 	// moved from SpiderColl so we can load up at startup
@@ -417,6 +430,9 @@ class CollectionRec {
 	long   m_spiderRoundNum;
 
 	char  m_makeImageThumbnails;
+
+	long m_thumbnailMaxWidthHeight ;
+
 	char  m_indexSpiderReplies;
 	char  m_indexBody;
 
@@ -526,6 +542,9 @@ class CollectionRec {
 
 	long  m_filterTimeout;                // kill filter pid after X secs
 
+	// for Spider.cpp
+	long m_updateRoundNum;
+
 	// from Conf.h
 	long m_posdbMinFilesToMerge ;
 	long m_titledbMinFilesToMerge ;
@@ -604,7 +623,6 @@ class CollectionRec {
 	long m_summaryMaxLen;
 	long m_summaryMaxNumLines;
 	long m_summaryMaxNumCharsPerLine;
-	long m_summaryDefaultNumLines;
 	char m_useNewSummaries;
 
 	char m_getDocIdScoringInfo;
@@ -681,7 +699,10 @@ class CollectionRec {
 	// total crawling stats summed up from all hosts in network
 	CrawlInfo m_globalCrawlInfo;
 
-	CrawlInfo m_tmpCrawlInfo;
+	//CrawlInfo m_tmpCrawlInfo;
+
+	// holds the latest CrawlInfo for each host for this collrec
+	SafeBuf m_crawlInfoBuf;
 
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;
@@ -813,6 +834,10 @@ class CollectionRec {
 	//long  m_htmlHeadLen;
 	//long  m_htmlTailLen;
 	//long  m_htmlRootLen;
+
+	SafeBuf m_htmlRoot;
+	SafeBuf m_htmlHead;
+	SafeBuf m_htmlTail;
 
 	// . some users allowed to access this collection parameters
 	// . TODO: have permission bits for various levels of access
@@ -979,9 +1004,9 @@ class CollectionRec {
 	//long  m_maxOtherDocLen;
 
 	// the proxy ip, 0 if none
-	long  m_proxyIp;
+	//long  m_proxyIp;
 	// and proxy port
-	long m_proxyPort;
+	//long m_proxyPort;
 
 	// . puts <br>s in the summary to keep its width below this
 	// . but we exceed this width before we would split a word

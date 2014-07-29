@@ -119,6 +119,8 @@ class Images {
 	bool downloadImage();
 	bool makeThumb();
 
+	char *getImageUrl ( long j , long *urlLen ) ;
+
 	//bool gotImage ( );
 	void thumbStart_r ( bool amThread );
 
@@ -130,6 +132,8 @@ class Images {
 	// callback information
 	void  *m_state  ;
 	void (* m_callback)(void *state );
+
+	long m_xysize;
 
 	bool      m_setCalled;
 	long      m_errno;

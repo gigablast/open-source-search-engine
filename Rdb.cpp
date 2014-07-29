@@ -10,7 +10,7 @@
 #include "Posdb.h"
 #include "Cachedb.h"
 #include "Monitordb.h"
-#include "Datedb.h"
+//#include "Datedb.h"
 #include "Titledb.h"
 #include "Spider.h"
 //#include "Tfndb.h"
@@ -164,8 +164,8 @@ bool Rdb::init ( char          *dir                  ,
 	if ( m_rdbId == RDB2_INDEXDB2  ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
 	if ( m_rdbId == RDB_POSDB    ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
 	if ( m_rdbId == RDB2_POSDB2  ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
-	if ( m_rdbId == RDB_DATEDB     ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
-	if ( m_rdbId == RDB2_DATEDB2   ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
+	//if ( m_rdbId == RDB_DATEDB     ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
+	//if ( m_rdbId == RDB2_DATEDB2   ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
 	if ( m_rdbId == RDB_SECTIONDB  ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
 	if ( m_rdbId == RDB_PLACEDB    ) m_pageSize = GB_INDEXDB_PAGE_SIZE;
 	if ( m_rdbId == RDB2_SECTIONDB2) m_pageSize = GB_INDEXDB_PAGE_SIZE;
@@ -227,9 +227,9 @@ bool Rdb::init ( char          *dir                  ,
 	    (m_rdbId == RDB_INDEXDB     ||
 	     m_rdbId == RDB2_INDEXDB2   ||
 	     m_rdbId == RDB_POSDB      ||
-	     m_rdbId == RDB2_POSDB2     ||
-	     m_rdbId == RDB_DATEDB      ||
-	     m_rdbId == RDB2_DATEDB2    
+	     m_rdbId == RDB2_POSDB2     
+	     //m_rdbId == RDB_DATEDB      ||
+	     //m_rdbId == RDB2_DATEDB2    
 	     //m_rdbId == RDB_LINKDB      ||
  	     //m_rdbId == RDB2_LINKDB2)) 
 	     ))
@@ -1642,7 +1642,7 @@ void attemptMergeAll ( int fd , void *state ) {
 	//g_checksumdb2.getRdb()->attemptMerge ( 1 , false , !state);
 	//g_indexdb2.getRdb()->attemptMerge    ( 1 , false , !state);
 	g_posdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_datedb2.getRdb()->attemptMerge     ( 1 , false , !state);
+	//g_datedb2.getRdb()->attemptMerge     ( 1 , false , !state);
 	//g_sectiondb2.getRdb()->attemptMerge    ( 1 , false , !state);
 	g_titledb2.getRdb()->attemptMerge    ( 1 , false , !state);
 	//g_tfndb2.getRdb()->attemptMerge      ( 1 , false , !state);
@@ -1714,7 +1714,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	       m_rdbId == RDB_TFNDB      ||
 	       m_rdbId == RDB_INDEXDB    || 
 	       m_rdbId == RDB_POSDB    || 
-	       m_rdbId == RDB_DATEDB     ||
+	       //m_rdbId == RDB_DATEDB     ||
 	       m_rdbId == RDB_CLUSTERDB  ||
 	       m_rdbId == RDB_LINKDB     ||
 	       //m_rdbId == RDB_CHECKSUMDB ||
@@ -2700,7 +2700,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		//s_table9 [ RDB_TFNDB     ] = g_tfndb.getRdb();
 		s_table9 [ RDB_CLUSTERDB ] = g_clusterdb.getRdb();
 		s_table9 [ RDB_CATDB     ] = g_catdb.getRdb();
-		s_table9 [ RDB_DATEDB    ] = g_datedb.getRdb();
+		//s_table9 [ RDB_DATEDB    ] = g_datedb.getRdb();
 		s_table9 [ RDB_LINKDB    ] = g_linkdb.getRdb();
 		s_table9 [ RDB_CACHEDB   ] = g_cachedb.getRdb();
 		s_table9 [ RDB_SERPDB    ] = g_serpdb.getRdb();
@@ -2718,7 +2718,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB2_SPIDERDB2  ] = g_spiderdb2.getRdb();
 		//s_table9 [ RDB2_TFNDB2     ] = g_tfndb2.getRdb();
 		s_table9 [ RDB2_CLUSTERDB2 ] = g_clusterdb2.getRdb();
-		s_table9 [ RDB2_DATEDB2    ] = g_datedb2.getRdb();
+		//s_table9 [ RDB2_DATEDB2    ] = g_datedb2.getRdb();
 		s_table9 [ RDB2_LINKDB2    ] = g_linkdb2.getRdb();
 		s_table9 [ RDB2_REVDB2     ] = g_revdb2.getRdb();
 		s_table9 [ RDB2_TAGDB2     ] = g_tagdb2.getRdb();
@@ -2733,7 +2733,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	if ( rdb == g_catdb.getRdb     () ) return RDB_CATDB;
 	if ( rdb == g_indexdb.getRdb   () ) return RDB_INDEXDB;
 	if ( rdb == g_posdb.getRdb   () ) return RDB_POSDB;
-	if ( rdb == g_datedb.getRdb    () ) return RDB_DATEDB;
+	//if ( rdb == g_datedb.getRdb    () ) return RDB_DATEDB;
 	if ( rdb == g_titledb.getRdb   () ) return RDB_TITLEDB;
 	if ( rdb == g_sectiondb.getRdb () ) return RDB_SECTIONDB;
 	if ( rdb == g_placedb.getRdb   () ) return RDB_PLACEDB;
@@ -2754,7 +2754,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	if ( rdb == g_catdb.getRdb     () ) return RDB_CATDB;
 	if ( rdb == g_indexdb2.getRdb   () ) return RDB2_INDEXDB2;
 	if ( rdb == g_posdb2.getRdb   () ) return RDB2_POSDB2;
-	if ( rdb == g_datedb2.getRdb    () ) return RDB2_DATEDB2;
+	//if ( rdb == g_datedb2.getRdb    () ) return RDB2_DATEDB2;
 	if ( rdb == g_tagdb2.getRdb     () ) return RDB2_TAGDB2;
 	if ( rdb == g_titledb2.getRdb   () ) return RDB2_TITLEDB2;
 	if ( rdb == g_sectiondb2.getRdb () ) return RDB2_SECTIONDB2;
@@ -2778,7 +2778,7 @@ char isSecondaryRdb ( uint8_t rdbId ) {
         case RDB2_CATDB2     : return true;
 	case RDB2_INDEXDB2   : return true;
 	case RDB2_POSDB2   : return true;
-	case RDB2_DATEDB2    : return true;
+		//case RDB2_DATEDB2    : return true;
 	case RDB2_TAGDB2     : return true;
 	case RDB2_TITLEDB2   : return true;
 	case RDB2_SECTIONDB2 : return true;
@@ -2809,14 +2809,14 @@ char getKeySizeFromRdbId ( uint8_t rdbId ) {
 			// assume 12
 			long ks = 12;
 			// only these are 16 as of now
-			if ( i == RDB_DATEDB    ||
+			if ( //i == RDB_DATEDB    ||
 			     i == RDB_SPIDERDB  ||
 			     i == RDB_TAGDB     ||
 			     i == RDB_SYNCDB    ||
 			     i == RDB_SECTIONDB ||
 			     i == RDB_PLACEDB   ||
 
-			     i == RDB2_DATEDB2    ||
+			     //i == RDB2_DATEDB2    ||
 			     i == RDB2_SPIDERDB2  ||
 			     i == RDB2_TAGDB2     ||
 			     i == RDB2_SECTIONDB2 ||

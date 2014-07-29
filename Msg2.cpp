@@ -594,6 +594,10 @@ bool Msg2::gotList ( RdbList *list ) {
 	for ( long i = 0 ; i < m_numLists ; i++ ) {
 		if ( m_lists[i].m_listSize < m_minRecSizes[i] ) continue;
 		if ( m_minRecSizes[i] == 0 ) continue;
+		// do not print this if compiling section xpathsitehash stats
+		// because we only need like 10k of list to get a decent
+		// reading
+		if ( m_req->m_forSectionStats ) break;
 		log("msg2: read termlist #%li size=%li maxSize=%li. losing "
 		    "docIds!",
 		    i,m_lists[i].m_listSize,m_minRecSizes[i]);

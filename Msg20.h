@@ -75,6 +75,7 @@ class Msg20Request {
 	char       m_numSummaryLines           ; // non-zero default
 	char       m_expected                  ; // non-zero default
 	char       m_allowPunctInPhrase        ; // non-zero default
+	bool       m_getHeaderTag              ;
 	void      *m_state                     ;
 	void      *m_state2                    ; // used by Msg25.cpp
 	long       m_j                         ; // used by Msg25.cpp
@@ -86,6 +87,7 @@ class Msg20Request {
 	char       m_boolFlag                  ;
 	long       m_titleMaxLen               ;
 	long       m_summaryMaxLen             ;
+	long       m_summaryMaxNumCharsPerLine ;
 	long       m_maxNumCharsPerLine        ;
 	long       m_bigSampleRadius           ;
 	long       m_bigSampleMaxLen           ;
@@ -416,9 +418,11 @@ public:
 	//   methods must be changed
 	// . also, all ptr_* should be char* and all size_* should be in bytes
 	char       *ptr_tbuf                 ; // title buffer
+	char       *ptr_htag                 ; // h1 tag buf
 	char       *ptr_ubuf                 ; // url buffer
 	char       *ptr_rubuf                ; // redirect url buffer
-	char       *ptr_sum                  ; // summary
+	char       *ptr_displaySum           ; // summary for displaying
+	char       *ptr_dedupSum             ; // summary for deduping
 	char       *ptr_dbuf                 ; // display metas \0 separated
 	//char     *ptr_sbuf                 ; // big sample buf for gigabits
 	char       *ptr_gigabitSample        ;
@@ -429,6 +433,7 @@ public:
 	char       *ptr_gbvecbuf             ; // gigabit vector
 	char       *ptr_imgUrl               ; // youtube/metacafe vid thumb
 	char       *ptr_imgData              ; // for encoded images
+	char       *ptr_facetBuf             ;
 	//char       *ptr_eventEnglishTime     ; // "every saturday [[]] jan"
 	//char       *ptr_eventDateIntervals   ;
 	char       *ptr_likedbList           ;
@@ -512,9 +517,11 @@ public:
 	// . string sizes of the strings we store into m_buf[]
 	// . wordCountBuf is an exact word count 1-1 with each "range"
 	long       size_tbuf                 ;
+	long       size_htag                 ;
 	long       size_ubuf                 ;
 	long       size_rubuf                ;
-	long       size_sum                  ;
+	long       size_displaySum           ;
+	long       size_dedupSum             ;
 	long       size_dbuf                 ;
 	//long     size_sbuf                 ;
 	long       size_gigabitSample        ; // includes \0
@@ -524,7 +531,8 @@ public:
 	long       size_tvbuf                ;
 	long       size_gbvecbuf             ;
 	long       size_imgUrl               ; // youtube/metacafe vid thumb
-	long       size_imgData;
+	long       size_imgData              ;
+	long       size_facetBuf             ;
 	//long       size_eventEnglishTime     ;
 	//long       size_eventDateIntervals   ;
 	long       size_likedbList           ;

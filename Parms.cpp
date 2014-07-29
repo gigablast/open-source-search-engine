@@ -31,6 +31,7 @@
 #include "hash.h"
 #include "Test.h"
 #include "Rebalance.h"
+#include "SpiderProxy.h" // buildProxyTable()
 #include "PageInject.h"
 
 // width of input box in characters for url filter expression
@@ -144,6 +145,10 @@ bool CommandUpdateSiteList ( char *rec ) {
 	}
 	// need this
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( ! cr ) {
+		log("parms: no cr for collnum %li to update",(long)collnum);
+		return true;
+	}
 	// get the sitelist
 	char *data = getDataFromParmRec ( rec );
 	// update the table that maps site to whether we should spider it
@@ -308,6 +313,45 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	return true;
 }
 
+// after we add a new coll, or at anytime after we can clone it
+bool CommandCloneColl ( char *rec ) {
+
+	// the collnum we want to affect.
+	collnum_t dstCollnum = getCollnumFromParmRec ( rec );
+
+	// . data is the collnum in ascii.
+	// . from "&restart=467" for example
+	char *data = rec + sizeof(key96_t) + 4;
+	long dataSize = *(long *)(rec + sizeof(key96_t));
+	//if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
+	// copy parm settings from this collection name
+	char *srcColl = data;
+	
+	// return if none to clone from
+	if ( dataSize <= 0 ) return true;
+	// avoid defaulting to main collection
+	if ( ! data[0]  ) return true;
+
+	CollectionRec *srcRec = NULL;
+	CollectionRec *dstRec = NULL;
+	srcRec = g_collectiondb.getRec ( srcColl    ); // get from name
+	dstRec = g_collectiondb.getRec ( dstCollnum ); // get from #
+	
+	if ( ! srcRec ) 
+		return log("parms: invalid coll %s to clone from",
+			   srcColl);
+	if ( ! dstRec ) 
+		return log("parms: invalid collnum %li to clone to",
+			   (long)dstCollnum);
+
+	log ("parms: cloning parms from collection %s to %s",
+	      srcRec->m_coll,dstRec->m_coll);
+
+	g_parms.cloneCollRec ( (char *)dstRec , (char *)srcRec );
+
+	return true;
+}
+
 // customCrawl:
 // 0 for regular collection
 // 1 for custom crawl
@@ -423,6 +467,10 @@ bool CommandForceNextSpiderRound ( char *rec ) {
 
 	cr->m_spiderRoundStartTime = roundStartTime;
 	cr->m_spiderRoundNum = newRoundNum;
+
+	// if we don't have this is prints  out "skipping0 ... " for urls
+	// we try to spider in Spider.cpp.
+	cr->m_spiderStatus = SP_INPROGRESS;
 
 	// reset the round counts. this will log a msg. resetting the
 	// round counts will prevent maxToProcess/maxToCrawl from holding
@@ -997,6 +1045,9 @@ unsigned long Parms::calcChecksum() {
 }
 */
 
+// from Pages.cpp
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+
 // returns false and sets g_errno on error
 bool Parms::setGigablastRequest ( TcpSocket *socket ,
 				  HttpRequest *hrArg ,
@@ -1005,12 +1056,15 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	long page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
+
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
 		log("admin: THIS is null for page %li.",page);
 		return false;
 	}
+
+	gr->m_socket = socket;
 
 	// make a copy of the httprequest because the original is on the stack
 	// in HttpServer::requestHandler()
@@ -1023,8 +1077,6 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	// use the one we copied which won't disappear/beFreed on us
 	HttpRequest *hr = &gr->m_hr;
 
-	gr->m_socket = socket;
-
 	// need this
 	long obj = OBJ_GBREQUEST;
 
@@ -1032,6 +1084,12 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
 	//
 	setToDefault ( THIS , obj , NULL);
+
+
+	// map PAGE_ADDURL to PAGE_ADDURL2 so 
+	// /addurl is same as /admin/addurl as far as parms.
+	if ( page == PAGE_ADDURL ) 
+		page = PAGE_ADDURL2;
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
@@ -1061,7 +1119,7 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 		}
 		// bail if the cgi field is not in the parms list
 		if ( j >= m_numParms ) {
-			log("parms: missing cgi parm %s",field);
+			//log("parms: missing cgi parm %s",field);
 			continue;
 		}
 		// value of cgi parm (null terminated)
@@ -1118,21 +1176,52 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	//}
 
 	// print standard header
-	char fmt = r->getReplyFormat();
-	if ( fmt == FORMAT_HTML )
+	char format = r->getReplyFormat();
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
 		g_pages.printAdminTop ( sb , s , r );
 
+	// xml/json header
+	char *res = NULL;
+	if ( format == FORMAT_XML )
+		res = "<response>\n"
+			"\t<statusCode>0</statusCode>\n"
+			"\t<statusMsg>Success</statusMsg>\n";
+	if ( format == FORMAT_JSON )
+		res = "{ \"response:\"{\n"
+			"\t\"statusCode\":0,\n"
+			"\t\"statusMsg\":\"Success\"\n";
+	if ( res )
+		sb->safeStrcpy ( res );
+	
+	// do not show the parms and their current values unless showsettings=1
+	// was explicitly given for the xml/json feeds
+	long show = 1;
+	if ( format != FORMAT_HTML )
+	 	show = r->getLong("show",0);
+	if ( show )
+	 	printParmTable ( sb , s , r );
 
-	printParmTable ( sb , s , r );
+	// xml/json tail
+	if ( format == FORMAT_XML )
+		res = "</response>\n";
+	if ( format == FORMAT_JSON )
+		res = "\t}\n}\n";
+	if ( res )
+		sb->safeStrcpy ( res );
+
 
 	bool POSTReply = g_pages.getPage ( page )->m_usePost;
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
 
 	return g_httpServer.sendDynamicPage ( s                , 
 					      sb->getBufStart() ,
 					      sb->length()      , 
 					      -1               ,
 					      POSTReply        ,
-					      NULL             , // contType
+					      ct             , // contType
 					      -1               , // httpstatus
 					      NULL,//cookie           ,
 					      NULL             );// charset
@@ -1145,9 +1234,9 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 
 	long  fromIp   = s->m_ip;
 
-	char fmt = r->getReplyFormat();
+	char format = r->getReplyFormat();
 	/*
-	if ( fmt == FORMAT_HTML )
+	if ( format == FORMAT_HTML )
 		sb->safePrintf (  
 				"<script type=\"text/javascript\">"
 				"function filterRow(str) {"
@@ -1209,6 +1298,21 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 			"Add url is temporarily disabled in Master Controls."
 			"</font></td></tr>\n";
 
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		char *coll = g_collectiondb.getDefaultColl(r);
+		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+	 	g_parms.printParms2 ( sb ,
+				      page ,
+	 	 		      cr ,
+	 	 		      1 , // long nc , # cols?
+	 	 		      1 , // long pd , print desc?
+	 	 		      false , // isCrawlbot
+	 	 		      format ,
+	 	 		      NULL ); // TcpSocket *sock
+		return true;
+	}
+
+
 	// . page repair (PageRepair.cpp) has a status table BEFORE the parms
 	//   iff we are doing a repair
 	// . only one page for all collections, we have a parm that is
@@ -1218,47 +1322,45 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 		g_repair.printRepairStatus ( sb , fromIp );
 	
 	// start the table
-	if ( fmt == FORMAT_HTML ) {
-		sb->safePrintf( 
-			       "\n"
-			       "<table %s "
-			       //"style=\"border-radius:15px;"
-			       //"border:#6060f0 2px solid;"
-			       //"\" "
-			       //"width=100%% bgcolor=#%s "
-			       //"bgcolor=black "
-			       //"cellpadding=4 "
-			       //"border=0 "//border=1 "
-			       "id=\"parmtable\">"
-			       "<tr><td colspan=20>"// bgcolor=#%s>"
-			       ,TABLE_STYLE
-			       //,DARKER_BLUE
-			       //,DARK_BLUE
-				);
+	sb->safePrintf( 
+		       "\n"
+		       "<table %s "
+		       //"style=\"border-radius:15px;"
+		       //"border:#6060f0 2px solid;"
+		       //"\" "
+		       //"width=100%% bgcolor=#%s "
+		       //"bgcolor=black "
+		       //"cellpadding=4 "
+		       //"border=0 "//border=1 "
+		       "id=\"parmtable\">"
+		       "<tr><td colspan=20>"// bgcolor=#%s>"
+		       ,TABLE_STYLE
+		       //,DARKER_BLUE
+		       //,DARK_BLUE
+			);
 
-		/*
+	/*
 
-		  take this out since we took out a ton of parms for
-		  simplicties sake
+	  take this out since we took out a ton of parms for
+	  simplicties sake
 
-		if ( page != PAGE_FILTERS )
-			sb->safePrintf("<div style=\"float:left;\">" 
-				       "filter:<input type=\"text\" "
-				       "onkeyup=\"filterRow(this.value)\" "
-				       "value=\"\"></div>"
-				       );
-		*/
+	  if ( page != PAGE_FILTERS )
+	  sb->safePrintf("<div style=\"float:left;\">" 
+	  "filter:<input type=\"text\" "
+	  "onkeyup=\"filterRow(this.value)\" "
+	  "value=\"\"></div>"
+	  );
+	*/
 
-		sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
-			       //"<font size=+1>"
-			       "<center>"
-			       "<b>%s</b>"
-			       //"</font>"
-			       "</center>"
-			       //"</div>"
-			       "</td></tr>%s%s\n",
-			       tt,e1,e2);
-	}
+	sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
+		       //"<font size=+1>"
+		       "<center>"
+		       "<b>%s</b>"
+		       //"</font>"
+		       "</center>"
+		       //"</div>"
+		       "</td></tr>%s%s\n",
+		       tt,e1,e2);
 
 	//bool isCrawlbot = false;
 	//if ( collOveride ) isCrawlbot = true;
@@ -1268,28 +1370,36 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	g_parms.printParms ( sb , s , r );
 
 	// end the table
-	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
+	sb->safePrintf ( "</table>\n" );
 
 	// this must be outside of table, submit button follows
-	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br>\n" );
+	sb->safePrintf ( "<br>\n" );
+
+	if ( page == PAGE_SPIDERPROXIES ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
+		printSpiderProxyTable ( sb );
+		// do not print another submit button
+		return true;
+	}
 
 	// url filter page has a test table
-	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
+	if ( page == PAGE_FILTERS ) {
 		// wrap up the form, print a submit button
 		g_pages.printSubmit ( sb );
 		printUrlExpressionExamples ( sb );
 	}
-	else if ( page == PAGE_BASIC_SETTINGS && fmt == FORMAT_HTML ) {
+	else if ( page == PAGE_BASIC_SETTINGS ) {
 		// wrap up the form, print a submit button
 		g_pages.printSubmit ( sb );
 		printSitePatternExamples ( sb , r );
 	}
-	else if ( page == PAGE_SPIDER && fmt == FORMAT_HTML ) { // PAGE_SITES
+	else if ( page == PAGE_SPIDER ) { // PAGE_SITES
 		// wrap up the form, print a submit button
 		g_pages.printSubmit ( sb );
 		printSitePatternExamples ( sb , r );
 	}
-	else if ( fmt == FORMAT_HTML ) {
+	else {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
 	}
@@ -1466,9 +1576,9 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news","chinese"};
+	char *items[] = {"custom","web","news","chinese","shallow"};
 	char *s;
-	for ( long i = 0 ; i < 4 ; i++ ) {
+	for ( long i = 0 ; i < 5 ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
 		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
@@ -1553,7 +1663,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  long nc ,
 			  long pd , 
 			  bool isCrawlbot , 
-			  bool isJSON ,
+			  char format , // bool isJSON ,
 			  TcpSocket *sock ) {
 	bool status = true;
 	s_count = 0;
@@ -1573,6 +1683,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
 
+
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
@@ -1590,6 +1701,16 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		//     m->m_type != TYPE_CMD     ) continue;
 		// skip if hidden
 		if ( m->m_flags & PF_HIDDEN ) continue;
+
+		// or if should not show in html, like the 
+		// name of the collection, the "c" parm we do not show
+		// generally on the html page even though it is a required parm
+		// we have it in a hidden html input tag in Pages.cpp.
+		if ( (m->m_flags & PF_NOHTML) && 
+		     format != FORMAT_JSON &&
+		     format != FORMAT_XML )
+			continue;
+
 		// get right ptr
 		char *THIS = NULL;
 		if ( m->m_obj == OBJ_CONF ) 
@@ -1624,7 +1745,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
 		     m->m_rowid == -1 &&
-		     ! isJSON ) {
+		     format != FORMAT_JSON &&
+		     format != FORMAT_XML ) { // ! isJSON ) {
 			//
 			// make a separate table for array of parms
 			sb->safePrintf (
@@ -1644,6 +1766,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			// print users current ip if showing the list
 			// of "Master IPs" for admin access
 			if ( m->m_page == PAGE_SECURITY &&
+			     sock &&
 			     m->m_title &&
 			     strstr(m->m_title,"IP") )
 				sb->safePrintf(" <b>Your current IP is "
@@ -1670,7 +1793,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     bg,nc,pd,
 						     false,
 						     isCrawlbot,
-						     isJSON);
+						     format);//isJSON);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1690,7 +1813,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
-						   isCrawlbot,isJSON);
+						   isCrawlbot,format);//isJSON)
 			}
 		}
 		// end array table
@@ -1714,11 +1837,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			char *coll ,
 			char *pwd  ,
 			char *bg   ,
-			long  nc   ,
-			long  pd   ,
+			long  nc   , // # column?
+			long  pd   , // print description
 			bool lastRow ,
 			bool isCrawlbot ,
-			bool isJSON ) {
+			//bool isJSON ) {
+			char format ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1741,6 +1865,88 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_type == TYPE_COMMENT ) return true;
 
 	if ( m->m_flags & PF_HIDDEN ) return true;
+
+	CollectionRec *cr = NULL;
+	collnum_t collnum = -1;
+	if ( coll ) {
+		cr = g_collectiondb.getRec ( coll );
+		if ( cr ) collnum = cr->m_collnum;
+	}
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		// the upload button has no val, cmds too
+		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) return true;
+	}
+
+	long page = m->m_page;
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf ( "\t<parm>\n");
+		sb->safePrintf ( "\t\t<title><![CDATA[");
+		sb->cdataEncode ( m->m_title );
+		sb->safePrintf ( "]]></title>\n");
+		sb->safePrintf ( "\t\t<desc><![CDATA[");
+		sb->cdataEncode ( m->m_desc );
+		sb->safePrintf ( "]]></desc>\n");
+		if ( m->m_flags & PF_REQUIRED )
+			sb->safePrintf("\t\t<required>1</required>\n");
+		sb->safePrintf ( "\t\t<cgi>%s</cgi>\n",m->m_cgi);
+		// and default value if it exists
+		char *def = m->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "\t\t<defaultValue><![CDATA[");
+		sb->cdataEncode ( def );
+		sb->safePrintf ( "]]></defaultValue>\n");
+		if ( page == PAGE_MASTER ||
+		     page == PAGE_SEARCH ||
+		     page == PAGE_SPIDER ||
+		     page == PAGE_SPIDERPROXIES ||
+		     page == PAGE_FILTERS ||
+		     page == PAGE_SECURITY ||
+		     page == PAGE_REPAIR ||
+		     page == PAGE_LOG ) {
+			sb->safePrintf ( "\t\t<currentValue><![CDATA[");
+			SafeBuf xb;
+			m->printVal ( &xb , collnum , 0 );//occNum
+			sb->cdataEncode ( xb.getBufStart() );
+			sb->safePrintf ( "]]></currentValue>\n");
+		}
+		sb->safePrintf ( "\t</parm>\n");
+		return true;
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf ( "\t\"parm\":{\n");
+		sb->safePrintf ( "\t\t\"title\":\"%s\",\n",m->m_title);
+		sb->safePrintf ( "\t\t\"desc\":\"");
+		sb->jsonEncode ( m->m_desc );
+		sb->safePrintf("\",\n");
+		if ( m->m_flags & PF_REQUIRED )
+			sb->safePrintf("\t\t\"required\":1,\n");
+		sb->safePrintf ( "\t\t\"cgi\":\"%s\",\n",m->m_cgi);
+		// and default value if it exists
+		char *def = m->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "\t\t\"defaultValue\":\"");
+		sb->jsonEncode(def);
+		sb->safePrintf("\",\n");
+		if ( page == PAGE_MASTER ||
+		     page == PAGE_SEARCH ||
+		     page == PAGE_SPIDER ||
+		     page == PAGE_SPIDERPROXIES ||
+		     page == PAGE_FILTERS ||
+		     page == PAGE_SECURITY ||
+		     page == PAGE_REPAIR ||
+		     page == PAGE_LOG ) {
+			sb->safePrintf ( "\t\t\"currentValue\":\"");
+			SafeBuf js;
+			m->printVal ( &js , collnum , 0 );//occNum );
+			sb->jsonEncode(js.getBufStart());
+			sb->safePrintf("\"\n");
+		}
+		sb->safePrintf("\t}\n");
+		return true;
+	}
 
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
@@ -1802,13 +2008,6 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
 
-	CollectionRec *cr = NULL;
-	collnum_t collnum = -1;
-	if ( coll ) {
-		cr = g_collectiondb.getRec ( coll );
-		if ( cr ) collnum = cr->m_collnum;
-	}
-
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
@@ -1817,7 +2016,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	//   default line in the url filters table
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
-		if ( m->m_desc && pd == 1 && ! isJSON ) {
+		if ( m->m_desc && pd == 1 ) {
 			// url FILTERS table description row
 			sb->safePrintf ( "<td colspan=20 bgcolor=#%s>"
 					 "<font size=-1>\n" , DARK_BLUE);
@@ -1832,7 +2031,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		// # column
 		// do not show this for PAGE_PRIORITIES it is confusing
-		if ( m->m_max > 1 && ! isJSON ) {
+		if ( m->m_max > 1 ) {
 		     //m->m_page != PAGE_PRIORITIES ) {
 			sb->safePrintf (  "<td><b>#</b></td>\n" );
 		}
@@ -1842,8 +2041,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			// parm shortcut
 			Parm *mk = &m_parms[k];
 			// not if printing json
-			if ( isJSON ) continue;
-
+			//if ( format != FORMAT_HTML )continue;//isJSON )
 			// skip if hidden
 			if ( cr && ! cr->m_isCustomCrawl &&
 			     (mk->m_flags & PF_DIFFBOT) )
@@ -1884,7 +2082,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			*/
 			sb->safePrintf ("</td>\n");
 		}
-		if ( ! isJSON ) sb->safePrintf ( "</tr>\n" ); // mdw added
+		//if ( format == FORMAT_HTML ) 
+		sb->safePrintf ( "</tr>\n" ); // mdw added
 	}
 
 	// skip if hidden. diffbot api url only for custom crawls.
@@ -1917,16 +2116,23 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
 			sb->safePrintf ( "<tr bgcolor=#%s>",bg);
+
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
-			if ( pd ) 
+			if ( pd ) {
 				status &= sb->htmlEncode (m->m_desc,
 							  gbstrlen(m->m_desc),
 							  false);
+				// is it required?
+				if ( m->m_flags & PF_REQUIRED )
+					sb->safePrintf(" <b><font color=green>"
+						       "REQUIRED</font></b>");
+			}
+
 			sb->safePrintf ( "</font><br>\n" );
 		}
-		else {
+		if ( t != TYPE_STRINGBOX ) {
 			// this td will be invisible if isCrawlbot and the
 			// parm is too advanced to display
 			sb->safePrintf ( "<td " );
@@ -1938,11 +2144,16 @@ bool Parms::printParm ( SafeBuf* sb,
 					 3*100/nc/2/4, m->m_title );
 
 			// the "site list" parm has html in description
-			if ( pd ) 
+			if ( pd ) {
 				status &= sb->safeStrcpy(m->m_desc);
 				//status &= sb->htmlEncode (m->m_desc,
 				//			  gbstrlen(m->m_desc),
 				//			  false);
+				// is it required?
+				if ( m->m_flags & PF_REQUIRED )
+					sb->safePrintf(" <b><font color=green>"
+						       "REQUIRED</font></b>");
+			}
 
 			// and cgi parm if it exists
 			//if ( m->m_def && m->m_scgi )
@@ -1978,10 +2189,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		char *bgc = LIGHT_BLUE;
 		if ( j % 2 ) bgc = DARK_BLUE;
 		// do not print this if doing json
-		if ( isJSON ) ;
+		//if ( format != FORMAT_HTML );//isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
-		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
+		if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
 			sb->safePrintf ( "<tr bgcolor=#%s>"
 					 "<td>%li</td>\n<td>", 
 					 bgc,
@@ -2030,69 +2241,67 @@ bool Parms::printParm ( SafeBuf* sb,
 		//if ( *s ) ddd1 = " checked";
 		//else      ddd2 = " checked";
 		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			if ( ! lastRow ) {
-				long val = 0;
-				if ( *s ) val = 1;
-				sb->safePrintf("\"%s\":%li,\n",cgi,val);
-			}
-		}
-		else {
-			//sb->safePrintf("<center><nobr>");
-			sb->safePrintf("<nobr>");
-			// this is part of the "HACK" fix below. you have to
-			// specify the cgi parm in the POST request, and 
-			// unchecked checkboxes are not included in the POST 
-			// request.
-			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
-			//	sb->safePrintf("<input type=hidden ");
-			//char *val = "Y";
-			//if ( ! *s ) val = "N";
-			char *val = "";
-			// "s" is invalid of parm has no "object"
-			if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
-				val = " checked";
-			if ( m->m_obj != OBJ_NONE && s && *s ) 
-				val = " checked";
-			// s is NULL for GigablastRequest parms
-			if ( ! s && m->m_def && m->m_def[0]=='1' )
-				val = " checked";
-			// in case it is not checked, submit that!
-			// if it gets checked this should be overridden then
-			sb->safePrintf("<input type=hidden name=%s value=0>"
-				       , cgi );
-			//else
-			sb->safePrintf("<input type=checkbox value=1 ");
-				       //"<nobr><input type=button ");
-			if ( m->m_page == PAGE_FILTERS)
-				sb->safePrintf("id=id_%s ",cgi);
+		// if ( format == FORMAT_JSON ) { // isJSON ) {
+		// 	if ( ! lastRow ) {
+		// 		long val = 0;
+		// 		if ( *s ) val = 1;
+		// 		sb->safePrintf("\"%s\":%li,\n",cgi,val);
+		// 	}
+		// }
+		//sb->safePrintf("<center><nobr>");
+		sb->safePrintf("<nobr>");
+		// this is part of the "HACK" fix below. you have to
+		// specify the cgi parm in the POST request, and 
+		// unchecked checkboxes are not included in the POST 
+		// request.
+		//if ( lastRow && m->m_page == PAGE_FILTERS ) 
+		//	sb->safePrintf("<input type=hidden ");
+		//char *val = "Y";
+		//if ( ! *s ) val = "N";
+		char *val = "";
+		// "s" is invalid of parm has no "object"
+		if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
+			val = " checked";
+		if ( m->m_obj != OBJ_NONE && s && *s ) 
+			val = " checked";
+		// s is NULL for GigablastRequest parms
+		if ( ! s && m->m_def && m->m_def[0]=='1' )
+			val = " checked";
+		// in case it is not checked, submit that!
+		// if it gets checked this should be overridden then
+		sb->safePrintf("<input type=hidden name=%s value=0>"
+			       , cgi );
+		//else
+		sb->safePrintf("<input type=checkbox value=1 ");
+		//"<nobr><input type=button ");
+		if ( m->m_page == PAGE_FILTERS)
+			sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("name=%s%s"
-				       //" onmouseup=\""
-				       //"if ( this.value=='N' ) {"
-				       //"this.value='Y';"
-				       //"} "
-				       //"else if ( this.value=='Y' ) {"
-				       //"this.value='N';"
-				       //"}"
-				       //"\" "
-				       ">"
-				       ,cgi
-				       ,val);//,ddd);
-			//
-			// repeat for off position
-			//
-			//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
-			//	sb->safePrintf(" Off:<input type=radio ");
-			//	if ( m->m_page == PAGE_FILTERS)
-			//		sb->safePrintf("id=id_%s ",cgi);
-			//	sb->safePrintf("value=0 name=%s%s>",
-			//		       cgi,ddd2);
-			//}
-			sb->safePrintf("</nobr>"
-				       //"</center>"
-				       );
-		}
+		sb->safePrintf("name=%s%s"
+			       //" onmouseup=\""
+			       //"if ( this.value=='N' ) {"
+			       //"this.value='Y';"
+			       //"} "
+			       //"else if ( this.value=='Y' ) {"
+			       //"this.value='N';"
+			       //"}"
+			       //"\" "
+			       ">"
+			       ,cgi
+			       ,val);//,ddd);
+		//
+		// repeat for off position
+		//
+		//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
+		//	sb->safePrintf(" Off:<input type=radio ");
+		//	if ( m->m_page == PAGE_FILTERS)
+		//		sb->safePrintf("id=id_%s ",cgi);
+		//	sb->safePrintf("value=0 name=%s%s>",
+		//		       cgi,ddd2);
+		//}
+		sb->safePrintf("</nobr>"
+			       //"</center>"
+			       );
 	}
 	else if ( t == TYPE_CHAR )
 		sb->safePrintf ("<input type=text name=%s value=\"%li\" "
@@ -2105,11 +2314,11 @@ bool Parms::printParm ( SafeBuf* sb,
 				false , false );
 	else if ( t == TYPE_PRIORITY2 ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
-		else
-			printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
-					true , true );
+		// if ( format==FORMAT_JSON) // isJSON )
+		// 	sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
+		// else
+		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
+				true , true );
 	}
 	// this url filters parm is an array of SAFEBUFs now, so each is
 	// a string and that string is the diffbot api url to use. 
@@ -2140,14 +2349,14 @@ bool Parms::printParm ( SafeBuf* sb,
 			  cgi,m->m_title);
 	else if ( t == TYPE_FLOAT ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
-		else
-			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%f\" "
-					// 3 was ok on firefox but need 6
-					// on chrome
-					"size=7>",cgi,*(float *)s);
+		// if ( format == FORMAT_JSON )//isJSON )
+		// 	sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
+		// else
+		sb->safePrintf ("<input type=text name=%s "
+				"value=\"%f\" "
+				// 3 was ok on firefox but need 6
+				// on chrome
+				"size=7>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -2159,14 +2368,14 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
-		else
-			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%li\" "
-					// 3 was ok on firefox but need 6
-					// on chrome
-					"size=6>",cgi,*(long *)s);
+		// if ( format == FORMAT_JSON ) // isJSON )
+		// 	sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+		// else
+		sb->safePrintf ("<input type=text name=%s "
+				"value=\"%li\" "
+				// 3 was ok on firefox but need 6
+				// on chrome
+				"size=6>",cgi,*(long *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
@@ -2186,7 +2395,7 @@ bool Parms::printParm ( SafeBuf* sb,
 				cgi,size);
 
 		// if it has PF_DEFAULTCOLL flag set then use the coll
-		if ( m->m_flags & PF_COLLDEFAULT )
+		if ( cr && (m->m_flags & PF_COLLDEFAULT) )
 			sb->safePrintf("%s",cr->m_coll);
 		else
 			sb->dequote ( s , gbstrlen(s) );
@@ -2236,7 +2445,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ("<input type=text name=%s size=%li "
 					"value=\"",cgi,size);
 			// if it has PF_DEFAULTCOLL flag set then use the coll
-			if ( m->m_flags & PF_COLLDEFAULT )
+			if ( cr && (m->m_flags & PF_COLLDEFAULT) )
 				sb->safePrintf("%s",cr->m_coll);
 			else if ( sp )
 				sb->dequote ( sp , gbstrlen(sp) );
@@ -2262,22 +2471,23 @@ bool Parms::printParm ( SafeBuf* sb,
 			sx = &tmp;
 			char *def = m->m_def;
 			// if it has PF_DEFAULTCOLL flag set then use the coll
-			if ( m->m_flags & PF_COLLDEFAULT ) def = cr->m_coll;
+			if ( cr && (m->m_flags & PF_COLLDEFAULT) ) 
+				def = cr->m_coll;
 			tmp.safePrintf("%s",def);
 		}
 
 		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			// this can be empty for the empty row i guess
-			if ( sx->length() ) {
-				// convert diffbot # to string
-				sb->safePrintf("\"%s\":\"",cgi);
-				if ( m->m_obj != OBJ_NONE )
-					sb->safeUtf8ToJSON (sx->getBufStart());
-				sb->safePrintf("\",\n");
-			}
-		}
-		else if ( m->m_flags & PF_TEXTAREA ) {
+		// if ( format == FORMAT_JSON ) { // isJSON ) {
+		// 	// this can be empty for the empty row i guess
+		// 	if ( sx->length() ) {
+		// 		// convert diffbot # to string
+		// 		sb->safePrintf("\"%s\":\"",cgi);
+		// 		if ( m->m_obj != OBJ_NONE )
+		// 			sb->safeUtf8ToJSON (sx->getBufStart());
+		// 		sb->safePrintf("\",\n");
+		// 	}
+		// }
+		if ( m->m_flags & PF_TEXTAREA ) {
 			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
 					cgi);
 			//sb->dequote ( s , gbstrlen(s) );
@@ -2435,10 +2645,10 @@ bool Parms::printParm ( SafeBuf* sb,
 
 
 	// end the input cell
-	if ( ! isJSON ) sb->safePrintf ( "</td>\n");
+	sb->safePrintf ( "</td>\n");
 
 	// "insert above" link? used for arrays only, where order matters
-	if ( m->m_addin && j < jend && ! isJSON ) {
+	if ( m->m_addin && j < jend ) {//! isJSON ) {
 		sb->safePrintf ( "<td><a href=\"?c=%s&" // cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
@@ -2455,7 +2665,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . display the remove link for arrays if we need to
 	// . but don't display if next guy does NOT start a new row
 	//if ( m->m_max > 1 && lastInRow && ! isJSON ) {
-	if ( m->m_addin && j < jend && ! isJSON ) {
+	if ( m->m_addin && j < jend ) { //! isJSON ) {
 	//     m->m_page != PAGE_PRIORITIES ) {
 		// show remove link?
 		bool show = true;
@@ -2480,7 +2690,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					//"rm_%s=1\">"
 					// remove=<rownum>
 					"remove%s=%li\">"
-					"remove</td>\n",coll,//cgi );
+					"remove</a></td>\n",coll,//cgi );
 					suffix,
 					j); // j is row #
 					
@@ -2488,7 +2698,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td></td>\n");
 	}
 
-	if ( lastInRow && ! isJSON ) sb->safePrintf ("</tr>\n");
+	if ( lastInRow ) sb->safePrintf ("</tr>\n");
 	return status;
 }
 
@@ -2968,10 +3178,11 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
-		if ( m->m_obj == OBJ_CONF ) {
-			CollectionRec *cr = (CollectionRec *)THIS;
-			if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
-		}
+		// what is this?
+		//if ( m->m_obj == OBJ_COLL ) {
+		//	CollectionRec *cr = (CollectionRec *)THIS;
+		//	if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
+		//}
 		// sanity check, make sure it does not overflow
 		if ( m->m_obj == OBJ_COLL &&
 		     m->m_off > (long)sizeof(CollectionRec)){
@@ -3182,6 +3393,9 @@ bool Parms::setFromFile ( void *THIS        ,
 			//continue;
 		}
 
+		// now use proper cdata
+		// we can't do this and be backwards compatible right now
+		//nb = cdataDecode ( v , v , 0 );//, vlen , false ,0);
 		// now decode it into itself
 		nb = htmlDecode ( v , v , vlen , false ,0);
 		v[nb] = '\0';
@@ -3359,15 +3573,17 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize){
 			  CT_XML  );
 }
 
-#define MAX_CONF_SIZE 200000
+//#define MAX_CONF_SIZE 200000
 
 // returns false and sets g_errno on error
 bool Parms::saveToXml ( char *THIS , char *f , char objType ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// print into buffer
-	char  buf[MAX_CONF_SIZE];
-	char *p    = buf;
-	char *pend = buf + MAX_CONF_SIZE;
+	// "seeds" can be pretty big so go with safebuf now
+	//char  buf[MAX_CONF_SIZE];
+	SafeBuf sb;
+	//char *p    = buf;
+	//char *pend = buf + MAX_CONF_SIZE;
 	long  len ;
 	long  n   ;
 	File  ff  ;
@@ -3449,8 +3665,9 @@ skip2:
 		char *start;
 		// just print tag if it has no description
 		if ( ! *d ) goto skip;
-		if ( p + gbstrlen(d)+5 >= pend ) goto hadError;
-		if ( p > buf ) *p++='\n';
+		//if ( p + gbstrlen(d)+5 >= pend ) goto hadError;
+		//if ( p > buf ) *p++='\n';
+		if ( sb.length() ) sb.pushChar('\n');
 	loop:
 		dend  = d + 77;
 		if ( dend > END ) dend = END;
@@ -3462,11 +3679,14 @@ skip2:
 			d++; 
 		}
 		if ( ! *d ) last = d;
-		memcpy ( p , "# " , 2 ); 
-		p += 2;
-		memcpy ( p , start , last - start );
-		p += last - start;
-		*p++='\n';
+		//memcpy ( p , "# " , 2 ); 
+		//p += 2;
+		sb.safeMemcpy("# ",2);
+		//memcpy ( p , start , last - start );
+		//p += last - start;
+		sb.safeMemcpy(start,last-start);
+		//*p++='\n';
+		sb.pushChar('\n');
 		d = last + 1;
 		if ( d < END && *d ) goto loop;
 		// bail if comment
@@ -3499,16 +3719,19 @@ skip2:
 		// loop over all in this potential array
 		for ( j = 0 ; j < count ; j++ ) {
 			// the xml
-			if ( p + gbstrlen(m->m_xml) >= pend ) goto hadError;
-			sprintf ( p , "<%s>" , m->m_xml );
-			p += gbstrlen ( p );
+			//if ( p + gbstrlen(m->m_xml) >= pend ) goto hadError;
+			if ( g_errno ) goto hadError;
+			//sprintf ( p , "<%s>" , m->m_xml );
+			//p += gbstrlen ( p );
+			sb.safePrintf("<%s>" , m->m_xml );
 			// print CDATA if string
 			if ( m->m_type == TYPE_STRING         || 
 			     m->m_type == TYPE_STRINGBOX      ||
 			     m->m_type == TYPE_SAFEBUF        ||
 			     m->m_type == TYPE_STRINGNONEMPTY   ) {
-				sprintf ( p , "<![CDATA[" );
-				p += gbstrlen ( p );
+				//sprintf ( p , "<![CDATA[" );
+				//p += gbstrlen ( p );
+				sb.safeStrcpy( "<![CDATA[" );
 			}
 			// break point
 			//if (strcmp ( m->m_xml , "filterRulesetDefault")==0)
@@ -3516,26 +3739,32 @@ skip2:
 			// . represent it in ascii form
 			// . this escapes out <'s and >'s
 			// . this ALSO encodes #'s (xml comment indicators)
-			p = getParmHtmlEncoded(p,pend,m,s);
+			//p = getParmHtmlEncoded(p,pend,m,s);
+			getParmHtmlEncoded(&sb,m,s);
 			// print CDATA if string
 			if ( m->m_type == TYPE_STRING         || 
 			     m->m_type == TYPE_STRINGBOX      ||
 			     m->m_type == TYPE_SAFEBUF        ||
 			     m->m_type == TYPE_STRINGNONEMPTY   ) {
-				sprintf ( p , "]]>" );
-				p += gbstrlen ( p );
+				//sprintf ( p , "]]>" );
+				//p += gbstrlen ( p );
+				sb.safeStrcpy("]]>" );
 			}
 			// this is NULL if it ran out of room
-			if ( ! p ) goto hadError;
+			//if ( ! p ) goto hadError;
+			if ( g_errno ) goto hadError;
 			// advance to next element in array, if it is one
 			s = s + m->m_size;
 			// close the xml tag
-			if ( p + 4 >= pend ) goto hadError;
-			sprintf ( p , "</>\n" );
-			p += gbstrlen ( p );
+			//if ( p + 4 >= pend ) goto hadError;
+			//sprintf ( p , "</>\n" );
+			//p += gbstrlen ( p );
+			sb.safeStrcpy("</>\n" );
+			if ( g_errno ) goto hadError;
 		}
 	}
-	*p = '\0';
+	//*p = '\0';
+	sb.nullTerm();
 
 	ff.set ( f );
 	if ( ! ff.open ( O_RDWR | O_CREAT | O_TRUNC ) )
@@ -3543,17 +3772,20 @@ skip2:
 			   ff.getFilename(),mstrerror(g_errno));
 
 	// save the parm to the file
-	len = gbstrlen(buf);
+	//len = gbstrlen(buf);
+	len = sb.length();
 	// use -1 for offset so we do not use pwrite() so it will not leave
 	// garbage at end of file
-	n    = ff.write ( buf , len , -1 );
+	//n    = ff.write ( buf , len , -1 );
+	n    = ff.write ( sb.getBufStart() , len , -1 );
 	ff.close();
 	if ( n == len ) return true;
 	return log("admin: Could not write to file %s.",ff.getFilename());
  hadError:
-	return log("admin: File bigger than %li bytes."
-		   "  Please increase #define in Parms.cpp.",
-		   (long)MAX_CONF_SIZE);
+	return log("admin: Error writing coll.conf buf: %s",mstrerror(g_errno));
+	//File bigger than %li bytes."
+	//	   "  Please increase #define in Parms.cpp.",
+	//	   (long)MAX_CONF_SIZE);
 }
 
 Parm *Parms::getParm ( char *cgi ) {
@@ -3626,9 +3858,9 @@ skipMakeTable:
 }
 */
 
-char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
+bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 	// do not breech the buffer
-	if ( p + 100 >= pend ) return p;
+	//if ( p + 100 >= pend ) return p;
 	// print it out
 	char t = m->m_type;
 	if ( t == TYPE_CHAR           || t == TYPE_BOOL           ||
@@ -3639,32 +3871,38 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	     t == TYPE_PRIORITY_BOXES || t == TYPE_RETRIES        ||
 	     t == TYPE_RETRIES        || t == TYPE_FILTER         ||
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
-		sprintf (p,"%li",(long)*s);
+		sb->safePrintf("%li",(long)*s);
 	else if ( t == TYPE_FLOAT )
-		sprintf (p,"%f",*(float *)s);
+		sb->safePrintf("%f",*(float *)s);
 	else if ( t == TYPE_IP ) 
-		sprintf (p,"%s",iptoa(*(long *)s));
+		sb->safePrintf("%s",iptoa(*(long *)s));
 	else if ( t == TYPE_LONG || t == TYPE_LONG_CONST || t == TYPE_RULESET||
 		  t == TYPE_SITERULE ) 
-		sprintf (p,"%li",*(long *)s);
+		sb->safePrintf("%li",*(long *)s);
 	else if ( t == TYPE_LONG_LONG )
-		sprintf (p,"%lli",*(long long *)s);
+		sb->safePrintf("%lli",*(long long *)s);
 	else if ( t == TYPE_SAFEBUF ) {
-		SafeBuf *sb = (SafeBuf *)s;
-		char *buf = sb->getBufStart();
-		long blen = 0;
-		if ( buf ) blen = gbstrlen(buf);
-		p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
+		SafeBuf *sb2 = (SafeBuf *)s;
+		char *buf = sb2->getBufStart();
+		//long blen = 0;
+		//if ( buf ) blen = gbstrlen(buf);
+		//p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
+		// we can't do proper cdata and be backwards compatible
+		//sb->cdataEncode ( buf );//, blen );//, true ); // #?*
+		sb->htmlEncode ( buf );
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
 		  t == TYPE_STRINGNONEMPTY ||
 		  t == TYPE_TIME) {
-		long slen = gbstrlen ( s );
+		//long slen = gbstrlen ( s );
 		// this returns the length of what was written, it may
 		// not have converted everything if pend-p was too small...
 		//p += saftenTags2 ( p , pend - p , s , len );
-		p = htmlEncode ( p , pend , s , s + slen , true /*#?*/);
+		//p = htmlEncode ( p , pend , s , s + slen , true /*#?*/);
+		// we can't do proper cdata and be backwards compatible
+		//sb->cdataEncode ( s );//, slen );//, true /*#?*/);
+		sb->htmlEncode ( s );
 	}
 	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
 		// time is stored as long
@@ -3672,10 +3910,13 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 		// get the time struct
 		struct tm *tp = localtime ( (time_t *)&ct ) ;
 		// set the "selected" month for the drop down
-		strftime ( p , 100 , "%d %b %Y %H:%M UTC" , tp );
+		char tmp[100];
+		strftime ( tmp , 100 , "%d %b %Y %H:%M UTC" , tp );
+		sb->safeStrcpy ( tmp );
 	}
-	p += gbstrlen ( p );
-	return p;
+	//p += gbstrlen ( p );
+	//return p;
+	return true;
 }
 /*
 // returns the size needed to serialize parms
@@ -4379,6 +4620,175 @@ void Parms::init ( ) {
 	char *x = (char *)&cr;
 	char *y = (char *)&si;
 
+
+	//////////////
+	// 
+	// now for Pages.cpp printApiForPage() we need these
+	//
+	//////////////
+
+
+	GigablastRequest gr;
+
+	/*
+	m->m_title = "delete collection";
+	m->m_desc  = "A collection name to delete. You can specify multiple "
+		"&delColl= parms in the request to delete multiple "
+		"collections.";
+	m->m_cgi   = "delColl";
+	m->m_page  = PAGE_DELCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = 0;//PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "delete collection";
+	m->m_desc  = "A collection name to delete. You can specify multiple "
+		"&delColl= parms in the request to delete multiple "
+		"collections.";
+	// camelcase as opposed to above lowercase
+	m->m_cgi   = "delcoll";
+	m->m_page  = PAGE_DELCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "A collection name to add.";
+	// camelcase support
+	m->m_cgi   = "addColl";
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "A collection name to add.";
+	// lowercase support
+	m->m_cgi   = "addcoll";
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_HIDDEN;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+	*/
+
+	m->m_title = "collection";
+	m->m_desc  = "Clone settings INTO this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_CLONECOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_BASIC_STATUS;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SPIDERDB;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SITEDB;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Inject into this collection.";
+	m->m_cgi   = "c";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	// //
+	// // more global-ish parms
+	// //
+
+	// m->m_title = "show settings";
+	// m->m_desc  = "show settings or values for this page.";
+	// m->m_cgi   = "showsettings";
+	// m->m_page  = PAGE_MASTER;
+	// m->m_obj   = OBJ_NONE;
+	// m->m_type  = TYPE_BOOL;
+	// m->m_def   = "1";
+	// // do not show in html controls
+	// m->m_flags = PF_API | PF_NOHTML;
+	// m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	// m++;
+
+
+
+	////////////
+	//
+	// end stuff for printApiForPage()
+	//
+	////////////
+
 	// just a comment in the conf file
 	m->m_desc  = 
 		"All <, >, \" and # characters that are values for a field "
@@ -5078,6 +5488,22 @@ void Parms::init ( ) {
 	//m->m_type  = TYPE_BOOL;
 	//m++;
 
+	/*
+	m->m_title = "qa build mode";
+	m->m_desc  = "When on Msg13.cpp saves docs in the qatest123 coll "
+		"to qa/ subdir, when off "
+		"if downloading a doc for qatest123 coll and not in "
+		"qa subdir then it returns a 404.";
+	m->m_cgi   = "qabuildmode";
+	m->m_off   = (char *)&g_conf.m_qaBuildMode - g;
+	m->m_def   = "0"; 
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_CONF;
+	m->m_flags = PF_NOAPI | PF_HIDDEN;
+	m++;
+	*/
+
 	m->m_title = "read only mode";
 	m->m_desc  = "Read only mode does not allow spidering.";
 	m->m_cgi   = "readonlymode";
@@ -5140,7 +5566,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_DUP;
+	m->m_flags = PF_DUP|PF_CLONE;
 	m++;
 
 	m->m_title = "site list";
@@ -5583,14 +6009,54 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
+	m->m_title = "delete collection";
+	m->m_desc  = "Delete the specified collection. You can specify "
+		"multiple &delcoll= parms in a single request to delete "
+		"multiple collections at once.";
+	// lowercase as opposed to camelcase above
+	m->m_cgi   = "delcoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_DELCOLL;
+	m->m_obj   = OBJ_COLL;
+	m->m_func2 = CommandDeleteColl2;
+	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m++;
+
+	// arg is the collection # to clone from
+	m->m_title = "clone collection";
+	m->m_desc  = "Clone collection settings FROM this collection.";
+	m->m_cgi   = "clonecoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_CLONECOLL;
+	m->m_obj   = OBJ_COLL;
+	m->m_func  = CommandCloneColl;
+	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m++;
+
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
+	// camelcase support
 	m->m_cgi   = "addColl";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_func  = CommandAddColl0;
 	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "Add a new collection with this name. No spaces "
+		"allowed or strange characters allowed. Max of 64 characters.";
+	// lower case support
+	m->m_cgi   = "addcoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_COLL;
+	m->m_func  = CommandAddColl0;
+	m->m_cast  = 1;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
 	m->m_title = "add custom crawl";
@@ -5723,7 +6189,7 @@ void Parms::init ( ) {
 		"See the <a href=#qops>query operators</a> below for "
 		"more info.";
 	m->m_obj   = OBJ_SI;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_off   = (char *)&si.m_query - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "q";
@@ -5748,7 +6214,7 @@ void Parms::init ( ) {
 	m->m_desc  = "The number of results returned per page.";
 	// make it 25 not 50 since we only have like 26 balloons
 	m->m_def   = "10";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_docsWanted - y;
 	m->m_type  = TYPE_LONG;
@@ -5763,18 +6229,18 @@ void Parms::init ( ) {
 		"separated by a whitespace to search multiple collections at "
 		"once.";
 	m->m_cgi   = "c";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&si.m_coll - y;
 	m++;
 
 	m->m_title = "first result num";
 	m->m_desc  = "Start displaying at search result #X. Starts at 0.";
 	m->m_def   = "0";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_firstResultNum - y;
 	m->m_type  = TYPE_LONG;
@@ -5795,9 +6261,23 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
+
+	m->m_title = "hide all clustered results";
+	m->m_desc  = "Only display at most one result per site.";
+	m->m_cgi   = "hacr";
+	m->m_off   = (char *)&si.m_hideAllClustered - y;
+	m->m_defOff= (char *)&cr.m_hideAllClustered - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m++;
+
 
 	m->m_title = "dedup results";
 	m->m_desc  = "Should duplicate search results be removed? This is "
@@ -5810,7 +6290,7 @@ void Parms::init ( ) {
 	m->m_group = 1;
 	m->m_cgi   = "dr";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -5822,13 +6302,13 @@ void Parms::init ( ) {
 		"dr=1 for this to work.";
 	m->m_cgi   = "pss";
 	m->m_off   = (char *)&si.m_percentSimilarSummary - y;
+	m->m_defOff= (char *)&cr.m_percentSimilarSummary - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "0"; //90
 	m->m_group = 0;
 	m->m_smin  = 0;
 	m->m_smax  = 100;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;       
 
@@ -5842,7 +6322,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -5855,7 +6335,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "spell";
 	m->m_off   = (char *)&si.m_spellCheck - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "1";
 	m->m_flags = PF_API;
@@ -5866,7 +6346,7 @@ void Parms::init ( ) {
 		"Useful when thousands/millions of search results are "
 		"requested. Required when doing such things otherwise "
 		"Gigablast could run out of memory.";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_streamResults - y;
 	m->m_type  = TYPE_CHAR;
@@ -5886,7 +6366,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "scores"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_getDocIdScoringInfo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = NULL;
 	m->m_flags = PF_API;
@@ -5900,12 +6380,12 @@ void Parms::init ( ) {
 	m->m_desc  = "If enabled, query expansion will expand your query "
 		"to include the various forms and "
 		"synonyms of the query terms.";
-	m->m_def   = "1";
 	m->m_off   = (char *)&si.m_queryExpansion - y;
+	m->m_defOff= (char *)&cr.m_queryExpansion - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi  = "qe";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -5966,7 +6446,7 @@ void Parms::init ( ) {
 	m->m_desc  = "The ip address of the searcher. We can pass back "
 		"for use in the autoban technology which bans abusive IPs.";
 	m->m_obj   = OBJ_SI;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_off   = (char *)&si.m_userIpStr - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "uip";
@@ -5981,7 +6461,7 @@ void Parms::init ( ) {
 	//m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_off   = (char *)&si.m_useMinAlgo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	// seems, good, default it on
 	m->m_def   = "1";
@@ -5996,7 +6476,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Only score up to this many inlink text term pairs";
 	m->m_off   = (char *)&si.m_realMaxTop - y;
 	m->m_type  = TYPE_LONG;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "10";
 	m->m_cgi   = "rmt";
@@ -6007,7 +6487,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Should search results be ranked using this new algo?";
 	m->m_off   = (char *)&si.m_useNewAlgo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	// seems, good, default it on
 	m->m_def   = "1";
@@ -6019,7 +6499,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Quickly eliminated docids using max score algo";
 	m->m_off   = (char *)&si.m_doMaxScoreAlgo - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "1";
 	m->m_cgi   = "dmsa";
@@ -6031,7 +6511,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Should we try to speed up search results generation?";
 	m->m_off   = (char *)&si.m_fastIntersection - y;
 	m->m_type  = TYPE_CHAR;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	// turn off until we debug
 	m->m_def   = "-1";
@@ -6100,7 +6580,7 @@ void Parms::init ( ) {
 	m->m_def   = "xx";//_US";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6117,7 +6597,7 @@ void Parms::init ( ) {
 	m->m_def   = "us";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -6195,7 +6675,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7048,7 +7528,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7706,6 +8186,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "max title len";
+	m->m_desc  = "What is the maximum number of "
+		"characters allowed in titles displayed in the search "
+		"results?";
+	m->m_cgi   = "tml";
+	m->m_defOff= (char *)&cr.m_titleMaxLen - x;
+	m->m_off   = (char *)&si.m_titleMaxLen - y;
+	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	/*
 	m->m_title = "use new summary generator";
 	m->m_desc  = "Also used for gigabits and titles.";
@@ -7737,37 +8230,50 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "default number of summary excerpts";
-	m->m_desc  = "What is the default number of "
-		"summary excerpts displayed per search result?";
+	m->m_title = "number of summary excerpts";
+	m->m_desc  = "How many summary excerpts to display per search result?";
 	m->m_cgi   = "ns";
 	m->m_type  = TYPE_LONG;
-	m->m_defOff= (char *)&cr.m_summaryDefaultNumLines - x;
+	m->m_defOff= (char *)&cr.m_summaryMaxNumLines - x;
 	m->m_group = 0;
 	m->m_off   = (char *)&si.m_numLinesInSummary - y;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
-
 
 
 	m->m_title = "max summary line width";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
+		"Also affects title. "
 		"Strings without spaces that exceed this "
-		"width are not split.";
+		"width are not split. Has no affect on xml or json feed, "
+		"only works on html.";
 	m->m_cgi   = "sw";
-	m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
-	m->m_type  = TYPE_LONG;
+	//m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
+	m->m_off   = (char *)&si.m_summaryMaxWidth - y;
 	m->m_defOff= (char *)&cr.m_summaryMaxWidth - x;
+	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 
+	m->m_title = "max summary excerpt length";
+	m->m_desc = "What is the maximum number of "
+		"characters allowed per summary excerpt?";
+	m->m_cgi   = "smxcpl";
+	m->m_off   = (char *)&si.m_summaryMaxNumCharsPerLine - y;
+	m->m_defOff= (char *)&cr.m_summaryMaxNumCharsPerLine - x;
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
 	/*
 	m->m_title = "enable page turk";
 	m->m_desc  = "If enabled, search results shall feed the page turk "
@@ -7788,7 +8294,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_defOff= (char *)&cr.m_docsToScanForTopics - x;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7802,7 +8308,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7820,7 +8326,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7834,7 +8340,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7850,7 +8356,7 @@ void Parms::init ( ) {
 	m->m_def   = "2";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7867,8 +8373,98 @@ void Parms::init ( ) {
 	m->m_def   = "80";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m++;
+
+	///////////////////////////////////////////
+	//  SPIDER PROXY CONTROLS
+	//  
+	///////////////////////////////////////////
+
+	m->m_title = "use spider proxies";
+	m->m_desc  = "Use the spider proxies listed below. If none are "
+		"listed then gb will not use any.";
+	m->m_cgi   = "useproxyips";
+	m->m_xml   = "useSpiderProxies";
+	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "spider proxy ips";
+	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
+		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>. "
+		"If a proxy itself times out when downloading through it "
+		"it will be perceived as a normal download timeout and the "
+		"page will be retried according to the url filters table, so "
+		"you  might want to modify the url filters to retry network "
+		"errors more aggressively. Search for 'private proxies' on "
+		"google to find proxy providers. Try to ensure all your "
+		"proxies are on different class C IPs if possible. "
+		"That is, the first 3 numbers in the IP addresses are all "
+		"different.";
+	m->m_cgi   = "proxyips";
+	m->m_xml   = "proxyIps";
+	m->m_off   = (char *)&g_conf.m_proxyIps - g;
+	m->m_type  = TYPE_SAFEBUF; // TYPE_IP;
+	m->m_def   = "";
+	m->m_flags = PF_TEXTAREA | PF_REBUILDPROXYTABLE;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "spider proxy test url";
+	m->m_desc  = "Download this url every minute through each proxy "
+		"listed above to ensure they are up. Typically you should "
+		"make this a URL you own so you do not aggravate another "
+		"webmaster.";
+	m->m_xml   = "proxyTestUrl";
+	m->m_cgi   = "proxytesturl";
+	m->m_off   = (char *)&g_conf.m_proxyTestUrl - g;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "http://www.gigablast.com/";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "mix up user agents";
+	m->m_desc  = "Use random user-agents when downloading to "
+		"protecting gb's anonymity. The User-Agent used is a function "
+		"of the proxy IP/port and IP of the url being downloaded. "
+		"That way it is consistent when downloading the same website "
+		"through the same proxy.";
+	m->m_cgi   = "userandagents";
+	m->m_xml   = "useRandAgents";
+	m->m_off   = (char *)&g_conf.m_useRandAgents - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "squid proxy authorized users";
+	m->m_desc  = "Gigablast can also simulate a squid proxy, "
+		"complete with "
+		"caching. It will forward your request to the proxies you "
+		"list above, if any. This list consists of space-separated "
+		"<i>username:password</i> items. Leave this list empty "
+		"to disable squid caching behaviour. The default cache "
+		"size for this is 10MB per shard. Use item *:* to allow "
+		"anyone access.";
+	m->m_xml   = "proxyAuth";
+	m->m_cgi   = "proxyAuth";
+	m->m_off   = (char *)&g_conf.m_proxyAuth - g;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = PF_TEXTAREA;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 
@@ -7883,9 +8479,24 @@ void Parms::init ( ) {
 	m->m_def   = "6";
 	m->m_group = 0;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
+
+	m->m_title = "show images";
+	m->m_desc  = "Should we return or show the thumbnail images in the "
+		"search results?";
+	m->m_cgi   = "showimages";
+	m->m_off   = (char *)&si.m_showImages - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m->m_flags = PF_NOSAVE;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 
 	m->m_title = "read from cache";
 	m->m_desc  = "Should we read search results from the cache? Set "
@@ -7897,7 +8508,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_flags = PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7908,7 +8519,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_useCache - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_cgi   = "usecache";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7919,7 +8530,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_wcache - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_cgi   = "wcache";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7935,7 +8546,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7951,7 +8562,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7963,7 +8574,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "url";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7975,7 +8586,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "link";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7987,7 +8598,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "quotea";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -7999,7 +8610,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "quoteb";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8012,7 +8623,7 @@ void Parms::init ( ) {
 	m->m_size  = 1024; // MAX_SITE_LEN;
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8026,7 +8637,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	//m->m_size  = 32*1024; // MAX_SITES_LEN;
 	m->m_cgi   = "sites";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
@@ -8041,7 +8652,7 @@ void Parms::init ( ) {
 	//m->m_size  = 500;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8053,7 +8664,7 @@ void Parms::init ( ) {
 	//m->m_size  = 500;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8063,7 +8674,7 @@ void Parms::init ( ) {
 	m->m_def   = "html";
 	m->m_off   = (char *)&si.m_formatStr - y;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "format";
 	m++;
@@ -8073,7 +8684,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_familyFilter - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "ff";
 	m++;
@@ -8091,7 +8702,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 1; // turn off for now
 	m->m_sprpp = 1;
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8107,7 +8718,7 @@ void Parms::init ( ) {
 	//m->m_size  = 1000;
 	m->m_sprpg = 0; // no need to propagate this one
 	m->m_sprpp = 0;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8122,7 +8733,7 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m->m_smax  = 8;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8148,7 +8759,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmo";
 	m->m_smin  = 0;
 	m->m_smax  = 2;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8161,7 +8772,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "bq";
 	m->m_smin  = 0;
 	m->m_smax  = 2;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8183,7 +8794,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_cgi   = "dt";
 	//m->m_size  = 3000;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	
@@ -8265,7 +8876,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rdc";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8276,7 +8887,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_returnDocIds - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rd";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8288,7 +8899,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rp";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8301,7 +8912,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "niceness";
 	m->m_smin  = 0;
 	m->m_smax  = 1;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8324,7 +8935,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "debug";
 	//m->m_priv  = 1;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8334,7 +8945,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_debugGigabits - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "debug";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8344,7 +8955,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_docIdsOnly - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "dio";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8353,9 +8964,10 @@ void Parms::init ( ) {
 		"results page.";
 	m->m_off   = (char *)&si.m_imgUrl - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "iu";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8364,9 +8976,10 @@ void Parms::init ( ) {
 		"the search results page.";
 	m->m_off   = (char *)&si.m_imgLink - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "ix";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8375,7 +8988,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_imgWidth - y;
 	m->m_type  = TYPE_LONG;
 	m->m_cgi   = "iw";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
 	m++;
@@ -8386,7 +8999,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_imgHeight - y;
 	m->m_type  = TYPE_LONG;
 	m->m_cgi   = "ih";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
 	m++;
@@ -8398,7 +9011,7 @@ void Parms::init ( ) {
 	// m->m_cgi   = "pwd";
 	// m->m_size  = 32;
 	// m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	// m->m_page  = PAGE_NONE;
+	// m->m_page  = PAGE_RESULTS;
 	// m->m_obj   = OBJ_SI;
 	// m++;
 
@@ -8410,7 +9023,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "admin";
 	m->m_sprpg = 1; // propagate on GET request
         m->m_sprpp = 1; // propagate on POST request
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8438,7 +9051,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "gblang";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8450,7 +9063,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_cgi   = "prepend";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8462,7 +9075,7 @@ void Parms::init ( ) {
 	m->m_def   = NULL;
 	//m->m_def   = "iso-8859-1";
 	m->m_cgi   = "gbcountry";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8496,7 +9109,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_cgi   = "sb";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8507,7 +9120,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_cgi   = "apip";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8519,7 +9132,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "uafn";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8533,7 +9146,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "bd";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8550,7 +9163,7 @@ void Parms::init ( ) {
         m->m_def   = NULL;
 	m->m_size  = MAX_QUERY_LEN;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 	*/
@@ -8563,7 +9176,7 @@ void Parms::init ( ) {
 	m->m_def   = "utf-8";
 	//m->m_def   = "iso-8859-1";
 	m->m_cgi   = "qcs";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8574,7 +9187,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "inlinks";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8587,7 +9200,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "outlinks";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8599,7 +9212,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "tf";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8612,7 +9225,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "spiderresults";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8625,7 +9238,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "spiderresultroots";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8638,7 +9251,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cgi   = "jmcl";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
@@ -8649,7 +9262,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_cgi   = "icc";
-	m->m_page  = PAGE_NONE;
+	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_flags = PF_API;
 	m++;
@@ -8660,7 +9273,7 @@ void Parms::init ( ) {
 	// m->m_type  = TYPE_CHAR;
 	// m->m_def   = "0";
 	// m->m_cgi   = "sectionvotes";
-	// m->m_page  = PAGE_NONE;
+	// m->m_page  = PAGE_RESULTS;
 	// m->m_obj   = OBJ_SI;
 	// m->m_flags = PF_API;
 	// m++;
@@ -8669,8 +9282,6 @@ void Parms::init ( ) {
 	// END /search
 	//////////////
 
-
-	GigablastRequest gr;
 
 	//////////
 	// PAGE GET (cached web pages)
@@ -8797,7 +9408,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
-
+	
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
@@ -9504,7 +10115,7 @@ void Parms::init ( ) {
 	m++;
 
 	// DIFFBOT:
-	// . this is sent to each shard by issuing a "restartRound=" cmd
+	// . this is sent to each shard by issuing a "&roundStart=1" cmd
 	// . similar to the "addcoll" cmd we add args to it and make it
 	//   the "forceround" cmd parm and add THAT to the parmlist.
 	//   so "roundStart=1" is really an alias for us.
@@ -10561,6 +11172,15 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandReloadLanguagePages;
 	m->m_cast  = 0;
+	m++;
+
+	m->m_title = "proxy port";
+	m->m_desc  = "Retrieve pages from the proxy on "
+		"this port.";
+	m->m_cgi   = "proxyport";
+	m->m_off   = (char *)&cr.m_proxyPort - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
 	m++;
 
 	m->m_title = "all reload language pages";
@@ -11733,6 +12353,9 @@ void Parms::init ( ) {
 		"new sites. "
 		"Selecting <i>chinese</i> makes the spider prioritize the "
 		"spidering of chinese pages, etc. "
+		"Selecting <i>shallow</i> makes the spider go deep on "
+		"all sites unless they are tagged <i>shallow</i> in the "
+		"site list. "
 		"Important: "
 		"If you select a profile other than <i>custom</i> "
 		"then your changes "
@@ -11741,7 +12364,7 @@ void Parms::init ( ) {
 	m->m_colspan = 3;
 	m->m_type  = TYPE_UFP;// 1 byte dropdown menu
 	m->m_def   = "1"; // UFP_WEB
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -11842,7 +12465,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1; // if we START a new row
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -11856,7 +12479,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
@@ -11886,7 +12509,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_units = "days";
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	m->m_title = "max spiders";
@@ -11901,7 +12524,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	m->m_title = "max spiders per ip";
@@ -11915,7 +12538,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	m->m_title = "same ip wait (ms)";
@@ -11932,7 +12555,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_units = "milliseconds";
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	/*
@@ -11959,7 +12582,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
 	m->m_def   = "50";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_addin = 1; // "insert" follows?
 	m++;
 
@@ -13456,12 +14079,28 @@ void Parms::init ( ) {
 	// ADD URL PARMS
 	//
 	///////////
+
+	m->m_title = "collection";
+	m->m_desc  = "Add urls into this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m++;
+
 	m->m_title = "urls to add";
 	m->m_desc  = "List of urls to index. One per line or space separated. "
 		"If your url does not index as you expect you "
-		"can check it's history. " // (spiderdb lookup)
+		"can check it's spider history by doing a url: search on it. "
 		"Added urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
+		"Added urls will match the <i><a href=/admin/filters#isaddurl>"
+		"isaddurl</a></i> directive on "
+		"the url filters page. "
 		"The add url api is described on the "
 		"<a href=/admin/api>api</a> page.";
 	m->m_cgi   = "urls";
@@ -13470,7 +14109,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_urlsBuf - (char *)&gr;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_TEXTAREA | PF_NOSAVE | PF_API;
+	m->m_flags = PF_TEXTAREA | PF_NOSAVE | PF_API|PF_REQUIRED;
 	m++;
 
 	/*
@@ -13501,12 +14140,13 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_off   = (char *)&gr.m_harvestLinksBox - (char *)&gr;
+	m->m_off   = (char *)&gr.m_harvestLinks - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "1";
 	m->m_flags = PF_API;
 	m++;
 
+	/*
 	m->m_title = "force respider";
 	m->m_desc  = "Force an immediate respider even if the url "
 		"is already indexed.";
@@ -13518,18 +14158,8 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m++;
+	*/
 
-	m->m_title = "collection";
-	m->m_desc  = "Add urls into this collection.";
-	m->m_cgi   = "c";
-	m->m_page  = PAGE_ADDURL2;
-	m->m_obj   = OBJ_GBREQUEST;
-	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
-	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = NULL;
-	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
-	m++;
 
 
 	////////
@@ -13558,7 +14188,9 @@ void Parms::init ( ) {
 		"Injected urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
 		"The injection api is described on the "
-		"<a href=/admin/api>api</a> page.";
+		"<a href=/admin/api>api</a> page. "
+		"Make up a fake url if you are injecting content that "
+		"does not have one.";
 	m->m_cgi   = "url";
 	//m->m_cgi2  = "u";
 	//m->m_cgi3  = "seed"; // pagerawlbot
@@ -13577,7 +14209,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API | PF_HIDDEN;
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
 	m++;
@@ -13588,7 +14220,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API | PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_DIFFBOT;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
 	m++;
@@ -13599,7 +14231,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API | PF_HIDDEN;
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
 	m++;
@@ -13636,31 +14268,20 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
+	// leave off because could start spidering whole web unintentionally
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
 	m++;
 	
-	m->m_title = "collection";
-	m->m_desc  = "Inject into this collection.";
-	m->m_cgi   = "c";
-	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = NULL;
-	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
-	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
-	m++;
-
 	m->m_title = "short reply";
 	m->m_desc  = "Should the injection response be short and simple?";
 	m->m_cgi   = "quick";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_shortReply - (char *)&gr;
 	m++;
@@ -13766,9 +14387,10 @@ void Parms::init ( ) {
 
 	m->m_title = "content type";
 	m->m_desc  = "If you supply content in the text box below without "
-		"an HTTP mime, then you need to enter the content type. "
-		"Possible values: text/html text/plain text/xml "
-		"application/json";
+		"an HTTP mime header, "
+		"then you need to enter the content type. "
+		"Possible values: <b>text/html text/plain text/xml "
+		"application/json</b>";
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
@@ -13780,7 +14402,8 @@ void Parms::init ( ) {
 
 	m->m_title = "content charset";
 	m->m_desc  = "A number representing the charset of the content "
-		"if provided below and no mime is given. Defaults to utf8 "
+		"if provided below and no HTTP mime header "
+		"is given. Defaults to utf8 "
 		"which is 106. "
 		"See iana_charset.h for the numeric values.";
 	m->m_cgi   = "charset";
@@ -13823,13 +14446,25 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_content - (char *)&gr;
 	m++;
 
+	m->m_title = "get sectiondb voting info";
+	m->m_desc = "Return section information of injected content for "
+		"the injected subdomain. ";
+	m->m_cgi   = "sections";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API|PF_NOHTML;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_getSections - (char *)&gr;
+	m++;
+
 	m->m_title = "diffbot reply";
 	m->m_desc = "Used exclusively by diffbot. Do not use.";
 	m->m_cgi   = "diffbotreply";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API|PF_TEXTAREA|PF_HIDDEN; // do not show in our api
+	m->m_flags = PF_API|PF_TEXTAREA|PF_NOHTML; // do not show in our api
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;
@@ -13840,6 +14475,18 @@ void Parms::init ( ) {
 	// QUERY REINDEX
 	//
 	///////////////////
+
+	m->m_title = "collection";
+	m->m_desc  = "query reindex in this collection.";
+	m->m_cgi   = "c";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m->m_page  = PAGE_REINDEX;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
 
 	m->m_title = "query to reindex or delete";
 	m->m_desc  = "We either reindex or delete the search results of "
@@ -13852,7 +14499,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REINDEX;
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_def   = NULL;
-	m->m_flags = PF_API ;
+	m->m_flags = PF_API |PF_REQUIRED;
 	m++;
 
 	m->m_title = "start result number";
@@ -13894,7 +14541,7 @@ void Parms::init ( ) {
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "
 		"reindex them.";
-	m->m_cgi   = "delete";
+	m->m_cgi   = "forcedel";
 	m->m_off   = (char *)&gr.m_forceDel - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_page  = PAGE_REINDEX;
@@ -13924,7 +14571,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "1";
-	m->m_flags = PF_API | PF_NOSAVE;
+	m->m_flags = PF_API | PF_NOSAVE | PF_CLONE;
 	m++;
 
 	m->m_title = "get scoring info by default";
@@ -13938,7 +14585,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "1";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m++;
 
 	m->m_title = "do query expansion by default";
@@ -13949,8 +14596,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_queryExpansion - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi  = "qe";
-	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
@@ -13965,10 +14612,11 @@ void Parms::init ( ) {
 	m->m_smax  = 8;
 	m->m_sprpg = 1; // turn off for now
 	m->m_sprpp = 1;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
 	m->m_title = "max title len";
 	m->m_desc  = "What is the maximum number of "
 		"characters allowed in titles displayed in the search "
@@ -13976,7 +14624,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "tml";
 	m->m_off   = (char *)&cr.m_titleMaxLen - x;
 	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_def   = "80";
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -14006,15 +14654,14 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
 	// buzz
 	m->m_title = "hide all clustered results";
-	m->m_desc  = "Hide all clustered results instead of displaying two "
-		"results from each site.";
+	m->m_desc  = "Only display at most one result per site.";
 	m->m_cgi   = "hacr";
 	m->m_off   = (char *)&cr.m_hideAllClustered - x;
 	m->m_type  = TYPE_BOOL;
@@ -14022,7 +14669,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m++;
 
 	m->m_title = "dedup results by default";
@@ -14034,7 +14681,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 1;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14051,7 +14698,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_smin  = 0;
 	m->m_smax  = 100;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
@@ -14067,7 +14714,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
@@ -14081,7 +14728,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14113,8 +14760,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
-	m->m_group = 0;
-	m->m_flags = PF_API;
+	//m->m_group = 0;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14131,7 +14778,7 @@ void Parms::init ( ) {
 	m->m_size  = 2+1;
 	m->m_def   = "us";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14160,7 +14807,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_summaryMaxLen - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "512";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14173,7 +14820,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14186,11 +14833,12 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "90";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	/*
 	m->m_title = "default number of summary excerpts by default";
 	m->m_desc  = "What is the default number of "
 		"summary excerpts displayed per search result?";
@@ -14203,19 +14851,21 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
-
+	*/
 
 	m->m_title = "max summary line width by default";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
+		"Also affects title. "
 		"Strings without spaces that exceed this "
-		"width are not split.";
+		"width are not split. Has no affect on xml or json feed, "
+		"only works on html.";
 	m->m_cgi   = "smw";
 	m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14228,7 +14878,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "70000";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
@@ -14255,7 +14905,7 @@ void Parms::init ( ) {
 	m->m_size  = SUMMARYHIGHLIGHTTAGMAXSIZE ;
 	m->m_def   = "<b style=\"color:black;background-color:#ffff66\">";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14269,7 +14919,7 @@ void Parms::init ( ) {
 	m->m_size  = SUMMARYHIGHLIGHTTAGMAXSIZE ;
 	m->m_def   = "</b>";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14282,7 +14932,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "30";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14296,7 +14946,7 @@ void Parms::init ( ) {
 	// default to 0 since newspaperarchive only has docs from same IP dom
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14309,7 +14959,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14326,7 +14976,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14341,7 +14991,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "5";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14354,7 +15004,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "2";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14368,7 +15018,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14381,7 +15031,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "6";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14395,7 +15045,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4096";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14423,7 +15073,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_displayDmozCategories - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14436,7 +15086,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14450,7 +15100,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14463,7 +15113,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14476,7 +15126,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14488,7 +15138,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14671,66 +15321,137 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	/*
+	m->m_title = "home page";
+	static SafeBuf s_tmpBuf;
+	s_tmpBuf.safePrintf (
+			  "Html to display for the home page. "
+			  "Leave empty for default home page. "
+			  "Use %%N for total "
+			  "number of pages indexed. Use %%n for number of "
+			  "pages indexed "
+			  "for the current collection. "
+			  //"Use %%H so Gigablast knows where to insert "
+			  //"the hidden form input tags, which must be there. "
+			  "Use %%c to insert the current collection name. "
+			  //"Use %T to display the standard footer. "
+			  "Use %%q to display the query in "
+			  "a text box. "
+			  "Use %%t to display the directory TOP. "
+			  "Example to paste into textbox: "
+			  "<br><i>"
+			  );
+	s_tmpBuf.htmlEncode (
+			      "<html>"
+			      "<title>My Gigablast Search Engine</title>"
+			      "<script>\n"
+			      //"<!--"
+			      "function x(){document.f.q.focus();}"
+			      //"// -->"
+			      "\n</script>"
+			      "<body onload=\"x()\">"
+			      "<br><br>"
+			      "<center>"
+			      "<a href=/>"
+			      "<img border=0 width=500 height=122 "
+			      "src=/logo-med.jpg></a>"
+			      "<br><br>"
+			      "<b>My Search Engine</b>"
+			      "<br><br>"
+			      // "<br><br><br>"
+			      // "<b>web</b> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=\"/Top\">directory</a> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=/adv.html>advanced search</a> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=/addurl "
+			      // "title=\"Instantly add your url to "
+			      //"the index\">"
+			      // "add url</a>"
+			      // "<br><br>"
+			      "<form method=get action=/search name=f>"
+			      "<input type=hidden name=c value=\"%c\">"
+			      "<input name=q type=text size=60 value=\"\">"
+			      "&nbsp;"
+			      "<input type=\"submit\" value=\"Search\">"
+			      "</form>"
+			      "<br>"
+			      "<center>"
+			      "Searching the <b>%c</b> collection of %n "
+			      "documents."
+			      "</center>"
+			      "<br>"
+			      "</body></html>")  ;
+	s_tmpBuf.safePrintf("</i>");
+	m->m_desc = s_tmpBuf.getBufStart();
+	m->m_xml  = "homePageHtml";
+	m->m_cgi   = "hp";
+	m->m_off   = (char *)&cr.m_htmlRoot - x;
+	//m->m_plen  = (char *)&cr.m_htmlRootLen - x; // length of string
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	//m->m_size  = MAX_HTML_LEN + 1;
+	m->m_def   = "";
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA | PF_CLONE;
+	m++;
+
+
 	m->m_title = "html head";
-	m->m_desc  = "Html to display before the search results. Convenient "
-		"for changing colors and displaying logos. Use the variable, "
-		"%q, to represent the query to display in a text box. "
-		"Use %e to display it in a url.  "
-		"Use %e to print the page encoding.Use %D to print a drop down "
-		"menu for the number of search results to return. Use %S "
-		"to print sort by date or relevance link. Use %L to "
-		"display the logo. Use %R to display radio buttons for site "
-		"search. Use %F to begin the form. and use %H to insert "
+        static SafeBuf s_tmpBuf2;
+	s_tmpBuf2.safePrintf("Html to display before the search results. ");
+	char *fff = "Leave empty for default. "
+		"Convenient "
+		"for changing colors and displaying logos. Use "
+		"the variable, "
+		"%q, to represent the query to display in a "
+		"text box. "
+		"Use %e to print the url encoded query.  "
+		//"Use %e to print the page encoding. "
+		// i guess this is out for now
+		//"Use %D to "
+		//"print a drop down "
+		//"menu for the number of search results to return. "
+		"Use %S "
+		"to print sort by date or relevance link. Use "
+		"%L to "
+		"display the logo. Use %R to display radio "
+		"buttons for site "
+		"search. Use %F to begin the form. and use %H to "
+		"insert "
 		"hidden text "
-		"boxes of parameters, both %F and %H are necessary. "
+		"boxes of parameters like the current search result "
+		"page number. "
+		"BOTH %F and %H are necessary for the html head, but do "
+		"not duplicate them in the html tail. "
 		"Use %f to display "
 		"the family filter radio buttons. "
-		"Directory: Use %s to display the directory "
-		"search type options. Use %l to specify the location of "
-		"dir=rtl in the body tag for RTL pages. "
-		"Use %where and %when to substitute the where and when of "
-		"the query. These values may be set based on the cookie if "
-		"none was explicitly given. "
-		"IMPORTANT: In the xml configuration file, this html "
-		"must be encoded (less thans mapped to &lt;, etc.).";
-	m->m_cgi   = "hh";
-	m->m_off   = (char *)cr.m_htmlHead - x;
-	m->m_plen  = (char *)&cr.m_htmlHeadLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
+		// take this out for now
+		//"Directory: Use %s to display the directory "
+		//"search type options. "
+		//"Use %l to specify the "
+		//"location of "
+		//"dir=rtl in the body tag for RTL pages. "
+		//"Use %where and %when to substitute the where "
+		//"and when of "
+		//"the query. "
+		//"These values may be set based on the cookie "
+		//"if "
+		//"none was explicitly given. "
+		//"IMPORTANT: In the xml configuration file, "
+		//"this html "
+		//"must be encoded (less thans mapped to &lt;, "
+		//"etc.).";
+		"Example to paste into textbox: <br><i>";
+	s_tmpBuf2.safeStrcpy(fff);
+	s_tmpBuf2.htmlEncode(
 		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
 		"Transitional//EN\">\n"
 		"<html>\n"
 		"<head>\n"
-		"<title>Gigablast Search Results</title>\n"
+		"<title>My Gigablast Search Results</title>\n"
 		"<meta http-equiv=\"Content-Type\" "
 		"content=\"text/html; charset=utf-8\">\n"
-		"<style><!--\n"
-		"body {\n"
-		"font-family:Arial, Helvetica, sans-serif;\n"
-		"color: #000000;\n"
-		"font-size: 12px;\n"
-		"margin: 20px 5px;\n"
-		"}\n"
-		"a:link {color:#00c}\n"
-		"a:visited {color:#551a8b}\n"
-		"a:active {color:#f00}\n"
-		".bold {font-weight: bold;}\n"
-		".bluetable {background:#d1e1ff;margin-bottom:15px;"
-		"font-size:12px;}\n"
-		".url {color:#008000;}\n"
-		".cached, .cached a {font-size: 10px;color: #666666;\n"
-		"}\n"
-		"table {\n"
-		"font-family:Arial, Helvetica, sans-serif;\n"
-		"color: #000000;\n"
-		"font-size: 12px;\n"
-		"}\n"
-		".directory {font-size: 16px;}\n"
-		"-->\n"
-		"</style>\n"
 		"</head>\n"
 		"<body%l>\n"
 
@@ -14763,36 +15484,51 @@ void Parms::init ( ) {
 		// %R radio button for site(s) search
 		"<br>%f %R\n"
 		// directory search options
-		"</td><td>%s</td>\n"
+		// MDW: i guess this is out for now
+		//"</td><td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
 		// %H prints the hidden for vars. Print them *after* the input 
 		// text boxes, radio buttons, etc. so these hidden vars can be 
 		// overriden as they should be.
-		"%H"; 
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_htmlHead - y;
+		"%H"); 
+	s_tmpBuf2.safePrintf("</i>");
+	m->m_desc  = s_tmpBuf2.getBufStart();
+	m->m_xml   = "htmlHead";
+	m->m_cgi   = "hh";
+	m->m_off   = (char *)&cr.m_htmlHead - x;
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	m->m_def   = "";
+	//m->m_sparm = 1;
+	//m->m_soff  = (char *)&si.m_htmlHead - y;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA | PF_CLONE;
 	m++;
 
+
 	m->m_title = "html tail";
-	m->m_desc  = "Html to display after the search results.";
-	m->m_cgi   = "ht";
-	m->m_off   = (char *)cr.m_htmlTail - x;
-	m->m_plen  = (char *)&cr.m_htmlTailLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
+        static SafeBuf s_tmpBuf3;
+	s_tmpBuf3.safePrintf("Html to display after the search results. ");
+	s_tmpBuf3.safeStrcpy(fff);
+	s_tmpBuf3.htmlEncode (
 		"<br>\n"
-		"%F<table cellpadding=2 cellspacing=0 border=0>\n"
+		//"%F"
+		"<table cellpadding=2 cellspacing=0 border=0>\n"
 		"<tr><td></td>\n"
-		"<td valign=top align=center>\n"
-		"<nobr>"
-		"<input type=text name=q size=60 value=\"%q\"> %D\n"
-		"<input type=submit value=\"Blast It!\" border=0>\n"
-		"</nobr>"
+		//"<td valign=top align=center>\n"
+		// this old query is overriding a newer query above so
+		// i commented out. mfd 6/2014
+		//"<nobr>"
+		//"<input type=text name=q size=60 value=\"%q\"> %D\n"
+		//"<input type=submit value=\"Blast It!\" border=0>\n"
+		//"</nobr>"
 		// family filter
-		"<br>%f %R\n"
-		"</td><td>%s</td>\n"
+		//"<br>%f %R\n"
+		//"<br>"
+		//"%R\n"
+		//"</td>"
+		"<td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
 		"Try your search on  \n"
@@ -14805,126 +15541,24 @@ void Parms::init ( ) {
 		"dmoz</a> &nbsp;\n"
 		//"<a href=http://search01.altavista.com/web/results?q=%e>"
 		//"alta vista</a>\n"
-		"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
-		"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
-		"</a>\n"
-		"</font></body>\n";
-	//m->m_def   = "</font></body></html>";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_htmlTail - y;
+		//"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
+		//"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
+		//"</a>\n"
+		"</font></body>\n");
+	s_tmpBuf3.safePrintf("</i>");
+	m->m_desc  = s_tmpBuf3.getBufStart();
+	m->m_xml   = "htmlTail";
+	m->m_cgi   = "ht";
+	m->m_off   = (char *)&cr.m_htmlTail - x;
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	m->m_def   = "";
+	//m->m_sparm = 1;
+	//m->m_soff  = (char *)&si.m_htmlHead - y;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA | PF_CLONE;
 	m++;
 
-	m->m_title = "home page";
-	m->m_desc  = "Html to display for the home page. Use %N for total "
-		"number of pages indexed. Use %n for number of pages indexed "
-		"for the current collection. "
-		"Use %H so Gigablast knows where to insert "
-		"the hidden form input tags, which must be there. Use %T to "
-		"display the standard footer and %q to display the query in "
-		"a text box. Use %t to display the directory TOP.";
-	m->m_cgi   = "hp";
-	m->m_off   = (char *)cr.m_htmlRoot - x;
-	m->m_plen  = (char *)&cr.m_htmlRootLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
-		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
-		"Transitional//EN\">\n"
-		"<html>\n"
-		"<head>\n"
-		"<title>Gigablast</title>\n"
-		"<meta http-equiv=\"Content-Type\" content=\"text/html; "
-		"charset=utf-8\">\n"
-		"<meta name=\"description\" content=\"A powerful, new "
-		"search engine that does real-time indexing.\">\n"
-		"<meta name=\"keywords\" content=\"search, search engine, "
-		"search engines, search the web, fresh index\">\n"
-		"<style type=\"text/css\">\n"
-		"<!--\n"
-		"body {\n"
-		"font-family: Arial, Helvetica, sans-serif;\n"
-		"background: #FFFFFF;\n"
-		"font-size: 16px;\n"
-		"color: #000000;\n"
-		"text-align: center;\n"
-		"margin: 20px 5px 20px;\n"
-		"}\n"
-		"a.search {\n"
-		"font-weight: bold;\n"
-		"color: #FFFFFF;\n"
-		"text-decoration: underline;\n"
-		"font-size: small;\n"
-		"}\n"
-		".redtop {\n"
-		"color: #c62939;\n"
-		"font-weight: bold;\n"
-		"margin-top: 1.25em;\n"
-		"margin-bottom: 1.15em;\n"
-		"}\n"
-		".red, .red a {\n"
-		"color: #c62939;\n"
-		"font-weight: bold;\n"
-		"margin-top: 1.5em;\n"
-		"margin-bottom: 2em;\n"
-		"}\n"
-		".nav, .nav a {\n"
-		"color: #000000;\n"
-		"font-weight: bold;\n"
-		"margin-top: 3em;\n"
-		"font-size: 96%;\n"
-		"}\n"
-		"-->\n"
-		"</style>\n"
-		"</head>\n"
-		
-		"<script>\n"
-		"<!--\n"
-		"function x(){document.f.q.focus();}\n"
-		"// --></script>\n"
-		"<body onload=\"x()\">\n"
-		"<a href=\"/\"><img src=\"logo.gif\" "
-		"alt=\"Gigablast\" border=0></a>\n"
-		"<p class=\"redtop\">Information Acceleration.</p>\n"
-
-		"<form method=\"get\" action=\"/search\" name=\"f\">\n"
-		"%H\n"
-		"<table bgcolor=\"#0079ba\" border=0 cellpadding=6 "
-		"width=100%>\n"
-		"<tbody>\n"
-		"<tr>\n"
-
-		"<td width=50%>&nbsp;</td>\n"
-		"<td width=60> <div align=\"center\">\n"
-		"<input name=\"q\" value=\"%q\" size=60 type=\"text\"> \n" 
-		"</td><td width=50%>\n"
-
-		// %D is the drop down menu for # of search results
-		"%%D &nbsp; "
-		"<input value=\"Blast It!\" border=0 type=\"submit\"> <a "
-		"href=\"/adv.html\" class=\"search\">"
-		"<nobr>Advanced Search</nobr></a>\n"
-		"</td>\n"
-		"</tr>\n"
-		"</tbody>\n"
-		"</table>\n"
-		"</form>\n"
-		"<p style=\"margin-top: 1.5em;margin-bottom: 2.5em;\"><b>"
-		"%N pages indexed</b></p>\n"
-		"<p class=\"red\"><a href=\"/"
-		"searchfeed.html\">XML Search Feed (new)</a></p>\n"
-		
-		"<p class=\"red\"><a href=\"http://sitesearch.gigablast.com/"
-		"sitesearch.html\">Dedicated Site Search (new)</a></p>\n"
-		"<p class=\"red\"><a href=\"/cts."
-		"html\">Custom Topic Search (new)</a></p>\n"
-		"<p class=\"red\"><a href=\"/ask."
-		"html\">Gigablast Answers Questions</a></p>\n"
-		"%T\n"
-		"</body>\n"
-		"</html>\n";
-	m++;
-	*/
 
 	///////////////////////////////////////////
 	// PAGE SPIDER CONTROLS
@@ -14948,6 +15582,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "site list";
@@ -14973,7 +15608,7 @@ void Parms::init ( ) {
 	m->m_func  = CommandUpdateSiteList;
 	m->m_def   = "";
 	// rebuild urlfilters now will nuke doledb and call updateSiteList()
-	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS;
+	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 
@@ -15041,6 +15676,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "spider delay in milliseconds";
@@ -15053,6 +15689,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++; 
 
 
@@ -15065,6 +15702,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "max robots.txt cache age";
@@ -15082,6 +15720,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 
@@ -15112,6 +15751,7 @@ void Parms::init ( ) {
 	m->m_units = "minutes";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "daily merge days";
@@ -15128,6 +15768,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "daily merge last started";
@@ -15199,6 +15840,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "max add urls";
@@ -15213,6 +15855,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 
@@ -15385,6 +16028,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "deduping enabled for www";
@@ -15398,6 +16042,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "detect custom error pages";
@@ -15409,6 +16054,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "delete 404s";
@@ -15420,6 +16066,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "delete timed out docs";
@@ -15449,6 +16096,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "use ifModifiedSince";
@@ -15465,6 +16113,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "build similarity vector from content only";
@@ -15767,6 +16416,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "restrict link voting by ip";
@@ -15785,6 +16435,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "use new link algo";
@@ -15835,6 +16486,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	/*
@@ -16090,6 +16742,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 
@@ -16264,6 +16917,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "filter name";
@@ -16277,6 +16931,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "filter timeout";
@@ -16289,8 +16944,10 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
+	/*
 	m->m_title = "proxy ip";
 	m->m_desc  = "Retrieve pages from the proxy at this IP address.";
 	m->m_cgi   = "proxyip";
@@ -16299,6 +16956,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0.0.0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "proxy port";
@@ -16311,7 +16969,9 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
+	*/
 
 	m->m_title = "make image thumbnails";
 	m->m_desc  = "Try to find the best image on each page and "
@@ -16323,6 +16983,21 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+	m->m_title = "max thumbnail width or height";
+	m->m_desc  = "This is in pixels and limits the size of the thumbnail. "
+		"Gigablast tries to make at least the width or the height "
+		"equal to this maximum, but, unless the thumbnail is sqaure, "
+		"one side will be longer than the other.";
+	m->m_cgi   = "mtwh";
+	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "250";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "index spider replies";
@@ -16337,9 +17012,14 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
 	// default off for now until we fix it better. 5/26/14 mdw
-	m->m_def   = "0";
+	// turn back on 6/21 now that we do not index plain text terms
+	// and we add gbdocspidertime and gbdocindextime terms so you
+	// can use those to sort regular docs and not have spider reply
+	// status docs in the serps.
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	// i put this in here so i can save disk space for my global
@@ -16355,6 +17035,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_cgi   = "apiUrl";
@@ -16372,7 +17053,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_SPIDER;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_def   = "";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
@@ -16985,7 +17666,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_flags = PF_COLLDEFAULT;
+	m->m_flags = PF_REQUIRED | PF_NOHTML;
 	m++;
 
 	m->m_title = "memory to use for repair";
@@ -17901,6 +18582,16 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "log debug spider proxies";
+	m->m_cgi   = "ldspr";
+	m->m_off   = (char *)&g_conf.m_logDebugProxies - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 	m->m_title = "log debug url attempts";
 	m->m_cgi   = "ldspua";
 	m->m_off   = (char *)&g_conf.m_logDebugUrlAttempts - g;
@@ -18130,21 +18821,6 @@ void Parms::init ( ) {
 	/////
 
 
-	// most pages that are status pages take a "format"
-	m->m_title = "format of the response";
-	m->m_desc  = "Can be \"xml\" or \"json\".";
-	m->m_def   = "xml";
-	m->m_off   = (char *)&gr.m_formatStr - (char *)&gr;
-	m->m_type  = TYPE_CHARPTR;
-	m->m_page  = PAGE_HOSTS;
-	m->m_obj   = OBJ_GBREQUEST;
-	m->m_cgi   = "format";
-	m++;
-
-
-
-
-
 	// END PARMS PARM END PARMS END
 
 
@@ -18235,7 +18911,8 @@ void Parms::init ( ) {
 			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s."
 			    " (%li,%li,%li). Did you FORGET to include "
 			    "an & before the cr.myVariable when setting "
-			    "m_off for this parm?",
+			    "m_off for this parm? Or subtract  'x' instead "
+			    "of 'g' or vice versa.",
 			    i,m_parms[i].m_title,
 			    mm,
 			    m_parms[i].m_off,
@@ -18735,6 +19412,14 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	else if ( m->m_type == TYPE_CMD ) {
 		val = parmValString;
 		if ( val ) valSize = gbstrlen(val)+1;
+		// . addcoll collection can not be too long
+		// . TODO: supply a Parm::m_checkValFunc to ensure val is
+		//   legitimate, and set g_errno on error
+		if ( strcmp(m->m_cgi,"addcoll") == 0 &&valSize-1>MAX_COLL_LEN){
+			log("admin: addcoll coll too long");
+			g_errno = ECOLLTOOBIG;
+			return false;
+		}
 		// scan for holes if we hit the limit
 		//if ( g_collectiondb.m_numRecs >= 1LL>>sizeof(collnum_t) )
 	}
@@ -18965,10 +19650,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			return false;
 	}
 
-
-
-
-
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
@@ -18992,6 +19673,8 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// get the next available collnum and use that for setting
 		// any additional parms. that is the coll it will act on.
 		if ( strcmp(m->m_cgi,"addColl") == 0 ||
+		     // lowercase support. camelcase is obsolete.
+		     strcmp(m->m_cgi,"addcoll") == 0 ||
 		     strcmp(m->m_cgi,"addCrawl") == 0 ||
 		     strcmp(m->m_cgi,"addBulk" ) == 0 ||
 		     strcmp(m->m_cgi,"reset" ) == 0 ||
@@ -19021,7 +19704,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//   time (current time) and the new round # as the args.
 		// . this will call CommandForceNextSpiderRound() function
 		//   on every shard with these args, "tmpVal".
-		if ( strcmp(m->m_cgi,"roundStart") == 0 ) {
+		if ( cr && strcmp(m->m_cgi,"roundStart") == 0 ) {
 			// use the current time so anything spidered before
 			// this time (the round start time) will be respidered
 			//sprintf(tmp,"%lu",getTimeGlobalNoCore());
@@ -19704,6 +20387,9 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_flags & PF_REBUILDURLFILTERS )
 			we->m_doRebuilds = true;
 
+		if ( parm->m_flags & PF_REBUILDPROXYTABLE )
+			we->m_doProxyRebuild = true;
+
 		// get collnum i guess
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
@@ -19735,6 +20421,7 @@ void handleRequest3fLoop ( void *weArg ) {
 				log("parms: failed to reg sleeper");
 				return;
 			}
+			log("parms: updateParm blocked. waiting.");
 			return;
 		}
 
@@ -19781,6 +20468,11 @@ void handleRequest3fLoop ( void *weArg ) {
 		cx->rebuildUrlFilters();
 	}
 
+	// if user changed the list of proxy ips rebuild the binary
+	// array representation of the proxy ips we have
+	if ( we->m_doProxyRebuild )
+		buildProxyTable();
+		
 	// note it
 	if ( ! we->m_sentReply )
 		log("parms: sending parm update reply");
@@ -19822,6 +20514,7 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
 	we->m_updatedRound = false;
+	we->m_doProxyRebuild = false;
 	we->m_collnum = -1;
 	we->m_sentReply = 0;
 
@@ -20011,7 +20704,9 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		if ( ! cr ) continue;
 		// clear flag
 		if ( cr->m_hackFlag ) continue;
-		char *cmdStr = "addColl";
+		//char *cmdStr = "addColl";
+		// now use lowercase, not camelcase
+		char *cmdStr = "addcoll";
 		if ( cr->m_isCustomCrawl == 1 ) cmdStr = "addCrawl";
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// note in log
@@ -20206,6 +20901,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// sets g_errno on error
 		if ( parm->m_func ) {
 			parm->m_func ( rec );
+			return true;
+		}
+
+		// fix core from using "roundstart=1" on non-existent coll
+		if ( ! parm->m_func2 ) {
 			return true;
 		}
 
@@ -20614,11 +21314,25 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "Used for doing quotas."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>domainpages</td>"
-			  "<td>The number of pages that are currently indexed "
-			  "for the domain of the URL. "
-			  "Used for doing quotas."
-			  "</td></tr>"
+
+			  // MDW: 7/11/2014 take this out until it works.
+			  // problem is that the quota table m_localTable
+			  // in Spider.cpp gets reset for each firstIp scan,
+			  // and we have a.walmart.com and b.walmart.com
+			  // with different first ips even though on same 
+			  // domain. perhaps we should use the domain as the
+			  // key to getting the firstip for and subdomain.
+			  // but out whole selection algo in spider.cpp is
+			  // firstIp based, so it scans all the spiderrequests
+			  // from a single firstip to get the winner for that
+			  // firstip. 
+			  
+
+			  // "<tr class=poo><td>domainpages</td>"
+			  // "<td>The number of pages that are currently indexed "
+			  // "for the domain of the URL. "
+			  // "Used for doing quotas."
+			  // "</td></tr>"
 
 			  "<tr class=poo><td>siteadds</td>"
 			  "<td>The number URLs manually added to the "
@@ -20626,11 +21340,13 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "popularity."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>domainadds</td>"
-			  "<td>The number URLs manually added to the "
-			  "domain of the URL. Used to guage a domain's "
-			  "popularity."
-			  "</td></tr>"
+			  // taken out for the same reason as domainpages
+			  // above was taken out. see expanation up there.
+			  // "<tr class=poo><td>domainadds</td>"
+			  // "<td>The number URLs manually added to the "
+			  // "domain of the URL. Used to guage a domain's "
+			  // "popularity."
+			  // "</td></tr>"
 
 
 
@@ -20741,11 +21457,16 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "fine level of control."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
+			  "<tr class=poo><td>"
+			  "<a name=isaddurl>"
+			  "isaddurl | !isaddurl"
+			  "</a>"
+			  "</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
-			  "url interface. This replaces the add url priority "
-			  "parm."
+			  "url interface or API."
+			  //"This replaces the add url priority "
+			  //"parm."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>isinjected | !isinjected</td>"
@@ -20755,7 +21476,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<a href=/admin/inject>inject page</a> or API."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
+			  "<tr class=poo><td>isreindex | !isreindex</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
 			  "<a href=/admin/reindex>query reindex</a> "
@@ -20767,7 +21488,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "feature. "
 			  "You can set max spiders to 0 "
 			  "for non "
-			  "docidbased requests while you reindex or delete "
+			  "isreindex requests while you reindex or delete "
 			  "the results of a query for extra speed."
 			  "</td></tr>"
 
@@ -20775,7 +21496,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<td>"
 			  "This is true if the url was added manually. "
 			  "Which means it matches isaddurl, isinjected, "
-			  " or isdocidbased. as opposed to only "
+			  " or isreindex. as opposed to only "
 			  "being discovered from the spider. "
 			  "</td></tr>"
 
@@ -21022,6 +21743,17 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "</td></tr>"
 
 
+			  "<tr class=poo><td>tag:<i>tagname</i></td>"
+			  "<td>"
+			  "This is true if the url is tagged with this "
+			  "<i>tagname</i> in the site list. Read about tags "
+			  "on the <a href=/admin/settings>"//#examples>"
+			  "site list</a> "
+			  "page."
+			  "</td></tr>"
+
+
+
 			  "</td></tr></table><br><br>\n",
 			  TABLE_STYLE );
 
@@ -21046,4 +21778,79 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 		// wrap it up
 		sb->safePrintf("</table><br><br>");
 		return true;
+}
+
+// . copy/clone parms from one collrec to another
+// . returns false and sets g_errno on error
+// . if doing this after creating a new collection on host #0 we have to call
+//   syncParmsWithHost0() to get all the shards in sync.
+bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
+
+	// now set THIS based on the parameters in the xml file
+	for ( long i = 0 ; i < m_numParms ; i++ ) {
+
+		// get it
+		Parm *m = &m_parms[i];
+		if ( m->m_obj != OBJ_COLL ) continue;
+
+		//log(LOG_DEBUG, "Parms: %s: parm: %s", filename, m->m_xml);
+		// . there are 2 object types, coll recs and g_conf, aka
+		//   OBJ_COLL and OBJ_CONF.
+
+		// skip comments and command
+		if ( !(m->m_flags & PF_CLONE) ) continue;
+
+		// get parm data ptr
+		char *src = srcCR + m->m_off;
+		char *dst = dstCR + m->m_off;
+
+		// if not an array use this
+		if ( ! m->isArray() ) {
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *a = (SafeBuf *)src;
+				SafeBuf *b = (SafeBuf *)dst;
+				b->reset();
+				b->safeMemcpy ( a );
+				b->nullTerm();
+			}
+			else {
+				// this should work for most types
+				memcpy ( dst , src , m->m_size );
+			}
+			continue;
+		}
+
+		//
+		// arrays only below here
+		//
+
+		// for arrays only
+		long *srcNum = (long *)(src-4);
+		long *dstNum = (long *)(dst-4);
+
+		// array can have multiple values
+		for ( long j = 0 ; j < *srcNum ; j++ ) {
+
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *a = (SafeBuf *)src;
+				SafeBuf *b = (SafeBuf *)dst;
+				b->reset();
+				b->safeMemcpy ( a );
+				b->nullTerm();
+			}
+			else {
+				// this should work for most types
+				memcpy ( dst , src , m->m_size );
+			}
+
+			src += m->m_size;
+			dst += m->m_size;
+
+		}
+
+		// update # elements in array
+		*dstNum = *srcNum;
+
+	}
+	return true;
 }

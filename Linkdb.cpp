@@ -1028,7 +1028,8 @@ bool Msg25::getLinkInfo2( char      *site                ,
 	return doReadLoop();
 }
 
-
+// . returns false if blocked, returns true otherwise
+// . returns true and sets g_errno on error
 bool Msg25::doReadLoop ( ) {
 
 	//log("debug: entering doReadLoop this=%lx",(long)this);
@@ -1391,6 +1392,8 @@ bool Msg25::sendRequests ( ) {
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) {
 		log("linkdb: collnum %li is gone 1",(long)m_collnum);
+		// that func doesn't set g_errno so we must
+		g_errno = ENOCOLLREC;
 		return true;
 	}
 	//char *coll = cr->m_coll;
@@ -2335,6 +2338,8 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) {
 		log("linkdb: collnum %li is gone 2",(long)m_collnum);
+		// that func doesn't set g_errno so we must
+		g_errno = ENOCOLLREC;
 		return true;
 	}
 	char *coll = cr->m_coll;
@@ -5462,7 +5467,10 @@ bool Links::addLink ( char *link , long linkLen , long nodeNum ,
 	//bool addWWW = true;
 	//if ( titleRecVersion >= 99 ) addWWW = false;
 	//bool addWWW = false;
-	bool addWWW = true;
+	//bool addWWW = true;
+
+	// we now use everything has is for sites like file.org
+	bool addWWW = false;
 
 	url.set ( m_baseUrl       ,
 		  link            ,
