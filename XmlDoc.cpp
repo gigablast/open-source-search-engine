@@ -25656,7 +25656,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		if ( ! hashCountry       ( table ) ) return NULL;
 		if ( ! hashTagRec        ( table ) ) return NULL;
 		// hash for gbsortby:gbspiderdate
-		if ( ! hashDateNumbers   ( table , true ) ) return NULL;
+		if ( ! hashDateNumbers   ( table ) ) return NULL;
 		// has gbhasthumbnail:1 or 0
 		if ( ! hashImageStuff    ( table ) ) return NULL;
 		// and the json itself
@@ -25729,7 +25729,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 
 
 	if ( ! hashLinks         ( table ) ) return NULL;
-	if ( ! hashDateNumbers   ( table , true ) ) return NULL;
+	if ( ! hashDateNumbers   ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
 	if ( ! hashDMOZCategories( table ) ) return NULL;
@@ -25982,10 +25982,10 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	// . then the url. url: site: ip: etc. terms
 	// . do NOT hash non-fielded terms so we do not get "status" 
 	//   results poluting the serps => false
-	if ( ! hashUrl ( &tt4 , false ) ) return NULL;
+	if ( ! hashUrl ( &tt4 , true ) ) return NULL;
 
-	// false --> do not hash the gbdoc* terms
-	hashDateNumbers ( &tt4 , false );
+	// false --> do not hash the gbdoc* terms (CT_STATUS)
+	hashDateNumbers ( &tt4 , true );
 
 	// store keys in safebuf then to make our own meta list
 	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
@@ -26029,6 +26029,14 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	SafeBuf tmp;
 	tmp.safePrintf("<title>Spider Status: %s</title>",
 		       mstrerror(m_indexCode));
+
+	// if we are a dup...
+	if ( m_indexCode == EDOCDUP )
+		tmp.safePrintf("Dup of docid %lli<br>", m_docIdWeAreADupOf );
+
+	if ( m_redirUrlPtr && m_redirUrlValid )
+		tmp.safePrintf("Redirected to %s<br>",m_redirUrlPtr->getUrl());
+
 	// put stats like we log out from logIt
 	//tmp.safePrintf("<div style=max-width:800px;>\n");
 	// store log output into doc
@@ -26209,7 +26217,7 @@ long XmlDoc::getIndexedTime() {
 
 // . hash dates for sorting by using gbsortby: and gbrevsortby:
 // . do 'gbsortby:gbspiderdate' as your query to see this in action
-bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool hashgbdocTerms) {
+bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool isStatusDoc ) {
 
 	// stop if already set
 	if ( ! m_spideredTimeValid ) return true;
@@ -26238,7 +26246,7 @@ bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool hashgbdocTerms) {
 
 	// do not index the rest if we are a "spider reply" document
 	// which is like a fake document for seeing spider statuses
-	if ( ! hashgbdocTerms ) return true;
+	if ( isStatusDoc == CT_STATUS ) return true;
 
 	// now for CT_STATUS spider status "documents" we also index
 	// gbspiderdate so index this so we can just do a 
@@ -26651,7 +26659,7 @@ bool XmlDoc::hashLinksForLinkdb ( HashTableX *dt ) {
 
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
-bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
+bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 
 	setStatus ( "hashing url colon" );
 
@@ -26671,6 +26679,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	// append a "www." for doing url: searches
 	Url uw; uw.set ( fu->getUrl() , fu->getUrlLen() , true );
 	hi.m_prefix    = "url";
+	if ( isStatusDoc ) hi.m_prefix = "url2";
 	if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
 		return false;
 
@@ -26685,6 +26694,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	char *s    = fu->getUrl   ();
 	long  slen = fu->getUrlLen();
 	hi.m_prefix = "inurl";
+	if ( isStatusDoc ) hi.m_prefix = "inurl2";
 	if ( ! hashString ( s,slen, &hi ) ) return false;
 
 	setStatus ( "hashing ip colon" );
@@ -26699,6 +26709,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	//char *tmp = iptoa ( m_ip );
 	//long  tlen = gbstrlen(tmp);
 	hi.m_prefix = "ip";
+	if ( isStatusDoc ) hi.m_prefix = "ip2";
 	if ( ! hashSingleTerm(ipbuf,iplen,&hi) ) return false;
 
 	//
@@ -26768,6 +26779,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	long blen = sprintf(buf,"%li",pathDepth);
 	// update parms
 	hi.m_prefix    = "gbpathdepth";
+	if ( isStatusDoc ) hi.m_prefix = "gbpathdepth2";
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	// hash gbpathdepth:X
 	if ( ! hashString ( buf,blen,&hi) ) return false;
@@ -26782,6 +26794,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	blen = sprintf(buf,"%li",(long)m_hopCount);
 	// update parms
 	hi.m_prefix    = "gbhopcount";
+	if ( isStatusDoc ) hi.m_prefix = "gbhopcount2";
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	// hash gbpathdepth:X
 	if ( ! hashString ( buf,blen,&hi) ) return false;
@@ -26798,6 +26811,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	else                        hm = "0";
 	// update parms
 	hi.m_prefix = "gbhasfilename";
+	if ( isStatusDoc ) hi.m_prefix = "gbhasfilename2";
 	// hash gbhasfilename:[0|1]
 	if ( ! hashString ( hm,1,&hi) ) return false;
 
@@ -26809,6 +26823,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	if ( fu->isCgi() ) hm = "1";
 	else               hm = "0";
 	hi.m_prefix = "gbiscgi";
+	if ( isStatusDoc ) hi.m_prefix = "gbiscgi2";
 	if ( ! hashString ( hm,1,&hi) ) return false;
 
 
@@ -26822,6 +26837,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	if ( fu->getExtensionLen() ) hm = "1";
 	else                         hm = "0";
 	hi.m_prefix = "gbhasext";
+	if ( isStatusDoc ) hi.m_prefix = "gbhasext2";
 	if ( ! hashString ( hm,1,&hi) ) return false;
 
 	//
@@ -26866,6 +26882,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 		*p = '\0';
 		// update hash parms
 		hi.m_prefix    = "site";
+		if ( isStatusDoc ) hi.m_prefix = "site2";
 		hi.m_hashGroup = HASHGROUP_INURL;
 		// this returns false on failure
 		if ( ! hashSingleTerm (buf,p-buf,&hi ) ) return false;
@@ -26889,11 +26906,13 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	long  elen = fu->getExtensionLen();
 	// update hash parms
 	hi.m_prefix    = "ext";
+	if ( isStatusDoc ) hi.m_prefix = "ext2";
 	if ( ! hashSingleTerm(ext,elen,&hi ) ) return false;
 
 
 	setStatus ( "hashing gbdocid" );
 	hi.m_prefix = "gbdocid";
+	if ( isStatusDoc ) hi.m_prefix = "gbdocid2";
 	char buf2[32];
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
@@ -26913,11 +26932,12 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 		// append a "www." as part of normalization
 		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
 		hi.m_prefix    = "gbparenturl";
+		if ( isStatusDoc ) hi.m_prefix = "gbparenturl2";
 		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
 			return false;
 	}
 
-	if ( ! hashNonFieldTerms ) return true;
+	if ( isStatusDoc ) return true;
 
 	setStatus ( "hashing SiteGetter terms");
 

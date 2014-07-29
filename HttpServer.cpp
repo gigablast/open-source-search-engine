@@ -1239,6 +1239,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	}
 	// set the filepath/name
 	char fullPath[512];
+	bool isQAFile = false;
 	// if it's gigablast.com, www.gigablast.com, ... do shortcut
 	//if ( strcasecmp ( h , "www.gigablast.com" ) == 0 ) goto skip;
 	//if ( strcasecmp ( h , "gigablast.com"     ) == 0 ) goto skip;
@@ -1261,6 +1262,13 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		}
 		// otherwise, use default html dir
 		sprintf(fullPath,"%s/%s", g_hostdb.m_httpRootDir , path );
+
+		// special hack for /qa/content.* stuff, do not use /html/
+		if ( strncmp(path,"/qa/",4) == 0 ) {
+			isQAFile = true;
+			sprintf(fullPath,"%s%s", g_hostdb.m_dir, path );
+		}
+
 		// now retrieve the file
 		f->set ( fullPath );
 	}		
@@ -1321,6 +1329,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// if no extension assume charset utf8
 	char *charset = NULL;
 	if ( ! ext || ext[0] == 0 ) charset = "utf-8";
+
+	if ( isQAFile ) ext = "txt";
 
 	if ( partialContent )
 		m.makeMime (fileSize,ct,lastModified,offset,bytesToSend,ext,

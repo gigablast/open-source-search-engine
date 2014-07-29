@@ -3149,14 +3149,28 @@ static bool       s_isInitialized = false;
 struct QueryField g_fields[] = {
 	{"url", FIELD_URL, true,"Match the exact url. Example: url:www.gigablast.com/addurl.htm"},
 	{"ext", FIELD_EXT, true,"Match the url extension. Example: ext:htm or ext:mpeg to find urls ending in .htm or .mpeg respectively."},
+
+	{"url2", FIELD_URL, true,"Match the exact url. Example: url:www.gigablast.com/addurl.htm"},
+	{"ext2", FIELD_EXT, true,"Match the url extension. Example: ext:htm or ext:mpeg to find urls ending in .htm or .mpeg respectively."},
+
+
 	{"link", FIELD_LINK, true,"Match pages that link to the given url. Example: link:www.gigablast.com will return all pages linking to the www.gigablast.com page."},
 	{"links", FIELD_LINKS, true,"Same as link:."},
 	{"ilink", FIELD_ILINK, true,"Similar to above."},
 	{"sitelink", FIELD_SITELINK, true,"Matches all pages that link to the given site. Example:sitelink:www.gigablast.com matches all pages that link to some page on the www.gigablast.com site."},
+
 	{"site", FIELD_SITE, true,"Matches all pages from the given site. Example: site:www.gigablast.com will return all the pages on the gigablast site"},
 	//{"coll", FIELD_COLL, true,"Not sure if this works."},
 	{"ip", FIELD_IP, true,"Matches all pages with the given ip. Example:1.2.3.4 will match all pages whose urls have that IP address."},
 	{"inurl", FIELD_SUBURL, true,"Matches all pages that have the given terms in the url. Example inurl:water will match all pages whose url has the word water in it, but the word must be delineated by punctuation."},
+
+
+	{"site2", FIELD_SITE, true,"Matches all pages from the given site. Example: site:www.gigablast.com will return all the pages on the gigablast site"},
+	//{"coll", FIELD_COLL, true,"Not sure if this works."},
+	{"ip2", FIELD_IP, true,"Matches all pages with the given ip. Example:1.2.3.4 will match all pages whose urls have that IP address."},
+	{"inurl2", FIELD_SUBURL, true,"Matches all pages that have the given terms in the url. Example inurl:water will match all pages whose url has the word water in it, but the word must be delineated by punctuation."},
+
+
 	{"suburl", FIELD_SUBURL, true,"Same as inurl."},
 	{"intitle", FIELD_TITLE, false,"Matches all pages that have pages that have the given term in their title. Example: title:web returns all pages that have the word web in their title."},
 	{"title", FIELD_TITLE, false,"Same as intitle:"},
@@ -3192,6 +3206,16 @@ struct QueryField g_fields[] = {
 	{"gbiscgi", FIELD_GBOTHER, false,""},
 	{"gbhasext", FIELD_GBOTHER, false,""},
 	{"gbsubmiturl", FIELD_GBOTHER, false,""},
+
+
+	// for content type CT_STATUS documents (Spider status docs)
+	{"gbpathdepth2", FIELD_GBOTHER, false,"the path depth of the url's path."},
+	{"gbhopcount2", FIELD_GBOTHER, false,"the hop count of the url. roots are 0."},
+	{"gbhasfilename2", FIELD_GBOTHER, false,""},
+	{"gbiscgi2", FIELD_GBOTHER, false,""},
+	{"gbhasext2", FIELD_GBOTHER, false,""},
+
+
 
 	//{"qdom", FIELD_QUOTA, false,""},
 	//{"qhost", FIELD_QUOTA, false,""},

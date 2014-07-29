@@ -422,17 +422,18 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	// if it is like /GA/Atlanta then call sendPageResults
 	// and that should be smart enough to set the m_where in
 	// SearchInput.cpp from the path!!
-	if ( path && 
-	     // "filename" does not start with '/' for some reason
-	     //path[0] &&
-	     //path[0] == '/' &&
-	     path[0] &&
-	     is_alpha_a(path[0]) &&
-	     is_alpha_a(path[1]) &&
-	     pathLen<64 &&
-	     // "GET /NM"
-	     (path[2] == '/' || path[2]=='\0' || path[2]==' ') )
-		return PAGE_RESULTS;
+	// this messes up /qa/* files
+	// if ( path && 
+	//      // "filename" does not start with '/' for some reason
+	//      //path[0] &&
+	//      //path[0] == '/' &&
+	//      path[0] &&
+	//      is_alpha_a(path[0]) &&
+	//      is_alpha_a(path[1]) &&
+	//      pathLen<64 &&
+	//      // "GET /NM"
+	//      (path[2] == '/' || path[2]=='\0' || path[2]==' ') )
+	// 	return PAGE_RESULTS;
 
 	// go down the list comparing the pathname to dynamic page names
 	for ( long i = 0 ; i < s_numPages ; i++ ) {

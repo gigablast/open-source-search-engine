@@ -784,8 +784,8 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
-	bool hashUrl ( class HashTableX *table , bool hashNonFieldTerms=true) ;
-	bool hashDateNumbers ( class HashTableX *tt , bool hashAll ) ;
+	bool hashUrl ( class HashTableX *table , bool isStatusDoc = false ) ;
+	bool hashDateNumbers ( class HashTableX *tt , bool isStatusDoc=false) ;
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,

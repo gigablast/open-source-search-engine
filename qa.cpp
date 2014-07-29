@@ -7,7 +7,7 @@ SafeBuf g_qaOutput;
 bool g_qaInProgress = false;
 long g_numErrors;
 
-static long s_expectedCRC = 0;
+static long s_checkCRC = 0;
 
 static bool s_registered = false;
 
@@ -91,6 +91,15 @@ static char *s_content = NULL;
 static HashTableX s_ht;
 static QATest *s_qt = NULL;
 
+bool saveHashTable ( ) {
+	if ( s_ht.m_numSlotsUsed <= 0 ) return true;
+	SafeBuf fn;
+	fn.safePrintf("%s/qa/",g_hostdb.m_dir);
+	log("qa: saving crctable.dat");
+	s_ht.save ( fn.getBufStart() , "crctable.dat" );
+	return true;
+}
+
 void processReply ( char *reply , long replyLen ) {
 
 	// store our current reply
@@ -171,7 +180,7 @@ void processReply ( char *reply , long replyLen ) {
 	//
 
 	// this means caller does not care about the response
-	if ( s_expectedCRC == 0 ) {
+	if ( ! s_checkCRC ) {
 		//s_callback();
 		return;
 	}
@@ -193,6 +202,10 @@ void processReply ( char *reply , long replyLen ) {
 	if ( ! s_init ) {
 		s_init = true;
 		s_ht.set(4,4,1024,NULL,0,false,0,"qaht");
+		// make symlink
+		//char cmd[512];
+		//snprintf(cmd,"cd %s/html ; ln -s ../qa ./qa", g_hostdb.m_dir);
+		//system(cmd);
 		// try to load from disk
 		SafeBuf fn;
 		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
@@ -203,11 +216,11 @@ void processReply ( char *reply , long replyLen ) {
 	// look up in hashtable to see what reply crc should be
 	long *val = (long *)s_ht.getValue ( &urlHash32 );
 
-	if ( ! val ) {
-		// add it so we know
-		s_ht.addKey ( &urlHash32 , &contentCRC );
-		g_qaOutput.safePrintf("first time testing<br>%s : %s (urlhash=%lu "
-				      "crc=<a href=/qa/content.%li>%lu</a>)<br>"
+	// just return if the same
+	if ( val && contentCRC == *val ) {
+		g_qaOutput.safePrintf("passed test<br>%s : %s (urlhash=%lu "
+				      "crc=<a href=/qa/content.%lu>"
+				      "%lu</a>)<br>"
 				      "<hr>",
 				      s_qt->m_testName,
 				      s_url.getUrl(),
@@ -217,10 +230,19 @@ void processReply ( char *reply , long replyLen ) {
 		return;
 	}
 
-	// just return if the same
-	if ( contentCRC == *val ) {
-		g_qaOutput.safePrintf("passed test<br>%s : %s (urlhash=%lu "
-				      "crc=<a href=/qa/content.%li>%lu</a>)<br>"
+
+
+	// break up into lines
+	char fn2[1024];
+	sprintf(fn2,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
+	fb2.save ( fn2 );
+
+	if ( ! val ) {
+		// add it so we know
+		s_ht.addKey ( &urlHash32 , &contentCRC );
+		g_qaOutput.safePrintf("first time testing<br>%s : %s (urlhash=%lu "
+				      "crc=<a href=/qa/content.%lu>%lu"
+				      "</a>)<br>"
 				      "<hr>",
 				      s_qt->m_testName,
 				      s_url.getUrl(),
@@ -229,6 +251,7 @@ void processReply ( char *reply , long replyLen ) {
 				      contentCRC);
 		return;
 	}
+
 
 	log("qa: crc changed for url %s from %li to %li",
 	    s_url.getUrl(),*val,contentCRC);
@@ -239,11 +262,6 @@ void processReply ( char *reply , long replyLen ) {
 	sprintf(fn1,"%sqa/content.%lu",g_hostdb.m_dir, *val);
 	fb1.load(fn1);
 	fb1.nullTerm();
-
-	// break up into lines
-	char fn2[1024];
-	sprintf(fn2,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
-	fb2.save ( fn2 );
 
 	// do the diff between the two replies so we can see what changed
 	char cmd[1024];
@@ -269,7 +287,7 @@ void processReply ( char *reply , long replyLen ) {
 
 			      " != <a href=/qa/content.%lu>%lu</a> = newcrc"
 			      "<br>diff output follows:<br>"
-			      "<hr><pre id=%lu style=background-color:0xffffff;>",
+			      "<pre id=%lu style=background-color:0xffffff;>",
 			      s_qt->m_testName,
 			      s_url.getUrl(),
 			      urlHash32,
@@ -298,7 +316,7 @@ void processReply ( char *reply , long replyLen ) {
 	sb.load("/tmp/diffout");
 	g_qaOutput.htmlEncode ( sb.getBufStart() );
 
-	g_qaOutput.safePrintf("</pre><br>");
+	g_qaOutput.safePrintf("</pre><br><hr>");
 
 	// if this is zero allow it to slide by. it is learning mode i guess.
 	// so we can learn what crc we need to use.
@@ -321,7 +339,7 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 }
 
 // returns false if blocked, true otherwise, like on quick connect error
-bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
+bool getUrl( char *path , long checkCRC = 0 , char *post = NULL ) {
 
 	SafeBuf sb;
 	sb.safePrintf ( "http://%s:%li%s"
@@ -330,7 +348,7 @@ bool getUrl( char *path , long expectedCRC = 0 , char *post = NULL ) {
 			, path
 			);
 
-	s_expectedCRC = expectedCRC;
+	s_checkCRC = checkCRC;
 
 	bool doPost = true;
 	if ( strncmp ( path , "/search" , 7 ) == 0 )
@@ -933,7 +951,7 @@ bool qaspider1 ( ) {
 	//static bool s_y6 = false;
 	if ( ! s_flags[10] ) {
 		s_flags[10] = true;
-		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -941,7 +959,7 @@ bool qaspider1 ( ) {
 	//static bool s_y7 = false;
 	if ( ! s_flags[11] ) {
 		s_flags[11] = true;
-		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9861563119&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -949,24 +967,35 @@ bool qaspider1 ( ) {
 	//static bool s_y8 = false;
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
-		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
 			return false;
 	}
 
 
 	// delete the collection
 	//static bool s_fee = false;
-	if ( ! s_flags[13] ) {
-		s_flags[13] = true;
-		if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
+	// if ( ! s_flags[13] ) {
+	// 	s_flags[13] = true;
+	// 	if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
+	// 		return false;
+	// }
+
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=site2%3Awww.walmart.com+"
+				"gbsortby%3Agbspiderdate",
+				999 ) )
 			return false;
 	}
+	
+
 
 	//static bool s_fee2 = false;
 	if ( ! s_flags[14] ) {
 		s_flags[14] = true;
-		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA SPIDER1 TEST\n\n\n");
+		log("qa: SUCCESSFULLY COMPLETED "
+			"QA SPIDER1 TEST");
 		return true;
 	}
 
@@ -1031,7 +1060,8 @@ bool qaspider2 ( ) {
 		s_flags[3] = true;
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&format=xml&sitelist=");
-		sb.urlEncode("tag:shallow www.walmart.com\r\n"
+		sb.urlEncode(//walmart has too many pages at depth 1, so remove it
+			     //"tag:shallow www.walmart.com\r\n"
 			     "tag:shallow http://www.ibm.com/\r\n");
 		sb.nullTerm();
 		if ( ! getUrl ("/admin/settings",0,sb.getBufStart() ) )
@@ -1091,7 +1121,7 @@ bool qaspider2 ( ) {
 		s_flags[7] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&n=500&"
 				"q=gbhopcount%3A0",
-				0 ) )
+				999 ) )
 			return false;
 	}
 	
@@ -1101,14 +1131,14 @@ bool qaspider2 ( ) {
 		s_flags[8] = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
 				"q=gbfacetstr%3Agbxpathsitehash2492664135",
-				0 ) )
+				999 ) )
 			return false;
 	}
 
 	//static bool s_y6 = false;
 	if ( ! s_flags[9] ) {
 		s_flags[9] = true;
-		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1116,7 +1146,7 @@ bool qaspider2 ( ) {
 	//static bool s_y7 = false;
 	if ( ! s_flags[10] ) {
 		s_flags[10] = true;
-		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1124,7 +1154,7 @@ bool qaspider2 ( ) {
 	//static bool s_y8 = false;
 	if ( ! s_flags[11] ) {
 		s_flags[11] = true;
-		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=main&d=61506292&cnsp=0" , 0 ) )
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1140,8 +1170,8 @@ bool qaspider2 ( ) {
 	//static bool s_fee2 = false;
 	if ( ! s_flags[13] ) {
 		s_flags[13] = true;
-		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED "
-			"QA SPIDER2 TEST\n\n\n");
+		log("qa: SUCCESSFULLY COMPLETED "
+		    "QA SPIDER2 TEST");
 		return true;
 	}
 
@@ -1168,16 +1198,18 @@ static QATest s_qatests[] = {
 
 	{qainject1,
 	 "injectTest1",
-	 "Test injection api. Test injection of multiple urls with content. Test "
-	 "deletion of urls via inject api."},
+	 "Test injection api. Test injection of multiple urls with content. "
+	 "Test deletion of urls via inject api."},
 
 	{qainject2,
 	 "injectTest2",
-	 "Test injection api. Test delimeter-based injection of single file."},
+	 "Test injection api. Test delimeter-based injection of single file. "
+	 "test tml ns smxcpl sw showimages sc search parms."},
 
 	{qaspider1,
 	 "spiderSitePagesTest",
-	 "Test spidering walmart.com and ibm.com using sitepages quota."},
+	 "Test spidering walmart.com and ibm.com using sitepages quota. "
+	 "Test facets."},
 
 	{qaspider2,
 	 "spiderHopCountTest",
@@ -1227,14 +1259,9 @@ bool qatest ( ) {
 	}
 
 	// save this
-	if ( s_ht.m_numSlotsUsed ) {
-		SafeBuf fn;
-		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
-		log("qa: saving crctable.dat");
-		s_ht.save ( fn.getBufStart() , "crctable.dat" );
-		// do not reset since we don't reload it above!
-		//s_ht.reset();
-	}
+	saveHashTable();
+	// do not reset since we don't reload it above!
+	//s_ht.reset();
 
 	//if ( g_numErrors )
 	//	g_qaOutput.safePrintf("<input type=submit value=submit><br>");
@@ -1276,12 +1303,20 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	// . test id identified by "ajaxUrlHash" which is the hash of the test's url
 	//   and the test name, QATest::m_testName
 	long ajax = hr->getLong("ajax",0);
-	unsigned long ajaxUrlHash = (unsigned long long)hr->getLongLong("uh",0LL);
-	unsigned long ajaxCrc = (unsigned long long)hr->getLongLong("crc",0LL);
+	unsigned long ajaxUrlHash ;
+	ajaxUrlHash = (unsigned long long)hr->getLongLong("uh",0LL);
+	unsigned long ajaxCrc ;
+	ajaxCrc = (unsigned long long)hr->getLongLong("crc",0LL);
+
 	if ( ajax ) {
-		// overwrite current value with provided one because the user
-		// click on an override checkbox to update the crc
-		s_ht.addKey ( &ajaxUrlHash , &ajaxCrc );
+		// make sure it is initialized
+		if ( s_ht.m_ks ) {
+			// overwrite current value with provided one because 
+			// the user click on an override checkbox to update 
+			// the crc
+			s_ht.addKey ( &ajaxUrlHash , &ajaxCrc );
+			saveHashTable();
+		}
 		// send back the urlhash so the checkbox can turn the
 		// bg color of the "diff" gray
 		SafeBuf sb3;
@@ -1334,6 +1369,12 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 				      "u='/admin/qa?ajax=1&uh='+urlhash+'&crc='+crc;\n"
 				      "client.open('GET',u);\n"
 				      "client.send();\n"
+				      
+				      // use that to fix background to gray
+				      "var w=document.getElementById(urlhash);\n"
+				      // set background color
+				      "w.style.backgroundColor = '0xe0e0e0';\n"
+
 				      // gear spinning after checkbox
 				      "}\n\n "
 
