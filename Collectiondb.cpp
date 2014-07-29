@@ -2880,7 +2880,7 @@ bool CollectionRec::save ( ) {
 	//m_localCrawlInfo.print ( &sb );
 	// binary now
 	sb.safeMemcpy ( &m_localCrawlInfo , sizeof(CrawlInfo) );
-	if ( sb.dumpToFile ( tmp ) == -1 ) {
+	if ( sb.safeSave ( tmp ) == -1 ) {
 		log("db: failed to save file %s : %s",
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
@@ -2893,7 +2893,7 @@ bool CollectionRec::save ( ) {
 	//m_globalCrawlInfo.print ( &sb );
 	// binary now
 	sb.safeMemcpy ( &m_globalCrawlInfo , sizeof(CrawlInfo) );
-	if ( sb.dumpToFile ( tmp ) == -1 ) {
+	if ( sb.safeSave ( tmp ) == -1 ) {
 		log("db: failed to save file %s : %s",
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;

@@ -423,6 +423,58 @@ long SafeBuf::dumpToFile(char *filename ) {
 	return m_length;
 }
 
+// return -1 on error
+long SafeBuf::safeSave (char *filename ) {
+ retry22:
+
+	// first write to tmp file
+	SafeBuf fn;
+	fn.safePrintf( "%s.saving",filename );
+
+	long fd = open ( fn.getBufStart() ,
+			 O_CREAT | O_WRONLY | O_TRUNC,
+			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+	if ( fd < 0 ) {
+		// valgrind
+		if ( errno == EINTR ) goto retry22;
+		log("safebuf: Failed to open %s for writing: %s", 
+		    fn.getBufStart(), mstrerror(errno));
+		return -1;
+	}
+	//logf(LOG_DEBUG, "test: safebuf %li bytes written to %s",m_length,
+	//     filename);
+ retry23:
+	long bytes = write(fd, (char*)m_buf, m_length) ;
+	if ( bytes != m_length ) {
+		// valgrind
+		if ( bytes <= 0 && errno == EINTR ) goto retry23;
+		logf(LOG_DEBUG,"test: safebuf bad write %li != %li: %s",
+		     bytes,m_length,mstrerror(errno));
+		close(fd);
+		return -1;
+	}
+	close(fd);
+
+	// remove original file before replacing it
+	if ( access (filename , F_OK ) == 0) unlink ( filename );
+
+	// now move it to the actual filename
+	//long status = ::rename ( fn.getBufStart() , filename );
+	long status = ::link ( fn.getBufStart() , filename );
+
+	// note it
+	//log("sb: saved %s safely",filename);
+
+	if ( status == -1 ) {
+		//g_errno = errno;
+		log("sb: safeBuf::safeSave::link: %s",mstrerror(errno));
+		return -1;
+	}
+
+	return m_length;
+}
+
+
 long SafeBuf::fillFromFile(char *dir,char *filename) {
 	char buf[1024];
 	if ( dir ) sprintf(buf,"%s/%s",dir,filename);

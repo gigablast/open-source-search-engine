@@ -57,6 +57,8 @@ struct SafeBuf {
 	long dumpToFile(char *filename);
 	long save ( char *dir, char *fname){return saveToFile(dir,fname); };
 	long save ( char *fullFilename ) ;
+	// saves to tmp file and if that succeeds then renames to orig filename
+	long safeSave (char *filename );
 
 	long  fillFromFile(char *filename);
 	long  fillFromFile(char *dir,char *filename);

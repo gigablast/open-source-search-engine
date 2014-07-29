@@ -3766,10 +3766,10 @@ skip2:
 	//*p = '\0';
 	sb.nullTerm();
 
-	ff.set ( f );
-	if ( ! ff.open ( O_RDWR | O_CREAT | O_TRUNC ) )
-		return log("db: Could not open %s : %s",
-			   ff.getFilename(),mstrerror(g_errno));
+	//ff.set ( f );
+	//if ( ! ff.open ( O_RDWR | O_CREAT | O_TRUNC ) )
+	//	return log("db: Could not open %s : %s",
+	//		   ff.getFilename(),mstrerror(g_errno));
 
 	// save the parm to the file
 	//len = gbstrlen(buf);
@@ -3777,12 +3777,18 @@ skip2:
 	// use -1 for offset so we do not use pwrite() so it will not leave
 	// garbage at end of file
 	//n    = ff.write ( buf , len , -1 );
-	n    = ff.write ( sb.getBufStart() , len , -1 );
-	ff.close();
-	if ( n == len ) return true;
-	return log("admin: Could not write to file %s.",ff.getFilename());
+	//n    = ff.write ( sb.getBufStart() , len , -1 );
+	//ff.close();
+	//if ( n == len ) return true;
+
+	// save to filename "f". returns # of bytes written. -1 on error.
+	if ( sb.safeSave ( f ) >= 0 )
+		return true;
+
+	return log("admin: Could not write to file %s.",f);
  hadError:
-	return log("admin: Error writing coll.conf buf: %s",mstrerror(g_errno));
+	return log("admin: Error writing to %s: %s",f,mstrerror(g_errno));
+
 	//File bigger than %li bytes."
 	//	   "  Please increase #define in Parms.cpp.",
 	//	   (long)MAX_CONF_SIZE);
