@@ -213,16 +213,23 @@ void processReply ( char *reply , long replyLen ) {
 		s_ht.load ( fn.getBufStart() , "crctable.dat" );
 	}
 
+	// break up into lines
+	char fn2[1024];
+	sprintf(fn2,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
+	fb2.save ( fn2 );
+
 	// look up in hashtable to see what reply crc should be
 	long *val = (long *)s_ht.getValue ( &urlHash32 );
 
 	// just return if the same
 	if ( val && contentCRC == *val ) {
-		g_qaOutput.safePrintf("passed test<br>%s : %s (urlhash=%lu "
+		g_qaOutput.safePrintf("passed test<br>%s : "
+				      "<a href=%s>%s</a> (urlhash=%lu "
 				      "crc=<a href=/qa/content.%lu>"
 				      "%lu</a>)<br>"
 				      "<hr>",
 				      s_qt->m_testName,
+				      s_url.getUrl(),
 				      s_url.getUrl(),
 				      urlHash32,
 				      contentCRC,
@@ -232,19 +239,17 @@ void processReply ( char *reply , long replyLen ) {
 
 
 
-	// break up into lines
-	char fn2[1024];
-	sprintf(fn2,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
-	fb2.save ( fn2 );
-
 	if ( ! val ) {
 		// add it so we know
 		s_ht.addKey ( &urlHash32 , &contentCRC );
-		g_qaOutput.safePrintf("first time testing<br>%s : %s (urlhash=%lu "
+		g_qaOutput.safePrintf("first time testing<br>%s : "
+				      "<a href=%s>%s</a> "
+				      "(urlhash=%lu "
 				      "crc=<a href=/qa/content.%lu>%lu"
 				      "</a>)<br>"
 				      "<hr>",
 				      s_qt->m_testName,
+				      s_url.getUrl(),
 				      s_url.getUrl(),
 				      urlHash32,
 				      contentCRC,
@@ -271,7 +276,8 @@ void processReply ( char *reply , long replyLen ) {
 
 	g_numErrors++;
 	
-	g_qaOutput.safePrintf("FAILED TEST<br>%s : %s (urlhash=%lu)<br>"
+	g_qaOutput.safePrintf("FAILED TEST<br>%s : "
+			      "<a href=%s>%s</a> (urlhash=%lu)<br>"
 
 			      "<input type=checkbox name=urlhash%lu value=1 "
 			      // use ajax to update test crc. if you undo your
@@ -289,6 +295,7 @@ void processReply ( char *reply , long replyLen ) {
 			      "<br>diff output follows:<br>"
 			      "<pre id=%lu style=background-color:0xffffff;>",
 			      s_qt->m_testName,
+			      s_url.getUrl(),
 			      s_url.getUrl(),
 			      urlHash32,
 
@@ -951,7 +958,7 @@ bool qaspider1 ( ) {
 	//static bool s_y6 = false;
 	if ( ! s_flags[10] ) {
 		s_flags[10] = true;
-		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9861563119&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -967,7 +974,7 @@ bool qaspider1 ( ) {
 	//static bool s_y8 = false;
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
-		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9861563119&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1130,7 +1137,7 @@ bool qaspider2 ( ) {
 	if ( ! s_flags[8] ) {
 		s_flags[8] = true;
 		if ( ! getUrl ( "/search?c=qatest123&format=json&"
-				"q=gbfacetstr%3Agbxpathsitehash2492664135",
+				"q=gbfacetstr%3Agbxpathsitehash3311332088",
 				999 ) )
 			return false;
 	}
@@ -1138,7 +1145,7 @@ bool qaspider2 ( ) {
 	//static bool s_y6 = false;
 	if ( ! s_flags[9] ) {
 		s_flags[9] = true;
-		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash3311332088&qlang=xx&c=qatest123&d=9577169402&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1146,7 +1153,7 @@ bool qaspider2 ( ) {
 	//static bool s_y7 = false;
 	if ( ! s_flags[10] ) {
 		s_flags[10] = true;
-		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9577169402&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1154,18 +1161,18 @@ bool qaspider2 ( ) {
 	//static bool s_y8 = false;
 	if ( ! s_flags[11] ) {
 		s_flags[11] = true;
-		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=61506292&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9577169402&cnsp=0" , 999 ) )
 			return false;
 	}
 
 
 	// delete the collection
 	//static bool s_fee = false;
-	if ( ! s_flags[12] ) {
-		s_flags[12] = true;
-		if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
-			return false;
-	}
+	// if ( ! s_flags[12] ) {
+	// 	s_flags[12] = true;
+	// 	if ( ! getUrl ( "/admin/delcoll?delcoll=qatest123" ) )
+	// 		return false;
+	// }
 
 	//static bool s_fee2 = false;
 	if ( ! s_flags[13] ) {

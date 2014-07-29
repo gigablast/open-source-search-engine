@@ -299,6 +299,11 @@ bool processLoop ( void *state ) {
 			return false;
 	}
 
+	char *contentType = "text/html";
+	char format = st->m_format;
+	if ( format == FORMAT_XML ) contentType = "text/xml";
+	if ( format == FORMAT_JSON ) contentType = "application/json";
+
 	// if we printed a special page (like rainbow sections) then return now
 	if ( st->m_printed ) {
 		bool status = g_httpServer.sendDynamicPage (s,
@@ -306,7 +311,8 @@ bool processLoop ( void *state ) {
 							    sb->getBufStart(),
 							    sb->getLength(),
 							    -1,false,
-							    "text/html",
+							    //"text/html",
+							    contentType,
 							    -1, NULL, "utf8" );
 		// nuke state2
 		mdelete ( st , sizeof(State2) , "PageGet1" );
@@ -396,7 +402,7 @@ bool processLoop ( void *state ) {
 		//p += gbstrlen ( p );
 	}
 
-	char format = st->m_format;
+	//char format = st->m_format;
 	if ( format == FORMAT_XML ) sb->reset();
 	if ( format == FORMAT_JSON ) sb->reset();
 
@@ -886,7 +892,7 @@ bool processLoop ( void *state ) {
 
 	// now encapsulate it in html head/tail and send it off
 	// sendErr:
-	char *contentType = "text/html";
+	contentType = "text/html";
 	if ( strip == 2 ) contentType = "text/xml";
 	// xml is usually buggy and this throws browser off
 	//if ( ctype == CT_XML ) contentType = "text/xml";
