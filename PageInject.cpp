@@ -505,7 +505,6 @@ bool Msg7::inject ( void *state ,
 	// count them
 	m_injectCount++;
 
-
 	if ( ! xd->injectDoc ( m_injectUrlBuf.getBufStart() ,
 			       cr ,
 			       start , // content ,

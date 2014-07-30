@@ -1052,6 +1052,10 @@ bool SafeBuf::cdataEncode ( char *s ) {
 	return safeCdataMemcpy(s,gbstrlen(s));
 }
 
+bool SafeBuf::cdataEncode ( char *s , long len ) {
+	return safeCdataMemcpy(s,len);
+}
+
 
 bool  SafeBuf::safeCdataMemcpy ( char *s, long len ) {
 	long len1 = m_length;

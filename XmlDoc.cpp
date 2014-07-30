@@ -38365,11 +38365,11 @@ bool XmlDoc::printSerpFiltered ( Section *sx , char *tagName ) {
 	for ( long i = fa ; i < la ; i++ ) {
 		// skip if br
 		if ( tids[i] == TAG_BR ) continue;
-		m_serpBuf.safeMemcpy ( wptrs[i] , wlens[i] );
+		m_serpBuf.cdataEncode ( wptrs[i] , wlens[i] );
 	}
 	// cdata!
 	m_serpBuf.safePrintf("]]>");
-	m_serpBuf.safePrintf("</%s>",tagName);
+	m_serpBuf.safePrintf("</%s>\n",tagName);
 	return true;
 }
 

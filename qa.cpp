@@ -1502,7 +1502,8 @@ static QATest s_qatests[] = {
 
 	{qajson,
 	 "jsontest",
-	 "Inject some JSON pages and test json-ish queries."}
+	 "Add Url some JSON pages and test json-ish queries. Test facets over "
+	 "json docs."}
 
 };
 
@@ -1713,7 +1714,8 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		      "</td></tr>");
 
 	// header row
-	sb.safePrintf("<tr><td><b>Do Test?</b> <a style=cursor:hand;cursor:pointer; "
+	sb.safePrintf("<tr><td><b>Do Test?</b> <a style=cursor:hand;"
+		      "cursor:pointer; "
 		      "onclick=\"checkAll('test', %li);\">(toggle)</a>",n);
 	sb.safePrintf("</td><td><b>Test Name</b></td></tr>\n");
 	
@@ -1726,7 +1728,7 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		else              bg = DARK_BLUE;
 		sb.safePrintf("<tr bgcolor=#%s>"
 			      "<td><input type=checkbox value=1 name=test%li "
-			      "id=test%li checked></td>"
+			      "id=test%li></td>"
 			      "<td>%s"
 			      "<br>"
 			      "<font color=gray size=-1>%s</font>"

@@ -296,6 +296,7 @@ struct SafeBuf {
 	bool htmlEncodeXmlTags ( char *s , long slen , long niceness ) ;
 
 	bool  cdataEncode ( char *s ) ;
+	bool  cdataEncode ( char *s , long slen ) ;
 
 	// . append a \0 but do not inc m_length
 	// . for null terminating strings
