@@ -219,10 +219,11 @@ class Msg40 {
 	bool m_doneWithLookup;
 	HashTableX m_facetTextTable;
 	SafeBuf m_facetTextBuf;
+	bool m_firstTime;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;
-	void lookupFacets2 ( ) ;
 	bool lookupFacets ( ) ;
+	void lookupFacets2 ( ) ;
 	void gotFacetText ( class Msg20 *msg20 ) ;
 	class Msg20 *getUnusedMsg20 ( ) ;
 

@@ -1296,7 +1296,6 @@ bool gotResults ( void *state ) {
 	// print logo, search box, results x-y, ... into st->m_sb
 	printSearchResultsHeader ( st );
 
-
 	// propagate "topdocid" so when he does another query every 30 secs
 	// or so we know what docid was on top for scrolling purposes
 	//if ( si->m_format == FORMAT_WIDGET_AJAX )
@@ -1750,6 +1749,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 
+	if ( si->m_format != FORMAT_HTML ) 
+		msg40->printFacetTables ( sb );
+
+
 	// for diffbot collections only...
 	if ( st->m_header && 
 	     si->m_format == FORMAT_JSON &&
@@ -2188,7 +2191,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// . LATER: show the text string corresponding to the hash
 	//   by looking it up in the titleRec
 	//
-	msg40->printFacetTables ( sb );
+	if ( si->m_format == FORMAT_HTML ) msg40->printFacetTables ( sb );
 	//
 	// END FACET PRINTING
 	//

@@ -83,6 +83,7 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , long len);
 
 Msg40::Msg40() {
+	m_firstTime = true;
 	m_doneWithLookup = false;
 	m_socketHadError = 0;
 	m_buf           = NULL;
@@ -5894,7 +5895,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 Msg20 *Msg40::getUnusedMsg20 ( ) {
 
 	// make a safebuf of 50 of them if we haven't yet
-	if ( m_unusedBuf.length() <= 0 ) {
+	if ( m_unusedBuf.getCapacity() <= 0 ) {
 		if ( ! m_unusedBuf.reserve ( (long)MAX2 * sizeof(Msg20) ) ) {
 			return NULL;
 		}
@@ -5919,15 +5920,17 @@ Msg20 *Msg40::getUnusedMsg20 ( ) {
 	return NULL;
 }
 
-static void gotFacetTextWrapper ( void *state ) {
+static bool gotFacetTextWrapper ( void *state ) {
 	Msg20 *m20 = (Msg20 *)state;
 	Msg40 *THIS = (Msg40 *)m20->m_hack;
 	THIS->gotFacetText(m20);
+	return true;
 }
 
 void Msg40::gotFacetText ( Msg20 *msg20 ) {
 
 	m_numMsg20sIn++;
+	log("msg40: numin=%li",m_numMsg20sIn);
 
 	if ( ! msg20->m_r ) {
 		log("msg40: msg20 reply is NULL");
@@ -5955,6 +5958,10 @@ void Msg40::gotFacetText ( Msg20 *msg20 ) {
 	m_facetTextBuf.safeStrcpy ( text );
 	m_facetTextBuf.pushChar('\0');
 
+	// initialize this if it needs it
+	if ( m_facetTextTable.m_ks == 0 )
+		m_facetTextTable.set(4,4,64,NULL,0,false,0,"fctxtbl");
+
 	// store in buffer
 	m_facetTextTable.addKey ( &facetVal32 , &offset );
 
@@ -5967,10 +5974,13 @@ bool Msg40::lookupFacets ( ) {
 
 	if ( m_doneWithLookup ) return true;
 
-	m_numMsg20sOut = 0;
-	m_numMsg20sIn  = 0;
-	m_j = 0;
-	m_i = 0;
+	if ( m_firstTime ) {
+		m_firstTime = false;
+		m_numMsg20sOut = 0;
+		m_numMsg20sIn  = 0;
+		m_j = 0;
+		m_i = 0;
+	}
 
 	lookupFacets2();
 
@@ -6037,6 +6047,7 @@ void Msg40::lookupFacets2 ( ) {
 			// or a meta tag facet.
 			SafeBuf tmp;
 			tmp.safeMemcpy ( qt->m_term , qt->m_termLen );
+			tmp.nullTerm();
 			req. ptr_qbuf = tmp.getBufStart();
 			req.size_qbuf = tmp.length() + 1; // include \0
 
@@ -6045,11 +6056,15 @@ void Msg40::lookupFacets2 ( ) {
 			msg20->m_hack = (long)this;
 
 			req.m_state     = msg20;
-			req.m_callback2 = gotFacetTextWrapper;
+			req.m_callback  = gotFacetTextWrapper;
+
+			// TODO: fix this
+			req.m_collnum = m_si->m_firstCollnum;
 
 			// get it
 			if ( ! msg20->getSummary ( &req ) ) {
 				m_numMsg20sOut++;
+				log("msg40: numout=%li",m_numMsg20sOut);
 				continue;
 			}
 
@@ -6098,30 +6113,30 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 			if ( format == FORMAT_XML ) {
 				sb->safePrintf("\t\t<facet>\n"
-					       "\t\t\t<query>%s</query>\n"
-					       "\t\t\t<docCount>%li"
-					       "</docCount>\n"
-					       "\t\t\t<text><![CDATA["
+					       "\t\t\t<field>%s</field>\n"
+					       "\t\t\t<value><![CDATA[%lu,"
 					       , qt->m_term
-					       , count
+					       , val32
 					       );
 				sb->cdataEncode ( text );
 				sb->safePrintf("]]></text>\n"
-					       "\t\t</facet>\n");
+					       "\t\t\t<docCount>%li"
+					       "</docCount>\n"
+					       "\t\t</facet>\n",count);
 				continue;
 			}
 
 			if ( format == FORMAT_JSON ) {
-				sb->safePrintf("\t\t\"facet\":{\n"
-					       "\t\t\t\"query\":\"%s\",\n"
-					       "\t\t\t\"docCount\":%li,\n"
-					       "\t\t\t\"text\":\""
+				sb->safePrintf("\"facet\":{\n"
+					       "\t\"field\":\"%s\",\n"
+					       "\t\"value\":\"%lu,"
 					       , qt->m_term
-					       , count
+					       , val32
 					       );
 				sb->jsonEncode ( text );
-				sb->safePrintf("\"\n"
-					       "\t\t},\n");
+				sb->safePrintf("\",\n"
+					       "\t\"docCount\":%li\n"
+					       "},\n", count);
 				continue;
 			}
 

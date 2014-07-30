@@ -1419,7 +1419,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			// then size
 			need += 4;
 			// then buckets. keys and counts
-			need += (4+4) * used;
+			need += (4+sizeof(FacetEntry)) * used;
 		}
 		// allocate
 		SafeBuf tmp;
@@ -1452,7 +1452,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			p += 4;
 			long count = 0;
 			// for sanity check
-			char *pend = p + (used * 8);
+			char *pend = p + (used * (4+sizeof(FacetEntry)));
 			// serialize the key/val pairs
 			for ( long k = 0 ; k < ft->m_numSlots ; k++ ) {
 				// skip empty buckets
@@ -1465,7 +1465,8 @@ void Msg39::estimateHitsAndSendReply ( ) {
 				// lookup the text of the facet in Msg40.cpp
 				FacetEntry *fe;
 				fe = (FacetEntry *)ft->getValFromSlot(k);
-				memcpy ( p , fe , sizeof(fe) );
+				memcpy ( p , fe , sizeof(FacetEntry) );
+				p += sizeof(FacetEntry);
 				// do not breach
 				if ( ++count >= (long)MAX_FACETS ) break;
 			}

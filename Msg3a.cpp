@@ -967,7 +967,9 @@ bool Msg3a::mergeLists ( ) {
 		// we have to manually cal this
 		ht->constructor();
 		// 4 byte key, 4 byte score for counting facet values
-		if ( ! ht->set(4,4,128,NULL,0,false,m_r->m_niceness,"fhtqt")) 
+		if ( ! ht->set(4,sizeof(FacetEntry),
+			       128,NULL,0,false,
+			       m_r->m_niceness,"fhtqt")) 
 			return true;
 		// sanity
 		if ( ! ht->m_isWritable ) {char *xx=NULL;*xx=0;}
@@ -1008,20 +1010,37 @@ bool Msg3a::mergeLists ( ) {
 			break;
 		}
 		// the end point
-		char *pend = p + (8 * nh);
+		char *pend = p + ((4+sizeof(FacetEntry)) * nh);
+		// shortcut
+		HashTableX *ft = &qt->m_facetHashTable;
 		// now compile the facet hash list into there
 		for ( ; p < pend ; ) {
 			long facetValue = *(long *)p;
 			p += 4;
 			// how many docids had this facetValue?
-			long facetCount = *(long *)p;
-			p += 4;
+			//long facetCount = *(long *)p;
+			//p += 4;
+			FacetEntry *fe = (FacetEntry *)p;
+			p += sizeof(FacetEntry);
 			// debug
 			//log("msg3a: got facethash %li) %lu",k,p[k]);
 			// accumulate scores from all shards
-			if ( ! qt->m_facetHashTable.addScore(&facetValue,
-							     facetCount) )
-				return true;
+			//if ( ! qt->m_facetHashTable.addScore(&facetValue,
+			//				     facetCount) )
+			//	return true;
+			FacetEntry *fe2 ;
+			fe2 = (FacetEntry *)ft->getValue ( &facetValue );
+			if ( ! fe2 ) {
+				ft->addKey ( &facetValue,fe );
+			}
+			else {
+				fe2->m_count += fe->m_count;
+				// prefer docid kinda randomly to balance 
+				// lookupFacets() load in Msg40.cpp
+				if ( rand() % 2 )
+					fe2->m_docId = fe->m_docId;
+			}
+
 		}
 		// now get the next gbfacet: term if there was one
 		if ( p < last ) goto ploop;
