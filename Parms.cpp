@@ -14239,7 +14239,8 @@ void Parms::init ( ) {
 
 	m->m_title = "query to scrape";
 	m->m_desc  = "Scrape popular search engines for this query "
-		"and inject their links.";
+		"and inject their links. You are not required to supply "
+		"the <i>url</i> parm if you supply this parm.";
 	m->m_cgi   = "qts";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
