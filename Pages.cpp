@@ -1704,7 +1704,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 
 	sb->safePrintf (  //"&nbsp; &nbsp; &nbsp; "
 			  "<a style=text-decoration:none; href=/admin/hosts>"
-			  "<b>hosts in cluster</b></a>: ");
+			  "<b><u>hosts in cluster</u></b></a>: ");
 
 	if ( ! qs   ) qs   = "";
 	//if ( ! pwd  ) pwd  = "";

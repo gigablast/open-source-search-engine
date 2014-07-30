@@ -157,6 +157,12 @@ void processReply ( char *reply , long replyLen ) {
 	// for json
 	markOut ( content , "\"currentTimeUTC\":" );
 	markOut ( content , "\"responseTimeMS\":");
+	markOut ( content , "\"docsInCollection\":");
+
+	// for xml
+	markOut ( content , "<currentTimeUTC>" );
+	markOut ( content , "<responseTimeMS>");
+	markOut ( content , "<docsInCollection>");
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
@@ -244,7 +250,8 @@ void processReply ( char *reply , long replyLen ) {
 
 	// just return if the same
 	if ( val && contentCRC == *val ) {
-		g_qaOutput.safePrintf("passed test<br>%s : "
+		g_qaOutput.safePrintf("<b style=color:green;>"
+				      "passed test</b><br>%s : "
 				      "<a href=%s>%s</a> (urlhash=%lu "
 				      "crc=<a href=/qa/content.%lu>"
 				      "%lu</a>)<br>"
@@ -263,7 +270,8 @@ void processReply ( char *reply , long replyLen ) {
 	if ( ! val ) {
 		// add it so we know
 		s_ht.addKey ( &urlHash32 , &contentCRC );
-		g_qaOutput.safePrintf("first time testing<br>%s : "
+		g_qaOutput.safePrintf("<b style=color:blue;>"
+				      "first time testing</b><br>%s : "
 				      "<a href=%s>%s</a> "
 				      "(urlhash=%lu "
 				      "crc=<a href=/qa/content.%lu>%lu"
@@ -297,7 +305,7 @@ void processReply ( char *reply , long replyLen ) {
 
 	g_numErrors++;
 	
-	g_qaOutput.safePrintf("FAILED TEST<br>%s : "
+	g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
 			      "<a href=%s>%s</a> (urlhash=%lu)<br>"
 
 			      "<input type=checkbox name=urlhash%lu value=1 "
@@ -1244,7 +1252,7 @@ bool qascrape ( ) {
 		SafeBuf sb;
 		sb.safePrintf( "/admin/inject?c=qatest123&"
 			       "format=xml&qts=test");
-		if ( ! getUrl ( sb.getBufStart() , 0 ) )
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
 			return false;
 	}
 		
@@ -1266,6 +1274,183 @@ bool qascrape ( ) {
 		s_flags[13] = true;
 		log("qa: SUCCESSFULLY COMPLETED "
 		    "QA SCRAPE TEST");
+		return true;
+	}
+
+	return true;
+}
+
+static char *s_ubuf4 = 
+	"http://www.nortel.com/multimedia/flash/mediaplayer/config/solutions_enterprisesecurity.json "
+	"http://quirksmode.org/m/d/md.json "
+	"http://www.chip.de/headfoot/json/8659753/tk.json?t=11-02-08-13-32 "
+	"http://developer.apple.com/wwdc/data/sessions.json "
+	"http://www.bbc.co.uk/radio4/programmes/schedules/fm/today.json "
+	"http://www.hellonorthgeorgia.com/slideShowJSON11034.json "
+	"http://www.metastatic.org/log-4.json "
+	"http://www.metastatic.org/log.json "
+	"http://www.textsfromlastnight.com/Vote-Down-Text-24266.json "
+	"http://www.textsfromlastnight.com/Vote-Up-Text-13999.json "
+	"http://shapewiki.com/shapes/4755.json "
+	"http://shapewiki.com/shapes/40.json "
+	"http://www.neocol.com/news/hcc-international-appoint-neocol-as-information-management-partner.json "
+	"http://www.bbc.co.uk/programmes/b00vy3l1.json "
+	"http://iwakura.clipp.in/feed.json "
+	"http://schwarzlich.clipp.in/feed.json "
+	"http://freethefoxes.googlecode.com/svn/trunk/lang/sv.json "
+	"http://www.domik.net/data/vCard1.json "
+	"http://www.domik.net/data/vCard14205.json "
+	"http://www.chip.de/headfoot/json/8659753/handy.json?t=11-02-08-13-32 "
+	"http://www.neocol.com/news/neocol-relocates-to-new-expanded-hq.json "
+	"http://www.nbafinals.com/video/channels/nba_tv/2009/07/23/nba_20090723_1fab5_pistons.nba.json "
+	"http://quiltid.com/feeds/me/blake.json "
+	"http://parliament.southgatelabs.com/members.json "
+	"http://www.funradio.fr/service/carrousel.json?home "
+	"http://doyouflip.com/dcefd5cffeecebcabc049a8a1cc18fac/bundle.json "
+	"http://freethefoxes.googlecode.com/svn/trunk/lang/sch.json "
+	"http://delphie.clipp.in/feed.json "
+	"http://gotgastro.com/notices.json "
+	"http://www.paralela45bacau.ro/ajax/newsletter.json "
+	"http://www.elstoleno.com/unsorted.json "
+	"http://papanda.clipp.in/feed.json "
+	"http://d.yimg.com/b/api/data/us/news/elections/2010/result/us_house.json "
+	"http://www.nba.co.nz/video/teams/sixers/2009/07/28/090727lou.sixers.json "
+	"http://n2.talis.com/svn/playground/mmmmmrob/OpenLibrary/tags/day1/data/authors.1in10.json "
+	"http://asn.jesandco.org/resources/D2364040_manifest.json "
+	"http://search.twitter.com/search.json?q=from%3ADrathal "
+	"http://www.matthiresmusic.com/3f6524261baf47acc61d3fb22ab9b18a/bundle.json "
+	"http://search.twitter.com/search.json?q= "
+	"http://www.christinaperri.com/98a59708246eb4fcc4e22a09113699c6/bundle.json "
+	"http://www.misterbluesky.nl/News.json "
+	"http://ymorimo.clipp.in/feed.json "
+	"http://wedata.net/databases.json "
+	"http://cms.myspacecdn.com/cms/api/opensearch.json "
+	"http://seria.clipp.in/feed.json "
+	"http://www.treysongz.com/6b10fcf3a6f99b4622e4d33d1532b380/bundle.json "
+	"http://psychedesire.clipp.in/feed.json "
+	"http://www.sekaino.com/skedu/demodata/dev_data_ccmixter.json "
+	"http://www.360wichita.com/slideShowJSON8496.json "
+	"http://speakerrate.com/events/856-jquery-conference-2011-san-francisco-bay-area.json "
+	;
+
+bool qajson ( ) {
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// add the 50 urls
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
+		SafeBuf sb;
+
+		sb.safePrintf("&c=qatest123"
+			      "&format=json"
+			      "&strip=1"
+			      "&spiderlinks=0"
+			      "&urls="//www.walmart.com+ibm.com"
+			      );
+		sb.urlEncode ( s_ubuf4 );
+		// . now a list of websites we want to spider
+		// . the space is already encoded as +
+		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+			return false;
+	}
+
+
+	//
+	// wait for spidering to stop
+	//
+ checkagain:
+
+	// wait until spider finishes. check the spider status page
+	// in json to see when completed
+	//static bool s_k1 = false;
+	if ( ! s_flags[5] ) {
+		// wait 5 seconds, call sleep timer... then call qatest()
+		//usleep(5000000); // 5 seconds
+		wait(3.0);
+		s_flags[5] = true;
+		return false;
+	}
+
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
+			return false;
+	}
+
+	//static bool s_k2 = false;
+	if ( ! s_flags[6] ) {
+		// ensure spiders are done. 
+		// "Nothing currently available to spider"
+		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
+			s_flags[5] = false;
+			s_flags[15] = false;
+			goto checkagain;
+		}
+		s_flags[6] = true;
+	}
+
+		
+
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=type%3Ajson+meta.authors%3Appk",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[8] ) {
+		s_flags[8] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&n=100&"
+				"q=type%3Ajson",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[9] ) {
+		s_flags[9] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfacetstr%3Ameta.authors",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[10] ) {
+		s_flags[10] = true;
+		// this has > 50 values for the facet field hash
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfacetstr%3Astrings.key",
+				-1310551262 ) )
+			return false;
+	}
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+		    "QA JSON TEST");
 		return true;
 	}
 
@@ -1313,7 +1498,11 @@ static QATest s_qatests[] = {
 
 	{qascrape,
 	 "queryScrapeTest",
-	 "Scrape and inject results from google and bing."}
+	 "Scrape and inject results from google and bing."},
+
+	{qajson,
+	 "jsontest",
+	 "Inject some JSON pages and test json-ish queries."}
 
 };
 

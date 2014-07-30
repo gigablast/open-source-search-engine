@@ -5930,7 +5930,7 @@ static bool gotFacetTextWrapper ( void *state ) {
 void Msg40::gotFacetText ( Msg20 *msg20 ) {
 
 	m_numMsg20sIn++;
-	log("msg40: numin=%li",m_numMsg20sIn);
+	//log("msg40: numin=%li",m_numMsg20sIn);
 
 	if ( ! msg20->m_r ) {
 		log("msg40: msg20 reply is NULL");
@@ -6032,7 +6032,7 @@ void Msg40::lookupFacets2 ( ) {
 			long long docId = fe->m_docId;
 
 			// more than 50 already outstanding?
-			if ( m_numMsg20sOut - m_numMsg20sIn > MAX2 )
+			if ( m_numMsg20sOut - m_numMsg20sIn >= MAX2 )
 				// wait for some to come back
 				return;
 
@@ -6070,7 +6070,7 @@ void Msg40::lookupFacets2 ( ) {
 			// get it
 			if ( ! msg20->getSummary ( &req ) ) {
 				m_numMsg20sOut++;
-				log("msg40: numout=%li",m_numMsg20sOut);
+				//log("msg40: numout=%li",m_numMsg20sOut);
 				continue;
 			}
 

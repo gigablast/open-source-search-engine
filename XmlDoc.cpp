@@ -48307,6 +48307,8 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ,
 		b += m_words.m_wordLens  [si->m_next->m_b-1];
 		if ( ! sb->safeTruncateEllipsis (a,b-a,160) ) return false;
 		if ( ! sb->pushChar('\0') ) return false;
+		// if wanted a specific string, we are done
+		if ( fvh ) return true;
 	}
 	return true;
 }
@@ -48315,18 +48317,46 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ,
 bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 
 	Xml *xml = getXml();
-	long len = 0;
-	char *str = xml->getMetaContentPointer(qs,gbstrlen(qs),"name",&len);
-	if ( ! str ) return true;
-	if ( len <= 0 ) return true;
 
-	// otherwise add facet FIELD to our buf
-	if ( ! sb->safeStrcpy(qs) ) return false;
-	if ( ! sb->pushChar('\0') ) return false;
+	long qsLen = gbstrlen(qs);
 
-	// then add facet VALUE
-	if ( ! sb->safeMemcpy(str,len) ) return false;
-	if ( ! sb->pushChar('\0') ) return false;
+	// find the first meta summary node
+	for ( long i = 0 ; i < xml->m_numNodes ; i++ ) {
+		// continue if not a meta tag
+		if ( xml->m_nodes[i].m_nodeId != 68 ) continue;
+		// . does it have a type field that's "summary"
+		// . <meta name=summary content="...">
+		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
+		long nameLen;
+		char *s = xml->getString ( i , "name", &nameLen );
+		// "s" can be "summary","description","keywords",...
+		if ( nameLen != qsLen ) continue;
+		if ( strncasecmp ( s , qs , qsLen ) != 0 ) continue;
+		// point to the summary itself
+		long contentLen;
+		char *content = xml->getString ( i , "content" , &contentLen );
+		if ( ! content || contentLen <= 0 ) continue;
+
+		// hash it to match it if caller specified a particular hash
+		// because they are coming from Msg40::lookUpFacets() function
+		// to convert the hashes to strings, like for rendering in
+		// the facets box to the left of the search results
+		FacetValHash_t val32 = hash32 ( content, contentLen);
+		if ( fvh && fvh != val32 ) continue;
+
+		// otherwise add facet FIELD to our buf
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+
+		// then add facet VALUE
+		if ( !sb->safePrintf("%lu,",(unsigned long)val32))return false;
+		if ( !sb->safeMemcpy(content,contentLen) ) return false;
+		if ( !sb->pushChar('\0') ) return false;
+
+		// if only one specified, we are done
+		if ( fvh ) return true;
+	}
+
 	return true;
 }
 
@@ -48357,10 +48387,6 @@ bool XmlDoc::storeFacetValuesJSON (char *qs, SafeBuf *sb,FacetValHash_t fvh ) {
 		// skip if not for us
 		if ( strcmp(nameBuf.getBufStart(),qs) ) continue;
 
-		// otherwise add facet FIELD to our buf
-		if ( ! sb->safeStrcpy(qs) ) return false;
-		if ( ! sb->pushChar('\0') ) return false;
-
 		//
 		// now Json.cpp decodes and stores the value into
 		// a buffer, so ji->getValue() should be decoded completely
@@ -48368,9 +48394,25 @@ bool XmlDoc::storeFacetValuesJSON (char *qs, SafeBuf *sb,FacetValHash_t fvh ) {
 		long vlen;
 		char *val = ji->getValueAsString( &vlen );
 
+		// hash it to match it if caller specified a particular hash
+		// because they are coming from Msg40::lookUpFacets() function
+		// to convert the hashes to strings, like for rendering in
+		// the facets box to the left of the search results
+		FacetValHash_t val32 = hash32 ( val , vlen );
+		if ( fvh && val32 != fvh ) 
+			continue;
+
+		// otherwise add facet FIELD to our buf
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+
 		// then add facet VALUE
+		if ( !sb->safePrintf("%lu,",(unsigned long)val32))return false;
 		if ( val && vlen && ! sb->safeMemcpy(val,vlen) ) return false;
 		if ( ! sb->pushChar('\0') ) return false;
+
+		// if wanted a specific string, then we are done
+		if ( fvh ) return true;
 	}
 
 	return true;
