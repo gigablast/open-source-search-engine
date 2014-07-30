@@ -5942,6 +5942,8 @@ void Msg40::gotFacetText ( Msg20 *msg20 ) {
 	// null as well?
 	if ( ! buf ) {
 		log("msg40: ptr_facetBuf is NULL");
+		// try to launch more msg20s
+		lookupFacets();
 		return;
 	}
 
