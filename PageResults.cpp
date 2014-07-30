@@ -4170,6 +4170,19 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
 	}
 
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf (" - "
+				"<a style=color:blue; "
+				"href=\"/search?sb=1&c=%s&"
+				"q=url2%%3A" 
+				, coll 
+				);
+		sb->urlEncode ( url , gbstrlen(url) , false );
+		sb->safePrintf ( "\">"
+				 "spider info</a>"
+			       );
+	}
+
 	//
 	// show rainbow sections link
 	//
@@ -4207,19 +4220,6 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 //si->m_defaultSortLang,
 				 coll , 
 				 mr->m_docId ); 
-	}
-
-	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
-		sb->safePrintf (" - "
-				"<a style=color:green; "
-				"href=\"/search?sb=1&c=%s&"
-				"q=url2%%3A" 
-				, coll 
-				);
-		sb->urlEncode ( url , gbstrlen(url) , false );
-		sb->safePrintf ( "\">"
-				 "spider info</a>"
-			       );
 	}
 
 	// this stuff is secret just for local guys!

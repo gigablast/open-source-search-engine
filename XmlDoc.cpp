@@ -26046,7 +26046,8 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 
 	// the ptr_* were all zero'd out, put the ones we want to keep back in
 	SafeBuf tmp;
-	tmp.safePrintf("<title>Spider Status: %s</title>",
+	// was "Spider Status: %s" but that is unnecessary
+	tmp.safePrintf("<title>%s</title>",
 		       mstrerror(m_indexCode));
 
 	// if we are a dup...
@@ -34147,6 +34148,7 @@ bool XmlDoc::printMenu ( SafeBuf *sb ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return false;
 
+	/*
 	char *coll = cr->m_coll;
 
 	long long d = m_docId;
@@ -34167,23 +34169,24 @@ bool XmlDoc::printMenu ( SafeBuf *sb ) {
 		       "<a href=/print?c=%s&d=%lli&page=2&recompute=1>"
 		       "page inlinks</a> | "
 		       "<a href=/print?c=%s&d=%lli&page=3>site inlinks</a> | "
-		       "<a href=/print?c=%s&d=%lli&page=4>sections</a> | "
-		       "<a href=/print?c=%s&d=%lli&page=5>indexed terms</a> | "
+		       //"<a href=/print?c=%s&d=%lli&page=4>sections</a> | "
+		       "<a href=/print?c=%s&d=%lli&page=5>indexed terms</a>"
 		       // the breakdown of when it was spidered and when it
 		       // is due to be spidered again. and any errors 
 		       // encountered when spidering
-		       "<a href=/print?c=%s&d=%lli&page=6>spider stats</a> | "
-		       "<a href=/print?c=%s&d=%lli&page=7>cached page</a>"
+		       //"<a href=/print?c=%s&d=%lli&page=6>spider stats</a> |"
+		       //" <a href=/print?c=%s&d=%lli&page=7>cached page</a>"
 		       "<br>"
 		       "<br>"
 		       ,coll,d//ue.getBufStart()
 		       ,coll,d//ue.getBufStart()
 		       ,coll,d//ue.getBufStart()
+		       //,coll,d//ue.getBufStart()
 		       ,coll,d//ue.getBufStart()
-		       ,coll,d//ue.getBufStart()
-		       ,coll,d//ue.getBufStart()
-		       ,coll,d//ue.getBufStart()
+		       //,coll,d//ue.getBufStart()
+		       //,coll,d//ue.getBufStart()
 		       );
+	*/
 	return true;
 }
 

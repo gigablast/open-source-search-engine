@@ -26,7 +26,7 @@ char *g_contentTypeStrings [] = {
 	"css"  , // 15
 	"json" ,  // 16
 	"image", // 17
-	"status" // 18
+	"spiderstatus" // 18
 };
 
 HttpMime::HttpMime () { reset(); }
