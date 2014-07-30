@@ -28840,13 +28840,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 			for ( ; *e && ! is_wspace_a(*e) ; e++ );
 			// tmp null it
 			char c = *e; *e = '\0';
+			// this is zero if unspecifed
+			FacetValHash_t fvh = m_req->m_facetValHash;
 			// . this will store facetField/facetValue pairs
 			// . stores into safebuf, m_tmpBuf2
 			// . it will terminate all stored strings with \0
 			// . we check meta tags for html docs
 			// . otherwise we check xml/json doc fields
 			// . returns false with g_errno set on error
-			bool ret = storeFacetValues ( qs , &m_tmpBuf2 ) ;
+			bool ret = storeFacetValues ( qs , &m_tmpBuf2 , fvh ) ;
 			// revert the \0
 			*e = c;
 			// return NULL with g_errno set on error
@@ -48237,7 +48239,7 @@ char *XmlDoc::getDiffbotParentUrl( char *myUrl ) {
 	return NULL;
 }
 
-bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
+bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	// sanity
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
@@ -48245,20 +48247,21 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb ) {
 	// if "qa" is a gbxpathsitehash123456 type of beastie then we
 	// gotta scan the sections
 	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
-		return storeFacetValuesSections ( qs , sb );
+		return storeFacetValuesSections ( qs , sb , fvh );
 
 
 	// if a json doc, get json field
 	if ( m_contentType == CT_JSON ) 
-		return storeFacetValuesJSON ( qs , sb );
+		return storeFacetValuesJSON ( qs , sb , fvh );
 
 	if ( m_contentType == CT_HTML ) 
-		return storeFacetValuesHtml ( qs , sb );
+		return storeFacetValuesHtml ( qs , sb , fvh );
 
 	return true;
 }
 
-bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ) {
+bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ,
+					FacetValHash_t fvh ) {
 
 	// scan all sections
 	Sections *ss = getSections();
@@ -48292,6 +48295,8 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ) {
 		// . get hash of sentences this tag contains indirectly
 		unsigned long val32 = (unsigned long)si->m_indirectSentHash64;
 		if ( ! val32 ) continue;
+		// if a facetvalhash was provided we must match
+		if ( fvh && val32 != fvh ) continue;
 		// got one print the facet field
 		if ( ! sb->safeStrcpy(qs) ) return false;
 		if ( ! sb->pushChar('\0') ) return false;
@@ -48307,7 +48312,7 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ) {
 }
 
 
-bool XmlDoc::storeFacetValuesHtml ( char *qs , SafeBuf *sb ) {
+bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 
 	Xml *xml = getXml();
 	long len = 0;
@@ -48325,7 +48330,7 @@ bool XmlDoc::storeFacetValuesHtml ( char *qs , SafeBuf *sb ) {
 	return true;
 }
 
-bool XmlDoc::storeFacetValuesJSON ( char *qs , SafeBuf *sb ) {
+bool XmlDoc::storeFacetValuesJSON (char *qs, SafeBuf *sb,FacetValHash_t fvh ) {
 
 	// use new json parser
 	Json *jp = getParsedJson();

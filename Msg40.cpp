@@ -5949,7 +5949,7 @@ void Msg40::gotFacetText ( Msg20 *msg20 ) {
 	// skip query term string
 	p += gbstrlen(p) + 1;
 	// then <val32>,<str32>
-	long long facetVal32 = atoll(p);
+	FacetValHash_t fvh = atoll(p);
 	char *text = strstr ( p , "," );
 	// skip comma. text could be truncated/ellipsis-sized
 	if ( text ) text++;
@@ -5960,10 +5960,11 @@ void Msg40::gotFacetText ( Msg20 *msg20 ) {
 
 	// initialize this if it needs it
 	if ( m_facetTextTable.m_ks == 0 )
-		m_facetTextTable.set(4,4,64,NULL,0,false,0,"fctxtbl");
+		m_facetTextTable.set(sizeof(FacetValHash_t),4,
+				     64,NULL,0,false,0,"fctxtbl");
 
 	// store in buffer
-	m_facetTextTable.addKey ( &facetVal32 , &offset );
+	m_facetTextTable.addKey ( &fvh , &offset );
 
 	// try to launch more msg20s
 	if ( ! lookupFacets() ) return;
@@ -6020,7 +6021,8 @@ void Msg40::lookupFacets2 ( ) {
 		for (  ; m_j < fht->getNumSlots() ; m_j++ ) {
 			// skip empty slots
 			if ( ! fht->m_flags[m_j] ) continue;
-			//long val32 = *(long *)fht->getKeyFromSlot(m_j);
+			// get hash of the facet value
+			FacetValHash_t fvh = *(long *)fht->getKeyFromSlot(m_j);
 			//long count = *(long *)fht->getValFromSlot(j);
 			// get the docid as well
 			FacetEntry *fe =(FacetEntry *)fht->getValFromSlot(m_j);
@@ -6052,6 +6054,10 @@ void Msg40::lookupFacets2 ( ) {
 			req.size_qbuf = tmp.length() + 1; // include \0
 
 			req.m_justGetFacets = true;
+			// need to supply the hash of the facet value otherwise
+			// if a doc has multiple values for a facet it always
+			// returns the first one. so tell it we want this one.
+			req.m_facetValHash  = fvh;
 
 			msg20->m_hack = (long)this;
 
@@ -6098,14 +6104,19 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 		for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
 			// skip empty slots
 			if ( ! fht->m_flags[j] ) continue;
-			long val32 = *(long *)fht->getKeyFromSlot(j);
+			// this was originally 32 bit hash of the facet val
+			// but now it is 64 bit i guess
+			FacetValHash_t *fvh ;
+			fvh = (FacetValHash_t *)fht->getKeyFromSlot(j);
+			// we store how many docids had this value
 			long count = *(long *)fht->getValFromSlot(j);
-			// lookup
-			long *offset=(long *)m_facetTextTable.getValue(&val32);
+			// lookup the text representation, whose hash is
+			// *fvh
+			long *offset=(long *)m_facetTextTable.getValue(fvh);
 			// wtf?
 			if ( ! offset ) {
 				log("msg40: missing facet text for val=%lu",
-				    val32);
+				    *fvh);
 				continue;
 			}
 
@@ -6116,7 +6127,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 					       "\t\t\t<field>%s</field>\n"
 					       "\t\t\t<value><![CDATA[%lu,"
 					       , qt->m_term
-					       , val32
+					       , *fvh
 					       );
 				sb->cdataEncode ( text );
 				sb->safePrintf("]]></text>\n"
@@ -6131,7 +6142,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 					       "\t\"field\":\"%s\",\n"
 					       "\t\"value\":\"%lu,"
 					       , qt->m_term
-					       , val32
+					       , *fvh
 					       );
 				sb->jsonEncode ( text );
 				sb->safePrintf("\",\n"
@@ -6167,7 +6178,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       "</td></tr>\n"
 				       ,m_si->m_coll
 				       ,qt->m_term // for query
-				       ,val32 // for query
+				       ,*fvh // for query
 				       //,qt->m_term // for query
 				       //,val32 // for query
 				       //,val32 // stat for printing

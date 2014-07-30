@@ -1074,6 +1074,29 @@ The same parameters on the Log Controls page can be adjusted in the gb.conf file
 Gigablast is a fairly sophisticated database that has a few things you can tweak to increase query performance or indexing performance.
 <br><br>
 
+<b>General Optimizations:</b>
+<ul>
+<li> Ensure that each disk drive is on its own separate "scsi host". See which drives are on what scsi hosts by doing a <i>cat /proc/scsi/scsi</li>. If multiple drives are sharing a "scsi host", like for example, "Host: scsi3", then you are going to have I/O contention and really, really slow Gigablast down. You can buy SATA cards that plug into your PCI-E slot to provide more scsi hosts.
+
+<li> Prevent Linux from unnecessary swapping. Linux will often swap out
+Gigablast pages to satisfy Linux's disk cache. By using the swapoff command
+to turn off swap you can increase performance, but if the computer runs out
+of memory it will start killing processes withouth giving them a chance
+to save their data.
+
+<li> Consider adding more servers to your architecture. You can add the new servers to the hosts.conf file and Gigablast can rebalance the shards while still serving queries.
+
+
+
+<!--using Rik van Riel's
+patch, rc6-rmap15j, applied to kernel 2.4.21, you can add the 
+/proc/sys/vm/pagecache control file. By doing a 
+'echo 1 1 > /proc/sys/vm/pagecache' you tell the kernel to only use 1% of
+the swap space, so swapping is effectively minimized.-->
+</ul>
+
+<br>
+
 <b>Query Optimizations:</b>
 
 <ul>
@@ -1118,7 +1141,6 @@ cluster records are loaded. You can also turn them off by default (site cluster 
 specifies <i>&sc=1</i> or <i>&dr=1</i> in their query URL then they will
 override that switch.
 
-<li>If you are experiencing a high average query latency under a high query throughput then consider adding more mirror servers to your architecture. If you do not have any mirrors, and are serving a large query volume, then data requests tend to clump up onto one particular server at random, slowing everybody else down. If that server has one or more mirrors available, then its load will be evened out through Gigablast's dynamic load balancing and the average query latency will decrease.
 </ul>
 
 <br>
@@ -1152,21 +1174,7 @@ to make bdflush more bursty. More information about bdflush is available
 in the Linux kernel source Documentation directory in the proc.txt file.-->
 </ul>
 
-<br>
 
-<b>Linux Optimizations:</b>
-<ul>
-<li> Prevent Linux from unnecessary swapping. Linux will often swap out
-Gigablast pages to satisfy Linux's disk cache. By using the swapoff command
-to turn off swap you can increase performance, but if the computer runs out
-of memory it will start killing processes withouth giving them a chance
-to save their data.
-<!--using Rik van Riel's
-patch, rc6-rmap15j, applied to kernel 2.4.21, you can add the 
-/proc/sys/vm/pagecache control file. By doing a 
-'echo 1 1 > /proc/sys/vm/pagecache' you tell the kernel to only use 1% of
-the swap space, so swapping is effectively minimized.-->
-</ul>
 <br>
 
 
