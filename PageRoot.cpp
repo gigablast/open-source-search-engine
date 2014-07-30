@@ -56,7 +56,7 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/contact.html>Contact</a>"
 		      " &nbsp; &nbsp; "
-		      "<a href=%s/help.html>Query Syntax</a>"
+		      "<a href=%s/help.html>Help</a>"
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/privacy.html>Privacy Policy</a>"
 		      " &nbsp; &nbsp; "
@@ -83,8 +83,9 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 			      );
 
 	//if ( r->isLocal() )
-	    sb.safePrintf("&nbsp; &nbsp; [<a href=\"/admin/settings\">"
-			  "<font color=red>Admin</font></a>]");
+	    sb.safePrintf("&nbsp; &nbsp; &nbsp; [<a style=color:green; "
+			  "href=\"/admin/settings\">"
+			  "Admin</a>]");
 	sb.safePrintf("</p></b></center></body></html>");
 	return true;
 }

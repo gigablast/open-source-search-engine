@@ -2534,6 +2534,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("</ul></div>\n");
 
 
+	/*
 	p.safePrintf("<div style=padding-left:10%%>"
 		     "<font size=+2><b>Other Information</b></font>"
 		     "<ul>"
@@ -2542,7 +2543,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "</div>"
 		     "<br>"
 		     );
-
+	*/
 
 
 	p.safePrintf("<div style=padding-left:10%%;><hr></div>\n");
@@ -2562,6 +2563,8 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	//
 	// PRINT QUERY OPERATORS TABLE NOW
 	//
+
+	/*
 	p.safePrintf ( "<center>"
 		       "<br>"
 		       "<a name=qops>"
@@ -2590,7 +2593,8 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 			     "<td><b>%s</b>:</td><td>%s</td></tr>\n",
 			     LIGHT_BLUE,f->text,d);
 	}
-	
+	*/
+
 	p.safePrintf("</table></center></body></html>");
 
 	char* sbuf = p.getBufStart();

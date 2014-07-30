@@ -2015,7 +2015,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      ""
 			      "<a style=color:green; "
 			       "href=\"/admin/settings?c=%s\">"
-			      "[admin]"
+			      "admin"
 			      "</a>",coll);
 		// print reindex link
 		// get the filename directly
@@ -2026,48 +2026,48 @@ bool printSearchResultsHeader ( State0 *st ) {
 					"<a style=color:green; "
 					"href=\"/admin/reindex?c=%s&"
 					"qlang=%s&q=%s\">"
-					"[respider these results]"
+					"respider these results"
 					"</a>"
 					" ",coll, langStr , st->m_qe );
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; "
 				"href=\"/admin/inject?c=%s&qts=%s\">"
-			       "[scrape google/bing]</a>"
+			       "scrape google/bing</a>"
 			       " ", coll , st->m_qe );
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; "
 				"href=\"/search?sb=1&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[show banned results]</a>"
+			       "show banned results</a>"
 			       " ", coll , langStr , st->m_qe );
 
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; "
-				"href=\"/admin/api?&c=%s\">[api]</a>"
+				"href=\"/admin/api?&c=%s\">api</a>"
 				, coll );
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; "
 				"href=\"/search?format=xml&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[xml]</a>"
+			       "xml</a>"
 			       " ", coll , langStr , st->m_qe );
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; "
 				"href=\"/search?format=json&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[json]</a>"
+			       "json</a>"
 			       " ", coll , langStr , st->m_qe );
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; "
 				"href=\"/search?admin=0&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[hide admin links]</a>"
+			       "hide admin links</a>"
 			       " ", coll , langStr , st->m_qe );
 	}
 
@@ -4173,8 +4173,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	// show rainbow sections link
 	//
-	if ( si->m_format == FORMAT_HTML ) {
-		sb->safePrintf ( " - <a style=color:blue; href=\""
+	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
+		sb->safePrintf ( " - <a style=color:green; href=\""
 				 "/get?"
 				 // show rainbow sections
 				 "page=4&"
@@ -4191,8 +4191,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 mr->m_docId ); 
 	}
 
-	if ( si->m_format == FORMAT_HTML ) {
-		sb->safePrintf ( " - <a style=color:blue; href=\""
+	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
+		sb->safePrintf ( " - <a style=color:green; href=\""
 				 "/get?"
 				 // show rainbow sections
 				 "page=1&"
@@ -4201,12 +4201,25 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "c=%s&"
 				 "d=%lli&"
 				 "cnsp=0\">"
-				 "info</a>", 
+				 "page info</a>", 
 				 //st->m_qe , 
 				 // "qlang" parm
 				 //si->m_defaultSortLang,
 				 coll , 
 				 mr->m_docId ); 
+	}
+
+	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
+		sb->safePrintf (" - "
+				"<a style=color:green; "
+				"href=\"/search?sb=1&c=%s&"
+				"q=url2%%3A" 
+				, coll 
+				);
+		sb->urlEncode ( url , gbstrlen(url) , false );
+		sb->safePrintf ( "\">"
+				 "spider info</a>"
+			       );
 	}
 
 	// this stuff is secret just for local guys!

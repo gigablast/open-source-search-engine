@@ -6216,6 +6216,19 @@ void Parms::init ( ) {
 	// m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	// m++;
 
+	m->m_title = "collection";
+	m->m_desc  = "Search this collection. Use multiple collection names "
+		"separated by a whitespace to search multiple collections at "
+		"once.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&si.m_coll - y;
+	m++;
+
 	m->m_title = "number of results per query";
 	m->m_desc  = "The number of results returned per page.";
 	// make it 25 not 50 since we only have like 26 balloons
@@ -6229,19 +6242,6 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m++;
 
-
-	m->m_title = "collection";
-	m->m_desc  = "Search this collection. Use multiple collection names "
-		"separated by a whitespace to search multiple collections at "
-		"once.";
-	m->m_cgi   = "c";
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
-	m->m_def   = NULL;
-	m->m_flags = PF_API | PF_REQUIRED;
-	m->m_off   = (char *)&si.m_coll - y;
-	m++;
 
 	m->m_title = "first result num";
 	m->m_desc  = "Start displaying at search result #X. Starts at 0.";

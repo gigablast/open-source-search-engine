@@ -3330,7 +3330,7 @@ struct QueryField g_fields[] = {
 	//{"gbisaggregator"           ,FIELD_GBOTHER,false,"gbisaggregator:0|1 depending on if the event came from an event aggregator website, like eviesays.com."},
 	{"gbdeduped"                ,FIELD_GBOTHER,false,""},
 
-	{"gbinjected", FIELD_GBOTHER,false,"Was the event injected?."},
+	{"gbinjected", FIELD_GBOTHER,false,"Was the document injected?."},
 
 	//{"gbstartrange",FIELD_GBSTARTRANGE,false,""},
 	//{"gbendrange",FIELD_GBENDRANGE,false,""},
