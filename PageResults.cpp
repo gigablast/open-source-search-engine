@@ -2012,49 +2012,63 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// convenient admin link
 	if ( isAdmin ) {
 		sb->safePrintf(" &nbsp; "
-			      "<font color=red><b>"
-			      "<a href=\"/admin/settings?c=%s\">"
+			      ""
+			      "<a style=color:green; "
+			       "href=\"/admin/settings?c=%s\">"
 			      "[admin]"
-			      "</a></b></font>",coll);
+			      "</a>",coll);
 		// print reindex link
 		// get the filename directly
 		char *langStr = si->m_defaultSortLang;
 		if ( numResults>0 )
 			sb->safePrintf (" &nbsp; "
-					"<font color=red><b>"
-					"<a href=\"/admin/reindex?c=%s&"
+					""
+					"<a style=color:green; "
+					"href=\"/admin/reindex?c=%s&"
 					"qlang=%s&q=%s\">"
-					"[reindex or delete these results]"
-					"</a></b>"
-					"</font> ",coll, langStr , st->m_qe );
+					"[respider these results]"
+					"</a>"
+					" ",coll, langStr , st->m_qe );
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/inject?c=%s&qts=%s\">"
-			       "[scrape]</a></b>"
-			       "</font> ", coll , st->m_qe );
+			       ""
+			       "<a style=color:green; "
+				"href=\"/admin/inject?c=%s&qts=%s\">"
+			       "[scrape google/bing]</a>"
+			       " ", coll , st->m_qe );
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/search?sb=1&c=%s&"
+			       ""
+			       "<a style=color:green; "
+				"href=\"/search?sb=1&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[show banned results]</a></b>"
-			       "</font> ", coll , langStr , st->m_qe );
+			       "[show banned results]</a>"
+			       " ", coll , langStr , st->m_qe );
 
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/admin/api?&c=%s\">[api]</a></b>"
+			       ""
+			       "<a style=color:green; "
+				"href=\"/admin/api?&c=%s\">[api]</a>"
 				, coll );
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/search?format=xml&c=%s&"
+			       ""
+			       "<a style=color:green; "
+				"href=\"/search?format=xml&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[xml]</a></b>"
-			       "</font> ", coll , langStr , st->m_qe );
+			       "[xml]</a>"
+			       " ", coll , langStr , st->m_qe );
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/search?format=json&c=%s&"
+			       ""
+			       "<a style=color:green; "
+				"href=\"/search?format=json&c=%s&"
 			       "qlang=%s&q=%s\">"
-			       "[json]</a></b>"
-			       "</font> ", coll , langStr , st->m_qe );
+			       "[json]</a>"
+			       " ", coll , langStr , st->m_qe );
+		sb->safePrintf (" &nbsp; "
+			       ""
+			       "<a style=color:green; "
+				"href=\"/search?admin=0&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[hide admin links]</a>"
+			       " ", coll , langStr , st->m_qe );
 	}
 
 	// if its an ip: or site: query, print ban link
@@ -2075,14 +2089,16 @@ bool printSearchResultsHeader ( State0 *st ) {
 		buf[i] = '\0';
 		// search ip back or forward
 		long ip = atoip(buf,i);
-		sb->safePrintf ("&nbsp <b>"
-			       "<a href=\"/search?q=ip%%3A%s&c=%s&n=%li\">"
-			       "[prev %s]</a></b>" , 
+		sb->safePrintf ("&nbsp "
+			       "<a style=color:green; "
+				"href=\"/search?q=ip%%3A%s&c=%s&n=%li\">"
+			       "[prev %s]</a>" , 
 			       iptoa(ip-0x01000000),coll,docsWanted,
 			       iptoa(ip-0x01000000));
-		sb->safePrintf ("&nbsp <b>"
-			       "<a href=\"/search?q=ip%%3A%s&c=%s&n=%li\">"
-			       "[next %s]</a></b>" , 
+		sb->safePrintf ("&nbsp "
+			       "<a style=color:green; "
+				"href=\"/search?q=ip%%3A%s&c=%s&n=%li\">"
+			       "[next %s]</a>" , 
 			       iptoa(ip+0x01000000),coll,docsWanted,
 			       iptoa(ip+0x01000000));
 	}
@@ -2095,13 +2111,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 		char c = *sp;
 		// get the filename directly
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/admin/tagdb?"
+			       ""
+			       "<a style=color:green; href=\"/admin/tagdb?"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
 			       "c=%s\">"
-			       "[ban %s]</a></b>"
-			       "</font> ",coll , start );
+			       "[ban %s]</a>"
+				" ",coll , start );
 		*sp = c;
 	}
 	if ( isAdmin && strncmp(si->m_displayQuery,"gbad:",5)==0) {
@@ -2112,15 +2128,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 		char c = *sp;
 		*sp = '\0';
 		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/admin/tagdb?"
+			       ""
+			       "<a style=color:green; href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
 			       "c=%s"
 			       "&u=%s-gbadid.com\">"
-			       "[ban %s]</a></b>"
-			       "</font> ", coll , start , start );
+			       "[ban %s]</a>"
+				" ", coll , start , start );
 		*sp = c;
 	}
  skip2:
@@ -2129,13 +2145,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( isAdmin && msg40->getCachedTime() > 0 ) {
 		// get the filename directly
 		sb->safePrintf(" &nbsp; "
-			      "<font color=red><b>"
-			      "<a href=\"/search?c=%s",
+			      ""
+			      "<a style=color:green; href=\"/search?c=%s",
 			      coll );
 		// finish it
 		sb->safePrintf("&q=%s&rcache=0&seq=0&rtq=0\">"
-			      "[cache off]</a></b>"
-			      "</font> ", st->m_qe );
+			      "[cache off]</a>"
+			      " ", st->m_qe );
 	}
 
 	// mention ignored query terms
@@ -2522,7 +2538,7 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	if ( isAdmin && banSites.length() > 0 )
 		sb->safePrintf ("<br><br><div align=right><b>"
-			       "<a href=\"/admin/tagdb?"
+			       "<a style=color:green; href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -4092,7 +4108,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// unhide the divs on click
 	long placeHolder = -1;
 	long placeHolderLen = 0;
-	if ( si->m_format == FORMAT_HTML ) {
+	if ( si->m_format == FORMAT_HTML && si->m_getDocIdScoringInfo ) {
 		// place holder for backlink table link
 		placeHolder = sb->length();
 		sb->safePrintf (" - <a onclick="
@@ -4111,12 +4127,16 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "style="
 			       "cursor:hand;"
 			       "cursor:pointer;"
-			       "color:red;>"
+			       "color:blue;>"
 			       "<u>00000 backlinks</u>"
 			       "</a>"
 			       , ix 
 			       );
 		placeHolderLen = sb->length() - placeHolder;
+	}
+
+
+	if ( si->m_format == FORMAT_HTML && si->m_getDocIdScoringInfo ) {
 		// unhide the scoring table on click
 		sb->safePrintf (" - <a onclick="
 
@@ -4134,13 +4154,17 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "style="
 			       "cursor:hand;"
 			       "cursor:pointer;"
-			       "color:red;>"
+			       "color:blue;>"
 			       "<u>scoring</u>"
 			       "</a>"
 			       ,ix
 			       );
+	}
+
+	if ( si->m_format == FORMAT_HTML ) {
 		// reindex
-		sb->safePrintf(" - <a style=color:red; href=\"/addurl?urls=");
+		sb->safePrintf(" - <a style=color:blue; href=\"/addurl?"
+			       "urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
 		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
@@ -4150,7 +4174,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// show rainbow sections link
 	//
 	if ( si->m_format == FORMAT_HTML ) {
-		sb->safePrintf ( " - <a href=\""
+		sb->safePrintf ( " - <a style=color:blue; href=\""
 				 "/get?"
 				 // show rainbow sections
 				 "page=4&"
@@ -4168,7 +4192,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	if ( si->m_format == FORMAT_HTML ) {
-		sb->safePrintf ( " - <a href=\""
+		sb->safePrintf ( " - <a style=color:blue; href=\""
 				 "/get?"
 				 // show rainbow sections
 				 "page=1&"
@@ -4192,18 +4216,19 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// don't combine this with the sprintf above cuz
 		// iptoa uses a static local buffer like ctime()
 		sb->safePrintf(//"<br>"
-			      " &nbsp; - &nbsp; <a href=\"/search?"
+			      " - <a style=color:green; href=\"/search?"
 			      "c=%s&sc=1&dr=0&q=ip:%s&"
 			      "n=100&usecache=0\">%s</a>",
 			      coll,iptoa(mr->m_ip), iptoa(mr->m_ip) );
 		// ip domain link
 		unsigned char *us = (unsigned char *)&mr->m_ip;//urlip;
-		sb->safePrintf (" - <a href=\"/search?c=%s&sc=1&dr=0&n=100&"
-					       "q=ip:%li.%li.%li&"
-			       "usecache=0\">%li.%li.%li</a>",
-			       coll,
-			       (long)us[0],(long)us[1],(long)us[2],
-			       (long)us[0],(long)us[1],(long)us[2]);
+		sb->safePrintf (" - <a style=color:green; "
+				"href=\"/search?c=%s&sc=1&dr=0&n=100&"
+				"q=ip:%li.%li.%li&"
+				"usecache=0\">%li.%li.%li</a>",
+				coll,
+				(long)us[0],(long)us[1],(long)us[2],
+				(long)us[0],(long)us[1],(long)us[2]);
 
 		/*
 		// . now the info link
@@ -4247,7 +4272,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			dbuf [ dlen ] = '\0';
 		}
 		sb->safePrintf (" - "
-			       " <a href=\"/search?"
+			       " <a style=color:green; href=\"/search?"
 			       "q=site%%3A%s&sc=0&c=%s\">"
 			       "%s</a> " ,
 			       dbuf ,
@@ -4259,12 +4284,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			banVal = 0;
 		}
 		sb->safePrintf(" - "
-			      " <a href=\"/admin/tagdb?"
+			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
-			      "<nobr><b>%sBAN %s</b>"
+			      "<nobr>%sBAN %s"
 			      "</nobr></a> "
 			      , banVal
 			      , dbuf
@@ -4276,7 +4301,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		memcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
-			      " <a href=\"/admin/tagdb?"
+			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"
@@ -4317,8 +4342,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		
 		long urlFilterNum = (long)mr->m_urlFilterNum;
 		if(urlFilterNum != -1) {
-			sb->safePrintf (" - <a href=/admin/filters?c=%s>"
-				       "UrlFilter</a>:%li", 
+			sb->safePrintf (" - <a style=color:green; "
+					"href=/admin/filters?c=%s>"
+				       "UrlFilter:%li</a>", 
 				       coll ,
 				       urlFilterNum);
 		}					
@@ -4430,8 +4456,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// wtf?
 		//char *xx=NULL;*xx=0;
 		// at least close up the table
-		if ( si->m_format == FORMAT_HTML ) 
-			sb->safePrintf("</table>\n");
+		if ( si->m_format != FORMAT_HTML ) return true;
+
+		sb->safePrintf("</table>\n");
+
 		return true;
 	}
 
@@ -4823,14 +4851,16 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		memset ( p , ' ' , plen );
 	if ( numInlinks > 0 && numInlinks < 99999 ) {
 		char *ss = strstr ( p, "00000" );
-		char c = ss[5];
-		sprintf(ss,"%5li",numInlinks);
-		ss[5] = c;
+		if ( ss ) {
+			char c = ss[5];
+			sprintf(ss,"%5li",numInlinks);
+			ss[5] = c;
+		}
 	}
 	// print "1 backlink" not "1 backlinks"
 	if ( numInlinks == 1 ) {
 		char *xx = strstr(p,"backlinks");
-		xx[8] = ' ';
+		if ( xx ) xx[8] = ' ';
 	}
 
 	return true;
