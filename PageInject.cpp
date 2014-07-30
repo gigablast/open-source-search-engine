@@ -43,6 +43,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 	mnew ( msg7, sizeof(Msg7) , "PageInject" );
 
+	msg7->m_socket = sock;
 
 	char format = hr->getReplyFormat();
 
@@ -566,7 +567,7 @@ void doneInjectingLinksWrapper ( void *state ) {
 		// return if it blocks
 		if ( ! msg7->scrapeQuery() ) return;
 	}
-	TcpSocket *s = msg7->m_socket;
+
 	// otherwise, parse out the search results so steve can display them
 	if ( g_errno )
 		sb->safePrintf("<error><![CDATA[%s]]></error>\n",
@@ -580,7 +581,8 @@ void doneInjectingLinksWrapper ( void *state ) {
 	//p += sprintf ( p , "scraping status ");
 	// print error msg out, too or "Success"
 	//p += sprintf ( p , "%s", mstrerror(g_errno));
-	g_httpServer.sendDynamicPage ( s, 
+	TcpSocket *sock = msg7->m_socket;
+	g_httpServer.sendDynamicPage ( sock, 
 				       sb->getBufStart(),
 				       sb->length(),
 				       -1/*cachetime*/);
@@ -610,6 +612,7 @@ bool Msg7::scrapeQuery ( ) {
 	// first encode the query
 	SafeBuf ebuf;
 	ebuf.urlEncode ( qts ); // queryUNEncoded );
+	ebuf.nullTerm();
 
 	char *uf;
 	if ( m_round == 1 )
@@ -672,7 +675,7 @@ bool Msg7::scrapeQuery ( ) {
 	if ( m_useAhrefs )
 		m_xd.m_useAhrefs = true;
 
-	m_xd.m_reallyInjectLinks = gr->m_injectLinks;
+	m_xd.m_reallyInjectLinks = true;//gr->m_injectLinks;
 
 	//
 	// rather than just add the links of the page to spiderdb,

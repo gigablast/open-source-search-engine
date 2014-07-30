@@ -1184,6 +1184,66 @@ bool qaspider2 ( ) {
 
 	return true;
 }
+
+bool qascrape ( ) {
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// scrape it
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&qts=test");
+		if ( ! getUrl ( sb.getBufStart() , 0 ) )
+			return false;
+	}
+		
+
+
+	// verify no results for gbhopcount:2 query
+	//static bool s_y4 = false;
+	if ( ! s_flags[6] ) {
+		s_flags[6] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=test",
+				-1310551262 ) )
+			return false;
+	}
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+		    "QA SCRAPE TEST");
+		return true;
+	}
+
+	return true;
+}
+
+
 /*
 bool qaspider ( ) {
 
@@ -1220,7 +1280,13 @@ static QATest s_qatests[] = {
 
 	{qaspider2,
 	 "spiderHopCountTest",
-	 "Test spidering ibm.com using hopcount limit."}
+	 "Test spidering ibm.com using hopcount limit."},
+
+
+	{qascrape,
+	 "queryScrapeTest",
+	 "Scrape and inject results from google and bing."}
+	
 
 };
 
