@@ -328,12 +328,20 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_ipRestrictForTopics     = false;
 	}
 
-
+	
 
 
 	// and set from the http request. will set m_coll, etc.
 	g_parms.setFromRequest ( &m_hr , sock , cr , (char *)this , OBJ_SI );
 
+
+	if ( m_streamResults &&
+	     tmpFormat != FORMAT_XML && 
+	     tmpFormat != FORMAT_JSON ) {
+		log("si: streamResults only supported for "
+		    "json/html. disabling");
+		m_streamResults = false;
+	}
 
 	m_coll = coll;
 

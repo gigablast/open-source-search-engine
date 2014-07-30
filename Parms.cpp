@@ -6351,7 +6351,8 @@ void Parms::init ( ) {
 	m->m_desc  = "Stream search results back on socket as they arrive. "
 		"Useful when thousands/millions of search results are "
 		"requested. Required when doing such things otherwise "
-		"Gigablast could run out of memory.";
+		"Gigablast could run out of memory. Only supported for "
+		"JSON and XML formats, not HTML.";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_off   = (char *)&si.m_streamResults - y;

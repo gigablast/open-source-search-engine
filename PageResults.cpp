@@ -1749,7 +1749,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 
-	if ( si->m_format != FORMAT_HTML ) 
+	// when streaming results we lookup the facets last
+	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults ) 
 		msg40->printFacetTables ( sb );
 
 
@@ -2390,12 +2391,18 @@ bool printSearchResultsTail ( State0 *st ) {
 	if ( si->m_format == FORMAT_JSON ) {	
 		// remove last },\n if there and replace with just \n
 		char *e = sb->getBuf() - 2;
-		if ( e[0]==',' && e[1]=='\n') {
+		if ( sb->length()>=2 &&
+		     e[0]==',' && e[1]=='\n') {
 			sb->m_length -= 2;
 			sb->safePrintf("\n");
 		}
 		// print ending ] for json
 		sb->safePrintf("]\n");
+
+		// when streaming results we lookup the facets last
+		if ( si->m_streamResults ) 
+			msg40->printFacetTables ( sb );
+
 		if ( st->m_header ) sb->safePrintf("}\n");
 		// all done for json
 		return true;
@@ -2564,8 +2571,14 @@ bool printSearchResultsTail ( State0 *st ) {
 	}
 
 	
-	if ( si->m_format == FORMAT_XML )
+	if ( si->m_format == FORMAT_XML ) {
+
+		// when streaming results we lookup the facets last
+		if ( si->m_streamResults ) 
+			msg40->printFacetTables ( sb );
+
 		sb->safePrintf("</response>\n");
+	}
 
 
 	// if we did not use ajax, print this tail here now
@@ -3881,6 +3894,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// doc size in Kilobytes
 		sb->safePrintf ( "\t\t<size><![CDATA[%4.0fk]]></size>\n",
 				(float)mr->m_contentLen/1024.0);
+		sb->safePrintf ( "\t\t<sizeInBytes>%li</sizeInBytes>\n",
+				 mr->m_contentLen);
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t<docId>%lli</docId>\n",mr->m_docId );
@@ -3926,6 +3941,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// doc size in Kilobytes
 		sb->safePrintf ( "\t\t\"size\":\"%4.0fk\",\n",
 				(float)mr->m_contentLen/1024.0);
+		sb->safePrintf ( "\t\t\"sizeInBytes\":%li,\n",
+				 mr->m_contentLen);
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t\"docId\":%lli,\n",mr->m_docId );
@@ -3996,7 +4013,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("\t\t<language><![CDATA[%s]]>"
 			      "</language>\n", 
 			      getLanguageString(mr->m_language));
-		
+		sb->safePrintf("\t\t<langAbbr>%s</langAbbr>\n", 
+			      getLangAbbr(mr->m_language));
 		char *charset = get_charset_str(mr->m_charset);
 		if(charset)
 			sb->safePrintf("\t\t<charset><![CDATA[%s]]>"
@@ -4007,7 +4025,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// result
 		sb->safePrintf("\t\t\"language\":\"%s\",\n",
 			      getLanguageString(mr->m_language));
-		
+		sb->safePrintf("\t\t\"langAbbr\":\"%s\",\n",
+			      getLangAbbr(mr->m_language));
 		char *charset = get_charset_str(mr->m_charset);
 		if(charset)
 			sb->safePrintf("\t\t\"charset\":\"%s\",\n",charset);

@@ -48,8 +48,13 @@ void markOut ( char *content , char *needle ) {
 
 	if ( ! content ) return;
 
+ loop:
+
 	char *s = strstr ( content , needle );
 	if ( ! s ) return;
+
+	// advance over name like "rand64=" to avoid hitting those digits
+	s += gbstrlen(needle);
 
 	for ( ; *s && ! is_digit(*s); s++ );
 
@@ -62,6 +67,10 @@ void markOut ( char *content , char *needle ) {
 
 	// space out digits
 	for ( ; *s && is_digit(*s); s++ ) *s = ' ';
+
+	// loop for more for the "rand64=" thing
+	content = s;
+	goto loop;
 }
 
 // do not hash 
@@ -141,6 +150,9 @@ void processReply ( char *reply , long replyLen ) {
 
 	// until i figure this one out, take it out
 	markOut ( content , "<hits>");
+
+	// for those links in the html pages
+	markOut ( content, "rand64=");
 
 	// for json
 	markOut ( content , "\"currentTimeUTC\":" );
@@ -908,7 +920,7 @@ bool qaspider1 ( ) {
 	if ( ! s_flags[5] ) {
 		// wait 5 seconds, call sleep timer... then call qatest()
 		//usleep(5000000); // 5 seconds
-		wait(5.0);
+		wait(3.0);
 		s_flags[5] = true;
 		return false;
 	}
@@ -1004,8 +1016,16 @@ bool qaspider1 ( ) {
 				999 ) )
 			return false;
 	}
-	
 
+	// xpath is like a title here i think. check the returned
+	// facet table in the left column
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=html&"
+				"q=gbfacetstr:gbxpathsitehash3624590799"
+				, 999 ) )
+			return false;
+	}
 
 	//static bool s_fee2 = false;
 	if ( ! s_flags[14] ) {
@@ -1096,7 +1116,7 @@ bool qaspider2 ( ) {
 	if ( ! s_flags[4] ) {
 		//usleep(5000000); // 5 seconds
 		s_flags[4] = true;
-		wait(5.0);
+		wait(3.0);
 		return false;
 	}
 

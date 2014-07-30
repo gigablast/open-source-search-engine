@@ -6088,6 +6088,8 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	char format = m_si->m_format;
 
+	bool firstTime = true;
+
 	for ( long i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
 		//if ( m_si->m_format != FORMAT_HTML ) break;
@@ -6116,25 +6118,36 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			// wtf?
 			if ( ! offset ) {
 				log("msg40: missing facet text for val=%lu",
-				    *fvh);
+				    (unsigned long)*fvh);
 				continue;
 			}
 
 			char *text = m_facetTextBuf.getBufStart() + *offset;
 
 			if ( format == FORMAT_XML ) {
-				sb->safePrintf("\t\t<facet>\n"
-					       "\t\t\t<field>%s</field>\n"
-					       "\t\t\t<value><![CDATA[%lu,"
+				sb->safePrintf("\t<facet>\n"
+					       "\t\t<field>%s</field>\n"
+					       "\t\t<value><![CDATA[%lu,"
 					       , qt->m_term
-					       , *fvh
+					       , (unsigned long)*fvh
 					       );
 				sb->cdataEncode ( text );
-				sb->safePrintf("]]></text>\n"
-					       "\t\t\t<docCount>%li"
+				sb->safePrintf("]]></value>\n"
+					       "\t\t<docCount>%li"
 					       "</docCount>\n"
-					       "\t\t</facet>\n",count);
+					       "\t</facet>\n",count);
 				continue;
+			}
+
+			if ( format == FORMAT_JSON && firstTime ) {
+				firstTime = false;
+				// if streaming results we may have hacked off
+				// the last ,\n so put it back
+				if ( m_si->m_streamResults ) {
+					//sb->m_length -= 1;
+					sb->safeStrcpy(",\n\n");
+				}
+				//sb->safePrintf("\"facets\":[\n");
 			}
 
 			if ( format == FORMAT_JSON ) {
@@ -6142,12 +6155,12 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 					       "\t\"field\":\"%s\",\n"
 					       "\t\"value\":\"%lu,"
 					       , qt->m_term
-					       , *fvh
+					       , (unsigned long)*fvh
 					       );
 				sb->jsonEncode ( text );
 				sb->safePrintf("\",\n"
 					       "\t\"docCount\":%li\n"
-					       "},\n", count);
+					       "}\n,\n", count);
 				continue;
 			}
 
@@ -6178,7 +6191,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       "</td></tr>\n"
 				       ,m_si->m_coll
 				       ,qt->m_term // for query
-				       ,*fvh // for query
+				       , (unsigned long)*fvh // for query
 				       //,qt->m_term // for query
 				       //,val32 // for query
 				       //,val32 // stat for printing
@@ -6188,5 +6201,22 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 		if ( ! needTable ) 
 			sb->safePrintf("</table>\n");
 	}
+
+	if ( format == FORMAT_JSON && ! firstTime ) {
+		// remove ,\n
+		sb->m_length -= 2;
+		// make just \n
+		sb->pushChar('\n');
+		//sb->safePrintf("],\n");
+
+		// search results will follow so put a comma here if not
+		// streaming result. if we are streaming results we print
+		// the facets after the results so we can take advantage
+		// of the msg20 summary lookups we already did to get the
+		// facet text.
+		if ( ! m_si->m_streamResults ) 
+			sb->safePrintf(",\n");
+	}
+
 	return true;
 }
