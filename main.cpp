@@ -421,8 +421,7 @@ int main2 ( int argc , char *argv[] ) {
 			      "\n"
 			      "\tgb will first try to load "
 			      "the hosts.conf in the same directory as the "
-			      "gb binary, if not found, then it will try "
-			      "/etc/gigablast/hosts.conf. "
+			      "gb binary. "
 			      "Then it will determine its hostId based on "
 			      "the directory and IP address listed in the "
 			      "hosts.conf file it loaded. Things in []'s "
@@ -459,13 +458,13 @@ int main2 ( int argc , char *argv[] ) {
 			// "<hostId> -r\n\tindicates recovery mode, "
 			// "sends email to addresses "
 			// "specified in Conf.h upon startup.\n\n"
-			"-r\tindicates recovery mode, "
-			"sends email to addresses "
-			"specified in Conf.h upon startup.\n\n"
+			// "-r\tindicates recovery mode, "
+			// "sends email to addresses "
+			// "specified in Conf.h upon startup.\n\n"
 
 			"start [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
-			"[hostId] if specified using an ssh command.\n\n"
+			"[hostId], if specified, using an ssh command.\n\n"
 
 			/*
 			"kstart [hostId]\n"
@@ -477,11 +476,11 @@ int main2 ( int argc , char *argv[] ) {
 
 			"stop [hostId]\n"
 			"\tsaves and exits for all gb hosts or "
-			"just on [hostId] if specified.\n\n"
+			"just on [hostId], if specified.\n\n"
 
 			"save [hostId]\n"
 			"\tjust saves for all gb hosts or "
-			"just on [hostId] if specified.\n\n"
+			"just on [hostId], if specified.\n\n"
 
 			"start [hostId1-hostId2]\n"
 			"\ttwo hostids with a hyphen in between indicates a "
@@ -512,11 +511,11 @@ int main2 ( int argc , char *argv[] ) {
 
 			"spidersoff [hostId]\n"
 			"\tdisables spidering for all gb hosts or "
-			"just on [hostId] if specified.\n\n"
+			"just on [hostId], if specified.\n\n"
 
 			"spiderson [hostId]\n"
 			"\tensables spidering for all gb hosts or "
-			"just on [hostId] if specified.\n\n"
+			"just on [hostId], if specified.\n\n"
 
 			/*
 			"cacheoff [hostId]\n"
@@ -568,8 +567,8 @@ int main2 ( int argc , char *argv[] ) {
 
 			"install [hostId]\n"
 			"\tinstall all required files for gb from "
-			"current working directory "
-			"to [hostId]. If no [hostId] is specified install "
+			"current working directory of the gb binary "
+			"to [hostId]. If no [hostId] is specified, install "
 			"to ALL hosts.\n\n"
 
 			/*
