@@ -6011,10 +6011,12 @@ void Msg40::lookupFacets2 ( ) {
 	for ( ; m_i < m_si->m_q.getNumTerms() ; m_i++ ) {
 
 		QueryTerm *qt = &m_si->m_q.m_qterms[m_i];
-		// skip if not facet
-		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
-		     qt->m_fieldCode != FIELD_GBFACETINT &&
-		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+		// skip if not STRING facet. we don't need to lookup
+		// numeric facets because we already have the # for compiling
+		// and presenting on the search results page.
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR ) //&&
+		     //qt->m_fieldCode != FIELD_GBFACETINT &&
+		     //qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
 
 		HashTableX *fht = &qt->m_facetHashTable;
@@ -6101,6 +6103,8 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 		     qt->m_fieldCode != FIELD_GBFACETINT &&
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
+		bool isString = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
 		HashTableX *fht = &qt->m_facetHashTable;
 		// a new table for each facet query term
 		bool needTable = true;
@@ -6113,28 +6117,60 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			FacetValHash_t *fvh ;
 			fvh = (FacetValHash_t *)fht->getKeyFromSlot(j);
 			// we store how many docids had this value
-			long count = *(long *)fht->getValFromSlot(j);
-			// lookup the text representation, whose hash is
-			// *fvh
-			long *offset=(long *)m_facetTextTable.getValue(fvh);
-			// wtf?
-			if ( ! offset ) {
-				log("msg40: missing facet text for val=%lu",
-				    (unsigned long)*fvh);
-				continue;
+			//long count = *(long *)fht->getValFromSlot(j);
+			FacetEntry *fe;
+			fe = (FacetEntry *)fht->getValueFromSlot(j);
+			long count = fe->m_count;
+
+			char *text = NULL;
+
+			char *term = qt->m_term;
+			if ( term[0] == ' ' ) term++;
+			if ( strncasecmp(term,"gbfacetstr:",11)== 0 )
+				term += 11;
+			if ( strncasecmp(term,"gbfacetint:",11)== 0 )
+				term += 11;
+			if ( strncasecmp(term,"gbfacetfloat:",13)== 0 )
+				term += 13;
+
+			char tmp[64];
+			if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
+				sprintf(tmp,"%li",(long)*fvh);
+				text = tmp;
 			}
 
-			char *text = m_facetTextBuf.getBufStart() + *offset;
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
+				sprintf(tmp,"%f",(float)*fvh);
+				text = tmp;
+			}
+
+			// lookup the text representation, whose hash is *fvh
+			if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
+				long *offset;
+				offset =(long *)m_facetTextTable.getValue(fvh);
+				// wtf?
+				if ( ! offset ) {
+					log("msg40: missing facet text for "
+					    "val32=%lu",
+					    (unsigned long)*fvh);
+					continue;
+				}
+				text = m_facetTextBuf.getBufStart() + *offset;
+			}
 
 			if ( format == FORMAT_XML ) {
 				sb->safePrintf("\t<facet>\n"
 					       "\t\t<field>%s</field>\n"
-					       "\t\t<value><![CDATA[%lu,"
-					       , qt->m_term
-					       , (unsigned long)*fvh
+					       "\t\t<value>"
+					       , term
 					       );
+				if ( isString )
+					sb->safePrintf("<![CDATA[%lu,",
+						       (unsigned long)*fvh);
 				sb->cdataEncode ( text );
-				sb->safePrintf("]]></value>\n"
+				if ( isString )
+					sb->safePrintf("]]>");
+				sb->safePrintf("</value>\n"
 					       "\t\t<docCount>%li"
 					       "</docCount>\n"
 					       "\t</facet>\n",count);
@@ -6155,12 +6191,16 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			if ( format == FORMAT_JSON ) {
 				sb->safePrintf("\"facet\":{\n"
 					       "\t\"field\":\"%s\",\n"
-					       "\t\"value\":\"%lu,"
-					       , qt->m_term
-					       , (unsigned long)*fvh
+					       "\t\"value\":"
+					       , term
 					       );
+				if ( isString )
+					sb->safePrintf("\"%lu,"
+						       , (unsigned long)*fvh);
 				sb->jsonEncode ( text );
-				sb->safePrintf("\",\n"
+				if ( isString )
+					sb->safePrintf("\"");
+				sb->safePrintf(",\n"
 					       "\t\"docCount\":%li\n"
 					       "}\n,\n", count);
 				continue;
@@ -6173,7 +6213,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 					       "bgcolor=lightgray>"
 					       "<tr><td width=200px;>"
 					       "FACET %s</td></tr>"
-					       ,qt->m_term);
+					       , term);
 			}
 			// print the facet in its numeric form
 			// we will have to lookup based on its docid
@@ -6192,7 +6232,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       "</a>"
 				       "</td></tr>\n"
 				       ,m_si->m_coll
-				       ,qt->m_term // for query
+				       ,term // for query
 				       , (unsigned long)*fvh // for query
 				       //,qt->m_term // for query
 				       //,val32 // for query

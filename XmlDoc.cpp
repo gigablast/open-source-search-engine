@@ -48280,6 +48280,9 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ,
 	for ( ; *p && ! is_digit(*p); p++ );
 	uint64_t xsh = (unsigned long long)atoll(p);
 
+	bool isString = false;
+	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;
+
 	Section *si = ss->m_rootSection;
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 	for ( ; si ; si = si->m_next ) {
@@ -48300,7 +48303,7 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ,
 		// got one print the facet field
 		if ( ! sb->safeStrcpy(qs) ) return false;
 		if ( ! sb->pushChar('\0') ) return false;
-		if ( ! sb->safePrintf("%lu,",val32) ) return false;
+		if ( isString && ! sb->safePrintf("%lu,",val32) ) return false;
 		// put ALSO print the string somewhat
 		char *a = m_words.m_words[si->m_next->m_a];
 		char *b = m_words.m_words[si->m_next->m_b-1];
@@ -48319,6 +48322,9 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 	Xml *xml = getXml();
 
 	long qsLen = gbstrlen(qs);
+
+	bool isString = false;
+	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;
 
 	// find the first meta summary node
 	for ( long i = 0 ; i < xml->m_numNodes ; i++ ) {
@@ -48349,7 +48355,8 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 		if ( ! sb->pushChar('\0') ) return false;
 
 		// then add facet VALUE
-		if ( !sb->safePrintf("%lu,",(unsigned long)val32))return false;
+		if ( isString && !sb->safePrintf("%lu,",(unsigned long)val32))
+			return false;
 		if ( !sb->safeMemcpy(content,contentLen) ) return false;
 		if ( !sb->pushChar('\0') ) return false;
 
@@ -48369,6 +48376,9 @@ bool XmlDoc::storeFacetValuesJSON (char *qs, SafeBuf *sb,FacetValHash_t fvh ) {
 
 	char nb[1024];
 	SafeBuf nameBuf(nb,1024);
+
+	bool isString = false;
+	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;
 
 	for ( ; ji ; ji = ji->m_next ) {
 
@@ -48407,7 +48417,9 @@ bool XmlDoc::storeFacetValuesJSON (char *qs, SafeBuf *sb,FacetValHash_t fvh ) {
 		if ( ! sb->pushChar('\0') ) return false;
 
 		// then add facet VALUE
-		if ( !sb->safePrintf("%lu,",(unsigned long)val32))return false;
+		if ( isString && !sb->safePrintf("%lu,",(unsigned long)val32))
+				return false;
+
 		if ( val && vlen && ! sb->safeMemcpy(val,vlen) ) return false;
 		if ( ! sb->pushChar('\0') ) return false;
 

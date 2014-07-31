@@ -1030,7 +1030,23 @@ bool qaspider1 ( ) {
 	if ( ! s_flags[18] ) {
 		s_flags[18] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=html&"
-				"q=gbfacetstr:gbxpathsitehash3624590799"
+				"q=gbfacetstr%3Agbxpathsitehash3624590799"
+				, 999 ) )
+			return false;
+	}
+
+	if ( ! s_flags[19] ) {
+		s_flags[19] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&xml=1&"
+				"q=gbfacetint%3Agbhopcount"
+				, 999 ) )
+			return false;
+	}
+
+	if ( ! s_flags[20] ) {
+		s_flags[20] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&json=1&"
+				"q=gbfacetint%3Alog.score"
 				, 999 ) )
 			return false;
 	}
