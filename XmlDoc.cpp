@@ -9520,7 +9520,7 @@ Url **XmlDoc::getRedirUrl() {
 	// . if we followed too many then bail
 	// . www.motorolamobility.com www.outlook.com ... failed when we 
 	//   had >= 4 here
-	if ( ++m_numRedirects >= 5 ) {
+	if ( ++m_numRedirects >= 7 ) {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
@@ -9643,6 +9643,18 @@ Url **XmlDoc::getRedirUrl() {
 		// login page ... so add this check here
 		if ( ! f->isRoot() )
 			simplifiedRedir = true;
+
+	bool allowSimplifiedRedirs = m_allowSimplifiedRedirs;
+
+	// follow redirects if injecting so we do not return 
+	// EDOCSIMPLIFIEDREDIR
+	if ( getIsInjecting ( ) )
+		allowSimplifiedRedirs = true;
+
+	// or if disabled then follow the redirect
+	if ( ! cr->m_useSimplifiedRedirects )
+		allowSimplifiedRedirs = true;
+
 	// . if the redir url is simpler, but has no hostname we
 	//   prepend a "www." to it
 	// . this should avoids www.russ.ru and russ.ru from being
@@ -9663,7 +9675,7 @@ Url **XmlDoc::getRedirUrl() {
 	// . 301 means moved PERMANENTLY...
 	// . many people use 301 on their root pages though, so treat
 	//   it like a temporary redirect, like exclusivelyequine.com
-	if ( simplifiedRedir && ! m_allowSimplifiedRedirs &&
+	if ( simplifiedRedir && ! allowSimplifiedRedirs &&
 	     // for custom BULK clients don't like this i guess
 	     // AND for custom crawl it was messing up the processing
 	     // url format for a nytimes blog subsite which was redirecting
