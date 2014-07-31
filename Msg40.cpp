@@ -6140,7 +6140,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			}
 
 			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
-				sprintf(tmp,"%f",(float)*fvh);
+				sprintf(tmp,"%f",*(float *)fvh);
 				text = tmp;
 			}
 
@@ -6215,6 +6215,11 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 					       "FACET %s</td></tr>"
 					       , term);
 			}
+
+			char *suffix = "int";
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+				suffix = "float";
+
 			// print the facet in its numeric form
 			// we will have to lookup based on its docid
 			// and get it from the cached page later
@@ -6225,18 +6230,21 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       // docs from this facet with that
 				       // value. actually gbmin/max would work
 				       "<a href=/search?c=%s&q="
-				       "gbequalint%%3A%s:%lu"
-				       //"+gbmaxint%%3A%s:%lu>"
-				       ">"
+				       "gbequal%s%%3A%s:"
+				       ,m_si->m_coll
+				       ,suffix
+				       ,term // for query
+				       );
+
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+				sb->safePrintf("%f",*(float *)fvh);
+			else
+				sb->safePrintf("%lu",(long)*fvh);
+
+			sb->safePrintf(">"
 				       "%s (%lu)"
 				       "</a>"
 				       "</td></tr>\n"
-				       ,m_si->m_coll
-				       ,term // for query
-				       , (unsigned long)*fvh // for query
-				       //,qt->m_term // for query
-				       //,val32 // for query
-				       //,val32 // stat for printing
 				       ,text
 				       ,count); // count for printing
 		}

@@ -1051,6 +1051,16 @@ bool qaspider1 ( ) {
 			return false;
 	}
 
+	if ( ! s_flags[21] ) {
+		s_flags[21] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&xml=1&"
+				"q=gbfacetfloat%3Atalks.rating"
+				, 999 ) )
+			return false;
+	}
+
+
+
 	//static bool s_fee2 = false;
 	if ( ! s_flags[14] ) {
 		s_flags[14] = true;
