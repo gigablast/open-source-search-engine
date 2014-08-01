@@ -14500,7 +14500,9 @@ void Parms::init ( ) {
 	m->m_desc  = "We either reindex or delete the search results of "
 		"this query. Reindexing them will redownload them and "
 		"possible update the siterank, which is based on the "
-		"number of links to the site.";
+		"number of links to the site. This will add the url "
+		"requests to "
+		"the spider queue so ensure your spiders are enabled.";
 	m->m_cgi   = "q";
 	m->m_off   = (char *)&gr.m_query - (char *)&gr;
 	m->m_type  = TYPE_CHARPTR;

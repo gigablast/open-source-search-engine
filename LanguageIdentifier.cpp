@@ -87,6 +87,30 @@ const uint8_t *langToTopic[] = {
 	(uint8_t*)"Unknown",
 	(uint8_t*)"Unknown",
 	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
+	(uint8_t*)"Unknown",
 	(uint8_t*)"Unknown"
 };
 
@@ -681,6 +705,7 @@ uint8_t LanguageIdentifier::getBestLangsFromVec(char* langCount,
 uint8_t LanguageIdentifier::findLangFromDMOZTopic(char *topic) {
 	int x;
 	for(x = 0; x < MAX_LANGUAGES; x++) {
+		if ( ! langToTopic[x] ) continue;
 		if(!strncasecmp((char*)langToTopic[x], topic,
 				gbstrlen((char *)langToTopic[x])))
 			return(x);

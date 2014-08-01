@@ -434,12 +434,13 @@ bool Synonyms::addAmpPhrase ( long wordNum , HashTableX *dt ) {
 	*m_aidsPtr++ = h;
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
+	*m_termPtrsPtr++ = NULL;
+
 	*m_termOffsPtr++ = m_synWordBuf.length();
+	*m_termLensPtr++ = wlen+4;
 	m_synWordBuf.safeMemcpy ( w , wlen );
 	m_synWordBuf.safeStrcpy (" and");
 	m_synWordBuf.pushChar('\0');
-	*m_termLensPtr++ = wlen+4;
-	*m_termPtrsPtr++ = NULL;
 
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
