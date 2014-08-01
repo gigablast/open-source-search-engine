@@ -304,6 +304,12 @@ long Synonyms::getSynonyms ( Words *words ,
 		*m_termPtrsPtr++ = p;
 		*m_termLensPtr++ = e-p;
 
+		// increment the dummies to keep in sync with synonym index
+		// this is only for when m_termPtrs[x] is NULL because
+		// we store the term into m_synWordBuf() because it is not
+		// in out wiktionary file in memory.
+		*m_termOffsPtr++ = -1;
+
 		// only for multi-word synonyms like "New Jersey"...
 		*m_wids0Ptr = 0LL;
 		*m_wids1Ptr = 0LL;
@@ -381,9 +387,10 @@ bool Synonyms::addWithoutApostrophe ( long wordNum , HashTableX *dt ) {
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
 	*m_termPtrsPtr++ = NULL;
+	*m_termLensPtr++ = wlen;
 
 	*m_termOffsPtr++ = m_synWordBuf.length();
-	*m_termLensPtr++ = wlen;
+
 	m_synWordBuf.safeMemcpy(w,wlen);
 	m_synWordBuf.pushChar('\0');
 
