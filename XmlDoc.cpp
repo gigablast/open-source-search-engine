@@ -9868,7 +9868,7 @@ Url **XmlDoc::getRedirUrl() {
 	// . if we followed too many then bail
 	// . www.motorolamobility.com www.outlook.com ... failed when we 
 	//   had >= 4 here
-	if ( ++m_numRedirects >= 5 ) {
+	if ( ++m_numRedirects >= 7 ) {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
@@ -9997,6 +9997,10 @@ Url **XmlDoc::getRedirUrl() {
 	// follow redirects if injecting so we do not return 
 	// EDOCSIMPLIFIEDREDIR
 	if ( getIsInjecting ( ) )
+		allowSimplifiedRedirs = true;
+
+	// or if disabled then follow the redirect
+	if ( ! cr->m_useSimplifiedRedirects )
 		allowSimplifiedRedirs = true;
 
 	// . if the redir url is simpler, but has no hostname we
