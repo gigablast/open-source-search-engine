@@ -3075,6 +3075,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			// comma?
 			if ( mr->size_content>1 ) sb->pushChar(',');
 			sb->safePrintf("\"docId\":%lli", mr->m_docId);
+			sb->safePrintf(",\"gburl\":\"");
+			sb->jsonEncode(mr->ptr_ubuf);
+			sb->safePrintf("\"");
 			// for deduping
 			//sb->safePrintf(",\"crc\":%lu",mr->m_contentHash32);
 			// crap, we lose resolution storing as a float

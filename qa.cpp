@@ -537,7 +537,6 @@ bool qainject1 ( ) {
 	// +the
 	//static bool s_x5 = false;
 	if ( ! s_flags[3] ) {
-		//usleep(1500000);
 		wait(1.5);
 		s_flags[3] = true;
 		return false;
@@ -558,6 +557,15 @@ bool qainject1 ( ) {
 				"q=sports+news",2009472889 ) )
 		     return false;
 	}
+
+	// 'washer & dryer' does some algorithmic synonyms 'washer and dryer'
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"debug=1&q=washer+%26+dryer",9999 ) )
+		     return false;
+	}
+
 
 	//
 	// eject/delete the urls
@@ -580,9 +588,7 @@ bool qainject1 ( ) {
 	//
 	// make sure no results left, +the
 	//
-	//static bool s_x9 = false;
 	if ( ! s_flags[6] ) {
-		//usleep(1500000);
 		wait(1.5);
 		s_flags[6] = true;
 		return false;
@@ -660,7 +666,6 @@ bool qainject2 ( ) {
 	// now query check
 	//static bool s_y4 = false;
 	if ( ! s_flags[8] ) {
-		//usleep(1500000);
 		wait(1.5);
 		s_flags[8] = true;
 		return false;
