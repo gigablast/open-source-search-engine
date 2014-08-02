@@ -13277,6 +13277,12 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 
 	if ( justEvents ) return;
 
+	if ( f & SEC_HASHXPATH )
+		sbuf->safePrintf("hashxpath ");
+
+	sbuf->safePrintf("indsenthash64=%llu ",sn->m_indirectSentHash64);
+
+
 	if ( f & SEC_TOD_EVENT )
 		sbuf->safePrintf("todevent ");
 
@@ -15700,14 +15706,14 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		SectionStats *ss = &sk->m_stats;
 
 		// also the value of the inner html hashed
-		if ( ss->m_totalMatches ) {
+		if ( sk->m_flags & SEC_HASHXPATH ) {//ss->m_totalMatches > 0) {
 			unsigned long val ;
 			val = (unsigned long) sk->m_indirectSentHash64 ;
 			m_sbuf->safePrintf("xpathsitehashval=%lu ", val );
 		}
 
 		// some voting stats
-		if ( ss->m_totalMatches )
+		if ( sk->m_flags & SEC_HASHXPATH ) {//ss->m_totalMatches > 0) {
 			m_sbuf->safePrintf("_s=M%liD%lin%liu%lih%lu "
 					   ,(long)ss->m_totalMatches
 					   ,(long)ss->m_totalDocIds
@@ -15715,6 +15721,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 					   ,(long)ss->m_numUniqueVals
 					   ,(unsigned long)mod
 					   );
+		}
 
 		// take this out for now... MDW 7/7/2014
 
@@ -15787,7 +15794,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			m_sbuf->safePrintf(" (%li places)",acount);
 	}
 
-	m_sbuf->safePrintf("</i>");
+	m_sbuf->safePrintf("</i>\n");
 
 	// now print each word and subsections in this section
 	long a = sk->m_a;

@@ -164,6 +164,11 @@ void processReply ( char *reply , long replyLen ) {
 	markOut ( content , "<responseTimeMS>");
 	markOut ( content , "<docsInCollection>");
 
+	// indexed 1 day ago
+	markOut ( content,"indexed:");
+	// modified 1 day ago
+	markOut ( content,"modified:");
+
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
 	long contentCRC = 0; 
@@ -876,6 +881,7 @@ bool qaspider1 ( ) {
 			      // take out hopcount for now, just test quotas
 			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
 
+			      // just one spider out allowed for consistency
 	       "fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
 
 	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
@@ -957,6 +963,11 @@ bool qaspider1 ( ) {
 	}
 
 
+	// wait for index msg4 to not be cached to ensure all results indexed
+	if ( ! s_flags[22] ) {
+		s_flags[22] = true;
+		wait(1.5);
+	}
 
 
 	// verify no results for gbhopcount:2 query
@@ -1209,6 +1220,15 @@ bool qaspider2 ( ) {
 				999 ) )
 			return false;
 	}
+
+	// wait for some reason
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		wait(1.5);
+		return false;
+	}
+
+
 
 	//static bool s_y6 = false;
 	if ( ! s_flags[9] ) {

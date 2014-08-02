@@ -2614,8 +2614,13 @@ bool XmlDoc::indexDoc2 ( ) {
 	bool flush = false;
 	if ( m_contentInjected ) flush = true;
 	if ( m_sreqValid && m_sreq.m_isPageInject ) flush = true;
+	// to keep our qa runs consistent
+	if ( strcmp(cr->m_coll,"qatest123") ) flush = true;
+
 	if ( ! m_listAdded ) flush = false;
 	if ( m_listFlushed ) flush = false;
+
+
 	// HACK: flush it if we are injecting it in case the next thing we 
 	//       spider is dependent on this one
 	if ( flush ) {
