@@ -2642,7 +2642,7 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	long node = m_waitingTree.getNextNode ( 0, (char *)&m_waitingTreeKey );
 	// if empty, stop
 	if ( node < 0 ) return 0;
-	// breathe. no, this deleted the collection!
+	// breathe. take this out fix core because cr could be deleted...
 	//QUICKPOLL(MAX_NICENESS);
 	// get the key
 	key_t *k = (key_t *)m_waitingTree.getKey ( node );

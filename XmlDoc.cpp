@@ -30199,7 +30199,13 @@ SafeBuf *XmlDoc::getHeaderTagBuf() {
 	for ( ; si ; si = si->m_next ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		if ( si->m_tagId == TAG_H1 ) break;
+		if ( si->m_tagId != TAG_H1 ) continue;
+		// if it contains now text, this will be -1
+		// so give up on it
+		if ( si->m_firstWordPos < 0 ) continue;
+		if ( si->m_lastWordPos  < 0 ) continue;
+		// ok, it works, get it
+		break;
 	}
 	// if no h1 tag then make buf empty
 	if ( ! si ) {
