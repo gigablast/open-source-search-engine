@@ -740,7 +740,6 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 			      "border-right-width:0px;"
 			      "border-style:solid;"
 			      "margin-left:10px;"
-			      "border-color:blue;"
 			      "border-top-left-radius:10px;"
 			      "border-bottom-left-radius:10px;"
 			      "font-size:14px;"
@@ -748,16 +747,27 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 			      , mi[i].m_url
 			      );
 		if ( i == pageNum )
-			sb.safePrintf("color:black;"
-				      "background-color:white;");
+			sb.safePrintf(
+				      "border-color:blue;"
+				      "color:black;"
+				      "background-color:white;\" ");
 		else
-			sb.safePrintf("color:white;"
-				      "background-color:blue;");
+			sb.safePrintf("border-color:white;"
+				      "color:white;"
+				      "background-color:blue;\" "
+				      " onmouseover=\""
+				      "this.style.backgroundColor='lightblue';"
+				      "this.style.color='black';\""
+				      " onmouseout=\""
+				      "this.style.backgroundColor='blue';"
+				      "this.style.color='white';\""
+				      );
 
-		sb.safePrintf("\">"
+		sb.safePrintf(">"
 			      // make button wider
+			      "<nobr>"
 			      "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; "
-			      "<b>%s</b> &nbsp; &nbsp;"
+			      "<b>%s</b> &nbsp; &nbsp;</nobr>"
 			      , mi[i].m_text
 			      );
 		//
@@ -783,7 +793,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	// admin link
 	sb.safePrintf(
 		      "<a href=/admin/settings>"
-		      "<div style=background-color:green;"
+		      "<div style=\"background-color:green;"
 		      "padding:5px;"
 		      "text-align:right;"
 		      "border-width:3px;"
@@ -814,7 +824,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 	// now the MAIN column
 	//
-	sb.safePrintf("\n</TD><TD valign=top style=padding-left:20px;>\n");
+	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
 
 	return true;
 }
@@ -858,7 +868,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// else
 
 
-	 sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	 sb.safePrintf("<a href=/><img border=0 width=500 "
 	 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
@@ -892,8 +902,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 
 	// put search box in a box
-	sb.safePrintf("<div style=background-color:blue;padding:20px;"
-		      "border-radius:20px;"
+	sb.safePrintf("<div style=\"background-color:blue;padding:20px;"
+		      "border-radius:20px;\""
 		      ">");
 
 
@@ -1125,7 +1135,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 
 
-	 sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	 sb.safePrintf("<a href=/><img border=0 width=500 "
 	 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
@@ -1217,7 +1227,8 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";
 
-	sb.safePrintf("<br><br>Add a url to the <b>%s</b> collection",coll);
+	sb.safePrintf("<br><center>"
+		      "Add a url to the <b>%s</b> collection</center>",coll);
 
 	// if url is non-empty the ajax will receive this identical msg
 	// and display it in the div, so do not duplicate the msg!
@@ -1287,7 +1298,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	printFrontPageShell ( sb , 1 );
 
 
-	 sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	 sb.safePrintf("<a href=/><img border=0 width=500 "
 	 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "

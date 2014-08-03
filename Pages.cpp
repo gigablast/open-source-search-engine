@@ -2469,6 +2469,7 @@ int parmcmp ( const void *a, const void *b ) {
 #define DARK_YELLOW "ffaaaa"
 #define LIGHT_YELLOW "ffcccc"
 
+bool printFrontPageShell ( SafeBuf &sb , long pageNum ) ;
 
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
@@ -2494,24 +2495,40 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf("<html><head><title>Gigablast API</title></head><body>");
 
-	p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "
-		     "font-size: 15px;} </style>");
+
+	// new stuff
+	printFrontPageShell ( p , 6 );
+
+
+	//p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "
+	//	     "font-size: 15px;} </style>");
 
 
 	// print colors
-	g_pages.printColors ( &p );
+	//g_pages.printColors ( &p );
 	// start table
-	p.safePrintf( "<table><tr><td>");
+	//p.safePrintf( "<table><tr><td>");
 	// print logo
-	g_pages.printLogo   ( &p , coll );
-	p.safePrintf("</td></tr></table><br><br>");
+	//g_pages.printLogo   ( &p , coll );
+	//p.safePrintf("</td></tr></table><br><br>");
+
+
+	 p.safePrintf("<a href=/><img border=0 width=500 "
+	 	      "height=122 src=/logo-med.jpg></a>\n");
+
+	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
+	//	      "height=44 src=/gigablast.jpg></a>\n");
+
+
+	p.safePrintf("<br><br>\n");
+
 
 	p.safePrintf("NOTE: All APIs support both GET and POST method. "
 		     "If the size of your request is more than 2K you "
 		     "should use POST.");
 	p.safePrintf("<br><br>");
 
-	p.safePrintf("<div style=padding-left:10%%>"
+	p.safePrintf(//"<div style=padding-left:10%%>"
 		     "<font size=+2><b>API by pages</b></font>"
 		     "<ul>"
 		     );
@@ -2531,7 +2548,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 			     );
 	}
 
-	p.safePrintf("</ul></div>\n");
+	p.safePrintf("</ul>");//</div>\n");
 
 
 	/*
@@ -2546,16 +2563,14 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	*/
 
 
-	p.safePrintf("<div style=padding-left:10%%;><hr></div>\n");
-
+	p.safePrintf("<hr>\n");
 
 	bool printed = false;
 	for ( long i = 0 ; i < s_numPages ; i++ ) {
 		if ( i == PAGE_NONE ) continue;
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
 		if ( printed )
-			p.safePrintf("<div style=padding-left:10%%;>"
-				     "<hr></div><br>\n");
+			p.safePrintf("<hr><br>\n");
 		printApiForPage ( &p , i , cr );
 		printed = true;
 	}
@@ -2568,7 +2583,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf ( "<center>"
 		       "<br>"
 		       "<a name=qops>"
-		       "<div style=padding-left:10%%;>"
+		       "<div>"
 		       "<hr></div><br>\n"
 		       "</a>"
 
@@ -2625,7 +2640,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf("<a name=/%s>",pageStr);//PAGENUM);
 
 
-	sb->safePrintf("<div style=padding-left:10%%>"
+	sb->safePrintf(//"<div style=padding-left:10%%>"
 		       "<font size=+2><b><a href=/%s?c=%s>/%s</a></b></font>"
 		       ,pageStr,cr->m_coll,pageStr);
 	sb->safePrintf("</a>");
@@ -2686,10 +2701,11 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	
 	sb->safePrintf("<br>");
-	sb->safePrintf("</div><br>");
+	sb->safePrintf(//"</div>"
+		       "<br>");
 	
 	// begin new list of centered tables
-	sb->safePrintf("<center>");
+	//sb->safePrintf("<center>");
 	
 	// and the start of the input parms table
 	sb->safePrintf ( 
@@ -2897,14 +2913,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	// do not print the tables below now,
 	// we provide output links for xml, json and html
-	sb->safePrintf("</center>");
+	//sb->safePrintf("</center>");
 
 	if ( PAGENUM != PAGE_GET &&
 	     PAGENUM != PAGE_RESULTS )
 		return true;
 
 
-	sb->safePrintf("<center>");
+	//sb->safePrintf("<center>");
 
 	//
 	// done printing parm table
@@ -3072,7 +3088,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf("</pre>");
 	sb->safePrintf ( "</td></tr></table><br>\n\n" );
 	
-	sb->safePrintf("</center>");
+	//sb->safePrintf("</center>");
 	
 	return true;
 }
