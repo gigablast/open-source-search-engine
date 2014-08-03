@@ -1494,7 +1494,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		      "height:100px;"
 		      "\">"
 		      "<br style=line-height:10px;>"
-		      "<img width=54 height=79 src=/rocket.jpg>"
+		      "<img width=54 height=79 alt=HOME src=/rocket.jpg>"
 		      "</div>"
 		      "</a>"
 		      "</center>"
@@ -1504,7 +1504,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		      );
 
 
-	// admin link
+	// home link
 	sb.safePrintf(
 		      "<a href=/>"
 		      "<div style=\"background-color:blue;"
@@ -3271,11 +3271,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// print the rank. it starts at 0 so add 1
 	if ( si->m_format == FORMAT_HTML && si->m_streamResults )
-		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
-			       ix+1 );
+		//sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+		//	       ix+1 );
+		sb->safePrintf("<table><tr><td>");
 	else if ( si->m_format == FORMAT_HTML )
-		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
-			      ix+1 + si->m_firstResultNum );
+		//sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+		//	      ix+1 + si->m_firstResultNum );
+		sb->safePrintf("<table><tr><td>");
 
 	if ( si->m_showBanned ) {
 		if ( err == EDOCBANNED   ) err = 0;
@@ -6601,18 +6603,22 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		      "<table border=0 cellspacing=5>"
 		      //"style=color:blue;>"
 		      "<tr>"
-		      "<td rowspan=2 valign=top>"
-		      "<a href=/>"
-		      "<img "
-		      "border=0 "
-		      "src=%s/logo-small.png "
-		      "height=64 width=295>"
-		      "</a>"
-		      "</td>"
+
+		      // take out logo now that we have the circle rocket
+		      // "<td rowspan=2 valign=top>"
+		      // "<a href=/>"
+		      // "<img "
+		      // "border=0 "
+		      // "src=%s/logo-small.png "
+		      // "height=64 width=295>"
+		      // "</a>"
+		      // "</td>"
 		      
 		      "<td>"
-		      , root
+		      //, root
 		      );
+
+	/*
 	// menu above search box
 	sb->safePrintf(
 		      "<br>"
@@ -6654,6 +6660,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	else
 		sb->safePrintf("<b title=\"Browse the DMOZ directory\">"
 			      "directory</b>");
+	*/
 
 	char *coll = hr->getString("c");
 	if ( ! coll ) coll = "";
@@ -6665,22 +6672,24 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	if ( si && si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
 
 
-	sb->safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
+	sb->safePrintf(
+
+		       //" &nbsp;&nbsp;&nbsp;&nbsp; "
 		      
 		      // i'm not sure why this was removed. perhaps
 		      // because it is not working yet because of
 		      // some bugs...
-		      "<a title=\"Advanced web search\" "
-		      "href=/adv.html>"
-		      "advanced"
-		      "</a>"
+		      // "<a title=\"Advanced web search\" "
+		      // "href=/adv.html>"
+		      // "advanced"
+		      // "</a>"
 		      
-		      " &nbsp;&nbsp;&nbsp;&nbsp;"
+		      // " &nbsp;&nbsp;&nbsp;&nbsp;"
 		      
-		      "<a title=\"Add your url to the index\" "
-		      "href=/addurl>"
-		      "add url"
-		      "</a>"
+		      // "<a title=\"Add your url to the index\" "
+		      // "href=/addurl>"
+		      // "add url"
+		      // "</a>"
 		      
 		      /*
 			" &nbsp;&nbsp;|&nbsp;&nbsp; "
@@ -6697,7 +6706,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			"</a>"
 		      */
 		      
-		      "<br><br>"
+		       //"<br><br>"
 		      //
 		      // search box
 		      //
@@ -6736,7 +6745,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		printDmozRadioButtons(sb,catId);
 	}
 	else {
-		sb->safePrintf("Try your search (not secure) on: "
+		sb->safePrintf("Try your search on: "
 			      "&nbsp;&nbsp; "
 			      "<a href=https://www.google"
 			      ".com/search?q="

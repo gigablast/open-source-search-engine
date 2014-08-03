@@ -2570,7 +2570,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 4 );
+	printFrontPageShell ( sb , 5 );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
