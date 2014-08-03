@@ -1424,6 +1424,126 @@ bool expandHtml (  SafeBuf& sb,
 		   char *method ,
 		   CollectionRec *cr ) ;
 
+
+bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
+
+	char *title = "Search Results";
+	sb.safePrintf("<title>Gigablast - %s</title>\n",title);
+	sb.safePrintf("<style><!--\n");
+	sb.safePrintf("body {\n");
+	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb.safePrintf("color: #000000;\n");
+	sb.safePrintf("font-size: 12px;\n");
+	sb.safePrintf("margin: 20px 5px;\n");
+	sb.safePrintf("letter-spacing: 0.04em;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf("a {text-decoration:none;}\n");
+	//sb.safePrintf("a:link {color:#00c}\n");
+	//sb.safePrintf("a:visited {color:#551a8b}\n");
+	//sb.safePrintf("a:active {color:#f00}\n");
+	sb.safePrintf(".bold {font-weight: bold;}\n");
+	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
+	sb.safePrintf(".url {color:#008000;}\n");
+	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf("table {\n");
+	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb.safePrintf("color: #000000;\n");
+	sb.safePrintf("font-size: 12px;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf(".directory {font-size: 16px;}\n"
+		      ".nav {font-size:20px;align:right;}\n"
+		      );
+	sb.safePrintf("-->\n");
+	sb.safePrintf("</style>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("</head>\n");
+	sb.safePrintf("<script>\n");
+	sb.safePrintf("<!--\n");
+	sb.safePrintf("function x(){document.f.q.focus();}\n");
+	sb.safePrintf("// --></script>\n");
+	sb.safePrintf("<body onload=\"x()\">\n");
+
+	//
+	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
+	//
+	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+		      "\n<TR>\n");
+
+	//
+	// first the nav column
+	//
+	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+		      "valign=top "
+		      "style=\""
+		      "border-right:3px solid blue;"
+		      "\">"
+
+		      "<br>"
+
+		      "<center>"
+		      "<a href=/>"
+		      "<div style=\""
+		      "background-color:white;"
+		      "padding:10px;"
+		      "border-radius:100px;"
+		      "border-color:blue;"
+		      "border-width:3px;"
+		      "border-style:solid;"
+		      "width:100px;"
+		      "height:100px;"
+		      "\">"
+		      "<br style=line-height:10px;>"
+		      "<img width=54 height=79 src=/rocket.jpg>"
+		      "</div>"
+		      "</a>"
+		      "</center>"
+
+		      "<br>"
+		      "<br>"
+		      );
+
+
+	// admin link
+	sb.safePrintf(
+		      "<a href=/>"
+		      "<div style=\"background-color:blue;"
+		      "padding:5px;"
+		      "text-align:right;"
+		      "border-width:3px;"
+		      "border-right-width:0px;"
+		      "border-style:solid;"
+		      "margin-left:10px;"
+		      "border-color:white;"
+		      "border-top-left-radius:10px;"
+		      "border-bottom-left-radius:10px;"
+		      "font-size:14px;"
+		      "color:white;"
+		      "cursor:hand;"
+		      "cursor:pointer;\" "
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightblue';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='blue';"
+		      "this.style.color='white';\""
+		      ">"
+		      "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; "
+		      "&nbsp; &nbsp; &nbsp; "
+		      "<b>HOME</b> &nbsp; &nbsp;"
+		      "</div>"
+		      "</a>"
+		      "<br>"
+		      );
+
+	//
+	// now the MAIN column
+	//
+	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
+	return true;
+}
+
+
 bool printSearchResultsHeader ( State0 *st ) {
 
 	SearchInput *si = &st->m_si;
@@ -1471,6 +1591,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				    cr);
 	}
 				 
+
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
@@ -1498,6 +1619,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 		if ( header ) sb->safeStrcpy ( header );
 	}
 
+
+	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
+		printLeftNavColumn ( *sb,st );
+	}
 
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
 		printLogoAndSearchBox ( sb,&st->m_hr,-1,si); // catId = -1
@@ -6467,6 +6592,9 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	char *root = "";
 	if ( g_conf.m_isMattWells )
 		root = "http://www.gigablast.com";
+
+	// now make a TABLE, left PANE contains gigabits and stuff
+
 
 	sb->safePrintf(
 		      // logo and menu table

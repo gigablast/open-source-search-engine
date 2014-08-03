@@ -646,8 +646,14 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
 	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
 	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
-	sb.safePrintf("<title>Gigablast - "
-		      "An Alternative Open Source Search Engine</title>\n");
+	char *title = "An Alternative Open Source Search Engine";
+	if ( pageNum == 1 ) title = "Directory";
+	if ( pageNum == 2 ) title = "Advanced";
+	if ( pageNum == 3 ) title = "Add Url";
+	if ( pageNum == 4 ) title = "About";
+	if ( pageNum == 5 ) title = "Help";
+	if ( pageNum == 6 ) title = "API";
+	sb.safePrintf("<title>Gigablast - %s</title>\n",title);
 	sb.safePrintf("<style><!--\n");
 	sb.safePrintf("body {\n");
 	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
