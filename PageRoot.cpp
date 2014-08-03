@@ -727,9 +727,29 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		      "\">"
 
 		      "<br>"
+
+		      "<center>"
+		      "<a href=/>"
+		      "<div style=\""
+		      "background-color:white;"
+		      "padding:10px;"
+		      "border-radius:100px;"
+		      "border-color:blue;"
+		      "border-width:3px;"
+		      "border-style:solid;"
+		      "width:100px;"
+		      "height:100px;"
+		      "\">"
+		      "<br style=line-height:10px;>"
+		      "<img width=54 height=79 src=/rocket.jpg>"
+		      "</div>"
+		      "</a>"
+		      "</center>"
+
+
 		      "<br>"
 		      "<br>"
-		      "<br>"
+
 		      );
 
 	long n = sizeof(mi) / sizeof(MenuItem);
@@ -832,6 +852,13 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
 
+	sb.safePrintf("<a href=/><img border=0 width=470 "
+		      "height=44 src=/gigablast.jpg></a>\n");
+
+	sb.safePrintf("<br>"
+		      "<img border=0 width=470 "
+		      "height=15 src=/bar.jpg>\n");
+
 	return true;
 }
 
@@ -874,8 +901,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// else
 
 
-	 sb.safePrintf("<a href=/><img border=0 width=500 "
-	 	      "height=122 src=/logo-med.jpg></a>\n");
+	// sb.safePrintf("<a href=/><img border=0 width=500 "
+	// 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
 	//	      "height=44 src=/gigablast.jpg></a>\n");
@@ -1141,8 +1168,8 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 
 
-	 sb.safePrintf("<a href=/><img border=0 width=500 "
-	 	      "height=122 src=/logo-med.jpg></a>\n");
+	// sb.safePrintf("<a href=/><img border=0 width=500 "
+	// 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
 	//	      "height=44 src=/gigablast.jpg></a>\n");
@@ -1304,8 +1331,8 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	printFrontPageShell ( sb , 1 );
 
 
-	 sb.safePrintf("<a href=/><img border=0 width=500 "
-	 	      "height=122 src=/logo-med.jpg></a>\n");
+	// sb.safePrintf("<a href=/><img border=0 width=500 "
+	// 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
 	//	      "height=44 src=/gigablast.jpg></a>\n");
@@ -2281,5 +2308,517 @@ bool canSubmit ( unsigned long h , long now , long maxAddUrlsPerIpDomPerDay ) {
 
 void resetPageAddUrl ( ) {
 	s_htable.reset();
+}
+
+
+bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
+
+	SafeBuf sb;
+
+	printFrontPageShell ( sb , 2 );
+
+
+	// sb.safePrintf("<a href=/><img border=0 width=500 "
+	// 	      "height=122 src=/logo-med.jpg></a>\n");
+
+	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
+	//	      "height=44 src=/gigablast.jpg></a>\n");
+
+
+	sb.safePrintf("<br><br>\n");
+	sb.safePrintf("<br><br><br>\n");
+
+	// submit to https now
+	sb.safePrintf("<form method=GET "
+		      "action=/search name=f>\n" );
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
+
+	sb.safePrintf(
+	"<script type=text/javascript>"
+	"<!--"
+	"function x(){document.f.q.focus();}"
+	"// -->"
+	"</script>"
+	"</head>"
+	""
+
+	"<body onload=x()>"
+
+	//"<form method=get action=/search>"
+
+	"	<table width=605 border=0 align=center cellpadding=5 cellspacing=3>"
+	"		<tbody>"
+	"			<tr align=left valign=middle>"
+	"			<th colspan=3>Search for...</th>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td><strong>all</strong> of these words</td>"
+	"				<td><input type=text name=plus size=40 /></td>"
+	"				<td><input type=submit value=Search /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>this <strong>exact phrase</strong></td>"
+	"				<td colspan=2><input type=text name=quote1 size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>and this <strong>exact phrase</strong></td>"
+	"				<td colspan=2><input type=text name=quote2 size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td><strong>any</strong> of these words</td>"
+	"				<td colspan=2><input type=text name=q size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td><strong>none</strong> of these words</td>"
+	"				<td colspan=2><input type=text name=minus size=40 /></td>"
+	"			</tr>"
+	""
+	"			<tr align=left valign=middle>"
+	"				<td>In this language:"
+	"				</td>"
+	"				<td colspan=2>"
+	"				<select name=gblang>"
+	"				<option value=0>Any</option>"
+	"				<option value=1>English</option>"
+	"<option value=2>French</option>	"
+	"<option value=3>Spanish</option>"
+	"<option value=4>Russian</option>"
+	"<option value=5>Turkish</option>"
+	"<option value=6>Japanese</option>"
+	"<option value=7>ChineseTrad</option>"
+	"<option value=8>ChineseSimp</option>"
+	"<option value=9>Korean</option>"
+	"<option value=10>German</option>"
+	"<option value=11>Dutch</option>"
+	"<option value=12>Italian</option>"
+	"<option value=13>Finnish</option>"
+	"<option value=14>Swedish</option>"
+	"<option value=15>Norwegian</option>"
+	"<option value=16>Portuguese</option>"
+	"<option value=17>Vietnamese</option>"
+	"<option value=18>Arabic</option>"
+	"<option value=19>Hebrew</option>"
+	"<option value=20>Indonesian</option>"
+	"<option value=21>Greek</option>"
+	"<option value=22>Thai</option>"
+	"<option value=23>Hindi</option>"
+	"<option value=24>Bengala</option>"
+	"<option value=25>Polish</option>"
+	"<option value=26>Tagalog</option>"
+	"				</select>"
+	"				</td>"
+	"			</tr>"
+	""
+	""
+	"			<tr align=left valign=middle>"
+	"				<td>Restrict to this URL</td>"
+	"				<td colspan=2><input type=text name=url size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Pages that link to this URL</td>"
+	"				<td colspan=2><input type=text name=link size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Site Clustering</td>"
+	"				<td colspan=2><input type=radio name=sc value=1 checked=checked />yes&nbsp;&nbsp;&nbsp;<input type=radio name=sc value=0 />no</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Number of summary excerpts</td>"
+	"				<td colspan=2><input type=radio name=ns value=0 />0&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=1 />1&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=2 />2&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=3 checked=checked />3&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=4 />4&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=5 />5</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Results per Page</td>"
+	"				<td colspan=2><input type=radio name=n value=10 checked=checked />10&nbsp;&nbsp;<input type=radio name=n value=20 />20&nbsp;&nbsp;<input type=radio name=n value=30 />30&nbsp;&nbsp;<input type=radio name=n value=40 />40&nbsp;&nbsp;<input type=radio name=n value=50 />50&nbsp;&nbsp;<input type=radio name=n value=100 />100</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Restrict to these Sites</td>"
+	"				<td colspan=2><textarea rows=10 cols=40 name=sites></textarea></td>"
+	"			</tr>"
+	"	  </tbody>"
+	"	</table>"
+		      );
+
+
+
+	sb.safePrintf("</form>\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("<br><br>\n");
+
+	printNav ( sb , hr );
+
+	g_httpServer.sendDynamicPage (sock, 
+				      sb.getBufStart(), 
+				      sb.length(),
+				      3600, // cachetime
+				      false,// post?
+				      "text/html",
+				      200, // http status
+				      NULL, // cookie
+				      "UTF-8");
+
+	return true;
+}
+
+
+bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
+
+	SafeBuf sb;
+
+	printFrontPageShell ( sb , 4 );
+
+
+	// sb.safePrintf("<a href=/><img border=0 width=500 "
+	// 	      "height=122 src=/logo-med.jpg></a>\n");
+
+	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
+	//	      "height=44 src=/gigablast.jpg></a>\n");
+
+
+	sb.safePrintf("<br><br>\n");
+	sb.safePrintf("<br><br><br>\n");
+
+	// submit to https now
+	//sb.safePrintf("<form method=GET "
+	//	      "action=/addurl name=f>\n" );
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
+
+	sb.safePrintf(
+	"<table width=100%% cellpadding=5 cellspacing=0 border=0>"
+	"<!--<tr bgcolor=#0340fd>"
+	"<th colspan=2>"
+	"<font color=33dcff>"
+	"About Gigablast</font> "
+	"</th>"
+	"</tr>"
+	"-->"
+	"<tr>"
+	"<td>"
+	"<br>"
+	""
+	"<center>"
+	"<table width=650px>"
+	"<tr><td>"
+	""
+	"        <p>As of 2013, Gigablast is one of the remaining four search engines in the United States that maintains its own searchable index of over a billion pages."
+	""
+	"	</p>"
+	""
+	"        <p>Founded in 2000, <a href=/bio.html>Matt Wells</a> created Gigablast to index up to 200 Billion pages"
+	"          with the least amount of hardware possible. Gigablast provides large-scale,"
+	"          high-performance, real-time information retrieval technology for partner"
+	"          sites. The company offers a variety of features including topic generation"
+	"          and the ability to index multiple document formats. This search delivery"
+	"          mechanism gives a partner \"turn key\" search capability and"
+	"          the capacity to instantly offer search at maximum scalability with minimum"
+	"          cost. "
+	"          Clients range from NASDAQ 100 listed corporations to boutique"
+	"          companies."
+	"	</p>"
+	""
+	"<p>"
+	"Matt Wells is currently the sole maintainer and programmer of Gigablast and is open for <u>consulting work</u>. For more information, contact us at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
+	"</p>"
+	"<br>"
+	"<center>"
+	"<iframe width=420 height=315 src=http://www.youtube-nocookie.com/embed/hoUzcU76u3I frameborder=0 allowfullscreen></iframe>"
+	"</center>"
+	"</td></tr>"
+	"</table>"
+	"</center>"
+	"</table>"
+
+		      );
+
+
+	sb.safePrintf("</form>\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("<br><br>\n");
+
+	printNav ( sb , hr );
+
+	g_httpServer.sendDynamicPage (sock, 
+				      sb.getBufStart(), 
+				      sb.length(),
+				      3600, // cachetime
+				      false,// post?
+				      "text/html",
+				      200, // http status
+				      NULL, // cookie
+				      "UTF-8");
+
+	return true;
+}
+
+
+bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
+
+	SafeBuf sb;
+
+	printFrontPageShell ( sb , 4 );
+
+	sb.safePrintf("<br><br>\n");
+	sb.safePrintf("<br><br><br>\n");
+
+	// submit to https now
+	//sb.safePrintf("<form method=GET "
+	//	      "action=/addurl name=f>\n" );
+
+	// CollectionRec *cr = g_collectiondb.getRec ( hr );
+	// char *coll = "";
+	// if ( cr ) coll = cr->m_coll;
+	// if ( cr )
+	// 	sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+	// 		      cr->m_coll);
+
+
+	sb.safePrintf(
+	"<br>"
+	"        <table width=650px cellpadding=5 cellspacing=0 border=0>"
+	""
+	"<tr bgcolor=#0340fd>"
+	""
+	"            <th><font color=33dcff>Search</font></th>"
+	"            <th><font color=33dcff>Description</font></th>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+dog>cat "
+	"              dog</a></td>"
+	"            <td>Search results have the word <em>cat</em> and the word <em>dog</em> "
+	"              in them. They could also have <i>cats</i> and <i>dogs</i>.</td>"
+	"          </tr>"
+	""
+	""
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%2Bcat>+cat</a></td>"
+	"            <td>Search results have the word <em>cat</em> in them. If the search results has the word <i>cats</i> then it will not be included. The plus sign indicates an exact match and not to use synonyms, hypernyms or hyponyms or any other form of the word.</td>"
+	"          </tr>"
+	""
+	""
+	"          <tr> "
+	"            <td height=10><a href=/search?q=mp3+%%22take+five%%22>mp3&nbsp;\"take&nbsp;five\"</a></td>"
+	"            <td>Search results have the word <em>mp3</em> and the exact phrase <em>take "
+	"              five</em> in them.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%22john+smith%%22+-%%22bob+dole%%22>\"john&nbsp;smith\"&nbsp;-\"bob&nbsp;dole\"</a></td>"
+	"            <td>Search results have the phrase <em>john smith</em> but NOT the "
+	"              phrase <em>bob dole</em> in them.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=bmx+-game>bmx&nbsp;-game</a></td>"
+	"            <td>Search results have the word <em>bmx</em> but not <em>game</em>.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=inurl%%3Aedu+title%%3Auniversity><b>inurl:</b></a><a href=/search?q=inurl%%3Aedu+title%%3Auniversity>edu <b>title:</b>university</a></td>"
+	"            <td>Search results have <em>university</em> in their title and <em>edu</em> "
+	"              in their url.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22><b>site:</b></a><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22>www.ibm.com&nbsp;\"big&nbsp;blue\"</a></td>"
+	"            <td>Search results are from the site <em>www.ibm.com</em> and have the phrase "
+	"              <em>big blue</em> in them.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=url%%3Awww.yahoo.com><b>url:</b></a><a href=/search?q=url%%3Awww.yahoo.com&n=10>www.yahoo.com</a></td>"
+	"            <td>Search result is the single URL www.yahoo.com, if it is indexed.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><nobr><a href=/search?q=title%%3A%%22the+news%%22+-%%22weather+report%%22><b>title:</b>\"the "
+	"              news\" -\"weather report\"</a></nobr></td>"
+	"            <td>Search results have the phrase <em>the news</em> in their title, "
+	"              and do NOT have the phrase <em>weather report</em> anywhere in their "
+	"              content.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=ip%%3A216.32.120+cars><b>ip:</b></a><a href=/search?q=ip%%3A216.32.120>216.32.120</a></td>"
+	"            <td>Search results are from the the ip 216.32.120.*.</td>"
+	"          </tr>"
+	""
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=type%%3Apdf+nutrition><b>type:</b>pdf nutrition</a></td>"
+	"            <td>Search results are PDF (Portable Document Format) documents that "
+	"              contain the word <em>nutrition</em>.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=type%%3Adoc><b>type:</b>doc</a></td>"
+	"            <td>Search results are Microsoft Word documents.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=type%%3Axls><b>type:</b>xls</a></td>"
+	"            <td>Search results are Microsoft Excel documents.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=type%%3Appt><b>type:</b>ppt</a></td>"
+	"            <td>Search results are Microsoft Power Point documents.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=type%%3Aps><b>type:</b>ps</a></td>"
+	"            <td>Search results are Postscript documents.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=type%%3Atext><b>type:</b>text</a></td>"
+	"            <td>Search results are plain text documents.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=filetype%%3Apdf><b>filetype:</b>pdf</a></td>"
+	"            <td>Search results are PDF documents.</td>"
+	"          </tr>"
+	""
+	""
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=link%%3Awww.yahoo.com><b>link:</b>www.yahoo.com</a></td>"
+	"            <td>All the pages that link to www.yahoo.com.</td>"
+	"          </tr>"
+	""
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=sitelink%%3Awww.yahoo.com><b>sitelink:</b>www.yahoo.com</a></td>"
+	"            <td>All the pages that link to any page on www.yahoo.com.</td>"
+	"          </tr>"
+	""
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=ext%%3Atxt><b>ext:</b>txt</a></td>"
+	"            <td>All the pages whose url ends in the .txt extension.</td>"
+	"          </tr>"
+	""
+	""
+	"          <tr> "
+	"            <td style=padding-bottom:12px;>&nbsp;</td>"
+	"            <td style=padding-bottom:12px;>&nbsp;</td>"
+	"          </tr>"
+	""
+	"<tr bgcolor=#0340fd>"
+	""
+	"            <th><font color=33dcff>Boolean Search</font></th>"
+	"            <th><font color=33dcff>Description</font></th>"
+	""
+	"          </tr>"
+	""
+	"          <tr> "
+	"            <td colspan=2 bgcolor=#FFFFCC><center>"
+	"                Note: boolean operators must be in UPPER CASE. "
+	"              </td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+AND+dog>cat&nbsp;AND&nbsp;dog</a></td>"
+	"            <td>Search results have the word <em>cat</em> AND the word <em>dog</em> "
+	"              in them.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=cat+OR+dog>cat&nbsp;OR&nbsp;dog</a></td>"
+	"            <td>Search results have the word <em>cat</em> OR the word <em>dog</em> "
+	"              in them, but preference is given to results that have both words.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+dog+OR+pig>cat&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td>Search results have the two words <em>cat</em> and <em>dog</em> "
+	"              OR search results have the word <em>pig</em>, but preference is "
+	"              given to results that have all three words. This illustrates how "
+	"              the individual words of one operand are all required for that operand "
+	"              to be true.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%22cat+dog%%22+OR+pig>\"cat&nbsp;dog\"&nbsp;OR&nbsp;pig</a></td>"
+	"            <td>Search results have the phrase <em>\"cat dog\"</em> in them OR they "
+	"              have the word <em>pig</em>, but preference is given to results that "
+	"              have both.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>title</a><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>:\"cat "
+	"              dog\" OR pig</a></td>"
+	"            <td>Search results have the phrase <em>\"cat dog\"</em> in their title "
+	"              OR they have the word <em>pig</em>, but preference is given to results "
+	"              that have both.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=cat+OR+dog+OR+pig>cat&nbsp;OR&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td>Search results need only have one word, <em>cat</em> or <em>dog</em> "
+	"              or <em>pig</em>, but preference is given to results that have the "
+	"              most of the words.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+OR+dog+AND+pig>cat&nbsp;OR&nbsp;dog&nbsp;AND&nbsp;pig</a></td>"
+	"            <td>Search results have <em>dog</em> and <em>pig</em>, but they may "
+	"              or may not have <em>cat</em>. Preference is given to results that "
+	"              have all three. To evaluate expressions with more than two operands, "
+	"              as in this case where we have three, you can divide the expression "
+	"              up into sub-expressions that consist of only one operator each. "
+	"              In this case we would have the following two sub-expressions: <em>cat "
+	"              OR dog</em> and <em>dog AND pig</em>. Then, for the original expression "
+	"              to be true, at least one of the sub-expressions that have an OR "
+	"              operator must be true, and, in addition, all of the sub-expressions "
+	"              that have AND operators must be true. Using this logic you can evaluate "
+	"              expressions with more than one boolean operator.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=cat+AND+NOT+dog>cat&nbsp;AND&nbsp;NOT&nbsp;dog</a></td>"
+	"            <td>Search results have <em>cat</em> but do not have <em>dog</em>.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+AND+NOT+%%28dog+OR+pig%%29>cat&nbsp;AND&nbsp;NOT&nbsp;(dog&nbsp;OR&nbsp;pig)</a></td>"
+	"            <td>Search results have <em>cat</em> but do not have <em>dog</em> "
+	"              and do not have <em>pig</em>. When evaluating a boolean expression "
+	"              that contains ()'s you can evaluate the sub-expression in the ()'s "
+	"              first. So if a document has <em>dog</em> or it has <em>pig</em> "
+	"              or it has both, then the expression, <em>(dog OR pig)</em> would "
+	"              be true. So you could, in this case, substitute <em>true</em> for "
+	"              that expression to get the following: <em>cat AND NOT (true) = cat "
+	"              AND false = false</em>. Does anyone actually read this far?</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%28cat+OR+dog%%29+AND+NOT+%%28cat+AND+dog%%29>(cat&nbsp;OR&nbsp;dog)&nbsp;AND&nbsp;NOT&nbsp;(cat&nbsp;AND&nbsp;dog)</a></td>"
+	"            <td>Search results have <em>cat</em> or <em>dog</em> but not both.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td>left-operand&nbsp;&nbsp;OPERATOR&nbsp;&nbsp;right-operand</td>"
+	"            <td>This is the general format of a boolean expression. The possible "
+	"              operators are: OR and AND. The operands can themselves be boolean "
+	"              expressions and can be optionally enclosed in parentheses. A NOT "
+	"              operator can optionally preceed the left or the right operand.</td>"
+	"          </tr>"
+	""
+	"        </table>"
+	""
+	""
+	""
+	"</td></tr>"
+	"</table>"
+	"<br>"
+		      );
+
+
+	//sb.safePrintf("</form>\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("<br><br>\n");
+
+	printNav ( sb , hr );
+
+	g_httpServer.sendDynamicPage (sock, 
+				      sb.getBufStart(), 
+				      sb.length(),
+				      3600, // cachetime
+				      false,// post?
+				      "text/html",
+				      200, // http status
+				      NULL, // cookie
+				      "UTF-8");
+
+	return true;
 }
 

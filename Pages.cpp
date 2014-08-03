@@ -2513,8 +2513,8 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	//p.safePrintf("</td></tr></table><br><br>");
 
 
-	 p.safePrintf("<a href=/><img border=0 width=500 "
-	 	      "height=122 src=/logo-med.jpg></a>\n");
+	// p.safePrintf("<a href=/><img border=0 width=500 "
+	// 	      "height=122 src=/logo-med.jpg></a>\n");
 
 	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
 	//	      "height=44 src=/gigablast.jpg></a>\n");

@@ -1186,6 +1186,15 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//if ( ! strncmp ( path ,"/help.html", pathLen ) )
 	//	return sendPageAbout ( s , r , path );
 
+	if ( ! strncmp ( path ,"/adv.html", pathLen ) )
+		return sendPageAdvanced ( s , r );
+
+	if ( ! strncmp ( path ,"/about.html", pathLen ) )
+		return sendPageAbout ( s , r );
+
+	if ( ! strncmp ( path ,"/help.html", pathLen ) )
+		return sendPageHelp ( s , r );
+
 	if ( ! strncmp ( path ,"/api.html", pathLen ) )
 		return sendPageAPI ( s , r  );
 	if ( ! strncmp ( path ,"/api", pathLen ) )
