@@ -44,6 +44,7 @@ bool sendPageRoot ( TcpSocket *s, HttpRequest *r ){
 
 bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 
+	/*
 	char *root       = "";
 	char *rootSecure = "";
 	if ( g_conf.m_isMattWells ) {
@@ -86,7 +87,11 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 	    sb.safePrintf("&nbsp; &nbsp; &nbsp; [<a style=color:green; "
 			  "href=\"/admin/settings\">"
 			  "Admin</a>]");
-	sb.safePrintf("</p></b></center></body></html>");
+	    sb.safePrintf("</p></b></center>");
+	*/
+
+	sb.safePrintf("</TD></TR></TABLE>"
+		      "</body></html>");
 	return true;
 }
 
@@ -634,6 +639,186 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
+bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
+
+	sb.safePrintf("<html>\n");
+	sb.safePrintf("<head>\n");
+	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
+	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
+	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	sb.safePrintf("<title>Gigablast - "
+		      "An Alternative Open Source Search Engine</title>\n");
+	sb.safePrintf("<style><!--\n");
+	sb.safePrintf("body {\n");
+	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb.safePrintf("color: #000000;\n");
+	sb.safePrintf("font-size: 12px;\n");
+	sb.safePrintf("margin: 20px 5px;\n");
+	sb.safePrintf("letter-spacing: 0.04em;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf("a {text-decoration:none;}\n");
+	//sb.safePrintf("a:link {color:#00c}\n");
+	//sb.safePrintf("a:visited {color:#551a8b}\n");
+	//sb.safePrintf("a:active {color:#f00}\n");
+	sb.safePrintf(".bold {font-weight: bold;}\n");
+	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
+	sb.safePrintf(".url {color:#008000;}\n");
+	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf("table {\n");
+	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb.safePrintf("color: #000000;\n");
+	sb.safePrintf("font-size: 12px;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf(".directory {font-size: 16px;}\n"
+		      ".nav {font-size:20px;align:right;}\n"
+		      );
+	sb.safePrintf("-->\n");
+	sb.safePrintf("</style>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("</head>\n");
+	sb.safePrintf("<script>\n");
+	sb.safePrintf("<!--\n");
+	sb.safePrintf("function x(){document.f.q.focus();}\n");
+	sb.safePrintf("// --></script>\n");
+	sb.safePrintf("<body onload=\"x()\">\n");
+	//sb.safePrintf("<body>\n");
+	//g_proxy.insertLoginBarDirective ( &sb );
+
+	//
+	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
+	//
+
+
+	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+		      "\n<TR>\n");
+
+
+	class MenuItem {
+	public:
+		char *m_text;
+		char *m_url;
+	};
+
+	static MenuItem mi[] = {
+
+		{"SEARCH","/"},
+		{"DIRECTORY","/Top"},
+		{"ADVANCED","/adv.html"},
+		{"ADD URL","/addurl"},
+		{"ABOUT","/about.html"},
+		{"HELP","/help.html"},
+		{"API","/api"}
+	};
+
+	//
+	// first the nav column
+	//
+	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+		      "valign=top "
+		      "style=\""
+		      "border-right:3px solid blue;"
+		      "\">"
+
+		      "<br>"
+		      "<br>"
+		      "<br>"
+		      "<br>"
+		      );
+
+	long n = sizeof(mi) / sizeof(MenuItem);
+
+	for ( long i = 0 ; i < n ; i++ ) {
+
+		sb.safePrintf(
+			      "<a href=%s>"
+			      "<div style=\""
+			      "padding:5px;"
+			      "position:relative;"
+			      "text-align:right;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-color:blue;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "font-size:14px;"
+			      "x-overflow:;"
+			      , mi[i].m_url
+			      );
+		if ( i == pageNum )
+			sb.safePrintf("color:black;"
+				      "background-color:white;");
+		else
+			sb.safePrintf("color:white;"
+				      "background-color:blue;");
+
+		sb.safePrintf("\">"
+			      // make button wider
+			      "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; "
+			      "<b>%s</b> &nbsp; &nbsp;"
+			      , mi[i].m_text
+			      );
+		//
+		// begin hack: white out the blue border line!!
+		//
+		if ( i == pageNum )
+			sb.safePrintf(
+				      "<div style=padding:5px;top:0;"
+				      "background-color:white;"
+				      "display:inline-block;"
+				      "position:absolute;>"
+				      "&nbsp;"
+				      "</div>"
+				      );
+		// end hack
+		sb.safePrintf(
+			      "</div>"
+			      "</a>"
+			      "<br>"
+			      );
+	}
+
+	// admin link
+	sb.safePrintf(
+		      "<a href=/admin/settings>"
+		      "<div style=background-color:green;"
+		      "padding:5px;"
+		      "text-align:right;"
+		      "border-width:3px;"
+		      "border-right-width:0px;"
+		      "border-style:solid;"
+		      "margin-left:10px;"
+		      "border-color:white;"
+		      "border-top-left-radius:10px;"
+		      "border-bottom-left-radius:10px;"
+		      "font-size:14px;"
+		      "color:white;"
+		      "cursor:hand;"
+		      "cursor:pointer;\" "
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\""
+		      ">"
+		      "<b>ADMIN</b> &nbsp; &nbsp;"
+		      "</div>"
+		      "</a>"
+		      "<br>"
+		      );
+
+
+	//
+	// now the MAIN column
+	//
+	sb.safePrintf("\n</TD><TD valign=top style=padding-left:20px;>\n");
+
+	return true;
+}
+
 bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	SearchInput si;
@@ -660,60 +845,29 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
+	printFrontPageShell ( sb ,0 );
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
-	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
-	sb.safePrintf("<title>Gigablast - "
-		      "An Alternative Open Source Search Engine</title>\n");
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a:link {color:#00c}\n");
-	sb.safePrintf("a:visited {color:#551a8b}\n");
-	sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n");
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
-	//sb.safePrintf("<body>\n");
-	//g_proxy.insertLoginBarDirective ( &sb );
-	sb.safePrintf("<br><br>\n");
-// try to avoid using https for images. it is like 10ms slower.
 
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=http://www.gigablast.com/logo-"
-			      "med.jpg></a>\n");
-	else
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=/logo-med.jpg></a>\n");
+	//sb.safePrintf("<br><br>\n");
+	// try to avoid using https for images. it is like 10ms slower.
+
+	// if ( g_conf.m_isMattWells )
+	// 	sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	// 		      "height=122 src=http://www.gigablast.com/logo-"
+	// 		      "med.jpg></a>\n");
+	// else
+
+
+	 sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	 	      "height=122 src=/logo-med.jpg></a>\n");
+
+	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
+	//	      "height=44 src=/gigablast.jpg></a>\n");
+
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
+	/*
 	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; ");
 	if ( g_conf.m_isMattWells )
 		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo</a> "
@@ -727,6 +881,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		      "Gigablast's index\">add url</a>");
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
+	*/
 	// submit to https now
 	sb.safePrintf("<form method=%s "
 		      "action=/search name=f>\n", method);
@@ -735,8 +890,32 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
 			      cr->m_coll);
 
-	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
 
+	// put search box in a box
+	sb.safePrintf("<div style=background-color:blue;padding:20px;"
+		      "border-radius:20px;"
+		      ">");
+
+
+	sb.safePrintf("<input name=q type=text "
+		      "style=\""
+		      //"width:%lipx;"
+		      "height:26px;"
+		      "padding:0px;"
+		      "font-weight:bold;"
+		      "padding-left:5px;"
+		      //"border-radius:10px;"
+		      "margin:0px;"
+		      "border:1px inset lightgray;"
+		      "background-color:#ffffff;"
+		      "font-size:18px;"
+		      "\" "
+
+		      "size=40 value=\"\">&nbsp;"
+
+		      "<input type=\"submit\" value=\"Search\">\n");
+
+	sb.safePrintf("</div>\n");
 
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
@@ -756,6 +935,10 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// print any red boxes we might need to
 	if ( printRedBox2 ( &sb , true ) )
 		sb.safePrintf("<br>\n");
+
+	/*
+
+	  do not show table for open source installs
 
 	sb.safePrintf("<table cellpadding=3>\n");
 	sb.safePrintf("\n");
@@ -814,6 +997,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		  );
 	sb.safePrintf("</td></tr>\n");
 
+	*/
 
 	/*
 	sb.safePrintf("<tr valign=top>\n");
@@ -853,6 +1037,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("\n");
 	*/
 
+	/*
 	if ( g_conf.m_isMattWells ) {
 		sb.safePrintf("<tr valign=top>\n");
 		sb.safePrintf("<td align=center><center><img src=%s/dollargear.png "
@@ -862,6 +1047,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=http://www.gigablast.com/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
 		sb.safePrintf("</td></tr>\n");
 	}
+	*/
 
 	/*
 	sb.safePrintf("<tr valign=top>\n");
@@ -915,7 +1101,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
-	sb.safePrintf("</table>\n");
+	//sb.safePrintf("</table>\n");
 	sb.safePrintf("<br><br>\n");
 	printNav ( sb , r );
 	return true;
@@ -923,72 +1109,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	sb.safePrintf("<title>Gigablast - Add Url</title>\n");
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a:link {color:#00c}\n");
-	sb.safePrintf("a:visited {color:#551a8b}\n");
-	sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n");
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	//sb.safePrintf("<body onload=\"x()\">\n");
-	/*
-	if ( url ) {
-		sb.safePrintf(
-			      "<body "
-			      "onLoad=\""
-			      "var client = new XMLHttpRequest();\n"
-			      "client.onreadystatechange = handler;\n"
-			      "var url='/addurl?urls="
-			      );
-		sb.urlEncode ( url );
-		// propagate "admin" if set
-		//long admin = hr->getLong("admin",-1);
-		//if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
-		// provide hash of the query so clients can't just pass in
-		// a bogus id to get search results from us
-		unsigned long h32 = hash32n(url);
-		if ( h32 == 0 ) h32 = 1;
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb.safePrintf("&id=%lu&rand=%llu';\n"
-			      "client.open('GET', url );\n"
-			      "client.send();\n"
-			      "\">"
-			      , h32
-			      , rand64
-			      );
-
-	}
-	else {
-		sb.safePrintf("<body>");
-	}
-	*/
-	sb.safePrintf("<body>");
+	printFrontPageShell ( sb , 3 );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1002,48 +1123,69 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		      "</script>\n");
 
 
-	//g_proxy.insertLoginBarDirective ( &sb );
 
-	sb.safePrintf("\n");
-	sb.safePrintf("<br><br>\n");
 
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=http://www.gigablast.com/logo-"
-			      "med.jpg></a>\n");
-	else
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=/logo-med.jpg></a>\n");
+	 sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	 	      "height=122 src=/logo-med.jpg></a>\n");
+
+	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
+	//	      "height=44 src=/gigablast.jpg></a>\n");
+
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
+	/*
+	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; ");
 	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
-			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
-	sb.safePrintf("<a href=\"/Top\">directory</a> "
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo</a> "
+			      "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      );
+	sb.safePrintf( "<a href=\"/Top\">directory</a> "
 		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
-	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
-		      "index\">"
-		      "add url</b>");
+	sb.safePrintf("<a href=/addurl title=\"Instantly add your url to "
+		      "Gigablast's index\">add url</a>");
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
-	sb.safePrintf("<form method=get action=/addurl name=f>\n");
-
+	*/
+	// submit to https now
+	sb.safePrintf("<form method=GET "
+		      "action=/addurl name=f>\n" );
 
 	CollectionRec *cr = g_collectiondb.getRec ( r );
-	// the collection we want to add the url to
-	char *coll = NULL;
-	if ( cr ) 
-		coll = cr->m_coll;
-	if ( coll )
-		sb.safePrintf("<input type=hidden name=c value=\"%s\">",coll);
-	if ( ! coll ) 
-		coll = "";
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
 
-	sb.safePrintf("<input name=urls type=text size=60 value=\"");
+
+	// put search box in a box
+	sb.safePrintf("<div style=background-color:blue;padding:20px;"
+		      "border-radius:20px;"
+		      ">");
+
+
+	sb.safePrintf("<input name=urls type=text "
+		      "style=\""
+		      //"width:%lipx;"
+		      "height:26px;"
+		      "padding:0px;"
+		      "font-weight:bold;"
+		      "padding-left:5px;"
+		      //"border-radius:10px;"
+		      "margin:0px;"
+		      "border:1px inset lightgray;"
+		      "background-color:#ffffff;"
+		      "font-size:18px;"
+		      "\" "
+
+		      "size=40 value=\""
+		      );
+
+
+
 	if ( url ) {
 		SafeBuf tmp;
 		tmp.safePrintf("%s",url);
@@ -1055,6 +1197,14 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		sb.safePrintf("http://");
 	sb.safePrintf("\">&nbsp;<input type=\"submit\" value=\"Add Url\">\n");
 	sb.safePrintf("\n");
+
+
+	sb.safePrintf("</div>\n");
+
+	sb.safePrintf("\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+
 
 	// if addurl is turned off, just print "disabled" msg
 	char *msg = NULL;
@@ -1134,88 +1284,55 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 		return printTopDirectory ( sb , format );
 
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\">");
-	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
-	sb.safePrintf("<title>Gigablast</title>\n");
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a:link {color:#00c}\n");
-	sb.safePrintf("a:visited {color:#551a8b}\n");
-	sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n");
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
-	sb.safePrintf("<body>\n");
-	sb.safePrintf("<br><br>\n");
-// try to avoid using https for images. it is like 10ms slower.
+	printFrontPageShell ( sb , 1 );
 
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=http://www.gigablast.com/logo-"
-			      "med.jpg></a>\n");
-	else
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=/logo-med.jpg></a>\n");
+
+	 sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	 	      "height=122 src=/logo-med.jpg></a>\n");
+
+	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
+	//	      "height=44 src=/gigablast.jpg></a>\n");
+
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
-
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
-			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
-
-	sb.safePrintf("<a href=\"/Top\"><b>directory</b></a> "
-		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
-
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a href=http://www.gigablast.com/events>"
-			      "events</a>"
-			      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
-
-	sb.safePrintf("<a href=/adv.html>advanced search</a>");
-	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
-	char *root = "";
-	if ( g_conf.m_isMattWells )
-		root = "http://www.gigablast.com";
-	sb.safePrintf("<a href=%s/addurl title=\"Instantly add your url to "
-		      "Gigablast's index\">add url</a>"
-		      , root );
-	sb.safePrintf("\n");
-	sb.safePrintf("<br><br>\n");
-	// submit to HTTPS now
-	sb.safePrintf("<form method=get "
+	// submit to https now
+	sb.safePrintf("<form method=GET "
 		      "action=/search name=f>\n");
-	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
-	sb.safePrintf("<input type=hidden "
-		      "name=prepend value=\"gbipcatid:2\">");
+
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
+
+	// put search box in a box
+	sb.safePrintf("<div style=background-color:blue;padding:20px;"
+		      "border-radius:20px;"
+		      ">");
+
+
+	sb.safePrintf("<input name=q type=text "
+		      "style=\""
+		      //"width:%lipx;"
+		      "height:26px;"
+		      "padding:0px;"
+		      "font-weight:bold;"
+		      "padding-left:5px;"
+		      //"border-radius:10px;"
+		      "margin:0px;"
+		      "border:1px inset lightgray;"
+		      "background-color:#ffffff;"
+		      "font-size:18px;"
+		      "\" "
+
+		      "size=40 value=\"\">&nbsp;"
+
+		      "<input type=\"submit\" value=\"Search\">\n");
+
+	sb.safePrintf("</div>\n");
+
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
