@@ -1686,6 +1686,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	//
 	// print sort by date options
 	//
+	/*
 	if ( format == FORMAT_HTML )
 		sb.safePrintf(
 			      "<div id=best "
@@ -1711,7 +1712,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 			      "</div>"
 
 			      "<br>"
-
+	*/
 			      /*
 			      "<div id=newsest "
 			      "style="
@@ -1763,7 +1764,6 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 			      "<br>"
 
 			      */
-			      );
 
 
 	//
@@ -4558,7 +4558,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "cursor:hand;"
 			       "cursor:pointer;"
 			       "color:blue;>"
-			       "<u>scoring</u>"
+			       "scoring"
 			       "</a>"
 			       ,ix
 			       );
@@ -4589,8 +4589,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	// show rainbow sections link
 	//
-	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
-		sb->safePrintf ( " - <a style=color:green; href=\""
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a style=color:blue; href=\""
 				 "/get?"
 				 // show rainbow sections
 				 "page=4&"
@@ -4607,8 +4607,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 mr->m_docId ); 
 	}
 
-	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
-		sb->safePrintf ( " - <a style=color:green; href=\""
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a style=color:blue; href=\""
 				 "/get?"
 				 // show rainbow sections
 				 "page=1&"
@@ -4625,20 +4625,20 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 mr->m_docId ); 
 	}
 
-	// this stuff is secret just for local guys!
-	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
+	// this stuff is secret just for local guys! not any more
+	if ( si->m_format == FORMAT_HTML ) {
 		// now the ip of url
 		//long urlip = msg40->getIp(i);
 		// don't combine this with the sprintf above cuz
 		// iptoa uses a static local buffer like ctime()
 		sb->safePrintf(//"<br>"
-			      " - <a style=color:green; href=\"/search?"
+			      " - <a style=color:blue; href=\"/search?"
 			      "c=%s&sc=1&dr=0&q=ip:%s&"
 			      "n=100&usecache=0\">%s</a>",
 			      coll,iptoa(mr->m_ip), iptoa(mr->m_ip) );
 		// ip domain link
 		unsigned char *us = (unsigned char *)&mr->m_ip;//urlip;
-		sb->safePrintf (" - <a style=color:green; "
+		sb->safePrintf (" - <a style=color:blue; "
 				"href=\"/search?c=%s&sc=1&dr=0&n=100&"
 				"q=ip:%li.%li.%li&"
 				"usecache=0\">%li.%li.%li</a>",
@@ -4675,10 +4675,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		*/
 	}
 
-	// admin always gets the site: option so he can ban
-	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
-		char dbuf [ MAX_URL_LEN ];
-		long dlen = uu.getDomainLen();
+	char dbuf [ MAX_URL_LEN ];
+	long dlen = uu.getDomainLen();
+	if ( si->m_format == FORMAT_HTML ) {
 		memcpy ( dbuf , uu.getDomain() , dlen );
 		dbuf [ dlen ] = '\0';
 		// newspaperarchive urls have no domain
@@ -4687,19 +4686,27 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			memcpy ( dbuf , uu.getHost() , dlen );
 			dbuf [ dlen ] = '\0';
 		}
+	}
+
+
+	// admin always gets the site: option so he can ban
+	if ( si->m_format == FORMAT_HTML ) {
 		sb->safePrintf (" - "
-			       " <a style=color:green; href=\"/search?"
+			       " <a style=color:blue; href=\"/search?"
 			       "q=site%%3A%s&sc=0&c=%s\">"
-			       "%s</a> " ,
-			       dbuf ,
-			       coll , dbuf );
+			       "domain</a> " ,
+				dbuf ,
+				coll );//, dbuf );
+	}
+
+	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
 		char *un = "";
 		long  banVal = 1;
 		if ( mr->m_isBanned ) {
 			un = "UN";
 			banVal = 0;
 		}
-		sb->safePrintf(" - "
+		sb->safePrintf("<br>"
 			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
@@ -4756,6 +4763,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		
 		//sb->safePrintf ("] ");
 		
+		/*
+		  put this on 'page info'
 		long urlFilterNum = (long)mr->m_urlFilterNum;
 		if(urlFilterNum != -1) {
 			sb->safePrintf (" - <a style=color:green; "
@@ -4764,7 +4773,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				       coll ,
 				       urlFilterNum);
 		}					
-
+		*/
 		
 	}
 

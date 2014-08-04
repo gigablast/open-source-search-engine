@@ -955,9 +955,26 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		      "font-size:18px;"
 		      "\" "
 
-		      "size=40 value=\"\">&nbsp;"
+		      "size=40 value=\"\">&nbsp; &nbsp;"
 
-		      "<input type=\"submit\" value=\"Search\">\n");
+		      //"<input type=\"submit\" value=\"Search\">"
+
+		      "<div onclick=document.f.submit(); "
+		      "style=border-radius:28px;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "border-color:white;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "padding:12px;"
+		      "width:20px;"
+		      "height:20px;"
+		      "display:inline-block;"
+		      "background-color:green;color:white;>"
+		      "<b style=margin-left:-5px;font-size:18px;>GO</b>"
+		      "</div>"
+		      "\n"
+		      );
 
 	sb.safePrintf("</div>\n");
 
@@ -1236,7 +1253,24 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	}
 	else
 		sb.safePrintf("http://");
-	sb.safePrintf("\">&nbsp;<input type=\"submit\" value=\"Add Url\">\n");
+	sb.safePrintf("\">&nbsp; &nbsp;"
+		      //"<input type=\"submit\" value=\"Add Url\">\n"
+		      "<div onclick=document.f.submit(); "
+		      "style=border-radius:28px;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "border-color:white;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "padding:12px;"
+		      "width:20px;"
+		      "height:20px;"
+		      "display:inline-block;"
+		      "background-color:green;color:white;>"
+		      "<b style=margin-left:-5px;font-size:18px;>GO</b>"
+		      "</div>"
+		      "\n"
+		      );
 	sb.safePrintf("\n");
 
 
@@ -1367,9 +1401,26 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 		      "font-size:18px;"
 		      "\" "
 
-		      "size=40 value=\"\">&nbsp;"
+		      "size=40 value=\"\">&nbsp; &nbsp;"
 
-		      "<input type=\"submit\" value=\"Search\">\n");
+		      //"<input type=\"submit\" value=\"Search\">\n");
+
+		      "<div onclick=document.f.submit(); "
+		      "style=border-radius:28px;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "border-color:white;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "padding:12px;"
+		      "width:20px;"
+		      "height:20px;"
+		      "display:inline-block;"
+		      "background-color:green;color:white;>"
+		      "<b style=margin-left:-5px;font-size:18px;>GO</b>"
+		      "</div>"
+		      "\n"
+		      );
 
 	sb.safePrintf("</div>\n");
 
@@ -2226,11 +2277,13 @@ void doneInjectingWrapper3 ( void *st ) {
 				      rand32,
 				      coll);
 			sb.urlEncode(url);
-			sb.safePrintf(">Check it</a> or "
-				      "<a href=http://www.gigablast.com/seo?u=");
-			sb.urlEncode(url);
-			sb.safePrintf(">SEO it</a>"
-				      ".</b>");
+			sb.safePrintf(">Check it</a>"// or "
+				      //"<a href=http://www.gigablast."
+				      //"com/seo?u=");
+				      //sb.urlEncode(url);
+				      //sb.safePrintf(">SEO it</a>"
+				      "."
+				      "</b>");
 		}
 			
 		//pm = msg;

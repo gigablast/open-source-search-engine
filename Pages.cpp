@@ -933,7 +933,79 @@ bool Pages::getNiceness ( long page ) {
 //
 // Convenient html printing routines
 //
-//////////////n////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+bool printNavButton ( char *text , char *link , bool isHighlighted ,
+		      SafeBuf *sb ) {
+
+
+	if ( isHighlighted )
+		sb->safePrintf(
+			       "<a style=text-decoration:none; href=%s>"
+			       "<div "
+			       "style=\""
+			       "padding:4px;"
+			       "margin-left:10px;"
+			       "background-color:white;"
+			       "border-top-left-radius:10px;"
+			       "border-bottom-left-radius:10px;"
+			       "border-width:3px;"
+			       "border-style:solid;"
+			       "margin-right:-3px;"
+			       "border-color:blue;"
+			       "border-right-color:white;"
+			       "overflow-y:auto;"
+			       "overflow-x:hidden;"
+			       "line-height:23px;"
+			       "text-align:right;"
+			       "\""
+			       ">"
+			       "<b>%s</b> &nbsp; &nbsp;"
+			       "</div>"
+			       "</a>"
+			       "<br>"
+			       , link
+			       , text
+			       );
+
+	else
+		sb->safePrintf(
+			       "<a style=text-decoration:none; href=%s>"
+			       "<div "
+
+			       " onmouseover=\""
+			       "this.style.backgroundColor='lightblue';"
+			       "this.style.color='black';\""
+			       " onmouseout=\""
+			       "this.style.backgroundColor='blue';"
+			       "this.style.color='white';\""
+
+			       "style=\""
+			       "padding:4px;" // same as TABLE_STYLE
+			       "margin-left:10px;"
+			       "background-color:blue;"//#d0d0d0;"
+			       "border-top-left-radius:10px;"
+			       "border-bottom-left-radius:10px;"
+			       "border-color:white;"
+			       "border-width:3px;"
+			       "border-right-width:0px;"
+			       "border-style:solid;"
+			       "text-align:right;"
+			       "overflow-y:auto;"
+			       "overflow-x:hidden;"
+			       "line-height:23px;"
+			       "color:white;"
+			       "\""
+			       ">"
+			       "<b>%s</b> &nbsp; &nbsp;"
+			       "</div>"
+			       "<br>"
+			       "</a>"
+			       , link
+			       , text
+			       );
+	return true;
+}
 
 bool Pages::printAdminTop (SafeBuf     *sb   ,
 			   TcpSocket   *s    ,
@@ -1011,12 +1083,61 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// center all
 	//sprintf ( p , "<center>\n");
 	//p += gbstrlen ( p );
-	// table
-	sb->safePrintf( "<TABLE "
-			"cellpadding=5 border=0>"
-			"<tr><td valign=top>");
+
+
+	// table. left column is logo and collection name list.
+	// right column is the other crap.
+	//sb->safePrintf( "<TABLE "
+	//		"cellpadding=5 border=0>"
+	//		"<tr><td valign=top>");
 	// print the logo in upper left corner
-	status &= printLogo ( sb , coll );
+	// this logo sucks, do the new one, a yellow div with a hole in it
+	// for the rocket
+	//status &= printLogo ( sb , coll );
+
+
+	//
+	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
+	//
+	sb->safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+		      "\n<TR>\n");
+
+	//
+	// first the nav column
+	//
+	sb->safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+		      "valign=top "
+		      "style=\""
+		      "width:210px;"
+		      "border-right:3px solid blue;"
+		      "\">"
+
+		      "<br>"
+
+		      "<center>"
+		      "<a href=/>"
+		      "<div style=\""
+		      "background-color:white;"
+		      "padding:10px;"
+		      "border-radius:100px;"
+		      "border-color:blue;"
+		      "border-width:3px;"
+		      "border-style:solid;"
+		      "width:100px;"
+		      "height:100px;"
+		      "\">"
+		      "<br style=line-height:10px;>"
+		      "<img width=54 height=79 alt=HOME src=/rocket.jpg>"
+		      "</div>"
+		      "</a>"
+		      "</center>"
+
+		      "<br>"
+		      "<br>"
+		      );
+
+
+
 
 	/*
 	sb->safePrintf("<br><br><br>");
@@ -1043,11 +1164,95 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
 	*/
 
+        bool isBasic = false;
+	if ( page == PAGE_BASIC_SETTINGS ) isBasic = true;
+	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
+	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
+	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
+	if ( page == PAGE_BASIC_SECURITY ) isBasic = true;
+	if ( page == PAGE_BASIC_SEARCH ) isBasic = true;
+
+
+	printNavButton ( "BASIC" , "/admin/settings", isBasic , sb );
+	printNavButton ( "ADVANCED" , "/admin/master", ! isBasic , sb );
+
+
+	// collections box
+	sb->safePrintf(
+		       //"<TR>"
+		       //"<TD valign=top>"
+		       "<div "
+		       "style=\""
+		       //"max-height:600px;"
+		       //"max-width:200px;"
+		       //"min-width:200px;"
+		       "padding:4px;" // same as TABLE_STYLE
+		       "margin-left:10px;"
+		       "background-color:white;"//#d0d0d0;"
+		       "border-top-left-radius:10px;"
+		       "border-bottom-left-radius:10px;"
+		       "border-color:blue;"
+		       //"border:2px #606060 solid;"
+		       "border-width:3px;"
+		       "border-style:solid;"
+		       "margin-right:-3px;"
+		       "border-right-color:white;"
+		       //"border-width:2px;"
+		       //"border-color:#606060;"
+		       "overflow-y:auto;"
+		       "overflow-x:hidden;"
+		       "line-height:23px;"
+		       "color:black;"
+		       "\""
+		       ">"
+		       );
+	// collection under that
+	//status&=printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+
+	// collection navbar
+	status&=printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+
+
+	sb->safePrintf("</div>");
+
+	sb->safePrintf("<div style=padding-left:10px;>"
+		       "<br>"
+		       "<b>Key</b>"
+		       "<br>"
+		       "<br>"
+		       );
+	sb->safePrintf(
+		       "<font color=black>"
+		       "&#x25cf;</font> spider is done"
+		       "<br>"
+
+		       "<font color=orange>"
+		       "&#x25cf;</font> spider is paused"
+		       "<br>"
+
+		       "<font color=green>"
+		       "&#x25cf;</font> spider is active"
+		       "<br>"
+
+		       "<font color=gray>"
+		       "&#x25cf;</font> spider queue is empty"
+		       "<br>"
+		       "</div>"
+		       );
+
+
+	sb->safePrintf("</TD>");
+
 
 	//
 	// begin the 2nd column of the display
 	//
-	sb->safePrintf("</TD>\n<TD>");
+
+	// the controls will go here
+	sb->safePrintf("<TD valign=top>"
+		       "<div style=padding-left:20px; "
+		       "id=pane2>");
+
 
 
 	// logout link on far right
@@ -1091,17 +1296,10 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( added )
 		sb->safePrintf("%s",mb.getBufStart());
 
-        bool isBasic = false;
-	if ( page == PAGE_BASIC_SETTINGS ) isBasic = true;
-	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
-	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
-	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
-	if ( page == PAGE_BASIC_SECURITY ) isBasic = true;
-	if ( page == PAGE_BASIC_SEARCH ) isBasic = true;
-
 	//
 	// print breadcrumb. main > Basic > Settings
 	//
+	/*
 	char *menu = "advanced";
 	if ( isBasic ) menu = "basic";
 	sb->safePrintf("<br>");
@@ -1117,9 +1315,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       //,s_pages[page].m_filename , coll
 		       //,s_pages[page].m_filename , coll
 		       );
+	*/
 
-
-
+	/*
 	// print Basic | Advanced links
 	if ( isBasic )
 		sb->safePrintf ( "<b>"
@@ -1159,68 +1357,18 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 				 , coll
 				 , coll
 				 );
-
 	sb->safePrintf("<br><br>");
+	*/
+
 
 	// print the menu links under that
 	status &= printAdminLinks ( sb, page , coll , isBasic );
 
+	sb->safePrintf("<br>");
+
 	// begin 2nd row in big table
-	sb->safePrintf("</td></TR>");
+	//sb->safePrintf("</td></TR>");
 
-	sb->safePrintf(
-		       "<TR>"
-		       "<TD valign=top>"
-		       "<div "
-		       "style=\""
-		       "max-height:600px;"
-		       "max-width:200px;"
-		       "min-width:200px;"
-		       "padding:4px;" // same as TABLE_STYLE
-		       "background-color:#d0d0d0;"
-		       "border-radius:10px;"
-		       "border:2px #606060 solid;"
-		       //"border-width:2px;"
-		       //"border-color:#606060;"
-		       "overflow-y:auto;"
-		       "overflow-x:hidden;"
-		       "line-height:23px;"
-		       "\""
-		       ">"
-		       );
-	// collection under that
-	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
-
-	sb->safePrintf("</div>");
-
-	sb->safePrintf("<br>"
-		       "<b>Key</b>"
-		       "<br>"
-		       "<br>"
-		       );
-	sb->safePrintf(
-		       "<font color=black>"
-		       "&#x25cf;</font> spider is done"
-		       "<br>"
-
-		       "<font color=orange>"
-		       "&#x25cf;</font> spider is paused"
-		       "<br>"
-
-		       "<font color=green>"
-		       "&#x25cf;</font> spider is active"
-		       "<br>"
-
-		       "<font color=gray>"
-		       "&#x25cf;</font> spider queue is empty"
-		       "<br>"
-		       );
-
-
-	sb->safePrintf("</TD>");
-
-	// the controls will go here
-	sb->safePrintf("<TD valign=top>");
 
 	return true;
 }
@@ -1420,6 +1568,7 @@ bool Pages::printAdminBottom ( SafeBuf *sb ) {
 			       "<br>\n" ) )
 		status = false;
 	if ( ! sb->safePrintf(
+			      "</div>" // id=pane2
 			      "</TD>"
 			      "</TR>"
 			      "</TABLE>\n"
