@@ -2474,6 +2474,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      numResults );
 	*/
 
+	/*
 	// convenient admin link
 	if ( isAdmin ) {
 		sb->safePrintf(" &nbsp; "
@@ -2618,6 +2619,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      "[cache off]</a>"
 			      " ", st->m_qe );
 	}
+	*/
 
 	// mention ignored query terms
 	// we need to set another Query with "keepAllSingles" set to false
@@ -7035,6 +7037,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	if ( catId >= 0 ) {
 		printDmozRadioButtons(sb,catId);
 	}
+	/*
 	else {
 		sb->safePrintf("Try your search on: "
 			      "&nbsp;&nbsp; "
@@ -7048,6 +7051,51 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		sb->urlEncode ( qstr );		
 		sb->safePrintf (">bing</a>");
 	}
+	*/
+	
+	// bar of drop down menus
+	sb->safePrintf(
+		       "<div style=color:gray;>"
+		       //"Search on %c%c%c"
+		       //" &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;>"
+		       "Any time %c%c%c" 
+		       "</span>"
+		       " &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;>"
+		       "Sort by relevance %c%c%c"
+		       "</span>"
+		       " &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;>"
+		       "Any language %c%c%c"
+		       "</span>"
+		       " &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;>"
+		       "Any filetype %c%c%c"
+		       "</span>"
+		       " &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;>"
+		       "Facets %c%c%c"
+		       "</span>"
+		       " &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;>"
+		       "Output %c%c%c" // html xml json
+		       "</span>"
+		       " &nbsp; &nbsp; "
+		       "<span style=cursor:pointer;cursor:hand;color:green;>"
+		       "Admin %c%c%c"
+		       "</span>"
+		       "<br>"
+		       //,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       ,0xe2,0x96,0xbc
+		       );
+
 	sb->safePrintf( "</form>\n"
 		       "</td>"
 		       "</tr>"
