@@ -1546,6 +1546,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	SearchInput *si = &st->m_si;
 	Msg40 *msg40 = &st->m_msg40;
 
+	char format = si->m_format;
+
 	//
 	// BEGIN FACET PRINTING
 	//
@@ -1554,7 +1556,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	// . LATER: show the text string corresponding to the hash
 	//   by looking it up in the titleRec
 	//
-	if ( si->m_format == FORMAT_HTML ) msg40->printFacetTables ( &sb );
+	if ( format == FORMAT_HTML ) msg40->printFacetTables ( &sb );
 	//
 	// END FACET PRINTING
 	//
@@ -1566,7 +1568,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
-	if ( si->m_format != FORMAT_HTML ) numGigabits = 0;
+	if ( format != FORMAT_HTML ) numGigabits = 0;
 
 
 	// print gigabits
@@ -1574,7 +1576,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	//long numCols = 5;
 	//long perRow = numGigabits / numCols;
 
-	if ( numGigabits && si->m_format == FORMAT_HTML )
+	if ( numGigabits && format == FORMAT_HTML )
 		// gigabit unhide function
 		sb.safePrintf (
 				"<script>"
@@ -1593,7 +1595,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 				"</script>\n"
 			       );
 	
-	if ( numGigabits && si->m_format == FORMAT_HTML )
+	if ( numGigabits && format == FORMAT_HTML )
 		sb.safePrintf("<div id=gigabits "
 			      "style="
 			      "padding:5px;"
@@ -1636,47 +1638,247 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
 
 	for ( long i = 0 ; i < numGigabits ; i++ ) {
-		//if ( i > 0 && si->m_format == FORMAT_HTML ) 
+		//if ( i > 0 && format == FORMAT_HTML ) 
 		//	sb.safePrintf("<hr>");
 		//if ( perRow && (i % perRow == 0) )
 		//	sb.safePrintf("</td><td valign=top>");
 		// print all sentences containing this gigabit
 		Gigabit *gi = &gigabits[i];
 		// after the first 3 hide them with a more link
-		if ( i == 3 && si->m_format == FORMAT_HTML ) 
+		if ( i == 1 && format == FORMAT_HTML )  {
+			sb.safePrintf("</span><a onclick="
+				      "\""
+				      "var e = "
+				      "document.getElementById('hidegbits');"
+				      "if ( e.style.display == 'none' ){\n"
+				      "e.style.display = '';\n"
+				      "this.innerHtml='Show less';"
+				      "}"
+				      "else {\n"
+				      "e.style.display = 'none';\n"
+				      "this.innerHtml='Show more';\n"
+				      "}\n"
+				      "\" style=cursor:hand;cursor:pointer;>"
+				      "Show more</a>");
 			sb.safePrintf("<span id=hidegbits "
-				      "style=display:none;>");
+				      "style=display:none;>"
+				      "<br><br>");
+		}
 
 		//printGigabit ( st,sb , msg40 , gi , si );
 		//sb.safePrintf("<br>");
 		printGigabitContainingSentences(st,&sb,msg40,gi,si,
 						&gigabitQuery);
-		sb.safePrintf("<br><br>");
+		if ( format == FORMAT_HTML )
+			sb.safePrintf("<br><br>");
 	}
 
-	if ( numGigabits >= 3 && si->m_format == FORMAT_HTML ) 
-		sb.safePrintf("</span><a onclick="
-			      "\""
-			      "var e = document.getElementById('hidegbits');"
-			      "if ( e.style.display == 'none' ){\n"
-			      "e.style.display = '';\n"
-			      "this.innerHtml='Show less';"
-			      "}"
-			      "else {\n"
-			      "e.style.display = 'none';\n"
-			      "this.innerHtml='Show more';\n"
-			      "}\n"
-			      "\" style=cursor:hand;cursor:pointer;>"
-			      "Show more</a>");
+	//if ( numGigabits >= 1 && format == FORMAT_HTML ) 
 
-	if ( numGigabits && si->m_format == FORMAT_HTML )
+	if ( numGigabits && format == FORMAT_HTML )
 		sb.safePrintf("</td></tr></table></div><br>");
+
+
+	//
+	// now print various knobs
+	//
+
+	//
+	// print sort by date options
+	//
+	if ( format == FORMAT_HTML )
+		sb.safePrintf(
+			      "<div id=best "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:blue;"
+			      "background-color:white;"
+			      "border-right-color:white;"
+			      "margin-right:-3px;"
+			      "text-align:right;"
+			      ">"
+			      "<b>"
+			      "SEARCH TOOLS &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+
+			      "<br>"
+
+			      /*
+			      "<div id=newsest "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:white;"
+			      "background-color:blue;"
+			      "border-right-color:blue;"
+			      "margin-right:0px;"
+			      "text-align:right;"
+			      "color:white;"
+			      ">"
+			      "<b>"
+			      "NEWSET FIRST &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+
+			      "<br>"
+
+			      "<div id=newsest "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:white;"
+			      "background-color:blue;"
+			      "border-right-color:blue;"
+			      "margin-right:0px;"
+			      "text-align:right;"
+			      "color:white;"
+			      ">"
+			      "<b>"
+			      "OLDEST FIRST &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+			      "<br>"
+
+			      */
+			      );
+
+
+	//
+	// print date contraint functions now
+	//
+	if ( format == FORMAT_HTML && 1 == 2)
+		sb.safePrintf(
+			      "<div id=best "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:blue;"
+			      "background-color:white;"
+			      "border-right-color:white;"
+			      "margin-right:-3px;"
+			      "text-align:right;"
+			      ">"
+			      "<b>"
+			      "ANYTIME &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+
+			      "<br>"
+
+			      "<div id=newsest "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:white;"
+			      "background-color:blue;"
+			      "border-right-color:blue;"
+			      "margin-right:0px;"
+			      "text-align:right;"
+			      "color:white;"
+			      ">"
+			      "<b>"
+			      "LAST 24 HOURS &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+
+			      "<br>"
+
+			      "<div id=newsest "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:white;"
+			      "background-color:blue;"
+			      "border-right-color:blue;"
+			      "margin-right:0px;"
+			      "text-align:right;"
+			      "color:white;"
+			      ">"
+			      "<b>"
+			      "LAST 7 DAYS &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+			      "<br>"
+
+			      "<div id=newsest "
+			      "style="
+			      "font-size:14px;"
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:white;"
+			      "background-color:blue;"
+			      "border-right-color:blue;"
+			      "margin-right:0px;"
+			      "text-align:right;"
+			      "color:white;"
+			      ">"
+			      "<b>"
+			      "LAST 30 DAYS &nbsp; &nbsp;"
+			      "</b>"
+			      "</div>"
+			      "<br>"
+
+
+			      );
+
 
 
 	//
 	// now the MAIN column
 	//
-	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
+	if ( format == FORMAT_HTML )
+		sb.safePrintf("\n</TD>"
+			      "<TD valign=top style=padding-left:30px;>\n");
 	return true;
 }
 
