@@ -659,7 +659,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
 	sb.safePrintf("color: #000000;\n");
 	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
+	sb.safePrintf("margin: 0px 0px;\n");
 	sb.safePrintf("letter-spacing: 0.04em;\n");
 	sb.safePrintf("}\n");
 	sb.safePrintf("a {text-decoration:none;}\n");
@@ -852,12 +852,14 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
 
+	sb.safePrintf("<br><br>");
+
 	sb.safePrintf("<a href=/><img border=0 width=470 "
 		      "height=44 src=/gigablast.jpg></a>\n");
 
-	sb.safePrintf("<br>"
-		      "<img border=0 width=470 "
-		      "height=15 src=/bar.jpg>\n");
+	// sb.safePrintf("<br>"
+	// 	      "<img border=0 width=470 "
+	// 	      "height=15 src=/bar.jpg>\n");
 
 	return true;
 }
@@ -901,13 +903,6 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// else
 
 
-	// sb.safePrintf("<a href=/><img border=0 width=500 "
-	// 	      "height=122 src=/logo-med.jpg></a>\n");
-
-	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
-	//	      "height=44 src=/gigablast.jpg></a>\n");
-
-
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 	/*
@@ -935,8 +930,14 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 
 	// put search box in a box
-	sb.safePrintf("<div style=\"background-color:blue;padding:20px;"
-		      "border-radius:20px;\""
+	sb.safePrintf("<div style="
+		      "background-color:#fcc714;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "border-color:blue;"
+		      //"background-color:blue;"
+		      "padding:20px;"
+		      "border-radius:20px;"
 		      ">");
 
 
@@ -1166,15 +1167,6 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		      "</script>\n");
 
 
-
-
-	// sb.safePrintf("<a href=/><img border=0 width=500 "
-	// 	      "height=122 src=/logo-med.jpg></a>\n");
-
-	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
-	//	      "height=44 src=/gigablast.jpg></a>\n");
-
-
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 	/*
@@ -1205,7 +1197,13 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 
 	// put search box in a box
-	sb.safePrintf("<div style=background-color:blue;padding:20px;"
+	sb.safePrintf("<div style="
+		      "background-color:#fcc714;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "border-color:blue;"
+		      //"background-color:blue;"
+		      "padding:20px;"
 		      "border-radius:20px;"
 		      ">");
 
@@ -1330,14 +1328,6 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	printFrontPageShell ( sb , 1 );
 
-
-	// sb.safePrintf("<a href=/><img border=0 width=500 "
-	// 	      "height=122 src=/logo-med.jpg></a>\n");
-
-	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
-	//	      "height=44 src=/gigablast.jpg></a>\n");
-
-
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 
@@ -1352,7 +1342,13 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 
 	// put search box in a box
-	sb.safePrintf("<div style=background-color:blue;padding:20px;"
+	sb.safePrintf("<div style="
+		      "background-color:#fcc714;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "border-color:blue;"
+		      //"background-color:blue;"
+		      "padding:20px;"
 		      "border-radius:20px;"
 		      ">");
 
@@ -2317,14 +2313,6 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	printFrontPageShell ( sb , 2 );
 
-
-	// sb.safePrintf("<a href=/><img border=0 width=500 "
-	// 	      "height=122 src=/logo-med.jpg></a>\n");
-
-	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
-	//	      "height=44 src=/gigablast.jpg></a>\n");
-
-
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 
@@ -2475,15 +2463,8 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 	printFrontPageShell ( sb , 4 );
 
 
-	// sb.safePrintf("<a href=/><img border=0 width=500 "
-	// 	      "height=122 src=/logo-med.jpg></a>\n");
-
-	//sb.safePrintf("<center><a href=/><img border=0 width=470 "
-	//	      "height=44 src=/gigablast.jpg></a>\n");
-
-
-	sb.safePrintf("<br><br>\n");
-	sb.safePrintf("<br><br><br>\n");
+	sb.safePrintf("<br>\n");
+	//sb.safePrintf("<br><br><br>\n");
 
 	// submit to https now
 	//sb.safePrintf("<form method=GET "

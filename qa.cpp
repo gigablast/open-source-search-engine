@@ -1075,6 +1075,14 @@ bool qaspider1 ( ) {
 			return false;
 	}
 
+	if ( ! s_flags[23] ) {
+		s_flags[23] = true;
+		// test facets mixed with gigabits in left hand column
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&html=1&"
+				"q=gbfacetint%3Agbhopcount+walmart"
+				, 999 ) )
+			return false;
+	}
 
 
 	//static bool s_fee2 = false;

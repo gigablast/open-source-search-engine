@@ -3272,7 +3272,9 @@ static int gigabitCmp ( const void *a, const void *b ) {
 bool Msg40::computeGigabits( TopicGroup *tg ) {
 
 	// not if we skipped the first X summariest
-	if ( m_didSummarySkip ) { char *xx=NULL;*xx=0; }return true;
+	if ( m_didSummarySkip ) { char *xx=NULL;*xx=0; }
+
+	//return true;
 
 	//long long start = gettimeofdayInMilliseconds();
 
@@ -6209,11 +6211,34 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			// print that out
 			if ( needTable ) {
 				needTable = false;
-				sb->safePrintf("<table cellspacing=7 "
-					       "bgcolor=lightgray>"
-					       "<tr><td width=200px;>"
-					       "FACET %s</td></tr>"
-					       , term);
+
+
+				sb->safePrintf("<div id=facets "
+					       "style="
+					       "padding:5px;"
+					       "position:relative;"
+					       "border-width:3px;"
+					       "border-right-width:0px;"
+					       "border-style:solid;"
+					       "margin-left:10px;"
+					       "border-top-left-radius:10px;"
+					      "border-bottom-left-radius:10px;"
+					       "border-color:blue;"
+					       "background-color:white;"
+					       "border-right-color:white;"
+					       "margin-right:-3px;"
+					       ">"
+
+					       "<table cellspacing=7>"
+					       "<tr><td width=200px; "
+					       "valign=top>"
+					       "<center>"
+					       "<img src=/facets40.jpg>"
+					       "</center>"
+					       "<br>"
+					       );
+				sb->safePrintf("<b>%s</b></td></tr>\n",
+					       term);
 			}
 
 			char *suffix = "int";
@@ -6249,7 +6274,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       ,count); // count for printing
 		}
 		if ( ! needTable ) 
-			sb->safePrintf("</table>\n");
+			sb->safePrintf("</table></div><br>\n");
 	}
 
 	if ( format == FORMAT_JSON && ! firstTime ) {

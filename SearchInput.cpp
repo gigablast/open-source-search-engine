@@ -322,11 +322,13 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		// turn gigabits off by default if not html
 		m_docsToScanForTopics = 0;
 	}
+
 	// if they have a list of sites...
-	else if ( m_sites && m_sites[0] ) {
+	if ( m_sites && m_sites[0] ) {
 		m_doSiteClustering        = false;
 		m_ipRestrictForTopics     = false;
 	}
+
 
 	
 
@@ -358,35 +360,6 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// set m_isAdmin to zero if no correct ip or password
 	if ( ! g_conf.isRootAdmin ( sock , &m_hr ) ) m_isAdmin = 0;
 
-
-	//
-	// TODO: use Parms.cpp defaults
-	//
-	TopicGroup *tg = &m_topicGroups[0];
-
-	//
-	//
-	// gigabits
-	//
-	//
-	tg->m_numTopics = 50;
-	tg->m_maxTopics = 50;
-	tg->m_docsToScanForTopics = m_docsToScanForTopics;
-	tg->m_minTopicScore = 0;
-	tg->m_maxWordsPerTopic = 6;
-	tg->m_meta[0] = '\0';
-	tg->m_delimeter = '\0';
-	tg->m_useIdfForTopics = false;
-	tg->m_dedup = true;
-	// need to be on at least 2 pages!
-	tg->m_minDocCount = 2;
-	tg->m_ipRestrict = true;
-	tg->m_dedupSamplePercent = 80;
-	tg->m_topicRemoveOverlaps = true;
-	tg->m_topicSampleSize = 4096;
-	// max sequential punct chars allowedin a topic
-	tg->m_topicMaxPunctLen = 1;
-	m_numTopicGroups = 1;
 
 	//////////////////////////////////////
 	//
@@ -512,6 +485,10 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_ipRestrictForTopics = false;
 		m_doSiteClustering    = false;
 	}
+
+	if ( cr && ! cr->m_ipRestrict )
+		m_ipRestrictForTopics = false;
+
 	if ( m_q.m_hasQuotaField ) {
 		m_doSiteClustering    = false;
 		m_doDupContentRemoval = false;
@@ -558,6 +535,37 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	}
 	// save it
 	m_rcache = readFromCache;
+
+
+	//
+	// TODO: use Parms.cpp defaults
+	//
+	TopicGroup *tg = &m_topicGroups[0];
+
+	//
+	//
+	// gigabits
+	//
+	//
+	tg->m_numTopics = 50;
+	tg->m_maxTopics = 50;
+	tg->m_docsToScanForTopics = m_docsToScanForTopics;
+	tg->m_minTopicScore = 0;
+	tg->m_maxWordsPerTopic = 6;
+	tg->m_meta[0] = '\0';
+	tg->m_delimeter = '\0';
+	tg->m_useIdfForTopics = false;
+	tg->m_dedup = true;
+	// need to be on at least 2 pages!
+	tg->m_minDocCount = 2;
+	tg->m_ipRestrict = m_ipRestrictForTopics;
+	tg->m_dedupSamplePercent = 80;
+	tg->m_topicRemoveOverlaps = true;
+	tg->m_topicSampleSize = 4096;
+	// max sequential punct chars allowedin a topic
+	tg->m_topicMaxPunctLen = 1;
+	m_numTopicGroups = 1;
+
 
 	return true;
 }

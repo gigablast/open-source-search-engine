@@ -748,8 +748,10 @@ static bool printGigabitContainingSentences ( State0 *st,
 
 	HttpRequest *hr = &st->m_hr;
 
+	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
+
 	// make a new query
-	sb->safePrintf("<a href=\"/search?gigabits=1&q=");
+	sb->safePrintf("<a href=\"/search?gigabits=1&c=%s&q=",cr->m_coll);
 	sb->urlEncode(gi->m_term,gi->m_termLen);
 	sb->safeMemcpy("+|+",3);
 	char *q = hr->getString("q",NULL,"");
@@ -762,7 +764,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 	sb->safePrintf("      ");//,gi->m_numPages);
 	sb->safePrintf("</font>");
 	sb->safePrintf("</b>");
-	if ( si->m_isAdmin ) 
+	if ( si->m_isAdmin && 1 == 2 ) 
 		sb->safePrintf("[%.0f]{%li}",
 			      gi->m_gbscore,
 			      gi->m_minPop);
@@ -770,7 +772,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 	long revert = sb->length();
 
 	sb->safePrintf("<font color=blue style=align:right;>"
-		      "<a onclick=ccc(%li);>"
+		      "<a style=cursor:hand;cursor:pointer; onclick=ccc(%li);>"
 		      , s_gigabitCount 
 		      );
 	long spaceOutOff = sb->length();
@@ -816,7 +818,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		// first time, print in the single fact div
 		if ( first ) {
 			sb->safePrintf("<div "
-				      "style=\"border:1px lightgray solid;\" "
+				       //"style=\"border:1px lightgray solid;\"
 				      "id=fd%li>",s_gigabitCount);
 		}
 
@@ -825,7 +827,8 @@ static bool printGigabitContainingSentences ( State0 *st,
 				      "display:none;"
 				      "overflow-x:hidden;"
 				      "overflow-y:auto;"//scroll;"
-				      "border:1px lightgray solid;\" "
+				       //"border:1px lightgray solid; "
+				       "\" "
 				      "id=sd%li>",s_gigabitCount);
 			printedSecond = true;
 		}
@@ -842,7 +845,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 			//}
 		}
 		else {
-			sb->safePrintf("<br>");
+			//sb->safePrintf("");
 		}
 
 
@@ -883,8 +886,8 @@ static bool printGigabitContainingSentences ( State0 *st,
 
 		fi->m_printed = 1;
 		saveOffset = sb->length();
-		sb->safePrintf(" <a href=/get?cnsp=0&"
-			      "strip=1&d=%lli>",reply->m_docId);
+		sb->safePrintf(" <a href=/get?c=%s&cnsp=0&"
+			       "strip=0&d=%lli>",cr->m_coll,reply->m_docId);
 		long dlen; char *dom = getDomFast(reply->ptr_ubuf,&dlen);
 		sb->safeMemcpy(dom,dlen);
 		sb->safePrintf("</a>\n");
@@ -1434,7 +1437,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
 	sb.safePrintf("color: #000000;\n");
 	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
+	sb.safePrintf("margin: 0px 0px;\n");
 	sb.safePrintf("letter-spacing: 0.04em;\n");
 	sb.safePrintf("}\n");
 	sb.safePrintf("a {text-decoration:none;}\n");
@@ -1476,6 +1479,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\""
+		      "width:210px;"
 		      "border-right:3px solid blue;"
 		      "\">"
 
@@ -1504,6 +1508,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		      );
 
 
+	/*
 	// home link
 	sb.safePrintf(
 		      "<a href=/>"
@@ -1535,6 +1540,138 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		      "</a>"
 		      "<br>"
 		      );
+	*/
+
+
+	SearchInput *si = &st->m_si;
+	Msg40 *msg40 = &st->m_msg40;
+
+	//
+	// BEGIN FACET PRINTING
+	//
+	// 
+	// . print out one table for each gbfacet: term in the query
+	// . LATER: show the text string corresponding to the hash
+	//   by looking it up in the titleRec
+	//
+	if ( si->m_format == FORMAT_HTML ) msg40->printFacetTables ( &sb );
+	//
+	// END FACET PRINTING
+	//
+
+	//
+	// BEGIN PRINT GIGABITS
+	//
+
+	SafeBuf *gbuf = &msg40->m_gigabitBuf;
+	long numGigabits = gbuf->length()/sizeof(Gigabit);
+
+	if ( si->m_format != FORMAT_HTML ) numGigabits = 0;
+
+
+	// print gigabits
+	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
+	//long numCols = 5;
+	//long perRow = numGigabits / numCols;
+
+	if ( numGigabits && si->m_format == FORMAT_HTML )
+		// gigabit unhide function
+		sb.safePrintf (
+				"<script>"
+				"function ccc ( gn ) {\n"
+				"var e = document.getElementById('fd'+gn);\n"
+				"var f = document.getElementById('sd'+gn);\n"
+				"if ( e.style.display == 'none' ){\n"
+				"e.style.display = '';\n"
+				"f.style.display = 'none';\n"
+				"}\n"
+				"else {\n"
+				"e.style.display = 'none';\n"
+				"f.style.display = '';\n"
+				"}\n"
+				"}\n"
+				"</script>\n"
+			       );
+	
+	if ( numGigabits && si->m_format == FORMAT_HTML )
+		sb.safePrintf("<div id=gigabits "
+			      "style="
+			      "padding:5px;"
+			      "position:relative;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "border-color:blue;"
+			      "background-color:white;"
+			      "border-right-color:white;"
+			      "margin-right:-3px;"
+			      ">"
+			      "<table cellspacing=7>"
+			      "<tr><td width=200px; valign=top>"
+			      "<center><img src=/gigabits40.jpg></center>"
+			      "<br>"
+			      "<br>"
+			      );
+
+	Query gigabitQuery;
+	SafeBuf ttt;
+	// limit it to 40 gigabits for now
+	for ( long i = 0 ; i < numGigabits && i < 40 ; i++ ) {
+		Gigabit *gi = &gigabits[i];
+		ttt.pushChar('\"');
+		ttt.safeMemcpy(gi->m_term,gi->m_termLen);
+		ttt.pushChar('\"');
+		ttt.pushChar(' ');
+	}
+	if ( numGigabits > 0 ) 
+		gigabitQuery.set2 ( ttt.getBufStart() ,
+				    si->m_queryLangId ,
+				    true , // queryexpansion?
+				    true );  // usestopwords?
+
+
+
+
+	for ( long i = 0 ; i < numGigabits ; i++ ) {
+		//if ( i > 0 && si->m_format == FORMAT_HTML ) 
+		//	sb.safePrintf("<hr>");
+		//if ( perRow && (i % perRow == 0) )
+		//	sb.safePrintf("</td><td valign=top>");
+		// print all sentences containing this gigabit
+		Gigabit *gi = &gigabits[i];
+		// after the first 3 hide them with a more link
+		if ( i == 3 && si->m_format == FORMAT_HTML ) 
+			sb.safePrintf("<span id=hidegbits "
+				      "style=display:none;>");
+
+		//printGigabit ( st,sb , msg40 , gi , si );
+		//sb.safePrintf("<br>");
+		printGigabitContainingSentences(st,&sb,msg40,gi,si,
+						&gigabitQuery);
+		sb.safePrintf("<br><br>");
+	}
+
+	if ( numGigabits >= 3 && si->m_format == FORMAT_HTML ) 
+		sb.safePrintf("</span><a onclick="
+			      "\""
+			      "var e = document.getElementById('hidegbits');"
+			      "if ( e.style.display == 'none' ){\n"
+			      "e.style.display = '';\n"
+			      "this.innerHtml='Show less';"
+			      "}"
+			      "else {\n"
+			      "e.style.display = 'none';\n"
+			      "this.innerHtml='Show more';\n"
+			      "}\n"
+			      "\" style=cursor:hand;cursor:pointer;>"
+			      "Show more</a>");
+
+	if ( numGigabits && si->m_format == FORMAT_HTML )
+		sb.safePrintf("</td></tr></table></div><br>");
+
 
 	//
 	// now the MAIN column
@@ -2325,94 +2462,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<table cellpadding=0 cellspacing=0>"
 			      "<tr><td valign=top>");
 
-	//
-	// BEGIN FACET PRINTING
-	//
-	// 
-	// . print out one table for each gbfacet: term in the query
-	// . LATER: show the text string corresponding to the hash
-	//   by looking it up in the titleRec
-	//
-	if ( si->m_format == FORMAT_HTML ) msg40->printFacetTables ( sb );
-	//
-	// END FACET PRINTING
-	//
-
-
-
-
-	SafeBuf *gbuf = &msg40->m_gigabitBuf;
-	long numGigabits = gbuf->length()/sizeof(Gigabit);
-
-	if ( si->m_format != FORMAT_HTML ) numGigabits = 0;
-
-
-	// print gigabits
-	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
-	//long numCols = 5;
-	//long perRow = numGigabits / numCols;
-
-	if ( numGigabits && si->m_format == FORMAT_HTML )
-		// gigabit unhide function
-		sb->safePrintf (
-				"<script>"
-				"function ccc ( gn ) {\n"
-				"var e = document.getElementById('fd'+gn);\n"
-				"var f = document.getElementById('sd'+gn);\n"
-				"if ( e.style.display == 'none' ){\n"
-				"e.style.display = '';\n"
-				"f.style.display = 'none';\n"
-				"}\n"
-				"else {\n"
-				"e.style.display = 'none';\n"
-				"f.style.display = '';\n"
-				"}\n"
-				"}\n"
-				"</script>\n"
-			       );
-	
-	if ( numGigabits && si->m_format == FORMAT_HTML )
-		sb->safePrintf("<table cellspacing=7 bgcolor=lightgray>"
-			      "<tr><td width=200px; valign=top>");
-
-	Query gigabitQuery;
-	SafeBuf ttt;
-	// limit it to 40 gigabits for now
-	for ( long i = 0 ; i < numGigabits && i < 40 ; i++ ) {
-		Gigabit *gi = &gigabits[i];
-		ttt.pushChar('\"');
-		ttt.safeMemcpy(gi->m_term,gi->m_termLen);
-		ttt.pushChar('\"');
-		ttt.pushChar(' ');
-	}
-	if ( numGigabits > 0 ) 
-		gigabitQuery.set2 ( ttt.getBufStart() ,
-				    si->m_queryLangId ,
-				    true , // queryexpansion?
-				    true );  // usestopwords?
-
-
-
-
-	for ( long i = 0 ; i < numGigabits ; i++ ) {
-		if ( i > 0 && si->m_format == FORMAT_HTML ) 
-			sb->safePrintf("<hr>");
-		//if ( perRow && (i % perRow == 0) )
-		//	sb->safePrintf("</td><td valign=top>");
-		// print all sentences containing this gigabit
-		Gigabit *gi = &gigabits[i];
-		//printGigabit ( st,sb , msg40 , gi , si );
-		//sb->safePrintf("<br>");
-		printGigabitContainingSentences(st,sb,msg40,gi,si,
-						&gigabitQuery);
-		sb->safePrintf("<br><br>");
-	}
-	if ( numGigabits && si->m_format == FORMAT_HTML )
-		sb->safePrintf("</td></tr></table>");
-
 	// two pane table
-	if ( si->m_format == FORMAT_HTML ) 
-		sb->safePrintf("</td><td valign=top>");
+	//if ( si->m_format == FORMAT_HTML ) 
+	//	sb->safePrintf("</td><td valign=top>");
 
 	// did we get a spelling recommendation?
 	if ( si->m_format == FORMAT_HTML && st->m_spell[0] ) {
@@ -6727,19 +6779,47 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	}
 	
 
+	// put search box in a box
+	sb->safePrintf("<div style="
+		       "background-color:#fcc714;"
+		       "border-style:solid;"
+		       "border-width:3px;"
+		       "border-color:blue;"
+		       //"background-color:blue;"
+		       "padding:20px;"
+		       "border-radius:20px;"
+		       ">");
+
 	sb->safePrintf (
-		      // input table
-		      //"<div style=margin-left:5px;margin-right:5px;>
-		      "<input size=40 type=text name=q value=\""
-		      );
+			//"<div style=margin-left:5px;margin-right:5px;>
+			"<input size=40 type=text name=q "
+
+			"style=\""
+			//"width:%lipx;"
+			"height:26px;"
+			"padding:0px;"
+			"font-weight:bold;"
+			"padding-left:5px;"
+			//"border-radius:10px;"
+			"margin:0px;"
+			"border:1px inset lightgray;"
+			"background-color:#ffffff;"
+			"font-size:18px;"
+			"\" "
+
+
+			"value=\""
+			);
+
 	// contents of search box
 	long  qlen;
 	char *qstr = hr->getString("q",&qlen,"",NULL);
 	sb->htmlEncode ( qstr , qlen , false );
 	sb->safePrintf ("\">"
-		       "<input type=submit value=\"Search\" border=0>"
-		       "<br>"
-		       "<br>"
+			"<input type=submit value=\"Search\" border=0>"
+			"</div>"
+			"<br>"
+			"<br>"
 		       );
 	if ( catId >= 0 ) {
 		printDmozRadioButtons(sb,catId);
