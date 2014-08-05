@@ -28,6 +28,9 @@
 #include "PageResults.h"
 #include "Proxy.h"
 
+static bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) ;
+static bool printMenu ( SafeBuf *sb , long menuNum ) ;
+
 //static void gotSpellingWrapper ( void *state ) ;
 static void gotResultsWrapper  ( void *state ) ;
 //static void gotAdsWrapper      ( void *state ) ;
@@ -2337,7 +2340,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( dq ) urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,gbstrlen(dq));
 
 	// how many results were requested?
-	long docsWanted = msg40->getDocsWanted();
+	//long docsWanted = msg40->getDocsWanted();
 
 	// store html head into p, but stop at %q
 	//char *head = cr->m_htmlHead;
@@ -7080,49 +7083,9 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		sb->safePrintf (">bing</a>");
 	}
 	*/
+
+	printSearchFiltersBar ( sb , hr );
 	
-	// bar of drop down menus
-	sb->safePrintf(
-		       "<div style=color:gray;>"
-		       //"Search on %c%c%c"
-		       //" &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;>"
-		       "Any time %c%c%c" 
-		       "</span>"
-		       " &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;>"
-		       "Sort by relevance %c%c%c"
-		       "</span>"
-		       " &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;>"
-		       "Any language %c%c%c"
-		       "</span>"
-		       " &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;>"
-		       "Any filetype %c%c%c"
-		       "</span>"
-		       " &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;>"
-		       "Facets %c%c%c"
-		       "</span>"
-		       " &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;>"
-		       "Output %c%c%c" // html xml json
-		       "</span>"
-		       " &nbsp; &nbsp; "
-		       "<span style=cursor:pointer;cursor:hand;color:green;>"
-		       "Admin %c%c%c"
-		       "</span>"
-		       "<br>"
-		       //,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       ,0xe2,0x96,0xbc
-		       );
 
 	sb->safePrintf( "</form>\n"
 		       "</td>"
@@ -8070,5 +8033,303 @@ bool printDmozEntry ( SafeBuf *sb ,
 		sb->safePrintf("\t\t},\n");
 		return true;
 	}
+	return true;
+}
+
+class MenuItem {
+public:
+	long  m_menuNum;
+	char *m_title;
+	// we append this to the url
+	char *m_cgiField;
+	char *m_cgiVal;
+	char  m_tmp[10];
+};
+
+static MenuItem s_mi[200];
+static long s_num = 0;
+
+bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
+
+	SafeBuf cu;
+	hr->getCurrentUrl ( cu );
+
+
+	sb->safePrintf("<script>"
+		       "function show(id){"
+		       "var e = document.getElementById(id);"
+		       "if ( e.style.display == 'none' ){"
+		       "e.style.display = '';"
+		       "}"
+		       "else {"
+		       "e.style.display = 'none';"
+		       "}"
+		       "}"
+		       "</script>"
+		       );
+
+
+	static bool s_init = false;
+
+	if ( ! s_init ) {
+
+		long n = 0;
+
+		s_mi[n].m_menuNum  = 0;
+		s_mi[n].m_title    = "Any time";
+		s_mi[n].m_cgiField = "secsback";
+		s_mi[n].m_cgiVal   = "0";
+		n++;
+
+		s_mi[n].m_menuNum  = 0;
+		s_mi[n].m_title    = "Past 24 hours";
+		s_mi[n].m_cgiField = "secsback";
+		s_mi[n].m_cgiVal   = "86400";
+		n++;
+
+		s_mi[n].m_menuNum  = 0;
+		s_mi[n].m_title    = "Past week";
+		s_mi[n].m_cgiField = "secsback";
+		s_mi[n].m_cgiVal   = "604800";
+		n++;
+
+		s_mi[n].m_menuNum  = 0;
+		s_mi[n].m_title    = "Past month";
+		s_mi[n].m_cgiField = "secsback";
+		s_mi[n].m_cgiVal   = "2592000";
+		n++;
+
+		s_mi[n].m_menuNum  = 0;
+		s_mi[n].m_title    = "Past year";
+		s_mi[n].m_cgiField = "secsback";
+		s_mi[n].m_cgiVal   = "31536000";
+		n++;
+
+		// sort by
+
+		s_mi[n].m_menuNum  = 1;
+		s_mi[n].m_title    = "Sorted by relevance";
+		s_mi[n].m_cgiField = "sortby";
+		s_mi[n].m_cgiVal   = "0";
+		n++;
+
+		s_mi[n].m_menuNum  = 1;
+		s_mi[n].m_title    = "Sorted by date";
+		s_mi[n].m_cgiField = "sortby";
+		s_mi[n].m_cgiVal   = "1";
+		n++;
+
+		s_mi[n].m_menuNum  = 1;
+		s_mi[n].m_title    = "Reverse sorted by date";
+		s_mi[n].m_cgiField = "sortby";
+		s_mi[n].m_cgiVal   = "2";
+		n++;
+
+		// languages
+
+		s_mi[n].m_menuNum  = 2;
+		s_mi[n].m_title    = "Any language";
+		s_mi[n].m_cgiField = "qlang";
+		s_mi[n].m_cgiVal   = "";
+		n++;
+
+		for ( long i = 0 ; i < langLast ; i++ ) {
+			s_mi[n].m_menuNum  = 2;
+			s_mi[n].m_title    = getLanguageString(i);
+			s_mi[n].m_cgiField = "qlang";
+			snprintf(s_mi[n].m_tmp,10,"%s",getLangAbbr(i));
+			s_mi[n].m_cgiVal   = s_mi[n].m_tmp;
+			n++;
+		}
+
+		// filetypes
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "Any filetype";
+		s_mi[n].m_cgiField = "filetype";
+		s_mi[n].m_cgiVal   = "";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "PDF";
+		s_mi[n].m_cgiField = "filetype";
+		s_mi[n].m_cgiVal   = "pdf";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "Microsoft Word";
+		s_mi[n].m_cgiField = "filetype";
+		s_mi[n].m_cgiVal   = "doc";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "Excel";
+		s_mi[n].m_cgiField = "filetype";
+		s_mi[n].m_cgiVal   = "xls";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "PostScript";
+		s_mi[n].m_cgiField = "filetype";
+		s_mi[n].m_cgiVal   = "ps";
+		n++;
+
+		// facets
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Facets";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "";
+		n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Language facet";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "gbfacetstr:gblangid";
+		n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Content type facet";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "gbfacetstr:gbcontenttypeid";
+		n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Spider date facet";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "gbfacetint:gbspiderdate";
+		n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Site rank facet";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "gbfacetstr:gbsiterank";
+		n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Domains facet";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "gbfacetint:gbdomhash";
+		n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Hopcount facet";
+		s_mi[n].m_cgiField = "prepend";
+		s_mi[n].m_cgiVal   = "gbfacetstr:gbhopcount";
+		n++;
+
+		// output
+
+		s_mi[n].m_menuNum  = 5;
+		s_mi[n].m_title    = "Output HTML";
+		s_mi[n].m_cgiField = "format";
+		s_mi[n].m_cgiVal   = "html";
+		n++;
+
+		s_mi[n].m_menuNum  = 5;
+		s_mi[n].m_title    = "Output XML";
+		s_mi[n].m_cgiField = "format";
+		s_mi[n].m_cgiVal   = "xml";
+		n++;
+
+		s_mi[n].m_menuNum  = 5;
+		s_mi[n].m_title    = "Output JSON";
+		s_mi[n].m_cgiField = "format";
+		s_mi[n].m_cgiVal   = "json";
+		n++;
+
+		s_num = n;
+		if ( n > 200 ) { char *xx=NULL;*xx=0; }
+	}
+
+
+	// we'll print the admin menu custom since it's mostly off-page links
+
+	// bar of drop down menus
+	sb->safePrintf("<div style=color:gray;>");
+
+	for ( long i = 0 ; i <= 5 ; i++ )
+		printMenu ( sb , i );
+
+	sb->safePrintf("</div>\n");
+
+	return true;
+}
+
+bool printMenu ( SafeBuf *sb , long menuNum ) {
+
+	bool firstOne = true;
+
+	MenuItem *first = NULL;
+
+	for ( long i = 0 ; i < s_num ; i++ ) {
+
+		// shortcut
+		MenuItem *mi = &s_mi[i];
+
+		// skip if not our item
+		if ( mi->m_menuNum != menuNum ) continue;
+
+		if ( ! first ) first = mi;
+
+		if ( ! firstOne ) goto skip;
+
+		firstOne = false;
+
+		// for centering the dropdown
+		sb->safePrintf("<span style=position:relative;></span>");
+
+		// print hidden drop down menu
+		sb->safePrintf(
+			       "<span id=menu%li style=\"display:none;"
+			       "position:absolute;"
+			       //"margin-left:-20px;"
+			       "margin-top:15px;"
+			       "width:150px;"
+			       "max-height:300px;"
+			       "overflow-y:auto;"
+			       "background-color:white;"
+			       "padding:10px;"
+			       "width=80px;border-width:1px;"
+			       "border-color:lightgray;"
+			       "box-shadow: -.5px 1px 1px gray;"
+			       "border-style:solid;color:gray;\">"
+			       , mi->m_menuNum
+			       );
+
+	skip:
+
+		// print each item in there
+		sb->safePrintf("<span style=cursor:pointer;cursor:hand;>"
+			       "<nobr>&nbsp; %s</nobr>"
+			       "</span>"
+			       , mi->m_title );
+		sb->safePrintf("<br><br>");
+	}
+
+	// wrap up the drop down
+	sb->safePrintf("</span>");
+
+	// print heading or current selection i guess
+	sb->safePrintf(
+		       // separate menus with these two spaces
+		       " &nbsp; &nbsp; "
+		       // print the menu header that when clicked
+		       // will show the drop down
+		       "<span style=cursor:pointer;"
+		       "cursor:hand; "
+		       "onmousedown=\"this.style.color='red';\" "
+		       "onmouseup=\"this.style.color='gray';\" "
+		       "onclick=show('menu%li');>"
+		       "%s %c%c%c" 
+		       "</span>"
+		       , first->m_menuNum
+		       , first->m_title
+		       ,0xe2
+		       ,0x96
+		       ,0xbc
+		       );
+
+
 	return true;
 }
