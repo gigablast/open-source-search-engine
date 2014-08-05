@@ -7029,7 +7029,35 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	char *qstr = hr->getString("q",&qlen,"",NULL);
 	sb->htmlEncode ( qstr , qlen , false );
 	sb->safePrintf ("\">"
-			"<input type=submit value=\"Search\" border=0>"
+			//"<input type=submit value=\"Search\" border=0>"
+
+			"&nbsp; &nbsp;"
+
+			"<div onclick=document.f.submit(); "
+
+			" onmouseover=\""
+			"this.style.backgroundColor='lightgreen';"
+			"this.style.color='black';\""
+			" onmouseout=\""
+			"this.style.backgroundColor='green';"
+			"this.style.color='white';\" "
+
+			"style=border-radius:28px;"
+			"cursor:pointer;"
+			"cursor:hand;"
+			"border-color:white;"
+			"border-style:solid;"
+			"border-width:3px;"
+			"padding:12px;"
+			"width:20px;"
+			"height:20px;"
+			"display:inline-block;"
+			"background-color:green;color:white;>"
+			"<b style=margin-left:-5px;font-size:18px;"
+			">GO</b>"
+			"</div>"
+
+
 			"</div>"
 			"<br>"
 			"<br>"

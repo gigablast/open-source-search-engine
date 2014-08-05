@@ -960,6 +960,14 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		      //"<input type=\"submit\" value=\"Search\">"
 
 		      "<div onclick=document.f.submit(); "
+
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\" "
+
 		      "style=border-radius:28px;"
 		      "cursor:pointer;"
 		      "cursor:hand;"
@@ -971,7 +979,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		      "height:20px;"
 		      "display:inline-block;"
 		      "background-color:green;color:white;>"
-		      "<b style=margin-left:-5px;font-size:18px;>GO</b>"
+		      "<b style=margin-left:-5px;font-size:18px;"
+		      ">GO</b>"
 		      "</div>"
 		      "\n"
 		      );
@@ -1256,6 +1265,15 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("\">&nbsp; &nbsp;"
 		      //"<input type=\"submit\" value=\"Add Url\">\n"
 		      "<div onclick=document.f.submit(); "
+
+
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\" "
+
 		      "style=border-radius:28px;"
 		      "cursor:pointer;"
 		      "cursor:hand;"
@@ -1406,6 +1424,14 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 		      //"<input type=\"submit\" value=\"Search\">\n");
 
 		      "<div onclick=document.f.submit(); "
+
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\" "
+
 		      "style=border-radius:28px;"
 		      "cursor:pointer;"
 		      "cursor:hand;"
@@ -2401,8 +2427,34 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 	"			</tr>"
 	"			<tr align=left valign=middle>"
 	"				<td><strong>all</strong> of these words</td>"
-	"				<td><input type=text name=plus size=40 /></td>"
-	"				<td><input type=submit value=Search /></td>"
+	"				<td><input type=text name=plus size=40 />"
+
+	"</td><td>"
+
+			"<div onclick=document.f.submit(); "
+
+			" onmouseover=\""
+			"this.style.backgroundColor='lightgreen';"
+			"this.style.color='black';\""
+			" onmouseout=\""
+			"this.style.backgroundColor='green';"
+			"this.style.color='white';\" "
+
+			"style=border-radius:28px;"
+			"cursor:pointer;"
+			"cursor:hand;"
+			"border-color:white;"
+			"border-style:solid;"
+			"border-width:3px;"
+			"padding:12px;"
+			"width:20px;"
+			"height:20px;"
+			"display:inline-block;"
+			"background-color:green;color:white;>"
+			"<b style=margin-left:-5px;font-size:18px;"
+			">GO</b>"
+			"</div>"
+	"</td>"
 	"			</tr>"
 	"			<tr align=left valign=middle>"
 	"				<td>this <strong>exact phrase</strong></td>"
