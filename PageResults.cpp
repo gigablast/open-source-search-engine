@@ -29,7 +29,7 @@
 #include "Proxy.h"
 
 static bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) ;
-static bool printMenu ( SafeBuf *sb , long menuNum ) ;
+static bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) ;
 
 //static void gotSpellingWrapper ( void *state ) ;
 static void gotResultsWrapper  ( void *state ) ;
@@ -37,6 +37,7 @@ static void gotResultsWrapper  ( void *state ) ;
 static void gotState           ( void *state ) ;
 static bool gotResults         ( void *state ) ;
 
+bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) ;
 
 bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
 
@@ -8042,9 +8043,8 @@ public:
 	long  m_menuNum;
 	char *m_title;
 	// we append this to the url
-	char *m_cgiField;
-	char *m_cgiVal;
-	char  m_tmp[10];
+	char *m_cgi;
+	char  m_tmp[25];
 };
 
 static MenuItem s_mi[200];
@@ -8078,68 +8078,59 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Any time";
-		s_mi[n].m_cgiField = "secsback";
-		s_mi[n].m_cgiVal   = "0";
+		s_mi[n].m_cgi      = "secsback=0";
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past 24 hours";
-		s_mi[n].m_cgiField = "secsback";
-		s_mi[n].m_cgiVal   = "86400";
+		s_mi[n].m_cgi      = "secsback=86400";
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past week";
-		s_mi[n].m_cgiField = "secsback";
-		s_mi[n].m_cgiVal   = "604800";
+		s_mi[n].m_cgi      = "secsback=604800";
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past month";
-		s_mi[n].m_cgiField = "secsback";
-		s_mi[n].m_cgiVal   = "2592000";
+		s_mi[n].m_cgi      = "secsback=2592000";
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past year";
-		s_mi[n].m_cgiField = "secsback";
-		s_mi[n].m_cgiVal   = "31536000";
+		s_mi[n].m_cgi      = "secsback=31536000";
 		n++;
 
 		// sort by
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Sorted by relevance";
-		s_mi[n].m_cgiField = "sortby";
-		s_mi[n].m_cgiVal   = "0";
+		s_mi[n].m_cgi      = "sortby=0";
 		n++;
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Sorted by date";
-		s_mi[n].m_cgiField = "sortby";
-		s_mi[n].m_cgiVal   = "1";
+		s_mi[n].m_cgi      = "sortby=1";
 		n++;
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Reverse sorted by date";
-		s_mi[n].m_cgiField = "sortby";
-		s_mi[n].m_cgiVal   = "2";
+		s_mi[n].m_cgi      = "sortby=2";
 		n++;
 
 		// languages
 
 		s_mi[n].m_menuNum  = 2;
 		s_mi[n].m_title    = "Any language";
-		s_mi[n].m_cgiField = "qlang";
-		s_mi[n].m_cgiVal   = "";
+		s_mi[n].m_cgi      = "qlang=";
 		n++;
 
 		for ( long i = 0 ; i < langLast ; i++ ) {
 			s_mi[n].m_menuNum  = 2;
 			s_mi[n].m_title    = getLanguageString(i);
-			s_mi[n].m_cgiField = "qlang";
-			snprintf(s_mi[n].m_tmp,10,"%s",getLangAbbr(i));
-			s_mi[n].m_cgiVal   = s_mi[n].m_tmp;
+			char *abbr = getLangAbbr(i);
+			snprintf(s_mi[n].m_tmp,10,"qlang=%s",abbr);
+			s_mi[n].m_cgi      = s_mi[n].m_tmp;
 			n++;
 		}
 
@@ -8147,96 +8138,81 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Any filetype";
-		s_mi[n].m_cgiField = "filetype";
-		s_mi[n].m_cgiVal   = "";
+		s_mi[n].m_cgi      = "filetype=any";
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PDF";
-		s_mi[n].m_cgiField = "filetype";
-		s_mi[n].m_cgiVal   = "pdf";
+		s_mi[n].m_cgi      = "filetype=pdf";
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Microsoft Word";
-		s_mi[n].m_cgiField = "filetype";
-		s_mi[n].m_cgiVal   = "doc";
+		s_mi[n].m_cgi      = "filetype=doc";
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Excel";
-		s_mi[n].m_cgiField = "filetype";
-		s_mi[n].m_cgiVal   = "xls";
+		s_mi[n].m_cgi      = "filetype=xls";
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PostScript";
-		s_mi[n].m_cgiField = "filetype";
-		s_mi[n].m_cgiVal   = "ps";
+		s_mi[n].m_cgi      = "filetype=ps";
 		n++;
 
 		// facets
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Facets";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "";
+		s_mi[n].m_cgi      = "";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Language facet";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "gbfacetstr:gblangid";
+		s_mi[n].m_cgi      = "facet1=gbfacetint:gblangid";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Content type facet";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "gbfacetstr:gbcontenttypeid";
+		s_mi[n].m_cgi      = "facet2=gbfacetint:gbcontenttypeid";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Spider date facet";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "gbfacetint:gbspiderdate";
+		s_mi[n].m_cgi      = "facet3=gbfacetint:gbspiderdate";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Site rank facet";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "gbfacetstr:gbsiterank";
+		s_mi[n].m_cgi      = "facet4=gbfacetstr:gbsiterank";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Domains facet";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "gbfacetint:gbdomhash";
+		s_mi[n].m_cgi      = "facet5=gbfacetint:gbdomhash";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Hopcount facet";
-		s_mi[n].m_cgiField = "prepend";
-		s_mi[n].m_cgiVal   = "gbfacetstr:gbhopcount";
+		s_mi[n].m_cgi      = "facet6=gbfacetint:gbhopcount";
 		n++;
 
 		// output
 
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output HTML";
-		s_mi[n].m_cgiField = "format";
-		s_mi[n].m_cgiVal   = "html";
+		s_mi[n].m_cgi      = "format=html";
 		n++;
 
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output XML";
-		s_mi[n].m_cgiField = "format";
-		s_mi[n].m_cgiVal   = "xml";
+		s_mi[n].m_cgi      = "format=xml";
 		n++;
 
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output JSON";
-		s_mi[n].m_cgiField = "format";
-		s_mi[n].m_cgiVal   = "json";
+		s_mi[n].m_cgi      = "format=json";
 		n++;
 
 		s_num = n;
@@ -8250,14 +8226,14 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 	sb->safePrintf("<div style=color:gray;>");
 
 	for ( long i = 0 ; i <= 5 ; i++ )
-		printMenu ( sb , i );
+		printMenu ( sb , i , hr );
 
 	sb->safePrintf("</div>\n");
 
 	return true;
 }
 
-bool printMenu ( SafeBuf *sb , long menuNum ) {
+bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 
 	bool firstOne = true;
 
@@ -8294,18 +8270,43 @@ bool printMenu ( SafeBuf *sb , long menuNum ) {
 			       "width=80px;border-width:1px;"
 			       "border-color:lightgray;"
 			       "box-shadow: -.5px 1px 1px gray;"
-			       "border-style:solid;color:gray;\">"
+			       "border-style:solid;color:gray;\" "
+
+			       //" onmouseout=\""
+			       //"this.style.display='none';\""
+
+			       ">"
 			       , mi->m_menuNum
 			       );
 
 	skip:
 
+		
+		// . add our cgi to the original url
+		// . so if it has &qlang=de and they select &qlang=en
+		//   we have to replace it... etc.
+		SafeBuf newUrl;
+		replaceParm ( mi->m_cgi , &newUrl , hr );
+
 		// print each item in there
-		sb->safePrintf("<span style=cursor:pointer;cursor:hand;>"
+		sb->safePrintf("<a href=%s>"
+			       "<div style=cursor:pointer;cursor:hand;"
+			       "padding-top:10px;"
+			       "padding-bottom:10px;"
+			       "color:gray;"
+
+			       " onmouseover=\""
+			       "this.style.backgroundColor='#e0e0e0';\" "
+			       " onmouseout=\""
+			       "this.style.backgroundColor='white';\" "
+
+			       ">"
 			       "<nobr>&nbsp; %s</nobr>"
-			       "</span>"
+			       "</div>"
+			       "</a>"
+			       , newUrl.getBufStart()
 			       , mi->m_title );
-		sb->safePrintf("<br><br>");
+		//sb->safePrintf("<br><br>");
 	}
 
 	// wrap up the drop down
@@ -8332,5 +8333,45 @@ bool printMenu ( SafeBuf *sb , long menuNum ) {
 		       );
 
 
+	return true;
+}
+
+bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) { 
+
+	// get original request url. this is not \0 terminated
+	char *src    = hr->m_origUrlRequest;
+	long  srcLen = hr->m_origUrlRequestLen;
+	char *srcEnd = src + srcLen;
+
+	char *equal = strstr(cgi,"=");
+	if ( ! equal ) return log("results: %s has no equal sign",cgi);
+	long cgiLen = equal - cgi;
+
+	char *found = strncasestr ( src , cgi , srcLen , cgiLen );
+
+	// if no collision, just append it
+	if ( ! found ) {
+		if ( ! newUrl->safeMemcpy ( src , srcLen ) ) return false;
+		if ( ! newUrl->pushChar('&') ) return false;
+		if ( ! newUrl->safeStrcpy ( cgi ) ) return false;
+		if ( ! newUrl->nullTerm() ) return false;
+		return true;
+	}
+
+	// . otherwise we have to replace it
+	// . copy up to where it starts
+	if ( ! newUrl->safeMemcpy ( src , found-src ) ) return false;
+	// then insert our new cgi there
+	if ( ! newUrl->safeStrcpy ( cgi ) ) return false;
+	// then resume it
+	char *foundEnd = strncasestr ( found , "&" , srcEnd - found );
+	// if nothing came after...
+	if ( ! foundEnd ) {
+		if ( ! newUrl->nullTerm() ) return false;
+		return true;
+	}
+	// copy over what came after
+	if ( ! newUrl->safeMemcpy ( foundEnd, srcEnd-foundEnd ) ) return false;
+	if ( ! newUrl->nullTerm() ) return false;
 	return true;
 }
