@@ -195,14 +195,14 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	s[len]='\0';
 
 	// make http:////www.xyz.com into http://www.xyz.com
-	if ( len > 14 && s[7]=='/' && ! strncasecmp ( s , "http:////" , 9 ) ) {
-		memcpy (s+7,s+9,len-9+1);
-		len -= 2;
-	}
-	if ( len > 14 && s[8]=='/' && ! strncasecmp ( s ,"https:////", 10 ) ) {
-		memcpy (s+8,s+10,len-9+1);
-		len -= 2;
-	}
+	// if ( len > 14 && s[7]=='/' && ! strncasecmp ( s , "http:////" ,9) ){
+	// 	memcpy (s+7,s+9,len-9+1);
+	// 	len -= 2;
+	// }
+	// if ( len > 14 && s[8]=='/' && ! strncasecmp ( s ,"https:////",10)){
+	// 	memcpy (s+8,s+10,len-9+1);
+	// 	len -= 2;
+	// }
 
 	// . remove session ids from s
 	// . ';' most likely preceeds a session id

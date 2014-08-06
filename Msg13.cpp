@@ -164,8 +164,8 @@ bool Msg13::getDoc ( Msg13Request *r,
 	if ( r->m_urlIp == -1 ) { char *xx = NULL; *xx = 0; }
 
 	// set this
-	r->m_urlLen    = gbstrlen ( r->m_url );
-	r->m_urlHash64 = hash64 ( r->m_url , r->m_urlLen );
+	//r->m_urlLen    = gbstrlen ( r->ptr_url );
+	r->m_urlHash64 = hash64 ( r->ptr_url , r->size_url-1);//m_urlLen );
 
 	// sanity check, if spidering the test coll make sure one of 
 	// these is true!! this prevents us from mistakenly turning it off
@@ -186,8 +186,8 @@ bool Msg13::getDoc ( Msg13Request *r,
 	//	r->m_testParserEnabled = true;
 
 	// is this a /robots.txt url?
-	if ( r->m_urlLen > 12 && 
-	     ! strncmp ( r->m_url + r->m_urlLen - 11,"/robots.txt",11))
+	if ( r->size_url - 1 > 12 && 
+	     ! strncmp ( r->ptr_url + r->size_url -1 -11,"/robots.txt",11))
 		r->m_isRobotsTxt = true;
 
 	// force caching if getting robots.txt so is compressed in cache
@@ -195,7 +195,7 @@ bool Msg13::getDoc ( Msg13Request *r,
 		r->m_compressReply = true;
 
 	// do not get .google.com/ crap
-	//if ( strstr(r->m_url,".google.com/") ) { char *xx=NULL;*xx=0; }
+	//if ( strstr(r->ptr_url,".google.com/") ) { char *xx=NULL;*xx=0; }
 
 	// set it for this too
 	//if ( g_conf.m_useCompressionProxy ) {
@@ -261,19 +261,33 @@ bool Msg13::forwardRequest ( ) {
 		logf ( LOG_DEBUG, 
 		       "spider: sending download request of %s firstIp=%s "
 		       "uh48=%llu to "
-		       "host %li (child=%li)", r->m_url, iptoa(r->m_firstIp), 
+		       "host %li (child=%li)", r->ptr_url, iptoa(r->m_firstIp), 
 		       r->m_urlHash48, hostId,
 		       r->m_skipHammerCheck);
 
 
 	// fill up the request
-	long requestSize = r->getSize();
+	long requestBufSize = r->getSize();
+
+	// we have to serialize it now because it has cookies as well as
+	// the url.
+	char *requestBuf = serializeMsg ( sizeof(Msg39Request),
+					  &r->size_url,
+					  &r->size_cookie,
+					  &r->ptr_url,
+					  r,
+					  &requestBufSize ,
+					  NULL , 
+					  0,//RBUF_SIZE , 
+					  false );
+	// g_errno should be set in this case, most likely to ENOMEM
+	if ( ! requestBuf ) return true;
 
 	// . otherwise, send the request to the key host
 	// . returns false and sets g_errno on error
 	// . now wait for 2 minutes before timing out
-	if ( ! g_udpServer.sendRequest ( (char *)r    ,
-					 requestSize  , 
+	if ( ! g_udpServer.sendRequest ( requestBuf, // (char *)r    ,
+					 requestBufSize  , 
 					 0x13         , // msgType 0x13
 					 h->m_ip      ,
 					 h->m_port    ,
@@ -309,7 +323,8 @@ void gotForwardedReplyWrapper ( void *state , UdpSlot *slot ) {
 
 bool Msg13::gotForwardedReply ( UdpSlot *slot ) {
 	// don't let udpserver free the request, it's our m_request[]
-	slot->m_sendBufAlloc = NULL;
+	// no, now let him free it because it was serialized into there
+	//slot->m_sendBufAlloc = NULL;
 	// what did he give us?
 	char *reply          = slot->m_readBuf;
 	long  replySize      = slot->m_readBufSize;
@@ -343,7 +358,7 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 
 	if ( g_conf.m_logDebugRobots || g_conf.m_logDebugDownloads )
 		logf(LOG_DEBUG,"spider: FINALIZED %s firstIp=%s",
-		     r->m_url,iptoa(r->m_firstIp));
+		     r->ptr_url,iptoa(r->m_firstIp));
 
 
 	// . if timed out probably the host is now dead so try another one!
@@ -351,7 +366,7 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	if ( g_errno == EUDPTIMEDOUT ) {
 		// try again
 		log("spider: retrying1. had error for %s : %s",
-		    r->m_url,mstrerror(g_errno));
+		    r->ptr_url,mstrerror(g_errno));
 		// return if that blocked
 		if ( ! forwardRequest ( ) ) return false;
 		// a different g_errno should be set now!
@@ -362,7 +377,7 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 		// for it here
 		if ( g_conf.m_logDebugSpider )
 			log("spider: error for %s: %s",
-			    r->m_url,mstrerror(g_errno));
+			    r->ptr_url,mstrerror(g_errno));
 		return true;
 	}
 
@@ -435,7 +450,7 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	// log it for now
 	if ( g_conf.m_logDebugSpider )
 		log("http: got doc %s %li to %li",
-		    r->m_url,(long)replySize,(long)uncompressedLen);
+		    r->ptr_url,(long)replySize,(long)uncompressedLen);
 
 	return true;
 }
@@ -458,9 +473,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	//if ( niceness == 0 ) { char *xx=NULL;*xx=0; }
 
 	// make sure we do not download gigablast.com admin pages!
-	if ( g_hostdb.isIpInNetwork ( r->m_firstIp ) && r->m_urlLen >= 7 ) {
+	if ( g_hostdb.isIpInNetwork ( r->m_firstIp ) && r->size_url-1 >= 7 ) {
 		Url url;
-		url.set ( r->m_url );
+		url.set ( r->ptr_url );
 		// . never download /master urls from ips of hosts in cluster
 		// . TODO: FIX! the pages might be in another cluster!
 		if ( ( strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
@@ -500,7 +515,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		// helpful for debugging. even though you may see a robots.txt
 		// redirect and think we are downloading that each time,
 		// we are not... the redirect is cached here as well.
-		//log("spider: %s was in cache",r->m_url);
+		//log("spider: %s was in cache",r->ptr_url);
 		// . send the cached reply back
 		// . this will free send/read bufs on completion/g_errno
 		g_udpServer.sendReply_ass ( rec , recSize , rec, recSize,slot);
@@ -510,7 +525,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// log it so we can see if we are hammering
 	if ( g_conf.m_logDebugRobots || g_conf.m_logDebugDownloads )
 		logf(LOG_DEBUG,"spider: DOWNLOADING %s firstIp=%s",
-		     r->m_url,iptoa(r->m_firstIp));
+		     r->ptr_url,iptoa(r->m_firstIp));
 
 	// temporary hack
 	if ( r->m_parent ) { char *xx=NULL;*xx=0; }
@@ -559,7 +574,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		//   which will store maybe a -1 if currently downloading...
 		if ( queueIt ) {
 			// debug
-			//log("spider: adding %s to crawldelayqueue",r->m_url);
+			//log("spider: adding %s to crawldelayqueue",r->ptr_url);
 			// save this
 			r->m_udpSlot = slot;
 			r->m_nextLink = NULL;
@@ -580,7 +595,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		if ( last > 0 && waited < r->m_crawlDelayMS ) {
 			log("spider: hammering firstIp=%s url=%s "
 			    "only waited %lli ms of %li ms",
-			    iptoa(r->m_firstIp),r->m_url,waited,
+			    iptoa(r->m_firstIp),r->ptr_url,waited,
 			    r->m_crawlDelayMS);
 			// this guy has too many redirects and it fails us...
 			// BUT do not core if running live, only if for test
@@ -598,14 +613,14 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		//	    "firstIp=%s "
 		//	    "url=%s "
 		//	    "to msg13::hammerCache",
-		//	    nowms,iptoa(r->m_firstIp),r->m_url);
+		//	    nowms,iptoa(r->m_firstIp),r->ptr_url);
 		// clear error from that if any, not important really
 		g_errno = 0;
 	}
 
 	// try to get it from the test cache?
 	TcpSocket ts;
-	if ( r->m_useTestCache && getTestDoc ( r->m_url, &ts , r ) ) {
+	if ( r->m_useTestCache && getTestDoc ( r->ptr_url, &ts , r ) ) {
 		// save this
 		r->m_udpSlot = slot;
 		// store the request so gotHttpReply can reply to it
@@ -672,7 +687,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 
 
 	// do not get .google.com/ crap
-	//if ( strstr(r->m_url,".google.com/") ) { char *xx=NULL;*xx=0; }
+	//if ( strstr(r->ptr_url,".google.com/") ) { char *xx=NULL;*xx=0; }
 
 	downloadTheDocForReals ( r );
 }
@@ -689,7 +704,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 
 	// this means our callback will be called
 	if ( ! firstInLine ) {
-		//log("spider: inlining %s",r->m_url);
+		//log("spider: inlining %s",r->ptr_url);
 		return;
 	}
 
@@ -715,7 +730,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 		    "firstIp=%s "
 		    "url=%s "
 		    "to msg13::hammerCache",
-		    -1LL,iptoa(r->m_firstIp),r->m_url);
+		    -1LL,iptoa(r->m_firstIp),r->ptr_url);
 
 
 	// flag this
@@ -723,7 +738,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	// note it here
 	if ( g_conf.m_logDebugSpider )
 		log("spider: downloading %s (%s) (skiphammercheck=%li)",
-		    r->m_url,iptoa(r->m_urlIp) ,
+		    r->ptr_url,iptoa(r->m_urlIp) ,
 		    (long)r->m_skipHammerCheck);
 
 	// use the default agent unless scraping
@@ -755,7 +770,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 
 
 	// download it
-	if ( ! g_httpServer.getDoc ( r->m_url             ,
+	if ( ! g_httpServer.getDoc ( r->ptr_url             ,
 				     r->m_urlIp           ,
 				     0                    , // offset
 				     -1                   ,
@@ -767,7 +782,10 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 				     r->m_httpProxyPort   ,
 				     r->m_maxTextDocLen   ,
 				     r->m_maxOtherDocLen  ,
-				     agent                ) )
+				     agent                ,
+				     "HTTP/1.0"           , // protocol
+				     false                , // do POST?
+				     r->ptr_cookie        ) )
 		// return false if blocked
 		return;
 	// . log this so i know about it
@@ -818,7 +836,7 @@ void gotHttpReply2 ( void *state ,
 	if ( g_errno && g_conf.m_logDebugSpider )
 		log("spider: http reply (msg13) had error = %s "
 		    "for %s at ip %s",
-		    mstrerror(g_errno),r->m_url,iptoa(r->m_urlIp));
+		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
 
 	// get time now
 	long long nowms = gettimeofdayInMilliseconds();
@@ -832,7 +850,7 @@ void gotHttpReply2 ( void *state ,
 		    "firstIp=%s "
 		    "url=%s "
 		    "to msg13::hammerCache",
-		    nowms,iptoa(r->m_firstIp),r->m_url);
+		    nowms,iptoa(r->m_firstIp),r->ptr_url);
 
 
 	// sanity. this was happening from iframe download
@@ -859,7 +877,7 @@ void gotHttpReply2 ( void *state ,
 	// note it
 	if ( r->m_useTestCache && g_conf.m_logDebugSpider )
 		logf(LOG_DEBUG,"spider: got reply for %s firstIp=%s uh48=%llu",
-		     r->m_url,iptoa(r->m_firstIp),r->m_urlHash48);
+		     r->ptr_url,iptoa(r->m_firstIp),r->m_urlHash48);
 
 	long niceness = r->m_niceness;
 
@@ -986,7 +1004,7 @@ void gotHttpReply2 ( void *state ,
 	     !r->m_isRobotsTxt && 
 	     r->m_compressReply ) {
 		long cs = getCharsetFast ( &mime,
-					   r->m_url,
+					   r->ptr_url,
 					   content,
 					   contentLen,
 					   niceness);
@@ -1088,7 +1106,7 @@ void gotHttpReply2 ( void *state ,
 		// ok, did we have an error?
 		if ( g_errno )
 			log("scproxy: xml set for %s had error: %s",
-			    r->m_url,mstrerror(g_errno));
+			    r->ptr_url,mstrerror(g_errno));
 		// otherwise, i guess we had no iframes worthy of expanding
 		// so pretend we do not have any iframes
 		hasIframe2 = false;
@@ -1128,12 +1146,12 @@ void gotHttpReply2 ( void *state ,
 	}
 
 	// nuke the content if from flurbit.com website!!
-	if ( r->m_url &&
+	if ( r->ptr_url &&
 	     replySize>0 &&
 	     goodStatus &&
-	     strstr ( r->m_url,"flurbit.com/" ) ) {
+	     strstr ( r->ptr_url,"flurbit.com/" ) ) {
 		// note it in log
-		log("msg13: got flurbit url: %s",r->m_url);
+		log("msg13: got flurbit url: %s",r->ptr_url);
 		// record in the stats
 		docsPtr     = &g_stats.m_compressUnchangedDocs;
 		bytesInPtr  = &g_stats.m_compressUnchangedBytesIn;
@@ -1366,7 +1384,7 @@ void gotHttpReply2 ( void *state ,
 				log("proxy: msg13: sending back error: %s "
 				    "for url %s with ip %s",
 				    mstrerror(err),
-				    r2->m_url,
+				    r2->ptr_url,
 				    iptoa(r2->m_urlIp));
 			g_udpServer.sendErrorReply ( slot , err );
 			continue;
@@ -1412,7 +1430,7 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 
 	if ( g_errno ) {
 		log("spider: error from proxy for %s: %s",
-		    r->m_url,mstrerror(g_errno));
+		    r->ptr_url,mstrerror(g_errno));
 		g_udpServer.sendErrorReply(r->m_udpSlot, g_errno);
 		return;
 	}
@@ -2014,8 +2032,8 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	// make a fake spider request so we can do it
 	SpiderRequest sreq;
 	sreq.reset();
-	strcpy(sreq.m_url,r->m_url);
-	long firstIp = hash32n(r->m_url);
+	strcpy(sreq.m_url,r->ptr_url);
+	long firstIp = hash32n(r->ptr_url);
 	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
 	sreq.setKey( firstIp,0LL, false );
 	sreq.m_isInjecting   = 1; 
@@ -2027,7 +2045,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 
 	// log it now
 	if ( g_conf.m_logDebugBuild ) 
-		log("scproxy: expanding iframes for %s",r->m_url);
+		log("scproxy: expanding iframes for %s",r->ptr_url);
 
 	// . use the enormous power of our new XmlDoc class
 	// . this returns false with g_errno set on error
@@ -2108,7 +2126,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	char **ec = xd->getExpandedUtf8Content();
 	// this means it blocked
 	if ( ec == (void *)-1 ) {
-		//log("scproxy: waiting for %s",r->m_url);
+		//log("scproxy: waiting for %s",r->ptr_url);
 		return false;
 	}
 	// return true with g_errno set
@@ -2128,7 +2146,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	// so i'd think indicative of something special
 	if ( g_conf.m_logDebugBuild ) 
 		log("scproxy: got iframe expansion without blocking for url=%s"
-		    " err=%s",r->m_url,mstrerror(g_errno));
+		    " err=%s",r->ptr_url,mstrerror(g_errno));
 
 	// save g_errno for returning
 	long saved = g_errno;
@@ -2169,11 +2187,11 @@ void gotIframeExpandedContent ( void *state ) {
 	// this was stored in xd
 	Msg13Request *r = xd->m_r;
 
-	//log("scproxy: done waiting for %s",r->m_url);
+	//log("scproxy: done waiting for %s",r->ptr_url);
 
 	// note it
 	if ( g_conf.m_logDebugBuild ) 
-		log("scproxy: got iframe expansion for url=%s",r->m_url);
+		log("scproxy: got iframe expansion for url=%s",r->ptr_url);
 
 	// assume we had no expansion or there was an error
 	char *reply          = NULL;
@@ -2212,7 +2230,7 @@ void gotIframeExpandedContent ( void *state ) {
 	// on the main cluster!
 	if ( g_errno )
 		log("scproxy: error getting iframe content for url=%s : %s",
-		    r->m_url,mstrerror(g_errno));
+		    r->ptr_url,mstrerror(g_errno));
 	// sanity check
 	if ( reply && reply[replySize-1] != '\0') { char *xx=NULL;*xx=0; }
 	// pass back the error we had, if any
@@ -2270,7 +2288,7 @@ void scanHammerQueue ( int fd , void *state ) {
 		// debug
 		//log("spider: downloading %s from crawldelay queue "
 		//    "waited=%llims crawldelay=%lims", 
-		//    r->m_url,waited,r->m_crawlDelayMS);
+		//    r->ptr_url,waited,r->m_crawlDelayMS);
 
 		// good to go
 		downloadTheDocForReals ( r );

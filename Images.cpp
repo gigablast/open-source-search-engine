@@ -692,7 +692,9 @@ bool Images::downloadImage ( ) {
 		r->m_addToTestCache = 1;
 	}
 	// url is the most important
-	strcpy(r->m_url,m_imageUrl.getUrl());
+	//strcpy(r->m_url,m_imageUrl.getUrl());
+	r-> ptr_url = m_imageUrl.getUrl();
+	r->size_url = m_imageUrl.getUrlLen()+1; // include \0
 	// . try to download it
 	// . i guess we are ignoring hammers at this point
 	if ( ! m_msg13.getDoc(r,false,this,downloadImageWrapper)) 

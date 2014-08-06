@@ -181,6 +181,10 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	if ( size == 0 ) cmd = "HEAD";
 	if ( doPost    ) cmd = "POST";
 
+	// crap, can't spider nyt.com if we are 1.0, so use 1.0 but also
+	// note Connection: Close\r\n when making requests
+	//proto = "HTTP/1.1";
+
 	 // . now use "Accept-Language: en" to tell servers we prefer english
 	 // . i removed keep-alive connection since some connections close on
 	 //   non-200 ok http statuses and we think they're open since close
@@ -212,6 +216,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   "Host: %s\r\n"
 			   "%s"
 			   "User-Agent: %s\r\n"
+			   "Connection: Close\r\n"
 			   //"Connection: Keep-Alive\r\n" 
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n\r\n" ,
@@ -226,6 +231,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   "Host: %s\r\n"
 			   "%s"
 			   "User-Agent: %s\r\n"
+			   "Connection: Close\r\n"
 			   //"Connection: Keep-Alive\r\n"
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n"
@@ -246,6 +252,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   "Host: %s\r\n"
 			   "%s"
 			   "User-Agent: %s\r\n"
+			   "Connection: Close\r\n"
 			   //"Connection: Keep-Alive\r\n"
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n"
@@ -275,6 +282,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   "Accept: */*\r\n" 
 			   "Host: %s\r\n"
 			   "%s"
+			   "Connection: Close\r\n"
 			   //"Connection: Keep-Alive\r\n"
 			   //"Accept-Language: en\r\n"
 				"%s",
@@ -415,6 +423,12 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 d = strstr ( req , "\r\n\r\n" );
 		 if ( d ) { dc = *d; *d = '\0'; }
 		 else log("http: Got POST request without \\r\\n\\r\\n.");
+	 }
+
+	 bool multipart = false;
+	 if ( m_requestType == 2 ) { // is POST?
+		 char *cd =strcasestr(req,"Content-Type: multipart/form-data");
+		 if ( cd ) multipart = true;
 	 }
 
 	 // . point to the file path 
@@ -812,7 +826,8 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 }
 
 	 // Put '\0' back into the HttpRequest buffer...
-	 if (m_cgiBuf){
+	 // crap, not if we are multi-part unencoded stuff...
+	 if ( m_cgiBuf && ! multipart ) {
 		 // do not mangle the "ucontent"!
 		 long cgiBufLen = m_cgiBufLen;
 		 cgiBufLen -= m_ucontentLen;

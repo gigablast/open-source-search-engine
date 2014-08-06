@@ -190,8 +190,14 @@ bool HttpServer::getDoc ( char   *url      ,
 	char *host = getHostFast ( url , &hostLen , &port );
 	
 
+	// mdw23
 	//if ( g_conf.m_logDebugSpider )
-	//	log("spider: httprequest = %s", req );
+	// {
+	// 	SafeBuf tmp;
+	// 	tmp.safeMemcpy ( req , reqSize );
+	// 	tmp.nullTerm();
+	// 	log("spider: httprequest = %s", tmp.getBufStart() );
+	// }
 
 
 	// do we have an ip to send to? assume not

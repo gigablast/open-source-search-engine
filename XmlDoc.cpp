@@ -9412,6 +9412,23 @@ Url **XmlDoc::getRedirUrl() {
 	// breathe
 	QUICKPOLL(m_niceness);
 
+	// get cookie for redirect to fix nyt.com
+	char *cookie = mime.getCookie();
+	// find end of cookie at the semicolon
+	char *s = cookie;
+	for ( ; s && *s && *s != ';' ; s++ );
+	if ( s && *s == ';' ) {
+		// do not include ;
+		long clen = s - cookie;
+		m_redirCookieBuf.reset();
+		m_redirCookieBuf.safeMemcpy ( cookie , clen );
+		m_redirCookieBuf.nullTerm();
+		m_redirCookieBufValid = true;
+	}
+
+	// mdw23
+	//log("http: reply=%s",m_httpReply);
+
 	// a hack for removing session ids already in there. for 
 	// brilliantshopper's bs4 collection and gk0 cluster
 	//bool forceRedirect = false;
@@ -9520,7 +9537,7 @@ Url **XmlDoc::getRedirUrl() {
 	// . if we followed too many then bail
 	// . www.motorolamobility.com www.outlook.com ... failed when we 
 	//   had >= 4 here
-	if ( ++m_numRedirects >= 7 ) {
+	if ( ++m_numRedirects >= 10 ) {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
@@ -14711,7 +14728,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// clear it first
 	r->reset();
 	// and set the url
-	strcpy ( r->m_url , cu->getUrl() );
+	//strcpy ( r->m_url , cu->getUrl() );
+	r->ptr_url  = cu->getUrl();
+	r->size_url = cu->getUrlLen()+1;
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 	// max to download in bytes. currently 1MB.
@@ -14747,6 +14766,15 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
 
+	if ( m_redirCookieBufValid && m_redirCookieBuf.length() ) {
+		r->ptr_cookie  = m_redirCookieBuf.getBufStart();
+		r->size_cookie = m_redirCookieBuf.length() + 1;
+		// . only do once per redirect
+		// . do not invalidate because we might have to carry it
+		//   through to the next redir... unless we change domain
+		// . this fixes the nyt.com bug some more
+		//m_redirCookieBufValid = false;
+	}
 
 	// . this is -1 if unknown. none found in robots.txt or provided
 	//   in the custom crawl parms.
