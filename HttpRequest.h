@@ -208,6 +208,17 @@ class HttpRequest {
 	char  m_filename[MAX_HTTP_FILENAME_LEN];
 	long  m_filenameLen;  // excludes ?cgistuff
 
+	// the TcpSocket::m_readBuf basically
+	//char *m_origReq;
+	//long  m_origReqLen;
+
+	// if request is like "GET /poo?foo=bar"
+	// then origUrlRequest is "/poo?foo=bar"
+	// references into TcpSocket::m_readBuf
+	char *m_origUrlRequest;
+	long  m_origUrlRequestLen;
+
+
 	// virtual host in the Host: field of the mime
 	char  m_host[256];
 	long  m_hostLen;

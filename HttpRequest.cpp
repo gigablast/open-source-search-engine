@@ -666,6 +666,15 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 strcat ( m_filename , "index.html" );
 		 m_filenameLen = gbstrlen ( m_filename );
 	 }
+
+
+	 // . uses the TcpSocket::m_readBuf
+	 // . if *p was ? then keep going
+	 m_origUrlRequest = origReq + filenameStart;
+	 char *p = origReq + m_filenameLen;
+	 for ( ; *p && ! is_wspace_a(*p) ; p++ );
+	 m_origUrlRequestLen = p - m_origUrlRequest;
+
 	 // set file offset/size defaults
 	 m_fileOffset = 0;
 	 // -1 means ALL the file from m_fileOffset onwards
