@@ -1366,7 +1366,11 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 	// . doesn't this only apply to reading replies and not requests???
 	// . MDW: add "&& s->m_sendBuf to it"
 	// . just return -1 WITHOUT setting g_errno
-	if ( n == 0 ) return -1; // { s->m_sockState = ST_CLOSED; return 1; }
+	if ( n == 0 )  {
+		// for debug. seems like content-length: is counting
+		// the \r\n when it shoulnd't be
+		//char *xx=NULL;*xx=0; 
+		return -1; } // { s->m_sockState = ST_CLOSED; return 1; }
 	// update counts
 	s->m_totalRead  += n;
 	s->m_readOffset += n;
@@ -1439,15 +1443,17 @@ bool TcpServer::setTotalToRead ( TcpSocket *s ) {
 	if ( size > 0 ) s->m_totalToRead = size;
 	// if size is unknown ensure we have at least 10k of extra space
 	if ( size == -1 ) size = s->m_readOffset + 10*1024;
-	// . if it's smaller than our current buffer don't worry
-	// . we need to make sure to store a \0 at end of the read...
-	//if ( size <= s->m_readBufSize ) return true;
-	if ( size < s->m_readBufSize ) return true;
-	// adjust so we can include our \0 at the end of the m_readBuf
+
+	// adjust so we can include our \0 at the end of the m_readBuf (mdw)
 	size += 1;
 	// and for the proxy ip!!
 	// (See HttpServer.cpp::sendDynamicPage())
 	size += 4;
+
+	// . if it's smaller than our current buffer don't worry
+	// . we need to make sure to store a \0 at end of the read...
+	//if ( size <= s->m_readBufSize ) return true;
+	if ( size < s->m_readBufSize ) return true;
 	// prepare for realloc if we're point to s->m_tmpBuf
 	//char *tmp = NULL;
 	char *newBuf = NULL;

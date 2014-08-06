@@ -1571,6 +1571,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
+	// MDW: support gigabits in xml/json format again
 	if ( format != FORMAT_HTML ) numGigabits = 0;
 
 
@@ -5830,7 +5831,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	}
 	
 	// term freq
-	sb->safePrintf("<td>%lli <font color=magenta>"
+	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf1,tfw1);
 	// insamewikiphrase?
@@ -5911,7 +5912,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		sb->safePrintf("<td>&nbsp;</td>");
 	}
 	// term freq
-	sb->safePrintf("<td>%lli <font color=magenta>"
+	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf2,tfw2);
 	// insamewikiphrase?
@@ -6336,7 +6337,7 @@ bool printSingleScore ( SafeBuf *sb ,
 		
 	}
 	
-	sb->safePrintf("<td>%lli <font color=magenta>"
+	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
 		      "%.02f</font></td>" // termfreq
 		      "</tr>"
 		      , tf

@@ -130,6 +130,9 @@ public:
 	long  size_url;
 	long  size_cookie;
 
+	// string buf for deserializeMsg() function
+	char m_buf[0];
+
 	long getSize() {
 		return ((char *)ptr_url-(char *)this) +size_url+size_cookie;};
 

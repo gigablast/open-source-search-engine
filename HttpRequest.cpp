@@ -385,7 +385,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 //log("captch: %s",m_buf);
 	 }
 
-	 if ( ! postData ) {
+	 if ( ! doPost ) { // ! postData ) {
 		 m_reqBuf.safePrintf("\r\n");
 	 }
 

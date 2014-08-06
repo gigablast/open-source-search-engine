@@ -169,6 +169,16 @@ void processReply ( char *reply , long replyLen ) {
 	// modified 1 day ago
 	markOut ( content,"modified:");
 
+	// s_gigabitCount... it is perpetually incrementing static counter
+	// in PageResults.cpp
+	markOut(content,"ccc(");
+	markOut(content,"id=fd");
+	markOut(content,"id=sd");
+
+	// for some reason the term freq seems to change a little in
+	// the scoring table
+	markOut(content,"id=tf");
+
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
 	long contentCRC = 0; 
@@ -526,6 +536,9 @@ bool qainject1 ( ) {
 			sb.urlEncode ( s_urlPtrs[s_flags[20]] );
 			// the content
 			sb.safePrintf("&hasmime=1");
+			// sanity
+			//if ( strstr(s_urlPtrs[s_flags[20]],"wdc.htm") )
+			//	log("hey");
 			sb.safePrintf("&content=");
 			sb.urlEncode(s_contentPtrs[s_flags[20]] );
 			sb.nullTerm();
