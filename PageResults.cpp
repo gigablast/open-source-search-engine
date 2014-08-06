@@ -8300,11 +8300,20 @@ bool printMenu ( SafeBuf *sb , long menuNum ) {
 	skip:
 
 		// print each item in there
-		sb->safePrintf("<span style=cursor:pointer;cursor:hand;>"
+		sb->safePrintf("<div style=cursor:pointer;cursor:hand;"
+			       "padding-top:10px;"
+			       "padding-bottom:10px;"
+
+			       " onmouseover=\""
+			       "this.style.backgroundColor='#f0f0f0';\" "
+			       " onmouseout=\""
+			       "this.style.backgroundColor='white';\" "
+
+			       ">"
 			       "<nobr>&nbsp; %s</nobr>"
-			       "</span>"
+			       "</div>"
 			       , mi->m_title );
-		sb->safePrintf("<br><br>");
+		//sb->safePrintf("<br><br>");
 	}
 
 	// wrap up the drop down
