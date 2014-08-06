@@ -120,16 +120,23 @@ public:
 	long long m_cacheKey;
 	char      m_testDir[32];
 	// msg13 sets this too, so you don't have to worry about setting it
-	long      m_urlLen;
+	//long      m_urlLen;
 	// includes \0 termination
-	char      m_url[MAX_URL_LEN+1];
+	//char      m_url[MAX_URL_LEN+1];
+
+	char *ptr_url;
+	char *ptr_cookie;
+
+	long  size_url;
+	long  size_cookie;
 
 	long getSize() {
-		return ((char *)m_url-(char *)this) +m_urlLen +1;};
+		return ((char *)ptr_url-(char *)this) +size_url+size_cookie;};
 
 	// zero it all out
 	void reset() {
-		memset (this,0,(char *)m_url - (char *)this + 1); 
+		//memset (this,0,(char *)m_url - (char *)this + 1); 
+		memset (this,0,sizeof(Msg13Request));
 		m_maxTextDocLen  = -1; // no limit
 		m_maxOtherDocLen = -1; // no limit
 		m_crawlDelayMS   = -1; // unknown or none

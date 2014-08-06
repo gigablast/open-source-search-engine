@@ -986,6 +986,7 @@ class XmlDoc {
 
 	Url        m_redirUrl;
 	Url       *m_redirUrlPtr;
+	SafeBuf    m_redirCookieBuf;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;
 	Url        m_canonicalRedirUrl;
@@ -1270,6 +1271,7 @@ class XmlDoc {
 	//bool m_tryAgainTimeDeltaValid;
 	//bool m_eliminateMenusValid;
 	bool m_redirUrlValid;
+	bool m_redirCookieBufValid;
 	bool m_metaRedirUrlValid;
 	bool m_canonicalRedirUrlValid;
 	bool m_statusMsgValid;

@@ -247,8 +247,14 @@ bool HttpServer::getDoc ( char   *url      ,
 	if ( ! req ) return true;
 
 
+	// mdw23
 	//if ( g_conf.m_logDebugSpider )
-	//	log("spider: httprequest = %s", req );
+	// {
+	// 	SafeBuf tmp;
+	// 	tmp.safeMemcpy ( req , reqSize );
+	// 	tmp.nullTerm();
+	// 	log("spider: httprequest = %s", tmp.getBufStart() );
+	// }
 
 
 	// do we have an ip to send to? assume not
@@ -3440,7 +3446,7 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	// let msg13 know to just send the request in m_url
 	r->m_isSquidProxiedUrl = true;
 
-	char *proxiedReqBuf = r->m_url;
+	char *proxiedReqBuf = r->ptr_url;
 
 	// store into there
 	memcpy ( proxiedReqBuf,
@@ -3450,7 +3456,7 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 
 	// include terminating \0. well it is already i think. see
 	// Msg13Request::getSize(), so no need to add +1
-	r->m_urlLen = sqs->m_sock->m_readOffset;
+	r->size_url = sqs->m_sock->m_readOffset;
 
 	// use urlip for this, it determines what host downloads it
 	r->m_firstIp                = r->m_urlIp;
@@ -3483,7 +3489,7 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	r->m_isCustomCrawl       = 0;
 
 	// log for now
-	log("proxy: getting proxied content for req=%s",r->m_url);
+	log("proxy: getting proxied content for req=%s",r->ptr_url);
 
 	// isTestColl = false. return if blocked.
 	if ( ! sqs->m_msg13.getDoc ( r, false ,sqs, gotSquidProxiedContent ) ) 

@@ -159,9 +159,10 @@ bool HttpMime::parse ( char *mime , long mimeLen , Url *url ) {
 		}
 		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) 
 			m_contentType = getContentTypePrivate ( p + 13 );
-		else if ( strncasecmp ( p , "Set-Cookie: "   ,11) == 0 ) {
+		else if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
 			m_cookie = p + 11;
-			m_cookieLen = gbstrlen ( p + 11 );
+			if ( m_cookie[0] == ' ' ) m_cookie++;
+			m_cookieLen = gbstrlen ( m_cookie );
 		}
 		else if ( strncasecmp ( p , "Location:"       , 9) == 0 ) {
 			// point to it
