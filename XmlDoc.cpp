@@ -26438,6 +26438,18 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 
 	setStatus ( "hashing content type" );
 
+
+	// hash numerically so we can do gbfacetint:type on it
+	HashInfo hi;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_tt        = tt;
+	hi.m_prefix    = "type";
+
+	char tmp[6];
+	sprintf(tmp,"%lu",(long)ctype);
+	if ( ! hashString (tmp,gbstrlen(tmp),&hi ) ) return false;
+
+
 	// these ctypes are defined in HttpMime.h
 	switch (ctype) {
 	case CT_HTML: s = "html"; break;
@@ -26459,12 +26471,6 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 	// that for searching diffbot json objects
 	if ( cr->m_isCustomCrawl && ctype==CT_JSON && !m_isDiffbotJSONObject )
 		return true;
-
-	// set up the hashing parms
-	HashInfo hi;
-	hi.m_hashGroup = HASHGROUP_INTAG;
-	hi.m_tt        = tt;
-	hi.m_prefix    = "type";
 
 	// . now hash it
 	// . use a score of 1 for all
@@ -32313,6 +32319,11 @@ bool XmlDoc::hashFacet1 ( char *term ,
 
 	if ( ! hashFacet2 ( "gbfacetstr",term, val32 , tt ) ) return false;
 
+	//
+	// why do this if we already do it for hashNumber() using gbsortby: ?
+	//
+
+	/*
 	// if it's a number hash as float and int
 	if ( nw != 1 ) return true;
 	char **wptrs = words->m_words;
@@ -32326,6 +32337,7 @@ bool XmlDoc::hashFacet1 ( char *term ,
 	// and an int val
 	long vi32 = atoi(wptrs[0]);
 	if ( ! hashFacet2 ( "gbfacetint",term, vi32 , tt ) ) return false;
+	*/
 
 	return true;
 }
@@ -48420,6 +48432,16 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 
 	bool isString = false;
 	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;
+
+	// check for gblang:en etc.
+	// if ( isString && strncmp(qs,"gblang",6)==0 ) {
+	// 	if (!sb->safeStrcpy(qs) ) return false;
+	// 	if (!sb->pushChar('\0') ) return false;
+	// 	// find the lang that has that hash!
+	// 	if (!sb->safePrintf("%lu,",(unsigned long)val32)) return false;
+	// 	if (!sb->safeMemcpy(content,contentLen) ) return false;
+	// 	if (!sb->pushChar('\0') ) return false;
+	//}
 
 	// find the first meta summary node
 	for ( long i = 0 ; i < xml->m_numNodes ; i++ ) {

@@ -2260,6 +2260,13 @@ bool Query::setQWords ( char boolFlag ,
 		if ( fieldCode == FIELD_GBNUMBEREQUALINT )
 			ph = hash64 ("gbsortbyint", 11);
 
+
+		if ( fieldCode == FIELD_GBFACETFLOAT )
+			ph = hash64 ("gbsortby",8);
+		if ( fieldCode == FIELD_GBFACETINT )
+			ph = hash64 ("gbsortbyint",11);
+
+
 		// ptr to field, if any
 
 		qw->m_fieldCode = fieldCode;

@@ -8198,6 +8198,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "JSON";
+		s_mi[n].m_cgi      = "filetype=json";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Excel";
 		s_mi[n].m_cgi      = "filetype=xls";
 		n++;
@@ -8216,12 +8221,22 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Language facet";
-		s_mi[n].m_cgi      = "facet=gbfacetint:gblangid";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gblang";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Content type facet";
-		s_mi[n].m_cgi      = "facet=gbfacetint:gbcontenttypeid";
+		s_mi[n].m_cgi      = "facet=gbfacetint:type";
+		n++;
+
+		// s_mi[n].m_menuNum  = 4;
+		// s_mi[n].m_title    = "Ip address";
+		// s_mi[n].m_cgi      = "facet=gbfacetstr:ip";
+		// n++;
+
+		s_mi[n].m_menuNum  = 4;
+		s_mi[n].m_title    = "Url path depth";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gbpathdepth";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
@@ -8229,15 +8244,16 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_cgi      = "facet=gbfacetint:gbspiderdate";
 		n++;
 
+		// everything in tagdb is hashed
 		s_mi[n].m_menuNum  = 4;
-		s_mi[n].m_title    = "Site rank facet";
-		s_mi[n].m_cgi      = "facet=gbfacetstr:gbsiterank";
+		s_mi[n].m_title    = "Site num inlinks facet";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gbtagsitenuminlinks";
 		n++;
 
-		s_mi[n].m_menuNum  = 4;
-		s_mi[n].m_title    = "Domains facet";
-		s_mi[n].m_cgi      = "facet=gbfacetint:gbdomhash";
-		n++;
+		// s_mi[n].m_menuNum  = 4;
+		// s_mi[n].m_title    = "Domains facet";
+		// s_mi[n].m_cgi      = "facet=gbfacetint:gbdomhash";
+		// n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Hopcount facet";
@@ -8347,10 +8363,19 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		}
 
 		// is it in the url
-		if ( ! strnstr ( src , srcLen , mi->m_cgi ) ) {
+		char *match = strnstr ( src , srcLen , mi->m_cgi ) ;
+		if ( ! match ) {
 			isTrueHeader = false;
 			continue;
 		}
+		// ensure ? or & preceeds
+		if ( match > src && match[-1] != '?' && match[-1] != '&' )
+			continue;
+		// and \0 or & follows
+		long milen = gbstrlen(mi->m_cgi);
+		if ( match+milen > src+srcLen ) continue;
+		if ( ! is_wspace_a(match[milen]) && match[milen] != '&' ) 
+			continue;
 		// got it
 		first = mi;
 		// do not highlight the orig header
