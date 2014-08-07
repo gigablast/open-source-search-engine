@@ -1155,6 +1155,7 @@ class XmlDoc {
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
 	char     m_matchingQueryBufValid;
+	char     m_matchesCrawlPatternValid;
 	char     m_relatedQueryBufValid;
 	char     m_queryLinkBufValid;
 	char     m_redirSpiderRequestValid;
@@ -1687,7 +1688,7 @@ class XmlDoc {
 	bool *getRecycleDiffbotReply ( ) ;
 	SafeBuf *getTokenizedDiffbotReply ( ) ;
 	SafeBuf *getDiffbotReply ( ) ;
-	//bool doesUrlMatchDiffbotCrawlPattern() ;
+	bool doesUrlMatchDiffbotCrawlPattern() ;
 	//bool doesUrlMatchDiffbotProcessPattern() ;
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	long *getDiffbotTitleHashes ( long *numHashes ) ;
@@ -1888,6 +1889,7 @@ class XmlDoc {
 	long m_numMsg4fRequests;
 	long m_numMsg4fReplies;
 	bool m_sentMsg4fRequests;
+	bool m_matchesCrawlPattern;
 	class UdpSlot *m_savedSlot;
 	long m_numMsg95Requests;
 	long m_numMsg95Replies;
