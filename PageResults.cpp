@@ -8261,27 +8261,10 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_cgi      = "format=json";
 		n++;
 
-
-		// ADMIN
-
+		// show/hide banned
 		s_mi[n].m_menuNum  = 6;
-		s_mi[n].m_title    = "Admin";
-		s_mi[n].m_cgi      = "/admin/settings";
-		n++;
-
-		s_mi[n].m_menuNum  = 6;
-		s_mi[n].m_title    = "Respider all results";
-		s_mi[n].m_cgi      = "/admin/reindex";
-		n++;
-
-		s_mi[n].m_menuNum  = 6;
-		s_mi[n].m_title    = "Delete all results";
-		s_mi[n].m_cgi      = "/admin/reindex";
-		n++;
-
-		s_mi[n].m_menuNum  = 6;
-		s_mi[n].m_title    = "Scrape from google/bing";
-		s_mi[n].m_cgi      = "/admin/inject";
+		s_mi[n].m_title    = "Hide banned results";
+		s_mi[n].m_cgi      = "sb=0";
 		n++;
 
 		s_mi[n].m_menuNum  = 6;
@@ -8289,12 +8272,29 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_cgi      = "sb=1";
 		n++;
 
-		s_mi[n].m_menuNum  = 6;
-		s_mi[n].m_title    = "Hide banned results";
-		s_mi[n].m_cgi      = "sb=0";
+
+
+		// ADMIN
+
+		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_title    = "Admin";
+		s_mi[n].m_cgi      = "/admin/settings";
 		n++;
 
+		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_title    = "Respider all results";
+		s_mi[n].m_cgi      = "/admin/reindex";
+		n++;
 
+		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_title    = "Delete all results";
+		s_mi[n].m_cgi      = "/admin/reindex";
+		n++;
+
+		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_title    = "Scrape from google/bing";
+		s_mi[n].m_cgi      = "/admin/inject";
+		n++;
 
 		s_num = n;
 		if ( n > 200 ) { char *xx=NULL;*xx=0; }
@@ -8339,7 +8339,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		if ( mi->m_menuNum != menuNum ) continue;
 
 		// admin menu is special
-		if ( menuNum == 6 ) {
+		if ( menuNum == 7 ) {
 			first = mi;
 			frontTag = "<font color=green>";
 			backTag = "</font>";
