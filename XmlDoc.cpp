@@ -14989,7 +14989,9 @@ char **XmlDoc::gotHttpReply ( ) {
 
 	// if it doesn't match the crawl pattern, just the process pattern
 	// then do not increment download successes
-	if ( cr->m_isCustomCrawl == 1 && ! doesUrlMatchDiffbotCrawlPattern() ) 
+	if ( doIncrement &&
+	     cr->m_isCustomCrawl == 1 && 
+	     ! doesUrlMatchDiffbotCrawlPattern() ) 
 		doIncrement = false;
 	
 
