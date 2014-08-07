@@ -6390,7 +6390,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "filetype";
-	m->m_desc  = "Restrict results to this filetypes. Supported "
+	m->m_desc  = "Restrict results to this filetype. Supported "
 		"filetypes are pdf, doc, html xml, json, xls.";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;

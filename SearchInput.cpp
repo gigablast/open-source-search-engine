@@ -668,6 +668,23 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		m_sbuf1.safePrintf("filetype:%s",ft);
 	}
 
+	// facet prepend en masse
+	// for ( long i = 1 ; i <= 6 ; i++ ) {
+	// 	char tmp[12];
+	// 	sprintf(tmp,"facet%li",i);
+	// 	char *ff = hr->getString(tmp,NULL);
+	// 	if ( ! ff ) continue;
+	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	// 	m_sbuf1.safePrintf("%s",ff);
+	// }
+
+	// one at a time for now
+	char *ff = hr->getString("facet",NULL);
+	if ( ff ) {
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	m_sbuf1.safePrintf("%s",ff);
+	 }
+
 
 	// append site: term
 	// if ( m_sites && m_sites[0] ) {

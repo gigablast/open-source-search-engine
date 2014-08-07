@@ -8127,7 +8127,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Sorted by relevance";
-		s_mi[n].m_cgi      = "sortby=";
+		s_mi[n].m_cgi      = "sortby=0";
 		n++;
 
 		s_mi[n].m_menuNum  = 1;
@@ -8144,7 +8144,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 2;
 		s_mi[n].m_title    = "Any language";
-		s_mi[n].m_cgi      = "qlang=";
+		s_mi[n].m_cgi      = "qlang=xx";
 		n++;
 
 		for ( long i = 0 ; i < langLast ; i++ ) {
@@ -8202,32 +8202,32 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Language facet";
-		s_mi[n].m_cgi      = "facet1=gbfacetint:gblangid";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gblangid";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Content type facet";
-		s_mi[n].m_cgi      = "facet2=gbfacetint:gbcontenttypeid";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gbcontenttypeid";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Spider date facet";
-		s_mi[n].m_cgi      = "facet3=gbfacetint:gbspiderdate";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gbspiderdate";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Site rank facet";
-		s_mi[n].m_cgi      = "facet4=gbfacetstr:gbsiterank";
+		s_mi[n].m_cgi      = "facet=gbfacetstr:gbsiterank";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Domains facet";
-		s_mi[n].m_cgi      = "facet5=gbfacetint:gbdomhash";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gbdomhash";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Hopcount facet";
-		s_mi[n].m_cgi      = "facet6=gbfacetint:gbhopcount";
+		s_mi[n].m_cgi      = "facet=gbfacetint:gbhopcount";
 		n++;
 
 		// output
@@ -8270,6 +8270,36 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 	bool firstOne = true;
 
 	MenuItem *first = NULL;
+
+	char *src    = hr->m_origUrlRequest;
+	long  srcLen = hr->m_origUrlRequestLen;
+
+	char *frontTag = "";
+	char *backTag = "";
+
+	bool isTrueHeader = true;
+
+	// try to set first based on what's in the url
+	for ( long i = 0 ; i < s_num ; i++ ) {
+		// shortcut
+		MenuItem *mi = &s_mi[i];
+		// skip if not our item
+		if ( mi->m_menuNum != menuNum ) continue;
+		// is it in the url
+		if ( ! strnstr ( src , srcLen , mi->m_cgi ) ) {
+			isTrueHeader = false;
+			continue;
+		}
+		// got it
+		first = mi;
+		// do not highlight the orig header
+		if ( isTrueHeader ) break;
+		frontTag = "<b style=color:maroon;>";
+		backTag = "</b>";
+		break;
+	}
+	
+
 
 	for ( long i = 0 ; i < s_num ; i++ ) {
 
@@ -8333,11 +8363,23 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 			       "this.style.backgroundColor='white';\" "
 
 			       ">"
-			       "<nobr>&nbsp; %s</nobr>"
+			       "<nobr>"
+			       , newUrl.getBufStart()
+			       );
+
+		// print checkmark (check mark) next to selected one
+		// if not the default (trueHeader)
+		if ( ! isTrueHeader && mi == first )
+			sb->safePrintf("<b style=color:black;>%c%c%c</b>",
+				       0xe2,0x9c,0x93);
+		else 
+			sb->safePrintf("&nbsp; &nbsp; ");
+
+		sb->safePrintf(" %s</nobr>"
 			       "</div>"
 			       "</a>"
-			       , newUrl.getBufStart()
 			       , mi->m_title );
+
 		//sb->safePrintf("<br><br>");
 	}
 
@@ -8355,10 +8397,12 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		       "onmousedown=\"this.style.color='red';\" "
 		       "onmouseup=\"this.style.color='gray';\" "
 		       "onclick=show('menu%li');>"
-		       "%s %c%c%c" 
+		       "%s%s%s %c%c%c" 
 		       "</span>"
 		       , first->m_menuNum
+		       , frontTag
 		       , first->m_title
+		       , backTag
 		       ,0xe2
 		       ,0x96
 		       ,0xbc
