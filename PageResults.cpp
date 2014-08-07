@@ -8210,8 +8210,8 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		// facets
 
 		s_mi[n].m_menuNum  = 4;
-		s_mi[n].m_title    = "Facets";
-		s_mi[n].m_cgi      = "";
+		s_mi[n].m_title    = "No Facets";
+		s_mi[n].m_cgi      = "facet=";
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
@@ -8261,6 +8261,41 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_cgi      = "format=json";
 		n++;
 
+
+		// ADMIN
+
+		s_mi[n].m_menuNum  = 6;
+		s_mi[n].m_title    = "Admin";
+		s_mi[n].m_cgi      = "/admin/settings";
+		n++;
+
+		s_mi[n].m_menuNum  = 6;
+		s_mi[n].m_title    = "Respider all results";
+		s_mi[n].m_cgi      = "/admin/reindex";
+		n++;
+
+		s_mi[n].m_menuNum  = 6;
+		s_mi[n].m_title    = "Delete all results";
+		s_mi[n].m_cgi      = "/admin/reindex";
+		n++;
+
+		s_mi[n].m_menuNum  = 6;
+		s_mi[n].m_title    = "Scrape from google/bing";
+		s_mi[n].m_cgi      = "/admin/inject";
+		n++;
+
+		s_mi[n].m_menuNum  = 6;
+		s_mi[n].m_title    = "Show banned results";
+		s_mi[n].m_cgi      = "sb=1";
+		n++;
+
+		s_mi[n].m_menuNum  = 6;
+		s_mi[n].m_title    = "Hide banned results";
+		s_mi[n].m_cgi      = "sb=0";
+		n++;
+
+
+
 		s_num = n;
 		if ( n > 200 ) { char *xx=NULL;*xx=0; }
 	}
@@ -8271,8 +8306,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 	// bar of drop down menus
 	sb->safePrintf("<div style=color:gray;>");
 
-	for ( long i = 0 ; i <= 5 ; i++ )
+	for ( long i = 0 ; i <= s_mi[s_num-1].m_menuNum ; i++ ) {
+		// after 4 make a new line
+		if ( i == 5 ) sb->safePrintf("<br><br>");
 		printMenu ( sb , i , hr );
+	}
 
 	sb->safePrintf("</div>\n");
 
@@ -8299,6 +8337,15 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		MenuItem *mi = &s_mi[i];
 		// skip if not our item
 		if ( mi->m_menuNum != menuNum ) continue;
+
+		// admin menu is special
+		if ( menuNum == 6 ) {
+			first = mi;
+			frontTag = "<font color=green>";
+			backTag = "</font>";
+			break;
+		}
+
 		// is it in the url
 		if ( ! strnstr ( src , srcLen , mi->m_cgi ) ) {
 			isTrueHeader = false;
@@ -8313,7 +8360,6 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		break;
 	}
 	
-
 
 	for ( long i = 0 ; i < s_num ; i++ ) {
 
@@ -8420,9 +8466,13 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		       "onmouseup=\"this.style.color='gray';"
 
 		       // close any other open menu
-		       "if ( openmenu !='' ) {"
+		       "if ( openmenu !='') {"
 		       "document.getElementById(openmenu)."
-		       "style.display='none'; openmenu='';"
+		       "style.display='none'; "
+		       "var saved=openmenu;"
+		       "openmenu='';"
+		       // don't reopen our same menu below!
+		       "if ( saved=='menu%li') return;"
 		       "}"
 
 		       // show our menu
@@ -8435,6 +8485,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 
 		       "%s%s%s %c%c%c" 
 		       "</span>"
+		       , first->m_menuNum
 		       , first->m_menuNum
 		       , first->m_menuNum
 		       , frontTag
