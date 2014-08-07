@@ -6089,12 +6089,16 @@ void Msg40::lookupFacets2 ( ) {
 	}
 }
 
+// this is new PageResults.cpp
+bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) ;
 
 bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	char format = m_si->m_format;
 
 	bool firstTime = true;
+
+	HttpRequest *hr = &m_si->m_hr;
 
 	for ( long i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
@@ -6126,14 +6130,20 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 			char *text = NULL;
 
-			char *term = qt->m_term;
-			if ( term[0] == ' ' ) term++;
-			if ( strncasecmp(term,"gbfacetstr:",11)== 0 )
-				term += 11;
-			if ( strncasecmp(term,"gbfacetint:",11)== 0 )
-				term += 11;
-			if ( strncasecmp(term,"gbfacetfloat:",13)== 0 )
-				term += 13;
+			char *termPtr = qt->m_term;
+			long  termLen = qt->m_termLen;
+			if ( termPtr[0] == ' ' ) { termPtr++; termLen--; }
+			if ( strncasecmp(termPtr,"gbfacetstr:",11)== 0 ) {
+				termPtr += 11; termLen -= 11; }
+			if ( strncasecmp(termPtr,"gbfacetint:",11)== 0 ) {
+				termPtr += 11; termLen -= 11; }
+			if ( strncasecmp(termPtr,"gbfacetfloat:",13)== 0 ) {
+				termPtr += 13; termLen -= 13; }
+			char tmpBuf[64];
+			SafeBuf termBuf(tmpBuf,64);
+			termBuf.safeMemcpy(termPtr,termLen);
+			termBuf.nullTerm();
+			char *term = termBuf.getBufStart();
 
 			char tmp[64];
 			if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
@@ -6241,9 +6251,23 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 					       term);
 			}
 
+			// make the cgi parm to add to the original url
+			char nsbuf[128];
+			SafeBuf newStuff(nsbuf,128);
 			char *suffix = "int";
 			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 				suffix = "float";
+			newStuff.safePrintf("prepend=gbequal%s%%3A",suffix);
+			newStuff.safePrintf("%s%%3A",term);
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+				newStuff.safePrintf("%f",*(float *)fvh);
+			else
+				newStuff.safePrintf("%lu",(long)*fvh);
+
+			// get the original url and add 
+			// &prepend=gbequalint:gbhopcount:1 type stuff to it
+			SafeBuf newUrl;
+			replaceParm ( newStuff.getBufStart(), &newUrl , hr );
 
 			// print the facet in its numeric form
 			// we will have to lookup based on its docid
@@ -6254,20 +6278,11 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       // make a search to just show those
 				       // docs from this facet with that
 				       // value. actually gbmin/max would work
-				       "<a href=/search?c=%s&q="
-				       "gbequal%s%%3A%s:"
-				       ,m_si->m_coll
-				       ,suffix
-				       ,term // for query
+				       "<a href=\"%s\">"
+				       , newUrl.getBufStart()
 				       );
 
-			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
-				sb->safePrintf("%f",*(float *)fvh);
-			else
-				sb->safePrintf("%lu",(long)*fvh);
-
-			sb->safePrintf(">"
-				       "%s (%lu)"
+			sb->safePrintf("%s (%lu)"
 				       "</a>"
 				       "</td></tr>\n"
 				       ,text

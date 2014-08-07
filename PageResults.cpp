@@ -2834,13 +2834,15 @@ bool printSearchResultsTail ( State0 *st ) {
 		args.safePrintf("&sb=1");
 	if ( ! si->m_showBanned && si->m_isAdmin )
 		args.safePrintf("&sb=0");
+
+	//HttpRequest *hr = &st->m_hr;
+
 	// collection
 	args.safePrintf("&c=%s",coll);
 	// formatting info
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		args.safePrintf("&format=widget");
-		HttpRequest *hr = &st->m_hr;
 		long widgetwidth = hr->getLong("widgetwidth",250);
 		args.safePrintf("&widgetwidth=%li",widgetwidth);
 	}
@@ -2857,16 +2859,27 @@ bool printSearchResultsTail ( State0 *st ) {
 	      //si->m_format == FORMAT_WIDGET_AJAX
 	      ) ) {
 		long ss = firstNum - msg40->getDocsWanted();
-		sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
+		
+		//sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
-		sb->safeStrcpy ( st->m_qe );
+		//sb->safeStrcpy ( st->m_qe );
 		// print other args if not zero
-		sb->safeMemcpy ( &args );
+		//sb->safeMemcpy ( &args );
+
+		// make the cgi parm to add to the original url
+		char nsbuf[128];
+		sprintf(nsbuf,"s=%li",ss);
+		// get the original url and add/replace in &s=xxx
+		SafeBuf newUrl;
+		replaceParm ( nsbuf , &newUrl , hr );
+
+
 		// close it up
-		sb->safePrintf ("\"><b>"
+		sb->safePrintf ("<a href=\"%s\"><b>"
 			       "<font size=+0>Prev %li Results</font>"
-			       "</b></a>", 
-				msg40->getDocsWanted() );
+			       "</b></a>"
+				, newUrl.getBufStart()
+				, msg40->getDocsWanted() );
 	}
 
 	// now print "Next X Results"
@@ -2879,16 +2892,25 @@ bool printSearchResultsTail ( State0 *st ) {
 		// print a separator first if we had a prev results before us
 		if ( sb->length() > remember ) sb->safePrintf ( " &nbsp; " );
 		// add the query
-		sb->safePrintf ("<a href=\"/search?s=%li&q=",ss);
+		//sb->safePrintf ("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
-		sb->safeStrcpy ( st->m_qe );
+		//sb->safeStrcpy ( st->m_qe );
 		// print other args if not zero
-		sb->safeMemcpy ( &args );
+		//sb->safeMemcpy ( &args );
+
+		// make the cgi parm to add to the original url
+		char nsbuf[128];
+		sprintf(nsbuf,"s=%li",ss);
+		// get the original url and add/replace in &s=xxx
+		SafeBuf newUrl;
+		replaceParm ( nsbuf , &newUrl , hr );
+
 		// close it up
-		sb->safePrintf("\"><b>"
+		sb->safePrintf("<a href=\"%s\"><b>"
 			      "<font size=+0>Next %li Results</font>"
-			      "</b></a>", 
-			       msg40->getDocsWanted() );
+			      "</b></a>"
+			       , newUrl.getBufStart()
+			       , msg40->getDocsWanted() );
 	}
 
 
@@ -8105,7 +8127,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Sorted by relevance";
-		s_mi[n].m_cgi      = "sortby=0";
+		s_mi[n].m_cgi      = "sortby=";
 		n++;
 
 		s_mi[n].m_menuNum  = 1;
@@ -8142,6 +8164,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "HTML";
+		s_mi[n].m_cgi      = "filetype=html";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PDF";
 		s_mi[n].m_cgi      = "filetype=pdf";
 		n++;
@@ -8149,6 +8176,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Microsoft Word";
 		s_mi[n].m_cgi      = "filetype=doc";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "XML";
+		s_mi[n].m_cgi      = "filetype=xml";
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
@@ -8347,7 +8379,21 @@ bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) {
 	if ( ! equal ) return log("results: %s has no equal sign",cgi);
 	long cgiLen = equal - cgi;
 
-	char *found = strncasestr ( src , cgi , srcLen , cgiLen );
+	char *found = NULL;
+
+	char *p = src;
+
+ tryagain:
+
+	found = strncasestr ( p , cgi , srcEnd - p , cgiLen );
+
+	// if no ? or & before it it is bogus!
+	if ( found && found[-1] != '&' && found[-1] != '?' ) {
+		// try again
+		p = found + 1;
+		goto tryagain;
+	}
+		
 
 	// if no collision, just append it
 	if ( ! found ) {

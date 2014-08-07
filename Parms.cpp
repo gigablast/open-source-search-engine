@@ -6364,6 +6364,42 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m++;
 
+	m->m_title = "seconds back";
+	m->m_desc  = "Limit results to pages spidered this many seconds ago. "
+		"Use 0 to disable.";
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m->m_off   = (char *)&si.m_secsBack - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_cgi   = "secsback";
+	m->m_flags = PF_API;
+	m++;
+
+	m->m_title = "sort by";
+	m->m_desc  = "Use 0 to sort results by relevance, 1 to sort by "
+		"most recent spider date down, and 2 to sort by oldest "
+		"spidered results first.";
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m->m_off   = (char *)&si.m_sortBy - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_def   = "0"; // this means relevance
+	m->m_cgi   = "sortby";
+	m->m_flags = PF_API;
+	m++;
+
+	m->m_title = "filetype";
+	m->m_desc  = "Restrict results to this filetypes. Supported "
+		"filetypes are pdf, doc, html xml, json, xls.";
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m->m_off   = (char *)&si.m_filetype - y;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = "";
+	m->m_cgi   = "filetype";
+	m->m_flags = PF_API;
+	m++;
 
 	m->m_title = "get scoring info";
 	m->m_desc  = "Get scoring information for each result so you "

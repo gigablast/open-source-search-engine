@@ -250,6 +250,14 @@ class SearchInput {
 	// thousands of results are requested
 	char   m_streamResults;
 
+	// limit search results to pages spidered this many seconds ago
+	long   m_secsBack;
+
+	// 0 relevance, 1 date, 2 reverse date
+	char   m_sortBy;
+
+	char *m_filetype;
+
 	// . related topic (gigabits) parameters
 	// . TODO: prepend m_top_ to these var names
 	long   m_docsToScanForTopics;     // msg40

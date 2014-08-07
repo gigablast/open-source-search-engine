@@ -641,6 +641,34 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		m_sbuf1.safePrintf( "%s", qp );
 	}
 
+	// and this
+	if ( m_secsBack > 0 ) {
+		long timestamp = getTimeGlobalNoCore();
+		timestamp -= m_secsBack;
+		if ( timestamp <= 0 ) timestamp = 0;
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbminint:gbspiderdate:%lu",timestamp);
+	}
+
+	if ( m_sortBy == 1 ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbsortby:gbspiderdate");
+	}
+
+	if ( m_sortBy == 2 ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbrevsortby:gbspiderdate");
+	}
+
+	char *ft = m_filetype;
+	if ( ft && strcasecmp(ft,"any")==0 ) ft = NULL;
+	if ( ft && ! ft[0] ) ft = NULL;
+	if ( ft ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("filetype:%s",ft);
+	}
+
+
 	// append site: term
 	// if ( m_sites && m_sites[0] ) {
 	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
