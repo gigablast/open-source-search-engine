@@ -14983,9 +14983,19 @@ char **XmlDoc::gotHttpReply ( ) {
 	// make it so
 	g_errno = saved;
 
+	bool doIncrement = true;
+	if ( m_isChildDoc ) doIncrement = false;
+	if ( m_incrementedDownloadCount ) doIncrement = false;
+
+	// if it doesn't match the crawl pattern, just the process pattern
+	// then do not increment download successes
+	if ( cr->m_isCustomCrawl == 1 && ! doesUrlMatchDiffbotCrawlPattern() ) 
+		doIncrement = false;
+	
+
 	// . do not count bad http status in mime as failure i guess
 	// . do not inc this count for robots.txt and root page downloads, etc.
-	if ( ! m_isChildDoc && ! m_incrementedDownloadCount ) {
+	if ( doIncrement ) {
 		cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
 		cr->m_globalCrawlInfo.m_pageDownloadSuccesses++;
 		cr->m_localCrawlInfo.m_pageDownloadSuccessesThisRound++;
@@ -20122,6 +20132,7 @@ bool checkRegex ( SafeBuf *regex ,
 	*boolValValid = true;
 	return boolVal;
 }
+*/
 
 // . should we send this url off to diffbot or processing?
 // . if the url's downloaded content does not match the provided regex
@@ -20130,14 +20141,45 @@ bool checkRegex ( SafeBuf *regex ,
 // . make sure this regex is pre-tested before starting the crawl
 //   so we know it compiles
 bool XmlDoc::doesUrlMatchDiffbotCrawlPattern() {
-	return checkRegex ( &cr->m_diffbotUrlCrawlPattern ,
-			    m_firstUrl.m_url ,
-			    &m_diffbotUrlCrawlPatternMatch,
-			    &m_diffbotUrlCrawlPatternMatchValid,
-			    NULL,
-			    cr);
+
+	if ( m_matchesCrawlPatternValid )
+		return m_matchesCrawlPattern;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
+
+	// get the compiled regular expressions
+	regex_t *ucr = &cr->m_ucr;
+	if ( ! cr->m_hasucr ) ucr = NULL;
+
+	if ( ! m_firstUrlValid ) return false;
+
+
+	m_matchesCrawlPatternValid = true;
+	m_matchesCrawlPattern = false;
+
+	Url *furl = getFirstUrl();
+	char *url = furl->getUrl();
+
+	// if we had a url crawl regex then regexec will return non-zero
+	// if our url does NOT match i guess
+	if ( ucr && regexec(ucr,url,0,NULL,0) ) 
+		return false;
+
+	// shortcut
+	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+
+	// do not require a match on ucp if ucr is given
+	if ( ucp && ! ucr && ! doesStringContainPattern(url,ucp) )
+		return false;
+
+	m_matchesCrawlPattern = true;
+
+	return true;
 }
 
+/*
 bool XmlDoc::doesUrlMatchDiffbotProcessPattern() {
 	return checkRegex ( &cr->m_diffbotUrlProcessPattern ,
 			    m_firstUrl.m_url ,
