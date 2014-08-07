@@ -331,6 +331,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		printCSSHead ( &sb ,format );
 		sb.safePrintf(
 			      "<body "
+
 			      "onLoad=\""
 			      "var client = new XMLHttpRequest();\n"
 			      "client.onreadystatechange = handler;\n"
@@ -1467,9 +1468,22 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	sb.safePrintf("</head>\n");
 	sb.safePrintf("<script>\n");
 	sb.safePrintf("<!--\n");
+	sb.safePrintf("var openmenu=''; var inmenuclick=0;");
 	sb.safePrintf("function x(){document.f.q.focus();}\n");
 	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
+	sb.safePrintf("<body "
+
+		      "onmousedown=\""
+
+		      "if (openmenu != '' && inmenuclick==0) {"
+		        "document.getElementById(openmenu)."
+		        "style.display='none'; openmenu='';"
+		      "}"
+
+		      "inmenuclick=0;"
+		      "\" "
+
+		      "onload=\"x()\">\n");
 
 	//
 	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
@@ -8362,6 +8376,10 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 			       " onmouseout=\""
 			       "this.style.backgroundColor='white';\" "
 
+			       // prevent the body onmousedown from 
+			       // hiding the menu
+			       " onmousedown=\"inmenuclick=1;\" "
+
 			       ">"
 			       "<nobr>"
 			       , newUrl.getBufStart()
@@ -8394,11 +8412,30 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		       // will show the drop down
 		       "<span style=cursor:pointer;"
 		       "cursor:hand; "
-		       "onmousedown=\"this.style.color='red';\" "
-		       "onmouseup=\"this.style.color='gray';\" "
-		       "onclick=show('menu%li');>"
+
+		       "onmousedown=\"this.style.color='red';"
+		       "inmenuclick=1;"
+		       "\" "
+
+		       "onmouseup=\"this.style.color='gray';"
+
+		       // close any other open menu
+		       "if ( openmenu !='' ) {"
+		       "document.getElementById(openmenu)."
+		       "style.display='none'; openmenu='';"
+		       "}"
+
+		       // show our menu
+		       "show('menu%li'); "
+		       // we are now open
+		       "openmenu='menu%li'; "
+
+		       "\""
+		       ">"
+
 		       "%s%s%s %c%c%c" 
 		       "</span>"
+		       , first->m_menuNum
 		       , first->m_menuNum
 		       , frontTag
 		       , first->m_title
