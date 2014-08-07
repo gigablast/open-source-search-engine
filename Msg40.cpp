@@ -6254,15 +6254,21 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			// make the cgi parm to add to the original url
 			char nsbuf[128];
 			SafeBuf newStuff(nsbuf,128);
-			char *suffix = "int";
+			// they are all ints...
+			//char *suffix = "int";
+			//if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+			//	suffix = "float";
+			//newStuff.safePrintf("prepend=gbequalint%%3A");
 			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
-				suffix = "float";
-			newStuff.safePrintf("prepend=gbequal%s%%3A",suffix);
-			newStuff.safePrintf("%s%%3A",term);
-			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
-				newStuff.safePrintf("%f",*(float *)fvh);
+				newStuff.safePrintf("prepend="
+						    "gbequalfloat%%3A%s%%3A%f",
+						    term,
+						    *(float *)fvh);
 			else
-				newStuff.safePrintf("%lu",(long)*fvh);
+				newStuff.safePrintf("prepend="
+						    "gbequalint%%3A%s%%3A%lu",
+						    term,
+						    (long)*fvh);
 
 			// get the original url and add 
 			// &prepend=gbequalint:gbhopcount:1 type stuff to it

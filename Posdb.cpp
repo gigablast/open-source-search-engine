@@ -4302,6 +4302,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 		if (qt->m_fieldCode == FIELD_GBNUMBERMAX )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBNUMBEREQUALFLOAT )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 		if (qt->m_fieldCode == FIELD_GBSORTBYINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
@@ -4675,6 +4677,11 @@ inline bool isInRange( char *p , QueryTerm *qt ) {
 		return ( score2 <= qt->m_qword->m_float );
 	}
 
+	if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALFLOAT ) {
+		float score2 = g_posdb.getFloat ( p );
+		return ( score2 == qt->m_qword->m_float );
+	}
+
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) {
 		long score2 = g_posdb.getInt ( p );
 		return ( score2 >= qt->m_qword->m_int );
@@ -4728,6 +4735,8 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) 
 		isRangeTerm = true;
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) 
+		isRangeTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALFLOAT )
 		isRangeTerm = true;
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) 
 		isRangeTerm = true;
@@ -7402,6 +7411,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) 
 			isRangeTerm = true;
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) 
+			isRangeTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALFLOAT ) 
 			isRangeTerm = true;
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) 
 			isRangeTerm = true;

@@ -2250,6 +2250,8 @@ bool Query::setQWords ( char boolFlag ,
 			ph = hash64 ("gbsortby", 8);
 		if ( fieldCode == FIELD_GBNUMBERMAX )
 			ph = hash64 ("gbsortby", 8);
+		if ( fieldCode == FIELD_GBNUMBEREQUALFLOAT )
+			ph = hash64 ("gbsortby", 8);
 
 		if ( fieldCode == FIELD_GBNUMBERMININT )
 			ph = hash64 ("gbsortbyint", 11);
@@ -2284,6 +2286,7 @@ bool Query::setQWords ( char boolFlag ,
 		     // gbmin:price:1.23
 		     fieldCode == FIELD_GBNUMBERMIN ||
 		     fieldCode == FIELD_GBNUMBERMAX ||
+		     fieldCode == FIELD_GBNUMBEREQUALFLOAT ||
 
 		     fieldCode == FIELD_GBSORTBYINT ||
 		     fieldCode == FIELD_GBREVSORTBYINT ||
@@ -2346,6 +2349,7 @@ bool Query::setQWords ( char boolFlag ,
 			if ( lastColonLen>0 &&
 			     ( fieldCode == FIELD_GBNUMBERMIN ||
 			       fieldCode == FIELD_GBNUMBERMAX ||
+			       fieldCode == FIELD_GBNUMBEREQUALFLOAT ||
 			       fieldCode == FIELD_GBNUMBEREQUALINT ||
 			       fieldCode == FIELD_GBNUMBERMININT ||
 			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
@@ -3298,6 +3302,11 @@ struct QueryField g_fields[] = {
 	 "fields can be in JSON or in meta tag. "
 	 "Use 'gbspiderdate' field for the last time the page was "
 	 "spidered in seconds since the epoch in UTC."
+	},
+
+	{"gbequalfloat", FIELD_GBNUMBEREQUALFLOAT, false,
+	 "Example: 'gbequalfloat:field.price:1.23'. "
+	 "Numeric fields can be in JSON or in meta tag."
 	},
 
 	{"gbfacetstr", FIELD_GBFACETSTR, false,

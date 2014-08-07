@@ -125,6 +125,7 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBFACETINT       64
 #define FIELD_GBFACETFLOAT     65
 #define FIELD_GBNUMBEREQUALINT 66
+#define FIELD_GBNUMBEREQUALFLOAT 67
 
 #define FIELD_GBOTHER 92
 
