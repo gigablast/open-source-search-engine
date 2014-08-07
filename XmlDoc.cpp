@@ -14987,12 +14987,19 @@ char **XmlDoc::gotHttpReply ( ) {
 	if ( m_isChildDoc ) doIncrement = false;
 	if ( m_incrementedDownloadCount ) doIncrement = false;
 
+	bool isSeed = ( m_sreqValid && m_sreq.m_isAddUrl );
+		
 	// if it doesn't match the crawl pattern, just the process pattern
 	// then do not increment download successes
 	if ( doIncrement &&
 	     cr->m_isCustomCrawl == 1 && 
+	     // allow seeds to be counted
+	     ! isSeed &&
+	     //! sreq->m_isPageReindex &&
+	     //! sreq->m_isInjecting &&
 	     ! doesUrlMatchDiffbotCrawlPattern() ) 
 		doIncrement = false;
+
 	
 
 	// . do not count bad http status in mime as failure i guess
