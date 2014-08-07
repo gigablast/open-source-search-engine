@@ -271,7 +271,7 @@ bool Msg13::forwardRequest ( ) {
 
 	// we have to serialize it now because it has cookies as well as
 	// the url.
-	char *requestBuf = serializeMsg ( sizeof(Msg39Request),
+	char *requestBuf = serializeMsg ( sizeof(Msg13Request),
 					  &r->size_url,
 					  &r->size_cookie,
 					  &r->ptr_url,
@@ -468,6 +468,14 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	Msg13Request *r = (Msg13Request *)slot->m_readBuf;
 	// use slot niceness
 	r->m_niceness = niceness;
+
+	// deserialize it now
+	deserializeMsg ( sizeof(Msg13),
+			 &r->size_url,
+			 &r->size_cookie,
+			 &r->ptr_url,
+			 r->m_buf );
+
 	// . sanity - otherwise xmldoc::set cores!
 	// . no! sometimes the niceness gets converted!
 	//if ( niceness == 0 ) { char *xx=NULL;*xx=0; }
