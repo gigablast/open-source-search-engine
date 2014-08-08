@@ -2679,7 +2679,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	""
 	"<tr bgcolor=#0340fd>"
 	""
-	"<th><font color=33dcff>Search</font></th>"
+	"<th><font color=33dcff>Example Query</font></th>"
 	"<th><font color=33dcff>Description</font></th>"
 	"</tr>"
 	"<tr> "
@@ -2796,11 +2796,20 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		      //"<td><font color=33dcff><b>Description</b></font></td>"
 		      // "</tr>"
 		      "<tr bgcolor=#E1FFFF>"
+		      "<td>cat | dog</td><td>"
+		      "Match documents that have cat and dog in them, but "
+		      "do not allow cat to affect the ranking score, only "
+		      "dog. This is called a <i>query refinement</i>."
+		      "</td></tr>\n"
+
+		      "<tr bgcolor=#ffFFFF>"
 		      "<td>document.title:paper</td><td>"
 		      "That query will match a JSON document like "
 		      "<i>"
 		      "{ \"document\":{\"title\":\"This is a good paper.\" "
 		      "}}</i> or, alternatively, an XML document like <i>"
+
+
 		      );
 	sb.htmlEncode("<document><title>This is a good paper"
 		      "</title></document>" );
@@ -2809,7 +2818,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	char *bg1 = "#E1FFFF";
 	char *bg2 = "#ffffff";
-	char *bgcolor = bg2;
+	char *bgcolor = bg1;
 
 	// table of the query keywords
 	long n = getNumFieldCodes();

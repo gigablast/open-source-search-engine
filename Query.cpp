@@ -381,6 +381,8 @@ bool Query::set2 ( char *query        ,
 			m_hasQuotaField = true;
 		else if ( qw->m_fieldCode == FIELD_SUBURL )
 			m_hasSubUrlField = true;
+		else if ( qw->m_fieldCode == FIELD_SUBURL2 )
+			m_hasSubUrlField = true;
 	}
 
 	// set m_docIdRestriction if a term is gbdocid:
@@ -3467,96 +3469,6 @@ struct QueryField g_fields[] = {
 	//
 
 
-	{"gbstatus",
-	 FIELD_GENERIC,
-	 false,
-	 "gbstatus:0",
-	 "Matches all special spider status documents that spidered "
-	 "their url successfully. Replace <i>0</i> with other numeric error "
-	 "codes to get the other outcomes.",
-	 0},
-
-	
-	{"gbstatusmsg",
-	 FIELD_GENERIC,
-	 false,
-	 "gbstatusmsg:tcp",
-	 "Matches all special spider status documents that had a status "
-	 "message containing the word <i>tcp</i> like in "
-	 "<i>TCP Timed Out</i>. Similarly, gbstatus:success, "
-	 "gbstatus:\"robots.txt\" are other possibilities.",
-	 0},
-
-
-	{"site2", 
-	 FIELD_SITE, 
-	 true,
-	 "site2:mysite.com",
-	 "Matches all the special spider status documents on the "
-	 "mysite.com domain.",
-	 0 },
-
-
-	{"ip2", 
-	 FIELD_IP, 
-	 true,
-	 "ip2:1.2.3.4",
-	 "Matches all the special spider status "
-	 "documents whose IP is 1.2.3.4.",
-	 0 },
-
-	{"inurl2", 
-	 FIELD_SUBURL, 
-	 true,
-	 "inurl2:dog",
-	 "Matches all the special spider status "
-	 "documents that have the word dog in their url, like "
-	 "http://www.mysite.com/dog/food.html. However will not match "
-	 "http://www.mysite.com/dogfood.html because it is not an "
-	 "individual word. It must be delineated by punctuation.",
-	 0 },
-
-
-	{"gbpathdepth2", 
-	 FIELD_GBOTHER, 
-	 false,
-	 "gbpathdepth2:2",
-	 "Similar to gbpathdepth: described above but for special "
-	 "spider status documents.",
-	 0},
-
-	{"gbhopcount2", 
-	 FIELD_GBOTHER, 
-	 false,
-	 "gbhopcount2:3",
-	 "Similar to gbhopcount: described above but for special "
-	 "spider status documents.",
-	 0},
-
-
-	{"gbhasfilename2", 
-	 FIELD_GBOTHER, 
-	 false,
-	 "gbhasfilename2:1",
-	 "Similar to gbhasfilename: described above but for special "
-	 "spider status documents.",
-	 0},
-
-	{"gbiscgi2",
-	 FIELD_GBOTHER, 
-	 false,
-	 "gbiscgi2:1",
-	 "Similar to gbiscgi: described above but for special "
-	 "spider status documents.",
-	 0},
-
-	{"gbhasext2",
-	 FIELD_GBOTHER, 
-	 false,
-	 "gbhasext2:1",
-	 "Similar to gbhasext: described above but for special "
-	 "spider status documents.",
-	 0},
 
 	//{"qdom", FIELD_QUOTA, false,""},
 	//{"qhost", FIELD_QUOTA, false,""},
@@ -3834,30 +3746,35 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;cores&gt;10&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
-	 0
-	},
+	 0},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:gbhopcount",
+	 "Returns facets in "
+	 "of the <i>gbhopcount</i> field over the documents so you can "
+	 "search the distribution of hopcounts over the index.",
+	 0},
 
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
-	 "gbfacetint:product.weight",
+	 "gbfacetfloat:product.weight",
 	 "Returns facets "
 	 "of the <i>weight</i> field in a JSON document like "
 	 "<i>{ \"product\":{\"weight\":1.45}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
-	 0
-	},
-
+	 0},
 
 
 	{"gbcountry",
 	 FIELD_GBCOUNTRY,
 	 false,
 	 "gbcountry:us",
-	"Matches documents determined by Gigablast to be from the United "
-	"States. See the country abbreviations in the CountryCode.cpp "
+	 "Matches documents determined by Gigablast to be from the United "
+	 "States. See the country abbreviations in the CountryCode.cpp "
 	 "open source distribution. Some more popular examples include: "
-	 "de, fr, uk, ca, cn."},
+	 "de, fr, uk, ca, cn.",
+	0},
 
 
 
@@ -3876,6 +3793,97 @@ struct QueryField g_fields[] = {
 	 "Matches the document with the docid 123456",
 	 0},
 
+
+	{"gbstatus",
+	 FIELD_GENERIC,
+	 false,
+	 "gbstatus:0",
+	 "Matches all special spider status documents that spidered "
+	 "their url successfully. Replace <i>0</i> with other numeric error "
+	 "codes to get the other outcomes.",
+	 0},
+
+	
+	{"gbstatusmsg",
+	 FIELD_GENERIC,
+	 false,
+	 "gbstatusmsg:tcp",
+	 "Matches all special spider status documents that had a status "
+	 "message containing the word <i>tcp</i> like in "
+	 "<i>TCP Timed Out</i>. Similarly, gbstatus:success, "
+	 "gbstatus:\"robots.txt\" are other possibilities.",
+	 0},
+
+
+	{"site2", 
+	 FIELD_SITE, 
+	 true,
+	 "site2:mysite.com",
+	 "Matches all the special spider status documents on the "
+	 "mysite.com domain.",
+	 0 },
+
+
+	{"ip2", 
+	 FIELD_IP, 
+	 true,
+	 "ip2:1.2.3.4",
+	 "Matches all the special spider status "
+	 "documents whose IP is 1.2.3.4.",
+	 0 },
+
+	{"inurl2", 
+	 FIELD_SUBURL2, 
+	 true,
+	 "inurl2:dog",
+	 "Matches all the special spider status "
+	 "documents that have the word dog in their url, like "
+	 "http://www.mysite.com/dog/food.html. However will not match "
+	 "http://www.mysite.com/dogfood.html because it is not an "
+	 "individual word. It must be delineated by punctuation.",
+	 0 },
+
+
+	{"gbpathdepth2", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbpathdepth2:2",
+	 "Similar to gbpathdepth: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	{"gbhopcount2", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhopcount2:3",
+	 "Similar to gbhopcount: described above but for special "
+	 "spider status documents.",
+	 0},
+
+
+	{"gbhasfilename2", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhasfilename2:1",
+	 "Similar to gbhasfilename: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	{"gbiscgi2",
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbiscgi2:1",
+	 "Similar to gbiscgi: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	{"gbhasext2",
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhasext2:1",
+	 "Similar to gbhasext: described above but for special "
+	 "spider status documents.",
+	 0},
 
 	// diffbot only
 	{"gbparenturl", 
