@@ -2709,79 +2709,80 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"            <td><a href=/search?q=bmx+-game>bmx&nbsp;-game</a></td>"
 	"            <td>Search results have the word <em>bmx</em> but not <em>game</em>.</td>"
 	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=inurl%%3Aedu+title%%3Auniversity><b>inurl:</b></a><a href=/search?q=inurl%%3Aedu+title%%3Auniversity>edu <b>title:</b>university</a></td>"
-	"            <td>Search results have <em>university</em> in their title and <em>edu</em> "
-	"              in their url.</td>"
-	"          </tr>"
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22><b>site:</b></a><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22>www.ibm.com&nbsp;\"big&nbsp;blue\"</a></td>"
-	"            <td>Search results are from the site <em>www.ibm.com</em> and have the phrase "
-	"              <em>big blue</em> in them.</td>"
-	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=url%%3Awww.yahoo.com><b>url:</b></a><a href=/search?q=url%%3Awww.yahoo.com&n=10>www.yahoo.com</a></td>"
-	"            <td>Search result is the single URL www.yahoo.com, if it is indexed.</td>"
-	"          </tr>"
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><nobr><a href=/search?q=title%%3A%%22the+news%%22+-%%22weather+report%%22><b>title:</b>\"the "
-	"              news\" -\"weather report\"</a></nobr></td>"
-	"            <td>Search results have the phrase <em>the news</em> in their title, "
-	"              and do NOT have the phrase <em>weather report</em> anywhere in their "
-	"              content.</td>"
-	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=ip%%3A216.32.120+cars><b>ip:</b></a><a href=/search?q=ip%%3A216.32.120>216.32.120</a></td>"
-	"            <td>Search results are from the the ip 216.32.120.*.</td>"
-	"          </tr>"
-	""
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=type%%3Apdf+nutrition><b>type:</b>pdf nutrition</a></td>"
-	"            <td>Search results are PDF (Portable Document Format) documents that "
-	"              contain the word <em>nutrition</em>.</td>"
-	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=type%%3Adoc><b>type:</b>doc</a></td>"
-	"            <td>Search results are Microsoft Word documents.</td>"
-	"          </tr>"
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=type%%3Axls><b>type:</b>xls</a></td>"
-	"            <td>Search results are Microsoft Excel documents.</td>"
-	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=type%%3Appt><b>type:</b>ppt</a></td>"
-	"            <td>Search results are Microsoft Power Point documents.</td>"
-	"          </tr>"
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=type%%3Aps><b>type:</b>ps</a></td>"
-	"            <td>Search results are Postscript documents.</td>"
-	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=type%%3Atext><b>type:</b>text</a></td>"
-	"            <td>Search results are plain text documents.</td>"
-	"          </tr>"
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=filetype%%3Apdf><b>filetype:</b>pdf</a></td>"
-	"            <td>Search results are PDF documents.</td>"
-	"          </tr>"
-	""
-	""
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=link%%3Awww.yahoo.com><b>link:</b>www.yahoo.com</a></td>"
-	"            <td>All the pages that link to www.yahoo.com.</td>"
-	"          </tr>"
-	""
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=sitelink%%3Awww.yahoo.com><b>sitelink:</b>www.yahoo.com</a></td>"
-	"            <td>All the pages that link to any page on www.yahoo.com.</td>"
-	"          </tr>"
-	""
-	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=ext%%3Atxt><b>ext:</b>txt</a></td>"
-	"            <td>All the pages whose url ends in the .txt extension.</td>"
-	"          </tr>"
-	""
-	""
+	// "          <tr> "
+	// "            <td><a href=/search?q=inurl%%3Aedu+title%%3Auniversity><b>inurl:</b></a><a href=/search?q=inurl%%3Aedu+title%%3Auniversity>edu <b>title:</b>university</a></td>"
+	// "            <td>Search results have <em>university</em> in their title and <em>edu</em> "
+	// "              in their url.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22><b>site:</b></a><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22>www.ibm.com&nbsp;\"big&nbsp;blue\"</a></td>"
+	// "            <td>Search results are from the site <em>www.ibm.com</em> and have the phrase "
+	// "              <em>big blue</em> in them.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=url%%3Awww.yahoo.com><b>url:</b></a><a href=/search?q=url%%3Awww.yahoo.com&n=10>www.yahoo.com</a></td>"
+	// "            <td>Search result is the single URL www.yahoo.com, if it is indexed.</td>"
+	// "          </tr>"
+
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><nobr><a href=/search?q=title%%3A%%22the+news%%22+-%%22weather+report%%22><b>title:</b>\"the "
+	// "              news\" -\"weather report\"</a></nobr></td>"
+	// "            <td>Search results have the phrase <em>the news</em> in their title, "
+	// "              and do NOT have the phrase <em>weather report</em> anywhere in their "
+	// "              content.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=ip%%3A216.32.120+cars><b>ip:</b></a><a href=/search?q=ip%%3A216.32.120>216.32.120</a></td>"
+	// "            <td>Search results are from the the ip 216.32.120.*.</td>"
+	// "          </tr>"
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=type%%3Apdf+nutrition><b>type:</b>pdf nutrition</a></td>"
+	// "            <td>Search results are PDF (Portable Document Format) documents that "
+	// "              contain the word <em>nutrition</em>.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=type%%3Adoc><b>type:</b>doc</a></td>"
+	// "            <td>Search results are Microsoft Word documents.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=type%%3Axls><b>type:</b>xls</a></td>"
+	// "            <td>Search results are Microsoft Excel documents.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=type%%3Appt><b>type:</b>ppt</a></td>"
+	// "            <td>Search results are Microsoft Power Point documents.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=type%%3Aps><b>type:</b>ps</a></td>"
+	// "            <td>Search results are Postscript documents.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=type%%3Atext><b>type:</b>text</a></td>"
+	// "            <td>Search results are plain text documents.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=filetype%%3Apdf><b>filetype:</b>pdf</a></td>"
+	// "            <td>Search results are PDF documents.</td>"
+	// "          </tr>"
+	// ""
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=link%%3Awww.yahoo.com><b>link:</b>www.yahoo.com</a></td>"
+	// "            <td>All the pages that link to www.yahoo.com.</td>"
+	// "          </tr>"
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=sitelink%%3Awww.yahoo.com><b>sitelink:</b>www.yahoo.com</a></td>"
+	// "            <td>All the pages that link to any page on www.yahoo.com.</td>"
+	// "          </tr>"
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=ext%%3Atxt><b>ext:</b>txt</a></td>"
+	// "            <td>All the pages whose url ends in the .txt extension.</td>"
+	// "          </tr>"
+	// ""
+	// ""
 		      );
 
 
@@ -2794,7 +2795,8 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		      // "</font></td>"
 		      //"<td><font color=33dcff><b>Description</b></font></td>"
 		      // "</tr>"
-		      "<tr><td>document<b>.</b>title<b>:</b>paper</td><td>"
+		      "<tr bgcolor=#E1FFFF>"
+		      "<td>document.title:paper</td><td>"
 		      "That query will match a JSON document like "
 		      "<i>"
 		      "{ \"document\":{\"title\":\"This is a good paper.\" "
@@ -2805,18 +2807,35 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	sb.safePrintf("</i></td></tr>\n");
 
 
+	char *bg1 = "#E1FFFF";
+	char *bg2 = "#ffffff";
+	char *bgcolor = bg2;
+
 	// table of the query keywords
 	long n = getNumFieldCodes();
 	for ( long i = 0 ; i < n ; i++ ) {
 		// get field #i
 		QueryField *f = &g_fields[i];
+
+		if ( g_fields[i].m_flag & QTF_HIDE ) continue;
+		
+
 		// print it out
 		char *d = f->desc;
 		// fix table internal cell bordering
-		if ( d[0] == '\0' ) d = "&nbsp;";
-		sb.safePrintf("<tr bgcolor=#%s>"
-			     "<td><b>%s</b></td><td>%s</td></tr>\n",
-			     LIGHT_BLUE,f->example,d);
+		if ( ! d || d[0] == '\0' ) d = "&nbsp;";
+		sb.safePrintf("<tr bgcolor=%s>"
+			      "<td><nobr><a href=\"/search?q="
+			      , bgcolor );
+		sb.urlEncode ( f->example );
+		sb.safePrintf("\">");
+		sb.safePrintf("%s</a></nobr></td>"
+			      "<td>%s</td></tr>\n",
+			      f->example,
+			      d);
+
+		if ( bgcolor == bg1 ) bgcolor = bg2;
+		else                  bgcolor = bg1;
 	}
 
 

@@ -3194,7 +3194,7 @@ struct QueryField g_fields[] = {
 	{"link", 
 	 FIELD_LINK, 
 	 true,
-	 "link:http://www.gigablast.com/foobar.html",
+	 "link:www.gigablast.com/foo.html",
 	 "Matches all the documents that have a link to "
 	 "http://www.gigablast.com/foobar.html",
 	 0 },
@@ -3556,180 +3556,358 @@ struct QueryField g_fields[] = {
 	 "gbhasext2:1",
 	 "Similar to gbhasext: described above but for special "
 	 "spider status documents.",
-	 0}
-
-	/*
-left off here
+	 0},
 
 	//{"qdom", FIELD_QUOTA, false,""},
 	//{"qhost", FIELD_QUOTA, false,""},
 
-	{"gbsortby", FIELD_GBSORTBY, false,
-	 "dog gbsortbyint:gbspiderdate",
-	 "Sort the search results that contain 'dog' by "
-	 "the date they were last spidered, with the newest "
-	 "on top."},
 
-	{"gbrevsortby", FIELD_GBREVSORTBY, false,
-	 "dog gbrevsortbyint:gbspiderdate",
-	 "Sort the search results that contain 'dog' by "
-	 "the date they were last spidered, but with the "
-	 "oldest on top."},
+	{"gbsortbyfloat", 
+	 FIELD_GBSORTBY, 
+	 false,
+	 "cameras gbsortbyfloat:price",
+	 "Sort all documents that "
+	 "contain 'camera' by price. <i>price</i> can be a root JSON field or "
+	 "in a meta tag, or in an xml &lt;price&gt; tag.", 
+	 0 },
 
 
-	{"gbsortbyfloat", FIELD_GBSORTBY, false,
-	 "cameras gbsortbyfloat:price","Sort all search results that "
-	 "contain 'camera' by price. <i>price</i> can be a JSON field or "
-	 "in a meta tag, or in an xml &lt;price&gt; tag.", 0 },
-
-
-	{"gbsortbyfloat", FIELD_GBSORTBY, false,
-	 "cameras gbsortbyfloat:product.price","Sort all search results that "
+	{"gbsortbyfloat", 
+	 FIELD_GBSORTBY, 
+	 false,
+	 "cameras gbsortbyfloat:product.price",
+	 "Sort all documents that "
 	 "contain 'camera' by price. <i>price</i> can be in a JSON document "
 	 "like "
 	 "<i>{ \"product\":{\"price\":1500.00}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", QTF_DUP },
-
+	 "</i>", 
+	 0 },
 
 
 	{"gbrevsortbyfloat", 
 	 FIELD_GBREVSORTBY, 
 	 false,
-	 "Example: gbrevsortbyfloat:item.price . "
-	 "Fields can be in JSON or in meta tag.",
-	0},
+	 "cameras gbrevsortbyfloat:product.price",
+	 "Like above example but sorted with highest prices on top.",
+	 0 },
 
+
+	{"gbsortby", 
+	 FIELD_GBSORTBY, 
+	 false,
+	 "dog gbsortbyint:gbspiderdate",
+	 "Sort the documents that contain 'dog' by "
+	 "the date they were last spidered, with the newest "
+	 "on top.",
+	 QTF_HIDE},
+
+	{"gbrevsortby", 
+	 FIELD_GBREVSORTBY, 
+	 false,
+	 "dog gbrevsortbyint:gbspiderdate",
+	 "Sort the documents that contain 'dog' by "
+	 "the date they were last spidered, but with the "
+	 "oldest on top.",
+	 QTF_HIDE},
+
+
+
+
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "pilots gbsortbyint:employees",
+	 "Sort all documents that "
+	 "contain 'pilots' by employees. "
+	 "<i>employees</i> can be a root JSON field or "
+	 "in a meta tag, or in an xml &lt;price&gt; tag. The value it "
+	 "contains is interpreted as a 32-bit integer.", 
+	 0 },
+
+
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "gbsortbyint:gbspiderdate",
+	 "Sort all documents by the date they were spidered/downloaded.",
+	 0},
+
+
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "gbsortbyint:company.employees",
+	 "Sort all documents by employees. Documents can contain "
+	 "<i>employees</i> in a JSON document "
+	 "like "
+	 "<i>{ \"product\":{\"price\":1500.00}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0 },
+
+
+	{"gbrevsortbyint", 
+	 FIELD_GBREVSORTBYINT, 
+	 false,
+	 "gbrevsortbyint:gbspiderdate",
+	 "Sort all documents by the date they were spidered/downloaded "
+	 "but with the oldest on top.",
+	 0},
 
 
 
 	// gbmin:price:1.23
-	{"gbmin", FIELD_GBNUMBERMIN, false,"Usage: gbmin:price:1.99 . Numeric "
-	 "fields can be in JSON or in meta tag."},
-	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
 
-	{"gbminfloat", FIELD_GBNUMBERMIN, false,"Usage: gbminfloat:price:1.99 . Numeric "
-	 "fields can be in JSON or in meta tag."},
-	{"gbmaxfloat", FIELD_GBNUMBERMAX, false,"Usage: gbmaxfloat:price:1.99"},
-
-
-	{"gbdocspiderdate",FIELD_GENERIC,false,
-	 "Example: gbspiderdate:1400081479 will return results that have "
-	 "that spider date timestamp (UTC)"},
-
-	{"gbspiderdate",FIELD_GENERIC,false,
-	 "Similar to above but includes spider reply \"documents\"."},
+	{"gbminfloat", 
+	 FIELD_GBNUMBERMIN, 
+	 false,
+	 "cameras gbminfloat:price:109.99",
+	 "Matches all documents that "
+	 "contain 'camera' or 'cameras' and have a price of at least 109.99. "
+	 "<i>price</i> can be a root JSON field or "
+	 "in a meta tag name <i>price</i>, or in an xml &lt;price&gt; tag.", 
+	 0 },
 
 
-	{"gbdocindexdate",FIELD_GENERIC,false,
-	 "Similar to above but when document was indexed. Time is "
-	 "slightly greater than or equal to the spider date."},
+	{"gbminfloat", 
+	 FIELD_GBNUMBERMIN, 
+	 false,
+	 "cameras gbminfloat:product.price:109.99",
+	 "Matches all documents that "
+	 "contain 'camera' or 'cameras' and have a price of at least 109.99 "
+	 "in a JSON document like "
+	 "<i>{ \"product\":{\"price\":1500.00}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0 },
 
-	{"gbindexdate",FIELD_GENERIC,false,
-	 "Similar to above but includes spider reply \"documents\"."},
+
+	// alias we need to bury
+	{"gbmin", 
+	 FIELD_GBNUMBERMIN, 
+	 false,
+	 "",
+	 "",
+	 QTF_HIDE},
+
+
+
+	{"gbmaxfloat", 
+	 FIELD_GBNUMBERMAX, 
+	 false,
+	 "cameras gbmaxfloat:price:109.99",
+	 "Like the gbminfloat examples above, but is an upper bound.",
+	 0 },
+
+
+
+	{"gbequalfloat", 
+	 FIELD_GBNUMBEREQUALFLOAT, 
+	 false,
+	 "gbequalfloat:product.price:1.23",
+	 "Similar to gbminfloat and gbmaxfloat but is an equality constraint.",
+	 0 },
+
+
+
+	{"gbmax", 
+	 FIELD_GBNUMBERMAX, 
+	 false,
+	 "",
+	 "",
+	 QTF_HIDE},
+
+
+
+	{"gbminint", 
+	 FIELD_GBNUMBERMININT, 
+	 false,
+	 "gbminint:gbspiderdate:1391749680",
+	 "Matches all documents with a spider timestamp of at least "
+	 "1391749680. Use this as opposed th gbminfloat when you need "
+	 "32 bits of integer precision.",
+	 0},
+
+
+	{"gbmaxint", 
+	 FIELD_GBNUMBERMAXINT, 
+	 false,
+	 "gbmaxint:company.employees:20",
+	 "Matches all companies with 20 or less employees "
+	 "in a JSON document like "
+	 "<i>{ \"company\":{\"employees\":13}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;company&gt;&lt;employees&gt;13&lt;/employees&gt;"
+	 "&lt;/company&gt;"
+	 "</i>", 
+	 0},
+
+
+	{"gbequalint", 
+	 FIELD_GBNUMBEREQUALINT, 
+	 false,
+	 "gbequalint:company.employees:13",
+	 "Similar to gbminint and gbmaxint but is an equality constraint.",
+	 0},
+
+
+
+
+
+	{"gbdocspiderdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbspiderdate:1400081479",
+	 "Matches documents that have "
+	 "that spider date timestamp (UTC). Does not include the "
+	 "special spider status documents. This is the time the document "
+	 "completed downloading.",
+	 0},
+
+
+	{"gbspiderdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbspiderdate:1400081479",
+	 "Like above, but DOES include the special spider status documents.",
+	 0},
+
+
+	{"gbdocindexdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbdocindexdate:1400081479",
+	 "Like above, but is the time the document was last indexed. "
+	 "This time is "
+	 "slightly greater than or equal to the spider date. Does not "
+	 "include the special spider status documents.",
+	 0},
+
+
+	{"gbindexdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbindexdate:1400081479",
+	 "Like above, but it does include the special spider status "
+	 "documents.",
+	 0},
 
 	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
 	//  "results that have "
 	//  "that spider date timestamp (UTC)"},
 
-	{"gbsortbyint", FIELD_GBSORTBYINT, false,
-	 "Example: gbsortbyint:intfield . Fields can be "
-	 "in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
 
-	{"gbrevsortbyint", FIELD_GBREVSORTBYINT, false,
-	 "Example: 'gbrevsortbyint:item.count'. "
-	 "Fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
-
-	{"gbminint", FIELD_GBNUMBERMININT, false,
-	 "Example: 'gbminint:gbspiderdate:1391749680' "
-	 "'gbminint:count:99'. Numeric "
-	 "fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
-
-	{"gbmaxint", FIELD_GBNUMBERMAXINT, false,
-	 "Example: 'gbmaxint:gbspiderdate:1391749680' "
-	 "'gbmaxint:count:99'. Numeric "
-	 "fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
-
-	{"gbequalint", FIELD_GBNUMBEREQUALINT, false,
-	 "Example: 'gbequalint:gbspiderdate:1391749680' "
-	 "'gbequalint:count:99'. Numeric "
-	 "fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
-
-	{"gbequalfloat", FIELD_GBNUMBEREQUALFLOAT, false,
-	 "Example: 'gbequalfloat:field.price:1.23'. "
-	 "Numeric fields can be in JSON or in meta tag."
-	},
-
-	{"gbfacetstr", FIELD_GBFACETSTR, false,
-	 "Example: 'gbfacetstr:color' will return facets in "
+	{"gbfacetstr", 
+	 FIELD_GBFACETSTR, 
+	 false,
+	 "gbfacetstr:color",
+	 "Returns facets in "
 	 "the search results "
-	 "by their color field. Any other "
-	 "field name can follow the gbfacetstr: operator."
-	},
+	 "by their color field.",
+	 0},
+
+
+	{"gbfacetstr", 
+	 FIELD_GBFACETSTR, 
+	 false,
+	 "gbfacetstr:product.color",
+	 "Returns facets in "
+	 "of the color field in a JSON document like "
+	 "<i>{ \"product\":{\"color\":\"red\"}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;color&gt;red&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0},
+
+
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
-	 "Example: 'gbfacetint:numReviews' will return "
-	 "facets in the search results "
-	 "with the # of documents for each number of reviews. Any other "
-	 "field name can follow the gbfacetint: operator."
+	 "gbfacetint:product.cores",
+	 "Returns facets in "
+	 "of the <i>cores</i> field in a JSON document like "
+	 "<i>{ \"product\":{\"cores\":10}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;cores&gt;10&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0
 	},
 
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
-	 "Example: 'gbfacetfloat:price' will return facets in the "
-	 "search results "
-	 "with the # of documents that have certain price ranges. Any other "
-	 "field name can follow the gbfacetfloat: operator."
+	 "gbfacetint:product.weight",
+	 "Returns facets "
+	 "of the <i>weight</i> field in a JSON document like "
+	 "<i>{ \"product\":{\"weight\":1.45}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0
 	},
 
 
-	{"gbcountry",FIELD_GBCOUNTRY,false,""},
-	{"gbad",FIELD_GBAD,false,""},
+
+	{"gbcountry",
+	 FIELD_GBCOUNTRY,
+	 false,
+	 "gbcountry:us",
+	"Matches documents determined by Gigablast to be from the United "
+	"States. See the country abbreviations in the CountryCode.cpp "
+	 "open source distribution. Some more popular examples include: "
+	 "de, fr, uk, ca, cn."},
 
 
-	//{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
+
+	{"gbpermalink",
+	 FIELD_GBPERMALINK,
+	 false,
+	 "gbpermalink:1",
+	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
+	 "to match documents that are NOT permalinks.",
+	0},
+
+	{"gbdocid",
+	 FIELD_GBDOCID,
+	 false,
+	 "gbdocid:123456",
+	 "Matches the document with the docid 123456",
+	 0},
+
+
+	// diffbot only
+	{"gbparenturl", 
+	 FIELD_GBPARENTURL, 
+	 true,
+	 "gbparenturl:www.xyz.com/abc.html",
+	 "Diffbot only. Match the json urls that "
+	 "were extract from this parent url. Example: "
+	 "gbparenturl:www.gigablast.com/addurl.htm",
+	 0},
+
+
 
 	// they don't need to know about this
-	{"gbtagvector", FIELD_GBTAGVECTOR, false,"","",QTF_INTERNAL},
-	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,"","",QTF_INTERNAL},
-	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,"","",QTF_INTERNAL},
-	{"gbcontenthash", FIELD_GBCONTENTHASH, false,"","",QTF_INTERNAL},
+	{"gbad",FIELD_GBAD,false,"","",QTF_HIDE},
+	{"gbtagvector", FIELD_GBTAGVECTOR, false,"","",QTF_HIDE},
+	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,"","",QTF_HIDE},
+	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,"","",QTF_HIDE},
+	{"gbcontenthash", FIELD_GBCONTENTHASH, false,"","",QTF_HIDE},
+	{"gbduphash"  ,FIELD_GBOTHER,false,"","",QTF_HIDE},
+	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"","",QTF_HIDE}
 
-
-	{"gbduphash"                ,FIELD_GBOTHER,false,"Internal use only."},
-	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"Internal use only."},
-	{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},
+	//{"gbcsenum",FIELD_GBCSENUM,false,""},
+	//{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},
 	//{"gbisaggregator"           ,FIELD_GBOTHER,false,"gbisaggregator:0|1 depending on if the event came from an event aggregator website, like eviesays.com."},
-	{"gbdeduped"                ,FIELD_GBOTHER,false,""},
+	//{"gbdeduped"                ,FIELD_GBOTHER,false,""},
 
-	{"gbinjected", FIELD_GBOTHER,false,"Was the document injected?."},
+	//{"gbinjected", FIELD_GBOTHER,false,"Was the document injected?."},
 
 	//{"gbstartrange",FIELD_GBSTARTRANGE,false,""},
 	//{"gbendrange",FIELD_GBENDRANGE,false,""},
 
-	{"gbpermalink",FIELD_GBPERMALINK,false,""},
-	//{"gbcsenum",FIELD_GBCSENUM,false,""},
-	{"gbparenturl", FIELD_GBPARENTURL, true,"Match the json urls that "
-	 "were extract from this parent url. Example: "
-	 "gbparenturl:www.gigablast.com/addurl.htm"},
-	{"gbdocid",FIELD_GBDOCID,false,"restrict results to this docid"}
-	*/
 	
 };
 
@@ -3754,8 +3932,10 @@ static bool initFieldTable(){
 		long n = getNumFieldCodes();
 		for ( long i = 0 ; i < n ; i++ ) {
 			// skip if dup
-			if ( g_fields[i].m_flag & QTF_DUP ) continue;
+			//if ( g_fields[i].m_flag & QTF_DUP ) continue;
 			long long h = hash64b ( g_fields[i].text );
+			// if already in there it is a dup
+			if ( s_table.isInTable ( &h ) ) continue;
 			// store the entity index in the hash table as score
 			if ( ! s_table.addTerm ( &h, i+1 ) ) return false;
 		}

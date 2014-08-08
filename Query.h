@@ -139,7 +139,8 @@ long getNumFieldCodes ( );
 // . values for QueryField::m_flag
 // . QTF_DUP means it is just for the help page in PageRoot.cpp to 
 //   illustrate a second or third example
-#define QTF_DUP 0x01
+#define QTF_DUP  0x01
+#define QTF_HIDE 0x02
 
 struct QueryField {
 	char *text;
