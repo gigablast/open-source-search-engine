@@ -15974,10 +15974,16 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
 		// an optional quote
 		if ( *p == '\"' ) p++;
+		// can also be a single quote!
+		if ( *p == '\'' ) p++;
 		// set the url start
 		char *url = p;
 		// now advance to next quote or space or >
-		for ( ; *p && !is_wspace_a(*p) && *p!='\"' && *p!='>' ; p++);
+		for ( ; *p && !is_wspace_a(*p) && 
+			      *p !='\'' && 
+			      *p !='\"' && 
+			      *p !='>' ; 
+		      p++);
 		// that is the end
 		char *urlEnd = p;
 		// get size
