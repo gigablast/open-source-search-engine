@@ -136,11 +136,18 @@ char getFieldCode3 ( long long h64 ) ;
 
 long getNumFieldCodes ( );
 
+// . values for QueryField::m_flag
+// . QTF_DUP means it is just for the help page in PageRoot.cpp to 
+//   illustrate a second or third example
+#define QTF_DUP 0x01
+
 struct QueryField {
 	char *text;
 	char field;
 	bool hasColon;
+	char *example;
 	char *desc;
+	char  m_flag;
 };
 
 extern struct QueryField g_fields[];
@@ -421,6 +428,14 @@ class QueryTerm {
 	long       m_termLen;
 	// point to the posdblist that represents us
 	class RdbList   *m_posdbListPtr;
+
+	// the ()'s following an int/float facet term dictate the
+	// ranges for clustering the numeric values. like 
+	// gbfacetfloat:price:(0-10,10-20,...)
+	// values outside the ranges will be ignored
+	char *m_parenList;
+	long  m_parenListLen;
+
 	// . our representative bits
 	// . the bits in this bit vector is 1-1 with the QueryTerms
 	// . if a doc has query term #i then bit #i will be set

@@ -26404,7 +26404,8 @@ bool XmlDoc::hashMetaZip ( HashTableX *tt ) {
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt        = tt;
-	hi.m_prefix    = "zipcode";
+	//hi.m_prefix    = "zipcode";
+	hi.m_prefix    = "gbzipcode";
 
  nextZip:
 	// . parse out the zip codes, may be multiple ones

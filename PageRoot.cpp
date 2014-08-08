@@ -2675,16 +2675,15 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	sb.safePrintf(
 	"<br>"
-	"        <table width=650px cellpadding=5 cellspacing=0 border=0>"
+	"<table width=650px cellpadding=5 cellspacing=0 border=0>"
 	""
 	"<tr bgcolor=#0340fd>"
 	""
-	"            <th><font color=33dcff>Search</font></th>"
-	"            <th><font color=33dcff>Description</font></th>"
-	"          </tr>"
-	"          <tr> "
-	"            <td><a href=/search?q=cat+dog>cat "
-	"              dog</a></td>"
+	"<th><font color=33dcff>Search</font></th>"
+	"<th><font color=33dcff>Description</font></th>"
+	"</tr>"
+	"<tr> "
+	"<td><a href=/search?q=cat+dog>cat dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> and the word <em>dog</em> "
 	"              in them. They could also have <i>cats</i> and <i>dogs</i>.</td>"
 	"          </tr>"
@@ -2783,11 +2782,54 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"          </tr>"
 	""
 	""
+		      );
+
+
+	sb.safePrintf(
+		      // spacer
+		      //"<tr><td><br></td><td></td></tr>"
+
+		      //"<tr bgcolor=#0340fd>"
+		      // "<td><font color=33dcff><b>Special Query</b>"
+		      // "</font></td>"
+		      //"<td><font color=33dcff><b>Description</b></font></td>"
+		      // "</tr>"
+		      "<tr><td>document<b>.</b>title<b>:</b>paper</td><td>"
+		      "That query will match a JSON document like "
+		      "<i>"
+		      "{ \"document\":{\"title\":\"This is a good paper.\" "
+		      "}}</i> or, alternatively, an XML document like <i>"
+		      );
+	sb.htmlEncode("<document><title>This is a good paper"
+		      "</title></document>" );
+	sb.safePrintf("</i></td></tr>\n");
+
+
+	// table of the query keywords
+	long n = getNumFieldCodes();
+	for ( long i = 0 ; i < n ; i++ ) {
+		// get field #i
+		QueryField *f = &g_fields[i];
+		// print it out
+		char *d = f->desc;
+		// fix table internal cell bordering
+		if ( d[0] == '\0' ) d = "&nbsp;";
+		sb.safePrintf("<tr bgcolor=#%s>"
+			     "<td><b>%s</b></td><td>%s</td></tr>\n",
+			     LIGHT_BLUE,f->example,d);
+	}
+
+
+
+
+	sb.safePrintf(
 	"          <tr> "
 	"            <td style=padding-bottom:12px;>&nbsp;</td>"
 	"            <td style=padding-bottom:12px;>&nbsp;</td>"
 	"          </tr>"
 	""
+
+
 	"<tr bgcolor=#0340fd>"
 	""
 	"            <th><font color=33dcff>Boolean Search</font></th>"
@@ -2878,14 +2920,24 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              operator can optionally preceed the left or the right operand.</td>"
 	"          </tr>"
 	""
-	"        </table>"
+	//"        </table>"
 	""
 	""
 	""
-	"</td></tr>"
-	"</table>"
-	"<br>"
+	//"</td></tr>"
+	//"</table>"
+	//"<br>"
 		      );
+
+
+
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+
+	
+	sb.safePrintf("</table>");
 
 
 	//sb.safePrintf("</form>\n");
