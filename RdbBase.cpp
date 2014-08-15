@@ -1564,8 +1564,10 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// the rdbmaps hold this info
 	long long totalRecs = 0LL;
 	float percentNegativeRecs = getPercentNegativeRecsOnDisk ( &totalRecs);
+	bool doNegCheck = false;
 	// 1. if disk space is tight and >20% negative recs, force it
-	if ( g_process.m_diskAvail >= 0 && 
+	if ( doNegCheck &&
+	     g_process.m_diskAvail >= 0 && 
 	     g_process.m_diskAvail < 10000000000LL && // 10GB
 	     percentNegativeRecs > .20 ) {
 		m_nextMergeForced = true;
@@ -1577,7 +1579,8 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		    m_rdb->m_dbname,g_process.m_diskAvail);
 	}
 	// 2. if >40% negative recs force it
-	if ( percentNegativeRecs > .40 ) {
+	if ( doNegCheck && 
+	     percentNegativeRecs > .40 ) {
 		m_nextMergeForced = true;
 		forceMergeAll = true;
 		log("rdb: hit negative rec concentration of %f "

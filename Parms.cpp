@@ -8952,15 +8952,16 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
         m++;
 
-	/*
 	m->m_title = "url injection enabled";
 	m->m_desc  = "If enabled you can directly inject URLs into the index.";
 	m->m_cgi   = "ie";
 	m->m_off   = (char *)&g_conf.m_injectionEnabled - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_def   = "1";
 	m++;
-	*/
 
 	m->m_title = "init QA tests";
 	m->m_desc  = "If initiated gb performs some integrity tests "

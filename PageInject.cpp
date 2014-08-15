@@ -31,6 +31,16 @@ static void sendReplyWrapper ( void *state ) {
 //   HttpServer::sendReply() so we gotta copy it here
 bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 
+  if ( ! g_conf.m_injectionEnabled ) {
+    g_errno = EBADENGINEER;
+    log("inject: injection disabled");
+    return g_httpServer.sendErrorReply(sock,500,"injection is disabled by "
+				       "the administrator in the master "
+				       "controls");
+  }
+
+
+
 	// get the collection
 	// make a new state
 	Msg7 *msg7;

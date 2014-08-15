@@ -275,7 +275,7 @@ class Conf {
 	//bool  m_stubHubSpideringEnabled;
 	//bool  m_eventBriteSpideringEnabled;
 	//bool  m_refreshFacebookUsersEnabled;
-	//bool  m_injectionEnabled     ;
+	bool  m_injectionEnabled     ;
 	// qa testing loop going on? uses "test" subdir
 	bool  m_testParserEnabled     ;
 	bool  m_testSpiderEnabled     ;

@@ -5236,7 +5236,7 @@ void SpiderLoop::startLoop ( ) {
 	// in case host when dead.
 	// now that we only send the info on startup and if changed,
 	// let's move back down to 1 second
-	if ( !g_loop.registerSleepCallback(1000,
+	if ( !g_loop.registerSleepCallback(5000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
@@ -12547,6 +12547,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+
+	  QUICKPOLL(MAX_NICENESS);
 
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
