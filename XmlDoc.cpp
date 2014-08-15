@@ -35971,7 +35971,9 @@ bool getWordPosVec ( Words *words ,
 			dist++;
 			continue;
 		}
-		// and so do sequences of punct
+		// . and so do sequences of punct
+		// . must duplicate this code in Query.cpp for setting
+		//   QueryWord::m_posNum
 		if ( ! wids[i] ) {
 			// simple space or sequence of just white space
 			if ( words->isSpaces(i) ) 

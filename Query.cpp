@@ -1943,6 +1943,8 @@ bool Query::setQWords ( char boolFlag ,
 	// assume we contain no pipe operator
 	long pi = -1;
 
+	long posNum = 0;
+
 	// loop over all words, these QueryWords are 1-1 with "words"
 	for ( long i = 0 ; i < numWords && i < MAX_QUERY_WORDS ; i++ ) {
 		// convenience var, these are 1-1 with "words"
@@ -1963,6 +1965,31 @@ bool Query::setQWords ( char boolFlag ,
 		qw->m_word    = words.getWord(i);
 		qw->m_wordLen = words.getWordLen(i);
 		qw->m_isPunct = words.isPunct(i);
+
+		qw->m_posNum = posNum;
+
+		// count 1 unit for it
+		posNum++;
+
+		// . we duplicated this code from XmlDoc.cpp's
+		//   getWordPosVec() function
+		if ( qw->m_isPunct ) { // ! wids[i] ) {
+			char *wp = qw->m_word;
+			long  wplen = qw->m_wordLen;
+			// simple space or sequence of just white space
+			if ( words.isSpaces(i) ) 
+				posNum += 0;
+			// 'cd-rom'
+			else if ( wp[0]=='-' && wplen==1 ) 
+				posNum += 0;
+			// 'mr. x'
+			else if ( wp[0]=='.' && words.isSpaces2(i,1)) 
+				posNum += 0;
+			// animal (dog)
+			else 
+				posNum++;
+		}
+
 		char *w   = words.getWord(i);
 		long wlen = words.getWordLen(i);
 		// assume it is a query weight operator

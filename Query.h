@@ -271,6 +271,7 @@ class QueryWord {
 	// hash of field name then collection, used to hash termId
 	long long   m_prefixHash;
 	long        m_wordNum;
+	long        m_posNum;
 	// are we in a phrase in a wikipedia title?
 	long        m_wikiPhraseId;
 	long        m_wikiPhraseStart;
