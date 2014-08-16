@@ -3359,12 +3359,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
-		m_spiderPriorities   [i] = 54;
+		m_spiderPriorities   [i] = 53;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		i++;
 		// just process, do not spider links if does not match ucp
 		m_regExs[i].set("matchesupp");
-		m_spiderPriorities   [i] = 53;
+		m_spiderPriorities   [i] = 54;
 		m_harvestLinks       [i] = false;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
@@ -3384,7 +3384,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// harvest links if we should crawl it
 	if ( ucp && ! upp ) {
 		m_regExs[i].set("matchesucp");
-		m_spiderPriorities   [i] = 54;
+		m_spiderPriorities   [i] = 53;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		// process everything since upp is empty
 		//m_spiderDiffbotApiUrl[i].set ( api );
@@ -3404,7 +3404,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// just process
 	if ( upp && ! ucp ) {
 		m_regExs[i].set("matchesupp");
-		m_spiderPriorities   [i] = 53;
+		m_spiderPriorities   [i] = 54;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
 		//m_harvestLinks       [i] = false;
 		//m_spiderDiffbotApiUrl[i].set ( api );

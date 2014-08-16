@@ -1616,6 +1616,7 @@ void Rdb::doneDumping ( ) {
 
 // this should be called every few seconds by the sleep callback, too
 void attemptMergeAll ( int fd , void *state ) {
+
 	if ( state && g_conf.m_logDebugDb ) state = NULL;
 	//g_checksumdb.getRdb()->attemptMerge ( 1 , false , !state);
 	g_linkdb.getRdb()->attemptMerge     ( 1 , false , !state);
@@ -2611,7 +2612,11 @@ long long Rdb::getNumGlobalRecs ( ) {
 // . return number of positive records - negative records
 long long Rdb::getNumTotalRecs ( ) {
 	long long total = 0;
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+	long nb = getNumBases();
+	// don't slam the cpu on this if too many collections
+	if ( nb > 10 ) return 0;
+	//return 0; // too many collections!!
+	for ( long i = 0 ; i < nb ; i++ ) {
 		RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumTotalRecs();

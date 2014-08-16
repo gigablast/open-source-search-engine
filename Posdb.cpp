@@ -3411,6 +3411,8 @@ float PosdbTable::getTermPairScoreForAny ( long i, long j,
 	     m_quotedStartIds[i] >= 0 )
 		inSameQuotedPhrase = true;
 
+	// oops.. this was not counting non-space punct for 2 units 
+	// instead of 1
 	if ( inSameQuotedPhrase ) 
 		qdist = m_qpos[j] - m_qpos[i];		
 
@@ -3503,10 +3505,12 @@ float PosdbTable::getTermPairScoreForAny ( long i, long j,
 			//    "posj=%li",
 			//    i,j,dist,qdist,p1,p2);
 			// TODO: allow for off by 1
+			// if it has punct in it then dist will be 3, 
+			// just a space or similar then dist should be 2.
 			if ( dist > qdist && dist - qdist >= 2 ) 
-				goto skip2;
+				goto skip1;
 			if ( dist < qdist && qdist - dist >= 2 ) 
-				goto skip2;
+				goto skip1;
 		}
 
 		// are either synonyms
@@ -4126,13 +4130,18 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if ( ! qt->m_isRequired ) continue;
 		// set this stff
 		QueryWord     *qw =   qt->m_qword;
-		long wordNum = qw - &m_q->m_qwords[0];
+		//long wordNum = qw - &m_q->m_qwords[0];
 		// get one
 		QueryTermInfo *qti = &qip[nrg];
 		// and set it
 		qti->m_qt            = qt;
 		qti->m_qtermNum      = i;
-		qti->m_qpos          = wordNum;
+		// this is not good enough, we need to count 
+		// non-whitespace punct as 2 units not 1 unit
+		// otherwise qdist gets thrown off and our phrasing fails.
+		// so use QueryTerm::m_qpos just for this.
+		//qti->m_qpos          = wordNum;
+		qti->m_qpos          = qw->m_posNum;
 		qti->m_wikiPhraseId  = qw->m_wikiPhraseId;
 		qti->m_quotedStartId = qw->m_quoteStart;
 		// is it gbsortby:?

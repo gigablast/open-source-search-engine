@@ -1950,6 +1950,8 @@ bool Query::setQWords ( char boolFlag ,
 	// assume we contain no pipe operator
 	long pi = -1;
 
+	long posNum = 0;
+
 	// loop over all words, these QueryWords are 1-1 with "words"
 	for ( long i = 0 ; i < numWords && i < MAX_QUERY_WORDS ; i++ ) {
 		// convenience var, these are 1-1 with "words"
@@ -1970,6 +1972,31 @@ bool Query::setQWords ( char boolFlag ,
 		qw->m_word    = words.getWord(i);
 		qw->m_wordLen = words.getWordLen(i);
 		qw->m_isPunct = words.isPunct(i);
+
+		qw->m_posNum = posNum;
+
+		// count 1 unit for it
+		posNum++;
+
+		// . we duplicated this code from XmlDoc.cpp's
+		//   getWordPosVec() function
+		if ( qw->m_isPunct ) { // ! wids[i] ) {
+			char *wp = qw->m_word;
+			long  wplen = qw->m_wordLen;
+			// simple space or sequence of just white space
+			if ( words.isSpaces(i) ) 
+				posNum += 0;
+			// 'cd-rom'
+			else if ( wp[0]=='-' && wplen==1 ) 
+				posNum += 0;
+			// 'mr. x'
+			else if ( wp[0]=='.' && words.isSpaces2(i,1)) 
+				posNum += 0;
+			// animal (dog)
+			else 
+				posNum++;
+		}
+
 		char *w   = words.getWord(i);
 		long wlen = words.getWordLen(i);
 		// assume it is a query weight operator
@@ -2088,6 +2115,10 @@ bool Query::setQWords ( char boolFlag ,
 		// TODO: fix title:" hey there" (space in quotes is ok)
 		bool cancelField = false;
 		if ( words.hasSpace(i) && ! inQuotes ) cancelField = true;
+		// fix title:"foo bar" "another quote" so "another quote"
+		// is not in the title: field
+		if ( words.hasSpace(i) && inQuotes && nq>= 2 ) 
+			cancelField = true;
 		// BUT if we have a quote, and they just got turned off,
 		// and the space is not after the quote, do not cancel field!
 		if ( nq == 1 && cancelField ) {
@@ -2681,6 +2712,63 @@ bool Query::setQWords ( char boolFlag ,
 	//Spam spam;
 	//spam.reset ( words.getNumWords() );
 
+
+	// treat strongly connected phrases like cd-rom and 3.2.0.3 as being
+	// in quotes for the most part, therefore, set m_quoteStart for them
+	long j;
+	long qs = -1;
+	for ( j = 0 ; j < numWords ; j++ ) {
+		// skip all but strongly connected words
+		if ( m_qwords[j].m_ignoreWord != IGNORE_CONNECTED &&
+		     // must also be non punct word OR a space
+		     ( !words.isPunct(j) || words.m_words[j][0] == ' ' ) ) {
+			// break the "quote", if any
+			qs = -1; continue; }
+		// if he is punctuation and qs is -1, skip him,
+		// punctuation words can no longer start a quote
+		if ( words.isPunct(j) && qs == -1 ) continue;
+		// uningore him if we should
+		if ( keepAllSingles ) m_qwords[j].m_ignoreWord = 0;
+		// if already in quotes, don't bother!
+		if ( m_qwords[j].m_quoteStart >= 0 ) continue;
+		// remember him
+		if ( qs == -1 ) qs = j;
+		// he starts the phrase
+		m_qwords[j].m_quoteStart = qs;
+		// force him into a quoted phrase
+		m_qwords[j].m_inQuotes   = true;
+		//m_qwords[j].m_inQuotedPhrase = true;
+	}
+
+	// fix for tags.uri:http://foo.com/bar so it works like
+	// tags.uri:"http://foo.com/bar" like it should
+	long first = -1;
+	for ( j = 0 ; j < numWords ; j++ ) {
+		// stop when we hit spaces
+		if ( words.hasSpace(j) ) {
+			first = -1;
+			continue;
+		}
+		// skip if not in field
+		if ( ! m_qwords[j].m_fieldCode ) continue;
+		// first alnumword in field?
+		if ( first == -1 ) {
+			// must be alnum
+			if ( m_qwords[j].m_isPunct ) continue;
+			// must have punct then another alnum word
+			if ( j+2 >= numWords ) break;
+			// spaces screw it up
+			if ( words.hasSpace(j+1) ) continue;
+			// then an alnum word after
+			first = j;
+		}
+		// we are in fake quoted phrase
+		m_qwords[j].m_inQuotes = true;
+		m_qwords[j].m_quoteStart = first;
+	}
+
+
+
 	// make the phrases from the words and the tweaked Bits class
 	//Phrases phrases;
 	if ( ! phrases.set ( &words , 
@@ -2928,33 +3016,6 @@ bool Query::setQWords ( char boolFlag ,
 					qw->m_ignorePhrase = IGNORE_REPEAT;
 			}
 		}
-	}
-
-	// treat strongly connected phrases like cd-rom and 3.2.0.3 as being
-	// in quotes for the most part, therefore, set m_quoteStart for them
-	long j;
-	long qs = -1;
-	for ( j = 0 ; j < numWords ; j++ ) {
-		// skip all but strongly connected words
-		if ( m_qwords[j].m_ignoreWord != IGNORE_CONNECTED &&
-		     // must also be non punct word OR a space
-		     ( !words.isPunct(j) || words.m_words[j][0] == ' ' ) ) {
-			// break the "quote", if any
-			qs = -1; continue; }
-		// if he is punctuation and qs is -1, skip him,
-		// punctuation words can no longer start a quote
-		if ( words.isPunct(j) && qs == -1 ) continue;
-		// uningore him if we should
-		if ( keepAllSingles ) m_qwords[j].m_ignoreWord = 0;
-		// if already in quotes, don't bother!
-		if ( m_qwords[j].m_quoteStart >= 0 ) continue;
-		// remember him
-		if ( qs == -1 ) qs = j;
-		// he starts the phrase
-		m_qwords[j].m_quoteStart = qs;
-		// force him into a quoted phrase
-		m_qwords[j].m_inQuotes   = true;
-		//m_qwords[j].m_inQuotedPhrase = true;
 	}
 
 	// . if we only have one quoted query then force its sign to be '+'

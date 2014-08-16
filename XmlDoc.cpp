@@ -10050,7 +10050,11 @@ Url **XmlDoc::getRedirUrl() {
 	     // AND for custom crawl it was messing up the processing
 	     // url format for a nytimes blog subsite which was redirecting
 	     // to the proper nytimes.com site...
-	     ! cr->m_isCustomCrawl ) {
+	     // ! cr->m_isCustomCrawl ) {
+	     // no, we need this for custom crawls because otherwise we
+	     // get too many dups in the index. so for nyt we need something
+	     // else
+	     cr->m_isCustomCrawl != 2 ) {
 		// returns false if blocked, true otherwise
 		//return addSimplifiedRedirect();
 		m_redirError = EDOCSIMPLIFIEDREDIR;
@@ -37112,7 +37116,9 @@ bool getWordPosVec ( Words *words ,
 			dist++;
 			continue;
 		}
-		// and so do sequences of punct
+		// . and so do sequences of punct
+		// . must duplicate this code in Query.cpp for setting
+		//   QueryWord::m_posNum
 		if ( ! wids[i] ) {
 			// simple space or sequence of just white space
 			if ( words->isSpaces(i) ) 
