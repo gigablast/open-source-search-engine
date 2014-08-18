@@ -2700,6 +2700,9 @@ bool Query::setQWords ( char boolFlag ,
 		}
 		// skip if not in field
 		if ( ! m_qwords[j].m_fieldCode ) continue;
+		// must be in a generic field, the other fields like site:
+		// will be messed up by this logic
+		if ( m_qwords[j].m_fieldCode != FIELD_GENERIC ) continue;
 		// first alnumword in field?
 		if ( first == -1 ) {
 			// must be alnum
@@ -3240,23 +3243,23 @@ struct QueryField g_fields[] = {
 	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
 
 
-	{"gbdocspiderdate",FIELD_GENERIC,false,
+	{"gbdocspiderdate",FIELD_GBOTHER,false,
 	 "Example: gbspiderdate:1400081479 will return results that have "
 	 "that spider date timestamp (UTC)"},
 
-	{"gbspiderdate",FIELD_GENERIC,false,
+	{"gbspiderdate",FIELD_GBOTHER,false,
 	 "Similar to above but includes spider reply \"documents\"."},
 
 
-	{"gbdocindexdate",FIELD_GENERIC,false,
+	{"gbdocindexdate",FIELD_GBOTHER,false,
 	 "Similar to above but when document was indexed. Time is "
 	 "slightly greater than or equal to the spider date."},
 
-	{"gbindexdate",FIELD_GENERIC,false,
+	{"gbindexdate",FIELD_GBOTHER,false,
 	 "Similar to above but includes spider reply \"documents\"."},
 
 
-	// {"gbreplyspiderdate",FIELD_GENERIC,false,
+	// {"gbreplyspiderdate",FIELD_GBOTHER,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
 	//  "results that have "
 	//  "that spider date timestamp (UTC)"},
