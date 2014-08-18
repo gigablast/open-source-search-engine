@@ -1944,6 +1944,14 @@ bool XmlDoc::injectDoc ( char *url ,
 			 void *state,
 			 void (*callback)(void *state) ) {
 
+	// wait until we are synced with host #0
+	if ( ! isClockInSync() ) {
+		log("xmldocl: got injection request but clock not yet "
+		    "synced with host #0");
+		g_errno = ETRYAGAIN;//CLOCKNOTSYNCED;
+		return true;
+	}
+
 	// normalize url
 	Url uu;
 	// do not add www to fix tmblr.co/ZHw5yo1E5TAaW injection
