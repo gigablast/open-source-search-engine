@@ -528,7 +528,7 @@ void XmlDoc::reset ( ) {
 		// should point into a safebuf as well
 		//mfree ( ptr_linkInfo2 , size_linkInfo2, "LinkInfo2");
 		ptr_linkInfo2    = NULL;
-		m_linkInfo1Valid = false;
+		m_linkInfo2Valid = false;
 	}
 	if ( m_rawUtf8ContentValid && m_rawUtf8Content && !m_setFromTitleRec
 	     // was content supplied by pageInject.cpp?
@@ -21040,6 +21040,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// since we might have set it in copyFromOldDoc() above
 		ptr_linkInfo1  = NULL;
 		size_linkInfo1 = 0;
+		m_linkInfo1Valid = false;
 
 		// . if not using spiderdb we are done at this point
 		// . this happens for diffbot json replies (m_dx)
@@ -23316,7 +23317,8 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 	// we need the link info too!
 	ptr_linkInfo1  = od->ptr_linkInfo1;
 	size_linkInfo1 = od->size_linkInfo1;
-	m_linkInfo1Valid = true;
+	if ( ptr_linkInfo1 && size_linkInfo1 ) m_linkInfo1Valid = true;
+	else m_linkInfo1Valid = false; 
 
 	// turn off for debug
 	ptr_sectiondbData = NULL;
