@@ -16140,7 +16140,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "usr";
 	m->m_off   = (char *)&cr.m_useSimplifiedRedirects - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	// turn off for now. spider time deduping should help any issues
+	// by disabling this.
+	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
