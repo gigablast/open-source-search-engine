@@ -449,21 +449,37 @@ bool Tag::printDataToBuf ( SafeBuf *sb ) {
 	return true;
 }
 
+// /admin/tagdb?c=mdw&u=www.mdw123.com&ufu=&username=admin&tagtype0=sitenuminlinks&tagdata0=10&tagtype1=rootlang&tagdata1=&tagtype2=rootlang&tagdata2=&add=Add+Tags
 bool Tag::printToBufAsAddRequest ( SafeBuf *sb ) {
 	// print the tagname
 	char *str = getTagStrFromType ( m_type );
+	sb->safePrintf("/admin/tagdb?");
+	// print the site
+	//sb->safePrintf("u=");
+	//sb->urlEncode ( m_url->getUrl() );
+	// print key of the tag as 16 byte key in ascii hex notation
+	// we don't know the "site" for all tags because "site" is a tag
+	// itself. we should take this in lieu of the "u=" url parm
+	// which is made to generate the key anyhow.
+	//sb->safePrintf("tagkey0=%s",KEYSTR(&m_key,16));
+	sb->safePrintf("&tagn0keyb0=%lli",m_key.n0);
+	sb->safePrintf("&tagn1keyb0=%lli",m_key.n1);
 	// print the user that added this tag
-	sb->safePrintf ( "%s.user=%s" , str , getUser() );
+	sb->safePrintf ( "&username=%s" , getUser() );
+	// the tag type, like "sitenuminlinks" or "rootlang"
+	sb->safePrintf("&tagtype0=%s",str);
 	// print the date when this tag was added
-	sb->safePrintf ("&%s.time=%li", str, m_timestamp );
-	// print the ip added from
-	sb->safePrintf("&%s.ip=%s",str,iptoa(m_ip));
+	//sb->safePrintf ("&%s.time=%li", str, m_timestamp );
 	// print the tag id
 	//sb->safePrintf("&%s.id=%lu",str,(long)m_tagId);
 	// the "score"
-	sb->safePrintf("&%s.data=",str);
+	sb->safePrintf("&tagdata0=");//,str);
 	// print the m_data
-	if ( ! printDataToBuf ( sb ) ) return false;
+	SafeBuf tmp;
+	if ( ! printDataToBuf ( &tmp ) ) return false;
+	tmp.nullTerm();
+	sb->urlEncode(tmp.getBufStart());
+	sb->nullTerm();
 	return true;
 }
 
@@ -1138,6 +1154,16 @@ bool TagRec::setFromHttpRequest ( HttpRequest *r, TcpSocket *s ) {
 		sprintf ( buf , "tagn0key%li" , i );
 		key.n0 = r->getLongLong ( buf, 0LL );
 
+		// for supporting dumping/adding of tagdb using wget
+		sprintf ( buf , "tagn1key%lib" , i );
+		long long v1 = r->getLongLong ( buf, key.n1 );
+		sprintf ( buf , "tagn0key%lib" , i );
+		long long v0 = r->getLongLong ( buf, key.n0 );
+		bool hackKey = ( v1 || v0 );
+		key.n1 = v1;
+		key.n0 = v0;
+
+
 		// if empty skip it
 		if ( ! dataPtr    ) continue;
 		if ( ! dataPtr[0] ) continue;
@@ -1212,6 +1238,10 @@ bool TagRec::setFromHttpRequest ( HttpRequest *r, TcpSocket *s ) {
 			// error?
 			if ( ! tag )
 				return false;
+
+			// hack the key
+			if ( hackKey ) // key.n1 != 0 || key.n0 != 0 ) 
+				tag->m_key = key;
 
 			bool deleteOldKey = false;
 
