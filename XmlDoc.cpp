@@ -13430,7 +13430,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( *od ) oldLinkInfo1 = (*od)->getLinkInfo1();
 
 	// if ip does not exist, make it 0
-	if ( *ip == 0 ) {
+	if ( *ip == 0 || *ip == -1 ) {
 		m_linkInfo1Valid = true;
 		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
 		s_dummy2.m_size = sizeof(LinkInfo);
@@ -13440,7 +13440,9 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	}
 
 	//link info generation requires an IP for internal/external computation
-	if ( *ip == -1 || *ip == 0 ) { char *xx=NULL;*xx=0; }
+	// UNLESS we are from getSpiderReplyMetaList2() ... so handle
+	// -1 above!
+	//if ( *ip == -1 || *ip == 0 ) { char *xx=NULL;*xx=0; }
 
 	// . error getting linkers?
 	// . on udp timeout we were coring below because msg25.m_linkInfo
@@ -25863,15 +25865,6 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	// try to get an available docid, preferring "d" if available
 	long long *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
-
-	// fix from coring in getHopCount() calling getLinkInfo1()
-	if ( ! m_linkInfo1Valid ) {
-		m_linkInfo1Valid = true;
-		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
-		s_dummy2.m_size = sizeof(LinkInfo);
-		ptr_linkInfo1  = &s_dummy2;
-		size_linkInfo1 = sizeof(LinkInfo);
-	}
 
 	unsigned char *hc = (unsigned char *)getHopCount();
 	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
