@@ -2179,9 +2179,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// save how many docs are in this collection
 	long long docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
-	//RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , si->m_coll2 );
+	RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , st->m_collnum );
 	//if ( base ) docsInColl = base->getNumGlobalRecs();
-	docsInColl = g_hostdb.getNumGlobalRecs ( );
+	//docsInColl = g_hostdb.getNumGlobalRecs ( );
+	// estimate it
+	if ( base ) docsInColl = base->getNumGlobalRecs();
+	// multiply by # of *unique* shards
+	docsInColl *= g_hostdb.getNumShards();
 	// include number of docs in the collection corpus
 	if ( docsInColl >= 0LL ) {
 	    if ( si->m_format == FORMAT_XML)
@@ -2406,7 +2410,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf ( "PQR'd " );
 		sb->safePrintf ("Results <b>%li</b> to <b>%li</b> of "
 			       "exactly <b>%s</b> from an index "
-			       "of %s pages" , 
+			       "of about %s pages" , 
 			       firstNum + 1          ,
 			       firstNum + n          ,
 			       thbuf                 ,
@@ -2419,7 +2423,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf ( "PQR'd " );
 		sb->safePrintf ("Results <b>%li</b> to <b>%li</b> of "
 			       "exactly <b>%s</b> from an index "
-			       "of %s pages" , 
+			       "of about %s pages" , 
 			       firstNum + 1          ,
 			       firstNum + n          ,
 			       thbuf                 ,
@@ -4496,7 +4500,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ( " - <a href=/scroll.html?page="
 				"get?"
 				"q=%s&c=%s&d=%lli>"
-				"cached</a>",
+				"cached</a>\n",
 				st->m_qe , coll ,
 				mr->m_docId );
 	else if ( printCached )
@@ -4505,7 +4509,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				"q=%s&"
 				"qlang=%s&"
 				"c=%s&d=%lli&cnsp=0\">"
-				"cached</a>", 
+				"cached</a>\n", 
 				st->m_qe , 
 				// "qlang" parm
 				si->m_defaultSortLang,
@@ -4575,7 +4579,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "cursor:pointer;"
 			       "color:blue;>"
 			       "<u>00000 backlinks</u>"
-			       "</a>"
+			       "</a>\n"
 			       , ix 
 			       );
 		placeHolderLen = sb->length() - placeHolder;
@@ -4602,7 +4606,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "cursor:pointer;"
 			       "color:blue;>"
 			       "scoring"
-			       "</a>"
+			       "</a>\n"
 			       ,ix
 			       );
 	}
@@ -4613,7 +4617,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
+		sb->safePrintf("&rand64=%llu\">respider</a>\n",rand64);
 	}
 
 	if ( si->m_format == FORMAT_HTML ) {
@@ -4625,7 +4629,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				);
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		sb->safePrintf ( "\">"
-				 "spider info</a>"
+				 "spider info</a>\n"
 			       );
 	}
 
@@ -4642,7 +4646,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "c=%s&"
 				 "d=%lli&"
 				 "cnsp=0\">"
-				 "sections</a>", 
+				 "sections</a>\n", 
 				 st->m_qe , 
 				 // "qlang" parm
 				 si->m_defaultSortLang,
@@ -4660,7 +4664,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "c=%s&"
 				 "d=%lli&"
 				 "cnsp=0\">"
-				 "page info</a>", 
+				 "page info</a>\n", 
 				 //st->m_qe , 
 				 // "qlang" parm
 				 //si->m_defaultSortLang,
@@ -4677,14 +4681,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf(//"<br>"
 			      " - <a style=color:blue; href=\"/search?"
 			      "c=%s&sc=1&dr=0&q=ip:%s&"
-			      "n=100&usecache=0\">%s</a>",
+			      "n=100&usecache=0\">%s</a>\n",
 			      coll,iptoa(mr->m_ip), iptoa(mr->m_ip) );
 		// ip domain link
 		unsigned char *us = (unsigned char *)&mr->m_ip;//urlip;
 		sb->safePrintf (" - <a style=color:blue; "
 				"href=\"/search?c=%s&sc=1&dr=0&n=100&"
 				"q=ip:%li.%li.%li&"
-				"usecache=0\">%li.%li.%li</a>",
+				"usecache=0\">%li.%li.%li</a>\n",
 				coll,
 				(long)us[0],(long)us[1],(long)us[2],
 				(long)us[0],(long)us[1],(long)us[2]);
@@ -4737,7 +4741,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf (" - "
 			       " <a style=color:blue; href=\"/search?"
 			       "q=site%%3A%s&sc=0&c=%s\">"
-			       "domain</a> " ,
+			       "domain</a>\n" ,
 				dbuf ,
 				coll );//, dbuf );
 	}
@@ -4756,7 +4760,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
 			      "<nobr>%sBAN %s"
-			      "</nobr></a> "
+			      "</nobr></a>\n"
 			      , banVal
 			      , dbuf
 			      , coll
@@ -4772,7 +4776,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
-			      "<nobr>%sBAN %s</nobr></a> "
+			      "<nobr>%sBAN %s</nobr></a>\n"
 			      , banVal
 			      , dbuf
 			      , coll
@@ -4801,7 +4805,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf ("<a href=\"/search?"
 				       "q=%s"
 				       "&sc=1&dr=0&c=%s&n=200&rat=0\">"
-				       "Ad Id</a> " ,
+				       "Ad Id</a>\n" ,
 				       mr->ptr_gbAdIds,  coll);
 		
 		//sb->safePrintf ("] ");

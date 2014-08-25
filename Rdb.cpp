@@ -2609,12 +2609,24 @@ long long Rdb::getNumGlobalRecs ( ) {
 	return getNumTotalRecs() * g_hostdb.m_numShards;//Groups;
 }
 
+static long s_lastTime = 0;
+static long long s_lastTotal = 0LL;
+
 // . return number of positive records - negative records
 long long Rdb::getNumTotalRecs ( ) {
 	long long total = 0;
+
+	// this gets slammed w/ too many collections so use a cache...
+	long now = 0;
+	//if ( g_collectiondb.m_numRecsUsed > 10 ) {
+	now = getTimeLocal();
+	if ( now - s_lastTime == 0 ) 
+		return s_lastTotal;
+	//}
+
+	// same as num recs
 	long nb = getNumBases();
-	// don't slam the cpu on this if too many collections
-	if ( nb > 10 ) return 0;
+
 	//return 0; // too many collections!!
 	for ( long i = 0 ; i < nb ; i++ ) {
 		RdbBase *base = getBase(i);
@@ -2625,6 +2637,11 @@ long long Rdb::getNumTotalRecs ( ) {
 	// . TODO: count negative and positive recs in the b-tree
 	//total += m_tree.getNumPositiveKeys();
 	//total -= m_tree.getNumNegativeKeys();
+	if ( now ) {
+		s_lastTime = now;
+		s_lastTotal = total;
+	}
+
 	return total;
 }
 
