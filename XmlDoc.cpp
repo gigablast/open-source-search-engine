@@ -13460,7 +13460,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( *od ) oldLinkInfo1 = (*od)->getLinkInfo1();
 
 	// if ip does not exist, make it 0
-	if ( *ip == 0 ) {
+	if ( *ip == 0 || *ip == -1 ) {
 		m_linkInfo1Valid = true;
 		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
 		s_dummy2.m_size = sizeof(LinkInfo);
@@ -13470,7 +13470,9 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	}
 
 	//link info generation requires an IP for internal/external computation
-	if ( *ip == -1 || *ip == 0 ) { char *xx=NULL;*xx=0; }
+	// UNLESS we are from getSpiderReplyMetaList2() ... so handle
+	// -1 above!
+	//if ( *ip == -1 || *ip == 0 ) { char *xx=NULL;*xx=0; }
 
 	// . error getting linkers?
 	// . on udp timeout we were coring below because msg25.m_linkInfo
