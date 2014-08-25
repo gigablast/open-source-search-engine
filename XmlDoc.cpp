@@ -25864,6 +25864,15 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	long long *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
 
+	// fix from coring in getHopCount() calling getLinkInfo1()
+	if ( ! m_linkInfo1Valid ) {
+		m_linkInfo1Valid = true;
+		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
+		s_dummy2.m_size = sizeof(LinkInfo);
+		ptr_linkInfo1  = &s_dummy2;
+		size_linkInfo1 = sizeof(LinkInfo);
+	}
+
 	unsigned char *hc = (unsigned char *)getHopCount();
 	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
