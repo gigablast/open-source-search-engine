@@ -1518,16 +1518,6 @@ bool qajson ( ) {
 	}
 
 
-	// test gbequalint:field:"quoted value" query to ensure it converts
-	// the quoted value into the right int32
-	if ( ! s_flags[11] ) {
-		s_flags[11] = true;
-		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
-				"q=gbequalint%3AAstrings.key%3A\"samsung\"",
-				-1310551262 ) )
-			return false;
-	}
-
 	// other query tests...
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
@@ -1545,6 +1535,60 @@ bool qajson ( ) {
 			return false;
 	}
 	
+
+	// test gbfieldmatch:field:"quoted value" query to ensure it converts
+	// the quoted value into the right int32
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3Ainvestigate-tweet",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3A\"Maemo+Browser\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3A\"Google+Wireless+Transcoder\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	// this should have no results, not capitalized
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3A\"samsung\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3ASamsung",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3A\"Samsung\"",
+				-1310551262 ) )
+			return false;
+	}
 
 
 

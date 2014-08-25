@@ -32381,10 +32381,12 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	//	s_facetPrefixHash = hash64n ( "gbfacet" );
 	long long prefixHash = hash64n ( prefix );
 
+	// term is like something like "object.price" or whatever.
+	// it is the json field itself, or the meta tag name, etc.
 	long long termId64 = hash64n ( term );
 
 	// combine with the "gbfacet" prefix. old prefix hash on right.
-	// like "price" on left and "gbfacetfloat" on left... see Query.cpp
+	// like "price" on right and "gbfacetfloat" on left... see Query.cpp.
 	long long ph2 = hash64 ( termId64, prefixHash );
 
 	// . now store it
@@ -32458,13 +32460,16 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	// make a special hashinfo for this facet
 	HashInfo hi;
 	hi.m_tt = tt;
-	hi.m_prefix = prefix;//"gbfacet";
+	// the full prefix
+	char fullPrefix[64];
+	snprintf(fullPrefix,64,"%s:%s",prefix,term);
+	hi.m_prefix = fullPrefix;//"gbfacet";
 
 	// add to wts for PageParser.cpp display
 	// store it
 	if ( ! storeTerm ( buf,
 			   bufLen,
-			   prefixHash, // s_facetPrefixHash,
+			   ph2, // prefixHash, // s_facetPrefixHash,
 			   &hi,
 			   0, // word#, i,
 			   0, // wordPos
