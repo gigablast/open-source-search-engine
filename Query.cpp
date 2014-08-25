@@ -683,9 +683,12 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 // 		if ( qw->m_ignoreWord ) continue;
 
 		// ignore if in quotes
-		if ( qw->m_quoteStart >= 0 ) continue;
+		//if ( qw->m_quoteStart >= 0 ) continue;
+		// ignore if in quotes and part of phrase, watch out
+		// for things like "word", a single word in quotes.
+		if ( qw->m_quoteStart >= 0 && qw->m_phraseId ) continue;
 
-		// if nore if weight is absolute zero
+		// ignore if weight is absolute zero
 		if ( qw->m_userWeight == 0   && 
 		     qw->m_userType   == 'a'  ) continue;
 
@@ -2413,6 +2416,29 @@ bool Query::setQWords ( char boolFlag ,
 				// and also the floating point after that
 				qw->m_float = atof ( w + lastColonLen + 1 );
 				qw->m_int = (long)atoll( w + lastColonLen+1);
+				// if it is like
+				// gbequalint:tag.uri:"http://xyz.com/poo"
+				// then we should hash the string into
+				// an int just like how the field value would
+				// be hashed when adding gbequalint: terms
+				// in XmlDoc.cpp:hashFacet2(). the hash of
+				// the tag.uri field, for example, is set
+				// in hashFacet1() and set to "val32". so
+				// hash it just like that does here.
+				if ( colonCount >= 1 &&
+				     fieldCode == FIELD_GBNUMBEREQUALINT &&
+				     firstColonLen > 0 &&
+				     wlen>3 && // something must be in the ""'s
+				     w[wlen-1] == '\"' &&
+				     w[firstColonLen] == ':' &&
+				     w[firstColonLen+1] == '\"' ) {
+					// . skip over colon at start
+					// . skip over quotes at start/end
+					char *a = w + firstColonLen + 2;
+					char *b = w + wlen - 1;
+					qw->m_int = hash32 ( a , b - a );
+					qw->m_float = (float)qw->m_int;
+				}
 			}
 
 
