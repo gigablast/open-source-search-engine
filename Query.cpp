@@ -2426,7 +2426,7 @@ bool Query::setQWords ( char boolFlag ,
 				qw->m_float = atof ( w + lastColonLen + 1 );
 				qw->m_int = (long)atoll( w + lastColonLen+1);
 				// if it is like
-				// gbfieldhash:tag.uri:"http://xyz.com/poo"
+				// gbfieldmatch:tag.uri:"http://xyz.com/poo"
 				// then we should hash the string into
 				// an int just like how the field value would
 				// be hashed when adding gbfacetstr: terms
@@ -2465,7 +2465,7 @@ bool Query::setQWords ( char boolFlag ,
 					// hash it like
 					// gbfacetstr:object.price
 					// even though its 
-					// gbfieldhash:object.title:"some foo"
+					// gbfieldmatch:object.title:"some foo"
 					//
 					/*
 					long long wid1;
@@ -3799,7 +3799,7 @@ struct QueryField g_fields[] = {
 	{"gbfieldmatch",
 	 FIELD_GBFIELDMATCH,
 	 true,
-	 "gbfieldhash:strings.vendor:\"My Vendor Inc.\"",
+	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
 	 "Matches all the meta tag or JSON or XML fields that have "
 	 "the name \"strings.vendor\" and contain the exactly provided "
 	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
