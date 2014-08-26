@@ -1179,6 +1179,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
 	//
 	sb->safePrintf("<TABLE border=0 height=100%% cellpadding=0 "
+		       "width=100%% "
 		       "cellspacing=0>"
 		      "\n<TR>\n");
 
@@ -1266,6 +1267,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       //"max-height:600px;"
 		       //"max-width:200px;"
 		       //"min-width:200px;"
+
+		       "width:200px;"
+
 		       "padding:4px;" // same as TABLE_STYLE
 		       "margin-left:10px;"
 		       "background-color:white;"//#d0d0d0;"
@@ -2257,11 +2261,13 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 			 g_collectiondb.m_numRecsUsed , s );
 
 	sb->safePrintf( "<center>"
+			"<nobr>"
 			"<font size=-1>"
 			"<a href=/admin/addcoll?c=%s>add</a> &nbsp; &nbsp; "
 			"<a href=/admin/delcoll?c=%s>delete</a> &nbsp; &nbsp; "
 			"<a href=/admin/clonecoll?c=%s>clone</a>"
 			"</font>"
+			"</nobr>"
 			"</center>"
 			, coll
 			, coll
