@@ -696,7 +696,8 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 
 
-	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+	sb.safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
+		      "cellpadding=0>"
 		      "\n<TR>\n");
 
 
@@ -722,7 +723,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
 		      "valign=top "
-		      "style=\""
+		      "style=\"width:210px;"
 		      "border-right:3px solid blue;"
 		      "\">"
 

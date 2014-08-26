@@ -1782,7 +1782,9 @@ bool Pages::printColors ( SafeBuf *sb, char* bodyJavascript ) {
 	sb->safePrintf (
 		  "<body text=#000000 bgcolor=#"
 		  BGCOLOR
-		  " link=#000000 vlink=#000000 alink=#000000 %s>\n" 
+		  " link=#000000 vlink=#000000 alink=#000000 "
+		  "style=margin:0px;padding:0px; "
+		  "%s>\n" 
 		  "<style>"
 		  "body,td,p,.h{font-family:"
 		  //"arial,"
@@ -2145,7 +2147,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				       "</a>"
 				       "</b>"
 				       //"</span>"
-				       " &nbsp; \n"
+				       " &nbsp; "
+				       "\n"
 				       ,s_pages[i].m_filename
 				       ,coll
 				       ,buf

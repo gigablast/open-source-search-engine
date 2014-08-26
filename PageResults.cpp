@@ -1488,7 +1488,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	//
 	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
 	//
-	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0 "
+		      "cellspacing=0>"
 		      "\n<TR>\n");
 
 	//
