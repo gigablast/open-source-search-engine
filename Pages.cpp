@@ -1437,6 +1437,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// this div will hold the submenu and forms
 	sb->safePrintf(
 		       "<div style=padding-left:20px;"
+		       "padding-right:20px;"
 		       "margin-left:0px;"
 		       "background-color:white;"
 		       "id=panel2>"
@@ -2092,6 +2093,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_ACCESS ) continue;
 		if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;
+		if ( i == PAGE_API ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
 		if ( i == PAGE_TITLEDB ) continue;
 		// move these links to the coll nav bar on the left
