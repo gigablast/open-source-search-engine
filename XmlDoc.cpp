@@ -28916,15 +28916,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// if they provided a query with gbfacet*: terms then we have
 	// to get those facet values.
 	if ( ! m_gotFacets ) {
-		// need this for storeFacetValues() if we are json
-		if ( m_contentType == CT_JSON ) {
-			Json *jp = getParsedJson();
-			if ( ! jp || jp == (void *)-1)return (Msg20Reply *)jp;
-		}
-		if ( m_contentType == CT_HTML ) {
-			Xml *xml = getXml();
-			if ( ! xml || xml==(void *)-1)return (Msg20Reply *)xml;
-		}
 		// only do this once
 		m_gotFacets = true;
 		// get facet term
@@ -28945,6 +28936,17 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		}
 		// if we had a facet, get the values it has in the doc
 		if ( qs && *qs ) {
+			// need this for storeFacetValues() if we are json
+			if ( m_contentType == CT_JSON ) {
+				Json *jp = getParsedJson();
+				if ( ! jp || jp == (void *)-1)
+					return (Msg20Reply *)jp;
+			}
+			if ( m_contentType == CT_HTML ) {
+				Xml *xml = getXml();
+				if ( ! xml || xml==(void *)-1)
+					return (Msg20Reply *)xml;
+			}
 			// find end of it
 			char *e = qs;
 			for ( ; *e && ! is_wspace_a(*e) ; e++ );
