@@ -172,13 +172,13 @@ class Datedb {
 
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 extern class Datedb g_datedb;
-extern class Datedb g_datedb2;
+//extern class Datedb g_datedb2;
 
 #endif
 

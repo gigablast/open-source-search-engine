@@ -91,6 +91,58 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	// best candidate, and just use that
 	if ( xd->m_isDiffbotJSONObject ) return;
 
+	//
+	// first add any open graph candidate.
+	// basically they page telling us the best image straight up.
+	//
+
+	long node2 = -1;
+	long startNode = 0;
+
+	// . field can be stuff like "summary","description","keywords",...
+	// . if "convertHtmlEntites" is true we change < to &lt; and > to &gt;
+	// . <meta property="og:image" content="http://example.com/rock2.jpg"/>
+	// . <meta property="og:image" content="http://example.com/rock3.jpg"/>
+ ogimgloop:
+	char ubuf[2000];
+	long ulen = xml->getMetaContent ( ubuf , // store the val here
+					  1999 ,
+					  "og:image",
+					  8,
+					  "property",
+					  false, // convertHtmlEntities
+					  startNode ,
+					  &node2 ); // matchedNode
+	// update this in case goto ogimgloop is called
+	startNode = node2 + 1;
+	// see section below for explanation of what we are storing here...
+	if ( node2 >= 0 ) {
+		// save it
+		m_imageNodes[m_numImages] = node2;
+		Query q;
+		if ( ulen > MAX_URL_LEN ) goto ogimgloop;
+		// set it to the full url
+		Url iu;
+		// use "pageUrl" as the baseUrl
+		iu.set ( pageUrl , ubuf , ulen );
+		// skip if invalid domain or TLD
+		if ( iu.getDomainLen() <= 0 ) goto ogimgloop;
+		// for looking it up on disk to see if unique or not
+		char buf[2000];
+		snprintf ( buf , 1999, "gbimage:%s",iu.getUrl());
+		// TODO: make sure this is a no-split termid storage thingy
+		// in Msg14.cpp
+		if ( ! q.set2 ( buf , langUnknown , false ) ) return;
+		// store the termid
+		m_termIds[m_numImages] = q.getTermId(0);
+		// advance the counter
+		m_numImages++;
+		// try to get more graph images if we have some room
+		if ( m_numImages + 2 < MAX_IMAGES ) goto ogimgloop;
+	}
+	
+
+
 	//m_pageSite  = pageSite;
 	// scan the words
 	long       nw     = words->getNumWords();
@@ -530,7 +582,7 @@ bool Images::downloadImages () {
 				// get img tag node
 				node = m_imageNodes[m_j];
 				// get the url of the image
-				src = m_xml->getString(node,"src",&srcLen);
+				src = getImageUrl ( m_j , &srcLen );
 				// use "pageUrl" as the baseUrl
 				m_imageUrl.set ( m_pageUrl , src , srcLen ); 
 			}
@@ -689,6 +741,7 @@ bool Images::downloadImage ( ) {
 	r->m_urlIp = m_latestIp;
 	if ( ! strcmp(cr->m_coll,"qatest123")) {
 		r->m_useTestCache   = 1;
+		//if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = 1;
 		r->m_addToTestCache = 1;
 	}
 	// url is the most important
@@ -757,8 +810,7 @@ bool Images::makeThumb ( ) {
 		srcLen = gbstrlen(src);
 	}
 	else {
-		long node = m_imageNodes[m_j];
-		src = m_xml->getString(node,"src",&srcLen);
+		src = getImageUrl ( m_j , &srcLen );
 	}
 	// set it to the full url
 	Url iu;
@@ -850,6 +902,16 @@ bool Images::makeThumb ( ) {
 		}
 	}
 
+	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
+
+	// save how big of thumbnails we should make. user can change
+	// this in the 'spider controls'
+	m_xysize = cr->m_thumbnailMaxWidthHeight ;
+	// make it 250 pixels if no decent value provided
+	if ( m_xysize <= 0 ) m_xysize = 250;
+	// and keep it sane
+	if ( m_xysize > 2048 ) m_xysize = 2048;
 
 	// update status
 	if ( m_xd ) m_xd->setStatus ( "making thumbnail" );
@@ -968,24 +1030,48 @@ void Images::thumbStart_r ( bool amThread ) {
 		       break;
         } 
 
-	long xysize = 250;//100;
+	//long xysize = 250;//100;
 	// make thumbnail a little bigger for diffbot for widget
-	if ( m_xd->m_isDiffbotJSONObject ) xysize = 250;
+	//if ( m_xd->m_isDiffbotJSONObject ) xysize = 250;
 
 	// i hope 2500 is big enough!
 	char  cmd[2501];
 
 	//sprintf( cmd, scmd, ext, in, out);
 	char *wdir = g_hostdb.m_dir;
+	// can be /dev/stderr or like /var/gigablast/data/log000 etc.
+	char *logFile = g_log.getFilename();
 	// wdir ends in / so this should work.
 	snprintf( cmd, 2500 ,
-		 "LD_LIBRARY_PATH=%s %s%stopnm %s | "
-		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %li %li - | "
-		 "LD_LIBRARY_PATH=%s %sppmtojpeg - > %s"
-		 , wdir , wdir , ext , in
-		 , wdir , wdir , xysize , xysize
-		 , wdir , wdir , out
+		 "LD_LIBRARY_PATH=%s %s%stopnm %s 2>> %s | "
+		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %li %li - 2>> %s | "
+		  // put all its stderr msgs into /dev/null
+		  // so "jpegtopnm: WRITING PPM FILE" doesn't clog console
+		 "LD_LIBRARY_PATH=%s %sppmtojpeg - > %s 2>> %s"
+		  , wdir , wdir , ext , in , logFile
+		  , wdir , wdir , m_xysize , m_xysize , logFile
+		  , wdir , wdir , out , logFile
 		 );
+
+	// if they already have netpbm package installed use that then
+	static bool s_checked = false;
+	static bool s_hasNetpbm = false;
+	if ( ! s_checked ) {
+		s_checked = true;
+		File f;
+		f.set("/usr/bin/pnmscale");
+		s_hasNetpbm = f.doesExist() ;
+	}
+	if ( s_hasNetpbm )
+		snprintf( cmd, 2500 ,
+			  "%stopnm %s 2>> %s | "
+			  "pnmscale -xysize %li %li - 2>> %s | "
+			  "ppmtojpeg - > %s 2>> %s"
+			  , ext , in , logFile
+			  , m_xysize , m_xysize , logFile
+			  , out , logFile
+			  );
+		
         
         // Call clone function for the shell to execute command
         // This call WILL BLOCK	. timeout is 30 seconds.
@@ -1216,10 +1302,11 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 	long newdx = (long)((float)m_dx * min);
 	long newdy = (long)((float)m_dy * min);
 
-	if ( printLink && format==FORMAT_HTML ) 
+	// might be FORMAT_AJAX!
+	if ( printLink && format !=FORMAT_XML && format != FORMAT_JSON )
 		sb->safePrintf("<a href=%s>", getUrl() );
 
-	if ( format == FORMAT_HTML )
+	if ( format !=FORMAT_XML && format != FORMAT_JSON )
 		sb->safePrintf("<img width=%li height=%li align=left "
 			       "%s"
 			       "src=\"data:image/"
@@ -1230,20 +1317,44 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 			       );
 
 	if ( format == FORMAT_XML )
-		sb->safePrintf("<imageBase64>");
+		sb->safePrintf("\t<imageBase64>");
+
+	if ( format == FORMAT_JSON )
+		sb->safePrintf("\t\"imageBase64\":\"");
 
 	// encode image in base 64
 	sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
-	if ( format == FORMAT_HTML ) {
+	if ( format !=FORMAT_XML && format != FORMAT_JSON ) {
 		sb->safePrintf("\">");
 		if ( printLink ) sb->safePrintf ("</a>");
 	}
 
 	if ( format == FORMAT_XML )
-		sb->safePrintf("</imageBase64>");
+		sb->safePrintf("</imageBase64>\n");
+
+	if ( format == FORMAT_JSON )
+		sb->safePrintf("\",\n");
 
 	// widget needs to know the width of the thumb for formatting
 	// the text either on top of the thumb or to the right of it
 	if ( retNewdx ) *retNewdx = newdx;
 	return true;
+}
+
+
+char *Images::getImageUrl ( long j , long *urlLen ) {
+
+	long node = m_imageNodes[j];
+	long srcLen = 0;
+	char *src = m_xml->getString(node,"src",&srcLen);
+	// maybe it was an og:image meta tag
+	if ( ! src ) 
+		src = m_xml->getString(node,"content",&srcLen);
+
+	// wtf?
+	if ( ! src ) 
+		log("image: image bad/null src");
+
+	*urlLen = srcLen;
+	return src;
 }

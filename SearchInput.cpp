@@ -12,7 +12,7 @@
 #include "Timedb.h"
 #include "PageResults.h"
 
-char getFormatFromRequest ( class HttpRequest *hr ) ;
+//char getFormatFromRequest ( class HttpRequest *hr ) ;
 
 SearchInput::SearchInput() {
 	reset();
@@ -257,7 +257,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 			return false;
 		}
 		// add to our list
-		if (!m_collnumBuf.safeMemcpy(&cr->m_collnum,sizeof(collnum_t)))
+		if (!m_collnumBuf.safeMemcpy(&tmpcr->m_collnum,
+					     sizeof(collnum_t)))
 			return false;
 		// restore the \0 character we wrote in there
 		*end = c;
@@ -310,29 +311,39 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//////
 
 	// get the format. "xml" "html" "json" --> FORMAT_HTML, FORMAT_CSV ...
-	char tmpFormat = getFormatFromRequest ( &m_hr );
+	char tmpFormat = m_hr.getReplyFormat();//getFormatFromRequest ( &m_hr);
 	// now override automatic defaults for special cases
 	if ( tmpFormat != FORMAT_HTML ) {
 		m_familyFilter            = 0;
 		m_numTopicsToDisplay      = 0;
 		m_doQueryHighlighting     = 0;
-		m_spellCheck              = 0;
+		//m_spellCheck              = 0;
 		m_getDocIdScoringInfo = false;
 		// turn gigabits off by default if not html
-		m_docsToScanForTopics = 0;
+		//m_docsToScanForTopics = 0;
 	}
+
 	// if they have a list of sites...
-	else if ( m_sites && m_sites[0] ) {
+	if ( m_sites && m_sites[0] ) {
 		m_doSiteClustering        = false;
 		m_ipRestrictForTopics     = false;
 	}
 
 
+	
 
 
 	// and set from the http request. will set m_coll, etc.
 	g_parms.setFromRequest ( &m_hr , sock , cr , (char *)this , OBJ_SI );
 
+
+	if ( m_streamResults &&
+	     tmpFormat != FORMAT_XML && 
+	     tmpFormat != FORMAT_JSON ) {
+		log("si: streamResults only supported for "
+		    "json/html. disabling");
+		m_streamResults = false;
+	}
 
 	m_coll = coll;
 
@@ -349,35 +360,6 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// set m_isAdmin to zero if no correct ip or password
 	if ( ! g_conf.isRootAdmin ( sock , &m_hr ) ) m_isAdmin = 0;
 
-
-	//
-	// TODO: use Parms.cpp defaults
-	//
-	TopicGroup *tg = &m_topicGroups[0];
-
-	//
-	//
-	// gigabits
-	//
-	//
-	tg->m_numTopics = 50;
-	tg->m_maxTopics = 50;
-	tg->m_docsToScanForTopics = m_docsToScanForTopics;
-	tg->m_minTopicScore = 0;
-	tg->m_maxWordsPerTopic = 6;
-	tg->m_meta[0] = '\0';
-	tg->m_delimeter = '\0';
-	tg->m_useIdfForTopics = false;
-	tg->m_dedup = true;
-	// need to be on at least 2 pages!
-	tg->m_minDocCount = 2;
-	tg->m_ipRestrict = true;
-	tg->m_dedupSamplePercent = 80;
-	tg->m_topicRemoveOverlaps = true;
-	tg->m_topicSampleSize = 4096;
-	// max sequential punct chars allowedin a topic
-	tg->m_topicMaxPunctLen = 1;
-	m_numTopicGroups = 1;
 
 	//////////////////////////////////////
 	//
@@ -490,6 +472,10 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		return false;
 	}
 
+
+	if ( m_hideAllClustered )
+		m_doSiteClustering = true;
+
 	// turn off some parms
 	if ( m_q.m_hasUrlField  ) 
 		m_ipRestrictForTopics = false;
@@ -499,11 +485,17 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_ipRestrictForTopics = false;
 		m_doSiteClustering    = false;
 	}
+
+	if ( cr && ! cr->m_ipRestrict )
+		m_ipRestrictForTopics = false;
+
 	if ( m_q.m_hasQuotaField ) {
 		m_doSiteClustering    = false;
 		m_doDupContentRemoval = false;
 	}
 
+	if ( ! m_doSiteClustering )
+		m_hideAllClustered = false;
 
 	// sanity check
 	if(m_firstResultNum < 0) m_firstResultNum = 0;
@@ -543,6 +535,37 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	}
 	// save it
 	m_rcache = readFromCache;
+
+
+	//
+	// TODO: use Parms.cpp defaults
+	//
+	TopicGroup *tg = &m_topicGroups[0];
+
+	//
+	//
+	// gigabits
+	//
+	//
+	tg->m_numTopics = 50;
+	tg->m_maxTopics = 50;
+	tg->m_docsToScanForTopics = m_docsToScanForTopics;
+	tg->m_minTopicScore = 0;
+	tg->m_maxWordsPerTopic = 6;
+	tg->m_meta[0] = '\0';
+	tg->m_delimeter = '\0';
+	tg->m_useIdfForTopics = false;
+	tg->m_dedup = true;
+	// need to be on at least 2 pages!
+	tg->m_minDocCount = 2;
+	tg->m_ipRestrict = m_ipRestrictForTopics;
+	tg->m_dedupSamplePercent = 80;
+	tg->m_topicRemoveOverlaps = true;
+	tg->m_topicSampleSize = 4096;
+	// max sequential punct chars allowedin a topic
+	tg->m_topicMaxPunctLen = 1;
+	m_numTopicGroups = 1;
+
 
 	return true;
 }
@@ -617,6 +640,51 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		//p += sprintf( p, "+gblang:%li |", m_gblang );
 		m_sbuf1.safePrintf( "%s", qp );
 	}
+
+	// and this
+	if ( m_secsBack > 0 ) {
+		long timestamp = getTimeGlobalNoCore();
+		timestamp -= m_secsBack;
+		if ( timestamp <= 0 ) timestamp = 0;
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbminint:gbspiderdate:%lu",timestamp);
+	}
+
+	if ( m_sortBy == 1 ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbsortby:gbspiderdate");
+	}
+
+	if ( m_sortBy == 2 ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbrevsortby:gbspiderdate");
+	}
+
+	char *ft = m_filetype;
+	if ( ft && strcasecmp(ft,"any")==0 ) ft = NULL;
+	if ( ft && ! ft[0] ) ft = NULL;
+	if ( ft ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("filetype:%s",ft);
+	}
+
+	// facet prepend en masse
+	// for ( long i = 1 ; i <= 6 ; i++ ) {
+	// 	char tmp[12];
+	// 	sprintf(tmp,"facet%li",i);
+	// 	char *ff = hr->getString(tmp,NULL);
+	// 	if ( ! ff ) continue;
+	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	// 	m_sbuf1.safePrintf("%s",ff);
+	// }
+
+	// one at a time for now
+	char *ff = hr->getString("facet",NULL);
+	if ( ff ) {
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	m_sbuf1.safePrintf("%s",ff);
+	 }
+
 
 	// append site: term
 	// if ( m_sites && m_sites[0] ) {
@@ -960,51 +1028,6 @@ uint8_t SearchInput::detectQueryLanguage(void) {
 }
 */
 
-char getFormatFromRequest ( HttpRequest *r ) {
-
-	char *formatStr = r->getString("format");
-
-	//if ( ! formatStr ) return FORMAT_HTML;
-
-	char format = FORMAT_HTML;
-
-	// what format should search results be in? default is html
-	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
-	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
-	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
-	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
-	if ( formatStr && strcmp(formatStr,"iframe")==0)
-		format=FORMAT_WIDGET_IFRAME;
-	if ( formatStr && strcmp(formatStr,"ajax")==0)
-		format=FORMAT_WIDGET_AJAX;
-	if ( formatStr && strcmp(formatStr,"append")==0)
-		format=FORMAT_WIDGET_APPEND;
-
-	// support old api &xml=1 to mean &format=1
-	if ( r->getLong("xml",0) ) {
-		format = FORMAT_XML;
-	}
-
-	// also support &json=1
-	if ( r->getLong("json",0) ) {
-		format = FORMAT_JSON;
-	}
-
-	if ( r->getLong("csv",0) ) {
-		format = FORMAT_CSV;
-	}
-
-	if ( r->getLong("iframe",0) ) {
-		format = FORMAT_WIDGET_IFRAME;
-	}
-
-	if ( r->getLong("ajax",0) ) {
-		format = FORMAT_WIDGET_AJAX;
-	}
-
-	if ( r->getLong("append",0) ) {
-		format = FORMAT_WIDGET_APPEND;
-	}
-
-	return format;
-}
+//char getFormatFromRequest ( HttpRequest *r ) {
+//
+//}

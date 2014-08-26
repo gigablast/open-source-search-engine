@@ -5469,7 +5469,10 @@ bool Links::addLink ( char *link , long linkLen , long nodeNum ,
 	//bool addWWW = true;
 	//if ( titleRecVersion >= 99 ) addWWW = false;
 	//bool addWWW = false;
-	bool addWWW = true;
+	//bool addWWW = true;
+
+	// we now use everything has is for sites like file.org
+	bool addWWW = false;
 
 	url.set ( m_baseUrl       ,
 		  link            ,

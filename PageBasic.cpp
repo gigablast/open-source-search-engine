@@ -5,6 +5,7 @@
 #include "Parms.h"
 #include "Spider.h"
 #include "PageResults.h" // for RESULT_HEIGHT
+#include "Stats.h"
 
 // 5 seconds
 #define DEFAULT_WIDGET_RELOAD 1000
@@ -63,10 +64,13 @@ public:
 	// hash of the subdomain or domain for this line in sitelist
 	long m_thingHash32;
 	// ptr to the line in CollectionRec::m_siteListBuf
-	char *m_patternStr;
+	long m_patternStrOff;
 	// offset of the url path in the pattern, 0 means none
 	short m_pathOff; 
 	short m_pathLen;
+	// offset into buffer. for 'tag:shallow site:walmart.com' type stuff
+	long  m_tagOff;
+	short m_tagLen;
 };
 
 
@@ -156,6 +160,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	
 	sc->m_siteListIsEmptyValid = true;
 
+	sc->m_siteListIsEmptyValid = true;
+
 	// use this so it will be free automatically when msg4 completes!
 	SafeBuf *spiderReqBuf = &sc->m_msg4x.m_tmpBuf;
 
@@ -180,7 +186,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		// skip to end of line marker
 		for ( ; *pn && *pn != '\n' ; pn++ ) ;
 
-		char *start = s;
+		// point to the pattern (skips over "tag:xxx " if there)
+		char *patternStart = s;
 
 		// back p up over spaces in case ended in spaces
 	        char *pe = pn;
@@ -197,12 +204,14 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		bool isNeg = false;
 		bool isFilter = true;
 
-	innerLoop:
 		// skip spaces at start of line
-		if ( *s == ' ' ) s++;
+		for ( ; *s && *s == ' ' ; s++ );
 
 		// comment?
 		if ( *s == '#' ) continue;
+
+		// empty line?
+		if ( s[0] == '\r' && s[1] == '\n' ) { s++; continue; }
 
 		// empty line?
 		if ( *s == '\n' ) continue;
@@ -213,11 +222,14 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		//	continue;
 		//}
 
-		if ( *s == '-' ) {
-			sc->m_siteListHasNegatives = true;
-			isNeg = true;
-			s++;
-		}
+		char *tag = NULL;
+		long tagLen = 0;
+
+	innerLoop:
+
+		// skip spaces
+		for ( ; *s && *s == ' ' ; s++ );
+
 
 		// exact:?
 		//if ( strncmp(s,"exact:",6) == 0 ) {
@@ -231,6 +243,28 @@ bool updateSiteListBuf ( collnum_t collnum ,
 			s += 5;
 			isFilter = false;
 			goto innerLoop;
+		}
+
+
+		// does it start with "tag:xxxxx "?
+		if ( *s == 't' && 
+		     s[1] == 'a' &&
+		     s[2] == 'g' &&
+		     s[3] == ':' ) {
+			tag = s+4;
+			for ( ; *s && ! is_wspace_a(*s) ; s++ );
+			tagLen = s - tag;
+			// skip over white space after tag:xxxx so "s"
+			// point to the url or contains: or whatever
+			for ( ; *s && is_wspace_a(*s) ; s++ );
+			// set pattern start to AFTER the tag stuff
+			patternStart = s;
+		}
+
+		if ( *s == '-' ) {
+			sc->m_siteListHasNegatives = true;
+			isNeg = true;
+			s++;
 		}
 
 		if ( strncmp(s,"site:",5) == 0 ) {
@@ -252,19 +286,34 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		if ( slen <= 0 ) 
 			continue;
 
+		// add to string buffers
+		if ( ! isUrl && isNeg ) {
+			if ( !sc->m_negSubstringBuf.safeMemcpy(s,slen))
+				return true;
+			if ( !sc->m_negSubstringBuf.pushChar('\0') )
+				return true;
+			if ( ! tagLen ) continue;
+			// append tag
+			if ( !sc->m_negSubstringBuf.safeMemcpy("tag:",4))
+				return true;
+			if ( !sc->m_negSubstringBuf.safeMemcpy(tag,tagLen) ) 
+				return true;
+			if ( !sc->m_negSubstringBuf.pushChar('\0') )
+				return true;
+		}
 		if ( ! isUrl ) {
-			// add to string buffers
-			if (   isNeg ) {
-				if ( !sc->m_negSubstringBuf.safeMemcpy(s,slen))
-					return true;
-				if ( !sc->m_negSubstringBuf.pushChar('\0') )
-					return true;
-				continue;
-			}
 			// add to string buffers
 			if ( ! sc->m_posSubstringBuf.safeMemcpy(s,slen) )
 				return true;
 			if ( ! sc->m_posSubstringBuf.pushChar('\0') )
+				return true;
+			if ( ! tagLen ) continue;
+			// append tag
+			if ( !sc->m_posSubstringBuf.safeMemcpy("tag:",4))
+				return true;
+			if ( !sc->m_posSubstringBuf.safeMemcpy(tag,tagLen) ) 
+				return true;
+			if ( !sc->m_posSubstringBuf.pushChar('\0') )
 				return true;
 			continue;
 		}
@@ -288,6 +337,11 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		     // a "site:" directive mean no seeding
 		     // a "contains:" directive mean no seeding
 		     seedMe &&
+		     // do not seed stuff after tag:xxx directives
+		     // no, we need to seed it to avoid confusion. if
+		     // they don't want it seeded they can use site: after
+		     // the tag:
+		     //! tag &&
 		     ! dedup.isInTable ( &h32 ) ) {
 			// make spider request
 			SpiderRequest sreq;
@@ -313,9 +367,21 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		pd.m_thingHash32 = u.getHostHash32();
 		// . ptr to the line in CollectionRec::m_siteListBuf. 
 		// . includes pointing to "exact:" too i guess and tag: later.
-		pd.m_patternStr = start;
+		// . store offset since CommandUpdateSiteList() passes us
+		//   a temp buf that will be freed before copying the buf
+		//   over to its permanent place at cr->m_siteListBuf
+		pd.m_patternStrOff = patternStart - siteListArg;
 		// offset of the url path in the pattern, 0 means none
 		pd.m_pathOff = 0;
+		// did we have a tag?
+		if ( tag ) {
+			pd.m_tagOff = tag - siteListArg;
+			pd.m_tagLen = tagLen;
+		}
+		else {
+			pd.m_tagOff = -1;
+			pd.m_tagLen = 0;
+		}
 		// scan url pattern, it should start at "s"
 		char *x = s;
 		// go all the way to the end
@@ -331,10 +397,11 @@ bool updateSiteListBuf ( collnum_t collnum ,
 			// empty path besides the /?
 			if (  x >= pe   ) break;
 			// ok, we got something here i think
-			if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
+			// no, might be like http://xyz.com/?poo
+			//if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
 			// calc length from "start" of line so we can
 			// jump to the path quickly for compares. inc "/"
-			pd.m_pathOff = (x-1) - start;
+			pd.m_pathOff = (x-1) - patternStart;
 			pd.m_pathLen = pe - (x-1);
 			break;
 		}
@@ -381,7 +448,9 @@ bool updateSiteListBuf ( collnum_t collnum ,
 // . the url patterns all contain a domain now, so this can use the domain
 //   hash to speed things up
 // . return ptr to the start of the line in case it has "tag:" i guess
-char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
+char *getMatchingUrlPattern ( SpiderColl *sc , 
+			      SpiderRequest *sreq ,
+			      char *tagArg ) { // tagArg can be NULL
 
 	// if it has * and no negatives, we are in!
 	//if ( sc->m_siteListAsteriskLine && ! sc->m_siteListHasNegatives )
@@ -430,30 +499,85 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// we handle.
 	long slot = dt->getSlot ( &sreq->m_domHash32 );
 
+	char *buf = cr->m_siteListBuf.getBufStart();
+
 	// loop over all the patterns that contain this domain and see
 	// the first one we match, and if we match a negative one.
 	for ( ; slot >= 0 ; slot = dt->getNextSlot(slot,&sreq->m_domHash32)) {
 		// get pattern
 		PatternData *pd = (PatternData *)dt->getValueFromSlot ( slot );
+		// point to string
+		char *patternStr = buf + pd->m_patternStrOff;
 		// is it negative? return NULL if so so url will be ignored
-		//if ( pd->m_patternStr[0] == '-' ) 
+		//if ( patternStr[0] == '-' ) 
 		//	return NULL;
 		// otherwise, it has a path. skip if we don't match path ptrn
 		if ( pd->m_pathOff ) {
 			if ( ! myPath ) myPath = sreq->getUrlPath();
 			if ( strncmp (myPath,
-				      pd->m_patternStr + pd->m_pathOff,
+				      patternStr + pd->m_pathOff,
 				      pd->m_pathLen ) )
 				continue;
 		}
+
+		// for entries like http://domain.com/ we have to match
+		// protocol and url can NOT be like www.domain.com to match.
+		// this is really like a regex like ^http://xyz.com/poo/boo/
+		if ( (patternStr[0]=='h' ||
+		      patternStr[0]=='H') &&
+		     ( patternStr[1]=='t' ||
+		       patternStr[1]=='T' ) &&
+		     ( patternStr[2]=='t' ||
+		       patternStr[2]=='T' ) &&
+		     ( patternStr[3]=='p' ||
+		       patternStr[3]=='P' ) ) {
+			char *x = patternStr+4;
+			// is it https:// ?
+			if ( *x == 's' || *x == 'S' ) x++;
+			// watch out for subdomains like http.foo.com
+			if ( *x != ':' ) goto nomatch;
+			// ok, we have to substring match exactly. like 
+			// ^http://xyssds.com/foobar/
+			char *a = patternStr;
+			char *b = sreq->m_url;
+			for ( ; ; a++, b++ ) {
+				// stop matching when pattern is exhausted
+				if ( is_wspace_a(*a) || ! *a ) 
+					return patternStr;
+				if ( *a != *b ) break;
+			}
+			// we failed to match "pd" so try next line
+			continue;
+		}
+ nomatch:		
+
+
+		// if caller also gave a tag we'll want to see if this
+		// "pd" has an entry for this domain that has that tag
+		if ( tagArg ) {
+			// skip if entry has no tag
+			if ( pd->m_tagLen <= 0 ) continue;
+			// skip if does not match domain or host
+			if ( pd->m_thingHash32 != sreq->m_domHash32 &&
+			     pd->m_thingHash32 != sreq->m_hostHash32 )
+				continue;
+			// compare tags
+			char *pdtag = pd->m_tagOff + buf;
+			if ( strncmp(tagArg,pdtag,pd->m_tagLen) ) continue;
+			// must be nothing after
+			if ( is_alnum_a(tagArg[pd->m_tagLen]) ) continue;
+			// that's a match
+			return patternStr;
+		}
+
 		// was the line just a domain and not a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_domHash32 )
 			// this will be false if negative pattern i guess
-			return pd->m_patternStr;
+			return patternStr;
 		// was it just a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_hostHash32 )
 			// this will be false if negative pattern i guess
-			return pd->m_patternStr;
+			return patternStr;
 	}
 
 
@@ -571,7 +695,25 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "Spider the url "
 		      "<i>http://www.goodstuff.com/</i> and spider "
 		      "any links we harvest that start with "
-		      "<i>http://www.goodstuff.com/</i>"
+		      "<i>http://www.goodstuff.com/</i>. NOTE: if the url "
+		      "www.goodstuff.com redirects to foo.goodstuff.com then "
+		      "foo.goodstuff.com still gets spidered "
+		      "because it is considered to be manually added, but "
+		      "no other urls from foo.goodstuff.com will be spidered."
+		      "</td>"
+		      "</tr>"
+
+		      // protocol and subdomain match
+		      "<tr>"
+		      "<td>http://justdomain.com/foo/</td>"
+		      "<td>"
+		      "Spider the url "
+		      "<i>http://justdomain.com/foo/</i> and spider "
+		      "any links we harvest that start with "
+		      "<i>http://justdomain.com/foo/</i>. "
+		      "Urls that start with "
+		      "<i>http://<b>www.</b>justdomain.com/</i>, for example, "
+		      "will NOT match this."
 		      "</td>"
 		      "</tr>"
 
@@ -700,32 +842,33 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "things down and are confusing to use."
 		      "</td>"
 		      "</tr>"
-		      
+		      */
 
 		      // tag match
 		      "<tr><td>"
 		      //"<td>tag:boots contains:boots<br>"
 		      "<nobr>tag:boots site:www.westernfootwear."
 		      "</nobr>com<br>"
-		      "tag:boots site:www.cowboyshop.com<br>"
+		      "tag:boots cowboyshop.com<br>"
+		      "tag:boots contains:/boots<br>"
 		      "tag:boots site:www.moreboots.com<br>"
-		      "<nobr>tag:boots site:www.lotsoffootwear.com"
+		      "<nobr>tag:boots http://lotsoffootwear.com/"
 		      "</nobr><br>"
 		      //"<td>t:boots -contains:www.cowboyshop.com/shoes/</td>"
 		      "</td><td>"
 		      "Advance users only. "
-		      "Tag any urls matching these 4 url patterns "
+		      "Tag any urls matching these 5 url patterns "
 		      "so we can use "
 		      "the expression <i>tag:boots</i> in the "
-		      "<a href=/scheduler>spider scheduler</a> and perhaps "
-		      "give such urls higher spider priority."
+		      "<a href=/admin/filters>url filters</a> and perhaps "
+		      "give such urls higher spider priority. "
 		      "For more "
 		      "precise spidering control over url subsets. "
 		      "Preceed any pattern with the tagname followed by "
 		      "space to tag it."
 		      "</td>"
 		      "</tr>"
-		      */
+
 
 		      "<tr>"
 		      "<td># This line is a comment.</td>"
@@ -741,7 +884,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 }
 
 
-// from pagecrawlbot.cpp for printCrawlDetailsInJson()
+// from pagecrawlbot.cpp for printCrawlDetails()
 #include "PageCrawlBot.h"
 
 ///////////
@@ -755,11 +898,12 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	SafeBuf sb(buf,128000);
 	sb.reset();
 
-	char *fs = hr->getString("format",NULL,NULL);
-	char fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
+	// char *fs = hr->getString("format",NULL,NULL);
+	// char format = FORMAT_HTML;
+	// if ( fs && strcmp(fs,"html") == 0 ) format = FORMAT_HTML;
+	// if ( fs && strcmp(fs,"json") == 0 ) format = FORMAT_JSON;
+	// if ( fs && strcmp(fs,"xml") == 0 ) format = FORMAT_XML;
+	char format = hr->getReplyFormat();
 
 
 	// true = usedefault coll?
@@ -769,22 +913,26 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
-	if ( fmt == FMT_JSON ) {
-		printCrawlDetailsInJson ( &sb , cr , getVersionFromRequest(hr) );
+	if ( format == FORMAT_JSON || format == FORMAT_XML) {
+		// this is in PageCrawlBot.cpp
+		printCrawlDetails2 ( &sb , cr , format );
+		char *ct = "text/xml";
+		if ( format == FORMAT_JSON ) ct = "application/json";
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
-						     0); // cachetime
+						     0, // cachetime
+						     false,//POSTReply        ,
+						     ct);
 	}
 
-
 	// print standard header 
-	if ( fmt == FORMAT_HTML )
+	if ( format == FORMAT_HTML )
 		// this prints the <form tag as well
 		g_pages.printAdminTop ( &sb , socket , hr );
 
 	// table to split between widget and stats in left and right panes
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("<TABLE id=pane>"
 			      "<TR><TD valign=top>");
 	}
@@ -801,7 +949,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	// you and we try to maintain your current visual state even though
 	// the scrollbar position will change.
 	//
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 
 		// save position so we can output the widget code
 		// so user can embed it into their own web page
@@ -1234,7 +1382,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// the right table pane is the crawl stats
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("</TD><TD valign=top>");
 	}
 
@@ -1242,7 +1390,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	// show stats
 	//
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 
 		char *seedStr = cr->m_diffbotSeeds.getBufStart();
 		if ( ! seedStr ) seedStr = "";
@@ -1330,6 +1478,37 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
 			      );
 
+
+		//
+		// begin status code breakdown
+		//
+		for ( long i = 0 ; i < 65536 ; i++ ) {
+			if ( g_stats.m_allErrorsNew[i] == 0 &&
+			     g_stats.m_allErrorsOld[i] == 0 )
+				continue;
+			sb.safePrintf (
+				       "<tr>"
+				       "<td><b> &nbsp; <a href=/search?c=%s&q="
+				       "gbstatusmsg%%3A"
+				       "%%22"
+				       ,
+				       cr->m_coll );
+			sb.urlEncode(mstrerror(i));
+			sb.safePrintf ("%%22>"
+				       "%s"
+				       "</a>"
+				       "</b></td>"
+				       "<td>%lli</td>"
+				       "</tr>\n" ,
+				       mstrerror(i),
+				       g_stats.m_allErrorsNew[i] +
+				       g_stats.m_allErrorsOld[i] );
+		}
+		//
+		// end status code breakdown
+		//
+
+
 		char tmp3[64];
 		struct tm *timeStruct;
 		timeStruct = localtime((time_t *)&cr->m_diffbotCrawlStartTime);
@@ -1402,12 +1581,12 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// end the right table pane
-	if ( fmt == FORMAT_HTML ) {
+	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("</TD></TR></TABLE>");
 	}
 
 
-	//if ( fmt != FORMAT_JSON )
+	//if ( format != FORMAT_JSON )
 	//	// wrap up the form, print a submit button
 	//	g_pages.printAdminBottom ( &sb );
 

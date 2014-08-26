@@ -26,7 +26,7 @@ char *g_contentTypeStrings [] = {
 	"css"  , // 15
 	"json" ,  // 16
 	"image", // 17
-	"status" // 18
+	"spiderstatus" // 18
 };
 
 HttpMime::HttpMime () { reset(); }
@@ -487,6 +487,22 @@ void getTime ( char *s , int *sec , int *min , int *hour ) {
 }
 
 long getContentTypeFromStr ( char *s ) {
+
+	long slen = gbstrlen(s);
+
+	// trim off spaces at the end
+	char tmp[64];
+	if ( s[slen-1] == ' ' ) {
+		strncpy(tmp,s,63);
+		tmp[63] = '\0';
+		long newLen = gbstrlen(tmp);
+		s = tmp;
+		char *send = tmp + newLen;
+		for ( ; send>s && send[-1] == ' '; send-- );
+		*send = '\0';
+	}
+
+	
 	// -1 means unknown
 	//long ct = -1;
 	long ct = CT_UNKNOWN;
@@ -577,6 +593,7 @@ long HttpMime::getContentTypePrivate ( char *s ) {
 	}
 
  next:
+
 	// temp term it for the strcmp() function
 	c = *send; *send = '\0';
 	// set this
@@ -604,6 +621,19 @@ bool s_init = false;
 void resetHttpMime ( ) {
 	s_mimeTable.reset();
 }
+
+const char *HttpMime::getContentTypeFromExtension ( char *ext , long elen) {
+	// assume text/html if no extension provided
+	if ( ! ext || ! ext[0] ) return "text/html";
+	if ( elen <= 0 ) return "text/html";
+	// get hash for table look up
+	long key = hash32 ( ext , elen );
+	char *ptr = (char *)s_mimeTable.getValue ( key );
+	if ( ptr ) return ptr;
+	// if not found in table, assume text/html
+	return "text/html";
+}
+
 
 // . list of types is on: http://www.duke.edu/websrv/file-extensions.html
 // . i copied it to the bottom of this file though
@@ -746,7 +776,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 			  //"Expires: -1\r\n"
 			  "Connection: Close\r\n"
 			  "%s"
-			  "Content-Type: %s\r\n\r\n",
+			  "Content-Type: %s\r\n",
 			  //"Connection: Keep-Alive\r\n"
 			  //"%s"
 			  //"Location: fuck\r\n"

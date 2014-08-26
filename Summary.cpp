@@ -973,6 +973,10 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 		m_summaryLen = xml->getMetaContent(p,maxSummaryLen,
 						   "description",11);
 
+
+	if ( m_numDisplayLines > 0 )
+		m_displayLen = m_summaryLen;
+
 	if ( m_summaryLen > 0 ) {
 		m_summaryExcerptLen[0] = m_summaryLen;
 		m_numExcerpts = 1;
@@ -1075,6 +1079,10 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 		*p++ = '\0';
 		// set length
 		m_summaryLen = p - m_summary;
+
+		if ( m_numDisplayLines > 0 )
+			m_displayLen = m_summaryLen;
+
 		if ( m_summaryLen > 50000 ) { char*xx=NULL;*xx=0; }
 		return true;
 	}

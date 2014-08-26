@@ -83,6 +83,8 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , long len);
 
 Msg40::Msg40() {
+	m_firstTime = true;
+	m_doneWithLookup = false;
 	m_socketHadError = 0;
 	m_buf           = NULL;
 	m_buf2          = NULL;
@@ -106,6 +108,8 @@ Msg40::Msg40() {
 	//m_numGigabitInfos = 0;
 }
 
+#define MAX2 50
+
 void Msg40::resetBuf2 ( ) {
 	// remember num to free in reset() function
 	char *p = m_msg20StartBuf;
@@ -125,6 +129,12 @@ void Msg40::resetBuf2 ( ) {
 	// now free the msg20 ptrs and buffer space
 	if ( m_buf2 ) mfree ( m_buf2 , m_bufMaxSize2 , "Msg40b" );
 	m_buf2 = NULL;
+
+
+	// make a safebuf of 50 of them if we haven't yet
+	if ( m_unusedBuf.length() <= 0 ) return;
+	Msg20 *ma = (Msg20 *)m_unusedBuf.getBufStart();
+	for ( long i = 0 ; i < (long)MAX2 ; i++ ) ma[i].destructor();
 }
 
 Msg40::~Msg40() {
@@ -547,6 +557,7 @@ bool Msg40::getDocIds ( bool recall ) {
 	mr.m_debug                     = m_si->m_debug          ;
 	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
 	mr.m_doSiteClustering          = m_si->m_doSiteClustering    ;
+	mr.m_hideAllClustered          = m_si->m_hideAllClustered;
 	mr.m_familyFilter              = m_si->m_familyFilter;
 	//mr.m_useMinAlgo                = m_si->m_useMinAlgo;
 	//mr.m_useNewAlgo                = m_si->m_useNewAlgo;
@@ -1511,12 +1522,20 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_getSummaryVector   = true;
 		req.m_bigSampleRadius    = bigSampleRadius;
 		req.m_bigSampleMaxLen    = bigSampleMaxLen;
-		req.m_titleMaxLen        = 256;
-		req.m_titleMaxLen = cr->m_titleMaxLen;
+		//req.m_titleMaxLen        = 256;
+		req.m_titleMaxLen = m_si->m_titleMaxLen; // cr->
 		req.m_summaryMaxLen = cr->m_summaryMaxLen;
+
+		// Line means excerpt 
+		req.m_summaryMaxNumCharsPerLine = 
+			m_si->m_summaryMaxNumCharsPerLine;
+
+		// a special undocumented thing for getting <h1> tag
+		req.m_getHeaderTag       = m_si->m_hr.getLong("geth1tag",0);
 		//req.m_numSummaryLines = cr->m_summaryMaxNumLines;
 		// let "ns" parm override
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
+
 		if(m_si->m_isAdmin && m_si->m_format == FORMAT_HTML )
 			req.m_getGigabitVector   = true;
 		else    req.m_getGigabitVector   = false;
@@ -1556,7 +1575,9 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		if (m_si->m_queryMatchOffsets)
 			req.m_getMatches = true;
 
+		// it copies this using a serialize() function
 		if ( ! m->getSummary ( &req ) ) continue;
+
 		// got reply
 		m_numReplies++;
 		// . otherwise we got summary without blocking
@@ -1629,6 +1650,11 @@ bool gotSummaryWrapper ( void *state ) {
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
 	if ( ! THIS->gotSummary ( ) ) return false;
+	// lookup facets
+	if ( THIS->m_si &&
+	     ! THIS->m_si->m_streamResults &&
+	     ! THIS->lookupFacets() ) 
+		return false;
 	// now call callback, we're done
 	THIS->m_callback ( THIS->m_state );
 	return true;
@@ -1932,6 +1958,17 @@ bool Msg40::gotSummary ( ) {
 		// this should increase m_msg3a.m_numDocIds
 		m_msg3a.mergeLists();
 	}
+
+	// if we've printed everything out and we are streaming, now
+	// get the facet text. when done this should print the tail
+	// like we do below. lookupFacets() should scan the facet values
+	// and each value should have a docid with it that we do the lookup
+	// on. and store the text into m_facetTextBuf safebuf, and make
+	// the facet table have the offset of it in that safebuf.
+	if ( m_si && 
+	     m_si->m_streamResults && 
+	     m_printi >= m_msg3a.m_numDocIds )
+		if ( ! lookupFacets () ) return false;
 
 
 	// . wrap it up with Next 10 etc.
@@ -2824,9 +2861,11 @@ bool Msg40::gotSummary ( ) {
 		uc = false;
 	}
 	if ( m_si->m_docIdsOnly ) uc = false;
+
+
+
 	// all done if not storing in cache
 	if ( ! uc ) return true;
-
 	// debug
 	if ( m_si->m_debug )
 		logf(LOG_DEBUG,"query: [%lu] Storing output in cache.",
@@ -3233,7 +3272,9 @@ static int gigabitCmp ( const void *a, const void *b ) {
 bool Msg40::computeGigabits( TopicGroup *tg ) {
 
 	// not if we skipped the first X summariest
-	if ( m_didSummarySkip ) { char *xx=NULL;*xx=0; }return true;
+	if ( m_didSummarySkip ) { char *xx=NULL;*xx=0; }
+
+	//return true;
 
 	//long long start = gettimeofdayInMilliseconds();
 
@@ -5849,6 +5890,429 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 	sb->pushChar('\n');
 	sb->nullTerm();
+
+	return true;
+}
+
+Msg20 *Msg40::getUnusedMsg20 ( ) {
+
+	// make a safebuf of 50 of them if we haven't yet
+	if ( m_unusedBuf.getCapacity() <= 0 ) {
+		if ( ! m_unusedBuf.reserve ( (long)MAX2 * sizeof(Msg20) ) ) {
+			return NULL;
+		}
+		Msg20 *ma = (Msg20 *)m_unusedBuf.getBufStart();
+		for ( long i = 0 ; i < (long)MAX2 ; i++ )
+			ma[i].constructor();
+	}
+		
+
+	Msg20 *ma = (Msg20 *)m_unusedBuf.getBufStart();
+
+	for ( long i = 0 ; i < (long)MAX2 ; i++ ) {
+		// m_inProgress is set to false right before it
+		// calls Msg20::m_callback which is gotSummaryWrapper()
+		// so we should be ok with this
+		if ( ma[i].m_inProgress ) continue;
+		return &ma[i];
+	}
+
+	// how can this happen???
+	char *xx=NULL;*xx=0; 
+	return NULL;
+}
+
+static bool gotFacetTextWrapper ( void *state ) {
+	Msg20 *m20 = (Msg20 *)state;
+	Msg40 *THIS = (Msg40 *)m20->m_hack;
+	THIS->gotFacetText(m20);
+	return true;
+}
+
+void Msg40::gotFacetText ( Msg20 *msg20 ) {
+
+	m_numMsg20sIn++;
+	//log("msg40: numin=%li",m_numMsg20sIn);
+
+	if ( ! msg20->m_r ) {
+		log("msg40: msg20 reply is NULL");
+		return;
+	}
+
+	char *buf = msg20->m_r->ptr_facetBuf;
+
+	// null as well?
+	if ( ! buf ) {
+		log("msg40: ptr_facetBuf is NULL");
+		// try to launch more msg20s
+		lookupFacets();
+		return;
+	}
+
+	char *p = buf;
+	// skip query term string
+	p += gbstrlen(p) + 1;
+	// then <val32>,<str32>
+	FacetValHash_t fvh = atoll(p);
+	char *text = strstr ( p , "," );
+	// skip comma. text could be truncated/ellipsis-sized
+	if ( text ) text++;
+
+	long offset = m_facetTextBuf.length();
+	m_facetTextBuf.safeStrcpy ( text );
+	m_facetTextBuf.pushChar('\0');
+
+	// initialize this if it needs it
+	if ( m_facetTextTable.m_ks == 0 )
+		m_facetTextTable.set(sizeof(FacetValHash_t),4,
+				     64,NULL,0,false,0,"fctxtbl");
+
+	// store in buffer
+	m_facetTextTable.addKey ( &fvh , &offset );
+
+	// try to launch more msg20s
+	if ( ! lookupFacets() ) return;
+}
+
+// return false if blocked, true otherwise
+bool Msg40::lookupFacets ( ) {
+
+	if ( m_doneWithLookup ) return true;
+
+	if ( m_firstTime ) {
+		m_firstTime = false;
+		m_numMsg20sOut = 0;
+		m_numMsg20sIn  = 0;
+		m_j = 0;
+		m_i = 0;
+	}
+
+	lookupFacets2();
+
+	// if not done return false
+	if ( m_numMsg20sOut > m_numMsg20sIn ) return false;
+
+	m_doneWithLookup = true;
+
+	// did nothing? return true so control resumes from where
+	// lookupFacets() was called
+	if ( m_numMsg20sOut == 0 ) return true;
+
+	// hack: dec since gotSummaryWrapper incs this
+	m_numReplies--;
+	// . ok, we blocked, so call callback, etc.
+	// . pretend we just got another summary
+	gotSummaryWrapper ( this );
+
+	return true;
+}
+
+void Msg40::lookupFacets2 ( ) {
+
+	// scan each query term
+	for ( ; m_i < m_si->m_q.getNumTerms() ; m_i++ ) {
+
+		QueryTerm *qt = &m_si->m_q.m_qterms[m_i];
+		// skip if not STRING facet. we don't need to lookup
+		// numeric facets because we already have the # for compiling
+		// and presenting on the search results page.
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR ) //&&
+		     //qt->m_fieldCode != FIELD_GBFACETINT &&
+		     //qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+
+		HashTableX *fht = &qt->m_facetHashTable;
+
+		// scan every value this facet has
+		for (  ; m_j < fht->getNumSlots() ; m_j++ ) {
+			// skip empty slots
+			if ( ! fht->m_flags[m_j] ) continue;
+			// get hash of the facet value
+			FacetValHash_t fvh = *(long *)fht->getKeyFromSlot(m_j);
+			//long count = *(long *)fht->getValFromSlot(j);
+			// get the docid as well
+			FacetEntry *fe =(FacetEntry *)fht->getValFromSlot(m_j);
+			// how many docids in the results had this valud?
+			//long      count = fe->m_count;
+			// one of the docids that had it
+			long long docId = fe->m_docId;
+
+			// more than 50 already outstanding?
+			if ( m_numMsg20sOut - m_numMsg20sIn >= MAX2 )
+				// wait for some to come back
+				return;
+
+			// lookup docid that has this to get text
+			Msg20 *msg20 = getUnusedMsg20();
+			// wait if none available
+			if ( ! msg20 ) return;
+
+			// make the request
+			Msg20Request req;
+			req.m_docId = docId;
+			// supply the query term so we know what to return.
+			// it's either an xpath facet, a json/xml field facet
+			// or a meta tag facet.
+			SafeBuf tmp;
+			tmp.safeMemcpy ( qt->m_term , qt->m_termLen );
+			tmp.nullTerm();
+			req. ptr_qbuf = tmp.getBufStart();
+			req.size_qbuf = tmp.length() + 1; // include \0
+
+			req.m_justGetFacets = true;
+			// need to supply the hash of the facet value otherwise
+			// if a doc has multiple values for a facet it always
+			// returns the first one. so tell it we want this one.
+			req.m_facetValHash  = fvh;
+
+			msg20->m_hack = (long)this;
+
+			req.m_state     = msg20;
+			req.m_callback  = gotFacetTextWrapper;
+
+			// TODO: fix this
+			req.m_collnum = m_si->m_firstCollnum;
+
+			// get it
+			if ( ! msg20->getSummary ( &req ) ) {
+				m_numMsg20sOut++;
+				//log("msg40: numout=%li",m_numMsg20sOut);
+				continue;
+			}
+
+			// must have been error otherwise
+			log("facet: error getting text: %s",
+			    mstrerror(g_errno));
+		}
+		// done! reset scan of inner loop
+		m_j = 0;
+	}
+}
+
+// this is new PageResults.cpp
+bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) ;
+
+bool Msg40::printFacetTables ( SafeBuf *sb ) {
+
+	char format = m_si->m_format;
+
+	bool firstTime = true;
+
+	HttpRequest *hr = &m_si->m_hr;
+
+	for ( long i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
+		// only for html for now i guess
+		//if ( m_si->m_format != FORMAT_HTML ) break;
+		QueryTerm *qt = &m_si->m_q.m_qterms[i];
+		// skip if not facet
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+		bool isString = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
+		HashTableX *fht = &qt->m_facetHashTable;
+		// a new table for each facet query term
+		bool needTable = true;
+		// print out the dumps
+		for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
+			// skip empty slots
+			if ( ! fht->m_flags[j] ) continue;
+			// this was originally 32 bit hash of the facet val
+			// but now it is 64 bit i guess
+			FacetValHash_t *fvh ;
+			fvh = (FacetValHash_t *)fht->getKeyFromSlot(j);
+			// we store how many docids had this value
+			//long count = *(long *)fht->getValFromSlot(j);
+			FacetEntry *fe;
+			fe = (FacetEntry *)fht->getValueFromSlot(j);
+			long count = fe->m_count;
+
+			char *text = NULL;
+
+			char *termPtr = qt->m_term;
+			long  termLen = qt->m_termLen;
+			if ( termPtr[0] == ' ' ) { termPtr++; termLen--; }
+			if ( strncasecmp(termPtr,"gbfacetstr:",11)== 0 ) {
+				termPtr += 11; termLen -= 11; }
+			if ( strncasecmp(termPtr,"gbfacetint:",11)== 0 ) {
+				termPtr += 11; termLen -= 11; }
+			if ( strncasecmp(termPtr,"gbfacetfloat:",13)== 0 ) {
+				termPtr += 13; termLen -= 13; }
+			char tmpBuf[64];
+			SafeBuf termBuf(tmpBuf,64);
+			termBuf.safeMemcpy(termPtr,termLen);
+			termBuf.nullTerm();
+			char *term = termBuf.getBufStart();
+
+			char tmp[64];
+			if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
+				sprintf(tmp,"%li",(long)*fvh);
+				text = tmp;
+			}
+
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
+				sprintf(tmp,"%f",*(float *)fvh);
+				text = tmp;
+			}
+
+			// lookup the text representation, whose hash is *fvh
+			if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
+				long *offset;
+				offset =(long *)m_facetTextTable.getValue(fvh);
+				// wtf?
+				if ( ! offset ) {
+					log("msg40: missing facet text for "
+					    "val32=%lu",
+					    (unsigned long)*fvh);
+					continue;
+				}
+				text = m_facetTextBuf.getBufStart() + *offset;
+			}
+
+			if ( format == FORMAT_XML ) {
+				sb->safePrintf("\t<facet>\n"
+					       "\t\t<field>%s</field>\n"
+					       "\t\t<value>"
+					       , term
+					       );
+				if ( isString )
+					sb->safePrintf("<![CDATA[%lu,",
+						       (unsigned long)*fvh);
+				sb->cdataEncode ( text );
+				if ( isString )
+					sb->safePrintf("]]>");
+				sb->safePrintf("</value>\n"
+					       "\t\t<docCount>%li"
+					       "</docCount>\n"
+					       "\t</facet>\n",count);
+				continue;
+			}
+
+			if ( format == FORMAT_JSON && firstTime ) {
+				firstTime = false;
+				// if streaming results we may have hacked off
+				// the last ,\n so put it back
+				if ( m_si->m_streamResults ) {
+					//sb->m_length -= 1;
+					sb->safeStrcpy(",\n\n");
+				}
+				//sb->safePrintf("\"facets\":[\n");
+			}
+
+			if ( format == FORMAT_JSON ) {
+				sb->safePrintf("\"facet\":{\n"
+					       "\t\"field\":\"%s\",\n"
+					       "\t\"value\":"
+					       , term
+					       );
+				if ( isString )
+					sb->safePrintf("\"%lu,"
+						       , (unsigned long)*fvh);
+				sb->jsonEncode ( text );
+				if ( isString )
+					sb->safePrintf("\"");
+				sb->safePrintf(",\n"
+					       "\t\"docCount\":%li\n"
+					       "}\n,\n", count);
+				continue;
+			}
+
+			// print that out
+			if ( needTable ) {
+				needTable = false;
+
+
+				sb->safePrintf("<div id=facets "
+					       "style="
+					       "padding:5px;"
+					       "position:relative;"
+					       "border-width:3px;"
+					       "border-right-width:0px;"
+					       "border-style:solid;"
+					       "margin-left:10px;"
+					       "border-top-left-radius:10px;"
+					      "border-bottom-left-radius:10px;"
+					       "border-color:blue;"
+					       "background-color:white;"
+					       "border-right-color:white;"
+					       "margin-right:-3px;"
+					       ">"
+
+					       "<table cellspacing=7>"
+					       "<tr><td width=200px; "
+					       "valign=top>"
+					       "<center>"
+					       "<img src=/facets40.jpg>"
+					       "</center>"
+					       "<br>"
+					       );
+				sb->safePrintf("<b>%s</b></td></tr>\n",
+					       term);
+			}
+
+			// make the cgi parm to add to the original url
+			char nsbuf[128];
+			SafeBuf newStuff(nsbuf,128);
+			// they are all ints...
+			//char *suffix = "int";
+			//if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+			//	suffix = "float";
+			//newStuff.safePrintf("prepend=gbequalint%%3A");
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+				newStuff.safePrintf("prepend="
+						    "gbequalfloat%%3A%s%%3A%f",
+						    term,
+						    *(float *)fvh);
+			else
+				newStuff.safePrintf("prepend="
+						    "gbequalint%%3A%s%%3A%lu",
+						    term,
+						    (long)*fvh);
+
+			// get the original url and add 
+			// &prepend=gbequalint:gbhopcount:1 type stuff to it
+			SafeBuf newUrl;
+			replaceParm ( newStuff.getBufStart(), &newUrl , hr );
+
+			// print the facet in its numeric form
+			// we will have to lookup based on its docid
+			// and get it from the cached page later
+			sb->safePrintf("<tr><td width=200px; valign=top>"
+				       //"<a href=?search="//gbfacet%3A"
+				       //"%s:%lu"
+				       // make a search to just show those
+				       // docs from this facet with that
+				       // value. actually gbmin/max would work
+				       "<a href=\"%s\">"
+				       , newUrl.getBufStart()
+				       );
+
+			sb->safePrintf("%s (%lu)"
+				       "</a>"
+				       "</td></tr>\n"
+				       ,text
+				       ,count); // count for printing
+		}
+		if ( ! needTable ) 
+			sb->safePrintf("</table></div><br>\n");
+	}
+
+	if ( format == FORMAT_JSON && ! firstTime ) {
+		// remove ,\n
+		sb->m_length -= 2;
+		// make just \n
+		sb->pushChar('\n');
+		//sb->safePrintf("],\n");
+
+		// search results will follow so put a comma here if not
+		// streaming result. if we are streaming results we print
+		// the facets after the results so we can take advantage
+		// of the msg20 summary lookups we already did to get the
+		// facet text.
+		if ( ! m_si->m_streamResults ) 
+			sb->safePrintf(",\n");
+	}
 
 	return true;
 }

@@ -105,6 +105,7 @@ float getTermFreqWeight  ( long long termFreq , long long numDocsInColl );
 #define BF_NEGATIVE           0x08  // query word has a negative sign before it
 #define BF_BIGRAM             0x10  // query word has a negative sign before it
 #define BF_NUMBER             0x20  // is it like gbsortby:price? numeric?
+#define BF_FACET              0x40  // gbfacet:price
 
 void printTermList ( long i, char *list, long listSize ) ;
 
@@ -378,10 +379,10 @@ class Posdb {
 
 	// . HACK: for sectionhash:xxxxx posdb keys
 	// . we use the w,G,s,v and F bits
-	unsigned long getSectionSiteHash32 ( void *key ) {
+	unsigned long getFacetVal32 ( void *key ) {
 		return *(unsigned long *)(((char *)key)+2); };
-	void setSectionSiteHash32 ( void *key , long siteHash32 ) {
-		*(unsigned long *)(((char *)key)+2) = siteHash32; };
+	void setFacetVal32 ( void *key , long facetVal32 ) {
+		*(unsigned long *)(((char *)key)+2) = facetVal32; };
 
 	long long getTermFreq ( collnum_t collnum, long long termId ) ;
 
@@ -394,6 +395,14 @@ class Posdb {
 
 	DiskPageCache m_pc;
 };
+
+class FacetEntry {
+ public:
+	long m_count;
+	long long m_docId;
+};
+
+
 
 #define MAX_SUBLISTS 50
 
@@ -577,6 +586,8 @@ class PosdbTable {
 
 	unsigned long long m_docIdHack;
 
+	bool m_hasFacetTerm;
+
 	bool m_hasMaxSerpScore;
 
 	// hack for seo.cpp:
@@ -617,9 +628,9 @@ class PosdbTable {
 	// how many docs in the collection?
 	long long m_docsInColl;
 
-	SectionStats m_sectionStats;
-	SafeBuf m_siteHashList;
-	HashTableX m_dt;
+	//SectionStats m_sectionStats;
+	//SafeBuf m_facetHashList;
+	//HashTableX m_dt;
 
 	class Msg2 *m_msg2;
 

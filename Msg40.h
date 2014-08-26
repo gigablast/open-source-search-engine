@@ -210,6 +210,24 @@ class Msg40 {
 
 	bool printSearchResult9 ( long ix , long *numPrintedSoFar ,
 				  class Msg20Reply *mr ) ;
+
+	SafeBuf m_unusedBuf;
+	long m_numMsg20sOut ;
+	long m_numMsg20sIn  ;
+	long m_j ;
+	long m_i ;
+	bool m_doneWithLookup;
+	HashTableX m_facetTextTable;
+	SafeBuf m_facetTextBuf;
+	bool m_firstTime;
+
+	bool printFacetTables ( class SafeBuf *sb ) ;
+	bool lookupFacets ( ) ;
+	void lookupFacets2 ( ) ;
+	void gotFacetText ( class Msg20 *msg20 ) ;
+	class Msg20 *getUnusedMsg20 ( ) ;
+
+
 	HashTableX m_columnTable;
 	bool printCSVHeaderRow ( class SafeBuf *sb );
 	bool printJsonItemInCSV ( class State0 *st , long ix );

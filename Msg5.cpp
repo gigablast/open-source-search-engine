@@ -204,11 +204,13 @@ bool Msg5::getList ( char     rdbId         ,
 	m_rdbId         = rdbId;
 	m_collnum          = collnum;
 
-	CollectionRec *ttt = g_collectiondb.getRec ( m_collnum );
-	if ( ! ttt ) {
-		g_errno = ENOCOLLREC;
-		return true;
-	}
+	// why was this here? it was messing up the statsdb ("graph") link
+	// in the admin panel.
+	//CollectionRec *ttt = g_collectiondb.getRec ( m_collnum );
+	//if ( ! ttt ) {
+	//	g_errno = ENOCOLLREC;
+	//	return true;
+	//}
 
 	m_list          = list;
 	//m_startKey      = startKey;

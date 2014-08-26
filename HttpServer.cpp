@@ -136,6 +136,10 @@ bool HttpServer::getDoc ( char   *url      ,
 	if ( ip == -1 ) 
 		log("http: you probably didn't mean to set ip=-1 did you? "
 		    "try setting to 0.");
+
+	// ignore if -1 as well
+	if ( proxyIp == -1 ) proxyIp = 0;
+
 	//log(LOG_WARN, "http: get doc %s", url->getUrl());
 	// use the HttpRequest class
 	HttpRequest r;
@@ -143,7 +147,17 @@ bool HttpServer::getDoc ( char   *url      ,
 	long defPort = 80;
 	// check for a secured site
 	TcpServer *tcp = &m_tcp;
+	bool urlIsHttps = false;
 	if ( url && strncasecmp(url, "https://", 8) == 0 ) {
+		urlIsHttps = true;
+		defPort = 443;
+	}
+
+	// if going through a proxy do not use the ssl server, it will
+	// handle the encryption from itself to the host website. unfortunately
+	// then the http requests/responses are unencrypted from the
+	// proxy to us here.
+	if ( urlIsHttps && ! proxyIp ) {
 		if (!m_ssltcp.m_ready) {
 			// TODO: set an error here
 			log("https: Trying to get HTTPS site when SSL "
@@ -152,7 +166,6 @@ bool HttpServer::getDoc ( char   *url      ,
 			return true;
 		}
 		tcp = &m_ssltcp;
-		defPort = 443;
 	}
 
 	long pcLen = 0;
@@ -161,19 +174,67 @@ bool HttpServer::getDoc ( char   *url      ,
 	char *req = NULL;
 	long reqSize;
 
+	// if downloading an *httpS* url we have to send a 
+	// CONNECT www.abc.com:443 HTTP/1.0\r\n\r\n request first
+	// and get back a connection established reply, before we can
+	// send the actual encrypted http stuff.
+	bool useHttpTunnel = ( proxyIp && urlIsHttps );
+
+	long  hostLen ;
+	long  port = defPort;
+	char *host = NULL;
+	if ( ! ip || useHttpTunnel ) 
+		host = getHostFast ( url , &hostLen , &port );
+
+
 	// this returns false and sets g_errno on error
 	if ( ! fullRequest ) {
 		if ( ! r.set ( url , offset , size , ifModifiedSince ,
 			       userAgent , proto , doPost , cookie ,
-			       additionalHeader , pcLen ) ) return true;
+			       // pass in proxyIp because if it is a
+			       // request being sent to a proxy we have to
+			       // say "GET http://www.xyz.com/" the full
+			       // url, not just a relative path.
+			       additionalHeader , pcLen , proxyIp ) ) 
+			return true;
 		reqSize = r.getRequestLen();
-		req = (char *) mmalloc( reqSize + pcLen ,"HttpServer");
-		if ( req ) 
-			memcpy ( req , r.getRequest() , reqSize );
-		if ( req && pcLen ) {
-			memcpy ( req + reqSize, postContent , pcLen );
-			reqSize += pcLen;
+		long need = reqSize + pcLen;
+		// if we are requesting an HTTPS url through a proxy then
+		// this will prepend a
+		// CONNECT www.abc.com:443 HTTP/1.0\r\n\r\n
+		// CONNECT www.gigablast.com:443 HTTP/1.0\r\n\r\n
+		// to the actual mime and we have to detect that
+		// below and just send that to the proxy. when the proxy
+		// sends back "HTTP/1.0 200 Connection established\r\n\r\n"
+		// we use ssl_write in tcpserver.cpp to send the original
+		// encrypted http request.
+		SafeBuf sb;
+		if ( useHttpTunnel ) {
+			sb.safePrintf("CONNECT ");
+			sb.safeMemcpy ( host, hostLen );
+			sb.safePrintf(":%li HTTP/1.0\r\n",port);
+			// sb.safePrintf("Host: ");
+			// sb.safeMemcpy ( host, hostLen );
+			// sb.safePrintf("\r\n");
+			sb.safePrintf("\r\n");
+			sb.nullTerm();
+			need += sb.length();
 		}
+		req = (char *) mmalloc( need ,"HttpServer");
+		char *p = req;
+		if ( req && sb.length() ) {
+			memcpy ( p , sb.getBufStart() , sb.length() );
+			p += sb.length();
+		}
+		if ( req ) {
+			memcpy ( p , r.getRequest() , reqSize );
+			p += reqSize;
+		}
+		if ( req && pcLen ) {
+			memcpy ( p , postContent , pcLen );
+			p += pcLen;
+		}
+		reqSize = p - req;
 	}
 	else {
 		// does not contain \0 i guess
@@ -185,10 +246,6 @@ bool HttpServer::getDoc ( char   *url      ,
 	// . return true and set g_errno on error
 	if ( ! req ) return true;
 
-	long  hostLen ;
-	long  port = defPort;
-	char *host = getHostFast ( url , &hostLen , &port );
-	
 
 	// mdw23
 	//if ( g_conf.m_logDebugSpider )
@@ -202,6 +259,7 @@ bool HttpServer::getDoc ( char   *url      ,
 
 	// do we have an ip to send to? assume not
 	if ( proxyIp ) { ip = proxyIp ; port = proxyPort; }
+
 	// special NULL case
 	if ( !state || !callback ) {
 		// . send it away
@@ -262,9 +320,11 @@ bool HttpServer::getDoc ( char   *url      ,
 	// debug
 	log(LOG_DEBUG,"http: Getting doc with ip=%s state=%lu url=%s.",
 	    iptoa(ip),(unsigned long)state,url);
+
 	// . send it away
 	// . callback will be called on completion of transaction
 	// . be sure to free "req/reqSize" in callback() somewhere
+	// . if using an http proxy, then ip should be valid here...
 	if ( ip ) {
 		if ( ! tcp->sendMsg (  ip             ,
 				       port           ,
@@ -276,7 +336,8 @@ bool HttpServer::getDoc ( char   *url      ,
 				       gotDocWrapper  ,
 				       timeout        ,
 				       maxTextDocLen  ,
-				       maxOtherDocLen ) )
+				       maxOtherDocLen ,
+				       useHttpTunnel  ) )
 			return false;
 		// otherwise we didn't block
 		states[n]    = NULL;
@@ -670,6 +731,13 @@ void HttpServer::requestHandler ( TcpSocket *s ) {
 		sendErrorReply ( s , 400, "Bad Request" );
 		return;
 	}
+
+	// ok, we got an authenticated proxy request
+	if ( r.m_isSquidProxyRequest ) {
+		processSquidProxyRequest ( s , &r );
+		return;
+	}
+
 	// log the request iff filename does not end in .gif .jpg .
 	char *f     = r.getFilename();
 	long  flen  = r.getFilenameLen();
@@ -844,7 +912,7 @@ bool endsWith(char *haystack, int haystackLen, char *needle, int needleLen) {
     return haystackLen >= needleLen && !strncmp(haystack + haystackLen - needleLen, needle, needleLen);
 }
 
-#include "Pages.h" // sendPageAPI
+#include "Pages.h" // sendPageAPI, printApiForPage()
 
 // . reply to a GET (including partial get) or HEAD request
 // . HEAD just returns the MIME header for the file requested
@@ -1007,6 +1075,56 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( isProxy && ( n == PAGE_RESULTS || n == PAGE_ROOT ) )
 		n = -1;
 
+	//////////
+	//
+	// if they say &showinput=1 on any page we show the input parms
+	//
+	//////////
+	char format = r->getReplyFormat();
+	long show = r->getLong("showinput",0);
+	WebPage *wp = g_pages.getPage(n);
+	if ( wp && (wp->m_pgflags & PG_NOAPI) ) show = false;
+	if ( show ) {
+		SafeBuf sb;
+		//CollectionRec *cr = g_collectiondb.getRec ( r );
+		//printApiForPage ( &sb , n , cr );
+		// xml/json header
+		char *res = NULL;
+		if ( format == FORMAT_XML )
+			res = "<response>\n"
+				"\t<statusCode>0</statusCode>\n"
+				"\t<statusMsg>Success</statusMsg>\n";
+		if ( format == FORMAT_JSON )
+			res = "{ \"response:\"{\n"
+				"\t\"statusCode\":0,\n"
+				"\t\"statusMsg\":\"Success\"\n";
+		if ( res )
+			sb.safeStrcpy ( res );
+		//
+		// this is it
+		//
+		g_parms.printParmTable ( &sb , s , r );
+		// xml/json tail
+		if ( format == FORMAT_XML )
+			res = "</response>\n";
+		if ( format == FORMAT_JSON )
+			res = "\t}\n}\n";
+		if ( res )
+			sb.safeStrcpy ( res );
+		char *ct = "text/html";
+		if ( format == FORMAT_JSON ) ct = "application/json";
+		if ( format == FORMAT_XML  ) ct = "text/xml";
+		return g_httpServer.sendDynamicPage(s,
+						    sb.getBufStart(),
+						    sb.length(),
+						    0, false, 
+						    ct,
+						    -1, NULL,
+						    "UTF-8");
+	}
+
+
+
 	// map to new events page if we are eventguru.com
 	//if ( isNewSite && ( n == PAGE_RESULTS || n == PAGE_ROOT ) )
 	//	return sendPageEvents ( s , r );
@@ -1074,6 +1192,15 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//if ( ! strncmp ( path ,"/help.html", pathLen ) )
 	//	return sendPageAbout ( s , r , path );
 
+	if ( ! strncmp ( path ,"/adv.html", pathLen ) )
+		return sendPageAdvanced ( s , r );
+
+	if ( ! strncmp ( path ,"/about.html", pathLen ) )
+		return sendPageAbout ( s , r );
+
+	if ( ! strncmp ( path ,"/help.html", pathLen ) )
+		return sendPageHelp ( s , r );
+
 	if ( ! strncmp ( path ,"/api.html", pathLen ) )
 		return sendPageAPI ( s , r  );
 	if ( ! strncmp ( path ,"/api", pathLen ) )
@@ -1127,6 +1254,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	}
 	// set the filepath/name
 	char fullPath[512];
+	bool isQAFile = false;
 	// if it's gigablast.com, www.gigablast.com, ... do shortcut
 	//if ( strcasecmp ( h , "www.gigablast.com" ) == 0 ) goto skip;
 	//if ( strcasecmp ( h , "gigablast.com"     ) == 0 ) goto skip;
@@ -1149,6 +1277,13 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		}
 		// otherwise, use default html dir
 		sprintf(fullPath,"%s/%s", g_hostdb.m_httpRootDir , path );
+
+		// special hack for /qa/content.* stuff, do not use /html/
+		if ( strncmp(path,"/qa/",4) == 0 ) {
+			isQAFile = true;
+			sprintf(fullPath,"%s%s", g_hostdb.m_dir, path );
+		}
+
 		// now retrieve the file
 		f->set ( fullPath );
 	}		
@@ -1209,6 +1344,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// if no extension assume charset utf8
 	char *charset = NULL;
 	if ( ! ext || ext[0] == 0 ) charset = "utf-8";
+
+	if ( isQAFile ) ext = "txt";
 
 	if ( partialContent )
 		m.makeMime (fileSize,ct,lastModified,offset,bytesToSend,ext,
@@ -1500,6 +1637,148 @@ void cleanUp ( void *state , TcpSocket *s ) {
 	if ( s && s->m_state == f ) s->m_state = NULL;
 }
 
+bool HttpServer::sendSuccessReply ( GigablastRequest *gr , char *addMsg ) {
+	return sendSuccessReply ( gr->m_socket ,
+				  gr->m_hr.getReplyFormat() ,
+				  addMsg );
+}
+
+bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
+	// get time in secs since epoch
+	time_t now ;
+	if ( isClockInSync() ) now = getTimeGlobal();
+	else                   now = getTimeLocal();
+	// . buffer for the MIME request and brief html err msg
+	// . NOTE: ctime appends a \n to the time, so we don't need to
+	char msg[1024];
+	SafeBuf sb(msg,1024,0,false);
+
+	char *tt = asctime(gmtime ( &now ));
+	tt [ gbstrlen(tt) - 1 ] = '\0';
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+
+	char cbuf[1024];
+	SafeBuf cb(cbuf,1024,0,false);
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		cb.safePrintf("<html><b>Success</b></html>");
+
+	if ( format == FORMAT_XML ) {
+		cb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg><![CDATA[Success]]>"
+			      "</statusMsg>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		cb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":0,\n"
+			      "\t\"statusMsg\":\"Success\",\n" );
+	}
+
+	if ( addMsg )
+		cb.safeStrcpy(addMsg);
+
+
+	if ( format == FORMAT_XML ) {
+		cb.safePrintf("</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		// erase trailing ,\n
+		cb.m_length -= 2;
+		cb.safePrintf("\n"
+			      "}\n"
+			      "}\n");
+	}
+
+
+	sb.safePrintf(
+		      "HTTP/1.0 200 (OK)\r\n"
+		      "Content-Length: %li\r\n"
+		      "Connection: Close\r\n"
+		      "Content-Type: %s\r\n"
+		      "Date: %s UTC\r\n\r\n"
+		      , cb.length()
+		      , ct
+		      , tt );
+
+	sb.safeMemcpy ( &cb );
+
+	// use this new function that will compress the reply now if the
+	// request was a ZET instead of a GET
+	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
+}
+
+bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
+
+	long error = g_errno;
+	char *errmsg = mstrerror(error);
+
+	time_t now ;//= getTimeGlobal();
+	if ( isClockInSync() ) now = getTimeGlobal();
+	else                   now = getTimeLocal();
+
+	long format = gr->m_hr.getReplyFormat();
+	char msg[1024];
+	SafeBuf sb(msg,1024,0,false);
+	char *tt = asctime(gmtime ( &now ));
+	tt [ gbstrlen(tt) - 1 ] = '\0';
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+
+	SafeBuf xb;
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		xb.safePrintf("<html><b>Error = %s</b></html>",errmsg );
+
+	if ( format == FORMAT_XML ) {
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>%li</statusCode>\n"
+			      "\t<statusMsg><![CDATA[", error );
+		xb.cdataEncode(errmsg );
+		xb.safePrintf("]]></statusMsg>\n"
+			      "</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		xb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":%li,\n"
+			      "\t\"statusMsg\":\"", error );
+		xb.jsonEncode(errmsg );
+		xb.safePrintf("\"\n"
+			      "}\n"
+			      "}\n");
+	}
+
+	sb.safePrintf(
+		      "HTTP/1.0 %li (%s)\r\n"
+		      "Content-Length: %li\r\n"
+		      "Connection: Close\r\n"
+		      "Content-Type: %s\r\n"
+		      "Date: %s UTC\r\n\r\n"
+		      ,
+		      error  ,
+		      errmsg ,
+
+		      xb.length(),
+
+		      ct ,
+		      tt ); // ctime ( &now ) ,
+
+
+	sb.safeMemcpy ( &xb );
+
+	// use this new function that will compress the reply now if the
+	// request was a ZET instead of a GET
+	return sendReply2 ( msg , sb.length() , NULL , 0 , gr->m_socket );
+}
+
 // . send an error reply, like "HTTP/1.1 404 Not Found"
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -1516,9 +1795,16 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	time_t now ;//= getTimeGlobal();
 	if ( isClockInSync() ) now = getTimeGlobal();
 	else                   now = getTimeLocal();
+
+	// this kinda sucks that we have to do it twice...
+	HttpRequest hr;
+	hr.set ( s->m_readBuf , s->m_readOffset , s ) ;
+	char format = hr.getReplyFormat();
+
 	// . buffer for the MIME request and brief html err msg
 	// . NOTE: ctime appends a \n to the time, so we don't need to
 	char msg[1024];
+	SafeBuf sb(msg,1024,0,false);
 	// if it's a 404, redirect to home page
 	/*
 	if ( error == 404 ) 
@@ -1533,26 +1819,61 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	*/
 	char *tt = asctime(gmtime ( &now ));
 	tt [ gbstrlen(tt) - 1 ] = '\0';
-	sprintf ( msg , 
-		  "HTTP/1.0 %li (%s)\r\n"
-		  "Content-Length: %li\r\n"
-		  "Connection: Close\r\n"
-		  "Date: %s UTC\r\n\r\n"
-		  "<html><b>Error = %s</b></html>",
-		  error  ,
-		  errmsg ,
-		  (long)(gbstrlen("<html><b>Error = </b></html>")+
-			 gbstrlen(errmsg)),
-		  tt , // ctime ( &now ) ,
-                  errmsg );
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+
+	SafeBuf xb;
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		xb.safePrintf("<html><b>Error = %s</b></html>",errmsg );
+
+	if ( format == FORMAT_XML ) {
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>%li</statusCode>\n"
+			      "\t<statusMsg><![CDATA[", error );
+		xb.cdataEncode(errmsg );
+		xb.safePrintf("]]></statusMsg>\n"
+			      "</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		xb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":%li,\n"
+			      "\t\"statusMsg\":\"", error );
+		xb.jsonEncode(errmsg );
+		xb.safePrintf("\"\n"
+			      "}\n"
+			      "}\n");
+	}
+
+	sb.safePrintf(
+		      "HTTP/1.0 %li (%s)\r\n"
+		      "Content-Length: %li\r\n"
+		      "Connection: Close\r\n"
+		      "Content-Type: %s\r\n"
+		      "Date: %s UTC\r\n\r\n"
+		      ,
+		      error  ,
+		      errmsg ,
+
+		      xb.length(),
+
+		      ct ,
+		      tt ); // ctime ( &now ) ,
+
+
+	sb.safeMemcpy ( &xb );
+
 	// . move the reply to a send buffer
 	// . don't make sendBuf bigger than g_conf.m_httpMaxSendBufSize
-	long msgSize    = gbstrlen ( msg );
+	//long msgSize    = gbstrlen ( msg );
 	// record it
-	if ( bytesSent ) *bytesSent = msgSize;//sendBufSize;
+	if ( bytesSent ) *bytesSent = sb.length();//sendBufSize;
 	// use this new function that will compress the reply now if the
 	// request was a ZET instead of a GET
-	return sendReply2 ( msg , msgSize , NULL , 0 , s );
+	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
 
 	/*
 	// . this returns false if blocked, true otherwise
@@ -1578,6 +1899,11 @@ bool HttpServer::sendQueryErrorReply( TcpSocket *s , long error ,
 				      //long  rawFormat, 
 				      char format ,
 				      int errnum, char *content) {
+
+	// just use this for now. it detects the format already...
+	return sendErrorReply ( s,error,errmsg,NULL);
+
+	/*
 	// clear g_errno so the send goes through
 	g_errno = 0;
 	// get time in secs since epoch
@@ -1645,6 +1971,7 @@ bool HttpServer::sendQueryErrorReply( TcpSocket *s , long error ,
 	long msgSize    = gbstrlen ( msg );
 
 	return sendReply2 ( msg , msgSize , NULL , 0 , s );
+	*/
 
 	/*
 	long sendBufSize = msgSize;
@@ -1891,6 +2218,14 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 		     bufSize);
 		return bufSize;
 	}
+
+	// if it is "HTTP/1.0 200 Connetion established\r\n\r\n" we are done
+	// it is just a mime reply and no content. then we need to send
+	// the https request, encrypted, to the proxy... because our tunnel
+	// is now established
+	if ( s->m_tunnelMode == 1 )
+		return mimeSize;
+
 	// . don't read more than this many bytes!
 	// . this may change if we detect a Content-Type: field in the MIME
 	long max = s->m_maxTextDocLen + 10*1024;
@@ -2424,8 +2759,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		return s;
 	}
 	char *pnew = newBuf;
-	char *pold = s->m_readBuf;
-	char *mimeEnd = pold + mime.getMimeLen();
+	char *mimeEnd = s->m_readBuf + mime.getMimeLen();
 
 	// copy header to the new buffer, do it in two parts, since we
 	// have to modify the encoding and content length as we go.
@@ -2433,9 +2767,8 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// so we need to rewrite the Content-Length: and the 
 	// Content-Encoding: http mime field values so they are no longer
 	// "gzip" and use the uncompressed content-length.
-	char *ptr;
-	char *ptr1;
-	char *ptr2;
+	char *ptr1 = NULL;
+	char *ptr2 = NULL;
 	if(mime.getContentEncodingPos() &&
 	   mime.getContentEncodingPos() < mime.getContentLengthPos()) {
 		ptr1 = mime.getContentEncodingPos();
@@ -2445,54 +2778,69 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		ptr1 = mime.getContentLengthPos();
 		ptr2 = mime.getContentEncodingPos();
 	}
-	ptr = ptr1;
 
-	while(ptr) {
-		long segLen = ptr - pold;
-		memcpy(pnew, pold, segLen);
-		pold += segLen;
-		pnew += segLen;
-		if(ptr == mime.getContentEncodingPos())
+	
+	if ( ! ptr1 )
+		ptr1 = s->m_readBuf;
+
+
+	char *src = s->m_readBuf;
+
+	// sometimes they are missing Content-Length:
+	if ( ptr1 ) {
+		// copy ptr1 to src
+		memcpy ( pnew, src, ptr1 - src );
+		pnew += ptr1 - src;
+		src  += ptr1 - src;
+		// store either the new content encoding or new length
+		if(ptr1 == mime.getContentEncodingPos())
 			pnew += sprintf(pnew, " identity");
-		else	pnew += sprintf(pnew, " %li",newSize);
-		// scan to end of mime field line so we skip the value
-		while(*pold != '\r' && *pold != '\n') pold++;
-		// then skip the \r\n at end of line
-		//if (*pold == '\r' && pold[1] == '\n') {
-		//	*pnew++ = *pold++;
-		//	*pnew++ = *pold++;
-		//}
-		// if we just got done with the 2nd field, then stop.
-		// we will copy the rest with "restLen" below
-		if(ptr == ptr2) break;//ptr = NULL;
-		// otherwise, point to the 2nd mime field and remove its
-		// value and replace it with the new content-length or
-		// "identity"
-		else ptr = ptr2;
+		else	
+			pnew += sprintf(pnew, " %li",newSize);
+		// scan to \r\n at end of that line we replace
+		while ( *src != '\r' && *src != '\n') src++;
 	}
 
+	if ( ptr2 ) {
+		// copy ptr2 to src
+		memcpy ( pnew , src , ptr2 - src );
+		pnew += ptr2 - src;
+		src  += ptr2 - src;
+		// now insert the new shit
+		if(ptr2 == mime.getContentEncodingPos())
+			pnew += sprintf(pnew, " identity");
+		else	
+			pnew += sprintf(pnew, " %li",newSize);
+		// scan to \r\n at end of that line we replace
+		while ( *src != '\r' && *src != '\n') src++;
+	}
 
-	long restLen = mimeEnd - pold;
+	// copy the rest
+	memcpy ( pnew , src , mimeEnd - src );
+	pnew += mimeEnd - src;
+	src  += mimeEnd - src;
+
 
 	// before restLen was negative because we were skipping over
 	// leading \n's in the document body because the while loop above
 	// was bad logic
-	if ( restLen < 0 || ! ptr1 ) {
-		log("http: got bad gzipped reply2 of size=%li.",
-		    newSize );
-		mfree (newBuf, need, "HttpUnzipError");
-		g_errno = ECORRUPTHTTPGZIP;
-		return s;
-	}
+	// if ( restLen < 0 || ! ptr1 ) {
+	// 	log("http: got bad gzipped reply2 of size=%li.",
+	// 	    newSize );
+	// 	mfree (newBuf, need, "HttpUnzipError");
+	// 	g_errno = ECORRUPTHTTPGZIP;
+	// 	return s;
+	// }
 		
-	memcpy(pnew, pold, restLen);
- 	pold += restLen;
- 	pnew += restLen;
+	// memcpy(pnew, pold, restLen);
+ 	// pold += restLen;
+ 	// pnew += restLen;
+
 	long unsigned int uncompressedLen = newSize;
 	long compressedLen = s->m_readOffset-mime.getMimeLen();
 
 	int zipErr = gbuncompress((unsigned char*)pnew, &uncompressedLen,
-				  (unsigned char*)pold, 
+				  (unsigned char*)src, 
 				  compressedLen);
 	
 
@@ -2960,3 +3308,254 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 	return true;
 }
 */
+
+////////////////////
+//
+// support for Gigablast acting like a squid proxy
+//
+// handle requests like:
+//
+// GET http://www.xyz.com/
+// Proxy-Authentication: Basic xxxxxx
+//
+/////////////////////
+
+#define PADDING_SIZE 3000
+
+// in honor of squid
+class SquidState {
+public:
+	TcpSocket *m_sock;
+	// store the ip here
+	long m_ip;
+	// not really needed but saves a malloc
+	DnsState m_dnsState;
+
+	Msg13 m_msg13;
+	Msg13Request m_request;
+	// padding for large requests with cookies and shit so we can store
+	// the request into m_request.m_url and have it overflow some.
+	// IMPORTANT: this array declaration must directly follow m_request.
+	char m_padding[PADDING_SIZE];
+};
+
+static void gotSquidProxiedUrlIp ( void *state , long ip );
+
+// did gigablast receive a request like:
+// GET http://www.xyz.com/
+// Proxy-authorization: Basic abcdefghij
+//
+// so we want to fetch that document using msg13 which will send the
+// request to the appropriate host in the cluster based on the url's ip.
+// that host will check its document cache for it and return that if there.
+// otherwise, that host will download it.
+// that host will also use the spider proxies (floaters) if specified,
+// to route the request through the appropriate spider proxy.
+bool HttpServer::processSquidProxyRequest ( TcpSocket *sock, HttpRequest *hr) {
+
+	// we need the actual ip of the requested url so we know
+	// which host to send the msg13 request to. that way it can ensure
+	// that we do not flood a particular IP with too many requests at once.
+
+	// sanity
+	if ( hr->m_squidProxiedUrlLen > MAX_URL_LEN )
+		// what is ip lookup failure for proxy?
+		return sendErrorReply ( sock,500,"Url too long (via Proxy)" );
+
+	long maxRequestLen = MAX_URL_LEN + PADDING_SIZE;
+	if ( sock->m_readOffset >= maxRequestLen )
+		// what is ip lookup failure for proxy?
+		return sendErrorReply(sock,500,"Request too long (via Proxy)");
+
+	SquidState *sqs;
+	try { sqs = new (SquidState) ; }
+	// return true and set g_errno if couldn't make a new File class
+	catch ( ... ) { 
+		g_errno = ENOMEM;
+		log("squid: new(%i): %s",
+		    sizeof(SquidState),mstrerror(g_errno));
+		return sendErrorReply(sock,500,mstrerror(g_errno)); 
+	}
+	mnew ( sqs, sizeof(SquidState), "squidst");
+
+	// init
+	sqs->m_ip = 0;
+	sqs->m_sock = sock;
+
+	// normalize the url. MAX_URL_LEN is an issue...
+	Url url;
+	url.set ( hr->m_squidProxiedUrl , hr->m_squidProxiedUrlLen );
+
+	// get hostname for ip lookup
+	char *host = url.getHost();
+	long hlen = url.getHostLen();
+
+	// . return false if this blocked
+	// . this returns true and sets g_errno on error
+	if ( ! g_dns.getIp ( host,
+			     hlen,
+			     &sqs->m_ip,
+			     sqs,
+			     gotSquidProxiedUrlIp,
+			     &sqs->m_dnsState) )
+		return false;
+
+	// error?
+	if ( g_errno ) {
+		mdelete ( sqs, sizeof(SquidState), "sqs");
+		delete (sqs);
+		// what is ip lookup failure for proxy?
+		return sendErrorReply ( sock , 404 , "Not Found (via Proxy)" );
+	}
+	
+	// must have been in cache using sqs->m_ip
+	gotSquidProxiedUrlIp ( sqs , sqs->m_ip );
+	
+	// assume maybe incorrectly that this blocked! might have had the
+	// page in cache as well...
+	return false;
+}
+
+static void gotSquidProxiedContent ( void *state ) ;
+
+void gotSquidProxiedUrlIp ( void *state , long ip ) {
+	SquidState *sqs = (SquidState *)state;
+
+	// send the exact request. hide in the url buf i guess.
+	TcpSocket *sock = sqs->m_sock;
+
+
+	// if ip lookup failed... return 
+	if ( ip == 0 || ip == -1 ) {
+		mdelete ( sqs, sizeof(SquidState), "sqs");
+		delete (sqs);
+		// what is ip lookup failure for proxy?
+		g_httpServer.sendErrorReply(sock,404,"Not Found (via Proxy)");
+		return;
+	}
+
+
+	// pick the host to send the msg13 to now based on the ip
+	Msg13Request *r = &sqs->m_request;
+	
+	// clear everything
+	r->reset();
+
+	r->m_urlIp = ip;
+
+	// let msg13 know to just send the request in m_url
+	r->m_isSquidProxiedUrl = true;
+
+	char *proxiedReqBuf = r->ptr_url;
+
+	// store into there
+	memcpy ( proxiedReqBuf,
+		 sqs->m_sock->m_readBuf,
+		 // include +1 for the terminating \0
+		 sqs->m_sock->m_readOffset + 1);
+
+	// include terminating \0. well it is already i think. see
+	// Msg13Request::getSize(), so no need to add +1
+	r->size_url = sqs->m_sock->m_readOffset;
+
+	// use urlip for this, it determines what host downloads it
+	r->m_firstIp                = r->m_urlIp;
+	// other stuff
+	r->m_maxCacheAge            = 3600; // for page cache. 1hr.
+	r->m_urlHash48              = 0LL;
+	r->m_maxTextDocLen          = -1;//maxDownload;
+	r->m_maxOtherDocLen         = -1;//maxDownload;
+	r->m_forwardDownloadRequest = false;
+	r->m_useTestCache           = false;
+	r->m_spideredTime           = 0;
+	r->m_ifModifiedSince        = 0;
+	r->m_skipHammerCheck        = 0;
+	// . this is -1 if unknown. none found in robots.txt or provided
+	//   in the custom crawl parms.
+	// . it should also be 0 for the robots.txt file itself
+	// . since we are a proxy and have no idea, let's default to 0ms
+	r->m_crawlDelayMS = 0;
+	// let's time our crawl delay from the initiation of the download
+	// not from the end of the download. this will make things a little
+	// faster but could slam servers more.
+	r->m_crawlDelayFromEnd = false;
+	// new stuff
+	r->m_contentHash32 = 0;
+	// turn this off too
+	r->m_attemptedIframeExpansion = false;
+	// turn off
+	r->m_useCompressionProxy = false;
+	r->m_compressReply       = false;
+	r->m_isCustomCrawl       = 0;
+
+	// log for now
+	log("proxy: getting proxied content for req=%s",r->ptr_url);
+
+	// isTestColl = false. return if blocked.
+	if ( ! sqs->m_msg13.getDoc ( r, false ,sqs, gotSquidProxiedContent ) ) 
+		return;
+
+	// we did not block, send back the content
+	gotSquidProxiedContent ( sqs );
+}
+
+#include "PageInject.h" // Msg7
+
+void gotSquidProxiedContent ( void *state ) {
+	SquidState *sqs = (SquidState *)state;
+
+	// send back the reply
+	Msg13 *msg13 = &sqs->m_msg13;
+	char *reply = msg13->m_replyBuf;
+	long  replySize = msg13->m_replyBufSize;
+	long replyAllocSize = msg13->m_replyBufAllocSize;
+
+	TcpSocket *sock = sqs->m_sock;
+
+	if ( ! reply ) {
+		log("proxy: got empty reply from webserver. setting g_errno.");
+		g_errno = EBADREPLY;
+	}
+
+	// if it timed out or something...
+	if ( g_errno ) {
+		log("proxy: proxy reply had error=%s",mstrerror(g_errno));
+		mdelete ( sqs, sizeof(SquidState), "sqs");
+		delete (sqs);
+		// what is ip lookup failure for proxy?
+		g_httpServer.sendErrorReply(sock,505,"Timed Out (via Proxy)");
+		return;
+	}
+
+
+	// another debg log
+	long clen = 500;
+	if ( clen > replySize ) clen = replySize -1;
+	if ( clen < 0 ) clen = 0;
+	char c = reply[clen];
+	reply[clen]=0;
+	log("proxy: got proxied reply=%s",reply);
+	reply[clen]=c;
+
+	// don't let Msg13::reset() free it
+	sqs->m_msg13.m_replyBuf = NULL;
+
+	// sanity, this should be exact... since TcpServer.cpp needs that
+	//if ( replySize != replyAllocSize ) { char *xx=NULL;*xx=0; }
+
+	mdelete ( sqs, sizeof(SquidState), "sqs");
+	delete  ( sqs );
+
+	// . the reply should already have a mime at the top since we are
+	//   acting like a squid proxy, send it back...
+	// . this should free the reply when done
+	TcpServer *tcp = &g_httpServer.m_tcp;
+	tcp->sendMsg ( sock ,
+		       reply ,  // sendbuf
+		       replyAllocSize ,  // bufsize
+		       replySize , // used
+		       replySize , // msgtotalsize
+		       NULL , // state
+		       NULL ); // donesendingcallback
+}
+

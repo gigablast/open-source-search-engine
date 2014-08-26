@@ -6,17 +6,62 @@
 HttpRequest::HttpRequest () { m_cgiBuf = NULL; m_cgiBuf2 = NULL; reset(); }
 HttpRequest::~HttpRequest() { reset();      }
 
+
 char HttpRequest::getReplyFormat() {
 	if ( m_replyFormatValid ) return m_replyFormat;
-	char *fs = getString("format",NULL,NULL);
-	char fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
-	m_replyFormat = fmt;
+
+	char *formatStr = getString("format");
+
+	char format = -1;//FORMAT_HTML;
+
+	// what format should search results be in? default is html
+	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
+	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
+	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
+	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
+	if ( formatStr && strcmp(formatStr,"iframe")==0)
+		format=FORMAT_WIDGET_IFRAME;
+	if ( formatStr && strcmp(formatStr,"ajax")==0)
+		format=FORMAT_WIDGET_AJAX;
+	if ( formatStr && strcmp(formatStr,"append")==0)
+		format=FORMAT_WIDGET_APPEND;
+
+	// support old api &xml=1 to mean &format=1
+	if ( getLong("xml",0) ) {
+		format = FORMAT_XML;
+	}
+
+	// also support &json=1
+	if ( getLong("json",0) ) {
+		format = FORMAT_JSON;
+	}
+
+	if ( getLong("csv",0) ) {
+		format = FORMAT_CSV;
+	}
+
+	if ( getLong("iframe",0) ) {
+		format = FORMAT_WIDGET_IFRAME;
+	}
+
+	if ( getLong("ajax",0) ) {
+		format = FORMAT_WIDGET_AJAX;
+	}
+
+	if ( getLong("append",0) ) {
+		format = FORMAT_WIDGET_APPEND;
+	}
+
+	// default to html
+	if ( format == -1 ) 
+		format = FORMAT_HTML;
+
+	m_replyFormat = format;
 	m_replyFormatValid = true;
-	return m_replyFormat;
+
+	return format;
 }
+
 
 void HttpRequest::reset() {
 	m_numFields = 0;
@@ -89,6 +134,11 @@ bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 	return true;
 }
 
+#define RT_GET 0
+#define RT_HEAD 1
+#define RT_POST 2
+#define RT_CONNECT 3
+
 // TODO: ensure not sent to a proxy server since it will expect us to close it
 // TODO: use chunked transfer encodings to do HTTP/1.1
 
@@ -102,7 +152,10 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		       char *userAgent , char *proto , bool doPost ,
 		       char *cookie , char *additionalHeader ,
 		       // if posting something, how many bytes is it?
-		       long postContentLen ) {
+		       long postContentLen ,
+		       // are we sending the request through an http proxy?
+		       // if so this will be non-zero
+		       long proxyIp ) {
 
 	m_reqBufValid = false;
 
@@ -110,6 +163,12 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	long port = 80;
 	char *hptr = getHostFast ( url , &hlen , &port );
 	char *path = getPathFast ( url );
+
+	// . use the full url if sending to an http proxy
+	// . HACK: do NOT do this if it is httpS because we end up
+	//   using the http tunnel using the CONNECT cmd and the squid proxy
+	//   will just forward/proxy just the entire tcp packets.
+	if ( proxyIp && strncmp(url,"https://",8) != 0 ) path = url;
 
 	char *pathEnd  = NULL;
 	char *postData = NULL;
@@ -129,7 +188,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	//if ( url->getUrlLen() + 400 >= MAX_REQ_LEN ) { 
 	//	g_errno = EURLTOOBIG; return false;}
 	// assume request type is a GET
-	m_requestType = 0;
+	m_requestType = RT_GET;//0;
 	// get the host NULL terminated
 	char host[1024+8];
 	//long hlen = url->getHostLen();
@@ -210,7 +269,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 
 	 if ( size == 0 ) {
 		 // 1 for HEAD requests
-		 m_requestType = 1; 
+		 m_requestType = RT_HEAD; 
 		 m_reqBuf.safePrintf (
 			   "%s %s %s\r\n" 
 			   "Host: %s\r\n"
@@ -326,7 +385,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 //log("captch: %s",m_buf);
 	 }
 
-	 if ( ! doPost ) { // postData ) {
+	 if ( ! doPost ) { // ! postData ) {
 		 m_reqBuf.safePrintf("\r\n");
 	 }
 
@@ -344,13 +403,13 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 return true;
  }
 
- // . parse an incoming request
- // . return false and set g_errno on error
- // . CAUTION: we destroy "req" by replacing it's last char with a \0
- // . last char must be \n or \r for it to be a proper request anyway
- bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
-	 // reset number of cgi field terms
-	 reset();
+// . parse an incoming request
+// . return false and set g_errno on error
+// . CAUTION: we destroy "req" by replacing it's last char with a \0
+// . last char must be \n or \r for it to be a proper request anyway
+bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
+	// reset number of cgi field terms
+	reset();
 
 	 if ( ! m_reqBuf.reserve ( origReqLen + 1 ) ) {
 		 log("http: failed to copy request: %s",mstrerror(g_errno));
@@ -376,7 +435,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 if ( req[reqLen] != '\0' ) { char *xx = NULL; *xx = 0; }
 	 
 	 // how long is the first line, the primary request
-	 long i;
+	 // long i;
 	 // for ( i = 0 ; i<reqLen && i<MAX_REQ_LEN && 
 	 //	       req[i]!='\n' && req[i]!='\r'; i++);
 	 // . now fill up m_buf, used to log the request
@@ -391,19 +450,46 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // m_bufLen = urlNormCode ( m_buf , MAX_REQ_LEN - 1 , req , i );
 	 // ensure it's big enough to be a valid request
 	 if ( reqLen < 5 ) { 
-		 log("http: got reqlen<5 = %s",req);
+		 log("http: got reqlen %li<5 = %s",reqLen,req);
 		 g_errno = EBADREQUEST; 
 		 return false; 
 	 }
+
+	 long cmdLen = 0;
+
 	 // or if first line too long
 	 //if ( i >= 1024 )  { g_errno = EBADREQUEST; return false; }
 	 // get the type, must be GET or HEAD
-	 if      ( strncmp ( req , "GET "  , 4 ) == 0 ) m_requestType = 0;
+	 if      ( strncmp ( req , "GET "  , 4 ) == 0 ) {
+		 m_requestType = RT_GET;
+		 cmdLen = 3;
+	 }
 	 // these means a compressed reply was requested. use by query
 	 // compression proxies.
-	 else if ( strncmp ( req , "ZET "  , 4 ) == 0 ) m_requestType = 0;
-	 else if ( strncmp ( req , "HEAD " , 5 ) == 0 ) m_requestType = 1;
-	 else if ( strncmp ( req , "POST " , 5 ) == 0 ) m_requestType = 2;
+	 else if ( strncmp ( req , "ZET "  , 4 ) == 0 ) {
+		 m_requestType = RT_GET;
+		 cmdLen = 3;
+	 }
+	 else if ( strncmp ( req , "HEAD " , 5 ) == 0 ) {
+		 m_requestType = RT_HEAD;
+		 cmdLen = 4;
+	 }
+	 else if ( strncmp ( req , "POST " , 5 ) == 0 )  {
+		 m_requestType = RT_POST;
+		 cmdLen = 4;
+	 }
+	 else if ( strncmp ( req , "CONNECT " , 8 ) == 0 ) {
+		 //m_requestType = RT_CONNECT;
+		 //cmdLen = 7;
+		 // we do not proxy https requests because we can't
+		 // decrypt the page contents to cache them or to insert
+		 // the sectiondb voting markup, so it's kinda pointless...
+		 // and i'm not aiming to be a full-fledge squid proxy.
+		 log("http: CONNECT request not supported because we "
+		     "can't insert section markup and we can't cache: %s",req);
+		 g_errno = EBADREQUEST; 
+		 return false; 
+	 }
 	 else { 
 		 log("http: got bad request cmd: %s",req);
 		 g_errno = EBADREQUEST; 
@@ -412,18 +498,109 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // . NULL terminate the request (a destructive operation!)
 	 // . this removes the last \n in the trailing \r\n 
 	 // . shit, but it fucks up POST requests
-	 if ( m_requestType != 2 ) { req [ reqLen - 1 ] = '\0'; reqLen--; }
+	 if ( m_requestType != RT_POST ) { 
+		 req [ reqLen - 1 ] = '\0'; 
+		 reqLen--; 
+	 }
 
 	 // POST requests can be absolutely huge if you are injecting a 100MB
 	 // file, so limit our strstrs to the end of the mime
 	 char *d = NULL;
 	 char  dc;
 	 // check for body if it was a POST request
-	 if ( m_requestType == 2 ) {
+	 if ( m_requestType == RT_POST ) {
 		 d = strstr ( req , "\r\n\r\n" );
 		 if ( d ) { dc = *d; *d = '\0'; }
 		 else log("http: Got POST request without \\r\\n\\r\\n.");
 	 }
+
+	 // is it a proxy request?
+	 m_isSquidProxyRequest = false;
+	 if ( strncmp ( req + cmdLen + 1, "http://" ,7) == 0 ||
+	      strncmp ( req + cmdLen + 1, "https://",8) == 0 ) {
+		 m_isSquidProxyRequest = true;
+		 // set url parms for it
+		 m_squidProxiedUrl = req + cmdLen + 1;
+		 char *p = m_squidProxiedUrl + 7;
+		 if ( *p == '/' ) p++; // https:// ?
+		 // stop at whitespace or \0
+		 for ( ; *p && ! is_wspace_a(*p) ; p++ );
+		 // that's the length of it
+		 m_squidProxiedUrlLen = p - m_squidProxiedUrl;
+	 }
+	 else if ( m_requestType == RT_CONNECT ) {
+		 m_isSquidProxyRequest = true;
+		 // set url parms for it
+		 m_squidProxiedUrl = req + cmdLen + 1;
+		 // usually its like CONNECT diffbot.com:443
+		 char *p = m_squidProxiedUrl;
+		 // stop at whitespace or \0
+		 for ( ; *p && ! is_wspace_a(*p) ; p++ );
+		 // that's the length of it
+		 m_squidProxiedUrlLen = p - m_squidProxiedUrl;
+	 }
+
+	 // check authentication
+	 char *auth = NULL;
+	 if ( m_isSquidProxyRequest && req )
+		 auth = strstr(req,"Proxy-authorization: Basic ");
+
+	 //if ( m_isSquidProxyRequest && ! auth ) {
+	 //	 log("http: no auth in proxy request %s",req);
+	 //	 g_errno = EBADREQUEST; 
+	 //	 return false; 
+	 //}
+
+	 SafeBuf tmp;
+	 if ( auth ) {
+		 // find end of it
+		 char *p = auth;
+		 for ( ; *p && *p != '\r' && *p != '\n' ; p++ );
+		 tmp.base64Decode ( auth , p - auth );
+	 }
+
+	 // assume incorrect username/password
+	 bool matched = false;
+	 if ( m_isSquidProxyRequest ) {
+		 // now try to match in g_conf.m_proxyAuth safebuf of
+		 // username:password space-separated list
+		 char *p = g_conf.m_proxyAuth.getBufStart();
+		 // loop over those
+		 for ( ; p && *p ; ) {
+			 // skip initial white space
+			 for ( ; *p && is_wspace_a(*p); p++ );
+			 // skip to end of username:password thing
+			 char *end = p;
+			 for ( ; *end && !is_wspace_a(*end); end++);
+			 // save
+			 char *start = p;
+			 // advance
+			 p = end;
+			 // this is always a match
+			 if ( end-start == 3 && strncmp(start,"*:*",3)==0 ) {
+				 matched = true;
+				 break;
+			 }
+			 // compare now
+			 if ( tmp.length() != end-start ) 
+				 continue;
+			 if ( strncmp(tmp.getBufStart(),start,end-start))
+				 continue;
+			 // we got a match
+			 matched = true;
+			 break;
+		 }
+	 }
+
+	 // incorrect username:passwrod?
+	 if ( m_isSquidProxyRequest && ! matched ) {
+		 log("http: bad username:password in proxy request %s",req);
+		 g_errno = EPERMDENIED;
+		 return false; 
+	 }
+
+	 // if proxy request to download a url through us, we are done
+	 if ( m_isSquidProxyRequest ) return true;
 
 	 bool multipart = false;
 	 if ( m_requestType == 2 ) { // is POST?
@@ -435,10 +612,11 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // . skip over the "GET "
 	 long filenameStart = 4 ;
 	 // skip over extra char if it's a "HEAD " request
-	 if ( m_requestType == 1 || m_requestType == 2 ) filenameStart++;
+	 if ( m_requestType == RT_HEAD || m_requestType == RT_POST ) 
+		 filenameStart++;
 
 	 // are we a redirect?
-	 i = filenameStart;
+	 long i = filenameStart;
 	 m_redirLen = 0;
 	 if ( strncmp ( &req[i] , "/?redir=" , 8 ) == 0 ) {
 		 for ( long k = i+8; k<reqLen && m_redirLen<126 ; k++) {
@@ -488,6 +666,15 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 strcat ( m_filename , "index.html" );
 		 m_filenameLen = gbstrlen ( m_filename );
 	 }
+
+
+	 // . uses the TcpSocket::m_readBuf
+	 // . if *p was ? then keep going
+	 m_origUrlRequest = origReq + filenameStart;
+	 char *p = origReq + m_filenameLen;
+	 for ( ; *p && ! is_wspace_a(*p) ; p++ );
+	 m_origUrlRequestLen = p - m_origUrlRequest;
+
 	 // set file offset/size defaults
 	 m_fileOffset = 0;
 	 // -1 means ALL the file from m_fileOffset onwards
@@ -739,7 +926,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // . look after the mime
 	 //char *d = NULL;
 	 // check for body if it was a POST request
-	 //if ( m_requestType == 2 ) d = strstr ( req , "\r\n\r\n" );
+	 //if ( m_requestType == RT_POST ) d = strstr ( req , "\r\n\r\n" );
 
 	 // now put d's char back, just in case... does it really matter?
 	 if ( d ) *d = dc;

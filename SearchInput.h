@@ -158,6 +158,8 @@ class SearchInput {
 	// ip address of searcher used for banning abusive IPs "uip"
 	char *m_userIpStr;
 
+	char  m_showImages;
+
 	// general parms, not part of makeKey(), but should be serialized
 	char   m_useCache;                   // msg40
 	char   m_rcache;                     // msg40
@@ -205,6 +207,8 @@ class SearchInput {
 	long   m_imgWidth;
 	long   m_imgHeight;
 
+	long   m_titleMaxLen;
+
 	// for limiting results by score in the widget
 	double    m_maxSerpScore;
 	long long m_minSerpDocId;
@@ -230,6 +234,8 @@ class SearchInput {
 	char   m_doDupContentRemoval;     // msg40
 	char   m_getDocIdScoringInfo;
 
+	char   m_hideAllClustered;
+
 	// ranking algos
 	char   m_useMinAlgo;
 	char   m_useNewAlgo;
@@ -243,6 +249,14 @@ class SearchInput {
 	// stream results back on socket in streaming mode, usefule when 
 	// thousands of results are requested
 	char   m_streamResults;
+
+	// limit search results to pages spidered this many seconds ago
+	long   m_secsBack;
+
+	// 0 relevance, 1 date, 2 reverse date
+	char   m_sortBy;
+
+	char *m_filetype;
 
 	// . related topic (gigabits) parameters
 	// . TODO: prepend m_top_ to these var names
@@ -304,6 +318,8 @@ class SearchInput {
 	// general parameters
 	long   m_numLinesInSummary;           // msg40
 	long   m_summaryMaxWidth;             // msg40
+	long   m_summaryMaxNumCharsPerLine;
+
 	long   m_docsWanted;                  // msg40
 	long   m_firstResultNum;              // msg40
 	long   m_boolFlag;                    // msg40

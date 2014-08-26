@@ -17,11 +17,42 @@ extern char *g_fakeReply;
 
 class Msg13Request {
 public:
-	long long m_urlHash48;
+
+	// the top portion of Msg13Request is sent to handleRequest54()
+	// in SpiderProxy.cpp to get and return proxies, as well as to
+	// ban proxies.
+	long getProxyRequestSize() { return (char *)&m_lastHack-(char *)this;};
 	long  m_urlIp;
+	long  m_lbId; // loadbucket id
+	// the http proxy to use to download
+	long  m_proxyIp;
+	short m_proxyPort;
+	long  m_banProxyIp;
+	short m_banProxyPort;
+	char  m_opCode;
+	char  m_lastHack;
+
+	// not part of the proxy request, but set from ProxyReply:
+	long  m_numBannedProxies;
+	// . if using proxies, how many proxies have we tried to download 
+	//   this url through
+	// . used internally in Msg13.cpp
+	long m_proxyTries;
+	// if using proxies, did host #0 tell us there were more to try if
+	// this one did not work out?
+	bool m_hasMoreProxiesToTry;
+
+	// we call this function after the imposed crawl-delay is over
+	void (*m_hammerCallback)(class Msg13Request *r);
+
+
+	long long m_urlHash48;
 	long  m_firstIp;
-	long  m_httpProxyIp;
-	short m_httpProxyPort;
+
+	// a tmp hack var referencing into m_url[] below
+	char *m_proxiedUrl;
+	long  m_proxiedUrlLen;
+
 	char  m_niceness;
 	long  m_ifModifiedSince;
 	long  m_maxCacheAge;
@@ -60,6 +91,13 @@ public:
 	long  m_attemptedIframeExpansion:1;
 	long  m_crawlDelayFromEnd:1;
 	long  m_forEvents:1;
+
+	// does m_url represent a FULL http request mime and NOT just a url?
+	// this happens when gigablast is being used like a squid proxy.
+	long  m_isSquidProxiedUrl:1;
+
+	long  m_foundInCache:1;
+
 	//long  m_testParserEnabled:1;
 	//long  m_testSpiderEnabled:1;
 	//long  m_isPageParser:1;
@@ -72,6 +110,8 @@ public:
 	// on the other hand, if we are called indirectly by handleRequest13()
 	// then we set m_udpSlot.
 	class UdpSlot *m_udpSlot;
+
+	class TcpSocket *m_tcpSocket;
 
 	// used for addTestDoc() and caching. msg13 sets this
 	long long m_urlHash64;	
@@ -141,6 +181,8 @@ class Msg13 {
 
 	// point to it
 	Msg13Request *m_request;
+
+	//char m_tmpBuf32[32];
 };
 
 bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) ;

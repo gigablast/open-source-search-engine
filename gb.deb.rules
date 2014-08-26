@@ -32,6 +32,11 @@ override_dh_strip:
 # debian/gb.substvars and makes dpkg -i bitch about dependencies not being met
 override_dh_shlibdeps:
 	echo "skipping dh_shlibdeps call! MDW"
+# adding the line below here does not seem to make dpkg prompt to
+# install netpbm, rather just bitch about it and make it harder to install
+#	echo "building our own gb.substvars"
+#	echo  "misc:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
+#	echo  "misc:Depends=netpbm" > debian/gb.substvars 
 
 # override_dh_shlibdeps-indep:
 # 	echo "shit"

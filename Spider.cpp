@@ -286,8 +286,10 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		collnum_t collnum = xd->m_collnum;
 		CollectionRec *cr = g_collectiondb.getRec(collnum);
 		char *cs = ""; if ( cr ) cs = cr->m_coll;
-		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
-			       cs,(long)collnum);
+		// sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
+		// 	       cs,(long)collnum);
+		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
+			       cs,cs);
 	}
 
 	sb->safePrintf(" <td><nobr>");
@@ -1060,7 +1062,7 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	//   have nuked it
 	//CollectionRec *cr = sc->m_cr;
 	// use fake ptrs for easier debugging
-	//if ( cr ) cr->m_spiderColl = NULL;
+	//if ( cr ) cr->m_spiderColl = (SpiderColl *)0x987654;//NULL;
 	mdelete ( sc , sizeof(SpiderColl),"postdel1");
 	delete ( sc );
 	return true;
@@ -1219,10 +1221,18 @@ bool SpiderColl::load ( ) {
 	m_msg1Avail    = true;
 	m_isPopulating = false;
 
-	if ( ! m_lastDownloadCache.init ( 1000       , // maxcachemem,
+	// keep it kinda low if we got a ton of collections
+	long maxMem = 15000;
+	long maxNodes = 500;
+	if ( g_collectiondb.m_numRecsUsed > 500 ) {
+		maxMem = 1000;
+		maxNodes = 100;
+	}
+
+	if ( ! m_lastDownloadCache.init ( maxMem     , // maxcachemem,
 					  8          , // fixed data size (MS)
 					  false      , // support lists?
-					  100        , // max nodes
+					  maxNodes   , // max nodes
 					  false      , // use half keys?
 					  "downcache", // dbname
 					  false      , // load from disk?
@@ -2194,7 +2204,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// HACK: set isOutlink to true here since we don't know if we have sre
 	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr,
 				true,//isoutlink? HACK!
-				NULL); // quota table
+				NULL); // quota table quotatable
 	// sanity check
 	//if ( ufn < 0 ) { 
 	//	log("spider: failed to add spider request for %s because "
@@ -2632,8 +2642,8 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	long node = m_waitingTree.getNextNode ( 0, (char *)&m_waitingTreeKey );
 	// if empty, stop
 	if ( node < 0 ) return 0;
-	// breathe
-	QUICKPOLL(MAX_NICENESS);
+	// breathe. take this out fix core because cr could be deleted...
+	//QUICKPOLL(MAX_NICENESS);
 	// get the key
 	key_t *k = (key_t *)m_waitingTree.getKey ( node );
 
@@ -2739,6 +2749,8 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	// skip if in repair mode
 	if ( g_repairMode ) return;
+	// sanity
+	if ( m_deleteMyself ) { char *xx=NULL;*xx=0; }
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
 	// if entering for the first time, we need to read list from spiderdb
@@ -5250,6 +5262,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// if spidering disabled then do not do this crap
 	if ( ! g_conf.m_spideringEnabled )  return;
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -5560,6 +5574,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// if we don't have all the url counts from all hosts, then wait.
 	// one host is probably down and was never up to begin with
 	if ( ! s_countsAreValid ) return;
@@ -6660,7 +6676,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		return true;
 	}
 	// turned off?
-	if ( ( (! g_conf.m_spideringEnabled 
+	if ( ( (! g_conf.m_spideringEnabled ||
+		// or if trying to exit
+		g_process.m_mode == EXIT_MODE
 		) && // ! g_conf.m_webSpideringEnabled ) &&
 	       ! sreq->m_isInjecting ) || 
 	     // repairing the collection's rdbs?
@@ -10035,7 +10053,7 @@ bool isAggregator ( long siteHash32,long domHash32,char *url,long urlLen ) {
 #define SIGN_LE 6
 
 // from PageBasic.cpp
-char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) ;
+char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq, char *tag);
 
 // . this is called by SpiderCache.cpp for every url it scans in spiderdb
 // . we must skip certain rules in getUrlFilterNum() when doing to for Msg20
@@ -10076,6 +10094,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	bool checkedRow = false;
 	//SpiderColl *sc = cr->m_spiderColl;
 	SpiderColl *sc = g_spiderCache.getSpiderColl(cr->m_collnum);
+
+	if ( ! quotaTable ) quotaTable = &sc->m_localTable;
 
 	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");
@@ -10445,7 +10465,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// if there is no domain or url explicitly listed
 			// then assume user is spidering the whole internet
 			// and we basically ignore "insitelist"
-			if ( sc->m_siteListIsEmpty &&
+			if ( sc->m_siteListIsEmpty && 
 			     sc->m_siteListIsEmptyValid ) {
 				// use a dummy row match
 				row = (char *)1;
@@ -10454,7 +10474,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				// only do once for speed
 				checkedRow = true;
 				// this function is in PageBasic.cpp
-				row = getMatchingUrlPattern ( sc, sreq );
+				row = getMatchingUrlPattern ( sc, sreq ,NULL);
 			}
 			// if we are not submitted from the add url api, skip
 			if ( (bool)row == val ) continue;
@@ -10467,7 +10487,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
-		
 
 		// . was it submitted from PageAddUrl.cpp?
 		// . replaces the "add url priority" parm
@@ -10900,6 +10919,41 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( *p=='d' && ! strcmp(p,"default" ) )
 			return i;
 
+		// is it in the big list of sites?
+		if ( *p == 't' && strncmp(p,"tag:",4) == 0 ) {
+			// skip for msg20
+			//if ( isForMsg20 ) continue;
+			// if only seeds in the sitelist and no
+
+			// if there is no domain or url explicitly listed
+			// then assume user is spidering the whole internet
+			// and we basically ignore "insitelist"
+			if ( sc->m_siteListIsEmpty &&
+			     sc->m_siteListIsEmptyValid ) {
+				row = NULL;// no row
+			}
+			else if ( ! checkedRow ) {
+				// only do once for speed
+				checkedRow = true;
+				// this function is in PageBasic.cpp
+				// . it also has to match "tag" at (p+4)
+				row = getMatchingUrlPattern ( sc, sreq ,p+4);
+			}
+			// if we are not submitted from the add url api, skip
+			if ( (bool)row == val ) continue;
+			// skip tag:
+			p += 4;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+		
+
+
+
 		// set the sign
 		char *s = p;
 		// skip s to after
@@ -11028,8 +11082,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[8] == 's' ) {
 			// need a quota table for this
 			if ( ! quotaTable ) continue;
-			long *valPtr = (long *)quotaTable->
-				getValue(&sreq->m_siteHash32);
+			long *valPtr ;
+		       valPtr=(long*)quotaTable->getValue(&sreq->m_siteHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
 			long a;
@@ -11066,9 +11120,14 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[8] == 'g' &&
 		     p[9] == 'e' &&
 		     p[10] == 's' ) {
-			// need a quota table for this
-			if ( ! quotaTable ) continue;
-			long *valPtr ;
+			// need a quota table for this. this only happens
+			// when trying to shortcut things to avoid adding
+			// urls to spiderdb... like XmlDoc.cpp calls
+			// getUrlFtilerNum() to see if doc is banned or
+			// if it should harvest links.
+			if ( ! quotaTable )
+				return -1;
+			long *valPtr;
 			valPtr=(long*)quotaTable->getValue(&sreq->m_domHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
@@ -12567,6 +12626,13 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		//
 		/////////
 
+		// speed up qa pipeline
+		long spiderDoneTimer = (long)SPIDER_DONE_TIMER;
+		if ( cr->m_coll[0] == 'q' &&
+		     cr->m_coll[1] == 'a' &&
+		     strcmp(cr->m_coll,"qatest123")==0)
+			spiderDoneTimer = 10;
+
 		// if we haven't spidered anything in 1 min assume the
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
@@ -12577,7 +12643,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		     // will increment the round # and wait just
 		     // SPIDER_DONE_TIMER seconds and end up setting
 		     // hasUrlsReadyToSpider to false!
-		     now > cr->m_spiderRoundStartTime + SPIDER_DONE_TIMER &&
+		     now > cr->m_spiderRoundStartTime + spiderDoneTimer &&
 		     // no spiders currently out. i've seen a couple out
 		     // waiting for a diffbot reply. wait for them to
 		     // return before ending the round...
@@ -12589,7 +12655,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		     //cr->m_spideringEnabled &&
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
-		     (long) SPIDER_DONE_TIMER ) {
+		     spiderDoneTimer ) {
 			// this is the MOST IMPORTANT variable so note it
 			log("spider: coll %s has no more urls to spider",
 			    cr->m_coll);

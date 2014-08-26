@@ -618,6 +618,9 @@ loop:
 	if ( g_errno == ENOSLOTS ) return false;
 	// pointless as well if no time left in the multicast
 	if ( g_errno == EUDPTIMEDOUT ) return false;
+	// or if shutting down the server! otherwise it loops forever and
+	// won't exit when sending a msg20 request. i've seen this...
+	if ( g_errno == ESHUTTINGDOWN ) return false;
 	// otherwise try another host and hope for the best
 	g_errno = 0;
 	key = 0 ; 

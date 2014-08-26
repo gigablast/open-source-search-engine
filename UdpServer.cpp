@@ -165,6 +165,13 @@ bool UdpServer::useSharedMem() {
 
 // free send/readBufs
 void UdpServer::reset() {
+
+	// sometimes itimer interrupt goes off in Loop.cpp when we are exiting
+	// so fix that core. it happened when running the ./gb stop cmd b/c
+	// it exited while in the middle of a udp handler, so g_callSlot
+	// was non-null but invalid and the sigalrmhander() in Loop.cpp puked.
+	g_callSlot = NULL;
+
 	// clear our slots
 	if ( ! m_slots ) return;
 	log(LOG_DEBUG,"db: resetting udp server");

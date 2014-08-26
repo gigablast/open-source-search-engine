@@ -1868,6 +1868,8 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 		      (srcEnd[-1] == ':' || 
 		       srcEnd[-1] == ' ' ||
 		       srcEnd[-1] == '-' ||
+		       srcEnd[-1] == '\n' ||
+		       srcEnd[-1] == '\r' ||
 		       srcEnd[-1] == '|'   )    ; 
 	      srcEnd-- );
 

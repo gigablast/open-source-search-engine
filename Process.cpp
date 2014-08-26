@@ -44,6 +44,7 @@
 #include "Users.h"
 #include "Proxy.h"
 #include "Rebalance.h"
+#include "SpiderProxy.h"
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;
@@ -852,6 +853,11 @@ void doneCmdWrapper ( void *state ) {
 }
 
 void hdtempWrapper ( int fd , void *state ) {
+
+	// also download test urls from spider proxies to ensure they
+	// are up and running properly
+	downloadTestUrlFromProxies();
+
 	// reset this... why?
 	g_errno = 0;
 	// do not get if already getting
@@ -1793,6 +1799,9 @@ bool Process::saveBlockingFiles1 ( ) {
 
 	// save the login table
 	g_users.save();
+
+	// save stats on spider proxies if any
+	saveSpiderProxyStats();
 
 	// save the query log buffer if it was modified by the 
 	// runSeoQueryLoop() in seo.cpp which updates its

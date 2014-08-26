@@ -472,6 +472,8 @@ long XmlNode::setCommentNode2 ( char *node ) {
 		// look for ending of ]> like for <![if gt IE 6]>
 		if ( node[i]   !='>' ) continue;
 		if ( node[i-1] ==']' ) break;
+		// look for ending of --> like for <![endif]-->
+		if ( node[i-1] == '-' && node[i-2] == '-' ) break;
 	}
 
 	// skip i over the >, if any (could be end of doc)

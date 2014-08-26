@@ -1517,9 +1517,9 @@ bool Sections::set ( Words     *w                       ,
 			p += 6;
 		}
 		// if root section has no tag this is zero and will core
-		// in Dates.cpp where it checks m_turkTagHash to be zero
+		// in Dates.cpp where it checks m_turkTagHash32 to be zero
 		if ( ctid == 0 ) ctid = 999999;
-		// set it for setting m_turkTagHash
+		// set it for setting m_turkTagHash32
 		sn->m_turkBaseHash = ctid;
 		// always make root turkbasehash be 999999.
 		// if root section did not start with tag it's turkBaseHash
@@ -1997,6 +1997,57 @@ bool Sections::set ( Words     *w                       ,
 			// fix "smooth smooth!"
 			if ( sn->m_sentenceContentHash64 == 0 )
 				sn->m_sentenceContentHash64 = 123456;
+		}
+	}
+
+
+	////////
+	//
+	// set Section::m_indirectSentHash64
+	//
+	////////
+	for ( Section *sn = m_firstSent ; sn ; sn = sn->m_nextSent ) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// sanity check
+		long long sc64 = sn->m_sentenceContentHash64;
+		if ( ! sc64 ) { char *xx=NULL;*xx=0; }
+		// propagate it upwards
+		Section *p = sn;
+		// TODO: because we use XOR for speed we might end up with
+		// a 0 if two sentence are repeated, they cancel out..
+		for ( ; p ; p = p->m_parent )
+			p->m_indirectSentHash64 ^= sc64;
+	}
+
+	/////
+	//
+	// set SEC_HASHXPATH
+	//
+	/////
+	for ( Section *sn = m_firstSent ; sn ; sn = sn->m_nextSent ) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// sanity check
+		long long sc64 = sn->m_sentenceContentHash64;
+		if ( ! sc64 ) { char *xx=NULL;*xx=0; }
+		// propagate it upwards
+		Section *p = sn->m_parent;
+		// parent of sentence always gets it i guess
+		unsigned long long lastVal = 0x7fffffffffffffffLL;
+		// TODO: because we use XOR for speed we might end up with
+		// a 0 if two sentence are repeated, they cancel out..
+		for ( ; p ; p = p->m_parent ) {
+			// how can this be a text node?
+			if ( p->m_tagId == TAG_TEXTNODE ) continue;
+			// if parent's hash is same as its kid then do not
+			// hash it separately in order to save index space
+			// from adding gbxpathsitehash1234567 terms
+			if ( p->m_indirectSentHash64 == lastVal ) continue;
+			// update this for deduping
+			lastVal = p->m_indirectSentHash64;
+			// this parent should be hashed with gbxpathsitehash123
+			p->m_flags |= SEC_HASHXPATH;
 		}
 	}
 
@@ -11855,7 +11906,7 @@ bool Sections::addVotes ( SectionVotingTable *nsvt , uint32_t tagPairHash ) {
 		// sanity check
 		if ( ! sn->m_sentenceContentHash64 ) { char *xx=NULL;*xx=0; }
 		// add the tag hash too!
-		if ( ! nsvt->addVote3 ( sn->m_turkTagHash     ,
+		if ( ! nsvt->addVote3 ( sn->m_turkTagHash32   ,
 					SV_TURKTAGHASH        , 
 					1.0               ,   // score
 					1.0               ,
@@ -11865,9 +11916,10 @@ bool Sections::addVotes ( SectionVotingTable *nsvt , uint32_t tagPairHash ) {
 		//if ( sn->m_flags & SEC_NOTEXT ) continue;
 		// . combine the tag hash with the content hash #2
 		// . for some reason m_contentHash is 0 for like menu-y sectns
-		long modified = sn->m_turkTagHash^sn->m_sentenceContentHash64;
+		long modified = sn->m_turkTagHash32;
+		modified ^= sn->m_sentenceContentHash64;
 		// now we use votehash32 which ignores dates and numbers
-		//long modified = sn->m_turkTagHash ^ sn->m_voteHash32;
+		//long modified = sn->m_turkTagHash32 ^ sn->m_voteHash32;
 		// . update m_nsvt voting table now
 		// . the tagHash is the content hash for this one
 		// . this will return false with g_errno set
@@ -11920,7 +11972,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		// for that docid
 		long secType = g_indexdb.getScore ( (char *)key );
 		// treat key like a datedb key and get the taghash
-		uint32_t turkTagHash = g_datedb.getDate ( key );
+		uint32_t turkTagHash32 = g_datedb.getDate ( key );
 		// get this
 		long long d = g_datedb.getDocId(key);
 		// skip this vote if from an old titlerec of ourselves!
@@ -11934,7 +11986,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		// tagHash of zero so we can keep tabs on how many section
 		// voters we have. we need to limit the # of voters per site
 		// otherwise we have a huge sectiondb explosion.
-		if ( turkTagHash == 0 ) {
+		if ( turkTagHash32 == 0 ) {
 			// now that we do compression we strip these votes
 			// in Msg0.cppp
 			//char *xx=NULL;*xx=0; 
@@ -11989,7 +12041,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		float numSampled = sv->m_numSampled;
 
 		// incorporate this vote into m_osvt. the "old" voting table.
-		if ( ! addVote3 ( turkTagHash      ,
+		if ( ! addVote3 ( turkTagHash32    ,
 				  secType          ,
 				  avg              ,  // score
 				  numSampled       )) // numSampled
@@ -13224,6 +13276,12 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 	//	sbuf->safePrintf("multplaces ");
 
 	if ( justEvents ) return;
+
+	if ( f & SEC_HASHXPATH )
+		sbuf->safePrintf("hashxpath ");
+
+	sbuf->safePrintf("indsenthash64=%llu ",sn->m_indirectSentHash64);
+
 
 	if ( f & SEC_TOD_EVENT )
 		sbuf->safePrintf("todevent ");
@@ -14611,8 +14669,8 @@ void Sections::setTagHashes ( ) {
 		if ( ! sn->m_parent ) {
 			sn->m_depth   = 0;
 			sn->m_tagHash = bh;
-			sn->m_turkTagHash = sn->m_turkBaseHash;//m_tagId;
-			//sn->m_turkTagHash = bh;
+			sn->m_turkTagHash32 = sn->m_turkBaseHash;//m_tagId;
+			//sn->m_turkTagHash32 = bh;
 			//sn->m_formatHash = fh;
 			// sanity check
 			if ( bh == 0 ) { char *xx=NULL;*xx=0; }
@@ -14628,10 +14686,10 @@ void Sections::setTagHashes ( ) {
 		// now use this for setting Date::m_dateTagHash instead
 		// of using Section::m_tagHash since often the dates like
 		// for zvents.org are in a <tr id=xxxx> where xxxx changes
-		sn->m_turkTagHash = 
+		sn->m_turkTagHash32 = 
 			//hash32h ( sn->m_tagId, sn->m_parent->m_turkTagHash );
 			hash32h ( sn->m_turkBaseHash,
-				  sn->m_parent->m_turkTagHash );
+				  sn->m_parent->m_turkTagHash32 );
 
 		sn->m_colorHash = hash32h ( bh , sn->m_parent->m_colorHash );
 
@@ -14644,7 +14702,7 @@ void Sections::setTagHashes ( ) {
 		// the section voting should still match up
 		if ( bh == BH_IMPLIED ) {
 			sn->m_tagHash     = sn->m_parent->m_tagHash;
-			sn->m_turkTagHash = sn->m_parent->m_turkTagHash;
+			sn->m_turkTagHash32 = sn->m_parent->m_turkTagHash32;
 		}
 
 		// sanity check
@@ -15554,6 +15612,8 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 	//	m_sbuf->safePrintf("A=%li ",sk->m_a);
 
 
+	/*
+	  take out for now since we changed the stats class around
 	if ( format == FORMAT_PROCOG && sk->m_stats.m_numUniqueSites >= 2 ) {
 		// do not count our own site!
 		m_sbuf->safePrintf("<i>"
@@ -15571,6 +15631,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 				   , sk->m_sentenceContentHash64
 				   ,(long)sk->m_stats.m_numUniqueSites-1);
 	}
+	*/
 
 	m_sbuf->safePrintf("<i>");
 
@@ -15606,14 +15667,80 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// print tag hash now
 		m_sbuf->safePrintf("taghash=%lu ",(long)sk->m_tagHash);
 		
-		m_sbuf->safePrintf("turktaghash=%lu ",(long)sk->m_turkTagHash);
+		m_sbuf->safePrintf("turktaghash=%lu ",
+				   (long)sk->m_turkTagHash32);
 		
 		if ( sk->m_contentHash64 )
-			m_sbuf->safePrintf("ch=%llu ",sk->m_contentHash64);
+			m_sbuf->safePrintf("ch64=%llu ",sk->m_contentHash64);
 		if ( sk->m_sentenceContentHash64 && 
 		     sk->m_sentenceContentHash64 != sk->m_contentHash64 )
 			m_sbuf->safePrintf("sch=%llu ",
 					   sk->m_sentenceContentHash64);
+
+
+		// show this stuff for tags that contain sentences indirectly,
+		// that is what we hash in XmlDoc::hashSections()
+		//if(sk->m_indirectSentHash64 && sk->m_tagId != TAG_TEXTNODE) {
+		uint64_t mod = 0;
+		if ( sk->m_flags & SEC_HASHXPATH ) {
+		// show for all tags now because diffbot wants to see
+		// markup on all tags
+		//if ( sk->m_indirectSentHash64 && sk->m_tagId !=TAG_TEXTNODE){
+		//if ( sk->m_stats.m_totalDocIds ) {
+			mod = (unsigned long)sk->m_turkTagHash32;
+			mod ^= (unsigned long)(unsigned long long)m_siteHash64;
+			m_sbuf->safePrintf("<a style=decoration:none; "
+					   "href=/search?c=%s&"
+					   "q=gbfacetstr%%3A"
+					   "gbxpathsitehash%llu>"
+					   //"<u>"
+					   "xpathsitehash=%llu"
+					   //"</u>"
+					   "</a> "
+					   //"</font> "
+					   ,m_coll
+					   ,mod
+					   ,mod);
+		}
+
+		SectionStats *ss = &sk->m_stats;
+
+		// also the value of the inner html hashed
+		if ( sk->m_flags & SEC_HASHXPATH ) {//ss->m_totalMatches > 0) {
+			unsigned long val ;
+			val = (unsigned long) sk->m_indirectSentHash64 ;
+			m_sbuf->safePrintf("xpathsitehashval=%lu ", val );
+		}
+
+		// some voting stats
+		if ( sk->m_flags & SEC_HASHXPATH ) {//ss->m_totalMatches > 0) {
+			m_sbuf->safePrintf("_s=M%liD%lin%liu%lih%lu "
+					   ,(long)ss->m_totalMatches
+					   ,(long)ss->m_totalDocIds
+					   ,(long)ss->m_totalEntries
+					   ,(long)ss->m_numUniqueVals
+					   ,(unsigned long)mod
+					   );
+		}
+
+		// take this out for now... MDW 7/7/2014
+
+		// // for the gbsectionhash:xxxxx terms we index
+		// if ( sk->m_sentenceContentHash64 ) {
+		// 	unsigned long mod = (unsigned long)sk->m_turkTagHash32;
+		// 	mod ^= (unsigned long)m_siteHash64;
+		// 	m_sbuf->safePrintf(//"<font color=red>"
+		// 			   "gbsectionhash32=%lu "
+		// 			   //"</font> "
+		// 			   ,mod);
+		// }
+		// if ( sk->m_contentHash64 )
+		// 	m_sbuf->safePrintf(//"<font color=red>"
+		// 			   "ch32=%lu"
+		// 			   //"</font> "
+		// 			   ,
+		// 			   (unsigned long)sk->m_contentHash64);
+					   
 		
 		if ( sk->m_lastLinkContentHash32 )
 			m_sbuf->safePrintf("llch=%lu ",
@@ -15667,7 +15794,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			m_sbuf->safePrintf(" (%li places)",acount);
 	}
 
-	m_sbuf->safePrintf("</i>");
+	m_sbuf->safePrintf("</i>\n");
 
 	// now print each word and subsections in this section
 	long a = sk->m_a;

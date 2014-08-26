@@ -121,7 +121,12 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBREVSORTBYINT   60
 #define FIELD_GBNUMBERMININT   61
 #define FIELD_GBNUMBERMAXINT   62
-
+#define FIELD_GBFACETSTR       63
+#define FIELD_GBFACETINT       64
+#define FIELD_GBFACETFLOAT     65
+#define FIELD_GBNUMBEREQUALINT 66
+#define FIELD_GBNUMBEREQUALFLOAT 67
+#define FIELD_SUBURL2            68
 
 #define FIELD_GBOTHER 92
 
@@ -132,11 +137,19 @@ char getFieldCode3 ( long long h64 ) ;
 
 long getNumFieldCodes ( );
 
+// . values for QueryField::m_flag
+// . QTF_DUP means it is just for the help page in PageRoot.cpp to 
+//   illustrate a second or third example
+#define QTF_DUP  0x01
+#define QTF_HIDE 0x02
+
 struct QueryField {
 	char *text;
 	char field;
 	bool hasColon;
+	char *example;
 	char *desc;
+	char  m_flag;
 };
 
 extern struct QueryField g_fields[];
@@ -418,6 +431,14 @@ class QueryTerm {
 	long       m_termLen;
 	// point to the posdblist that represents us
 	class RdbList   *m_posdbListPtr;
+
+	// the ()'s following an int/float facet term dictate the
+	// ranges for clustering the numeric values. like 
+	// gbfacetfloat:price:(0-10,10-20,...)
+	// values outside the ranges will be ignored
+	char *m_parenList;
+	long  m_parenListLen;
+
 	// . our representative bits
 	// . the bits in this bit vector is 1-1 with the QueryTerms
 	// . if a doc has query term #i then bit #i will be set
@@ -496,6 +517,11 @@ class QueryTerm {
 	class QueryTerm *m_rightPhraseTerm;
 	// for scoring summary sentences from XmlDoc::getEventSummary()
 	float m_score;
+
+	// facet support in Posdb.cpp for compiling the data and we'll
+	// send this back via Msg39Reply::ptr_facetHashList which will be
+	// 1-1 with the query terms.
+	HashTableX m_facetHashTable;
 
 	char m_startKey[MAX_KEY_BYTES];
 	char m_endKey  [MAX_KEY_BYTES];
@@ -810,6 +836,14 @@ class Query {
 	long long getQueryHash();
 
 	bool isCompoundTerm ( long i ) ;
+
+	class QueryTerm *getQueryTermByTermId64 ( long long termId ) {
+		for ( long i = 0 ; i < m_numTerms ; i++ ) {
+			if ( m_qterms[i].m_termId == termId ) 
+				return &m_qterms[i];
+		}
+		return NULL;
+	};
 
 	// silly little functions that support the BIG HACK
 	//long getNumNonFieldedSingletonTerms() { return m_numTermsSpecial; };

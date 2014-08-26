@@ -1730,11 +1730,14 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 		//log("Loop: read %lli",gettimeofdayInMilliseconds());
 		g_loop.callCallbacks_ass ( false , fd ); 
 	}
-	//else if ( band & POLLERR )  
+	// fix qainject1() test with this
+	else if ( band & POLLERR )  {
+		log(LOG_INFO,"loop: got POLLERR on fd=%i.",fd);
+	}
 	//g_loop.callCallbacks_ass ( false , fd ); 
 	// this happens if the socket closes abruptly
 	// or out of band data, etc... see "man 2 poll" for more info
-	else { 
+	else if ( band & POLLHUP ) { 
 		// i see these all the time for fd == 0, so don't print it
 		if ( fd != 0 ) 
 			log(LOG_INFO,"loop: Received hangup on fd=%i.",fd);

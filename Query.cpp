@@ -8,6 +8,8 @@
 #include "Url.h"
 #include "Clusterdb.h" // g_clusterdb.getNumGlobalRecs()
 #include "StopWords.h" // isQueryStopWord()
+#include "Sections.h"
+#include "Msg1.h"
 #include "Speller.h"
 //#include "Thesaurus.h"
 #include "Mem.h"
@@ -378,6 +380,8 @@ bool Query::set2 ( char *query        ,
 		else if ( qw->m_fieldCode == FIELD_QUOTA )
 			m_hasQuotaField = true;
 		else if ( qw->m_fieldCode == FIELD_SUBURL )
+			m_hasSubUrlField = true;
+		else if ( qw->m_fieldCode == FIELD_SUBURL2 )
 			m_hasSubUrlField = true;
 	}
 
@@ -1172,7 +1176,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	long sn = 0;
 	Synonyms syn;
 	// loop over all words in query and process its synonyms list
-	if ( m_langId != langUnknown && m_queryExpansion ) 
+	//if ( m_langId != langUnknown && m_queryExpansion ) 
+	// if lang is "xx" unknown we still do synonyms it just does
+	// a loop over all languages starting with english
+	if ( m_queryExpansion ) 
 		sn = m_numWords;
 
 	long long to = hash64n("to",0LL);
@@ -2266,17 +2273,32 @@ bool Query::setQWords ( char boolFlag ,
 		if ( fieldCode == FIELD_SUBURL )
 			ph = hash64 ( "inurl", 5 );
 
+		// fix for filetype:pdf queries
+		if ( fieldCode == FIELD_TYPE )
+			ph = hash64 ("type",4);
+
 		// these are range constraints on the gbsortby: termlist
 		// which sorts numbers in a field from low to high
 		if ( fieldCode == FIELD_GBNUMBERMIN )
 			ph = hash64 ("gbsortby", 8);
 		if ( fieldCode == FIELD_GBNUMBERMAX )
 			ph = hash64 ("gbsortby", 8);
+		if ( fieldCode == FIELD_GBNUMBEREQUALFLOAT )
+			ph = hash64 ("gbsortby", 8);
 
 		if ( fieldCode == FIELD_GBNUMBERMININT )
 			ph = hash64 ("gbsortbyint", 11);
 		if ( fieldCode == FIELD_GBNUMBERMAXINT )
 			ph = hash64 ("gbsortbyint", 11);
+		if ( fieldCode == FIELD_GBNUMBEREQUALINT )
+			ph = hash64 ("gbsortbyint", 11);
+
+
+		if ( fieldCode == FIELD_GBFACETFLOAT )
+			ph = hash64 ("gbsortby",8);
+		if ( fieldCode == FIELD_GBFACETINT )
+			ph = hash64 ("gbsortbyint",11);
+
 
 		// ptr to field, if any
 
@@ -2304,11 +2326,16 @@ bool Query::setQWords ( char boolFlag ,
 		     // gbmin:price:1.23
 		     fieldCode == FIELD_GBNUMBERMIN ||
 		     fieldCode == FIELD_GBNUMBERMAX ||
+		     fieldCode == FIELD_GBNUMBEREQUALFLOAT ||
 
 		     fieldCode == FIELD_GBSORTBYINT ||
 		     fieldCode == FIELD_GBREVSORTBYINT ||
 		     fieldCode == FIELD_GBNUMBERMININT ||
 		     fieldCode == FIELD_GBNUMBERMAXINT ||
+		     fieldCode == FIELD_GBNUMBEREQUALINT ||
+		     fieldCode == FIELD_GBFACETSTR ||
+		     fieldCode == FIELD_GBFACETINT ||
+		     fieldCode == FIELD_GBFACETFLOAT ||
 
 		     fieldCode == FIELD_GBAD  ) {
 			// . find 1st space -- that terminates the field value
@@ -2318,6 +2345,8 @@ bool Query::setQWords ( char boolFlag ,
 				 words.m_wordLens[words.m_numWords-1]);
 			// use this for gbmin:price:1.99 etc.
 			long firstColonLen = -1;
+			long lastColonLen = -1;
+			long colonCount = 0;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2327,7 +2356,12 @@ bool Query::setQWords ( char boolFlag ,
 				// stop at first white space
 				if ( is_wspace_utf8(w+wlen) ) break;
 				// in case of gbmin:price:1.99 record first ':'
-				if ( w[wlen]==':' ) firstColonLen = wlen;
+				if ( w[wlen]==':' ) {
+					lastColonLen = wlen;
+					if ( firstColonLen == -1 )
+						firstColonLen = wlen;
+					colonCount++;
+				}
 				wlen++;
 			}
 			// ignore following words until we hit a space
@@ -2352,16 +2386,33 @@ bool Query::setQWords ( char boolFlag ,
 
 
 			// gbmin:price:1.23
-			if ( firstColonLen>0 &&
+			if ( lastColonLen>0 &&
 			     ( fieldCode == FIELD_GBNUMBERMIN ||
 			       fieldCode == FIELD_GBNUMBERMAX ||
+			       fieldCode == FIELD_GBNUMBEREQUALFLOAT ||
+			       fieldCode == FIELD_GBNUMBEREQUALINT ||
 			       fieldCode == FIELD_GBNUMBERMININT ||
 			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
 				// record the field
-				wid = hash64Lower_utf8(w,firstColonLen , 0LL );
+				wid = hash64Lower_utf8(w,lastColonLen , 0LL );
+				// fix gbminint:gbfacetstr:gbxpath...:165004297
+				if ( colonCount == 2 ) {
+					long long wid1;
+					long long wid2;
+					char *a = w;
+					char *b = w + firstColonLen;
+					wid1 = hash64Lower_utf8(a,b-a);
+					a = w + firstColonLen+1;
+					b = w + lastColonLen;
+					wid2 = hash64Lower_utf8(a,b-a);
+					// keep prefix as 2nd arg to this
+					wid = hash64 ( wid2 , wid1 );
+					// we need this for it to work
+					ph = 0LL;
+				}
 				// and also the floating point after that
-				qw->m_float = atof ( w + firstColonLen + 1 );
-				qw->m_int = (long)atoll( w + firstColonLen+1);
+				qw->m_float = atof ( w + lastColonLen + 1 );
+				qw->m_int = (long)atoll( w + lastColonLen+1);
 			}
 
 
@@ -3177,148 +3228,757 @@ static bool       s_isInitialized = false;
 
 // 3rd field = m_hasColon
 struct QueryField g_fields[] = {
-	{"url", FIELD_URL, true,"Match the exact url. Example: url:www.gigablast.com/addurl.htm"},
-	{"ext", FIELD_EXT, true,"Match the url extension. Example: ext:htm or ext:mpeg to find urls ending in .htm or .mpeg respectively."},
-	{"link", FIELD_LINK, true,"Match pages that link to the given url. Example: link:www.gigablast.com will return all pages linking to the www.gigablast.com page."},
-	{"links", FIELD_LINKS, true,"Same as link:."},
-	{"ilink", FIELD_ILINK, true,"Similar to above."},
-	{"sitelink", FIELD_SITELINK, true,"Matches all pages that link to the given site. Example:sitelink:www.gigablast.com matches all pages that link to some page on the www.gigablast.com site."},
-	{"site", FIELD_SITE, true,"Matches all pages from the given site. Example: site:www.gigablast.com will return all the pages on the gigablast site"},
+
+	{"url", 
+	 FIELD_URL, 
+	 true,
+	 "url:www.abc.com/page.html",
+	 "Matches the page with that exact url. Uses the first url, not "
+	 "the url it redirects to, if any." , 
+	 0 },
+
+
+	{"ext", 
+	 FIELD_EXT, 
+	 true,
+	 "ext:doc",
+	 "Match documents whose url ends in the <i>.doc</i> file extension.",
+	 0 },
+
+
+	{"url2", 
+	 FIELD_URL, 
+	 true,
+	 "url2:www.abc.com/page.html",
+	 "Matches the <i>Spider Status</i> documents for the specified url. "
+	 "These special documents "
+	 "let you know exactly when the url was attempted to be "
+	 "spidered and the outcome.",
+	 0 },
+
+
+	{"link", 
+	 FIELD_LINK, 
+	 true,
+	 "link:www.gigablast.com/foo.html",
+	 "Matches all the documents that have a link to "
+	 "http://www.gigablast.com/foobar.html",
+	 0 },
+
+	//{"links", FIELD_LINKS, true,"Same as link:."},
+	//{"ilink", FIELD_ILINK, true,"Similar to above."},
+
+
+	{"sitelink", 
+	 FIELD_SITELINK, 
+	 true,
+	 "sitelink:abc.foobar.com",
+	 "Matches all documents that link to any page on the "
+	 "<i>abc.foobar.com</i> site.",
+	 0 },
+
+	{"site", 
+	 FIELD_SITE, 
+	 true,
+	 "site:mysite.com",
+	 "Matches all documents on the mysite.com domain.",
+	 0 },
+
+	{"site", 
+	 FIELD_SITE, 
+	 true,
+	 "site:www.mysite.com/dir1/dir2/",
+	 "Matches all documents whose url starts with "
+	 "www.mysite.com/dir1/dir2/",
+	 QTF_DUP },
+
+
 	//{"coll", FIELD_COLL, true,"Not sure if this works."},
-	{"ip", FIELD_IP, true,"Matches all pages with the given ip. Example:1.2.3.4 will match all pages whose urls have that IP address."},
-	{"inurl", FIELD_SUBURL, true,"Matches all pages that have the given terms in the url. Example inurl:water will match all pages whose url has the word water in it, but the word must be delineated by punctuation."},
-	{"suburl", FIELD_SUBURL, true,"Same as inurl."},
-	{"intitle", FIELD_TITLE, false,"Matches all pages that have pages that have the given term in their title. Example: title:web returns all pages that have the word web in their title."},
-	{"title", FIELD_TITLE, false,"Same as intitle:"},
-	{"isclean", FIELD_ISCLEAN, true,"Matches all pages that are deemed non-offensive and safe for children."},
-	{"gbrss", FIELD_GBRSS, true,"Matches all pages that are rss feeds."},
-	//{"gbruleset",FIELD_GBRULESET, true,"Obsolete."},
-	{"type", FIELD_TYPE, false,"Matches all pages of the specified file type. Example: type:pdf will match pdf documents, regardless of their file extension. Examples: type:doc type:status type:json type:xls"},
-	{"filetype", FIELD_TYPE, false,"Same as type:"},
-	{"gbisadult",FIELD_TYPE,false,"use gbisadult:0 and gbisadult:1 to restrict results to non-adult and adult documents respectively."},
-	{"gbimage",FIELD_URL,false,"use gbimage:<url> to return all documents containing that image url."},
+	{"ip", 
+	 FIELD_IP, 
+	 true,
+	 "ip:1.2.3.4",
+	 "Matches all documents whose IP is 1.2.3.4.",
+	 0 },
 
-	{"gbstatus",FIELD_TYPE,false,"If document is a spider reply, then search the spider status as a number using this. 0 means success, so gbstatus:0 would return all successful statuses."},
-	{"gbstatusmsg",FIELD_TYPE,false,"If document is a spider reply, then search the spider status description, which might be something like 'TCP Timed out' or 'Robots.txt disallows' or 'Success', if no error."},
 
-	{"gbhasthumbnail",FIELD_TYPE,false,"use gbhasthumbnail:0 and gbhasthumbnail:1 to restrict results to those that do not have or have thumbnails respectively."},
-	{"gbtag*", FIELD_TAG, false,"Matches all pages whose tag named * have the specified value. Example: gbtagingoogle:1 matches all pages that have a value of 1 for their ingoogle tag in tagdb."},
-	{"zip", FIELD_ZIP, false,"Matches all pages that have the specified zip code in their meta zip code tag. Not to be used with events."},
-	{"zipcode", FIELD_ZIP, false,"Same as zip:"},
+	{"ip", 
+	 FIELD_IP, 
+	 true,
+	 "ip:1.2.3",
+	 "Matches all documents whose IP STARTS with 1.2.3.",
+	 QTF_DUP },
+
+
+	{"inurl", 
+	 FIELD_SUBURL, 
+	 true,
+	 "inurl:dog",
+	 "Matches all documents that have the word dog in their url, like "
+	 "http://www.mysite.com/dog/food.html. However will not match "
+	 "http://www.mysite.com/dogfood.html because it is not an "
+	 "individual word. It must be delineated by punctuation.",
+	 0 },
+
+
+	{"suburl", 
+	 FIELD_SUBURL, 
+	 true,
+	 "suburl:dog",
+	 "Same as inurl.",
+	0},
+
+	{"intitle", 
+	 FIELD_TITLE, 
+	 false,
+	 "title:cat",
+	 "Matches all the documents that have the word cat in their "
+	 "title.",
+	 0 },
+
+
+	{"intitle", 
+	 FIELD_TITLE, 
+	 false,
+	 "title:\"cat food\"",
+	 "Matches all the documents that have the phrase \"cat food\" "
+	 "in their title.",
+	 QTF_DUP },
+	
+
+	{"title", 
+	 FIELD_TITLE, 
+	 false,
+	 "title:cat",
+	 "Same as intitle:",
+	0},
+
+
+	//{"isclean", FIELD_ISCLEAN, true,"Matches all pages that are deemed non-offensive and safe for children."},
+
+
+	{"gbinrss", 
+	 FIELD_GBRSS, 
+	 true,
+	 "gbinrss:1",
+	 "Matches all documents that are in RSS feeds. Likewise, use "
+	 "<i>gbinrss:0</i> to match all documents that are NOT in RSS feeds.",
+	 0},
+
+
+	{"type", 
+	 FIELD_TYPE, 
+	 false,
+	 "type:pdf",
+	 "Matches all documents that are PDFs. Other possible types include "
+	 "<i>html, text, xml, pdf, doc, xls, ppt, ps, css, json, status.</i> "
+	 "<i>status</i> matches special documents that are stored every time "
+	 "a url is spidered so you can see all the spider attempts and when "
+	 "they occurred as well as the outcome.",
+	 0},
+
+	{"filetype", 
+	 FIELD_TYPE, 
+	 false,
+	 "filetype:pdf",
+	 "Same as type: above.",
+	0},
+
+	{"gbisadult",
+	 FIELD_GENERIC,
+	 false,
+	 "gbisadult:1",
+	 "Matches all documents that have been detected as adult documents "
+	 "and may be unsuitable for children. Likewise, use "
+	 "<i>gbisadult:0</i> to match all documents that were NOT detected "
+	 "as adult documents.",
+	 0},
+
+	{"gbimage",
+	 FIELD_URL,
+	 false,
+	 "gbimage:site.com/image.jpg",
+	 "Matches all documents that contain the specified image.",
+	 0},
+
+	{"gbhasthumbnail",
+	 FIELD_GENERIC,
+	 false,
+	 "gbhasthumbnail:1",
+	 "Matches all documents for which Gigablast detected a thumbnail. "
+	 "Likewise use <i>gbhasthumbnail:0</i> to match all documents that "
+	 "do not have thumbnails.",
+	 0},
+
+
+	{"gbtag*", 
+	 FIELD_TAG, 
+	 false,
+	 "gbtag*",
+	 "Matches all documents whose tag named * have the specified value "
+	 "in the tagdb entry for the url. Example: gbtagsitenuminlinks:2 "
+	 "matches all documents that have 2 qualified "
+	 "inlinks pointing to their site "
+	 "based on the tagdb record. You can also provide your own "
+	 "tags in addition to the tags already present. See the <i>tagdb</i> "
+	 "menu for more information.",
+	0},
+
+
+	{"gbzipcode", 
+	 FIELD_ZIP, 
+	 false,
+	 "gbzip:90210",
+	 "Matches all documents that have the specified zip code "
+	 "in their meta zip code tag.",
+	 0},
+
 	//{"range", FIELD_RANGE, false,""}, // obsolete, datedb replaced
-	{"charset", FIELD_CHARSET, false,"Matches all pages in the given character set."},
-	{"urlhash",FIELD_URLHASH, false,""},
-	{"urlhashdiv10",FIELD_URLHASHDIV10, false,""},
-	{"urlhashdiv100",FIELD_URLHASHDIV100, false,""},
-	{"gblang",FIELD_GBLANG,false,"Matches all pages in the given language. Examples: gblang:en gblang:fr gblang:de"},
-	{"gbquality",FIELD_GBQUALITY,true,""},
-	{"gblinktextin",FIELD_LINKTEXTIN,true,""},
-	{"gblinktextout",FIELD_LINKTEXTOUT,true,""},
-	{"gbkeyword",FIELD_KEYWORD,true,""},
-	{"gbcharset", FIELD_CHARSET, false,""},
-	{"gbpathdepth", FIELD_GBOTHER, false,"the path depth of the url"},
-	{"gbhasfilename", FIELD_GBOTHER, false,""},
-	{"gbiscgi", FIELD_GBOTHER, false,""},
-	{"gbhasext", FIELD_GBOTHER, false,""},
-	{"gbsubmiturl", FIELD_GBOTHER, false,""},
+
+	{"gbcharset", 
+	 FIELD_CHARSET, 
+	 false,
+	 "gbcharset:utf-8",
+	 "Matches all documents originally in the Utf-8 charset. "
+	 "Available character sets are listed in the <i>iana_charset.cpp</i> "
+	 "file in the open source distribution. There are a lot. Some "
+	 "more popular ones are: <i>us, latin1, iso-8859-1, csascii, ascii, "
+	 "latin2, latin3, latin4, greek, shift_jis.",
+	 0},
+
+
+	// this just complicates things for now, so comment out
+	//{"urlhash",FIELD_URLHASH, false,""},
+	//{"urlhashdiv10",FIELD_URLHASHDIV10, false,""},
+	//{"urlhashdiv100",FIELD_URLHASHDIV100, false,""},
+
+	{"gblang",
+	 FIELD_GBLANG,
+	 false,
+	 "gblang:de",
+	 "Matches all documents in german. "
+	 "The supported language abbreviations "
+	 "are at the bottom of the <i>url filters</i> page. Some more "
+	 "common ones are <i>en, es, fr, zh_cn</i>.",
+	 0},
+
+	//{"gbquality",FIELD_GBQUALITY,true,""},
+	//{"gblinktextin",FIELD_LINKTEXTIN,true,""},
+	//{"gblinktextout",FIELD_LINKTEXTOUT,true,""},
+	//{"gbkeyword",FIELD_KEYWORD,true,""},
+	//{"gbcharset", FIELD_CHARSET, false,""},
+
+	{"gbpathdepth", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbpathdepth:3",
+	 "Matches all documents whose url has 3 path components to it like "
+	 "http://somedomain.com/dir1/dir2/dir3/foo.html",
+	 0},
+
+
+	{"gbhopcount", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhopcount:2",
+	 "Matches all documents that are a minimum of two link hops away "
+	 "from a root url.",
+	 0},
+
+
+	{"gbhasfilename", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhasfilename:1",
+	 "Matches all documents whose url ends in a filename like "
+	 "<i>http://somedomain.com/dir1/myfile</i> and not "
+	 "<i>http://somedomain.com/dir1/dir2/</i>. Likewise, use "
+	 "<i>gbhasfilename:0</i> to match all the documents that do not "
+	 "have a filename in their url.",
+	 0},
+
+
+	{"gbiscgi", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbiscgi:1",
+	 "Matches all documents that have a question mark in their url. "
+	 "Likewise gbiscgi:0 matches all documents that do not.",
+	0},
+
+
+	{"gbhasext", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhasext:1",
+	 "Matches all documents that have a file extension in their url. "
+	 "Likewise, <i>gbhasext:0</i> matches all documents that do not have "
+	 "a file extension in their url.",
+	0},
+
+	{"gbsubmiturl", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbsubmiturl:domain.com/process.php",
+	 "Matches all documents that have a form that submits to the "
+	 "specified url.",
+	0},
+
+
+
+
+
+	//
+	// for content type CT_STATUS documents (Spider status docs)
+	//
+
+
 
 	//{"qdom", FIELD_QUOTA, false,""},
 	//{"qhost", FIELD_QUOTA, false,""},
-	{"gbtagvector", FIELD_GBTAGVECTOR, false,""},
 
-	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,""},
-	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,""},
-	{"gbcontenthash", FIELD_GBCONTENTHASH, false,""},
 
-	{"gbsortby", FIELD_GBSORTBY, false,
-	 "Example: gbsortby:price. Fields can be "
-	 "in JSON or in meta tag."},
-	{"gbrevsortby", FIELD_GBREVSORTBY, false,
-	 "Example: gbrevsortby:item.price . "
-	 "Fields can be in JSON or in meta tag."},
+	{"gbsortbyfloat", 
+	 FIELD_GBSORTBY, 
+	 false,
+	 "cameras gbsortbyfloat:price",
+	 "Sort all documents that "
+	 "contain 'camera' by price. <i>price</i> can be a root JSON field or "
+	 "in a meta tag, or in an xml &lt;price&gt; tag.", 
+	 0 },
+
+
+	{"gbsortbyfloat", 
+	 FIELD_GBSORTBY, 
+	 false,
+	 "cameras gbsortbyfloat:product.price",
+	 "Sort all documents that "
+	 "contain 'camera' by price. <i>price</i> can be in a JSON document "
+	 "like "
+	 "<i>{ \"product\":{\"price\":1500.00}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0 },
+
+
+	{"gbrevsortbyfloat", 
+	 FIELD_GBREVSORTBY, 
+	 false,
+	 "cameras gbrevsortbyfloat:product.price",
+	 "Like above example but sorted with highest prices on top.",
+	 0 },
+
+
+	{"gbsortby", 
+	 FIELD_GBSORTBY, 
+	 false,
+	 "dog gbsortbyint:gbspiderdate",
+	 "Sort the documents that contain 'dog' by "
+	 "the date they were last spidered, with the newest "
+	 "on top.",
+	 QTF_HIDE},
+
+	{"gbrevsortby", 
+	 FIELD_GBREVSORTBY, 
+	 false,
+	 "dog gbrevsortbyint:gbspiderdate",
+	 "Sort the documents that contain 'dog' by "
+	 "the date they were last spidered, but with the "
+	 "oldest on top.",
+	 QTF_HIDE},
+
+
+
+
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "pilots gbsortbyint:employees",
+	 "Sort all documents that "
+	 "contain 'pilots' by employees. "
+	 "<i>employees</i> can be a root JSON field or "
+	 "in a meta tag, or in an xml &lt;price&gt; tag. The value it "
+	 "contains is interpreted as a 32-bit integer.", 
+	 0 },
+
+
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "gbsortbyint:gbspiderdate",
+	 "Sort all documents by the date they were spidered/downloaded.",
+	 0},
+
+
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "gbsortbyint:company.employees",
+	 "Sort all documents by employees. Documents can contain "
+	 "<i>employees</i> in a JSON document "
+	 "like "
+	 "<i>{ \"product\":{\"price\":1500.00}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0 },
+
+
+	{"gbrevsortbyint", 
+	 FIELD_GBREVSORTBYINT, 
+	 false,
+	 "gbrevsortbyint:gbspiderdate",
+	 "Sort all documents by the date they were spidered/downloaded "
+	 "but with the oldest on top.",
+	 0},
+
+
 
 	// gbmin:price:1.23
-	{"gbmin", FIELD_GBNUMBERMIN, false,"Usage: gbmin:price:1.99 . Numeric "
-	 "fields can be in JSON or in meta tag."},
-	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
+
+	{"gbminfloat", 
+	 FIELD_GBNUMBERMIN, 
+	 false,
+	 "cameras gbminfloat:price:109.99",
+	 "Matches all documents that "
+	 "contain 'camera' or 'cameras' and have a price of at least 109.99. "
+	 "<i>price</i> can be a root JSON field or "
+	 "in a meta tag name <i>price</i>, or in an xml &lt;price&gt; tag.", 
+	 0 },
 
 
-	{"gbdocspiderdate",FIELD_GBOTHER,false,
-	 "Example: gbspiderdate:1400081479 will return results that have "
-	 "that spider date timestamp (UTC)"},
-
-	{"gbspiderdate",FIELD_GBOTHER,false,
-	 "Similar to above but includes spider reply \"documents\"."},
-
-
-	{"gbdocindexdate",FIELD_GBOTHER,false,
-	 "Similar to above but when document was indexed. Time is "
-	 "slightly greater than or equal to the spider date."},
-
-	{"gbindexdate",FIELD_GBOTHER,false,
-	 "Similar to above but includes spider reply \"documents\"."},
+	{"gbminfloat", 
+	 FIELD_GBNUMBERMIN, 
+	 false,
+	 "cameras gbminfloat:product.price:109.99",
+	 "Matches all documents that "
+	 "contain 'camera' or 'cameras' and have a price of at least 109.99 "
+	 "in a JSON document like "
+	 "<i>{ \"product\":{\"price\":1500.00}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0 },
 
 
-	// {"gbreplyspiderdate",FIELD_GBOTHER,false,
+	// alias we need to bury
+	{"gbmin", 
+	 FIELD_GBNUMBERMIN, 
+	 false,
+	 "",
+	 "",
+	 QTF_HIDE},
+
+
+
+	{"gbmaxfloat", 
+	 FIELD_GBNUMBERMAX, 
+	 false,
+	 "cameras gbmaxfloat:price:109.99",
+	 "Like the gbminfloat examples above, but is an upper bound.",
+	 0 },
+
+
+
+	{"gbequalfloat", 
+	 FIELD_GBNUMBEREQUALFLOAT, 
+	 false,
+	 "gbequalfloat:product.price:1.23",
+	 "Similar to gbminfloat and gbmaxfloat but is an equality constraint.",
+	 0 },
+
+
+
+	{"gbmax", 
+	 FIELD_GBNUMBERMAX, 
+	 false,
+	 "",
+	 "",
+	 QTF_HIDE},
+
+
+
+	{"gbminint", 
+	 FIELD_GBNUMBERMININT, 
+	 false,
+	 "gbminint:gbspiderdate:1391749680",
+	 "Matches all documents with a spider timestamp of at least "
+	 "1391749680. Use this as opposed th gbminfloat when you need "
+	 "32 bits of integer precision.",
+	 0},
+
+
+	{"gbmaxint", 
+	 FIELD_GBNUMBERMAXINT, 
+	 false,
+	 "gbmaxint:company.employees:20",
+	 "Matches all companies with 20 or less employees "
+	 "in a JSON document like "
+	 "<i>{ \"company\":{\"employees\":13}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;company&gt;&lt;employees&gt;13&lt;/employees&gt;"
+	 "&lt;/company&gt;"
+	 "</i>", 
+	 0},
+
+
+	{"gbequalint", 
+	 FIELD_GBNUMBEREQUALINT, 
+	 false,
+	 "gbequalint:company.employees:13",
+	 "Similar to gbminint and gbmaxint but is an equality constraint.",
+	 0},
+
+
+
+
+
+	{"gbdocspiderdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbspiderdate:1400081479",
+	 "Matches documents that have "
+	 "that spider date timestamp (UTC). Does not include the "
+	 "special spider status documents. This is the time the document "
+	 "completed downloading.",
+	 0},
+
+
+	{"gbspiderdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbspiderdate:1400081479",
+	 "Like above, but DOES include the special spider status documents.",
+	 0},
+
+	{"gbdocindexdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbdocindexdate:1400081479",
+	 "Like above, but is the time the document was last indexed. "
+	 "This time is "
+	 "slightly greater than or equal to the spider date. Does not "
+	 "include the special spider status documents.",
+	 0},
+
+
+	{"gbindexdate",
+	 FIELD_GENERIC,
+	 false,
+	 "gbindexdate:1400081479",
+	 "Like above, but it does include the special spider status "
+	 "documents.",
+	 0},
+
+	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
 	//  "results that have "
 	//  "that spider date timestamp (UTC)"},
 
-	{"gbsortbyint", FIELD_GBSORTBYINT, false,
-	 "Example: gbsortbyint:intfield . Fields can be "
-	 "in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
 
-	{"gbrevsortbyint", FIELD_GBREVSORTBYINT, false,
-	 "Example: 'gbrevsortbyint:item.count'. "
-	 "Fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
-
-	{"gbminint", FIELD_GBNUMBERMININT, false,
-	 "Example: 'gbminint:gbspiderdate:1391749680' "
-	 "'gbminint:count:99'. Numeric "
-	 "fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
-
-	{"gbmaxint", FIELD_GBNUMBERMAXINT, false,
-	 "Example: 'gbmaxint:gbspiderdate:1391749680' "
-	 "'gbmaxint:count:99'. Numeric "
-	 "fields can be in JSON or in meta tag. "
-	 "Use 'gbspiderdate' field for the last time the page was "
-	 "spidered in seconds since the epoch in UTC."
-	},
+	{"gbfacetstr", 
+	 FIELD_GBFACETSTR, 
+	 false,
+	 "gbfacetstr:color",
+	 "Returns facets in "
+	 "the search results "
+	 "by their color field.",
+	 0},
 
 
-	{"gbcountry",FIELD_GBCOUNTRY,false,""},
-	{"gbad",FIELD_GBAD,false,""},
+	{"gbfacetstr", 
+	 FIELD_GBFACETSTR, 
+	 false,
+	 "gbfacetstr:product.color",
+	 "Returns facets in "
+	 "of the color field in a JSON document like "
+	 "<i>{ \"product\":{\"color\":\"red\"}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;color&gt;red&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0},
 
 
-	{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:product.cores",
+	 "Returns facets in "
+	 "of the <i>cores</i> field in a JSON document like "
+	 "<i>{ \"product\":{\"cores\":10}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;cores&gt;10&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:gbhopcount",
+	 "Returns facets in "
+	 "of the <i>gbhopcount</i> field over the documents so you can "
+	 "search the distribution of hopcounts over the index.",
+	 0},
+
+	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
+	 "gbfacetfloat:product.weight",
+	 "Returns facets "
+	 "of the <i>weight</i> field in a JSON document like "
+	 "<i>{ \"product\":{\"weight\":1.45}} "
+	 "</i> or, alternatively, an XML document like <i>"
+	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
+	 "</i>", 
+	 0},
 
 
-	{"gbduphash"                ,FIELD_GBOTHER,false,"Internal use only."},
-	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"Internal use only."},
-	{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},
+	{"gbcountry",
+	 FIELD_GBCOUNTRY,
+	 false,
+	 "gbcountry:us",
+	 "Matches documents determined by Gigablast to be from the United "
+	 "States. See the country abbreviations in the CountryCode.cpp "
+	 "open source distribution. Some more popular examples include: "
+	 "de, fr, uk, ca, cn.",
+	0},
+
+
+
+	{"gbpermalink",
+	 FIELD_GBPERMALINK,
+	 false,
+	 "gbpermalink:1",
+	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
+	 "to match documents that are NOT permalinks.",
+	0},
+
+	{"gbdocid",
+	 FIELD_GBDOCID,
+	 false,
+	 "gbdocid:123456",
+	 "Matches the document with the docid 123456",
+	 0},
+
+
+	{"gbstatus",
+	 FIELD_GENERIC,
+	 false,
+	 "gbstatus:0",
+	 "Matches all special spider status documents that spidered "
+	 "their url successfully. Replace <i>0</i> with other numeric error "
+	 "codes to get the other outcomes.",
+	 0},
+
+	
+	{"gbstatusmsg",
+	 FIELD_GENERIC,
+	 false,
+	 "gbstatusmsg:tcp",
+	 "Matches all special spider status documents that had a status "
+	 "message containing the word <i>tcp</i> like in "
+	 "<i>TCP Timed Out</i>. Similarly, gbstatus:success, "
+	 "gbstatus:\"robots.txt\" are other possibilities.",
+	 0},
+
+
+	{"site2", 
+	 FIELD_SITE, 
+	 true,
+	 "site2:mysite.com",
+	 "Matches all the special spider status documents on the "
+	 "mysite.com domain.",
+	 0 },
+
+
+	{"ip2", 
+	 FIELD_IP, 
+	 true,
+	 "ip2:1.2.3.4",
+	 "Matches all the special spider status "
+	 "documents whose IP is 1.2.3.4.",
+	 0 },
+
+	{"inurl2", 
+	 FIELD_SUBURL2, 
+	 true,
+	 "inurl2:dog",
+	 "Matches all the special spider status "
+	 "documents that have the word dog in their url, like "
+	 "http://www.mysite.com/dog/food.html. However will not match "
+	 "http://www.mysite.com/dogfood.html because it is not an "
+	 "individual word. It must be delineated by punctuation.",
+	 0 },
+
+
+	{"gbpathdepth2", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbpathdepth2:2",
+	 "Similar to gbpathdepth: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	{"gbhopcount2", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhopcount2:3",
+	 "Similar to gbhopcount: described above but for special "
+	 "spider status documents.",
+	 0},
+
+
+	{"gbhasfilename2", 
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhasfilename2:1",
+	 "Similar to gbhasfilename: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	{"gbiscgi2",
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbiscgi2:1",
+	 "Similar to gbiscgi: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	{"gbhasext2",
+	 FIELD_GBOTHER, 
+	 false,
+	 "gbhasext2:1",
+	 "Similar to gbhasext: described above but for special "
+	 "spider status documents.",
+	 0},
+
+	// diffbot only
+	{"gbparenturl", 
+	 FIELD_GBPARENTURL, 
+	 true,
+	 "gbparenturl:www.xyz.com/abc.html",
+	 "Diffbot only. Match the json urls that "
+	 "were extract from this parent url. Example: "
+	 "gbparenturl:www.gigablast.com/addurl.htm",
+	 0},
+
+
+
+	// they don't need to know about this
+	{"gbad",FIELD_GBAD,false,"","",QTF_HIDE},
+	{"gbtagvector", FIELD_GBTAGVECTOR, false,"","",QTF_HIDE},
+	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,"","",QTF_HIDE},
+	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,"","",QTF_HIDE},
+	{"gbcontenthash", FIELD_GBCONTENTHASH, false,"","",QTF_HIDE},
+	{"gbduphash"  ,FIELD_GBOTHER,false,"","",QTF_HIDE},
+	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"","",QTF_HIDE}
+
+	//{"gbcsenum",FIELD_GBCSENUM,false,""},
+	//{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},
 	//{"gbisaggregator"           ,FIELD_GBOTHER,false,"gbisaggregator:0|1 depending on if the event came from an event aggregator website, like eviesays.com."},
-	{"gbdeduped"                ,FIELD_GBOTHER,false,""},
+	//{"gbdeduped"                ,FIELD_GBOTHER,false,""},
 
-	{"gbinjected", FIELD_GBOTHER,false,"Was the event injected?."},
+	//{"gbinjected", FIELD_GBOTHER,false,"Was the document injected?."},
 
 	//{"gbstartrange",FIELD_GBSTARTRANGE,false,""},
 	//{"gbendrange",FIELD_GBENDRANGE,false,""},
 
-	{"gbpermalink",FIELD_GBPERMALINK,false,""},
-	//{"gbcsenum",FIELD_GBCSENUM,false,""},
-	{"gbparenturl", FIELD_GBPARENTURL, true,"Match the json urls that "
-	 "were extract from this parent url. Example: "
-	 "gbparenturl:www.gigablast.com/addurl.htm"},
-	{"gbdocid",FIELD_GBDOCID,false,"restrict results to this docid"}
 	
 };
 
@@ -3342,7 +4002,11 @@ static bool initFieldTable(){
 		// now add in all the stop words
 		long n = getNumFieldCodes();
 		for ( long i = 0 ; i < n ; i++ ) {
+			// skip if dup
+			//if ( g_fields[i].m_flag & QTF_DUP ) continue;
 			long long h = hash64b ( g_fields[i].text );
+			// if already in there it is a dup
+			if ( s_table.isInTable ( &h ) ) continue;
 			// store the entity index in the hash table as score
 			if ( ! s_table.addTerm ( &h, i+1 ) ) return false;
 		}

@@ -248,6 +248,8 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	// hack this off until the overrun bug is fixed
 	g_conf.m_datedbMaxCacheMem = 0;
 
+	//g_conf.m_qaBuildMode = true;// false
+
 	// force on for now
 	g_conf.m_useStatsdb = true;
 
@@ -422,9 +424,14 @@ bool Conf::save ( ) {
 	// always reset this before saving
 	bool keep = g_conf.m_testMem ;
 	g_conf.m_testMem = false;
-	char fname[1024];
-	sprintf ( fname , "%sgb.conf.saving", g_hostdb.m_dir );
-	bool status = g_parms.saveToXml ( (char *)this , fname ,OBJ_CONF);
+	//char fname[1024];
+	//sprintf ( fname , "%sgb.conf.saving", g_hostdb.m_dir );
+	SafeBuf fn;
+	fn.safePrintf("%sgb.conf",g_hostdb.m_dir);
+	bool status = g_parms.saveToXml ( (char *)this , 
+					  fn.getBufStart(),
+					  OBJ_CONF);
+	/*
 	if ( status ) {
 		char fname2[1024];
 		char *local = "";
@@ -439,6 +446,7 @@ bool Conf::save ( ) {
 					fname, strerror(errno));
 		}
 	}
+	*/
 	// restore
 	g_conf.m_testMem = keep;
 	return status;

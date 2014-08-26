@@ -8,7 +8,7 @@
 
 // a global class extern'd in .h file
 Datedb g_datedb;
-Datedb g_datedb2;
+//Datedb g_datedb2;
 
 // resets rdb
 void Datedb::reset() { m_rdb.reset(); }
@@ -42,7 +42,7 @@ bool Datedb::init ( ) {
 	long maxCacheNodes = g_conf.m_datedbMaxCacheMem / 600;
 
 
-	long pageSize = GB_INDEXDB_PAGE_SIZE;
+//	long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
@@ -57,13 +57,13 @@ bool Datedb::init ( ) {
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "datedb",
-			   RDB_DATEDB,
-			   pcmem    ,
-			   pageSize , 
-			   true     ,  // use RAM disk?
-			   false    )) // minimize disk seeks?
-		return log("db: Datedb pc init failed.");
+// 	if ( ! m_pc.init ( "datedb",
+// 			   RDB_DATEDB,
+// 			   pcmem    ,
+// 			   pageSize , 
+// 			   true     ,  // use RAM disk?
+// 			   false    )) // minimize disk seeks?
+// 		return log("db: Datedb pc init failed.");
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -85,7 +85,7 @@ bool Datedb::init ( ) {
 			   maxCacheNodes 	       ,
 			   true                        , // use half keys?
 			   g_conf.m_datedbSaveCache   ,
-			   &m_pc                      ,
+			   NULL,//&m_pc                      ,
 			   false                      , // is titledb?
 			   false                      , // preload dskpagecache
 			   16                         ); // key size

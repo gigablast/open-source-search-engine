@@ -22,6 +22,7 @@ static bool processLoop ( void *state ) ;
 class State2 {
 public:
 	Msg22      m_msg22;
+	char m_format;
 	//TitleRec   m_tr;
 	long       m_niceness;
 	XmlDoc     m_xd;
@@ -42,6 +43,7 @@ public:
 	char       m_q[MAX_QUERY_LEN+1];
 	long       m_qlen;
 	char       m_boolFlag;
+	bool       m_printed;
 	long long  m_docId;
 	bool       m_includeHeader;
 	bool       m_includeBaseHref;
@@ -54,6 +56,7 @@ public:
 	bool       m_netTestResults;
 	bool       m_isBanned;
 	bool       m_noArchive;
+	SafeBuf    m_sb;
 };
 	
 
@@ -76,7 +79,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	// get the collection rec
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	if ( ! cr ) {
-		g_errno = ENOTFOUND;
+		g_errno = ENOCOLLREC;
 		log("query: Archived copy retrieval failed. "
 		    "No collection record found for "
 		    "collection \"%s\".",coll);
@@ -103,6 +106,13 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	long  long docId = r->getLongLong ( "d" , 0LL /*default*/ );
 	// get url
 	char *url = r->getString ( "u",NULL);
+
+	if ( docId == 0 && ! url ) {
+		g_errno = EMISSINGINPUT;
+		return g_httpServer.sendErrorReply (s,500 ,mstrerror(g_errno));
+	}
+
+
 	// . should we do a sequential lookup?
 	// . we need to match summary here so we need to know this
 	//bool seq = r->getLong ( "seq" , false );
@@ -123,6 +133,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	st->m_isAdmin  = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal  = r->isLocal();
 	st->m_docId    = docId;
+	st->m_printed  = false;
 	// include header ... "this page cached by Gigablast on..."
 	st->m_includeHeader     = r->getLong ("ih"    , true  );
 	st->m_includeBaseHref   = r->getLong ("ibh"   , false );
@@ -153,6 +164,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	st->m_isBanned = false;
 	st->m_noArchive = false;
 	st->m_socket = s;
+	st->m_format = r->getReplyFormat();
 	// default to 0 niceness
 	st->m_niceness = 0;
 	st->m_r.copy ( r );
@@ -212,7 +224,7 @@ bool sendErrorReply ( void *state , long err ) {
 	TcpSocket *s = st->m_socket;
 
 	char tmp [ 1024*32 ] ;
-	sprintf ( tmp , "<b>had server-side error: %s</b><br>",
+	sprintf ( tmp , "%s",
 		  mstrerror(g_errno));
 	// nuke state2
 	mdelete ( st , sizeof(State2) , "PageGet1" );
@@ -274,6 +286,40 @@ bool processLoop ( void *state ) {
 	if ( ! st->m_isAdmin && *na )
 		return sendErrorReply ( st , ENOCACHE );
 
+	SafeBuf *sb = &st->m_sb;
+
+
+	// &page=4 will print rainbow sections
+	if ( ! st->m_printed && st->m_r.getLong("page",0) ) {
+		// do not repeat this call
+		st->m_printed = true;
+		// this will call us again since we called
+		// xd->setCallback() above to us
+		if ( ! xd->printDocForProCog ( sb , &st->m_r ) )
+			return false;
+	}
+
+	char *contentType = "text/html";
+	char format = st->m_format;
+	if ( format == FORMAT_XML ) contentType = "text/xml";
+	if ( format == FORMAT_JSON ) contentType = "application/json";
+
+	// if we printed a special page (like rainbow sections) then return now
+	if ( st->m_printed ) {
+		bool status = g_httpServer.sendDynamicPage (s,
+							    //buf,bufLen,
+							    sb->getBufStart(),
+							    sb->getLength(),
+							    -1,false,
+							    //"text/html",
+							    contentType,
+							    -1, NULL, "utf8" );
+		// nuke state2
+		mdelete ( st , sizeof(State2) , "PageGet1" );
+		delete (st);
+		return status;
+	}
+
 	/*
 	  // this was calling XmlDoc and setting sections, etc. to
 	  // get the SpiderReply junk... no no no
@@ -315,8 +361,6 @@ bool processLoop ( void *state ) {
 	// shortcut
 	char strip = st->m_strip;
 
-	SafeBuf sb;
-
 	// alloc buffer now
 	//char *buf = NULL;
 	//long  bufMaxSize = 0;
@@ -331,11 +375,11 @@ bool processLoop ( void *state ) {
 
 	// for undoing the header
 	//char *start1 = p;
-	long startLen1 = sb.length();
+	long startLen1 = sb->length();
 
 	// we are always utfu
 	if ( strip != 2 )
-		sb.safePrintf( "<meta http-equiv=\"Content-Type\" "
+		sb->safePrintf( "<meta http-equiv=\"Content-Type\" "
 			     "content=\"text/html;charset=utf8\">\n");
 
 	// base href
@@ -346,21 +390,24 @@ bool processLoop ( void *state ) {
 	if ( xd->ptr_redirUrl ) base = xd->ptr_redirUrl;
 	//Url *redir = *xd->getRedirUrl();
 	if ( strip != 2 ) {
-		sb.safePrintf ( "<BASE HREF=\"%s\">" , base );
+		sb->safePrintf ( "<BASE HREF=\"%s\">" , base );
 		//p += gbstrlen ( p );
 	}
 
 	// default colors in case css files missing
 	if ( strip != 2 ) {
-		sb.safePrintf( "\n<style type=\"text/css\">\n"
+		sb->safePrintf( "\n<style type=\"text/css\">\n"
 			  "body{background-color:white;color:black;}\n"
 			  "</style>\n");
 		//p += gbstrlen ( p );
 	}
 
+	//char format = st->m_format;
+	if ( format == FORMAT_XML ) sb->reset();
+	if ( format == FORMAT_JSON ) sb->reset();
 
 	// for undoing the stuff below
-	long startLen2 = sb.length();//p;
+	long startLen2 = sb->length();//p;
 
 	// query should be NULL terminated
 	char *q    = st->m_q;
@@ -383,6 +430,19 @@ bool processLoop ( void *state ) {
 	if ( xd->m_contentType == CT_JSON )
 		printDisclaimer = false;
 
+	if ( format == FORMAT_XML ) printDisclaimer = false;
+	if ( format == FORMAT_JSON ) printDisclaimer = false;
+
+	char tbuf[100];
+	tbuf[0] = 0;
+	time_t lastSpiderDate = xd->m_spideredTime;
+
+	if ( printDisclaimer ||
+	     format == FORMAT_XML ||
+	     format == FORMAT_JSON ) {
+		struct tm *timeStruct = gmtime ( &lastSpiderDate );
+		strftime ( tbuf, 100,"%b %d, %Y UTC", timeStruct);
+	}
 
 	// We should always be displaying this disclaimer.
 	// - May eventually want to display this at a different location
@@ -391,7 +451,7 @@ bool processLoop ( void *state ) {
 	// CNS: if ( ! st->m_clickNScroll ) {
 	if ( printDisclaimer ) {
 
-		sb.safePrintf(//sprintf ( p , 
+		sb->safePrintf(//sprintf ( p , 
 			  //"<BASE HREF=\"%s\">"
 			  //"<table border=1 width=100%%>"
 			  //"<tr><td>"
@@ -412,28 +472,28 @@ bool processLoop ( void *state ) {
 		//p += gbstrlen ( p );
 		// then the rest
 		//sprintf(p , 
-		sb.safePrintf(
+		sb->safePrintf(
 			"<span style=\"%s\">. "
 			"Gigablast is not responsible for the content of "
 			"this page.</span>", styleTitle );
 		//p += gbstrlen ( p );
 
-		sb.safePrintf ( "<br/><span style=\"%s\">"
+		sb->safePrintf ( "<br/><span style=\"%s\">"
 			  "Cached: </span>"
 			  "<span style=\"%s\">",
 			  styleTitle, styleText );
 		//p += gbstrlen ( p );
 
 		// then the spider date in GMT
-		time_t lastSpiderDate = xd->m_spideredTime;
-		struct tm *timeStruct = gmtime ( &lastSpiderDate );
-		char tbuf[100];
-		strftime ( tbuf, 100,"%b %d, %Y UTC", timeStruct);
+		// time_t lastSpiderDate = xd->m_spideredTime;
+		// struct tm *timeStruct = gmtime ( &lastSpiderDate );
+		// char tbuf[100];
+		// strftime ( tbuf, 100,"%b %d, %Y UTC", timeStruct);
 		//p += gbstrlen ( p );
-		sb.safeStrcpy(tbuf);
+		sb->safeStrcpy(tbuf);
 
 		// Moved over from PageResults.cpp
-		sb.safePrintf( "</span> - <a href=\""
+		sb->safePrintf( "</span> - <a href=\""
 			      "/get?"
 			      "q=%s&amp;c=%s&amp;rtq=%li&amp;"
 			      "d=%lli&amp;strip=1\""
@@ -445,7 +505,7 @@ bool processLoop ( void *state ) {
 
 		// a link to alexa
 		if ( f->getUrlLen() > 5 ) {
-			sb.safePrintf( " - <a href=\"http:"
+			sb->safePrintf( " - <a href=\"http:"
 					 "//web.archive.org/web/*/%s\""
 					 " style=\"%s\">"
 					 "[older copies]</a>" ,
@@ -453,19 +513,19 @@ bool processLoop ( void *state ) {
 		}
 
 		if (st->m_noArchive){
-			sb.safePrintf( " - <span style=\"%s\"><b>"
+			sb->safePrintf( " - <span style=\"%s\"><b>"
 				     "[NOARCHIVE]</b></span>",
 				     styleTell );
 		}
 		if (st->m_isBanned){
-			sb.safePrintf(" - <span style=\"%s\"><b>"
+			sb->safePrintf(" - <span style=\"%s\"><b>"
 				     "[BANNED]</b></span>",
 				     styleTell );
 		}
 
 		// only print this if we got a query
 		if ( qlen > 0 ) {
-			sb.safePrintf("<br/><br/><span style=\"%s\"> "
+			sb->safePrintf("<br/><br/><span style=\"%s\"> "
 				   "These search terms have been "
 				   "highlighted:  ",
 				   styleText );
@@ -543,7 +603,7 @@ bool processLoop ( void *state ) {
 	if ( printDisclaimer ) {
 		hilen = hi.set ( //p       ,
 				 //avail   ,
-				&sb ,
+				sb ,
 				 &qw     , // words to highlight
 				 &m      , // matches relative to qw
 				 false   , // doSteming
@@ -552,7 +612,7 @@ bool processLoop ( void *state ) {
 		//p += hilen;
 		// now an hr
 		//memcpy ( p , "</span></table></table>\n" , 24 );   p += 24;
-		sb.safeStrcpy("</span></table></table>\n");
+		sb->safeStrcpy("</span></table></table>\n");
 	}
 
 
@@ -562,18 +622,50 @@ bool processLoop ( void *state ) {
 	if ( xd->m_contentType == CT_JSON )
 		includeHeader = false;
 
+	if ( format == FORMAT_XML ) includeHeader = false;
+	if ( format == FORMAT_JSON ) includeHeader = false;
+
 	//mfree(uq, uqCapacity, "PageGet");
 	// undo the header writes if we should
 	if ( ! includeHeader ) {
 		// including base href is off by default when not including
 		// the header, so the caller must explicitly turn it back on
-		if ( st->m_includeBaseHref ) sb.m_length=startLen2;//p=start2;
-		else                         sb.m_length=startLen1;//p=start1;
+		if ( st->m_includeBaseHref ) sb->m_length=startLen2;//p=start2;
+		else                         sb->m_length=startLen1;//p=start1;
+	}
+
+	//sb->safeStrcpy(tbuf);
+
+
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("<response>\n");
+		sb->safePrintf("<statusCode>0</statusCode>\n");
+		sb->safePrintf("<statusMsg>Success</statusMsg>\n");
+		sb->safePrintf("<url><![CDATA[");
+		sb->cdataEncode(xd->m_firstUrl.m_url);
+		sb->safePrintf("]]></url>\n");
+		sb->safePrintf("<docId>%llu</docId>\n",xd->m_docId);
+		sb->safePrintf("\t<cachedTimeUTC>%lu</cachedTimeUTC>\n",
+			      lastSpiderDate);
+		sb->safePrintf("\t<cachedTimeStr>%s</cachedTimeStr>\n",tbuf);
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("{\"response\":{\n");
+		sb->safePrintf("\t\"statusCode\":0,\n");
+		sb->safePrintf("\t\"statusMsg\":\"Success\",\n");
+		sb->safePrintf("\t\"url\":\"");
+		sb->jsonEncode(xd->m_firstUrl.m_url);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"docId\":%llu,\n",xd->m_docId);
+		sb->safePrintf("\t\"cachedTimeUTC\":%lu,\n",lastSpiderDate);
+		sb->safePrintf("\t\"cachedTimeStr\":\"%s\",\n",tbuf);
 	}
 
 	// identify start of <title> tag we wrote out
-	char *sbstart = sb.getBufStart();
-	char *sbend   = sb.getBufEnd();
+	char *sbstart = sb->getBufStart();
+	char *sbend   = sb->getBufEnd();
 	char *titleStart = NULL;
 	char *titleEnd   = NULL;
 	for ( char *t = sbstart ; t < sbend ; t++ ) {
@@ -617,7 +709,7 @@ bool processLoop ( void *state ) {
 		if ( ! ebuf ) ebuf = "";
 
 		//p += sprintf ( p , 
-		sb.safePrintf(
+		sb->safePrintf(
 			       "<table border=1 "
 			       "cellpadding=10 "
 			       "cellspacing=0 "
@@ -627,7 +719,7 @@ bool processLoop ( void *state ) {
 		long printLinks = st->m_r.getLong("links",0);
 
 		if ( ! printDisclaimer && printLinks )
-			sb.safePrintf(//p += sprintf ( p , 
+			sb->safePrintf(//p += sprintf ( p , 
 				       // first put cached and live link
 				       "<tr>"
 				       "<td bgcolor=lightyellow>"
@@ -658,7 +750,7 @@ bool processLoop ( void *state ) {
 				       );
 
 		if ( printLinks ) {
-			sb.safePrintf(//p += sprintf ( p ,
+			sb->safePrintf(//p += sprintf ( p ,
 				       "<tr><td bgcolor=pink>"
 				       "<span style=\"font-size:18px;"
 				       "font-weight:600;"
@@ -667,11 +759,11 @@ bool processLoop ( void *state ) {
 				       "<b>PAGE TITLE:</b> "
 				       );
 			long tlen = titleEnd - titleStart;
-			sb.safeMemcpy ( titleStart , tlen );
-			sb.safePrintf ( "</span></td></tr>" );
+			sb->safeMemcpy ( titleStart , tlen );
+			sb->safePrintf ( "</span></td></tr>" );
 		}
 
-		sb.safePrintf( "</table><br>\n" );
+		sb->safePrintf( "</table><br>\n" );
 
 	}
 
@@ -681,9 +773,13 @@ bool processLoop ( void *state ) {
 	if ( ctype == CT_TEXT ) pre = true ; // text/plain
 	if ( ctype == CT_DOC  ) pre = true ; // filtered msword
 	if ( ctype == CT_PS   ) pre = true ; // filtered postscript
+
+	if ( format == FORMAT_XML ) pre = false;
+	if ( format == FORMAT_JSON ) pre = false;
+
 	// if it is content-type text, add a <pre>
 	if ( pre ) {//p + 5 < bufEnd && pre ) {
-		sb.safePrintf("<pre>");
+		sb->safePrintf("<pre>");
 		//p += 5;
 	}
 
@@ -706,10 +802,15 @@ bool processLoop ( void *state ) {
 	// do not do term highlighting if json
 	if ( xd->m_contentType == CT_JSON )
 		queryHighlighting = false;
+
+	SafeBuf tmp;
+	SafeBuf *xb = sb;
+	if ( format == FORMAT_XML ) xb = &tmp;
+	if ( format == FORMAT_JSON ) xb = &tmp;
 	
 
 	if ( ! queryHighlighting ) {
-		sb.safeMemcpy ( content , contentLen );
+		xb->safeMemcpy ( content , contentLen );
 		//p += contentLen ;
 	}
 	else {
@@ -733,7 +834,7 @@ bool processLoop ( void *state ) {
 		Matches m;
 		m.setQuery ( &qq );
 		m.addMatches ( &ww );
-		hilen = hi.set ( &sb , // p , avail , 
+		hilen = hi.set ( xb , // p , avail , 
 				 &ww , &m ,
 				 false /*doStemming?*/ ,  
 				 st->m_clickAndScroll , 
@@ -742,9 +843,24 @@ bool processLoop ( void *state ) {
 		log(LOG_DEBUG, "query: Done highlighting cached page content");
 	}
 
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("\t<content><![CDATA[");
+		sb->cdataEncode ( xb->getBufStart() );
+		sb->safePrintf("]]></content>\n");
+		sb->safePrintf("</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("\t\"content\":\"\n");
+		sb->jsonEncode ( xb->getBufStart() );
+		sb->safePrintf("\"\n}\n}\n");
+	}
+
+
 	// if it is content-type text, add a </pre>
 	if ( pre ) { // p + 6 < bufEnd && pre ) {
-		sb.safeMemcpy ( "</pre>" , 6 );
+		sb->safeMemcpy ( "</pre>" , 6 );
 		//p += 6;
 	}
 
@@ -759,8 +875,8 @@ bool processLoop ( void *state ) {
 
 	if ( ct == CT_XML ) {
 		// encode the xml tags into &lt;tagname&gt; sequences
-		if ( !newbuf.htmlEncodeXmlTags ( sb.getBufStart() ,
-						 sb.getLength(),
+		if ( !newbuf.htmlEncodeXmlTags ( sb->getBufStart() ,
+						 sb->getLength(),
 						 0)){// niceness=0
 			//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
 			return sendErrorReply ( st , g_errno );
@@ -771,12 +887,12 @@ bool processLoop ( void *state ) {
 		// reassign
 		//buf    = newbuf.getBufStart();
 		//bufLen = newbuf.length();
-		sb.stealBuf ( &newbuf );
+		sb->stealBuf ( &newbuf );
 	}
 
 	// now encapsulate it in html head/tail and send it off
 	// sendErr:
-	char *contentType = "text/html";
+	contentType = "text/html";
 	if ( strip == 2 ) contentType = "text/xml";
 	// xml is usually buggy and this throws browser off
 	//if ( ctype == CT_XML ) contentType = "text/xml";
@@ -784,17 +900,25 @@ bool processLoop ( void *state ) {
 	if ( xd->m_contentType == CT_JSON )
 		contentType = "application/json";
 
+	if ( format == FORMAT_XML ) contentType = "text/xml";
+	if ( format == FORMAT_JSON ) contentType = "application/json";
+
+	// safebuf, sb, is a member of "st" so this should copy the buffer
+	// when it constructs the http reply, and we gotta call delete(st)
+	// AFTER this so sb is still valid.
+	bool status = g_httpServer.sendDynamicPage (s,
+						    //buf,bufLen,
+						    sb->getBufStart(),
+						    sb->getLength(),
+						    -1,false,
+						    contentType,
+						     -1, NULL, "utf8" );
+
 	// nuke state2
 	mdelete ( st , sizeof(State2) , "PageGet1" );
 	delete (st);
 
-	bool status = g_httpServer.sendDynamicPage (s,
-						    //buf,bufLen,
-						    sb.getBufStart(),
-						    sb.getLength(),
-						    -1,false,
-						    contentType,
-						     -1, NULL, "utf8" );
+
 	// free out buffer that we alloc'd before returning since this
 	// should have copied it into another buffer
 

@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_doProxyRebuild;
 	bool m_updatedRound;
 	collnum_t m_collnum;
 	bool m_registered;
@@ -386,6 +387,8 @@ class CollectionRec {
 
 	bool rebuildChineseRules();
 
+	bool rebuildShallowRules();
+
 	bool m_urlFiltersHavePageCounts;
 
 	// moved from SpiderColl so we can load up at startup
@@ -427,6 +430,9 @@ class CollectionRec {
 	long   m_spiderRoundNum;
 
 	char  m_makeImageThumbnails;
+
+	long m_thumbnailMaxWidthHeight ;
+
 	char  m_indexSpiderReplies;
 	char  m_indexBody;
 
@@ -998,9 +1004,9 @@ class CollectionRec {
 	//long  m_maxOtherDocLen;
 
 	// the proxy ip, 0 if none
-	long  m_proxyIp;
+	//long  m_proxyIp;
 	// and proxy port
-	long m_proxyPort;
+	//long m_proxyPort;
 
 	// . puts <br>s in the summary to keep its width below this
 	// . but we exceed this width before we would split a word

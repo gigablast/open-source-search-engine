@@ -22,7 +22,7 @@
 //char *printNumResultsDropDown ( char *p, long n, bool *printedDropDown);
 bool printNumResultsDropDown ( SafeBuf& sb, long n, bool *printedDropDown);
 //static char *printTopDirectory ( char *p, char *pend );
-static bool printTopDirectory ( SafeBuf& sb );
+static bool printTopDirectory ( SafeBuf& sb , char format );
 
 // this prints the last five queries
 //static long printLastQueries ( char *p , char *pend ) ;
@@ -44,6 +44,7 @@ bool sendPageRoot ( TcpSocket *s, HttpRequest *r ){
 
 bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 
+	/*
 	char *root       = "";
 	char *rootSecure = "";
 	if ( g_conf.m_isMattWells ) {
@@ -56,7 +57,7 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/contact.html>Contact</a>"
 		      " &nbsp; &nbsp; "
-		      "<a href=%s/help.html>Query Syntax</a>"
+		      "<a href=%s/help.html>Help</a>"
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/privacy.html>Privacy Policy</a>"
 		      " &nbsp; &nbsp; "
@@ -83,9 +84,14 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 			      );
 
 	//if ( r->isLocal() )
-	    sb.safePrintf("&nbsp; &nbsp; [<a href=\"/admin/settings\">"
-			  "<font color=red>Admin</font></a>]");
-	sb.safePrintf("</p></b></center></body></html>");
+	    sb.safePrintf("&nbsp; &nbsp; &nbsp; [<a style=color:green; "
+			  "href=\"/admin/settings\">"
+			  "Admin</a>]");
+	    sb.safePrintf("</p></b></center>");
+	*/
+
+	sb.safePrintf("</TD></TR></TABLE>"
+		      "</body></html>");
 	return true;
 }
 
@@ -586,7 +592,7 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 't' ) {
 			i += 1;
 			//p = printTopDirectory ( p, pend );
-			printTopDirectory ( sb );
+			printTopDirectory ( sb , FORMAT_HTML );
 			continue;
 		}
 
@@ -633,6 +639,231 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
+bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
+
+	sb.safePrintf("<html>\n");
+	sb.safePrintf("<head>\n");
+	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
+	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
+	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	char *title = "An Alternative Open Source Search Engine";
+	if ( pageNum == 1 ) title = "Directory";
+	if ( pageNum == 2 ) title = "Advanced";
+	if ( pageNum == 3 ) title = "Add Url";
+	if ( pageNum == 4 ) title = "About";
+	if ( pageNum == 5 ) title = "Help";
+	if ( pageNum == 6 ) title = "API";
+	sb.safePrintf("<title>Gigablast - %s</title>\n",title);
+	sb.safePrintf("<style><!--\n");
+	sb.safePrintf("body {\n");
+	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb.safePrintf("color: #000000;\n");
+	sb.safePrintf("font-size: 12px;\n");
+	sb.safePrintf("margin: 0px 0px;\n");
+	sb.safePrintf("letter-spacing: 0.04em;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf("a {text-decoration:none;}\n");
+	//sb.safePrintf("a:link {color:#00c}\n");
+	//sb.safePrintf("a:visited {color:#551a8b}\n");
+	//sb.safePrintf("a:active {color:#f00}\n");
+	sb.safePrintf(".bold {font-weight: bold;}\n");
+	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
+	sb.safePrintf(".url {color:#008000;}\n");
+	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf("table {\n");
+	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb.safePrintf("color: #000000;\n");
+	sb.safePrintf("font-size: 12px;\n");
+	sb.safePrintf("}\n");
+	sb.safePrintf(".directory {font-size: 16px;}\n"
+		      ".nav {font-size:20px;align:right;}\n"
+		      );
+	sb.safePrintf("-->\n");
+	sb.safePrintf("</style>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("</head>\n");
+	sb.safePrintf("<script>\n");
+	sb.safePrintf("<!--\n");
+	sb.safePrintf("function x(){document.f.q.focus();}\n");
+	sb.safePrintf("// --></script>\n");
+	sb.safePrintf("<body onload=\"x()\">\n");
+	//sb.safePrintf("<body>\n");
+	//g_proxy.insertLoginBarDirective ( &sb );
+
+	//
+	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
+	//
+
+
+	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+		      "\n<TR>\n");
+
+
+	class MenuItem {
+	public:
+		char *m_text;
+		char *m_url;
+	};
+
+	static MenuItem mi[] = {
+
+		{"SEARCH","/"},
+		{"DIRECTORY","/Top"},
+		{"ADVANCED","/adv.html"},
+		{"ADD URL","/addurl"},
+		{"ABOUT","/about.html"},
+		{"HELP","/help.html"},
+		{"API","/api"}
+	};
+
+	//
+	// first the nav column
+	//
+	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+		      "valign=top "
+		      "style=\""
+		      "border-right:3px solid blue;"
+		      "\">"
+
+		      "<br>"
+
+		      "<center>"
+		      "<a href=/>"
+		      "<div style=\""
+		      "background-color:white;"
+		      "padding:10px;"
+		      "border-radius:100px;"
+		      "border-color:blue;"
+		      "border-width:3px;"
+		      "border-style:solid;"
+		      "width:100px;"
+		      "height:100px;"
+		      "\">"
+		      "<br style=line-height:10px;>"
+		      "<img width=54 height=79 src=/rocket.jpg>"
+		      "</div>"
+		      "</a>"
+		      "</center>"
+
+
+		      "<br>"
+		      "<br>"
+
+		      );
+
+	long n = sizeof(mi) / sizeof(MenuItem);
+
+	for ( long i = 0 ; i < n ; i++ ) {
+
+		sb.safePrintf(
+			      "<a href=%s>"
+			      "<div style=\""
+			      "padding:5px;"
+			      "position:relative;"
+			      "text-align:right;"
+			      "border-width:3px;"
+			      "border-right-width:0px;"
+			      "border-style:solid;"
+			      "margin-left:10px;"
+			      "border-top-left-radius:10px;"
+			      "border-bottom-left-radius:10px;"
+			      "font-size:14px;"
+			      "x-overflow:;"
+			      , mi[i].m_url
+			      );
+		if ( i == pageNum )
+			sb.safePrintf(
+				      "border-color:blue;"
+				      "color:black;"
+				      "background-color:white;\" ");
+		else
+			sb.safePrintf("border-color:white;"
+				      "color:white;"
+				      "background-color:blue;\" "
+				      " onmouseover=\""
+				      "this.style.backgroundColor='lightblue';"
+				      "this.style.color='black';\""
+				      " onmouseout=\""
+				      "this.style.backgroundColor='blue';"
+				      "this.style.color='white';\""
+				      );
+
+		sb.safePrintf(">"
+			      // make button wider
+			      "<nobr>"
+			      "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; "
+			      "<b>%s</b> &nbsp; &nbsp;</nobr>"
+			      , mi[i].m_text
+			      );
+		//
+		// begin hack: white out the blue border line!!
+		//
+		if ( i == pageNum )
+			sb.safePrintf(
+				      "<div style=padding:5px;top:0;"
+				      "background-color:white;"
+				      "display:inline-block;"
+				      "position:absolute;>"
+				      "&nbsp;"
+				      "</div>"
+				      );
+		// end hack
+		sb.safePrintf(
+			      "</div>"
+			      "</a>"
+			      "<br>"
+			      );
+	}
+
+	// admin link
+	sb.safePrintf(
+		      "<a href=/admin/settings>"
+		      "<div style=\"background-color:green;"
+		      "padding:5px;"
+		      "text-align:right;"
+		      "border-width:3px;"
+		      "border-right-width:0px;"
+		      "border-style:solid;"
+		      "margin-left:10px;"
+		      "border-color:white;"
+		      "border-top-left-radius:10px;"
+		      "border-bottom-left-radius:10px;"
+		      "font-size:14px;"
+		      "color:white;"
+		      "cursor:hand;"
+		      "cursor:pointer;\" "
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\""
+		      ">"
+		      "<b>ADMIN</b> &nbsp; &nbsp;"
+		      "</div>"
+		      "</a>"
+		      "<br>"
+		      );
+
+
+	//
+	// now the MAIN column
+	//
+	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
+
+	sb.safePrintf("<br><br>");
+
+	sb.safePrintf("<a href=/><img border=0 width=470 "
+		      "height=44 src=/gigablast.jpg></a>\n");
+
+	// sb.safePrintf("<br>"
+	// 	      "<img border=0 width=470 "
+	// 	      "height=15 src=/bar.jpg>\n");
+
+	return true;
+}
+
 bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	SearchInput si;
@@ -659,60 +890,22 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
+	printFrontPageShell ( sb ,0 );
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
-	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
-	sb.safePrintf("<title>Gigablast - "
-		      "An Alternative Open Source Search Engine</title>\n");
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a:link {color:#00c}\n");
-	sb.safePrintf("a:visited {color:#551a8b}\n");
-	sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n");
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
-	//sb.safePrintf("<body>\n");
-	//g_proxy.insertLoginBarDirective ( &sb );
-	sb.safePrintf("<br><br>\n");
-// try to avoid using https for images. it is like 10ms slower.
 
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=http://www.gigablast.com/logo-"
-			      "med.jpg></a>\n");
-	else
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=/logo-med.jpg></a>\n");
+	//sb.safePrintf("<br><br>\n");
+	// try to avoid using https for images. it is like 10ms slower.
+
+	// if ( g_conf.m_isMattWells )
+	// 	sb.safePrintf("<center><a href=/><img border=0 width=500 "
+	// 		      "height=122 src=http://www.gigablast.com/logo-"
+	// 		      "med.jpg></a>\n");
+	// else
+
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
+	/*
 	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; ");
 	if ( g_conf.m_isMattWells )
 		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo</a> "
@@ -726,6 +919,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		      "Gigablast's index\">add url</a>");
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
+	*/
 	// submit to https now
 	sb.safePrintf("<form method=%s "
 		      "action=/search name=f>\n", method);
@@ -734,8 +928,64 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
 			      cr->m_coll);
 
-	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
 
+	// put search box in a box
+	sb.safePrintf("<div style="
+		      "background-color:#fcc714;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "border-color:blue;"
+		      //"background-color:blue;"
+		      "padding:20px;"
+		      "border-radius:20px;"
+		      ">");
+
+
+	sb.safePrintf("<input name=q type=text "
+		      "style=\""
+		      //"width:%lipx;"
+		      "height:26px;"
+		      "padding:0px;"
+		      "font-weight:bold;"
+		      "padding-left:5px;"
+		      //"border-radius:10px;"
+		      "margin:0px;"
+		      "border:1px inset lightgray;"
+		      "background-color:#ffffff;"
+		      "font-size:18px;"
+		      "\" "
+
+		      "size=40 value=\"\">&nbsp; &nbsp;"
+
+		      //"<input type=\"submit\" value=\"Search\">"
+
+		      "<div onclick=document.f.submit(); "
+
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\" "
+
+		      "style=border-radius:28px;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "border-color:white;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "padding:12px;"
+		      "width:20px;"
+		      "height:20px;"
+		      "display:inline-block;"
+		      "background-color:green;color:white;>"
+		      "<b style=margin-left:-5px;font-size:18px;"
+		      ">GO</b>"
+		      "</div>"
+		      "\n"
+		      );
+
+	sb.safePrintf("</div>\n");
 
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
@@ -755,6 +1005,10 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// print any red boxes we might need to
 	if ( printRedBox2 ( &sb , true ) )
 		sb.safePrintf("<br>\n");
+
+	/*
+
+	  do not show table for open source installs
 
 	sb.safePrintf("<table cellpadding=3>\n");
 	sb.safePrintf("\n");
@@ -813,6 +1067,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		  );
 	sb.safePrintf("</td></tr>\n");
 
+	*/
 
 	/*
 	sb.safePrintf("<tr valign=top>\n");
@@ -852,6 +1107,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("\n");
 	*/
 
+	/*
 	if ( g_conf.m_isMattWells ) {
 		sb.safePrintf("<tr valign=top>\n");
 		sb.safePrintf("<td align=center><center><img src=%s/dollargear.png "
@@ -861,6 +1117,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=http://www.gigablast.com/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
 		sb.safePrintf("</td></tr>\n");
 	}
+	*/
 
 	/*
 	sb.safePrintf("<tr valign=top>\n");
@@ -914,7 +1171,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
-	sb.safePrintf("</table>\n");
+	//sb.safePrintf("</table>\n");
 	sb.safePrintf("<br><br>\n");
 	printNav ( sb , r );
 	return true;
@@ -922,72 +1179,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	sb.safePrintf("<title>Gigablast - Add Url</title>\n");
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a:link {color:#00c}\n");
-	sb.safePrintf("a:visited {color:#551a8b}\n");
-	sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n");
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	//sb.safePrintf("<body onload=\"x()\">\n");
-	/*
-	if ( url ) {
-		sb.safePrintf(
-			      "<body "
-			      "onLoad=\""
-			      "var client = new XMLHttpRequest();\n"
-			      "client.onreadystatechange = handler;\n"
-			      "var url='/addurl?u="
-			      );
-		sb.urlEncode ( url );
-		// propagate "admin" if set
-		//long admin = hr->getLong("admin",-1);
-		//if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
-		// provide hash of the query so clients can't just pass in
-		// a bogus id to get search results from us
-		unsigned long h32 = hash32n(url);
-		if ( h32 == 0 ) h32 = 1;
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb.safePrintf("&id=%lu&rand=%llu';\n"
-			      "client.open('GET', url );\n"
-			      "client.send();\n"
-			      "\">"
-			      , h32
-			      , rand64
-			      );
-
-	}
-	else {
-		sb.safePrintf("<body>");
-	}
-	*/
-	sb.safePrintf("<body>");
+	printFrontPageShell ( sb , 3 );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1001,48 +1193,66 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		      "</script>\n");
 
 
-	//g_proxy.insertLoginBarDirective ( &sb );
-
-	sb.safePrintf("\n");
-	sb.safePrintf("<br><br>\n");
-
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=http://www.gigablast.com/logo-"
-			      "med.jpg></a>\n");
-	else
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=/logo-med.jpg></a>\n");
-
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
+	/*
+	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; ");
 	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
-			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
-	sb.safePrintf("<a href=\"/Top\">directory</a> "
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo</a> "
+			      "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      );
+	sb.safePrintf( "<a href=\"/Top\">directory</a> "
 		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
-	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
-		      "index\">"
-		      "add url</b>");
+	sb.safePrintf("<a href=/addurl title=\"Instantly add your url to "
+		      "Gigablast's index\">add url</a>");
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
-	sb.safePrintf("<form method=get action=/addurl name=f>\n");
-
+	*/
+	// submit to https now
+	sb.safePrintf("<form method=GET "
+		      "action=/addurl name=f>\n" );
 
 	CollectionRec *cr = g_collectiondb.getRec ( r );
-	// the collection we want to add the url to
-	char *coll = NULL;
-	if ( cr ) 
-		coll = cr->m_coll;
-	if ( coll )
-		sb.safePrintf("<input type=hidden name=c value=\"%s\">",coll);
-	if ( ! coll ) 
-		coll = "";
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
 
-	sb.safePrintf("<input name=u type=text size=60 value=\"");
+
+	// put search box in a box
+	sb.safePrintf("<div style="
+		      "background-color:#fcc714;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "border-color:blue;"
+		      //"background-color:blue;"
+		      "padding:20px;"
+		      "border-radius:20px;"
+		      ">");
+
+
+	sb.safePrintf("<input name=urls type=text "
+		      "style=\""
+		      //"width:%lipx;"
+		      "height:26px;"
+		      "padding:0px;"
+		      "font-weight:bold;"
+		      "padding-left:5px;"
+		      //"border-radius:10px;"
+		      "margin:0px;"
+		      "border:1px inset lightgray;"
+		      "background-color:#ffffff;"
+		      "font-size:18px;"
+		      "\" "
+
+		      "size=40 value=\""
+		      );
+
+
+
 	if ( url ) {
 		SafeBuf tmp;
 		tmp.safePrintf("%s",url);
@@ -1052,8 +1262,42 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	}
 	else
 		sb.safePrintf("http://");
-	sb.safePrintf("\">&nbsp;<input type=\"submit\" value=\"Add Url\">\n");
+	sb.safePrintf("\">&nbsp; &nbsp;"
+		      //"<input type=\"submit\" value=\"Add Url\">\n"
+		      "<div onclick=document.f.submit(); "
+
+
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\" "
+
+		      "style=border-radius:28px;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "border-color:white;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "padding:12px;"
+		      "width:20px;"
+		      "height:20px;"
+		      "display:inline-block;"
+		      "background-color:green;color:white;>"
+		      "<b style=margin-left:-5px;font-size:18px;>GO</b>"
+		      "</div>"
+		      "\n"
+		      );
 	sb.safePrintf("\n");
+
+
+	sb.safePrintf("</div>\n");
+
+	sb.safePrintf("\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+
 
 	// if addurl is turned off, just print "disabled" msg
 	char *msg = NULL;
@@ -1066,7 +1310,8 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";
 
-	sb.safePrintf("<br><br>Add a url to the <b>%s</b> collection",coll);
+	sb.safePrintf("<br><center>"
+		      "Add a url to the <b>%s</b> collection</center>",coll);
 
 	// if url is non-empty the ajax will receive this identical msg
 	// and display it in the div, so do not duplicate the msg!
@@ -1092,7 +1337,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 			      //"alert('shit');"
 			      "var client = new XMLHttpRequest();\n"
 			      "client.onreadystatechange = handler;\n"
-			      "var url='/addurl?u="
+			      "var url='/addurl?urls="
 			      , root );
 		sb.urlEncode ( url );
 		// propagate "admin" if set
@@ -1128,95 +1373,90 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\">");
-	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
-	sb.safePrintf("<title>Gigablast</title>\n");
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 20px 5px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a:link {color:#00c}\n");
-	sb.safePrintf("a:visited {color:#551a8b}\n");
-	sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n");
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
-	sb.safePrintf("<body>\n");
-	sb.safePrintf("<br><br>\n");
-// try to avoid using https for images. it is like 10ms slower.
+	char format = r->getReplyFormat();
+	if ( format != FORMAT_HTML )
+		return printTopDirectory ( sb , format );
 
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=http://www.gigablast.com/logo-"
-			      "med.jpg></a>\n");
-	else
-		sb.safePrintf("<center><a href=/><img border=0 width=500 "
-			      "height=122 src=/logo-med.jpg></a>\n");
+
+	printFrontPageShell ( sb , 1 );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
-
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
-			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
-
-	sb.safePrintf("<a href=\"/Top\"><b>directory</b></a> "
-		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
-
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a href=http://www.gigablast.com/events>"
-			      "events</a>"
-			      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
-
-	sb.safePrintf("<a href=/adv.html>advanced search</a>");
-	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
-	char *root = "";
-	if ( g_conf.m_isMattWells )
-		root = "http://www.gigablast.com";
-	sb.safePrintf("<a href=%s/addurl title=\"Instantly add your url to "
-		      "Gigablast's index\">add url</a>"
-		      , root );
-	sb.safePrintf("\n");
-	sb.safePrintf("<br><br>\n");
-	// submit to HTTPS now
-	sb.safePrintf("<form method=get "
+	// submit to https now
+	sb.safePrintf("<form method=GET "
 		      "action=/search name=f>\n");
-	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
-	sb.safePrintf("<input type=hidden "
-		      "name=prepend value=\"gbipcatid:2\">");
+
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
+
+	// put search box in a box
+	sb.safePrintf("<div style="
+		      "background-color:#fcc714;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "border-color:blue;"
+		      //"background-color:blue;"
+		      "padding:20px;"
+		      "border-radius:20px;"
+		      ">");
+
+
+	sb.safePrintf("<input name=q type=text "
+		      "style=\""
+		      //"width:%lipx;"
+		      "height:26px;"
+		      "padding:0px;"
+		      "font-weight:bold;"
+		      "padding-left:5px;"
+		      //"border-radius:10px;"
+		      "margin:0px;"
+		      "border:1px inset lightgray;"
+		      "background-color:#ffffff;"
+		      "font-size:18px;"
+		      "\" "
+
+		      "size=40 value=\"\">&nbsp; &nbsp;"
+
+		      //"<input type=\"submit\" value=\"Search\">\n");
+
+		      "<div onclick=document.f.submit(); "
+
+		      " onmouseover=\""
+		      "this.style.backgroundColor='lightgreen';"
+		      "this.style.color='black';\""
+		      " onmouseout=\""
+		      "this.style.backgroundColor='green';"
+		      "this.style.color='white';\" "
+
+		      "style=border-radius:28px;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "border-color:white;"
+		      "border-style:solid;"
+		      "border-width:3px;"
+		      "padding:12px;"
+		      "width:20px;"
+		      "height:20px;"
+		      "display:inline-block;"
+		      "background-color:green;color:white;>"
+		      "<b style=margin-left:-5px;font-size:18px;>GO</b>"
+		      "</div>"
+		      "\n"
+		      );
+
+	sb.safePrintf("</div>\n");
+
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
 	sb.safePrintf("\n");
 
 
-	printTopDirectory ( sb );
+	printTopDirectory ( sb , FORMAT_HTML );
 
 	sb.safePrintf("<br><br>\n");
 
@@ -1395,10 +1635,12 @@ long printLastQueries ( char *p , char *pend ) {
 
 
 //char *printTopDirectory ( char *p, char *pend ) {
-bool printTopDirectory ( SafeBuf& sb ) {
+bool printTopDirectory ( SafeBuf& sb , char format ) {
+
+	long nr = g_catdb.getRdb()->getNumTotalRecs();
 
 	// if no recs in catdb, print instructions
-	if ( g_catdb.getRdb()->getNumTotalRecs() == 0 )
+	if ( nr == 0 && format == FORMAT_HTML)
 		return sb.safePrintf("<center>"
 				     "<b>DMOZ functionality is not set up.</b>"
 				     "<br>"
@@ -1410,6 +1652,12 @@ bool printTopDirectory ( SafeBuf& sb ) {
 				     "</a>."
 				     "</b>"
 				     "</center>");
+
+	// send back an xml/json error reply
+	if ( nr == 0 && format != FORMAT_HTML ) {
+		g_errno = EDMOZNOTREADY;
+		return false;
+	}
 
 	//char topList[4096];
 	//sprintf(topList, 
@@ -1619,26 +1867,26 @@ static bool s_inprogress = false;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
+bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// . get fields from cgi field of the requested url
 	// . get the search query
 	long  urlLen = 0;
-	char *url = r->getString ( "u" , &urlLen , NULL /*default*/);
+	char *url = hr->getString ( "urls" , &urlLen , NULL /*default*/);
 
 	// see if they provided a url of a file of urls if they did not
 	// provide a url to add directly
-	bool isAdmin = g_conf.isCollAdmin ( s , r );
+	bool isAdmin = g_conf.isCollAdmin ( sock , hr );
 	long  ufuLen = 0;
 	char *ufu = NULL;
-	if ( isAdmin )
-		// get the url of a file of urls (ufu)
-		ufu = r->getString ( "ufu" , &ufuLen , NULL );
+	//if ( isAdmin )
+	//	// get the url of a file of urls (ufu)
+	//	ufu = hr->getString ( "ufu" , &ufuLen , NULL );
 
 	// can't be too long, that's obnoxious
 	if ( urlLen > MAX_URL_LEN || ufuLen > MAX_URL_LEN ) {
 		g_errno = EBUFTOOSMALL;
 		g_msg = " (error: url too long)";
-		return g_httpServer.sendErrorReply(s,500,"url too long");
+		return g_httpServer.sendErrorReply(sock,500,"url too long");
 	}
 	// get the collection
 	//long  collLen = 0;
@@ -1650,20 +1898,20 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//}
 	// get collection rec
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
 		g_msg = " (error: no collection)";
-		return g_httpServer.sendErrorReply(s,500,"no coll rec");
+		return g_httpServer.sendErrorReply(sock,500,"no coll rec");
 	}
 	// . make sure the ip is not banned
 	// . we may also have an exclusive list of IPs for private collections
-	if ( ! cr->hasSearchPermission ( s ) ) {
+	if ( ! cr->hasSearchPermission ( sock ) ) {
 		g_errno = ENOPERM;
 		g_msg = " (error: permission denied)";
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
+	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 
 
@@ -1672,8 +1920,8 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//
 	if ( ! url ) {
 		SafeBuf sb;
-		printAddUrlHomePage ( sb , NULL , r );
-		return g_httpServer.sendDynamicPage(s, 
+		printAddUrlHomePage ( sb , NULL , hr );
+		return g_httpServer.sendDynamicPage(sock, 
 						    sb.getBufStart(), 
 						    sb.length(),
 						    // 120 secs cachetime
@@ -1686,19 +1934,19 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 						    200,
 						    NULL, // cookie
 						    "UTF-8",
-						    r);
+						    hr);
 	}
 
 	//
 	// run the ajax script on load to submit the url now 
 	//
-	long id = r->getLong("id",0);
+	long id = hr->getLong("id",0);
 	// if we are not being called by the ajax loader, the put the
 	// ajax loader script into the html now
 	if ( id == 0 ) {
 		SafeBuf sb;
-		printAddUrlHomePage ( sb , url , r );
-		return g_httpServer.sendDynamicPage ( s, 
+		printAddUrlHomePage ( sb , url , hr );
+		return g_httpServer.sendDynamicPage ( sock, 
 						      sb.getBufStart(), 
 						      sb.length(),
 						      // don't cache any more
@@ -1711,7 +1959,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 						      200,
 						      NULL, // cookie
 						      "UTF-8",
-						      r);
+						      hr);
 	}
 
 	//
@@ -1742,7 +1990,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	if  ( msg ) {
 		SafeBuf sb;
 		sb.safePrintf("%s",msg);
-		g_httpServer.sendDynamicPage (s, 
+		g_httpServer.sendDynamicPage (sock, 
 					      sb.getBufStart(), 
 					      sb.length(),
 					      3600,//-1, // cachetime
@@ -1764,10 +2012,10 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		g_errno = ENOMEM;
 		log("PageAddUrl: new(%i): %s", 
 		    sizeof(State1i),mstrerror(g_errno));
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); }
+	    return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno)); }
 	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin
-	st1->m_socket  = s;
+	st1->m_socket  = sock;
 	st1->m_isAdmin = isAdmin;
 
 	/*
@@ -1809,12 +2057,12 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//unsigned long h = ipdom ( s->m_ip );
 	// . use top 2 bytes now, some isps have large blocks
 	// . if this causes problems, then they can do pay for inclusion
-	unsigned long h = iptop ( s->m_ip );
+	unsigned long h = iptop ( sock->m_ip );
 	long codeLen;
-	char* code = r->getString("code", &codeLen);
-	if(g_autoBan.hasCode(code, codeLen, s->m_ip)) {
+	char* code = hr->getString("code", &codeLen);
+	if(g_autoBan.hasCode(code, codeLen, sock->m_ip)) {
 		long uipLen = 0;
-		char* uip = r->getString("uip",&uipLen);
+		char* uip = hr->getString("uip",&uipLen);
 		long hip = 0;
 		//use the uip when we have a raw query to test if 
 		//we can submit
@@ -1824,18 +2072,18 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		}
 	}
 
-	st1->m_strip = r->getLong("strip",0);
+	st1->m_strip = hr->getLong("strip",0);
 	// . Remember, for cgi, if the box is not checked, then it is not 
 	//   reported in the request, so set default return value to 0
 	// . support both camel case and all lower-cases
-	st1->m_spiderLinks = r->getLong("spiderLinks",0);
-	st1->m_spiderLinks = r->getLong("spiderlinks",st1->m_spiderLinks);
+	st1->m_spiderLinks = hr->getLong("spiderLinks",0);
+	st1->m_spiderLinks = hr->getLong("spiderlinks",st1->m_spiderLinks);
 
 	// . should we force it into spiderdb even if already in there
 	// . use to manually update spider times for a url
 	// . however, will not remove old scheduled spider times
 	// . mdw: made force on the default
-	st1->m_forceRespider = r->getLong("force",1); // 0);
+	st1->m_forceRespider = hr->getLong("force",1); // 0);
 
 	long now = getTimeGlobal();
 	// . allow 1 submit every 1 hour
@@ -1850,7 +2098,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		delete (st1);
 		// use cachetime of 3600 so it does not re-inject if you hit 
 		// the back button!
-		g_httpServer.sendDynamicPage (s, 
+		g_httpServer.sendDynamicPage (sock, 
 					      sb.getBufStart(), 
 					      sb.length(),
 					      3600,//-1, // cachetime
@@ -1877,6 +2125,17 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	}
 	*/
 
+
+	// set this. also sets gr->m_hr
+	GigablastRequest *gr = &st1->m_msg7.m_gr;
+	// this will fill in GigablastRequest so all the parms we need are set
+	g_parms.setGigablastRequest ( sock , hr , gr );
+
+	// this is really an injection, not add url, so make
+	// GigablastRequest::m_url point to Gigablast::m_urlsBuf because
+	// the PAGE_ADDURLS2 parms in Parms.cpp fill in the m_urlsBuf.
+	// HACK!
+	gr->m_url = gr->m_urlsBuf;
 
 	//
 	// inject using msg7
@@ -2044,11 +2303,13 @@ void doneInjectingWrapper3 ( void *st ) {
 				      rand32,
 				      coll);
 			sb.urlEncode(url);
-			sb.safePrintf(">Check it</a> or "
-				      "<a href=http://www.gigablast.com/seo?u=");
-			sb.urlEncode(url);
-			sb.safePrintf(">SEO it</a>"
-				      ".</b>");
+			sb.safePrintf(">Check it</a>"// or "
+				      //"<a href=http://www.gigablast."
+				      //"com/seo?u=");
+				      //sb.urlEncode(url);
+				      //sb.safePrintf(">SEO it</a>"
+				      "."
+				      "</b>");
 		}
 			
 		//pm = msg;
@@ -2122,5 +2383,608 @@ bool canSubmit ( unsigned long h , long now , long maxAddUrlsPerIpDomPerDay ) {
 
 void resetPageAddUrl ( ) {
 	s_htable.reset();
+}
+
+
+bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
+
+	SafeBuf sb;
+
+	printFrontPageShell ( sb , 2 );
+
+	sb.safePrintf("<br><br>\n");
+	sb.safePrintf("<br><br><br>\n");
+
+	// submit to https now
+	sb.safePrintf("<form method=GET "
+		      "action=/search name=f>\n" );
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
+
+	sb.safePrintf(
+	"<script type=text/javascript>"
+	"<!--"
+	"function x(){document.f.q.focus();}"
+	"// -->"
+	"</script>"
+	"</head>"
+	""
+
+	"<body onload=x()>"
+
+	//"<form method=get action=/search>"
+
+	"	<table width=605 border=0 align=center cellpadding=5 cellspacing=3>"
+	"		<tbody>"
+	"			<tr align=left valign=middle>"
+	"			<th colspan=3>Search for...</th>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td><strong>all</strong> of these words</td>"
+	"				<td><input type=text name=plus size=40 />"
+
+	"</td><td>"
+
+			"<div onclick=document.f.submit(); "
+
+			" onmouseover=\""
+			"this.style.backgroundColor='lightgreen';"
+			"this.style.color='black';\""
+			" onmouseout=\""
+			"this.style.backgroundColor='green';"
+			"this.style.color='white';\" "
+
+			"style=border-radius:28px;"
+			"cursor:pointer;"
+			"cursor:hand;"
+			"border-color:white;"
+			"border-style:solid;"
+			"border-width:3px;"
+			"padding:12px;"
+			"width:20px;"
+			"height:20px;"
+			"display:inline-block;"
+			"background-color:green;color:white;>"
+			"<b style=margin-left:-5px;font-size:18px;"
+			">GO</b>"
+			"</div>"
+	"</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>this <strong>exact phrase</strong></td>"
+	"				<td colspan=2><input type=text name=quote1 size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>and this <strong>exact phrase</strong></td>"
+	"				<td colspan=2><input type=text name=quote2 size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td><strong>any</strong> of these words</td>"
+	"				<td colspan=2><input type=text name=q size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td><strong>none</strong> of these words</td>"
+	"				<td colspan=2><input type=text name=minus size=40 /></td>"
+	"			</tr>"
+	""
+	"			<tr align=left valign=middle>"
+	"				<td>In this language:"
+	"				</td>"
+	"				<td colspan=2>"
+	"				<select name=gblang>"
+	"				<option value=0>Any</option>"
+	"				<option value=1>English</option>"
+	"<option value=2>French</option>	"
+	"<option value=3>Spanish</option>"
+	"<option value=4>Russian</option>"
+	"<option value=5>Turkish</option>"
+	"<option value=6>Japanese</option>"
+	"<option value=7>ChineseTrad</option>"
+	"<option value=8>ChineseSimp</option>"
+	"<option value=9>Korean</option>"
+	"<option value=10>German</option>"
+	"<option value=11>Dutch</option>"
+	"<option value=12>Italian</option>"
+	"<option value=13>Finnish</option>"
+	"<option value=14>Swedish</option>"
+	"<option value=15>Norwegian</option>"
+	"<option value=16>Portuguese</option>"
+	"<option value=17>Vietnamese</option>"
+	"<option value=18>Arabic</option>"
+	"<option value=19>Hebrew</option>"
+	"<option value=20>Indonesian</option>"
+	"<option value=21>Greek</option>"
+	"<option value=22>Thai</option>"
+	"<option value=23>Hindi</option>"
+	"<option value=24>Bengala</option>"
+	"<option value=25>Polish</option>"
+	"<option value=26>Tagalog</option>"
+	"				</select>"
+	"				</td>"
+	"			</tr>"
+	""
+	""
+	"			<tr align=left valign=middle>"
+	"				<td>Restrict to this URL</td>"
+	"				<td colspan=2><input type=text name=url size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Pages that link to this URL</td>"
+	"				<td colspan=2><input type=text name=link size=40 /></td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Site Clustering</td>"
+	"				<td colspan=2><input type=radio name=sc value=1 checked=checked />yes&nbsp;&nbsp;&nbsp;<input type=radio name=sc value=0 />no</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Number of summary excerpts</td>"
+	"				<td colspan=2><input type=radio name=ns value=0 />0&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=1 />1&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=2 />2&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=3 checked=checked />3&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=4 />4&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=5 />5</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Results per Page</td>"
+	"				<td colspan=2><input type=radio name=n value=10 checked=checked />10&nbsp;&nbsp;<input type=radio name=n value=20 />20&nbsp;&nbsp;<input type=radio name=n value=30 />30&nbsp;&nbsp;<input type=radio name=n value=40 />40&nbsp;&nbsp;<input type=radio name=n value=50 />50&nbsp;&nbsp;<input type=radio name=n value=100 />100</td>"
+	"			</tr>"
+	"			<tr align=left valign=middle>"
+	"				<td>Restrict to these Sites</td>"
+	"				<td colspan=2><textarea rows=10 cols=40 name=sites></textarea></td>"
+	"			</tr>"
+	"	  </tbody>"
+	"	</table>"
+		      );
+
+
+
+	sb.safePrintf("</form>\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("<br><br>\n");
+
+	printNav ( sb , hr );
+
+	g_httpServer.sendDynamicPage (sock, 
+				      sb.getBufStart(), 
+				      sb.length(),
+				      3600, // cachetime
+				      false,// post?
+				      "text/html",
+				      200, // http status
+				      NULL, // cookie
+				      "UTF-8");
+
+	return true;
+}
+
+
+bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
+
+	SafeBuf sb;
+
+	printFrontPageShell ( sb , 4 );
+
+
+	sb.safePrintf("<br>\n");
+	//sb.safePrintf("<br><br><br>\n");
+
+	// submit to https now
+	//sb.safePrintf("<form method=GET "
+	//	      "action=/addurl name=f>\n" );
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
+
+	sb.safePrintf(
+	"<table width=100%% cellpadding=5 cellspacing=0 border=0>"
+	"<!--<tr bgcolor=#0340fd>"
+	"<th colspan=2>"
+	"<font color=33dcff>"
+	"About Gigablast</font> "
+	"</th>"
+	"</tr>"
+	"-->"
+	"<tr>"
+	"<td>"
+	"<br>"
+	""
+	"<center>"
+	"<table width=650px>"
+	"<tr><td>"
+	""
+	"        <p>As of 2013, Gigablast is one of the remaining four search engines in the United States that maintains its own searchable index of over a billion pages."
+	""
+	"	</p>"
+	""
+	"        <p>Founded in 2000, <a href=/bio.html>Matt Wells</a> created Gigablast to index up to 200 Billion pages"
+	"          with the least amount of hardware possible. Gigablast provides large-scale,"
+	"          high-performance, real-time information retrieval technology for partner"
+	"          sites. The company offers a variety of features including topic generation"
+	"          and the ability to index multiple document formats. This search delivery"
+	"          mechanism gives a partner \"turn key\" search capability and"
+	"          the capacity to instantly offer search at maximum scalability with minimum"
+	"          cost. "
+	"          Clients range from NASDAQ 100 listed corporations to boutique"
+	"          companies."
+	"	</p>"
+	""
+	"<p>"
+	"Matt Wells is currently the sole maintainer and programmer of Gigablast and is open for <u>consulting work</u>. For more information, contact us at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
+	"</p>"
+	"<br>"
+	"<center>"
+	"<iframe width=420 height=315 src=http://www.youtube-nocookie.com/embed/hoUzcU76u3I frameborder=0 allowfullscreen></iframe>"
+	"</center>"
+	"</td></tr>"
+	"</table>"
+	"</center>"
+	"</table>"
+
+		      );
+
+
+	sb.safePrintf("</form>\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("<br><br>\n");
+
+	printNav ( sb , hr );
+
+	g_httpServer.sendDynamicPage (sock, 
+				      sb.getBufStart(), 
+				      sb.length(),
+				      3600, // cachetime
+				      false,// post?
+				      "text/html",
+				      200, // http status
+				      NULL, // cookie
+				      "UTF-8");
+
+	return true;
+}
+
+
+bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
+
+	SafeBuf sb;
+
+	printFrontPageShell ( sb , 5 );
+
+	sb.safePrintf("<br><br>\n");
+	sb.safePrintf("<br><br><br>\n");
+
+	// submit to https now
+	//sb.safePrintf("<form method=GET "
+	//	      "action=/addurl name=f>\n" );
+
+	// CollectionRec *cr = g_collectiondb.getRec ( hr );
+	// char *coll = "";
+	// if ( cr ) coll = cr->m_coll;
+	// if ( cr )
+	// 	sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+	// 		      cr->m_coll);
+
+
+	sb.safePrintf(
+	"<br>"
+	"<table width=650px cellpadding=5 cellspacing=0 border=0>"
+	""
+	"<tr bgcolor=#0340fd>"
+	""
+	"<th><font color=33dcff>Example Query</font></th>"
+	"<th><font color=33dcff>Description</font></th>"
+	"</tr>"
+	"<tr> "
+	"<td><a href=/search?q=cat+dog>cat dog</a></td>"
+	"            <td>Search results have the word <em>cat</em> and the word <em>dog</em> "
+	"              in them. They could also have <i>cats</i> and <i>dogs</i>.</td>"
+	"          </tr>"
+	""
+	""
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%2Bcat>+cat</a></td>"
+	"            <td>Search results have the word <em>cat</em> in them. If the search results has the word <i>cats</i> then it will not be included. The plus sign indicates an exact match and not to use synonyms, hypernyms or hyponyms or any other form of the word.</td>"
+	"          </tr>"
+	""
+	""
+	"          <tr> "
+	"            <td height=10><a href=/search?q=mp3+%%22take+five%%22>mp3&nbsp;\"take&nbsp;five\"</a></td>"
+	"            <td>Search results have the word <em>mp3</em> and the exact phrase <em>take "
+	"              five</em> in them.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%22john+smith%%22+-%%22bob+dole%%22>\"john&nbsp;smith\"&nbsp;-\"bob&nbsp;dole\"</a></td>"
+	"            <td>Search results have the phrase <em>john smith</em> but NOT the "
+	"              phrase <em>bob dole</em> in them.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=bmx+-game>bmx&nbsp;-game</a></td>"
+	"            <td>Search results have the word <em>bmx</em> but not <em>game</em>.</td>"
+	"          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=inurl%%3Aedu+title%%3Auniversity><b>inurl:</b></a><a href=/search?q=inurl%%3Aedu+title%%3Auniversity>edu <b>title:</b>university</a></td>"
+	// "            <td>Search results have <em>university</em> in their title and <em>edu</em> "
+	// "              in their url.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22><b>site:</b></a><a href=/search?q=site%%3Awww.ibm.com+%%22big+blue%%22>www.ibm.com&nbsp;\"big&nbsp;blue\"</a></td>"
+	// "            <td>Search results are from the site <em>www.ibm.com</em> and have the phrase "
+	// "              <em>big blue</em> in them.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=url%%3Awww.yahoo.com><b>url:</b></a><a href=/search?q=url%%3Awww.yahoo.com&n=10>www.yahoo.com</a></td>"
+	// "            <td>Search result is the single URL www.yahoo.com, if it is indexed.</td>"
+	// "          </tr>"
+
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><nobr><a href=/search?q=title%%3A%%22the+news%%22+-%%22weather+report%%22><b>title:</b>\"the "
+	// "              news\" -\"weather report\"</a></nobr></td>"
+	// "            <td>Search results have the phrase <em>the news</em> in their title, "
+	// "              and do NOT have the phrase <em>weather report</em> anywhere in their "
+	// "              content.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=ip%%3A216.32.120+cars><b>ip:</b></a><a href=/search?q=ip%%3A216.32.120>216.32.120</a></td>"
+	// "            <td>Search results are from the the ip 216.32.120.*.</td>"
+	// "          </tr>"
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=type%%3Apdf+nutrition><b>type:</b>pdf nutrition</a></td>"
+	// "            <td>Search results are PDF (Portable Document Format) documents that "
+	// "              contain the word <em>nutrition</em>.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=type%%3Adoc><b>type:</b>doc</a></td>"
+	// "            <td>Search results are Microsoft Word documents.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=type%%3Axls><b>type:</b>xls</a></td>"
+	// "            <td>Search results are Microsoft Excel documents.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=type%%3Appt><b>type:</b>ppt</a></td>"
+	// "            <td>Search results are Microsoft Power Point documents.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=type%%3Aps><b>type:</b>ps</a></td>"
+	// "            <td>Search results are Postscript documents.</td>"
+	// "          </tr>"
+	// "          <tr> "
+	// "            <td><a href=/search?q=type%%3Atext><b>type:</b>text</a></td>"
+	// "            <td>Search results are plain text documents.</td>"
+	// "          </tr>"
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=filetype%%3Apdf><b>filetype:</b>pdf</a></td>"
+	// "            <td>Search results are PDF documents.</td>"
+	// "          </tr>"
+	// ""
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=link%%3Awww.yahoo.com><b>link:</b>www.yahoo.com</a></td>"
+	// "            <td>All the pages that link to www.yahoo.com.</td>"
+	// "          </tr>"
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=sitelink%%3Awww.yahoo.com><b>sitelink:</b>www.yahoo.com</a></td>"
+	// "            <td>All the pages that link to any page on www.yahoo.com.</td>"
+	// "          </tr>"
+	// ""
+	// "          <tr bgcolor=#E1FFFF> "
+	// "            <td><a href=/search?q=ext%%3Atxt><b>ext:</b>txt</a></td>"
+	// "            <td>All the pages whose url ends in the .txt extension.</td>"
+	// "          </tr>"
+	// ""
+	// ""
+		      );
+
+
+	sb.safePrintf(
+		      // spacer
+		      //"<tr><td><br></td><td></td></tr>"
+
+		      //"<tr bgcolor=#0340fd>"
+		      // "<td><font color=33dcff><b>Special Query</b>"
+		      // "</font></td>"
+		      //"<td><font color=33dcff><b>Description</b></font></td>"
+		      // "</tr>"
+		      "<tr bgcolor=#E1FFFF>"
+		      "<td>cat | dog</td><td>"
+		      "Match documents that have cat and dog in them, but "
+		      "do not allow cat to affect the ranking score, only "
+		      "dog. This is called a <i>query refinement</i>."
+		      "</td></tr>\n"
+
+		      "<tr bgcolor=#ffFFFF>"
+		      "<td>document.title:paper</td><td>"
+		      "That query will match a JSON document like "
+		      "<i>"
+		      "{ \"document\":{\"title\":\"This is a good paper.\" "
+		      "}}</i> or, alternatively, an XML document like <i>"
+
+
+		      );
+	sb.htmlEncode("<document><title>This is a good paper"
+		      "</title></document>" );
+	sb.safePrintf("</i></td></tr>\n");
+
+
+	char *bg1 = "#E1FFFF";
+	char *bg2 = "#ffffff";
+	char *bgcolor = bg1;
+
+	// table of the query keywords
+	long n = getNumFieldCodes();
+	for ( long i = 0 ; i < n ; i++ ) {
+		// get field #i
+		QueryField *f = &g_fields[i];
+
+		if ( g_fields[i].m_flag & QTF_HIDE ) continue;
+		
+
+		// print it out
+		char *d = f->desc;
+		// fix table internal cell bordering
+		if ( ! d || d[0] == '\0' ) d = "&nbsp;";
+		sb.safePrintf("<tr bgcolor=%s>"
+			      "<td><nobr><a href=\"/search?q="
+			      , bgcolor );
+		sb.urlEncode ( f->example );
+		sb.safePrintf("\">");
+		sb.safePrintf("%s</a></nobr></td>"
+			      "<td>%s</td></tr>\n",
+			      f->example,
+			      d);
+
+		if ( bgcolor == bg1 ) bgcolor = bg2;
+		else                  bgcolor = bg1;
+	}
+
+
+
+
+	sb.safePrintf(
+	"          <tr> "
+	"            <td style=padding-bottom:12px;>&nbsp;</td>"
+	"            <td style=padding-bottom:12px;>&nbsp;</td>"
+	"          </tr>"
+	""
+
+
+	"<tr bgcolor=#0340fd>"
+	""
+	"            <th><font color=33dcff>Boolean Search</font></th>"
+	"            <th><font color=33dcff>Description</font></th>"
+	""
+	"          </tr>"
+	""
+	"          <tr> "
+	"            <td colspan=2 bgcolor=#FFFFCC><center>"
+	"                Note: boolean operators must be in UPPER CASE. "
+	"              </td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+AND+dog>cat&nbsp;AND&nbsp;dog</a></td>"
+	"            <td>Search results have the word <em>cat</em> AND the word <em>dog</em> "
+	"              in them.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=cat+OR+dog>cat&nbsp;OR&nbsp;dog</a></td>"
+	"            <td>Search results have the word <em>cat</em> OR the word <em>dog</em> "
+	"              in them, but preference is given to results that have both words.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+dog+OR+pig>cat&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td>Search results have the two words <em>cat</em> and <em>dog</em> "
+	"              OR search results have the word <em>pig</em>, but preference is "
+	"              given to results that have all three words. This illustrates how "
+	"              the individual words of one operand are all required for that operand "
+	"              to be true.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%22cat+dog%%22+OR+pig>\"cat&nbsp;dog\"&nbsp;OR&nbsp;pig</a></td>"
+	"            <td>Search results have the phrase <em>\"cat dog\"</em> in them OR they "
+	"              have the word <em>pig</em>, but preference is given to results that "
+	"              have both.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>title</a><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>:\"cat "
+	"              dog\" OR pig</a></td>"
+	"            <td>Search results have the phrase <em>\"cat dog\"</em> in their title "
+	"              OR they have the word <em>pig</em>, but preference is given to results "
+	"              that have both.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=cat+OR+dog+OR+pig>cat&nbsp;OR&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td>Search results need only have one word, <em>cat</em> or <em>dog</em> "
+	"              or <em>pig</em>, but preference is given to results that have the "
+	"              most of the words.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+OR+dog+AND+pig>cat&nbsp;OR&nbsp;dog&nbsp;AND&nbsp;pig</a></td>"
+	"            <td>Search results have <em>dog</em> and <em>pig</em>, but they may "
+	"              or may not have <em>cat</em>. Preference is given to results that "
+	"              have all three. To evaluate expressions with more than two operands, "
+	"              as in this case where we have three, you can divide the expression "
+	"              up into sub-expressions that consist of only one operator each. "
+	"              In this case we would have the following two sub-expressions: <em>cat "
+	"              OR dog</em> and <em>dog AND pig</em>. Then, for the original expression "
+	"              to be true, at least one of the sub-expressions that have an OR "
+	"              operator must be true, and, in addition, all of the sub-expressions "
+	"              that have AND operators must be true. Using this logic you can evaluate "
+	"              expressions with more than one boolean operator.</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=cat+AND+NOT+dog>cat&nbsp;AND&nbsp;NOT&nbsp;dog</a></td>"
+	"            <td>Search results have <em>cat</em> but do not have <em>dog</em>.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td><a href=/search?q=cat+AND+NOT+%%28dog+OR+pig%%29>cat&nbsp;AND&nbsp;NOT&nbsp;(dog&nbsp;OR&nbsp;pig)</a></td>"
+	"            <td>Search results have <em>cat</em> but do not have <em>dog</em> "
+	"              and do not have <em>pig</em>. When evaluating a boolean expression "
+	"              that contains ()'s you can evaluate the sub-expression in the ()'s "
+	"              first. So if a document has <em>dog</em> or it has <em>pig</em> "
+	"              or it has both, then the expression, <em>(dog OR pig)</em> would "
+	"              be true. So you could, in this case, substitute <em>true</em> for "
+	"              that expression to get the following: <em>cat AND NOT (true) = cat "
+	"              AND false = false</em>. Does anyone actually read this far?</td>"
+	"          </tr>"
+	"          <tr bgcolor=#E1FFFF> "
+	"            <td><a href=/search?q=%%28cat+OR+dog%%29+AND+NOT+%%28cat+AND+dog%%29>(cat&nbsp;OR&nbsp;dog)&nbsp;AND&nbsp;NOT&nbsp;(cat&nbsp;AND&nbsp;dog)</a></td>"
+	"            <td>Search results have <em>cat</em> or <em>dog</em> but not both.</td>"
+	"          </tr>"
+	"          <tr> "
+	"            <td>left-operand&nbsp;&nbsp;OPERATOR&nbsp;&nbsp;right-operand</td>"
+	"            <td>This is the general format of a boolean expression. The possible "
+	"              operators are: OR and AND. The operands can themselves be boolean "
+	"              expressions and can be optionally enclosed in parentheses. A NOT "
+	"              operator can optionally preceed the left or the right operand.</td>"
+	"          </tr>"
+	""
+	//"        </table>"
+	""
+	""
+	""
+	//"</td></tr>"
+	//"</table>"
+	//"<br>"
+		      );
+
+
+
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+	//sb.safePrintf("<tr><td></td><td></td></tr>\n");
+
+	
+	sb.safePrintf("</table>");
+
+
+	//sb.safePrintf("</form>\n");
+	sb.safePrintf("<br>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("<br><br>\n");
+
+	printNav ( sb , hr );
+
+	g_httpServer.sendDynamicPage (sock, 
+				      sb.getBufStart(), 
+				      sb.length(),
+				      3600, // cachetime
+				      false,// post?
+				      "text/html",
+				      200, // http status
+				      NULL, // cookie
+				      "UTF-8");
+
+	return true;
 }
 
