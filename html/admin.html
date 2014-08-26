@@ -1076,7 +1076,7 @@ Gigablast is a fairly sophisticated database that has a few things you can tweak
 
 <b>General Optimizations:</b>
 <ul>
-<li> Ensure that each disk drive is on its own separate "scsi host". See which drives are on what scsi hosts by doing a <i>cat /proc/scsi/scsi</i>. If multiple drives are sharing a "scsi host", like for example, "Host: scsi3", then you are going to have I/O contention and really, really slow Gigablast down. You can buy SATA cards that plug into your PCI-E slot to provide more scsi hosts.
+<li> Ensure that all drives can operate at maximum performance at the same time. Nowadays, the PCI-E bus could be the limiting factor, so be aware of that. Ensure you get maximum throughput and lots of disk seeks per second. By doing a <i>cat /proc/scsi/scsi</i> you can get info about your drives.
 
 <li> Prevent Linux from unnecessary swapping. Linux will often swap out
 Gigablast pages to satisfy Linux's disk cache. By using the swapoff command
