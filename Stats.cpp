@@ -502,7 +502,7 @@ void drawLine2 ( SafeBuf &sb ,
 		      "left:%li;"
 		      "top:%li;"
 		      "background-color:#%06lx;"
-		      "z-index:-5;"
+		      "z-index:5;"
 		      "min-height:%lipx;"
 		      "min-width:%lipx;\"></div>\n"
 		      , x1
@@ -566,7 +566,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		      
 		      //"overflow-y:hidden;"
 		      "overflow-x:hidden;"
-		      "z-index:-10;"
+		      //"z-index:-10;"
 		      // the tick marks we print below are based on it
 		      // being a window of the last 20 seconds... and using
 		      // DX pixels
