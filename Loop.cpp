@@ -1731,19 +1731,19 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 	if ( band & POLLIN  ) {
 		// keep stats on this now since some linuxes dont work right
 		g_stats.m_readSignals++;
-		log("Loop: read %lli fd=%i",gettimeofdayInMilliseconds(),fd);
+		//log("Loop: read %lli fd=%i",gettimeofdayInMilliseconds(),fd);
 		g_loop.callCallbacks_ass ( true  , fd ); 
 	}
 	else if ( band & POLLPRI ) {
 		// keep stats on this now since some linuxes dont work right
 		g_stats.m_readSignals++;
-		log("Loop: read %lli fd=%i",gettimeofdayInMilliseconds(),fd);
+		//log("Loop: read %lli fd=%i",gettimeofdayInMilliseconds(),fd);
 		g_loop.callCallbacks_ass ( true  , fd ) ;
 	}
 	else if ( band & POLLOUT ) {
 		// keep stats on this now since some linuxes dont work right
 		g_stats.m_writeSignals++;
-		log("Loop: write %lli fd=%i",gettimeofdayInMilliseconds(),fd);
+		//log("Loop: write %lli fd=%i",gettimeofdayInMilliseconds(),fd)
 		g_loop.callCallbacks_ass ( false , fd ); 
 	}
 	// fix qainject1() test with this
