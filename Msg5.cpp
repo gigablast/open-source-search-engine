@@ -149,6 +149,11 @@ bool Msg5::getList ( char     rdbId         ,
 		log("disk: Trying to reset a class waiting for a reply.");
 		char *xx = NULL; *xx = 0; 
 	}
+	if ( collnum < 0 ) {
+		log("msg5: called with bad collnum=%li",(long)collnum);
+		g_errno = ENOCOLLREC;
+		return true;
+	}
 	// sanity check. we no longer have record caches!
 	// now we do again for posdb gbdocid:xxx| restricted queries
 	//if ( addToCache || maxCacheAge ) {char *xx=NULL;*xx=0; }

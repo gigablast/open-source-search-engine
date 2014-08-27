@@ -803,6 +803,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td colspan=2>"
 			      "<center><b>General Info</b></td></tr>\n"
 			      "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
+			      "<tr class=poo><td><b>Process ID</b></td><td>%lu</td></tr>\n"
 			      "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>read signals</b></td><td>%lli</td></tr>\n"
@@ -821,6 +822,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      ,
 			      TABLE_STYLE ,
 			      ubuf.getBufStart(),
+			      (unsigned long)getpid(),
 			      g_numCorrupt,
 			      g_numAlarms,
 			      g_stats.m_readSignals,
