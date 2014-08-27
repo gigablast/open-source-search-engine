@@ -18,6 +18,8 @@ Stats::Stats ( ) {
 	//m_minWindowStartTime = 0;
 	memset ( m_pts , 0 , sizeof(StatPoint)*MAX_POINTS );
 
+	m_readSignals = 0;
+	m_writeSignals = 0;
 	m_slowDiskReads = 0;
 	m_queryTimes = 0;
 	m_numQueries = 0;

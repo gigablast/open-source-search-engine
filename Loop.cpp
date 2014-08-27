@@ -344,7 +344,7 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 #ifdef _POLLONLY_
 	return true;
 #endif
-	// truncate nicess cuz we only get GB_SIGRTMIN+1 to GB_SIGRTMIN+2 signals
+	// trunc nicess cuz we only get GB_SIGRTMIN+1 to GB_SIGRTMIN+2 signals
 	if ( niceness < -1             ) niceness = -1;
 	if ( niceness >  MAX_NICENESS  ) niceness = MAX_NICENESS;
 	// debug msg
@@ -581,7 +581,7 @@ bool Loop::init ( ) {
 	// . when using threads GB_SIGRTMIN becomes 35, not 32 anymore
 	//   since threads use these signals to reactivate suspended threads
 	// . debug msg
-	//log("GB_SIGRTMIN=%li", GB_SIGRTMIN );
+	log("admin: GB_SIGRTMIN=%li", (long)GB_SIGRTMIN );
 	// . block the GB_SIGRTMIN signal
 	// . anytime this is raised it goes onto the signal queue
 	// . we use sigtimedwait() to get signals off the queue
@@ -711,6 +711,7 @@ bool Loop::init ( ) {
 	//setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
 
 	sa.sa_sigaction = sigalrmHandler;
+	// it's gotta be real time, not virtual cpu time now
 	//if ( sigaction ( SIGALRM, &sa, 0 ) < 0 ) g_errno = errno;
 	if ( sigaction ( SIGVTALRM, &sa, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
@@ -1008,11 +1009,14 @@ bool Loop::runLoop ( ) {
 		//g_udpServer2.process_ass ( g_now );
 		// MDW: see if this works without this junk, if not then
 		// put it back in
-		g_udpServer.sendPoll_ass (true,g_now);
-		g_udpServer.process_ass ( g_now );
+		// seems like never getting signals on redhat 16-core box.
+		// we always process dgrams through this... wtf? try taking
+		// it out and seeing what's happening
+		//g_udpServer.sendPoll_ass (true,g_now);
+		//g_udpServer.process_ass ( g_now );
 		// and dns now too
-		g_dns.m_udpServer.sendPoll_ass(true,g_now);
-		g_dns.m_udpServer.process_ass ( g_now );
+		//g_dns.m_udpServer.sendPoll_ass(true,g_now);
+		//g_dns.m_udpServer.process_ass ( g_now );
 
 		// if there was a high niceness  http request within a 
 		// quickpoll, we stored it and now we'll call it here.
@@ -1043,7 +1047,8 @@ bool Loop::runLoop ( ) {
 		g_threads.timedCleanUp(4, MAX_NICENESS ) ; // 4 ms
 
 		// do it anyway
-		doPoll();
+		// take this out as well to see if signals are coming in
+		//doPoll();
 
 		while ( m_needToPoll ) doPoll();
 
@@ -1085,19 +1090,21 @@ bool Loop::runLoop ( ) {
 
 		if ( sigNum <  0 ) {
 			if ( errno == EAGAIN || errno == EINTR ||
-					errno == EILSEQ || errno == 0 ) { 
+			     errno == EILSEQ || errno == 0 ) { 
 				sigNum = 0; 
 				errno = 0;
 			}
 			else if ( errno != ENOMEM ) {
-				log("loop: sigtimedwait(): %s.",strerror(errno));
+				log("loop: sigtimedwait(): %s.",
+				    strerror(errno));
 				continue;
 			}
 		}
 		if ( sigNum == 0 ) {
-			//no signals pending, try to take care of anything left undone:
+			//no signals pending, try to take care of anything 
+			// left undone:
 
-			long long startTime = gettimeofdayInMillisecondsLocal();
+			long long startTime =gettimeofdayInMillisecondsLocal();
 			if(g_now & 1) {
 				if(g_udpServer.needBottom())  
 					g_udpServer.makeCallbacks_ass ( 2 );
@@ -1143,6 +1150,9 @@ bool Loop::runLoop ( ) {
 				s_sigWaitTimePtr = &s_sigWaitTime;
 			}
 		}
+		//
+		// we got a signal, process it
+		//
 		else {
 			if   ( info.si_code == SIGIO ) {
 				log("loop: got sigio");
@@ -1706,7 +1716,7 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 // 		g_threads.launchThreads();
 	}
 
-	// if we just needed a cleanup
+	// if we just needed to cleanup a thread
 	if ( info->si_signo == SIGCHLD ) return;
 
 	// if we don't got a signal for an fd, just a sigqueue() call, bail now
@@ -1719,15 +1729,21 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 	//if      ( band & (POLLIN | POLLOUT) == (POLLIN | POLLOUT) ) 
 	// g_loop.callCallbacks_ass ( true/*forReading?*/ , fd );
 	if ( band & POLLIN  ) {
-		//log("Loop: read %lli",gettimeofdayInMilliseconds());
+		// keep stats on this now since some linuxes dont work right
+		g_stats.m_readSignals++;
+		log("Loop: read %lli fd=%i",gettimeofdayInMilliseconds(),fd);
 		g_loop.callCallbacks_ass ( true  , fd ); 
 	}
 	else if ( band & POLLPRI ) {
-		//log("Loop: read %lli",gettimeofdayInMilliseconds());
+		// keep stats on this now since some linuxes dont work right
+		g_stats.m_readSignals++;
+		log("Loop: read %lli fd=%i",gettimeofdayInMilliseconds(),fd);
 		g_loop.callCallbacks_ass ( true  , fd ) ;
 	}
 	else if ( band & POLLOUT ) {
-		//log("Loop: read %lli",gettimeofdayInMilliseconds());
+		// keep stats on this now since some linuxes dont work right
+		g_stats.m_writeSignals++;
+		log("Loop: write %lli fd=%i",gettimeofdayInMilliseconds(),fd);
 		g_loop.callCallbacks_ass ( false , fd ); 
 	}
 	// fix qainject1() test with this

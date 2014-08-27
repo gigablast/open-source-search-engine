@@ -868,6 +868,10 @@ void hdtempWrapper ( int fd , void *state ) {
 	long now = getTime();
 	// or if haven't waited long enough
 	if ( now < s_nextTime ) return;
+
+	// ignore this for now, ssds don't have temp monitoring
+	return;
+
 	// set it
 	g_process.m_threadOut = true;
 	// . call thread to call popen
@@ -1005,7 +1009,7 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 
 	// ignore temps now. ssds don't have it
-	return NULL;
+	//return NULL;
 	
 
 	static char *s_parm = "ata";

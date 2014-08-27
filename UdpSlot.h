@@ -220,13 +220,40 @@ class UdpSlot {
 	// . for internal use
 	// . set a window bit
 	void setBit ( long dgramNum , unsigned char *bits ) {
-		bits [ dgramNum >> 3 ] |= (1 << (dgramNum & 0x07)); };
+		// lazy initialize,since initializing all bits is too expensive
+		if ( dgramNum >= m_numBitsInitialized ) {
+			m_sentBits2   [dgramNum>>3] = 0;
+			m_readBits2   [dgramNum>>3] = 0;
+			m_sentAckBits2[dgramNum>>3] = 0;
+			m_readAckBits2[dgramNum>>3] = 0;
+			m_numBitsInitialized += 8;
+		}
+		bits [ dgramNum >> 3 ] |= (1 << (dgramNum & 0x07)); 
+	};
 	// clear a window bit
 	void clrBit ( long dgramNum , unsigned char *bits ) {
-		bits [ dgramNum >> 3 ] &= ~(1 << (dgramNum & 0x07)); };
+		// lazy initialize,since initializing all bits is too expensive
+		if ( dgramNum >= m_numBitsInitialized ) {
+			m_sentBits2   [dgramNum>>3] = 0;
+			m_readBits2   [dgramNum>>3] = 0;
+			m_sentAckBits2[dgramNum>>3] = 0;
+			m_readAckBits2[dgramNum>>3] = 0;
+			m_numBitsInitialized += 8;
+		}
+		bits [ dgramNum >> 3 ] &= ~(1 << (dgramNum & 0x07)); 
+	};
 	// get value of a window bit
 	bool isOn   ( long dgramNum , unsigned char *bits ) {
-		return bits [ dgramNum >> 3 ] & (1 << (dgramNum & 0x07)); };
+		// lazy initialize,since initializing all bits is too expensive
+		if ( dgramNum >= m_numBitsInitialized ) {
+			m_sentBits2   [dgramNum>>3] = 0;
+			m_readBits2   [dgramNum>>3] = 0;
+			m_sentAckBits2[dgramNum>>3] = 0;
+			m_readAckBits2[dgramNum>>3] = 0;
+			m_numBitsInitialized += 8;
+		}
+		return bits [ dgramNum >> 3 ] & (1 << (dgramNum & 0x07)); 
+	};
 
 	// clear all the bits
 	//void clrAllBits ( unsigned char *bits , long numBits ) {
@@ -380,14 +407,16 @@ class UdpSlot {
 	// don't wait longer than this, however
 	short          m_maxWait;
 
+	// save cpu by not having to call memset() on m_sentBits et al
+	long m_numBitsInitialized;
 
 	// . i've discarded the window since msg size is limited
 	// . this way is faster 
 	// . these bits determine what dgrams we've sent/read/sentAck/readAck
-	unsigned char m_sentBits    [ (MAX_DGRAMS / 8) + 1 ];
-	unsigned char m_readBits    [ (MAX_DGRAMS / 8) + 1 ];
-	unsigned char m_sentAckBits [ (MAX_DGRAMS / 8) + 1 ];
-	unsigned char m_readAckBits [ (MAX_DGRAMS / 8) + 1 ];
+	unsigned char m_sentBits2    [ (MAX_DGRAMS / 8) + 1 ];
+	unsigned char m_readBits2    [ (MAX_DGRAMS / 8) + 1 ];
+	unsigned char m_sentAckBits2 [ (MAX_DGRAMS / 8) + 1 ];
+	unsigned char m_readAckBits2 [ (MAX_DGRAMS / 8) + 1 ];
 
 	// we keep the unused slots in a linked list in UdpServer
 	class UdpSlot *m_next;

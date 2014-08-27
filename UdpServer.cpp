@@ -454,8 +454,9 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	// log an innocent msg
 	//log ( 0, "udp: listening on port %hu with sd=%li and "
 	//      "niceness=%li", m_port, m_sock, m_niceness );
-	log ( LOG_INIT, "udp: Listening on UDP port %hu with niceness=%li.", 
-	       m_port, niceness );
+	log ( LOG_INIT, "udp: Listening on UDP port %hu with niceness=%li "
+	      "and fd=%i.", 
+	      m_port, niceness , m_sock );
 	// print dgram sizes
 	//log("udp:  using max dgram size of %li bytes", DGRAM_SIZE );
 	return true;
