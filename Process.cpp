@@ -1219,10 +1219,12 @@ void diskHeartbeatWrapper ( int fd , void *state ) {
 }
 */
 
+// called by PingServer.cpp only as of now
 long long Process::getTotalDocsIndexed() {
 	if ( m_totalDocsIndexed == -1LL ) {
 		Rdb *rdb = g_clusterdb.getRdb();
-		m_totalDocsIndexed = rdb->getNumTotalRecs();
+		// useCache = true
+		m_totalDocsIndexed = rdb->getNumTotalRecs(true);
 	}
 	return m_totalDocsIndexed;
 }
