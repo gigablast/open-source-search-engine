@@ -1,5 +1,5 @@
-gb (1.9-1) unstable; urgency=low
+gb (1.10-1) unstable; urgency=low
 
-  * Lots of bug fixes
+  * More bug fixes. Faster event loop.
 
- -- mwells <gigablast@mail.com>  Tue, 27 Aug 2014 17:38:35 -0700
+ -- mwells <gigablast@mail.com>  Tue, 28 Aug 2014 17:38:35 -0700
