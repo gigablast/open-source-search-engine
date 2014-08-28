@@ -92,7 +92,7 @@ else
 # trying to use good ole' clone() again because it seems the errno location
 # thing is fixed by just ignoring it.
 #
-CPPFLAGS = -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable
+CPPFLAGS = -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -D_POLLONLY_
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.

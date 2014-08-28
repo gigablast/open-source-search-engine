@@ -430,7 +430,7 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	// get uncompressed size
 	uint32_t unzippedLen = *(long*)reply;
 	// sanity checks
-	if ( unzippedLen < 0 || unzippedLen > 10000000 ) {
+	if ( unzippedLen > 10000000 ) {
 		log("spider: downloaded probable corrupt gzipped doc "
 		    "with unzipped len of %li",(long)unzippedLen);
 		g_errno = ECORRUPTDATA;
@@ -1211,7 +1211,7 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 		catch ( ... ) { 
 			g_errno = ENOMEM;
 			log("squid: msg7 new(%i): %s",
-			    sizeof(Msg7),mstrerror(g_errno));
+			    (int)sizeof(Msg7),mstrerror(g_errno));
 			return;
 		}
 		mnew ( msg7, sizeof(Msg7), "m7st" );

@@ -14,7 +14,7 @@ bool hasBackTag ( nodeid_t tagId ) ;
 long getTagLen ( char *node ) ;
 bool isTagStart ( char *s );//, long i, long version ) ;
 // s points to tag name - first char
-nodeid_t getTagId ( char *s , class NodeType **retp = NULL ); 
+nodeid_t getTagId ( char *s , struct NodeType **retp = NULL ); 
 
 class XmlNode {
 
@@ -159,7 +159,7 @@ struct NodeType {
 	char     m_isXmlTag;
 };
 
-extern class NodeType g_nodes[];
+extern struct NodeType g_nodes[];
 
 inline char *getTagName ( nodeid_t tagId ) {return g_nodes[tagId].m_nodeName;};
 

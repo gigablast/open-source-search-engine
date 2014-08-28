@@ -24,7 +24,7 @@ bool print128 ( key128_t *kp ) ;
 long printTime ( long ttt );
 time_t mktime_utc ( struct tm *ttt ) ;
 
-struct SafeBuf;
+class SafeBuf;
 // seems like this should be defined, but it isn't
 long strnlen ( const char *s , long maxLen );
 // this too
@@ -147,7 +147,9 @@ bool      atob        ( const char *s, long len ) ;
 char *strncasestr ( char *haystack , char *needle , long haystackSize ) ;
 char *strncasestr ( char *haystack , char *needle , 
 		    long haystackSize, long needleSize ) ;
-char *strnstr ( char *haystack , char *needle , long haystackSize ) ;
+
+// XXX ACC: removed per mdw
+//char *strnstr ( char *haystack , char *needle , long haystackSize ) ;
 
 // independent of case
 char *gb_strcasestr ( char *haystack , char *needle );

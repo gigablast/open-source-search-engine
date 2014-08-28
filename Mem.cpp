@@ -32,7 +32,7 @@
 //void  dlfree(void*);
 //void* dlcalloc(size_t, size_t);
 //void* dlrealloc(void*, size_t);
-#include "malloc.c"
+//#include "malloc.c"
 
 #define sysmalloc ::malloc
 #define syscalloc ::calloc
@@ -235,7 +235,7 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	//if ( s_mcount > 57 && (rand() % 1000) < 2 ) { 
 	if ( g_conf.m_testMem && (rand() % 100) < 2 ) { 
 		g_errno = ENOMEM; 
-		log("mem: new-fake(%i): %s",size, mstrerror(g_errno));
+		log("mem: new-fake(%lu): %s",size, mstrerror(g_errno));
 		throw std::bad_alloc(); 
 		// return NULL; }
 	} 
@@ -247,7 +247,7 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	// don't go over max
 	if ( g_mem.m_used + size >= g_mem.m_maxMem &&
 	     g_mem.m_maxMem > 1000000 ) {
-		log("mem: new(%i): Out of memory.", size );
+		log("mem: new(%lu): Out of memory.", size );
 		//if ( unlock ) mutexUnlock();
 		throw std::bad_alloc();
 		//throw 1;
@@ -269,7 +269,7 @@ newmemloop:
 	//void *mem = s_pool.malloc ( size );
 	if ( ! mem && size > 0 ) {
 		g_errno = errno;
-		log("mem: new(%i): %s",size, mstrerror(g_errno));
+		log("mem: new(%lu): %s",size, mstrerror(g_errno));
 		//if ( unlock ) mutexUnlock();
 		throw std::bad_alloc();
 		//throw 1;
@@ -332,7 +332,7 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	// don't go over max
 	if ( g_mem.m_used + size >= g_mem.m_maxMem &&
 	     g_mem.m_maxMem > 1000000 ) {
-		log("mem: new(%i): Out of memory.", size );
+		log("mem: new(%lu): Out of memory.", size );
 		throw std::bad_alloc();
 		//throw 1;
 	}
@@ -354,7 +354,7 @@ newmemloop:
 	//void *mem = s_pool.malloc ( size );
 	if ( ! mem && size > 0 ) {
 		g_errno = errno;
-		log("mem: new(%i): %s",size, mstrerror(g_errno));
+		log("mem: new(%lu): %s",size, mstrerror(g_errno));
 		//if ( unlock ) mutexUnlock();
 		throw std::bad_alloc();
 		//throw 1;

@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#ifdef CYGWIN
+#if defined(CYGWIN) || defined(__APPLE__)
 // use a stub
 long klogctl( int, char *,int ) { return 0; }
 #else

@@ -2311,7 +2311,7 @@ int startUp ( void *state ) {
 	// . the first 4 bytes of t->m_state should be t->m_callback
 	// . no! just use 1 to tell Loop to call g_threads.cleanUp()
 	// . TODO: pass in a ptr to cleanUpWrapper() instead of "t"
-	sigval_t svt; 
+	sigval svt; 
 	svt.sival_int = (int)t ; //(int)(t->m_state); // fd;
 
 	// set exit time
@@ -2347,7 +2347,11 @@ int startUp ( void *state ) {
 
 	// . it does not send us a signal automatically, so we must do it!
 	// . i noticed during the linkdb rebuild we were not getting the signal
+
+        // XXX ACC Added test for _POLLONLY_ because OSX doesn't have sigqueue!
+#ifndef _POLLONLY_
 	sigqueue ( s_pid, GB_SIGRTMIN + 1 + t->m_niceness, svt ) ;
+#endif
 
 	return 0;
 }

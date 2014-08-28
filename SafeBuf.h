@@ -5,7 +5,8 @@
 //#include "Unicode.h"
 #include "gb-include.h"
 
-struct SafeBuf {
+class SafeBuf {
+public:
 	//*TRUCTORS
 	SafeBuf();
 	SafeBuf(long initSize, char *label = NULL);

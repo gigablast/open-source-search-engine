@@ -22,6 +22,12 @@ pid_t getpidtid();
 #define UNLINK_THREAD    5
 #define GENERIC_THREAD   6
 //#define SSLACCEPT_THREAD 7
+
+// XXX ACC: Totally bogus, only to force a hacked compilation on OSX for
+// static analysis with Coverity.
+#define SIGRTMIN 42
+// End hack
+
 #define GB_SIGRTMIN	 (SIGRTMIN+4)
 #define MAX_NICENESS     2
 // . a ThreadQueue has a list of thread entries

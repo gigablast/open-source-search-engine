@@ -2620,7 +2620,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// it will be there
 	slot->m_errno = g_errno;
 	// make the signal data
-	sigval_t svt; 
+	sigval svt; 
 	// zero means to call g_udpServer2.makeCbacks()
 	svt.sival_int = 0;
 	// debug msg
