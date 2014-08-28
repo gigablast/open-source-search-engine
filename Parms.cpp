@@ -11837,14 +11837,14 @@ void Parms::init ( ) {
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "
 		"for index-building purposes. Keep low to reduce impact "
-		"on query response time. Increase for RAID systems or when "
-		"initially building an index.";
+		"on query response time. Increase for fast disks or when "
+		"preferring build speed over lower query latencies";
 	m->m_cgi   = "smdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "7";
+	m->m_def   = "30";
 	m->m_units = "threads";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11854,10 +11854,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "smbdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "3"; // 1
+	m->m_def   = "8"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11867,10 +11867,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "smmdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "4"; // 3
+	m->m_def   = "19"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11880,10 +11880,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "smsdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "5";
+	m->m_def   = "20";
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11891,15 +11891,16 @@ void Parms::init ( ) {
 	m->m_title = "max query read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "
-		"for querying purposes. IDE systems tend to be more "
-		"responsive when this is low. Increase for SCSI or RAID "
-		"systems.";
+		"for querying purposes.";
+	//IDE systems tend to be more "
+	//	"responsive when this is low. Increase for SCSI or RAID "
+	//	"systems.";
 	m->m_cgi   = "qmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "20";
+	m->m_def   = "50";
 	m->m_units = "threads";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11909,10 +11910,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmbdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "20"; // 1
+	m->m_def   = "30"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11922,10 +11923,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "20"; // 3
+	m->m_def   = "30"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -11935,10 +11936,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmsdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "20";
+	m->m_def   = "40";
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
