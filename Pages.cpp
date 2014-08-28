@@ -1196,7 +1196,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		      "<br>"
 
 		      "<center>"
-		      "<a href=/>"
+		      "<a href=/?c=%s>"
 		      "<div style=\""
 		      "background-color:white;"
 		      "padding:10px;"
@@ -1215,6 +1215,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 		      "<br>"
 		      "<br>"
+		       ,coll
 		      );
 
 

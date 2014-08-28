@@ -1523,6 +1523,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
 	SearchInput *si = &st->m_si;
 	Msg40 *msg40 = &st->m_msg40;
+	CollectionRec *cr = si->m_cr;
 
 	char format = si->m_format;
 
@@ -1599,7 +1600,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 			      "<br>"
 
 			      "<center>"
-			      "<a href=/>"
+			      "<a href=/?c=%s>"
 			      "<div style=\""
 			      "background-color:white;"
 			      "padding:10px;"
@@ -1619,6 +1620,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
 			      "<br>"
 			      "<br>"
+			      ,cr->m_coll
 			      );
 	}
 
