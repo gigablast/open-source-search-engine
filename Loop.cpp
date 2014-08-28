@@ -679,7 +679,7 @@ bool Loop::init ( ) {
 	// . when using threads GB_SIGRTMIN becomes 35, not 32 anymore
 	//   since threads use these signals to reactivate suspended threads
 	// . debug msg
-	log("admin: GB_SIGRTMIN=%li", (long)GB_SIGRTMIN );
+	//log("admin: GB_SIGRTMIN=%li", (long)GB_SIGRTMIN );
 	// . block the GB_SIGRTMIN signal
 	// . anytime this is raised it goes onto the signal queue
 	// . we use sigtimedwait() to get signals off the queue
