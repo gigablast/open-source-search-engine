@@ -3295,31 +3295,32 @@ static bool       s_isInitialized = false;
 // 3rd field = m_hasColon
 struct QueryField g_fields[] = {
 
+	{"gbfieldmatch",
+	 FIELD_GBFIELDMATCH,
+	 true,
+	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
+	 "Matches all the meta tag or JSON or XML fields that have "
+	 "the name \"strings.vendor\" and contain the exactly provided "
+	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
+	 "sensitive and includes punctuation, so it's exact match.",
+	 "Advanced Query Operators",
+	 QTF_BEGINNEWTABLE },
+
 	{"url", 
 	 FIELD_URL, 
 	 true,
 	 "url:www.abc.com/page.html",
 	 "Matches the page with that exact url. Uses the first url, not "
 	 "the url it redirects to, if any." , 
+	 NULL,
 	 0 },
-
 
 	{"ext", 
 	 FIELD_EXT, 
 	 true,
 	 "ext:doc",
 	 "Match documents whose url ends in the <i>.doc</i> file extension.",
-	 0 },
-
-
-	{"url2", 
-	 FIELD_URL, 
-	 true,
-	 "url2:www.abc.com/page.html",
-	 "Matches the <i>Spider Status</i> documents for the specified url. "
-	 "These special documents "
-	 "let you know exactly when the url was attempted to be "
-	 "spidered and the outcome.",
+	 NULL,
 	 0 },
 
 
@@ -3329,6 +3330,7 @@ struct QueryField g_fields[] = {
 	 "link:www.gigablast.com/foo.html",
 	 "Matches all the documents that have a link to "
 	 "http://www.gigablast.com/foobar.html",
+	 NULL,
 	 0 },
 
 	//{"links", FIELD_LINKS, true,"Same as link:."},
@@ -3341,6 +3343,7 @@ struct QueryField g_fields[] = {
 	 "sitelink:abc.foobar.com",
 	 "Matches all documents that link to any page on the "
 	 "<i>abc.foobar.com</i> site.",
+	 NULL,
 	 0 },
 
 	{"site", 
@@ -3348,6 +3351,7 @@ struct QueryField g_fields[] = {
 	 true,
 	 "site:mysite.com",
 	 "Matches all documents on the mysite.com domain.",
+	 NULL,
 	 0 },
 
 	{"site", 
@@ -3356,6 +3360,7 @@ struct QueryField g_fields[] = {
 	 "site:www.mysite.com/dir1/dir2/",
 	 "Matches all documents whose url starts with "
 	 "www.mysite.com/dir1/dir2/",
+	 NULL,
 	 QTF_DUP },
 
 
@@ -3365,6 +3370,7 @@ struct QueryField g_fields[] = {
 	 true,
 	 "ip:1.2.3.4",
 	 "Matches all documents whose IP is 1.2.3.4.",
+	 NULL,
 	 0 },
 
 
@@ -3373,6 +3379,7 @@ struct QueryField g_fields[] = {
 	 true,
 	 "ip:1.2.3",
 	 "Matches all documents whose IP STARTS with 1.2.3.",
+	 NULL,
 	 QTF_DUP },
 
 
@@ -3384,6 +3391,7 @@ struct QueryField g_fields[] = {
 	 "http://www.mysite.com/dog/food.html. However will not match "
 	 "http://www.mysite.com/dogfood.html because it is not an "
 	 "individual word. It must be delineated by punctuation.",
+	 NULL,
 	 0 },
 
 
@@ -3392,6 +3400,7 @@ struct QueryField g_fields[] = {
 	 true,
 	 "suburl:dog",
 	 "Same as inurl.",
+	 NULL,
 	0},
 
 	{"intitle", 
@@ -3400,6 +3409,7 @@ struct QueryField g_fields[] = {
 	 "title:cat",
 	 "Matches all the documents that have the word cat in their "
 	 "title.",
+	 NULL,
 	 0 },
 
 
@@ -3409,6 +3419,7 @@ struct QueryField g_fields[] = {
 	 "title:\"cat food\"",
 	 "Matches all the documents that have the phrase \"cat food\" "
 	 "in their title.",
+	 NULL,
 	 QTF_DUP },
 	
 
@@ -3417,6 +3428,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "title:cat",
 	 "Same as intitle:",
+	 NULL,
 	0},
 
 
@@ -3429,6 +3441,7 @@ struct QueryField g_fields[] = {
 	 "gbinrss:1",
 	 "Matches all documents that are in RSS feeds. Likewise, use "
 	 "<i>gbinrss:0</i> to match all documents that are NOT in RSS feeds.",
+	 NULL,
 	 0},
 
 
@@ -3441,6 +3454,7 @@ struct QueryField g_fields[] = {
 	 "<i>status</i> matches special documents that are stored every time "
 	 "a url is spidered so you can see all the spider attempts and when "
 	 "they occurred as well as the outcome.",
+	 NULL,
 	 0},
 
 	{"filetype", 
@@ -3448,6 +3462,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "filetype:pdf",
 	 "Same as type: above.",
+	 NULL,
 	0},
 
 	{"gbisadult",
@@ -3458,6 +3473,7 @@ struct QueryField g_fields[] = {
 	 "and may be unsuitable for children. Likewise, use "
 	 "<i>gbisadult:0</i> to match all documents that were NOT detected "
 	 "as adult documents.",
+	 NULL,
 	 0},
 
 	{"gbimage",
@@ -3465,6 +3481,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbimage:site.com/image.jpg",
 	 "Matches all documents that contain the specified image.",
+	 NULL,
 	 0},
 
 	{"gbhasthumbnail",
@@ -3474,6 +3491,7 @@ struct QueryField g_fields[] = {
 	 "Matches all documents for which Gigablast detected a thumbnail. "
 	 "Likewise use <i>gbhasthumbnail:0</i> to match all documents that "
 	 "do not have thumbnails.",
+	 NULL,
 	 0},
 
 
@@ -3488,6 +3506,7 @@ struct QueryField g_fields[] = {
 	 "based on the tagdb record. You can also provide your own "
 	 "tags in addition to the tags already present. See the <i>tagdb</i> "
 	 "menu for more information.",
+	 NULL,
 	0},
 
 
@@ -3497,6 +3516,7 @@ struct QueryField g_fields[] = {
 	 "gbzip:90210",
 	 "Matches all documents that have the specified zip code "
 	 "in their meta zip code tag.",
+	 NULL,
 	 0},
 
 	//{"range", FIELD_RANGE, false,""}, // obsolete, datedb replaced
@@ -3510,6 +3530,7 @@ struct QueryField g_fields[] = {
 	 "file in the open source distribution. There are a lot. Some "
 	 "more popular ones are: <i>us, latin1, iso-8859-1, csascii, ascii, "
 	 "latin2, latin3, latin4, greek, shift_jis.",
+	 NULL,
 	 0},
 
 
@@ -3526,6 +3547,7 @@ struct QueryField g_fields[] = {
 	 "The supported language abbreviations "
 	 "are at the bottom of the <i>url filters</i> page. Some more "
 	 "common ones are <i>en, es, fr, zh_cn</i>.",
+	 NULL,
 	 0},
 
 	//{"gbquality",FIELD_GBQUALITY,true,""},
@@ -3540,6 +3562,7 @@ struct QueryField g_fields[] = {
 	 "gbpathdepth:3",
 	 "Matches all documents whose url has 3 path components to it like "
 	 "http://somedomain.com/dir1/dir2/dir3/foo.html",
+	 NULL,
 	 0},
 
 
@@ -3549,6 +3572,7 @@ struct QueryField g_fields[] = {
 	 "gbhopcount:2",
 	 "Matches all documents that are a minimum of two link hops away "
 	 "from a root url.",
+	 NULL,
 	 0},
 
 
@@ -3561,6 +3585,7 @@ struct QueryField g_fields[] = {
 	 "<i>http://somedomain.com/dir1/dir2/</i>. Likewise, use "
 	 "<i>gbhasfilename:0</i> to match all the documents that do not "
 	 "have a filename in their url.",
+	 NULL,
 	 0},
 
 
@@ -3570,6 +3595,7 @@ struct QueryField g_fields[] = {
 	 "gbiscgi:1",
 	 "Matches all documents that have a question mark in their url. "
 	 "Likewise gbiscgi:0 matches all documents that do not.",
+	 NULL,
 	0},
 
 
@@ -3580,6 +3606,7 @@ struct QueryField g_fields[] = {
 	 "Matches all documents that have a file extension in their url. "
 	 "Likewise, <i>gbhasext:0</i> matches all documents that do not have "
 	 "a file extension in their url.",
+	 NULL,
 	0},
 
 	{"gbsubmiturl", 
@@ -3588,8 +3615,20 @@ struct QueryField g_fields[] = {
 	 "gbsubmiturl:domain.com/process.php",
 	 "Matches all documents that have a form that submits to the "
 	 "specified url.",
+	 NULL,
 	0},
 
+
+	// diffbot only
+	{"gbparenturl", 
+	 FIELD_GBPARENTURL, 
+	 true,
+	 "gbparenturl:www.xyz.com/abc.html",
+	 "Diffbot only. Match the json urls that "
+	 "were extract from this parent url. Example: "
+	 "gbparenturl:www.gigablast.com/addurl.htm",
+	 NULL,
+	 0},
 
 
 
@@ -3611,7 +3650,8 @@ struct QueryField g_fields[] = {
 	 "Sort all documents that "
 	 "contain 'camera' by price. <i>price</i> can be a root JSON field or "
 	 "in a meta tag, or in an xml &lt;price&gt; tag.", 
-	 0 },
+	 "Numeric Field Query Operators",
+	 QTF_BEGINNEWTABLE },
 
 
 	{"gbsortbyfloat", 
@@ -3625,6 +3665,7 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
 	 0 },
 
 
@@ -3633,6 +3674,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "cameras gbrevsortbyfloat:product.price",
 	 "Like above example but sorted with highest prices on top.",
+	 NULL,
 	 0 },
 
 
@@ -3643,6 +3685,7 @@ struct QueryField g_fields[] = {
 	 "Sort the documents that contain 'dog' by "
 	 "the date they were last spidered, with the newest "
 	 "on top.",
+	 NULL,
 	 QTF_HIDE},
 
 	{"gbrevsortby", 
@@ -3652,6 +3695,7 @@ struct QueryField g_fields[] = {
 	 "Sort the documents that contain 'dog' by "
 	 "the date they were last spidered, but with the "
 	 "oldest on top.",
+	 NULL,
 	 QTF_HIDE},
 
 
@@ -3666,6 +3710,7 @@ struct QueryField g_fields[] = {
 	 "<i>employees</i> can be a root JSON field or "
 	 "in a meta tag, or in an xml &lt;price&gt; tag. The value it "
 	 "contains is interpreted as a 32-bit integer.", 
+	 NULL,
 	 0 },
 
 
@@ -3674,6 +3719,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbsortbyint:gbspiderdate",
 	 "Sort all documents by the date they were spidered/downloaded.",
+	 NULL,
 	 0},
 
 
@@ -3688,6 +3734,7 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
 	 0 },
 
 
@@ -3697,6 +3744,7 @@ struct QueryField g_fields[] = {
 	 "gbrevsortbyint:gbspiderdate",
 	 "Sort all documents by the date they were spidered/downloaded "
 	 "but with the oldest on top.",
+	 NULL,
 	 0},
 
 
@@ -3711,6 +3759,7 @@ struct QueryField g_fields[] = {
 	 "contain 'camera' or 'cameras' and have a price of at least 109.99. "
 	 "<i>price</i> can be a root JSON field or "
 	 "in a meta tag name <i>price</i>, or in an xml &lt;price&gt; tag.", 
+	 NULL,
 	 0 },
 
 
@@ -3725,6 +3774,7 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;price&gt;1500.00&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
 	 0 },
 
 
@@ -3734,6 +3784,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "",
 	 "",
+	 NULL,
 	 QTF_HIDE},
 
 
@@ -3743,6 +3794,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "cameras gbmaxfloat:price:109.99",
 	 "Like the gbminfloat examples above, but is an upper bound.",
+	 NULL,
 	 0 },
 
 
@@ -3752,6 +3804,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbequalfloat:product.price:1.23",
 	 "Similar to gbminfloat and gbmaxfloat but is an equality constraint.",
+	 NULL,
 	 0 },
 
 
@@ -3761,6 +3814,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "",
 	 "",
+	 NULL,
 	 QTF_HIDE},
 
 
@@ -3772,6 +3826,7 @@ struct QueryField g_fields[] = {
 	 "Matches all documents with a spider timestamp of at least "
 	 "1391749680. Use this as opposed th gbminfloat when you need "
 	 "32 bits of integer precision.",
+	 NULL,
 	 0},
 
 
@@ -3786,6 +3841,7 @@ struct QueryField g_fields[] = {
 	 "&lt;company&gt;&lt;employees&gt;13&lt;/employees&gt;"
 	 "&lt;/company&gt;"
 	 "</i>", 
+	 NULL,
 	 0},
 
 
@@ -3794,17 +3850,8 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbequalint:company.employees:13",
 	 "Similar to gbminint and gbmaxint but is an equality constraint.",
+	 NULL,
 	 0},
-
-	{"gbfieldmatch",
-	 FIELD_GBFIELDMATCH,
-	 true,
-	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
-	 "Matches all the meta tag or JSON or XML fields that have "
-	 "the name \"strings.vendor\" and contain the exactly provided "
-	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
-	 "sensitive, so it's exact match.",
-	 0 },
 
 
 	{"gbdocspiderdate",
@@ -3815,7 +3862,8 @@ struct QueryField g_fields[] = {
 	 "that spider date timestamp (UTC). Does not include the "
 	 "special spider status documents. This is the time the document "
 	 "completed downloading.",
-	 0},
+	 "Date Related Query Operators",
+	 QTF_BEGINNEWTABLE},
 
 
 	{"gbspiderdate",
@@ -3823,6 +3871,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbspiderdate:1400081479",
 	 "Like above, but DOES include the special spider status documents.",
+	 NULL,
 	 0},
 
 
@@ -3834,6 +3883,7 @@ struct QueryField g_fields[] = {
 	 "This time is "
 	 "slightly greater than or equal to the spider date. Does not "
 	 "include the special spider status documents.",
+	 NULL,
 	 0},
 
 
@@ -3843,13 +3893,13 @@ struct QueryField g_fields[] = {
 	 "gbindexdate:1400081479",
 	 "Like above, but it does include the special spider status "
 	 "documents.",
+	 NULL,
 	 0},
 
 	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
 	//  "results that have "
 	//  "that spider date timestamp (UTC)"},
-
 
 	{"gbfacetstr", 
 	 FIELD_GBFACETSTR, 
@@ -3858,7 +3908,8 @@ struct QueryField g_fields[] = {
 	 "Returns facets in "
 	 "the search results "
 	 "by their color field.",
-	 0},
+	 "Facet Related Query Operators",
+	 QTF_BEGINNEWTABLE},
 
 
 	{"gbfacetstr", 
@@ -3871,6 +3922,7 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;color&gt;red&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
 	 0},
 
 
@@ -3883,6 +3935,7 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;cores&gt;10&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
 	 0},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
@@ -3890,6 +3943,7 @@ struct QueryField g_fields[] = {
 	 "Returns facets in "
 	 "of the <i>gbhopcount</i> field over the documents so you can "
 	 "search the distribution of hopcounts over the index.",
+	 NULL,
 	 0},
 
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
@@ -3900,6 +3954,7 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
 	 0},
 
 
@@ -3911,9 +3966,10 @@ struct QueryField g_fields[] = {
 	 "States. See the country abbreviations in the CountryCode.cpp "
 	 "open source distribution. Some more popular examples include: "
 	 "de, fr, uk, ca, cn.",
-	0},
+	 NULL,
+	 0} ,
 
-
+// mdw
 
 	{"gbpermalink",
 	 FIELD_GBPERMALINK,
@@ -3921,6 +3977,7 @@ struct QueryField g_fields[] = {
 	 "gbpermalink:1",
 	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
 	 "to match documents that are NOT permalinks.",
+	 NULL,
 	0},
 
 	{"gbdocid",
@@ -3928,9 +3985,12 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbdocid:123456",
 	 "Matches the document with the docid 123456",
+	 NULL,
 	 0},
 
-
+	//
+	// spider status docs queries
+	//
 	{"gbstatus",
 	 FIELD_GENERIC,
 	 false,
@@ -3938,7 +3998,8 @@ struct QueryField g_fields[] = {
 	 "Matches all special spider status documents that spidered "
 	 "their url successfully. Replace <i>0</i> with other numeric error "
 	 "codes to get the other outcomes.",
-	 0},
+	 "Spider Status Documents", // title
+	 QTF_BEGINNEWTABLE},
 
 	
 	{"gbstatusmsg",
@@ -3949,8 +4010,20 @@ struct QueryField g_fields[] = {
 	 "message containing the word <i>tcp</i> like in "
 	 "<i>TCP Timed Out</i>. Similarly, gbstatus:success, "
 	 "gbstatus:\"robots.txt\" are other possibilities.",
+	 NULL,
 	 0},
 
+
+	{"url2", 
+	 FIELD_URL, 
+	 true,
+	 "url2:www.abc.com/page.html",
+	 "Matches the <i>Spider Status</i> documents for the specified url. "
+	 "These special documents "
+	 "let you know exactly when the url was attempted to be "
+	 "spidered and the outcome.",
+	 NULL,
+	 0 },
 
 	{"site2", 
 	 FIELD_SITE, 
@@ -3958,6 +4031,7 @@ struct QueryField g_fields[] = {
 	 "site2:mysite.com",
 	 "Matches all the special spider status documents on the "
 	 "mysite.com domain.",
+	 NULL,
 	 0 },
 
 
@@ -3967,6 +4041,7 @@ struct QueryField g_fields[] = {
 	 "ip2:1.2.3.4",
 	 "Matches all the special spider status "
 	 "documents whose IP is 1.2.3.4.",
+	 NULL,
 	 0 },
 
 	{"inurl2", 
@@ -3978,6 +4053,7 @@ struct QueryField g_fields[] = {
 	 "http://www.mysite.com/dog/food.html. However will not match "
 	 "http://www.mysite.com/dogfood.html because it is not an "
 	 "individual word. It must be delineated by punctuation.",
+	 NULL,
 	 0 },
 
 
@@ -3987,6 +4063,7 @@ struct QueryField g_fields[] = {
 	 "gbpathdepth2:2",
 	 "Similar to gbpathdepth: described above but for special "
 	 "spider status documents.",
+	 NULL,
 	 0},
 
 	{"gbhopcount2", 
@@ -3995,6 +4072,7 @@ struct QueryField g_fields[] = {
 	 "gbhopcount2:3",
 	 "Similar to gbhopcount: described above but for special "
 	 "spider status documents.",
+	 NULL,
 	 0},
 
 
@@ -4004,6 +4082,7 @@ struct QueryField g_fields[] = {
 	 "gbhasfilename2:1",
 	 "Similar to gbhasfilename: described above but for special "
 	 "spider status documents.",
+	 NULL,
 	 0},
 
 	{"gbiscgi2",
@@ -4012,6 +4091,7 @@ struct QueryField g_fields[] = {
 	 "gbiscgi2:1",
 	 "Similar to gbiscgi: described above but for special "
 	 "spider status documents.",
+	 NULL,
 	 0},
 
 	{"gbhasext2",
@@ -4020,28 +4100,19 @@ struct QueryField g_fields[] = {
 	 "gbhasext2:1",
 	 "Similar to gbhasext: described above but for special "
 	 "spider status documents.",
-	 0},
-
-	// diffbot only
-	{"gbparenturl", 
-	 FIELD_GBPARENTURL, 
-	 true,
-	 "gbparenturl:www.xyz.com/abc.html",
-	 "Diffbot only. Match the json urls that "
-	 "were extract from this parent url. Example: "
-	 "gbparenturl:www.gigablast.com/addurl.htm",
+	 NULL,
 	 0},
 
 
 
 	// they don't need to know about this
-	{"gbad",FIELD_GBAD,false,"","",QTF_HIDE},
-	{"gbtagvector", FIELD_GBTAGVECTOR, false,"","",QTF_HIDE},
-	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,"","",QTF_HIDE},
-	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,"","",QTF_HIDE},
-	{"gbcontenthash", FIELD_GBCONTENTHASH, false,"","",QTF_HIDE},
-	{"gbduphash"  ,FIELD_GBOTHER,false,"","",QTF_HIDE},
-	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"","",QTF_HIDE}
+	{"gbad",FIELD_GBAD,false,"","",NULL,QTF_HIDE},
+	{"gbtagvector", FIELD_GBTAGVECTOR, false,"","",NULL,QTF_HIDE},
+	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,"","",NULL,QTF_HIDE},
+	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,"","",NULL,QTF_HIDE},
+	{"gbcontenthash", FIELD_GBCONTENTHASH, false,"","",NULL,QTF_HIDE},
+	{"gbduphash"  ,FIELD_GBOTHER,false,"","",NULL,QTF_HIDE},
+	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"","",NULL,QTF_HIDE}
 
 	//{"gbcsenum",FIELD_GBCSENUM,false,""},
 	//{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},
