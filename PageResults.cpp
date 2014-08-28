@@ -3128,23 +3128,29 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf("</response>\n");
 	}
 
+	if ( si->m_format == FORMAT_HTML && 
+	     ! g_conf.m_isMattWells &&
+	     cr->m_htmlTail.length() == 0 ) {
+		sb->safePrintf ( "<br>"
+				 "<center>"
+				 "<font color=gray>"
+				 "Copyright &copy; 2014. All Rights "
+				 "Reserved.<br/>"
+				 "Powered by the <a href=\"http://www."
+				 "gigablast.com/\">GigaBlast</a> open source "
+				 "search engine."
+				 "</font>"
+				 "</center>\n"
+				 "<br>\n"
+				 );
+	}
+
 
 	// if we did not use ajax, print this tail here now
 	if ( si->m_format == FORMAT_HTML && ! g_conf.m_isMattWells ) {
-		sb->safePrintf ( "<br>"
-				"<center>"
-				"<font color=gray>"
-				"Copyright &copy; 2014. All Rights "
-				"Reserved.<br/>"
-				"Powered by the <a href=\"http://www."
-				"gigablast.com/\">GigaBlast</a> open source "
-				"search engine."
-				"</font>"
-				"</center>\n"
-				
-				"</body>\n"
+		sb->safePrintf( "</body>\n"
 				"</html>\n"
-			      );
+				);
 	}
 
 	// ajax widgets will have this outside the downloaded content
