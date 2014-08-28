@@ -160,7 +160,12 @@ void UdpSlot::connect ( UdpProtocol    *proto    ,
 	// . make async signal safe
 	// . TODO: this is slow to clear all those m_*bits, we got 1.7k of slot
 	//long size = (unsigned long)m_tmpBuf - (unsigned long)this ;
-	long size = (unsigned long)&m_next - (unsigned long)this ;
+	//long size = (unsigned long)&m_next - (unsigned long)this ;
+	//memset_ass ( (char *)this , 0 , size );
+	// avoid that heavy memset_ass() call using this logic.
+	// we will clear on demand using m_numBitsInitialized logic
+	// in UdpSlot.h
+	long size = (unsigned long)&m_sentBits2 - (unsigned long)this ;
 	memset_ass ( (char *)this , 0 , size );
 	// store this info
 	m_proto    = proto    ;
@@ -248,12 +253,13 @@ void UdpSlot::resetConnect ( ) {
 	m_sentAckBitsOn = 0;
 	m_nextToSend = 0;
 	m_firstUnlitSentAckBit = 0;
-	for ( long b = 0; b < m_dgramsToSend; b++ ) {
-		clrBit(b, m_sentBits);
-		clrBit(b, m_readBits);
-		clrBit(b, m_sentAckBits);
-		clrBit(b, m_readAckBits);
-	}
+	m_numBitsInitialized = 0;
+	// for ( long b = 0; b < m_dgramsToSend; b++ ) {
+	// 	clrBit(b, m_sentBits2);
+	// 	clrBit(b, m_readBits2);
+	// 	clrBit(b, m_sentAckBits2);
+	// 	clrBit(b, m_readAckBits2);
+	// }
 	// . set m_dgramsToSend
 	// . similar to UdpProtocol::getNumDgrams(char *dgram,long dgramSize)
 	long dataSpace  = m_maxDgramSize ;
@@ -373,7 +379,7 @@ void UdpSlot::prepareForResend ( long long now , bool resendAll ) {
 	// clear all if reset is true
 	if ( resendAll ) {
 		for ( long i = 0 ; i < m_dgramsToSend ; i++ ) 
-			clrBit ( i , m_readAckBits );
+			clrBit ( i , m_readAckBits2 );
 		m_readAckBitsOn = 0;
 	}
 	// how many sentBits we cleared
@@ -381,11 +387,11 @@ void UdpSlot::prepareForResend ( long long now , bool resendAll ) {
 	// clear each sent bit if it hasn't gotten an ACK
 	for ( long i = 0 ; i < m_dgramsToSend ; i++ ) {
 		// continue if we already have an ack for this one
-		if ( isOn ( i , m_readAckBits ) ) continue;
+		if ( isOn ( i , m_readAckBits2 ) ) continue;
 		// continue if it's already cleared
-		if ( ! isOn ( i , m_sentBits ) ) continue;
+		if ( ! isOn ( i , m_sentBits2 ) ) continue;
 		// mark dgram #i as unsent since we don't have ACK for it yet
-		clrBit ( i , m_sentBits );
+		clrBit ( i , m_sentBits2 );
 		// reduce the lit bit count
 		m_sentBitsOn--;
 		// may have to adjust m_nextToSend
@@ -617,7 +623,7 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, long long now ){
 	// we may have received an ack for an implied resend (from ack gap)
 	// so we clear some bits, but then got an ACK back later
 	while ( m_nextToSend < m_dgramsToSend &&
-		isOn ( m_nextToSend , m_sentBits ) ) 
+		isOn ( m_nextToSend , m_sentBits2 ) ) 
 		m_nextToSend++;
 	// if we've sent it all return -2
 	if ( m_sentBitsOn >= m_dgramsToSend ) return -2;
@@ -847,13 +853,13 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, long long now ){
 	// . sendSetup() will set m_firstSendTime to -1
 	if (m_sentBitsOn == 0 && m_firstSendTime == -1) m_firstSendTime =now;
 	// mark this dgram as sent
-	setBit ( dgramNum , m_sentBits );
+	setBit ( dgramNum , m_sentBits2 );
 	// count the bit we lit
 	m_sentBitsOn++;
 	// update last send time stamp even if we're a resend
 	m_lastSendTime = now;
 	// update m_nextToSend
-	m_nextToSend = getNextUnlitBit ( dgramNum, m_sentBits,m_dgramsToSend);
+	m_nextToSend = getNextUnlitBit ( dgramNum, m_sentBits2,m_dgramsToSend);
 	// log network info
 	if ( g_conf.m_logDebugUdp ) {
 		//long shotgun = 0;
@@ -923,8 +929,8 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, long long now ){
 	return 1;
 }
 
-// assume m_readBits, m_sendBits, m_sentAckBits and m_readAckBits are correct
-// and update m_firstUnlitSentAckBit, m_sentAckBitsOn, m_readBitsOn,
+// assume m_readBits2, m_sendBits2, m_sentAckBits2 and m_readAckBits2 are 
+// correct and update m_firstUnlitSentAckBit, m_sentAckBitsOn, m_readBitsOn,
 // m_readAckBitsOn and m_sentBitsOn
 void UdpSlot::fixSlot ( ) {
 	// log it
@@ -948,19 +954,19 @@ void UdpSlot::fixSlot ( ) {
 	m_sentBitsOn    = 0;
 	m_sentAckBitsOn = 0;
 	for ( long i = 0 ; i < m_dgramsToRead ; i++ ) {
-		if ( isOn ( i , m_readBits    ) ) m_readBitsOn++;
+		if ( isOn ( i , m_readBits2    ) ) m_readBitsOn++;
 		// we send back an ack for every dgram read
-		if ( isOn ( i , m_sentAckBits ) ) m_sentAckBitsOn++;
+		if ( isOn ( i , m_sentAckBits2 ) ) m_sentAckBitsOn++;
 	}
 	for ( long i = 0 ; i < m_dgramsToSend ; i++ ) {
-		if ( isOn ( i , m_sentBits    ) ) m_sentBitsOn++;
+		if ( isOn ( i , m_sentBits2    ) ) m_sentBitsOn++;
 		// we must read an ack for every dgram sent
-		if ( isOn ( i , m_readAckBits ) ) m_readAckBitsOn++;
+		if ( isOn ( i , m_readAckBits2 ) ) m_readAckBitsOn++;
 	}
 
 	// start at bit #0 so this doesn't loop forever
-       m_firstUnlitSentAckBit=getNextUnlitBit(-1,m_sentAckBits,m_dgramsToRead);
-       m_nextToSend          =getNextUnlitBit(-1,m_sentBits   ,m_dgramsToSend);
+      m_firstUnlitSentAckBit=getNextUnlitBit(-1,m_sentAckBits2,m_dgramsToRead);
+      m_nextToSend          =getNextUnlitBit(-1,m_sentBits2   ,m_dgramsToSend);
 
 	log(LOG_LOGIC,
 	    "udp: after fixSlot(): "
@@ -1007,12 +1013,12 @@ long UdpSlot::sendAck ( int sock , long long now ,
 	char dgram[DGRAM_SIZE_CEILING];
 
 	// . if dgramNum is -1, send the next ack in line
-	// . it's the first bit in m_sentAckBits that is 0 while being
+	// . it's the first bit in m_sentAckBits2 that is 0 while being
 	//   lit in m_readBits
 	if ( dgramNum == -1 ) {
 		// m_firstUnlitSentAckBit is the first clr bit in m_sentAckBits
 		dgramNum = m_firstUnlitSentAckBit;
-		// . now find the first bit in m_sentAckBits that is off
+		// . now find the first bit in m_sentAckBits2 that is off
 		//   yet on in m_readBits
 		// . the OLD statement below didn't check to see if dgramNum is
 		//   then off in m_sentAckBits!!!
@@ -1020,10 +1026,10 @@ long UdpSlot::sendAck ( int sock , long long now ,
 		// . we know that m_sentAckBitsOn < m_readBitsOn so the 
 		//   we must find a bit with these properties
 		for ( ; dgramNum < m_dgramsToRead ; dgramNum++ ) {
-		       // if bit off in m_readBits, it's not an ACK candidate
-		       if(!isOn(dgramNum,m_readBits))continue;
-		       // if bit is off in m_sentAckBits, that's the one!
-		       if(!isOn(dgramNum,m_sentAckBits))break;
+		       // if bit off in m_readBits2, it's not an ACK candidate
+		       if(!isOn(dgramNum,m_readBits2))continue;
+		       // if bit is off in m_sentAckBits2, that's the one!
+		       if(!isOn(dgramNum,m_sentAckBits2))break;
 		}
 		// if we had no match, that's an error!
 		if ( dgramNum >= m_dgramsToRead ) {
@@ -1123,9 +1129,9 @@ long UdpSlot::sendAck ( int sock , long long now ,
 	if ( m_host ) m_host->m_dgramsTo++;
 	// sending to loopback, 127.0.0.1?
 	else if ( ip == 0x0100007f ) g_hostdb.getMyHost()->m_dgramsTo++;
-	if ( ! isOn ( dgramNum , m_sentAckBits ) ) {
+	if ( ! isOn ( dgramNum , m_sentAckBits2 ) ) {
 		// mark this ack as sent
-		setBit ( dgramNum , m_sentAckBits );
+		setBit ( dgramNum , m_sentAckBits2 );
 		// count the bit we lit
 		m_sentAckBitsOn++;
 	}
@@ -1149,7 +1155,7 @@ long UdpSlot::sendAck ( int sock , long long now ,
 	// . otherwise, we had a read hole so we had to skip dgramNum around
 	if (dgramNum <= m_firstUnlitSentAckBit) 
 		m_firstUnlitSentAckBit = getNextUnlitBit(dgramNum,
-							 m_sentAckBits,
+							 m_sentAckBits2,
 							 m_dgramsToRead);
 	// log msg
 	if ( g_conf.m_logDebugUdp ) { // || cancelTrans ) {
@@ -1190,7 +1196,7 @@ long UdpSlot::sendAck ( int sock , long long now ,
 // . if the read dgram had an error code we set g_errno to that and ret false
 // . anyone calling this should call sendDatagramOrAck() immediately afterwards
 //   in case the send was blocking on receiving an ACK or we should send an ACK
-// . updates: m_readBits, m_readBitsOn, m_sentAckBits, m_sentAckBitsOn
+// . updates: m_readBits2, m_readBitsOn, m_sentAckBits2, m_sentAckBitsOn
 //            m_firstUnlitSentAckBit
 bool UdpSlot::readDatagramOrAck ( int        sock    , 
 				  char      *peek    ,
@@ -1324,7 +1330,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 		if ( dgramNum != 0 ) 
 			log(LOG_LOGIC,"udp: Error dgram is not dgram #0.");
 		// it's new to us, set the read bits
-		setBit ( dgramNum, m_readBits );
+		setBit ( dgramNum, m_readBits2 );
 		// we read one dgram
 		m_readBitsOn = 1;
 		// only one dgram to read
@@ -1345,7 +1351,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	if ( m_callback && m_readAckBitsOn != m_dgramsToSend ) { 
 		// catch em all up
 		for ( long i = 0 ; i < m_dgramsToSend ; i++ ) 
-			setBit ( i , m_readAckBits );
+			setBit ( i , m_readAckBits2 );
 		m_readAckBitsOn = m_dgramsToSend;
 		if ( g_conf.m_logDebugUdp ) 
 			log(LOG_DEBUG,"udp: Cramming ACKs "
@@ -1360,11 +1366,11 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// . makeReadBuf will init m_firstReadTime to -1
 	//if (m_readBitsOn == 0 && m_firstReadTime == -1) m_firstReadTime =now;
 	// did we already receive this dgram? 
-	if ( isOn(dgramNum,m_readBits) ) {
+	if ( isOn(dgramNum,m_readBits2) ) {
 		// did we already send the ack for it?
-		if ( isOn(dgramNum,m_sentAckBits) ) {
+		if ( isOn(dgramNum,m_sentAckBits2) ) {
 			// clear the ack we sent for this so we send it again
-			clrBit ( dgramNum , m_sentAckBits );
+			clrBit ( dgramNum , m_sentAckBits2 );
 			// reduce lit bit count of sent acks
 			m_sentAckBitsOn--;
 			// update the next ack to send
@@ -1579,7 +1585,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 		// keep track of dgrams sent outside of our cluster
 		//else          g_stats.m_dgramsFromStrangers++;
 		// it's new to us, set the read bits
-		setBit ( dgramNum, m_readBits );
+		setBit ( dgramNum, m_readBits2 );
 		// inc the lit bit count
 		m_readBitsOn++;
 		// if our proto doesn't use acks, treat this as an ACK as well
@@ -1631,7 +1637,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// bounce it back into m_readBuf
 	memcpy_ass ( dest , src , len );
 	// it's new to us, set the read bits
-	setBit ( dgramNum, m_readBits );
+	setBit ( dgramNum, m_readBits2 );
 	// inc the lit bit count
 	m_readBitsOn++;
 	// if our proto doesn't use acks, treat this as an ACK as well
@@ -1661,20 +1667,20 @@ void UdpSlot::readAck ( int sock , long dgramNum , long long now ) {
 	// reset the resendTime to the starting point before back-off scheme
 	setResendTime();
 	// if this is a dup ack, ignore it
-	if ( isOn ( dgramNum , m_readAckBits ) ) return;
+	if ( isOn ( dgramNum , m_readAckBits2 ) ) return;
 	// mark this ack as read
-	setBit ( dgramNum , m_readAckBits );
+	setBit ( dgramNum , m_readAckBits2 );
 	// update lit bit count
 	m_readAckBitsOn++;
 	// if it was marked as unsent, fix that
-	if ( ! isOn ( dgramNum , m_sentBits ) ) {
+	if ( ! isOn ( dgramNum , m_sentBits2 ) ) {
 		// bitch if we do not even have a send buffer. why is he acking
 		// something we haven't even had to a chance to generate let 
 		// alone send? network error?
 		if ( ! m_sendBufAlloc || m_dgramsToSend <= 0 ) 
 			log("udp: Read ack but send buf is empty.");
 		// mark this dgram as sent
-		setBit ( dgramNum , m_sentBits );
+		setBit ( dgramNum , m_sentBits2 );
 		// update lit bit count
 		m_sentBitsOn++;
 	}
@@ -1686,11 +1692,11 @@ void UdpSlot::readAck ( int sock , long dgramNum , long long now ) {
 	//   on our right as having sent bits of 0, until we hit a lit ack bit
 	for ( long i = dgramNum - 1 ; i >= 0 ; i-- ) {
 		// stop after hitting a lit bit
-		if ( isOn ( i , m_readAckBits ) ) break;
+		if ( isOn ( i , m_readAckBits2 ) ) break;
 		// mark as unsent iff it's marked as sent
-		if ( ! isOn ( i , m_sentBits ) ) continue;
+		if ( ! isOn ( i , m_sentBits2 ) ) continue;
 		// mark as unsent
-		clrBit ( i , m_sentBits );
+		clrBit ( i , m_sentBits2 );
 		// reduce the lit bit count
 		m_sentBitsOn--;
 		// update m_nextToSend

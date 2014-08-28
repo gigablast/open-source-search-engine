@@ -136,13 +136,16 @@ skipReplaceHost:
 	//char *shotcol = "";
 	char shotcol[1024];
 	shotcol[0] = '\0';
+	char *cs = coll;
+	if ( ! cs ) cs = "";
+
 	if ( g_conf.m_useShotgun && format == FORMAT_HTML ) {
 		colspan = "31";
 		//shotcol = "<td><b>ip2</b></td>";
 		sprintf ( shotcol, "<td><a href=\"/admin/hosts?c=%s"
 			 	   "&sort=2\">"
 			  "<b>ping2</b></td></a>",
-			  coll);
+			  cs);
 	}
 
 	// print host table
@@ -253,24 +256,24 @@ skipReplaceHost:
 			       TABLE_STYLE ,
 			       colspan    ,
 
-			       coll, sort,
+			       cs, sort,
 			       DARK_BLUE  ,
 
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
-			       coll,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
+			       cs,
 			       shotcol    );
 
 	// loop through each host we know and print it's stats
@@ -750,7 +753,7 @@ skipReplaceHost:
 			  "</tr>" , 
 			  bg,//LIGHT_BLUE ,
 			  ipbuf3, h->m_httpPort, 
-			  coll, sort,
+			  cs, sort,
 			  i , 
 			  h->m_hostname,
 			  h->m_shardNum,//group,
@@ -986,7 +989,7 @@ skipReplaceHost:
 			  LIGHT_BLUE,
 			  ipbuf3,
 			  h->m_httpPort,
-			  coll,
+			  cs,
 			  i , 
 
 			  type,

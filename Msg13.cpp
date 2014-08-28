@@ -2850,6 +2850,13 @@ void scanHammerQueue ( int fd , void *state ) {
 	long long waited = -1LL;
 	Msg13Request *nextLink = NULL;
 
+	//bool useProxies = true;
+	// user can turn off proxy use with this switch
+	//if ( ! g_conf.m_useProxyIps ) useProxies = false;
+	// we gotta have some proxy ips that we can use
+	//if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
+
+
 	// scan down the linked list of queued of msg13 requests
 	for ( ; r ; prev = r , r = nextLink ) { 
 
@@ -2868,7 +2875,9 @@ void scanHammerQueue ( int fd , void *state ) {
 		// . try to be more sensitive for more sensitive website policy
 		// . we don't know why this proxy was banned, or if we were 
 		//   responsible, or who banned it, but be more sensitive
-		if ( r->m_hammerCallback == downloadTheDocForReals3b )
+		if ( //useProxies && 
+		     r->m_numBannedProxies &&
+		     r->m_hammerCallback == downloadTheDocForReals3b )
 			crawlDelayMS = r->m_numBannedProxies * 2000;
 
 		// download finished? 
@@ -2891,6 +2900,15 @@ void scanHammerQueue ( int fd , void *state ) {
 		// callback can now be either downloadTheDocForReals(r)
 		// or downloadTheDocForReals3b(r) if it is waiting after 
 		// getting a ProxyReply that had a m_proxyBackoff set
+
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: calling hammer callback for "
+			    "%s (timestamp=%lli,waited=%lli,crawlDelayMS=%li)",
+			    r->ptr_url,
+			    last,
+			    waited,
+			    crawlDelayMS);
+
 		//
 		// it should also add the current time to the hammer cache
 		// for r->m_firstIp

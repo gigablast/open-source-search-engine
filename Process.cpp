@@ -868,6 +868,10 @@ void hdtempWrapper ( int fd , void *state ) {
 	long now = getTime();
 	// or if haven't waited long enough
 	if ( now < s_nextTime ) return;
+
+	// ignore this for now, ssds don't have temp monitoring
+	return;
+
 	// set it
 	g_process.m_threadOut = true;
 	// . call thread to call popen
@@ -1005,7 +1009,7 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 
 	// ignore temps now. ssds don't have it
-	return NULL;
+	//return NULL;
 	
 
 	static char *s_parm = "ata";
@@ -1151,6 +1155,10 @@ void heartbeatWrapper ( int fd , void *state ) {
 	if ( elapsed > 200 ) 
 		// now we print the # of elapsed alarms. that way we will
 		// know if the alarms were going off or not...
+		// this happens if the rt sig queue is overflowed.
+		// check the "cat /proc/<pid>/status | grep SigQ" output
+		// to see if its overflowed. hopefully i will fix this by
+		// queue the signals myself in Loop.cpp.
 		log("db: missed heartbeat by %lli ms. Num elapsed alarms = "
 		    "%li", elapsed-100,(long)(g_numAlarms - s_lastNumAlarms));
 	s_last = now;
