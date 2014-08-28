@@ -143,6 +143,7 @@ long getNumFieldCodes ( );
 //   illustrate a second or third example
 #define QTF_DUP  0x01
 #define QTF_HIDE 0x02
+#define QTF_BEGINNEWTABLE 0x04
 
 struct QueryField {
 	char *text;
@@ -150,6 +151,7 @@ struct QueryField {
 	bool hasColon;
 	char *example;
 	char *desc;
+	char *m_title;
 	char  m_flag;
 };
 

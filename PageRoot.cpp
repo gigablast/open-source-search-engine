@@ -2678,6 +2678,16 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"<br>"
 	"<table width=650px cellpadding=5 cellspacing=0 border=0>"
 	""
+
+	// yellow/gold bar
+	"<tr>"
+	"<td colspan=2 bgcolor=#f3c714>"
+	"<b>"
+	"Basic Query Syntax"
+	"</b>"
+	"</td>"
+	"</tr>\n"
+
 	"<tr bgcolor=#0340fd>"
 	""
 	"<th><font color=33dcff>Example Query</font></th>"
@@ -2830,6 +2840,32 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		if ( g_fields[i].m_flag & QTF_HIDE ) continue;
 		
 
+		// new table?
+		if ( g_fields[i].m_flag & QTF_BEGINNEWTABLE ) {
+			sb.safePrintf("</table>"
+				      "<br>"
+				      "<br>"
+				      "<br>"
+				      "<table width=650px "
+				      "cellpadding=5 cellspacing=0 border=0>"
+				      // yellow/gold bar
+				      "<tr>"
+				      "<td colspan=2 bgcolor=#f3c714>"
+				      "<b>"
+				      "%s"
+				      "</b>"
+				      "</td>"
+				      "</tr>\n"
+				      "<tr bgcolor=#0340fd>"
+				      "<th><font color=33dcff>"
+				      "Example Query</font></th>"
+				      "<th><font color=33dcff>"
+				      "Description</font></th>"
+				      "</tr>\n"
+				      , g_fields[i].m_title
+				      );
+		}
+
 		// print it out
 		char *d = f->desc;
 		// fix table internal cell bordering
@@ -2852,16 +2888,32 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 
 	sb.safePrintf(
-	"          <tr> "
-	"            <td style=padding-bottom:12px;>&nbsp;</td>"
-	"            <td style=padding-bottom:12px;>&nbsp;</td>"
-	"          </tr>"
-	""
+	// "          <tr> "
+	// "            <td style=padding-bottom:12px;>&nbsp;</td>"
+	// "            <td style=padding-bottom:12px;>&nbsp;</td>"
+	// "          </tr>"
+	// ""
+
+		      "</table>"
+		      
+		      "<br><br><br>"
+
+		      "<table width=650px "
+		      "cellpadding=5 cellspacing=0 border=0>"
+
+	// yellow/gold bar
+	"<tr>"
+	"<td colspan=2 bgcolor=#f3c714>"
+	"<b>"
+	"Boolean Queries"
+	"</b>"
+	"</td>"
+	"</tr>\n"
 
 
 	"<tr bgcolor=#0340fd>"
 	""
-	"            <th><font color=33dcff>Boolean Search</font></th>"
+	"            <th><font color=33dcff>Example Query</font></th>"
 	"            <th><font color=33dcff>Description</font></th>"
 	""
 	"          </tr>"

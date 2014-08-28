@@ -15827,9 +15827,14 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 	// assume none in doc
 	m_canonicalRedirUrlPtr = NULL;
 
-	// disable for now, not good really for deduping
-	m_canonicalRedirUrlValid = true;
-	return &m_canonicalRedirUrlPtr;
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// disable for crawlbot, not good really for deduping
+	if ( cr->m_isCustomCrawl ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
 
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
