@@ -8476,7 +8476,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "mix up user agents";
-	m->m_desc  = "Use random user-agents when downloading to "
+	m->m_desc  = "Use random user-agents when downloading through "
+		"a spider proxy listed above to "
 		"protecting gb's anonymity. The User-Agent used is a function "
 		"of the proxy IP/port and IP of the url being downloaded. "
 		"That way it is consistent when downloading the same website "
