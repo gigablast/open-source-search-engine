@@ -3295,6 +3295,17 @@ static bool       s_isInitialized = false;
 // 3rd field = m_hasColon
 struct QueryField g_fields[] = {
 
+	{"gbfieldmatch",
+	 FIELD_GBFIELDMATCH,
+	 true,
+	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
+	 "Matches all the meta tag or JSON or XML fields that have "
+	 "the name \"strings.vendor\" and contain the exactly provided "
+	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
+	 "sensitive and includes punctuation, so it's exact match.",
+	 "Advanced Query Operators",
+	 QTF_BEGINNEWTABLE },
+
 	{"url", 
 	 FIELD_URL, 
 	 true,
@@ -3303,7 +3314,6 @@ struct QueryField g_fields[] = {
 	 "the url it redirects to, if any." , 
 	 NULL,
 	 0 },
-
 
 	{"ext", 
 	 FIELD_EXT, 
@@ -3842,17 +3852,6 @@ struct QueryField g_fields[] = {
 	 "Similar to gbminint and gbmaxint but is an equality constraint.",
 	 NULL,
 	 0},
-
-	{"gbfieldmatch",
-	 FIELD_GBFIELDMATCH,
-	 true,
-	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
-	 "Matches all the meta tag or JSON or XML fields that have "
-	 "the name \"strings.vendor\" and contain the exactly provided "
-	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
-	 "sensitive, so it's exact match.",
-	 NULL,
-	 0 },
 
 
 	{"gbdocspiderdate",
