@@ -136,7 +136,8 @@ class DnsProtocol : public UdpProtocol {
 		return DGRAM_SIZE_DNS; };
 
 	// we don't make Acks so return a dgramSize of 0
-	virtual long makeAck ( char *dgram, long dgramNum, long transId){
+        virtual long makeAck ( char *dgram, long dgramNum, long transId,
+			       bool  weInitiated , bool cancelTrans ) {
 		return 0; };
 
 	// we store the 1 dgram in it's ready to send form

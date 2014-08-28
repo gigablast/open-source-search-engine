@@ -3472,7 +3472,8 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 #define MAX_DMOZ_TITLES 10
 
 long *XmlDoc::getNumDmozEntries() {
-	long **getDmozCatIds();
+    // XXX ACC: commented out per mdw
+    //	long **getDmozCatIds();
 	long nc = size_catIds / 4;
 	if ( nc > MAX_DMOZ_TITLES ) nc = MAX_DMOZ_TITLES;
 	m_numDmozEntries = nc;
@@ -19650,7 +19651,7 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	// and "unchanged" was true.
 	if ( m_unchangedValid && m_unchanged ) {
 		if ( ! m_titleRecBufValid ) return true;
-		if ( ! m_titleRecBuf.length()==0 ) return true;
+		if ( m_titleRecBuf.length()==0 ) return true;
 	}
 
 	CollectionRec *cr = getCollRec();
@@ -26374,7 +26375,7 @@ bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool isStatusDoc ) {
 
 	// do not index the rest if we are a "spider reply" document
 	// which is like a fake document for seeing spider statuses
-	if ( isStatusDoc == CT_STATUS ) return true;
+	if ( isStatusDoc ) return true;
 
 	// now for CT_STATUS spider status "documents" we also index
 	// gbspiderdate so index this so we can just do a 
@@ -42234,7 +42235,7 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	//   getRelatedQueryLinks() which make a new xmldoc. then it can
 	//   call newxd->getTermListBuf() instead of us passing it in.
 	// . so each host has a bin, a host bin
-	SafeBuf hostBin[g_hostdb.m_numHosts];
+	SafeBuf hostBin[MAX_HOSTS];
 
 	// scan the related docids and send the requests if we have not already
 	for ( long i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {

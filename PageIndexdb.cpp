@@ -95,7 +95,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("PageIndexdb: new(%i): %s", 
-		    sizeof(State10),mstrerror(g_errno));
+		    (int)sizeof(State10),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State10) , "PageIndexdb" );
 	// password, too

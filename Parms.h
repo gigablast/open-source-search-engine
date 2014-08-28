@@ -84,6 +84,7 @@ class HttpRequest;
 class TcpSocket;
 
 class Page {
+public:
 	long  m_page;     // from the PAGE_* enums above
 	char *m_bgcolor;  // color of the cells in the table
 	char *m_topcolor; // color of the table's first row

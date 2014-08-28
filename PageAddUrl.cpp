@@ -94,7 +94,7 @@ bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 	catch ( ... ) { 
 		g_errno = ENOMEM;
 		log("PageAddUrl: new(%i): %s", 
-		    sizeof(GigablastRequest),mstrerror(g_errno));
+		    (int)sizeof(GigablastRequest),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(sock,500,
 						   mstrerror(g_errno)); 
 	}

@@ -48,7 +48,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	catch ( ... ) { 
 		g_errno = ENOMEM;
 		log("PageInject: new(%i): %s", 
-		    sizeof(Msg7),mstrerror(g_errno));
+		    (int)sizeof(Msg7),mstrerror(g_errno));
 	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 	mnew ( msg7, sizeof(Msg7) , "PageInject" );

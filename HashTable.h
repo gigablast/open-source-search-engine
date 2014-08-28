@@ -77,7 +77,6 @@ class HashTable {
 	long m_numSlotsUsed;
 	unsigned long m_mask;
 
-	char m_needsSave;
 	char m_doFree;
 
 	char *m_label;

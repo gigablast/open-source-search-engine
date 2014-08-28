@@ -818,6 +818,7 @@ const char g_map_is_vowel[] = {
 // when matching query terms to words/phrases in doc skip over spaces
 // or other punct so that "flypaper" in the query matches "fly paper" in the
 // doc
+/*
 	const char g_map_is_match_skip[] = { // 48-57
 		0,0,0,0,0,0,0,0, // 0
 		0,1,1,0,0,0,0,0, // \t and \n
@@ -851,6 +852,7 @@ const char g_map_is_vowel[] = {
 		0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0};
+*/
 
 // seems like this should be defined, but it isn't
 long strnlen ( const char *s , long maxLen ) {

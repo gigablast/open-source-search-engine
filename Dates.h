@@ -647,7 +647,7 @@ public:
 			       long         i                 ,
 			       long         niceness          , 
 			       long        *endWordNum        ,
-			       class TimeZone **tzPtr         ,
+			       struct TimeZone **tzPtr        ,
 			       bool             monthPreceeds ,
 			       bool            *hadAmPM       ,
 			       bool            *hadMinute     ,

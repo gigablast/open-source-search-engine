@@ -1221,7 +1221,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 		//logf(LOG_INFO,//LOG_DEBUG,
 		log(LOG_DEBUG,
 		     "udp: Read cancel ack hdrlen=%li tid=%li "
-		     "src=%s:%hu msgType=0x%hx weInitiated=%li sent=%li "
+		     "src=%s:%hu msgType=0x%hhx weInitiated=%li sent=%li "
 		    "sendbufalloc=%lu sendbufsize=%lu",
 		     peekSize , m_proto->getTransId ( peek,peekSize ),
 		     iptoa(m_ip),m_port,
