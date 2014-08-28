@@ -970,7 +970,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		
 		 // No match
 		 if (!bufLen ||
-		     !strnstr(qstr, qlen, buf)){
+		     !strnstr2(qstr, qlen, buf)){
 			 // skip to end of line
 			 while (*ep && ep < epend && *ep != '\n') ep++;
 			 // skip newline

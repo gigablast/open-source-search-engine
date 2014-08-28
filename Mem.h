@@ -21,7 +21,7 @@
 //void mutexLock   ( );
 //void mutexUnlock ( );
 
-struct SafeBuf;
+class SafeBuf;
 // some memory manipulation functions inlined below
 long long htonll ( unsigned long long a );
 long long ntohll ( unsigned long long a );

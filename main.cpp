@@ -482,13 +482,12 @@ int main2 ( int argc , char *argv[] ) {
 			"\tjust saves for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
-			"start [hostId1-hostId2]\n"
-			"\ttwo hostids with a hyphen in between indicates a "
-			"range.\n\n"
+			"start <hostId1-hostId2>\n"
+			"\trun gb on the specified range of hostIds in "
+			"a keepalive loop.\n\n"
 
-			"stop [hostId1-hostId2]\n"
-			"\ttwo hostids with a hyphen in between indicates a "
-			"range.\n\n"
+			"stop <hostId1-hostId2>\n"
+			"\ttell gb to exit on the given range of hostIds.\n\n"
 
 			/*
 			"tmpstart [hostId]\n"

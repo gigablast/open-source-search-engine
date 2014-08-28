@@ -410,7 +410,8 @@ void handleRequest8b ( UdpSlot *slot, long netnice ) {
 	try { st8b = new (State08b); }
 	catch ( ... ) { 
 		g_errno = ENOMEM;
-		log("Msg8b: new(%i): %s", sizeof(State08b),mstrerror(g_errno));
+		log("Msg8b: new(%i): %s", 
+		    (int)sizeof(State08b),mstrerror(g_errno));
 		us->sendErrorReply ( slot, g_errno ); 
 		return; 
 	}

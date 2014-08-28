@@ -125,7 +125,8 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	try { st = new (State2); }
 	catch (... ) {
 		g_errno = ENOMEM;
-		log("PageGet: new(%i): %s", sizeof(State2),mstrerror(g_errno));
+		log("PageGet: new(%i): %s", 
+		    (int)sizeof(State2),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State2) , "PageGet1" );
 	// save the socket and if Host: is local in the Http request Mime

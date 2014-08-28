@@ -2012,7 +2012,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	catch ( ... ) { 
 		g_errno = ENOMEM;
 		log("PageAddUrl: new(%i): %s", 
-		    sizeof(State1i),mstrerror(g_errno));
+		    (int)sizeof(State1i),mstrerror(g_errno));
 	    return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno)); }
 	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin

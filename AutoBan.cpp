@@ -677,7 +677,7 @@ checkSubstr:
 		banRegex[i] = '\0';
 		// search for substr (must be longer than 2 chars
 		if ( i - start > 2){
-			if (strnstr(reqStr, reqLen, &banRegex[start])) 
+			if (strnstr2(reqStr, reqLen, &banRegex[start])) 
 				gotMatch = true;
 			else missedMatch = true;
 		}

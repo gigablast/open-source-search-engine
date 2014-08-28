@@ -8495,7 +8495,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		}
 
 		// is it in the url
-		char *match = strnstr ( src , srcLen , mi->m_cgi ) ;
+		char *match = strnstr ( src , mi->m_cgi , srcLen );
 		if ( ! match ) {
 			isTrueHeader = false;
 			continue;

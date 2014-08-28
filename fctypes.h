@@ -24,12 +24,14 @@ bool print128 ( key128_t *kp ) ;
 long printTime ( long ttt );
 time_t mktime_utc ( struct tm *ttt ) ;
 
-struct SafeBuf;
+class SafeBuf;
 // seems like this should be defined, but it isn't
 long strnlen ( const char *s , long maxLen );
 // this too
 char *strncasestr( char *haystack, long haylen, char *needle);
-char *strnstr( char *haystack, long haylen, char *needle);
+
+// this is also done below
+char *strnstr2( char *haystack, long haylen, char *needle);
 
 // just like sprintf(s,"%llu",n), but we insert commas
 long ulltoa ( char *s , unsigned long long n ) ;

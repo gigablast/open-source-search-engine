@@ -148,7 +148,8 @@ inline bool isTagStart ( char *s ) { // , long i, long version ) {
 //   bits for extracting title, summaries, et al.
 // . the is indexable is false for tags like <script> <option> whose contents
 //   are not visible/indexable
-struct NodeType {
+class NodeType {
+ public:
 	char    *m_nodeName;
 	bool     m_hasBackTag;
 	char     m_isBreaking;

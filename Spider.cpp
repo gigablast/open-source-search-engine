@@ -8163,7 +8163,7 @@ bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r ) {
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("PageSpiderdb: new(%i): %s", 
-		    sizeof(State11),mstrerror(g_errno));
+		    (int)sizeof(State11),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State11) , "PageSpiderdb" );
 	// get the priority/#ofRecs from the cgi vars

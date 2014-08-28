@@ -93,7 +93,7 @@ public:
 	char *m_testDesc;
 	char  m_doTest;
 	// we set s_flags to this
-	long  m_flags[30];
+	long  m_flags[50];
 };
 
 static char *s_content = NULL;
@@ -584,6 +584,18 @@ bool qainject1 ( ) {
 		     return false;
 	}
 
+	//
+	// query reindex test
+	//
+	if ( ! s_flags[30] ) {
+		s_flags[30] = true;
+		if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=1&format=xml&"
+				"debug=1&q=sports",9999 ) )
+			return false;
+	}
+
+	// temp end it here
+	return true;
 
 	//
 	// eject/delete the urls

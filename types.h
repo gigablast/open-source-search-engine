@@ -18,6 +18,11 @@
 
 #define MAX_KEY_BYTES 28
 
+// ACC XXX On Mac OSX ignore the system definition of key_t.
+#ifdef __APPLE__
+#define _KEY_T
+#endif
+
 // shit, how was i supposed to know this is defined in sys/types.h...
 #define key_t   u_int96_t
 

@@ -15,7 +15,10 @@
 // send on.
 #define MAX_SLOTS 10000
 
-//#define _POLLONLY_
+// apple mac os x does not have real-time signal support
+#ifdef __APPLE__
+#define _POLLONLY_
+#endif
 
 // TODO: . if signal queue overflows another signal is sent
 //       . capture that signal and use poll or something???

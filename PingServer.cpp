@@ -1,6 +1,7 @@
 #include "gb-include.h"
 
-#ifdef CYGWIN
+// cygwin and apple mac os x does not support klogctl
+#if defined(CYGWIN) || defined(__APPLE__)
 // use a stub
 long klogctl( int, char *,int ) { return 0; }
 #else
