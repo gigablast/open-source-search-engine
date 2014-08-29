@@ -674,7 +674,7 @@ uint8_t LanguageIdentifier::getBestLangsFromVec(char* langCount,
 
 uint8_t LanguageIdentifier::findLangFromDMOZTopic(char *topic) {
 	int x;
-	for(x = 0; x < (long)sizeof(langToTopic)/sizeof(uint8_t *); x++) {
+	for(x = 0; x < (int)sizeof(langToTopic)/sizeof(uint8_t *); x++) {
 		if ( ! langToTopic[x] ) continue;
 		if(!strncasecmp((char*)langToTopic[x], topic,
 				gbstrlen((char *)langToTopic[x])))
