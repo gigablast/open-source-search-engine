@@ -7398,6 +7398,15 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 			// for csv.
 			if ( ji->isInArray() ) continue;
 
+
+			// skip "html" field... too spammy for csv and > 32k 
+			// causes libreoffice calc to truncate it and break 
+			// its parsing
+			if ( ji->m_name && 
+			     //! ji->m_parent &&
+			     strcmp(ji->m_name,"html")==0)
+				continue;
+
 			// reset length of buf to 0
 			tmpBuf.reset();
 
@@ -7514,6 +7523,13 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		if ( ! ji->getCompoundName ( tmpBuf ) )
 			return false;
 
+		// skip "html" field... too spammy for csv and > 32k causes
+		// libreoffice calc to truncate it and break its parsing
+		if ( ji->m_name && 
+		     //! ji->m_parent &&
+		     strcmp(ji->m_name,"html")==0)
+			continue;
+
 		// is it new?
 		long long h64 = hash64n ( tmpBuf.getBufStart() );
 
@@ -7534,19 +7550,24 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 
 	// now print out what we got
 	for ( long i = 0 ; i < numCSVColumns ; i++ ) {
-		// , delimeted
-		if ( i > 0 ) sb->pushChar(',');
+
 		// get it
 		ji = ptrs[i];
-		// skip if none
-		if ( ! ji ) continue;
 
 		// skip "html" field... too spammy for csv and > 32k causes
 		// libreoffice calc to truncate it and break its parsing
-		if ( ji->m_name && 
+		if ( ji &&
+		     ji->m_name && 
 		     //! ji->m_parent &&
 		     strcmp(ji->m_name,"html")==0)
 			continue;
+
+		// , delimeted
+		if ( i > 0 ) sb->pushChar(',');
+
+		// skip if none
+		if ( ! ji ) continue;
+
 
 		//
 		// get value and print otherwise
