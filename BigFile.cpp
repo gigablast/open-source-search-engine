@@ -151,7 +151,7 @@ bool BigFile::addPart ( long n ) {
 	try { f = new (File); }
 	catch ( ... ) { 
 		g_errno = ENOMEM;
-		return log("BigFile: new(%i): %s",sizeof(File), 
+		return log("BigFile: new(%i): %s",(int)sizeof(File), 
 			   mstrerror(g_errno)); 
 	}
 	mnew ( f , sizeof(File) , "BigFile" );
@@ -1216,6 +1216,7 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	// . only allow syncing if file is non-blocking, because blocking
 	//   writes are used for when we call RdbTree::fastSave_r() and it
 	//   takes forever to dump Spiderdb if we sync each little write
+#ifndef __APPLE_
 	if ( g_conf.m_flushWrites   && 
 	     doWrite                && 
 	     (fstate->m_flags & O_NONBLOCK) && 
@@ -1224,6 +1225,7 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 		// ignore an error here
 		errno = 0;
 	}
+#endif
 	// update the count
 	bytesDone += n;
 	// inc the main offset and the buffer ptr, "p"

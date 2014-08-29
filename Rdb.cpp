@@ -33,6 +33,10 @@ void attemptMergeAll ( int fd , void *state ) ;
 //static key_t s_tfndbOppKey    ;
 
 Rdb::Rdb ( ) {
+
+	m_cacheLastTime  = 0;
+	m_cacheLastTotal = 0LL;
+
 	//m_numBases = 0;
 	m_inAddList = false;
 	m_collectionlessBase = NULL;
@@ -2610,11 +2614,22 @@ long long Rdb::getNumGlobalRecs ( ) {
 }
 
 // . return number of positive records - negative records
-long long Rdb::getNumTotalRecs ( ) {
-	long long total = 0;
+long long Rdb::getNumTotalRecs ( bool useCache ) {
+
+	// this gets slammed w/ too many collections so use a cache...
+	//if ( g_collectiondb.m_numRecsUsed > 10 ) {
+	long now = 0;
+	if ( useCache ) {
+		now = getTimeLocal();
+		if ( now - m_cacheLastTime == 0 ) 
+			return m_cacheLastTotal;
+	}
+
+	// same as num recs
 	long nb = getNumBases();
-	// don't slam the cpu on this if too many collections
-	if ( nb > 10 ) return 0;
+
+	long long total = 0LL;
+
 	//return 0; // too many collections!!
 	for ( long i = 0 ; i < nb ; i++ ) {
 		RdbBase *base = getBase(i);
@@ -2625,6 +2640,11 @@ long long Rdb::getNumTotalRecs ( ) {
 	// . TODO: count negative and positive recs in the b-tree
 	//total += m_tree.getNumPositiveKeys();
 	//total -= m_tree.getNumNegativeKeys();
+	if ( now ) {
+		m_cacheLastTime = now;
+		m_cacheLastTotal = total;
+	}
+
 	return total;
 }
 

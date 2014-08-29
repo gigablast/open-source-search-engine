@@ -868,6 +868,7 @@ void hdtempWrapper ( int fd , void *state ) {
 	long now = getTime();
 	// or if haven't waited long enough
 	if ( now < s_nextTime ) return;
+
 	// set it
 	g_process.m_threadOut = true;
 	// . call thread to call popen
@@ -1151,6 +1152,10 @@ void heartbeatWrapper ( int fd , void *state ) {
 	if ( elapsed > 200 ) 
 		// now we print the # of elapsed alarms. that way we will
 		// know if the alarms were going off or not...
+		// this happens if the rt sig queue is overflowed.
+		// check the "cat /proc/<pid>/status | grep SigQ" output
+		// to see if its overflowed. hopefully i will fix this by
+		// queue the signals myself in Loop.cpp.
 		log("db: missed heartbeat by %lli ms. Num elapsed alarms = "
 		    "%li", elapsed-100,(long)(g_numAlarms - s_lastNumAlarms));
 	s_last = now;
@@ -1211,10 +1216,12 @@ void diskHeartbeatWrapper ( int fd , void *state ) {
 }
 */
 
+// called by PingServer.cpp only as of now
 long long Process::getTotalDocsIndexed() {
 	if ( m_totalDocsIndexed == -1LL ) {
 		Rdb *rdb = g_clusterdb.getRdb();
-		m_totalDocsIndexed = rdb->getNumTotalRecs();
+		// useCache = true
+		m_totalDocsIndexed = rdb->getNumTotalRecs(true);
 	}
 	return m_totalDocsIndexed;
 }

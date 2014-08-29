@@ -127,6 +127,7 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBNUMBEREQUALINT 66
 #define FIELD_GBNUMBEREQUALFLOAT 67
 #define FIELD_SUBURL2            68
+#define FIELD_GBFIELDMATCH       69
 
 #define FIELD_GBOTHER 92
 
@@ -142,6 +143,7 @@ long getNumFieldCodes ( );
 //   illustrate a second or third example
 #define QTF_DUP  0x01
 #define QTF_HIDE 0x02
+#define QTF_BEGINNEWTABLE 0x04
 
 struct QueryField {
 	char *text;
@@ -149,6 +151,7 @@ struct QueryField {
 	bool hasColon;
 	char *example;
 	char *desc;
+	char *m_title;
 	char  m_flag;
 };
 

@@ -4324,6 +4324,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 		if (qt->m_fieldCode == FIELD_GBNUMBEREQUALINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBFIELDMATCH )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 
 		if (qt->m_fieldCode == FIELD_GBFACETSTR )
@@ -4706,6 +4708,11 @@ inline bool isInRange( char *p , QueryTerm *qt ) {
 		return ( score2 == qt->m_qword->m_int );
 	}
 
+	if ( qt->m_fieldCode == FIELD_GBFIELDMATCH ) {
+		long score2 = g_posdb.getInt ( p );
+		return ( score2 == qt->m_qword->m_int );
+	}
+
 	// how did this happen?
 	char *xx=NULL;*xx=0;
 	return true;
@@ -4752,6 +4759,8 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) 
 		isRangeTerm = true;
 	if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) 
+		isRangeTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
 		isRangeTerm = true;
 
 	// . just scan each sublist vs. the docid list
@@ -7428,6 +7437,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) 
 			isRangeTerm = true;
 		if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) 
+			isRangeTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
 			isRangeTerm = true;
 
 		// . make it consistent with Query::isTruth()

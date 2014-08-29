@@ -27,7 +27,7 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <a href=#features>Features</a><br><br>
 
 
-<a href=/api>API</a> - for doing searches, indexing documents and performing cluster maintenance<br><br>
+<a href=/admin/api>API</a> - for doing searches, indexing documents and performing cluster maintenance<br><br>
 
 
 <!--<a href=#weighting>Weighting Query Terms</a> - how to pass in your own query term weights<br><br>-->
@@ -161,16 +161,16 @@ You will need an Intel or AMD system with at least 4GB of RAM for every gigablas
 
 <br>
 
-<table><tr><td colspan=2><b>Installed Files</b></td></tr>
+<table cellpadding=5><tr><td colspan=2><b>Installed Files</b></td></tr>
 <tr><td><nobr>/var/gigablast/data0/</nobr></td><td>Directory of Gigablast binary and data files</td></tr>
 <tr><td>/etc/init.d/gb</td><td>start up script link</td></tr>
-<tr><td>/etc/init/gb.conf</td><td>Ubuntu upstart conf file so you can type 'start gb' or 'stop gb', but that will only work on local instances of gb.</td></tr>
+<!--<tr><td>/etc/init/gb.conf</td><td>Ubuntu upstart conf file so you can type 'start gb' or 'stop gb', but that will only work on local instances of gb.</td></tr>-->
 <tr><td>/usr/bin/gb</td><td>Link to /var/gigablast/data0/gb</td></tr>
 </table>
 
 
-<br><br>
-If you run into an bugs let me know so i can fix them right away: gigablast@mail.com.
+<!--<br><br>
+If you run into an bugs let me know so i can fix them right away: gigablast@mail.com.-->
 
 
 <br>
@@ -183,8 +183,8 @@ If you run into an bugs let me know so i can fix them right away: gigablast@mail
 
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
 
-If you run into an bugs let me know so i can fix them right away: gigablast@mail.com.
-<br><br>
+<!--If you run into an bugs let me know so i can fix them right away: gigablast@mail.com.
+<br><br>-->
 <!--
 You will need the following packages installed<br>
 <ul>
@@ -1068,7 +1068,7 @@ The same parameters on the Log Controls page can be adjusted in the gb.conf file
 <tr><td><center><b><font color=#ffffff size=+1>Optimizing
 </td></tr></table>
 <br>
-&lt;<i>Last Updated May 2014</i>&gt;
+&lt;<i>Last Updated August 2014</i>&gt;
 <br>
 <br>
 Gigablast is a fairly sophisticated database that has a few things you can tweak to increase query performance or indexing performance.
@@ -1076,7 +1076,7 @@ Gigablast is a fairly sophisticated database that has a few things you can tweak
 
 <b>General Optimizations:</b>
 <ul>
-<li> Ensure that each disk drive is on its own separate "scsi host". See which drives are on what scsi hosts by doing a <i>cat /proc/scsi/scsi</li>. If multiple drives are sharing a "scsi host", like for example, "Host: scsi3", then you are going to have I/O contention and really, really slow Gigablast down. You can buy SATA cards that plug into your PCI-E slot to provide more scsi hosts.
+<li> Ensure that all drives can operate at maximum performance at the same time. Nowadays, the PCI-E bus could be the limiting factor, so be aware of that. Ensure you get maximum throughput and lots of disk seeks per second. By doing a <i>cat /proc/scsi/scsi</i> you can get info about your drives.
 
 <li> Prevent Linux from unnecessary swapping. Linux will often swap out
 Gigablast pages to satisfy Linux's disk cache. By using the swapoff command
@@ -1086,6 +1086,7 @@ to save their data.
 
 <li> Consider adding more servers to your architecture. You can add the new servers to the hosts.conf file and Gigablast can rebalance the shards while still serving queries.
 
+<li> Run one gb process per physical core, not including hyperthreaded cores. Hypthreaded cores are not that good.
 
 
 <!--using Rik van Riel's
@@ -1137,10 +1138,11 @@ save around 10 disk seeks every query.
 <li> Disable site clustering and dup removal. By specifying <i>&sc=0&dr=0</i>
 in your query's URL you ensure that these two services are avoided and no
 cluster records are loaded. You can also turn them off by default (site cluster by default and dedup results by default) on the
-<a href="/admin">Search Controls</a> page. But if someone explicitly
+<a href="/admin/search">Search Controls</a> page. But if someone explicitly
 specifies <i>&sc=1</i> or <i>&dr=1</i> in their query URL then they will
 override that switch.
 
+<li> Disable gigabit generation. If accessing from the API set &amp;dsrt=0 otherwise set <i>results to scan for gigabits generation by dfefault</i> to 0 in the search controls page for your collection.
 </ul>
 
 <br>
@@ -1151,8 +1153,8 @@ override that switch.
 <li> Disable dup checking. Gigablast will not allow any duplicate pages
 from the same domain into the index when this is enabled. This means that
 Gigablast must do about one disk seek for every URL indexed to verify it is
-not a duplicate. If you keep checksumdb all in memory this will not be a
-problem. This is in the <a href=/admin/spider>Spider Controls</a> page.
+not a duplicate. 
+See the <i>deduping enabled</i> parm on the <a href=/admin/spider>Spider Controls</a> page.
 <!--<li> Disable <b>link voting</b>. Gigablast performs at least one disk seek
 to determine who link to the URL being indexed. If it does have some linkers
 then the Cached Copy of each linker (up to 200) is loaded and the corresponding

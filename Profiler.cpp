@@ -314,7 +314,8 @@ bool Profiler::processSymbolTable (FILE * file){
 					strncpy(fnInfoTmp.m_fnName,
 						strtab+psym->st_name,255);
 					
-					char* end = strnstr(fnInfoTmp.m_fnName,
+					char* end = strnstr2(fnInfoTmp.
+							     m_fnName,
 							    255, "__");
 					if(end) 
 						*end = '\0';

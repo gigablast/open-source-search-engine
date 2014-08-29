@@ -118,7 +118,7 @@ class CallbackEntry {
 public:
 	void *m_state;
 	void (* m_callback ) ( void *state , long ip );
-	class DnsState *m_ds;
+	struct DnsState *m_ds;
 	//class CallbackEntry *m_next;
 	// we can't use a data ptr because slots get moved around when one
 	// is deleted.
@@ -161,7 +161,7 @@ class Dns {
 		     // monitor.cpp passes in false for this:
 		     bool   cacheNotFounds = true );
 
-	bool sendToNextDNS ( class DnsState *ds , long timeout = 60 ) ;
+	bool sendToNextDNS ( struct DnsState *ds , long timeout = 60 ) ;
 
 	bool getIpOfDNS ( DnsState *ds ) ;
 
@@ -171,7 +171,7 @@ class Dns {
 	// . also update the timestamps in our private hostmap
 	// . returns -1 on error
 	// . returns 0 if ip does not exist
-	long gotIp ( UdpSlot *slot , class DnsState *dnsState );
+	long gotIp ( UdpSlot *slot , struct DnsState *dnsState );
 
 	// . we have our own udp server
 	// . it contains our HostMap and DnsProtocol ptrs

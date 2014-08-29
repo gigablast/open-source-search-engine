@@ -1,0 +1,6 @@
+handle SIG38 nostop noprint pass
+handle SIG39 nostop noprint pass
+handle SIG40 nostop noprint pass
+handle SIG41 nostop noprint pass
+set print thread-events 0
+

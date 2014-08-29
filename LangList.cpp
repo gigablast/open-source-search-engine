@@ -399,6 +399,7 @@ bool LangList::loadLists ( ) {
 		stats.st_size = 0;
 		int status = stat ( ff, &stats );
 		if ( status != 0 ) {
+			close(fd);
 			log ( "lang: Could not stat %s: %s.",
 			      ff, strerror(errno) );
 			return false;

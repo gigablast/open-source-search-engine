@@ -81,37 +81,7 @@ const uint8_t *langToTopic[] = {
 	(uint8_t*)"Hindi",
 	(uint8_t*)"Bangla",
 	(uint8_t*)"Polska",
-	(uint8_t*)"Tagalog",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown",
-	(uint8_t*)"Unknown"
+	(uint8_t*)"Tagalog"
 };
 
 #define MAX_DOCTYPE_SEARCH_LEN (512)
@@ -704,7 +674,7 @@ uint8_t LanguageIdentifier::getBestLangsFromVec(char* langCount,
 
 uint8_t LanguageIdentifier::findLangFromDMOZTopic(char *topic) {
 	int x;
-	for(x = 0; x < MAX_LANGUAGES; x++) {
+	for(x = 0; x < (int)(sizeof(langToTopic)/sizeof(uint8_t *)); x++) {
 		if ( ! langToTopic[x] ) continue;
 		if(!strncasecmp((char*)langToTopic[x], topic,
 				gbstrlen((char *)langToTopic[x])))

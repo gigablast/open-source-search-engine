@@ -93,7 +93,7 @@ public:
 	char *m_testDesc;
 	char  m_doTest;
 	// we set s_flags to this
-	long  m_flags[30];
+	long  m_flags[50];
 };
 
 static char *s_content = NULL;
@@ -584,6 +584,18 @@ bool qainject1 ( ) {
 		     return false;
 	}
 
+	//
+	// mdw: query reindex test
+	//
+	// if ( ! s_flags[30] ) {
+	// 	s_flags[30] = true;
+	// 	if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=1&format=xml&"
+	// 			"debug=1&q=sports",9999 ) )
+	// 		return false;
+	// }
+
+	// // temp end it here
+	// return true;
 
 	//
 	// eject/delete the urls
@@ -1518,9 +1530,83 @@ bool qajson ( ) {
 	}
 
 
-	//static bool s_fee2 = false;
+	// other query tests...
+	if ( ! s_flags[12] ) {
+		s_flags[12] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=inurl2%3Aquirksmode.org%2Fm%2F",
+				-1310551262 ) )
+			return false;
+	}
+
 	if ( ! s_flags[13] ) {
 		s_flags[13] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=site%3Aquirksmode.org",
+				-1310551262 ) )
+			return false;
+	}
+	
+
+	// test gbfieldmatch:field:"quoted value" query to ensure it converts
+	// the quoted value into the right int32
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3Ainvestigate-tweet",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3A\"Maemo+Browser\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3A\"Google+Wireless+Transcoder\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	// this should have no results, not capitalized
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3A\"samsung\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3ASamsung",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3A\"Samsung\"",
+				-1310551262 ) )
+			return false;
+	}
+
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[20] ) {
+		s_flags[20] = true;
 		log("qa: SUCCESSFULLY COMPLETED "
 		    "QA JSON TEST");
 		return true;

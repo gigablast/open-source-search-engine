@@ -482,13 +482,12 @@ int main2 ( int argc , char *argv[] ) {
 			"\tjust saves for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
-			"start [hostId1-hostId2]\n"
-			"\ttwo hostids with a hyphen in between indicates a "
-			"range.\n\n"
+			"start <hostId1-hostId2>\n"
+			"\trun gb on the specified range of hostIds in "
+			"a keepalive loop.\n\n"
 
-			"stop [hostId1-hostId2]\n"
-			"\ttwo hostids with a hyphen in between indicates a "
-			"range.\n\n"
+			"stop <hostId1-hostId2>\n"
+			"\ttell gb to exit on the given range of hostIds.\n\n"
 
 			/*
 			"tmpstart [hostId]\n"
@@ -4742,7 +4741,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			SafeBuf tmpBuf;
 			tmpBuf.safePrintf(
-					  "rcp -r %s %s:%s"
+					  "scp -r %s %s:%s"
 					  , fileListBuf.getBufStart()
 					  , iptoa(h2->m_ip)
 					  , h2->m_dir
@@ -4825,7 +4824,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -4840,7 +4839,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%sgb.new "
 				"%s:%s/tmpgb.installed &",
 				dir,
@@ -5139,7 +5138,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				continue;
 			}
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/content.rdf.u8 "
 				"%s:%scatdb/content.rdf.u8",
 				dir,
@@ -5148,7 +5147,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/structure.rdf.u8 "
 				"%s:%scatdb/structure.rdf.u8",
 				dir,
@@ -5157,7 +5156,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/gbdmoz.structure.dat "
 				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
@@ -5166,7 +5165,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/gbdmoz.content.dat "
 				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
@@ -5175,7 +5174,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			//system ( tmp );
 			//sprintf(tmp,
-			//	"rcp "
+			//	"scp "
 			//	"%scatdb/gbdmoz.content.dat.diff "
 			//	"%s:%scatdb/gbdmoz.content.dat.diff",
 			//	dir,
@@ -5189,7 +5188,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/content.rdf.u8.new "
 				"%s:%scatdb/content.rdf.u8.new",
 				dir,
@@ -5198,7 +5197,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/structure.rdf.u8.new "
 				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
@@ -5207,7 +5206,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/gbdmoz.structure.dat.new "
 				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
@@ -5216,7 +5215,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/gbdmoz.content.dat.new "
 				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
@@ -5225,7 +5224,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"rcp "
+				"scp "
 				"%scatdb/gbdmoz.content.dat.new.diff "
 				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,

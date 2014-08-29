@@ -3480,7 +3480,8 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 #define MAX_DMOZ_TITLES 10
 
 long *XmlDoc::getNumDmozEntries() {
-	long **getDmozCatIds();
+	// MDW: wth is this?
+	//long **getDmozCatIds();
 	long nc = size_catIds / 4;
 	if ( nc > MAX_DMOZ_TITLES ) nc = MAX_DMOZ_TITLES;
 	m_numDmozEntries = nc;
@@ -15835,9 +15836,14 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 	// assume none in doc
 	m_canonicalRedirUrlPtr = NULL;
 
-	// disable for now, not good really for deduping
-	m_canonicalRedirUrlValid = true;
-	return &m_canonicalRedirUrlPtr;
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// disable for crawlbot, not good really for deduping
+	if ( cr->m_isCustomCrawl ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
 
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
@@ -15853,6 +15859,8 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 
 	// scan nodes looking for a <link> node. like getBaseUrl()
 	for ( long i=0 ; i < xml->getNumNodes() ; i++ ) {
+		// breathe some
+		QUICKPOLL(m_niceness);
 		// 12 is the <base href> tag id
 		if ( xml->getNodeId ( i ) != TAG_LINK ) continue;
 		// get the href field of this base tag
@@ -15879,6 +15887,39 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		// if it is us, keep it NULL, it's not a redirect. we are
 		// the canonical url.
 		if ( isMe ) break;
+		// ignore if in an expanded iframe (<gbrame>) tag
+		char *pstart = xml->m_xml;
+		char *p      = link;
+		// scan backwards
+		if ( ! m_didExpansion ) p = pstart;
+		bool skip = false;
+		for ( ; p > pstart ; p-- ) {
+			QUICKPOLL(m_niceness);
+			if ( p[0] != '<' ) 
+				continue;
+			if ( p[1] == '/' && 
+			     p[2] == 'g' &&
+			     p[3] == 'b' &&
+			     p[4] == 'f' &&
+			     p[5] == 'r' &&
+			     p[6] == 'a' &&
+			     p[7] == 'm' &&
+			     p[8] == 'e' &&
+			     p[9] == '>' )
+				break;
+			if ( p[1] == 'g' &&
+			     p[2] == 'b' &&
+			     p[3] == 'f' &&
+			     p[4] == 'r' &&
+			     p[5] == 'a' &&
+			     p[6] == 'm' &&
+			     p[7] == 'e' &&
+			     p[8] == '>' ) {
+				skip = true;
+				break;
+			}
+		}
+		if ( skip ) continue;
 		// otherwise, it is not us, we are NOT the canonical url
 		// and we should not be indexed, but just ass the canonical
 		// url as a spiderrequest into spiderdb, just like
@@ -19653,7 +19694,7 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	// and "unchanged" was true.
 	if ( m_unchangedValid && m_unchanged ) {
 		if ( ! m_titleRecBufValid ) return true;
-		if ( ! m_titleRecBuf.length()==0 ) return true;
+		if ( m_titleRecBuf.length()==0 ) return true;
 	}
 
 	CollectionRec *cr = getCollRec();
@@ -26377,7 +26418,8 @@ bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool isStatusDoc ) {
 
 	// do not index the rest if we are a "spider reply" document
 	// which is like a fake document for seeing spider statuses
-	if ( isStatusDoc == CT_STATUS ) return true;
+	//if ( isStatusDoc == CT_STATUS ) return true;
+	if ( isStatusDoc ) return true;
 
 	// now for CT_STATUS spider status "documents" we also index
 	// gbspiderdate so index this so we can just do a 
@@ -28924,15 +28966,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// if they provided a query with gbfacet*: terms then we have
 	// to get those facet values.
 	if ( ! m_gotFacets ) {
-		// need this for storeFacetValues() if we are json
-		if ( m_contentType == CT_JSON ) {
-			Json *jp = getParsedJson();
-			if ( ! jp || jp == (void *)-1)return (Msg20Reply *)jp;
-		}
-		if ( m_contentType == CT_HTML ) {
-			Xml *xml = getXml();
-			if ( ! xml || xml==(void *)-1)return (Msg20Reply *)xml;
-		}
 		// only do this once
 		m_gotFacets = true;
 		// get facet term
@@ -28953,6 +28986,17 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		}
 		// if we had a facet, get the values it has in the doc
 		if ( qs && *qs ) {
+			// need this for storeFacetValues() if we are json
+			if ( m_contentType == CT_JSON ) {
+				Json *jp = getParsedJson();
+				if ( ! jp || jp == (void *)-1)
+					return (Msg20Reply *)jp;
+			}
+			if ( m_contentType == CT_HTML ) {
+				Xml *xml = getXml();
+				if ( ! xml || xml==(void *)-1)
+					return (Msg20Reply *)xml;
+			}
 			// find end of it
 			char *e = qs;
 			for ( ; *e && ! is_wspace_a(*e) ; e++ );
@@ -32389,10 +32433,12 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	//	s_facetPrefixHash = hash64n ( "gbfacet" );
 	long long prefixHash = hash64n ( prefix );
 
+	// term is like something like "object.price" or whatever.
+	// it is the json field itself, or the meta tag name, etc.
 	long long termId64 = hash64n ( term );
 
 	// combine with the "gbfacet" prefix. old prefix hash on right.
-	// like "price" on left and "gbfacetfloat" on left... see Query.cpp
+	// like "price" on right and "gbfacetfloat" on left... see Query.cpp.
 	long long ph2 = hash64 ( termId64, prefixHash );
 
 	// . now store it
@@ -32466,13 +32512,16 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	// make a special hashinfo for this facet
 	HashInfo hi;
 	hi.m_tt = tt;
-	hi.m_prefix = prefix;//"gbfacet";
+	// the full prefix
+	char fullPrefix[64];
+	snprintf(fullPrefix,64,"%s:%s",prefix,term);
+	hi.m_prefix = fullPrefix;//"gbfacet";
 
 	// add to wts for PageParser.cpp display
 	// store it
 	if ( ! storeTerm ( buf,
 			   bufLen,
-			   prefixHash, // s_facetPrefixHash,
+			   ph2, // prefixHash, // s_facetPrefixHash,
 			   &hi,
 			   0, // word#, i,
 			   0, // wordPos
@@ -42230,7 +42279,11 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	//   getRelatedQueryLinks() which make a new xmldoc. then it can
 	//   call newxd->getTermListBuf() instead of us passing it in.
 	// . so each host has a bin, a host bin
+#ifdef __APPLE__
+	SafeBuf hostBin[MAX_HOSTS];
+#else
 	SafeBuf hostBin[g_hostdb.m_numHosts];
+#endif
 
 	// scan the related docids and send the requests if we have not already
 	for ( long i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {

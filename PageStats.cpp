@@ -803,8 +803,11 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td colspan=2>"
 			      "<center><b>General Info</b></td></tr>\n"
 			      "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
+			      "<tr class=poo><td><b>Process ID</b></td><td>%lu</td></tr>\n"
 			      "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>read signals</b></td><td>%lli</td></tr>\n"
+			      "<tr class=poo><td><b>write signals</b></td><td>%lli</td></tr>\n"
 			      "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
@@ -815,11 +818,15 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //"<tr class=poo><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
 			      "</tr>\n"
 			      "<tr class=poo><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
-			      "<tr class=poo><td><b>Local Time</b></td><td>%s (%li)</td></tr>\n",
+			      "<tr class=poo><td><b>Local Time</b></td><td>%s (%li)</td></tr>\n"
+			      ,
 			      TABLE_STYLE ,
 			      ubuf.getBufStart(),
+			      (unsigned long)getpid(),
 			      g_numCorrupt,
 			      g_numAlarms,
+			      g_stats.m_readSignals,
+			      g_stats.m_writeSignals,
 			      g_numQuickPolls,
 			      kv , 
 			      //GBPROJECTNAME,

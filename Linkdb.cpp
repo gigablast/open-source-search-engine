@@ -1883,7 +1883,7 @@ char *getExplanation ( char *note ) {
 		"inlink appears to be in a table of ad links",
 
 		"duplicateIPCClass",
-		
+		"duplicate ip c block"
 
 	};
 

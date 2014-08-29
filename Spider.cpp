@@ -6099,6 +6099,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// update m_msg5StartKey for next read
 	if ( m_list.getListSize() > 0 ) {
+		// what is m_list.m_ks ?
 		m_list.getLastKey((char *)&m_sc->m_msg5StartKey);
 		m_sc->m_msg5StartKey += 1;
 		// i guess we had something? wait for nothing to be there
@@ -8163,7 +8164,7 @@ bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r ) {
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("PageSpiderdb: new(%i): %s", 
-		    sizeof(State11),mstrerror(g_errno));
+		    (int)sizeof(State11),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State11) , "PageSpiderdb" );
 	// get the priority/#ofRecs from the cgi vars

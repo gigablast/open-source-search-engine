@@ -471,196 +471,196 @@ bool isAdult( char *s, long slen, char **loc ) {
 	if ( loc ) 
 		p = loc;
 	// check for naughty words
-	if ( ( *p = strnstr ( s , slen , "upskirt"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "downblouse" ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "adult"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "shemale"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "spank"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "dildo"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "shaved"     ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "bdsm"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "voyeur"     ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "shemale"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "fisting"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "escorts"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "vibrator"   ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "rgasm"      ) ) ) return true; // 0rgasm
-	if ( ( *p = strnstr ( s , slen , "orgy"       ) ) ) return true; 
-	if ( ( *p = strnstr ( s , slen , "orgies"     ) ) ) return true; 
-	if ( ( *p = strnstr ( s , slen , "orgasm"     ) ) ) return true; 
-	if ( ( *p = strnstr ( s , slen , "masturbat"  ) ) ) return true; 
-	if ( ( *p = strnstr ( s , slen , "stripper"   ) ) ) return true; 
-	if ( ( *p = strnstr ( s , slen , "lolita"     ) ) ) return true; 
-	//if ( ( *p = strnstr ( s , slen , "hardcore"   ) ) ) return true; ps2hardcore.co.uk
-	if ( ( *p = strnstr ( s , slen , "softcore"   ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "whore"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "slut"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "smut"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "tits"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "lesbian"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "swinger"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "upskirt"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "downblouse" ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "adult"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "shemale"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "spank"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "dildo"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "shaved"     ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "bdsm"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "voyeur"     ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "shemale"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "fisting"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "escorts"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "vibrator"   ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "rgasm"      ) ) ) return true; // 0rgasm
+	if ( ( *p = strnstr2 ( s , slen , "orgy"       ) ) ) return true; 
+	if ( ( *p = strnstr2 ( s , slen , "orgies"     ) ) ) return true; 
+	if ( ( *p = strnstr2 ( s , slen , "orgasm"     ) ) ) return true; 
+	if ( ( *p = strnstr2 ( s , slen , "masturbat"  ) ) ) return true; 
+	if ( ( *p = strnstr2 ( s , slen , "stripper"   ) ) ) return true; 
+	if ( ( *p = strnstr2 ( s , slen , "lolita"     ) ) ) return true; 
+	//if ( ( *p = strnstr2 ( s , slen , "hardcore"   ) ) ) return true; ps2hardcore.co.uk
+	if ( ( *p = strnstr2 ( s , slen , "softcore"   ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "whore"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "slut"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "smut"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "tits"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "lesbian"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "swinger"    ) ) ) return true;
 	// fetish is not necessarily a porn word, like native americans
 	// make "fetishes" and it was catching cakefetish.com, a food site
-	//if ( ( *p = strnstr ( s , slen , "fetish"   ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "housewife"  ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "housewive"  ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "nude"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "bondage"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "centerfold" ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "incest"     ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "pedophil"   ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "pedofil"    ) ) ) return true;
+	//if ( ( *p = strnstr2 ( s , slen , "fetish"   ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "housewife"  ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "housewive"  ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "nude"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "bondage"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "centerfold" ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "incest"     ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "pedophil"   ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "pedofil"    ) ) ) return true;
 	// hornyear.com
-	if ( ( *p = strnstr ( s , slen , "horny"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "pussy"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "pussies"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "penis"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "vagina"     ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "phuck"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "blowjob"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "gangbang"   ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "xxx"        ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "porn"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "felch"      ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "cunt"       ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "bestial"    ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "tranny"     ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "beastial"   ) ) ) return true;
-	if ( ( *p = strnstr ( s , slen , "crotch"     ) ) ) return true;
-	//if ( ( *p = strnstr ( s , slen , "oral"     ) ) ) return true; // moral, doctorial, ..
+	if ( ( *p = strnstr2 ( s , slen , "horny"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "pussy"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "pussies"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "penis"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "vagina"     ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "phuck"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "blowjob"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "gangbang"   ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "xxx"        ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "porn"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "felch"      ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "cunt"       ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "bestial"    ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "tranny"     ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "beastial"   ) ) ) return true;
+	if ( ( *p = strnstr2 ( s , slen , "crotch"     ) ) ) return true;
+	//if ( ( *p = strnstr2 ( s , slen , "oral"     ) ) ) return true; // moral, doctorial, ..
 	// these below may have legit meanings
-	if ( ( *p = strnstr ( s , slen , "kink"       ) ) ) {
-		if ( strnstr ( s , slen , "kinko" ) ) return false;// the store
+	if ( ( *p = strnstr2 ( s , slen , "kink"       ) ) ) {
+		if ( strnstr2 ( s , slen , "kinko" ) ) return false;// the store
 		return true;
 	}
-	if ( ( *p = strnstr ( s , slen , "sex"      ) ) ) {
+	if ( ( *p = strnstr2 ( s , slen , "sex"      ) ) ) {
 		// sexton, sextant, sextuplet, sextet
-		if ( strnstr ( s , slen , "sext"       ) ) return false; 
-		if ( strnstr ( s , slen , "middlesex"  ) ) return false;
-		if ( strnstr ( s , slen , "sussex"     ) ) return false;
-		if ( strnstr ( s , slen , "essex"      ) ) return false;
-		if ( strnstr ( s , slen , "deusex"     ) ) 
+		if ( strnstr2 ( s , slen , "sext"       ) ) return false; 
+		if ( strnstr2 ( s , slen , "middlesex"  ) ) return false;
+		if ( strnstr2 ( s , slen , "sussex"     ) ) return false;
+		if ( strnstr2 ( s , slen , "essex"      ) ) return false;
+		if ( strnstr2 ( s , slen , "deusex"     ) ) 
 			return false; // video game
-		if ( strnstr ( s , slen , "sexchange"  ) ) 
+		if ( strnstr2 ( s , slen , "sexchange"  ) ) 
 			return false; // businessexh
-		if ( strnstr ( s , slen , "sexpress"   ) ) 
+		if ( strnstr2 ( s , slen , "sexpress"   ) ) 
 			return false; // *express
-		if ( strnstr ( s , slen , "sexpert"    ) ) 
+		if ( strnstr2 ( s , slen , "sexpert"    ) ) 
 			return false; // *expert
-		if ( strnstr ( s , slen , "sexcel"     ) ) 
+		if ( strnstr2 ( s , slen , "sexcel"     ) ) 
 			return false; // *excellence
-		if ( strnstr ( s , slen , "sexist"     ) ) 
+		if ( strnstr2 ( s , slen , "sexist"     ) ) 
 			return false; // existence
-		if ( strnstr ( s , slen , "sexile"     ) ) 
+		if ( strnstr2 ( s , slen , "sexile"     ) ) 
 			return false; // existence
-		if ( strnstr ( s , slen , "harassm"    ) ) 
+		if ( strnstr2 ( s , slen , "harassm"    ) ) 
 			return false; // harassment
-		if ( strnstr ( s , slen , "sexperi"    ) ) 
+		if ( strnstr2 ( s , slen , "sexperi"    ) ) 
 			return false; // experience
-		if ( strnstr ( s , slen , "transex"    ) ) 
+		if ( strnstr2 ( s , slen , "transex"    ) ) 
 			return false; // transexual
-		if ( strnstr ( s , slen , "sexual"     ) ) 
+		if ( strnstr2 ( s , slen , "sexual"     ) ) 
 			return false; // abuse,health
-		if ( strnstr ( s , slen , "sexpo"      ) ) 
+		if ( strnstr2 ( s , slen , "sexpo"      ) ) 
 			return false; // expo,expose
-		if ( strnstr ( s , slen , "exoti"      ) ) 
+		if ( strnstr2 ( s , slen , "exoti"      ) ) 
 			return false; // exotic(que)
-		if ( strnstr ( s , slen , "sexclu"     ) ) 
+		if ( strnstr2 ( s , slen , "sexclu"     ) ) 
 			return false; // exclusive/de
 		return true;
 	}
 	// www.losAnaLos.de
 	// sanalcafe.net
-	if ( ( *p = strnstr ( s , slen , "anal" ) ) ) {
-		if ( strnstr ( s , slen , "analog"     ) ) 
+	if ( ( *p = strnstr2 ( s , slen , "anal" ) ) ) {
+		if ( strnstr2 ( s , slen , "analog"     ) ) 
 			return false; // analogy
-		if ( strnstr ( s , slen , "analy"      ) ) 
+		if ( strnstr2 ( s , slen , "analy"      ) ) 
 			return false; // analysis
-		if ( strnstr ( s , slen , "canal"      ) ) 
+		if ( strnstr2 ( s , slen , "canal"      ) ) 
 			return false;
-		if ( strnstr ( s , slen , "kanal"      ) ) 
+		if ( strnstr2 ( s , slen , "kanal"      ) ) 
 			return false; // german
-		if ( strnstr ( s , slen , "banal"      ) ) 
+		if ( strnstr2 ( s , slen , "banal"      ) ) 
 			return false;
 		return true;
 	}
-	if ( ( *p = strnstr ( s , slen , "cum" ) ) ) {
-		if ( strnstr ( s , slen , "circum"     ) ) 
+	if ( ( *p = strnstr2 ( s , slen , "cum" ) ) ) {
+		if ( strnstr2 ( s , slen , "circum"     ) ) 
 			return false; // circumvent
-		if ( strnstr ( s , slen , "magn"       ) ) 
+		if ( strnstr2 ( s , slen , "magn"       ) ) 
 			return false; // magna cum
-		if ( strnstr ( s , slen , "succu"      ) ) 
+		if ( strnstr2 ( s , slen , "succu"      ) ) 
 			return false; // succumb
-		if ( strnstr ( s , slen , "cumber"     ) ) 
+		if ( strnstr2 ( s , slen , "cumber"     ) ) 
 			return false; // encumber
-		if ( strnstr ( s , slen , "docum"      ) ) 
+		if ( strnstr2 ( s , slen , "docum"      ) ) 
 			return false; // document
-		if ( strnstr ( s , slen , "cumul"      ) ) 
+		if ( strnstr2 ( s , slen , "cumul"      ) ) 
 			return false; // accumulate
-		if ( strnstr ( s , slen , "acumen"     ) ) 
+		if ( strnstr2 ( s , slen , "acumen"     ) ) 
 			return false; // acumen
-		if ( strnstr ( s , slen , "cucum"      ) ) 
+		if ( strnstr2 ( s , slen , "cucum"      ) ) 
 			return false; // cucumber
-		if ( strnstr ( s , slen , "incum"      ) ) 
+		if ( strnstr2 ( s , slen , "incum"      ) ) 
 			return false; // incumbent
-		if ( strnstr ( s , slen , "capsicum"   ) ) return false; 
-		if ( strnstr ( s , slen , "modicum"    ) ) return false; 
-		if ( strnstr ( s , slen , "locum"      ) ) 
+		if ( strnstr2 ( s , slen , "capsicum"   ) ) return false; 
+		if ( strnstr2 ( s , slen , "modicum"    ) ) return false; 
+		if ( strnstr2 ( s , slen , "locum"      ) ) 
 			return false; // slocum
-		if ( strnstr ( s , slen , "scum"       ) ) return false; 
-		if ( strnstr ( s , slen , "accu"       ) ) 
+		if ( strnstr2 ( s , slen , "scum"       ) ) return false; 
+		if ( strnstr2 ( s , slen , "accu"       ) ) 
 			return false; // compounds!
 		// arcum.de
 		// cummingscove.com
 		// cumchristo.org
 		return true;
 	}
-	//if ( ( *p = strnstr ( s , slen , "lust"        ) ) ) {
-	//	if ( strnstr ( s , slen , "illust"   ) ) return false; // illustrated
-	//	if ( strnstr ( s , slen , "clust"    ) ) return false; // cluster
-	//	if ( strnstr ( s , slen , "blust"    ) ) return false; // bluster
-	//	if ( strnstr ( s , slen , "lustrad"  ) ) return false; // balustrade
+	//if ( ( *p = strnstr2 ( s , slen , "lust"        ) ) ) {
+	//	if ( strnstr2 ( s , slen , "illust"   ) ) return false; // illustrated
+	//	if ( strnstr2 ( s , slen , "clust"    ) ) return false; // cluster
+	//	if ( strnstr2 ( s , slen , "blust"    ) ) return false; // bluster
+	//	if ( strnstr2 ( s , slen , "lustrad"  ) ) return false; // balustrade
 	//	// TODO: plusthemes.com wanderlust
 	//	return true;
 	//}
 	// brettwatt.com
-	//if ( ( *p = strnstr ( s , slen , "twat"       ) ) ) {
-	//	if ( strnstr ( s , slen , "watch"    ) ) return false; // wristwatch
-	//	if ( strnstr ( s , slen , "atwater"  ) ) return false;
-	//	if ( strnstr ( s , slen , "water"    ) ) return false; // sweetwater
+	//if ( ( *p = strnstr2 ( s , slen , "twat"       ) ) ) {
+	//	if ( strnstr2 ( s , slen , "watch"    ) ) return false; // wristwatch
+	//	if ( strnstr2 ( s , slen , "atwater"  ) ) return false;
+	//	if ( strnstr2 ( s , slen , "water"    ) ) return false; // sweetwater
 	//	return true;
 	//}
-	if ( ( *p = strnstr ( s , slen , "clit" ) ) && 
-	       ! strnstr ( s , slen , "heraclitus" ) )
+	if ( ( *p = strnstr2 ( s , slen , "clit" ) ) && 
+	       ! strnstr2 ( s , slen , "heraclitus" ) )
 		return true;
 	// fuckedcompany.com is ok
-	if ( ( *p = strnstr ( s , slen , "fuck" ) ) && 
-	       ! strnstr ( s , slen , "fuckedcomp" ) )
+	if ( ( *p = strnstr2 ( s , slen , "fuck" ) ) && 
+	       ! strnstr2 ( s , slen , "fuckedcomp" ) )
 		return true;
-	if ( ( *p = strnstr ( s , slen , "boob" ) ) && 
-	       ! strnstr ( s , slen , "booboo"     ) )
+	if ( ( *p = strnstr2 ( s , slen , "boob" ) ) && 
+	       ! strnstr2 ( s , slen , "booboo"     ) )
 		return true;
-	if ( ( *p = strnstr ( s , slen , "wank" ) )&& 
-	       ! strnstr ( s , slen , "swank"      ) )
+	if ( ( *p = strnstr2 ( s , slen , "wank" ) )&& 
+	       ! strnstr2 ( s , slen , "swank"      ) )
 		return true;
 	// fick is german for fuck (fornication under consent of the king)
-	if ( ( *p = strnstr ( s , slen , "fick" ) )&& 
-	       ! strnstr ( s , slen , "fickle" ) &&
-	       ! strnstr ( s , slen , "traffick"   ) )return true;
+	if ( ( *p = strnstr2 ( s , slen , "fick" ) )&& 
+	       ! strnstr2 ( s , slen , "fickle" ) &&
+	       ! strnstr2 ( s , slen , "traffick"   ) )return true;
 	// sclerotic
 	// buerotipp.de
-	if ( ( *p = strnstr ( s , slen , "eroti") ) && 
-	       ! strnstr ( s , slen , "sclero"     ) )
+	if ( ( *p = strnstr2 ( s , slen , "eroti") ) && 
+	       ! strnstr2 ( s , slen , "sclero"     ) )
 		return true;
 	// albaberlin.com
 	// babelfish.altavista.com
-	if ( ( *p = strnstr ( s , slen , "babe" ) ) && 
-	       ! strnstr ( s , slen , "toyland"   ) &&
-	       ! strnstr ( s , slen , "babel"      ) )
+	if ( ( *p = strnstr2 ( s , slen , "babe" ) ) && 
+	       ! strnstr2 ( s , slen , "toyland"   ) &&
+	       ! strnstr2 ( s , slen , "babel"      ) )
 		return true;
 	// what is gaya.dk?
-	if ( ( *p = strnstr ( s , slen , "gay" ) ) && 
-	       ! strnstr ( s , slen , "gaylord"    ) )
+	if ( ( *p = strnstr2 ( s , slen , "gay" ) ) && 
+	       ! strnstr2 ( s , slen , "gaylord"    ) )
 		return true;
 	// url appears to be ok
 	return false;

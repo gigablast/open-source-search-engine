@@ -301,6 +301,9 @@ void RdbCache::addLongLong ( collnum_t collnum ,
 	k.n1 = (unsigned long long)key;
 	// sanity check
 	//if ( m_cks != 4 ) { char *xx = NULL; *xx = 0; }
+	// sanity check
+	if ( m_cks > (long)sizeof(key_t) ) { char *xx = NULL; *xx = 0; }
+	//if ( m_dks != 0 ) { char *xx = NULL; *xx = 0; }
 	//addRecord ( collnum , k , NULL , 0 , (char *)&value , 8 ,
 	//addRecord ( collnum , (char *)&key , NULL , 0 , (char *)&value , 8 ,
 	addRecord ( collnum , (char *)&k , NULL , 0 , (char *)&value , 8 ,
@@ -348,6 +351,8 @@ void RdbCache::addLong ( collnum_t collnum ,
 	key_t k;
 	k.n0 = 0;
 	k.n1 = key;
+	// sanity check
+	if ( m_cks > (long)sizeof(key_t) ) { char *xx = NULL; *xx = 0; }
 	addRecord ( collnum , (char *)&k , NULL , 0 , (char *)&value , 4 ,
 		    0 , // timestamp=now
 		    retRecPtr );

@@ -6,7 +6,7 @@
 #include "DiskPageCache.h"
 #include "RdbMap.h"    // GB_PAGE_SIZE
 #include "Indexdb.h"
-
+#include "Profiler.h"
 // types.h uses key_t type that shmget uses
 #undef key_t
 
@@ -512,6 +512,8 @@ void DiskPageCache::addPages ( long vfd,
 	if ( m_switch && ! *m_switch ) return;
 	// sometimes the file got unlinked on us
 	if ( ! m_memOff[vfd] ) return;
+	// for some reason profiler cores all the time in here
+	if ( g_profiler.m_realTimeProfilerRunning ) return;
 	// what is the page range?
 	long long sp = offset / m_pageSize ;
 	// point to it
@@ -539,6 +541,11 @@ void DiskPageCache::addPages ( long vfd,
 
 char *DiskPageCache::getMemPtrFromOff ( long off ) {
 	if ( off < 0 ) return NULL; // NULL means not in DiskPageCache
+
+	// for some reason profiler cores all the time in here
+	// and m_numPageSets is 0 like we got reset
+	if ( g_profiler.m_realTimeProfilerRunning ) return NULL;
+
 	// get set number
 	long sn = off / m_maxPageSetSize ;
 	// get offset from within the chunk of memory (within the set)

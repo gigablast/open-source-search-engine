@@ -232,7 +232,7 @@ class Rdb {
 				   (char *)maxKey,oldTruncationLimit);};
 
 	// positive minus negative
-	long long getNumTotalRecs ( ) ;
+	long long getNumTotalRecs ( bool useCache = false ) ;
 
 	long long getNumRecsOnDisk ( );
 
@@ -381,6 +381,9 @@ class Rdb {
 	RdbDump   m_dump;  
 	// memory for us to use to avoid calling malloc()/mdup()/...
 	RdbMem    m_mem;
+
+	long      m_cacheLastTime;
+	long long m_cacheLastTotal;
 
 	bool m_inAddList;
 

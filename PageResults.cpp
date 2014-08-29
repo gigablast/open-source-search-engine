@@ -380,8 +380,8 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		long dg = hr->getLong("dg",-1);
 		if ( dg >= 0 ) sb.safePrintf("&dg=%li",dg);
 		// show gigabits?
-		long gb = hr->getLong("gigabits",1);
-		if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
+		//long gb = hr->getLong("gigabits",1);
+		//if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
 		// show banned results?
 		long showBanned = hr->getLong("sb",0);
 		if ( showBanned ) sb.safePrintf("&sb=1");
@@ -743,53 +743,81 @@ static bool printGigabitContainingSentences ( State0 *st,
 					      Msg40 *msg40 , 
 					      Gigabit *gi , 
 					      SearchInput *si ,
-					      Query *gigabitQuery ) {
+					      Query *gigabitQuery ,
+					      long gigabitId ) {
 
-	static long s_gigabitCount = 0;
-
-	sb->safePrintf("<nobr><b>");
-	//"<img src=http://search.yippy.com/"
-	//"images/new/button-closed.gif><b>");
-
-	HttpRequest *hr = &st->m_hr;
-
-	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
-
-	// make a new query
-	sb->safePrintf("<a href=\"/search?gigabits=1&c=%s&q=",cr->m_coll);
-	sb->urlEncode(gi->m_term,gi->m_termLen);
-	sb->safeMemcpy("+|+",3);
-	char *q = hr->getString("q",NULL,"");
-	sb->urlEncode(q);
-	sb->safePrintf("\">");
-	sb->safeMemcpy(gi->m_term,gi->m_termLen);
-	sb->safePrintf("</a></b>");
-	sb->safePrintf(" <font color=gray size=-1>");
-	long numOff = sb->m_length;
-	sb->safePrintf("      ");//,gi->m_numPages);
-	sb->safePrintf("</font>");
-	sb->safePrintf("</b>");
-	if ( si->m_isAdmin && 1 == 2 ) 
-		sb->safePrintf("[%.0f]{%li}",
-			      gi->m_gbscore,
-			      gi->m_minPop);
-
-	long revert = sb->length();
-
-	sb->safePrintf("<font color=blue style=align:right;>"
-		      "<a style=cursor:hand;cursor:pointer; onclick=ccc(%li);>"
-		      , s_gigabitCount 
-		      );
-	long spaceOutOff = sb->length();
-	sb->safePrintf( "%c%c%c",
-		      0xe2,
-		      0x87,
-		      0x93);
-	sb->safePrintf(//"[more]"
-		      "</a></font>");
+	//static long s_gigabitCount = 0;
 	
 
-	sb->safePrintf("</nobr>"); // <br>
+	char format = si->m_format;
+
+	HttpRequest *hr = &st->m_hr;
+	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec(collnum );
+
+	long numOff;
+	long revert;
+	long spaceOutOff;
+
+	if ( format == FORMAT_HTML ) {
+		sb->safePrintf("<nobr><b>");
+		//"<img src=http://search.yippy.com/"
+		//"images/new/button-closed.gif><b>");
+
+		// make a new query
+		sb->safePrintf("<a href=\"/search?c=%s&q=",cr->m_coll);
+		sb->urlEncode(gi->m_term,gi->m_termLen);
+		sb->safeMemcpy("+|+",3);
+		char *q = hr->getString("q",NULL,"");
+		sb->urlEncode(q);
+		sb->safePrintf("\">");
+		sb->safeMemcpy(gi->m_term,gi->m_termLen);
+		sb->safePrintf("</a></b>");
+		sb->safePrintf(" <font color=gray size=-1>");
+		numOff = sb->m_length;
+		sb->safePrintf("      ");//,gi->m_numPages);
+		sb->safePrintf("</font>");
+		sb->safePrintf("</b>");
+		if ( si->m_isAdmin && 1 == 2 ) 
+			sb->safePrintf("[%.0f]{%li}",
+				       gi->m_gbscore,
+				       gi->m_minPop);
+
+		revert = sb->length();
+
+		sb->safePrintf("<font color=blue style=align:right;>"
+			       "<a style=cursor:hand;cursor:pointer; "
+			       "onclick=ccc(%li);>"
+			       , gigabitId // s_gigabitCount 
+			       );
+		spaceOutOff = sb->length();
+		sb->safePrintf( "%c%c%c",
+				0xe2,
+				0x87,
+				0x93);
+		sb->safePrintf(//"[more]"
+			       "</a></font>");
+	
+
+		sb->safePrintf("</nobr>"); // <br>
+	}
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<gigabit>\n");
+		sb->safePrintf("\t\t\t<term><![CDATA[");
+		sb->cdataEncode(gi->m_term,gi->m_termLen);
+		sb->safePrintf("]]></term>\n");
+		sb->safePrintf("\t\t\t<score>%f</score>\n",gi->m_gbscore);
+		sb->safePrintf("\t\t\t<minPop>%li</minPop>\n",gi->m_minPop);
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("\t\"gigabit\":{\n");
+		sb->safePrintf("\t\t\"term\":\"");
+		sb->jsonEncode(gi->m_term,gi->m_termLen);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\t\"score\":%f,\n",gi->m_gbscore);
+		sb->safePrintf("\t\t\"minPop\":%li,\n",gi->m_minPop);
+	}
 
 	// get facts
 	long numNuggets = 0;
@@ -821,27 +849,27 @@ static bool printGigabitContainingSentences ( State0 *st,
 	again:
 
 		// first time, print in the single fact div
-		if ( first ) {
+		if ( first && format == FORMAT_HTML ) {
 			sb->safePrintf("<div "
 				       //"style=\"border:1px lightgray solid;\"
-				      "id=fd%li>",s_gigabitCount);
+				      "id=fd%li>",gigabitId);//s_gigabitCount);
 		}
 
-		if ( second ) {
+		if ( second && format == FORMAT_HTML ) {
 			sb->safePrintf("<div style=\"max-height:300px;"
 				      "display:none;"
 				      "overflow-x:hidden;"
 				      "overflow-y:auto;"//scroll;"
 				       //"border:1px lightgray solid; "
 				       "\" "
-				      "id=sd%li>",s_gigabitCount);
+				      "id=sd%li>",gigabitId);//s_gigabitCount);
 			printedSecond = true;
 		}
 
 		Msg20Reply *reply = fi->m_reply;
 
 		// ok, print it out
-		if ( ! first && ! second ) {
+		if ( ! first && ! second && format == FORMAT_HTML ) {
 			//if ( reply->m_docId != lastDocId ) 
 			sb->safePrintf("<br><br>\n");
 			//else {
@@ -875,7 +903,8 @@ static bool printGigabitContainingSentences ( State0 *st,
 			0 , // fieldCode
 			0  ); // niceness
 		// now highlight the original query as well but in black bold
-		h.set ( sb , // print it out here
+		SafeBuf tmpBuf2;
+		h.set ( &tmpBuf2 , // print it out here
 			tmpBuf.getBufStart() , // content
 			tmpBuf.length() , // len
 			si->m_queryLangId , // from m_defaultSortLang
@@ -889,16 +918,59 @@ static bool printGigabitContainingSentences ( State0 *st,
 			0  ); // niceness
 		
 
+		long dlen; char *dom = getDomFast(reply->ptr_ubuf,&dlen);
+
+		// print the sentence
+		if ( format == FORMAT_HTML )
+			sb->safeStrcpy(tmpBuf2.getBufStart());
+
+		if ( format == FORMAT_XML ) {
+			sb->safePrintf("\t\t\t<instance>\n"
+				       "\t\t\t\t<sentence><![CDATA[");
+			sb->cdataEncode(tmpBuf2.getBufStart());
+			sb->safePrintf("]]></sentence>\n");
+			sb->safePrintf("\t\t\t\t<url><![CDATA[");
+			sb->cdataEncode(reply->ptr_ubuf);
+			sb->safePrintf("]]></url>\n");
+			sb->safePrintf("\t\t\t\t<domain><![CDATA[");
+			sb->cdataEncode(dom,dlen);
+			sb->safePrintf("]]></domain>\n");
+			sb->safePrintf("\t\t\t</instance>\n");
+		}
+
+		if ( format == FORMAT_JSON ) {
+			sb->safePrintf("\t\t\"instance\":{\n"
+				       "\t\t\t\"sentence\":\"");
+			sb->jsonEncode(tmpBuf2.getBufStart());
+			sb->safePrintf("\",\n");
+
+			sb->safePrintf("\t\t\t\"url\":\"");
+			sb->jsonEncode(reply->ptr_ubuf);
+			sb->safePrintf("\",\n");
+
+			sb->safePrintf("\t\t\t\"domain\":\"");
+			sb->jsonEncode(dom,dlen);
+			sb->safePrintf("\"\n");
+			sb->safePrintf("\t\t},\n");
+		}
+
+
 		fi->m_printed = 1;
 		saveOffset = sb->length();
-		sb->safePrintf(" <a href=/get?c=%s&cnsp=0&"
-			       "strip=0&d=%lli>",cr->m_coll,reply->m_docId);
-		long dlen; char *dom = getDomFast(reply->ptr_ubuf,&dlen);
-		sb->safeMemcpy(dom,dlen);
-		sb->safePrintf("</a>\n");
+		if ( format == FORMAT_HTML )
+			sb->safePrintf(" <a href=/get?c=%s&cnsp=0&"
+				       "strip=0&d=%lli>",
+				       cr->m_coll,reply->m_docId);
+
+		if ( format == FORMAT_HTML )
+			sb->safeMemcpy(dom,dlen);
+
+		if ( format == FORMAT_HTML )
+			sb->safePrintf("</a>\n");
+
 		//lastDocId = reply->m_docId;
 
-		if ( first ) {
+		if ( first && format == FORMAT_HTML ) {
 			sb->safePrintf("</div>");
 		}
 
@@ -913,6 +985,20 @@ static bool printGigabitContainingSentences ( State0 *st,
 			goto again;
 		}
 	}
+
+	if ( format == FORMAT_XML ) 
+		sb->safePrintf("\t</gigabit>\n");
+
+	if ( format == FORMAT_JSON ) {
+		// remove last ,\n
+		sb->m_length -= 2;
+		// replace with just \n
+		sb->safePrintf("\n\t},\n");
+	}
+
+	// all done if not html
+	if ( format != FORMAT_HTML )
+		return true;
 
 	// we counted the first one twice since we had to throw it into
 	// the hidden div too!
@@ -943,7 +1029,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 			dst[k] = src[k];
 	}
 
-	s_gigabitCount++;
+	//s_gigabitCount++;
 
 	if ( printedSecond ) {
 		sb->safePrintf("</div>");
@@ -1435,95 +1521,108 @@ bool expandHtml (  SafeBuf& sb,
 
 bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
-	char *title = "Search Results";
-	sb.safePrintf("<title>Gigablast - %s</title>\n",title);
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 0px 0px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a {text-decoration:none;}\n");
-	//sb.safePrintf("a:link {color:#00c}\n");
-	//sb.safePrintf("a:visited {color:#551a8b}\n");
-	//sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n"
-		      ".nav {font-size:20px;align:right;}\n"
-		      );
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("var openmenu=''; var inmenuclick=0;");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body "
+	SearchInput *si = &st->m_si;
+	Msg40 *msg40 = &st->m_msg40;
+	CollectionRec *cr = si->m_cr;
 
-		      "onmousedown=\""
+	char format = si->m_format;
 
-		      "if (openmenu != '' && inmenuclick==0) {"
-		        "document.getElementById(openmenu)."
-		        "style.display='none'; openmenu='';"
-		      "}"
+	if ( format == FORMAT_HTML ) {
+		char *title = "Search Results";
+		sb.safePrintf("<title>Gigablast - %s</title>\n",title);
+		sb.safePrintf("<style><!--\n");
+		sb.safePrintf("body {\n");
+		sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+		sb.safePrintf("color: #000000;\n");
+		sb.safePrintf("font-size: 12px;\n");
+		sb.safePrintf("margin: 0px 0px;\n");
+		sb.safePrintf("letter-spacing: 0.04em;\n");
+		sb.safePrintf("}\n");
+		sb.safePrintf("a {text-decoration:none;}\n");
+		//sb.safePrintf("a:link {color:#00c}\n");
+		//sb.safePrintf("a:visited {color:#551a8b}\n");
+		//sb.safePrintf("a:active {color:#f00}\n");
+		sb.safePrintf(".bold {font-weight: bold;}\n");
+		sb.safePrintf(".bluetable {background:#d1e1ff;"
+			      "margin-bottom:15px;font-size:12px;}\n");
+		sb.safePrintf(".url {color:#008000;}\n");
+		sb.safePrintf(".cached, .cached a {font-size: 10px;"
+			      "color: #666666;\n");
+		sb.safePrintf("}\n");
+		sb.safePrintf("table {\n");
+		sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+		sb.safePrintf("color: #000000;\n");
+		sb.safePrintf("font-size: 12px;\n");
+		sb.safePrintf("}\n");
+		sb.safePrintf(".directory {font-size: 16px;}\n"
+			      ".nav {font-size:20px;align:right;}\n"
+			      );
+		sb.safePrintf("-->\n");
+		sb.safePrintf("</style>\n");
+		sb.safePrintf("\n");
+		sb.safePrintf("</head>\n");
+		sb.safePrintf("<script>\n");
+		sb.safePrintf("<!--\n");
+		sb.safePrintf("var openmenu=''; var inmenuclick=0;");
+		sb.safePrintf("function x(){document.f.q.focus();}\n");
+		sb.safePrintf("// --></script>\n");
+		sb.safePrintf("<body "
 
-		      "inmenuclick=0;"
-		      "\" "
+			      "onmousedown=\""
 
-		      "onload=\"x()\">\n");
+			      "if (openmenu != '' && inmenuclick==0) {"
+			      "document.getElementById(openmenu)."
+			      "style.display='none'; openmenu='';"
+			      "}"
 
-	//
-	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
-	//
-	sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
-		      "\n<TR>\n");
+			      "inmenuclick=0;"
+			      "\" "
 
-	//
-	// first the nav column
-	//
-	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
-		      "valign=top "
-		      "style=\""
-		      "width:210px;"
-		      "border-right:3px solid blue;"
-		      "\">"
+			      "onload=\"x()\">\n");
 
-		      "<br>"
+		//
+		// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
+		//
+		sb.safePrintf("<TABLE border=0 height=100%% cellpadding=0 "
+			      "cellspacing=0>"
+			      "\n<TR>\n");
 
-		      "<center>"
-		      "<a href=/>"
-		      "<div style=\""
-		      "background-color:white;"
-		      "padding:10px;"
-		      "border-radius:100px;"
-		      "border-color:blue;"
-		      "border-width:3px;"
-		      "border-style:solid;"
-		      "width:100px;"
-		      "height:100px;"
-		      "\">"
-		      "<br style=line-height:10px;>"
-		      "<img width=54 height=79 alt=HOME src=/rocket.jpg>"
-		      "</div>"
-		      "</a>"
-		      "</center>"
+		//
+		// first the nav column
+		//
+		sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+			      "valign=top "
+			      "style=\""
+			      "width:210px;"
+			      "border-right:3px solid blue;"
+			      "\">"
 
-		      "<br>"
-		      "<br>"
-		      );
+			      "<br>"
+
+			      "<center>"
+			      "<a href=/?c=%s>"
+			      "<div style=\""
+			      "background-color:white;"
+			      "padding:10px;"
+			      "border-radius:100px;"
+			      "border-color:blue;"
+			      "border-width:3px;"
+			      "border-style:solid;"
+			      "width:100px;"
+			      "height:100px;"
+			      "\">"
+			      "<br style=line-height:10px;>"
+			      "<img width=54 height=79 "
+			      "alt=HOME src=/rocket.jpg>"
+			      "</div>"
+			      "</a>"
+			      "</center>"
+
+			      "<br>"
+			      "<br>"
+			      ,cr->m_coll
+			      );
+	}
 
 
 	/*
@@ -1561,11 +1660,6 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	*/
 
 
-	SearchInput *si = &st->m_si;
-	Msg40 *msg40 = &st->m_msg40;
-
-	char format = si->m_format;
-
 	//
 	// BEGIN FACET PRINTING
 	//
@@ -1587,13 +1681,20 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
 	// MDW: support gigabits in xml/json format again
-	if ( format != FORMAT_HTML ) numGigabits = 0;
+	//if ( format != FORMAT_HTML ) numGigabits = 0;
 
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
 	//long numCols = 5;
 	//long perRow = numGigabits / numCols;
+
+	if ( numGigabits && format == FORMAT_XML )
+		sb.safePrintf("\t<gigabits>\n");
+
+	if ( numGigabits && format == FORMAT_JSON )
+		sb.safePrintf("\"gigabits\":{\n");
+
 
 	if ( numGigabits && format == FORMAT_HTML )
 		// gigabit unhide function
@@ -1687,7 +1788,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		//printGigabit ( st,sb , msg40 , gi , si );
 		//sb.safePrintf("<br>");
 		printGigabitContainingSentences(st,&sb,msg40,gi,si,
-						&gigabitQuery);
+						&gigabitQuery,
+						i);
 		if ( format == FORMAT_HTML )
 			sb.safePrintf("<br><br>");
 	}
@@ -1697,6 +1799,16 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	if ( numGigabits && format == FORMAT_HTML )
 		sb.safePrintf("</td></tr></table></div><br>");
 
+
+	if ( numGigabits && format == FORMAT_XML )
+		sb.safePrintf("\t</gigabits>\n");
+
+	if ( numGigabits && format == FORMAT_JSON ) {
+		// remove ,\n
+		sb.m_length -=2;
+		// add back just \n
+		sb.safePrintf("\n},\n");
+	}
 
 	//
 	// now print various knobs
@@ -1786,7 +1898,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
 
 	//
-	// print date contraint functions now
+	// print date constraint functions now
 	//
 	if ( format == FORMAT_HTML && 1 == 2)
 		sb.safePrintf(
@@ -1977,7 +2089,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 		if ( header ) sb->safeStrcpy ( header );
 	}
 
-
+	// this also prints gigabits and nuggabits
+	// if we are xml/json we call this below otherwise we lose
+	// the header of <?xml...> or whatever
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
 		printLeftNavColumn ( *sb,st );
 	}
@@ -2179,9 +2293,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// save how many docs are in this collection
 	long long docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
-	//RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , si->m_coll2 );
+	RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , st->m_collnum );
 	//if ( base ) docsInColl = base->getNumGlobalRecs();
-	docsInColl = g_hostdb.getNumGlobalRecs ( );
+	//docsInColl = g_hostdb.getNumGlobalRecs ( );
+	// estimate it
+	if ( base ) docsInColl = base->getNumGlobalRecs();
+	// multiply by # of *unique* shards
+	docsInColl *= g_hostdb.getNumShards();
 	// include number of docs in the collection corpus
 	if ( docsInColl >= 0LL ) {
 	    if ( si->m_format == FORMAT_XML)
@@ -2235,6 +2353,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// when streaming results we lookup the facets last
 	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults ) 
 		msg40->printFacetTables ( sb );
+
+	// now print gigabits if we are xml/json
+	if ( si->m_format != FORMAT_HTML ) {
+		// this will print gigabits
+		printLeftNavColumn ( *sb,st );
+	}
 
 
 	// for diffbot collections only...
@@ -2406,7 +2530,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf ( "PQR'd " );
 		sb->safePrintf ("Results <b>%li</b> to <b>%li</b> of "
 			       "exactly <b>%s</b> from an index "
-			       "of %s pages" , 
+			       "of about %s pages" , 
 			       firstNum + 1          ,
 			       firstNum + n          ,
 			       thbuf                 ,
@@ -2419,7 +2543,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf ( "PQR'd " );
 		sb->safePrintf ("Results <b>%li</b> to <b>%li</b> of "
 			       "exactly <b>%s</b> from an index "
-			       "of %s pages" , 
+			       "of about %s pages" , 
 			       firstNum + 1          ,
 			       firstNum + n          ,
 			       thbuf                 ,
@@ -2980,19 +3104,21 @@ bool printSearchResultsTail ( State0 *st ) {
 	// TODO: print cache line in light gray here
 	// TODO: "these results were cached X minutes ago"
 	if ( msg40->getCachedTime() > 0 && si->m_format == FORMAT_HTML ) {
-		sb->safePrintf("<br><br><font size=1 color=707070><b><center>");
+		sb->safePrintf("<br><br><font size=1 color=707070>"
+			       "<b><center>");
 		sb->safePrintf ( " These results were cached " );
 		// this cached time is this local cpu's time
 		long diff = getTime() - msg40->getCachedTime();
-		if      ( diff < 60   ) sb->safePrintf ( "%li seconds" , diff );
-		else if ( diff < 2*60 ) sb->safePrintf ( "1 minute");
-		else                    sb->safePrintf ( "%li minutes",diff/60);
+		if      ( diff < 60   ) sb->safePrintf ("%li seconds", diff );
+		else if ( diff < 2*60 ) sb->safePrintf ("1 minute");
+		else                    sb->safePrintf ("%li minutes",diff/60);
 		sb->safePrintf ( " ago. [<a href=\"/pageCache.html\">"
 				"<font color=707070>Info</font></a>]");
 		sb->safePrintf ( "</center></font>");
 	}
 
 	
+
 	if ( si->m_format == FORMAT_XML ) {
 
 		// when streaming results we lookup the facets last
@@ -3002,23 +3128,29 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf("</response>\n");
 	}
 
+	if ( si->m_format == FORMAT_HTML && 
+	     ! g_conf.m_isMattWells &&
+	     cr->m_htmlTail.length() == 0 ) {
+		sb->safePrintf ( "<br>"
+				 "<center>"
+				 "<font color=gray>"
+				 "Copyright &copy; 2014. All Rights "
+				 "Reserved.<br/>"
+				 "Powered by the <a href=\"http://www."
+				 "gigablast.com/\">GigaBlast</a> open source "
+				 "search engine."
+				 "</font>"
+				 "</center>\n"
+				 "<br>\n"
+				 );
+	}
+
 
 	// if we did not use ajax, print this tail here now
 	if ( si->m_format == FORMAT_HTML && ! g_conf.m_isMattWells ) {
-		sb->safePrintf ( "<br>"
-				"<center>"
-				"<font color=gray>"
-				"Copyright &copy; 2014. All Rights "
-				"Reserved.<br/>"
-				"Powered by the <a href=\"http://www."
-				"gigablast.com/\">GigaBlast</a> open source "
-				"search engine."
-				"</font>"
-				"</center>\n"
-				
-				"</body>\n"
+		sb->safePrintf( "</body>\n"
 				"</html>\n"
-			      );
+				);
 	}
 
 	// ajax widgets will have this outside the downloaded content
@@ -4496,7 +4628,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ( " - <a href=/scroll.html?page="
 				"get?"
 				"q=%s&c=%s&d=%lli>"
-				"cached</a>",
+				"cached</a>\n",
 				st->m_qe , coll ,
 				mr->m_docId );
 	else if ( printCached )
@@ -4505,7 +4637,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				"q=%s&"
 				"qlang=%s&"
 				"c=%s&d=%lli&cnsp=0\">"
-				"cached</a>", 
+				"cached</a>\n", 
 				st->m_qe , 
 				// "qlang" parm
 				si->m_defaultSortLang,
@@ -4575,7 +4707,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "cursor:pointer;"
 			       "color:blue;>"
 			       "<u>00000 backlinks</u>"
-			       "</a>"
+			       "</a>\n"
 			       , ix 
 			       );
 		placeHolderLen = sb->length() - placeHolder;
@@ -4602,7 +4734,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "cursor:pointer;"
 			       "color:blue;>"
 			       "scoring"
-			       "</a>"
+			       "</a>\n"
 			       ,ix
 			       );
 	}
@@ -4613,7 +4745,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
+		sb->safePrintf("&rand64=%llu\">respider</a>\n",rand64);
 	}
 
 	if ( si->m_format == FORMAT_HTML ) {
@@ -4625,7 +4757,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				);
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		sb->safePrintf ( "\">"
-				 "spider info</a>"
+				 "spider info</a>\n"
 			       );
 	}
 
@@ -4642,7 +4774,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "c=%s&"
 				 "d=%lli&"
 				 "cnsp=0\">"
-				 "sections</a>", 
+				 "sections</a>\n", 
 				 st->m_qe , 
 				 // "qlang" parm
 				 si->m_defaultSortLang,
@@ -4660,7 +4792,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "c=%s&"
 				 "d=%lli&"
 				 "cnsp=0\">"
-				 "page info</a>", 
+				 "page info</a>\n", 
 				 //st->m_qe , 
 				 // "qlang" parm
 				 //si->m_defaultSortLang,
@@ -4677,14 +4809,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf(//"<br>"
 			      " - <a style=color:blue; href=\"/search?"
 			      "c=%s&sc=1&dr=0&q=ip:%s&"
-			      "n=100&usecache=0\">%s</a>",
+			      "n=100&usecache=0\">%s</a>\n",
 			      coll,iptoa(mr->m_ip), iptoa(mr->m_ip) );
 		// ip domain link
 		unsigned char *us = (unsigned char *)&mr->m_ip;//urlip;
 		sb->safePrintf (" - <a style=color:blue; "
 				"href=\"/search?c=%s&sc=1&dr=0&n=100&"
 				"q=ip:%li.%li.%li&"
-				"usecache=0\">%li.%li.%li</a>",
+				"usecache=0\">%li.%li.%li</a>\n",
 				coll,
 				(long)us[0],(long)us[1],(long)us[2],
 				(long)us[0],(long)us[1],(long)us[2]);
@@ -4737,7 +4869,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf (" - "
 			       " <a style=color:blue; href=\"/search?"
 			       "q=site%%3A%s&sc=0&c=%s\">"
-			       "domain</a> " ,
+			       "domain</a>\n" ,
 				dbuf ,
 				coll );//, dbuf );
 	}
@@ -4756,7 +4888,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
 			      "<nobr>%sBAN %s"
-			      "</nobr></a> "
+			      "</nobr></a>\n"
 			      , banVal
 			      , dbuf
 			      , coll
@@ -4772,7 +4904,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
-			      "<nobr>%sBAN %s</nobr></a> "
+			      "<nobr>%sBAN %s</nobr></a>\n"
 			      , banVal
 			      , dbuf
 			      , coll
@@ -4801,7 +4933,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf ("<a href=\"/search?"
 				       "q=%s"
 				       "&sc=1&dr=0&c=%s&n=200&rat=0\">"
-				       "Ad Id</a> " ,
+				       "Ad Id</a>\n" ,
 				       mr->ptr_gbAdIds,  coll);
 		
 		//sb->safePrintf ("] ");
@@ -8363,7 +8495,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		}
 
 		// is it in the url
-		char *match = strnstr ( src , srcLen , mi->m_cgi ) ;
+		char *match = strnstr ( src , mi->m_cgi , srcLen );
 		if ( ! match ) {
 			isTrueHeader = false;
 			continue;

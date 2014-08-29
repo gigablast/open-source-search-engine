@@ -88,7 +88,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		catch ( ... ) {
 			g_errno = ENOMEM;
 			log("PageParser: new(%i): %s", 
-			    sizeof(State8),mstrerror(g_errno));
+			    (int)sizeof(State8),mstrerror(g_errno));
 			return g_httpServer.sendErrorReply(s,500,
 						       mstrerror(g_errno));}
 		mnew ( st , sizeof(State8) , "PageParser" );
@@ -573,7 +573,8 @@ bool processLoop ( void *state ) {
 		CollectionRec *cr = xd->getCollRec();
 		if ( xd && cr && cr->m_coll && !strcmp(cr->m_coll,"qatest123"))
 			// use same dir that XmlDoc::getTestDir() would use
-			saveTestBuf ( "test-page-parser" );
+			//saveTestBuf ( "test-page-parser" );
+			saveTestBuf("qa");
 		// now get the meta list, in the process it will print out a 
 		// bunch of junk into st->m_xbuf
 		char *metalist = xd->getMetaList ( );
@@ -653,7 +654,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("PageParser: new(%i): %s", 
-		    sizeof(State8),mstrerror(g_errno));
+		    (int)sizeof(State8),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,
 						   mstrerror(g_errno));}
 	mnew ( st , sizeof(State8) , "PageParser" );

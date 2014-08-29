@@ -702,7 +702,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		if ( isClockInSync() ) tt = getTimeGlobal();
 		else                   tt = getTimeLocal();
 		struct tm *timeStruct = localtime ( &tt );
-		char buf[64];
+		char buf[100];
 		strftime ( buf , 100 , "%b %d %T", timeStruct);
 		// what url refered user to this one?
 		char *ref = r->getReferer();
@@ -935,9 +935,88 @@ bool Pages::getNiceness ( long page ) {
 //
 //////////////////////////////////////////////////////////
 
+bool printTopNavButton ( char *text, 
+			 char *link, 
+			 bool isHighlighted, 
+			 char *coll,
+			 SafeBuf *sb ) {
+
+	if ( isHighlighted )
+		sb->safePrintf(
+			       "<a style=text-decoration:none; href=%s?c=%s>"
+			       "<div "
+			       "style=\""
+			       "padding:6px;"
+			       "display:inline;"
+			       "margin-left:10px;"
+			       "background-color:white;"
+			       "border-top-left-radius:10px;"
+			       "border-top-right-radius:10px;"
+			       "border-width:3px;"
+			       "border-style:solid;"
+			       //"margin-bottom:-3px;"
+			       "border-color:blue;"
+			       "border-bottom-color:white;"
+			       //"overflow-y:hidden;"
+			       //"overflow-x:hidden;"
+			       //"line-height:23px;"
+
+			       //"text-align:right;"
+			       "\""
+			       ">"
+			       "<b>%s</b>"
+			       "</div>"
+			       "</a>"
+			       //"<br>"
+			       , link
+			       , coll
+			       , text
+			       );
+
+	else
+		sb->safePrintf(
+			       "<a style=text-decoration:none; href=%s?%s>"
+			       "<div "
+
+			       " onmouseover=\""
+			       "this.style.backgroundColor='lightblue';"
+			       "this.style.color='black';\""
+			       " onmouseout=\""
+			       "this.style.backgroundColor='blue';"
+			       "this.style.color='white';\""
+
+			       "style=\""
+			       "padding:6px;" // same as TABLE_STYLE
+			       "display:inline;"
+			       "margin-left:10px;"
+			       "background-color:blue;"//#d0d0d0;"
+			       "border-top-left-radius:10px;"
+			       "border-top-right-radius:10px;"
+			       "border-color:white;"
+			       "border-width:3px;"
+			       "border-bottom-width:0px;"
+			       "border-style:solid;"
+			       //"text-align:right;"
+			       "overflow-y:hidden;"
+			       "overflow-x:hidden;"
+			       "line-height:23px;"
+			       "color:white;"
+			       "\""
+			       ">"
+			       "<b>%s</b>"
+			       "</div>"
+			       //"<br>"
+			       "</a>"
+			       , link
+			       , coll
+			       , text
+			       );
+	return true;
+}
+
+
 bool printNavButton ( char *text , char *link , bool isHighlighted ,
 		      SafeBuf *sb ) {
-
 
 	if ( isHighlighted )
 		sb->safePrintf(
@@ -1099,7 +1178,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//
 	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
 	//
-	sb->safePrintf("<TABLE border=0 height=100%% cellpadding=0>"
+	sb->safePrintf("<TABLE border=0 height=100%% cellpadding=0 "
+		       "width=100%% "
+		       "cellspacing=0>"
 		      "\n<TR>\n");
 
 	//
@@ -1115,7 +1196,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		      "<br>"
 
 		      "<center>"
-		      "<a href=/>"
+		      "<a href=/?c=%s>"
 		      "<div style=\""
 		      "background-color:white;"
 		      "padding:10px;"
@@ -1134,6 +1215,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 		      "<br>"
 		      "<br>"
+		       ,coll
 		      );
 
 
@@ -1173,8 +1255,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( page == PAGE_BASIC_SEARCH ) isBasic = true;
 
 
-	printNavButton ( "BASIC" , "/admin/settings", isBasic , sb );
-	printNavButton ( "ADVANCED" , "/admin/master", ! isBasic , sb );
+	//printNavButton ( "BASIC" , "/admin/settings", isBasic , sb );
+	//printNavButton ( "ADVANCED" , "/admin/master", ! isBasic , sb );
 
 
 	// collections box
@@ -1186,6 +1268,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       //"max-height:600px;"
 		       //"max-width:200px;"
 		       //"min-width:200px;"
+
+		       "width:200px;"
+
 		       "padding:4px;" // same as TABLE_STYLE
 		       "margin-left:10px;"
 		       "background-color:white;"//#d0d0d0;"
@@ -1249,11 +1334,23 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//
 
 	// the controls will go here
-	sb->safePrintf("<TD valign=top>"
-		       "<div style=padding-left:20px; "
-		       "id=pane2>");
+	sb->safePrintf("<TD valign=top >"
+		       "<div style=\"padding-left:20px;"
 
+		       "margin-left:-3px;"
 
+		       "border-color:#f3c714;"
+		       "border-width:3px;"
+		       "border-left-width:3px;"
+		       "border-top-width:0px;"
+		       "border-right-width:0px;"
+		       "border-bottom-color:blue;"
+		       "border-top-width:0px;"
+		       "border-style:solid;"
+		       "padding:4px;"
+
+		       "background-color:#f3c714;\" " // yellow/gold
+		       "id=prepane>");
 
 	// logout link on far right
 	sb->safePrintf("<div align=right "
@@ -1317,54 +1414,45 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       );
 	*/
 
-	/*
-	// print Basic | Advanced links
-	if ( isBasic )
-		sb->safePrintf ( "<b>"
-				 "<a href=/admin/settings?c=%s "
-				 "style=text-decoration:none;>"
-				 "<font color=red>"
-				 "basic"
-				 "</font>"
-				 "</a>"
-				 "</b>"
-				 " &nbsp; "
-				 "<b>"
-				 "<a href=/admin/master?c=%s "
-				 "style=text-decoration:none;>"
-				 "advanced"
-				 "</a>"
-				 "</b>"
-				 , coll
-				 , coll
-				 );
-	else
-		sb->safePrintf ( "<b>"
-				 "<a href=/admin/settings?c=%s "
-				 "style=text-decoration:none;>"
-				 "basic"
-				 "</a>"
-				 "</b>"
-				 " &nbsp; "
-				 "<b>"
-				 "<a href=/admin/settings?c=%s "
-				 "style=text-decoration:none;>"
-				 "<font color=red>"
-				 "advanced"
-				 "</font>"
-				 "</a>"
-				 "</b>"
-				 , coll
-				 , coll
-				 );
-	sb->safePrintf("<br><br>");
-	*/
 
+	// print Basic | Advanced links
+	printTopNavButton("BASIC",
+			  "/admin/settings",
+			  isBasic, // highlighted?
+			  coll,
+			  sb );
+
+	printTopNavButton("ADVANCED",
+			  "/admin/master",
+			  !isBasic, // highlighted?
+			  coll,
+			  sb );
+
+
+
+	sb->safePrintf("<br>");
+
+	// end that yellow/gold div
+	sb->safePrintf("</div>");
+
+	// this div will hold the submenu and forms
+	sb->safePrintf(
+		       "<div style=padding-left:20px;"
+		       "padding-right:20px;"
+		       "margin-left:0px;"
+		       "background-color:white;"
+		       "id=panel2>"
+		       
+		       "<br>"
+		       );
 
 	// print the menu links under that
 	status &= printAdminLinks ( sb, page , coll , isBasic );
 
+
 	sb->safePrintf("<br>");
+
+		       
 
 	// begin 2nd row in big table
 	//sb->safePrintf("</td></TR>");
@@ -1696,7 +1784,9 @@ bool Pages::printColors ( SafeBuf *sb, char* bodyJavascript ) {
 	sb->safePrintf (
 		  "<body text=#000000 bgcolor=#"
 		  BGCOLOR
-		  " link=#000000 vlink=#000000 alink=#000000 %s>\n" 
+		  " link=#000000 vlink=#000000 alink=#000000 "
+		  "style=margin:0px;padding:0px; "
+		  "%s>\n" 
 		  "<style>"
 		  "body,td,p,.h{font-family:"
 		  //"arial,"
@@ -2004,6 +2094,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_ACCESS ) continue;
 		if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;
+		if ( i == PAGE_API ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
 		if ( i == PAGE_TITLEDB ) continue;
 		// move these links to the coll nav bar on the left
@@ -2059,7 +2150,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				       "</a>"
 				       "</b>"
 				       //"</span>"
-				       " &nbsp; \n"
+				       " &nbsp; "
+				       "\n"
 				       ,s_pages[i].m_filename
 				       ,coll
 				       ,buf
@@ -2175,11 +2267,13 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 			 g_collectiondb.m_numRecsUsed , s );
 
 	sb->safePrintf( "<center>"
+			"<nobr>"
 			"<font size=-1>"
 			"<a href=/admin/addcoll?c=%s>add</a> &nbsp; &nbsp; "
 			"<a href=/admin/delcoll?c=%s>delete</a> &nbsp; &nbsp; "
 			"<a href=/admin/clonecoll?c=%s>clone</a>"
 			"</font>"
+			"</nobr>"
 			"</center>"
 			, coll
 			, coll

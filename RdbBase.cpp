@@ -734,7 +734,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_mem.m_maxMem = mm;
 		g_errno = ENOMEM;
 		log("RdbBase: new(%i): %s", 
-		    sizeof(BigFile),mstrerror(g_errno));
+		    (int)sizeof(BigFile),mstrerror(g_errno));
 		return -1; 
 	}
 	mnew ( f , sizeof(BigFile) , "RdbBFile" );
@@ -744,7 +744,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_mem.m_maxMem = mm;
 		g_errno = ENOMEM;
 		log("RdbBase: new(%i): %s", 
-		    sizeof(RdbMap),mstrerror(g_errno));
+		    (int)sizeof(RdbMap),mstrerror(g_errno));
 		mdelete ( f , sizeof(BigFile),"RdbBFile");
 		delete (f); 
 		return -1; 
