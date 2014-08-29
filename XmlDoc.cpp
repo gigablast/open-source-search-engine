@@ -21240,7 +21240,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		SafeBuf *spiderReplyMetaList = NULL;
 		if ( cr->m_indexSpiderReplies && 
 		     m_useSpiderdb &&
-		     // doing it for diffbot throws off smoketests
+		     // doing it for diffbot throws off smoketests.
+		     // yeah, but we need it, so we'll just have to update
+		     // the smoketests
 		     ! cr->m_isCustomCrawl ) {
 			// get the spiderreply ready to be added
 			spiderReplyMetaList = getSpiderReplyMetaList ( newsr );

@@ -5249,7 +5249,7 @@ void SpiderLoop::startLoop ( ) {
 	// in case host when dead.
 	// now that we only send the info on startup and if changed,
 	// let's move back down to 1 second
-	if ( !g_loop.registerSleepCallback(5000,
+	if ( !g_loop.registerSleepCallback(3000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
