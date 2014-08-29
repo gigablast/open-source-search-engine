@@ -27,7 +27,7 @@ class Scraper {
 
 	bool scrapeProCog();
 	
-	char m_coll[MAX_COLL_LEN];
+	char m_coll[MAX_COLL_LEN+1];
 	long m_numReceived;
 	long m_numSent;
 

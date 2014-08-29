@@ -1944,7 +1944,7 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 	time_t tt = getTimeLocal();
 	struct tm *timeStruct = localtime ( &tt );
 	char bufTime[64];
-	strftime ( bufTime , 100 , "%b %d %T", timeStruct);
+	strftime ( bufTime , 63 , "%b %d %T", timeStruct);
 	//char *ref = r->getReferer ();
 
 	// if autobanned and we should not log, return now

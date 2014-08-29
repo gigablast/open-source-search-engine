@@ -7745,7 +7745,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		for ( long k = 0 ; k < di->m_numPtrs; k++ ) {
 			Date *pd = di->m_ptrs[k];
 			if ( pd->m_a < mina ) mina = pd->m_a;
-			if ( pd->m_b > maxb ) maxb = pd->m_a;
+			if ( pd->m_b > maxb ) maxb = pd->m_b;
 		}
 		// get section date is in, if any
 		Section *sa = m_sections->m_sectionPtrs[mina];
@@ -23280,6 +23280,7 @@ long Dates::addIntervals ( Date       *di     ,
 	if ( ni == 0 ) return ni;
 	// copy into this buffer
 	Interval buf[MAX_INTERVALS];
+	if ( ni > MAX_INTERVALS ) ni = MAX_INTERVALS;
 	memcpy(buf,retInt,ni*sizeof(Interval));
 
 	// store here

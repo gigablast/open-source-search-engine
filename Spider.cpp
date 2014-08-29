@@ -6099,6 +6099,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// update m_msg5StartKey for next read
 	if ( m_list.getListSize() > 0 ) {
+		// what is m_list.m_ks ?
 		m_list.getLastKey((char *)&m_sc->m_msg5StartKey);
 		m_sc->m_msg5StartKey += 1;
 		// i guess we had something? wait for nothing to be there

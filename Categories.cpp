@@ -1561,7 +1561,7 @@ long Categories::createDirSearchRequest ( char *requestBuf,
 	return p - requestBuf;
 }
 
-static HashTable langTables[32];
+static HashTable langTables[MAX_LANGUAGES+1];
 
 // Horrible hack, must fix later
 bool Categories::loadLangTables(void) {

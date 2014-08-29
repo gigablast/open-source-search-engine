@@ -1602,17 +1602,26 @@ bool loadAddsInProgress ( char *prefix ) {
 		// get host
 		Host *h = g_hostdb.getHost(hostId);
 		// must be there
-		if ( ! h ) return log("build: bad msg4 hostid %li",hostId);
+		if ( ! h ) {
+			close (fd);
+			return log("build: bad msg4 hostid %li",hostId);
+		}
 		// host many bytes
 		long numBytes;
 		read ( fd , (char *)&numBytes , 4 );
 		p += 4;
 		// allocate buffer
 		char *buf = (char *)mmalloc ( numBytes , "msg4loadbuf");
-		if ( ! buf ) return log("build: could not alloc msg4 buf");
+		if ( ! buf ) {
+			close ( fd );
+			return log("build: could not alloc msg4 buf");
+		}
 		// the buffer
 		long nb = read ( fd , buf , numBytes );
-		if ( nb != numBytes ) return log("build: bad msg4 buf read");
+		if ( nb != numBytes ) {
+			close ( fd );
+			return log("build: bad msg4 buf read");
+		}
 		p += numBytes;
 		// send it!
 		if ( ! g_udpServer.sendRequest ( buf ,
@@ -1625,6 +1634,7 @@ bool loadAddsInProgress ( char *prefix ) {
 						 NULL         , // state data
 						 NULL , // callback
 						 999999999)){// seconds timeout
+			close ( fd );
 			// report it
 			return log("build: could not resend reload buf: %s",
 				   mstrerror(g_errno));

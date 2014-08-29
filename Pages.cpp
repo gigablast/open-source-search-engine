@@ -702,7 +702,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		if ( isClockInSync() ) tt = getTimeGlobal();
 		else                   tt = getTimeLocal();
 		struct tm *timeStruct = localtime ( &tt );
-		char buf[64];
+		char buf[100];
 		strftime ( buf , 100 , "%b %d %T", timeStruct);
 		// what url refered user to this one?
 		char *ref = r->getReferer();

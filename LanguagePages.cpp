@@ -126,7 +126,7 @@ uint8_t *LanguagePages::getLanguageHeader(uint8_t lang, long *len) {
 }
 
 uint8_t *LanguagePages::getLanguageFooter(uint8_t lang, long *len) {
-	if(lang > MAX_LANGUAGES) return(NULL);
+	if(lang >= MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_FooterSize[lang];
 	return m_languageFooters[lang];

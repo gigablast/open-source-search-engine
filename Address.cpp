@@ -4072,7 +4072,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 	if ( a + 6 < nw &&
 	     wids[a  ] == h_p && 
 	     wids[a+2] == h_o &&
-	     wids[a+4] == h_o &&
+	     wids[a+4] == h_b &&
 	     is_digit(wptrs[a+6][0]) ) 
 		k = a + 6;
 
@@ -15017,7 +15017,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 			if(*asciiEnd ==','||*asciiEnd=='\t'||!*asciiEnd)break;
 		char *altEnd = alt;
 		for ( ; altEnd ; altEnd++ ) 
-			if (*altEnd==','||*asciiEnd=='\t'||!*altEnd) break;
+			if (*altEnd==','||*altEnd=='\t'||!*altEnd) break;
 		// null terms
 		*nameEnd  = '\0';
 		*asciiEnd = '\0';

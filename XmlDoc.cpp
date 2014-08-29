@@ -15877,6 +15877,38 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		// if it is us, keep it NULL, it's not a redirect. we are
 		// the canonical url.
 		if ( isMe ) break;
+		// ignore if in an expanded iframe (<gbrame>) tag
+		char *pstart = xml->m_xml;
+		char *p      = link;
+		// scan backwards
+		if ( ! m_didExpansion ) p = pstart;
+		bool skip = false;
+		for ( ; p > pstart ; p-- ) {
+			if ( p[0] != '<' ) 
+				continue;
+			if ( p[1] == '/' && 
+			     p[2] == 'g' &&
+			     p[3] == 'b' &&
+			     p[4] == 'f' &&
+			     p[5] == 'r' &&
+			     p[6] == 'a' &&
+			     p[7] == 'm' &&
+			     p[8] == 'e' &&
+			     p[9] == '>' )
+				break;
+			if ( p[1] == 'g' &&
+			     p[2] == 'b' &&
+			     p[3] == 'f' &&
+			     p[4] == 'r' &&
+			     p[5] == 'a' &&
+			     p[6] == 'm' &&
+			     p[7] == 'e' &&
+			     p[8] == '>' ) {
+				skip = true;
+				break;
+			}
+		}
+		if ( skip ) continue;
 		// otherwise, it is not us, we are NOT the canonical url
 		// and we should not be indexed, but just ass the canonical
 		// url as a spiderrequest into spiderdb, just like

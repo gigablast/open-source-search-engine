@@ -1321,7 +1321,7 @@ uint8_t CountryCode::getLanguageFromDMOZ(long catid) {
 int CountryCode::lookupCountryFromDMOZTopic(const char *catname, int len) {
 	if(len < 1) return(0);
 	if(!s_countryRegex) return(0);
-	char buf[2048];
+	char buf[2049];
 	if(len > 2047) len = 2047;
 	memcpy(buf, catname, len);
 	buf[len+1] = 0;
