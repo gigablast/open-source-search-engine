@@ -15851,6 +15851,8 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 
 	// scan nodes looking for a <link> node. like getBaseUrl()
 	for ( long i=0 ; i < xml->getNumNodes() ; i++ ) {
+		// breathe some
+		QUICKPOLL(m_niceness);
 		// 12 is the <base href> tag id
 		if ( xml->getNodeId ( i ) != TAG_LINK ) continue;
 		// get the href field of this base tag
@@ -15884,6 +15886,7 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		if ( ! m_didExpansion ) p = pstart;
 		bool skip = false;
 		for ( ; p > pstart ; p-- ) {
+			QUICKPOLL(m_niceness);
 			if ( p[0] != '<' ) 
 				continue;
 			if ( p[1] == '/' && 

@@ -585,17 +585,17 @@ bool qainject1 ( ) {
 	}
 
 	//
-	// query reindex test
+	// mdw: query reindex test
 	//
-	if ( ! s_flags[30] ) {
-		s_flags[30] = true;
-		if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=1&format=xml&"
-				"debug=1&q=sports",9999 ) )
-			return false;
-	}
+	// if ( ! s_flags[30] ) {
+	// 	s_flags[30] = true;
+	// 	if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=1&format=xml&"
+	// 			"debug=1&q=sports",9999 ) )
+	// 		return false;
+	// }
 
-	// temp end it here
-	return true;
+	// // temp end it here
+	// return true;
 
 	//
 	// eject/delete the urls
