@@ -1252,19 +1252,19 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("<br>");
 
 	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
-	sb.safePrintf("<img style=float:left;padding-right:15px; height=188px width=101px src=/robot3.png>");
+	sb.safePrintf("<a href=/admin/addcoll><img style=float:left;padding-right:15px; height=188px width=101px src=/robot3.png></a>");
 	sb.safePrintf("<br>");
-	sb.safePrintf("STEP 1. <a href=/admin/addcoll>Click here to");
+	sb.safePrintf("<b>STEP 1.</b> <a href=/admin/addcoll>Click here to");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>name your engine</b></a>.");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<br>");
-	sb.safePrintf("STEP 2. <a href=/admin/settings>Click here to ");
+	sb.safePrintf("<b>STEP 2.</b> <a href=/admin/settings>Click here to ");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>add websites to index</b></a>.");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<br>");
-	sb.safePrintf("STEP 3. <a href=/admin/status>Click here to");
+	sb.safePrintf("<b>STEP 3.</b> <a href=/admin/status>Click here to");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>insert search box</b></a>.");
 
@@ -1288,11 +1288,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 
 	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
-	sb.safePrintf("<img style=float:left;padding-bottom:20px;padding-right:10px; height=81px width=121px src=/computer2.png>");
+	sb.safePrintf("<a href=http://www.gigablast.com/appliance.html><img style=float:left;padding-bottom:20px;padding-right:10px; height=81px width=121px src=/computer2.png></a>");
 
 
 	sb.safePrintf("Put the web in your closet. ");
-	sb.safePrintf("Jump start your efforts with four 1U supermicro servers loaded with the top 2 billion pages from the web. <a href=http://www.gigablast.com/appliance.html>[more]</a>");
+	sb.safePrintf("Jump start your efforts with four 1U supermicro servers loaded with the top 2 billion pages from the web. <a href=http://www.gigablast.com/appliance.html>[learn more]</a>");
 	sb.safePrintf("</font>");
 
 	sb.safePrintf("</div>");
@@ -1312,7 +1312,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</b>");
 
 	sb.safePrintf("<div style=margin-left:30px;margin-right:5px;>");
-	sb.safePrintf("<img style=float:left;padding-right:10px height=71px width=71px src=/unlocked2.png>");
+	sb.safePrintf("<a href=http://www.gigablast.com/admin.html#features><img style=float:left;padding-right:10px height=71px width=71px src=/unlocked2.png></a>");
 
 	sb.safePrintf("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>.");
 	sb.safePrintf("</div>");
@@ -2776,7 +2776,7 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 	"	</p>"
 	""
 	"<p>"
-	"Matt Wells is currently the sole maintainer and programmer of Gigablast and is open for <u>consulting work</u>. For more information, contact Matt directly at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
+	"For more information, contact Matt directly at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
 	"</p>"
 	"<br>"
 	"<center>"
