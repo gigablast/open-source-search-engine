@@ -639,20 +639,22 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
-bool printFrontPageShell ( SafeBuf *sb , long pageNum ) {
+bool printFrontPageShell ( SafeBuf *sb , char *tabName ) { // long pageNum ) {
 
 	sb->safePrintf("<html>\n");
 	sb->safePrintf("<head>\n");
 	//sb->safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
 	sb->safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
 	sb->safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	//char *title = "An Alternative Open Source Search Engine";
 	char *title = "An Alternative Open Source Search Engine";
-	if ( pageNum == 1 ) title = "Directory";
-	if ( pageNum == 2 ) title = "Advanced";
-	if ( pageNum == 3 ) title = "Add Url";
-	if ( pageNum == 4 ) title = "About";
-	if ( pageNum == 5 ) title = "Help";
-	if ( pageNum == 6 ) title = "API";
+	if ( strcasecmp(tabName,"search") ) title = tabName;
+	// if ( pageNum == 1 ) title = "Directory";
+	// if ( pageNum == 2 ) title = "Advanced";
+	// if ( pageNum == 3 ) title = "Add Url";
+	// if ( pageNum == 4 ) title = "About";
+	// if ( pageNum == 5 ) title = "Help";
+	// if ( pageNum == 6 ) title = "API";
 	sb->safePrintf("<title>Gigablast - %s</title>\n",title);
 	sb->safePrintf("<style><!--\n");
 	sb->safePrintf("body {\n");
@@ -715,6 +717,7 @@ bool printFrontPageShell ( SafeBuf *sb , long pageNum ) {
 		{"ADD URL","/addurl"},
 		{"SYNTAX","/syntax.html"},
 		{"ABOUT","/about.html"},
+		{"NEWS","/news.html"},
 		{"FAQ","/faq.html"},
 		{"API","/api.html"}
 	};
@@ -774,7 +777,12 @@ bool printFrontPageShell ( SafeBuf *sb , long pageNum ) {
 			      "x-overflow:;"
 			      , mi[i].m_url
 			      );
-		if ( i == pageNum )
+		//if ( i == pageNum )
+		bool matched = false;
+		if ( strcasecmp(mi[i].m_text,tabName) == 0 )
+			matched = true;
+
+		if ( matched )
 			sb->safePrintf(
 				      "border-color:blue;"
 				      "color:black;"
@@ -801,7 +809,7 @@ bool printFrontPageShell ( SafeBuf *sb , long pageNum ) {
 		//
 		// begin hack: white out the blue border line!!
 		//
-		if ( i == pageNum )
+		if ( matched )
 			sb->safePrintf(
 				      "<div style=padding:5px;top:0;"
 				      "background-color:white;"
@@ -935,7 +943,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
-	printFrontPageShell ( &sb ,0 );
+	printFrontPageShell ( &sb , "search" );
 
 
 	//sb.safePrintf("<br><br>\n");
@@ -1339,7 +1347,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
-	printFrontPageShell ( &sb , 3 );
+	printFrontPageShell ( &sb , "add url" );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1538,7 +1546,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 		return printTopDirectory ( sb , format );
 
 
-	printFrontPageShell ( &sb , 1 );
+	printFrontPageShell ( &sb , "directory" );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2550,7 +2558,7 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( &sb , 2 );
+	printFrontPageShell ( &sb , "advanced" );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2725,7 +2733,7 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( &sb , 4 );
+	printFrontPageShell ( &sb , "about" );
 
 
 	sb.safePrintf("<br>\n");
@@ -2816,7 +2824,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( &sb , 5 );
+	printFrontPageShell ( &sb , "syntax" );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");

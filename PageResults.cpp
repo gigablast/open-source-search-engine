@@ -7025,7 +7025,7 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
-bool printFrontPageShell ( SafeBuf *sb , long pageNum ) ;
+bool printFrontPageShell ( SafeBuf *sb , char *tabName ) ;
 
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
@@ -7062,7 +7062,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 
 
 	if ( catId > 0 ) {
-		printFrontPageShell ( sb , 1); //  PAGE_DIRECTORY
+		printFrontPageShell ( sb , "directory"); //  PAGE_DIRECTORY
 	}
 
 	/*

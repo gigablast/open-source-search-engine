@@ -18,6 +18,8 @@ HttpServer g_httpServer;
 //bool sendPageSiteMap ( TcpSocket *s , HttpRequest *r ) ;
 //bool sendPageApi ( TcpSocket *s , HttpRequest *r ) ;
 bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) ;
+bool sendPagePretty ( TcpSocket *s , HttpRequest *r , char *filename ,
+		      char *tabName ) ;
 
 // we get like 100k submissions a day!!!
 static HashTable s_htable;
@@ -1202,6 +1204,16 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		return sendPageHelp ( s , r );
 	if ( ! strncmp ( path ,"/syntax.html", pathLen ) )
 		return sendPageHelp ( s , r );
+
+
+	// decorate the plain html page, news.html, with our nav chrome
+	if ( ! strncmp ( path ,"/news.html", pathLen ) )
+		return sendPagePretty ( s , r , "news.html", "news");
+
+
+	// decorate the plain html page, rants.html, with our nav chrome
+	if ( ! strncmp ( path ,"/faq.html", pathLen ) )
+		return sendPagePretty ( s , r , "faq.html", "faq");
 
 
 	if ( ! strncmp ( path ,"/api.html", pathLen ) )
@@ -2874,6 +2886,48 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	s->m_readBufSize = need;
 	return s;
 }
+
+
+bool printFrontPageShell ( SafeBuf *sb , char *tabName );
+
+bool sendPagePretty ( TcpSocket *s , 
+		      HttpRequest *r , 
+		      char *filename ,
+		      char *tabName ) {
+
+	SafeBuf sb;
+
+	// print the chrome
+	printFrontPageShell ( &sb , tabName ); //  -1=pagenum
+
+	SafeBuf ff;
+	ff.safePrintf("html/%s",filename);
+
+	SafeBuf tmp;
+	tmp.fillFromFile ( g_hostdb.m_dir , ff.getBufStart() );
+
+	sb.safeStrcpy ( tmp.getBufStart() );
+
+
+	// done
+	sb.safePrintf("\n</html>");
+
+	char *charset = "utf-8";
+	char *ct = "text/html";
+	g_httpServer.sendDynamicPage ( s      , 
+				       sb.getBufStart(), 
+				       sb.length(), 
+				       25         , // cachetime in secs
+				       // pick up key changes
+				       // this was 0 before
+				       false      , // POSTREply? 
+				       ct         , // content type
+				       -1         , // http status -1->200
+				       NULL, // cookiePtr  ,
+				       charset    );
+	return true;
+}	
+
 
 /*
 bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
