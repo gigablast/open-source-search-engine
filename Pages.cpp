@@ -1494,6 +1494,7 @@ bool printGigabotAdvice ( SafeBuf *sb , long page ) {
 		"</td></tr></table>";
 	sb->safePrintf("<div style=max-width:490px;"
 		       "padding-right:10px;>");
+
 	sb->safePrintf("%s",box);
 
 	char *advice = NULL;
@@ -1502,7 +1503,7 @@ bool printGigabotAdvice ( SafeBuf *sb , long page ) {
 			"STEP 1 of 3. "
 			"<br>"
 			"<br>"
-			"Begin. Human, I am Gigabot."
+			"Human, I am Gigabot."
 			"<br><br>"
 			"Enter the name of your collection "
 			"(search engine) in the box below then hit "
@@ -1520,8 +1521,8 @@ bool printGigabotAdvice ( SafeBuf *sb , long page ) {
 			"search engine into the box marked <i>site list</i>."
 			"<br>"
 			"<br>"
-			"Do not deviate from this path, or, as is always the "
-			"case, you may "
+			"Do not deviate from this path, or, as is always "
+			"the case, you may "
 			"be blasted.";
 	if ( page == PAGE_BASIC_STATUS )
 		advice = 
@@ -1537,15 +1538,13 @@ bool printGigabotAdvice ( SafeBuf *sb , long page ) {
 			"the source code. Copy and paste this code "
 			"into your website to make a search box that "
 			"connects to the search engine you have created. "
-			"END."
 			;
 
 
 	// the mean looking robot
-	sb->safePrintf("<img style=float:left;padding-right:15px;"
-		       "padding-top:10px;padding-bottom:10px;"
-		       " "
+	sb->safePrintf("<img style=float:left;padding-right:15px; "
 		       "height=141px width=75px src=/robot3.png>"
+		       "</td><td>"
 		       "<b>"
 		       "%s"
 		       "</b>"
