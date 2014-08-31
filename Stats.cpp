@@ -606,10 +606,10 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 			      //"background-color:#000000;"
 			      "z-index:110;"
 			      "min-height:20px;"
-			      "min-width:3px;\">%lis</div>\n"
+			      "min-width:3px;\">%.01fs</div>\n"
 			      , (long)x-10
 			      // the label:
-			      ,(long)(DT * (long long)x / (long long)DX)/1000
+			      ,(float)(DT* (long long)x / (long long)DX)/1000.0
 			      );
 
 		// move cursor

@@ -821,6 +821,8 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	sb.safePrintf(
 		      "<a href=/admin/settings>"
 		      "<div style=\"background-color:green;"
+		      // for try it out bubble:
+		      //"position:relative;"
 		      "padding:5px;"
 		      "text-align:right;"
 		      "border-width:3px;"
@@ -841,6 +843,47 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		      "this.style.backgroundColor='green';"
 		      "this.style.color='white';\""
 		      ">"
+
+		      /*
+		      // try it out bubble div
+		      "<div "
+
+		      " onmouseover=\""
+		      "this.style.box-shadow='10px 10px 5px #888888';"
+		      "\""
+		      " onmouseout=\""
+		      "this.style.box-shadow='';"
+		      "\""
+
+		      "style=\""
+		      "vertical-align:middle;"
+		      "text-align:left;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      //"border-color:black;"
+		      //"border-style:solid;"
+		      //"border-width:2px;"
+		      "padding:3px;"
+		      //"width:30px;"
+		      //"height:20px;"
+		      //"margin-top:-20px;"
+		      "margin-left:-120px;"
+		      "position:absolute;"
+		      //"top:-20px;"
+		      //"left:10px;"
+		      "display:inline-block;"
+		      "\""
+		      ">"
+		      "<b style=font-size:11px;>"
+		      "Click for demo"
+		      "</b>"
+		      "</div>"
+		      */
+		      // end try it out bubble div
+
+
+
+
 		      "<b>ADMIN</b> &nbsp; &nbsp;"
 		      "</div>"
 		      "</a>"
@@ -1168,6 +1211,121 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		  ,85);
 	sb.safePrintf("</td></tr>\n");
 	*/
+
+	//
+	// begin new stuff
+	//
+
+	// gradients
+	sb.safePrintf("<style><!--\n");
+	
+	sb.safePrintf(".grad {");
+	sb.safePrintf("background: rgb(190,201,247);");
+	sb.safePrintf("background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjYmVjOWY3IiBzdG9wLW9wYWNpdHk9IjEiLz4KICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBiM2NlZCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);");
+	sb.safePrintf("background: -moz-linear-gradient(-45deg, rgba(190,201,247,1) 0%%, rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: -webkit-gradient(linear, left top, right bottom, color-stop(0%%,rgba(190,201,247,1)), color-stop(100%%,rgba(11,60,237,1)));");
+	sb.safePrintf("background: -webkit-linear-gradient(-45deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: -o-linear-gradient(-45deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: -ms-linear-gradient(-45deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: linear-gradient(135deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#bec9f7', endColorstr='#0b3ced',GradientType=1 );");
+	sb.safePrintf("}");
+	sb.safePrintf("-->");
+	sb.safePrintf("</style>\n");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:320px;height:320px;display:inline-block;z-index:100;color:black;position:relative;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+
+	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
+	sb.safePrintf("Build Your Own");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
+	sb.safePrintf("Search Engine");
+	sb.safePrintf("</font>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+
+	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
+	sb.safePrintf("<img style=float:left;padding-right:15px; height=188px width=101px src=/robot3.png>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("STEP 1. <a href=/admin/addcoll>Click here to");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>name your engine</b></a>.");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("STEP 2. <a href=/admin/settings>Click here to ");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>add websites to index</b></a>.");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("STEP 3. <a href=/admin/status>Click here to");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>insert search box</b></a>.");
+
+	sb.safePrintf("</div>");
+
+	sb.safePrintf("</div>");
+
+
+	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:280px;height:280px;display:inline-block;z-index:105;color:black;margin-left:-50px;position:absolute;margin-top:50px;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br style=line-height:25px;>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:40px;>");
+	sb.safePrintf("Web Search Appliance");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+
+	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
+	sb.safePrintf("<img style=float:left;padding-bottom:20px;padding-right:10px; height=81px width=121px src=/computer2.png>");
+
+
+	sb.safePrintf("Put the web in your closet. ");
+	sb.safePrintf("Jump start your efforts with four 1U supermicro servers loaded with the top 2 billion pages from the web. <a href=http://www.gigablast.com/appliance.html>[more]</a>");
+	sb.safePrintf("</font>");
+
+	sb.safePrintf("</div>");
+
+	sb.safePrintf("</div>");
+
+
+	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:220px;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:60px;>");
+	sb.safePrintf("Open Source");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<div style=margin-left:30px;margin-right:5px;>");
+	sb.safePrintf("<img style=float:left;padding-right:10px height=71px width=71px src=/unlocked2.png>");
+
+	sb.safePrintf("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>.");
+	sb.safePrintf("</div>");
+
+	sb.safePrintf("</div>");
+
+
+	//sb.safePrintf("</TD></TR></TABLE></body></html>");
+
+
+	//
+	// end new stuff
+	//
 
 
 	sb.safePrintf("\n");
@@ -2618,7 +2776,7 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 	"	</p>"
 	""
 	"<p>"
-	"Matt Wells is currently the sole maintainer and programmer of Gigablast and is open for <u>consulting work</u>. For more information, contact us at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
+	"Matt Wells is currently the sole maintainer and programmer of Gigablast and is open for <u>consulting work</u>. For more information, contact Matt directly at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
 	"</p>"
 	"<br>"
 	"<center>"

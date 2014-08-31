@@ -2771,6 +2771,11 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "should use POST.");
 	p.safePrintf("<br><br>");
 
+	p.safePrintf("NOTE: All APIs support both http and https "
+		     "protocols.");
+
+	p.safePrintf("<br><br>");
+
 	p.safePrintf(//"<div style=padding-left:10%%>"
 		     "<font size=+2><b>API by pages</b></font>"
 		     "<ul>"
@@ -2967,7 +2972,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			"</tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>#</b></td>"
-			"<td><b>parm</b></td>"
+			"<td><b>Parm</b></td>"
 			//"<td><b>Page</b></td>"
 			"<td><b>Type</b></td>"
 			"<td><b>Title</b></td>"
