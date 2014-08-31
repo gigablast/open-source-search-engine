@@ -357,8 +357,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//
 	//////
 
-	// set m_isAdmin to zero if no correct ip or password
-	if ( ! g_conf.isRootAdmin ( sock , &m_hr ) ) m_isAdmin = 0;
+	// set m_isRootAdmin to zero if no correct ip or password
+	if ( ! g_conf.isRootAdmin ( sock , &m_hr ) ) m_isRootAdmin = 0;
 
 
 	//////////////////////////////////////

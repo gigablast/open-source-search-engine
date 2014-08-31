@@ -1162,6 +1162,31 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	long page = g_pages.getDynamicPageNumber ( r );
 
+	char format = r->getReplyFormat();
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	char *action = r->getString("action",NULL);
+	if ( page == PAGE_BASIC_SETTINGS &&
+	     // this is non-null if handling a submit request
+	     action && 
+	     format == FORMAT_HTML ) {
+		//return g_parms.sendPageGeneric ( s, r, PAGE_BASIC_SETTINGS );
+		// just redirect to it
+		char *coll = r->getString("c",NULL);
+		if ( coll ) {
+			sb->safePrintf("<meta http-equiv=Refresh "
+				      "content=\"0; URL=/admin/status"
+				      "?c=%s\">",
+				      coll);
+			return g_httpServer.sendDynamicPage (s,
+							     sb->getBufStart(),
+							     sb->length());
+		}
+	}
+
+
 	//
 	// some "generic" pages do additional processing on the provided input
 	// so we need to call those functions here...
@@ -1176,7 +1201,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	//}
 
 	// print standard header
-	char format = r->getReplyFormat();
 	if ( format != FORMAT_XML && format != FORMAT_JSON )
 		g_pages.printAdminTop ( sb , s , r );
 
@@ -9061,7 +9085,7 @@ void Parms::init ( ) {
 
 	m->m_title = "admin override";
 	m->m_desc  = "admin override";
-	m->m_off   = (char *)&si.m_isAdmin - y;
+	m->m_off   = (char *)&si.m_isRootAdmin - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_cgi   = "admin";

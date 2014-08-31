@@ -641,7 +641,7 @@ bool getResults ( void *state ) {
 
 	// if they don't have the ever changing key, they're probably a bot
 	/*
-	if ( (!si->m_isAssassin||si->m_isAdmin) &&
+	if ( (!si->m_isAssassin||si->m_isRootAdmin) &&
 	     si->m_raw == 0 && si->m_siteLen <= 0 &&
 	     si->m_sitesLen <= 0 ) {
 		// if there and robot checking on, check it
@@ -7541,7 +7541,7 @@ bool printAdminLinks ( SafeBuf &sb , State7 *st ) {
 
 	SearchInput *si = &st->m_si;
 
-	if ( ! si->m_isAdmin ) return true;
+	if ( ! si->m_isRootAdmin ) return true;
 
 	Msg40 *msg40 = &(st->m_msg40);
 	// how many results were requested?
@@ -8023,7 +8023,7 @@ static bool printResult ( CollectionRec *cr,
 
 
 	// the score if admin
-	if ( si->m_isAdmin && !si->m_isFriend ) {
+	if ( si->m_isRootAdmin && !si->m_isFriend ) {
 		long level = (long)msg40->getClusterLevel(ix);
 		char evs[1024];
 		sprintf(evs,"eventhash=%llu eventid=%li "
@@ -8129,7 +8129,7 @@ static bool printResult ( CollectionRec *cr,
 	evf &= ~(evflags_t)EV_DESERIALIZED;
 
 	// print the event flags first
-	if ( evf && si->m_isAdmin ) {
+	if ( evf && si->m_isRootAdmin ) {
 		// color in red
 		if ( ! sb.safePrintf("<b><font color=red>[") )
 			return false;
@@ -8528,7 +8528,7 @@ static bool printResult ( CollectionRec *cr,
 		sb.safePrintf ( " - indexed: %li days ago",days);
 	// do not show if more than 1 wk old! we want to seem as
 	// fresh as possible
-	else if ( ts > 0 && si->m_isAdmin && !si->m_isFriend ) {
+	else if ( ts > 0 && si->m_isRootAdmin && !si->m_isFriend ) {
 		char tbuf[100];
 		strftime ( tbuf , 100 , " - indexed: %b %d %Y",timeStruct);
 		sb.safePrintf ( "%s", tbuf );
@@ -8539,7 +8539,7 @@ static bool printResult ( CollectionRec *cr,
 	sb.safePrintf("\n");
 
 	// this stuff is secret just for local guys!
-	if ( si->m_isAdmin ) { // Assassin && !si->m_isFriend ) {
+	if ( si->m_isRootAdmin ) { // Assassin && !si->m_isFriend ) {
 		// now the ip of url
 		//long urlip = msg40->getIp(i);
 		// don't combine this with the sprintf above cuz
@@ -8556,7 +8556,7 @@ static bool printResult ( CollectionRec *cr,
 			       (long)us[0],(long)us[1],(long)us[2],
 			       (long)us[0],(long)us[1],(long)us[2]);
 		
-		//if ( si->m_isAdmin && !si->m_isFriend ) {
+		//if ( si->m_isRootAdmin && !si->m_isFriend ) {
 		// . now the info link
 		// . if it's local, don't put the hostname/port in
 		//   there cuz it will mess up Global Spec's machine
@@ -10967,7 +10967,7 @@ bool printAllResults ( SafeBuf &sb , State7 *st , Query &qq ) {
 	if ( si->m_collLen2 == 4 && strncmp ( si->m_coll2, "main", 4) == 0 ) 
 		isMain = true;
 	// print "in collection ***" if we had a collection
-	if ( si->m_collLen2 >0 && ! isMain && si->m_isAdmin && printMenuJunk) {
+	if ( si->m_collLen2 >0 && ! isMain && si->m_isRootAdmin && printMenuJunk) {
 		sb.safePrintf (" in collection '<b>");
 		sb.safeMemcpy ( si->m_coll2 , si->m_collLen2 );
 		sb.safeMemcpy ( "</b>'" , 5 );
@@ -17171,7 +17171,7 @@ static bool canSubmit  (unsigned long h, long now, long maxUrlsPerIpDom);
 class State9 {
 public:
 	TcpSocket *m_socket;
-        bool       m_isAdmin;
+        bool       m_isRootAdmin;
 	char       m_coll[MAX_COLL_LEN+1];
 
 	HttpRequest  m_hr;
@@ -17295,7 +17295,7 @@ bool sendPageAddEvent ( TcpSocket *s , HttpRequest *r ) {
 
 	// save socket and isAdmin
 	st9->m_socket  = s;
-	st9->m_isAdmin = isAdmin;
+	st9->m_isRootAdmin = isAdmin;
 
 	st9->m_hr.copy ( r );
 
@@ -17430,7 +17430,7 @@ bool gotCaptchaReply ( State9 *st9 , TcpSocket *s ) {
 	bool passed = true;
 	// turn off captcha for now
 	//if ( s ) passed = isCaptchaReplyCorrect ( s );
-	if ( ! passed && ! st9->m_isAdmin ) {
+	if ( ! passed && ! st9->m_isRootAdmin ) {
 		sb->safePrintf("<br><b>Captcha had incorrect answer</b><br>");
 		//return sendErrorReply9 ( st9 );
 	}
@@ -17464,7 +17464,7 @@ bool gotCaptchaReply ( State9 *st9 , TcpSocket *s ) {
 	unsigned long h = iptop ( sip );
 	// . allow 1 submit every 1 hour
 	// . restrict by submitter domain ip
-	if ( ! st9->m_isAdmin &&
+	if ( ! st9->m_isRootAdmin &&
 	     ! canSubmit ( h , now , cr->m_maxAddUrlsPerIpDomPerDay ) ) {
 		// print error
 		sb->safePrintf("<br><b>Exceed quota</b><br>");
@@ -17613,7 +17613,7 @@ bool gotCaptchaReply ( State9 *st9 , TcpSocket *s ) {
 	}
 
 	// log that xml so we can test it out on page parser
-	if ( st9->m_isAdmin && 1 == 2) {
+	if ( st9->m_isRootAdmin && 1 == 2) {
 		SafeBuf ttt;
 		ttt.safePrintf("<br>"
 			       "<a href=/admin/parser?"
@@ -17669,7 +17669,7 @@ bool sendReply ( void *state ) {
 
 	// extract info from state
 	//TcpSocket *s       = st9->m_socket;
-	//bool       isAdmin = st9->m_isAdmin;
+	//bool       isAdmin = st9->m_isRootAdmin;
 	//char      *url     = NULL;
 	//if ( st9->m_urlLen ) url = st9->m_url;
 

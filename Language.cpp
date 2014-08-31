@@ -3999,7 +3999,7 @@ bool StateWik::getSummary( ){
 				0,//m_si->m_displayMetasLen  ,
 				0,//bigSampleRadius          ,
 				0,//bigSampleMaxLen         ,
-				true,//m_si->m_isAdmin ,
+				true,//m_si->m_isRootAdmin ,
 				true   , //requireallterms
 				false    , //count links
 				0,

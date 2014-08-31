@@ -45,7 +45,7 @@ public:
 	long      m_numRecs;
 	TcpSocket *m_socket;
 	HttpRequest m_r;
-	bool      m_isAdmin;
+	bool      m_isRootAdmin;
 	bool      m_isLocal;
 	Msg36     m_msg36;    // term freqs (term popularity)
 	long long m_termFreq;
@@ -130,7 +130,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	// save the TcpSocket
 	st->m_socket = s;
 	// and if the request is local/internal or not
-	st->m_isAdmin = g_conf.isCollAdmin ( s , r );
+	st->m_isRootAdmin = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal = r->isLocal();
 	st->m_r.copy ( r );
 	// . check for add/delete request

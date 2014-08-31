@@ -2529,7 +2529,7 @@ public:
 	HttpRequest m_hr;
 	long m_submittingNewUser;
 	// is this really the admin logged in as another user?
-	bool m_isAdmin;
+	bool m_isRootAdmin;
 	long long m_adminSessId;
 	long m_adminId;
 
@@ -2702,7 +2702,7 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 	// reset shit
 	su->m_userId32 = -1;
 	su->m_sessionId64 = 0;
-	su->m_isAdmin = false;
+	su->m_isRootAdmin = false;
 	su->m_adminSessId = 0LL;
 	su->m_adminId = 0;
 
@@ -2732,7 +2732,7 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 		// check it
 		if ( ui->m_lastSessionId64 != asi ) continue;
 		// got a match
-		su->m_isAdmin = true;
+		su->m_isRootAdmin = true;
 		// save the underlying admin user info
 		su->m_adminSessId = asi;
 		su->m_adminId = ui->m_userId32;
@@ -3099,7 +3099,7 @@ bool printLogoutPage ( StateUser *su ) {
 	// disguise, then redirect back to our main page. but if we are
 	// the admin and NOT logged in as someone else, then log us out
 	// as normal!
-	if ( su->m_isAdmin && su->m_adminSessId != su->m_sessionId64 ) {
+	if ( su->m_isRootAdmin && su->m_adminSessId != su->m_sessionId64 ) {
 		sb.reset();
 		sb.safePrintf("<META HTTP-EQUIV=refresh "
 			      "content=\"0;URL=/account\">");
@@ -4551,7 +4551,7 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	// the admin can credit the account if he receives a wire or a check
 	// from a user...
 	/*
-	if ( su->m_isAdmin )
+	if ( su->m_isRootAdmin )
 		sb->safePrintf("<br>"
 			       "<font color=red>"
 			       "Record Wire of "

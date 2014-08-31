@@ -1458,7 +1458,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	
 	// gigabot helper blurb
-	printGigabotAdvice ( sb , page );
+	printGigabotAdvice ( sb , page , r );
 
 	// begin 2nd row in big table
 	//sb->safePrintf("</td></TR>");
@@ -1467,12 +1467,15 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	return true;
 }
 
-bool printGigabotAdvice ( SafeBuf *sb , long page , SearchInput *si ) {
+bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
+
+	char format = hr->getFormat();
+	if ( format != FORMAT_HTML ) return true;
 
 	// we only show to guest users. if we are logged in as master admin
 	// then skip this step.
-	if ( si->m_isMasterAdmin )
-		return true;
+	//if ( hr->isGuestAdmin() )
+	//	return false;
 
 	// also, only show if running in matt's data cetner
 	//if ( ! g_conf.m_isMattWells )
@@ -1501,10 +1504,6 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , SearchInput *si ) {
 		"<tr><td>";
 	char *boxEnd =
 		"</td></tr></table>";
-	sb->safePrintf("<div style=max-width:490px;"
-		       "padding-right:10px;>");
-
-	sb->safePrintf("%s",box);
 
 	char *advice = NULL;
 	if ( page == PAGE_ADDCOLL )
@@ -1551,6 +1550,12 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , SearchInput *si ) {
 			"connects to the search engine you have created. "
 			;
 
+	if ( ! advice ) return true;
+
+	sb->safePrintf("<div style=max-width:490px;"
+		       "padding-right:10px;>");
+
+	sb->safePrintf("%s",box);
 
 	// the mean looking robot
 	sb->safePrintf("<img style=float:left;padding-right:15px; "

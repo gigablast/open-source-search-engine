@@ -701,7 +701,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // reset our hostname
 	 m_hostLen = 0;
 	 // assume request is NOT from local network
-	 //m_isAdmin = false;
+	 //m_isRootAdmin = false;
 	 m_isLocal = false;
 	 // get the virtual hostname they want to use
 	 char *s = strstr ( req ,"Host:" );
@@ -844,9 +844,9 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 m_plen = i - filenameStart;
 	 // we're local if hostname is 192.168.[0|1].y
 	 //if ( strncmp(iptoa(sock->m_ip),"192.168.1.",10) == 0) {
-	 //	m_isAdmin = true; m_isLocal = true; }
+	 //	m_isRootAdmin = true; m_isLocal = true; }
 	 //if ( strncmp(iptoa(sock->m_ip),"192.168.0.",10) == 0) {
-	 //	m_isAdmin = true; m_isLocal = true; }
+	 //	m_isRootAdmin = true; m_isLocal = true; }
 	 //if(strncmp(iptoa(sock->m_ip),"192.168.1.",10) == 0) m_isLocal = true;
 	 //if(strncmp(iptoa(sock->m_ip),"192.168.0.",10) == 0) m_isLocal = true;
 	 if ( sock && strncmp(iptoa(sock->m_ip),"192.168.",8) == 0) 
@@ -921,7 +921,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 
 	 // . also if we're coming from lenny at my house consider it local
 	 // . this is a security risk, however... TODO: FIX!!!
-	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isAdmin = true;
+	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isRootAdmin = true;
 	 // . TODO: now add any cgi data from a POST.....
 	 // . look after the mime
 	 //char *d = NULL;
@@ -941,7 +941,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 if ( ! addCgi ( post , postLen ) ) return false;
 	 }
 	 // sometimes i don't want to be admin
-	 //if ( getLong ( "admin" , 1 ) == 0 ) m_isAdmin = false;
+	 //if ( getLong ( "admin" , 1 ) == 0 ) m_isRootAdmin = false;
 	 // success
 	 
 	 /////
@@ -1649,4 +1649,32 @@ int getVersionFromRequest ( HttpRequest *r ) {
         return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;
     return v;
 }
+
+
+// if user is NOT the root admin, and the collection is NOT main/dmoz/demo
+// then assume they are a guest admin
+bool HttpRequest::isGuestAdmin ( ) {
+
+	// if we are coming from a local ip then we are the root admin, not
+	// a guest user.
+	if ( isLocal() )
+		return false;
+
+	CollectionRec *cr = g_collectiondb.getRec ( this , false );
+
+	// if collection does not exist, meaning &c=xxxxx was not specified,
+	// in the GET request, then assume they want to create a new one.
+	if ( ! cr ) return true;
+
+	// main, dmoz and demo colls are off limits. those are never guest
+	// admin collection names.
+	if ( strcmp(cr->m_coll,"main") ) return false;
+	if ( strcmp(cr->m_coll,"dmoz") ) return false;
+	if ( strcmp(cr->m_coll,"demo") ) return false;
+
+	// if they know the collection name then they are logged in
+	return true;
+}
+
+	
 

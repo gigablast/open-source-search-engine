@@ -6,6 +6,7 @@
 #include "Collectiondb.h"
 //#include "CollectionRec.h"
 #include "Users.h"
+#include "Parms.h"
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) ;
 
@@ -76,8 +77,34 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		return g_httpServer.sendSuccessReply(s,format);
 	}
 
+
 	char  buf [ 64*1024 ];
 	SafeBuf p(buf, 64*1024);
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// if added the coll successfully, do not print same page, jump to
+	// printing the basic settings page so they can add sites to it.
+	// crap, this GET request, "r", is missing the "c" parm sometimes.
+	// we need to use the "addcoll" parm anyway. maybe print a meta
+	// redirect then?
+	char *action = r->getString("action",NULL);
+	if ( action && ! msg && format == FORMAT_HTML ) {
+		//return g_parms.sendPageGeneric ( s, r, PAGE_BASIC_SETTINGS );
+		// just redirect to it
+		char *addColl = r->getString("addcoll",NULL);
+		if ( addColl )
+			p.safePrintf("<meta http-equiv=Refresh "
+				      "content=\"0; URL=/admin/settings"
+				      "?c=%s\">",
+				      addColl);
+		return g_httpServer.sendDynamicPage (s,
+						     p.getBufStart(),
+						     p.length());
+	}
+
+
 	// print standard header
 	g_pages.printAdminTop ( &p , s , r );
 
@@ -105,9 +132,11 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 			  "</center><br>\n",cc,msg);
 	}
 
-
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
 	if ( add ) {
-		printGigabotAdvice ( &p , PAGE_ADDCOLL );
+		printGigabotAdvice ( &p , PAGE_ADDCOLL , r );
 	}
 
 

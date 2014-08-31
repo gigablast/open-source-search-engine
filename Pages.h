@@ -33,7 +33,7 @@ bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
 bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 //bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
 
-bool printGigabotAdvice ( SafeBuf *sb , long page ) ;
+bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) ;
 
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
@@ -176,10 +176,10 @@ class Pages {
 	// . also, modify both if you modify either!
 
 	bool printAdminTop 	       ( SafeBuf     *sb   ,
-				  TcpSocket   *s    ,
-				  HttpRequest *r    ,
-				  char        *qs = NULL,
-				  char* bodyJavascript = "" );
+					 TcpSocket   *s    ,
+					 HttpRequest *r    ,
+					 char        *qs = NULL,
+					 char* bodyJavascript = "" );
 
 
 	bool printAdminTop2 	       ( SafeBuf     *sb   ,
