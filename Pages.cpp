@@ -2284,9 +2284,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	}
 
 	// print documentation links
+	/*
 	if ( ! isBasic )
 		sb->safePrintf(" <a style=text-decoration:none "
-			       "href=/admin.html>"
+			       "href=/faq.html>"
 			       "<b>"
 			       "admin guide"
 			       "</b></a> "
@@ -2298,6 +2299,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			       "<b>dev guide</b></a>" 
 
 			       );
+	*/
 	
 	sb->safePrintf("</div>");
 

@@ -713,9 +713,10 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
 		{"ADD URL","/addurl"},
+		{"SYNTAX","/syntax.html"},
 		{"ABOUT","/about.html"},
-		{"HELP","/help.html"},
-		{"API","/api"}
+		{"FAQ","/faq.html"},
+		{"API","/api.html"}
 	};
 
 	//
@@ -1070,7 +1071,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
 	"</font><br>\n");
-	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>. Limited support available for free."
+	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>. Limited support available for free."
 		  ,80);
 	sb.safePrintf("<br><br>");
 	sb.safePrintf("</td></tr>\n");
@@ -1312,9 +1313,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</b>");
 
 	sb.safePrintf("<div style=margin-left:30px;margin-right:5px;>");
-	sb.safePrintf("<a href=http://www.gigablast.com/admin.html#features><img style=float:left;padding-right:10px height=71px width=71px src=/unlocked2.png></a>");
+	sb.safePrintf("<a href=http://www.gigablast.com/faq.html#features><img style=float:left;padding-right:10px height=71px width=71px src=/unlocked2.png></a>");
 
-	sb.safePrintf("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>.");
+	sb.safePrintf("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>.");
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
@@ -1806,7 +1807,7 @@ bool printTopDirectory ( SafeBuf& sb , char format ) {
 				     "<br>"
 				     "<b>"
 				     "Please follow the set up "
-				     "<a href=/admin.html#dmoz>"
+				     "<a href=/faq.html#dmoz>"
 				     "instructions"
 				     "</a>."
 				     "</b>"

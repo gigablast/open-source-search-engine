@@ -5638,7 +5638,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Remove all documents from the collection and re-add "
 		"seed urls from site list.";
 	// If you do this accidentally there "
-	//"is a <a href=/admin.html#recover>recovery procedure</a> to "
+	//"is a <a href=/faq.html#recover>recovery procedure</a> to "
 	//	"get back the trashed data.";
 	m->m_cgi   = "restart";
 	m->m_page  = PAGE_BASIC_SETTINGS;
