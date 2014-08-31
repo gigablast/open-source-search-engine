@@ -1214,6 +1214,20 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// decorate the plain html page, rants.html, with our nav chrome
 	if ( ! strncmp ( path ,"/faq.html", pathLen ) )
 		return sendPagePretty ( s , r , "faq.html", "faq");
+	if ( ! strncmp ( path ,"/admin.html", pathLen ) )
+		return sendPagePretty ( s , r , "faq.html", "faq");
+
+	// decorate the plain html pages with our nav chrome
+	if ( ! strncmp ( path ,"/developer.html", pathLen ) )
+		return sendPagePretty ( s , r , "developer.html", "developer");
+	if ( ! strncmp ( path ,"/compare.html", pathLen ) )
+		return sendPagePretty ( s , r , "compare.html", "compare");
+
+	if ( ! strncmp ( path ,"/contact.html", pathLen ) )
+		return sendPagePretty ( s , r , "contact.html", "contact");
+
+	if ( ! strncmp ( path ,"/bio.html", pathLen ) )
+		return sendPagePretty ( s , r , "bio.html", "bio");
 
 
 	if ( ! strncmp ( path ,"/api.html", pathLen ) )
