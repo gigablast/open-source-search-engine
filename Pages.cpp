@@ -1467,7 +1467,16 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	return true;
 }
 
-bool printGigabotAdvice ( SafeBuf *sb , long page ) {
+bool printGigabotAdvice ( SafeBuf *sb , long page , SearchInput *si ) {
+
+	// we only show to guest users. if we are logged in as master admin
+	// then skip this step.
+	if ( si->m_isMasterAdmin )
+		return true;
+
+	// also, only show if running in matt's data cetner
+	//if ( ! g_conf.m_isMattWells )
+	//	return true;
 
 	// gradient class
 	// yellow box
@@ -1503,15 +1512,16 @@ bool printGigabotAdvice ( SafeBuf *sb , long page ) {
 			"STEP 1 of 3. "
 			"<br>"
 			"<br>"
-			"Human, I am Gigabot."
-			"<br><br>"
+			//"Human, I am Gigabot."
+			//"<br><br>"
 			"Enter the name of your collection "
 			"(search engine) in the box below then hit "
 			"submit."
-			"<br>"
-			"<br>"
-			"Do not deviate from this path or you may "
-			"be blasted.";
+			// "<br>"
+			// "<br>"
+			// "Do not deviate from this path or you may "
+			// "be blasted."
+			;
 	if ( page == PAGE_BASIC_SETTINGS )
 		advice = 
 			"STEP 2 of 3. "
@@ -1519,11 +1529,12 @@ bool printGigabotAdvice ( SafeBuf *sb , long page ) {
 			"<br>"
 			"Enter the list of websites you want to be in your "
 			"search engine into the box marked <i>site list</i>."
-			"<br>"
-			"<br>"
-			"Do not deviate from this path, or, as is always "
-			"the case, you may "
-			"be blasted.";
+			// "<br>"
+			// "<br>"
+			// "Do not deviate from this path, or, as is always "
+			// "the case, you may "
+			// "be blasted."
+			;
 	if ( page == PAGE_BASIC_STATUS )
 		advice = 
 			"STEP 3 of 3. "

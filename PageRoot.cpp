@@ -1253,7 +1253,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</font>");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
-	sb.safePrintf("Search Engine");
+	sb.safePrintf("Search Engine in the");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
+	sb.safePrintf("Cloud");
 	sb.safePrintf("</font>");
 	sb.safePrintf("</b>");
 
@@ -1262,7 +1266,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
 	sb.safePrintf("<a href=/admin/addcoll><img style=float:left;padding-right:15px; height=188px width=101px src=/robot3.png></a>");
-	sb.safePrintf("<br>");
+	//sb.safePrintf("<br>");
 	sb.safePrintf("<b>STEP 1.</b> <a href=/admin/addcoll>Click here to");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>name your engine</b></a>.");
@@ -1309,7 +1313,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 
-	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:220px;background-color:lightgray;\">");
+	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:230px;background-color:lightgray;\">");
 
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>");
