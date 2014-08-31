@@ -2808,7 +2808,7 @@ int parmcmp ( const void *a, const void *b ) {
 #define DARK_YELLOW "ffaaaa"
 #define LIGHT_YELLOW "ffcccc"
 
-bool printFrontPageShell ( SafeBuf &sb , long pageNum ) ;
+bool printFrontPageShell ( SafeBuf *sb , long pageNum ) ;
 
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
@@ -2836,7 +2836,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// new stuff
-	printFrontPageShell ( p , 6 );
+	printFrontPageShell ( &p , 6 );
 
 
 	//p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "

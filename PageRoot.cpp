@@ -639,13 +639,13 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
-bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
+bool printFrontPageShell ( SafeBuf *sb , long pageNum ) {
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
-	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	sb->safePrintf("<html>\n");
+	sb->safePrintf("<head>\n");
+	//sb->safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
+	sb->safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
+	sb->safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
 	char *title = "An Alternative Open Source Search Engine";
 	if ( pageNum == 1 ) title = "Directory";
 	if ( pageNum == 2 ) title = "Advanced";
@@ -653,42 +653,42 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	if ( pageNum == 4 ) title = "About";
 	if ( pageNum == 5 ) title = "Help";
 	if ( pageNum == 6 ) title = "API";
-	sb.safePrintf("<title>Gigablast - %s</title>\n",title);
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 0px 0px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a {text-decoration:none;}\n");
-	//sb.safePrintf("a:link {color:#00c}\n");
-	//sb.safePrintf("a:visited {color:#551a8b}\n");
-	//sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n"
+	sb->safePrintf("<title>Gigablast - %s</title>\n",title);
+	sb->safePrintf("<style><!--\n");
+	sb->safePrintf("body {\n");
+	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb->safePrintf("color: #000000;\n");
+	sb->safePrintf("font-size: 12px;\n");
+	sb->safePrintf("margin: 0px 0px;\n");
+	sb->safePrintf("letter-spacing: 0.04em;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf("a {text-decoration:none;}\n");
+	//sb->safePrintf("a:link {color:#00c}\n");
+	//sb->safePrintf("a:visited {color:#551a8b}\n");
+	//sb->safePrintf("a:active {color:#f00}\n");
+	sb->safePrintf(".bold {font-weight: bold;}\n");
+	sb->safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
+	sb->safePrintf(".url {color:#008000;}\n");
+	sb->safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf("table {\n");
+	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb->safePrintf("color: #000000;\n");
+	sb->safePrintf("font-size: 12px;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf(".directory {font-size: 16px;}\n"
 		      ".nav {font-size:20px;align:right;}\n"
 		      );
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
-	//sb.safePrintf("<body>\n");
+	sb->safePrintf("-->\n");
+	sb->safePrintf("</style>\n");
+	sb->safePrintf("\n");
+	sb->safePrintf("</head>\n");
+	sb->safePrintf("<script>\n");
+	sb->safePrintf("<!--\n");
+	sb->safePrintf("function x(){document.f.q.focus();}\n");
+	sb->safePrintf("// --></script>\n");
+	sb->safePrintf("<body onload=\"x()\">\n");
+	//sb->safePrintf("<body>\n");
 	//g_proxy.insertLoginBarDirective ( &sb );
 
 	//
@@ -696,7 +696,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 
 
-	sb.safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
+	sb->safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
 		      "cellpadding=0>"
 		      "\n<TR>\n");
 
@@ -722,7 +722,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 	// first the nav column
 	//
-	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+	sb->safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\"width:210px;"
 		      "border-right:3px solid blue;"
@@ -758,7 +758,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 
 	for ( long i = 0 ; i < n ; i++ ) {
 
-		sb.safePrintf(
+		sb->safePrintf(
 			      "<a href=%s>"
 			      "<div style=\""
 			      "padding:5px;"
@@ -775,12 +775,12 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 			      , mi[i].m_url
 			      );
 		if ( i == pageNum )
-			sb.safePrintf(
+			sb->safePrintf(
 				      "border-color:blue;"
 				      "color:black;"
 				      "background-color:white;\" ");
 		else
-			sb.safePrintf("border-color:white;"
+			sb->safePrintf("border-color:white;"
 				      "color:white;"
 				      "background-color:blue;\" "
 				      " onmouseover=\""
@@ -791,7 +791,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 				      "this.style.color='white';\""
 				      );
 
-		sb.safePrintf(">"
+		sb->safePrintf(">"
 			      // make button wider
 			      "<nobr>"
 			      "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; "
@@ -802,7 +802,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		// begin hack: white out the blue border line!!
 		//
 		if ( i == pageNum )
-			sb.safePrintf(
+			sb->safePrintf(
 				      "<div style=padding:5px;top:0;"
 				      "background-color:white;"
 				      "display:inline-block;"
@@ -811,7 +811,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 				      "</div>"
 				      );
 		// end hack
-		sb.safePrintf(
+		sb->safePrintf(
 			      "</div>"
 			      "</a>"
 			      "<br>"
@@ -819,7 +819,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	}
 
 	// admin link
-	sb.safePrintf(
+	sb->safePrintf(
 		      "<a href=/admin/settings>"
 		      "<div style=\"background-color:green;"
 		      // for try it out bubble:
@@ -895,14 +895,14 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 	// now the MAIN column
 	//
-	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
+	sb->safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
 
-	sb.safePrintf("<br><br>");
+	sb->safePrintf("<br><br>");
 
-	sb.safePrintf("<a href=/><img border=0 width=470 "
+	sb->safePrintf("<a href=/><img border=0 width=470 "
 		      "height=44 src=/gigablast.jpg></a>\n");
 
-	// sb.safePrintf("<br>"
+	// sb->safePrintf("<br>"
 	// 	      "<img border=0 width=470 "
 	// 	      "height=15 src=/bar.jpg>\n");
 
@@ -935,7 +935,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
-	printFrontPageShell ( sb ,0 );
+	printFrontPageShell ( &sb ,0 );
 
 
 	//sb.safePrintf("<br><br>\n");
@@ -1339,7 +1339,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
-	printFrontPageShell ( sb , 3 );
+	printFrontPageShell ( &sb , 3 );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1538,7 +1538,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 		return printTopDirectory ( sb , format );
 
 
-	printFrontPageShell ( sb , 1 );
+	printFrontPageShell ( &sb , 1 );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2550,7 +2550,7 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 2 );
+	printFrontPageShell ( &sb , 2 );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2725,7 +2725,7 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 4 );
+	printFrontPageShell ( &sb , 4 );
 
 
 	sb.safePrintf("<br>\n");
@@ -2816,7 +2816,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 5 );
+	printFrontPageShell ( &sb , 5 );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");

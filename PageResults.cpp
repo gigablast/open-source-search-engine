@@ -7025,6 +7025,8 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
+bool printFrontPageShell ( SafeBuf *sb , long pageNum ) ;
+
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			     SearchInput *si ) {
@@ -7036,6 +7038,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	// now make a TABLE, left PANE contains gigabits and stuff
 
 
+	/*
 	sb->safePrintf(
 		      // logo and menu table
 		      "<table border=0 cellspacing=5>"
@@ -7055,6 +7058,12 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		      "<td>"
 		      //, root
 		      );
+	*/
+
+
+	if ( catId > 0 ) {
+		printFrontPageShell ( sb , 1); //  PAGE_DIRECTORY
+	}
 
 	/*
 	// menu above search box
@@ -7166,7 +7175,11 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	
 
 	// put search box in a box
-	sb->safePrintf("<div style="
+	sb->safePrintf(
+		       "<br>"
+		       "<br>"
+		       "<br>"
+		       "<div style="
 		       "background-color:#fcc714;"
 		       "border-style:solid;"
 		       "border-width:3px;"
@@ -7175,6 +7188,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		       "padding:20px;"
 		       "border-radius:20px;"
 		       ">");
+
 
 	sb->safePrintf (
 			//"<div style=margin-left:5px;margin-right:5px;>
@@ -7229,15 +7243,20 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			"<b style=margin-left:-5px;font-size:18px;"
 			">GO</b>"
 			"</div>"
+			);
 
 
-			"</div>"
+	// print "Search [ ] sites  [ ] pages in this topic or below"
+	if ( catId >= 0 ) {
+		sb->safePrintf("<br>");
+		printDmozRadioButtons(sb,catId);
+	}
+
+	sb->safePrintf(	"</div>"
 			"<br>"
 			"<br>"
 		       );
-	if ( catId >= 0 ) {
-		printDmozRadioButtons(sb,catId);
-	}
+
 	/*
 	else {
 		sb->safePrintf("Try your search on: "
@@ -7254,13 +7273,15 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	}
 	*/
 
-	printSearchFiltersBar ( sb , hr );
+	// do not print filter bar if showing a dmoz topic
+	if ( catId == 0 )
+		printSearchFiltersBar ( sb , hr );
 	
 
 	sb->safePrintf( "</form>\n"
-		       "</td>"
-		       "</tr>"
-		       "</table>\n"
+		       // 	"</td>"
+		       // "</tr>"
+		       // "</table>\n"
 		       );
 	return true;
 }
