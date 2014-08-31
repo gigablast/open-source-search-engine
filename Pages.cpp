@@ -1452,12 +1452,107 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	sb->safePrintf("<br>");
 
-		       
+
+	if ( page != PAGE_BASIC_SETTINGS )
+		return true;
+
+	
+	// gigabot helper blurb
+	printGigabotAdvice ( sb , page );
 
 	// begin 2nd row in big table
 	//sb->safePrintf("</td></TR>");
 
 
+	return true;
+}
+
+bool printGigabotAdvice ( SafeBuf *sb , long page ) {
+
+	// gradient class
+	// yellow box
+	char *box = 
+		"<table cellpadding=5 "
+		// full width of enclosing div
+		"width=100%% "
+		"style=\""
+
+		//"background-color:gold;"
+		//"border:3px blue solid;"
+
+		"background-color:lightblue;"
+		"border:3px blue solid;"
+
+
+		"border-radius:8px;"
+		//"max-width:500px;"
+		"\" "
+		"border=0"
+		">"
+		"<tr><td>";
+	char *boxEnd =
+		"</td></tr></table>";
+	sb->safePrintf("<div style=max-width:490px;"
+		       "padding-right:10px;>");
+	sb->safePrintf("%s",box);
+
+	char *advice = NULL;
+	if ( page == PAGE_ADDCOLL )
+		advice =
+			"STEP 1 of 3. "
+			"<br>"
+			"<br>"
+			"Begin. Human, I am Gigabot."
+			"<br><br>"
+			"Enter the name of your collection "
+			"(search engine) in the box below then hit "
+			"submit."
+			"<br>"
+			"<br>"
+			"Do not deviate from this path or you may "
+			"be blasted.";
+	if ( page == PAGE_BASIC_SETTINGS )
+		advice = 
+			"STEP 2 of 3. "
+			"<br>"
+			"<br>"
+			"Enter the list of websites you want to be in your "
+			"search engine into the box marked <i>site list</i>."
+			"<br>"
+			"<br>"
+			"Do not deviate from this path, or, as is always the "
+			"case, you may "
+			"be blasted.";
+	if ( page == PAGE_BASIC_STATUS )
+		advice = 
+			"STEP 3 of 3. "
+			"<br>"
+			"<br>"
+			"Ensure you see search results appearing in "
+			"the box below. If not, then you have spider "
+			"problems."
+			"<br>"
+			"<br>"
+			"Click on the links in the lower right to expose "
+			"the source code. Copy and paste this code "
+			"into your website to make a search box that "
+			"connects to the search engine you have created. "
+			"END."
+			;
+
+
+	// the mean looking robot
+	sb->safePrintf("<img style=float:left;padding-right:15px;"
+		       "padding-top:10px;padding-bottom:10px;"
+		       " "
+		       "height=141px width=75px src=/robot3.png>"
+		       "<b>"
+		       "%s"
+		       "</b>"
+		       , advice
+		       );
+	sb->safePrintf("%s",boxEnd);
+	sb->safePrintf("<br><br></div>");
 	return true;
 }
 

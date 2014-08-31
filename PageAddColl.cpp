@@ -105,6 +105,13 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 			  "</center><br>\n",cc,msg);
 	}
 
+
+	if ( add ) {
+		printGigabotAdvice ( &p , PAGE_ADDCOLL );
+	}
+
+
+
 	// print the add collection box
 	if ( add /*&& (! nc[0] || g_errno ) */ ) {
 		p.safePrintf (

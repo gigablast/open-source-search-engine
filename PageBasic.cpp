@@ -931,6 +931,9 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// this prints the <form tag as well
 		g_pages.printAdminTop ( &sb , socket , hr );
 
+	if ( format == FORMAT_HTML )
+		printGigabotAdvice ( &sb , PAGE_BASIC_STATUS );
+
 	// table to split between widget and stats in left and right panes
 	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("<TABLE id=pane>"
