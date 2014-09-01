@@ -3426,8 +3426,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 	char format = si->m_format;
 	// these are handled in the <dmozEntry> logic below now
-	if ( format == FORMAT_XML ) return true;
-	if ( format == FORMAT_JSON ) return true;
+	if ( format != FORMAT_HTML ) return true;
 
 	// if ( format == FORMAT_XML ) {
 	// 	sb->safePrintf("\t\t<dmozCat>\n"
@@ -3770,10 +3769,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				   url,mr->ptr_imgUrl);
 
 	// if we have a thumbnail show it next to the search result,
-	// base64 encoded
-	if ( //(si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
+	// base64 encoded. do NOT do this for the WIDGET, only for search
+	// results in html/xml.
+	if ( (si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
-	    si->m_showImages && mr->ptr_imgData ) {
+	     si->m_showImages && mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 		if ( si->m_format == FORMAT_XML )
@@ -3815,6 +3815,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		}
 	}
 
+	bool isWide = false;
+
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
@@ -3826,6 +3828,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// prevent coring
 		if ( widgetWidth < 1 ) widgetWidth = 1;
 
+		// char *bg1 = "lightgray";
+		// char *bg2 = "white";
+		// char *bgcolor = bg1;
+		// if ( (ix % 1) == 1 ) bgcolor = bg2;
+
 		// each search result in widget has a div around it
 		sb->safePrintf("<div "
 			       "class=result "
@@ -3835,13 +3842,17 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       // using the scripts in PageBasic.cpp
 			       "docid=%lli "
 			       "score=%f " // double
-			       
+
 			       "style=\""
 			       "width:%lipx;"
 			       "min-height:%lipx;"//140px;"
 			       "height:%lipx;"//140px;"
 			       "padding:%lipx;"
 			       "position:relative;"
+			       // summary overflows w/o this!
+			       "overflow-y:hidden;"
+			       // alternate bg color to separate results!
+			       //"background-color:%s;"
 			       //"display:table-cell;"
 			       //"vertical-align:bottom;"
 			       "\""
@@ -3854,6 +3865,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
+			       //, bgcolor
 			       );
 		// if ( mr->ptr_imgUrl )
 		// 	sb->safePrintf("background-repeat:no-repeat;"
@@ -3889,13 +3901,15 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 		// if thumbnail is wide enough put text on top of it, otherwise
 		// image is to the left and text is to the right of image
-		if ( newdx > .5 * widgetWidth )
+		if ( newdx > .5 * widgetWidth ) {
+			isWide = true;
 			sb->safePrintf("position:absolute;"
 				       "bottom:%li;"
 				       "left:%li;"
 				       , (long) PADDING 
 				       , (long) PADDING 
 				       );
+		}
 		// to align the text verticall we gotta make a textbox div
 		// otherwise it wraps below image! mdw
 		//else
@@ -3904,7 +3918,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf("position:absolute;"
 				       "bottom:%li;"
 				       "left:%li;"
-				       , (long) PADDING 
+				       , (long) PADDING
 				       , (long) PADDING + newdx + 10 );
 
 		// close the style and begin the url
@@ -4276,11 +4290,25 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	bool printSummary = true;
 	// do not print summaries for widgets by default unless overridden
 	// with &summary=1
+	long defSum = 0;
+	// if no image then default the summary to on
+	if ( ! mr->ptr_imgData ) defSum = 1;
+
 	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
 	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) && 
-	     hr->getLong("summaries",0) == 0 )
+	     hr->getLong("summaries",defSum) == 0 ) 
 		printSummary = false;
+
+	if ( printSummary &&
+	     (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
+	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
+		long sumLen = strLen;
+		if ( sumLen > 50 ) sumLen = 50;
+		sb->safePrintf("<br>");
+		sb->safeTruncateEllipsis ( str , 100 );
+	}
 
 	if ( printSummary && si->m_format == FORMAT_HTML )
 		sb->brify ( str , strLen, 0 , cols ); // niceness = 0
@@ -4418,6 +4446,26 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// turn off the color
 		sb->safePrintf ( "</font>\n" );
 	}
+
+	// print url for widgets now
+	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
+	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
+		sb->safePrintf ("<br><font color=gray size=-1>" );
+		// print url for widgets in top left if we have a wide image
+		// otherwise it gets truncated below the title for some reason
+		if ( isWide )
+			sb->safePrintf ("<br><font color=white size=-1 "
+					"style=position:absolute;left:10px;"
+					"top:10px;background-color:black;>" );
+		else
+			sb->safePrintf ("<br><font color=gray size=-1>");
+		// print the url now, truncated to 50 chars
+		sb->safeTruncateEllipsis ( url , 50 ); // cols - 30 );
+		sb->safePrintf ( "</font>\n" );
+	}
+
+
 	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t\t<url><![CDATA[");
 		sb->safeMemcpy ( url , urlLen );
@@ -5026,7 +5074,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX )
-		sb->safePrintf("</div>");
+		sb->safePrintf("</div><hr>");
 	
 
 	if ( si->m_format == FORMAT_HTML )
