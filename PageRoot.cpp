@@ -639,7 +639,7 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName ) { // long pageNum ) {
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 
 	sb->safePrintf("<html>\n");
 	sb->safePrintf("<head>\n");
@@ -745,24 +745,33 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName ) { // long pageNum ) {
 		      "width:100px;"
 		      "height:100px;"
 		      "\">"
-		      "<br style=line-height:10px;>"
-		      "<img width=54 height=79 src=/rocket.jpg>"
-		      "</div>"
-		      "</a>"
-		      "</center>"
+		       );
 
+	if ( strcmp(tabName,"appliance") == 0 )
+		sb->safePrintf("<img style=margin-top:21px; width=90 "
+			       "height=57 src=/computer2.png>");
+	else
+		sb->safePrintf("<br style=line-height:10px;>"
+			       "<img width=54 height=79 src=/rocket.jpg>"
+			       );
 
-		      "<br>"
-		      "<br>"
+	sb->safePrintf ( "</div>"
+			 "</a>"
+			 "</center>"
 
+			 "<br>"
+			 "<br>"
 		      );
 
 	long n = sizeof(mi) / sizeof(MenuItem);
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	for ( long i = 0 ; i < n ; i++ ) {
 
 		sb->safePrintf(
-			      "<a href=%s>"
+			      "<a href=%s?c=%s>"
 			      "<div style=\""
 			      "padding:5px;"
 			      "position:relative;"
@@ -776,6 +785,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName ) { // long pageNum ) {
 			      "font-size:14px;"
 			      "x-overflow:;"
 			      , mi[i].m_url
+			      , coll
 			      );
 		//if ( i == pageNum )
 		bool matched = false;
@@ -828,7 +838,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName ) { // long pageNum ) {
 
 	// admin link
 	sb->safePrintf(
-		      "<a href=/admin/settings>"
+		      "<a href=/admin/settings?c=%s>"
 		      "<div style=\"background-color:green;"
 		      // for try it out bubble:
 		      //"position:relative;"
@@ -897,6 +907,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName ) { // long pageNum ) {
 		      "</div>"
 		      "</a>"
 		      "<br>"
+		      , coll
 		      );
 
 
@@ -943,7 +954,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
-	printFrontPageShell ( &sb , "search" );
+	printFrontPageShell ( &sb , "search" , cr );
 
 
 	//sb.safePrintf("<br><br>\n");
@@ -1351,7 +1362,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
-	printFrontPageShell ( &sb , "add url" );
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+
+	printFrontPageShell ( &sb , "add url" , cr );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1386,7 +1399,6 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<form method=GET "
 		      "action=/addurl name=f>\n" );
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 	if ( cr )
@@ -1549,8 +1561,9 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	if ( format != FORMAT_HTML )
 		return printTopDirectory ( sb , format );
 
+	CollectionRec *cr = g_collectiondb.getRec ( r );
 
-	printFrontPageShell ( &sb , "directory" );
+	printFrontPageShell ( &sb , "directory" , cr );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -1559,7 +1572,6 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<form method=GET "
 		      "action=/search name=f>\n");
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
 	if ( cr )
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
 			      cr->m_coll);
@@ -2562,7 +2574,9 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( &sb , "advanced" );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	printFrontPageShell ( &sb , "advanced" , cr );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2571,7 +2585,6 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 	sb.safePrintf("<form method=GET "
 		      "action=/search name=f>\n" );
 
-	CollectionRec *cr = g_collectiondb.getRec ( hr );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 	if ( cr )
@@ -2737,7 +2750,9 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( &sb , "about" );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	printFrontPageShell ( &sb , "about" , cr );
 
 
 	sb.safePrintf("<br>\n");
@@ -2747,7 +2762,6 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 	//sb.safePrintf("<form method=GET "
 	//	      "action=/addurl name=f>\n" );
 
-	CollectionRec *cr = g_collectiondb.getRec ( hr );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 	if ( cr )
@@ -2828,7 +2842,9 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( &sb , "syntax" );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	printFrontPageShell ( &sb , "syntax" , cr );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2837,7 +2853,6 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	//sb.safePrintf("<form method=GET "
 	//	      "action=/addurl name=f>\n" );
 
-	// CollectionRec *cr = g_collectiondb.getRec ( hr );
 	// char *coll = "";
 	// if ( cr ) coll = cr->m_coll;
 	// if ( cr )

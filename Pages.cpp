@@ -975,7 +975,7 @@ bool printTopNavButton ( char *text,
 
 	else
 		sb->safePrintf(
-			       "<a style=text-decoration:none; href=%s?%s>"
+			       "<a style=text-decoration:none; href=%s?c=%s>"
 			       "<div "
 
 			       " onmouseover=\""
@@ -2848,7 +2848,7 @@ int parmcmp ( const void *a, const void *b ) {
 #define DARK_YELLOW "ffaaaa"
 #define LIGHT_YELLOW "ffcccc"
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName ) ;
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) ;
 
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
@@ -2876,7 +2876,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// new stuff
-	printFrontPageShell ( &p , "api" );
+	printFrontPageShell ( &p , "api" , cr );
 
 
 	//p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "

@@ -1229,6 +1229,9 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( ! strncmp ( path ,"/bio.html", pathLen ) )
 		return sendPagePretty ( s , r , "bio.html", "bio");
 
+	if ( ! strncmp ( path ,"/appliance.html", pathLen ) )
+		return sendPagePretty ( s , r , "appliance.html", "appliance");
+
 
 	if ( ! strncmp ( path ,"/api.html", pathLen ) )
 		return sendPageAPI ( s , r  );
@@ -2902,7 +2905,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 }
 
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName );
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr );
 
 bool sendPagePretty ( TcpSocket *s , 
 		      HttpRequest *r , 
@@ -2911,8 +2914,10 @@ bool sendPagePretty ( TcpSocket *s ,
 
 	SafeBuf sb;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+
 	// print the chrome
-	printFrontPageShell ( &sb , tabName ); //  -1=pagenum
+	printFrontPageShell ( &sb , tabName , cr ); //  -1=pagenum
 
 	SafeBuf ff;
 	ff.safePrintf("html/%s",filename);
