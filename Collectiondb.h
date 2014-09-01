@@ -410,6 +410,12 @@ class CollectionRec {
 
 	char m_dailyMergeDOWList[48];
 
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// ip of user adding the collection
+	char m_userIp[16];
+
 	// spider controls for this collection
 	//char  m_oldSpideringEnabled     ;
 	//char  m_newSpideringEnabled     ;

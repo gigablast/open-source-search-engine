@@ -667,7 +667,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . will only add parm recs we have permission to modify
 	// . if no collection supplied will just return true with no g_errno
 	if ( isAdmin &&
-	     ! g_parms.convertHttpRequestToParmList ( r , parmList , page ) )
+	     ! g_parms.convertHttpRequestToParmList ( r, parmList, page, s))
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
 
@@ -1295,7 +1295,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//status&=printCollectionNavBar ( sb, page , username , coll,pwd, qs );
 
 	// collection navbar
-	status&=printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+	status&=printCollectionNavBar ( sb, page , username, coll,pwd, qs,s,r);
 
 
 	sb->safePrintf("</div>");
@@ -1516,8 +1516,10 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 			"Enter the name of your collection "
 			"(search engine) in the box below then hit "
 			"submit."
-			// "<br>"
-			// "<br>"
+			"<br>"
+			"<br>"
+			"Remember this name so you can access the controls "
+			"later."
 			// "Do not deviate from this path or you may "
 			// "be blasted."
 			;
@@ -2335,7 +2337,9 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 				    char *username,
 				    char *coll     ,
 				    char *pwd      ,
-				    char *qs       ) {
+				    char *qs       ,
+				    TcpSocket *sock ,
+				    HttpRequest *hr ) {
 	bool status = true;
 	//if ( ! pwd ) pwd = "";
 	if ( ! qs  ) qs  = "";
@@ -2374,9 +2378,17 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 	char *s = "s";
 	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
-	sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
-			 "</center>\n",
-			 g_collectiondb.m_numRecsUsed , s );
+
+	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
+
+	if ( isRootAdmin )
+		sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
+				 "</center>\n",
+				 g_collectiondb.m_numRecsUsed , s );
+	else
+		sb->safePrintf ( "<center><nobr><b>Collections</b></nobr>"
+				 "</center>\n");
+
 
 	sb->safePrintf( "<center>"
 			"<nobr>"
@@ -2407,6 +2419,18 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// if not root admin and collrec's password does not match
+		// the one we are logged in with (in the cookie) then skip it
+		// if ( ! isRootAdmin &&
+		//      cr->m_password &&
+		//      ! strcmp(cr->m_password,pwd) )
+		// 	continue;
+
+
 		char *cname = cc->m_coll;
 
 		row++;

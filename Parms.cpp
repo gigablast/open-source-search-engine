@@ -6089,6 +6089,25 @@ void Parms::init ( ) {
 	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
 
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// used to prevent a guest ip adding more than one coll
+	m->m_title = "user ip";
+	m->m_desc  = "IP of user adding collection.";
+	m->m_cgi   = "userip";
+	m->m_xml   = "userIp";
+	m->m_off   = (char *)&cr.m_userIp - x;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = 16;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;// | PF_NOSAVE;
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
+
 	m->m_title = "add custom crawl";
 	m->m_desc  = "add custom crawl";
 	m->m_cgi   = "addCrawl";
@@ -9511,6 +9530,18 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+
+	m->m_title = "allow cloud users";
+	m->m_desc  = "Can guest users create a collection?";
+	m->m_cgi   = "acu";
+	m->m_off   = (char *)&g_conf.m_allowCloudUsers - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "auto save frequency";
 	m->m_desc  = "Save data in memory to disk after this many minutes "
@@ -19618,10 +19649,36 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 // returns false and sets g_errno on error
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
-					  long page ){
+					  long page , TcpSocket *sock ) {
 
 	// false = useDefaultRec?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// if not the root admin only all user to change settings, etc.
+	// if the collection rec is a guest collection. i.e. in the cloud.
+	//
+	bool isRootAdmin = g_conf.isRootAdmin(sock,hr);
+	bool isRootColl = false;
+	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
+	// the main,dmoz and demo collections are root admin only
+	if ( ! isRootAdmin && isRootColl ) {
+		g_errno = ENOPERM;
+		return log("parms: root admin can only change main/dmoz/demo"
+			   " collections.");
+	}
+	// just knowing the collection name is enough for a cloud user to
+	// modify the collection's parms. however, to modify the master 
+	// controls or stuff in g_conf, you have to be root admin.
+	if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
+		g_errno = ENOPERM;
+		return log("parms: permission denied for user");
+	}
+
 
 	//if ( c ) {
 	//	cr = g_collectiondb.getRec ( hr );
@@ -19816,6 +19873,13 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			// given as a string.
 			val = oldCollName;
 
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// master controls require root permission
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
 		// add the cmd parm
 		if ( ! addNewParmToList2 ( parmList ,
 					   // it might be a collection-less
@@ -19855,6 +19919,29 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 
 	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// provide userip so when adding a new collection we can
+	// store it in the collection rec to ensure that the same
+	// IP address cannot add more than one collection.
+	//
+	if ( sock && page == PAGE_ADDCOLL ) {
+		char *ipStr = iptoa(sock->m_ip);
+		long occNum;
+		Parm *um = getParmFast1 ( "userip" , &occNum); // NULL = occNum
+		if ( ! addNewParmToList2 ( parmList ,
+					   // HACK! operate on the to-be-added
+					   // collrec, if there was an addcoll
+					   // reset or restart coll cmd...
+					   parmCollnum ,
+					   ipStr, // val ,
+					   occNum ,
+					   um ) )
+			return false;
+	}
+
+
+	//
 	// now add the parms that are NOT commands
 	//
 	
@@ -19873,6 +19960,35 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// convert field to parm
 		long occNum;
 		Parm *m = getParmFast1 ( field , &occNum );
+
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// master controls require root permission. otherwise, just
+		// knowing the collection name is enough for a cloud user
+		// to change settings.
+		//
+		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// if this IP c-block as already added a collection then do not
+		// allow it to add another.
+		//
+		if ( m && strcmp(m->m_cgi,"addcoll")==0 && ! isRootAdmin ) {
+			// see if user's c block has already added a collection
+			long numAdded = 0;
+			if ( numAdded >= 1 ) {
+				g_errno = ENOPERM;
+				log("parms: already added a collection from "
+				    "this cloud user's c-block.");
+				return false;
+			}
+		}
+
 
 		//
 		// map "pause" to spidering enabled

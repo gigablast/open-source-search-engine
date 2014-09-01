@@ -1676,5 +1676,6 @@ bool HttpRequest::isGuestAdmin ( ) {
 	return true;
 }
 
-	
+
+
 

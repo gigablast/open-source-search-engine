@@ -267,7 +267,9 @@ class Pages {
 				      char *username,
 				      char *coll     ,
 				      char *pwd      ,
-				      char *qs       );
+				      char *qs       ,
+				      TcpSocket *sock ,
+				      HttpRequest *hr );
 	/*
 	char *printCollectionNavBar    ( char *p    ,
 					 char *pend , 
