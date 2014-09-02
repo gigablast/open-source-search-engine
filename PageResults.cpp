@@ -3816,6 +3816,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	bool isWide = false;
+	long newdx = 0;
 
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
@@ -3848,9 +3849,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "min-height:%lipx;"//140px;"
 			       "height:%lipx;"//140px;"
 			       "padding:%lipx;"
+			       //"padding-right:40px;"
 			       "position:relative;"
 			       // summary overflows w/o this!
 			       "overflow-y:hidden;"
+			       "overflow-x:hidden;"
 			       // alternate bg color to separate results!
 			       //"background-color:%s;"
 			       //"display:table-cell;"
@@ -3861,7 +3864,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       // this is a double now. this won't work
 			       // for streaming...
 			       , msg40->m_msg3a.m_scores[ix]
-			       , widgetWidth - 2*8 // padding is 8px
+			       // subtract 8 for scrollbar on right
+			       , widgetWidth - 2*8 - 8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
@@ -3873,7 +3877,6 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// 		       "background-image:url('%s');"
 		// 		       , widgetwidth - 2*8 // padding is 8px
 		// 		       , mr->ptr_imgUrl);
-		long newdx = 0;
 		if ( mr->ptr_imgData ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
@@ -4305,9 +4308,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
 		long sumLen = strLen;
-		if ( sumLen > 50 ) sumLen = 50;
-		sb->safePrintf("<br>");
-		sb->safeTruncateEllipsis ( str , 100 );
+		if ( sumLen > 150 ) sumLen = 150;
+		if ( sumLen ) {
+			sb->safePrintf("<br>");
+			sb->safeTruncateEllipsis ( str , sumLen );
+		}
 	}
 
 	if ( printSummary && si->m_format == FORMAT_HTML )
@@ -4451,13 +4456,18 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
 	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
-		sb->safePrintf ("<br><font color=gray size=-1>" );
+		//sb->safePrintf ("<br><font color=gray size=-1>" );
 		// print url for widgets in top left if we have a wide image
 		// otherwise it gets truncated below the title for some reason
 		if ( isWide )
 			sb->safePrintf ("<br><font color=white size=-1 "
 					"style=position:absolute;left:10px;"
 					"top:10px;background-color:black;>" );
+		else if ( mr->ptr_imgData )
+			sb->safePrintf ("<br><font color=gray size=-1 "
+					"style=position:absolute;left:%lipx;"
+					"top:10px;>"
+				       , (long) PADDING + newdx + 10 );
 		else
 			sb->safePrintf ("<br><font color=gray size=-1>");
 		// print the url now, truncated to 50 chars

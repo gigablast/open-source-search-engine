@@ -1472,6 +1472,11 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 	char format = hr->getFormat();
 	if ( format != FORMAT_HTML ) return true;
 
+	char guide = hr->getLong("guide",0);
+	if ( ! guide ) return true;
+
+	sb->safePrintf("<input type=hidden name=guide value=1>\n");
+
 	// we only show to guest users. if we are logged in as master admin
 	// then skip this step.
 	//if ( hr->isGuestAdmin() )

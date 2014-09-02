@@ -7,6 +7,8 @@
 #include "PageResults.h" // for RESULT_HEIGHT
 #include "Stats.h"
 
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) ;
+
 // 5 seconds
 #define DEFAULT_WIDGET_RELOAD 1000
 
@@ -883,6 +885,463 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 	return true;
 }
 
+bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
+
+	sb->safePrintf("<script type=\"text/javascript\">\n\n");
+
+	// if user has the scrollbar at the top
+	// in the widget we do a search every 15 secs
+	// to try to load more recent results. we should
+	// return up to 10 results above your last 
+	// top docid and 10 results below it. that way
+	// no matter which of the 10 results you were
+	// viewing your view should remaing unchanged.
+	sb->safePrintf(
+
+		       // global var
+		       "var forcing;"
+
+		       "function widget123_handler_reload() {"
+		       // return if reply is not fully ready
+		       "if(this.readyState != 4 )return;"
+
+		       // if error or empty reply then do nothing
+		       "if(!this.responseText)return;"
+		       // get the widget container
+		       "var w=document.getElementById(\"widget123\");"
+
+		       // GET DOCID of first div/searchresult
+		       "var sd=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+		       "var cd;"
+		       "if ( sd ) cd=sd.firstChild;"
+		       "var fd=0;"
+		       "if(cd) fd=cd.getAttribute('docid');"
+
+
+		       // if the searchbox has the focus then do not
+		       // update the content just yet...
+		       "var qb=document.getElementById(\"qbox\");"
+		       "if(qb&&qb==document.activeElement)"
+		       "return;"
+
+		       // or if not forced and they scrolled down
+		       // don't jerk them back up again
+		       "if(!forcing&&sd&&sd.scrollTop!=0)return;"
+
+
+		       // just set the widget content to the reply
+		       "w.innerHTML=this.responseText;"
+
+		       //
+		       // find that SAME docid in response and see
+		       // how many new results were added above it
+		       //
+		       "var added=0;"
+		       // did we find the docid?
+		       "var found=0;"
+		       // get div again since we updated innerHTML
+		       "sd=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+		       // scan the kids
+		       "var kid=sd.firstChild;"
+		       // begin the while loop to scan the kids
+		       "while (kid) {"
+		       // if div had no docid it might have been a line
+		       // break div, so ignore
+		       "if (!kid.hasAttribute('docid') ) {"
+		       "kid=kid.nextSibling;"
+		       "continue;"
+		       "}"
+		       // set kd to docid of kid
+		       "var kd=kid.getAttribute('docid');"
+		       // stop if we hit our original top docid
+		       "if(kd==fd) {found=1;break;}"
+		       // otherwise count it as a NEW result we got
+		       "added++;"
+		       // advance kid
+		       "kid=kid.nextSibling;"
+		       // end while loop
+		       "}"
+
+		       //"alert(\"added=\"+added);"
+
+		       // how many results did we ADD above the
+		       // reported "topdocid" of the widget?
+		       // it should be in the ajax reply from the
+		       // search engine. how many result were above
+		       // the given "topdocid".
+		       //"var ta=document.getElementById(\"topadd\");"
+		       //"var added=0;"
+		       //"if(ta)added=ta.value;"
+
+		       // if nothing added do nothing
+		       "if (added==0)return;"
+
+		       // if original top docid not found, i guess we
+		       // added too many new guys to the top of the
+		       // search results, so don't bother scrolling
+		       // just reset to top
+		       "if (!found) return;"
+
+		       // show that
+		       //"alert(this.responseText);"
+
+		       // get the div that has the scrollbar
+		       "var sd=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+		       // save current scroll pos
+		       "var oldpos=parseInt(sd.scrollTop);"
+		       // note it
+		       //"alert (sd.scrollTop);"
+		       // preserve the relative scroll position so we
+		       // do not jerk around since we might have added 
+		       // "added" new results to the top.
+		       "sd.scrollTop += added*%li;"
+
+		       // try to scroll out new results if we are
+		       // still at the top of the scrollbar and
+		       // there are new results to scroll.
+		       "if(oldpos==0)widget123_scroll();}\n\n"
+
+		       // for preserving scrollbar position
+		       ,(long)RESULT_HEIGHT +2*PADDING
+
+		       );
+
+
+	// scroll the widget up until we hit the 0 position
+	sb->safePrintf(
+		       "function widget123_scroll() {"
+		       // only scroll if at the top of the widget
+		       // and not scrolled down so we do not
+		       // interrupt
+		       "var sd=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+		       // TODO: need parseInt here?
+		       "var pos=parseInt(sd.scrollTop);"
+		       // note it
+		       //"alert (sd.scrollTop);"
+		       // if already at the top of widget, return
+		       "if(pos==0)return;"
+		       // decrement by 3 pixels
+		       "pos=pos-3;"
+		       // do not go negative
+		       "if(pos<0)pos=0;"
+		       // assign to scroll up. TODO: need +\"px\"; ?
+		       "sd.scrollTop=pos;"
+		       // all done, then return
+		       "if(pos==0) return;"
+		       // otherwise, scroll more in 3ms
+		       // TODO: make this 1000ms on result boundaries
+		       // so it delays on each new result. perhaps make
+		       // it less than 1000ms if we have a lot of 
+		       // results above us!
+		       "setTimeout('widget123_scroll()',3);}\n\n"
+
+		       );
+
+	// this function appends the search results to what is
+	// already in the widget.
+	sb->safePrintf(
+		       "function widget123_handler_append() {"
+		       // return if reply is not fully ready
+		       "if(this.readyState != 4 )return;"
+		       // i guess we are done... release the lock
+		       "outstanding=0;"
+		       // if error or empty reply then do nothing
+		       "if(!this.responseText)return;"
+		       // if too small
+		       "if(this.responseText.length<=3)return;"
+		       // get the widget container
+		       "var w=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+		       // just set the widget content to the reply
+		       "w.innerHTML+=this.responseText;"
+		       "}\n\n"
+		       );
+
+
+	//sb->safePrintf ( "</script>\n\n" );
+
+	long widgetWidth = 300;
+	long widgetHeight = 500;
+
+	// make the ajax url that gets the search results
+	SafeBuf ub;
+	ub.safePrintf("/search"
+		      //"format=ajax"
+		      "?c=%s"
+		      //"&prepend=gbsortbyint%%3Agbspiderdate"
+		      "&q=-gbstatus:0+gbsortbyint%%3Agbindexdate"
+		      "&sc=0" // no site clustering
+		      "&dr=0" // no deduping
+			      // 10 results at a time
+		      "&n=10"
+		      "&widgetheight=%li"
+		      "&widgetwidth=%li"
+		      , cr->m_coll
+		      , widgetHeight
+		      , widgetWidth
+		      );
+	//ub.safePrintf("&topdocid="
+	//	      );
+
+	// get the search results from neo as soon as this div is
+	// being rendered, and set its contents to them
+	sb->safePrintf(//"<script type=text/javascript>"
+
+		       "function widget123_reload(force) {"
+			 
+		       // when the user submits a new query in the
+		       // query box we set force to false when
+		       // we call this (see PageResults.cpp) so that
+		       // we do not register multiple timeouts
+		       "if ( ! force ) "
+		       "setTimeout('widget123_reload(0)',%li);"
+
+		       // get the query box
+		       "var qb=document.getElementById(\"qbox\");"
+
+		       // if forced then turn off focus for searchbox
+		       // since it was either 1) the initial call
+		       // or 2) someone submitted a query and
+		       // we got called from PageResults.cpp
+		       // onsubmit event.
+		       "if (force&&qb) qb.blur();"
+
+
+		       // if the searchbox has the focus then do not
+		       // reload!! unless force is true..
+		       "if(qb&&qb==document.activeElement&&!force)"
+		       "return;"
+
+		       //"var ee=document.getElementById(\"sbox\");"
+		       //"if (ee)alert('reloading '+ee.style.display);"
+
+		       // do not do timer reload if searchbox is
+		       // visible because we do not want to interrupt
+		       // a possible search
+		       //"if(!force&&ee && ee.style.display=='')return;"
+
+
+		       // do not bother timed reloading if scrollbar pos
+		       // not at top or near bottom
+		       "var sd=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+
+		       "if ( sd && !force ) {"
+		       "var pos=parseInt(sd.scrollTop);"
+		       "if (pos!=0) return;"
+		       "}"
+
+
+		       "var client=new XMLHttpRequest();"
+		       "client.onreadystatechange="
+		       "widget123_handler_reload;"
+
+		       // . this url gets the search results
+		       // . get them in "ajax" format so we can embed
+		       //   them into the base html as a widget
+		       "var u='%s&format=ajax';"
+
+		       // append our query from query box if there
+		       "var qv;"
+		       "if (qb) qv=qb.value;"
+		       "if (qv){"
+		       //"u+='&q=';"
+		       "u+='&prepend=';"
+		       "u+=encodeURI(qv);"
+		       "}"
+
+		       // set global var so handler knows if we were
+		       // forced or not
+		       "forcing=force;"
+
+		       // get the docid at the top of the widget
+		       // so we can get SURROUNDING search results,
+		       // like 10 before it and 10 after it for
+		       // our infinite scrolling
+		       //"var td=document.getElementById('topdocid');"
+		       //"if ( td ) u=u+\"&topdocid=\"+td.value;"
+
+		       //"alert('reloading');"
+
+		       "client.open('GET',u);"
+		       "client.send();"
+		       "}\n\n"
+
+		       // when page loads, populate the widget immed.
+		       "widget123_reload(1);\n\n"
+
+		       // initiate the timer loop since it was
+		       // not initiated on that call since we had to
+		       // set force=1 to load in case the query box
+		       // was currently visible.
+		       "setTimeout('widget123_reload(0)',%li);"
+
+		       //, widgetHeight
+		       , (long)DEFAULT_WIDGET_RELOAD
+		       , ub.getBufStart()
+		       , (long)DEFAULT_WIDGET_RELOAD
+		       );
+
+	//
+	// . call this when scrollbar gets 5 up from bottom
+	// . but if < 10 new results are appended, then stop!
+	//
+	sb->safePrintf(
+		       "var outstanding=0;\n\n"
+
+		       "function widget123_append() {"
+			      
+		       // bail if already outstanding
+		       "if (outstanding) return;"
+
+		       // if scrollbar not near bottom, then return
+		       "var sd=document.getElementById("
+		       "\"widget123_scrolldiv\");"
+		       "if ( sd ) {"
+		       "var pos=parseInt(sd.scrollTop);"
+		       "if (pos < (sd.scrollHeight-%li)) "
+		       "return;"
+		       "}"
+
+		       // . this url gets the search results
+		       // . just get them so we can APPEND them to
+		       //   the widget, so it will be just the
+		       //   "results" divs
+		       "var u='%s&format=append';"
+
+		       // . get score of the last docid in our widget
+		       // . it should be persistent.
+		       // . it is like a bookmark for scrolling
+		       // . append results AFTER it into the widget
+		       // . this way we can deal with the fact that
+		       //   we may be adding 100s of results to this
+		       //   query per second, especially if spidering
+		       //   at a high rate. and this will keep the
+		       //   results we append persistent.
+		       // . now we scan the children "search result"
+		       //   divs of the "widget123_scrolldiv" div
+		       //   container to get the last child and get
+		       //   its score/docid so we can re-do the search
+		       //   and just get the search results with
+		       //   a score/docid LESS THAN that. THEN our
+		       //   results should be contiguous.
+		       // . get the container div, "cd"
+		       "var cd=document.getElementById("
+		       "'widget123_scrolldiv');"
+		       // must be there
+		       "if(!cd)return;"
+		       // get the last child div in there
+		       "var d=cd.lastChild.previousSibling;"
+		       // must be there
+		       "if(!d)return;"
+		       // get docid/score
+		       "u=u+\"&maxserpscore=\"+d.getAttribute('score');"
+		       "u=u+\"&minserpdocid=\"+d.getAttribute('docid');"
+
+		       // append our query from query box if there
+		       "var qb=document.getElementById(\"qbox\");"
+		       "var qv;"
+		       "if (qb) qv=qb.value;"
+		       "if (qv){"
+		       //"u+='&q=';"
+		       "u+='&prepend=';"
+		       "u+=encodeURI(qv);"
+		       "}"
+
+
+		       // turn on the lock to prevent excessive calls
+		       "outstanding=1;"
+
+		       //"alert(\"scrolling2 u=\"+u);"
+
+		       "var client=new XMLHttpRequest();"
+		       "client.onreadystatechange="
+		       "widget123_handler_append;"
+
+		       //"alert('appending scrollTop='+sd.scrollTop+' scrollHeight='+sd.scrollHeight+' 5results=%li'+u);"
+		       "client.open('GET',u);"
+		       "client.send();"
+		       "}\n\n"
+
+		       "</script>\n\n"
+
+		       // if (pos < (sd.scrollHeight-%li)) return...
+		       // once user scrolls down to within last 5
+		       // results then try to append to the results.
+		       , widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING)
+
+
+		       , ub.getBufStart()
+
+		       //,widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING
+		       );
+
+
+	// then the WIDGET MASTER div. set the "id" so that the
+	// style tag the user sets can control its appearance.
+	// when the browser loads this the ajax sets the contents
+	// to the reply from neo.
+
+	// on scroll call widget123_append() which will append
+	// more search results if we are near the bottom of the
+	// widget.
+
+	sb->safePrintf("<div id=widget123 "
+		       "style=\"border:2px solid black;"
+		       "position:relative;border-radius:10px;"
+		       "width:%lipx;height:%lipx;\">"
+		       , widgetWidth
+		       , widgetHeight
+		       );
+
+	//sb->safePrintf("<style>"
+	//	      "a{color:white;}"
+	//	      "</style>");
+
+
+	sb->safePrintf("Waiting for Server...");
+
+
+	// end the containing div
+	sb->safePrintf("</div>");
+
+	return true;
+}
+
+bool sendPageWidgets ( TcpSocket *socket , HttpRequest *hr ) {
+
+	// true = usedefault coll?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
+	if ( ! cr ) {
+		g_httpServer.sendErrorReply(socket,500,"invalid collection");
+		return true;
+	}
+
+	char  buf [ 128000 ];
+	SafeBuf sb(buf,128000);
+
+	printFrontPageShell ( &sb, "widgets", cr );
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+
+	//char format = hr->getReplyFormat();
+	//if ( format == FORMAT_HTML )
+	printGigabotAdvice ( &sb , PAGE_BASIC_STATUS , hr );
+
+	printScrollingWidget ( &sb , cr );
+
+	return g_httpServer.sendDynamicPage (socket, 
+					     sb.getBufStart(), 
+					     sb.length(),
+					     0); // cachetime
+}
+
+
 
 // from pagecrawlbot.cpp for printCrawlDetails()
 #include "PageCrawlBot.h"
@@ -931,9 +1390,6 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// this prints the <form tag as well
 		g_pages.printAdminTop ( &sb , socket , hr );
 
-	if ( format == FORMAT_HTML )
-		printGigabotAdvice ( &sb , PAGE_BASIC_STATUS , hr );
-
 	// table to split between widget and stats in left and right panes
 	if ( format == FORMAT_HTML ) {
 		sb.safePrintf("<TABLE id=pane>"
@@ -958,427 +1414,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// so user can embed it into their own web page
 		savedLen1 = sb.length();
 		
-		sb.safePrintf("<script type=\"text/javascript\">\n\n");
-
-		// if user has the scrollbar at the top
-		// in the widget we do a search every 15 secs
-		// to try to load more recent results. we should
-		// return up to 10 results above your last 
-		// top docid and 10 results below it. that way
-		// no matter which of the 10 results you were
-		// viewing your view should remaing unchanged.
-		sb.safePrintf(
-
-			      // global var
-			      "var forcing;"
-
-			      "function widget123_handler_reload() {"
-			      // return if reply is not fully ready
-			      "if(this.readyState != 4 )return;"
-
-			      // if error or empty reply then do nothing
-			      "if(!this.responseText)return;"
-			      // get the widget container
-			      "var w=document.getElementById(\"widget123\");"
-
-			      // GET DOCID of first div/searchresult
-			      "var sd=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-			      "var cd;"
-			      "if ( sd ) cd=sd.firstChild;"
-			      "var fd=0;"
-			      "if(cd) fd=cd.getAttribute('docid');"
-
-
-			      // if the searchbox has the focus then do not
-			      // update the content just yet...
-			      "var qb=document.getElementById(\"qbox\");"
-			      "if(qb&&qb==document.activeElement)"
-			      "return;"
-
-			      // or if not forced and they scrolled down
-			      // don't jerk them back up again
-			      "if(!forcing&&sd&&sd.scrollTop!=0)return;"
-
-
-			      // just set the widget content to the reply
-			      "w.innerHTML=this.responseText;"
-
-			      //
-			      // find that SAME docid in response and see
-			      // how many new results were added above it
-			      //
-			      "var added=0;"
-			      // did we find the docid?
-			      "var found=0;"
-			      // get div again since we updated innerHTML
-			      "sd=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-			      // scan the kids
-			      "var kid=sd.firstChild;"
-			      // begin the while loop to scan the kids
-			      "while (kid) {"
-			      // if div had no docid it might have been a line
-			      // break div, so ignore
-			      "if (!kid.hasAttribute('docid') ) {"
-			      "kid=kid.nextSibling;"
-			      "continue;"
-			      "}"
-			      // set kd to docid of kid
-			      "var kd=kid.getAttribute('docid');"
-			      // stop if we hit our original top docid
-			      "if(kd==fd) {found=1;break;}"
-			      // otherwise count it as a NEW result we got
-			      "added++;"
-			      // advance kid
-			      "kid=kid.nextSibling;"
-			      // end while loop
-			      "}"
-
-			      //"alert(\"added=\"+added);"
-
-			      // how many results did we ADD above the
-			      // reported "topdocid" of the widget?
-			      // it should be in the ajax reply from the
-			      // search engine. how many result were above
-			      // the given "topdocid".
-			      //"var ta=document.getElementById(\"topadd\");"
-			      //"var added=0;"
-			      //"if(ta)added=ta.value;"
-
-			      // if nothing added do nothing
-			      "if (added==0)return;"
-
-			      // if original top docid not found, i guess we
-			      // added too many new guys to the top of the
-			      // search results, so don't bother scrolling
-			      // just reset to top
-			      "if (!found) return;"
-
-			      // show that
-			      //"alert(this.responseText);"
-
-			      // get the div that has the scrollbar
-			      "var sd=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-			      // save current scroll pos
-			      "var oldpos=parseInt(sd.scrollTop);"
-			      // note it
-			      //"alert (sd.scrollTop);"
-			      // preserve the relative scroll position so we
-			      // do not jerk around since we might have added 
-			      // "added" new results to the top.
-			      "sd.scrollTop += added*%li;"
-
-			      // try to scroll out new results if we are
-			      // still at the top of the scrollbar and
-			      // there are new results to scroll.
-			      "if(oldpos==0)widget123_scroll();}\n\n"
-
-			      // for preserving scrollbar position
-			      ,(long)RESULT_HEIGHT +2*PADDING
-
-			      );
-
-
-		// scroll the widget up until we hit the 0 position
-		sb.safePrintf(
-			      "function widget123_scroll() {"
-			      // only scroll if at the top of the widget
-			      // and not scrolled down so we do not
-			      // interrupt
-			      "var sd=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-			      // TODO: need parseInt here?
-			      "var pos=parseInt(sd.scrollTop);"
-			      // note it
-			      //"alert (sd.scrollTop);"
-			      // if already at the top of widget, return
-			      "if(pos==0)return;"
-			      // decrement by 3 pixels
-			      "pos=pos-3;"
-			      // do not go negative
-			      "if(pos<0)pos=0;"
-			      // assign to scroll up. TODO: need +\"px\"; ?
-			      "sd.scrollTop=pos;"
-			      // all done, then return
-			      "if(pos==0) return;"
-			      // otherwise, scroll more in 3ms
-			      // TODO: make this 1000ms on result boundaries
-			      // so it delays on each new result. perhaps make
-			      // it less than 1000ms if we have a lot of 
-			      // results above us!
-			      "setTimeout('widget123_scroll()',3);}\n\n"
-
-			      );
-
-		// this function appends the search results to what is
-		// already in the widget.
-		sb.safePrintf(
-			      "function widget123_handler_append() {"
-			      // return if reply is not fully ready
-			      "if(this.readyState != 4 )return;"
-			      // i guess we are done... release the lock
-			      "outstanding=0;"
-			      // if error or empty reply then do nothing
-			      "if(!this.responseText)return;"
-			      // if too small
-			      "if(this.responseText.length<=3)return;"
-			      // get the widget container
-			      "var w=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-			      // just set the widget content to the reply
-			      "w.innerHTML+=this.responseText;"
-			      "}\n\n"
-			      );
-
-
-		//sb.safePrintf ( "</script>\n\n" );
-
-		long widgetWidth = 300;
-		long widgetHeight = 500;
-
-		// make the ajax url that gets the search results
-		SafeBuf ub;
-		ub.safePrintf("/search"
-			      //"format=ajax"
-			      "?c=%s"
-			      //"&prepend=gbsortbyint%%3Agbspiderdate"
-			      "&q=-gbstatus:0+gbsortbyint%%3Agbindexdate"
-			      "&sc=0" // no site clustering
-			      "&dr=0" // no deduping
-			      // 10 results at a time
-			      "&n=10"
-			      "&widgetheight=%li"
-			      "&widgetwidth=%li"
-			      , cr->m_coll
-			      , widgetHeight
-			      , widgetWidth
-			      );
-		//ub.safePrintf("&topdocid="
-		//	      );
-
-		// get the search results from neo as soon as this div is
-		// being rendered, and set its contents to them
-		sb.safePrintf(//"<script type=text/javascript>"
-
-			      "function widget123_reload(force) {"
-			 
-			      // when the user submits a new query in the
-			      // query box we set force to false when
-			      // we call this (see PageResults.cpp) so that
-			      // we do not register multiple timeouts
-			      "if ( ! force ) "
-			      "setTimeout('widget123_reload(0)',%li);"
-
-			      // get the query box
-			      "var qb=document.getElementById(\"qbox\");"
-
-			      // if forced then turn off focus for searchbox
-			      // since it was either 1) the initial call
-			      // or 2) someone submitted a query and
-			      // we got called from PageResults.cpp
-			      // onsubmit event.
-			      "if (force&&qb) qb.blur();"
-
-
-			      // if the searchbox has the focus then do not
-			      // reload!! unless force is true..
-			      "if(qb&&qb==document.activeElement&&!force)"
-			      "return;"
-
-			      //"var ee=document.getElementById(\"sbox\");"
-			      //"if (ee)alert('reloading '+ee.style.display);"
-
-			      // do not do timer reload if searchbox is
-			      // visible because we do not want to interrupt
-			      // a possible search
-			      //"if(!force&&ee && ee.style.display=='')return;"
-
-
-			      // do not bother timed reloading if scrollbar pos
-			      // not at top or near bottom
-			      "var sd=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-
-			      "if ( sd && !force ) {"
-			      "var pos=parseInt(sd.scrollTop);"
-			      "if (pos!=0) return;"
-			      "}"
-
-
-			      "var client=new XMLHttpRequest();"
-			      "client.onreadystatechange="
-			      "widget123_handler_reload;"
-
-			      // . this url gets the search results
-			      // . get them in "ajax" format so we can embed
-			      //   them into the base html as a widget
-			      "var u='%s&format=ajax';"
-
-			      // append our query from query box if there
-			      "var qv;"
-			      "if (qb) qv=qb.value;"
-			      "if (qv){"
-			      //"u+='&q=';"
-			      "u+='&prepend=';"
-			      "u+=encodeURI(qv);"
-			      "}"
-
-			      // set global var so handler knows if we were
-			      // forced or not
-			      "forcing=force;"
-
-			      // get the docid at the top of the widget
-			      // so we can get SURROUNDING search results,
-			      // like 10 before it and 10 after it for
-			      // our infinite scrolling
-			      //"var td=document.getElementById('topdocid');"
-			      //"if ( td ) u=u+\"&topdocid=\"+td.value;"
-
-			      //"alert('reloading');"
-
-			      "client.open('GET',u);"
-			      "client.send();"
-			      "}\n\n"
-
-			      // when page loads, populate the widget immed.
-			      "widget123_reload(1);\n\n"
-
-			      // initiate the timer loop since it was
-			      // not initiated on that call since we had to
-			      // set force=1 to load in case the query box
-			      // was currently visible.
-			      "setTimeout('widget123_reload(0)',%li);"
-
-			      //, widgetHeight
-			      , (long)DEFAULT_WIDGET_RELOAD
-			      , ub.getBufStart()
-			      , (long)DEFAULT_WIDGET_RELOAD
-			      );
-
-		//
-		// . call this when scrollbar gets 5 up from bottom
-		// . but if < 10 new results are appended, then stop!
-		//
-		sb.safePrintf(
-			      "var outstanding=0;\n\n"
-
-			      "function widget123_append() {"
-			      
-			      // bail if already outstanding
-			      "if (outstanding) return;"
-
-			      // if scrollbar not near bottom, then return
-			      "var sd=document.getElementById("
-			      "\"widget123_scrolldiv\");"
-			      "if ( sd ) {"
-			      "var pos=parseInt(sd.scrollTop);"
-			      "if (pos < (sd.scrollHeight-%li)) "
-			      "return;"
-			      "}"
-
-			      // . this url gets the search results
-			      // . just get them so we can APPEND them to
-			      //   the widget, so it will be just the
-			      //   "results" divs
-			      "var u='%s&format=append';"
-
-			      // . get score of the last docid in our widget
-			      // . it should be persistent.
-			      // . it is like a bookmark for scrolling
-			      // . append results AFTER it into the widget
-			      // . this way we can deal with the fact that
-			      //   we may be adding 100s of results to this
-			      //   query per second, especially if spidering
-			      //   at a high rate. and this will keep the
-			      //   results we append persistent.
-			      // . now we scan the children "search result"
-			      //   divs of the "widget123_scrolldiv" div
-			      //   container to get the last child and get
-			      //   its score/docid so we can re-do the search
-			      //   and just get the search results with
-			      //   a score/docid LESS THAN that. THEN our
-			      //   results should be contiguous.
-			      // . get the container div, "cd"
-			      "var cd=document.getElementById("
-			      "'widget123_scrolldiv');"
-			      // must be there
-			      "if(!cd)return;"
-			      // get the last child div in there
-			      "var d=cd.lastChild.previousSibling;"
-			      // must be there
-			      "if(!d)return;"
-			      // get docid/score
-			      "u=u+\"&maxserpscore=\"+d.getAttribute('score');"
-			      "u=u+\"&minserpdocid=\"+d.getAttribute('docid');"
-
-			      // append our query from query box if there
-			      "var qb=document.getElementById(\"qbox\");"
-			      "var qv;"
-			      "if (qb) qv=qb.value;"
-			      "if (qv){"
-			      //"u+='&q=';"
-			      "u+='&prepend=';"
-			      "u+=encodeURI(qv);"
-			      "}"
-
-
-			      // turn on the lock to prevent excessive calls
-			      "outstanding=1;"
-
-			      //"alert(\"scrolling2 u=\"+u);"
-
-			      "var client=new XMLHttpRequest();"
-			      "client.onreadystatechange="
-			      "widget123_handler_append;"
-
-			      //"alert('appending scrollTop='+sd.scrollTop+' scrollHeight='+sd.scrollHeight+' 5results=%li'+u);"
-			      "client.open('GET',u);"
-			      "client.send();"
-			      "}\n\n"
-
-			      "</script>\n\n"
-
-			      // if (pos < (sd.scrollHeight-%li)) return...
-			      // once user scrolls down to within last 5
-			      // results then try to append to the results.
-			      , widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING)
-
-
-			      , ub.getBufStart()
-
-			      //,widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING
-			      );
-
-
-		// then the WIDGET MASTER div. set the "id" so that the
-		// style tag the user sets can control its appearance.
-		// when the browser loads this the ajax sets the contents
-		// to the reply from neo.
-
-		// on scroll call widget123_append() which will append
-		// more search results if we are near the bottom of the
-		// widget.
-
-		sb.safePrintf("<div id=widget123 "
-			      "style=\"border:2px solid black;"
-			      "position:relative;border-radius:10px;"
-			      "width:%lipx;height:%lipx;\">"
-			      , widgetWidth
-			      , widgetHeight
-			      );
-
-		//sb.safePrintf("<style>"
-		//	      "a{color:white;}"
-		//	      "</style>");
-
-
-		sb.safePrintf("Waiting for Server...");
-
-
-		// end the containing div
-		sb.safePrintf("</div>");
+		printScrollingWidget ( &sb , cr );
 
 		savedLen2 = sb.length();
 

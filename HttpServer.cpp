@@ -1205,6 +1205,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( ! strncmp ( path ,"/syntax.html", pathLen ) )
 		return sendPageHelp ( s , r );
 
+	if ( ! strncmp ( path ,"/widgets.html", pathLen ) )
+		return sendPageWidgets ( s , r );
 
 	// decorate the plain html page, news.html, with our nav chrome
 	if ( ! strncmp ( path ,"/news.html", pathLen ) )

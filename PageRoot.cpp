@@ -715,6 +715,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
 		{"ADD URL","/addurl"},
+		{"WIDGETS","/widgets.html"},
 		{"SYNTAX","/syntax.html"},
 		{"ABOUT","/about.html"},
 		{"NEWS","/news.html"},
@@ -1278,17 +1279,20 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
 	sb.safePrintf("<a href=/admin/addcoll><img style=float:left;padding-right:15px; height=188px width=101px src=/robot3.png></a>");
 	//sb.safePrintf("<br>");
-	sb.safePrintf("<b>STEP 1.</b> <a href=/admin/addcoll>Click here to");
+	sb.safePrintf("<b>STEP 1.</b> <a href=/admin/addcoll?guide=1>"
+		      "Click here to");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>name your engine</b></a>.");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<br>");
-	sb.safePrintf("<b>STEP 2.</b> <a href=/admin/settings>Click here to ");
+	sb.safePrintf("<b>STEP 2.</b> <a href=/admin/settings?guide=1>"
+		      "Click here to ");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>add websites to index</b></a>.");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<br>");
-	sb.safePrintf("<b>STEP 3.</b> <a href=/admin/status>Click here to");
+	sb.safePrintf("<b>STEP 3.</b> <a href=/widgets.html?guide=1>"
+		      "Click here to");
 	sb.safePrintf("<br>");
 	sb.safePrintf("<b>insert search box</b></a>.");
 

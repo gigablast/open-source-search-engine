@@ -29,6 +29,7 @@ extern char *g_msg;
 // . declare all dynamic functions here
 // . these are all defined in Page*.cpp files
 // . these are called to send a dynamic page
+bool sendPageWidgets ( TcpSocket *socket , HttpRequest *hr ) ;
 bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
 bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 //bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );

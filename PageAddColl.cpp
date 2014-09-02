@@ -90,14 +90,15 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// we need to use the "addcoll" parm anyway. maybe print a meta
 	// redirect then?
 	char *action = r->getString("action",NULL);
-	if ( action && ! msg && format == FORMAT_HTML ) {
+	char guide = r->getLong("guide",0);
+	if ( action && ! msg && format == FORMAT_HTML && guide ) {
 		//return g_parms.sendPageGeneric ( s, r, PAGE_BASIC_SETTINGS );
 		// just redirect to it
 		char *addColl = r->getString("addcoll",NULL);
 		if ( addColl )
 			p.safePrintf("<meta http-equiv=Refresh "
 				      "content=\"0; URL=/admin/settings"
-				      "?c=%s\">",
+				      "?guide=1&c=%s\">",
 				      addColl);
 		return g_httpServer.sendDynamicPage (s,
 						     p.getBufStart(),
@@ -135,9 +136,8 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
 	//
-	if ( add ) {
+	if ( add && guide )
 		printGigabotAdvice ( &p , PAGE_ADDCOLL , r );
-	}
 
 
 
@@ -175,6 +175,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		//	  "<td><input type=text name=cpc value=\"%s\" size=30>"
 		//	  "</td></tr>\n",coll);
 		p.safePrintf ( "</table></center><br>\n");
+
 		// wrap up the form started by printAdminTop
 		g_pages.printAdminBottom ( &p );
 		long bufLen = p.length();

@@ -1177,8 +1177,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 		char *coll = r->getString("c",NULL);
 		if ( coll ) {
 			sb->safePrintf("<meta http-equiv=Refresh "
-				      "content=\"0; URL=/admin/status"
-				      "?c=%s\">",
+				      "content=\"0; URL=/widgets.html"
+				      "?guide=1&c=%s\">",
 				      coll);
 			return g_httpServer.sendDynamicPage (s,
 							     sb->getBufStart(),
