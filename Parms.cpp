@@ -3015,6 +3015,14 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		*(float *)(THIS + m->m_off + 4*j) = (float)atof ( s );
 		newVal = *(float *)(THIS + m->m_off + 4*j);
 		goto changed; }
+	else if ( t == TYPE_DOUBLE ) {
+		if( fromRequest &&
+		    *(double *)(THIS + m->m_off + 4*j) == (double)atof ( s ) ) 
+			return;
+		if ( fromRequest ) oldVal = *(double *)(THIS + m->m_off + 4*j);
+		*(double *)(THIS + m->m_off + 4*j) = (double)atof ( s );
+		newVal = *(double *)(THIS + m->m_off + 4*j);
+		goto changed; }
 	else if ( t == TYPE_IP ) {
 		if ( fromRequest && *(long *)(THIS + m->m_off + 4*j) == 
 		     (long)atoip (s,gbstrlen(s) ) ) 

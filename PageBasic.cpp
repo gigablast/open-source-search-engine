@@ -1243,6 +1243,10 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       "var d=cd.lastChild.previousSibling;"
 		       // must be there
 		       "if(!d)return;"
+		       // now that we added <hr> tags after each div do this!
+		       "d=d.previousSibling;"
+		       // must be there
+		       "if(!d)return;"
 		       // get docid/score
 		       "u=u+\"&maxserpscore=\"+d.getAttribute('score');"
 		       "u=u+\"&minserpdocid=\"+d.getAttribute('docid');"
