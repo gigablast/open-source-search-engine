@@ -1190,10 +1190,11 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		      "valign=top "
 		      "style=\""
 		      "width:210px;"
+		       "max-width:210px;"
 		      "border-right:3px solid blue;"
 		      "\">"
 
-		      "<br>"
+		      "<br style=line-height:14px;>"
 
 		      "<center>"
 		      "<a href=/?c=%s>"
@@ -1269,7 +1270,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       //"max-width:200px;"
 		       //"min-width:200px;"
 
-		       "width:200px;"
+		       "width:190px;"
 
 		       "padding:4px;" // same as TABLE_STYLE
 		       "margin-left:10px;"

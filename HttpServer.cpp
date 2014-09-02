@@ -1208,6 +1208,10 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( ! strncmp ( path ,"/widgets.html", pathLen ) )
 		return sendPageWidgets ( s , r );
 
+	// who uses gigablast?
+	if ( ! strncmp ( path ,"/users.html", pathLen ) )
+		return sendPagePretty ( s , r,"users.html","users"); // special
+
 	// decorate the plain html page, news.html, with our nav chrome
 	if ( ! strncmp ( path ,"/news.html", pathLen ) )
 		return sendPagePretty ( s , r , "news.html", "news");

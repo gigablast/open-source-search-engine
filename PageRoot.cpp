@@ -717,6 +717,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		{"ADD URL","/addurl"},
 		{"WIDGETS","/widgets.html"},
 		{"SYNTAX","/syntax.html"},
+		{"USERS","/users.html"},
 		{"ABOUT","/about.html"},
 		{"NEWS","/news.html"},
 		{"FAQ","/faq.html"},
