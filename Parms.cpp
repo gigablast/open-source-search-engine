@@ -20291,7 +20291,7 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 		// nothing? strange. something is not right.
 		if ( ! pn ) { 
-			log("pn is null");
+			log("parms: pn is null");
 			break;
 			char *xx=NULL; *xx=0; 
 		}

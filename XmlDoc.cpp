@@ -36395,8 +36395,16 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinks,rdbId) ) 
 			return NULL;
 	}
+
+	long old2, old3, old4;
+
+	// if running for diffbot crawlbot then isCustomCrawl is true
+	// so do not update the siteinlink info already in tagdb since i 
+	// imported it from my main collection. we do not want to overwrite it.
+	if ( cr->m_isCustomCrawl ) goto skipSiteInlinks;
+
 	// sitenuminlinksfresh
-	long old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
+	old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
 	if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
 	     m_updatingSiteLinkInfoTags )
 		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
@@ -36404,7 +36412,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
 			return NULL;
 	// sitepop
-	long old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
+	old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
 				&timestamp);
 	if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
 	     m_updatingSiteLinkInfoTags )
@@ -36413,7 +36421,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
 			return NULL;
 	// total site inlinks
-	long old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
+	old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
 				&timestamp);
 	if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
 	     m_updatingSiteLinkInfoTags )
@@ -36421,6 +36429,8 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				     now,"xmldoc",
 				    *ip,m_siteNumInlinksTotal,rdbId)) 
 			return NULL;
+
+ skipSiteInlinks:
 
 	// get root title buf from old tag
 	char *data  = NULL;
