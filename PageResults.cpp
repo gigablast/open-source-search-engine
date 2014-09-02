@@ -2360,11 +2360,14 @@ bool printSearchResultsHeader ( State0 *st ) {
 		printLeftNavColumn ( *sb,st );
 	}
 
+	// global-index is not a custom crawl but we should use "objects"
+	bool isDiffbot = cr->m_isCustomCrawl;
+	if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) isDiffbot = true;
 
 	// for diffbot collections only...
-	if ( st->m_header && 
+	if ( st->m_header &&
 	     si->m_format == FORMAT_JSON &&
-	     cr->m_isCustomCrawl ) {
+	     isDiffbot ) {
 		sb->safePrintf("\"objects\":[\n");
 		return true;
 	}
