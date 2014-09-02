@@ -916,8 +916,9 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       "var cd;"
 		       "if ( sd ) cd=sd.firstChild;"
 		       "var fd=0;"
-		       "if(cd) fd=cd.getAttribute('docid');"
-
+		       // if nodetype is 3 that means it says
+		       // 'No results. Waiting for spider to kick in.'
+		       "if(cd && cd.nodeType==1) fd=cd.getAttribute('docid');"
 
 		       // if the searchbox has the focus then do not
 		       // update the content just yet...
@@ -925,9 +926,13 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       "if(qb&&qb==document.activeElement)"
 		       "return;"
 
+		       //"alert(this.responseText);"
+
 		       // or if not forced and they scrolled down
-		       // don't jerk them back up again
-		       "if(!forcing&&sd&&sd.scrollTop!=0)return;"
+		       // don't jerk them back up again. unless
+		       // the inner html starts with 'No results'!
+		       "if(!forcing&&sd&&sd.scrollTop!=0&&cd&&cd.nodeType==1)"
+		       "return;"
 
 
 		       // just set the widget content to the reply
@@ -1303,7 +1308,7 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 	//	      "</style>");
 
 
-	sb->safePrintf("Waiting for Server...");
+	sb->safePrintf("Waiting for Server Response...");
 
 
 	// end the containing div
