@@ -7119,7 +7119,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	*/
 
 
-	if ( catId > 0 ) {
+	if ( catId >= 0 ) {
 		CollectionRec *cr = g_collectiondb.getRec ( hr );
 		printFrontPageShell ( sb , "directory",cr); //  PAGE_DIRECTORY
 	}
@@ -7333,7 +7333,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	*/
 
 	// do not print filter bar if showing a dmoz topic
-	if ( catId == 0 )
+	if ( catId < 0 )
 		printSearchFiltersBar ( sb , hr );
 	
 
