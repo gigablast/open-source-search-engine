@@ -126,7 +126,7 @@ void Loop::reset() {
 static void sigbadHandler ( int x , siginfo_t *info , void *y ) ;
 static void sigpwrHandler ( int x , siginfo_t *info , void *y ) ;
 static void sighupHandler ( int x , siginfo_t *info , void *y ) ;
-static void sigioHandler  ( int x , siginfo_t *info , void *y ) ;
+//static void sigioHandler  ( int x , siginfo_t *info , void *y ) ;
 static void sigalrmHandler( int x , siginfo_t *info , void *y ) ;
 static void sigvtalrmHandler( int x , siginfo_t *info , void *y ) ;
 
@@ -1721,11 +1721,11 @@ bool Loop::runLoop ( ) {
 
 // . the kernel sends a SIGIO signal when the sig queue overflows
 // . we resort to polling the fd's when that happens
-void sigioHandler ( int x , siginfo_t *info , void *y ) {
-	// set the m_needToPoll flag
-	g_loop.m_needToPoll = true;
-	return;
-}
+// void sigioHandler ( int x , siginfo_t *info , void *y ) {
+// 	// set the m_needToPoll flag
+// 	g_loop.m_needToPoll = true;
+// 	return;
+// }
 
 //--- TODO: flush the signal queue after polling until done
 //--- are we getting stale signals resolved by flush so we get
@@ -1832,6 +1832,8 @@ void Loop::doPoll ( ) {
 	g_inWaitState = false;
 
 	if ( n < 0 ) { 
+		// got it
+		//log("loop: got errno=%li",(long)errno);
 		// valgrind
 		if ( errno == EINTR ) {
 			// if shutting own was it a sigterm ?
