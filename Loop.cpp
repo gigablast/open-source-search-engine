@@ -382,6 +382,11 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 		g_errno = errno;
 		return log("loop: fcntl(NONBLOCK): %s.",strerror(errno));
 	}
+
+	// we use select()/poll now so skip stuff below
+	return true;
+
+
  retry8:
 	// tell kernel to send the signal to us when fd is ready for read/write
 	if ( fcntl (fd, F_SETOWN , getpid() ) < 0 ) {
@@ -624,6 +629,10 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 		g_threads.m_needsCleanup = true;
 		return;
 	}
+
+	// the stuff below should no longer be used since we
+	// do not use F_SETSIG now
+	return;
 
 	// extract the file descriptor that needs attention
 	int fd   = info->si_fd;
