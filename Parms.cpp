@@ -12629,7 +12629,7 @@ void Parms::init ( ) {
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_maxSpidersPerRule - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "99";
+	m->m_def   = "300";
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
