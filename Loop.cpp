@@ -48,6 +48,7 @@ bool g_interruptsOn = false;
 bool g_someAreQueued = false;
 
 long g_numAlarms = 0;
+long g_numVTAlarms = 0;
 long g_numQuickPolls = 0;
 long g_missedQuickPolls = 0;
 
@@ -124,6 +125,7 @@ static void sigpwrHandler ( int x , siginfo_t *info , void *y ) ;
 static void sighupHandler ( int x , siginfo_t *info , void *y ) ;
 static void sigioHandler  ( int x , siginfo_t *info , void *y ) ;
 static void sigalrmHandler( int x , siginfo_t *info , void *y ) ;
+static void sigvtalrmHandler( int x , siginfo_t *info , void *y ) ;
 
 long g_fdWriteBits[MAX_NUM_FDS/32];
 long g_fdReadBits [MAX_NUM_FDS/32];
@@ -887,21 +889,26 @@ bool Loop::init ( ) {
  	m_noInterrupt.it_value.tv_usec = 0;
  	m_noInterrupt.it_interval.tv_sec = 0;
  	m_noInterrupt.it_interval.tv_usec = 0;
+	//m_realInterrupt.it_value.tv_sec = 0;
+	//m_realInterrupt.it_value.tv_usec = QUICKPOLL_INTERVAL * 1000;
 
 	// set the interrupts to off for now
-	disableTimer();
+	//mdw:disableTimer();
 
-	//setitimer(ITIMER_REAL, &m_quickInterrupt, NULL);
-	//setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
+	// make this 100ms i guess
+	setitimer(ITIMER_REAL, &m_quickInterrupt, NULL);
+	// this is 10ms
+	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
 
 	sa.sa_sigaction = sigalrmHandler;
 	// it's gotta be real time, not virtual cpu time now
-	//if ( sigaction ( SIGALRM, &sa, 0 ) < 0 ) g_errno = errno;
-	if ( sigaction ( SIGVTALRM, &sa, 0 ) < 0 ) g_errno = errno;
-	if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
-
-
+	if ( sigaction ( SIGALRM, &sa, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) return log("loop: sigaction: %s.", mstrerror(errno));
+
+	// block sigvtalarm
+	sa.sa_sigaction = sigvtalrmHandler;
+	if ( sigaction ( SIGVTALRM, &sa, 0 ) < 0 ) g_errno = errno;
+	if ( g_errno ) log("loop: sigaction SIGVTALRM: %s.", mstrerror(errno));
 
 	// success
 	return true;
@@ -951,8 +958,10 @@ void sigbadHandler ( int x , siginfo_t *info , void *y ) {
 	g_process.shutdown ( true );
 }
 
+void sigvtalrmHandler ( int x , siginfo_t *info , void *y ) {
 
-void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
+	// stats
+	g_numVTAlarms++;
 
 	// see if a niceness 0 algo is hogging the cpu
 	if ( g_callSlot && g_niceness == 0 ) {
@@ -990,8 +999,6 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	}
 
 	g_nowApprox += QUICKPOLL_INTERVAL; // 10 ms
-	// stats
-	g_numAlarms++;
 
 	// sanity check
 	if ( g_loop.m_inQuickPoll && 
@@ -1040,20 +1047,6 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 		//char *xx=NULL;*xx=0; 
 	}
 
-	// . see where we are in the code
-	// . for computing cpu usage
-	// . if idling we will be in sigtimedwait() at the lowest level
-	Host *h = g_hostdb.m_myHost;
-	// . i guess this means we were doing something... (otherwise idle)
-	// . this is KINDA like a 100 point sample, but it has crazy decay
-	//   logic built into it
-	if (h) {
-		if ( ! g_inWaitState )
-			h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 100;
-		else
-			h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 000;
-	}
-
 	// if it has been a while since heartbeat (> 10000ms) dump core so
 	// we can see where the process was... that is a missed quick poll?
 	if ( g_process.m_lastHeartbeatApprox == 0 ) return;
@@ -1067,6 +1060,24 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	}
 
 	//logf(LOG_DEBUG, "xxx now: %lli! approx: %lli", g_now, g_nowApprox);
+
+}
+
+void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
+
+	// stats
+	g_numAlarms++;
+	// . see where we are in the code
+	// . for computing cpu usage
+	// . if idling we will be in sigtimedwait() at the lowest level
+	Host *h = g_hostdb.m_myHost;
+	// . i guess this means we were doing something... (otherwise idle)
+	// . this is KINDA like a 100 point sample, but it has crazy decay
+	//   logic built into it
+	if ( ! g_inWaitState )
+		h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 100;
+	else
+		h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 000;
 }
 
 static sigset_t s_rtmin;
@@ -1157,7 +1168,7 @@ bool Loop::runLoop ( ) {
 	// . makes g_udpServer2 quite jumpy
 	g_loop.interruptsOn();
 
-	enableTimer();
+	//mdw:enableTimer();
 
 	// . now loop forever waiting for signals
 	// . but every second check for timer-based events
@@ -1719,7 +1730,7 @@ void Loop::doPoll ( ) {
 	//if(g_udpServer2.needBottom()) g_udpServer2.makeCallbacks_ass ( 1 );
 
 
-	bool processedOne;
+	//bool processedOne;
 	long n;
 	//	long repeats = 0;
 	// skipLowerPriorities:
@@ -1734,7 +1745,11 @@ void Loop::doPoll ( ) {
 	timeval v;
 	v.tv_sec  = 0;
 	if ( m_inQuickPoll ) v.tv_usec = 0;
-	else                 v.tv_usec = 10 * 1000;  // 10ms for sleepcallbacks
+	// 10ms for sleepcallbacks so they can be called...
+	// and we need this to be the same as sigalrmhandler() since we
+	// keep track of cpu usage here too, since sigalrmhandler is "VT"
+	// based it only goes off when that much "cpu time" has elapsed.
+	else                 v.tv_usec = QUICKPOLL_INTERVAL * 1000;  
 
 	// set descriptors we should watch
 	// MDW: no longer necessary since we have s_selectMaskRead, etc.
@@ -1750,10 +1765,6 @@ void Loop::doPoll ( ) {
 	// }
  again:
 
-	// used to measure cpu usage. sigalarm needs to know if we are
-	// sitting idle in select() or are actively doing something w/ the cpu
-	g_inWaitState = true;
-
 	// gotta copy to our own since bits get cleared by select() function
 	fd_set readfds;
 	fd_set writefds;
@@ -1765,6 +1776,10 @@ void Loop::doPoll ( ) {
 	// what is the point of fds for writing... skip it
 	FD_ZERO ( &writefds );
 	FD_ZERO ( &exceptfds );
+
+	// used to measure cpu usage. sigalarm needs to know if we are
+	// sitting idle in select() or are actively doing something w/ the cpu
+	g_inWaitState = true;
 
 	// for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
 	// 	// continue if not set for reading
@@ -1802,6 +1817,12 @@ void Loop::doPoll ( ) {
 		return;
 	}
 
+	// if we wait for 10ms with nothing happening, fix cpu usage here too
+	// if ( n == 0 ) {
+	// 	Host *h = g_hostdb.m_myHost;
+	// 	h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 000;
+	// }
+
 	// debug msg
 	if ( g_conf.m_logDebugLoop) 
 		logf(LOG_DEBUG,"loop: Got %li fds waiting.",n);
@@ -1826,7 +1847,7 @@ void Loop::doPoll ( ) {
 	//	g_threads.launchThreads();
 	//	return;
 	//}
-	processedOne = false;
+	//processedOne = false;
 
 	// a Slot ptr
 	Slot *s;
@@ -1856,6 +1877,7 @@ void Loop::doPoll ( ) {
 
 	// now keep this fast, too. just check fds we need to.
 	for ( long i = 0 ; i < s_numReadFds ; i++ ) {
+		if ( n == 0 ) break;
 		int fd = s_readFds[i];
 	 	s = m_readSlots  [ fd ];
 	 	// if niceness is not 0, handle it below
@@ -1865,6 +1887,7 @@ void Loop::doPoll ( ) {
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,0);
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
+	//	if ( n == 0 ) break;
 	// 	int fd = s_writeFds[i];
 	//  	s = m_writeSlots  [ fd ];
 	//  	// if niceness is not 0, handle it below
@@ -1885,6 +1908,7 @@ void Loop::doPoll ( ) {
 
 	// now for lower priority fds
 	for ( long i = 0 ; i < s_numReadFds ; i++ ) {
+		if ( n == 0 ) break;
 		int fd = s_readFds[i];
 	 	s = m_readSlots  [ fd ];
 	 	// if niceness is not 0, handle it below
@@ -1894,6 +1918,7 @@ void Loop::doPoll ( ) {
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,1);
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
+	//	if ( n == 0 ) break;
 	// 	int fd = s_writeFds[i];
 	//  	s = m_writeSlots  [ fd ];
 	//  	// if niceness is not 0, handle it below
@@ -1964,7 +1989,6 @@ void Loop::doPoll ( ) {
 	g_now = gettimeofdayInMilliseconds();
 	// call sleepers if they need it
 	// call this every (about) 1 second
-	{
 	long elapsed = g_now - s_lastTime;
 	// if someone changed the system clock on us, this could be negative
 	// so fix it! otherwise, times may NEVER get called in our lifetime
@@ -1976,7 +2000,6 @@ void Loop::doPoll ( ) {
 		s_lastTime = g_now;
 		// handle returned threads for all other nicenesses
 		g_threads.timedCleanUp(4,MAX_NICENESS); // 4 ms
-	}
 	}
 	// debug msg
 	if ( g_conf.m_logDebugLoop ) log(LOG_DEBUG,"loop: Exited doPoll.");
@@ -2418,24 +2441,24 @@ void Loop::disableTimer() {
 }
 
 
-void Loop::enableTimer() {
-	m_canQuickPoll = true;
-	//	logf(LOG_WARN, "xxx enabling");
-	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
-	//setitimer(ITIMER_REAL, &m_quickInterrupt, NULL);
-}
+// void Loop::enableTimer() {
+// 	m_canQuickPoll = true;
+// 	//	logf(LOG_WARN, "xxx enabling");
+// 	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
+// 	//setitimer(ITIMER_REAL, &m_quickInterrupt, NULL);
+// }
 
 
 
 
 //calling with a 0 niceness will turn off the timer interrupt
-void Loop::setitimerInterval(long niceness) {
-	if(niceness) {
-		setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
-		m_canQuickPoll = true;
-	}
-	else {
-		setitimer(ITIMER_VIRTUAL, &m_noInterrupt, NULL);
-		m_canQuickPoll = false;
-	}
-}
+// void Loop::setitimerInterval(long niceness) {
+// 	if(niceness) {
+// 		setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
+// 		m_canQuickPoll = true;
+// 	}
+// 	else {
+// 		setitimer(ITIMER_VIRTUAL, &m_noInterrupt, NULL);
+// 		m_canQuickPoll = false;
+// 	}
+// }

@@ -89,6 +89,7 @@ extern long long g_nowApprox;
 
 // count of how many SIGVTALRM signals we had so far
 extern long g_numAlarms;
+extern long g_numVTAlarms;
 extern long g_numQuickPolls;
 
 extern char g_niceness ;
@@ -165,6 +166,7 @@ class Loop {
 	bool        m_needsToQuickPoll;
 	bool        m_canQuickPoll;
 	itimerval   m_quickInterrupt;
+	itimerval   m_realInterrupt;
 	itimerval   m_noInterrupt;
 	// call this when you don't want to be interrupted
 	void interruptsOff ( ) ;
