@@ -1787,7 +1787,16 @@ void Loop::doPoll ( ) {
 
 	if ( n < 0 ) { 
 		// valgrind
-		if ( errno == EINTR ) goto again;
+		if ( errno == EINTR ) {
+			// if shutting own was it a sigterm ?
+			if ( m_shutdown ) goto again;
+			// handle returned threads for niceness 0
+			g_threads.timedCleanUp(3,0); // 3 ms
+			if ( m_inQuickPoll ) goto again;
+			// high niceness threads
+			g_threads.timedCleanUp(4,MAX_NICENESS); // 3 ms
+			goto again;
+		}
 		g_errno = errno;
 		log("loop: select: %s.",strerror(g_errno));
 		return;
