@@ -1162,6 +1162,31 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	long page = g_pages.getDynamicPageNumber ( r );
 
+	char format = r->getReplyFormat();
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	char *action = r->getString("action",NULL);
+	if ( page == PAGE_BASIC_SETTINGS &&
+	     // this is non-null if handling a submit request
+	     action && 
+	     format == FORMAT_HTML ) {
+		//return g_parms.sendPageGeneric ( s, r, PAGE_BASIC_SETTINGS );
+		// just redirect to it
+		char *coll = r->getString("c",NULL);
+		if ( coll ) {
+			sb->safePrintf("<meta http-equiv=Refresh "
+				      "content=\"0; URL=/widgets.html"
+				      "?guide=1&c=%s\">",
+				      coll);
+			return g_httpServer.sendDynamicPage (s,
+							     sb->getBufStart(),
+							     sb->length());
+		}
+	}
+
+
 	//
 	// some "generic" pages do additional processing on the provided input
 	// so we need to call those functions here...
@@ -1176,7 +1201,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	//}
 
 	// print standard header
-	char format = r->getReplyFormat();
 	if ( format != FORMAT_XML && format != FORMAT_JSON )
 		g_pages.printAdminTop ( sb , s , r );
 
@@ -2990,6 +3014,14 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		if ( fromRequest ) oldVal = *(float *)(THIS + m->m_off + 4*j);
 		*(float *)(THIS + m->m_off + 4*j) = (float)atof ( s );
 		newVal = *(float *)(THIS + m->m_off + 4*j);
+		goto changed; }
+	else if ( t == TYPE_DOUBLE ) {
+		if( fromRequest &&
+		    *(double *)(THIS + m->m_off + 4*j) == (double)atof ( s ) ) 
+			return;
+		if ( fromRequest ) oldVal = *(double *)(THIS + m->m_off + 4*j);
+		*(double *)(THIS + m->m_off + 4*j) = (double)atof ( s );
+		newVal = *(double *)(THIS + m->m_off + 4*j);
 		goto changed; }
 	else if ( t == TYPE_IP ) {
 		if ( fromRequest && *(long *)(THIS + m->m_off + 4*j) == 
@@ -5638,7 +5670,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Remove all documents from the collection and re-add "
 		"seed urls from site list.";
 	// If you do this accidentally there "
-	//"is a <a href=/admin.html#recover>recovery procedure</a> to "
+	//"is a <a href=/faq.html#recover>recovery procedure</a> to "
 	//	"get back the trashed data.";
 	m->m_cgi   = "restart";
 	m->m_page  = PAGE_BASIC_SETTINGS;
@@ -6064,6 +6096,25 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// used to prevent a guest ip adding more than one coll
+	m->m_title = "user ip";
+	m->m_desc  = "IP of user adding collection.";
+	m->m_cgi   = "userip";
+	m->m_xml   = "userIp";
+	m->m_off   = (char *)&cr.m_userIp - x;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = 16;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;// | PF_NOSAVE;
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 
 	m->m_title = "add custom crawl";
 	m->m_desc  = "add custom crawl";
@@ -9061,7 +9112,7 @@ void Parms::init ( ) {
 
 	m->m_title = "admin override";
 	m->m_desc  = "admin override";
-	m->m_off   = (char *)&si.m_isAdmin - y;
+	m->m_off   = (char *)&si.m_isRootAdmin - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_cgi   = "admin";
@@ -9456,7 +9507,11 @@ void Parms::init ( ) {
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously for ALL collections PER HOST?";
+		"simultaneously for ALL collections PER HOST? Caution: "
+		"raising this too high could result in some Out of Memory "
+		"(OOM) errors. The hard limit is currently 300. Each "
+		"collection has its own limit in the <i>spider controls</i> "
+		"that you may have to increase as well.";
 	m->m_cgi   = "mtsp";
 	m->m_off   = (char *)&g_conf.m_maxTotalSpiders - g;
 	m->m_type  = TYPE_LONG;
@@ -9487,6 +9542,18 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+
+	m->m_title = "allow cloud users";
+	m->m_desc  = "Can guest users create a collection?";
+	m->m_cgi   = "acu";
+	m->m_off   = (char *)&g_conf.m_allowCloudUsers - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "auto save frequency";
 	m->m_desc  = "Save data in memory to disk after this many minutes "
@@ -11899,7 +11966,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "50";
+	m->m_def   = "100";
 	m->m_units = "threads";
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
@@ -11911,7 +11978,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmbdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "30"; // 1
+	m->m_def   = "60"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -11924,7 +11991,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "30"; // 3
+	m->m_def   = "80"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -11937,7 +12004,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmsdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "40";
+	m->m_def   = "80";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -15718,11 +15785,14 @@ void Parms::init ( ) {
 	m->m_title = "max spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously PER HOST for THIS collection?";
+		"simultaneously PER HOST for THIS collection? The "
+		"maximum number of spiders over all collections is "
+		"controlled in the <i>master controls</i>.";
 	m->m_cgi   = "mns";
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
+	// make it the hard max so control is really in the master controls
+	m->m_def   = "300";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -19594,10 +19664,36 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 // returns false and sets g_errno on error
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
-					  long page ){
+					  long page , TcpSocket *sock ) {
 
 	// false = useDefaultRec?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// if not the root admin only all user to change settings, etc.
+	// if the collection rec is a guest collection. i.e. in the cloud.
+	//
+	bool isRootAdmin = g_conf.isRootAdmin(sock,hr);
+	bool isRootColl = false;
+	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
+	// the main,dmoz and demo collections are root admin only
+	if ( ! isRootAdmin && isRootColl ) {
+		g_errno = ENOPERM;
+		return log("parms: root admin can only change main/dmoz/demo"
+			   " collections.");
+	}
+	// just knowing the collection name is enough for a cloud user to
+	// modify the collection's parms. however, to modify the master 
+	// controls or stuff in g_conf, you have to be root admin.
+	if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
+		g_errno = ENOPERM;
+		return log("parms: permission denied for user");
+	}
+
 
 	//if ( c ) {
 	//	cr = g_collectiondb.getRec ( hr );
@@ -19792,6 +19888,13 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			// given as a string.
 			val = oldCollName;
 
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// master controls require root permission
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
 		// add the cmd parm
 		if ( ! addNewParmToList2 ( parmList ,
 					   // it might be a collection-less
@@ -19831,6 +19934,29 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 
 	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// provide userip so when adding a new collection we can
+	// store it in the collection rec to ensure that the same
+	// IP address cannot add more than one collection.
+	//
+	if ( sock && page == PAGE_ADDCOLL ) {
+		char *ipStr = iptoa(sock->m_ip);
+		long occNum;
+		Parm *um = getParmFast1 ( "userip" , &occNum); // NULL = occNum
+		if ( ! addNewParmToList2 ( parmList ,
+					   // HACK! operate on the to-be-added
+					   // collrec, if there was an addcoll
+					   // reset or restart coll cmd...
+					   parmCollnum ,
+					   ipStr, // val ,
+					   occNum ,
+					   um ) )
+			return false;
+	}
+
+
+	//
 	// now add the parms that are NOT commands
 	//
 	
@@ -19849,6 +19975,35 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// convert field to parm
 		long occNum;
 		Parm *m = getParmFast1 ( field , &occNum );
+
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// master controls require root permission. otherwise, just
+		// knowing the collection name is enough for a cloud user
+		// to change settings.
+		//
+		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// if this IP c-block as already added a collection then do not
+		// allow it to add another.
+		//
+		if ( m && strcmp(m->m_cgi,"addcoll")==0 && ! isRootAdmin ) {
+			// see if user's c block has already added a collection
+			long numAdded = 0;
+			if ( numAdded >= 1 ) {
+				g_errno = ENOPERM;
+				log("parms: already added a collection from "
+				    "this cloud user's c-block.");
+				return false;
+			}
+		}
+
 
 		//
 		// map "pause" to spidering enabled

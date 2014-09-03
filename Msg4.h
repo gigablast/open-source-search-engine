@@ -78,7 +78,8 @@ class Msg4 {
 	bool addMetaList2 ( );
 
 	Msg4() { m_inUse = false; };
-	~Msg4() { if ( m_inUse ) { char *xx=NULL;*xx=0; } };
+	// why wasn't this saved in addsinprogress.dat file?
+	~Msg4() { if ( m_inUse ) log("BAD: MSG4 in use!!!!!!"); };
 
 	// injecting into the "test" collection likes to flush the buffers
 	// after each injection to make sure the data is available for

@@ -36,7 +36,7 @@ public:
 	HttpRequest m_r;
 	char m_coll[MAX_COLL_LEN+2];
 	//CollectionRec *m_cr;
-	bool       m_isAdmin;
+	bool       m_isRootAdmin;
 	bool       m_isLocal;
 	//bool       m_seq;
 	bool       m_rtq;
@@ -131,7 +131,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	mnew ( st , sizeof(State2) , "PageGet1" );
 	// save the socket and if Host: is local in the Http request Mime
 	st->m_socket   = s;
-	st->m_isAdmin  = g_conf.isCollAdmin ( s , r );
+	st->m_isRootAdmin  = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal  = r->isLocal();
 	st->m_docId    = docId;
 	st->m_printed  = false;
@@ -284,7 +284,7 @@ bool processLoop ( void *state ) {
 	// error?
 	if ( ! na ) return sendErrorReply ( st , g_errno );
 	// forbidden? allow turkeys through though...
-	if ( ! st->m_isAdmin && *na )
+	if ( ! st->m_isRootAdmin && *na )
 		return sendErrorReply ( st , ENOCACHE );
 
 	SafeBuf *sb = &st->m_sb;
@@ -332,7 +332,7 @@ bool processLoop ( void *state ) {
 	// error?
 	if ( ! vi ) return sendErrorReply ( st , g_errno );
 	// banned?
-	if ( ! st->m_isAdmin && ! *vi ) return sendErrorReply (st,EDOCBANNED);
+	if ( ! st->m_isRootAdmin && ! *vi ) return sendErrorReply (st,EDOCBANNED);
 	*/
 
 	// get the utf8 content

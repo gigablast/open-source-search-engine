@@ -777,7 +777,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		sb->safePrintf("      ");//,gi->m_numPages);
 		sb->safePrintf("</font>");
 		sb->safePrintf("</b>");
-		if ( si->m_isAdmin && 1 == 2 ) 
+		if ( si->m_isRootAdmin && 1 == 2 ) 
 			sb->safePrintf("[%.0f]{%li}",
 				       gi->m_gbscore,
 				       gi->m_minPop);
@@ -1069,7 +1069,7 @@ static bool printGigabit ( State0 *st,
 	sb->safePrintf("(%li)",gi->m_numPages);
 	sb->safePrintf("</font>");
 	sb->safePrintf("</b>");
-	if ( si->m_isAdmin ) 
+	if ( si->m_isRootAdmin ) 
 		sb->safePrintf("[%.0f]{%li}",
 			      gi->m_gbscore,
 			      gi->m_minPop);
@@ -2513,7 +2513,7 @@ bool printSearchResultsHeader ( State0 *st ) {
         Query qq3;
 	Query *qq2;
 	bool firstIgnored;
-	bool isAdmin = si->m_isAdmin;
+	bool isAdmin = si->m_isRootAdmin;
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	// otherwise, we had no error
@@ -2971,9 +2971,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	char abuf[300];
 	SafeBuf args(abuf,300);
 	// show banned?
-	if ( si->m_showBanned && ! si->m_isAdmin )
+	if ( si->m_showBanned && ! si->m_isRootAdmin )
 		args.safePrintf("&sb=1");
-	if ( ! si->m_showBanned && si->m_isAdmin )
+	if ( ! si->m_showBanned && si->m_isRootAdmin )
 		args.safePrintf("&sb=0");
 
 	//HttpRequest *hr = &st->m_hr;
@@ -3089,7 +3089,7 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf("<input name=c type=hidden value=\"%s\">",coll);
 	}
 
-	bool isAdmin = si->m_isAdmin;
+	bool isAdmin = si->m_isRootAdmin;
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	if ( isAdmin && banSites.length() > 0 )
@@ -3228,7 +3228,7 @@ bool printTimeAgo ( SafeBuf *sb , long ts , char *prefix , SearchInput *si ) {
 	else if (days< 7 )sb->safePrintf ( " - %s: %li days ago",prefix,days);
 	// do not show if more than 1 wk old! we want to seem as
 	// fresh as possible
-	else if ( ts > 0 ) { // && si->m_isAdmin ) {
+	else if ( ts > 0 ) { // && si->m_isRootAdmin ) {
 		struct tm *timeStruct = localtime ( &ts );
 		sb->safePrintf(" - %s: ",prefix);
 		char tmp[100];
@@ -3429,8 +3429,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 	char format = si->m_format;
 	// these are handled in the <dmozEntry> logic below now
-	if ( format == FORMAT_XML ) return true;
-	if ( format == FORMAT_JSON ) return true;
+	if ( format != FORMAT_HTML ) return true;
 
 	// if ( format == FORMAT_XML ) {
 	// 	sb->safePrintf("\t\t<dmozCat>\n"
@@ -3694,7 +3693,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// indent it if level is 2
 	bool indent = false;
 
-	bool isAdmin = si->m_isAdmin;
+	bool isAdmin = si->m_isRootAdmin;
 	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
 	//unsigned long long lastSiteHash = siteHash;
@@ -3773,10 +3772,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				   url,mr->ptr_imgUrl);
 
 	// if we have a thumbnail show it next to the search result,
-	// base64 encoded
-	if ( //(si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
+	// base64 encoded. do NOT do this for the WIDGET, only for search
+	// results in html/xml.
+	if ( (si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
-	    si->m_showImages && mr->ptr_imgData ) {
+	     si->m_showImages && mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 		if ( si->m_format == FORMAT_XML )
@@ -3818,6 +3818,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		}
 	}
 
+	bool isWide = false;
+	long newdx = 0;
+
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
@@ -3829,6 +3832,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// prevent coring
 		if ( widgetWidth < 1 ) widgetWidth = 1;
 
+		// char *bg1 = "lightgray";
+		// char *bg2 = "white";
+		// char *bgcolor = bg1;
+		// if ( (ix % 1) == 1 ) bgcolor = bg2;
+
 		// each search result in widget has a div around it
 		sb->safePrintf("<div "
 			       "class=result "
@@ -3838,13 +3846,19 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       // using the scripts in PageBasic.cpp
 			       "docid=%lli "
 			       "score=%f " // double
-			       
+
 			       "style=\""
 			       "width:%lipx;"
 			       "min-height:%lipx;"//140px;"
 			       "height:%lipx;"//140px;"
 			       "padding:%lipx;"
+			       //"padding-right:40px;"
 			       "position:relative;"
+			       // summary overflows w/o this!
+			       "overflow-y:hidden;"
+			       "overflow-x:hidden;"
+			       // alternate bg color to separate results!
+			       //"background-color:%s;"
 			       //"display:table-cell;"
 			       //"vertical-align:bottom;"
 			       "\""
@@ -3853,10 +3867,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       // this is a double now. this won't work
 			       // for streaming...
 			       , msg40->m_msg3a.m_scores[ix]
-			       , widgetWidth - 2*8 // padding is 8px
+			       // subtract 8 for scrollbar on right
+			       , widgetWidth - 2*8 - 8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
+			       //, bgcolor
 			       );
 		// if ( mr->ptr_imgUrl )
 		// 	sb->safePrintf("background-repeat:no-repeat;"
@@ -3864,7 +3880,6 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// 		       "background-image:url('%s');"
 		// 		       , widgetwidth - 2*8 // padding is 8px
 		// 		       , mr->ptr_imgUrl);
-		long newdx = 0;
 		if ( mr->ptr_imgData ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
@@ -3892,13 +3907,15 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 		// if thumbnail is wide enough put text on top of it, otherwise
 		// image is to the left and text is to the right of image
-		if ( newdx > .5 * widgetWidth )
+		if ( newdx > .5 * widgetWidth ) {
+			isWide = true;
 			sb->safePrintf("position:absolute;"
 				       "bottom:%li;"
 				       "left:%li;"
 				       , (long) PADDING 
 				       , (long) PADDING 
 				       );
+		}
 		// to align the text verticall we gotta make a textbox div
 		// otherwise it wraps below image! mdw
 		//else
@@ -3907,7 +3924,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf("position:absolute;"
 				       "bottom:%li;"
 				       "left:%li;"
-				       , (long) PADDING 
+				       , (long) PADDING
 				       , (long) PADDING + newdx + 10 );
 
 		// close the style and begin the url
@@ -4279,11 +4296,27 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	bool printSummary = true;
 	// do not print summaries for widgets by default unless overridden
 	// with &summary=1
+	long defSum = 0;
+	// if no image then default the summary to on
+	if ( ! mr->ptr_imgData ) defSum = 1;
+
 	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
 	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) && 
-	     hr->getLong("summaries",0) == 0 )
+	     hr->getLong("summaries",defSum) == 0 ) 
 		printSummary = false;
+
+	if ( printSummary &&
+	     (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
+	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
+		long sumLen = strLen;
+		if ( sumLen > 150 ) sumLen = 150;
+		if ( sumLen ) {
+			sb->safePrintf("<br>");
+			sb->safeTruncateEllipsis ( str , sumLen );
+		}
+	}
 
 	if ( printSummary && si->m_format == FORMAT_HTML )
 		sb->brify ( str , strLen, 0 , cols ); // niceness = 0
@@ -4421,6 +4454,31 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// turn off the color
 		sb->safePrintf ( "</font>\n" );
 	}
+
+	// print url for widgets now
+	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
+	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
+		//sb->safePrintf ("<br><font color=gray size=-1>" );
+		// print url for widgets in top left if we have a wide image
+		// otherwise it gets truncated below the title for some reason
+		if ( isWide )
+			sb->safePrintf ("<br><font color=white size=-1 "
+					"style=position:absolute;left:10px;"
+					"top:10px;background-color:black;>" );
+		else if ( mr->ptr_imgData )
+			sb->safePrintf ("<br><font color=gray size=-1 "
+					"style=position:absolute;left:%lipx;"
+					"top:10px;>"
+				       , (long) PADDING + newdx + 10 );
+		else
+			sb->safePrintf ("<br><font color=gray size=-1>");
+		// print the url now, truncated to 50 chars
+		sb->safeTruncateEllipsis ( url , 50 ); // cols - 30 );
+		sb->safePrintf ( "</font>\n" );
+	}
+
+
 	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t\t<url><![CDATA[");
 		sb->safeMemcpy ( url , urlLen );
@@ -5029,7 +5087,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX )
-		sb->safePrintf("</div>");
+		sb->safePrintf("</div><hr>");
 	
 
 	if ( si->m_format == FORMAT_HTML )
@@ -6991,7 +7049,7 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 	//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
 	if (dirIndex < 0) dirIndex = 0;
 	//   display the directory bread crumb
-	//if( (si->m_cat_dirId > 0 && si->m_isAdmin && !si->m_isFriend)
+	//if( (si->m_cat_dirId > 0 && si->m_isRootAdmin && !si->m_isFriend)
 	//     || (si->m_cat_sdir > 0 && si->m_cat_sdirt != 0) )
 	//	sb->safePrintf("<br><br>");
 	// shortcut. rtl=Right To Left language format.
@@ -7028,6 +7086,8 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr) ;
+
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			     SearchInput *si ) {
@@ -7039,6 +7099,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	// now make a TABLE, left PANE contains gigabits and stuff
 
 
+	/*
 	sb->safePrintf(
 		      // logo and menu table
 		      "<table border=0 cellspacing=5>"
@@ -7058,6 +7119,13 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		      "<td>"
 		      //, root
 		      );
+	*/
+
+
+	if ( catId >= 0 ) {
+		CollectionRec *cr = g_collectiondb.getRec ( hr );
+		printFrontPageShell ( sb , "directory",cr); //  PAGE_DIRECTORY
+	}
 
 	/*
 	// menu above search box
@@ -7169,7 +7237,11 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	
 
 	// put search box in a box
-	sb->safePrintf("<div style="
+	sb->safePrintf(
+		       "<br>"
+		       "<br>"
+		       "<br>"
+		       "<div style="
 		       "background-color:#fcc714;"
 		       "border-style:solid;"
 		       "border-width:3px;"
@@ -7178,6 +7250,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 		       "padding:20px;"
 		       "border-radius:20px;"
 		       ">");
+
 
 	sb->safePrintf (
 			//"<div style=margin-left:5px;margin-right:5px;>
@@ -7232,15 +7305,20 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			"<b style=margin-left:-5px;font-size:18px;"
 			">GO</b>"
 			"</div>"
+			);
 
 
-			"</div>"
+	// print "Search [ ] sites  [ ] pages in this topic or below"
+	if ( catId >= 0 ) {
+		sb->safePrintf("<br>");
+		printDmozRadioButtons(sb,catId);
+	}
+
+	sb->safePrintf(	"</div>"
 			"<br>"
 			"<br>"
 		       );
-	if ( catId >= 0 ) {
-		printDmozRadioButtons(sb,catId);
-	}
+
 	/*
 	else {
 		sb->safePrintf("Try your search on: "
@@ -7257,13 +7335,15 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	}
 	*/
 
-	printSearchFiltersBar ( sb , hr );
+	// do not print filter bar if showing a dmoz topic
+	if ( catId < 0 )
+		printSearchFiltersBar ( sb , hr );
 	
 
 	sb->safePrintf( "</form>\n"
-		       "</td>"
-		       "</tr>"
-		       "</table>\n"
+		       // 	"</td>"
+		       // "</tr>"
+		       // "</table>\n"
 		       );
 	return true;
 }
@@ -8366,6 +8446,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PostScript";
 		s_mi[n].m_cgi      = "filetype=ps";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "Spider Status";
+		s_mi[n].m_cgi      = "filetype=status";
 		n++;
 
 		// facets
