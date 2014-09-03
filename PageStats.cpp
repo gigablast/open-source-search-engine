@@ -807,6 +807,11 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>SIGALRMS</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
+
+			      "<tr class=poo><td><b>SIGCHLDS</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>SIGQUEUES</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>SIGOTHERS</b></td><td>%li</td></tr>\n"
+
 			      "<tr class=poo><td><b>read signals</b></td><td>%lli</td></tr>\n"
 			      "<tr class=poo><td><b>write signals</b></td><td>%lli</td></tr>\n"
 			      "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
@@ -827,6 +832,11 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      g_numCorrupt,
 			      g_numAlarms,
 			      g_numVTAlarms,
+
+			      g_numSigChlds,
+			      g_numSigQueues,
+			      g_numSigOthers,
+
 			      g_stats.m_readSignals,
 			      g_stats.m_writeSignals,
 			      g_numQuickPolls,

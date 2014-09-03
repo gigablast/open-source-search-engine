@@ -51,6 +51,9 @@ long g_numAlarms = 0;
 long g_numVTAlarms = 0;
 long g_numQuickPolls = 0;
 long g_missedQuickPolls = 0;
+long g_numSigChlds = 0;
+long g_numSigQueues = 0;
+long g_numSigOthers = 0;
 
 // since we can't call gettimeofday() while in a sig handler, we use this
 // and update it periodically to keep it somewhat accurate
@@ -617,6 +620,7 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 
 	// if we just needed to cleanup a thread
 	if ( info->si_signo == SIGCHLD ) {
+		g_numSigChlds++;
 		// this has no fd really, Threads.cpp just sends it when
 		// the thread is done
 		g_threads.m_needsCleanup = true;
@@ -624,11 +628,15 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 	}
 
 	if ( info->si_code == SI_QUEUE ) {
+		g_numSigQueues++;
 		//log("admin: got sigqueue");
 		// the thread is done
 		g_threads.m_needsCleanup = true;
 		return;
 	}
+
+	// wtf is this?
+	g_numSigOthers++;
 
 	// the stuff below should no longer be used since we
 	// do not use F_SETSIG now

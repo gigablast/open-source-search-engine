@@ -92,6 +92,11 @@ extern long g_numAlarms;
 extern long g_numVTAlarms;
 extern long g_numQuickPolls;
 
+extern long g_numSigChlds;
+extern long g_numSigQueues;
+extern long g_numSigOthers;
+
+
 extern char g_niceness ;
 
 // we make sure the same callback/handler is not hogging the cpu when it is
