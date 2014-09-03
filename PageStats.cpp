@@ -812,8 +812,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<tr class=poo><td><b>SIGQUEUES</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>SIGOTHERS</b></td><td>%li</td></tr>\n"
 
-			      "<tr class=poo><td><b>read signals</b></td><td>%lli</td></tr>\n"
-			      "<tr class=poo><td><b>write signals</b></td><td>%lli</td></tr>\n"
+			      //"<tr class=poo><td><b>read signals</b></td><td>%lli</td></tr>\n"
+			      //"<tr class=poo><td><b>write signals</b></td><td>%lli</td></tr>\n"
 			      "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
 			      "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
@@ -837,8 +837,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      g_numSigQueues,
 			      g_numSigOthers,
 
-			      g_stats.m_readSignals,
-			      g_stats.m_writeSignals,
+			      //g_stats.m_readSignals,
+			      //g_stats.m_writeSignals,
 			      g_numQuickPolls,
 			      kv , 
 			      //GBPROJECTNAME,

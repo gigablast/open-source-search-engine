@@ -763,10 +763,11 @@ long Threads::timedCleanUp (long maxTime, long niceness) {
 			m_threadQueues[j].timedCleanUp ( i );
 
 		launchThreads();
+
+		if ( maxTime < 0 ) continue;
+
 		took = startTime - gettimeofdayInMillisecondsLocal();
-
 		if ( took <= maxTime ) continue;
-
 		// ok, we have to cut if short...
 		m_needsCleanup = true;
 		break;
@@ -2347,7 +2348,10 @@ int startUp ( void *state ) {
 
 	// . it does not send us a signal automatically, so we must do it!
 	// . i noticed during the linkdb rebuild we were not getting the signal
-	sigqueue ( s_pid, GB_SIGRTMIN + 1 + t->m_niceness, svt ) ;
+	//sigqueue ( s_pid, GB_SIGRTMIN + 1 + t->m_niceness, svt ) ;
+
+	// try a sigchld now! doesn't it already do this? no...
+	sigqueue ( s_pid, SIGCHLD, svt ) ;
 
 	return 0;
 }

@@ -121,8 +121,8 @@ void Loop::reset() {
 	*/
 }
 
-static void sigHandler_r  ( int x , siginfo_t *info , void *v ) ;
-static void sigHandlerRT  ( int x , siginfo_t *info , void *v ) ;
+//static void sigHandler_r  ( int x , siginfo_t *info , void *v ) ;
+//static void sigHandlerRT  ( int x , siginfo_t *info , void *v ) ;
 static void sigbadHandler ( int x , siginfo_t *info , void *y ) ;
 static void sigpwrHandler ( int x , siginfo_t *info , void *y ) ;
 static void sighupHandler ( int x , siginfo_t *info , void *y ) ;
@@ -389,6 +389,7 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 	// we use select()/poll now so skip stuff below
 	return true;
 
+	/*
 
  retry8:
 	// tell kernel to send the signal to us when fd is ready for read/write
@@ -413,13 +414,14 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 	// . tell kernel to send this signal when fd is ready for read/write
 	// . reserve GB_SIGRTMIN for unmaskable interrupts (niceness = -1)
 	//   as used by high priority udp server, g_udpServer2
-	if ( fcntl (fd, F_SETSIG , GB_SIGRTMIN/*32?*/ + 1 + niceness ) < 0 ) {
+	if ( fcntl (fd, F_SETSIG , GB_SIGRTMIN + 1 + niceness ) < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry6;
 		g_errno = errno;
 		return log("loop: fcntl(F_SETSIG): %s.",strerror(errno));
 	}
 	return true;
+	*/
 }
 
 // . if "forReading" is true  call callbacks registered for reading on "fd" 
@@ -642,6 +644,7 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 	// do not use F_SETSIG now
 	return;
 
+	/*
 	// extract the file descriptor that needs attention
 	int fd   = info->si_fd;
 
@@ -653,12 +656,12 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 	// set the right callback
 	
 	// info->si_band values:
-	//#define POLLIN      0x0001    /* There is data to read */
-        //#define POLLPRI     0x0002    /* There is urgent data to read */
-	//#define POLLOUT     0x0004    /* Writing now will not block */
-	//#define POLLERR     0x0008    /* Error condition */
-	//#define POLLHUP     0x0010    /* Hung up */
-	//#define POLLNVAL    0x0020    /* Invalid request: fd not open */
+	//#define POLLIN      0x0001    // There is data to read 
+        //#define POLLPRI     0x0002    // There is urgent data to read 
+	//#define POLLOUT     0x0004    // Writing now will not block 
+	//#define POLLERR     0x0008    // Error condition 
+	//#define POLLHUP     0x0010    // Hung up 
+	//#define POLLNVAL    0x0020    // Invalid request: fd not open
 	int band = info->si_band;  
 	// translate SIGPIPE's to band of POLLHUP
 	if ( info->si_signo == SIGPIPE ) {
@@ -671,7 +674,7 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 	// . NOTE: when it's connected it sets both POLLIN and POLLOUT
 	// . NOTE: or when a socket is trying to connect to it if it's listener
 	//if      ( band & (POLLIN | POLLOUT) == (POLLIN | POLLOUT) ) 
-	// g_loop.callCallbacks_ass ( true/*forReading?*/ , fd );
+	// g_loop.callCallbacks_ass ( true , fd ); // for reading
 	if ( band & POLLIN  ) {
 		// keep stats on this now since some linuxes dont work right
 		g_stats.m_readSignals++;
@@ -707,6 +710,7 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 		// it is ready for writing i guess
 		g_fdWriteBits[fd/32] = 1<<(fd%32);
 	}
+	*/
 }
 
 
@@ -762,12 +766,12 @@ bool Loop::init ( ) {
 	sigset_t sigs;
 	sigemptyset ( &sigs                );	
 	sigaddset   ( &sigs , SIGPIPE      ); //if we write to a close socket
-#ifndef _VALGRIND_
-	sigaddset   ( &sigs , GB_SIGRTMIN     );
-#endif
-	sigaddset   ( &sigs , GB_SIGRTMIN + 1 );
-	sigaddset   ( &sigs , GB_SIGRTMIN + 2 );
-	sigaddset   ( &sigs , GB_SIGRTMIN + 3 );
+// #ifndef _VALGRIND_
+// 	sigaddset   ( &sigs , GB_SIGRTMIN     );
+// #endif
+// 	sigaddset   ( &sigs , GB_SIGRTMIN + 1 );
+// 	sigaddset   ( &sigs , GB_SIGRTMIN + 2 );
+// 	sigaddset   ( &sigs , GB_SIGRTMIN + 3 );
 	sigaddset   ( &sigs , SIGCHLD      );
 
 #ifdef PTHREADS
@@ -809,10 +813,10 @@ bool Loop::init ( ) {
 	sa2.sa_sigaction = sigHandlerQueue_r;
 	g_errno = 0;
 	if ( sigaction ( SIGPIPE, &sa2, 0 ) < 0 ) g_errno = errno;
-	if ( sigaction ( GB_SIGRTMIN    , &sa2, 0 ) < 0 ) g_errno = errno;
-	if ( sigaction ( GB_SIGRTMIN + 1, &sa2, 0 ) < 0 ) g_errno = errno;
-	if ( sigaction ( GB_SIGRTMIN + 2, &sa2, 0 ) < 0 ) g_errno = errno;
-	if ( sigaction ( GB_SIGRTMIN + 3, &sa2, 0 ) < 0 ) g_errno = errno;
+	// if ( sigaction ( GB_SIGRTMIN    , &sa2, 0 ) < 0 ) g_errno = errno;
+	// if ( sigaction ( GB_SIGRTMIN + 1, &sa2, 0 ) < 0 ) g_errno = errno;
+	// if ( sigaction ( GB_SIGRTMIN + 2, &sa2, 0 ) < 0 ) g_errno = errno;
+	// if ( sigaction ( GB_SIGRTMIN + 3, &sa2, 0 ) < 0 ) g_errno = errno;
 	if ( sigaction ( SIGCHLD, &sa2, 0 ) < 0 ) g_errno = errno;
 	if ( sigaction ( SIGIO, &sa2, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) log("loop: sigaction(): %s.", mstrerror(g_errno) );
@@ -823,6 +827,8 @@ bool Loop::init ( ) {
 	//sigemptyset ( &m_sigrtmin );
 	// tmp debug hack, so we don't have real time signals now...
 	//sigaddset   ( &m_sigrtmin, GB_SIGRTMIN );
+
+	/*
 	// now set up a signal handler to handle just/only SIGIO
 	struct sigaction sa;
 	// . sa_mask is the set of signals that should be blocked when
@@ -845,10 +851,10 @@ bool Loop::init ( ) {
 	// clear g_errno
 	g_errno = 0;
 	// now when we got an unblocked GB_SIGRTMIN signal go here right away
-#ifndef _VALGRIND_
-	if ( sigaction ( GB_SIGRTMIN, &sa, 0 ) < 0 ) g_errno = errno;
-	if ( g_errno)log("loop: sigaction GB_SIGRTMIN: %s.", mstrerror(errno));
-#endif
+// #ifndef _VALGRIND_
+// 	if ( sigaction ( GB_SIGRTMIN, &sa, 0 ) < 0 ) g_errno = errno;
+// 	if ( g_errno)log("loop: sigaction GB_SIGRTMIN: %s.", mstrerror(errno));
+// #endif
 
 	// set it this way for SIGIO's
 	sa.sa_flags = SA_SIGINFO ; // | SA_ONESHOT;
@@ -871,7 +877,15 @@ bool Loop::init ( ) {
 	if ( sigaction ( SIGIO, &sa, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) log("loop: sigaction SIGIO: %s.", mstrerror(errno));
 #endif
+	*/
 
+	struct sigaction sa;
+	// . sa_mask is the set of signals that should be blocked when
+	//   we're handling the signal, make this empty
+	// . GB_SIGRTMIN signals will be automatically blocked while we're
+	//   handling a SIGIO signal, so don't worry about that
+	sigemptyset (&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO ; // | SA_ONESHOT;
 
 	// handle HUP signals gracefully by saving and shutting down
 	sa.sa_sigaction = sighupHandler;
@@ -1105,10 +1119,10 @@ void maskSignals() {
 	if ( ! s_init ) {
 		s_init = true;
 		sigemptyset ( &s_rtmin );
-		sigaddset ( &s_rtmin, GB_SIGRTMIN     );
-		sigaddset ( &s_rtmin, GB_SIGRTMIN + 1 );
-		sigaddset ( &s_rtmin, GB_SIGRTMIN + 2 );
-		sigaddset ( &s_rtmin, GB_SIGRTMIN + 3 );
+		// sigaddset ( &s_rtmin, GB_SIGRTMIN     );
+		// sigaddset ( &s_rtmin, GB_SIGRTMIN + 1 );
+		// sigaddset ( &s_rtmin, GB_SIGRTMIN + 2 );
+		// sigaddset ( &s_rtmin, GB_SIGRTMIN + 3 );
 		sigaddset ( &s_rtmin, SIGCHLD );
 		sigaddset ( &s_rtmin, SIGIO   );
 		sigaddset ( &s_rtmin, SIGPIPE ); 
@@ -1153,12 +1167,12 @@ bool Loop::runLoop ( ) {
 	// . set sigs on which sigtimedwait() listens for
 	// . add this signal to our set of signals to watch (currently NONE)
 	sigaddset ( &sigs0, SIGPIPE      ); 
-#ifndef _VALGRIND_
-	sigaddset ( &sigs0, GB_SIGRTMIN     );
-#endif
-	sigaddset ( &sigs0, GB_SIGRTMIN + 1 );
-	sigaddset ( &sigs0, GB_SIGRTMIN + 2 );
-	sigaddset ( &sigs0, GB_SIGRTMIN + 3 );
+// #ifndef _VALGRIND_
+// 	sigaddset ( &sigs0, GB_SIGRTMIN     );
+// #endif
+// 	sigaddset ( &sigs0, GB_SIGRTMIN + 1 );
+// 	sigaddset ( &sigs0, GB_SIGRTMIN + 2 );
+// 	sigaddset ( &sigs0, GB_SIGRTMIN + 3 );
 	sigaddset ( &sigs0, SIGCHLD      );
 	//sigaddset ( &sigs0, SIGVTALRM    );
 	// . TODO: do we need to mask SIGIO too? (sig queue overflow?)
@@ -1823,10 +1837,10 @@ void Loop::doPoll ( ) {
 			// if shutting own was it a sigterm ?
 			if ( m_shutdown ) goto again;
 			// handle returned threads for niceness 0
-			g_threads.timedCleanUp(3,0); // 3 ms
+			g_threads.timedCleanUp(-3,0); // 3 ms
 			if ( m_inQuickPoll ) goto again;
 			// high niceness threads
-			g_threads.timedCleanUp(4,MAX_NICENESS); // 3 ms
+			g_threads.timedCleanUp(-4,MAX_NICENESS); // 3 ms
 			goto again;
 		}
 		g_errno = errno;
@@ -1916,7 +1930,7 @@ void Loop::doPoll ( ) {
 
 		
 	// handle returned threads for niceness 0
-	g_threads.timedCleanUp(3,0); // 3 ms
+	g_threads.timedCleanUp(-3,0); // 3 ms
 
 	//
 	// the stuff below is not super urgent, do not do if in quickpoll
@@ -2000,7 +2014,7 @@ void Loop::doPoll ( ) {
 	// }
 
 	// handle returned threads for all other nicenesses
-	g_threads.timedCleanUp(4,MAX_NICENESS); // 4 ms
+	g_threads.timedCleanUp(-4,MAX_NICENESS); // 4 ms
 
 	// set time
 	g_now = gettimeofdayInMilliseconds();
@@ -2016,7 +2030,7 @@ void Loop::doPoll ( ) {
 		// note the last time we called them
 		s_lastTime = g_now;
 		// handle returned threads for all other nicenesses
-		g_threads.timedCleanUp(4,MAX_NICENESS); // 4 ms
+		g_threads.timedCleanUp(-4,MAX_NICENESS); // 4 ms
 	}
 	// debug msg
 	if ( g_conf.m_logDebugLoop ) log(LOG_DEBUG,"loop: Exited doPoll.");
@@ -2038,9 +2052,9 @@ void Loop::interruptsOff ( ) {
 	sigset_t rtmin;
 	sigemptyset ( &rtmin );
 	// tmp debug hack, so we don't have real time signals now...
-#ifndef _VALGRIND_
-	sigaddset   ( &rtmin, GB_SIGRTMIN );
-#endif
+// #ifndef _VALGRIND_
+// 	sigaddset   ( &rtmin, GB_SIGRTMIN );
+// #endif
 	// block it
 	if ( sigprocmask ( SIG_BLOCK  , &rtmin, 0 ) < 0 ) {
 		log("loop: interruptsOff: sigprocmask: %s.", strerror(errno));
@@ -2063,9 +2077,9 @@ void Loop::interruptsOn ( ) {
 	sigset_t rtmin;
 	sigemptyset ( &rtmin );
 	// uncomment this next line to easily disable real time interrupts
-#ifndef _VALGRIND_
-	sigaddset   ( &rtmin, GB_SIGRTMIN );
-#endif
+// #ifndef _VALGRIND_
+// 	sigaddset   ( &rtmin, GB_SIGRTMIN );
+// #endif
 	// debug msg
 	//log("interruptsOn");
 	// let everyone know before we are vulnerable to an interrupt
@@ -2077,6 +2091,7 @@ void Loop::interruptsOn ( ) {
 	}
 }
 
+/*
 // handle hot real time signals here
 void sigHandlerRT ( int x , siginfo_t *info , void *v ) {
 	// if we're not hot, what are we doing here?
@@ -2115,7 +2130,9 @@ void sigHandlerRT ( int x , siginfo_t *info , void *v ) {
 	// debug msg
 	//fprintf (stderr,"out of rt handler\n");
 }
+*/
 
+/*
 // come here when we get a GB_SIGRTMIN+X signal
 void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 
@@ -2141,22 +2158,20 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 	// clear g_errno before callling handlers
 	g_errno = 0;
 	// info->si_band values:
-	//#define POLLIN      0x0001    /* There is data to read */
-        //#define POLLPRI     0x0002    /* There is urgent data to read */
-	//#define POLLOUT     0x0004    /* Writing now will not block */
-	//#define POLLERR     0x0008    /* Error condition */
-	//#define POLLHUP     0x0010    /* Hung up */
-	//#define POLLNVAL    0x0020    /* Invalid request: fd not open */
+	//#define POLLIN      0x0001    // There is data to read 
+        //#define POLLPRI     0x0002    // There is urgent data to read 
+	//#define POLLOUT     0x0004    // Writing now will not block 
+	//#define POLLERR     0x0008    // Error condition 
+	//#define POLLHUP     0x0010    // Hung up 
+	//#define POLLNVAL    0x0020    // Invalid request: fd not open 
 	int band = info->si_band;  
-	/*
-	fprintf(stderr,"got fd         = %i\n", fd   );
-	fprintf(stderr,"got band       = %i\n", band );
-	fprintf(stderr,"band & POLLIN  = %i\n", band & POLLIN  );
-	fprintf(stderr,"band & POLLPRI = %i\n", band & POLLPRI );
-	fprintf(stderr,"band & POLLOUT = %i\n", band & POLLOUT );
-	fprintf(stderr,"band & POLLERR = %i\n", band & POLLERR );
-	fprintf(stderr,"band & POLLHUP = %i\n", band & POLLHUP );
-	*/
+	// fprintf(stderr,"got fd         = %i\n", fd   );
+	// fprintf(stderr,"got band       = %i\n", band );
+	// fprintf(stderr,"band & POLLIN  = %i\n", band & POLLIN  );
+	// fprintf(stderr,"band & POLLPRI = %i\n", band & POLLPRI );
+	// fprintf(stderr,"band & POLLOUT = %i\n", band & POLLOUT );
+	// fprintf(stderr,"band & POLLERR = %i\n", band & POLLERR );
+	// fprintf(stderr,"band & POLLHUP = %i\n", band & POLLHUP );
 	// translate SIGPIPE's to band of POLLHUP
 	if ( info->si_signo == SIGPIPE ) {
 		band = POLLHUP;
@@ -2183,8 +2198,8 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 		// so we can call their callbacks and remove them
 		g_threads.timedCleanUp(4,MAX_NICENESS); // 4 ms
 
-// 		//		g_threads.cleanUp ( (ThreadEntry *)val , x/*max niceness*/);
-// 		g_threads.cleanUp ( (ThreadEntry *)val , 1000/*max niceness*/);
+// 		//		g_threads.cleanUp ( (ThreadEntry *)val , x);// max niceness
+// 		g_threads.cleanUp ( (ThreadEntry *)val , 1000);//max niceness
 
 // 		// launch any threads in waiting since this sig was 
 // 		// from a terminating one
@@ -2202,7 +2217,7 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 	// . NOTE: when it's connected it sets both POLLIN and POLLOUT
 	// . NOTE: or when a socket is trying to connect to it if it's listener
 	//if      ( band & (POLLIN | POLLOUT) == (POLLIN | POLLOUT) ) 
-	// g_loop.callCallbacks_ass ( true/*forReading?*/ , fd );
+	// g_loop.callCallbacks_ass ( true , fd ); // for reading
 	if ( band & POLLIN  ) {
 		// keep stats on this now since some linuxes dont work right
 		g_stats.m_readSignals++;
@@ -2238,7 +2253,7 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 // end ifdef CYGWIN
 #endif
 }
-
+*/
 
 /*
 #if 1 || (LINUX_VERSION_CODE < KERNEL_VERSION(2,3,31)) 

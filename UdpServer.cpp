@@ -2631,13 +2631,13 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//   happen since we're already in an interrupt handler, so we have
 	//   to let g_loop know to poll
 	// . TODO: won't he have to wakeup before he'll poll?????
-#ifndef _POLLONLY_	
-	if ( ! g_loop.m_needToPoll && 
-	     sigqueue ( s_pid, GB_SIGRTMIN + 1 , svt ) < 0 )
-		g_loop.m_needToPoll = true;
-#else
-	g_loop.m_needToPoll = true;
-#endif
+// #ifndef _POLLONLY_	
+// 	if ( ! g_loop.m_needToPoll && 
+// 	     sigqueue ( s_pid, GB_SIGRTMIN + 1 , svt ) < 0 )
+// 		g_loop.m_needToPoll = true;
+// #else
+// 	g_loop.m_needToPoll = true;
+// #endif
 	// . tell g_loop that we did a queue
 	// . he sets this to false before calling our makeCallbacks_ass()
 	g_someAreQueued = true;
