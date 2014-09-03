@@ -9507,7 +9507,11 @@ void Parms::init ( ) {
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously for ALL collections PER HOST?";
+		"simultaneously for ALL collections PER HOST? Caution: "
+		"raising this too high could result in some Out of Memory "
+		"(OOM) errors. The hard limit is currently 300. Each "
+		"collection has its own limit in the <i>spider controls</i> "
+		"that you may have to increase as well.";
 	m->m_cgi   = "mtsp";
 	m->m_off   = (char *)&g_conf.m_maxTotalSpiders - g;
 	m->m_type  = TYPE_LONG;
@@ -12629,7 +12633,7 @@ void Parms::init ( ) {
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_maxSpidersPerRule - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "300";
+	m->m_def   = "99";
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
@@ -15781,11 +15785,14 @@ void Parms::init ( ) {
 	m->m_title = "max spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously PER HOST for THIS collection?";
+		"simultaneously PER HOST for THIS collection? The "
+		"maximum number of spiders over all collections is "
+		"controlled in the <i>master controls</i>.";
 	m->m_cgi   = "mns";
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
+	// make it the hard max so control is really in the master controls
+	m->m_def   = "300";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
