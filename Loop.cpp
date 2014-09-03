@@ -1822,7 +1822,9 @@ void Loop::doPoll ( ) {
 	// 	// if niceness is not -1, handle it below
 	// }
 
-	// poll the fd's searching for socket closes
+	// . poll the fd's searching for socket closes
+	// . the sigalrms and sigvtalrms and SIGCHLDs knock us out of this
+	//   select() with n < 0 and errno equal to EINTR
 	n = select (MAX_NUM_FDS, 
 		    &readfds,
 		    &writefds,
@@ -1832,10 +1834,11 @@ void Loop::doPoll ( ) {
 	g_inWaitState = false;
 
 	if ( n < 0 ) { 
-		// got it
-		//log("loop: got errno=%li",(long)errno);
 		// valgrind
 		if ( errno == EINTR ) {
+			// got it. if we get a sig alarm or vt alarm or
+			// SIGCHLD (from Threads.cpp) we end up here.
+			//log("loop: got errno=%li",(long)errno);
 			// if shutting own was it a sigterm ?
 			if ( m_shutdown ) goto again;
 			// handle returned threads for niceness 0

@@ -2350,6 +2350,9 @@ int startUp ( void *state ) {
 	// . i noticed during the linkdb rebuild we were not getting the signal
 	//sigqueue ( s_pid, GB_SIGRTMIN + 1 + t->m_niceness, svt ) ;
 
+	// i verified this breaks select() in Loop.cpp out of it's sleep
+	//fprintf(stderr,"threads sending SIGCHLD\n");
+
 	// try a sigchld now! doesn't it already do this? no...
 	sigqueue ( s_pid, SIGCHLD, svt ) ;
 
