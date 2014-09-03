@@ -8445,6 +8445,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_cgi      = "filetype=ps";
 		n++;
 
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "Spider Status";
+		s_mi[n].m_cgi      = "filetype=status";
+		n++;
+
 		// facets
 
 		s_mi[n].m_menuNum  = 4;
