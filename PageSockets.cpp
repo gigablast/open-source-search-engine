@@ -582,6 +582,13 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 					);
 		}
 
+		char *rf1 = "";
+		char *rf2 = "";
+		if ( s->m_resendCount ) {
+			rf1 = "<b style=color:red;>";
+			rf2 = "</b>";
+		}
+			
 		p->safePrintf ( "<td>%lu</td>" // transId
 				"<td>%i</td>" // called handler
 				"<td>%li</td>" // dgrams read
@@ -590,7 +597,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 				"<td>%li</td>" // dgrams sent
 				"<td>%li</td>" // dgrams to send
 				"<td>%li</td>" // acks read
-				"<td>%hhu</td>" // resend count
+				"<td>%s%hhu%s</td>" // resend count
 				"</tr>\n" ,
 				s->m_transId,
 				calledHandler,
@@ -600,7 +607,10 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 				s->getNumDgramsSent() ,
 				s->m_dgramsToSend ,
 				s->getNumAcksRead() ,
-				s->m_resendCount );
+				rf1 ,
+				s->m_resendCount ,
+				rf2
+				);
 	}
 	// end the table
 	p->safePrintf ("</table><br>\n" );
