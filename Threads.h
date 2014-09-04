@@ -22,7 +22,7 @@ pid_t getpidtid();
 #define UNLINK_THREAD    5
 #define GENERIC_THREAD   6
 //#define SSLACCEPT_THREAD 7
-#define GB_SIGRTMIN	 (SIGRTMIN+4)
+//#define GB_SIGRTMIN	 (SIGRTMIN+4)
 #define MAX_NICENESS     2
 // . a ThreadQueue has a list of thread entries
 // . each thread entry represents a thread in progress or waiting to be created

@@ -667,7 +667,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . will only add parm recs we have permission to modify
 	// . if no collection supplied will just return true with no g_errno
 	if ( isAdmin &&
-	     ! g_parms.convertHttpRequestToParmList ( r , parmList , page ) )
+	     ! g_parms.convertHttpRequestToParmList ( r, parmList, page, s))
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
 
@@ -975,7 +975,7 @@ bool printTopNavButton ( char *text,
 
 	else
 		sb->safePrintf(
-			       "<a style=text-decoration:none; href=%s?%s>"
+			       "<a style=text-decoration:none; href=%s?c=%s>"
 			       "<div "
 
 			       " onmouseover=\""
@@ -1190,10 +1190,11 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		      "valign=top "
 		      "style=\""
 		      "width:210px;"
+		       "max-width:210px;"
 		      "border-right:3px solid blue;"
 		      "\">"
 
-		      "<br>"
+		      "<br style=line-height:14px;>"
 
 		      "<center>"
 		      "<a href=/?c=%s>"
@@ -1269,7 +1270,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       //"max-width:200px;"
 		       //"min-width:200px;"
 
-		       "width:200px;"
+		       "width:190px;"
 
 		       "padding:4px;" // same as TABLE_STYLE
 		       "margin-left:10px;"
@@ -1295,7 +1296,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//status&=printCollectionNavBar ( sb, page , username , coll,pwd, qs );
 
 	// collection navbar
-	status&=printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+	status&=printCollectionNavBar ( sb, page , username, coll,pwd, qs,s,r);
 
 
 	sb->safePrintf("</div>");
@@ -1452,12 +1453,129 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	sb->safePrintf("<br>");
 
-		       
+
+	if ( page != PAGE_BASIC_SETTINGS )
+		return true;
+
+	
+	// gigabot helper blurb
+	printGigabotAdvice ( sb , page , r );
 
 	// begin 2nd row in big table
 	//sb->safePrintf("</td></TR>");
 
 
+	return true;
+}
+
+bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
+
+	char format = hr->getFormat();
+	if ( format != FORMAT_HTML ) return true;
+
+	char guide = hr->getLong("guide",0);
+	if ( ! guide ) return true;
+
+	sb->safePrintf("<input type=hidden name=guide value=1>\n");
+
+	// we only show to guest users. if we are logged in as master admin
+	// then skip this step.
+	//if ( hr->isGuestAdmin() )
+	//	return false;
+
+	// also, only show if running in matt's data cetner
+	//if ( ! g_conf.m_isMattWells )
+	//	return true;
+
+	// gradient class
+	// yellow box
+	char *box = 
+		"<table cellpadding=5 "
+		// full width of enclosing div
+		"width=100%% "
+		"style=\""
+
+		//"background-color:gold;"
+		//"border:3px blue solid;"
+
+		"background-color:lightblue;"
+		"border:3px blue solid;"
+
+
+		"border-radius:8px;"
+		//"max-width:500px;"
+		"\" "
+		"border=0"
+		">"
+		"<tr><td>";
+	char *boxEnd =
+		"</td></tr></table>";
+
+	char *advice = NULL;
+	if ( page == PAGE_ADDCOLL )
+		advice =
+			"STEP 1 of 3. "
+			"<br>"
+			"<br>"
+			//"Human, I am Gigabot."
+			//"<br><br>"
+			"Enter the name of your collection "
+			"(search engine) in the box below then hit "
+			"submit."
+			"<br>"
+			"<br>"
+			"Remember this name so you can access the controls "
+			"later."
+			// "Do not deviate from this path or you may "
+			// "be blasted."
+			;
+	if ( page == PAGE_BASIC_SETTINGS )
+		advice = 
+			"STEP 2 of 3. "
+			"<br>"
+			"<br>"
+			"Enter the list of websites you want to be in your "
+			"search engine into the box marked <i>site list</i>."
+			// "<br>"
+			// "<br>"
+			// "Do not deviate from this path, or, as is always "
+			// "the case, you may "
+			// "be blasted."
+			;
+	if ( page == PAGE_BASIC_STATUS )
+		advice = 
+			"STEP 3 of 3. "
+			"<br>"
+			"<br>"
+			"Ensure you see search results appearing in "
+			"the box below. If not, then you have spider "
+			"problems."
+			"<br>"
+			"<br>"
+			"Click on the links in the lower right to expose "
+			"the source code. Copy and paste this code "
+			"into your website to make a search box that "
+			"connects to the search engine you have created. "
+			;
+
+	if ( ! advice ) return true;
+
+	sb->safePrintf("<div style=max-width:490px;"
+		       "padding-right:10px;>");
+
+	sb->safePrintf("%s",box);
+
+	// the mean looking robot
+	sb->safePrintf("<img style=float:left;padding-right:15px; "
+		       "height=141px width=75px src=/robot3.png>"
+		       "</td><td>"
+		       "<b>"
+		       "%s"
+		       "</b>"
+		       , advice
+		       );
+	sb->safePrintf("%s",boxEnd);
+	sb->safePrintf("<br><br></div>");
 	return true;
 }
 
@@ -2190,9 +2308,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	}
 
 	// print documentation links
+	/*
 	if ( ! isBasic )
 		sb->safePrintf(" <a style=text-decoration:none "
-			       "href=/admin.html>"
+			       "href=/faq.html>"
 			       "<b>"
 			       "admin guide"
 			       "</b></a> "
@@ -2204,6 +2323,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			       "<b>dev guide</b></a>" 
 
 			       );
+	*/
 	
 	sb->safePrintf("</div>");
 
@@ -2223,7 +2343,9 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 				    char *username,
 				    char *coll     ,
 				    char *pwd      ,
-				    char *qs       ) {
+				    char *qs       ,
+				    TcpSocket *sock ,
+				    HttpRequest *hr ) {
 	bool status = true;
 	//if ( ! pwd ) pwd = "";
 	if ( ! qs  ) qs  = "";
@@ -2262,9 +2384,17 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 	char *s = "s";
 	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
-	sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
-			 "</center>\n",
-			 g_collectiondb.m_numRecsUsed , s );
+
+	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
+
+	if ( isRootAdmin )
+		sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
+				 "</center>\n",
+				 g_collectiondb.m_numRecsUsed , s );
+	else
+		sb->safePrintf ( "<center><nobr><b>Collections</b></nobr>"
+				 "</center>\n");
+
 
 	sb->safePrintf( "<center>"
 			"<nobr>"
@@ -2295,6 +2425,18 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// if not root admin and collrec's password does not match
+		// the one we are logged in with (in the cookie) then skip it
+		// if ( ! isRootAdmin &&
+		//      cr->m_password &&
+		//      ! strcmp(cr->m_password,pwd) )
+		// 	continue;
+
+
 		char *cname = cc->m_coll;
 
 		row++;
@@ -2712,7 +2854,7 @@ int parmcmp ( const void *a, const void *b ) {
 #define DARK_YELLOW "ffaaaa"
 #define LIGHT_YELLOW "ffcccc"
 
-bool printFrontPageShell ( SafeBuf &sb , long pageNum ) ;
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) ;
 
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
@@ -2740,7 +2882,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// new stuff
-	printFrontPageShell ( p , 6 );
+	printFrontPageShell ( &p , "api" , cr );
 
 
 	//p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "
@@ -2769,6 +2911,11 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("NOTE: All APIs support both GET and POST method. "
 		     "If the size of your request is more than 2K you "
 		     "should use POST.");
+	p.safePrintf("<br><br>");
+
+	p.safePrintf("NOTE: All APIs support both http and https "
+		     "protocols.");
+
 	p.safePrintf("<br><br>");
 
 	p.safePrintf(//"<div style=padding-left:10%%>"
@@ -2967,7 +3114,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			"</tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>#</b></td>"
-			"<td><b>parm</b></td>"
+			"<td><b>Parm</b></td>"
 			//"<td><b>Page</b></td>"
 			"<td><b>Type</b></td>"
 			"<td><b>Title</b></td>"

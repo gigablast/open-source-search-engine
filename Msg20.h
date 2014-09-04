@@ -178,7 +178,7 @@ class Msg20Request {
 	char       m_getTurkForm               :1;
 	char       m_showTurkInstructions      :1;
 	char       m_isTurkSpecialQuery        :1;
-	char       m_isAdmin                   :1;
+	char       m_isRootAdmin                   :1;
 	// . this is for buzz.
 	// . this says to compute the <absScore2> tag in their xml feed.
 	// . the document receives a score of 0 if it does not match the query

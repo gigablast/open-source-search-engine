@@ -1,0 +1,406 @@
+
+<div style=max-width:700px;>
+
+<br>
+<br><br>
+
+<a name=revival></a>
+<font size=+1><b>15 Year Anniversary</b></font><br>
+<i>September 1, 2014</i><br><br>
+It's been 15 years since I first started Gigablast. It's taken some interesting directions as of late. Most notably being open source. I've decided to revive the old blog entries that you can find below and continue working on top of those.
+
+
+
+
+<br><br><br><br>
+
+
+
+
+<a name=gigabits></a>
+<font size=+1><b>Giga Bits Introduced</b></font><br>
+<i>Jan 31, 2004</i><br><br>
+Gigablast now generates related concepts for your query. I call them Giga Bits.  I believe it is the best concept generator in the industry, but if you don't think so please <a href="/contact.html">drop me a note</a> explaining why not, so I can improve it. 
+<br><br>
+You can also ask Gigablast a simple question like <a href="/search?q=Who+is+President+of+Russia%3F">"Who is President of Russia?"</a> and it often comes up with the correct answer in the Giga Bits section. How do you think it does that?
+<br><br>
+In other news, the spider speed ups I rolled a few weeks ago are tremendously successful. I can easily burn all my bandwidth quota with insignificant load on my servers. I could not be happier with this.
+<br><br>
+Now I'm planning on turning Gigablast into a default AND engine. Why? Because it will decrease query latency by several times, believe or not. That should put Gigablast on par with the fastest engines in the world, even though it only runs on 8 desktop machines. But Don't worry, I will still leave the default OR functionality intact. 
+<br>
+<br>
+<br>
+<br>
+
+<a name=update></a>
+<font size=+1><b>January Update Rolled</b></font><br>
+<i>Jan 8, 2004</i><br><br>
+Gigablast now has a more professional, but still recognizable, logo, and a new catch phrase, "Information Acceleration". Lots of changes on the back end. You should notice significantly higher quality searches. The spider algorithm was sped up several times. Gigablast should be able to index several million documents per day, but that still remains to be tested. &lt;knock on wood&gt;.  Site clustering was sped up. I added the ability to force all query terms to be required by using the &rat=1 cgi parm. Now Gigablast will automatically regenerate some of its databases when they are missing. And I think I wasted two weeks working like a dog on code that I'm not going to end up using! I hate when that happens... 
+
+<br>
+<br>
+<br>
+<br>
+
+<a name=traffic></a>
+<font size=+1><b>An Easy way to Slash Motor Vehicle Emissions</b></font><br>
+<i>Dec 11, 2003</i><br><br>
+Blanket the whole city with wi-fi access. (like <a href="/?redir=http://story.news.yahoo.com/news?tmpl=story&ncid=1293&e=2&u=/ap/20031211/ap_on_hi_te/wi_fi_city&sid=95573418">Cerritos, California</a>)  When you want to travel from point A
+to point B, tell the central traffic computer. It will then give you a time 
+window in which to begin your voyage and, most importantly, it will ensure that
+as long as you stay within the window you will always hit green lights. 
+<br><br>
+If you stray from your path, you'll be able to get a new window via the wi-fi network.
+If everyone's car has gps and is connected to the wi-fi network, 
+the central computer will also be able to monitor the flow of traffic and 
+make adjustments to your itinerary in real-time.
+Essentially, the traffic computer will be solving a large system of linear,
+and possibly non-linear, constraints in real-time. Lots of fun... and think of
+how much more efficient travel will be!! If someone wants to secure funding,
+count me in.
+
+<br>
+<br>
+<br>
+<br>
+
+<a name=spellchecker></a>
+<font size=+1><b>Spellchecker Finally Finished</b></font><br>
+<i>Nov 18, 2003</i><br><br>
+After a large, countable number of interruptions, I've finally completed the spellchecker. I tested the word '<b>dooty</b>' on several search engines to see how they handled that misspelling. Here's what I got:
+<br><br>
+<table>
+<tr><td><b>Source</b></td><td><b>Result</b></td></tr>
+<tr><td>Alltheweb</td><td><a href="http://www.alltheweb.com/search?query=dooty">booty</a><td></tr>
+<tr><td>Altavista</td><td><a href="http://search01.altavista.com/web/results?q=dooty">dhooti</a></td></tr>
+<tr><td>Gigablast</td><td><a href="http://www.gigablast.com/search?q=dooty">door</a></td></tr>
+<tr><td>Google</td><td><a href="http://www.google.com/search?q=dooty">doody</a></td></tr>
+<tr><td>Microsoft Word</td><td>Doty</td></tr>
+<tr><td>Teoma</td><td><a href="http://s.teoma.com/search?q=dooty">doty</a></td></tr>
+<tr><td>Wisenut</td><td>N/A (no spellchecker)</td></tr>
+</table>
+<br>
+So there is no one way to code a spellchecker. It's a guessing game. And, hey Wisenut, want to license a good spellchecker for cheap? <a href="/contact.html">Let me know</a>.
+
+<br><br>
+Gigablast uses its cached web pages to generate its dictionary instead of the query logs. When a word or phrase is not found in the the dictionary, Gigablast replaces it with the closest match in the dictionary.  If multiple words or phrases are equally close, then Gigablast resorts to a popularity ranking.
+<br><br>
+One interesting thing I noticed is that in Google's spellchecker you must at least get the first letter of the word correct, otherwise, Google will not be able to recommend the correct spelling. I made Gigablast this way too, because it really cuts down on the number of words it has to search to come up with a recommendation. This also allows you to have an extremely large dictionary distributed amongst several machines, where each machine is responsible for a letter.
+<br><br>
+Also of note: I am planning on purchasing the hardware required for achieving a 5 billion document index capable of serving hundreds of queries per second within the next 12 months. Wish me luck... and thanks for using Gigablast.
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=onagain></a>
+<font size=+1><b>Spiders On Again</b></font><br>
+<i>Nov 10, 2003</i><br><br>
+After updating the spider code I've reactivated the spiders. Gigablast should be able to spider at a faster rate with even less impact on query response time than before. So add your urls now while the addings good.
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=speed></a>
+<font size=+1><b>Going For Speed</b></font><br>
+<i>Nov 3, 2003</i><br><br>
+I've finally got around to working on Gigablast's distributed caches. It was not doing a lot of caching before. The new cache class I rigged up has no memory fragmentation and minimal record overhead. It is vurhy nice.<br><br>
+I've stopped spidering just for a bit so I can dedicate all Gigablast's RAM to the multi-level cache system I have in place now and see how much I can reduce query latency. Disks are still my main point of contention by far so the caching helps out a lot. But I could still use more memory.<br><br>
+Take Gigablast for a <a href="/">spin</a>. See how fast it is.
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=metas></a>
+<font size=+1><b>Bring Me Your Meta Tags</b></font><br>
+<i>Oct 11, 2003</i><br><br>
+As of now Gigablast supports the indexing, searching and displaying of generic meta tags. You name them I fame them. For instance, if you have a tag like <i>&lt;meta name="foo" content="bar baz"&gt;</i> in your document, then you will be able to do a search like <i><a href="/search?q=foo%3Abar&dt=foo">foo:bar</a></i> or <i><a href="/search?q=foo%3A%22bar+baz%22&dt=foo">foo:"bar baz"</a></i> and Gigablast will find your document. 
+<br><br>
+You can tell Gigablast to display the contents of arbitrary meta tags in the search results, like <a href="/search?q=gigablast&s=10&dt=author+keywords%3A32">this</a>. Note that you must assign the <i>dt</i> cgi parameter to a space-separated list of the names of the meta tags you want to display. You can limit the number of returned characters of each tag to X characters by appending a <i>:X</i> to the name of the meta tag supplied to the <i>dt</i> parameter. In the link above, I limited the displayed keywords to 32 characters.
+<br><br>
+Why use generic metas? Because it is very powerful. It allows you to embed custom data in your documents, search for it and retrieve it. Originally I wanted to do something like this in XML, but now my gut instincts are that XML is not catching on because it is ugly and bloated. Meta tags are pretty and slick.
+<br>
+<br>
+<br>
+<br>
+
+<a name=verisignstopped></a>
+<font size=+1><b>Verisign Stops Destroying the Internet</b></font><br>
+<i>Oct 11, 2003</i><br><br>
+Ok, they actually stopped about a week ago, but I didn't get around to posting it until now. They really ought to lose their privileged position so this does not happen again. Please do not stop your boycott. They have not learned from their mistakes.
+<br>
+<br>
+<br>
+<br>
+
+<a name=moreverisign></a>
+<font size=+1><b>Verisign Continues to Damage Gigablast's Index</b></font><br>
+<i>September 30, 2003</i><br><br>
+When the Gigablast spider tries to download a page from a domain it first gets the associated robots.txt file for that domain.  When the domain does not exist it ends up downloading a robots.txt file from verisign. There are two major problems with this. The first is that verisign's servers may be slow which will slow down Gigablast's indexing. Secondly, and this has been happening for a while now, Gigablast will still index any incoming link text for that domain, thinking that the domain still exists, but just that spider permission was denied by the robots.txt file.
+<br>
+<br>
+So, hats off to you verisign, thanks for enhancing my index with your fantastic "service". I hope your company is around for many years so you can continue providing me with your great "services".
+<br>
+<br>
+If you have been hurt because of verisign's greed you might want to consider joining the <a href="/?redir=http://www.geek.com/news/geeknews/2003Sep/gee20030929021965.htm">class-action lawsuit</a> announced Friday, September 26th, by the <a href="/?redir=http://www.techfirm.com/">Ira Rothken law firm</a>.
+<br>
+<br>
+Want to learn more about how the internet is run? Check out <a href="/?redir=http://www.paradigm.nu/icann/">the ICANN movie page</a>. Movie #1 portrays verisign's CEO, Stratton Sclavos, quite well in my opinion.
+<br>
+<br>
+<b>(10/01/03) Update #5:</b> verisign <a href="/?redir=http://www.pcworld.com/news/article/0,aid,112712,00.asp">comes under further scrutiny</a>.
+<br>
+<br>
+<br>
+<br>
+
+<a name=verisign></a>
+<font size=+1><b>Verisign Redesigns the Internet for their Own Profit</b></font><br>
+<i>September 24, 2003</i><br><br>
+My spiders expect to get "not found" messages when they look up a domain that does not have an IP. When verisign uses their privledged position to change the underlying fundamentals of the internet just to line their own greedy pockets it really, really perturbs me.  Now, rather than get the "not found" message, my spiders get back a valid IP, the IP of verisign's commercial servers. That causes my spiders to then proceed to download the robots.txt from that domain. This can take forever if their servers are slow. What a pain. Now I have to fix my freakin' code. And that's just one of many problems this company has caused.
+<br>
+<br>
+Please join me in boycott. I'm going to discourage everyone I know from supporting this abusive, monopolistic entity.
+<br>
+<br>
+<b>(9/22/03) Update #1:</b> verisign <a href="/?redir=http://www.icann.org/correspondence/lewis-to-twomey-21sep03.htm">responded</a> to ICANN's request that they stop. <a href="/?redir=http://slashdot.org/articles/03/09/22/2255202.shtml?tid=126&tid=95&tid=99">See what the slashdot community has to say about this response.</a>
+<br>
+<br>
+<b>(9/22/03) Update #2:</b> ICANN has now posted some complaints in this <a href="/?redir=http://forum.icann.org/alac-forum/redirect/">forum</a>.
+<br>
+<br>
+<b>(9/24/03) Update #3:</b> Slashdot has more <a href="/?redir=http://yro.slashdot.org/yro/03/09/24/0134256.shtml?tid=126&tid=95&tid=98&tid=99">coverage</a>.
+<br>
+<br>
+<b>(9/24/03) Update #4:</b> Please sign the <a href="/?redir=http://www.whois.sc/verisign-dns/">petition</a> to stop verisign.
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=geotags></a>
+<font size=+1><b>Geo-Sensitive Search</b></font><br>
+<i>September 18, 2003</i><br><br>
+Gigablast now supports some special new meta tags that allow for constraining a search to a particular zipcode, city, state or country. Support was also added for the standard author, language and classification meta tags. This <a href="/tagsdemo.html">page</a> explains more. These meta tags should be standard, everyone should use them (but not abuse them!) and things will be easier for everybody.
+<br><br>
+Secondly, I have declared jihad against stale indexes. I am planning a significantly faster update cycle, not to mention growing the index to about 400 million pages, all hopefully in the next few months.
+<br>
+<br>
+<br>
+<br>
+
+<a name=turing></a>
+<font size=+1><b>Foiling the Addurl Scripts</b></font><br>
+<i>September 6, 2003</i><br><br>
+The new pseudo-Turing test on the <a href="/addurl">addurl page</a> should prevent most automated scripts from submitting boatloads of URLs. If someone actually takes the time to code a way around it then I'll just have to take it a step further. I would rather work on other things, though, so please quit abusing my free service and discontinue your scripts. Thanks.
+<br>
+<br>
+<br>
+<br>
+
+<a name=boolean></a>
+<font size=+1><b>Boolean is Here</b></font><br>
+<i>September 1, 2003</i><br><br>
+I just rolled out the new boolean logic code. You should be able to do nested boolean queries using the traditional AND, OR and NOT boolean operators. See the updated <a href="/help.html#boolean">help page</a> for more detail.
+<br><br>
+I have declared jihad against swapping and am now running the 2.4.21-rc6-rmap15j Linux kernel with swap tuned to zero using the /proc/sys/vm/pagecache knobs. So far no machines have swapped, which is great, but I'm unsure of this kernel's stability.
+<br>
+<br>
+<br>
+<br>
+
+<a name=swap></a>
+<font size=+1><b>All Swapped Out</b></font><br>
+<i>August 29, 2003</i><br><br>
+I no longer recommend turning the swap off, at least not on linux 2.4.22. A kernel panicked on me and froze a server. Not good. If anyone has any ideas for how I can prevent my app from being swapped out, please let me know. I've tried mlockall() within my app but that makes its memory usage explode for some reason. I've also tried Rik van Riel's 2.4.21-rc6-rmap15j.txt patch on the 2.4.21 kernel, but it still does unnecessary swapping (although, strangely, only when spidering). If you know how to fix this problem, please help!!! <a href="vmstat.html">Here</a> is the output from the vmstat command on one of my production machines running 2.4.22. And <a href="vmstatrik.html">here</a> is the output from my test machine running 2.4.21-rc6-rmap15j.txt. 
+<br>
+<br>
+<br>
+<br>
+
+<a name=kernel></a>
+<font size=+1><b>Kernel Update</b></font><br>
+<i>August 28, 2003</i><br><br>
+I updated the Linux kernel to 2.4.22, which was just released a few days ago on <a href="/?redir=http://www.kernel.org/">kernel.org</a>. Now my gigabit cards are working, yay! I finally had to turn off swap using the swapoff command. When an application runs out of memory the swapper is supposed to write unfrequently used memory to disk so it can give that memory to the application that needs it. Unfortunately, the Linux virtual memory manager enjoys swapping out an application's memory for no good reason. This can often make an application disastrously slow, especially when the application ends up blocking on code that it doesn't expect too! And, furthermore, when the application uses the disk intensely it has to wait even longer for memory to get swapped back in from disk. I recommend that anyone who needs high performance turn off the swap and just make sure their program does not use more physical memory than is available.
+<br>
+<br>
+<br>
+<br>
+
+<a name=gang></a>
+<font size=+1><b>The Gang's All Here</b></font><br>
+<i>August 17, 2003</i><br><br>
+I decided to add PostScript (<a href="/search?q=type:ps">.ps</a>) , PowerPoint (<a href="/search?q=type:ppt">.ppt</a>), Excel SpreadSheet (<a href="/search?q=type:xls">.xls</a>) and Microsoft Word (<a href="/search?q=type:doc">.doc</a>) support in addition to the PDF support. Woo-hoo.
+<br>
+<br>
+<br>
+<br>
+
+<a name=pdf></a>
+<font size=+1><b>PDF Support</b></font><br>
+<i>August 14, 2003</i><br><br>
+Gigablast now indexes PDF documents. Try the search <a href="/search?q=type:pdf"><i>type:pdf</i></a> to see some PDF results. <i>type</i> is a new search field. It also support the text type, <a href="/search?q=type:text"><i>type:text</i></a>, and will support other file types in the future.
+<br>
+<br>
+<br>
+<br>
+
+<a name=codeupdate3></a>
+<font size=+1><b>Minor Code Updates</b></font><br>
+<i>July 17, 2003</i><br><br>
+I've cleaned up the keyword highlight routines so they don't highlight isolated stop words. Gigablast now displays a <a href="/superRecall.html">blue bar</a> above returned search results that do not have <b>all</b> of your query terms. When returning a page of search results Gigablast lets you know how long ago that page was cached by displaying a small message at the bottom of that page. NOTE: This small message is at the bottom of the page containing the search results, not at the bottom of any pages from the web page cache, that is a different cache entirely. Numerous updates to less user-visible things on the back end. Many bugs fixed, but still more to go. Thanks a bunch to Bruce Perens for writing the <a href="/?redir=http://www.perens.com/FreeSoftware/">Electric Fence</a> debug utility.
+<br>
+<br>
+<br>
+<br>
+
+<a name=codeupdate2></a>
+<font size=+1><b>Gigablast 2.0</b></font><br>
+<i>June 20, 2003</i><br><br>
+I've recently released Gigablast 2.0. Right now Gigablast can do about twice as many queries per second as before. When I take care of a few more things that rate should double again. 
+<br><br>
+The ranking algorithm now treats phrase weights much better. If you search for something like <i><a href="/search?q=boots+in+the+uk">boots in the uk</a></i> you won't get a bunch of results that have that exact phrase in them, but rather you will get UK sites about boots (theoretically). And when you do a search like <i><a href="/search?q=all+the+king%27s+men">all the king's men</a></i> you will get results that have that exact phrase. If you find any queries for which Gigablast is especially bad, but a competing search engine is good, please <a href="/contact.html">let me know</a>, I'm am very interested.
+<br><br>
+2.0 also introduced a new index format. The new index is half the size of the old one. This allows my current setup to index over 400 million pages with dual redundancy. Before it was only able to index about 300 million pages. The decreased index size also speeds up the query process since only half as much data needs to be read from disk to satisfy a query.
+<br><br>
+I've also started a full index refresh, starting with top level pages that haven't been spidered in a while. This is especially nice because a lot of pages that were indexed before all my anti-spam algorithms were 100% in place are just now getting filtered appropriately. I've manually removed over 100,000 spam pages so far, too.
+<br>
+<br>
+<br>
+<br>
+
+<a name=grub></a>
+<font size=+1><b>My Take on Looksmart's Grub</b></font><br>
+<i>Apr 19, 2003</i><br><br>
+There's been some press about Grub, a program from Looksmart which you install on your machine to help Looksmart spider the web. Looksmart is only using Grub to save on their bandwidth. Essentially Grub just compresses web pages before sending them to Looksmart's indexer thus reducing the bandwidth they have to pay for by a factor of 5 or so. The same thing could be accomplished through a proxy which compresses web pages. Eventually, once the HTTP mime standard for requesting compressed web pages is better supported by web servers, Grub will not be necessary. 
+<br>
+<br>
+<br>
+<br>
+
+<a name=codeupdate></a>
+<font size=+1><b>Code Update</b></font><br>
+<i>Mar 25, 2003</i><br><br>
+I just rolled some significant updates to Gigablast's back-end. Gigablast now has a uniformly-distributed, unreplicated search results cache. This means that if someone has done your search within the last several hours then you will get results back very fast. This also means that Gigablast can handle a lot more queries per second.
+<br>
+<br>
+I also added lots of debug and timing messages that can be turned on and off via the Gigablast admin page. This allows me to quickly isolate problems and identify bottlenecks.
+<br>
+<br>
+Gigablast now synchronizes the clocks on all machines on the network so the instant add-url should be more "instant". Before I made this change, one machine would tell another to spider a new url "now", where "now" was actually a few minutes into the future on the spider machine. But since everyone's currently synchronized, this will not be a problem anymore.
+<br>
+<br>
+There were about 100 other changes and bug fixes, minor and major, that I made, too, that should result in significant performance gains. My next big set of changes should make searches at least 5 times faster, but it will probably take several months until completed. I will keep you posted.
+<br>
+<br>
+<br>
+<br>
+
+<a name=downtime></a>
+<font size=+1><b>Downtime</b></font><br>
+<i>Feb 20, 2003</i><br><br>
+To combat downtime I wrote a monitoring program. It will send me a text message on my cellphone if gigablast ever stops responding to queries. This should prevent extended periods of downtime by alerting me to the problem so I can promptly fix it.
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=uunet></a>
+<font size=+1><b>Connectivity Problems. Bah!</b></font><br>
+<i>Feb 14, 2003</i><br><br>
+I had to turn off the main refresh spiders a few weeks ago because of internet connectivity problems. Lots of pages were inaccessible or were timing out to the point that spider performance was suffering too much. 
+<br><br>
+After running tcpdump in combination with wget I noticed that the FIN packets of some web page transfers were being lost or delayed for over a minute. The TCP FIN packet is typically the last TCP packet sent to your browser when it retrieves a web page. It tells your browser to close the connection. Once it is received the little spinning logo in the upper right corner of your browser window should stop spinning. 
+<br><br>
+The most significant problem was, however, that the initial incoming data packet for some URLs was being lost or excessively delayed. You can get by without receiving FIN packets but you absoultely need these TCP "P" packets. I've tested my equipment and my ISP has tested their equipment and we have both concluded that the problem is upstream. Yesterday my ISP submitted a ticket to Worldcom/UUNet.  Worldcom's techs have verified the problem and thought it was... "interesting". 
+<br><br>
+I personally think it is a bug in some filtering or monitoring software installed at one of Worldcom's NAPs (Network Access Points). NAPs are where the big internet providers interface with each other. The most popular NAPs are in big cities, the Tier-1 cities, as they're called.  There are also companies that host NAP sites where the big carriers like Worldcom can install their equipment. The big carriers then set up Peering Agreements with each other. Peering Agreements state the conditions under which two or more carriers will exchange internet traffic. 
+<br><br>
+Once you have a peering agreement in place with another carrier then you must pay them based on how much data you transfer from your network to their network across a NAP. This means that downloading a file is much cheaper than uploading a file.  When you send a request to retrieve some information, that request is small compared to the amount of data it retrieves. Therefore, the carrier that hosted the server from which you got the data will end up paying more. Doh! I got off the topic. I hope they fix the problem soon!
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=ads></a>
+<font size=+1><b>Considering Advertisements</b></font><br>
+<i>Jan 10, 2003</i><br><br>
+I'm now looking into serving text advertisements on top of the search results page so I can continue to fund my information retrieval research. I am also exploring the possibility of injecting ads into some of my xml-based search feeds. If you're interested in a search feed I should be able to give you an even better deal provided you can display the ads I feed you, in addition to any other ads you might want to add. If anyone has any good advice concerning what ad company I should use, I'd love to here it.
+<br>
+<br>
+<br>
+<br>
+
+<a name=codeupdate></a>
+<font size=+1><b>Code Update</b></font><br>
+<i>Dec 27, 2002</i><br><br>
+After a brief hiatus I've restarted the Gigablast spiders. The problem was they were having a negative impact on the query engine's performance, but now, all spider processing yields computer resources much better to the query traffic. The result is that the spidering process only runs in the space between queries. This actually involved a lot of work. I had to insert code to suspend spider-related, network transactions and cancel disk-read and disk-write threads.<br><br>
+I've also launched my <a href="/gigaboost.html">Gigaboost</a> campaign. This rewards pages that link to gigablast.com with a boost in the search results rankings. The boost is only utilized to resolve ties in ranking scores so it does not taint the quality of the index.<br><br>
+Gigablast.nu, in Scandinavia, now has a news index built from news sources in the Scandinavian region. It is not publically available just yet because there's still a few details we are working out. 
+I've also added better duplicate detection and removal. It won't be very noticable until the index refresh cycle completes. 
+In addition Gigablast now removes session ids from urls, but, this only applies to new links and will be back pedaled to fix urls already in the index at a later date. 
+There is also a new summary generator installed. It's over ten times faster than the old one. If you notice any problems with it please contact me. As always, I appreciate any constructive input you have to give.
+<br>
+<br>
+<br>
+<br>
+
+
+<a name=corruption></a>
+<font size=+1><b>Data Corruption Mysteries</b></font><br>
+<i>Dec 20, 2002</i><br><br>
+I've been having problems with my hard drives. I have a bunch of Maxtor 160GB drives (Model # = 4G160J8) running on Linux 2.4.17 with the <a href="/ide.2.4.17.02152002.patch.bz2">48-bit LBA patch</a>. Each machine has 4 of these drives on them, 2 on each IDE slot. I've had about 160 gigabytes of data on one before so I know the patch seems to do the job. But every now and then a drive will mess up a write. I do a lot of writing and it usually takes tens of gigabytes of writing before a drive does this.  It writes out about 8 bytes that don't match what should have been written. This causes index corruption and I've had to install work-arounds in my code to detect and patch it. 
+<br>
+<br>
+I'm not sure if the problem is with the hard drive itself or with Linux. I've made sure that the problem wasn't in my code by doing a read after each write to verify. I thought it might be my motherboard or CPU. I use AMDs and Giga-byte motherboards.  But gigablast.nu in Sweden has the same problem and it uses a Pentium 3. Furthermore, gigablast.nu uses a RAID of 160GB Maxtors, whereas gigablast.com does not. Gigablast.nu uses version 2.4.19 of Linux with the 48-bit LBA patch. So the problem seems to be with Linux, the LBA patch or the hard drive itself.
+<br>
+<br>
+On top of all this mess, about 1 Maxtor, out of the 32 I have, completely fails on me every 4 months.  The drive just gives I/O errors to the kernel and brings the whole system down. Luckily, gigablast.com implements a redundant architecture so the failing server will be replaced by his backup. So far Maxtor has replaced the drives I had fail. If you give them your credit card number they'll even send the replacements out in advance.  But I believe the failure problem is an indicator that the data corruption problem is hard drive related, not Linux related. If anyone has any insight into this problem please let me know, you could quite easily be my hero.
+<br>
+<br>
+If you're still reading this you're pretty hard core so <a href="/output.html">here's</a> what /var/log/messages says when the 4G160J8 completely fails.
+<br>
+<br>
+<br>
+<br>
+
+<a name=pvr></a>
+<font size=+1><b>Personal Video Recorders (PVRs)</b></font><br>
+<i>Dec 20, 2002</i><br><br>
+Boy, these things are great. I bought a Tivo last year for my wife and she loved it. At first though she wasn't that enthusiastic because she wasn't very familiar with it. But now we rarely rent any more video tapes from Blockbuster or Hollywood video because there's always something interesting to watch on the Tivo. You just let it know what shows you like and it will record them anytime they come on. We always have an overflow of Simpsons and Seinfeld epsidoes on there.
+<br>
+<br>
+In the future though I don't think Tivo is going to make it. The reason? Home networking. Because I'm a professional computer person, we already have a home network installed. If the TV had an ethernet jack it would be in our network. 100Mbps is fast enough to send it a high-quality video stream from the computers already on the network. I have a cable modem which, in the future, should allow the computer using it to rip signals from the cable station, as well. For now though, you could split your cable and plug the new end into a tuner card on your PC. So once someone comes out with a small device for the television that converts an ethernet-based mpeg stream to a video signal we can use our home PC to act as the TIVO. This device should be pretty cheap, I'd imagine around $30 or so. The only thing you'd need then is a way to allow the remote control to talk to your PC.
+<br>
+<br>
+Now I read about the EFF suing "Hollywood" in order to clarify consumer rights of fair use. Specifically, the EFF was said to be representing Replay TV. Hey! Isn't Replay TV owned in part by Disney (aka Hollywood)... hmmmm... Seems like Disney might have pretty good control over the outcome of this case. I think it's a conflict of interest when such an important trial, which would set precedence for many cases to come, has the same plantiff as defendant.
+<br>
+<br>
+This makes me wonder about when Disney's Go.com division got sued by Overture (then known as Goto.com) for logo infringement. Disney had to pay around 20 million to Overture. I wonder what kind of ties Disney had to Overture. Ok, maybe I'm being a conspiracy theorist, so I'll stop now.
+<br>
+<br>
+<br>
+<br>
+
+<a name=ecs></a>
+<font size=+1><b>ECS K7S5A Motherboard Mayhem</b></font><br>
+<i>Dec 20, 2002</i><br><br>
+I pinch pennies. When I bought my 8 servers I got the cheapest motherboards I could get for my AMD 1.4GHz Athlon T-Birds. At the time, in late January 2002, they turned out to be the K7S5A's. While running my search engine on them I experienced lots of segmentation faults. I spent a couple of days pouring over the code wondering if I was tripping out. It wasn't until I ran memtest86 at boot time (ran by lilo) that I found memory was being corrupted. I even tried new memory sticks to no avail. Fortunately I found some pages on the web that addressed the problem. It was the motherboard. It took me many hours to replace them on all 8 servers. I don't recommend ECS. I've been very happy with the Giga-byte motherboards I have now.
+
+
+<br><br><br>
+<br><br><br>
+
+</div>
+
+
+
+	
