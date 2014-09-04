@@ -1963,7 +1963,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// always free the sendBuf 
 	if ( s->m_sendBuf ) mfree (s->m_sendBuf, s->m_sendBufSize,"TcpServer");
 	// unregister it with Loop so we don't get any calls about it
-	g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
+	//g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
 	g_loop.unregisterReadCallback  ( sd , this , readSocketWrapper  );
 	// debug msg
 	//log("unregistering sd=%li",sd);
