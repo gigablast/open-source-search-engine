@@ -870,11 +870,11 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 // . this wrapper is called when m_sock is ready for writing
 // . should only be called by Loop.cpp since it calls callbacks
 // . should only be called if in an interrupt or interrupts are off!!
-void sendPollWrapper_ass ( int fd , void *state ) { 
-	UdpServer *THIS  = (UdpServer *)state;
-	// begin the read/send/callback loop
-	THIS->process_ass ( g_now );
-}
+// void sendPollWrapper_ass ( int fd , void *state ) { 
+// 	UdpServer *THIS  = (UdpServer *)state;
+// 	// begin the read/send/callback loop
+// 	THIS->process_ass ( g_now );
+// }
 
 // . should only be called from process_ass() since this is not re-entrant
 // . sends all the awaiting dgrams it can
@@ -1457,7 +1457,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			getSlot = false;
 		// try to prevent another lockup condition of msg20 spawing
 		// a msg22 request to self but failing...
-		if ( msgType == 0x20 && m_msg20sInWaiting >= 100 && niceness )
+		if ( msgType == 0x20 && m_msg20sInWaiting >= 50 && niceness )
 			getSlot = false;
 		// if running short on mem, do not accept any more requests
 		// because we can lock up from that, too
@@ -1494,7 +1494,10 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		//   in loop, the proper way is to throttle back the # of
 		//   outstanding tagdb lookups or whatever at the source
 		//   otherwise we jam up
-		if ( msgType == 0x00 && m_numUsedSlots > 500 && niceness )
+		// . tagdb lookups were being dropped because of this being
+		//   500 so i raised to 900. a lot of them were from
+		//   'get outlink tag recs' or 'get link info' (0x20)
+		if ( msgType == 0x00 && m_numUsedSlots > 1000 && niceness )
 			getSlot = false;
 
 		// added this because host #14 was clogging on
