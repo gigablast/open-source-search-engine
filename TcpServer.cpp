@@ -992,10 +992,13 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	//   precedence over spider traffic
 	if (!g_loop.registerReadCallback (sd,this,readSocketWrapper,niceness))
 		goto hadError;
-	if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
-		g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-		goto hadError;
-	}
+	// what does thie really mean? shouldn't we only register for write
+	// if a write we did failed because the buffer was full?
+	//if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,
+	//niceness)){
+	// 	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	// 	goto hadError;
+	// }
 	// return "s" on success
 	return s;
 	// otherwise, free "s" and return NULL

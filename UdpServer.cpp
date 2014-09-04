@@ -358,11 +358,14 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 		return false;
 	// . also register for writing to the socket, when it's ready
 	// . use the original niceness for this, too
-       if ( ! g_loop.registerWriteCallback ( m_sock,
-					     this,
-					     sendPollWrapper_ass,
-					     0 )) // niceness ) )
-		return false;	
+	// . what does this really mean? shouldn't we only use it
+	//   when we try to write but the write buf is full so we have
+	//   to try again later when it becomes unfull?
+	// if ( ! g_loop.registerWriteCallback ( m_sock,
+	// 					     this,
+	// 					     sendPollWrapper_ass,
+	// 					     0 )) // niceness ) )
+	// 		return false;	
 	// . also register for 30 ms tix (was 15ms)
         //   but we aren't using tokens any more so I raised it
 	// . it's low so we can claim any unclaimed tokens!
@@ -1198,6 +1201,12 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 				  MSG_PEEK          ,
 				  (sockaddr *)&from , 
 				  &fromLen          );	
+
+	// note it
+	if ( g_conf.m_logDebugLoop )
+		log("loop: readsock_ass: peekSize=%i m_sock/fd=%i",
+		    peekSize,m_sock);
+
 	// cancel silly g_errnos and return 0 since we blocked
 	if ( peekSize < 0 ) {
 		g_errno = errno;

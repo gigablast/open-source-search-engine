@@ -16,9 +16,9 @@
 #define MAX_SLOTS 10000
 
 // apple mac os x does not have real-time signal support
-#ifdef __APPLE__
-#define _POLLONLY_
-#endif
+// #ifdef __APPLE__
+// #define _POLLONLY_
+// #endif
 
 // TODO: . if signal queue overflows another signal is sent
 //       . capture that signal and use poll or something???
@@ -914,8 +914,8 @@ bool Loop::init ( ) {
 	//now set up our alarm for quickpoll
 	m_quickInterrupt.it_value.tv_sec = 0;
 	m_quickInterrupt.it_value.tv_usec = QUICKPOLL_INTERVAL * 1000;
-	m_quickInterrupt.it_interval.tv_sec = 0;
-	m_quickInterrupt.it_interval.tv_usec = QUICKPOLL_INTERVAL * 1000;
+	m_realInterrupt.it_interval.tv_sec = 0;
+	m_realInterrupt.it_interval.tv_usec = 7 * 1000;
  	m_noInterrupt.it_value.tv_sec = 0;
  	m_noInterrupt.it_value.tv_usec = 0;
  	m_noInterrupt.it_interval.tv_sec = 0;
@@ -926,8 +926,8 @@ bool Loop::init ( ) {
 	// set the interrupts to off for now
 	//mdw:disableTimer();
 
-	// make this 100ms i guess
-	setitimer(ITIMER_REAL, &m_quickInterrupt, NULL);
+	// make this 7ms i guess
+	setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
 	// this is 10ms
 	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
 
@@ -1808,6 +1808,9 @@ void Loop::doPoll ( ) {
 	FD_ZERO ( &writefds );
 	FD_ZERO ( &exceptfds );
 
+	if ( g_conf.m_logDebugLoop )
+		log("loop: in select");
+
 	// used to measure cpu usage. sigalarm needs to know if we are
 	// sitting idle in select() or are actively doing something w/ the cpu
 	g_inWaitState = true;
@@ -1832,6 +1835,10 @@ void Loop::doPoll ( ) {
 		    &v );
 
 	g_inWaitState = false;
+
+	if ( g_conf.m_logDebugLoop )
+		log("loop: out select n=%li errno=%li errnomsg=%s",
+		    (long)n,(long)errno,mstrerror(errno));
 
 	if ( n < 0 ) { 
 		// valgrind
@@ -1911,6 +1918,8 @@ void Loop::doPoll ( ) {
 	// handle returned threads for niceness -1
 	//g_threads.timedCleanUp(2/*ms*/);
 
+	bool calledOne = false;
+
 	// now keep this fast, too. just check fds we need to.
 	for ( long i = 0 ; i < s_numReadFds ; i++ ) {
 		if ( n == 0 ) break;
@@ -1919,8 +1928,13 @@ void Loop::doPoll ( ) {
 	 	// if niceness is not 0, handle it below
 		if ( s && s->m_niceness > 0 ) continue;
 		// must be set
-		if ( FD_ISSET ( fd , &readfds ) )
+		if ( FD_ISSET ( fd , &readfds ) ) {
+			if ( g_conf.m_logDebugLoop )
+				log("loop: calling cback0 niceness=%li fd=%i"
+				    , s->m_niceness , fd );
+			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,0);
+		}
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
 	//	if ( n == 0 ) break;
@@ -1950,8 +1964,13 @@ void Loop::doPoll ( ) {
 	 	// if niceness is not 0, handle it below
 		if ( s && s->m_niceness <= 0 ) continue;
 		// must be set
-		if ( FD_ISSET ( fd , &readfds ) )
+		if ( FD_ISSET ( fd , &readfds ) ) {
+			if ( g_conf.m_logDebugLoop )
+				log("loop: calling cback1 niceness=%li fd=%i"
+				    , s->m_niceness , fd );
+			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,1);
+		}
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
 	//	if ( n == 0 ) break;
@@ -1964,7 +1983,9 @@ void Loop::doPoll ( ) {
 	// 		callCallbacks_ass (false/*forReading?*/,fd, g_now,1);
 	// }
 
-		
+	//if ( ! calledOne )
+	//	log("loop: select returned n=%li but nothing called.",n);
+
 
 	// . MDW: replaced this with more efficient logic above
 	// . call the callback for each fd we got
