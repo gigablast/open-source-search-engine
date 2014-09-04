@@ -358,11 +358,14 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 		return false;
 	// . also register for writing to the socket, when it's ready
 	// . use the original niceness for this, too
-       if ( ! g_loop.registerWriteCallback ( m_sock,
-					     this,
-					     sendPollWrapper_ass,
-					     0 )) // niceness ) )
-		return false;	
+	// . what does this really mean? shouldn't we only use it
+	//   when we try to write but the write buf is full so we have
+	//   to try again later when it becomes unfull?
+	// if ( ! g_loop.registerWriteCallback ( m_sock,
+	// 					     this,
+	// 					     sendPollWrapper_ass,
+	// 					     0 )) // niceness ) )
+	// 		return false;	
 	// . also register for 30 ms tix (was 15ms)
         //   but we aren't using tokens any more so I raised it
 	// . it's low so we can claim any unclaimed tokens!
@@ -867,11 +870,11 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 // . this wrapper is called when m_sock is ready for writing
 // . should only be called by Loop.cpp since it calls callbacks
 // . should only be called if in an interrupt or interrupts are off!!
-void sendPollWrapper_ass ( int fd , void *state ) { 
-	UdpServer *THIS  = (UdpServer *)state;
-	// begin the read/send/callback loop
-	THIS->process_ass ( g_now );
-}
+// void sendPollWrapper_ass ( int fd , void *state ) { 
+// 	UdpServer *THIS  = (UdpServer *)state;
+// 	// begin the read/send/callback loop
+// 	THIS->process_ass ( g_now );
+// }
 
 // . should only be called from process_ass() since this is not re-entrant
 // . sends all the awaiting dgrams it can
@@ -1198,6 +1201,12 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 				  MSG_PEEK          ,
 				  (sockaddr *)&from , 
 				  &fromLen          );	
+
+	// note it
+	if ( g_conf.m_logDebugLoop )
+		log("loop: readsock_ass: peekSize=%i m_sock/fd=%i",
+		    peekSize,m_sock);
+
 	// cancel silly g_errnos and return 0 since we blocked
 	if ( peekSize < 0 ) {
 		g_errno = errno;
@@ -1448,7 +1457,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			getSlot = false;
 		// try to prevent another lockup condition of msg20 spawing
 		// a msg22 request to self but failing...
-		if ( msgType == 0x20 && m_msg20sInWaiting >= 100 && niceness )
+		if ( msgType == 0x20 && m_msg20sInWaiting >= 50 && niceness )
 			getSlot = false;
 		// if running short on mem, do not accept any more requests
 		// because we can lock up from that, too
@@ -1485,7 +1494,10 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		//   in loop, the proper way is to throttle back the # of
 		//   outstanding tagdb lookups or whatever at the source
 		//   otherwise we jam up
-		if ( msgType == 0x00 && m_numUsedSlots > 500 && niceness )
+		// . tagdb lookups were being dropped because of this being
+		//   500 so i raised to 900. a lot of them were from
+		//   'get outlink tag recs' or 'get link info' (0x20)
+		if ( msgType == 0x00 && m_numUsedSlots > 1000 && niceness )
 			getSlot = false;
 
 		// added this because host #14 was clogging on
@@ -2631,13 +2643,13 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//   happen since we're already in an interrupt handler, so we have
 	//   to let g_loop know to poll
 	// . TODO: won't he have to wakeup before he'll poll?????
-#ifndef _POLLONLY_	
-	if ( ! g_loop.m_needToPoll && 
-	     sigqueue ( s_pid, GB_SIGRTMIN + 1 , svt ) < 0 )
-		g_loop.m_needToPoll = true;
-#else
-	g_loop.m_needToPoll = true;
-#endif
+// #ifndef _POLLONLY_	
+// 	if ( ! g_loop.m_needToPoll && 
+// 	     sigqueue ( s_pid, GB_SIGRTMIN + 1 , svt ) < 0 )
+// 		g_loop.m_needToPoll = true;
+// #else
+// 	g_loop.m_needToPoll = true;
+// #endif
 	// . tell g_loop that we did a queue
 	// . he sets this to false before calling our makeCallbacks_ass()
 	g_someAreQueued = true;
