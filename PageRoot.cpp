@@ -1256,8 +1256,6 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</style>\n");
 
 	sb.safePrintf("<br>");
-
-	/*
 	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:320px;height:320px;display:inline-block;z-index:100;color:black;position:relative;background-color:lightgray;\">");
 
 	sb.safePrintf("<br>");
@@ -1349,7 +1347,6 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
-	*/
 
 
 	//sb.safePrintf("</TD></TR></TABLE></body></html>");
