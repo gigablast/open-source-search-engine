@@ -2309,7 +2309,6 @@ bool Query::setQWords ( char boolFlag ,
 		if ( fieldCode == FIELD_GBFACETINT )
 			ph = hash64 ("gbsortbyint",11);
 
-
 		// ptr to field, if any
 
 		qw->m_fieldCode = fieldCode;
@@ -2358,6 +2357,7 @@ bool Query::setQWords ( char boolFlag ,
 			long firstColonLen = -1;
 			long lastColonLen = -1;
 			long colonCount = 0;
+			long firstComma = -1;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2373,6 +2373,10 @@ bool Query::setQWords ( char boolFlag ,
 						firstColonLen = wlen;
 					colonCount++;
 				}
+				// hit a comma in something like
+				// gbfacetfloat:price,0-1,1-2.5,2.5-10
+				if ( w[wlen]==',' && firstComma == -1 )
+					firstComma = wlen;
 				wlen++;
 			}
 			// ignore following words until we hit a space
@@ -2380,6 +2384,74 @@ bool Query::setQWords ( char boolFlag ,
 			// the hash
 			unsigned long long wid = hash64 ( w , wlen, 0LL );
 
+			//
+			// BEGIN FACET RANGE LISTS
+			//
+			qw->m_numFacetRanges = 0;
+			// for gbfacetfloat:price,0-1,1-2.5,... just hash price
+			if ( firstComma > 0 &&
+			     ( fieldCode == FIELD_GBFACETINT ||
+			       fieldCode == FIELD_GBFACETFLOAT ) )
+				// hash the "price" not the following range lst
+				wid = hash64 ( w , firstComma );
+			// now store the range list so we can 
+			// fill up the buckets below
+			char *s = w + firstComma + 1;
+			char *send = w + wlen;
+			long nr = 0;
+			for ( ; s <send && fieldCode == FIELD_GBFACETINT;s++){
+				// must be a digit or . or -
+				if ( ! is_digit(s[0]) &&
+				     s[0] != '.' &&
+				     s[0] != '-' )
+					break;
+				qw->m_facetRangeIntA [nr] = atoll(s);
+				// skip hyphen
+				for ( ; s < send && *s != '-' ; s++ );
+				// skip that
+				if ( *s != '-' ) break;
+				s++;
+				// must be a digit or . or -
+				if ( ! is_digit(s[0]) &&
+				     s[0] != '.' &&
+				     s[0] != '-' )
+					break;
+				qw->m_facetRangeIntB [nr] = atoll(s);
+				// count it
+				qw->m_numFacetRanges = ++nr;
+				// max?
+				if ( nr >= MAX_FACET_RANGES ) break;
+				// skip to comma or end
+				for ( ; s < send && *s != ',' ; s++ );
+				// skip that
+				if ( *s != ',' ) break;
+				// SKIP COMMA
+				s++;
+			}
+			for ( ; s <send && fieldCode==FIELD_GBFACETFLOAT;s++){
+				qw->m_facetRangeFloatA [nr] = atof(s);
+				// skip hyphen
+				for ( ; s < send && *s != '-' ; s++ );
+				// skip that
+				if ( *s != '-' ) break;
+				s++;
+				qw->m_facetRangeFloatB [nr] = atof(s);
+				// count it
+				qw->m_numFacetRanges = ++nr;
+				// max?
+				if ( nr >= MAX_FACET_RANGES ) break;
+				// skip to comma or end
+				for ( ; s < send && *s != ',' ; s++ );
+				// skip that
+				if ( *s != ',' ) break;
+				// SKIP COMMA
+				s++;
+			}
+
+			//
+			// END FACET RANGE LISTS
+			//
+			     
 			// i've decided not to make 
 			// gbsortby:products.offerPrice 
 			// gbmin:price:1.23 case insensitive
@@ -3522,8 +3594,6 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
-	//{"range", FIELD_RANGE, false,""}, // obsolete, datedb replaced
-
 	{"gbcharset", 
 	 FIELD_CHARSET, 
 	 false,
@@ -4123,8 +4193,6 @@ struct QueryField g_fields[] = {
 
 	//{"gbinjected", FIELD_GBOTHER,false,"Was the document injected?."},
 
-	//{"gbstartrange",FIELD_GBSTARTRANGE,false,""},
-	//{"gbendrange",FIELD_GBENDRANGE,false,""},
 
 	
 };

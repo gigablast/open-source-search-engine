@@ -804,15 +804,24 @@ bool PosdbTable::allocTopTree ( ) {
 		long long total = m_msg2->m_lists[i].getListSize();
 		// skip if empty
 		if ( total == 0 ) continue;
+		// need this
+		QueryWord *qw = qt->m_qword;
 		// we got facet terms
 		m_hasFacetTerm = true;
 		// assume list is a unique site for section hash dup
 		long maxRecs = total / 6 + 1;
 		// slot
 		long slots = maxRecs * 4;
+
+		// if user provided a comma separated range like
+		// gbfacetfloat:price,0-10.0,10.0-30,30-100,100-1000
+		// then that is the max # of slots
+		if ( slots > qw->m_numFacetRanges ) slots=qw->m_numFacetRanges;
+
 		// min of at least 20 otherwise m_dt re-allocs in thread and
 		// causes a core!
 		if ( slots  < 32 ) slots = 32;
+
 		// limit this bitch to 10 million otherwise this gets huge!
 		// like over 28 million i've seen and it goes oom
 		if ( slots > 2000000 ) {
@@ -6910,73 +6919,108 @@ void PosdbTable::intersectLists10_r ( ) {
 	// gbfacet:<xpathsitehash> and the values is the innerhtml content hash
 	// of that xpath/site so we won't have to do buckets for that.
 	//
-	if ( m_hasFacetTerm && ! secondPass ) {
-		// scan each facet termlist and update
-		// QueryTerm::m_facetHashTable/m_dt
-		for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
-			QueryTerm *qt = &m_q->m_qterms[i];
-			if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
-			     qt->m_fieldCode != FIELD_GBFACETINT &&
-			     qt->m_fieldCode != FIELD_GBFACETFLOAT )
-				continue;
-			char *p    = miniMergedList[i];
-			//char *pend = miniMergedEnd [i];
-			//
-			// just grab the first value i guess...
-			//
-			//long val32 = g_posdb.getFacetVal32 ( p );
-			// add it. count occurences of it per docid
-			//qt->m_facetHashTable.addTerm32 ( &val32 );
-			// it might have multiple sections that have
-			// the same gbxpathsitehash...
-			bool firstTime = true;
-			long lastVal;
-			for ( ; ; ) {
-				// do not breach sublist
-				if ( p >= miniMergedEnd[i] ) break;
-				// break if 12 byte key: another docid!
-				if ( ! firstTime && !(p[0] & 0x04) ) break;
-				// . first key is the full size
-				// . uses the w,G,s,v and F bits to hold this
-				// . this is no longer necessarily sitehash,but
-				//   can be any val, like now SectionStats is 
-				//   using it for the innerHtml sentence 
-				//   content hash32
-				long val32 = g_posdb.getFacetVal32 ( p );
-				// don't allow the same docid to vote on the
-				// same value twice!
-				if ( val32 != lastVal || firstTime ) {
-					// add it
-					//qt->m_facetHashTable.addTerm32(&val32
-					// get it
-					HashTableX *ft = &qt->m_facetHashTable;
-					FacetEntry *fe;
-					fe=(FacetEntry *)ft->getValue(&val32);
-					// if there, augment it
-					if ( fe ) {
-						fe->m_count++;
-					}
-					// if not there, init it
-					else {
-						FacetEntry ff;
-						ff.m_count = 1;
-						ff.m_docId = m_docId;
-						ft->addKey(&val32,&ff);
-					}
-				}
-				// to avoid dupage...
-				lastVal = val32;
-				// skip over 6 or 12 byte key
-				if ( firstTime ) p += 12;
-				else             p += 6;
-				firstTime = false;
+	if ( ! m_hasFacetTerm ) goto skipFacetCheck;
+	if ( ! secondPass ) goto skipFacetCheck;
+
+	// scan each facet termlist and update
+	// QueryTerm::m_facetHashTable/m_dt
+	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_q->m_qterms[i];
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+		char *p    = miniMergedList[i];
+		//char *pend = miniMergedEnd [i];
+		//
+		// just grab the first value i guess...
+		//
+		//long val32 = g_posdb.getFacetVal32 ( p );
+		// add it. count occurences of it per docid
+		//qt->m_facetHashTable.addTerm32 ( &val32 );
+		// it might have multiple sections that have
+		// the same gbxpathsitehash...
+		bool firstTime = true;
+		long lastVal;
+		for ( ; ; ) {
+
+		// do not breach sublist
+		if ( p >= miniMergedEnd[i] ) break;
+		// break if 12 byte key: another docid!
+		if ( ! firstTime && !(p[0] & 0x04) ) break;
+		// . first key is the full size
+		// . uses the w,G,s,v and F bits to hold this
+		// . this is no longer necessarily sitehash,but
+		//   can be any val, like now SectionStats is 
+		//   using it for the innerHtml sentence 
+		//   content hash32
+		long val32 = g_posdb.getFacetVal32 ( p );
+
+		float *fp = (float *)&val32;
+
+		QueryWord *qw = qt->m_qword;
+
+		//
+		// CONDENSE THE FACETS
+		//
+		// if the specified facet range is like
+		// 'gbfacetfloat:price,0-1.0,1.0-10,10-50'
+		// then we map this val to one of those range
+		// buckets, i guess the first number in the
+		// range, and do the counts on that! this is
+		// the HISTOGRAM logic. that way if we have 1M results
+		// and each page has its own price, we won't have 1M facets!
+		for ( long k = 0 ; k < qw->m_numFacetRanges ; k ++ ) {
+			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
+				if ( *fp < qw->m_facetRangeFloatA[k])continue;
+				if ( *fp >=qw->m_facetRangeFloatB[k])continue;
+				val32=*(long *)(&qw->m_facetRangeFloatA[k]);
+				break;
+			}
+			// otherwise it was like a 'gbfacetint:gbhopcount' qry
+			if ( val32 <  qw->m_facetRangeIntA[k] ) continue;
+			if ( val32 >= qw->m_facetRangeIntB[k] ) continue;
+			val32 = qw->m_facetRangeIntA[k];
+			break;
+		}
+						
+		// don't allow the same docid to vote on the
+		// same value twice!
+		if ( val32 != lastVal || firstTime ) {
+			// add it
+			//qt->m_facetHashTable.addTerm32(&val32
+			// get it
+			HashTableX *ft = &qt->m_facetHashTable;
+			FacetEntry *fe;
+			fe=(FacetEntry *)ft->getValue(&val32);
+			// if there, augment it
+			if ( fe ) {
+				fe->m_count++;
+			}
+			// if not there, init it
+			else {
+				FacetEntry ff;
+				ff.m_count = 1;
+				ff.m_docId = m_docId;
+				ft->addKey(&val32,&ff);
 			}
 		}
-		// if only one term like gbfacetstr:gbxpathsitehash123456
-		// then do not bother adding to top tree
-		if ( m_r->m_forSectionStats ) goto advance;
+		// to avoid dupage...
+		lastVal = val32;
+		// skip over 6 or 12 byte key
+		if ( firstTime ) p += 12;
+		else             p += 6;
+		firstTime = false;
+		}
 	}
 
+
+ skipFacetCheck:
+
+
+	// if only one term like gbfacetstr:gbxpathsitehash123456
+	// then do not bother adding to top tree
+	if ( m_r->m_forSectionStats ) goto advance;
 
 
 	// . seoDebug hack so we can set "dcs"
