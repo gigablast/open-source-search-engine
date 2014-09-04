@@ -29,11 +29,12 @@ extern char *g_msg;
 // . declare all dynamic functions here
 // . these are all defined in Page*.cpp files
 // . these are called to send a dynamic page
+bool sendPageWidgets ( TcpSocket *socket , HttpRequest *hr ) ;
 bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
 bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 //bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
 
-
+bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) ;
 
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
@@ -176,10 +177,10 @@ class Pages {
 	// . also, modify both if you modify either!
 
 	bool printAdminTop 	       ( SafeBuf     *sb   ,
-				  TcpSocket   *s    ,
-				  HttpRequest *r    ,
-				  char        *qs = NULL,
-				  char* bodyJavascript = "" );
+					 TcpSocket   *s    ,
+					 HttpRequest *r    ,
+					 char        *qs = NULL,
+					 char* bodyJavascript = "" );
 
 
 	bool printAdminTop2 	       ( SafeBuf     *sb   ,
@@ -267,7 +268,9 @@ class Pages {
 				      char *username,
 				      char *coll     ,
 				      char *pwd      ,
-				      char *qs       );
+				      char *qs       ,
+				      TcpSocket *sock ,
+				      HttpRequest *hr );
 	/*
 	char *printCollectionNavBar    ( char *p    ,
 					 char *pend , 

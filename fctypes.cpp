@@ -1877,7 +1877,10 @@ long long gettimeofdayInMillisecondsSynced() {
 	if ( g_inSigHandler && ! g_threads.amThread() ) { 
 		char *xx = NULL; *xx = 0; }
 	// sanity check
-	if ( ! isClockInSync() ) { char *xx = NULL; *xx = 0; }
+	if ( ! isClockInSync() ) { 
+		log("xml: clock not in sync with host #0 yet!!!!!!");
+		//char *xx = NULL; *xx = 0; }
+	}
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Getting global time but clock not in sync.");
 	// this isn't async signal safe...

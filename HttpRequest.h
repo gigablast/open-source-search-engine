@@ -73,6 +73,7 @@ class HttpRequest {
 	};
 
 	// FORMAT_HTML FORMAT_JSON FORMAT_XML
+	char getFormat() { return getReplyFormat(); };
 	char getReplyFormat();
 	bool m_replyFormatValid;
 	char m_replyFormat;
@@ -120,7 +121,7 @@ class HttpRequest {
 	char *getHost        () { return m_host;    };
 	long  getHostLen     () { return m_hostLen; };
 	//bool  isLocal        () { return m_isLocal; };
-	//bool  isAdmin        () { return m_isAdmin; };
+	//bool  isAdmin        () { return m_isRootAdmin; };
 	bool  isLocal        () { return m_isLocal; };
 
 	// is this the admin of a collection?
@@ -152,6 +153,8 @@ class HttpRequest {
 	
 
 	bool hasField ( char *field );
+
+	bool isGuestAdmin ( ) ;
 
 	// are we a redir? if so return non-NULL
 	char      *getRedir    ( ) { return m_redir;    };
@@ -230,7 +233,7 @@ class HttpRequest {
 	bool m_isMSIE;
 
 	// does the connecting machine have admin privledges?
-	//bool  m_isAdmin;
+	//bool  m_isRootAdmin;
 
 	// . decoded cgi data stored here 
 	// . this just points into TcpSocket::m_readBuf

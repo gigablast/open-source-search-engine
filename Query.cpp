@@ -2820,6 +2820,9 @@ bool Query::setQWords ( char boolFlag ,
 		}
 		// skip if not in field
 		if ( ! m_qwords[j].m_fieldCode ) continue;
+		// must be in a generic field, the other fields like site:
+		// will be messed up by this logic
+		if ( m_qwords[j].m_fieldCode != FIELD_GENERIC ) continue;
 		// first alnumword in field?
 		if ( first == -1 ) {
 			// must be alnum
@@ -3873,7 +3876,6 @@ struct QueryField g_fields[] = {
 	 "Like above, but DOES include the special spider status documents.",
 	 NULL,
 	 0},
-
 
 	{"gbdocindexdate",
 	 FIELD_GENERIC,

@@ -37,9 +37,10 @@ void testWinnerTreeKey ( ) ;
 // try 30 again since we have new localcrawlinfo update logic much faster
 //#define SPIDER_DONE_TIMER 30
 // neo under heavy load go to 60
-#define SPIDER_DONE_TIMER 60
+//#define SPIDER_DONE_TIMER 60
 // super overloaded
 //#define SPIDER_DONE_TIMER 90
+#define SPIDER_DONE_TIMER 20
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
@@ -5248,7 +5249,7 @@ void SpiderLoop::startLoop ( ) {
 	// in case host when dead.
 	// now that we only send the info on startup and if changed,
 	// let's move back down to 1 second
-	if ( !g_loop.registerSleepCallback(5000,
+	if ( !g_loop.registerSleepCallback(3000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");

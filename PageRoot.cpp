@@ -639,56 +639,58 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
-bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 
-	sb.safePrintf("<html>\n");
-	sb.safePrintf("<head>\n");
-	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
-	sb.safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb.safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	sb->safePrintf("<html>\n");
+	sb->safePrintf("<head>\n");
+	//sb->safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
+	sb->safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
+	sb->safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	//char *title = "An Alternative Open Source Search Engine";
 	char *title = "An Alternative Open Source Search Engine";
-	if ( pageNum == 1 ) title = "Directory";
-	if ( pageNum == 2 ) title = "Advanced";
-	if ( pageNum == 3 ) title = "Add Url";
-	if ( pageNum == 4 ) title = "About";
-	if ( pageNum == 5 ) title = "Help";
-	if ( pageNum == 6 ) title = "API";
-	sb.safePrintf("<title>Gigablast - %s</title>\n",title);
-	sb.safePrintf("<style><!--\n");
-	sb.safePrintf("body {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("margin: 0px 0px;\n");
-	sb.safePrintf("letter-spacing: 0.04em;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("a {text-decoration:none;}\n");
-	//sb.safePrintf("a:link {color:#00c}\n");
-	//sb.safePrintf("a:visited {color:#551a8b}\n");
-	//sb.safePrintf("a:active {color:#f00}\n");
-	sb.safePrintf(".bold {font-weight: bold;}\n");
-	sb.safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb.safePrintf(".url {color:#008000;}\n");
-	sb.safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf("table {\n");
-	sb.safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb.safePrintf("color: #000000;\n");
-	sb.safePrintf("font-size: 12px;\n");
-	sb.safePrintf("}\n");
-	sb.safePrintf(".directory {font-size: 16px;}\n"
+	if ( strcasecmp(tabName,"search") ) title = tabName;
+	// if ( pageNum == 1 ) title = "Directory";
+	// if ( pageNum == 2 ) title = "Advanced";
+	// if ( pageNum == 3 ) title = "Add Url";
+	// if ( pageNum == 4 ) title = "About";
+	// if ( pageNum == 5 ) title = "Help";
+	// if ( pageNum == 6 ) title = "API";
+	sb->safePrintf("<title>Gigablast - %s</title>\n",title);
+	sb->safePrintf("<style><!--\n");
+	sb->safePrintf("body {\n");
+	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb->safePrintf("color: #000000;\n");
+	sb->safePrintf("font-size: 12px;\n");
+	sb->safePrintf("margin: 0px 0px;\n");
+	sb->safePrintf("letter-spacing: 0.04em;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf("a {text-decoration:none;}\n");
+	//sb->safePrintf("a:link {color:#00c}\n");
+	//sb->safePrintf("a:visited {color:#551a8b}\n");
+	//sb->safePrintf("a:active {color:#f00}\n");
+	sb->safePrintf(".bold {font-weight: bold;}\n");
+	sb->safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
+	sb->safePrintf(".url {color:#008000;}\n");
+	sb->safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf("table {\n");
+	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb->safePrintf("color: #000000;\n");
+	sb->safePrintf("font-size: 12px;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf(".directory {font-size: 16px;}\n"
 		      ".nav {font-size:20px;align:right;}\n"
 		      );
-	sb.safePrintf("-->\n");
-	sb.safePrintf("</style>\n");
-	sb.safePrintf("\n");
-	sb.safePrintf("</head>\n");
-	sb.safePrintf("<script>\n");
-	sb.safePrintf("<!--\n");
-	sb.safePrintf("function x(){document.f.q.focus();}\n");
-	sb.safePrintf("// --></script>\n");
-	sb.safePrintf("<body onload=\"x()\">\n");
-	//sb.safePrintf("<body>\n");
+	sb->safePrintf("-->\n");
+	sb->safePrintf("</style>\n");
+	sb->safePrintf("\n");
+	sb->safePrintf("</head>\n");
+	sb->safePrintf("<script>\n");
+	sb->safePrintf("<!--\n");
+	sb->safePrintf("function x(){document.f.q.focus();}\n");
+	sb->safePrintf("// --></script>\n");
+	sb->safePrintf("<body onload=\"x()\">\n");
+	//sb->safePrintf("<body>\n");
 	//g_proxy.insertLoginBarDirective ( &sb );
 
 	//
@@ -696,7 +698,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	//
 
 
-	sb.safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
+	sb->safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
 		      "cellpadding=0>"
 		      "\n<TR>\n");
 
@@ -713,15 +715,19 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
 		{"ADD URL","/addurl"},
+		{"WIDGETS","/widgets.html"},
+		{"SYNTAX","/syntax.html"},
+		{"USERS","/users.html"},
 		{"ABOUT","/about.html"},
-		{"HELP","/help.html"},
-		{"API","/api"}
+		{"NEWS","/news.html"},
+		{"FAQ","/faq.html"},
+		{"API","/api.html"}
 	};
 
 	//
 	// first the nav column
 	//
-	sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+	sb->safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\"width:210px;"
 		      "border-right:3px solid blue;"
@@ -741,24 +747,33 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		      "width:100px;"
 		      "height:100px;"
 		      "\">"
-		      "<br style=line-height:10px;>"
-		      "<img width=54 height=79 src=/rocket.jpg>"
-		      "</div>"
-		      "</a>"
-		      "</center>"
+		       );
 
+	if ( strcmp(tabName,"appliance") == 0 )
+		sb->safePrintf("<img style=margin-top:21px; width=90 "
+			       "height=57 src=/computer2.png>");
+	else
+		sb->safePrintf("<br style=line-height:10px;>"
+			       "<img width=54 height=79 src=/rocket.jpg>"
+			       );
 
-		      "<br>"
-		      "<br>"
+	sb->safePrintf ( "</div>"
+			 "</a>"
+			 "</center>"
 
+			 "<br>"
+			 "<br>"
 		      );
 
 	long n = sizeof(mi) / sizeof(MenuItem);
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	for ( long i = 0 ; i < n ; i++ ) {
 
-		sb.safePrintf(
-			      "<a href=%s>"
+		sb->safePrintf(
+			      "<a href=%s?c=%s>"
 			      "<div style=\""
 			      "padding:5px;"
 			      "position:relative;"
@@ -772,14 +787,20 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 			      "font-size:14px;"
 			      "x-overflow:;"
 			      , mi[i].m_url
+			      , coll
 			      );
-		if ( i == pageNum )
-			sb.safePrintf(
+		//if ( i == pageNum )
+		bool matched = false;
+		if ( strcasecmp(mi[i].m_text,tabName) == 0 )
+			matched = true;
+
+		if ( matched )
+			sb->safePrintf(
 				      "border-color:blue;"
 				      "color:black;"
 				      "background-color:white;\" ");
 		else
-			sb.safePrintf("border-color:white;"
+			sb->safePrintf("border-color:white;"
 				      "color:white;"
 				      "background-color:blue;\" "
 				      " onmouseover=\""
@@ -790,7 +811,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 				      "this.style.color='white';\""
 				      );
 
-		sb.safePrintf(">"
+		sb->safePrintf(">"
 			      // make button wider
 			      "<nobr>"
 			      "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; "
@@ -800,8 +821,8 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		//
 		// begin hack: white out the blue border line!!
 		//
-		if ( i == pageNum )
-			sb.safePrintf(
+		if ( matched )
+			sb->safePrintf(
 				      "<div style=padding:5px;top:0;"
 				      "background-color:white;"
 				      "display:inline-block;"
@@ -810,7 +831,7 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 				      "</div>"
 				      );
 		// end hack
-		sb.safePrintf(
+		sb->safePrintf(
 			      "</div>"
 			      "</a>"
 			      "<br>"
@@ -818,9 +839,11 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 	}
 
 	// admin link
-	sb.safePrintf(
-		      "<a href=/admin/settings>"
+	sb->safePrintf(
+		      "<a href=/admin/settings?c=%s>"
 		      "<div style=\"background-color:green;"
+		      // for try it out bubble:
+		      //"position:relative;"
 		      "padding:5px;"
 		      "text-align:right;"
 		      "border-width:3px;"
@@ -841,24 +864,66 @@ bool printFrontPageShell ( SafeBuf &sb , long pageNum ) {
 		      "this.style.backgroundColor='green';"
 		      "this.style.color='white';\""
 		      ">"
+
+		      /*
+		      // try it out bubble div
+		      "<div "
+
+		      " onmouseover=\""
+		      "this.style.box-shadow='10px 10px 5px #888888';"
+		      "\""
+		      " onmouseout=\""
+		      "this.style.box-shadow='';"
+		      "\""
+
+		      "style=\""
+		      "vertical-align:middle;"
+		      "text-align:left;"
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      //"border-color:black;"
+		      //"border-style:solid;"
+		      //"border-width:2px;"
+		      "padding:3px;"
+		      //"width:30px;"
+		      //"height:20px;"
+		      //"margin-top:-20px;"
+		      "margin-left:-120px;"
+		      "position:absolute;"
+		      //"top:-20px;"
+		      //"left:10px;"
+		      "display:inline-block;"
+		      "\""
+		      ">"
+		      "<b style=font-size:11px;>"
+		      "Click for demo"
+		      "</b>"
+		      "</div>"
+		      */
+		      // end try it out bubble div
+
+
+
+
 		      "<b>ADMIN</b> &nbsp; &nbsp;"
 		      "</div>"
 		      "</a>"
 		      "<br>"
+		      , coll
 		      );
 
 
 	//
 	// now the MAIN column
 	//
-	sb.safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
+	sb->safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
 
-	sb.safePrintf("<br><br>");
+	sb->safePrintf("<br><br>");
 
-	sb.safePrintf("<a href=/><img border=0 width=470 "
+	sb->safePrintf("<a href=/><img border=0 width=470 "
 		      "height=44 src=/gigablast.jpg></a>\n");
 
-	// sb.safePrintf("<br>"
+	// sb->safePrintf("<br>"
 	// 	      "<img border=0 width=470 "
 	// 	      "height=15 src=/bar.jpg>\n");
 
@@ -891,7 +956,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
-	printFrontPageShell ( sb ,0 );
+	printFrontPageShell ( &sb , "search" , cr );
 
 
 	//sb.safePrintf("<br><br>\n");
@@ -1027,7 +1092,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
 	"</font><br>\n");
-	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>. Limited support available for free."
+	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>. Limited support available for free."
 		  ,80);
 	sb.safePrintf("<br><br>");
 	sb.safePrintf("</td></tr>\n");
@@ -1169,6 +1234,128 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</td></tr>\n");
 	*/
 
+	//
+	// begin new stuff
+	//
+
+	// gradients
+	sb.safePrintf("<style><!--\n");
+	
+	sb.safePrintf(".grad {");
+	sb.safePrintf("background: rgb(190,201,247);");
+	sb.safePrintf("background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjYmVjOWY3IiBzdG9wLW9wYWNpdHk9IjEiLz4KICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBiM2NlZCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);");
+	sb.safePrintf("background: -moz-linear-gradient(-45deg, rgba(190,201,247,1) 0%%, rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: -webkit-gradient(linear, left top, right bottom, color-stop(0%%,rgba(190,201,247,1)), color-stop(100%%,rgba(11,60,237,1)));");
+	sb.safePrintf("background: -webkit-linear-gradient(-45deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: -o-linear-gradient(-45deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: -ms-linear-gradient(-45deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("background: linear-gradient(135deg, rgba(190,201,247,1) 0%%,rgba(11,60,237,1) 100%%);");
+	sb.safePrintf("filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#bec9f7', endColorstr='#0b3ced',GradientType=1 );");
+	sb.safePrintf("}");
+	sb.safePrintf("-->");
+	sb.safePrintf("</style>\n");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:320px;height:320px;display:inline-block;z-index:100;color:black;position:relative;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+
+	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
+	sb.safePrintf("Build Your Own");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
+	sb.safePrintf("Search Engine in the");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:80px;>");
+	sb.safePrintf("Cloud");
+	sb.safePrintf("</font>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+
+	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
+	sb.safePrintf("<a href=/admin/addcoll><img style=float:left;padding-right:15px; height=188px width=101px src=/robot3.png></a>");
+	//sb.safePrintf("<br>");
+	sb.safePrintf("<b>STEP 1.</b> <a href=/admin/addcoll?guide=1>"
+		      "Click here to");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>name your engine</b></a>.");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>STEP 2.</b> <a href=/admin/settings?guide=1>"
+		      "Click here to ");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>add websites to index</b></a>.");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>STEP 3.</b> <a href=/widgets.html?guide=1>"
+		      "Click here to");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>insert search box</b></a>.");
+
+	sb.safePrintf("</div>");
+
+	sb.safePrintf("</div>");
+
+
+	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:280px;height:280px;display:inline-block;z-index:105;color:black;margin-left:-50px;position:absolute;margin-top:50px;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br style=line-height:25px;>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:40px;>");
+	sb.safePrintf("Web Search Appliance");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+
+	sb.safePrintf("<div style=margin-left:20px;width:270px;>");
+	sb.safePrintf("<a href=http://www.gigablast.com/appliance.html><img style=float:left;padding-bottom:20px;padding-right:10px; height=81px width=121px src=/computer2.png></a>");
+
+
+	sb.safePrintf("Put the web in your closet. ");
+	sb.safePrintf("Jump start your efforts with four 1U supermicro servers loaded with the top 2 billion pages from the web. <a href=http://www.gigablast.com/appliance.html>[learn more]</a>");
+	sb.safePrintf("</font>");
+
+	sb.safePrintf("</div>");
+
+	sb.safePrintf("</div>");
+
+
+	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:230px;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:60px;>");
+	sb.safePrintf("Open Source");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<div style=margin-left:30px;margin-right:5px;>");
+	sb.safePrintf("<a href=http://www.gigablast.com/faq.html#features><img style=float:left;padding-right:10px height=71px width=71px src=/unlocked2.png></a>");
+
+	sb.safePrintf("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>.");
+	sb.safePrintf("</div>");
+
+	sb.safePrintf("</div>");
+
+
+	//sb.safePrintf("</TD></TR></TABLE></body></html>");
+
+
+	//
+	// end new stuff
+	//
+
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
@@ -1180,7 +1367,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
-	printFrontPageShell ( sb , 3 );
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+
+	printFrontPageShell ( &sb , "add url" , cr );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1215,7 +1404,6 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<form method=GET "
 		      "action=/addurl name=f>\n" );
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 	if ( cr )
@@ -1378,8 +1566,9 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	if ( format != FORMAT_HTML )
 		return printTopDirectory ( sb , format );
 
+	CollectionRec *cr = g_collectiondb.getRec ( r );
 
-	printFrontPageShell ( sb , 1 );
+	printFrontPageShell ( &sb , "directory" , cr );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -1388,7 +1577,6 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<form method=GET "
 		      "action=/search name=f>\n");
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
 	if ( cr )
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
 			      cr->m_coll);
@@ -1648,7 +1836,7 @@ bool printTopDirectory ( SafeBuf& sb , char format ) {
 				     "<br>"
 				     "<b>"
 				     "Please follow the set up "
-				     "<a href=/admin.html#dmoz>"
+				     "<a href=/faq.html#dmoz>"
 				     "instructions"
 				     "</a>."
 				     "</b>"
@@ -1839,7 +2027,7 @@ public:
 	//Msg4       m_msg4;
 	Msg7       m_msg7;
 	TcpSocket *m_socket;
-        bool       m_isAdmin;
+        bool       m_isRootAdmin;
 	char       m_coll[MAX_COLL_LEN+1];
 	bool       m_goodAnswer;
 	bool       m_doTuringTest;
@@ -2017,7 +2205,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin
 	st1->m_socket  = sock;
-	st1->m_isAdmin = isAdmin;
+	st1->m_isRootAdmin = isAdmin;
 
 	/*
 	// save the url
@@ -2089,7 +2277,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	long now = getTimeGlobal();
 	// . allow 1 submit every 1 hour
 	// . restrict by submitter domain ip
-	if ( ! st1->m_isAdmin &&
+	if ( ! st1->m_isRootAdmin &&
 	     ! canSubmit ( h , now , cr->m_maxAddUrlsPerIpDomPerDay ) ) {
 		// return error page
 		//g_errno = ETOOEARLY;
@@ -2115,7 +2303,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// check it, if turing test is enabled for this collection
 	/*
-	if ( ! st1->m_isAdmin && cr->m_doTuringTest && 
+	if ( ! st1->m_isRootAdmin && cr->m_doTuringTest && 
 	     ! g_turingTest.isHuman(r) )  {
 		// log note so we know it didn't make it
 		g_msg = " (error: bad answer)";
@@ -2170,7 +2358,7 @@ void doneInjectingWrapper3 ( void *st ) {
 	log(LOG_INFO,"http: add url %s (%s)",url ,mstrerror(g_errno));
 	// extract info from state
 	TcpSocket *sock    = st1->m_socket;
-	//bool       isAdmin = st1->m_isAdmin;
+	//bool       isAdmin = st1->m_isRootAdmin;
 	//char      *url     = NULL;
 	//if ( st1->m_urlLen ) url = st1->m_url;
 	// re-null it out if just http://
@@ -2391,7 +2579,9 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 2 );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	printFrontPageShell ( &sb , "advanced" , cr );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2400,7 +2590,6 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 	sb.safePrintf("<form method=GET "
 		      "action=/search name=f>\n" );
 
-	CollectionRec *cr = g_collectiondb.getRec ( hr );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 	if ( cr )
@@ -2566,7 +2755,9 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 4 );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	printFrontPageShell ( &sb , "about" , cr );
 
 
 	sb.safePrintf("<br>\n");
@@ -2576,7 +2767,6 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 	//sb.safePrintf("<form method=GET "
 	//	      "action=/addurl name=f>\n" );
 
-	CollectionRec *cr = g_collectiondb.getRec ( hr );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 	if ( cr )
@@ -2618,7 +2808,7 @@ bool sendPageAbout ( TcpSocket *sock , HttpRequest *hr ) {
 	"	</p>"
 	""
 	"<p>"
-	"Matt Wells is currently the sole maintainer and programmer of Gigablast and is open for <u>consulting work</u>. For more information, contact us at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
+	"For more information, contact Matt directly at <br><img src=data:image/gif;base64,R0lGODlhLAEeAIAAAP///wAAACH5BAEAAAAALAAAAAAsAR4AAAL+hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zqPB3wsKV7/Ao9gBHpEb5kkJcfqGPenCeikaG1ooBjvyOsAkMdVGPqQl3a0Caq66l3PTegjUAvT1ed1wFxgHqMeQF3eYd9U19ofQ1sjluDj5WMloWNg0qIaVaKSZ0Abp5dcX+sZJeImZSri4h/Q3GpnZmjooS0c3CUmpOoEqijp6a1l82Ol2uipZ2ZwZ+/z6ticdO2x87Cy8mqu9zd0LytldAU4thkwGp5QIrb6VJjg+HW5pjR0PTSnJL/pPmblrXAISjGIPoTxH7Uwpo+YK3kKJwww+bFQvmJn+QsnwQcTl72M/kNhsRfAErBMHJogcqqQIC6K7hROPDaTnjA1DWYrulfu27Fk3lqzsDU1ZUkPKUi6TfntZ8pNIWiYxihPaklQ2qCS7AgXTLufVX6qQLkHoUWbQaGpfcTyF7mBVW2XHScvKdevIpNnArp1Ltl7dlUabOv0b8bA3chsTyt3Lja2hu40Rd9XL96HfvPdArjF352ThtIpFQg3r7W5irNPm0YScOC9q2GlbWpx9ueLjdD8J19QrZfbTthIbWzx+kaTf1sw8umZ1+7XyoiFRSo95tirezMLtEj+4/Pkuul/LZ735ExzVvuLJn687emxg3aVXI3aSHitajEVnn5vX755g7wEoHy7MxRdZgrVZtuAjDQI2WRT7uWdVgVfwMtx7EtbS24QhiVULfaWcQeJuWZhVYooq8jCTYzGFtmKMMtbQYgY1zohjjjf48kVcOv4IpA8w8hJkkUYeiWSSSi7J5AgFAAA7>"
 	"</p>"
 	"<br>"
 	"<center>"
@@ -2657,7 +2847,9 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
 
-	printFrontPageShell ( sb , 5 );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	printFrontPageShell ( &sb , "syntax" , cr );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2666,7 +2858,6 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	//sb.safePrintf("<form method=GET "
 	//	      "action=/addurl name=f>\n" );
 
-	// CollectionRec *cr = g_collectiondb.getRec ( hr );
 	// char *coll = "";
 	// if ( cr ) coll = cr->m_coll;
 	// if ( cr )

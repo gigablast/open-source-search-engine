@@ -184,7 +184,7 @@ case EDIFFBOTTOKENEXPIRED: return "Diffbot token expired";
 case EDIFFBOTUNKNOWNERROR: return "Diffbot unknown error";
 case EMISSINGINPUT: return "Missing required input parms";
 case EDMOZNOTREADY: return "Dmoz is not setup, follow instructions in "
-			"admin.html to setup";
+			"faq.html to setup";
 case EPROXYSSLCONNECTFAILED: return "SSL tunnel through HTTP proxy failed";
 case EINLINESECTIONS: return "Error generating section votes";
 case EREADONLYMODE: return "In read only mode. Failed.";

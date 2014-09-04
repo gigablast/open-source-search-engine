@@ -466,6 +466,8 @@ class Conf {
 	// redhat 9's NPTL doesn't like our async signals
 	bool   m_allowAsyncSignals;
 
+	bool   m_allowCloudUsers;
+
 	// if in read-only mode we do no spidering and load no saved trees
 	// so we can use all mem for caching index lists
 	bool   m_readOnlyMode;

@@ -1957,6 +1957,14 @@ bool XmlDoc::injectDoc ( char *url ,
 			 void *state,
 			 void (*callback)(void *state) ) {
 
+	// wait until we are synced with host #0
+	if ( ! isClockInSync() ) {
+		log("xmldocl: got injection request but clock not yet "
+		    "synced with host #0");
+		g_errno = ETRYAGAIN;//CLOCKNOTSYNCED;
+		return true;
+	}
+
 	// normalize url
 	Url uu;
 	// do not add www to fix tmblr.co/ZHw5yo1E5TAaW injection
@@ -16719,10 +16727,10 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// These ulimit sizes are max virtual memory in kilobytes. let's
 	// keep them to 25 Megabytes
 	if      ( ctype == CT_PDF ) 
-		snprintf(cmd,2047 ,"ulimit -v 25000 ; ulimit -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out );
+		snprintf(cmd,2047 ,"ulimit -v 25000 ; ulimit -t 30 ; timeout 30s nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out );
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
-		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; export ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
+		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; export ANTIWORDHOME=%s/antiword-dir ; timeout 30s nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
 	else if ( ctype == CT_XLS )
 		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in , out );
 	// this is too buggy for now... causes hanging threads because it
@@ -21232,7 +21240,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		SafeBuf *spiderReplyMetaList = NULL;
 		if ( cr->m_indexSpiderReplies && 
 		     m_useSpiderdb &&
-		     // doing it for diffbot throws off smoketests
+		     // doing it for diffbot throws off smoketests.
+		     // yeah, but we need it, so we'll just have to update
+		     // the smoketests
 		     ! cr->m_isCustomCrawl ) {
 			// get the spiderreply ready to be added
 			spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
@@ -36385,8 +36395,16 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinks,rdbId) ) 
 			return NULL;
 	}
+
+	long old2, old3, old4;
+
+	// if running for diffbot crawlbot then isCustomCrawl is true
+	// so do not update the siteinlink info already in tagdb since i 
+	// imported it from my main collection. we do not want to overwrite it.
+	if ( cr->m_isCustomCrawl ) goto skipSiteInlinks;
+
 	// sitenuminlinksfresh
-	long old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
+	old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
 	if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
 	     m_updatingSiteLinkInfoTags )
 		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
@@ -36394,7 +36412,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
 			return NULL;
 	// sitepop
-	long old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
+	old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
 				&timestamp);
 	if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
 	     m_updatingSiteLinkInfoTags )
@@ -36403,7 +36421,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
 			return NULL;
 	// total site inlinks
-	long old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
+	old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
 				&timestamp);
 	if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
 	     m_updatingSiteLinkInfoTags )
@@ -36411,6 +36429,8 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				     now,"xmldoc",
 				    *ip,m_siteNumInlinksTotal,rdbId)) 
 			return NULL;
+
+ skipSiteInlinks:
 
 	// get root title buf from old tag
 	char *data  = NULL;

@@ -117,7 +117,7 @@ class SearchInput {
 
 	Query         *m_q2;
 
-	char           m_isAdmin;
+	char           m_isRootAdmin;
 
 
 	// these are set from things above

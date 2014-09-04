@@ -110,8 +110,8 @@ class Stats {
 	long      m_totalNumFails;
 	float     m_avgQueryTime;
 	float     m_successRate;
-	long long m_readSignals;
-	long long m_writeSignals;
+	//long long m_readSignals;
+	//long long m_writeSignals;
 
 	// set in BigFile.cpp
 	long      m_slowDiskReads;
