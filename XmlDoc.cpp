@@ -48533,23 +48533,42 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 	// 	if (!sb->pushChar('\0') ) return false;
 	//}
 
+
+	char *content;
+	long contentLen;
+	long nameLen;
+	char *s;
+	long i = 0;
+
+	bool uniqueField = false;
+
+	// a title tag can count now too
+	if ( strcmp(qs,"title") == 0 ) {
+		// skip leading spaces = false
+		content = xml->getString ("title",&contentLen,false);
+		uniqueField = true;
+		goto skip;
+	}
+			
+
+
 	// find the first meta summary node
-	for ( long i = 0 ; i < xml->m_numNodes ; i++ ) {
+	for ( i = 0 ; i < xml->m_numNodes ; i++ ) {
+
 		// continue if not a meta tag
-		if ( xml->m_nodes[i].m_nodeId != 68 ) continue;
+		if ( xml->m_nodes[i].m_nodeId != TAG_META ) continue;
 		// . does it have a type field that's "summary"
 		// . <meta name=summary content="...">
 		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
-		long nameLen;
-		char *s = xml->getString ( i , "name", &nameLen );
+		s = xml->getString ( i , "name", &nameLen );
 		// "s" can be "summary","description","keywords",...
 		if ( nameLen != qsLen ) continue;
 		if ( strncasecmp ( s , qs , qsLen ) != 0 ) continue;
 		// point to the summary itself
-		long contentLen;
-		char *content = xml->getString ( i , "content" , &contentLen );
+		content = xml->getString ( i , "content" , &contentLen );
 		if ( ! content || contentLen <= 0 ) continue;
 
+	skip:
 		// hash it to match it if caller specified a particular hash
 		// because they are coming from Msg40::lookUpFacets() function
 		// to convert the hashes to strings, like for rendering in
@@ -48569,6 +48588,8 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 
 		// if only one specified, we are done
 		if ( fvh ) return true;
+
+		if ( uniqueField ) return true;
 	}
 
 	return true;

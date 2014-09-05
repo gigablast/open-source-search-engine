@@ -6413,8 +6413,11 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 					    (long)*fvh);
 		else if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
 			newStuff.safePrintf("prepend="
-					    "gbfieldmatch%%3A%s%%3A%%22",
-					    term);
+					    "gbfieldmatch%%3A%s%%3A%%22"
+					    ,term
+					    //"gbequalint%%3A%s%%3A%lu"
+					    //,(long)*fvh
+					    );
 			newStuff.urlEncode(text);
 			newStuff.safePrintf("%%22");
 		}

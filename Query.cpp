@@ -1842,7 +1842,9 @@ bool Query::setQWords ( char boolFlag ,
 	if ( m_qwords || m_qwordsAllocSize ) { char *xx = NULL; *xx = 0; }
 	// point m_qwords to our generic buffer if it will fit
 	//	if ( need < GBUF_SIZE ) {
-	if ( m_gnext + need < m_gbuf + GBUF_SIZE ) {
+	if ( m_gnext + need < m_gbuf + GBUF_SIZE && 
+	     // it can wrap so watch out with this:
+	     need < GBUF_SIZE ) {
 		m_qwords = (QueryWord *)m_gnext;
 		m_gnext += need;
 	}
