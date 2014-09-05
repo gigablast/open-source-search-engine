@@ -6363,7 +6363,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		//if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 		//	suffix = "float";
 		//newStuff.safePrintf("prepend=gbequalint%%3A");
-		if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
+		if ( qt->m_fieldCode == FIELD_GBFACETINT &&
+		     qw->m_numFacetRanges > 0 ) {
 		     long min = qw->m_facetRangeIntA[k2];
 		     long max = qw->m_facetRangeIntB[k2];
 		     if ( min == max )
@@ -6405,11 +6406,18 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 					    "gbequalfloat%%3A%s%%3A%f",
 					    term,
 					    *(float *)fvh);
-		else
+		else if ( qt->m_fieldCode == FIELD_GBFACETINT )
 			newStuff.safePrintf("prepend="
 					    "gbequalint%%3A%s%%3A%lu",
 					    term,
 					    (long)*fvh);
+		else if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
+			newStuff.safePrintf("prepend="
+					    "gbfieldmatch%%3A%s%%3A%%22",
+					    term);
+			newStuff.urlEncode(text);
+			newStuff.safePrintf("%%22");
+		}
 
 		// get the original url and add 
 		// &prepend=gbequalint:gbhopcount:1 type stuff to it
