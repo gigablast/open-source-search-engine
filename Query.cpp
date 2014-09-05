@@ -4041,6 +4041,14 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:size,0-10,10-20,30-100,100-200,200-1000,1000-10000",
+	 "Returns facets in "
+	 "of the <i>size</i> field (either in json, field or a meta tag) "
+	 "and cluster the results into the specified ranges.",
+	 NULL,
+	 0},
+
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
 	 "gbfacetfloat:product.weight",
 	 "Returns facets "
@@ -4049,6 +4057,12 @@ struct QueryField g_fields[] = {
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
 	 "</i>", 
+	 NULL,
+	 0},
+
+	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
+	 "gbfacetfloat:product.price,0-1.5,1.5-5,5.0-20,20-100.0",
+	 "Similar to above but cluster the pricess into the specified ranges.",
 	 NULL,
 	 0},
 
