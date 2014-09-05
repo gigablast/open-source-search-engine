@@ -6964,7 +6964,10 @@ void PosdbTable::intersectLists10_r ( ) {
 	// of that xpath/site so we won't have to do buckets for that.
 	//
 	if ( ! m_hasFacetTerm ) goto skipFacetCheck;
-	if ( ! secondPass ) goto skipFacetCheck;
+
+	// only do facet computations on the first pass so we have access
+	// to all docids even if not in the winner tree
+	if ( secondPass ) goto skipFacetCheck;
 
 	// scan each facet termlist and update
 	// QueryTerm::m_facetHashTable/m_dt
@@ -7040,18 +7043,18 @@ void PosdbTable::intersectLists10_r ( ) {
 			FacetEntry *fe;
 			fe=(FacetEntry *)ft->getValue(&val32);
 			// debug 
-			log("facets: got entry for key=%lu d=%llu",
-			    val32,m_docId);
-			// if there, augment it
-			if ( fe ) {
-				fe->m_count++;
-			}
+			//log("facets: got entry for key=%lu d=%llu",
+			//    val32,m_docId);
 			// if not there, init it
-			else {
+			if ( ! fe ) {
 				FacetEntry ff;
 				ff.m_count = 1;
 				ff.m_docId = m_docId;
 				ft->addKey(&val32,&ff);
+			}
+			// only one vote per docid
+			else if ( fe->m_docId != (long long)m_docId ) {
+				fe->m_count++;
 			}
 		}
 		// to avoid dupage...
