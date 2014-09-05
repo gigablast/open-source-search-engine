@@ -377,11 +377,11 @@ class QueryWord {
 	SafeBuf m_synWordBuf;
 
 
-	long m_facetRangeIntA   [MAX_FACET_RANGES];
-	long m_facetRangeIntB   [MAX_FACET_RANGES];
-	long m_facetRangeFloatA [MAX_FACET_RANGES];
-	long m_facetRangeFloatB [MAX_FACET_RANGES];
-	long m_numFacetRanges;
+	long  m_facetRangeIntA   [MAX_FACET_RANGES];
+	long  m_facetRangeIntB   [MAX_FACET_RANGES];
+	float m_facetRangeFloatA [MAX_FACET_RANGES];
+	float m_facetRangeFloatB [MAX_FACET_RANGES];
+	long  m_numFacetRanges;
 
 
 	// what operand bit # is it for doing boolen queries?

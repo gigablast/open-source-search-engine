@@ -222,6 +222,7 @@ class Msg40 {
 	bool m_firstTime;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;
+	bool printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );
 	bool lookupFacets ( ) ;
 	void lookupFacets2 ( ) ;
 	void gotFacetText ( class Msg20 *msg20 ) ;

@@ -6096,9 +6096,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	char format = m_si->m_format;
 
-	bool firstTime = true;
-
-	HttpRequest *hr = &m_si->m_hr;
+	long saved = sb->length();
 
 	for ( long i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
@@ -6109,196 +6107,14 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 		     qt->m_fieldCode != FIELD_GBFACETINT &&
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
-		bool isString = false;
-		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
-		HashTableX *fht = &qt->m_facetHashTable;
-		// a new table for each facet query term
-		bool needTable = true;
-		// print out the dumps
-		for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
-			// skip empty slots
-			if ( ! fht->m_flags[j] ) continue;
-			// this was originally 32 bit hash of the facet val
-			// but now it is 64 bit i guess
-			FacetValHash_t *fvh ;
-			fvh = (FacetValHash_t *)fht->getKeyFromSlot(j);
-			// we store how many docids had this value
-			//long count = *(long *)fht->getValFromSlot(j);
-			FacetEntry *fe;
-			fe = (FacetEntry *)fht->getValueFromSlot(j);
-			long count = fe->m_count;
 
-			char *text = NULL;
+		// if had facet ranges, print them out
+		printFacetsForTable ( sb , qt );;
 
-			char *termPtr = qt->m_term;
-			long  termLen = qt->m_termLen;
-			if ( termPtr[0] == ' ' ) { termPtr++; termLen--; }
-			if ( strncasecmp(termPtr,"gbfacetstr:",11)== 0 ) {
-				termPtr += 11; termLen -= 11; }
-			if ( strncasecmp(termPtr,"gbfacetint:",11)== 0 ) {
-				termPtr += 11; termLen -= 11; }
-			if ( strncasecmp(termPtr,"gbfacetfloat:",13)== 0 ) {
-				termPtr += 13; termLen -= 13; }
-			char tmpBuf[64];
-			SafeBuf termBuf(tmpBuf,64);
-			termBuf.safeMemcpy(termPtr,termLen);
-			termBuf.nullTerm();
-			char *term = termBuf.getBufStart();
-
-			char tmp[64];
-			if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
-				sprintf(tmp,"%li",(long)*fvh);
-				text = tmp;
-			}
-
-			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
-				sprintf(tmp,"%f",*(float *)fvh);
-				text = tmp;
-			}
-
-			// lookup the text representation, whose hash is *fvh
-			if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
-				long *offset;
-				offset =(long *)m_facetTextTable.getValue(fvh);
-				// wtf?
-				if ( ! offset ) {
-					log("msg40: missing facet text for "
-					    "val32=%lu",
-					    (unsigned long)*fvh);
-					continue;
-				}
-				text = m_facetTextBuf.getBufStart() + *offset;
-			}
-
-			if ( format == FORMAT_XML ) {
-				sb->safePrintf("\t<facet>\n"
-					       "\t\t<field>%s</field>\n"
-					       "\t\t<value>"
-					       , term
-					       );
-				if ( isString )
-					sb->safePrintf("<![CDATA[%lu,",
-						       (unsigned long)*fvh);
-				sb->cdataEncode ( text );
-				if ( isString )
-					sb->safePrintf("]]>");
-				sb->safePrintf("</value>\n"
-					       "\t\t<docCount>%li"
-					       "</docCount>\n"
-					       "\t</facet>\n",count);
-				continue;
-			}
-
-			if ( format == FORMAT_JSON && firstTime ) {
-				firstTime = false;
-				// if streaming results we may have hacked off
-				// the last ,\n so put it back
-				if ( m_si->m_streamResults ) {
-					//sb->m_length -= 1;
-					sb->safeStrcpy(",\n\n");
-				}
-				//sb->safePrintf("\"facets\":[\n");
-			}
-
-			if ( format == FORMAT_JSON ) {
-				sb->safePrintf("\"facet\":{\n"
-					       "\t\"field\":\"%s\",\n"
-					       "\t\"value\":"
-					       , term
-					       );
-				if ( isString )
-					sb->safePrintf("\"%lu,"
-						       , (unsigned long)*fvh);
-				sb->jsonEncode ( text );
-				if ( isString )
-					sb->safePrintf("\"");
-				sb->safePrintf(",\n"
-					       "\t\"docCount\":%li\n"
-					       "}\n,\n", count);
-				continue;
-			}
-
-			// print that out
-			if ( needTable ) {
-				needTable = false;
-
-
-				sb->safePrintf("<div id=facets "
-					       "style="
-					       "padding:5px;"
-					       "position:relative;"
-					       "border-width:3px;"
-					       "border-right-width:0px;"
-					       "border-style:solid;"
-					       "margin-left:10px;"
-					       "border-top-left-radius:10px;"
-					      "border-bottom-left-radius:10px;"
-					       "border-color:blue;"
-					       "background-color:white;"
-					       "border-right-color:white;"
-					       "margin-right:-3px;"
-					       ">"
-
-					       "<table cellspacing=7>"
-					       "<tr><td width=200px; "
-					       "valign=top>"
-					       "<center>"
-					       "<img src=/facets40.jpg>"
-					       "</center>"
-					       "<br>"
-					       );
-				sb->safePrintf("<b>%s</b></td></tr>\n",
-					       term);
-			}
-
-			// make the cgi parm to add to the original url
-			char nsbuf[128];
-			SafeBuf newStuff(nsbuf,128);
-			// they are all ints...
-			//char *suffix = "int";
-			//if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
-			//	suffix = "float";
-			//newStuff.safePrintf("prepend=gbequalint%%3A");
-			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
-				newStuff.safePrintf("prepend="
-						    "gbequalfloat%%3A%s%%3A%f",
-						    term,
-						    *(float *)fvh);
-			else
-				newStuff.safePrintf("prepend="
-						    "gbequalint%%3A%s%%3A%lu",
-						    term,
-						    (long)*fvh);
-
-			// get the original url and add 
-			// &prepend=gbequalint:gbhopcount:1 type stuff to it
-			SafeBuf newUrl;
-			replaceParm ( newStuff.getBufStart(), &newUrl , hr );
-
-			// print the facet in its numeric form
-			// we will have to lookup based on its docid
-			// and get it from the cached page later
-			sb->safePrintf("<tr><td width=200px; valign=top>"
-				       //"<a href=?search="//gbfacet%3A"
-				       //"%s:%lu"
-				       // make a search to just show those
-				       // docs from this facet with that
-				       // value. actually gbmin/max would work
-				       "<a href=\"%s\">"
-				       , newUrl.getBufStart()
-				       );
-
-			sb->safePrintf("%s (%lu)"
-				       "</a>"
-				       "</td></tr>\n"
-				       ,text
-				       ,count); // count for printing
-		}
-		if ( ! needTable ) 
-			sb->safePrintf("</table></div><br>\n");
 	}
 
-	if ( format == FORMAT_JSON && ! firstTime ) {
+	// if json, remove ending ,\n and make it just \n
+	if ( format == FORMAT_JSON && sb->length() != saved ) {
 		// remove ,\n
 		sb->m_length -= 2;
 		// make just \n
@@ -6313,6 +6129,298 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 		if ( ! m_si->m_streamResults ) 
 			sb->safePrintf(",\n");
 	}
+
+	return true;
+}
+
+HashTableX *g_fht = NULL;
+
+// sort facets by document counts before displaying
+static int feCmp ( const void *a1, const void *b1 ) {
+	long a = (long)a1;
+	long b = (long)b1;
+	FacetEntry *fe1 = (FacetEntry *)g_fht->getValFromSlot(a);
+	FacetEntry *fe2 = (FacetEntry *)g_fht->getValFromSlot(b);
+	return (fe1->m_count - fe2->m_count);
+}
+
+bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
+
+	//QueryWord *qw = qt->m_qword;
+	//if ( qw->m_numFacetRanges > 0 )
+
+	HashTableX *fht = &qt->m_facetHashTable;
+	// first sort facetentries in hashtable by their key before
+	// we print them out
+	long np = fht->getNumSlotsUsed();
+	SafeBuf pbuf;
+	if ( ! pbuf.reserve(np*4) ) return false;
+	long *ptrs = (long *)pbuf.getBufStart();
+	long numPtrs = 0;
+	for ( long j = 0 ; j < fht->getNumSlots() ; j++ ) {
+		if ( ! fht->m_flags[j] ) continue;
+		ptrs[numPtrs++] = j;
+	}
+	// use this as global for qsort
+	g_fht = fht;
+	// use qsort
+	gbqsort ( ptrs , numPtrs , sizeof(long) , feCmp , 0 );
+
+
+	// now scan the slots and print out
+	HttpRequest *hr = &m_si->m_hr;
+	bool firstTime = true;
+	bool isString = false;
+	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
+	char format = m_si->m_format;
+	// a new table for each facet query term
+	bool needTable = true;
+	// print out the dumps
+	for ( long x= 0 ; x < numPtrs ; x++ ) {
+		// skip empty slots
+		//if ( ! fht->m_flags[j] ) continue;
+		long j = ptrs[x];
+		// this was originally 32 bit hash of the facet val
+		// but now it is 64 bit i guess
+		FacetValHash_t *fvh ;
+		fvh = (FacetValHash_t *)fht->getKeyFromSlot(j);
+		// we store how many docids had this value
+		//long count = *(long *)fht->getValFromSlot(j);
+		FacetEntry *fe;
+		fe = (FacetEntry *)fht->getValueFromSlot(j);
+		long count = 0;
+		// could be empty if range had no values in it
+		if ( fe ) count = fe->m_count;
+
+		char *text = NULL;
+
+		char *termPtr = qt->m_term;
+		long  termLen = qt->m_termLen;
+		if ( termPtr[0] == ' ' ) { termPtr++; termLen--; }
+		if ( strncasecmp(termPtr,"gbfacetstr:",11)== 0 ) {
+			termPtr += 11; termLen -= 11; }
+		if ( strncasecmp(termPtr,"gbfacetint:",11)== 0 ) {
+			termPtr += 11; termLen -= 11; }
+		if ( strncasecmp(termPtr,"gbfacetfloat:",13)== 0 ) {
+			termPtr += 13; termLen -= 13; }
+		char tmpBuf[64];
+		SafeBuf termBuf(tmpBuf,64);
+		termBuf.safeMemcpy(termPtr,termLen);
+		termBuf.nullTerm();
+		char *term = termBuf.getBufStart();
+
+		char tmp[64];
+
+		QueryWord *qw= qt->m_qword;
+
+			
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
+			sprintf(tmp,"%li",(long)*fvh);
+			text = tmp;
+		}
+
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
+			sprintf(tmp,"%f",*(float *)fvh);
+			text = tmp;
+		}
+
+		long k2 = -1;
+
+		for ( long k = 0 ; k < qw->m_numFacetRanges; k++ ) {
+			if ( qt->m_fieldCode != FIELD_GBFACETINT )
+				break;
+			if ( *(long *)fvh < qw->m_facetRangeIntA[k])
+				continue;
+			if ( *(long *)fvh > qw->m_facetRangeIntB[k])
+				continue;
+			sprintf(tmp,"[%li-%li)"
+				,qw->m_facetRangeIntA[k]
+				,qw->m_facetRangeIntB[k]
+				);
+			text = tmp;
+			k2 = k;
+		}
+
+		for ( long k = 0 ; k < qw->m_numFacetRanges; k++ ) {
+			if ( qt->m_fieldCode != FIELD_GBFACETFLOAT )
+				break;
+			if ( *(float *)fvh < qw->m_facetRangeFloatA[k])
+				continue;
+			if ( *(float *)fvh > qw->m_facetRangeFloatB[k])
+				continue;
+			sprintf(tmp,"[%f-%f)"
+				,qw->m_facetRangeFloatA[k]
+				,qw->m_facetRangeFloatB[k]
+				);
+			text = tmp;
+			k2 = k;
+		}
+
+
+		// lookup the text representation, whose hash is *fvh
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
+			long *offset;
+			offset =(long *)m_facetTextTable.getValue(fvh);
+			// wtf?
+			if ( ! offset ) {
+				log("msg40: missing facet text for "
+				    "val32=%lu",
+				    (unsigned long)*fvh);
+				continue;
+			}
+			text = m_facetTextBuf.getBufStart() + *offset;
+		}
+
+		if ( format == FORMAT_XML ) {
+			sb->safePrintf("\t<facet>\n"
+				       "\t\t<field>%s</field>\n"
+				       "\t\t<value>"
+				       , term
+				       );
+			if ( isString )
+				sb->safePrintf("<![CDATA[%lu,",
+					       (unsigned long)*fvh);
+			sb->cdataEncode ( text );
+			if ( isString )
+				sb->safePrintf("]]>");
+			sb->safePrintf("</value>\n"
+				       "\t\t<docCount>%li"
+				       "</docCount>\n"
+				       "\t</facet>\n",count);
+			continue;
+		}
+
+		if ( format == FORMAT_JSON && firstTime ) {
+			firstTime = false;
+			// if streaming results we may have hacked off
+			// the last ,\n so put it back
+			if ( m_si->m_streamResults ) {
+				//sb->m_length -= 1;
+				sb->safeStrcpy(",\n\n");
+			}
+			//sb->safePrintf("\"facets\":[\n");
+		}
+
+		if ( format == FORMAT_JSON ) {
+			sb->safePrintf("\"facet\":{\n"
+				       "\t\"field\":\"%s\",\n"
+				       "\t\"value\":"
+				       , term
+				       );
+			if ( isString )
+				sb->safePrintf("\"%lu,"
+					       , (unsigned long)*fvh);
+			sb->jsonEncode ( text );
+			if ( isString )
+				sb->safePrintf("\"");
+			sb->safePrintf(",\n"
+				       "\t\"docCount\":%li\n"
+				       "}\n,\n", count);
+			continue;
+		}
+
+		// print that out
+		if ( needTable ) {
+			needTable = false;
+
+
+			sb->safePrintf("<div id=facets "
+				       "style="
+				       "padding:5px;"
+				       "position:relative;"
+				       "border-width:3px;"
+				       "border-right-width:0px;"
+				       "border-style:solid;"
+				       "margin-left:10px;"
+				       "border-top-left-radius:10px;"
+				       "border-bottom-left-radius:10px;"
+				       "border-color:blue;"
+				       "background-color:white;"
+				       "border-right-color:white;"
+				       "margin-right:-3px;"
+				       ">"
+
+				       "<table cellspacing=7>"
+				       "<tr><td width=200px; "
+				       "valign=top>"
+				       "<center>"
+				       "<img src=/facets40.jpg>"
+				       "</center>"
+				       "<br>"
+				       );
+			sb->safePrintf("<font color=gray>"
+				       "values for</font> "
+				       "<b>%s</b></td></tr>\n",
+				       term);
+		}
+
+		// make the cgi parm to add to the original url
+		char nsbuf[128];
+		SafeBuf newStuff(nsbuf,128);
+		// they are all ints...
+		//char *suffix = "int";
+		//if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+		//	suffix = "float";
+		//newStuff.safePrintf("prepend=gbequalint%%3A");
+		if ( qt->m_fieldCode == FIELD_GBFACETINT &&
+		     qw->m_numFacetRanges > 0 ) {
+			newStuff.safePrintf("prepend="
+					    "gbminint%%3A%s%%3A%lu+"
+					    "gbmaxint%%3A%s%%3A%lu+"
+					    ,term
+					    ,qw->m_facetRangeIntA[k2]
+					    ,term
+					    ,qw->m_facetRangeIntB[k2]-1
+					    );
+		}
+		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT &&
+			  qw->m_numFacetRanges > 0 ) {
+			newStuff.safePrintf("prepend="
+					    "gbminfloat%%3A%s%%3A%f+"
+					    "gbmaxfloat%%3A%s%%3A%f+"
+					    ,term
+					    ,qw->m_facetRangeFloatA[k2]
+					    ,term
+					    ,qw->m_facetRangeFloatB[k2]-1
+					    );
+		}
+		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+			newStuff.safePrintf("prepend="
+					    "gbequalfloat%%3A%s%%3A%f",
+					    term,
+					    *(float *)fvh);
+		else
+			newStuff.safePrintf("prepend="
+					    "gbequalint%%3A%s%%3A%lu",
+					    term,
+					    (long)*fvh);
+
+		// get the original url and add 
+		// &prepend=gbequalint:gbhopcount:1 type stuff to it
+		SafeBuf newUrl;
+		replaceParm ( newStuff.getBufStart(), &newUrl , hr );
+
+		// print the facet in its numeric form
+		// we will have to lookup based on its docid
+		// and get it from the cached page later
+		sb->safePrintf("<tr><td width=200px; valign=top>"
+			       //"<a href=?search="//gbfacet%3A"
+			       //"%s:%lu"
+			       // make a search to just show those
+			       // docs from this facet with that
+			       // value. actually gbmin/max would work
+			       "<a href=\"%s\">"
+			       , newUrl.getBufStart()
+			       );
+
+		sb->safePrintf("%s (%lu documents)"
+			       "</a>"
+			       "</td></tr>\n"
+			       ,text
+			       ,count); // count for printing
+	}
+	if ( ! needTable ) 
+		sb->safePrintf("</table></div><br>\n");
 
 	return true;
 }

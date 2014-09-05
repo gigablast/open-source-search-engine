@@ -5231,7 +5231,6 @@ void PosdbTable::intersectLists10_r ( ) {
 	}
 	*/
 
-
 	//
 	// hash the docids in the whitelist termlists into a hashtable.
 	// every docid in the search results must be in there. the
@@ -5270,6 +5269,51 @@ void PosdbTable::intersectLists10_r ( ) {
 			m_whiteListTable.addKey ( rec + 7 );
 		}
 	}
+
+
+	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_q->m_qterms[i];
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+
+		QueryWord *qw = qt->m_qword;
+
+		//
+		// if first time init facet hash table so empty facet ranges
+		// will still print out but with 0 documents
+		//
+		for ( long k = 0 ; k < qw->m_numFacetRanges ; k ++ ) {
+			HashTableX *ft = &qt->m_facetHashTable;
+			FacetEntry *fe;
+			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
+				float val32 = qw->m_facetRangeFloatA[k];
+				fe=(FacetEntry *)ft->getValue(&val32);
+				FacetEntry ff;
+				ff.m_count = 0;
+				ff.m_docId = m_docId;
+				ft->addKey(&val32,&ff);
+				continue;
+			}
+			else {
+				// and for int facets
+				long val32 = qw->m_facetRangeIntA[k];
+				fe=(FacetEntry *)ft->getValue(&val32);
+				FacetEntry ff;
+				ff.m_count = 0;
+				ff.m_docId = m_docId;
+				ft->addKey(&val32,&ff);
+				continue;
+			}
+		}
+		//
+		// end init of facet hash table
+		//
+	}
+
+
+
 	m_addedSites = true;
 
 
@@ -6948,6 +6992,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( p >= miniMergedEnd[i] ) break;
 		// break if 12 byte key: another docid!
 		if ( ! firstTime && !(p[0] & 0x04) ) break;
+
 		// . first key is the full size
 		// . uses the w,G,s,v and F bits to hold this
 		// . this is no longer necessarily sitehash,but
@@ -6959,6 +7004,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		float *fp = (float *)&val32;
 
 		QueryWord *qw = qt->m_qword;
+
 
 		//
 		// CONDENSE THE FACETS
@@ -6993,6 +7039,9 @@ void PosdbTable::intersectLists10_r ( ) {
 			HashTableX *ft = &qt->m_facetHashTable;
 			FacetEntry *fe;
 			fe=(FacetEntry *)ft->getValue(&val32);
+			// debug 
+			log("facets: got entry for key=%lu d=%llu",
+			    val32,m_docId);
 			// if there, augment it
 			if ( fe ) {
 				fe->m_count++;

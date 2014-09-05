@@ -1954,6 +1954,7 @@ bool Query::setQWords ( char boolFlag ,
 	long pi = -1;
 
 	long posNum = 0;
+	char *ignoreTill = NULL;
 
 	// loop over all words, these QueryWords are 1-1 with "words"
 	for ( long i = 0 ; i < numWords && i < MAX_QUERY_WORDS ; i++ ) {
@@ -1980,6 +1981,10 @@ bool Query::setQWords ( char boolFlag ,
 
 		// count 1 unit for it
 		posNum++;
+
+		// we ignore the facet value range list...
+		if ( ignoreTill && qw->m_word < ignoreTill ) 
+			continue;
 
 		// . we duplicated this code from XmlDoc.cpp's
 		//   getWordPosVec() function
@@ -2399,53 +2404,71 @@ bool Query::setQWords ( char boolFlag ,
 			char *s = w + firstComma + 1;
 			char *send = w + wlen;
 			long nr = 0;
-			for ( ; s <send && fieldCode == FIELD_GBFACETINT;s++){
+			for ( ; s <send && fieldCode == FIELD_GBFACETINT;){
 				// must be a digit or . or -
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
 				     s[0] != '-' )
 					break;
-				qw->m_facetRangeIntA [nr] = atoll(s);
-				// skip hyphen
+				char *sav = s;
+				// skip to hyphen
 				for ( ; s < send && *s != '-' ; s++ );
-				// skip that
+				// stop if not hyphen
 				if ( *s != '-' ) break;
+				// skip hyphen
 				s++;
 				// must be a digit or . or -
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
 				     s[0] != '-' )
 					break;
-				qw->m_facetRangeIntB [nr] = atoll(s);
-				// count it
-				qw->m_numFacetRanges = ++nr;
-				// max?
-				if ( nr >= MAX_FACET_RANGES ) break;
+				// if under max, add it
+				if ( nr < MAX_FACET_RANGES ) {
+					qw->m_facetRangeIntA [nr] = atoll(sav);
+					qw->m_facetRangeIntB [nr] = atoll(s);
+					qw->m_numFacetRanges = ++nr;
+				}
 				// skip to comma or end
 				for ( ; s < send && *s != ',' ; s++ );
 				// skip that
 				if ( *s != ',' ) break;
 				// SKIP COMMA
 				s++;
+				// ignore till. does not included s
+				ignoreTill = s;
 			}
-			for ( ; s <send && fieldCode==FIELD_GBFACETFLOAT;s++){
-				qw->m_facetRangeFloatA [nr] = atof(s);
-				// skip hyphen
+			for ( ; s <send && fieldCode==FIELD_GBFACETFLOAT;){
+				// must be a digit or . or -
+				if ( ! is_digit(s[0]) &&
+				     s[0] != '.' &&
+				     s[0] != '-' )
+					break;
+				char *sav = s;
+				// skip to hyphen
 				for ( ; s < send && *s != '-' ; s++ );
-				// skip that
+				// stop if not hyphen
 				if ( *s != '-' ) break;
+				// skip hyphen
 				s++;
-				qw->m_facetRangeFloatB [nr] = atof(s);
-				// count it
-				qw->m_numFacetRanges = ++nr;
-				// max?
-				if ( nr >= MAX_FACET_RANGES ) break;
+				// must be a digit or . or -
+				if ( ! is_digit(s[0]) &&
+				     s[0] != '.' &&
+				     s[0] != '-' )
+					break;
+				// if under max, add it
+				if ( nr < MAX_FACET_RANGES ) {
+					qw->m_facetRangeFloatA [nr] =atof(sav);
+					qw->m_facetRangeFloatB [nr] =atof(s);
+					qw->m_numFacetRanges = ++nr;
+				}
 				// skip to comma or end
 				for ( ; s < send && *s != ',' ; s++ );
 				// skip that
 				if ( *s != ',' ) break;
 				// SKIP COMMA
 				s++;
+				// ignore till. does not included s
+				ignoreTill = s;
 			}
 
 			//
