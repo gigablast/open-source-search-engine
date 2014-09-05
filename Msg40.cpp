@@ -6304,15 +6304,16 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		if ( format == FORMAT_JSON ) {
 			sb->safePrintf("\"facet\":{\n"
 				       "\t\"field\":\"%s\",\n"
-				       "\t\"value\":"
+				       "\t\"value\":\""
 				       , term
 				       );
-			if ( isString )
-				sb->safePrintf("\"%lu,"
+			if (  isString )
+				sb->safePrintf("%lu,"
 					       , (unsigned long)*fvh);
 			sb->jsonEncode ( text );
-			if ( isString )
-				sb->safePrintf("\"");
+			//if ( isString )
+			// just use quotes for ranges like "[1-3)" now
+			sb->safePrintf("\"");
 			sb->safePrintf(",\n"
 				       "\t\"docCount\":%li\n"
 				       "}\n,\n", count);
