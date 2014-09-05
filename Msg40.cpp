@@ -6137,11 +6137,11 @@ HashTableX *g_fht = NULL;
 
 // sort facets by document counts before displaying
 static int feCmp ( const void *a1, const void *b1 ) {
-	long a = (long)a1;
-	long b = (long)b1;
+	long a = *(long *)a1;
+	long b = *(long *)b1;
 	FacetEntry *fe1 = (FacetEntry *)g_fht->getValFromSlot(a);
 	FacetEntry *fe2 = (FacetEntry *)g_fht->getValFromSlot(b);
-	return (fe1->m_count - fe2->m_count);
+	return (fe2->m_count - fe1->m_count);
 }
 
 bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
@@ -6231,7 +6231,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				break;
 			if ( *(long *)fvh < qw->m_facetRangeIntA[k])
 				continue;
-			if ( *(long *)fvh > qw->m_facetRangeIntB[k])
+			if ( *(long *)fvh >= qw->m_facetRangeIntB[k])
 				continue;
 			sprintf(tmp,"[%li-%li)"
 				,qw->m_facetRangeIntA[k]
@@ -6246,7 +6246,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				break;
 			if ( *(float *)fvh < qw->m_facetRangeFloatA[k])
 				continue;
-			if ( *(float *)fvh > qw->m_facetRangeFloatB[k])
+			if ( *(float *)fvh >= qw->m_facetRangeFloatB[k])
 				continue;
 			sprintf(tmp,"[%f-%f)"
 				,qw->m_facetRangeFloatA[k]
@@ -6362,27 +6362,42 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		//if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 		//	suffix = "float";
 		//newStuff.safePrintf("prepend=gbequalint%%3A");
-		if ( qt->m_fieldCode == FIELD_GBFACETINT &&
-		     qw->m_numFacetRanges > 0 ) {
-			newStuff.safePrintf("prepend="
-					    "gbminint%%3A%s%%3A%lu+"
-					    "gbmaxint%%3A%s%%3A%lu+"
-					    ,term
-					    ,qw->m_facetRangeIntA[k2]
-					    ,term
-					    ,qw->m_facetRangeIntB[k2]-1
-					    );
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
+		     long min = qw->m_facetRangeIntA[k2];
+		     long max = qw->m_facetRangeIntB[k2];
+		     if ( min == max )
+			     newStuff.safePrintf("prepend="
+						 "gbequalint%%3A%s%%3A%lu+"
+						 ,term
+						 ,(long)*fvh);
+		     else
+			     newStuff.safePrintf("prepend="
+						 "gbminint%%3A%s%%3A%lu+"
+						 "gbmaxint%%3A%s%%3A%lu+"
+						 ,term
+						 ,min
+						 ,term
+						 ,max-1
+						 );
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT &&
 			  qw->m_numFacetRanges > 0 ) {
-			newStuff.safePrintf("prepend="
-					    "gbminfloat%%3A%s%%3A%f+"
-					    "gbmaxfloat%%3A%s%%3A%f+"
-					    ,term
-					    ,qw->m_facetRangeFloatA[k2]
-					    ,term
-					    ,qw->m_facetRangeFloatB[k2]-1
-					    );
+			float min = qw->m_facetRangeIntA[k2];
+			float max = qw->m_facetRangeIntB[k2];
+			if ( min == max )
+				newStuff.safePrintf("prepend="
+						    "gbequalfloat%%3A%s%%3A%f+"
+						    ,term
+						    ,*(float *)fvh);
+			else
+				newStuff.safePrintf("prepend="
+						    "gbminfloat%%3A%s%%3A%f+"
+						    "gbmaxfloat%%3A%s%%3A%f+"
+						    ,term
+						    ,min
+						    ,term
+						    ,max
+						    );
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 			newStuff.safePrintf("prepend="
