@@ -25985,7 +25985,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// requests are added to spiderdb from the query reindex tool.
 	// do not do for diffbot subdocuments either, usespiderdb should be
 	// false for those.
-	if ( m_setFromDocId || ! m_useSpiderdb ) {
+	// MDW: i disagree, i want to see when these get updated! 9/6/2014
+	//if ( m_setFromDocId || ! m_useSpiderdb ) {
+	if ( ! m_useSpiderdb ) {
 		m_spiderReplyMetaListValid = true;
 		return &m_spiderReplyMetaList;
 	}
@@ -25996,10 +25998,11 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// so cut that out. this is kinda a hack b/c i'm not sure what's 
 	// going on. but you can set a break point here and see what's up if
 	// you want.
-	if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
-		m_spiderReplyMetaListValid = true;
-		return &m_spiderReplyMetaList;
-	}
+	// MDW: likewise, take this out, i want these recorded as well..
+	// if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
+	// 	m_spiderReplyMetaListValid = true;
+	// 	return &m_spiderReplyMetaList;
+	// }
 
 	// . fake this out so we do not core
 	// . hashWords3() uses it i guess
