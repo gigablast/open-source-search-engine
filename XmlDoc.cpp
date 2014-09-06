@@ -20208,7 +20208,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 	if ( ! cr ) return true;
 
 	// do not do this if not test collection for now
-	if ( strcmp(cr->m_coll,"qatest123") ) return true;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) return true;
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
@@ -20840,7 +20840,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	setStatus ( "getting meta list" );
 
 	// force it true?
-	if ( m_deleteFromIndex ) forDelete = true;
+	// "forDelete" means we want the metalist to consist of "negative"
+	// keys that will annihilate with the positive keys in the index,
+	// posdb and the other rdbs, in order to delete them. "deleteFromIndex"
+	// means to just call getMetaList(tre) on the m_oldDoc (old XmlDoc)
+	// which is built from the titlerec in Titledb. so don't confuse
+	// these two things. otherwise when i add this we were not adding
+	// the spiderreply of "Doc Force Deleted" from doing a query reindex
+	// and it kept repeating everytime we started gb up.
+	//if ( m_deleteFromIndex ) forDelete = true;
 
 	// assume valid
 	m_metaList     = "";
@@ -21371,6 +21379,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		od->m_diffbotApiUrlValid = true;
 		// api url should be empty by default
 		//od->m_diffbotApiNum = DBA_NONE;
+		//log("break it here. shit this is not getting the list!!!");
 		// if we are doing diffbot stuff, we are still indexing this
 		// page, so we need to get the old doc meta list
 		oldList = od->getMetaList ( true );
@@ -21667,6 +21676,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 
 	if ( m_indexCode ) nd = NULL;
+
+	// OR if deleting from index, we just want to get the metalist
+	// directly from "od"
+	if ( m_deleteFromIndex ) nd = NULL;
+
 
 	//
 	//
@@ -22385,6 +22399,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . if repairing and not rebuilding titledb, we do not need the
 	//   titlerec
 	if ( m_useTitledb ) {
+		// this buf includes key/datasize/compressdata
 		SafeBuf *tr = getTitleRecBuf ();
 		// panic if this blocks! it should not at this point because 
 		// we'd have to re-hash the crap above
@@ -25970,7 +25985,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// requests are added to spiderdb from the query reindex tool.
 	// do not do for diffbot subdocuments either, usespiderdb should be
 	// false for those.
-	if ( m_setFromDocId || ! m_useSpiderdb ) {
+	// MDW: i disagree, i want to see when these get updated! 9/6/2014
+	//if ( m_setFromDocId || ! m_useSpiderdb ) {
+	if ( ! m_useSpiderdb ) {
 		m_spiderReplyMetaListValid = true;
 		return &m_spiderReplyMetaList;
 	}
@@ -25981,10 +25998,11 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// so cut that out. this is kinda a hack b/c i'm not sure what's 
 	// going on. but you can set a break point here and see what's up if
 	// you want.
-	if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
-		m_spiderReplyMetaListValid = true;
-		return &m_spiderReplyMetaList;
-	}
+	// MDW: likewise, take this out, i want these recorded as well..
+	// if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
+	// 	m_spiderReplyMetaListValid = true;
+	// 	return &m_spiderReplyMetaList;
+	// }
 
 	// . fake this out so we do not core
 	// . hashWords3() uses it i guess
