@@ -3065,12 +3065,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			       "or "
 			       "<a href=/%s?showinput=1&format=json>"
 			       "json</a> "
-			       "or <a href=/%s>html</a> ] "
+			       //"or <a href=/%s>html</a>"
+			       " ] "
 			       "</font>",
 			       s_pages[PAGENUM].m_desc,
 			       pageStr,
-			       pageStr,
-			       pageStr);
+			       pageStr
+			       //pageStr);
+			       );
 
 	// status pages. if its a status page with no input parms
 	if ( s_pages[PAGENUM].m_pgflags & PG_STATUS )
@@ -3082,12 +3084,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			       "or "
 			       "<a href=/%s?format=json>"
 			       "json</a> "
-			       "or <a href=/%s>html</a> ] "
+			       //"or <a href=/%s>html</a> ] "  
+			       " ] "
 			       "</font>",
 			       pageStr,
 			       cr->m_coll,
-			       pageStr,
-			       pageStr);
+			       pageStr
+			       //pageStr
+			       );
 
 	
 	sb->safePrintf("<br>");
