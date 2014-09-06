@@ -585,19 +585,6 @@ bool qainject1 ( ) {
 	}
 
 	//
-	// mdw: query reindex test
-	//
-	// if ( ! s_flags[30] ) {
-	// 	s_flags[30] = true;
-	// 	if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=1&format=xml&"
-	// 			"debug=1&q=sports",9999 ) )
-	// 		return false;
-	// }
-
-	// // temp end it here
-	// return true;
-
-	//
 	// eject/delete the urls
 	//
 	//static long s_ii2 = 0;
@@ -740,13 +727,47 @@ bool qainject2 ( ) {
 
 
 	//
-	// delete the 'qatest123' collection
+	// mdw: query reindex test
 	//
-	if ( ! s_flags[12] ) {
-		s_flags[12] = true;
-		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+	 if ( ! s_flags[30] ) {
+	 	s_flags[30] = true;
+	 	if ( ! getUrl ( "/admin/reindex"
+				"?c=qatest123"
+				"&format=xml"
+	 			//"&debug=1"
+				"&q=sports"
+				"&forcedel=1"
+				"&qa=1"
+				,9999 ) )
+	 		return false;
+	}
+
+
+	 // wait 10 seconds for reindex to finish
+	if ( ! s_flags[31] ) {
+		wait(10.0);
+		s_flags[31] = true;
+		return false;
+	}
+
+	// ensure no results for sports now
+	if ( ! s_flags[32] ) {
+		s_flags[32] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
+				"&ns=1&tml=20&smxcpl=30&"
+				"sw=10&showimages=0&sc=1"
+				,-1405546537 ) )
 			return false;
 	}
+
+	//
+	// delete the 'qatest123' collection
+	//
+	// if ( ! s_flags[12] ) {
+	// 	s_flags[12] = true;
+	// 	if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+	// 		return false;
+	// }
 
 
 	//static bool s_fee2 = false;
