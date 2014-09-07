@@ -1200,9 +1200,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	//		return false;
 	//}
 
+	char *bodyjs = NULL;
+	if ( page == PAGE_BASIC_SETTINGS )
+		bodyjs =" onload=document.getElementById('tabox').focus();";
+
 	// print standard header
 	if ( format != FORMAT_XML && format != FORMAT_JSON )
-		g_pages.printAdminTop ( sb , s , r );
+		g_pages.printAdminTop ( sb , s , r , NULL , bodyjs );
 
 	// xml/json header
 	char *res = NULL;
@@ -2512,7 +2516,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		// 	}
 		// }
 		if ( m->m_flags & PF_TEXTAREA ) {
-			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
+			sb->safePrintf ("<textarea id=tabox "
+					"name=%s rows=10 cols=80>",
 					cgi);
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
@@ -2537,7 +2542,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 	}
 	else if ( t == TYPE_STRINGBOX ) {
-		sb->safePrintf("<textarea rows=10 cols=64 name=%s>",cgi);
+		sb->safePrintf("<textarea id=tabox rows=10 cols=64 name=%s>",
+			       cgi);
 		//p += urlEncode ( p , pend - p , s , gbstrlen(s) );
 		//p += htmlDecode ( p , s , gbstrlen(s) );
 		sb->htmlEncode ( s , gbstrlen(s), false );

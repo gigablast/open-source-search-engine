@@ -724,6 +724,9 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		{"API","/api.html"}
 	};
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	//
 	// first the nav column
 	//
@@ -736,7 +739,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		      "<br>"
 
 		      "<center>"
-		      "<a href=/>"
+		      "<a href=/?c=%s>"
 		      "<div style=\""
 		      "background-color:white;"
 		      "padding:10px;"
@@ -747,6 +750,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		      "width:100px;"
 		      "height:100px;"
 		      "\">"
+		       , coll
 		       );
 
 	if ( strcmp(tabName,"appliance") == 0 )
@@ -767,8 +771,6 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 
 	long n = sizeof(mi) / sizeof(MenuItem);
 
-	char *coll = "";
-	if ( cr ) coll = cr->m_coll;
 
 	for ( long i = 0 ; i < n ; i++ ) {
 
