@@ -1459,7 +1459,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	
 	// gigabot helper blurb
-	printGigabotAdvice ( sb , page , r );
+	printGigabotAdvice ( sb , page , r , NULL );
 
 	// begin 2nd row in big table
 	//sb->safePrintf("</td></TR>");
@@ -1468,7 +1468,10 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	return true;
 }
 
-bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
+bool printGigabotAdvice ( SafeBuf *sb , 
+			  long page , 
+			  HttpRequest *hr ,
+			  char *errMsg ) {
 
 	char format = hr->getFormat();
 	if ( format != FORMAT_HTML ) return true;
@@ -1521,7 +1524,8 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 			//"<br><br>"
 			"Enter the name of your collection "
 			"(search engine) in the box below then hit "
-			"submit."
+			"submit. You can only use alphanumeric characters, "
+			"hyphens or underscores."
 			"<br>"
 			"<br>"
 			"Remember this name so you can access the controls "
@@ -1570,7 +1574,12 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 		       "height=141px width=75px src=/robot3.png>"
 		       "</td><td>"
 		       "<b>"
-		       "%s"
+		       );
+
+	if ( errMsg )
+		sb->safePrintf("%s",errMsg);
+	
+	sb->safePrintf("%s"
 		       "</b>"
 		       , advice
 		       );

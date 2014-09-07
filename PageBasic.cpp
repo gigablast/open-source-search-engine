@@ -1340,7 +1340,7 @@ bool sendPageWidgets ( TcpSocket *socket , HttpRequest *hr ) {
 
 	//char format = hr->getReplyFormat();
 	//if ( format == FORMAT_HTML )
-	printGigabotAdvice ( &sb , PAGE_BASIC_STATUS , hr );
+	printGigabotAdvice ( &sb , PAGE_BASIC_STATUS , hr , NULL );
 
 	printScrollingWidget ( &sb , cr );
 
