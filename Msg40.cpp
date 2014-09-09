@@ -6200,8 +6200,44 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				//sb->safePrintf("\"facets\":[\n");
 			}
 
+			// print that out
+			if ( needTable ) {
+				needTable = false;
+
+        if ( format == FORMAT_HTML ) {
+          sb->safePrintf("<div id=facets "
+                   "style="
+                   "padding:5px;"
+                   "position:relative;"
+                   "border-width:3px;"
+                   "border-right-width:0px;"
+                   "border-style:solid;"
+                   "margin-left:10px;"
+                   "border-top-left-radius:10px;"
+                  "border-bottom-left-radius:10px;"
+                   "border-color:blue;"
+                   "background-color:white;"
+                   "border-right-color:white;"
+                   "margin-right:-3px;"
+                   ">"
+
+                   "<table cellspacing=7>"
+                   "<tr><td width=200px; "
+                   "valign=top>"
+                   "<center>"
+                   "<img src=/facets40.jpg>"
+                   "</center>"
+                   "<br>"
+                   );
+          sb->safePrintf("<b>%s</b></td></tr>\n",
+                   term);
+        } else if ( format == FORMAT_JSON ) {
+          sb->safePrintf("\"facets\":[");
+        }
+			}
+
 			if ( format == FORMAT_JSON ) {
-				sb->safePrintf("\"facet\":{\n"
+				sb->safePrintf("{\n"
 					       "\t\"field\":\"%s\",\n"
 					       "\t\"value\":"
 					       , term
@@ -6218,38 +6254,6 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				continue;
 			}
 
-			// print that out
-			if ( needTable ) {
-				needTable = false;
-
-
-				sb->safePrintf("<div id=facets "
-					       "style="
-					       "padding:5px;"
-					       "position:relative;"
-					       "border-width:3px;"
-					       "border-right-width:0px;"
-					       "border-style:solid;"
-					       "margin-left:10px;"
-					       "border-top-left-radius:10px;"
-					      "border-bottom-left-radius:10px;"
-					       "border-color:blue;"
-					       "background-color:white;"
-					       "border-right-color:white;"
-					       "margin-right:-3px;"
-					       ">"
-
-					       "<table cellspacing=7>"
-					       "<tr><td width=200px; "
-					       "valign=top>"
-					       "<center>"
-					       "<img src=/facets40.jpg>"
-					       "</center>"
-					       "<br>"
-					       );
-				sb->safePrintf("<b>%s</b></td></tr>\n",
-					       term);
-			}
 
 			// make the cgi parm to add to the original url
 			char nsbuf[128];
@@ -6293,10 +6297,16 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 				       "</td></tr>\n"
 				       ,text
 				       ,count); // count for printing
-		}
-		if ( ! needTable ) 
-			sb->safePrintf("</table></div><br>\n");
-	}
+		} // endfor fht
+		if ( ! needTable ) {
+			if ( format == FORMAT_HTML ) {
+        sb->safePrintf("</table></div><br>\n");
+      } else if ( format == FORMAT_JSON ) {
+        sb->m_length -= 2;            // hack off trailing comma 
+        sb->safePrintf("],\n");       // close off json array
+	    }
+    }
+  }
 
 	if ( format == FORMAT_JSON && ! firstTime ) {
 		// remove ,\n
