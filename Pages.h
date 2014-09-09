@@ -325,8 +325,8 @@ enum {
 	//PAGE_WORDVECTOR  ,
 
 	// basic controls page /admin/basic
-	PAGE_BASIC_SETTINGS ,
-	PAGE_BASIC_STATUS ,
+	PAGE_BASIC_SETTINGS , //10
+	PAGE_BASIC_STATUS , 
 	//PAGE_BASIC_SEARCH , // TODO
 	//PAGE_BASIC_DIFFBOT , // TODO
 	PAGE_BASIC_SECURITY ,
@@ -334,12 +334,12 @@ enum {
 
 	// master admin pages
 	PAGE_MASTER      , 
-	PAGE_SEARCH      ,  
-	PAGE_SPIDER      ,
+	PAGE_SEARCH      ,  // 15
+	PAGE_SPIDER      , 
 	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
-	PAGE_SECURITY    ,
-	PAGE_ADDCOLL     ,	 // 20
+	PAGE_SECURITY    , // 19
+	PAGE_ADDCOLL     , //20	 
 	PAGE_DELCOLL     , 
 	PAGE_CLONECOLL   ,
 	PAGE_REPAIR      ,

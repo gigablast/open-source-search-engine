@@ -3234,6 +3234,11 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		// these have PAGE_NONE for some reason
 		if ( parm->m_obj == OBJ_SI ) pageNum = PAGE_RESULTS;
 
+		// dup page fix. so we should 'masterpwd' and 'masterip'
+		// in the list now.
+		if ( pageNum == PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
+
+
 		if ( pageNum != PAGENUM ) continue;
 
 		SafeBuf tmp;
@@ -3250,6 +3255,10 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			if ( ! def ) def = "";
 			if ( strcmp(tmp.getBufStart(),def) ) diff=1;
 		}
+
+		// do not show passwords in this!
+		if ( parm->m_flags & PF_PRIVATE )
+			printVal = false;
 
 		// print the parm
 		if ( diff == 1 ) 
@@ -3297,6 +3306,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		if ( parm->m_flags & PF_REQUIRED )
 			sb->safePrintf(" <b><font color=green>REQUIRED"
 				     "</font></b>");
+
 		if ( printVal ) {
 			sb->safePrintf("<br><b><nobr>Current value:</nobr> ");
 			// print in red if not default value

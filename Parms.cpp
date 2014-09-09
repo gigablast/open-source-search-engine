@@ -18217,6 +18217,7 @@ void Parms::init ( ) {
 	m->m_size  = PASSWORD_MAX_LEN+1;
 	m->m_page  = PAGE_SECURITY;
 	m->m_addin = 1; // "insert" follows?
+	m->m_flags = PF_PRIVATE;
 	m++;
 
 
@@ -18243,6 +18244,7 @@ void Parms::init ( ) {
 	m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_obj   = OBJ_CONF;
+	m->m_flags = PF_PRIVATE;
 	m++;
 
 	m->m_title = "remove connect ip";
