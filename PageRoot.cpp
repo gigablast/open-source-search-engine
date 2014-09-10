@@ -1236,6 +1236,10 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</td></tr>\n");
 	*/
 
+
+	/*
+
+
 	//
 	// begin new stuff
 	//
@@ -1361,6 +1365,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// end new stuff
 	//
 
+	*/
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");

@@ -333,6 +333,7 @@ enum {
 	PAGE_BASIC_SEARCH ,
 
 	// master admin pages
+	PAGE_HOSTS       ,
 	PAGE_MASTER      , 
 	PAGE_SEARCH      ,  // 15
 	PAGE_SPIDER      , 
@@ -349,7 +350,6 @@ enum {
 	PAGE_ADDURL2     , // 26
 	PAGE_REINDEX     ,	
 
-	PAGE_HOSTS       ,
 	PAGE_STATS       , // 10
 	PAGE_GRAPH       , // PAGE_STATSDB	 ,
 	PAGE_PERF        ,

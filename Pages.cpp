@@ -115,6 +115,11 @@ static WebPage s_pages[] = {
 
 
 
+	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "hosts status",
+	  sendPageHosts    , 0 ,NULL,NULL,PG_STATUS},
+
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls",
@@ -181,11 +186,6 @@ static WebPage s_pages[] = {
 
 
 
-
-	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "hosts status",
-	  sendPageHosts    , 0 ,NULL,NULL,PG_STATUS},
 
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
@@ -2229,7 +2229,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_ADDCOLL ) continue;
 		if ( i == PAGE_DELCOLL ) continue;
 		if ( i == PAGE_CLONECOLL ) continue;
-		if ( i == PAGE_HOSTS ) continue;
+
+		// put this back in
+		//if ( i == PAGE_HOSTS ) continue;
 
 		// print "url download" before "inject url"
 		// GET /mycollname_urls.csv
