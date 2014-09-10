@@ -177,8 +177,9 @@ bool Msg13::getDoc ( Msg13Request *r,
 	//r->m_urlLen    = gbstrlen ( r->ptr_url );
 	r->m_urlHash64 = hash64 ( r->ptr_url , r->size_url-1);//m_urlLen );
 
-	if ( isTestColl )
-		r->m_useTestCache = true;
+	// no! i don't want to store images in there
+	//if ( isTestColl )
+	//	r->m_useTestCache = true;
 
 	// default to 'qa' test coll if non given
 	if ( r->m_useTestCache &&

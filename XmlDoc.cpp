@@ -2628,7 +2628,6 @@ bool XmlDoc::indexDoc2 ( ) {
 	if ( ! m_listAdded ) flush = false;
 	if ( m_listFlushed ) flush = false;
 
-
 	// HACK: flush it if we are injecting it in case the next thing we 
 	//       spider is dependent on this one
 	if ( flush ) {
@@ -15282,6 +15281,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//   redirects, etc.? no...
 	bool isTestColl = false;
 	if ( ! strcmp(cr->m_coll,"qatest123") ) isTestColl = true;
+
+	//if ( isTestColl && m_contentType == CT_IMAGE )
+	//	isTestColl = false;
 
 	// sanity check. keep injections fast. no downloading!
 	if ( m_wasInjected ) { 

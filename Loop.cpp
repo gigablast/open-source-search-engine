@@ -914,8 +914,16 @@ bool Loop::init ( ) {
 	//now set up our alarm for quickpoll
 	m_quickInterrupt.it_value.tv_sec = 0;
 	m_quickInterrupt.it_value.tv_usec = QUICKPOLL_INTERVAL * 1000;
+	m_quickInterrupt.it_interval.tv_sec = 0;
+	m_quickInterrupt.it_interval.tv_usec = QUICKPOLL_INTERVAL * 1000;
+
+
+	m_realInterrupt.it_value.tv_sec = 0;
+	m_realInterrupt.it_value.tv_usec = 7 * 1000;
 	m_realInterrupt.it_interval.tv_sec = 0;
 	m_realInterrupt.it_interval.tv_usec = 7 * 1000;
+
+
  	m_noInterrupt.it_value.tv_sec = 0;
  	m_noInterrupt.it_value.tv_usec = 0;
  	m_noInterrupt.it_interval.tv_sec = 0;
@@ -1801,11 +1809,13 @@ void Loop::doPoll ( ) {
 	fd_set writefds;
 	fd_set exceptfds;
 	memcpy ( &readfds, &s_selectMaskRead , sizeof(fd_set) );
+	memcpy ( &writefds, &s_selectMaskRead , sizeof(fd_set) );
 	//memcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
 	//memcpy ( &exceptfds, &s_selectMaskExcept , sizeof(fd_set) );
 
-	// what is the point of fds for writing... skip it
-	FD_ZERO ( &writefds );
+	// what is the point of fds for writing... its for when we
+	// get a new socket via accept() it is read for writing...
+	//FD_ZERO ( &writefds );
 	FD_ZERO ( &exceptfds );
 
 	if ( g_conf.m_logDebugLoop )
@@ -1935,6 +1945,13 @@ void Loop::doPoll ( ) {
 			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,0);
 		}
+		if ( FD_ISSET ( fd , &writefds ) ) {
+			if ( g_conf.m_logDebugLoop )
+				log("loop: calling cback0 niceness=%li fd=%i"
+				    , s->m_niceness , fd );
+			calledOne = true;
+			callCallbacks_ass (false/*forReading?*/,fd, g_now,0);
+		}
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
 	//	if ( n == 0 ) break;
@@ -1970,6 +1987,13 @@ void Loop::doPoll ( ) {
 				    , s->m_niceness , fd );
 			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,1);
+		}
+		if ( FD_ISSET ( fd , &writefds ) ) {
+			if ( g_conf.m_logDebugLoop )
+				log("loop: calling cback1 niceness=%li fd=%i"
+				    , s->m_niceness , fd );
+			calledOne = true;
+			callCallbacks_ass (false/*forReading?*/,fd, g_now,1);
 		}
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {

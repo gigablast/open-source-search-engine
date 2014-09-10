@@ -516,6 +516,16 @@ bool qainject1 ( ) {
 			return false;
 	}
 
+	// turn off images thumbnails
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
 	// this only loads once
 	loadUrls();
 	long max = s_ubuf2.length()/(long)sizeof(char *);
@@ -652,6 +662,16 @@ bool qainject2 ( ) {
 	if ( ! s_flags[1] ) {
 		s_flags[1] = true;
 		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// turn off images thumbnails
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -912,6 +932,16 @@ bool qaspider1 ( ) {
 			return false;
 	}
 
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
 	// too deep
 	//static bool s_z1 = false;
@@ -1165,6 +1195,15 @@ bool qaspider2 ( ) {
 			return false;
 	}
 
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
 	// too deep
 	//static bool s_z1 = false;
@@ -1351,6 +1390,15 @@ bool qascrape ( ) {
 	}
 
 
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
 	// scrape it
 	if ( ! s_flags[3] ) {
 		s_flags[3] = true;
@@ -1461,6 +1509,14 @@ bool qajson ( ) {
 			return false;
 	}
 
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
 
 	// add the 50 urls
 	if ( ! s_flags[3] ) {

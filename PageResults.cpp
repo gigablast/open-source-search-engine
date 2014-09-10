@@ -987,7 +987,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 	}
 
 	if ( format == FORMAT_XML ) 
-		sb->safePrintf("\t</gigabit>\n");
+		sb->safePrintf("\t\t</gigabit>\n");
 
 	if ( format == FORMAT_JSON ) {
 		// remove last ,\n

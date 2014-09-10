@@ -2066,7 +2066,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	sigset_t sigs;
 	sigemptyset ( &sigs );
 	sigaddset   ( &sigs , SIGALRM );
-	//sigaddset   ( &sigs , SIGVTALRM );
+	sigaddset   ( &sigs , SIGVTALRM );
 	if ( sigprocmask ( SIG_BLOCK  , &sigs , NULL ) < 0 )
 		log("threads: failed to block sig");
 
