@@ -6134,6 +6134,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 }
 
 HashTableX *g_fht = NULL;
+QueryTerm *g_qt = NULL;
 
 // sort facets by document counts before displaying
 static int feCmp ( const void *a1, const void *b1 ) {
@@ -6141,7 +6142,14 @@ static int feCmp ( const void *a1, const void *b1 ) {
 	long b = *(long *)b1;
 	FacetEntry *fe1 = (FacetEntry *)g_fht->getValFromSlot(a);
 	FacetEntry *fe2 = (FacetEntry *)g_fht->getValFromSlot(b);
-	return (fe2->m_count - fe1->m_count);
+	if ( fe2->m_count > fe1->m_count ) return 1;
+	if ( fe2->m_count < fe1->m_count ) return -1;
+	long *k1 = (long *)g_fht->getKeyFromSlot(a);
+	long *k2 = (long *)g_fht->getKeyFromSlot(b);
+	if ( g_qt->m_fieldCode == FIELD_GBFACETFLOAT )
+		return (int)( *(float *)k2 - *(float *)k1 );
+	// otherwise an int
+	return ( *k2 - *k1 );
 }
 
 bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
@@ -6163,6 +6171,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	}
 	// use this as global for qsort
 	g_fht = fht;
+	g_qt  = qt;
 	// use qsort
 	gbqsort ( ptrs , numPtrs , sizeof(long) , feCmp , 0 );
 
