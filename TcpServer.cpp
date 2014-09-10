@@ -994,10 +994,9 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		goto hadError;
 	// what does thie really mean? shouldn't we only register for write
 	// if a write we did failed because the buffer was full?
-	//if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,
-	//niceness)){
-	// 	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-	// 	goto hadError;
+	// if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
+	//  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	//  	goto hadError;
 	// }
 	// return "s" on success
 	return s;
@@ -1124,10 +1123,18 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 // 	return true;
 // }
 
+void readSocketWrapper2 ( int sd , void *state ) ;
+
 // . this is called by Loop::gotSig() when "sd" is ready for reading
 // . we registered it with Loop::registerReadCallback(sd) in wrapSocket()
 // . g_errno will be set by Loop if there was a kinda socket reset error
 void readSocketWrapper ( int sd , void *state ) {
+	readSocketWrapper2 ( sd , state );
+	writeSocketWrapper ( sd , state );
+}
+
+
+void readSocketWrapper2 ( int sd , void *state ) {
 	// debug msg
 	//log("........... TcpServer::readSocketWrapper %li\n",sd);
 	// extract our this ptr

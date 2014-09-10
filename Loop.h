@@ -132,10 +132,10 @@ class Loop {
 	// . register this "fd" with "callback"
 	// . "callback" will be called when fd is ready for reading
 	// . "callback" will be called when there is an error on fd
-	bool registerWriteCallback ( int   fd    ,
-				     void *state , 
-				     void (* callback)(int fd, void *state ) ,
-				     long   niceness );//= MAX_NICENESS );
+	/* bool registerWriteCallback ( int   fd    , */
+	/* 			     void *state ,  */
+	/* 			     void (* callback)(int fd, void *state ) , */
+	/* 			     long   niceness ); */
 
 	// . register this callback to be called every second
 	// . TODO: implement "seconds" parameter
@@ -148,8 +148,8 @@ class Loop {
 	void unregisterReadCallback  ( int fd, void *state ,
 				       void (* callback)(int fd,void *state),
 				       bool silent = false );
-	void unregisterWriteCallback ( int fd, void *state ,
-				       void (* callback)(int fd,void *state));
+	/* void unregisterWriteCallback ( int fd, void *state , */
+	/* 			       void (* callback)(int fd,void *state)); */
 	void unregisterSleepCallback ( void *state ,
 				       void (* callback)(int fd,void *state));
 
@@ -221,7 +221,7 @@ class Loop {
 	// . fd of MAX_NUM_FDS   is used for sleep callbacks
 	// . fd of MAX_NUM_FDS+1 is used for thread exit callbacks
 	Slot *m_readSlots  [MAX_NUM_FDS+2];
-	Slot *m_writeSlots [MAX_NUM_FDS+2];
+	//Slot *m_writeSlots [MAX_NUM_FDS+2];
 
 	// the minimal tick time in milliseconds (ms)
 	long m_minTick;
