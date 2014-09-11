@@ -8555,17 +8555,22 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_cgi      = "admin=0";
 		n++;
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_title    = "Action";
+		s_mi[n].m_cgi      = "";
+		n++;
+
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Respider all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		n++;
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Delete all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		n++;
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Scrape from google/bing";
 		s_mi[n].m_cgi      = "/admin/inject";
 		n++;
@@ -8613,15 +8618,16 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		if ( mi->m_menuNum != menuNum ) continue;
 
 		// admin menu is special
-		if ( menuNum == s_num - 1 ) {
-			first = mi;
-			frontTag = "<font color=green>";
-			backTag = "</font>";
-			break;
-		}
+		// if ( menuNum == s_num - 1 ) {
+		// 	first = mi;
+		// 	frontTag = "<font color=green>";
+		// 	backTag = "</font>";
+		// 	break;
+		// }
 
 		// is it in the url
 		char *match = strnstr ( src , mi->m_cgi , srcLen );
+
 		// or if empty quotes it is the true header like
 		// for 'hide spider log' option
 		if ( ! match ) {
@@ -8640,8 +8646,6 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		first = mi;
 		// do not highlight the orig header
 		if ( isDefaultHeader ) break;
-		// or if "Show Admin View" is selected
-		//if ( strcmp(mi->m_title,"Show Admin View") == 0 ) break;
 		frontTag = "<b style=color:maroon;>";
 		backTag = "</b>";
 		break;
@@ -8720,7 +8724,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 
 		// print checkmark (check mark) next to selected one
 		// if not the default (trueHeader)
-		if ( ! isDefaultHeader && mi == first )
+		if ( mi == first ) // ! isDefaultHeader && mi == first )
 			sb->safePrintf("<b style=color:black;>%c%c%c</b>",
 				       0xe2,0x9c,0x93);
 		else 
