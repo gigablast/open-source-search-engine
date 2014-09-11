@@ -68,7 +68,7 @@ bool Dir::open ( ) {
 bool Dir::cleanOut ( ) {
 	char buf[1024];
 	sprintf ( buf , "rm -r %s/*", m_dirname );
-	system ( buf );
+	gbsystem ( buf );
 	return true;
 }
 
@@ -76,7 +76,7 @@ bool Dir::cleanOut ( ) {
 bool Dir::create ( ) {
 	char buf[1024];
 	sprintf ( buf , "mkdir %s", m_dirname );
-	system ( buf );
+	gbsystem ( buf );
 	return true;
 }
 

@@ -1160,6 +1160,11 @@ time it was indexed. Some web servers do not support the IfModifiedSince tag,
 so Gigablast will compare the old page with the new one to see if anything
 changed. This backup method is not quite as efficient as the first, 
 but it can still save ample disk resources.
+
+<li> Disable <i>make image thumbnails</i> in the <a href=/admin/spider>spider controls</a> if you have not already.
+
+</ul>
+
 <!--<li> Don't let Linux's bdflush flush the write buffer to disk whenever it 
 wants. Gigablast needs to control this so it won't perform a lot of reads
 when a write is going on. Try performing a 'echo 1 > /proc/sys/vm/bdflush'

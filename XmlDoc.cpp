@@ -2628,7 +2628,6 @@ bool XmlDoc::indexDoc2 ( ) {
 	if ( ! m_listAdded ) flush = false;
 	if ( m_listFlushed ) flush = false;
 
-
 	// HACK: flush it if we are injecting it in case the next thing we 
 	//       spider is dependent on this one
 	if ( flush ) {
@@ -15283,6 +15282,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isTestColl = false;
 	if ( ! strcmp(cr->m_coll,"qatest123") ) isTestColl = true;
 
+	//if ( isTestColl && m_contentType == CT_IMAGE )
+	//	isTestColl = false;
+
 	// sanity check. keep injections fast. no downloading!
 	if ( m_wasInjected ) { 
 		log("xmldoc: url injection failed! error!");
@@ -16746,7 +16748,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd );
+	int retVal = gbsystem ( cmd );
 	if ( retVal == -1 )
 		log("gb: system(%s) : %s",
 		    cmd,mstrerror(g_errno));
@@ -31347,7 +31349,7 @@ int gbcompress7 ( unsigned char *dest      ,
 	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd.getBufStart() );
+	int retVal = gbsystem ( cmd.getBufStart() );
 	if ( retVal == -1 )
 		log("gb: system(%s) : %s",cmd.getBufStart(),
 		    mstrerror(g_errno));
@@ -48551,23 +48553,42 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 	// 	if (!sb->pushChar('\0') ) return false;
 	//}
 
+
+	char *content;
+	long contentLen;
+	long nameLen;
+	char *s;
+	long i = 0;
+
+	bool uniqueField = false;
+
+	// a title tag can count now too
+	if ( strcmp(qs,"title") == 0 ) {
+		// skip leading spaces = false
+		content = xml->getString ("title",&contentLen,false);
+		uniqueField = true;
+		goto skip;
+	}
+			
+
+
 	// find the first meta summary node
-	for ( long i = 0 ; i < xml->m_numNodes ; i++ ) {
+	for ( i = 0 ; i < xml->m_numNodes ; i++ ) {
+
 		// continue if not a meta tag
-		if ( xml->m_nodes[i].m_nodeId != 68 ) continue;
+		if ( xml->m_nodes[i].m_nodeId != TAG_META ) continue;
 		// . does it have a type field that's "summary"
 		// . <meta name=summary content="...">
 		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
-		long nameLen;
-		char *s = xml->getString ( i , "name", &nameLen );
+		s = xml->getString ( i , "name", &nameLen );
 		// "s" can be "summary","description","keywords",...
 		if ( nameLen != qsLen ) continue;
 		if ( strncasecmp ( s , qs , qsLen ) != 0 ) continue;
 		// point to the summary itself
-		long contentLen;
-		char *content = xml->getString ( i , "content" , &contentLen );
+		content = xml->getString ( i , "content" , &contentLen );
 		if ( ! content || contentLen <= 0 ) continue;
 
+	skip:
 		// hash it to match it if caller specified a particular hash
 		// because they are coming from Msg40::lookUpFacets() function
 		// to convert the hashes to strings, like for rendering in
@@ -48587,6 +48608,8 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 
 		// if only one specified, we are done
 		if ( fvh ) return true;
+
+		if ( uniqueField ) return true;
 	}
 
 	return true;

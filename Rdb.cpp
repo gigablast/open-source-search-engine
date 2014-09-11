@@ -429,7 +429,7 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 	logf(LOG_INFO,"repair: Moving *-saved.dat %s. %s", structName, cmd);
 
 	errno = 0;
-	if ( system ( cmd ) == -1 )
+	if ( gbsystem ( cmd ) == -1 )
 		return log("repair: Moving saved %s had error: %s.",
 			   structName, mstrerror(errno));
 

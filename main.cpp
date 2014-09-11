@@ -1236,10 +1236,11 @@ int main2 ( int argc , char *argv[] ) {
 	}
 
 	/*
-	  test json parser error with bad json
+	//  test json parser error with bad json
 	Json jp;
 	char xxx[1024];
-	sprintf(xxx,"\"categories\":[\"shop\"");
+	//sprintf(xxx,"\"categories\":[\"shop\"");
+	sprintf(xxx,"\"too small\"");
 	jp.parseJsonStringIntoJsonItems(xxx,0);
 	JsonItem *ji = jp.getFirstItem();
 	for ( ; ji ; ji = ji->m_next ) {

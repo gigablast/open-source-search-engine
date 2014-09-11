@@ -177,6 +177,17 @@ bool Msg13::getDoc ( Msg13Request *r,
 	//r->m_urlLen    = gbstrlen ( r->ptr_url );
 	r->m_urlHash64 = hash64 ( r->ptr_url , r->size_url-1);//m_urlLen );
 
+	// no! i don't want to store images in there
+	//if ( isTestColl )
+	//	r->m_useTestCache = true;
+
+	// default to 'qa' test coll if non given
+	if ( r->m_useTestCache &&
+	     ! r->m_testDir[0] ) {
+		r->m_testDir[0] = 'q';
+		r->m_testDir[1] = 'a';
+	}
+
 	// sanity check, if spidering the test coll make sure one of 
 	// these is true!! this prevents us from mistakenly turning it off
 	// and not using the doc cache on disk like we should
@@ -295,6 +306,8 @@ bool Msg13::forwardRequest ( ) {
 		       r->m_urlHash48, hostId,
 		       r->m_skipHammerCheck);
 
+	// sanity
+	if ( r->m_useTestCache && ! r->m_testDir[0] ) { char *xx=NULL;*xx=0;}
 
 	// fill up the request
 	long requestBufSize = r->getSize();
@@ -595,6 +608,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 				     12         , // data key size?
 				     -1         );// numPtrsMax
 	}
+
+	// sanity
+	if ( r->m_useTestCache && ! r->m_testDir[0] ) { char *xx=NULL;*xx=0;}
 
 	// try to get it from the test cache?
 	TcpSocket ts;

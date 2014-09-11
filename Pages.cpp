@@ -115,6 +115,11 @@ static WebPage s_pages[] = {
 
 
 
+	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "hosts status",
+	  sendPageHosts    , 0 ,NULL,NULL,PG_STATUS},
+
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls",
@@ -181,11 +186,6 @@ static WebPage s_pages[] = {
 
 
 
-
-	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "hosts status",
-	  sendPageHosts    , 0 ,NULL,NULL,PG_STATUS},
 
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
@@ -1459,7 +1459,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	
 	// gigabot helper blurb
-	printGigabotAdvice ( sb , page , r );
+	printGigabotAdvice ( sb , page , r , NULL );
 
 	// begin 2nd row in big table
 	//sb->safePrintf("</td></TR>");
@@ -1468,7 +1468,10 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	return true;
 }
 
-bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
+bool printGigabotAdvice ( SafeBuf *sb , 
+			  long page , 
+			  HttpRequest *hr ,
+			  char *errMsg ) {
 
 	char format = hr->getFormat();
 	if ( format != FORMAT_HTML ) return true;
@@ -1521,7 +1524,8 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 			//"<br><br>"
 			"Enter the name of your collection "
 			"(search engine) in the box below then hit "
-			"submit."
+			"submit. You can only use alphanumeric characters, "
+			"hyphens or underscores."
 			"<br>"
 			"<br>"
 			"Remember this name so you can access the controls "
@@ -1535,7 +1539,8 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 			"<br>"
 			"<br>"
 			"Enter the list of websites you want to be in your "
-			"search engine into the box marked <i>site list</i>."
+			"search engine into the box marked <i>site list</i> "
+			"then click the <i>submit</i> button."
 			// "<br>"
 			// "<br>"
 			// "Do not deviate from this path, or, as is always "
@@ -1570,7 +1575,12 @@ bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) {
 		       "height=141px width=75px src=/robot3.png>"
 		       "</td><td>"
 		       "<b>"
-		       "%s"
+		       );
+
+	if ( errMsg )
+		sb->safePrintf("%s",errMsg);
+	
+	sb->safePrintf("%s"
 		       "</b>"
 		       , advice
 		       );
@@ -2219,7 +2229,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_ADDCOLL ) continue;
 		if ( i == PAGE_DELCOLL ) continue;
 		if ( i == PAGE_CLONECOLL ) continue;
-		if ( i == PAGE_HOSTS ) continue;
+
+		// put this back in
+		//if ( i == PAGE_HOSTS ) continue;
 
 		// print "url download" before "inject url"
 		// GET /mycollname_urls.csv
@@ -3065,12 +3077,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			       "or "
 			       "<a href=/%s?showinput=1&format=json>"
 			       "json</a> "
-			       "or <a href=/%s>html</a> ] "
+			       //"or <a href=/%s>html</a>"
+			       " ] "
 			       "</font>",
 			       s_pages[PAGENUM].m_desc,
 			       pageStr,
-			       pageStr,
-			       pageStr);
+			       pageStr
+			       //pageStr);
+			       );
 
 	// status pages. if its a status page with no input parms
 	if ( s_pages[PAGENUM].m_pgflags & PG_STATUS )
@@ -3082,12 +3096,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			       "or "
 			       "<a href=/%s?format=json>"
 			       "json</a> "
-			       "or <a href=/%s>html</a> ] "
+			       //"or <a href=/%s>html</a> ] "  
+			       " ] "
 			       "</font>",
 			       pageStr,
 			       cr->m_coll,
-			       pageStr,
-			       pageStr);
+			       pageStr
+			       //pageStr
+			       );
 
 	
 	sb->safePrintf("<br>");
@@ -3220,6 +3236,11 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		// these have PAGE_NONE for some reason
 		if ( parm->m_obj == OBJ_SI ) pageNum = PAGE_RESULTS;
 
+		// dup page fix. so we should 'masterpwd' and 'masterip'
+		// in the list now.
+		if ( pageNum == PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
+
+
 		if ( pageNum != PAGENUM ) continue;
 
 		SafeBuf tmp;
@@ -3236,6 +3257,10 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			if ( ! def ) def = "";
 			if ( strcmp(tmp.getBufStart(),def) ) diff=1;
 		}
+
+		// do not show passwords in this!
+		if ( parm->m_flags & PF_PRIVATE )
+			printVal = false;
 
 		// print the parm
 		if ( diff == 1 ) 
@@ -3283,6 +3308,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		if ( parm->m_flags & PF_REQUIRED )
 			sb->safePrintf(" <b><font color=green>REQUIRED"
 				     "</font></b>");
+
 		if ( printVal ) {
 			sb->safePrintf("<br><b><nobr>Current value:</nobr> ");
 			// print in red if not default value

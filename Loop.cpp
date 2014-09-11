@@ -130,8 +130,8 @@ static void sighupHandler ( int x , siginfo_t *info , void *y ) ;
 static void sigalrmHandler( int x , siginfo_t *info , void *y ) ;
 static void sigvtalrmHandler( int x , siginfo_t *info , void *y ) ;
 
-long g_fdWriteBits[MAX_NUM_FDS/32];
-long g_fdReadBits [MAX_NUM_FDS/32];
+//long g_fdWriteBits[MAX_NUM_FDS/32];
+//long g_fdReadBits [MAX_NUM_FDS/32];
 
 void Loop::unregisterReadCallback ( int fd, void *state ,
 				    void (* callback)(int fd,void *state),
@@ -158,8 +158,8 @@ static fd_set s_selectMaskWrite;
 static fd_set s_selectMaskExcept;
 
 static int s_readFds[MAX_NUM_FDS];
-static int s_writeFds[MAX_NUM_FDS];
 static long s_numReadFds = 0;
+static int s_writeFds[MAX_NUM_FDS];
 static long s_numWriteFds = 0;
 
 void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
@@ -204,13 +204,17 @@ void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
 				break;
 			}
 			for (long i = 0; i < s_numWriteFds ; i++ ) {
-				if ( s_writeFds[i] != fd ) continue;
-				s_writeFds[i] = s_writeFds[s_numWriteFds-1];
-				s_numWriteFds--;
-				// remove from select mask too
-				FD_CLR(fd,&s_selectMaskWrite);
-				FD_CLR(fd,&s_selectMaskExcept);
-				break;
+			 	if ( s_writeFds[i] != fd ) continue;
+			 	s_writeFds[i] = s_writeFds[s_numWriteFds-1];
+			 	s_numWriteFds--;
+			 	// remove from select mask too
+			 	FD_CLR(fd,&s_selectMaskWrite);
+				if ( g_conf.m_logDebugLoop )
+					log("loop: clearing fd=%li from "
+					    "write #wrts=%li"
+					    ,(long)fd,(long)s_numWriteFds);
+			// 	FD_CLR(fd,&s_selectMaskExcept);
+			 	break;
 			}
 		}
 		// debug msg
@@ -243,6 +247,10 @@ void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
 	// . HttpServer.cpp always calls this even if it did not register its
 	//   File's fd just to make sure.
 	if ( silent ) return;
+
+	return;
+	// sometimes the socket is abruptly closed and that calls the
+	// unregisterWriteCallback() for us... so skip this
 	log(LOG_LOGIC,
 	    "loop: unregisterCallback: callback not found (fd=%i).",fd);
 }
@@ -334,16 +342,16 @@ bool Loop::addSlot ( bool forReading , int fd, void *state,
 		//}
 	}
 	else {
-		next = m_writeSlots [ fd ];
-		m_writeSlots [ fd ] = s;
-		//FD_SET ( fd , &m_writefds );
-		// if not already registered, add to list
-		if ( fd<MAX_NUM_FDS && ! FD_ISSET ( fd,&s_selectMaskWrite ) ) {
-			s_writeFds[s_numWriteFds++] = fd;
-			FD_SET ( fd,&s_selectMaskWrite  );
-			// sanity
-			if ( s_numWriteFds>MAX_NUM_FDS){char *xx=NULL;*xx=0;}
-		}
+	 	next = m_writeSlots [ fd ];
+	 	m_writeSlots [ fd ] = s;
+	 	//FD_SET ( fd , &m_writefds );
+	 	// if not already registered, add to list
+	 	if ( fd<MAX_NUM_FDS && ! FD_ISSET ( fd,&s_selectMaskWrite ) ) {
+	 		s_writeFds[s_numWriteFds++] = fd;
+	 		FD_SET ( fd,&s_selectMaskWrite  );
+	 		// sanity
+	 		if ( s_numWriteFds>MAX_NUM_FDS){char *xx=NULL;*xx=0;}
+	 	}
 	}
 	// set our callback and state
 	s->m_callback  = callback;
@@ -429,6 +437,7 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 // . if fd is MAX_NUM_FDS and "forReading" is true call all sleepy callbacks
 void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
 			       long niceness ) {
+
 	// debug msg
 	//if ( g_conf.m_logDebugUdp ) log("callCallbacks_ass start");
 	//if ( fd != 1024 ) {
@@ -439,8 +448,9 @@ void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
 	int saved_errno = g_errno;
 	// get the first Slot in the chain that is waiting on this fd
 	Slot *s ;
-	if ( forReading ) s = m_readSlots  [ fd ];
-	else              s = m_writeSlots [ fd ];
+	//if ( forReading ) s = m_readSlots  [ fd ];
+	//else              s = m_writeSlots [ fd ];
+	s = m_readSlots [ fd ];
 	// ensure we called something
 	long numCalled = 0;
 
@@ -579,7 +589,7 @@ Loop::Loop ( ) {
 	// set all callbacks to NULL so we know they're empty
 	for ( long i = 0 ; i < MAX_NUM_FDS+2 ; i++ ) {
 		m_readSlots [i] = NULL;
-		m_writeSlots[i] = NULL;
+		//m_writeSlots[i] = NULL;
 	}
 	// the extra sleep slots
 	//m_readSlots [ MAX_NUM_FDS ] = NULL;
@@ -914,8 +924,16 @@ bool Loop::init ( ) {
 	//now set up our alarm for quickpoll
 	m_quickInterrupt.it_value.tv_sec = 0;
 	m_quickInterrupt.it_value.tv_usec = QUICKPOLL_INTERVAL * 1000;
+	m_quickInterrupt.it_interval.tv_sec = 0;
+	m_quickInterrupt.it_interval.tv_usec = QUICKPOLL_INTERVAL * 1000;
+
+
+	m_realInterrupt.it_value.tv_sec = 0;
+	m_realInterrupt.it_value.tv_usec = 7 * 1000;
 	m_realInterrupt.it_interval.tv_sec = 0;
 	m_realInterrupt.it_interval.tv_usec = 7 * 1000;
+
+
  	m_noInterrupt.it_value.tv_sec = 0;
  	m_noInterrupt.it_value.tv_usec = 0;
  	m_noInterrupt.it_interval.tv_sec = 0;
@@ -927,7 +945,7 @@ bool Loop::init ( ) {
 	//mdw:disableTimer();
 
 	// make this 7ms i guess
-	setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
+	//setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
 	// this is 10ms
 	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
 
@@ -1801,11 +1819,12 @@ void Loop::doPoll ( ) {
 	fd_set writefds;
 	fd_set exceptfds;
 	memcpy ( &readfds, &s_selectMaskRead , sizeof(fd_set) );
-	//memcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
+	memcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
 	//memcpy ( &exceptfds, &s_selectMaskExcept , sizeof(fd_set) );
 
-	// what is the point of fds for writing... skip it
-	FD_ZERO ( &writefds );
+	// what is the point of fds for writing... its for when we
+	// get a new socket via accept() it is read for writing...
+	//FD_ZERO ( &writefds );
 	FD_ZERO ( &exceptfds );
 
 	if ( g_conf.m_logDebugLoop )
@@ -1870,15 +1889,20 @@ void Loop::doPoll ( ) {
 	if ( g_conf.m_logDebugLoop) 
 		logf(LOG_DEBUG,"loop: Got %li fds waiting.",n);
 
-	// for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
-	// 	// continue if not set for reading
-	// 	if ( FD_ISSET ( i , &readfds ) ||
-	// 	     FD_ISSET ( i , &writefds ) ||
-	// 	     FD_ISSET ( i , &exceptfds ) )
-	// 	// debug
-	// 	log("loop: fd %li is on",i);
-	// 	// if niceness is not -1, handle it below
-	// }
+	if ( g_conf.m_logDebugLoop) {
+	 for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
+	  	// continue if not set for reading
+	  	if ( FD_ISSET ( i , &readfds ) )
+	 	log("loop: fd %li is on for read",i);
+	 	if ( FD_ISSET ( i , &writefds ) )
+	 	log("loop: fd %li is on for write",i);
+	 	if ( FD_ISSET ( i , &exceptfds ) )
+	 		log("loop: fd %li is on for except",i);
+	  	// debug
+
+	 	// if niceness is not -1, handle it below
+	 }
+	}
 
 	// . reset the need to poll flag if everything is caught up now
 	// . let's take this out for now ... won't this leave some
@@ -1935,6 +1959,15 @@ void Loop::doPoll ( ) {
 			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,0);
 		}
+		// fds are always ready for writing so take this out.
+		// our read callbacks always try to do a write as well.
+		if ( FD_ISSET ( fd , &writefds ) ) {
+			if ( g_conf.m_logDebugLoop )
+				log("loop: calling cback0 niceness=%li fd=%i"
+				    , s->m_niceness , fd );
+			calledOne = true;
+			callCallbacks_ass (false/*forReading?*/,fd, g_now,0);
+		}
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
 	//	if ( n == 0 ) break;
@@ -1970,6 +2003,15 @@ void Loop::doPoll ( ) {
 				    , s->m_niceness , fd );
 			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,1);
+		}
+		// fds are always ready for writing so take this out.
+		// our read callbacks always try to do a write as well.
+		if ( FD_ISSET ( fd , &writefds ) ) {
+			if ( g_conf.m_logDebugLoop )
+				log("loop: calling cback1 niceness=%li fd=%i"
+				    , s->m_niceness , fd );
+			calledOne = true;
+			callCallbacks_ass (false/*forReading?*/,fd, g_now,1);
 		}
 	}
 	// for ( long i = 0 ; i < s_numWriteFds ; i++ ) {
@@ -2498,6 +2540,16 @@ void Loop::disableTimer() {
 	setitimer(ITIMER_VIRTUAL, &m_noInterrupt, NULL);
 }
 
+int gbsystem(char *cmd ) {
+	if ( ! g_conf.m_runAsDaemon )
+		setitimer(ITIMER_REAL, &g_loop.m_noInterrupt, NULL);
+	log("gb: running system(\"%s\")",cmd);
+	int ret = system(cmd);
+	if ( ! g_conf.m_runAsDaemon )
+		setitimer(ITIMER_REAL, &g_loop.m_realInterrupt, NULL);
+	return ret;
+}
+	
 
 // void Loop::enableTimer() {
 // 	m_canQuickPoll = true;

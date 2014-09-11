@@ -253,7 +253,7 @@ public:
 ////////////////////////////////////////////////////////
 
 
-
+#define MAX_FACET_RANGES 256
 
 // . these first two classes are functionless
 // . QueryWord, like the Phrases class, is an extension on the Words class
@@ -375,6 +375,14 @@ class QueryWord {
 
 	// for holding some synonyms
 	SafeBuf m_synWordBuf;
+
+
+	long  m_facetRangeIntA   [MAX_FACET_RANGES];
+	long  m_facetRangeIntB   [MAX_FACET_RANGES];
+	float m_facetRangeFloatA [MAX_FACET_RANGES];
+	float m_facetRangeFloatB [MAX_FACET_RANGES];
+	long  m_numFacetRanges;
+
 
 	// what operand bit # is it for doing boolen queries?
 	//long  m_opBitNum;
