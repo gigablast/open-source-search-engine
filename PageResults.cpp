@@ -8546,8 +8546,13 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		// ADMIN
 
 		s_mi[n].m_menuNum  = 8;
-		s_mi[n].m_title    = "Admin";
-		s_mi[n].m_cgi      = "/admin/settings";
+		s_mi[n].m_title    = "Show Admin View";
+		s_mi[n].m_cgi      = "admin=1";
+		n++;
+
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Show User View";
+		s_mi[n].m_cgi      = "admin=0";
 		n++;
 
 		s_mi[n].m_menuNum  = 8;
@@ -8635,6 +8640,8 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		first = mi;
 		// do not highlight the orig header
 		if ( isDefaultHeader ) break;
+		// or if "Show Admin View" is selected
+		//if ( strcmp(mi->m_title,"Show Admin View") == 0 ) break;
 		frontTag = "<b style=color:maroon;>";
 		backTag = "</b>";
 		break;
