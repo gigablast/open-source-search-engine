@@ -223,7 +223,7 @@ class Loop {
 	// . fd of MAX_NUM_FDS   is used for sleep callbacks
 	// . fd of MAX_NUM_FDS+1 is used for thread exit callbacks
 	Slot *m_readSlots  [MAX_NUM_FDS+2];
-	//Slot *m_writeSlots [MAX_NUM_FDS+2];
+	Slot *m_writeSlots [MAX_NUM_FDS+2];
 
 	// the minimal tick time in milliseconds (ms)
 	long m_minTick;

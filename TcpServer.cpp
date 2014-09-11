@@ -1001,11 +1001,12 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	if (!g_loop.registerReadCallback (sd,this,readSocketWrapper,niceness))
 		goto hadError;
 	// what does thie really mean? shouldn't we only register for write
-	// if a write we did failed because the buffer was full?
-	if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
-	  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-	  	goto hadError;
-	}
+	// if a write we did failed because the buffer was full?.
+	// let's do this after the connection request is accepted!
+	//if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
+	//  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	//  	goto hadError;
+	//}
 	// return "s" on success
 	return s;
 	// otherwise, free "s" and return NULL
@@ -1820,7 +1821,23 @@ long TcpServer::connectSocket ( TcpSocket *s ) {
 		goto connected;
 	}
 	// we blocked with the EINPROGRESS g_errno
-	if ( g_errno == EINPROGRESS ) { g_errno = 0; return 0; }
+	if ( g_errno == EINPROGRESS ) { 
+		// hopefully this will let us know when the socket is
+		// connected and ready for writing to.
+		if(!g_loop.registerWriteCallback(s->m_sd,
+						 this,
+						 writeSocketWrapper,
+						 s->m_niceness)){
+			log("tcp: failed to reg write callback for sd=%i",
+			    s->m_sd);
+			g_loop.unregisterReadCallback(s->m_sd,
+						      this , 
+						      readSocketWrapper  );
+			//goto hadError;
+		}
+		g_errno = 0; 
+		return 0; 
+	}
 	// return -1 on real error
 	if ( g_conf.m_logDebugTcp )
 		log(LOG_INFO,"tcp: Failed to connect socket: %s, %s:%li", 

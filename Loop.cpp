@@ -159,8 +159,8 @@ static fd_set s_selectMaskExcept;
 
 static int s_readFds[MAX_NUM_FDS];
 static long s_numReadFds = 0;
-//static int s_writeFds[MAX_NUM_FDS];
-//static long s_numWriteFds = 0;
+static int s_writeFds[MAX_NUM_FDS];
+static long s_numWriteFds = 0;
 
 void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
 				void (* callback)(int fd,void *state) ,
@@ -209,6 +209,10 @@ void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
 			 	s_numWriteFds--;
 			 	// remove from select mask too
 			 	FD_CLR(fd,&s_selectMaskWrite);
+				if ( g_conf.m_logDebugLoop )
+					log("loop: clearing fd=%li from "
+					    "write #wrts=%li"
+					    ,(long)fd,(long)s_numWriteFds);
 			// 	FD_CLR(fd,&s_selectMaskExcept);
 			 	break;
 			}
@@ -243,6 +247,10 @@ void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
 	// . HttpServer.cpp always calls this even if it did not register its
 	//   File's fd just to make sure.
 	if ( silent ) return;
+
+	return;
+	// sometimes the socket is abruptly closed and that calls the
+	// unregisterWriteCallback() for us... so skip this
 	log(LOG_LOGIC,
 	    "loop: unregisterCallback: callback not found (fd=%i).",fd);
 }
@@ -1881,18 +1889,18 @@ void Loop::doPoll ( ) {
 	if ( g_conf.m_logDebugLoop) 
 		logf(LOG_DEBUG,"loop: Got %li fds waiting.",n);
 
-	for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
-	 	// continue if not set for reading
-	 	if ( FD_ISSET ( i , &readfds ) )
-		log("loop: fd %li is on for read",i);
-		if ( FD_ISSET ( i , &writefds ) )
-		log("loop: fd %li is on for write",i);
-		if ( FD_ISSET ( i , &exceptfds ) )
-			log("loop: fd %li is on for except",i);
-	 	// debug
+	// for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
+	//  	// continue if not set for reading
+	//  	if ( FD_ISSET ( i , &readfds ) )
+	// 	log("loop: fd %li is on for read",i);
+	// 	if ( FD_ISSET ( i , &writefds ) )
+	// 	log("loop: fd %li is on for write",i);
+	// 	if ( FD_ISSET ( i , &exceptfds ) )
+	// 		log("loop: fd %li is on for except",i);
+	//  	// debug
 
-		// if niceness is not -1, handle it below
-	}
+	// 	// if niceness is not -1, handle it below
+	// }
 
 	// . reset the need to poll flag if everything is caught up now
 	// . let's take this out for now ... won't this leave some
