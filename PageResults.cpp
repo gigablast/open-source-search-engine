@@ -1748,13 +1748,18 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		ttt.pushChar('\"');
 		ttt.pushChar(' ');
 	}
+	// term on it
+	ttt.nullTerm();
+
 	if ( numGigabits > 0 ) 
 		gigabitQuery.set2 ( ttt.getBufStart() ,
 				    si->m_queryLangId ,
 				    true , // queryexpansion?
 				    true );  // usestopwords?
 
-
+	log("results: gigabitquery=%s landid=%li"
+	    ,ttt.getBufStart()
+	    ,si->m_queryLangId);
 
 
 	for ( long i = 0 ; i < numGigabits ; i++ ) {

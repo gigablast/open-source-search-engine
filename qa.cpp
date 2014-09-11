@@ -572,7 +572,8 @@ bool qainject1 ( ) {
 
 	if ( ! s_flags[16] ) {
 		s_flags[16] = true;
-		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
+				"&dsrt=500",
 				702467314 ) )
 			return false;
 	}
