@@ -268,7 +268,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			else {
 				log("json: fieldless name in json");
 				g_errno = EBADJSONPARSER;
-				return false;
+				return NULL;
 			}
 			// skip over the string
 			size = 0;
