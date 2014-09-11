@@ -2524,6 +2524,16 @@ void Loop::disableTimer() {
 	setitimer(ITIMER_VIRTUAL, &m_noInterrupt, NULL);
 }
 
+int gbsystem(char *cmd ) {
+	if ( ! g_conf.m_runAsDaemon )
+		setitimer(ITIMER_REAL, &g_loop.m_noInterrupt, NULL);
+	log("gb: running system(\"%s\")",cmd);
+	int ret = system(cmd);
+	if ( ! g_conf.m_runAsDaemon )
+		setitimer(ITIMER_REAL, &g_loop.m_realInterrupt, NULL);
+	return ret;
+}
+	
 
 // void Loop::enableTimer() {
 // 	m_canQuickPoll = true;

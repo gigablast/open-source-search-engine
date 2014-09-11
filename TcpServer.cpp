@@ -847,7 +847,15 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 TcpSocket *TcpServer::getSocket  ( int sd ) {
 	TcpSocket *s = m_tcpSockets[sd];
 	if ( s ) return s;
-	log(LOG_LOGIC,"tcp: tcpserver: getSocket: sd=%i has no TcpSocket.",sd);
+	// now since i don't really use write callbacks anymore, since
+	// they are only needed for once a socket is connected, i just
+	// always calll a write after processing a read/write signal.
+	// read/write signals are combined together in Loop.cpp now
+	// for simplicity. the only write signal was received after a
+	// tcp socket connection was made.
+	if ( g_conf.m_logDebugTcp )
+		log(LOG_LOGIC,"tcp: tcpserver: getSocket: sd=%i has no "
+		    "TcpSocket.",sd);
 	return NULL;
 }
 

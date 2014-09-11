@@ -18,6 +18,8 @@
 #define QUERYPRIORITYWEIGHT 16
 #define QUICKPOLL_INTERVAL 10
 
+int gbsystem(char *cmd ) ;
+
 #define sleep(a) { char *xx=NULL;*xx=0; }
 //#define sleep(a) logf(LOG_INFO,"sleep: sleep"); 
 

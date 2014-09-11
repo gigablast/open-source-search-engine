@@ -315,8 +315,8 @@ void processReply ( char *reply , long replyLen ) {
 	// do the diff between the two replies so we can see what changed
 	char cmd[1024];
 	sprintf(cmd,"diff %s %s > /tmp/diffout",fn1,fn2);
-	log("qa: %s\n",cmd);
-	system(cmd);
+	//log("qa: %s\n",cmd);
+	gbsystem(cmd);
 
 	g_numErrors++;
 	
@@ -1173,6 +1173,7 @@ bool qaspider1 ( ) {
 }
 
 bool qaspider2 ( ) {
+
 	//
 	// delete the 'qatest123' collection
 	//
