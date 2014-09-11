@@ -1889,18 +1889,20 @@ void Loop::doPoll ( ) {
 	if ( g_conf.m_logDebugLoop) 
 		logf(LOG_DEBUG,"loop: Got %li fds waiting.",n);
 
-	// for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
-	//  	// continue if not set for reading
-	//  	if ( FD_ISSET ( i , &readfds ) )
-	// 	log("loop: fd %li is on for read",i);
-	// 	if ( FD_ISSET ( i , &writefds ) )
-	// 	log("loop: fd %li is on for write",i);
-	// 	if ( FD_ISSET ( i , &exceptfds ) )
-	// 		log("loop: fd %li is on for except",i);
-	//  	// debug
+	if ( g_conf.m_logDebugLoop) {
+	 for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
+	  	// continue if not set for reading
+	  	if ( FD_ISSET ( i , &readfds ) )
+	 	log("loop: fd %li is on for read",i);
+	 	if ( FD_ISSET ( i , &writefds ) )
+	 	log("loop: fd %li is on for write",i);
+	 	if ( FD_ISSET ( i , &exceptfds ) )
+	 		log("loop: fd %li is on for except",i);
+	  	// debug
 
-	// 	// if niceness is not -1, handle it below
-	// }
+	 	// if niceness is not -1, handle it below
+	 }
+	}
 
 	// . reset the need to poll flag if everything is caught up now
 	// . let's take this out for now ... won't this leave some

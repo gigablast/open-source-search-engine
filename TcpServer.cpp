@@ -1003,10 +1003,11 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	// what does thie really mean? shouldn't we only register for write
 	// if a write we did failed because the buffer was full?.
 	// let's do this after the connection request is accepted!
-	//if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
-	//  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-	//  	goto hadError;
-	//}
+	// MDW: try this again
+	if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
+	  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	  	goto hadError;
+	}
 	// return "s" on success
 	return s;
 	// otherwise, free "s" and return NULL
@@ -1557,7 +1558,19 @@ void writeSocketWrapper ( int sd , void *state ) {
 			THIS->destroySocket ( s ); 
 		}
 		// return on coonection error or if still trying to connect
-		if ( status != 1 ) return;
+		if ( status != 1 ) {
+			// hopefully this will let us know when the socket is
+			// connected and ready for writing to.
+			// if(!g_loop.registerWriteCallback(s->m_sd,
+			// 				 THIS,
+			// 				 writeSocketWrapper,
+			// 				 s->m_niceness)){
+			// 	log("tcp: failed to reg write callback for "
+			// 	    "sd=%i", s->m_sd);
+			// 	//goto hadError;
+			// }
+			return;
+		}
 		// now try to send on it
 	}
 	// if socket has nothing to send yet cuz we're waiting, wait...
@@ -1623,7 +1636,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 
 	// we only register write callback to see when it is connected so
 	// we can do a write, so we should not need this now
-	g_loop.unregisterWriteCallback(s->m_sd,this,writeSocketWrapper);
+	//g_loop.unregisterWriteCallback(s->m_sd,this,writeSocketWrapper);
 
 
  loop:
@@ -1817,24 +1830,16 @@ long TcpServer::connectSocket ( TcpSocket *s ) {
 		if ( g_conf.m_logDebugTcp )
 			log("........... TcpServer already connected %i to "
 			    "%s port %i\n", s->m_sd, iptoa(s->m_ip),s->m_port);
+
+		g_loop.unregisterWriteCallback(s->m_sd,
+					       this,
+					       writeSocketWrapper);
+
 		g_errno = 0;
 		goto connected;
 	}
 	// we blocked with the EINPROGRESS g_errno
 	if ( g_errno == EINPROGRESS ) { 
-		// hopefully this will let us know when the socket is
-		// connected and ready for writing to.
-		if(!g_loop.registerWriteCallback(s->m_sd,
-						 this,
-						 writeSocketWrapper,
-						 s->m_niceness)){
-			log("tcp: failed to reg write callback for sd=%i",
-			    s->m_sd);
-			g_loop.unregisterReadCallback(s->m_sd,
-						      this , 
-						      readSocketWrapper  );
-			//goto hadError;
-		}
 		g_errno = 0; 
 		return 0; 
 	}
