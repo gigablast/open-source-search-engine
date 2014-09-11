@@ -1002,10 +1002,10 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		goto hadError;
 	// what does thie really mean? shouldn't we only register for write
 	// if a write we did failed because the buffer was full?
-	// if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
-	//  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-	//  	goto hadError;
-	// }
+	if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
+	  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	  	goto hadError;
+	}
 	// return "s" on success
 	return s;
 	// otherwise, free "s" and return NULL
@@ -1138,6 +1138,11 @@ void readSocketWrapper2 ( int sd , void *state ) ;
 // . g_errno will be set by Loop if there was a kinda socket reset error
 void readSocketWrapper ( int sd , void *state ) {
 	readSocketWrapper2 ( sd , state );
+	// since we got rid of waiting for writing on fds, since it only
+	// applies to freshly connected tcp sockets, we poll for ready-
+	// -for-write fds on the select() call in Loop.cpp on the same fds
+	// we are waiting for reads on. so if we get a signal it could really
+	// be a ready-for-write signal, so try this writing just in case.
 	writeSocketWrapper ( sd , state );
 }
 
@@ -1506,6 +1511,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// debug msg
 	//log("........... TcpServer::writeSocketWrapper sd=%li\n",sd);
 	TcpServer *THIS = (TcpServer *)state;
+
 	// get the TcpSocket for this socket descriptor
 	TcpSocket *s = THIS->getSocket ( sd );
 	if ( ! s ) { 
@@ -1613,6 +1619,12 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		//long status = readSocket ( s );
 		//return status; //-1; 
 	}
+
+	// we only register write callback to see when it is connected so
+	// we can do a write, so we should not need this now
+	g_loop.unregisterWriteCallback(s->m_sd,this,writeSocketWrapper);
+
+
  loop:
 	// send some stuff
 	long toSend = s->m_sendBufUsed - s->m_sendOffset;
@@ -1978,7 +1990,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// always free the sendBuf 
 	if ( s->m_sendBuf ) mfree (s->m_sendBuf, s->m_sendBufSize,"TcpServer");
 	// unregister it with Loop so we don't get any calls about it
-	//g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
+	g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
 	g_loop.unregisterReadCallback  ( sd , this , readSocketWrapper  );
 	// debug msg
 	//log("unregistering sd=%li",sd);

@@ -134,10 +134,10 @@ class Loop {
 	// . register this "fd" with "callback"
 	// . "callback" will be called when fd is ready for reading
 	// . "callback" will be called when there is an error on fd
-	/* bool registerWriteCallback ( int   fd    , */
-	/* 			     void *state ,  */
-	/* 			     void (* callback)(int fd, void *state ) , */
-	/* 			     long   niceness ); */
+	bool registerWriteCallback ( int   fd    ,
+				     void *state ,
+				     void (* callback)(int fd, void *state ) , 
+	 			     long   niceness ); 
 
 	// . register this callback to be called every second
 	// . TODO: implement "seconds" parameter
@@ -150,8 +150,8 @@ class Loop {
 	void unregisterReadCallback  ( int fd, void *state ,
 				       void (* callback)(int fd,void *state),
 				       bool silent = false );
-	/* void unregisterWriteCallback ( int fd, void *state , */
-	/* 			       void (* callback)(int fd,void *state)); */
+	void unregisterWriteCallback ( int fd, void *state ,
+	 			       void (* callback)(int fd,void *state)); 
 	void unregisterSleepCallback ( void *state ,
 				       void (* callback)(int fd,void *state));
 

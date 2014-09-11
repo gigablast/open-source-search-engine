@@ -131,7 +131,7 @@ static void sigalrmHandler( int x , siginfo_t *info , void *y ) ;
 static void sigvtalrmHandler( int x , siginfo_t *info , void *y ) ;
 
 //long g_fdWriteBits[MAX_NUM_FDS/32];
-long g_fdReadBits [MAX_NUM_FDS/32];
+//long g_fdReadBits [MAX_NUM_FDS/32];
 
 void Loop::unregisterReadCallback ( int fd, void *state ,
 				    void (* callback)(int fd,void *state),
@@ -142,11 +142,11 @@ void Loop::unregisterReadCallback ( int fd, void *state ,
 			     silent );
 }
 
-// void Loop::unregisterWriteCallback ( int fd, void *state ,
-// 				    void (* callback)(int fd,void *state)){
-// 	// from writing
-// 	unregisterCallback ( m_writeSlots , fd          , state , callback );
-// }
+void Loop::unregisterWriteCallback ( int fd, void *state ,
+				    void (* callback)(int fd,void *state)){
+	// from writing
+	unregisterCallback ( m_writeSlots , fd          , state , callback );
+}
 
 void Loop::unregisterSleepCallback ( void *state ,
 				     void (* callback)(int fd,void *state)){
@@ -203,15 +203,15 @@ void Loop::unregisterCallback ( Slot **slots , int fd , void *state ,
 				FD_CLR(fd,&s_selectMaskRead );
 				break;
 			}
-			// for (long i = 0; i < s_numWriteFds ; i++ ) {
-			// 	if ( s_writeFds[i] != fd ) continue;
-			// 	s_writeFds[i] = s_writeFds[s_numWriteFds-1];
-			// 	s_numWriteFds--;
-			// 	// remove from select mask too
-			// 	FD_CLR(fd,&s_selectMaskWrite);
+			for (long i = 0; i < s_numWriteFds ; i++ ) {
+			 	if ( s_writeFds[i] != fd ) continue;
+			 	s_writeFds[i] = s_writeFds[s_numWriteFds-1];
+			 	s_numWriteFds--;
+			 	// remove from select mask too
+			 	FD_CLR(fd,&s_selectMaskWrite);
 			// 	FD_CLR(fd,&s_selectMaskExcept);
-			// 	break;
-			// }
+			 	break;
+			}
 		}
 		// debug msg
 		//log("Loop::unregistered fd=%li state=%lu", fd, (long)state );
@@ -257,14 +257,14 @@ bool Loop::registerReadCallback  ( int fd,
 }
 
 
-// bool Loop::registerWriteCallback ( int fd,
-// 				   void *state, 
-// 				   void (* callback)(int fd, void *state ) ,
-// 				   long  niceness ) {
-// 	// the "false" answers the question "for reading?"
-// 	if ( addSlot ( false, fd, state, callback, niceness ) )return true;
-// 	return log("loop: Unable to register write callback.");
-// }
+bool Loop::registerWriteCallback ( int fd,
+				   void *state, 
+				   void (* callback)(int fd, void *state ) ,
+				   long  niceness ) {
+	// the "false" answers the question "for reading?"
+	if ( addSlot ( false, fd, state, callback, niceness ) )return true;
+	return log("loop: Unable to register write callback.");
+}
 
 // tick is in milliseconds
 bool Loop::registerSleepCallback ( long tick ,
@@ -297,9 +297,8 @@ bool Loop::addSlot ( bool forReading , int fd, void *state,
 	// . ensure fd not already registered with this callback/state
 	// . prevent dups so you can keep calling register w/o fear
 	Slot *s;
-	//if ( forReading ) s = m_readSlots  [ fd ];
-	//else              s = m_writeSlots [ fd ];
-	s = m_readSlots [ fd ];
+	if ( forReading ) s = m_readSlots  [ fd ];
+	else              s = m_writeSlots [ fd ];
 	while ( s ) {
 		if ( s->m_callback == callback &&
 		     s->m_state    == state      ) {
@@ -318,34 +317,34 @@ bool Loop::addSlot ( bool forReading , int fd, void *state,
 	// for pointing to slot already in position for fd
 	Slot *next ;
 	// store ourselves in the slot for this fd
-	//if ( forReading ) {
-	next = m_readSlots [ fd ];
-	m_readSlots  [ fd ] = s;
-	// if not already registered, add to list
-	if ( fd<MAX_NUM_FDS && ! FD_ISSET ( fd,&s_selectMaskRead ) ) {
-		s_readFds[s_numReadFds++] = fd;
-		FD_SET ( fd,&s_selectMaskRead  );
-		// sanity
-		if ( s_numReadFds>MAX_NUM_FDS){char *xx=NULL;*xx=0;}
-	}
+	if ( forReading ) {
+		next = m_readSlots [ fd ];
+		m_readSlots  [ fd ] = s;
+		// if not already registered, add to list
+		if ( fd<MAX_NUM_FDS && ! FD_ISSET ( fd,&s_selectMaskRead ) ) {
+			s_readFds[s_numReadFds++] = fd;
+			FD_SET ( fd,&s_selectMaskRead  );
+			// sanity
+			if ( s_numReadFds>MAX_NUM_FDS){char *xx=NULL;*xx=0;}
+		}
 		// fd == MAX_NUM_FDS if it's a sleep callback
 		//if ( fd < MAX_NUM_FDS ) {
 		//FD_SET ( fd , &m_readfds   );
 		//FD_SET ( fd , &m_exceptfds );
 		//}
-	// }
-	// else {
-	// 	next = m_writeSlots [ fd ];
-	// 	m_writeSlots [ fd ] = s;
-	// 	//FD_SET ( fd , &m_writefds );
-	// 	// if not already registered, add to list
-	// 	if ( fd<MAX_NUM_FDS && ! FD_ISSET ( fd,&s_selectMaskWrite ) ) {
-	// 		s_writeFds[s_numWriteFds++] = fd;
-	// 		FD_SET ( fd,&s_selectMaskWrite  );
-	// 		// sanity
-	// 		if ( s_numWriteFds>MAX_NUM_FDS){char *xx=NULL;*xx=0;}
-	// 	}
-	// }
+	}
+	else {
+	 	next = m_writeSlots [ fd ];
+	 	m_writeSlots [ fd ] = s;
+	 	//FD_SET ( fd , &m_writefds );
+	 	// if not already registered, add to list
+	 	if ( fd<MAX_NUM_FDS && ! FD_ISSET ( fd,&s_selectMaskWrite ) ) {
+	 		s_writeFds[s_numWriteFds++] = fd;
+	 		FD_SET ( fd,&s_selectMaskWrite  );
+	 		// sanity
+	 		if ( s_numWriteFds>MAX_NUM_FDS){char *xx=NULL;*xx=0;}
+	 	}
+	}
 	// set our callback and state
 	s->m_callback  = callback;
 	s->m_state     = state;
@@ -430,6 +429,7 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 // . if fd is MAX_NUM_FDS and "forReading" is true call all sleepy callbacks
 void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
 			       long niceness ) {
+
 	// debug msg
 	//if ( g_conf.m_logDebugUdp ) log("callCallbacks_ass start");
 	//if ( fd != 1024 ) {
@@ -937,7 +937,7 @@ bool Loop::init ( ) {
 	//mdw:disableTimer();
 
 	// make this 7ms i guess
-	setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
+	//setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
 	// this is 10ms
 	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
 
@@ -1811,8 +1811,7 @@ void Loop::doPoll ( ) {
 	fd_set writefds;
 	fd_set exceptfds;
 	memcpy ( &readfds, &s_selectMaskRead , sizeof(fd_set) );
-	memcpy ( &writefds, &s_selectMaskRead , sizeof(fd_set) );
-	//memcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
+	memcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
 	//memcpy ( &exceptfds, &s_selectMaskExcept , sizeof(fd_set) );
 
 	// what is the point of fds for writing... its for when we
@@ -1882,15 +1881,18 @@ void Loop::doPoll ( ) {
 	if ( g_conf.m_logDebugLoop) 
 		logf(LOG_DEBUG,"loop: Got %li fds waiting.",n);
 
-	// for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
-	// 	// continue if not set for reading
-	// 	if ( FD_ISSET ( i , &readfds ) ||
-	// 	     FD_ISSET ( i , &writefds ) ||
-	// 	     FD_ISSET ( i , &exceptfds ) )
-	// 	// debug
-	// 	log("loop: fd %li is on",i);
-	// 	// if niceness is not -1, handle it below
-	// }
+	for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) {	
+	 	// continue if not set for reading
+	 	if ( FD_ISSET ( i , &readfds ) )
+		log("loop: fd %li is on for read",i);
+		if ( FD_ISSET ( i , &writefds ) )
+		log("loop: fd %li is on for write",i);
+		if ( FD_ISSET ( i , &exceptfds ) )
+			log("loop: fd %li is on for except",i);
+	 	// debug
+
+		// if niceness is not -1, handle it below
+	}
 
 	// . reset the need to poll flag if everything is caught up now
 	// . let's take this out for now ... won't this leave some
@@ -1947,6 +1949,8 @@ void Loop::doPoll ( ) {
 			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,0);
 		}
+		// fds are always ready for writing so take this out.
+		// our read callbacks always try to do a write as well.
 		if ( FD_ISSET ( fd , &writefds ) ) {
 			if ( g_conf.m_logDebugLoop )
 				log("loop: calling cback0 niceness=%li fd=%i"
@@ -1990,6 +1994,8 @@ void Loop::doPoll ( ) {
 			calledOne = true;
 			callCallbacks_ass (true/*forReading?*/,fd, g_now,1);
 		}
+		// fds are always ready for writing so take this out.
+		// our read callbacks always try to do a write as well.
 		if ( FD_ISSET ( fd , &writefds ) ) {
 			if ( g_conf.m_logDebugLoop )
 				log("loop: calling cback1 niceness=%li fd=%i"
