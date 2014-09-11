@@ -2114,7 +2114,7 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 	sprintf ( cmd, "ssh %s \"cd %s; du -b | tail -n 1\" > ./synccheck.txt",
 		  ip1str, h->m_dir );
 	log ( LOG_INFO, "init: %s", cmd );
-	system(cmd);
+	gbsystem(cmd);
 	long fd = open ( "./synccheck.txt", O_RDONLY );
 	if ( fd < 0 )
 		return log(LOG_WARN, "conf: Unable to open synccheck.txt. "
@@ -2123,7 +2123,7 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 	cmd[len] = '\0';
 	close(fd);
 	// delete the file to make sure we don't reuse it
-	system ( "rm ./synccheck.txt" );
+	gbsystem ( "rm ./synccheck.txt" );
 	// check the size
 	long checkSize = atol(cmd);
 	if ( checkSize > 4096 || checkSize <= 0 )
@@ -2239,7 +2239,7 @@ void Hostdb::syncDone ( ) {
 	char cmd[1024];
 	sprintf(cmd, "./gb start %li", m_syncHost->m_hostId);
 	log ( LOG_INFO, "init: %s", cmd );
-	system(cmd);
+	gbsystem(cmd);
 	m_syncHost = NULL;
 }
 

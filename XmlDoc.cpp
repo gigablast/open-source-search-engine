@@ -16748,7 +16748,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd );
+	int retVal = gbsystem ( cmd );
 	if ( retVal == -1 )
 		log("gb: system(%s) : %s",
 		    cmd,mstrerror(g_errno));
@@ -31349,7 +31349,7 @@ int gbcompress7 ( unsigned char *dest      ,
 	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd.getBufStart() );
+	int retVal = gbsystem ( cmd.getBufStart() );
 	if ( retVal == -1 )
 		log("gb: system(%s) : %s",cmd.getBufStart(),
 		    mstrerror(g_errno));
