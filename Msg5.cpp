@@ -828,6 +828,13 @@ bool Msg5::needsRecall ( ) {
 	if(m_readAbsolutelyNothing&&
 	   (m_rdbId==RDB_DOLEDB||m_rdbId==RDB_SPIDERDB ) ) 
 		goto done;
+	// seems to be ok, let's open it up to fix this bug where we try
+	// to read too many bytes a small titledb and it does an infinite loop
+	if ( m_readAbsolutelyNothing ) {
+		log("rdb: read absolutely nothing more for dbname=%s on cn=%li",
+		    base->m_dbname,(long)m_collnum);
+		goto done;
+	}
 	//if ( m_list->getEndKey() >= m_endKey ) goto done;
 	if ( KEYCMP(m_list->getEndKey(),m_endKey,m_ks)>=0 ) goto done;
 
@@ -1292,6 +1299,10 @@ bool Msg5::gotList2 ( ) {
 	}
 
 	if ( m_numListPtrs == 0 ) m_readAbsolutelyNothing = true;
+
+	// if all lists from msg3 were 0... tree still might have something
+	if ( m_totalSize == 0 && m_treeList.isEmpty() ) 
+		m_readAbsolutelyNothing = true;
 
 	// if msg3 had corruption in a list which was detected in contrain_r()
 	if ( g_errno == ECORRUPTDATA ) {

@@ -2425,9 +2425,6 @@ bool RdbBase::verifyFileSharding ( ) {
 
 	if ( m_rdb->m_isCollectionLess ) return true;
 
-	//log ( "db: Verifying %s for coll %s (collnum=%li)...", 
-	//      m_dbname , m_coll , (long)m_collnum );
-
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -2441,6 +2438,12 @@ bool RdbBase::verifyFileSharding ( ) {
 	char rdbId = m_rdb->m_rdbId;
 	if ( rdbId == RDB_TITLEDB ) minRecSizes = 640000;
 	
+	log ( "db: Verifying shard parity for %s of %li bytes "
+	      "for coll %s (collnum=%li)...", 
+	      m_dbname , 
+	      minRecSizes,
+	      m_coll , (long)m_collnum );
+
 	if ( ! msg5.getList ( m_rdb->m_rdbId, //RDB_POSDB   ,
 			      m_collnum       ,
 			      &list         ,
@@ -2493,9 +2496,9 @@ bool RdbBase::verifyFileSharding ( ) {
 
 		if ( ++printed > 100 ) continue;
 
-		// avoid log spam... comment this out
-		//log ( "db: Found bad key in list belongs to shard %li",
-		//      shardNum);
+		// avoid log spam... comment this out. nah print out 1st 100.
+		log ( "db: Found bad key in list belongs to shard %li",
+		      shardNum);
 	}
 
 	g_threads.enableThreads();
@@ -2504,7 +2507,10 @@ bool RdbBase::verifyFileSharding ( ) {
 	//	log("db: verified %li recs for %s in coll %s",
 	//	    got,m_dbname,m_coll);
        
-	if ( got == count ) return true;
+	if ( got == count ) {
+		//log("db: passed on %li recs (count=%li)",got,count);
+		return true;
+	}
 
 	// tally it up
 	g_rebalance.m_numForeignRecs += count - got;
