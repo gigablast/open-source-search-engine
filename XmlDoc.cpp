@@ -24531,6 +24531,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		if ( hc > 65535 ) hc = 65535;
 		ksr.m_hopCount         = hc;
 
+		// keep hopcount the same for redirs
+		if ( m_indexCodeValid && 
+		     ( m_indexCode == EDOCSIMPLIFIEDREDIR ||
+		       m_indexCode == EDOCNONCANONICAL ) )
+			ksr.m_hopCount = m_hopCount;
+
 		if ( issiteroot   ) ksr.m_hopCount = 0;
 		if ( ispingserver ) ksr.m_hopCount = 0;
 		//if ( isrss        ) ksr.m_hopCount = 0;
