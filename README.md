@@ -6,7 +6,7 @@ An open source web and enterprise search engine. As can be seen on http://www.gi
 RUNNING GIGABLAST
 -----------------
 
-See html/admin.html for all administrative documentation including 
+See html/faq.html for all administrative documentation including 
 the quick start instructions.
 
 Alternatively, visit http://www.gigablast.com/admin.html

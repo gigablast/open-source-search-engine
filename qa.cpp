@@ -315,8 +315,8 @@ void processReply ( char *reply , long replyLen ) {
 	// do the diff between the two replies so we can see what changed
 	char cmd[1024];
 	sprintf(cmd,"diff %s %s > /tmp/diffout",fn1,fn2);
-	log("qa: %s\n",cmd);
-	system(cmd);
+	//log("qa: %s\n",cmd);
+	gbsystem(cmd);
 
 	g_numErrors++;
 	
@@ -516,6 +516,16 @@ bool qainject1 ( ) {
 			return false;
 	}
 
+	// turn off images thumbnails
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
 	// this only loads once
 	loadUrls();
 	long max = s_ubuf2.length()/(long)sizeof(char *);
@@ -562,7 +572,8 @@ bool qainject1 ( ) {
 
 	if ( ! s_flags[16] ) {
 		s_flags[16] = true;
-		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
+				"&dsrt=500",
 				702467314 ) )
 			return false;
 	}
@@ -583,19 +594,6 @@ bool qainject1 ( ) {
 				"debug=1&q=washer+%26+dryer",9999 ) )
 		     return false;
 	}
-
-	//
-	// mdw: query reindex test
-	//
-	// if ( ! s_flags[30] ) {
-	// 	s_flags[30] = true;
-	// 	if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=1&format=xml&"
-	// 			"debug=1&q=sports",9999 ) )
-	// 		return false;
-	// }
-
-	// // temp end it here
-	// return true;
 
 	//
 	// eject/delete the urls
@@ -671,6 +669,16 @@ bool qainject2 ( ) {
 	}
 
 
+	// turn off images thumbnails
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
 	//
 	// try delimeter based injecting
 	//
@@ -740,13 +748,47 @@ bool qainject2 ( ) {
 
 
 	//
-	// delete the 'qatest123' collection
+	// mdw: query reindex test
 	//
-	if ( ! s_flags[12] ) {
-		s_flags[12] = true;
-		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+	 if ( ! s_flags[30] ) {
+	 	s_flags[30] = true;
+	 	if ( ! getUrl ( "/admin/reindex"
+				"?c=qatest123"
+				"&format=xml"
+	 			//"&debug=1"
+				"&q=sports"
+				"&forcedel=1"
+				"&qa=1"
+				,9999 ) )
+	 		return false;
+	}
+
+
+	 // wait 10 seconds for reindex to finish
+	if ( ! s_flags[31] ) {
+		wait(10.0);
+		s_flags[31] = true;
+		return false;
+	}
+
+	// ensure no results for sports now
+	if ( ! s_flags[32] ) {
+		s_flags[32] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports"
+				"&ns=1&tml=20&smxcpl=30&"
+				"sw=10&showimages=0&sc=1"
+				,-1405546537 ) )
 			return false;
 	}
+
+	//
+	// delete the 'qatest123' collection
+	//
+	// if ( ! s_flags[12] ) {
+	// 	s_flags[12] = true;
+	// 	if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+	// 		return false;
+	// }
 
 
 	//static bool s_fee2 = false;
@@ -890,6 +932,16 @@ bool qaspider1 ( ) {
 				238170006 ) )
 			return false;
 	}
+
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
 
 	// restrict hopcount to 0 or 1 in url filters so we do not spider
 	// too deep
@@ -1122,6 +1174,7 @@ bool qaspider1 ( ) {
 }
 
 bool qaspider2 ( ) {
+
 	//
 	// delete the 'qatest123' collection
 	//
@@ -1139,6 +1192,15 @@ bool qaspider2 ( ) {
 	if ( ! s_flags[1] ) {
 		s_flags[1] = true;
 		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1330,6 +1392,15 @@ bool qascrape ( ) {
 	}
 
 
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
 	// scrape it
 	if ( ! s_flags[3] ) {
 		s_flags[3] = true;
@@ -1440,6 +1511,14 @@ bool qajson ( ) {
 			return false;
 	}
 
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
 
 	// add the 50 urls
 	if ( ! s_flags[3] ) {

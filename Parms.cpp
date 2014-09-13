@@ -1200,9 +1200,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	//		return false;
 	//}
 
+	char *bodyjs = NULL;
+	if ( page == PAGE_BASIC_SETTINGS )
+		bodyjs =" onload=document.getElementById('tabox').focus();";
+
 	// print standard header
 	if ( format != FORMAT_XML && format != FORMAT_JSON )
-		g_pages.printAdminTop ( sb , s , r );
+		g_pages.printAdminTop ( sb , s , r , NULL , bodyjs );
 
 	// xml/json header
 	char *res = NULL;
@@ -2512,7 +2516,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		// 	}
 		// }
 		if ( m->m_flags & PF_TEXTAREA ) {
-			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
+			sb->safePrintf ("<textarea id=tabox "
+					"name=%s rows=10 cols=80>",
 					cgi);
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
@@ -2537,7 +2542,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 	}
 	else if ( t == TYPE_STRINGBOX ) {
-		sb->safePrintf("<textarea rows=10 cols=64 name=%s>",cgi);
+		sb->safePrintf("<textarea id=tabox rows=10 cols=64 name=%s>",
+			       cgi);
 		//p += urlEncode ( p , pend - p , s , gbstrlen(s) );
 		//p += htmlDecode ( p , s , gbstrlen(s) );
 		sb->htmlEncode ( s , gbstrlen(s), false );
@@ -5611,6 +5617,18 @@ void Parms::init ( ) {
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
 		"See <a href=#examples>example site list</a> below. "
+		"<br>"
+		"<br>"
+		"Example #1: <b>mysite.com myothersite.com</b>"
+		"<br>"
+		"<i>This will spider just those two sites.</i>"
+		"<br>"
+		"<br>"
+		"Example #2: <b>seed:dmoz.org</b>"
+		"<br>"
+		"<i>This will spider the whole web starting with the website "
+		"dmoz.org</i>"
+		"<br><br>"
 		"Gigablast uses the "
 		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
@@ -5621,9 +5639,7 @@ void Parms::init ( ) {
 		"tools. "
 		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>add "
-		"urls</a> interface. <b>IF YOU WANT TO SPIDER THE WHOLE "
-		"WEB</b> then only use the <i>seed:</i> directives here "
-		"lest you limit yourself to a set of domains.";
+		"urls</a> interface.";
 	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
@@ -17101,7 +17117,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "mit";
 	m->m_off   = (char *)&cr.m_makeImageThumbnails - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -18201,6 +18217,7 @@ void Parms::init ( ) {
 	m->m_size  = PASSWORD_MAX_LEN+1;
 	m->m_page  = PAGE_SECURITY;
 	m->m_addin = 1; // "insert" follows?
+	m->m_flags = PF_PRIVATE;
 	m++;
 
 
@@ -18227,6 +18244,7 @@ void Parms::init ( ) {
 	m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_obj   = OBJ_CONF;
+	m->m_flags = PF_PRIVATE;
 	m++;
 
 	m->m_title = "remove connect ip";

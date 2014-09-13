@@ -987,7 +987,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 	}
 
 	if ( format == FORMAT_XML ) 
-		sb->safePrintf("\t</gigabit>\n");
+		sb->safePrintf("\t\t</gigabit>\n");
 
 	if ( format == FORMAT_JSON ) {
 		// remove last ,\n
@@ -1748,13 +1748,18 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		ttt.pushChar('\"');
 		ttt.pushChar(' ');
 	}
+	// term on it
+	ttt.nullTerm();
+
 	if ( numGigabits > 0 ) 
 		gigabitQuery.set2 ( ttt.getBufStart() ,
 				    si->m_queryLangId ,
 				    true , // queryexpansion?
 				    true );  // usestopwords?
 
-
+	log("results: gigabitquery=%s landid=%li"
+	    ,ttt.getBufStart()
+	    ,si->m_queryLangId);
 
 
 	for ( long i = 0 ; i < numGigabits ; i++ ) {
@@ -8530,25 +8535,47 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		n++;
 
 
-
-		// ADMIN
-
+		// spider status
 		s_mi[n].m_menuNum  = 7;
-		s_mi[n].m_title    = "Admin";
-		s_mi[n].m_cgi      = "/admin/settings";
+		s_mi[n].m_title    = "Hide Spider Log";
+		s_mi[n].m_cgi      = "splog=0";
 		n++;
 
 		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_title    = "Show Spider Log";
+		s_mi[n].m_cgi      = "q=type:status";
+		n++;
+
+
+
+		// ADMIN
+
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Show Admin View";
+		s_mi[n].m_cgi      = "admin=1";
+		n++;
+
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Show User View";
+		s_mi[n].m_cgi      = "admin=0";
+		n++;
+
+		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_title    = "Action";
+		s_mi[n].m_cgi      = "";
+		n++;
+
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Respider all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		n++;
 
-		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Delete all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		n++;
 
-		s_mi[n].m_menuNum  = 7;
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Scrape from google/bing";
 		s_mi[n].m_cgi      = "/admin/inject";
 		n++;
@@ -8586,7 +8613,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 	char *frontTag = "";
 	char *backTag = "";
 
-	bool isTrueHeader = true;
+	bool isDefaultHeader = true;
 
 	// try to set first based on what's in the url
 	for ( long i = 0 ; i < s_num ; i++ ) {
@@ -8596,17 +8623,20 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		if ( mi->m_menuNum != menuNum ) continue;
 
 		// admin menu is special
-		if ( menuNum == 7 ) {
-			first = mi;
-			frontTag = "<font color=green>";
-			backTag = "</font>";
-			break;
-		}
+		// if ( menuNum == s_num - 1 ) {
+		// 	first = mi;
+		// 	frontTag = "<font color=green>";
+		// 	backTag = "</font>";
+		// 	break;
+		// }
 
 		// is it in the url
 		char *match = strnstr ( src , mi->m_cgi , srcLen );
+
+		// or if empty quotes it is the true header like
+		// for 'hide spider log' option
 		if ( ! match ) {
-			isTrueHeader = false;
+			isDefaultHeader = false;
 			continue;
 		}
 		// ensure ? or & preceeds
@@ -8620,7 +8650,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		// got it
 		first = mi;
 		// do not highlight the orig header
-		if ( isTrueHeader ) break;
+		if ( isDefaultHeader ) break;
 		frontTag = "<b style=color:maroon;>";
 		backTag = "</b>";
 		break;
@@ -8699,7 +8729,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 
 		// print checkmark (check mark) next to selected one
 		// if not the default (trueHeader)
-		if ( ! isTrueHeader && mi == first )
+		if ( mi == first ) // ! isDefaultHeader && mi == first )
 			sb->safePrintf("<b style=color:black;>%c%c%c</b>",
 				       0xe2,0x9c,0x93);
 		else 

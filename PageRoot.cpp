@@ -724,6 +724,9 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		{"API","/api.html"}
 	};
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	//
 	// first the nav column
 	//
@@ -736,7 +739,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		      "<br>"
 
 		      "<center>"
-		      "<a href=/>"
+		      "<a href=/?c=%s>"
 		      "<div style=\""
 		      "background-color:white;"
 		      "padding:10px;"
@@ -747,6 +750,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		      "width:100px;"
 		      "height:100px;"
 		      "\">"
+		       , coll
 		       );
 
 	if ( strcmp(tabName,"appliance") == 0 )
@@ -767,8 +771,6 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 
 	long n = sizeof(mi) / sizeof(MenuItem);
 
-	char *coll = "";
-	if ( cr ) coll = cr->m_coll;
 
 	for ( long i = 0 ; i < n ; i++ ) {
 
@@ -1234,6 +1236,10 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</td></tr>\n");
 	*/
 
+
+	/*
+
+
 	//
 	// begin new stuff
 	//
@@ -1257,7 +1263,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("<br>");
 
-	/*
+
 	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:320px;height:320px;display:inline-block;z-index:100;color:black;position:relative;background-color:lightgray;\">");
 
 	sb.safePrintf("<br>");
@@ -1349,7 +1355,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
-	*/
+
 
 
 	//sb.safePrintf("</TD></TR></TABLE></body></html>");
@@ -1359,6 +1365,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	// end new stuff
 	//
 
+	*/
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");

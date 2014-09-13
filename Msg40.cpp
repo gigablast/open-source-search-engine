@@ -6134,6 +6134,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 }
 
 HashTableX *g_fht = NULL;
+QueryTerm *g_qt = NULL;
 
 // sort facets by document counts before displaying
 static int feCmp ( const void *a1, const void *b1 ) {
@@ -6141,7 +6142,14 @@ static int feCmp ( const void *a1, const void *b1 ) {
 	long b = *(long *)b1;
 	FacetEntry *fe1 = (FacetEntry *)g_fht->getValFromSlot(a);
 	FacetEntry *fe2 = (FacetEntry *)g_fht->getValFromSlot(b);
-	return (fe2->m_count - fe1->m_count);
+	if ( fe2->m_count > fe1->m_count ) return 1;
+	if ( fe2->m_count < fe1->m_count ) return -1;
+	long *k1 = (long *)g_fht->getKeyFromSlot(a);
+	long *k2 = (long *)g_fht->getKeyFromSlot(b);
+	if ( g_qt->m_fieldCode == FIELD_GBFACETFLOAT )
+		return (int)( *(float *)k2 - *(float *)k1 );
+	// otherwise an int
+	return ( *k2 - *k1 );
 }
 
 bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
@@ -6163,6 +6171,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	}
 	// use this as global for qsort
 	g_fht = fht;
+	g_qt  = qt;
 	// use qsort
 	gbqsort ( ptrs , numPtrs , sizeof(long) , feCmp , 0 );
 
@@ -6301,29 +6310,9 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			//sb->safePrintf("\"facets\":[\n");
 		}
 
-		if ( format == FORMAT_JSON ) {
-			sb->safePrintf("\"facet\":{\n"
-				       "\t\"field\":\"%s\",\n"
-				       "\t\"value\":\""
-				       , term
-				       );
-			if (  isString )
-				sb->safePrintf("%lu,"
-					       , (unsigned long)*fvh);
-			sb->jsonEncode ( text );
-			//if ( isString )
-			// just use quotes for ranges like "[1-3)" now
-			sb->safePrintf("\"");
-			sb->safePrintf(",\n"
-				       "\t\"docCount\":%li\n"
-				       "}\n,\n", count);
-			continue;
-		}
-
 		// print that out
-		if ( needTable ) {
+		if ( needTable && format == FORMAT_HTML ) {
 			needTable = false;
-
 
 			sb->safePrintf("<div id=facets "
 				       "style="
@@ -6354,6 +6343,33 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				       "<b>%s</b></td></tr>\n",
 				       term);
 		}
+
+
+		if ( needTable && format == FORMAT_JSON ) {
+			needTable = false;
+			sb->safePrintf("\"facets\":[");
+		}
+
+
+		if ( format == FORMAT_JSON ) {
+			sb->safePrintf("{\n"
+				       "\t\"field\":\"%s\",\n"
+				       "\t\"value\":\""
+				       , term
+				       );
+			if (  isString )
+				sb->safePrintf("%lu,"
+					       , (unsigned long)*fvh);
+			sb->jsonEncode ( text );
+			//if ( isString )
+			// just use quotes for ranges like "[1-3)" now
+			sb->safePrintf("\"");
+			sb->safePrintf(",\n"
+				       "\t\"docCount\":%li\n"
+				       "}\n,\n", count);
+			continue;
+		}
+
 
 		// make the cgi parm to add to the original url
 		char nsbuf[128];
@@ -6446,7 +6462,13 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			       ,text
 			       ,count); // count for printing
 	}
-	if ( ! needTable ) 
+
+	if ( ! needTable && format == FORMAT_JSON ) {
+		sb->m_length -= 2; // hack off trailing comma
+		sb->safePrintf("],\n"); // close off json array
+	}
+
+	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
 	return true;

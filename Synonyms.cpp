@@ -193,13 +193,18 @@ long Synonyms::getSynonyms ( Words *words ,
 	// loop through all languages if no luck
 	if ( doLangLoop ) {
 
-		// save it
-		if ( ss ) savedss = ss;
+		// save it. english is #1 so prefer that in case of
+		// multiple matches i guess...
+		if ( ss && ! savedss ) savedss = ss;
 
 		// can only have one match to avoid ambiguity when doing
 		// a loop over all the langids
 		if ( ss && ++synSetCount >= 2 ) {
-			ss = NULL;
+			// no, don't do this, just keep the first one.
+			// like 'sport' is in english and french, so keep
+			// the english one i guess. so do not NULL out "ss".
+			// only NULL it out orig langid is unknown
+			if ( origLangId != langUnknown ) ss = NULL;
 			goto skip;
 		}
 

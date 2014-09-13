@@ -18,6 +18,8 @@
 #define QUERYPRIORITYWEIGHT 16
 #define QUICKPOLL_INTERVAL 10
 
+int gbsystem(char *cmd ) ;
+
 #define sleep(a) { char *xx=NULL;*xx=0; }
 //#define sleep(a) logf(LOG_INFO,"sleep: sleep"); 
 
@@ -133,9 +135,9 @@ class Loop {
 	// . "callback" will be called when fd is ready for reading
 	// . "callback" will be called when there is an error on fd
 	bool registerWriteCallback ( int   fd    ,
-				     void *state , 
-				     void (* callback)(int fd, void *state ) ,
-				     long   niceness );//= MAX_NICENESS );
+				     void *state ,
+				     void (* callback)(int fd, void *state ) , 
+	 			     long   niceness ); 
 
 	// . register this callback to be called every second
 	// . TODO: implement "seconds" parameter
@@ -149,7 +151,7 @@ class Loop {
 				       void (* callback)(int fd,void *state),
 				       bool silent = false );
 	void unregisterWriteCallback ( int fd, void *state ,
-				       void (* callback)(int fd,void *state));
+	 			       void (* callback)(int fd,void *state)); 
 	void unregisterSleepCallback ( void *state ,
 				       void (* callback)(int fd,void *state));
 

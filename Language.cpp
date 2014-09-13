@@ -2615,11 +2615,11 @@ bool Language::generateDicts ( long numWordsToDump , char *coll ) {
 	}
 	sprintf ( dd , "mkdir %sdict.new/" , g_hostdb.m_dir );
 	log(LOG_INIT,"lang: %s",dd);
-	if ( system ( dd ) == -1 ) return false;
+	if ( gbsystem ( dd ) == -1 ) return false;
 
 	sprintf ( dd , "mkdir %stmp/" , g_hostdb.m_dir );
 	log(LOG_INIT,"lang: %s",dd);
-	if ( system ( dd ) == -1 ) return false;
+	if ( gbsystem ( dd ) == -1 ) return false;
 
 	// . loop through all titleRecs
 	// . put all words/phrases that begin with letter X in file
@@ -2671,7 +2671,7 @@ bool Language::generateDicts ( long numWordsToDump , char *coll ) {
 			getLanguageAbbr(m_lang), i, g_hostdb.m_dir,
 			getLanguageAbbr(m_lang), getLanguageAbbr(m_lang), i);
 		log(LOG_INIT,"lang: %s",tmp);
-		system ( tmp );
+		gbsystem ( tmp );
 	}
 
 	// . now convert each sorted file into a unique list of word/phrases 
@@ -3653,7 +3653,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 			 g_hostdb.m_dir, getLanguageAbbr(m_lang),
 			 getLanguageAbbr(m_lang), i );
 		log(LOG_INIT,"lang: %s",bb);
-		system ( bb );
+		gbsystem ( bb );
 
 		// make the phonets for it too
 		//sprintf(bb,"%sdict.new/dict.%li",g_hostdb.m_dir,i);
@@ -3856,7 +3856,7 @@ bool Language::makeQueryFiles ( ) {
 		//"| sort -f | uniq -i -c -d | sort -g -r -k 1,1 "
 		//"> %s.uniq.sorted", ff, ff );
 		//log ( LOG_INIT,"lang: %s", cmd );
-		//system(cmd);
+		//gbsystem(cmd);
 	}
 	return true;
 }

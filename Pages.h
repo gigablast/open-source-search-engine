@@ -34,7 +34,8 @@ bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
 bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 //bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
 
-bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ) ;
+bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ,
+			  char *gerrmsg ) ;
 
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
@@ -324,21 +325,22 @@ enum {
 	//PAGE_WORDVECTOR  ,
 
 	// basic controls page /admin/basic
-	PAGE_BASIC_SETTINGS ,
-	PAGE_BASIC_STATUS ,
+	PAGE_BASIC_SETTINGS , //10
+	PAGE_BASIC_STATUS , 
 	//PAGE_BASIC_SEARCH , // TODO
 	//PAGE_BASIC_DIFFBOT , // TODO
 	PAGE_BASIC_SECURITY ,
 	PAGE_BASIC_SEARCH ,
 
 	// master admin pages
+	PAGE_HOSTS       ,
 	PAGE_MASTER      , 
-	PAGE_SEARCH      ,  
-	PAGE_SPIDER      ,
+	PAGE_SEARCH      ,  // 15
+	PAGE_SPIDER      , 
 	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
-	PAGE_SECURITY    ,
-	PAGE_ADDCOLL     ,	 // 20
+	PAGE_SECURITY    , // 19
+	PAGE_ADDCOLL     , //20	 
 	PAGE_DELCOLL     , 
 	PAGE_CLONECOLL   ,
 	PAGE_REPAIR      ,
@@ -348,7 +350,6 @@ enum {
 	PAGE_ADDURL2     , // 26
 	PAGE_REINDEX     ,	
 
-	PAGE_HOSTS       ,
 	PAGE_STATS       , // 10
 	PAGE_GRAPH       , // PAGE_STATSDB	 ,
 	PAGE_PERF        ,

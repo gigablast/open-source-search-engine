@@ -847,7 +847,15 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 TcpSocket *TcpServer::getSocket  ( int sd ) {
 	TcpSocket *s = m_tcpSockets[sd];
 	if ( s ) return s;
-	log(LOG_LOGIC,"tcp: tcpserver: getSocket: sd=%i has no TcpSocket.",sd);
+	// now since i don't really use write callbacks anymore, since
+	// they are only needed for once a socket is connected, i just
+	// always calll a write after processing a read/write signal.
+	// read/write signals are combined together in Loop.cpp now
+	// for simplicity. the only write signal was received after a
+	// tcp socket connection was made.
+	if ( g_conf.m_logDebugTcp )
+		log(LOG_LOGIC,"tcp: tcpserver: getSocket: sd=%i has no "
+		    "TcpSocket.",sd);
 	return NULL;
 }
 
@@ -993,12 +1001,13 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	if (!g_loop.registerReadCallback (sd,this,readSocketWrapper,niceness))
 		goto hadError;
 	// what does thie really mean? shouldn't we only register for write
-	// if a write we did failed because the buffer was full?
-	//if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,
-	//niceness)){
-	// 	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-	// 	goto hadError;
-	// }
+	// if a write we did failed because the buffer was full?.
+	// let's do this after the connection request is accepted!
+	// MDW: try this again
+	if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
+	  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	  	goto hadError;
+	}
 	// return "s" on success
 	return s;
 	// otherwise, free "s" and return NULL
@@ -1124,10 +1133,23 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 // 	return true;
 // }
 
+void readSocketWrapper2 ( int sd , void *state ) ;
+
 // . this is called by Loop::gotSig() when "sd" is ready for reading
 // . we registered it with Loop::registerReadCallback(sd) in wrapSocket()
 // . g_errno will be set by Loop if there was a kinda socket reset error
 void readSocketWrapper ( int sd , void *state ) {
+	readSocketWrapper2 ( sd , state );
+	// since we got rid of waiting for writing on fds, since it only
+	// applies to freshly connected tcp sockets, we poll for ready-
+	// -for-write fds on the select() call in Loop.cpp on the same fds
+	// we are waiting for reads on. so if we get a signal it could really
+	// be a ready-for-write signal, so try this writing just in case.
+	writeSocketWrapper ( sd , state );
+}
+
+
+void readSocketWrapper2 ( int sd , void *state ) {
 	// debug msg
 	//log("........... TcpServer::readSocketWrapper %li\n",sd);
 	// extract our this ptr
@@ -1491,6 +1513,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// debug msg
 	//log("........... TcpServer::writeSocketWrapper sd=%li\n",sd);
 	TcpServer *THIS = (TcpServer *)state;
+
 	// get the TcpSocket for this socket descriptor
 	TcpSocket *s = THIS->getSocket ( sd );
 	if ( ! s ) { 
@@ -1535,7 +1558,19 @@ void writeSocketWrapper ( int sd , void *state ) {
 			THIS->destroySocket ( s ); 
 		}
 		// return on coonection error or if still trying to connect
-		if ( status != 1 ) return;
+		if ( status != 1 ) {
+			// hopefully this will let us know when the socket is
+			// connected and ready for writing to.
+			// if(!g_loop.registerWriteCallback(s->m_sd,
+			// 				 THIS,
+			// 				 writeSocketWrapper,
+			// 				 s->m_niceness)){
+			// 	log("tcp: failed to reg write callback for "
+			// 	    "sd=%i", s->m_sd);
+			// 	//goto hadError;
+			// }
+			return;
+		}
 		// now try to send on it
 	}
 	// if socket has nothing to send yet cuz we're waiting, wait...
@@ -1598,6 +1633,12 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		//long status = readSocket ( s );
 		//return status; //-1; 
 	}
+
+	// we only register write callback to see when it is connected so
+	// we can do a write, so we should not need this now
+	//g_loop.unregisterWriteCallback(s->m_sd,this,writeSocketWrapper);
+
+
  loop:
 	// send some stuff
 	long toSend = s->m_sendBufUsed - s->m_sendOffset;
@@ -1789,11 +1830,19 @@ long TcpServer::connectSocket ( TcpSocket *s ) {
 		if ( g_conf.m_logDebugTcp )
 			log("........... TcpServer already connected %i to "
 			    "%s port %i\n", s->m_sd, iptoa(s->m_ip),s->m_port);
+
+		g_loop.unregisterWriteCallback(s->m_sd,
+					       this,
+					       writeSocketWrapper);
+
 		g_errno = 0;
 		goto connected;
 	}
 	// we blocked with the EINPROGRESS g_errno
-	if ( g_errno == EINPROGRESS ) { g_errno = 0; return 0; }
+	if ( g_errno == EINPROGRESS ) { 
+		g_errno = 0; 
+		return 0; 
+	}
 	// return -1 on real error
 	if ( g_conf.m_logDebugTcp )
 		log(LOG_INFO,"tcp: Failed to connect socket: %s, %s:%li", 
@@ -1963,7 +2012,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// always free the sendBuf 
 	if ( s->m_sendBuf ) mfree (s->m_sendBuf, s->m_sendBufSize,"TcpServer");
 	// unregister it with Loop so we don't get any calls about it
-	//g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
+	g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
 	g_loop.unregisterReadCallback  ( sd , this , readSocketWrapper  );
 	// debug msg
 	//log("unregistering sd=%li",sd);

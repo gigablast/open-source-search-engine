@@ -241,7 +241,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			// . otherwise, it was field value, so index it
 			// . TODO: later make field names compounded to
 			//   better represent nesting?
-			else {
+			// . added 'else if (NAME){' fix for json=\"too small\"
+			else if ( NAME ) {
 				// make a new one in safebuf. our
 				// parent will be the array type item.
 				ji = addNewItem();
@@ -263,6 +264,11 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 				m_sb.pushChar('\0');
 				// ok, this one is done
 				ji = NULL;
+			}
+			else {
+				log("json: fieldless name in json");
+				g_errno = EBADJSONPARSER;
+				return NULL;
 			}
 			// skip over the string
 			size = 0;

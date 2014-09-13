@@ -2628,7 +2628,6 @@ bool XmlDoc::indexDoc2 ( ) {
 	if ( ! m_listAdded ) flush = false;
 	if ( m_listFlushed ) flush = false;
 
-
 	// HACK: flush it if we are injecting it in case the next thing we 
 	//       spider is dependent on this one
 	if ( flush ) {
@@ -15283,6 +15282,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isTestColl = false;
 	if ( ! strcmp(cr->m_coll,"qatest123") ) isTestColl = true;
 
+	//if ( isTestColl && m_contentType == CT_IMAGE )
+	//	isTestColl = false;
+
 	// sanity check. keep injections fast. no downloading!
 	if ( m_wasInjected ) { 
 		log("xmldoc: url injection failed! error!");
@@ -16746,7 +16748,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd );
+	int retVal = gbsystem ( cmd );
 	if ( retVal == -1 )
 		log("gb: system(%s) : %s",
 		    cmd,mstrerror(g_errno));
@@ -20208,7 +20210,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 	if ( ! cr ) return true;
 
 	// do not do this if not test collection for now
-	if ( strcmp(cr->m_coll,"qatest123") ) return true;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) return true;
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
@@ -20840,7 +20842,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	setStatus ( "getting meta list" );
 
 	// force it true?
-	if ( m_deleteFromIndex ) forDelete = true;
+	// "forDelete" means we want the metalist to consist of "negative"
+	// keys that will annihilate with the positive keys in the index,
+	// posdb and the other rdbs, in order to delete them. "deleteFromIndex"
+	// means to just call getMetaList(tre) on the m_oldDoc (old XmlDoc)
+	// which is built from the titlerec in Titledb. so don't confuse
+	// these two things. otherwise when i add this we were not adding
+	// the spiderreply of "Doc Force Deleted" from doing a query reindex
+	// and it kept repeating everytime we started gb up.
+	//if ( m_deleteFromIndex ) forDelete = true;
 
 	// assume valid
 	m_metaList     = "";
@@ -21371,6 +21381,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		od->m_diffbotApiUrlValid = true;
 		// api url should be empty by default
 		//od->m_diffbotApiNum = DBA_NONE;
+		//log("break it here. shit this is not getting the list!!!");
 		// if we are doing diffbot stuff, we are still indexing this
 		// page, so we need to get the old doc meta list
 		oldList = od->getMetaList ( true );
@@ -21667,6 +21678,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 
 	if ( m_indexCode ) nd = NULL;
+
+	// OR if deleting from index, we just want to get the metalist
+	// directly from "od"
+	if ( m_deleteFromIndex ) nd = NULL;
+
 
 	//
 	//
@@ -22385,6 +22401,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . if repairing and not rebuilding titledb, we do not need the
 	//   titlerec
 	if ( m_useTitledb ) {
+		// this buf includes key/datasize/compressdata
 		SafeBuf *tr = getTitleRecBuf ();
 		// panic if this blocks! it should not at this point because 
 		// we'd have to re-hash the crap above
@@ -24514,6 +24531,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		if ( hc > 65535 ) hc = 65535;
 		ksr.m_hopCount         = hc;
 
+		// keep hopcount the same for redirs
+		if ( m_indexCodeValid && 
+		     ( m_indexCode == EDOCSIMPLIFIEDREDIR ||
+		       m_indexCode == EDOCNONCANONICAL ) )
+			ksr.m_hopCount = m_hopCount;
+
 		if ( issiteroot   ) ksr.m_hopCount = 0;
 		if ( ispingserver ) ksr.m_hopCount = 0;
 		//if ( isrss        ) ksr.m_hopCount = 0;
@@ -25970,7 +25993,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// requests are added to spiderdb from the query reindex tool.
 	// do not do for diffbot subdocuments either, usespiderdb should be
 	// false for those.
-	if ( m_setFromDocId || ! m_useSpiderdb ) {
+	// MDW: i disagree, i want to see when these get updated! 9/6/2014
+	//if ( m_setFromDocId || ! m_useSpiderdb ) {
+	if ( ! m_useSpiderdb ) {
 		m_spiderReplyMetaListValid = true;
 		return &m_spiderReplyMetaList;
 	}
@@ -25981,10 +26006,11 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// so cut that out. this is kinda a hack b/c i'm not sure what's 
 	// going on. but you can set a break point here and see what's up if
 	// you want.
-	if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
-		m_spiderReplyMetaListValid = true;
-		return &m_spiderReplyMetaList;
-	}
+	// MDW: likewise, take this out, i want these recorded as well..
+	// if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
+	// 	m_spiderReplyMetaListValid = true;
+	// 	return &m_spiderReplyMetaList;
+	// }
 
 	// . fake this out so we do not core
 	// . hashWords3() uses it i guess
@@ -31329,7 +31355,7 @@ int gbcompress7 ( unsigned char *dest      ,
 	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd.getBufStart() );
+	int retVal = gbsystem ( cmd.getBufStart() );
 	if ( retVal == -1 )
 		log("gb: system(%s) : %s",cmd.getBufStart(),
 		    mstrerror(g_errno));

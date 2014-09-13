@@ -77,9 +77,49 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		return g_httpServer.sendSuccessReply(s,format);
 	}
 
+	// error?
+	char *action = r->getString("action",NULL);
+	char *addColl = r->getString("addcoll",NULL);
+
+
 
 	char  buf [ 64*1024 ];
 	SafeBuf p(buf, 64*1024);
+
+
+	//
+	// CLOUD SEARCH ENGIEN SUPPORT - GIGABOT ERRORS
+	//
+
+	SafeBuf gtmp;
+	char *gmsg = NULL;
+	// is it too big?
+	if ( action && addColl && gbstrlen(addColl) > MAX_COLL_LEN ) {
+		gtmp.safePrintf("search engine name is too long");
+		gmsg = gtmp.getBufStart();
+	}
+	// from Collectiondb.cpp::addNewColl() ensure coll name is legit
+	char *x = addColl;
+	for ( ; x && *x ; x++ ) {
+		if ( is_alnum_a(*x) ) continue;
+		if ( *x == '-' ) continue;
+		if ( *x == '_' ) continue; // underscore now allowed
+		break;
+	}
+	if ( x && *x ) {
+		g_errno = EBADENGINEER;
+		gtmp.safePrintf("<font color=red>Error. \"%s\" is a "
+				"malformed name because it "
+				"contains the '%c' character.</font><br><br>",
+				addColl,*x);
+		gmsg = gtmp.getBufStart();
+	}
+
+	//
+	// END GIGABOT ERRORS
+	//
+
+
 
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
@@ -89,12 +129,11 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// crap, this GET request, "r", is missing the "c" parm sometimes.
 	// we need to use the "addcoll" parm anyway. maybe print a meta
 	// redirect then?
-	char *action = r->getString("action",NULL);
 	char guide = r->getLong("guide",0);
-	if ( action && ! msg && format == FORMAT_HTML && guide ) {
+	// do not redirect if gmsg is set, there was a problem with the name
+	if ( action && ! msg && format == FORMAT_HTML && guide && ! gmsg ) {
 		//return g_parms.sendPageGeneric ( s, r, PAGE_BASIC_SETTINGS );
 		// just redirect to it
-		char *addColl = r->getString("addcoll",NULL);
 		if ( addColl )
 			p.safePrintf("<meta http-equiv=Refresh "
 				      "content=\"0; URL=/admin/settings"
@@ -107,7 +146,16 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 
 	// print standard header
-	g_pages.printAdminTop ( &p , s , r );
+	g_pages.printAdminTop ( &p , s , r , NULL, 
+				"onload=document."
+				"getElementById('acbox').focus();");
+
+
+	// gigabot error?
+	//if ( gmsg ) 
+	//	p.safePrintf("Gigabot says: %s<br><br>",gmsg);
+
+
 
 	//long  page     = g_pages.getDynamicPageNumber ( r );
 	//char *coll     = r->getString    ( "c"    );
@@ -121,7 +169,11 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 	if ( g_errno ) msg = mstrerror(g_errno);
 
-	if ( msg ) {
+
+
+
+
+	if ( msg && ! guide ) {
 		char *cc = "deleting";
 		if ( add ) cc = "adding";
 		p.safePrintf (
@@ -137,36 +189,56 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// CLOUD SEARCH ENGINE SUPPORT
 	//
 	if ( add && guide )
-		printGigabotAdvice ( &p , PAGE_ADDCOLL , r );
+		printGigabotAdvice ( &p , PAGE_ADDCOLL , r , gmsg );
 
 
 
 	// print the add collection box
 	if ( add /*&& (! nc[0] || g_errno ) */ ) {
+
+		char *t1 = "Add Collection";
+		if ( guide ) t1 = "Add Search Engine";
+
 		p.safePrintf (
 			  "<center>\n<table %s>\n"
 			   "<tr class=hdrow><td colspan=2>"
-			  "<center><b>Add Collection</b></center>"
-			  "</td></tr>\n",
-			  TABLE_STYLE);
-		p.safePrintf (
-			  "<tr bgcolor=#%s>"
-			  "<td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=addcoll size=30>"
+			  "<center><b>%s</b></center>"
 			  "</td></tr>\n"
-
-			  "<tr bgcolor=#%s>"
-			  "<td><b>clone settings from this collection</b>"
-			  "<br><font size=1>Copy settings from this "
-			  "pre-existing collection. Leave blank to "
-			  "accept default values.</font></td>\n"
-			  "<td><input type=text name=clonecoll size=30>"
-			  "</td>"
-			  "</tr>"
-
-			  , LIGHT_BLUE
-			  , LIGHT_BLUE
+			  ,TABLE_STYLE
+			  ,t1
 			      );
+		char *t2 = "collection";
+		if ( guide ) t2 = "search engine";
+		char *str = addColl;
+		if ( ! addColl ) str = "";
+		p.safePrintf (
+			      "<tr bgcolor=#%s>"
+			      "<td><b>name of new %s to add</td>\n"
+			      "<td><input type=text name=addcoll size=30 "
+			      "id=acbox "
+			      "value=\"%s\">"
+			      "</td></tr>\n"
+			      , LIGHT_BLUE
+			      , t2 
+			      , str
+			      );
+
+		// don't show the clone box if we are under gigabot the guide
+		if ( ! guide )
+			p.safePrintf(
+				     "<tr bgcolor=#%s>"
+				     "<td><b>clone settings from this "
+				     "collection</b>"
+				     "<br><font size=1>Copy settings from "
+				     "this pre-existing collection. Leave "
+				     "blank to "
+				     "accept default values.</font></td>\n"
+				     "<td><input type=text name=clonecoll "
+				     "size=30>"
+				     "</td>"
+				     "</tr>"
+				     , LIGHT_BLUE
+				     );
 		// now list collections from which to copy the config
 		//p.safePrintf (
 		//	  "<tr><td><b>copy configuration from this "
