@@ -8424,6 +8424,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "TEXT";
+		s_mi[n].m_cgi      = "filetype=txt";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PDF";
 		s_mi[n].m_cgi      = "filetype=pdf";
 		n++;
