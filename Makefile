@@ -553,10 +553,10 @@ master-rpm:
 # need to do 'apt-get intall dh-make'
 # deb-master
 master-deb:
-	git archive --format=tar --prefix=gb-1.10/ master > ../gb_1.10.orig.tar
+	git archive --format=tar --prefix=gb-1.13/ master > ../gb_1.13.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.10 -f ../gb_1.10.orig.tar
+	dh_make -e gigablast@mail.com -p gb_1.13 -f ../gb_1.13.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -581,7 +581,7 @@ master-deb:
 # upload den
 	scp gb*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.10-1_i386.deb
+	sudo alien --to-rpm gb_1.13-1_i386.deb
 # upload rpm
 	scp gb*.rpm gk268:/w/html/	
 
