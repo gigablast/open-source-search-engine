@@ -1757,9 +1757,9 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 				    true , // queryexpansion?
 				    true );  // usestopwords?
 
-	log("results: gigabitquery=%s landid=%li"
-	    ,ttt.getBufStart()
-	    ,si->m_queryLangId);
+	// log("results: gigabitquery=%s landid=%li"
+	//     ,ttt.getBufStart()
+	//     ,si->m_queryLangId);
 
 
 	for ( long i = 0 ; i < numGigabits ; i++ ) {
