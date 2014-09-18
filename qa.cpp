@@ -20,7 +20,7 @@ void qatestWrapper ( int fd , void *state ) {
 // wait X seconds, call sleep timer... then call qatest()
 void wait( float seconds ) {
 	// put into milliseconds
-	long delay = seconds * 1000;
+	long delay = (long)(seconds * 1000.0);
 
 	if ( g_loop.registerSleepCallback ( delay         ,
 					    NULL , // state
