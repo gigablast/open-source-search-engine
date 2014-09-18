@@ -639,69 +639,10 @@ bool expandHtml (  SafeBuf& sb,
 }
 
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
-
-	sb->safePrintf("<html>\n");
-	sb->safePrintf("<head>\n");
-	//sb->safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
-	sb->safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
-	sb->safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
-	//char *title = "An Alternative Open Source Search Engine";
-	char *title = "An Alternative Open Source Search Engine";
-	if ( strcasecmp(tabName,"search") ) title = tabName;
-	// if ( pageNum == 1 ) title = "Directory";
-	// if ( pageNum == 2 ) title = "Advanced";
-	// if ( pageNum == 3 ) title = "Add Url";
-	// if ( pageNum == 4 ) title = "About";
-	// if ( pageNum == 5 ) title = "Help";
-	// if ( pageNum == 6 ) title = "API";
-	sb->safePrintf("<title>Gigablast - %s</title>\n",title);
-	sb->safePrintf("<style><!--\n");
-	sb->safePrintf("body {\n");
-	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb->safePrintf("color: #000000;\n");
-	sb->safePrintf("font-size: 12px;\n");
-	sb->safePrintf("margin: 0px 0px;\n");
-	sb->safePrintf("letter-spacing: 0.04em;\n");
-	sb->safePrintf("}\n");
-	sb->safePrintf("a {text-decoration:none;}\n");
-	//sb->safePrintf("a:link {color:#00c}\n");
-	//sb->safePrintf("a:visited {color:#551a8b}\n");
-	//sb->safePrintf("a:active {color:#f00}\n");
-	sb->safePrintf(".bold {font-weight: bold;}\n");
-	sb->safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
-	sb->safePrintf(".url {color:#008000;}\n");
-	sb->safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
-	sb->safePrintf("}\n");
-	sb->safePrintf("table {\n");
-	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
-	sb->safePrintf("color: #000000;\n");
-	sb->safePrintf("font-size: 12px;\n");
-	sb->safePrintf("}\n");
-	sb->safePrintf(".directory {font-size: 16px;}\n"
-		      ".nav {font-size:20px;align:right;}\n"
-		      );
-	sb->safePrintf("-->\n");
-	sb->safePrintf("</style>\n");
-	sb->safePrintf("\n");
-	sb->safePrintf("</head>\n");
-	sb->safePrintf("<script>\n");
-	sb->safePrintf("<!--\n");
-	sb->safePrintf("function x(){document.f.q.focus();}\n");
-	sb->safePrintf("// --></script>\n");
-	sb->safePrintf("<body onload=\"x()\">\n");
-	//sb->safePrintf("<body>\n");
-	//g_proxy.insertLoginBarDirective ( &sb );
-
-	//
-	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
-	//
-
-
-	sb->safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
-		      "cellpadding=0>"
-		      "\n<TR>\n");
-
+bool printLeftColumnRocketAndTabs ( SafeBuf *sb , 
+				    bool isSearchResultsPage ,
+				    CollectionRec *cr ,
+				    char *tabName ) {
 
 	class MenuItem {
 	public:
@@ -712,6 +653,11 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 	static MenuItem mi[] = {
 
 		{"SEARCH","/"},
+		{"IMAGES","/?searchtype=images"},
+		{"PRODUCTS","/?searchtype=products"},
+		{"ARTICLES","/?searchtype=articles"},
+		{"DISCUSSIONS","/?searchtype=discussions"},
+
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
 		{"ADD URL","/addurl"},
@@ -730,7 +676,8 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 	//
 	// first the nav column
 	//
-	sb->safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+	sb->safePrintf(
+		       "<TD bgcolor=#f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\"width:210px;"
 		      "border-right:3px solid blue;"
@@ -774,8 +721,13 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 
 	for ( long i = 0 ; i < n ; i++ ) {
 
+		if ( isSearchResultsPage && i >= 5 ) break;
+
+		char delim = '?';
+		if ( strstr ( mi[i].m_url,"?") ) delim = '&';
+
 		sb->safePrintf(
-			      "<a href=%s?c=%s>"
+			      "<a href=%s%cc=%s>"
 			      "<div style=\""
 			      "padding:5px;"
 			      "position:relative;"
@@ -789,6 +741,7 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 			      "font-size:14px;"
 			      "x-overflow:;"
 			      , mi[i].m_url
+			      , delim
 			      , coll
 			      );
 		//if ( i == pageNum )
@@ -840,7 +793,11 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 			      );
 	}
 
+
+
 	// admin link
+	if ( isSearchResultsPage ) return true;
+
 	sb->safePrintf(
 		      "<a href=/admin/settings?c=%s>"
 		      "<div style=\"background-color:green;"
@@ -911,14 +868,87 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 		      "</div>"
 		      "</a>"
 		      "<br>"
+
+		      "</TD>"
 		      , coll
 		      );
+
+	return true;
+}
+
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
+
+	sb->safePrintf("<html>\n");
+	sb->safePrintf("<head>\n");
+	//sb->safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf8\">");
+	sb->safePrintf("<meta name=\"description\" content=\"A powerful, new search engine that does real-time indexing!\">\n");
+	sb->safePrintf("<meta name=\"keywords\" content=\"search, search engine, search engines, search the web, fresh index, green search engine, green search, clean search engine, clean search\">\n");
+	//char *title = "An Alternative Open Source Search Engine";
+	char *title = "An Alternative Open Source Search Engine";
+	if ( strcasecmp(tabName,"search") ) title = tabName;
+	// if ( pageNum == 1 ) title = "Directory";
+	// if ( pageNum == 2 ) title = "Advanced";
+	// if ( pageNum == 3 ) title = "Add Url";
+	// if ( pageNum == 4 ) title = "About";
+	// if ( pageNum == 5 ) title = "Help";
+	// if ( pageNum == 6 ) title = "API";
+	sb->safePrintf("<title>Gigablast - %s</title>\n",title);
+	sb->safePrintf("<style><!--\n");
+	sb->safePrintf("body {\n");
+	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb->safePrintf("color: #000000;\n");
+	sb->safePrintf("font-size: 12px;\n");
+	sb->safePrintf("margin: 0px 0px;\n");
+	sb->safePrintf("letter-spacing: 0.04em;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf("a {text-decoration:none;}\n");
+	//sb->safePrintf("a:link {color:#00c}\n");
+	//sb->safePrintf("a:visited {color:#551a8b}\n");
+	//sb->safePrintf("a:active {color:#f00}\n");
+	sb->safePrintf(".bold {font-weight: bold;}\n");
+	sb->safePrintf(".bluetable {background:#d1e1ff;margin-bottom:15px;font-size:12px;}\n");
+	sb->safePrintf(".url {color:#008000;}\n");
+	sb->safePrintf(".cached, .cached a {font-size: 10px;color: #666666;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf("table {\n");
+	sb->safePrintf("font-family:Arial, Helvetica, sans-serif;\n");
+	sb->safePrintf("color: #000000;\n");
+	sb->safePrintf("font-size: 12px;\n");
+	sb->safePrintf("}\n");
+	sb->safePrintf(".directory {font-size: 16px;}\n"
+		      ".nav {font-size:20px;align:right;}\n"
+		      );
+	sb->safePrintf("-->\n");
+	sb->safePrintf("</style>\n");
+	sb->safePrintf("\n");
+	sb->safePrintf("</head>\n");
+	sb->safePrintf("<script>\n");
+	sb->safePrintf("<!--\n");
+	sb->safePrintf("function x(){document.f.q.focus();}\n");
+	sb->safePrintf("// --></script>\n");
+	sb->safePrintf("<body onload=\"x()\">\n");
+	//sb->safePrintf("<body>\n");
+	//g_proxy.insertLoginBarDirective ( &sb );
+
+	//
+	// DIVIDE INTO TWO PANES, LEFT COLUMN and MAIN COLUMN
+	//
+
+
+	sb->safePrintf("<TABLE border=0 height=100%% cellspacing=0 "
+		      "cellpadding=0>"
+		      "\n<TR>\n");
+
+
+	// . also prints <TD>...</TD>
+	// . false = isSearchResultsPage?
+	printLeftColumnRocketAndTabs ( sb , false , cr , tabName );
 
 
 	//
 	// now the MAIN column
 	//
-	sb->safePrintf("\n</TD><TD valign=top style=padding-left:30px;>\n");
+	sb->safePrintf("\n<TD valign=top style=padding-left:30px;>\n");
 
 	sb->safePrintf("<br><br>");
 
@@ -958,7 +988,14 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 				     cr );//CollectionRec *cr ) {
 	}
 
-	printFrontPageShell ( &sb , "search" , cr );
+	// . search special types
+	// . defaults to web which is "search"
+	// . can be like "images" "products" "articles"
+	char *searchType = r->getString("searchtype",NULL,"search",NULL);
+	log("searchtype=%s",searchType);
+
+	// pass searchType in as tabName
+	printFrontPageShell ( &sb , searchType , cr );
 
 
 	//sb.safePrintf("<br><br>\n");
