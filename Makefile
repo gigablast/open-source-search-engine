@@ -127,6 +127,11 @@ g8: gb
 utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest monitor seektest urlinfo treetest dnstest dmozparse gbtitletest
 
 gb: $(OBJS) main.o $(LIBFILES)
+	echo -n "#define GBVERSION \"" > vvv
+	#date --utc >> vvv
+	date +%Y.%M.%d-%T-%Z >> vvv
+	head -c -1 vvv > Version.h
+	echo "\"" >> Version.h
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 cygwin:

@@ -10,7 +10,7 @@
 // maybe we should put this in a common header file so we don't have 
 // certain files compiled with the platform default, and some not -partap
 
-//#include "GBVersion.h"
+#include "Version.h"
 #include "Mem.h"
 #include "Conf.h"
 #include "Threads.h"
@@ -992,7 +992,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
-		fprintf(stdout,"Gigablast March-2014\n");
+		fprintf(stdout,"Gigablast Version: %s\n",GBVERSION);
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -1533,9 +1533,6 @@ int main2 ( int argc , char *argv[] ) {
 	}
 	*/
 
-
-	// log the version
-	//log(LOG_INIT,"conf: Gigablast Server %s",GBVersion);
 
 	//Put this here so that now we can log messages
   	if ( strcmp ( cmd , "proxy" ) == 0 ) {
@@ -2996,6 +2993,9 @@ int main2 ( int argc , char *argv[] ) {
 	//	log("db: Threads init failed." ); return 1; }
 
 	g_log.m_logTimestamps = true;
+
+	// log the version
+	log(LOG_INIT,"conf: Gigablast Version: %s",GBVERSION);
 
 	// show current working dir
 	log("host: Working directory is %s",workingDir);

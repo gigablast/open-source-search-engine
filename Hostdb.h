@@ -53,7 +53,8 @@ enum {
 #define PFLAG_RECOVERYMODE   0x80
 
 // added slow disk reads to it, 4 bytes (was 52)
-#define MAX_PING_SIZE (44+4+4)
+// 24 bytes for the gbversion
+#define MAX_PING_SIZE (44+4+4+24)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02
@@ -273,6 +274,9 @@ class Host {
 	// . temps in celsius of the hard drives
 	// . set in Process.cpp
 	short          m_hdtemps[4];
+
+	// 24 bytes including ending \0
+	char m_gbVersionStrBuf[24];
 
 	// Syncdb.cpp uses these
 	char           m_inSync ;

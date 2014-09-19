@@ -22,6 +22,7 @@ long klogctl( int, char *,int ) { return 0; }
 #include "Spider.h"
 #include "Test.h"
 #include "Rebalance.h"
+#include "Version.h"
 
 #define PAGER_BUF_SIZE (10*1024)
 
@@ -467,10 +468,20 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	memcpy ( p , me->m_hdtemps , 4 * 2 );
 	p += 4 * 2;
 
+	// store the gbVersionStrBuf now, just a date with a \0 included
+	memcpy ( p , GBVERSION , 24 );
+	p += 24;
+
+
 	long requestSize = p - request;
 
 	// sanity check
-	if ( requestSize != MAX_PING_SIZE ) { char *xx = NULL; *xx = 0; }
+	if ( requestSize != MAX_PING_SIZE ) { 
+		log("ping: "
+		    "YOU ARE MIXING MULTIPLE GB VERSIONS IN YOUR CLUSTER. "
+		    "MAKE SURE THEY ARE ALL THE SAME GB BINARY");
+		char *xx = NULL; *xx = 0; }
+
 
 	// debug msg
 	//logf(LOG_DEBUG,"net: Sending ping request to hid=%li ip=%s.",
@@ -921,6 +932,10 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		// the 4 hd temps
 		memcpy ( h->m_hdtemps , p , 4 * 2 );
 		p += 4 * 2;
+
+		// at the end the gbverstionstrbuf
+		memcpy ( h->m_gbVersionStrBuf , p , 24 );
+		p += 24;
 
 		// if any one of them is overheating, then turn off
 		// spiders on ourselves (and thus the full cluster)

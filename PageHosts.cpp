@@ -195,7 +195,8 @@ skipReplaceHost:
 			       // this is now fairly obsolete
 			       //"<td><b>ide channel</td>"
 
-			       "<td><b>HD temps (C)</b></td>"
+			       //"<td><b>HD temps (C)</b></td>"
+			       "<td><b>GB version</b></td>"
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
@@ -366,6 +367,7 @@ skipReplaceHost:
 		strcpy(ipbuf1,iptoa(h->m_ip));
 		strcpy(ipbuf2,iptoa(h->m_ipShotgun));
 
+		/*
 		char  hdbuf[128];
 		char *hp = hdbuf;
 		for ( long k = 0 ; k < 4 ; k++ ) {
@@ -379,6 +381,9 @@ skipReplaceHost:
 			if ( k < 3 ) *hp++ = '/';
 			*hp = '\0';
 		}
+		*/
+		char *vbuf = h->m_gbVersionStrBuf;
+		
 
 		//long switchGroup = 0;
 		//if ( g_hostdb.m_indexSplits > 1 )
@@ -531,7 +536,8 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<dnsPort>%li</dnsPort>\n",
 				      (long)h->m_dnsClientPort);
 
-			sb.safePrintf("\t\t<hdTemp>%s</hdTemp>\n",hdbuf);
+			//sb.safePrintf("\t\t<hdTemp>%s</hdTemp>\n",hdbuf);
+			sb.safePrintf("\t\t<gbVersion>%s</gbVersion>\n",vbuf);
 
 			sb.safePrintf("\t\t<resends>%li</resends>\n",
 				      h->m_totalResends);
@@ -619,7 +625,8 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"dnsPort\":%li,\n",
 				      (long)h->m_dnsClientPort);
 
-			sb.safePrintf("\t\t\"hdTemp\":\"%s\",\n",hdbuf);
+			//sb.safePrintf("\t\t\"hdTemp\":\"%s\",\n",hdbuf);
+			sb.safePrintf("\t\t\"gbVersion\":\"%s\",\n",vbuf);
 
 			sb.safePrintf("\t\t\"resends\":%li,\n",
 				      h->m_totalResends);
@@ -770,7 +777,7 @@ skipReplaceHost:
 			  //switchGroup ,
 			  //tmpN,
 			  //h->m_ideChannel,
-			  hdbuf,
+			  vbuf,//hdbuf,
 			  h->m_totalResends,
 			  h->m_errorReplies,
 			  h->m_etryagains,
