@@ -733,7 +733,7 @@ skipReplaceHost:
 
 			  // hd temps
 			  // no, this is gb version now
-			  "<td>%s%s%s</td>"
+			  "<td><nobr>%s%s%s</nobr></td>"
 
 			  // resends
 			  "<td>%li</td>"
