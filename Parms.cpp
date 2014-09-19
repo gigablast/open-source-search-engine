@@ -4960,7 +4960,7 @@ void Parms::init ( ) {
 		"assigns a url or site to a ruleset. Each tagdb record is "
 		"about 100 bytes or so.";
 	m->m_off   = (char *)&g_conf.m_tagdbMaxTreeMem - g;
-	m->m_def   = "1028000"; 
+	m->m_def   = "31028000"; 
 	m->m_type  = TYPE_LONG;
 	m->m_flags = PF_NOSYNC|PF_NOAPI;
 	m->m_page  = PAGE_NONE;

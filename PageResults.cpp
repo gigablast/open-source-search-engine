@@ -3669,14 +3669,6 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
-	if ( si->m_format == FORMAT_XML ) 
-		sb->safePrintf("\t<result>\n" );
-
-	if ( si->m_format == FORMAT_JSON ) {
-		if ( *numPrintedSoFar != 0 ) sb->safePrintf(",\n");
-		sb->safePrintf("\t{\n" );
-	}
-
 	Highlight hi;
 
 	// get the url
@@ -3724,7 +3716,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( err || urlLen <= 0 || ! url ) {
 		// it's unprofessional to display this in browser
 		// so just let admin see it
-		if ( isAdmin ) {
+		if ( isAdmin && si->m_format == FORMAT_HTML ) {
 			sb->safePrintf("<i>docId %lli had error: "
 				      "%s</i><br><br>",
 				      mr->m_docId,//msg40->getDocId(i),
@@ -3734,12 +3726,22 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		log("query: docId %lli had error: %s.",
 		    mr->m_docId,mstrerror(err));
 		// wrap it up if clustered
-		if ( indent ) sb->safeMemcpy("</blockquote>",13);
-		// inc it
-		*numPrintedSoFar = *numPrintedSoFar + 1;
+		if ( indent && si->m_format == FORMAT_HTML) 
+			sb->safeMemcpy("</blockquote>",13);
+		// DO NOT inc it otherwise puts a comma in there and
+		// screws up the json
+		//*numPrintedSoFar = *numPrintedSoFar + 1;
 		return true;
 	}
 	
+	if ( si->m_format == FORMAT_XML ) 
+		sb->safePrintf("\t<result>\n" );
+
+	if ( si->m_format == FORMAT_JSON ) {
+		if ( *numPrintedSoFar != 0 ) sb->safePrintf(",\n");
+		sb->safePrintf("\t{\n" );
+	}
+
 
 	// the score if admin
 	/*
