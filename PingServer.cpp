@@ -22,6 +22,7 @@ long klogctl( int, char *,int ) { return 0; }
 #include "Spider.h"
 #include "Test.h"
 #include "Rebalance.h"
+#include "Version.h"
 
 #define PAGER_BUF_SIZE (10*1024)
 
@@ -467,10 +468,22 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	memcpy ( p , me->m_hdtemps , 4 * 2 );
 	p += 4 * 2;
 
+	// store the gbVersionStrBuf now, just a date with a \0 included
+	char *v = getVersion();
+	long vsize = getVersionSize(); // 21 bytes
+	memcpy ( p , v , vsize );
+	p += vsize;
+
+
 	long requestSize = p - request;
 
 	// sanity check
-	if ( requestSize != MAX_PING_SIZE ) { char *xx = NULL; *xx = 0; }
+	if ( requestSize != MAX_PING_SIZE ) { 
+		log("ping: "
+		    "YOU ARE MIXING MULTIPLE GB VERSIONS IN YOUR CLUSTER. "
+		    "MAKE SURE THEY ARE ALL THE SAME GB BINARY");
+		char *xx = NULL; *xx = 0; }
+
 
 	// debug msg
 	//logf(LOG_DEBUG,"net: Sending ping request to hid=%li ip=%s.",
@@ -922,6 +935,11 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		memcpy ( h->m_hdtemps , p , 4 * 2 );
 		p += 4 * 2;
 
+		// at the end the gbverstionstrbuf
+		long vsize = getVersionSize(); // 21
+		memcpy ( h->m_gbVersionStrBuf , p , vsize );
+		p += vsize;
+
 		// if any one of them is overheating, then turn off
 		// spiders on ourselves (and thus the full cluster)
 		for ( long k = 0 ; k < 4 ; k++ )
@@ -1151,9 +1169,12 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 	//else if ( requestSize == 9 )
 	//	g_sync.addOp ( OP_SYNCPT , "" , *(long long *)request );
 	// otherwise, unknown request size
-	else 
+	else {
 		log(LOG_LOGIC,"net: pingserver: Unknown request size of "
-		    "%li bytes.", requestSize);
+		    "%li bytes. You are probably running a different gb "
+		    "version on this host. check the hosts table for "
+		    "version info.", requestSize);
+	}
 	// always send back an empty reply
 	g_udpServer.sendReply_ass ( reply     , // msg
 				     replySize , // msgSize

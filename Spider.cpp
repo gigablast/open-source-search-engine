@@ -289,13 +289,15 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		char *cs = ""; if ( cr ) cs = cr->m_coll;
 		// sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
 		// 	       cs,(long)collnum);
-		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
-			       cs,cs);
+		//sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
+		//	       cs,cs);
+		sb->safePrintf(" <td><a href=/search?q=url%%3A%s>%s</a>"
+			       "</td>\n",m_url,cs);
 	}
 
-	sb->safePrintf(" <td><nobr>");
+	sb->safePrintf(" <td><a href=%s><nobr>",m_url);
 	sb->safeTruncateEllipsis ( m_url , 64 );
-	sb->safePrintf("</nobr></td>\n");
+	sb->safePrintf("</nobr></a></td>\n");
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);

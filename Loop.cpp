@@ -929,9 +929,9 @@ bool Loop::init ( ) {
 
 
 	m_realInterrupt.it_value.tv_sec = 0;
-	m_realInterrupt.it_value.tv_usec = 7 * 1000;
+	m_realInterrupt.it_value.tv_usec = 10 * 1000;
 	m_realInterrupt.it_interval.tv_sec = 0;
-	m_realInterrupt.it_interval.tv_usec = 7 * 1000;
+	m_realInterrupt.it_interval.tv_usec = 10 * 1000;
 
 
  	m_noInterrupt.it_value.tv_sec = 0;
@@ -944,8 +944,8 @@ bool Loop::init ( ) {
 	// set the interrupts to off for now
 	//mdw:disableTimer();
 
-	// make this 7ms i guess
-	//setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
+	// make this 10ms i guess
+	setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
 	// this is 10ms
 	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
 
@@ -977,6 +977,9 @@ void sigbadHandler ( int x , siginfo_t *info , void *y ) {
 	// to be set before calling waitpid() on it
 	if ( g_threads.amThread() ) errno = 0x7fffffff;
 
+	// turn off sigalarms
+	g_loop.disableTimer();
+
 	log("loop: sigbadhandler. disabling handler from recall.");
 	// . don't allow this handler to be called again
 	// . does this work if we're in a thread?
@@ -988,7 +991,7 @@ void sigbadHandler ( int x , siginfo_t *info , void *y ) {
 	sigaction ( SIGILL , &sa, 0 ) ;
 	sigaction ( SIGFPE , &sa, 0 ) ;
 	sigaction ( SIGBUS , &sa, 0 ) ;
-	sigaction ( SIGALRM, &sa, 0 ) ;
+	//sigaction ( SIGALRM, &sa, 0 ) ;
 	// if we've already been here, or don't need to be, then bail
 	if ( g_loop.m_shutdown ) {
 		log("loop: sigbadhandler. shutdown already called.");
@@ -2538,6 +2541,7 @@ void Loop::disableTimer() {
 	//logf(LOG_WARN,"xxx disabling");
 	m_canQuickPoll = false;
 	setitimer(ITIMER_VIRTUAL, &m_noInterrupt, NULL);
+	setitimer(ITIMER_REAL, &m_noInterrupt, NULL);
 }
 
 int gbsystem(char *cmd ) {

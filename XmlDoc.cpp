@@ -24531,6 +24531,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		if ( hc > 65535 ) hc = 65535;
 		ksr.m_hopCount         = hc;
 
+		// keep hopcount the same for redirs
+		if ( m_indexCodeValid && 
+		     ( m_indexCode == EDOCSIMPLIFIEDREDIR ||
+		       m_indexCode == EDOCNONCANONICAL ) )
+			ksr.m_hopCount = m_hopCount;
+
 		if ( issiteroot   ) ksr.m_hopCount = 0;
 		if ( ispingserver ) ksr.m_hopCount = 0;
 		//if ( isrss        ) ksr.m_hopCount = 0;
@@ -29799,6 +29805,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		blen = 0;
 	}
 
+	// verify for rss as well. seems like we end up coring because
+	// length/size is not in cahoots and [size-1] != '\0' sometimes
+	if ( ! verifyUtf8 ( rssItem , rssItemLen ) ) {
+		log("xmldoc: bad RSS ITEM text from url=%s for %s",
+		    m_req->ptr_linkee,m_firstUrl.m_url);
+		rssItem[0] = '\0';
+		rssItemLen = 0;
+	}
 
 	// point to it, include the \0.
 	if ( blen > 0 ) {
@@ -29880,6 +29894,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// breathe
 	QUICKPOLL(m_niceness);
 
+	// sanity check
+	if ( reply->ptr_rssItem && 
+	     reply->size_rssItem>0 && 
+	     reply->ptr_rssItem[reply->size_rssItem-1]!=0) {
+		char *xx=NULL;*xx=0; }
+
 
 	//log ("nogl=%li",(long)m_req->m_onlyNeedGoodInlinks );
 
@@ -29887,12 +29907,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . we get the title above in "getThatTitle"
 	if ( reply->m_isLinkSpam ) { 
 		m_replyValid = true; return reply; }
-
-	// sanity check
-	if ( reply->ptr_rssItem && 
-	     reply->size_rssItem>0 && 
-	     reply->ptr_rssItem[reply->size_rssItem-1]!=0) {
-		char *xx=NULL;*xx=0; }
 
 	// . this vector is set from a sample of the entire doc
 	// . it is used to dedup voters in Msg25.cpp

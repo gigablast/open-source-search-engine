@@ -1519,6 +1519,11 @@ bool expandHtml (  SafeBuf& sb,
 		   CollectionRec *cr ) ;
 
 
+bool printLeftColumnRocketAndTabs ( SafeBuf *sb, 
+				    bool isSearchResultsPage ,
+				    CollectionRec *cr ,
+				    char *tabName );
+
 bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
 	SearchInput *si = &st->m_si;
@@ -1590,38 +1595,45 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		//
 		// first the nav column
 		//
-		sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
-			      "valign=top "
-			      "style=\""
-			      "width:210px;"
-			      "border-right:3px solid blue;"
-			      "\">"
 
-			      "<br>"
+		// . also prints <TD>...</TD>. true=isSearchresults
+		// . tabName = "search"
+		printLeftColumnRocketAndTabs ( &sb , true , cr , "search" );
 
-			      "<center>"
-			      "<a href=/?c=%s>"
-			      "<div style=\""
-			      "background-color:white;"
-			      "padding:10px;"
-			      "border-radius:100px;"
-			      "border-color:blue;"
-			      "border-width:3px;"
-			      "border-style:solid;"
-			      "width:100px;"
-			      "height:100px;"
-			      "\">"
-			      "<br style=line-height:10px;>"
-			      "<img width=54 height=79 "
-			      "alt=HOME src=/rocket.jpg>"
-			      "</div>"
-			      "</a>"
-			      "</center>"
 
-			      "<br>"
-			      "<br>"
-			      ,cr->m_coll
-			      );
+
+// 		sb.safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+// 			      "valign=top "
+// 			      "style=\""
+// 			      "width:210px;"
+// 			      "border-right:3px solid blue;"
+// 			      "\">"
+
+// 			      "<br>"
+
+// 			      "<center>"
+// 			      "<a href=/?c=%s>"
+// 			      "<div style=\""
+// 			      "background-color:white;"
+// 			      "padding:10px;"
+// 			      "border-radius:100px;"
+// 			      "border-color:blue;"
+// 			      "border-width:3px;"
+// 			      "border-style:solid;"
+// 			      "width:100px;"
+// 			      "height:100px;"
+// 			      "\">"
+// 			      "<br style=line-height:10px;>"
+// 			      "<img width=54 height=79 "
+// 			      "alt=HOME src=/rocket.jpg>"
+// 			      "</div>"
+// 			      "</a>"
+// 			      "</center>"
+
+// 			      "<br>"
+// 			      "<br>"
+// 			      ,cr->m_coll
+// 			      );
 	}
 
 
@@ -1757,9 +1769,9 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 				    true , // queryexpansion?
 				    true );  // usestopwords?
 
-	log("results: gigabitquery=%s landid=%li"
-	    ,ttt.getBufStart()
-	    ,si->m_queryLangId);
+	// log("results: gigabitquery=%s landid=%li"
+	//     ,ttt.getBufStart()
+	//     ,si->m_queryLangId);
 
 
 	for ( long i = 0 ; i < numGigabits ; i++ ) {
@@ -8421,6 +8433,11 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "HTML";
 		s_mi[n].m_cgi      = "filetype=html";
+		n++;
+
+		s_mi[n].m_menuNum  = 3;
+		s_mi[n].m_title    = "TEXT";
+		s_mi[n].m_cgi      = "filetype=txt";
 		n++;
 
 		s_mi[n].m_menuNum  = 3;

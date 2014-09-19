@@ -6468,7 +6468,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		sb->safePrintf("],\n"); // close off json array
 	}
 
-	if ( ! needTable && format == FORMAT_JSON ) 
+	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
 	return true;

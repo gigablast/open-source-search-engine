@@ -20,7 +20,7 @@ void qatestWrapper ( int fd , void *state ) {
 // wait X seconds, call sleep timer... then call qatest()
 void wait( float seconds ) {
 	// put into milliseconds
-	long delay = seconds * 1000;
+	long delay = (long)(seconds * 1000.0);
 
 	if ( g_loop.registerSleepCallback ( delay         ,
 					    NULL , // state
@@ -107,6 +107,32 @@ bool saveHashTable ( ) {
 	log("qa: saving crctable.dat");
 	s_ht.save ( fn.getBufStart() , "crctable.dat" );
 	return true;
+}
+
+void makeQADir ( ) {
+	static bool s_init = false;
+	if ( s_init ) return;
+	s_init = true;
+	s_ht.set(4,4,1024,NULL,0,false,0,"qaht");
+	// make symlink
+	//char cmd[512];
+	//snprintf(cmd,"cd %s/html ;ln -s ../qa ./qa", g_hostdb.m_dir);
+	//system(cmd);
+	char dir[1024];
+	snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
+	log("mkdir mkdir %s",dir);
+	long status = ::mkdir ( dir ,
+				S_IRUSR | S_IWUSR | S_IXUSR | 
+				S_IRGRP | S_IWGRP | S_IXGRP | 
+				S_IROTH | S_IXOTH );
+	if ( status == -1 && errno != EEXIST && errno )
+		log("qa: Failed to make directory %s: %s.",
+		    dir,mstrerror(errno));
+	// try to load from disk
+	SafeBuf fn;
+	fn.safePrintf("%s/qa/",g_hostdb.m_dir);
+	log("qa: loading crctable.dat");
+	s_ht.load ( fn.getBufStart() , "crctable.dat" );
 }
 
 void processReply ( char *reply , long replyLen ) {
@@ -231,29 +257,7 @@ void processReply ( char *reply , long replyLen ) {
 	// combine together
 	urlHash32 = hash32h ( nameHash , urlHash32 );
 
-	static bool s_init = false;
-	if ( ! s_init ) {
-		s_init = true;
-		s_ht.set(4,4,1024,NULL,0,false,0,"qaht");
-		// make symlink
-		//char cmd[512];
-		//snprintf(cmd,"cd %s/html ;ln -s ../qa ./qa", g_hostdb.m_dir);
-		//system(cmd);
-		char dir[1024];
-		snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
-		long status = ::mkdir ( dir ,
-					S_IRUSR | S_IWUSR | S_IXUSR | 
-					S_IRGRP | S_IWGRP | S_IXGRP | 
-					S_IROTH | S_IXOTH );
-	        if ( status == -1 && errno != EEXIST && errno )
-			log("qa: Failed to make directory %s: %s.",
-			    dir,mstrerror(errno));
-		// try to load from disk
-		SafeBuf fn;
-		fn.safePrintf("%s/qa/",g_hostdb.m_dir);
-		log("qa: loading crctable.dat");
-		s_ht.load ( fn.getBufStart() , "crctable.dat" );
-	}
+	makeQADir();
 
 	// break up into lines
 	char fn2[1024];

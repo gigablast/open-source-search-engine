@@ -114,11 +114,11 @@ bool Query::set2 ( char *query        ,
 	// fix summary rerank and highlighting.
 	bool keepAllSingles = true;
 
-	// assume not boolean
-	char boolFlag = 0;
+	// assume  boolean auto-detect.
+	char boolFlag = 2;
 
 	// come back up here if we changed our boolean minds
- top:
+	// top:
 
 	reset();
 
@@ -152,6 +152,10 @@ bool Query::set2 ( char *query        ,
 	char *q = query;
 	// see if it should be boolean...
 	for ( long i = 0 ; i < queryLen ; i++ ) {
+		// but if bool flag is 0 that means it is NOT boolean!
+		// it must be one for autodetection. so do not autodetect
+		// unless this is 2.
+		if ( boolFlag != 2 ) break;
 		if ( q[i]=='A' && q[i+1]=='N' && q[i+2]=='D' &&
 		     (q[i+3]==' ' || q[i+3]=='(') )
 			boolFlag = 1;
@@ -162,6 +166,9 @@ bool Query::set2 ( char *query        ,
 		     (q[i+3]==' ' || q[i+3]=='(') )
 			boolFlag = 1;		
 	}
+
+	// if we did not set the flag to 1 set it to 0. force to non-bool
+	if ( boolFlag == 2 ) boolFlag = 0;
 	
 	// come back up here if we find no bool operators but had ()'s
 	// top:
@@ -198,11 +205,11 @@ bool Query::set2 ( char *query        ,
 			return log(LOG_LOGIC,"query: query: query too big.");
 		}
 		// translate ( and )
-		if ( boolFlag != 0 && query[i] == '(' ) {
+		if ( boolFlag == 1 && query[i] == '(' ) {
 			memcpy ( p , " LeFtP " , 7 ); p += 7;
 			continue;
 		}
-		if ( boolFlag != 0 && query[i] == ')' ) {
+		if ( boolFlag == 1 && query[i] == ')' ) {
 			memcpy ( p , " RiGhP " , 7 ); p += 7;
 			continue;
 		}
@@ -294,9 +301,10 @@ bool Query::set2 ( char *query        ,
 		return false;
 	//log(LOG_DEBUG, "Query: QWords set");
 	// did we have any boolean operators
+	/*
 	char found  = 0;
 	char parens = 0;
-	if ( boolFlag >= 1 ) {
+	if ( boolFlag == 1 ) {
 		for ( long i = 0 ; i < m_numWords ; i++ ) {
 			char *w    = m_qwords[i].m_word;
 			long  wlen = m_qwords[i].m_wordLen;
@@ -321,6 +329,7 @@ bool Query::set2 ( char *query        ,
 		// if no bool operators, it's definitely not a boolean query
 		if ( found == 0 ) boolFlag = 0;
 	}
+	*/
 
 	// set m_qterms from m_qwords, always succeeds
 	setQTerms ( words , phrases );

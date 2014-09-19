@@ -632,7 +632,7 @@ bool Statsdb::gifLoop ( ) {
 		      "background-color:#c0c0c0;"
 		      //"overflow-y:hidden;"
 		      "overflow-x:hidden;"
-		      "z-index:-10;"
+			"z-index:0;"
 		      // the tick marks we print below are based on it
 		      // being a window of the last 20 seconds... and using
 		      // DX2 pixels
@@ -658,8 +658,8 @@ bool Statsdb::gifLoop ( ) {
 		m_gw.safePrintf("<div style=\"position:absolute;"
 			      "left:%li;"
 			      "bottom:0;"
-			      "background-color:#000000;"
-			      "z-index:110;"
+			      "background-color:black;"
+			      "z-index:10;"
 			      "min-height:20px;"
 			      "min-width:3px;\"></div>\n"
 			      , m_bx + (long)x-1
@@ -668,12 +668,16 @@ bool Statsdb::gifLoop ( ) {
 		// LABEL
 		m_gw.safePrintf("<div style=\"position:absolute;"
 				"left:%li;"
-				"bottom:20;"
+				"bottom:22;"
 				//"background-color:#000000;"
-				"z-index:110;"
+				"z-index:10;"
+				"height:20px;"
+				"width:3px;"
+				"color:black;"
+				"font-size:10px;"
 				"min-height:20px;"
 				"min-width:3px;\">%lis</div>\n"
-				, (long)x-10 + m_bx
+				, (long)x-15 + m_bx
 				// the label:
 				, xv
 				);

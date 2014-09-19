@@ -3734,6 +3734,28 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 	}
 
 
+	bool sameVersions = true;
+	for ( long i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
+		// count if not dead
+		Host *h1 = &g_hostdb.m_hosts[i-1];
+		Host *h2 = &g_hostdb.m_hosts[i];
+		if (!strcmp(h1->m_gbVersionStrBuf,h2->m_gbVersionStrBuf))
+			continue;
+		sameVersions = false;
+		break;
+	}
+	if ( ! sameVersions ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("One or more hosts have different gb versions. "
+			       "See the <a href=/admin/hosts>hosts</a> "
+			       "table.");
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
+
 	if ( g_pingServer.m_hostsConfInDisagreement ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
@@ -3759,7 +3781,8 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("A host requires a shard rebalance. "
-			      "Click 'rebalance shards' in master controls "
+			       "Click 'rebalance shards' in the "
+			       "<a href=/admin/master>master controls</a> "
 			       "to rebalance all hosts.");
 		mb->safePrintf("%s",boxEnd);
 	}
@@ -3771,7 +3794,9 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		if ( ps->m_numHostsDead == 1 ) s = "host is";
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%li %s dead and not responding to "
-			      "pings.",ps->m_numHostsDead ,s );
+			      "pings. See the "
+			       "<a href=/admin/host>hosts table</a>.",
+			       ps->m_numHostsDead ,s );
 		mb->safePrintf("%s",boxEnd);
 	}
 
