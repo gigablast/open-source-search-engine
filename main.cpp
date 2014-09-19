@@ -10,7 +10,7 @@
 // maybe we should put this in a common header file so we don't have 
 // certain files compiled with the platform default, and some not -partap
 
-#include "Version.h"
+#include "Version.h" // getVersion()
 #include "Mem.h"
 #include "Conf.h"
 #include "Threads.h"
@@ -992,7 +992,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
-		fprintf(stdout,"Gigablast Version: %s\n",GBVERSION);
+		fprintf(stdout,"Gigablast Version: %s\n",getVersion());
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -2995,7 +2995,7 @@ int main2 ( int argc , char *argv[] ) {
 	g_log.m_logTimestamps = true;
 
 	// log the version
-	log(LOG_INIT,"conf: Gigablast Version: %s",GBVERSION);
+	log(LOG_INIT,"conf: Gigablast Version: %s",getVersion());
 
 	// show current working dir
 	log("host: Working directory is %s",workingDir);

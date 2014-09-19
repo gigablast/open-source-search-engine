@@ -469,8 +469,10 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	p += 4 * 2;
 
 	// store the gbVersionStrBuf now, just a date with a \0 included
-	memcpy ( p , GBVERSION , 24 );
-	p += 24;
+	char *v = getVersion();
+	long vsize = getVersionSize(); // 21 bytes
+	memcpy ( p , v , vsize );
+	p += vsize;
 
 
 	long requestSize = p - request;
@@ -934,8 +936,9 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		p += 4 * 2;
 
 		// at the end the gbverstionstrbuf
-		memcpy ( h->m_gbVersionStrBuf , p , 24 );
-		p += 24;
+		long vsize = getVersionSize(); // 21
+		memcpy ( h->m_gbVersionStrBuf , p , vsize );
+		p += vsize;
 
 		// if any one of them is overheating, then turn off
 		// spiders on ourselves (and thus the full cluster)
