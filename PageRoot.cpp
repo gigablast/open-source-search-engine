@@ -653,10 +653,11 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 	static MenuItem mi[] = {
 
 		{"SEARCH","/"},
-		{"IMAGES","/?searchtype=images"},
-		{"PRODUCTS","/?searchtype=products"},
-		{"ARTICLES","/?searchtype=articles"},
-		{"DISCUSSIONS","/?searchtype=discussions"},
+
+// 		{"IMAGES","/?searchtype=images"},
+// 		{"PRODUCTS","/?searchtype=products"},
+// 		{"ARTICLES","/?searchtype=articles"},
+// 		{"DISCUSSIONS","/?searchtype=discussions"},
 
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
