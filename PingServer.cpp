@@ -1166,9 +1166,12 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 	//else if ( requestSize == 9 )
 	//	g_sync.addOp ( OP_SYNCPT , "" , *(long long *)request );
 	// otherwise, unknown request size
-	else 
+	else {
 		log(LOG_LOGIC,"net: pingserver: Unknown request size of "
-		    "%li bytes.", requestSize);
+		    "%li bytes. You are probably running a different gb "
+		    "version on this host. check the hosts table for "
+		    "version info.", requestSize);
+	}
 	// always send back an empty reply
 	g_udpServer.sendReply_ass ( reply     , // msg
 				     replySize , // msgSize
