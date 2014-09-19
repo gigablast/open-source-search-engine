@@ -3749,7 +3749,7 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("One or more hosts have different gb versions. "
-			       "See the <a href=/admin/hosts><i>hosts</i></a> "
+			       "See the <a href=/admin/hosts>hosts</a> "
 			       "table.");
 		mb->safePrintf("%s",boxEnd);
 	}
@@ -3781,7 +3781,8 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("A host requires a shard rebalance. "
-			      "Click 'rebalance shards' in master controls "
+			       "Click 'rebalance shards' in the "
+			       "<a href=/admin/master>master controls</a> "
 			       "to rebalance all hosts.");
 		mb->safePrintf("%s",boxEnd);
 	}
@@ -3793,7 +3794,9 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		if ( ps->m_numHostsDead == 1 ) s = "host is";
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%li %s dead and not responding to "
-			      "pings.",ps->m_numHostsDead ,s );
+			      "pings. See the "
+			       "<a href=/admin/host>hosts table</a>.",
+			       ps->m_numHostsDead ,s );
 		mb->safePrintf("%s",boxEnd);
 	}
 
