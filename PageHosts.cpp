@@ -339,6 +339,23 @@ skipReplaceHost:
 
 	long long nowmsLocal = gettimeofdayInMillisecondsLocal();
 
+	// compute majority gb version so we can highlight bad out of sync
+	// gb versions in red below
+	long majorityHash32 = 0;
+	long lastCount = 0;
+	// get majority gb version
+	for ( long si = 0 ; si < nh ; si++ ) {
+		long i = hostSort[si];
+		// get the ith host (hostId)
+		Host *h = g_hostdb.getHost ( i );
+		char *vbuf = h->m_gbVersionStrBuf;
+		long vhash32 = hash32n ( vbuf );
+		if ( vhash32 == majorityHash32 ) lastCount++;
+		else lastCount--;
+		if ( lastCount < 0 ) majorityHash32 = vhash32;
+	}
+
+
 	// print it
 	//long ng = g_hostdb.getNumGroups();
 	for ( long si = 0 ; si < nh ; si++ ) {
@@ -383,7 +400,14 @@ skipReplaceHost:
 		}
 		*/
 		char *vbuf = h->m_gbVersionStrBuf;
-		
+		// get hash
+		long vhash32 = hash32n ( vbuf );
+		char *vbuf1 = "";
+		char *vbuf2 = "";
+		if ( vhash32 != majorityHash32 ) {
+			vbuf1 = "<font color=red><b>";
+			vbuf2 = "</font></b>";
+		}
 
 		//long switchGroup = 0;
 		//if ( g_hostdb.m_indexSplits > 1 )
@@ -708,7 +732,8 @@ skipReplaceHost:
 			  //"<td>%li</td>" // ide channel
 
 			  // hd temps
-			  "<td>%s</td>"
+			  // no, this is gb version now
+			  "<td>%s%s%s</td>"
 
 			  // resends
 			  "<td>%li</td>"
@@ -777,7 +802,9 @@ skipReplaceHost:
 			  //switchGroup ,
 			  //tmpN,
 			  //h->m_ideChannel,
+			  vbuf1,
 			  vbuf,//hdbuf,
+			  vbuf2,
 			  h->m_totalResends,
 			  h->m_errorReplies,
 			  h->m_etryagains,
