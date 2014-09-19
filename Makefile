@@ -138,7 +138,7 @@ utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest moni
 # 	#rm PingServer.o
 
 vclean:
-	rm Version.o
+	rm -f Version.o
 
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
