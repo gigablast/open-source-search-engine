@@ -1,1 +1,7 @@
-#define GBVERSION "2014.23.19-11:23:25-MDT"
+#ifndef GBVERSION2_H
+#define GBVERSION2_H
+
+long getVersionSize () ;
+char *getVersion ( ) ;
+
+#endif

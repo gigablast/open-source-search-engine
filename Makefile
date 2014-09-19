@@ -59,7 +59,8 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Users.o Images.o Wiki.o Wiktionary.o Scraper.o \
 	Dates.o Sections.o SiteGetter.o Syncdb.o qa.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
-	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o
+	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o \
+	Version.o
 
 
 CHECKFORMATSTRING = -D_CHECK_FORMAT_STRING_
@@ -126,12 +127,20 @@ g8: gb
 
 utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest monitor seektest urlinfo treetest dnstest dmozparse gbtitletest
 
-gb: $(OBJS) main.o $(LIBFILES)
-	echo -n "#define GBVERSION \"" > vvv
-	#date --utc >> vvv
-	date +%Y.%M.%d-%T-%Z >> vvv
-	head -c -1 vvv > Version.h
-	echo "\"" >> Version.h
+# version:
+# 	echo -n "#define GBVERSION \"" > vvv
+# 	#date --utc >> vvv
+# 	date +%Y.%M.%d-%T-%Z >> vvv
+# 	head -c -1 vvv > Version.h
+# 	echo "\"" >> Version.h
+# 	#for Version.h dependency
+# 	#rm main.o
+# 	#rm PingServer.o
+
+vclean:
+	rm -f Version.o
+
+gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 cygwin:
@@ -247,9 +256,9 @@ gbtitletest: gbtitletest.o
 
 # comment this out for faster deb package building
 clean:
-	-rm -f *.o gb *.bz2 blaster2 udptest memtest hashtest membustest mergetest seektest addtest monitor reindex convert maketestindex makespiderdb makeclusterdb urlinfo gbfilter dnstest thunder dmozparse gbtitletest gmon.* GBVersion.cpp quarantine core core.*
+	-rm -f *.o gb *.bz2 blaster2 udptest memtest hashtest membustest mergetest seektest addtest monitor reindex convert maketestindex makespiderdb makeclusterdb urlinfo gbfilter dnstest thunder dmozparse gbtitletest gmon.* quarantine core core.*
 
-.PHONY: GBVersion.cpp
+#.PHONY: GBVersion.cpp
 
 convert.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
