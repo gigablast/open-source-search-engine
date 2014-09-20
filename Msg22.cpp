@@ -474,7 +474,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	       if ( ! dom ) {
 		       log("msg22: got bad url in request: %s from "
 			   "hostid %li for msg22 call ",
-			   r->m_url,slot->m_hostId);
+			   r->m_url,slot->m_host->m_hostId);
 		       g_errno = EBADURL;
 		       us->sendErrorReply ( slot , g_errno ); 
 		       mdelete ( st , sizeof(State22) , "Msg22" );
