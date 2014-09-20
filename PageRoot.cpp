@@ -667,6 +667,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 		{"USERS","/users.html"},
 		{"ABOUT","/about.html"},
 		{"NEWS","/news.html"},
+		{"FEED","/searchfeed.html"},
 		{"FAQ","/faq.html"},
 		{"API","/api.html"}
 	};
