@@ -59,7 +59,8 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Users.o Images.o Wiki.o Wiktionary.o Scraper.o \
 	Dates.o Sections.o SiteGetter.o Syncdb.o qa.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
-	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o
+	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o \
+	Import.o
 
 
 CHECKFORMATSTRING = -D_CHECK_FORMAT_STRING_

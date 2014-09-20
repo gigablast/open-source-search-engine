@@ -14202,6 +14202,55 @@ void Parms::init ( ) {
 	//m++;
 
 
+	// IMPORT PARMS
+	m->m_title = "enable document importation";
+	m->m_desc  = "Import documents into this collection.";
+	m->m_cgi   = "import";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_COLLREC;
+	m->m_off   = (char *)&cr.m_importEnabled - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API; 
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Collection to import documents into.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m++;
+
+	m->m_title = "directory containing titledb files";
+	m->m_desc  = "Import documents contained in titledb files in this "
+		"directory.";
+	m->m_cgi   = "importdir";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_COLLREC;
+	m->m_off   = (char *)&cr.m_importDir - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API;
+	m++;
+
+	m->m_title = "number of simultaneous injections";
+	m->m_desc  = "Typically try one or two injections per host in "
+		"your cluster.";
+	m->m_cgi   = "importinjects";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_COLLREC;
+	m->m_off   = (char *)&cr.m_importInjects - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "2";
+	m->m_flags = PF_API;
+	m++;
+
+
 
 	///////////
 	//

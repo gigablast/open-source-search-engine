@@ -248,6 +248,10 @@ static WebPage s_pages[] = {
 	{ PAGE_QA , "admin/qa"         , 0 , "qa" , 0 , 0 ,
 	  "quality assurance", sendPageQA , 0 ,NULL,NULL,PG_NOAPI},
 
+	{ PAGE_IMPORT , "admin/import"         , 0 , "import" , 0 , 0 ,
+	  "import documents from another cluster", 
+	  sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
 	  "api",  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},

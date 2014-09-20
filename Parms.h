@@ -143,6 +143,15 @@ class GigablastRequest {
 
 	///////////
 	//
+	// /admin/import parms
+	//
+	///////////
+	char *m_importDir; // TYPE_CHARPTR
+	long  m_importInjects;
+
+
+	///////////
+	//
 	// /get parms (for getting cached web pages)
 	//
 	///////////
