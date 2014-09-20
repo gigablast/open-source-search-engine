@@ -1197,8 +1197,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( ! strncmp ( path ,"/adv.html", pathLen ) )
 		return sendPageAdvanced ( s , r );
 
-	if ( ! strncmp ( path ,"/about.html", pathLen ) )
-		return sendPageAbout ( s , r );
+	//if ( ! strncmp ( path ,"/about.html", pathLen ) )
+	//	return sendPageAbout ( s , r );
 
 	if ( ! strncmp ( path ,"/help.html", pathLen ) )
 		return sendPageHelp ( s , r );
@@ -1211,6 +1211,9 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// who uses gigablast?
 	if ( ! strncmp ( path ,"/users.html", pathLen ) )
 		return sendPagePretty ( s , r,"users.html","users"); // special
+
+	if ( ! strncmp ( path ,"/about.html", pathLen ) )
+		return sendPagePretty ( s , r , "about.html","about" );
 
 	// decorate the plain html page, news.html, with our nav chrome
 	if ( ! strncmp ( path ,"/news.html", pathLen ) )
