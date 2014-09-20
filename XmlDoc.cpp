@@ -15847,6 +15847,23 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		return &m_canonicalRedirUrlPtr;
 	}
 
+	// are we site root page? don't follow canonical url then.
+	char *isRoot = getIsSiteRoot();
+	if ( ! isRoot || isRoot == (char *)-1 ) return (Url **)isRoot;
+	if ( *isRoot ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
+	// if this page has an inlink, then let it stand
+	LinkInfo  *info1 = getLinkInfo1 ();
+	if ( ! info1 || info1 == (LinkInfo *)-1 ) return (Url **)info1;
+	if ( info1->getNumGoodInlinks() > 0 ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
+
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
 
@@ -29805,6 +29822,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		blen = 0;
 	}
 
+	// verify for rss as well. seems like we end up coring because
+	// length/size is not in cahoots and [size-1] != '\0' sometimes
+	if ( ! verifyUtf8 ( rssItem , rssItemLen ) ) {
+		log("xmldoc: bad RSS ITEM text from url=%s for %s",
+		    m_req->ptr_linkee,m_firstUrl.m_url);
+		rssItem[0] = '\0';
+		rssItemLen = 0;
+	}
 
 	// point to it, include the \0.
 	if ( blen > 0 ) {
@@ -29886,6 +29911,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// breathe
 	QUICKPOLL(m_niceness);
 
+	// sanity check
+	if ( reply->ptr_rssItem && 
+	     reply->size_rssItem>0 && 
+	     reply->ptr_rssItem[reply->size_rssItem-1]!=0) {
+		char *xx=NULL;*xx=0; }
+
 
 	//log ("nogl=%li",(long)m_req->m_onlyNeedGoodInlinks );
 
@@ -29893,12 +29924,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . we get the title above in "getThatTitle"
 	if ( reply->m_isLinkSpam ) { 
 		m_replyValid = true; return reply; }
-
-	// sanity check
-	if ( reply->ptr_rssItem && 
-	     reply->size_rssItem>0 && 
-	     reply->ptr_rssItem[reply->size_rssItem-1]!=0) {
-		char *xx=NULL;*xx=0; }
 
 	// . this vector is set from a sample of the entire doc
 	// . it is used to dedup voters in Msg25.cpp

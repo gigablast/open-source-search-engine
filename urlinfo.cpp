@@ -19,7 +19,7 @@ bool allExit ( ) { return true; }
 //long g_qbufNeedSave = false;
 //SafeBuf g_qbuf;
 bool sendPageSEO(class TcpSocket *s, class HttpRequest *hr) {return true;}
-
+char g_recoveryMode;
 
 int main ( int argc , char *argv[] ) {
 	bool addWWW = true;
@@ -82,13 +82,24 @@ int main ( int argc , char *argv[] ) {
 		addWWW   ,      /*add www?*/
 		stripSession ); /*strip session ids?*/
 	// print it
-	char out[1024*3];
+	char out[1024*4];
 	char *p = out;
+	p += sprintf(p,"tld: ");
+	memcpy ( p, u.getTLD(),u.getTLDLen());
+	p += u.getTLDLen();
+	char c = *p;
+	*p = '\0';
+	printf("%s\n",out);
+	*p = c;
+	
+
+	// dom
+	p = out;
 	sprintf ( p , "dom: ");
 	p += gbstrlen ( p );
 	memcpy ( p , u.getDomain() , u.getDomainLen() );
 	p += u.getDomainLen();
-	char c = *p;
+	c = *p;
 	*p = '\0';
 	printf("%s\n",out);
 	*p = c;

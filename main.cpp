@@ -10,7 +10,7 @@
 // maybe we should put this in a common header file so we don't have 
 // certain files compiled with the platform default, and some not -partap
 
-//#include "GBVersion.h"
+#include "Version.h" // getVersion()
 #include "Mem.h"
 #include "Conf.h"
 #include "Threads.h"
@@ -992,7 +992,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
-		fprintf(stdout,"Gigablast March-2014\n");
+		fprintf(stdout,"Gigablast Version: %s\n",getVersion());
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -1533,9 +1533,6 @@ int main2 ( int argc , char *argv[] ) {
 	}
 	*/
 
-
-	// log the version
-	//log(LOG_INIT,"conf: Gigablast Server %s",GBVersion);
 
 	//Put this here so that now we can log messages
   	if ( strcmp ( cmd , "proxy" ) == 0 ) {
@@ -2996,6 +2993,9 @@ int main2 ( int argc , char *argv[] ) {
 	//	log("db: Threads init failed." ); return 1; }
 
 	g_log.m_logTimestamps = true;
+
+	// log the version
+	log(LOG_INIT,"conf: Gigablast Version: %s",getVersion());
 
 	// show current working dir
 	log("host: Working directory is %s",workingDir);
@@ -4596,6 +4596,9 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 	// this is a big rcp so only do one at a time...
 	if  ( installFlag == ifk_install ) maxOut = 1;
 
+	// same with this. takes too long on gk144, jams up
+	if  ( installFlag == ifk_installgb ) maxOut = 1;
+
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
@@ -4825,7 +4828,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp "
+				"scp -c blowfish " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,

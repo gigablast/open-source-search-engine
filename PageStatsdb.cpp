@@ -688,7 +688,7 @@ time_t genDate( char *date, long dateLen ) {
 
 	//*
 	memset( (char *)&tmRef, 0, sizeof( tmRef ) );
-	time_t now = (time_t)getTimeGlobal();
+	time_t now = (time_t)getTimeGlobalNoCore();
 	localtime_r( &now, &tmRef );
 	now = mktime( &tmRef );
 	// */

@@ -195,7 +195,8 @@ skipReplaceHost:
 			       // this is now fairly obsolete
 			       //"<td><b>ide channel</td>"
 
-			       "<td><b>HD temps (C)</b></td>"
+			       //"<td><b>HD temps (C)</b></td>"
+			       "<td><b>GB version</b></td>"
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
@@ -338,6 +339,23 @@ skipReplaceHost:
 
 	long long nowmsLocal = gettimeofdayInMillisecondsLocal();
 
+	// compute majority gb version so we can highlight bad out of sync
+	// gb versions in red below
+	long majorityHash32 = 0;
+	long lastCount = 0;
+	// get majority gb version
+	for ( long si = 0 ; si < nh ; si++ ) {
+		long i = hostSort[si];
+		// get the ith host (hostId)
+		Host *h = g_hostdb.getHost ( i );
+		char *vbuf = h->m_gbVersionStrBuf;
+		long vhash32 = hash32n ( vbuf );
+		if ( vhash32 == majorityHash32 ) lastCount++;
+		else lastCount--;
+		if ( lastCount < 0 ) majorityHash32 = vhash32;
+	}
+
+
 	// print it
 	//long ng = g_hostdb.getNumGroups();
 	for ( long si = 0 ; si < nh ; si++ ) {
@@ -366,6 +384,7 @@ skipReplaceHost:
 		strcpy(ipbuf1,iptoa(h->m_ip));
 		strcpy(ipbuf2,iptoa(h->m_ipShotgun));
 
+		/*
 		char  hdbuf[128];
 		char *hp = hdbuf;
 		for ( long k = 0 ; k < 4 ; k++ ) {
@@ -378,6 +397,16 @@ skipReplaceHost:
 				hp += sprintf(hp,"%li",temp);
 			if ( k < 3 ) *hp++ = '/';
 			*hp = '\0';
+		}
+		*/
+		char *vbuf = h->m_gbVersionStrBuf;
+		// get hash
+		long vhash32 = hash32n ( vbuf );
+		char *vbuf1 = "";
+		char *vbuf2 = "";
+		if ( vhash32 != majorityHash32 ) {
+			vbuf1 = "<font color=red><b>";
+			vbuf2 = "</font></b>";
 		}
 
 		//long switchGroup = 0;
@@ -531,7 +560,8 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<dnsPort>%li</dnsPort>\n",
 				      (long)h->m_dnsClientPort);
 
-			sb.safePrintf("\t\t<hdTemp>%s</hdTemp>\n",hdbuf);
+			//sb.safePrintf("\t\t<hdTemp>%s</hdTemp>\n",hdbuf);
+			sb.safePrintf("\t\t<gbVersion>%s</gbVersion>\n",vbuf);
 
 			sb.safePrintf("\t\t<resends>%li</resends>\n",
 				      h->m_totalResends);
@@ -619,7 +649,8 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"dnsPort\":%li,\n",
 				      (long)h->m_dnsClientPort);
 
-			sb.safePrintf("\t\t\"hdTemp\":\"%s\",\n",hdbuf);
+			//sb.safePrintf("\t\t\"hdTemp\":\"%s\",\n",hdbuf);
+			sb.safePrintf("\t\t\"gbVersion\":\"%s\",\n",vbuf);
 
 			sb.safePrintf("\t\t\"resends\":%li,\n",
 				      h->m_totalResends);
@@ -701,7 +732,8 @@ skipReplaceHost:
 			  //"<td>%li</td>" // ide channel
 
 			  // hd temps
-			  "<td>%s</td>"
+			  // no, this is gb version now
+			  "<td><nobr>%s%s%s</nobr></td>"
 
 			  // resends
 			  "<td>%li</td>"
@@ -770,7 +802,9 @@ skipReplaceHost:
 			  //switchGroup ,
 			  //tmpN,
 			  //h->m_ideChannel,
-			  hdbuf,
+			  vbuf1,
+			  vbuf,//hdbuf,
+			  vbuf2,
 			  h->m_totalResends,
 			  h->m_errorReplies,
 			  h->m_etryagains,
