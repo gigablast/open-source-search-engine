@@ -2316,7 +2316,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// estimate it
 	if ( base ) docsInColl = base->getNumGlobalRecs();
 	// multiply by # of *unique* shards
-	docsInColl *= g_hostdb.getNumShards();
+	// no because it already does this i think
+	//docsInColl *= g_hostdb.getNumShards();
 	// include number of docs in the collection corpus
 	if ( docsInColl >= 0LL ) {
 	    if ( si->m_format == FORMAT_XML)
