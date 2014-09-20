@@ -53,8 +53,8 @@ enum {
 #define PFLAG_RECOVERYMODE   0x80
 
 // added slow disk reads to it, 4 bytes (was 52)
-// 24 bytes for the gbversion
-#define MAX_PING_SIZE (44+4+4+24)
+// 21 bytes for the gbversion (see getVersionSize())
+#define MAX_PING_SIZE (44+4+4+21)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02

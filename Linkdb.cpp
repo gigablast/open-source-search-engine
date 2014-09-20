@@ -2022,7 +2022,13 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 
 	// sanity check, Xml::set() requires this...
 	if ( r&&r->size_rssItem > 0 && r->ptr_rssItem[r->size_rssItem-1]!=0 ) {
-		char *xx=NULL;*xx=0; }
+		log("admin: received corrupt rss item of size "
+		    "%li not null terminated  from linker %s",
+		    r->size_rssItem,r->ptr_ubuf);
+		// ignore it for now
+		r->size_rssItem = 0;
+		r->ptr_rssItem  = NULL;
+	}
 
 	// . if no link text, count as error
 	// . linkText->getLinkTextLen()

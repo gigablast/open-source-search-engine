@@ -1160,7 +1160,7 @@ void handleRequest4 ( UdpSlot *slot , long netnice ) {
 		// if we send back a g_errno then multicast retries forever
 		// so just absorb it!
 		log("msg4: got corrupted request from hostid %li "
-		    "used=%li != %li=readBufSize",
+		    "used=%li != %li=readBufSize msg4",
 		    slot->m_host->m_hostId,
 		    used,
 		    readBufSize);
