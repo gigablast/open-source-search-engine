@@ -5497,6 +5497,10 @@ bool Links::addLink ( char *link , long linkLen , long nodeNum ,
 	// <script></script> tags
 	if ( url.getDomainLen() <= 0 || url.getHostLen() <= 0 ) return true;
 
+	// stop http://0x0017.0000000000000000000000000000000000000024521276/
+	// which somehow make it through without this!!
+	if ( url.getTLDLen() <= 0 ) return true;
+
 	// count dirty links
 	//if ( url.isDirty() ) m_numDirtyLinks++;
 	// . a lot of links are redirect to other places
