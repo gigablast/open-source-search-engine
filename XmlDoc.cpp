@@ -15847,6 +15847,23 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		return &m_canonicalRedirUrlPtr;
 	}
 
+	// are we site root page? don't follow canonical url then.
+	char *isRoot = getIsSiteRoot();
+	if ( ! isRoot || isRoot == (char *)-1 ) return (Url **)isRoot;
+	if ( *isRoot ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
+	// if this page has an inlink, then let it stand
+	LinkInfo  *info1 = getLinkInfo1 ();
+	if ( ! info1 || info1 == (LinkInfo *)-1 ) return (Url **)info1;
+	if ( info1->getNumGoodInlinks() > 0 ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
+
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
 
