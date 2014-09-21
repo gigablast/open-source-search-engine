@@ -14230,11 +14230,12 @@ void Parms::init ( ) {
 	m->m_desc  = "Import documents contained in titledb files in this "
 		"directory.";
 	m->m_cgi   = "importdir";
+	m->m_xml   = "importDir";
 	m->m_page  = PAGE_IMPORT;
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = (char *)&cr.m_importDir - x;
 	m->m_type  = TYPE_SAFEBUF;
-	m->m_def   = NULL;
+	m->m_def   = "";
 	m->m_flags = PF_API;
 	m++;
 
@@ -14242,6 +14243,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Typically try one or two injections per host in "
 		"your cluster.";
 	m->m_cgi   = "numimportinjects";
+	m->m_xml   = "numImportInjects";
 	m->m_page  = PAGE_IMPORT;
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = (char *)&cr.m_numImportInjects - x;
