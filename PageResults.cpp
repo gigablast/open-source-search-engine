@@ -8490,7 +8490,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Content type facet";
-		s_mi[n].m_cgi      = "facet=gbfacetint:type";
+		s_mi[n].m_cgi      = "facet=gbfacetstr:type";
 		n++;
 
 		// s_mi[n].m_menuNum  = 4;
