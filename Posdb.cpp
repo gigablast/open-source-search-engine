@@ -838,6 +838,8 @@ bool PosdbTable::allocTopTree ( ) {
 						  slots,NULL,0,false,
 						  0,"qfht" ) )
 			return false;
+		// make it nongrowable because we'll be in a thread
+		qt->m_facetHashTable.setNonGrow();
 	}
 	return true;
 }

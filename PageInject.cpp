@@ -817,6 +817,7 @@ void ImportState::reset() {
 
 // . call this when gb startsup
 // . scan collections to see if any imports were active
+// . returns false and sets g_errno on failure
 bool resumeImports ( ) {
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
@@ -830,9 +831,9 @@ bool resumeImports ( ) {
 		try { is = new (ImportState); }
 		catch ( ... ) { 
 			g_errno = ENOMEM;
-			log("PageInject: new(%i): %s", 
-			    (int)sizeof(ImportState),mstrerror(g_errno));
-			return NULL;
+			log("PageInject: new(%li): %s", 
+			    (long)sizeof(ImportState),mstrerror(g_errno));
+			return false;
 		}
 		mnew ( is, sizeof(ImportState) , "isstate");
 		// assign to cr as well

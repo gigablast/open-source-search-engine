@@ -17,6 +17,7 @@ void HashTableX::constructor() {
 	m_txtBuf = NULL;
 	m_useKeyMagic = false;
 	m_ks = 0;
+	m_allowGrowth = true;
 }
 
 void HashTableX::destructor() {
@@ -93,6 +94,7 @@ void HashTableX::reset ( ) {
 	m_numSlotsUsed = 0;
 	m_addIffNotUnique = false;
 	m_maskKeyOffset = 0;
+	m_allowGrowth = true;
 	//m_useKeyMagic = false;
 	// we should free it in reset()
 	if ( m_doFree && m_txtBuf ) {
@@ -189,6 +191,13 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 	}
 	// never got initialized? call HashTableX::init()
 	if ( m_ks <= 0 ){ char *xx=NULL; *xx=0; }
+
+	if ( ! m_allowGrowth && m_numSlotsUsed + 1 > m_numSlots ) {
+		log("hashtable: hit max ceiling of hashtable of %li slots. "
+		    "and can not grow because in thread.",m_numSlotsUsed);
+		return false;
+	}
+
 	// check to see if we should grow the table. now we grow
 	// when 25% full to make operations faster so getLongestString()
 	// doesn't return such big numbers!
