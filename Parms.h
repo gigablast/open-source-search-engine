@@ -141,6 +141,7 @@ class GigablastRequest {
 	long  m_charset;
 	long  m_hopCount;
 
+
 	///////////
 	//
 	// /admin/import parms

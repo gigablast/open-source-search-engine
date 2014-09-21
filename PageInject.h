@@ -3,6 +3,8 @@
 
 bool sendPageInject ( class TcpSocket *s, class HttpRequest *hr );
 
+bool resumeImports ( ) ;
+
 #include "XmlDoc.h"
 #include "Users.h"
 #include "Parms.h" // GigablastRequest
@@ -29,10 +31,19 @@ public:
 	void *m_state;
 	void (* m_callback )(void *state);
 
+	long long m_hackFileOff;
+	long m_hackFileId;
+
 	//long m_crawlbotAPI;
 
+	class ImportState *m_importState;
+
+	void constructor();
 	Msg7 ();
 	~Msg7 ();
+	bool m_inUse;
+
+	void reset();
 
 	bool scrapeQuery ( );
 

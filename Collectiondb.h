@@ -551,9 +551,11 @@ class CollectionRec {
 	// for Spider.cpp
 	long m_updateRoundNum;
 
+	// IMPORT PARMS
 	char    m_importEnabled;
 	SafeBuf m_importDir;
-	long    m_importInjects;
+	long    m_numImportInjects;
+
 
 	// from Conf.h
 	long m_posdbMinFilesToMerge ;
