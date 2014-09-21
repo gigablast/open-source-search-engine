@@ -4605,23 +4605,34 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 	long maxOut = 6;
 
-	// this is a big rcp so only do one at a time...
+	// this is a big scp so only do two at a time...
 	if  ( installFlag == ifk_install ) maxOut = 1;
 
 	// same with this. takes too long on gk144, jams up
-	if  ( installFlag == ifk_installgb ) maxOut = 1;
+	if  ( installFlag == ifk_installgb ) maxOut = 2;
+
+	if  ( installFlag == ifk_installgbrcp ) maxOut = 4;
+
+	long maxOutPerIp = 6;
 
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
 
-		// if host ip is like the 10th occurence then do
-		// not do ampersand
-		iptab.addScore((long *)&h2->m_ip);
-		long score = iptab.getScore32(&h2->m_ip);
-		char *amp = " &";
-		if ( (score % maxOut) == 0 ) amp = "";
+		char *amp = " ";
+
+		// if i is NOT multiple of maxOut then use '&'
+		// even if all all different machines (IPs) scp chokes and so
+		// does rcp a little. so restrict to maxOut at a time.
+		if ( (i+1) % maxOut ) amp = "&";
 			
+
+		// if host ip is like the 10th occurence then do
+		// not do ampersand. this is for hosts on the same IP.
+		//long score = iptab.getScore32(&h2->m_ip);
+		//if ( (score % maxOutPerIp) ) amp = "&";
+		//iptab.addScore((long *)&h2->m_ip);
+
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
 		if ( hostId >= 0 && hostId2 == -1 ) {
