@@ -14207,7 +14207,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Import documents into this collection.";
 	m->m_cgi   = "import";
 	m->m_page  = PAGE_IMPORT;
-	m->m_obj   = OBJ_COLLREC;
+	m->m_obj   = OBJ_COLL;
 	m->m_off   = (char *)&cr.m_importEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
@@ -14231,7 +14231,7 @@ void Parms::init ( ) {
 		"directory.";
 	m->m_cgi   = "importdir";
 	m->m_page  = PAGE_IMPORT;
-	m->m_obj   = OBJ_COLLREC;
+	m->m_obj   = OBJ_COLL;
 	m->m_off   = (char *)&cr.m_importDir - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = NULL;
@@ -14243,7 +14243,7 @@ void Parms::init ( ) {
 		"your cluster.";
 	m->m_cgi   = "importinjects";
 	m->m_page  = PAGE_IMPORT;
-	m->m_obj   = OBJ_COLLREC;
+	m->m_obj   = OBJ_COLL;
 	m->m_off   = (char *)&cr.m_importInjects - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "2";
