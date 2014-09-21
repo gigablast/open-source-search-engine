@@ -4232,7 +4232,8 @@ struct QueryField g_fields[] = {
 	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,"","",NULL,QTF_HIDE},
 	{"gbcontenthash", FIELD_GBCONTENTHASH, false,"","",NULL,QTF_HIDE},
 	{"gbduphash"  ,FIELD_GBOTHER,false,"","",NULL,QTF_HIDE},
-	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"","",NULL,QTF_HIDE}
+	// call it field url to hash all up to the first space
+	{"gbsitetemplate"           ,FIELD_URL,false,"","",NULL,QTF_HIDE}
 
 	//{"gbcsenum",FIELD_GBCSENUM,false,""},
 	//{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},

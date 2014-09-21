@@ -25627,7 +25627,8 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	// use the prefix as the description if description is NULL
 	hi.m_prefix = "gbsitetemplate";
-	if ( ! hashString ( buf,blen,&hi ) ) return false;
+	//if ( ! hashString ( buf,blen,&hi ) ) return false;
+	if ( ! hashSingleTerm ( buf,blen,&hi ) ) return false;
 	
 
 	setStatus ( "hashing no-split gbimage keys" );

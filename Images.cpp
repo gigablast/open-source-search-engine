@@ -133,6 +133,8 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 		// TODO: make sure this is a no-split termid storage thingy
 		// in Msg14.cpp
 		if ( ! q.set2 ( buf , langUnknown , false ) ) return;
+		// sanity test
+		if ( q.getNumTerms() != 1 ) { char *xx=0;*xx=0; }
 		// store the termid
 		m_termIds[m_numImages] = q.getTermId(0);
 		// advance the counter
@@ -356,6 +358,9 @@ bool Images::getThumbnail ( char *pageSite ,
 	// see XmlDoc.cpp::hashNoSplit() where it hashes gbsitetemplate: term)
 	long shardNum = g_hostdb.getShardNumByTermId ( &startKey );
 
+	if ( g_conf.m_logDebugImage )
+		log("image: image checking %s list on shard %li",buf,shardNum);
+
 	// if ( ! m_msg36.getTermFreq ( m_collnum               ,
 	// 			     0                  , // maxAge
 	// 			     termId             ,
@@ -457,7 +462,18 @@ bool Images::launchRequests ( ) {
 		// no split is true for this one, so we do not split by docid
 		//uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
 		unsigned long shardNum;
-		shardNum = getShardNum(RDB_POSDB,&startKey);
+		//shardNum = getShardNum(RDB_POSDB,&startKey);
+		//uint32_t getShardNum (char rdbId, void *key );
+		//uint32_t getShardNumFromDocId ( long long d ) ;
+		// assume to be for posdb here
+		shardNum = g_hostdb.getShardNumByTermId ( &startKey );
+
+		// debug msg
+		if ( g_conf.m_logDebugImage )
+			log("image: image checking shardnum %li (termid0=%llu)"
+			    " for image url #%li",
+			    shardNum ,m_termIds[i],i);
+
 		// get the termlist
 		if ( ! m_msg0.getList ( -1    , // hostid
 					-1    , // ip
@@ -522,6 +538,8 @@ void Images::gotTermList ( ) {
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRecord() ) {
 		// get the first rec
 		long long d = m_list.getCurrentDocId();
+		// note it
+		//log("dup: image is dupped");
 		// is it us? if so ignore it
 		if ( d == m_docId ) continue;
 		// crap, i guess our image url is not unique. mark it off.
