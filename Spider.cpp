@@ -6303,7 +6303,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	long sameIpWaitTime = 5000; // 250; // ms
 	long maxSpidersOutPerIp = 1;
 	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
-		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
+		if ( cr->m_spiderPriorities[i] != pri ) continue;
 		//if ( ! cr->m_spidersEnabled[i] ) continue;
 		if ( cr->m_maxSpidersPerRule[i] > max )
 			max = cr->m_maxSpidersPerRule[i];
