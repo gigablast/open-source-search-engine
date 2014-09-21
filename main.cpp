@@ -290,35 +290,36 @@ UdpProtocol g_dp; // Default Proto
 // installFlag konstants 
 typedef enum {
 	ifk_install = 1,
-	ifk_start = 2,
-	ifk_installgb = 3,
-	ifk_installconf = 4,
-	ifk_gendbs = 10,
-	ifk_fixtfndb = 11,
-	ifk_gentfndb = 12,
-	ifk_installcat = 13,
-	ifk_installnewcat = 14,
-	ifk_genclusterdb = 15,
-	ifk_distributeC = 16,
-	ifk_installgb2 = 17,
-	ifk_dsh = 18,
-	ifk_dsh2 = 19,
-	ifk_backupcopy = 20,
-	ifk_backupmove = 21,
-	ifk_backuprestore = 22,
-	ifk_proxy_start = 23,
-	ifk_installconf2 = 24,
-	ifk_installcat2 = 25,
-	ifk_kstart = 26,
-	ifk_installnewcat2 = 27,
-	ifk_dumpmissing = 30,
-	ifk_removedocids = 31,
-	ifk_dumpdups = 32,
-	//ifk_install2 = 33,
-	ifk_tmpstart = 41,
-	ifk_installtmpgb = 42,
-	ifk_proxy_kstart = 43,
-	ifk_start2 = 222	
+	ifk_start ,
+	ifk_installgb ,
+	ifk_installgbrcp ,
+	ifk_installconf ,
+	ifk_gendbs ,
+	ifk_fixtfndb ,
+	ifk_gentfndb ,
+	ifk_installcat,
+	ifk_installnewcat,
+	ifk_genclusterdb ,
+	ifk_distributeC ,
+	ifk_installgb2 ,
+	ifk_dsh ,
+	ifk_dsh2 ,
+	ifk_backupcopy ,
+	ifk_backupmove ,
+	ifk_backuprestore ,
+	ifk_proxy_start ,
+	ifk_installconf2 ,
+	ifk_installcat2 ,
+	ifk_kstart ,
+	ifk_installnewcat2 ,
+	ifk_dumpmissing ,
+	ifk_removedocids ,
+	ifk_dumpdups ,
+	//ifk_install2,
+	ifk_tmpstart ,
+	ifk_installtmpgb ,
+	ifk_proxy_kstart ,
+	ifk_start2 	
 } install_flag_konst_t;
 
 int install ( install_flag_konst_t installFlag , long hostId , 
@@ -578,6 +579,10 @@ int main2 ( int argc , char *argv[] ) {
 
 			"installgb [hostId]\n"
 			"\tlike above, but install just the gb executable.\n\n"
+
+			"installgbrcp [hostId]\n"
+			"\tlike above, but install just the gb executable "
+			"and using rcp.\n\n"
 
 			/*
 			"installgb2 [hostId]\n"
@@ -1987,6 +1992,13 @@ int main2 ( int argc , char *argv[] ) {
 		long hostId = -1;
 		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
 		return install ( ifk_installgb , hostId );
+	}
+	// gb installgbrcp
+	if ( strcmp ( cmd , "installgbrcp" ) == 0 ) {	
+		// get hostId to install TO (-1 means all)
+		long hostId = -1;
+		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
+		return install ( ifk_installgbrcp , hostId );
 	}
 	// gb installgb
 	if ( strcmp ( cmd , "installgb2" ) == 0 ) {	
@@ -4829,6 +4841,27 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			sprintf(tmp,
 				"scp -c blowfish " // blowfish is faster
+				"%s%s "
+				"%s:%s/gb.installed%s",
+				dir,
+				target,
+				iptoa(h2->m_ip),
+				h2->m_dir,
+				amp);
+			log(LOG_INIT,"admin: %s", tmp);
+			system ( tmp );
+		}
+		else if ( installFlag == ifk_installgbrcp ) {
+			// don't copy to ourselves
+			//if ( h2->m_hostId == h->m_hostId ) continue;
+
+			File f;
+			char *target = "gb.new";
+			f.set(g_hostdb.m_myHost->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
+			sprintf(tmp,
+				"rcp "
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
