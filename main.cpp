@@ -4613,7 +4613,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 	if  ( installFlag == ifk_installgbrcp ) maxOut = 4;
 
-	long maxOutPerIp = 6;
+	//long maxOutPerIp = 6;
 
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
