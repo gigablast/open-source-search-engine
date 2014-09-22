@@ -4609,7 +4609,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 	if  ( installFlag == ifk_install ) maxOut = 1;
 
 	// same with this. takes too long on gk144, jams up
-	if  ( installFlag == ifk_installgb ) maxOut = 2;
+	if  ( installFlag == ifk_installgb ) maxOut = 4;
 
 	if  ( installFlag == ifk_installgbrcp ) maxOut = 4;
 
