@@ -385,7 +385,7 @@ class CollectionRec {
 	// for regular crawls
 	bool rebuildUrlFilters2();
 
-	bool rebuildChineseRules();
+	bool rebuildLangRules( char *lang , char *tld );
 
 	bool rebuildShallowRules();
 
@@ -730,8 +730,8 @@ class CollectionRec {
 	SafeBuf m_siteListBuf;
 	char m_spiderToo;
 
-	// see UFP_* values in Parms.h. i.e. UFP_NEWS for crawling for NEWS
-	char m_urlFiltersProfile;
+	// can be "web" "english" "romantic" "german" etc.
+	SafeBuf m_urlFiltersProfile;
 
 	// . now the url regular expressions
 	// . we chain down the regular expressions

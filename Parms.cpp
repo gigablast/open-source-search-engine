@@ -1601,17 +1601,48 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 	return true;
 }
 
-bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
+class DropLangs {
+public:
+	char *m_title;
+	char *m_lang;
+	char *m_tld;
+};
+
+DropLangs g_drops[] = {
+	{"custom",NULL,NULL},
+	{"web",NULL,NULL},
+	{"news",NULL,NULL},
+	{"english","en","com,us.gov,org"},
+	{"german","de","de"},
+	{"french","fr","fr"},
+	{"norweigian","nl","nl"},
+	{"spanish","es","es"},
+	{"italian","it","it"},
+	{"romantic","en,de,fr,nl,es,it","com,us.gov,org,de,fr,nl,es,it"}
+};
+
+// "url filters profile" values. used to set default crawl rules
+// in Collectiondb.cpp's CollectionRec::setUrlFiltersToDefaults(). 
+// for instance, UFP_NEWS spiders sites more frequently but less deep in
+// order to get "news" pages and articles
+bool printDropDownProfile ( SafeBuf* sb, char *name, CollectionRec *cr ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news","chinese","shallow"};
-	char *s;
-	for ( long i = 0 ; i < 5 ; i++ ) {
-		if ( i == select ) s = " selected";
-		else               s = "";
-		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
+	//char *items[] = {"custom","web","news","chinese","shallow"};
+	long nd = sizeof(g_drops)/sizeof(DropLangs);
+	for ( long i = 0 ; i < nd ; i++ ) {
+		//if ( i == select ) s = " selected";
+		//else               s = "";
+		char *x = cr->m_urlFiltersProfile.getBufStart();
+		char *s;
+		if ( strcmp(g_drops[i].m_title, x) == 0 ) s = " selected";
+		else                                      s = "";
+		sb->safePrintf ("<option value=%s%s>%s",
+				g_drops[i].m_title,
+				s,
+				g_drops[i].m_title );
 	}
-	sb->safePrintf ( "</select>" );
+	sb->safePrintf ( "</select>");
 	return true;
 }
 
@@ -2354,9 +2385,11 @@ bool Parms::printParm ( SafeBuf* sb,
 	//else if ( t == TYPE_DIFFBOT_DROPDOWN ) {
 	//	char *xx=NULL;*xx=0;
 	//}
-	else if ( t == TYPE_UFP )
+	//else if ( t == TYPE_UFP )
+	else if ( t == TYPE_SAFEBUF && 
+		  strcmp(m->m_title,"url filters profile")==0)
 		// url filters profile drop down "ufp"
-		printDropDownProfile ( sb , "ufp" , *s );
+		printDropDownProfile ( sb , "ufp" , cr );//*s );
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
@@ -12491,8 +12524,8 @@ void Parms::init ( ) {
 		"to the table will be lost.";
 	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
 	m->m_colspan = 3;
-	m->m_type  = TYPE_UFP;// 1 byte dropdown menu
-	m->m_def   = "1"; // UFP_WEB
+	m->m_type  = TYPE_SAFEBUF;//UFP;// 1 byte dropdown menu
+	m->m_def   = "web"; // UFP_WEB
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
