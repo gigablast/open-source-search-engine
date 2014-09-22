@@ -6003,6 +6003,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	     m_sc->m_msg5StartKey != m_sc->m_nextDoledbKey )
 		log("spider: msg5startKey differs from nextdoledbkey");
 
+	// seems like we need this reset here... strange
+	m_list.reset();
+
 	// get a spider rec for us to spider from doledb (mdw)
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
 				cr->m_collnum, // coll            ,
