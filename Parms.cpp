@@ -6290,6 +6290,21 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "fast results";
+	m->m_desc  = "Use &fast=1 to obtain seach results from the much "
+		"faster Gigablast index, although the results are not "
+		"searched as thoroughly.";
+	m->m_obj   = OBJ_SI;
+	m->m_page  = PAGE_RESULTS;
+	m->m_off   = (char *)&si.m_query - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = "0";
+	m->m_cgi   = "fast";
+	//m->m_size  = MAX_QUERY_LEN;
+	m->m_flags = PF_COOKIE | PF_WIDGET_PARM | PF_API;
+	m++;
+
+
 	m->m_title = "query";
 	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>. "
 		"See the <a href=#qops>query operators</a> below for "
