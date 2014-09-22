@@ -5389,7 +5389,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "]]>"
 			       "</finalScoreEquationCanonical>\n"
 			       , SITERANKDIVISOR
-			       , SAMELANGMULT
+				, si->m_sameLangWeight //SAMELANGMULT
 			       , ff2 
 			       );
 		sb->safePrintf ("\t\t<finalScoreEquation>"
@@ -5405,7 +5405,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		     mr->m_language    == 0 ||
 		     si->m_queryLangId == mr->m_language )
 			sb->safePrintf(" * %.01f",
-				      SAMELANGMULT);//FOREIGNLANGDIVISOR);
+				       si->m_sameLangWeight);//SAMELANGMULT);
 		// the actual min then
 		sb->safePrintf(" * %.03f",minScore);
 		// no longer list all the scores
@@ -5481,7 +5481,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     mr->m_language    == 0 ||
 	     si->m_queryLangId == mr->m_language )
 		sb->safePrintf(" * <font color=green><b>%.01f</b></font>",
-			      SAMELANGMULT);//FOREIGNLANGDIVISOR);
+			       si->m_sameLangWeight);//SAMELANGMULT);
 
 	// list all final scores starting with pairs
 	sb->safePrintf(" * %s("
@@ -8353,6 +8353,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 	};
 
+	/*
 	langUnknown     = 0,
 	langEnglish     = 1,
 	langFrench      = 2,
@@ -8413,7 +8414,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 	langEstonian       = 55,
 	langLast           = 56
 };
-
+	*/
 
 	SafeBuf cu;
 	hr->getCurrentUrl ( cu );

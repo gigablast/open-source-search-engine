@@ -6691,6 +6691,22 @@ void Parms::init ( ) {
 	// m->m_group = 0;
 	// m++;
 
+	m->m_title = "language weight";
+	m->m_desc  = "Defalt language weight if document matches quer "
+		"language. Use this to give results that match the specified "
+		"the speicified &qlang higher ranking. Can be override with "
+		"&langw in the query url.";
+	m->m_cgi   = "langweight";
+	m->m_off   = (char *)&cr.m_sameLangWeight - x;
+	m->m_type  = TYPE_FLOAT;
+	m->m_def   = "20.000000";
+	m->m_group = 1;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
+
 	m->m_title = "use language weights";
 	m->m_desc  = "Use Language weights to sort query results. "
 		"This will give results that match the specified &qlang "
@@ -6722,6 +6738,21 @@ void Parms::init ( ) {
 	//m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
 	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "language weight";
+	m->m_desc  = "Use this to override the default language weight "
+		"for this collection. The default language weight can be "
+		"set in the search controls and is usually something like "
+		"20.0. Which means that we multiply a result's score by 20 "
+		"if from the same language as the query.";
+	m->m_off   = (char *)&si.m_sameLangWeight - y;
+	m->m_defOff= (char *)&cr.m_sameLangWeight - x;
+	m->m_type  = TYPE_FLOAT;
+	m->m_cgi  = "langw";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;

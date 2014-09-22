@@ -585,6 +585,7 @@ bool Msg40::getDocIds ( bool recall ) {
 
 	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
 	mr.m_maxSerpScore              = m_si->m_maxSerpScore;
+	mr.m_sameLangWeight            = m_si->m_sameLangWeight;
 
 	//
 	// how many docid splits should we do to avoid going OOM?

@@ -6858,7 +6858,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	if ( m_r->m_language == 0 || 
 	     docLang == 0 ||
 	     m_r->m_language == docLang)
-		score *= SAMELANGMULT;
+		score *= (m_r->m_sameLangWeight);//SAMELANGMULT;
 
 	// assume filtered out
 	if ( ! secondPass ) m_filtered++;
@@ -7408,7 +7408,7 @@ float PosdbTable::getMaxPossibleScore ( QueryTermInfo *qti ,
 	if ( m_r->m_language == docLang ||
 	     m_r->m_language == 0 || 
 	     docLang == 0 )
-		score *= SAMELANGMULT;
+		score *= m_r->m_sameLangWeight;//SAMELANGMULT;
 	
 	// assume the other term we pair with will be 1.0
 	score *= qti->m_termFreqWeight;

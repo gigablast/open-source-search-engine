@@ -213,6 +213,8 @@ class SearchInput {
 	double    m_maxSerpScore;
 	long long m_minSerpDocId;
 
+	float m_sameLangWeight;
+
 	// prefer what lang in the results. it gets a 20x boost. "en" "xx" "fr"
 	char 	      *m_defaultSortLang;
 	// prefer what country in the results. currently unused. support later.

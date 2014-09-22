@@ -533,6 +533,8 @@ class CollectionRec {
 	char  m_spiderStatus;
 	//char *m_spiderStatusMsg;
 
+	float m_sameLangWeight;
+
 	// Language stuff
 	float			m_languageUnknownWeight;
 	float			m_languageWeightFactor;

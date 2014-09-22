@@ -64,6 +64,7 @@ class Msg39Request {
 		size_readSizes            = 0;
 		size_query                = 0;
 		size_whiteList            = 0;
+		m_sameLangWeight          = 20.0;
 		//size_coll                 = 0;
 
 		m_getDocIdScoringInfo = 1;
@@ -95,6 +96,8 @@ class Msg39Request {
 	long    m_maxAge;
 	long    m_maxQueryTerms;
 	long    m_numDocIdSplits;
+	float   m_sameLangWeight;
+
 	//long    m_compoundListMaxSize;
 	char    m_boolFlag;
 	uint8_t m_language;
