@@ -8335,12 +8335,85 @@ public:
 	// we append this to the url
 	char *m_cgi;
 	char  m_tmp[25];
+	char *m_icon; // for languages - the language flag
+	char  m_iconWidth;
+	char  m_iconHeight;
 };
 
 static MenuItem s_mi[200];
 static long s_num = 0;
 
 bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
+
+	// 1-1 with the langs in
+
+	char *g_flagBytes[] = {
+		0, // langunknown
+		
+
+	};
+
+	langUnknown     = 0,
+	langEnglish     = 1,
+	langFrench      = 2,
+	langSpanish     = 3,
+	langRussian     = 4,
+	langTurkish     = 5,
+	langJapanese    = 6,
+	langChineseTrad = 7, // cantonese
+	langChineseSimp = 8, // mandarin
+	langKorean      = 9,
+	langGerman      = 10,
+	langDutch       = 11,
+	langItalian     = 12,
+	langFinnish     = 13,
+	langSwedish     = 14,
+	langNorwegian   = 15,
+	langPortuguese  = 16,
+	langVietnamese  = 17,
+	langArabic      = 18,
+	langHebrew      = 19,
+	langIndonesian  = 20,
+	langGreek       = 21,
+	langThai        = 22,
+	langHindi       = 23,
+	langBengala     = 24,
+	langPolish      = 25,
+	langTagalog     = 26,
+
+	// added for wiktionary
+	langLatin          = 27,
+	langEsperanto      = 28,
+	langCatalan        = 29,
+	langBulgarian      = 30,
+	langTranslingual   = 31, // used by multiple langs in wiktionary
+	langSerboCroatian  = 32,
+	langHungarian      = 33,
+	langDanish         = 34,
+	langLithuanian     = 35,
+	langCzech          = 36,
+	langGalician       = 37,
+	langGeorgian       = 38,
+	langScottishGaelic = 39,
+	langGothic         = 40,
+	langRomanian       = 41,
+	langIrish          = 42,
+	langLatvian        = 43,
+	langArmenian       = 44,
+	langIcelandic      = 45,
+	langAncientGreek   = 46,
+	langManx           = 47,
+	langIdo            = 48,
+	langPersian        = 49,
+	langTelugu         = 50,
+	langVenetian       = 51,
+	langMalgasy        = 52,
+	langKurdish        = 53,
+	langLuxembourgish  = 54,
+	langEstonian       = 55,
+	langLast           = 56
+};
+
 
 	SafeBuf cu;
 	hr->getCurrentUrl ( cu );
@@ -8369,43 +8442,51 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Any time";
 		s_mi[n].m_cgi      = "secsback=0";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past 24 hours";
 		s_mi[n].m_cgi      = "secsback=86400";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past week";
 		s_mi[n].m_cgi      = "secsback=604800";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past month";
 		s_mi[n].m_cgi      = "secsback=2592000";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Past year";
 		s_mi[n].m_cgi      = "secsback=31536000";
 		n++;
+		s_mi[n].m_icon     = NULL;
 
 		// sort by
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Sorted by relevance";
 		s_mi[n].m_cgi      = "sortby=0";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Sorted by date";
 		s_mi[n].m_cgi      = "sortby=1";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 1;
 		s_mi[n].m_title    = "Reverse sorted by date";
 		s_mi[n].m_cgi      = "sortby=2";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// languages
@@ -8413,6 +8494,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 2;
 		s_mi[n].m_title    = "Any language";
 		s_mi[n].m_cgi      = "qlang=xx";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		for ( long i = 0 ; i < langLast ; i++ ) {
@@ -8421,6 +8503,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 			char *abbr = getLangAbbr(i);
 			snprintf(s_mi[n].m_tmp,10,"qlang=%s",abbr);
 			s_mi[n].m_cgi      = s_mi[n].m_tmp;
+			s_mi[n].m_icon     = g_flagBytes[i]; //base64encoded
 			n++;
 		}
 
@@ -8429,51 +8512,61 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Any filetype";
 		s_mi[n].m_cgi      = "filetype=any";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "HTML";
 		s_mi[n].m_cgi      = "filetype=html";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "TEXT";
 		s_mi[n].m_cgi      = "filetype=txt";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PDF";
 		s_mi[n].m_cgi      = "filetype=pdf";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Microsoft Word";
 		s_mi[n].m_cgi      = "filetype=doc";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "XML";
 		s_mi[n].m_cgi      = "filetype=xml";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "JSON";
 		s_mi[n].m_cgi      = "filetype=json";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Excel";
 		s_mi[n].m_cgi      = "filetype=xls";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "PostScript";
 		s_mi[n].m_cgi      = "filetype=ps";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 3;
 		s_mi[n].m_title    = "Spider Status";
 		s_mi[n].m_cgi      = "filetype=status";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// facets
@@ -8481,16 +8574,19 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "No Facets";
 		s_mi[n].m_cgi      = "facet=";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Language facet";
 		s_mi[n].m_cgi      = "facet=gbfacetint:gblang";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Content type facet";
 		s_mi[n].m_cgi      = "facet=gbfacetstr:type";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// s_mi[n].m_menuNum  = 4;
@@ -8501,17 +8597,20 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Url path depth";
 		s_mi[n].m_cgi      = "facet=gbfacetint:gbpathdepth";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Spider date facet";
 		s_mi[n].m_cgi      = "facet=gbfacetint:gbspiderdate";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// everything in tagdb is hashed
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Site num inlinks facet";
 		s_mi[n].m_cgi      = "facet=gbfacetint:gbtagsitenuminlinks";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// s_mi[n].m_menuNum  = 4;
@@ -8522,6 +8621,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 4;
 		s_mi[n].m_title    = "Hopcount facet";
 		s_mi[n].m_cgi      = "facet=gbfacetint:gbhopcount";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// output
@@ -8529,27 +8629,32 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output HTML";
 		s_mi[n].m_cgi      = "format=html";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output XML";
 		s_mi[n].m_cgi      = "format=xml";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output JSON";
 		s_mi[n].m_cgi      = "format=json";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		// show/hide banned
 		s_mi[n].m_menuNum  = 6;
 		s_mi[n].m_title    = "Hide banned results";
 		s_mi[n].m_cgi      = "sb=0";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 6;
 		s_mi[n].m_title    = "Show banned results";
 		s_mi[n].m_cgi      = "sb=1";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 
@@ -8557,11 +8662,13 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 7;
 		s_mi[n].m_title    = "Hide Spider Log";
 		s_mi[n].m_cgi      = "splog=0";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 7;
 		s_mi[n].m_title    = "Show Spider Log";
 		s_mi[n].m_cgi      = "q=type:status";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 
@@ -8571,31 +8678,37 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 8;
 		s_mi[n].m_title    = "Show Admin View";
 		s_mi[n].m_cgi      = "admin=1";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 8;
 		s_mi[n].m_title    = "Show User View";
 		s_mi[n].m_cgi      = "admin=0";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Action";
 		s_mi[n].m_cgi      = "";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Respider all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Delete all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Scrape from google/bing";
 		s_mi[n].m_cgi      = "/admin/inject";
+		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_num = n;
