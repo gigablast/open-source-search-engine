@@ -82,7 +82,7 @@ UdpServer g_udpServer2;
 
 
 static void readPollWrapper_ass ( int fd , void *state ) ;
-static void sendPollWrapper_ass ( int fd , void *state ) ;
+//static void sendPollWrapper_ass ( int fd , void *state ) ;
 static void timePollWrapper     ( int fd , void *state ) ;
 static void defaultCallbackWrapper ( void *state , UdpSlot *slot );
 
