@@ -129,7 +129,9 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 		if ( iu.getDomainLen() <= 0 ) goto ogimgloop;
 		// for looking it up on disk to see if unique or not
 		char buf[2000];
-		snprintf ( buf , 1999, "gbimage:%s",iu.getUrl());
+		// if we don't put in quotes it expands '|' into
+		// the "PiiPe" operator in Query.cpp
+		snprintf ( buf , 1999, "gbimage:\"%s\"",iu.getUrl());
 		// TODO: make sure this is a no-split termid storage thingy
 		// in Msg14.cpp
 		if ( ! q.set2 ( buf , langUnknown , false ) ) return;
@@ -258,7 +260,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 
 		// if we do have 10 or more, then we lookup the image url to
 		// make sure it is indeed unique
-		sprintf ( buf , "gbimage:%s",u);
+		sprintf ( buf , "gbimage:\"%s\"",u);
 		// TODO: make sure this is a no-split termid storage thingy
 		// in Msg14.cpp
 		if ( ! q.set2 ( buf , langUnknown , false ) )
@@ -984,7 +986,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	// rather than a pipe, since popen() seems broken.
 	// m_dir ends in / so this should work.
 	char in[364];
-	snprintf ( in , 363,"%strashin.%li", g_hostdb.m_dir, id );
+	snprintf ( in , 363,"%strash/in.%li", g_hostdb.m_dir, id );
 	unlink ( in );
 
 	log( LOG_DEBUG, "image: thumbStart_r create in file." );
@@ -992,7 +994,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	// collect the output from the filter from this file
 	// m_dir ends in / so this should work.
 	char out[364];
-	snprintf ( out , 363,"%strashout.%li", g_hostdb.m_dir, id );
+	snprintf ( out , 363,"%strash/out.%li", g_hostdb.m_dir, id );
         unlink ( out );
 
 	log( LOG_DEBUG, "image: thumbStart_r create out file." );
@@ -1122,7 +1124,8 @@ void Images::thumbStart_r ( bool amThread ) {
         if( (fhndl = open( out, O_RDONLY )) < 0 ) {
                log( "image: Could not open file, %s, for reading: %s.",
 		    out, mstrerror( m_errno ) );
-	       m_stopDownloading = true;
+		unlink ( out );
+		m_stopDownloading = true;
 	       return;
         }
 
@@ -1131,6 +1134,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		     out, m_thumbnailSize );
 		m_stopDownloading = true;
 		close(fhndl);
+		unlink ( out );
 		return;
 	}
 
@@ -1142,6 +1146,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		log(LOG_DEBUG,"image: Diff           : %ld", 
 		     m_imgReplyMaxLen-m_thumbnailSize );
 		close(fhndl);
+		unlink ( out );
 		return;
 
 	}
@@ -1150,6 +1155,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		log( "image: Seek couldn't rewind file, %s.", out );
 		m_stopDownloading = true;
 		close(fhndl);
+		unlink ( out );
 		return;
 	}
 
@@ -1169,6 +1175,7 @@ void Images::thumbStart_r ( bool amThread ) {
  		     out, mstrerror( m_errno ) );
 		unlink( out );
 		m_stopDownloading = true;
+		unlink ( out );
  	        return;
         }
 	fhndl = 0;
