@@ -1957,11 +1957,16 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	// never for custom crawls however
 	if ( m_isCustomCrawl ) 
 		rebuild = false;
+
+	char *s = m_urlFiltersProfile.getBufStart();
+
+	// leave custom profiles alone
+	if ( !strcmp(s,"custom" ) )
+		rebuild = false;
+
 	//if ( m_numRegExs > 0 && strcmp(m_regExs[m_numRegExs-1],"default") )
 	//	addDefault = true;
 	if ( ! rebuild ) return true;
-
-	char *s = m_urlFiltersProfile.getBufStart();
 
 	if ( !strcmp(s,"shallow" ) )
 		return rebuildShallowRules();
