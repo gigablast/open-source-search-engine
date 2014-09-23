@@ -8345,12 +8345,13 @@ static long s_num = 0;
 
 bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
-	// 1-1 with the langs in
-
+	// 1-1 with the langs in Lang.h
 	char *g_flagBytes[] = {
-		0, // langunknown
+		// base64 encoding
+		NULL, // langunknown
+		// english
 		
-
+	
 	};
 
 	/*
