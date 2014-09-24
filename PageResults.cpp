@@ -7104,7 +7104,8 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr) ;
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr,
+			   bool printGigablast ) ;
 
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
@@ -7142,7 +7143,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 
 	if ( catId >= 0 ) {
 		CollectionRec *cr = g_collectiondb.getRec ( hr );
-		printFrontPageShell ( sb , "directory",cr); //  PAGE_DIRECTORY
+		printFrontPageShell ( sb , "directory",cr,true);//PAGE_DIRECTOR
 	}
 
 	/*

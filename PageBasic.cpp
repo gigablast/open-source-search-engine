@@ -7,7 +7,8 @@
 #include "PageResults.h" // for RESULT_HEIGHT
 #include "Stats.h"
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) ;
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ,
+			   bool printGigablast ) ;
 
 // 5 seconds
 #define DEFAULT_WIDGET_RELOAD 1000
@@ -1333,7 +1334,7 @@ bool sendPageWidgets ( TcpSocket *socket , HttpRequest *hr ) {
 	char  buf [ 128000 ];
 	SafeBuf sb(buf,128000);
 
-	printFrontPageShell ( &sb, "widgets", cr );
+	printFrontPageShell ( &sb, "widgets", cr , true );
 
 	sb.safePrintf("<br>");
 	sb.safePrintf("<br>");

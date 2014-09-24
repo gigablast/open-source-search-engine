@@ -878,7 +878,8 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 	return true;
 }
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ,
+			   bool printGigablast ) {
 
 	sb->safePrintf("<html>\n");
 	sb->safePrintf("<head>\n");
@@ -954,6 +955,9 @@ bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) {
 
 	sb->safePrintf("<br><br>");
 
+	if ( ! printGigablast )
+		return true;
+
 	sb->safePrintf("<a href=/><img border=0 width=470 "
 		      "height=44 src=/gigablast.jpg></a>\n");
 
@@ -997,7 +1001,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	log("searchtype=%s",searchType);
 
 	// pass searchType in as tabName
-	printFrontPageShell ( &sb , searchType , cr );
+	printFrontPageShell ( &sb , searchType , cr , true );
 
 
 	//sb.safePrintf("<br><br>\n");
@@ -1418,7 +1422,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( r );
 
-	printFrontPageShell ( &sb , "add url" , cr );
+	printFrontPageShell ( &sb , "add url" , cr , true );
 
 
 	sb.safePrintf("<script type=\"text/javascript\">\n"
@@ -1617,7 +1621,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( r );
 
-	printFrontPageShell ( &sb , "directory" , cr );
+	printFrontPageShell ( &sb , "directory" , cr , true );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2630,7 +2634,7 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
-	printFrontPageShell ( &sb , "advanced" , cr );
+	printFrontPageShell ( &sb , "advanced" , cr , true );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
@@ -2806,7 +2810,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
-	printFrontPageShell ( &sb , "syntax" , cr );
+	printFrontPageShell ( &sb , "syntax" , cr , true );
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");

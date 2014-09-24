@@ -2870,7 +2870,8 @@ int parmcmp ( const void *a, const void *b ) {
 #define DARK_YELLOW "ffaaaa"
 #define LIGHT_YELLOW "ffcccc"
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ) ;
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ,
+			   bool printGigablast ) ;
 
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
@@ -2898,7 +2899,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// new stuff
-	printFrontPageShell ( &p , "api" , cr );
+	printFrontPageShell ( &p , "api" , cr , true );
 
 
 	//p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "

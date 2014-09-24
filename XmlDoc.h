@@ -1445,6 +1445,7 @@ class XmlDoc {
 	//SearchInput m_si;
 	//Msg40 m_msg40;
 	//DateParse2 m_dateParse2;
+	bool m_printedMenu;
 	Dates m_dates;
 	HashTableX m_clockCandidatesTable;
 	SafeBuf m_cctbuf;

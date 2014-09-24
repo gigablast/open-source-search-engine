@@ -119,6 +119,7 @@ XmlDoc::XmlDoc() {
 	m_rootDoc    = NULL;
 	m_oldDoc     = NULL;
 	m_dx = NULL;
+	m_printedMenu = false;
 	// reset all *valid* flags to false
 	void *p    = &m_VALIDSTART;
 	void *pend = &m_VALIDEND;
@@ -186,6 +187,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 	
+	m_printedMenu = false;
+
 	// for hashing CT_STATUS docs consistently, this might be invalid
 	// so call it 0
 	m_pubDate = 0;
@@ -34472,12 +34475,18 @@ static void printDocForProCogWrapper ( void *state ) {
 	else                     THIS->m_callback2 ( THIS->m_state );
 }
 
+// in PageRoot.cpp
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ,
+			   bool printGigablast );
 
 // . returns false if blocked, true otherwise
 // . sets g_errno and returns true on error
 bool XmlDoc::printDocForProCog ( SafeBuf *sb , HttpRequest *hr ) {
 
 	if ( ! sb ) return true;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
 
 	m_masterLoop = printDocForProCogWrapper;
 	m_masterState = this;
@@ -34493,6 +34502,15 @@ bool XmlDoc::printDocForProCog ( SafeBuf *sb , HttpRequest *hr ) {
 
 
 	long page = hr->getLong("page",1);
+
+
+	// for some reason sections page blocks forever in browser
+	if ( page != 7 && ! m_printedMenu ) { // && page != 5 )
+		printFrontPageShell ( sb , "search" , cr , false );
+		m_printedMenu = true;
+		//printMenu ( sb );
+	}
+
 
 	if ( page == 1 )
 		return printGeneralInfo(sb,hr);
@@ -34776,7 +34794,7 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td>total inlinks to page"
 			"</td><td>%li</td></tr>\n"
 
-			"<tr><td>page inlinks last computed</td>"
+			"<tr><td><nobr>page inlinks last computed</nobr></td>"
 			"<td>%s</td></tr>\n"
 			"</td></tr>\n",
 			get_charset_str(m_charset),
@@ -35377,7 +35395,7 @@ bool XmlDoc::printTermList ( SafeBuf *sb , HttpRequest *hr ) {
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
 	if ( ! isXml ) {
-		printMenu ( sb );
+		//printMenu ( sb );
 		//sb->safePrintf("<i>* indicates word is a synonym or "
 		//	       "alternative word form<br><br>");
 		sb->safePrintf("N column = DensityRank (0-%li)<br>"

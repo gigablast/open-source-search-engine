@@ -2918,7 +2918,8 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 }
 
 
-bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr );
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ,
+			   bool printGigablast );
 
 bool sendPagePretty ( TcpSocket *s , 
 		      HttpRequest *r , 
@@ -2930,7 +2931,7 @@ bool sendPagePretty ( TcpSocket *s ,
 	CollectionRec *cr = g_collectiondb.getRec ( r );
 
 	// print the chrome
-	printFrontPageShell ( &sb , tabName , cr ); //  -1=pagenum
+	printFrontPageShell ( &sb , tabName , cr , true ); //  -1=pagenum
 
 	SafeBuf ff;
 	ff.safePrintf("html/%s",filename);
