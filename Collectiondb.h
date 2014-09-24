@@ -557,6 +557,7 @@ class CollectionRec {
 	char    m_importEnabled;
 	SafeBuf m_importDir;
 	long    m_numImportInjects;
+	class ImportState *m_importState;
 
 
 	// from Conf.h

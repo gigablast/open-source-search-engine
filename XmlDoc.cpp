@@ -1730,6 +1730,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_redirError      = 0;
 	m_redirErrorValid = true;
 
+	// stop core when importing and calling getNewSpiderReply()
+	m_downloadEndTime = m_spideredTime;
+	m_downloadEndTimeValid = true;
+
 	// make a copy for new tag rec too, this one we modify
 	//memcpy ( &m_newTagRec     , ptr_tagRecData , size_tagRecData );
 
@@ -2167,6 +2171,28 @@ bool XmlDoc::indexDoc ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
 
+	if ( ! m_masterLoop ) {
+		m_masterLoop  = indexDocWrapper;
+		m_masterState = this;
+	}
+
+	// do not index if already indexed and we are importing
+	// from the code in PageInject.cpp from a foreign titledb file
+	if ( m_isImporting && m_isImportingValid ) {
+		char *isIndexed = getIsIndexed();
+		if ( ! isIndexed ) {
+			log("import: import had error: %s",mstrerror(g_errno));
+			return true;
+		}
+		if ( isIndexed == (char *)-1) 
+			return false;
+		if ( *isIndexed ) {
+			log("import: skipping import for %s. already indexed.",
+			    m_firstUrl.getUrl());
+			return true;
+		}
+	}
+		
 	// . even if not using diffbot, keep track of these counts
 	// . even if we had something like EFAKEFIRSTIP, OOM, or whatever
 	//   it was an attempt we made to crawl this url
@@ -20227,7 +20253,9 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 	if ( ! cr ) return true;
 
 	// do not do this if not test collection for now
-	if ( ! strcmp(cr->m_coll,"qatest123") ) return true;
+	if ( strcmp(cr->m_coll,"qatest123") ) return true;
+	
+	log("xmldoc: VERIFYING METALIST");
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
@@ -20248,8 +20276,10 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		// must always be negative if deleteing
 		// spiderdb is exempt because we add a spiderreply that is
 		// positive and a spiderdoc
-		if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
-			char *xx=NULL;*xx=0; }
+		// no, this is no longer the case because we add spider
+		// replies to the index when deleting or rejecting a doc.
+		//if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
+		//	char *xx=NULL;*xx=0; }
 		// get the key size. a table lookup in Rdb.cpp.
 		long ks ;
 		if      ( rdbId == RDB_POSDB || rdbId == RDB2_POSDB2 ) {

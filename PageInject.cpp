@@ -326,9 +326,9 @@ Msg7::Msg7 () {
 Msg7::~Msg7 () {
 }
 
-void Msg7::constructor () {
-	reset();
-}
+//void Msg7::constructor () {
+//	reset();
+//}
 
 void Msg7::reset() { 
 	m_round = 0;
@@ -336,6 +336,7 @@ void Msg7::reset() {
 	m_fixMe = false;
 	m_injectCount = 0;
 	m_start = NULL;
+	m_sbuf.reset();
 }
 
 // when XmlDoc::inject() complets it calls this
@@ -416,6 +417,44 @@ bool Msg7::inject ( char *coll ,
 	return inject ( state , callback );
 }
 
+// returns false if would block
+bool Msg7::injectTitleRec ( void *state ,
+			    void (*callback)(void *state) ,
+			    CollectionRec *cr ) {
+	m_state = state;
+	m_callback = callback;
+
+	// shortcut
+	XmlDoc *xd = &m_xd;
+
+	xd->reset();
+
+	// if injecting a titlerec from an import operation use set2()
+	//if ( m_sbuf.length() > 0 ) {
+	xd->set2 ( m_sbuf.getBufStart() ,
+		   m_sbuf.length() ,
+		   cr->m_coll ,
+		   NULL, // pbuf
+		   MAX_NICENESS ,
+		   NULL ); // sreq
+	// log it i guess
+	log("inject: importing %s",xd->m_firstUrl.getUrl());
+	// call this when done indexing
+	//xd->m_masterState = this;
+	//xd->m_masterLoop  = doneInjectingWrapper9;
+	xd->m_state = this;
+	xd->m_callback1  = doneInjectingWrapper9;
+	xd->m_isImporting = true;
+	xd->m_isImportingValid = true;
+	// then index it
+	if ( ! xd->indexDoc() )
+		return false;
+	return true;
+}
+
+
+// . returns false if blocked and callback will be called, true otherwise
+// . sets g_errno on error
 bool Msg7::inject ( void *state ,
 		    void (*callback)(void *state) 
 		    //long spiderLinksDefault ,
@@ -432,6 +471,12 @@ bool Msg7::inject ( void *state ,
 		return true;
 	}
 
+	m_state = state;
+	m_callback = callback;
+
+	// shortcut
+	XmlDoc *xd = &m_xd;
+
 	if ( ! gr->m_url ) {
 		log("inject: no url provied to inject");
 		g_errno = EBADURL;
@@ -440,16 +485,10 @@ bool Msg7::inject ( void *state ,
 
 	//char *coll = cr->m_coll;
 
-	m_state = state;
-	m_callback = callback;
-
 	// test
 	//diffbotReply = "{\"request\":{\"pageUrl\":\"http://www.washingtonpost.com/2011/03/10/ABe7RaQ_moreresults.html\",\"api\":\"article\",\"version\":3},\"objects\":[{\"icon\":\"http://www.washingtonpost.com/favicon.ico\",\"text\":\"In Case You Missed It\nWeb Hostess Live: The latest from the Web (vForum, May 15, 2014; 3:05 PM)\nGot Plans: Advice from the Going Out Guide (vForum, May 15, 2014; 2:05 PM)\nWhat to Watch: TV chat with Hank Stuever (vForum, May 15, 2014; 1:10 PM)\nColor of Money Live (vForum, May 15, 2014; 1:05 PM)\nWeb Hostess Live: The latest from the Web (vForum, May 15, 2014; 12:25 PM)\nMichael Devine outdoor entertaining and design | Home Front (vForum, May 15, 2014; 12:20 PM)\nThe Answer Sheet: Education chat with Valerie Strauss (vForum, May 14, 2014; 2:00 PM)\nThe Reliable Source Live (vForum, May 14, 2014; 1:05 PM)\nAsk Tom: Rants, raves and questions on the DC dining scene (vForum, May 14, 2014; 12:15 PM)\nOn Parenting with Meghan Leahy (vForum, May 14, 2014; 12:10 PM)\nAsk Aaron: The week in politics (vForum, May 13, 2014; 3:05 PM)\nEugene Robinson Live (vForum, May 13, 2014; 2:05 PM)\nTuesdays with Moron: Chatological Humor Update (vForum, May 13, 2014; 12:00 PM)\nComPost Live with Alexandra Petri (vForum, May 13, 2014; 11:05 AM)\nAsk Boswell: Redskins, Nationals and Washington sports (vForum, May 12, 2014; 1:50 PM)\nAdvice from Slate's 'Dear Prudence' (vForum, May 12, 2014; 1:40 PM)\nDr. Gridlock (vForum, May 12, 2014; 1:35 PM)\nSwitchback: Talking Tech (vForum, May 9, 2014; 12:05 PM)\nThe Fix Live (vForum, May 9, 2014; 12:00 PM)\nWhat to Watch: TV chat with Hank Stuever (vForum, May 8, 2014; 1:10 PM)\nMore News\",\"title\":\"The Washington Post\",\"diffbotUri\":\"article|3|828850106\",\"pageUrl\":\"http://www.washingtonpost.com/2011/03/10/ABe7RaQ_moreresults.html\",\"humanLanguage\":\"en\",\"html\":\"<p>In Case You Missed It<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/web-hostess-140515-new.html\\\">Web Hostess Live: The latest from the Web<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 3:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/got-plans-05-15-2014.html\\\">Got Plans: Advice from the Going Out Guide<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 2:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/tv-chat-140515.html\\\">What to Watch: TV chat with Hank Stuever<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 1:10 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/color-of-money-live-20140515.html\\\">Color of Money Live<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 1:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/web-hostess-140515-new.html\\\">Web Hostess Live: The latest from the Web<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 12:25 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/home-front-0515.html\\\">Michael Devine outdoor entertaining and design | Home Front<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 12:20 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/the-answer-sheet-20140514.html\\\">The Answer Sheet: Education chat with Valerie Strauss<\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 2:00 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/the-reliable-source-140514-new.html\\\">The Reliable Source Live<\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 1:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/ask-tom-5-14-14.html\\\">Ask Tom: Rants, raves and questions on the DC dining scene <\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 12:15 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/parenting-0514.html\\\">On Parenting with Meghan Leahy<\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 12:10 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/post-politics-ask-aaron-051313.html\\\">Ask Aaron: The week in politics<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 3:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/opinion-focus-with-eugene-robinson-20140513.html\\\">Eugene Robinson Live<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 2:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/gene-weingarten-140513.html\\\">Tuesdays with Moron: Chatological Humor Update<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 12:00 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/compost-live-140513.html\\\">ComPost Live with Alexandra Petri<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 11:05 AM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/ask-boswell-1400512.html\\\">Ask Boswell: Redskins, Nationals and Washington sports<\\/a>  <\\/p>\n<p>(vForum, May 12, 2014; 1:50 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/dear-prudence-140512.html\\\">Advice from Slate's 'Dear Prudence'<\\/a>  <\\/p>\n<p>(vForum, May 12, 2014; 1:40 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/gridlock-0512.html\\\">Dr. Gridlock <\\/a>  <\\/p>\n<p>(vForum, May 12, 2014; 1:35 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/switchback-20140509.html\\\">Switchback: Talking Tech<\\/a>  <\\/p>\n<p>(vForum, May 9, 2014; 12:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/live-fix-140509.html\\\">The Fix Live<\\/a>  <\\/p>\n<p>(vForum, May 9, 2014; 12:00 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/tv-chat-140508.html\\\">What to Watch: TV chat with Hank Stuever<\\/a>  <\\/p>\n<p>(vForum, May 8, 2014; 1:10 PM)<\\/p>\n<p>  <a href=\\\"http://www.washingtonpost.com/2011/03/10/ /2011/03/10/ABe7RaQ_moreresults.html ?startIndex=20&dwxLoid=\\\">More News <\\/a>  <\\/p>\",\"date\":\"Tue, 13 May 2014 00:00:00 GMT\",\"type\":\"article\"}]}";
 
 	if ( g_repairMode ) { g_errno = EREPAIRING; return true; }
-
-	// shortcut
-	XmlDoc *xd = &m_xd;
 
 	// this will be NULL if the "content" was empty or not given
 	char *content = gr->m_content;
@@ -756,7 +795,7 @@ class ImportState {
 public:
 
 	// available msg7s to use
-	class Msg7 *m_ptrs;
+	class Msg7 **m_ptrs;
 	long   m_numPtrs;
 
 	// collection we are importing INTO
@@ -766,20 +805,17 @@ public:
 	long long m_numOut;
 
 	// bookmarking helpers
-	long m_fileId;
 	long long m_fileOffset;
 	long m_bfFileId;
 	BigFile m_bf;
-	bool m_offIsValid;
 	bool m_loadedPlaceHolder;
+	long long m_bfFileSize;
 
 	class Msg7 *getAvailMsg7();
 
-	void saveFileBookMark ( class Msg7 *msg7 );
+	void saveFileBookMark ( );//class Msg7 *msg7 );
 
-	BigFile *getCurrentTitleFileAndOffset ( CollectionRec *cr , 
-						long long *off , 
-						long minFileId );
+	bool setCurrentTitleFileAndOffset ( );
 
 	ImportState() ;
 	~ImportState() { reset(); }
@@ -794,11 +830,14 @@ ImportState::ImportState () {
 	m_numOut = 0; 
 	m_ptrs = NULL; 
 	m_numPtrs=0;
+	m_bfFileId = -1;
+	m_bfFileSize = -1;
+	m_fileOffset = 0;
 }
 
 void ImportState::reset() {
 	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
-		Msg7 *msg7 = &m_ptrs[i];
+		Msg7 *msg7 = m_ptrs[i];
 		if ( ! msg7 ) continue;
 		msg7->reset();
 		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
@@ -808,17 +847,26 @@ void ImportState::reset() {
 	mfree ( m_ptrs , MAXINJECTSOUT * sizeof(Msg7 *) , "ism7f" );
 	m_ptrs = NULL;
 	m_numPtrs = 0;
-	m_fileId = -1;
 	m_fileOffset = 0LL;
 	m_bfFileId = -2;
-	m_offIsValid = false;
 	m_loadedPlaceHolder = false;
+}
+
+static bool s_tried = false;
+
+// if user clicks on "enable import loop" for a collection we call this
+// from Parms.cpp
+void resetImportLoopFlag () {
+	s_tried = false;
 }
 
 // . call this when gb startsup
 // . scan collections to see if any imports were active
 // . returns false and sets g_errno on failure
 bool resumeImports ( ) {
+
+	if ( s_tried ) return true;
+	s_tried = true;
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
@@ -837,7 +885,7 @@ bool resumeImports ( ) {
 		}
 		mnew ( is, sizeof(ImportState) , "isstate");
 		// assign to cr as well
-		//cr->m_importState = is;
+		cr->m_importState = is;
 		// and collnum
 		is->m_collnum = cr->m_collnum;
 		// resume the import
@@ -849,16 +897,25 @@ bool resumeImports ( ) {
 
 
 
-BigFile *ImportState::getCurrentTitleFileAndOffset ( CollectionRec *cr , 
-						     long long *off , 
-						     long minFileId ) {
-	
-	if ( m_offIsValid ) {
-		*off = m_fileOffset;
-		return &m_bf; 
-	}
+// . sets m_fileOffset and m_bf
+// . returns false and sets g_errno on error
+// . returns false if nothing to read too... but does not set g_errno
+bool ImportState::setCurrentTitleFileAndOffset ( ) {
 
-	m_offIsValid = true;
+	// leave m_bf and m_fileOffset alone if there is more to read
+	if ( m_fileOffset < m_bfFileSize )
+		return true;
+
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) return false;
+
+	log("import: import finding next file");
+	
+	// if ( m_offIsValid ) {
+	// 	//*off = m_fileOffset;
+	// 	return &m_bf; 
+	// }
+	//m_offIsValid = true;
 
 	// look for titledb0001.dat etc. files in the 
 	// workingDir/inject/ subdir
@@ -877,8 +934,14 @@ BigFile *ImportState::getCurrentTitleFileAndOffset ( CollectionRec *cr ,
 	//
 	Dir dir;
 	dir.set(ddd.getBufStart());
+
+	if ( ! dir.open() ) return false;
+
+	// assume none
+	long minFileId = -1;
+
 	// getNextFilename() writes into this
-	char pattern[8]; strcpy ( pattern , "titledb*.dat*" );
+	char pattern[64]; strcpy ( pattern , "titledb*" );
 	char *filename;
 	while ( ( filename = dir.getNextFilename ( pattern ) ) ) {
 		// filename must be a certain length
@@ -888,6 +951,9 @@ BigFile *ImportState::getCurrentTitleFileAndOffset ( CollectionRec *cr ,
 		// ensure filename starts w/ our m_dbname
 		if ( strncmp ( filename , "titledb", 7 ) != 0 )
 			continue;
+		// skip if not .dat file
+		if ( ! strstr ( filename , ".dat" ) )
+			continue;
 		// then a 4 digit number should follow
 		char *s = filename + 7;
 		if ( ! isdigit(*(s+0)) ) continue;
@@ -896,10 +962,11 @@ BigFile *ImportState::getCurrentTitleFileAndOffset ( CollectionRec *cr ,
 		if ( ! isdigit(*(s+3)) ) continue;
 		// convert digit to id
 		long id = atol(s);
-		// do not accept files we've already processed
-		if ( id < minFileId ) continue;
+		// . do not accept files we've already processed
+		// . -1 means we haven't processed any yet
+		if ( m_bfFileId >= 0 && id <= m_bfFileId ) continue;
 		// the min of those we haven't yet processed/injected
-		if ( id < m_fileId ) m_fileId = id;
+		if ( id < minFileId || minFileId < 0 ) minFileId = id;
 	}
 
 	// get where we left off
@@ -915,25 +982,38 @@ BigFile *ImportState::getCurrentTitleFileAndOffset ( CollectionRec *cr ,
 			sscanf ( ff.getBufStart() 
 				 , "%llu,%lu"
 				 , &m_fileOffset
-				 , &m_fileId
+				 , &minFileId
 				 );
 		}
 	}
 
-	// if no files!
-	if ( m_fileId == -1 ) return NULL;
+	// if no files! return false to indicate we are done
+	if ( minFileId == -1 ) return false;
 
 	// set up s_bf then
-	if ( m_bfFileId != m_fileId ) {
-		SafeBuf tmp;
-		tmp.safePrintf("inject/titledb%04li.dat"
-			       ,m_fileId);
-		m_bf.set ( g_hostdb.m_dir, tmp.getBufStart() );
-		m_bfFileId = m_fileId;
+	//if ( m_bfFileId != minFileId ) {
+	SafeBuf tmp;
+	tmp.safePrintf("titledb%04li-000.dat"
+		       //,dir.getDirname()
+		       ,minFileId);
+	m_bf.set ( dir.getDirname() ,tmp.getBufStart() );
+	if ( ! m_bf.open( O_RDONLY ) ) {
+		log("inject: import: could not open %s%s for reading",
+		    dir.getDirname(),tmp.getBufStart());
+		return false;
 	}
+	m_bfFileId = minFileId;
+	// reset ptr into file
+	//*off = 0;
+	// and set this
+	m_bfFileSize = m_bf.getFileSize();
 
-	return &m_bf;
+	m_fileOffset = 0;
+	//}
 
+	log("import: importing from file %s",m_bf.getFilename());
+
+	return true;//&m_bf;
 }
 
 void gotMsg7ReplyWrapper ( void *state ) ;
@@ -950,6 +1030,8 @@ void gotMsg7ReplyWrapper ( void *state ) ;
 // . if none found just return
 // . when msg7 inject competes it calls this
 // . call this from sleep wrapper in Process.cpp
+// . returns false if would block (outstanding injects), true otherwise
+// . sets g_errno on error
 bool ImportState::importLoop ( ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
@@ -969,82 +1051,140 @@ bool ImportState::importLoop ( ) {
 
  INJECTLOOP:
 
+	// stop if waiting on outstanding injects
+	long long out = m_numOut - m_numIn;
+	if ( out >= cr->m_numImportInjects ) {
+		g_errno = 0;
+		return false;
+	}
+	
+
 	// scan each titledb file scanning titledb0001.dat first,
 	// titledb0003.dat second etc.
 
-	long long offset = -1;
-	// when offset is too big for current m_bigFile file then
-	// we go to the next and set offset to 0.
-	BigFile *bf = getCurrentTitleFileAndOffset ( cr , &offset , -1 );
+	//long long offset = -1;
+	// . when offset is too big for current m_bigFile file then
+	//   we go to the next and set offset to 0.
+	// . sets m_bf and m_fileOffset
+	if ( ! setCurrentTitleFileAndOffset ( ) ) {//cr  , -1 );
+		log("import: import: no files to read");
+		//goto INJECTLOOP;
+		return true;
+	}
+
+
 
 	// this is -1 if none remain!
-	if ( offset == -1 ) return true;
+	if ( m_fileOffset == -1 ) {
+		log("import: import fileoffset is -1. done.");
+		return true;
+	}
 
+	long long saved = m_fileOffset;
 
 	Msg7 *msg7;
-	GigablastRequest *gr;
-	SafeBuf sbuf;
+	//GigablastRequest *gr;
+	SafeBuf *sbuf = NULL;
 
 	long need = 12;
 	long dataSize = -1;
 	XmlDoc xd;
+	key128_t tkey;
+	bool status;
+
+
+	if ( m_fileOffset >= m_bfFileSize ) {
+		log("inject: import: done processing file %li %s",
+		    m_bfFileId,m_bf.getFilename());
+		goto nextFile;
+	}
 	
 	// read in title rec key and data size
-	key128_t tkey;
-	long n = bf->read ( &tkey, 12 , m_fileOffset );
+	status = m_bf.read ( &tkey, 12 , m_fileOffset );
 	
-	if ( n != 12 ) goto nextFile;
+	//if ( n != 12 ) goto nextFile;
+	if ( g_errno ) {
+		log("inject: import: reading file error: %s. advancing "
+		    "to next file",mstrerror(g_errno));
+		goto nextFile;
+	}
+
+	m_fileOffset += 12;
+
+	// if negative key, skip
+	if ( (tkey.n0 & 0x01) == 0 ) {
+		goto INJECTLOOP;
+	}
 
 	// if non-negative then read in size
-	if ( tkey.n0 & 0x01 ) {
-		n = bf->read ( &dataSize , 4 , m_fileOffset );
-		if ( n != 4 ) goto nextFile;
-		need += 4;
-		need += dataSize;
-		if ( dataSize < 0 || dataSize > 500000000 ) {
-			log("main: could not scan in titledb rec of "
-			    "corrupt dataSize of %li. BAILING ENTIRE "
-			    "SCAN of file %s",dataSize,bf->getFilename());
-			goto nextFile;
-		}
+	status = m_bf.read ( &dataSize , 4 , m_fileOffset );
+	if ( g_errno ) {
+		log("main: failed to read in title rec "
+		    "file. %s. Skipping file %s",
+		    mstrerror(g_errno),m_bf.getFilename());
+		goto nextFile;
+	}
+	m_fileOffset += 4;
+	need += 4;
+	need += dataSize;
+	if ( dataSize < 0 || dataSize > 500000000 ) {
+		log("main: could not scan in titledb rec of "
+		    "corrupt dataSize of %li. BAILING ENTIRE "
+		    "SCAN of file %s",dataSize,m_bf.getFilename());
+		goto nextFile;
 	}
 
-
-	// point to start of buf
-	sbuf.reset();
-
-	// ensure we have enough room
-	sbuf.reserve ( need );
-
-	// store title key
-	sbuf.safeMemcpy ( &tkey , sizeof(key_t) );
-
-	// then datasize if any. neg rec will have -1 datasize
-	if ( dataSize >= 0 ) 
-		sbuf.pushLong ( dataSize );
-
-	// then read data rec itself into it, compressed titlerec part
-	if ( dataSize > 0 ) {
-		// read in the titlerec after the key/datasize
-		n = bf->read ( sbuf.getBuf() ,
-				dataSize ,
-				m_fileOffset );
-		if ( n != dataSize ) {
-			log("main: failed to read in title rec "
-			    "file. %li != %li. Skipping file %s",
-			    n,dataSize,bf->getFilename());
-			goto nextFile;
-		}
-		// it's good, count it
-		sbuf.m_length += n;
-	}
+	//gr = &msg7->m_gr;
 
 	//XmlDoc *xd = getAvailXmlDoc();
 	msg7 = getAvailMsg7();
 
 	// if none, must have to wait for some to come back to us
-	if ( ! msg7 ) return false;
+	if ( ! msg7 ) {
+		// restore file offset
+		//m_fileOffset = saved;
+		// no, must have been a oom or something
+		log("import: import no msg7 available");
+		return true;//false;
+	}
 	
+	// this is for holding a compressed titlerec
+	sbuf = &msg7->m_sbuf;//&gr->m_sbuf;
+
+	// point to start of buf
+	sbuf->reset();
+
+	// ensure we have enough room
+	sbuf->reserve ( need );
+
+	// store title key
+	sbuf->safeMemcpy ( &tkey , sizeof(key_t) );
+
+	// then datasize if any. neg rec will have -1 datasize
+	if ( dataSize >= 0 ) 
+		sbuf->pushLong ( dataSize );
+
+	// then read data rec itself into it, compressed titlerec part
+	if ( dataSize > 0 ) {
+		// read in the titlerec after the key/datasize
+		status = m_bf.read ( sbuf->getBuf() ,
+				     dataSize ,
+				     m_fileOffset );
+		if ( g_errno ) { // n != dataSize ) {
+			log("main: failed to read in title rec "
+			    "file. %s. Skipping file %s",
+			    mstrerror(g_errno),m_bf.getFilename());
+			// essentially free up this msg7 now
+			msg7->m_inUse = false;
+			msg7->reset();
+			goto nextFile;
+		}
+		// advance
+		m_fileOffset += dataSize;
+		// it's good, count it
+		sbuf->m_length += dataSize;
+	}
+
 	// set xmldoc from the title rec
 	//xd->set ( sbuf.getBufStart() );
 	//xd->m_masterState = NULL;
@@ -1053,10 +1193,8 @@ bool ImportState::importLoop ( ) {
 	// we use this so we know where the doc we are injecting
 	// was in the foregien titledb file. so we can update our bookmark
 	// code.
-	msg7->m_hackFileOff = m_fileOffset;
-	msg7->m_hackFileId  = m_fileId;
-
-	gr = &msg7->m_gr;
+	msg7->m_hackFileOff = saved;//m_fileOffset;
+	msg7->m_hackFileId  = m_bfFileId;
 
 	//
 	// inject a title rec buf this time, we are doing an import
@@ -1065,40 +1203,45 @@ bool ImportState::importLoop ( ) {
 	//gr->m_titleRecBuf = &sbuf;
 
 	// break it down into gw
-	xd.set2 ( sbuf.getBufStart() ,
-		  sbuf.length() , // max size
-		  cr->m_coll, // use our coll
-		  NULL , // pbuf for page parser
-		  1 , // niceness
-		  NULL ); //sreq );
+	// xd.set2 ( sbuf.getBufStart() ,
+	// 	  sbuf.length() , // max size
+	// 	  cr->m_coll, // use our coll
+	// 	  NULL , // pbuf for page parser
+	// 	  1 , // niceness
+	// 	  NULL ); //sreq );
+
+	// // note it
+	// log("import: importing %s",xd.m_firstUrl.getUrl());
 
 	// now we can set gr for the injection
-	gr->m_url = xd.getFirstUrl()->getUrl();
-	gr->m_queryToScrape = NULL;
-	gr->m_contentDelim = 0;
-	gr->m_contentTypeStr = g_contentTypeStrings [xd.m_contentType];
-	gr->m_contentFile = NULL;
-	gr->m_content = xd.ptr_utf8Content;
-	gr->m_diffbotReply = NULL;
-	gr->m_injectLinks = false;
-	gr->m_spiderLinks = true;
-	gr->m_shortReply = false;
-	gr->m_newOnly = false;
-	gr->m_deleteUrl = false;
-	gr->m_recycle = true; // recycle content? or sitelinks?
-	gr->m_dedup = false;
-	gr->m_hasMime = false;
-	gr->m_doConsistencyTesting = false;
-	gr->m_getSections = false;
-	gr->m_gotSections = false;
-	gr->m_charset = xd.m_charset;
-	gr->m_hopCount = xd.m_hopCount;
+	// TODO: inject the whole "sbuf" so we get sitenuminlinks etc
+	// all exactly the same...
+	// gr->m_url = xd.getFirstUrl()->getUrl();
+	// gr->m_queryToScrape = NULL;
+	// gr->m_contentDelim = 0;
+	// gr->m_contentTypeStr = g_contentTypeStrings [xd.m_contentType];
+	// gr->m_contentFile = NULL;
+	// gr->m_content = xd.ptr_utf8Content;
+	// gr->m_diffbotReply = NULL;
+	// gr->m_injectLinks = false;
+	// gr->m_spiderLinks = true;
+	// gr->m_shortReply = false;
+	// gr->m_newOnly = false;
+	// gr->m_deleteUrl = false;
+	// gr->m_recycle = true; // recycle content? or sitelinks?
+	// gr->m_dedup = false;
+	// gr->m_hasMime = false;
+	// gr->m_doConsistencyTesting = false;
+	// gr->m_getSections = false;
+	// gr->m_gotSections = false;
+	// gr->m_charset = xd.m_charset;
+	// gr->m_hopCount = xd.m_hopCount;
 
 
 	//
 	// point to next doc in the titledb file
 	//
-	m_fileOffset += need;
+	//m_fileOffset += need;
 
 
 
@@ -1107,23 +1250,30 @@ bool ImportState::importLoop ( ) {
 	// then index it. master callback will be called
 	//if ( ! xd->index() ) return false;
 	// TODO: make this forward the request to an appropriate host!!
-	if ( msg7->inject ( msg7 , // state
-			    gotMsg7ReplyWrapper ) ) // callback
+	// . gr->m_sbuf is set to the titlerec so this should handle that
+	//   and use XmlDoc::set4() or whatever
+	if ( msg7->injectTitleRec ( msg7 , // state
+				    gotMsg7ReplyWrapper , // callback
+				    cr )) {
 		// it didn't block somehow...
-		m_numIn++;
+		msg7->m_inUse = false;
+		msg7->gotMsg7Reply();
+	}
 
 	goto INJECTLOOP;
 
  nextFile:
 	// invalidate this flag
-	m_offIsValid = false;
-	// and call this function. we add one to m_bfFileId so we
-	// do not re-get the file we just injected.
-	bf = getCurrentTitleFileAndOffset ( cr , &offset , m_bfFileId+1 );
-
-	// still going on? bf should be new and offset should be 0
-	if ( bf )
-		goto INJECTLOOP;
+	//m_offIsValid = false;
+	// . and call this function. we add one to m_bfFileId so we
+	//   do not re-get the file we just injected.
+	// . sets m_bf and m_fileOffset
+	// . returns false if nothing to read
+	if ( ! setCurrentTitleFileAndOffset ( ) ) { //cr , m_bfFileId+1 );
+		log("import: import: no files left to read");
+		//goto INJECTLOOP;
+		return true;
+	}
 
 	// if it returns NULL we are done!
 	log("main: titledb injection loop completed. waiting for "
@@ -1141,22 +1291,36 @@ bool ImportState::importLoop ( ) {
 void gotMsg7ReplyWrapper ( void *state ) {
 
 	Msg7 *msg7 = (Msg7 *)state;
+	msg7->gotMsg7Reply();
 
-	if ( msg7->m_inUse ) { char *xx=NULL;*xx=0; }
-	
 	ImportState *is = msg7->m_importState;
+
+	if ( ! is->importLoop() ) return;
+
+	log("inject: import is done");
+
+	mdelete ( is, sizeof(ImportState) , "impstate");
+	delete (is);
+}
+
+void Msg7::gotMsg7Reply ( ) {
+
+	if ( m_inUse ) { char *xx=NULL;*xx=0; }
+	
+	ImportState *is = m_importState;
 
 	is->m_numIn++;
 
-	log("tdbinject: injected %lli docs",is->m_numIn);
+	log("import: imported %lli docs (off=%lli)",
+	    is->m_numIn,is->m_fileOffset);
 
 	// if we were the least far ahead of scanning the files
 	// then save our position in case server crashes so we can
 	// resume
-	is->saveFileBookMark ( msg7  );
-
-	is->importLoop();
+	//is->saveFileBookMark ( this  );
 }
+
+
 // . return NULL with g_errno set on error
 // . importLoop() calls this to get a msg7 to inject a doc from the foreign
 //   titledb file into our local collection
@@ -1169,10 +1333,12 @@ Msg7 *ImportState::getAvailMsg7 ( ) {
 
 	// each msg7 has an xmldoc doc in it
 	if ( ! m_ptrs ) {
-		m_ptrs = (Msg7 *)mmalloc(sizeof(Msg7)* MAXINJECTSOUT,"sxdp");
+		long max = (long)MAXINJECTSOUT;
+		m_ptrs=(Msg7 **)mcalloc(sizeof(Msg7 *)* max,"sxdp");
 		if ( ! m_ptrs ) return NULL;
-		for ( long i = 0 ; i < MAXINJECTSOUT ;i++ ) 
-			m_ptrs[i].constructor();
+		m_numPtrs = max;//(long)MAXINJECTSOUT;
+		//for ( long i = 0 ; i < MAXINJECTSOUT ;i++ ) 
+		//	m_ptrs[i].constructor();
 	}
 
 	// respect the user limit for this coll
@@ -1183,9 +1349,22 @@ Msg7 *ImportState::getAvailMsg7 ( ) {
 	}
 
 	// find one not in use and return it
-	for ( long i = 0 ; i < (long)MAXINJECTSOUT ; i++ ) {
+	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
 		// point to it
-		Msg7 *m7 = &m_ptrs[i];
+		Msg7 *m7 = m_ptrs[i];
+		// if NULL then init it and use it
+		if ( ! m7 ) {
+			try { m7 = new (Msg7); }
+			catch ( ... ) { 
+				g_errno = ENOMEM;
+				log("PageInject: new(%li): %s", 
+				    (long)sizeof(Msg7),mstrerror(g_errno));
+				return NULL;
+			}
+			mnew ( m7, sizeof(Msg7) , "dmsg7");
+			// assign so we can delete later
+			m_ptrs[i] = m7;
+		}
 		if ( m7->m_inUse ) continue;
 		m7->m_inUse = true;
 		m7->m_importState = this;
@@ -1196,31 +1375,48 @@ Msg7 *ImportState::getAvailMsg7 ( ) {
 	return NULL;
 }
 
+void saveImportStates ( ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		if ( ! cr->m_importEnabled ) continue;
+		cr->m_importState->saveFileBookMark ();
+	}
+}
 
 // "xd" is the XmlDoc that just completed injecting
-void ImportState::saveFileBookMark ( Msg7 *msg7 ) {
+void ImportState::saveFileBookMark ( ) { //Msg7 *msg7 ) {
 
-	long fileId  = msg7->m_hackFileId;
-	long long fileOff = msg7->m_hackFileOff;
+	long long minOff = -1LL;
+	long minFileId = -1;
+
+	//long fileId  = msg7->m_hackFileId;
+	//long long fileOff = msg7->m_hackFileOff;
 
 	// if there is one outstanding the preceeded us, we can't update
 	// the bookmark just yet.
-	for ( long i = 0 ; i < (long)MAXINJECTSOUT ; i++ ) {
-		Msg7 *m7 = &m_ptrs[i];
-		// skip if us
-		if ( m7 == msg7 ) continue;
-		// if not in use it has never launched? or is back...
-		if ( m7 != msg7 && ! msg7->m_inUse ) continue;
-		// return if we are NOT the earliest launched that just 
-		// came back
-		if ( msg7->m_hackFileId < fileId ) return;
-		if ( msg7->m_hackFileId == fileId &&
-		     msg7->m_hackFileOff < fileOff ) return;
+	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
+		Msg7 *m7 = m_ptrs[i];
+		// can be null if never used
+		if ( ! m7 ) continue;
+		if ( ! m7->m_inUse ) continue;
+		if ( minOff == -1 ) {
+			minOff = m7->m_hackFileOff;
+			minFileId = m7->m_hackFileId;
+			continue;
+		}
+		if ( m7->m_hackFileId > minFileId ) 
+			continue;
+		if ( m7->m_hackFileId == minFileId &&
+		     m7->m_hackFileOff > minOff ) 
+			continue;
+		minOff = m7->m_hackFileOff;
+		minFileId = m7->m_hackFileId;
 	}
 
 	char fname[256];
 	sprintf(fname,"%slasttitledbinjectinfo.dat",g_hostdb.m_dir);
 	SafeBuf ff;
-	ff.safePrintf("%llu,%lu",m_fileOffset,m_fileId);
+	ff.safePrintf("%llu,%lu",minOff,minFileId);//_fileOffset,m_bfFileId);
 	ff.save ( fname );
 }

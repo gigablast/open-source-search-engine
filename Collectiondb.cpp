@@ -1960,9 +1960,24 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 
 	char *s = m_urlFiltersProfile.getBufStart();
 
+
+	// support the old UFP_CUSTOM, etc. numeric values
+	if ( !strcmp(s,"0" ) )
+		s = "custom";
+	// UFP_WEB SUPPORT
+	if ( !strcmp(s,"1" ) )
+		s = "web";
+	// UFP_NEWS
+	if ( !strcmp(s,"2" ) )
+		s = "shallow";
+
+
+
 	// leave custom profiles alone
 	if ( !strcmp(s,"custom" ) )
 		rebuild = false;
+
+	
 
 	//if ( m_numRegExs > 0 && strcmp(m_regExs[m_numRegExs-1],"default") )
 	//	addDefault = true;
@@ -1981,7 +1996,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	if ( !strcmp(s,"german") )
 		return rebuildLangRules( "de","de");
 
-	if ( !strcmp(s,"") )
+	if ( !strcmp(s,"french") )
 		return rebuildLangRules( "fr","fr");
 
 	if ( !strcmp(s,"norwegian") )

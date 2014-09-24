@@ -1189,6 +1189,7 @@ class XmlDoc {
 	//char     m_numBannedOutlinksValid;
 	char     m_hopCountValid;
 	char     m_isInjectingValid;
+	char     m_isImportingValid;
 	char     m_metaListCheckSum8Valid;
 	char     m_contentValid;
 	char     m_filteredContentValid;
@@ -1562,6 +1563,7 @@ class XmlDoc {
 	SafeBuf m_myPageLinkInfoBuf;
 	SafeBuf m_myTempLinkInfoBuf;
 	char m_isInjecting;
+	char m_isImporting;
 	char m_useFakeMime;
 	char m_useSiteLinkBuf;
 	char m_usePageLinkBuf;

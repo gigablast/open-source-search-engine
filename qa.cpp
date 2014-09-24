@@ -86,6 +86,8 @@ long qa_hash32 ( char *s ) {
 	return h;
 }
 
+#define MAXFLAGS 50
+
 class QATest {
 public:
 	bool (* m_func)();
@@ -93,7 +95,7 @@ public:
 	char *m_testDesc;
 	char  m_doTest;
 	// we set s_flags to this
-	long  m_flags[50];
+	long  m_flags[MAXFLAGS];
 };
 
 static char *s_content = NULL;
@@ -189,6 +191,7 @@ void processReply ( char *reply , long replyLen ) {
 	markOut ( content , "<currentTimeUTC>" );
 	markOut ( content , "<responseTimeMS>");
 	markOut ( content , "<docsInCollection>");
+	markOut ( content , "<firstIndexedDateUTC>");
 
 	// indexed 1 day ago
 	markOut ( content,"indexed:");
@@ -204,6 +207,9 @@ void processReply ( char *reply , long replyLen ) {
 	// for some reason the term freq seems to change a little in
 	// the scoring table
 	markOut(content,"id=tf");
+
+	// # of collections in the admin page: ..."4 Collections"
+	markOut(content,"px;color:black;\"><center><nobr><b>");
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
@@ -785,6 +791,16 @@ bool qainject2 ( ) {
 			return false;
 	}
 
+	// and this particular url has two spider status records indexed
+	if ( ! s_flags[33] ) {
+		s_flags[33] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q="
+				"url2%3Axyz.com%2F-13737921970569011262&xml=1"
+				,-1405546537 ) )
+			return false;
+	}
+
+
 	//
 	// delete the 'qatest123' collection
 	//
@@ -955,7 +971,7 @@ bool qaspider1 ( ) {
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&"
 			      // make it the custom filter
-			      "ufp=0&"
+			      "ufp=custom&"
 
 	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
 
@@ -1218,7 +1234,7 @@ bool qaspider2 ( ) {
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123&"
 			      // make it the custom filter
-			      "ufp=0&"
+			      "ufp=custom&"
 
 	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
 
@@ -1330,9 +1346,11 @@ bool qaspider2 ( ) {
 
 
 	//static bool s_y6 = false;
+	// 102573507011 docid is 
+	// http://www.ibm.com/smarterplanet/us/en/overview/ideas/
 	if ( ! s_flags[9] ) {
 		s_flags[9] = true;
-		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash3311332088&qlang=xx&c=qatest123&d=9577169402&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?page=4&q=gbfacetstr:gbxpathsitehash3311332088&qlang=xx&c=qatest123&d=102573507011&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1340,7 +1358,7 @@ bool qaspider2 ( ) {
 	//static bool s_y7 = false;
 	if ( ! s_flags[10] ) {
 		s_flags[10] = true;
-		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9577169402&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?xml=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=102573507011&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1348,7 +1366,7 @@ bool qaspider2 ( ) {
 	//static bool s_y8 = false;
 	if ( ! s_flags[11] ) {
 		s_flags[11] = true;
-		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=9577169402&cnsp=0" , 999 ) )
+		if ( ! getUrl ( "/get?json=1&page=4&q=gbfacetstr:gbxpathsitehash2492664135&qlang=xx&c=qatest123&d=102573507011&cnsp=0" , 999 ) )
 			return false;
 	}
 
@@ -1752,7 +1770,7 @@ void resetFlags() {
 	long n = sizeof(s_qatests)/sizeof(QATest);
 	for ( long i = 0 ; i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
-		memset(qt->m_flags,0,4*30);
+		memset(qt->m_flags,0,4*MAXFLAGS);
 	}
 }
 

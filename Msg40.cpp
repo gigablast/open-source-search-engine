@@ -6428,6 +6428,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 					    "gbequalint%%3A%s%%3A%lu",
 					    term,
 					    (long)*fvh);
+		else if ( qt->m_fieldCode == FIELD_GBFACETSTR &&
+			  // in XmlDoc.cpp the gbxpathsitehash123456: terms
+			  // call hashFacets2() separately with val32 
+			  // equal to the section inner hash which is not
+			  // an exact hash of the string using hash32()
+			  // unfortunately, so we can't use gbfieldmatch:
+			  // which is case sensitive etc.
+			  !strncmp(qt->m_term,
+				   "gbfacetstr:gbxpathsitehash",26) )
+			newStuff.safePrintf("prepend="
+					    "gbequalint%%3Agbfacetstr%%3A"
+					    "%s%%3A%lu",
+					    term,
+					    (long)*fvh);
 		else if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {
 			newStuff.safePrintf("prepend="
 					    "gbfieldmatch%%3A%s%%3A%%22"

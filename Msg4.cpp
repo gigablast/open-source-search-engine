@@ -630,6 +630,8 @@ bool Msg4::addMetaList2 ( ) {
 		bool del ;
 		if ( *p & 0x01 ) del = false;
 		else             del = true;
+		// tmp debug
+		//if ( del ) { char *xx=NULL;*xx=0;}
 		// get the key size. a table lookup in Rdb.cpp.
 		long ks ;
 		if      ( rdbId == RDB_POSDB || rdbId == RDB2_POSDB2) ks = 18;

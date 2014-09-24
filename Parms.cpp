@@ -6709,7 +6709,8 @@ void Parms::init ( ) {
 	m->m_title = "language weight";
 	m->m_desc  = "Defalt language weight if document matches quer "
 		"language. Use this to give results that match the specified "
-		"the speicified &qlang higher ranking. Can be override with "
+		"the speicified &qlang higher ranking, or docs whose language "
+		"is unnknown. Can be override with "
 		"&langw in the query url.";
 	m->m_cgi   = "langweight";
 	m->m_off   = (char *)&cr.m_sameLangWeight - x;
@@ -6763,7 +6764,8 @@ void Parms::init ( ) {
 		"for this collection. The default language weight can be "
 		"set in the search controls and is usually something like "
 		"20.0. Which means that we multiply a result's score by 20 "
-		"if from the same language as the query.";
+		"if from the same language as the query or the language is "
+		"unknown.";
 	m->m_off   = (char *)&si.m_sameLangWeight - y;
 	m->m_defOff= (char *)&cr.m_sameLangWeight - x;
 	m->m_type  = TYPE_FLOAT;
@@ -17247,7 +17249,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "mit";
 	m->m_off   = (char *)&cr.m_makeImageThumbnails - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	// default to off since it slows things down to do this
+	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -21214,6 +21217,8 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 	return true;
 }	
 
+void resetImportLoopFlag () ;
+
 // . this adds the key if not a cmd key to parmdb rdbtree
 // . this executes cmds
 // . this updates the CollectionRec which may disappear later and be fully
@@ -21408,6 +21413,10 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	    val2.getBufStart());
 
 	if ( cr ) cr->m_needsSave = true;
+
+	// HACK #2
+	if ( base == cr && dst == (char *)&cr->m_importEnabled )
+		resetImportLoopFlag();
 
 	//
 	// HACK

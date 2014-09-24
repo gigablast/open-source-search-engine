@@ -5,6 +5,9 @@ bool sendPageInject ( class TcpSocket *s, class HttpRequest *hr );
 
 bool resumeImports ( ) ;
 
+// called by Process.cpp
+void saveImportStates ( ) ;
+
 #include "XmlDoc.h"
 #include "Users.h"
 #include "Parms.h" // GigablastRequest
@@ -28,6 +31,8 @@ public:
 	char m_useAhrefs;
 	HashTableX m_linkDedupTable;
 
+	SafeBuf m_sbuf; // for holding entire titlerec for importing
+
 	void *m_state;
 	void (* m_callback )(void *state);
 
@@ -38,7 +43,7 @@ public:
 
 	class ImportState *m_importState;
 
-	void constructor();
+	//void constructor();
 	Msg7 ();
 	~Msg7 ();
 	bool m_inUse;
@@ -56,6 +61,13 @@ public:
 
 	bool inject ( void *state ,
 		      void (*callback)(void *state) );
+
+
+	bool injectTitleRec ( void *state ,
+			      void (*callback)(void *state) ,
+			      class CollectionRec *cr );
+
+	void gotMsg7Reply ();
 
 };
 
