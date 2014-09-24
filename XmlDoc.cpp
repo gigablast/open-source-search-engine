@@ -186,6 +186,8 @@ XmlDoc::~XmlDoc() {
 static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
+
+	m_isImporting = false;
 	
 	m_printedMenu = false;
 
@@ -22430,6 +22432,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     // if we were set from a titleRec, see if we got
 		     // a different hash of terms to index this time around...
 		     m_setFromTitleRec &&
+		     // fix for import log spam
+		     ! m_isImporting &&
 		     m_version >= 120 &&
 		     m_metaListCheckSum8 != currentMetaListCheckSum8 )
 			log("xmldoc: checksum parsing inconsistency for %s",

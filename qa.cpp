@@ -824,6 +824,94 @@ bool qainject2 ( ) {
 	return true;
 }
 
+bool qaimport () {
+
+	//if ( ! s_callback ) s_callback = qainject1;
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// turn spiders off so it doesn't spider while we are importing
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// set the import dir and # inject threads
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/import?c=qatest123&importdir=%2Fhome%2Fmwells%2Ftesting%2Fimport%2F&numimportinjects=3&import=1&action=submit",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// wait for importloop to "kick in" so it can set cr->m_importState
+	if ( ! s_flags[3] ) {
+	 	wait(1.0);
+	 	s_flags[3] = true;
+	 	return false;
+	}
+
+	// import must be done!
+	if ( ! s_flags[19] ) {
+		CollectionRec *cr = g_collectiondb.getRec("qatest123");
+		// if still importing this will be non-null
+		if ( cr->m_importState ) {
+			wait(1.0);
+			return false;
+		}
+		// all done then
+		s_flags[19] = true;
+	}
+
+	// test query
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
+				"&dsrt=500",
+				702467314 ) )
+			return false;
+	}
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED DATA "
+		    "IMPORT TEST");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
+
+	return true;
+}
+
 /*
 static char *s_urls1 =
 	" walmart.com"
@@ -1760,9 +1848,13 @@ static QATest s_qatests[] = {
 	 "Scrape and inject results from google and bing."},
 
 	{qajson,
-	 "jsontest",
+	 "jsonTest",
 	 "Add Url some JSON pages and test json-ish queries. Test facets over "
-	 "json docs."}
+	 "json docs."},
+
+	{qaimport,
+	 "importDataTest",
+	 "Test data import functionality."}
 
 };
 
@@ -2014,5 +2106,3 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 
 	return true;
 }
-
-
