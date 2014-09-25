@@ -119,6 +119,7 @@ XmlDoc::XmlDoc() {
 	m_rootDoc    = NULL;
 	m_oldDoc     = NULL;
 	m_dx = NULL;
+	m_printedMenu = false;
 	// reset all *valid* flags to false
 	void *p    = &m_VALIDSTART;
 	void *pend = &m_VALIDEND;
@@ -186,6 +187,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 	
+	m_printedMenu = false;
+
 	// for hashing CT_STATUS docs consistently, this might be invalid
 	// so call it 0
 	m_pubDate = 0;
@@ -1730,6 +1733,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_redirError      = 0;
 	m_redirErrorValid = true;
 
+	// stop core when importing and calling getNewSpiderReply()
+	m_downloadEndTime = m_spideredTime;
+	m_downloadEndTimeValid = true;
+
 	// make a copy for new tag rec too, this one we modify
 	//memcpy ( &m_newTagRec     , ptr_tagRecData , size_tagRecData );
 
@@ -2167,6 +2174,28 @@ bool XmlDoc::indexDoc ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
 
+	if ( ! m_masterLoop ) {
+		m_masterLoop  = indexDocWrapper;
+		m_masterState = this;
+	}
+
+	// do not index if already indexed and we are importing
+	// from the code in PageInject.cpp from a foreign titledb file
+	if ( m_isImporting && m_isImportingValid ) {
+		char *isIndexed = getIsIndexed();
+		if ( ! isIndexed ) {
+			log("import: import had error: %s",mstrerror(g_errno));
+			return true;
+		}
+		if ( isIndexed == (char *)-1) 
+			return false;
+		if ( *isIndexed ) {
+			log("import: skipping import for %s. already indexed.",
+			    m_firstUrl.getUrl());
+			return true;
+		}
+	}
+		
 	// . even if not using diffbot, keep track of these counts
 	// . even if we had something like EFAKEFIRSTIP, OOM, or whatever
 	//   it was an attempt we made to crawl this url
@@ -15847,6 +15876,23 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		return &m_canonicalRedirUrlPtr;
 	}
 
+	// are we site root page? don't follow canonical url then.
+	char *isRoot = getIsSiteRoot();
+	if ( ! isRoot || isRoot == (char *)-1 ) return (Url **)isRoot;
+	if ( *isRoot ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
+	// if this page has an inlink, then let it stand
+	LinkInfo  *info1 = getLinkInfo1 ();
+	if ( ! info1 || info1 == (LinkInfo *)-1 ) return (Url **)info1;
+	if ( info1->getNumGoodInlinks() > 0 ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
+
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
 
@@ -20210,7 +20256,9 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 	if ( ! cr ) return true;
 
 	// do not do this if not test collection for now
-	if ( ! strcmp(cr->m_coll,"qatest123") ) return true;
+	if ( strcmp(cr->m_coll,"qatest123") ) return true;
+	
+	log("xmldoc: VERIFYING METALIST");
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
@@ -20231,8 +20279,10 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		// must always be negative if deleteing
 		// spiderdb is exempt because we add a spiderreply that is
 		// positive and a spiderdoc
-		if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
-			char *xx=NULL;*xx=0; }
+		// no, this is no longer the case because we add spider
+		// replies to the index when deleting or rejecting a doc.
+		//if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
+		//	char *xx=NULL;*xx=0; }
 		// get the key size. a table lookup in Rdb.cpp.
 		long ks ;
 		if      ( rdbId == RDB_POSDB || rdbId == RDB2_POSDB2 ) {
@@ -25610,7 +25660,8 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	// use the prefix as the description if description is NULL
 	hi.m_prefix = "gbsitetemplate";
-	if ( ! hashString ( buf,blen,&hi ) ) return false;
+	//if ( ! hashString ( buf,blen,&hi ) ) return false;
+	if ( ! hashSingleTerm ( buf,blen,&hi ) ) return false;
 	
 
 	setStatus ( "hashing no-split gbimage keys" );
@@ -29805,6 +29856,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		blen = 0;
 	}
 
+	// verify for rss as well. seems like we end up coring because
+	// length/size is not in cahoots and [size-1] != '\0' sometimes
+	if ( ! verifyUtf8 ( rssItem , rssItemLen ) ) {
+		log("xmldoc: bad RSS ITEM text from url=%s for %s",
+		    m_req->ptr_linkee,m_firstUrl.m_url);
+		rssItem[0] = '\0';
+		rssItemLen = 0;
+	}
 
 	// point to it, include the \0.
 	if ( blen > 0 ) {
@@ -29886,6 +29945,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// breathe
 	QUICKPOLL(m_niceness);
 
+	// sanity check
+	if ( reply->ptr_rssItem && 
+	     reply->size_rssItem>0 && 
+	     reply->ptr_rssItem[reply->size_rssItem-1]!=0) {
+		char *xx=NULL;*xx=0; }
+
 
 	//log ("nogl=%li",(long)m_req->m_onlyNeedGoodInlinks );
 
@@ -29893,12 +29958,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . we get the title above in "getThatTitle"
 	if ( reply->m_isLinkSpam ) { 
 		m_replyValid = true; return reply; }
-
-	// sanity check
-	if ( reply->ptr_rssItem && 
-	     reply->size_rssItem>0 && 
-	     reply->ptr_rssItem[reply->size_rssItem-1]!=0) {
-		char *xx=NULL;*xx=0; }
 
 	// . this vector is set from a sample of the entire doc
 	// . it is used to dedup voters in Msg25.cpp
@@ -34416,12 +34475,18 @@ static void printDocForProCogWrapper ( void *state ) {
 	else                     THIS->m_callback2 ( THIS->m_state );
 }
 
+// in PageRoot.cpp
+bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr ,
+			   bool printGigablast );
 
 // . returns false if blocked, true otherwise
 // . sets g_errno and returns true on error
 bool XmlDoc::printDocForProCog ( SafeBuf *sb , HttpRequest *hr ) {
 
 	if ( ! sb ) return true;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
 
 	m_masterLoop = printDocForProCogWrapper;
 	m_masterState = this;
@@ -34437,6 +34502,15 @@ bool XmlDoc::printDocForProCog ( SafeBuf *sb , HttpRequest *hr ) {
 
 
 	long page = hr->getLong("page",1);
+
+
+	// for some reason sections page blocks forever in browser
+	if ( page != 7 && ! m_printedMenu ) { // && page != 5 )
+		printFrontPageShell ( sb , "search" , cr , false );
+		m_printedMenu = true;
+		//printMenu ( sb );
+	}
+
 
 	if ( page == 1 )
 		return printGeneralInfo(sb,hr);
@@ -34720,7 +34794,7 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td>total inlinks to page"
 			"</td><td>%li</td></tr>\n"
 
-			"<tr><td>page inlinks last computed</td>"
+			"<tr><td><nobr>page inlinks last computed</nobr></td>"
 			"<td>%s</td></tr>\n"
 			"</td></tr>\n",
 			get_charset_str(m_charset),
@@ -35321,7 +35395,7 @@ bool XmlDoc::printTermList ( SafeBuf *sb , HttpRequest *hr ) {
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
 	if ( ! isXml ) {
-		printMenu ( sb );
+		//printMenu ( sb );
 		//sb->safePrintf("<i>* indicates word is a synonym or "
 		//	       "alternative word form<br><br>");
 		sb->safePrintf("N column = DensityRank (0-%li)<br>"

@@ -289,13 +289,15 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		char *cs = ""; if ( cr ) cs = cr->m_coll;
 		// sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
 		// 	       cs,(long)collnum);
-		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
-			       cs,cs);
+		//sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
+		//	       cs,cs);
+		sb->safePrintf(" <td><a href=/search?q=url%%3A%s>%s</a>"
+			       "</td>\n",m_url,cs);
 	}
 
-	sb->safePrintf(" <td><nobr>");
+	sb->safePrintf(" <td><a href=%s><nobr>",m_url);
 	sb->safeTruncateEllipsis ( m_url , 64 );
-	sb->safePrintf("</nobr></td>\n");
+	sb->safePrintf("</nobr></a></td>\n");
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);
@@ -6001,6 +6003,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	     m_sc->m_msg5StartKey != m_sc->m_nextDoledbKey )
 		log("spider: msg5startKey differs from nextdoledbkey");
 
+	// seems like we need this reset here... strange
+	m_list.reset();
+
 	// get a spider rec for us to spider from doledb (mdw)
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
 				cr->m_collnum, // coll            ,
@@ -6301,7 +6306,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	long sameIpWaitTime = 5000; // 250; // ms
 	long maxSpidersOutPerIp = 1;
 	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
-		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
+		if ( cr->m_spiderPriorities[i] != pri ) continue;
 		//if ( ! cr->m_spidersEnabled[i] ) continue;
 		if ( cr->m_maxSpidersPerRule[i] > max )
 			max = cr->m_maxSpidersPerRule[i];

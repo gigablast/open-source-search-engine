@@ -12,6 +12,8 @@
 #include "HttpRequest.h"
 //#include "Msg28.h"
 
+#include "PageInject.h" // resumeImports() function
+
 class Process {
 
  public:

@@ -53,6 +53,10 @@ class HashTableX {
 	// how many keys are dups
 	long getNumDups();
 
+	// if in a thread to dont allow it to grow
+	void setNonGrow() { m_allowGrowth = false; }
+	bool m_allowGrowth;
+
 	bool addFloat ( long *wid , float score ) {
 		long slot = getSlot ( wid );
                 if ( slot<0 ) return addKey( wid ,&score,&slot);

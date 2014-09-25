@@ -266,7 +266,11 @@ time_t atotime1 ( char *s ) {
 	time_t global = timegm ( &t );
 
 	// skip HH:MM:SS
-	while ( ! isspace (*s) ) s++;	
+	while ( *s && ! isspace (*s) ) s++;	
+
+	// no timezone following??? fix core.
+	if ( ! *s ) return global;
+
 	// skip spaces
 	while ( isspace (*s) ) s++;
 	// convert local time to "utc" or whatever timezone "s" points to,

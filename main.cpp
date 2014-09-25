@@ -10,7 +10,7 @@
 // maybe we should put this in a common header file so we don't have 
 // certain files compiled with the platform default, and some not -partap
 
-//#include "GBVersion.h"
+#include "Version.h" // getVersion()
 #include "Mem.h"
 #include "Conf.h"
 #include "Threads.h"
@@ -290,35 +290,36 @@ UdpProtocol g_dp; // Default Proto
 // installFlag konstants 
 typedef enum {
 	ifk_install = 1,
-	ifk_start = 2,
-	ifk_installgb = 3,
-	ifk_installconf = 4,
-	ifk_gendbs = 10,
-	ifk_fixtfndb = 11,
-	ifk_gentfndb = 12,
-	ifk_installcat = 13,
-	ifk_installnewcat = 14,
-	ifk_genclusterdb = 15,
-	ifk_distributeC = 16,
-	ifk_installgb2 = 17,
-	ifk_dsh = 18,
-	ifk_dsh2 = 19,
-	ifk_backupcopy = 20,
-	ifk_backupmove = 21,
-	ifk_backuprestore = 22,
-	ifk_proxy_start = 23,
-	ifk_installconf2 = 24,
-	ifk_installcat2 = 25,
-	ifk_kstart = 26,
-	ifk_installnewcat2 = 27,
-	ifk_dumpmissing = 30,
-	ifk_removedocids = 31,
-	ifk_dumpdups = 32,
-	//ifk_install2 = 33,
-	ifk_tmpstart = 41,
-	ifk_installtmpgb = 42,
-	ifk_proxy_kstart = 43,
-	ifk_start2 = 222	
+	ifk_start ,
+	ifk_installgb ,
+	ifk_installgbrcp ,
+	ifk_installconf ,
+	ifk_gendbs ,
+	ifk_fixtfndb ,
+	ifk_gentfndb ,
+	ifk_installcat,
+	ifk_installnewcat,
+	ifk_genclusterdb ,
+	ifk_distributeC ,
+	ifk_installgb2 ,
+	ifk_dsh ,
+	ifk_dsh2 ,
+	ifk_backupcopy ,
+	ifk_backupmove ,
+	ifk_backuprestore ,
+	ifk_proxy_start ,
+	ifk_installconf2 ,
+	ifk_installcat2 ,
+	ifk_kstart ,
+	ifk_installnewcat2 ,
+	ifk_dumpmissing ,
+	ifk_removedocids ,
+	ifk_dumpdups ,
+	//ifk_install2,
+	ifk_tmpstart ,
+	ifk_installtmpgb ,
+	ifk_proxy_kstart ,
+	ifk_start2 	
 } install_flag_konst_t;
 
 int install ( install_flag_konst_t installFlag , long hostId , 
@@ -578,6 +579,10 @@ int main2 ( int argc , char *argv[] ) {
 
 			"installgb [hostId]\n"
 			"\tlike above, but install just the gb executable.\n\n"
+
+			"installgbrcp [hostId]\n"
+			"\tlike above, but install just the gb executable "
+			"and using rcp.\n\n"
 
 			/*
 			"installgb2 [hostId]\n"
@@ -992,7 +997,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
-		fprintf(stdout,"Gigablast March-2014\n");
+		fprintf(stdout,"Gigablast Version: %s\n",getVersion());
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -1534,9 +1539,6 @@ int main2 ( int argc , char *argv[] ) {
 	*/
 
 
-	// log the version
-	//log(LOG_INIT,"conf: Gigablast Server %s",GBVersion);
-
 	//Put this here so that now we can log messages
   	if ( strcmp ( cmd , "proxy" ) == 0 ) {
 		if (argc < 3){
@@ -1990,6 +1992,13 @@ int main2 ( int argc , char *argv[] ) {
 		long hostId = -1;
 		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
 		return install ( ifk_installgb , hostId );
+	}
+	// gb installgbrcp
+	if ( strcmp ( cmd , "installgbrcp" ) == 0 ) {	
+		// get hostId to install TO (-1 means all)
+		long hostId = -1;
+		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
+		return install ( ifk_installgbrcp , hostId );
 	}
 	// gb installgb
 	if ( strcmp ( cmd , "installgb2" ) == 0 ) {	
@@ -2996,6 +3005,9 @@ int main2 ( int argc , char *argv[] ) {
 	//	log("db: Threads init failed." ); return 1; }
 
 	g_log.m_logTimestamps = true;
+
+	// log the version
+	log(LOG_INIT,"conf: Gigablast Version: %s",getVersion());
 
 	// show current working dir
 	log("host: Working directory is %s",workingDir);
@@ -4593,20 +4605,34 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 	long maxOut = 6;
 
-	// this is a big rcp so only do one at a time...
+	// this is a big scp so only do two at a time...
 	if  ( installFlag == ifk_install ) maxOut = 1;
+
+	// same with this. takes too long on gk144, jams up
+	if  ( installFlag == ifk_installgb ) maxOut = 4;
+
+	if  ( installFlag == ifk_installgbrcp ) maxOut = 4;
+
+	//long maxOutPerIp = 6;
 
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
 
-		// if host ip is like the 10th occurence then do
-		// not do ampersand
-		iptab.addScore((long *)&h2->m_ip);
-		long score = iptab.getScore32(&h2->m_ip);
-		char *amp = " &";
-		if ( (score % maxOut) == 0 ) amp = "";
+		char *amp = " ";
+
+		// if i is NOT multiple of maxOut then use '&'
+		// even if all all different machines (IPs) scp chokes and so
+		// does rcp a little. so restrict to maxOut at a time.
+		if ( (i+1) % maxOut ) amp = "&";
 			
+
+		// if host ip is like the 10th occurence then do
+		// not do ampersand. this is for hosts on the same IP.
+		//long score = iptab.getScore32(&h2->m_ip);
+		//if ( (score % maxOutPerIp) ) amp = "&";
+		//iptab.addScore((long *)&h2->m_ip);
+
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
 		if ( hostId >= 0 && hostId2 == -1 ) {
@@ -4825,7 +4851,28 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp "
+				"scp -c blowfish " // blowfish is faster
+				"%s%s "
+				"%s:%s/gb.installed%s",
+				dir,
+				target,
+				iptoa(h2->m_ip),
+				h2->m_dir,
+				amp);
+			log(LOG_INIT,"admin: %s", tmp);
+			system ( tmp );
+		}
+		else if ( installFlag == ifk_installgbrcp ) {
+			// don't copy to ourselves
+			//if ( h2->m_hostId == h->m_hostId ) continue;
+
+			File f;
+			char *target = "gb.new";
+			f.set(g_hostdb.m_myHost->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
+			sprintf(tmp,
+				"rcp "
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -17371,163 +17418,3 @@ int copyFiles ( char *dstDir ) {
 	system ( tmp.getBufStart() );
 	return 0;
 }
-
-/*
-
-/////
-//
-// . injecting titledb files into your collection
-// . just put the titledb*.dat files into the ./inject/ subdir off your
-//   working dir and gb will automatically inject them into the main
-//   collection.
-//
-/////
-
-#deinfe MAXINJECTSOUT 10
-
-// return NULL with g_errno set on error
-XmlDoc *getAvailXmlDoc ( ) {
-	static XmlDoc *s_xmlDocPtr = NULL;
-	if ( ! s_xmlDocPtr ) {
-		s_xmlDocPtr = mmalloc ( sizeof(XmlDoc) * MAXINJECTSOUT,"sxdp");
-		if ( ! s_xmlDocPtr ) return NULL;
-		for ( long i = 0 ; i < (long)MAXINJECTSOUT ; i++ )
-			s_xmlDocPtr[i].constructor();
-	}
-	// find one not in use and return it
-	for ( long i = 0 ; i < (long)MAXINJECTSOUT ; i++ )
-		if ( ! s_xmlDocPtr[i].m_inUse ) return &s_xmlDocPtr[i];
-	// none avail
-	g_errno = 0;
-	return NULL;
-}
-
-BigFile *getCurrentTitleFileAndOffset ( long long *off ) {
-
-	static long s_fileId = -1;
-	static long long s_fileOffset = 0LL;
-
-	// look for titledb0001.dat etc. files in the workingDir/inject/ dir
-	SafeBuf ddd;
-	ddd.safePrintf("%sinject",g_hostdb.m_workingDir);
-
-	// assume we are the first filename
-	Dir d;
-	d.set(ddd.getBufStart());
-	char *s = getNextFile("titledb*.dat");
-	long id ; sscanf ( s , "titledb%li.",&s_fileId);
-	if ( s && id < s_fileId ) s_fileId = id;
-
-	// get where we left off
-	static bool s_loadedPlaceHolder = false;
-	if ( ! s_loadedPlaceHolder ) {
-		// read where we left off from file if possible
-		char fname[256];
-		sprintf(fname,"./lasttitledbinjectinfo.dat");
-		SafeBuf ff;
-		ff.fillFromFile(fname);
-		if ( ff.length() < 1 ) goto noplaceholder;
-		// get the placeholder
-		sscanf ( ff.getBufStart() 
-			 , "%llu,%lu"
-			 , &s_fileOffset
-			 , &s_fileId
-			 );
-	}
-}
-
-// search for files named titledb*.dat
-// if none found just return
-bool titledbInjectLoop ( ) {
-
- INJECTLOOP:
-
-	// scan each titledb file scanning titledb0001.dat first,
-	// titledb0003.dat second etc.
-
-	long long offset = -1;
-	// when offset is too big for current s_bigFile file then
-	// we go to the next and set offset to 0.
-	BigFile *bf = getCurrentTitleFileAndOffset ( &offset );
-
-	// this is -1 if none remain!
-	if ( offset == -1 ) return true;
-
-
-	long need = 12;
-	long dataSize = -1;
-	
-	// read in title rec key and data size
-	long n = bf->read ( &tkey, 12 , s_fileOffset );
-	
-	if ( n != 12 ) goto nextFile;
-
-	// if non-negative then read in size
-	if ( tkey.n0 & 0x01 ) {
-		n = bf->read ( &dataSize , 4 , s_fileOffset );
-		if ( n != 4 ) goto nextFile;
-		need += 4;
-		need += dataSize;
-		if ( dataSize < 0 || dataSize > 500000000 ) {
-			log("main: could not scan in titledb rec of "
-			    "corrupt dataSize of %li. BAILING ENTIRE "
-			    "SCAN of file %s",s_titFilename);
-			goto nextFile;
-		}
-	}
-
-	// point to start of buf
-	sbuf.reset();
-
-	// ensure we have enough room
-	sbuf.reserve ( need );
-
-	// store title key
-	sbuf.safeMemcpy ( &tkey , sizeof(key_t) );
-
-	// then datasize if any. neg rec will have -1 datasize
-	if ( dataSize >= 0 ) 
-		sbuf.pushLong ( dataSize );
-
-	// then read data rec itself into it, compressed titlerec part
-	if ( dataSize > 0 ) {
-		// read in the titlerec after the key/datasize
-		n = bf->read ( sbuf.m_buf + sbuf.m_length ,
-				dataSize ,
-				s_fileOffset );
-		if ( n != dataSize ) {
-			log("main: failed to read in title rec "
-			    "file. %li != %li. Skipping file %s",
-			    n,dataSize,s_titFilename);
-			goto nextFile;
-		}
-		// it's good, count it
-		sbuf.m_length += n;
-	}
-
-	//
-	// point to next doc in the titledb file
-	//
-	s_fileOff += need;
-
-
-	XmlDoc *xd = getAvailXmlDoc();
-
-	// if none, must have to wait for some to come back to us
-	if ( ! xd ) return false;
-		
-	// set xmldoc from the title rec
-	s_xmlDocPtr->set ( sbuf.getBufStart() );
-	s_xmlDocPtr->m_masterState = NULL;
-	s_xmlDocPtr->m_masterCallback ( titledbInjectLoop );
-
-	// then index it. master callback will be called
-	if ( ! s_xmlDocPtr->index() ) return false;
-
-	// it didn't block somehow...
-	goto INJECTLOOP;
-
-	// dummy return
-	return true;
-}
-*/

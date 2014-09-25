@@ -18,14 +18,14 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) ;
 // in Collectiondb.cpp's CollectionRec::setUrlFiltersToDefaults(). 
 // for instance, UFP_NEWS spiders sites more frequently but less deep in
 // order to get "news" pages and articles
-enum {
-	UFP_CUSTOM = 0 ,
-	UFP_NONE   = 0 ,
-	UFP_WEB    = 1 ,
-	UFP_NEWS   = 2 ,
-	UFP_CHINESE = 3,
-	UFP_SHALLOW = 4
-};
+//enum {
+//	UFP_CUSTOM = 0 ,
+//	UFP_NONE   = 0 ,
+//	UFP_WEB    = 1 ,
+//	UFP_NEWS   = 2 ,
+//	UFP_LANG = 3,
+//	UFP_SHALLOW = 4
+//};
 
 // special priorities for the priority drop down 
 // in the url filters table
@@ -140,6 +140,16 @@ class GigablastRequest {
 	char  m_gotSections;
 	long  m_charset;
 	long  m_hopCount;
+
+
+	///////////
+	//
+	// /admin/import parms
+	//
+	///////////
+	char *m_importDir; // TYPE_CHARPTR
+	long  m_importInjects;
+
 
 	///////////
 	//

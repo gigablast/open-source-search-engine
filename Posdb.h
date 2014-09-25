@@ -95,7 +95,7 @@ float getTermFreqWeight  ( long long termFreq , long long numDocsInColl );
 #define WIKI_WEIGHT    0.10 // was 0.20
 #define SITERANKDIVISOR 3.0
 #define SITERANKMULTIPLIER 0.33333333
-#define SAMELANGMULT    20.0 // FOREIGNLANGDIVISOR  2.0
+//#define SAMELANGMULT    20.0 // FOREIGNLANGDIVISOR  2.0
 
 #define POSDBKEY key144_t
 

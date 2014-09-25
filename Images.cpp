@@ -129,10 +129,14 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 		if ( iu.getDomainLen() <= 0 ) goto ogimgloop;
 		// for looking it up on disk to see if unique or not
 		char buf[2000];
-		snprintf ( buf , 1999, "gbimage:%s",iu.getUrl());
+		// if we don't put in quotes it expands '|' into
+		// the "PiiPe" operator in Query.cpp
+		snprintf ( buf , 1999, "gbimage:\"%s\"",iu.getUrl());
 		// TODO: make sure this is a no-split termid storage thingy
 		// in Msg14.cpp
 		if ( ! q.set2 ( buf , langUnknown , false ) ) return;
+		// sanity test
+		if ( q.getNumTerms() != 1 ) { char *xx=0;*xx=0; }
 		// store the termid
 		m_termIds[m_numImages] = q.getTermId(0);
 		// advance the counter
@@ -256,7 +260,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 
 		// if we do have 10 or more, then we lookup the image url to
 		// make sure it is indeed unique
-		sprintf ( buf , "gbimage:%s",u);
+		sprintf ( buf , "gbimage:\"%s\"",u);
 		// TODO: make sure this is a no-split termid storage thingy
 		// in Msg14.cpp
 		if ( ! q.set2 ( buf , langUnknown , false ) )
@@ -355,6 +359,9 @@ bool Images::getThumbnail ( char *pageSite ,
 	// get shard of that (this termlist is sharded by termid -
 	// see XmlDoc.cpp::hashNoSplit() where it hashes gbsitetemplate: term)
 	long shardNum = g_hostdb.getShardNumByTermId ( &startKey );
+
+	if ( g_conf.m_logDebugImage )
+		log("image: image checking %s list on shard %li",buf,shardNum);
 
 	// if ( ! m_msg36.getTermFreq ( m_collnum               ,
 	// 			     0                  , // maxAge
@@ -457,7 +464,18 @@ bool Images::launchRequests ( ) {
 		// no split is true for this one, so we do not split by docid
 		//uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
 		unsigned long shardNum;
-		shardNum = getShardNum(RDB_POSDB,&startKey);
+		//shardNum = getShardNum(RDB_POSDB,&startKey);
+		//uint32_t getShardNum (char rdbId, void *key );
+		//uint32_t getShardNumFromDocId ( long long d ) ;
+		// assume to be for posdb here
+		shardNum = g_hostdb.getShardNumByTermId ( &startKey );
+
+		// debug msg
+		if ( g_conf.m_logDebugImage )
+			log("image: image checking shardnum %li (termid0=%llu)"
+			    " for image url #%li",
+			    shardNum ,m_termIds[i],i);
+
 		// get the termlist
 		if ( ! m_msg0.getList ( -1    , // hostid
 					-1    , // ip
@@ -522,6 +540,8 @@ void Images::gotTermList ( ) {
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRecord() ) {
 		// get the first rec
 		long long d = m_list.getCurrentDocId();
+		// note it
+		//log("dup: image is dupped");
 		// is it us? if so ignore it
 		if ( d == m_docId ) continue;
 		// crap, i guess our image url is not unique. mark it off.
@@ -966,7 +986,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	// rather than a pipe, since popen() seems broken.
 	// m_dir ends in / so this should work.
 	char in[364];
-	snprintf ( in , 363,"%strashin.%li", g_hostdb.m_dir, id );
+	snprintf ( in , 363,"%strash/in.%li", g_hostdb.m_dir, id );
 	unlink ( in );
 
 	log( LOG_DEBUG, "image: thumbStart_r create in file." );
@@ -974,7 +994,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	// collect the output from the filter from this file
 	// m_dir ends in / so this should work.
 	char out[364];
-	snprintf ( out , 363,"%strashout.%li", g_hostdb.m_dir, id );
+	snprintf ( out , 363,"%strash/out.%li", g_hostdb.m_dir, id );
         unlink ( out );
 
 	log( LOG_DEBUG, "image: thumbStart_r create out file." );
@@ -1104,7 +1124,8 @@ void Images::thumbStart_r ( bool amThread ) {
         if( (fhndl = open( out, O_RDONLY )) < 0 ) {
                log( "image: Could not open file, %s, for reading: %s.",
 		    out, mstrerror( m_errno ) );
-	       m_stopDownloading = true;
+		unlink ( out );
+		m_stopDownloading = true;
 	       return;
         }
 
@@ -1113,6 +1134,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		     out, m_thumbnailSize );
 		m_stopDownloading = true;
 		close(fhndl);
+		unlink ( out );
 		return;
 	}
 
@@ -1124,6 +1146,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		log(LOG_DEBUG,"image: Diff           : %ld", 
 		     m_imgReplyMaxLen-m_thumbnailSize );
 		close(fhndl);
+		unlink ( out );
 		return;
 
 	}
@@ -1132,6 +1155,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		log( "image: Seek couldn't rewind file, %s.", out );
 		m_stopDownloading = true;
 		close(fhndl);
+		unlink ( out );
 		return;
 	}
 
@@ -1151,6 +1175,7 @@ void Images::thumbStart_r ( bool amThread ) {
  		     out, mstrerror( m_errno ) );
 		unlink( out );
 		m_stopDownloading = true;
+		unlink ( out );
  	        return;
         }
 	fhndl = 0;

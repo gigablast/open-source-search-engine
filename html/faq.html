@@ -40,11 +40,17 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br>
 <br>
 
+<a href=#scaling>Updating the Binary</a> - follow similar procedure to <i>Scaling the Cluster</i>
+<br>
+<br>
+
 
 <!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
 <br>
 <br>-->
-<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br>
+<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)
+
+<br><br>
 
 <!--
 <a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems
@@ -53,13 +59,16 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <!--<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host-->
 <!--<br><br>
 <a href=#security>The Security System</a> - how to control access-->
-<br><br>
 
 <!--<a href=#build>Building an Index</a> - how to start building your index<br><br>
 <a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>-->
 
 <!--<a href=#quotas>Document Quotas</a> - how to limit documents into the index<br><br>-->
-<a href=#injecting>Injecting Documents</a> - inserting documents directly into Gigablast<br><br><a href=#deleting>Deleting Documents</a> - removing documents from the index
+<a href=/api.html#/admin/inject>Injecting Documents</a> - inserting documents directly into Gigablast
+
+<br><br>
+
+<a href=/api.html#/admin/inject>Deleting Documents</a> - removing documents from the index
 
 <br><br><a href=#metas>Indexing User-Defined Meta Tags</a> - how Gigablast indexes user-defined meta tags
 
@@ -103,7 +112,7 @@ You will need an Intel or AMD system with at least 4GB of RAM for every gigablas
 <b><font color=red>For Linux:</font></b>
 <br><br>
 
-1. Download the <a href=http://www.gigablast.com/gb-1.7-2.i386.rpm>Gigablast package for <b>RedHat</b> Linux</a> or the <a href=http://www.gigablast.com/gb_1.7-1_i386.deb>Gigablast package for <b>Ubuntu</b>/Debian Linux</a>. 
+1. Download the <a href=http://www.gigablast.com/gb-1.14-2.i386.rpm>Gigablast package for <b>RedHat</b> Linux</a> or the <a href=http://www.gigablast.com/gb_1.14-1_i386.deb>Gigablast package for <b>Ubuntu</b>/Debian Linux</a>. 
 
 <br><br>
 
@@ -194,9 +203,10 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.0.</b> For <u>Ubuntu</u> do <b>sudo apt-get install make g++ gcc-multilib lib32stdc++6</b>
+<b>1.</b> For <u>Ubuntu</u> do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
 <br><br>
-<b>1.1.</b> For Ubuntu 14.04 LTS (released in Apr 17, 2014) you also need to do an <b>apt-get install g++-multilib</b>
+<b>1.1</b> For Ubuntu 14.04 LTS (released in Apr 17, 2014) you also need to do 
+an <b>apt-get install g++-multilib</b>
 <br><br>
 <b>1.2.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
 <br><br>
@@ -266,6 +276,8 @@ For RedHat do a <b>yum install gcc-c++</b>
 <li> Makes and displays thumbnail images in the search results.
 <li> Nested boolean queries using AND, OR, NOT operators.
 <li> Built-in support for <a href=http://www.diffbot.com/products/automatic/>diffbot.com's api</a>, which extracts various entities from web sites, like products, articles, etc. But you will need to get a free token from them for access to their API.
+<li> Facets over meta tags for HTML documents.
+<li> Facets over JSON fields.
 <li> Spellchecker will be renabled shortly.
 </ul>
 
@@ -372,7 +384,7 @@ Each directory should have the following files and subdirectories:<br><br>
 <br>
 1. Locate the hosts.conf file. If installing from binaries it should be in the /var/gigablast/data0/ directory. If it does not exist yet then run <b>gb</b> or <b>./gb</b> which will create one. You will then have to exit gb after it does.
 <br><br>
-2. Update the <b>num-mirrors</b> in the hosts.conf file. Leave it as 0 if you do not want redundancy. If you want each shard to be mirrored by one other gb instance, then set this to 1. I find that 1 is typically good enough, provided that the twin is on a different physical server. So if one server gets trashed there is another to serve that shard. The sole advantage in not mirroring your cluster is that you will have twice the disk space for storing documents. Query speed should be unaffected because Gigablast is smart enough to split the load evenly between mirrors when processing queries. You can send your queries to any shard and it will communicate with all the other shards to aggregate the results. If one shard fails and you are not mirroring then you will lose that part of the index, unfortunately.
+2. Update the <b>num-mirrors</b> in the hosts.conf file. Leave it as 0 if you do not want redundancy. If you want each shard to be mirrored by one other gb instance, then set this to 1. I find that 1 is typically good enough, provided that the mirror is on a different physical server. So if one server gets trashed there is another to serve that shard. The sole advantage in not mirroring your cluster is that you will have twice the disk space for storing documents. Query speed should be unaffected because Gigablast is smart enough to split the load evenly between mirrors when processing queries. You can send your queries to any shard and it will communicate with all the other shards to aggregate the results. If one shard fails and you are not mirroring then you will lose that part of the index, unfortunately.
 
 <br><br>
 3. Make one entry in the hosts.conf per physical core you have on your server.  If an entry is on the same server as another, then it will need a completely different set of ports.  Each gb instance also requires 4GB of ram, so you may be limited by your RAM before being limited by your cores. You can of course run multiple gb instances on a single core if you have the RAM, but performance will not be optimal.
@@ -670,7 +682,7 @@ You can limit the number of documents on a per site basis. By default the site i
 
 
 
-
+<!--
 <a name=injecting></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Injecting Documents</td></tr></table>
@@ -709,10 +721,11 @@ The cgi parameters accepted by the /inject URL for injecting content are the fol
 
 <tr><td bgcolor=#eeeeee>iplookups=X</b></td>
 <td bgcolor=#eeeeee>If X is 1 and the ip of the URL is not valid or provided then Gigablast will look it up. If X is 0 Gigablast will never look up the IP of the URL. Default is 1.</td></tr>
+-->
 
 <!--<tr><td>isnew=X</b></td>
 <td>If X is 0 then the URL is presumed to already be in the index. If X is 1 then URL is presumed to not be in the index. Omitting this parameter is ok for now. In the future it may be put to use to help save disk seeks. Default is 1.</td></tr>-->
-
+<!--
 <tr><td>dedup=X</b></td>
 <td>If X is 1 then Gigablast will not add the URL if another already exists in the index from the same domain with the same content. If X is 0 then Gigablast will not do any deduping. Default is 1.</td></tr>
 
@@ -797,7 +810,7 @@ You can delete documents from the index two ways:<ul>
 <li>Perhaps the most popular is to use the <a href="/admin/reindex">Reindex URLs</a> tool which allows you to delete all documents that match a simple query. Furthermore, that tool allows you to assign rulesets to all the domains of all the matching documents. All documents that match the query will have their docids stored in a spider queue of a user-specified priority. The spider will have to be enabled for that priority queue for the deletion to take place. Deleting documents is very similar to adding documents.<br><br>
 <li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page.
 </ul>
-
+-->
 
 <br>
 <a name=metas></a>

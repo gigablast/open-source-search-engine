@@ -524,7 +524,10 @@ bool RdbMap::addRecord ( char *key, char *rec , long recSize ) {
 	// . sanity check
 	// . a key of 0 is valid, so watch out for m_lastKey's sake
 	//if ( key <= m_lastKey && (m_lastKey.n0!=0 || m_lastKey.n1!=0)) {
-	if ( KEYCMP(key,m_lastKey,m_ks)<=0 && 
+	// i changed from <= to < because i saw it core when two linkdb
+	// keys were the same. no idea how that happened. maybe a timing
+	// coincidence thingy.
+	if ( KEYCMP(key,m_lastKey,m_ks)<0 && 
 	     KEYCMP(m_lastKey,KEYMIN(),m_ks)!=0 ) {
 		m_badKeys++;
 		// do not log more than once per second

@@ -73,6 +73,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 
 	JsonItem *ji = NULL;
 
+	if ( ! json ) return NULL;
+
 	// how much space will we need to avoid any reallocs?
 	char *p = json;
 	bool inQuote = false;

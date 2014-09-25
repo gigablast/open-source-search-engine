@@ -1601,17 +1601,48 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 	return true;
 }
 
-bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
+class DropLangs {
+public:
+	char *m_title;
+	char *m_lang;
+	char *m_tld;
+};
+
+DropLangs g_drops[] = {
+	{"custom",NULL,NULL},
+	{"web",NULL,NULL},
+	{"news",NULL,NULL},
+	{"english","en","com,us.gov,org"},
+	{"german","de","de"},
+	{"french","fr","fr"},
+	{"norweigian","nl","nl"},
+	{"spanish","es","es"},
+	{"italian","it","it"},
+	{"romantic","en,de,fr,nl,es,it","com,us.gov,org,de,fr,nl,es,it"}
+};
+
+// "url filters profile" values. used to set default crawl rules
+// in Collectiondb.cpp's CollectionRec::setUrlFiltersToDefaults(). 
+// for instance, UFP_NEWS spiders sites more frequently but less deep in
+// order to get "news" pages and articles
+bool printDropDownProfile ( SafeBuf* sb, char *name, CollectionRec *cr ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news","chinese","shallow"};
-	char *s;
-	for ( long i = 0 ; i < 5 ; i++ ) {
-		if ( i == select ) s = " selected";
-		else               s = "";
-		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
+	//char *items[] = {"custom","web","news","chinese","shallow"};
+	long nd = sizeof(g_drops)/sizeof(DropLangs);
+	for ( long i = 0 ; i < nd ; i++ ) {
+		//if ( i == select ) s = " selected";
+		//else               s = "";
+		char *x = cr->m_urlFiltersProfile.getBufStart();
+		char *s;
+		if ( strcmp(g_drops[i].m_title, x) == 0 ) s = " selected";
+		else                                      s = "";
+		sb->safePrintf ("<option value=%s%s>%s",
+				g_drops[i].m_title,
+				s,
+				g_drops[i].m_title );
 	}
-	sb->safePrintf ( "</select>" );
+	sb->safePrintf ( "</select>");
 	return true;
 }
 
@@ -2354,9 +2385,11 @@ bool Parms::printParm ( SafeBuf* sb,
 	//else if ( t == TYPE_DIFFBOT_DROPDOWN ) {
 	//	char *xx=NULL;*xx=0;
 	//}
-	else if ( t == TYPE_UFP )
+	//else if ( t == TYPE_UFP )
+	else if ( t == TYPE_SAFEBUF && 
+		  strcmp(m->m_title,"url filters profile")==0)
 		// url filters profile drop down "ufp"
-		printDropDownProfile ( sb , "ufp" , *s );
+		printDropDownProfile ( sb , "ufp" , cr );//*s );
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
@@ -6257,6 +6290,21 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "fast results";
+	m->m_desc  = "Use &fast=1 to obtain seach results from the much "
+		"faster Gigablast index, although the results are not "
+		"searched as thoroughly.";
+	m->m_obj   = OBJ_SI;
+	m->m_page  = PAGE_RESULTS;
+	m->m_off   = (char *)&si.m_query - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = "0";
+	m->m_cgi   = "fast";
+	//m->m_size  = MAX_QUERY_LEN;
+	m->m_flags = PF_COOKIE | PF_WIDGET_PARM | PF_API;
+	m++;
+
+
 	m->m_title = "query";
 	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>. "
 		"See the <a href=#qops>query operators</a> below for "
@@ -6658,6 +6706,23 @@ void Parms::init ( ) {
 	// m->m_group = 0;
 	// m++;
 
+	m->m_title = "language weight";
+	m->m_desc  = "Defalt language weight if document matches quer "
+		"language. Use this to give results that match the specified "
+		"the speicified &qlang higher ranking, or docs whose language "
+		"is unnknown. Can be override with "
+		"&langw in the query url.";
+	m->m_cgi   = "langweight";
+	m->m_off   = (char *)&cr.m_sameLangWeight - x;
+	m->m_type  = TYPE_FLOAT;
+	m->m_def   = "20.000000";
+	m->m_group = 1;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
+
 	m->m_title = "use language weights";
 	m->m_desc  = "Use Language weights to sort query results. "
 		"This will give results that match the specified &qlang "
@@ -6689,6 +6754,22 @@ void Parms::init ( ) {
 	//m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
 	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "language weight";
+	m->m_desc  = "Use this to override the default language weight "
+		"for this collection. The default language weight can be "
+		"set in the search controls and is usually something like "
+		"20.0. Which means that we multiply a result's score by 20 "
+		"if from the same language as the query or the language is "
+		"unknown.";
+	m->m_off   = (char *)&si.m_sameLangWeight - y;
+	m->m_defOff= (char *)&cr.m_sameLangWeight - x;
+	m->m_type  = TYPE_FLOAT;
+	m->m_cgi  = "langw";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
@@ -12491,8 +12572,8 @@ void Parms::init ( ) {
 		"to the table will be lost.";
 	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
 	m->m_colspan = 3;
-	m->m_type  = TYPE_UFP;// 1 byte dropdown menu
-	m->m_def   = "1"; // UFP_WEB
+	m->m_type  = TYPE_SAFEBUF;//UFP;// 1 byte dropdown menu
+	m->m_def   = "web"; // UFP_WEB
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
@@ -14200,6 +14281,57 @@ void Parms::init ( ) {
 	//m->m_sparm = 1;
 	//m->m_scgi  = "turk";
 	//m++;
+
+
+	// IMPORT PARMS
+	m->m_title = "enable document importation";
+	m->m_desc  = "Import documents into this collection.";
+	m->m_cgi   = "import";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_importEnabled - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API; 
+	m++;
+
+	// m->m_title = "collection";
+	// m->m_desc  = "Collection to import documents into.";
+	// m->m_cgi   = "c";
+	// m->m_page  = PAGE_IMPORT;
+	// m->m_obj   = OBJ_GBREQUEST;
+	// m->m_off   = (char *)&cr.m_imcoll - (char *)&gr;
+	// m->m_type  = TYPE_CHARPTR;
+	// m->m_def   = NULL;
+	// // PF_COLLDEFAULT: so it gets set to default coll on html page
+	// m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	// m++;
+
+	m->m_title = "directory containing titledb files";
+	m->m_desc  = "Import documents contained in titledb files in this "
+		"directory.";
+	m->m_cgi   = "importdir";
+	m->m_xml   = "importDir";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_importDir - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = PF_API;
+	m++;
+
+	m->m_title = "number of simultaneous injections";
+	m->m_desc  = "Typically try one or two injections per host in "
+		"your cluster.";
+	m->m_cgi   = "numimportinjects";
+	m->m_xml   = "numImportInjects";
+	m->m_page  = PAGE_IMPORT;
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_numImportInjects - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "2";
+	m->m_flags = PF_API;
+	m++;
 
 
 
@@ -17117,7 +17249,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "mit";
 	m->m_off   = (char *)&cr.m_makeImageThumbnails - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	// default to off since it slows things down to do this
+	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -21084,6 +21217,8 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 	return true;
 }	
 
+void resetImportLoopFlag () ;
+
 // . this adds the key if not a cmd key to parmdb rdbtree
 // . this executes cmds
 // . this updates the CollectionRec which may disappear later and be fully
@@ -21278,6 +21413,10 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	    val2.getBufStart());
 
 	if ( cr ) cr->m_needsSave = true;
+
+	// HACK #2
+	if ( base == cr && dst == (char *)&cr->m_importEnabled )
+		resetImportLoopFlag();
 
 	//
 	// HACK

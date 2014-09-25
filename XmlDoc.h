@@ -1189,6 +1189,7 @@ class XmlDoc {
 	//char     m_numBannedOutlinksValid;
 	char     m_hopCountValid;
 	char     m_isInjectingValid;
+	char     m_isImportingValid;
 	char     m_metaListCheckSum8Valid;
 	char     m_contentValid;
 	char     m_filteredContentValid;
@@ -1444,6 +1445,7 @@ class XmlDoc {
 	//SearchInput m_si;
 	//Msg40 m_msg40;
 	//DateParse2 m_dateParse2;
+	bool m_printedMenu;
 	Dates m_dates;
 	HashTableX m_clockCandidatesTable;
 	SafeBuf m_cctbuf;
@@ -1562,6 +1564,7 @@ class XmlDoc {
 	SafeBuf m_myPageLinkInfoBuf;
 	SafeBuf m_myTempLinkInfoBuf;
 	char m_isInjecting;
+	char m_isImporting;
 	char m_useFakeMime;
 	char m_useSiteLinkBuf;
 	char m_usePageLinkBuf;

@@ -715,10 +715,14 @@ bool addTestIp ( char *host , long hostLen , long ip ) {
 	return true;
 }
 
+void makeQADir();
+
 // . save it back to disk
 // . we should call this from Test.cpp when the run is completed!!
 bool saveTestBuf ( char *testDir ) {
 	//char *testDir = g_test.getTestDir();
+	// ensure ./qa/ subdir exsts. in qa.cpp
+	makeQADir();
 	// filename
 	char fn[100]; sprintf(fn,"%s/%s/ips.txt",g_hostdb.m_dir, testDir);
 	// set it

@@ -1,5 +1,5 @@
-#ifndef UNICODE_H__
-#define UNICODE_H__
+#ifndef UNICODEH
+#define UNICODEH
 
 #include <sys/types.h>
 #include <limits.h>

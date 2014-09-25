@@ -1948,24 +1948,79 @@ bool CollectionRec::countEvents ( ) {
 */
 
 bool CollectionRec::rebuildUrlFilters2 ( ) {
-	bool rebuild = false;
+	bool rebuild = true;
 	if ( m_numRegExs == 0 ) 
 		rebuild = true;
 	// don't touch it if not supposed to as long as we have some already
-	if ( m_urlFiltersProfile != UFP_NONE )
-		rebuild = true;
+	//if ( m_urlFiltersProfile != UFP_NONE )
+	//	rebuild = true;
 	// never for custom crawls however
 	if ( m_isCustomCrawl ) 
 		rebuild = false;
+
+	char *s = m_urlFiltersProfile.getBufStart();
+
+
+	// support the old UFP_CUSTOM, etc. numeric values
+	if ( !strcmp(s,"0" ) )
+		s = "custom";
+	// UFP_WEB SUPPORT
+	if ( !strcmp(s,"1" ) )
+		s = "web";
+	// UFP_NEWS
+	if ( !strcmp(s,"2" ) )
+		s = "shallow";
+
+
+
+	// leave custom profiles alone
+	if ( !strcmp(s,"custom" ) )
+		rebuild = false;
+
+	
+
 	//if ( m_numRegExs > 0 && strcmp(m_regExs[m_numRegExs-1],"default") )
 	//	addDefault = true;
 	if ( ! rebuild ) return true;
 
-	if ( m_urlFiltersProfile == UFP_CHINESE )
-		return rebuildChineseRules();
-
-	if ( m_urlFiltersProfile == UFP_SHALLOW )
+	if ( !strcmp(s,"shallow" ) )
 		return rebuildShallowRules();
+
+	//if ( strcmp(s,"web") )
+	// just fall through for that
+
+
+	if ( !strcmp(s,"english") )
+		return rebuildLangRules( "en","com,us,gov");
+
+	if ( !strcmp(s,"german") )
+		return rebuildLangRules( "de","de");
+
+	if ( !strcmp(s,"french") )
+		return rebuildLangRules( "fr","fr");
+
+	if ( !strcmp(s,"norwegian") )
+		return rebuildLangRules( "nl","nl");
+
+	if ( !strcmp(s,"spanish") )
+		return rebuildLangRules( "es","es");
+
+	//if ( m_urlFiltersProfile == UFP_EURO )
+	//	return rebuildLangRules( "de,fr,nl,es,sv,no,it",
+	//				 "com,gov,org,de,fr,nl,es,sv,no,it");
+
+
+	if ( !strcmp(s,"romantic") )
+		return rebuildLangRules("en,de,fr,nl,es,sv,no,it,fi,pt",
+
+					"de,fr,nl,es,sv,no,it,fi,pt,"
+
+					"com,gov,org"
+					);
+
+	if ( !strcmp(s,"chinese") )
+		return rebuildLangRules( "zh_cn,zh_tw","cn");
+
 
 	long n = 0;
 
@@ -2024,7 +2079,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 45;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
@@ -2035,7 +2090,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 85;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
@@ -2046,7 +2101,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 50;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
@@ -2057,7 +2112,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 48;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
@@ -2068,7 +2123,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 49;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
@@ -2079,7 +2134,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 47;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
@@ -2090,7 +2145,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 40;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .04166; // 60 minutes
 	n++;
 
@@ -2101,7 +2156,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 39;
-	if ( m_urlFiltersProfile == UFP_NEWS )
+	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .04166; // 60 minutes
 	n++;
 
@@ -2113,7 +2168,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	// do not harvest links if we are spiderings NEWS
-	if ( m_urlFiltersProfile == UFP_NEWS ) {
+	if ( ! strcmp(s,"news") ) {
 		m_spiderFreqs  [n] = 5.0;
 		m_harvestLinks [n] = 0;
 	}
@@ -2127,7 +2182,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 29;
 	// do not harvest links if we are spiderings NEWS
-	if ( m_urlFiltersProfile == UFP_NEWS ) {
+	if ( ! strcmp(s,"news") ) {
 		m_spiderFreqs  [n] = 5.0;
 		m_harvestLinks [n] = 0;
 	}
@@ -2141,7 +2196,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 20;
 	// turn off spidering if hopcount is too big and we are spiderings NEWS
-	if ( m_urlFiltersProfile == UFP_NEWS ) {
+	if ( ! strcmp(s,"news") ) {
 		m_maxSpidersPerRule [n] = 0;
 		m_harvestLinks      [n] = 0;
 	}
@@ -2157,7 +2212,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 19;
 	// turn off spidering if hopcount is too big and we are spiderings NEWS
-	if ( m_urlFiltersProfile == UFP_NEWS ) {
+	if ( ! strcmp(s,"news") ) {
 		m_maxSpidersPerRule [n] = 0;
 		m_harvestLinks      [n] = 0;
 	}
@@ -2183,7 +2238,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 1;
-	if ( m_urlFiltersProfile == UFP_NEWS ) {
+	if ( ! strcmp(s,"news") ) {
 		m_maxSpidersPerRule [n] = 0;
 		m_harvestLinks      [n] = 0;
 	}
@@ -2212,7 +2267,8 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	return true;
 }
 
-bool CollectionRec::rebuildChineseRules ( ) {
+
+bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 
 	long n = 0;
 
@@ -2271,7 +2327,9 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 85;
 	n++;
 
-	m_regExs[n].set("hopcount==0 && iswww && isnew && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && iswww && isnew && tld==%s",
+			       tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2280,7 +2338,10 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 50;
 	n++;
 
-	m_regExs[n].set("hopcount==0 && iswww && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && iswww && isnew && "
+			       "parentlang==%s,xx"
+			       ,langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2300,7 +2361,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount==0 && iswww && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && iswww && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2309,7 +2371,9 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 48;
 	n++;
 
-	m_regExs[n].set("hopcount==0 && iswww && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && iswww && parentlang==%s,xx",
+			       langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2331,7 +2395,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount==0 && isnew && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && isnew && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2340,7 +2405,9 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 49;
 	n++;
 
-	m_regExs[n].set("hopcount==0 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && isnew && parentlang==%s,xx",
+			       langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2360,7 +2427,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount==0 && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2369,7 +2437,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 47;
 	n++;
 
-	m_regExs[n].set("hopcount==0 && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==0 && parentlang==%s,xx",langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2390,7 +2459,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount==1 && isnew && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==1 && isnew && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2399,7 +2469,9 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 40;
 	n++;
 
-	m_regExs[n].set("hopcount==1 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==1 && isnew && parentlang==%s,xx",
+			       tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2419,7 +2491,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount==1 && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==1 && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2428,7 +2501,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 39;
 	n++;
 
-	m_regExs[n].set("hopcount==1 && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==1 && parentlang==%s,xx",langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2448,8 +2522,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-
-	m_regExs[n].set("hopcount==2 && isnew && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==2 && isnew && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2458,7 +2532,9 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 30;
 	n++;
 
-	m_regExs[n].set("hopcount==2 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==2 && isnew && parentlang==%s,xx",
+			       langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2479,7 +2555,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount==2 && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==2 && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2488,7 +2565,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 29;
 	n++;
 
-	m_regExs[n].set("hopcount==2 && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount==2 && parentlang==%s,xx",langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2509,7 +2587,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount>=3 && isnew && tld==cn");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount>=3 && isnew && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2518,7 +2597,9 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 22;
 	n++;
 
-	m_regExs[n].set("hopcount>=3 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount>=3 && isnew && parentlang==%s,xx",
+			       langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2539,7 +2620,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 
 
-	m_regExs[n].set("hopcount>=3 && tld==cn");
+	m_regExs[n].safePrintf("hopcount>=3 && tld==%s",tldStr);
+	m_regExs[n].reset();
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2548,7 +2630,8 @@ bool CollectionRec::rebuildChineseRules ( ) {
 	m_spiderPriorities   [n] = 21;
 	n++;
 
-	m_regExs[n].set("hopcount>=3 && parentlang==zh_cn,zh_tw,xx");
+	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount>=3 && parentlang==%s,xx",langStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -3053,8 +3136,8 @@ void nukeDoledb ( collnum_t collnum );
 bool CollectionRec::rebuildUrlFilters ( ) {
 
 	if ( ! g_conf.m_doingCommandLine )
-		log("coll: Rebuilding url filters for %s ufp=%li",m_coll,
-		    (long)m_urlFiltersProfile);
+		log("coll: Rebuilding url filters for %s ufp=%s",m_coll,
+		    m_urlFiltersProfile.getBufStart());
 
 	// if not a custom crawl, and no expressions, add a default one
 	//if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {

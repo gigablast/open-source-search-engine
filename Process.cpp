@@ -45,6 +45,7 @@
 #include "Proxy.h"
 #include "Rebalance.h"
 #include "SpiderProxy.h"
+#include "PageInject.h"
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;
@@ -1254,6 +1255,10 @@ void processSleepWrapper ( int fd , void *state ) {
 	// . returns right away in most cases
 	g_rebalance.rebalanceLoop();
 
+	// in PageInject.cpp startup up any imports that might have been
+	// going on before we shutdown last time. 
+	resumeImports();
+
 	// if doing the final part of a repair.cpp loop where we convert
 	// titledb2 files to titledb etc. then do not save!
 	if ( g_repairMode == 7 ) return;
@@ -1882,6 +1887,11 @@ bool Process::saveBlockingFiles2 ( ) {
 	//g_spiderLoop.saveCurrentSpidering();
 	// save autoban stuff
 	g_autoBan.save();
+
+	// if doing titlerec imports in PageInject.cpp, save cursors,
+	// i.e. file offsets
+	saveImportStates();
+
         // this one too
 	//      g_classifier.save();
         //g_siteBonus.save();

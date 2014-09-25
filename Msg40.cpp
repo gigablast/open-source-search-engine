@@ -585,6 +585,7 @@ bool Msg40::getDocIds ( bool recall ) {
 
 	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
 	mr.m_maxSerpScore              = m_si->m_maxSerpScore;
+	mr.m_sameLangWeight            = m_si->m_sameLangWeight;
 
 	//
 	// how many docid splits should we do to avoid going OOM?
@@ -6425,6 +6426,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		else if ( qt->m_fieldCode == FIELD_GBFACETINT )
 			newStuff.safePrintf("prepend="
 					    "gbequalint%%3A%s%%3A%lu",
+					    term,
+					    (long)*fvh);
+		else if ( qt->m_fieldCode == FIELD_GBFACETSTR &&
+			  // in XmlDoc.cpp the gbxpathsitehash123456: terms
+			  // call hashFacets2() separately with val32 
+			  // equal to the section inner hash which is not
+			  // an exact hash of the string using hash32()
+			  // unfortunately, so we can't use gbfieldmatch:
+			  // which is case sensitive etc.
+			  !strncmp(qt->m_term,
+				   "gbfacetstr:gbxpathsitehash",26) )
+			newStuff.safePrintf("prepend="
+					    "gbequalint%%3Agbfacetstr%%3A"
+					    "%s%%3A%lu",
 					    term,
 					    (long)*fvh);
 		else if ( qt->m_fieldCode == FIELD_GBFACETSTR ) {

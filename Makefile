@@ -59,8 +59,8 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Users.o Images.o Wiki.o Wiktionary.o Scraper.o \
 	Dates.o Sections.o SiteGetter.o Syncdb.o qa.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
-	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o
-
+	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o \
+	Version.o
 
 CHECKFORMATSTRING = -D_CHECK_FORMAT_STRING_
 
@@ -126,7 +126,20 @@ g8: gb
 
 utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest monitor seektest urlinfo treetest dnstest dmozparse gbtitletest
 
-gb: $(OBJS) main.o $(LIBFILES)
+# version:
+# 	echo -n "#define GBVERSION \"" > vvv
+# 	#date --utc >> vvv
+# 	date +%Y.%M.%d-%T-%Z >> vvv
+# 	head -c -1 vvv > Version.h
+# 	echo "\"" >> Version.h
+# 	#for Version.h dependency
+# 	#rm main.o
+# 	#rm PingServer.o
+
+vclean:
+	rm -f Version.o
+
+gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 cygwin:
@@ -242,9 +255,9 @@ gbtitletest: gbtitletest.o
 
 # comment this out for faster deb package building
 clean:
-	-rm -f *.o gb *.bz2 blaster2 udptest memtest hashtest membustest mergetest seektest addtest monitor reindex convert maketestindex makespiderdb makeclusterdb urlinfo gbfilter dnstest thunder dmozparse gbtitletest gmon.* GBVersion.cpp quarantine core core.*
+	-rm -f *.o gb *.bz2 blaster2 udptest memtest hashtest membustest mergetest seektest addtest monitor reindex convert maketestindex makespiderdb makeclusterdb urlinfo gbfilter dnstest thunder dmozparse gbtitletest gmon.* quarantine core core.*
 
-.PHONY: GBVersion.cpp
+#.PHONY: GBVersion.cpp
 
 convert.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
@@ -553,10 +566,11 @@ master-rpm:
 # need to do 'apt-get intall dh-make'
 # deb-master
 master-deb:
-	git archive --format=tar --prefix=gb-1.10/ master > ../gb_1.10.orig.tar
+# need to change in changelog too!! dont' forget!!!
+	git archive --format=tar --prefix=gb-1.14/ master > ../gb_1.14.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.10 -f ../gb_1.10.orig.tar
+	dh_make -e gigablast@mail.com -p gb_1.14 -f ../gb_1.14.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -581,7 +595,7 @@ master-deb:
 # upload den
 	scp gb*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.10-1_i386.deb
+	sudo alien --to-rpm gb_1.14-1_i386.deb
 # upload rpm
 	scp gb*.rpm gk268:/w/html/	
 

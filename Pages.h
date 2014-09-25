@@ -365,6 +365,7 @@ enum {
 //	PAGE_THESAURUS   , 
 
 	PAGE_QA,
+	PAGE_IMPORT,
 
 	// . non master-admin pages (collection controls)
 	// . PAGE_OVERVIEW acts as a cutoff point (search Parms.cpp for it)
