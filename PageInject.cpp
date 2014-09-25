@@ -917,6 +917,8 @@ bool resumeImports ( ) {
 	if ( s_tried ) return true;
 	s_tried = true;
 
+	if ( g_hostdb.m_hostId != 0 ) return true;
+
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -1085,7 +1087,7 @@ bool ImportState::importLoop ( ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
-	if ( ! cr ) { 
+	if ( ! cr || g_hostdb.m_hostId != 0 ) { 
 		// if coll was deleted!
 		log("import: collnum %li deleted while importing into",
 		    (long)m_collnum);
