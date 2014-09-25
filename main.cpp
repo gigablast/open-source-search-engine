@@ -2691,7 +2691,8 @@ int main2 ( int argc , char *argv[] ) {
 				// hash the term itself
 				termId = hash64n(targ);
 				// hash prefix with termhash
-				termId = hash64(termId,prefix64);
+				if ( prefix64 )
+					termId = hash64(termId,prefix64);
 				termId &= TERMID_MASK;
 			}
 			else {
@@ -12887,6 +12888,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	if ( termId >= 0 ) {
 		g_posdb.makeStartKey ( &startKey, termId );
 		g_posdb.makeEndKey  ( &endKey, termId );
+		printf("termid=%llu\n",termId);
 		printf("startkey=%s\n",KEYSTR(&startKey,sizeof(POSDBKEY)));
 		printf("endkey=%s\n",KEYSTR(&endKey,sizeof(POSDBKEY)));
 	}

@@ -4824,7 +4824,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       "urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu\">respider</a>\n",rand64);
+		sb->safePrintf("&c=%s&rand64=%llu\">respider</a>\n",
+			       coll,rand64);
 	}
 
 	if ( si->m_format == FORMAT_HTML ) {
@@ -8826,6 +8827,9 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 
 			       //" onmouseout=\""
 			       //"this.style.display='none';\""
+
+			       // if clicking on scrollbar do not hide menu!
+			       " onmousedown=\"inmenuclick=1;\" "
 
 			       ">"
 			       , mi->m_menuNum

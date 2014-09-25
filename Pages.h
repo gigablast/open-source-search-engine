@@ -17,6 +17,8 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage = false ) ;
 #include "SafeBuf.h"
 #include "PageCrawlBot.h" // sendPageCrawlBot()
 
+#define GOLD "f3c734"
+
 #define LIGHTER_BLUE "e8e8ff"
 #define LIGHT_BLUE "d0d0e0"
 #define DARK_BLUE  "c0c0f0"

@@ -3194,6 +3194,36 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( m_sreqValid && m_sreq.m_ignoreDocUnchangedError )
 		check = false;
 	if ( check ) {
+		// check inlinks now too!
+		LinkInfo  *info1 = getLinkInfo1 ();
+		if ( ! info1 || info1 == (LinkInfo *)-1 ) return (long *)info1;
+		LinkInfo  *info2 = od->getLinkInfo1 ();
+		if ( ! info2 || info2 == (LinkInfo *)-1 ) return (long *)info2;
+		Inlink *k1 = NULL;
+		Inlink *k2 = NULL;
+		char *s1, *s2;
+		long len1,len2;
+		if ( info1->getNumGoodInlinks() !=
+		     info2->getNumGoodInlinks() ) 
+			goto changed;
+		for ( ; k1=info1->getNextInlink(k1) , 
+			      k2=info2->getNextInlink(k2); ) {
+			if ( ! k1 ) 
+				break;
+			if ( ! k2 ) 
+				break;
+			if ( k1->m_siteNumInlinks != k2->m_siteNumInlinks ) 
+				goto changed;
+			s1   = k1->ptr_linkText;
+			len1 = k1->size_linkText - 1; // exclude \0
+			s2   = k2->ptr_linkText;
+			len2 = k2->size_linkText - 1; // exclude \0
+			if ( len1 != len2 )
+				goto changed;
+			if ( memcmp(s1,s2,len1) != 0 )
+				goto changed;
+		}
+		// no change in link text, look for change in page content now
 		long *ch32 = getContentHash32();
 		if ( ! ch32 || ch32 == (void *)-1 ) return (long *)ch32;
 		if ( *ch32 == od->m_contentHash32 ) {
@@ -3203,6 +3233,7 @@ long *XmlDoc::getIndexCode2 ( ) {
 		}
 	}
 
+ changed:
 	// words
 	Words *words = getWords();
 	if ( ! words || words == (Words *)-1 ) return (long *)words;
@@ -22273,13 +22304,17 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . LINKDB
 	// . linkdb records. assume one per outlink
 	// . we may index 2 16-byte keys for each outlink
-	Links *nl = NULL; if ( spideringLinks ) nl = &m_links;
+	Links *nl2 = NULL; 
+	//if ( spideringLinks ) nl2 = &m_links;
+	// if injecting, spideringLinks is false, but then we don't
+	// add the links to linkdb, which causes the qainlinks() test to fail
+	nl2 = &m_links;
 	// do not bother if deleting. but we do add simplified redirects
 	// to spiderdb as SpiderRequests now.
 	long code = m_indexCode;
 	if  ( code == EDOCSIMPLIFIEDREDIR ) code = 0;
 	if  ( code == EDOCNONCANONICAL    ) code = 0;
-	if  ( code ) nl = NULL;
+	if  ( code ) nl2 = NULL;
 	//Links *ol = NULL; if ( od ) ol = od->getLinks();
 	// . set key/data size
 	// . use a 16 byte key, not the usual 12
@@ -22288,7 +22323,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	HashTableX kt1;
 	//HashTableX kt2;
 	long nis = 0;
-	if ( nl && m_useLinkdb ) nis = nl->getNumLinks() * 4;
+	if ( nl2 && m_useLinkdb ) nis = nl2->getNumLinks() * 4;
 	// pre-grow table based on # outlinks
 	kt1.set ( sizeof(key224_t),0,nis,NULL,0,false,m_niceness,"link-indx" );
 	// use magic to make fast
@@ -22307,7 +22342,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//   but this will have to be for adding to Linkdb. basically take a
 	//   lot of it from Linkdb::fillLinkdbList()
 	// . these return false with g_errno set on error
-	if ( m_useLinkdb && nl && ! hashLinksForLinkdb(&kt1) ) return NULL;
+	if ( m_useLinkdb && nl2 && ! hashLinksForLinkdb(&kt1) ) return NULL;
 	//if ( add2 && ol && ! !od->m_skipIndexing && 
 	//     ol->hash(&kt2,od,m_niceness) ) 
 	//	return NULL;
@@ -22933,7 +22968,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . should also add with a time of now plus 5 seconds to that if
 	//   we spider an outlink linkdb should be update with this doc
 	//   pointing to it so it can get link text then!!
-	if ( spideringLinks && nl && ! m_doingConsistencyCheck && 
+	if ( spideringLinks && nl2 && ! m_doingConsistencyCheck && 
 	     m_useSpiderdb && ! forDelete ){
 		// returns NULL and sets g_errno on error
 		char *ret = addOutlinkSpiderRecsToMetaList ();

@@ -1190,7 +1190,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//
 	// first the nav column
 	//
-	sb->safePrintf("<TD bgcolor=#f3c714 " // yellow/gold
+	sb->safePrintf("<TD bgcolor=#%s "//f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\""
 		      "width:210px;"
@@ -1220,6 +1220,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 		      "<br>"
 		      "<br>"
+		       , GOLD
 		       ,coll
 		      );
 
@@ -1344,7 +1345,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 		       "margin-left:-3px;"
 
-		       "border-color:#f3c714;"
+		       "border-color:#%s;"//f3c714;"
 		       "border-width:3px;"
 		       "border-left-width:3px;"
 		       "border-top-width:0px;"
@@ -1354,8 +1355,11 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "border-style:solid;"
 		       "padding:4px;"
 
-		       "background-color:#f3c714;\" " // yellow/gold
-		       "id=prepane>");
+		       "background-color:#%s;\" "//f3c714;\" " // yellow/gold
+		       "id=prepane>"
+		       , GOLD
+		       , GOLD
+		       );
 
 	// logout link on far right
 	sb->safePrintf("<div align=right "

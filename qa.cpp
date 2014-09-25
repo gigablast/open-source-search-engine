@@ -889,6 +889,13 @@ bool qaimport () {
 		s_flags[19] = true;
 	}
 
+	// wait for absorption of index
+	if ( ! s_flags[28] ) {
+	 	wait(2.0);
+	 	s_flags[28] = true;
+	 	return false;
+	}
+
 	// test query
 	if ( ! s_flags[16] ) {
 		s_flags[16] = true;
@@ -899,11 +906,155 @@ bool qaimport () {
 	}
 
 
+	// test site clustering
+	if ( ! s_flags[29] ) {
+		s_flags[29] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=mediapost&dsrt=0&sc=1",
+				702467314 ) )
+			return false;
+	}
+
+
 	//static bool s_fee2 = false;
 	if ( ! s_flags[13] ) {
 		s_flags[13] = true;
 		log("qa: SUCCESSFULLY COMPLETED DATA "
 		    "IMPORT TEST");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
+
+	return true;
+}
+
+bool qainlinks() {
+
+	//if ( ! s_callback ) s_callback = qainject1;
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// turn spiders off so it doesn't spider while we are importing
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// inject youtube
+	if ( ! s_flags[2] ) {
+		s_flags[2] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&u=www.youtube.com");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+	// test query
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=youtube"
+				,702467314 ) )
+			return false;
+	}
+
+
+
+	// scrape inlinkers
+	if ( ! s_flags[4] ) {
+		s_flags[4] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&qts=link:www.youtube.com&n=100");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+	// inject better inlinkers
+	if ( ! s_flags[20] ) {
+		s_flags[20] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&"
+			       "url=www.freebsd.org%%2Fcommunity.html");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+
+
+
+	// wait a second for linkdb absorption
+	if ( ! s_flags[5] ) {
+	 	wait(1.0);
+	 	s_flags[5] = true;
+	 	return false;
+	}
+
+
+
+	// RE-inject youtube
+	if ( ! s_flags[6] ) {
+		s_flags[6] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&u=www.youtube.com");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+
+	// wait a second term freq stabilization
+	if ( ! s_flags[9] ) {
+	 	wait(2.0);
+	 	s_flags[9] = true;
+	 	return false;
+	}
+
+	// test query
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&"
+				"format=xml&q=youtube"
+				// get scoring info
+				"&scores=1"
+				,702467314 ) )
+			return false;
+	}
+
+
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED INLINK TEST");
 		//if ( s_callback == qainject ) exit(0);
 		return true;
 	}
@@ -1854,7 +2005,12 @@ static QATest s_qatests[] = {
 
 	{qaimport,
 	 "importDataTest",
-	 "Test data import functionality."}
+	 "Test data import functionality. Test site clustering."},
+
+	{qainlinks,
+	 "inlinksTest",
+	 "Test youtube inlinks. Test EDOCUNCHANGED iff just inlinks change."}
+
 
 };
 

@@ -654,10 +654,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 		{"SEARCH","/"},
 
-// 		{"IMAGES","/?searchtype=images"},
-// 		{"PRODUCTS","/?searchtype=products"},
-// 		{"ARTICLES","/?searchtype=articles"},
-// 		{"DISCUSSIONS","/?searchtype=discussions"},
+ 		{"DISCUSSIONS","/?searchtype=discussions"},
+ 		{"PRODUCTS","/?searchtype=products"},
+ 		{"ARTICLES","/?searchtype=articles"},
+ 		{"IMAGES","/?searchtype=images"},
 
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
@@ -679,7 +679,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 	// first the nav column
 	//
 	sb->safePrintf(
-		       "<TD bgcolor=#f3c714 " // yellow/gold
+		       "<TD bgcolor=#%s " // f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\"width:210px;"
 		      "border-right:3px solid blue;"
@@ -699,6 +699,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 		      "width:100px;"
 		      "height:100px;"
 		      "\">"
+		       , GOLD
 		       , coll
 		       );
 
@@ -724,6 +725,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 	for ( long i = 0 ; i < n ; i++ ) {
 
 		if ( isSearchResultsPage && i >= 5 ) break;
+
+		if ( i >= 1 && i <= 4 &&
+		     cr->m_diffbotApiUrl.length()<= 0 )
+			continue;
 
 		char delim = '?';
 		if ( strstr ( mi[i].m_url,"?") ) delim = '&';
@@ -1042,14 +1047,16 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	// put search box in a box
 	sb.safePrintf("<div style="
-		      "background-color:#fcc714;"
+		      "background-color:#%s;"//fcc714;"
 		      "border-style:solid;"
 		      "border-width:3px;"
 		      "border-color:blue;"
 		      //"background-color:blue;"
 		      "padding:20px;"
 		      "border-radius:20px;"
-		      ">");
+		      ">"
+		      ,GOLD
+		      );
 
 
 	sb.safePrintf("<input name=q type=text "
@@ -1466,14 +1473,16 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	// put search box in a box
 	sb.safePrintf("<div style="
-		      "background-color:#fcc714;"
+		      "background-color:#%s;" // fcc714;"
 		      "border-style:solid;"
 		      "border-width:3px;"
 		      "border-color:blue;"
 		      //"background-color:blue;"
 		      "padding:20px;"
 		      "border-radius:20px;"
-		      ">");
+		      ">"
+		      , GOLD
+		      );
 
 
 	sb.safePrintf("<input name=urls type=text "
@@ -1637,14 +1646,16 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	// put search box in a box
 	sb.safePrintf("<div style="
-		      "background-color:#fcc714;"
+		      "background-color:#%s;" // fcc714;"
 		      "border-style:solid;"
 		      "border-width:3px;"
 		      "border-color:blue;"
 		      //"background-color:blue;"
 		      "padding:20px;"
 		      "border-radius:20px;"
-		      ">");
+		      ">"
+		      ,GOLD
+		      );
 
 
 	sb.safePrintf("<input name=q type=text "
@@ -2833,7 +2844,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// yellow/gold bar
 	"<tr>"
-	"<td colspan=2 bgcolor=#f3c714>"
+	"<td colspan=2 bgcolor=#%s>" // f3c714>"
 	"<b>"
 	"Basic Query Syntax"
 	"</b>"
@@ -2946,6 +2957,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	// "          </tr>"
 	// ""
 	// ""
+	, GOLD
 		      );
 
 
@@ -3002,7 +3014,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 				      "cellpadding=5 cellspacing=0 border=0>"
 				      // yellow/gold bar
 				      "<tr>"
-				      "<td colspan=2 bgcolor=#f3c714>"
+				      "<td colspan=2 bgcolor=#%s>"//f3c714>"
 				      "<b>"
 				      "%s"
 				      "</b>"
@@ -3014,6 +3026,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 				      "<th><font color=33dcff>"
 				      "Description</font></th>"
 				      "</tr>\n"
+				      , GOLD
 				      , g_fields[i].m_title
 				      );
 		}
@@ -3055,7 +3068,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// yellow/gold bar
 	"<tr>"
-	"<td colspan=2 bgcolor=#f3c714>"
+		      "<td colspan=2 bgcolor=#%s>" // f3c714>"
 	"<b>"
 	"Boolean Queries"
 	"</b>"
@@ -3160,6 +3173,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	//"</td></tr>"
 	//"</table>"
 	//"<br>"
+		      , GOLD
 		      );
 
 

@@ -1164,11 +1164,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char format = r->getReplyFormat();
 
+	char guide = r->getLong("guide",0);
+
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
 	//
 	char *action = r->getString("action",NULL);
 	if ( page == PAGE_BASIC_SETTINGS &&
+	     guide &&
 	     // this is non-null if handling a submit request
 	     action && 
 	     format == FORMAT_HTML ) {
@@ -17311,8 +17314,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "apiUrl";
 	m->m_desc  = "Send every spidered url to this url and index "
 		"the reply in addition to the normal indexing process. "
-		"Example: by specifying http://api.diffbot.com/v2/"
-		"analyze?mode=auto&token=<yourDiffbotToken> here "
+		"Example: by specifying http://api.diffbot.com/v3/"
+		"analyze?mode=high-precision&token=<yourDiffbotToken> here "
 		"you can index the structured JSON replies from diffbot for "
 		"every url that is spidered. "
 		"Gigablast will automatically "
