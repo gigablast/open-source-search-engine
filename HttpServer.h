@@ -190,10 +190,12 @@ class HttpServer {
 	//header to reflect the new size and encoding 
 	TcpSocket *unzipReply(TcpSocket* s);
 	
-	float getCompressionRatio()
-	{return (float)m_uncompressedBytes/m_bytesDownloaded;}
-
-
+	float getCompressionRatio() {
+		if ( m_bytesDownloaded )
+			return (float)m_uncompressedBytes/m_bytesDownloaded;
+		else
+			return 0.0;
+	};
 
 	//this is for low priority requests which come in while we are
 	//in a quickpoll
@@ -225,8 +227,8 @@ class HttpServer {
 	void *states[MAX_DOWNLOADS];
 	tcp_callback_t callbacks[MAX_DOWNLOADS];
 
-	long m_bytesDownloaded;
-	long m_uncompressedBytes;
+	long long m_bytesDownloaded;
+	long long m_uncompressedBytes;
 
 	//QueuedRequest m_requestQueue[MAX_REQUEST_QUEUE];
 	//long          m_lastSlotUsed;

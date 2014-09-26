@@ -2233,6 +2233,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_API ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
 		if ( i == PAGE_TITLEDB ) continue;
+		if ( i == PAGE_IMPORT ) continue;
 		// move these links to the coll nav bar on the left
 		if ( i == PAGE_ADDCOLL ) continue;
 		if ( i == PAGE_DELCOLL ) continue;

@@ -975,6 +975,19 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td colspan=2 class=hdrow>"
 			      "<center><b>Network</b></td></tr>\n"
 
+			      "<tr class=poo><td><b>http server "
+			      "bytes downloaded</b>"
+			      "</td><td>%llu</td></tr>\n" 
+
+			      "<tr class=poo><td><b>http server "
+			      "bytes downloaded (uncompressed)</b>"
+			      "</td><td>%llu</td></tr>\n" 
+
+			      "<tr class=poo><td><b>http server "
+			      "compression ratio</b>"
+			      "</td><td>%.02f</td></tr>\n" 
+			      
+
 			      "<tr class=poo><td><b>ip1 bytes/packets in</b>"
 			      "</td><td>%llu / %llu</td></tr>\n" 
 
@@ -999,6 +1012,11 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 			      ,
 			      TABLE_STYLE,
+
+			      g_httpServer.m_bytesDownloaded,
+			      g_httpServer.m_uncompressedBytes,
+			      g_httpServer.getCompressionRatio(),
+
 			      g_udpServer.m_eth0BytesIn,
 			      g_udpServer.m_eth0PacketsIn,
 
@@ -1021,6 +1039,15 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML )
 		p.safePrintf ( 
 			      "\t<networkStats>\n"
+
+			      "\t\t<httpServerBytesDownloaded>%llu"
+			      "</httpServerBytesDownloaded>\n"
+
+			      "\t\t<httpServerBytesDownloadedUncompressed>%llu"
+			      "</httpServerBytesDownloadedUncompressed>\n"
+
+			      "\t\t<httpServerCompressionRatio>%.02f"
+			      "</httpServerCompressionRatio>\n"
 
 			      "\t\t<ip1BytesIn>%llu</ip1BytesIn>\n"
 			      "\t\t<ip1PacketsIn>%llu</ip1PacketsIn>\n"
@@ -1045,6 +1072,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "\t</networkStats>\n"
 
 			      ,
+
+			      g_httpServer.m_bytesDownloaded,
+			      g_httpServer.m_uncompressedBytes,
+			      g_httpServer.getCompressionRatio(),
+
+
 			      g_udpServer.m_eth0BytesIn,
 			      g_udpServer.m_eth0PacketsIn,
 
@@ -1066,6 +1099,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_JSON )
 		p.safePrintf ( 
 			      "\t\"networkStats\":{\n"
+
+
+			      "\t\t\"httpServerBytesDownloaded\":%llu,\n"
+			      "\t\t\"httpServerBytesDownloadedUncompressed\""
+			      ":%llu,\n"
+			      "\t\t\"httpServerCompressionRatio\":%.02f,\n"
 
 			      "\t\t\"ip1BytesIn\":%llu,\n"
 			      "\t\t\"ip1PacketsIn\":%llu,\n"
@@ -1090,6 +1129,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "\t},\n"
 
 			      ,
+
+			      g_httpServer.m_bytesDownloaded,
+			      g_httpServer.m_uncompressedBytes,
+			      g_httpServer.getCompressionRatio(),
+
+
 			      g_udpServer.m_eth0BytesIn,
 			      g_udpServer.m_eth0PacketsIn,
 
