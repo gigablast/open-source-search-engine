@@ -14312,7 +14312,7 @@ void Parms::init ( ) {
 
 	m->m_title = "directory containing titledb files";
 	m->m_desc  = "Import documents contained in titledb files in this "
-		"directory.";
+		"directory. This is an ABSOLUTE directory path.";
 	m->m_cgi   = "importdir";
 	m->m_xml   = "importDir";
 	m->m_page  = PAGE_IMPORT;
