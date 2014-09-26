@@ -171,7 +171,57 @@ void doneReindexing ( void *state ) {
 	//
 	/////
 
+	HttpRequest *hr = &gr->m_hr;
+
+	char format = hr->getReplyFormat();
+
 	SafeBuf sb;
+
+
+	char *ct = "text/html";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+
+	if ( format == FORMAT_XML ) {
+		sb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg>Success</statusMsg>\n"
+			      "\t<matchingResults>%li</matchingResults>\n"
+			      "</response>"
+			      , st->m_msg1c.m_numDocIdsAdded
+			      );
+		g_httpServer.sendDynamicPage ( gr->m_socket,
+					       sb.getBufStart(),
+					       sb.length(),
+					       -1,
+					       false,ct);
+		mdelete ( st , sizeof(State13) , "PageTagdb" );
+		delete (st);
+		return;
+	}
+
+		
+
+	if ( format == FORMAT_JSON ) {
+		sb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":0,\n"
+			      "\t\"statusMsg\":\"Success\",\n"
+			      "\t\"matchingResults\":%li\n"
+			      "}\n"
+			      "}\n"
+			      , st->m_msg1c.m_numDocIdsAdded
+			      );
+		g_httpServer.sendDynamicPage ( gr->m_socket,
+					       sb.getBufStart(),
+					       sb.length(),
+					       -1,
+					       false,ct);
+		mdelete ( st , sizeof(State13) , "PageTagdb" );
+		delete (st);
+		return;
+	}
+
+
 
 	g_pages.printAdminTop ( &sb , gr->m_socket , &gr->m_hr );
 

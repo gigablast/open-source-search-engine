@@ -2305,6 +2305,10 @@ bool Query::setQWords ( char boolFlag ,
 		if ( fieldCode == FIELD_GBNUMBEREQUALFLOAT )
 			ph = hash64 ("gbsortby", 8);
 
+		// fix for gbsortbyfloat:product.price
+		if ( fieldCode == FIELD_GBSORTBYFLOAT )
+			ph = hash64 ("gbsortby", 8);
+
 		if ( fieldCode == FIELD_GBNUMBERMININT )
 			ph = hash64 ("gbsortbyint", 11);
 		if ( fieldCode == FIELD_GBNUMBERMAXINT )
@@ -2346,8 +2350,8 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_IP   ||
 		     fieldCode == FIELD_ISCLEAN ||
 		     fieldCode == FIELD_QUOTA ||
-		     fieldCode == FIELD_GBSORTBY ||
-		     fieldCode == FIELD_GBREVSORTBY ||
+		     fieldCode == FIELD_GBSORTBYFLOAT ||
+		     fieldCode == FIELD_GBREVSORTBYFLOAT ||
 		     // gbmin:price:1.23
 		     fieldCode == FIELD_GBNUMBERMIN ||
 		     fieldCode == FIELD_GBNUMBERMAX ||
@@ -2489,8 +2493,8 @@ bool Query::setQWords ( char boolFlag ,
 			// i've decided not to make 
 			// gbsortby:products.offerPrice 
 			// gbmin:price:1.23 case insensitive
-			if ( fieldCode == FIELD_GBSORTBY ||
-			     fieldCode == FIELD_GBREVSORTBY ||
+			if ( fieldCode == FIELD_GBSORTBYFLOAT ||
+			     fieldCode == FIELD_GBREVSORTBYFLOAT ||
 			     fieldCode == FIELD_GBSORTBYINT ||
 			     fieldCode == FIELD_GBREVSORTBYINT ) {
 				wid = hash64Lower_utf8 ( w , wlen , 0LL );
@@ -3751,7 +3755,7 @@ struct QueryField g_fields[] = {
 
 
 	{"gbsortbyfloat", 
-	 FIELD_GBSORTBY, 
+	 FIELD_GBSORTBYFLOAT, 
 	 false,
 	 "cameras gbsortbyfloat:price",
 	 "Sort all documents that "
@@ -3762,7 +3766,7 @@ struct QueryField g_fields[] = {
 
 
 	{"gbsortbyfloat", 
-	 FIELD_GBSORTBY, 
+	 FIELD_GBSORTBYFLOAT, 
 	 false,
 	 "cameras gbsortbyfloat:product.price",
 	 "Sort all documents that "
@@ -3777,7 +3781,7 @@ struct QueryField g_fields[] = {
 
 
 	{"gbrevsortbyfloat", 
-	 FIELD_GBREVSORTBY, 
+	 FIELD_GBREVSORTBYFLOAT, 
 	 false,
 	 "cameras gbrevsortbyfloat:product.price",
 	 "Like above example but sorted with highest prices on top.",
@@ -3786,7 +3790,7 @@ struct QueryField g_fields[] = {
 
 
 	{"gbsortby", 
-	 FIELD_GBSORTBY, 
+	 FIELD_GBSORTBYFLOAT, 
 	 false,
 	 "dog gbsortbyint:gbspiderdate",
 	 "Sort the documents that contain 'dog' by "
@@ -3796,7 +3800,7 @@ struct QueryField g_fields[] = {
 	 QTF_HIDE},
 
 	{"gbrevsortby", 
-	 FIELD_GBREVSORTBY, 
+	 FIELD_GBREVSORTBYFLOAT, 
 	 false,
 	 "dog gbrevsortbyint:gbspiderdate",
 	 "Sort the documents that contain 'dog' by "

@@ -4156,8 +4156,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		qti->m_wikiPhraseId  = qw->m_wikiPhraseId;
 		qti->m_quotedStartId = qw->m_quoteStart;
 		// is it gbsortby:?
-		if ( qt->m_fieldCode == FIELD_GBSORTBY ||
-		     qt->m_fieldCode == FIELD_GBREVSORTBY )
+		if ( qt->m_fieldCode == FIELD_GBSORTBYFLOAT ||
+		     qt->m_fieldCode == FIELD_GBREVSORTBYFLOAT )
 			m_sortByTermNum = i;
 
 		if ( qt->m_fieldCode == FIELD_GBSORTBYINT ||
@@ -4314,9 +4314,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 
 		// numeric posdb termlist flags. instead of word position
 		// they have a float stored there for sorting etc.
-		if (qt->m_fieldCode == FIELD_GBSORTBY )
+		if (qt->m_fieldCode == FIELD_GBSORTBYFLOAT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
-		if (qt->m_fieldCode == FIELD_GBREVSORTBY )
+		if (qt->m_fieldCode == FIELD_GBREVSORTBYFLOAT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 		if (qt->m_fieldCode == FIELD_GBNUMBERMIN )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
