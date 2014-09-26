@@ -12478,6 +12478,8 @@ long *XmlDoc::getSiteNumInlinks ( ) {
 		maxAge *= 3600*24;
 		// so youtube which has 2997 links will add an extra 29 days
 		maxAge += (sni / 100) * 86400;
+		// hack for global index. never affect siteinlinks i imported
+		if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) age = 0;
 		// invalidate for that as wel
 		if ( age > maxAge ) valid = false;
 	}
@@ -36501,7 +36503,12 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	// if running for diffbot crawlbot then isCustomCrawl is true
 	// so do not update the siteinlink info already in tagdb since i 
 	// imported it from my main collection. we do not want to overwrite it.
-	if ( cr->m_isCustomCrawl ) goto skipSiteInlinks;
+	// NO, because for single site crawls we bottlenech on msg25
+	// when there are millions of urls. we only skip this
+	// for the global-index and if already in tagdb!
+	// No, let's just not invalidate the sitenuminlinks* tags
+	// in XmlDoc::getSiteNumInlinks()
+	//if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) ) goto skipSiteInlinks;
 
 	// sitenuminlinksfresh
 	old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
