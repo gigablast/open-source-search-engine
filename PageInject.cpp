@@ -1468,6 +1468,7 @@ Multicast *ImportState::getAvailMulticast() { // Msg7 ( ) {
 }
 
 void saveImportStates ( ) {
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) return;
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
