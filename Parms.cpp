@@ -10074,7 +10074,7 @@ void Parms::init ( ) {
         m->m_cgi   = "afgdwd";
         m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
         m->m_type  = TYPE_BOOL;
-        m->m_def   = "0";
+        m->m_def   = "1";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
         m++;
