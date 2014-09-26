@@ -567,10 +567,10 @@ master-rpm:
 # deb-master
 master-deb:
 # need to change in changelog too!! dont' forget!!!
-	git archive --format=tar --prefix=gb-1.14/ master > ../gb_1.14.orig.tar
+	git archive --format=tar --prefix=gb-1.15/ master > ../gb_1.15.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.14 -f ../gb_1.14.orig.tar
+	dh_make -e gigablast@mail.com -p gb_1.15 -f ../gb_1.15.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -595,7 +595,7 @@ master-deb:
 # upload den
 	scp gb*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.14-1_i386.deb
+	sudo alien --to-rpm gb_1.15-1_i386.deb
 # upload rpm
 	scp gb*.rpm gk268:/w/html/	
 
