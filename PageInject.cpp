@@ -1110,6 +1110,20 @@ bool ImportState::importLoop ( ) {
 	}
 	
 
+	if ( ! cr->m_importEnabled ) {
+		// wait for all to return
+		if ( out > 0 ) return false;
+		// then delete it
+		log("import: collnum %li import loop disabled",
+		    (long)m_collnum);
+		mdelete ( this, sizeof(ImportState) , "impstate");
+		delete (this);
+		return true;
+	}
+
+
+
+
 	// scan each titledb file scanning titledb0001.dat first,
 	// titledb0003.dat second etc.
 

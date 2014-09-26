@@ -35850,7 +35850,7 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	char *src     = NULL;
 	long  srcSize = 0;
 
-	if ( ptr_rootTitleBuf ) {
+	if ( ptr_rootTitleBuf || m_setFromTitleRec ) {
 		src    =  ptr_rootTitleBuf;
 		srcSize = size_rootTitleBuf;
 	}
