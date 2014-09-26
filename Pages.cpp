@@ -1303,6 +1303,27 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// collection navbar
 	status&=printCollectionNavBar ( sb, page , username, coll,pwd, qs,s,r);
 
+	// count the statuses
+	long emptyCount = 0;
+	long doneCount = 0;
+	long activeCount = 0;
+	long pauseCount = 0;
+	for (long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cc = g_collectiondb.m_recs[i];
+		if ( ! cc ) continue;
+		CrawlInfo *ci = &cc->m_globalCrawlInfo;
+		if (   cc->m_spideringEnabled && 
+		     ! ci->m_hasUrlsReadyToSpider &&
+		       ci->m_urlsHarvested )
+			emptyCount++;
+		else if ( ! ci->m_hasUrlsReadyToSpider )
+			doneCount++;
+		else if (cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
+			activeCount++;
+		else if (!cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider)
+			pauseCount++;
+	}
+
 
 	sb->safePrintf("</div>");
 
@@ -1314,21 +1335,27 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       );
 	sb->safePrintf(
 		       "<font color=black>"
-		       "&#x25cf;</font> spider is done"
+		       "&#x25cf;</font> spider is done (%li)"
 		       "<br>"
 
 		       "<font color=orange>"
-		       "&#x25cf;</font> spider is paused"
+		       "&#x25cf;</font> spider is paused (%li)"
 		       "<br>"
 
 		       "<font color=green>"
-		       "&#x25cf;</font> spider is active"
+		       "&#x25cf;</font> spider is active (%li)"
 		       "<br>"
 
 		       "<font color=gray>"
-		       "&#x25cf;</font> spider queue is empty"
+		       "&#x25cf;</font> spider queue empty (%li)"
 		       "<br>"
 		       "</div>"
+
+		       ,doneCount
+		       ,pauseCount
+		       ,activeCount
+		       ,emptyCount
+
 		       );
 
 
