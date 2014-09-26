@@ -1289,7 +1289,6 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	/*
 
-
 	//
 	// begin new stuff
 	//
@@ -1407,15 +1406,50 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 
+	//
+	// donate with paypal bubble
+	//
 
-	//sb.safePrintf("</TD></TR></TABLE></body></html>");
+	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:180px;height:180px;display:inline-block;z-index:120;color:black;margin-left:10px;position:absolute;margin-top:270px;background-color:lightgray;\">");
 
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:40px;>");
+	sb.safePrintf("Contribute");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<div style=margin-left:15px;margin-right:5px;>");
+
+
+	sb.safePrintf(
+
+		      "Help Gigablast development with PayPal."
+		      "<br>"
+		      "<br>"
+		      // BEGIN PAYPAL DONATE BUTTON
+		      "<form action=\"https://www.paypal.com/cgi-bin/webscr\" method=\"post\" target=\"_top\">"
+		      "<input type=\"hidden\" name=\"cmd\" value=\"_donations\">"
+		      "<input type=\"hidden\" name=\"business\" value=\"2SFSFLUY3KS9Y\">"
+		      "<input type=\"hidden\" name=\"lc\" value=\"US\">"
+		      "<input type=\"hidden\" name=\"item_name\" value=\"Gigablast, Inc.\">"
+		      "<input type=\"hidden\" name=\"currency_code\" value=\"USD\">"
+		      "<input type=\"hidden\" name=\"bn\" value=\"PP-DonationsBF:btn_donateCC_LG.gif:NonHosted\">"
+		      "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif\" border=\"0\" name=\"submit\" alt=\"PayPal - The safer, easier way to pay online!\" height=47 width=147>"
+		      "<img alt=\"\" border=\"0\" src=\"https://www.paypalobjects.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\">"
+		      "</form>"
+		      // END PAYPAY BUTTON
+		      "</center></div></center></td>\n"
+		      );
 
 	//
 	// end new stuff
 	//
 
 	*/
+
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");

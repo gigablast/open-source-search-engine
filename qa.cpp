@@ -758,7 +758,7 @@ bool qainject2 ( ) {
 
 
 	//
-	// mdw: query reindex test
+	// mdw: query DELETE test
 	//
 	 if ( ! s_flags[30] ) {
 	 	s_flags[30] = true;
@@ -1055,6 +1055,170 @@ bool qainlinks() {
 	if ( ! s_flags[13] ) {
 		s_flags[13] = true;
 		log("qa: SUCCESSFULLY COMPLETED INLINK TEST");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
+
+	return true;
+}
+
+// query reindex test
+bool qareindex() {
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// turn off images thumbnails
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// this only loads once
+	loadUrls();
+	long max = s_ubuf2.length()/(long)sizeof(char *);
+	//max = 1;
+
+	//
+	// inject urls, return false if not done yet
+	//
+	//static bool s_x4 = false;
+	if ( ! s_flags[2] ) {
+		// TODO: try delimeter based injection too
+		//static long s_ii = 0;
+		for ( ; s_flags[20] < max ; ) {
+			// inject using html api
+			SafeBuf sb;
+			sb.safePrintf("&c=qatest123&deleteurl=0&"
+				      "format=xml&u=");
+			sb.urlEncode ( s_urlPtrs[s_flags[20]] );
+			// the content
+			sb.safePrintf("&hasmime=1");
+			// sanity
+			//if ( strstr(s_urlPtrs[s_flags[20]],"wdc.htm") )
+			//	log("hey");
+			sb.safePrintf("&content=");
+			sb.urlEncode(s_contentPtrs[s_flags[20]] );
+			sb.nullTerm();
+			// pre-inc it in case getUrl() blocks
+			s_flags[20]++;//ii++;
+			if ( ! getUrl("/admin/inject",
+				      0, // no idea what crc to expect
+				      sb.getBufStart()) )
+				return false;
+		}
+		s_flags[2] = true;
+	}
+
+	// wait for absorption
+	if ( ! s_flags[3] ) {
+		wait(1.5);
+		s_flags[3] = true;
+		return false;
+	}
+
+	// query for 'test'
+	if ( ! s_flags[27] ) {
+		s_flags[27] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=17&format=xml&q=test&icc=1",
+				-1672870556 ) )
+			return false;
+	}
+
+	// make 2nd url filter !isreindex just have 0 spiders so we do
+	// not spider the links from the REINDEXED PAGES
+	if ( ! s_flags[4] ) {
+		s_flags[4] = true;
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123&"
+			      // make it the custom filter
+			      "ufp=custom&"
+			      // zero spiders if not isreindex
+			      "fe1=default&hspl1=0&hspl1=1&fsf1=1.000000&"
+			      "mspr1=0&mspi1=0&xg1=1000&fsp1=45&"
+		);
+		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
+			return false;
+	}
+
+
+
+	// do the query reindex on 'test'
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=16&"
+				"format=xml&q=test"
+				, 702467314 ) )
+			return false;
+	}
+
+ checkagain2:
+	// wait until spider finishes. check the spider status page
+	// in json to see when completed
+	if ( ! s_flags[5] ) {
+		wait(3.0);
+		s_flags[5] = true;
+		return false;
+	}
+
+
+	// wait for all spiders to stop
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
+			return false;
+	}
+
+	//static bool s_k2 = false;
+	if ( ! s_flags[6] ) {
+		// ensure spiders are done. 
+		// "Nothing currently available to spider"
+		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
+			s_flags[5] = false;
+			s_flags[15] = false;
+			goto checkagain2;
+		}
+		s_flags[6] = true;
+	}
+
+	//
+	// query for 'test' again after the reindex
+	//
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=14&format=xml&q=test&icc=1",
+				-1672870556 ) )
+			return false;
+	}
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+		    "QUERY REINDEX");
 		//if ( s_callback == qainject ) exit(0);
 		return true;
 	}
@@ -2009,8 +2173,11 @@ static QATest s_qatests[] = {
 
 	{qainlinks,
 	 "inlinksTest",
-	 "Test youtube inlinks. Test EDOCUNCHANGED iff just inlinks change."}
+	 "Test youtube inlinks. Test EDOCUNCHANGED iff just inlinks change."},
 
+	{qareindex,
+	 "queryReindexTest",
+	 "Test query reindex function. Ensure changed docs are updated."}
 
 };
 

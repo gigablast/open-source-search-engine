@@ -3618,7 +3618,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	// just print cached web page?
-	if ( mr->ptr_content ) {
+	if ( mr->ptr_content && 
+	     si->m_format == FORMAT_JSON &&
+	     strstr(mr->ptr_ubuf,"-diffbotxyz") ) {
 
 		// for json items separate with \n,\n
 		if ( si->m_format != FORMAT_HTML && *numPrintedSoFar > 0 )
@@ -3627,8 +3629,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// a dud? just print empty {}'s
 		if ( mr->size_content == 1 ) 
 			sb->safePrintf("{}");
+		// if it's a diffbot object just print it out directly
+		// into the json. it is already json.
 		else
 			sb->safeStrcpy ( mr->ptr_content );
+			
 
 		// . let's hack the spidertime onto the end
 		// . so when we sort by that using gbsortby:spiderdate
@@ -3689,6 +3694,21 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( *numPrintedSoFar != 0 ) sb->safePrintf(",\n");
 		sb->safePrintf("\t{\n" );
 	}
+
+
+	if ( mr->ptr_content && si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<content><![CDATA[" );
+		sb->cdataEncode ( mr->ptr_content );
+		sb->safePrintf("]]></content>\n");
+	}
+		
+	if ( mr->ptr_content && si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"content\":\"" );
+		sb->jsonEncode ( mr->ptr_content );
+		sb->safePrintf("\",\n");
+	}
+
+
 
 	Highlight hi;
 

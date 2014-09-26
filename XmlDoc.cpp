@@ -1337,7 +1337,13 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// similar to set3() above
 		m_setFromDocId   = true;
 		// use content and ip from old title rec to save time
-		m_recycleContent = true;
+		// . crap this is making the query reindex not actually
+		//   re-download the content. 
+		// . we already check the m_deleteFromIndex flag below
+		//   in getUtf8Content() and use the old content in that case
+		//   so i'm not sure why we are recycling here, so take
+		//   this out. MDW 9/25/2014.
+		//m_recycleContent = true;
 		// sanity
 		if ( m_docId == 0LL ) { char *xx=NULL;*xx=0; }
 	}
@@ -15797,7 +15803,10 @@ char **XmlDoc::getContent ( ) {
 	// if we were set from a title rec use that we do not have the original
 	// content, and caller should be calling getUtf8Content() anyway!!
 	if ( m_setFromTitleRec ) { char *xx=NULL; *xx=0; }
-	if ( m_setFromDocId    ) { char *xx=NULL; *xx=0; }
+
+	// query reindex has m_setFromDocId to true and we WANT to re-download
+	// the content... so why did i have this here? MDW 9/25/2014
+	//if ( m_setFromDocId    ) { char *xx=NULL; *xx=0; }
 
 	// recycle?
 	//if ( m_recycleContent ) { char *xx=NULL; *xx=0; }
@@ -18974,6 +18983,17 @@ char *XmlDoc::getSpiderLinks ( ) {
 	//	m_spiderLinks2     = false; 
 	//	m_spiderLinksValid = true ; }
 
+	// this slows importing down because we end up doing ip lookups
+	// for every outlink if "firstip" not in tagdb.
+	// shoot. set2() already sets m_spiderLinksValid to true so we
+	// have to override if importing.
+	if ( m_isImporting && m_isImportingValid ) {
+		m_spiderLinks  = false;
+		m_spiderLinks2 = false;
+		m_spiderLinksValid = true;
+		return &m_spiderLinks2;
+	}
+
 	// return the valid value
 	if ( m_spiderLinksValid ) return &m_spiderLinks2;
 
@@ -21792,8 +21812,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// likewise if there error was ENONCANONICAL treat it like that
 	if ( m_indexCode == EDOCNONCANONICAL )
 		spideringLinks = true;
-	
-
 
 	//
 	// . prepare the outlink info if we are adding links to spiderdb!
@@ -35850,7 +35868,7 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	char *src     = NULL;
 	long  srcSize = 0;
 
-	if ( ptr_rootTitleBuf ) {
+	if ( ptr_rootTitleBuf || m_setFromTitleRec ) {
 		src    =  ptr_rootTitleBuf;
 		srcSize = size_rootTitleBuf;
 	}
