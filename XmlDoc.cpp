@@ -36537,7 +36537,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 				    *ip,m_siteNumInlinksTotal,rdbId)) 
 			return NULL;
 
- skipSiteInlinks:
+	// skipSiteInlinks:
 
 	// get root title buf from old tag
 	char *data  = NULL;
