@@ -18974,6 +18974,17 @@ char *XmlDoc::getSpiderLinks ( ) {
 	//	m_spiderLinks2     = false; 
 	//	m_spiderLinksValid = true ; }
 
+	// this slows importing down because we end up doing ip lookups
+	// for every outlink if "firstip" not in tagdb.
+	// shoot. set2() already sets m_spiderLinksValid to true so we
+	// have to override if importing.
+	if ( m_isImporting && m_isImportingValid ) {
+		m_spiderLinks  = false;
+		m_spiderLinks2 = false;
+		m_spiderLinksValid = true;
+		return &m_spiderLinks2;
+	}
+
 	// return the valid value
 	if ( m_spiderLinksValid ) return &m_spiderLinks2;
 
@@ -21792,8 +21803,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// likewise if there error was ENONCANONICAL treat it like that
 	if ( m_indexCode == EDOCNONCANONICAL )
 		spideringLinks = true;
-	
-
 
 	//
 	// . prepare the outlink info if we are adding links to spiderdb!
