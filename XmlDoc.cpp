@@ -15261,6 +15261,11 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( od )
 		r->m_contentHash32 = od->m_contentHash32;
 
+	// force floater usage on even if "use spider proxies" parms is off
+	// if we're a diffbot crawl and use robots is off.
+	if ( cr && ! cr->m_useRobotsTxt && cr->m_isCustomCrawl )
+		r->m_forceUseFloaters = true;
+
 	// eventgurubot is the max
 	//char *userAgent = g_conf.m_spiderUserAgent;
 	// hardcode it

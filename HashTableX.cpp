@@ -432,7 +432,6 @@ bool HashTableX::load ( char *dir , char *filename ,  SafeBuf *fillBuf ) {
 
 // both return false and set g_errno on error, true otherwise
 bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
-	reset();
 	File f;
 	f.set ( dir , filename );
 	if ( ! f.doesExist() ) return false;
@@ -447,10 +446,27 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
 	off += 4;
 	if ( ! f.read ( &numSlotsUsed , 4 , off ) ) return false;
 	off += 4;
-	if ( ! f.read ( &m_ks         , 4 , off ) ) return false;
+	long ks;
+	if ( ! f.read ( &ks         , 4 , off ) ) return false;
 	off += 4;
-	if ( ! f.read ( &m_ds         , 4 , off ) ) return false;
+	long ds;
+	if ( ! f.read ( &ds         , 4 , off ) ) return false;
 	off += 4;
+
+	// bogus key size?
+	if ( ks <= 0 ) {
+		log("htable: reading hashtable from %s%s: "
+		    "bogus keysize of %li",
+		    dir,filename,ks );
+		return false;
+	}
+
+	// just in case m_ks was already set, call reset() down here
+	reset();
+
+	m_ks = ks;
+	m_ds = ds;
+
 	if ( ! setTableSize ( numSlots , NULL , 0 ) ) return false;
 	if ( ! f.read ( m_keys        , numSlots * m_ks , off ) ) return false;
 	off += numSlots * m_ks;
