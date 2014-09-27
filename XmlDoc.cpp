@@ -29549,11 +29549,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	// returns values of specified meta tags
 	if ( ! reply->ptr_dbuf && m_req->size_displayMetas > 1 ) {
-		long dlen;  char *d;
-		d = getDescriptionBuf(m_req->ptr_displayMetas,&dlen);
+		long dsize;  char *d;
+		d = getDescriptionBuf(m_req->ptr_displayMetas,&dsize);
 		if ( ! d || d == (char *)-1 ) return (Msg20Reply *)d;
 		reply->ptr_dbuf  = d;
-		reply->size_dbuf = dlen + 1;
+		reply->size_dbuf = dsize; // includes \0
 	}
 
 	// breathe
@@ -30437,9 +30437,9 @@ Matches *XmlDoc::getMatches () {
 }
 
 // sender wants meta description, custom tags, etc.
-char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
+char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dsize ) {
 	// return the buffer if we got it
-	if ( m_dbufValid ) { *dlen = m_dbufLen; return m_dbuf; }
+	if ( m_dbufValid ) { *dsize = m_dbufSize; return m_dbuf; }
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
 	// now get the content of the requested display meta tags
@@ -30483,6 +30483,14 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 						 gbstrlen(s) , // name len
 						 "name"    , // http-equiv/name
 						 false     );// convert &#'s?
+		dptr[wlen] = '\0';
+
+		// test it out
+		if ( ! verifyUtf8 ( dptr ) ) {
+			log("xmldoc: invalid utf8 content for meta tag %s.",s);
+			continue;
+		}
+
 		// advance and NULL terminate
 		dptr    += wlen;
 		*dptr++  = '\0';
@@ -30492,8 +30500,9 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 			    "was encountered. Truncating.",dbufEnd-m_dbuf);
 	}
 	// what is the size of the content of displayed meta tags?
-	m_dbufLen   = dptr - m_dbuf;
+	m_dbufSize   = dptr - m_dbuf;
 	m_dbufValid = true;
+	*dsize = m_dbufSize;
 	return m_dbuf;
 }
 

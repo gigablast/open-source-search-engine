@@ -2032,7 +2032,7 @@ class XmlDoc {
 	Query m_query;
 	Matches m_matches;
 	// meta description buf
-	long m_dbufLen;
+	long m_dbufSize;
 	char m_dbuf[1024];
 	SafeBuf m_htb;
 	Title m_title;

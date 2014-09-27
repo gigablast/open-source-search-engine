@@ -51,6 +51,8 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 
 bool printScoresHeader ( SafeBuf *sb ) ;
 
+bool printMetaContent ( Msg40 *msg40 , long i ,State0 *st, SafeBuf *sb );
+
 bool printSingleScore ( SafeBuf *sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
 
@@ -2279,7 +2281,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t\t<omitCount>%li</omitCount>\n",
+		sb->safePrintf("\t<omitCount>%li</omitCount>\n",
 			       msg40->m_omitCount);
 
 	if ( si->m_format == FORMAT_JSON )
@@ -4435,6 +4437,16 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// new line if not xml
 	if ( si->m_format == FORMAT_HTML && strLen ) 
 		sb->safePrintf("<br>\n");
+
+
+	/////////
+	// 
+	// meta tag values for &dt=keywords ...
+	//
+	/////////
+	if ( mr->ptr_dbuf && mr->size_dbuf>1 )
+		printMetaContent ( msg40 , ix,st,sb);
+
 
 	////////////
 	//
@@ -8774,41 +8786,53 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_icon     = NULL;
 		n++;
 
+		// META TAGS
+		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_title    = "No Meta Tags";
+		s_mi[n].m_cgi      = "dt=";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_title    = "Show Meta Tags";
+		s_mi[n].m_cgi      = "dt=keywords+description";
+		s_mi[n].m_icon     = NULL;
+		n++;
 
 
 		// ADMIN
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Show Admin View";
 		s_mi[n].m_cgi      = "admin=1";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Show User View";
 		s_mi[n].m_cgi      = "admin=0";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 10;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Action";
 		s_mi[n].m_cgi      = "";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 10;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Respider all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 10;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Delete all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 10;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Scrape from google/bing";
 		s_mi[n].m_cgi      = "/admin/inject";
 		s_mi[n].m_icon     = NULL;
@@ -9095,5 +9119,92 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 	// copy over what came after
 	if ( ! newUrl->safeMemcpy ( foundEnd, srcEnd-foundEnd ) ) return false;
 	if ( ! newUrl->nullTerm() ) return false;
+	return true;
+}
+
+bool printMetaContent ( Msg40 *msg40 , long i , State0 *st, SafeBuf *sb ) {
+	// store the user-requested meta tags content
+	SearchInput *si = &st->m_si;
+	char *pp      =      si->m_displayMetas;
+	char *ppend   = pp + gbstrlen(si->m_displayMetas);
+	Msg20 *m = msg40->m_msg20[i];//getMsg20(i);
+	Msg20Reply *mr = m->m_r;
+	char *dbuf    = mr->ptr_dbuf;//msg40->getDisplayBuf(i);
+	long  dbufLen = mr->size_dbuf-1;//msg40->getDisplayBufLen(i);
+	char *dbufEnd = dbuf + (dbufLen-1);
+	char *dptr    = dbuf;
+	//bool  printedSomething = false;
+	// loop over the names of the requested meta tags
+	while ( pp < ppend && dptr < dbufEnd ) {
+		// . assure last byte of dbuf is \0
+		//   provided dbufLen > 0
+		// . this insures sprintf and gbstrlen won't
+		//   crash on dbuf/dptr
+		if ( dbuf [ dbufLen ] != '\0' ) {
+			log(LOG_LOGIC,"query: Meta tag buffer has no \\0.");
+			break;
+		}
+		// skip initial spaces
+		while ( pp < ppend && is_wspace_a(*pp) ) pp++;
+		// break if done
+		if ( ! *pp ) break;
+		// that's the start of the meta tag name
+		char *ss = pp;
+		// . find end of that meta tag name
+		// . can end in :<integer> -- specifies max len
+		while ( pp < ppend && ! is_wspace_a(*pp) && 
+			*pp != ':' ) pp++;
+		// save current char
+		char  c  = *pp;
+		char *cp = pp;
+		// NULL terminate the name
+		*pp++ = '\0';
+		// if ':' was specified, skip the rest
+		if ( c == ':' ) while ( pp < ppend && ! is_wspace_a(*pp)) pp++;
+		// print the name
+		//long sslen = gbstrlen ( ss   );
+		//long ddlen = gbstrlen ( dptr );
+		long ddlen = dbufLen;
+		//if ( p + sslen + ddlen + 100 > pend ) continue;
+		// newspaperarchive wants tags printed even if no value
+		// make sure the meta tag isn't fucked up
+		for ( long ti = 0; ti < ddlen; ti++ ) {
+			if ( dptr[ti] == '"' ||
+			     dptr[ti] == '>' ||
+			     dptr[ti] == '<' ||
+			     dptr[ti] == '\r' ||
+			     dptr[ti] == '\n' ||
+			     dptr[ti] == '\0' ) {
+				ddlen = ti;
+				break;
+			}
+		}
+
+		if ( ddlen > 0 ) {
+			// ship it out
+			if ( si->m_format == FORMAT_XML ) {
+				sb->safePrintf ( "\t\t<display name=\"%s\">"
+					  	"<![CDATA[", ss );
+				sb->cdataEncode ( dptr, ddlen );
+				sb->safePrintf ( "]]></display>\n" );
+			}
+			else if ( si->m_format == FORMAT_JSON ) {
+				sb->safePrintf ( "\t\t\"display.%s\":\"",ss);
+				sb->jsonEncode ( dptr, ddlen );
+				sb->safePrintf ( "\",\n");
+			}
+			// otherwise, print in light gray
+			else {
+				sb->safePrintf("<font color=#c62939>"
+					      "<b>%s</b>: ", ss );
+				sb->safeMemcpy ( dptr, ddlen );
+				sb->safePrintf ( "</font><br>" );
+			}
+		}
+		// restore tag name buffer
+		*cp = c;
+		// point to next content of tag to display
+		dptr += ddlen + 1;
+	}
 	return true;
 }

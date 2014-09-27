@@ -159,6 +159,7 @@ class GigablastRequest {
 	long long m_docId;
 	long      m_strip;
 	char      m_includeHeader;
+	char      m_highlightQuery;
 
 	///////////
 	//

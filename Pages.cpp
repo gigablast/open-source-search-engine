@@ -3202,7 +3202,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		       "<td>STRING</td>"
 		       "<td>output format</td>"
 		       "<td>html</td>"
-		       "<td>Display output in this format.</td>"
+		       "<td>Display output in this format. Can be "
+		       "<i>html</i>, <i>json</i> or <i>xml</i>.</td>"
 		       "</tr>"
 		       , blues[count%2]
 		       , count

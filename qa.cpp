@@ -605,6 +605,55 @@ bool qainject1 ( ) {
 		     return false;
 	}
 
+
+	//
+	// adv.html test
+	//
+	// query for 'test' using adv.html advanced search interface
+	if ( ! s_flags[27] ) {
+		s_flags[27] = true;
+		if ( ! getUrl ( 
+			       "/search?c=qatest123&qa=17&format=xml&"
+			       "dr=1&pss=50&sc=1&hacr=1&quotea=web+site&"
+			       "gblang=1&minus=transcripts&n=150", 
+			       123 ) )
+			return false;
+	}
+
+
+	// &sites= test
+	if ( ! s_flags[28] ) {
+		s_flags[28] = true;
+		if ( ! getUrl ( 
+			       "/search?c=qatest123&qa=17&format=xml&q=web&"
+			       "sortby=2&"
+			       // html only:
+			       "sw=20&"
+			       "filetype=html&"
+			       "ff=1&"
+			       "facet=gbfacetint:gbhopcount&"
+			       "sites=mindtools.com+www.redcross.org"
+			       , 123 ) )
+			return false;
+	}
+
+	// html test of summary width
+	if ( ! s_flags[29] ) {
+		s_flags[29] = true;
+		if ( ! getUrl ( 
+			       "/search?c=qatest123&qa=17&format=html&q=web&"
+			       // html only:
+			       "sw=20&tml=10&ns=1&smxcpl=30&qh=0&n=100&"
+			       "dt=keywords+description&"
+			       "facet=gbfacetint:gbspiderdate&"
+			       , 123 ) )
+			return false;
+	}
+
+
+	// stop for now
+	return true;
+
 	//
 	// eject/delete the urls
 	//
@@ -1226,6 +1275,7 @@ bool qareindex() {
 
 	return true;
 }
+
 
 /*
 static char *s_urls1 =

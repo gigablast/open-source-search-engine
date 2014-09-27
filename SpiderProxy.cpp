@@ -505,6 +505,9 @@ bool downloadTestUrlFromProxies ( ) {
 	// only host #0 should do the testing i guess
 	//if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
 
+	// no need if no url
+	if ( g_conf.m_proxyTestUrl.length() <= 1 ) return true;
+
 	// if host #0 dies then host #1 must take its place managing the
 	// spider proxies
 	Host *h0 = g_hostdb.getFirstAliveHost();

@@ -6794,6 +6794,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -8694,6 +8695,17 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "use cache";
+	m->m_desc  = "Use 0 if Gigablast should not read or write from "
+		"any caches at any level.";
+	m->m_def   = "-1";
+	m->m_off   = (char *)&si.m_useCache - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_cgi   = "usecache";
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "read from cache";
 	m->m_desc  = "Should we read search results from the cache? Set "
 		"to false to fix dmoz bug.";
@@ -8704,17 +8716,6 @@ void Parms::init ( ) {
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_flags = PF_NOSAVE;
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m++;
-
-	m->m_title = "use cache";
-	m->m_desc  = "Use 0 if Gigablast should not read or write from "
-		"any caches at any level.";
-	m->m_def   = "-1";
-	m->m_off   = (char *)&si.m_useCache - y;
-	m->m_type  = TYPE_CHAR;
-	m->m_cgi   = "usecache";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -8772,6 +8773,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "restrict search to pages that link to this url";
@@ -8787,7 +8789,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "search for this phrase quoted";
-	m->m_desc  = "The phrase which will be quoted.";
+	m->m_desc  = "The phrase which will be quoted in the query. From the "
+		"advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_quote1 - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	//m->m_size  = 512;
@@ -8796,10 +8799,12 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "search for this second phrase quoted";
-	m->m_desc  = "The phrase which will be quoted.";
+	m->m_desc  = "The phrase which will be quoted in the query. From the "
+		"advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_quote2 - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	//m->m_size  = 512;
@@ -8808,6 +8813,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -8840,7 +8846,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "require these query terms";
-	m->m_desc  = "Returned results will have all the words in X.";
+	m->m_desc  = "Returned results will have all the words in X. "
+		"From the advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_plus - y;
 	m->m_def   = NULL;
 	m->m_type  = TYPE_CHARPTR;//STRING;
@@ -8850,10 +8857,12 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "avoid these query terms";
-	m->m_desc  = "Returned results will NOT have any of the words in X.";
+	m->m_desc  = "Returned results will NOT have any of the words in X. "
+		"From the advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_minus - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "minus";
@@ -8862,6 +8871,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "format of the returned search results";
@@ -8873,6 +8883,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "format";
+	m->m_flags = PF_NOAPI; // alread in the api, so don't repeat
 	m++;
 
 	m->m_title = "family filter";
@@ -8903,10 +8914,8 @@ void Parms::init ( ) {
 	m++;
 
 
-
 	m->m_title = "cached page highlight query";
-	m->m_desc  = "Highlight the terms in this query instead. For "
-		"display of the cached page.";
+	m->m_desc  = "Highlight the terms in this query instead.";
 	m->m_def   = NULL;
 	m->m_off   = (char *)&si.m_highlightQuery - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
@@ -8917,6 +8926,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
+
 
 	/*
 	m->m_title = "highlight event date in summaries.";
@@ -8946,8 +8956,8 @@ void Parms::init ( ) {
 	*/
 
 	m->m_title = "Query match offsets";
-	m->m_desc  = "Return a list of the offsets of each query word"
-		"actually matched in the document.  1 means byte offset,"
+	m->m_desc  = "Return a list of the offsets of each query word "
+		"actually matched in the document.  1 means byte offset, "
 		"and 2 means word offset.";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_queryMatchOffsets - y;
@@ -8957,6 +8967,7 @@ void Parms::init ( ) {
 	m->m_smax  = 2;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "boolean status";
@@ -9064,21 +9075,46 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "niceness";
+	m->m_desc  = "Can be 0 or 1. 0 is usually a faster, high-priority "
+		"query, 1 is a slower, lower-priority query.";
+	m->m_def   = "0";
+	m->m_off   = (char *)&si.m_niceness - y;
+	m->m_type  = TYPE_LONG;
+	m->m_cgi   = "niceness";
+	m->m_smin  = 0;
+	m->m_smax  = 1;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "debug flag";
+	m->m_desc  = "Is 1 to log debug information, 0 otherwise.";
+	m->m_def   = "0";
+	m->m_off   = (char *)&si.m_debug - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_cgi   = "debug";
+	//m->m_priv  = 1;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "return number of docs per topic";
 	m->m_desc  = "Use 1 if you want Gigablast to return the number of "
-		"documents in the search results that contained each topic.";
+		"documents in the search results that contained each topic "
+		"(gigabit).";
 	m->m_def   = "1";
 	m->m_off   = (char *)&si.m_returnDocIdCount - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rdc";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "return docids per topic";
 	m->m_desc  = "Use 1 if you want Gigablast to return the list of "
-		"docIds from the search results that contained each topic.";
+		"docIds from the search results that contained each topic "
+		"(gigabit).";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_returnDocIds - y;
 	m->m_type  = TYPE_BOOL;
@@ -9089,25 +9125,12 @@ void Parms::init ( ) {
 
 	m->m_title = "return popularity per topic";
 	m->m_desc  = "Use 1 if you want Gigablast to return the popularity "
-		"of each topic.";
+		"of each topic (gigabit).";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_returnPops - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rp";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m++;
-
-	m->m_title = "niceness";
-	m->m_desc  = "Can be 0 or 1. 0 is usually a faster, high-priority "
-		"query, 1 is a slower, lower-priority query.";
-	m->m_def   = "0";
-	m->m_off   = (char *)&si.m_niceness - y;
-	m->m_type  = TYPE_LONG;
-	m->m_cgi   = "niceness";
-	m->m_smin  = 0;
-	m->m_smax  = 1;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -9124,23 +9147,12 @@ void Parms::init ( ) {
 	//m++;
 
 
-	m->m_title = "debug flag";
-	m->m_desc  = "Is 1 to log debug information, 0 otherwise.";
-	m->m_def   = "0";
-	m->m_off   = (char *)&si.m_debug - y;
-	m->m_type  = TYPE_BOOL;
-	m->m_cgi   = "debug";
-	//m->m_priv  = 1;
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m++;
-
 	m->m_title = "debug gigabits flag";
 	m->m_desc  = "Is 1 to log gigabits debug information, 0 otherwise.";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_debugGigabits - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_cgi   = "debug";
+	m->m_cgi   = "debuggigabits";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -9165,6 +9177,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "iu";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "image link";
@@ -9177,6 +9190,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ix";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "image width";
@@ -9187,6 +9201,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "image height";
@@ -9198,6 +9213,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// m->m_title = "password";
@@ -9273,6 +9289,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "gbcountry";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -9374,6 +9391,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qcs";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// buzz
@@ -9385,6 +9403,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "inlinks";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// buzz
@@ -9398,6 +9417,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "outlinks";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// buzz
@@ -9538,6 +9558,17 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_cgi   = "ih";
 	m->m_off   = (char *)&gr.m_includeHeader - (char *)&gr;
+	m->m_flags = PF_API;
+	m++;
+
+	m->m_title = "query";
+	m->m_desc  = "Highlight this query in the page.";
+	m->m_def   = "";
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_GET;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_cgi   = "q";
+	m->m_off   = (char *)&gr.m_query - (char *)&gr;
 	m->m_flags = PF_API;
 	m++;
 
