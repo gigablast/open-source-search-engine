@@ -38,6 +38,9 @@ static void gotState           ( void *state ) ;
 static bool gotResults         ( void *state ) ;
 
 bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) ;
+bool replaceParm2 ( char *cgi , SafeBuf *newUrl , 
+		    char *oldUrl , long oldUrlLen ) ;
+
 
 bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
 
@@ -2275,6 +2278,17 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 
+	if ( si->m_format == FORMAT_XML )
+		sb->safePrintf("\t\t<omitCount>%li</omitCount>\n",
+			       msg40->m_omitCount);
+
+	if ( si->m_format == FORMAT_JSON )
+		sb->safePrintf("\"omitCount\":%li,\n",
+			       msg40->m_omitCount);
+
+
+
+
 	//bool xml = si->m_xml;
 
 
@@ -3012,6 +3026,45 @@ bool printSearchResultsTail ( State0 *st ) {
 		args.safePrintf("&sites=%s",si->m_sites);
 
 
+	if ( si->m_format == FORMAT_HTML &&
+	     msg40->m_omitCount ) { // && firstNum == 0 ) { 
+		// . add our cgi to the original url
+		// . so if it has &qlang=de and they select &qlang=en
+		//   we have to replace it... etc.
+		SafeBuf newUrl;
+		// show banned results
+		replaceParm2 ("sb=1",
+			      &newUrl,
+			      hr->m_origUrlRequest,
+			      hr->m_origUrlRequestLen );
+		// no deduping by summary or content hash etc.
+		SafeBuf newUrl2;
+		replaceParm2("dr=0",&newUrl2,newUrl.getBufStart(),
+			     newUrl.length());
+		// and no site clustering
+		SafeBuf newUrl3;
+		replaceParm2 ( "sc=0", &newUrl3 , newUrl2.getBufStart(),
+			     newUrl2.length());
+		// start at results #0 again
+		SafeBuf newUrl4;
+		replaceParm2 ( "s=0", &newUrl4 , newUrl3.getBufStart(),
+			     newUrl3.length());
+		
+		sb->safePrintf("<center>"
+			       "<i>"
+			       "%li results were omitted because they "
+			       "were considered duplicates, banned, <br>"
+			       "or "
+			       "from the same site as other results. "
+			       "<a href=%s>Click here to show all results</a>."
+			       "</i>"
+			       "</center>"
+			       "<br><br>"
+			       , msg40->m_omitCount
+			       , newUrl4.getBufStart() );
+	}
+
+
 	if ( firstNum > 0 && 
 	     (si->m_format == FORMAT_HTML || 
 	      si->m_format == FORMAT_WIDGET_IFRAME //||
@@ -3075,7 +3128,9 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	// print try this search on...
 	// an additional <br> if we had a Next or Prev results link
-	if ( sb->length() > remember ) sb->safeMemcpy ("<br>" , 4 ); 
+	if ( sb->length() > remember &&
+	     si->m_format == FORMAT_HTML ) 
+		sb->safeMemcpy ("<br>" , 4 ); 
 
 	//
 	// END PRINT PREV 10 NEXT 10 links!
@@ -3554,6 +3609,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	long long d = msg40->getDocId(ix);
 
+	// do not print if it is a summary dup or had some error
+	// long level = (long)msg40->getClusterLevel(ix);
+	// if ( level != CR_OK &&
+	//      level != CR_INDENT )
+	// 	return true;
+	
 
 
 	if ( si->m_docIdsOnly ) {
@@ -8958,6 +9019,15 @@ bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) {
 	// get original request url. this is not \0 terminated
 	char *src    = hr->m_origUrlRequest;
 	long  srcLen = hr->m_origUrlRequestLen;
+	return replaceParm2 ( cgi ,newUrl, src, srcLen );
+}
+
+bool replaceParm2 ( char *cgi , SafeBuf *newUrl , 
+		    char *oldUrl , long oldUrlLen ) {
+
+	char *src    = oldUrl;
+	long  srcLen = oldUrlLen;
+
 	char *srcEnd = src + srcLen;
 
 	char *equal = strstr(cgi,"=");

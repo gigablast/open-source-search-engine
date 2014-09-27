@@ -6419,7 +6419,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "percent similar dedup summary";
-	m->m_desc  = "If document summary is this percent similar "
+	m->m_desc  = "If document summary (and title) are "
+		"this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
 		"same. 0 means no summary deduping. You must also supply "
@@ -14954,7 +14955,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "percent similar dedup summary default value";
-	m->m_desc  = "If document summary is this percent similar "
+	m->m_desc  = "If document summary (and title) are "
+		"this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
 		"same. 0 means no summary deduping.";
