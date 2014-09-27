@@ -1,10 +1,11 @@
 #include "gb-include.h"
 
-//unsigned long long g_hashtab[256][256] ;
+unsigned long long g_hashtab[256][256] ;
 
-// now we explicitly specify the zobrist table so we are compatible
-// with cygwin and apple environments
-#include "hashtab.cpp"
+// . now we explicitly specify the zobrist table so we are compatible
+//   with cygwin and apple environments
+// . no, let's just define the rand2() function to be compatible then
+//#include "hashtab.cpp"
 
 // . used for computing zobrist hash of a string up to 256 chars long
 // . first array component is the max length, 256, of the string
@@ -18,16 +19,13 @@ bool hashinit () {
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
 
-	if ( g_hashtab[0][0] != 6720717044602784129LL ) return false;
+	//if ( g_hashtab[0][0] != 6720717044602784129LL ) return false;
+	//s_initialized = true;
+	//return true;
 
-	s_initialized = true;
-	return true;
-
-	//FILE *fd = fopen ( "./hashtab.cpp", "rw" );
-
-	fprintf(stdout,"g_hashtab[256][256]={\n");
+	//fprintf(stdout,"g_hashtab[256][256]={\n");
 	for ( long i = 0 ; i < 256 ; i++ ) {
-		fprintf(stdout,"{");
+		//fprintf(stdout,"{");
 		for ( long j = 0 ; j < 256 ; j++ ) {
 			g_hashtab [i][j]  = (unsigned long long)rand();
 			// the top bit never gets set, so fix
@@ -39,13 +37,13 @@ bool hashinit () {
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
 			// fixes for cygwin/apple
-			fprintf(stdout,"%lluULL",g_hashtab[i][j]);
-			if ( j+1<256 ) fprintf(stdout,",");
+			//fprintf(stdout,"%lluULL",g_hashtab[i][j]);
+			//if ( j+1<256 ) fprintf(stdout,",");
 		}
-		fprintf(stdout,"},\n");
+		//fprintf(stdout,"},\n");
 	}
-	fprintf(stdout,"};\n");
-	fflush ( stdout );
+	//fprintf(stdout,"};\n");
+	//fflush ( stdout );
 
 	if ( g_hashtab[0][0] != 6720717044602784129LL ) return false;
 
