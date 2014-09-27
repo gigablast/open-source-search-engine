@@ -1194,8 +1194,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//if ( ! strncmp ( path ,"/help.html", pathLen ) )
 	//	return sendPageAbout ( s , r , path );
 
-	if ( ! strncmp ( path ,"/adv.html", pathLen ) )
-		return sendPageAdvanced ( s , r );
+	//if ( ! strncmp ( path ,"/adv.html", pathLen ) )
+	//	return sendPageAdvanced ( s , r );
 
 	//if ( ! strncmp ( path ,"/about.html", pathLen ) )
 	//	return sendPageAbout ( s , r );
@@ -1207,6 +1207,9 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 
 	if ( ! strncmp ( path ,"/widgets.html", pathLen ) )
 		return sendPageWidgets ( s , r );
+
+	if ( ! strncmp ( path ,"/adv.html", pathLen ) )
+		return sendPagePretty ( s , r,"adv.html","advanced");
 
 	// who uses gigablast?
 	if ( ! strncmp ( path ,"/users.html", pathLen ) )

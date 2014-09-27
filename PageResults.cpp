@@ -7377,6 +7377,11 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	long  qlen;
 	char *qstr = hr->getString("q",&qlen,"",NULL);
 	sb->htmlEncode ( qstr , qlen , false );
+
+	// if it was an advanced search, this can be empty
+	if ( qlen == 0 && si->m_displayQuery )
+		sb->htmlEncode ( si->m_displayQuery );
+
 	sb->safePrintf ("\">"
 			//"<input type=submit value=\"Search\" border=0>"
 

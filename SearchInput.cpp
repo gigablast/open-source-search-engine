@@ -641,6 +641,42 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		m_sbuf1.safePrintf( "%s", qp );
 	}
 
+	// boolean OR terms
+	bool boolq = false;
+	char *any = hr->getString("any",NULL);
+	bool first = true;
+	if ( any ) {
+		char *s = any;
+		char *send = any + gbstrlen(any);
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
+		while (s < send) {
+			while (isspace(*s) && s < send) s++;
+			char *s2 = s+1;
+			if (*s == '\"') {
+				// if there's no closing quote just treat
+				// the end of the line as such
+				while (*s2 != '\"' && s2 < send) s2++;
+				if (s2 < send) s2++;
+			} else {
+				while (!isspace(*s2) && s2 < send) s2++;
+			}
+			if ( first ) m_sbuf1.safeStrcpy("(");
+			if ( first ) m_sbuf2.safeStrcpy("(");
+			if ( ! first ) m_sbuf1.safeStrcpy(" OR ");
+			if ( ! first ) m_sbuf2.safeStrcpy(" OR ");
+			first = false;
+			m_sbuf1.safeMemcpy ( s , s2 - s );
+			m_sbuf2.safeMemcpy ( s , s2 - s );
+			s = s2 + 1;
+		}
+	}
+	if ( ! first ) m_sbuf1.safeStrcpy(") AND ");
+	if ( ! first ) m_sbuf2.safeStrcpy(") AND ");
+	if ( ! first ) boolq = true;
+
+
+
 	// and this
 	if ( m_secsBack > 0 ) {
 		long timestamp = getTimeGlobalNoCore();
@@ -694,36 +730,69 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	// }
 
 	if ( m_familyFilter ) {
-		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbisadult:0 | ");
+		//if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		//m_sbuf1.safePrintf("gbisadult:0 | ");
+	 	//if( p > pstart ) *p++ =  ' ';
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
+	 	//p += sprintf( p, "+gblang:%li |", m_gblang );
+	 	m_sbuf1.safePrintf( "+gbisadult:0");
+	 	m_sbuf2.safePrintf( "+gbisadult:0");
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" |");
+			m_sbuf2.safeStrcpy(" |");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND ");
+			m_sbuf2.safeStrcpy(" AND ");
+		}
+
 	}
 
-	// append gblang: term
-	// if( m_gblang > 0 ) {
-	// 	//if( p > pstart ) *p++ =  ' ';
-	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-	// 	//p += sprintf( p, "+gblang:%li |", m_gblang );
-	// 	m_sbuf1.safePrintf( "+gblang:%li |", m_gblang );
-	// }
+	// PRE-pend gblang: term
+	long gblang = hr->getLong("gblang",-1);
+	if( gblang >= 0 ) {
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
+	 	m_sbuf1.safePrintf( "+gblang:%li", gblang );
+	 	m_sbuf2.safePrintf( "+gblang:%li", gblang );
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" |");
+			m_sbuf2.safeStrcpy(" |");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND ");
+			m_sbuf2.safeStrcpy(" AND ");
+		}
+	}
+
 	// bookmark here so we can copy into st->m_displayQuery below
 	//long displayQueryOffset = m_sbuf1.length();
 	// append url: term
-	if ( m_url && m_url[0] ) {
-		//if ( p > pstart ) *p++ = ' ';
-		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		//memcpy ( p , "+url:" , 5 ); p += 5;
-		m_sbuf1.safeStrcpy ( "+url:");
-		//memcpy ( p , m_url , m_urlLen ); p += m_urlLen;
-		m_sbuf1.safeStrcpy ( m_url );
-	}
+	// if ( m_url && m_url[0] ) {
+	// 	//if ( p > pstart ) *p++ = ' ';
+	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	// 	//memcpy ( p , "+url:" , 5 ); p += 5;
+	// 	m_sbuf1.safeStrcpy ( "+url:");
+	// 	//memcpy ( p , m_url , m_urlLen ); p += m_urlLen;
+	// 	m_sbuf1.safeStrcpy ( m_url );
+	// }
 	// append url: term
 	if ( m_link && m_link[0] ) {
-		//if ( p > pstart ) *p++ = ' ';
-		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		//memcpy ( p , "+link:" , 6 ); p += 6;
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		m_sbuf1.safeStrcpy ( "+link:");
-		//memcpy ( p , m_link , m_linkLen ); p += m_linkLen;
+		m_sbuf2.safeStrcpy ( "+link:");
 		m_sbuf1.safeStrcpy ( m_link );
+		m_sbuf2.safeStrcpy ( m_link );
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" |");
+			m_sbuf2.safeStrcpy(" |");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND ");
+			m_sbuf2.safeStrcpy(" AND ");
+		}
 	}
 	// append the natural query
 	if ( m_query && m_query[0] ) {
@@ -757,7 +826,14 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//*p++ = '+';
 		//*p++ = '\"';
-		m_sbuf1.safeStrcpy("+\"");
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" +\"");
+			m_sbuf2.safeStrcpy(" +\"");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND \"");
+			m_sbuf2.safeStrcpy(" AND \"");
+		}
 		//p += ucToUtf8(p, pend-p, m_quote1, m_quoteLen1, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_quote1 );
 		//memcpy ( p , m_quote1 , m_quoteLen1 ); p += m_quoteLen1 ;
@@ -768,7 +844,6 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		//*p2++ = '+';
 		//*p2++ = '\"';
-		m_sbuf2.safeStrcpy("+\"");
 		//p2+=ucToUtf8(p2, pend2-p2, m_quote1, m_quoteLen1, csStr,0,0);
 		m_sbuf2.safeStrcpy ( m_quote1 );
 		//memcpy ( p2 , m_quote1 , m_quoteLen1 ); p2 += m_quoteLen1 ;
@@ -785,7 +860,17 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//*p++ = '+';
 		//*p++ = '\"';
-		m_sbuf1.safeStrcpy("+\"");
+
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" +\"");
+			m_sbuf2.safeStrcpy(" +\"");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND \"");
+			m_sbuf2.safeStrcpy(" AND \"");
+		}
+
+		//m_sbuf1.safeStrcpy("+\"");
 		//p += ucToUtf8(p, pend-p, m_quote2, m_quoteLen2, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_quote2 );
 		//memcpy ( p , m_quote2 , m_quoteLen2 ); p += m_quoteLen2 ;
@@ -796,7 +881,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		//*p2++ = '+';
 		//*p2++ = '\"';
-		m_sbuf2.safeStrcpy("+\"");
+		//m_sbuf2.safeStrcpy("+\"");
 		//p2+=ucToUtf8(p2, pend2-p2, m_quote2, m_quoteLen2, csStr,0,0);
 		m_sbuf2.safeStrcpy ( m_quote2 );
 		//memcpy ( p2 , m_quote2 , m_quoteLen2 ); p2 += m_quoteLen2 ;
@@ -828,11 +913,20 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s2 < send) break;
+			//if (s2 < send) break;
 			//if (p < pend) *p++ = '+';
 			//if (p2 < pend2) *p2++ = '+';
-			m_sbuf1.pushChar('+');
-			m_sbuf2.pushChar('+');
+			//m_sbuf1.pushChar('+');
+			//m_sbuf2.pushChar('+');
+			if ( ! boolq ) {
+				m_sbuf1.safeStrcpy("+");
+				m_sbuf2.safeStrcpy("+");
+			}
+			else {
+				m_sbuf1.safeStrcpy(" AND ");
+				m_sbuf2.safeStrcpy(" AND ");
+			}
+
 			//p += ucToUtf8(p, pend-p, s, s2-s, csStr, 0,0);
 			//p2 += ucToUtf8(p2, pend2-p2, s, s2-s, csStr, 0,0);
 			m_sbuf1.safeMemcpy ( s , s2 - s );
@@ -882,8 +976,18 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			if (s2 < send) break;
 			//if (p < pend) *p++ = '-';
 			//if (p2 < pend2) *p2++ = '-';
-			m_sbuf1.pushChar('-');
-			m_sbuf2.pushChar('-');
+			// m_sbuf1.pushChar('-');
+			// m_sbuf2.pushChar('-');
+
+			if ( ! boolq ) {
+				m_sbuf1.safeStrcpy("-");
+				m_sbuf2.safeStrcpy("-");
+			}
+			else {
+				m_sbuf1.safeStrcpy(" AND NOT ");
+				m_sbuf2.safeStrcpy(" AND NOT ");
+			}
+
 			//p += ucToUtf8(p, pend-p, s, s2-s, csStr, 0,0);
 			//p2 += ucToUtf8(p2, pend2-p2, s, s2-s, csStr, 0,0);
 			m_sbuf1.safeMemcpy ( s , s2 - s );
@@ -923,9 +1027,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}
 
 	// null terms
-	if ( ! m_sbuf1.pushChar('\0') ) return false;
-	if ( ! m_sbuf2.pushChar('\0') ) return false;
-	if ( ! m_sbuf3.pushChar('\0') ) return false;
+	if ( ! m_sbuf1.nullTerm() ) return false;
+	if ( ! m_sbuf2.nullTerm() ) return false;
+	if ( ! m_sbuf3.nullTerm() ) return false;
 
 	// the natural query
 	m_displayQuery = m_sbuf2.getBufStart();// + displayQueryOffset;

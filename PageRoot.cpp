@@ -2672,7 +2672,7 @@ void resetPageAddUrl ( ) {
 	s_htable.reset();
 }
 
-
+/*
 bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
@@ -2847,7 +2847,7 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	return true;
 }
-
+*/
 
 bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
