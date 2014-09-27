@@ -730,21 +730,17 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	// }
 
 	if ( m_familyFilter ) {
-		//if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		//m_sbuf1.safePrintf("gbisadult:0 | ");
-	 	//if( p > pstart ) *p++ =  ' ';
 	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
-	 	//p += sprintf( p, "+gblang:%li |", m_gblang );
+	 	//if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 	 	m_sbuf1.safePrintf( "+gbisadult:0");
-	 	m_sbuf2.safePrintf( "+gbisadult:0");
+	 	//m_sbuf2.safePrintf( "+gbisadult:0");
 		if ( ! boolq ) {
 			m_sbuf1.safeStrcpy(" |");
-			m_sbuf2.safeStrcpy(" |");
+			//m_sbuf2.safeStrcpy(" |");
 		}
 		else {
 			m_sbuf1.safeStrcpy(" AND ");
-			m_sbuf2.safeStrcpy(" AND ");
+			//m_sbuf2.safeStrcpy(" AND ");
 		}
 
 	}

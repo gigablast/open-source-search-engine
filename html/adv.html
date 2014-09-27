@@ -1,20 +1,23 @@
 <br><br><br>
 <form method=GET action=/search name=f>
 
+<table width=605 border=0 align=center cellpadding=5 cellspacing=3>
 
-<script type=text/javascript><!--function x(){document.f.q.focus();}// --></script></head><body onload=x()><table width=605 border=0 align=center cellpadding=5 cellspacing=3><tbody><tr align=left valign=middle><th colspan=3>Search for...</th></tr><tr align=left valign=middle><td><strong>all</strong> of these words</td><td><input type=text name=plus size=40 /></td><td><div onclick=document.f.submit();  onmouseover="this.style.backgroundColor='lightgreen';this.style.color='black';" onmouseout="this.style.backgroundColor='green';this.style.color='white';" style=border-radius:28px;cursor:pointer;cursor:hand;border-color:white;border-style:solid;border-width:3px;padding:12px;width:20px;height:20px;display:inline-block;background-color:green;color:white;><b style=margin-left:-5px;font-size:18px;>GO</b></div></td></tr><tr align=left valign=middle><td>this <strong>exact phrase</strong></td><td colspan=2><input type=text name=quotea size=40 /></td></tr><tr align=left valign=middle><td>and this <strong>exact phrase</strong></td><td colspan=2><input type=text name=quoteb size=40 /></td></tr>
+<tbody>
+
+<tr align=left valign=middle><th colspan=3>Search for...</th></tr><tr align=left valign=middle><td><strong>all</strong> of these words</td><td><input type=text id=q name=plus size=40 /></td><td><div onclick=document.f.submit();  onmouseover="this.style.backgroundColor='lightgreen';this.style.color='black';" onmouseout="this.style.backgroundColor='green';this.style.color='white';" style=border-radius:28px;cursor:pointer;cursor:hand;border-color:white;border-style:solid;border-width:3px;padding:12px;width:20px;height:20px;display:inline-block;background-color:green;color:white;><b style=margin-left:-5px;font-size:18px;>GO</b></div></td></tr><tr align=left valign=middle><td>this <strong>exact phrase</strong></td><td colspan=2><input type=text name=quotea size=40 /></td></tr><tr align=left valign=middle><td>and this <strong>exact phrase</strong></td><td colspan=2><input type=text name=quoteb size=40 /></td></tr>
 
 <tr align=left valign=middle><td><strong>any</strong> of these words</td><td colspan=2><input type=text name=any size=40 /></td></tr>
 
 <tr align=left valign=middle><td><strong>none</strong> of these words</td><td colspan=2><input type=text name=minus size=40 /></td></tr>
 
-<tr align=left valign=middle><td>Family Filter</td><td colspan=2><input type=radio name=ff value=1/>yes&nbsp;&nbsp;&nbsp;<input type=radio name=ff value=0 checked/>no</td></tr>
+<!--<tr align=left valign=middle><td>Family Filter</td><td colspan=2><input type=radio name=ff value=1/>yes&nbsp;&nbsp;&nbsp;<input type=radio name=ff value=0 checked/>no</td></tr>-->
 
 
 
 <tr align=left valign=middle><td>In this language:</td><td colspan=2>
 
-<select name=gblang>
+<select name=gblang style=width:415px;>
 <option value=-1>Any</option>
 <option value=0>Unknown</option>
 
@@ -28,16 +31,20 @@
 
 <tr align=left valign=middle><td>Site Clustering</td><td colspan=2><input type=radio name=sc value=1/>yes&nbsp;&nbsp;&nbsp;<input type=radio name=sc value=0 checked/>no</td></tr>
 
-<tr align=left valign=middle><td>Number of summary excerpts</td><td colspan=2><input type=radio name=ns value=0 />0&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=1 />1&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=2 />2&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=3 checked=checked />3&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=4 />4&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=5 />5</td></tr>
+<tr align=left valign=middle><td>Number of summary excerpts</td><td colspan=2><input type=radio name=ns value=0>0&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=1>1&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=2>2&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=3 checked>3&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=4>4&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=5>5</td></tr>
 
-<tr align=left valign=middle><td>Results per Page</td><td colspan=2><input type=radio name=n value=10 checked=checked />10&nbsp;&nbsp;<input type=radio name=n value=20 />20&nbsp;&nbsp;<input type=radio name=n value=30 />30&nbsp;&nbsp;<input type=radio name=n value=40 />40&nbsp;&nbsp;<input type=radio name=n value=50 />50&nbsp;&nbsp;<input type=radio name=n value=100 />100</td></tr>
+<tr align=left valign=middle><td>Results per Page</td>
+
+<td colspan=2><input type=radio name=n value=10 checked/>10&nbsp;&nbsp;<input type=radio name=n value=20 />20&nbsp;&nbsp;<input type=radio name=n value=30 />30&nbsp;&nbsp;<input type=radio name=n value=40 />40&nbsp;&nbsp;<input type=radio name=n value=50 />50&nbsp;&nbsp;<input type=radio name=n value=100 />100</td></tr>
 
 
-<tr align=left valign=middle><td>Restrict to these Sites</td><td colspan=2><textarea rows=10 cols=56 name=sites></textarea></td></tr>  </tbody></table>
+<tr align=left valign=middle><td>Restrict to these Sites</td><td colspan=2><textarea rows=10 cols=56 name=sites></textarea></td></tr>
 
+<tr><td></td><td><input type=submit></td></tr>
+
+  </tbody></table>
 
 </form>
 <br>
 
 <br><br>
-</TD></TR></TABLE></body></html>

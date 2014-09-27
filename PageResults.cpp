@@ -8761,40 +8761,54 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		n++;
 
 
+		// family filter
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Family Filter Off";
+		s_mi[n].m_cgi      = "ff=0";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Family Filter On";
+		s_mi[n].m_cgi      = "ff=1";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+
 
 		// ADMIN
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Show Admin View";
 		s_mi[n].m_cgi      = "admin=1";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 9;
 		s_mi[n].m_title    = "Show User View";
 		s_mi[n].m_cgi      = "admin=0";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Action";
 		s_mi[n].m_cgi      = "";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Respider all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Delete all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Scrape from google/bing";
 		s_mi[n].m_cgi      = "/admin/inject";
 		s_mi[n].m_icon     = NULL;
@@ -8813,10 +8827,12 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 	for ( long i = 0 ; i <= s_mi[s_num-1].m_menuNum ; i++ ) {
 		// after 4 make a new line
 		if ( i == 5 ) sb->safePrintf("<br><br>");
+		if ( i == 9 ) sb->safePrintf("<br><br>");
 		printMenu ( sb , i , hr );
 	}
 
 	sb->safePrintf("</div>\n");
+	sb->safePrintf("<br>\n");
 
 	return true;
 }
