@@ -2,6 +2,7 @@ SHELL = /bin/bash
 
 CC=g++
 
+# remove dlstubs.o for CYGWIN
 OBJS =  UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
 	PageGet.o PageHosts.o PageIndexdb.o \
@@ -96,7 +97,7 @@ CPPFLAGS = -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
-#LIBS= -lz -lm -lpthread -lssl -lcrypto -iconv -lz
+#LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
 
 endif
 
