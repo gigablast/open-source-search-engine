@@ -15263,7 +15263,12 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// force floater usage on even if "use spider proxies" parms is off
 	// if we're a diffbot crawl and use robots is off.
-	if ( cr && ! cr->m_useRobotsTxt && cr->m_isCustomCrawl )
+	//if ( cr && ! cr->m_useRobotsTxt && cr->m_isCustomCrawl )
+	//	r->m_forceUseFloaters = true;
+
+	// for beta testing, make it a collection specific parm for diffbot
+	// so we can turn on manually
+	if ( cr->m_forceUseFloaters )
 		r->m_forceUseFloaters = true;
 
 	// eventgurubot is the max

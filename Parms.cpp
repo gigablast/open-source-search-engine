@@ -15994,7 +15994,19 @@ void Parms::init ( ) {
 	m++;
 
 
-
+	m->m_title = "use proxies for spidering";
+	m->m_desc  = "If this is true Gigablast will use the proxies "
+		"listed on the <i>proxies</i> page for spidering for "
+		"this collection regardless whether the proxies are enabled "
+		"on the <i>proxies</i> page.";
+	m->m_cgi   = "useproxies";
+	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
 
 	/*
 	m->m_title = "add url enabled";

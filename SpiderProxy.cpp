@@ -337,9 +337,9 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		       // we fetch a test url every minute or so through
 		       // each proxy to ensure it is up. typically this should
 		       // be your website so you do not make someone angry.
-		       "<td><b>test url last download</b></td>"
+		       "<td><b>test url last download attempt</b></td>"
 		       // print "FAILED" in red if it failed to download
-		       "<td><b>test url download time</b></td>"
+		       "<td><b>test url download took</b></td>"
 
 		       "<td><b>last bytes downloaded</b></td>"
 
