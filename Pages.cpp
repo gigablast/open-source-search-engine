@@ -960,6 +960,10 @@ bool printTopNavButton ( char *text,
 			       "border-style:solid;"
 			       //"margin-bottom:-3px;"
 			       "border-color:blue;"
+			       // fix for msie. no this is bad for firefox
+			       //"padding-bottom:7px;"
+			       // fix msie this way:
+			       "border-bottom-width:4px;"
 			       "border-bottom-color:white;"
 			       //"overflow-y:hidden;"
 			       //"overflow-x:hidden;"
@@ -1368,14 +1372,31 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//
 
 	// the controls will go here
-	sb->safePrintf("<TD valign=top >"
+	sb->safePrintf("<TD valign=top>"
+
+		       // MDW 9/27/2014: tried to fix that blue border
+		       // in MSIE but could not easily make it go away.
+		       // seems like the table cell truncates the div's
+		       // left border below even if i put a z-index:1000;
+		       // on there.
+
+		       // "style="
+		       // "border-color:green;"
+		       // "border-left-width:3px;"
+		       // "border-style:solid;"
+		       // "margin-left:-30px;"
+		       // ">"
+
 		       "<div style=\"padding-left:20px;"
 
 		       "margin-left:-3px;"
 
 		       "border-color:#%s;"//f3c714;"
 		       "border-width:3px;"
-		       "border-left-width:3px;"
+		       // make this from 3px to 4px for msie
+		       "border-left-width:4px;"
+		       // another msie fix:
+		       //"position:absolute;"
 		       "border-top-width:0px;"
 		       "border-right-width:0px;"
 		       "border-bottom-color:blue;"
