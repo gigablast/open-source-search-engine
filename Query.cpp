@@ -3656,8 +3656,11 @@ struct QueryField g_fields[] = {
 	 "gblang:de",
 	 "Matches all documents in german. "
 	 "The supported language abbreviations "
-	 "are at the bottom of the <i>url filters</i> page. Some more "
-	 "common ones are <i>en, es, fr, zh_cn</i>.",
+	 "are at the bottom of the <a href=/admin/filters>url filters</a> "
+	 "page. Some more "
+	 "common ones are <i>gblang:en, gblang:es, gblang:fr, "
+	 // need quotes for this one!!
+	 "gblang:\"zh_cn\"</i> (note the quotes for zh_cn!).",
 	 NULL,
 	 0},
 
