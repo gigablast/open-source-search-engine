@@ -6401,7 +6401,7 @@ bool printScoresHeader ( SafeBuf *sb ) {
 		      "<td>spam</td>"
 		      "<td>inlnkPR</td>" // nlinkSiteRank</td>"
 		      "<td>termFreq</td>"
-		      "</tr>" 
+		      "</tr>\n" 
 		      );
 	return true;
 }
@@ -6625,9 +6625,9 @@ bool printSingleScore ( SafeBuf *sb ,
 
 
 	sb->safePrintf("<tr>"
-		      "<td rowspan=2>%.03f</td>"
+		      "<td rowspan=2>%.03f</td>\n"
 		      "<td>%s <font color=orange>%.1f"
-		      "</font></td>"
+		      "</font></td\n>"
 		      // wordpos
 		      "<td>"
 		      "<a href=\"/get?d=" 
@@ -6641,17 +6641,17 @@ bool printSingleScore ( SafeBuf *sb ,
 		      "hipos=%li&c=%s#hipos\">"
 		      ,(long)ss->m_wordPos
 		      ,si->m_cr->m_coll);
-	sb->safePrintf("%li</a></td>"
+	sb->safePrintf("%li</a></td>\n"
 		      "<td>%s <font color=blue>%.1f"
-		      "</font></td>" // syn
+		      "</font></td>\n" // syn
 		      
 		      // wikibigram?/weight
-		      "<td>%s <font color=green>%.02f</font></td>"
+		      "<td>%s <font color=green>%.02f</font></td>\n"
 		      
 		      //"<td>%li/<font color=green>%f"
 		      //"</font></td>" // diversity
 		      "<td>%li <font color=purple>"
-		      "%.02f</font></td>" // density
+		      "%.02f</font></td>\n" // density
 		      , (long)ss->m_wordPos
 		      , syn
 		      , sw // synonym weight
@@ -6665,7 +6665,7 @@ bool printSingleScore ( SafeBuf *sb ,
 	if ( ss->m_hashGroup == HASHGROUP_INLINKTEXT ) {
 		sb->safePrintf("<td>&nbsp;</td>"
 			      "<td>%li <font color=red>%.02f"
-			      "</font></td>" // wordspam
+			      "</font></td>\n" // wordspam
 			      , (long)ss->m_wordSpamRank
 			      , wsw
 			      );
@@ -6673,7 +6673,7 @@ bool printSingleScore ( SafeBuf *sb ,
 	else {
 		sb->safePrintf("<td>%li <font color=red>%.02f"
 			      "</font></td>" // wordspam
-			      "<td>&nbsp;</td>"
+			      "<td>&nbsp;</td>\n"
 			      , (long)ss->m_wordSpamRank
 			      , wsw
 			      );
@@ -6681,8 +6681,8 @@ bool printSingleScore ( SafeBuf *sb ,
 	}
 	
 	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
-		      "%.02f</font></td>" // termfreq
-		      "</tr>"
+		      "%.02f</font></td>\n" // termfreq
+		      "</tr>\n"
 		      , tf
 		      , tfw
 		      );
@@ -6717,7 +6717,7 @@ bool printSingleScore ( SafeBuf *sb ,
 		      "<font color=magenta>%.02f</font>"
 		      //" / ( 3.0 )"
 		      // end formula
-		      "</td></tr>"
+		      "</td></tr>\n"
 		      , ss->m_finalScore
 		      //, (long)MAXWORDPOS+1
 		      , hgw
