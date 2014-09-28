@@ -26026,6 +26026,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( *ct == CT_JSON ) {
 		// this hashes both with and without the fieldname
 		hashJSONFields ( table ); 
+		// hash gblang:de
+		if ( ! hashLanguageString ( table ) ) return NULL;
 		goto skip;
 	}
 
@@ -26033,6 +26035,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( *ct == CT_XML ) {
 		// this hashes both with and without the fieldname
 		hashXMLFields ( table );
+		// hash gblang:de
+		if ( ! hashLanguageString ( table ) ) return NULL;
 		goto skip;
 	}
 
@@ -26080,6 +26084,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashCharset       ( table ) ) return NULL;
 	if ( ! hashRSSInfo       ( table ) ) return NULL;
 	if ( ! hashPermalink     ( table ) ) return NULL;
+
+	// hash gblang:de last for parsing consistency
+	if ( ! hashLanguageString ( table ) ) return NULL;
 
 	// we set this now in hashWords3()
 	if ( m_doingSEO )
@@ -28191,7 +28198,31 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 	if ( ! hashString ( s, slen, &hi ) ) return false;
 
 	// try lang abbreviation
-	slen = sprintf(s , "%s ", getLangAbbr(langId) );
+	sprintf(s , "%s ", getLangAbbr(langId) );
+	// go back to broken way to try to fix parsing consistency bug
+	// by adding hashLanguageString() function below
+	//sprintf(s , "%s ", getLangAbbr(langId) );
+	if ( ! hashString ( s, slen, &hi ) ) return false;
+
+	return true;
+}
+
+bool XmlDoc::hashLanguageString ( HashTableX *tt ) {
+
+	setStatus ( "hashing language string" );
+
+	long langId = (long)*getLangId();
+
+	// update hash parms
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_prefix    = "gblang";
+
+	// try lang abbreviation
+	char s[32];
+	long slen = sprintf(s , "%s ", getLangAbbr(langId) );
+	// go back to broken way to try to fix parsing consistency bug
 	if ( ! hashString ( s, slen, &hi ) ) return false;
 
 	return true;

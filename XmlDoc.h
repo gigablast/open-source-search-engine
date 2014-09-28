@@ -802,6 +802,7 @@ class XmlDoc {
 	bool linksToGigablast ( ) ;
 	bool searchboxToGigablast ( ) ;
 	bool hashLanguage ( class HashTableX *table ) ;
+	bool hashLanguageString ( class HashTableX *table ) ;
 	bool hashCountry ( class HashTableX *table ) ;
 	bool hashSiteNumInlinks ( class HashTableX *table ) ;
 	bool hashCharset ( class HashTableX *table ) ;
