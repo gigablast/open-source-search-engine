@@ -2292,7 +2292,7 @@ bool qaxml ( ) {
 	if ( ! s_flags[10] ) {
 		s_flags[10] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=gbminint%%3Aoembed.thumbnail_height%3A380",
+				"q=gbminint%3Aoembed.thumbnail_height%3A380",
 				-1310551262 ) )
 			return false;
 	}
@@ -2302,7 +2302,7 @@ bool qaxml ( ) {
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=gbmaxint%%3Aoembed.thumbnail_height%3A380",
+				"q=gbmaxint%3Aoembed.thumbnail_height%3A380",
 				-1310551262 ) )
 			return false;
 	}
@@ -2319,7 +2319,7 @@ bool qaxml ( ) {
 	if ( ! s_flags[14] ) {
 		s_flags[14] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=gbfacetstr%%3Arss.channel.title",
+				"q=gbfacetstr%3Arss.channel.title",
 				-1310551262 ) )
 			return false;
 	}

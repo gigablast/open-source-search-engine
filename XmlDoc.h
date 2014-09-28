@@ -918,6 +918,8 @@ class XmlDoc {
 					FacetValHash_t fvh ) ;
 	bool storeFacetValuesHtml     ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
+	bool storeFacetValuesXml      ( char *qs , class SafeBuf *sb ,
+					FacetValHash_t fvh ) ;
 	bool storeFacetValuesJSON     ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
 

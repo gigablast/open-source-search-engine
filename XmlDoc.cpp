@@ -29202,7 +29202,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 				if ( ! jp || jp == (void *)-1)
 					return (Msg20Reply *)jp;
 			}
-			if ( m_contentType == CT_HTML ) {
+			if ( m_contentType == CT_HTML ||
+			     m_contentType == CT_XML ) {
 				Xml *xml = getXml();
 				if ( ! xml || xml==(void *)-1)
 					return (Msg20Reply *)xml;
@@ -48667,6 +48668,8 @@ char *XmlDoc::hashXMLFields ( HashTableX *table ) {
 	long n = xml->getNumNodes();
 	XmlNode *nodes = xml->getNodes   ();
 
+	SafeBuf nameBuf;
+
 	// scan the xml nodes
 	for ( long i = 0 ; i < n ; i++ ) {
 
@@ -48679,7 +48682,7 @@ char *XmlDoc::hashXMLFields ( HashTableX *table ) {
 
 		// assemble the full parent name
 		// like "tag1.tag2.tag3"
-		SafeBuf nameBuf;
+		nameBuf.reset();
 		xml->getCompoundName ( i , &nameBuf );
 
 		// this is \0 terminated
@@ -48748,6 +48751,9 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	if ( m_contentType == CT_HTML ) 
 		return storeFacetValuesHtml ( qs , sb , fvh );
+
+	if ( m_contentType == CT_XML ) 
+		return storeFacetValuesXml ( qs , sb , fvh );
 
 	return true;
 }
@@ -48864,6 +48870,89 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 		if ( ! content || contentLen <= 0 ) continue;
 
 	skip:
+		// hash it to match it if caller specified a particular hash
+		// because they are coming from Msg40::lookUpFacets() function
+		// to convert the hashes to strings, like for rendering in
+		// the facets box to the left of the search results
+		FacetValHash_t val32 = hash32 ( content, contentLen);
+		if ( fvh && fvh != val32 ) continue;
+
+		// otherwise add facet FIELD to our buf
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+
+		// then add facet VALUE
+		if ( isString && !sb->safePrintf("%lu,",(unsigned long)val32))
+			return false;
+		if ( !sb->safeMemcpy(content,contentLen) ) return false;
+		if ( !sb->pushChar('\0') ) return false;
+
+		// if only one specified, we are done
+		if ( fvh ) return true;
+
+		if ( uniqueField ) return true;
+	}
+
+	return true;
+}
+
+
+bool XmlDoc::storeFacetValuesXml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
+
+	Xml *xml = getXml();
+
+	long qsLen = gbstrlen(qs);
+
+	bool isString = false;
+	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;
+
+	long i = 0;
+
+	bool uniqueField = false;
+
+	SafeBuf nameBuf;
+
+	// find the first meta summary node
+	for ( i = 0 ; i < xml->m_numNodes ; i++ ) {
+
+		// skip text nodes
+		if ( xml->m_nodes[i].m_nodeId == 0 ) continue;
+
+		// assemble the full parent name
+		// like "tag1.tag2.tag3"
+		nameBuf.reset();
+		xml->getCompoundName ( i , &nameBuf );
+		long nameLen = nameBuf.length();
+		char *s = nameBuf.getBufStart();
+
+		// . does it have a type field that's "summary"
+		// . <meta name=summary content="...">
+		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
+		//s = xml->getString ( i , "name", &nameLen );
+
+		// "s" can be "summary","description","keywords",...
+		if ( nameLen != qsLen ) continue;
+		if ( strncasecmp ( s , qs , qsLen ) != 0 ) continue;
+
+		// got it...
+
+		// wtf?
+		if ( i + 1 >= xml->m_numNodes ) continue;
+
+		// point to the content! this is a text node?
+
+		// skip if not a text node, we don't return tag nodes i guess
+		if ( xml->m_nodes[i+1].m_nodeId ) continue;
+
+		char *content = xml->m_nodes[i+1].m_node;
+		long contentLen = xml->m_nodes[i+1].m_nodeLen;
+
+		// skip if empty
+		if ( ! content || contentLen <= 0 ) continue;
+
+		// skip commen cases too! like white space
+		if ( contentLen == 1 && is_wspace_a(content[0]) ) continue;
+
 		// hash it to match it if caller specified a particular hash
 		// because they are coming from Msg40::lookUpFacets() function
 		// to convert the hashes to strings, like for rendering in
