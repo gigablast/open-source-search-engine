@@ -105,6 +105,7 @@ Msg40::Msg40() {
 	m_numPrintedSoFar = 0;
 	m_lastChunk     = false;
 	m_didSummarySkip = false;
+	m_omitCount      = 0;
 	//m_numGigabitInfos = 0;
 }
 
@@ -159,6 +160,9 @@ bool Msg40::getResults ( SearchInput *si      ,
 			 bool         forward ,
 			 void        *state   ,
 			 void   (* callback) ( void *state ) ) {
+
+	m_omitCount = 0;
+
 	// warning
 	//if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
 	if ( si->m_collnumBuf.length() < (long)sizeof(collnum_t) )

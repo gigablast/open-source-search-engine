@@ -2281,11 +2281,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t<omitCount>%li</omitCount>\n",
+		sb->safePrintf("\t<numResultsOmitted>%li"
+			       "</numResultsOmitted>\n",
 			       msg40->m_omitCount);
 
 	if ( si->m_format == FORMAT_JSON )
-		sb->safePrintf("\"omitCount\":%li,\n",
+		sb->safePrintf("\"numResultsOmitted\":%li,\n",
 			       msg40->m_omitCount);
 
 

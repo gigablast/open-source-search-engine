@@ -502,8 +502,6 @@ static long *s_flags = NULL;
 //
 bool qainject1 ( ) {
 
-	//if ( ! s_callback ) s_callback = qainject1;
-
 	//
 	// delete the 'qatest123' collection
 	//
@@ -652,7 +650,7 @@ bool qainject1 ( ) {
 
 
 	// stop for now
-	return true;
+	//return true; //
 
 	//
 	// eject/delete the urls
@@ -875,8 +873,6 @@ bool qainject2 ( ) {
 
 bool qaimport () {
 
-	//if ( ! s_callback ) s_callback = qainject1;
-
 	//
 	// delete the 'qatest123' collection
 	//
@@ -979,8 +975,6 @@ bool qaimport () {
 }
 
 bool qainlinks() {
-
-	//if ( ! s_callback ) s_callback = qainject1;
 
 	//
 	// delete the 'qatest123' collection
@@ -2192,7 +2186,8 @@ static QATest s_qatests[] = {
 	{qainject1,
 	 "injectTest1",
 	 "Test injection api. Test injection of multiple urls with content. "
-	 "Test deletion of urls via inject api."},
+	 "Test deletion of urls via inject api. Test most query api parms. "
+	 "Test advanced search parms."},
 
 	{qainject2,
 	 "injectTest2",
