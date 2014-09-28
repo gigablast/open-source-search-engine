@@ -86,8 +86,12 @@ class Xml {
 	// . ie. "xml.country.state.city"
 	// . fullTag option returns the entire node text
 	// . ie. "<xml>.<country>.<state abbrev="true">.<city arg="foo">
-	long getCompoundName ( long n , char *buf , long bufMaxLen, 
-			       bool fullTag = false ) ;
+	//long getCompoundName ( long n , char *buf , long bufMaxLen, 
+	//		       bool fullTag = false ) ;
+
+	// get like compound name like "node1.node2.node3\0"
+	bool getCompoundName ( long node , class SafeBuf *sb ) ;
+
 
 	// . used for parsing xml conf files
 	// . used for getting the title in an html doc, etc.
@@ -208,9 +212,6 @@ class Xml {
 
 	// used because "s" may have words separated by periods
 	long long getCompoundHash ( char *s , long len ) const;
-
-	// get like compound name like "node1.node2.node3"
-	bool getCompoundName ( long node , class SafeBuf *sb ) ;
 
 	// . set the m_parentNum of each XmlNode in our m_nodes array
 	// . TODO: do it on demand?

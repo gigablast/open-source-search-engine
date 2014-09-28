@@ -1695,7 +1695,8 @@ class XmlDoc {
 	//bool doesUrlMatchDiffbotProcessPattern() ;
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	long *getDiffbotTitleHashes ( long *numHashes ) ;
-	char *hashJSON ( HashTableX *table );
+	char *hashJSONFields ( HashTableX *table );
+	char *hashXMLFields ( HashTableX *table );
 	long *nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) ;
 
 	long m_joc;

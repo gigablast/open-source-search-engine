@@ -25961,6 +25961,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// hash diffbot's json output here
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
+	/*
 	if ( *ct == CT_JSON ) { // && m_isDiffbotJSONObject ) {
 		// hash the content type for type:json query
 		if ( ! hashContentType   ( table ) ) return NULL;
@@ -25978,6 +25979,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		// and the json itself
 		return hashJSON ( table ); 
 	}
+	*/
 
 	if ( ! hashContentType   ( table ) ) return NULL;
 	if ( ! hashUrl           ( table ) ) return NULL;
@@ -26003,12 +26005,27 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashNoSplit ( table ) ) return NULL;
 
 
-	// global index unless this is a json object in which case it is
-	// hased above in the call to hashJSON(). this will decrease disk
-	// usage by about half, posdb* files are pretty big.
-	if ( cr->m_isCustomCrawl || ! cr->m_indexBody ) return (char *)1;
+	// MDW: i think we just inject empty html with a diffbotreply into
+	// global index now, so don't need this... 9/28/2014
 
+	// global index unless this is a json object in which case it is
+	// hashed above in the call to hashJSON(). this will decrease disk
+	// usage by about half, posdb* files are pretty big.
+	//if ( cr->m_isCustomCrawl || ! cr->m_indexBody ) return (char *)1;
 	     
+	// hash json fields
+	if ( *ct == CT_JSON ) {
+		// this hashes both with and without the fieldname
+		hashJSONFields ( table ); 
+		goto skip;
+	}
+
+	// same for xml now, so we can search for field:value like w/ json
+	if ( *ct == CT_XML ) {
+		// this hashes both with and without the fieldname
+		hashXMLFields ( table );
+		goto skip;
+	}
 
 	// hash the body of the doc first so m_dist is 0 to match
 	// the rainbow display of sections
@@ -26037,6 +26054,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// the body, and only hash a term if was not already hashed above 
 	// somewhere.
 	if ( ! hashMetaSummary(table) ) return NULL;
+
+ skip:
 
 	// this will only increment the scores of terms already in the table
 	// because we neighborhoods are not techincally in the document
@@ -27365,6 +27384,9 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
 bool XmlDoc::hashSections ( HashTableX *tt ) {
+
+	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
+	if ( m_contentType == CT_HTML ) return true;
 
 	setStatus ( "hashing sections" );
 
@@ -48428,9 +48450,9 @@ Json *XmlDoc::getParsedJson ( ) {
 
 #include "Json.h"
 
-char *XmlDoc::hashJSON ( HashTableX *table ) {
+char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 
-	setStatus ( "hashing json" );
+	setStatus ( "hashing json fields" );
 
 	HashInfo hi;
 	hi.m_tt        = table;
@@ -48587,6 +48609,52 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	//m_contentHash32 = totalHash32;
 	//m_contentHash32Valid = true;
+
+	return (char *)0x01;
+}
+
+char *XmlDoc::hashXMLFields ( HashTableX *table ) {
+
+	setStatus ( "hashing xml fields" );
+
+	HashInfo hi;
+	hi.m_tt        = table;
+	hi.m_desc      = "xml object";
+
+	Xml *xml = getXml();
+	long n = xml->getNumNodes();
+	XmlNode *nodes = xml->getNodes   ();
+
+	// scan the xml nodes
+	for ( long i = 0 ; i < n ; i++ ) {
+
+		// breathe
+		QUICKPOLL(m_niceness);
+
+		// . skip if it's a tag not text node skip it
+		// . we just want the "text" nodes
+		if ( nodes[i].isTag() ) continue;
+
+		// assemble the full parent name
+		// like "tag1.tag2.tag3"
+		SafeBuf nameBuf;
+		xml->getCompoundName ( i , &nameBuf );
+
+		// this is \0 terminated
+		char *tagName = nameBuf.getBufStart();
+
+		// get the utf8 text
+		char *val = nodes[i].m_node;
+		long vlen = nodes[i].m_nodeLen;
+
+		// index like "title:whatever"
+		hi.m_prefix = tagName;
+		hashString ( val , vlen , &hi );
+
+		// hash without the field name as well
+		hi.m_prefix = NULL;
+		hashString ( val , vlen , &hi );
+	}
 
 	return (char *)0x01;
 }
