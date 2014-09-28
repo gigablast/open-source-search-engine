@@ -209,6 +209,9 @@ class Xml {
 	// used because "s" may have words separated by periods
 	long long getCompoundHash ( char *s , long len ) const;
 
+	// get like compound name like "node1.node2.node3"
+	bool getCompoundName ( long node , class SafeBuf *sb ) ;
+
 	// . set the m_parentNum of each XmlNode in our m_nodes array
 	// . TODO: do it on demand?
 	void setParents ();

@@ -95,6 +95,7 @@ class XmlNode {
 	// . use for <a href> xml nodes only right now
 	// . used so XmlDoc.cpp::getContactUsLink() works better
 	//long       m_linkNum;        
+	class XmlNode *m_parent;
 };
 
 // . does "s" start a tag? (regular tag , back tag or comment tag)

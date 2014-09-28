@@ -196,6 +196,26 @@ void Xml::reset ( ) {
 	m_allocSize   = 0;
 }
 
+
+bool Xml::getCompoundName ( long node , SafeBuf *sb ) {
+	XmlNode *buf[256];
+	XmlNode *xn = &m_nodes[node];
+	long np = 0;
+	for ( ; xn ; xn = xn->m_parent ) {
+		if ( ! xn->m_nodeId ) continue;
+		if ( np >= 256 ) {g_errno = EBUFTOOSMALL;return false;}
+		buf[np++] = xn;
+	}
+	for ( long i = np - 1 ; i >= 0 ; i-- ) {
+		XmlNode *xn = buf[i];
+		sb->safeMemcpy ( xn->m_node , xn->m_nodeLen );
+		if ( i > 0 ) sb->pushChar('.');
+	}
+	sb->nullTerm();
+	return true;
+}
+
+
 #include "HttpMime.h" // CT_JSON
 
 // "s" must be in utf8
@@ -258,6 +278,10 @@ bool Xml::set ( char  *s             ,
 		return true;
 	}
 
+	// override
+	if ( contentType == CT_XML )
+		pureXml = true;
+
 
 	QUICKPOLL((niceness));
 	long i;
@@ -310,6 +334,11 @@ bool Xml::set ( char  *s             ,
 		logf(LOG_TIMING,
 		    "build: xml: set: 4c. %llu",gettimeofdayInMilliseconds());
 
+	XmlNode *parent = NULL;
+	XmlNode *parentStackStart[256];
+	XmlNode **parentStackPtr = &parentStackStart[0];
+	XmlNode **parentStackEnd = &parentStackStart[256];
+
 	// . TODO: do this on demand
 	// . now fill our nodes array
 	// . loop over the xml
@@ -320,14 +349,49 @@ bool Xml::set ( char  *s             ,
 		QUICKPOLL(niceness);
 		// remember oldi
 		oldi = i;
+
+		// convenience ptr
+		XmlNode *xi = &m_nodes[m_numNodes];
+
 		// set that node
-		i += m_nodes[m_numNodes].set (&m_xml[i],pureXml,version);
+		i += xi->set (&m_xml[i],pureXml,version);
+
+
+		// set his parent xml node if is xml
+		xi->m_parent = parent;
+
+		// if not text node then he's the new parent
+		if ( xi->m_nodeId && xi->m_nodeId != TAG_COMMENT ) {
+
+			// if we are a back tag pop the stack
+			if ( ! xi->isFrontTag() ) {
+				// pop old parent
+				if ( parentStackPtr > parentStackStart )
+					parent = *(--parentStackPtr);
+			}
+			// we are a front tag...
+			else {
+				// did we overflow?
+				if ( parentStackPtr >= parentStackEnd ) {
+					log("xml: xml parent overflow");
+					g_errno = EBUFTOOSMALL;
+					return false;
+				}
+				// push the old parent ptr
+				if ( parent ) *parentStackPtr++ = parent;
+				// set the new parent to us
+				parent = xi;
+			}
+		}
+			
+			
+
 		// in script?
-		if ( m_nodes[m_numNodes].m_nodeId != TAG_SCRIPT ) {
+		if ( xi->m_nodeId != TAG_SCRIPT ) {
 			m_numNodes++;
 			continue;
 		}
-		if ( ! m_nodes[m_numNodes].isFrontTag() ) {
+		if ( ! xi->isFrontTag() ) {
 			m_numNodes++;
 			continue;
 		}
