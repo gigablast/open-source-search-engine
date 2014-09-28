@@ -4435,8 +4435,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
-	// new line if not xml
-	if ( si->m_format == FORMAT_HTML && strLen ) 
+	// new line if not xml. even summary is empty we need it too like
+	// when showing xml docs - MDW 9/28/2014
+	if ( si->m_format == FORMAT_HTML ) // && strLen ) 
 		sb->safePrintf("<br>\n");
 
 

@@ -27401,8 +27401,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
 bool XmlDoc::hashSections ( HashTableX *tt ) {
 
-	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
-	if ( m_contentType == CT_HTML ) return true;
+	//if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
+	//if ( m_contentType == CT_HTML ) return true;
 
 	setStatus ( "hashing sections" );
 
@@ -30657,6 +30657,15 @@ Title *XmlDoc::getTitle ( ) {
 
 Summary *XmlDoc::getSummary () {
 	if ( m_summaryValid ) return &m_summary;
+
+	// xml and json docs have empty summaries for now
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (Summary *)ct;
+
+	if ( *ct == CT_JSON || *ct == CT_XML ) {
+		m_summaryValid = true;
+		return &m_summary;
+	}
 
 	// need a buncha crap
 	Words *ww = getWords();
