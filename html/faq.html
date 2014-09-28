@@ -44,6 +44,15 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br>
 <br>
 
+<a href=#trouble>Cleaning Up after a Crash</a> - how do i make sure my data is in tact after a host crashes?
+<br>
+<br>
+
+
+<a href=#spider>The Spider</a> - how does the spider work?
+<br>
+<br>
+
 
 <!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
 <br>
@@ -225,7 +234,7 @@ an <b>apt-get install g++-multilib</b>
 <br><br><a name=features></a>
 <h1>Features</h1>
 
-&lt;<i>Last Updated May 2014</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 
 <ul>
@@ -485,29 +494,39 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 
 <a name=trouble></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
-<tr><td><center><b><font color=#ffffff size=+1>Troubleshooting</td></tr></table>
+<tr><td><center><b><font color=#ffffff size=+1>Cleaning Up After a Crash</td></tr></table>
 <br>
-&lt;<i>Caution: Old Documentation</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 <!--
 <br>
 <a name=disaster></a>
 <b>A host in the network crashed. How do I temporarily decrease query latency on the network until I get it up again?</b><br>You can go to the <i>Search Controls</i> page and cut all nine tier sizes in half. This will reduce search result recall, but should cut query latency times in half for slower queries until the crashed host is recovered.<br>-->
 
-<br><b>A host in the network crashed. What is the recovery procedure?</b><br>First determine if the host's crash was clean or unclean. It was clean if the host was able to save all data in memory before it crashed. If the log ended with <i>allExit: dumping core after saving</i> then the crash was clean, otherwise it was not.<br><br>If the crash was clean then you can simply restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. However, if the crash was not clean, like in the case of a sudden power outtage, then in order to ensure no data gets lost, you must copy the data of the crashed host's twin. If it does not have a twin then there may be some data loss and/or corruption. In that case try reading the section below, <i>How do I minimize the damage after an unclean crash with no twin?</i>, but you may be better off starting the index build from scratch. To recover from an unclean crash using the twin, follow the steps below: <br><br>a. Click on 'all spiders off' in the 'master controls' of host #0, or host #1 if host #0 was the host that crashed.<br>b. If you were injecting content directly into Gigablast, stop.<br>c. Click on 'all just save' in the 'master controls' of host #0 or host #1 if host #0 was the one that crashed.<br>d. Determine the twin of the crashed host by looking in the <a href="#hosts">hosts.conf</a> file. The twin will have the same group (shard) number as the crashed host.<br>e. Recursively copy the working directory of the twin to a spare host  using rcp since it is much faster than scp.<br>f. Restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. If it is not restartable, then skip this step.<br>g. If the crashed host was restarted, wait for it to come back up. Monitor another host's <i>hosts</i> table to see when it is up, or watch the log of the crashed host.<br>h. If the crashed host was restarted, wait a minute for it to absorb all of the data add requests that may still be lingering. Wait for all hosts' <i>spider queues</i> of urls currently being spidered to be empty of urls.<br>i. Perform another <i>all just save</i> command to relegate any new data to disk.<br>j. After the copy completes edit the hosts.conf on host #0 and replace the ip address of the crashed host with that of the spare host.<br>k. Do a <b>gb stop</b> to safely shut down all hosts in the network.<br>l. Do a <b>gb installconf</b> to propagate the hosts.conf file from host #0 to all other hosts in the network (including the spare host, but not the crashed host)<br>m. Do a <b>gb start</b> to bring up all hosts under the new hosts.conf file.<br>n. Monitor all logs for a little bit by doing <i>dsh -c -f all 'tail -f /a/log? /a/log??'</i><br>o. Check the <i>hosts</i> table to ensure all hosts are up and running.<br><br><br><b>How do I minimize the damage after an unclean crash with no twin?</b><br>You may never be able to get the index 100% back into shape right now, but in the near future there may be some technology that allows gigablast to easily recover from these situations. For now though, 2. Try to determine the last url that was indexed and *fully* saved to disk. Every time you index a url some data is added to all of these databases: checksumdb, indexdb, spiderdb, titledb and tfndb. These databases all have in-memory data that is periodically dumped to disk. So you must determine the last time each of these databases dumped to disk by looking at the timestamp on the corresponding files in the appropriate collection subdirectories contained in the working directory. If tfndb was dumped to disk the longest time ago, then use its timestamp to indicate when the last url was successfully added or injected. You might want to subtract thirty minutes from that timestamp to make sure because it is really the time that that file <b>started</b> being dumped to disk that you are after, and that timestamp represents the time of the last write to that file. Now you can re-add the potentially missing urls from that time forward and get a semi-decent recovery.<br><br><b>Gigablast is slow to respond to queries. How do I speed it up?</b><br>a. If you see long purple lines in the Performance graph when Gigablast is slow then that means Gigablast is operating on a slow network OR your tier sizes, adjustable on the Search Controls page, are way too high so that too much data is clogging the network. If your tier sizes are at the default values or lower, then the problem may be that the bandwidth between one gigablast host and another is below the required 1000Mbps. Try doing a 'dmesg | grep Mbps' to see what speed your card is operating at. Also try testing the bandwidth between hosts using the thunder program or try copying a large file using rcp and timing it. Do not use scp since it is often bottlenecked on the CPU due to the encryption that it does. If your gigabit card is operating at 100Mbps that can sometimes be fixed by rebooting. I've found that there is about a 20% chance that the reboot will make the card come back to 1000Mbps.<br><br>b. If you see lots of long black lines on the Performance graph then that means your disk is slowing everything down. Make sure that if you are doing realtime queries that you do not have too many big indexdb files. If you tight merge everything it should fix that problem. Otherwise, consider getting a raid level 0 and faster disks. Perhaps the filesystem is severly fragmented.Or maybe your query traffic is repetetive. If the queries are sorted alphabetically, or you have many duplicate queries, then most of the workload might be falling on one particular host in the network, thus bottle-necking everything.
+<br><b>A host in the network crashed. What is the recovery procedure?</b><br>First determine if the host's crash was clean or unclean. It was clean if the host was able to save all data in memory before it crashed. If the log ended with <i>allExit: dumping core after saving</i> then the crash was clean, otherwise it was not.<br><br>If the crash was clean then you can simply restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. However, if the crash was not clean, like in the case of a sudden power outtage, then in order to ensure no data gets lost, you must copy the data of the crashed host's twin. If it does not have a twin then there may be some data loss and/or corruption. In that case try reading the section below, <i>How do I minimize the damage after an unclean crash with no twin?</i>, but you may be better off starting the index build from scratch. To recover from an unclean crash using the twin, follow the steps below: <br><br>a. Click on 'all spiders off' in the 'master controls' of host #0, or host #1 if host #0 was the host that crashed.<br>b. If you were injecting content directly into Gigablast, stop.<br>c. Click on 'all just save' in the 'master controls' of host #0 or host #1 if host #0 was the one that crashed.<br>d. Determine the twin of the crashed host by looking in the <a href="#hosts">hosts.conf</a> file or on the <a href=/admin/hosts>hosts</a> page. The twin will have the same shard number as the crashed host.<br>e. Recursively copy the working directory of the twin to the crashed host  using rcp since it is much faster than scp.<br>f. Restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. If it is not restartable, then skip this step.
+
+<!--
+<br>g. If the crashed host was restarted, wait for it to come back up. Monitor another host's <i>hosts</i> table to see when it is up, or watch the log of the crashed host.<br>h. If the crashed host was restarted, wait a minute for it to absorb all of the data add requests that may still be lingering. Wait for all hosts' <i>spider queues</i> of urls currently being spidered to be empty of urls.<br>i. Perform another <i>all just save</i> command to relegate any new data to disk.<br>j. After the copy completes edit the hosts.conf on host #0 and replace the ip address of the crashed host with that of the spare host.<br>k. Do a <b>gb stop</b> to safely shut down all hosts in the network.<br>l. Do a <b>gb installconf</b> to propagate the hosts.conf file from host #0 to all other hosts in the network (including the spare host, but not the crashed host)<br>m. Do a <b>gb start</b> to bring up all hosts under the new hosts.conf file.<br>n. Monitor all logs for a little bit by doing <i>dsh -c -f all 'tail -f /a/log? /a/log??'</i><br>o. Check the <i>hosts</i> table to ensure all hosts are up and running.
+-->
+
+<br><br><br><b>How do I minimize the damage after an unclean crash with no twin?</b><br>You may never be able to get the index 100% back into shape right now, but in the near future there may be some technology that allows gigablast to easily recover from these situations. For now though, 2. Try to determine the last url that was indexed and *fully* saved to disk. Every time you index a url some data is added to all of these databases: checksumdb, posdb (index), spiderdb, titledb and clusterdb. These databases all have in-memory data that is periodically dumped to disk. So you must determine the last time each of these databases dumped to disk by looking at the timestamp on the corresponding files in the appropriate collection subdirectories contained in the working directory. If clusterdb was dumped to disk the longest time ago, then use its timestamp to indicate when the last url was successfully added or injected. You might want to subtract thirty minutes from that timestamp to make sure because it is really the time that that file <b>started</b> being dumped to disk that you are after, and that timestamp represents the time of the last write to that file. Now you can re-add the potentially missing urls from that time forward using the <a href=/admin/addurl>AddUrl page</a> and get a semi-decent recovery.
+<br>
+
 
 <!--
 <br><br><b>I get different results for the XML feed (raw=X) as compared to the HTML feed. What is going on?</b><br>           Try adding the &rt=1 cgi parameter to the search string to tell Gigablast to return real time results.rt is set to 0 by default for the XML feed, but not for the HTML feed.  That means Gigablast will only look at the root indexdb file when looking up queries.  Any newly added pages will be indexed outside of the root file until a merge is done.  This is done for performance reasons.  You can enable real time look ups by adding &rt=1 to the search string.  Also, in your search controls there are options to enable or disable real time lookups for regular queries and XML feeds, labeled as "restrict indexdb for queries" and "restrict indexdb for xml feed".  Make sure both regular queries and xml queries are doing the same thing when comparing results.<br><br>Also, you need to look at the tier sizes at the top of the Search Controls page. The tier sizes  (tierStage0, tierStage1, ...) listed for the raw (XML feed) queries needs to match non-raw in order to get exactly the same results. Smaller tier sizes yield better performance but yield less search results.
 -->
-
+<!--
 <br><br><b>The spider is on but no urls are showing up in the Spider Queue table as being spidered. What is wrong?</b><br><table width=100%><tr><td>1. Set <i>log spidered urls</i> to YES on the <i>log</i> page. Then check the log to see if something is being logged.</td></tr><tr><td>2. Check the <a href=/admin/master>master controls</a> page for the following:<br> &nbsp; a. the <i>spider enabled</i> switch is set to YES.
 
-<br> &nbsp; b. the <i>max total spiders</i> is not too LOW.
+-->
+
 
 <!--<br> &nbsp; c. the <i>spider max kbps</i> control is set high enough.</td></tr></td></tr><tr><td>3. Check the <i>spider controls</i> page for the following:-->
 
 <!--<br> &nbsp; c. the <i>spider delay</i> control is not TOO HIGH.-->
 
+<!--
 </td></tr></td></tr><tr><td>
 
 3. Check the <a href=/admin/spider>spider controls</a> page for the following:
@@ -522,28 +541,21 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <br> &nbsp; c. the <i>spider delay in milliseconds</i> control is not TOO HIGH.
 
 <br> &nbsp; b. the appropriate <i>spidering enabled</i> checkboxes in the URL Filters page are checked.
+-->
 
 <!--<br> &nbsp; c. the <i>spider start</i> and <i>end times</i> are set appropriately.-->
 
 <!--<br> &nbsp; d. the <i>use current time</i> control is set correctly.-->
 
 <!--</td></tr><tr><td>4. Make sure you have urls to spider by running 'gb dump s <collname>' on the command line to dump out spiderdb. See 'gb -h' for the help menu and more options.-->
-
+<!--
 </td></tr>
 </table>
-
-<br><b>The spider is slow.</b><br><table width=100%><tr><td>In the current <a href=/admin/spiderdb>spider queue</a>, what are the statuses of each url?
+-->
 
 <!-- If they are mostly "getting cached web page" and the IP address column is mostly empty, then Gigablast may be bogged down looking up the cached web pages of each url in the spider queue only to discover it is from a domain that was just spidered. This is a wasted lookup, and it can bog things down pretty quickly when you are spidering a lot of old urls from the same domain. Try setting <i>same domain wait</i> and <i>same ip wait</i> both to 0. This will pound those domain's server, though, so be careful. Maybe set it to 1000ms or so instead. We plan to fix this in the future.
 -->
 
-<br>
-<br><b>The spider is always bottlenecking on <i>adding links</i>.</b>
-
-<table width=100%>
-<tr><td>It often does a dns lookup on each link if it has not encountered that subdomain before. Otherwise, the subdomain IP when first encountered is stored in tagdb in the <i>firstIp</i> field. You might try using more DNSesor disabling link spidering.
-</td></tr>
-</table>
 <!--
 <br><br><a name=security></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -627,15 +639,25 @@ these hosts by clicking on the host numbers at the top of the page.
 <tr><td><center><b><font color=#ffffff size=+1>The Spider
 </td></tr></table>
 <br>
-&lt;<i>Caution: Old Documentation</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 <br>
 <b>Robots.txt</b>
 <br><br>
-The name of Gigablast's spider is Gigabot. 
-Gigabot/1.0 is used for the User-Agent field of all HTTP mime headers that Gigablast transmits. 
+The name of Gigablast's spider is Gigabot, but it by default uses GigablastOpenSource as the name of the User-Agent when downloading web pages.
+
 Gigabot respects the <a href=/spider.html>robots.txt convention</a> (robot exclusion) as well as supporting the meta noindex, noarchive and nofollow meta tags. You can tell Gigabot to ignore robots.txt files on the <a href="/admin/spider">Spider Controls</a> page.
 <br><br>
+
+<a name="spiderqueue">
+<b>Spider Queues</b>
+<br><br>
+
+You can tell Gigabot what to spider by using the <i>site list</i> on the <a href=/admin/settings>Settings</a> page. You can have very precise control over the spider by also employing the use of the <a href=/admin/filters>URL Filters</a> page which allows you to prioritize and schedule the spiders based on the individual URL and many of its associated attributes, such as hop count, language, parent language, whether is is indexed already and number of inlinks to its site, to name just a smidgen.
+<br><br>
+<br>
+
+<!--
 <b><a name=classifying>Classifying URLs</a></b> 
 <br><br>
 You can specify different indexing and spider parameters on a per URL basis by one or more of the following methods:
@@ -648,17 +670,23 @@ If you add a site which is just a canonical domain name with no explicit host na
 Sites may also use IP addresses instead of domain names. If the least significant byte of an IP address that you submit to tagdb is 0 then any URL with the same top 3 IP bytes as that IP will be considered a match.
 <li>You can specify a regular expression to describe a set of URLs using the interface on the <a href="/admin/filters"></a>URL filters</a> page. You can then assign a <a href=#ruleset>ruleset</a> that describes how to spider those URLs and how to index their content. Currently, you can also explicitly assign a spider frequency and spider queue to matching URLs. If these are specified they will override any values in the ruleset.</ul>
 If the URL being spidered matches a site in tagdb then Gigablast will use the corresponding ruleset from that and will not bother searching the regular expressions on the <a href="/admin/filters"></a>URL filters</a> page.
+-->
+
+<!--
 <br><br>
-<a name="spiderqueue">
-<b>Spider Queues</b>
-<br><br>
-Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 7. Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it belongs. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href="/admin/filters"></a>URL filters</a> page.
+Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 127.
+ Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it belongs. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href="/admin/filters"></a>URL filters</a> page.
 <br><br>
 On the <a href="/admin/spider">Spider Controls</a> page you can toggle the spidering of individual spider queues as well as link harvesting. More control on a per queue basis will be available soon, perhaps including the ability to assign a ruleset to a spider queue.
 <br><br>
 The general idea behind spider queues is that it allows Gigablast to prioritize its spidering. If two URLs are overdue to be spidered, Gigabot will download the one in the spider queue with the highest priority before downloading the other. If the two URLs have the same spider priority then Gigabot will prefer the one in the new spider queue. If they are both in the new queue or both in the old queue, then Gigabot will spider them based on their scheduled spider time.
+
 <br><br>
 Another aspect of the spider queues is that they allow Gigabot to perform depth-first spidering. When no priority is explicitly given for a URL then Gigabot will assign the URL the priority of the "linker from which it was found" minus one.
+-->
+
+
+<!--
 <br><br>
 <b>Custom Filters</b>
 <br><br>
@@ -671,6 +699,8 @@ You can specify the name of your filter (an executable program) on the <a href="
 <br><br>
 You can use multiple filters by using the pipe operator and entering a filter like "./filter1 | ./filter2 | ./filter3". In this case, only "filter1" would receive the temporary filename as its argument, the others would read from stdin.
 <br><br>
+-->
+
 <!--
 <a name=quotas></>
 <b>Document Quotas</b>
@@ -811,7 +841,7 @@ You can delete documents from the index two ways:<ul>
 <li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page.
 </ul>
 -->
-
+<!--
 <br>
 <a name=metas></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -830,6 +860,8 @@ Why use user-defined metas? Because it is very powerful. It allows you to embed 
 You can also explicitly specify how to index certain meta tags by making an &lt;index&gt; tag in the <a href="#ruleset">ruleset</a> as shown <a href="#rsmetas">here</a>. The specified meta tags will be indexed in the user-defined meta tag fashion as described above, in addition to any method described in the ruleset.<br>
 <br>
 <br>
+-->
+
 <!--
 <a name=bigdocs></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -1072,7 +1104,7 @@ The same parameters on the Log Controls page can be adjusted in the gb.conf file
 <tr><td><center><b><font color=#ffffff size=+1>Optimizing
 </td></tr></table>
 <br>
-&lt;<i>Last Updated August 2014</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 <br>
 Gigablast is a fairly sophisticated database that has a few things you can tweak to increase query performance or indexing performance.
@@ -1147,7 +1179,22 @@ specifies <i>&sc=1</i> or <i>&dr=1</i> in their query URL then they will
 override that switch.
 
 <li> Disable gigabit generation. If accessing from the API set &amp;dsrt=0 otherwise set <i>results to scan for gigabits generation by dfefault</i> to 0 in the search controls page for your collection.
+
+<li> If you see lots of long black lines on the <a href=/admin/perf>Performance graph</a> then that means your disk is slowing everything down. Make sure that if you are doing realtime queries that you do not have too many big posdb (index) files. If you tight merge everything it should fix that problem. Otherwise, consider getting a raid level 0 and faster disks. Get SSDs. Perhaps the filesystem is severly fragmented. Or maybe your query traffic is repetetive. If the queries are sorted alphabetically, or you have many duplicate queries, then most of the workload might be falling on one particular host in the network, thus bottle-necking everything.
+
+<li> If you see long purple lines in the <a href=/admin/perf>Performance graph</a> when Gigablast is doing slow query handling then that means Gigablast is distributed over a slow network.
+
+<!-- OR your tier sizes, adjustable on the Search Controls page, are way too high so that too much data is clogging the network. If your tier sizes are at the default values or lower, then the problem may be that the bandwidth between one gigablast host and another is below the required 1000Mbps. Try doing a 'dmesg | grep Mbps' to see what speed your card is operating at. Also try testing the bandwidth between hosts using the thunder program or try copying a large file using rcp and timing it. Do not use scp since it is often bottlenecked on the CPU due to the encryption that it does. If your gigabit card is operating at 100Mbps that can sometimes be fixed by rebooting. I've found that there is about a 20% chance that the reboot will make the card come back to 1000Mbps.-->
+
+
+
+
 </ul>
+
+
+
+
+
 
 <br>
 
@@ -1175,6 +1222,12 @@ changed. This backup method is not quite as efficient as the first,
 but it can still save ample disk resources.
 
 <li> Disable <i>make image thumbnails</i> in the <a href=/admin/spider>spider controls</a> if you have not already.
+
+
+<li> In the current <a href=/admin/spiderdb>spider queue</a>, what are the statuses of each url? If the spider is always bottlenecking on <i>adding links</i> 
+ that is because it does a dns lookup on each link if it has not previously encountered that subdomain. Otherwise, the subdomain IP when first encountered is stored in tagdb in the <i>firstIp</i> field. You might try using more DNSes (add more in the <a href=/admin/master>Master Controls</a>).
+
+<li> Ensure that the maximum spiders in the <a href=/admin/master>Master Controls</a> and in your collection's <a href=/admin/spider>Spider Controls</a> is high enough.
 
 </ul>
 
