@@ -3663,7 +3663,9 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		  "<input type=submit value=ok border=0 onclick=\""
 		  "document.cookie='pwd='+document.getElementById('ppp')"
 		  ".value+"
-		  "';expires=0';"
+		  // fix so cookies work for msie. expires= is wrong i guess.
+		  //"';expires=9999999';"
+		  "';max-age=9999999';"
 		  "\"></td>"
 		  "</tr></table>"
 		  "</center>"
