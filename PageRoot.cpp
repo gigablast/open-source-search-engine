@@ -708,7 +708,8 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 			       "height=57 src=/computer2.png>");
 	else
 		sb->safePrintf("<br style=line-height:10px;>"
-			       "<img width=54 height=79 src=/rocket.jpg>"
+			       "<img border=0 "
+			       "width=54 height=79 src=/rocket.jpg>"
 			       );
 
 	sb->safePrintf ( "</div>"
