@@ -206,11 +206,20 @@ bool Xml::getCompoundName ( long node , SafeBuf *sb ) {
 		if ( np >= 256 ) {g_errno = EBUFTOOSMALL;return false;}
 		buf[np++] = xn;
 	}
+
+	// ignore that initial <?xml ..> tag they all have
+	if ( np > 0 &&
+	     buf[np-1]->m_tagNameLen == 3 &&
+	     strncasecmp(buf[np-1]->m_tagName,"xml",3) == 0 )
+		np--;
+
 	for ( long i = np - 1 ; i >= 0 ; i-- ) {
 		XmlNode *xn = buf[i];
-		sb->safeMemcpy ( xn->m_node , xn->m_nodeLen );
-		if ( i > 0 ) sb->pushChar('.');
+		sb->safeMemcpy ( xn->m_tagName , xn->m_tagNameLen );
+		sb->pushChar('.');
 	}
+	// remove last '.'
+	if ( sb->length() ) sb->m_length--;
 	sb->nullTerm();
 	return true;
 }
@@ -361,7 +370,9 @@ bool Xml::set ( char  *s             ,
 		xi->m_parent = parent;
 
 		// if not text node then he's the new parent
-		if ( xi->m_nodeId && xi->m_nodeId != TAG_COMMENT ) {
+		if ( pureXml &&
+		     xi->m_nodeId && 
+		     xi->m_nodeId != TAG_COMMENT ) {
 
 			// if we are a back tag pop the stack
 			if ( ! xi->isFrontTag() ) {

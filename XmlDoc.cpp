@@ -17655,7 +17655,9 @@ char **XmlDoc::getUtf8Content ( ) {
 	// all tags like <title> or <link> to <gbtitle> or <gblink> so we
 	// know they are xml tags. because stuff like &lt;br&gt; will
 	// become <br> and will be within its xml tag like <gbdescription>
-	// or <gbtitle>
+	// or <gbtitle>.
+	// MDW: 9/28/2014. no longer do this since i added hashXmlFields().
+	/*
 	if ( m_contentType == CT_XML ) {
 		// count the xml tags
 		char *p    = m_expandedUtf8Content;
@@ -17711,6 +17713,7 @@ char **XmlDoc::getUtf8Content ( ) {
 		// free esbuf if we were referencing that to save mem
 		m_esbuf.purge();
 	}
+	*/
 
 	// richmondspca.org has &quot; in some tags and we do not like
 	// expanding that to " because it messes up XmlNode::getTagLen()
@@ -17727,11 +17730,15 @@ char **XmlDoc::getUtf8Content ( ) {
 	//   utf8 chars so that Xml::set(), etc. still work properly and don't
 	//   add any more html tags than it should
 	// . this will decode in place
-	long n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
-			    m_expandedUtf8Content,//ptr_utf8Content,
-			    m_expandedUtf8ContentSize-1,//size_utf8Content-1,
-			    doSpecial,
-			    m_niceness);
+	// . MDW: 9/28/2014. no longer do for xml docs since i added
+	//   hashXmlFields()
+	long n = m_expandedUtf8ContentSize - 1;
+	if ( m_contentType != CT_XML )
+		n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
+			       m_expandedUtf8Content,//ptr_utf8Content,
+			       m_expandedUtf8ContentSize-1,//size_utf8Con
+			       doSpecial,
+			       m_niceness);
 
 	// can't exceed this! n does not include the final \0 even though
 	// we do right it out.
@@ -17741,12 +17748,14 @@ char **XmlDoc::getUtf8Content ( ) {
 
 	// now rss has crap in it like "&amp;nbsp;" so we have to do another
 	// decoding pass
-	if ( m_contentType == CT_XML ) // isRSSExt )
-		n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
-			       m_expandedUtf8Content,//ptr_utf8Content,
-			       n,
-			       false,//doSpecial,
-			       m_niceness);
+	// . MDW: 9/28/2014. no longer do for xml docs since i added
+	//   hashXmlFields()
+	// if ( m_contentType == CT_XML ) // isRSSExt )
+	// 	n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
+	// 		       m_expandedUtf8Content,//ptr_utf8Content,
+	// 		       n,
+	// 		       false,//doSpecial,
+	// 		       m_niceness);
 	// sanity
 	if ( n > m_expandedUtf8ContentSize-1 ) {char *xx=NULL;*xx=0; }
 	// sanity
@@ -48620,6 +48629,8 @@ char *XmlDoc::hashXMLFields ( HashTableX *table ) {
 	HashInfo hi;
 	hi.m_tt        = table;
 	hi.m_desc      = "xml object";
+	hi.m_hashGroup = HASHGROUP_BODY;
+
 
 	Xml *xml = getXml();
 	long n = xml->getNumNodes();
@@ -48648,8 +48659,10 @@ char *XmlDoc::hashXMLFields ( HashTableX *table ) {
 		long vlen = nodes[i].m_nodeLen;
 
 		// index like "title:whatever"
-		hi.m_prefix = tagName;
-		hashString ( val , vlen , &hi );
+		if ( tagName && tagName[0] ) {
+			hi.m_prefix = tagName;
+			hashString ( val , vlen , &hi );
+		}
 
 		// hash without the field name as well
 		hi.m_prefix = NULL;
