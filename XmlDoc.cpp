@@ -28160,7 +28160,7 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 	if ( ! hashString ( s, slen, &hi ) ) return false;
 
 	// try lang abbreviation
-	sprintf(s , "%s ", getLangAbbr(langId) );
+	slen = sprintf(s , "%s ", getLangAbbr(langId) );
 	if ( ! hashString ( s, slen, &hi ) ) return false;
 
 	return true;
