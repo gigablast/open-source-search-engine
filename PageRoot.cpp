@@ -1120,6 +1120,77 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.safePrintf("\n");
 	}
 
+
+	// always the option to add event guru to their list of
+	// search engine in their browser
+	sb.safePrintf("<br>"
+		      //"<br>"
+
+		      "<script>\n"
+		      "function addEngine() {\n"
+		      "if (window.external && "
+		      "('AddSearchProvider' in window.external)) {\n"
+		      // Firefox 2 and IE 7, OpenSearch
+		      "window.external.AddSearchProvider('http://"
+		      "www.gigablast.com/searchbar.xml');\n"
+		      "}\n"
+		      "else if (window.sidebar && ('addSearchEngine' "
+		      "in window.sidebar)) {\n"
+		      // Firefox <= 1.5, Sherlock
+		      "window.sidebar.addSearchEngine('http://"
+		      "www.gigablast.com/searchbar.xml',"
+		      //"example.com/search-plugin.src',"
+		      "'http://www.gigablast.com/rocket.jpg'," //guru.png
+		      "'Search Plugin', '');\n"
+		      "}\n"
+		      "else {"
+		      // No search engine support (IE 6, Opera, etc).
+		      "alert('No search engine support');\n"
+		      "}\n"
+		      // do not ask again if they tried to add it
+		      // meta cookie should store this
+		      //"document.getElementById('addedse').value='1';\n"
+		      // NEVER ask again! permanent cookie
+		      "document.cookie = 'didse=3';"
+		      // make it invisible again
+		      //"var e = document.getElementById('addse');\n"
+		      //"e.style.display = 'none';\n"
+		      "}\n"
+
+
+		      "</script>\n"
+
+
+		      "<center>"
+		      "<a onclick='addEngine();' style="
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "color:blue;"
+		      ">"
+
+		      "<img height=16 width=16 border=0 src=/rocket16.png>"
+
+		      "<font color=#505050>"
+		      "%c%c%c "
+		      "</font>"
+
+		      "&nbsp; "
+
+		      "Add Gigablast to your browser's "
+		      "search engines"
+		      "</a>"
+		      "</center>"
+		      "<br>"
+		      "<br>"
+
+		       // print triangle
+		       ,0xe2
+		       ,0x96
+		       ,0xbc
+
+		      );
+
+
 	// print any red boxes we might need to
 	if ( printRedBox2 ( &sb , true ) )
 		sb.safePrintf("<br>\n");

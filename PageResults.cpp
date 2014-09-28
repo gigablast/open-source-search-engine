@@ -9051,6 +9051,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		       , frontTag
 		       , first->m_title
 		       , backTag
+		       // print triangle
 		       ,0xe2
 		       ,0x96
 		       ,0xbc
