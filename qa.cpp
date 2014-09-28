@@ -527,7 +527,7 @@ bool qainject1 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -729,7 +729,7 @@ bool qainject2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1134,7 +1134,7 @@ bool qareindex() {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1401,9 +1401,10 @@ bool qaspider1 ( ) {
 	}
 
 	// turn off images thumbnails
+	// set max spiders to 1 for consistency!
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1667,7 +1668,7 @@ bool qaspider2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1864,7 +1865,7 @@ bool qascrape ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1983,7 +1984,7 @@ bool qajson ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2203,7 +2204,7 @@ bool qaxml ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
