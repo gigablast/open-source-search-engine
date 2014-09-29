@@ -175,6 +175,7 @@ class Loop {
 	itimerval   m_quickInterrupt;
 	itimerval   m_realInterrupt;
 	itimerval   m_noInterrupt;
+	bool        m_isDoingLoop;
 	// call this when you don't want to be interrupted
 	void interruptsOff ( ) ;
 	// and this to resume being interrupted

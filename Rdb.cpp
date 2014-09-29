@@ -515,7 +515,7 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
 	RdbBase *base = NULL;
-	if ( cr ) base = cr->getBasePtr ( collnum );
+	if ( cr ) base = cr->getBasePtr ( m_rdbId );
 	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
 		return log("db: Rdb for db \"%s\" and "
@@ -1050,8 +1050,12 @@ bool Rdb::saveMaps ( bool useThread ) {
 	//	if ( m_bases[i] ) m_bases[i]->saveMaps ( useThread );
 	// now loop over bases
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
 		// shut it down
-		RdbBase *base = getBase(i);
+		//RdbBase *base = getBase(i);
 		//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
 		//if ( base ) base->closeMaps ( m_urgent );
 		if ( base ) base->saveMaps ( useThread );
@@ -1253,7 +1257,11 @@ bool Rdb::dumpTree ( long niceness ) {
 	// . keep the number of files down
 	// . dont dump all the way up to the max, leave one open for merging
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( base && base->m_numFiles >= max ) {
 			base->attemptMerge (1,false);//niceness,forced?
 			g_errno = ETOOMANYFILES;
@@ -1395,10 +1403,14 @@ bool Rdb::gotTokenForDump ( ) {
 bool Rdb::dumpCollLoop ( ) {
 
  loop:
+	CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+	if ( ! cr ) return true;
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
-		RdbBase *base = getBase(m_dumpCollnum);
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
 		// . if we wrote nothing, remove the file
 		// . if coll was deleted under us, base will be NULL!
@@ -1418,12 +1430,13 @@ bool Rdb::dumpCollLoop ( ) {
 	// advance
 	m_dumpCollnum++;
 	// advance m_dumpCollnum until we have a non-null RdbBase
-	while ( m_dumpCollnum < getNumBases() && ! getBase(m_dumpCollnum) )
+	while ( m_dumpCollnum < getNumBases() && 
+		! cr->getBasePtr (m_rdbId) )
 		m_dumpCollnum++;
 	// if no more, we're done...
 	if ( m_dumpCollnum >= getNumBases() ) return true;
 
-	RdbBase *base = getBase(m_dumpCollnum);
+	RdbBase *base = cr->getBasePtr(m_rdbId);//m_dumpCollnum);
 
 	// before we create the file, see if tree has anything for this coll
 	//key_t k; k.setMin();
@@ -1670,8 +1683,14 @@ void attemptMergeAll ( int fd , void *state ) {
 
 // called by main.cpp
 void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
+
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		base->attemptMerge(niceness,forced,doLog);
 		// stop if we got unlink/rename threads out from a merge
@@ -2640,7 +2659,10 @@ long long Rdb::getNumTotalRecs ( bool useCache ) {
 
 	//return 0; // too many collections!!
 	for ( long i = 0 ; i < nb ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
 		if ( ! base ) continue;
 		total += base->getNumTotalRecs();
 	}
@@ -2661,7 +2683,11 @@ long long Rdb::getNumTotalRecs ( bool useCache ) {
 long long Rdb::getMapMemAlloced () {
 	long long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		// skip null base if swapped out
+		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		if ( ! cr ) return true;
+		RdbBase *base = cr->getBasePtr(m_rdbId);		
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getMapMemAlloced();
 	}
@@ -2672,7 +2698,11 @@ long long Rdb::getMapMemAlloced () {
 long Rdb::getNumSmallFiles ( ) {
 	long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		// skip null base if swapped out
+		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		if ( ! cr ) return true;
+		RdbBase *base = cr->getBasePtr(m_rdbId);		
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumSmallFiles();
 	}
@@ -2683,7 +2713,11 @@ long Rdb::getNumSmallFiles ( ) {
 long Rdb::getNumFiles ( ) {
 	long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumFiles();
 	}
@@ -2693,7 +2727,11 @@ long Rdb::getNumFiles ( ) {
 long long Rdb::getDiskSpaceUsed ( ) {
 	long long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getDiskSpaceUsed();
 	}
@@ -2705,7 +2743,11 @@ bool Rdb::isMerging ( ) {
 	return (bool)m_numMergesOut;
 
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		if ( base->isMerging() ) return true;
 	}

@@ -1277,12 +1277,8 @@ class CollectionRec {
 	class RdbBase *getBase ( char rdbId );
 
 	// Rdb.cpp uses this after deleting an RdbBase and adding new one
-	void           setBasePtr ( char rdbId , class RdbBase *base ) {
-		m_bases [ (unsigned char)rdbId ] = base;
-	};
-	class RdbBase *getBasePtr ( char rdbId ) {
-		return m_bases [ (unsigned char)rdbId ];
-	};
+	void           setBasePtr ( char rdbId , class RdbBase *base ) ;
+	class RdbBase *getBasePtr ( char rdbId ) ;
 
  private:
 	// . now chuck this into CollectionRec instead of having a fixed

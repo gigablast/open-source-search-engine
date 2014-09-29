@@ -588,17 +588,44 @@ bool Collectiondb::addNewColl ( char *coll ,
 	return true;
 }
 
+void CollectionRec::setBasePtr ( char rdbId , class RdbBase *base ) {
+	// if in the process of swapping in, this will be false...
+	//if ( m_swappedOut ) { char *xx=NULL;*xx=0; }
+	if ( rdbId < 0 || rdbId >= RDB_END ) { char *xx=NULL;*xx=0; }
+	if ( m_bases[ (unsigned char)rdbId ]){ char *xx=NULL;*xx=0; }
+	m_bases [ (unsigned char)rdbId ] = base;
+}
+
+RdbBase *CollectionRec::getBasePtr ( char rdbId ) {
+	if ( rdbId < 0 || rdbId >= RDB_END ) { char *xx=NULL;*xx=0; }
+	return m_bases [ (unsigned char)rdbId ];
+}
+
+static bool s_inside = false;
+
 // returns NULL w/ g_errno set on error.
 RdbBase *CollectionRec::getBase ( char rdbId ) {
 
+	if ( s_inside ) { char *xx=NULL;*xx=0; }
+
 	if ( ! m_swappedOut ) return m_bases[(unsigned char)rdbId];
 
+	log("cdb: swapin collnum=%li",(long)m_collnum);
+
+	s_inside = true;
+
 	// load them back in. return NULL w/ g_errno set on error.
-	if ( ! g_collectiondb.addRdbBasesForCollRec ( this ) ) return NULL;
+	if ( ! g_collectiondb.addRdbBasesForCollRec ( this ) ) {
+		log("coll: error swapin: %s",mstrerror(g_errno));
+		return NULL;
+	}
+
+	s_inside = false;
 
 	g_collectiondb.m_numCollsSwappedOut--;
-
 	m_swappedOut = false;
+
+	log("coll: swapin was successful for collnum=%li",(long)m_collnum);
 
 	return m_bases[(unsigned char)rdbId];	
 }
@@ -606,6 +633,8 @@ RdbBase *CollectionRec::getBase ( char rdbId ) {
 bool CollectionRec::swapOut ( ) {
 
 	if ( m_swappedOut ) return true;
+
+	log("cdb: swapout collnum=%li",(long)m_collnum);
 
 	// free all RdbBases in each rdb
 	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
@@ -639,10 +668,13 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,  bool isNew ) {
 	return true;
 }
 
+// swap it in
 bool Collectiondb::addRdbBaseToAllRdbsForEachCollRec ( ) {
 	for ( long i = 0 ; i < m_numRecs ; i++ ) {
 		CollectionRec *cr = m_recs[i];
 		if ( ! cr ) continue;
+		// skip if swapped out
+		if ( cr->m_swappedOut ) continue;
 		// add rdb base files etc. for it
 		addRdbBasesForCollRec ( cr );
 	}
