@@ -346,7 +346,8 @@ class Parms {
 			  long pd ,
 			  bool isCrawlbot ,
 			  char format, //bool isJSON,
-			  TcpSocket *sock
+			  TcpSocket *sock,
+			  bool isRootAdmin
 			  );
 
 	/*
@@ -380,8 +381,9 @@ class Parms {
 			  long  nc   ,
 			 long  pd   ,
 			 bool lastRow ,
-			 bool isCrawlbot = false,
-			 char format = FORMAT_HTML);//bool isJSON = false ) ;
+			 bool isCrawlbot ,//= false,
+			 char format , //= FORMAT_HTML,
+			 bool isRootAdmin );
 
 	char *getTHIS ( HttpRequest *r , long page );
 

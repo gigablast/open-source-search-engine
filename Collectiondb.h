@@ -560,6 +560,8 @@ class CollectionRec {
 	long    m_numImportInjects;
 	class ImportState *m_importState;
 
+	SafeBuf m_collectionPasswords;
+	SafeBuf m_collectionIps;
 
 	// from Conf.h
 	long m_posdbMinFilesToMerge ;

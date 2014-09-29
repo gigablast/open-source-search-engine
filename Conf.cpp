@@ -89,16 +89,41 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 */
 
 bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
+
 	// until we have coll tokens use this...
-	return isRootAdmin ( socket , hr );
+	//return isRootAdmin ( socket , hr );
+
+	// root always does
+	if ( isRootAdmin ( socket , hr ) ) return true;
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
+
+	//long page = g_pages.getDynamicPageNumber(hr);
+
+	// the very act of just knowing the collname of a guest account
+	// is good enough to update it
+	if ( cr && strncmp ( cr->m_coll , "guest_" , 6 ) == 0 )
+	     //strcmp( cr->m_coll , coll         ) == 0 &&
+	     // ( page == PAGE_BASIC_SETTINGS ||
+	     //   page == PAGE_SPIDER ||
+	     //   page == PAGE_SEARCH ||
+	     //   page == PAGE_FILTERS ||
+	     //   page == PAGE_INJECT ||
+	     //   page == PAGE_REINDEX ) )
+		return true;
+
+	return false;
 }
+	
 
 // . is user a root administrator?
 // . only need to be from root IP *OR* have password, not both
 bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// totally open access?
-	if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
+	//if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
+	if ( m_connectIps.length() <= 0 &&
+	     m_masterPwds.length() <= 0 )
 		return true;
 
 	// coming from root gets you in
@@ -114,7 +139,9 @@ bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 bool Conf::hasRootPwd ( HttpRequest *hr ) {
 
-	if ( m_numMasterPwds == 0 ) return false;
+	//if ( m_numMasterPwds == 0 ) return false;
+	if ( m_masterPwds.length() <= 0 )
+		return false;
 
 	char *p = hr->getString("pwd");
 
@@ -124,11 +151,23 @@ bool Conf::hasRootPwd ( HttpRequest *hr ) {
 
 	if ( ! p ) return false;
 
-	for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
-		if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
-		// we got a match
+	char *buf = m_masterPwds.getBufStart();
+	char *match = strstr ( buf , p );
+	if ( ! match ) return false;
+	
+	long len = gbstrlen(p);
+
+	// ensure book-ended by whitespace
+	if (  match && 
+	      (match == buf || is_wspace_a(match[-1])) &&
+	      (!match[len] || is_wspace_a(match[len])) )
 		return true;
-	}
+
+	// for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
+	// 	if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
+	// 	// we got a match
+	// 	return true;
+	// }
 	return false;
 }
 
@@ -136,31 +175,49 @@ bool Conf::hasRootPwd ( HttpRequest *hr ) {
 bool Conf::isRootIp ( unsigned long ip ) {
 
 	//if ( m_numMasterIps == 0 ) return false;
-	if ( m_numConnectIps == 0 ) return false;
+	//if ( m_numConnectIps == 0 ) return false;
+	if ( m_connectIps.length() <= 0 ) return false;
 
-	for ( long i = 0 ; i < m_numConnectIps ; i++ ) 
-		if ( m_connectIps[i] == (long)ip )
-			return true;
+	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) 
+	// 	if ( m_connectIps[i] == (long)ip )
+	// 		return true;
 
 	//if ( ip == atoip("10.5.0.2",8) ) return true;
+
+	char *p = iptoa(ip);
+
+	char *buf = m_connectIps.getBufStart();
+	char *match = strstr ( buf , p );
+	if ( ! match ) return false;
+	
+	long len = gbstrlen(p);
+
+	// ensure book-ended by whitespace
+	if (  match && 
+	      (match == buf || is_wspace_a(match[-1])) &&
+	      (!match[len] || is_wspace_a(match[len])) )
+		return true;
 
 	// no match
 	return false;
 }
 
 bool Conf::isConnectIp ( unsigned long ip ) {
-	for ( long i = 0 ; i < m_numConnectIps ; i++ ) {
-		if ( m_connectIps[i] == (long)ip )
-			return true;
-		// . 1.2.3.0 ips mean the whole block 
-		// . the high byte in the long is the Least Signficant Byte
-		if ( (m_connectIps[i] >> 24) == 0 &&
-		     (m_connectIps[i] & 0x00ffffff) == 
-		     ((long)ip        & 0x00ffffff)    )
-			return true;
-	}
+
+	return isRootIp(ip);
+
+	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) {
+	// 	if ( m_connectIps[i] == (long)ip )
+	// 		return true;
+	// 	// . 1.2.3.0 ips mean the whole block 
+	// 	// . the high byte in the long is the Least Signficant Byte
+	// 	if ( (m_connectIps[i] >> 24) == 0 &&
+	// 	     (m_connectIps[i] & 0x00ffffff) == 
+	// 	     ((long)ip        & 0x00ffffff)    )
+	// 		return true;
+	// }
 	// no match
-	return false;
+	//return false;
 }
 
 // . set all member vars to their default values

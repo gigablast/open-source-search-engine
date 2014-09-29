@@ -108,7 +108,9 @@ static WebPage s_pages[] = {
 	  "basic status", sendPageBasicStatus  , 0 ,NULL,NULL,PG_STATUS},
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,NULL,NULL,PG_NOAPI},
-	{ PAGE_BASIC_SECURITY, "admin/security", 0 , "security",1, 0 , 
+	{ PAGE_BASIC_SECURITY, "admin/collectionpasswords", 0 , 
+	  "passwords",
+	  1, 0 , 
 	  "basic security", sendPageGeneric  , 0 ,NULL,NULL,0},
 	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
 	  "basic search", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
@@ -142,10 +144,11 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY,
 	  "log controls",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
-	{ PAGE_SECURITY, "admin/security2", 0 , "security"     ,  1 , 0 ,
+	{ PAGE_ROOTPASSWORDS, "admin/rootpasswords", 
+	  0 , "root passwords" ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "advanced security",
-	  sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  "root passwords",
+	  sendPageGeneric , 0 ,NULL,NULL,0},
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection",
@@ -525,7 +528,11 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//Host *h = g_hostdb.m_myHost;
 
 	// now use this...
-	bool isAdmin = g_conf.isRootAdmin ( s , r );
+	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+
+
+	CollectionRec *cr = g_collectiondb.getRec ( r , true );
+
 
 	////////////////////
 	////////////////////
@@ -534,10 +541,14 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//
 	////////////////////
 	////////////////////
-	if ( ! publicPage && ! isAdmin )
-		return sendPageLogin ( s , r );
 
-	if ( page == PAGE_CRAWLBOT && ! isAdmin )
+	// no longer, we let anyone snoop around to check out the gui
+	//char guest = r->getLong("guest",0);
+
+	//if ( ! publicPage && ! isRootAdmin && ! guest )
+	//	return sendPageLogin ( s , r );
+
+	if ( page == PAGE_CRAWLBOT && ! isRootAdmin )
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
 
@@ -655,6 +666,39 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// 	}
 
 
+
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// if not the root admin only all user to change settings, etc.
+	// if the collection rec is a guest collection. i.e. in the cloud.
+	//
+	//bool isRootAdmin = g_conf.isRootAdmin(sock,hr);
+	bool isRootColl = false;
+	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
+	// the main,dmoz and demo collections are root admin only
+	// if ( ! isRootAdmin && isRootColl ) {
+	// 	g_errno = ENOPERM;
+	// 	return log("parms: root admin can only change main/dmoz/demo"
+	// 		   " collections.");
+	// }
+	// just knowing the collection name is enough for a cloud user to
+	// modify the collection's parms. however, to modify the master 
+	// controls or stuff in g_conf, you have to be root admin.
+	if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
+		//g_errno = ENOPERM;
+		//return log("parms: permission denied for user");
+		return sendPageLogin ( s , r );
+	}
+
+
+
+
+
+
 	// get safebuf stored in TcpSocket class
 	SafeBuf *parmList = &s->m_handyBuf;
 
@@ -668,13 +712,12 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	////////
 	
 	// . convert http request to list of parmdb records
-	// . will only add parm recs we have permission to modify
+	// . will only add parm recs we have permission to modify!!!
 	// . if no collection supplied will just return true with no g_errno
-	if ( isAdmin &&
+	if ( //isRootAdmin &&
 	     ! g_parms.convertHttpRequestToParmList ( r, parmList, page, s))
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
-
 	// . add parmList using Parms::m_msg4 to all hosts!
 	// . returns true and sets g_errno on error
 	// . returns false if would block
@@ -682,7 +725,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . so then doneBroadcastingParms() is called when all hosts
 	//   have received the updated parms, unless a host is dead,
 	//   in which case he should sync up when he comes back up
-	if ( isAdmin &&
+	if ( //isCollAdmin &&
 	     ! g_parms.broadcastParmList ( parmList , 
 					   s , // state is socket i guess
 					   doneBroadcastingParms ) )
@@ -3298,7 +3341,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 		// dup page fix. so we should 'masterpwd' and 'masterip'
 		// in the list now.
-		if ( pageNum == PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
+		//if ( pageNum ==PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
 
 
 		if ( pageNum != PAGENUM ) continue;
@@ -3764,13 +3807,15 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		return (bool)adds;
 	}
 
-	if ( g_conf.m_numConnectIps == 0 && g_conf.m_numMasterPwds == 0 ) {
+	if ( g_conf.m_masterPwds.length() == 0 && 
+	     g_conf.m_connectIps.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("URGENT. Please specify a password "
 			       "or IP address in the "
-			       "<a href=/admin/security>security</a> "
+			       "<a href=/admin/rootpassword>root "
+			       "password</a> "
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
 		mb->safePrintf("%s",boxEnd);

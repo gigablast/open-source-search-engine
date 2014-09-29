@@ -234,7 +234,7 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_SECURITY ) continue;
+		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -263,7 +263,7 @@ bool CommandRemovePasswordRow ( char *rec ) {
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_SECURITY ) continue;
+		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -1302,14 +1302,14 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_INJECT     ) tt = "Inject Url";
-	if ( page == PAGE_SECURITY   ) tt = "Security";
+	if ( page == PAGE_ROOTPASSWORDS ) tt = "Root Passwords";
 	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Url Filters";
 	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
-	if ( page == PAGE_BASIC_SECURITY ) tt = "Security";
+	if ( page == PAGE_BASIC_SECURITY ) tt = "Collection Passwords";
 	//if ( page == PAGE_SITES ) tt = "Site List";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
@@ -1332,6 +1332,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		char *coll = g_collectiondb.getDefaultColl(r);
 		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+		bool isRootAdmin = g_conf.isRootAdmin ( s , r );
 	 	g_parms.printParms2 ( sb ,
 				      page ,
 	 	 		      cr ,
@@ -1339,7 +1340,8 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	 	 		      1 , // long pd , print desc?
 	 	 		      false , // isCrawlbot
 	 	 		      format ,
-	 	 		      NULL ); // TcpSocket *sock
+	 	 		      NULL , // TcpSocket *sock
+				      isRootAdmin ); 
 		return true;
 	}
 
@@ -1708,12 +1710,15 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long pd = r->getLong("pd",1);
 	char *coll = g_collectiondb.getDefaultColl(r);
 	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+
+	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+
 	//char *coll = r->getString ( "c"   );
 	//if ( ! coll || ! coll[0] ) coll = "main";
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// if "main" collection does not exist, try another
 	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
-	printParms2 ( sb, page, cr, nc, pd,0,0 , s);
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isRootAdmin);
 	return true;
 }
 
@@ -1726,7 +1731,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  long pd , 
 			  bool isCrawlbot , 
 			  char format , // bool isJSON ,
-			  TcpSocket *sock ) {
+			  TcpSocket *sock ,
+			  bool isRootAdmin ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1739,12 +1745,11 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	if ( cr ) coll = cr->m_coll;
 
 	// page aliases
-	if ( page == PAGE_BASIC_SECURITY )
-		page = PAGE_SECURITY;
+	//if ( page == PAGE_BASIC_SECURITY )
+	//	page = PAGE_ROOTPASSWORDS;
 
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
-
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -1827,7 +1832,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			sb->safePrintf ( "%s" , m->m_desc );
 			// print users current ip if showing the list
 			// of "Master IPs" for admin access
-			if ( m->m_page == PAGE_SECURITY &&
+			if ( m->m_page == PAGE_ROOTPASSWORDS &&
 			     sock &&
 			     m->m_title &&
 			     strstr(m->m_title,"IP") )
@@ -1855,7 +1860,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     bg,nc,pd,
 						     false,
 						     isCrawlbot,
-						     format);//isJSON);
+						     format,
+						     isRootAdmin);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1875,7 +1881,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
-						   isCrawlbot,format);//isJSON)
+						   isCrawlbot,format,
+						   isRootAdmin);
 			}
 		}
 		// end array table
@@ -1904,7 +1911,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			bool lastRow ,
 			bool isCrawlbot ,
 			//bool isJSON ) {
-			char format ) {
+			char format ,
+			bool isRootAdmin ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1964,7 +1972,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_SECURITY ||
+		     page == PAGE_ROOTPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t<currentValue><![CDATA[");
@@ -1997,7 +2005,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_SECURITY ||
+		     page == PAGE_ROOTPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t\"currentValue\":\"");
@@ -2393,6 +2401,14 @@ bool Parms::printParm ( SafeBuf* sb,
 		  strcmp(m->m_title,"url filters profile")==0)
 		// url filters profile drop down "ufp"
 		printDropDownProfile ( sb , "ufp" , cr );//*s );
+
+	// do not expose master passwords or IPs to non-root admins
+	else if ( t == TYPE_STRINGNONEMPTY &&
+		  ! isRootAdmin &&
+		  ( m->m_flags & PF_PRIVATE ) )
+		return true;
+
+
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
@@ -2745,10 +2761,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		// do not allow removal of last default url filters rule
 		//if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
 		char *suffix = "";
-		if ( m->m_page == PAGE_SECURITY &&
+		if ( m->m_page == PAGE_ROOTPASSWORDS &&
 		     m->m_type == TYPE_IP ) 
 			suffix = "ip";
-		if ( m->m_page == PAGE_SECURITY &&
+		if ( m->m_page == PAGE_ROOTPASSWORDS &&
 		     m->m_type == TYPE_STRINGNONEMPTY ) 
 			suffix = "pwd";
 		if ( show )
@@ -18379,12 +18395,13 @@ void Parms::init ( ) {
 	/////////////
 
 	///////////////////////////////////////////
-	// SECURITY CONTROLS
+	// ROOT PASSWORDS page
 	///////////////////////////////////////////
 
 
 	m->m_title = "Master Passwords";
-	m->m_desc  = "Any matching password will have administrative access "
+	m->m_desc  = "Whitespace separated list of passwords. "
+		"Any matching password will have administrative access "
 		"to Gigablast and all collections.";
 		//"If no Admin Password or Admin IP is specified then "
 		//"Gigablast will only allow local IPs to connect to it "
@@ -18392,13 +18409,13 @@ void Parms::init ( ) {
 	m->m_cgi   = "masterpwd";
 	m->m_xml   = "masterPassword";
 	m->m_obj   = OBJ_CONF;
-	m->m_max   = MAX_MASTER_PASSWORDS;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
-	m->m_type  = TYPE_STRINGNONEMPTY;
-	m->m_size  = PASSWORD_MAX_LEN+1;
-	m->m_page  = PAGE_SECURITY;
-	m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_PRIVATE;
+	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
+	m->m_page  = PAGE_ROOTPASSWORDS;
+	//m->m_max   = MAX_MASTER_PASSWORDS;
+	//m->m_size  = PASSWORD_MAX_LEN+1;
+	//m->m_addin = 1; // "insert" follows?
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
 	m++;
 
 
@@ -18412,41 +18429,42 @@ void Parms::init ( ) {
 	//	"was disabled in the Master Controls. IPs that have 0 has "
 	//	"their Least Significant Byte are treated as wildcards for "
 	//	"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
-	m->m_desc  = "Any IPs in this list will have administrative access "
+	m->m_desc  = "Whitespace separated list of Ips. "
+		"Any IPs in this list will have administrative access "
 		"to Gigablast and all collections.";
 	m->m_cgi   = "masterip";
 	m->m_xml   = "masterIp";
-	m->m_page  = PAGE_SECURITY;
-	m->m_max   = MAX_CONNECT_IPS;
-	m->m_off   = (char *)g_conf.m_connectIps - g;
-	m->m_type  = TYPE_IP;
-	m->m_priv  = 2;
+	m->m_page  = PAGE_ROOTPASSWORDS;
+	m->m_off   = (char *)&g_conf.m_connectIps - g;
+	m->m_type  = TYPE_SAFEBUF;//IP;
 	m->m_def   = "";
-	m->m_addin = 1; // "insert" follows?
+	//m->m_max   = MAX_CONNECT_IPS;
+	//m->m_priv  = 2;
+	//m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_obj   = OBJ_CONF;
-	m->m_flags = PF_PRIVATE;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
 	m++;
 
-	m->m_title = "remove connect ip";
-	m->m_desc  = "remove a connect ip";
-	m->m_cgi   = "removeip";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func  = CommandRemoveConnectIpRow;
-	m->m_cast  = 1;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "remove connect ip";
+	// m->m_desc  = "remove a connect ip";
+	// m->m_cgi   = "removeip";
+	// m->m_type  = TYPE_CMD;
+	// m->m_page  = PAGE_NONE;
+	// m->m_func  = CommandRemoveConnectIpRow;
+	// m->m_cast  = 1;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
-	m->m_title = "remove a password";
-	m->m_desc  = "remove a password";
-	m->m_cgi   = "removepwd";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func  = CommandRemovePasswordRow;
-	m->m_cast  = 1;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "remove a password";
+	// m->m_desc  = "remove a password";
+	// m->m_cgi   = "removepwd";
+	// m->m_type  = TYPE_CMD;
+	// m->m_page  = PAGE_NONE;
+	// m->m_func  = CommandRemovePasswordRow;
+	// m->m_cast  = 1;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
 
 	/*
@@ -18462,7 +18480,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_superTurksLen - g;
-	m->m_page = PAGE_SECURITY;
+	m->m_page = PAGE_ROOTPASSWORDS;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	*/
@@ -18495,7 +18513,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_usersLen - g;
-	m->m_page = PAGE_SECURITY;
+	m->m_page = PAGE_ROOTPASSWORDS;
 	m++;
 	*/
 
@@ -18516,6 +18534,36 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m++;
 	*/
+
+
+	m->m_title = "Collection Passwords";
+	m->m_desc  = "Whitespace separated list of passwords. "
+		"Any matching password will have administrative access "
+		"to the controls for just thie collection.";
+	m->m_cgi   = "collpwd";
+	m->m_xml   = "collectionPasswords";
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_collectionPasswords - x;
+	m->m_def   = "";
+	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
+	m->m_page  = PAGE_BASIC_SECURITY;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m++;
+
+	m->m_title = "Collection Ips";
+	m->m_desc  = "Whitespace separated list of IPs. "
+		"Any matching IP will have administrative access "
+		"to the controls for just thie collection.";
+	m->m_cgi   = "collips";
+	m->m_xml   = "collectionIps";
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_collectionIps - x;
+	m->m_def   = "";
+	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
+	m->m_page  = PAGE_BASIC_SECURITY;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m++;
+
 
 	//////
 	// END SECURITY CONTROLS
@@ -19868,37 +19916,17 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	// false = useDefaultRec?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 
-	//
-	// CLOUD SEARCH ENGINE SUPPORT
-	//
-	// if not the root admin only all user to change settings, etc.
-	// if the collection rec is a guest collection. i.e. in the cloud.
-	//
-	bool isRootAdmin = g_conf.isRootAdmin(sock,hr);
-	bool isRootColl = false;
-	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
-	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
-	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
-	// the main,dmoz and demo collections are root admin only
-	if ( ! isRootAdmin && isRootColl ) {
-		g_errno = ENOPERM;
-		return log("parms: root admin can only change main/dmoz/demo"
-			   " collections.");
-	}
-	// just knowing the collection name is enough for a cloud user to
-	// modify the collection's parms. however, to modify the master 
-	// controls or stuff in g_conf, you have to be root admin.
-	if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
-		g_errno = ENOPERM;
-		return log("parms: permission denied for user");
-	}
-
-
 	//if ( c ) {
 	//	cr = g_collectiondb.getRec ( hr );
 	//	if ( ! cr ) log("parms: coll not found");
 	//}
+
+	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
 	
+	// does this user have permission to update the parms?
+	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr ) ;
+
+
 	// might be g_conf specific, not coll specific
 	//bool hasPerm = false;
 	// just knowing the collection name of a custom crawl means you
@@ -20091,7 +20119,15 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// CLOUD SEARCH ENGINE SUPPORT
 		//
 		// master controls require root permission
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
+		// need to have permission for collection for collrec parms
+		if ( m && m->m_obj == OBJ_COLL && ! isCollAdmin )
+			continue;
+
+		// must at least be coll admin to do anything
+		if ( ! isCollAdmin )
 			continue;
 
 		// add the cmd parm
@@ -20184,6 +20220,14 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// to change settings.
 		//
 		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
+		// need to have permission for collection for collrec parms
+		if ( m && m->m_obj == OBJ_COLL && ! isCollAdmin )
+			continue;
+
+		// must at least be coll admin to do anything
+		if ( ! isCollAdmin )
 			continue;
 
 		//
@@ -21437,7 +21481,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		     cr->m_regExs[occNum].getLength() == 0 )
 			updateCount = false;
 		// and for other pages, like master ips, skip if empty!
-		// PAGE_PASSWORDS, PAGE_SECURITY, ...
+		// PAGE_PASSWORDS, PAGE_ROOTPASSWORDS, ...
 		if ( parm->m_page != PAGE_FILTERS && ! changed )
 			updateCount = false;
 
