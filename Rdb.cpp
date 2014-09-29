@@ -91,7 +91,8 @@ RdbBase *Rdb::getBase ( collnum_t collnum )  {
 	// RdbBase for statsdb, etc. resides in collrec #0 i guess
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return NULL;
-	return cr->m_bases[(unsigned char)m_rdbId];
+	// this might load the rdbbase on demand now
+	return cr->getBase ( m_rdbId ); // m_bases[(unsigned char)m_rdbId];
 }
 
 // used by Rdb::addBase1()
@@ -104,8 +105,11 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	}
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return;
-	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
-	cr->m_bases[(unsigned char)m_rdbId] = base;
+	//if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
+	RdbBase *oldBase = cr->getBasePtr ( m_rdbId );
+	if ( oldBase ) { char *xx=NULL;*xx=0; }
+	//cr->m_bases[(unsigned char)m_rdbId] = base;
+	cr->setBasePtr ( m_rdbId , base );
 	log ( LOG_DEBUG,"db: added base to collrec "
 	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
 	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
@@ -510,7 +514,8 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
-	RdbBase *base = getBase ( collnum );
+	RdbBase *base = NULL;
+	if ( cr ) base = cr->getBasePtr ( collnum );
 	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
 		return log("db: Rdb for db \"%s\" and "
@@ -580,7 +585,9 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 bool Rdb::resetBase ( collnum_t collnum ) {
 	CollectionRec *cr = g_collectiondb.getRec(collnum);
 	if ( ! cr ) return true;
-	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	//RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	// get the ptr, don't use CollectionRec::getBase() so we do not swapin
+	RdbBase *base = cr->getBasePtr (m_rdbId);
 	if ( ! base ) return true;
 	base->reset();
 	return true;
@@ -605,8 +612,8 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 		return true;
 	}
 
-
-	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	//Rdbbase *base = cr->m_bases[(unsigned char)m_rdbId];
+	RdbBase *base = cr->getBase(m_rdbId);
 	if ( ! base ) return true;
 
 	// scan files in there
@@ -668,7 +675,8 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// NULL it out...
 	CollectionRec *oldcr = g_collectiondb.getRec(collnum);
-	oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	//oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	oldcr->setBasePtr ( m_rdbId , NULL );
 	char *coll = oldcr->m_coll;
 
 	char *msg = "deleted";

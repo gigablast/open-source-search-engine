@@ -147,13 +147,20 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<tr class=poo><td>shared mem used</td>"
 			      "<td>%lli</td></tr>\n"
 			      "<tr class=poo><td>swaps</td>"
-			      "<td>%lli</td></tr>\n",
+			      "<td>%lli</td></tr>\n"
+			      "<tr class=poo><td>"
+			      "collections swapped out"
+			      "</td>"
+			      "<td>%li</td></tr>\n" 
+			      ,
 			      //"<tr class=poo><td>num alloc chunks</td>
 			      //<td>%li</td></tr>\n",
 			      g_mem.getMaxAlloc(),
 			      g_mem.getMaxAllocBy() ,
 			      g_mem.m_sharedUsed,
-			      (long long)ru.ru_nswap); // idrss,
+			      (long long)ru.ru_nswap,// idrss,
+			      g_collectiondb.m_numCollsSwappedOut
+			      ); 
 		p.safePrintf (
 			      "<tr class=poo><td><b>current allocations</b>"
 			      "</td>"
@@ -162,6 +169,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td>%lli</td></tr>\n" ,
 			      g_mem.getNumAllocated() ,
 			      (long long)g_mem.getNumTotalAllocated() );
+
 	}
 
 

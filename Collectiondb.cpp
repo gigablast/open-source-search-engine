@@ -35,6 +35,7 @@ Collectiondb::Collectiondb ( ) {
 	m_wrapped = 0;
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
+	m_numCollsSwappedOut = 0;
 	//m_lastUpdateTime = 0LL;
 	m_needsSave = false;
 	// sanity
@@ -117,11 +118,26 @@ bool Collectiondb::loadAllCollRecs ( ) {
 	d.set ( dname );
 	if ( ! d.open ()) return log("admin: Could not load collection config "
 				     "files.");
+	long count = 0;
+	char *f;
+	while ( ( f = d.getNextFilename ( "*" ) ) ) {
+		// skip if first char not "coll."
+		if ( strncmp ( f , "coll." , 5 ) != 0 ) continue;
+		// must end on a digit (i.e. coll.main.0)
+		if ( ! is_digit (f[gbstrlen(f)-1]) ) continue;
+		// count them
+		count++;
+	}
+
+	// reset directory for another scan
+	d.set ( dname );
+	if ( ! d.open ()) return log("admin: Could not load collection config "
+				     "files.");
+
 	// note it
 	//log(LOG_INFO,"db: loading collection config files.");
 	// . scan through all subdirs in the collections dir
 	// . they should be like, "coll.main/" and "coll.mycollection/"
-	char *f;
 	while ( ( f = d.getNextFilename ( "*" ) ) ) {
 		// skip if first char not "coll."
 		if ( strncmp ( f , "coll." , 5 ) != 0 ) continue;
@@ -138,6 +154,10 @@ bool Collectiondb::loadAllCollRecs ( ) {
 		// add it
 		if ( ! addExistingColl ( coll , collnum ) )
 			return false;
+		// swap it out if we got 100+ collections
+		if ( count < 100 ) continue;
+		CollectionRec *cr = getRec ( collnum );
+		if ( cr ) cr->swapOut();
 	}
 	// if no existing recs added... add coll.main.0 always at startup
 	if ( m_numRecs == 0 ) {
@@ -151,7 +171,7 @@ bool Collectiondb::loadAllCollRecs ( ) {
 			     // to add the same collnum to every shard
 			     0 );
 	}
-		
+
 	// note it
 	//log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
 	//    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
@@ -209,6 +229,7 @@ void Collectiondb::updateTime() {
 #include "Cachedb.h"
 #include "Syncdb.h"
 
+// same as addOldColl()
 bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
 	long i = collnum;
@@ -252,7 +273,7 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
 	//log("admin: loaded old coll \"%s\"",coll);
 
-	// load if not new
+	// load coll.conf file
 	if ( ! cr->load ( coll , i ) ) {
 		mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
 		log("admin: Failed to load coll.%s.%li/coll.conf",coll,i);
@@ -567,6 +588,47 @@ bool Collectiondb::addNewColl ( char *coll ,
 	return true;
 }
 
+// returns NULL w/ g_errno set on error.
+RdbBase *CollectionRec::getBase ( char rdbId ) {
+
+	if ( ! m_swappedOut ) return m_bases[(unsigned char)rdbId];
+
+	// load them back in. return NULL w/ g_errno set on error.
+	if ( ! g_collectiondb.addRdbBasesForCollRec ( this ) ) return NULL;
+
+	g_collectiondb.m_numCollsSwappedOut--;
+
+	m_swappedOut = false;
+
+	return m_bases[(unsigned char)rdbId];	
+}
+
+bool CollectionRec::swapOut ( ) {
+
+	if ( m_swappedOut ) return true;
+
+	// free all RdbBases in each rdb
+	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+	     Rdb *rdb = g_process.m_rdbs[i];
+	     // this frees all the RdbBase::m_files and m_maps for the base
+	     rdb->resetBase ( m_collnum );
+	}
+
+	// now free each base itself
+	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+		RdbBase *base = m_bases[i];
+		if ( ! base ) continue;
+		mdelete (base, sizeof(RdbBase), "Rdb Coll");
+		delete  (base);
+		m_bases[i] = NULL;
+	}
+
+	m_swappedOut = true;
+	g_collectiondb.m_numCollsSwappedOut++;
+
+	return true;
+}
+
 // . called only by addNewColl() and by addExistingColl()
 bool Collectiondb::registerCollRec ( CollectionRec *cr ,  bool isNew ) {
 
@@ -584,6 +646,12 @@ bool Collectiondb::addRdbBaseToAllRdbsForEachCollRec ( ) {
 		// add rdb base files etc. for it
 		addRdbBasesForCollRec ( cr );
 	}
+
+	// now clean the trees. moved this into here from
+	// addRdbBasesForCollRec() since we call addRdbBasesForCollRec()
+	// now from getBase() to load on-demand for saving memory
+	cleanTrees();
+
 	return true;
 }
 
@@ -616,7 +684,7 @@ bool Collectiondb::addRdbBasesForCollRec ( CollectionRec *cr ) {
 	if ( ! g_doledb.getRdb()->addRdbBase1       ( coll ) ) goto hadError;
 
 	// now clean the trees
-	cleanTrees();
+	//cleanTrees();
 
 	// debug message
 	//log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
@@ -1544,6 +1612,7 @@ CollectionRec::CollectionRec() {
 	m_collnum = -1;
 	m_coll[0] = '\0';
 	m_updateRoundNum = 0;
+	m_swappedOut = false;
 	//m_numSearchPwds = 0;
 	//m_numBanIps     = 0;
 	//m_numSearchIps  = 0;
@@ -3593,7 +3662,7 @@ void testRegex ( ) {
 }
 
 long long CollectionRec::getNumDocsIndexed() {
-	RdbBase *base = m_bases[RDB_TITLEDB];
+	RdbBase *base = getBase(RDB_TITLEDB);//m_bases[RDB_TITLEDB];
 	if ( ! base ) return 0LL;
 	return base->getNumGlobalRecs();
 }
