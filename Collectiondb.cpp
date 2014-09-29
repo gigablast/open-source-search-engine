@@ -592,7 +592,10 @@ void CollectionRec::setBasePtr ( char rdbId , class RdbBase *base ) {
 	// if in the process of swapping in, this will be false...
 	//if ( m_swappedOut ) { char *xx=NULL;*xx=0; }
 	if ( rdbId < 0 || rdbId >= RDB_END ) { char *xx=NULL;*xx=0; }
-	if ( m_bases[ (unsigned char)rdbId ]){ char *xx=NULL;*xx=0; }
+	// Rdb::deleteColl() will call this even though we are swapped in
+	// but it calls it with "base" set to NULL after it nukes the RdbBase
+	// so check if base is null here.
+	if ( base && m_bases[ (unsigned char)rdbId ]){ char *xx=NULL;*xx=0; }
 	m_bases [ (unsigned char)rdbId ] = base;
 }
 
