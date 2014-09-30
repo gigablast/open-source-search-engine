@@ -2548,7 +2548,8 @@ bool printSearchResultsHeader ( State0 *st ) {
         Query qq3;
 	Query *qq2;
 	bool firstIgnored;
-	bool isAdmin = si->m_isRootAdmin;
+	//bool isAdmin = si->m_isRootAdmin;
+	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	// otherwise, we had no error
@@ -3165,7 +3166,7 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf("<input name=c type=hidden value=\"%s\">",coll);
 	}
 
-	bool isAdmin = si->m_isRootAdmin;
+	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	if ( isAdmin && banSites.length() > 0 )
@@ -3793,7 +3794,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// indent it if level is 2
 	bool indent = false;
 
-	bool isAdmin = si->m_isRootAdmin;
+	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
 	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
 	//unsigned long long lastSiteHash = siteHash;
@@ -4770,7 +4771,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 
 	
-	if ( isAdmin && si->m_format == FORMAT_HTML ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		long lang = mr->m_language;
 		if ( lang ) sb->safePrintf(" - %s",getLanguageString(lang));
 		uint16_t cc = mr->m_computedCountry;
@@ -5047,6 +5048,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				dbuf ,
 				coll );//, dbuf );
 	}
+
 
 	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
 		char *un = "";

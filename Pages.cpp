@@ -2675,7 +2675,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 		// every other coll in a darker div
 		if ( (row % 2) == 0 )
-			sb->safePrintf("</div>");
+			sb->safePrintf("</div>\n");
 		else
 			sb->safePrintf("<br>\n");
 	}

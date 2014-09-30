@@ -107,15 +107,34 @@ bool isInWhiteSpaceList ( char *p , char *buf ) {
 	return false;
 }
 
-bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
+bool Conf::isCollAdmin ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// until we have coll tokens use this...
 	//return isRootAdmin ( socket , hr );
 
 	// root always does
-	if ( isRootAdmin ( socket , hr ) ) return true;
+	if ( isRootAdmin ( sock , hr ) ) return true;
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
+	if ( ! cr ) return false;
+
+	return isCollAdmin2 ( sock , hr , cr );
+
+}
+
+bool Conf::isCollAdminForColl ( TcpSocket *sock, HttpRequest *hr, char *coll ){
+
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+
+	if ( ! cr ) return false;
+
+	return isCollAdmin2 ( sock , hr , cr );
+}
+
+bool Conf::isCollAdmin2 ( TcpSocket *sock , 
+			  HttpRequest *hr ,
+			  CollectionRec *cr ) {
+
 	if ( ! cr ) return false;
 
 	//long page = g_pages.getDynamicPageNumber(hr);
@@ -130,7 +149,7 @@ bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 
 	// a good ip?
-	char *p   = iptoa(socket->m_ip);
+	char *p   = iptoa(sock->m_ip);
 	char *buf = cr->m_collectionIps.getBufStart();
 	if ( isInWhiteSpaceList ( p , buf ) ) return true;
 

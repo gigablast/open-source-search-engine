@@ -211,6 +211,11 @@ void processReply ( char *reply , long replyLen ) {
 	// # of collections in the admin page: ..."4 Collections"
 	markOut(content,"px;color:black;\"><center><nobr><b>");
 
+	markOut(content,"spider is done (");
+	markOut(content,"spider is paused (");
+	markOut(content,"spider is active (");
+	markOut(content,"spider queue empty (");
+
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
 	long contentCRC = 0; 
@@ -518,7 +523,8 @@ bool qainject1 ( ) {
 	//static bool s_x2 = false;
 	if ( ! s_flags[1] ) {
 		s_flags[1] = true;
-		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -532,7 +538,6 @@ bool qainject1 ( ) {
 				238170006 ) )
 			return false;
 	}
-
 
 	// this only loads once
 	loadUrls();

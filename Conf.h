@@ -50,6 +50,10 @@ class Conf {
 	Conf();
 
 	bool isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
+	bool isCollAdminForColl (TcpSocket *sock, HttpRequest *hr,char *coll );
+	bool isCollAdmin2 (TcpSocket *socket , HttpRequest *hr,
+			   class CollectionRec *cr) ;
+
 
 	bool isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
 	//bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );

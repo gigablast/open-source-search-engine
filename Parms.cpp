@@ -20052,6 +20052,9 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// skip if not a command parm, like "addcoll"
 		if ( m->m_type != TYPE_CMD ) continue;
 
+		if ( m->m_obj != OBJ_CONF && m->m_obj != OBJ_COLL )
+			continue;
+
 		//
 		// HACK
 		//
@@ -20130,17 +20133,49 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//
 		// CLOUD SEARCH ENGINE SUPPORT
 		//
+
+		//
+		// if this is the "delcoll" parm then "c" may have been
+		// excluded from http request, therefore isCollAdmin and
+		// isRootAdmin may be false, so see if they have permission
+		// for the "val" collection for this one...
+		bool hasPerm = false;
+		if ( m->m_page == PAGE_DELCOLL &&
+		     strcmp(m->m_cgi,"delcoll") == 0 ) {
+			// permission override for /admin/delcoll cmd & parm
+			hasPerm = g_conf.isCollAdminForColl (sock,hr,val);
+		}
+
+		// if this IP c-block as already added a collection then do not
+		// allow it to add another.
+		if ( m->m_page == PAGE_ADDCOLL &&
+		     g_conf.m_allowCloudUsers &&
+		     ! isRootAdmin &&
+		     strcmp(m->m_cgi,"addcoll")==0 ) {
+			// see if user's c block has already added a collection
+			long numAdded = 0;
+			if ( numAdded >= 1 ) {
+				g_errno = ENOPERM;
+				log("parms: already added a collection from "
+				    "this cloud user's c-block.");
+				return false;
+			}
+			hasPerm = true;
+		}
+
 		// master controls require root permission
-		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+			log("parms: could not run root parm \"%s\" no perm.",
+			    m->m_title);
 			continue;
+		}
 
 		// need to have permission for collection for collrec parms
-		if ( m && m->m_obj == OBJ_COLL && ! isCollAdmin )
+		if ( m->m_obj == OBJ_COLL && ! isCollAdmin && ! hasPerm ) {
+			log("parms: could not run coll parm \"%s\" no perm.",
+			    m->m_title);
 			continue;
-
-		// must at least be coll admin to do anything
-		if ( ! isCollAdmin )
-			continue;
+		}
 
 		// add the cmd parm
 		if ( ! addNewParmToList2 ( parmList ,
@@ -20223,43 +20258,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		long occNum;
 		Parm *m = getParmFast1 ( field , &occNum );
 
-
-		//
-		// CLOUD SEARCH ENGINE SUPPORT
-		//
-		// master controls require root permission. otherwise, just
-		// knowing the collection name is enough for a cloud user
-		// to change settings.
-		//
-		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
-			continue;
-
-		// need to have permission for collection for collrec parms
-		if ( m && m->m_obj == OBJ_COLL && ! isCollAdmin )
-			continue;
-
-		// must at least be coll admin to do anything
-		if ( ! isCollAdmin )
-			continue;
-
-		//
-		// CLOUD SEARCH ENGINE SUPPORT
-		//
-		// if this IP c-block as already added a collection then do not
-		// allow it to add another.
-		//
-		if ( m && strcmp(m->m_cgi,"addcoll")==0 && ! isRootAdmin ) {
-			// see if user's c block has already added a collection
-			long numAdded = 0;
-			if ( numAdded >= 1 ) {
-				g_errno = ENOPERM;
-				log("parms: already added a collection from "
-				    "this cloud user's c-block.");
-				return false;
-			}
-		}
-
-
 		//
 		// map "pause" to spidering enabled
 		//
@@ -20272,10 +20270,28 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		}
 
 		if ( ! m ) continue;
-		if ( m->m_type == TYPE_CMD ) continue;
 
-		if ( m->m_obj == OBJ_NONE ) continue;
-		if ( m->m_obj == OBJ_SI ) continue;
+		// skip if IS a command parm, like "addcoll", we did that above
+		if ( m->m_type == TYPE_CMD ) 
+			continue;
+
+		if ( m->m_obj != OBJ_CONF && m->m_obj != OBJ_COLL )
+			continue;
+
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// master controls require root permission. otherwise, just
+		// knowing the collection name is enough for a cloud user
+		// to change settings.
+		//
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
+		// need to have permission for collection for collrec parms
+		if ( m->m_obj == OBJ_COLL && ! isCollAdmin )
+			continue;
 
 		// convert spiderRoundStartTime=0 (roundStart=0 roundStart=1) 
 		// to spiderRoundStartTime=<currenttime>+30secs
@@ -21387,7 +21403,10 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	if ( collnum >= 0 ) {
 		cr = g_collectiondb.getRec ( collnum );
 		if ( ! cr ) {
-			log("parmdb: invalid collnum for parm");
+			char *ps = "unknown parm";
+			if ( parm ) ps = parm->m_title;
+			log("parmdb: invalid collnum %li for parm \"%s\"",
+			    (long)collnum,ps);
 			g_errno = ENOCOLLREC;
 			return true;
 		}
