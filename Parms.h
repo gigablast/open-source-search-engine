@@ -385,7 +385,8 @@ class Parms {
 			 bool isCrawlbot ,//= false,
 			 char format , //= FORMAT_HTML,
 			 bool isRootAdmin ,
-			 bool isCollAdmin );
+			 bool isCollAdmin ,
+			 class TcpSocket *sock );
 
 	char *getTHIS ( HttpRequest *r , long page );
 

@@ -1309,7 +1309,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Url Filters";
 	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
-	if ( page == PAGE_BASIC_SECURITY ) tt = "Collection Passwords";
+	if ( page == PAGE_COLLPASSWORDS ) tt = "Collection Passwords";
 	//if ( page == PAGE_SITES ) tt = "Site List";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
@@ -1749,7 +1749,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	if ( cr ) coll = cr->m_coll;
 
 	// page aliases
-	//if ( page == PAGE_BASIC_SECURITY )
+	//if ( page == PAGE_COLLPASSWORDS )
 	//	page = PAGE_ROOTPASSWORDS;
 
 	GigablastRequest gr;
@@ -1834,14 +1834,6 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				  ,DARK_BLUE,m->m_title);
 			// print the description
 			sb->safePrintf ( "%s" , m->m_desc );
-			// print users current ip if showing the list
-			// of "Master IPs" for admin access
-			if ( m->m_page == PAGE_ROOTPASSWORDS &&
-			     sock &&
-			     m->m_title &&
-			     strstr(m->m_title,"IP") )
-				sb->safePrintf(" <b>Your current IP is "
-					       "%s.</b>",iptoa(sock->m_ip));
 			// end the description
 			sb->safePrintf("</font></td></tr>\n");
 
@@ -1866,7 +1858,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     isCrawlbot,
 						     format,
 						     isRootAdmin,
-						     isCollAdmin);
+						     isCollAdmin,
+						     sock);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1888,7 +1881,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						   bg,nc,pd, j==size-1,
 						   isCrawlbot,format,
 						   isRootAdmin,
-						   isCollAdmin);
+						   isCollAdmin,
+						   sock);
 			}
 		}
 		// end array table
@@ -1919,7 +1913,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			//bool isJSON ) {
 			char format ,
 			bool isRootAdmin ,
-			bool isCollAdmin ) {
+			bool isCollAdmin ,
+			TcpSocket *sock ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -2230,6 +2225,17 @@ bool Parms::printParm ( SafeBuf* sb,
 				if ( m->m_flags & PF_REQUIRED )
 					sb->safePrintf(" <b><font color=green>"
 						       "REQUIRED</font></b>");
+
+				// print users current ip if showing the list
+				// of "Master IPs" for admin access
+				if ( ( m->m_page == PAGE_ROOTPASSWORDS ||
+				       m->m_page == PAGE_COLLPASSWORDS ) &&
+				     sock &&
+				     m->m_title &&
+				     strstr(m->m_title,"IP") )
+					sb->safePrintf(" <b>Your current IP "
+						       "is %s.</b>",
+						       iptoa(sock->m_ip));
 			}
 
 			// and cgi parm if it exists
@@ -18420,6 +18426,7 @@ void Parms::init ( ) {
 		//"as the master admin.";
 	m->m_cgi   = "masterpwd";
 	m->m_xml   = "masterPassword";
+	m->m_def   = "";
 	m->m_obj   = OBJ_CONF;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
@@ -18558,11 +18565,11 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_collectionPasswords - x;
 	m->m_def   = "";
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
-	m->m_page  = PAGE_BASIC_SECURITY;
+	m->m_page  = PAGE_COLLPASSWORDS;
 	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
 	m++;
 
-	m->m_title = "Collection Ips";
+	m->m_title = "Collection IPs";
 	m->m_desc  = "Whitespace separated list of IPs. "
 		"Any matching IP will have administrative access "
 		"to the controls for just this collection.";
@@ -18572,7 +18579,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_collectionIps - x;
 	m->m_def   = "";
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
-	m->m_page  = PAGE_BASIC_SECURITY;
+	m->m_page  = PAGE_COLLPASSWORDS;
 	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
 	m++;
 
