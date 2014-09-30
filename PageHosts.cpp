@@ -234,10 +234,10 @@ skipReplaceHost:
 			       "<b>mem used</a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
-			       "<b>cpu</a></td>"
+			       "<b>cpu used</a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
-			       "<b>disk</a></td>"
+			       "<b>disk used</a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
 			       "<b>max ping1</a></td>"
@@ -1224,13 +1224,13 @@ skipReplaceHost:
 		  "</tr>\n"
 
 		  "<tr class=poo>"
-		  "<td>cpu usage</td>"
+		  "<td>cpu used</td>"
 		  "<td>Percentage of cpu resources in use by the gb process."
 		  "</td>"
 		  "</tr>\n"
 
 		  "<tr class=poo>"
-		  "<td>disk usage</td>"
+		  "<td>disk used</td>"
 		  "<td>Percentage of disk in use. When this gets close to "
 		  "100%% you need to do something."
 		  "</td>"
