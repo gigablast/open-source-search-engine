@@ -412,6 +412,7 @@ class CollectionRec {
 
 	char m_dailyMergeDOWList[48];
 
+	long m_treeCount;
 
 	bool swapOut();
 	bool m_swappedOut;

@@ -1384,6 +1384,40 @@ bool Rdb::gotTokenForDump ( ) {
 	    "db: Checking validity of in memory data of %s before dumping, "
 	    "took %lli ms.",m_dbname,gettimeofdayInMilliseconds()-start);
 
+	////
+	//
+	// see what collnums are in the tree and just try those
+	//
+	////
+	CollectionRec *cr = NULL;
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// reset his tree count flag thing
+		cr->m_treeCount = 0;
+	}
+	if ( m_useTree ) {
+		// now scan the rdbtree and inc treecount where appropriate
+		for ( long i = 0 ; i < m_tree.m_minUnusedNode ; i++ ) {
+			// skip node if parents is -2 (unoccupied)
+			if ( m_tree.m_parents[i] == -2 ) continue;
+			// get rec from tree collnum
+			cr = g_collectiondb.m_recs[m_tree.m_collnums[i]];
+			if ( cr ) cr->m_treeCount++;
+		}
+	}
+	else {
+		for(long i = 0; i < m_buckets.m_numBuckets; i++) {
+			RdbBucket *b = m_buckets.m_buckets[i];
+			collnum_t cn = b->getCollnum();
+			long nk = b->getNumKeys();
+			for ( long j = 0 ; j < nk; j++ ) {
+				cr = g_collectiondb.m_recs[cn];
+				if ( cr ) cr->m_treeCount++;
+			}
+		}
+	}
+
 	// loop through collections, dump each one
 	m_dumpCollnum = (collnum_t)-1;
 	// clear this for dumpCollLoop()
@@ -1403,13 +1437,20 @@ bool Rdb::gotTokenForDump ( ) {
 bool Rdb::dumpCollLoop ( ) {
 
  loop:
-	CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
-	if ( ! cr ) return true;
+	// if no more, we're done...
+	if ( m_dumpCollnum >= getNumBases() ) return true;
+
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
+	hadError:
 		// if swapped out, this will be NULL, so skip it
-		RdbBase *base = cr->getBasePtr(m_rdbId);
+		RdbBase *base = NULL;
+		CollectionRec *cr = NULL;
+		if ( m_dumpCollnum>=0 ) 
+			cr = g_collectiondb.m_recs[m_dumpCollnum];
+		if ( cr ) 
+			base = cr->getBasePtr(m_rdbId);
 		//RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
 		// . if we wrote nothing, remove the file
@@ -1427,16 +1468,26 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
-	// advance
+	// advance for next round
 	m_dumpCollnum++;
-	// advance m_dumpCollnum until we have a non-null RdbBase
-	while ( m_dumpCollnum < getNumBases() && 
-		! cr->getBasePtr (m_rdbId) )
-		m_dumpCollnum++;
-	// if no more, we're done...
-	if ( m_dumpCollnum >= getNumBases() ) return true;
 
-	RdbBase *base = cr->getBasePtr(m_rdbId);//m_dumpCollnum);
+	CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+
+	// collrec is valid?
+	if ( ! cr ) goto loop;
+
+	// base is null if swapped out. skip it then. is that correct?
+	// probably not!
+	//RdbBase *base = cr->getBasePtr(m_rdbId);//m_dumpCollnum);
+	// swap it in for dumping purposes if we have to
+	RdbBase *base = cr->getBase(m_rdbId);//m_dumpCollnum);	
+
+	// hwo can this happen
+	if ( ! base ) { 
+		log("rdb: dumpcollloop base was null for cn=%li",
+		    (long)m_dumpCollnum-1);
+		goto hadError;
+	}
 
 	// before we create the file, see if tree has anything for this coll
 	//key_t k; k.setMin();
@@ -2684,7 +2735,7 @@ long long Rdb::getMapMemAlloced () {
 	long long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
 		// skip null base if swapped out
-		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) return true;
 		RdbBase *base = cr->getBasePtr(m_rdbId);		
 		//RdbBase *base = getBase(i);
@@ -2699,7 +2750,7 @@ long Rdb::getNumSmallFiles ( ) {
 	long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
 		// skip null base if swapped out
-		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) return true;
 		RdbBase *base = cr->getBasePtr(m_rdbId);		
 		//RdbBase *base = getBase(i);

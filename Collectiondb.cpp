@@ -606,7 +606,8 @@ RdbBase *CollectionRec::getBasePtr ( char rdbId ) {
 
 static bool s_inside = false;
 
-// returns NULL w/ g_errno set on error.
+// . returns NULL w/ g_errno set on error.
+// . TODO: ensure not called from in thread, not thread safe
 RdbBase *CollectionRec::getBase ( char rdbId ) {
 
 	if ( s_inside ) { char *xx=NULL;*xx=0; }
@@ -615,14 +616,25 @@ RdbBase *CollectionRec::getBase ( char rdbId ) {
 
 	log("cdb: swapin collnum=%li",(long)m_collnum);
 
+	// sanity!
+	if ( g_threads.amThread() ) { char *xx=NULL;*xx=0; }
+
 	s_inside = true;
+
+	// turn off quickpoll to avoid getbase() being re-called and
+	// coring from s_inside being true
+	long saved = g_conf.m_useQuickpoll;
+	g_conf.m_useQuickpoll = false;
 
 	// load them back in. return NULL w/ g_errno set on error.
 	if ( ! g_collectiondb.addRdbBasesForCollRec ( this ) ) {
 		log("coll: error swapin: %s",mstrerror(g_errno));
+		g_conf.m_useQuickpoll = saved;
+		s_inside = false;
 		return NULL;
 	}
 
+	g_conf.m_useQuickpoll = saved;
 	s_inside = false;
 
 	g_collectiondb.m_numCollsSwappedOut--;
