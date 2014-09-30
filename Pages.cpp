@@ -130,7 +130,7 @@ static WebPage s_pages[] = {
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,
 	//NULL,NULL,PG_NOAPI},
 
-	{ PAGE_BASIC_SECURITY, 
+	{ PAGE_COLLPASSWORDS,//BASIC_SECURITY, 
 	  "admin/collectionpasswords", 0,"collection passwords",0,0,
 	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
 	  PG_COLLADMIN},
@@ -755,11 +755,11 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// just knowing the collection name is enough for a cloud user to
 	// modify the collection's parms. however, to modify the master 
 	// controls or stuff in g_conf, you have to be root admin.
-	if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
-		//g_errno = ENOPERM;
-		//return log("parms: permission denied for user");
-		return sendPageLogin ( s , r );
-	}
+	// if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
+	// 	//g_errno = ENOPERM;
+	// 	//return log("parms: permission denied for user");
+	// 	return sendPageLogin ( s , r );
+	// }
 
 
 
@@ -1372,7 +1372,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
 	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
 	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
-	if ( page == PAGE_BASIC_SECURITY ) isBasic = true;
+	if ( page == PAGE_COLLPASSWORDS ) isBasic = true;
 	if ( page == PAGE_BASIC_SEARCH ) isBasic = true;
 
 
@@ -3725,7 +3725,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		hasPermission = true;
 
 	if ( emsg.length() == 0 && ! hasPermission && pwd )
-		emsg.safePrintf("Master password incorrect");
+		emsg.safePrintf("Root password incorrect");
 
 
 	// sanity
@@ -3788,7 +3788,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		  //"</td><td></td></tr>"
 		  //"<tr><td>"
 
-		  "<b>Master Password : &nbsp; </td>"
+		  "<b>Root Password : &nbsp; </td>"
 		  "<td><input id=ppp type=password name=pwd size=30>"
 		  "</td><td>"
 		  "<input type=submit value=ok border=0 onclick=\""
@@ -3882,7 +3882,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("URGENT. Please specify a ROOT password "
 			       "or IP address in the "
-			       "<a href=/admin/rootpassword>root "
+			       "<a href=/admin/rootpasswords>root "
 			       "password</a> "
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
