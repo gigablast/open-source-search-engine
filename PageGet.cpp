@@ -622,6 +622,8 @@ bool processLoop ( void *state ) {
 	// do not show header for json object display
 	if ( xd->m_contentType == CT_JSON )
 		includeHeader = false;
+	if ( xd->m_contentType == CT_XML )
+		includeHeader = false;
 
 	if ( format == FORMAT_XML ) includeHeader = false;
 	if ( format == FORMAT_JSON ) includeHeader = false;
@@ -868,6 +870,10 @@ bool processLoop ( void *state ) {
 	// calculate bufLen
 	//long bufLen = p - buf;
 
+	/*
+
+	  MDW: return the xml page as is now. 9/28/2014
+
 	long ct = xd->m_contentType;
 
 	// now filter the entire buffer to escape out the xml tags
@@ -890,6 +896,7 @@ bool processLoop ( void *state ) {
 		//bufLen = newbuf.length();
 		sb->stealBuf ( &newbuf );
 	}
+	*/
 
 	// now encapsulate it in html head/tail and send it off
 	// sendErr:

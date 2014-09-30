@@ -12862,6 +12862,18 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 					 "adding new urls, or wait for "
 					 "existing urls to be respidered.");
 	}
+
+	// let's pass the qareindex() test in qa.cpp... it wasn't updating
+	// the status to done. it kept saying in progress.
+	if ( ! cx->m_isCustomCrawl && 
+	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
+		//*status = SP_COMPLETED;
+		return msg->safePrintf ( "Nothing currently "
+					 "available to spider. "
+					 "Change your url filters, try "
+					 "adding new urls, or wait for "
+					 "existing urls to be respidered.");
+	}
 		
 
 	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {

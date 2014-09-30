@@ -88,17 +88,96 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 }
 */
 
-bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
-	// until we have coll tokens use this...
-	return isRootAdmin ( socket , hr );
+bool isInWhiteSpaceList ( char *p , char *buf ) {
+
+	if ( ! p ) return false;
+
+	char *match = strstr ( buf , p );
+	if ( ! match ) return false;
+	
+	long len = gbstrlen(p);
+
+	// ensure book-ended by whitespace
+	if (  match && 
+	      (match == buf || is_wspace_a(match[-1])) &&
+	      (!match[len] || is_wspace_a(match[len])) )
+		return true;
+
+	// no match
+	return false;
 }
+
+bool Conf::isCollAdmin ( TcpSocket *sock , HttpRequest *hr ) {
+
+	// until we have coll tokens use this...
+	//return isRootAdmin ( socket , hr );
+
+	// root always does
+	if ( isRootAdmin ( sock , hr ) ) return true;
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
+	if ( ! cr ) return false;
+
+	return isCollAdmin2 ( sock , hr , cr );
+
+}
+
+bool Conf::isCollAdminForColl ( TcpSocket *sock, HttpRequest *hr, char *coll ){
+
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+
+	if ( ! cr ) return false;
+
+	return isCollAdmin2 ( sock , hr , cr );
+}
+
+bool Conf::isCollAdmin2 ( TcpSocket *sock , 
+			  HttpRequest *hr ,
+			  CollectionRec *cr ) {
+
+	if ( ! cr ) return false;
+
+	//long page = g_pages.getDynamicPageNumber(hr);
+
+	// never for main or dmoz! must be root!
+	if ( strcmp(cr->m_coll,"main")==0 ) return false;
+	if ( strcmp(cr->m_coll,"dmoz")==0 ) return false;
+
+	// empty password field? then allow them through
+	if ( cr->m_collectionPasswords.length() <= 0 &&
+	     cr->m_collectionIps      .length() <= 0 )
+		return true;
+
+	// a good ip?
+	char *p   = iptoa(sock->m_ip);
+	char *buf = cr->m_collectionIps.getBufStart();
+	if ( isInWhiteSpaceList ( p , buf ) ) return true;
+
+	// if they got the password, let them in
+	p = hr->getString("pwd");
+	if ( ! p ) p = hr->getString("password");
+	if ( ! p ) p = hr->getStringFromCookie("pwd");
+	if ( ! p ) return false;
+	buf = cr->m_collectionPasswords.getBufStart();
+	if ( isInWhiteSpaceList ( p , buf ) ) return true;
+
+	// the very act of just knowing the collname of a guest account
+	// is good enough to update it
+	//if ( strncmp ( cr->m_coll , "guest_" , 6 ) == 0 )
+	//	return true;
+
+	return false;
+}
+	
 
 // . is user a root administrator?
 // . only need to be from root IP *OR* have password, not both
 bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// totally open access?
-	if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
+	//if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
+	if ( m_connectIps.length() <= 0 &&
+	     m_masterPwds.length() <= 0 )
 		return true;
 
 	// coming from root gets you in
@@ -114,7 +193,9 @@ bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 bool Conf::hasRootPwd ( HttpRequest *hr ) {
 
-	if ( m_numMasterPwds == 0 ) return false;
+	//if ( m_numMasterPwds == 0 ) return false;
+	if ( m_masterPwds.length() <= 0 )
+		return false;
 
 	char *p = hr->getString("pwd");
 
@@ -124,43 +205,46 @@ bool Conf::hasRootPwd ( HttpRequest *hr ) {
 
 	if ( ! p ) return false;
 
-	for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
-		if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
-		// we got a match
-		return true;
-	}
-	return false;
+	char *buf = m_masterPwds.getBufStart();
+
+	return isInWhiteSpaceList ( p , buf );
 }
 
 // . check this ip in the list of admin ips
 bool Conf::isRootIp ( unsigned long ip ) {
 
 	//if ( m_numMasterIps == 0 ) return false;
-	if ( m_numConnectIps == 0 ) return false;
+	//if ( m_numConnectIps == 0 ) return false;
+	if ( m_connectIps.length() <= 0 ) return false;
 
-	for ( long i = 0 ; i < m_numConnectIps ; i++ ) 
-		if ( m_connectIps[i] == (long)ip )
-			return true;
+	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) 
+	// 	if ( m_connectIps[i] == (long)ip )
+	// 		return true;
 
 	//if ( ip == atoip("10.5.0.2",8) ) return true;
 
-	// no match
-	return false;
+	char *p = iptoa(ip);
+	char *buf = m_connectIps.getBufStart();
+
+	return isInWhiteSpaceList ( p , buf );
 }
 
 bool Conf::isConnectIp ( unsigned long ip ) {
-	for ( long i = 0 ; i < m_numConnectIps ; i++ ) {
-		if ( m_connectIps[i] == (long)ip )
-			return true;
-		// . 1.2.3.0 ips mean the whole block 
-		// . the high byte in the long is the Least Signficant Byte
-		if ( (m_connectIps[i] >> 24) == 0 &&
-		     (m_connectIps[i] & 0x00ffffff) == 
-		     ((long)ip        & 0x00ffffff)    )
-			return true;
-	}
+
+	return isRootIp(ip);
+
+	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) {
+	// 	if ( m_connectIps[i] == (long)ip )
+	// 		return true;
+	// 	// . 1.2.3.0 ips mean the whole block 
+	// 	// . the high byte in the long is the Least Signficant Byte
+	// 	if ( (m_connectIps[i] >> 24) == 0 &&
+	// 	     (m_connectIps[i] & 0x00ffffff) == 
+	// 	     ((long)ip        & 0x00ffffff)    )
+	// 		return true;
+	// }
 	// no match
-	return false;
+	//return false;
 }
 
 // . set all member vars to their default values

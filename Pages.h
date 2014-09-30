@@ -5,8 +5,13 @@
 #ifndef _PAGES_H_
 #define _PAGES_H_
 
-bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage = false ) ;
-bool printRedBox ( SafeBuf *mb , bool isRootWebPage = false ) ;
+bool printRedBox2 ( SafeBuf *sb , 
+		    class TcpSocket *sock , 
+		    class HttpRequest *hr );
+
+bool printRedBox  ( SafeBuf *mb , 
+		    class TcpSocket *sock , 
+		    class HttpRequest *hr );
 
 // for PageEvents.cpp and Accessdb.cpp
 //#define RESULTSWIDTHSTR "550px"
@@ -16,6 +21,8 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage = false ) ;
 #include "HttpServer.h"
 #include "SafeBuf.h"
 #include "PageCrawlBot.h" // sendPageCrawlBot()
+
+#define GOLD "f3c734"
 
 #define LIGHTER_BLUE "e8e8ff"
 #define LIGHT_BLUE "d0d0e0"
@@ -102,6 +109,8 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) ;
 // values for WebPage::m_flags
 #define PG_NOAPI 0x01
 #define PG_STATUS 0x02
+#define PG_COLLADMIN 0x04
+#define PG_ROOTADMIN 0x08
 
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
@@ -308,13 +317,13 @@ extern class Pages g_pages;
 // . some pages also have urls like /search to mean page=0
 enum {
 	// dummy pages
-	PAGE_NOHOSTLINKS = 0,
-	PAGE_ADMIN     ,
+	//PAGE_NOHOSTLINKS = 0,
+	//PAGE_ADMIN     ,
 	//PAGE_QUALITY   ,
-	PAGE_PUBLIC    ,
+	//PAGE_PUBLIC    ,
 
 	// public pages
-	PAGE_ROOT        ,
+	PAGE_ROOT        =0,
 	PAGE_RESULTS     ,
 	//PAGE_WIDGET,
 	PAGE_ADDURL      , // 5
@@ -339,7 +348,7 @@ enum {
 	PAGE_SPIDER      , 
 	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
-	PAGE_SECURITY    , // 19
+	PAGE_ROOTPASSWORDS , // 19
 	PAGE_ADDCOLL     , //20	 
 	PAGE_DELCOLL     , 
 	PAGE_CLONECOLL   ,

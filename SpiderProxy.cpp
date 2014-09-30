@@ -337,9 +337,9 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		       // we fetch a test url every minute or so through
 		       // each proxy to ensure it is up. typically this should
 		       // be your website so you do not make someone angry.
-		       "<td><b>test url last download</b></td>"
+		       "<td><b>test url last download attempt</b></td>"
 		       // print "FAILED" in red if it failed to download
-		       "<td><b>test url download time</b></td>"
+		       "<td><b>test url download took</b></td>"
 
 		       "<td><b>last bytes downloaded</b></td>"
 
@@ -504,6 +504,9 @@ bool downloadTestUrlFromProxies ( ) {
 
 	// only host #0 should do the testing i guess
 	//if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
+
+	// no need if no url
+	if ( g_conf.m_proxyTestUrl.length() <= 1 ) return true;
 
 	// if host #0 dies then host #1 must take its place managing the
 	// spider proxies
@@ -706,8 +709,11 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		goto redo;
 	}
 
+	// reset minCount so we can take the min over those we check here
+	minCount = -1;
 	long long oldest = 0x7fffffffffffffffLL;
 	SpiderProxy *winnersp = NULL;
+	long count = 0;
 	// now find the best proxy wih the minCount
 	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
 		// skip empty slots
@@ -716,12 +722,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValueFromSlot(i);
 		// if it failed the last test, skip it... not here...
 		if ( skipDead && sp->m_lastDownloadError ) continue;
-		// if all hosts were "dead" because they all had 
-		// m_lastDownloadError set then minCount will be 999999
-		// and nobody should continue from this statement:
-		if ( sp->m_countForThisIp > minCount ) continue;
-		// then go by last download time for this ip
-		if ( sp->m_lastTimeUsedForThisIp >= oldest ) continue;
+
 		// if this proxy was banned by the url's ip... skip it. it is
 		// not a candidate...
 		if ( skipDead ) {
@@ -730,8 +731,34 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 			long long h64 = hash64h ( uip , pip );
 			if ( s_proxyBannedTable.isInTable ( &h64 ) ) continue;
 		}
+
+		// if some proxies are "alive" then only pick from
+		// the first half of the proxies that are alive (i.e. still
+		// work). that way, when one of those goes dead we will inc
+		// the backoff (crawldelay) and a new proxy that we haven't
+		// used for this url's IP will take it's place. and such
+		// new proxies will only have the new backoff count used
+		// through them. that way, we don't get ALL of our proxies
+		// banned at about the same time since we do somewhat uniform
+		// load balancing over them.
+		if ( skipDead && count > aliveProxyCandidates / 2 )
+			continue;
+
+		// count the alive/non-banned candidates
+		count++;
+
+		// if all hosts were "dead" because they all had 
+		// m_lastDownloadError set then minCount will be 999999
+		// and nobody should continue from this statement:
+		if ( sp->m_countForThisIp > minCount && minCount>=0 ) continue;
+		// then go by last download time for this ip
+		if ( sp->m_countForThisIp == minCount && minCount>=0 &&
+		     sp->m_lastTimeUsedForThisIp >= oldest ) 
+			continue;
+
 		// pick the spider proxy used longest ago
-		oldest = sp->m_lastTimeUsedForThisIp;
+		oldest   = sp->m_lastTimeUsedForThisIp;
+		minCount = sp->m_countForThisIp;
 		// got a new winner
 		winnersp = sp;
 	}

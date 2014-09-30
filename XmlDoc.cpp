@@ -186,6 +186,8 @@ XmlDoc::~XmlDoc() {
 static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
+
+	m_isImporting = false;
 	
 	m_printedMenu = false;
 
@@ -1335,7 +1337,13 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// similar to set3() above
 		m_setFromDocId   = true;
 		// use content and ip from old title rec to save time
-		m_recycleContent = true;
+		// . crap this is making the query reindex not actually
+		//   re-download the content. 
+		// . we already check the m_deleteFromIndex flag below
+		//   in getUtf8Content() and use the old content in that case
+		//   so i'm not sure why we are recycling here, so take
+		//   this out. MDW 9/25/2014.
+		//m_recycleContent = true;
 		// sanity
 		if ( m_docId == 0LL ) { char *xx=NULL;*xx=0; }
 	}
@@ -3192,6 +3200,36 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( m_sreqValid && m_sreq.m_ignoreDocUnchangedError )
 		check = false;
 	if ( check ) {
+		// check inlinks now too!
+		LinkInfo  *info1 = getLinkInfo1 ();
+		if ( ! info1 || info1 == (LinkInfo *)-1 ) return (long *)info1;
+		LinkInfo  *info2 = od->getLinkInfo1 ();
+		if ( ! info2 || info2 == (LinkInfo *)-1 ) return (long *)info2;
+		Inlink *k1 = NULL;
+		Inlink *k2 = NULL;
+		char *s1, *s2;
+		long len1,len2;
+		if ( info1->getNumGoodInlinks() !=
+		     info2->getNumGoodInlinks() ) 
+			goto changed;
+		for ( ; k1=info1->getNextInlink(k1) , 
+			      k2=info2->getNextInlink(k2); ) {
+			if ( ! k1 ) 
+				break;
+			if ( ! k2 ) 
+				break;
+			if ( k1->m_siteNumInlinks != k2->m_siteNumInlinks ) 
+				goto changed;
+			s1   = k1->ptr_linkText;
+			len1 = k1->size_linkText - 1; // exclude \0
+			s2   = k2->ptr_linkText;
+			len2 = k2->size_linkText - 1; // exclude \0
+			if ( len1 != len2 )
+				goto changed;
+			if ( memcmp(s1,s2,len1) != 0 )
+				goto changed;
+		}
+		// no change in link text, look for change in page content now
 		long *ch32 = getContentHash32();
 		if ( ! ch32 || ch32 == (void *)-1 ) return (long *)ch32;
 		if ( *ch32 == od->m_contentHash32 ) {
@@ -3201,6 +3239,7 @@ long *XmlDoc::getIndexCode2 ( ) {
 		}
 	}
 
+ changed:
 	// words
 	Words *words = getWords();
 	if ( ! words || words == (Words *)-1 ) return (long *)words;
@@ -15222,6 +15261,16 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( od )
 		r->m_contentHash32 = od->m_contentHash32;
 
+	// force floater usage on even if "use spider proxies" parms is off
+	// if we're a diffbot crawl and use robots is off.
+	//if ( cr && ! cr->m_useRobotsTxt && cr->m_isCustomCrawl )
+	//	r->m_forceUseFloaters = true;
+
+	// for beta testing, make it a collection specific parm for diffbot
+	// so we can turn on manually
+	if ( cr->m_forceUseFloaters )
+		r->m_forceUseFloaters = true;
+
 	// eventgurubot is the max
 	//char *userAgent = g_conf.m_spiderUserAgent;
 	// hardcode it
@@ -15766,7 +15815,10 @@ char **XmlDoc::getContent ( ) {
 	// if we were set from a title rec use that we do not have the original
 	// content, and caller should be calling getUtf8Content() anyway!!
 	if ( m_setFromTitleRec ) { char *xx=NULL; *xx=0; }
-	if ( m_setFromDocId    ) { char *xx=NULL; *xx=0; }
+
+	// query reindex has m_setFromDocId to true and we WANT to re-download
+	// the content... so why did i have this here? MDW 9/25/2014
+	//if ( m_setFromDocId    ) { char *xx=NULL; *xx=0; }
 
 	// recycle?
 	//if ( m_recycleContent ) { char *xx=NULL; *xx=0; }
@@ -17603,7 +17655,9 @@ char **XmlDoc::getUtf8Content ( ) {
 	// all tags like <title> or <link> to <gbtitle> or <gblink> so we
 	// know they are xml tags. because stuff like &lt;br&gt; will
 	// become <br> and will be within its xml tag like <gbdescription>
-	// or <gbtitle>
+	// or <gbtitle>.
+	// MDW: 9/28/2014. no longer do this since i added hashXmlFields().
+	/*
 	if ( m_contentType == CT_XML ) {
 		// count the xml tags
 		char *p    = m_expandedUtf8Content;
@@ -17659,6 +17713,7 @@ char **XmlDoc::getUtf8Content ( ) {
 		// free esbuf if we were referencing that to save mem
 		m_esbuf.purge();
 	}
+	*/
 
 	// richmondspca.org has &quot; in some tags and we do not like
 	// expanding that to " because it messes up XmlNode::getTagLen()
@@ -17675,11 +17730,15 @@ char **XmlDoc::getUtf8Content ( ) {
 	//   utf8 chars so that Xml::set(), etc. still work properly and don't
 	//   add any more html tags than it should
 	// . this will decode in place
-	long n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
-			    m_expandedUtf8Content,//ptr_utf8Content,
-			    m_expandedUtf8ContentSize-1,//size_utf8Content-1,
-			    doSpecial,
-			    m_niceness);
+	// . MDW: 9/28/2014. no longer do for xml docs since i added
+	//   hashXmlFields()
+	long n = m_expandedUtf8ContentSize - 1;
+	if ( m_contentType != CT_XML )
+		n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
+			       m_expandedUtf8Content,//ptr_utf8Content,
+			       m_expandedUtf8ContentSize-1,//size_utf8Con
+			       doSpecial,
+			       m_niceness);
 
 	// can't exceed this! n does not include the final \0 even though
 	// we do right it out.
@@ -17689,12 +17748,14 @@ char **XmlDoc::getUtf8Content ( ) {
 
 	// now rss has crap in it like "&amp;nbsp;" so we have to do another
 	// decoding pass
-	if ( m_contentType == CT_XML ) // isRSSExt )
-		n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
-			       m_expandedUtf8Content,//ptr_utf8Content,
-			       n,
-			       false,//doSpecial,
-			       m_niceness);
+	// . MDW: 9/28/2014. no longer do for xml docs since i added
+	//   hashXmlFields()
+	// if ( m_contentType == CT_XML ) // isRSSExt )
+	// 	n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
+	// 		       m_expandedUtf8Content,//ptr_utf8Content,
+	// 		       n,
+	// 		       false,//doSpecial,
+	// 		       m_niceness);
 	// sanity
 	if ( n > m_expandedUtf8ContentSize-1 ) {char *xx=NULL;*xx=0; }
 	// sanity
@@ -18942,6 +19003,17 @@ char *XmlDoc::getSpiderLinks ( ) {
 	//	m_spiderLinks      = false; 
 	//	m_spiderLinks2     = false; 
 	//	m_spiderLinksValid = true ; }
+
+	// this slows importing down because we end up doing ip lookups
+	// for every outlink if "firstip" not in tagdb.
+	// shoot. set2() already sets m_spiderLinksValid to true so we
+	// have to override if importing.
+	if ( m_isImporting && m_isImportingValid ) {
+		m_spiderLinks  = false;
+		m_spiderLinks2 = false;
+		m_spiderLinksValid = true;
+		return &m_spiderLinks2;
+	}
 
 	// return the valid value
 	if ( m_spiderLinksValid ) return &m_spiderLinks2;
@@ -21761,8 +21833,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// likewise if there error was ENONCANONICAL treat it like that
 	if ( m_indexCode == EDOCNONCANONICAL )
 		spideringLinks = true;
-	
-
 
 	//
 	// . prepare the outlink info if we are adding links to spiderdb!
@@ -22273,13 +22343,17 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . LINKDB
 	// . linkdb records. assume one per outlink
 	// . we may index 2 16-byte keys for each outlink
-	Links *nl = NULL; if ( spideringLinks ) nl = &m_links;
+	Links *nl2 = NULL; 
+	//if ( spideringLinks ) nl2 = &m_links;
+	// if injecting, spideringLinks is false, but then we don't
+	// add the links to linkdb, which causes the qainlinks() test to fail
+	nl2 = &m_links;
 	// do not bother if deleting. but we do add simplified redirects
 	// to spiderdb as SpiderRequests now.
 	long code = m_indexCode;
 	if  ( code == EDOCSIMPLIFIEDREDIR ) code = 0;
 	if  ( code == EDOCNONCANONICAL    ) code = 0;
-	if  ( code ) nl = NULL;
+	if  ( code ) nl2 = NULL;
 	//Links *ol = NULL; if ( od ) ol = od->getLinks();
 	// . set key/data size
 	// . use a 16 byte key, not the usual 12
@@ -22288,7 +22362,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	HashTableX kt1;
 	//HashTableX kt2;
 	long nis = 0;
-	if ( nl && m_useLinkdb ) nis = nl->getNumLinks() * 4;
+	if ( nl2 && m_useLinkdb ) nis = nl2->getNumLinks() * 4;
 	// pre-grow table based on # outlinks
 	kt1.set ( sizeof(key224_t),0,nis,NULL,0,false,m_niceness,"link-indx" );
 	// use magic to make fast
@@ -22307,7 +22381,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//   but this will have to be for adding to Linkdb. basically take a
 	//   lot of it from Linkdb::fillLinkdbList()
 	// . these return false with g_errno set on error
-	if ( m_useLinkdb && nl && ! hashLinksForLinkdb(&kt1) ) return NULL;
+	if ( m_useLinkdb && nl2 && ! hashLinksForLinkdb(&kt1) ) return NULL;
 	//if ( add2 && ol && ! !od->m_skipIndexing && 
 	//     ol->hash(&kt2,od,m_niceness) ) 
 	//	return NULL;
@@ -22432,6 +22506,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     // if we were set from a titleRec, see if we got
 		     // a different hash of terms to index this time around...
 		     m_setFromTitleRec &&
+		     // fix for import log spam
+		     ! m_isImporting &&
 		     m_version >= 120 &&
 		     m_metaListCheckSum8 != currentMetaListCheckSum8 )
 			log("xmldoc: checksum parsing inconsistency for %s",
@@ -22931,7 +23007,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . should also add with a time of now plus 5 seconds to that if
 	//   we spider an outlink linkdb should be update with this doc
 	//   pointing to it so it can get link text then!!
-	if ( spideringLinks && nl && ! m_doingConsistencyCheck && 
+	if ( spideringLinks && nl2 && ! m_doingConsistencyCheck && 
 	     m_useSpiderdb && ! forDelete ){
 		// returns NULL and sets g_errno on error
 		char *ret = addOutlinkSpiderRecsToMetaList ();
@@ -25894,6 +25970,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// hash diffbot's json output here
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
+	/*
 	if ( *ct == CT_JSON ) { // && m_isDiffbotJSONObject ) {
 		// hash the content type for type:json query
 		if ( ! hashContentType   ( table ) ) return NULL;
@@ -25911,6 +25988,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		// and the json itself
 		return hashJSON ( table ); 
 	}
+	*/
 
 	if ( ! hashContentType   ( table ) ) return NULL;
 	if ( ! hashUrl           ( table ) ) return NULL;
@@ -25936,12 +26014,31 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashNoSplit ( table ) ) return NULL;
 
 
-	// global index unless this is a json object in which case it is
-	// hased above in the call to hashJSON(). this will decrease disk
-	// usage by about half, posdb* files are pretty big.
-	if ( cr->m_isCustomCrawl || ! cr->m_indexBody ) return (char *)1;
+	// MDW: i think we just inject empty html with a diffbotreply into
+	// global index now, so don't need this... 9/28/2014
 
+	// global index unless this is a json object in which case it is
+	// hashed above in the call to hashJSON(). this will decrease disk
+	// usage by about half, posdb* files are pretty big.
+	//if ( cr->m_isCustomCrawl || ! cr->m_indexBody ) return (char *)1;
 	     
+	// hash json fields
+	if ( *ct == CT_JSON ) {
+		// this hashes both with and without the fieldname
+		hashJSONFields ( table ); 
+		// hash gblang:de
+		if ( ! hashLanguageString ( table ) ) return NULL;
+		goto skip;
+	}
+
+	// same for xml now, so we can search for field:value like w/ json
+	if ( *ct == CT_XML ) {
+		// this hashes both with and without the fieldname
+		hashXMLFields ( table );
+		// hash gblang:de
+		if ( ! hashLanguageString ( table ) ) return NULL;
+		goto skip;
+	}
 
 	// hash the body of the doc first so m_dist is 0 to match
 	// the rainbow display of sections
@@ -25971,6 +26068,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// somewhere.
 	if ( ! hashMetaSummary(table) ) return NULL;
 
+ skip:
+
 	// this will only increment the scores of terms already in the table
 	// because we neighborhoods are not techincally in the document
 	// necessarily and we do not want to ruin our precision
@@ -25985,6 +26084,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashCharset       ( table ) ) return NULL;
 	if ( ! hashRSSInfo       ( table ) ) return NULL;
 	if ( ! hashPermalink     ( table ) ) return NULL;
+
+	// hash gblang:de last for parsing consistency
+	if ( ! hashLanguageString ( table ) ) return NULL;
 
 	// we set this now in hashWords3()
 	if ( m_doingSEO )
@@ -27299,6 +27401,9 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
 bool XmlDoc::hashSections ( HashTableX *tt ) {
 
+	//if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
+	//if ( m_contentType == CT_HTML ) return true;
+
 	setStatus ( "hashing sections" );
 
 	if ( ! m_sectionsValid ) { char *xx=NULL;*xx=0; }
@@ -28094,6 +28199,30 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 
 	// try lang abbreviation
 	sprintf(s , "%s ", getLangAbbr(langId) );
+	// go back to broken way to try to fix parsing consistency bug
+	// by adding hashLanguageString() function below
+	//sprintf(s , "%s ", getLangAbbr(langId) );
+	if ( ! hashString ( s, slen, &hi ) ) return false;
+
+	return true;
+}
+
+bool XmlDoc::hashLanguageString ( HashTableX *tt ) {
+
+	setStatus ( "hashing language string" );
+
+	long langId = (long)*getLangId();
+
+	// update hash parms
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_prefix    = "gblang";
+
+	// try lang abbreviation
+	char s[32];
+	long slen = sprintf(s , "%s ", getLangAbbr(langId) );
+	// go back to broken way to try to fix parsing consistency bug
 	if ( ! hashString ( s, slen, &hi ) ) return false;
 
 	return true;
@@ -29073,7 +29202,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 				if ( ! jp || jp == (void *)-1)
 					return (Msg20Reply *)jp;
 			}
-			if ( m_contentType == CT_HTML ) {
+			if ( m_contentType == CT_HTML ||
+			     m_contentType == CT_XML ) {
 				Xml *xml = getXml();
 				if ( ! xml || xml==(void *)-1)
 					return (Msg20Reply *)xml;
@@ -29482,11 +29612,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	// returns values of specified meta tags
 	if ( ! reply->ptr_dbuf && m_req->size_displayMetas > 1 ) {
-		long dlen;  char *d;
-		d = getDescriptionBuf(m_req->ptr_displayMetas,&dlen);
+		long dsize;  char *d;
+		d = getDescriptionBuf(m_req->ptr_displayMetas,&dsize);
 		if ( ! d || d == (char *)-1 ) return (Msg20Reply *)d;
 		reply->ptr_dbuf  = d;
-		reply->size_dbuf = dlen + 1;
+		reply->size_dbuf = dsize; // includes \0
 	}
 
 	// breathe
@@ -30370,9 +30500,9 @@ Matches *XmlDoc::getMatches () {
 }
 
 // sender wants meta description, custom tags, etc.
-char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
+char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dsize ) {
 	// return the buffer if we got it
-	if ( m_dbufValid ) { *dlen = m_dbufLen; return m_dbuf; }
+	if ( m_dbufValid ) { *dsize = m_dbufSize; return m_dbuf; }
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
 	// now get the content of the requested display meta tags
@@ -30416,6 +30546,14 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 						 gbstrlen(s) , // name len
 						 "name"    , // http-equiv/name
 						 false     );// convert &#'s?
+		dptr[wlen] = '\0';
+
+		// test it out
+		if ( ! verifyUtf8 ( dptr ) ) {
+			log("xmldoc: invalid utf8 content for meta tag %s.",s);
+			continue;
+		}
+
 		// advance and NULL terminate
 		dptr    += wlen;
 		*dptr++  = '\0';
@@ -30425,8 +30563,9 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 			    "was encountered. Truncating.",dbufEnd-m_dbuf);
 	}
 	// what is the size of the content of displayed meta tags?
-	m_dbufLen   = dptr - m_dbuf;
+	m_dbufSize   = dptr - m_dbuf;
 	m_dbufValid = true;
+	*dsize = m_dbufSize;
 	return m_dbuf;
 }
 
@@ -30518,6 +30657,15 @@ Title *XmlDoc::getTitle ( ) {
 
 Summary *XmlDoc::getSummary () {
 	if ( m_summaryValid ) return &m_summary;
+
+	// xml and json docs have empty summaries for now
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (Summary *)ct;
+
+	if ( *ct == CT_JSON || *ct == CT_XML ) {
+		m_summaryValid = true;
+		return &m_summary;
+	}
 
 	// need a buncha crap
 	Words *ww = getWords();
@@ -35813,7 +35961,7 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	char *src     = NULL;
 	long  srcSize = 0;
 
-	if ( ptr_rootTitleBuf ) {
+	if ( ptr_rootTitleBuf || m_setFromTitleRec ) {
 		src    =  ptr_rootTitleBuf;
 		srcSize = size_rootTitleBuf;
 	}
@@ -48352,9 +48500,9 @@ Json *XmlDoc::getParsedJson ( ) {
 
 #include "Json.h"
 
-char *XmlDoc::hashJSON ( HashTableX *table ) {
+char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 
-	setStatus ( "hashing json" );
+	setStatus ( "hashing json fields" );
 
 	HashInfo hi;
 	hi.m_tt        = table;
@@ -48515,6 +48663,58 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	return (char *)0x01;
 }
 
+char *XmlDoc::hashXMLFields ( HashTableX *table ) {
+
+	setStatus ( "hashing xml fields" );
+
+	HashInfo hi;
+	hi.m_tt        = table;
+	hi.m_desc      = "xml object";
+	hi.m_hashGroup = HASHGROUP_BODY;
+
+
+	Xml *xml = getXml();
+	long n = xml->getNumNodes();
+	XmlNode *nodes = xml->getNodes   ();
+
+	SafeBuf nameBuf;
+
+	// scan the xml nodes
+	for ( long i = 0 ; i < n ; i++ ) {
+
+		// breathe
+		QUICKPOLL(m_niceness);
+
+		// . skip if it's a tag not text node skip it
+		// . we just want the "text" nodes
+		if ( nodes[i].isTag() ) continue;
+
+		// assemble the full parent name
+		// like "tag1.tag2.tag3"
+		nameBuf.reset();
+		xml->getCompoundName ( i , &nameBuf );
+
+		// this is \0 terminated
+		char *tagName = nameBuf.getBufStart();
+
+		// get the utf8 text
+		char *val = nodes[i].m_node;
+		long vlen = nodes[i].m_nodeLen;
+
+		// index like "title:whatever"
+		if ( tagName && tagName[0] ) {
+			hi.m_prefix = tagName;
+			hashString ( val , vlen , &hi );
+		}
+
+		// hash without the field name as well
+		hi.m_prefix = NULL;
+		hashString ( val , vlen , &hi );
+	}
+
+	return (char *)0x01;
+}
+
 // if our url is that of a subdoc, then get the url of the parent doc
 // from which we were a subsection
 char *XmlDoc::getDiffbotParentUrl( char *myUrl ) {
@@ -48560,6 +48760,9 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	if ( m_contentType == CT_HTML ) 
 		return storeFacetValuesHtml ( qs , sb , fvh );
+
+	if ( m_contentType == CT_XML ) 
+		return storeFacetValuesXml ( qs , sb , fvh );
 
 	return true;
 }
@@ -48676,6 +48879,89 @@ bool XmlDoc::storeFacetValuesHtml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 		if ( ! content || contentLen <= 0 ) continue;
 
 	skip:
+		// hash it to match it if caller specified a particular hash
+		// because they are coming from Msg40::lookUpFacets() function
+		// to convert the hashes to strings, like for rendering in
+		// the facets box to the left of the search results
+		FacetValHash_t val32 = hash32 ( content, contentLen);
+		if ( fvh && fvh != val32 ) continue;
+
+		// otherwise add facet FIELD to our buf
+		if ( ! sb->safeStrcpy(qs) ) return false;
+		if ( ! sb->pushChar('\0') ) return false;
+
+		// then add facet VALUE
+		if ( isString && !sb->safePrintf("%lu,",(unsigned long)val32))
+			return false;
+		if ( !sb->safeMemcpy(content,contentLen) ) return false;
+		if ( !sb->pushChar('\0') ) return false;
+
+		// if only one specified, we are done
+		if ( fvh ) return true;
+
+		if ( uniqueField ) return true;
+	}
+
+	return true;
+}
+
+
+bool XmlDoc::storeFacetValuesXml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
+
+	Xml *xml = getXml();
+
+	long qsLen = gbstrlen(qs);
+
+	bool isString = false;
+	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;
+
+	long i = 0;
+
+	bool uniqueField = false;
+
+	SafeBuf nameBuf;
+
+	// find the first meta summary node
+	for ( i = 0 ; i < xml->m_numNodes ; i++ ) {
+
+		// skip text nodes
+		if ( xml->m_nodes[i].m_nodeId == 0 ) continue;
+
+		// assemble the full parent name
+		// like "tag1.tag2.tag3"
+		nameBuf.reset();
+		xml->getCompoundName ( i , &nameBuf );
+		long nameLen = nameBuf.length();
+		char *s = nameBuf.getBufStart();
+
+		// . does it have a type field that's "summary"
+		// . <meta name=summary content="...">
+		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
+		//s = xml->getString ( i , "name", &nameLen );
+
+		// "s" can be "summary","description","keywords",...
+		if ( nameLen != qsLen ) continue;
+		if ( strncasecmp ( s , qs , qsLen ) != 0 ) continue;
+
+		// got it...
+
+		// wtf?
+		if ( i + 1 >= xml->m_numNodes ) continue;
+
+		// point to the content! this is a text node?
+
+		// skip if not a text node, we don't return tag nodes i guess
+		if ( xml->m_nodes[i+1].m_nodeId ) continue;
+
+		char *content = xml->m_nodes[i+1].m_node;
+		long contentLen = xml->m_nodes[i+1].m_nodeLen;
+
+		// skip if empty
+		if ( ! content || contentLen <= 0 ) continue;
+
+		// skip commen cases too! like white space
+		if ( contentLen == 1 && is_wspace_a(content[0]) ) continue;
+
 		// hash it to match it if caller specified a particular hash
 		// because they are coming from Msg40::lookUpFacets() function
 		// to convert the hashes to strings, like for rendering in

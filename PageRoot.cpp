@@ -654,10 +654,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 		{"SEARCH","/"},
 
-// 		{"IMAGES","/?searchtype=images"},
-// 		{"PRODUCTS","/?searchtype=products"},
-// 		{"ARTICLES","/?searchtype=articles"},
-// 		{"DISCUSSIONS","/?searchtype=discussions"},
+ 		{"DISCUSSIONS","/?searchtype=discussions"},
+ 		{"PRODUCTS","/?searchtype=products"},
+ 		{"ARTICLES","/?searchtype=articles"},
+ 		{"IMAGES","/?searchtype=images"},
 
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
@@ -679,7 +679,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 	// first the nav column
 	//
 	sb->safePrintf(
-		       "<TD bgcolor=#f3c714 " // yellow/gold
+		       "<TD bgcolor=#%s " // f3c714 " // yellow/gold
 		      "valign=top "
 		      "style=\"width:210px;"
 		      "border-right:3px solid blue;"
@@ -699,6 +699,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 		      "width:100px;"
 		      "height:100px;"
 		      "\">"
+		       , GOLD
 		       , coll
 		       );
 
@@ -707,7 +708,8 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 			       "height=57 src=/computer2.png>");
 	else
 		sb->safePrintf("<br style=line-height:10px;>"
-			       "<img width=54 height=79 src=/rocket.jpg>"
+			       "<img border=0 "
+			       "width=54 height=79 src=/rocket.jpg>"
 			       );
 
 	sb->safePrintf ( "</div>"
@@ -724,6 +726,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 	for ( long i = 0 ; i < n ; i++ ) {
 
 		if ( isSearchResultsPage && i >= 5 ) break;
+
+		if ( i >= 1 && i <= 4 &&
+		     cr->m_diffbotApiUrl.length()<= 0 )
+			continue;
 
 		char delim = '?';
 		if ( strstr ( mi[i].m_url,"?") ) delim = '&';
@@ -1042,14 +1048,16 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	// put search box in a box
 	sb.safePrintf("<div style="
-		      "background-color:#fcc714;"
+		      "background-color:#%s;"//fcc714;"
 		      "border-style:solid;"
 		      "border-width:3px;"
 		      "border-color:blue;"
 		      //"background-color:blue;"
 		      "padding:20px;"
 		      "border-radius:20px;"
-		      ">");
+		      ">"
+		      ,GOLD
+		      );
 
 
 	sb.safePrintf("<input name=q type=text "
@@ -1113,8 +1121,79 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.safePrintf("\n");
 	}
 
+
+	// always the option to add event guru to their list of
+	// search engine in their browser
+	sb.safePrintf("<br>"
+		      //"<br>"
+
+		      "<script>\n"
+		      "function addEngine() {\n"
+		      "if (window.external && "
+		      "('AddSearchProvider' in window.external)) {\n"
+		      // Firefox 2 and IE 7, OpenSearch
+		      "window.external.AddSearchProvider('http://"
+		      "www.gigablast.com/searchbar.xml');\n"
+		      "}\n"
+		      "else if (window.sidebar && ('addSearchEngine' "
+		      "in window.sidebar)) {\n"
+		      // Firefox <= 1.5, Sherlock
+		      "window.sidebar.addSearchEngine('http://"
+		      "www.gigablast.com/searchbar.xml',"
+		      //"example.com/search-plugin.src',"
+		      "'http://www.gigablast.com/rocket.jpg'," //guru.png
+		      "'Search Plugin', '');\n"
+		      "}\n"
+		      "else {"
+		      // No search engine support (IE 6, Opera, etc).
+		      "alert('No search engine support');\n"
+		      "}\n"
+		      // do not ask again if they tried to add it
+		      // meta cookie should store this
+		      //"document.getElementById('addedse').value='1';\n"
+		      // NEVER ask again! permanent cookie
+		      "document.cookie = 'didse=3';"
+		      // make it invisible again
+		      //"var e = document.getElementById('addse');\n"
+		      //"e.style.display = 'none';\n"
+		      "}\n"
+
+
+		      "</script>\n"
+
+
+		      "<center>"
+		      "<a onclick='addEngine();' style="
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "color:blue;"
+		      ">"
+
+		      "<img height=16 width=16 border=0 src=/rocket16.png>"
+
+		      "<font color=#505050>"
+		      "%c%c%c "
+		      "</font>"
+
+		      "&nbsp; "
+
+		      "Add Gigablast to your browser's "
+		      "search engines"
+		      "</a>"
+		      "</center>"
+		      "<br>"
+		      "<br>"
+
+		       // print triangle
+		       ,0xe2
+		       ,0x96
+		       ,0xbc
+
+		      );
+
+
 	// print any red boxes we might need to
-	if ( printRedBox2 ( &sb , true ) )
+	if ( printRedBox2 ( &sb , sock , r ) ) // true ) )
 		sb.safePrintf("<br>\n");
 
 	/*
@@ -1280,9 +1359,6 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	*/
 
 
-	/*
-
-
 	//
 	// begin new stuff
 	//
@@ -1352,6 +1428,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("</div>");
 
+	/*
 
 	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:280px;height:280px;display:inline-block;z-index:105;color:black;margin-left:-50px;position:absolute;margin-top:50px;background-color:lightgray;\">");
 
@@ -1378,6 +1455,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
+	*/
 
 
 	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:230px;background-color:lightgray;\">");
@@ -1399,16 +1477,49 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("</div>");
 
+	//
+	// donate with paypal bubble
+	//
+
+	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:180px;height:180px;display:inline-block;z-index:120;color:black;margin-left:10px;position:absolute;margin-top:270px;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:40px;>");
+	sb.safePrintf("Contribute");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<div style=margin-left:15px;margin-right:5px;>");
 
 
-	//sb.safePrintf("</TD></TR></TABLE></body></html>");
+	sb.safePrintf(
 
+		      "Help Gigablast development with PayPal."
+		      "<br>"
+		      "<br>"
+		      // BEGIN PAYPAL DONATE BUTTON
+		      "<form action=\"https://www.paypal.com/cgi-bin/webscr\" method=\"post\" target=\"_top\">"
+		      "<input type=\"hidden\" name=\"cmd\" value=\"_donations\">"
+		      "<input type=\"hidden\" name=\"business\" value=\"2SFSFLUY3KS9Y\">"
+		      "<input type=\"hidden\" name=\"lc\" value=\"US\">"
+		      "<input type=\"hidden\" name=\"item_name\" value=\"Gigablast, Inc.\">"
+		      "<input type=\"hidden\" name=\"currency_code\" value=\"USD\">"
+		      "<input type=\"hidden\" name=\"bn\" value=\"PP-DonationsBF:btn_donateCC_LG.gif:NonHosted\">"
+		      "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif\" border=\"0\" name=\"submit\" alt=\"PayPal - The safer, easier way to pay online!\" height=47 width=147>"
+		      "<img alt=\"\" border=\"0\" src=\"https://www.paypalobjects.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\">"
+		      "</form>"
+		      // END PAYPAY BUTTON
+		      "</center></div></center>"
+		      //"</td>\n"
+		      );
 
 	//
 	// end new stuff
 	//
 
-	*/
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
@@ -1466,14 +1577,16 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	// put search box in a box
 	sb.safePrintf("<div style="
-		      "background-color:#fcc714;"
+		      "background-color:#%s;" // fcc714;"
 		      "border-style:solid;"
 		      "border-width:3px;"
 		      "border-color:blue;"
 		      //"background-color:blue;"
 		      "padding:20px;"
 		      "border-radius:20px;"
-		      ">");
+		      ">"
+		      , GOLD
+		      );
 
 
 	sb.safePrintf("<input name=urls type=text "
@@ -1637,14 +1750,16 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	// put search box in a box
 	sb.safePrintf("<div style="
-		      "background-color:#fcc714;"
+		      "background-color:#%s;" // fcc714;"
 		      "border-style:solid;"
 		      "border-width:3px;"
 		      "border-color:blue;"
 		      //"background-color:blue;"
 		      "padding:20px;"
 		      "border-radius:20px;"
-		      ">");
+		      ">"
+		      ,GOLD
+		      );
 
 
 	sb.safePrintf("<input name=q type=text "
@@ -2627,7 +2742,7 @@ void resetPageAddUrl ( ) {
 	s_htable.reset();
 }
 
-
+/*
 bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
@@ -2802,7 +2917,7 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	return true;
 }
-
+*/
 
 bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
@@ -2833,7 +2948,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// yellow/gold bar
 	"<tr>"
-	"<td colspan=2 bgcolor=#f3c714>"
+	"<td colspan=2 bgcolor=#%s>" // f3c714>"
 	"<b>"
 	"Basic Query Syntax"
 	"</b>"
@@ -2946,6 +3061,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	// "          </tr>"
 	// ""
 	// ""
+	, GOLD
 		      );
 
 
@@ -3002,7 +3118,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 				      "cellpadding=5 cellspacing=0 border=0>"
 				      // yellow/gold bar
 				      "<tr>"
-				      "<td colspan=2 bgcolor=#f3c714>"
+				      "<td colspan=2 bgcolor=#%s>"//f3c714>"
 				      "<b>"
 				      "%s"
 				      "</b>"
@@ -3014,6 +3130,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 				      "<th><font color=33dcff>"
 				      "Description</font></th>"
 				      "</tr>\n"
+				      , GOLD
 				      , g_fields[i].m_title
 				      );
 		}
@@ -3055,7 +3172,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// yellow/gold bar
 	"<tr>"
-	"<td colspan=2 bgcolor=#f3c714>"
+		      "<td colspan=2 bgcolor=#%s>" // f3c714>"
 	"<b>"
 	"Boolean Queries"
 	"</b>"
@@ -3160,6 +3277,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	//"</td></tr>"
 	//"</table>"
 	//"<br>"
+		      , GOLD
 		      );
 
 

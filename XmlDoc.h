@@ -802,6 +802,7 @@ class XmlDoc {
 	bool linksToGigablast ( ) ;
 	bool searchboxToGigablast ( ) ;
 	bool hashLanguage ( class HashTableX *table ) ;
+	bool hashLanguageString ( class HashTableX *table ) ;
 	bool hashCountry ( class HashTableX *table ) ;
 	bool hashSiteNumInlinks ( class HashTableX *table ) ;
 	bool hashCharset ( class HashTableX *table ) ;
@@ -916,6 +917,8 @@ class XmlDoc {
 	bool storeFacetValuesSections ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
 	bool storeFacetValuesHtml     ( char *qs , class SafeBuf *sb ,
+					FacetValHash_t fvh ) ;
+	bool storeFacetValuesXml      ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
 	bool storeFacetValuesJSON     ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
@@ -1695,7 +1698,8 @@ class XmlDoc {
 	//bool doesUrlMatchDiffbotProcessPattern() ;
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	long *getDiffbotTitleHashes ( long *numHashes ) ;
-	char *hashJSON ( HashTableX *table );
+	char *hashJSONFields ( HashTableX *table );
+	char *hashXMLFields ( HashTableX *table );
 	long *nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) ;
 
 	long m_joc;
@@ -2032,7 +2036,7 @@ class XmlDoc {
 	Query m_query;
 	Matches m_matches;
 	// meta description buf
-	long m_dbufLen;
+	long m_dbufSize;
 	char m_dbuf[1024];
 	SafeBuf m_htb;
 	Title m_title;

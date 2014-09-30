@@ -33,7 +33,7 @@
 //   so we do not need to repeat the same link text over and over again.
 //   Use M bits to hold # of inlinks the page has for other terms.
 
-//   NOTE: for inlinktext terms the pattern rank is the siterank of the
+//   NOTE: for inlinktext terms the spam rank is the siterank of the
 //   inlinker!
 
 //   NOTE: densityrank for title is based on # of title words only. same goes

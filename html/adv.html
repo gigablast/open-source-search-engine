@@ -1,0 +1,50 @@
+<br><br><br>
+<form method=GET action=/search name=f>
+
+<table width=605 border=0 align=center cellpadding=5 cellspacing=3>
+
+<tbody>
+
+<tr align=left valign=middle><th colspan=3>Search for...</th></tr><tr align=left valign=middle><td><strong>all</strong> of these words</td><td><input type=text id=q name=plus size=40 /></td><td><div onclick=document.f.submit();  onmouseover="this.style.backgroundColor='lightgreen';this.style.color='black';" onmouseout="this.style.backgroundColor='green';this.style.color='white';" style=border-radius:28px;cursor:pointer;cursor:hand;border-color:white;border-style:solid;border-width:3px;padding:12px;width:20px;height:20px;display:inline-block;background-color:green;color:white;><b style=margin-left:-5px;font-size:18px;>GO</b></div></td></tr><tr align=left valign=middle><td>this <strong>exact phrase</strong></td><td colspan=2><input type=text name=quotea size=40 /></td></tr><tr align=left valign=middle><td>and this <strong>exact phrase</strong></td><td colspan=2><input type=text name=quoteb size=40 /></td></tr>
+
+<tr align=left valign=middle><td><strong>any</strong> of these words</td><td colspan=2><input type=text name=any size=40 /></td></tr>
+
+<tr align=left valign=middle><td><strong>none</strong> of these words</td><td colspan=2><input type=text name=minus size=40 /></td></tr>
+
+<!--<tr align=left valign=middle><td>Family Filter</td><td colspan=2><input type=radio name=ff value=1/>yes&nbsp;&nbsp;&nbsp;<input type=radio name=ff value=0 checked/>no</td></tr>-->
+
+
+
+<tr align=left valign=middle><td>In this language:</td><td colspan=2>
+
+<select name=gblang style=width:415px;>
+<option value=-1>Any</option>
+<option value=0>Unknown</option>
+
+<option value=1>English</option><option value=2>French</option><option value=3>Spanish</option><option value=4>Russian</option><option value=5>Turkish</option><option value=6>Japanese</option><option value=7>ChineseTrad</option><option value=8>ChineseSimp</option><option value=9>Korean</option><option value=10>German</option><option value=11>Dutch</option><option value=12>Italian</option><option value=13>Finnish</option><option value=14>Swedish</option><option value=15>Norwegian</option><option value=16>Portuguese</option><option value=17>Vietnamese</option><option value=18>Arabic</option><option value=19>Hebrew</option><option value=20>Indonesian</option><option value=21>Greek</option><option value=22>Thai</option><option value=23>Hindi</option><option value=24>Bengala</option><option value=25>Polish</option><option value=26>Tagalog</option></select></td></tr>
+
+
+<tr align=left valign=middle><td>Pages that link to this URL</td><td colspan=2><input type=text name=link size=40 /></td></tr>
+
+<tr><td>Search these collections</td><td><input type=text name=c size=40></td></tr>
+
+
+<tr align=left valign=middle><td>Site Clustering</td><td colspan=2><input type=radio name=sc value=1/>yes&nbsp;&nbsp;&nbsp;<input type=radio name=sc value=0 checked/>no</td></tr>
+
+<tr align=left valign=middle><td>Number of summary excerpts</td><td colspan=2><input type=radio name=ns value=0>0&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=1>1&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=2>2&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=3 checked>3&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=4>4&nbsp;&nbsp;&nbsp;<input type=radio name=ns value=5>5</td></tr>
+
+<tr align=left valign=middle><td>Results per Page</td>
+
+<td colspan=2><input type=radio name=n value=10 checked/>10&nbsp;&nbsp;<input type=radio name=n value=20 />20&nbsp;&nbsp;<input type=radio name=n value=30 />30&nbsp;&nbsp;<input type=radio name=n value=40 />40&nbsp;&nbsp;<input type=radio name=n value=50 />50&nbsp;&nbsp;<input type=radio name=n value=100 />100</td></tr>
+
+
+<tr align=left valign=middle><td>Restrict to these Sites</td><td colspan=2><textarea rows=10 cols=56 name=sites></textarea></td></tr>
+
+<tr><td></td><td><input type=submit></td></tr>
+
+  </tbody></table>
+
+</form>
+<br>
+
+<br><br>

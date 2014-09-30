@@ -81,6 +81,9 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	char *action = r->getString("action",NULL);
 	char *addColl = r->getString("addcoll",NULL);
 
+	// add our ip to the list
+	//char *ips = r->getString("collips",NULL);
+	//char *pwds = r->getString("collpwd",NULL);
 
 
 	char  buf [ 64*1024 ];
@@ -88,7 +91,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 
 	//
-	// CLOUD SEARCH ENGIEN SUPPORT - GIGABOT ERRORS
+	// CLOUD SEARCH ENGINE SUPPORT - GIGABOT ERRORS
 	//
 
 	SafeBuf gtmp;
@@ -239,6 +242,41 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 				     "</tr>"
 				     , LIGHT_BLUE
 				     );
+
+		// collection pwds
+		p.safePrintf(
+			     "<tr bgcolor=#%s>"
+			     "<td><b>collection passwords"
+			     "</b>"
+			     "<br><font size=1>List of white space separated "
+			     "passwords allowed to adminster collection."
+			     "</font>"
+			     "</td>\n"
+			     "<td><input type=text name=collpwd "
+			     "size=60>"
+			     "</td>"
+			     "</tr>"
+			     , LIGHT_BLUE
+			     );
+
+		// ips box for security
+		p.safePrintf(
+			     "<tr bgcolor=#%s>"
+			     "<td><b>collection ips"
+			     "</b>"
+
+			     "<br><font size=1>List of white space separated "
+			     "IPs allowed to adminster collection."
+			     "</font>"
+
+			     "</td>\n"
+			     "<td><input type=text name=collips "
+			     "size=60>"
+			     "</td>"
+			     "</tr>"
+			     , LIGHT_BLUE
+			     );
+
 		// now list collections from which to copy the config
 		//p.safePrintf (
 		//	  "<tr><td><b>copy configuration from this "

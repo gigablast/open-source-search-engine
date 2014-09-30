@@ -105,6 +105,7 @@ Msg40::Msg40() {
 	m_numPrintedSoFar = 0;
 	m_lastChunk     = false;
 	m_didSummarySkip = false;
+	m_omitCount      = 0;
 	//m_numGigabitInfos = 0;
 }
 
@@ -159,6 +160,9 @@ bool Msg40::getResults ( SearchInput *si      ,
 			 bool         forward ,
 			 void        *state   ,
 			 void   (* callback) ( void *state ) ) {
+
+	m_omitCount = 0;
+
 	// warning
 	//if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
 	if ( si->m_collnumBuf.length() < (long)sizeof(collnum_t) )
@@ -2404,6 +2408,9 @@ bool Msg40::gotSummary ( ) {
 	// how many docids are visible? (unfiltered)
 	//long visible = m_filterStats[CR_OK];
 
+
+	m_omitCount = 0;
+
 	// count how many are visible!
 	long visible = 0;
 	// loop over each clusterLevel and set it
@@ -2412,6 +2419,8 @@ bool Msg40::gotSummary ( ) {
 		char *level = &m_msg3a.m_clusterLevels[i];
 		// on CR_OK
 		if ( *level == CR_OK ) visible++;
+		// otherwise count as ommitted
+		else m_omitCount++;
 	}
 
 	// do we got enough search results now?
@@ -2464,10 +2473,16 @@ bool Msg40::gotSummary ( ) {
 
 	// if we do not have enough visible, try to get more
 	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail &&
+	     // do not spin too long in this!
+	     // TODO: fix this better somehow later
+	     m_docsToGet <= 1000 &&
 	     // doesn't work on multi-coll just yet, it cores
 	     m_numCollsToSearch == 1 ) {
 		// can it cover us?
-		long need = m_msg3a.m_docsToGet + 20;
+		//long need = m_msg3a.m_docsToGet + 20;
+		long need = m_docsToGet + 20;
+		// increase by 25 percent as well
+		need *= 1.25;
 		// note it
 		log("msg40: too many summaries invisible. getting more "
 		    "docids from msg3a merge and getting summaries. "
@@ -2479,20 +2494,31 @@ bool Msg40::gotSummary ( ) {
 		    m_numReplies, m_numRequests);
 		// get more
 		//m_docsToGet = need;
-		// merge more
-		m_msg3a.m_docsToGet = need;
-		m_msg3a.mergeLists();
-		// rellaoc the msg20 array
-		if ( ! reallocMsg20Buf() ) return true;
+
+		// get more!
+		//m_msg3a.m_docsToGet = need;
+		m_docsToGet = need;
 		// reset this before launch
 		m_numReplies  = 0;
 		m_numRequests = 0;
 		// reprocess all!
 		m_lastProcessedi = -1;
+		// let's do it all from the top!
+		return getDocIds ( true ) ;
+		
+
+		//m_msg3a.mergeLists();
+		// rellaoc the msg20 array
+		//if ( ! reallocMsg20Buf() ) return true;
+		// reset this before launch
+		//m_numReplies  = 0;
+		//m_numRequests = 0;
+		// reprocess all!
+		//m_lastProcessedi = -1;
 		// now launch!
-		if ( ! launchMsg20s ( true ) ) return false; 
+		//if ( ! launchMsg20s ( true ) ) return false; 
 		// all done, call callback
-		return true;
+		//return true;
 	}
 
 	     /*

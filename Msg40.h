@@ -220,6 +220,7 @@ class Msg40 {
 	HashTableX m_facetTextTable;
 	SafeBuf m_facetTextBuf;
 	bool m_firstTime;
+	long m_omitCount;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;
 	bool printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );

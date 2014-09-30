@@ -50,6 +50,10 @@ class Conf {
 	Conf();
 
 	bool isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
+	bool isCollAdminForColl (TcpSocket *sock, HttpRequest *hr,char *coll );
+	bool isCollAdmin2 (TcpSocket *socket , HttpRequest *hr,
+			   class CollectionRec *cr) ;
+
 
 	bool isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
 	//bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
@@ -686,14 +690,17 @@ class Conf {
 	// programmer reminders.
 	bool m_logReminders;
 
-	long m_numMasterPwds;
-	char m_masterPwds[MAX_MASTER_PASSWORDS][PASSWORD_MAX_LEN];
+	//long m_numMasterPwds;
+	//char m_masterPwds[MAX_MASTER_PASSWORDS][PASSWORD_MAX_LEN];
+	SafeBuf m_masterPwds;
+
 	//long m_numMasterIps;
 	//long m_masterIps[MAX_MASTER_IPS];
 
 	// these are the new master ips
-	long  m_numConnectIps;
-	long  m_connectIps [ MAX_CONNECT_IPS ];
+	//long  m_numConnectIps;
+	//long  m_connectIps [ MAX_CONNECT_IPS ];
+	SafeBuf m_connectIps;
 
 	// should we generate similarity/content vector for titleRecs lacking?
 	// this takes a ~100+ ms, very expensive, so it is just meant for

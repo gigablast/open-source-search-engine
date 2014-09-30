@@ -234,7 +234,7 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_SECURITY ) continue;
+		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -263,7 +263,7 @@ bool CommandRemovePasswordRow ( char *rec ) {
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_SECURITY ) continue;
+		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -1164,11 +1164,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char format = r->getReplyFormat();
 
+	char guide = r->getLong("guide",0);
+
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
 	//
 	char *action = r->getString("action",NULL);
 	if ( page == PAGE_BASIC_SETTINGS &&
+	     guide &&
 	     // this is non-null if handling a submit request
 	     action && 
 	     format == FORMAT_HTML ) {
@@ -1299,14 +1302,14 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_INJECT     ) tt = "Inject Url";
-	if ( page == PAGE_SECURITY   ) tt = "Security";
+	if ( page == PAGE_ROOTPASSWORDS ) tt = "Root Passwords";
 	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Url Filters";
 	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
-	if ( page == PAGE_BASIC_SECURITY ) tt = "Security";
+	if ( page == PAGE_BASIC_SECURITY ) tt = "Collection Passwords";
 	//if ( page == PAGE_SITES ) tt = "Site List";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
@@ -1329,6 +1332,8 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		char *coll = g_collectiondb.getDefaultColl(r);
 		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+		bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+		bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 	 	g_parms.printParms2 ( sb ,
 				      page ,
 	 	 		      cr ,
@@ -1336,7 +1341,9 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	 	 		      1 , // long pd , print desc?
 	 	 		      false , // isCrawlbot
 	 	 		      format ,
-	 	 		      NULL ); // TcpSocket *sock
+	 	 		      NULL , // TcpSocket *sock
+				      isRootAdmin ,
+				      isCollAdmin ); 
 		return true;
 	}
 
@@ -1705,12 +1712,16 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long pd = r->getLong("pd",1);
 	char *coll = g_collectiondb.getDefaultColl(r);
 	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+
+	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+
 	//char *coll = r->getString ( "c"   );
 	//if ( ! coll || ! coll[0] ) coll = "main";
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// if "main" collection does not exist, try another
 	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
-	printParms2 ( sb, page, cr, nc, pd,0,0 , s);
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isRootAdmin,isCollAdmin);
 	return true;
 }
 
@@ -1723,7 +1734,9 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  long pd , 
 			  bool isCrawlbot , 
 			  char format , // bool isJSON ,
-			  TcpSocket *sock ) {
+			  TcpSocket *sock ,
+			  bool isRootAdmin ,
+			  bool isCollAdmin ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1736,12 +1749,11 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	if ( cr ) coll = cr->m_coll;
 
 	// page aliases
-	if ( page == PAGE_BASIC_SECURITY )
-		page = PAGE_SECURITY;
+	//if ( page == PAGE_BASIC_SECURITY )
+	//	page = PAGE_ROOTPASSWORDS;
 
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
-
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -1824,7 +1836,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			sb->safePrintf ( "%s" , m->m_desc );
 			// print users current ip if showing the list
 			// of "Master IPs" for admin access
-			if ( m->m_page == PAGE_SECURITY &&
+			if ( m->m_page == PAGE_ROOTPASSWORDS &&
 			     sock &&
 			     m->m_title &&
 			     strstr(m->m_title,"IP") )
@@ -1852,7 +1864,9 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     bg,nc,pd,
 						     false,
 						     isCrawlbot,
-						     format);//isJSON);
+						     format,
+						     isRootAdmin,
+						     isCollAdmin);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1872,7 +1886,9 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
-						   isCrawlbot,format);//isJSON)
+						   isCrawlbot,format,
+						   isRootAdmin,
+						   isCollAdmin);
 			}
 		}
 		// end array table
@@ -1901,7 +1917,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			bool lastRow ,
 			bool isCrawlbot ,
 			//bool isJSON ) {
-			char format ) {
+			char format ,
+			bool isRootAdmin ,
+			bool isCollAdmin ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1961,7 +1979,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_SECURITY ||
+		     page == PAGE_ROOTPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t<currentValue><![CDATA[");
@@ -1994,7 +2012,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_SECURITY ||
+		     page == PAGE_ROOTPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t\"currentValue\":\"");
@@ -2390,6 +2408,19 @@ bool Parms::printParm ( SafeBuf* sb,
 		  strcmp(m->m_title,"url filters profile")==0)
 		// url filters profile drop down "ufp"
 		printDropDownProfile ( sb , "ufp" , cr );//*s );
+
+	// do not expose master passwords or IPs to non-root admins
+	else if ( ( m->m_flags & PF_PRIVATE ) && 
+		  m->m_obj == OBJ_CONF &&
+		  ! isRootAdmin )
+		return true;
+
+	// do not expose master passwords or IPs to non-root admins
+	else if ( ( m->m_flags & PF_PRIVATE ) && 
+		  m->m_obj == OBJ_COLL &&
+		  ! isCollAdmin )
+		return true;
+
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
@@ -2742,10 +2773,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		// do not allow removal of last default url filters rule
 		//if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
 		char *suffix = "";
-		if ( m->m_page == PAGE_SECURITY &&
+		if ( m->m_page == PAGE_ROOTPASSWORDS &&
 		     m->m_type == TYPE_IP ) 
 			suffix = "ip";
-		if ( m->m_page == PAGE_SECURITY &&
+		if ( m->m_page == PAGE_ROOTPASSWORDS &&
 		     m->m_type == TYPE_STRINGNONEMPTY ) 
 			suffix = "pwd";
 		if ( show )
@@ -4993,7 +5024,7 @@ void Parms::init ( ) {
 		"assigns a url or site to a ruleset. Each tagdb record is "
 		"about 100 bytes or so.";
 	m->m_off   = (char *)&g_conf.m_tagdbMaxTreeMem - g;
-	m->m_def   = "31028000"; 
+	m->m_def   = "1028000"; 
 	m->m_type  = TYPE_LONG;
 	m->m_flags = PF_NOSYNC|PF_NOAPI;
 	m->m_page  = PAGE_NONE;
@@ -6416,7 +6447,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "percent similar dedup summary";
-	m->m_desc  = "If document summary is this percent similar "
+	m->m_desc  = "If document summary (and title) are "
+		"this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
 		"same. 0 means no summary deduping. You must also supply "
@@ -6790,6 +6822,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -8690,6 +8723,17 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "use cache";
+	m->m_desc  = "Use 0 if Gigablast should not read or write from "
+		"any caches at any level.";
+	m->m_def   = "-1";
+	m->m_off   = (char *)&si.m_useCache - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_cgi   = "usecache";
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "read from cache";
 	m->m_desc  = "Should we read search results from the cache? Set "
 		"to false to fix dmoz bug.";
@@ -8700,17 +8744,6 @@ void Parms::init ( ) {
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_flags = PF_NOSAVE;
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m++;
-
-	m->m_title = "use cache";
-	m->m_desc  = "Use 0 if Gigablast should not read or write from "
-		"any caches at any level.";
-	m->m_def   = "-1";
-	m->m_off   = (char *)&si.m_useCache - y;
-	m->m_type  = TYPE_CHAR;
-	m->m_cgi   = "usecache";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -8768,6 +8801,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "restrict search to pages that link to this url";
@@ -8783,7 +8817,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "search for this phrase quoted";
-	m->m_desc  = "The phrase which will be quoted.";
+	m->m_desc  = "The phrase which will be quoted in the query. From the "
+		"advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_quote1 - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	//m->m_size  = 512;
@@ -8792,10 +8827,12 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "search for this second phrase quoted";
-	m->m_desc  = "The phrase which will be quoted.";
+	m->m_desc  = "The phrase which will be quoted in the query. From the "
+		"advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_quote2 - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	//m->m_size  = 512;
@@ -8804,6 +8841,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -8836,7 +8874,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "require these query terms";
-	m->m_desc  = "Returned results will have all the words in X.";
+	m->m_desc  = "Returned results will have all the words in X. "
+		"From the advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_plus - y;
 	m->m_def   = NULL;
 	m->m_type  = TYPE_CHARPTR;//STRING;
@@ -8846,10 +8885,12 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "avoid these query terms";
-	m->m_desc  = "Returned results will NOT have any of the words in X.";
+	m->m_desc  = "Returned results will NOT have any of the words in X. "
+		"From the advanced search page, adv.html.";
 	m->m_off   = (char *)&si.m_minus - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "minus";
@@ -8858,6 +8899,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "format of the returned search results";
@@ -8869,6 +8911,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "format";
+	m->m_flags = PF_NOAPI; // alread in the api, so don't repeat
 	m++;
 
 	m->m_title = "family filter";
@@ -8899,10 +8942,8 @@ void Parms::init ( ) {
 	m++;
 
 
-
 	m->m_title = "cached page highlight query";
-	m->m_desc  = "Highlight the terms in this query instead. For "
-		"display of the cached page.";
+	m->m_desc  = "Highlight the terms in this query instead.";
 	m->m_def   = NULL;
 	m->m_off   = (char *)&si.m_highlightQuery - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
@@ -8913,6 +8954,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
+
 
 	/*
 	m->m_title = "highlight event date in summaries.";
@@ -8942,8 +8984,8 @@ void Parms::init ( ) {
 	*/
 
 	m->m_title = "Query match offsets";
-	m->m_desc  = "Return a list of the offsets of each query word"
-		"actually matched in the document.  1 means byte offset,"
+	m->m_desc  = "Return a list of the offsets of each query word "
+		"actually matched in the document.  1 means byte offset, "
 		"and 2 means word offset.";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_queryMatchOffsets - y;
@@ -8953,6 +8995,7 @@ void Parms::init ( ) {
 	m->m_smax  = 2;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "boolean status";
@@ -9016,7 +9059,7 @@ void Parms::init ( ) {
 		"<br><br>\n"
 		"<b>META</b> is the meta tag name to which Gigablast will "
 		"restrict the content used to generate the topics. Do not "
-		"specify thie field to restrict the content to the body of "
+		"specify this field to restrict the content to the body of "
 		"each document, that is the default.\n"
 		"<br><br>\n"	
 		"<b>DEL</b> is a single character delimeter which defines "
@@ -9060,21 +9103,46 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "niceness";
+	m->m_desc  = "Can be 0 or 1. 0 is usually a faster, high-priority "
+		"query, 1 is a slower, lower-priority query.";
+	m->m_def   = "0";
+	m->m_off   = (char *)&si.m_niceness - y;
+	m->m_type  = TYPE_LONG;
+	m->m_cgi   = "niceness";
+	m->m_smin  = 0;
+	m->m_smax  = 1;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "debug flag";
+	m->m_desc  = "Is 1 to log debug information, 0 otherwise.";
+	m->m_def   = "0";
+	m->m_off   = (char *)&si.m_debug - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_cgi   = "debug";
+	//m->m_priv  = 1;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "return number of docs per topic";
 	m->m_desc  = "Use 1 if you want Gigablast to return the number of "
-		"documents in the search results that contained each topic.";
+		"documents in the search results that contained each topic "
+		"(gigabit).";
 	m->m_def   = "1";
 	m->m_off   = (char *)&si.m_returnDocIdCount - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rdc";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "return docids per topic";
 	m->m_desc  = "Use 1 if you want Gigablast to return the list of "
-		"docIds from the search results that contained each topic.";
+		"docIds from the search results that contained each topic "
+		"(gigabit).";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_returnDocIds - y;
 	m->m_type  = TYPE_BOOL;
@@ -9085,25 +9153,12 @@ void Parms::init ( ) {
 
 	m->m_title = "return popularity per topic";
 	m->m_desc  = "Use 1 if you want Gigablast to return the popularity "
-		"of each topic.";
+		"of each topic (gigabit).";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_returnPops - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi   = "rp";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m++;
-
-	m->m_title = "niceness";
-	m->m_desc  = "Can be 0 or 1. 0 is usually a faster, high-priority "
-		"query, 1 is a slower, lower-priority query.";
-	m->m_def   = "0";
-	m->m_off   = (char *)&si.m_niceness - y;
-	m->m_type  = TYPE_LONG;
-	m->m_cgi   = "niceness";
-	m->m_smin  = 0;
-	m->m_smax  = 1;
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -9120,23 +9175,12 @@ void Parms::init ( ) {
 	//m++;
 
 
-	m->m_title = "debug flag";
-	m->m_desc  = "Is 1 to log debug information, 0 otherwise.";
-	m->m_def   = "0";
-	m->m_off   = (char *)&si.m_debug - y;
-	m->m_type  = TYPE_BOOL;
-	m->m_cgi   = "debug";
-	//m->m_priv  = 1;
-	m->m_page  = PAGE_RESULTS;
-	m->m_obj   = OBJ_SI;
-	m++;
-
 	m->m_title = "debug gigabits flag";
 	m->m_desc  = "Is 1 to log gigabits debug information, 0 otherwise.";
 	m->m_def   = "0";
 	m->m_off   = (char *)&si.m_debugGigabits - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_cgi   = "debug";
+	m->m_cgi   = "debuggigabits";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -9161,6 +9205,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "iu";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "image link";
@@ -9173,6 +9218,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ix";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "image width";
@@ -9183,6 +9229,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	m->m_title = "image height";
@@ -9194,6 +9241,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "200";
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// m->m_title = "password";
@@ -9269,6 +9317,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "gbcountry";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -9370,6 +9419,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qcs";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// buzz
@@ -9381,6 +9431,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "inlinks";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// buzz
@@ -9394,6 +9445,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "outlinks";
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
+	m->m_flags = PF_NOAPI;
 	m++;
 
 	// buzz
@@ -9534,6 +9586,17 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_cgi   = "ih";
 	m->m_off   = (char *)&gr.m_includeHeader - (char *)&gr;
+	m->m_flags = PF_API;
+	m++;
+
+	m->m_title = "query";
+	m->m_desc  = "Highlight this query in the page.";
+	m->m_def   = "";
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_GET;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_cgi   = "q";
+	m->m_off   = (char *)&gr.m_query - (char *)&gr;
 	m->m_flags = PF_API;
 	m++;
 
@@ -10071,7 +10134,7 @@ void Parms::init ( ) {
         m->m_cgi   = "afgdwd";
         m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
         m->m_type  = TYPE_BOOL;
-        m->m_def   = "0";
+        m->m_def   = "1";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
         m++;
@@ -14309,7 +14372,7 @@ void Parms::init ( ) {
 
 	m->m_title = "directory containing titledb files";
 	m->m_desc  = "Import documents contained in titledb files in this "
-		"directory.";
+		"directory. This is an ABSOLUTE directory path.";
 	m->m_cgi   = "importdir";
 	m->m_xml   = "importDir";
 	m->m_page  = PAGE_IMPORT;
@@ -14951,7 +15014,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "percent similar dedup summary default value";
-	m->m_desc  = "If document summary is this percent similar "
+	m->m_desc  = "If document summary (and title) are "
+		"this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
 		"same. 0 means no summary deduping.";
@@ -15991,7 +16055,19 @@ void Parms::init ( ) {
 	m++;
 
 
-
+	m->m_title = "use proxies for spidering";
+	m->m_desc  = "If this is true Gigablast will use the proxies "
+		"listed on the <i>proxies</i> page for spidering for "
+		"this collection regardless whether the proxies are enabled "
+		"on the <i>proxies</i> page.";
+	m->m_cgi   = "useproxies";
+	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
 
 	/*
 	m->m_title = "add url enabled";
@@ -17305,14 +17381,14 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_CLONE;
+	m->m_flags = PF_CLONE | PF_HIDDEN;
 	m++;
 
 	m->m_cgi   = "apiUrl";
 	m->m_desc  = "Send every spidered url to this url and index "
 		"the reply in addition to the normal indexing process. "
-		"Example: by specifying http://api.diffbot.com/v2/"
-		"analyze?mode=auto&token=<yourDiffbotToken> here "
+		"Example: by specifying http://api.diffbot.com/v3/"
+		"analyze?mode=high-precision&token=<yourDiffbotToken> here "
 		"you can index the structured JSON replies from diffbot for "
 		"every url that is spidered. "
 		"Gigablast will automatically "
@@ -18331,12 +18407,13 @@ void Parms::init ( ) {
 	/////////////
 
 	///////////////////////////////////////////
-	// SECURITY CONTROLS
+	// ROOT PASSWORDS page
 	///////////////////////////////////////////
 
 
-	m->m_title = "Master Passwords";
-	m->m_desc  = "Any matching password will have administrative access "
+	m->m_title = "Root Passwords";
+	m->m_desc  = "Whitespace separated list of passwords. "
+		"Any matching password will have administrative access "
 		"to Gigablast and all collections.";
 		//"If no Admin Password or Admin IP is specified then "
 		//"Gigablast will only allow local IPs to connect to it "
@@ -18344,17 +18421,17 @@ void Parms::init ( ) {
 	m->m_cgi   = "masterpwd";
 	m->m_xml   = "masterPassword";
 	m->m_obj   = OBJ_CONF;
-	m->m_max   = MAX_MASTER_PASSWORDS;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
-	m->m_type  = TYPE_STRINGNONEMPTY;
-	m->m_size  = PASSWORD_MAX_LEN+1;
-	m->m_page  = PAGE_SECURITY;
-	m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_PRIVATE;
+	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
+	m->m_page  = PAGE_ROOTPASSWORDS;
+	//m->m_max   = MAX_MASTER_PASSWORDS;
+	//m->m_size  = PASSWORD_MAX_LEN+1;
+	//m->m_addin = 1; // "insert" follows?
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
 	m++;
 
 
-	m->m_title = "Master IPs";
+	m->m_title = "Root IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
@@ -18364,41 +18441,42 @@ void Parms::init ( ) {
 	//	"was disabled in the Master Controls. IPs that have 0 has "
 	//	"their Least Significant Byte are treated as wildcards for "
 	//	"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
-	m->m_desc  = "Any IPs in this list will have administrative access "
+	m->m_desc  = "Whitespace separated list of Ips. "
+		"Any IPs in this list will have administrative access "
 		"to Gigablast and all collections.";
 	m->m_cgi   = "masterip";
 	m->m_xml   = "masterIp";
-	m->m_page  = PAGE_SECURITY;
-	m->m_max   = MAX_CONNECT_IPS;
-	m->m_off   = (char *)g_conf.m_connectIps - g;
-	m->m_type  = TYPE_IP;
-	m->m_priv  = 2;
+	m->m_page  = PAGE_ROOTPASSWORDS;
+	m->m_off   = (char *)&g_conf.m_connectIps - g;
+	m->m_type  = TYPE_SAFEBUF;//IP;
 	m->m_def   = "";
-	m->m_addin = 1; // "insert" follows?
+	//m->m_max   = MAX_CONNECT_IPS;
+	//m->m_priv  = 2;
+	//m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_obj   = OBJ_CONF;
-	m->m_flags = PF_PRIVATE;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
 	m++;
 
-	m->m_title = "remove connect ip";
-	m->m_desc  = "remove a connect ip";
-	m->m_cgi   = "removeip";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func  = CommandRemoveConnectIpRow;
-	m->m_cast  = 1;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "remove connect ip";
+	// m->m_desc  = "remove a connect ip";
+	// m->m_cgi   = "removeip";
+	// m->m_type  = TYPE_CMD;
+	// m->m_page  = PAGE_NONE;
+	// m->m_func  = CommandRemoveConnectIpRow;
+	// m->m_cast  = 1;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
-	m->m_title = "remove a password";
-	m->m_desc  = "remove a password";
-	m->m_cgi   = "removepwd";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func  = CommandRemovePasswordRow;
-	m->m_cast  = 1;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "remove a password";
+	// m->m_desc  = "remove a password";
+	// m->m_cgi   = "removepwd";
+	// m->m_type  = TYPE_CMD;
+	// m->m_page  = PAGE_NONE;
+	// m->m_func  = CommandRemovePasswordRow;
+	// m->m_cast  = 1;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
 
 	/*
@@ -18414,7 +18492,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_superTurksLen - g;
-	m->m_page = PAGE_SECURITY;
+	m->m_page = PAGE_ROOTPASSWORDS;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	*/
@@ -18447,7 +18525,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_usersLen - g;
-	m->m_page = PAGE_SECURITY;
+	m->m_page = PAGE_ROOTPASSWORDS;
 	m++;
 	*/
 
@@ -18468,6 +18546,36 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m++;
 	*/
+
+
+	m->m_title = "Collection Passwords";
+	m->m_desc  = "Whitespace separated list of passwords. "
+		"Any matching password will have administrative access "
+		"to the controls for just this collection.";
+	m->m_cgi   = "collpwd";
+	m->m_xml   = "collectionPasswords";
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_collectionPasswords - x;
+	m->m_def   = "";
+	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
+	m->m_page  = PAGE_BASIC_SECURITY;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m++;
+
+	m->m_title = "Collection Ips";
+	m->m_desc  = "Whitespace separated list of IPs. "
+		"Any matching IP will have administrative access "
+		"to the controls for just this collection.";
+	m->m_cgi   = "collips";
+	m->m_xml   = "collectionIps";
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = (char *)&cr.m_collectionIps - x;
+	m->m_def   = "";
+	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
+	m->m_page  = PAGE_BASIC_SECURITY;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m++;
+
 
 	//////
 	// END SECURITY CONTROLS
@@ -19820,37 +19928,17 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	// false = useDefaultRec?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 
-	//
-	// CLOUD SEARCH ENGINE SUPPORT
-	//
-	// if not the root admin only all user to change settings, etc.
-	// if the collection rec is a guest collection. i.e. in the cloud.
-	//
-	bool isRootAdmin = g_conf.isRootAdmin(sock,hr);
-	bool isRootColl = false;
-	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
-	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
-	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
-	// the main,dmoz and demo collections are root admin only
-	if ( ! isRootAdmin && isRootColl ) {
-		g_errno = ENOPERM;
-		return log("parms: root admin can only change main/dmoz/demo"
-			   " collections.");
-	}
-	// just knowing the collection name is enough for a cloud user to
-	// modify the collection's parms. however, to modify the master 
-	// controls or stuff in g_conf, you have to be root admin.
-	if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
-		g_errno = ENOPERM;
-		return log("parms: permission denied for user");
-	}
-
-
 	//if ( c ) {
 	//	cr = g_collectiondb.getRec ( hr );
 	//	if ( ! cr ) log("parms: coll not found");
 	//}
+
+	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
 	
+	// does this user have permission to update the parms?
+	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr ) ;
+
+
 	// might be g_conf specific, not coll specific
 	//bool hasPerm = false;
 	// just knowing the collection name of a custom crawl means you
@@ -19964,6 +20052,9 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// skip if not a command parm, like "addcoll"
 		if ( m->m_type != TYPE_CMD ) continue;
 
+		if ( m->m_obj != OBJ_CONF && m->m_obj != OBJ_COLL )
+			continue;
+
 		//
 		// HACK
 		//
@@ -20042,9 +20133,49 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//
 		// CLOUD SEARCH ENGINE SUPPORT
 		//
+
+		//
+		// if this is the "delcoll" parm then "c" may have been
+		// excluded from http request, therefore isCollAdmin and
+		// isRootAdmin may be false, so see if they have permission
+		// for the "val" collection for this one...
+		bool hasPerm = false;
+		if ( m->m_page == PAGE_DELCOLL &&
+		     strcmp(m->m_cgi,"delcoll") == 0 ) {
+			// permission override for /admin/delcoll cmd & parm
+			hasPerm = g_conf.isCollAdminForColl (sock,hr,val);
+		}
+
+		// if this IP c-block as already added a collection then do not
+		// allow it to add another.
+		if ( m->m_page == PAGE_ADDCOLL &&
+		     g_conf.m_allowCloudUsers &&
+		     ! isRootAdmin &&
+		     strcmp(m->m_cgi,"addcoll")==0 ) {
+			// see if user's c block has already added a collection
+			long numAdded = 0;
+			if ( numAdded >= 1 ) {
+				g_errno = ENOPERM;
+				log("parms: already added a collection from "
+				    "this cloud user's c-block.");
+				return false;
+			}
+			hasPerm = true;
+		}
+
 		// master controls require root permission
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+			log("parms: could not run root parm \"%s\" no perm.",
+			    m->m_title);
 			continue;
+		}
+
+		// need to have permission for collection for collrec parms
+		if ( m->m_obj == OBJ_COLL && ! isCollAdmin && ! hasPerm ) {
+			log("parms: could not run coll parm \"%s\" no perm.",
+			    m->m_title);
+			continue;
+		}
 
 		// add the cmd parm
 		if ( ! addNewParmToList2 ( parmList ,
@@ -20127,35 +20258,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		long occNum;
 		Parm *m = getParmFast1 ( field , &occNum );
 
-
-		//
-		// CLOUD SEARCH ENGINE SUPPORT
-		//
-		// master controls require root permission. otherwise, just
-		// knowing the collection name is enough for a cloud user
-		// to change settings.
-		//
-		if ( m && m->m_obj == OBJ_CONF && ! isRootAdmin )
-			continue;
-
-		//
-		// CLOUD SEARCH ENGINE SUPPORT
-		//
-		// if this IP c-block as already added a collection then do not
-		// allow it to add another.
-		//
-		if ( m && strcmp(m->m_cgi,"addcoll")==0 && ! isRootAdmin ) {
-			// see if user's c block has already added a collection
-			long numAdded = 0;
-			if ( numAdded >= 1 ) {
-				g_errno = ENOPERM;
-				log("parms: already added a collection from "
-				    "this cloud user's c-block.");
-				return false;
-			}
-		}
-
-
 		//
 		// map "pause" to spidering enabled
 		//
@@ -20168,10 +20270,28 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		}
 
 		if ( ! m ) continue;
-		if ( m->m_type == TYPE_CMD ) continue;
 
-		if ( m->m_obj == OBJ_NONE ) continue;
-		if ( m->m_obj == OBJ_SI ) continue;
+		// skip if IS a command parm, like "addcoll", we did that above
+		if ( m->m_type == TYPE_CMD ) 
+			continue;
+
+		if ( m->m_obj != OBJ_CONF && m->m_obj != OBJ_COLL )
+			continue;
+
+
+		//
+		// CLOUD SEARCH ENGINE SUPPORT
+		//
+		// master controls require root permission. otherwise, just
+		// knowing the collection name is enough for a cloud user
+		// to change settings.
+		//
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+			continue;
+
+		// need to have permission for collection for collrec parms
+		if ( m->m_obj == OBJ_COLL && ! isCollAdmin )
+			continue;
 
 		// convert spiderRoundStartTime=0 (roundStart=0 roundStart=1) 
 		// to spiderRoundStartTime=<currenttime>+30secs
@@ -21283,7 +21403,10 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	if ( collnum >= 0 ) {
 		cr = g_collectiondb.getRec ( collnum );
 		if ( ! cr ) {
-			log("parmdb: invalid collnum for parm");
+			char *ps = "unknown parm";
+			if ( parm ) ps = parm->m_title;
+			log("parmdb: invalid collnum %li for parm \"%s\"",
+			    (long)collnum,ps);
 			g_errno = ENOCOLLREC;
 			return true;
 		}
@@ -21389,7 +21512,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		     cr->m_regExs[occNum].getLength() == 0 )
 			updateCount = false;
 		// and for other pages, like master ips, skip if empty!
-		// PAGE_PASSWORDS, PAGE_SECURITY, ...
+		// PAGE_PASSWORDS, PAGE_ROOTPASSWORDS, ...
 		if ( parm->m_page != PAGE_FILTERS && ! changed )
 			updateCount = false;
 
