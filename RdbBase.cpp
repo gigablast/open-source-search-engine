@@ -1456,8 +1456,8 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	//	m_minToMerge = g_conf.m_statsdbMinFilesToMerge;
 	if ( m_rdb == g_syncdb.getRdb() )
 		m_minToMerge = g_syncdb.m_rdb.m_minToMerge;
-	//if ( cr && m_rdb == g_linkdb.getRdb() )
-	//	m_minToMerge = cr->m_linkdbMinFilesToMerge;
+	if ( cr && m_rdb == g_linkdb.getRdb() )
+		m_minToMerge = cr->m_linkdbMinFilesToMerge;
 	if ( cr && m_rdb == g_cachedb.getRdb() )
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_serpdb.getRdb() )

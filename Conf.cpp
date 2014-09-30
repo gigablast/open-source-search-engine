@@ -88,6 +88,25 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 }
 */
 
+bool isInWhiteSpaceList ( char *p , char *buf ) {
+
+	if ( ! p ) return false;
+
+	char *match = strstr ( buf , p );
+	if ( ! match ) return false;
+	
+	long len = gbstrlen(p);
+
+	// ensure book-ended by whitespace
+	if (  match && 
+	      (match == buf || is_wspace_a(match[-1])) &&
+	      (!match[len] || is_wspace_a(match[len])) )
+		return true;
+
+	// no match
+	return false;
+}
+
 bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// until we have coll tokens use this...
@@ -97,20 +116,36 @@ bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( isRootAdmin ( socket , hr ) ) return true;
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
+	if ( ! cr ) return false;
 
 	//long page = g_pages.getDynamicPageNumber(hr);
 
+	// never for main or dmoz! must be root!
+	if ( strcmp(cr->m_coll,"main")==0 ) return false;
+	if ( strcmp(cr->m_coll,"dmoz")==0 ) return false;
+
+	// empty password field? then allow them through
+	if ( cr->m_collectionPasswords.length() <= 0 &&
+	     cr->m_collectionIps      .length() <= 0 )
+		return true;
+
+	// a good ip?
+	char *p   = iptoa(socket->m_ip);
+	char *buf = cr->m_collectionIps.getBufStart();
+	if ( isInWhiteSpaceList ( p , buf ) ) return true;
+
+	// if they got the password, let them in
+	p = hr->getString("pwd");
+	if ( ! p ) p = hr->getString("password");
+	if ( ! p ) p = hr->getStringFromCookie("pwd");
+	if ( ! p ) return false;
+	buf = cr->m_collectionPasswords.getBufStart();
+	if ( isInWhiteSpaceList ( p , buf ) ) return true;
+
 	// the very act of just knowing the collname of a guest account
 	// is good enough to update it
-	if ( cr && strncmp ( cr->m_coll , "guest_" , 6 ) == 0 )
-	     //strcmp( cr->m_coll , coll         ) == 0 &&
-	     // ( page == PAGE_BASIC_SETTINGS ||
-	     //   page == PAGE_SPIDER ||
-	     //   page == PAGE_SEARCH ||
-	     //   page == PAGE_FILTERS ||
-	     //   page == PAGE_INJECT ||
-	     //   page == PAGE_REINDEX ) )
-		return true;
+	//if ( strncmp ( cr->m_coll , "guest_" , 6 ) == 0 )
+	//	return true;
 
 	return false;
 }
@@ -152,23 +187,8 @@ bool Conf::hasRootPwd ( HttpRequest *hr ) {
 	if ( ! p ) return false;
 
 	char *buf = m_masterPwds.getBufStart();
-	char *match = strstr ( buf , p );
-	if ( ! match ) return false;
-	
-	long len = gbstrlen(p);
 
-	// ensure book-ended by whitespace
-	if (  match && 
-	      (match == buf || is_wspace_a(match[-1])) &&
-	      (!match[len] || is_wspace_a(match[len])) )
-		return true;
-
-	// for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
-	// 	if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
-	// 	// we got a match
-	// 	return true;
-	// }
-	return false;
+	return isInWhiteSpaceList ( p , buf );
 }
 
 // . check this ip in the list of admin ips
@@ -185,21 +205,9 @@ bool Conf::isRootIp ( unsigned long ip ) {
 	//if ( ip == atoip("10.5.0.2",8) ) return true;
 
 	char *p = iptoa(ip);
-
 	char *buf = m_connectIps.getBufStart();
-	char *match = strstr ( buf , p );
-	if ( ! match ) return false;
-	
-	long len = gbstrlen(p);
 
-	// ensure book-ended by whitespace
-	if (  match && 
-	      (match == buf || is_wspace_a(match[-1])) &&
-	      (!match[len] || is_wspace_a(match[len])) )
-		return true;
-
-	// no match
-	return false;
+	return isInWhiteSpaceList ( p , buf );
 }
 
 bool Conf::isConnectIp ( unsigned long ip ) {

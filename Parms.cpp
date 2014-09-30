@@ -1333,6 +1333,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 		char *coll = g_collectiondb.getDefaultColl(r);
 		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
 		bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+		bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 	 	g_parms.printParms2 ( sb ,
 				      page ,
 	 	 		      cr ,
@@ -1341,7 +1342,8 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	 	 		      false , // isCrawlbot
 	 	 		      format ,
 	 	 		      NULL , // TcpSocket *sock
-				      isRootAdmin ); 
+				      isRootAdmin ,
+				      isCollAdmin ); 
 		return true;
 	}
 
@@ -1712,13 +1714,14 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
 
 	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 
 	//char *coll = r->getString ( "c"   );
 	//if ( ! coll || ! coll[0] ) coll = "main";
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// if "main" collection does not exist, try another
 	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
-	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isRootAdmin);
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isRootAdmin,isCollAdmin);
 	return true;
 }
 
@@ -1732,7 +1735,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  bool isCrawlbot , 
 			  char format , // bool isJSON ,
 			  TcpSocket *sock ,
-			  bool isRootAdmin ) {
+			  bool isRootAdmin ,
+			  bool isCollAdmin ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1861,7 +1865,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     false,
 						     isCrawlbot,
 						     format,
-						     isRootAdmin);
+						     isRootAdmin,
+						     isCollAdmin);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1882,7 +1887,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
 						   isCrawlbot,format,
-						   isRootAdmin);
+						   isRootAdmin,
+						   isCollAdmin);
 			}
 		}
 		// end array table
@@ -1912,7 +1918,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			bool isCrawlbot ,
 			//bool isJSON ) {
 			char format ,
-			bool isRootAdmin ) {
+			bool isRootAdmin ,
+			bool isCollAdmin ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -2403,11 +2410,16 @@ bool Parms::printParm ( SafeBuf* sb,
 		printDropDownProfile ( sb , "ufp" , cr );//*s );
 
 	// do not expose master passwords or IPs to non-root admins
-	else if ( t == TYPE_STRINGNONEMPTY &&
-		  ! isRootAdmin &&
-		  ( m->m_flags & PF_PRIVATE ) )
+	else if ( ( m->m_flags & PF_PRIVATE ) && 
+		  m->m_obj == OBJ_CONF &&
+		  ! isRootAdmin )
 		return true;
 
+	// do not expose master passwords or IPs to non-root admins
+	else if ( ( m->m_flags & PF_PRIVATE ) && 
+		  m->m_obj == OBJ_COLL &&
+		  ! isCollAdmin )
+		return true;
 
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
@@ -9047,7 +9059,7 @@ void Parms::init ( ) {
 		"<br><br>\n"
 		"<b>META</b> is the meta tag name to which Gigablast will "
 		"restrict the content used to generate the topics. Do not "
-		"specify thie field to restrict the content to the body of "
+		"specify this field to restrict the content to the body of "
 		"each document, that is the default.\n"
 		"<br><br>\n"	
 		"<b>DEL</b> is a single character delimeter which defines "
@@ -18399,7 +18411,7 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 
 
-	m->m_title = "Master Passwords";
+	m->m_title = "Root Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
 		"to Gigablast and all collections.";
@@ -18419,7 +18431,7 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "Master IPs";
+	m->m_title = "Root IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
@@ -18539,7 +18551,7 @@ void Parms::init ( ) {
 	m->m_title = "Collection Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
-		"to the controls for just thie collection.";
+		"to the controls for just this collection.";
 	m->m_cgi   = "collpwd";
 	m->m_xml   = "collectionPasswords";
 	m->m_obj   = OBJ_COLL;
@@ -18553,7 +18565,7 @@ void Parms::init ( ) {
 	m->m_title = "Collection Ips";
 	m->m_desc  = "Whitespace separated list of IPs. "
 		"Any matching IP will have administrative access "
-		"to the controls for just thie collection.";
+		"to the controls for just this collection.";
 	m->m_cgi   = "collips";
 	m->m_xml   = "collectionIps";
 	m->m_obj   = OBJ_COLL;
