@@ -1193,7 +1193,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 
 	// print any red boxes we might need to
-	if ( printRedBox2 ( &sb , true ) )
+	if ( printRedBox2 ( &sb , sock , r ) ) // true ) )
 		sb.safePrintf("<br>\n");
 
 	/*

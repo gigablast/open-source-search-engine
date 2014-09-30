@@ -41,17 +41,20 @@ class WebPage {
 //   otherwise you'll get a malformed error when running
 static long s_numPages = 0;
 static WebPage s_pages[] = {
+
+	/*
 	// dummy pages 
 	{ PAGE_NOHOSTLINKS	, "nohostlinks",   0, "host links", 0, 0, 
 	  "dummy page - if set in the users row then host links will not be "
 	  " shown",
-	  NULL, 0 ,NULL,NULL,PG_NOAPI},
+	  NULL, 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_ADMIN           , "colladmin",   0, "master=0", 0, 0,
 	  "dummy page - if set in the users row then user will have master=0 and "
 	  " collection links will be highlighted in red",
-	  NULL, 0 ,NULL,NULL,PG_NOAPI},  
-
-
+	  NULL, 0 ,NULL,NULL,
+	  PG_NOAPI},  
 
 	//{ PAGE_QUALITY         , "quality",     0, "quality",  0, 0,
 	//  "dummy page - if set in the users row then  \"Quality Control\""
@@ -61,14 +64,19 @@ static WebPage s_pages[] = {
 	  "dummy page - if set in the users row then page function is"
 	  " called directly and not through g_parms.setFromRequest", 
 	  NULL, 0 ,NULL,NULL,PG_NOAPI},
- 	
+	*/
+
 	// publicly accessible pages
 	{ PAGE_ROOT      , "index.html"    , 0 , "root" , 0 , 0 ,
 	  "search page to query",
-	  sendPageRoot   , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageRoot   , 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_RESULTS   , "search"        , 0 , "search" , 0 , 0 ,
 	  "search results page",
-	  sendPageResults, 0 ,NULL,NULL,0},
+	  sendPageResults, 0 ,NULL,NULL,
+	  0},
+
 	//{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
 	//  "widget page",
 	//  sendPageWidget, 0 ,NULL,NULL,PG_NOAPI},
@@ -77,25 +85,33 @@ static WebPage s_pages[] = {
 	// api use PAGE_ADDURL2 which is /admin/addurl. so we set PG_NOAPI here
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  "Page where you can add url for spidering",
-	  sendPageAddUrl, 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageAddUrl, 0 ,NULL,NULL,
+	  PG_NOAPI},
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "gets cached web page",
-	  sendPageGet  , 0 ,NULL,NULL,0},
+	  sendPageGet  , 0 ,NULL,NULL,
+	  0},
+
 	{ PAGE_LOGIN     , "login"         , 0 , "login" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	 "login",
-	 sendPageLogin, 0 ,NULL,NULL,PG_NOAPI},
+	 sendPageLogin, 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_DIRECTORY , "dir"           , 0 , "directory" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "directory",
 	  // until api is ready, take this out of the menu
-	  sendPageDirectory , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageDirectory , 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_REPORTSPAM , "reportspam"   , 0 , "report spam" , 0 , 0 ,
-	  //USER_PUBLIC | USER_MASTER | USER_ADMIN |  USER_PROXY | USER_CLIENT, 
+	  //USER_PUBLIC | USER_MASTER | USER_ADMIN |  USER_PROXY | USER_CLIENT 
 	  "report spam",
 	  sendPageReportSpam , 0 ,NULL,NULL,PG_NOAPI},
+
 	//{ PAGE_WORDVECTOR, "vec"           , 0 , "word vectors" , 0 , 1 ,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN , 
 	//  "word vectors",
@@ -103,118 +119,142 @@ static WebPage s_pages[] = {
 
 	// use post now for the "site list" which can be big
 	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, M_POST , 
-	  "basic settings", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  "basic settings", sendPageGeneric , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN},
+
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
-	  "basic status", sendPageBasicStatus  , 0 ,NULL,NULL,PG_STATUS},
+	  "basic status", sendPageBasicStatus  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_COLLADMIN},
+
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
-	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,NULL,NULL,PG_NOAPI},
-	{ PAGE_BASIC_SECURITY, "admin/collectionpasswords", 0 , 
-	  "passwords",
-	  1, 0 , 
-	  "basic security", sendPageGeneric  , 0 ,NULL,NULL,0},
+	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,
+	//NULL,NULL,PG_NOAPI},
+
+	{ PAGE_BASIC_SECURITY, 
+	  "admin/collectionpasswords", 0,"collection passwords",0,0,
+	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_COLLADMIN},
+
 	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
-	  "basic search", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
-
-
+	  "basic search", sendPageRoot  , 0 ,NULL,NULL,
+	  PG_NOAPI},
 
 	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
-	  "hosts status",
-	  sendPageHosts    , 0 ,NULL,NULL,PG_STATUS},
+	  "hosts status", sendPageHosts    , 0 ,NULL,NULL,
+	  PG_STATUS|PG_ROOTADMIN},
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
-	  "master controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "master controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_ROOTADMIN},
+
 	// use POST for html head/tail and page root html. might be large.
 	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
-	  "search controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "search controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  0},
+
 	// use post now for the "site list" which can be big
 	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
-	  "spider controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "spider controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_COLLADMIN},
 
 	{ PAGE_SPIDERPROXIES,"admin/proxies"   , 0 , "proxies" ,  1 , 0,
-	  "proxies", sendPageGeneric  , 0,NULL,NULL,0 } ,
+	  "proxies", sendPageGeneric  , 0,NULL,NULL,
+	  PG_ROOTADMIN } ,
 
 	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY,
-	  "log controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "log controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_ROOTADMIN},
+
 	{ PAGE_ROOTPASSWORDS, "admin/rootpasswords", 
 	  0 , "root passwords" ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "root passwords",
-	  sendPageGeneric , 0 ,NULL,NULL,0},
+	  "root passwords", 
+	  sendPageGeneric , 0 ,NULL,NULL,
+	  PG_ROOTADMIN},
+
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection",
-	  sendPageAddColl  , 0 ,NULL,NULL,0},
+	  sendPageAddColl  , 0 ,NULL,NULL,
+	  PG_ROOTADMIN},
+
 	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
 	  //USER_MASTER , 
 	  "delete a collection",
-	  sendPageDelColl  , 0 ,NULL,NULL,0},
+	  sendPageDelColl  , 0 ,NULL,NULL,
+	  PG_COLLADMIN},
+
 	{ PAGE_CLONECOLL, "admin/clonecoll" , 0 , "clone collection" ,  1 ,0,
 	  //USER_MASTER , 
 	  "clone one collection's settings to another",
-	  sendPageCloneColl  , 0 ,NULL,NULL,0},
+	  sendPageCloneColl  , 0 ,NULL,NULL,
+	  PG_ROOTADMIN},
+
 	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
-	  //USER_MASTER ,
 	  "repair data",
-	  sendPageGeneric   , 0 ,NULL,NULL,PG_NOAPI},
-	// { PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
-	//   "what sites can be spidered",
-	//   sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI}, // sendPageBasicSettings
+	  //USER_MASTER ,
+	  sendPageGeneric , 0 ,NULL,NULL,
+	  PG_ROOTADMIN },
+
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
-	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
-	  // until we get this working, set PG_NOAPI
-	  sendPageGeneric  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN},
+
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" , 0,M_MULTI ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
-	  sendPageInject   , 2 } ,
+	  sendPageInject   , 2 ,NULL,NULL,
+	  0} ,
+
 	// this is the addurl page the the admin!
 	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
 	  "add url page for admin",
-	  sendPageAddUrl2   , 0 ,NULL,NULL,0},
+	  sendPageAddUrl2   , 0 ,NULL,NULL,
+	  PG_COLLADMIN},
+
 	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER, 
 	  "query delete/reindex",
-	  sendPageReindex  , 0 ,NULL,NULL,0},
-
-
-
-
+	  sendPageReindex  , 0 ,NULL,NULL,
+	  PG_COLLADMIN},
 
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "general statistics",
-	  sendPageStats    , 0 ,NULL,NULL,PG_STATUS},
+	  sendPageStats    , 0 ,NULL,NULL,
+	  PG_STATUS|PG_ROOTADMIN},
 
 	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
 	  "query stats graph",
-	  sendPageGraph  , 2 /*niceness*/ ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageGraph  , 2  ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "function performance graph",
-	  sendPagePerf     , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPagePerf     , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "sockets",
-	  sendPageSockets  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageSockets  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
 
 	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
 	  //USER_MASTER ,  
 	  "logview",
-	  sendPageLogView  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageLogView  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+
 //	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
 //	  //USER_MASTER , 
 //	  "sync",
@@ -223,19 +263,21 @@ static WebPage s_pages[] = {
 	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , M_POST ,
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
-	  sendPageAutoban   , 0 ,NULL,NULL,PG_NOAPI},
-	  /*
-	{ PAGE_SPIDERLOCKS,"admin/spiderlocks" , 0 , "spider locks" ,  0 , 0 ,
-	  USER_MASTER , sendPageSpiderLocks , 0 ,NULL,NULL,PG_NOAPI},
-	  */
+	  sendPageAutoban   , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
+
 	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 ,M_POST,
 	  //USER_MASTER , 
 	  "profiler",
-	  sendPageProfiler   , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageProfiler   , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
+
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads",
-	  sendPageThreads  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageThreads  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+
 	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
 	//  "thesaurus",
@@ -249,38 +291,51 @@ static WebPage s_pages[] = {
 	//  sendPageOverview  , 0 ,NULL,NULL,PG_NOAPI},
 
 	{ PAGE_QA , "admin/qa"         , 0 , "qa" , 0 , 0 ,
-	  "quality assurance", sendPageQA , 0 ,NULL,NULL,PG_NOAPI},
+	  "quality assurance", 
+	  sendPageQA , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
 
 	{ PAGE_IMPORT , "admin/import"         , 0 , "import" , 0 , 0 ,
 	  "import documents from another cluster", 
-	  sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
 
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
-	  "api",  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},
+	  "api",  
+	  sendPageAPI , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN},
 
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules",
-	  sendPageGeneric , 0,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric , 0,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_INDEXDB   , "admin/indexdb" , 0 , "indexdb"         ,  0 , 0,
 	  //USER_MASTER ,
 	  "indexdb",
-	  sendPageIndexdb  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageIndexdb  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
+
 	{ PAGE_TITLEDB   , "admin/titledb" , 0 , "titledb"         ,  0 , 0,
 	  //USER_MASTER , 
 	  "titledb",
-	  sendPageTitledb  , 2,NULL,NULL,PG_NOAPI},
+	  sendPageTitledb  , 2,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
 	// 1 = usePost
 
 	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
 	  "simplified spider controls",
-	  sendPageCrawlbot , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageCrawlbot , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "spider queue",
-	  sendPageSpiderdb , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageSpiderdb , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
 	//  "spider priorities",
@@ -293,33 +348,45 @@ static WebPage s_pages[] = {
 #ifndef CYGWIN
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
-	  sendPageSEO   , 2 ,NULL,NULL,PG_NOAPI},
+	  sendPageSEO   , 2 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
 #else
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
-	  sendPageResults  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageResults  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
 #endif
 
 	{ PAGE_ACCESS    , "admin/access" , 0 , "access" ,  1 , M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "access password, ip, admin ips etc. all goes in here",
-	  sendPageGeneric  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
+
 	{ PAGE_SEARCHBOX , "admin/searchbox", 0 , "search" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search box",
-	  sendPageResults  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageResults  , 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_PARSER    , "admin/parser"  , 0 , "parser"          , 0,M_POST,
 	  //USER_MASTER ,
 	  "page parser",
-	  sendPageParser   , 2 ,NULL,NULL,PG_NOAPI},
+	  sendPageParser   , 2 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN},
+
 	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "add/remove/get tags for sites/urls",
-	  sendPageTagdb ,  0 ,NULL,NULL,PG_NOAPI},	  
+	  sendPageTagdb ,  0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN},	  
+
 	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb",
-	  sendPageCatdb    , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageCatdb    , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ROOTADMIN},
+
 	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	//"login link - also logoffs user",
@@ -1488,7 +1555,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
 	SafeBuf mb;
-	bool added = printRedBox ( &mb );
+	bool added = printRedBox ( &mb , s , r );
 
 	// print emergency msg box
 	if ( added )
@@ -3749,10 +3816,10 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 					      NULL);// cookie
 }
 
-bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage ) {
+bool printRedBox2 ( SafeBuf *sb , TcpSocket *sock , HttpRequest *hr ) {
 	SafeBuf mb;
 	// return false if no red box
-	if ( ! printRedBox ( &mb , isRootWebPage ) ) return false;
+	if ( ! printRedBox ( &mb , sock , hr ) ) return false;
 	// otherwise, print it
 	sb->safeStrcpy ( mb.getBufStart() );
 	// return true since we printed one
@@ -3760,7 +3827,7 @@ bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage ) {
 }
 
 // emergency message box
-bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
+bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 
 	PingServer *ps = &g_pingServer;
 
@@ -3785,12 +3852,14 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 
 	mb->safePrintf("<div style=max-width:500px;>");
 
+	long page = g_pages.getDynamicPageNumber ( hr );
+
 	// are we just starting off? give them a little help.
-	CollectionRec *cr = g_collectiondb.getRec("main");
+	CollectionRec *crm = g_collectiondb.getRec("main");
 	if ( g_collectiondb.m_numRecs == 1 && 
-	     cr &&
-	     isRootWebPage &&
-	     cr->m_globalCrawlInfo.m_pageDownloadAttempts == 0 ) {
+	     crm &&
+	     page == PAGE_ROOT && // isRootWebPage &&
+	     crm->m_globalCrawlInfo.m_pageDownloadAttempts == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
@@ -3802,19 +3871,35 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
-	if ( isRootWebPage ) {
+	if ( page == PAGE_ROOT ) { // isRootWebPage ) {
 		mb->safePrintf("</div>");
 		return (bool)adds;
 	}
 
-	if ( g_conf.m_masterPwds.length() == 0 && 
-	     g_conf.m_connectIps.length() == 0 ) {
+	if ( g_conf.m_masterPwds.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("URGENT. Please specify a password "
+		mb->safePrintf("URGENT. Please specify a ROOT password "
 			       "or IP address in the "
 			       "<a href=/admin/rootpassword>root "
+			       "password</a> "
+			       "table. Right now anybody might be able "
+			       "to access the Gigablast admin controls.");
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	if ( cr &&
+	     cr->m_collectionPasswords.length() == 0 && 
+	     cr->m_collectionIps.length() == 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("URGENT. Please specify a COLLECTION password "
+			       "or IP address in the "
+			       "<a href=/admin/collectionpasswords>"
 			       "password</a> "
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
@@ -3893,6 +3978,42 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 			       "to rebalance all hosts.");
 		mb->safePrintf("%s",boxEnd);
 	}
+
+	WebPage *wp = g_pages.getPage(page);
+
+	if ( wp && 
+	     (wp->m_pgflags & (PG_ROOTADMIN|PG_COLLADMIN)) &&
+	     ! g_conf.isRootAdmin(sock,hr) &&
+	     ! g_conf.isCollAdmin(sock,hr) ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+
+		char *ff = "admin/settings";
+		if ( wp ) ff = wp->m_filename;
+
+		mb->safePrintf("You have no write access to these "
+			       "controls. Please enter the collection or "
+			       "root password to get access: "
+
+			       "<form method=GET action=\"/%s\" name=xyz>"
+
+			       "<input type=password id=ppp name=xpwd size=20>"
+
+			       "<input type=submit value=ok "
+			       "border=0 onclick=\""
+			       "document.cookie='pwd='+"
+			       "document.getElementById('ppp')"
+			       ".value+"
+			       "';max-age=9999999';"
+			       "\">"
+
+			       "</form>"
+			       , ff );
+
+		mb->safePrintf("%s",boxEnd);
+	}
+
 
 	if ( ps->m_numHostsDead ) {
 		if ( adds ) mb->safePrintf("<br>");
