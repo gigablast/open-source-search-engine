@@ -1471,21 +1471,37 @@ bool Rdb::dumpCollLoop ( ) {
 	// advance for next round
 	m_dumpCollnum++;
 
-	CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+	// don't bother getting the base for all collections because
+	// we end up swapping them in
+	for ( ; m_dumpCollnum < getNumBases() ; m_dumpCollnum++ ) {
+		// collection rdbs like statsdb are ok to process
+		if ( m_isCollectionLess ) break;
+		// otherwise get the coll rec now
+		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		// skip if empty
+		if ( ! cr ) continue;
+		// skip if no recs in tree
+		if ( cr->m_treeCount == 0 ) continue;
+		// ok, it's good to dump
+		break;
+	}
 
-	// collrec is valid?
-	if ( ! cr ) goto loop;
+	// if no more, we're done...
+	if ( m_dumpCollnum >= getNumBases() ) return true;
 
 	// base is null if swapped out. skip it then. is that correct?
 	// probably not!
 	//RdbBase *base = cr->getBasePtr(m_rdbId);//m_dumpCollnum);
-	// swap it in for dumping purposes if we have to
-	RdbBase *base = cr->getBase(m_rdbId);//m_dumpCollnum);	
 
-	// hwo can this happen
+	// swap it in for dumping purposes if we have to
+	// "cr" is NULL potentially for collectionless rdbs, like statsdb,
+	// do we can't involve that...
+	RdbBase *base = getBase(m_dumpCollnum);
+
+	// hwo can this happen? error swappingin?
 	if ( ! base ) { 
 		log("rdb: dumpcollloop base was null for cn=%li",
-		    (long)m_dumpCollnum-1);
+		    (long)m_dumpCollnum);
 		goto hadError;
 	}
 
