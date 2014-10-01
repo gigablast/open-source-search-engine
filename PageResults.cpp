@@ -8594,6 +8594,13 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_icon     = NULL;
 		n++;
 
+		s_mi[n].m_menuNum  = 1;
+		s_mi[n].m_title    = "Sorted by site inlinks";
+		s_mi[n].m_cgi      = "sortby=3";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+
 		// languages
 
 		s_mi[n].m_menuNum  = 2;
