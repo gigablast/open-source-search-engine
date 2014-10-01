@@ -20293,12 +20293,21 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// knowing the collection name is enough for a cloud user
 		// to change settings.
 		//
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin )
+		bool hasPerm = false;
+
+		// master controls require root permission
+		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+			log("parms: could not set root parm \"%s\" no perm.",
+			    m->m_title);
 			continue;
+		}
 
 		// need to have permission for collection for collrec parms
-		if ( m->m_obj == OBJ_COLL && ! isCollAdmin )
+		if ( m->m_obj == OBJ_COLL && ! isCollAdmin && ! hasPerm ) {
+			log("parms: could not set coll parm \"%s\" no perm.",
+			    m->m_title);
 			continue;
+		}
 
 		// convert spiderRoundStartTime=0 (roundStart=0 roundStart=1) 
 		// to spiderRoundStartTime=<currenttime>+30secs

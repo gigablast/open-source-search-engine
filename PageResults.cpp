@@ -2285,7 +2285,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "</numResultsOmitted>\n",
 			       msg40->m_omitCount);
 
-	if ( si->m_format == FORMAT_JSON )
+	if ( st->m_header && si->m_format == FORMAT_JSON )
 		sb->safePrintf("\"numResultsOmitted\":%li,\n",
 			       msg40->m_omitCount);
 
