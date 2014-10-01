@@ -8667,7 +8667,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
-	m->m_title = "reset proxy tables";
+	m->m_title = "reset proxy table";
 	m->m_desc  = "Reset the proxy statistics in the table below.";
 	m->m_cgi   = "resetproxytable";
 	m->m_type  = TYPE_CMD;
