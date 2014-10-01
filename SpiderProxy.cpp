@@ -719,12 +719,19 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		goto redo;
 	}
 
+	// . we only use one proxy if none are banned by this IP
+	// . when that gets banned, we will use the next 2 proxies with
+	//   a higher backoff/crawlDelay, etc.
+	long threshHold = 1 << numBannedProxies;
+
 	// reset minCount so we can take the min over those we check here
 	minCount = -1;
 	long long oldest = 0x7fffffffffffffffLL;
 	SpiderProxy *winnersp = NULL;
 	long count = 0;
-	// now find the best proxy wih the minCount
+	// . now find the best proxy wih the minCount
+	// . TODO: start at a random slot based on url's IP so we don't
+	//   overload the first proxy so much
 	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
 		// skip empty slots
 		if ( ! s_iptab.m_flags[i] ) continue;
@@ -751,7 +758,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		// through them. that way, we don't get ALL of our proxies
 		// banned at about the same time since we do somewhat uniform
 		// load balancing over them.
-		if ( skipDead && count > aliveProxyCandidates / 2 )
+		if ( skipDead && count >= threshHold)//aliveProxyCandidates/2 )
 			continue;
 
 		// count the alive/non-banned candidates
