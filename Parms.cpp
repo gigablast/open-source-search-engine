@@ -17112,6 +17112,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
+	m->m_title = "use canonical redirects";
+	m->m_desc  = "If page has a <link canonical> on it then treat it "
+		"as a redirect.";
+	m->m_cgi   = "ucr";
+	m->m_off   = (char *)&cr.m_useCanonicalRedirects - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
 
 	m->m_title = "do IP lookup";
 	m->m_desc  = "If this is disabled and the proxy "

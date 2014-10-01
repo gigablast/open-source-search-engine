@@ -10117,6 +10117,16 @@ Url **XmlDoc::getRedirUrl() {
 	// if not allow, do not do them... except for the two below
 	//if ( ! m_useSimplifiedRedirects || m_isDirColl )
 	//	simplifiedRedir = false;
+
+	// special hack for nytimes.com. do not consider simplified redirs
+	// because it uses a cookie along with redirs to get to the final
+	// page.
+	char *dom2 = m_firstUrl.getDomain();
+	long  dlen2 = m_firstUrl.getDomainLen();
+	if ( dlen2 == 11 && strncmp(dom2,"nytimes.com",dlen2)==0 )
+		allowSimplifiedRedirs = true;
+
+
 	// . don't bother indexing this url if the redir is better
 	// . 301 means moved PERMANENTLY...
 	// . many people use 301 on their root pages though, so treat
@@ -15929,6 +15939,12 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		m_canonicalRedirUrlValid = true;
 		return &m_canonicalRedirUrlPtr;
 	}
+
+	if ( ! cr->m_useCanonicalRedirects ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
+
 
 	// are we site root page? don't follow canonical url then.
 	char *isRoot = getIsSiteRoot();

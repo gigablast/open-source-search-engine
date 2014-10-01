@@ -602,6 +602,8 @@ class CollectionRec {
 	char  m_allowAsianDocs          ;
 	char  m_allowAdultDocs          ;
 	char  m_doSerpDetection         ;
+	char  m_useCanonicalRedirects   ;
+
 	//char  m_trustIsNew              ; // trust spider rec's isNew bit?
 
 	//charm_minLinkPriority           ; // don't add links under this prty
