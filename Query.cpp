@@ -3851,6 +3851,15 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0 },
 
+	{"gbsortbyint", 
+	 FIELD_GBSORTBYINT, 
+	 false,
+	 "gbsortbyint:gbsitenuminlinks",
+	 "Sort all documents by the number of distinct inlinks the "
+	 "document's site has.",
+	 NULL,
+	 0 },
+
 
 	{"gbrevsortbyint", 
 	 FIELD_GBREVSORTBYINT, 
