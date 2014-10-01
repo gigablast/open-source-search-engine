@@ -722,7 +722,47 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 	// . we only use one proxy if none are banned by this IP
 	// . when that gets banned, we will use the next 2 proxies with
 	//   a higher backoff/crawlDelay, etc.
-	long threshHold = 1 << numBannedProxies;
+	long threshHold;
+	if      ( numBannedProxies <= 0  ) threshHold = 1;
+
+	// if first proxy gets banned, try next 2 proxies until both get ban'd
+	else if ( numBannedProxies == 1  ) threshHold = 2;
+	else if ( numBannedProxies <  1+2) threshHold = 3 - numBannedProxies;
+
+	// if next two proxies got banned, try next 4 proxies until banned
+	else if ( numBannedProxies == 3  ) threshHold = 4;
+	else if ( numBannedProxies <  3+4) threshHold = 7 - numBannedProxies;
+
+	// if next 4 proxies got banned, try next 8 proxies until they get band
+	else if ( numBannedProxies == 7  ) threshHold = 8;
+	else if ( numBannedProxies <  7+8) threshHold = 15 - numBannedProxies;
+
+	else if ( numBannedProxies == 15) threshHold = 16;
+	else if ( numBannedProxies <  15+16 ) threshHold = 31-numBannedProxies;
+
+	else if ( numBannedProxies == 31 ) threshHold = 32;
+	else if ( numBannedProxies <  31+32)threshHold=63-numBannedProxies;
+
+	else if ( numBannedProxies == 63 ) threshHold = 64;
+	else if ( numBannedProxies <  63+64)threshHold=127-numBannedProxies;
+
+	else if ( numBannedProxies == 127 ) threshHold = 128;
+	else if ( numBannedProxies <  127+128)threshHold=255-numBannedProxies;
+
+	else if ( numBannedProxies == 255 ) threshHold = 256;
+	else if ( numBannedProxies <  255+256)threshHold=512-numBannedProxies;
+
+	else if ( numBannedProxies == 511 ) threshHold = 512;
+	else if ( numBannedProxies <  511+512)threshHold=1024-numBannedProxies;
+
+	else threshHold = 1024;
+	
+	
+	if ( threshHold <= 0 ) {
+		log("proxy: spiderproxy error in threshold of %li "
+		    "for banned=%li",threshHold,numBannedProxies);
+		threshHold = 1;
+	}
 
 	// reset minCount so we can take the min over those we check here
 	minCount = -1;
