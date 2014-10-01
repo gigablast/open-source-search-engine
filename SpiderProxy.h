@@ -14,6 +14,8 @@ bool buildProxyTable ( );
 // show spider proxy stats, called by Parms.cpp
 bool printSpiderProxyTable ( SafeBuf *sb ) ;
 
+bool resetProxyStats ( ) ;
+
 // save stats on the spider proxies if any
 bool saveSpiderProxyStats();
 

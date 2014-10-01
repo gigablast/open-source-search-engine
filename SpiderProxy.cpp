@@ -228,6 +228,16 @@ bool initProxyTables ( ) {
 	return true;
 }
 
+bool resetProxyStats ( ) {
+	// s_proxyBannedTable.reset();
+	// s_banCountTable.reset();
+	// s_iptab.reset();
+	s_iptab.set(8,sizeof(SpiderProxy),0,NULL,0,false,0,"siptab");
+	s_proxyBannedTable.set(8,0,0,NULL,0,false,1,"proxban");
+	s_banCountTable.set(4,4,0,NULL,0,false,1,"bancnt");
+	return buildProxyTable();
+}
+
 // save the stats
 bool saveSpiderProxyStats ( ) {
 

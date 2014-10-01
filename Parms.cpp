@@ -409,6 +409,11 @@ bool CommandAddColl2 ( char *rec ) { // bulk job
 	return CommandAddColl ( rec , 2 );
 }
 
+bool CommandResetProxyTable ( char *rec ) {
+	// from SpiderProxy.h
+	return resetProxyStats();
+}
+
 // . returns true and sets g_errno on error
 // . returns false if would block
 bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
@@ -8661,6 +8666,17 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+	m->m_title = "reset proxy tables";
+	m->m_desc  = "Reset the proxy statistics in the table below.";
+	m->m_cgi   = "resetproxytable";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandResetProxyTable;
+	m->m_cast  = 1;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "mix up user agents";
 	m->m_desc  = "Use random user-agents when downloading through "
