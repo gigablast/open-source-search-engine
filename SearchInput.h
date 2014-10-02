@@ -118,7 +118,7 @@ class SearchInput {
 	Query         *m_q2;
 
 	char           m_isRootAdmin;
-
+	char           m_isCollAdmin;
 
 	// these are set from things above
 	TopicGroup     m_topicGroups [ MAX_TOPIC_GROUPS ];// msg40

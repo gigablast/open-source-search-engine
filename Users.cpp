@@ -80,8 +80,8 @@ bool User::verifyPageNum ( uint16_t pageNum ){
 	}
 	// check if pageNum is of dummy page
 	bool isDummy = true;
-	if ( pageNum >  PAGE_PUBLIC )
-		isDummy = false;
+	//if ( pageNum >  PAGE_PUBLIC )
+	isDummy = false;
 	//
 	if ( m_allPages && !isDummy )
 		return true;
@@ -93,8 +93,9 @@ bool User::verifyPageNum ( uint16_t pageNum ){
 long User::firstPage ( ){
 	// return first allowed page
 	for ( uint16_t i = 0; i < m_numPages; i++ )
-		if ( ! (m_pages[i] & 0x8000) &&
-	              (m_pages[i]&0x7fff) > PAGE_PUBLIC ) return m_pages[i];
+		if ( ! (m_pages[i] & 0x8000) ) //&&
+		     //           (m_pages[i]&0x7fff) > PAGE_PUBLIC ) 
+			return m_pages[i];
 	
 	// if all pages is set then just return the root page 
 	if ( m_allPages ) return PAGE_ROOT;

@@ -211,6 +211,11 @@ void processReply ( char *reply , long replyLen ) {
 	// # of collections in the admin page: ..."4 Collections"
 	markOut(content,"px;color:black;\"><center><nobr><b>");
 
+	markOut(content,"spider is done (");
+	markOut(content,"spider is paused (");
+	markOut(content,"spider is active (");
+	markOut(content,"spider queue empty (");
+
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
 	long contentCRC = 0; 
@@ -502,8 +507,6 @@ static long *s_flags = NULL;
 //
 bool qainject1 ( ) {
 
-	//if ( ! s_callback ) s_callback = qainject1;
-
 	//
 	// delete the 'qatest123' collection
 	//
@@ -520,7 +523,8 @@ bool qainject1 ( ) {
 	//static bool s_x2 = false;
 	if ( ! s_flags[1] ) {
 		s_flags[1] = true;
-		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -529,12 +533,11 @@ bool qainject1 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
 	}
-
 
 	// this only loads once
 	loadUrls();
@@ -604,6 +607,55 @@ bool qainject1 ( ) {
 				"debug=1&q=washer+%26+dryer",9999 ) )
 		     return false;
 	}
+
+
+	//
+	// adv.html test
+	//
+	// query for 'test' using adv.html advanced search interface
+	if ( ! s_flags[27] ) {
+		s_flags[27] = true;
+		if ( ! getUrl ( 
+			       "/search?c=qatest123&qa=17&format=xml&"
+			       "dr=1&pss=50&sc=1&hacr=1&quotea=web+site&"
+			       "gblang=1&minus=transcripts&n=150", 
+			       123 ) )
+			return false;
+	}
+
+
+	// &sites= test
+	if ( ! s_flags[28] ) {
+		s_flags[28] = true;
+		if ( ! getUrl ( 
+			       "/search?c=qatest123&qa=17&format=xml&q=web&"
+			       "sortby=2&"
+			       // html only:
+			       "sw=20&"
+			       "filetype=html&"
+			       "ff=1&"
+			       "facet=gbfacetint:gbhopcount&"
+			       "sites=mindtools.com+www.redcross.org"
+			       , 123 ) )
+			return false;
+	}
+
+	// html test of summary width
+	if ( ! s_flags[29] ) {
+		s_flags[29] = true;
+		if ( ! getUrl ( 
+			       "/search?c=qatest123&qa=17&format=html&q=web&"
+			       // html only:
+			       "sw=20&tml=10&ns=1&smxcpl=30&qh=0&n=100&"
+			       "dt=keywords+description&"
+			       "facet=gbfacetint:gbspiderdate&"
+			       , 123 ) )
+			return false;
+	}
+
+
+	// stop for now
+	//return true; //
 
 	//
 	// eject/delete the urls
@@ -682,7 +734,7 @@ bool qainject2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -758,7 +810,7 @@ bool qainject2 ( ) {
 
 
 	//
-	// mdw: query reindex test
+	// mdw: query DELETE test
 	//
 	 if ( ! s_flags[30] ) {
 	 	s_flags[30] = true;
@@ -823,6 +875,406 @@ bool qainject2 ( ) {
 
 	return true;
 }
+
+bool qaimport () {
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// turn spiders off so it doesn't spider while we are importing
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// set the import dir and # inject threads
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/import?c=qatest123&importdir=%2Fhome%2Fmwells%2Ftesting%2Fimport%2F&numimportinjects=3&import=1&action=submit",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// wait for importloop to "kick in" so it can set cr->m_importState
+	if ( ! s_flags[3] ) {
+	 	wait(1.0);
+	 	s_flags[3] = true;
+	 	return false;
+	}
+
+	// import must be done!
+	if ( ! s_flags[19] ) {
+		CollectionRec *cr = g_collectiondb.getRec("qatest123");
+		// if still importing this will be non-null
+		if ( cr->m_importState ) {
+			wait(1.0);
+			return false;
+		}
+		// all done then
+		s_flags[19] = true;
+	}
+
+	// wait for absorption of index
+	if ( ! s_flags[28] ) {
+	 	wait(2.0);
+	 	s_flags[28] = true;
+	 	return false;
+	}
+
+	// test query
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
+				"&dsrt=500",
+				702467314 ) )
+			return false;
+	}
+
+
+	// test site clustering
+	if ( ! s_flags[29] ) {
+		s_flags[29] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=mediapost&dsrt=0&sc=1",
+				702467314 ) )
+			return false;
+	}
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED DATA "
+		    "IMPORT TEST");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
+
+	return true;
+}
+
+bool qainlinks() {
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// turn spiders off so it doesn't spider while we are importing
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// inject youtube
+	if ( ! s_flags[2] ) {
+		s_flags[2] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&u=www.youtube.com");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+	// test query
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=youtube"
+				,702467314 ) )
+			return false;
+	}
+
+
+
+	// scrape inlinkers
+	if ( ! s_flags[4] ) {
+		s_flags[4] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&qts=link:www.youtube.com&n=100");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+	// inject better inlinkers
+	if ( ! s_flags[20] ) {
+		s_flags[20] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&"
+			       "url=www.freebsd.org%%2Fcommunity.html");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+
+
+
+	// wait a second for linkdb absorption
+	if ( ! s_flags[5] ) {
+	 	wait(1.0);
+	 	s_flags[5] = true;
+	 	return false;
+	}
+
+
+
+	// RE-inject youtube
+	if ( ! s_flags[6] ) {
+		s_flags[6] = true;
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&"
+			       "format=xml&u=www.youtube.com");
+		if ( ! getUrl ( sb.getBufStart() , 999 ) )
+			return false;
+	}
+
+
+	// wait a second term freq stabilization
+	if ( ! s_flags[9] ) {
+	 	wait(2.0);
+	 	s_flags[9] = true;
+	 	return false;
+	}
+
+	// test query
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&"
+				"format=xml&q=youtube"
+				// get scoring info
+				"&scores=1"
+				,702467314 ) )
+			return false;
+	}
+
+
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED INLINK TEST");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
+
+	return true;
+}
+
+// query reindex test
+bool qareindex() {
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// turn off images thumbnails
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// this only loads once
+	loadUrls();
+	long max = s_ubuf2.length()/(long)sizeof(char *);
+	//max = 1;
+
+	//
+	// inject urls, return false if not done yet
+	//
+	//static bool s_x4 = false;
+	if ( ! s_flags[2] ) {
+		// TODO: try delimeter based injection too
+		//static long s_ii = 0;
+		for ( ; s_flags[20] < max ; ) {
+			// inject using html api
+			SafeBuf sb;
+			sb.safePrintf("&c=qatest123&deleteurl=0&"
+				      "format=xml&u=");
+			sb.urlEncode ( s_urlPtrs[s_flags[20]] );
+			// the content
+			sb.safePrintf("&hasmime=1");
+			// sanity
+			//if ( strstr(s_urlPtrs[s_flags[20]],"wdc.htm") )
+			//	log("hey");
+			sb.safePrintf("&content=");
+			sb.urlEncode(s_contentPtrs[s_flags[20]] );
+			sb.nullTerm();
+			// pre-inc it in case getUrl() blocks
+			s_flags[20]++;//ii++;
+			if ( ! getUrl("/admin/inject",
+				      0, // no idea what crc to expect
+				      sb.getBufStart()) )
+				return false;
+		}
+		s_flags[2] = true;
+	}
+
+	// wait for absorption
+	if ( ! s_flags[3] ) {
+		wait(1.5);
+		s_flags[3] = true;
+		return false;
+	}
+
+	// query for 'test'
+	if ( ! s_flags[27] ) {
+		s_flags[27] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=17&format=xml&q=test&icc=1",
+				-1672870556 ) )
+			return false;
+	}
+
+	// make 2nd url filter !isreindex just have 0 spiders so we do
+	// not spider the links from the REINDEXED PAGES
+	if ( ! s_flags[4] ) {
+		s_flags[4] = true;
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123&"
+			      // make it the custom filter
+			      "ufp=custom&"
+			      // zero spiders if not isreindex
+			      "fe1=default&hspl1=0&hspl1=1&fsf1=1.000000&"
+			      "mspr1=0&mspi1=0&xg1=1000&fsp1=45&"
+		);
+		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
+			return false;
+	}
+
+
+
+	// do the query reindex on 'test'
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/admin/reindex?c=qatest123&qa=16&"
+				"format=xml&q=test"
+				, 702467314 ) )
+			return false;
+	}
+
+ checkagain2:
+	// wait until spider finishes. check the spider status page
+	// in json to see when completed
+	if ( ! s_flags[5] ) {
+		wait(3.0);
+		s_flags[5] = true;
+		return false;
+	}
+
+
+	// wait for all spiders to stop
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
+			return false;
+	}
+
+	//static bool s_k2 = false;
+	if ( ! s_flags[6] ) {
+		// ensure spiders are done. 
+		// "Nothing currently available to spider"
+		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
+			s_flags[5] = false;
+			s_flags[15] = false;
+			goto checkagain2;
+		}
+		s_flags[6] = true;
+	}
+
+	//
+	// query for 'test' again after the reindex
+	//
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=14&format=xml&q=test&icc=1",
+				-1672870556 ) )
+			return false;
+	}
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+		    "QUERY REINDEX");
+		//if ( s_callback == qainject ) exit(0);
+		return true;
+	}
+
+
+	return true;
+}
+
 
 /*
 static char *s_urls1 =
@@ -954,9 +1406,10 @@ bool qaspider1 ( ) {
 	}
 
 	// turn off images thumbnails
+	// set max spiders to 1 for consistency!
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1220,7 +1673,7 @@ bool qaspider2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1417,7 +1870,7 @@ bool qascrape ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1536,7 +1989,7 @@ bool qajson ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1716,6 +2169,225 @@ bool qajson ( ) {
 	return true;
 }
 
+static char *s_ubuf5 = 
+	"http://www.thompsoncancer.com/News/RSSLocation2.ashx?sid=7 "
+	"http://www.jdlculaval.com/xmlrpc.php?rsd "
+	"http://pharmacept.com/feed/ "
+	"http://www.web-erfolg.net/feed/ "
+	"http://www.extremetriathlon.org/site/feed/ "
+	"http://www.pilatesplusdublin.ie/wp-includes/wlwmanifest.xml "
+	"http://www.youtube.com/oembed?url=http%3A//www.youtube.com/watch?v%3Dv0lZQVaXSyM&format=xml "
+	"http://www.ehow.com/feed/home/garden-lawn/lawn-mowers.rss "
+	"http://www.functionaltrainingpro.com/xmlrpc.php?rsd "
+	"http://mississippisociety.com/index.php/feed "
+	;
+				      ;
+
+bool qaxml ( ) {
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// turn off images thumbnails
+	if ( ! s_flags[24] ) {
+		s_flags[24] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	// add the 50 urls
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
+		SafeBuf sb;
+
+		sb.safePrintf("&c=qatest123"
+			      "&format=json"
+			      "&strip=1"
+			      "&spiderlinks=0"
+			      "&urls="//www.walmart.com+ibm.com"
+			      );
+		sb.urlEncode ( s_ubuf5 );
+		// . now a list of websites we want to spider
+		// . the space is already encoded as +
+		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+			return false;
+	}
+
+
+	//
+	// wait for spidering to stop
+	//
+ checkagain:
+
+	// wait until spider finishes. check the spider status page
+	// in json to see when completed
+	//static bool s_k1 = false;
+	if ( ! s_flags[5] ) {
+		// wait 5 seconds, call sleep timer... then call qatest()
+		//usleep(5000000); // 5 seconds
+		wait(3.0);
+		s_flags[5] = true;
+		return false;
+	}
+
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/admin/status?format=json&c=qatest123",0) )
+			return false;
+	}
+
+	//static bool s_k2 = false;
+	if ( ! s_flags[6] ) {
+		// ensure spiders are done. 
+		// "Nothing currently available to spider"
+		if ( s_content&&!strstr(s_content,"Nothing currently avail")){
+			s_flags[5] = false;
+			s_flags[15] = false;
+			goto checkagain;
+		}
+		s_flags[6] = true;
+	}
+
+		
+
+	if ( ! s_flags[7] ) {
+		s_flags[7] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=type%3Axml+oembed.type%3Avideo",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[8] ) {
+		s_flags[8] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=video",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[9] ) {
+		s_flags[9] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=oembed.thumbnail_height%3A360",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[10] ) {
+		s_flags[10] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbminint%3Aoembed.thumbnail_height%3A380",
+				-1310551262 ) )
+			return false;
+	}
+
+
+	// other query tests...
+	if ( ! s_flags[12] ) {
+		s_flags[12] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbmaxint%3Aoembed.thumbnail_height%3A380",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[13] ) {
+		s_flags[13] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=rss.channel.item.title%3Abests",
+				-1310551262 ) )
+			return false;
+	}
+	
+
+	if ( ! s_flags[14] ) {
+		s_flags[14] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
+				"q=gbfacetstr%3Arss.channel.title",
+				-1310551262 ) )
+			return false;
+	}
+
+	/*
+	if ( ! s_flags[15] ) {
+		s_flags[15] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3A\"Maemo+Browser\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[16] ) {
+		s_flags[16] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key"
+				"%3A\"Google+Wireless+Transcoder\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	// this should have no results, not capitalized
+	if ( ! s_flags[17] ) {
+		s_flags[17] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3A\"samsung\"",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3ASamsung",
+				-1310551262 ) )
+			return false;
+	}
+
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
+				"q=gbfieldmatch%3Astrings.key%3A\"Samsung\"",
+				-1310551262 ) )
+			return false;
+	}
+	*/
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[20] ) {
+		s_flags[20] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+		    "QA XML TEST");
+		return true;
+	}
+
+	return true;
+}
+
+
+
 
 /*
 bool qaspider ( ) {
@@ -1739,7 +2411,8 @@ static QATest s_qatests[] = {
 	{qainject1,
 	 "injectTest1",
 	 "Test injection api. Test injection of multiple urls with content. "
-	 "Test deletion of urls via inject api."},
+	 "Test deletion of urls via inject api. Test most query api parms. "
+	 "Test advanced search parms."},
 
 	{qainject2,
 	 "injectTest2",
@@ -1760,9 +2433,26 @@ static QATest s_qatests[] = {
 	 "Scrape and inject results from google and bing."},
 
 	{qajson,
-	 "jsontest",
+	 "jsonTest",
 	 "Add Url some JSON pages and test json-ish queries. Test facets over "
-	 "json docs."}
+	 "json docs."},
+
+	{qaxml,
+	 "xmlTest",
+	 "Add Url some XML pages and test xml-ish queries. Test facets over "
+	 "xml docs."},
+
+	{qaimport,
+	 "importDataTest",
+	 "Test data import functionality. Test site clustering."},
+
+	{qainlinks,
+	 "inlinksTest",
+	 "Test youtube inlinks. Test EDOCUNCHANGED iff just inlinks change."},
+
+	{qareindex,
+	 "queryReindexTest",
+	 "Test query reindex function. Ensure changed docs are updated."}
 
 };
 
@@ -2014,5 +2704,3 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 
 	return true;
 }
-
-

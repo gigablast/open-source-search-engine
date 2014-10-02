@@ -1,6 +1,8 @@
 #ifndef GBINJECT_H
 #define GBINJECT_H    
 
+void  handleRequest7 ( class UdpSlot *slot , long netnice ) ;
+
 bool sendPageInject ( class TcpSocket *s, class HttpRequest *hr );
 
 bool resumeImports ( ) ;
@@ -36,8 +38,8 @@ public:
 	void *m_state;
 	void (* m_callback )(void *state);
 
-	long long m_hackFileOff;
-	long m_hackFileId;
+	//long long m_hackFileOff;
+	//long m_hackFileId;
 
 	//long m_crawlbotAPI;
 
@@ -63,9 +65,9 @@ public:
 		      void (*callback)(void *state) );
 
 
-	bool injectTitleRec ( void *state ,
-			      void (*callback)(void *state) ,
-			      class CollectionRec *cr );
+	//bool injectTitleRec ( void *state ,
+	//		      void (*callback)(void *state) ,
+	//		      class CollectionRec *cr );
 
 	void gotMsg7Reply ();
 

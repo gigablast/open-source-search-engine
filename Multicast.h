@@ -245,6 +245,11 @@ class Multicast {
 	long       m_hack32; 
 	long long  m_hack64;
 
+	// more hack stuff used by PageInject.cpp
+	long m_hackFileId;
+	long long m_hackFileOff;
+	class ImportState *m_importState;
+
 	// hacky crunk use by seo pipeline in xmldoc.cpp
 	//void *m_hackxd;
 	//void *m_hackHost;

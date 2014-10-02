@@ -159,6 +159,7 @@ class GigablastRequest {
 	long long m_docId;
 	long      m_strip;
 	char      m_includeHeader;
+	char      m_highlightQuery;
 
 	///////////
 	//
@@ -345,7 +346,9 @@ class Parms {
 			  long pd ,
 			  bool isCrawlbot ,
 			  char format, //bool isJSON,
-			  TcpSocket *sock
+			  TcpSocket *sock,
+			  bool isRootAdmin,
+			  bool isCollAdmin
 			  );
 
 	/*
@@ -379,8 +382,11 @@ class Parms {
 			  long  nc   ,
 			 long  pd   ,
 			 bool lastRow ,
-			 bool isCrawlbot = false,
-			 char format = FORMAT_HTML);//bool isJSON = false ) ;
+			 bool isCrawlbot ,//= false,
+			 char format , //= FORMAT_HTML,
+			 bool isRootAdmin ,
+			 bool isCollAdmin ,
+			 class TcpSocket *sock );
 
 	char *getTHIS ( HttpRequest *r , long page );
 

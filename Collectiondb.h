@@ -501,6 +501,7 @@ class CollectionRec {
 	char  m_enforceNewQuotas        ;
 	char  m_doIpLookups             ; // considered iff using proxy
 	char  m_useRobotsTxt            ;
+	char  m_forceUseFloaters        ;
 	//char  m_restrictDomain          ; // say on same domain as seeds?
 	char  m_doTuringTest            ; // for addurl
 	char  m_applyFilterToText       ; // speeds us up
@@ -566,6 +567,8 @@ class CollectionRec {
 	long    m_numImportInjects;
 	class ImportState *m_importState;
 
+	SafeBuf m_collectionPasswords;
+	SafeBuf m_collectionIps;
 
 	// from Conf.h
 	long m_posdbMinFilesToMerge ;

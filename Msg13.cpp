@@ -732,8 +732,12 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	// user can turn off proxy use with this switch
 	if ( ! g_conf.m_useProxyIps ) useProxies = false;
 
+	// for diffbot turn ON if use robots is off
+	if ( r->m_forceUseFloaters ) useProxies = true;
+
 	// we gotta have some proxy ips that we can use
 	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
+
 
 	// we did not need a spider proxy ip so send this reuest to a host
 	// to download the url

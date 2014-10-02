@@ -1686,6 +1686,7 @@ CollectionRec::CollectionRec() {
 	// inits for sortbydatetable
 	m_inProgress = false;
 	m_msg5       = NULL;
+	m_importState = NULL;
 	// JAB - track which regex parsers have been initialized
 	//log(LOG_DEBUG,"regex: %p initalizing empty parsers", m_pRegExParser);
 

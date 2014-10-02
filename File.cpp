@@ -618,27 +618,41 @@ bool File::closeLeastUsed () {
 long File::getFileSize ( ) {
 
 	// allow the substitution of another filename
-        struct stat stats;
+        //struct stat stats;
 
-        stats.st_size = 0;
+        //stats.st_size = 0;
 
-        int status = stat ( m_filename , &stats );
+        //int status = stat ( m_filename , &stats );
+
+	FILE *fd = fopen ( m_filename , "r" );
+	if ( ! fd ) {
+		log("disk: error getFileSize(%s) : %s",
+		    m_filename , strerror(g_errno));
+		return -1;
+	}
+
+	fseek(fd,0,SEEK_END);
+	long fileSize = ftell ( fd );
+
+	fclose ( fd );
+
+	return fileSize;
 
         // return the size if the status was ok
-        if ( status == 0 ) return stats.st_size;
+        //if ( status == 0 ) return stats.st_size;
 
 	// copy errno to g_errno
-	g_errno = errno;
+	//g_errno = errno;
 
         // return 0 and reset g_errno if it just does not exist
-        if ( g_errno == ENOENT ) { g_errno = 0; return 0; }
+        //if ( g_errno == ENOENT ) { g_errno = 0; return 0; }
 
         // resource temporarily unavailable (for newer libc)
-        if ( g_errno == EAGAIN ) { g_errno = 0; return 0; }
+        //if ( g_errno == EAGAIN ) { g_errno = 0; return 0; }
 
         // log & return -1 on any other error
-        log("disk: error getFileSize(%s) : %s",m_filename , strerror(g_errno));
-        return -1;
+        //log("disk: error getFileSize(%s) : %s",m_filename,strerror(g_errno));
+        //return -1;
 }
 
 // . return 0 on error

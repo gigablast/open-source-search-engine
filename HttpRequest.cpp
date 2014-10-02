@@ -893,11 +893,11 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 
 
 	 // connectips/adminips
-	 for ( long i = 0 ; i < g_conf.m_numConnectIps ; i++ ) {
-		 if ( sock->m_ip != g_conf.m_connectIps[i] ) continue;
-		 m_isLocal = true;
-		 break;
-	 }
+	 // for ( long i = 0 ; i < g_conf.m_numConnectIps ; i++ ) {
+	 // 	 if ( sock->m_ip != g_conf.m_connectIps[i] ) continue;
+	 // 	 m_isLocal = true;
+	 // 	 break;
+	 // }
 
 	 // roadrunner ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 

@@ -418,21 +418,67 @@ bool Msg7::inject ( char *coll ,
 }
 
 // returns false if would block
-bool Msg7::injectTitleRec ( void *state ,
-			    void (*callback)(void *state) ,
-			    CollectionRec *cr ) {
-	m_state = state;
-	m_callback = callback;
+// bool Msg7::injectTitleRec ( void *state ,
+// 			    void (*callback)(void *state) ,
+// 			    CollectionRec *cr ) {
+
+
+static void sendReply ( UdpSlot *slot ) {
+
+	if ( g_errno )
+		g_udpServer.sendErrorReply(slot,g_errno);
+	else
+		g_udpServer.sendReply_ass(NULL,0,NULL,0,slot);
+
+}
+
+// when XmlDoc::inject() complets it calls this
+void doneInjectingWrapper10 ( void *state ) {
+	XmlDoc *xd = (XmlDoc *)state;
+	UdpSlot *slot = (UdpSlot *)xd->m_slot;
+	long err = g_errno;
+	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
+	delete (xd);
+	g_errno = err;
+	sendReply ( slot );
+}
+
+void handleRequest7 ( UdpSlot *slot , long netnice ) {
+
+	//m_state = state;
+	//m_callback = callback;
 
 	// shortcut
-	XmlDoc *xd = &m_xd;
+	XmlDoc *xd;
+	try { xd = new (XmlDoc); }
+	catch ( ... ) { 
+		g_errno = ENOMEM;
+		log("PageInject: import failed: new(%i): %s", 
+		    (int)sizeof(XmlDoc),mstrerror(g_errno));
+		sendReply(slot);
+		return;
+	}
+	mnew ( xd, sizeof(XmlDoc) , "PageInject" );
 
-	xd->reset();
+	//xd->reset();
+	char *titleRec = slot->m_readBuf;
+	long titleRecSize = slot->m_readBufSize;
+
+	long collnum = *(long *)titleRec;
+
+	titleRec += 4;
+	titleRecSize -= 4;
+
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) {
+		sendReply(slot);
+		return;
+	}
 
 	// if injecting a titlerec from an import operation use set2()
 	//if ( m_sbuf.length() > 0 ) {
-	xd->set2 ( m_sbuf.getBufStart() ,
-		   m_sbuf.length() ,
+	xd->set2 ( titleRec,//m_sbuf.getBufStart() ,
+		   titleRecSize,//m_sbuf.length() ,
 		   cr->m_coll ,
 		   NULL, // pbuf
 		   MAX_NICENESS ,
@@ -442,14 +488,20 @@ bool Msg7::injectTitleRec ( void *state ,
 	// call this when done indexing
 	//xd->m_masterState = this;
 	//xd->m_masterLoop  = doneInjectingWrapper9;
-	xd->m_state = this;
-	xd->m_callback1  = doneInjectingWrapper9;
+	xd->m_state = xd;//this;
+	xd->m_callback1  = doneInjectingWrapper10;
 	xd->m_isImporting = true;
 	xd->m_isImportingValid = true;
+	// hack this
+	xd->m_slot = slot;
 	// then index it
 	if ( ! xd->indexDoc() )
-		return false;
-	return true;
+		// return if would block
+		return;
+
+	// all done?
+	//return true;
+	sendReply ( slot );
 }
 
 
@@ -795,7 +847,7 @@ class ImportState {
 public:
 
 	// available msg7s to use
-	class Msg7 **m_ptrs;
+	class Multicast *m_ptrs;
 	long   m_numPtrs;
 
 	// collection we are importing INTO
@@ -811,7 +863,7 @@ public:
 	bool m_loadedPlaceHolder;
 	long long m_bfFileSize;
 
-	class Msg7 *getAvailMsg7();
+	class Multicast *getAvailMulticast();// Msg7();
 
 	void saveFileBookMark ( );//class Msg7 *msg7 );
 
@@ -837,14 +889,11 @@ ImportState::ImportState () {
 
 void ImportState::reset() {
 	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
-		Msg7 *msg7 = m_ptrs[i];
-		if ( ! msg7 ) continue;
-		msg7->reset();
-		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
-		delete (msg7);
+		Multicast *mcast = &m_ptrs[i];
+		mcast->destructor();
 		//m_ptrs[i] = NULL;
 	}
-	mfree ( m_ptrs , MAXINJECTSOUT * sizeof(Msg7 *) , "ism7f" );
+	mfree ( m_ptrs , MAXINJECTSOUT * sizeof(Multicast) , "ism7f" );
 	m_ptrs = NULL;
 	m_numPtrs = 0;
 	m_fileOffset = 0LL;
@@ -867,6 +916,8 @@ bool resumeImports ( ) {
 
 	if ( s_tried ) return true;
 	s_tried = true;
+
+	if ( g_hostdb.m_hostId != 0 ) return true;
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
@@ -1016,7 +1067,7 @@ bool ImportState::setCurrentTitleFileAndOffset ( ) {
 	return true;//&m_bf;
 }
 
-void gotMsg7ReplyWrapper ( void *state ) ;
+void gotMulticastReplyWrapper ( void *state , void *state2 ) ;
 
 
 //
@@ -1036,7 +1087,7 @@ bool ImportState::importLoop ( ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
-	if ( ! cr ) { 
+	if ( ! cr || g_hostdb.m_hostId != 0 ) { 
 		// if coll was deleted!
 		log("import: collnum %li deleted while importing into",
 		    (long)m_collnum);
@@ -1058,6 +1109,20 @@ bool ImportState::importLoop ( ) {
 		return false;
 	}
 	
+
+	if ( ! cr->m_importEnabled ) {
+		// wait for all to return
+		if ( out > 0 ) return false;
+		// then delete it
+		log("import: collnum %li import loop disabled",
+		    (long)m_collnum);
+		mdelete ( this, sizeof(ImportState) , "impstate");
+		delete (this);
+		return true;
+	}
+
+
+
 
 	// scan each titledb file scanning titledb0001.dat first,
 	// titledb0003.dat second etc.
@@ -1082,16 +1147,23 @@ bool ImportState::importLoop ( ) {
 
 	long long saved = m_fileOffset;
 
-	Msg7 *msg7;
+	//Msg7 *msg7;
 	//GigablastRequest *gr;
-	SafeBuf *sbuf = NULL;
+	//SafeBuf *sbuf = NULL;
 
 	long need = 12;
 	long dataSize = -1;
-	XmlDoc xd;
-	key128_t tkey;
+	//XmlDoc xd;
+	key_t tkey;
 	bool status;
-
+	SafeBuf tmp;
+	SafeBuf *sbuf = &tmp;
+	long long docId;
+	long shardNum;
+	long key;
+	Multicast *mcast;
+	char *req;
+	long reqSize;
 
 	if ( m_fileOffset >= m_bfFileSize ) {
 		log("inject: import: done processing file %li %s",
@@ -1100,7 +1172,7 @@ bool ImportState::importLoop ( ) {
 	}
 	
 	// read in title rec key and data size
-	status = m_bf.read ( &tkey, 12 , m_fileOffset );
+	status = m_bf.read ( &tkey, sizeof(key_t) , m_fileOffset );
 	
 	//if ( n != 12 ) goto nextFile;
 	if ( g_errno ) {
@@ -1127,6 +1199,7 @@ bool ImportState::importLoop ( ) {
 	m_fileOffset += 4;
 	need += 4;
 	need += dataSize;
+	need += 4; // collnum, first 4 bytes
 	if ( dataSize < 0 || dataSize > 500000000 ) {
 		log("main: could not scan in titledb rec of "
 		    "corrupt dataSize of %li. BAILING ENTIRE "
@@ -1137,25 +1210,29 @@ bool ImportState::importLoop ( ) {
 	//gr = &msg7->m_gr;
 
 	//XmlDoc *xd = getAvailXmlDoc();
-	msg7 = getAvailMsg7();
+	//msg7 = getAvailMsg7();
+	mcast = getAvailMulticast();
 
 	// if none, must have to wait for some to come back to us
-	if ( ! msg7 ) {
+	if ( ! mcast ) {
 		// restore file offset
 		//m_fileOffset = saved;
 		// no, must have been a oom or something
-		log("import: import no msg7 available");
+		log("import: import no mcast available");
 		return true;//false;
 	}
 	
 	// this is for holding a compressed titlerec
-	sbuf = &msg7->m_sbuf;//&gr->m_sbuf;
+	//sbuf = &mcast->m_sbuf;//&gr->m_sbuf;
 
 	// point to start of buf
 	sbuf->reset();
 
 	// ensure we have enough room
 	sbuf->reserve ( need );
+
+	// collnum first 4 bytes
+	sbuf->pushLong( (long)m_collnum );
 
 	// store title key
 	sbuf->safeMemcpy ( &tkey , sizeof(key_t) );
@@ -1175,8 +1252,8 @@ bool ImportState::importLoop ( ) {
 			    "file. %s. Skipping file %s",
 			    mstrerror(g_errno),m_bf.getFilename());
 			// essentially free up this msg7 now
-			msg7->m_inUse = false;
-			msg7->reset();
+			//msg7->m_inUse = false;
+			//msg7->reset();
 			goto nextFile;
 		}
 		// advance
@@ -1193,8 +1270,8 @@ bool ImportState::importLoop ( ) {
 	// we use this so we know where the doc we are injecting
 	// was in the foregien titledb file. so we can update our bookmark
 	// code.
-	msg7->m_hackFileOff = saved;//m_fileOffset;
-	msg7->m_hackFileId  = m_bfFileId;
+	mcast->m_hackFileOff = saved;//m_fileOffset;
+	mcast->m_hackFileId  = m_bfFileId;
 
 	//
 	// inject a title rec buf this time, we are doing an import
@@ -1243,21 +1320,55 @@ bool ImportState::importLoop ( ) {
 	//
 	//m_fileOffset += need;
 
+	// get docid from key
+	docId = g_titledb.getDocIdFromKey ( &tkey );
+
+	// get shard that holds the titlerec for it
+	shardNum = g_hostdb.getShardNumFromDocId ( docId );
+
+	// for selecting which host in the shard receives it
+	key = (long)docId;
 
 
 	m_numOut++;
 
 	// then index it. master callback will be called
 	//if ( ! xd->index() ) return false;
+
 	// TODO: make this forward the request to an appropriate host!!
 	// . gr->m_sbuf is set to the titlerec so this should handle that
 	//   and use XmlDoc::set4() or whatever
-	if ( msg7->injectTitleRec ( msg7 , // state
-				    gotMsg7ReplyWrapper , // callback
-				    cr )) {
-		// it didn't block somehow...
-		msg7->m_inUse = false;
-		msg7->gotMsg7Reply();
+	// if ( msg7->injectTitleRec ( msg7 , // state
+	// 			    gotMsg7ReplyWrapper , // callback
+	// 			    cr )) {
+	// 	// it didn't block somehow...
+	// 	msg7->m_inUse = false;
+	// 	msg7->gotMsg7Reply();
+	// }
+
+
+	req = sbuf->getBufStart();
+	reqSize = sbuf->length();
+
+	if ( reqSize != need ) { char *xx=NULL;*xx=0 ; }
+
+	// do not free it, let multicast free it after sending it
+	sbuf->detachBuf();
+
+
+	if ( ! mcast->send ( req ,
+			     reqSize ,
+			     0x07 ,
+			     true , // ownmsg?
+			     shardNum,
+			     false, // send to whole shard?
+			     key , // for selecting host in shard
+			     mcast , // state
+			     NULL , // state2
+			     gotMulticastReplyWrapper ,
+			     999999 ) ) { // total timeout in seconds
+		log("import: import mcast had error: %s",mstrerror(g_errno));
+		m_numIn++;
 	}
 
 	goto INJECTLOOP;
@@ -1288,43 +1399,37 @@ bool ImportState::importLoop ( ) {
 	return true;
 }
 
-void gotMsg7ReplyWrapper ( void *state ) {
+void gotMulticastReplyWrapper ( void *state , void *state2 ) {
 
-	Msg7 *msg7 = (Msg7 *)state;
-	msg7->gotMsg7Reply();
+	Multicast *mcast = (Multicast *)state;
+	//msg7->gotMsg7Reply();
 
-	ImportState *is = msg7->m_importState;
-
-	if ( ! is->importLoop() ) return;
-
-	log("inject: import is done");
-
-	mdelete ( is, sizeof(ImportState) , "impstate");
-	delete (is);
-}
-
-void Msg7::gotMsg7Reply ( ) {
-
-	if ( m_inUse ) { char *xx=NULL;*xx=0; }
-	
-	ImportState *is = m_importState;
+	ImportState *is = mcast->m_importState;
 
 	is->m_numIn++;
 
 	log("import: imported %lli docs (off=%lli)",
 	    is->m_numIn,is->m_fileOffset);
 
-	// if we were the least far ahead of scanning the files
-	// then save our position in case server crashes so we can
-	// resume
-	//is->saveFileBookMark ( this  );
-}
+	if ( ! is->importLoop() ) return;
 
+	// we will be called again when this multicast reply comes in...
+	if ( is->m_numIn < is->m_numOut ) return;
+
+	log("inject: import is done");
+
+	CollectionRec *cr = g_collectiondb.getRec ( is->m_collnum );
+	// signify to qa.cpp that we are done
+	if ( cr ) cr->m_importState = NULL;
+
+	mdelete ( is, sizeof(ImportState) , "impstate");
+	delete (is);
+}
 
 // . return NULL with g_errno set on error
 // . importLoop() calls this to get a msg7 to inject a doc from the foreign
 //   titledb file into our local collection
-Msg7 *ImportState::getAvailMsg7 ( ) {
+Multicast *ImportState::getAvailMulticast() { // Msg7 ( ) {
 
 	//static XmlDoc **s_ptrs = NULL;
 
@@ -1334,11 +1439,11 @@ Msg7 *ImportState::getAvailMsg7 ( ) {
 	// each msg7 has an xmldoc doc in it
 	if ( ! m_ptrs ) {
 		long max = (long)MAXINJECTSOUT;
-		m_ptrs=(Msg7 **)mcalloc(sizeof(Msg7 *)* max,"sxdp");
+		m_ptrs=(Multicast *)mcalloc(sizeof(Multicast)* max,"sxdp");
 		if ( ! m_ptrs ) return NULL;
 		m_numPtrs = max;//(long)MAXINJECTSOUT;
-		//for ( long i = 0 ; i < MAXINJECTSOUT ;i++ ) 
-		//	m_ptrs[i].constructor();
+		for ( long i = 0 ; i < m_numPtrs ;i++ ) 
+			m_ptrs[i].constructor();
 	}
 
 	// respect the user limit for this coll
@@ -1351,24 +1456,11 @@ Msg7 *ImportState::getAvailMsg7 ( ) {
 	// find one not in use and return it
 	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
 		// point to it
-		Msg7 *m7 = m_ptrs[i];
-		// if NULL then init it and use it
-		if ( ! m7 ) {
-			try { m7 = new (Msg7); }
-			catch ( ... ) { 
-				g_errno = ENOMEM;
-				log("PageInject: new(%li): %s", 
-				    (long)sizeof(Msg7),mstrerror(g_errno));
-				return NULL;
-			}
-			mnew ( m7, sizeof(Msg7) , "dmsg7");
-			// assign so we can delete later
-			m_ptrs[i] = m7;
-		}
-		if ( m7->m_inUse ) continue;
-		m7->m_inUse = true;
-		m7->m_importState = this;
-		return m7;
+		Multicast *mcast = &m_ptrs[i];
+		if ( mcast->m_inUse ) continue;
+		//m7->m_inUse = true;
+		mcast->m_importState = this;
+		return mcast;
 	}
 	// none avail
 	g_errno = 0;
@@ -1376,6 +1468,7 @@ Msg7 *ImportState::getAvailMsg7 ( ) {
 }
 
 void saveImportStates ( ) {
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) return;
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -1396,22 +1489,20 @@ void ImportState::saveFileBookMark ( ) { //Msg7 *msg7 ) {
 	// if there is one outstanding the preceeded us, we can't update
 	// the bookmark just yet.
 	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
-		Msg7 *m7 = m_ptrs[i];
-		// can be null if never used
-		if ( ! m7 ) continue;
-		if ( ! m7->m_inUse ) continue;
+		Multicast *mcast = &m_ptrs[i];
+		if ( ! mcast->m_inUse ) continue;
 		if ( minOff == -1 ) {
-			minOff = m7->m_hackFileOff;
-			minFileId = m7->m_hackFileId;
+			minOff = mcast->m_hackFileOff;
+			minFileId = mcast->m_hackFileId;
 			continue;
 		}
-		if ( m7->m_hackFileId > minFileId ) 
+		if ( mcast->m_hackFileId > minFileId ) 
 			continue;
-		if ( m7->m_hackFileId == minFileId &&
-		     m7->m_hackFileOff > minOff ) 
+		if ( mcast->m_hackFileId == minFileId &&
+		     mcast->m_hackFileOff > minOff ) 
 			continue;
-		minOff = m7->m_hackFileOff;
-		minFileId = m7->m_hackFileId;
+		minOff = mcast->m_hackFileOff;
+		minFileId = mcast->m_hackFileId;
 	}
 
 	char fname[256];

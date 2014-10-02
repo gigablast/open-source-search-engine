@@ -97,6 +97,7 @@ public:
 	long  m_isSquidProxiedUrl:1;
 
 	long  m_foundInCache:1;
+	long  m_forceUseFloaters:1;
 
 	//long  m_testParserEnabled:1;
 	//long  m_testSpiderEnabled:1;

@@ -27,6 +27,7 @@ void Summary::reset() {
 		m_bitScoresBufSize = 0;
 	}
 	m_summaryLen = 0;
+	m_displayLen = 0;
 	//m_bufMaxLen = 0;
 	//m_bufLen = 0;
 	//m_buf = NULL;
