@@ -829,6 +829,40 @@ int main2 ( int argc , char *argv[] ) {
 #else
 			*/
 
+			//"dump <db> <collection> [T]\n\tDump a db from disk. "
+			"dump <db> <collection>\n\tDump a db from disk. "
+			"Example: gb dump t main\n"
+			"\t<collection> is the name of the collection.\n"
+
+			"\t<db> is s to dump spiderdb."
+			//"set [T] to 1 to print "
+			//"new stats. 2 to print old stats. "
+			//"T is ip of firstip."
+			"\n"
+
+			"\t<db> is t to dump titledb. "
+			//"\tT is the first docId to dump. Applies only to "
+			//"titledb. "
+			"\n"
+
+			"\t<db> is p to dump posdb (the index)."
+			//"\tOptional: T is the termid to dump."
+			"\n"
+
+			"\t<db> is D to dump duplicate docids in titledb.\n"
+			"\t<db> is c to dump checksumdb.\n"
+			"\t<db> is S to dump tagdb.\n"
+			"\t<db> is W to dump tagdb for wget.\n"
+			"\t<db> is x to dump doledb.\n"
+			"\t<db> is w to dump waiting tree.\n"
+			"\t<db> is B to dump sectiondb.\n"
+			"\t<db> is C to dump catdb.\n"
+			"\t<db> is l to dump clusterdb.\n"
+			"\t<db> is z to dump statsdb all keys.\n"
+			"\t<db> is Z to dump statsdb all keys and "
+			"data samples.\n"
+			"\t<db> is L to dump linkdb.\n"
+
 			/*
 			"dump <V> [C [X [Y [Z [T]]]]]\n\tdump a db in "
 			//#endif

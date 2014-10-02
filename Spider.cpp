@@ -3957,13 +3957,17 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// this is -1 on corruption
 		if ( srep && srep->m_httpStatus >= 1000 ) {
-			log("spider: got corrupt 3 spiderReply in scan (cn=%li)",
+			log("spider: got corrupt 3 spiderReply in scan "
+			    "httpstatus=%li (cn=%li)",
+			    (long)srep->m_httpStatus,
 			    (long)m_collnum);
 			srep = NULL;
 		}
 		// bad langid?
 		if ( srep && ! getLanguageAbbr (srep->m_langId) ) {
-			log("spider: got corrupt 4 spiderReply in scan (cn=%li)",
+			log("spider: got corrupt 4 spiderReply in scan "
+			    "langid=%li (cn=%li)",
+			    (long)srep->m_langId,
 			    (long)m_collnum);
 			srep = NULL;
 		}
