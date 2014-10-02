@@ -4049,6 +4049,18 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
+	if ( ! g_conf.m_useThreadsForSystemCalls ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Threads for system calls are disabled. "
+			       "Might hurt performance because these "
+			       "are calls to "
+			       "3rd party executables and "
+			       "can take a long time to run, like pdf2html.");
+		mb->safePrintf("%s",boxEnd);
+	}
+
 	mb->safePrintf("</div>");
 
 	return (bool)adds;
