@@ -1384,6 +1384,7 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 		logf(LOG_DEBUG,"tcp: readSocket: read %li bytes on sd=%li",
 		     (long)n,(long)s->m_sd);
 
+	//log("tcp: readtcpbuf(%li)=%s",n,s->m_readBuf+s->m_readOffset);
 
 	// debug msg
 	//log(".......... TcpServer read %i bytes on %i\n",n,s->m_sd);

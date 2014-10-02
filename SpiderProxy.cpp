@@ -479,7 +479,12 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	SpiderProxy *sp = (SpiderProxy *)s_iptab.getValue ( &key );
 
 	// did user remove it from the list before we could finish testing it?
-	if ( ! sp ) return;
+	if ( ! sp ) {
+		log("sproxy: spider proxy entry for ip %s:%li is gone! wtf? "
+		    "proxy stats table cannot be updated.",
+		    iptoa(s->m_ip),(long)s->m_port);
+		return;
+	}
 
 	sp->m_isWaiting = false;
 

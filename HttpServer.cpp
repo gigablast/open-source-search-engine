@@ -2827,9 +2827,10 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		ptr2 = mime.getContentEncodingPos();
 	}
 
-	
-	if ( ! ptr1 )
-		ptr1 = s->m_readBuf;
+	// this was writing a number at the start of the mime and messing
+	// up our squid proxy implementation. so take out. MDW 10/2/2014
+	//if ( ! ptr1 )
+	//	ptr1 = s->m_readBuf;
 
 
 	char *src = s->m_readBuf;
@@ -3584,6 +3585,10 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	r->m_compressReply       = false;
 	r->m_isCustomCrawl       = 0;
 
+	// force the use of the floaters now otherwise they might not be used
+	// if you have the floaters disabled on the 'proxy' page
+	r->m_forceUseFloaters = 1;
+
 	// log for now
 	log("proxy: getting proxied content for req=%s",r->ptr_url);
 
@@ -3625,13 +3630,15 @@ void gotSquidProxiedContent ( void *state ) {
 
 
 	// another debg log
-	long clen = 500;
-	if ( clen > replySize ) clen = replySize -1;
-	if ( clen < 0 ) clen = 0;
-	char c = reply[clen];
-	reply[clen]=0;
-	log("proxy: got proxied reply=%s",reply);
-	reply[clen]=c;
+	if ( g_conf.m_logDebugProxies ) {
+		long clen = 500;
+		if ( clen > replySize ) clen = replySize -1;
+		if ( clen < 0 ) clen = 0;
+		char c = reply[clen];
+		reply[clen]=0;
+		log("proxy: got proxied reply=%s",reply);
+		reply[clen]=c;
+	}
 
 	// don't let Msg13::reset() free it
 	sqs->m_msg13.m_replyBuf = NULL;

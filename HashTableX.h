@@ -238,9 +238,9 @@ class HashTableX {
 		}
 		else {
 			// get lower 32 bits of key
-			n = (unsigned long)key;
+			n =*(unsigned long *)(((char *)&key) +m_maskKeyOffset);
 			// use magic to "randomize" key a little
-			n^=g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			n^=g_hashtab[(unsigned char)((char *)&key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
@@ -271,9 +271,10 @@ class HashTableX {
 		}
 		else {
 			// get lower 32 bits of key
-			n = (unsigned long)key;
+			//n = (unsigned long)key;
+			n =*(unsigned long *)(((char *)&key) +m_maskKeyOffset);
 			// use magic to "randomize" key a little
-			n^=g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			n^=g_hashtab[(unsigned char)((char *)&key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
@@ -305,8 +306,8 @@ class HashTableX {
 		}
 		else {
 			// use magic to "randomize" key a little
-			n = *(unsigned long *)((char *)&key);
-			n ^= g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			n =*(unsigned long *)(((char *)&key) +m_maskKeyOffset);
+			n ^= g_hashtab[(unsigned char)((char *)&key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
@@ -357,8 +358,8 @@ class HashTableX {
 		}
 		else {
 			// use magic to "randomize" key a little
-			n = *(unsigned long *)((char *)key);
-			n ^= g_hashtab[(unsigned char)((char *)key)[0]][0];
+			n =*(unsigned long *)(((char *)&key) +m_maskKeyOffset);
+			n ^= g_hashtab[(unsigned char)((char *)key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
