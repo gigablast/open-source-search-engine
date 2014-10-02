@@ -91,7 +91,8 @@ RdbBase *Rdb::getBase ( collnum_t collnum )  {
 	// RdbBase for statsdb, etc. resides in collrec #0 i guess
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return NULL;
-	return cr->m_bases[(unsigned char)m_rdbId];
+	// this might load the rdbbase on demand now
+	return cr->getBase ( m_rdbId ); // m_bases[(unsigned char)m_rdbId];
 }
 
 // used by Rdb::addBase1()
@@ -104,8 +105,11 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	}
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return;
-	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
-	cr->m_bases[(unsigned char)m_rdbId] = base;
+	//if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
+	RdbBase *oldBase = cr->getBasePtr ( m_rdbId );
+	if ( oldBase ) { char *xx=NULL;*xx=0; }
+	//cr->m_bases[(unsigned char)m_rdbId] = base;
+	cr->setBasePtr ( m_rdbId , base );
 	log ( LOG_DEBUG,"db: added base to collrec "
 	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
 	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
@@ -510,7 +514,8 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
-	RdbBase *base = getBase ( collnum );
+	RdbBase *base = NULL;
+	if ( cr ) base = cr->getBasePtr ( m_rdbId );
 	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
 		return log("db: Rdb for db \"%s\" and "
@@ -580,7 +585,9 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 bool Rdb::resetBase ( collnum_t collnum ) {
 	CollectionRec *cr = g_collectiondb.getRec(collnum);
 	if ( ! cr ) return true;
-	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	//RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	// get the ptr, don't use CollectionRec::getBase() so we do not swapin
+	RdbBase *base = cr->getBasePtr (m_rdbId);
 	if ( ! base ) return true;
 	base->reset();
 	return true;
@@ -605,8 +612,8 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 		return true;
 	}
 
-
-	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	//Rdbbase *base = cr->m_bases[(unsigned char)m_rdbId];
+	RdbBase *base = cr->getBase(m_rdbId);
 	if ( ! base ) return true;
 
 	// scan files in there
@@ -668,7 +675,8 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// NULL it out...
 	CollectionRec *oldcr = g_collectiondb.getRec(collnum);
-	oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	//oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	oldcr->setBasePtr ( m_rdbId , NULL );
 	char *coll = oldcr->m_coll;
 
 	char *msg = "deleted";
@@ -1042,8 +1050,12 @@ bool Rdb::saveMaps ( bool useThread ) {
 	//	if ( m_bases[i] ) m_bases[i]->saveMaps ( useThread );
 	// now loop over bases
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
 		// shut it down
-		RdbBase *base = getBase(i);
+		//RdbBase *base = getBase(i);
 		//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
 		//if ( base ) base->closeMaps ( m_urgent );
 		if ( base ) base->saveMaps ( useThread );
@@ -1245,7 +1257,11 @@ bool Rdb::dumpTree ( long niceness ) {
 	// . keep the number of files down
 	// . dont dump all the way up to the max, leave one open for merging
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( base && base->m_numFiles >= max ) {
 			base->attemptMerge (1,false);//niceness,forced?
 			g_errno = ETOOMANYFILES;
@@ -1368,6 +1384,40 @@ bool Rdb::gotTokenForDump ( ) {
 	    "db: Checking validity of in memory data of %s before dumping, "
 	    "took %lli ms.",m_dbname,gettimeofdayInMilliseconds()-start);
 
+	////
+	//
+	// see what collnums are in the tree and just try those
+	//
+	////
+	CollectionRec *cr = NULL;
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// reset his tree count flag thing
+		cr->m_treeCount = 0;
+	}
+	if ( m_useTree ) {
+		// now scan the rdbtree and inc treecount where appropriate
+		for ( long i = 0 ; i < m_tree.m_minUnusedNode ; i++ ) {
+			// skip node if parents is -2 (unoccupied)
+			if ( m_tree.m_parents[i] == -2 ) continue;
+			// get rec from tree collnum
+			cr = g_collectiondb.m_recs[m_tree.m_collnums[i]];
+			if ( cr ) cr->m_treeCount++;
+		}
+	}
+	else {
+		for(long i = 0; i < m_buckets.m_numBuckets; i++) {
+			RdbBucket *b = m_buckets.m_buckets[i];
+			collnum_t cn = b->getCollnum();
+			long nk = b->getNumKeys();
+			for ( long j = 0 ; j < nk; j++ ) {
+				cr = g_collectiondb.m_recs[cn];
+				if ( cr ) cr->m_treeCount++;
+			}
+		}
+	}
+
 	// loop through collections, dump each one
 	m_dumpCollnum = (collnum_t)-1;
 	// clear this for dumpCollLoop()
@@ -1387,10 +1437,21 @@ bool Rdb::gotTokenForDump ( ) {
 bool Rdb::dumpCollLoop ( ) {
 
  loop:
+	// if no more, we're done...
+	if ( m_dumpCollnum >= getNumBases() ) return true;
+
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
-		RdbBase *base = getBase(m_dumpCollnum);
+	hadError:
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = NULL;
+		CollectionRec *cr = NULL;
+		if ( m_dumpCollnum>=0 ) 
+			cr = g_collectiondb.m_recs[m_dumpCollnum];
+		if ( cr ) 
+			base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
 		// . if we wrote nothing, remove the file
 		// . if coll was deleted under us, base will be NULL!
@@ -1407,15 +1468,42 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
-	// advance
+	// advance for next round
 	m_dumpCollnum++;
-	// advance m_dumpCollnum until we have a non-null RdbBase
-	while ( m_dumpCollnum < getNumBases() && ! getBase(m_dumpCollnum) )
-		m_dumpCollnum++;
+
+	// don't bother getting the base for all collections because
+	// we end up swapping them in
+	for ( ; m_dumpCollnum < getNumBases() ; m_dumpCollnum++ ) {
+		// collection rdbs like statsdb are ok to process
+		if ( m_isCollectionLess ) break;
+		// otherwise get the coll rec now
+		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		// skip if empty
+		if ( ! cr ) continue;
+		// skip if no recs in tree
+		if ( cr->m_treeCount == 0 ) continue;
+		// ok, it's good to dump
+		break;
+	}
+
 	// if no more, we're done...
 	if ( m_dumpCollnum >= getNumBases() ) return true;
 
+	// base is null if swapped out. skip it then. is that correct?
+	// probably not!
+	//RdbBase *base = cr->getBasePtr(m_rdbId);//m_dumpCollnum);
+
+	// swap it in for dumping purposes if we have to
+	// "cr" is NULL potentially for collectionless rdbs, like statsdb,
+	// do we can't involve that...
 	RdbBase *base = getBase(m_dumpCollnum);
+
+	// hwo can this happen? error swappingin?
+	if ( ! base ) { 
+		log("rdb: dumpcollloop base was null for cn=%li",
+		    (long)m_dumpCollnum);
+		goto hadError;
+	}
 
 	// before we create the file, see if tree has anything for this coll
 	//key_t k; k.setMin();
@@ -1662,8 +1750,14 @@ void attemptMergeAll ( int fd , void *state ) {
 
 // called by main.cpp
 void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
+
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		base->attemptMerge(niceness,forced,doLog);
 		// stop if we got unlink/rename threads out from a merge
@@ -2632,7 +2726,10 @@ long long Rdb::getNumTotalRecs ( bool useCache ) {
 
 	//return 0; // too many collections!!
 	for ( long i = 0 ; i < nb ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
 		if ( ! base ) continue;
 		total += base->getNumTotalRecs();
 	}
@@ -2653,7 +2750,11 @@ long long Rdb::getNumTotalRecs ( bool useCache ) {
 long long Rdb::getMapMemAlloced () {
 	long long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		// skip null base if swapped out
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) return true;
+		RdbBase *base = cr->getBasePtr(m_rdbId);		
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getMapMemAlloced();
 	}
@@ -2664,7 +2765,11 @@ long long Rdb::getMapMemAlloced () {
 long Rdb::getNumSmallFiles ( ) {
 	long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		// skip null base if swapped out
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) return true;
+		RdbBase *base = cr->getBasePtr(m_rdbId);		
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumSmallFiles();
 	}
@@ -2675,7 +2780,11 @@ long Rdb::getNumSmallFiles ( ) {
 long Rdb::getNumFiles ( ) {
 	long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumFiles();
 	}
@@ -2685,7 +2794,11 @@ long Rdb::getNumFiles ( ) {
 long long Rdb::getDiskSpaceUsed ( ) {
 	long long total = 0;
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getDiskSpaceUsed();
 	}
@@ -2697,7 +2810,11 @@ bool Rdb::isMerging ( ) {
 	return (bool)m_numMergesOut;
 
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		if ( base->isMerging() ) return true;
 	}

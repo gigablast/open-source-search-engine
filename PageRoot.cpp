@@ -1362,7 +1362,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	//
 	// begin new stuff
 	//
-
+	/*
 	// gradients
 	sb.safePrintf("<style><!--\n");
 	
@@ -1427,6 +1427,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
+	*/
 
 	/*
 
@@ -1456,7 +1457,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("</div>");
 	*/
-
+	/*
 
 	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:230px;background-color:lightgray;\">");
 
@@ -1515,7 +1516,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		      "</center></div></center>"
 		      //"</td>\n"
 		      );
-
+	*/
 	//
 	// end new stuff
 	//

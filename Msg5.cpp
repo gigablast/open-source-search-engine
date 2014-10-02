@@ -1578,6 +1578,8 @@ void Msg5::repairLists_r ( ) {
 		// . logging the key ranges gives us an idea of how long
 		//   it will take to patch the bad data
 		long nn = m_msg3.m_numFileNums;
+		// TODO: fix this. can't call Collectiondb::getBase from
+		// within a thread!
 		RdbBase *base = getRdbBase ( m_rdbId , m_collnum );
 		if ( i < nn && base ) {
 			long fn = m_msg3.m_fileNums[i];
@@ -1631,8 +1633,8 @@ void Msg5::mergeLists_r ( ) {
 	if ( KEYCMP(m_prevKey,m_fileStartKey,m_ks)>=0 ) m_prevCount = 0;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) {
-		log("No collection found."); return; }
+	//RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) {
+	//	log("No collection found."); return; }
 
 	/*
 	if ( m_rdbId == RDB_POSDB ) {
@@ -1765,7 +1767,8 @@ void Msg5::mergeLists_r ( ) {
 			  m_minEndKey     , 
 			  m_minRecSizes   ,
 			  m_removeNegRecs ,
-			  getIdFromRdb ( base->m_rdb ) ,
+			  //getIdFromRdb ( base->m_rdb ) ,
+			  m_rdbId ,
 			  &m_filtered     ,
 			  NULL,//m_tfns          , // used for titledb
 			  NULL,//&m_tfndbList    , // used for titledb

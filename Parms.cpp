@@ -3367,8 +3367,9 @@ bool Parms::setFromFile ( void *THIS        ,
 	// . let the log know what we are doing
 	// . filename is NULL if a call from CollectionRec::setToDefaults()
 	Xml xml;
-	char buf [ MAX_XML_CONF ];
-	if ( filename && ! setXmlFromFile (&xml,filename,buf,MAX_XML_CONF) )
+	//char buf [ MAX_XML_CONF ];
+	SafeBuf sb;
+	if ( filename&&!setXmlFromFile(&xml,filename,&sb))//buf,MAX_XML_CONF) )
 		return false;
 
 	// . all the collectionRecs have the same default file in
@@ -3631,29 +3632,36 @@ bool Parms::setFromFile ( void *THIS        ,
 }
 
 // returns false and sets g_errno on error
-bool Parms::setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize){
-	File f;
-	f.set ( filename );
+bool Parms::setXmlFromFile(Xml *xml, char *filename, SafeBuf *sb ) {
+	// File f;
+	// f.set ( filename );
 	// is it too big?
-	long fsize = f.getFileSize();
-	if ( fsize > bufSize ) {
-		log ("conf: File size of %s is %li, must be "
-		     "less than %li.",f.getFilename(),fsize,bufSize );
-		char *xx = NULL; *xx = 0;
-	}
+	// long fsize = f.getFileSize();
+	// if ( fsize > bufSize ) {
+	// 	log ("conf: File size of %s is %li, must be "
+	// 	     "less than %li.",f.getFilename(),fsize,bufSize );
+	// 	char *xx = NULL; *xx = 0;
+	// }
 	// open it for reading
-	f.set ( filename );
-	if ( ! f.open ( O_RDONLY ) )
-		return log("conf: Could not open %s: %s.",
-		    filename,mstrerror(g_errno));
-	// read in the file
-	long numRead = f.read ( buf , bufSize , 0 /*offset*/ );
-	f.close ( );
-	if ( numRead != fsize )
-	      return log ("conf: Could not read %s : %s.",
-			  filename,mstrerror(g_errno));
-	// null terminate it
-	buf [ fsize ] = '\0';
+	// f.set ( filename );
+	// if ( ! f.open ( O_RDONLY ) )
+	// 	return log("conf: Could not open %s: %s.",
+	// 	    filename,mstrerror(g_errno));
+	// // read in the file
+	// long numRead = f.read ( buf , bufSize , 0 /*offset*/ );
+	// f.close ( );
+	// if ( numRead != fsize )
+	//       return log ("conf: Could not read %s : %s.",
+	// 		  filename,mstrerror(g_errno));
+	// // null terminate it
+	// buf [ fsize ] = '\0';
+
+	sb->load ( filename );
+	char *buf = sb->getBufStart();
+	if ( ! buf )
+		return log ("conf: Could not read %s : %s.",
+			    filename,mstrerror(g_errno));
+		
 	// . remove all comments in case they contain tags
 	// . if you have a # as part of your string, it must be html encoded,
 	//   just like you encode < and >
@@ -3672,7 +3680,7 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize){
 		*d++ = *s++;
 	}
 	*d = '\0';
-	bufSize = d - buf;
+	long bufSize = d - buf;
 	// . set to xml
 	// . use version of 0
 	return xml->set ( buf     , 

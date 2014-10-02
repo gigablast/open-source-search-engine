@@ -584,7 +584,7 @@ Loop::Loop ( ) {
 	m_inQuickPoll      = false;
 	m_needsToQuickPoll = false;
 	m_canQuickPoll     = false;
-
+	m_isDoingLoop      = false;
 
 	// set all callbacks to NULL so we know they're empty
 	for ( long i = 0 ; i < MAX_NUM_FDS+2 ; i++ ) {
@@ -1219,6 +1219,8 @@ bool Loop::runLoop ( ) {
 	// . UNBLOCKs GB_SIGRTMIN
 	// . makes g_udpServer2 quite jumpy
 	g_loop.interruptsOn();
+
+	m_isDoingLoop = true;
 
 	//mdw:enableTimer();
 

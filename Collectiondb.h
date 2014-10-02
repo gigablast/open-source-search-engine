@@ -171,6 +171,8 @@ class Collectiondb  {
 	
 	long m_wrapped;
 
+	long m_numCollsSwappedOut;
+
 	//long long            m_lastUpdateTime;
 };
 
@@ -409,6 +411,11 @@ class CollectionRec {
 	int32_t m_dailyMergeTrigger;
 
 	char m_dailyMergeDOWList[48];
+
+	long m_treeCount;
+
+	bool swapOut();
+	bool m_swappedOut;
 
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
@@ -1271,10 +1278,21 @@ class CollectionRec {
 	// below here
 	char m_END_COPY;
 
+
+	// use this not m_bases to get the RdbBase
+	class RdbBase *getBase ( char rdbId );
+
+	// Rdb.cpp uses this after deleting an RdbBase and adding new one
+	void           setBasePtr ( char rdbId , class RdbBase *base ) ;
+	class RdbBase *getBasePtr ( char rdbId ) ;
+
+ private:
 	// . now chuck this into CollectionRec instead of having a fixed
 	//   array of them in Rdb.h called m_bases[]
 	// . leave this out of any copy of course
 	class RdbBase *m_bases[RDB_END2];
+
+ public:
 
 	// this is basically a cache on timedb, one per collection
 	HashTableX m_sortByDateTable;

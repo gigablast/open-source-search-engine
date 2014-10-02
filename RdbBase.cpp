@@ -2425,6 +2425,10 @@ bool RdbBase::verifyFileSharding ( ) {
 
 	if ( m_rdb->m_isCollectionLess ) return true;
 
+	// if swapping in from CollectionRec::getBase() then do
+	// not re-verify file sharding! only do at startup
+	if ( g_loop.m_isDoingLoop ) return true;
+
 	g_threads.disableThreads();
 
 	Msg5 msg5;

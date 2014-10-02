@@ -414,7 +414,7 @@ class Parms {
 
 	bool setParmsFromXml ( Xml &xml , void *THIS, char objType ) ;
 
-	bool setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize);
+	bool setXmlFromFile(Xml *xml, char *filename, class SafeBuf *sb );
 
 	bool saveToXml ( char *THIS , char *f , char objType ) ;
 
