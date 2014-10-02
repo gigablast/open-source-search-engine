@@ -24913,11 +24913,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			logf(LOG_DEBUG,
 			     "spider: attempting to %s link. "
 			     "%s "
-			     "tags=%s" ,
+			     "tags=%s " 
+			     "onpage=%s"
+			     ,
 			     action ,
 			     ksr.m_url,
 			     //sb1.getBufStart(),
-			     sb2.getBufStart());
+			     sb2.getBufStart(),
+			     m_firstUrl.m_url);
 		}
 		// do not add if bad priority, SPIDER_PRIORITY_FILTERED, ...
 		// . mdw: oct 24, 2013. now i add so the urls show up in

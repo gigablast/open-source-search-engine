@@ -1263,8 +1263,10 @@ void readSocketWrapper2 ( int sd , void *state ) {
 			return;
 		}
 		// note it
-		log("tcp: established http tunnel for https url of sd=%li",
-		    (long)s->m_sd);
+		if ( g_conf.m_logDebugProxies )
+			log("tcp: established http tunnel for https url of "
+			    "sd=%li req=%s",
+			    (long)s->m_sd,s->m_sendBuf);
 		// free current read buffer if we should
 		if ( s->m_readBuf )
 			mfree ( s->m_readBuf , s->m_readBufSize,"tcprbuf");
@@ -1384,7 +1386,10 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 		logf(LOG_DEBUG,"tcp: readSocket: read %li bytes on sd=%li",
 		     (long)n,(long)s->m_sd);
 
-	//log("tcp: readtcpbuf(%li)=%s",n,s->m_readBuf+s->m_readOffset);
+	// debug spider proxy
+	if ( g_conf.m_logDebugProxies )
+		log("tcp: readtcpbuf(%li)=%s",
+		    (long)n,s->m_readBuf+s->m_readOffset);
 
 	// debug msg
 	//log(".......... TcpServer read %i bytes on %i\n",n,s->m_sd);
@@ -1672,6 +1677,8 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		toSend = s->m_sendBufUsed - tunnelRequestSize -s->m_sendOffset;
 		// enter write mode after this
 		s->m_tunnelMode = 3;
+		// reset this so we do not truncate the NEXT reply!
+		s->m_totalToRead = 0;
 		//
 		// use ssl now
 		//
