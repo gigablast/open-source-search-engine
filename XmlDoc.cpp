@@ -14884,6 +14884,35 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		m_diffbotUrl.safePrintf("token=%s",
 					cr->m_diffbotToken.getBufStart());
 
+	bool useProxies = true;
+	// user can turn off proxy use with this switch
+	if ( ! g_conf.m_useProxyIps ) useProxies = false;
+	// did collection override?
+	if ( cr->m_forceUseFloaters ) useProxies = true;
+	// we gotta have some proxy ips that we can use
+	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
+	// if we used a proxy to download the doc, then diffbot should too
+	// BUT tell diffbot to go through host #0 so we can send it to the
+	// correct proxy using our load balancing & backoff algos.
+	if ( useProxies ) {
+		Host *h0 = g_hostdb.getHost(0);
+		m_diffbotUrl.safePrintf("&proxy=%s:%li",
+					iptoa(h0->m_ip),
+					(long)h0->m_httpPort);
+	}
+	char *p = g_conf.m_proxyAuth.getBufStart();
+	if ( useProxies && p ) {
+		char *p1 = p;
+		for ( ; *p1 &&   is_wspace_a(*p1) ; p1++ );
+		char *p2 = p1;
+		for ( ; *p2 && ! is_wspace_a(*p2) ; p2++ );
+		char c = *p2;
+		*p2 = '\0';
+		m_diffbotUrl.safePrintf("&proxyauth=");
+		m_diffbotUrl.urlEncode(p1);
+		*p2 = c;
+	}
+
 	m_diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
 	m_diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
