@@ -666,11 +666,19 @@ bool processLoop ( void *state ) {
 		sb->safePrintf("\t\"cachedTimeStr\":\"%s\",\n",tbuf);
 	}
 
+	
 	// identify start of <title> tag we wrote out
 	char *sbstart = sb->getBufStart();
 	char *sbend   = sb->getBufEnd();
 	char *titleStart = NULL;
 	char *titleEnd   = NULL;
+
+	char ctype = (char)xd->m_contentType;
+
+	// do not calc title or print it if doc is xml or json
+	if ( ctype == CT_XML ) sbend = sbstart;
+	if ( ctype == CT_JSON ) sbend = sbstart;
+
 	for ( char *t = sbstart ; t < sbend ; t++ ) {
 		// title tag?
 		if ( t[0]!='<' ) continue;
@@ -772,7 +780,6 @@ bool processLoop ( void *state ) {
 
 	// is the content preformatted?
 	bool pre = false;
-	char ctype = (char)xd->m_contentType;
 	if ( ctype == CT_TEXT ) pre = true ; // text/plain
 	if ( ctype == CT_DOC  ) pre = true ; // filtered msword
 	if ( ctype == CT_PS   ) pre = true ; // filtered postscript
@@ -814,6 +821,7 @@ bool processLoop ( void *state ) {
 
 	if ( ! queryHighlighting ) {
 		xb->safeMemcpy ( content , contentLen );
+		xb->nullTerm();
 		//p += contentLen ;
 	}
 	else {
@@ -907,6 +915,9 @@ bool processLoop ( void *state ) {
 
 	if ( xd->m_contentType == CT_JSON )
 		contentType = "application/json";
+
+	if ( xd->m_contentType == CT_XML )
+		contentType = "test/xml";
 
 	if ( format == FORMAT_XML ) contentType = "text/xml";
 	if ( format == FORMAT_JSON ) contentType = "application/json";
