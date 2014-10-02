@@ -11128,16 +11128,7 @@ void Parms::init ( ) {
 // 	m->m_def   = "1";
 // 	m++;
 
-	m->m_title = "use threads";
-	m->m_desc  = "If enabled, Gigablast will use threads.";
-	m->m_cgi   = "ut";
-	m->m_off   = (char *)&g_conf.m_useThreads - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_MASTER;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	
 
 	// . this will leak the shared mem if the process is Ctrl+C'd
 	// . that is expected behavior
@@ -12033,6 +12024,63 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+
+
+	m->m_title = "use threads";
+	m->m_desc  = "If enabled, Gigablast will use threads.";
+	m->m_cgi   = "ut";
+	m->m_off   = (char *)&g_conf.m_useThreads - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	// turn off for now. after seeing how SLOOOOOW brian's merge op was
+	// when all 16 shards on a 16-core machine were merging (even w/ SSDs)
+	// i turned threads off and it was over 100x faster. so until we have
+	// pooling or something turn these off
+	m->m_title = "use threads for disk";
+	m->m_desc  = "If enabled, Gigablast will use threads for disk ops. "
+		"Until pthreads is any good leave this off. If you have "
+		"SSDs performance can be as much as 100x better.";
+	m->m_cgi   = "utfd";
+	m->m_off   = (char *)&g_conf.m_useThreadsForDisk - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "use threads for intersects and merges";
+	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
+		"Until pthreads is any good leave this off.";
+	m->m_cgi   = "utfio";
+	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "use threads for system calls";
+	m->m_desc  = "Gigablast does not make too many system calls so "
+		"leave this on in case the system call is slow.";
+	m->m_cgi   = "utfsc";
+	m->m_off   = (char *)&g_conf.m_useThreadsForSystemCalls - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+
+
 	m->m_title = "max cpu threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for intersecting docid lists.";
@@ -12047,6 +12095,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "max cpu merge threads";
@@ -12061,6 +12110,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "max write threads";
@@ -12076,6 +12126,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "do synchronous writes";
@@ -12089,7 +12140,11 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
+
+
+
 
 	m->m_title = "max spider read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
@@ -12105,10 +12160,12 @@ void Parms::init ( ) {
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "max spider big read threads";
-	m->m_desc  = "This particular number applies to all reads above 1MB.";
+	m->m_desc  = "This particular number applies to all disk "
+		"reads above 1MB.";
 	m->m_cgi   = "smbdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
@@ -12121,7 +12178,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max spider medium read threads";
-	m->m_desc  = "This particular number applies to all reads above 100K.";
+	m->m_desc  = "This particular number applies to all disk "
+		"reads above 100K.";
 	m->m_cgi   = "smmdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
@@ -12134,7 +12192,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max spider small read threads";
-	m->m_desc  = "This particular number applies to all reads above 1MB.";
+	m->m_desc  = "This particular number applies to all disk "
+		"reads above 1MB.";
 	m->m_cgi   = "smsdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
@@ -12161,6 +12220,7 @@ void Parms::init ( ) {
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "max query big read threads";
@@ -12177,7 +12237,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max query medium read threads";
-	m->m_desc  = "This particular number applies to all reads above 100K.";
+	m->m_desc  = "This particular number applies to all disk "
+		"reads above 100K.";
 	m->m_cgi   = "qmmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
@@ -12190,7 +12251,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max query small read threads";
-	m->m_desc  = "This particular number applies to all reads above 1MB.";
+	m->m_desc  = "This particular number applies to all disk "
+		"reads above 1MB.";
 	m->m_cgi   = "qmsdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
@@ -16474,6 +16536,20 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
+	m->m_title = "use canonical redirects";
+	m->m_desc  = "If page has a <link canonical> on it then treat it "
+		"as a redirect, add it to spiderdb for spidering "
+		"and abandon the indexing of the current url.";
+	m->m_cgi   = "ucr";
+	m->m_off   = (char *)&cr.m_useCanonicalRedirects - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m->m_group = 0;
+	m++;
+
 	m->m_title = "use ifModifiedSince";
 	m->m_desc  = "If this is true, the spider, when "
 		"updating a web page that is already in the index, will "
@@ -17119,19 +17195,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
 	m++;
-
-	m->m_title = "use canonical redirects";
-	m->m_desc  = "If page has a <link canonical> on it then treat it "
-		"as a redirect.";
-	m->m_cgi   = "ucr";
-	m->m_off   = (char *)&cr.m_useCanonicalRedirects - x;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_page  = PAGE_SPIDER;
-	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_CLONE;
-	m++;
-
 
 	m->m_title = "do IP lookup";
 	m->m_desc  = "If this is disabled and the proxy "

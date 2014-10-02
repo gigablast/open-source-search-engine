@@ -431,9 +431,21 @@ bool Threads::call ( char   type                         ,
 #ifdef _VALGRIND_
 	return false;
 #endif
+
+	g_errno = 0;
+
 	// don't spawn any if disabled
 	if ( m_disabled ) return false;
 	if ( ! g_conf.m_useThreads ) return false;
+
+	if ( type == DISK_THREAD && ! g_conf.m_useThreadsForDisk ) 
+		return false;
+	if ( type == MERGE_THREAD && ! g_conf.m_useThreadsForIndexOps )
+		return false;
+	if ( type == INTERSECT_THREAD && ! g_conf.m_useThreadsForIndexOps )
+		return false;
+	if ( type == FILTER_THREAD && ! g_conf.m_useThreadsForSystemCalls )
+		return false;
 
 	if ( ! m_initialized && ! init() )
 		return log("db: Threads init failed." );

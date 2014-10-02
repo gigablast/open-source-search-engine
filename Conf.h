@@ -552,6 +552,11 @@ class Conf {
 
 	bool   m_splitTwins;
 	bool   m_useThreads;
+
+	bool   m_useThreadsForDisk;
+	bool   m_useThreadsForIndexOps;
+	bool   m_useThreadsForSystemCalls;
+
 	bool   m_useSHM;
 	bool   m_useQuickpoll;
 

@@ -1468,10 +1468,10 @@ bool Msg5::gotList2 ( ) {
 	//m_waitingForMerge = false;
 
 	// thread creation failed
-	if ( g_conf.m_useThreads && ! g_threads.m_disabled )
+	if ( g_errno ) // g_conf.m_useThreads && ! g_threads.m_disabled )
 		log(LOG_INFO,
 		    "net: Failed to create thread to merge lists. Doing "
-		    "blocking merge. Hurts performance.");
+		    "blocking merge. (%s)",mstrerror(g_errno));
 	// clear g_errno because it really isn't a problem, we just block
 	g_errno = 0;
 	// come here to skip the thread

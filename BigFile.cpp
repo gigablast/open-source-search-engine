@@ -534,6 +534,9 @@ bool BigFile::readwrite ( void         *buf      ,
 		g_errno = fstate->m_errno = EDISKSTUCK;
 		return true;
 	}
+
+	long saved;
+
 	// . if we're blocking then do it now
 	// . this should return false and set g_errno on error, true otherwise
 	if ( ! isNonBlocking ) 	goto skipThread;
@@ -548,6 +551,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	// . thread will add signal to g_loop on completion to call
 	if ( g_threads.call ( DISK_THREAD/*threadType*/, niceness , fstate ,
 			      doneWrapper , readwriteWrapper_r) ) return false;
+
+	saved = g_errno;
+
 	// note it
 	if ( g_errno ) {
 		static time_t s_time  = 0;
@@ -576,15 +582,17 @@ bool BigFile::readwrite ( void         *buf      ,
 	g_errno = 0;
 	// if threads are manually disabled don't print these msgs because
 	// we redbox the fact above the controls in Pages.cpp
-	if ( g_conf.m_useThreads && ! g_threads.m_disabled ) {
+	if ( saved ) { // g_conf.m_useThreads && ! g_threads.m_disabled ) {
 		static long s_lastTime = 0;
 		long now = getTime();
 		if ( now - s_lastTime >= 1 ) {
 			s_lastTime = now;
 			log (LOG_INFO,
 			     "disk: Doing blocking disk access. "
-			     "This will hurt "
-			     "performance. isWrite=%li.",(long)doWrite);
+			     //"This will hurt "
+			     //"performance. "
+			     "isWrite=%li. (%s)",(long)doWrite,
+			     mstrerror(saved));
 		}
 	}
 	// come here if we haven't spawned a thread

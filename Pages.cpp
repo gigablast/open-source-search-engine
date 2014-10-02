@@ -4028,12 +4028,24 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
-	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
+	if ( ! g_conf.m_useThreads ) { // || g_threads.m_disabled ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("Threads are disabled. Severely hurts "
-			      "performance.");
+		mb->safePrintf("All Threads are disabled. "
+			       "Might hurt performance for doing system "
+			       "calls which call 3rd party executables and "
+			       "can take a long time to run, like pdf2html.");
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
+	if ( g_conf.m_useThreadsForDisk ) { // || g_threads.m_disabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Threads are ENabled for disk. Severely hurts "
+			      "performance because pthreads suck.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
