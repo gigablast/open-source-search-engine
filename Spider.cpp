@@ -291,8 +291,8 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		// 	       cs,(long)collnum);
 		//sb->safePrintf(" <td><a href=/crawlbot?c=%s>%s</a></td>\n",
 		//	       cs,cs);
-		sb->safePrintf(" <td><a href=/search?q=url%%3A%s>%s</a>"
-			       "</td>\n",m_url,cs);
+		sb->safePrintf(" <td><a href=/search?c=%s&q=url%%3A%s>%s</a>"
+			       "</td>\n",cs,m_url,cs);
 	}
 
 	sb->safePrintf(" <td><a href=%s><nobr>",m_url);

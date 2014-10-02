@@ -3029,21 +3029,28 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r ) {
 
 	// this is actually the entire http request mime, not a url
-	char *squidProxiedReqBuf = r->ptr_url;
+	//char *squidProxiedReqBuf = r->ptr_url;
 
-	char *s = strstr ( squidProxiedReqBuf , "GET http" );
-	long slen = 8;
-	if ( ! s ) {
-		s = strstr ( squidProxiedReqBuf , "POST http");
-		slen = 9;
-	}
-	if ( ! s ) {
-		s = strstr ( squidProxiedReqBuf , "HEAD http");
-		slen = 9;
-	}
-	if ( ! s ) return false;
+	// shortcut. this is the actual squid request like
+	// "CONNECT www.youtube.com:443 HTTP/1.1\r\nProxy-COnnection: ... "
+	// or
+	// "GET http://www.youtube.com/..."
+	char *s = r->ptr_url;
+	char *pu = NULL;
 
-	r->m_proxiedUrl = s + slen - 4;
+	if ( strncmp ( s , "GET http" ,8 ) == 0 ) 
+		pu = s + 4;
+	else if ( strncmp ( s , "POST http" ,9 ) == 0 )
+		pu = s + 5;
+	else if ( strncmp ( s , "HEAD http" ,9 ) == 0 )
+		pu = s + 5;
+	// this doesn't always have http:// usually just a hostname
+	else if ( strncmp ( s , "CONNECT " ,8 ) == 0 )
+		pu = s + 8;
+
+	if ( ! pu ) return false;
+
+	r->m_proxiedUrl = pu;
 
 	// find end of it
 	char *p = r->m_proxiedUrl;
@@ -3061,6 +3068,13 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 
 	// hash the url
 	char *start = r->m_proxiedUrl;
+
+	// how can this happen?
+	if ( ! start ) {
+		log("proxy: no proxied url");
+		return 0LL;
+	}
+
 	// skip http:// or https://
 	// skip forward
 	char *s = start;

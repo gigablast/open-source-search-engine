@@ -3447,6 +3447,10 @@ static void gotSquidProxiedUrlIp ( void *state , long ip );
 // to route the request through the appropriate spider proxy.
 bool HttpServer::processSquidProxyRequest ( TcpSocket *sock, HttpRequest *hr) {
 
+	// debug note
+	log("http: got squid proxy request from client at %s",
+	    iptoa(sock->m_ip));
+
 	// we need the actual ip of the requested url so we know
 	// which host to send the msg13 request to. that way it can ensure
 	// that we do not flood a particular IP with too many requests at once.
