@@ -3539,13 +3539,16 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	// let msg13 know to just send the request in m_url
 	r->m_isSquidProxiedUrl = true;
 
-	char *proxiedReqBuf = r->ptr_url;
+	// char *proxiedReqBuf = r->ptr_url;
 
-	// store into there
-	memcpy ( proxiedReqBuf,
-		 sqs->m_sock->m_readBuf,
-		 // include +1 for the terminating \0
-		 sqs->m_sock->m_readOffset + 1);
+	// // store into there
+	// memcpy ( proxiedReqBuf,
+	// 	 sqs->m_sock->m_readBuf,
+	// 	 // include +1 for the terminating \0
+	// 	 sqs->m_sock->m_readOffset + 1);
+
+	// send the whole http request mime to the msg13 handling host
+	r->ptr_url = sqs->m_sock->m_readBuf;
 
 	// include terminating \0. well it is already i think. see
 	// Msg13Request::getSize(), so no need to add +1
@@ -3592,7 +3595,7 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	gotSquidProxiedContent ( sqs );
 }
 
-#include "PageInject.h" // Msg7
+//#include "PageInject.h" // Msg7
 
 void gotSquidProxiedContent ( void *state ) {
 	SquidState *sqs = (SquidState *)state;

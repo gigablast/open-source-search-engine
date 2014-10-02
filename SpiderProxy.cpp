@@ -232,7 +232,9 @@ bool resetProxyStats ( ) {
 	// s_proxyBannedTable.reset();
 	// s_banCountTable.reset();
 	// s_iptab.reset();
-	s_iptab.set(8,sizeof(SpiderProxy),0,NULL,0,false,0,"siptab");
+	s_iptab.set(8,sizeof(SpiderProxy),0,NULL,0,false,0,"siptab",true);
+	// skip port part of key magic, and get LSB of the IP as key magic
+	s_iptab.m_maskKeyOffset = 5;
 	s_proxyBannedTable.set(8,0,0,NULL,0,false,1,"proxban");
 	s_banCountTable.set(4,4,0,NULL,0,false,1,"bancnt");
 	return buildProxyTable();
@@ -769,10 +771,16 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 	long long oldest = 0x7fffffffffffffffLL;
 	SpiderProxy *winnersp = NULL;
 	long count = 0;
+	// start at a random slot based on url's IP so we don't
+	// overload the first proxy
+	long start = ((unsigned long)urlIp) % s_iptab.getNumSlots();
+	long slotCount = s_iptab.getNumSlots();
 	// . now find the best proxy wih the minCount
-	// . TODO: start at a random slot based on url's IP so we don't
-	//   overload the first proxy so much
-	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
+	for ( long i = start ; ; i++ ) {
+		// scan all slots in hash table, then stop
+		if ( slotCount-- <= 0 ) break;
+		// wrap around to zero if we hit the end
+		if ( i == s_iptab.getNumSlots() ) i = 0;
 		// skip empty slots
 		if ( ! s_iptab.m_flags[i] ) continue;
 		// get the spider proxy
@@ -964,7 +972,9 @@ bool initSpiderProxyStuff() {
 		return false;
 
 	// key is ip/port
-	s_iptab.set(8,sizeof(SpiderProxy),0,NULL,0,false,0,"siptab");
+	s_iptab.set(8,sizeof(SpiderProxy),0,NULL,0,false,0,"siptab",true);
+	// skip port part of key magic, and get LSB of the IP as key magic
+	s_iptab.m_maskKeyOffset = 5;
 
 	loadSpiderProxyStats();
 

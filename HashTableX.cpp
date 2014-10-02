@@ -461,8 +461,9 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
 		return false;
 	}
 
-	// just in case m_ks was already set, call reset() down here
-	reset();
+	// just in case m_ks was already set, call reset() down here...
+	// no, it resets our "magic" stuff!
+	if ( m_ks != ks || m_ds != ds ) reset();
 
 	m_ks = ks;
 	m_ds = ds;

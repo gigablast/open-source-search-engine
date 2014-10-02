@@ -1195,7 +1195,7 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	// it failed i guess proceed
 	gotHttpReply( state , ts );
 }
-
+/*
 static void doneInjectingProxyReply ( void *state ) {
 	Msg7 *msg7 = (Msg7 *)state;
 	if ( g_errno )
@@ -1207,9 +1207,11 @@ static void doneInjectingProxyReply ( void *state ) {
 }
 
 static bool markupServerReply ( Msg13Request *r , TcpSocket *ts );
+*/
 
 void gotHttpReply ( void *state , TcpSocket *ts ) {
 
+	/*
  	// cast it
 	Msg13Request *r = (Msg13Request *)state;
 
@@ -1299,6 +1301,7 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 			ts = NULL;
 		}
 	}
+	*/
 
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
@@ -3106,6 +3109,7 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 	return h64;
 }
 
+/*
 static void sendBackInlineSectionVotingBuf ( void *xd ) ;
 
 // . returns false if blocks and will call gotHttpReply2() when done
@@ -3264,7 +3268,7 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	// 			   replyAllocSize,
 	// 			   r->m_udpSlot);
 }
-
+*/
 
 static char *s_agentList[] = {
 	"Mozilla/5.0 (compatible; U; ABrowse 0.6; Syllable) AppleWebKit/420+ (KHTML, like Gecko)",
