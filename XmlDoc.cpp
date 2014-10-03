@@ -28314,6 +28314,11 @@ bool XmlDoc::hashSiteNumInlinks ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_prefix    = "gbsitenuminlinks";
 
+	// hack test
+	// slen = sprintf(s,"%lu",
+	// 	       ((unsigned long)m_firstUrl.getUrlHash32()) % 1000);
+	// log("xmldoc: sitenuminlinks for %s is %s",m_firstUrl.getUrl(),s);
+
 	return hashString ( s, slen, &hi );
 }
 

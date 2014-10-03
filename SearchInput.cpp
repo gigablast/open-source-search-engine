@@ -690,17 +690,17 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 
 	if ( m_sortBy == 1 ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbsortby:gbspiderdate");
+		m_sbuf1.safePrintf("gbsortbyint:gbspiderdate");
 	}
 
 	if ( m_sortBy == 2 ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbrevsortby:gbspiderdate");
+		m_sbuf1.safePrintf("gbrevsortbyint:gbspiderdate");
 	}
 
 	if ( m_sortBy == 3 ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbsortby:gbsitenuminlinks");
+		m_sbuf1.safePrintf("gbsortbyint:gbsitenuminlinks");
 	}
 
 	char *ft = m_filetype;
