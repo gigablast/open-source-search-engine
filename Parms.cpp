@@ -3618,10 +3618,9 @@ bool Parms::setFromFile ( void *THIS        ,
 		XmlNode *xn = &xml.m_nodes[i];
 		// look for <masterPassword>
 		if ( pn->m_tagNameLen != 14 ) continue;
+		if ( xn->m_tagNameLen != 8 ) continue;
 		// if it is not the OLD supported tag then skip
 		if ( strncmp ( pn->m_tagName,"masterPassword",14 ) ) continue;
-
-		if ( xn->m_tagNameLen != 8 ) continue;
 		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
 		// otherwise append to buf
 		char *text = xn->m_node + 9;
