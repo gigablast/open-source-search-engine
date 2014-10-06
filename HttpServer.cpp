@@ -1097,9 +1097,9 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 				"\t<statusCode>0</statusCode>\n"
 				"\t<statusMsg>Success</statusMsg>\n";
 		if ( format == FORMAT_JSON )
-			res = "{ \"response:\"{\n"
+			res = "{ \"response\":{\n"
 				"\t\"statusCode\":0,\n"
-				"\t\"statusMsg\":\"Success\"\n";
+				"\t\"statusMsg\":\"Success\",\n";
 		if ( res )
 			sb.safeStrcpy ( res );
 		//
