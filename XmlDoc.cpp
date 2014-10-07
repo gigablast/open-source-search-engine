@@ -18423,6 +18423,12 @@ Images *XmlDoc::getImages ( ) {
 		return &m_images;
 	}
 
+	if ( ! cr->m_isCustomCrawl ) {
+		m_images.reset();
+		m_imagesValid = true;
+		return &m_images;
+	}
+
 	setStatus ( "getting thumbnail" );
 
 	Words *words = getWords();
