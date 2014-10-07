@@ -2763,6 +2763,7 @@ void gotIframeExpandedContent ( void *state ) {
 	delete  ( xd );
 }
 
+#define DELAYPERBAN 1000
 
 // returns true if we queue the request to download later
 bool addToHammerQueue ( Msg13Request *r ) {
@@ -2790,8 +2791,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   responsible, or who banned it, but be more sensitive anyway
 	if ( //r->m_hammerCallback == downloadTheDocForReals3b &&
 	     r->m_numBannedProxies &&
-	     r->m_numBannedProxies * 2000 > crawlDelayMS ) {
-		crawlDelayMS = r->m_numBannedProxies * 2000;
+	     r->m_numBannedProxies * DELAYPERBAN > crawlDelayMS ) {
+		crawlDelayMS = r->m_numBannedProxies * DELAYPERBAN;
 		if ( crawlDelayMS > MAX_PROXYCRAWLDELAYMS )
 			crawlDelayMS = MAX_PROXYCRAWLDELAYMS;
 	}
@@ -2904,7 +2905,7 @@ void scanHammerQueue ( int fd , void *state ) {
 		if ( //useProxies && 
 		     r->m_numBannedProxies &&
 		     r->m_hammerCallback == downloadTheDocForReals3b )
-			crawlDelayMS = r->m_numBannedProxies * 2000;
+			crawlDelayMS = r->m_numBannedProxies * DELAYPERBAN;
 
 		// download finished? 
 		if ( last > 0 ) {
