@@ -11,6 +11,9 @@
 
 #include "Url.h" // MAX_URL_LEN
 
+// max crawl delay form proxy backoff of 1 minute (60 seconds)
+#define MAX_PROXYCRAWLDELAYMS 60000
+
 void resetMsg13Caches ( ) ;
 
 extern char *g_fakeReply;

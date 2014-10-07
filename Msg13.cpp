@@ -2790,8 +2790,11 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   responsible, or who banned it, but be more sensitive anyway
 	if ( //r->m_hammerCallback == downloadTheDocForReals3b &&
 	     r->m_numBannedProxies &&
-	     r->m_numBannedProxies * 2000 > crawlDelayMS )
+	     r->m_numBannedProxies * 2000 > crawlDelayMS ) {
 		crawlDelayMS = r->m_numBannedProxies * 2000;
+		if ( crawlDelayMS > MAX_PROXYCRAWLDELAYMS )
+			crawlDelayMS = MAX_PROXYCRAWLDELAYMS;
+	}
 
 	bool queueIt = false;
 	if ( last > 0 && waited < crawlDelayMS ) queueIt = true;
