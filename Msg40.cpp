@@ -661,8 +661,16 @@ bool Msg40::getDocIds ( bool recall ) {
 	if ( m_numCollsToSearch <= 1 )
 		m_msg3aPtrs[0] = &m_msg3a;
 
+	long maxOutMsg3as = 1;
+
 	// create new ones if searching more than 1 coll
 	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+
+		// do not have more than this many outstanding
+		if ( m_num3aRequests - m_num3aReplies >= maxOutMsg3as )
+			// wait for it to return before launching another
+			return false;
+
 		// get it
 		Msg3a *mp = m_msg3aPtrs[i];
 		// stop if only searching one collection
@@ -675,7 +683,11 @@ bool Msg40::getDocIds ( bool recall ) {
 			mnew(mp,sizeof(Msg3a),"tm3ap");
 		}
 		// error?
-		if ( ! mp ) return true;
+		if ( ! mp ) {
+			log("msg40: Msg40::getDocIds() had error: %s",
+			    mstrerror(g_errno));
+			return true;
+		}
 		// assign it
 		m_msg3aPtrs[i] = mp;
 		// assign the request for it
@@ -705,6 +717,11 @@ void gotDocIdsWrapper ( void *state ) {
 	// if this blocked, it returns false
 	//if ( ! checkTurnOffRAT ( state ) ) return;
 	THIS->m_num3aReplies++;
+	// try to launch more if there are more colls left to search
+	if ( THIS->m_num3aRequests < THIS->m_numCollsToSearch ) {
+		THIS->getDocIds ( false );
+		return;
+	}
 	// return if this blocked
 	if ( ! THIS->gotDocIds() ) return;
 	// now call callback, we're done
