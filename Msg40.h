@@ -130,6 +130,7 @@ class Msg40 {
 	SafeBuf m_factBuf;
 
 	// keep these public since called by wrapper functions
+	bool federatedLoop ( ) ;
 	bool gotDocIds        ( ) ;
 	bool launchMsg20s     ( bool recalled ) ;
 	class Msg20 *getAvailMsg20();
