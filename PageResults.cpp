@@ -3751,6 +3751,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		return true;
 	}
 
+	long cursor = -1;
+	if ( si->m_format == FORMAT_XML  ) cursor = sb->length();
+	if ( si->m_format == FORMAT_JSON ) cursor = sb->length();
 
 	if ( si->m_format == FORMAT_XML ) 
 		sb->safePrintf("\t<result>\n" );
@@ -3818,6 +3821,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// if this msg20 had an error print "had error"
 	if ( err || urlLen <= 0 || ! url ) {
+		// revert back so we do not break the json/xml
+		if ( cursor >= 0 ) sb->m_length = cursor;
 		// it's unprofessional to display this in browser
 		// so just let admin see it
 		if ( isAdmin && si->m_format == FORMAT_HTML ) {
