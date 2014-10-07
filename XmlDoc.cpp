@@ -14925,7 +14925,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// because the crawl delay can be as high as that, even higher
 	if ( useProxies )
 		m_diffbotUrl.safePrintf("&timeout=%li",
-					(long)MAX_PROXYCRAWLDELAYMS);
+					(long)MAX_PROXYCRAWLDELAYMS+10000);
 
 	m_diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
