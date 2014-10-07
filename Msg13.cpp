@@ -2763,7 +2763,7 @@ void gotIframeExpandedContent ( void *state ) {
 	delete  ( xd );
 }
 
-#define DELAYPERBAN 1000
+#define DELAYPERBAN 500
 
 // returns true if we queue the request to download later
 bool addToHammerQueue ( Msg13Request *r ) {
