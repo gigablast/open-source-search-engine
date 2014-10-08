@@ -14914,7 +14914,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		for ( ; *p2 && ! is_wspace_a(*p2) ; p2++ );
 		char c = *p2;
 		*p2 = '\0';
-		m_diffbotUrl.safePrintf("&proxyauth=");
+		m_diffbotUrl.safePrintf("&proxyAuth=");
 		m_diffbotUrl.urlEncode(p1);
 		*p2 = c;
 	}
