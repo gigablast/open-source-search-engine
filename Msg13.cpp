@@ -787,7 +787,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 					 NULL         ,
 					 r         , // state data
 					 gotProxyHostReplyWrapper  ,
-					 10    )){// 10 sec timeout
+					 9999999  )){// 9999999 sec timeout
 		// sanity check
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// report it
@@ -809,7 +809,7 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( g_errno ) {
 		// note it
 		log("sproxy: got proxy request error: %s",mstrerror(g_errno));
-		g_udpServer.sendErrorReply(slot,g_errno);
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 	//
@@ -823,7 +823,7 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( replySize != sizeof(ProxyReply) ) {
 		log("sproxy: bad 54 reply size of %li != %li",
 		    replySize,(long)sizeof(ProxyReply));
-		g_udpServer.sendErrorReply(slot,g_errno);
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 

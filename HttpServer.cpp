@@ -59,7 +59,7 @@ bool HttpServer::init ( short port,
 	//m_maxOpenSockets = 1000000;
 
 	//well, not infinite
-	m_maxOpenSockets = g_conf.m_httpMaxSockets;
+	//m_maxOpenSockets = g_conf.m_httpMaxSockets;
 	
 	m_uncompressedBytes = m_bytesDownloaded = 1;
 
@@ -79,7 +79,7 @@ bool HttpServer::init ( short port,
 			   getMsgPiece                 ,
 			   port                        ,
 			   //&g_conf.m_httpMaxSockets     ) ) return false;
-			   &m_maxOpenSockets  ) ) return false;
+			   &g_conf.m_httpMaxSockets  ) ) return false;
 	//g_conf.m_httpMaxReadBufSize , 
 	//g_conf.m_httpMaxSendBufSize ) ) return false;
 	// set our secure TcpServer class
@@ -424,6 +424,8 @@ bool HttpServer::getDoc ( long ip,
 	// . callback will be called on completion of transaction
 	// . be sure to free "req/reqSize" in callback() somewhere
 
+	// MDW: THIS IS RETURNING TRUE SOMEHOW w/o setting g_errno
+
 	if ( ! tcp->sendMsg (  ip             ,
 			       port           ,
 			       req            , 
@@ -440,6 +442,7 @@ bool HttpServer::getDoc ( long ip,
 	states[n]    = NULL;
 	callbacks[n] = NULL;
 	s_numOutgoingSockets--;
+	log("http: sendmsg returned true!: %s",mstrerror(g_errno));
 	return true;
 }
 

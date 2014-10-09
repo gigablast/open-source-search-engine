@@ -594,6 +594,7 @@ bool TcpServer::sendMsg ( long   ip       ,
 	// . adds socket to array for us and sets the fd non-blocking, etc.
 	s = getNewSocket ( );
 	// return true if s is NULL and g_errno was set by getNewSocket()
+	// might set g_errno to EOUTOFSOCKETS
 	if ( ! s ) { mfree ( sendBuf , sendBufSize,"TcpServer"); return true; }
 	// set up the new TcpSocket for connecting
 	s->m_state            = state;
@@ -764,7 +765,7 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 			long now = getTimeLocal();
 			static long s_last = 0;
 			static long s_count = 0;
-			if ( now - s_last < 5 ) 
+			if ( now - s_last < 5 && s_last ) 
 				s_count++;
 			else {
 				log("tcp: Out of sockets. Max sockets = %li. "
@@ -779,6 +780,8 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 			// send email alert
 			g_pingServer.sendEmailMsg ( &s_lastTime ,
 						    "out of sockets on https");
+			// in case sendEmailMsg resets g_errno somehow
+			g_errno = EOUTOFSOCKETS; 
 			return NULL;
 		}
 
@@ -877,7 +880,7 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 			long now = getTimeLocal();
 			static long s_last = 0;
 			static long s_count = 0;
-			if ( now - s_last < 5 ) 
+			if ( now - s_last < 5 && s_last ) 
 				s_count++;
 			else {
 				log("tcp: Out of sockets. Max sockets = %li. "
@@ -892,6 +895,8 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 			// send email alert
 			g_pingServer.sendEmailMsg ( &s_lastTime ,
 						    "out of sockets on https");
+			// in case sendEmailMsg resets g_errno somehow
+			g_errno = EOUTOFSOCKETS; 
 			return NULL;
 		}
 	// sanity check
@@ -903,6 +908,8 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		// send email alert
 		g_pingServer.sendEmailMsg ( &s_lastTime ,
 					    "out of sockets on https2");
+		// in case sendEmailMsg resets g_errno somehow
+		g_errno = EOUTOFSOCKETS; 
 		return NULL;
 	}
 	// alloc a new TcpSocket
@@ -922,6 +929,8 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		g_pingServer.sendEmailMsg ( &s_lastTime ,
 					    "out of sockets on https3");
 		//sleep(10000);
+		// in case sendEmailMsg resets g_errno somehow
+		g_errno = EOUTOFSOCKETS; 
 		return NULL;
 	}
 	// save this i guess
