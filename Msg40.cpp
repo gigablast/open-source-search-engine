@@ -269,7 +269,11 @@ bool Msg40::getResults ( SearchInput *si      ,
 	//if ( get > m_maxDocIdsToCompute ) get = m_maxDocIdsToCompute;
 	// ok, need some sane limit though to prevent malloc from 
 	// trying to get 7800003 docids and going ENOMEM
-	if ( get > MAXDOCIDSTOCOMPUTE ) get = MAXDOCIDSTOCOMPUTE;
+	if ( get > MAXDOCIDSTOCOMPUTE ) {
+		log("msg40: asking for too many docids. reducing to %li",
+		    (long)MAXDOCIDSTOCOMPUTE);
+		get = MAXDOCIDSTOCOMPUTE;
+	}
 	// this is how many visible results we need, after filtering/clustering
 	m_docsToGetVisible = get;
 	// if site clustering is on, get more than we should in anticipation 

@@ -1058,8 +1058,20 @@ bool Msg3a::mergeLists ( ) {
 
 	// . how much do we need to store final merged docids, etc.?
 	// . docid=8 score=4 bitScore=1 clusterRecs=key_t clusterLevls=1
-	long need = m_docsToGet * (8+sizeof(double)+
-				   sizeof(key_t)+sizeof(DocIdScore *)+1);
+	//long need = m_docsToGet * (8+sizeof(double)+
+	long nd1 = m_docsToGet;
+	long nd2 = 0;
+	for ( long j = 0; j < m_numHosts; j++ ) {
+		Msg39Reply *mr = m_reply[j];
+		if ( ! mr ) continue;
+		nd2 += mr->m_numDocIds;
+	}
+	// pick the min docid count from the above two methods
+	long nd = nd1;
+	if ( nd2 < nd1 ) nd = nd2;
+
+	long need =  nd * (8+sizeof(double)+
+			   sizeof(key_t)+sizeof(DocIdScore *)+1);
 	// allocate it
 	m_finalBuf     = (char *)mmalloc ( need , "finalBuf" );
 	m_finalBufSize = need;
@@ -1067,11 +1079,11 @@ bool Msg3a::mergeLists ( ) {
 	if ( ! m_finalBuf ) return true;
 	// hook into it
 	char *p = m_finalBuf;
-	m_docIds        = (long long *)p; p += m_docsToGet * 8;
-	m_scores        = (double    *)p; p += m_docsToGet * sizeof(double);
-	m_clusterRecs   = (key_t     *)p; p += m_docsToGet * sizeof(key_t);
-	m_clusterLevels = (char      *)p; p += m_docsToGet * 1;
-	m_scoreInfos    = (DocIdScore **)p;p+=m_docsToGet*sizeof(DocIdScore *);
+	m_docIds        = (long long *)p; p += nd * 8;
+	m_scores        = (double    *)p; p += nd * sizeof(double);
+	m_clusterRecs   = (key_t     *)p; p += nd * sizeof(key_t);
+	m_clusterLevels = (char      *)p; p += nd * 1;
+	m_scoreInfos    = (DocIdScore **)p;p+=nd*sizeof(DocIdScore *);
 
 	// sanity check
 	char *pend = m_finalBuf + need;
@@ -1080,11 +1092,11 @@ bool Msg3a::mergeLists ( ) {
 	// . get at least twice as many slots as docids
 	HashTableT<long long,char> htable;
 	// returns false and sets g_errno on error
-	if ( ! htable.set ( m_docsToGet * 2 ) ) return true;
+	if ( ! htable.set ( nd * 2 ) ) return true;
 	// hash table for doing site clustering, provided we
 	// are fully split and we got the site recs now
 	HashTableT<long long,long> htable2;
-	if ( m_r->m_doSiteClustering && ! htable2.set ( m_docsToGet * 2 ) ) 
+	if ( m_r->m_doSiteClustering && ! htable2.set ( nd * 2 ) ) 
 		return true;
 
 	//

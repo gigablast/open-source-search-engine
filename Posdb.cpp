@@ -711,7 +711,27 @@ bool PosdbTable::allocWhiteListTable ( ) {
 
 
 bool PosdbTable::allocTopTree ( ) {
-	long nn = m_r->m_docsToGet;
+	long nn1 = m_r->m_docsToGet;
+	long nn2 = 0;
+	// just add all up in case doing boolean OR or something
+	for ( long k = 0 ; k < m_msg2->getNumLists() ; k++ ) {
+		// count
+		RdbList *list = m_msg2->getList(k);
+		// skip if null
+		if ( ! list ) continue;
+		// skip if list is empty, too
+		if ( list->isEmpty() ) continue;
+		// tally. each new docid in this termlist will compress
+		// the 6 byte termid out, so reduce by 6.
+		nn2 += list->m_listSize / ( sizeof(POSDBKEY) -6 );
+	}
+	// do not go OOM just because client asked for 10B results and we
+	// only have like 100 results.
+	long nn = nn1;
+	if ( nn2 < nn1 ) nn = nn2;
+
+
+
 	if ( m_r->m_doSiteClustering ) nn *= 2;
         // limit to this regardless!
         //CollectionRec *cr = g_collectiondb.getRec ( m_coll );
