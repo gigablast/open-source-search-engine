@@ -7744,7 +7744,12 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 
 		long slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there
-		if ( slot < 0 ) { char *xx=NULL;*xx=0;}
+		if ( slot < 0 ) { 
+			// do not core on this anymore...
+			log("serps: json column not in table : %s",ji->m_name);
+			continue;
+			//char *xx=NULL;*xx=0;}
+		}
 
 		// get col #
 		long column = *(long *)columnTable->getValueFromSlot ( slot );

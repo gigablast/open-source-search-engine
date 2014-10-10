@@ -197,8 +197,10 @@ bool HttpServer::getDoc ( char   *url      ,
 			       // request being sent to a proxy we have to
 			       // say "GET http://www.xyz.com/" the full
 			       // url, not just a relative path.
-			       additionalHeader , pcLen , proxyIp ) ) 
+			       additionalHeader , pcLen , proxyIp ) ) {
+			log("http: http req error: %s",mstrerror(g_errno));
 			return true;
+		}
 		reqSize = r.getRequestLen();
 		long need = reqSize + pcLen;
 		// if we are requesting an HTTPS url through a proxy then

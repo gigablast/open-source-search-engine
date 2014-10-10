@@ -10731,7 +10731,7 @@ void Parms::init ( ) {
 		"receives from gigablast if gigablast hosts are on the "
 		"10.5.*.* IPs. Then run <i>/etc/init.d/sendmail restart</i> "
 		"as root to pick up those changes so sendmail will forward "
-		"Gigablast's mail to the address you give below.";
+		"Gigablast's email to the email address you give below.";
 	m->m_cgi   = "esrvone";
 	m->m_off   = (char *)&g_conf.m_email1MX - g;
 	m->m_type  = TYPE_STRING;
