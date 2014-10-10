@@ -2290,6 +2290,12 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	if ( g_errno == EBADURL ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
+
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
@@ -18417,6 +18423,12 @@ Images *XmlDoc::getImages ( ) {
 		return &m_images;
 	}
 
+	if ( cr->m_isCustomCrawl ) {
+		m_images.reset();
+		m_imagesValid = true;
+		return &m_images;
+	}
+
 	setStatus ( "getting thumbnail" );
 
 	Words *words = getWords();
@@ -21111,7 +21123,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// query reindex on such things, detect it, and add the request
 	// for the original parent multidoc url.
 	//
-	if ( m_sreqValid && m_sreq.m_isPageReindex ) {
+	if ( m_sreqValid && m_sreq.m_isPageReindex &&
+	     // if it is a force delete, then allow the user to delete
+	     // such diffbot reply json children documents, however.
+	     ! m_sreq.m_forceDelete ) {
 		// see if its diffbot json object
 		XmlDoc **pod = getOldXmlDoc ( );
 		if ( ! pod || pod == (XmlDoc **)-1 ) return (char *)pod;

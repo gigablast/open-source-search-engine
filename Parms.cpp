@@ -1759,6 +1759,12 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
+    
+
+  // Begin "parms":[]
+  if (format == FORMAT_JSON ) {     
+    sb->safePrintf ("\"parms\":[\n");
+  }
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -1843,6 +1849,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			sb->safePrintf("</font></td></tr>\n");
 
 		}
+
 		// arrays always have blank line for adding stuff
 		if ( m->m_max > 1 )
 		     // not for PAGE_PRIORITIES!
@@ -1890,12 +1897,20 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						   sock);
 			}
 		}
+
 		// end array table
 		//if ( m->m_max > 1 ) {
 		//	sprintf ( p , "</table><br>\n");
 		//	p += gbstrlen ( p );
 		//}
 	}
+
+  // end "parms":[]
+  if ( format == FORMAT_JSON ) {
+    if ( m_numParms != 0 ) sb->m_length -= 2;
+    sb->safePrintf("\n]\n");
+  }
+
 	return status;
 }
 
@@ -1993,7 +2008,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 
 	if ( format == FORMAT_JSON ) {
-		sb->safePrintf ( "\t\"parm\":{\n");
+		sb->safePrintf ( "\t{\n");
 		sb->safePrintf ( "\t\t\"title\":\"%s\",\n",m->m_title);
 		sb->safePrintf ( "\t\t\"desc\":\"");
 		sb->jsonEncode ( m->m_desc );
@@ -2019,9 +2034,10 @@ bool Parms::printParm ( SafeBuf* sb,
 			SafeBuf js;
 			m->printVal ( &js , collnum , 0 );//occNum );
 			sb->jsonEncode(js.getBufStart());
-			sb->safePrintf("\"\n");
+			sb->safePrintf("\",\n");
 		}
-		sb->safePrintf("\t}\n");
+    sb->m_length -= 2; // hack of trailing comma
+		sb->safePrintf("\n\t},\n");
 		return true;
 	}
 
