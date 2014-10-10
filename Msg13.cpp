@@ -787,7 +787,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 					 NULL         ,
 					 r         , // state data
 					 gotProxyHostReplyWrapper  ,
-					 10    )){// 10 sec timeout
+					 9999999  )){// 9999999 sec timeout
 		// sanity check
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// report it
@@ -809,7 +809,7 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( g_errno ) {
 		// note it
 		log("sproxy: got proxy request error: %s",mstrerror(g_errno));
-		g_udpServer.sendErrorReply(slot,g_errno);
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 	//
@@ -823,7 +823,7 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( replySize != sizeof(ProxyReply) ) {
 		log("sproxy: bad 54 reply size of %li != %li",
 		    replySize,(long)sizeof(ProxyReply));
-		g_udpServer.sendErrorReply(slot,g_errno);
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 
@@ -2763,6 +2763,7 @@ void gotIframeExpandedContent ( void *state ) {
 	delete  ( xd );
 }
 
+#define DELAYPERBAN 500
 
 // returns true if we queue the request to download later
 bool addToHammerQueue ( Msg13Request *r ) {
@@ -2790,8 +2791,11 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   responsible, or who banned it, but be more sensitive anyway
 	if ( //r->m_hammerCallback == downloadTheDocForReals3b &&
 	     r->m_numBannedProxies &&
-	     r->m_numBannedProxies * 2000 > crawlDelayMS )
-		crawlDelayMS = r->m_numBannedProxies * 2000;
+	     r->m_numBannedProxies * DELAYPERBAN > crawlDelayMS ) {
+		crawlDelayMS = r->m_numBannedProxies * DELAYPERBAN;
+		if ( crawlDelayMS > MAX_PROXYCRAWLDELAYMS )
+			crawlDelayMS = MAX_PROXYCRAWLDELAYMS;
+	}
 
 	bool queueIt = false;
 	if ( last > 0 && waited < crawlDelayMS ) queueIt = true;
@@ -2901,7 +2905,7 @@ void scanHammerQueue ( int fd , void *state ) {
 		if ( //useProxies && 
 		     r->m_numBannedProxies &&
 		     r->m_hammerCallback == downloadTheDocForReals3b )
-			crawlDelayMS = r->m_numBannedProxies * 2000;
+			crawlDelayMS = r->m_numBannedProxies * DELAYPERBAN;
 
 		// download finished? 
 		if ( last > 0 ) {

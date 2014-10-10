@@ -20,7 +20,9 @@
 #include "PostQueryRerank.h"
 
 // replace CollectionRec::m_maxDocIdsToCompute with this
-#define MAXDOCIDSTOCOMPUTE 500000
+//#define MAXDOCIDSTOCOMPUTE 500000
+// make it 2B now. no reason not too limit it so low.
+#define MAXDOCIDSTOCOMPUTE 2000000000
 
 #define MAX_GIGABIT_WORDS 10
 
@@ -130,6 +132,7 @@ class Msg40 {
 	SafeBuf m_factBuf;
 
 	// keep these public since called by wrapper functions
+	bool federatedLoop ( ) ;
 	bool gotDocIds        ( ) ;
 	bool launchMsg20s     ( bool recalled ) ;
 	class Msg20 *getAvailMsg20();

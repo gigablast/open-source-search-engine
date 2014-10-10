@@ -3491,6 +3491,21 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		i++;
 	}
 
+	bool ucpHasPositive = false;
+	// . scan them to see if all patterns start with '!' or not
+	// . if pattern starts with ! it is negative, otherwise positve
+	if ( ucp ) ucpHasPositive = hasPositivePattern ( ucp );
+
+	// if no crawl regex, and it has a crawl pattern consisting of
+	// only negative patterns then restrict to domains of seeds
+	if ( ucp && ! ucpHasPositive && ! m_hasucr ) {
+		m_regExs[i].set("!isonsamedomain && !ismanualadd");
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
+
+
+
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 15;
 	m_spiderFreqs        [i] = 0.0;

@@ -269,7 +269,11 @@ bool Msg40::getResults ( SearchInput *si      ,
 	//if ( get > m_maxDocIdsToCompute ) get = m_maxDocIdsToCompute;
 	// ok, need some sane limit though to prevent malloc from 
 	// trying to get 7800003 docids and going ENOMEM
-	if ( get > MAXDOCIDSTOCOMPUTE ) get = MAXDOCIDSTOCOMPUTE;
+	if ( get > MAXDOCIDSTOCOMPUTE ) {
+		log("msg40: asking for too many docids. reducing to %li",
+		    (long)MAXDOCIDSTOCOMPUTE);
+		get = MAXDOCIDSTOCOMPUTE;
+	}
 	// this is how many visible results we need, after filtering/clustering
 	m_docsToGetVisible = get;
 	// if site clustering is on, get more than we should in anticipation 
@@ -544,9 +548,48 @@ bool Msg40::prepareToGetDocIds ( ) {
 // . sets g_errno on error
 bool Msg40::getDocIds ( bool recall ) {
 
+	// . get the docIds
+	// . this sets m_msg3a.m_clusterLevels[] for us
+	//if(! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
+	//	return false;
+
+	////
+	//
+	// NEW CODE FOR LAUNCHING one MSG3a per collnum to search a token
+	//
+	////
+	m_num3aReplies = 0;
+	m_num3aRequests = 0;
+
+	// how many are we searching? usually just one.
+	m_numCollsToSearch = m_si->m_collnumBuf.length() /sizeof(collnum_t);
+
+	// make enough for ptrs
+	long need = sizeof(Msg3a *) * m_numCollsToSearch;
+	if ( ! m_msg3aPtrBuf.reserve ( need ) ) return true;
+	// cast the mem buffer
+	m_msg3aPtrs = (Msg3a **)m_msg3aPtrBuf.getBufStart();
+
+	// clear these out so we do not free them when destructing
+	for ( long i = 0 ; i < m_numCollsToSearch ;i++ )
+		m_msg3aPtrs[i] = NULL;
+
+	// use first guy in case only one coll we are searching, the std case
+	if ( m_numCollsToSearch <= 1 )
+		m_msg3aPtrs[0] = &m_msg3a;
+
+	return federatedLoop();
+}
+
+bool Msg40::federatedLoop ( ) {
+
+	// search the provided collnums (collections)
+	collnum_t *cp = (collnum_t *)m_si->m_collnumBuf.getBufStart();
+
 	// we modified m_rcache above to be true if we should read from cache
 	long maxAge = 0 ;
 	if ( m_si->m_rcache ) maxAge = g_conf.m_indexdbMaxIndexListAge;
+
 
 	// reset it
 	Msg39Request mr;
@@ -625,46 +668,10 @@ bool Msg40::getDocIds ( bool recall ) {
 	// store it in the reuquest now
 	mr.m_numDocIdSplits = numDocIdSplits;
 
-	
-
-
-	// . get the docIds
-	// . this sets m_msg3a.m_clusterLevels[] for us
-	//if(! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
-	//	return false;
-
-	////
-	//
-	// NEW CODE FOR LAUNCHING one MSG3a per collnum to search a token
-	//
-	////
-	m_num3aReplies = 0;
-	m_num3aRequests = 0;
-
-	// search the provided collnums (collections)
-	collnum_t *cp = (collnum_t *)m_si->m_collnumBuf.getBufStart();
-
-	// how many are we searching? usually just one.
-	m_numCollsToSearch = m_si->m_collnumBuf.length() /sizeof(collnum_t);
-
-	// make enough for ptrs
-	long need = sizeof(Msg3a *) * m_numCollsToSearch;
-	if ( ! m_msg3aPtrBuf.reserve ( need ) ) return true;
-	// cast the mem buffer
-	m_msg3aPtrs = (Msg3a **)m_msg3aPtrBuf.getBufStart();
-
-	// clear these out so we do not free them when destructing
-	for ( long i = 0 ; i < m_numCollsToSearch ;i++ )
-		m_msg3aPtrs[i] = NULL;
-
-	// use first guy in case only one coll we are searching, the std case
-	if ( m_numCollsToSearch <= 1 )
-		m_msg3aPtrs[0] = &m_msg3a;
-
 	long maxOutMsg3as = 1;
 
 	// create new ones if searching more than 1 coll
-	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+	for ( long i = m_num3aRequests ; i < m_numCollsToSearch ; i++ ) {
 
 		// do not have more than this many outstanding
 		if ( m_num3aRequests - m_num3aReplies >= maxOutMsg3as )
@@ -719,7 +726,7 @@ void gotDocIdsWrapper ( void *state ) {
 	THIS->m_num3aReplies++;
 	// try to launch more if there are more colls left to search
 	if ( THIS->m_num3aRequests < THIS->m_numCollsToSearch ) {
-		THIS->getDocIds ( false );
+		THIS->federatedLoop ( );
 		return;
 	}
 	// return if this blocked

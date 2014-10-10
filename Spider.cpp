@@ -12893,6 +12893,35 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 		return msg->safePrintf("Spider is in progress.");
 }
 
+bool hasPositivePattern ( char *pattern ) {
+	char *p = pattern;
+	// scan the " || " separated substrings
+	for ( ; *p ; ) {
+		// get beginning of this string
+		char *start = p;
+		// skip white space
+		while ( *start && is_wspace_a(*start) ) start++;
+		// done?
+		if ( ! *start ) break;
+		// find end of it
+		char *end = start;
+		while ( *end && end[0] != '|' )
+			end++;
+		// advance p for next guy
+		p = end;
+		// should be two |'s
+		if ( *p ) p++;
+		if ( *p ) p++;
+		// skip if negative pattern
+		if ( start[0] == '!' && start[1] && start[1]!='|' )
+			continue;
+		// otherwise it's a positive pattern
+		return true;
+	}
+	return false;
+}
+
+
 // pattern is a ||-separted list of substrings
 bool doesStringContainPattern ( char *content , char *pattern ) {
 				//bool checkForNegatives ) {

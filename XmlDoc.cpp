@@ -14914,10 +14914,18 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		for ( ; *p2 && ! is_wspace_a(*p2) ; p2++ );
 		char c = *p2;
 		*p2 = '\0';
-		m_diffbotUrl.safePrintf("&proxyauth=");
+		m_diffbotUrl.safePrintf("&proxyAuth=");
 		m_diffbotUrl.urlEncode(p1);
 		*p2 = c;
 	}
+	// if we use proxies then increase the timeout since proxies 
+	// increase the crawl delay in hopes of backing off to discover
+	// the website's policy so we don't hit it too hard and get banned.
+	// so to avoid diffbot timing out tell it to wait up to a minute
+	// because the crawl delay can be as high as that, even higher
+	if ( useProxies )
+		m_diffbotUrl.safePrintf("&timeout=%li",
+					(long)MAX_PROXYCRAWLDELAYMS+10000);
 
 	m_diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
