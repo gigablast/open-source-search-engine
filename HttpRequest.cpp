@@ -479,18 +479,19 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 cmdLen = 4;
 	 }
 	 else if ( strncmp ( req , "CONNECT " , 8 ) == 0 ) {
-		 m_requestType = RT_CONNECT;
-		 cmdLen = 7;
+		 // take this out until it stops losing descriptors and works
+		 //m_requestType = RT_CONNECT;
+		 //cmdLen = 7;
 		 // we no longer insert section info. emmanuel gets section
 		 // info when injecting a doc now i think in PageInject.cpp.
 		 // we do not proxy https requests because we can't
 		 // decrypt the page contents to cache them or to insert
 		 // the sectiondb voting markup, so it's kinda pointless...
 		 // and i'm not aiming to be a full-fledge squid proxy.
-		 //log("http: CONNECT request not supported because we "
-		 //  "can't insert section markup and we can't cache: %s",req);
-		 //g_errno = EBADREQUEST; 
-		 //return false; 
+		 log("http: CONNECT request not supported because we "
+		   "can't insert section markup and we can't cache: %s",req);
+		 g_errno = EBADREQUEST; 
+		 return false; 
 	 }
 	 else { 
 		 log("http: got bad request cmd: %s",req);
