@@ -48820,11 +48820,12 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	// sanity
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 
+  storeFacetValuesSite ( qs, sb, fvh );
+
 	// if "qa" is a gbxpathsitehash123456 type of beastie then we
 	// gotta scan the sections
 	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
 		return storeFacetValuesSections ( qs , sb , fvh );
-
 
 	// if a json doc, get json field
 	if ( m_contentType == CT_JSON ) 
@@ -48835,6 +48836,31 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	if ( m_contentType == CT_XML ) 
 		return storeFacetValuesXml ( qs , sb , fvh );
+
+	return true;
+}
+
+// Store facet for site
+bool XmlDoc::storeFacetValuesSite ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
+
+  char* val = getSite();
+  int  vlen = gbstrlen(val);
+	FacetValHash_t val32 = hash32 ( val , vlen );
+
+
+	// skip if not for us
+	if ( fvh && val32 != fvh ) return false;
+	if ( strcmp("gbtagsite",qs) ) return false;
+
+
+	// otherwise add facet FIELD to our buf
+	if ( ! sb->safeStrcpy(qs) ) return false;
+	if ( ! sb->pushChar('\0') ) return false;
+
+	// then add facet VALUE
+	if ( !sb->safePrintf("%lu,",(unsigned long)val32)) return false;
+	if ( val && vlen && ! sb->safeMemcpy(val,vlen) ) return false;
+	if ( ! sb->pushChar('\0') ) return false;
 
 	return true;
 }
