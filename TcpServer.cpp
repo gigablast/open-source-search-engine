@@ -102,6 +102,8 @@ bool TcpServer::init ( void (* requestHandler)(TcpSocket *s) ,
 	memset ( m_actualSockets , 0 , sizeof(TcpSocket)* MAX_TCP_SOCKS );
 	m_lastFilled = 0;
 	m_numUsed    = 0;
+	m_numOpen    = 0;
+	m_numClosed  = 0;
 	// remember our port
 	m_port = port;
 	// point to dummy if we need to
@@ -828,8 +830,10 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 		return NULL;
 	}
 
+	m_numOpen++;
+
 	// ssl debug
-	//log("tcp: open socket fd=%i",m_sock);
+	log("tcp: open socket fd=%i (open=%li)",sd,m_numOpen-m_numClosed);
 
 	// . create a new TcpSocket around this socket descriptor
 	// . returns NULL and sets g_errno on error
@@ -841,6 +845,11 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 		if ( sd == 0 ) log("tcp: closing1 sd of 0");
 		if ( ::close(sd) == -1 )
 			log("tcp: close2(%li) = %s",(long)sd,mstrerror(errno));
+		else {
+			m_numClosed++;
+			log("tcp: closing sock %i (open=%li)",sd,
+			    m_numOpen-m_numClosed);
+		}
 		return NULL; 
 	}
 	// return it on success
@@ -925,6 +934,11 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		if ( sd == 0 ) log("tcp: closing2 sd of 0");
 		if ( ::close(sd) == -1 )
 			log("tcp: close3(%li) = %s",(long)sd,mstrerror(errno));
+		else {
+			m_numClosed++;
+			log("tcp: closing sock %i (%li)",sd,
+			    m_numOpen-m_numClosed);
+		}
 		// send email alert
 		g_pingServer.sendEmailMsg ( &s_lastTime ,
 					    "out of sockets on https3");
@@ -2006,6 +2020,11 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( cret != 0 ) // == -1 ) 
 		log("tcp: close(%li) = %li = %s",
 		    (long)sd,cret,mstrerror(errno));
+	else {
+		m_numClosed++;
+		log("tcp: closing sock %i (open=%li)",sd,
+		    m_numOpen-m_numClosed);
+	}
 	// a 2nd close? it should return -1 with errno set!
 	//long cret2 = ::close ( sd );
 	//if ( cret2 != -1 )
@@ -2270,7 +2289,7 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 	if ( g_errno == EAGAIN ) { g_errno = 0; return NULL; }
 	if ( g_errno == EILSEQ ) { g_errno = 0; return NULL; }
 
-	if ( g_conf.m_logDebugTcp ) 
+	//if ( g_conf.m_logDebugTcp ) 
 		logf(LOG_DEBUG,"tcp: ...... accepted sd=%li",(long)newsd);
 
 	// ssl debug!
@@ -2298,6 +2317,10 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 		//return NULL;
 	}
 
+	m_numOpen++;
+
+	log("tcp: accept socket fd=%i (open=%li)",newsd,m_numOpen-m_numClosed);
+
 	// ban assholes
 	//if(g_autoBan.isBanned(name.sin_addr.s_addr)) return NULL;
 	//if ( (long)name.sin_addr.s_addr == atoip ("194.205.122.42",14) ) {
@@ -2318,6 +2341,11 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 		if ( ::close(newsd)== -1 )
 			log("tcp: close2(%li) = %s",
 			    (long)newsd,mstrerror(errno));
+		else {
+			m_numClosed++;
+			log("tcp: closing sock %i (open=%li)",newsd,
+			    m_numOpen-m_numClosed);
+		}
 		return NULL; 
 	}
 

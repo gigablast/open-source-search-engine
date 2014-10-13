@@ -243,6 +243,9 @@ class TcpServer {
 
 	// ready to go or not
 	bool m_ready;
+
+	long m_numOpen;
+	long m_numClosed;
 };
 
 #endif

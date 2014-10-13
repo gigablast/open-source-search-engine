@@ -914,6 +914,8 @@ class XmlDoc {
 
 	bool storeFacetValues         ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
+	bool storeFacetValuesSite     ( char *qs , SafeBuf *sb , 
+					FacetValHash_t fvh );
 	bool storeFacetValuesSections ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
 	bool storeFacetValuesHtml     ( char *qs , class SafeBuf *sb ,
