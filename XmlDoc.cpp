@@ -14901,7 +14901,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// BUT tell diffbot to go through host #0 so we can send it to the
 	// correct proxy using our load balancing & backoff algos.
 	if ( useProxies ) {
-		Host *h0 = g_hostdb.getHost(0);
+		//Host *h0 = g_hostdb.getHost(0);
+		// use a random host now to avoid host #0 running
+		// out of sockets from diffbot trying to connect
+		// for downloading hundreds of urls from the same
+		// high crawl delay site.
+		long r = rand() % g_hostdb.m_numHosts;
+		Host *h0 = g_hostdb.getHost(r);
 		m_diffbotUrl.safePrintf("&proxy=%s:%li",
 					iptoa(h0->m_ip),
 					(long)h0->m_httpPort);
