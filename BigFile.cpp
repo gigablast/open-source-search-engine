@@ -1494,7 +1494,9 @@ void *renameWrapper_r ( void *state , ThreadEntry *t ) {
 	// file will not actually be renamed in this thread
 	f->close1_r();
 	// sync to disk in case power goes out
-	sync();
+	// when i gdb gb during its slow unlink on morph it is in the
+	// sync() function, so let's take this out...
+	//sync();
 	// . this might be safe to call in a thread
 	// . but we do it right after the thread exits now
 	//THIS->m_files[i]->set ( THIS->m_newBaseFilename );
@@ -1516,7 +1518,9 @@ void *unlinkWrapper_r ( void *state , ThreadEntry *t ) {
 	// file will not actually be unlinked in this thread
 	f->close1_r();
 	// sync to disk in case power goes out
-	sync();
+	// when i gdb gb during its slow unlink on morph it is in the
+	// sync() function, so let's take this out...
+	//sync();
 	return NULL;
 }
 

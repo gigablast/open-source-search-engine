@@ -150,6 +150,8 @@ void allExitWrapper ( int fd , void *state ) ;
 
 //bool QuerySerializeTest( char *ff ); 	// Query.cpp
 
+void rmTest();
+
 //#ifndef _LARS_
 static void dumpTitledb  ( char *coll,long sfn,long numFiles,bool includeTree,
 			   long long docId , char justPrintDups ,
@@ -2658,6 +2660,12 @@ int main2 ( int argc , char *argv[] ) {
 		g_log.m_disabled = true;
 		return 0;
 	}
+
+	if ( strcmp ( cmd , "rmtest" ) == 0 ) {
+		rmTest();
+		return 0;
+	}
+
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='T')  {		
 
@@ -17454,4 +17462,38 @@ int copyFiles ( char *dstDir ) {
 	fprintf(stderr,"\nRunning cmd: %s\n",tmp.getBufStart());
 	system ( tmp.getBufStart() );
 	return 0;
+}
+
+void rmTest() {
+
+	File f;
+	// make five files
+	long max = 100;
+
+	for ( long i = 0 ; i < max ; i++ ) {
+		SafeBuf fn;
+		fn.safePrintf("./tmpfile%li",i);
+		SafeBuf sb;
+		for ( long j = 0 ; j < 100 ; j++ ) {
+			sb.safePrintf("%li\n",(long)rand());
+		}
+		sb.save ( fn.getBufStart() );
+	}
+
+	// now delete
+	fprintf(stderr,"Deleting files\n");
+	long long now = gettimeofdayInMillisecondsLocal();
+
+	for ( long i = 0 ; i < max ; i++ ) {
+		SafeBuf fn;
+		fn.safePrintf("./tmpfile%li",i);
+		File f;
+		f.set ( fn.getBufStart() );
+		f.unlink();
+	}
+
+	long long took = gettimeofdayInMillisecondsLocal() - now;
+
+	fprintf(stderr,"Deleting files took %lli ms\n",took);
+
 }
