@@ -2289,7 +2289,7 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 	if ( g_errno == EAGAIN ) { g_errno = 0; return NULL; }
 	if ( g_errno == EILSEQ ) { g_errno = 0; return NULL; }
 
-	//if ( g_conf.m_logDebugTcp ) 
+	if ( g_conf.m_logDebugTcp ) 
 		logf(LOG_DEBUG,"tcp: ...... accepted sd=%li",(long)newsd);
 
 	// ssl debug!
