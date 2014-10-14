@@ -885,7 +885,7 @@ bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 	}
 
 	// if msg2 had ALL empty lists we can cut it short
-	if ( m_posdbTable.m_topTree->m_numUsedNodes == 0 ) {
+	if ( m_posdbTable.m_topTree->m_numNodes == 0 ) {
 		//estimateHitsAndSendReply ( );
 		return true;
 	}

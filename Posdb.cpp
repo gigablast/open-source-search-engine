@@ -730,6 +730,15 @@ bool PosdbTable::allocTopTree ( ) {
 	long nn = nn1;
 	if ( nn2 < nn1 ) nn = nn2;
 
+	// . do not alloc space for anything if all termlists are empty
+	// . before, even if nn was 0, top tree would alloc a bunch of nodes
+	//   and we don't want to do that now to save mem and so 
+	//   Msg39 can check 
+	//   if ( m_posdbTable.m_topTree->m_numNodes == 0 )
+	//   to see if it should
+	//   advance to the next docid range or not.
+	if ( nn == 0 )
+		return true;
 
 
 	if ( m_r->m_doSiteClustering ) nn *= 2;
