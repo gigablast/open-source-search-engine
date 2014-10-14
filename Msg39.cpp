@@ -884,6 +884,13 @@ bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 		return true;
 	}
 
+	// if msg2 had ALL empty lists we can cut it short
+	if ( m_posdbTable.m_topTree->m_numUsedNodes == 0 ) {
+		//estimateHitsAndSendReply ( );
+		return true;
+	}
+		
+
 	// we have to allocate this with each call because each call can
 	// be a different docid range from doDocIdSplitLoop.
 	if ( ! m_posdbTable.allocWhiteListTable() ) {

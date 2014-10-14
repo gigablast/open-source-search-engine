@@ -14906,7 +14906,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		// out of sockets from diffbot trying to connect
 		// for downloading hundreds of urls from the same
 		// high crawl delay site.
-		long r = rand() % g_hostdb.m_numHosts;
+		// round robin over the hosts just to be more evenly
+		// distributed. it will likely get several http requests
+		// from diffbot.
+		static long s_lastHostId = -1;
+		if ( s_lastHostId == -1 )
+			s_lastHostId = g_hostdb.m_myHost->m_hostId;
+		long r = s_lastHostId;//rand() % g_hostdb.m_numHosts;
+		if ( ++s_lastHostId >= g_hostdb.m_numHosts )
+			s_lastHostId = 0;
 		Host *h0 = g_hostdb.getHost(r);
 		m_diffbotUrl.safePrintf("&proxy=%s:%li",
 					iptoa(h0->m_ip),

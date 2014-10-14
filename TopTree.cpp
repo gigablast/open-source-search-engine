@@ -519,7 +519,13 @@ void TopTree::deleteNode ( long i , uint8_t domHash ) {
 	// if it was the low node, update it
 	if ( i == m_lowNode ) {
 		m_lowNode = getNext ( i );
-		if ( m_lowNode == -1 ) { char *xx=NULL;*xx=0; }
+		if ( m_lowNode == -1 ) { 
+			log("toptree: toptree delete error node #%li "
+			    "domHash=%li because next node is -1 numnodes=%li",
+			    i,(long)domHash,m_numUsedNodes);
+		//char *xx=NULL;*xx=0; }
+			//return;
+		}
 	}
 	
 	// update the vcount
