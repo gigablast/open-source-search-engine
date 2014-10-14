@@ -833,7 +833,7 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 	m_numOpen++;
 
 	// ssl debug
-	log("tcp: open socket fd=%i (open=%li)",sd,m_numOpen-m_numClosed);
+	//log("tcp: open socket fd=%i (open=%li)",sd,m_numOpen-m_numClosed);
 
 	// . create a new TcpSocket around this socket descriptor
 	// . returns NULL and sets g_errno on error
@@ -847,8 +847,8 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 			log("tcp: close2(%li) = %s",(long)sd,mstrerror(errno));
 		else {
 			m_numClosed++;
-			log("tcp: closing sock %i (open=%li)",sd,
-			    m_numOpen-m_numClosed);
+			// log("tcp: closing sock %i (open=%li)",sd,
+			//     m_numOpen-m_numClosed);
 		}
 		return NULL; 
 	}
@@ -936,8 +936,8 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 			log("tcp: close3(%li) = %s",(long)sd,mstrerror(errno));
 		else {
 			m_numClosed++;
-			log("tcp: closing sock %i (%li)",sd,
-			    m_numOpen-m_numClosed);
+			// log("tcp: closing sock %i (%li)",sd,
+			//     m_numOpen-m_numClosed);
 		}
 		// send email alert
 		g_pingServer.sendEmailMsg ( &s_lastTime ,
@@ -2022,8 +2022,8 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 		    (long)sd,cret,mstrerror(errno));
 	else {
 		m_numClosed++;
-		log("tcp: closing sock %i (open=%li)",sd,
-		    m_numOpen-m_numClosed);
+		// log("tcp: closing sock %i (open=%li)",sd,
+		//     m_numOpen-m_numClosed);
 	}
 	// a 2nd close? it should return -1 with errno set!
 	//long cret2 = ::close ( sd );
@@ -2319,7 +2319,8 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 
 	m_numOpen++;
 
-	log("tcp: accept socket fd=%i (open=%li)",newsd,m_numOpen-m_numClosed);
+	//log("tcp: accept socket fd=%i (open=%li)",newsd,
+	//m_numOpen-m_numClosed);
 
 	// ban assholes
 	//if(g_autoBan.isBanned(name.sin_addr.s_addr)) return NULL;
@@ -2343,8 +2344,8 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 			    (long)newsd,mstrerror(errno));
 		else {
 			m_numClosed++;
-			log("tcp: closing sock %i (open=%li)",newsd,
-			    m_numOpen-m_numClosed);
+			// log("tcp: closing sock %i (open=%li)",newsd,
+			//     m_numOpen-m_numClosed);
 		}
 		return NULL; 
 	}
