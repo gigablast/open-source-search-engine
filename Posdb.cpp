@@ -714,13 +714,17 @@ bool PosdbTable::allocTopTree ( ) {
 	long nn1 = m_r->m_docsToGet;
 	long nn2 = 0;
 	// just add all up in case doing boolean OR or something
-	for ( long k = 0 ; k < m_msg2->getNumLists() ; k++ ) {
+	for ( long k = 0 ; k < m_msg2->m_numLists;k++){//getNumLists() ; k++) {
 		// count
 		RdbList *list = m_msg2->getList(k);
 		// skip if null
 		if ( ! list ) continue;
 		// skip if list is empty, too
 		if ( list->isEmpty() ) continue;
+		// show if debug
+		if ( m_debug )
+			log("toptree: adding listsize %li to nn2",
+			    list->m_listSize);
 		// tally. each new docid in this termlist will compress
 		// the 6 byte termid out, so reduce by 6.
 		nn2 += list->m_listSize / ( sizeof(POSDBKEY) -6 );
@@ -745,6 +749,10 @@ bool PosdbTable::allocTopTree ( ) {
         // limit to this regardless!
         //CollectionRec *cr = g_collectiondb.getRec ( m_coll );
         //if ( ! cr ) return false;
+
+	if ( m_debug )
+		log("toptree: toptree: initializing %li nodes",nn);
+
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) 
 		return false;
