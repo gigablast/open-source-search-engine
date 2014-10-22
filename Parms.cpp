@@ -20095,7 +20095,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 	////////
 	//
-	// HACK: if crawlbot user supplies a token and a name, and the
+	// HACK: if crawlbot user supplies a token, name, and seeds, and the
 	// corresponding collection does not exist then assume it is an add
 	//
 	////////
@@ -20124,10 +20124,12 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	bool hasDelete   = hr->hasField("delete");
 	bool hasRestart  = hr->hasField("restart");
 	bool hasReset    = hr->hasField("reset");
+  bool hasSeeds    = hr->hasField("seeds");
 	if ( ! cr          && 
 	     token         && 
 	     name          && 
 	     customCrawl   &&
+       hasSeeds      &&
 	     ! hasDelete   &&
 	     ! hasRestart  &&
 	     ! hasReset    &&
