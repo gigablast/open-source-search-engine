@@ -657,7 +657,7 @@ bool Msg40::federatedLoop ( ) {
 	// and mult based on index size
 	numDocIdSplits *= mult;
 	// prevent going OOM for type:article AND html
-	if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
+	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
 	// for testing
 	//m_numDocIdSplits = 3;
