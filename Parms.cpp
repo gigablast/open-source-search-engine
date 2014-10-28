@@ -20124,12 +20124,14 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	bool hasDelete   = hr->hasField("delete");
 	bool hasRestart  = hr->hasField("restart");
 	bool hasReset    = hr->hasField("reset");
-  bool hasSeeds    = hr->hasField("seeds");
+	bool hasSeeds    = hr->hasField("seeds");
+	// check for bulk jobs as well
+	if ( ! hasSeeds ) hasSeeds = hr->hasField("urls");
 	if ( ! cr          && 
 	     token         && 
 	     name          && 
 	     customCrawl   &&
-       hasSeeds      &&
+	     hasSeeds      &&
 	     ! hasDelete   &&
 	     ! hasRestart  &&
 	     ! hasReset    &&
