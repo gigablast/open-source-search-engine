@@ -1302,6 +1302,10 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 				"}\n"
 				"</script>");
 	*/
+
+	if ( page == PAGE_COLLPASSWORDS2 )
+		page = PAGE_COLLPASSWORDS;
+
 	// print the start of the table
 	char *tt = "None";
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
@@ -1757,14 +1761,17 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	//if ( page == PAGE_COLLPASSWORDS )
 	//	page = PAGE_ROOTPASSWORDS;
 
+	if ( page == PAGE_COLLPASSWORDS2 )
+		page = PAGE_COLLPASSWORDS;
+
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
     
 
-  // Begin "parms":[]
-  if (format == FORMAT_JSON ) {     
-    sb->safePrintf ("\"parms\":[\n");
-  }
+	// Begin "parms":[]
+	if (format == FORMAT_JSON ) {     
+		sb->safePrintf ("\"parms\":[\n");
+	}
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {

@@ -171,9 +171,9 @@ static WebPage s_pages[] = {
 	  PG_ROOTADMIN},
 
 	{ PAGE_COLLPASSWORDS2,//BASIC_SECURITY, 
-	  "admin/collectionpasswords", 0,"collection passwords",0,0,
+	  "admin/collectionpasswords2", 0,"collection passwords",0,0,
 	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_COLLADMIN},
+	  PG_COLLADMIN|PG_NOAPI},
 
 
 	{ PAGE_ROOTPASSWORDS, "admin/rootpasswords", 
@@ -3415,9 +3415,6 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		// dup page fix. so we should 'masterpwd' and 'masterip'
 		// in the list now.
 		//if ( pageNum ==PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
-		if ( pageNum == PAGE_COLLPASSWORDS2 )
-			pageNum = PAGE_COLLPASSWORDS;
-
 
 		if ( pageNum != PAGENUM ) continue;
 
