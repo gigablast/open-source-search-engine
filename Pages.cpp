@@ -130,7 +130,7 @@ static WebPage s_pages[] = {
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,
 	//NULL,NULL,PG_NOAPI},
 
-	{ PAGE_COLLPASSWORDS,//BASIC_SECURITY, 
+	{ PAGE_COLLPASSWORDS,
 	  "admin/collectionpasswords", 0,"collection passwords",0,0,
 	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
 	  PG_COLLADMIN},
@@ -169,6 +169,12 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY,
 	  "log controls", sendPageGeneric  , 0 ,NULL,NULL,
 	  PG_ROOTADMIN},
+
+	{ PAGE_COLLPASSWORDS2,//BASIC_SECURITY, 
+	  "admin/collectionpasswords", 0,"collection passwords",0,0,
+	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_COLLADMIN},
+
 
 	{ PAGE_ROOTPASSWORDS, "admin/rootpasswords", 
 	  0 , "root passwords" ,  1 , 0 ,
@@ -3409,6 +3415,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		// dup page fix. so we should 'masterpwd' and 'masterip'
 		// in the list now.
 		//if ( pageNum ==PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
+		if ( pageNum == PAGE_COLLPASSWORDS2 )
+			pageNum = PAGE_COLLPASSWORDS;
 
 
 		if ( pageNum != PAGENUM ) continue;
