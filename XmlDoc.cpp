@@ -2278,6 +2278,10 @@ bool XmlDoc::indexDoc ( ) {
 		    "error reply.",
 		    m_docId,mstrerror(g_errno));
 
+	// seems like this was causing a core somehow...
+	if ( g_errno == ENOMEM )
+		return true;
+
 	// if docid not found when trying to do a query reindex...
 	// this really shouldn't happen but i think we were adding
 	// additional SpiderRequests since we were using a fake first ip.
