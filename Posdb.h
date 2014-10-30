@@ -144,7 +144,7 @@ class Posdb {
 	// . since it is 16 bytes, the big bit will be set
 	void makeKey ( void              *kp             ,
 		       long long          termId         ,
-		       unsigned long long docId          , 
+		       uint64_t docId          , 
 		       long               wordPos        ,
 		       char               densityRank    ,
 		       char               diversityRank  ,
@@ -179,7 +179,7 @@ class Posdb {
 		kp->n0 |= ((unsigned short)mbits) << 4;
 	}
 	
-	void setDocIdBits ( void *vkp , unsigned long long docId ) {
+	void setDocIdBits ( void *vkp , uint64_t docId ) {
 		key144_t *kp = (key144_t *)vkp;
 		kp->n1 &= 0x000003ffffffffffLL;
 		kp->n1 |= (docId<<(32+10));
@@ -191,7 +191,7 @@ class Posdb {
 		key144_t *kp = (key144_t *)vkp;
 		if ( siteRank > MAXSITERANK ) { char *xx=NULL;*xx=0; }
 		kp->n1 &= 0xfffffe1fffffffffLL;
-		kp->n1 |= ((unsigned long long)siteRank)<<(32+5);
+		kp->n1 |= ((uint64_t)siteRank)<<(32+5);
 	}
 	
 	void setLangIdBits ( void *vkp , char langId ) {
@@ -199,7 +199,7 @@ class Posdb {
 		if ( langId > MAXLANGID ) { char *xx=NULL;*xx=0; }
 		kp->n1 &= 0xffffffe0ffffffffLL;
 		// put the lower 5 bits here
-		kp->n1 |= ((unsigned long long)(langId&0x1f))<<(32);
+		kp->n1 |= ((uint64_t)(langId&0x1f))<<(32);
 		// and the upper 6th bit here. n0 is a short.
 		// 0011 1111
 		if ( langId & 0x20 ) kp->n0 |= 0x08;
@@ -291,7 +291,7 @@ class Posdb {
 	};
 
 	long long getDocId ( void *key ) {
-		unsigned long long d = 0LL;
+		uint64_t d = 0LL;
 		d = ((unsigned char *)key)[11];
 		d <<= 32;
 		d |= *(unsigned long *)(((unsigned char *)key)+7);
@@ -471,10 +471,10 @@ class PosdbList : public RdbList {
 	long long getCurrentTermId12 ( ) {
 		return getTermId12 ( m_listPtr ); };
 	long long getTermId12 ( char *rec ) {
-		return (*(unsigned long long *)(&rec[4])) >> 16 ;
+		return (*(uint64_t *)(&rec[4])) >> 16 ;
 	};
 	long long getTermId16 ( char *rec ) {
-		return (*(unsigned long long *)(&rec[8])) >> 16 ;
+		return (*(uint64_t *)(&rec[8])) >> 16 ;
 	};
 	// these 2 assume 12 and 6 byte keys respectively
 	long long getCurrentDocId () {
@@ -488,7 +488,7 @@ class PosdbList : public RdbList {
 	long long getCurrentDocId12 ( ) {
 		return getDocId12 ( m_listPtr ); };
 	long long getDocId12 ( char *rec ) {
-		return ((*(unsigned long long *)(rec)) >> 2) & DOCID_MASK; };
+		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
 	long long getDocId6 ( char *rec ) {
 		long long docid;
 		*(long *)(&docid) = *(long *)rec;
@@ -582,9 +582,9 @@ class PosdbTable {
 	// has init already been called?
 	bool isInitialized ( ) { return m_initialized; };
 
-	unsigned long long m_docId;
+	uint64_t m_docId;
 
-	unsigned long long m_docIdHack;
+	uint64_t m_docIdHack;
 
 	bool m_hasFacetTerm;
 

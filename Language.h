@@ -108,7 +108,7 @@ class Language {
 	
 	//bool makeAffinities();
 
-	//long getPhrasePopularity ( char *s, unsigned long long h,
+	//long getPhrasePopularity ( char *s, uint64_t h,
 	//		       bool checkTitleRecDict );
 
 	bool checkDict(char *s, long slen, char encodeType);
@@ -130,7 +130,7 @@ class Language {
 	//StateDict *m_stateDict;
 
 	// hash table of the dictionary
-	HashTableT <unsigned long long, long>m_dict;
+	HashTableT <uint64_t, long>m_dict;
 
  private:
 	long spellcheckDict();
@@ -262,13 +262,13 @@ class Language {
 	// the value is a composite of index in m_tuplePtrs where the list
 	// starts as the high 32 bits of the value and the number of 
 	// words having the same phonetic as the low 32 bits of the value
-	HashTableT <unsigned long long, unsigned long long > m_phonetics;
+	HashTableT <uint64_t, uint64_t > m_phonetics;
 
 	// hash table of the distributed pop words dictionary
 	//	HashTableT <unsigned long, long> m_titlerecDict;
 
 	// hash table of the distributed pop words dictionary
-	HashTableT <unsigned long long, long>m_distributedPopPhrases;
+	HashTableT <uint64_t, long>m_distributedPopPhrases;
 
 	// hash table of the top popular words in the dictionary
 	//	HashTableT <unsigned long, char *> m_topPopPhrases;

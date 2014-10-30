@@ -1630,8 +1630,8 @@ bool Categories::initLangTables(void) {
 	char name[512];
 	register int i;
 	// long long memory = g_mem.m_used;
-	unsigned long long start;
-	unsigned long long stop;
+	uint64_t start;
+	uint64_t stop;
 	for(i = 2; i <= MAX_LANGUAGES; i++) {
 
 		// There is no language 5!

@@ -360,7 +360,7 @@ public:
 	// . i.e. "11am = 11:00 AM", "3/3/11 = March 3rd 2011"
 	uint64_t m_dateHash64;
 
-	unsigned long long m_norepeatKey ;
+	uint64_t m_norepeatKey ;
 	long               m_norepeatResult ;
 
 	// usually the date ptr containing the tod, but in the case of

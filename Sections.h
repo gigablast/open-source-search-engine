@@ -270,7 +270,7 @@ class Sectiondb {
 	Rdb *getRdb() { return &m_rdb; }
 
 	uint64_t getSiteHash ( void *k ) {
-		return ((*(unsigned long long *)(((char *)k)+8))) >> 16;};
+		return ((*(uint64_t *)(((char *)k)+8))) >> 16;};
 
 
 	uint32_t getSectionHash ( void *k ) {
@@ -278,7 +278,7 @@ class Sectiondb {
 
 
 	long long getDocId ( void *k ) {
-		return ((*(unsigned long long *)k) >> 2) & DOCID_MASK; }
+		return ((*(uint64_t *)k) >> 2) & DOCID_MASK; }
 
 
 	uint8_t getSectionType ( void *k ) {

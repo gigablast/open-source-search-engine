@@ -6587,7 +6587,7 @@ void dumpWaitingTree (char *coll ) {
 		// get ip from that
 		long firstIp = (key->n0) & 0xffffffff;
 		// get the time
-		unsigned long long spiderTimeMS = key->n1;
+		uint64_t spiderTimeMS = key->n1;
 		// shift upp
 		spiderTimeMS <<= 32;
 		// or in
@@ -8441,8 +8441,8 @@ void dumpMissing ( char *coll ) {
 	
 	// make a hash table for docids
 	logf(LOG_INFO,"db: Allocating %li bytes for docids.",numSlots*8);
-	unsigned long long *slots = 
-		(unsigned long long *)mcalloc ( numSlots * 8 , "dumpMissing" );
+	uint64_t *slots = 
+		(uint64_t *)mcalloc ( numSlots * 8 , "dumpMissing" );
 	if ( ! slots ) {
 		log("db: Could not alloc %li bytes to load in %lli docids.",
 		    numSlots*8,numRecs);
@@ -8502,7 +8502,7 @@ void dumpMissing ( char *coll ) {
 		long  tfn = 0;//g_tfndb.getTfn(&k);
 		if ( tfn == 255 ) continue;
 		// get docid
-		unsigned long long d = 0LL;//g_tfndb.getDocId ( &k );
+		uint64_t d = 0LL;//g_tfndb.getDocId ( &k );
 		// add to hash table
 		//long n = (unsigned long)d & mask;
 		long n = (unsigned long)d % numSlots;
@@ -8592,7 +8592,7 @@ void dumpMissing ( char *coll ) {
 		// do we hold his titleRec? continue if not
 		if ( getShardNum ( RDB_TITLEDB , &k ) != shardNum ) continue;
 		// get his docid
-		unsigned long long d = g_indexdb.getDocId(k);
+		uint64_t d = g_indexdb.getDocId(k);
 		// otherwise, report him if not in tfndb
 		//long n = (unsigned long)d & mask;
 		long n = (unsigned long)d % numSlots;
@@ -8673,7 +8673,7 @@ void dumpDups ( char *coll ) {
 	key_t k;
 	long long d;
 	long hashMod;
-	unsigned long long n2;
+	uint64_t n2;
 	long long endTid;
 	char filename[30];
 	char buff[100];
@@ -8969,10 +8969,10 @@ void dumpDups ( char *coll ) {
 		indexdbCount ++;
 
 		
-		n2 = (unsigned long long) d & (hashMod-1);
+		n2 = (uint64_t) d & (hashMod-1);
 		n2 += offset1;
 		while ( slots[n2] && slots[n2] != d ) {
-			if ( ++n2 >= (unsigned long long) offset2 ) 
+			if ( ++n2 >= (uint64_t) offset2 ) 
 				n2 = offset1;
 		}
 
@@ -9121,8 +9121,8 @@ void removeDocIds  ( char *coll , char *filename ) {
 	long need = numSlots * 8;
 	logf(LOG_INFO,"db: Allocating %li bytes for hash table.",need);
 	unsigned long mask = numSlots - 1;
-	unsigned long long *slots = 
-		(unsigned long long *)mcalloc(need,"loaddocids");
+	uint64_t *slots = 
+		(uint64_t *)mcalloc(need,"loaddocids");
 	if ( ! slots ) {
 		log("db: Could not allocate %li bytes to read in docids. "
 		    "Please split this file and do multiple runs.", need);
@@ -9157,7 +9157,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 	*pend = 0;
 	while ( *p ) {
 		// get docid
-		unsigned long long d = atoll(p);
+		uint64_t d = atoll(p);
 		// hash it
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )
@@ -9318,7 +9318,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 		key_t k    = list.getCurrentKey();
 		// skip deletes
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
-		unsigned long long d = g_indexdb.getDocId(k);
+		uint64_t d = g_indexdb.getDocId(k);
 		// see if docid is in delete list
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )
@@ -9415,7 +9415,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 		// skip deletes
 		//if ( (k.n0 & 0x01) == 0x00 ) continue;
 		if ( (((key_t *)k)->n0 & 0x01) == 0x00 ) continue;
-		unsigned long long d = g_checksumdb.getDocId( k );
+		uint64_t d = g_checksumdb.getDocId( k );
 		// see if docid is in delete list
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )
@@ -9518,7 +9518,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 		key_t k    = list.getCurrentKey();
 		// skip deletes
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
-		unsigned long long d = g_clusterdb.getDocId(&k);
+		uint64_t d = g_clusterdb.getDocId(&k);
 		// see if docid is in delete list
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )
@@ -9613,7 +9613,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 		key_t k    = list.getCurrentKey();
 		// skip deletes
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
-		unsigned long long d = 0;//g_tfndb.getDocId(&k);
+		uint64_t d = 0;//g_tfndb.getDocId(&k);
 		// see if docid is in delete list
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )
@@ -10070,7 +10070,7 @@ bool genDateRange ( char *coll ) {
 	long minRecSizes = 1024*1024;
 	//long minRecSizes = 32*1024;
 	unsigned long count = 0;
-	unsigned long long addSize = 0;
+	uint64_t addSize = 0;
 	// turn off threads
 	g_threads.disableThreads();
 	// log the start
@@ -10181,7 +10181,7 @@ listLoop:
 	// dump the term table into an index list
 	IndexList indexList;
 	IndexList newDateList;
-	unsigned long long chksum1;
+	uint64_t chksum1;
 	indexList.set ( &tt,
 			oldtr.getDocId(),
 			NULL,
@@ -11560,7 +11560,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	//long j, off , size;
 	long long off , size;
 	for ( long i = 0 ; i < 100000 ; i++ ) {
-		unsigned long long r = rand();
+		uint64_t r = rand();
 		r <<= 32 ;
 		r |= rand();
 		off = r % (s_filesize - s_maxReadSize );

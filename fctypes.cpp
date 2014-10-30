@@ -924,7 +924,7 @@ long getNumWords ( char *s , long len, long titleVersion ) {
 // . this stores a "n" into "s" and returns the # of bytes written into "s"
 // . it also puts commas into the number
 // . it now also NULL terminates bytes written into "s"
-long ulltoa ( char *s , unsigned long long n ) {
+long ulltoa ( char *s , uint64_t n ) {
 	// if n is zero, it's easy
 	if ( n == 0LL ) { *s++='0'; *s='\0'; return 1; }
 	// a hunk is a number in [0,999]

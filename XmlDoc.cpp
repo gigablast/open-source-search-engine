@@ -8648,7 +8648,7 @@ long long *XmlDoc::getExactContentHash64 ( ) {
 	//if ( p[plen] != '\0' ) { char *xx=NULL;*xx=0; }
 
 	unsigned char *pend = (unsigned char *)p + plen;
-	unsigned long long h64 = 0LL;
+	uint64_t h64 = 0LL;
 	unsigned char pos = 0;
 	bool lastWasSpace = true;
 	for ( ; p < pend ; p++ ) {
@@ -18643,7 +18643,7 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 		long need = links->m_numLinks * 4;
 		m_fakeIpBuf.reserve ( need );
 		for ( long i = 0 ; i < links->m_numLinks ; i++ ) {
-			unsigned long long h64 = links->getHostHash64(i);
+			uint64_t h64 = links->getHostHash64(i);
 			long ip = h64 & 0xffffffff;
 			m_fakeIpBuf.pushLong(ip);
 		}
@@ -20619,7 +20619,7 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		// set our rec size, includes key/dataSize/data
 		long recSize = p - rec;
 		// debug point
-		//if ( *(unsigned long long *)k == 4828936067112479745LL )
+		//if ( *(uint64_t *)k == 4828936067112479745LL )
 		//	log("hey");
 		// if just adding, do it
 		if ( ! checkList ) {
@@ -32492,7 +32492,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 		}
 		for ( long j = 0 ; j < naids ; j++ ) {
 			// skip if same as original
-			if ( (unsigned long long)aids[j] == wids[i] ) continue;
+			if ( (uint64_t)aids[j] == wids[i] ) continue;
 			// . hash it with the prefix if any
 			// . fixes gbwhere:galleries bug...
 			if ( plen>0 ) syh = hash64 ( aids[j] , prefixHash );
@@ -33690,7 +33690,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 
 	sb->safePrintf("<tr><td>hostHash64</td><td>0x%llx</td></tr>",
-		       (unsigned long long)getHostHash32a());
+		       (uint64_t)getHostHash32a());
 	sb->safePrintf("<tr><td>site</td><td>");
 	sb->safeMemcpy(ptr_site,size_site-1);
 	sb->safePrintf("</td></tr>\n");
@@ -34595,7 +34595,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				 //(unsigned long)tp[i]->m_score32 ,
 				 //dateStr          ,
 				 //desc, // start + tp[i]->m_descOff    ,
-				 (unsigned long long)tp[i]->m_termId 
+				 (uint64_t)tp[i]->m_termId 
 				 & TERMID_MASK );
 
 		if ( tp[i]->m_shardByTermId ) sb->safePrintf("<td><b>1</b></td>" );
@@ -37209,7 +37209,7 @@ char *XmlDoc::getWordSpamVec ( ) {
 		//if ( words->getStripWordId(i) ) 
 		//	h = words->getStripWordId(i);
 		// "j" is the bucket index
-		long j = (unsigned long long)h % size;
+		long j = (uint64_t)h % size;
 		// make sure j points to the right bucket
 		while (bucketHash[j]) {
 			if ( h == bucketHash[j] ) break;
@@ -37836,7 +37836,7 @@ char *XmlDoc::getFragVec ( ) {
 	long        ringPos  [ NUMWORDS ];
 	long        ringi = 0;
 	long        count = 0;
-	unsigned long long   h     = 0;
+	uint64_t   h     = 0;
 
 	// . make the hash table
 	// . make it big enough so there are gaps, so chains are not too long
@@ -37848,7 +37848,7 @@ char *XmlDoc::getFragVec ( ) {
 	if ( need < 50000 ) buf = tmpBuf;
 	else                buf = (char *)mmalloc ( need , "WeightsSet3" );
 	char      *ptr        = buf;
-	unsigned long long *hashes = (unsigned long long *)ptr; ptr += nb * 8;
+	uint64_t *hashes = (uint64_t *)ptr; ptr += nb * 8;
 	long      *vals       = (long      *)ptr; ptr += nb * 4;
 	float     *ww         = (float     *)ptr; ptr += nb * 4;
 	if ( ! buf ) return NULL;
@@ -39842,7 +39842,7 @@ bool XmlDoc::addUniqueWordsToBuf ( SafeBuf *termInfoBuf ,
 				   bool getSynonyms ) {
 
 	long nw   = ww->getNumWords ();
-	unsigned long long *wids = (unsigned long long *)ww->getWordIds  ();
+	uint64_t *wids = (uint64_t *)ww->getWordIds  ();
 	//nodeid_t  *tids = ww->getTagIds   ();
 	uint8_t *langId = getLangId();
 	// this should have been set by parent caller
@@ -39887,7 +39887,7 @@ bool XmlDoc::addUniqueWordsToBuf ( SafeBuf *termInfoBuf ,
 			char c= wptr[wlen];
 			wptr[wlen] = '\0';
 			log("seo: storecount wid=%lu word=%s",
-			    (unsigned long)((unsigned long long)wids[i]),wptr);
+			    (unsigned long)((uint64_t)wids[i]),wptr);
 			wptr[wlen] = c;
 		}
 		*/
@@ -40116,7 +40116,7 @@ bool XmlDoc::checkCachedb ( ) {
 		if ( m_spideredTimeValid ) ch32 ^= m_spideredTime;
 		// first check cachedb. enum type cr_MatchingQueries
 		long uh32 ;
-		uh32 =(unsigned long)((unsigned long long)getFirstUrlHash64());
+		uh32 =(unsigned long)((uint64_t)getFirstUrlHash64());
 		key_t sk = g_cachedb.makeStartKey ( uh32 , ch32 );
 		key_t ek = g_cachedb.makeEndKey   ( uh32 , ch32 );
 		// debug
@@ -40600,7 +40600,7 @@ bool XmlDoc::storeMatchingQueriesIntoCachedb ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -40713,7 +40713,7 @@ bool XmlDoc::storeRelatedDocIdsIntoCachedb ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -40844,7 +40844,7 @@ bool XmlDoc::storeRecommendedLinksBuf ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -40958,7 +40958,7 @@ bool XmlDoc::storeRelatedQueriesIntoCachedb ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -41078,7 +41078,7 @@ bool XmlDoc::storeWordPosInfoBufIntoCachedb ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -41201,7 +41201,7 @@ bool XmlDoc::storeMissingTermBufIntoCachedb ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -41324,7 +41324,7 @@ bool XmlDoc::storeScoredInsertableTermsIntoCachedb ( ) {
 	// ensure no reallocating - that would screw logic below up
 	char *orig = listBuf.getBufStart();
 
-	long uh32 = (unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 = (unsigned long)((uint64_t)getFirstUrlHash64());
 
 	key_t k;
 
@@ -46990,7 +46990,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 	if ( forSite ) myList = &m_siteReplyList;
 	else           myList = &m_pageReplyList;
 	
-	long uh32 =(unsigned long)((unsigned long long)getFirstUrlHash64());
+	long uh32 =(unsigned long)((uint64_t)getFirstUrlHash64());
 
 	// first check cachedb!
 	bool checkIt = false;
@@ -48901,7 +48901,7 @@ bool XmlDoc::storeFacetValuesSections ( char *qs , SafeBuf *sb ,
 	// so get the digit part
 	char *p = qs;
 	for ( ; *p && ! is_digit(*p); p++ );
-	uint64_t xsh = (unsigned long long)atoll(p);
+	uint64_t xsh = (uint64_t)atoll(p);
 
 	bool isString = false;
 	if ( strncmp(qs-4,"str:",4) == 0 ) isString = true;

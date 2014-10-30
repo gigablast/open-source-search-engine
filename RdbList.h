@@ -566,10 +566,10 @@ inline char cmp2b ( char *alo , char *ahi , char *blo , char *bhi ) {
 	   *(unsigned short *) ((char *)bhi)     ? -1  \
        :  (*(unsigned short *) ((char *)ahi)    >      \
 	   *(unsigned short *) ((char *)bhi)     ?  1  \
-       :  (*(unsigned long long *)&((char *)alo)[2] <      \
-	   *(unsigned long long *)&((char *)blo)[2]  ? -1  \
-       :  (*(unsigned long long *)&((char *)alo)[2] >      \
-	   *(unsigned long long *)&((char *)blo)[2]  ?  1  \
+       :  (*(uint64_t *)&((char *)alo)[2] <      \
+	   *(uint64_t *)&((char *)blo)[2]  ? -1  \
+       :  (*(uint64_t *)&((char *)alo)[2] >      \
+	   *(uint64_t *)&((char *)blo)[2]  ?  1  \
        :(((*(unsigned short *) ((char *)alo)    )|0x02) <        \
 	 ((*(unsigned short *) ((char *)blo)    )|0x02)    ? -1  \
        :(((*(unsigned short *) ((char *)alo)    )|0x02) >        \
@@ -586,10 +586,10 @@ inline char cmp2b ( char *alo , char *ahi , char *blo , char *bhi ) {
 	   *(unsigned short *) ((char *)bhi)     ? -1  \
        :  (*(unsigned short *) ((char *)ahi)    >      \
 	   *(unsigned short *) ((char *)bhi)     ?  1  \
-       :  (*(unsigned long long *)&((char *)alo)[2] <      \
-	   *(unsigned long long *)&((char *)blo)[2]  ? -1  \
-       :  (*(unsigned long long *)&((char *)alo)[2] >      \
-	   *(unsigned long long *)&((char *)blo)[2]  ?  1  \
+       :  (*(uint64_t *)&((char *)alo)[2] <      \
+	   *(uint64_t *)&((char *)blo)[2]  ? -1  \
+       :  (*(uint64_t *)&((char *)alo)[2] >      \
+	   *(uint64_t *)&((char *)blo)[2]  ?  1  \
        :(((*(unsigned short *) ((char *)alo)    )|0x03) <        \
 	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ? -1  \
        :(((*(unsigned short *) ((char *)alo)    )|0x03) >        \

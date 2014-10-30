@@ -16,7 +16,7 @@
 //#define SEED64 7651331LL
 
 // call this before calling any hash*() routines so we can fill our table
-extern unsigned long long g_hashtab[256][256];
+extern uint64_t g_hashtab[256][256];
 
 #include "types.h"
 
@@ -35,11 +35,11 @@ unsigned long hash32Lower_utf8  ( char *s, long len,unsigned long startHash=0);
 uint32_t      hash32b          (char *s,long len1,char *s2, long len2);
 uint32_t      hash32_cont      ( char *s, char *slen,
 				 uint32_t startHash , long *conti );
-uint64_t      hash64n          ( char *s, unsigned long long startHash =0LL);
+uint64_t      hash64n          ( char *s, uint64_t startHash =0LL);
 uint64_t      hash64           ( uint64_t h1,uint64_t h2);
 uint64_t      hash64           ( char *s,long len,uint64_t startHash=0);
 uint64_t      hash64_cont      ( char *s,long len,
-				 unsigned long long startHash,long *conti);
+				 uint64_t startHash,long *conti);
 uint64_t      hash64b          ( char *s,         uint64_t startHash=0);
 uint64_t      hash64Fast       ( uint64_t h1 , uint64_t h2 ) ;
 uint64_t      hash64Lower_a    ( char *s, long len, uint64_t startHash = 0 );
@@ -81,8 +81,8 @@ uint64_t       hash64Upper_a    ( char *s, long len, uint64_t startHash = 0 );
 //			  const char *prefix2 , long prefixLen2 ) ;
 
 
-inline unsigned long long hash64b ( char *s , unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64b ( char *s , uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	while ( s[i] ) {
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
@@ -91,9 +91,9 @@ inline unsigned long long hash64b ( char *s , unsigned long long startHash ) {
 	return h;
 }
 
-inline unsigned long long hash64 ( char *s, long len, 
-				   unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64 ( char *s, long len, 
+				   uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	while ( i < len ) { 
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
@@ -102,10 +102,10 @@ inline unsigned long long hash64 ( char *s, long len,
 	return h;
 }
 
-inline unsigned long long hash64_cont ( char *s, long len, 
-					unsigned long long startHash ,
+inline uint64_t hash64_cont ( char *s, long len, 
+					uint64_t startHash ,
 					long *conti ) {
-	unsigned long long h = startHash;
+	uint64_t h = startHash;
 	long i = 0;//*conti;
 	while ( i < len ) { 
 		h ^= g_hashtab [(unsigned char)(i+*conti)][(unsigned char)s[i]];
@@ -126,9 +126,9 @@ inline uint64_t hash64Fast ( uint64_t h1 , uint64_t h2 ) {
 // . combine 2 hashes into 1
 // . TODO: ensure this is a good way
 // . used for combining words' hashes into phrases (also fields,collections)..
-inline unsigned long long hash64 (unsigned long long h1,unsigned long long h2){
+inline uint64_t hash64 (uint64_t h1,uint64_t h2){
 	// treat the 16 bytes as a string now instead of multiplying them
-	unsigned long long h = 0;
+	uint64_t h = 0;
 
 	h ^= g_hashtab [ 0] [ *((unsigned char *)(&h1)+0) ] ;
 	h ^= g_hashtab [ 1] [ *((unsigned char *)(&h1)+1) ] ;
@@ -152,9 +152,9 @@ inline unsigned long long hash64 (unsigned long long h1,unsigned long long h2){
 }
 
 
-inline unsigned long long hash64Lower_a ( char *s, long len, 
-					unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64Lower_a ( char *s, long len, 
+					uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
@@ -407,9 +407,9 @@ inline uint64_t hash64LowerAscii_utf8 (char *p,long len,uint64_t startHash){
 }
 
 
-inline unsigned long long hash64Upper_a ( char *s , long len , 
-					  unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64Upper_a ( char *s , long len , 
+					  uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
@@ -470,9 +470,9 @@ inline uint64_t hash64AsciiLowerE ( char *s, long len, uint64_t startHash ) {
 	return h;
 }
 
-inline unsigned long long hash64Ascii ( char *s , long len , 
-					unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64Ascii ( char *s , long len , 
+					uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
@@ -482,9 +482,9 @@ inline unsigned long long hash64Ascii ( char *s , long len ,
 	return h;
 }
 
-inline unsigned long long hash64AsciiLower (char *s, long len, 
-				   unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64AsciiLower (char *s, long len, 
+				   uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i]
@@ -494,9 +494,9 @@ inline unsigned long long hash64AsciiLower (char *s, long len,
 	return h;
 }
 
-inline unsigned long long hash64Cap( char *s , long len , 
-				     unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64Cap( char *s , long len , 
+				     uint64_t startHash ) {
+	uint64_t h = startHash;
 	// first letter is cap
 	if ( len < 1 ) return h;
 	h ^= g_hashtab [0] [(unsigned char)to_upper(s[0])];
@@ -512,9 +512,9 @@ inline unsigned long long hash64Cap( char *s , long len ,
 */
 
 /*
-inline unsigned long long hash64AsciiCap( char *s , long len, 
-					  unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64AsciiCap( char *s , long len, 
+					  uint64_t startHash ) {
+	uint64_t h = startHash;
 	// first letter is cap
 	if ( len < 1 ) return h;
 	h ^= g_hashtab [0] [(unsigned char)to_upper(s[0])];
@@ -529,9 +529,9 @@ inline unsigned long long hash64AsciiCap( char *s , long len,
 }
 
 // used by Checksumdb.cpp for comparing if docs are dups
-inline unsigned long long hash64AsciiLowerAlnumOnly (char *s, long len, 
-				   unsigned long long startHash ) {
-	unsigned long long h = startHash;
+inline uint64_t hash64AsciiLowerAlnumOnly (char *s, long len, 
+				   uint64_t startHash ) {
+	uint64_t h = startHash;
 	long i = 0;
 	long count = 0;
 	while ( i < len ) {

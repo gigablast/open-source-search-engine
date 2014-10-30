@@ -1364,7 +1364,7 @@ bool IndexTable2::alloc ( ) {
 
 	// No more truth table!
 
-	//unsigned long long numCombos = 0;
+	//uint64_t numCombos = 0;
 	// only for boolean queries
 	//if ( m_q->m_isBoolean ) numCombos = 1LL << m_q->m_numExplicitBits;
 	// do not use any more than 10MB for a boolean table right now

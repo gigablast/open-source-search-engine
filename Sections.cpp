@@ -2034,7 +2034,7 @@ bool Sections::set ( Words     *w                       ,
 		// propagate it upwards
 		Section *p = sn->m_parent;
 		// parent of sentence always gets it i guess
-		unsigned long long lastVal = 0x7fffffffffffffffLL;
+		uint64_t lastVal = 0x7fffffffffffffffLL;
 		// TODO: because we use XOR for speed we might end up with
 		// a 0 if two sentence are repeated, they cancel out..
 		for ( ; p ; p = p->m_parent ) {
@@ -2194,7 +2194,7 @@ bool Sections::set ( Words     *w                       ,
 		// mask our prevSibling
 		vote &= 0x00000000ffffffff;
 		// we are the new prevSiblinkg now
-		vote |= ((unsigned long long)((unsigned long)sn))<<32;
+		vote |= ((uint64_t)((unsigned long)sn))<<32;
 		// inc occNum for the next guy
 		vote++;
 		// store back. return true with g_errno set on error
@@ -15688,7 +15688,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		//if ( sk->m_indirectSentHash64 && sk->m_tagId !=TAG_TEXTNODE){
 		//if ( sk->m_stats.m_totalDocIds ) {
 			mod = (unsigned long)sk->m_turkTagHash32;
-			mod ^= (unsigned long)(unsigned long long)m_siteHash64;
+			mod ^= (unsigned long)(uint64_t)m_siteHash64;
 			m_sbuf->safePrintf("<a style=decoration:none; "
 					   "href=/search?c=%s&"
 					   "q=gbfacetstr%%3A"

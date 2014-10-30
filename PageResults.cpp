@@ -405,7 +405,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// parent page will be cached and so will this ajax url.
 		// but if they hit reload the parent page reloads with a
 		// different ajax url because "rand" is different
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
 		sb.safePrintf("&id=%lu&rand=%llu';\n"
 			      "client.open('GET', url );\n"
 			      "client.send();\n"
@@ -3791,7 +3791,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	urlLen = uu.getUrlLen();
 
 	// get my site hash
-	unsigned long long siteHash = 0;
+	uint64_t siteHash = 0;
 	if ( uu.getHostLen() > 0 ) 
 		siteHash = hash64(uu.getHost(),uu.getHostLen());
 	// indent it if level is 2
@@ -3800,7 +3800,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
 	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
-	//unsigned long long lastSiteHash = siteHash;
+	//uint64_t lastSiteHash = siteHash;
 	if ( indent && si->m_format == FORMAT_HTML ) 
 		sb->safePrintf("<blockquote>"); 
 
@@ -4923,7 +4923,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf(" - <a style=color:blue; href=\"/addurl?"
 			       "urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
 		sb->safePrintf("&c=%s&rand64=%llu\">respider</a>\n",
 			       coll,rand64);
 	}

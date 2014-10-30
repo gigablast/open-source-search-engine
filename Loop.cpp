@@ -484,8 +484,8 @@ void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
 		//	    fd,(long)s->m_state);
 		// do the callback
 		//long address = 0;
-		// 		unsigned long long profilerStart,profilerEnd;
-		// 		unsigned long long statStart, statEnd;
+		// 		uint64_t profilerStart,profilerEnd;
+		// 		uint64_t statStart, statEnd;
 		/*
 		if(g_conf.m_profilingEnabled){
 			address=(long)s->m_callback;

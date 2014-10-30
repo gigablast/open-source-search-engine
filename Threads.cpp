@@ -2203,8 +2203,8 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// get into a wierd loop thingy
 	if ( te ) return false;
 
-// 	unsigned long long profilerStart,profilerEnd;
-// 	unsigned long long statStart,statEnd;
+// 	uint64_t profilerStart,profilerEnd;
+// 	uint64_t statStart,statEnd;
 
 	//if (g_conf.m_profilingEnabled){
 	//	address=(long)t->m_startRoutine;

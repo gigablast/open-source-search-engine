@@ -37,7 +37,7 @@ main ( ) {
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
 			g_hashtab [i][j] <<= 32;
-			g_hashtab [i][j] |= (unsigned long long)rand();
+			g_hashtab [i][j] |= (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;

@@ -64,7 +64,7 @@ class StateSpeller{
 	char  *m_nrw;
 	char  *m_nend;
 	long  *m_numNarrow;
-	unsigned long long m_start;
+	uint64_t m_start;
 	long   m_numFrags;
 	long   m_numFragsReceived;
 	StateFrag *m_stFrag[MAX_FRAG_SIZE];
@@ -88,7 +88,7 @@ class Speller {
 	//uint8_t getUniqueLang ( long long *wid );
 	long long getLangBits64 ( long long *wid ) ;
 
-	long getPhrasePopularity ( char *s, unsigned long long h,
+	long getPhrasePopularity ( char *s, uint64_t h,
 				   bool checkTitleRecDict,
 				   unsigned char langId = langEnglish );
 
@@ -160,7 +160,7 @@ class Speller {
 	bool populateHashTable( char *ff, HashTableX *htable, 
 				unsigned char langId );
 	//private:
-	//HashTableT <unsigned long long, char* > m_unifiedDict;
+	//HashTableT <uint64_t, char* > m_unifiedDict;
 	HashTableX m_unifiedDict;
 
 	// can this queryword start a phrase ?

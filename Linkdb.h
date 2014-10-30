@@ -237,8 +237,8 @@ class Linkdb {
 	unsigned long getLinkeeSiteHash32_uk ( key224_t *key ) {
 		return (key->n3) >> 32; }
 
-	unsigned long long getLinkeeUrlHash64_uk ( key224_t *key ) {
-		unsigned long long h = key->n3;
+	uint64_t getLinkeeUrlHash64_uk ( key224_t *key ) {
+		uint64_t h = key->n3;
 		h &= 0x00000000ffffffffLL;
 		h <<= 15;
 		h |= key->n2 >> 49;
@@ -285,7 +285,7 @@ class Linkdb {
 	}
 
 	long long getLinkerDocId_uk( key224_t *k ) {
-		unsigned long long d = k->n2 & 0xff;
+		uint64_t d = k->n2 & 0xff;
 		d <<= 30;
 		d |= k->n1 >>34;
 		return d;
@@ -318,7 +318,7 @@ class Linkdb {
 		// clear old bits
 		((key224_t *)k)->n1 &= 0xffffffff03ffffLL;
 		// scale us into it
-		((key224_t *)k)->n1 |= ((unsigned long long)date) << 18;
+		((key224_t *)k)->n1 |= ((uint64_t)date) << 18;
 	}
 
 	long getLostDate_uk ( void *k ) {
@@ -346,7 +346,7 @@ class Linkdb {
 		// clear old bits
 		((key224_t *)k)->n1 &= 0xffffffffffff0003LL;
 		// scale us into it
-		((key224_t *)k)->n1 |= ((unsigned long long)date) << 2;
+		((key224_t *)k)->n1 |= ((uint64_t)date) << 2;
 	}
 
 	uint32_t getLinkerSiteHash32_uk( void *k ) {

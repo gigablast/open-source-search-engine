@@ -1182,7 +1182,7 @@ bool Weights::set1 ( Words    *words              ,
 		QUICKPOLL ( m_niceness );		
         }
 
-	//HashTableT<unsigned long long,char> titleRepeatTable;
+	//HashTableT<uint64_t,char> titleRepeatTable;
 	HashTableX titleRepeatTable;
 	long bufSize = 1024 * 20; // 10 bytes per record 
 	char buf[bufSize]; 
@@ -2542,7 +2542,7 @@ bool Weights::set4 ( ) {
 		//if ( words->getStripWordId(i) ) 
 		//	h = words->getStripWordId(i);
 		// "j" is the bucket index
-		long j = (unsigned long long)h % size;
+		long j = (uint64_t)h % size;
 		// make sure j points to the right bucket
 		while (bucketHash[j]) {
 			if ( h == bucketHash[j] ) break;

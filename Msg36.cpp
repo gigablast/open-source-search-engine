@@ -398,7 +398,7 @@ void handleRequest36 ( UdpSlot *slot , long netnice ) {
 	long  recSize;
 	key_t k;
 	k.n0 = 0;
-	k.n1 = (unsigned long long)termId;
+	k.n1 = (uint64_t)termId;
 	// . return false if not found
 	// . we can't promote it because we re-set the count below by
 	//   doing a *(long long *)rec=count, if we promoted the slot then that

@@ -36,7 +36,7 @@ class u_int96_t {
 
  public:
 	// it's little endian
-	unsigned long long n0; // the low  long long
+	uint64_t n0; // the low  long long
 	unsigned long      n1; // the high long 
 
 	u_int96_t (                ) { };
@@ -78,7 +78,7 @@ class u_int96_t {
 	long operator &  ( unsigned long i ) {
 		return n0 & i; };
 
-	//void operator += ( unsigned long long i ) { // watch out for carry
+	//void operator += ( uint64_t i ) { // watch out for carry
 	//if ( n0 + i < n0 ) n1++;
 	//n0 += i; };
 
@@ -98,7 +98,7 @@ class u_int96_t {
 	// NOTE: i must be bigger than j!?
 	/*
 	key_t operator + ( u_int96_t i ) {
-		unsigned long long oldn0 = n0;
+		uint64_t oldn0 = n0;
 		n0 = n0 + i.n0;
 		if ( n0 < oldn0 ) n1++; // carry
 		n1 += i.n1;
@@ -198,8 +198,8 @@ class u_int128_t {
 
  public:
 	// it's little endian
-	unsigned long long n0; // the low  long long
-	unsigned long long n1; // the high long 
+	uint64_t n0; // the low  long long
+	uint64_t n1; // the high long 
 
 	u_int128_t (                ) { };
 	u_int128_t ( unsigned long i ) {	n0 = i; n1 = 0; };
@@ -329,9 +329,9 @@ class key192_t {
 	//uint32_t k4;
 	//uint32_t k5;
 	// it's little endian
-	unsigned long long n0; // the low  long long
-	unsigned long long n1; // the medium long long
-	unsigned long long n2; // the high long long
+	uint64_t n0; // the low  long long
+	uint64_t n1; // the medium long long
+	uint64_t n2; // the high long long
 
 	bool operator == ( key192_t i ) { 
 		return ( i.n0 == n0 && 
@@ -379,9 +379,9 @@ class key224_t {
 	//uint32_t k5;
 	// it's little endian
 	unsigned long      n0;
-	unsigned long long n1; // the low  long long
-	unsigned long long n2; // the medium long long
-	unsigned long long n3; // the high long long
+	uint64_t n1; // the low  long long
+	uint64_t n2; // the medium long long
+	uint64_t n3; // the high long long
 
 	bool operator == ( key224_t i ) { 
 		return ( i.n0 == n0 && 
@@ -434,8 +434,8 @@ class key144_t {
  public:
 	// it's little endian
 	unsigned short      n0; // the low short
-	unsigned long long  n1; // the medium long long
-	unsigned long long  n2; // the high long long
+	uint64_t  n1; // the medium long long
+	uint64_t  n2; // the high long long
 
 	bool operator == ( key144_t i ) { 
 		return ( i.n0 == n0 && 
@@ -482,14 +482,14 @@ class key144_t {
 inline char KEYCMP ( char *k1, long a, char *k2, long b , char keySize ) {
 	// posdb
 	if ( keySize == 18 ) {
-		if ( (*(unsigned long long *)(k1+a*keySize+2+8)) <
-		   (*(unsigned long long *)(k2+b*keySize+2+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+2+8)) >
-		   (*(unsigned long long *)(k2+b*keySize+2+8)) ) return  1;
-		if ( (*(unsigned long long *)(k1+a*keySize+2)) < 
-		   (*(unsigned long long *)(k2+b*keySize+2)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+2)) > 
-		   (*(unsigned long long *)(k2+b*keySize+2)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+2+8)) <
+		   (*(uint64_t *)(k2+b*keySize+2+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+2+8)) >
+		   (*(uint64_t *)(k2+b*keySize+2+8)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+2)) < 
+		   (*(uint64_t *)(k2+b*keySize+2)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+2)) > 
+		   (*(uint64_t *)(k2+b*keySize+2)) ) return  1;
 		if ( (*(unsigned short *)(k1+a*keySize+0)) <
 		   (*(unsigned short *)(k2+b*keySize+0)) ) return -1;
 		if ( (*(unsigned short *)(k1+a*keySize+0)) >
@@ -497,10 +497,10 @@ inline char KEYCMP ( char *k1, long a, char *k2, long b , char keySize ) {
 		return 0;
 	}
 	if ( keySize == 12 ) { 
-		if ( (*(unsigned long long *)(k1+a*keySize+4)) < 
-		     (*(unsigned long long *)(k2+b*keySize+4)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+4)) > 
-		     (*(unsigned long long *)(k2+b*keySize+4)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+4)) < 
+		     (*(uint64_t *)(k2+b*keySize+4)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+4)) > 
+		     (*(uint64_t *)(k2+b*keySize+4)) ) return  1;
 		if ( (*(unsigned long      *)(k1+a*keySize+0)) < 
 		     (*(unsigned long      *)(k2+b*keySize+0)) ) return -1;
 		if ( (*(unsigned long      *)(k1+a*keySize+0)) > 
@@ -509,14 +509,14 @@ inline char KEYCMP ( char *k1, long a, char *k2, long b , char keySize ) {
 	}
 	// must be size of 16 then
 	if ( keySize == 16 ) {
-		if ( (*(unsigned long long *)(k1+a*keySize+8)) < 
-		   (*(unsigned long long *)(k2+b*keySize+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+8)) > 
-		   (*(unsigned long long *)(k2+b*keySize+8)) ) return  1;
-		if ( (*(unsigned long long *)(k1+a*keySize+0)) <
-		   (*(unsigned long long *)(k2+b*keySize+0)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+0)) >
-		   (*(unsigned long long *)(k2+b*keySize+0)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+8)) < 
+		   (*(uint64_t *)(k2+b*keySize+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+8)) > 
+		   (*(uint64_t *)(k2+b*keySize+8)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+0)) <
+		   (*(uint64_t *)(k2+b*keySize+0)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+0)) >
+		   (*(uint64_t *)(k2+b*keySize+0)) ) return  1;
 		return 0;
 	}
 	// allow half key comparison too
@@ -533,33 +533,33 @@ inline char KEYCMP ( char *k1, long a, char *k2, long b , char keySize ) {
 	}
 	// 128+64= 196bit keys for m_orderKey in Spider.cpp in RdbTree.cpp
 	if ( keySize == 24 ) {
-		if ( (*(unsigned long long *)(k1+a*keySize+16)) <
-		   (*(unsigned long long *)(k2+b*keySize+16)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+16)) >
-		   (*(unsigned long long *)(k2+b*keySize+16)) ) return  1;
-		if ( (*(unsigned long long *)(k1+a*keySize+8)) < 
-		   (*(unsigned long long *)(k2+b*keySize+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+8)) > 
-		   (*(unsigned long long *)(k2+b*keySize+8)) ) return  1;
-		if ( (*(unsigned long long *)(k1+a*keySize+0)) <
-		   (*(unsigned long long *)(k2+b*keySize+0)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+0)) >
-		   (*(unsigned long long *)(k2+b*keySize+0)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+16)) <
+		   (*(uint64_t *)(k2+b*keySize+16)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+16)) >
+		   (*(uint64_t *)(k2+b*keySize+16)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+8)) < 
+		   (*(uint64_t *)(k2+b*keySize+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+8)) > 
+		   (*(uint64_t *)(k2+b*keySize+8)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+0)) <
+		   (*(uint64_t *)(k2+b*keySize+0)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+0)) >
+		   (*(uint64_t *)(k2+b*keySize+0)) ) return  1;
 		return 0;
 	}
 	if ( keySize == 28 ) {
-		if ( (*(unsigned long long *)(k1+a*keySize+20)) <
-		   (*(unsigned long long *)(k2+b*keySize+20)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+20)) >
-		   (*(unsigned long long *)(k2+b*keySize+20)) ) return  1;
-		if ( (*(unsigned long long *)(k1+a*keySize+12)) < 
-		   (*(unsigned long long *)(k2+b*keySize+12)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+12)) > 
-		   (*(unsigned long long *)(k2+b*keySize+12)) ) return  1;
-		if ( (*(unsigned long long *)(k1+a*keySize+4)) <
-		   (*(unsigned long long *)(k2+b*keySize+4)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+4)) >
-		   (*(unsigned long long *)(k2+b*keySize+4)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+20)) <
+		   (*(uint64_t *)(k2+b*keySize+20)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+20)) >
+		   (*(uint64_t *)(k2+b*keySize+20)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+12)) < 
+		   (*(uint64_t *)(k2+b*keySize+12)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+12)) > 
+		   (*(uint64_t *)(k2+b*keySize+12)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+4)) <
+		   (*(uint64_t *)(k2+b*keySize+4)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+4)) >
+		   (*(uint64_t *)(k2+b*keySize+4)) ) return  1;
 		if ( (*(unsigned long *)(k1+a*keySize)) <
 		   (*(unsigned long *)(k2+b*keySize)) ) return -1;
 		if ( (*(unsigned long *)(k1+a*keySize)) >
@@ -567,10 +567,10 @@ inline char KEYCMP ( char *k1, long a, char *k2, long b , char keySize ) {
 		return 0;
 	}
 	if ( keySize == 8 ) {
-		if ( (*(unsigned long long *)(k1+a*keySize+0)) <
-		     (*(unsigned long long *)(k2+b*keySize+0)) ) return -1;
-		if ( (*(unsigned long long *)(k1+a*keySize+0)) >
-		     (*(unsigned long long *)(k2+b*keySize+0)) ) return  1;
+		if ( (*(uint64_t *)(k1+a*keySize+0)) <
+		     (*(uint64_t *)(k2+b*keySize+0)) ) return -1;
+		if ( (*(uint64_t *)(k1+a*keySize+0)) >
+		     (*(uint64_t *)(k2+b*keySize+0)) ) return  1;
 		return 0;
 	}
 	char *xx=NULL;*xx=0;
@@ -580,14 +580,14 @@ inline char KEYCMP ( char *k1, long a, char *k2, long b , char keySize ) {
 inline char KEYCMP ( char *k1, char *k2, char keySize ) {
 	// posdb
 	if ( keySize == 18 ) {
-		if ( (*(unsigned long long *)(k1+10)) <
-		     (*(unsigned long long *)(k2+10)) ) return -1;
-		if ( (*(unsigned long long *)(k1+10)) >
-		     (*(unsigned long long *)(k2+10)) ) return  1;
-		if ( (*(unsigned long long *)(k1+2)) <
-		     (*(unsigned long long *)(k2+2)) ) return -1;
-		if ( (*(unsigned long long *)(k1+2)) >
-		     (*(unsigned long long *)(k2+2)) ) return  1;
+		if ( (*(uint64_t *)(k1+10)) <
+		     (*(uint64_t *)(k2+10)) ) return -1;
+		if ( (*(uint64_t *)(k1+10)) >
+		     (*(uint64_t *)(k2+10)) ) return  1;
+		if ( (*(uint64_t *)(k1+2)) <
+		     (*(uint64_t *)(k2+2)) ) return -1;
+		if ( (*(uint64_t *)(k1+2)) >
+		     (*(uint64_t *)(k2+2)) ) return  1;
 		if ( (*(unsigned short *)(k1)) <
 		     (*(unsigned short *)(k2)) ) return -1;
 		if ( (*(unsigned short *)(k1)) >
@@ -595,10 +595,10 @@ inline char KEYCMP ( char *k1, char *k2, char keySize ) {
 		return 0;
 	}
 	if ( keySize == 12 ) { 
-		if ( (*(unsigned long long *)(k1+4)) < 
-		     (*(unsigned long long *)(k2+4)) ) return -1;
-		if ( (*(unsigned long long *)(k1+4)) > 
-		     (*(unsigned long long *)(k2+4)) ) return  1;
+		if ( (*(uint64_t *)(k1+4)) < 
+		     (*(uint64_t *)(k2+4)) ) return -1;
+		if ( (*(uint64_t *)(k1+4)) > 
+		     (*(uint64_t *)(k2+4)) ) return  1;
 		if ( (*(unsigned long      *)(k1)) < 
 		     (*(unsigned long      *)(k2)) ) return -1;
 		if ( (*(unsigned long      *)(k1)) > 
@@ -607,14 +607,14 @@ inline char KEYCMP ( char *k1, char *k2, char keySize ) {
 	}
 	// must be size of 16 then
 	if ( keySize == 16 ) {
-		if ( (*(unsigned long long *)(k1+8)) <
-		     (*(unsigned long long *)(k2+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+8)) >
-		     (*(unsigned long long *)(k2+8)) ) return  1;
-		if ( (*(unsigned long long *)(k1)) <
-		     (*(unsigned long long *)(k2)) ) return -1;
-		if ( (*(unsigned long long *)(k1)) >
-		     (*(unsigned long long *)(k2)) ) return  1;
+		if ( (*(uint64_t *)(k1+8)) <
+		     (*(uint64_t *)(k2+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+8)) >
+		     (*(uint64_t *)(k2+8)) ) return  1;
+		if ( (*(uint64_t *)(k1)) <
+		     (*(uint64_t *)(k2)) ) return -1;
+		if ( (*(uint64_t *)(k1)) >
+		     (*(uint64_t *)(k2)) ) return  1;
 		return 0;
 	}
 	// allow half key comparison too
@@ -631,33 +631,33 @@ inline char KEYCMP ( char *k1, char *k2, char keySize ) {
 	}
 	// must be size of 16 then
 	if ( keySize == 24 ) {
-		if ( (*(unsigned long long *)(k1+16)) <
-		     (*(unsigned long long *)(k2+16)) ) return -1;
-		if ( (*(unsigned long long *)(k1+16)) >
-		     (*(unsigned long long *)(k2+16)) ) return  1;
-		if ( (*(unsigned long long *)(k1+8)) <
-		     (*(unsigned long long *)(k2+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+8)) >
-		     (*(unsigned long long *)(k2+8)) ) return  1;
-		if ( (*(unsigned long long *)(k1)) <
-		     (*(unsigned long long *)(k2)) ) return -1;
-		if ( (*(unsigned long long *)(k1)) >
-		     (*(unsigned long long *)(k2)) ) return  1;
+		if ( (*(uint64_t *)(k1+16)) <
+		     (*(uint64_t *)(k2+16)) ) return -1;
+		if ( (*(uint64_t *)(k1+16)) >
+		     (*(uint64_t *)(k2+16)) ) return  1;
+		if ( (*(uint64_t *)(k1+8)) <
+		     (*(uint64_t *)(k2+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+8)) >
+		     (*(uint64_t *)(k2+8)) ) return  1;
+		if ( (*(uint64_t *)(k1)) <
+		     (*(uint64_t *)(k2)) ) return -1;
+		if ( (*(uint64_t *)(k1)) >
+		     (*(uint64_t *)(k2)) ) return  1;
 		return 0;
 	}
 	if ( keySize == 28 ) {
-		if ( (*(unsigned long long *)(k1+20)) <
-		     (*(unsigned long long *)(k2+20)) ) return -1;
-		if ( (*(unsigned long long *)(k1+20)) >
-		     (*(unsigned long long *)(k2+20)) ) return  1;
-		if ( (*(unsigned long long *)(k1+12)) <
-		     (*(unsigned long long *)(k2+12)) ) return -1;
-		if ( (*(unsigned long long *)(k1+12)) >
-		     (*(unsigned long long *)(k2+12)) ) return  1;
-		if ( (*(unsigned long long *)(k1+4)) <
-		     (*(unsigned long long *)(k2+4)) ) return -1;
-		if ( (*(unsigned long long *)(k1+4)) >
-		     (*(unsigned long long *)(k2+4)) ) return  1;
+		if ( (*(uint64_t *)(k1+20)) <
+		     (*(uint64_t *)(k2+20)) ) return -1;
+		if ( (*(uint64_t *)(k1+20)) >
+		     (*(uint64_t *)(k2+20)) ) return  1;
+		if ( (*(uint64_t *)(k1+12)) <
+		     (*(uint64_t *)(k2+12)) ) return -1;
+		if ( (*(uint64_t *)(k1+12)) >
+		     (*(uint64_t *)(k2+12)) ) return  1;
+		if ( (*(uint64_t *)(k1+4)) <
+		     (*(uint64_t *)(k2+4)) ) return -1;
+		if ( (*(uint64_t *)(k1+4)) >
+		     (*(uint64_t *)(k2+4)) ) return  1;
 		if ( (*(unsigned long *)(k1)) <
 		     (*(unsigned long *)(k2)) ) return -1;
 		if ( (*(unsigned long *)(k1)) >
@@ -679,14 +679,14 @@ inline char KEYCMP ( char *k1, char *k2, char keySize ) {
 inline char KEYCMPNEGEQ ( char *k1, char *k2, char keySize ) {
 	// posdb
 	if ( keySize == 18 ) { 
-		if ( (*(unsigned long long *)(k1+10)) < 
-		     (*(unsigned long long *)(k2+10)) ) return -1;
-		if ( (*(unsigned long long *)(k1+10)) > 
-		     (*(unsigned long long *)(k2+10)) ) return  1;
-		if ( (*(unsigned long long *)(k1+2)) < 
-		     (*(unsigned long long *)(k2+2)) ) return -1;
-		if ( (*(unsigned long long *)(k1+2)) > 
-		     (*(unsigned long long *)(k2+2)) ) return  1;
+		if ( (*(uint64_t *)(k1+10)) < 
+		     (*(uint64_t *)(k2+10)) ) return -1;
+		if ( (*(uint64_t *)(k1+10)) > 
+		     (*(uint64_t *)(k2+10)) ) return  1;
+		if ( (*(uint64_t *)(k1+2)) < 
+		     (*(uint64_t *)(k2+2)) ) return -1;
+		if ( (*(uint64_t *)(k1+2)) > 
+		     (*(uint64_t *)(k2+2)) ) return  1;
 		unsigned short k1n0 = ((*(unsigned short*)(k1)) & ~0x01UL);
 		unsigned short k2n0 = ((*(unsigned short*)(k2)) & ~0x01UL);
 		if ( k1n0 < k2n0 ) return -1;
@@ -694,49 +694,49 @@ inline char KEYCMPNEGEQ ( char *k1, char *k2, char keySize ) {
 		return 0;
 	}
 	if ( keySize == 24 ) { 
-		if ( (*(unsigned long long *)(k1+16)) < 
-		     (*(unsigned long long *)(k2+16)) ) return -1;
-		if ( (*(unsigned long long *)(k1+16)) > 
-		     (*(unsigned long long *)(k2+16)) ) return  1;
-		if ( (*(unsigned long long *)(k1+8)) < 
-		     (*(unsigned long long *)(k2+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+8)) > 
-		     (*(unsigned long long *)(k2+8)) ) return  1;
-		unsigned long long k1n0 = 
-			((*(unsigned long long*)(k1)) & ~0x01ULL);
-		unsigned long long k2n0 = 
-			((*(unsigned long long*)(k2)) & ~0x01ULL);
+		if ( (*(uint64_t *)(k1+16)) < 
+		     (*(uint64_t *)(k2+16)) ) return -1;
+		if ( (*(uint64_t *)(k1+16)) > 
+		     (*(uint64_t *)(k2+16)) ) return  1;
+		if ( (*(uint64_t *)(k1+8)) < 
+		     (*(uint64_t *)(k2+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+8)) > 
+		     (*(uint64_t *)(k2+8)) ) return  1;
+		uint64_t k1n0 = 
+			((*(uint64_t*)(k1)) & ~0x01ULL);
+		uint64_t k2n0 = 
+			((*(uint64_t*)(k2)) & ~0x01ULL);
 		if ( k1n0 < k2n0 ) return -1;
 		if ( k1n0 > k2n0 ) return  1;
 		return 0;
 	}
 	// linkdb
 	if ( keySize == 28 ) { 
-		if ( (*(unsigned long long *)(k1+20)) < 
-		     (*(unsigned long long *)(k2+20)) ) return -1;
-		if ( (*(unsigned long long *)(k1+20)) > 
-		     (*(unsigned long long *)(k2+20)) ) return  1;
-		if ( (*(unsigned long long *)(k1+12)) < 
-		     (*(unsigned long long *)(k2+12)) ) return -1;
-		if ( (*(unsigned long long *)(k1+12)) > 
-		     (*(unsigned long long *)(k2+12)) ) return  1;
-		if ( (*(unsigned long long *)(k1+4)) < 
-		     (*(unsigned long long *)(k2+4)) ) return -1;
-		if ( (*(unsigned long long *)(k1+4)) > 
-		     (*(unsigned long long *)(k2+4)) ) return  1;
-		unsigned long long k1n0 = 
+		if ( (*(uint64_t *)(k1+20)) < 
+		     (*(uint64_t *)(k2+20)) ) return -1;
+		if ( (*(uint64_t *)(k1+20)) > 
+		     (*(uint64_t *)(k2+20)) ) return  1;
+		if ( (*(uint64_t *)(k1+12)) < 
+		     (*(uint64_t *)(k2+12)) ) return -1;
+		if ( (*(uint64_t *)(k1+12)) > 
+		     (*(uint64_t *)(k2+12)) ) return  1;
+		if ( (*(uint64_t *)(k1+4)) < 
+		     (*(uint64_t *)(k2+4)) ) return -1;
+		if ( (*(uint64_t *)(k1+4)) > 
+		     (*(uint64_t *)(k2+4)) ) return  1;
+		uint64_t k1n0 = 
 			((*(unsigned long *)(k1)) & ~0x01ULL);
-		unsigned long long k2n0 = 
+		uint64_t k2n0 = 
 			((*(unsigned long *)(k2)) & ~0x01ULL);
 		if ( k1n0 < k2n0 ) return -1;
 		if ( k1n0 > k2n0 ) return  1;
 		return 0;
 	}
 	if ( keySize == 12 ) { 
-		if ( (*(unsigned long long *)(k1+4)) < 
-		     (*(unsigned long long *)(k2+4)) ) return -1;
-		if ( (*(unsigned long long *)(k1+4)) > 
-		     (*(unsigned long long *)(k2+4)) ) return  1;
+		if ( (*(uint64_t *)(k1+4)) < 
+		     (*(uint64_t *)(k2+4)) ) return -1;
+		if ( (*(uint64_t *)(k1+4)) > 
+		     (*(uint64_t *)(k2+4)) ) return  1;
 		unsigned long k1n0 = ((*(unsigned long*)(k1)) & ~0x01UL);
 		unsigned long k2n0 = ((*(unsigned long*)(k2)) & ~0x01UL);
 		if ( k1n0 < k2n0 ) return -1;
@@ -745,12 +745,12 @@ inline char KEYCMPNEGEQ ( char *k1, char *k2, char keySize ) {
 	}
 	// must be size of 16 then
 	if ( keySize == 16 ) {
-		if ( (*(unsigned long long *)(k1+8)) <
-		     (*(unsigned long long *)(k2+8)) ) return -1;
-		if ( (*(unsigned long long *)(k1+8)) >
-		     (*(unsigned long long *)(k2+8)) ) return  1;
-		unsigned long long k1n0 = ((*(unsigned long long *)(k1)) & ~0x01ULL);
-		unsigned long long k2n0 = ((*(unsigned long long *)(k2)) & ~0x01ULL);
+		if ( (*(uint64_t *)(k1+8)) <
+		     (*(uint64_t *)(k2+8)) ) return -1;
+		if ( (*(uint64_t *)(k1+8)) >
+		     (*(uint64_t *)(k2+8)) ) return  1;
+		uint64_t k1n0 = ((*(uint64_t *)(k1)) & ~0x01ULL);
+		uint64_t k2n0 = ((*(uint64_t *)(k2)) & ~0x01ULL);
 		if ( k1n0 < k2n0 ) return -1;
 		if ( k1n0 > k2n0 ) return  1;
 		return 0;

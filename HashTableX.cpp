@@ -320,7 +320,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 
 	long long n = (long long)oldn;
 	// make it a power of 2 for speed if small
-	n = getHighestLitBitValueLL((unsigned long long)oldn * 2LL -1);
+	n = getHighestLitBitValueLL((uint64_t)oldn * 2LL -1);
 	// sanity check, must be less than 1B
 	if ( n > 1000000000 ) { char *xx=NULL;*xx=0; }
 	// limit...

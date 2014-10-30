@@ -55,7 +55,7 @@ class Proxy {
 	//bool   m_verifiedDataFeed;
 	// protected:
 	void printRequest (TcpSocket *s, HttpRequest *r,
-			   unsigned long long took = 0,
+			   uint64_t took = 0,
 			   char *content = NULL ,
 			   long contentLen = 0 );
 	//HttpRequest  m_r;

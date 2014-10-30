@@ -211,7 +211,7 @@ bool Datedb::verify ( char *coll ) {
 key128_t Datedb::makeKey ( long long          termId   , 
 			   unsigned long      date     ,
 			   unsigned char      score    , 
-			   unsigned long long docId    , 
+			   uint64_t docId    , 
 			   bool               isDelKey ) {
 	key128_t key ;
 	char *kp = (char *)&key;

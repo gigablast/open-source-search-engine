@@ -23,8 +23,8 @@
 
 class SafeBuf;
 // some memory manipulation functions inlined below
-long long htonll ( unsigned long long a );
-long long ntohll ( unsigned long long a );
+long long htonll ( uint64_t a );
+long long ntohll ( uint64_t a );
 key_t ntohkey ( key_t key ) ;
 key_t htonkey ( key_t key ) ;
 
@@ -32,7 +32,7 @@ key_t htonkey ( key_t key ) ;
 long getNumBitsOn ( unsigned char      bits );
 long getNumBitsOn ( unsigned short     bits );
 long getNumBitsOn ( unsigned long      bits );
-long getNumBitsOn ( unsigned long long bits );
+long getNumBitsOn ( uint64_t bits );
 */
 
 // assume only one bit is set for this (used by Address.cpp)
@@ -42,11 +42,11 @@ long getHighestLitBit  ( unsigned char     bits ) ;
 long getHighestLitBit  ( unsigned short    bits ) ;
 
 // these are bit #'s, like 0,1,2,3,...63 for long longs
-long getLowestLitBitLL ( unsigned long long bits ) ;
+long getLowestLitBitLL ( uint64_t bits ) ;
 
 // this is the value, like 0,1,2,4, ... 4billion
 unsigned long      getHighestLitBitValue   ( unsigned long      bits ) ;
-unsigned long long getHighestLitBitValueLL ( unsigned long long bits ) ;
+uint64_t getHighestLitBitValueLL ( uint64_t bits ) ;
 
 
 unsigned long reverseBits ( unsigned long x ) ;
@@ -266,7 +266,7 @@ inline long getNumBitsOn32 ( unsigned long bits ) {
 		g_a [ *((unsigned char *)(&bits) + 3)  ] ;
 }
 
-inline long getNumBitsOn64 ( unsigned long long bits ) {
+inline long getNumBitsOn64 ( uint64_t bits ) {
 	return 	g_a [ *((unsigned char *)(&bits) + 0)  ] +
 		g_a [ *((unsigned char *)(&bits) + 1)  ] +
 		g_a [ *((unsigned char *)(&bits) + 2)  ] +

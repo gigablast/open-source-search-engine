@@ -56,7 +56,7 @@ class IndexList : public RdbList {
 		   class IndexList    *oldDateList ,
 		   class Sections     *newSections ,
 		   class Sections     *oldSections ,
-		   unsigned long long *chksum1Ptr  , // = NULL,
+		   uint64_t *chksum1Ptr  , // = NULL,
 		   long                niceness    ); // = 2);
 	bool subtract ( TermTable *ourTable , class IndexList *oldList1 );
 	*/
@@ -75,10 +75,10 @@ class IndexList : public RdbList {
 	long long getCurrentTermId12 ( ) {
 		return getTermId12 ( m_listPtr ); };
 	long long getTermId12 ( char *rec ) {
-		return (*(unsigned long long *)(&rec[4])) >> 16 ;
+		return (*(uint64_t *)(&rec[4])) >> 16 ;
 	};
 	long long getTermId16 ( char *rec ) {
-		return (*(unsigned long long *)(&rec[8])) >> 16 ;
+		return (*(uint64_t *)(&rec[8])) >> 16 ;
 	};
 	//long long getTermId12 ( char *rec ) {
 	//	return ((long long)(*(unsigned long *)(m_listPtrHi+2))<<14) | 
@@ -96,7 +96,7 @@ class IndexList : public RdbList {
 	long long getCurrentDocId12 ( ) {
 		return getDocId12 ( m_listPtr ); };
 	long long getDocId12 ( char *rec ) {
-		return ((*(unsigned long long *)(rec)) >> 2) & DOCID_MASK; };
+		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
 	//long long getDocId12 ( char *rec ) {
 	//	((*(unsigned long *)rec)>>10) |
 	//		(((long long)(*(unsigned short *)(rec+4)))<<22);

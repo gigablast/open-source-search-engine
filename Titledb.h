@@ -52,8 +52,8 @@ class Titledb {
 	//   in the case of a collision we pick a nearby docId that is 
 	//   different but guaranteed to be in the same group/cluster, so you 
 	//   can be assured the top 32 bits of the docId will be unchanged
-	unsigned long long getProbableDocId ( Url *url , bool mask = true ) {
-		unsigned long long probableDocId = hash64b(url->getUrl(),0);
+	uint64_t getProbableDocId ( Url *url , bool mask = true ) {
+		uint64_t probableDocId = hash64b(url->getUrl(),0);
 		// Linkdb::getUrlHash() does not mask it
 		if ( mask ) probableDocId = probableDocId & DOCID_MASK;
 		// clear bits 6-13 because we want to put the domain hash there
@@ -68,15 +68,15 @@ class Titledb {
 	};
 
 	// a different way to do it
-	unsigned long long getProbableDocId ( char *url  ) {
+	uint64_t getProbableDocId ( char *url  ) {
 		Url u;
 		u.set(url, gbstrlen(url));
 		return getProbableDocId ( &u ); 
 	};
 
 	// a different way to do it
-	unsigned long long getProbableDocId(char *url,char *dom,long domLen) {
-		unsigned long long probableDocId = hash64b(url,0) & 
+	uint64_t getProbableDocId(char *url,char *dom,long domLen) {
+		uint64_t probableDocId = hash64b(url,0) & 
 			DOCID_MASK;
 		// clear bits 6-13 because we want to put the domain hash there
 		probableDocId &= 0xffffffffffffc03fULL;
@@ -89,11 +89,11 @@ class Titledb {
 	};
 
 	// turn off the last 6 bits
-	unsigned long long getFirstProbableDocId ( long long d ) {
+	uint64_t getFirstProbableDocId ( long long d ) {
 		return d & 0xffffffffffffffc0LL; };
 
 	// turn on the last 6 bits for the end docId
-	unsigned long long getLastProbableDocId  ( long long d ) {
+	uint64_t getLastProbableDocId  ( long long d ) {
 		return d | 0x000000000000003fLL; };
 
 	// . the top NUMDOCIDBITs of "key" are the docId
@@ -101,8 +101,8 @@ class Titledb {
 	// . using the top bits to partition allows us to keep keys that
 	//   are near each other (euclidean metric) in the same partition
 	long long getDocIdFromKey ( key_t *key ) {
-		unsigned long long docId;
-		docId = ((unsigned long long)key->n1)<<(NUMDOCIDBITS - 32);
+		uint64_t docId;
+		docId = ((uint64_t)key->n1)<<(NUMDOCIDBITS - 32);
 		docId|=                      key->n0 >>(64-(NUMDOCIDBITS-32));
 		return docId;
 	};

@@ -1325,7 +1325,7 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 	// value here.
 	unsigned long r1 = rand();
 	unsigned long r2 = rand();
-	unsigned long long crawlId64 = (unsigned long long) r1;
+	uint64_t crawlId64 = (uint64_t) r1;
 	crawlId64 <<= 32;
 	crawlId64 |= r2;
 
@@ -2780,7 +2780,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		// random coll name to add
 		unsigned long r1 = rand();
 		unsigned long r2 = rand();
-		unsigned long long rand64 = (unsigned long long) r1;
+		uint64_t rand64 = (uint64_t) r1;
 		rand64 <<= 32;
 		rand64 |=  r2;
 		char newCollName[MAX_COLL_LEN+1];
@@ -3041,7 +3041,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	// this is for making sure the search results are not cached
 	unsigned long r1 = rand();
 	unsigned long r2 = rand();
-	unsigned long long rand64 = (unsigned long long) r1;
+	uint64_t rand64 = (uint64_t) r1;
 	rand64 <<= 32;
 	rand64 |=  r2;
 

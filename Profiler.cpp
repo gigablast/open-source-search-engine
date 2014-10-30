@@ -28,7 +28,7 @@ static int decend_cmpUll ( const void *h1 , const void *h2 );
 static int decend_cmpF ( const void *h1 , const void *h2 );
 unsigned long *indexTable;
 unsigned long *keyTable;
-unsigned long long *valueTableUll;
+uint64_t *valueTableUll;
 float *valueTableF;
 //HashTableT<uint32_t, uint64_t> realTimeProfilerData;
 #include "HashTableX.h"
@@ -535,7 +535,7 @@ inline uint64_t gettimeofdayInMicroseconds(void) {
 }
 bool Profiler::pause(const char* caller, long lineno, long took) {
 	lastQuickPollTime = gettimeofdayInMicroseconds(); 
-	unsigned long long nowLocal = lastQuickPollTime / 1000;
+	uint64_t nowLocal = lastQuickPollTime / 1000;
 	void *trace[3];
 	backtrace(trace, 3);
 	const void *stackPtr = trace[2];
@@ -544,7 +544,7 @@ bool Profiler::pause(const char* caller, long lineno, long took) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
 		FnInfo* fnInfo = *(FnInfo **)m_activeFns.getValueFromSlot(i);
-		unsigned long long blockedTime = nowLocal - 
+		uint64_t blockedTime = nowLocal - 
 			fnInfo->m_lastPauseTime ;
 		if (blockedTime > fnInfo->m_maxBlockedTime) {
 			fnInfo->m_maxBlockedTime = blockedTime;
@@ -602,7 +602,7 @@ bool Profiler::pause(const char* caller, long lineno, long took) {
 }
 
 bool Profiler::unpause() {
-	unsigned long long nowLocal = gettimeofdayInMillisecondsLocal();
+	uint64_t nowLocal = gettimeofdayInMillisecondsLocal();
  	for(long i = 0; i < m_activeFns.getNumSlots(); i++) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
@@ -632,11 +632,11 @@ bool Profiler::endTimer(long address,
 	fnInfo=*(FnInfo **)m_activeFns.getValueFromSlot(slot);
 	if(--fnInfo->m_inFunction > 0) return true;
 
-	unsigned long long nowLocal = gettimeofdayInMillisecondsLocal();
-	//unsigned long long now = gettimeofdayInMilliseconds();
-	unsigned long long timeTaken = nowLocal - fnInfo->m_startTimeLocal;
+	uint64_t nowLocal = gettimeofdayInMillisecondsLocal();
+	//uint64_t now = gettimeofdayInMilliseconds();
+	uint64_t timeTaken = nowLocal - fnInfo->m_startTimeLocal;
 
-	unsigned long long blockedTime = nowLocal - fnInfo->m_lastPauseTime ;
+	uint64_t blockedTime = nowLocal - fnInfo->m_lastPauseTime ;
 	if (blockedTime > fnInfo->m_maxBlockedTime) {
 		fnInfo->m_maxBlockedTime = blockedTime;
 		fnInfo->m_prevQpoll = fnInfo->m_lastQpoll;
@@ -677,7 +677,7 @@ bool Profiler::endTimer(long address,
 
 	for (long i=0;i<11;i++){
 		//if we find a hashtable is less than 1 second old
-		unsigned long long diffTime=nowLocal-m_fnTime[i];
+		uint64_t diffTime=nowLocal-m_fnTime[i];
 		if((diffTime<1000)&&(m_fnTime[i]!=0)){
 			//Add this function. Don't add the function name,
 			//shall get that from m_fn
@@ -713,7 +713,7 @@ bool Profiler::endTimer(long address,
 	//if not, then find a hashtable that is more than 10 seconds old
 	//and replace it with the new hashtable
 	for (long i=0;i<11;i++){
-		unsigned long long diffTime=nowLocal-m_fnTime[i];
+		uint64_t diffTime=nowLocal-m_fnTime[i];
 		if((diffTime>=10000) || (m_fnTime[i]==0)){
 			/*log(LOG_WARN,"Profiler: m_fntime=%lli,i=%li,now=%lli,diffTime=%lli",
 			  m_fnTime[i],i,now,diffTime);*/
@@ -805,8 +805,8 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		valueTableF=(float*) 
 			mcalloc(numSlotsUsed*sizeof(float),"ProfilerY");
 	else
-		valueTableUll=(unsigned long long*) 
-			mcalloc(numSlotsUsed*sizeof(unsigned long long),
+		valueTableUll=(uint64_t*) 
+			mcalloc(numSlotsUsed*sizeof(uint64_t),
 				"ProfilerY");
 	long numFnsCalled=0;
 	for (long i=0;i<numSlots;i++){
@@ -900,13 +900,13 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	sb->safePrintf("<td><b><a href=/admin/profiler?sort10=7&c=%s&"
 		       ">"
 		       "Times From Thread</a></b></td></tr>",coll);
-	unsigned long long now=gettimeofdayInMillisecondsLocal();
+	uint64_t now=gettimeofdayInMillisecondsLocal();
 	long numFnsCalled10=0;;
 	for(long i=0;i<numFnsCalled;i++){
-		unsigned long long timesCalled=0;
-		unsigned long long totalTimeTaken=0;
-		unsigned long long maxTimeTaken=0;
-		unsigned long long numCalledFromThread=0;
+		uint64_t timesCalled=0;
+		uint64_t totalTimeTaken=0;
+		uint64_t maxTimeTaken=0;
+		uint64_t numCalledFromThread=0;
 		//If hashtable is less than 10 secs old, use it
 		for(long j=0;j<11;j++){
 			if ((now-m_fnTime[i]) < 10000){
@@ -958,10 +958,10 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		      decend_cmpUll);
 
 	for(long i=0;i<numFnsCalled10;i++){
-		unsigned long long timesCalled=0;		
-		unsigned long long totalTimeTaken=0;
-		unsigned long long maxTimeTaken=0;
-		unsigned long long numCalledFromThread=0;
+		uint64_t timesCalled=0;		
+		uint64_t totalTimeTaken=0;
+		uint64_t maxTimeTaken=0;
+		uint64_t numCalledFromThread=0;
 		//If hashtable is less than 10 secs old, continue
 		for(long j=0;j<11;j++){
 			if ((now-m_fnTime[i])<10000){
@@ -1012,7 +1012,7 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		      "ProfilerY");
 	else
 		mfree(valueTableUll,
-		      numSlotsUsed*sizeof(unsigned long long),
+		      numSlotsUsed*sizeof(uint64_t),
 		      "ProfilerY");
 
 
@@ -1048,8 +1048,8 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		return true;
 	}
 
-	valueTableUll = (unsigned long long*)
-		mcalloc(numSlotsUsed * sizeof(unsigned long long),"ProfilerZ");
+	valueTableUll = (uint64_t*)
+		mcalloc(numSlotsUsed * sizeof(uint64_t),"ProfilerZ");
 	if(!valueTableUll) {
 		sb->safePrintf("</table>");
 		return true;
@@ -1074,7 +1074,7 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		      numSlotsUsed*sizeof(unsigned long),
 		      "ProfilerZ");
 		mfree(valueTableUll,
-		      numSlotsUsed*sizeof(unsigned long long),
+		      numSlotsUsed*sizeof(uint64_t),
 		      "ProfilerZ");
 		sb->safePrintf("</table>");
 		return true;
@@ -1111,7 +1111,7 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	}
 	sb->safePrintf("</table>");
 
-	mfree(valueTableUll,numSlotsUsed*sizeof(unsigned long long),"ProfilerZ");
+	mfree(valueTableUll,numSlotsUsed*sizeof(uint64_t),"ProfilerZ");
 	mfree(indexTable,   numSlotsUsed*sizeof(unsigned long),"ProfilerZ");
 	mfree(keyTable,     numSlotsUsed*sizeof(unsigned long),"ProfilerZ");
 	return true;

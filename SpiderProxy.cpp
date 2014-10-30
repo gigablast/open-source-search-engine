@@ -170,7 +170,7 @@ bool buildProxyTable ( ) {
 
 		// . we got a legit ip:port
 		// . see if already in our table
-		unsigned long long ipKey = (unsigned long)ip;
+		uint64_t ipKey = (unsigned long)ip;
 		ipKey <<= 16;
 		ipKey |= (unsigned short)(port & 0xffff);
 
@@ -472,7 +472,7 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// we can get the spider proxy ip/port from the socket because
 	// we sent this url download request to that spider proxy
-	unsigned long long key = (unsigned long)s->m_ip;
+	uint64_t key = (unsigned long)s->m_ip;
 	key <<= 16;
 	key |= (unsigned short)(s->m_port & 0xffff);
 
@@ -668,7 +668,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		LoadBucket *lb;
 		lb = (LoadBucket *)s_loadTable.getValueFromSlot(i);
 		// get the spider proxy this load point was for
-		unsigned long long key = (unsigned long)lb->m_proxyIp;
+		uint64_t key = (unsigned long)lb->m_proxyIp;
 		key <<= 16;
 		key |= (unsigned short)lb->m_proxyPort;
 		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValue(&key);

@@ -500,7 +500,7 @@ bool Speller::launchReco(StateFrag *st){
 			// if the phrase is in dict or in the top pop words,
 			// phrase is found. Don't check if we are narrowing 
 			// the phrase because we need to multicast anyways
-			unsigned long long h ;
+			uint64_t h ;
 			h = hash64d(st->m_a, gbstrlen(st->m_a) );
 			if ( !st->m_narrowPhrase && 
 			     getPhrasePopularity( st->m_a, h, false ) > 0 ){
@@ -1185,7 +1185,7 @@ bool Speller::loadUnifiedDict() {
 		*p = '\0';
 		p++;
 
-		unsigned long long key = hash64d(phrase,gbstrlen(phrase));
+		uint64_t key = hash64d(phrase,gbstrlen(phrase));
 
 		// make sure we haven't added this word/phrase yet
 		if ( m_unifiedDict.isInTable ( &key ) ) {
@@ -1412,7 +1412,7 @@ bool Speller::loadUnifiedDict() {
 
 // in case the language is unknown, just give the pop of the
 // first found language
-long Speller::getPhrasePopularity ( char *str, unsigned long long h,
+long Speller::getPhrasePopularity ( char *str, uint64_t h,
 				    bool checkTitleRecDict,
 				    unsigned char langId ){
 	//char *xx=NULL;*xx=0;
@@ -1713,7 +1713,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 
 		// check if the word has popularity. if it is in the 
 		// unifiedDict, then it is considered to be a word
-		unsigned long long h = hash64d(s, a-s);//a - s, encodeType);
+		uint64_t h = hash64d(s, a-s);//a - s, encodeType);
 		long pop = getPhrasePopularity(s, h, false, langId);
 
 		// continue if did not find it
@@ -1757,7 +1757,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 
   // check if the word has popularity. if it is in the 
   // unifiedDict, then it is considered to be a word
-  unsigned long long h = hash64d(s, a - s, encodeType);
+  uint64_t h = hash64d(s, a - s, encodeType);
   long pop = getPhrasePopularity(s, h, false, langId);
 
   // continue if did not find it
@@ -1778,7 +1778,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 
 bool Speller::createUnifiedDict (){
 	// first get all the tuples from wordlist and query file
-	//HashTableT <unsigned long long, char*> ht[MAX_LANGUAGES];
+	//HashTableT <uint64_t, char*> ht[MAX_LANGUAGES];
 	HashTableX ht[MAX_LANGUAGES];
 	char ff[1024];
 	for ( long i = 0; i < MAX_LANGUAGES; i++ ){
@@ -1813,14 +1813,14 @@ bool Speller::createUnifiedDict (){
 
 	log(LOG_INIT,"spell: Making %s.", ff );
 
-	//HashTableT <unsigned long long, long> phrases;
+	//HashTableT <uint64_t, long> phrases;
 	HashTableX phrases;
 	phrases.set(8,4,0,NULL,0,false,0,"phud");
 	char buf[1024];
 	for ( long  i = 0; i < MAX_LANGUAGES; i++ ){
 		// get each slot
 		for ( long j = 0; j < ht[i].getNumSlots(); j++ ){
-			unsigned long long key = *(unsigned long long *)ht[i].getKey(j);
+			uint64_t key = *(uint64_t *)ht[i].getKey(j);
 			if ( key == 0 )
 				continue;
 			// if key is already found
@@ -1919,7 +1919,7 @@ bool Speller::populateHashTable( char *ff, HashTableX *htable,
 		char *phrase = p;
 		while ( *p != '\t' && *p != '\0' )
 			p++;
-		unsigned long long key = hash64d(phrase, p-phrase );
+		uint64_t key = hash64d(phrase, p-phrase );
 		long slot = htable->getSlot(&key);
 		if ( slot == -1 )
 			htable->addKey(&key,&tuple);
@@ -2236,7 +2236,7 @@ void Speller::dictLookupTest ( char *ff ){
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		buf[wlen-1]='\0';
-		unsigned long long h = hash64d ( buf, gbstrlen(buf));
+		uint64_t h = hash64d ( buf, gbstrlen(buf));
 		long pop = g_speller.getPhrasePopularity(buf, h, true);
 		if ( pop < 0 ){
 			char *xx = NULL; *xx = 0;

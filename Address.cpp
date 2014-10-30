@@ -75,7 +75,7 @@ class Address *g_address; // for debug
 #include "sort.h"
 #include "HttpServer.h"
 
-//#define CF_UNIQUE (((unsigned long long)1LL)<<63)
+//#define CF_UNIQUE (((uint64_t)1LL)<<63)
 
 bool getBestLatLon ( RdbList *list      ,
 		     double  *bestLat   ,

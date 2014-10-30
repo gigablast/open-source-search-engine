@@ -1703,7 +1703,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		// a bogus id to get search results from us
 		unsigned long h32 = hash32n(url);
 		if ( h32 == 0 ) h32 = 1;
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
 		// msg7 needs an explicit collection for /addurl for injecting
 		// in PageInject.cpp. it does not use defaults for safety.
 		sb.safePrintf("&id=%lu&c=%s&rand=%llu';\n"

@@ -185,7 +185,7 @@ bool RdbCache::isInCache ( collnum_t collnum, char *cacheKey, long maxAge ) {
 	// bail if no cache
 	if ( m_numPtrsMax <= 0 ) return false;
 	// look up in hash table
-	//long n=(cacheKey.n0 + (unsigned long long)cacheKey.n1)% m_numPtrsMax;
+	//long n=(cacheKey.n0 + (uint64_t)cacheKey.n1)% m_numPtrsMax;
 	long n = hash32 ( cacheKey , m_cks ) % m_numPtrsMax;
 	// chain
 	while ( m_ptrs[n] && 
@@ -218,7 +218,7 @@ long long RdbCache::getLongLong ( collnum_t collnum ,
 	long  recSize;
 	key_t k;
 	k.n0 = 0;
-	k.n1 = (unsigned long long)key;
+	k.n1 = (uint64_t)key;
 	// sanity check
 	//if ( m_cks != 4 ) { char *xx = NULL; *xx = 0; }
 	// return -1 if not found
@@ -245,12 +245,12 @@ long long RdbCache::getLongLong ( collnum_t collnum ,
 
 // both key and returned value are long longs for this
 long long RdbCache::getLongLong2 ( collnum_t collnum ,
-				  unsigned long long key , long maxAge ,
+				  uint64_t key , long maxAge ,
 				  bool promoteRecord ) {
 	char *rec;
 	long  recSize;
 	key_t k;
-	k.n0 = (unsigned long long)key;
+	k.n0 = (uint64_t)key;
 	k.n1 = 0;
 	// sanity check
 	if ( m_cks != 8 ) { char *xx = NULL; *xx = 0; }
@@ -277,10 +277,10 @@ long long RdbCache::getLongLong2 ( collnum_t collnum ,
 	
 // this puts a long in there
 void RdbCache::addLongLong2 ( collnum_t collnum ,
-			      unsigned long long key , long long value ,
+			      uint64_t key , long long value ,
 			      char **retRecPtr ) {
 	key_t k;
-	k.n0 = (unsigned long long)key;
+	k.n0 = (uint64_t)key;
 	k.n1 = 0;
 	// sanity check
 	if ( m_cks != 8 ) { char *xx = NULL; *xx = 0; }
@@ -298,7 +298,7 @@ void RdbCache::addLongLong ( collnum_t collnum ,
 			     char **retRecPtr ) {
 	key_t k;
 	k.n0 = 0;
-	k.n1 = (unsigned long long)key;
+	k.n1 = (uint64_t)key;
 	// sanity check
 	//if ( m_cks != 4 ) { char *xx = NULL; *xx = 0; }
 	// sanity check
@@ -315,7 +315,7 @@ void RdbCache::addLongLong ( collnum_t collnum ,
 
 
 long RdbCache::getLong ( collnum_t collnum ,
-			 unsigned long long key , long maxAge ,
+			 uint64_t key , long maxAge ,
 			 bool promoteRecord ) {
 	char *rec;
 	long  recSize;
@@ -346,7 +346,7 @@ long RdbCache::getLong ( collnum_t collnum ,
 
 // this puts a long in there
 void RdbCache::addLong ( collnum_t collnum ,
-			 unsigned long long key , long value ,
+			 uint64_t key , long value ,
 			 char **retRecPtr ) {
 	key_t k;
 	k.n0 = 0;
@@ -433,7 +433,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	//if ( ! doCopy ) 
 	//	return log("RdbCache::getRecord: only doCopy supported");
 	// look up in hash table
-	//long n =(cacheKey.n0 + (unsigned long long)cacheKey.n1)%m_numPtrsMax;
+	//long n =(cacheKey.n0 + (uint64_t)cacheKey.n1)%m_numPtrsMax;
 	long n = hash32 ( cacheKey , m_cks ) % m_numPtrsMax;
 	//long n = cacheKey.n0 % m_numPtrsMax;
 	// chain
@@ -1135,7 +1135,7 @@ void RdbCache::markDeletedRecord(char *ptr){
 // patch the hole so chaining still works
 //void RdbCache::removeKey ( collnum_t collnum , key_t key , char *rec ) {
 void RdbCache::removeKey ( collnum_t collnum , char *key , char *rec ) {
-	//long n = (key.n0 + (unsigned long long)key.n1)% m_numPtrsMax;
+	//long n = (key.n0 + (uint64_t)key.n1)% m_numPtrsMax;
 	long n = hash32 ( key , m_cks ) % m_numPtrsMax;
 	// debug msg
 	//if ( m_cks == 4)
@@ -1222,7 +1222,7 @@ void RdbCache::removeKey ( collnum_t collnum , char *key , char *rec ) {
 //void RdbCache::addKey ( collnum_t collnum , key_t key , char *ptr ) { 
 void RdbCache::addKey ( collnum_t collnum , char *key , char *ptr ) { 
 	// look up in hash table
-	//long n = (key.n0 + (unsigned long long)key.n1)% m_numPtrsMax;
+	//long n = (key.n0 + (uint64_t)key.n1)% m_numPtrsMax;
 	long n = hash32 ( key , m_cks ) % m_numPtrsMax;
 	// save orig for debugging
 	//long n2 = n;
@@ -1643,7 +1643,7 @@ bool RdbCache::load ( char *dbname ) {
 void RdbCache::removeKeyRange ( collnum_t collnum ,
 				char *startKey ,
 				char *endKey ) {
-	//long n = (key.n0 + (unsigned long long)key.n1)% m_numPtrsMax;
+	//long n = (key.n0 + (uint64_t)key.n1)% m_numPtrsMax;
 	// unused now!!
 	long n = hash32 ( startKey , m_cks ) % m_numPtrsMax;
 	long startn = n;

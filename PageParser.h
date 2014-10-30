@@ -86,7 +86,7 @@ public:
 
 	// these are from rearranging the code
 	long      m_indexCode;
-	//unsigned long long m_chksum1;
+	//uint64_t m_chksum1;
 	long long m_took1;
 	long long m_took1b;
 	long long m_took2;

@@ -375,7 +375,7 @@ void Posdb::makeKey48 ( char              *vkp            ,
 // . TODO: substitute var ptrs if you want extra speed
 void Posdb::makeKey ( void              *vkp            ,
 		      long long          termId         ,
-		      unsigned long long docId          , 
+		      uint64_t docId          , 
 		      long               wordPos        ,
 		      char               densityRank    ,
 		      char               diversityRank  ,
@@ -3727,7 +3727,7 @@ float PosdbTable::getTermPairScoreForAny ( long i, long j,
 			// we have a 12 byte key with the same docid but
 			// different siterank or langid because it was
 			// not deleted right!
-			if ( (unsigned long long)g_posdb.getDocId(wpi) != 
+			if ( (uint64_t)g_posdb.getDocId(wpi) != 
 			     m_docId ) {
 				char *xx=NULL;*xx=0;
 				goto done;
@@ -3928,7 +3928,7 @@ float PosdbTable::getTermPairScoreForAny ( long i, long j,
 			// we have a 12 byte key with the same docid but
 			// different siterank or langid because it was
 			// not deleted right!
-			if ( (unsigned long long)g_posdb.getDocId(wpj) != 
+			if ( (uint64_t)g_posdb.getDocId(wpj) != 
 			     m_docId ) {
 				char *xx=NULL;*xx=0;
 				goto done;
@@ -5055,7 +5055,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	long long dd = g_posdb.getDocId(minRecPtr);
 	log("posdb: adding docid %lli", dd);
 	// test
-	unsigned long long actualDocId;
+	uint64_t actualDocId;
 	actualDocId = *(unsigned long *)(dp+1);
 	actualDocId <<= 8;
 	actualDocId |= (unsigned char)dp[0];
@@ -5520,7 +5520,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	char *xdp = m_docIdVoteBuf.getBufStart();
 	char *xdpEnd = xdp + m_docIdVoteBuf.length();
 	for ( ; xdp < xdpEnd ; xdp += 6 ) {
-		unsigned long long actualDocId;
+		uint64_t actualDocId;
 		actualDocId = *(unsigned long *)(xdp+1);
 		actualDocId <<= 8;
 		actualDocId |= (unsigned char)xdp[0];
@@ -5570,7 +5570,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	xdp = m_docIdVoteBuf.getBufStart();
 	xdpEnd = xdp + m_docIdVoteBuf.length();
 	for ( ; xdp < xdpEnd ; xdp += 6 ) {
-		unsigned long long actualDocId;
+		uint64_t actualDocId;
 		actualDocId = *(unsigned long *)(xdp+1);
 		actualDocId <<= 8;
 		actualDocId |= (unsigned char)xdp[0];
@@ -5668,7 +5668,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	bool allNull;
 	long minPos =0;
 
-	unsigned long long lastDocId = 0LL;
+	uint64_t lastDocId = 0LL;
 	long lastLen = 0;
 	char siteRank =0;
 	char docLang =0;
@@ -5884,8 +5884,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		// OOM conditions.
 		if ( m_r->m_minDocId != -1 &&
 		     m_r->m_maxDocId != -1 &&
-		     ( m_docId < (unsigned long long)m_r->m_minDocId || 
-		       m_docId >= (unsigned long long)m_r->m_maxDocId ) ) 
+		     ( m_docId < (uint64_t)m_r->m_minDocId || 
+		       m_docId >= (uint64_t)m_r->m_maxDocId ) ) 
 			goto nextNode;
 		// set query termlists in all sublists
 		for ( long i = 0 ; i < m_numQueryTermInfos ; i++ ) {

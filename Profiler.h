@@ -262,7 +262,7 @@ protected:
 	QuickPollInfo m_quickPollInfos[512];
 	long          m_lastQPUsed;
 	
-	unsigned long long m_fnTime[11];
+	uint64_t m_fnTime[11];
 private:
 	// Realtime profiler stuff
 	uint32_t getFuncBaseAddr(const uint32_t address);

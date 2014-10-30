@@ -50,7 +50,7 @@
 //#define BASE_QUERY_SCORE 10000000
 
 // let's support up to 64 query terms for now
-typedef unsigned long long qvec_t;
+typedef uint64_t qvec_t;
 
 #define MAX_EXPLICIT_BITS (sizeof(qvec_t)*8)
 

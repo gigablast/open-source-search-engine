@@ -24,10 +24,10 @@
 inline int KEYCMP12 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+4)) <
-	     (*(unsigned long long *)(k2+4)) ) return -1;
-	if ( (*(unsigned long long *)(k1+4)) > 
-	     (*(unsigned long long *)(k2+4)) ) return  1;
+	if ( (*(uint64_t *)(k1+4)) <
+	     (*(uint64_t *)(k2+4)) ) return -1;
+	if ( (*(uint64_t *)(k1+4)) > 
+	     (*(uint64_t *)(k2+4)) ) return  1;
 	unsigned long k1n0 = ((*(unsigned long*)(k1)) & ~0x01UL);
 	unsigned long k2n0 = ((*(unsigned long*)(k2)) & ~0x01UL);
 	if ( k1n0 < k2n0 ) return -1;
@@ -40,12 +40,12 @@ inline int KEYCMP12 ( const void *a, const void *b ) {
 inline int KEYCMP16 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+8)) <
-	     (*(unsigned long long *)(k2+8)) ) return -1;
-	if ( (*(unsigned long long *)(k1+8)) >
-	     (*(unsigned long long *)(k2+8)) ) return  1;
-	unsigned long long k1n0 = ((*(unsigned long long *)(k1)) & ~0x01ULL);
-	unsigned long long k2n0 = ((*(unsigned long long *)(k2)) & ~0x01ULL);
+	if ( (*(uint64_t *)(k1+8)) <
+	     (*(uint64_t *)(k2+8)) ) return -1;
+	if ( (*(uint64_t *)(k1+8)) >
+	     (*(uint64_t *)(k2+8)) ) return  1;
+	uint64_t k1n0 = ((*(uint64_t *)(k1)) & ~0x01ULL);
+	uint64_t k2n0 = ((*(uint64_t *)(k2)) & ~0x01ULL);
 	if ( k1n0 < k2n0 ) return -1;
 	if ( k1n0 > k2n0 ) return  1;
 	return 0;
@@ -54,14 +54,14 @@ inline int KEYCMP16 ( const void *a, const void *b ) {
 inline int KEYCMP18 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+10)) <
-	     (*(unsigned long long *)(k2+10)) ) return -1;
-	if ( (*(unsigned long long *)(k1+10)) >
-	     (*(unsigned long long *)(k2+10)) ) return  1;
-	if ( (*(unsigned long long *)(k1+2)) <
-	     (*(unsigned long long *)(k2+2)) ) return -1;
-	if ( (*(unsigned long long *)(k1+2)) >
-	     (*(unsigned long long *)(k2+2)) ) return  1;
+	if ( (*(uint64_t *)(k1+10)) <
+	     (*(uint64_t *)(k2+10)) ) return -1;
+	if ( (*(uint64_t *)(k1+10)) >
+	     (*(uint64_t *)(k2+10)) ) return  1;
+	if ( (*(uint64_t *)(k1+2)) <
+	     (*(uint64_t *)(k2+2)) ) return -1;
+	if ( (*(uint64_t *)(k1+2)) >
+	     (*(uint64_t *)(k2+2)) ) return  1;
 	unsigned short k1n0 = ((*(unsigned short *)(k1)) & 0xfffe);
 	unsigned short k2n0 = ((*(unsigned short *)(k2)) & 0xfffe);
 	if ( k1n0 < k2n0 ) return -1;
@@ -72,16 +72,16 @@ inline int KEYCMP18 ( const void *a, const void *b ) {
 inline int KEYCMP24 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+16)) <
-	     (*(unsigned long long *)(k2+16)) ) return -1;
-	if ( (*(unsigned long long *)(k1+16)) >
-	     (*(unsigned long long *)(k2+16)) ) return  1;
-	if ( (*(unsigned long long *)(k1+8)) <
-	     (*(unsigned long long *)(k2+8)) ) return -1;
-	if ( (*(unsigned long long *)(k1+8)) >
-	     (*(unsigned long long *)(k2+8)) ) return  1;
-	unsigned long long k1n0 = ((*(unsigned long long *)(k1)) & ~0x01ULL);
-	unsigned long long k2n0 = ((*(unsigned long long *)(k2)) & ~0x01ULL);
+	if ( (*(uint64_t *)(k1+16)) <
+	     (*(uint64_t *)(k2+16)) ) return -1;
+	if ( (*(uint64_t *)(k1+16)) >
+	     (*(uint64_t *)(k2+16)) ) return  1;
+	if ( (*(uint64_t *)(k1+8)) <
+	     (*(uint64_t *)(k2+8)) ) return -1;
+	if ( (*(uint64_t *)(k1+8)) >
+	     (*(uint64_t *)(k2+8)) ) return  1;
+	uint64_t k1n0 = ((*(uint64_t *)(k1)) & ~0x01ULL);
+	uint64_t k2n0 = ((*(uint64_t *)(k2)) & ~0x01ULL);
 	if ( k1n0 < k2n0 ) return -1;
 	if ( k1n0 > k2n0 ) return  1;
 	return 0;

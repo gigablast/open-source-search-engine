@@ -592,8 +592,8 @@ bool Syncdb::loop4 ( ) {
 		log("sync: requesting meta list sid=%lu zid=%llu age=%llu "
 		    "from twin hostid #%li",
 		    (unsigned long)sid,
-		    (unsigned long long)zid,
-		    (unsigned long long)age,
+		    (uint64_t)zid,
+		    (uint64_t)age,
 		    (long)tid);
 		// i guess we are out of sync
 		g_hostdb.m_myHost->m_inSync = false;
@@ -733,7 +733,7 @@ void Syncdb::loop5 ( ) {
 		// note it
 		log("sync: storing key for meta request list sid=%lu zid=%llu "
 		    "from twin hostid #%li",(unsigned long)sid,
-		    (unsigned long long)zid,(long)tid);
+		    (uint64_t)zid,(long)tid);
 		// make the key. make NEGATIVE "b" keys.
 		m_keys [ m_nk++ ] = makeKey ( 0,1,0,0,0,sid,zid,0 );
 		// stop if full

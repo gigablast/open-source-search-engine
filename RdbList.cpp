@@ -2362,8 +2362,8 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	if ( minRecSizes == 0 ) return true;
 
 	// get the biggest possible minKey so everyone's <= it
-	unsigned long long tmpHi = 0xffffffffffffffffLL;
-	unsigned long long tmpLo = 0LL;
+	uint64_t tmpHi = 0xffffffffffffffffLL;
+	uint64_t tmpLo = 0LL;
 
 	// maxPtr set by minRecSizes
 	char *maxPtr = m_list + minRecSizes;
@@ -2487,7 +2487,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	unsigned long groupId ;
 	unsigned long myGroupId = g_hostdb.m_groupId;
 	//unsigned long groupMask = g_hostdb.m_groupMask;
-	//unsigned long long docid;
+	//uint64_t docid;
 	//char *pp;
 
 	bool skipFilter = false;

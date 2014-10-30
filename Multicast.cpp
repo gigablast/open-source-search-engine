@@ -410,8 +410,8 @@ void Multicast::gotReply2 ( UdpSlot *slot ) {
 		// allow us to be re-used now, callback might relaunch
 		m_inUse = false;
 		if ( m_callback ) {
-// 			unsigned long long profilerStart,profilerEnd;
-// 			unsigned long long statStart,statEnd;
+// 			uint64_t profilerStart,profilerEnd;
+// 			uint64_t statStart,statEnd;
 
 			//if(g_conf.m_profilingEnabled){
 			//	address=(long)m_callback;
@@ -1534,9 +1534,9 @@ void Multicast::closeUpShop ( UdpSlot *slot ) {
 	m_inUse = false;
 	// now call the user callback if it exists
 	if ( m_callback ) {
-		//		unsigned long long profilerStart;
-		//unsigned long long profilerEnd;
-		//unsigned long long statStart,statEnd;
+		//		uint64_t profilerStart;
+		//uint64_t profilerEnd;
+		//uint64_t statStart,statEnd;
 
 		//if (g_conf.m_profilingEnabled){
 		//	//profilerStart=gettimeofdayInMillisecondsLocal();

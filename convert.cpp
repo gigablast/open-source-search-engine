@@ -372,7 +372,7 @@ convert: hashinit failed" ); return 1; }
 		//if ( termId == 0xdadadadaLL || 
 		//     termId == 0xdadadad2LL  ) continue;
 		// extract docid from the old format key
-		unsigned long long docId = *(long long *)p;
+		uint64_t docId = *(long long *)p;
 		docId >>= 1;
 		docId &= DOCID_MASK;
 		// was it a delete key?

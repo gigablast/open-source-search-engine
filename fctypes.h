@@ -34,7 +34,7 @@ char *strncasestr( char *haystack, long haylen, char *needle);
 char *strnstr2( char *haystack, long haylen, char *needle);
 
 // just like sprintf(s,"%llu",n), but we insert commas
-long ulltoa ( char *s , unsigned long long n ) ;
+long ulltoa ( char *s , uint64_t n ) ;
 
 // . convert < to &lt; and > to &gt and & to &amp;
 // . store "t" into "s"

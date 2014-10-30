@@ -15,7 +15,7 @@
 
 #define MAX_HASHES 1000
 
-unsigned long long g_hashtab[256][256];
+uint64_t g_hashtab[256][256];
 
 unsigned long hash32 ( char *s, long len ) {
 	unsigned long h = 0;
@@ -78,12 +78,12 @@ int main ( int argc , char *argv[] ) {
 	srand ( 1945687 );
 	for ( long i = 0 ; i < 256 ; i++ )
 		for ( long j = 0 ; j < 256 ; j++ ) {
-			g_hashtab [i][j]  = (unsigned long long)rand();
+			g_hashtab [i][j]  = (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
 			g_hashtab [i][j] <<= 32;
-			g_hashtab [i][j] |= (unsigned long long)rand();
+			g_hashtab [i][j] |= (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;

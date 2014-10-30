@@ -1235,7 +1235,7 @@ int CountryCode::createHashTable(void) {
 
 	char tmpbuf[2048];
 	HashTable ht;
-	unsigned long long entries = 0UL;
+	uint64_t entries = 0UL;
 	long catid;
 	long numcats = g_categories->m_numCats;
 	catcountryrec_t ccr;

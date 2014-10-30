@@ -425,7 +425,7 @@ class Likedb {
 			 long       eventId     ,
 			 long       rsvp_status ,
 			 long       start_time  ,
-			 unsigned long long eventHash64 ,
+			 uint64_t eventHash64 ,
 			 long long  value       );
 
 	bool makeFriendTable ( class Msg39Request *req ,
@@ -496,7 +496,7 @@ class Msgfc {
 	bool addLikedbTag ( long long userId,
 			    long long docId,
 			    long      eventId,
-			    unsigned long long eventHash64 ,
+			    uint64_t eventHash64 ,
 			    long start_time,
 			    long likedbTag , // LB_* #define's above
 			    bool negative , // turn off that flag?

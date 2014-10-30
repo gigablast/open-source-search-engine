@@ -2277,7 +2277,7 @@ bool Query::setQWords ( char boolFlag ,
 		}
 		// . get prefix hash of collection name and field
 		// . but first convert field to lower case
-		unsigned long long ph;
+		uint64_t ph;
 		long fflen = fieldLen;
 		if ( fflen > 62 ) fflen = 62;
 		char ff[64];
@@ -2402,7 +2402,7 @@ bool Query::setQWords ( char boolFlag ,
 			// ignore following words until we hit a space
 			ignoreTilSpace = true;
 			// the hash
-			unsigned long long wid = hash64 ( w , wlen, 0LL );
+			uint64_t wid = hash64 ( w , wlen, 0LL );
 
 			//
 			// BEGIN FACET RANGE LISTS
@@ -2711,7 +2711,7 @@ bool Query::setQWords ( char boolFlag ,
 		// . add single-word term id
 		// . this is computed by hash64AsciiLower() 
 		// . but only hash64Lower_a if _HASHWITHACCENTS_ is true
-		unsigned long long wid = 0LL;
+		uint64_t wid = 0LL;
 		if (fieldCode == FIELD_CHARSET){
 			// find first space -- that terminates the field value
 			char* end = 
@@ -3022,8 +3022,8 @@ bool Query::setQWords ( char boolFlag ,
 		// . get phrase info for this term
 		// . a pid (phraseId)of 0 indicates it does not start a phrase
 		// . raw phrase termId
-		//unsigned long long pid = phrases.getPhraseId(i);
-		unsigned long long pid = 0LL;
+		//uint64_t pid = phrases.getPhraseId(i);
+		uint64_t pid = 0LL;
 		// nwp is a REGULAR WORD COUNT!!
 		long nwp = 0;
 		if ( qw->m_inQuotedPhrase )
@@ -3037,7 +3037,7 @@ bool Query::setQWords ( char boolFlag ,
 		qw->m_rawPhraseId = pid;
 		// does word #i start a phrase?
 		if ( pid != 0 ) {
-			unsigned long long ph = qw->m_prefixHash ;
+			uint64_t ph = qw->m_prefixHash ;
 			// store the phrase id with coll/prefix
 			//qw->m_phraseId = g_indexdb.getTermId ( ph , pid );
 			// like we do it in XmlDoc.cpp's hashString()

@@ -465,7 +465,7 @@ bool gotFriends ( void *state ) {
 	//
 	char *iconIdStr = hr->getString("iconid",NULL);
 	char *iconSrc   = hr->getString("iconsrc",NULL);
-	unsigned long long eventHash64 = hr->getLongLong("evh64",0LL);
+	uint64_t eventHash64 = hr->getLongLong("evh64",0LL);
 
 	// skip the tagging if we can
 	if ( ! eventHash64 || ! iconSrc || ! iconIdStr  )
@@ -7994,7 +7994,7 @@ static bool printResult ( CollectionRec *cr,
 	urlLen = uu.getUrlLen();
 	//}
 	// get my site hash
-	unsigned long long siteHash = 0;
+	uint64_t siteHash = 0;
 	if ( uu.getHostLen() > 0 ) 
 		siteHash = hash64(uu.getHost(),uu.getHostLen());
 	// if this msg20 had an error print "had error"
@@ -12100,7 +12100,7 @@ bool sendPageBack ( TcpSocket *s ,
 	long long userId = hr->getLongLongFromCookie("userid",0LL);
 	if ( ! userId ) {
 		userId = rand();
-		unsigned long long now = getTimeLocal();
+		uint64_t now = getTimeLocal();
 		userId = hash32h ( now , userId );
 		// keep positive
 		userId >>= 1;

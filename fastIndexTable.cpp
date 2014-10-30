@@ -286,7 +286,7 @@ void IndexTable::addList ( IndexList *list, long scoreWeight, char termSign ,
 		//   and IT stores the least significant long first
 		if ( *k & (unsigned char)0x01 == 0 ) score = -score;
 		// just mask out everything else, but the docId from ith key
-		docIdBits =(*((unsigned long long *)k)) & 0x0000007ffffffffeLL;
+		docIdBits =(*((uint64_t *)k)) & 0x0000007ffffffffeLL;
 		// . hash docId
 		// . it's faster to use a power-of-2 table size and a mask
 		n = ( (*(unsigned long *)k) >>1 ) & m_mask;
@@ -557,8 +557,8 @@ bool IndexTable::growTable ( long growBy ) {
                 // skip the empty buckets 
 		if ( ! m_scores[i] ) continue;
                 // get the new slot number for this slot (might be the same!)
-                //long newn = (unsigned long long)m_docIdBits[i] % n;
-		long newn = (unsigned long long)m_docIdBits[i] & m_mask;
+                //long newn = (uint64_t)m_docIdBits[i] % n;
+		long newn = (uint64_t)m_docIdBits[i] & m_mask;
                 while ( newScores [ newn ] != 0 ) if ( ++newn >= n ) newn = 0;
                 // move the docIdBits/score/bitCount to this new slot
 		newDocIdBits [newn] = m_docIdBits [i];

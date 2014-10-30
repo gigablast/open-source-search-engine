@@ -3146,7 +3146,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		goto changed; }
 	else if ( t == TYPE_LONG_LONG ) {
 		if ( fromRequest &&
-		     *(unsigned long long *)(THIS + m->m_off+8*j)==
+		     *(uint64_t *)(THIS + m->m_off+8*j)==
 		     strtoull(s,NULL,10))
 			return;
 		*(long long *)(THIS + m->m_off + 8*j) = strtoull(s,NULL,10);

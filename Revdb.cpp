@@ -158,7 +158,7 @@ key_t Revdb::makeKey ( long long docId, bool isDel ){
 	key_t key ;
 	key.n1 = 0;
 	// shift up for delbit
-	key.n0 = ((unsigned long long)docId) << 1;
+	key.n0 = ((uint64_t)docId) << 1;
 	// final del bit
 	if ( ! isDel ) key.n0 |= 0x01;
 	return key;

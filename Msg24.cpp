@@ -1878,7 +1878,7 @@ bool onSamePages ( long i, long j, long *slots, long *heads, long *pages ) {
 }
 */
 
-void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops , 
+void hashExcerpt ( Query *q , uint64_t *qids , long *qpops , 
 		   long nqi , TermTable *tt , char *buf , long bufLen , 
 		   Words *w , TopicGroup *t , Scores *scoresPtr , 
 		   bool isUnicode , char *repeatTable , 
@@ -1954,7 +1954,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 #endif
 
 	// get query hashes/ids, 32 bit, skip phrases
-	unsigned long long qids [MAX_QUERY_TERMS];
+	uint64_t qids [MAX_QUERY_TERMS];
 	long qpops[MAX_QUERY_TERMS];
 	long nqi = 0;
 	//for ( long i=0 ; q && i<q->getNumTerms() && nqi<MAX_QUERY_TERMS; i++){ (aac)
@@ -2159,7 +2159,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 }
 
 
-void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
+void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 		   TermTable *tt , char *buf , long bufLen , 
 		   Words *w , TopicGroup *t , Scores *scoresPtr ,
 		   bool isUnicode , char *repeatTable , 
@@ -2200,7 +2200,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
        	lrgBufSize += 1002 * MAX_QUERY_TERMS * sizeof(long);
 	lrgBufSize += 2 * nw * sizeof(long);
 	lrgBufSize += 3 * nw * sizeof(char);
-	lrgBufSize += nw * sizeof(unsigned long long);
+	lrgBufSize += nw * sizeof(uint64_t);
 	lrgBuf = (char *)mmalloc(lrgBufSize, "hashExcerpt (Msg24)");
 	if (! lrgBuf) {
 	    nw >>= 2;
@@ -2208,7 +2208,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 	    lrgBufSize += 1002 * MAX_QUERY_TERMS * sizeof(long);
 	    lrgBufSize += 2 * nw * sizeof(long);
 	    lrgBufSize += 3 * nw * sizeof(char);
-	    lrgBufSize += nw * sizeof(unsigned long long);
+	    lrgBufSize += nw * sizeof(uint64_t);
 	    lrgBuf = (char *)mmalloc(lrgBufSize, "hashExcerpt (Msg24)");
 	};
 	if (! lrgBuf) {
@@ -2244,8 +2244,8 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 	long i  = 0;
 	if ( i < nw && w->isPunct(i) ) i++;
 	qtrs[i] = 0;
-	unsigned long long *wids = (unsigned long long *)lrgBufPtr;
-	lrgBufPtr += nw * sizeof(unsigned long long);
+	uint64_t *wids = (uint64_t *)lrgBufPtr;
+	lrgBufPtr += nw * sizeof(uint64_t);
 	// record the positions of all query words
 	char **wp   = w->m_words;
 	long  *wlen = w->m_wordLens;
@@ -2575,7 +2575,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 		// set initial score and bonus
 		score = qtrs[i];
 		bonus = 0;
-		unsigned long long  h = wids[i]; // hash value
+		uint64_t  h = wids[i]; // hash value
 		// if first letter is upper case, double the score
 		//if ( is_upper (w->getWord(i)[0]) ) score <<= 1;
 

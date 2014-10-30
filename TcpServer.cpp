@@ -2445,8 +2445,8 @@ void TcpServer::makeCallback ( TcpSocket * s ) {
 	if ( ! s->m_callback ) return;
 	// record times for profiler
 	//long address = (long)s->m_callback;
-// 	unsigned long long start ;
-// 	unsigned long long statStart,statEnd;
+// 	uint64_t start ;
+// 	uint64_t statStart,statEnd;
 	//if ( g_conf.m_profilingEnabled ) {
 // 		start = gettimeofdayInMillisecondsLocal();
 // 		statStart=gettimeofdayInMilliseconds();

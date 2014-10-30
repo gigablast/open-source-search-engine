@@ -14,7 +14,7 @@ static key_t makeClusterCacheKey ( unsigned long vfd,
 				   unsigned long pageNum ) {
 	key_t key;
 	key.n1 = vfd + 1;
-	key.n0 = (unsigned long long)pageNum + 1;
+	key.n0 = (uint64_t)pageNum + 1;
 	return key;
 }
 
@@ -789,9 +789,9 @@ key_t Clusterdb::makeClusterRecKey ( long long     docId,
 	if ( familyFilter ) key.n0 |= 0x0000000400000000ULL;
 	else                key.n0 &= 0xfffffffbffffffffULL;
 	// set the language bits
-	key.n0 |= ((unsigned long long)(languageBits & 0x3f)) << 28;
+	key.n0 |= ((uint64_t)(languageBits & 0x3f)) << 28;
 	// set the site hash
-	key.n0 |= (unsigned long long)(siteHash & 0x03ffffff) << 2;
+	key.n0 |= (uint64_t)(siteHash & 0x03ffffff) << 2;
 	// set the del bit
 	if ( isDelKey ) key.n0 &= 0xfffffffffffffffeULL;
 	else            key.n0 |= 0x0000000000000001ULL;

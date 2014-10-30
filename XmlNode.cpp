@@ -686,8 +686,8 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 	for ( long i = 0 ; i < s_numNodeTypes ; i++ ) {
 		long long h = hash64Upper_a ( g_nodes[i].m_nodeName, 
 					    gbstrlen(g_nodes[i].m_nodeName),0LL);
-		//long b = (unsigned long long)h % 512;
-		long b = (unsigned long long)h & 511;
+		//long b = (uint64_t)h % 512;
+		long b = (uint64_t)h & 511;
 		// debug msg
 	     //fprintf(stderr,"node #%li has bucket #%li, hash =%lli\n",i,b,h);
 		while ( s_hash[b] ) if ( ++b == 512 ) b = 0;
@@ -699,8 +699,8 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 
  ready:
 	// look up nodeHash in hash table
-	//long b = (unsigned long long)nodeHash % 512;
-	long b = (unsigned long long)nodeHash & 511;
+	//long b = (uint64_t)nodeHash % 512;
+	long b = (uint64_t)nodeHash & 511;
 	while ( s_hash[b] ) {
 		if (   s_hash[b] == nodeHash ) break;
 		if ( ++b == 512 ) b = 0;

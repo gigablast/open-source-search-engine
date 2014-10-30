@@ -112,7 +112,7 @@ class UdpProtocol {
 				bool           weInitiated ) {
 		key_t key;
 		key.n1 = transId;
-		key.n0 = (((unsigned long long) ip) << 16 ) | port;
+		key.n0 = (((uint64_t) ip) << 16 ) | port;
 		// . this prevents collisions between hosts using same transId
 		// . because only one of the 2 will have the callback set
 		if ( weInitiated ) key.n0 |= 0x8000000000000000LL;

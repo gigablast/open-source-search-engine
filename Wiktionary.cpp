@@ -1798,7 +1798,7 @@ bool Wiktionary::addWord ( char *word ,
 	//	log("hey");
 	//if ( formOf != word && fh64 == hash64n("of",0) )
 	//	log("hey");
-	//if ( (unsigned long long)wid == 17808519984823939745ULL ) 
+	//if ( (uint64_t)wid == 17808519984823939745ULL ) 
 	//	log("stratocumulus");
 
 	// hash in langid

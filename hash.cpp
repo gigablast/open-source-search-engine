@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-unsigned long long g_hashtab[256][256] ;
+uint64_t g_hashtab[256][256] ;
 
 // . now we explicitly specify the zobrist table so we are compatible
 //   with cygwin and apple environments
@@ -27,12 +27,12 @@ bool hashinit () {
 	for ( long i = 0 ; i < 256 ; i++ ) {
 		//fprintf(stdout,"{");
 		for ( long j = 0 ; j < 256 ; j++ ) {
-			g_hashtab [i][j]  = (unsigned long long)rand();
+			g_hashtab [i][j]  = (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
 			g_hashtab [i][j] <<= 32;
-			g_hashtab [i][j] |= (unsigned long long)rand();
+			g_hashtab [i][j] |= (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
@@ -85,15 +85,15 @@ unsigned long hash32n ( char *s ) {
 	return h;
 }
 
-uint64_t hash64n ( char *s, unsigned long long startHash ) {
-	unsigned long long h = startHash;
+uint64_t hash64n ( char *s, uint64_t startHash ) {
+	uint64_t h = startHash;
 	for ( long i = 0 ; s[i] ; i++ )
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
 	return h;
 }
 
 uint64_t hash64n_nospaces ( char *s, long len ) {
-	unsigned long long h = 0LL;
+	uint64_t h = 0LL;
 	long k = 0;
 	for ( long i = 0 ; i<len ; i++ ) {
 		if ( s[i] == ' ' ) continue;
@@ -197,7 +197,7 @@ uint64_t hash64h ( uint64_t h1 , uint64_t h2 ) {
 	return h;
 }
 
-void hash2string ( unsigned long long h , char *buf ) {
+void hash2string ( uint64_t h , char *buf ) {
 	//	sprintf(buf, "%016lx", h );
 	sprintf(buf   , "%08lx", (unsigned long)(h >> 32) );
 	sprintf(buf+10, "%08lx", (unsigned long)h );
@@ -210,7 +210,7 @@ uint32_t hash32d ( char *p, char *pend ) {
 
 // . only utf8 allowed now
 // . stole this from hash.h hash64LowerE()
-unsigned long long hash64d ( char *p, long plen ) {
+uint64_t hash64d ( char *p, long plen ) {
 	char *pend = p + plen;
 	uint64_t h = 0;
 	uint8_t  i = 0;

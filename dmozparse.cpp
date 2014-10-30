@@ -74,7 +74,7 @@ struct HashLink {
 
 // another hash, for urls
 struct UrlHashLink {
-	unsigned long long m_key;
+	uint64_t m_key;
 	//unsigned long      m_key2;
 	//long m_urlOffset;
 	//long m_urlLen;
@@ -84,7 +84,7 @@ struct UrlHashLink {
 
 // structure to store url info
 struct UrlInfo {
-	//unsigned long long m_hash;
+	//uint64_t m_hash;
 	//short m_urlLen;
 	//long  m_urlOffset;
 	unsigned char m_numCatids;
@@ -338,14 +338,14 @@ void clearUrlHashTable ( ) {
 }
 
 // add a url hash to the hash table with the given index
-long addUrlHash ( unsigned long long key,
+long addUrlHash ( uint64_t key,
 		  //unsigned long      key2,
 		  long index ) {
 		  //long index,
 		  //long urlOffset,
 		  //long urlLen ) {
 	// get the hash value
-	unsigned long hashKey = (key%(unsigned long long)URLHASHTABLE_SIZE);
+	unsigned long hashKey = (key%(uint64_t)URLHASHTABLE_SIZE);
 	// get the first node
 	UrlHashLink **currLink = &urlHashTable[hashKey];
 	// go to the first empty node
@@ -365,13 +365,13 @@ long addUrlHash ( unsigned long long key,
 }
 
 // get the index in the hash using hash key
-long getUrlHash ( unsigned long long key ) {
+long getUrlHash ( uint64_t key ) {
 		  //unsigned long      key2 ) {
 		  //unsigned long      key2,
 		  //long urlOffset,
 		  //long urlLen ) {
 	// get the hash value
-	unsigned long hashKey = (key%(unsigned long long)URLHASHTABLE_SIZE);
+	unsigned long hashKey = (key%(uint64_t)URLHASHTABLE_SIZE);
 	// get the first node
 	UrlHashLink *currLink = urlHashTable[hashKey];
 	// go to the correct node
@@ -1683,7 +1683,7 @@ hashLink:
 		// if good, add it to the buffer and add the cat
 		//urlBufferLen += urlLen;
 		// get the hash value
-		unsigned long long urlHash =
+		uint64_t urlHash =
 			hash64Lower_a(&urlBuffer[urlOffset], urlLen, 0);
 		//unsigned long urlHash2 =
 		//	hash32Lower(&urlBuffer[urlOffset], urlLen, 0);
@@ -1909,7 +1909,7 @@ fileEnd2:
 		long oldNumUrls;
 		char *oldUrls = NULL;
 		long oldUrlsBufferSize = OLDURL_BUFFER_SIZE;
-		unsigned long long *oldUrlHashes;
+		uint64_t *oldUrlHashes;
 		char *removeOldUrl;
 		//char oldUrl[MAX_URL_LEN*2];
 		long *oldCatids = NULL;
@@ -1945,7 +1945,7 @@ fileEnd2:
 			printf("Out of Memory!\n");
 			goto oldErrExit;
 		}
-		oldUrlHashes = (unsigned long long*)malloc (
+		oldUrlHashes = (uint64_t*)malloc (
 				sizeof(long long)*oldNumUrls );
 		if (!oldUrlHashes) {
 			printf("Out of Memory!\n");

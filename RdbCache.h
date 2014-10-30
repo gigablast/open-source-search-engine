@@ -100,21 +100,21 @@ class RdbCache {
 	// . both key and data are long longs here
 	// . returns -1 if not found
 	long long getLongLong2 ( collnum_t collnum ,
-				 unsigned long long key , 
+				 uint64_t key , 
 				 long maxAge , // in seconds
 				 bool promoteRecord );
 
 	// this puts a long in there
         void addLongLong2 ( collnum_t collnum ,
-			   unsigned long long key , long long value ,
+			   uint64_t key , long long value ,
 			   char **retRecPtr = NULL ) ;
 
 	// same routines for longs now, but key is a long long
 	long getLong ( collnum_t collnum ,
-		       unsigned long long key , long maxAge , // in seconds
+		       uint64_t key , long maxAge , // in seconds
 		       bool promoteRecord );
         void addLong ( collnum_t collnum ,
-		       unsigned long long key , long value ,
+		       uint64_t key , long value ,
 		       char **retRecPtr = NULL ) ;
 
 	// . returns true if found, false if not found in cache

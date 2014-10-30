@@ -2543,9 +2543,9 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	//   and the test name, QATest::m_testName
 	long ajax = hr->getLong("ajax",0);
 	unsigned long ajaxUrlHash ;
-	ajaxUrlHash = (unsigned long long)hr->getLongLong("uh",0LL);
+	ajaxUrlHash = (uint64_t)hr->getLongLong("uh",0LL);
 	unsigned long ajaxCrc ;
-	ajaxCrc = (unsigned long long)hr->getLongLong("crc",0LL);
+	ajaxCrc = (uint64_t)hr->getLongLong("crc",0LL);
 
 	if ( ajax ) {
 		// make sure it is initialized

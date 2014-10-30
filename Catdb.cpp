@@ -362,8 +362,8 @@ void Catdb::listSearch ( RdbList *list,
 			// next check spot
 			long delta = high - low;
 			currRec = low + (delta / 2);
-			//currRec = (char*)(((unsigned long long)low + 
-			//	           (unsigned long long)high)/2);
+			//currRec = (char*)(((uint64_t)low + 
+			//	           (uint64_t)high)/2);
 			// do correction
 			currRec = moveToCorrectKey( currRec,
 						    list,

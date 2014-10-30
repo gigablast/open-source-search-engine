@@ -28,8 +28,8 @@ Hostdb g_hostdb;
 // for harvesting link text from the larger index
 Hostdb g_hostdb2;
 
-HashTableT <unsigned long long, unsigned long> g_hostTableUdp;
-HashTableT <unsigned long long, unsigned long> g_hostTableTcp;
+HashTableT <uint64_t, unsigned long> g_hostTableUdp;
+HashTableT <uint64_t, unsigned long> g_hostTableTcp;
 
 Host     *g_listHosts [ MAX_HOSTS * 4 ];
 uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
@@ -1357,11 +1357,11 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 	}
 
 	// shortcut
-	HashTableT <unsigned long long, unsigned long> *t;
+	HashTableT <uint64_t, unsigned long> *t;
 	if ( udp ) t = &g_hostTableUdp;
 	else       t = &g_hostTableTcp;
 	// get his key
-	unsigned long long key = 0;
+	uint64_t key = 0;
 	// masking the low bits of the ip is not good because it is
 	// the same for every host! so reverse the key to get good hash
 	char *dst = (char *)&key;
@@ -1431,11 +1431,11 @@ bool Hostdb::isIpInNetwork ( uint32_t ip ) {
 // . use a port of 0 if we should disregard port
 Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
 	// shortcut
-	HashTableT <unsigned long long, unsigned long> *t;
+	HashTableT <uint64_t, unsigned long> *t;
 	if ( udp ) t = &g_hostTableUdp;
 	else       t = &g_hostTableTcp;
 	// reset key
-	unsigned long long key = 0;
+	uint64_t key = 0;
 	// masking the low bits of the ip is not good because it is
 	// the same for every host! so reverse the key to get good hash
 	char *dst = (char *)&key;
@@ -2382,26 +2382,26 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 
 	// try to put those most popular ones first for speed
 	if      ( rdbId == RDB_POSDB || rdbId == RDB2_POSDB2 ) {
-		unsigned long long d = g_posdb.getDocId ( k );
+		uint64_t d = g_posdb.getDocId ( k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	//if      ( rdbId == RDB_INDEXDB || rdbId == RDB2_INDEXDB2 ) {
-	//	unsigned long long d = g_indexdb.getDocId ( (key_t *)k );
+	//	uint64_t d = g_indexdb.getDocId ( (key_t *)k );
 	//	return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	//}
 	else if ( rdbId == RDB_DATEDB || rdbId == RDB2_DATEDB2 ) {
-		unsigned long long d = g_datedb.getDocId ( k );
+		uint64_t d = g_datedb.getDocId ( k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	else if ( rdbId == RDB_LINKDB || rdbId == RDB2_LINKDB2 ) {
 		return m_map [(*(uint16_t *)((char *)k + 26))>>3];	
 	}
 	//else if ( rdbId == RDB_TFNDB || rdbId == RDB2_TFNDB2 ) {
-	//	unsigned long long d = g_tfndb.getDocId ( (key_t *)k );
+	//	uint64_t d = g_tfndb.getDocId ( (key_t *)k );
 	//	return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	//}
 	else if ( rdbId == RDB_TITLEDB || rdbId == RDB2_TITLEDB2 ) {
-		unsigned long long d = g_titledb.getDocId ( (key_t *)k );
+		uint64_t d = g_titledb.getDocId ( (key_t *)k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	else if ( rdbId == RDB_SPIDERDB || rdbId == RDB2_SPIDERDB2 ) {
@@ -2422,7 +2422,7 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 		return m_map [ h & (MAX_KSLOTS-1)];
 	}
 	else if ( rdbId == RDB_CLUSTERDB || rdbId == RDB2_CLUSTERDB2 ) {
-		unsigned long long d = g_clusterdb.getDocId ( k );
+		uint64_t d = g_clusterdb.getDocId ( k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	else if ( rdbId == RDB_TAGDB || 
@@ -2451,13 +2451,13 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 	else if ( rdbId == RDB_SECTIONDB || rdbId == RDB2_SECTIONDB2 ) {
 		// use top 13 bits of key
 		return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-		//unsigned long long d = g_datedb.getDocId ( k );
+		//uint64_t d = g_datedb.getDocId ( k );
 		//return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	else if ( rdbId == RDB_REVDB || rdbId == RDB2_REVDB2 ) {
 		// key is formed like title key is
 		//long long d = g_titledb.getDocId ( (key_t *)k );
-		unsigned long long d = g_revdb.getDocId( (key_t *)k );
+		uint64_t d = g_revdb.getDocId( (key_t *)k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	//else if ( rdbId == RDB_FAKEDB ) {

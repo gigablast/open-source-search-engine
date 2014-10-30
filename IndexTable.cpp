@@ -2407,12 +2407,12 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	// what tier are we?
 	char tier = m_numTiers - 1;
 	long count = 0;
-	unsigned long long   d;
+	uint64_t   d;
 	unsigned long        h;
 	unsigned long        numBuckets = 0 ;
 	long                 bufSize    = 0 ;
 	char                *buf = NULL ;
-	unsigned long long  *htable = NULL;
+	uint64_t  *htable = NULL;
 	TopNode            **vtable = NULL;
 	long                 explicitCount;
 	long                 implicitCount;
@@ -2443,7 +2443,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 			    bufSize);
 			return;
 		}
-		htable  = (unsigned long long *)buf;
+		htable  = (uint64_t *)buf;
 		vtable  = (TopNode  **)(buf + numBuckets * 8) ;
 		memset ( htable , 0 , numBuckets * 8 );
 	}

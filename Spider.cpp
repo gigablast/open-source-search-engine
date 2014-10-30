@@ -1642,7 +1642,7 @@ long long SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
 	// any IP, we just want to get the next spider time.
 	if ( firstIp != 0 && storedFirstIp != firstIp ) return -1;
 	// get the time
-	unsigned long long spiderTimeMS = k->n1;
+	uint64_t spiderTimeMS = k->n1;
 	// shift upp
 	spiderTimeMS <<= 32;
 	// or in
@@ -4539,7 +4539,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		//log("spider: 7 del node for %s",iptoa(m_scanningIp));
 		m_waitingTreeKeyValid = false;
 		// note it
-		unsigned long long timestamp64 = m_waitingTreeKey.n1;
+		uint64_t timestamp64 = m_waitingTreeKey.n1;
 		timestamp64 <<= 32;
 		timestamp64 |= m_waitingTreeKey.n0 >> 32;
 		long firstIp = m_waitingTreeKey.n0 &= 0xffffffff;
@@ -4729,7 +4729,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		}
 
 		// get old time
-		unsigned long long oldSpiderTimeMS = m_waitingTreeKey.n1;
+		uint64_t oldSpiderTimeMS = m_waitingTreeKey.n1;
 		oldSpiderTimeMS <<= 32;
 		oldSpiderTimeMS |= (m_waitingTreeKey.n0 >> 32);
 		// delete old node
@@ -4899,7 +4899,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 	// log it
 	if ( g_conf.m_logDebugSpcache ) {
-		unsigned long long spiderTimeMS = m_waitingTreeKey.n1;
+		uint64_t spiderTimeMS = m_waitingTreeKey.n1;
 		spiderTimeMS <<= 32;
 		spiderTimeMS |= (m_waitingTreeKey.n0 >> 32);
 		logf(LOG_DEBUG,"spider: removing doled waitingtree key"
@@ -5144,7 +5144,7 @@ bool isAssignedToUs ( long firstIp ) {
 	long hpg = g_hostdb.getNumHostsPerShard();
 	// let's mix it up since spider shard was selected using this
 	// same mod on the firstIp method!!
-	unsigned long long h64 = firstIp;
+	uint64_t h64 = firstIp;
 	unsigned char c = firstIp & 0xff;
 	h64 ^= g_hashtab[c][0];
 	// select the next host number to try
@@ -6462,7 +6462,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// shortcut
 	//long long uh48 = sreq->getUrlHash48();
 	// get the lock key
-	unsigned long long lockKey ;
+	uint64_t lockKey ;
 	lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
 	// check tree
 	long slot = ht->getSlot ( &lockKey );
@@ -6746,7 +6746,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	// shortcut
 	long long lockKeyUh48 = makeLockTableKey ( sreq );
 
-	//unsigned long long lockKey ;
+	//uint64_t lockKey ;
 	//lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
 	//lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
 
@@ -7947,7 +7947,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	}
 
 	LockRequest *lr = (LockRequest *)request;
-	//unsigned long long lockKey = *(long long *)request;
+	//uint64_t lockKey = *(long long *)request;
 	//long lockSequence = *(long *)(request+8);
 	// is this a remove operation? assume not
 	//bool remove = false;
@@ -8899,7 +8899,7 @@ bool sendPage ( State11 *st ) {
 		// get ip from that
 		long firstIp = (key->n0) & 0xffffffff;
 		// get the time
-		unsigned long long spiderTimeMS = key->n1;
+		uint64_t spiderTimeMS = key->n1;
 		// shift upp
 		spiderTimeMS <<= 32;
 		// or in

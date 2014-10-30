@@ -299,7 +299,7 @@ class Msg5 {
 	collnum_t m_collnum;
 	
 	// actually part of a different algo than m_waitingForList!
-	unsigned long long m_waitingKey;
+	uint64_t m_waitingKey;
 
 	// hack parms
 	void *m_parent;

@@ -6,7 +6,7 @@
 #include "HashTableT.h"
 
 //make the key, it is just the needles ptr 
-//static HashTableT<unsigned long long , char*> s_quickTables;
+//static HashTableT<uint64_t , char*> s_quickTables;
 static HashTableX s_quickTables;
 
 /*
@@ -65,7 +65,7 @@ bool fast_highlight ( // highlight these query terms:
 // . a space (includes \r \n) in a needle will match a consecutive sequence
 //   of spaces in the haystack
 
-#define BITVEC unsigned long long
+#define BITVEC uint64_t
 
 char *getMatches2 ( Needle *needles          , 
 		    long    numNeedles       ,

@@ -569,7 +569,7 @@ long long getSynBaseHash64 ( char *qstr , uint8_t langId ) {
 		bool isStop = ::isStopWord(NULL,0,wids[i]);
 		if ( ::isCommonQueryWordInEnglish(wids[i]) ) isStop = true;
 		// find the smallest one
-		unsigned long long min = wids[i];
+		uint64_t min = wids[i];
 		//char *minWordPtr = wptrs[i];
 		//long  minWordLen = wlens[i];
 		// declare up here since we have a goto below
@@ -581,8 +581,8 @@ long long getSynBaseHash64 ( char *qstr , uint8_t langId ) {
 		// now scan the synonyms, they do not include "min" in them
 		for ( j = 0 ; j < naids ; j++ ) {
 			// get it
-			unsigned long long aid64;
-			aid64 = (unsigned long long)syn.m_aids[j];
+			uint64_t aid64;
+			aid64 = (uint64_t)syn.m_aids[j];
 			// if any syn already hashed then skip it and count
 			// as a repeated term. we have to do it this way
 			// rather than just getting the minimum synonym 

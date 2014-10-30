@@ -2219,7 +2219,7 @@ bool SafeBuf::inlineStyleTags ( ) {
 		long h32 = hash32 ( tagName , tagNameLen );
 		h32 = hash32 ( className , classNameLen , h32 );
 		// point that to our style and length
-		unsigned long long val = (unsigned long)style;
+		uint64_t val = (unsigned long)style;
 		val <<= 32;
 		val |= (unsigned long)styleLen;
 		// and store it
@@ -2336,8 +2336,8 @@ bool SafeBuf::inlineStyleTags ( ) {
 			continue;
 		}
 		// get it
-		unsigned long long val ;
-		val = *(unsigned long long *)stab.getValueFromSlot ( slot );
+		uint64_t val ;
+		val = *(uint64_t *)stab.getValueFromSlot ( slot );
 		// extract the style
 		char *style = (char *)(val>>32);
 		long styleLen = (long)(val & 0xffffffff);

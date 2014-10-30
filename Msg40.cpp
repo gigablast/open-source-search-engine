@@ -2702,7 +2702,7 @@ bool Msg40::gotSummary ( ) {
 		// i think it is just like hash64 but ignores spaces so we
 		// can hash 'cd rom' as "cdrom". but i think we do this
 		// now, so use m_termId as see...
-		unsigned long long qh = hash64d(s, slen);
+		uint64_t qh = hash64d(s, slen);
 		//long long qh = qt->m_termId;
 		long qpop;
 		qpop = g_speller.getPhrasePopularity(s, qh, true,lang);
@@ -3939,7 +3939,7 @@ bool hashSample ( Query *q,
 		long nw = ww.getNumWords();
 		for ( long i = 0 ; i < nw ; i++ ) {
 			// make it this
-			unsigned long widu = (unsigned long long)(wids[i]);
+			unsigned long widu = (uint64_t)(wids[i]);
 			// donot allow this! zero is a vector terminator
 			if ( widu == 0 ) widu = 1;
 			// skip if already added to vector
@@ -4635,7 +4635,7 @@ void hashExcerpt ( Query *q ,
 		float wordProxMax = 0;
 
 		float bonus = 0;
-		unsigned long long  ph64 = 0;//wids[i]; // hash value
+		uint64_t  ph64 = 0;//wids[i]; // hash value
 		// if first letter is upper case, double the score
 		//if ( is_upper_a (ww.getWord(i)[0]) ) score <<= 1;
 
@@ -5505,7 +5505,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	for ( long j = 0 ; j < nw ; j++ ) {
 		// make it this
 		unsigned long widu;
-		widu = (unsigned long long)(wids[j]);
+		widu = (uint64_t)(wids[j]);
 		// dont allow this! zero is a vector terminator
 		if ( widu == 0 ) widu = 1;
 		// skip if already added to vector

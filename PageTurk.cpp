@@ -1443,7 +1443,7 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 		if ( ! tag ) break;
 
 		// hash of url event being voted on is contained in
-		unsigned long long tagUh48;
+		uint64_t tagUh48;
 		// address/date content hash of event voted on
 		unsigned long tagAdch;
 		// good|bad|unconfirmed
@@ -2218,7 +2218,7 @@ public:
 	bool      m_isSuperTurk;
 	long long m_uh48;
 	time_t    m_addTime;
-	unsigned long long m_templateHash64;
+	uint64_t m_templateHash64;
 	bool m_isTurkSpecialQuery;
 };
 
@@ -2283,7 +2283,7 @@ bool gotResults ( State61 *st ) {
 	// debug for now
 	//g_conf.m_logDebugSpider = true;
 
-	unsigned long long templateHash64 ;
+	uint64_t templateHash64 ;
 
 
 	// . scan lockertable and remove any old lock you may have had

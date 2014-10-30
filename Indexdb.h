@@ -67,7 +67,7 @@ class Indexdb {
 	// . since it is 12 bytes, the big bit will be set
 	key_t makeKey ( long long          termId   , 
 			unsigned char      score    , 
-			unsigned long long docId    , 
+			uint64_t docId    , 
 			bool               isDelKey );
 
 	key_t makeFirstKey ( long long termId ) {
@@ -89,10 +89,10 @@ class Indexdb {
 
 	long long getDocId ( key_t k ) {
 		char *rec = (char *)&k;
-		return ((*(unsigned long long *)(rec)) >> 2) & DOCID_MASK; };
+		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
 
 	long long getDocId ( key_t *k ) {
-		return ((*(unsigned long long *)(k)) >> 2) & DOCID_MASK; };
+		return ((*(uint64_t *)(k)) >> 2) & DOCID_MASK; };
 
 	unsigned char getScore ( key_t k ) {
 		char *rec = (char *)&k;

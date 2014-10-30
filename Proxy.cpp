@@ -1163,7 +1163,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		msg.urlEncode ( urlToAdd );
 		unsigned long h32 = hash32n(urlToAdd);
 		if ( h32 == 0 ) h32 = 1;
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
 		msg.safePrintf( "&id=%lu&rand=%llu&confirmed=1';\n"
 				 "client.open('GET', url );\n"
 				 "client.send();\n"
@@ -1459,7 +1459,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		return;
 	}
 
-	unsigned long long took = nowms - stC->m_startTime;
+	uint64_t took = nowms - stC->m_startTime;
 
 	// if reply was compressed then uncompress it
 	if ( doUncompress ) {
@@ -1905,7 +1905,7 @@ Host *Proxy::pickBestHost( ) {
 */
 
 void Proxy::printRequest(TcpSocket *s, HttpRequest *r, 
-			 unsigned long long took ,
+			 uint64_t took ,
 			 char *content,
 			 long contentLen ) {
 	//LOG THE REQUEST
@@ -2438,7 +2438,7 @@ SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
 	}
 
 	// make a unique key for this summary rec, one per day per user
-	unsigned long long h64 = (unsigned long)userId32;
+	uint64_t h64 = (unsigned long)userId32;
 	unsigned long t = s_thisYear;
 	t <<= 16;
 	t |= s_thisMonth;
@@ -2672,7 +2672,7 @@ UserInfo *Proxy::getLoggedInUserInfo2 ( HttpRequest *hr ,
 		// assign a sessionid now. make it always positive!
 		long long1 = rand() % 0x7fffffff;
 		long long2 = rand() % 0x7fffffff;
-		unsigned long long newSessionId64 = long1;
+		uint64_t newSessionId64 = long1;
 		newSessionId64 <<= 32;
 		newSessionId64 |= long2;
 		// ensure not 0
@@ -3661,7 +3661,7 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 long long rand63 ( ) {
 	unsigned long r1 = rand();
 	unsigned long r2 = rand();
-	unsigned long long r = r1;
+	uint64_t r = r1;
 	r <<= 32;
 	r |= r2;
 	r &= 0x7fffffffffffffffLL;
@@ -4307,7 +4307,7 @@ bool Proxy::loadUserBufs ( ) {
 		// get the offset
 		long sumOff = ((char *)sr) - m_sumBuf.getBufStart();
 		// make key
-		unsigned long long h64 = (unsigned long)sr->m_userId32;
+		uint64_t h64 = (unsigned long)sr->m_userId32;
 		unsigned long t = sr->m_year;
 		t <<= 16;
 		t |= sr->m_month; // 1..12

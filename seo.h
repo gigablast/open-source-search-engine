@@ -116,7 +116,7 @@ public:
 // put these in the safebuf now
 class TermInfo {
 public:
-	unsigned long long m_termId64;
+	uint64_t m_termId64;
 	//long long m_termFreq64;
 };
 

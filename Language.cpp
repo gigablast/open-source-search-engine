@@ -494,12 +494,12 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		// check if phonet it present
 		if ( *phonet == '\0' )
 			continue;
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -557,12 +557,12 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		if ( *phonet == '\0' )
 			continue;
 
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -620,7 +620,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		// move to the phonet
 		tuple += gbstrlen(tuple) + 1;
 		
-		unsigned long long phonetKey = hash64Lower_utf8 ( tuple );
+		uint64_t phonetKey = hash64Lower_utf8 ( tuple );
 		if ( phonetKey % hostsPerSplit != myHash ){
 			index++;
 			continue;
@@ -635,7 +635,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 			// move to the phonet
 			tuple += gbstrlen(tuple) + 1;
 			
-			unsigned long long pKey = hash64Lower_utf8(tuple);
+			uint64_t pKey = hash64Lower_utf8(tuple);
 			if ( pKey != phonetKey )
 				break;
 
@@ -647,7 +647,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 			if (phrase > m_distributedBuf && 
 			    phrase < m_distributedBuf + m_distributedBufSize){
 				// add the distributed pop words
-				unsigned long long h = hash64d( phrase,
+				uint64_t h = hash64d( phrase,
 							       gbstrlen(phrase));
 				long slot = m_distributedPopPhrases.
 					getSlot(h);
@@ -667,7 +667,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		}
 		
 		// make the composite value
-		unsigned long long value = startIndex;
+		uint64_t value = startIndex;
 		// make it the higher 32 bits
 		value <<= 32;
 		value += numWordsInPhonet;
@@ -709,7 +709,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		// skip (lang, score) tuple 
 		p += gbstrlen(p) + 1;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -722,7 +722,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		if ( *phonet == '\0' ){
 			continue;
 		}
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash ){
@@ -821,7 +821,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		// skip (lang, score) tuple 
 		p += gbstrlen(p) + 1;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -834,7 +834,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		if ( *phonet == '\0' ){
 			continue;
 		}
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash ){
@@ -973,7 +973,7 @@ bool Language::loadDictHashTable( ){
 		while ( *p != '\t' )
 			p++;
 		
-		unsigned long long key = hash64d( phrase, p - phrase);
+		uint64_t key = hash64d( phrase, p - phrase);
 		long slot = m_dict.getSlot(key);
 		
 		long value = 0;
@@ -1013,7 +1013,7 @@ bool Language::loadDictHashTable( ){
 		while ( *p != '\t' )
 			p++;
 		
-		unsigned long long key = hash64d( p, p - phrase);
+		uint64_t key = hash64d( p, p - phrase);
 		long slot = m_dict.getSlot(key);
 		
 		long value = 0;
@@ -1054,7 +1054,7 @@ bool Language::loadDictHashTable( ){
 			while ( *p != '\t' )
 				p++;
 			p++;
-			unsigned long long key = hash64d( p, gbstrlen(p) );
+			uint64_t key = hash64d( p, gbstrlen(p) );
 			// add only if it is not found in english dict and 
 			// query dict
 			long slot = m_dict.getSlot(key);
@@ -1175,7 +1175,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 	char b1 = to_dict_char(bck[-1]);
 	char b2 = to_dict_char(bck[-2]);
 
-	unsigned long long start = gettimeofdayInMilliseconds();
+	uint64_t start = gettimeofdayInMilliseconds();
 	long minPop = 0;
 	char req[MAX_PHRASE_LEN];
 	// first get all the ones in the front
@@ -1211,7 +1211,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		}
 		// else get it by getphrasePopularity 
 		else {
-			unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+			uint64_t h = hash64d(phrase, gbstrlen(phrase));
 			pop = g_speller.getPhrasePopularity(phrase, h, false, 
 							    m_lang);
 		}
@@ -1287,7 +1287,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		}
 		// else get it by getphrasePopularity 
 		else {
-			unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+			uint64_t h = hash64d(phrase, gbstrlen(phrase));
 			pop = g_speller.getPhrasePopularity(phrase, h, false, 
 							    m_lang);
 		}
@@ -1321,7 +1321,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		     &phrases[MAX_FRAG_SIZE * indx], pops[indx]);
 	}
 
-	unsigned long long took = gettimeofdayInMilliseconds() - start;
+	uint64_t took = gettimeofdayInMilliseconds() - start;
 	if ( took > 5)
 		log ( LOG_WARN,"lang: Finding narrow phrases took %lli ms",
 		      took );
@@ -1424,7 +1424,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 		// phrases and then move on to individual words. This should
 		// eliminate bugs like saying "brittany spears" is correct
 		// because the phrase shall be checked before individual words
-		unsigned long long h = hash64d( origWord, gbstrlen(origWord));
+		uint64_t h = hash64d( origWord, gbstrlen(origWord));
 		if ( g_speller.getPhrasePopularity( origWord, 
 							h, false ) != 0 ){
 			*found = true;
@@ -1568,7 +1568,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 		splitWord[i+1] = splitWord[i];
 		splitWord[i] = '\0';
 		
-		unsigned long long h = hash64d ( splitWord, gbstrlen(splitWord));
+		uint64_t h = hash64d ( splitWord, gbstrlen(splitWord));
 		// check if the split words exist in the dictionary
 		long pop = g_speller.getPhrasePopularity(splitWord,h,false);
 		if ( pop == 0 ){
@@ -1665,7 +1665,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	long bestRecoIndex = 0;
 	long bestRecoPop = -1;
 	for ( long i = 0; i < numRecos; i++ ){
-		unsigned long long h = hash64d ( recos[i].reco, 
+		uint64_t h = hash64d ( recos[i].reco, 
 					    gbstrlen(recos[i].reco));
 		long pop = g_speller.getPhrasePopularity(recos[i].reco, h, 
 							 false);
@@ -1701,14 +1701,14 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 			  char *origClean, long tryForScore,
 			  Reco *recos, long numRecos, long *lowestScore ){ 
 	// go through all the phonetics and select those that have score <= 100
-	unsigned long long key = hash64Lower_utf8(phonetTmp);
+	uint64_t key = hash64Lower_utf8(phonetTmp);
 	long slot = m_phonetics.getSlot ( key );
 	if ( slot == -1 )
 		return numRecos;
 	
 	// the value is a combination of the index and the number of
 	// words having the same phonet
-	unsigned long long value = m_phonetics.getValueFromSlot(slot);
+	uint64_t value = m_phonetics.getValueFromSlot(slot);
 	
 	long index = value >> 32;
 	long numWordsInPhonet = value & 0xffffffff;
@@ -3025,7 +3025,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			// we need to preserve distinguish between proper
 			// and improper accent marks, so don't do just ascii
 			// by using wh = w.getWordId(j)
-			unsigned long long hh = hash64Lower_utf8 (tmp,tmplen );
+			uint64_t hh = hash64Lower_utf8 (tmp,tmplen );
 			// don't allow more than one vote per doc for a word
 			long ii = hh % vnumEntries;
 		vchain:
@@ -3407,7 +3407,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			// we need to preserve distinguish between proper
 			// and improper accent marks, so don't do just ascii
 			// by using wh = w.getWordId(i+j)
-			unsigned long long hh = hash64Lower_utf8 (tmp,tmplen );
+			uint64_t hh = hash64Lower_utf8 (tmp,tmplen );
 			// don't allow more than one vote per doc for a word
 			long ii = hh % vnumEntries;
 		vchain:
@@ -3508,7 +3508,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		char lastw [ 1029];
 		lastw[0] = '\0';
 		// and its hash in here
-		unsigned long long lasthh = 0;
+		uint64_t lasthh = 0;
 		char pbuf[1024];
 		//long bonus = 0;
 		//bool gotit = false; // do we start w/ '*'? means in dict.
@@ -3537,7 +3537,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 			// NULL terminate it to take off ending * and/or \n
 			p [plen] = '\0';
 			// get the hash of this word/phrase
-			unsigned long long hh = hash64Lower_utf8 ( p , plen );
+			uint64_t hh = hash64Lower_utf8 ( p , plen );
 			//sscanf ( buf , "%llx" , &hh );
 			// was it same as last? if so, tally and continue
 			if ( hh == lasthh ) { 
@@ -4803,7 +4803,7 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 			continue;
 
 		char *phonet = p;
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 		char tmp[1024];
@@ -4887,7 +4887,7 @@ long Language::spellcheckDict(){
 			    word);
 			continue;
 			}*/
-		unsigned long long h = hash64d ( word, gbstrlen(word));
+		uint64_t h = hash64d ( word, gbstrlen(word));
 
 		bool isInWiki = false;
 		// if the phrase is in wikipedia, its safe

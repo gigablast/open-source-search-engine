@@ -125,7 +125,7 @@ long HashTableT<Key_t, Val_t>::getOccupiedSlotNum ( Key_t& key ) const {
 	/*
 	switch(sizeof(Key_t)) {
 	case 8:
-		n = ((unsigned long long)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
 		break;		
 	default:
 		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
@@ -133,7 +133,7 @@ long HashTableT<Key_t, Val_t>::getOccupiedSlotNum ( Key_t& key ) const {
 	}
 	*/
 	if ( sizeof(Key_t) == 8 )
-		n = ((unsigned long long)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
 	else
 		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
 
@@ -184,7 +184,7 @@ bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , long *slot) {
 	/*
 	switch(sizeof(Key_t)) {
 	case 8:
-		n = ((unsigned long long)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
 		break;		
 	default:
 		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
@@ -192,7 +192,7 @@ bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , long *slot) {
 	}
 	*/
 	if ( sizeof(Key_t) == 8 )
-		n = ((unsigned long long)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
 	else
 		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
 
@@ -335,7 +335,7 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 			/*
 			switch(sizeof(Key_t)) {
 			case 8:
-				num=((unsigned long long)m_keys[i])%((unsigned long)n);
+				num=((uint64_t)m_keys[i])%((unsigned long)n);
 				break;		
 			default:
 				num=((unsigned long)m_keys[i])%((unsigned long)n);
@@ -343,7 +343,7 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 			}
 			*/
 			if ( sizeof(Key_t) == 8 )
-				num=((unsigned long long)m_keys[i])%
+				num=((uint64_t)m_keys[i])%
 					((unsigned long)n);
 			else
 				num=((unsigned long)m_keys[i])%
@@ -514,24 +514,24 @@ template class HashTableT<long long , long long>;
 template class HashTableT<long , long long>;
 template class HashTableT<long long , long>;
 template class HashTableT<long long, uint32_t>;
-template class HashTableT<unsigned long long , unsigned long>;
-template class HashTableT<unsigned long long , unsigned long long>;
-template class HashTableT<unsigned long long , char*>;
+template class HashTableT<uint64_t , unsigned long>;
+template class HashTableT<uint64_t , uint64_t>;
+template class HashTableT<uint64_t , char*>;
 template class HashTableT<unsigned long, unsigned long>;
 template class HashTableT<unsigned long, bool>;
 template class HashTableT<long long , bool>;
-template class HashTableT<unsigned long long, float>;
-template class HashTableT<unsigned long long, char>;
+template class HashTableT<uint64_t, float>;
+template class HashTableT<uint64_t, char>;
 template class HashTableT<unsigned long, char*>;
 template class HashTableT<unsigned long, FnInfo>;
 template class HashTableT<unsigned long, FnInfo*>;
 template class HashTableT<unsigned long, QuickPollInfo*>;
-template class HashTableT<unsigned long, HashTableT<unsigned long long, float>* >;
+template class HashTableT<unsigned long, HashTableT<uint64_t, float>* >;
 template class HashTableT<long long, char>;
 template class HashTableT<unsigned long, long long>;
 template class HashTableT<unsigned long, long>;
-template class HashTableT<unsigned long long, 
-			  HashTableT<unsigned long long, float> *>;
+template class HashTableT<uint64_t, 
+			  HashTableT<uint64_t, float> *>;
 template class HashTableT<long long, CallbackEntry>;	// Dns.cpp
 template class HashTableT<uint32_t, TLDIPEntry>;	// Dns.cpp
 template class HashTableT<long, short>;
@@ -541,8 +541,8 @@ class FrameTrace;
 template class HashTableT<uint32_t, FrameTrace *>;
 //template class HashTableT<long long, Title::InLinkInfo>;
 template class HashTableT<uint64_t, long>;
-//template class HashTableT<unsigned long long, SynonymLinkGroup>;
-template class HashTableT<unsigned long long, long long>;
+//template class HashTableT<uint64_t, SynonymLinkGroup>;
+template class HashTableT<uint64_t, long long>;
 template class HashTableT<long, ComTopInDmozRec>;
 template class HashTableT<unsigned short, const char *>;
 template class HashTableT<unsigned short, int>;
@@ -555,7 +555,7 @@ template class HashTableT<uint64_t, bool>;
 template class HashTableT<uint32_t, long>;
 //template class HashTableT<long, TurkUserState>;
 template class HashTableT<long, float>;
-//template class HashTableT<unsigned long long,SiteRec>;
+//template class HashTableT<uint64_t,SiteRec>;
 //#include "Spider.h"
 //template class HashTableT<uint64_t,DomSlot>;
 //template class HashTableT<long,IpSlot>;

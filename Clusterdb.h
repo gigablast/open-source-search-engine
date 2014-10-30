@@ -100,9 +100,9 @@ class Clusterdb {
 	// now docId occupies the bits after the first 23
 	long long getDocId ( void *k ) {
 		//long long docId = (k.n0) >> (32+24);
-		//docId |= ( ((unsigned long long)(k.n1)) << 8 );
+		//docId |= ( ((uint64_t)(k.n1)) << 8 );
 		long long docId = (((key_t *)k)->n0) >> 35;
-		docId |= ( ((unsigned long long)(((key_t *)k)->n1)) << 29 );
+		docId |= ( ((uint64_t)(((key_t *)k)->n1)) << 29 );
 		return docId;
 	};
 

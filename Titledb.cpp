@@ -235,7 +235,7 @@ bool Titledb::verify ( char *coll ) {
 // . we put a domain hash in the docId to ease site clustering
 // . returns false and sets errno on error
 /*
-unsigned long long Titledb::getProbableDocId ( char *url ) {
+uint64_t Titledb::getProbableDocId ( char *url ) {
 	// just hash the whole collection/url
 	long long docId ;
 	docId = 0; // hash64  ( coll , collLen );
@@ -277,7 +277,7 @@ key_t Titledb::makeKey ( long long docId, long long uh48, bool isDel ){
 	// top bits are the docid so generic getGroupId() works!
 	key.n1 = (unsigned long)(docId >> 6); // (NUMDOCIDBITS-32));
 
-	long long n0 = (unsigned long long)(docId&0x3f);
+	long long n0 = (uint64_t)(docId&0x3f);
 	// sanity check
 	if ( uh48 & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
 	// make room for uh48

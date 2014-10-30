@@ -1573,7 +1573,7 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	else         sysfree ( (char *)ptr - UNDERPAD );
 }
 
-long getLowestLitBitLL ( unsigned long long bits ) {
+long getLowestLitBitLL ( uint64_t bits ) {
 	// count how many bits we have to shift so that the first bit is 0
 	long shift = 0;
 	while ( (bits & (1LL<<shift)) == 0 && (shift < 63 ) ) shift++;
@@ -1588,16 +1588,16 @@ unsigned long getHighestLitBitValue ( unsigned long bits ) {
 	return highest;
 }
 
-unsigned long long getHighestLitBitValueLL ( unsigned long long bits ) {
+uint64_t getHighestLitBitValueLL ( uint64_t bits ) {
 	// count how many bits we have to shift so that the first bit is 0
-	unsigned long long highest =  0;
+	uint64_t highest =  0;
 	for ( long shift = 0 ; shift < 64 ; shift++ ) 
 		if ( bits & (1LL<<shift) ) highest = (1LL << shift);
 	return highest;
 }
 
 // TODO: speed up
-long long htonll ( unsigned long long a ) {
+long long htonll ( uint64_t a ) {
 	long long b;
 	unsigned int int0 = htonl ( ((unsigned long *)&a)[0] );
 	unsigned int int1 = htonl ( ((unsigned long *)&a)[1] );
@@ -1608,7 +1608,7 @@ long long htonll ( unsigned long long a ) {
 }
 
 // just swap 'em back
-long long ntohll ( unsigned long long a ) { 
+long long ntohll ( uint64_t a ) { 
 	return htonll ( a );
 }
 

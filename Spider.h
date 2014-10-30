@@ -1412,9 +1412,9 @@ class Msg12 {
 	bool removeAllLocks ( );
 
 	// these two things comprise the lock request buffer
-	//unsigned long long  m_lockKey;
+	//uint64_t  m_lockKey;
 	// this is the new lock key. just use docid for docid-only spider reqs.
-	unsigned long long  m_lockKeyUh48;
+	uint64_t  m_lockKeyUh48;
 	long                m_lockSequence;
 
 	long long  m_origUh48;

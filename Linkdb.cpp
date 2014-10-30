@@ -330,9 +330,9 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 	k.n2 |= (linkerIp & 0x00ffffff);
 
 	k.n2 <<= 8;
-	k.n2 |= (((unsigned long long)linkerDocId) >> 30);
+	k.n2 |= (((uint64_t)linkerDocId) >> 30);
 
-	k.n1 = (((unsigned long long)linkerDocId) & 0x3fffffffLL);
+	k.n1 = (((uint64_t)linkerDocId) & 0x3fffffffLL);
 
 	// two reserved bits
 	k.n1 <<= 2;
@@ -1377,7 +1377,7 @@ bool Msg25::sendRequests ( ) {
 	//	return true;
 	//}
 
-	unsigned long long lastDocId = 0LL;
+	uint64_t lastDocId = 0LL;
 
 	//log("debug: entering sendrequests this=%lx",(long)this);
 

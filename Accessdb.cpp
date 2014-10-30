@@ -599,8 +599,8 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 	for ( ;  ! final.isExhausted() ; final.skipCurrentRecord() ) {
 		char *rec = final.getCurrentRec();
 		AccessRec *ar = (AccessRec *)rec;
-		unsigned long long timestamp = ar->m_key128.n1;
-		unsigned long long widgetId = ar->m_key128.n0;
+		uint64_t timestamp = ar->m_key128.n1;
+		uint64_t widgetId = ar->m_key128.n0;
 		// overrun the delbit
 		widgetId >>= 1;
 		// swap them? we do two different types of lookups.

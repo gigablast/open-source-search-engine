@@ -144,15 +144,15 @@ class Event {
 	// into the buffer XmlDoc::ptr_tagBuf
 	//char *m_tagsPtr;
 
-	unsigned long long  m_addressHash64;
+	uint64_t  m_addressHash64;
 	// . this should be normalized as well
 	// . hash mostly the date types and the numbers together
 	// . use stuff like m_minTOD/m_maxTOD/etc. for hashing
-	unsigned long long  m_dateHash64;
+	uint64_t  m_dateHash64;
 	// hash of the title, just the alnum words
-	unsigned long long  m_titleHash64;
+	uint64_t  m_titleHash64;
 	// hash of all three
-	unsigned long long  m_eventHash64;
+	uint64_t  m_eventHash64;
 
 	// tag hash of the most specific date
 	unsigned long m_dateTagHash32;
@@ -167,7 +167,7 @@ class Event {
 	unsigned long m_adth32;
 
 	// hash of description, first 50 sentences in description
-	unsigned long long m_descHash64;
+	uint64_t m_descHash64;
 
 	// . similar to event hash but also incorporates the description
 	// . used to prevent indexing EXACTLY the same event on same pages
@@ -241,15 +241,15 @@ public:
 	evflags_t m_eventFlags;
 
 	// hash of normalized address
-	unsigned long long  m_addressHash64;
+	uint64_t  m_addressHash64;
 	// . this should be normalized as well
 	// . hash mostly the date types and the numbers together
 	// . use stuff like m_minTOD/m_maxTOD/etc. for hashing
-	unsigned long long  m_dateHash64;
+	uint64_t  m_dateHash64;
 	// hash of the title, just the alnum words
-	unsigned long long  m_titleHash64;
+	uint64_t  m_titleHash64;
 	// hash of all three
-	unsigned long long  m_eventHash64;
+	uint64_t  m_eventHash64;
 
 	// now hash of the date types in order? 
 	// TODO: consider putting this into m_adth32

@@ -232,7 +232,7 @@ bool Pops::set ( Words *words , long a , long b ) {
 		// once again for the 50th time partap's utf16 crap gets in 
 		// the way... we have to have all kinds of different hashing
 		// methods because of it...
-		unsigned long long key ; // = wids[i];
+		uint64_t key ; // = wids[i];
 		key = hash64d(wp[i],wlen[i]);
 		m_pops[i] = g_speller.getPhrasePopularity(wp[i], key,true);
 		// sanity check

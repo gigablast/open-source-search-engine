@@ -80,7 +80,7 @@ class Datedb {
 	key128_t makeKey ( long long          termId   , 
 			   unsigned long      date     ,
 			   unsigned char      score    , 
-			   unsigned long long docId    , 
+			   uint64_t docId    , 
 			   bool               isDelKey );
 
 	key128_t makeStartKey ( long long termId , unsigned long date1 ) {
@@ -90,7 +90,7 @@ class Datedb {
 
 	// works on 16 byte full key or 10 byte half key
 	long long getDocId ( void *key ) {
-		return ((*(unsigned long long *)(key)) >> 2) & DOCID_MASK; };
+		return ((*(uint64_t *)(key)) >> 2) & DOCID_MASK; };
 
 	unsigned char getScore ( void *key ) {
 		return ~(((unsigned char *)key)[5]); };

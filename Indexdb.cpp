@@ -362,7 +362,7 @@ deepLoop:
 // . TODO: substitute var ptrs if you want extra speed
 key_t Indexdb::makeKey ( long long          termId   , 
 			 unsigned char      score    , 
-			 unsigned long long docId    , 
+			 uint64_t docId    , 
 			 bool               isDelKey ) {
 	// make sure we mask out the hi bits we do not use first
 	termId = termId & TERMID_MASK;
@@ -474,7 +474,7 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 		// only account for truncation by docid for the first round
 		//if ( numRecs == maxRecs ) {
 		//	// make up for missed docids
-		//	unsigned long long d = g_indexdb.getDocId ( maxKey );
+		//	uint64_t d = g_indexdb.getDocId ( maxKey );
 		//	toAdd = (toAdd * DOCID_MASK) / d;
 		//}
 		//numRecs += toAdd;

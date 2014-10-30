@@ -285,7 +285,7 @@ bool Msg5::getList ( char     rdbId         ,
 
 	// debug msg and stuff
 	//m_startKey.n1 = 1616550649;
-	//m_startKey.n0 = (unsigned long long)10489958987685363408LL;
+	//m_startKey.n0 = (uint64_t)10489958987685363408LL;
 	//m_includeTree = true;
 	//m_minRecSizes = 10080000;
 	//m_startFileNum = 0;
@@ -347,7 +347,7 @@ bool Msg5::getList ( char     rdbId         ,
 	m_waitingKey=hash64_cont((char*)&m_startFileNum,4,m_waitingKey,&conti);
 	m_waitingKey=hash64_cont((char *)&m_numFiles,4,m_waitingKey,&conti);
 	m_waitingKey=hash64_cont((char *)&m_includeTree,1,m_waitingKey,&conti);
-	m_waitingKey^= ((unsigned long long)rdbId) << (64-8);
+	m_waitingKey^= ((uint64_t)rdbId) << (64-8);
 	// init it?
 	static bool s_waitInit = false;
 	if ( ! s_waitInit ) {

@@ -599,7 +599,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 			log("timedb: adding key docid=%012llu evid=%03li "
 			    "start=%lu end=%lu nxtstr=%lu key=%llu",
 			    docId,(long)eventId,stime,etime,
-			    ts.m_nextStartTime,(unsigned long long)key64);
+			    ts.m_nextStartTime,(uint64_t)key64);
 		// otherwise, good to add it
 		return ht->addKey(&key64,&ts);
 	}
@@ -614,7 +614,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 				    "start=%lu end=%lu nxtstr=%lu key=%llu",
 				    docId,(long)eventId,stime,etime,
 				    g_timedb.getNextStartTime32 ( kp ) ,
-				    (unsigned long long)key64);
+				    (uint64_t)key64);
 			return true;
 		}
 		// note it for debug
@@ -623,7 +623,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 			    "start=%lu end=%lu nxtstr=%lu key=%llu",
 			    docId,(long)eventId,stime,etime,
 			    g_timedb.getNextStartTime32 ( kp ) ,
-			    (unsigned long long)key64);
+			    (uint64_t)key64);
 		// . ok, nuke it i guess that was it
 		// . PROBLEM: revdb negative keys are added after the latest 
 		//   timedb keys for a doc, so if the best time was deleted
@@ -647,7 +647,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 			    g_timedb.getNextStartTime32 ( kp ) ,
 			    old->m_startTime,
 			    old->m_endTime,
-			    (unsigned long long)key64);
+			    (uint64_t)key64);
 		// then keep it
 		return true;
 	}
@@ -669,7 +669,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 			    g_timedb.getNextStartTime32 ( kp ) ,
 			    old->m_startTime,
 			    old->m_endTime,
-			    (unsigned long long)key64);
+			    (uint64_t)key64);
 		// then keep it
 		return true;
 	}
@@ -683,7 +683,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 		    g_timedb.getNextStartTime32 ( kp ) ,
 		    old->m_startTime,
 		    old->m_endTime,
-		    (unsigned long long)key64);
+		    (uint64_t)key64);
 	// otherwise, we replace it
 	old->m_startTime     = stime;
 	old->m_endTime       = etime;

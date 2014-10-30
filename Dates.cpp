@@ -9078,7 +9078,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 				//if ( dp->m_flags & DF_IN_VERTICAL_LIST )
 				//	break;
 
-				unsigned long long key = (unsigned long)di;
+				uint64_t key = (unsigned long)di;
 				// shift up
 				key <<= 32LL;
 				// need DD now, if there
@@ -26371,8 +26371,8 @@ bool Date::printTextNorm2 ( Interval **intervals ,
 		// shortcut
 		Interval *ii = intervals[i];
 		// seconds relative to that day
-		unsigned long long tod1 = ii->m_a % 86400;
-		unsigned long long tod2 = tod1 + ii->m_b - ii->m-a;
+		uint64_t tod1 = ii->m_a % 86400;
+		uint64_t tod2 = tod1 + ii->m_b - ii->m-a;
 		// . if more than 24 hours long... wtf?
 		// . Aug 2, 2010 2pm - Oct 10,2011 4pm
 		if ( tod2 - tod1 > 24*3600 ) {

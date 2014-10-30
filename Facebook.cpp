@@ -2914,7 +2914,7 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 	}
 	long gbeventId = ed->m_indexedEventId;
 	//long gbeventHash32 = (long)((unsigned long)ed->m_eventHash64);
-	unsigned long long evh64 = ed->m_eventHash64;
+	uint64_t evh64 = ed->m_eventHash64;
 	// shortcuts
 	//char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
 	long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
@@ -3805,7 +3805,7 @@ bool Likedb::init ( ) {
 	long eventId = 12345;
 	long rsvp_status = LF_GOING;//|LF_HIDE;
 	long start_time = 6543210;
-	unsigned long long eventHash64 = 9999997398453LL;
+	uint64_t eventHash64 = 9999997398453LL;
 	unsigned long eventHash32 = (unsigned long)eventHash64;
 	long value = 999888;
 	char *recs = g_likedb.makeRecs ( uid         ,
@@ -3927,7 +3927,7 @@ char *Likedb::makeRecs ( long long  uid         ,
 			 long       eventId     ,
 			 long       start_time  ,
 			 long       rsvp_status ,
-			 unsigned long long eventHash64 ,
+			 uint64_t eventHash64 ,
 			 long long  value       ) {
 	// sanity
 	if ( rsvp_status & LF_TYPEBIT ) { char *xx=NULL;*xx=0; }
@@ -4071,7 +4071,7 @@ key192_t Likedb::makeStartKey2 ( long long uid ) {
 bool Msgfc::addLikedbTag ( long long userId ,
 			   long long docId,
 			   long      gbeventId,
-			   unsigned long long eventHash64 ,
+			   uint64_t eventHash64 ,
 			   long start_time,
 			   long rsvp , // LF_* #define's above
 			   bool negative , // turn off that flag?
@@ -4086,7 +4086,7 @@ bool Msgfc::addLikedbTag ( long long userId ,
 	char *p = m_recs;
 	long size = (long)LIKEDB_RECSIZE*2;
 	long count = 0;
-	//long eventHash32 = (long)((unsigned long long)eventHash64);
+	//long eventHash32 = (long)((uint64_t)eventHash64);
 	long long value = 1LL;
 	if ( negative ) value = 0LL;
 
@@ -5294,7 +5294,7 @@ void Emailer::gotScanList ( ) {
 			continue;
 		}
 		// shortcut
-		unsigned long long fbId = fr->m_fbId;
+		uint64_t fbId = fr->m_fbId;
 
 		// is assigned to us for emailing?
 		Host *group = g_hostdb.getMyGroup();
@@ -5604,7 +5604,7 @@ char *getNextQuery ( ) {
 			// entry in the g_nameTable BUT they hash to the
 			// same PlaceDesc ptr, so use that as part of they
 			// key for making sure we have no dups in tree2.
-			k.n0 = (unsigned long long)pd;
+			k.n0 = (uint64_t)pd;
 			//note it
 			//log("adding pop=%lu",pop);
 			// add to b-tree to sort by pop
