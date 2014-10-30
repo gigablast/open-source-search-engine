@@ -17,17 +17,17 @@ public:
 class fslot2 {
 public:
 	long            m_score;
-	long long       m_docIdBits;
+	int64_t       m_docIdBits;
 	unsigned short  m_termBits;
 	//unsigned short align;
 };
 
-static long long gettimeofdayInMilliseconds() ;
+static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -89,7 +89,7 @@ main ( ) {
 	// debug msg
 	fprintf (stderr,"hashtest:: starting loop (nd=%li)\n",nd);
 	// time stamp
-	long long t   = gettimeofdayInMilliseconds();
+	int64_t t   = gettimeofdayInMilliseconds();
  again:
 	// advance the ending point before clearing the hash table
 	unsigned char *pend = p + (numSlots>>1)*6;
@@ -137,7 +137,7 @@ main ( ) {
 
  finalDone:
 	// completed
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	fprintf (stderr,"hashtest:: addList took %llu ms\n" , now - t );
 	// how many did we hash
 	long hashed = (p - (unsigned char *)docIds1) / 6;
@@ -229,8 +229,8 @@ main ( ) {
 int cmp (const void *p1, const void *p2) {
 
 
-	long long n1 = 0;
-	long long n2 = 0;
+	int64_t n1 = 0;
+	int64_t n2 = 0;
 
 	*(((unsigned char *)(&n1))+0) = *(((char *)p1)+0);
 	*(((unsigned char *)(&n1))+1) = *(((char *)p1)+1);

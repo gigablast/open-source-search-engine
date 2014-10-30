@@ -39,7 +39,7 @@ bool RdbMerge::merge ( char     rdbId        ,
 		       long     numFiles     ,
 		       long     niceness     ,
 		       class DiskPageCache *pc   ,
-		       long long maxTargetFileSize ,
+		       int64_t maxTargetFileSize ,
 		       char     keySize      ) {
 	// reset ourselves
 	reset();
@@ -99,7 +99,7 @@ bool RdbMerge::merge ( char     rdbId        ,
 		RdbMap  **maps  = rdb->getMaps();
 		BigFile **files = rdb->getFiles();
 		for ( long i=m_startFileNum;i<m_startFileNum+m_numFiles;i++){
-			long long minOff = 0LL;
+			int64_t minOff = 0LL;
 			long k = 0;
 			while ( k < files[i]->m_maxParts &&
 				!   files[i]->m_files[k]    ) {
@@ -171,7 +171,7 @@ bool RdbMerge::gotLock ( ) {
 	// . get last mapped offset
 	// . this may actually be smaller than the file's actual size
 	//   but the excess is not in the map, so we need to do it again
-	long long startOffset = m_targetMap->getFileSize();
+	int64_t startOffset = m_targetMap->getFileSize();
 
 	// if startOffset is > 0 use the last key as RdbDump:m_prevLastKey
 	// so it can compress the next key it dumps providee m_useHalfKeys
@@ -309,7 +309,7 @@ bool RdbMerge::getNextList ( ) {
 	for ( long i = m_startFileNum ; i < m_startFileNum + m_numFiles; i++ ){
 		RdbMap    *map    = base->m_maps[i];
 		long       page   = map->getPage ( m_startKey );
-		long long  offset = map->getAbsoluteOffset ( page );
+		int64_t  offset = map->getAbsoluteOffset ( page );
 		BigFile   *file   = base->m_files[i];
 		long       part   = file->getPartNum ( offset ) ;
 		if ( part == 0 ) continue;
@@ -376,19 +376,19 @@ bool RdbMerge::getAnotherList ( ) {
 
 	/*
 	if ( m_rdbId == RDB_TITLEDB ) { // && m_rdbId == RDB_TFNDB ) {
-		//long long docId1 = g_titledb.getDocIdFromKey ( m_startKey );
-	       long long docId1=g_titledb.getDocIdFromKey((key_t *)m_startKey);
-		//long long docId2 = g_titledb.getDocIdFromKey ( m_endKey );
+		//int64_t docId1 = g_titledb.getDocIdFromKey ( m_startKey );
+	       int64_t docId1=g_titledb.getDocIdFromKey((key_t *)m_startKey);
+		//int64_t docId2 = g_titledb.getDocIdFromKey ( m_endKey );
 		// tfndb is pretty much uniformly distributed
 		RdbBase *ubase = getRdbBase(RDB_TFNDB,m_coll);
 		if ( ! ubase ) return true;
-		long long space    = ubase->getDiskSpaceUsed();
-		//long long readSize = (space * (docId2-docId1)) / DOCID_MASK;
-		long long bufSize  = g_conf.m_mergeBufSize;
+		int64_t space    = ubase->getDiskSpaceUsed();
+		//int64_t readSize = (space * (docId2-docId1)) / DOCID_MASK;
+		int64_t bufSize  = g_conf.m_mergeBufSize;
 		// for now force to 100k
 		bufSize = 100000;
 		if ( bufSize > space ) bufSize = space;
-		long long docId3   = (long long) (((double)bufSize /
+		int64_t docId3   = (int64_t) (((double)bufSize /
 						  (double)space) *
 			(double)DOCID_MASK  + docId1);
 		// constrain newEndKey based on docId3

@@ -853,7 +853,7 @@ short get_iana_charset(char *cs, int len)
 	char saved = g_conf.m_useQuickpoll;
 	g_conf.m_useQuickpoll = false;
 	for ( long i = 0 ; i < n ; i++ ) {
-	    long long h = hash64Lower_a ( s_charsets[i].name, strlen(s_charsets[i].name) );
+	    int64_t h = hash64Lower_a ( s_charsets[i].name, strlen(s_charsets[i].name) );
 	    // store the charset index in the hash table as score
 		if ( ! s_table.addTerm(&h, i+1) ) 
 		return log("build: add term failed");
@@ -861,7 +861,7 @@ short get_iana_charset(char *cs, int len)
 	g_conf.m_useQuickpoll = saved;
 	s_isInitialized = true;
     }
-    long long h = hash64Lower_a ( cs , len );
+    int64_t h = hash64Lower_a ( cs , len );
     // get the entity index from table (stored in the score field)
     long i = (long) s_table.getScore ( &h );
     // return 0 if no match

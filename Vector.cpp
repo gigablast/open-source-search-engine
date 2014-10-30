@@ -454,7 +454,7 @@ long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 	long           n ;
 	unsigned long *h ;
 	// . what word pairs does "v" have that we also have?
-	// . TODO: speed up by making hash table use long instead of long long
+	// . TODO: speed up by making hash table use long instead of int64_t
 	n    = v->m_numPairHashes;
 	h    = v->m_pairHashes;
 	for ( long i = 0 ; i < n ; i++ ) {

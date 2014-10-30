@@ -92,7 +92,7 @@ bool Profiler::init() {
 // The gb executable file is in the ELF format, and the code here resembles 
 // readelf function in binutils from gnu.org. gb is 32-bits.
 bool Profiler:: readSymbolTable(){
-	long long start=gettimeofdayInMillisecondsLocal();
+	int64_t start=gettimeofdayInMillisecondsLocal();
 	struct stat  statbuf;
 	//unsigned int i;
 	char fileName[512];
@@ -130,7 +130,7 @@ bool Profiler:: readSymbolTable(){
 	
 	processSymbolTable (m_file);
 	
-	long long end=gettimeofdayInMillisecondsLocal();
+	int64_t end=gettimeofdayInMillisecondsLocal();
 	log(LOG_INIT,"admin: Took %lli milliseconds to build symbol table",
 		end-start);
 	mfree(m_sectionHeaders,m_elfHeader.e_shnum * sizeof (Elf_Internal_Shdr),

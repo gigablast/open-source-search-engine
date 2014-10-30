@@ -49,7 +49,7 @@ class IndexList : public RdbList {
 	// . oldList is subtracted from this list
 	/*
 	bool set ( class TermTable    *table       ,
-		   long long           docId       ,
+		   int64_t           docId       ,
 		   class IndexList    *oldList     ,
 		   class IndexList    *newDateList ,
 		   long                newDate     ,
@@ -72,37 +72,37 @@ class IndexList : public RdbList {
 
 	// . these are made for special IndexLists, too
 	// . getTermId() assumes as 12 byte key
-	long long getCurrentTermId12 ( ) {
+	int64_t getCurrentTermId12 ( ) {
 		return getTermId12 ( m_listPtr ); };
-	long long getTermId12 ( char *rec ) {
+	int64_t getTermId12 ( char *rec ) {
 		return (*(uint64_t *)(&rec[4])) >> 16 ;
 	};
-	long long getTermId16 ( char *rec ) {
+	int64_t getTermId16 ( char *rec ) {
 		return (*(uint64_t *)(&rec[8])) >> 16 ;
 	};
-	//long long getTermId12 ( char *rec ) {
-	//	return ((long long)(*(unsigned long *)(m_listPtrHi+2))<<14) | 
+	//int64_t getTermId12 ( char *rec ) {
+	//	return ((int64_t)(*(unsigned long *)(m_listPtrHi+2))<<14) | 
 	//		((*(unsigned short *)(m_listPtrHi))>>2) ;
 	//};
 	// these 2 assume 12 and 6 byte keys respectively
-	long long getCurrentDocId () {
+	int64_t getCurrentDocId () {
 		if ( isHalfBitOn ( m_listPtr ) ) return getDocId6 (m_listPtr);
 		else                             return getDocId12(m_listPtr);
 	};
-	long long getDocId ( char *rec ) {
+	int64_t getDocId ( char *rec ) {
 		if ( isHalfBitOn ( rec ) ) return getDocId6 (rec);
 		else                       return getDocId12(rec);
 	};
-	long long getCurrentDocId12 ( ) {
+	int64_t getCurrentDocId12 ( ) {
 		return getDocId12 ( m_listPtr ); };
-	long long getDocId12 ( char *rec ) {
+	int64_t getDocId12 ( char *rec ) {
 		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
-	//long long getDocId12 ( char *rec ) {
+	//int64_t getDocId12 ( char *rec ) {
 	//	((*(unsigned long *)rec)>>10) |
-	//		(((long long)(*(unsigned short *)(rec+4)))<<22);
+	//		(((int64_t)(*(unsigned short *)(rec+4)))<<22);
 	//};
-	long long getDocId6 ( char *rec ) {
-		long long docid;
+	int64_t getDocId6 ( char *rec ) {
+		int64_t docid;
 		*(long *)(&docid) = *(long *)rec;
 		((char *)&docid)[4] = rec[4];
 		docid >>= 2;

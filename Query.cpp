@@ -1194,7 +1194,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	if ( m_queryExpansion ) 
 		sn = m_numWords;
 
-	long long to = hash64n("to",0LL);
+	int64_t to = hash64n("to",0LL);
 
 	for ( long i = 0 ; i < sn ; i++ ) {
 		// get query word
@@ -1280,10 +1280,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			// stop word? no, we're a phrase term
 			qt->m_isQueryStopWord = qw->m_isQueryStopWord;
 			// change in both places
-			long long wid = syn.m_aids[j];
+			int64_t wid = syn.m_aids[j];
 			// might be in a title: field or something
 			if ( qw->m_prefixHash ) {
-				long long ph = qw->m_prefixHash;
+				int64_t ph = qw->m_prefixHash;
 				wid= hash64h(wid,ph);
 			}
 			qt->m_termId    = wid & TERMID_MASK;
@@ -1755,11 +1755,11 @@ void Query::addCompoundTerms ( ) {
 		// (first phrases, then words)
 		if ( ! m_qterms[i].m_isUORed ) continue;
 		// the termid of the compound list
-		long long id = 0LL;
+		int64_t id = 0LL;
 		// store compound terms last
 		long n = m_numTerms;
 		// sum of termfreqs
-		//long long sum = 0;
+		//int64_t sum = 0;
 		// we got a UOR'd list, see whose involved
 		long j ;
 		long numUORComponents = 0;
@@ -2519,8 +2519,8 @@ bool Query::setQWords ( char boolFlag ,
 				wid = hash64Lower_utf8(w,lastColonLen , 0LL );
 				// fix gbminint:gbfacetstr:gbxpath...:165004297
 				if ( colonCount == 2 ) {
-					long long wid1;
-					long long wid2;
+					int64_t wid1;
+					int64_t wid2;
 					char *a = w;
 					char *b = w + firstColonLen;
 					wid1 = hash64Lower_utf8(a,b-a);
@@ -2578,8 +2578,8 @@ bool Query::setQWords ( char boolFlag ,
 					// gbfieldmatch:object.title:"some foo"
 					//
 					/*
-					long long wid1;
-					long long wid2;
+					int64_t wid1;
+					int64_t wid2;
 					a = w;
 					b = w + firstColonLen;
 					wid1 = hash64Lower_utf8(a,b-a);
@@ -2962,7 +2962,7 @@ bool Query::setQWords ( char boolFlag ,
 			     0 /*niceness*/))//disallows HUGE phrases
 		return false;
 
-	long long *wids = words.getWordIds();
+	int64_t *wids = words.getWordIds();
 
 	// do phrases stuff
 	for ( long i = 0 ; i < numWords ; i++ ) {
@@ -2984,7 +2984,7 @@ bool Query::setQWords ( char boolFlag ,
 		// get the first word # to our left that starts a phrase
 		// of which we are a member
 		qw->m_leftPhraseStart = -1;
-		//long long tmp;
+		//int64_t tmp;
 		for ( long j = i - 1 ; j >= 0 ; j-- ) {
 			//if ( ! bits.isIndexable(j)     ) continue;
 			if ( ! bits.canPairAcross(j+1) ) break;
@@ -3029,10 +3029,10 @@ bool Query::setQWords ( char boolFlag ,
 		if ( qw->m_inQuotedPhrase )
 			// keep at a bigram for now... i'm not sure if we
 			// will be indexing trigrams
-			nwp = phrases.getMinWordsInPhrase(i,(long long *)&pid);
+			nwp = phrases.getMinWordsInPhrase(i,(int64_t *)&pid);
 		// just get a two-word phrase term if not in quotes
 		else
-			nwp = phrases.getMinWordsInPhrase(i,(long long *)&pid);
+			nwp = phrases.getMinWordsInPhrase(i,(int64_t *)&pid);
 		// store it
 		qw->m_rawPhraseId = pid;
 		// does word #i start a phrase?
@@ -3347,7 +3347,7 @@ bool Query::setQWords ( char boolFlag ,
 	long upTo = -1;
 	long wk_start;
 	long wk_nwk;
-	//long long *wids = words.getWordIds();
+	//int64_t *wids = words.getWordIds();
 	//
 	// set the wiki phrase ids
 	//
@@ -3388,7 +3388,7 @@ bool Query::setQWords ( char boolFlag ,
 }
 
 // return -1 if does not exist in query, otherwise return the query word num
-long Query::getWordNum ( long long wordId ) { 
+long Query::getWordNum ( int64_t wordId ) { 
 	// skip if punct or whatever
 	if ( wordId == 0LL || wordId == -1LL ) return -1;
 	for ( long i = 0 ; i < m_numWords ; i++ ) {
@@ -4284,7 +4284,7 @@ static bool initFieldTable(){
 		for ( long i = 0 ; i < n ; i++ ) {
 			// skip if dup
 			//if ( g_fields[i].m_flag & QTF_DUP ) continue;
-			long long h = hash64b ( g_fields[i].text );
+			int64_t h = hash64b ( g_fields[i].text );
 			// if already in there it is a dup
 			if ( s_table.isInTable ( &h ) ) continue;
 			// store the entity index in the hash table as score
@@ -4301,7 +4301,7 @@ char getFieldCode ( char *s , long len , bool *hasColon ) {
 	if (hasColon) *hasColon = false;
 
 	if (!initFieldTable()) return FIELD_GENERIC;
-	long long h = hash64Lower_a(s, len );//>> 1) ;
+	int64_t h = hash64Lower_a(s, len );//>> 1) ;
 	long i = (long) s_table.getScore ( &h ) ;
 	if (i==0) return FIELD_GENERIC;
 	//if (hasColon) *hasColon = g_fields[i-1].hasColon ; 
@@ -4315,14 +4315,14 @@ char getFieldCode2 ( char *s , long len , bool *hasColon ) {
 	if (!initFieldTable()) return FIELD_GENERIC;
 	// subtract the colon for matching
 	if ( s[len-1]==':') len--;
-	long long h = hash64 (s , len , 0LL );
+	int64_t h = hash64 (s , len , 0LL );
 	long i = (long) s_table.getScore ( &h ) ;
 	if (i==0) return FIELD_GENERIC;
 	//if (hasColon) *hasColon = g_fields[i-1].hasColon ; 
 	return g_fields[i-1].field;
 }
 
-char getFieldCode3 ( long long h64 ) {
+char getFieldCode3 ( int64_t h64 ) {
 	if (!initFieldTable()) return FIELD_GENERIC;
 	// subtract the colon for matching
 	long i = (long) s_table.getScore ( &h64 ) ;
@@ -4389,8 +4389,8 @@ void Query::printQueryTerms(){
 		     getTermId      (i) ,
 		     getRawTermId   (i) ,
 		     c ,
-		     (long long)m_qterms[i].m_explicitBit  ,
-		     (long long)m_qterms[i].m_implicitBits ,
+		     (int64_t)m_qterms[i].m_explicitBit  ,
+		     (int64_t)m_qterms[i].m_implicitBits ,
 		     (long) m_qterms[i].m_hardCount ,
 		     m_componentCodes[i],
 		     getTermLen(i),
@@ -4902,8 +4902,8 @@ void Operand::print(SafeBuf *sbuf) {
 // 	long shift = 0;
 // 	while (m_termBits >> shift) shift++;
 // 	sbuf->safePrintf("%i", 1<<(shift-1));
-	if (m_hasNOT) sbuf->safePrintf("NOT 0x%llx",*(long long *)m_opBits);
-	else sbuf->safePrintf("0x%llx", *(long long *)m_opBits);
+	if (m_hasNOT) sbuf->safePrintf("NOT 0x%llx",*(int64_t *)m_opBits);
+	else sbuf->safePrintf("0x%llx", *(int64_t *)m_opBits);
 }
 */
 
@@ -4928,8 +4928,8 @@ bool QueryTerm::isSplit() {
 
 
 // hash of all the query terms
-long long Query::getQueryHash() {
-	long long qh = 0LL;
+int64_t Query::getQueryHash() {
+	int64_t qh = 0LL;
 	for ( long i = 0 ; i < m_numTerms ; i++ ) 
 		qh = hash64 ( m_termIds[i] , qh );
 	return qh;

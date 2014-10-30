@@ -111,7 +111,7 @@ class RdbMap {
 	// . flushes when done
 	bool writeMap  ( );
 	bool writeMap2 ( );
-	long long writeSegment ( long segment , long long offset );
+	int64_t writeSegment ( long segment , int64_t offset );
 
 	// . calls addRecord() for each record in the list
 	// . returns false and sets errno on error
@@ -125,24 +125,24 @@ class RdbMap {
 	//	bool addKey  ( key_t &key );
 
 	// get the number of non-deleted records in the data file we map
-	long long getNumPositiveRecs  ( ) { return m_numPositiveRecs; };
+	int64_t getNumPositiveRecs  ( ) { return m_numPositiveRecs; };
 	// get the number of "delete" records in the data file we map
-	long long getNumNegativeRecs  ( ) { return m_numNegativeRecs; };
+	int64_t getNumNegativeRecs  ( ) { return m_numNegativeRecs; };
 	// total
-	long long getNumRecs          ( ) { return m_numPositiveRecs +
+	int64_t getNumRecs          ( ) { return m_numPositiveRecs +
 						    m_numNegativeRecs; };
 	// get the size of the file we are mapping
-	long long getFileSize () { return m_offset; };
+	int64_t getFileSize () { return m_offset; };
 
 	// . gets total size of all recs in this page range
 	// . if subtract is true we subtract the sizes of pages that begin
 	//   with a delete key (low bit is clear)
-	long long getRecSizes ( long startPage , 
+	int64_t getRecSizes ( long startPage , 
 			   long endPage   , 
 			   bool subtract  );
 
 	// like above, but recSizes is guaranteed to be in [startKey,endKey]
-	long long getMinRecSizes ( long   sp       , 
+	int64_t getMinRecSizes ( long   sp       , 
 			      long   ep       , 
 			      //key_t  startKey , 
 			      //key_t  endKey   ,
@@ -151,7 +151,7 @@ class RdbMap {
 			      bool   subtract );
 
 	// like above, but sets an upper bound for recs in [startKey,endKey]
-	long long getMaxRecSizes ( long   sp       , 
+	int64_t getMaxRecSizes ( long   sp       , 
 			      long   ep       , 
 			      //key_t  startKey , 
 			      //key_t  endKey   ,
@@ -172,7 +172,7 @@ class RdbMap {
 			    long  *startPage , long *endPage ,
 			    //key_t *maxKey    ,
 			    char  *maxKey ,
-			    long long oldTruncationLimit = -1 ) ;
+			    int64_t oldTruncationLimit = -1 ) ;
 
 	// get the ending page so that [startPage,endPage] has ALL the recs
 	// whose keys are in [startKey,endKey] 
@@ -188,10 +188,10 @@ class RdbMap {
 	// . offset of first key wholly on page # "page"
 	// . return length of the whole mapped file if "page" > m_numPages
 	// . use m_offset as the size of the file that we're mapping
-	long long getAbsoluteOffset     ( long page ) ;
+	int64_t getAbsoluteOffset     ( long page ) ;
 	// . the offset of a page after "page" that is a different key
 	// . returns m_offset if page >= m_numPages
-	long long getNextAbsoluteOffset ( long page ) ;
+	int64_t getNextAbsoluteOffset ( long page ) ;
 
 
 	//key_t getLastKey ( ) { return m_lastKey; };
@@ -252,7 +252,7 @@ class RdbMap {
 	// . reads the keys and offsets into buffers allocated during open().
 	bool readMap     ( BigFile *dataFile );
 	bool readMap2    ( );
-	long long readSegment ( long segment, long long offset, long fileSize);
+	int64_t readSegment ( long segment, int64_t offset, long fileSize);
 
 	// due to disk corruption keys or offsets can be out of order in map
 	bool verifyMap   ( BigFile *dataFile );
@@ -298,7 +298,7 @@ class RdbMap {
 	bool chopHead (long fileSize );
 
 	// how much mem is being used by this map?
-	long long getMemAlloced ();
+	int64_t getMemAlloced ();
 
 	// . attempts to auto-generate from data file, f
 	// . returns false and sets g_errno on error
@@ -359,12 +359,12 @@ class RdbMap {
         // . if this is > 0 we know a key was added to map so we should call
         //   writeMap() on close or destroy
 	// . NOTE: also used as the file size of the file we're mapping
-	long long m_offset;
+	int64_t m_offset;
 
 	// we keep global tallies on the number of non-deleted records
 	// and deleted records
-	long long m_numPositiveRecs;
-	long long m_numNegativeRecs;
+	int64_t m_numPositiveRecs;
+	int64_t m_numNegativeRecs;
 	// . the last key in the file itself
 	// . getKey(pageNum) returns this when pageNum == m_numPages
 	// . used by Msg3::getSmallestEndKey()
@@ -375,7 +375,7 @@ class RdbMap {
 	bool   m_needToWrite;
 
 	// when a BigFile gets chopped, keep up a start offset for it
-	long long m_fileStartOffset;
+	int64_t m_fileStartOffset;
 
 	// are we mapping a data file that supports 6-byte keys?
 	bool m_useHalfKeys;
@@ -388,7 +388,7 @@ class RdbMap {
 	long m_pageSizeBits;
 
 	long      m_lastLogTime ;
-	long long m_badKeys     ;
+	int64_t m_badKeys     ;
 	bool      m_needVerify  ;
 
 };

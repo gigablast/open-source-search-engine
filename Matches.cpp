@@ -177,7 +177,7 @@ void Matches::setQuery ( Query *q ) {
 			break; 
 		}
 		// this should be equivalent to the word id
-		long long qid = qt->m_rawTermId;//qw->m_rawWordId;
+		int64_t qid = qt->m_rawTermId;//qw->m_rawWordId;
 
 		// but NOT for 'cheatcodes.com'
 		if ( qt->m_isPhrase ) qid = qw->m_rawWordId;
@@ -219,7 +219,7 @@ void Matches::setQuery ( Query *q ) {
 		// we need this for the 'cheat codes' query as well so it
 		// highlights 'cheatcodes'
 		//
-		long long pid = qw->m_rawPhraseId;
+		int64_t pid = qw->m_rawPhraseId;
 		if ( pid == 0 ) continue;
 		// put in hash table
 		n = ((unsigned long)pid) & mask;
@@ -734,7 +734,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 bool Matches::addMatches ( char      *s         ,
 			   long       slen      ,
 			   mf_t       flags     ,
-			   long long  docId     ,
+			   int64_t  docId     ,
 			   long       niceness  ) {
 
 	// . do not breach
@@ -842,7 +842,7 @@ bool Matches::addMatches ( Words    *words               ,
 			   qvec_t    reqMask             ,
 			   qvec_t    negMask             ,
 			   long      diversityWeight     ,
-			   long long docId               ,
+			   int64_t docId               ,
 			   mf_t      flags               ) { 
 
 	// if no query term, bail.
@@ -879,23 +879,23 @@ bool Matches::addMatches ( Words    *words               ,
 	m_flags       [ m_numMatchGroups ] = flags;
 	m_numMatchGroups++;
 
-	long long *pids = NULL;
+	int64_t *pids = NULL;
 	if ( phrases ) pids = phrases->getPhraseIds2();
 
 	// set convenience vars
 	unsigned long  mask    = m_numSlots - 1;
-	long long     *wids    = words->getWordIds();
+	int64_t     *wids    = words->getWordIds();
 	long          *wlens   = words->getWordLens();
 	char         **wptrs   = words->getWords();
 	// swids = word ids where accent marks, etc. are stripped 
-	//long long     *swids   = words->getStripWordIds();
+	//int64_t     *swids   = words->getStripWordIds();
 	nodeid_t      *tids    = words->getTagIds();
 	long           nw      = words->m_numWords;
 	//long          *wscores = NULL;
 	//if ( scores )  wscores = scores->m_scores;
 	long           n;//,n2 ;
 	long           matchStack = 0;
-	long long      nextMatchWordIdMustBeThis = 0;
+	int64_t      nextMatchWordIdMustBeThis = 0;
 	long           nextMatchWordPos = 0;
 	long           lasti   = -3;
 	//bool           inAnchTag = false;
@@ -937,7 +937,7 @@ bool Matches::addMatches ( Words    *words               ,
 	long badFlags =SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_IN_TITLE;
 
 	//long anum;
-	//long long *aids;
+	//int64_t *aids;
 	//long j;
 	long qwn;
 	long numQWords;
@@ -1032,7 +1032,7 @@ bool Matches::addMatches ( Words    *words               ,
 		     wptrs[i][wlens[i]-2] == '\'' &&
 		     to_lower_a(wptrs[i][wlens[i]-1]) == 's' ) {
 			// move 's from word hash... very tricky
-			long long nwid = wids[i];
+			int64_t nwid = wids[i];
 			// undo hash64Lower_utf8 in hash.h
 			nwid ^= g_hashtab[wlens[i]-1][(uint8_t)'s'];
 			nwid ^= g_hashtab[wlens[i]-2][(uint8_t)'\''];
@@ -1221,7 +1221,7 @@ bool Matches::addMatches ( Words    *words               ,
 		//   compute the termFreq for our matching quote
 		// . MDW: WHAT IS THIS?????
 		/*
-		//long long  max = -1;
+		//int64_t  max = -1;
 		for ( long j = qwn ; j < qwn + numQWords && 
 			      // if the word is repeated twice in two different
 			      // phrases, qwn sometimes ends up in the later,
@@ -1390,10 +1390,10 @@ long Matches::getNumWordsInMatch ( Words *words     ,
 	// is it a two-word synonym?
 	if ( m_qtableFlags[n] & 0x08 ) {
 		// get the word following this
-		long long wid2 = 0LL;
+		int64_t wid2 = 0LL;
 		if ( wn+2 < words->m_numWords ) wid2 = words->m_wordIds[wn+2];
 		// scan the synonyms...
-		long long *wids = words->m_wordIds;
+		int64_t *wids = words->m_wordIds;
 		for ( long k = 0 ; k < m_q->m_numTerms ; k++ ) {
 			QueryTerm *qt = &m_q->m_qterms[k];
 			if ( ! qt->m_synonymOf ) continue;
@@ -1415,8 +1415,8 @@ long Matches::getNumWordsInMatch ( Words *words     ,
 	if ( ! (m_qtableFlags[n] & 0x02) ) { *numQWords = 1; return 1; }
 
 	// get word ids array for the doc
-	long long  *wids   = words->getWordIds();
-	//long long  *swids  = words->getStripWordIds();
+	int64_t  *wids   = words->getWordIds();
+	//int64_t  *swids  = words->getStripWordIds();
 	char      **ws     = words->getWords();
 	long       *wl     = words->getWordLens();
 	//the word we match in the query appears in quotes in the query
@@ -1616,7 +1616,7 @@ void Matches::setSubPhraseDetection() {
 	m_leftDiversity = 0;
 	m_rightDiversity = 0;
 
-	long long h = hash64LowerE("www",3);
+	int64_t h = hash64LowerE("www",3);
 	m_pre.addKey(h, LONG_MIN);
 }
 */
@@ -1628,14 +1628,14 @@ void Matches::detectSubPhrase(Words* words,
 			      long diversityWeight ) {
 
 	long       nw        = words->getNumWords();
-	long long *wids      = words->getWordIds();
+	int64_t *wids      = words->getWordIds();
 
 	// . Hash the preceding word
 	long prevWord = matchWordNum - 2;
 	//skip entities
 	while(prevWord > 0 && wids[prevWord] == 0) prevWord--;
 
-	long long wid;
+	int64_t wid;
 	long slot;
 	if(prevWord < 0 || wids[prevWord] == 0) {
 		//word begins this section

@@ -33,13 +33,13 @@ public:
 	long m_ip;
 	short m_port;
 	// last time we attempted to download the test url through this proxy
-	long long m_lastDownloadTestAttemptMS;
+	int64_t m_lastDownloadTestAttemptMS;
 	// use -1 to indicate timed out when downloading test url
 	long   m_lastDownloadTookMS;
 	// 0 means none... use mstrerror()
 	long   m_lastDownloadError;
 	// use -1 to indicate never
-	long long m_lastSuccessfulTestMS;
+	int64_t m_lastSuccessfulTestMS;
 
 	// how many times have we told a requesting host to use this proxy
 	// to download their url with.
@@ -54,14 +54,14 @@ public:
 	// waiting on test url to be downloaded
 	bool m_isWaiting;
 
-	long long m_timesUsed;
+	int64_t m_timesUsed;
 
 	long m_lastBytesDownloaded;
 
 	// special things used by LoadBucket algo to determine which
 	// SpiderProxy to use to download from a particular IP
 	long m_countForThisIp;
-	long long m_lastTimeUsedForThisIp;
+	int64_t m_lastTimeUsedForThisIp;
 
 };
 
@@ -85,8 +85,8 @@ public:
 	// ip address of the url being downloaded
 	long m_urlIp;
 	// the time it started
-	long long m_downloadStartTimeMS;
-	long long m_downloadEndTimeMS;
+	int64_t m_downloadStartTimeMS;
+	int64_t m_downloadEndTimeMS;
 	// the host using the proxy
 	long m_hostId;
 	// key is this for m_prTable
@@ -203,7 +203,7 @@ bool buildProxyTable ( ) {
 		// skip empty buckets in hashtable s_iptab
 		if ( ! s_iptab.m_flags[i] ) continue;
 		// get the key
-		long long key = *(long long *)s_iptab.getKey(i);
+		int64_t key = *(int64_t *)s_iptab.getKey(i);
 		// must also exist in tmptab, otherwise it got removed by user
 		if ( tmptab.isInTable ( &key ) ) continue;
 		// shoot, it got removed. not in the new list of ip:ports
@@ -489,8 +489,8 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	sp->m_isWaiting = false;
 
 	// ok, update how long it took to do the download
-	long long nowms = gettimeofdayInMillisecondsLocal();
-	long long took = nowms - sp->m_lastDownloadTestAttemptMS;
+	int64_t nowms = gettimeofdayInMillisecondsLocal();
+	int64_t took = nowms - sp->m_lastDownloadTestAttemptMS;
 	sp->m_lastDownloadTookMS = (long)took;
 
 	HttpMime mime;
@@ -530,7 +530,7 @@ bool downloadTestUrlFromProxies ( ) {
 	Host *h0 = g_hostdb.getFirstAliveHost();
 	if ( g_hostdb.m_myHost != h0 ) return true;
 
-	long long nowms = gettimeofdayInMillisecondsLocal();
+	int64_t nowms = gettimeofdayInMillisecondsLocal();
 
 	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
 
@@ -539,7 +539,7 @@ bool downloadTestUrlFromProxies ( ) {
 
 		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValueFromSlot(i);
 
-		long long elapsed  = nowms - sp->m_lastDownloadTestAttemptMS;
+		int64_t elapsed  = nowms - sp->m_lastDownloadTestAttemptMS;
 
 		// hit test url once per 31 seconds
 		if ( elapsed < 31000 ) continue;
@@ -630,9 +630,9 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		// this will "return" the banned proxy
 		returnProxy ( preq , NULL );
 		// now add it to the banned table
-		long long uip = preq->m_urlIp;
-		long long pip = preq->m_banProxyIp;
-		long long h64 = hash64h ( uip , pip );
+		int64_t uip = preq->m_urlIp;
+		int64_t pip = preq->m_banProxyIp;
+		int64_t h64 = hash64h ( uip , pip );
 		if ( ! s_proxyBannedTable.isInTable ( &h64 ) ) {
 			s_proxyBannedTable.addKey ( &h64 );
 			// for stats counting. each proxy ip maps to #
@@ -702,9 +702,9 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		// if this proxy was banned by the url's ip... skip it. it is
 		// not a candidate...
 		if ( skipDead ) {
-			long long uip = preq->m_urlIp;
-			long long pip = sp->m_ip;
-			long long h64 = hash64h ( uip , pip );
+			int64_t uip = preq->m_urlIp;
+			int64_t pip = sp->m_ip;
+			int64_t h64 = hash64h ( uip , pip );
 			if ( s_proxyBannedTable.isInTable ( &h64 ) ) {
 				numBannedProxies++;
 				continue;
@@ -773,7 +773,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 
 	// reset minCount so we can take the min over those we check here
 	minCount = -1;
-	long long oldest = 0x7fffffffffffffffLL;
+	int64_t oldest = 0x7fffffffffffffffLL;
 	SpiderProxy *winnersp = NULL;
 	long count = 0;
 	// start at a random slot based on url's IP so we don't
@@ -796,9 +796,9 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		// if this proxy was banned by the url's ip... skip it. it is
 		// not a candidate...
 		if ( skipDead ) {
-			long long uip = preq->m_urlIp;
-			long long pip = sp->m_ip;
-			long long h64 = hash64h ( uip , pip );
+			int64_t uip = preq->m_urlIp;
+			int64_t pip = sp->m_ip;
+			int64_t h64 = hash64h ( uip , pip );
 			if ( s_proxyBannedTable.isInTable ( &h64 ) ) continue;
 		}
 
@@ -836,7 +836,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 	// we must have a winner
 	if ( ! winnersp ) { char *xx=NULL;*xx=0; }
 
-	long long nowms = gettimeofdayInMillisecondsLocal();
+	int64_t nowms = gettimeofdayInMillisecondsLocal();
 
 	// winner count update
 	winnersp->m_timesUsed++;
@@ -894,7 +894,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		// skip if still active
 		if ( pp->m_downloadEndTimeMS == 0LL ) continue;
 		// delta t
-		long long took = nowms - pp->m_downloadEndTimeMS;
+		int64_t took = nowms - pp->m_downloadEndTimeMS;
 		// < 10 mins?
 		if ( took < LOADPOINT_EXPIRE_MS ) continue;
 		// ok, its too old, nuke it to save memory
@@ -941,7 +941,7 @@ void returnProxy ( Msg13Request *preq , UdpSlot *udpSlot ) {
 		if ( lb->m_proxyIp != preq->m_proxyIp ) continue;
 		if ( lb->m_proxyPort != preq->m_proxyPort ) continue;
 		// that's it. set the download end time
-		long long nowms = gettimeofdayInMillisecondsLocal();
+		int64_t nowms = gettimeofdayInMillisecondsLocal();
 		lb->m_downloadEndTimeMS = nowms;
 		break;
 	}

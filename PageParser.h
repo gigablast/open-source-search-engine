@@ -19,9 +19,9 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) ;
 bool sendPageParser2 ( TcpSocket    *s , 
 		       HttpRequest  *r ,
 		       class State8 *st ,
-		       long long     docId ,
+		       int64_t     docId ,
 		       Query        *q ,
-		       long long    *termFreqs       ,
+		       int64_t    *termFreqs       ,
 		       float        *termFreqWeights ,
 		       float        *affWeights ,
 		       void         *state ,
@@ -72,12 +72,12 @@ public:
 	//SafeBuf  m_sbuf2;
 
 	// new state vars for Msg3b.cpp
-	long long  m_docId;
+	int64_t  m_docId;
 	void      *m_state ;
 	void    (* m_callback) (void *state);
 	Query      m_tq;
 	Query     *m_q;
-	long long *m_termFreqs;
+	int64_t *m_termFreqs;
 	float     *m_termFreqWeights;
 	float     *m_affWeights;
 	//score_t    m_total;
@@ -87,10 +87,10 @@ public:
 	// these are from rearranging the code
 	long      m_indexCode;
 	//uint64_t m_chksum1;
-	long long m_took1;
-	long long m_took1b;
-	long long m_took2;
-	long long m_took3;
+	int64_t m_took1;
+	int64_t m_took1b;
+	int64_t m_took2;
+	int64_t m_took3;
 
 	char m_didRootDom;
 	char m_didRootWWW;

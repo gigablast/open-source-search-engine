@@ -233,8 +233,8 @@ void IndexTable2::init ( Query     *q               ,
 	// . get # of docs in collection
 	// . we use this to help modify the affinities to compensate for very 
 	//   popular words so 'new order' gets a decent affinity
-	//long long cnt1 = 0;
-	//long long cnt2 = 0;
+	//int64_t cnt1 = 0;
+	//int64_t cnt2 = 0;
 	//RdbBase *base1 = getRdbBase ( RDB_CHECKSUMDB , coll );
 	//RdbBase *base2 = getRdbBase ( RDB_CLUSTERDB  , coll );
 	//if ( base1 ) cnt1 = base1->getNumGlobalRecs();
@@ -284,7 +284,7 @@ void IndexTable2::init ( Query     *q               ,
 	m_logstate = (long)logstate;
 
 	// calc the size of each termlist, 1-1 with m_q->m_qterms[]
-	long long max = 0;
+	int64_t max = 0;
 	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		m_sizes[i] = 0;
 		// . component lists are merged into one compound list
@@ -415,7 +415,7 @@ public:
 	long       m_ni;
 	long       m_numExactExplicitMatches;
 	long       m_numExactImplicitMatches;
-	long long  m_estimatedTotalHits;
+	int64_t  m_estimatedTotalHits;
 	time_t     m_timestamp; // local clock time
 	time_t     m_nowUTCMod;
 	long       m_localBufSize     ;
@@ -878,7 +878,7 @@ void IndexTable2::setFreqWeights ( Query *q , bool phrases ) {
 		// . it can be multiplied by up to 256 (the term count)
 		// . then it can be multiplied by an affinity weight, but
 		//   that ranges from 0.0 to 1.0.
-		long long max = 0x7fffffff / 256;
+		int64_t max = 0x7fffffff / 256;
 		if ( w > max ) {
 			log("query: Weight breech. Truncating to %llu.",max);
 			w = (float)max;
@@ -978,7 +978,7 @@ void IndexTable2::setFreqWeights ( Query *q , bool phrases ) {
 		// get the term # for word #i (query word term num)
 		long qwtn = qw->m_queryWordTerm - &q->m_qterms[0];
 		// get the freq of that
-		long long freq = q->m_termFreqs[qwtn];
+		int64_t freq = q->m_termFreqs[qwtn];
 
 		// component lists are merged into one compound list
 		if ( m_componentCodes[qwtn] >= 0 ) continue;
@@ -997,7 +997,7 @@ void IndexTable2::setFreqWeights ( Query *q , bool phrases ) {
 		// sanity check
 		if ( term1 >= q->m_numTerms ) { char *xx = NULL; *xx = 0; };
 		// get the term freq of the left phrase
-		long long leftFreq  = -1LL;
+		int64_t leftFreq  = -1LL;
 		if ( term1 >= 0 ) leftFreq = q->m_termFreqs [ term1 ];
 
 		// get the phrase term this query word starts
@@ -1008,12 +1008,12 @@ void IndexTable2::setFreqWeights ( Query *q , bool phrases ) {
 		// sanity check
 		if ( term2 >= q->m_numTerms ) { char *xx = NULL; *xx = 0; };
 		// get the term freq of the left phrase
-		long long rightFreq  = -1LL;
+		int64_t rightFreq  = -1LL;
 		if ( term2 >= 0 ) rightFreq = q->m_termFreqs [ term2 ];
 
 		// . take the min phrase freq
 		// . these are -1 if not set
-		long long min = leftFreq;
+		int64_t min = leftFreq;
 		if ( min < 0 ) min = rightFreq;
 		if ( rightFreq < min && rightFreq >= 0 ) min = rightFreq;
 
@@ -1078,7 +1078,7 @@ bool IndexTable2::alloc ( ) {
 	//if ( ! allocTopTree() ) return false;
 
 	// pre-allocate all the space we need for intersecting the lists
-	long long need = 0;
+	int64_t need = 0;
 
 	// we only look at the lists in imap space, there are m_ni of them
 	long nqt = m_ni;
@@ -1119,7 +1119,7 @@ bool IndexTable2::alloc ( ) {
 		}
 		// how big to make hash table?
 		long slotSize  = 4+4+2+sizeof(qvec_t);
-		long long need = slotSize * max;
+		int64_t need = slotSize * max;
 	        // have some extra slots in between for speed
 		need = (need * 5 ) / 4;
 		// . do not go overboard
@@ -1186,7 +1186,7 @@ bool IndexTable2::alloc ( ) {
 	//   we performed. 
 	// . we intersect each termlist with the "active intersection" by
 	//   calling addLists2_r()
-	long long min = 0;
+	int64_t min = 0;
 	if ( m_requireAllTerms && m_nb > 0 ) {
 		for ( long i = 0 ; i < m_blocksize[0]; i++ )
 			min += m_lists[m_imap[i]].getListSize() / hks ;
@@ -1315,7 +1315,7 @@ bool IndexTable2::alloc ( ) {
 	//   if it is, we bury the lastGuy and replace him.
 	// . TODO: can we end up with a huge list and only one last guy?
 	//         won't that cause performance issues? panics?
-	long long nd = (105 * min) / 100 + 10 ;
+	int64_t nd = (105 * min) / 100 + 10 ;
 	if ( min < 0 ) { char *xx=NULL;*xx=0;}
 	if ( nd < 0  ) { char *xx=NULL;*xx=0;}
 	long need2 =
@@ -1571,7 +1571,7 @@ void IndexTable2::addLists_r ( long *totalListSizes , float sortByDateWeight ){
 	if ( empty ) return;
 
 	// set start time
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 
 	// . set the bit map so m_tmpq.m_bmap[][] gets set and we can convert
 	//   an explicit vector to an implicit bit vector by 
@@ -1791,7 +1791,7 @@ swapBack:
 		//*p &= ~0x02;
 	}
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// store the addLists time
 	m_addListsTime = now - t1;
 	m_t1 = t1;
@@ -2012,7 +2012,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 	// only log this error message once per call to this routine
 	char pflag = 0;
 	// time the gbsorting for the datelists
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 
 	// set latTermOff/lonTermOff
 	m_latTermOff  = -1;
@@ -2243,8 +2243,8 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 				// if they are all checked!!
 				/*
 				  CRAP! this was dropping results!!
-				if ( *(long long *)(end-10+5) ==
-				     *(long long *)(p+5) &&
+				if ( *(int64_t *)(end-10+5) ==
+				     *(int64_t *)(p+5) &&
 				     *(short *)(end-10+8) ==
 				     *(short *)(p+8)
 				     )
@@ -2312,7 +2312,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 
 	// time the gbsorting for the datelists
 	if ( m_isDebug || g_conf.m_logDebugQuery ) {
-		long long t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds();
 		logf(LOG_DEBUG,"query: Took %lli ms to prepare list ptrs. "
 		     "numDocIds=%lu numSorts=%li",
 		     t2 - t1 , numDocIds , numSorts );
@@ -2346,7 +2346,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 	long j;
 
 	// a dummy var
-	//long long tmpHi = 0x7fffffffffffffffLL;
+	//int64_t tmpHi = 0x7fffffffffffffffLL;
 	// . the info of the weakest entry in the top winners
 	// . if its is full and we get another winner, the weakest will be
 	//   replaced by the new winner
@@ -2622,7 +2622,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 		// the score position is nn * numTermsPerList + [list index]
 		// debug point
 		/*
-		long long ddd ;
+		int64_t ddd ;
 		memcpy ( &ddd , ptrs[i] , 6 );
 		ddd >>= 2;
 		ddd &= DOCID_MASK;
@@ -2635,10 +2635,10 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 			long sss = scoreTablePtr[ss];
 			logf(LOG_DEBUG,"i=%li max=%llu sc=%hhu sc2=%lu d=%llu",
 			    (long)i,
-			    (long long)(((long long)maxDocId)<<6) | 0x3fLL, 
+			    (int64_t)(((int64_t)maxDocId)<<6) | 0x3fLL, 
 			     255-ss, 
 			     sss,
-			    (long long)ddd );
+			    (int64_t)ddd );
 		}
 		*/
 
@@ -2735,7 +2735,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 		// got dup docid for the same termid due to index corruption?
 		if ( explicitBits[nn] & ebits ) {
 			// no point in logging since in thread!
-			//long long dd ;
+			//int64_t dd ;
 			//memcpy ( &dd , ptrs[i] , 6 );
 			//dd >>= 2;
 			//dd &= DOCID_MASK;
@@ -2909,7 +2909,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 		qvec_t ibits = m_q->getImplicits ( explicitBits[i] );
 		// log each one!
 		if ( m_isDebug ) {
-			long long d = getDocIdFromPtr(docIdPtrs[i]);
+			int64_t d = getDocIdFromPtr(docIdPtrs[i]);
 			if ( d == 17601280831LL ) 
 				log("you");
 			log("query: checking docid %lli "
@@ -2943,14 +2943,14 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 			// skip if if not in the sqDocIds
 			if ( m_useYesDocIdTable ) {
 				// make a docid out of it
-				long long d = getDocIdFromPtr(docIdPtrs[i]);
+				int64_t d = getDocIdFromPtr(docIdPtrs[i]);
 				// if not in table, skip it
 				if ( m_dt.getSlot(d) < 0 ) {
 					docIdPtrs[i] = NULL; continue; }
 			}
 			if ( m_useNoDocIdTable ) {
 				// make a docid out of it
-				long long d = getDocIdFromPtr(docIdPtrs[i]);
+				int64_t d = getDocIdFromPtr(docIdPtrs[i]);
 				// if in this table skip it
 				if ( m_et.getSlot(d) >= 0 ) {
 					docIdPtrs[i] = NULL; continue; }
@@ -3080,7 +3080,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 			//	     "query: getBitScore1 "
 			//	     "queryId=%lld bits=0x%016llx",
 			//	     m_r->m_queryId,
-			//	     (long long) explicitBits[i]);
+			//	     (int64_t) explicitBits[i]);
 			uint8_t bscore = getBitScore(explicitBits[i]);
 				
 			// if we are boolean we must have the right bscore
@@ -3536,7 +3536,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 		//	     "query: getBitScore2 "
 		//	     "queryId=%lld bits=0x%016llx",
 		//	     m_r->m_queryId,
-		//	     (long long) m_tmpEbitVec2[i]);
+		//	     (int64_t) m_tmpEbitVec2[i]);
 		// get the bit score, # terms implied
 		bscore = getBitScore ( m_tmpEbitVec2[i] ) ;
 		// count it if it has all terms EXplicitly
@@ -3647,7 +3647,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 		double untried = 1.0;
 		double noretry = 1.0;
 		// minimum term frequency of the eligible query terms
-		long long mintf = 0x7fffffffffffffffLL;
+		int64_t mintf = 0x7fffffffffffffffLL;
 		// . total hits we got now
 		// . we use explicit, because we're only taking combinations
 		//   of non-negative terms and positive phrase terms, using
@@ -3683,7 +3683,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 			if ( m_q->m_numTerms == 1 ) totalHits = m_termFreqs[i];
 
 			// how many docs have this term?
-			long long tf = m_termFreqs[i];
+			int64_t tf = m_termFreqs[i];
 			// . multiply to get initial # of combinations of terms
 			// . "tried" means we tried these combinations to 
 			//   produce the "totalHits" search results
@@ -3710,7 +3710,7 @@ void IndexTable2::addLists2_r ( long       numListsToDo     ,
 		double percent = (double)totalHits / (double)tried;
 		// out of the untried combinations,how many hits can we expect?
 		m_estimatedTotalHits = totalHits + 
-			(long long) (untried * percent);
+			(int64_t) (untried * percent);
 		// don't exceed the max tf of any one list (safety catch)
 		if ( m_estimatedTotalHits > mintf ) 
 			m_estimatedTotalHits = mintf;
@@ -3738,7 +3738,7 @@ bool IndexTable2::eventHashLoop ( long *listIndexes ,
 				  char **ptrEnds ,
 				  char **oldptrs ,
 				  long  numPtrs ,
-				  long long maxDocId ,
+				  int64_t maxDocId ,
 				  long      numListsToDo ,
 				  long      numSlots ,
 				  char **docIdPtrs ,
@@ -3810,7 +3810,7 @@ bool IndexTable2::eventHashLoop ( long *listIndexes ,
 		}
 
 		// for debuging lat/lon/times for an event
-		//long long d = getDocIdFromPtr(ptrs[i]);
+		//int64_t d = getDocIdFromPtr(ptrs[i]);
 		//if ( d == 17601280831LL && a==1 )
 		//	log("hey listi=%li",listi);
 
@@ -4109,7 +4109,7 @@ void IndexTable2::computeAffWeights    ( bool           rat          ,
 	// in imap space
 	long nqt = m_ni;
 
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	//logf ( LOG_DEBUG, "query: ComputeAffWeights nd=%li nqt=%li",
 	//		  numDocIds, nqt );
 
@@ -4201,7 +4201,7 @@ void IndexTable2::computeAffWeights    ( bool           rat          ,
 
 			// debug
 			if ( m_isDebug ) {
-				long long d = getDocIdFromPtr(docIdPtrs[i]);
+				int64_t d = getDocIdFromPtr(docIdPtrs[i]);
 				long cb = 0;
 				if ( ebits & qt->m_explicitBit ) cb = 1;
 				logf(LOG_DEBUG,"query: affweights d=%lli "
@@ -4741,7 +4741,7 @@ void IndexTable2::computeAffWeights    ( bool           rat          ,
 
 			// debug
 			if ( m_isDebug ) {
-				long long d = getDocIdFromPtr(docIdPtrs[i]);
+				int64_t d = getDocIdFromPtr(docIdPtrs[i]);
 				long cb = 0;
 				if ( explicitBits[i] & ebits2 ) cb=1;
 				logf(LOG_DEBUG,"query: syn term #%li "
@@ -4916,7 +4916,7 @@ void IndexTable2::computeAffWeights    ( bool           rat          ,
 		       "FINALWEIGHT=%f"
 		       ,
 		       qt->m_term,//bb ,
-		       (long long)qt->m_termId ,
+		       (int64_t)qt->m_termId ,
 		       pn ,
 		       sign,
 		       it                  ,
@@ -4945,7 +4945,7 @@ void IndexTable2::computeAffWeights    ( bool           rat          ,
 		*tpc = c;
 	}
 	/*
-	long long endTime = gettimeofdayInMilliseconds();
+	int64_t endTime = gettimeofdayInMilliseconds();
 	logf ( LOG_DEBUG, "query: ComputeAffWeights took %lli ms",
 			  endTime - startTime );
 	*/
@@ -5028,7 +5028,7 @@ void IndexTable2::computeWeightedScores ( long            numDocIds    ,
 	}
 	*/
 /*
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	//logf ( LOG_DEBUG, "query: ComputeWeightedScores nd=%li nqt=%li",
 	//		  numDocIds, nqt );
 	/////////////////////////////////////
@@ -5053,7 +5053,7 @@ void IndexTable2::computeWeightedScores ( long            numDocIds    ,
 	char *pend = tmp + 4095;
 	for ( long i = 0; i < numDocIds; i++ ) {
 		//if ( flags[i] == 0 ) continue;
-		long long d = 0;
+		int64_t d = 0;
 		memcpy(&d, docIdPtrs[i], 6);
 		d >>= 2;
 		d &= DOCID_MASK;
@@ -5128,7 +5128,7 @@ void IndexTable2::computeWeightedScores ( long            numDocIds    ,
 			     finalScores[i]);
 		logf ( LOG_DEBUG, "%s", tmp );
 	}
-	//long long endTime = gettimeofdayInMilliseconds();
+	//int64_t endTime = gettimeofdayInMilliseconds();
 	//logf ( LOG_DEBUG, "query: ComputeWeightedScores took %lli ms",
 	//		  endTime - startTime );
 }
@@ -5334,7 +5334,7 @@ long IndexTable2::fillTopDocIds ( //char         **topp      ,
 			goto loop1;
 		}
 		// debug
-		//long long d = getDocIdFromPtr(tmpp2[i]);
+		//int64_t d = getDocIdFromPtr(tmpp2[i]);
 		//logf(LOG_DEBUG,"gb: docid=%012llu eventid=%03li score=%lu",  
 		//     d, (long)tmpeid2[i],score);
 		/*
@@ -5353,7 +5353,7 @@ long IndexTable2::fillTopDocIds ( //char         **topp      ,
 		// a good assumption.
 		if ( end   == -1 ) { char *xx=NULL;*xx=0; }
 		// debug
-		long long d = getDocIdFromPtr(tmpp2[i]);
+		int64_t d = getDocIdFromPtr(tmpp2[i]);
 		logf(LOG_DEBUG,"gb: start=%lu end=%lu storehrs=%li "
 		     "end-start=%li docid=%llu eventid=%li",  
 		     start,end,(end&0x01),end-start,
@@ -5418,7 +5418,7 @@ long IndexTable2::fillTopDocIds ( //char         **topp      ,
 	//	     "query: getBitScore3 "
 	//	     "queryId=%lld bits=0x%016llx",
 	//	     m_r->m_queryId,
-	//	     (long long) ebits);
+	//	     (int64_t) ebits);
 	// set the bit score
 	t->m_bscore = getBitScore ( ebits );
 	// add in hard count (why didn't tree have this before?)
@@ -5438,7 +5438,7 @@ long IndexTable2::fillTopDocIds ( //char         **topp      ,
 		// TMP debug vars
 		char tt[10024];
 		char *pp ;
-		long long d ;
+		int64_t d ;
 		pp = tt;
 		pp += sprintf(pp,"[");
 		for ( long k = 0 ; k < m_q->m_numTerms ; k++ ) {
@@ -5492,7 +5492,7 @@ long IndexTable2::fillTopDocIds ( //char         **topp      ,
 		logf(LOG_DEBUG,"query: T %li) d=%llu %s s=%lu dh=0x%hhx "
 		     "bs=0x%02lx ebits=0x%lx required=0x%llx", i,d,tt,score,dh,
 		     (long)t->m_bscore,(long)ebits,
-		     (long long)m_q->m_requiredBits);
+		     (int64_t)m_q->m_requiredBits);
 	}
 
 	// . this will not add if tree is full and it is less than the 

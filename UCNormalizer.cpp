@@ -157,7 +157,7 @@ bool initCompositionTable(){
 				continue;
 			}
 			
-			long long h = ((long long)map[0] << 32) | map[1];
+			int64_t h = ((int64_t)map[0] << 32) | map[1];
 			//if ( ! s_compositions.addTerm( &h, i) ) 
 			//	return log("conf: bad init comp table");
 			if ( ! s_compositions.addKey ( &h, &i) ) 
@@ -170,7 +170,7 @@ bool initCompositionTable(){
 
 /*
 static UChar32 ucGetComposition(UChar32 c1, UChar32 c2) {
-	long long h = ((long long)c1 << 32) | c2;
+	int64_t h = ((int64_t)c1 << 32) | c2;
 	return (UChar32) s_compositions.getScoreFromTermId( h );
 }
 */

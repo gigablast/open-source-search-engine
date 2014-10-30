@@ -16,7 +16,7 @@ void RequestTable::reset ( ) {
 	m_processHash = 0;
 }
 
-long RequestTable::addRequest ( long long requestHash , void *state2 ) {
+long RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 	// sanity check
 	if ( requestHash == 0 ){
 		char *xx = NULL; *xx = 0;
@@ -64,7 +64,7 @@ long RequestTable::addRequest ( long long requestHash , void *state2 ) {
 	return count;
 }
 
-void RequestTable::gotReply ( long long  requestHash ,
+void RequestTable::gotReply ( int64_t  requestHash ,
 			      char      *reply       ,
 			      long       replySize   ,
 			      void      *state1      ,
@@ -108,7 +108,7 @@ void RequestTable::gotReply ( long long  requestHash ,
 	return;
 }
 
-void RequestTable::cancelRequest ( long long requestHash , void *state2 ) {
+void RequestTable::cancelRequest ( int64_t requestHash , void *state2 ) {
 	// there should only be one request for this request hash
 	long n = m_htable.getOccupiedSlotNum ( requestHash );
 	if ( n < 0 ){

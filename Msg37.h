@@ -24,9 +24,9 @@ class Msg37 {
 	// . "termIds/termFreqs" should NOT be on the stack in case we block
 	bool getTermFreqs ( collnum_t collnum ,
 			    long        maxAge     ,
-			    long long  *termIds    ,
+			    int64_t  *termIds    ,
 			    long        numTermIds ,
-			    long long  *termFreqs  ,
+			    int64_t  *termFreqs  ,
 			    void       *state      ,
 			    void (* callback)(void *state ) ,
 			    long        niceness   , // = MAX_NICENESS
@@ -44,7 +44,7 @@ class Msg37 {
 
 	// . ptr to "termFreqs" passed in by getTermFreqs[]
 	// . we remember it so we can set them
-	long long *m_termFreqs;
+	int64_t *m_termFreqs;
 	long       m_numTerms;
 
 	long m_numReplies  ;
@@ -61,7 +61,7 @@ class Msg37 {
 	collnum_t m_collnum;
 
 	long        m_maxAge;
-	long long  *m_termIds ;
+	int64_t  *m_termIds ;
 };
 
 #endif

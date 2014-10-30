@@ -17,8 +17,8 @@ int main ( int argc , char *argv[] ) {
 	RdbList list1, list2;
 
 	char data1 [ 32 ] , data2[32];
-	*(long long *)data1 = 273777931569279933;
-	*(long long *)data2 = 273777931569279932;
+	*(int64_t *)data1 = 273777931569279933;
+	*(int64_t *)data2 = 273777931569279932;
 	*(long *)(data1 + 8) = 0;
 	*(long *)(data2 + 8) = 0;
 
@@ -82,7 +82,7 @@ void *gohere ( void *) {
 	for ( long i = 0 ; i < 25000 ; i++ ) {
 		keys[i].n1 = rand();
 		long r = rand();
-		keys[i].n0 = ((long long)r << 32) | rand();
+		keys[i].n0 = ((int64_t)r << 32) | rand();
 		// for to be a positive key
 		keys[i].n0 |= 0x01;
 	}

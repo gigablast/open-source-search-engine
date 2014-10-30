@@ -95,7 +95,7 @@ class Conf {
 	//private_key m_privKey;      // our private key for this host
 
 	// max amount of memory we can use
-	long long        m_maxMem;
+	int64_t        m_maxMem;
 
 	// if this is false, we do not save, used by dump routines
 	// in main.cpp so they can change parms here and not worry about
@@ -234,7 +234,7 @@ class Conf {
 	long  m_tfndbMaxDiskPageCacheMem ; // for the DiskPageCache class only
 	//long  m_tfndbMinFilesToMerge;
 	//bool  m_tfndbSaveCache;
-	//long long  m_tfndbMaxUrls;
+	//int64_t  m_tfndbMaxUrls;
 
 	long  m_maxCpuThreads;
 	long  m_maxCpuMergeThreads;

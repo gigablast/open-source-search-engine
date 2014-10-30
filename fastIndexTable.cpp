@@ -51,8 +51,8 @@ void IndexTable::reset() {
 //         quickly!
 // . we now support multiple plus signs before the query term
 void IndexTable::set ( long       docsWanted ,
-		       long long *termIds    ,
-		       long long *termFreqs  ,
+		       int64_t *termIds    ,
+		       int64_t *termFreqs  ,
 		       char      *termSigns  ,
 		       char      *numPlusses ,
 		       char      *startTermNums , // phrase ranges
@@ -60,7 +60,7 @@ void IndexTable::set ( long       docsWanted ,
 		       long       numTerms      ) {
 	// make sure our max score isn't too big
 	//long a     = MAX_QUERY_TERMS * MAX_QUERY_TERMS * 300   * 255   + 255;
-	//long long aa=MAX_QUERY_TERMS * MAX_QUERY_TERMS * 300LL * 255LL + 255;
+	//int64_t aa=MAX_QUERY_TERMS * MAX_QUERY_TERMS * 300LL * 255LL + 255;
 	//if ( a != aa ) { 
 	//	log("IndexTable::set: MAX_QUERY_TERMS too big"); exit(-1); }
 	// clear everything
@@ -116,17 +116,17 @@ void IndexTable::set ( long       docsWanted ,
 // . now we use MAX_QUERY_TERMS * MAX_SCORE to be the actual max score so
 //   that we can use 4,080,000 for truncated hard-required terms
 // . TODO: make adjustable from an xml interpolated point map
-void IndexTable::setScoreWeights ( long long *termFreqs  , 
+void IndexTable::setScoreWeights ( int64_t *termFreqs  , 
 				   char      *numPlusses ,
 				   long       numTerms   ) {
 	// get an estimate on # of docs in the database
-	//long long numDocs = g_titledb.getGlobalNumDocs();
+	//int64_t numDocs = g_titledb.getGlobalNumDocs();
 	// this should only be zero if we have 0 docs, so make it 1 if so
 	//if ( numDocs <= 0 ) numDocs = 1;
 	// . compute the total termfreqs
 	// . round small termFreqs up to half a PAGE_SIZE
-	long long absMin  = PAGE_SIZE/(2*sizeof(key_t));
-	long long minFreq = termFreqs[0];
+	int64_t absMin  = PAGE_SIZE/(2*sizeof(key_t));
+	int64_t minFreq = termFreqs[0];
 	if ( minFreq < absMin ) minFreq = absMin;
 	for ( long i = 1 ; i < numTerms ; i++ ) {
 		if ( termFreqs[i] > minFreq ) continue;
@@ -136,7 +136,7 @@ void IndexTable::setScoreWeights ( long long *termFreqs  ,
 	// loop through each term computing the score weight for it
 	for ( long i = 0 ; i < numTerms ; i++ ) {
 		// reserve half the weight for up to 4 plus signs
-		long long max = MAX_SCORE_WEIGHT / 3;
+		int64_t max = MAX_SCORE_WEIGHT / 3;
 		// . 3 extra plusses can triple the score weight
 		// . each extra plus adds "extra" to the score weight
 		long extra = (2 * MAX_SCORE_WEIGHT) / 9;
@@ -145,7 +145,7 @@ void IndexTable::setScoreWeights ( long long *termFreqs  ,
 		// but don't exceed the absolute max
 		if ( max > MAX_SCORE_WEIGHT ) max = MAX_SCORE_WEIGHT;
 		// increase small term freqs to the minimum
-		long long freq = termFreqs[i];
+		int64_t freq = termFreqs[i];
 		if ( freq < absMin ) freq = absMin;
 		// . now if one term is 100 times more popular than another
 		//   it should count 1/100th as much
@@ -265,7 +265,7 @@ void IndexTable::addList ( IndexList *list, long scoreWeight, char termSign ,
 	// . date search term
 	if ( termSign == 'd' ) {addList3(list,scoreWeight,termBitMask);return;}
 	// records are data-less, just keys
-	long long      docIdBits;
+	int64_t      docIdBits;
 	short          score;
 	long           n;
 	register unsigned char *k   = (unsigned char *) list->getList();
@@ -282,7 +282,7 @@ void IndexTable::addList ( IndexList *list, long scoreWeight, char termSign ,
 		// . if delbit is set make the score negative
 		// . i.e. make negative if this key is a delete
 		// . this is dependent on endianess of machine
-		// . we're small endian, and the lower long long comes first
+		// . we're small endian, and the lower int64_t comes first
 		//   and IT stores the least significant long first
 		if ( *k & (unsigned char)0x01 == 0 ) score = -score;
 		// just mask out everything else, but the docId from ith key
@@ -317,7 +317,7 @@ void IndexTable::addList ( IndexList *list, long scoreWeight, char termSign ,
 // a minus term in front of them (exlcude from search results)
 void IndexTable::addList2 ( IndexList *list, unsigned short termBitMask ) {
 	// records are data-less, just keys
-	long long     docIdBits;
+	int64_t     docIdBits;
 	short         score;
 	long          n;
 	key_t        *k   = (key_t *) list->getList();
@@ -354,7 +354,7 @@ void IndexTable::addList2 ( IndexList *list, unsigned short termBitMask ) {
 void IndexTable::addList3 ( IndexList *list, long scoreWeight, 
 			   unsigned short termBitMask ) {
 	// records are data-less, just keys
-	long long     docIdBits;
+	int64_t     docIdBits;
 	short         score;
 	long          n;
 	key_t        *k   = (key_t *) list->getList();
@@ -402,13 +402,13 @@ bool IndexTable::setTopDocIds ( long topn , bool forcePhrases ) {
 	// reset any existing buffer
 	if ( m_buf ) {	mfree ( m_buf , m_bufSize,"IndexTable"); m_buf = NULL;}
 	// timing debug
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 	// make new buffer to hold top docids/scores/termBits
 	m_bufSize = (8 + 4 + 2) * topn;
 	m_buf = (char *) mmalloc ( m_bufSize ,"IndexTable" );
 	if ( ! m_buf ) return log("IndexTable::setTopDocIds: mmalloc failed");
 	// set our arrays as offsets into the allocated buffer
-	m_topDocIds       = (long long      *) m_buf;
+	m_topDocIds       = (int64_t      *) m_buf;
 	m_topScores       = (long           *) (m_buf + 8     * topn);
 	m_topBitScores    = (unsigned short *) (m_buf + (8+4) * topn);
 	m_maxNumTopDocIds = topn ;
@@ -436,7 +436,7 @@ bool IndexTable::setTopDocIds ( long topn , bool forcePhrases ) {
 	// these are the min info from the topDocIds
 	char      minBitScore  ;
 	long      minScore     ;
-	long long minDocId     ;
+	int64_t minDocId     ;
 	// get new lowest parms
 	getLowestTopDocId ( &minBitScore , &minScore , &minDocId );
 	// timing debug
@@ -463,7 +463,7 @@ bool IndexTable::setTopDocIds ( long topn , bool forcePhrases ) {
 			continue;
 	addIt:
 		// get the docId
-		long long docId = (m_docIdBits[i]>>1) &0x0000003fffffffffLL;
+		int64_t docId = (m_docIdBits[i]>>1) &0x0000003fffffffffLL;
 		// kick out the lowest
 		long j = getLowestTopDocId ( );
 		// debug
@@ -505,7 +505,7 @@ void IndexTable::sortTopDocIds ( ) {
 	doSwap:
 		long           tmpScore     = m_topScores     [i-1];
 		unsigned short tmpBitScore  = m_topBitScores  [i-1];
-		long long      tmpDocId     = m_topDocIds     [i-1];
+		int64_t      tmpDocId     = m_topDocIds     [i-1];
 		m_topScores     [i-1]  = m_topScores     [i  ];
 		m_topBitScores  [i-1]  = m_topBitScores  [i  ];
 		m_topDocIds     [i-1]  = m_topDocIds     [i  ];
@@ -540,7 +540,7 @@ bool IndexTable::growTable ( long growBy ) {
 	n = highest;
 	// . alloc new arrays
 	// . make sure to set all scores to 0
-	long long *newDocIdBits  = (long long *) mmalloc ( n * 8,"IndexTable");
+	int64_t *newDocIdBits  = (int64_t *) mmalloc ( n * 8,"IndexTable");
 	long      *newScores     = (long      *) mcalloc ( n * 4,"IndexTable");
 	unsigned short *newBits  = (unsigned short *)mmalloc(n*2,"IndexTable");
 	// return false on alloc error
@@ -599,7 +599,7 @@ long IndexTable::getNumResults ( bool thatIncludeAllTerms ) {
 	return count;
 }
 
-long long *IndexTable::getTopDocIds ( bool isAdmin ) { 
+int64_t *IndexTable::getTopDocIds ( bool isAdmin ) { 
 	if ( isAdmin ) {
 		log("----- # top docIds = %li",m_numTopDocIds);
 		for ( long i = 0 ; i < m_numTopDocIds; i++ ) 

@@ -44,10 +44,10 @@ public:
 	bool       m_isSuperTurk;
 	char       m_turkUser[256];
 	// hash64n() of m_turkUser:
-	long long  m_callertuid64;
+	int64_t  m_callertuid64;
 	//char       m_turkUserEncoded[512];
 	char       m_showTurkUser[256];
-	long long  m_tuid64;
+	int64_t  m_tuid64;
 	long       m_turkIp;
 	long       m_date1;
 	long       m_date2;
@@ -311,7 +311,7 @@ bool gotBanTagList ( State60 *st ) {
 		// null term it
 		data[dsize-3] = '\0';
 		// hash the turkip or turkusername that is banned
-		long long key64 = hash64n(data);
+		int64_t key64 = hash64n(data);
 		// add to table now. return true w/ g_errno set on error
 		if ( ! s_banTable.addKey ( &key64 ) ) goto haderror;
 	}
@@ -351,7 +351,7 @@ bool banTableReady ( State60 *st ) {
 	// maybe the ip was passed in
 	char *banTurkIp = st->m_r.getString("banevalip",NULL);
 	// make a 64 bit key of what we want to ban/unban
-	long long  key64 = 0LL;
+	int64_t  key64 = 0LL;
 	char      *data = NULL;
 	// use ip if that not there
 	if ( banTurkUser ) {
@@ -359,7 +359,7 @@ bool banTableReady ( State60 *st ) {
 		data  = banTurkUser;
 	}
 	else if ( banTurkIp ) {
-		key64 = (long long)atoip(banTurkIp);
+		key64 = (int64_t)atoip(banTurkIp);
 		data  = banTurkIp;
 	}
 	else {
@@ -764,7 +764,7 @@ public:
 	float m_totalEarned;
 	char  m_isBanned;
 	char  m_isSuperTurk;
-	long long m_tuid64;
+	int64_t m_tuid64;
 
 	//long m_numYoungSubmissions; // numyoungvotes
 	long m_turkUserOff;
@@ -820,7 +820,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		// was good or bad or unconfirmed? 
 		//char vv = data[dsize-3]; // o->good a->bad e->unconfirmed
 		// make key
-		long long tuid64 = hash64n ( user );
+		int64_t tuid64 = hash64n ( user );
 		// already in table?
 		TurkUserStat *tus = (TurkUserStat *)tust.getValue(&tuid64);
 		// make a new one if not there
@@ -1106,7 +1106,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		if ( st->m_isSuperTurk && ! targetSuper ) {
 			// is the turkusername banned?
 			long ban = 1;
-			//long long tuid64 = hash64n(tun);
+			//int64_t tuid64 = hash64n(tun);
 			//Tag *btag = (Tag *)s_banTable.getValue ( &tuid64 );
 			//if ( btag ) ban = 0;
 			if ( tus->m_isBanned ) ban = 0;
@@ -1171,7 +1171,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 			QUICKPOLL(TURKNICE);
 			if ( ! showIps ) break;
 			long ip = tus->m_turkUserIps[k];
-			long ip64 = (long long)ip;
+			long ip64 = (int64_t)ip;
 			long ban = 1;
 			char *cmd = "banip";
 			Tag *btag = (Tag *)s_banTable.getValue ( &ip64 );
@@ -1686,7 +1686,7 @@ public:
 	SafeBuf      m_sb;
 	CaptchaState m_cst;
 	bool         m_isSuperTurk;
-	long long    m_tuid64;
+	int64_t    m_tuid64;
 	//char         m_isRootAdmin;
 	char         m_coll [ MAX_COLL_LEN + 1];
 	long         m_collLen;
@@ -2116,7 +2116,7 @@ bool getResults ( State61 *st ) {
 	// . so we can end up directly turking every event if we do not
 	//   have 5 total turks that whose 5 indirect votes are required
 	//   to give consensus/confirmation on an event.
-	long long tuh64 = st->m_tuid64;
+	int64_t tuh64 = st->m_tuid64;
 	if ( st->m_round == 2 ) tuh64  = 0;
 
 	// advance!
@@ -2211,12 +2211,12 @@ bool getResults ( State61 *st ) {
 
 class TurkLock {
 public:
-	long long m_tuid64;
+	int64_t m_tuid64;
 	long      m_turkIp;
 	unsigned long m_adch32;
 	unsigned long m_adth32;
 	bool      m_isSuperTurk;
-	long long m_uh48;
+	int64_t m_uh48;
 	time_t    m_addTime;
 	uint64_t m_templateHash64;
 	bool m_isTurkSpecialQuery;
@@ -2318,7 +2318,7 @@ bool gotResults ( State61 *st ) {
 		// remove it?
 		if ( ! nuke ) continue;
 		// get key
-		long long uh48 = tk->m_uh48;
+		int64_t uh48 = tk->m_uh48;
 		// ok, it is expired
 		log("turk: force releasing turk lock on uh48=%llu",uh48);
 		// do it
@@ -2340,7 +2340,7 @@ bool gotResults ( State61 *st ) {
 		// no need to do lock checking if doing a direct query
 		if ( st->m_isTurkSpecialQuery ) break;
 		// shortcut
-		long long uh48 = mr->m_urlHash48;
+		int64_t uh48 = mr->m_urlHash48;
 		// shortcut
 		HashTableX *ht = &g_lockerTable;
 		// check our lock table
@@ -2638,7 +2638,7 @@ bool Msg1e::processLoop ( ) {
 	///////////////////////////
 
 	if ( m_stage == 0 ) {
-		long long docId = m_r->getLongLong("docid",0LL);
+		int64_t docId = m_r->getLongLong("docid",0LL);
 		log("turk: loading old title rec for turked docid=%llu "
 		    ,docId);
 		if ( docId == 0LL ) { g_errno = ENODOCID; return true; }
@@ -2665,12 +2665,12 @@ bool Msg1e::processLoop ( ) {
 	//////////////
 
 	// get key
-	long long uh48 = xd->getFirstUrlHash48();
+	int64_t uh48 = xd->getFirstUrlHash48();
 	char *url = xd->getFirstUrl()->getUrl();
 
 	// need this now i guess
 	char      *turkUser = m_r->getString("evaluser",NULL);
-	long long  tuid64 = hash64n ( turkUser );
+	int64_t  tuid64 = hash64n ( turkUser );
 
 	// shortcut
 	HashTableX *ht = &g_lockerTable;
@@ -2739,11 +2739,11 @@ bool Msg1e::processLoop ( ) {
 		//char *userIpStr = m_r->getString("turkip",NULL);
 		//long  turkIp    = 0;
 		//if ( userIpStr ) turkIp = atoip(userIpStr);
-		// get long longs since they are printed as 32-bit unsigned
+		// get int64_ts since they are printed as 32-bit unsigned
 		// so if they exceed 3 billion or so HttpRequest::getLong()
 		// would falter!
 		//longlong adch64=m_r->getLongLong("addressdatecontenthash",0);
-		//long long adth64=m_r->getLongLong("addressdatetaghash",0);
+		//int64_t adth64=m_r->getLongLong("addressdatetaghash",0);
 		// but ultimately they are 32 bit unsigned
 		//unsigned long adch32 = (unsigned long)adch64;
 		//unsigned long adth32 = (unsigned long)adth64;
@@ -3438,14 +3438,14 @@ bool printCaptcha ( State61 *st ) {
 	return printCaptcha2 ( sb );
 }
 
-bool isTurkBanned ( long long *tuid64 , long turkIp ) {
+bool isTurkBanned ( int64_t *tuid64 , long turkIp ) {
 	// is the turkusername banned?
 	if ( tuid64 ) {
 		Tag *btag = (Tag *)s_banTable.getValue ( tuid64 );
 		if ( btag ) return true;
 	}
 	if ( turkIp ) {
-		long ip64 = (long long)turkIp;
+		long ip64 = (int64_t)turkIp;
 		Tag *btag = (Tag *)s_banTable.getValue ( &ip64 );
 		if ( btag ) return true;
 	}

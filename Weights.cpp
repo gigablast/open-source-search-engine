@@ -431,7 +431,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	if ( m_isLinkText ) return true;
 
 	// ez vars
-	long long  *wids  = words->getWordIds ();		
+	int64_t  *wids  = words->getWordIds ();		
 	long        nw    = words->getNumWords();
 
 	// if no words, nothing to do
@@ -444,11 +444,11 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	//   make parsing inconsistencies for really large docs...
 	if ( nw > 80000 ) nw = 80000;
 
-	long long   ringWids [ NUMWORDS ];
+	int64_t   ringWids [ NUMWORDS ];
 	long        ringPos  [ NUMWORDS ];
 	long        ringi = 0;
 	long        count = 0;
-	long long   h     = 0;
+	int64_t   h     = 0;
 
 	// . make the hash table
 	// . make it big enough so there are gaps, so chains are not too long
@@ -460,7 +460,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	if ( need < 50000 ) buf = tmpBuf;
 	else                buf = (char *)mmalloc ( need , "WeightsSet3" );
 	char      *ptr        = buf;
-	long long *hashes     = (long long *)ptr; ptr += nb * 8;
+	int64_t *hashes     = (int64_t *)ptr; ptr += nb * 8;
 	long      *vals       = (long      *)ptr; ptr += nb * 4;
 	if ( ! buf ) return false;
 
@@ -641,17 +641,17 @@ bool Weights::set2 ( Words   *words   ,
 	if ( ! m_countTablePtr ) { char *xx = NULL; *xx = 0; }
 
 	// ez var
-	long long  *wids  = words->getWordIds ();		
+	int64_t  *wids  = words->getWordIds ();		
 	nodeid_t   *tids  = words->getTagIds  ();
 	//char      **wptrs = words->m_words;
 	//long       *wlens = words->m_wordLens;
 	long        nw    = words->getNumWords();
-	long long  *pids  = phrases->getPhraseIds();
+	int64_t  *pids  = phrases->getPhraseIds();
 	HashTableX *tt1   = m_countTablePtr;
 
 	//long      phrcountLast = 0;
 	long      nexti        = -10;
-	long long pidLast      = 0;
+	int64_t pidLast      = 0;
 
 	//logf(LOG_DEBUG,"build: still doing long sanity check in here");
 
@@ -670,13 +670,13 @@ bool Weights::set2 ( Words   *words   ,
 
 		// . RULE #15
 		// . try to inline this
-		long long nextWid = 0;
-		long long lastPid = 0;
+		int64_t nextWid = 0;
+		int64_t lastPid = 0;
 		long      nwp = phrases->getNumWordsInPhrase(i);
 		if ( nwp > 0 ) nextWid = wids [i + nwp - 1] ;
 		if ( i == nexti ) lastPid = pidLast;
 		// get current pid
-		long long pid = pids[i];
+		int64_t pid = pids[i];
 		// PHRASE WEIGHT HACK:
 		// if it is 0, force a phrase so that "News &amp; Events"
 		// is seen as a phrase as far as Weights.cpp is concerned
@@ -840,14 +840,14 @@ bool Weights::set2 ( Words   *words   ,
 		// . set1() must have been called for this to work
 		// . apply word weight based on punct to our left, if any
 		if ( i  >0  && !wids[i-1] && (!tids || !tids[i-1]) ) {
-			m_ww[i] = ((long long)m_ww[i]*(long long)m_ww[i-1])/DW;
+			m_ww[i] = ((int64_t)m_ww[i]*(int64_t)m_ww[i-1])/DW;
 			// debug purposes here
 			if ( m_rvw ) m_rvw [i*MAX_RULES+4] *= 
 					     ((float)m_ww[i-1])/(float)DW;
 		}
 		// apply word weight based on punct to our right, if any
 		if ( i+1<nw && !wids[i+1] && (!tids || !tids[i+1]) ) {
-			m_ww[i] = ((long long)m_ww[i]*(long long)m_ww[i+1])/DW;
+			m_ww[i] = ((int64_t)m_ww[i]*(int64_t)m_ww[i+1])/DW;
 			// debug purposes here
 			if ( m_rvw ) m_rvw [i*MAX_RULES+4] *= 
 					     ((float)m_ww[i+1])/(float)DW;
@@ -886,11 +886,11 @@ bool Weights::set2 ( Words   *words   ,
 		// sanity check
 		if ( nwp == 99 ) { char *xx = NULL; *xx = 0; }
 		// now mod the score
-		long long avg = m_pw[i];
+		int64_t avg = m_pw[i];
 		// weight by punct in between
 		for ( long j = i+1 ; j < i+nwp ; j++ ) {
 			if ( wids[j] ) continue;
-			avg = (avg * (long long)m_pw[j]) / DW;
+			avg = (avg * (int64_t)m_pw[j]) / DW;
 		}
 		// do not demote all the way to zero, we still want to index it
 		// and when normalized on a 100 point scale, like when printed
@@ -921,10 +921,10 @@ bool Weights::set2 ( Words   *words   ,
 //   wid2 is "good"
 // . we store sliderParm in titleRec so we can update it along
 //   with title and header weights on the fly from the spider controls
-void getWordToPhraseRatioWeights ( long long   pid1 , // pre phrase
-				   long long   wid1 ,
-				   long long   pid2 ,
-				   long long   wid2 , // post word
+void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
+				   int64_t   wid1 ,
+				   int64_t   pid2 ,
+				   int64_t   wid2 , // post word
 				   float      *ww   ,
 				   float      *pw   ,
 				   HashTableX *tt1  ,
@@ -1098,8 +1098,8 @@ void getWordToPhraseRatioWeights ( long long   pid1 , // pre phrase
 
 	/*
 	if ( phrcountMax >= 0 ) {
-		long long sh = getPrefixHash ( (char *)NULL , 0 , NULL , 0 );
-		long long tid = g_indexdb.getTermId ( sh , wid1 );
+		int64_t sh = getPrefixHash ( (char *)NULL , 0 , NULL , 0 );
+		int64_t tid = g_indexdb.getTermId ( sh , wid1 );
 		logf(LOG_DEBUG,"build: phrcountMax=%li wrdCount1=%li "
 		     "*ww=%.4f for word with tid=%llu",
 		     phrcountMax,wrdcount1,(float)*ww,tid);
@@ -1164,10 +1164,10 @@ bool Weights::set1 ( Words    *words              ,
 	if ( ! m_countTablePtr ) { char *xx = NULL; *xx = 0; }
 
 	nodeid_t   *tids  = words->getTagIds  ();
-	long long  *wids  = words->getWordIds ();		
+	int64_t  *wids  = words->getWordIds ();		
 	char      **wptrs = words->m_words;
 	long       *wlens = words->m_wordLens;
-	long long  *pids  = phrases->getPhraseIds();
+	int64_t  *pids  = phrases->getPhraseIds();
 	long tid = 0;
 
 	// these punct weights are used for RULE #4
@@ -1389,8 +1389,8 @@ bool Weights::set1 ( Words    *words              ,
 			// skip if not a word
 			if ( ! wids[j] ) continue;
 			// hash the word and phrase ids with the section num
-			long long hw = wids[j] * (long long)section;
-			long long hp = pids[j] * (long long)section;
+			int64_t hw = wids[j] * (int64_t)section;
+			int64_t hp = pids[j] * (int64_t)section;
 			// . do not demote first occurence of word in a 
 			//   low-scoring section, but only  demote successive 
 			//   occurences in low-scoring sections. 
@@ -1781,8 +1781,8 @@ bool Weights::set1 ( Words    *words              ,
 	// . RULE #9
 	// . if this is NOT the first time this word has occurred in this
 	//   particular fragment/sentence, then quarter its weight
-	// . long long h = hash64 ( wids[i] , fragNum );
-	long long h = wids[i] * (long long)fragNum;
+	// . int64_t h = hash64 ( wids[i] , fragNum );
+	int64_t h = wids[i] * (int64_t)fragNum;
 	if ( tt4.getScore(&h)) {
 		m_ww[i] = (long)(m_ww[i]*.25);
 		// debug purposes
@@ -1790,7 +1790,7 @@ bool Weights::set1 ( Words    *words              ,
 	}
 	if ( ! tt4.addTerm ( &h ) ) return false;
 	if ( pids[i] ) {
-		h = pids[i] * (long long)fragNum;
+		h = pids[i] * (int64_t)fragNum;
 		if ( tt4.getScore(&h)) {
 			m_pw[i] = (long)(m_pw[i]*.25);
 			if ( m_rvw ) m_rvp[i*MAX_RULES+9] *= .25;
@@ -2490,7 +2490,7 @@ bool Weights::set4 ( ) {
 	// . i.e. next[13] = 23--> word #23 FOLLOWS word #13 in the linked list
 	long      *next          = (long      *)p;  p += size * 4;  
 	// hash of this word's stem (or word itself if useStem if false)
-	long long *bucketHash    = (long long *)p;  p += size * 8;
+	int64_t *bucketHash    = (int64_t *)p;  p += size * 8;
 	// that word's position in document
 	long      *bucketWordPos = (long      *)p;  p += size * 4;
 	// profile of a word
@@ -2519,7 +2519,7 @@ bool Weights::set4 ( ) {
 	//bool usePos = false;
 	//if ( words->m_tagIds ) usePos = true;
 
-	long long *wids = words->getWordIds();
+	int64_t *wids = words->getWordIds();
 
 	// . loop through each word 
 	// . hash their stems and place in linked list
@@ -2537,7 +2537,7 @@ bool Weights::set4 ( ) {
 		//		blen = words->getPhraseStem(i,buf,100);
 		//		if (blen<=0) continue;
 		// get the hash of the ith word
-		long long h = words->getWordId(i);
+		int64_t h = words->getWordId(i);
 		// use secondary wordId if available
 		//if ( words->getStripWordId(i) ) 
 		//	h = words->getStripWordId(i);

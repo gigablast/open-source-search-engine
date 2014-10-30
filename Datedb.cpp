@@ -18,16 +18,16 @@ void Datedb::reset() { m_rdb.reset(); }
 bool Datedb::init ( ) {
 
 	// sanity check
-	long long termId = 0x00001915c8f5e747LL;
+	int64_t termId = 0x00001915c8f5e747LL;
 	long      date   = 0x0badf00d;
 	char      score  = 123;
-	long long docId =  247788576824LL;
+	int64_t docId =  247788576824LL;
 	key128_t k = makeKey ( termId,date,score,docId,false);
 	// parse it up to test
 	if ( g_datedb.getDate  (&k) != date   ) { char *xx=NULL;*xx=0; }
 	if ( g_indexdb.getScore((char *)&k) != score  ) { char *xx=NULL;*xx=0;}
 	if ( g_datedb.getDocId (&k) != docId  ) { char *xx=NULL;*xx=0; }
-	long long rt = g_datedb.getTermId(&k);
+	int64_t rt = g_datedb.getTermId(&k);
 	if ( g_datedb.getTermId(&k) != termId ) { char *xx=NULL;*xx=0; }
 	if ( rt                     != termId ) { char *xx=NULL;*xx=0; }
 	// . what's max # of tree nodes?
@@ -208,7 +208,7 @@ bool Datedb::verify ( char *coll ) {
 
 // . see Datedb.h for format of the 12 byte key
 // . TODO: substitute var ptrs if you want extra speed
-key128_t Datedb::makeKey ( long long          termId   , 
+key128_t Datedb::makeKey ( int64_t          termId   , 
 			   unsigned long      date     ,
 			   unsigned char      score    , 
 			   uint64_t docId    , 

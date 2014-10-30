@@ -32,7 +32,7 @@ class Wiktionary {
 
 
 	/*
-	uint8_t getLangId ( long long *wid ) {
+	uint8_t getLangId ( int64_t *wid ) {
 		long slot = m_langTable.getSlot ( wid );
 		if ( slot < 0 ) return langUnknown;
 		// amibguous?
@@ -44,7 +44,7 @@ class Wiktionary {
 		return *data;
 	};
 
-	uint8_t getPosFlags ( long long *wid , uint8_t langId ) {
+	uint8_t getPosFlags ( int64_t *wid , uint8_t langId ) {
 		long slot = m_langTable.getSlot ( wid );
 		if ( slot < 0 ) return 0;
 		// amibguous?
@@ -63,7 +63,7 @@ class Wiktionary {
 	// "en|bushmeat,bushmeats\n"
 	// so you can parse the word forms out and index them
 	// LATER we could add the Part of Speech...
-	char *getSynSet ( long long wid , uint8_t langId ) {
+	char *getSynSet ( int64_t wid , uint8_t langId ) {
 		// 0? that's bad
 		if ( wid == 0LL ) { char *xx=NULL;*xx=0;}//return NULL;
 		// hash it up like we did when adding to m_tmp table
@@ -87,7 +87,7 @@ class Wiktionary {
 		//return m_synBuf.getBufStart() + *offPtr;
 	};
 
-	char *getNextSynSet ( long long wid , uint8_t langId , char *prev ) {
+	char *getNextSynSet ( int64_t wid , uint8_t langId , char *prev ) {
 		// hash it up like we did when adding to m_tmp table
 		wid ^= g_hashtab[0][langId];
 		long slot;

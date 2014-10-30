@@ -125,8 +125,8 @@ class Host {
 //	time_t     m_lastComm ;      // time of last communication
 //	time_t     m_lastAttempt ;   // time of last attempted communication
 //	long       m_bandwidth;      // bytes per second
-//	long long  m_bytesRecvdFrom; // why do we need this?
-//	long long  m_bytesSentTo;    // why do we need this?
+//	int64_t  m_bytesRecvdFrom; // why do we need this?
+//	int64_t  m_bytesSentTo;    // why do we need this?
 	unsigned short m_port ;          // Mattster Protocol (MP) UDP port
 	//unsigned short m_portShotgun;    // for shotgunning
 	//unsigned short m_port2;          // the high priority port
@@ -143,7 +143,7 @@ class Host {
 	double         m_loadAvg;
 	float          m_percentMemUsed;
 	// the first time we went OOM (out of mem, i.e. >= 99% mem used)
-	long long      m_firstOOMTime;
+	int64_t      m_firstOOMTime;
 	// cpu usage
 	float          m_cpuUsage;
 
@@ -170,15 +170,15 @@ class Host {
 	collnum_t      m_dailyMergeCollnum;
 
 	// last time g_hostdb.ping(i) was called for this host in milliseconds.
-	long long      m_lastPing;
+	int64_t      m_lastPing;
 	// . first time we sent an unanswered ping request to this host
 	// . used so we can determine when to send an email alert
-	long long      m_startTime;
+	int64_t      m_startTime;
 	// is a ping in progress for this host?
 	char           m_inProgress1;
 	// shotgun
 	char           m_inProgress2;
-	long long      m_numPingReplies;
+	int64_t      m_numPingReplies;
 
 	// send to eth 0 or 1 when sending to this host?
 	char           m_preferEth;
@@ -224,7 +224,7 @@ class Host {
 	// used for logging when a host goes dead for the first time
 	bool           m_wasAlive;
 	bool           m_wasEverAlive;
-	long long      m_timeOfDeath;
+	int64_t      m_timeOfDeath;
 	// this toggles between 0 and 1 for alternating packet sends to
 	// eth0 and eth1 of this host
 	char           m_shotgunBit;
@@ -256,14 +256,14 @@ class Host {
 	long           m_forwardIp;
 	short          m_forwardPort;
 
-	long long      m_dgramsTo;
-	long long      m_dgramsFrom;
+	int64_t      m_dgramsTo;
+	int64_t      m_dgramsFrom;
 
 	char           m_repairMode;
 
 	// for timing how long the msg39 takes from this host
 	long           m_splitsDone;
-	long long      m_splitTimes;
+	int64_t      m_splitTimes;
 
 	// . the hostdb to which this host belongs!
 	// . getHost(ip,port) will return a Host ptr from either 
@@ -395,9 +395,9 @@ class Hostdb {
 
 	bool kernelErrors (Host *h) { return h->m_kernelErrors; };
 
-	long long getNumGlobalRecs ( );
+	int64_t getNumGlobalRecs ( );
 
-	long long getNumGlobalEvents ( );
+	int64_t getNumGlobalEvents ( );
 
 	//Host *getLiveHostInGroup ( long groupId );
 	Host *getLiveHostInShard ( long shardNum );
@@ -659,10 +659,10 @@ class Hostdb {
 	char  m_useTmpCluster;
 
 	//uint32_t getGroupId (char rdbId, void *key, bool split = true);
-	//uint32_t getGroupIdFromDocId ( long long d ) ;
+	//uint32_t getGroupIdFromDocId ( int64_t d ) ;
 
 	uint32_t getShardNum (char rdbId, void *key );
-	uint32_t getShardNumFromDocId ( long long d ) ;
+	uint32_t getShardNumFromDocId ( int64_t d ) ;
 
 	// assume to be for posdb here
 	uint32_t getShardNumByTermId ( void *key );
@@ -686,17 +686,17 @@ inline uint32_t getMyShardNum ( ) {
 	return g_hostdb.m_myHost->m_shardNum; 
 };
 
-inline uint32_t getShardNumFromDocId ( long long d ) {
+inline uint32_t getShardNumFromDocId ( int64_t d ) {
 	return g_hostdb.getShardNumFromDocId ( d );
 };
 
-long getShardNumFromTermId ( long long termId );
+long getShardNumFromTermId ( int64_t termId );
 
 //inline uint32_t getGroupId ( char rdbId, void *key,bool split = true) {
 //	return g_hostdb.getGroupId ( rdbId , key , split );
 //};
 
-//inline uint32_t getGroupIdFromDocId ( long long d ) {
+//inline uint32_t getGroupIdFromDocId ( int64_t d ) {
 //	return g_hostdb.getGroupIdFromDocId ( d );
 //};
 

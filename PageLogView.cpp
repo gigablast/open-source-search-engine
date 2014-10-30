@@ -290,14 +290,14 @@ void gotRemoteLogWrapper(void *state, UdpSlot *slot) {
 
 
 	while(1) {
-		long long timeStamp = 9223372036854775807LL;
-		//long long timeStamp = LONG_LONG_MAX;
+		int64_t timeStamp = 9223372036854775807LL;
+		//int64_t timeStamp = LONG_LONG_MAX;
 		long ndx = -1;
 		//get next winner
 		for (long i = 0; i < st->m_numSlots; i++) {
 			if(!st->m_readBufPtrs[i]) continue;
 			
-			long long t = atoll(st->m_readBufPtrs[i]);
+			int64_t t = atoll(st->m_readBufPtrs[i]);
 			if(t > timeStamp) continue;
 			timeStamp = t;
 			ndx = i;

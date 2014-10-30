@@ -320,7 +320,7 @@ bool Scraper::scrapeProCog ( ) {
 // . sets g_errno on error
 bool Scraper::gotDocIds ( ) {
 	// cache the top result
-	//long long docId = m_msg39->m_topDocId;
+	//int64_t docId = m_msg39->m_topDocId;
 	//float     score = m_msg39->m_topScore;
 	// store in local cache
 	long key32 = m_msg39->m_queryHash32;

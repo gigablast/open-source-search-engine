@@ -11,7 +11,7 @@
 // m_url[0]!=0 if this is a url-based request and NOT docid-based
 class Msg22Request {
 public:
-	long long m_docId;
+	int64_t m_docId;
 	long      m_niceness;
 	long      m_maxCacheAge;
 	collnum_t m_collnum;
@@ -39,7 +39,7 @@ class Msg22 {
 	static bool registerHandler ( ) ;
 
 	bool getAvailDocIdOnly ( class Msg22Request  *r              ,
-				 long long preferredDocId ,
+				 int64_t preferredDocId ,
 				 char *coll ,
 				 void *state ,
 				 void (* callback)(void *state) ,
@@ -50,7 +50,7 @@ class Msg22 {
 	// . use a maxCacheAge of 0 to avoid the cache
 	bool getTitleRec ( class Msg22Request *r ,
 			   char      *url     ,
-			   long long  docId   ,
+			   int64_t  docId   ,
 			   char      *coll    ,
 			   char     **titleRecPtrPtr  ,
 			   long      *titleRecSizePtr ,
@@ -64,7 +64,7 @@ class Msg22 {
 			   long       timeout        ,
 			   bool       doLoadBalancing = false );
 
-	long long getAvailDocId ( ) { return m_availDocId; };
+	int64_t getAvailDocId ( ) { return m_availDocId; };
 
 	// public so C wrappers can call
 	void gotReply ( ) ;
@@ -83,7 +83,7 @@ class Msg22 {
 	//void     *m_state3      ;
 
 	bool      m_found;
-	long long m_availDocId;
+	int64_t m_availDocId;
 	// the error getting the title rec is stored here
 	long      m_errno;
 

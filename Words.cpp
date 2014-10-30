@@ -465,12 +465,12 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 	// . google agrees
 	// . but what about "re'sume"?
 	if ( computeWordIds ) {
-		long long h = hash64Lower_utf8(&s[j],wlen);
+		int64_t h = hash64Lower_utf8(&s[j],wlen);
 		m_wordIds [m_numWords] = h;
 		// until we get an accent removal algo, comment this
 		// out and possibly use the query synonym pipeline
 		// to search without accents. MDW
-		//long long h2 = hash64AsciiLowerE(&s[j],wlen);
+		//int64_t h2 = hash64AsciiLowerE(&s[j],wlen);
 		//if ( h2 != h ) m_stripWordIds [m_numWords] = h2;
 		//else           m_stripWordIds [m_numWords] = 0LL;
 		//m_stripWordIds[m_numWords] = 0;
@@ -546,10 +546,10 @@ bool Words::allocateWordBuffers(long count, bool tagIds) {
 	p += sizeof(char*) * count;
 	m_wordLens = (long      *)p ;
 	p += sizeof(long)* count;
-	m_wordIds  = (long long *)p ;
-	p += sizeof (long long) * count;
-	//m_stripWordIds  = (long long *)p ;
-	//p += sizeof (long long) * count;
+	m_wordIds  = (int64_t *)p ;
+	p += sizeof (int64_t) * count;
+	//m_stripWordIds  = (int64_t *)p ;
+	//p += sizeof (int64_t) * count;
 	m_nodes = (long *)p;
 	p += sizeof(long) * count;
 
@@ -602,7 +602,7 @@ bool Words::hash ( TermTable      *table          ,
 		   Weights        *weights        ,
 		   unsigned long   baseScore      ,
 		   unsigned long   maxScore       ,
-		   long long       startHash      ,
+		   int64_t       startHash      ,
 		   char           *prefix1        ,
 		   long            prefixLen1     ,
 		   char           *prefix2        ,
@@ -635,7 +635,7 @@ bool Words::hash ( TermTable      *table          ,
 		norm    = DW;
 	}
 	// the hash of each word
-	long long h;
+	int64_t h;
 	// now hash each form of each word
 	for (long i = 0 ; i < m_numWords; i++ ) {
 		// don't hash punct words
@@ -1006,9 +1006,9 @@ long Words::isFloat  ( long n, float& f) {
 	return offset;
 }
 
-static uint8_t s_findMaxIndex(long long *array, int num, int *wantmax = NULL) {
+static uint8_t s_findMaxIndex(int64_t *array, int num, int *wantmax = NULL) {
 	if(!array || num < 2 || num > 255) return(0);
-	long long max, oldmax;
+	int64_t max, oldmax;
 	int idx = 0;
 	max = oldmax = INT_MIN;
 	for(int x = 0; x < num; x++) {
@@ -1086,15 +1086,15 @@ long Words::getLanguage( Sections *sections ,
 
 	// . take a random sample of words and look them up in the
 	//   language dictionary
-	//HashTableT<long long, char> ht;
+	//HashTableT<int64_t, char> ht;
 	HashTableX ht;
-	long long langCount[MAX_LANGUAGES];
-	long long langWorkArea[MAX_LANGUAGES];
+	int64_t langCount[MAX_LANGUAGES];
+	int64_t langWorkArea[MAX_LANGUAGES];
 	long numWords = m_numWords;
 	//long skip = numWords/maxSamples;
 	//if ( skip == 0 ) skip = 1;
 	// reset the language count
-	memset(langCount, 0, sizeof(long long)*MAX_LANGUAGES);
+	memset(langCount, 0, sizeof(int64_t)*MAX_LANGUAGES);
 	// sample the words
 	//long wordBase  = 0;
 	long wordi     = 0;
@@ -1107,7 +1107,7 @@ long Words::getLanguage( Sections *sections ,
 	// . google seems to index SEC_MARQUEE so i took that out of badFlags
 	long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
 	// shortcuts
-	long long *wids  = m_wordIds;
+	int64_t *wids  = m_wordIds;
 	long      *wlens = m_wordLens;
 	char     **wptrs = m_words;
 

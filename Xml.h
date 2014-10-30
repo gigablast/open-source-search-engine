@@ -74,7 +74,7 @@ class Xml {
 	char     *getNode       ( long n ) {return m_nodes[n].m_node; };
 	long      getNodeLen    ( long n ) {return m_nodes[n].m_nodeLen;};
 	nodeid_t  getNodeId     ( long n ) {return m_nodes[n].m_nodeId;};
-	long long getNodeHash   ( long n ) {return m_nodes[n].m_hash;};
+	int64_t getNodeHash   ( long n ) {return m_nodes[n].m_hash;};
 	bool      isVisible     ( long n ) {return m_nodes[n].m_isVisible;};
 
 	// get all nodes!
@@ -102,8 +102,8 @@ class Xml {
 				bool      defaultBool     = 0   ); 
 	long      getLong     ( long n0 , long n1 , char *tagName ,
 			        long      defaultLong     = 0   ); 
-	long long getLongLong ( long n0 , long n1 , char *tagName ,
-			        long long defaultLongLong = 0LL ); 
+	int64_t getLongLong ( long n0 , long n1 , char *tagName ,
+			        int64_t defaultLongLong = 0LL ); 
 	float     getFloat    ( long n0 , long n1 , char *tagName ,
 			        float defaultFloat = 0.0 );
 	char     *getString   ( long n0 , long n1 , char *tagName , long *len ,
@@ -115,7 +115,7 @@ class Xml {
 		return getBool(0,m_numNodes,tagName,defaultBool); }
 	long  getLong     ( char *tagName, long  defaultLong = 0 ) {
 		return getLong(0,m_numNodes,tagName,defaultLong); }
-	long long getLongLong (char *tagName, long long defaultLongLong = 0LL){
+	int64_t getLongLong (char *tagName, int64_t defaultLongLong = 0LL){
 		return getLongLong(0,m_numNodes,tagName,defaultLongLong); }
 	float getFloat   ( char *tagName, float defaultFloat = 0.0 ) {
 		return getFloat(0,m_numNodes,tagName,defaultFloat); }
@@ -211,7 +211,7 @@ class Xml {
 				 bool skipLeadingSpaces ) const;
 
 	// used because "s" may have words separated by periods
-	long long getCompoundHash ( char *s , long len ) const;
+	int64_t getCompoundHash ( char *s , long len ) const;
 
 	// . set the m_parentNum of each XmlNode in our m_nodes array
 	// . TODO: do it on demand?

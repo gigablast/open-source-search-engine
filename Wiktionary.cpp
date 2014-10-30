@@ -56,8 +56,8 @@ bool Wiktionary::test ( ) {
 
 	// test it out!
 	char *str = "love";//pie"; //forsake";
-	//long long wid = hash64Lower_utf8(str);
-	long long wid = hash64n(str);
+	//int64_t wid = hash64Lower_utf8(str);
+	int64_t wid = hash64n(str);
 	// use this now
 	char *p = getSynSet ( wid, langEnglish );
 	//char *p = (char *)m_synTable.getValue ( &wid );
@@ -76,7 +76,7 @@ bool Wiktionary::test ( ) {
 	*end = '\0';
 	// cast it
 	// only the first 6 bytes are valid
-	//long long *termIds = (long long *)p;
+	//int64_t *termIds = (int64_t *)p;
 	// header
 	log("wikt: test \"%s\" -> \"%s\"",str,p);
 	// back
@@ -276,15 +276,15 @@ bool Wiktionary::load() {
 		if ( ! g_conf.m_isLive ) return true;
 
 		// the size
-		long long h1 = m_synTable.getNumSlotsUsed();
-		long long h2 = m_synBuf  .length();
-		long long h = hash64 ( h1 , h2 );
+		int64_t h1 = m_synTable.getNumSlotsUsed();
+		int64_t h2 = m_synBuf  .length();
+		int64_t h = hash64 ( h1 , h2 );
 		char *tail1 = (char *)m_synTable.m_keys;
 		char *tail2 = m_synBuf  .getBufStart()+h2-1000;
 		h = hash64 ( tail1 , 1000 , h );
 		h = hash64 ( tail2 , 1000 , h );
-		long long nn = -662959013613045013LL;//-6197041242898026762LL;
-		long long nn2 = -2511412928924361809LL;
+		int64_t nn = -662959013613045013LL;//-6197041242898026762LL;
+		int64_t nn2 = -2511412928924361809LL;
 		if ( h != nn && h != nn2 ) {
 			log("gb: %s or %s checksum is not approved for "
 			    "live service (%lli != %lli)", ff3, ff4,
@@ -447,7 +447,7 @@ bool Wiktionary::addSynsets ( char *filename ) {
 
 	// remember first word
 	//char *first = p;
-	//long long baseHash64;
+	//int64_t baseHash64;
 
  wordLoop:
 	// find end of word
@@ -462,7 +462,7 @@ bool Wiktionary::addSynsets ( char *filename ) {
 	// "therapist". see Phrases.cpp... we do not have trigrams yet
 	// so we will have to do like bigram list chaning somehow to
 	// simulate trigrams.
-	long long wh64 = hash64n_nospaces(p,e-p);
+	int64_t wh64 = hash64n_nospaces(p,e-p);
 	// mangle with language id so Wiktionary::getSynSet() works
 	wh64 ^= g_hashtab[0][langId];
 	// last of it?
@@ -525,11 +525,11 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 		return false;
 	}
 	// read in whole thing
-	long long maxReadSize = 300000000; // 300MB
+	int64_t maxReadSize = 300000000; // 300MB
 	char *buf = (char *)mmalloc ( maxReadSize + 1 , "wikt" );
 	if ( ! buf ) return false;
 
-	long long offset = 0LL;
+	int64_t offset = 0LL;
 
 	// use this to scrape popularity info and other words we are missing
 	//if ( ! g_speller.init() ) return false;
@@ -1727,8 +1727,8 @@ bool Wiktionary::addWord ( char *word ,
 	// done if lang is unknown
 	if ( langId == langUnknown ) return true;
 	// hash the word
-	//long long wid = hash64Lower_utf8(word);
-	long long wid = hash64n(word);
+	//int64_t wid = hash64Lower_utf8(word);
+	int64_t wid = hash64n(word);
 
 	/*
 	// see if already in there
@@ -1750,7 +1750,7 @@ bool Wiktionary::addWord ( char *word ,
 	if ( ! formOf ) formOf = word;
 
 	// to file like dict.cz
-	long long lk64 = wid ;
+	int64_t lk64 = wid ;
 	lk64 ^= g_hashtab[4][langId];
 	if ( ! m_dedup.isInTable ( &lk64 ) ) {
 		m_dedup.addKey ( &lk64 );
@@ -1779,10 +1779,10 @@ bool Wiktionary::addWord ( char *word ,
 	// . but the "jump" key is language and POS sensitive
 	// . so "jump" as a noun does not map to "jumping" (verb) but only
 	//   maps to "jumps" the noun
-	//long long fh64 = hash64Lower_utf8(formOf);
-	long long fh64 = hash64n(formOf);
+	//int64_t fh64 = hash64Lower_utf8(formOf);
+	int64_t fh64 = hash64n(formOf);
 	// save that
-	long long baseForm = fh64;
+	int64_t baseForm = fh64;
 
 
 	// also add formOf
@@ -1807,7 +1807,7 @@ bool Wiktionary::addWord ( char *word ,
 	//fh64 ^= g_hashtab[1][posFlag];
 
 	// dedup table
-	long long dk64 = hash64h ( fh64 , wid );
+	int64_t dk64 = hash64h ( fh64 , wid );
 
 	//if ( dk64 == 4174548643612680780LL )
 	//	log("boo");
@@ -1889,7 +1889,7 @@ bool Wiktionary::compile ( ) {
 		// skip empty slots
 		if ( ! m_tmp.m_flags[i] ) continue;
 		// get this guys key
-		long long fh64 = m_tmp.getKey64FromSlot(i);
+		int64_t fh64 = m_tmp.getKey64FromSlot(i);
 		// is base form "pie"? why doesn't "pie" map to it?
 		//if( fh64 == 4935258599006239294LL ) // balon baseform in turk
 		//	log("en|UK");
@@ -1898,7 +1898,7 @@ bool Wiktionary::compile ( ) {
 		// this uses 8 byte keys
 		if ( ! dedup.addKey  ( &fh64 ) ) return false;
 		// reset
-		//long long lastWid = 0LL;
+		//int64_t lastWid = 0LL;
 		// remove dups
 		HashTableX dd2;
 		char dbuf2[512];
@@ -1912,7 +1912,7 @@ bool Wiktionary::compile ( ) {
 			// chain stops when we hit empty slot
 			if ( ! m_tmp.m_flags[j] ) break;
 			// make sure matches
-			long long kk = m_tmp.getKey64FromSlot(j);
+			int64_t kk = m_tmp.getKey64FromSlot(j);
 			// must match
 			if ( kk != fh64 ) continue;
 			// get a form of the base form, wid64
@@ -1923,15 +1923,15 @@ bool Wiktionary::compile ( ) {
 			if ( ! offPtr ) { char *xx=NULL;*xx=0; }
 			char *word = m_debugBuf.getBufStart() + *offPtr;
 			// now re-hash it as lower case
-			long long wid = hash64Lower_utf8(word);
+			int64_t wid = hash64Lower_utf8(word);
 			// dedup on it
 			if ( dd2.isInTable ( &wid ) ) continue;
 			dd2.addKey ( &wid );
 
 			// unique
-			//if ( *(long long *)data == lastWid ) continue;
+			//if ( *(int64_t *)data == lastWid ) continue;
 			// adjacent deduping
-			//lastWid = *(long long *)data;
+			//lastWid = *(int64_t *)data;
 			// it matches!
 			formCount++;
 
@@ -1955,7 +1955,7 @@ bool Wiktionary::compile ( ) {
 		// need 2+ forms!
 		if ( formCount +stripCount <= 1 ) continue;
 		// base form
-		//long long wid = *(long long *)m_tmp.getDataFromSlot(i);
+		//int64_t wid = *(int64_t *)m_tmp.getDataFromSlot(i);
 		// remember buf start
 		long bufLen = m_synBuf.length();
 		// remove dups
@@ -1977,13 +1977,13 @@ bool Wiktionary::compile ( ) {
 			// . this uses 8 byte keys
 			// . kk is the hash of the BASE form i think hashed
 			//   with the langid
-			long long kk = m_tmp.getKey64FromSlot(j);
+			int64_t kk = m_tmp.getKey64FromSlot(j);
 			// must match
 			if ( kk != fh64 ) continue;
 			// get a form of the base form, wid64
 			char *data = (char *)m_tmp.getDataFromSlot(j);
 			// get the word id
-			//long long wid =*(long long *)data;
+			//int64_t wid =*(int64_t *)data;
 			// CRAP! this is a case dependent hash! we need 
 			// to make it lower case now that the synsets
 			// have been established based on case, since 
@@ -1994,7 +1994,7 @@ bool Wiktionary::compile ( ) {
 			if ( ! offPtr ) { char *xx=NULL;*xx=0; }
 			char *word = m_debugBuf.getBufStart() + *offPtr;
 			// now re-hash it
-			long long wid = hash64Lower_utf8(word);
+			int64_t wid = hash64Lower_utf8(word);
 			// i bury langid in there
 			uint8_t langId = data[8];
 			// find "pie"!
@@ -2059,7 +2059,7 @@ bool Wiktionary::compile ( ) {
 			}
 			// if different, add it
 			if ( stripLen > 0 ) {
-				long long swid = hash64Lower_utf8(a);
+				int64_t swid = hash64Lower_utf8(a);
 				// xor in the langid
 				swid ^= g_hashtab[0][langId];
 				// only add this word form once per langId

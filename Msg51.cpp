@@ -71,7 +71,7 @@ void Msg51::reset ( ) {
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-bool Msg51::getClusterRecs ( long long     *docIds                   ,
+bool Msg51::getClusterRecs ( int64_t     *docIds                   ,
 			     char          *clusterLevels            ,
 			     key_t         *clusterRecs              ,
 			     long           numDocIds                ,
@@ -273,7 +273,7 @@ bool Msg51::sendRequest ( long    i ) {
 	
 	// bias clusterdb lookups (from Msg22.cpp)
 	long           numTwins     = g_hostdb.getNumHostsPerShard();
-	long long      sectionWidth = (DOCID_MASK/(long long)numTwins) + 1;
+	int64_t      sectionWidth = (DOCID_MASK/(int64_t)numTwins) + 1;
 	long           hostNum      = (d & DOCID_MASK) / sectionWidth;
 	long           numHosts     = g_hostdb.getNumHostsPerShard();
 	unsigned long  shardNum     = getShardNum(RDB_CLUSTERDB,&startKey);
@@ -374,12 +374,12 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 
 	// get docid
 	//key_t *startKey = (key_t *)msg0->m_startKey;
-	//long long docId = g_clusterdb.getDocId ( *startKey );
+	//int64_t docId = g_clusterdb.getDocId ( *startKey );
 
 	// this doubles as a ptr to a cluster rec
 	long    ci = (long   )msg0->m_dataPtr;
 	// get docid
-	long long docId = m_docIds[ci];
+	int64_t docId = m_docIds[ci];
 	// assume error!
 	m_clusterLevels[ci] = CR_ERROR_CLUSTERDB;
 
@@ -401,12 +401,12 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	// debug note
 	log(LOG_DEBUG,
 	    "build: had clusterdb SUCCESS for d=%lli dptr=%lu "
-	    "rec.n1=%lx,%016llx sitehash26=0x%lx.", (long long)docId, (long)ci,
+	    "rec.n1=%lx,%016llx sitehash26=0x%lx.", (int64_t)docId, (long)ci,
 	    rec->n1,rec->n0,
 	    g_clusterdb.getSiteHash26((char *)rec));
 
 	// check for docid mismatch
-	long long docId2 = g_clusterdb.getDocId ( rec );
+	int64_t docId2 = g_clusterdb.getDocId ( rec );
 	if ( docId != docId2 ) {
 		logf(LOG_DEBUG,"query: docid mismatch in clusterdb.");
 		return;
@@ -437,7 +437,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	//logf(LOG_DEBUG,"query: msg51 addRec k.n0=%llu rec.n0=%llu",docId,
 	//     rec->n0);
 
-	// . add the record to our quick cache as a long long
+	// . add the record to our quick cache as a int64_t
 	// . ignore any error
 	if ( s_cacheInit )
 		c->addRecord ( m_collnum        ,
@@ -454,7 +454,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 // . returns false and sets g_errno on error
 // . if maxDocIdsPerHostname is -1 do not do hostname clsutering
 bool setClusterLevels ( key_t     *clusterRecs          ,
-			long long *docIds               ,
+			int64_t *docIds               ,
 			long       numRecs              ,
 			long       maxDocIdsPerHostname ,
 			bool       doHostnameClustering ,
@@ -475,7 +475,7 @@ bool setClusterLevels ( key_t     *clusterRecs          ,
 	// how many negative site hashes do we have?
 	// count how many docids we got, they are a cgi value, so represented
 	// in ascii separated by +'s. i.e. "12345+435322+3439333333"
-	//HashTableT <long long,char> sht;
+	//HashTableT <int64_t,char> sht;
 	//if ( ! hashFromString ( &sht , noSiteIds ) ) return false;
 	//bool checkNegative = ( sht.getNumSlotsUsed() > 0 );
 
@@ -492,7 +492,7 @@ bool setClusterLevels ( key_t     *clusterRecs          ,
 	long           count = 0;
 	unsigned long  score = 0;
 	char          *crec ;
-	long long      h  ;
+	int64_t      h  ;
 	char          *level ;
 	bool           fakeIt ;
 loop:
@@ -527,7 +527,7 @@ loop:
 	// inc this count!
 	if ( fakeIt ) g_stats.m_filterStats[CR_ERROR_CLUSTERDB]++;
 	// if it matches a siteid on our black list
-	//if ( checkNegative && sht.getSlot((long long)h) > 0 ) {
+	//if ( checkNegative && sht.getSlot((int64_t)h) > 0 ) {
 	//	*level = CR_BLACKLISTED_SITE; goto loop; }
 	// look it up
 	score = ctab.getScore ( &h ) ;
@@ -553,7 +553,7 @@ loop:
 		     (long)count++,
 		     (long)siteHash26,
 		     clusterRecs[i].n0,
-		     (long long)docIds[i],
+		     (int64_t)docIds[i],
 		     (long)clusterLevels[i],
 		     g_crStrings[(long)clusterLevels[i]] );
 	}

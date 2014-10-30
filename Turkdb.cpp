@@ -12,7 +12,7 @@ public:
 	char    m_user[MAX_USER_SIZE];
 	//char    m_url[MAX_URL_LEN+1];
 	// the docid to edit
-	long long m_docId;
+	int64_t m_docId;
 };
 
 bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
@@ -140,7 +140,7 @@ public:
 	char      m_actionType;
 	long      m_ip;
 	float     m_number; // amount of money involved, or # of action pts.
-	long long m_docId;
+	int64_t m_docId;
 	char      m_desc[]; // username who verfied you, etc.
 };
 
@@ -430,7 +430,7 @@ bool sendPageTurkEval ( State60 *st ) {
 	if ( st->m_docId ) return displayEditorPage ( st );
 
 	// . otherwise, do a search to get the best page
-	long long termId = hash64n("gbunturked");
+	int64_t termId = hash64n("gbunturked");
 	// event id range is forced to 1 to 1 for this one since special
 	
 	key128_t startKey = g_datedb.makeStartKey (termId);
@@ -497,7 +497,7 @@ void gotDatedbList ( State60 *st ) {
 	// shortcut
 	RdbList *list = &st->m_list;
 	// the best docid
-	long long best = 0LL;
+	int64_t best = 0LL;
 	// scan the list to get urls/docids to turk out
 	for ( ; ! list->isExhausted() ; ) {
 		// get rec
@@ -507,7 +507,7 @@ void gotDatedbList ( State60 *st ) {
 		// skip if negative
 		if ( (k[0] & 0x01) == 0x00 ) continue;
 		// get the docid
-		long long docid = g_datedb.getDocId ( k );
+		int64_t docid = g_datedb.getDocId ( k );
 		// skip if locked
 		TurkLock *tt = (TurkLock *)g_turkLock.getValue(&docid);
 		// if there check time

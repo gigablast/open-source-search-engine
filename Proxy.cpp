@@ -38,11 +38,11 @@ struct StateControl{
 
 	long m_pageNum;
 	bool m_isYippySearch;
-	long long m_start;
+	int64_t m_start;
 	long m_reqNum;
 	SafeBuf m_sb;
 	TcpSocket *m_s;
-	long long m_startTime;
+	int64_t m_startTime;
 	bool m_isQuery;
 	unsigned long m_hash;
 	long m_hostId;
@@ -56,7 +56,7 @@ struct StateControl{
 	long     m_slotReadBufMaxSize;
 	//long     m_forward;
 	long     m_retries;
-	long long     m_timeout;
+	int64_t     m_timeout;
 	HttpRequest m_hr;
 	Host *m_forwardHost;
 	float m_pending;
@@ -97,7 +97,7 @@ public:
 	char m_zip[20];
 
 	// session info:
-	long long m_lastSessionId64;
+	int64_t m_lastSessionId64;
 	long m_lastActionTime;
 	long m_lastLoginIP;
 	float m_accountBalance;
@@ -1064,7 +1064,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	//   clustering then docsWanted is no indication of the
 	//   actual number of titleRecs (or title keys) read
 	// . it may take a while to do dup removal on 1 million docs
-	long long wait = 5000 + 100  * (docsWanted+firstResult);
+	int64_t wait = 5000 + 100  * (docsWanted+firstResult);
 	// those big UOR queries should not get re-routed all the time
 	wait += 1000 * stC->m_numQueryTerms;
 	// a min of 8 seconds is good
@@ -1443,7 +1443,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	//if ( s->m_readOffset < 0 ) { char *xx=NULL;*xx=0; }
 	if ( slot->m_readBufSize < 0 ) { char *xx=NULL;*xx=0; }
 
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 
 	//m_numOutstanding[stC->m_hostId]--;
 	//if ( s->m_readOffset == 0 ){
@@ -1534,7 +1534,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 			// i dont check if query is raw or not
 			long color = 0x00b58869;
 			if ( stC->m_raw ) color = 0x00753d30;
-			long long nowms = gettimeofdayInMilliseconds();
+			int64_t nowms = gettimeofdayInMilliseconds();
 			// . add the stat
 			// . use brown for the stat
 			g_stats.addStat_r ( 0               ,
@@ -1586,7 +1586,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		// i dont check if query is raw or not
 		long color = 0x00b58869;
 		if ( stC->m_raw ) color = 0x00753d30;
-		long long nowms = gettimeofdayInMilliseconds();
+		int64_t nowms = gettimeofdayInMilliseconds();
 		// . add the stat
 		// . use brown for the stat
 		g_stats.addStat_r ( 0               ,
@@ -2036,7 +2036,7 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 	// get the reply from the teaski machine
 	char *reply = s->m_readBuf;
 	long replySize = s->m_readOffset;
-	//long long took = gettimeofdayInMilliseconds() - stC->m_start;
+	//int64_t took = gettimeofdayInMilliseconds() - stC->m_start;
 
 	if ( ! reply ) {
 		g_errno = EBADREPLY;
@@ -2135,7 +2135,7 @@ class SummaryRec {
 	// how much user was charged for all these accesses:
 	float     m_totalCost;
 	// how long all replies took in milliseconds:
-	long long m_totalProcessTime;
+	int64_t m_totalProcessTime;
 	char      m_month;
 	char      m_day;
 	short     m_year;
@@ -2152,8 +2152,8 @@ public:
 	float     m_depositAmount;
 	long      m_depositDate;
 	// . use transactionid for doing CREDITs back to user
-	// . i've seen it > 5B so use a long long
-	long long m_authorizeNetTransactionId;
+	// . i've seen it > 5B so use a int64_t
+	int64_t m_authorizeNetTransactionId;
 	long      m_flags;
 };
 
@@ -2326,7 +2326,7 @@ float Proxy::getPrice ( long accessType ) {
 // . now they must have "&user=username&code=sdfsdfdfs"
 // . processTime is in milliseconds (ms)
 bool Proxy::addAccessPoint ( StateControl *stC , 
-			     long long nowms ,
+			     int64_t nowms ,
 			     long httpStatus ) {
 
 	HttpRequest *hr = &stC->m_hr;
@@ -2364,8 +2364,8 @@ bool Proxy::addAccessPoint ( StateControl *stC ,
 
 bool Proxy::addAccessPoint2 ( UserInfo *ui , 
 			      char accessType ,
-			      long long nowms ,
-			      long long startTime ) {
+			      int64_t nowms ,
+			      int64_t startTime ) {
 
 
 	if ( ! ui ) {
@@ -2383,7 +2383,7 @@ bool Proxy::addAccessPoint2 ( UserInfo *ui ,
 	// the account balance of course
 	ui->m_accountBalance -= price;
 
-	long long processTime = nowms - startTime; // stC->m_startTime;
+	int64_t processTime = nowms - startTime; // stC->m_startTime;
 
 	// increment counters, all else should be fixed by getSummaryRec()
 	sr->m_numAccesses++;
@@ -2510,7 +2510,7 @@ public:
 	TcpSocket *m_socket;
 	//Msg0 m_msg0;
 	//Msg4 m_msg4;
-	long long m_sessionId64;
+	int64_t m_sessionId64;
 	long m_userId32;
 	//HttpRequest m_hr;
 	SafeBuf m_sb;
@@ -2521,7 +2521,7 @@ public:
 	float m_deposit; // dollar amount
 	float m_refund;  // dollar amount (95%)
 	float m_refundFee; // 5%
-	long long m_refundTransId;
+	int64_t m_refundTransId;
 	//bool m_doWithdraw;
 	//float m_deposit;
 	// authorize.net's reply
@@ -2530,7 +2530,7 @@ public:
 	long m_submittingNewUser;
 	// is this really the admin logged in as another user?
 	bool m_isRootAdmin;
-	long long m_adminSessId;
+	int64_t m_adminSessId;
 	long m_adminId;
 
 	// for holding error msg and pointing m_depositErr to it
@@ -2621,7 +2621,7 @@ UserInfo *Proxy::getLoggedInUserInfo2 ( HttpRequest *hr ,
 	char *password = hr->getString("password",NULL);
 
 	// userid32 is used with sessionid
-	long long sessionId64 = hr->getLongLongFromCookie("sessionid",0LL);
+	int64_t sessionId64 = hr->getLongLongFromCookie("sessionid",0LL);
 	long userId32 = hr->getLongFromCookie("userid",0);
 
 	// if supplying "user", then they must also supply "pwd"!
@@ -2670,11 +2670,11 @@ UserInfo *Proxy::getLoggedInUserInfo2 ( HttpRequest *hr ,
 		if ( strcmp ( ui->m_password, password ) ) break;
 		// ok, i guess password matched, set a session id
 		// assign a sessionid now. make it always positive!
-		long long1 = rand() % 0x7fffffff;
-		long long2 = rand() % 0x7fffffff;
-		uint64_t newSessionId64 = long1;
+		int32_t num1 = rand() % 0x7fffffff;
+		int32_t num2 = rand() % 0x7fffffff;
+		uint64_t newSessionId64 = num1;
 		newSessionId64 <<= 32;
-		newSessionId64 |= long2;
+		newSessionId64 |= num2;
 		// ensure not 0
 		if ( newSessionId64 == 0 ) newSessionId64 = 1;
 		// add this session if to rec and re-add
@@ -2715,7 +2715,7 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 	su->m_sessionId64 = ui->m_lastSessionId64;
 
 	// are they really the admin, logged in as a user?
-	long long asi = hr->getLongLongFromCookie("adminsessid",0LL);
+	int64_t asi = hr->getLongLongFromCookie("adminsessid",0LL);
 	if ( ! asi ) return ui;
 
 	// admin IP be local ip for security!
@@ -3658,7 +3658,7 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 	return true;
 }
 
-long long rand63 ( ) {
+int64_t rand63 ( ) {
 	unsigned long r1 = rand();
 	unsigned long r2 = rand();
 	uint64_t r = r1;
@@ -3822,14 +3822,14 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 
 	//
 	// . we need this for doing CREDITs/withdrawals back to the user
-	// . i've seen this # > 5B so use a long long
+	// . i've seen this # > 5B so use a int64_t
 	//
 	long tlen;
 	char *tid = getField(docHTML,6,&tlen);
 	if ( tid ) {
 		char c = tid[tlen];
 		tid[tlen] = '\0';
-		long long transId = atoll(tid);
+		int64_t transId = atoll(tid);
 		tid[tlen] = c;
 		// the authorize.net transaction id
 		dr.m_authorizeNetTransactionId = transId;
@@ -5033,7 +5033,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	// userid is in cookie
 	long userId32 = hr->getLongFromCookie("userid",0);
 	UserInfo *ui = getUserInfoFromId ( userId32 );
-	long long sessionId64 = hr->getLongLongFromCookie("sessionid",0);
+	int64_t sessionId64 = hr->getLongLongFromCookie("sessionid",0);
 	if ( ui && ui->m_lastSessionId64 != sessionId64 ) ui = NULL;
 
 

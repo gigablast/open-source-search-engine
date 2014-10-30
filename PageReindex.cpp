@@ -363,7 +363,7 @@ bool Msg1c::gotList ( ) {
 
 	if ( g_errno ) return true;
 
-	long long *tmpDocIds = m_msg3a.getDocIds();
+	int64_t *tmpDocIds = m_msg3a.getDocIds();
 	long       numDocIds = m_msg3a.getNumDocIds();
 
 	if ( m_startNum > 0) {
@@ -397,7 +397,7 @@ bool Msg1c::gotList ( ) {
 	//long count = 0;
 	// list consists of docIds, loop through each one
  	for(long i = 0; i < numDocIds; i++) {
-		long long docId = tmpDocIds[i];
+		int64_t docId = tmpDocIds[i];
 		// when searching events we get multiple docids that are same
 		if ( dt.isInTable ( &docId ) ) continue;
 		// add it
@@ -762,7 +762,7 @@ bool Msg1d::updateTagTerms ( ) {
 
 // . put the meta list into "addBuf"
 // . returns false and sets g_errno on error
-bool Msg1d::getMetaList ( long long docId , 
+bool Msg1d::getMetaList ( int64_t docId , 
 			  long eventId , 
 			  TagRec *egr ,
 			  RdbList *oldList ,

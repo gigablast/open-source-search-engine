@@ -98,7 +98,7 @@ class Matches {
 	bool addMatches ( char      *s         ,
 			  long       slen      ,
 			  mf_t       flags     ,
-			  long long  docId     ,
+			  int64_t  docId     ,
 			  long       niceness  ) ;
 
 	// . this sets the m_matches[] array
@@ -117,7 +117,7 @@ class Matches {
 			  qvec_t    reqMask             = 0    ,
 			  qvec_t    negMask             = 0    ,
 			  long      diversityWeight     = 1    ,
-			  long long docId               = 0    ,
+			  int64_t docId               = 0    ,
 			  mf_t      flags               = 0    );
 
 	// this is NULL terminated
@@ -171,10 +171,10 @@ class Matches {
 
 	// . hash query word ids into a small hash table
 	// . we use this to see what words in the document are query terms
-	long long m_qtableIds      [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
+	int64_t m_qtableIds      [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
 	long      m_qtableWordNums [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
 	char      m_qtableFlags    [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
-	//long long m_qtableNegIds   [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
+	//int64_t m_qtableNegIds   [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
 	long      m_numSlots;
 	Query    *m_q;
 	long      m_maxNQW;
@@ -198,10 +198,10 @@ class Matches {
 	long m_leftDiversity;
 	long m_rightDiversity;
 
-	static const long m_htSize = 128 * (sizeof(long long) + sizeof(long));
+	static const long m_htSize = 128 * (sizeof(int64_t) + sizeof(long));
 	char m_subPhraseBuf[2 * m_htSize];
-	HashTableT<long long, long> m_pre;
-	HashTableT<long long, long> m_post;
+	HashTableT<int64_t, long> m_pre;
+	HashTableT<int64_t, long> m_post;
 
 	// . one words/scores/bits/pos/flags class per "match group"
 	// . match groups examples = body, a single link text, a meta tag, etc.
@@ -220,10 +220,10 @@ class Matches {
 	Bits     m_bitsArray     [MAX_MATCHGROUPS];
 	Pos      m_posArray      [MAX_MATCHGROUPS];
 
-	long long *m_pids2;
-	long long *m_pids3;
-	long long *m_pids4;
-	long long *m_pids5;
+	int64_t *m_pids2;
+	int64_t *m_pids3;
+	int64_t *m_pids4;
+	int64_t *m_pids5;
 
 	// MDW: i am hoping we do not need this, it is really only useful
 	// for the words in the body of the document!!

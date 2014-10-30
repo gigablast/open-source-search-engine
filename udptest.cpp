@@ -22,7 +22,7 @@ static void gotit         ( void    *state , UdpSlot *slot     ) ;
 char s_buf [ 1024*1024 ];
 long s_n = 0;
 
-long long s_startTime;
+int64_t s_startTime;
 
 bool mainShutdown ( bool urgent ) { return true; }
 

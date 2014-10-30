@@ -44,7 +44,7 @@ public:
 	long       m_qlen;
 	char       m_boolFlag;
 	bool       m_printed;
-	long long  m_docId;
+	int64_t  m_docId;
 	bool       m_includeHeader;
 	bool       m_includeBaseHref;
 	bool       m_queryHighlighting;

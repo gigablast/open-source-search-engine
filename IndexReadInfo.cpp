@@ -13,7 +13,7 @@ IndexReadInfo::IndexReadInfo() {
 // . sets startKey/endKey for each list, too
 // . startKey set passed endKey to indicate no reading
 void IndexReadInfo::init ( Query *q , 
-			   long long *termFreqs ,
+			   int64_t *termFreqs ,
 			   long docsWanted , char callNum ,
 			   long stage0 ,
 			   long *tierStage,
@@ -97,8 +97,8 @@ void IndexReadInfo::init ( Query *q ,
 	// . So we break up our 100k truncation limit that way
 	long toRead = m_stage[(int)callNum]; 
 
-	long long def = getStage0Default() ;
-	long long *tf = termFreqs ;
+	int64_t def = getStage0Default() ;
+	int64_t *tf = termFreqs ;
 	
 	// . ...but if we're only reading 1 list...
 	// . keys are 6 bytes each, first key is 12 bytes
@@ -138,7 +138,7 @@ void IndexReadInfo::init ( Query *q ,
 		// . when user specifies the s0=X cgi parm and X is like 4M
 		//   try to avoid allocating so much space when we do not need
 		// . mark is using s0 to get exact hit counts
-		long long max = tf[i] * m_hks+m_hks +GB_INDEXDB_PAGE_SIZE*10 ;
+		int64_t max = tf[i] * m_hks+m_hks +GB_INDEXDB_PAGE_SIZE*10 ;
 		if ( max < def ) max = def;
 		if ( m_readSizes[i] > max ) m_readSizes[i] = max;
 		// debug msg
@@ -279,7 +279,7 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 // . updates m_readSizes
 // . sets m_isDone to true if all lists are exhausted 
 // . used by virtual split in msg3b to check if we're done or not.
-void IndexReadInfo::update ( long long *termFreqs,
+void IndexReadInfo::update ( int64_t *termFreqs,
 			     long numLists,
 			     char callNum ) {
 	// loop over all lists and update m_startKeys[i]
@@ -289,7 +289,7 @@ void IndexReadInfo::update ( long long *termFreqs,
 		// . how many bytes did we read ? Since these are
 		// . half keys, multiply termFreqs by 6 and add 6 for the
 		// . first key which is full 12 bytes
-		long long listSize = termFreqs[i] * 6 + 6;
+		int64_t listSize = termFreqs[i] * 6 + 6;
 
 		if ( listSize < m_readSizes[i] ) {
 			m_ignore [i] = true;

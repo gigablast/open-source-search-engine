@@ -223,7 +223,7 @@ void Blaster::runBlaster(char *file1,char *file2,
 			
 			// start is the time in milliseconds of the first log 
 			// message
-			long long start=atoll(m_buf1);
+			int64_t start=atoll(m_buf1);
 			while(p<pend) {
 				char *lineStart=p;
 				char *urlStart=strstr(p," GET /search");
@@ -349,7 +349,7 @@ void Blaster:: processLogFile(void *state){
 	
 
 void Blaster::startBlastering(){
-	long long now=gettimeofdayInMilliseconds();
+	int64_t now=gettimeofdayInMilliseconds();
 	if(m_print && m_totalDone>0 && (m_totalDone % 20)==0){
 		log("blaster: Processed %li urls in %li ms",m_totalDone,
 		    (long) (now-m_startTime));
@@ -484,7 +484,7 @@ void Blaster::gotDoc1( void *state, TcpSocket *s){
 	if (!m_blasterDiff){
 		m_launched--;
 	}
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// get hash
 	char *reply = s->m_readBuf ;
 	long  size  = s->m_readOffset;
@@ -585,7 +585,7 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	// . we own it now and are responsible for freeing it
 	//	s->m_readBuf = NULL;
 
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// So now after getting both docIds, get their contents
 	char *reply1 = st->m_buf1 ;
 	long  size1  = st->m_buf1Len;

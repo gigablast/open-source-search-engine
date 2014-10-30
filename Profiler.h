@@ -109,9 +109,9 @@ struct FnInfo {
 	const char   *m_prevQpoll; 
 	
 
-	long long     m_startTimeLocal;
-	long long     m_startTime;
-	long long     m_lastPauseTime;
+	int64_t     m_startTimeLocal;
+	int64_t     m_startTime;
+	int64_t     m_lastPauseTime;
 	long          m_inFunction;
 };
 
@@ -165,7 +165,7 @@ class Profiler {
 	bool reset();
 	bool init();
 
-	bool addQuickPoll(long long took, const char* caller);
+	bool addQuickPoll(int64_t took, const char* caller);
 	bool startTimer(long address, const char* caller);
 	bool pause(const char *caller, long lineno, long took);
 	bool unpause();

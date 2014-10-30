@@ -19,7 +19,7 @@ bool Msg42::registerHandler ( ) {
 // . i based this on ../titledb/Msg23.cpp 
 bool Msg42::getTermFreq ( char      *coll       ,
 			  long       maxAge     ,
-			  long long  termId     ,
+			  int64_t  termId     ,
 			  void      *state      ,
 			  void (* callback)(void *state ) ,
 			  long       niceness   ) {
@@ -44,12 +44,12 @@ bool Msg42::getTermFreq ( char      *coll       ,
 	// . make a request
 	// . just send the termId and collection name
 	char *p = m_request;
-	*(long long *)p = termId ; p += 8;
+	*(int64_t *)p = termId ; p += 8;
 	strcpy ( p , coll ); p += gbstrlen(coll) + 1; // copy includes \0
 
 	long timeout = 5;
 	// in case it fails somehow
-	*(long long *)m_reply = 0LL;
+	*(int64_t *)m_reply = 0LL;
 	
 	// .  multicast to a host in group
 	// . returns false and sets g_errno on error
@@ -104,7 +104,7 @@ void Msg42::gotReply ( ) {
 		log(LOG_LOGIC,"query: Got bad reply for term "
 		    "frequency. Bad.");
 	// buf should have the # of records for m_termId
-	m_termFreq = *(long long *)m_reply ;
+	m_termFreq = *(int64_t *)m_reply ;
 }
 
 // . handle a request to get a linkInfo for a given docId/url/collection
@@ -124,14 +124,14 @@ void handleRequest42 ( UdpSlot *slot , long netnice ) {
                 us->sendErrorReply ( slot , EBADREQUESTSIZE ); 
 		return;
 	}
-	long long  termId = *(long long *) (request) ; 
+	int64_t  termId = *(int64_t *) (request) ; 
 	char      *coll   = request + 8;
 
-	long long termFreq = g_linkdb.getTermFreq(coll,termId);
+	int64_t termFreq = g_linkdb.getTermFreq(coll,termId);
 	// serialize it into a reply buffer 
 	// no need to malloc since we have the tmp buf
 	char *reply = slot->m_tmpBuf;
-	*(long long *)reply = termFreq ;
+	*(int64_t *)reply = termFreq ;
 	// . send back the buffer, it now belongs to the slot
 	// . this list and all our local vars should be freed on return
 	us->sendReply_ass ( reply , 8 , reply , 8 , slot );

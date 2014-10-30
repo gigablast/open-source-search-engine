@@ -31,11 +31,11 @@ class Dir {
 	int getNumFiles             ( char *pattern = NULL );
 
 	// . does not yet support recursion
-	long long   getUsedSpace    ( );
+	int64_t   getUsedSpace    ( );
 
 	char *getNewFilename ( char *pattern  ) ;
-	long long   getNewId       ( char *pattern  ) ;
-	long long   getFileId      ( char *filename ) ;
+	int64_t   getNewId       ( char *pattern  ) ;
+	int64_t   getFileId      ( char *filename ) ;
 
 	char *getDir     ( ) { return m_dirname; };
 	char *getDirName ( ) { return m_dirname; };

@@ -23,8 +23,8 @@
 
 class SafeBuf;
 // some memory manipulation functions inlined below
-long long htonll ( uint64_t a );
-long long ntohll ( uint64_t a );
+int64_t htonll ( uint64_t a );
+int64_t ntohll ( uint64_t a );
 key_t ntohkey ( key_t key ) ;
 key_t htonkey ( key_t key ) ;
 
@@ -41,7 +41,7 @@ long getBitPosLL   ( uint8_t *bit );
 long getHighestLitBit  ( unsigned char     bits ) ;
 long getHighestLitBit  ( unsigned short    bits ) ;
 
-// these are bit #'s, like 0,1,2,3,...63 for long longs
+// these are bit #'s, like 0,1,2,3,...63 for int64_ts
 long getLowestLitBitLL ( uint64_t bits ) ;
 
 // this is the value, like 0,1,2,4, ... 4billion
@@ -81,7 +81,7 @@ class Mem {
 	Mem();
 	~Mem();
 
-	bool init ( long long maxMem );
+	bool init ( int64_t maxMem );
 
 	void  setPid();
 	pid_t getPid();
@@ -106,18 +106,18 @@ class Mem {
 	//			const char *note);
 
 	// this one does not include new/delete mem, only *alloc()/free() mem
-	long long getUsedMem () { return m_used; };
-	long long getAvailMem() ;
+	int64_t getUsedMem () { return m_used; };
+	int64_t getAvailMem() ;
 	// the max mem ever alloced
-	long long getMaxAlloced() { return m_maxAlloced; };
-	long long getMaxAlloc  () { return m_maxAlloc; };
+	int64_t getMaxAlloced() { return m_maxAlloced; };
+	int64_t getMaxAlloc  () { return m_maxAlloc; };
 	const char *getMaxAllocBy() { return m_maxAllocBy; };
 	// the max mem we can use!
-	long long getMaxMem () ;
+	int64_t getMaxMem () ;
 
 	long getNumAllocated() { return m_numAllocated; };
 
-	long long getNumTotalAllocated() { return m_numTotalAllocated; };
+	int64_t getNumTotalAllocated() { return m_numTotalAllocated; };
 
 	// # of currently allocated chunks
 	long getNumChunks(); 
@@ -156,21 +156,21 @@ class Mem {
 	// this should assign this many pages to this process id so no other
 	// process can grab them -- only us.
 	// TODO: use sbrk()
-	//	bool  reserveMem ( long long bytesToReserve );
+	//	bool  reserveMem ( int64_t bytesToReserve );
 
-	long long m_maxAlloced; // at any one time
-	long long m_maxAlloc; // the biggest single alloc ever done
+	int64_t m_maxAlloced; // at any one time
+	int64_t m_maxAlloc; // the biggest single alloc ever done
 	const char *m_maxAllocBy; // the biggest single alloc ever done
-	long long m_maxMem;
+	int64_t m_maxMem;
 
 	// shared mem used
-	long long m_sharedUsed;
+	int64_t m_sharedUsed;
 
 	// currently used mem (estimate)
-	long long m_used;
+	int64_t m_used;
 
 	long          m_numAllocated;
-	long long     m_numTotalAllocated;
+	int64_t     m_numTotalAllocated;
 	unsigned long m_memtablesize;
 
  protected:

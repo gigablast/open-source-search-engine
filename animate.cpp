@@ -32,7 +32,7 @@ public:
 	// the actual filename as it was uploaded
 	char m_filename[90];
 	// the parsed out date in MILLIseconds since epoch
-	long long m_timestamp;
+	int64_t m_timestamp;
 	// the camera name, NULL terminated
 	char *m_camera;
 	long  m_cameraLen;
@@ -287,7 +287,7 @@ void main2 ( char *dirname ) {
 		ts1.tm_mday = day;
 		ts1.tm_year = y - 1900;
 		// make the time
-		long long timestamp = mktime(&ts1);
+		int64_t timestamp = mktime(&ts1);
 		// add in time since start of day in seconds
 		timestamp += hour * 60 * 60;
 		timestamp += min  * 60;
@@ -460,17 +460,17 @@ void main2 ( char *dirname ) {
 		//   all its brothers to finish too!
 		if ( now - e->m_ctime <= 5*60 ) continue;
 		// get our time according to camera
-		long long r = e->m_timestamp;
+		int64_t r = e->m_timestamp;
 		// get our camera name and length
 		char *c    = e->m_camera;
 		long  clen = e->m_cameraLen;
 
-		long long min  = r;
-		long long max  = r;
+		int64_t min  = r;
+		int64_t max  = r;
 
 		// hard limit of 30 seconds
-		long long hardmin = r - 1000 * 30;
-		long long hardmax = r + 1000 * 30;
+		int64_t hardmin = r - 1000 * 30;
+		int64_t hardmax = r + 1000 * 30;
 
 		char abort = 0;
 

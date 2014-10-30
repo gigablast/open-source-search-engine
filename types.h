@@ -36,7 +36,7 @@ class u_int96_t {
 
  public:
 	// it's little endian
-	uint64_t n0; // the low  long long
+	uint64_t n0; // the low  int64_t
 	unsigned long      n1; // the high long 
 
 	u_int96_t (                ) { };
@@ -144,7 +144,7 @@ class u_int96_t {
 	// TODO: make this more efficient
 	u_int96_t operator >> ( long i ) {
 		for ( long j = 0 ; j < i ; j++ ) {
-			long long carry = n1 & 0x01;
+			int64_t carry = n1 & 0x01;
 			n1 >>= 1;
 			n0 >>= 1;
 			if ( carry ) n0 |= 0x8000000000000000LL;
@@ -154,7 +154,7 @@ class u_int96_t {
 	// TODO: make this more efficient
 	u_int96_t operator << ( long i ) {
 		for ( long j = 0 ; j < i ; j++ ) {
-			long long carry = n0 & 0x8000000000000000LL;
+			int64_t carry = n0 & 0x8000000000000000LL;
 			n0 <<= 1;
 			n1 <<= 1;
 			if ( carry ) n1 |= 0x01;
@@ -198,7 +198,7 @@ class u_int128_t {
 
  public:
 	// it's little endian
-	uint64_t n0; // the low  long long
+	uint64_t n0; // the low  int64_t
 	uint64_t n1; // the high long 
 
 	u_int128_t (                ) { };
@@ -268,7 +268,7 @@ class u_int128_t {
 	// TODO: make this more efficient
 	u_int128_t operator >> ( long i ) {
 		for ( long j = 0 ; j < i ; j++ ) {
-			long long carry = n1 & 0x01;
+			int64_t carry = n1 & 0x01;
 			n1 >>= 1;
 			n0 >>= 1;
 			if ( carry ) n0 |= 0x8000000000000000LL;
@@ -278,7 +278,7 @@ class u_int128_t {
 	// TODO: make this more efficient
 	u_int128_t operator << ( long i ) {
 		for ( long j = 0 ; j < i ; j++ ) {
-			long long carry = n0 & 0x8000000000000000LL;
+			int64_t carry = n0 & 0x8000000000000000LL;
 			n0 <<= 1;
 			n1 <<= 1;
 			if ( carry ) n1 |= 0x01;
@@ -329,9 +329,9 @@ class key192_t {
 	//uint32_t k4;
 	//uint32_t k5;
 	// it's little endian
-	uint64_t n0; // the low  long long
-	uint64_t n1; // the medium long long
-	uint64_t n2; // the high long long
+	uint64_t n0; // the low  int64_t
+	uint64_t n1; // the medium int64_t
+	uint64_t n2; // the high int64_t
 
 	bool operator == ( key192_t i ) { 
 		return ( i.n0 == n0 && 
@@ -379,9 +379,9 @@ class key224_t {
 	//uint32_t k5;
 	// it's little endian
 	unsigned long      n0;
-	uint64_t n1; // the low  long long
-	uint64_t n2; // the medium long long
-	uint64_t n3; // the high long long
+	uint64_t n1; // the low  int64_t
+	uint64_t n2; // the medium int64_t
+	uint64_t n3; // the high int64_t
 
 	bool operator == ( key224_t i ) { 
 		return ( i.n0 == n0 && 
@@ -434,8 +434,8 @@ class key144_t {
  public:
 	// it's little endian
 	unsigned short      n0; // the low short
-	uint64_t  n1; // the medium long long
-	uint64_t  n2; // the high long long
+	uint64_t  n1; // the medium int64_t
+	uint64_t  n2; // the high int64_t
 
 	bool operator == ( key144_t i ) { 
 		return ( i.n0 == n0 && 
@@ -796,58 +796,58 @@ inline unsigned short KEY0 ( char *k , long ks ) {
 	return 0;
 }
 
-inline long long KEY1 ( char *k , char keySize ) {
+inline int64_t KEY1 ( char *k , char keySize ) {
 	if ( keySize == 12 ) return *(long *)(k+8);
-	if ( keySize == 18 ) return *(long long *)(k+2);
+	if ( keySize == 18 ) return *(int64_t *)(k+2);
 	// otherwise, assume 16
-	return *(long long *)(k+8);
+	return *(int64_t *)(k+8);
 }
 
-inline long long KEY2 ( char *k , char keySize ) {
-	if ( keySize == 18 ) return *(long long *)(k+10);
+inline int64_t KEY2 ( char *k , char keySize ) {
+	if ( keySize == 18 ) return *(int64_t *)(k+10);
 	char *xx=NULL;*xx=0;
 	return 0;
 }
 
 
 
-inline long long KEY0 ( char *k ) {
-	return *(long long *)k;
+inline int64_t KEY0 ( char *k ) {
+	return *(int64_t *)k;
 }
 inline void KEYSET ( char *k1 , char *k2 , char keySize ) {
 	// posdb
 	if ( keySize == 18 ) {
 		*(short *)(k1  ) = *(short *)(k2  );
-		*(long long *)(k1+2) = *(long long *)(k2+2);
-		*(long long *)(k1+10) = *(long long *)(k2+10);
+		*(int64_t *)(k1+2) = *(int64_t *)(k2+2);
+		*(int64_t *)(k1+10) = *(int64_t *)(k2+10);
 		return;
 	}
 	if ( keySize == 12 ) {
-		*(long long *) k1    = *(long long *) k2;
+		*(int64_t *) k1    = *(int64_t *) k2;
 		*(long      *)(k1+8) = *(long      *)(k2+8);
 		return;
 	}
 	// otherwise, assume 16
 	if ( keySize == 16 ) {
-		*(long long *)(k1  ) = *(long long *)(k2  );
-		*(long long *)(k1+8) = *(long long *)(k2+8);
+		*(int64_t *)(k1  ) = *(int64_t *)(k2  );
+		*(int64_t *)(k1+8) = *(int64_t *)(k2+8);
 		return;
 	}
 	if ( keySize == 24 ) {
-		*(long long *)(k1  ) = *(long long *)(k2  );
-		*(long long *)(k1+8) = *(long long *)(k2+8);
-		*(long long *)(k1+16) = *(long long *)(k2+16);
+		*(int64_t *)(k1  ) = *(int64_t *)(k2  );
+		*(int64_t *)(k1+8) = *(int64_t *)(k2+8);
+		*(int64_t *)(k1+16) = *(int64_t *)(k2+16);
 		return;
 	}
 	if ( keySize == 28 ) {
-		*(long long *)(k1  ) = *(long long *)(k2  );
-		*(long long *)(k1+8) = *(long long *)(k2+8);
-		*(long long *)(k1+16) = *(long long *)(k2+16);
+		*(int64_t *)(k1  ) = *(int64_t *)(k2  );
+		*(int64_t *)(k1+8) = *(int64_t *)(k2+8);
+		*(int64_t *)(k1+16) = *(int64_t *)(k2+16);
 		*(long *)(k1+24) = *(long *)(k2+24);
 		return;
 	}
 	if ( keySize == 8 ) {
-		*(long long *)(k1  ) = *(long long *)(k2  );
+		*(int64_t *)(k1  ) = *(int64_t *)(k2  );
 		return;
 	}
 	//if ( keySize == 4 ) {

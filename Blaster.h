@@ -81,7 +81,7 @@ class Blaster {
 	bool  m_useProxy;
 	bool  m_verbose;
 	bool  m_isLogFile;
-	long long m_startTime;
+	int64_t m_startTime;
 	long m_numUrls;
 	char **m_lineStart;
 	bool m_blasterDiff;

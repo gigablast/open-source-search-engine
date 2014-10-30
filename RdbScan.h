@@ -29,7 +29,7 @@ class RdbScan {
 	// . we need array of files so BigFile::filecb() knows when file nuked
 	bool setRead ( BigFile   *file          ,
 		       long       fixedDataSize ,
-		       long long  offset        ,
+		       int64_t  offset        ,
 		       long       bytesToRead   ,
 		       //key_t      startKey      , 
 		       //key_t      endKey        , 
@@ -80,7 +80,7 @@ class RdbScan {
 
 	// for sanity checking
 	BigFile   *m_file;
-	long long  m_offset;
+	int64_t  m_offset;
 	char       m_ks;
 
 	// for allowing page cache

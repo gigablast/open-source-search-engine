@@ -238,14 +238,14 @@ static bool initTable ( HashTableX *table, char *words[], long size ) {
 	for ( long i = 0 ; i < n ; i++ ) {
 		char      *sw    = words[i];
 		//long     swlen = gbstrlen ( sw );
-		long long  swh   = hash64Lower_utf8 ( sw );
+		int64_t  swh   = hash64Lower_utf8 ( sw );
 		if ( ! table->addTerm (&swh,i+1) ) return false;
 	}
 	return true;
 }
 */
 
-bool isAbbr ( long long h , bool *hasWordAfter ) {
+bool isAbbr ( int64_t h , bool *hasWordAfter ) {
 	if ( ! s_abbrInitialized ) {
 		// shortcut
 		HashTableX *t = &s_abbrTable;
@@ -256,13 +256,13 @@ bool isAbbr ( long long h , bool *hasWordAfter ) {
 		// now add in all the stop words
 		for ( long i = 0 ; i < n ; i++ ) {
 			char      *sw    = s_abbrs99[i].m_str;
-			long long  swh   = hash64Lower_utf8 ( sw );
+			int64_t  swh   = hash64Lower_utf8 ( sw );
 			long val = i + 1;
 			if ( ! t->addKey (&swh,&val) ) return false;
 		}
 		s_abbrInitialized = true;
 		// test it
-		long long h = hash64Lower_utf8("St");
+		int64_t h = hash64Lower_utf8("St");
 		if ( ! t->isInTable(&h) ) { char *xx=NULL;*xx=0; }
 		long sc = s_abbrTable.getScore ( &h );
 		if ( sc >= n ) { char *xx=NULL;*xx=0; }

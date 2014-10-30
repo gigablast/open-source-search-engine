@@ -312,7 +312,7 @@ void Msg8b::gotReply ( ) {
 		log ( "Msg8b: Reply had error: %s", mstrerror(g_errno));
 		return;
 	}
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 	// get the reply
 	long replySize;
 	long replyMaxSize;
@@ -357,8 +357,8 @@ void Msg8b::gotReply ( ) {
 		// we have to free it
 		mfree ( reply , replyMaxSize , "Msg8b" );
 	}
-	long long now = gettimeofdayInMilliseconds();
-	long long msg8bTook = now - startTime;
+	int64_t now = gettimeofdayInMilliseconds();
+	int64_t msg8bTook = now - startTime;
 	if(msg8bTook > 10)
 		log(LOG_INFO, "admin: gotreply for msg8b took %lli", 
 		    msg8bTook);

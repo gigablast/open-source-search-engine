@@ -156,7 +156,7 @@ class GigablastRequest {
 	// /get parms (for getting cached web pages)
 	//
 	///////////
-	long long m_docId;
+	int64_t m_docId;
 	long      m_strip;
 	char      m_includeHeader;
 	char      m_highlightQuery;

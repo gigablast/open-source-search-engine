@@ -21,7 +21,7 @@ public:
 	CatRec       m_catRec;
 	bool         m_catLookup;
 	bool         m_genCatdb;
-	long long    m_startTime;
+	int64_t    m_startTime;
 };
 
 // . returns false if blocked, true otherwise
@@ -143,7 +143,7 @@ bool sendReply ( void *state ) {
 		st->m_catLookup = false;
 		g_errno = 0;
 	}
-	long long endTime = gettimeofdayInMilliseconds();
+	int64_t endTime = gettimeofdayInMilliseconds();
 	// page buffer
 	SafeBuf sb;
 	sb.reserve(64*1024);

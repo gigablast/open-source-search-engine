@@ -7,8 +7,8 @@
 #include "Msg40.h" // MAXDOCIDSTOCOMPUTE
 
 /*
-long long TopNode::getDocId ( ) {
-	long long d;
+int64_t TopNode::getDocId ( ) {
+	int64_t d;
 	memcpy ( &d , m_docIdPtr , 6 );
 	d >>= 2;
 	d &= DOCID_MASK;
@@ -16,8 +16,8 @@ long long TopNode::getDocId ( ) {
 }
 
 
-long long TopNode::getDocIdForMsg3a ( ){
-	long long d;
+int64_t TopNode::getDocIdForMsg3a ( ){
+	int64_t d;
 	memcpy ( &d , m_docIdPtr , 6 );
 	//	d >>= 2;
 	d &= DOCID_MASK;
@@ -326,7 +326,7 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 	k.n1  =  domHash                 << 24; // 1 byte domHash
 	//k.n1 |= (t->m_bscore & ~0xc0)    << 16; // 1 byte bscore
 	k.n1 |=  cs                      >> 16; // 4 byte score
-	k.n0  =  ((long long)cs)         << (64-16);
+	k.n0  =  ((int64_t)cs)         << (64-16);
 	k.n0 |=  t->m_docId; // getDocIdFromPtr ( t->m_docIdPtr );
 
 	// do not add dups
@@ -459,7 +459,7 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		k.n1  =  domHash2                << 24; // 1 byte domHash
 		//k.n1 |= (t->m_bscore & ~0xc0)    << 16; // 1 byte bscore
 		k.n1 |=  cs                      >> 16; // 4 byte score
-		k.n0  =  ((long long)cs)         << (64-16);
+		k.n0  =  ((int64_t)cs)         << (64-16);
 		k.n0 |=  t->m_docId; // getDocIdFromPtr ( t->m_docIdPtr );
 		// delete the low node, this might do a rotation
 		deleteNode ( tn , domHash2 );
@@ -1067,7 +1067,7 @@ long TopTree::computeDepth ( long i ) {
 	else                          return rightDepth + 1;  
 }	
 
-bool TopTree::hasDocId ( long long d ) {
+bool TopTree::hasDocId ( int64_t d ) {
 	long i = getLowNode ( );
 	// scan the nodes
 	for ( ; i >= 0 ; i = getNext ( i ) ) {

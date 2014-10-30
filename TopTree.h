@@ -29,7 +29,7 @@ class TopNode {
 	// no longer needed, Msg3a does not need, it has already
 	//unsigned char  m_tier     ;
 	float          m_score    ;
-	long long      m_docId;
+	int64_t      m_docId;
 
 	// option for using int scores
 	long m_intScore;
@@ -53,9 +53,9 @@ class TopNode {
 	long m_left;   // kid
 	long m_right;  // kid
 
-	//long long getDocId ( );
+	//int64_t getDocId ( );
 
-	//long long getDocIdForMsg3a ( );
+	//int64_t getDocIdForMsg3a ( );
 };
 
 class TopTree {
@@ -94,7 +94,7 @@ class TopTree {
 
 	void deleteNodes ( );
 
-	bool hasDocId ( long long d );
+	bool hasDocId ( int64_t d );
 
 	TopNode *getNode ( long i ) { return &m_nodes[i]; }
 
@@ -132,7 +132,7 @@ class TopTree {
 	long  m_docsWanted;
 	long  m_ridiculousMax;
 	char  m_kickedOutDocIds;
-	//long long m_lastKickedOutDocId;
+	//int64_t m_lastKickedOutDocId;
 	long  m_domCount[256];
 	// the node with the minimum "score" for that domHash
 	long  m_domMinNode[256];

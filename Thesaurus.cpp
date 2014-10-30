@@ -67,7 +67,7 @@ static char *s_affFile = "thesaurus-affinity.txt";
 // quick and dirty
 static long findTermIds(char *s, int64_t *tids, 
 			bool hasSpace, long slen = 0) {
-	static long long pid = 0;//getPrefixHash(NULL, 0, "", 0);
+	static int64_t pid = 0;//getPrefixHash(NULL, 0, "", 0);
 	char buf[256];
 	if (!slen) slen = gbstrlen(s);
 	if (slen > 255) return 0;
@@ -84,7 +84,7 @@ static long findTermIds(char *s, int64_t *tids,
 		phrases.set(&words, &bits, true, false, 
 			TITLEREC_CURRENT_VERSION, 0);
 		long i = 0, j = 0;
-		long long tid;
+		int64_t tid;
 		while (i < words.getNumWords() && j < MAX_STIDS) {
 			tid = phrases.getPhraseId2(i++);
 			if (!tid) continue;
@@ -919,7 +919,7 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 
 struct Number {
 	char *m_word;
-	long long m_number;
+	int64_t m_number;
 	long m_len;
 	unsigned long m_h;
 };
@@ -976,20 +976,20 @@ static Number s_bigNumbers[] = {
 void testNumber() {
 	SynonymInfo info;
 	for(int i = 0; i < 10000; i++) {
-		long long n1 = (long long)rand() << 32 + rand();
+		int64_t n1 = (int64_t)rand() << 32 + rand();
 		bool r1 = g_thesaurus.parseNumbers(n1, &info);
 		if (!r1) log(LOG_INFO, "query: %lld failure", n1);
 		bool r2 = g_thesaurus.parseNumbers(info.m_syn[0], 
 						   info.m_len[0], 
 						   &info);
-		long long n2 = strtoll(info.m_, 0, 0);
+		int64_t n2 = strtoll(info.m_, 0, 0);
 		if (n1 != n2 && n1 >= 0) 
 			log(LOG_INFO, "query: %lld %lld %s", n1, n2, buf1);
 	}
 }
 #endif
 
-bool Thesaurus::parseNumbers(long long n, SynonymInfo *info) {
+bool Thesaurus::parseNumbers(int64_t n, SynonymInfo *info) {
 	SafeBuf buf(256);
 	bool sp = false, r = true;
 	// break it down until there's nothing left
@@ -1002,7 +1002,7 @@ bool Thesaurus::parseNumbers(long long n, SynonymInfo *info) {
 				break;
 			}
 		}
-		long long base = n;
+		int64_t base = n;
 		if (mult) base /= mult->m_number;
 		long hundred = base / 100;
 		long tens;
@@ -1073,13 +1073,13 @@ bool Thesaurus::parseNumbers(char *s, long slen, SynonymInfo *info) {
 	// first check to see if we have digits
 	char *p = s, *pend = s + slen;
 	char *send;
-	long long n = strtoll(s, &send, 10);
+	int64_t n = strtoll(s, &send, 10);
 	if (s != send && send == pend) {
 		return parseNumbers(n, info);
 	}
 	SafeBuf buf(256);
 	n = 0;
-	long long m = 0;
+	int64_t m = 0;
 	Number *sm = NULL, *tn = NULL, *hn = NULL, *md = NULL;
 	while (p < pend) {
 		while ((isspace(*p) || *p == ',') && p < pend) p++;
@@ -1164,7 +1164,7 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 				SynonymInfo *info, long bits) {
 	char *w1, *w2, *p1, *p2, *end, *mid = NULL;
 	long w1Len, w2Len, midLen;
-	long long leftSynHash, rightSynHash;
+	int64_t leftSynHash, rightSynHash;
 	// disable this lest we get into an infinite recursive loop
 	bits &= ~SYNBIT_PHRASE;
 	p1 = s;

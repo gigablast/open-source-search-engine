@@ -49,7 +49,7 @@ public:
 	void (*m_hammerCallback)(class Msg13Request *r);
 
 
-	long long m_urlHash48;
+	int64_t m_urlHash48;
 	long  m_firstIp;
 
 	// a tmp hack var referencing into m_url[] below
@@ -118,10 +118,10 @@ public:
 	class TcpSocket *m_tcpSocket;
 
 	// used for addTestDoc() and caching. msg13 sets this
-	long long m_urlHash64;	
+	int64_t m_urlHash64;	
 	long      m_spideredTime;
 	// used for caching (and for request table, wait in line table)
-	long long m_cacheKey;
+	int64_t m_cacheKey;
 	char      m_testDir[32];
 	// msg13 sets this too, so you don't have to worry about setting it
 	//long      m_urlLen;

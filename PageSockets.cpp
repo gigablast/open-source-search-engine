@@ -157,7 +157,7 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			, DARK_BLUE
 			);
 	// current time in milliseconds
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// store in buffer for sorting
 	long       times[MAX_TCP_SOCKS];
 	TcpSocket *socks[MAX_TCP_SOCKS];
@@ -250,7 +250,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 	//if ( ! pwd  ) pwd  = "";
 
 	// time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// get # of used nodes
 	//long n = server->getTopUsedSlot();
 	// store in buffer for sorting
@@ -386,9 +386,9 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		//if ( ! s->isDoneReading() ) st = "reading";
 		//if ( ! s->isDoneSending() ) st = "reading";
 		// times
-		long long elapsed0 = (now - s->m_startTime    ) ;
-		long long elapsed1 = (now - s->m_lastReadTime ) ;
-		long long elapsed2 = (now - s->m_lastSendTime ) ;
+		int64_t elapsed0 = (now - s->m_startTime    ) ;
+		int64_t elapsed1 = (now - s->m_lastReadTime ) ;
+		int64_t elapsed2 = (now - s->m_lastSendTime ) ;
 		char e0[32],e1[32], e2[32];
 		sprintf ( e0 , "%llims" , elapsed0 );
 		sprintf ( e1 , "%llims" , elapsed1 );

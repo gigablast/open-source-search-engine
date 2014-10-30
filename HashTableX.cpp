@@ -203,7 +203,7 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 	// doesn't return such big numbers!
 	if ( (m_numSlots < 20 || 2 * m_numSlotsUsed >= m_numSlots) &&
 	     m_numSlots < m_maxSlots ) {
-		long long growTo = ((long long)m_numSlots * 150LL )/100LL+20LL;
+		int64_t growTo = ((int64_t)m_numSlots * 150LL )/100LL+20LL;
 		if ( growTo > m_maxSlots ) growTo = m_maxSlots;
 		if ( ! setTableSize ( (long)growTo , NULL , 0 ) ) return false;
 	}
@@ -318,7 +318,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 	// don't change size if we do not need to
 	if ( oldn == m_numSlots ) return true;
 
-	long long n = (long long)oldn;
+	int64_t n = (int64_t)oldn;
 	// make it a power of 2 for speed if small
 	n = getHighestLitBitValueLL((uint64_t)oldn * 2LL -1);
 	// sanity check, must be less than 1B
@@ -335,7 +335,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 	if ( buf && bufSize < need ) { char *xx = NULL; *xx = 0; }
 
 	// we grow kinda slow, it slows things down, so note it
-	long long startTime =0LL;
+	int64_t startTime =0LL;
 	long old = -1;
 	if ( m_numSlots > 2000 ) {
 		startTime = gettimeofdayInMilliseconds();
@@ -404,7 +404,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 		if ( m_allocName ) name = m_allocName;
 		//if ( name && strcmp(name,"HashTableX")==0 )
 		//	log("hey");
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		logf(LOG_DEBUG,"table: grewtable %s from %li to %li slots "
 		     "in %lli ms (this=0x%lx) (used=%li)",  
 		     name,old,m_numSlots ,now - startTime,(long)this,oldUsed);

@@ -88,28 +88,28 @@ class RdbCache {
 	// . a quick hack for SpiderCache.cpp
 	// . if your record is always a 4 byte long call this
 	// . returns -1 if not found, so don't store -1 in there then
-	long long getLongLong ( collnum_t collnum ,
+	int64_t getLongLong ( collnum_t collnum ,
 				unsigned long key , long maxAge , // in seconds
 				bool promoteRecord );
 
 	// this puts a long in there
         void addLongLong ( collnum_t collnum ,
-			   unsigned long key , long long value ,
+			   unsigned long key , int64_t value ,
 			   char **retRecPtr = NULL ) ;
 
-	// . both key and data are long longs here
+	// . both key and data are int64_ts here
 	// . returns -1 if not found
-	long long getLongLong2 ( collnum_t collnum ,
+	int64_t getLongLong2 ( collnum_t collnum ,
 				 uint64_t key , 
 				 long maxAge , // in seconds
 				 bool promoteRecord );
 
 	// this puts a long in there
         void addLongLong2 ( collnum_t collnum ,
-			   uint64_t key , long long value ,
+			   uint64_t key , int64_t value ,
 			   char **retRecPtr = NULL ) ;
 
-	// same routines for longs now, but key is a long long
+	// same routines for longs now, but key is a int64_t
 	long getLong ( collnum_t collnum ,
 		       uint64_t key , long maxAge , // in seconds
 		       bool promoteRecord );
@@ -265,9 +265,9 @@ class RdbCache {
 	//long getBaseMem     () {
 	//	return m_baseMem         + m_tree.m_baseMem; };
 	// cache stats
-	long long getNumHits   () { return m_numHits;   };
-	long long getNumMisses () { return m_numMisses; };
-	long long getHitBytes  () { return m_hitBytes; };
+	int64_t getNumHits   () { return m_numHits;   };
+	int64_t getNumMisses () { return m_numMisses; };
+	int64_t getHitBytes  () { return m_hitBytes; };
 	long getNumUsedNodes  () { return m_numPtrsUsed; };
 	long getNumTotalNodes () { return m_numPtrsMax ; };
 
@@ -334,7 +334,7 @@ class RdbCache {
 	char      *m_bufs     [32];
 	long       m_bufSizes [32]; // size of the alloc'd space
 	long       m_numBufs;
-	long long  m_totalBufSize;
+	int64_t  m_totalBufSize;
 	long       m_offset; // where next rec is stored
 	long       m_tail;   // next rec to delete
 
@@ -347,10 +347,10 @@ class RdbCache {
 	//long      *m_crcs;
 
 	// cache hits and misses
-	long long m_numHits; // includes partial hits & cached not-founds too
-	//long long m_numPartialHits;
-	long long m_numMisses;
-	long long m_hitBytes;
+	int64_t m_numHits; // includes partial hits & cached not-founds too
+	//int64_t m_numPartialHits;
+	int64_t m_numMisses;
+	int64_t m_hitBytes;
 
 	long m_fixedDataSize;
 	bool m_supportLists;
@@ -367,14 +367,14 @@ class RdbCache {
 	char m_dks;
 
 	// count the add ops
-	long long m_adds;
-	long long m_deletes;
+	int64_t m_adds;
+	int64_t m_deletes;
 
 	char m_needsSave;
 
 	char m_corruptionDetected;
 
-	long long m_maxColls;
+	int64_t m_maxColls;
 };	
 
 #endif

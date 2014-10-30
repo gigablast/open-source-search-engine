@@ -60,8 +60,8 @@ static char s_countsAreValid = 1;
 /////////////////////////
 
 void SpiderRequest::setKey (long firstIp,
-			    long long parentDocId,
-			    long long uh48,
+			    int64_t parentDocId,
+			    int64_t uh48,
 			    bool isDel) {
 
 	// sanity
@@ -192,8 +192,8 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 }
 
 void SpiderReply::setKey (long firstIp,
-			  long long parentDocId,
-			  long long uh48,
+			  int64_t parentDocId,
+			  int64_t uh48,
 			  bool isDel) {
 	m_key = g_spiderdb.makeKey ( firstIp,uh48,false,parentDocId , isDel );
 	// set dataSize too!
@@ -280,8 +280,8 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 
 	// show elapsed time
 	if ( xd ) {
-		long long now = gettimeofdayInMilliseconds();
-		long long elapsed = now - xd->m_startTime;
+		int64_t now = gettimeofdayInMilliseconds();
+		int64_t elapsed = now - xd->m_startTime;
 		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
 		collnum_t collnum = xd->m_collnum;
@@ -422,8 +422,8 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 
 	// show elapsed time
 	if ( xd ) {
-		long long now = gettimeofdayInMilliseconds();
-		long long elapsed = now - xd->m_startTime;
+		int64_t now = gettimeofdayInMilliseconds();
+		int64_t elapsed = now - xd->m_startTime;
 		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
 		// print collection
@@ -593,8 +593,8 @@ bool Spiderdb::init ( ) {
 	//long      ip         = 0x1234;
 	char      priority   = 12;
 	long      spiderTime = 0x3fe96610;
-	long long urlHash48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
-	//long long pdocid     = 0x567834222LL;
+	int64_t urlHash48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
+	//int64_t pdocid     = 0x567834222LL;
 	//key192_t k = makeOrderKey ( ip,priority,spiderTime,urlHash48,pdocid);
 	//if (getOrderKeyUrlHash48  (&k)!=urlHash48 ){char*xx=NULL;*xx=0;}
 	//if (getOrderKeySpiderTime (&k)!=spiderTime){char*xx=NULL;*xx=0;}
@@ -610,7 +610,7 @@ bool Spiderdb::init ( ) {
 	if(g_doledb.getIsDel(&dk)!= 0){char*xx=NULL;*xx=0;}
 
 	// spiderdb key test
-	long long docId = 123456789;
+	int64_t docId = 123456789;
 	long firstIp = 0x23991688;
 	key128_t sk = g_spiderdb.makeKey ( firstIp,urlHash48,1,docId,false);
 	if ( ! g_spiderdb.isSpiderRequest (&sk) ) { char *xx=NULL;*xx=0; }
@@ -763,9 +763,9 @@ bool Spiderdb::verify ( char *coll ) {
 }
 
 key128_t Spiderdb::makeKey ( long      firstIp     ,
-			     long long urlHash48   , 
+			     int64_t urlHash48   , 
 			     bool      isRequest   ,
-			     long long parentDocId ,
+			     int64_t parentDocId ,
 			     bool      isDel       ) {
 	key128_t k;
 	k.n1 = (unsigned long)firstIp;
@@ -1405,7 +1405,7 @@ bool SpiderColl::makeDoleIPTable ( ) {
 
 key_t makeWaitingTreeKey ( uint64_t spiderTimeMS , long firstIp ) {
 	// sanity
-	if ( ((long long)spiderTimeMS) < 0 ) { char *xx=NULL;*xx=0; }
+	if ( ((int64_t)spiderTimeMS) < 0 ) { char *xx=NULL;*xx=0; }
 	// make the wait tree key
 	key_t wk;
 	wk.n1 = (spiderTimeMS>>32);
@@ -1603,7 +1603,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 			logf(LOG_DEBUG,"spider: added time=1 ip=%s to waiting "
 			    "tree (node#=%li)", iptoa(firstIp),wn);
 		// a tmp var
-		long long fakeone = 1LL;
+		int64_t fakeone = 1LL;
 		// add to table now since its in the tree
 		if ( ! m_waitingTable.addKey ( &firstIp , &fakeone ) ) {
 			log("spider: makeWaitTree2: %s",mstrerror(g_errno));
@@ -1625,7 +1625,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 }
 
 // for debugging query reindex i guess
-long long SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
+int64_t SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
 	// make the key. use 0 as the time...
 	key_t wk = makeWaitingTreeKey ( 0, firstIp );
 	// set node from wait tree key. this way we can resume from a prev key
@@ -1820,7 +1820,7 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// remove the lock here
 	//
 	//////
-	long long lockKey = makeLockTableKey ( srep );
+	int64_t lockKey = makeLockTableKey ( srep );
 	
 	// shortcut
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
@@ -1967,7 +1967,7 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	g_errno = 0;
 	// sanity check - test cache
 	//if ( g_conf.m_logDebugSpider && srep->m_downloadEndTime ) {
-	//	long long last = m_lastDownloadCache.getLongLong ( m_collnum ,
+	//	int64_t last = m_lastDownloadCache.getLongLong ( m_collnum ,
 	//						     srep->m_firstIp ,
 	//							   -1,// maxAge
 	//							   true );//pro
@@ -2058,7 +2058,7 @@ bool SpiderColl::isInDupCache ( SpiderRequest *sreq , bool addToCache ) {
 				  -1 ); // numptrsmax
 
 	// quit add dups over and over again...
-	long long dupKey64 = sreq->getUrlHash48();
+	int64_t dupKey64 = sreq->getUrlHash48();
 	// . these flags make big difference in url filters
 	// . NOTE: if you see a url that is not getting spidered that should be it might
 	//   be because we are not incorporating other flags here...
@@ -2114,7 +2114,7 @@ bool SpiderColl::isInDupCache ( SpiderRequest *sreq , bool addToCache ) {
 // . BUT! if we have 150,000 urls that is going to take a long time to
 //   spider, so it should have a high reload rate!
 bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq , 
-				    long long nowGlobalMS ) {
+				    int64_t nowGlobalMS ) {
 	// don't add negative keys or data less thangs
 	if ( sreq->m_dataSize <= 0 ) {
 		if ( g_conf.m_logDebugSpider )
@@ -2256,7 +2256,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// get spider time -- i.e. earliest time when we can spider it
 	//uint64_t spiderTimeMS = getSpiderTimeMS (sreq,ufn,NULL,nowGlobalMS );
 	// sanity
-	//if ( (long long)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+	//if ( (int64_t)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 
 	// once in waiting tree, we will scan waiting tree and then lookup
 	// each firstIp in waiting tree in spiderdb to get the best
@@ -2270,11 +2270,11 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// and add the new one. hmm, the waitingtree scan code ...
 
 	// sanity check
-	//long long ttt=getEarliestSpiderTimeFromWaitingTree(sreq->m_firstIp);
+	//int64_t ttt=getEarliestSpiderTimeFromWaitingTree(sreq->m_firstIp);
 	//logf (LOG_DEBUG,"spider: earliestime=%lli for firstip=%s",
 	//      ttt,iptoa(sreq->m_firstIp));
 	      
-	//if ( ttt != (long long)spiderTimeMS ) { char *xx=NULL;*xx=0; }
+	//if ( ttt != (int64_t)spiderTimeMS ) { char *xx=NULL;*xx=0; }
 
 	// update the latest siteNumInlinks count for this "site"
 	if ( sreq->m_siteNumInlinksValid ) {
@@ -2348,7 +2348,7 @@ bool SpiderLoop::printLockTable ( ) {
 		// cast lock
 		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
 		// get the key
-		long long lockKey = *(long long *)ht->getKeyFromSlot(i);
+		int64_t lockKey = *(int64_t *)ht->getKeyFromSlot(i);
 		// show it
 		log("dump: lock. "
 		    "lockkey=%lli "
@@ -2466,15 +2466,15 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	// compute the min time for this entry to satisfy sameIpWait
 	//
 	///////
-	long long spiderTimeMS = spiderTimeMSArg;
-	long long lastDownloadTimeMS = lastDownloadTime ( firstIp );
+	int64_t spiderTimeMS = spiderTimeMSArg;
+	int64_t lastDownloadTimeMS = lastDownloadTime ( firstIp );
 	// how long to wait between downloads from same ip in milliseconds?
 	long sameIpWaitTime = 250; // ms
 	if ( ufn >= 0 ) {
 		long siwt = m_sc->m_cr->m_spiderIpWaits[ufn];
 		if ( siwt >= 0 ) sameIpWaitTime = siwt;
 	}
-	long long minDownloadTime = sameIpWaitTime + siwt;
+	int64_t minDownloadTime = sameIpWaitTime + siwt;
 	// use that if it is more restrictive
 	if ( minDownloadTime > now && minDownloadTime > spiderTimeMS )
 		spiderTimeMS = minDownloadTime;
@@ -2491,9 +2491,9 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	//   anything at this point.
 	if ( ws >= 0 ) {
 		// get timems from waiting table
-		long long sms = m_waitingTable.getScore64FromSlot(ws);
+		int64_t sms = m_waitingTable.getScore64FromSlot(ws);
 		// get current time
-		//long long nowMS = gettimeofdayInMillisecondsGlobal();
+		//int64_t nowMS = gettimeofdayInMillisecondsGlobal();
 		// make the key then
 		key_t wk = makeWaitingTreeKey ( sms, firstIp );
 		// must be there
@@ -2507,7 +2507,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		//
 		// i'm not so sure what i was doing here before, but i don't
 		// want to starve the spiders, so make this 100ms not 5000ms
-		if ( (long long)spiderTimeMS > sms - 100 ) {
+		if ( (int64_t)spiderTimeMS > sms - 100 ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: skip updating waiting tree");
 			return false;
@@ -2559,7 +2559,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	long max =  m_waitingTree.getNumTotalNodes();
 	
 	if ( used + 1 > max ) {
-		long more = (((long long)used) * 15) / 10;
+		long more = (((int64_t)used) * 15) / 10;
 		if ( more < 10 ) more = 10;
 		if ( more > 100000 ) more = 100000;
 		long newNum = max + more;
@@ -2691,7 +2691,7 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	// stop if need to wait for this one
 	if ( spiderTimeMS > nowMS ) return 0;
 	// sanity
-	if ( (long long)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+	if ( (int64_t)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 	// save key for deleting when done
 	m_waitingTreeKey.n1 = k->n1;
 	m_waitingTreeKey.n0 = k->n0;
@@ -3082,7 +3082,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 		s_lastUfnTreeFlushTime = nowLocal;
 	}
 
-	long long uh48;
+	int64_t uh48;
 
 	//
 	// s_ufnTree tries to cache the top X spiderrequests for an IP
@@ -3214,8 +3214,8 @@ static void doledWrapper ( void *state ) {
 	// gotSpiderListWrapper
 	//THIS->m_isPopulating = false;
 
-	long long now = gettimeofdayInMilliseconds();
-	long long diff = now - THIS->m_msg4Start;
+	int64_t now = gettimeofdayInMilliseconds();
+	int64_t diff = now - THIS->m_msg4Start;
 	// we add recs to doledb using msg1 to keep things fast because
 	// msg4 has a delay of 500ms in it. but even then, msg1 can take
 	// 6ms or more just because of load issues.
@@ -3237,8 +3237,8 @@ static void doledWrapper ( void *state ) {
 
 key128_t makeUfnTreeKey ( long      firstIp      ,
 			  long      priority     ,
-			  long long spiderTimeMS ,
-			  long long uh48         ) {
+			  int64_t spiderTimeMS ,
+			  int64_t uh48         ) {
 	// sanity check, do not allow negative priorities for now
 	if ( priority < 0 ) { char *xx=NULL;*xx=0; }
 	if ( priority > 255 ) { char *xx=NULL;*xx=0; }
@@ -3277,8 +3277,8 @@ key128_t makeUfnTreeKey ( long      firstIp      ,
 key192_t makeWinnerTreeKey ( long firstIp ,
 			     long priority ,
 			     long hopCount,
-			     long long spiderTimeMS ,
-			     long long uh48 ) {
+			     int64_t spiderTimeMS ,
+			     int64_t uh48 ) {
 	key192_t k;
 	k.n2 = firstIp;
 	k.n2 <<= 16;
@@ -3302,8 +3302,8 @@ void parseWinnerTreeKey ( key192_t  *k ,
 			  long      *firstIp ,
 			  long      *priority ,
 			  long *hopCount,
-			  long long  *spiderTimeMS ,
-			  long long *uh48 ) {
+			  int64_t  *spiderTimeMS ,
+			  int64_t *uh48 ) {
 	*firstIp = (k->n2) >> 32;
 	*priority = 255 - ((k->n2 >> 16) & 0xffff);
 	*hopCount = (k->n2 & 0xffff);
@@ -3316,14 +3316,14 @@ void parseWinnerTreeKey ( key192_t  *k ,
 void testWinnerTreeKey ( ) {
 	long firstIp = 1234567;
 	long priority = 123;
-	long long spiderTimeMS = 456789123LL;
-	long long uh48 = 987654321888LL;
+	int64_t spiderTimeMS = 456789123LL;
+	int64_t uh48 = 987654321888LL;
 	long hc = 4321;
 	key192_t k = makeWinnerTreeKey (firstIp,priority,hc,spiderTimeMS,uh48);
 	long firstIp2;
 	long priority2;
-	long long spiderTimeMS2;
-	long long uh482;
+	int64_t spiderTimeMS2;
+	int64_t uh482;
 	long hc2;
 	parseWinnerTreeKey(&k,&firstIp2,&priority2,&hc2,&spiderTimeMS2,&uh482);
 	if ( firstIp != firstIp2 ) { char *xx=NULL;*xx=0; }
@@ -3648,7 +3648,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	list->resetListPtr();
 
 	// get this
-	long long nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
+	int64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
 	uint32_t nowGlobal   = nowGlobalMS / 1000;
 
 	//SpiderRequest *winReq      = NULL;
@@ -3656,7 +3656,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	//uint64_t       winTimeMS   = 0xffffffffffffffffLL;
 	//long           winMaxSpidersPerIp = 9999;
 	SpiderReply   *srep        = NULL;
-	long long      srepUh48;
+	int64_t      srepUh48;
 
 	// for getting the top MAX_NODES nodes
 	//long           tailPriority = -10;
@@ -3828,7 +3828,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		//
 		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
 			// get request url hash48 (jez= 220459274533043 )
-			long long uh48 = sreq->getUrlHash48();
+			int64_t uh48 = sreq->getUrlHash48();
 			// do not repeatedly page count if we just have
 			// a single fake firstip request. this just adds
 			// an entry to the table that will end up in
@@ -4012,12 +4012,12 @@ bool SpiderColl::scanListForWinners ( ) {
 		// temp debug
 		//char *xx=NULL;*xx=0;
 
-		long long spiderTimeMS;
+		int64_t spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );
 		// how many outstanding spiders on a single IP?
 		//long maxSpidersPerIp = m_cr->m_spiderIpMaxSpiders[ufn];
 		// sanity
-		if ( (long long)spiderTimeMS < 0 ) { 
+		if ( (int64_t)spiderTimeMS < 0 ) { 
 			log("spider: got corrupt 2 spiderRequest in scan (cn=%li)",
 			    (long)m_collnum);
 			continue;
@@ -4149,7 +4149,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// that evalIpLoop() repopulates doledb again with that
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
-		long long key = makeLockTableKey ( sreq );
+		int64_t key = makeLockTableKey ( sreq );
 		if ( g_spiderLoop.m_lockTable.isInTable ( &key ) ) {
 			// get it
 			//CrawlInfo *ci = &m_cr->m_localCrawlInfo;
@@ -4165,7 +4165,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
-		long long uh48 = sreq->getUrlHash48();
+		int64_t uh48 = sreq->getUrlHash48();
 
 		// make key
 		key192_t wk = makeWinnerTreeKey( firstIp ,
@@ -4214,9 +4214,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		// only compare to min winner in tree if tree is full
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
 			// get that key
-			long long tm1 = spiderTimeMS;
+			int64_t tm1 = spiderTimeMS;
 			// get the spider time of lowest scoring req in tree
-			long long tm2 = m_tailTimeMS;
+			int64_t tm2 = m_tailTimeMS;
 			// if they are both overdue, make them the same
 			if ( tm1 < nowGlobalMS ) tm1 = 1;
 			if ( tm2 < nowGlobalMS ) tm2 = 1;
@@ -4280,7 +4280,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		/*
 		// make the key
 		//if ( useTree ) {
-		long long uh48 = sreq->getUrlHash48();
+		int64_t uh48 = sreq->getUrlHash48();
 		key128_t k = makeUfnTreeKey ( firstIp ,priority,
 					      spiderTimeMS , uh48 );
 		//long nn =;
@@ -4291,8 +4291,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		//    "spiderdb.k.n0=0x%llx "
 		//    ,
 		//    nn,iptoa(firstIp),uh48,k.n1,
-		//    *(long long *)rec,
-		//    *(long long *)(rec+8)
+		//    *(int64_t *)rec,
+		//    *(int64_t *)(rec+8)
 		//   );
 		//numNodes++;
 		//}
@@ -4418,7 +4418,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		m_bestSpiderTimeMS = winTimeMS;
 		m_bestMaxSpidersPerIp = winMaxSpidersPerIp;
 		// sanity
-		if ( (long long)winTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+		if ( (int64_t)winTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 		// note it
 		if ( g_conf.m_logDebugSpider ) {
 			log("spider: found winning request IN THIS LIST ip=%s "
@@ -4595,8 +4595,8 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		long winIp;
 		long winPriority;
 		long winHopCount;
-		long long winSpiderTimeMS;
-		long long winUh48;
+		int64_t winSpiderTimeMS;
+		int64_t winUh48;
 		key192_t *winKey = (key192_t *)m_winnerTree.getKey ( node );
 		parseWinnerTreeKey ( winKey ,
 				     &winIp ,
@@ -4704,7 +4704,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	}		
 	*/
 
-	//long long nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
+	//int64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
 
 	// if best request has a future spiderTime, at least update
 	// the wait tree with that since we will not be doling this request
@@ -4776,7 +4776,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	// MDW: now we add a bunch of urls to doledb, so i guess we can't
 	// check locks...
 	/*
-	long long key = makeLockTableKey ( m_bestRequest );
+	int64_t key = makeLockTableKey ( m_bestRequest );
 	if ( g_spiderLoop.m_lockTable.isInTable ( &key ) ) {
 		log("spider: best request got doled out from under us");
 		return true;
@@ -4856,7 +4856,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	// delete the winner from ufntree as well
 	//
 	/*
-	long long buh48 = m_bestRequest->getUrlHash48();
+	int64_t buh48 = m_bestRequest->getUrlHash48();
 	key128_t bkey = makeUfnTreeKey ( m_bestRequest->m_firstIp ,
 					 m_bestRequest->m_priority ,
 					 m_bestSpiderTimeMS ,
@@ -4943,26 +4943,26 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 				       uint64_t nowGlobalMS ) {
 	// . get the scheduled spiderTime for it
 	// . assume this SpiderRequest never been successfully spidered
-	long long spiderTimeMS = ((uint64_t)sreq->m_addedTime) * 1000LL;
+	int64_t spiderTimeMS = ((uint64_t)sreq->m_addedTime) * 1000LL;
 	// if injecting for first time, use that!
 	if ( ! srep && sreq->m_isInjecting ) return spiderTimeMS;
 	if ( ! srep && sreq->m_isPageReindex ) return spiderTimeMS;
 
 	// to avoid hammering an ip, get last time we spidered it...
-	long long lastMS ;
+	int64_t lastMS ;
 	lastMS = m_lastDownloadCache.getLongLong ( m_collnum       ,
 						   sreq->m_firstIp ,
 						   -1              , // maxAge
 						   true            );// promote
 	// -1 means not found
-	if ( (long long)lastMS == -1 ) lastMS = 0;
+	if ( (int64_t)lastMS == -1 ) lastMS = 0;
 	// sanity
-	if ( (long long)lastMS < -1 ) { 
+	if ( (int64_t)lastMS < -1 ) { 
 		log("spider: corrupt last time in download cache. nuking.");
 		lastMS = 0;
 	}
 	// min time we can spider it
-	long long minSpiderTimeMS1 = lastMS + m_cr->m_spiderIpWaits[ufn];
+	int64_t minSpiderTimeMS1 = lastMS + m_cr->m_spiderIpWaits[ufn];
 	// if not found in cache
 	if ( lastMS == -1 ) minSpiderTimeMS1 = 0LL;
 
@@ -4972,7 +4972,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	/////////////////////////////////////////////////
 	/////////////////////////////////////////////////
 	long *cdp = (long *)m_cdTable.getValue ( &sreq->m_domHash32 );
-	long long minSpiderTimeMS2 = 0;
+	int64_t minSpiderTimeMS2 = 0;
 	if ( cdp && *cdp >= 0 ) minSpiderTimeMS2 = lastMS + *cdp;
 
 	// wait 5 seconds for all outlinks in order for them to have a
@@ -4998,7 +4998,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 		//{ char*xx=NULL;*xx=0;}
 	}
 	// compute new spiderTime for this guy, in seconds
-	long long waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
+	int64_t waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
 	// do not spider more than once per 15 seconds ever!
 	// no! might be a query reindex!!
 	if ( waitInSecs < 15 && ! sreq->m_isPageReindex ) { //urlIsDocId ) { 
@@ -5014,15 +5014,15 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	//if ( sreq->m_urlIsDocId ) waitInSecs = 0;
 	if ( sreq->m_isPageReindex ) waitInSecs = 0;
 	// when it was spidered
-	long long lastSpideredMS = ((uint64_t)srep->m_spideredTime) * 1000;
+	int64_t lastSpideredMS = ((uint64_t)srep->m_spideredTime) * 1000;
 	// . when we last attempted to spider it... (base time)
 	// . use a lastAttempt of 0 to indicate never! 
 	// (first time)
-	long long minSpiderTimeMS3 = lastSpideredMS + (waitInSecs * 1000LL);
+	int64_t minSpiderTimeMS3 = lastSpideredMS + (waitInSecs * 1000LL);
 	//  ensure min
 	if ( spiderTimeMS < minSpiderTimeMS3 ) spiderTimeMS = minSpiderTimeMS3;
 	// sanity
-	if ( (long long)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+	if ( (int64_t)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 
 	return spiderTimeMS;
 }
@@ -5039,8 +5039,8 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 	long *score = (long *)m_doleIpTable.getValue32 ( sreq->m_firstIp );
 	// debug point
 	if ( g_conf.m_logDebugSpider ){//&&1==2 ) { // disable for now, spammy
-		long long  uh48 = sreq->getUrlHash48();
-		long long pdocid = sreq->getParentDocId();
+		int64_t  uh48 = sreq->getUrlHash48();
+		int64_t pdocid = sreq->getParentDocId();
 		long ss = 1;
 		if ( score ) ss = *score + 1;
 		// if for some reason this collides with another key
@@ -5110,7 +5110,7 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 /*
 unsigned long getShardToSpider ( char *sr ) {
 	// use the url hash
-	long long uh48 = g_spiderdb.getUrlHash48 ( (key128_t *)sr );
+	int64_t uh48 = g_spiderdb.getUrlHash48 ( (key128_t *)sr );
 	// host to dole it based on ip
 	long hostId = uh48 % g_hostdb.m_numHosts ;
 	// get it
@@ -6118,8 +6118,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// log this now
 	if ( g_conf.m_logDebugSpider ) {
-		long long now = gettimeofdayInMillisecondsLocal();
-		long long took = now - m_doleStart;
+		int64_t now = gettimeofdayInMillisecondsLocal();
+		int64_t took = now - m_doleStart;
 		if ( took > 2 )
 			logf(LOG_DEBUG,"spider: GOT list from doledb in "
 			     "%llims "
@@ -6203,7 +6203,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// 12 byte doledb keys
 		long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
 		long stm = g_doledb.getSpiderTime(&m_sc->m_nextDoledbKey);
-		long long uh48 = g_doledb.getUrlHash48(&m_sc->m_nextDoledbKey);
+		int64_t uh48 = g_doledb.getUrlHash48(&m_sc->m_nextDoledbKey);
 		logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s"
 		     " pri=%li time=%lu uh48=%llu",
 		     KEYSTR(&m_sc->m_nextDoledbKey,12),
@@ -6412,7 +6412,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// in doledb.
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
 	// shortcut
-	long long lockKey = makeLockTableKey ( sreq );
+	int64_t lockKey = makeLockTableKey ( sreq );
 	// get the lock... only avoid if confirmed!
 	long slot = ht->getSlot ( &lockKey );
 	UrlLock *lock = NULL;
@@ -6460,7 +6460,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	//   host (or by us) then return true here
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
 	// shortcut
-	//long long uh48 = sreq->getUrlHash48();
+	//int64_t uh48 = sreq->getUrlHash48();
 	// get the lock key
 	uint64_t lockKey ;
 	lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
@@ -6519,8 +6519,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	//
 	//if ( g_conf.m_logDebugSpider ) {
 	//	// scan for it since we may have dup requests
-	//	long long uh48   = sreq->getUrlHash48();
-	//	long long pdocid = sreq->getParentDocId();
+	//	int64_t uh48   = sreq->getUrlHash48();
+	//	int64_t pdocid = sreq->getParentDocId();
 	//	// get any request from our urlhash table
 	//	SpiderRequest *sreq2 = m_sc->getSpiderRequest2 (&uh48,pdocid);
 	//	// must be there. i guess it could be missing if there is
@@ -6744,7 +6744,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
 	// shortcut
-	long long lockKeyUh48 = makeLockTableKey ( sreq );
+	int64_t lockKeyUh48 = makeLockTableKey ( sreq );
 
 	//uint64_t lockKey ;
 	//lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
@@ -6927,8 +6927,8 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	//
 	// sanity checks
 	//
-	//long long uh48;
-	//long long pdocid;
+	//int64_t uh48;
+	//int64_t pdocid;
 	//if ( g_conf.m_logDebugSpider ) {
 	//	// scan for it since we may have dup requests
 	//	uh48   = m_sreq->getUrlHash48();
@@ -7047,8 +7047,8 @@ bool SpiderLoop::spiderUrl2 ( ) {
 // . the one that was just indexed
 // . Msg7.cpp uses this to see what docid the injected doc got so it
 //   can forward it to external program
-//static long long s_lastDocId = -1;
-//long long SpiderLoop::getLastDocId ( ) { return s_lastDocId; }
+//static int64_t s_lastDocId = -1;
+//int64_t SpiderLoop::getLastDocId ( ) { return s_lastDocId; }
 
 void indexedDocWrapper ( void *state ) {
 	// . process the results
@@ -7142,7 +7142,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 		// . get its hash
 		// . should be same hash we use to store doc.%llu.html in
 		//   XmlDoc.cpp/Msg13.cpp stuff (getTestDoc())
-		long long h = hash64 ( u->getUrl() , u->getUrlLen() );
+		int64_t h = hash64 ( u->getUrl() , u->getUrlLen() );
 		char *testDir = g_test.getTestDir();
 		// make filename to dump out to
 		char fn[1024]; 
@@ -7309,7 +7309,7 @@ Msg12::Msg12 () {
 // . each group shares the same doledb and each host in the group competes
 //   for spidering all those urls. 
 // . that way if a host goes down is load is taken over
-bool Msg12::getLocks ( long long uh48, // probDocId , 
+bool Msg12::getLocks ( int64_t uh48, // probDocId , 
 		       char *url ,
 		       DOLEDBKEY *doledbKey,
 		       collnum_t collnum,
@@ -7947,7 +7947,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	}
 
 	LockRequest *lr = (LockRequest *)request;
-	//uint64_t lockKey = *(long long *)request;
+	//uint64_t lockKey = *(int64_t *)request;
 	//long lockSequence = *(long *)(request+8);
 	// is this a remove operation? assume not
 	//bool remove = false;
@@ -7974,7 +7974,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// remove expired locks from locktable
 	removeExpiredLocks ( hostId );
 
-	long long lockKey = lr->m_lockKeyUh48;
+	int64_t lockKey = lr->m_lockKeyUh48;
 
 	// check tree
 	long slot = ht->getSlot ( &lockKey ); // lr->m_lockKeyUh48 );
@@ -8107,7 +8107,7 @@ void removeExpiredLocks ( long hostId ) {
 		if ( ! ht->m_flags[i] ) continue;
 		// cast lock
 		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
-		long long lockKey = *(long long *)ht->getKeyFromSlot(i);
+		int64_t lockKey = *(int64_t *)ht->getKeyFromSlot(i);
 		// if collnum got deleted or reset
 		collnum_t collnum = lock->m_collnum;
 		if ( collnum >= g_collectiondb.m_numRecs ||
@@ -8540,13 +8540,13 @@ bool sendPage ( State11 *st ) {
 	//
 	// Spiders Table
 	//
-	long long totalPoints = g_stats.m_totalSpiderSuccessNew +
+	int64_t totalPoints = g_stats.m_totalSpiderSuccessNew +
 				g_stats.m_totalSpiderErrorsNew +
 				g_stats.m_totalSpiderSuccessOld +
 				g_stats.m_totalSpiderErrorsOld;
-	long long totalNew = g_stats.m_totalSpiderSuccessNew +
+	int64_t totalNew = g_stats.m_totalSpiderSuccessNew +
 			     g_stats.m_totalSpiderErrorsNew;
-	long long totalOld = g_stats.m_totalSpiderSuccessOld +
+	int64_t totalOld = g_stats.m_totalSpiderSuccessOld +
 			     g_stats.m_totalSpiderErrorsOld;
 	double tsr = 100.00;
 	double nsr = 100.00;
@@ -8878,7 +8878,7 @@ bool sendPage ( State11 *st ) {
 			TABLE_STYLE,
 			st->m_coll );
 	// print time format: 7/23/1971 10:45:32
-	long long timems = gettimeofdayInMillisecondsGlobal();
+	int64_t timems = gettimeofdayInMillisecondsGlobal();
 	sb.safePrintf("</b> (current time = %llu)(totalcount=%li)"
 		      "(waittablecount=%li)</td></tr>\n",
 		      timems,
@@ -11813,9 +11813,9 @@ long getUrlFilterNum ( SpiderRequest *sreq       ,
 	}
 
 	// check in cache using date of request and reply and uh48 as the key
-	long long key64 = sreq->getUrlHash48();
-	key64 ^= (long long)sreq->m_addedTime;
-	if ( srep ) key64 ^= ((long long)srep->m_spideredTime)<<32;
+	int64_t key64 = sreq->getUrlHash48();
+	key64 ^= (int64_t)sreq->m_addedTime;
+	if ( srep ) key64 ^= ((int64_t)srep->m_spideredTime)<<32;
 	char *uv = (char *)s_ufnTable.getValue(&key64);
 	if ( uv ) 
 		return *uv;
@@ -11867,8 +11867,8 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 	//}
 	char *dst          = newList;
 	char *restorePoint = newList;
-	long long reqUh48  = 0LL;
-	long long repUh48  = 0LL;
+	int64_t reqUh48  = 0LL;
+	int64_t repUh48  = 0LL;
 	SpiderReply   *oldRep = NULL;
 	SpiderRequest *oldReq = NULL;
 	char *lastKey     = NULL;
@@ -11909,7 +11909,7 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 			// cast it
 			SpiderReply *srep = (SpiderReply *)rec;
 			// shortcut
-			long long uh48 = srep->getUrlHash48();
+			int64_t uh48 = srep->getUrlHash48();
 			// crazy?
 			if ( ! uh48 ) { 
 				//uh48 = hash64b ( srep->m_url );
@@ -11949,7 +11949,7 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 
 		// shortcut
-		long long uh48 = sreq->getUrlHash48();
+		int64_t uh48 = sreq->getUrlHash48();
 
 		// crazy?
 		if ( ! uh48 ) { 
@@ -12370,8 +12370,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			// get the CrawlInfo for the ith host
 			CrawlInfo *stats = &cia[k];
 			// point to the stats for that host
-			long long *ss = (long long *)stats;
-			long long *gs = (long long *)gi;
+			int64_t *ss = (int64_t *)stats;
+			int64_t *gs = (int64_t *)gi;
 			// add each hosts counts into the global accumulators
 			for ( long j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
 				*gs = *gs + *ss;
@@ -12588,8 +12588,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	// so.
 	//cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 1;
 
-	//long long nowGlobalMS = gettimeofdayInMillisecondsGlobal();
-	//long long nextSpiderTimeMS;
+	//int64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();
+	//int64_t nextSpiderTimeMS;
 	// this will be 0 for ip's which have not had their SpiderRequests
 	// in spiderdb scanned yet to get the best SpiderRequest, so we
 	// just have to wait for that.
@@ -13014,7 +13014,7 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 
 long getFakeIpForUrl1 ( char *url1 ) {
 	// make the probable docid
-	long long probDocId = g_titledb.getProbableDocId ( url1 );
+	int64_t probDocId = g_titledb.getProbableDocId ( url1 );
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
 	return firstIp;
@@ -13022,7 +13022,7 @@ long getFakeIpForUrl1 ( char *url1 ) {
 
 long getFakeIpForUrl2 ( Url *url2 ) {
 	// make the probable docid
-	long long probDocId = g_titledb.getProbableDocId ( url2 );
+	int64_t probDocId = g_titledb.getProbableDocId ( url2 );
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
 	return firstIp;
@@ -13033,7 +13033,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	// reset it
 	reset();
 	// make the probable docid
-	long long probDocId = g_titledb.getProbableDocId ( url );
+	int64_t probDocId = g_titledb.getProbableDocId ( url );
 
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);

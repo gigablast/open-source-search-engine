@@ -237,8 +237,8 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 		/*
 		if ( m_bufPtr + MAX_URL_LEN + 1024 + wlen >= m_bufEnd ) {
 			// don't spam the logs
-			static long long s_lastTime = 0;
-			long long now = gettimeofdayInMilliseconds();
+			static int64_t s_lastTime = 0;
+			int64_t now = gettimeofdayInMilliseconds();
 			if ( now - s_lastTime < 1000 ) return true;
 			log("query: Not enough buffer space to highlight "
 			    "text. Ask Matt to fix.");

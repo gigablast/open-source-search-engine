@@ -69,16 +69,16 @@ class Clusterdb {
 				      bool  isDelKey );
 
 	// make the cluster rec key
-	key_t makeClusterRecKey ( long long     docId,
+	key_t makeClusterRecKey ( int64_t     docId,
 				  bool          familyFilter,
 				  uint8_t       languageBits,
 				  long          siteHash,
 				  bool          isDelKey,
 				  bool          isHalfKey = false );
 
-	key_t makeFirstClusterRecKey ( long long docId ) {
+	key_t makeFirstClusterRecKey ( int64_t docId ) {
 		return makeClusterRecKey ( docId, false, 0, 0, true ); };
-	key_t makeLastClusterRecKey  ( long long docId ) {
+	key_t makeLastClusterRecKey  ( int64_t docId ) {
 		return makeClusterRecKey ( docId, true, 0xff, 0xffffffff,
 					   false, true ); };
 
@@ -86,7 +86,7 @@ class Clusterdb {
 	key_t convertTitleRecKey ( key_t titleKey );
 
 	/*
-	unsigned long getGroupId ( long long docId ) {
+	unsigned long getGroupId ( int64_t docId ) {
 		return g_titledb.getGroupId ( docId ); };
 		
 	// cluster rec should be stored on same host as titleRec with the
@@ -98,15 +98,15 @@ class Clusterdb {
 	// NOTE: THESE NOW USE THE REAL CLUSTERDB REC
 	// // docId occupies the most significant bytes of the key
 	// now docId occupies the bits after the first 23
-	long long getDocId ( void *k ) {
-		//long long docId = (k.n0) >> (32+24);
+	int64_t getDocId ( void *k ) {
+		//int64_t docId = (k.n0) >> (32+24);
 		//docId |= ( ((uint64_t)(k.n1)) << 8 );
-		long long docId = (((key_t *)k)->n0) >> 35;
+		int64_t docId = (((key_t *)k)->n0) >> 35;
 		docId |= ( ((uint64_t)(((key_t *)k)->n1)) << 29 );
 		return docId;
 	};
 
-	//long long getDocId ( char *r ) {
+	//int64_t getDocId ( char *r ) {
 	//	return getDocId(*(key_t*)r);
 	//}
 
@@ -129,7 +129,7 @@ class Clusterdb {
 	//	return g_titledb.getContentHash ( *(key_t *)r ); };
 
 	char getFamilyFilter ( char *r ) {
-		if ( (*(long long *)r) & 0x0000000400000000LL ) return 1;
+		if ( (*(int64_t *)r) & 0x0000000400000000LL ) return 1;
 		return 0;
 	};
 

@@ -562,7 +562,7 @@ void Test::stopIt ( ) {
 		// point to this url
 		char *u = m_urlPtr;
 		// get hash
-		long long h = hash64 ( u , gbstrlen(u) );
+		int64_t h = hash64 ( u , gbstrlen(u) );
 		// shortcut
 		char *dir = g_hostdb.m_dir;
 
@@ -909,7 +909,7 @@ bool Test::injectLoop ( ) {
 	for ( ; m_urlPtr < m_urlEnd && *m_urlPtr ; m_urlPtr++ ) ;
 
 	// hash it
-	long long h = hash64b ( u );
+	int64_t h = hash64b ( u );
 	// dedup it lest we freeze up and stopIt() never gets called because
 	// m_urlsAdded is never decremented all the way to zero in Spider.cpp
 	if ( m_dt.isInTable ( &h ) ) goto loop;

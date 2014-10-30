@@ -30,14 +30,14 @@ class Gigabit {
 public:
 	char *m_term;
 	long  m_termLen;
-	long long m_termId64;
+	int64_t m_termId64;
 	float m_gbscore;
 	long m_minPop;
 	long m_numWords;
 	long  m_numPages;
-	long long m_lastDocId;
+	int64_t m_lastDocId;
 	// the wordids of the words in the gigabit (m_numWords of them)
-	long long m_wordIds[MAX_GIGABIT_WORDS];
+	int64_t m_wordIds[MAX_GIGABIT_WORDS];
 };
 
 
@@ -63,7 +63,7 @@ public:
 	char m_printed;
 	class Gigabit *m_gigabitPtrs[MAX_GIGABIT_PTRS];
 	long  m_numQTerms;
-	long long m_docId; // from where it came
+	int64_t m_docId; // from where it came
 	Msg20Reply *m_reply; // reply from where it came
 	// for deduping sentences
 	char  m_dedupVector[SAMPLE_VECTOR_SIZE]; // 128
@@ -77,7 +77,7 @@ class GigabitInfo {
         long       m_pop;
         long       m_count;
         long       m_numDocs;
-        long long  m_lastDocId;
+        int64_t  m_lastDocId;
         long       m_currentDocCount;
         char      *m_ptr;
         long       m_len;
@@ -156,7 +156,7 @@ class Msg40 {
 
 	// . estimated # of total hits
 	// . this is now an EXACT count... since we read all posdb termlists
-	long long getNumTotalHits (){return m_msg3a.m_numTotalEstimatedHits; }
+	int64_t getNumTotalHits (){return m_msg3a.m_numTotalEstimatedHits; }
 
 	// . we copy query and coll to our own local buffer
 	// . these routines give us back our inputted parameters we saved
@@ -172,8 +172,8 @@ class Msg40 {
 
 	char   getClusterLevel(long i){return m_msg3a.m_clusterLevels[i];};
 
-	long long getDocId  ( long i ){return m_msg3a.m_docIds[i]; };
-	long long *getDocIds(        ){return m_msg3a.m_docIds; };
+	int64_t getDocId  ( long i ){return m_msg3a.m_docIds[i]; };
+	int64_t *getDocIds(        ){return m_msg3a.m_docIds; };
 	double  getScore  ( long i ){return m_msg3a.m_scores[i]; };
 	class DocIdScore *getScoreInfo(long i){
 		if ( ! m_msg3a.m_scoreInfos ) return NULL;
@@ -204,7 +204,7 @@ class Msg40 {
 		return &gbs[i];
 	};
 
-        long long *getDocIdPtr() { return m_msg3a.m_docIds; }
+        int64_t *getDocIdPtr() { return m_msg3a.m_docIds; }
 
 	// Msg39 and all Msg20s must use the same clock timestamp
 	time_t m_nowUTC;
@@ -321,7 +321,7 @@ class Msg40 {
 	Multicast  m_mcast;
 
 	// for timing how long to get all summaries
-	long long  m_startTime;
+	int64_t  m_startTime;
 
 	// was Msg40 cached? if so, at what time?
 	bool       m_cachedResults;

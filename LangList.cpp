@@ -453,7 +453,7 @@ bool LangList::loadLists ( ) {
 		
 		long numWords = w.getNumWords();
 		for(long j = 0; j < numWords; j++) {
-			long long wordId = w.m_wordIds[j];
+			int64_t wordId = w.m_wordIds[j];
 			if(wordId == 0) continue;
 			// add it to the table
 			unsigned long score = m_langTable.getScore(&wordId);
@@ -499,7 +499,7 @@ bool LangList::loadLists ( ) {
 
 // . lookup word in language lists
 // . returns false if not found true if found and lang set
-bool LangList::lookup ( long long      termId,
+bool LangList::lookup ( int64_t      termId,
 			unsigned char *lang    ) {
 	// lookup the termId in the table
 	unsigned long score = m_langTable.getScore(&termId);

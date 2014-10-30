@@ -47,7 +47,7 @@ public:
 	key_t     m_endKey;
 	char     *m_coll;
 	long      m_collLen;
-	long long m_termId;
+	int64_t m_termId;
 	long      m_minRecSize;
 	Msg20     m_msg20s[MAX_FRAG_SIZE];
 	long      m_numMsg20sOutstanding;
@@ -62,8 +62,8 @@ class StateDict{
 	char      *m_buf;
 	long       m_bufSize;
 	char     **m_wordsPtr;
-	long long *m_termIds;
-	long long *m_termFreqs;
+	int64_t *m_termIds;
+	int64_t *m_termFreqs;
 	long       m_numTuples;
 	Msg37      m_msg37;
 };
@@ -83,8 +83,8 @@ class StateDict{
 	char       m_buf[1026];
 	Msg3a      m_msg3a;
 	Query      m_q;
-	long long  m_numerator;
-	long long  m_denominator;
+	int64_t  m_numerator;
+	int64_t  m_denominator;
 	};*/
 
 typedef struct Reco{

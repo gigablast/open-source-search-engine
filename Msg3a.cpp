@@ -208,7 +208,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	if ( m_r->m_useSeoResultsCache ) {
 		// the all important seo results cache key
 		m_ckey.n0 = hash64 ( m_r->ptr_query ,m_r->size_query - 1 ,0 );
-		m_ckey.n0 = hash64h ( (long long)m_r->m_collnum,  m_ckey.n0);
+		m_ckey.n0 = hash64h ( (int64_t)m_r->m_collnum,  m_ckey.n0);
 		m_ckey.n0 = hash64 ( (char *)&m_r->m_language,1 ,  m_ckey.n0 );
 		m_ckey.n0 = hash64 ( (char *)&m_r->m_docsToGet,4,  m_ckey.n0 );
 		// this should be non-zero so g_hostdb.getGroupId(RDB_SERPDB)
@@ -281,7 +281,7 @@ bool Msg3a::gotCacheReply ( ) {
 		m_numTotalEstimatedHits = *(long *)p;
 		p += 4;
 		// docids
-		m_docIds = (long long *)p;
+		m_docIds = (int64_t *)p;
 		p += 8 * m_numDocIds;
 		// scores
 		m_scores = (double *)p;
@@ -301,7 +301,7 @@ bool Msg3a::gotCacheReply ( ) {
 		// log each docid
 		//for ( long i = 0 ; i < m_numDocIds ; i++ ) {
 		//	//float score = m_msg3a->getScores()[i];
-		//	long long d = m_docIds[i];
+		//	int64_t d = m_docIds[i];
 		//	//long sh32 = m_msg3a->getSiteHash32(i);
 		//	p += sprintf(p,"d%li=%lli ",i,d);
 		//}
@@ -316,7 +316,7 @@ bool Msg3a::gotCacheReply ( ) {
 	setTermFreqWeights ( m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
 
 	if ( m_debug ) {
-		//long long *termIds = m_q->getTermIds();
+		//int64_t *termIds = m_q->getTermIds();
 		//if ( m_numCandidates ) termIds = m_synIds;
 		for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 			// get the term in utf8
@@ -443,7 +443,7 @@ bool Msg3a::gotCacheReply ( ) {
 	// for new posdb stuff
 	if ( timeout < 60 ) timeout = 60;
 
-	long long qh = 0LL; if ( m_q ) qh = m_q->getQueryHash();
+	int64_t qh = 0LL; if ( m_q ) qh = m_q->getQueryHash();
 
 	m_numHosts = g_hostdb.getNumHosts();
 	// only send to one host?
@@ -470,7 +470,7 @@ bool Msg3a::gotCacheReply ( ) {
 		// enough to download the "non split" termlists over the net.
 		// TODO: fix msg2 to do that...
 		if ( ! m_q->isSplit() ) {
-			long long     tid  = m_q->getTermId(0);
+			int64_t     tid  = m_q->getTermId(0);
 			key_t         k    = g_indexdb.makeKey(tid,1,1,false );
 			// split = false! do not split 
 			//gid = getGroupId ( RDB_POSDB,&k,false);
@@ -568,14 +568,14 @@ void gotReplyWrapper3a ( void *state , void *state2 ) {
 	// set it
 	Multicast *m = (Multicast *)state2;
 	// update time
-	long long endTime = gettimeofdayInMilliseconds();
+	int64_t endTime = gettimeofdayInMilliseconds();
 	// update host table
 	Host *h = m->m_replyingHost;
 	// i guess h is NULL on error?
 	if ( h ) {
 		// how long did it take from the launch of request until now
 		// for host "h" to give us the docids?
-		long long delta = (endTime - m->m_replyLaunchTime);
+		int64_t delta = (endTime - m->m_replyLaunchTime);
 		// . sanity check
 		// . ntpd can screw with our local time and make this negative
 		if ( delta >= 0 ) {
@@ -733,7 +733,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// debug log stuff
 		if ( ! m_debug ) continue;
 		// cast these for printing out
-		long long *docIds    = (long long *)mr->ptr_docIds;
+		int64_t *docIds    = (int64_t *)mr->ptr_docIds;
 		double    *scores    = (double    *)mr->ptr_scores;
 		// print out every docid in this shard reply
 		for ( long j = 0; j < mr->m_numDocIds ; j++ ) {
@@ -890,10 +890,10 @@ bool Msg3a::mergeLists ( ) {
 	//
 	////////
 	// add up all counts
-	long long count = 0LL;
+	int64_t count = 0LL;
 	for ( long i = 0 ; i < master.getNumSlots() ; i++ ) {
 		if ( ! master.m_flags[i] ) continue;
-		long long slotCount = *(long *)master.getValueFromSlot(i);
+		int64_t slotCount = *(long *)master.getValueFromSlot(i);
 		long h32 = *(long *)master.getKeyFromSlot(i);
 		if ( h32 == m_r->m_myFacetVal32 ) 
 			m_facetStats.m_myValCount = slotCount;
@@ -910,10 +910,10 @@ bool Msg3a::mergeLists ( ) {
 	// . point to the various docids, etc. in each shard reply
 	// . tcPtr = term count. how many required query terms does the doc 
 	//   have? formerly called topExplicits in IndexTable2.cpp
-	long long     *diPtr [MAX_SHARDS];
+	int64_t     *diPtr [MAX_SHARDS];
 	double        *rsPtr [MAX_SHARDS];
 	key_t         *ksPtr [MAX_SHARDS];
-	long long     *diEnd [MAX_SHARDS];
+	int64_t     *diEnd [MAX_SHARDS];
 	for ( long j = 0; j < m_numHosts ; j++ ) {
 		Msg39Reply *mr =m_reply[j];
 		// if we have gbdocid:| in query this could be NULL
@@ -924,10 +924,10 @@ bool Msg3a::mergeLists ( ) {
 			ksPtr[j] = NULL;
 			continue;
 		}
-		diPtr [j] = (long long *)mr->ptr_docIds;
+		diPtr [j] = (int64_t *)mr->ptr_docIds;
 		rsPtr [j] = (double    *)mr->ptr_scores;
 		ksPtr [j] = (key_t     *)mr->ptr_clusterRecs;
-		diEnd [j] = (long long *)(mr->ptr_docIds +
+		diEnd [j] = (int64_t *)(mr->ptr_docIds +
 					  mr->m_numDocIds * 8);
 	}
 
@@ -961,7 +961,7 @@ bool Msg3a::mergeLists ( ) {
 		//qt->m_facetStats.reset();
 		// now make a hashtable to compile all of the
 		// facethashlists from each shard into
-		//long long tid  = m_q->m_qterms[i].m_termId;
+		//int64_t tid  = m_q->m_qterms[i].m_termId;
 		// we hold all the facet values
 		HashTableX *ht = &qt->m_facetHashTable;
 		// we have to manually cal this
@@ -995,7 +995,7 @@ bool Msg3a::mergeLists ( ) {
 		// come back up here for another gbfacet:xxx term
 	ploop:
 		// first is the termid
-		long long termId = *(long long *)p;
+		int64_t termId = *(int64_t *)p;
 		// skip that
 		p += 8;
 		// the # of 32-bit facet hashest
@@ -1079,7 +1079,7 @@ bool Msg3a::mergeLists ( ) {
 	if ( ! m_finalBuf ) return true;
 	// hook into it
 	char *p = m_finalBuf;
-	m_docIds        = (long long *)p; p += nd * 8;
+	m_docIds        = (int64_t *)p; p += nd * 8;
 	m_scores        = (double    *)p; p += nd * sizeof(double);
 	m_clusterRecs   = (key_t     *)p; p += nd * sizeof(key_t);
 	m_clusterLevels = (char      *)p; p += nd * 1;
@@ -1090,12 +1090,12 @@ bool Msg3a::mergeLists ( ) {
 	if ( p != pend ) { char *xx = NULL; *xx =0; }
 	// . now allocate for hash table
 	// . get at least twice as many slots as docids
-	HashTableT<long long,char> htable;
+	HashTableT<int64_t,char> htable;
 	// returns false and sets g_errno on error
 	if ( ! htable.set ( nd * 2 ) ) return true;
 	// hash table for doing site clustering, provided we
 	// are fully split and we got the site recs now
-	HashTableT<long long,long> htable2;
+	HashTableT<int64_t,long> htable2;
 	if ( m_r->m_doSiteClustering && ! htable2.set ( nd * 2 ) ) 
 		return true;
 
@@ -1143,7 +1143,7 @@ bool Msg3a::mergeLists ( ) {
 		if ( m_r->m_familyFilter && 
 		     g_clusterdb.hasAdultContent((char *)ksPtr[maxj]) )
 			goto skip;
-		// get the hostname hash, a long long
+		// get the hostname hash, a int64_t
 		long sh = g_clusterdb.getSiteHash26 ((char *)ksPtr[maxj]);
 		// do we have enough from this hostname already?
 		long slot = htable2.getSlot ( sh );
@@ -1333,7 +1333,7 @@ long Msg3a::deserialize ( char *buf , char *bufEnd ) {
 	// estimated # of total hits
 	m_numTotalEstimatedHits = *(long *)p; p += 8;
 	// get each docid, 8 bytes each
-	m_docIds = (long long *)p; p += m_numDocIds * 8;
+	m_docIds = (int64_t *)p; p += m_numDocIds * 8;
 	// get scores
 	m_scores = (double *)p; p += m_numDocIds * sizeof(double) ;
 	// get cluster levels
@@ -1354,10 +1354,10 @@ void Msg3a::printTerms ( ) {
 		// "s" points to the term, "tid" the termId
 		//char      *s;
 		//long       slen;
-		//long long  tid;
+		//int64_t  tid;
 		//char buf[2048];
 		//buf[0]='\0';
-		long long tid  = m_q->m_qterms[i].m_termId;
+		int64_t tid  = m_q->m_qterms[i].m_termId;
 		char *s    = m_q->m_qterms[i].m_term;
 		if ( ! s ) {
 			logf(LOG_DEBUG,"query: term #%li "
@@ -1381,10 +1381,10 @@ void Msg3a::printTerms ( ) {
 
 void setTermFreqWeights ( collnum_t collnum , // char *coll,
 			  Query *q , 
-			  long long *termFreqs, 
+			  int64_t *termFreqs, 
 			  float *termFreqWeights ) {
 
-	long long numDocsInColl = 0;
+	int64_t numDocsInColl = 0;
 	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , collnum );	
 	if ( base ) numDocsInColl = base->getNumGlobalRecs();
 	// issue? set it to 1000 if so
@@ -1394,10 +1394,10 @@ void setTermFreqWeights ( collnum_t collnum , // char *coll,
 		numDocsInColl = 1;
 	}
 	// now get term freqs again, like the good old days
-	long long *termIds = q->getTermIds();
+	int64_t *termIds = q->getTermIds();
 	// just use rdbmap to estimate!
 	for ( long i = 0 ; i < q->getNumTerms(); i++ ) {
-		long long tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
+		int64_t tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
 		if ( termFreqs ) termFreqs[i] = tf;
 		float tfw = getTermFreqWeight(tf,numDocsInColl);
 		termFreqWeights[i] = tfw;

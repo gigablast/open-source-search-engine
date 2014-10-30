@@ -24,7 +24,7 @@
 #define MAX_QUERY_WORDS 800
 
 // . how many IndexLists might we get/intersect
-// . we now use a long long to hold the query term bits for non-boolean queries
+// . we now use a int64_t to hold the query term bits for non-boolean queries
 //#define MAX_QUERY_TERMS 216
 //#define MAX_QUERY_TERMS 512
 // seems like CTS is causing huge delay spiders in query processing so
@@ -134,7 +134,7 @@ typedef uint64_t qvec_t;
 // returns a FIELD_* code above, or FIELD_GENERIC if not in the list
 char getFieldCode  ( char *s , long len , bool *hasColon = NULL ) ;
 char getFieldCode2 ( char *s , long len , bool *hasColon = NULL ) ;
-char getFieldCode3 ( long long h64 ) ;
+char getFieldCode3 ( int64_t h64 ) ;
 
 long getNumFieldCodes ( );
 
@@ -282,10 +282,10 @@ class QueryWord {
 	long        m_phraseLen;
 	// this is the term hash with collection and field name and
 	// can be looked up directly in indexdb
-	long long   m_wordId ;
-	long long   m_phraseId;
+	int64_t   m_wordId ;
+	int64_t   m_phraseId;
 	// hash of field name then collection, used to hash termId
-	long long   m_prefixHash;
+	int64_t   m_prefixHash;
 	long        m_wordNum;
 	long        m_posNum;
 	// are we in a phrase in a wikipedia title?
@@ -295,10 +295,10 @@ class QueryWord {
 
 	// . this is just the hash of m_term and is used for highlighting, etc.
 	// . it is 0 for terms in a field?
-	long long   m_rawWordId ;
-	long long   m_rawPhraseId ;
+	int64_t   m_rawWordId ;
+	int64_t   m_rawPhraseId ;
 	// if we are phrase, the end word's raw id
-	long long   m_rightRawWordId;
+	int64_t   m_rightRawWordId;
 	// the field as a convenient numeric code
 	char        m_fieldCode ;
 	// . '-' means to exclude from search results
@@ -405,14 +405,14 @@ class QueryTerm {
 	// in Summary.cpp to use m_phrasePart to do this post-query filtering
 	long       m_phrasePart;
 	// this is phraseId for phrases, and wordId for words
-	long long  m_termId;
+	int64_t  m_termId;
 	// used by Matches.cpp
-	long long  m_rawTermId;
+	int64_t  m_rawTermId;
 
 	// . if we are a phrase these are the termids of the word that
 	//   starts the phrase and the word that ends the phrase respectively
-	long long  m_rightRawWordId;
-	long long  m_leftRawWordId;
+	int64_t  m_rightRawWordId;
+	int64_t  m_leftRawWordId;
 
 	// sign of the phrase or word we used
 	char       m_termSign;
@@ -484,8 +484,8 @@ class QueryTerm {
 	//   m_buf
 	//long m_affinity; 	// affinity to the synonym
 	QueryTerm *m_synonymOf;
-	long long m_synWids0;
-	long long m_synWids1;
+	int64_t m_synWids0;
+	int64_t m_synWids1;
 	long      m_numAlnumWordsInSynonym;
 	// like if we are the "nj" syn of "new jersey", this will be 2 words
 	// since "new jersey", our base, is 2 alnum words.
@@ -539,7 +539,7 @@ class QueryTerm {
 	char m_ks;
 
 	// used by Msg40.cpp for gigabits generation
-	long long m_hash64d;
+	int64_t m_hash64d;
 	long      m_popWeight;
 
 };
@@ -618,10 +618,10 @@ class Query {
 	// . will recopmute m_bitScores to fix bit #7
 	//void softenTruncatedTerms ( );
 
-	bool setQueryTermScores ( long long *termFreqsArg ) ;
+	bool setQueryTermScores ( int64_t *termFreqsArg ) ;
 
 	// about how hits for this query?
-	//long long getEstimatedTotalHits ( );
+	//int64_t getEstimatedTotalHits ( );
 
 	char *getQuery    ( ) { return m_orig  ; };
 	long  getQueryLen ( ) { return m_origLen; };
@@ -634,9 +634,9 @@ class Query {
 	bool       isPhrase     ( long i ) { return m_qterms[i].m_isPhrase;  };
 	bool       isInPhrase   ( long i ) { return m_qterms[i].m_inPhrase;  };
 	bool       isInQuotes   ( long i ) { return m_qterms[i].m_inQuotes;  };
-	long long  getTermId    ( long i ) { return m_qterms[i].m_termId;    };
+	int64_t  getTermId    ( long i ) { return m_qterms[i].m_termId;    };
 	char       getFieldCode2( long i ) { return m_qterms[i].m_fieldCode; };
-	long long  getRawTermId ( long i ) { return m_qterms[i].m_rawTermId; };
+	int64_t  getRawTermId ( long i ) { return m_qterms[i].m_rawTermId; };
 	char      *getTerm      ( long i ) { return m_qterms[i].m_term; };
 	long       getTermLen   ( long i ) { return m_qterms[i].m_termLen; };
 	bool       isQueryStopWord (long i ) { 
@@ -657,12 +657,12 @@ class Query {
 
 	// . Msg39 calls this to get our vector so it can pass it to Msg37
 	// . the signs and ids are dupped in the QueryTerm classes, too
-	//long long *getTermFreqs ( ) { return m_termFreqs ; };
-	//long long  getTermFreq  ( long i ) { return m_termFreqs[i]; };
-	long long *getTermIds   ( ) { return m_termIds   ; };
+	//int64_t *getTermFreqs ( ) { return m_termFreqs ; };
+	//int64_t  getTermFreq  ( long i ) { return m_termFreqs[i]; };
+	int64_t *getTermIds   ( ) { return m_termIds   ; };
 	char      *getTermSigns ( ) { return m_termSigns ; };
 	long      *getComponentCodes   ( ) { return m_componentCodes; };
-	long long  getRawWordId ( long i ) { return m_qwords[i].m_rawWordId;};
+	int64_t  getRawWordId ( long i ) { return m_qwords[i].m_rawWordId;};
 
 	long getNumComponentTerms ( ) { return m_numComponents; };
 
@@ -770,7 +770,7 @@ class Query {
 	bool setBitScoresBoolean ( char *buf , long bufSize );
 
 	// ALWAYS call this after calling setBitScores(), it uses m_bitScores[]
-	//long long getEstimatedTotalHitsBoolean ( );
+	//int64_t getEstimatedTotalHitsBoolean ( );
 
 	// sets m_qwords[] array, this function is the heart of the class
 	bool setQWords ( char boolFlag , bool keepAllSingles ,
@@ -782,17 +782,17 @@ class Query {
 	// . query expansion functions, the first gets all possible candidates
 	//   (eliminated after Msg37 returns), the second actually modifies the
 	//   query to include new terms
-	//long getCandidates(long *synMap, long long *synIds, long num);
+	//long getCandidates(long *synMap, int64_t *synIds, long num);
 	//void fixTermFreqs ( long      *synMap          ,
 	//		    long       numTermsAndSyns ,
-	//		    long long *termFreqs       ) ;
+	//		    int64_t *termFreqs       ) ;
 	//long filterCandidates ( long      *synMap          ,
-	//			long long *synIds          ,
+	//			int64_t *synIds          ,
 	//			long       numTermsAndSyns ,
-	//			long long *termFreqs       ,
+	//			int64_t *termFreqs       ,
 	//			char      *coll            ) ;
-	//bool expandQuery (long *synMap, long long *synIds, long num,
-	//		  long long *termFreqs);
+	//bool expandQuery (long *synMap, int64_t *synIds, long num,
+	//		  int64_t *termFreqs);
 
 	// set m_expressions[] and m_operands[] arrays and m_numOperands 
 	// for boolean queries
@@ -844,11 +844,11 @@ class Query {
  public:
 
 	// hash of all the query terms
-	long long getQueryHash();
+	int64_t getQueryHash();
 
 	bool isCompoundTerm ( long i ) ;
 
-	class QueryTerm *getQueryTermByTermId64 ( long long termId ) {
+	class QueryTerm *getQueryTermByTermId64 ( int64_t termId ) {
 		for ( long i = 0 ; i < m_numTerms ; i++ ) {
 			if ( m_qterms[i].m_termId == termId ) 
 				return &m_qterms[i];
@@ -862,7 +862,7 @@ class Query {
 
 	// return -1 if does not exist in query, otherwise return the 
 	// query word num
-	long getWordNum ( long long wordId );
+	long getWordNum ( int64_t wordId );
 
 	// this is now just used for boolean queries to deteremine if a docid
 	// is a match or not
@@ -907,8 +907,8 @@ class Query {
 	long      m_numTermsSpecial;
 
 	// separate vectors for easier interfacing, 1-1 with m_qterms
-	//long long m_termFreqs      [ MAX_QUERY_TERMS ];
-	long long m_termIds        [ MAX_QUERY_TERMS ];
+	//int64_t m_termFreqs      [ MAX_QUERY_TERMS ];
+	int64_t m_termIds        [ MAX_QUERY_TERMS ];
 	char      m_termSigns      [ MAX_QUERY_TERMS ];
 	long      m_componentCodes [ MAX_QUERY_TERMS ];
 	char      m_ignore         [ MAX_QUERY_TERMS ]; // is term ignored?
@@ -946,7 +946,7 @@ class Query {
 	long m_synInfoAllocSize;
 
 	// if they got a gbdocid: in the query and it's not boolean, set these
-	long long m_docIdRestriction;
+	int64_t m_docIdRestriction;
 	class Host *m_groupThatHasDocId;
 
 	// for holding the filtered query, in utf8
@@ -1006,12 +1006,12 @@ public:
 	long getNumTerms    ( ) { return m_numTerms; } ;
 	long getScore       ( long i ) { return m_scores[i]; } ;
 	void setScore        (long i, long score) {m_scores[i] = score; };
-	long long getTermId ( long i ) { return m_q->getTermId(i); } ; 
-	//long long getWordId ( long i ) { return m_wordIds[i]; } ; 
+	int64_t getTermId ( long i ) { return m_q->getTermId(i); } ; 
+	//int64_t getWordId ( long i ) { return m_wordIds[i]; } ; 
 private:
 	Query *m_q;
 	long m_numTerms;
-        long long *m_freqs;
+        int64_t *m_freqs;
 	long m_termPtrs  [ MAX_QUERY_TERMS ];
 	long m_scores  [ MAX_QUERY_TERMS ];
 	//long m_wordIds  [ MAX_QUERY_TERMS ];

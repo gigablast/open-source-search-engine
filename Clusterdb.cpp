@@ -23,16 +23,16 @@ static void clusterGetPages ( DiskPageCache *pc,
 			      long vfd,
 			      char *buf,
 			      long numBytes,
-			      long long offset,
+			      int64_t offset,
 			      long *newNumBytes,
-			      long long *newOffset ) {
+			      int64_t *newOffset ) {
 	bool cacheMiss = false;
 	// return new disk offset, assume unchanged
 	*newOffset   = offset;
 	*newNumBytes = numBytes;
 	// what is the page range?
-	long long sp = offset / GB_PAGE_SIZE ;
-	long long ep = (offset + (numBytes-1)) / GB_PAGE_SIZE ;
+	int64_t sp = offset / GB_PAGE_SIZE ;
+	int64_t ep = (offset + (numBytes-1)) / GB_PAGE_SIZE ;
 	// setup the cache list
 	RdbList cacheList;
 	key_t startKey;
@@ -88,7 +88,7 @@ static void clusterAddPages ( DiskPageCache *pc,
 			      long vfd,
 			      char *buf,
 			      long numBytes,
-			      long long offset ) {
+			      int64_t offset ) {
 	// make sure we have a clean vfd
 	if ( vfd < 0 || vfd >= MAX_NUM_VFDS2 )
 		return;
@@ -99,16 +99,16 @@ static void clusterAddPages ( DiskPageCache *pc,
 	long numTwins  = g_hostdb.getNumHostsPerShard();
 	long thisTwin  = g_hostdb.m_hostId/g_hostdb.m_numShards;
 	// get the bias range for this twin
-	long long biasStart = ((0x0000003fffffffffLL)/(long long)numTwins) *
-		(long long)thisTwin;
-	long long biasEnd;
+	int64_t biasStart = ((0x0000003fffffffffLL)/(int64_t)numTwins) *
+		(int64_t)thisTwin;
+	int64_t biasEnd;
 	if ( thisTwin == numTwins - 1 )
 		biasEnd = 0x0000003fffffffffLL + 1LL;
 	else
-		biasEnd = ((0x0000003fffffffffLL)/(long long)numTwins) *
-			(long long)(thisTwin+1);
+		biasEnd = ((0x0000003fffffffffLL)/(int64_t)numTwins) *
+			(int64_t)(thisTwin+1);
 	// get the page range
-	long long sp = offset / GB_PAGE_SIZE;
+	int64_t sp = offset / GB_PAGE_SIZE;
 	// point to it
 	char *bufPtr = buf;
 	char *bufEnd = buf + numBytes;
@@ -156,7 +156,7 @@ static void clusterAddPages ( DiskPageCache *pc,
 		cacheList1.reset();
 		// check the first key, if it's too large, we're all done here
 		key_t key = dataList.getCurrentKey();
-		long long docId = g_clusterdb.getDocId ( key );
+		int64_t docId = g_clusterdb.getDocId ( key );
 		//if ( docId >= biasEnd ) {
 		//	log ( "clusterdb: DocId after bias end, key.n1=%lx key.n0=%llx", key.n1, key.n0 );
 		//	log ( "clusterdb: DocId after bias end, %llx >= %llx", docId, biasEnd );
@@ -168,7 +168,7 @@ static void clusterAddPages ( DiskPageCache *pc,
 		while ( filled < size && !dataList.isExhausted() ) {
 			key = dataList.getCurrentKey();
 			// check the key for filtering
-			//long long docId = g_clusterdb.getDocId ( key );
+			//int64_t docId = g_clusterdb.getDocId ( key );
 			//long twin = hashLong((long)docId) % numTwins;
 			//if ( twin == thisTwin ) {
 				// add the key to the rdb list
@@ -199,7 +199,7 @@ static void clusterAddPages ( DiskPageCache *pc,
 }
 
 static long clusterGetVfd ( DiskPageCache *pc,
-			    long long maxFileSize ) {
+			    int64_t maxFileSize ) {
 	// pick a vfd for this file, will be used in the cache key
 	long i;
 	long count = MAX_NUM_VFDS2;
@@ -437,7 +437,7 @@ void Clusterdb::getSampleVector ( char *vec ,
 				  char *coll ,
 				  long  collLen ,
 				  long niceness) {
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 	TitleRec *tr = doc->getTitleRec();
 	SiteRec  *sr = doc->getSiteRec();
 	//sr->set ( tr->getSite() , tr->getColl() , tr->getCollLen() ,
@@ -451,7 +451,7 @@ void Clusterdb::getSampleVector ( char *vec ,
 	// this just sets the vector
 	doc->getIndexList(NULL,true,true,false,NULL,NULL,NULL, niceness);
 	// log the time
-	long long took =gettimeofdayInMilliseconds()-startTime;
+	int64_t took =gettimeofdayInMilliseconds()-startTime;
 	if ( took > 3 )
 		log(LOG_INFO,"query: Took %lli ms to make indexlist.",took);
 	// so get it
@@ -547,7 +547,7 @@ void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 	// . these should all be 12 byte keys
 	long i = 0 ;
 	long n = table->getNumTerms();
-	long long     *termIds = table->getTermIds();
+	int64_t     *termIds = table->getTermIds();
 	unsigned long *scores  = table->getScores ();
 	for ( ; i < n ; i++ ) {
 		// skip if empty bucket
@@ -772,7 +772,7 @@ char Clusterdb::getGigabitSimilarity ( char *vec0 , char *vec1 ,
 }
 */
 
-key_t Clusterdb::makeClusterRecKey ( long long     docId,
+key_t Clusterdb::makeClusterRecKey ( int64_t     docId,
 				     bool          familyFilter,
 				     uint8_t       languageBits,
 				     long          siteHash,
@@ -805,7 +805,7 @@ key_t Clusterdb::makeClusterRecKey ( long long     docId,
 /*
 key_t Clusterdb::convertTitleRecKey ( key_t titleKey ) {
 	// extract the docid
-	long long docId;
+	int64_t docId;
 	docId = titleKey.n1;
 	docId <<= 6;
 	docId |= titleKey.n0 >> 58;
@@ -827,7 +827,7 @@ void Clusterdb::makeRecFromTitleRec ( char     *rec,
 				      TitleRec *titleRec,
 				      bool      isDelKey ) {
 	// get the docId
-	long long docId = titleRec->getDocId();
+	int64_t docId = titleRec->getDocId();
 	// get the family filter
 	bool familyFilter = titleRec->hasAdultContent();
 	// get the language byte
@@ -849,7 +849,7 @@ void Clusterdb::makeRecFromTitleRecKey ( char *rec,
 					 char *key,
 					 bool  isDelKey ) {
 	// get the docId
-	long long docId = g_titledb.getDocIdFromKey((key_t*)key);
+	int64_t docId = g_titledb.getDocIdFromKey((key_t*)key);
 	// get the family filter
 	bool familyFilter = g_titledb.hasAdultContent(*(key_t*)key);
 	// . get the site hash

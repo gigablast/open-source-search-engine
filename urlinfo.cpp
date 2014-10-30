@@ -173,19 +173,19 @@ int main ( int argc , char *argv[] ) {
 	printf("encoded: %s\n",dst);
 
 	// the probable docid
-	long long pd = g_titledb.getProbableDocId(&u);
+	int64_t pd = g_titledb.getProbableDocId(&u);
 	printf("pdocid: %llu\n", pd );
 	printf("dom8: 0x%lx\n", (long)g_titledb.getDomHash8FromDocId(pd) );
 	//printf("ext23: 0x%lx\n",g_tfndb.makeExt(&u));
 	if ( u.isLinkLoop() ) printf("islinkloop: yes\n");
 	else                  printf("islinkloop: no\n");
-	long long hh64 = u.getHostHash64();
+	int64_t hh64 = u.getHostHash64();
 	printf("hosthash64: 0x%016llx\n",hh64);
 	unsigned long hh32 = u.getHostHash32();
 	printf("hosthash32: 0x%08lx (%lu)\n",hh32,hh32);
-	long long dh64 = u.getDomainHash64();
+	int64_t dh64 = u.getDomainHash64();
 	printf("domhash64: 0x%016llx\n",dh64);
-	long long uh64 = u.getUrlHash64();
+	int64_t uh64 = u.getUrlHash64();
 	printf("urlhash64: 0x%016llx\n",uh64);
 	//if(isUrlUnregulated(NULL ,0,&u)) printf("unregulated: yes\n");
 	//else                            printf("unregulated: no\n");

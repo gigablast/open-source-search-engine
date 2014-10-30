@@ -122,7 +122,7 @@ void UdpSlot::connect ( UdpProtocol *proto    ,
 			long         hostId   ,
 			long         transId  ,
 			long         timeout  , // in seconds
-			long long    now      ,
+			int64_t    now      ,
 			long         niceness ) {
 	// map loopback ip to our ip
 	unsigned long ip = endPoint->sin_addr.s_addr ;
@@ -150,7 +150,7 @@ void UdpSlot::connect ( UdpProtocol    *proto    ,
 			long            hostId   ,
 			long            transId  ,
 			long            timeout  , // in seconds
-			long long       now      ,
+			int64_t       now      ,
 			long            niceness ) {
 	// clear bufs
 	//m_sendBuf  = NULL;
@@ -280,7 +280,7 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 			  char      *alloc       ,
 			  long       allocSize   ,
 			  unsigned char     msgType     ,
-			  long long  now         ,
+			  int64_t  now         ,
 			  void      *state       ,
 			  void      (*callback)(void *state, UdpSlot *slot) ,
 			  long       niceness    ,
@@ -305,7 +305,7 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 		//return false;
 	}
 	// get the timestamp in milliseconds
-	//long long  now = gettimeofdayInMilliseconds();
+	//int64_t  now = gettimeofdayInMilliseconds();
 	// fill in the supplied parameters
 	m_sendBuf          = msg;
 	m_sendBufSize      = msgSize;
@@ -365,7 +365,7 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 }
 
 // resets a UdpSlot for a resend
-void UdpSlot::prepareForResend ( long long now , bool resendAll ) {
+void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 	// debug msg
 	//if ( g_conf.m_logDebugUdp ) 
 	//	log(LOG_DEBUG,"udp: resending slot "
@@ -615,7 +615,7 @@ void UdpSlot::setResendTime() {
 // . this is only called by UdpServer::doSending()
 // . we try to do ALL the reading before calling this so we can send
 //   many ACKs back in one packet
-long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, long long now ){
+long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	//log("sendDatagramOrAck");
 	// if acks we've sent isn't caught up to what we read, send an ack
 	if ( m_sentAckBitsOn < m_readBitsOn && m_proto->useAcks() ) 
@@ -848,7 +848,7 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, long long now ){
 	// keep track of dgrams sent outside of our cluster
 	//else          g_stats.m_dgramsToStrangers++;
 	// get time now
-	//long long  now = gettimeofdayInMilliseconds();
+	//int64_t  now = gettimeofdayInMilliseconds();
 	// . if it's our first, mark this for g_stats UDP_*_OUT_BPS
 	// . sendSetup() will set m_firstSendTime to -1
 	if (m_sentBitsOn == 0 && m_firstSendTime == -1) m_firstSendTime =now;
@@ -997,7 +997,7 @@ void UdpSlot::fixSlot ( ) {
 // . if m_callback is NULL we did NOT intiate the transaction
 // . we should only be called if m_sentAckBitsOn < m_readBitsOn, i.e.
 //   when we're not caught up with ACKing with what we've read
-long UdpSlot::sendAck ( int sock , long long now , 
+long UdpSlot::sendAck ( int sock , int64_t now , 
 			long dgramNum , long weInitiated ,
 			bool cancelTrans ) {
 	// protection from garbled dgrams
@@ -1201,7 +1201,7 @@ long UdpSlot::sendAck ( int sock , long long now ,
 bool UdpSlot::readDatagramOrAck ( int        sock    , 
 				  char      *peek    ,
 				  long       peekSize,
-				  long long  now     ,
+				  int64_t  now     ,
 				  bool      *discard ,
 				  long      *readSize ) {
 	// assume discard
@@ -1283,7 +1283,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// . now we have a regular dgram to process
 	// . get the timestamp in microseconds
 	// . change to g_now cuz this has to be async safe
-	//long long  now = gettimeofdayInMilliseconds();
+	//int64_t  now = gettimeofdayInMilliseconds();
 	// log msg
 	if ( g_conf.m_logDebugUdp ) {
 		long hid = -1;
@@ -1650,7 +1650,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 }
 
 // called to process an ack we read for dgram # "dgramNum"
-void UdpSlot::readAck ( int sock , long dgramNum , long long now ) {
+void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
 	// protection from garbled dgrams
 	if ( dgramNum >= MAX_DGRAMS ) {
 		log(LOG_LOGIC,
@@ -1659,7 +1659,7 @@ void UdpSlot::readAck ( int sock , long dgramNum , long long now ) {
                 return ; }
 	// . get time now
 	// . make async safe
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// update lastRead time for this transaction
 	m_lastReadTime = g_now;
 	// cease all resending
@@ -1708,7 +1708,7 @@ void UdpSlot::readAck ( int sock , long dgramNum , long long now ) {
 	if ( ! hasAcksToRead() ) {
 		//if ( m_msgType == 0x39 )
 		//	log("jey");
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		long delta = now - m_startTime;
 		// but if we were sending a reply, use m_queuedTime
 		// as the start time of the send. we set m_queuedTime
@@ -1736,7 +1736,7 @@ void UdpSlot::readAck ( int sock , long dgramNum , long long now ) {
 	// to save memory in UdpSlot we only keep track of every 8th dgram time
 	//if ( (dgramNum & 0x07) == 0 ) {
 		// get when we sent this dgram
-		//long long start = getSendTime ( dgramNum >> 3 ) ;
+		//int64_t start = getSendTime ( dgramNum >> 3 ) ;
 		// trip time
 		//long   tripTime = now - start;
 		// debug msg
@@ -1857,9 +1857,9 @@ bool UdpSlot::makeReadBuf ( long msgSize , long numDgrams ) {
 // . may have ACKs to send or plain old dgrams to send
 // . now is current time in milliseconds since the epoch
 // . returns -2 if token required to send more
-//long UdpSlot::getScore (long long now, UdpSlot *s_token , 
+//long UdpSlot::getScore (int64_t now, UdpSlot *s_token , 
 //			unsigned long s_tokenTime , long LARGE_MSG ) {
-long UdpSlot::getScore ( long long now ) {
+long UdpSlot::getScore ( int64_t now ) {
 	// . allow tokens 500ms older than the current possessor of the token
 	//   to send with an ack window of 1
 	// . if you change the 500 here change it in UdpServer::readSock() too
@@ -1920,7 +1920,7 @@ long UdpSlot::getScore ( long long now ) {
 	// return 1 if now is 0
 	if ( now == 0LL ) return 1;
 	// sort regular sends by the last send time
-	long long score  = now - m_lastSendTime + 1000;
+	int64_t score  = now - m_lastSendTime + 1000;
 	// watch out if someone changed the system clock on us
 	if ( score < 1000 ) score = 1000;
 	// . if we've resent before, wait enough time to send again!
@@ -1945,7 +1945,7 @@ long UdpSlot::getScore ( long long now ) {
 
 
 void UdpSlot::printState() {
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	log(LOG_TIMING, 
 	    "admin: UdpSlot - type:Msg%2lx nice:%li queued:%li handlerCalled:%li", 
 	    (long)m_msgType, m_niceness, (long)m_isQueued, (long)m_calledHandler);

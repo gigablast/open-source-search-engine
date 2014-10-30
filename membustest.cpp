@@ -2,12 +2,12 @@
 
 #include <sys/time.h>  // gettimeofday()
 
-//static long long gettimeofdayInMilliseconds() ;
+//static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -51,7 +51,7 @@ int main ( int argc , char *argv[] ) {
 	for ( long i = 0 ; i < n ; i++ ) buf[i] = 1;
 
 	// time stamp
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 
 	// . time the read loop
 	// . each read should only be 2 assenbly movl instructions:
@@ -105,7 +105,7 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// completed
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// multiply by 4 since these are longs
 	char *op = "read";
 	if ( ! readf ) op = "wrote";

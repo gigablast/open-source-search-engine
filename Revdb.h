@@ -36,9 +36,9 @@ class Revdb {
 	bool init2 ( long treeMem ) ;
 
 	// like titledb basically
-	key_t makeKey ( long long docId , bool del ) ;
+	key_t makeKey ( int64_t docId , bool del ) ;
 
-	long long getDocId ( key_t *k );
+	int64_t getDocId ( key_t *k );
 
 	Rdb *getRdb() { return &m_rdb; };
 

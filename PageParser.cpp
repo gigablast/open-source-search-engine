@@ -29,10 +29,10 @@ bool sendPageParser ( TcpSocket *s , HttpRequest *r ) {
 bool sendPageParser2 ( TcpSocket   *s , 
 		       HttpRequest *r ,
 		       State8      *st ,
-		       long long    docId ,
+		       int64_t    docId ,
 		       Query       *q ,
 		       // in query term space, not imap space
-		       long long   *termFreqs       ,
+		       int64_t   *termFreqs       ,
 		       // in imap space
 		       float       *termFreqWeights ,
 		       // in imap space
@@ -45,7 +45,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	// might a simple request to addsomething to validated.*.txt file
 	// from XmlDoc::print() or XmlDoc::validateOutput()
 	char *add = r->getString("add",NULL);
-	//long long uh64 = r->getLongLong("uh64",0LL);
+	//int64_t uh64 = r->getLongLong("uh64",0LL);
 	char *uh64str = r->getString("uh64",NULL);
 	//char *divTag = r->getString("div",NULL);
 	if ( uh64str ) {
@@ -54,9 +54,9 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		if ( to_lower_a(add[0])=='t' ) // "true" or "false"?
 			addNum = 1;
 		// convert it. skip beginning "str" inserted to prevent
-		// javascript from messing with the long long since it
+		// javascript from messing with the int64_t since it
 		// was rounding it!
-		//long long uh64 = atoll(uh64str);//+3);
+		//int64_t uh64 = atoll(uh64str);//+3);
 		// urldecode that
 		//long divTagLen = gbstrlen(divTag);
 		//long newLen  = urlDecode ( divTag , divTag , divTagLen );
@@ -516,7 +516,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	// if facebook, load xml content from title rec...
 	bool isFacebook = (bool)strstr(st->m_u,"http://www.facebook.com/");
 	if ( isFacebook && ! content ) {
-		long long docId = g_titledb.getProbableDocId(st->m_u);
+		int64_t docId = g_titledb.getProbableDocId(st->m_u);
 		sprintf(sreq.m_url ,"%llu", docId );
 		sreq.m_isPageReindex = true;
 	}

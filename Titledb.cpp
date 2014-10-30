@@ -14,8 +14,8 @@ void Titledb::reset() { m_rdb.reset(); }
 bool Titledb::init ( ) {
 
 	// key sanity tests
-	long long uh48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
-	long long docId = 123456789;
+	int64_t uh48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
+	int64_t docId = 123456789;
 	key_t k = makeKey(docId,uh48,false);
 	if ( getDocId(&k) != docId ) { char *xx=NULL;*xx=0;}
 	if ( getUrlHash48(&k) != uh48 ) { char *xx=NULL;*xx=0;}
@@ -38,7 +38,7 @@ bool Titledb::init ( ) {
 	if ( dlen1 != dlen2 ) { char *xx=NULL;*xx=0; }
 
 
-	long long maxMem = 200000000; // 200MB
+	int64_t maxMem = 200000000; // 200MB
 
 	// . what's max # of tree nodes?
 	// . assume avg TitleRec size (compressed html doc) is about 1k we get:
@@ -237,7 +237,7 @@ bool Titledb::verify ( char *coll ) {
 /*
 uint64_t Titledb::getProbableDocId ( char *url ) {
 	// just hash the whole collection/url
-	long long docId ;
+	int64_t docId ;
 	docId = 0; // hash64  ( coll , collLen );
 	docId = hash64b ( url , docId );
 	// top 8 bits of docId is always hash of the ip
@@ -251,7 +251,7 @@ uint64_t Titledb::getProbableDocId ( char *url ) {
 	//   lower 8 bits making the docid seems like from a different site
 	// . 00000000 00000000 00000000 00dddddd
 	// . dddddddd dddddddd hhhhhhhh dddddddd
-	//long long h2 = (h << 8);
+	//int64_t h2 = (h << 8);
 	// . clear all but lower 38 bits, then clear 8 bits for h2
 	docId &= DOCID_MASK; 
 	//docId |= h2;
@@ -261,7 +261,7 @@ uint64_t Titledb::getProbableDocId ( char *url ) {
 }
 */
 
-bool Titledb::isLocal ( long long docId ) {
+bool Titledb::isLocal ( int64_t docId ) {
 	// shift it up (64 minus 38) bits so we can mask it
 	//key_t key = makeTitleRecKey ( docId , false /*isDelKey?*/ );
 	// mask upper bits of the top 4 bytes
@@ -272,12 +272,12 @@ bool Titledb::isLocal ( long long docId ) {
 // . make the key of a TitleRec from a docId
 // . remember to set the low bit so it's not a delete
 // . hi bits are set in the key
-key_t Titledb::makeKey ( long long docId, long long uh48, bool isDel ){
+key_t Titledb::makeKey ( int64_t docId, int64_t uh48, bool isDel ){
 	key_t key ;
 	// top bits are the docid so generic getGroupId() works!
 	key.n1 = (unsigned long)(docId >> 6); // (NUMDOCIDBITS-32));
 
-	long long n0 = (uint64_t)(docId&0x3f);
+	int64_t n0 = (uint64_t)(docId&0x3f);
 	// sanity check
 	if ( uh48 & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
 	// make room for uh48

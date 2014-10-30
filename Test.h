@@ -40,7 +40,7 @@ class Test {
 	// are still in a loop adding urls to spiderdb via msg4?
 	bool m_isAdding;
 
-	long long m_testStartTime;
+	int64_t m_testStartTime;
 	
 	// this is set to the errno if any error encounted during the test
 	long m_errno ;

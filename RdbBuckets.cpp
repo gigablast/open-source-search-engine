@@ -476,9 +476,9 @@ bool RdbBucket::selfTest (char* prevKey) {
 			log(LOG_WARN, "db: bucket's first key: %016llx%08lx "
 			    "is less than last bucket's end key: "
 			    "%016llx%08lx!!!!!",
-			    *(long long*)(m_keys+(sizeof(long))), 
+			    *(int64_t*)(m_keys+(sizeof(long))), 
 			    *(long*)m_keys,
-			    *(long long*)(prevKey+(sizeof(long))), 
+			    *(int64_t*)(prevKey+(sizeof(long))), 
 			    *(long*)prevKey);
 			//printBucket();
 			return false;
@@ -488,15 +488,15 @@ bool RdbBucket::selfTest (char* prevKey) {
 
  	for(long i = 0; i < m_numKeys; i++) {
 //log(LOG_WARN, "rdbbuckets last key: ""%016llx%08lx num keys: %li",
-//   *(long long*)(kk+(sizeof(long))), *(long*)kk, m_numKeys);
+//   *(int64_t*)(kk+(sizeof(long))), *(long*)kk, m_numKeys);
 		if(i > 0 && KEYCMP(last, kk, ks) > 0) {
 			log(LOG_WARN, "db: bucket's last key was out "
 			    "of order!!!!!"
 			    "key was: %016llx%08lx vs prev: %016llx%08lx"
 			    " num keys: %li"
 			    " ks=%li bucketNum=%li",
-			    *(long long*)(kk+(sizeof(long))), *(long*)kk, 
-			    *(long long*)(last+(sizeof(long))), *(long*)last, 
+			    *(int64_t*)(kk+(sizeof(long))), *(long*)kk, 
+			    *(int64_t*)(last+(sizeof(long))), *(long*)last, 
 			    m_numKeys, ks, i);
 			return false;
 			//char* xx = NULL; *xx = 0;
@@ -520,7 +520,7 @@ void RdbBucket::printBucket() {
  	for(long i = 0; i < m_numKeys;i++) {
  		log(LOG_WARN, "rdbbuckets last key: ""%016llx%08lx num "
 		    "keys: %li",
- 		    *(long long*)(kk+(sizeof(long))), *(long*)kk, m_numKeys);
+ 		    *(int64_t*)(kk+(sizeof(long))), *(long*)kk, m_numKeys);
 		kk += recSize;
 	}
 }
@@ -850,7 +850,7 @@ long RdbBuckets::addNode (collnum_t collnum,
 	//check if we are full
 	if(m_buckets[i]->getNumKeys() == BUCKET_SIZE) {
 		//split the bucket
-		long long t = gettimeofdayInMilliseconds();
+		int64_t t = gettimeofdayInMilliseconds();
 		m_buckets[i]->sort();
 		RdbBucket* newBucket = bucketFactory();
 		if(newBucket == NULL ) {
@@ -862,7 +862,7 @@ long RdbBuckets::addNode (collnum_t collnum,
 		addBucket(newBucket, i+1);
 		if(bucketCmp(key, collnum, m_buckets[i]) > 0) i++;
 		
-		long long took = gettimeofdayInMilliseconds() - t;
+		int64_t took = gettimeofdayInMilliseconds() - t;
 		if(took > 10) log(LOG_WARN, 
 				  "db: split bucket in %lli ms for %s",took, 
 				  m_dbname);
@@ -1098,13 +1098,13 @@ bool RdbBuckets::selfTest(bool thorough, bool core) {
 		char* kk = b->getEndKey();
 		//log(LOG_WARN, "rdbbuckets last key: ""%016llx%08lx "
 		//"num keys: %li",
-		//*(long long*)(kk+(sizeof(long))),*(long*)kk,b->getNumKeys());
+		//*(int64_t*)(kk+(sizeof(long))),*(long*)kk,b->getNumKeys());
 		if(i > 0 &&
 		   lastcoll == b->getCollnum() && 
 		   KEYCMPNEGEQ(last, kk,m_ks) >= 0) {
 			log(LOG_WARN, "rdbbuckets last key: "
 			    "%016llx%08lx num keys: %li",
-			    *(long long*)(kk+(sizeof(long))),
+			    *(int64_t*)(kk+(sizeof(long))),
 			    *(long*)kk, b->getNumKeys());
 			log(LOG_WARN, "rdbbuckets last key was out "
 			    "of order!!!!!");
@@ -1401,14 +1401,14 @@ bool RdbBucket::getList(RdbList* list,
 			    "  %016llx%08lx %016llx%08lx."
 			    "  getting keys %li to %li for list"
 			    "bounded by %016llx%08lx %016llx%08lx",
-			    *(long long*)(startKey+(sizeof(long))),
+			    *(int64_t*)(startKey+(sizeof(long))),
 			    *(long*)startKey,
-			    *(long long*)(currKey+(sizeof(long))),
+			    *(int64_t*)(currKey+(sizeof(long))),
 			    *(long*)currKey,
 			    start, end,
- 			    *(long long*)(startKey+(sizeof(long))),
+ 			    *(int64_t*)(startKey+(sizeof(long))),
 			    *(long*)startKey,
- 			    *(long long*)(endKey+(sizeof(long))),
+ 			    *(int64_t*)(endKey+(sizeof(long))),
 			    *(long*)endKey);
 
 			printBucket();
@@ -1421,14 +1421,14 @@ bool RdbBucket::getList(RdbList* list,
 			    "  %016llx%08lx %016llx%08lx."
 			    "  getting keys %li to %li for list"
 			    "bounded by %016llx%08lx %016llx%08lx",
-			    *(long long*)(currKey+(sizeof(long))),
+			    *(int64_t*)(currKey+(sizeof(long))),
 			    *(long*)currKey,
-			    *(long long*)(endKey+(sizeof(long))),
+			    *(int64_t*)(endKey+(sizeof(long))),
 			    *(long*)endKey,
 			    start, end,
- 			    *(long long*)(startKey+(sizeof(long))),
+ 			    *(int64_t*)(startKey+(sizeof(long))),
 			    *(long*)startKey,
- 			    *(long long*)(endKey+(sizeof(long))),
+ 			    *(int64_t*)(endKey+(sizeof(long))),
 			    *(long*)endKey);
 
 			printBucket();
@@ -1695,7 +1695,7 @@ bool RdbBuckets::addList(RdbList* list, collnum_t collnum) {
 
 
 //return the total bytes of the list bookended by startKey and endKey
-long long RdbBuckets::getListSize ( collnum_t collnum,
+int64_t RdbBuckets::getListSize ( collnum_t collnum,
 				    char *startKey , char *endKey , 
 				    char *minKey , char *maxKey ) {
 
@@ -1717,7 +1717,7 @@ long long RdbBuckets::getListSize ( collnum_t collnum,
 	//log(LOG_WARN, "db numBuckets %li start %li end %li", 
 	//m_numBuckets, startBucket, endBucket);
 
-	long long retval = 0;
+	int64_t retval = 0;
 	for(long i = startBucket; i <= endBucket; i++) {
 		retval += m_buckets[i]->getNumKeys();
 	}
@@ -1843,7 +1843,7 @@ bool RdbBuckets::fastSave_r() {
 	errno = 0;
 	// . save the header
 	// . force file head to the 0 byte in case offset was elsewhere
-	long long offset = 0;
+	int64_t offset = 0;
 
 	offset = fastSaveColl_r(fd, offset);
 	
@@ -1860,7 +1860,7 @@ bool RdbBuckets::fastSave_r() {
 	return offset >= 0;
 }
 
-long long RdbBuckets::fastSaveColl_r(int fd, long long offset) {
+int64_t RdbBuckets::fastSaveColl_r(int fd, int64_t offset) {
 	if(m_numKeysApprox == 0) return offset;
 	long version = SAVE_VERSION;
 	long err = 0;
@@ -1949,7 +1949,7 @@ bool RdbBuckets::fastLoad ( BigFile *f , char* dbname) {
 	if ( fsize == 0 ) return true;
 
 	// init offset
-	long long offset = 0;
+	int64_t offset = 0;
 
 	offset = fastLoadColl(f, dbname, offset);
 
@@ -1962,9 +1962,9 @@ bool RdbBuckets::fastLoad ( BigFile *f , char* dbname) {
 }
 
 
-long long RdbBuckets::fastLoadColl( BigFile *f,
+int64_t RdbBuckets::fastLoadColl( BigFile *f,
 				    char *dbname,
-				    long long offset ) {
+				    int64_t offset ) {
 	long maxBuckets;
 	long numBuckets;
 	long version;
@@ -2034,7 +2034,7 @@ long long RdbBuckets::fastLoadColl( BigFile *f,
 // max key size -- posdb, 18 bytes, so use 18 here
 #define BTMP_SIZE (BUCKET_SIZE*18+1000)
 
-long long RdbBucket::fastSave_r(int fd, long long offset) {
+int64_t RdbBucket::fastSave_r(int fd, int64_t offset) {
 
 	// first copy to a buf before saving so we can unlock!
 	char tmp[BTMP_SIZE];
@@ -2085,7 +2085,7 @@ long long RdbBucket::fastSave_r(int fd, long long offset) {
 	return offset + size;
 }
 
-long long RdbBucket::fastLoad(BigFile *f, long long offset) {
+int64_t RdbBucket::fastLoad(BigFile *f, int64_t offset) {
 	errno = 0;
 
 	f->read  ( &m_collnum,sizeof(collnum_t), offset ); 

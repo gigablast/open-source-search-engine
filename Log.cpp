@@ -208,7 +208,7 @@ bool Log::shouldLog ( long type , char *msg ) {
 }
 
 
-bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
+bool Log::logR ( int64_t now , long type , char *msg , bool asterisk ,
 		 bool forced ) {
 
 	// filter if we should
@@ -381,7 +381,7 @@ static char  s_problem  = '\0';
 // . 4 bytes = size of string space
 // . X bytes = NULL terminated format string
 // . X bytes = 0-3 bytes word-alignment padding
-bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
+bool Log::logLater ( int64_t now, long type, char *format, va_list ap ) {
 	//return false;
 	// we have to be in a sig handler
 	//if ( ! g_inSigHandler ) 
@@ -426,7 +426,7 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	// is it a long, half or int? if so, leave as is.
 	if ( *p == 'l' ) { 
 		pap += 4; 
-		// it could be a long long
+		// it could be a int64_t
 		if ( (*p+1) == 'l' ) pap += 4;
 		goto loop; 
 	}
@@ -555,7 +555,7 @@ void Log::printBuf ( ) {
 		return;
 	}
 	// get time
-	long long now ;
+	int64_t now ;
 	memcpy ( (char *)&now , p , 8 );
 	p += 8;
 	// get size of args

@@ -12,7 +12,7 @@ void Revdb::reset() { m_rdb.reset(); }
 // init our rdb
 bool Revdb::init ( ) {
 
-	long long maxTreeMem = 200000000;
+	int64_t maxTreeMem = 200000000;
 	// . what's max # of tree nodes?
 	// . assume avg RevRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
@@ -154,7 +154,7 @@ bool Revdb::verify ( char *coll ) {
 // . make the key of a RevRec from a docId
 // . remember to set the low bit so it's not a delete
 // . hi bits are set in the key
-key_t Revdb::makeKey ( long long docId, bool isDel ){
+key_t Revdb::makeKey ( int64_t docId, bool isDel ){
 	key_t key ;
 	key.n1 = 0;
 	// shift up for delbit
@@ -164,6 +164,6 @@ key_t Revdb::makeKey ( long long docId, bool isDel ){
 	return key;
 };
 
-long long Revdb::getDocId ( key_t *k ) {
+int64_t Revdb::getDocId ( key_t *k ) {
 	return (k->n0 >> 1);
 }

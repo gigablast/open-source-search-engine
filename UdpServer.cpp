@@ -566,7 +566,7 @@ bool UdpServer::sendRequest ( char     *msg          ,
 	
 	// . get time 
 	// . returns g_now if we're in a signal handler
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// connect to the ip/port (udp-style: does not do much)
 	slot->connect ( m_proto, ip, port, h, hostId, transId, timeout, now ,
 			niceness );
@@ -604,7 +604,7 @@ bool UdpServer::sendRequest ( char     *msg          ,
 	//s_udpMem += msgSize;
 
 	// debug msg
-	//long long  now = gettimeofdayInMilliseconds();
+	//int64_t  now = gettimeofdayInMilliseconds();
 	//log("***added node #%li, isTimedOut=%li\n",node,
 	//slot->isTimedOut(now));
 	// let caller know the slot if he wants to
@@ -667,7 +667,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 		return;
 	}
 	// record some statistics on how long these msg handlers are taking
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// m_queuedTime should have been set before m_handlers[] was called
 	long delta = now - slot->m_queuedTime;
 	long n = slot->m_niceness;
@@ -717,7 +717,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	// use the msg type that's already in there
 	unsigned char msgType = slot->getMsgType();
 	// get time 
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// . use a NULL callback since we're sending a reply
 	// . set up for a send
 	if ( ! slot->sendSetup ( msg        ,
@@ -784,7 +784,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 // . that means we can be calling doSending() on a slot made in
 //   sendRequest() and then be interrupted by sendPollWrapper_ass()
 // . Fortunately, we have a lock around it in sendRequest()!
-bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
+bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,int64_t now) {
 
 	// if UdpServer::cancel() was called and this slot's callback was
 	// called, make sure to hault sending if we are in a quickpoll
@@ -798,7 +798,7 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 	// . unless we're in a sighandler or they're already off
 	bool flipped = interruptsOff();
 	// get time
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// . TODO: why this bug?
 	// . before we had dead lock, I guess *s_tokenTime was fucked up
 	// . this will ensure that it doesn't happend again
@@ -883,7 +883,7 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 // . tries to send msgs that are the "most caught up" to their ACKs first
 // . call the callback of slots that are TIMEDOUT or get an error!
 // . verified that this is not interruptible
-bool UdpServer::sendPoll_ass ( bool allowResends , long long now ) {
+bool UdpServer::sendPoll_ass ( bool allowResends , int64_t now ) {
 	// . turn off interrupts to be safe
 	// . unless we're in a sighandler or they're already off
 	bool flipped = interruptsOff();
@@ -959,7 +959,7 @@ bool UdpServer::sendPoll_ass ( bool allowResends , long long now ) {
 // . let's send the shortest first, but weight by how long it's been waiting!
 // . f(x) = a*(now - startTime) + b/msgSize
 // . verified that this is not interruptible
-UdpSlot *UdpServer::getBestSlotToSend ( long long now ) {
+UdpSlot *UdpServer::getBestSlotToSend ( int64_t now ) {
 	// . we send msgs that are mostly "caught up" with their acks first
 	// . the slot with the lowest score gets sent
 	// . re-sends have priority over NONre-sends(ACK was not recvd in time)
@@ -1033,13 +1033,13 @@ bool UdpServer::registerHandler ( unsigned char msgType ,
 
 // . read and send as much as we can before calling any callbacks
 // . if forceCallbacks is true we call them regardless if we read/sent anything
-void UdpServer::process_ass ( long long now , long maxNiceness) {
+void UdpServer::process_ass ( int64_t now , long maxNiceness) {
 	// bail if no main sock
 	if ( m_sock < 0 ) return ;
 
 	// if we call this while in the sighandler it crashes since
 	// gettimeofdayInMillisecondsLocal() is not async safe
-	long long startTimer;
+	int64_t startTimer;
 	if ( ! g_inSigHandler )
 		startTimer = gettimeofdayInMillisecondsLocal();
  bigloop:
@@ -1106,7 +1106,7 @@ void UdpServer::process_ass ( long long now , long maxNiceness) {
 	if(maxNiceness < 1) return;
 	// if we call this while in the sighandler it crashes since
 	// gettimeofdayInMillisecondsLocal() is not async safe
-	long long elapsed = 0;
+	int64_t elapsed = 0;
 	if ( ! g_inSigHandler )
 		elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
 	if(elapsed < 10) {
@@ -1141,7 +1141,7 @@ void readPollWrapper_ass ( int fd , void *state ) {
 // . should only be called from process_ass() since this is not re-entrant
 // . verified that this is not interruptible
 /*
-bool UdpServer::readPoll ( long long now ) {
+bool UdpServer::readPoll ( int64_t now ) {
 	// if m_sock shutdown, don't bother
 	if ( m_sock < 0 ) return false;
 	// a common var
@@ -1181,7 +1181,7 @@ void UdpServer::dumpdgram ( char *dgram , long dgramSize ) {
 }
 	
 // . returns -1 on error, 0 if blocked, 1 if completed reading dgram
-long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
+long UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	// turn em off
 	bool flipped = interruptsOff();
 	// NULLify slot
@@ -1259,7 +1259,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		  ! g_conf.isConnectIp ( ip ) ) {
 		// bitch, wait at least 5 seconds though
 		static long s_lastTime = 0;
-		static long long s_count = 0LL;
+		static int64_t s_count = 0LL;
 		s_count++;
 		if ( getTime() - s_lastTime > 5 ) {
 			s_lastTime = getTime();
@@ -1558,7 +1558,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			// discard it!
 			// only log this message up to once per second to avoid
 			// flooding the log
-			static long long s_lastTime = 0LL;
+			static int64_t s_lastTime = 0LL;
 			g_dropped++;
 			// count each msgType we drop
 			if ( niceness == 0 ) g_stats.m_dropped[msgType][0]++;
@@ -1818,7 +1818,7 @@ void UdpServer::resume ( ) {
 	// we are no longer suspened
 	m_isSuspended = false;
 	// get time now
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// send as much as we can now that m_isSuspended is false
 	sendPoll_ass ( true , now );
 	// resume any merge that was going on
@@ -1886,7 +1886,7 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 	if ( g_process.m_mode )
 		doNicenessConversion = false;
 
-	long long startTime = gettimeofdayInMillisecondsLocal();
+	int64_t startTime = gettimeofdayInMillisecondsLocal();
 
  fullRestart:
 
@@ -2027,7 +2027,7 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 		// try to call the callback for this slot
 		//g_loop.startBlockedCpuTimer();
 		// time it now
-		long long start2 = 0;
+		int64_t start2 = 0;
 		bool logIt = false;
 		if ( slot->m_niceness == 0 ) logIt = true;
 		if ( logIt ) start2 = gettimeofdayInMillisecondsLocal();
@@ -2047,7 +2047,7 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 		// . skip to next slot if did not call callback/handler
 		if ( ! makeCallback_ass ( slot ) ) continue;
 
-		long long took = 0;
+		int64_t took = 0;
 		if ( logIt )
 			took = gettimeofdayInMillisecondsLocal()-start2;
 		if ( took > 1000 || (slot->m_niceness==0 && took>100))
@@ -2058,7 +2058,7 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 			     (long)slot->m_msgType,
 			     (long)slot->m_niceness,
 			     (long)slot->m_callback);
-		long long elapsed;
+		int64_t elapsed;
 		numCalled++;
 
 		// log how long callback took
@@ -2172,10 +2172,10 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//g_loop.canQuickPoll(slot->m_niceness);
 
 	// for timing callbacks and handlers
-	long long start = 0;
-	long long took;
+	int64_t start = 0;
+	int64_t took;
 	//long mt ;
-	long long now ;
+	int64_t now ;
 	long delta , n , bucket;
 	float mem;
 	long saved;
@@ -2206,8 +2206,8 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		*/
 		// debug msg
 		if ( g_conf.m_logDebugUdp ) {
-			long long now  = gettimeofdayInMillisecondsLocal();
-			long long took = now - slot->m_startTime;
+			int64_t now  = gettimeofdayInMillisecondsLocal();
+			int64_t took = now - slot->m_startTime;
 			//if ( took > 10 )
 			long Mbps = 0;
 			if ( took > 0 ) Mbps = slot->m_readBufSize / took;
@@ -2299,7 +2299,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 			    "nice=%li",(long)slot->m_msgType,slot->m_niceness);
 
 		if ( g_conf.m_maxCallbackDelay >= 0 ) {
-			long long elapsed = gettimeofdayInMillisecondsLocal()-
+			int64_t elapsed = gettimeofdayInMillisecondsLocal()-
 				start;
 			if ( slot->m_niceness == 0 &&
 			     elapsed >= g_conf.m_maxCallbackDelay )
@@ -2387,9 +2387,9 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 
 			// debug msg
 			if ( g_conf.m_logDebugUdp ) {
-				long long now  = 
+				int64_t now  = 
 					gettimeofdayInMillisecondsLocal();
-				long long took = now - start ;
+				int64_t took = now - start ;
 				//if ( took > 10 )
 					log(LOG_DEBUG,
 					    "udp: Callback2 transId=%li "
@@ -2591,7 +2591,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	slot->m_errno = 0;
 
 	if ( g_conf.m_maxCallbackDelay >= 0 ) {
-		long long elapsed = gettimeofdayInMillisecondsLocal() - start;
+		int64_t elapsed = gettimeofdayInMillisecondsLocal() - start;
 		if ( elapsed >= g_conf.m_maxCallbackDelay &&
 		     slot->m_niceness == 0 )
 			log("udp: Took %lli ms to call "
@@ -2686,7 +2686,7 @@ void UdpServer::timePoll ( ) {
 	// only repeat once
 	//bool first = true;
 	// get time now
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// before timing everyone out or starting resends, just to make
 	// sure we read everything. we have have just been blocking on a long
 	// handler or callback or sequence of those things and have stuff
@@ -2725,14 +2725,14 @@ void UdpServer::timePoll ( ) {
 }
 
 // every half second we check to see if 
-//long long s_lastDeadCheck = 0LL;
+//int64_t s_lastDeadCheck = 0LL;
 
 // . this is called once per second
 // . return false and sets g_errno on error
 // . calls the callback of REPLY-reception slots that have timed out
 // . just nuke the REQUEST-reception slots that have timed out
 // . returns true if we timed one out OR reset one for resending
-bool UdpServer::readTimeoutPoll ( long long now ) {
+bool UdpServer::readTimeoutPoll ( int64_t now ) {
 	// bail if we are in a wait state
 	if ( m_isSuspended ) return false;
 	// did we do something? assume not.
@@ -2789,7 +2789,7 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 		if ( slot->m_lastReadTime > now ) slot->m_lastReadTime = now;
 		if ( slot->m_lastSendTime > now ) slot->m_lastSendTime = now;
 		// get time elapsed since last read
-		long long elapsed = now - slot->m_lastReadTime;
+		int64_t elapsed = now - slot->m_lastReadTime;
 		// set all timeouts to 4 secs if we are shutting down
 		if ( m_isShuttingDown && slot->m_timeout > 4 ) 
 			slot->m_timeout = 4;
@@ -2816,7 +2816,7 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 		// . 3. they take too long to ACK our reply 
 		// . 4. they take too long to ACK our request
 		// . only flag it if we haven't already...
-		if ( elapsed >= ((long long)slot->m_timeout) * 1000LL &&
+		if ( elapsed >= ((int64_t)slot->m_timeout) * 1000LL &&
 		     slot->m_errno != EUDPTIMEDOUT ) {
 			// . set slot's m_errno field
 			// . makeCallbacks_ass() should call its callback
@@ -2827,7 +2827,7 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 			continue;
 		}
 		// how long since last send?
-		long long delta = now - slot->m_lastSendTime;
+		int64_t delta = now - slot->m_lastSendTime;
 		// if elapsed is negative, then someone changed the system
 		// clock on us, so it won't hurt to resend just to update
 		// otherwise, we could be waiting years to resend

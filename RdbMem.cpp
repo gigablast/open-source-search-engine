@@ -66,7 +66,7 @@ bool RdbMem::init ( Rdb *rdb , long memToAlloc , char keySize ,
 	// . set our limit markers
 	// . one for when primary mem, m_ptr1, is growing upward
 	//   and the other for when it's growing downward
-	long long limit = ((long long)m_memSize * 90LL) / 100LL;
+	int64_t limit = ((int64_t)m_memSize * 90LL) / 100LL;
 	m_90up   = m_mem + limit;
 	m_90down = m_mem + m_memSize - limit;
 	// success

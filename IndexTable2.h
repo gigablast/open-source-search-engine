@@ -39,8 +39,8 @@ typedef unsigned long score_t;
 
 // . get the docid from the ptr
 // . works for both docid ptrs from m_topTree and m_topDocIdPtrs[]
-inline long long getDocIdFromPtr ( char *docIdPtr ) {
-	long long d;
+inline int64_t getDocIdFromPtr ( char *docIdPtr ) {
+	int64_t d;
 	memcpy ( &d , docIdPtr , 6 );
 	d >>= 2;
 	d &= DOCID_MASK;
@@ -143,7 +143,7 @@ class IndexTable2 {
 				  char **ptrEnds ,
 				  char **oldPtrs ,
 				  long  numPtrs ,
-				  long long maxDocId ,
+				  int64_t maxDocId ,
 				  long      numListsToDo ,
 				  long      numSlots ,
 				  char **docIdPtrs ,
@@ -259,16 +259,16 @@ class IndexTable2 {
 	void setStuffFromImap();
 
 	// how long to add the last batch of lists
-	long long       m_addListsTime;
-	long long       m_t1 ;
-	long long       m_t2 ;
+	int64_t       m_addListsTime;
+	int64_t       m_t1 ;
+	int64_t       m_t2 ;
 	unsigned long   m_totalDocIds;
 	long            m_numPanics;
 	long            m_numCollisions;
 	long            m_numPtrs; // in the beginning at least
 	long            m_numLoops;
 
-	long long       m_estimatedTotalHits;
+	int64_t       m_estimatedTotalHits;
 
 	long            m_errno;
 
@@ -282,10 +282,10 @@ class IndexTable2 {
 	bool            m_isDiskExhausted;
 
 	// point to array of term freqs, 1-1 with qterms
-	long long *m_termFreqs;
+	int64_t *m_termFreqs;
 
 	// how many docs in the collection?
-	long long m_docsInColl;
+	int64_t m_docsInColl;
 
 	// . the imap stuff
 	// . m_imap is set in Query.cpp, but we contain it here
@@ -435,7 +435,7 @@ class IndexTable2 {
 
 	bool            m_requireAllTerms;
 
-	long long       m_numDocsInColl;
+	int64_t       m_numDocsInColl;
 
 	// the current "intersection" is stored in this table
 	char          **m_tmpDocIdPtrs2;
@@ -487,10 +487,10 @@ class IndexTable2 {
 	// . the &sq=docid1+docid2+...+docidN cgi parm can restrict the
 	//   search results to this list of docids
 	bool m_useYesDocIdTable;
-	HashTableT<long long,char> m_dt;
+	HashTableT<int64_t,char> m_dt;
 	// likewise, exclude any docid in this table
 	bool m_useNoDocIdTable;
-	HashTableT<long long,char> m_et;
+	HashTableT<int64_t,char> m_et;
 	// cache boolean results
 	bool m_useBoolTable;
 	HashTableT<qvec_t,char> m_bt;
@@ -512,7 +512,7 @@ class IndexTable2 {
 			//	logf(LOG_DEBUG, 
 			//	     "query: getBitScoreCacheHit "
 			//	     "bits=0x%016llx",
-			//	     (long long) ebits);
+			//	     (int64_t) ebits);
 			bscore = m_bt.getValueFromSlot(slot);
 		}
 		else {
@@ -520,7 +520,7 @@ class IndexTable2 {
 			//	logf(LOG_DEBUG, 
 			//	     "query: getBitScoreCacheMiss "
 			//	     "bits=0x%016llx",
-			//	     (long long) ebits);
+			//	     (int64_t) ebits);
 			bscore = m_q->getBitScore(ebits);
 		}
 		// store new bool value
@@ -529,7 +529,7 @@ class IndexTable2 {
 			//	logf(LOG_DEBUG, 
 			//	     "query: getBitScoreCacheAdd "
 			//	     "bits=0x%016llx",
-			//	     (long long) ebits);
+			//	     (int64_t) ebits);
 			m_bt.addKey(ebits,bscore,NULL);
 		}
 		return bscore;
@@ -548,7 +548,7 @@ inline long IndexTable2::getWeakestTopDocId ( char          **topp         ,
 					      unsigned char  *minBitScore2 ,
 					      score_t        *score        ,
 					      char          **docIdPtr     ) {
-	long long      tmp         = 0LL;
+	int64_t      tmp         = 0LL;
 	score_t        minScore    = 0x7fffffff;
 	unsigned char  minBitScore = 0xff;
 	char          *minDocIdPtr = (char *)&tmp; 

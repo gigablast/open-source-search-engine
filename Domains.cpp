@@ -825,13 +825,13 @@ bool isTLD ( char *tld , long tldLen ) {
 		for ( long i = 0 ; i < n ; i++ ) {
 			char      *d    = s_tlds[i];
 			long       dlen = gbstrlen ( d );
-			long long  dh   = hash64Lower_a ( d , dlen );
+			int64_t  dh   = hash64Lower_a ( d , dlen );
 			if ( ! s_table.addKey (&dh,NULL) )
 				return log("build: dom table failed");
 		}
 		s_isInitialized = true;
 	} 
-	long long h = hash64Lower_a ( tld , tldLen ); // gbstrlen(tld));
+	int64_t h = hash64Lower_a ( tld , tldLen ); // gbstrlen(tld));
 	return s_table.isInTable ( &h );//getScoreFromTermId ( h );
 }		
 

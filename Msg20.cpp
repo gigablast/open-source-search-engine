@@ -145,7 +145,7 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	if ( req->m_docId >= 0 ) 
 		shardNum = hostdb->getShardNumFromDocId(req->m_docId);
 	else {
-		long long pdocId = g_titledb.getProbableDocId(req->ptr_ubuf);
+		int64_t pdocId = g_titledb.getProbableDocId(req->ptr_ubuf);
 		shardNum = getShardNumFromDocId(pdocId);
 	}
 
@@ -160,7 +160,7 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 
 	// put all alive hosts in this array
 	Host *cand[32];
-	long long  nc = 0;
+	int64_t  nc = 0;
 	for ( long i = 0 ; i < allNumHosts ; i++ ) {
 		// get that host
 		Host *hh = &allHosts[i];
@@ -176,8 +176,8 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 
 	// route based on docid region, not parity, because we want to hit
 	// the urldb page cache as much as possible
-	long long sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
-	long long probDocId    = req->m_docId;
+	int64_t sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
+	int64_t probDocId    = req->m_docId;
 	// i think reference pages just pass in a url to get the summary
 	if ( probDocId < 0 && req->size_ubuf ) 
 		probDocId = g_titledb.getProbableDocId ( req->ptr_ubuf );
@@ -386,7 +386,7 @@ void handleRequest20 ( UdpSlot *slot , long netnice ) {
 		return; 
 	}
 
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	// alloc a new state to get the titlerec
 	XmlDoc *xd;
@@ -429,9 +429,9 @@ bool gotReplyWrapperxd ( void *state ) {
 	// parse the request
 	Msg20Request *req = (Msg20Request *)slot->m_readBuf;
 	// print time
-	long long now = gettimeofdayInMilliseconds();
-	long long took = now - xd->m_setTime;
-	long long took2 = now - xd->m_cpuSummaryStartTime;
+	int64_t now = gettimeofdayInMilliseconds();
+	int64_t took = now - xd->m_setTime;
+	int64_t took2 = now - xd->m_cpuSummaryStartTime;
 
 	// if there is a baclkog of msg20 summary generation requests this
 	// is really not the cpu it took to make the smmary, but how long it

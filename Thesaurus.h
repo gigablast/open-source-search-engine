@@ -192,7 +192,7 @@ public:
 	bool getStems(char *s, long slen, SynonymInfo *info);
 	
 	// turns a string/int into the other form ("2" -> "two" & vice versa)
-	bool parseNumbers(long long n, SynonymInfo *syn);
+	bool parseNumbers(int64_t n, SynonymInfo *syn);
 	bool parseNumbers(char *s, long slen, SynonymInfo *syn);
 
 	// generates new phrase synonyms off two-term phrases

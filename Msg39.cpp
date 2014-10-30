@@ -326,14 +326,14 @@ bool Msg39::controlLoop ( ) {
 		// next phase
 		m_phase++;
 		// the starting docid...
-		long long d0 = m_ddd;
+		int64_t d0 = m_ddd;
 		// shortcut
-		long long delta = MAX_DOCID / (long long)m_r->m_numDocIdSplits;
+		int64_t delta = MAX_DOCID / (int64_t)m_r->m_numDocIdSplits;
 		// advance to point to the exclusive endpoint
 		m_ddd += delta;
 		// ensure this is exclusive of ddd since it will be
 		// inclusive in the following iteration.
-		long long d1 = m_ddd;
+		int64_t d1 = m_ddd;
 		// fix rounding errors
 		if ( d1 + 20LL > MAX_DOCID ) {
 			d1    = MAX_DOCID;
@@ -429,15 +429,15 @@ bool Msg39::controlLoop ( ) {
 // . to avoid running out of memory, generate the search results for
 //   multiple smaller docid-ranges, one range at a time.
 bool Msg39::doDocIdSplitLoop ( ) {
-	long long delta = MAX_DOCID / (long long)m_numDocIdSplits;
+	int64_t delta = MAX_DOCID / (int64_t)m_numDocIdSplits;
 	for ( ; m_ddd < m_dddEnd ; ) {
 		// the starting docid...
-		long long d0 = m_ddd;
+		int64_t d0 = m_ddd;
 		// advance to point to the exclusive endpoint
 		m_ddd += delta;
 		// ensure this is exclusive of ddd since it will be
 		// inclusive in the following iteration.
-		long long d1 = m_ddd;
+		int64_t d1 = m_ddd;
 		// fix rounding errors
 		if ( d1 + 20LL > MAX_DOCID ) {
 			d1    = MAX_DOCID;
@@ -537,11 +537,11 @@ bool Msg39::getLists () {
 	// . get the docid start and end
 	// . do docid paritioning so we can send to all hosts
 	//   in the network, not just one stripe
-	long long docIdStart = 0;
-	long long docIdEnd = MAX_DOCID;
+	int64_t docIdStart = 0;
+	int64_t docIdEnd = MAX_DOCID;
 	// . restrict to this docid?
 	// . will really make gbdocid:| searches much faster!
-	long long dr = m_tmpq.m_docIdRestriction;
+	int64_t dr = m_tmpq.m_docIdRestriction;
 	if ( dr ) {
 		docIdStart = dr;
 		docIdEnd   = dr + 1;
@@ -558,13 +558,13 @@ bool Msg39::getLists () {
 	//bool useTwins = false;
 	//if ( g_hostdb.getNumStripes() == 2 ) useTwins = true;
 	//if ( useTwins ) {
-	//	long long delta2 = ( docIdEnd - docIdStart ) / 2;
+	//	int64_t delta2 = ( docIdEnd - docIdStart ) / 2;
 	//	if ( m_r->m_stripe == 0 ) docIdEnd = docIdStart + delta2;
 	//	else                      docIdStart = docIdStart + delta2;
 	//}
 	// new striping logic:
 	long numStripes = g_hostdb.getNumStripes();
-	long long delta2 = ( docIdEnd - docIdStart ) / numStripes;
+	int64_t delta2 = ( docIdEnd - docIdStart ) / numStripes;
 	long stripe = g_hostdb.getMyHost()->m_stripe;
 	docIdStart += delta2 * stripe; // is this right?
 	docIdEnd = docIdStart + delta2;
@@ -593,7 +593,7 @@ bool Msg39::getLists () {
 		char *sk = qterm->m_startKey;
 		char *ek = qterm->m_endKey;
 		// get the term id
-		long long tid = m_tmpq.getTermId(i);
+		int64_t tid = m_tmpq.getTermId(i);
 		// if only 1 stripe
 		//if ( g_hostdb.getNumStripes() == 1 ) {
 		//	docIdStart = 0;
@@ -682,15 +682,15 @@ bool Msg39::getLists () {
 			     (long)qt->m_isRequired,
 			     (long)qt->m_fieldCode,
 
-			     (long long)qt->m_explicitBit  ,
-			     (long long)qt->m_implicitBits ,
+			     (int64_t)qt->m_explicitBit  ,
+			     (int64_t)qt->m_implicitBits ,
 
 			     wikiPhrId,
 			     (long)leftwikibigram,
 			     (long)rightwikibigram,
 			     ((long *)m_r->ptr_readSizes)[i]         ,
-			     //(long long)m_tmpq.m_qterms[i].m_explicitBit  ,
-			     //(long long)m_tmpq.m_qterms[i].m_implicitBits ,
+			     //(int64_t)m_tmpq.m_qterms[i].m_explicitBit  ,
+			     //(int64_t)m_tmpq.m_qterms[i].m_implicitBits ,
 			     (long)m_tmpq.m_qterms[i].m_hardCount ,
 			     (long)m_tmpq.m_componentCodes[i],
 			     (long)m_tmpq.getTermLen(i) ,
@@ -936,8 +936,8 @@ bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 	}
 
 	// time it
-	long long start = gettimeofdayInMilliseconds();
-	long long diff;
+	int64_t start = gettimeofdayInMilliseconds();
+	int64_t diff;
 
 	// . don't bother making a thread if lists are small
 	// . look at STAGE? in IndexReadInfo.cpp to see how we read in stages
@@ -1161,7 +1161,7 @@ bool Msg39::setClusterRecs ( ) {
 	// parse out the buf
 	char *p = m_buf;
 	// docIds
-	m_clusterDocIds = (long long *)p; p += numDocIds * 8;
+	m_clusterDocIds = (int64_t *)p; p += numDocIds * 8;
 	m_clusterLevels = (char      *)p; p += numDocIds * 1;
 	m_clusterRecs   = (key_t     *)p; p += numDocIds * 12;
 	// sanity check
@@ -1174,7 +1174,7 @@ bool Msg39::setClusterRecs ( ) {
 		// get the guy
 		TopNode *t = &m_tt.m_nodes[ti];
 		// get the docid
-		//long long  docId = getDocIdFromPtr(t->m_docIdPtr);
+		//int64_t  docId = getDocIdFromPtr(t->m_docIdPtr);
 		// store in array
 		m_clusterDocIds[nd] = t->m_docId;
 		// assume not gotten
@@ -1254,7 +1254,7 @@ bool Msg39::gotClusterRecs ( ) {
 		// get the guy
 		TopNode *t = &m_tt.m_nodes[ti];
 		// get the docid
-		//long long  docId = getDocIdFromPtr(t->m_docIdPtr);
+		//int64_t  docId = getDocIdFromPtr(t->m_docIdPtr);
 		// sanity check
 		if ( t->m_docId != m_clusterDocIds[nd] ) {char *xx=NULL;*xx=0;}
 		// set it
@@ -1314,7 +1314,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 	}
 
 	// convenience ptrs. we will store the docids/scores into these arrays
-	long long *topDocIds;
+	int64_t *topDocIds;
 	double    *topScores;
 	key_t     *topRecs;
 
@@ -1343,7 +1343,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		// start setting the stuff
 		mr.m_numDocIds = numDocIds;
 		// copy # estiamted hits into 8 bytes of reply
-		//long long est = m_posdbTable.m_estimatedTotalHits;
+		//int64_t est = m_posdbTable.m_estimatedTotalHits;
 		// ensure it has at least as many results as we got
 		//if ( est < numDocIds ) est = numDocIds;
 		// or if too big...
@@ -1379,7 +1379,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		mr.ptr_scores       = NULL;
 		mr.ptr_clusterRecs  = NULL;
 		// this is how much space to reserve
-		mr.size_docIds      = 8 * numDocIds; // long long
+		mr.size_docIds      = 8 * numDocIds; // int64_t
 		mr.size_scores      = sizeof(double) * numDocIds; // float
 		// if not doing site clustering, we won't have these perhaps...
 		if ( m_gotClusterRecs ) 
@@ -1450,7 +1450,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			// skip if none
 			if ( ft->m_numSlotsUsed == 0 ) continue;
 			// store query term id 64 bit
-			*(long long *)p = qt->m_termId;
+			*(int64_t *)p = qt->m_termId;
 			p += 8;
 			long used = ft->getNumSlotsUsed();
 			if ( used > (long)MAX_FACETS ) used = (long)MAX_FACETS;
@@ -1513,7 +1513,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			sendReply(m_slot,this,NULL,0,0,true);
 			return;
 		}
-		topDocIds    = (long long *) mr.ptr_docIds;
+		topDocIds    = (int64_t *) mr.ptr_docIds;
 		topScores    = (double    *) mr.ptr_scores;
 		topRecs      = (key_t     *) mr.ptr_clusterRecs;
 	}
@@ -1542,7 +1542,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 
 		// get the docid ptr
 		//char      *diptr = t->m_docIdPtr;
-		//long long  docId = getDocIdFromPtr(diptr);
+		//int64_t  docId = getDocIdFromPtr(diptr);
 		// sanity check
 		if ( t->m_docId < 0 ) { char *xx=NULL; *xx=0; }
 		//add it to the reply

@@ -15,7 +15,7 @@ struct M20List;
 struct savedM20Data {
 	long score;
 	int tier;
-	long long docId;
+	int64_t docId;
 	char clusterLevel;
 };
 

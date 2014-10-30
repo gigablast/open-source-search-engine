@@ -28,7 +28,7 @@ public:
 	XmlDoc       m_xd;
 	bool         m_isRootAdmin;
 	bool         m_isLocal;
-	long long    m_docId;
+	int64_t    m_docId;
 	char        *m_pwd;
 	char        *m_coll;
 	long         m_collLen;
@@ -43,7 +43,7 @@ public:
 // . call g_httpServer.sendDynamicPage() to send it
 bool sendPageTitledb ( TcpSocket *s , HttpRequest *r ) {
 	// get the docId from the cgi vars
-	long long docId = r->getLongLong ("d", 0LL );
+	int64_t docId = r->getLongLong ("d", 0LL );
 	// set up a msg22 to get the next titleRec
 	State4 *st ;
 	try { st = new (State4); }
@@ -104,7 +104,7 @@ bool gotTitleRec ( void *state ) {
 
 	SafeBuf sb;
 	// get it's docId
-	long long docId = st->m_docId;
+	int64_t docId = st->m_docId;
 	// make the query string for passing to different hosts
 	char  qs[64];
 	sprintf(qs,"&d=%lli",docId);

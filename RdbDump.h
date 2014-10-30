@@ -46,12 +46,12 @@ class RdbDump {
 		    void      *state         ,
 		    void     (* callback ) ( void *state ) ,
 		    bool       useHalfKeys   ,
-		    long long  startOffset   ,
+		    int64_t  startOffset   ,
 		    //key_t      prevLastKey   ,
 		    char      *prevLastKey   ,
 		    char       keySize       ,
 		    class DiskPageCache *pc  ,
-		    long long  maxFileSize   ,
+		    int64_t  maxFileSize   ,
 		    class Rdb    *rdb        );
 
 	// a niceness of 0 means to block on the dumping
@@ -113,7 +113,7 @@ class RdbDump {
 	bool         m_dedup         ; // used for merging/adding tree to cache
 	void        *m_state         ;
 	void       (*m_callback)(void *state ) ;
-	long long    m_offset        ;
+	int64_t    m_offset        ;
 
 	BigFile  *m_file          ;
 	long      m_id2           ; // secondary id of file we are dumping to
@@ -157,7 +157,7 @@ class RdbDump {
 	long      m_totalNegDumped;
 
 	// recall info
-	long long m_t1;
+	int64_t m_t1;
 	long      m_numPosRecs;
 	long      m_numNegRecs;
 

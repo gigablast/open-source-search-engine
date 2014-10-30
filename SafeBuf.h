@@ -213,7 +213,7 @@ public:
 			    char *data ,
 			    char  rdbId );
 	// makes the site "%llu.com" where %llu is userId
-	class Tag *addFaceookTag ( long long userId ,
+	class Tag *addFaceookTag ( int64_t userId ,
 				   char *tagname ,
 				   long  now ,
 				   long  ip ,
@@ -325,7 +325,7 @@ public:
 
 
 	bool  pushLong (long i);
-	bool  pushLongLong (long long i);
+	bool  pushLongLong (int64_t i);
 	bool  pushFloat (float i);
 	bool  pushDouble (double i);
 	long  popLong();
@@ -342,7 +342,7 @@ public:
 	//copy numbers into the buffer, *in binary*
 	//useful for making lists.
 	bool  operator += (uint64_t i);
-	bool  operator += (long long i);
+	bool  operator += (int64_t i);
 	bool  operator += (long i);
 	bool  operator += (unsigned long i);
 	bool  operator += (float i);

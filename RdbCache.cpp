@@ -211,7 +211,7 @@ bool RdbCache::isInCache ( collnum_t collnum, char *cacheKey, long maxAge ) {
 // . a quick hack for SpiderCache.cpp
 // . if your record is always a 4 byte long call this
 // . returns -1 if not found, so don't store -1 in there then
-long long RdbCache::getLongLong ( collnum_t collnum ,
+int64_t RdbCache::getLongLong ( collnum_t collnum ,
 				  unsigned long key , long maxAge ,
 				  bool promoteRecord ) {
 	char *rec;
@@ -240,11 +240,11 @@ long long RdbCache::getLongLong ( collnum_t collnum ,
 		return -1LL;
 	}
 	// otherwise, it was found and the right length, so return it
-	return *(long long *)rec;
+	return *(int64_t *)rec;
 }
 
-// both key and returned value are long longs for this
-long long RdbCache::getLongLong2 ( collnum_t collnum ,
+// both key and returned value are int64_ts for this
+int64_t RdbCache::getLongLong2 ( collnum_t collnum ,
 				  uint64_t key , long maxAge ,
 				  bool promoteRecord ) {
 	char *rec;
@@ -272,12 +272,12 @@ long long RdbCache::getLongLong2 ( collnum_t collnum ,
 		return -1LL;
 	}
 	// otherwise, it was found and the right length, so return it
-	return *(long long *)rec;
+	return *(int64_t *)rec;
 }
 	
 // this puts a long in there
 void RdbCache::addLongLong2 ( collnum_t collnum ,
-			      uint64_t key , long long value ,
+			      uint64_t key , int64_t value ,
 			      char **retRecPtr ) {
 	key_t k;
 	k.n0 = (uint64_t)key;
@@ -294,7 +294,7 @@ void RdbCache::addLongLong2 ( collnum_t collnum ,
 
 // this puts a long in there
 void RdbCache::addLongLong ( collnum_t collnum ,
-			     unsigned long key , long long value ,
+			     unsigned long key , int64_t value ,
 			     char **retRecPtr ) {
 	key_t k;
 	k.n0 = 0;
@@ -425,7 +425,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	if ( ! m_ptrs )
 		return log("cache: getRecord: failed because oom");
 	// time it -- debug
-	long long t = 0LL ;
+	int64_t t = 0LL ;
 	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
 	// reset this
 	if ( cachedTime ) *cachedTime = 0;
@@ -747,7 +747,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 			   long   timestamp ,
 			   char **retRecPtr ) {
 
-	//long long startTime = gettimeofdayInMillisecondsLocal();
+	//int64_t startTime = gettimeofdayInMillisecondsLocal();
 	if ( collnum < (collnum_t)0) {char *xx=NULL;*xx=0; }
 	if ( collnum >= m_maxColls ) {char *xx=NULL;*xx=0; }
 	// full key not allowed because we use that in markDeletedRecord()
@@ -756,7 +756,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	// bail if cache empty
 	if ( m_totalBufSize <= 0 ) return true;
 	// debug msg
-	long long t = 0LL ;
+	int64_t t = 0LL ;
 	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
 	// need space for record data
 	long need = recSize1 + recSize2;
@@ -947,8 +947,8 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	//     cacheKey.n1 , cacheKey.n0 ,
 	m_adds++;
 
-	//long long now = gettimeofdayInMillisecondsLocal();
-	//long long took = now - startTime;
+	//int64_t now = gettimeofdayInMillisecondsLocal();
+	//int64_t took = now - startTime;
 	//if(took > 10) 
 	//	log(LOG_INFO, "admin: adding to RdbCache %s of %li bytes "
 	//	    "took %lli ms.",m_dbname,recSize1+recSize2,took);

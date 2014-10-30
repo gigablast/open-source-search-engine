@@ -205,13 +205,13 @@ class Rdb {
 
 
 	// how much mem is alloced for our maps?
-	long long getMapMemAlloced ();
+	int64_t getMapMemAlloced ();
 
 	long       getNumFiles ( ) ;
 
 	// sum of all parts of all big files
 	long      getNumSmallFiles ( ) ;
-	long long getDiskSpaceUsed ( );
+	int64_t getDiskSpaceUsed ( );
 
 	// returns -1 if variable (variable dataSize)
 	long getRecSize ( ) {
@@ -220,55 +220,55 @@ class Rdb {
 		return m_ks + m_fixedDataSize; };
 
 	// use the maps and tree to estimate the size of this list
-	long long getListSize ( collnum_t collnum,
+	int64_t getListSize ( collnum_t collnum,
 			   //key_t startKey ,key_t endKey , key_t *maxKey ,
 			   char *startKey ,char *endKey , char *maxKey ,
-			   long long oldTruncationLimit ) ;
+			   int64_t oldTruncationLimit ) ;
 
-	long long getListSize ( collnum_t collnum,
+	int64_t getListSize ( collnum_t collnum,
 			   key_t startKey ,key_t endKey , key_t *maxKey ,
-			   long long oldTruncationLimit ) {
+			   int64_t oldTruncationLimit ) {
 		return getListSize(collnum,(char *)&startKey,(char *)&endKey,
 				   (char *)maxKey,oldTruncationLimit);};
 
 	// positive minus negative
-	long long getNumTotalRecs ( bool useCache = false ) ;
+	int64_t getNumTotalRecs ( bool useCache = false ) ;
 
-	long long getNumRecsOnDisk ( );
+	int64_t getNumRecsOnDisk ( );
 
-	long long getNumGlobalRecs ( );
+	int64_t getNumGlobalRecs ( );
 
 	// used for keeping track of stats
 	void      didSeek       (            ) { m_numSeeks++; };
 	void      didRead       ( long bytes ) { m_numRead += bytes; };
 	void      didReSeek     (            ) { m_numReSeeks++; };
-	long long getNumSeeks   (            ) { return m_numSeeks; };
-	long long getNumReSeeks (            ) { return m_numReSeeks; };
-	long long getNumRead    (            ) { return m_numRead ; };
+	int64_t getNumSeeks   (            ) { return m_numSeeks; };
+	int64_t getNumReSeeks (            ) { return m_numReSeeks; };
+	int64_t getNumRead    (            ) { return m_numRead ; };
 
 	// net stats for "get" requests
 	void      readRequestGet ( long bytes ) { 
 		m_numReqsGet++    ; m_numNetReadGet += bytes; };
 	void      sentReplyGet     ( long bytes ) {
 		m_numRepliesGet++ ; m_numNetSentGet += bytes; };
-	long long getNumRequestsGet ( ) { return m_numReqsGet;    };
-	long long getNetReadGet     ( ) { return m_numNetReadGet; };
-	long long getNumRepliesGet  ( ) { return m_numRepliesGet; };
-	long long getNetSentGet     ( ) { return m_numNetSentGet; };
+	int64_t getNumRequestsGet ( ) { return m_numReqsGet;    };
+	int64_t getNetReadGet     ( ) { return m_numNetReadGet; };
+	int64_t getNumRepliesGet  ( ) { return m_numRepliesGet; };
+	int64_t getNetSentGet     ( ) { return m_numNetSentGet; };
 
 	// net stats for "add" requests
 	void      readRequestAdd ( long bytes ) { 
 		m_numReqsAdd++    ; m_numNetReadAdd += bytes; };
 	void      sentReplyAdd     ( long bytes ) {
 		m_numRepliesAdd++ ; m_numNetSentAdd += bytes; };
-	long long getNumRequestsAdd ( ) { return m_numReqsAdd;    };
-	long long getNetReadAdd     ( ) { return m_numNetReadAdd; };
-	long long getNumRepliesAdd  ( ) { return m_numRepliesAdd; };
-	long long getNetSentAdd     ( ) { return m_numNetSentAdd; };
+	int64_t getNumRequestsAdd ( ) { return m_numReqsAdd;    };
+	int64_t getNetReadAdd     ( ) { return m_numNetReadAdd; };
+	int64_t getNumRepliesAdd  ( ) { return m_numRepliesAdd; };
+	int64_t getNetSentAdd     ( ) { return m_numNetSentAdd; };
 
 	// used by main.cpp to periodically save us if we haven't dumped
 	// in a while
-	long long getLastWriteTime   ( ) { return m_lastWrite; };
+	int64_t getLastWriteTime   ( ) { return m_lastWrite; };
 	
 	// private:
 
@@ -383,7 +383,7 @@ class Rdb {
 	RdbMem    m_mem;
 
 	long      m_cacheLastTime;
-	long long m_cacheLastTotal;
+	int64_t m_cacheLastTotal;
 
 	bool m_inAddList;
 
@@ -419,19 +419,19 @@ class Rdb {
 	long      m_delRecSize; // size of the whole delete record
 
 	// for keeping stats
-	long long m_numSeeks;
-	long long m_numReSeeks;
-	long long m_numRead;
+	int64_t m_numSeeks;
+	int64_t m_numReSeeks;
+	int64_t m_numRead;
 	// network request/reply info for get requests
-	long long m_numReqsGet    ;
-	long long m_numNetReadGet ;
-	long long m_numRepliesGet ; 
-	long long m_numNetSentGet ;
+	int64_t m_numReqsGet    ;
+	int64_t m_numNetReadGet ;
+	int64_t m_numRepliesGet ; 
+	int64_t m_numNetSentGet ;
 	// network request/reply info for add requests
-	long long m_numReqsAdd    ;
-	long long m_numNetReadAdd ;
-	long long m_numRepliesAdd ; 
-	long long m_numNetSentAdd ;
+	int64_t m_numReqsAdd    ;
+	int64_t m_numNetReadAdd ;
+	int64_t m_numRepliesAdd ; 
+	int64_t m_numNetSentAdd ;
 
 	// should our next merge in waiting force itself?
 	bool      m_nextMergeForced;
@@ -469,8 +469,8 @@ class Rdb {
 	//bool      m_hasMergeFile;
 
 	// rec counts for files being merged
-	//long long m_numPos ;
-	//long long m_numNeg ;
+	//int64_t m_numPos ;
+	//int64_t m_numNeg ;
 
 	// so only one save thread launches at a time
 	bool m_isSaving;
@@ -491,12 +491,12 @@ class Rdb {
 
 	BigFile m_dummyFile;
 
-	long long m_lastWrite;
+	int64_t m_lastWrite;
 
 	collnum_t m_dumpCollnum;
 
 	char      m_registered;
-	long long m_lastTime;
+	int64_t m_lastTime;
 
 	// set to true when dumping tree so RdbMem does not use the memory
 	// being dumped to hold newly added records

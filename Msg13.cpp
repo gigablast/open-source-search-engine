@@ -31,7 +31,7 @@ char *getRandUserAgent ( long urlIp , long proxyIp , long proxyPort ) ;
 bool getTestSpideredDate ( Url *u , long *origSpiderDate , char *testDir ) ;
 bool addTestSpideredDate ( Url *u , long  spideredTime   , char *testDir ) ;
 bool getTestDoc ( char *u , class TcpSocket *ts , Msg13Request *r );
-bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
+bool addTestDoc ( int64_t urlHash64 , char *httpReply , long httpReplySize ,
 		  long err , Msg13Request *r ) ;
 
 static void gotForwardedReplyWrapper ( void *state , UdpSlot *slot ) ;
@@ -61,7 +61,7 @@ long convertIntoLinks    ( char *reply, long replySize , Xml *xml ,
 static bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r );
 static void stripProxyAuthorization ( char *squidProxiedReqBuf ) ;
 static void fixGETorPOST ( char *squidProxiedReqBuf ) ;
-static long long computeProxiedCacheKey64 ( Msg13Request *r ) ;
+static int64_t computeProxiedCacheKey64 ( Msg13Request *r ) ;
 
 // cache for robots.txt pages
 static RdbCache s_httpCacheRobots;
@@ -897,7 +897,7 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	}
 	else if ( ! r->m_skipHammerCheck ) {
 		// get time now
-		long long nowms = gettimeofdayInMilliseconds();
+		int64_t nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
 		log(LOG_DEBUG,
 		    "spider: adding new time to hammercache for %s %s = %lli",
@@ -1339,7 +1339,7 @@ void gotHttpReply2 ( void *state ,
 		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
 
 	// get time now
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 	// . now store the current time in the cache
 	// . do NOT do this for robots.txt etc. where we skip hammer check
 	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck )
@@ -1388,9 +1388,9 @@ void gotHttpReply2 ( void *state ,
 	// assume http status is 200
 	bool goodStatus = true;
 
-	long long *docsPtr     = NULL;
-	long long *bytesInPtr  = NULL;
-	long long *bytesOutPtr = NULL;
+	int64_t *docsPtr     = NULL;
+	int64_t *bytesInPtr  = NULL;
+	int64_t *bytesOutPtr = NULL;
 
 	// use this mime
 	HttpMime mime;
@@ -1973,7 +1973,7 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	// sanity check
 	//if ( strcmp(m_coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 	// hash the url into 64 bits
-	long long h = hash64 ( u , gbstrlen(u) );
+	int64_t h = hash64 ( u , gbstrlen(u) );
 	// read the spider date file first
 	char fn[300]; 
 	File f;
@@ -2056,7 +2056,7 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 
 bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) {
 	// hash the url into 64 bits
-	long long uh64 = hash64(u->getUrl(),u->getUrlLen());
+	int64_t uh64 = hash64(u->getUrl(),u->getUrlLen());
 	// read the spider date file first
 	char fn[2000]; 
 	File f;
@@ -2096,7 +2096,7 @@ bool addTestSpideredDate ( Url *u , long spideredTime , char *testDir ) {
 	::mkdir(testDir,S_IRWXU);
 
 	// set this
-	long long uh64 = hash64(u->getUrl(),u->getUrlLen());
+	int64_t uh64 = hash64(u->getUrl(),u->getUrlLen());
 	// make that into a filename
 	char fn[300]; 
 	sprintf(fn,"%s/%s/doc.%llu.spiderdate.txt",
@@ -2123,7 +2123,7 @@ bool addTestSpideredDate ( Url *u , long spideredTime , char *testDir ) {
 }
 
 // add it to our "qatest123" subdir
-bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
+bool addTestDoc ( int64_t urlHash64 , char *httpReply , long httpReplySize ,
 		  long err , Msg13Request *r ) {
 
 	char fn[300];
@@ -2777,11 +2777,11 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// . make sure we are not hammering an ip
 	// . returns 0 if currently downloading a url from that ip
 	// . returns -1 if not found
-	long long last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
+	int64_t last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 	// get time now
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 	// how long has it been since last download START time?
-	long long waited = nowms - last;
+	int64_t waited = nowms - last;
 
 	long crawlDelayMS = r->m_crawlDelayMS;
 
@@ -2866,7 +2866,7 @@ void scanHammerQueue ( int fd , void *state ) {
 
 	if ( ! s_hammerQueueHead ) return;
 
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 
  top:
 
@@ -2874,7 +2874,7 @@ void scanHammerQueue ( int fd , void *state ) {
 	if ( ! r ) return;
 
 	Msg13Request *prev = NULL;
-	long long waited = -1LL;
+	int64_t waited = -1LL;
 	Msg13Request *nextLink = NULL;
 
 	//bool useProxies = true;
@@ -2890,7 +2890,7 @@ void scanHammerQueue ( int fd , void *state ) {
 		// downloadTheDocForReals() could free "r" so save this here
 		nextLink = r->m_nextLink;
 
-		long long last;
+		int64_t last;
 		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 		// is one from this ip outstanding?
 		if ( last == 0LL && r->m_crawlDelayFromEnd ) continue;
@@ -3068,7 +3068,7 @@ bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r ) {
 // . for the page cache we hash the url and the cookie to make the cache key
 // . also the GET/POST method i guess
 // . returns 0 on issues
-long long computeProxiedCacheKey64 ( Msg13Request *r ) {
+int64_t computeProxiedCacheKey64 ( Msg13Request *r ) {
 
 	// hash the url
 	char *start = r->m_proxiedUrl;
@@ -3090,7 +3090,7 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 	for ( ; *s && ! is_wspace_a(*s)  ; s++ ) {
 		if ( *s == '?' && ! cgi ) cgi = s; }
 	// hash the url
-	long long h64 = hash64 ( start , s - start );
+	int64_t h64 = hash64 ( start , s - start );
 
 
 	//

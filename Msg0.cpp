@@ -97,7 +97,7 @@ bool Msg0::registerHandler ( ) {
 //   see the cache here is a NETWORK cache, so when the machines that owns
 //   the list updates it on disk it can't flush our cache... so use a small
 //   maxCacheAge of like , 30 seconds or so...
-bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
+bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
 		     long      ip          , // info on hostId
 		     short     port        ,
 		     long      maxCacheAge , // max cached age in seconds
@@ -121,7 +121,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 		     long      startFileNum  ,
 		     long      numFiles      ,
 		     long      timeout       ,
-		     long long syncPoint     ,
+		     int64_t syncPoint     ,
 		     long      preferLocalReads ,
 		     Msg5     *msg5             ,
 		     Msg5     *msg5b            ,
@@ -272,10 +272,10 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 	}
 	*/
 	/*
-	long long singleDocIdQuery = 0LL;
+	int64_t singleDocIdQuery = 0LL;
 	if ( rdbId == RDB_POSDB ) {
-		long long d1 = g_posdb.getDocId(m_startKey);
-		long long d2 = g_posdb.getDocId(m_endKey);
+		int64_t d1 = g_posdb.getDocId(m_startKey);
+		int64_t d2 = g_posdb.getDocId(m_endKey);
 		if ( d1+1 == d2 ) singleDocIdQuery = d1;
 	}
 
@@ -447,7 +447,7 @@ skip:
 	//   Multicast.cpp::sleepWrapper1 too!!!!!!!!!!!!
 	//   no, not anymore, we commented out that request peeking code
 	char *p = m_request;
-	*(long long *) p = syncPoint        ; p += 8;
+	*(int64_t *) p = syncPoint        ; p += 8;
 	//*(key_t     *) p = m_startKey       ; p += sizeof(key_t);
 	//*(key_t     *) p = m_endKey         ; p += sizeof(key_t);
 	*(long      *) p = m_minRecSizes    ; p += 4;
@@ -880,7 +880,7 @@ public:
 	//Msg5       m_msg5b;
 	RdbList    m_list;
 	UdpSlot   *m_slot;
-	long long  m_startTime;
+	int64_t  m_startTime;
 	long       m_niceness;
 	UdpServer *m_us;
 	char       m_rdbId;
@@ -898,7 +898,7 @@ void callWaitingHandlers ( void *state ) {
 	//long netnice = 1;
 	//xd->m_hackSlot = NULL;
 	long niceness = xd->m_niceness;
-	long long docId = xd->m_docId;
+	int64_t docId = xd->m_docId;
 	delete ( xd );
 
 	// call everyone in wait queue's handler0 now
@@ -939,7 +939,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 	//}
 	// parse the request
 	char *p                  = request;
-	long long syncPoint          = *(long long *)p ; p += 8;
+	int64_t syncPoint          = *(int64_t *)p ; p += 8;
 	//key_t     startKey           = *(key_t     *)p ; p += sizeof(key_t);
 	//key_t     endKey             = *(key_t     *)p ; p += sizeof(key_t);
 	long      minRecSizes        = *(long      *)p ; p += 4;
@@ -985,10 +985,10 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 	// keep track of stats
 	if ( ! isRecall ) rdb->readRequestGet ( requestSize );
 
-	long long singleDocId2 = 0LL;
+	int64_t singleDocId2 = 0LL;
 	if ( rdbId == RDB_POSDB && maxCacheAge ) {
-		long long d1 = g_posdb.getDocId(startKey);
-		long long d2 = g_posdb.getDocId(endKey);
+		int64_t d1 = g_posdb.getDocId(startKey);
+		int64_t d2 = g_posdb.getDocId(endKey);
 		if ( d1+1 == d2 ) singleDocId2 = d1;
 	}
 
@@ -1111,7 +1111,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 
 	// check the sectiondb cache
 	if ( rdbId == RDB_SECTIONDB ) {
-		//long long sh48 = g_datedb.getTermId((key128_t *)startKey);
+		//int64_t sh48 = g_datedb.getTermId((key128_t *)startKey);
 		// use the start key now!!!
 		char *data;
 		long  dataSize;
@@ -1284,7 +1284,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 
 		// get sh48, the sitehash
 		key128_t *startKey = (key128_t *)msg5->m_startKey ;
-		long long sh48 = g_datedb.getTermId(startKey);
+		int64_t sh48 = g_datedb.getTermId(startKey);
 
 		// debug
 		//log("msg0: got sectiondblist from disk listsize=%li",
@@ -1460,7 +1460,7 @@ void doneSending_ass ( void *state , UdpSlot *slot ) {
 	// this is nULL if we hit the cache above
 	if ( ! st0 ) return;
 	// this might be inaccurate cuz sig handler can't call it!
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// log the stats
 	if ( g_conf.m_logTimingNet ) {
 		double mbps ;
@@ -1529,11 +1529,11 @@ RdbCache *getTermListCache ( ) {
 }
 
 // for posdb only!
-long long getTermListCacheKey ( char *startKey , char *endKey ) {
+int64_t getTermListCacheKey ( char *startKey , char *endKey ) {
 	// make the cache key by hashing the startkey + endkey together
 	long ks = sizeof(POSDBKEY);
 	long conti = 0;
-	long long ck64;
+	int64_t ck64;
 	ck64 = hash64_cont ( startKey , ks, 0LL, &conti );
 	ck64 = hash64_cont ( endKey , ks , ck64, &conti );
 	return ck64;
@@ -1546,7 +1546,7 @@ bool addRecToTermListCache ( char *coll,
 			     long  listSize ) {
 	RdbCache *c = getTermListCache();
 	if ( ! c ) return false;
-	long long ck64 = getTermListCacheKey ( startKey , endKey );
+	int64_t ck64 = getTermListCacheKey ( startKey , endKey );
 	//long recSize = list->getListSize();
 	//char *rec = list->getList();
 	return c->addRecord ( coll ,
@@ -1564,7 +1564,7 @@ bool getListFromTermListCache ( char *coll,
 
 	RdbCache *c = getTermListCache();
 	if ( ! c ) return false;
-	long long ck64 = getTermListCacheKey(startKey,endKey);
+	int64_t ck64 = getTermListCacheKey(startKey,endKey);
 	long recSize;
 	char *rec;
 
@@ -1604,7 +1604,7 @@ bool getRecFromTermListCache ( char *coll,
 
 	RdbCache *c = getTermListCache();
 	if ( ! c ) return false;
-	long long ck64 = getTermListCacheKey(startKey,endKey);
+	int64_t ck64 = getTermListCacheKey(startKey,endKey);
 	// return false if not found
 	if ( ! c->getRecord ( coll ,
 			      (char *)&ck64 , 
@@ -1619,7 +1619,7 @@ bool getRecFromTermListCache ( char *coll,
 }
 */
 /*
-bool isDocIdInTermListCache ( long long docId , char *coll ) {
+bool isDocIdInTermListCache ( int64_t docId , char *coll ) {
 	RdbCache *c = getTermListCache();
 	char *rec;
 	long  recSize;
@@ -1636,7 +1636,7 @@ bool isDocIdInTermListCache ( long long docId , char *coll ) {
 	return true;
 }
 
-bool addDocIdToTermListCache ( long long docId , char *coll ) {
+bool addDocIdToTermListCache ( int64_t docId , char *coll ) {
 	RdbCache *c = getTermListCache();
 	char data = 1;
 	bool status = c->addRecord ( coll ,

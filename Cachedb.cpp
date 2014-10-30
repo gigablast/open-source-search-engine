@@ -15,11 +15,11 @@ bool Cachedb::init ( ) {
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
 	long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
-	//long long maxTreeMem = 1000000;
+	//int64_t maxTreeMem = 1000000;
 	// i've seen some debug entries like 33MB because of
 	// m_debugDocIdScoreBuf and m_origDocIdScoreBuf take up so much space!
 	// so don't cache those any more!!
-	long long maxTreeMem = 40000000; // 40MB g_serpdb, 40MB g_cachedb
+	int64_t maxTreeMem = 40000000; // 40MB g_serpdb, 40MB g_cachedb
 	// . what's max # of tree nodes?
 	// . key+4+left+right+parents+dataPtr = sizeof(key96_t)+4 +4+4+4+4
 	// . 32 bytes per record when in the tree

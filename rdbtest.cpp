@@ -17,8 +17,8 @@ int main ( int argc , char *argv[] ) {
 	RdbList list1, list2;
 
 	char data1 [ 32 ] , data2[32];
-	*(long long *)data1 = 273777931569279933;
-	*(long long *)data2 = 273777931569279932;
+	*(int64_t *)data1 = 273777931569279933;
+	*(int64_t *)data2 = 273777931569279932;
 	*(long *)(data1 + 8) = 1059574105;
 	*(long *)(data2 + 8) = 1059574105;
 

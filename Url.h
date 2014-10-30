@@ -184,11 +184,11 @@ public:
 	long      getHostHash32   ( ) ;
 	long      getDomainHash32 ( ) ;
 
-	long long getUrlHash64    ( ) ;
-	long long getHostHash64   ( ) ;
-	long long getDomainHash64   ( ) ;
+	int64_t getUrlHash64    ( ) ;
+	int64_t getHostHash64   ( ) ;
+	int64_t getDomainHash64   ( ) ;
 
-	long long getUrlHash48    ( ) {
+	int64_t getUrlHash48    ( ) {
 		return getUrlHash64() & 0x0000ffffffffffffLL; }
 
 	// . store url w/o http://

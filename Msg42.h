@@ -26,18 +26,18 @@ class Msg42 {
 	// . sets *termFreq to UPPER BOUND on # of records with that "termId"
 	bool getTermFreq ( char       *coll       ,
 			   long        maxAge     ,
-			   long long   termId     ,
+			   int64_t   termId     ,
 			   void       *state      ,
 			   void (* callback)(void *state ) ,
 			   long        niceness = MAX_NICENESS );
 
-	long long getTermFreq () { return m_termFreq; };
+	int64_t getTermFreq () { return m_termFreq; };
 
 	// public so C wrapper can call
 	void gotReply ( ) ;
 
 	// we store the recvd termFreq in what this points to
-	long long  m_termFreq ;
+	int64_t  m_termFreq ;
 
 	// callback information
 	void  *m_state  ;

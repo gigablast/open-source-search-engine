@@ -125,16 +125,16 @@ char *Dir::getNextFilename ( char *pattern ) {
 // must call set first
 // not recursive!
 // return -1 on error
-long long Dir::getUsedSpace ( ) {
+int64_t Dir::getUsedSpace ( ) {
 
 	rewinddir ( m_dir );
 
-	long long total = 0;
+	int64_t total = 0;
 	struct dirent *ent ;
 	while ( ( ent = readdir ( m_dir ) )  )  {
 		File tmpfile;
 		tmpfile.set ( ent->d_name );
-		long long space = tmpfile.getFileSize ( );
+		int64_t space = tmpfile.getFileSize ( );
 		if ( space > 0 ) total += space;
 	}
 		
@@ -150,7 +150,7 @@ char *Dir::getFullName ( char *filename ) {
 
 // . replace the * in the pattern with a unique id from getNewId()
 char *Dir::getNewFilename ( char *pattern ) {
-	long long id = getNewId ( pattern );
+	int64_t id = getNewId ( pattern );
 	static char buf[1024];
 	strcpy ( buf , m_dirname );
 	int j = gbstrlen ( buf );
@@ -165,15 +165,15 @@ char *Dir::getNewFilename ( char *pattern ) {
 
 // . a highly specialized function
 // . gets a new id represented by files of pattern "pattern"
-// . if pattern is "*.data" will return the LUB for *, a long long
-long long Dir::getNewId ( char *pattern ) {
+// . if pattern is "*.data" will return the LUB for *, a int64_t
+int64_t Dir::getNewId ( char *pattern ) {
 
 	rewinddir ( m_dir );
 
 	char *filename ;
-	long long   lub = 0;
+	int64_t   lub = 0;
 	while ( (filename = getNextFilename ( pattern ))  ) {
-		long long id = getFileId ( filename );
+		int64_t id = getFileId ( filename );
 		if ( id >= lub ) lub = id + 1;
 	}	
 
@@ -183,7 +183,7 @@ long long Dir::getNewId ( char *pattern ) {
 // . another highly specialized function
 // . expects filename to begin with a number
 // . return -1 if none exists
-long long Dir::getFileId ( char *filename ) {
+int64_t Dir::getFileId ( char *filename ) {
 
 	int end = gbstrlen ( filename ) -1;
 	while ( end >= 0 && filename [ end ] != '.' ) end--;
@@ -197,7 +197,7 @@ long long Dir::getFileId ( char *filename ) {
 	if   ( end < 0 && ! isdigit ( filename[0] ) ) return -1;
 	if   ( end < 0 ) end = 0;
 	else             end++;
-	long long id = -1;
+	int64_t id = -1;
 	sscanf ( filename + end , "%lli." , & id );
 	return id;
 }

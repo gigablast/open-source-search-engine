@@ -89,31 +89,31 @@ class Titledb {
 	};
 
 	// turn off the last 6 bits
-	uint64_t getFirstProbableDocId ( long long d ) {
+	uint64_t getFirstProbableDocId ( int64_t d ) {
 		return d & 0xffffffffffffffc0LL; };
 
 	// turn on the last 6 bits for the end docId
-	uint64_t getLastProbableDocId  ( long long d ) {
+	uint64_t getLastProbableDocId  ( int64_t d ) {
 		return d | 0x000000000000003fLL; };
 
 	// . the top NUMDOCIDBITs of "key" are the docId
 	// . we use the top X bits of the keys to partition the records
 	// . using the top bits to partition allows us to keep keys that
 	//   are near each other (euclidean metric) in the same partition
-	long long getDocIdFromKey ( key_t *key ) {
+	int64_t getDocIdFromKey ( key_t *key ) {
 		uint64_t docId;
 		docId = ((uint64_t)key->n1)<<(NUMDOCIDBITS - 32);
 		docId|=                      key->n0 >>(64-(NUMDOCIDBITS-32));
 		return docId;
 	};
-	long long getDocId ( key_t *key ) { return getDocIdFromKey(key); };
-	long long getDocIdFromKey ( key_t  key ) {
+	int64_t getDocId ( key_t *key ) { return getDocIdFromKey(key); };
+	int64_t getDocIdFromKey ( key_t  key ) {
 		return getDocIdFromKey(&key);};
 
-	uint8_t getDomHash8FromDocId (long long d) {
+	uint8_t getDomHash8FromDocId (int64_t d) {
 		return (d & ~0xffffffffffffc03fULL) >> 6; }
 
-	long long getUrlHash48 ( key_t *k ) {
+	int64_t getUrlHash48 ( key_t *k ) {
 		return ((k->n0 >> 10) & 0x0000ffffffffffffLL); };
 
 	// . dptr is a char ptr to the docid
@@ -126,7 +126,7 @@ class Titledb {
 	uint8_t getDomHash8 ( uint8_t *dptr ) { return dptr[1]; }
 
 	// does this key/docId/url have it's titleRec stored locally?
-	bool isLocal ( long long docId );
+	bool isLocal ( int64_t docId );
 	bool isLocal ( Url *url ) {
 		return isLocal ( getProbableDocId(url) ); };
 	bool isLocal ( key_t key ) { 
@@ -138,19 +138,19 @@ class Titledb {
 	// . make the key of a TitleRec from a docId
 	// . remember to set the low bit so it's not a delete
 	// . hi bits are set in the key
-	key_t makeKey ( long long docId, long long uh48, bool isDel );
+	key_t makeKey ( int64_t docId, int64_t uh48, bool isDel );
 
-	key_t makeFirstKey ( long long docId ) {
+	key_t makeFirstKey ( int64_t docId ) {
 		return makeKey ( docId , 0, true ); };
 
-	key_t makeLastKey  ( long long docId ) {
+	key_t makeLastKey  ( int64_t docId ) {
 		return makeKey ( docId , 0xffffffffffffLL, false ); };
 
 	// . this is an estimate of the number of docs in the WHOLE db network
 	// . we assume each group/cluster has about the same # of docs as us
-	long long getGlobalNumDocs ( ) { 
+	int64_t getGlobalNumDocs ( ) { 
 		return m_rdb.getNumTotalRecs()*
-			(long long)g_hostdb.m_numShards;};
+			(int64_t)g_hostdb.m_numShards;};
 
 	long getLocalNumDocs () { return m_rdb.getNumTotalRecs(); };
 	long getNumDocsInMem () { return m_rdb.m_tree.getNumUsedNodes(); };

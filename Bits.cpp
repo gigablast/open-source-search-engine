@@ -67,10 +67,10 @@ bool Bits::set ( Words *words , char titleRecVersion , long niceness ,
 
 	nodeid_t *tagIds = words->getTagIds();
 	char **w         = words->getWords();
-	long long *wids  = words->getWordIds();
+	int64_t *wids  = words->getWordIds();
 	char **wptrs     = words->getWords();
 
-	long long prevWid = 0LL;
+	int64_t prevWid = 0LL;
 
 	//long  *wlens     = words->getWordLens();
 	long   brcount   = 0;
@@ -216,7 +216,7 @@ void Bits::setInUrlBits ( long niceness ) {
 	if ( m_inUrlBitsSet ) return;
 	m_inUrlBitsSet = true;
 	nodeid_t *tids  = m_words->getTagIds();
-	long long *wids = m_words->getWordIds();
+	int64_t *wids = m_words->getWordIds();
 	char **wptrs    = m_words->getWords();
 	long nw = m_words->getNumWords();
 	for ( long i = 0 ; i < nw; i++ ) {
@@ -280,7 +280,7 @@ wbit_t Bits::getAlnumBits ( long i , wbit_t prevBits ) {
 
 	char      *s   = m_words->getWord    ( i );
 	long       len = m_words->getWordLen ( i );
-	long long  wid = m_words->getWordId  ( i );
+	int64_t  wid = m_words->getWordId  ( i );
 
 	//if ( m_titleRecVersion < 36 && m_words->getStripWordId(i) )
 	//	wid = m_words->getStripWordId(i);
@@ -485,7 +485,7 @@ bool Bits::setForSummary ( Words *words , char *buf , long bufSize ) {
 	nodeid_t   *tagIds = words->getTagIds();
 	char      **w      = words->getWords();
 	long       *wlens  = words->getWordLens();
-	long long  *wids   = words->getWordIds();
+	int64_t  *wids   = words->getWordIds();
 
 	char          startSent = 1;
 	char          startFrag = 1;

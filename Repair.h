@@ -86,13 +86,13 @@ public:
 	//Msg14      m_msg14;
 	//RdbList    m_scanList;
 	RdbList    m_titleRecList;
-	long long  m_docId;
+	int64_t  m_docId;
 	char       m_isDelete;
 	RdbList    m_ulist;
 	RdbList    m_addlist;
 	//long       m_ruleset;
 	//LinkTextReply  m_rootLinkText;
-	long long  m_totalMem;
+	int64_t  m_totalMem;
 	long       m_stage ;
 	long       m_tfn;
 	long       m_count;
@@ -109,7 +109,7 @@ public:
 	key128_t   m_nextLinkdbKey;
 	//key128_t   m_nextPlacedbKey;
 	key_t      m_endKey;
-	long long  m_uh48;
+	int64_t  m_uh48;
 	//TitleRec   m_tr;
 	//Msg8a      m_msg8a;
 	long       m_priority;
@@ -137,8 +137,8 @@ public:
 	// . state info
 	// . indicator of what we save to disk
 	char       m_SAVE_START;
-	long long  m_lastDocId;
-	long long  m_prevDocId;
+	int64_t  m_lastDocId;
+	int64_t  m_prevDocId;
 	bool       m_completedFirstScan  ;
 	bool       m_completedSpiderdbScan ;
 	//bool     m_completedIndexdbScan  ;
@@ -146,20 +146,20 @@ public:
 	key_t      m_lastTitledbKey;
 	key_t      m_lastSpiderdbKey;
 
-	long long  m_recsScanned;
-	long long  m_recsOutOfOrder;
-	long long  m_recsetErrors;
-	long long  m_recsCorruptErrors;
-	long long  m_recsXmlErrors;
-	long long  m_recsDupDocIds;
-	long long  m_recsNegativeKeys;
-	long long  m_recsOverwritten;
-	long long  m_recsUnassigned;
-	long long  m_noTitleRecs;
-	long long  m_recsWrongGroupId;
-	long long  m_recsRoot;
-	long long  m_recsNonRoot;
-	long long  m_recsInjected;
+	int64_t  m_recsScanned;
+	int64_t  m_recsOutOfOrder;
+	int64_t  m_recsetErrors;
+	int64_t  m_recsCorruptErrors;
+	int64_t  m_recsXmlErrors;
+	int64_t  m_recsDupDocIds;
+	int64_t  m_recsNegativeKeys;
+	int64_t  m_recsOverwritten;
+	int64_t  m_recsUnassigned;
+	int64_t  m_noTitleRecs;
+	int64_t  m_recsWrongGroupId;
+	int64_t  m_recsRoot;
+	int64_t  m_recsNonRoot;
+	int64_t  m_recsInjected;
 	//long       m_fn;
 
 	// spiderdb scan stats
@@ -215,7 +215,7 @@ public:
 	CollectionRec *m_cr;
 
 	//for timing a repair process
-	long long  m_startTime;
+	int64_t  m_startTime;
 
 	// if repairing is disabled in the middle of a repair
 	char       m_isSuspended;

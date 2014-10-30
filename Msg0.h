@@ -16,7 +16,7 @@
 // termlist cache accessor functions for Msg5.cpp to use
 extern RdbCache g_termListCache;
 class RdbCache *getTermListCache ( ) ;
-long long getTermListCacheKey ( char *startKey , char *endKey ) ;
+int64_t getTermListCacheKey ( char *startKey , char *endKey ) ;
 bool addRecToTermListCache ( char *coll,
 			     char *startKey , 
 			     char *endKey , 
@@ -62,7 +62,7 @@ class Msg0 {
 	// . our disk cache gets flushed when the disk is updated so it's never
 	//   out of sync with the data
 	// . a maxCacheAge of 0 (or negative) means not to check the cache
-	bool getList ( long long hostId      , // -1 if unspecified
+	bool getList ( int64_t hostId      , // -1 if unspecified
 		       long      ip          , // info on hostId
 		       short     port        ,
 		       long      maxCacheAge , // max cached age in seconds
@@ -87,7 +87,7 @@ class Msg0 {
 		       long      startFileNum      =  0   ,
 		       long      numFiles          = -1   ,
 		       long      timeout           = 30   ,
-		       long long syncPoint         = -1   ,
+		       int64_t syncPoint         = -1   ,
 		       long      preferLocalReads  = -1   , // -1=use g_conf
 		       class Msg5 *msg5            = NULL ,
 		       class Msg5 *msg5b           = NULL ,
@@ -101,7 +101,7 @@ class Msg0 {
 //		       bool        allowPageCache  = true );
 //#endif
 
-	bool getList ( long long hostId      , // -1 if unspecified
+	bool getList ( int64_t hostId      , // -1 if unspecified
 		       long      ip          , // info on hostId
 		       short     port        ,
 		       long      maxCacheAge , // max cached age in seconds
@@ -124,7 +124,7 @@ class Msg0 {
 		       long      startFileNum      =  0   ,
 		       long      numFiles          = -1   ,
 		       long      timeout           = 30   ,
-		       long long syncPoint         = -1   ,
+		       int64_t syncPoint         = -1   ,
 		       long      preferLocalReads  = -1   , // -1=use g_conf
 		       class Msg5 *msg5            = NULL ,
 		       class Msg5 *msg5b           = NULL ,
@@ -199,7 +199,7 @@ class Msg0 {
 	void     *m_state;      
 
 	// host we sent RdbList request to 
-	long long m_hostId;
+	int64_t m_hostId;
 	long      m_ip;
 	short     m_port;
 
@@ -268,7 +268,7 @@ class Msg0 {
 	bool         m_isRealMerge;
 
 	// for timing the get
-	long long m_startTime;
+	int64_t m_startTime;
 
 	// and for reporting niceness
 	long m_niceness;

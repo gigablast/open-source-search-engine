@@ -134,7 +134,7 @@ public:
 	bool m_isLocked;
 
 	// ID
-	long long m_customerId;
+	int64_t m_customerId;
 
 	// Price Table
 	PriceTable m_priceTable;

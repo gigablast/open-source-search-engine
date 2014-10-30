@@ -227,8 +227,8 @@ class HttpServer {
 	void *states[MAX_DOWNLOADS];
 	tcp_callback_t callbacks[MAX_DOWNLOADS];
 
-	long long m_bytesDownloaded;
-	long long m_uncompressedBytes;
+	int64_t m_bytesDownloaded;
+	int64_t m_uncompressedBytes;
 
 	//QueuedRequest m_requestQueue[MAX_REQUEST_QUEUE];
 	//long          m_lastSlotUsed;

@@ -343,7 +343,7 @@ bool RdbBase::init ( char  *dir            ,
 	// . init BigFile::m_fileSize and m_lastModifiedTime
 	// . m_lastModifiedTime is now used by the merge to select older
 	//   titledb files to merge
-	long long bigFileSize[MAX_RDB_FILES];
+	int64_t bigFileSize[MAX_RDB_FILES];
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
 		BigFile *f = m_files[i];
 		bigFileSize[i] = f->getFileSize();
@@ -356,7 +356,7 @@ bool RdbBase::init ( char  *dir            ,
 		long maxMem = m_pc->getMemMax();
 		while ( maxMem > 0 ){
 			long minIndex = 0;
-			long long minFileSize = -1;
+			int64_t minFileSize = -1;
 			for ( long i = 0; i < m_numFiles; i++ ){
 				if ( bigFileSize[i] < 0 ) continue;
 				if ( minFileSize < 0 || 
@@ -390,8 +390,8 @@ bool RdbBase::init ( char  *dir            ,
 		if ( total <= 0 ) break;
 		BigFile *f = m_files[i];
 		f->setBlocking();
-		long long fsize  = f->getFileSize();
-		long long off    = 0;
+		int64_t fsize  = f->getFileSize();
+		int64_t off    = 0;
 		// for biasing, only read part of the file
 		if ( biasDiskPageCache ) {
 			long numTwins = g_hostdb.getNumHostsPerShard();
@@ -403,7 +403,7 @@ bool RdbBase::init ( char  *dir            ,
 		// read the file
 		for ( ; off < fsize ; off += 256000 ) {
 			if ( total <= 0 ) break;
-			long long toread = fsize - off;
+			int64_t toread = fsize - off;
 			if ( toread > 256000 ) toread = 256000;
 			f->read ( buf , toread , off );
 			total -= toread;
@@ -726,7 +726,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	// HACK: skip to avoid a OOM lockup. if RdbBase cannot dump
 	// its data to disk it can backlog everyone and memory will
 	// never get freed up.
-	long long mm = g_mem.m_maxMem;
+	int64_t mm = g_mem.m_maxMem;
 	g_mem.m_maxMem = 0x0fffffffffffffffLL;
 	BigFile *f ;
 	try { f = new (BigFile); }
@@ -810,8 +810,8 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		      "and restart. It probably happened when the power went "
 		      "out and a file delete operation failed to complete.",
 		      ff->getFilename() ,
-		      (long long)ff->getFileSize(),
-		      (long long)MAX_PART_SIZE);
+		      (int64_t)ff->getFileSize(),
+		      (int64_t)MAX_PART_SIZE);
 		return -1;
 	}
 
@@ -1000,8 +1000,8 @@ bool RdbBase::incorporateMerge ( ) {
 	//if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
 
 	// print out info of newly merged file
-	long long tp = m_maps[x]->getNumPositiveRecs();
-	long long tn = m_maps[x]->getNumNegativeRecs();
+	int64_t tp = m_maps[x]->getNumPositiveRecs();
+	int64_t tn = m_maps[x]->getNumNegativeRecs();
 	log(LOG_INFO,
 	    "merge: Merge succeeded. %s (#%li) has %lli positive "
 	     "and %lli negative recs.", m_files[x]->getFilename(), x, tp, tn);
@@ -1044,9 +1044,9 @@ bool RdbBase::incorporateMerge ( ) {
 	// . before unlinking the files, ensure merged file is the right size!!
 	// . this will save us some anguish
 	m_files[x]->m_fileSize = -1;
-	long long fs = m_files[x]->getFileSize();
+	int64_t fs = m_files[x]->getFileSize();
 	// get file size from map
-	long long fs2 = m_maps[x]->getFileSize();
+	int64_t fs2 = m_maps[x]->getFileSize();
 	// compare, if only a key off allow that. that is an artificat of
 	// generating a map for a file screwed up from a power outage. it
 	// will end on a non-key boundary.
@@ -1148,9 +1148,9 @@ void RdbBase::doneWrapper2 ( ) {
 
 	// sanity check
 	m_files[x]->m_fileSize = -1;
-	long long fs = m_files[x]->getFileSize();
+	int64_t fs = m_files[x]->getFileSize();
 	// get file size from map
-	long long fs2 = m_maps[x]->getFileSize();
+	int64_t fs2 = m_maps[x]->getFileSize();
 	// compare
 	if ( fs != fs2 ) {
 		log("build: Map file size does not agree with actual file "
@@ -1562,7 +1562,7 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info
-	long long totalRecs = 0LL;
+	int64_t totalRecs = 0LL;
 	float percentNegativeRecs = getPercentNegativeRecsOnDisk ( &totalRecs);
 	bool doNegCheck = false;
 	// 1. if disk space is tight and >20% negative recs, force it
@@ -1749,7 +1749,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	long      mergeFileId;
 	long      mergeFileNum;
 	float     minr ;
-	long long mint ;
+	int64_t mint ;
 	long      mini ;
 	bool      minOld ;
 	long      id2  = -1;
@@ -1757,7 +1757,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	bool      overide = false;
 	//long      smini = - 1;
 	//long      sn ;
-	//long long tfndbSize = 0;
+	//int64_t tfndbSize = 0;
 	long      nowLocal = getTimeLocal();
 
 	// but if niceness is 0 merge ALL files
@@ -1947,7 +1947,7 @@ void RdbBase::gotTokenForMerge ( ) {
 		// oldest file
 		time_t date = -1;
 		// add up the string
-		long long total = 0;
+		int64_t total = 0;
 		for ( long j = i ; j < i + n ; j++ ) {
 			total += m_files[j]->getFileSize();
 			time_t mtime = m_files[j]->getLastModifiedTime();
@@ -1984,9 +1984,9 @@ void RdbBase::gotTokenForMerge ( ) {
 		// . prefer the lowest average ratio
 		double ratio = 0.0;
 		for ( long j = i ; j < i + n - 1 ; j++ ) {
-			long long s1 = m_files[j  ]->getFileSize();
-			long long s2 = m_files[j+1]->getFileSize();
-			long long tmp;
+			int64_t s1 = m_files[j  ]->getFileSize();
+			int64_t s2 = m_files[j+1]->getFileSize();
+			int64_t tmp;
 			if ( s2 == 0 ) continue;
 			if ( s1 < s2 ) { tmp = s1; s1 = s2 ; s2 = tmp; }
 			ratio += (double)s1 / (double)s2 ;
@@ -2014,7 +2014,7 @@ void RdbBase::gotTokenForMerge ( ) {
 
 		// debug the merge selection
 		char      tooBig   = 0;
-		long long prevSize = 0;
+		int64_t prevSize = 0;
 		if ( i > 0 ) prevSize = m_files[i-1]->getFileSize();
 		if ( i > 0 && prevSize < total/4 ) tooBig = 1;
 		log(LOG_INFO,"merge: i=%li n=%li ratio=%.2f adjratio=%.2f "
@@ -2211,8 +2211,8 @@ void RdbBase::gotTokenForMerge ( ) {
 // . use the maps and tree to estimate the size of this list w/o hitting disk
 // . used by Indexdb.cpp to get the size of a list for IDF weighting purposes
 //long RdbBase::getListSize ( key_t startKey , key_t endKey , key_t *max ,
-long long RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
-			         long long oldTruncationLimit ) {
+int64_t RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
+			         int64_t oldTruncationLimit ) {
 	// . reset this to low points
 	// . this is on
 	//*max = endKey;
@@ -2221,7 +2221,7 @@ long long RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 	// do some looping
 	//key_t newGuy;
 	char newGuy[MAX_KEY_BYTES];
-	long long totalBytes = 0;
+	int64_t totalBytes = 0;
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
 		// the start and end pages for a page range
 		long pg1 , pg2;
@@ -2246,18 +2246,18 @@ long long RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 		// . minKey2 may be bigger than the actual minKey for this
 		//   range, likewise, maxKey2 may be smaller than the actual
 		//   maxKey, but should be good estimates
-		long long maxBytes = m_maps[i]->getMaxRecSizes ( pg1     ,
+		int64_t maxBytes = m_maps[i]->getMaxRecSizes ( pg1     ,
 							    pg2     ,
 							    startKey,
 							    endKey  ,
 							    true    );//subtrct
 		// get the min as well
-		long long minBytes = m_maps[i]->getMinRecSizes ( pg1     ,
+		int64_t minBytes = m_maps[i]->getMinRecSizes ( pg1     ,
 							    pg2     ,
 							    startKey,
 							    endKey  ,
 							    true    );//subtrct
-		long long avg = (maxBytes + minBytes) / 2LL;
+		int64_t avg = (maxBytes + minBytes) / 2LL;
 		// use that
 		totalBytes += avg;
 		// if not too many pages then don't even bother setting "max"
@@ -2280,7 +2280,7 @@ long long RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 	// before getting from the map (on disk IndexLists) get upper bound
 	// from the in memory b-tree
 	//long n=getTree()->getListSize (startKey, endKey, &minKey2, &maxKey2);
-	long long n;
+	int64_t n;
 	if(m_tree) n = m_tree->getListSize ( m_collnum ,
 					     startKey , endKey , NULL , NULL );
 	else n = m_buckets->getListSize ( m_collnum ,
@@ -2294,14 +2294,14 @@ long long RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 	return totalBytes;
 }
 
-long long RdbBase::getNumGlobalRecs ( ) {
+int64_t RdbBase::getNumGlobalRecs ( ) {
 	return getNumTotalRecs() * g_hostdb.m_numShards;
 }
 
 // . return number of positive records - negative records
-long long RdbBase::getNumTotalRecs ( ) {
-	long long numPositiveRecs = 0;
-	long long numNegativeRecs = 0;
+int64_t RdbBase::getNumTotalRecs ( ) {
+	int64_t numPositiveRecs = 0;
+	int64_t numNegativeRecs = 0;
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
 		// skip even #'d files -- those are merge files
 		if ( (m_fileIds[i] & 0x01) == 0 ) continue;
@@ -2324,7 +2324,7 @@ long long RdbBase::getNumTotalRecs ( ) {
 		//numPositiveRecs += m_buckets->getNumPositiveKeys(m_collnum);
 		//numNegativeRecs += m_buckets->getNumNegativeKeys(m_collnum);
 	}
-	//long long total = numPositiveRecs - numNegativeRecs;
+	//int64_t total = numPositiveRecs - numNegativeRecs;
 	//if ( total < 0 ) return 0LL;
 	//return total;
 	return numPositiveRecs - numNegativeRecs;
@@ -2332,8 +2332,8 @@ long long RdbBase::getNumTotalRecs ( ) {
 
 // . how much mem is alloced for all of our maps?
 // . we have one map per file
-long long RdbBase::getMapMemAlloced () {
-	long long alloced = 0;
+int64_t RdbBase::getMapMemAlloced () {
+	int64_t alloced = 0;
 	for ( long i = 0 ; i < m_numFiles ; i++ ) 
 		alloced += m_maps[i]->getMemAlloced();
 	return alloced;
@@ -2347,8 +2347,8 @@ long RdbBase::getNumSmallFiles ( ) {
 	return count;
 }
 
-long long RdbBase::getDiskSpaceUsed ( ) {
-	long long count = 0;
+int64_t RdbBase::getDiskSpaceUsed ( ) {
+	int64_t count = 0;
 	for ( long i = 0 ; i < m_numFiles ; i++ ) 
 		count += m_files[i]->getFileSize();
 	return count;
@@ -2534,15 +2534,15 @@ bool RdbBase::verifyFileSharding ( ) {
 	//return true;
 }
 
-float RdbBase::getPercentNegativeRecsOnDisk ( long long *totalArg ) {
+float RdbBase::getPercentNegativeRecsOnDisk ( int64_t *totalArg ) {
 	// scan the maps
-	long long numPos = 0LL;
-	long long numNeg = 0LL;
+	int64_t numPos = 0LL;
+	int64_t numNeg = 0LL;
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
 		numPos += m_maps[i]->getNumPositiveRecs();
 		numNeg += m_maps[i]->getNumNegativeRecs();
 	}
-	long long total = numPos + numNeg;
+	int64_t total = numPos + numNeg;
 	*totalArg = total;
 	float percent = (float)numNeg / (float)total;
 	return percent;

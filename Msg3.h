@@ -65,7 +65,7 @@ class Msg3 {
 			 long           retryNum      , // = 0             ,
 			 long           maxRetries    , // = -1
 			 bool           compensateForMerge ,
-			 long long      syncPoint     , // = -1 (none)
+			 int64_t      syncPoint     , // = -1 (none)
 			 bool           justGetEndKey = false ,
 			 bool           allowPageCache = true ,
 			 bool           hitDisk        = true );
@@ -165,7 +165,7 @@ class Msg3 {
 	long        m_maxRetries;
 
 	// for debugging
-	long long   m_startTime;
+	int64_t   m_startTime;
 
 	// . these hints make a call to constrain() fast
 	// . used to quickly contrain the tail of a 1-list read
@@ -175,7 +175,7 @@ class Msg3 {
 
 	bool        m_compensateForMerge;
 
-	//long long   m_syncPoint;
+	//int64_t   m_syncPoint;
 
 	char  m_buf[MSG3_BUF_SIZE];
 	char *m_alloc;

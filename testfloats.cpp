@@ -4,10 +4,10 @@
 #include <sys/time.h>  // gettimeofday() 
 #include <stdio.h>
 
-long long gettod ( ) {
+int64_t gettod ( ) {
 	struct timeval tv;
 	gettimeofday ( &tv , 0 );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -18,10 +18,10 @@ int main ( int argc , char *argv[] ) {
 
 	printf("start float loop\n");
 	float z;
-	long long start = gettod();
+	int64_t start = gettod();
 	for ( long i = 0 ; i < 10000000 ; i++ ) 
 		z = x * y;
-	long long end = gettod();
+	int64_t end = gettod();
 	printf("float muls took %llims\n",end-start);
 
 	long xi = 14598;

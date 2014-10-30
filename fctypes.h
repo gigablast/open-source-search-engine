@@ -139,8 +139,8 @@ bool is_title_junk(char c) ;
 // . get the # of words in this string
 long      getNumWords ( char *s , long len, long titleVersion ) ;
 long      atol2       ( const char *s, long len ) ;
-long long atoll1      ( const char *s ) ;
-long long atoll2      ( const char *s, long len ) ;
+int64_t atoll1      ( const char *s ) ;
+int64_t atoll2      ( const char *s, long len ) ;
 double    atof2       ( const char *s, long len ) ;
 double    atod2       (       char *s, long len ) ;
 bool      atob        ( const char *s, long len ) ;
@@ -156,11 +156,11 @@ char *gb_strcasestr ( char *haystack , char *needle );
 char *gb_strncasestr ( char *haystack , long haystackSize , char *needle ) ;
 
 // updates our static var, s_adjustment to keep our clock in sync to hostId #0
-void settimeofdayInMillisecondsGlobal ( long long newTime ) ;
+void settimeofdayInMillisecondsGlobal ( int64_t newTime ) ;
 
 // convert global to local time in milliseconds
-long long globalToLocalTimeMilliseconds ( long long global ) ;
-long long localToGlobalTimeMilliseconds ( long long local  ) ;
+int64_t globalToLocalTimeMilliseconds ( int64_t global ) ;
+int64_t localToGlobalTimeMilliseconds ( int64_t local  ) ;
 // the same thing but in seconds
 long      globalToLocalTimeSeconds      ( long      global ) ;
 long      localToGlobalTimeSeconds      ( long      local  ) ;
@@ -168,11 +168,11 @@ long      localToGlobalTimeSeconds      ( long      local  ) ;
 // we now default this to local time to avoid jumpiness associated with
 // having to sync with host #0. most routines calling this usually are just
 // taking deltas. 
-long long gettimeofdayInMillisecondsGlobal() ; // synced with host #0
-long long gettimeofdayInMillisecondsGlobalNoCore() ; // synced with host #0
-long long gettimeofdayInMillisecondsSynced() ; // synced with host #0
-long long gettimeofdayInMillisecondsLocal () ;// this is local now
-long long gettimeofdayInMilliseconds() ;// this is local now
+int64_t gettimeofdayInMillisecondsGlobal() ; // synced with host #0
+int64_t gettimeofdayInMillisecondsGlobalNoCore() ; // synced with host #0
+int64_t gettimeofdayInMillisecondsSynced() ; // synced with host #0
+int64_t gettimeofdayInMillisecondsLocal () ;// this is local now
+int64_t gettimeofdayInMilliseconds() ;// this is local now
 uint64_t gettimeofdayInMicroseconds(void) ;
 
 // . get time in seconds since epoch
@@ -209,7 +209,7 @@ extern const char g_map_is_tagname_char[];
 extern const char g_map_is_tag_control_char[];
 
 //extern bool      g_clockInSync;
-extern long long g_adjustment;
+extern int64_t g_adjustment;
 
 bool isClockInSync();
 
@@ -538,7 +538,7 @@ inline long to_lower_utf8 (char *dst, char *dstEnd, char *src ){
 	return dst - dstart;
 }
 
-void getCalendarFromMs(long long ms, 
+void getCalendarFromMs(int64_t ms, 
 		       long* days, 
 		       long* hours, 
 		       long* minutes, 

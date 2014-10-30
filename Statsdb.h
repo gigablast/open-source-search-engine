@@ -53,8 +53,8 @@ class Statsdb {
 	//   local buffer in that case
 	bool addStat ( long        niceness ,
 		       char       *label    ,
-		       long long   t1       ,
-		       long long   t2       ,
+		       int64_t   t1       ,
+		       int64_t   t2       ,
 		       float       value    , // y-value really, "numBytes"
 		       long        parmHash = 0   ,
 		       float       oldVal   = 0.0 ,
@@ -200,7 +200,7 @@ class StatData {
 	float     getNewVal () { return m_newVal ; };
 	bool      isStatusChange() { return (m_totalOps==0); };
 	bool      isEvent       () { return (m_totalOps==0); };
-	//void      setKey ( long long t1 , unsigned long labelHash ) {
+	//void      setKey ( int64_t t1 , unsigned long labelHash ) {
 	//	m_key.n1 = t1; m_key.n0 = labelHash; };
 	//long      getLabelHash () { return (long)m_labelHash; };
 	//long      getParmHash  () { return (long)m_labelHash; };

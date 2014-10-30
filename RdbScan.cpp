@@ -11,7 +11,7 @@ void gotListWrapper ( void *state ) ;
 // . sets errno on error
 bool RdbScan::setRead ( BigFile  *file         ,
 			long      fixedDataSize,
-			long long offset       ,
+			int64_t offset       ,
 			long      bytesToRead  ,
 			//key_t     startKey     , 
 			//key_t     endKey       ,

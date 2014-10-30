@@ -259,11 +259,11 @@ top:
 	// hash the prefix first to match XmlDoc::hashNoSplit()
 	char *prefix = "siteterm";
 	// hash that and we will incorporate it to match XmlDoc::hashNoSplit()
-	long long ph = hash64 ( prefix , gbstrlen(prefix) );
+	int64_t ph = hash64 ( prefix , gbstrlen(prefix) );
 	// . this should match basically what is in XmlDoc.cpp::hash()
 	// . and this now does not include pages that have no outlinks 
 	//   "underneath" them.
-	long long termId = hash64 ( host , pend - host , ph ) & TERMID_MASK;
+	int64_t termId = hash64 ( host , pend - host , ph ) & TERMID_MASK;
 
 	// get all pages that have this as their termid!
 	key144_t start ;

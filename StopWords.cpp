@@ -150,14 +150,14 @@ bool initWordTable( HashTableX *table, char *words[], long size ,
 	for ( long i = 0 ; i < n ; i++ ) {
 		char      *sw    = words[i];
 		long       swlen = gbstrlen ( sw );
-		long long  swh   = hash64Lower_utf8 ( sw , swlen );
+		int64_t  swh   = hash64Lower_utf8 ( sw , swlen );
 		//log("ii: #%li  %s",i,sw);
 		if ( ! table->addTerm (&swh,i+1) ) return false;
 	}
 	return true;
 }
 
-bool isStopWord ( char *s , long len , long long h ) {
+bool isStopWord ( char *s , long len , int64_t h ) {
 	if ( ! s_stopWordsInitialized ) {
 		s_stopWordsInitialized = 
 			initWordTable(&s_stopWordTable, s_stopWords, 
@@ -173,7 +173,7 @@ bool isStopWord ( char *s , long len , long long h ) {
 	return s_stopWordTable.getScore ( &h );
 }		
 
-bool isStopWord2 ( long long *h ) {
+bool isStopWord2 ( int64_t *h ) {
 	if ( ! s_stopWordsInitialized ) {
 		s_stopWordsInitialized = 
 			initWordTable(&s_stopWordTable, s_stopWords, 
@@ -1725,7 +1725,7 @@ static char      *s_queryStopWords[] = {
 static HashTableX s_queryStopWordTable;
 static bool       s_queryStopWordsInitialized = false;
 
-bool isQueryStopWord ( char *s , long len , long long h ) {
+bool isQueryStopWord ( char *s , long len , int64_t h ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
@@ -1739,7 +1739,7 @@ bool isQueryStopWord ( char *s , long len , long long h ) {
 // 		for ( long i = 0 ; i < n ; i++ ) {
 // 			char      *sw    = s_queryStopWords[i];
 // 			long       swlen = gbstrlen ( sw );
-// 			long long  swh   = hash64Lower ( sw , swlen );
+// 			int64_t  swh   = hash64Lower ( sw , swlen );
 // 			s_queryStopWordTable.addTerm (swh,i+1,i+1,true);
 // 			// . add w/o accent marks too!
 // 			// . skip "für" though because fur is an eng. word
@@ -3563,7 +3563,7 @@ void resetStopWordTables() {
 }
 
 // used by Msg24.cpp for gigabits generation
-long isCommonWord ( long long h ) {
+long isCommonWord ( int64_t h ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
@@ -3581,7 +3581,7 @@ long isCommonWord ( long long h ) {
 			long  swlen = gbstrlen ( sw );
 			//long  swh   = g_speller.hash32d ( sw , swlen );
 			// use the same algo that Words.cpp computeWordIds does
-			long long swh = hash64Lower_utf8 ( sw , swlen );
+			int64_t swh = hash64Lower_utf8 ( sw , swlen );
 			if ( ! s_commonWordTable.addTerm ( &swh,i+1 ) )
 				return false;
 			// . add w/o accent marks too!
@@ -3614,7 +3614,7 @@ static HashTableX s_verbTable;
 static bool       s_verbsInitialized = false;
 
 // used by Msg24.cpp for gigabits generation
-bool isVerb ( long long *hp ) {
+bool isVerb ( int64_t *hp ) {
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
 	if ( ! s_verbsInitialized ) {
@@ -3629,7 +3629,7 @@ bool isVerb ( long long *hp ) {
 			char *sw    = s_verbs[i];
 			long  swlen = gbstrlen ( sw );
 			// use the same algo that Words.cpp computeWordIds does
-			long long swh = hash64Lower_utf8 ( sw , swlen );
+			int64_t swh = hash64Lower_utf8 ( sw , swlen );
 			if ( ! s_verbTable.addKey ( &swh ) ) { 
 				char *xx=NULL;*xx=0; }
 		}
@@ -4010,7 +4010,7 @@ static char      *s_commonQueryWords[] = {
 // . h is the full wordid, not 48-bit termid
 // . you can now pass in a 32-bit word hash instead of 64 and it should
 //   still work!!!
-long isCommonQueryWordInEnglish ( long long h64 ) {
+long isCommonQueryWordInEnglish ( int64_t h64 ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
@@ -4030,7 +4030,7 @@ long isCommonQueryWordInEnglish ( long long h64 ) {
 			long  swlen = gbstrlen ( sw );
 			//long  swh   = g_speller.hash32d ( sw , swlen );
 			// use the same algo that Words.cpp computeWordIds does
-			long long swh64 = hash64Lower_utf8 ( sw , swlen );
+			int64_t swh64 = hash64Lower_utf8 ( sw , swlen );
 			if ( ! s_commonQueryWordTable.addTerm ( &swh64,i+1 ) )
 				return false;
 			// if you pass in a 32-bit "h64" from hash32n()

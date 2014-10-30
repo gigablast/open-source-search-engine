@@ -2072,7 +2072,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// . if an array, passed our end, this is the blank line at the end
 	// . USE THIS EMPTY/DEFAULT LINE TO ADD NEW DATA TO AN ARRAY
-	// . make at least as big as a long long
+	// . make at least as big as a int64_t
 	if ( j >= jend ) s = "\0\0\0\0\0\0\0\0";
 	// delimit each cgi var if we need to
 	if ( m->m_cgi && gbstrlen(m->m_cgi) > 45 ) {
@@ -2507,7 +2507,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ("%li",*(long *)s);
 	else if ( t == TYPE_LONG_LONG )
 		sb->safePrintf ("<input type=text name=%s value=\"%lli\" "
-				"size=12>",cgi,*(long long *)s);
+				"size=12>",cgi,*(int64_t *)s);
 	else if ( t == TYPE_STRING || t == TYPE_STRINGNONEMPTY ) {
 		long size = m->m_size;
 		// give regular expression box on url filters page more room
@@ -3149,7 +3149,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		     *(uint64_t *)(THIS + m->m_off+8*j)==
 		     strtoull(s,NULL,10))
 			return;
-		*(long long *)(THIS + m->m_off + 8*j) = strtoull(s,NULL,10);
+		*(int64_t *)(THIS + m->m_off + 8*j) = strtoull(s,NULL,10);
 		goto changed; }
 	// like TYPE_STRING but dynamically allocates
 	else if ( t == TYPE_SAFEBUF ) {
@@ -3230,7 +3230,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	// note it in the log
 	log("admin: parm \"%s\" changed value",m->m_title);
 
-	long long nowms = gettimeofdayInMillisecondsLocal();
+	int64_t nowms = gettimeofdayInMillisecondsLocal();
 
 	// . note it in statsdb
 	// . record what parm change and from/to what value
@@ -3272,7 +3272,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 				 true  );// force it? even if disabled?
 
 	// now the spider collection can just check the collection rec
-	//long long nowms = gettimeofdayInMilliseconds();
+	//int64_t nowms = gettimeofdayInMilliseconds();
 	//((CollectionRec *)THIS)->m_lastUpdateTime = nowms;
 
 	return;
@@ -4068,7 +4068,7 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 		  t == TYPE_SITERULE ) 
 		sb->safePrintf("%li",*(long *)s);
 	else if ( t == TYPE_LONG_LONG )
-		sb->safePrintf("%lli",*(long long *)s);
+		sb->safePrintf("%lli",*(int64_t *)s);
 	else if ( t == TYPE_SAFEBUF ) {
 		SafeBuf *sb2 = (SafeBuf *)s;
 		char *buf = sb2->getBufStart();
@@ -19868,7 +19868,7 @@ bool Parms::addNewParmToList1 ( SafeBuf *parmList ,
 
 // . make a parm rec using the prodivded string
 // . used to convert http requests into a parmlist
-// . string could be a float or long or long long in ascii, as well as a string
+// . string could be a float or long or int64_t in ascii, as well as a string
 // . returns false w/ g_errno set on error
 bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 				collnum_t collnum , 
@@ -19882,7 +19882,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	//char buf[2+MAX_COLL_LEN];
 
 	long val32;
-	long long val64;
+	int64_t val64;
 	char val8;
 	float valf;
 
@@ -20610,7 +20610,7 @@ public:
 	long m_numHostsTotal;
 	class ParmNode *m_prevNode;
 	class ParmNode *m_nextNode;
-	long long m_parmId;
+	int64_t m_parmId;
 	bool m_calledCallback;
 	long m_startTime;
 	void *m_state;
@@ -20625,7 +20625,7 @@ public:
 
 static ParmNode *s_headNode = NULL;
 static ParmNode *s_tailNode = NULL;
-static long long s_parmId = 0LL;
+static int64_t s_parmId = 0LL;
 
 // . will send the parm update request to each host and retry forever, 
 //   until dead hosts come back up
@@ -21315,7 +21315,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		// sanity check. -1 means g_conf. i guess.
 		if ( c < -1 ) { char *xx=NULL;*xx=0; }
 		// and parm hash
-		long long h64 = *(long long *)p;
+		int64_t h64 = *(int64_t *)p;
 		p += 8;
 		// if we being host #0 do not have this collnum tell 
 		// him to delete it!
@@ -21342,7 +21342,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		// c is -1 for g_conf
 		if ( ! g_parms.addAllParmsToList ( &tmp, c ) ) goto hadError;
 		// get checksum of that
-		long long m64 = hash64 ( tmp.getBufStart(),tmp.length() );
+		int64_t m64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// if match, keep chugging, that's in sync
 		if ( h64 == m64 ) continue;
 		// note in log
@@ -21430,7 +21430,7 @@ bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 		if ( ! hashList->safeMemcpy ( &i , sizeof(collnum_t) ) )
 			return false;
 		// hash that shit
-		long long h64 = hash64 ( tmp.getBufStart(),tmp.length() );
+		int64_t h64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// and store it
 		if ( ! hashList->pushLongLong ( h64 ) )
 			return false;
@@ -21502,7 +21502,7 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 			  //
 			  // use this to debug parm list checksums being off
 			  //
-			long long h64 ;
+			int64_t h64 ;
 			h64 = hash64 ( parmList->getBufStart(),
 				       parmList->length() );
 			// note it for debugging hash
@@ -21799,7 +21799,7 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 		return sb->safePrintf("%f",*(float *)val);
 
 	if ( m_type == TYPE_LONG_LONG ) 
-		return sb->safePrintf("%lli",*(long long *)val);
+		return sb->safePrintf("%lli",*(int64_t *)val);
 
 	if ( m_type == TYPE_CHARPTR ) {
 		if ( val ) return sb->safePrintf("%s",val);

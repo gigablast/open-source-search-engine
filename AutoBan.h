@@ -18,12 +18,12 @@
 struct CodeVal {
 	char  m_code[32];
 	long  m_ip;
-	long long  m_count;
+	int64_t  m_count;
 	long  m_outstanding;
 	long  m_maxEver;
 	long  m_maxOutstanding;
-	long long  m_bytesSent;
-	long long  m_bytesRead;
+	int64_t  m_bytesSent;
+	int64_t  m_bytesRead;
 };
 
 class AutoBan {

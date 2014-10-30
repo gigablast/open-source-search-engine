@@ -20,8 +20,8 @@ public:
 	Url 		m_url;
 	bool 		m_done;
 	long 		m_errno;
-	long long 	m_startTime;
-	long long 	m_elapsed;
+	int64_t 	m_startTime;
+	int64_t 	m_elapsed;
 
 	char           *m_buf;
 	bool            m_ownBuf;

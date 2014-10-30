@@ -81,7 +81,7 @@ class Msg20Request {
 	long       m_j                         ; // used by Msg25.cpp
 	bool    (* m_callback)( void *m_state );
 	void    (* m_callback2)( void *m_state );
-	long long  m_docId                     ;
+	int64_t  m_docId                     ;
 	Hostdb    *m_hostdb                    ;
 	long       m_niceness                  ;
 	char       m_boolFlag                  ;
@@ -297,9 +297,9 @@ public:
 	long       m_ip                  ;
 	long       m_firstIp             ;
 	long       m_wordPosStart        ;
-	long long  m_domHash             ;
-	long long  m_docId               ;
-	long long  m_urlHash48           ;
+	int64_t  m_domHash             ;
+	int64_t  m_docId               ;
+	int64_t  m_urlHash48           ;
 	uint64_t   m_eventHash64         ;
 	long       m_eventId             ;
 	uint64_t   m_eventDateHash64     ;
@@ -641,8 +641,8 @@ class Msg20 {
 	// set if we had an error
 	long   m_errno;
 
-	long long getRequestDocId () { return m_requestDocId; };
-	long long m_requestDocId;
+	int64_t getRequestDocId () { return m_requestDocId; };
+	int64_t m_requestDocId;
 
 	// and this is copied from the msg20request
 	long m_eventId;
@@ -715,14 +715,14 @@ class Msg20 {
 	long           getContentLen    () { return m_r->m_contentLen;  };
 	bool           isSumFromDmoz    () { return m_r->m_sumFromDmoz; };
 	long           getIp            () { return m_r->m_ip; };
-	long long      getDomainHash    () { return m_r->m_domHash; };
+	int64_t      getDomainHash    () { return m_r->m_domHash; };
 	unsigned char  getLanguage      () { return m_r->m_language; };
 	unsigned char  getSummaryLanguage() { return m_r->m_summaryLanguage; };
 	unsigned short getCountry       () { return m_r->m_country; };
 	unsigned short getComputedCountry(){ return m_r->m_computedCountry; }
 	short          getCharset       () { return m_r->m_charset; };
 	char           getUrlFilterNum  () { return m_r->m_urlFilterNum; }
-	long long      getDocId         () { return m_r->m_docId; };
+	int64_t      getDocId         () { return m_r->m_docId; };
 	time_t         getFirstSpidered () { return m_r->m_firstSpidered; };
 	time_t         getLastSpidered  () { return m_r->m_lastSpidered; };
 	time_t	       getNextSpiderDate() { return m_r->m_nextSpiderDate; };

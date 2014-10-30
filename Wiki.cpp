@@ -181,7 +181,7 @@ bool Wiki::loadText ( long fileSize ) {
 		*eol = c;
 		if ( pp ) continue;
 		// get these
-		long long *wids = w.getWordIds();
+		int64_t *wids = w.getWordIds();
 		// reset hash
 		uint32_t h = 0;
 		// count the words in the phrase
@@ -291,7 +291,7 @@ bool Wiki::loadText ( long fileSize ) {
 
 		uint32_t hf32 = 0;
 		count = 0;
-		long long *wids = w.getWordIds();
+		int64_t *wids = w.getWordIds();
 		// hash the word ids together to make a new hash that takes the
 		// space into account.
 		for ( long i = start ; i < nw ; i++ ) {
@@ -331,7 +331,7 @@ bool Wiki::loadText ( long fileSize ) {
 // if a phrase in a query is in a wikipedia title, then increase
 // its affWeights beyond the normal 1.0
 long Wiki::getNumWordsInWikiPhrase ( long i , Words *w ) {
-	long long *wids = w->m_wordIds;
+	int64_t *wids = w->m_wordIds;
 	if ( ! wids[i] ) return 0;
 	long nw = w->m_numWords;
 	char **wptrs = w->getWords();
@@ -340,7 +340,7 @@ long Wiki::getNumWordsInWikiPhrase ( long i , Words *w ) {
 	long max = -1;
 	long maxCount = 0;
 	// accumulate a hash of the word ids
-	//long long h      = 0LL;
+	//int64_t h      = 0LL;
 	uint32_t h = 0;
 	long      wcount = 0;
 	// otherwise, increase affinity high for included words
@@ -424,7 +424,7 @@ bool Wiki::setPhraseAffinityWeights ( Query *q , float *affWeights ,
 		// how many in the phrase
 		long max = -1;
 		// accumulate a hash of the word ids
-		long long h = 0LL;
+		int64_t h = 0LL;
 		// otherwise, increase affinity high for included words
 		for ( long j = i ; j < nw && count < 12 ; j++ ) {
 			// skip if not alnum

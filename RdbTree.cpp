@@ -711,7 +711,7 @@ long RdbTree::deleteNode  ( collnum_t collnum , char *key , bool freeData ) {
 	long node = getNode ( collnum , key );
 	// debug
 	//log("db: deleting n1=%llx n0=%llx node=%li.",
-	//    *(long long *)(key+8), *(long long *)(key+0),node);
+	//    *(int64_t *)(key+8), *(int64_t *)(key+0),node);
 	if ( node == -1 ) return -1;
 	deleteNode(node,freeData); 
 	return node;
@@ -2033,10 +2033,10 @@ long RdbTree::getOrderOfKey ( collnum_t collnum , char *key , char *retKey ) {
 		break;
         }
 	// normalize order since tree probably has less then 2^d nodes
-	long long normOrder = 
-		(long long) order          * 
-		(long long) m_numUsedNodes / 
-		(long long) ((1 << d) -1)  ;
+	int64_t normOrder = 
+		(int64_t) order          * 
+		(int64_t) m_numUsedNodes / 
+		(int64_t) ((1 << d) -1)  ;
 	return (long) normOrder;
 }
 
@@ -2490,8 +2490,8 @@ bool RdbTree::fastSave_r() {
 	errno = 0;
 	// . save the header
 	// . force file head to the 0 byte in case offset was elsewhere
-	long long offset = 0;
-	long long br = 0;
+	int64_t offset = 0;
+	int64_t br = 0;
 	br += pwrite ( fd , &m_numNodes       , 4 , offset ); offset += 4;
 	br += pwrite ( fd , &m_fixedDataSize  , 4 , offset ); offset += 4;
 	br += pwrite ( fd , &m_numUsedNodes   , 4 , offset ); offset += 4;
@@ -2542,9 +2542,9 @@ bool RdbTree::fastSave_r() {
 }
 
 // return bytes written
-long RdbTree::fastSaveBlock_r ( int fd , long start , long long offset ) {
+long RdbTree::fastSaveBlock_r ( int fd , long start , int64_t offset ) {
 	// save offset
-	long long oldOffset = offset;
+	int64_t oldOffset = offset;
 	// . just save each one right out, even if empty
 	//   because the empty's have a linked list in m_right[]
 	// . set # n
@@ -2555,7 +2555,7 @@ long RdbTree::fastSaveBlock_r ( int fd , long start , long long offset ) {
 	//log("writing block at %lli, %li nodes",
 	//     f->m_currentOffset, n);
 	errno = 0;
-	long long br = 0;
+	int64_t br = 0;
 	// write the block
 	br += pwrite ( fd,&m_collnums[start], n * sizeof(collnum_t) , offset );
 	offset += n * sizeof(collnum_t);
@@ -2622,7 +2622,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	if ( ! f->open ( O_RDONLY ) ) return log("db: open failed");
 	long fsize = f->getFileSize();
 	// init offset
-	long long offset = 0;
+	int64_t offset = 0;
 	// 16 byte header
 	long header = 4*6 + sizeof(m_doBalancing) + sizeof(m_ownData);
 	// file size must be a min of "header"
@@ -2784,14 +2784,14 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 			      long       start      , 
 			      long       totalNodes , 
 			      RdbMem    *stack      ,
-			      long long  offset     ) {
+			      int64_t  offset     ) {
 	// set # ndoes to read
 	long n = totalNodes - start;
 	if ( n > BLOCK_SIZE ) n = BLOCK_SIZE;
 	// debug msg
 	//log("reading block at %lli, %li nodes",
 	//     f->m_currentOffset, n );
-	long long oldOffset = offset;
+	int64_t oldOffset = offset;
 	// . copy them in
 	// . start reading at beginning of file
 	f->read ( &m_collnums[start], n * sizeof(collnum_t) , offset ); 
@@ -2933,7 +2933,7 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 	long n , fixedDataSize , numUsedNodes ;
 	bool doBalancing , ownData ;
 	long headNode , nextNode , minUnusedNode;
-	long long offset = 0;
+	int64_t offset = 0;
 	f->read  ( &n              , 4 , offset ); offset += 4 ;
 	f->read  ( &fixedDataSize  , 4 , offset ); offset += 4 ;
 	f->read  ( &numUsedNodes   , 4 , offset ); offset += 4 ;
@@ -2996,9 +2996,9 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 }
 
 long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
-			     long long offset ){
+			     int64_t offset ){
 	// save offset
-	long long oldOffset = offset;
+	int64_t oldOffset = offset;
 	// array for holding shit
 	long  slotNums [ BLOCK_SIZE ];
 	key_t keys     [ BLOCK_SIZE ];

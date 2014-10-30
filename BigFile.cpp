@@ -19,8 +19,8 @@
 // can complete
 long g_unlinkRenameThreads = 0;
 
-long long g_lastDiskReadStarted = 0LL;
-long long g_lastDiskReadCompleted = 0LL;
+int64_t g_lastDiskReadStarted = 0LL;
+int64_t g_lastDiskReadCompleted = 0LL;
 bool      g_diskIsStuck = false;
 
 static void  doneWrapper        ( void *state , ThreadEntry *t ) ;
@@ -181,7 +181,7 @@ bool BigFile::doesPartExist ( long n ) {
 //   DiskPageCache
 // . use maxFileSize of -1 for us to use getFileSize() to set it
 bool BigFile::open ( int flags , class DiskPageCache *pc , 
-		     long long maxFileSize ,
+		     int64_t maxFileSize ,
 		     int permissions ) {
 
         m_flags       = flags;
@@ -215,7 +215,7 @@ void BigFile::makeFilename_r ( char *baseFilename    ,
 	sprintf ( buf + gbstrlen(buf) , ".part%li", n );
 }
 
-//int BigFile::getfdByOffset ( long long offset ) {
+//int BigFile::getfdByOffset ( int64_t offset ) {
 //	return getfd ( offset / MAX_PART_SIZE , true /*forReading?*/ );
 //}
 
@@ -257,12 +257,12 @@ int BigFile::getfd ( long n , bool forReading , long *vfd ) {
 // . return -2 on error
 // . return -1 if does not exist
 // . otherwise return the big file's complete file size (can be well over 2gb)
-long long BigFile::getFileSize ( ) {
+int64_t BigFile::getFileSize ( ) {
 	// return if already computed
 	if ( m_fileSize >= 0 ) return m_fileSize;
 
 	// add up the sizes of each file
-	long long totalSize = 0;
+	int64_t totalSize = 0;
 	for ( long n = 0 ; n < m_maxParts ; n++ ) {
 		// we can have headless big files... count the heads
 		if ( ! m_files[n] ) { totalSize += MAX_PART_SIZE; continue; }
@@ -308,7 +308,7 @@ time_t BigFile::getLastModifiedTime ( ) {
 //   a signal is still pending for us, the callback will know we are nuked
 bool BigFile::read  ( void       *buf    , 
 		      long        size   , 
-		      long long   offset , 
+		      int64_t   offset , 
 		      FileState  *fs     ,                 
 		      void       *state  ,
 		      void      (* callback)(void *state) ,
@@ -326,7 +326,7 @@ bool BigFile::read  ( void       *buf    ,
 // . sets g_errno on error
 bool BigFile::write ( void       *buf    , 
 		      long        size   , 
-		      long long   offset , 
+		      int64_t   offset , 
 		      FileState  *fs     ,
 		      void       *state  ,
 		      void      (* callback)(void *state) ,
@@ -358,7 +358,7 @@ bool BigFile::write ( void       *buf    ,
 //   a signal is still pending for us, the callback will know we are nuked
 bool BigFile::readwrite ( void         *buf      , 
 			  long          size     , 
-			  long long     offset   , 
+			  int64_t     offset   , 
 			  bool          doWrite  ,
 			  FileState    *fstate   ,
 			  void         *state    ,
@@ -470,7 +470,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_flags       = m_flags;
 	// sanity
 	if ( fstate->m_bytesToGo > 150000000 )
-		log("file: huge read of %lli bytes",(long long)size);
+		log("file: huge read of %lli bytes",(int64_t)size);
 	// . set our fd's before entering the thread in case RdbMerge
 	//   calls our unlinkPart() 
 	// . it's thread-UNsafe to call getfd() from within the thread
@@ -637,14 +637,14 @@ bool BigFile::readwrite ( void         *buf      ,
 	a0->aio_fildes = fstate->m_fd1;
 	a1->aio_fildes = fstate->m_fd2;
 	// the offset of each file
-	long long off1 = fs->m_offset;
+	int64_t off1 = fs->m_offset;
 	// always read at start of 2nd file
-	long long off2 = 0;
+	int64_t off2 = 0;
 	// how many bytes to read from each file?
-	long long readSize1 = size;
-	long long readSize2 = 0;
+	int64_t readSize1 = size;
+	int64_t readSize2 = 0;
 	if ( off1 + readSize1 > MAX_PART_SIZE ) {
-		readSize1 = ((long long)MAX_PART_SIZE) - off1;
+		readSize1 = ((int64_t)MAX_PART_SIZE) - off1;
 		readSize2 = size - readSize1;
 	}
 	a0->aio_offset = off1;
@@ -725,8 +725,8 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_doneTime = gettimeofdayInMilliseconds();
 
 	// if it read less than 8MB/s bitch
-	long long now   = gettimeofdayInMilliseconds() ;
-	long long took  = now - fstate->m_startTime ;
+	int64_t now   = gettimeofdayInMilliseconds() ;
+	int64_t took  = now - fstate->m_startTime ;
 	long      rate  = 100000;
 	if ( took  > 500 ) rate = fstate->m_bytesDone / took ;
 	if ( rate < 8000 && fstate->m_niceness <= 0 ) {
@@ -822,7 +822,7 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 		exitWriteMode( fstate->m_vfd2 );
 	}
 	// if it read less than 8MB/s bitch
-	long long took = fstate->m_doneTime - fstate->m_startTime;
+	int64_t took = fstate->m_doneTime - fstate->m_startTime;
 	long      rate = 100000;
 	if ( took > 500 ) rate = fstate->m_bytesDone / took ;
 	bool slow = false;
@@ -897,7 +897,7 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 			    "off=%lli toread=%li.", 
 			    mstrerror(g_errno),
 			    (long)fstate->m_fd1,(long)fstate->m_vfd,
-			    (long long)fstate->m_offset , 
+			    (int64_t)fstate->m_offset , 
 			    (long)fstate->m_bytesToGo );
 	// someone is closing our fd without setting File::s_vfds[fd] to -1
 	if ( g_errno && g_errno != EDISKSTUCK ) {
@@ -1049,7 +1049,7 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 	//pthread_setcancelstate ( PTHREAD_CANCEL_DISABLE , NULL );
 	// set done time even if errno set
 	// - mdw, can't set this here now because fstate might be invalid...
-	//long long now = gettimeofdayInMilliseconds() ;
+	//int64_t now = gettimeofdayInMilliseconds() ;
 	//fstate->m_doneTime = now;
 	/*
 	// add the stat
@@ -1106,7 +1106,7 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	// how many bytes we've written so far
 	long       bytesDone = fstate->m_bytesDone;
 	// get current offset
-	long long  offset    = fstate->m_offset + fstate->m_bytesDone;
+	int64_t  offset    = fstate->m_offset + fstate->m_bytesDone;
 	// are we writing? or reading?
 	bool       doWrite   = fstate->m_doWrite;
 	// point to buf

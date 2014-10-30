@@ -367,7 +367,7 @@ static bool initEntityTable(){
 		// now add in all the stop words
 		long n = (long)sizeof(s_entities) / (long)sizeof(Entity);
 		for ( long i = 0 ; i < n ; i++ ) {
-			long long h = hash64b ( s_entities[i].entity );
+			int64_t h = hash64b ( s_entities[i].entity );
 			// grab the unicode code point
 			UChar32 up = s_entities[i].unicode;
 			// now we are 100% up
@@ -429,7 +429,7 @@ uint32_t getTextEntity ( char *s , long len ) {
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
 	// compute the hash of the entity including &, but not ;
-	long long h = hash64 ( s , len );
+	int64_t h = hash64 ( s , len );
 	// get the entity index from table (stored in the score field)
 	long i = (long) s_table.getScore ( &h );
 	// return 0 if no match

@@ -89,7 +89,7 @@ float getWordSpamWeight  ( unsigned char wordSpamRank );
 float getLinkerWeight    ( unsigned char wordSpamRank );
 char *getHashGroupString ( unsigned char hg );
 float getHashGroupWeight ( unsigned char hg );
-float getTermFreqWeight  ( long long termFreq , long long numDocsInColl );
+float getTermFreqWeight  ( int64_t termFreq , int64_t numDocsInColl );
 
 #define SYNONYM_WEIGHT 0.90
 #define WIKI_WEIGHT    0.10 // was 0.20
@@ -135,7 +135,7 @@ class Posdb {
 	// . store all posdb keys from revdbList into one hashtable
 	//   and only add to new list if not in there
 	//bool makeList ( class RdbList *revdbList ,
-	//		long long docId ,
+	//		int64_t docId ,
 	//		class Words *words );
 			
 
@@ -143,7 +143,7 @@ class Posdb {
 	// . make a 16-byte key from all these components
 	// . since it is 16 bytes, the big bit will be set
 	void makeKey ( void              *kp             ,
-		       long long          termId         ,
+		       int64_t          termId         ,
 		       uint64_t docId          , 
 		       long               wordPos        ,
 		       char               densityRank    ,
@@ -229,8 +229,8 @@ class Posdb {
 		return ( ( ((char *)vkp)[1] & 0x02 ) == 0x00 );
 	};
 
-	void makeStartKey ( void *kp, long long termId , 
-			    long long docId=0LL){
+	void makeStartKey ( void *kp, int64_t termId , 
+			    int64_t docId=0LL){
 		return makeKey ( kp,
 				 termId , 
 				 docId,
@@ -247,8 +247,8 @@ class Posdb {
 				 false ); // shardbytermid?
 	};
 
-	void makeEndKey  ( void *kp,long long termId, 
-			   long long docId = MAX_DOCID ) {
+	void makeEndKey  ( void *kp,int64_t termId, 
+			   int64_t docId = MAX_DOCID ) {
 		return makeKey ( kp,
 				 termId , 
 				 docId,
@@ -286,18 +286,18 @@ class Posdb {
 	}
 		
 
-	long long getTermId ( void *key ) {
+	int64_t getTermId ( void *key ) {
 		return ((key144_t *)key)->n2 >> 16;
 	};
 
-	long long getDocId ( void *key ) {
+	int64_t getDocId ( void *key ) {
 		uint64_t d = 0LL;
 		d = ((unsigned char *)key)[11];
 		d <<= 32;
 		d |= *(unsigned long *)(((unsigned char *)key)+7);
 		d >>= 2;
 		return d;
-		//long long d = ((key144_t *)key)->n2 & 0xffff;
+		//int64_t d = ((key144_t *)key)->n2 & 0xffff;
 		//d <<= 22;
 		//d |= ((key144_t *)key)->n1 >> (32+8+2);
 		//return d;
@@ -384,7 +384,7 @@ class Posdb {
 	void setFacetVal32 ( void *key , long facetVal32 ) {
 		*(unsigned long *)(((char *)key)+2) = facetVal32; };
 
-	long long getTermFreq ( collnum_t collnum, long long termId ) ;
+	int64_t getTermFreq ( collnum_t collnum, int64_t termId ) ;
 
 	//RdbCache *getCache ( ) { return &m_rdb.m_cache; };
 	Rdb      *getRdb   ( ) { return &m_rdb; };
@@ -399,7 +399,7 @@ class Posdb {
 class FacetEntry {
  public:
 	long m_count;
-	long long m_docId;
+	int64_t m_docId;
 };
 
 
@@ -427,7 +427,7 @@ public:
 	// how many are valid?
 	long      m_numSubLists;
 	// size of all m_subLists in bytes
-	long long m_totalSubListsSize;
+	int64_t m_totalSubListsSize;
 	// the term freq weight for this term
 	float     m_termFreqWeight;
 	// what query term # do we correspond to in Query.h
@@ -468,29 +468,29 @@ class PosdbList : public RdbList {
 
 	// . these are made for special IndexLists, too
 	// . getTermId() assumes as 12 byte key
-	long long getCurrentTermId12 ( ) {
+	int64_t getCurrentTermId12 ( ) {
 		return getTermId12 ( m_listPtr ); };
-	long long getTermId12 ( char *rec ) {
+	int64_t getTermId12 ( char *rec ) {
 		return (*(uint64_t *)(&rec[4])) >> 16 ;
 	};
-	long long getTermId16 ( char *rec ) {
+	int64_t getTermId16 ( char *rec ) {
 		return (*(uint64_t *)(&rec[8])) >> 16 ;
 	};
 	// these 2 assume 12 and 6 byte keys respectively
-	long long getCurrentDocId () {
+	int64_t getCurrentDocId () {
 		if ( isHalfBitOn ( m_listPtr ) ) return getDocId6 (m_listPtr);
 		else                             return getDocId12(m_listPtr);
 	};
-	long long getDocId ( char *rec ) {
+	int64_t getDocId ( char *rec ) {
 		if ( isHalfBitOn ( rec ) ) return getDocId6 (rec);
 		else                       return getDocId12(rec);
 	};
-	long long getCurrentDocId12 ( ) {
+	int64_t getCurrentDocId12 ( ) {
 		return getDocId12 ( m_listPtr ); };
-	long long getDocId12 ( char *rec ) {
+	int64_t getDocId12 ( char *rec ) {
 		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
-	long long getDocId6 ( char *rec ) {
-		long long docid;
+	int64_t getDocId6 ( char *rec ) {
+		int64_t docid;
 		*(long *)(&docid) = *(long *)rec;
 		((char *)&docid)[4] = rec[4];
 		docid >>= 2;
@@ -595,11 +595,11 @@ class PosdbTable {
 	float m_preFinalScore;
 
 	// how long to add the last batch of lists
-	long long       m_addListsTime;
-	long long       m_t1 ;
-	long long       m_t2 ;
+	int64_t       m_addListsTime;
+	int64_t       m_t1 ;
+	int64_t       m_t2 ;
 
-	long long       m_estimatedTotalHits;
+	int64_t       m_estimatedTotalHits;
 
 	long            m_errno;
 
@@ -616,7 +616,7 @@ class PosdbTable {
 	//class DocIdScore *m_ds;
 	long  m_qdist;
 	float *m_freqWeights;
-	//long long *m_freqs;
+	//int64_t *m_freqs;
 	char  *m_bflags;
 	long  *m_qtermNums;
 	float m_bestWindowScore;
@@ -626,7 +626,7 @@ class PosdbTable {
 	char **m_windowTermPtrs;
 
 	// how many docs in the collection?
-	long long m_docsInColl;
+	int64_t m_docsInColl;
 
 	//SectionStats m_sectionStats;
 	//SafeBuf m_facetHashList;
@@ -663,7 +663,7 @@ class PosdbTable {
 	// for debug msgs
 	long            m_logstate;
 
-	//long long       m_numDocsInColl;
+	//int64_t       m_numDocsInColl;
 
 	class Msg39Request *m_r;
 
@@ -762,8 +762,8 @@ class PairScore {
 	char  m_fixedDistance;
 	long  m_wordPos1;
 	long  m_wordPos2;
-	long long m_termFreq1;
-	long long m_termFreq2;
+	int64_t m_termFreq1;
+	int64_t m_termFreq2;
 	float     m_tfWeight1;
 	float     m_tfWeight2;
 	long m_qtermNum1;
@@ -783,7 +783,7 @@ class SingleScore {
 	char  m_wordSpamRank;
 	char  m_hashGroup;
 	long  m_wordPos;
-	long long m_termFreq; // float m_termFreqWeight;
+	int64_t m_termFreq; // float m_termFreqWeight;
 	float m_tfWeight;
 	long m_qtermNum;
 	char m_bflags;
@@ -810,7 +810,7 @@ class DocIdScore {
 	// we use QueryChange::getDebugDocIdScore() to "deserialize" per se
 	bool serialize   ( class SafeBuf *sb );
 
-	long long   m_docId;
+	int64_t   m_docId;
 	// made this a double because of intScores which can't be captured
 	// fully with a float. intScores are used to sort by spidered time
 	// for example. see Posdb.cpp "intScore".
@@ -849,7 +849,7 @@ extern RdbCache g_termFreqCache;
 
 // . b-step into list looking for docid "docId"
 // . assume p is start of list, excluding 6 byte of termid
-inline char *getWordPosList ( long long docId , char *list , long listSize ) {
+inline char *getWordPosList ( int64_t docId , char *list , long listSize ) {
 	// make step divisible by 6 initially
 	long step = (listSize / 12) * 6;
 	// shortcut
@@ -867,7 +867,7 @@ inline char *getWordPosList ( long long docId , char *list , long listSize ) {
 	// ok, we hit a 12 byte key i guess, so backup 6 more
 	p -= 6;
 	// ok, we got a 12-byte key then i guess
-	long long d = g_posdb.getDocId ( p );
+	int64_t d = g_posdb.getDocId ( p );
 	// we got a match, but it might be a NEGATIVE key so
 	// we have to try to find the positive keys in that case
 	if ( d == docId ) {

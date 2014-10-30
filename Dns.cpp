@@ -19,7 +19,7 @@ Dns g_dns;
 
 RdbCache g_timedoutCache;
 
-static long long s_antiLockCount = 1LL;
+static int64_t s_antiLockCount = 1LL;
 
 #define TIMEOUT_SINGLE_HOST 30
 #define TIMEOUT_TOTAL       90
@@ -29,7 +29,7 @@ static void gotIpOfDNSWrapper ( void *state , long ip ) ;
 static void returnIp ( DnsState *ds , long ip ) ;
 
 // CallbackEntry now defined in HashTableT.cpp
-static HashTableT<long long,CallbackEntry> s_dnstable;
+static HashTableT<int64_t,CallbackEntry> s_dnstable;
 static HashTableT<uint32_t,TLDIPEntry> s_TLDIPtable;
 
 Dns::Dns() {
@@ -372,7 +372,7 @@ bool Dns::getIp ( char *hostname ,
 	// . TODO: we can have collisions and end up getting back the wrong ip
 	//   how can we fix this? keep a ptr to ds->m_hostname? and if does
 	//   not match then just error out?
-	long long hostKey64 = hostKey96.n0 & 0x7fffffffffffffffLL;
+	int64_t hostKey64 = hostKey96.n0 & 0x7fffffffffffffffLL;
 	// never let this be zero
 	if ( hostKey64 == 0 ) hostKey64 = 1;
 	// see if we are already looking up this hostname
@@ -396,7 +396,7 @@ bool Dns::getIp ( char *hostname ,
 	// regardless, add our "ce" to the table, but assume we are NOT first
 	// in line for a hostname and use a bogus key. it  doesn't matter, 
 	// we just need some memory to store our CallbackEntry class.
-	static long long s_bogus = 0;
+	static int64_t s_bogus = 0;
 	// make a CallbackEntry class to add to a slot in the table
 	CallbackEntry ce;
 	ce.m_callback = callback;
@@ -408,7 +408,7 @@ bool Dns::getIp ( char *hostname ,
 	s_bogus++;
 	// if we are the first guy requesting the ip for this hostname
 	// then use "hostKey" to get the slot to store "ce", 
-	long long finalKey = hostKey64 ;
+	int64_t finalKey = hostKey64 ;
 	// otherwise use "s_bogus" as the key. the bogus key is just for 
 	// getting a slot to use to store "ce".
 	if ( ptr ) {
@@ -442,7 +442,7 @@ bool Dns::getIp ( char *hostname ,
 	}
 
 	// assume we have no parent
-	long long parentKey = 0;
+	int64_t parentKey = 0;
 	// if parent, set parentKey to "hostKey", the hash of the hostname
 	if ( ptr ) parentKey = hostKey64;
 
@@ -520,7 +520,7 @@ bool Dns::getIp ( char *hostname ,
 	// . insert into beginning of the linked list to avoid having to scan
 	// . "ptr" is a ptr to the parent CallbackEntry, head of linked list
 	if ( ptr ) {
-		long long oldNext = ptr->m_nextKey;
+		int64_t oldNext = ptr->m_nextKey;
 		ptr->m_nextKey    = finalKey;
 		ppp->m_nextKey    = oldNext;
 		// let parent know how big its linked list is
@@ -1397,14 +1397,14 @@ void returnIp ( DnsState *ds , long ip ) {
 	// . if the ip request is in progress, wait for it to come back
 	// . each bucket in the callback entry hashtable is a linked list of
 	//   callback/state pairs (CallbackEntries) waiting for that ip.
-	//long long key = ds->m_hostnameKey.n0 & 0x7fffffffffffffffLL;
-	long long key = ds->m_tableKey & 0x7fffffffffffffffLL;
+	//int64_t key = ds->m_hostnameKey.n0 & 0x7fffffffffffffffLL;
+	int64_t key = ds->m_tableKey & 0x7fffffffffffffffLL;
 	// was it a dns lookup?
 	bool dnsLookup = false;
 	// these will be the same if not. i created ds->m_tableKey
 	// just so we could make a special hash for such lookups so
 	// they would not be waiting in lines and deadlock.
-	if ( key != (long long)(ds->m_hostnameKey.n0 & 0x7fffffffffffffffLL) )
+	if ( key != (int64_t)(ds->m_hostnameKey.n0 & 0x7fffffffffffffffLL) )
 		dnsLookup = true;
 	// look up the entry from the table
 	CallbackEntry *ce = s_dnstable.getValuePointer ( key );
@@ -1423,7 +1423,7 @@ void returnIp ( DnsState *ds , long ip ) {
 	if ( g_conf.m_logDebugDns )
 		strncpy ( tmp , ds->m_hostname , 2040 );
 	// save parent for debugging purposes
-	long long parentKey = key;
+	int64_t parentKey = key;
 	// how many in the list?
 	long listSize = ce->m_listSize;
 	// only the nodes in this list have this id
@@ -1434,7 +1434,7 @@ void returnIp ( DnsState *ds , long ip ) {
 		// restore g_errno
 		g_errno = err;
 		// get the next one to call in the linked list
-		long long nextKey = ce->m_nextKey;
+		int64_t nextKey = ce->m_nextKey;
 		// debug msg
 		log(LOG_DEBUG,"dns: Removing key %llu from table. "
 		    "parentKey=%llu nextKey=%llu callback=%lu state=0x%lx.",
@@ -1818,7 +1818,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	if ( maxi == 0 ) maxi = nscount + arcount;
 	TLDIPEntry	tldip;
 	tldip.numTLDIPs = 0;
-	long long answerHash64 = 0LL;
+	int64_t answerHash64 = 0LL;
 
 	for ( long i = 0 ; i < maxi; i++ ) {
 		// well, this is the name of the record
@@ -1827,7 +1827,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		// in the answer section
 		char *s = getRRName ( rr , dgram, end );
 		//log("dns: got rr name: %s",s);
-		long long rrHash64 = 0LL;
+		int64_t rrHash64 = 0LL;
 		if ( s ) rrHash64 = hash64n ( s );
 		// . now a domain name should follow
 		// . but if the next byte has hi bit set then it means its

@@ -51,7 +51,7 @@ bool Pos::set ( Words  *words  ,
 	nodeid_t   *tids  = words->getTagIds(); // m_tagIds;
 	char      **wp    = words->m_words;
 	//long       *ss    = NULL;
-	//long long  *wids  = words->m_wordIds;
+	//int64_t  *wids  = words->m_wordIds;
 	//if ( scores ) ss  = scores->m_scores;
 
 	// save start point for filtering

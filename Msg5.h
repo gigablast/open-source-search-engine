@@ -90,7 +90,7 @@ class Msg5 {
 		       long       retryNum     =  0  ,
 		       long       maxRetries   = -1  ,
 		       bool       compensateForMerge = true ,
-		       long long      syncPoint = -1 ,
+		       int64_t      syncPoint = -1 ,
 		       class Msg5 *msg5b = NULL ,
 		       bool        isRealMerge = false ,
 		       bool        allowPageCache = true ,
@@ -121,7 +121,7 @@ class Msg5 {
 		       long       retryNum     =  0  ,
 		       long       maxRetries   = -1  ,
 		       bool       compensateForMerge = true ,
-		       long long      syncPoint = -1 ,
+		       int64_t      syncPoint = -1 ,
 		       class Msg5 *msg5b = NULL ,
 		       bool        isRealMerge = false ,
 		       bool        allowPageCache = true ,
@@ -236,11 +236,11 @@ class Msg5 {
 	// error correction stuff
 	bool      m_doErrorCorrection;
 	bool      m_hadCorruption;
-	//long long m_checkTime;
+	//int64_t m_checkTime;
 	class Msg0 *m_msg0;
 	
 	// for timing debug
-	long long m_startTime;
+	int64_t m_startTime;
 
 	// hold pointers to lists to merge
 	RdbList  *m_listPtrs [ MAX_RDB_FILES + 1 ]; // plus tree
@@ -274,14 +274,14 @@ class Msg5 {
 
 	long m_maxRetries;
 
-	//long long m_syncPoint;
+	//int64_t m_syncPoint;
 
 	long m_filtered;
 
 	// used for reading a corresponding tfndb list for a titledb read
 	class Msg5 *m_msg5b;
 	bool        m_isRealMerge;
-	long long   m_time1;
+	int64_t   m_time1;
 
 	long m_indexdbTruncationLimit;
 

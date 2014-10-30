@@ -271,9 +271,9 @@ bool Msgfb::getFacebookUserInfo ( HttpRequest *hr,
 	char *useFbid = m_hr.getString("usefbid",NULL);
 	// that overrides
 	if ( useFbid ) {
-		long long used = strtoull(useFbid,NULL,10);
+		int64_t used = strtoull(useFbid,NULL,10);
 		long h32a = hash32 ( (char *)&used, 8 );
-		// this has to be a long long because fh is printed as
+		// this has to be a int64_t because fh is printed as
 		// an unsigned long and atol() will croak
 		long h32b = m_hr.getLongLong("fh",0);
 		if ( h32a != h32b ) {
@@ -296,7 +296,7 @@ bool Msgfb::getFacebookUserInfo ( HttpRequest *hr,
 	//   at some point in time and we should try to get their list
 	//   of friends from the facebookdb rec so if they click 
 	//   to show all the events their friends are going to we can do that
-	long long fbId = strtoull ( fbidStr , NULL, 10 );
+	int64_t fbId = strtoull ( fbidStr , NULL, 10 );
 
 	// if they come into the canvas page we receive an encoded access
 	// token and fbid from facebook. so get that and do the lookup.
@@ -696,7 +696,7 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 
 	// mine out who sent it
 	char *from = strstr ( content , "\"from\":" );
-	long long id1 = 0LL;
+	int64_t id1 = 0LL;
 	if ( from ) {
 		char *ids = strstr ( from , "\"id\":" );
 		for ( ; ids && *ids && ! is_digit(*ids) ; ids++ );
@@ -708,7 +708,7 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 	char *data = NULL;
 	// start mining AFTER "from" because there is a top "data" field!!
 	if ( from ) data = strstr ( from , "\"data\":" );
-	long long id2 = 0LL;
+	int64_t id2 = 0LL;
 	if ( data ) {
 		char *ids = strstr ( data , "\"id\":" );
 		for ( ; ids && *ids && ! is_digit(*ids) ; ids++ );
@@ -733,7 +733,7 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 
 
 
-//long long mdw = 100003532411011LL; // my uid for Matt Wells
+//int64_t mdw = 100003532411011LL; // my uid for Matt Wells
 // 100003316058818 // uid for flurbit
 // http://graph.facebook.com/502303355/picture shows pics for a uid
 bool Msgfb::downloadFBUserInfo ( ) {
@@ -785,7 +785,7 @@ bool Msgfb::downloadFBUserInfo ( ) {
 	return true;
 }
 
-static bool queueFBId ( long long fbId , collnum_t collnum );
+static bool queueFBId ( int64_t fbId , collnum_t collnum );
 
 static void savedFBRecWrapper1 ( void *state ) {
 	Msgfb *mfb = (Msgfb *)state;
@@ -878,7 +878,7 @@ bool Msgfb::gotFQLUserInfo ( TcpSocket *s ) {
 	m_fbrecPtr = &m_fbrecGen;
 
 	// now that we got the fbid see if its in facebookdb again
-	long long fbId = m_fbrecGen.m_fbId;
+	int64_t fbId = m_fbrecGen.m_fbId;
 	key96_t startKey;
 	key96_t endKey;
 	startKey.n1 = 0;
@@ -1065,7 +1065,7 @@ bool Msgfb::doneRechecking ( ) {
 		// . if it was a facebook user_to_user app request we
 		//   should have called downloadUserToUserRequestInfo() to
 		//   set m_widgetId if it was not already set.
-		long long widgetId = m_widgetId;
+		int64_t widgetId = m_widgetId;
 		if ( ! widgetId ) widgetId = 1;
 		m_fbrecGen.m_originatingWidgetId = widgetId;
 		m_fbrecGen.m_lastLoginIP = m_socket->m_ip;
@@ -1105,7 +1105,7 @@ bool Msgfb::doneRechecking ( ) {
 
 class LikedbTableSlot {
 public:
-	long long m_uid;
+	int64_t m_uid;
 	long m_start_time;
 	long m_rsvp;
 };
@@ -1155,7 +1155,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 	// scan for friend ids first since we add \0s below
 	char *p = strstr ( content , "<uid2>" );
 	for ( ; p ; p = strstr (p+1,"<uid2>") ) {
-		long long uid2 = strtoull(p+6,NULL,10);
+		int64_t uid2 = strtoull(p+6,NULL,10);
 		if ( uid2 <= 0 ) continue;
 		// add it
 		if ( m_fidBuf.getAvail() < 8 && ! m_fidBuf.reserve(5000) ) 
@@ -1292,8 +1292,8 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		if ( strncmp ( s, "<uid>" , 5 ) ) break;
 		// skip that
 		s += 5;
-		// long long
-		long long uid = strtoull ( s , NULL, 10 );
+		// int64_t
+		int64_t uid = strtoull ( s , NULL, 10 );
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;		
 		// must be /uid
@@ -1307,8 +1307,8 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		if ( strncmp ( s, "<eid>" , 5 ) ) break;
 		// skip that
 		s += 5;
-		// long long
-		long long eid = strtoull ( s , NULL, 10 );
+		// int64_t
+		int64_t eid = strtoull ( s , NULL, 10 );
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;		
 		// must be /uid
@@ -1324,7 +1324,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		s += 13;
 		// skip whitespace
 		for ( ; *s && is_wspace_a(*s) ; s++ );
-		// long long
+		// int64_t
 		char *rsvp_status = s;
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;
@@ -1342,7 +1342,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		if ( strncmp ( s, "<start_time>" , 12 ) ) break;
 		// skip that
 		s += 12;
-		// long long
+		// int64_t
 		long start_time = (unsigned long)(atoll ( s ));
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;		
@@ -1453,23 +1453,23 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 /////////////////////////////////////
 
 // high priority queue for ppl that login
-long long g_fbq1   [100];
+int64_t g_fbq1   [100];
 collnum_t g_colls1 [100];
 long      g_n1 = 0;
 // low priority queue for passive facebookdb scanning
-//long long g_fbq2   [100];
+//int64_t g_fbq2   [100];
 //collnum_t g_colls2 [100];
 //long      g_n2 = 0;
 // used for queue
 Msgfb g_msgfb;
 
-bool isInQueue ( long long fbId , collnum_t collnum ) {
+bool isInQueue ( int64_t fbId , collnum_t collnum ) {
 	for ( long i = 0 ; i < g_n1 ; i++ ) 
 		if ( g_fbq1 [ i ] == fbId ) return true;
 	return false;
 }
 
-bool queueFBId ( long long fbId , collnum_t collnum ) {
+bool queueFBId ( int64_t fbId , collnum_t collnum ) {
 	// skip matt wells for now
 	//if ( fbId == 100003532411011LL ) {
 	//	log("facebook: skipping matt wells in queue");
@@ -1500,7 +1500,7 @@ static void doneProcessingWrapper ( void *state ) {
 	log("facebook: done with queue for fbid=%llu. error=%s",
 	    g_fbq1[0],mstrerror(err));
 	// save it for potential re-add
-	//long long fsaved = g_fbq1  [0];
+	//int64_t fsaved = g_fbq1  [0];
 	//collnum_t csaved = g_colls1[0];
 	// shift queue down
 	for ( long i = 1 ; i < g_n1 ; i++ ) {
@@ -1540,7 +1540,7 @@ void queueSleepWrapper ( int fd, void *state ) {
 	// return if all out and no more to put out
 	if ( g_n1 <= g_numOut ) return;
 	// get the next fbid
-	long long fbId = g_fbq1[g_numOut];
+	int64_t fbId = g_fbq1[g_numOut];
 	// get one not in use
 	Msgfb *mfb = NULL;
 	for ( long i = 0 ; i < NUM_MSGFBS ; i++ ) {
@@ -1551,7 +1551,7 @@ void queueSleepWrapper ( int fd, void *state ) {
 	// return if all in progress. how can this be?
 	if ( ! mfb ) return;
 	// get the fbid
-	//long long fbId    = g_fbq1[0];
+	//int64_t fbId    = g_fbq1[0];
 	//collnum_t collnum = g_colls1[0];
 	// inc this now!
 	g_numOut++;
@@ -1582,10 +1582,10 @@ static SafeBuf s_tbuf2;
 static long s_ptr1 = 0; // facebook dictionary query cursor
 static long s_ptr2 = 0; // facebook location query cursor
 static long s_ptr3 = 0; // stubhub cursor
-static long long s_ptr4 = 0; // eventbrite cursor
-static long long s_ptr5 = 0; // local facebookdb scanner cursor
+static int64_t s_ptr4 = 0; // eventbrite cursor
+static int64_t s_ptr5 = 0; // local facebookdb scanner cursor
 static long      s_holdOffStubHubTill = 0;
-static long long s_lastEventBriteEventId = 0;
+static int64_t s_lastEventBriteEventId = 0;
 static long      s_eventBriteWaitUntil = 0;
 static long      s_localWaitUntil = 0;
 
@@ -1617,7 +1617,7 @@ void Msgfb::queueLoop ( ) {
 
 	if ( m_phase == 0 ) {
 		// do not reset this!
-		long long saved = m_fbId;
+		int64_t saved = m_fbId;
 		// make sure this is empty and ready to go
 		reset();
 		// re-establish this
@@ -2330,7 +2330,7 @@ void Msgfb::queueLoop ( ) {
 		char *content    = m_fullReply.getBufStart();
 		long  contentLen = m_fullReply.length();
 		// sanity
-		long long origFbId = m_fbId;
+		int64_t origFbId = m_fbId;
 		// is this messing up our Msgfb::m_fbId???
 		if ( ! setFBRecFromFQLReply(content,contentLen,&m_fbrecGen)) {
 			log("fql: error setting fb rec from fql");
@@ -2409,7 +2409,7 @@ void Msgfb::queueLoop ( ) {
 		// did we add any?
 		bool printed = false;
 		// shortcut
-		long long *eids = (long long *)m_eidBuf.getBufStart();
+		int64_t *eids = (int64_t *)m_eidBuf.getBufStart();
 		// list some eids here
 		for ( long i = m_eventStartNum ; 
 		      i < max &&
@@ -2596,7 +2596,7 @@ void Msgfb::queueLoop ( ) {
 			}
 
 			if ( ! ep ) continue;
-			long long eid = strtoull ( ep , NULL , 10 );
+			int64_t eid = strtoull ( ep , NULL , 10 );
 			if ( eid == 0 ) continue;
 			if ( eid < 0 ) log("facebook: wtf? eid is 0");
 
@@ -2648,7 +2648,7 @@ void Msgfb::queueLoop ( ) {
 	recallInject:
 		char *coll = g_collectiondb.getColl ( m_collnum );
 		char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
-		long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
+		int64_t  *eventIds  = (int64_t *)m_evIdsBuf.getBufStart();
 		// get ptr to it
 		char *content    = eventPtrs[m_i];
 		long  contentLen = gbstrlen(content);
@@ -2832,7 +2832,7 @@ void Msgfb::queueLoop ( ) {
 		s_ptr4 = s_lastEventBriteEventId;
 
 		// save it for potential re-add
-		//long long fsaved = g_fbq1  [0];
+		//int64_t fsaved = g_fbq1  [0];
 		//collnum_t csaved = g_colls1[0];
 		// shift queue down
 		for ( long i = 1 ; i < g_n1 ; i++ ) {
@@ -2853,7 +2853,7 @@ void Msgfb::queueLoop ( ) {
 	// this will purge fullreply
 	reset();
 	// save it for potential re-add
-	long long fsaved = g_fbq1  [0];
+	int64_t fsaved = g_fbq1  [0];
 	collnum_t csaved = g_colls1[0];
 	// shift queue down
 	for ( long i = 1 ; i < g_n1 ; i++ ) {
@@ -2872,8 +2872,8 @@ void Msgfb::queueLoop ( ) {
 }
 
 // . these are ptrs to likedb records
-// . these first long long is the least significant
-// . the 2nd long long is more
+// . these first int64_t is the least significant
+// . the 2nd int64_t is more
 int likedbCmp ( const void *a , const void *b ) {
 	const key192_t *k1 = (key192_t *)a;
 	const key192_t *k2 = (key192_t *)b;
@@ -2899,7 +2899,7 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 	if ( m_i-1 < 0 ) { char *xx=NULL;*xx=0; }
 	// shortcuts
 	XmlDoc *xd = &msg7->m_xd;
-	long long docId = xd->m_docId;
+	int64_t docId = xd->m_docId;
 	// none if no events!
 	if ( ! xd->size_eventData ) return true;
 	if ( ! xd->m_eventDataValid ) return true;
@@ -2917,9 +2917,9 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 	uint64_t evh64 = ed->m_eventHash64;
 	// shortcuts
 	//char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
-	long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
+	int64_t  *eventIds  = (int64_t *)m_evIdsBuf.getBufStart();
 	// what facebook eventid did we just inject?
-	long long eid = eventIds[m_i-1];
+	int64_t eid = eventIds[m_i-1];
 	long count = 0;
 	SafeBuf tmpBuf;
 	if ( ! tmpBuf.reserve ( 50 ) ) return false;
@@ -2939,7 +2939,7 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 		// skip empties
 		if ( ! m_likedbTable.m_flags[i] ) continue;
 		// get the record in there
-		long long *eid2 = (long long *)m_likedbTable.getKeyFromSlot(i);
+		int64_t *eid2 = (int64_t *)m_likedbTable.getKeyFromSlot(i);
 		// skip if not a match
 		if ( *eid2 != eid ) continue;
 		// the data is a key that we made above
@@ -2949,7 +2949,7 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 		if ( g_conf.m_logDebugFacebook )
 			log("facebook: makerec uid=%lli",lts->m_uid);
 		// assume they "like" it
-		long long value = 1LL;
+		int64_t value = 1LL;
 		// unless it is "negative"
 		//if ( negative ) value = 0LL;
 		// make the flags
@@ -3048,7 +3048,7 @@ static void gotRecWrapper ( void *state ) {
 }
 
 // get it from facebookdb
-bool Msgfb::processFBId ( long long fbId , 
+bool Msgfb::processFBId ( int64_t fbId , 
 			  collnum_t collnum,
 			  void *state , 
 			  void (* callback) (void *) ) {
@@ -3407,7 +3407,7 @@ bool Msgfb::downloadEvents ( ) {
 			  );
 
 	// list all the new event ids here
-	//long long *newIds = (long long *)m_eidBuf.getBufStart();
+	//int64_t *newIds = (int64_t *)m_eidBuf.getBufStart();
 	//long       n      = m_eidBuf.length() / 8;
 	//bool firstOne = true;
 	//for ( long i = 0 ; i < n ; i++ ) {
@@ -3557,7 +3557,7 @@ bool Msgfb::injectFBEvents ( TcpSocket *s ) {
 		// try to get event id
 		char *ep = strstr ( start, "<eid>");
 		if ( ! ep ) continue;
-		long long eid = strtoull ( ep + 5 , NULL , 10 );
+		int64_t eid = strtoull ( ep + 5 , NULL , 10 );
 		if ( eid == 0 ) continue;
 		if ( eid < 0 ) log("facebook: wtf? eid is 0");
 		// store it
@@ -3598,7 +3598,7 @@ bool Msgfb::doInjectionLoop ( ) {
 	char *coll = g_collectiondb.getColl ( m_collnum );
 
 	char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
-	long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
+	int64_t  *eventIds  = (int64_t *)m_evIdsBuf.getBufStart();
 
 	for ( ; m_i < m_numEvents ;) {
 		// get ptr to it
@@ -3745,7 +3745,7 @@ bool Msgfb::addLikes ( ) { // doneInjecting ( ) {
 
 	// extract info from state
 	//TcpSocket *s = m_msg7->m_socket;
-	//long long docId  = xd->m_docId;
+	//int64_t docId  = xd->m_docId;
 	//long      hostId = 0;//msg7->m_msg7.m_hostId;
 
 	char *coll = g_collectiondb.getColl ( m_collnum );
@@ -3800,8 +3800,8 @@ void Likedb::reset() {
 
 bool Likedb::init ( ) {
 
-	long long uid = 123456789123LL;
-	long long docId = 999888777666LL;
+	int64_t uid = 123456789123LL;
+	int64_t docId = 999888777666LL;
 	long eventId = 12345;
 	long rsvp_status = LF_GOING;//|LF_HIDE;
 	long start_time = 6543210;
@@ -3816,7 +3816,7 @@ bool Likedb::init ( ) {
 					 eventHash64 ,
 					 value );
 	char *p = recs;
-	long long uid2 = g_likedb.getUserIdFromRec ( p );
+	int64_t uid2 = g_likedb.getUserIdFromRec ( p );
 	if ( uid2 != uid ) { char *xx=NULL;*xx=0; }
 	long flags = g_likedb.getFlagsFromRec ( p );
 	if ( flags != rsvp_status ) { char *xx=NULL;*xx=0; }
@@ -3922,13 +3922,13 @@ void Likedb::setEventId ( char *rec , long eventId ) {
 // use our docid/eventid because that is what we use in datedb when
 // doing a search. the docid and eventid should be returned by the msg7
 // inject reply.
-char *Likedb::makeRecs ( long long  uid         ,
-			 long long  docId       ,
+char *Likedb::makeRecs ( int64_t  uid         ,
+			 int64_t  docId       ,
 			 long       eventId     ,
 			 long       start_time  ,
 			 long       rsvp_status ,
 			 uint64_t eventHash64 ,
-			 long long  value       ) {
+			 int64_t  value       ) {
 	// sanity
 	if ( rsvp_status & LF_TYPEBIT ) { char *xx=NULL;*xx=0; }
 	if ( rsvp_status & LF_DELBIT  ) { char *xx=NULL;*xx=0; }
@@ -3985,7 +3985,7 @@ char *Likedb::makeRecs ( long long  uid         ,
 	*(long *)p = eventHash32;
 	p += 4;
 	// then the value
-	*(long long *)p = value;
+	*(int64_t *)p = value;
 	p += 8;
 
 
@@ -4004,14 +4004,14 @@ char *Likedb::makeRecs ( long long  uid         ,
 	*(long *)p = eventHash32;
 	p += 4;
 	// then the value
-	*(long long *)p = value;
+	*(int64_t *)p = value;
 	p += 8;
 	
 	return s_buf;
 }
 
 // make a "type 2" key (docid leads)
-key192_t Likedb::makeStartKey ( long long docId, long eventId ) {
+key192_t Likedb::makeStartKey ( int64_t docId, long eventId ) {
 	key192_t k;
 	// reset
 	k.n2 = docId;
@@ -4028,7 +4028,7 @@ key192_t Likedb::makeStartKey ( long long docId, long eventId ) {
 }
 
 // make a "type 2" key (docid leads)
-key192_t Likedb::makeEndKey ( long long docId, long eventId ) {
+key192_t Likedb::makeEndKey ( int64_t docId, long eventId ) {
 	key192_t k;
 	// reset
 	k.n2 = docId;
@@ -4044,19 +4044,19 @@ key192_t Likedb::makeEndKey ( long long docId, long eventId ) {
 	return k;
 }
 
-long long Likedb::getUserIdFromRec ( void *rec ) {
+int64_t Likedb::getUserIdFromRec ( void *rec ) {
 	key192_t *k = (key192_t *)rec;
 	if ( k->n0 & LF_TYPEBIT ) return k->n1;
 	return k->n2;
 }
 
-long long Likedb::getDocIdFromRec ( char *rec ) {
+int64_t Likedb::getDocIdFromRec ( char *rec ) {
 	key192_t *k = (key192_t *)rec;
 	if ( k->n0 & LF_TYPEBIT ) return k->n2 >> 26;
 	return k->n1 >> 26;
 }
 
-key192_t Likedb::makeStartKey2 ( long long uid ) {
+key192_t Likedb::makeStartKey2 ( int64_t uid ) {
 	key192_t k;
 	k.n2 = uid;
 	k.n1 = 0;
@@ -4068,8 +4068,8 @@ key192_t Likedb::makeStartKey2 ( long long uid ) {
 // . similar to facebook's event_members table, but uses our technology
 // . use Rdb, but prohibit from dumping to disk! must always be in tree.
 // . add this to likedb (or remove if "neg" is true.
-bool Msgfc::addLikedbTag ( long long userId ,
-			   long long docId,
+bool Msgfc::addLikedbTag ( int64_t userId ,
+			   int64_t docId,
 			   long      gbeventId,
 			   uint64_t eventHash64 ,
 			   long start_time,
@@ -4087,7 +4087,7 @@ bool Msgfc::addLikedbTag ( long long userId ,
 	long size = (long)LIKEDB_RECSIZE*2;
 	long count = 0;
 	//long eventHash32 = (long)((uint64_t)eventHash64);
-	long long value = 1LL;
+	int64_t value = 1LL;
 	if ( negative ) value = 0LL;
 
 	//if ( eventHash == 0 || eventHash32 == -1 ) { char *xx=NULL;*xx=0;}
@@ -4156,7 +4156,7 @@ bool Msgfc::addLikedbTag ( long long userId ,
 	return true;
 }
 
-long Likedb::getUserFlags ( long long userId , 
+long Likedb::getUserFlags ( int64_t userId , 
 			    long start_time ,
 			    char *list, 
 			    long listSize ) {
@@ -4168,12 +4168,12 @@ long Likedb::getUserFlags ( long long userId ,
 	long  flags = 0;
 	for ( ; p < pend ; p += LIKEDB_RECSIZE ) {
 		// check for matching userid
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		if ( uid != userId ) continue;
 		// got it
 		long ff = g_likedb.getFlagsFromRec ( p );
 		// get value
-		long long val = g_likedb.getValueFromRec ( p );
+		int64_t val = g_likedb.getValueFromRec ( p );
 		// skip if 0, that means unset!
 		if ( ! val ) continue;
 		// restrict to just this instance of its a "GOING" flag
@@ -4193,7 +4193,7 @@ long Likedb::getPositiveFlagsFromRec  ( char *rec ) {
 	return flags;
 }
 
-char *Likedb::getRecFromLikedbList ( long long userId ,
+char *Likedb::getRecFromLikedbList ( int64_t userId ,
 				     long start_time ,
 				     long flags , 
 				     char *list ,
@@ -4205,14 +4205,14 @@ char *Likedb::getRecFromLikedbList ( long long userId ,
 	char *pend  = list + listSize;
 	for ( ; p < pend ; p += LIKEDB_RECSIZE ) {
 		// check for matching userid
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		if ( uid != userId ) continue;
 		// got it
 		long ff = g_likedb.getFlagsFromRec ( p );
 		// must match
 		if ( ! ( ff & flags) ) continue;
 		// get value
-		long long val = g_likedb.getValueFromRec ( p );
+		int64_t val = g_likedb.getValueFromRec ( p );
 		// skip if 0, that means unset!
 		if ( ! val ) continue;
 		// restrict to just this instance of its a "GOING" flag
@@ -4350,7 +4350,7 @@ bool Msgfb::addedFBEvent ( TcpSocket *s ) {
 		return true;
 	}
 
-	long long eid = strtoull(p,NULL,10);
+	int64_t eid = strtoull(p,NULL,10);
 
 	// add it to likedb as being in facebook now!
 	char flags = LF_ADDEDTOFACEBOOK;
@@ -4607,7 +4607,7 @@ bool Emailer::emailScan ( EmailState *es ) {
 		return true;
 	}
 	// save id
-	long long fbId = kp->n0;
+	int64_t fbId = kp->n0;
 	// nuke that node
 	m_emailTree.deleteNode ( n , true );
 	// . ok launch an email. pass in the facebook id
@@ -4647,7 +4647,7 @@ static void gotPageToEmailWrapper ( void *state ) {
 	em->emailScan( es );
 }
 
-bool Emailer::launchEmail ( long long fbId ) {
+bool Emailer::launchEmail ( int64_t fbId ) {
 
 	// we need an email state now!
 	EmailState *es = NULL;
@@ -5131,7 +5131,7 @@ bool Emailer::doneAddingEmailedLikes ( EmailState *es ) {
 ////////////
 
 // need to set EmailState::m_fbId, m_emailResultsBuf
-bool Emailer::sendSingleEmail (  EmailState *es , long long fbId ) {
+bool Emailer::sendSingleEmail (  EmailState *es , int64_t fbId ) {
 
 	es->m_sendSingleEmail = true;
 	// claim it
@@ -5758,11 +5758,11 @@ bool loadQueryLoopState ( ) {
 	if ( p >= pend ) goto done;
 	s_holdOffStubHubTill = *(long *)p; p += 4;
 	if ( p >= pend ) goto done;
-	s_ptr4 = *(long long *)p; p += 8;
+	s_ptr4 = *(int64_t *)p; p += 8;
 	s_eventBriteWaitUntil = *(long *)p; p += 4;
 	// local scan
 	if ( p >= pend ) goto done;
-	s_ptr5           = *(long long *)p; p += 8;
+	s_ptr5           = *(int64_t *)p; p += 8;
 	s_localWaitUntil = *(long      *)p; p += 4;
  done:
 	log("facebook: loaded fbloop.dat. "

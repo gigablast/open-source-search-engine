@@ -119,8 +119,8 @@ bool Sections::set ( Words     *w                       ,
 		     Phrases   *phrases                 ,
 		     Bits      *bits                    ,
 		     Url       *url                     ,
-		     long long  docId                   ,
-		     long long  siteHash64              ,
+		     int64_t  docId                   ,
+		     int64_t  siteHash64              ,
 		     char      *coll                    ,
 		     long       niceness                ,
 		     void      *state                   ,
@@ -165,7 +165,7 @@ bool Sections::set ( Words     *w                       ,
 	if ( w->getNumWords() <= 0 ) return true;
 
 	// shortcuts
-	long long   *wids  = w->getWordIds  ();
+	int64_t   *wids  = w->getWordIds  ();
 	nodeid_t    *tids  = w->getTagIds   ();
 	long           nw  = w->getNumWords ();
 	char      **wptrs  = w->getWords    ();
@@ -983,13 +983,13 @@ bool Sections::set ( Words     *w                       ,
 		// store that
 		sn->m_tagHash = eh;
 		// what kid # are we for this particular parent?
-		long occNum = m_ot.getScore ( (long long *)&eh );
+		long occNum = m_ot.getScore ( (int64_t *)&eh );
 		// save our kid #
 		sn->m_occNum = occNum;
 		// inc it for the next guy
 		occNum++;
 		// store back. return true with g_errno set on error
-		if ( ! m_ot.addTerm ( (long long *)&eh ) ) return true;
+		if ( ! m_ot.addTerm ( (int64_t *)&eh ) ) return true;
 		*/
 		
 		
@@ -1151,7 +1151,7 @@ bool Sections::set ( Words     *w                       ,
 		// skip back tags
 		if ( *p == '/' ) continue;
 		// reset hash
-		long long xh = 0;
+		int64_t xh = 0;
 		// and hash char count
 		unsigned char cnt = 0;
 		// hash till space or / or >
@@ -1355,7 +1355,7 @@ bool Sections::set ( Words     *w                       ,
 		//if ( tid == TAG_A &&
 		//     !(sn->m_flags & SEC_SENTENCE) ) { char *xx=NULL;*xx=0; }
 		// use a modified tid as the tag hash?
-		long long mtid = tid;
+		int64_t mtid = tid;
 		// custom xml tag, hash the tag itself
 		if ( tid == TAG_XMLTAG )
 			mtid = hash32 ( wptrs[ws], wlens[ws] );
@@ -1478,7 +1478,7 @@ bool Sections::set ( Words     *w                       ,
 		//   that is kind of what "class" is used for
 		//
 		// use this = "Class" tid
-		long long ctid = tid;
+		int64_t ctid = tid;
 		// get ptr
 		uint8_t *p = (uint8_t *)wptrs[ws];
 		// skip <
@@ -2010,7 +2010,7 @@ bool Sections::set ( Words     *w                       ,
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// sanity check
-		long long sc64 = sn->m_sentenceContentHash64;
+		int64_t sc64 = sn->m_sentenceContentHash64;
 		if ( ! sc64 ) { char *xx=NULL;*xx=0; }
 		// propagate it upwards
 		Section *p = sn;
@@ -2029,7 +2029,7 @@ bool Sections::set ( Words     *w                       ,
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// sanity check
-		long long sc64 = sn->m_sentenceContentHash64;
+		int64_t sc64 = sn->m_sentenceContentHash64;
 		if ( ! sc64 ) { char *xx=NULL;*xx=0; }
 		// propagate it upwards
 		Section *p = sn->m_parent;
@@ -3109,13 +3109,13 @@ bool initPlaceIndicatorTable ( ) {
 	for ( long i = 0 ; i < n ; i++ ) {
 		// set words
 		char *s = s_pindicators[i];
-		long long h = hash64n(s);
+		int64_t h = hash64n(s);
 		s_pit.addKey ( &h );
 	}
 	return true;
 }
 
-bool isPlaceIndicator ( long long *widp ) {
+bool isPlaceIndicator ( int64_t *widp ) {
 	if ( ! s_init9 ) initPlaceIndicatorTable();
 	return s_pit.isInTable ( widp );
 }
@@ -3962,7 +3962,7 @@ void initGenericTable ( long niceness ) {
 	for ( long i = 0 ; i < n ; i++ ) {
 		char      *w    = s_ignore[i];
 		long       wlen = gbstrlen ( w );
-		long long  h    = hash64Lower_utf8 ( w , wlen );
+		int64_t  h    = hash64Lower_utf8 ( w , wlen );
 		if ( ! s_igt.addKey (&h) ) { char *xx=NULL;*xx=0; }
 	}
 }
@@ -3975,12 +3975,12 @@ bool Sections::setSentFlagsPart1 ( ) {
 	// shortcut
 	wbit_t *bits = m_bits->m_bits;
 
-	static long long h_i;
-	static long long h_com;
-	static long long h_org;
-	static long long h_net;
-	static long long h_pg;
-	static long long h_pg13;
+	static int64_t h_i;
+	static int64_t h_com;
+	static int64_t h_org;
+	static int64_t h_net;
+	static int64_t h_pg;
+	static int64_t h_pg13;
 	static bool s_init38 = false;
 	if ( ! s_init38 ) {
 		s_init38 = true;
@@ -4125,164 +4125,164 @@ bool Sections::setSentFlagsPart1 ( ) {
 bool Sections::setSentFlagsPart2 ( ) {
 
 	static bool s_init2 = false;
-	static long long h_close ;
-	static long long h_send ;
-	static long long h_map ;
-	static long long h_maps ;
-	static long long h_directions ;
-	static long long h_driving ;
-	static long long h_help ;
-	static long long h_more ;
-	static long long h_log ;
-	static long long h_sign ;
-	static long long h_login ;
-	static long long h_back ;
-	static long long h_change ;
-	static long long h_write ;
-	static long long h_save ;
-	static long long h_share ;
-	static long long h_forgot ;
-	static long long h_home ;
-	static long long h_hours;
-	static long long h_sitemap ;
-	static long long h_advanced ;
-	static long long h_go ;
-	static long long h_website ;
-	static long long h_view;
-	static long long h_add;
-	static long long h_submit;
-	static long long h_get;
-	static long long h_subscribe;
-	static long long h_loading;
-	static long long h_last;
-	static long long h_modified;
-	static long long h_updated;
-	static long long h_special;
-	static long long h_guest ;
-	static long long h_guests ;
-	static long long h_directed;
-	static long long h_venue ;
-	static long long h_instructor ;
-	static long long h_general; 
-	static long long h_information; 
-	static long long h_info ;
-	static long long h_i ;
-	static long long h_what ;
-	static long long h_who ;
-	static long long h_tickets; 
-	static long long h_support ;
-	static long long h_featuring;
-	static long long h_presents;
-	static long long h_phone;
-	static long long h_usa;
-	static long long h_relevancy; // sort by option
-	static long long h_buy;
-	static long long h_where;
-	static long long h_when;
-	static long long h_contact;
-	static long long h_description;
-	static long long h_location;
-	static long long h_located;
-	static long long h_of;
-	static long long h_the;
-	static long long h_and;
-	static long long h_at;
-	static long long h_to;
-	static long long h_be;
-	static long long h_or;
-	static long long h_not;
-	static long long h_in;
-	static long long h_on;
-	static long long h_for;
-	static long long h_with;
-	static long long h_from;
-	static long long h_click;
-	static long long h_here;
-	static long long h_new;
-	static long long h_free;
-	static long long h_title;
-	static long long h_event;
-	static long long h_adv;
-	static long long h_dos;
-	static long long h_advance;
-	static long long h_day;
-	static long long h_show;
-	static long long h_box;
-	static long long h_office;
-	static long long h_this;
-	static long long h_week;
-	static long long h_tonight;
-	static long long h_today;
-	static long long h_http;
-	static long long h_https;
-	static long long h_claim;
-	static long long h_it;
-	static long long h_upcoming;
-	static long long h_events;
-	static long long h_is;
-	static long long h_your;
-	static long long h_user;
-	static long long h_reviews;
-	static long long h_comments;
-	static long long h_bookmark;
-	static long long h_creator;
-	static long long h_tags;
-	static long long h_repeats;
-	static long long h_feed;
-	static long long h_readers;
-	static long long h_no;
-	static long long h_rating;
-	static long long h_publish;
-	static long long h_category;
-	static long long h_genre;
-	static long long h_type;
-	static long long h_price;
-	static long long h_rate;
-	static long long h_rates;
-	static long long h_users;
+	static int64_t h_close ;
+	static int64_t h_send ;
+	static int64_t h_map ;
+	static int64_t h_maps ;
+	static int64_t h_directions ;
+	static int64_t h_driving ;
+	static int64_t h_help ;
+	static int64_t h_more ;
+	static int64_t h_log ;
+	static int64_t h_sign ;
+	static int64_t h_login ;
+	static int64_t h_back ;
+	static int64_t h_change ;
+	static int64_t h_write ;
+	static int64_t h_save ;
+	static int64_t h_share ;
+	static int64_t h_forgot ;
+	static int64_t h_home ;
+	static int64_t h_hours;
+	static int64_t h_sitemap ;
+	static int64_t h_advanced ;
+	static int64_t h_go ;
+	static int64_t h_website ;
+	static int64_t h_view;
+	static int64_t h_add;
+	static int64_t h_submit;
+	static int64_t h_get;
+	static int64_t h_subscribe;
+	static int64_t h_loading;
+	static int64_t h_last;
+	static int64_t h_modified;
+	static int64_t h_updated;
+	static int64_t h_special;
+	static int64_t h_guest ;
+	static int64_t h_guests ;
+	static int64_t h_directed;
+	static int64_t h_venue ;
+	static int64_t h_instructor ;
+	static int64_t h_general; 
+	static int64_t h_information; 
+	static int64_t h_info ;
+	static int64_t h_i ;
+	static int64_t h_what ;
+	static int64_t h_who ;
+	static int64_t h_tickets; 
+	static int64_t h_support ;
+	static int64_t h_featuring;
+	static int64_t h_presents;
+	static int64_t h_phone;
+	static int64_t h_usa;
+	static int64_t h_relevancy; // sort by option
+	static int64_t h_buy;
+	static int64_t h_where;
+	static int64_t h_when;
+	static int64_t h_contact;
+	static int64_t h_description;
+	static int64_t h_location;
+	static int64_t h_located;
+	static int64_t h_of;
+	static int64_t h_the;
+	static int64_t h_and;
+	static int64_t h_at;
+	static int64_t h_to;
+	static int64_t h_be;
+	static int64_t h_or;
+	static int64_t h_not;
+	static int64_t h_in;
+	static int64_t h_on;
+	static int64_t h_for;
+	static int64_t h_with;
+	static int64_t h_from;
+	static int64_t h_click;
+	static int64_t h_here;
+	static int64_t h_new;
+	static int64_t h_free;
+	static int64_t h_title;
+	static int64_t h_event;
+	static int64_t h_adv;
+	static int64_t h_dos;
+	static int64_t h_advance;
+	static int64_t h_day;
+	static int64_t h_show;
+	static int64_t h_box;
+	static int64_t h_office;
+	static int64_t h_this;
+	static int64_t h_week;
+	static int64_t h_tonight;
+	static int64_t h_today;
+	static int64_t h_http;
+	static int64_t h_https;
+	static int64_t h_claim;
+	static int64_t h_it;
+	static int64_t h_upcoming;
+	static int64_t h_events;
+	static int64_t h_is;
+	static int64_t h_your;
+	static int64_t h_user;
+	static int64_t h_reviews;
+	static int64_t h_comments;
+	static int64_t h_bookmark;
+	static int64_t h_creator;
+	static int64_t h_tags;
+	static int64_t h_repeats;
+	static int64_t h_feed;
+	static int64_t h_readers;
+	static int64_t h_no;
+	static int64_t h_rating;
+	static int64_t h_publish;
+	static int64_t h_category;
+	static int64_t h_genre;
+	static int64_t h_type;
+	static int64_t h_price;
+	static int64_t h_rate;
+	static int64_t h_rates;
+	static int64_t h_users;
 
-	static long long h_date ;
-	static long long h_time ;
-	static long long h_other ;
-	static long long h_future ;
-	static long long h_dates ;
-	static long long h_times ;
-	static long long h_hide ;
-	static long long h_print ;
-	static long long h_powered;
-	static long long h_provided;
-	static long long h_admission;
-	static long long h_by;
-	static long long h_com;
-	static long long h_org;
-	static long long h_net;
-	static long long h_pg;
-	static long long h_pg13;
+	static int64_t h_date ;
+	static int64_t h_time ;
+	static int64_t h_other ;
+	static int64_t h_future ;
+	static int64_t h_dates ;
+	static int64_t h_times ;
+	static int64_t h_hide ;
+	static int64_t h_print ;
+	static int64_t h_powered;
+	static int64_t h_provided;
+	static int64_t h_admission;
+	static int64_t h_by;
+	static int64_t h_com;
+	static int64_t h_org;
+	static int64_t h_net;
+	static int64_t h_pg;
+	static int64_t h_pg13;
 
-	static long long h_a;
-	static long long h_use;
-	static long long h_search;
-	static long long h_find;
-	static long long h_school;
-	static long long h_shop;
-	static long long h_gift;
-	static long long h_gallery;
-	static long long h_library;
-	static long long h_photo;
-	static long long h_image;
-	static long long h_picture;
-	static long long h_video;
-	static long long h_media;
-	static long long h_copyright;
-	static long long h_review;
-	static long long h_join;
-	static long long h_request;
-	static long long h_promote;
-	static long long h_open;
-	static long long h_house;
-	static long long h_million;
-	static long long h_billion;
-	static long long h_thousand;
+	static int64_t h_a;
+	static int64_t h_use;
+	static int64_t h_search;
+	static int64_t h_find;
+	static int64_t h_school;
+	static int64_t h_shop;
+	static int64_t h_gift;
+	static int64_t h_gallery;
+	static int64_t h_library;
+	static int64_t h_photo;
+	static int64_t h_image;
+	static int64_t h_picture;
+	static int64_t h_video;
+	static int64_t h_media;
+	static int64_t h_copyright;
+	static int64_t h_review;
+	static int64_t h_join;
+	static int64_t h_request;
+	static int64_t h_promote;
+	static int64_t h_open;
+	static int64_t h_house;
+	static int64_t h_million;
+	static int64_t h_billion;
+	static int64_t h_thousand;
 
 	if ( ! s_init2 ) {
 		s_init2 = true;
@@ -4527,8 +4527,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 			// set words
 			char *s = s_titleFields[i];
 			Words w; w.set3 ( s );
-			long long *wi = w.getWordIds();
-			long long h = 0;
+			int64_t *wi = w.getWordIds();
+			int64_t h = 0;
 			// scan words
 			for ( long j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
@@ -4567,8 +4567,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 		for ( long i = 0 ; i < n ; i++ ) {
 			// set words
 			Words w; w.set3 ( s_exceptPhrases[i] );
-			long long *wi = w.getWordIds();
-			long long h = 0;
+			int64_t *wi = w.getWordIds();
+			int64_t h = 0;
 			// scan words
 			for ( long j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
@@ -4591,7 +4591,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// skip if no text
 		//if ( ! si->m_contentHash ) continue;
 		// get content hash
-		long long ch64 = si->m_contentHash64;
+		int64_t ch64 = si->m_contentHash64;
 		// fix for sentences
 		if ( ch64 == 0 ) ch64 = si->m_sentenceContentHash64;
 		// if not there in either one, skip it
@@ -4599,7 +4599,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// combine the tag hash with the content hash #2 because
 		// a lot of times it is repeated in like a different tag like
 		// the title tag
-		long long modified = si->m_tagHash ^ ch64;
+		int64_t modified = si->m_tagHash ^ ch64;
 		// store it. return false with g_errno set on error
 		if ( ! cht.addTerm ( &modified ) ) return false;
 	}
@@ -4766,7 +4766,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 			// skip doors or show, etc.
 			if ( s_igt.isInTable(&m_wids[j]) ) {
 				// see if phrase is an exception
-				long long h = m_wids[j];
+				int64_t h = m_wids[j];
 				long wcount = 1;
 				bool hadException = false;
 				for ( long k = j + 1 ; k < sentb ; k++ ) {
@@ -4853,7 +4853,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		//   if we set this SENT_INNONTITLEFIELD for this sentence
 		//
 		////////////////
-		long long h = 0;
+		int64_t h = 0;
 		long wcount = 0;
 		// scan BACKWARDS
 		for ( long i = sentb - 1 ; i >= senta ; i-- ) {
@@ -5037,7 +5037,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// SENT_STRANGE_PUNCT etc.
 		//
 		///////////////////
-		long long lastWid = 0LL;
+		int64_t lastWid = 0LL;
 		for ( long i = senta ; i < sentb ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
@@ -5154,7 +5154,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 				hadDollar = false;
 			} 
 
-			long long savedWid = lastWid;
+			int64_t savedWid = lastWid;
 			lastWid = m_wids[i];
 
 			// skip if not ours directly
@@ -5802,7 +5802,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		}
 		*/
 
-		long long ch64 = si->m_contentHash64;
+		int64_t ch64 = si->m_contentHash64;
 		// fix for sentences
 		if ( ch64 == 0 ) ch64 = si->m_sentenceContentHash64;
 		// must be there
@@ -5810,7 +5810,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// combine the tag hash with the content hash #2 because
 		// a lot of times it is repeated in like a different tag like
 		// the title tag
-		long long modified = si->m_tagHash ^ ch64;
+		int64_t modified = si->m_tagHash ^ ch64;
 		// repeat on page?
 		// hurts "5:30-7pm Beginning African w/ Romy" which is
 		// legit and repeated for different days of the week for
@@ -6101,7 +6101,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 			if ( ! is_digit(m_wptrs[last][0]))  break;
 		}
 		// make a phrase wid for "night club"
-		long long pid = 0LL;
+		int64_t pid = 0LL;
 		for ( long k = last - 1 ; k >= si->m_senta ; k-- ) {
 			QUICKPOLL(m_niceness);
 			if ( ! m_wids[k] ) continue;
@@ -6252,8 +6252,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 			// set words
 			char *s = s_starters[i];
 			Words w; w.set3 ( s );
-			long long *wi = w.getWordIds();
-			long long h = 0;
+			int64_t *wi = w.getWordIds();
+			int64_t h = 0;
 			// scan words
 			for ( long j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
@@ -6352,7 +6352,7 @@ long hasTitleWords ( sentflags_t sflags ,
 	if ( ! s_init9 ) initPlaceIndicatorTable();
 
 
-	long long *wids = words->getWordIds();
+	int64_t *wids = words->getWordIds();
 	nodeid_t *tids = words->getTagIds();
 	char **wptrs = words->getWords();
 	long *wlens = words->getWordLens();
@@ -6364,54 +6364,54 @@ long hasTitleWords ( sentflags_t sflags ,
 	if ( bitsClass ) bits = bitsClass->m_bits;
 
 	static bool s_flag = false;
-	static long long h_annual;
-	static long long h_anniversary;
-	static long long h_next;
-	static long long h_past;
-	static long long h_future;
-	static long long h_upcoming;
-	static long long h_other;
-	static long long h_more;
-	static long long h_weekly;
-	static long long h_daily;
-	static long long h_permanent; // fix permanent exhibit for collectorsg
-	static long long h_beginning ;
-	static long long h_every ;
-	static long long h_featuring ;
-	static long long h_for ;
-	static long long h_at ;
-	static long long h_by ;
-	static long long h_on ;
-	static long long h_no ;
-	static long long h_name ;
-	static long long h_in ;
-	static long long h_sponsored;
-	static long long h_sponsered;
-	static long long h_presented;
-	static long long h_i;
-	static long long h_id;
-	static long long h_begins ;
-	static long long h_meets ;
-	static long long h_benefitting ;
-	static long long h_benefiting ;
-	static long long h_with ;
-	static long long h_starring ;
-	static long long h_experience;
-	static long long h_w ;
-	static long long h_event;
-	static long long h_band;
-	static long long h_tickets;
-	static long long h_events;
-	static long long h_jobs;
-	static long long h_this;
-	static long long h_series;
-	static long long h_total;
-	static long long h_times;
-	static long long h_purchase;
-	static long long h_look;
-	static long long h_new;
-	static long long h_us;
-	static long long h_its;
+	static int64_t h_annual;
+	static int64_t h_anniversary;
+	static int64_t h_next;
+	static int64_t h_past;
+	static int64_t h_future;
+	static int64_t h_upcoming;
+	static int64_t h_other;
+	static int64_t h_more;
+	static int64_t h_weekly;
+	static int64_t h_daily;
+	static int64_t h_permanent; // fix permanent exhibit for collectorsg
+	static int64_t h_beginning ;
+	static int64_t h_every ;
+	static int64_t h_featuring ;
+	static int64_t h_for ;
+	static int64_t h_at ;
+	static int64_t h_by ;
+	static int64_t h_on ;
+	static int64_t h_no ;
+	static int64_t h_name ;
+	static int64_t h_in ;
+	static int64_t h_sponsored;
+	static int64_t h_sponsered;
+	static int64_t h_presented;
+	static int64_t h_i;
+	static int64_t h_id;
+	static int64_t h_begins ;
+	static int64_t h_meets ;
+	static int64_t h_benefitting ;
+	static int64_t h_benefiting ;
+	static int64_t h_with ;
+	static int64_t h_starring ;
+	static int64_t h_experience;
+	static int64_t h_w ;
+	static int64_t h_event;
+	static int64_t h_band;
+	static int64_t h_tickets;
+	static int64_t h_events;
+	static int64_t h_jobs;
+	static int64_t h_this;
+	static int64_t h_series;
+	static int64_t h_total;
+	static int64_t h_times;
+	static int64_t h_purchase;
+	static int64_t h_look;
+	static int64_t h_new;
+	static int64_t h_us;
+	static int64_t h_its;
 
 	if ( ! s_flag ) {
 		s_flag = true;
@@ -7574,8 +7574,8 @@ long hasTitleWords ( sentflags_t sflags ,
 			char *s = s_twords[i];
 			// set words
 			Words w; w.set3 ( s );
-			long long *wi = w.getWordIds();
-			long long h = 0;
+			int64_t *wi = w.getWordIds();
+			int64_t h = 0;
 			// scan words
 			for ( long j = 0 ; j < w.getNumWords(); j++ ) {
 				// fix "art of" = "of art"
@@ -7602,8 +7602,8 @@ long hasTitleWords ( sentflags_t sflags ,
 	// strange punct like a colon like 
 	// "Hebrew Conversation Class: Beginning" for dailylobo.com
 	long i = a;
-	long long firstWid = 0LL;
-	long long lastWid  = 0LL;
+	int64_t firstWid = 0LL;
+	int64_t lastWid  = 0LL;
 	bool hadAnnual = false;
 	bool hadFeaturing = false;
 	bool lastWordWasDate = false;
@@ -7626,14 +7626,14 @@ long hasTitleWords ( sentflags_t sflags ,
 		// phrase, try for the two because it might be a negative!
 		// i.e. "half open"
 		if ( lastWid ) {
-			long long combo = wids[i] ^ (lastWid<<1LL);
+			int64_t combo = wids[i] ^ (lastWid<<1LL);
 			char **sp2 = (char **)s_twt.getValue ( &combo );
 			// if there use that! otherwise, leave sp alone
 			if ( sp2 ) sp = sp2;
 			if ( sp2 ) oneWordMatch = false;
 		}
 		// get next wid after us
-		long long nextWid = 0LL;
+		int64_t nextWid = 0LL;
 		for ( long k = i + 1 ; k < b ; k++ ) {
 			QUICKPOLL(niceness);
 			if ( ! wids[k] )  continue;
@@ -7642,7 +7642,7 @@ long hasTitleWords ( sentflags_t sflags ,
 		}
 		// "-getting there" to prevent "getting" from winning
 		if ( nextWid ) {
-			long long combo = (wids[i]<<1LL) ^ nextWid;
+			int64_t combo = (wids[i]<<1LL) ^ nextWid;
 			char **sp2 = (char **)s_twt.getValue ( &combo );
 			// if there use that! otherwise, leave sp alone
 			if ( sp2 ) sp = sp2;
@@ -7675,7 +7675,7 @@ long hasTitleWords ( sentflags_t sflags ,
 		//	log("hey");
 
 		// save it
-		long long savedWid = lastWid;
+		int64_t savedWid = lastWid;
 		// assign
 		lastWid = wids[i];
 		// save this
@@ -7892,7 +7892,7 @@ long hasTitleWords ( sentflags_t sflags ,
 	// . if has mixed case do not do this loop
 	if ( sflags & SENT_MIXED_CASE ) b = 0;
 	long hadNonDateWord = 0;
-	long long lastWordId = 0LL;
+	int64_t lastWordId = 0LL;
 	bool lastWordPastTense = false;
 	// loop over all words in the title
 	for ( i = a ; i < b ; i++ ) {
@@ -8023,10 +8023,10 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 	// shortcut
 	wbit_t *bits = m_bits->m_bits;
 
-	static long long h_click;
-	static long long h_here;
-	static long long h_link;
-	static long long h_the;
+	static int64_t h_click;
+	static int64_t h_here;
+	static int64_t h_link;
+	static int64_t h_the;
 	static bool s_init = false;
 	if ( ! s_init ) {
 		s_init = true;
@@ -10109,36 +10109,36 @@ bool Sections::addSentenceSections ( ) {
 	Section **sp = m_sectionPtrs;
 
 	static bool s_init = false;
-	static long long h_in;
-	static long long h_at;
-	static long long h_for;
-	static long long h_to;
-	static long long h_on;
-	static long long h_under;
-	static long long h_with;
-	static long long h_along;
-	static long long h_from;
-	static long long h_by;
-	static long long h_of;
-	static long long h_some;
-	static long long h_the;
-	static long long h_and;
-	static long long h_a;
-	static long long h_p;
-	static long long h_m;
-	static long long h_am;
-	static long long h_pm;
-	static long long h_http;
-	static long long h_https;
-	static long long h_room;
-	static long long h_rm;
-	static long long h_bldg;
-	static long long h_building;
-	static long long h_suite;
-	static long long h_ste;
-	static long long h_tags;
-	//static long long h_noon;
-	//static long long h_midnight;
+	static int64_t h_in;
+	static int64_t h_at;
+	static int64_t h_for;
+	static int64_t h_to;
+	static int64_t h_on;
+	static int64_t h_under;
+	static int64_t h_with;
+	static int64_t h_along;
+	static int64_t h_from;
+	static int64_t h_by;
+	static int64_t h_of;
+	static int64_t h_some;
+	static int64_t h_the;
+	static int64_t h_and;
+	static int64_t h_a;
+	static int64_t h_p;
+	static int64_t h_m;
+	static int64_t h_am;
+	static int64_t h_pm;
+	static int64_t h_http;
+	static int64_t h_https;
+	static int64_t h_room;
+	static int64_t h_rm;
+	static int64_t h_bldg;
+	static int64_t h_building;
+	static int64_t h_suite;
+	static int64_t h_ste;
+	static int64_t h_tags;
+	//static int64_t h_noon;
+	//static int64_t h_midnight;
 	if ( ! s_init ) {
 		s_init = true;
 		h_tags = hash64n("tags");
@@ -10213,8 +10213,8 @@ bool Sections::addSentenceSections ( ) {
 		// skip if its bad! i.e. style or script or whatever
 		if ( cs->m_flags & badFlags ) continue;
 		// set that
-		long long prevWid = m_wids[i];
-		long long prevPrevWid = 0LL;
+		int64_t prevWid = m_wids[i];
+		int64_t prevPrevWid = 0LL;
 		// flag
 		long lastWidPos = i;//-1;
 		bool lastWasComma = false;
@@ -10648,7 +10648,7 @@ bool Sections::addSentenceSections ( ) {
 
 				// set "next" to next alnum word after us
 				long next = j+1;
-				long long nwid = 0LL;
+				int64_t nwid = 0LL;
 				long max  = next + 10;
 				if ( max > m_nw ) max = m_nw;
 				for ( ; next < max ; next++ ) {
@@ -11948,11 +11948,11 @@ SectionVotingTable::SectionVotingTable ( ) {
 bool SectionVotingTable::addListOfVotes ( RdbList *list, 
 					  key128_t **lastKey ,
 					  uint32_t tagPairHash ,
-					  long long myDocId ,
+					  int64_t myDocId ,
 					  long niceness ) {
 
-	long long lastDocId = 0LL;
-	long long lastsh48 = 0LL;
+	int64_t lastDocId = 0LL;
+	int64_t lastsh48 = 0LL;
 
 	// . tally the votes
 	// . the "flags" are more significant than the tag hash because
@@ -11974,11 +11974,11 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		// treat key like a datedb key and get the taghash
 		uint32_t turkTagHash32 = g_datedb.getDate ( key );
 		// get this
-		long long d = g_datedb.getDocId(key);
+		int64_t d = g_datedb.getDocId(key);
 		// skip this vote if from an old titlerec of ourselves!
 		if ( d == myDocId ) continue;
 		// sanity
-		long long sh48 = g_datedb.getTermId ( key );
+		int64_t sh48 = g_datedb.getTermId ( key );
 		if ( sh48 != lastsh48 && lastsh48 ) { char *xx=NULL;*xx=0;}
 		lastsh48 = sh48;
 
@@ -12237,7 +12237,7 @@ bool SectionVotingTable::addVote3 ( long        turkTagHash ,
 	
 	HashTableX *ttt = &m_svt;
 	// or in bitnum
-	//long long vk = turkTagHash;
+	//int64_t vk = turkTagHash;
 	uint64_t vk = sectionType;
 	// make room for bitnum
 	vk <<= 32;
@@ -12285,8 +12285,8 @@ bool SectionVotingTable::addVote3 ( long        turkTagHash ,
 //   "sectionType" is like SEC_TEXTY, SEC_DUP, SEC_CLOCK, etc.
 float SectionVotingTable::getScore ( long turkTagHash , long sectionType ) {
 	// make the vote key
-	long long vk = ((uint64_t)sectionType) << 32 | (uint32_t)turkTagHash;
-	//long long vk = ((uint64_t)tagHash) << 32 | (uint32_t)sectionType;
+	int64_t vk = ((uint64_t)sectionType) << 32 | (uint32_t)turkTagHash;
+	//int64_t vk = ((uint64_t)tagHash) << 32 | (uint32_t)sectionType;
 	// get these
 	SectionVote *sv = (SectionVote *)m_svt.getValue ( &vk );
 	//SectionVote *osv = (SectionVote *)m_osvt.getValue ( &vk );
@@ -12316,8 +12316,8 @@ float SectionVotingTable::getScore ( long turkTagHash , long sectionType ) {
 /*
 float SectionVotingTable::getOldScore ( Section *sn , long sectionType ) {
 	// make the vote key
-	long long vk = ((uint64_t)sectionType) << 32|(uint32_t)sn->m_tagHash;
-	//long long vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
+	int64_t vk = ((uint64_t)sectionType) << 32|(uint32_t)sn->m_tagHash;
+	//int64_t vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
 	// get these
 	SectionVote *osv = (SectionVote *)m_osvt.getValue ( &vk );
 	// return -1.0 if no voting data for this guy
@@ -12335,8 +12335,8 @@ float SectionVotingTable::getOldScore ( Section *sn , long sectionType ) {
 
 float SectionVotingTable::getNewScore ( Section *sn , long sectionType ) {
 	// make the vote key
-	long long vk = ((uint64_t)sectionType) << 32|(uint32_t)sn->m_tagHash;
-	//long long vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
+	int64_t vk = ((uint64_t)sectionType) << 32|(uint32_t)sn->m_tagHash;
+	//int64_t vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
 	// get these
 	SectionVote *nsv = (SectionVote *)m_nsvt.getValue ( &vk );
 	// return -1.0 if no voting data for this guy
@@ -12356,8 +12356,8 @@ float SectionVotingTable::getNewScore ( Section *sn , long sectionType ) {
 // just like getScore() above basically
 float SectionVotingTable::getNumSampled ( long turkTagHash, long sectionType) {
 	// make the vote key
-	long long vk = ((uint64_t)sectionType) << 32 | (uint32_t)turkTagHash;
-	//long long vk = ((uint64_t)tagHash) << 32 | (uint32_t)sectionType;
+	int64_t vk = ((uint64_t)sectionType) << 32 | (uint32_t)turkTagHash;
+	//int64_t vk = ((uint64_t)tagHash) << 32 | (uint32_t)sectionType;
 	// get these
 	SectionVote *sv = (SectionVote *)m_svt.getValue ( &vk );
 	//SectionVote *osv = (SectionVote *)m_osvt.getValue ( &vk );
@@ -12383,8 +12383,8 @@ float SectionVotingTable::getNumSampled ( long turkTagHash, long sectionType) {
 // just like getScore() above basically
 float SectionVotingTable::getOldNumSampled ( Section *sn , long sectionType ) {
 	// make the vote key
-	long long vk=((uint64_t)sectionType) << 32 | (uint32_t)sn->m_tagHash;
-	//long long vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
+	int64_t vk=((uint64_t)sectionType) << 32 | (uint32_t)sn->m_tagHash;
+	//int64_t vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
 	// get these
 	SectionVote *osv = (SectionVote *)m_osvt.getValue ( &vk );
 	// return 0.0 if no voting data for this guy
@@ -12446,7 +12446,7 @@ void Sections::getArticleRange ( long *start , long *end ) {
 //   represented in list we read from datedb
 // . returns false and sets g_errno on error
 // . returns true on success
-bool SectionVotingTable::hash ( long long docId , 
+bool SectionVotingTable::hash ( int64_t docId , 
 				HashTableX *dt ,
 				uint64_t siteHash64 ,
 				long niceness ) {
@@ -12534,7 +12534,7 @@ bool SectionVotingTable::hash ( long long docId ,
 		// sanity check
 		uint64_t sh = g_datedb.getTermId(&k);
 		if ( sh != termId ) { char *xx=NULL;*xx=0; }
-		long long d = g_datedb.getDocId(&k);
+		int64_t d = g_datedb.getDocId(&k);
 		if ( d != docId   ) { char *xx=NULL;*xx=0; }
 		// this returns false and sets g_errno on error
 		if ( ! dt->addKey ( &k , sv ) ) return false;
@@ -12593,7 +12593,7 @@ char *Sections::respiderLineWaiters ( char *metaList    ,
 		// must be this
 		if ( secType != SV_WAITINLINE ) continue;
 		// get docid
-		long long docId = m_list.getCurrentDocId();
+		int64_t docId = m_list.getCurrentDocId();
 		// store the rdbId
 		*p++ = RDB_SPIDERDB;
 		// . store in the meta list
@@ -12832,8 +12832,8 @@ bool Sections::print ( SafeBuf *sbuf ,
 				printFlags ( sbuf , sk , false );
 
 				// print the item tables out
-				long long *ph = (long long *)pt->getValue(&sk);
-				long long *eh = (long long *)et->getValue(&sk);
+				int64_t *ph = (int64_t *)pt->getValue(&sk);
+				int64_t *eh = (int64_t *)et->getValue(&sk);
 				//bool isInRt = false;
 				//if ( rt ) isInRt = rt->isInTable(&sk);
 				bool inPriceTable = false;
@@ -12842,7 +12842,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 						priceTable->isInTable(&sk);
 				// get addr index ptr if any (could be mult)
 				long acount = 0;
-				long long sh = 0LL;
+				int64_t sh = 0LL;
 				if ( at ) {
 					long slot = at->getSlot(&sk);
 					for(;slot>=0;
@@ -12852,7 +12852,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 						pp = (Place **)at->
 							getValueFromSlot(slot);
 						// get hash
-						long long tt=(*pp)->m_hash;
+						int64_t tt=(*pp)->m_hash;
 						// get max
 						if ( ! sh || tt > sh ) sh = tt;
 						// count them
@@ -13902,7 +13902,7 @@ bool Sections::setMenus ( ) {
 	}
 
 
-	long long h_copyright = hash64n("copyright");
+	int64_t h_copyright = hash64n("copyright");
 	// copyright check
 	// the copyright symbol in utf8 (see Entities.cpp for the code)
 	char copy[3];
@@ -14094,37 +14094,37 @@ bool Sections::setMenus ( ) {
 	}
 
 	static bool s_init = false;
-	static long long h_close ;
-	static long long h_send ;
-	static long long h_map ;
-	static long long h_maps ;
-	static long long h_directions ;
-	static long long h_driving ;
-	static long long h_help ;
-	static long long h_more ;
-	static long long h_log ;
-	static long long h_sign ;
-	static long long h_change ;
-	static long long h_write ;
-	static long long h_save ;
-	static long long h_share ;
-	static long long h_forgot ;
-	static long long h_home ;
-	static long long h_sitemap ;
-	static long long h_advanced ;
-	static long long h_go ;
-	static long long h_website ;
-	static long long h_view;
-	static long long h_add;
-	static long long h_submit;
-	static long long h_get;
-	static long long h_about;
+	static int64_t h_close ;
+	static int64_t h_send ;
+	static int64_t h_map ;
+	static int64_t h_maps ;
+	static int64_t h_directions ;
+	static int64_t h_driving ;
+	static int64_t h_help ;
+	static int64_t h_more ;
+	static int64_t h_log ;
+	static int64_t h_sign ;
+	static int64_t h_change ;
+	static int64_t h_write ;
+	static int64_t h_save ;
+	static int64_t h_share ;
+	static int64_t h_forgot ;
+	static int64_t h_home ;
+	static int64_t h_sitemap ;
+	static int64_t h_advanced ;
+	static int64_t h_go ;
+	static int64_t h_website ;
+	static int64_t h_view;
+	static int64_t h_add;
+	static int64_t h_submit;
+	static int64_t h_get;
+	static int64_t h_about;
 	// new stuff
-	static long long h_back; // back to top
-	static long long h_next;
-	static long long h_buy; // buy tickets
-	static long long h_english; // english french german versions
-	static long long h_click;
+	static int64_t h_back; // back to top
+	static int64_t h_next;
+	static int64_t h_buy; // buy tickets
+	static int64_t h_english; // english french german versions
+	static int64_t h_click;
 
 	if ( ! s_init ) {
 		s_init = true;
@@ -14661,8 +14661,8 @@ void Sections::setTagHashes ( ) {
 		// a br section added afterwards.
 		//Section *sn = m_sorted[i]; // sections[i];
 		// shortcut
-		long long bh = (long long)sn->m_baseHash;
-		//long long fh = sn->m_tagId;
+		int64_t bh = (int64_t)sn->m_baseHash;
+		//int64_t fh = sn->m_tagId;
 		// sanity check
 		if ( bh == 0 ) { char *xx=NULL;*xx=0; }
 		// if no parent, use initial values
@@ -15760,7 +15760,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 	
 		// get addr index ptr if any (could be mult)
 		long acount = 0;
-		//long long sh = 0LL;
+		//int64_t sh = 0LL;
 		long pi = sk->m_firstPlaceNum;
 		long np = m_aa->m_numSorted;
 		for ( ; pi >= 0 && pi < np ; pi++ ) {
@@ -15768,7 +15768,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			// stop if not in section any more
 			if ( p->m_a >= sk->m_b ) break;
 			// get hash
-			//long long tt = p->m_hash;
+			//int64_t tt = p->m_hash;
 			// get max
 			//if ( ! sh || tt > sh ) sh = tt;
 			// count them
@@ -16072,54 +16072,54 @@ bool Sections::setRegistrationBits ( ) {
 	static HashTableX s_kt;
 	static bool s_ktinit = false;
 	static char s_ktbuf[1200];
-	static long long h_registration;
-	static long long h_registrar;
-	static long long h_registrations;
-	static long long h_reservation;
-	static long long h_reservations;
-	static long long h_register;
-	static long long h_sign;
-	static long long h_up;
-	static long long h_signup;
-	static long long h_tickets;
-	static long long h_purchase;
-	static long long h_request;
-	static long long h_requesting;
-	static long long h_get;
-	static long long h_enroll;
-	static long long h_buy;
-	static long long h_presale ;
-	static long long h_pre ;
-	static long long h_sale ;
-	static long long h_on ;
-	static long long h_to ;
-	static long long h_sales ;
-	static long long h_deliver;
-	static long long h_picks;
-	static long long h_box; // box office for newmexicojazzfestival.org
-	static long long h_office;
-	static long long h_ticket;//ticket window for newmexicojazzfestival.org
-	static long long h_online;
-	static long long h_window;
-	static long long h_patron;
-	static long long h_service;
-	static long long h_services;
-	static long long h_phone;
-	static long long h_hours;
-	static long long h_end ;
-	static long long h_begin ;
-	static long long h_start ;
-	static long long h_stop ;
-	static long long h_parking;
-	static long long h_performance;
-	static long long h_dates;
-	static long long h_take;
-	static long long h_takes;
-	static long long h_place;
-	static long long h_doors;
-	static long long h_open;
-	static long long h_event;
-	static long long h_details;
+	static int64_t h_registration;
+	static int64_t h_registrar;
+	static int64_t h_registrations;
+	static int64_t h_reservation;
+	static int64_t h_reservations;
+	static int64_t h_register;
+	static int64_t h_sign;
+	static int64_t h_up;
+	static int64_t h_signup;
+	static int64_t h_tickets;
+	static int64_t h_purchase;
+	static int64_t h_request;
+	static int64_t h_requesting;
+	static int64_t h_get;
+	static int64_t h_enroll;
+	static int64_t h_buy;
+	static int64_t h_presale ;
+	static int64_t h_pre ;
+	static int64_t h_sale ;
+	static int64_t h_on ;
+	static int64_t h_to ;
+	static int64_t h_sales ;
+	static int64_t h_deliver;
+	static int64_t h_picks;
+	static int64_t h_box; // box office for newmexicojazzfestival.org
+	static int64_t h_office;
+	static int64_t h_ticket;//ticket window for newmexicojazzfestival.org
+	static int64_t h_online;
+	static int64_t h_window;
+	static int64_t h_patron;
+	static int64_t h_service;
+	static int64_t h_services;
+	static int64_t h_phone;
+	static int64_t h_hours;
+	static int64_t h_end ;
+	static int64_t h_begin ;
+	static int64_t h_start ;
+	static int64_t h_stop ;
+	static int64_t h_parking;
+	static int64_t h_performance;
+	static int64_t h_dates;
+	static int64_t h_take;
+	static int64_t h_takes;
+	static int64_t h_place;
+	static int64_t h_doors;
+	static int64_t h_open;
+	static int64_t h_event;
+	static int64_t h_details;
 	if ( ! s_ktinit ) {
 		s_ktinit = true;
 		s_kt.set(8,0,128,s_ktbuf,1200,false,m_niceness,"evkeywrds");
@@ -16207,7 +16207,7 @@ bool Sections::setRegistrationBits ( ) {
 	//HashTableX *tt = m_dates->getTODTable ();
 
 	// shortcut
-	//long long *wids = m_wids;
+	//int64_t *wids = m_wids;
 
 	m_bits->setInLinkBits ( this ); // m_sections );
 
@@ -16240,7 +16240,7 @@ bool Sections::setRegistrationBits ( ) {
 		*/
 
 		// shortcut
-		long long wid = m_wids[j];
+		int64_t wid = m_wids[j];
 
 		// "ictickets office" for http://www.ictickets.com/Event/
 		// Default.aspx?id=1036
@@ -16268,7 +16268,7 @@ bool Sections::setRegistrationBits ( ) {
 		// assume right after us
 		long next = j + 2;
 		// set nextWid to its id
-		long long nextWid = 0LL;
+		int64_t nextWid = 0LL;
 		for ( ; next < max ; next++ ) {
 			if ( ! m_wids[next] ) continue;
 			// grab it
@@ -16279,7 +16279,7 @@ bool Sections::setRegistrationBits ( ) {
 			break;
 		}
 		// and the next after that
-		long long nextWid2 = 0LL;
+		int64_t nextWid2 = 0LL;
 		for ( ; next < max ; next++ ) {
 			if ( ! m_wids[next] ) continue;
 			// grab it
@@ -16660,7 +16660,7 @@ sentflags_t getMixedCaseFlags ( Words *words ,
 				long sentb , 
 				long niceness ) {
 	
-	long long *wids = words->getWordIds();
+	int64_t *wids = words->getWordIds();
 	long *wlens = words->getWordLens();
 	char **wptrs = words->getWordPtrs();
 	long lowerCount = 0;
@@ -17105,8 +17105,8 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 			// set words
 			char *s = s_tableFields[i];
 			Words w; w.set3 ( s );
-			long long *wi = w.getWordIds();
-			long long h = 0;
+			int64_t *wi = w.getWordIds();
+			int64_t h = 0;
 			// scan words
 			for ( long j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
@@ -17300,7 +17300,7 @@ bool Sectiondb::init ( ) {
 	uint32_t sech32 = (uint32_t)rand();
 	uint64_t sh64 = (uint64_t)rand() << 32LL | rand();
 	uint8_t secType = 23;
-	long long docId = ((uint64_t)rand() << 32 | rand()) & DOCID_MASK;
+	int64_t docId = ((uint64_t)rand() << 32 | rand()) & DOCID_MASK;
 	k = makeKey2 ( sech32,
 		       sh64,
 		       secType,

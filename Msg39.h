@@ -131,13 +131,13 @@ class Msg39Request {
 
 	collnum_t m_collnum;
 
-	long long m_minDocId;
-	long long m_maxDocId;
+	int64_t m_minDocId;
+	int64_t m_maxDocId;
 	bool      m_makeReply;
 
 	// for widget, to only get results to append to last docid
 	double    m_maxSerpScore;
-	long long m_minSerpDocId;
+	int64_t m_minSerpDocId;
 
 	// msg3a stuff
 	long    m_timeout; // in seconds
@@ -181,7 +181,7 @@ public:
 
 	// do not add new string parms before ptr_docIds or
 	// after ptr_clusterRecs so serializeMsg() calls still work
-	char  *ptr_docIds         ; // the results, long long
+	char  *ptr_docIds         ; // the results, int64_t
 	char  *ptr_scores;        ; // now doubles! so we can have intScores
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
@@ -235,8 +235,8 @@ class Msg39 {
 	// . TODO: have a serialize/deserialize for Query class
 	Query       m_tmpq;
 
-	long long m_docIdStart ;
-	long long m_docIdEnd   ;
+	int64_t m_docIdStart ;
+	int64_t m_docIdEnd   ;
 
 	// used to get IndexLists all at once
 	Msg2        m_msg2;
@@ -256,8 +256,8 @@ class Msg39 {
 
 	//long m_numDocIdSplits;
 	bool m_allocedTree;
-	long long m_ddd;
-	long long m_dddEnd;
+	int64_t m_ddd;
+	int64_t m_dddEnd;
 	bool doDocIdSplitLoop();
 
 	// . we hold our IndexLists here for passing to PosdbTable
@@ -265,7 +265,7 @@ class Msg39 {
 	IndexList  m_lists [ MAX_QUERY_TERMS ];
 	
 	// used for timing
-	long long  m_startTime;
+	int64_t  m_startTime;
 
 	// this is set if PosdbTable::addLists() had an error
 	long       m_errno;
@@ -277,7 +277,7 @@ class Msg39 {
 
 	long       m_firstResultNum;
 
-	long long  m_numTotalHits;
+	int64_t  m_numTotalHits;
 
 	long       m_numCensored;
 
@@ -286,7 +286,7 @@ class Msg39 {
 
 	long        m_bufSize;
 	char       *m_buf;
-	long long  *m_clusterDocIds;
+	int64_t  *m_clusterDocIds;
 	char       *m_clusterLevels;
 	key_t      *m_clusterRecs;
 	long        m_numClusterDocIds;
@@ -306,15 +306,15 @@ class Msg39 {
 	bool  m_blocked;
 	void (*m_callback)( void *state );
 	void  *m_state;
-	long long m_topDocId;
+	int64_t m_topDocId;
 	float     m_topScore;
-	long long m_topDocId2;
+	int64_t m_topDocId2;
 	float     m_topScore2;
 
 	// . for the top 50 algo in seo.cpp
 	// . will be the score of the last result if < 50 results
 	float     m_topScore50;
-	long long m_topDocId50;
+	int64_t m_topDocId50;
 
 	bool  m_inUse;
 };		

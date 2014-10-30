@@ -763,8 +763,8 @@ long Threads::timedCleanUp (long maxTime, long niceness) {
 
 	if ( ! m_needsCleanup ) return 0;
 	//if ( g_inSigHandler ) return 0;
-	long long startTime = gettimeofdayInMillisecondsLocal();
-	long long took = 0;
+	int64_t startTime = gettimeofdayInMillisecondsLocal();
+	int64_t took = 0;
 
 	if ( niceness >= MAX_NICENESS ) m_needsCleanup = false;
 
@@ -1093,7 +1093,7 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 
 		makeCallback ( t );
 
- 		//long long took = gettimeofdayInMilliseconds()-startTime;
+ 		//int64_t took = gettimeofdayInMilliseconds()-startTime;
  		//if(took > 8 && maxNiceness > 0) {
  		//	if(g_conf.m_sequentialProfiling)
  		//		log(LOG_TIMING, 
@@ -1108,7 +1108,7 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		g_errno = 0;
 
 		if ( g_conf.m_logDebugThread ) {
-			long long now = gettimeofdayInMilliseconds();
+			int64_t now = gettimeofdayInMilliseconds();
 			log(LOG_DEBUG,"thread: [t=0x%lx] %s done1. "
 			    "active=%li "
 			    "time since queued = %llu ms  "
@@ -1155,7 +1155,7 @@ void makeCallback ( ThreadEntry *t ) {
 		    (long)t->m_niceness);
 
 	// time it?
-	long long start;
+	int64_t start;
 	if ( g_conf.m_maxCallbackDelay >= 0 ) 
 		start = gettimeofdayInMillisecondsLocal();
 
@@ -1168,7 +1168,7 @@ void makeCallback ( ThreadEntry *t ) {
 
 	// time it?
 	if ( g_conf.m_maxCallbackDelay >= 0 ) {
-		long long elapsed = gettimeofdayInMillisecondsLocal() - start;
+		int64_t elapsed = gettimeofdayInMillisecondsLocal() - start;
 		if ( elapsed >= g_conf.m_maxCallbackDelay )
 			log("threads: Took %lli ms to call "
 			    "thread callback niceness=%li",
@@ -1221,12 +1221,12 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 	// call all callbacks after all threads are cleaned up
 	void       (* callbacks[64])(void *state,ThreadEntry *);
 	void        *states    [64];
-	long long    times     [64];
-	long long    times2    [64];
-	long long    times3    [64];
-	long long    times4    [64];
+	int64_t    times     [64];
+	int64_t    times2    [64];
+	int64_t    times3    [64];
+	int64_t    times4    [64];
 	ThreadEntry *tids      [64];
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
  top:
 	long   numCallbacks = 0;
@@ -1451,7 +1451,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 
 		makeCallback ( t );
 
-// 		long long took = gettimeofdayInMilliseconds()-startTime;
+// 		int64_t took = gettimeofdayInMilliseconds()-startTime;
 // 		if(took > 8 && maxNiceness > 0) {
 // 			if(g_conf.m_sequentialProfiling)
 // 				log(LOG_TIMING, 
@@ -1466,7 +1466,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		g_errno = 0;
 
 		if ( g_conf.m_logDebugThread ) {
-			long long now = gettimeofdayInMilliseconds();
+			int64_t now = gettimeofdayInMilliseconds();
 			log(LOG_DEBUG,"thread: [t=0x%lx] %s done2. "
 			    "active=%li "
 			    "time since queued = %llu ms  "
@@ -1497,7 +1497,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		//if ( tt ) return;
 	}
 
-	long long took2 = gettimeofdayInMilliseconds()-startTime;
+	int64_t took2 = gettimeofdayInMilliseconds()-startTime;
 	if(numCallbacks > 0 && took2 > 5)
 		log(LOG_DEBUG, "threads: took %lli ms to callback %li "
 		    "callbacks, nice: %li", took2, numCallbacks, maxNiceness);
@@ -1510,7 +1510,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 
 	// print out that we got them
 	if ( g_conf.m_logDebugThread ) {
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		for ( long i = 0 ; i < numCallbacks ; i++ ) 
 			log(LOG_DEBUG,"thread: [tid=%lu] %s done3. "
 			    "active=%li "
@@ -1536,9 +1536,9 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 	// . do bubble sort cuz usually it's not too many threads we cleaned up
 	bool    flag ;
 	void (* tmpCallback)(void *state,ThreadEntry *t);
-	long long tmpTime;
+	int64_t tmpTime;
 	void   *tmpState;
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 
  bubble:
 	flag = false;
@@ -1564,7 +1564,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		callbacks[i] ( states[i] , NULL );
 	}
 
-	long long took = gettimeofdayInMilliseconds()-now;
+	int64_t took = gettimeofdayInMilliseconds()-now;
 	if(numCallbacks > 0 && took > 5)
 		log(LOG_TIMING, "admin: took %lli ms to callback %li "
 		    "callbacks, nice: %li", took, numCallbacks, maxNiceness);
@@ -1574,7 +1574,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 	//and call it.  do it again it until we've called all of them.
 	long newNumCallbacks = numCallbacks;
 	for ( long i = 0 ; i < numCallbacks ; i++ ) {
-		long long maxTime = 0;
+		int64_t maxTime = 0;
 		long maxNdx = 0;
 		for ( long j = 0 ; j < newNumCallbacks ; j++ ) {
 			if(maxTime >= times[i]) {
@@ -1642,7 +1642,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	if ( s_head == -1 ) return false;
 	// . how many threads are active now?
 	// . NOTE: not perfectly thread safe here
-	long long active = m_launched - m_returned ;
+	int64_t active = m_launched - m_returned ;
 	// debug msg
 	if ( g_conf.m_logDebugThread ) 
 		log(LOG_DEBUG,"thread: launchThread: active=%lli max=%li.",
@@ -1665,11 +1665,11 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	//	fprintf(stderr,"thread: launchThread: bad engineer\n");
 	//	::exit(-1);
 	//}
-	//long long now = gettimeofdayInMilliseconds();
-	long long now = -1LL;
+	//int64_t now = gettimeofdayInMilliseconds();
+	int64_t now = -1LL;
 	// pick thread with lowest niceness first
 	long      minNiceness = 0x7fffffff;
-	long long maxWait     = -1;
+	int64_t maxWait     = -1;
 	long      mini        = -1;
 	bool      minIsWrite  = false;
 	long      lowest      = 0x7fffffff;
@@ -1688,15 +1688,15 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	long hiActiveSma = m_hiLaunchedSma - m_hiReturnedSma;
 	long activeWrites = m_writesLaunched - m_writesReturned;
 	// how many niceness=2 threads are currently running now?
-	long long loActive = m_loLaunched - m_loReturned;
-	long long mdActive = m_mdLaunched - m_mdReturned;
-	//long long hiActive = m_hiLaunched - m_hiReturned;
+	int64_t loActive = m_loLaunched - m_loReturned;
+	int64_t mdActive = m_mdLaunched - m_mdReturned;
+	//int64_t hiActive = m_hiLaunched - m_hiReturned;
 	long      total    = loActive + mdActive;
 	long max = g_conf.m_spiderMaxDiskThreads;
 	if ( max <= 0 ) max = 1;
 	// hi priority max
 	// JAB: warning abatement
-	//long long hiActive = m_hiLaunched - m_hiReturned;
+	//int64_t hiActive = m_hiLaunched - m_hiReturned;
 
 	// i dunno what the point of this was... so i commented it out
 	//long max2 = g_conf.m_queryMaxDiskThreads ;
@@ -1815,7 +1815,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		// be lazy with this since it uses a significant amount of cpu
 		if ( now == -1LL ) now = gettimeofdayInMilliseconds();
 		// how long has this entry been waiting in the queue to launch?
-		long long waited = now - m_entries[i].m_queuedTime ;
+		int64_t waited = now - m_entries[i].m_queuedTime ;
 		// adjust "waited" if it originally had a niceness of 1
 		if ( m_entries[i].m_niceness >= 1 ) {
 			// save threads gain precedence
@@ -1887,7 +1887,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// . don't launch a low priority thread if there's a high launched
 	//   from any ThreadQueue 
 	// . hi priority is niceness <= 0, med/lo priority is niceness >= 1
-	//long long hiActive = g_threads.m_hiLaunched - g_threads.m_hiReturned;
+	//int64_t hiActive = g_threads.m_hiLaunched - g_threads.m_hiReturned;
 	// now just limit it to this queue... so you can launch a low
 	// merge thread even if there's a high disk read going on
 	//if ( minNiceness >= 1 && hiActive > 0 ) return false;
@@ -1898,7 +1898,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	//if ( minNiceness <= 0 && highest > 0 ) cancelLowPriorityThreads ();
 	// . let's cancel ALL low priority threads if we're launching a high
 	// . hi priority is niceness <= 0, low priority is niceness >= 1
-	//long long loActive = g_threads.m_loLaunched - g_threads.m_loReturned;
+	//int64_t loActive = g_threads.m_loLaunched - g_threads.m_loReturned;
 	long realNiceness = m_entries[mini].m_niceness;
 	//if ( realNiceness <= 0 && (loActive + mdActive) > 0 )
 	//	// this actually cancels medium priority threads, too
@@ -1996,7 +1996,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// debug msg
 	if ( g_conf.m_logDebugThread ) {
 		active = m_launched - m_returned ;		
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		log(LOG_DEBUG,"thread: [t=0x%lx] launched %s thread. "
 		    "active=%lli "
 		     "niceness=%lu. waited %llu ms in queue.",
@@ -2328,7 +2328,7 @@ int startUp ( void *state ) {
 	svt.sival_int = (int)t ; //(int)(t->m_state); // fd;
 
 	// set exit time
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	t->m_preExitTime = now;
 	t->m_exitTime    = now;
 	if ( g_conf.m_logDebugThread ) {
@@ -2543,7 +2543,7 @@ void ThreadQueue::removeThreads ( BigFile *bf ) {
 
 
 void Threads::printState() {
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 
 
 	for ( long i = 0 ; i < m_numQueues; i++ ) {

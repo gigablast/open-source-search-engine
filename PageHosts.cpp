@@ -25,7 +25,7 @@ static int memUsedSort    ( const void *i1, const void *i2 );
 static int cpuUsageSort   ( const void *i1, const void *i2 );
 static int diskUsageSort  ( const void *i1, const void *i2 );
 
-long generatePingMsg( Host *h, long long nowms, char *buffer );
+long generatePingMsg( Host *h, int64_t nowms, char *buffer );
 
 // . returns false if blocked, true otherwise
 // . sets errno on error
@@ -337,7 +337,7 @@ skipReplaceHost:
 		sb.safePrintf("\t\"statusMsg\":\"Success\",\n");
 	}
 
-	long long nowmsLocal = gettimeofdayInMillisecondsLocal();
+	int64_t nowmsLocal = gettimeofdayInMillisecondsLocal();
 
 	// compute majority gb version so we can highlight bad out of sync
 	// gb versions in red below
@@ -1328,7 +1328,7 @@ skipReplaceHost:
 						  sb.length() );
 }
 
-long generatePingMsg( Host *h, long long nowms, char *buf ) {
+long generatePingMsg( Host *h, int64_t nowms, char *buf ) {
         long ping = h->m_ping;
         // show ping age first
         long pingAge = nowms- h->m_lastPing;

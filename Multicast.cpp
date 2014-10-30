@@ -876,7 +876,7 @@ bool Multicast::sendToHost ( long i ) {
 	// . only used by pickBestHost() and sendToHost()
 	m_retired [ i ] = true;
 	// what time is it now?
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 	time_t    now   = nowms / 1000;
 	// save the time
 	m_launchTime [ i ] = nowms;
@@ -1036,7 +1036,7 @@ void sleepWrapper1 ( int bogusfd , void    *state ) {
 	//   going down so they know to stop sending to it and mark him as
 	//   dead
 
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// watch out for someone advancing the system clock
 	if ( THIS->m_lastLaunch > now ) THIS->m_lastLaunch = now;
 	// get elapsed time since we started the send
@@ -1601,9 +1601,9 @@ void Multicast::destroySlotsInProgress ( UdpSlot *slot ) {
 		// . stamp him so he doesn't have a better ping than host of #i
 		// . timedOut=true -->only stamp him if it makes his ping worse
 		//long      hostId       = m_slots[i]->m_hostId;
-		//long long lastSendTime = m_slots[i]->m_lastSendTime;
-		//long long now          = gettimeofdayInMilliseconds() ;
-		//long long tripTime     = now - lastSendTime;
+		//int64_t lastSendTime = m_slots[i]->m_lastSendTime;
+		//int64_t now          = gettimeofdayInMilliseconds() ;
+		//int64_t tripTime     = now - lastSendTime;
 		// . we no longer stamp hosts here, leave that up to
 		//   Hostdb::pingHost()
 		// tripTime is always in milliseconds

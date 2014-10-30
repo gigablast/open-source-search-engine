@@ -193,7 +193,7 @@ public:
 	Msgfc        m_msgfc;
 	TcpSocket   *m_socket;
 	Msg0         m_msg0;
-	long long    m_startTime;
+	int64_t    m_startTime;
 	Ads          m_ads;
 	long         m_numResultsPrinted;
 	bool         m_gotAds;
@@ -209,7 +209,7 @@ public:
 	char         m_doRobotChecking;
 	Query        m_qq3;
         long         m_numDocIds;
-	long long    m_took; // how long it took to get the results
+	int64_t    m_took; // how long it took to get the results
 	//SafeBuf      m_interestCookies;
 	char         m_needSave;
 	bool         m_didSave;
@@ -307,7 +307,7 @@ bool sendPageEvents2 ( TcpSocket *s ,
 	//
 	if ( hr->getString("sendemailfromfile",0) ) {
 		// get associated fbid so we can get the file to email
-		long long fbId = hr->getLongLong("usefbid",0LL);
+		int64_t fbId = hr->getLongLong("usefbid",0LL);
 		// shortcut
 		char *dir = g_hostdb.m_dir;
 		// make the filename
@@ -473,16 +473,16 @@ bool gotFriends ( void *state ) {
 
 	// try to get facebook user id. return browser id if no
 	// facebook id available. returns 0 if neither available.
-	long long facebookId = st->m_msgfb.m_fbId;
+	int64_t facebookId = st->m_msgfb.m_fbId;
 	// we assign a random userid if none in cookie. we call
 	// set-cookie: userid=xxxxx;expires=1000000000; on it so it
 	// should NEVER expire. 32 years...
-	long long eventGuruId = hr->getLongLongFromCookie("userid",0LL);
+	int64_t eventGuruId = hr->getLongLongFromCookie("userid",0LL);
 	// sanity constraint
 	if ( eventGuruId < 0 ) eventGuruId = 0;
 	if ( facebookId  < 0 ) facebookId  = 0;
 	// if facebook is there do not double add eventguruid
-	long long userId = 0;
+	int64_t userId = 0;
 	if ( eventGuruId ) userId = eventGuruId;
 	if ( facebookId  ) userId = facebookId;
 
@@ -515,7 +515,7 @@ bool gotFriends ( void *state ) {
 		return sendErrorReply2 ( st ); 
 	}
 
-	long long docId = hr->getLongLong("d",0LL);
+	int64_t docId = hr->getLongLong("d",0LL);
 	long      gbeventId = hr->getLong("evid",0);
 	long      start_time = hr->getLong("starttime",0);
 
@@ -544,12 +544,12 @@ bool addedTags ( void *state ) {
 	// get the tag
 	//HttpRequest *hr = &st->m_hr;
 
-	//long long facebookId = st->m_msgfb.m_fbId;
+	//int64_t facebookId = st->m_msgfb.m_fbId;
 
 	//char *iconIdStr = hr->getString("iconid",NULL);
 	//char *iconSrc   = hr->getString("iconsrc",NULL);
 
-	//long long eventHash64 = hr->getLongLong("ev",0LL);
+	//int64_t eventHash64 = hr->getLongLong("ev",0LL);
 
 	// get the search result id from the iconIdStr
 	//char *p = iconIdStr;
@@ -999,7 +999,7 @@ bool getResults ( void *state ) {
 	if ( ! status2 ) return false;
 	// log the time
 	//if ( g_conf.m_logQueryTimes ) {
-	long long took = gettimeofdayInMilliseconds()-st->m_startTime;
+	int64_t took = gettimeofdayInMilliseconds()-st->m_startTime;
 	if ( took >= g_conf.m_logQueryTimeThreshold ) {
 		//log(LOG_INFO,"query: Took %lli ms for %s",took,ttq);
 		logf(LOG_TIMING,"query: Took %lli ms for %s. results=%li",
@@ -1064,7 +1064,7 @@ void gotAdsWrapper ( void *state ) {
 
 void deleteState ( State7 *st ) {
 	// log the time
-	long long took = gettimeofdayInMilliseconds()-st->m_startTime;
+	int64_t took = gettimeofdayInMilliseconds()-st->m_startTime;
 	// record that
 	st->m_took = took;
 	//if ( g_conf.m_logQueryTimes ) {
@@ -1298,14 +1298,14 @@ bool printSimilarToTable ( SafeBuf &sb , State7 *st , Msg20Reply *mr ,
 		if ( ! ( flags &(LF_INVITED|LF_LIKE_EG|LF_GOING|LF_MAYBE_FB)))
 			continue;
 		// get id
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		// see if they are in our Msg39Request::ptr_similarPeopleIds
 		// list of ids we queried for.
 		bool inList = false;
 		char      *sids = si->m_similarPeopleIds.getBufStart();
 		long       slen = si->m_similarPeopleIds.length();
-		long long *sim  = (long long *) sids;
-		long long *send = (long long *)(sids+slen);
+		int64_t *sim  = (int64_t *) sids;
+		int64_t *send = (int64_t *)(sids+slen);
 		for ( ; sim < send ; sim++ ) {
 			if ( *sim != uid ) continue;
 			inList = true;
@@ -1365,7 +1365,7 @@ bool printPic ( SafeBuf &sb ,
 		SearchInput *si,
 		long width ,
 		long height,
-		long long uid,
+		int64_t uid,
 		char *target ) {
 
 	// ok, print it
@@ -1438,7 +1438,7 @@ bool printPics ( SafeBuf &sb ,
 		height = 20;
 	}
 
-	long long userId = si->m_eventGuruId;
+	int64_t userId = si->m_eventGuruId;
 	if ( si->m_facebookId ) userId = si->m_facebookId;
 
 	char *target = "";
@@ -1543,7 +1543,7 @@ bool printPics ( SafeBuf &sb ,
 		// we already printed you!
 		if ( p == me ) continue;
 		// http://graph.facebook.com/502303355/picture shows pic 4 uid
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		// need a friend for this
 		if ( ! friends->isInTable ( &uid ) ) continue;
 		// ok, print it
@@ -1570,7 +1570,7 @@ bool printPics ( SafeBuf &sb ,
 		// we already printed you!
 		if ( p == me ) continue;
 		// http://graph.facebook.com/502303355/picture shows pic 4 uid
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		// friends were printed above
 		if ( friends->isInTable ( &uid ) ) continue;
 		// ok, print it
@@ -1638,8 +1638,8 @@ bool printAttendeesAndLikers ( SafeBuf &sb , State7 *st , Msg20Reply *mr ,
 	FBRec *fbrec = st->m_msgfb.m_fbrecPtr;
 	if ( fbrec ) nf = fbrec->size_friendIds / 8;
 	friends.set ( 8 ,0, nf,NULL,0,false,0,"frdtbl");
-	long long *fids = NULL;
-	if ( fbrec ) fids = (long long *)fbrec->ptr_friendIds;
+	int64_t *fids = NULL;
+	if ( fbrec ) fids = (int64_t *)fbrec->ptr_friendIds;
 	for ( long i = 0 ; i < nf ; i++ ) friends.addKey(&fids[i]);
 
 	// print friends only?
@@ -1688,7 +1688,7 @@ bool printBecauseILike  ( SafeBuf &sb , State7 *st , Msg20Reply *mr ) {
 	char *pend = p + mr->size_likedbList;
 	for ( ; p < pend ; p += LIKEDB_RECSIZE ) {
 		// who is liking, etc. this event?
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		// skip if its not you!
 		if ( uid != st->m_msgfb.m_fbId ) continue;
 		// how did you flag it?
@@ -1719,7 +1719,7 @@ bool printMatchingTerms ( SafeBuf &sb , State7 *st , Msg20Reply *mr ) {
 	// only for "Just For You" searches right now
 	if ( ! si->m_showPersonal ) return true;
 	// shortcut
-	long long fbId = st->m_msgfb.m_fbId;
+	int64_t fbId = st->m_msgfb.m_fbId;
 	// . scan the query terms
 	// . stop at first pipe
 	// . ignore gbsimilarinto:1 term
@@ -1828,7 +1828,7 @@ bool printEventTitleLink ( SafeBuf &sb, SearchInput *si, Msg20Reply *mr ,
 	}
 
 	// shortcut
-	long long fbId = st->m_msgfb.m_fbId;
+	int64_t fbId = st->m_msgfb.m_fbId;
 
 	// print email fbid for tracking purposes
 	if ( si->m_emailFormat ) sb.safePrintf("ei=%llu&",fbId);
@@ -1867,8 +1867,8 @@ bool printIcons2 ( SafeBuf &sb ,
 		   SearchInput *si , 
 		   Msg20Reply *mr ,
 		   long iconId ,
-		   long long eventHash64 ,
-		   long long docId ,
+		   int64_t eventHash64 ,
+		   int64_t docId ,
 		   long      eventId ,
 		   long start_time ,
 		   State7 *st ,
@@ -1911,12 +1911,12 @@ bool printIcons2 ( SafeBuf &sb ,
 				);
 
 	// must be logged in to facebook to see these icons
-	long long facebookId = 0LL;
+	int64_t facebookId = 0LL;
 	if ( si->m_msgfb ) facebookId = si->m_msgfb->m_fbId;
 
 	bool icc = si->m_includeCachedCopy;
 
-	//long long userId = si->m_eventGuruId;
+	//int64_t userId = si->m_eventGuruId;
 	//if ( si->m_facebookId ) userId = si->m_facebookId;
 
 	// scan likedblist to see if this user likes this...
@@ -2061,7 +2061,7 @@ bool printIcons2 ( SafeBuf &sb ,
 	sb.safePrintf ( "<td>"
 			// we have to pass back the %llu guys as strings
 			// because the javascript on chrome doesn't support
-			// long long integers! it ends up zeroing out our
+			// int64_t integers! it ends up zeroing out our
 			// last few bits!!!!!
 			"<a>"
 			"<img "
@@ -7817,7 +7817,7 @@ void printAdminEventOptions ( SafeBuf* sb,
 	if (!si->m_isAssassin || si->m_isFriend) return;
 	// now the ip of url
 	//long urlip      = msg40->getIp(i);
-	long long docId = msg40->getDocId(i);
+	int64_t docId = msg40->getDocId(i);
 	Url uu;
 	uu.set ( url , urlLen );
 	char dbuf [ MAX_URL_LEN ];
@@ -9648,7 +9648,7 @@ bool printRedBoxes ( SafeBuf &sb , State7 *st ) {
 
 	SearchInput *si = &st->m_si;
 	Msg40 *msg40 = &(st->m_msg40);
-	long long fbId = st->m_msgfb.m_fbId;
+	int64_t fbId = st->m_msgfb.m_fbId;
 	bool firstCat;
 	SafeBuf cmd;
 
@@ -10957,7 +10957,7 @@ bool printAllResults ( SafeBuf &sb , State7 *st , Query &qq ) {
 	long numResults = msg40->getNumResults();
 	if ( n > numResults )  n = numResults;
 	// an estimate of the # of total hits
-	long long totalHits = msg40->getNumTotalHits();
+	int64_t totalHits = msg40->getNumTotalHits();
 	// only adjust upwards for first page now so it doesn't keep chaning
 	if ( totalHits < n ) totalHits = n;
 	ulltoa ( thbuf , totalHits );
@@ -11137,7 +11137,7 @@ bool printAllResults ( SafeBuf &sb , State7 *st , Query &qq ) {
 	}
 	// print LOCATION and DISTANCE!
 	else if ( si->m_emailFormat ) {
-		long long fbId = st->m_msgfb.m_fbId;
+		int64_t fbId = st->m_msgfb.m_fbId;
 		// printbox
 		sb.safePrintf("<div "
 			      "style=\""
@@ -11721,7 +11721,7 @@ bool printAllResults ( SafeBuf &sb , State7 *st , Query &qq ) {
 	if ( si->m_widget      ) passWidgetParms = true;
 	if ( si->m_igoogle     ) passWidgetParms = false;
 	//if ( si->m_interactive ) passWidgetParms = true;
-	long long fbId = st->m_msgfb.m_fbId;
+	int64_t fbId = st->m_msgfb.m_fbId;
 
 	// remember this position
 	long remember = sb.length();
@@ -12010,16 +12010,16 @@ bool printXmlHeader ( SafeBuf &sb , State7 *st ) {
 	sb.safePrintf("\t<responseTime>%lli</responseTime>\n",st->m_took);
 
 	// save how many docs are in it
-	long long docsInColl = -1;
+	int64_t docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
 	RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , si->m_coll2 );
 	if ( base ) docsInColl = base->getNumGlobalRecs();
 
-	long long totalHits  = msg40->getNumTotalHits();
+	int64_t totalHits  = msg40->getNumTotalHits();
 	sb.safePrintf(
 		      "\t<hits>%lli</hits>\n"
 		      "\t<moreResultsFollow>%li</moreResultsFollow>\n", 
-		      (long long)totalHits ,
+		      (int64_t)totalHits ,
 		      (long)msg40->moreResultsFollow() );
 	// was the query dirty?
 	if ( st->m_msg40.m_queryCensored )
@@ -12097,7 +12097,7 @@ bool sendPageBack ( TcpSocket *s ,
 		cb.safePrintf("%s",si->m_cookieBuf.getBufStart());
 
 	/*
-	long long userId = hr->getLongLongFromCookie("userid",0LL);
+	int64_t userId = hr->getLongLongFromCookie("userid",0LL);
 	if ( ! userId ) {
 		userId = rand();
 		uint64_t now = getTimeLocal();
@@ -12122,7 +12122,7 @@ bool sendPageBack ( TcpSocket *s ,
 	// . the first time they visit eventguru record the widgetid
 	// . record widget id of 1 if none
 	if ( si ) {
-		long long widgetId = hr->getLongLong("widgetid",0LL);
+		int64_t widgetId = hr->getLongLong("widgetid",0LL);
 		// if we parsed it out from a user_to_user app request
 		// from facebook, use that
 		if ( ! widgetId && msgfb->m_userToUserWidgetId )
@@ -12265,7 +12265,7 @@ bool gotResults ( void *state ) {
 			// this means they DON'T like it!
 			if ( flags & LF_HIDE     ) continue;
 			if ( flags & LF_DECLINED ) continue;
-			long long fbId = g_likedb.getUserIdFromRec ( p );
+			int64_t fbId = g_likedb.getUserIdFromRec ( p );
 			if ( ! ppl.addTerm ( &fbId ) )
 				// should always return true
 				return sendErrorReply7 ( st );
@@ -12293,7 +12293,7 @@ bool gotResults ( void *state ) {
 			// skip if not with 2+ events in your interests
 			if ( ne < 2 ) continue;
 			// who is this?
-			long long fbId = *(long long *)ppl.getKeyFromSlot(i);
+			int64_t fbId = *(int64_t *)ppl.getKeyFromSlot(i);
 			// skip if its you!
 			if ( fbId == st->m_msgfb.m_fbId ) continue;
 			// skip if can't beat the max
@@ -12421,8 +12421,8 @@ bool gotResults ( void *state ) {
 	      numResults,gettimeofdayInMilliseconds()-st->m_startTime,
 	      qq.getQuery());
 
-	long long nowms = gettimeofdayInMilliseconds();
-	long long delta = nowms - st->m_startTime ;
+	int64_t nowms = gettimeofdayInMilliseconds();
+	int64_t delta = nowms - st->m_startTime ;
 
 	Highlight h;
 
@@ -12492,7 +12492,7 @@ bool gotResults ( void *state ) {
 	HttpRequest *hr = &st->m_hr;
 
 	// shortcut
-	long long fbId = st->m_msgfb.m_fbId;
+	int64_t fbId = st->m_msgfb.m_fbId;
 
 	if ( si->m_emailFormat ) {
 
@@ -13114,7 +13114,7 @@ bool gotResults ( void *state ) {
 		sb.inlineStyleTags ( );
 	}
 
-	//long long fbId = st->m_msgfb.m_fbId;
+	//int64_t fbId = st->m_msgfb.m_fbId;
 	if ( si->m_emailFormat && fbId ) {
 		// the working dir
 		char *dir = g_hostdb.m_dir;
@@ -14434,7 +14434,7 @@ bool printEventAddress ( SafeBuf &sb , char *addr , SearchInput *si ,
 			buf[0] = adm1[0];
 			buf[1] = adm1[1];
 			buf[2] = 0;
-			long long ph64 = getWordXorHash(buf);
+			int64_t ph64 = getWordXorHash(buf);
 			PlaceDesc *pd=getPlaceDesc(ph64,PDF_STATE,crid,NULL,0);
 			if ( pd ) {
 				char *str = pd->getOfficialName();
@@ -16841,7 +16841,7 @@ bool printWidgetFrame ( SafeBuf &sb , State7 *st ) {
 			, si->m_widgetHeight
 			);
 
-	long long fbId = 0LL;
+	int64_t fbId = 0LL;
 	if ( st->m_msgfb.m_fbrecPtr && st->m_msgfb.m_fbId )
 		fbId = st->m_msgfb.m_fbId;
 
@@ -19327,7 +19327,7 @@ bool printFacebookRecsOut ( State66 *st ) {
 
 		/*
 		// hack for ppl we missed...
-		long long fbId = rec->m_fbId;
+		int64_t fbId = rec->m_fbId;
 		// jezebel
 		if ( fbId == 100003381767946LL ) ip = atoip("75.160.49.8");
 		// somesh

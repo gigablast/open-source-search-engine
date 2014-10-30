@@ -151,7 +151,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	// scan the words
 	long       nw     = words->getNumWords();
 	nodeid_t  *tids   = words->getTagIds();
-	long long *wids   = words->getWordIds();
+	int64_t *wids   = words->getWordIds();
 	//long      *scores = scoresArg->m_scores;
 	Section **sp = NULL; 
 	if ( sections ) sp = sections->m_sectionPtrs;
@@ -281,7 +281,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 // . sets g_errno on error
 bool Images::getThumbnail ( char *pageSite ,
 			    long  siteLen  ,
-			    long long docId ,
+			    int64_t docId ,
 			    XmlDoc *xd ,
 			    collnum_t collnum,//char *coll ,
 			    //char **statusPtr ,
@@ -349,7 +349,7 @@ bool Images::getThumbnail ( char *pageSite ,
 		// return true with g_errno set on error
 		return true;
 	// store the termid
-	long long termId = q.getTermId(0);
+	int64_t termId = q.getTermId(0);
 
 	key144_t startKey ;
 	key144_t endKey   ;
@@ -427,9 +427,9 @@ bool Images::gotTermFreq ( ) {
 	// error?
 	if ( g_errno ) return true;
 	// bail if less than 10
-	//long long nt = m_msg36.getTermFreq();
+	//int64_t nt = m_msg36.getTermFreq();
 	// each key but the first is 12 bytes (compressed)
-	long long nt = (m_list.getListSize() - 6)/ 12;
+	int64_t nt = (m_list.getListSize() - 6)/ 12;
 	// . return true, without g_errno set, we are done
 	// . if we do not have 10 or more webpages that share this same 
 	//   template then do not do image extraction at all, it is too risky
@@ -466,7 +466,7 @@ bool Images::launchRequests ( ) {
 		unsigned long shardNum;
 		//shardNum = getShardNum(RDB_POSDB,&startKey);
 		//uint32_t getShardNum (char rdbId, void *key );
-		//uint32_t getShardNumFromDocId ( long long d ) ;
+		//uint32_t getShardNumFromDocId ( int64_t d ) ;
 		// assume to be for posdb here
 		shardNum = g_hostdb.getShardNumByTermId ( &startKey );
 
@@ -539,7 +539,7 @@ void Images::gotTermList ( ) {
 	// loop over it
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRecord() ) {
 		// get the first rec
-		long long d = m_list.getCurrentDocId();
+		int64_t d = m_list.getCurrentDocId();
 		// note it
 		//log("dup: image is dupped");
 		// is it us? if so ignore it
@@ -964,7 +964,7 @@ void *thumbStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 void Images::thumbStart_r ( bool amThread ) {
 
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 
 	//static char  scmd[200] = "%stopnm %s | "
 	//                         "pnmscale -xysize 100 100 - | "
@@ -1180,7 +1180,7 @@ void Images::thumbStart_r ( bool amThread ) {
         }
 	fhndl = 0;
        	unlink( out );
-	long long stop = gettimeofdayInMilliseconds();
+	int64_t stop = gettimeofdayInMilliseconds();
 	// tell the loop above not to download anymore, we got one
 	m_thumbnailValid = true;
 

@@ -88,12 +88,12 @@ making %sbalanced tree with %li nodes",bs,numNodes);
 	//char *data = (char *)mmalloc ( numNodes * sizeof(key_t), "treetest");
 	//char *pp = data;
 	//if ( ! data ) { log("shit"); return -1; }
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < numNodes ; i++ ) {
 		t.addNode ( keys[i] , NULL , 0 ); // , pp , 5*1024 );
 		//pp += 5*1024;
 	}
-	long long t2 = gettimeofdayInMilliseconds();
+	int64_t t2 = gettimeofdayInMilliseconds();
 	log("added %li keys to tree in %lli ms",  numNodes , t2 - t1 );
 
 

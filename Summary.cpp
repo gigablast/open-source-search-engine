@@ -52,7 +52,7 @@ bool Summary::set2 ( Xml      *xml                ,
 		     Sections *sections           ,
 		     Pos      *pos                ,
 		     Query    *q                  ,
-		     long long *termFreqs         ,
+		     int64_t *termFreqs         ,
 		     float    *affWeights         , // 1-1 with qterms
 		     //char     *coll               ,
 		     //long      collLen            ,
@@ -91,7 +91,7 @@ bool Summary::set2 ( Xml      *xml                ,
 	//m_begPubDateList = begPubDateList;
 	//m_endPubDateList = endPubDateList;
 	//m_diversity      = 1.0;
-	// long long start = gettimeofdayInMilliseconds();
+	// int64_t start = gettimeofdayInMilliseconds();
 	// assume we got maxnumlines of summary
 	if ( (maxNumCharsPerLine+6)*maxNumLines > maxSummaryLen ) {
 		//maxNumCharsPerLine = (maxSummaryLen-10)/maxNumLines;
@@ -145,7 +145,7 @@ bool Summary::set2 ( Xml      *xml                ,
 					   //bigSampleRadius,
 					   maxSummaryLen );
 	
-	/*long long end = gettimeofdayInMilliseconds();
+	/*int64_t end = gettimeofdayInMilliseconds();
 	if ( end - start > 2 )
 		log ( LOG_WARN,"summary: took %lli ms to finish big hack",
 		      end - start );
@@ -245,7 +245,7 @@ bool Summary::set2 ( Xml      *xml                ,
 
 		// reset these at the top of each loop
 		Match     *maxm;
-		long long  maxScore = 0;
+		int64_t  maxScore = 0;
 		long       maxa = 0;
 		long       maxb = 0;
 		long       maxi  = -1;
@@ -262,7 +262,7 @@ bool Summary::set2 ( Xml      *xml                ,
 			}
 		}
 		lastNumFinal = numFinal;
-		// long long stget = gettimeofdayInMilliseconds();
+		// int64_t stget = gettimeofdayInMilliseconds();
 		// does the max that we found have a new query word that was
 		// not already in the summary?
 		//long maxFoundNew = 0;
@@ -293,7 +293,7 @@ bool Summary::set2 ( Xml      *xml                ,
 			// . get score of best window around this match
 			// . do not allow left post of window to be <= lasta to
 			//   avoid repeating the same window.
-			long long score = getBestWindow (matches, 
+			int64_t score = getBestWindow (matches, 
 							 i, 
 							 &lasta,
 							 &a, &b, 
@@ -602,7 +602,7 @@ long Summary::getSummaryLen ( long maxLines ) {
 // . window is defined by the half-open interval [a,b) where a and b are 
 //   word #'s in the Words array indicated by match #m
 // . return -1 and set g_errno on error
-long long Summary::getBestWindow ( Matches *matches       ,
+int64_t Summary::getBestWindow ( Matches *matches       ,
 				   long     mm            ,
 				   long    *lasta         ,
 				   long    *besta         ,
@@ -628,7 +628,7 @@ long long Summary::getBestWindow ( Matches *matches       ,
 	if ( m->m_sections ) sp = m->m_sections->m_sectionPtrs;
 
 	long            nw        = words->getNumWords();
-	long long      *wids      = words->getWordIds();
+	int64_t      *wids      = words->getWordIds();
 	nodeid_t       *tids      = words->getTagIds();
 
 	// . sanity check
@@ -795,7 +795,7 @@ long long Summary::getBestWindow ( Matches *matches       ,
 	// query words. Mark the represented query words in the array that
 	// comes to us. also mark how many times the same word is repeated in
 	// this summary.
-	long long score = 0LL;
+	int64_t score = 0LL;
 	// is a url contained in the summary, that looks bad! punish!
 	bool hasUrl = false;
 	// the word count we did above was just an approximate. count it right
@@ -999,7 +999,7 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 	long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_IN_TITLE;
 	// shortcut
 	nodeid_t  *tids = words->m_tagIds;
-	long long *wids = words->getWordIds();
+	int64_t *wids = words->getWordIds();
 	// get the section ptr array 1-1 with the words, "sp"
 	Section **sp = NULL;
 	if ( sections ) sp = sections->m_sectionPtrs;
@@ -1170,7 +1170,7 @@ bool Summary::set0 ( char *doc , long docLen , Query *q, Msg20Request *mr ) {
 		      mr->m_bigSampleMaxLen ,
 		      NULL , // bigSampleLen ptr!
 		      NULL ,
-		      (long long *)mr->ptr_termFreqs );
+		      (int64_t *)mr->ptr_termFreqs );
 }
 
 // . doc must be NULL terminated
@@ -1186,7 +1186,7 @@ bool Summary::set1 ( char      *doc                ,
 		     long       bigSampleMaxLen    ,
 		     long      *bigSampleLen       ,
 		     char      *foundTermVector    ,
-		     long long *termFreqs          ) {
+		     int64_t *termFreqs          ) {
 	// reset summary
 	m_summaryLen = 0;
 	m_summary[0]='\0';
@@ -1203,7 +1203,7 @@ bool Summary::set1 ( char      *doc                ,
 	long ptrs [ MAX_QUERY_TERMS ];
 	for ( long i = 0 ; i < numTerms ; i++ ) ptrs[i] = i;
 	// convenience var
-	long long *freqs = termFreqs; // q->getTermFreqs();
+	int64_t *freqs = termFreqs; // q->getTermFreqs();
 	// . this is taken from IndexTable.cpp
 	// . bubble sort so lower freqs (rare terms) are on top
 	bool flag = true;

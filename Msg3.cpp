@@ -77,7 +77,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		       long           retryNum      ,
 		       long           maxRetries    ,
 		       bool           compensateForMerge ,
-		       long long      syncPoint     ,
+		       int64_t      syncPoint     ,
 		       bool           justGetEndKey ,
 		       bool           allowPageCache ,
 		       bool           hitDisk        ) {
@@ -391,7 +391,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		//   then work correctly. before we were splitting these
 		//   sequence between successive disk reads and they were not
 		//   getting annihilated together in the call to indexMerge_r()
-		long long d = g_tfndb.getDocId ( (key_t *)&m_endKey );
+		int64_t d = g_tfndb.getDocId ( (key_t *)&m_endKey );
 		if ( d > 0 ) d = d - 1LL;
 		//m_constrainKey = g_tfndb.makeMaxKey(d);
 		*(key_t *)m_constrainKey = g_tfndb.makeMaxKey(d);
@@ -466,7 +466,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		//long p1 , p2; 
 		//maps[fn]->getPageRange (startKey,endKey,minRecSizes,&p1,&p2);
 		// now get some read info
-		long long offset      = maps[fn]->getAbsoluteOffset ( p1 );
+		int64_t offset      = maps[fn]->getAbsoluteOffset ( p1 );
 		long      bytesToRead = maps[fn]->getRecSizes ( p1, p2, false);
 		// max out the endkey for this list
 		// debug msg
@@ -941,8 +941,8 @@ bool Msg3::doneScanning ( ) {
 
 	// print the time
 	if ( g_conf.m_logTimingDb ) {
-		long long now = gettimeofdayInMilliseconds();
-		long long took = now - m_startTime;
+		int64_t now = gettimeofdayInMilliseconds();
+		int64_t took = now - m_startTime;
 		log(LOG_TIMING,
 		    "net: Took %lli ms to read %li lists of %li bytes total"
 		     " from %s (niceness=%li).",
@@ -1150,9 +1150,9 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 	// get the file maps from the rdb
 	RdbMap **maps = base->getMaps();
 	// add up counts from each map
-	long long totalNegatives = 0;
-	long long totalPositives = 0;
-	long long totalFileSize  = 0;
+	int64_t totalNegatives = 0;
+	int64_t totalPositives = 0;
+	int64_t totalFileSize  = 0;
 	for (long i = 0 ; i < m_numFileNums ; i++) {
 		long fn = m_fileNums[i];
 		// . this cored on me before when fn was -1, how'd that happen?
@@ -1167,7 +1167,7 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 		totalFileSize  += maps[fn]->getFileSize();
 	}
 	// add em all up
-	long long totalNumRecs = totalNegatives + totalPositives;
+	int64_t totalNumRecs = totalNegatives + totalPositives;
 	// if we have no records on disk, why are we reading from disk?
 	if ( totalNumRecs == 0 ) return ;
 	// what is the size of a negative record?
@@ -1175,7 +1175,7 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 	long negRecSize  = m_ks;
 	if ( base->getFixedDataSize() == -1 ) negRecSize += 4;
 	// what is the size of all positive recs combined?
-	long long posFileSize = totalFileSize - negRecSize * totalNegatives;
+	int64_t posFileSize = totalFileSize - negRecSize * totalNegatives;
 	// . we often overestimate the size of the negative recs for indexdb
 	//   because it uses half keys...
 	// . this can make posFileSize go negative and ultimately result in
@@ -1185,11 +1185,11 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 	long posRecSize  = 0;
 	if ( totalPositives > 0 ) posRecSize = posFileSize / totalPositives;
 	// we annihilate the negative recs and their positive pairs
-	long long loss   = totalNegatives * (negRecSize + posRecSize);
+	int64_t loss   = totalNegatives * (negRecSize + posRecSize);
 	// what is the percentage lost?
-	long long lostPercent = (100LL * loss) / totalFileSize;
+	int64_t lostPercent = (100LL * loss) / totalFileSize;
 	// how much more should we read to compensate?
-	long newMin = ((long long)m_minRecSizes * (lostPercent + 100LL))/100LL;
+	long newMin = ((int64_t)m_minRecSizes * (lostPercent + 100LL))/100LL;
 	// newMin will never be smaller unless it overflows
 	if ( newMin < m_minRecSizes ) newMin = 0x7fffffff;
 	// print msg if we changed m_minRecSizes

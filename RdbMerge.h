@@ -67,7 +67,7 @@ class RdbMerge {
 		     long       numFiles     ,
 		     long       niceness     ,
 		     class DiskPageCache *pc     ,
-		     long long maxTargetFileSize ,
+		     int64_t maxTargetFileSize ,
 		     char       keySize      );
 
 	bool isMerging ( ) { return m_isMerging; };
@@ -99,7 +99,7 @@ class RdbMerge {
 	bool        m_doneMerging;
 
 	// how many dup keys removed from the IndexList merge, if any?
-	long long getDupsRemoved ( ) { return m_dupsRemoved; };
+	int64_t getDupsRemoved ( ) { return m_dupsRemoved; };
 
 	void doSleep();
 
@@ -148,10 +148,10 @@ class RdbMerge {
 	long        m_niceness;
 
 	// count for indexdb
-	long long   m_dupsRemoved;
+	int64_t   m_dupsRemoved;
 
 	class DiskPageCache *m_pc;
-	long long m_maxTargetFileSize;
+	int64_t m_maxTargetFileSize;
 
 	long      m_id2;
 

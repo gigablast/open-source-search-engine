@@ -61,7 +61,7 @@ public:
 	
 	bool updateTagTerms ( ) ;
 
-	bool getMetaList ( long long docId , 
+	bool getMetaList ( int64_t docId , 
 			   long eventId , 
 			   TagRec *egr ,
 			   RdbList *oldList ,

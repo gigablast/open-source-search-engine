@@ -102,7 +102,7 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	if ( maxTitleChars <= 0 ) return true;
 	if ( maxTitleWords <= 0 ) return true;
 
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	// . reset so matches.cpp using this does not core
 	// . assume no title tag
@@ -178,7 +178,7 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 				  q ,
 				  cr );
 
-	long long took = gettimeofdayInMilliseconds() - startTime;
+	int64_t took = gettimeofdayInMilliseconds() - startTime;
 	if ( took > 5 ) log("query: Title set took %lli ms for %s", took,
 			    xd->getFirstUrl()->getUrl());
 
@@ -322,7 +322,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// the imported link info from another collection, linkInfo2...
  fooloop:
 
-	//long long x = gettimeofdayInMilliseconds();
+	//int64_t x = gettimeofdayInMilliseconds();
 
 	// . get every link text
 	// . TODO: repeat for linkInfo2, the imported link text
@@ -537,7 +537,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	//logf(LOG_DEBUG,"title: took2=%lli",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
-	//long long *wids = WW->getWordIds();
+	//int64_t *wids = WW->getWordIds();
 	// . find the last positive scoring guy
 	// . do not consider title candidates after "r" if "r" is non-zero
 	// . FIXES http://larvatusprodeo.net/2009/01/07/partisanship-politics-
@@ -1121,7 +1121,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			if ( ! q ) continue;
 			// convert the word id into a term id
 			//int64_ttermid=g_indexdb.getTermId(0,w->getWordId(j));
-			long long wid = w->getWordId(j);
+			int64_t wid = w->getWordId(j);
 			// reward if in the query
 			if ( q->getWordNum(wid) >= 0 ) {
 				qtb       *= 1.5;
@@ -1395,7 +1395,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// . hash each word in the document with a positive score
 	// . go up to the first 5000 "words"
 	// . hash up to 1000 "words"
-	HashTableT <long long,long> ht;
+	HashTableT <int64_t,long> ht;
 	inLink = false;
 	for ( long i = 0 ; i < NW && i < 5000 ; i++ ) {
 		// see whose in a link tag
@@ -1447,7 +1447,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		long       a1    = as   [i];
 		long       b1    = bs   [i];
 		long       nw1   = w1->getNumWords();
-		long long *wids1 = w1->getWordIds ();
+		int64_t *wids1 = w1->getWordIds ();
 		// loop through this candidates words
 		for ( long j = a1 ; j <= b1 && j < nw1 ; j++ ) {
 			// skip if not alnum
@@ -1657,8 +1657,8 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 	//if ( scores1 ) ss1 = scores1->m_scores;
 	//if ( scores2 ) ss2 = scores2->m_scores;
 	// this augments the hash table
-	//long long lastWids[1024];
-	long long lastWid   = -1;
+	//int64_t lastWids[1024];
+	int64_t lastWid   = -1;
 	float     lastScore = 0.0;
 	// but we cannot have more than 1024 slots then
 	if ( ! table.set ( 1024 ) ) return -1.0;
@@ -1670,7 +1670,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 	// loop over all words in "w1" and hash them
 	for ( long i = i0 ; i < i1 ; i++ ) {
 		// the word id
-		long long wid = (long) w1->m_wordIds[i] ;
+		int64_t wid = (long) w1->m_wordIds[i] ;
 		// skip if not indexable
 		if ( wid == 0 ) continue;
 		// or score is 0
@@ -1715,7 +1715,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// accumulate
 		sum += phrScore;
 		// get the phrase id
-		long long pid = hash64 ( wid , lastWid );
+		int64_t pid = hash64 ( wid , lastWid );
 		// debug
 		//logf(LOG_DEBUG,
 		//     "adding pid=%li score=%.02f sum=%.02f",
@@ -1743,7 +1743,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 	// loop over all words in "w1" and hash them
 	for ( long i = t0 ; i < t1 ; i++ ) {
 		// the word id
-		long long wid = (long) w2->m_wordIds[i] ;
+		int64_t wid = (long) w2->m_wordIds[i] ;
 		// skip if not indexable
 		if ( wid == 0 ) continue;
 		// or score is 0
@@ -1775,7 +1775,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// accumulate
 		sum += phrScore;
 		// get the phrase id
-		long long pid = hash64 ( wid , lastWid );
+		int64_t pid = hash64 ( wid , lastWid );
 		// is it in table? 
 		slot = table.getSlot ( (long)pid ) ;
 		// . accumulate if in there
@@ -1810,7 +1810,7 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 			Sections *sections ) {
 
 	// skip initial punct
-	//long long  *wids      = w->m_wordIds;
+	//int64_t  *wids      = w->m_wordIds;
 	//nodeid_t *tids      = w->m_tagIds;
 	char      **wp        = w->m_words;
 	long       *wlens     = w->m_wordLens;

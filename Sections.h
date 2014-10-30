@@ -226,12 +226,12 @@ typedef long esflags_t;
 #define NOINDEXFLAGS (SEC_SCRIPT|SEC_STYLE|SEC_SELECT)
 
 // the section type (bit flag vector for SEC_*) is currently 32 bits
-typedef long long sec_t;
-//typedef long long titleflags_t;
-typedef long long sentflags_t;
+typedef int64_t sec_t;
+//typedef int64_t titleflags_t;
+typedef int64_t sentflags_t;
 typedef uint32_t turkbits_t;
 
-bool  isPlaceIndicator ( long long *widp ) ;
+bool  isPlaceIndicator ( int64_t *widp ) ;
 char *getSentBitLabel ( sentflags_t sf ) ;
 char *getEventSentBitLabel ( esflags_t esflags ) ;
 char *getTurkBitLabel ( turkbits_t tb ) ;
@@ -277,7 +277,7 @@ class Sectiondb {
 		return (*(unsigned long *)(((char *)k)+6)); }
 
 
-	long long getDocId ( void *k ) {
+	int64_t getDocId ( void *k ) {
 		return ((*(uint64_t *)k) >> 2) & DOCID_MASK; }
 
 
@@ -318,12 +318,12 @@ class SectionStats {
 		m_totalDocIds   = 0;
 	};
 	// # of times xpath innerhtml matched ours. 1 count per docid max.
-	long long m_totalMatches;
+	int64_t m_totalMatches;
 	// # of times this xpath occurred. doc can have multiple times.
-	long long m_totalEntries;
+	int64_t m_totalEntries;
 	// # of unique vals this xpath had. doc can have multiple counts.
-	long long m_numUniqueVals;
-	long long m_totalDocIds;
+	int64_t m_numUniqueVals;
+	int64_t m_totalDocIds;
 };
 
 
@@ -672,8 +672,8 @@ class Sections {
 		   class Phrases  *phrases     ,
 		   class Bits     *bits        ,
 		   class Url      *url         ,
-		   long long       docId       ,
-		   long long       siteHash64  ,
+		   int64_t       docId       ,
+		   int64_t       siteHash64  ,
 		   char           *coll        ,
 		   long            niceness    ,
 		   void           *state       ,
@@ -788,9 +788,9 @@ class Sections {
 	class Bits  *m_bits     ;
 	class Url   *m_url      ;
 	class Dates *m_dates    ;
-	long long    m_docId    ;
-	long long    m_siteHash64 ;
-	//long long    m_tagPairHash;
+	int64_t    m_docId    ;
+	int64_t    m_siteHash64 ;
+	//int64_t    m_tagPairHash;
 	char        *m_coll     ;
 	void        *m_state    ;
 	void       (*m_callback) ( void *state );
@@ -816,7 +816,7 @@ class Sections {
 	key128_t m_startKey;
 	long  m_recall;
 	IndexList m_list;
-	long long m_termId;
+	int64_t m_termId;
 
 	long m_numLineWaiters;
 	bool m_waitInLine;
@@ -892,8 +892,8 @@ class Sections {
 	// set a flag
 	bool  m_badHtml;
 
-	long long  *m_wids;
-	long long  *m_pids;
+	int64_t  *m_wids;
+	int64_t  *m_pids;
 	long       *m_wlens;
 	char      **m_wptrs;
 	nodeid_t   *m_tids;
@@ -1069,14 +1069,14 @@ class SectionVotingTable {
 	bool addListOfVotes ( RdbList *list, 
 			      key128_t **lastKey ,
 			      uint32_t tagPairHash ,
-			      long long docId ,
+			      int64_t docId ,
 			      long niceness ) ;
 
 	// index our sections as flag|tagHash pairs using a termId which
 	// is basically our sitehash. this allows us to "vote" on what
 	// sections are static, dynamic, "texty" by indexing our votes into
 	// datedb.
-	bool hash ( long long docId , 
+	bool hash ( int64_t docId , 
 		    class HashTableX *dt , 
 		    uint64_t siteHash64 ,
 		    long niceness ) ;

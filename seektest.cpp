@@ -10,12 +10,12 @@
 #include <fcntl.h>
 
 
-static long long gettimeofdayInMilliseconds() ;
+static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -32,7 +32,7 @@ static long s_numThreads = 0;
 
 static long s_maxReadSize = 1;
 
-static long long s_startTime = 0;
+static int64_t s_startTime = 0;
 
 #define MAX_READ_SIZE (2000000)
 
@@ -128,11 +128,11 @@ void *startUp ( void *state ) {
 		size = s_maxReadSize;
 		//if ( size < 32*1024 ) size = 32*1024;
 		// time it
-		long long start = gettimeofdayInMilliseconds();
+		int64_t start = gettimeofdayInMilliseconds();
 		//fprintf(stderr,"%li) i=%li start\n",id,i );
 		pread ( s_fd1 , buf , size , off );
 		//fprintf(stderr,"%li) i=%li done\n",id,i );
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);

@@ -52,7 +52,7 @@ class Summary {
 	// . returns false and sets errno on error
 	bool set ( class Xml   *xml                ,
 		   class Query *q                  ,
-		   long long   *termFreqs          ,
+		   int64_t   *termFreqs          ,
 		   bool         doStemming         ,
 		   long         maxSummaryLen      , 
 		   long         maxNumLines        ,
@@ -72,7 +72,7 @@ class Summary {
 		    class Sections *sections           ,
 		    class Pos      *pos                ,
 		    class Query    *q                  ,
-		    long long      *termFreqs          ,
+		    int64_t      *termFreqs          ,
 		    float          *affWeights         , // 1-1 with qterms
 		    //char           *coll               ,
 		    //long            collLen            ,
@@ -147,7 +147,7 @@ class Summary {
 	bool set ( char      *doc                ,
 		   long       docLen             ,
 		   Query     *q                  ,
-		   long long *termFreqs          ,
+		   int64_t *termFreqs          ,
 		   bool       doStemming         ,
 		   long       maxSummaryLen      , 
 		   long       maxNumLines        ,
@@ -191,7 +191,7 @@ class Summary {
 				//long          *queryInSectionScore,
 				long           commentStart );
 
-	long long getBestWindow ( class Matches *matches ,
+	int64_t getBestWindow ( class Matches *matches ,
 				  long           mn      ,
 				  long          *lasta   ,
 				  long          *besta   ,
@@ -223,7 +223,7 @@ class Summary {
 		    long       bigSampleMaxLen    ,
 		    long      *bigSampleLen       ,
 		    char      *foundTermVector    ,
-		    long long *termFreqs          ) ;
+		    int64_t *termFreqs          ) ;
 
 	// null terminate and store the summary here.
 	char  m_summary      [ MAX_SUMMARY_LEN ];

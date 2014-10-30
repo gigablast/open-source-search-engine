@@ -45,7 +45,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// wait for clock to be synced with host #0
 	if ( ! isClockInSync() ) return;
 	// get local time
-	long long nowLocalMS = gettimeofdayInMillisecondsLocal();
+	int64_t nowLocalMS = gettimeofdayInMillisecondsLocal();
 	// get our hostid
 	long hid = g_hostdb.m_myHost->m_hostId;
 	// if process only recently started (1 min ago or less)

@@ -69,9 +69,9 @@ public:
 				char **lastKeyPtr );
 	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
 
-	long long m_lastUh48;
+	int64_t m_lastUh48;
 	long m_lastFirstIp;
-	long long m_prevReplyUh48;
+	int64_t m_prevReplyUh48;
 	long m_prevReplyFirstIp;
 	long m_prevReplyError;
 	time_t m_prevReplyDownloadTime;
@@ -81,7 +81,7 @@ public:
 	HttpRequest m_hr;
 	Msg7 m_msg7;
 	long m_dumpRound;
-	long long m_accumulated;
+	int64_t m_accumulated;
 
 	WaitEntry m_waitEntry;
 
@@ -748,7 +748,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		}
 
 		// print the url if not yet printed
-		long long uh48 = sreq->getUrlHash48  ();
+		int64_t uh48 = sreq->getUrlHash48  ();
 		long firstIp = sreq->m_firstIp;
 		bool printIt = false;
 		// there can be multiple spiderrequests for the same url!
@@ -4175,13 +4175,13 @@ long isInSeedBuf ( CollectionRec *cr , char *url, int len ) {
 			// skip possible white space. might be \0.
 			if ( *p ) p++;
 			// hash it
-			long long h64 = hash64 ( purl , end-purl );
+			int64_t h64 = hash64 ( purl , end-purl );
 			if ( ! ht->addKey ( &h64 ) ) return -1;
 		}
 	}
 
 	// is this url in the hash table?
-	long long u64 = hash64 ( url, len );
+	int64_t u64 = hash64 ( url, len );
 	
 	if ( ht->isInTable ( &u64 ) ) return 1;
 
@@ -4225,7 +4225,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		// if not legit skip
 		if ( url.getUrlLen() <= 0 ) continue;
 		// need this
-		long long probDocId = g_titledb.getProbableDocId(&url);
+		int64_t probDocId = g_titledb.getProbableDocId(&url);
 		// make it
 		SpiderRequest sreq;
 		sreq.reset();

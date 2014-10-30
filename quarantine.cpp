@@ -51,12 +51,12 @@ int main ( int argc , char *argv[] ) {
 
 	//mlockall(MCL_FUTURE);
 
-	long long maxMem = atoi(argv[1]); // 1GB?
-	long long chunkSize = 300000;
+	int64_t maxMem = atoi(argv[1]); // 1GB?
+	int64_t chunkSize = 300000;
 	long n = 0;
 	long max = (long)(maxMem / chunkSize) + 10;
 	char *mem [ max ];
-	long long total = 0LL;
+	int64_t total = 0LL;
 	for ( ; ; ) {
 		mem[n] = (char *)malloc ( chunkSize );
 		if ( mem[n] == NULL ) break;
@@ -74,7 +74,7 @@ int main ( int argc , char *argv[] ) {
 	fprintf(stderr,
 		"quarantine: scanning grabbed mem for errors.\n");
 
-	long long badRam = 0;
+	int64_t badRam = 0;
 	// scan each chunk
 	for ( long i = 0 ; i < n ; i++ ) {
 		// erturns true if passes

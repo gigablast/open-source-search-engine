@@ -617,7 +617,7 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 		for ( long i = 0 ; i < nn ; i++ ) {
 			char *name = g_nodes[i].m_nodeName;
 			long  nlen = gbstrlen(name);
-			long long h = hash64Upper_a ( name,nlen,0LL );
+			int64_t h = hash64Upper_a ( name,nlen,0LL );
 			NodeType *nt = &g_nodes[i];
 			if ( ! s_ht.addKey(&h,&nt) ) { 
 				char *xx=NULL;*xx=0; }
@@ -634,7 +634,7 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 	// facebook uses underscores like <start_time>
 	char *e = s; for ( ; *e && (is_alnum_a(*e) || *e=='-'|| *e=='_'); e++);
 	// hash it for lookup
-	long long h = hash64Upper_a ( s , e - s , 0 );
+	int64_t h = hash64Upper_a ( s , e - s , 0 );
 	// look it up
 	NodeType **ntp = (NodeType **)s_ht.getValue(&h);
 	// assume none
@@ -651,7 +651,7 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 // . 0 means not a node
 // . 1 means it's an xml node
 // . > 1 is reserved for pre-defined html nodes
-nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
+nodeid_t XmlNode::setNodeInfo ( int64_t  nodeHash ){//  , char *hasBackTag ,
 	                        //char      *isBreaking , char *isVisible ) {
 	/*
 	// sanity check
@@ -674,7 +674,7 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 	// . we have 108 node names so we'll use 512 buckets
 	// . given the hash of your node name you can look it up in this table
 	static bool      s_isHashed = false;
-	static long long s_hash [512];
+	static int64_t s_hash [512];
 	static nodeid_t  s_num  [512];
 	// how many NodeTypes do we have in g_nodes?
 	static long      s_numNodeTypes = sizeof(g_nodes) / sizeof(NodeType);
@@ -684,7 +684,7 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 	memset ( s_hash , 0 , 8*512 );
 	// set the hash table
 	for ( long i = 0 ; i < s_numNodeTypes ; i++ ) {
-		long long h = hash64Upper_a ( g_nodes[i].m_nodeName, 
+		int64_t h = hash64Upper_a ( g_nodes[i].m_nodeName, 
 					    gbstrlen(g_nodes[i].m_nodeName),0LL);
 		//long b = (uint64_t)h % 512;
 		long b = (uint64_t)h & 511;

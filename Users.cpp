@@ -639,7 +639,7 @@ User *Users::isUserLogged ( char *username, long ip  ){
 
 	// make the key a combo of ip and username
 	uint64_t key;
-	key = ((long long)ip << 32 ) | (long long)hash32n(username);
+	key = ((int64_t)ip << 32 ) | (int64_t)hash32n(username);
 
 	long slotNum = m_loginTable.getSlot ( &key );
 	if ( slotNum < 0 ) return NULL;
@@ -678,7 +678,7 @@ bool Users::loginUser ( char *username, long ip ) {
 	// add the user to the login table
 	//key_t cacheKey = makeUserKey ( username, &cacheKey );
 	uint64_t key;
-	key = ((long long)ip << 32 ) | (long long)hash32n(username);
+	key = ((int64_t)ip << 32 ) | (int64_t)hash32n(username);
 
 	m_needsSave = true;
 
@@ -691,7 +691,7 @@ bool Users::loginUser ( char *username, long ip ) {
 
 bool Users::logoffUser( char *username, long ip ){
 	uint64_t key;
-	key = ((long long)ip << 32 ) | (long long)hash32n(username);
+	key = ((int64_t)ip << 32 ) | (int64_t)hash32n(username);
 	m_loginTable.removeKey(&key);
 	return true;
 }

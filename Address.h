@@ -130,13 +130,13 @@ class Place *getStatePlace ( long a , long alnumPos , class Words *words );
 
 long getCommonWordIds ( long a1 , long b1 ,
 			long a2 , long b2 ,
-			long long *wids      ,
-			long long *commonIds ,
+			int64_t *wids      ,
+			int64_t *commonIds ,
 			long max ,
 			long niceness ) ;
 
 // used by XmlDoc::makeSimpleWordVector() as well
-long long *getSynonymWord ( long long *h , long long *prevId , bool isStreet );
+int64_t *getSynonymWord ( int64_t *h , int64_t *prevId , bool isStreet );
 
 // called by main.cpp
 void handleRequest2c ( class UdpSlot *slot , long nicenessWTF ) ;
@@ -320,18 +320,18 @@ class Address {
 			 bool verifiedOnly ,
 			 bool includeHash ) ;
 
-	key128_t makePlacedbKey ( long long docId , 
+	key128_t makePlacedbKey ( int64_t docId , 
 				  bool useName1 ,
 				  bool useName2 );
 
 	void setDivId ( ) ;
 
-	//long long makeAddressVotingTableKey ( );
+	//int64_t makeAddressVotingTableKey ( );
 
 	long print  ( );
-	long print2 ( long i, SafeBuf *pbuf , long long uh64 );
+	long print2 ( long i, SafeBuf *pbuf , int64_t uh64 );
 	void printEssentials ( SafeBuf *pbuf , bool forEvents ,
-			       long long uh64 );
+			       int64_t uh64 );
 
 	void reset() {
 		m_name1 = m_name2 = m_suite = m_street = NULL;
@@ -440,7 +440,7 @@ class Address {
 
 	// used for the m_avt, address voting table. must be unique for
 	// every address we have
-	//long long m_avtKey;
+	//int64_t m_avtKey;
 
 	// the dom and "firstip" this address came from
 	long m_domHash32;
@@ -597,7 +597,7 @@ class Addresses {
 		   class Bits     *bits        ,
 		   class TagRec   *gr          ,
 		   class Url      *url         ,
-		   long long       docId       ,
+		   int64_t       docId       ,
 		   //char           *coll        ,
 		   collnum_t collnum,
 		   long            domHash32   ,
@@ -618,7 +618,7 @@ class Addresses {
 
 	bool set2 ( ) ;
 
-	void print ( class SafeBuf *pbuf , long long uh64 );
+	void print ( class SafeBuf *pbuf , int64_t uh64 );
 
 	bool addAddress ( class Place *name1  ,
 			  class Place *name2  ,
@@ -633,7 +633,7 @@ class Addresses {
 			  char   flags3    ,
 			  class Address **retAddr );
 
-	bool hashForPlacedb ( long long         docId    ,
+	bool hashForPlacedb ( int64_t         docId    ,
 			      long              domHash  ,
 			      long              ip       ,
 			      class HashTableX *dt       ) ;
@@ -644,7 +644,7 @@ class Addresses {
 
 	bool isCityState ( class Section *si ) ;
 
-	long isCityState3 ( long long h1 , long long h2 ) ;
+	long isCityState3 ( int64_t h1 , int64_t h2 ) ;
 
 	long isCityState2 ( long a , long b ) ;
 
@@ -717,10 +717,10 @@ class Addresses {
 	Msg0            m_msg0;
 	RdbList         m_list;
 	class Url      *m_url;
-	long long       m_docId;
+	int64_t       m_docId;
 	//char           *m_coll;
 	collnum_t m_collnum;
-	long long       m_termId;
+	int64_t       m_termId;
 	long            m_domHash32;
 	long            m_ip;
 	//long            m_tagPairHash;
@@ -729,7 +729,7 @@ class Addresses {
 	char          **m_wptrs;
 	long           *m_wlens;
 	long            m_nw;
-	long long      *m_wids;
+	int64_t      *m_wids;
 	nodeid_t       *m_tids;
 	class Bits     *m_bits;
 	class TagRec   *m_gr;
@@ -793,7 +793,7 @@ class Addresses {
 };
 
 extern void getDSTInterval ( long year, long *a , long *b );
-extern long getDayOfWeek ( long long h ) ;
+extern long getDayOfWeek ( int64_t h ) ;
 extern bool setFromStr ( Address *a, char *s, pbits_t flags , 
 			 class PlaceMem *placeMem ,
 			 long niceness ) ;
@@ -897,6 +897,6 @@ PlaceDesc *getNearestCity_new ( float  lat ,
 				long   niceness ,
 				float *distInMilesSquared ) ;
 
-long long getWordXorHash ( char *s ) ;
+int64_t getWordXorHash ( char *s ) ;
 
 #endif

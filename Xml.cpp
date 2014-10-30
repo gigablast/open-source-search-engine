@@ -41,8 +41,8 @@ long Xml::getLong ( long n0 , long n1 , char *tagName , long defaultLong ) {
 }
 
 // . for parsing xml conf files
-long long Xml::getLongLong ( long n0 , long n1 , char *tagName , 
-			     long long defaultLongLong         ) {
+int64_t Xml::getLongLong ( long n0 , long n1 , char *tagName , 
+			     int64_t defaultLongLong         ) {
 	long len;
 	char *s = getTextForXmlTag ( n0 , n1 , tagName , &len , false );
 	if ( s ) return atoll2 ( s , len );
@@ -137,12 +137,12 @@ char *Xml::getNode ( char *tagName , long *len ) {
 
 
 
-long long Xml::getCompoundHash ( char *s , long len ) const {
+int64_t Xml::getCompoundHash ( char *s , long len ) const {
 	// setup
 	char *p     = s;
 	char *start = s;
 	long i   = 0;
-	long long h = 0;
+	int64_t h = 0;
  loop:
 	// find fisrt .
 	while ( i < len && p[i] != '.' ) i++;
@@ -168,7 +168,7 @@ long Xml::getNodeNum ( long n0 , long n1 , char *tagName , long tagNameLen ) con
 	//   "dns.ip" is not the same as hashing "dns" then "." then "ip"
 	//   by passing the hash of the last to the next as the startHash
 	// . therefore, i now parse it up
-	long long h = getCompoundHash ( tagName , tagNameLen );
+	int64_t h = getCompoundHash ( tagName , tagNameLen );
 	long i;
 	if ( n1 > m_numNodes ) n1 = m_numNodes;
 	if ( n0 > m_numNodes ) n0 = m_numNodes;

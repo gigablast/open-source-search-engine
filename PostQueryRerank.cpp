@@ -21,7 +21,7 @@ struct M20List {
 	//long m_score;
 	rscore_t m_score;
 	//int m_tier;
-	long long m_docId;
+	int64_t m_docId;
 	char m_clusterLevel;
 	//long m_bitScore;
 	long m_numCommonInlinks;
@@ -225,7 +225,7 @@ bool PostQueryRerank::preRerank ( ) {
 	// a ton of inlinking ips
 	if ( ! ipTable.set ( numSlots , tmp , 5000 ) ) return false;
 	// this table maps a docid to the number of search results it links to
-	HashTableT <long long, long> inlinkTable;
+	HashTableT <int64_t, long> inlinkTable;
 	char tmp2[5000];
 	long numSlots2 = 5000 / ((8+4)*4);
 	if ( ! inlinkTable.set ( numSlots2 , tmp2 , 5000 ) ) return false;
@@ -282,7 +282,7 @@ bool PostQueryRerank::preRerank ( ) {
 		// add its inlinking docids into the hash table, inlinkTable
 		LinkInfo *info = (LinkInfo *)mr->ptr_linkInfo;//inlinks;
 		//long       n         = msg20->getNumInlinks      ();
-		//long long *docIds    = msg20->getInlinkDocIds    ();
+		//int64_t *docIds    = msg20->getInlinkDocIds    ();
 		//char      *flags     = msg20->getInlinkFlags     ();
 		//long      *ips       = msg20->getInlinkIps       ();
 		//char      *qualities = msg20->getInlinkQualities ();
@@ -368,7 +368,7 @@ bool PostQueryRerank::preRerank ( ) {
 		sortArrItem->m_numCommonInlinks = 0;
 		// lookup its inlinking docids in the hash table
 		//long       n      = msg20->getNumInlinks   ();
-		//long long *docIds = msg20->getInlinkDocIds ();
+		//int64_t *docIds = msg20->getInlinkDocIds ();
 		LinkInfo *info = (LinkInfo *)msg20->m_r->ptr_linkInfo;
 		for ( Inlink *k=NULL;info&&(k=info->getNextInlink(k)) ; ) {
 			// how many search results does this inlinker link to?
@@ -2014,9 +2014,9 @@ rscore_t PostQueryRerank::rerankDmozCategoryNamesDontHaveQT ( rscore_t score,
 		Words w;
 		Bits b;
 		Phrases p;
-		long long *wids;
+		int64_t *wids;
 		long       nw;
-		long long *pids;
+		int64_t *pids;
 		if ( ! w.set( currTitle     ,
 			      currTitleLen  ,
 			      TITLEREC_CURRENT_VERSION,
@@ -2042,7 +2042,7 @@ rscore_t PostQueryRerank::rerankDmozCategoryNamesDontHaveQT ( rscore_t score,
 			for ( long k = 0; k < numQTs; k++ ) {
 				QueryTerm *qt = 
 					&m_si->m_q->m_qterms[k];
-				long long rawTermId = qt->m_rawTermId;
+				int64_t rawTermId = qt->m_rawTermId;
 				// ignore 0 termIds
 				if ( rawTermId == 0 ) continue;
 				// see if we already matched this id
@@ -2087,7 +2087,7 @@ rscore_t PostQueryRerank::rerankDmozCategoryNamesDontHaveQT ( rscore_t score,
 					if ( n != -1 ) continue;
 					// Compare this query term syn to 
 					// cat word
-					if ( (long long)h == wids[i] ) {
+					if ( (int64_t)h == wids[i] ) {
 						matchedIds.addKey( h, 0 );
 						numQTsInDmoz++;
 						//log( LOG_DEBUG, "query: "
@@ -2100,7 +2100,7 @@ rscore_t PostQueryRerank::rerankDmozCategoryNamesDontHaveQT ( rscore_t score,
 					// Compare this query term syn to 
 					// cat phrase
 					if ( qt->m_isPhrase && 
-					     (long long)h == pids[i] ) {
+					     (int64_t)h == pids[i] ) {
 						matchedIds.addKey( h, 0 );
 						numQTsInDmoz++;
 						//log( LOG_DEBUG, "query: "
@@ -2153,7 +2153,7 @@ rscore_t PostQueryRerank::rerankDmozCategoryNamesDontHaveGigabits ( rscore_t sco
 	//log( LOG_DEBUG, "query: numGigabits:%ld AWL", 
 	//     m_msg40->getNumTopics() );
 	long numTopics = m_msg40->getNumTopics();
-	HashTableT<long long, long> matchedIds;
+	HashTableT<int64_t, long> matchedIds;
 	matchedIds.set( numTopics*4 );
 	for ( long i = 0; i < numTopics; i++ ) {
 		Words words;

@@ -746,7 +746,7 @@ bool updateTfndb ( char *coll , RdbList *list , bool isTitledb,
 	// make the tfndb record
 	key_t ukey;
 	if ( isTitledb ) {
-		long long d = g_titledb.getDocIdFromKey ( (key_t *)k );
+		int64_t d = g_titledb.getDocIdFromKey ( (key_t *)k );
 		long e = g_titledb.getHostHash ( (key_t *)k );
 		ukey = g_tfndb.makeKey ( d, e, 255, false, false );//255=tfn
 		//g_tfndb.makeKey ( d, e, 255, false, false , ukey );
@@ -768,7 +768,7 @@ bool updateTfndb ( char *coll , RdbList *list , bool isTitledb,
 		// otherwise we should have a good data size
 		SpiderRec sr;
 		sr.set ( k , data , dataSize );
-		long long d = sr.getDocId();
+		int64_t d = sr.getDocId();
 		long e = g_tfndb.makeExt ( sr.getUrl() );
 		ukey = g_tfndb.makeKey ( d, e, 255, false, false );//255=tfn
 		//g_tfndb.makeKey ( d, e, 255, false, false , ukey );

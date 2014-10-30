@@ -19,10 +19,10 @@
 
 // this is RULE #15 implemented (See Weights.cpp) and is also used
 // by neighborhood.cpp to hash/index neighborhoods properly.
-void getWordToPhraseRatioWeights ( long long         pid1 , // pre phrase
-				   long long         wid1 ,
-				   long long         pid2 ,
-				   long long         wid2 , // post word
+void getWordToPhraseRatioWeights ( int64_t         pid1 , // pre phrase
+				   int64_t         wid1 ,
+				   int64_t         pid2 ,
+				   int64_t         wid2 , // post word
 				   float            *ww   ,
 				   float            *pw   ,
 				   class HashTableX *tt1  ,
@@ -92,7 +92,7 @@ class Weights {
 	long       m_headerWeight;
 	long       m_version;
 	long       m_nw;
-	long long *m_wids;
+	int64_t *m_wids;
 
 	long       m_niceness;
 

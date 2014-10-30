@@ -50,11 +50,11 @@ void SearchInput::clear ( long niceness ) {
 key_t SearchInput::makeKey ( ) {
 	// hash the query
 	long       n       = m_q.getNumTerms  ();
-	long long *termIds = m_q.getTermIds   ();
+	int64_t *termIds = m_q.getTermIds   ();
 	char      *signs   = m_q.getTermSigns ();
 	key_t k;
 	k.n1 = 0;
-	k.n0 = hash64 ( (char *)termIds , n * sizeof(long long) );
+	k.n0 = hash64 ( (char *)termIds , n * sizeof(int64_t) );
 	k.n0 = hash64 ( (char *)signs   , n , k.n0 );
 	// user defined weights, for weighting each query term separately
 	for ( long i = 0 ; i < n ; i++ ) {

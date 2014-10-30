@@ -68,7 +68,7 @@
 static void handleRequest24 ( UdpSlot *slot , long netnice ) ;
 
 static void setRepeatScores ( char      *repeatScores        ,
-			      long long *wids                ,
+			      int64_t *wids                ,
 			      long       nw                  ,
 			      char      *repeatTable         ,
 			      long       repeatTableNumSlots ,
@@ -119,7 +119,7 @@ bool Msg24::generateTopics ( char       *coll                ,
 			     long        queryLen            ,
 			     //float     termFreqWeights     ,
 			     //float     phraseAffWeights    ,
-			     long long  *docIds              ,
+			     int64_t  *docIds              ,
 			     char       *clusterLevels       ,
 			     long        numDocIds           ,
 			     TopicGroup  *topicGroups        ,
@@ -303,7 +303,7 @@ void Msg24::gotReply ( ) {
 	// . topics are NULL terminated
 	deserialize ( m_reply , m_replySize );
 
-	long long now  = gettimeofdayInMilliseconds();
+	int64_t now  = gettimeofdayInMilliseconds();
 	g_stats.addStat_r ( 0           ,
 			    m_startTime , 
 			    now,
@@ -405,12 +405,12 @@ void handleRequest24 ( UdpSlot *slot , long netnice ) {
 	st->m_queryLen = qlen;
 	p += qlen + 1;
 	// then the docids
-	//long long *docIds    = (long long *)p;
+	//int64_t *docIds    = (int64_t *)p;
 	//long       numDocIds = (requestEnd - p) / 9;
 	//p += numDocIds * 8;
 	// cluster levels
 	//char *clusterLevels = p;
-	st->m_docIds    = (long long *)p;
+	st->m_docIds    = (int64_t *)p;
 	st->m_numDocIds = (requestEnd - p) / 9;
 	p += st->m_numDocIds * 8;
 	// cluster levels
@@ -580,7 +580,7 @@ static bool hashSample ( Query *q, char *sample , long sampleLen ,
 			 TermTable *master, long *nqiPtr , 
 			 TopicGroup *t , 
 			 State24* st,
-			 long long docId ,
+			 int64_t docId ,
 			 char *vecs , long *numVecs ,
 			 class Words *wordsPtr , class Scores *scoresPtr ,
 			 bool isUnicode ,
@@ -610,7 +610,7 @@ void gotSampleWrapper ( void *state ) {
 	// wait for all replies to get here
 	if ( st->m_numReplies < st->m_numRequests ) return;
 	// get time now
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// . add the stat
 	// . use purple for tie to get all summaries
 	//g_stats.addStat_r ( 0           , 
@@ -618,7 +618,7 @@ void gotSampleWrapper ( void *state ) {
 	//		    now         ,
 	//		    0x008220ff  );
 	// timestamp log
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	log(LOG_DEBUG,"topics: msg24: Got %li titleRecs.",// in %lli ms",
 	    st->m_numReplies );//, now - m_startTime );
 
@@ -641,7 +641,7 @@ void gotSampleWrapper ( void *state ) {
 	}
 
 	// timestamp log
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	// debug
 	//char *pp = (char *)mmalloc ( 4 , "foo");
@@ -689,7 +689,7 @@ void gotSampleWrapper ( void *state ) {
 	// . now time with our new 6 word phrase maximum:
 	//   sum = 1294.0  avg = 16.0 sdev = 10.8 ... our rewrite was faster!!
 	//if ( g_conf.m_timingDebugEnabled )
-	long long took = gettimeofdayInMilliseconds() - startTime ;
+	int64_t took = gettimeofdayInMilliseconds() - startTime ;
 	if ( took > 1 ) 
 		log(LOG_TIMING,"topics: Took %lli ms to parse out topics.", 
 		     took );
@@ -699,7 +699,7 @@ void gotSampleWrapper ( void *state ) {
 
 class DocIdLink {
 public:
-	long long  m_docId;
+	int64_t  m_docId;
 	long       m_next; // offset into st->m_mem to DocIdLink
 };
 
@@ -729,7 +729,7 @@ bool getTopics ( State24       *st        ,
 	////////////////////////////////////////////
 	
 	
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 	
 	// only allow one vote per ip
 	HashTable iptable;
@@ -963,7 +963,7 @@ bool getTopics ( State24       *st        ,
 		// otherwise count it
 		tcount++;
 		// the docid
-		long long docId = 0;
+		int64_t docId = 0;
 		if ( ! wordsPtr ) docId = thisMsg20->getDocId();
 		// are we unicode?
 		bool isUnicode;
@@ -1692,9 +1692,9 @@ bool getTopics ( State24       *st        ,
 	// or if already hit MAX_TOPICS
 	//if ( maxWinners >= MAX_TOPICS ) goto skipdedup; mdw
 	if ( got == 0 ) maxWinners = maxWinners*2;
-	else            maxWinners = ((long long)maxWinners * 
-				      (long long)need * 110LL) / 
-				((long long)got * 100LL) + 10;
+	else            maxWinners = ((int64_t)maxWinners * 
+				      (int64_t)need * 110LL) / 
+				((int64_t)got * 100LL) + 10;
 	goto redo; // mdw
 
  skipdedup:
@@ -1776,7 +1776,7 @@ bool getTopics ( State24       *st        ,
 	long       *pscores = (long       *)p; p += ntp * 4;
 	long       *plens   = (long       *)p; p += ntp * 4;
 	long       *ndocids = (long       *)p; p += ntp * 4;
-	long long **dptrs   = (long long **)p; p += ntp * 4; // place holder
+	int64_t **dptrs   = (int64_t **)p; p += ntp * 4; // place holder
 	long       *ppops   = (long       *)p; p += ntp * 4;
 	char       *pgids   = (char       *)p; p += ntp ;
 	char       *ptext   = p;
@@ -1820,7 +1820,7 @@ bool getTopics ( State24       *st        ,
 			while ( (char *)link >= st->m_mem ) { 
 				count++; 
 				if ( st->m_returnDocIds ) {
-					*(long long *)ptext = link->m_docId;
+					*(int64_t *)ptext = link->m_docId;
 					ptext += 8;
 				}
 				link = (DocIdLink *)(st->m_mem + link->m_next);
@@ -1889,7 +1889,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops ,
 // . *nqiPtr is how many query terms we used - so caller can normalize scores
 bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		  TermTable *master, long *nqiPtr , TopicGroup *t ,
-		  State24 *st, long long docId ,
+		  State24 *st, int64_t docId ,
 		  char *vecs , long *numVecs ,
 		  Words *wordsPtr , Scores *scoresPtr , bool isUnicode ,
 		  char *repeatTable , long repeatTableNumSlots ,
@@ -1984,7 +1984,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 	// tell caller how many query terms we used so he can normalize scores
 	*nqiPtr = nqi;
 
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 
 	TermTable tt;
 	if ( ! tt.set(20000,true,true, false , returnPops, false, false,NULL)){
@@ -2250,7 +2250,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 	char **wp   = w->m_words;
 	long  *wlen = w->m_wordLens;
 	long   step = 2;
-	long long *rwids  = w->getWordIds();
+	int64_t *rwids  = w->getWordIds();
 	long      *scores = NULL;
 
 	// . now we keep a hash table to zero out repeated fragments
@@ -2822,7 +2822,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 			else if  ( pop < 50 ) ss = (score * 60) / 100;
 			else                  ss = (score * 40) / 100;
 			*/
-			//if ( tt->getScoreFromTermId((long long)h) > 0 )
+			//if ( tt->getScoreFromTermId((int64_t)h) > 0 )
 			//	continue;
 			// debug msg
 			//char c     = ww[wwlen];
@@ -2862,7 +2862,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 			//if ( scores && mm != NORM_WORD_SCORE )
 			//	ss = (ss * mm) / NORM_WORD_SCORE;
 			// only count the highest scoring guy once per page
-			//long tn = tt->getTermNum((long long)h);
+			//long tn = tt->getTermNum((int64_t)h);
 			//maxScore = ss;
 			//if ( tn >= 0 ) {
 			//	long sc = tt->getScoreFromTermNum(tn);
@@ -2871,7 +2871,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 			// . add it
 			// . now store the popularity, too, so we can display
 			//   it for the winning gigabits
-			//if ( ! tt->addTerm ((long long)h,ss,maxScore,false,
+			//if ( ! tt->addTerm ((int64_t)h,ss,maxScore,false,
 			//		    ww,wwlen,tn,NULL,pop) ) 
 			// . weight score by pop
 			// . lets try weighting more popular phrases more!
@@ -2890,7 +2890,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 			if ( ss <= 0 ) ss = 1;
 			// store it
 			long ipop = (long)(pop * MAXPOP);
-			if ( ! tt->addTerm ((long long)h,ss,maxScore,false,
+			if ( ! tt->addTerm ((int64_t)h,ss,maxScore,false,
 					    TITLEREC_CURRENT_VERSION    ,
 					    ww,wwlen,-1,NULL,ipop) ) {
 				log("topics: No memory to grow table.");
@@ -2914,7 +2914,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , long *qpops, long nqi,
 
 // taken from Weights.cpp's set3() function
 void setRepeatScores ( char      *repeatScores        ,
-		       long long *wids                ,
+		       int64_t *wids                ,
 		       long       nw                  ,
 		       char      *repeatTable         ,
 		       long       repeatTableNumSlots ,
@@ -2924,20 +2924,20 @@ void setRepeatScores ( char      *repeatScores        ,
 
 	char      *ptr      = repeatTable;
 	long       numSlots = repeatTableNumSlots;
-	long long *hashes   = (long long *)ptr; ptr += numSlots * 8;
+	int64_t *hashes   = (int64_t *)ptr; ptr += numSlots * 8;
 	long      *vals     = (long      *)ptr; ptr += numSlots * 4;
 
-	long long   ringWids [ 5 ];
+	int64_t   ringWids [ 5 ];
 	long        ringPos  [ 5 ];
 	long        ringi = 0;
 	long        count = 0;
-	long long   h     = 0;
+	int64_t   h     = 0;
 
 	// make the mask
 	unsigned long mask = numSlots - 1;
 
 	// clear ring of hashes
-	memset ( ringWids , 0 , 5 * sizeof(long long) );
+	memset ( ringWids , 0 , 5 * sizeof(int64_t) );
 
 	// for sanity check
 	//long lastStart = -1;
@@ -3151,7 +3151,7 @@ long Msg24::serialize ( char *buf , long bufLen ) {
 		p += m_topicNumDocIds[i] * 8;
 		// sanity check
 		//for ( long k = 0 ; k < m_topicNumDocIds[i] ; k++ )
-		//	if ( m_topicDocIds[i][k] & ~((long long)DOCID_MASK) ) {
+		//	if ( m_topicDocIds[i][k] & ~((int64_t)DOCID_MASK) ) {
 		//		log("query: Msg24 bad docid in serialize.");
 		//		char *xx = NULL; *xx = 0; 
 		//	}
@@ -3190,7 +3190,7 @@ long Msg24::deserialize ( char *buf , long bufLen ) {
 	m_topicScores    =  (long       *)p; p += m_numTopics * 4;
 	m_topicLens      =  (long       *)p; p += m_numTopics * 4;
 	m_topicNumDocIds =  (long       *)p; p += m_numTopics * 4; //voters
-	m_topicDocIds    =  (long long **)p; p += m_numTopics * 4; //placehldrs
+	m_topicDocIds    =  (int64_t **)p; p += m_numTopics * 4; //placehldrs
 	m_topicPops      =  (long       *)p; p += m_numTopics * 4;
 	m_topicGids      =                p; p += m_numTopics;
 	// . make ptrs to topic text
@@ -3202,11 +3202,11 @@ long Msg24::deserialize ( char *buf , long bufLen ) {
 	}
 	// now for the array of docids per topic
 	for ( long i = 0 ; i < m_numTopics ; i++ ) {
-		m_topicDocIds[i] = (long long *)p;
+		m_topicDocIds[i] = (int64_t *)p;
 		p += m_topicNumDocIds[i] * 8;
 		// sanity check
 		//for ( long k = 0 ; k < m_topicNumDocIds[i] ; k++ )
-		//	if ( m_topicDocIds[i][k] & ~((long long)DOCID_MASK) ) {
+		//	if ( m_topicDocIds[i][k] & ~((int64_t)DOCID_MASK) ) {
 		//		log("query: Msg24 bad docid in deserialize.");
 		//		char *xx = NULL; *xx = 0; 
 		//	}

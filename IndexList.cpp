@@ -34,13 +34,13 @@ void IndexList::print() {
 			     getTermId16(m_listPtr),
 			     getCurrentDate(),
 			     (long)getCurrentScore(),
-			     (long long)getCurrentDocId() );
+			     (int64_t)getCurrentDocId() );
 			continue;
 		}
 		logf(LOG_DEBUG,"db: %04li) %020lli %03li %020lli" ,
 		     i++ ,
-		     (long long)getCurrentTermId12() ,
+		     (int64_t)getCurrentTermId12() ,
 		     (long)getCurrentScore(),
-		     (long long)getCurrentDocId() );
+		     (int64_t)getCurrentDocId() );
 	}
 }

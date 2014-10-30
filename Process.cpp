@@ -947,7 +947,7 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 
 
 // set Process::m_diskUsage
-float getDiskUsage ( long long *diskAvail ) {
+float getDiskUsage ( int64_t *diskAvail ) {
 
 	// first get disk usage now
 	char cmd[10048];
@@ -991,7 +991,7 @@ float getDiskUsage ( long long *diskAvail ) {
 	close ( fd );
 
 	float usage;
-	long long avail;
+	int64_t avail;
 	sscanf(buf,"%lli %f",&avail,&usage);
 	// it is in KB so make it into bytes
 	if ( diskAvail ) *diskAvail = avail * 1000LL;
@@ -1139,9 +1139,9 @@ void Process::callHeartbeat () {
 }
 
 void heartbeatWrapper ( int fd , void *state ) {
-	static long long s_last = 0LL;
-	static long long s_lastNumAlarms = 0LL;
-	long long now = gettimeofdayInMilliseconds();
+	static int64_t s_last = 0LL;
+	static int64_t s_lastNumAlarms = 0LL;
+	int64_t now = gettimeofdayInMilliseconds();
 	if ( s_last == 0LL ) {
 		s_last = now;
 		s_lastNumAlarms = g_numAlarms;
@@ -1149,7 +1149,7 @@ void heartbeatWrapper ( int fd , void *state ) {
 	}
 	// . log when we've gone 100+ ms over our scheduled beat
 	// . this is a sign things are jammed up
-	long long elapsed = now - s_last;
+	int64_t elapsed = now - s_last;
 	if ( elapsed > 200 ) 
 		// now we print the # of elapsed alarms. that way we will
 		// know if the alarms were going off or not...
@@ -1218,7 +1218,7 @@ void diskHeartbeatWrapper ( int fd , void *state ) {
 */
 
 // called by PingServer.cpp only as of now
-long long Process::getTotalDocsIndexed() {
+int64_t Process::getTotalDocsIndexed() {
 	if ( m_totalDocsIndexed == -1LL ) {
 		Rdb *rdb = g_clusterdb.getRdb();
 		// useCache = true
@@ -1311,12 +1311,12 @@ void processSleepWrapper ( int fd , void *state ) {
 	// if we already saved it for that time, bail
 	if ( g_process.m_lastSaveTime >= nextLastSaveTime ) return;
 	
-	//long long now = gettimeofdayInMillisecondsLocal();
+	//int64_t now = gettimeofdayInMillisecondsLocal();
 	// . get a snapshot of the load average...
 	// . MDW: disable for now. not really used...
 	//update_load_average(now);
 	// convert from minutes in milliseconds
-	//long long delta = (long long)g_conf.m_autoSaveFrequency * 60000LL;
+	//int64_t delta = (int64_t)g_conf.m_autoSaveFrequency * 60000LL;
 	// if power is off make this every 30 seconds temporarily!
 	//if ( ! g_process.m_powerIsOn ) delta = 30000;
 	// return if we have not waited long enough
@@ -1530,7 +1530,7 @@ bool Process::shutdown2 ( ) {
 	if ( ! saveRdbMaps ( useThreads ) ) 
 		if ( ! m_urgent ) return false;
 
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	if ( m_firstShutdownTime == 0 ) m_firstShutdownTime = now;
 
 	// these udp servers will not read in new requests or allow
@@ -2295,7 +2295,7 @@ void handleRequestdd ( UdpSlot *slot , long netnice ) {
 		key_t k       = list.getCurrentKey();
 		char *rec     = list.getCurrentRec();
 		long  recSize = list.getCurrentRecSize();
-		long long docId       = g_titledb.getDocIdFromKey ( k );
+		int64_t docId       = g_titledb.getDocIdFromKey ( k );
 		if ( k <= lastKey ) 
 			log("key out of order. "
 			    "lastKey.n1=%lx n0=%llx "

@@ -686,10 +686,10 @@ long getY(Xml *xml, long n0,long n1,long X,char *strx,char *stry,long def){
 	if ( j <= 0 ) return y[0  ];
 	if ( j >= n ) return y[n-1];
 	// linear interpolate between our 2 points (x0,y0) and (x1,y1)
-	long long x0 = x[j-1];
-	long long x1 = x[j  ];
-	long long y0 = y[j-1];
-	long long y1 = y[j  ];
+	int64_t x0 = x[j-1];
+	int64_t x1 = x[j  ];
+	int64_t y0 = y[j-1];
+	int64_t y1 = y[j  ];
 	// error if x1 less than x0
 	if ( x1 <= x0 ) {
 		log("db: X coordinates are not in ascending order for map "
@@ -697,7 +697,7 @@ long getY(Xml *xml, long n0,long n1,long X,char *strx,char *stry,long def){
 		return def;
 	}
 	// otherwise we have a sloping line
-	return  y0 + ( ((long long)X - x0) * (y1-y0) ) /(x1-x0) ;
+	return  y0 + ( ((int64_t)X - x0) * (y1-y0) ) /(x1-x0) ;
 }
 
 

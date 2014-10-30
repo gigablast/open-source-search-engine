@@ -212,7 +212,7 @@ long Categories::loadCategories ( char *filename ) {
 		m_catHash[i].m_catIndex = i;
 	}
 	// is this a bottleneck? shouldn't it be stored that way on disk?
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 	// sort the category hash by hash value
 	gbsort(m_catHash, m_numCats, sizeof(CategoryHash), sortCatHash);
 
@@ -225,7 +225,7 @@ long Categories::loadCategories ( char *filename ) {
 	}
 
 	// time it
-	long long took = gettimeofdayInMilliseconds();
+	int64_t took = gettimeofdayInMilliseconds();
 	if ( took - start > 100 ) log(LOG_INIT,"admin: Took %lli ms to "
 				      "sort cat hashes.",took-start);
 	// close the file
@@ -1629,7 +1629,7 @@ bool Categories::loadLangTables(void) {
 bool Categories::initLangTables(void) {
 	char name[512];
 	register int i;
-	// long long memory = g_mem.m_used;
+	// int64_t memory = g_mem.m_used;
 	uint64_t start;
 	uint64_t stop;
 	for(i = 2; i <= MAX_LANGUAGES; i++) {

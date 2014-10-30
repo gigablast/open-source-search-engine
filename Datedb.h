@@ -77,19 +77,19 @@ class Datedb {
 	bool addIndexList ( class IndexList *list ) ;
 	// . make a 16-byte key from all these components
 	// . since it is 16 bytes, the big bit will be set
-	key128_t makeKey ( long long          termId   , 
+	key128_t makeKey ( int64_t          termId   , 
 			   unsigned long      date     ,
 			   unsigned char      score    , 
 			   uint64_t docId    , 
 			   bool               isDelKey );
 
-	key128_t makeStartKey ( long long termId , unsigned long date1 ) {
+	key128_t makeStartKey ( int64_t termId , unsigned long date1 ) {
 		return makeKey ( termId , date1, 255 , 0LL , true ); };
-	key128_t makeEndKey  ( long long termId , unsigned long date2 ) {
+	key128_t makeEndKey  ( int64_t termId , unsigned long date2 ) {
 		return makeKey ( termId , date2, 0   , DOCID_MASK , false ); };
 
 	// works on 16 byte full key or 10 byte half key
-	long long getDocId ( void *key ) {
+	int64_t getDocId ( void *key ) {
 		return ((*(uint64_t *)(key)) >> 2) & DOCID_MASK; };
 
 	unsigned char getScore ( void *key ) {
@@ -142,8 +142,8 @@ class Datedb {
 //#endif
 
 	// extract the termId from a key
-	long long getTermId ( key128_t *k ) {
-		long long termId = 0LL;
+	int64_t getTermId ( key128_t *k ) {
+		int64_t termId = 0LL;
 		memcpy ( &termId , ((char *)k) + 10 , 6 );
 		return termId ;
 	};

@@ -32,7 +32,7 @@ public:
 	Msg40        m_msg40;
 	TcpSocket   *m_socket;
 	Msg0         m_msg0;
-	long long    m_startTime;
+	int64_t    m_startTime;
 	//Ads          m_ads;
 	bool         m_gotAds;
 	bool         m_gotResults;
@@ -41,7 +41,7 @@ public:
 	long         m_errno;
 	Query        m_qq3;
         long         m_numDocIds;
-	long long    m_took; // how long it took to get the results
+	int64_t    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
 	char         m_qe[MAX_QUERY_LEN+1];

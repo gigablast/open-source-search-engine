@@ -57,9 +57,9 @@ long g_numSigOthers = 0;
 
 // since we can't call gettimeofday() while in a sig handler, we use this
 // and update it periodically to keep it somewhat accurate
-long long g_now = 0;
-//long long g_nowGlobal = 0;
-long long g_nowApprox = 0;
+int64_t g_now = 0;
+//int64_t g_nowGlobal = 0;
+int64_t g_nowApprox = 0;
 
 char g_inWaitState = false;
 
@@ -435,7 +435,7 @@ bool Loop::setNonBlocking ( int fd , long niceness ) {
 // . if "forReading" is true  call callbacks registered for reading on "fd" 
 // . if "forReading" is false call callbacks registered for writing on "fd" 
 // . if fd is MAX_NUM_FDS and "forReading" is true call all sleepy callbacks
-void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
+void Loop::callCallbacks_ass ( bool forReading , int fd , int64_t now ,
 			       long niceness ) {
 
 	// debug msg
@@ -459,7 +459,7 @@ void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
 
 	// . now call all the callbacks
 	// . most will re-register themselves (i.e. call registerCallback...()
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	while ( s ) {
 		// skip this slot if he has no callback
 		if ( ! s->m_callback ) continue;
@@ -547,8 +547,8 @@ void Loop::callCallbacks_ass ( bool forReading , int fd , long long now ,
 		s = s_callbacksNext;
 	}
 	s_callbacksNext = NULL;
-// 	long long now2 = gettimeofdayInMilliseconds();
-// 	long long took = now2 - startTime;
+// 	int64_t now2 = gettimeofdayInMilliseconds();
+// 	int64_t took = now2 - startTime;
 
 // 	if(g_conf.m_profilingEnabled && took > 10) {	
 // 		g_stats.addStat_r ( 0      , 
@@ -1174,7 +1174,7 @@ void sighupHandler ( int x , siginfo_t *info , void *y ) {
 
 // . keep a timestamp for the last time we called the sleep callbacks
 // . we have to call those every 1 second
-long long s_lastTime = 0;
+int64_t s_lastTime = 0;
 
 bool Loop::runLoop ( ) {
 
@@ -1442,7 +1442,7 @@ bool Loop::runLoop ( ) {
 	// 	}
 	// }
 
-	// long long elapsed = g_now - s_lastTime;
+	// int64_t elapsed = g_now - s_lastTime;
 	// // if someone changed the system clock on us, this could be negative
 	// // so fix it! otherwise, times may NEVER get called in our lifetime
 	// if ( elapsed < 0 ) elapsed = m_minTick;
@@ -1495,7 +1495,7 @@ bool Loop::runLoop ( ) {
 		//no signals pending, try to take care of anything 
 		// left undone:
 
-		long long startTime =gettimeofdayInMillisecondsLocal();
+		int64_t startTime =gettimeofdayInMillisecondsLocal();
 		if(g_now & 1) {
 			if(g_udpServer.needBottom())  
 				g_udpServer.makeCallbacks_ass ( 2 );
@@ -1720,7 +1720,7 @@ bool Loop::runLoop ( ) {
 	// sleep test
 	//log("SLEEPING");
 	//sleep(10);
-	//for ( long long i = 0 ; i < 1000000000000LL ; i++ );
+	//for ( int64_t i = 0 ; i < 1000000000000LL ; i++ );
 	// . we use g_now in UdpServer.cpp and should make it
 	//   as accurate as possible
 	// . but it's main use is because gettimeofday() is not async sig safe
@@ -2391,9 +2391,9 @@ void Loop::quickPoll(long niceness, const char* caller, long lineno) {
 		//		}
 		//		else return;
 	}
-	long long now = g_now;
-	//long long took = now - m_lastPollTime;
-	long long now2 = g_now;
+	int64_t now = g_now;
+	//int64_t took = now - m_lastPollTime;
+	int64_t now2 = g_now;
 	long gerrno = g_errno;
 
 	/*

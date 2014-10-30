@@ -463,7 +463,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</tr>\n",
 		  LIGHT_BLUE, DARK_BLUE);
 
-	long long a, b, c, d, e, f, g, h, i, j, k;
+	int64_t a, b, c, d, e, f, g, h, i, j, k;
 	StateAffinity *aff = g_thesaurus.m_affinityState;
 	if (!aff) {
 		p.safePrintf (

@@ -1062,10 +1062,10 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 	short         biggestHogNdx = -1;
 	unsigned char biggestHogNum = 0;
 
-	long long nowms;
+	int64_t nowms;
 	if ( maxIdleTime > 0 ) nowms = gettimeofdayInMilliseconds();
 	// conver it to milliseconds
-	long long maxms ;
+	int64_t maxms ;
 	if ( maxIdleTime > 0 ) maxms = maxIdleTime * 1000;
 	
 	for ( long i = 0 ; i <= m_lastFilled ; i++ ) {
@@ -1131,7 +1131,7 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 // bool TcpServer::closeLeastUsed ( ) {
 // 	// . see who hasn't been used in the longest time
 // 	// . only check the available sockets (m_state == ST_AVAILABLE)
-// 	long long minTime = (long long) 0x7fffffffffffffffLL;
+// 	int64_t minTime = (int64_t) 0x7fffffffffffffffLL;
 // 	long      mini    = -1;
 
 // 	for ( long i = 0 ; i <= m_lastFilled ; i++ ) {
@@ -1383,10 +1383,10 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 	// do the read
 	int n;
 	if ( m_useSSL || s->m_tunnelMode == 3 ) {
-		//long long now1 = gettimeofdayInMilliseconds();
+		//int64_t now1 = gettimeofdayInMilliseconds();
 		n = SSL_read(s->m_ssl, s->m_readBuf + s->m_readOffset, avail );
-		//long long now2 = gettimeofdayInMilliseconds();
-		//long long took = now2 - now1 ;
+		//int64_t now2 = gettimeofdayInMilliseconds();
+		//int64_t took = now2 - now1 ;
 		//if ( took >= 2 ) log("tcp: ssl_read took %llims", took);
 	}
 	else
@@ -1560,7 +1560,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// . like -- pollhup, socket closed
 	if ( g_errno == ESOCKETCLOSED ) { 
 		// note the ip now too
-		long long nowms = gettimeofdayInMilliseconds();
+		int64_t nowms = gettimeofdayInMilliseconds();
 		if ( g_conf.m_logDebugTcp )
 		     log(LOG_INFO,"tcp: sock closed. ip=%s. idle for %lli ms.",
 			 iptoa(s->m_ip),nowms-s->m_lastActionTime);
@@ -1727,10 +1727,10 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
  retry10:
 
 	if ( m_useSSL || s->m_tunnelMode == 3 ) {
-		//long long now1 = gettimeofdayInMilliseconds();
+		//int64_t now1 = gettimeofdayInMilliseconds();
 		n = SSL_write ( s->m_ssl, msg + s->m_sendOffset, toSend );
-		//long long now2 = gettimeofdayInMilliseconds();
-		//long long took = now2 - now1 ;
+		//int64_t now2 = gettimeofdayInMilliseconds();
+		//int64_t took = now2 - now1 ;
 		//if ( took >= 2 ) log("tcp: ssl_write took %llims", took);
 	}
 	else
@@ -2132,7 +2132,7 @@ void readTimeoutPollWrapper ( int sd , void *state ) {
 // . called by readTimeoutPollWrapper() every 1 second
 void TcpServer::readTimeoutPoll ( ) {
 	// get the time now in seconds
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// send the msg that is mostly caught up with it's acks first.
 	// "ackWait" is how many more acks we need to complete the transmission
 	for ( long i = 0 ; i <= m_lastFilled ; i++ ) {
@@ -2185,7 +2185,7 @@ void TcpServer::readTimeoutPoll ( ) {
 		if ( s->m_lastActionTime > now ) s->m_lastActionTime = now ;
 
 		// how long since we started...
-		long long total = now - s->m_startTime;
+		int64_t total = now - s->m_startTime;
 		// if it has been a minute or more, and averaging less than
 		// 20 bytes per second, time it out. otherwise we end up 
 		bool timeOut = false;
@@ -2219,7 +2219,7 @@ void TcpServer::readTimeoutPoll ( ) {
 		// if the transmission time out then makeCallback() will
 		// make the callback and then unconditionally delete theUdpSlot
 		// go back to top because delete might have shrunk table.
-		long long elapsed = now - s->m_lastActionTime;
+		int64_t elapsed = now - s->m_lastActionTime;
 		if ( ! timeOut && elapsed < s->m_timeout) continue;
 
 		//log("tcp: timeout=%li fd=%li",sockTimeout,s->m_sd);
@@ -2245,7 +2245,7 @@ void TcpServer::readTimeoutPoll ( ) {
 // . this is called by Loop::gotSig() when m_sock is ready for reading
 void acceptSocketWrapper ( int sd , void *state ) {
 	TcpServer *THIS = (TcpServer *)state;
-	long long startTimer = gettimeofdayInMilliseconds();
+	int64_t startTimer = gettimeofdayInMilliseconds();
  loop:
 	// . returns true if read completed, false otherwise
 	// . sets g_errno on error
@@ -2397,7 +2397,7 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 	}
 
 	//log("ssl: SSL_accept %li",newsd);
-	long long now1 = gettimeofdayInMilliseconds();
+	int64_t now1 = gettimeofdayInMilliseconds();
  retry19:
 	// . javier put this in here, but it was not non-blocking!!!
 	// . it is non-blocking now, however, when it does block and
@@ -2406,8 +2406,8 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 	// . this accept needs to be put in a thread then, maybe multiple 
 	//   threads
 	int r = SSL_accept(s->m_ssl);
-	long long now2 = gettimeofdayInMilliseconds();
-	long long took = now2 - now1 ;
+	int64_t now2 = gettimeofdayInMilliseconds();
+	int64_t took = now2 - now1 ;
 	if ( took >= 2 ) 
 		log("tcp: ssl_accept %li took %llims", (long)newsd, took);
 	// did it block?
@@ -2566,14 +2566,14 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 
 	SSL_set_fd(s->m_ssl, s->m_sd);
 
-	//long long now1 = gettimeofdayInMilliseconds();
+	//int64_t now1 = gettimeofdayInMilliseconds();
 	SSL_set_connect_state(s->m_ssl);
 	int r = SSL_connect(s->m_ssl);
 
 	if ( g_conf.m_logDebugTcp )
 		log("tcp: connecting with ssl on sd=%li",(long)s->m_sd);
-	//long long now2 = gettimeofdayInMilliseconds();
-	//long long took = now2 - now1 ;
+	//int64_t now2 = gettimeofdayInMilliseconds();
+	//int64_t took = now2 - now1 ;
 	//if ( took >= 2 ) log("tcp: ssl_connect took %llims", took);
 	if (!s->m_ssl) {
 		log("ssl: SSL is NULL after connect.");

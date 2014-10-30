@@ -64,7 +64,7 @@ bool Pops::makeFinalPopFile ( char *coll ) {
 // . make the pop file from indexdb
 // . a bunch of wordhash/#docs pairs
 // . word hash is lower 4 bytes of the termid
-// . first long long in file is the # of docs
+// . first int64_t in file is the # of docs
 bool Pops::makeLocalPopFile ( char *coll ) {
 	// get the rdbmap of the first indexdb file
 	RdbBase *base = g_indexdb.getBase ( coll );
@@ -86,7 +86,7 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 	out.set ( outFilename );
 
 	// store # of docs
-	long long n = g_titledb.getGlobalNumDocs();
+	int64_t n = g_titledb.getGlobalNumDocs();
 	out.write ( &n , 8 );
 
 	// store key read from disk into here
@@ -106,12 +106,12 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 	memset ( top , 0 , 6 );
 	bool warned = false;
 	// how big is this guy?
-	long long filesize = f.getFileSize();
+	int64_t filesize = f.getFileSize();
 	// reset error number
 	g_errno = 0;
 	// the big read loop
  loop:
-	long long readSize = bufSize;
+	int64_t readSize = bufSize;
 	if ( off + readSize > filesize ) readSize = filesize - off;
 	// return if we're done reading the whole file
 	if ( readSize <= 0 ) return;
@@ -180,11 +180,11 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 	//if ( ks == 12 )
 	//	fprintf(stdout,"%08lli) %08lx %016llx\n",
 	//		off + (p - buf) ,
-	//		*(long *)(tmp+8),*(long long *)tmp );
+	//		*(long *)(tmp+8),*(int64_t *)tmp );
 	//else
 	//	fprintf(stdout,"%08lli) %016llx %016llx\n",
 	//		off + (p - buf) ,
-	//		*(long long *)(tmp+8),*(long long *)tmp );
+	//		*(int64_t *)(tmp+8),*(int64_t *)tmp );
 
 	// go to next key
 	p += size;
@@ -199,7 +199,7 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 
 bool Pops::set ( Words *words , long a , long b ) {
 	long        nw        = words->getNumWords();
-	long long  *wids      = words->getWordIds ();
+	int64_t  *wids      = words->getWordIds ();
 	char      **wp        = words->m_words;
 	long       *wlen      = words->m_wordLens;
 

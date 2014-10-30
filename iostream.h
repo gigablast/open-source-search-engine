@@ -88,7 +88,7 @@ class ostream : virtual public ios
     ostream& operator<<(long n);
     ostream& operator<<(unsigned long n);
 #if defined(__GNUC__)
-    __extension__ ostream& operator<<(long long n);
+    __extension__ ostream& operator<<(int64_t n);
     __extension__ ostream& operator<<(uint64_t n);
 #endif
     ostream& operator<<(short n) {return operator<<((int)n);}
@@ -206,7 +206,7 @@ protected:
     istream& operator>>(int&);
     istream& operator>>(long&);
 #if defined(__GNUC__)
-    __extension__ istream& operator>>(long long&);
+    __extension__ istream& operator>>(int64_t&);
     __extension__ istream& operator>>(uint64_t&);
 #endif
     istream& operator>>(short&);

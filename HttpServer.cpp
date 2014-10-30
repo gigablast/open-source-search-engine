@@ -2770,7 +2770,7 @@ bool HttpServer::callQueuedPages() {
 */
 
 TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 
 	HttpMime mime;
 	if(!mime.set(s->m_readBuf,s->m_readOffset, NULL)) {

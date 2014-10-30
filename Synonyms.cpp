@@ -56,15 +56,15 @@ long Synonyms::getSynonyms ( Words *words ,
 	char *bufPtr = tmpBuf;
 
 	// point into buffer
-	m_aids = (long long *)bufPtr;
+	m_aids = (int64_t *)bufPtr;
 	bufPtr += maxSyns * 8;
 
 	// then the word ids
-	m_wids0 = (long long *)bufPtr;
+	m_wids0 = (int64_t *)bufPtr;
 	bufPtr += maxSyns * 8;
 
 	// second word ids, for multi alnum word synonyms, i.e. "New Jersey"
-	m_wids1 = (long long *)bufPtr;
+	m_wids1 = (int64_t *)bufPtr;
 	bufPtr += maxSyns * 8;
 
 	m_termPtrs = (char **)bufPtr;
@@ -116,7 +116,7 @@ long Synonyms::getSynonyms ( Words *words ,
 	char sourceId = SOURCE_WIKTIONARY;
 	char *ss = NULL;
 	char *savedss = NULL;
-	long long bwid;
+	int64_t bwid;
 	char wikiLangId = m_docLangId;
 	bool hadSpace ;
 	long klen ;
@@ -136,7 +136,7 @@ long Synonyms::getSynonyms ( Words *words ,
 		// get raw word id
 		bwid = m_words->m_wordIds[wordNum];
 		// each lang has its own bit
-		long long bits = g_speller.getLangBits64 ( &bwid );
+		int64_t bits = g_speller.getLangBits64 ( &bwid );
 		// skip if not unique
 		char count = getNumBitsOn64 ( bits ) ;
 		// if we only got one lang we could be, assume that
@@ -179,7 +179,7 @@ long Synonyms::getSynonyms ( Words *words ,
 		     wlen >= 3 &&
 		     w[wlen-2]=='\'' && 
 		     w[wlen-1]=='s' ) {
-			long long cwid = hash64Lower_utf8(w,wlen-2);
+			int64_t cwid = hash64Lower_utf8(w,wlen-2);
 			ss = g_wiktionary.getSynSet( cwid, wikiLangId );
 		}
 	}
@@ -283,7 +283,7 @@ long Synonyms::getSynonyms ( Words *words ,
 		//	if ( ! is_upper_a(*e) ) isAnagram = false;
 
 		// get it
-		long long h = hash64Lower_utf8_nospaces ( p , e - p );
+		int64_t h = hash64Lower_utf8_nospaces ( p , e - p );
 
 		// skip if same as base word
 		if ( h == bwid ) goto getNextSyn;
@@ -324,8 +324,8 @@ long Synonyms::getSynonyms ( Words *words ,
 		if ( hadSpace ) {
 			Words sw;
 			sw.setx ( p , e - p , m_niceness );
-			*(long long *)m_wids0Ptr = sw.m_wordIds[0];
-			*(long long *)m_wids1Ptr = sw.m_wordIds[2];
+			*(int64_t *)m_wids0Ptr = sw.m_wordIds[0];
+			*(int64_t *)m_wids1Ptr = sw.m_wordIds[2];
 			*(long  *)m_numAlnumWordsPtr = sw.getNumAlnumWords();
 		}
 
@@ -527,14 +527,14 @@ char *getSourceString ( char source ) {
 }
 
 // langId is language of the query
-long long getSynBaseHash64 ( char *qstr , uint8_t langId ) {
+int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) {
 	Words ww;
 	ww.set3 ( qstr );
 	long nw = ww.getNumWords();
-	long long *wids = ww.getWordIds();
+	int64_t *wids = ww.getWordIds();
 	//char **wptrs = ww.getWords();
 	//long *wlens = ww.getWordLens();
-	long long baseHash64 = 0LL;
+	int64_t baseHash64 = 0LL;
 	Synonyms syn;
 	// assume english if unknown to fix 'pandora's tower'
 	// vs 'pandoras tower' where both words are in both

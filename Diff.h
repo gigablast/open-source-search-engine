@@ -46,7 +46,7 @@ long lcsXml(long *lcsBuf1,        // xml1 indexes of nodes in lcs
 	    const long rlevel = 0); // level of recursion
 
 
-long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
+int64_testCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 			 long *outbuf2,  // xml2 indexes of nodes in lcs
 			 long *outlen, // number of consecutive nodes lcsBuf
 			 long outbuflen, // Size of output bufs (elts not bytes)

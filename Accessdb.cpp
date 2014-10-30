@@ -78,7 +78,7 @@ void addedAccessRecWrapper ( void *state ) {
 	g_accessdb.m_msg4InUse = false;
 }
 
-key128_t Accessdb::makeKey1 ( long long now, long long widgetId64 ) {
+key128_t Accessdb::makeKey1 ( int64_t now, int64_t widgetId64 ) {
 	key128_t ak;
 	ak.n1 = now;
 	ak.n0 = widgetId64;
@@ -88,7 +88,7 @@ key128_t Accessdb::makeKey1 ( long long now, long long widgetId64 ) {
 	return ak;
 }
 
-key128_t Accessdb::makeKey2 ( long long now, long long widgetId64 ) {
+key128_t Accessdb::makeKey2 ( int64_t now, int64_t widgetId64 ) {
 	key128_t ak;
 	// indicate its the 2nd type of key by setting high bit
 	ak.n1 = widgetId64 | 0x8000000000000000LL;
@@ -105,9 +105,9 @@ key128_t Accessdb::makeKey2 ( long long now, long long widgetId64 ) {
 // . storing group is based on the lower bits of the time64
 bool Accessdb::addAccess ( HttpRequest *hr , long ip ) {
 
-	long long now = gettimeofdayInMillisecondsGlobalNoCore(); 
-	long long fbId = hr->getLongLongFromCookie("fbid",0LL);
-	long long widgetId64 = hr->getLongLongFromCookie("widgetid",0LL);
+	int64_t now = gettimeofdayInMillisecondsGlobalNoCore(); 
+	int64_t fbId = hr->getLongLongFromCookie("fbid",0LL);
+	int64_t widgetId64 = hr->getLongLongFromCookie("widgetid",0LL);
 
 	// not if widgetid is bogus
 	if ( widgetId64 & 0x8000000000000000LL ) return true;
@@ -147,7 +147,7 @@ bool Accessdb::addAccess ( HttpRequest *hr , long ip ) {
 class MsgaaRequest {
 public:
 	long      m_startDate;
-	long long m_widgetId;
+	int64_t m_widgetId;
 	long      m_minRecSizes;
 };
 
@@ -198,7 +198,7 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *r ) {
 	if ( startDate == 0 ) startDate = getTimeGlobalNoCore() - 7*86400;
 
 	// get widgetid
-	long long widgetId = r->getLongLong("widgetid",0);
+	int64_t widgetId = r->getLongLong("widgetid",0);
 	// set request
 	st->m_request.m_startDate = startDate;
 	st->m_request.m_widgetId  = widgetId;
@@ -441,7 +441,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 
 	sb.safePrintf("<div style=width:780px;>");
 
-	//long long widgetId = st->m_request.m_widgetId;
+	//int64_t widgetId = st->m_request.m_widgetId;
 
 	/*
 	sb.safePrintf("<br>"
@@ -608,7 +608,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		// leads, otherwise the widgetid leads.
 		if ( timestamp & 0x8000000000000000LL ) {
 			timestamp &= 0x7fffffffffffffffLL;
-			long long tmp = widgetId;
+			int64_t tmp = widgetId;
 			widgetId = timestamp;
 			timestamp = tmp;
 		}
@@ -690,7 +690,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 class Stateab {
 public:
 	long m_startDate;
-	long long m_widgetId;
+	int64_t m_widgetId;
 	long m_minRecSizes;
 	UdpSlot *m_slot;
 	long m_niceness;
@@ -730,9 +730,9 @@ void handleRequestaa  ( UdpSlot *slot , long niceness ) {
 	st->m_niceness    = niceness;
 
 	// shortcut
-	long long wgid = req->m_widgetId;
+	int64_t wgid = req->m_widgetId;
 	// convert into milliseconds
-	long long timestamp = ((long long)req->m_startDate) * 1000;
+	int64_t timestamp = ((int64_t)req->m_startDate) * 1000;
 	// back 7 days from now if this is zero
 	if ( req->m_startDate == 0 ) {
 		timestamp = gettimeofdayInMillisecondsGlobalNoCore(); 
@@ -740,7 +740,7 @@ void handleRequestaa  ( UdpSlot *slot , long niceness ) {
 		timestamp -= 7*86400*1000;
 	}
 
-	long long longTime = 86400LL*365LL*1000LL*10; // 10 years in millisecs
+	int64_t longTime = 86400LL*365LL*1000LL*10; // 10 years in millisecs
 	// use the 2nd type of key... those have widgetid first and then
 	// the timestamp
 	key128_t startKey  = g_accessdb.makeKey2 ( timestamp ,wgid );
@@ -874,7 +874,7 @@ void gotScanList ( Stateab *st ) {
 		// get widgetit
 		FBRec *fr = (FBRec *)drec;
 		// but allow widget id of 0 through if its set to 1
-		long long wgid = fr->m_originatingWidgetId;
+		int64_t wgid = fr->m_originatingWidgetId;
 		if ( wgid == 0 ) wgid = 1;
 		// a zero widgetid means any! a one means came from no widget.
 		if ( st->m_widgetId && wgid != st->m_widgetId ) continue;

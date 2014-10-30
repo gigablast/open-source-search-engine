@@ -1610,7 +1610,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "&lt;X&gt; &lt;error message&gt;"
 "<br>\n"
 "<br>\n"
-"Where &lt;X&gt; is a string of digits in ASCII, corresponding to the error code. X is 0 on success (no error) in which case it will be followed by a <b>long long</b> docId and a hostId, which corresponds to the host in the <a href=#hosts>hosts.conf</a> file that stored the document. Any twins in its group will also have copies. If there was an error then X will be greater than 0 and may be followed by a space then the error message itself. If you did not define <i>quick=1</i>, then you will get back a response meant to be viewed on a browser."
+"Where &lt;X&gt; is a string of digits in ASCII, corresponding to the error code. X is 0 on success (no error) in which case it will be followed by a <b>int64_t</b> docId and a hostId, which corresponds to the host in the <a href=#hosts>hosts.conf</a> file that stored the document. Any twins in its group will also have copies. If there was an error then X will be greater than 0 and may be followed by a space then the error message itself. If you did not define <i>quick=1</i>, then you will get back a response meant to be viewed on a browser."
 "<br>\n"
 "<br>\n"
 " Make sure to read the complete reply before spawning another request, lest Gigablast become flooded with requests."

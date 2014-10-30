@@ -211,7 +211,7 @@ class SearchInput {
 
 	// for limiting results by score in the widget
 	double    m_maxSerpScore;
-	long long m_minSerpDocId;
+	int64_t m_minSerpDocId;
 
 	float m_sameLangWeight;
 
@@ -414,7 +414,7 @@ class SearchInput {
 
 
 	// for /get?d=xxxxx&strip=0&ih=1&qh=1
-	//long long m_docId;
+	//int64_t m_docId;
 	//long      m_strip;
 	//char      m_includeHeader;
 	//char      m_queryHighlighting; 

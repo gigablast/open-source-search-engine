@@ -40,7 +40,7 @@ class IndexReadInfo {
 	// . "stage0" is the first # of docIds to read from each IndexList
 	//   -- dynamic truncation
 	void init ( Query *q , 
-		    long long *termFreqs ,
+		    int64_t *termFreqs ,
 		    long docsWanted , char callNum , long stage0 ,
 		    long *tierStage ,
 		    bool useDateLists ,
@@ -60,10 +60,10 @@ class IndexReadInfo {
 	void update2 ( long tier ) ;
 
 	/*	void updateForMsg3b ( char *lastParts,
-			      long long *termFreqs, 
+			      int64_t *termFreqs, 
 			      long numLists );*/
 
-	void update ( long long *termFreqs,
+	void update ( int64_t *termFreqs,
 		      long numLists,
 		      char callNum );
 
@@ -90,7 +90,7 @@ class IndexReadInfo {
 	bool isDone ( ) { return m_isDone ; };
 
 	// call only after calling init() to estimate # of results
-	long long getEstimatedTotalHits();
+	int64_t getEstimatedTotalHits();
 
 	long getNumLists () { return m_numLists; };
 

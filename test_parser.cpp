@@ -174,7 +174,7 @@ long time_parser(void (*parse_doc)(char*,int, bool,char*), char* buf, int len, b
 	struct timezone tz1, tz2;
 
 	long times[test_count];
-	long long total=0;
+	int64_t total=0;
 	long max_time=-1;
 	long min_time=999999999;
 	for (int i=0;i<test_count;i++ ){

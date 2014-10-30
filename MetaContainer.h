@@ -33,7 +33,7 @@ public:
 	long m_baseNameLen;
 
 	// ID
-	long long m_id;
+	int64_t m_id;
 };
 
 #endif

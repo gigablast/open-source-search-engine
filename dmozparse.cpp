@@ -1946,7 +1946,7 @@ fileEnd2:
 			goto oldErrExit;
 		}
 		oldUrlHashes = (uint64_t*)malloc (
-				sizeof(long long)*oldNumUrls );
+				sizeof(int64_t)*oldNumUrls );
 		if (!oldUrlHashes) {
 			printf("Out of Memory!\n");
 			goto oldErrExit;
@@ -2364,7 +2364,7 @@ oldGoodExit:
 	lseek(outStream, 0, SEEK_END);
 	// write the urls
 	for (long i = 0; i < numUrlInfos; i++) {
-		//outStream.write((char*)&urlInfos[i].m_hash, sizeof(long long));
+		//outStream.write((char*)&urlInfos[i].m_hash, sizeof(int64_t));
 		//outStream.write((char*)&urlInfos[i].m_urlLen, sizeof(short));
 		//outStream.write(&urlBuffer[urlInfos[i].m_urlOffset],
 		//		sizeof(char)*urlInfos[i].m_urlLen);

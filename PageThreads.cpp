@@ -15,7 +15,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 	g_pages.printAdminTop ( &p , s , r );
 	//p.incrementLength(sss - ss);
 	
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 
 	//p.safePrintf("the sizes are %li %li", g_conf.m_medReadSize ,g_conf.m_smaReadSize );
 
@@ -88,7 +88,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_callback));
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_startRoutine));
 				if(diskThread && fs) {
-					long long took = (t->m_exitTime - t->m_launchedTime);
+					int64_t took = (t->m_exitTime - t->m_launchedTime);
 					if(took <= 0) took = 1;
 					p.safePrintf("<td>%li/%li</td>", t->m_bytesToGo, t->m_bytesToGo);
 					p.safePrintf("<td>%.2f kbps</td>", (float)t->m_bytesToGo/took);
@@ -110,7 +110,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_callback));
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_startRoutine));
 				if(diskThread && fs ) {
-					long long took = (now - t->m_launchedTime);
+					int64_t took = (now - t->m_launchedTime);
 					if(took <= 0) took = 1;
 					p.safePrintf("<td>%c%c%c/%li</td>", '?','?','?',t->m_bytesToGo);
 					p.safePrintf("<td>%.2f kbps</td>", 0.0);//(float)fs->m_bytesDone/took);

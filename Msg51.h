@@ -81,7 +81,7 @@ enum {
 extern char *g_crStrings[];
 
 bool setClusterLevels ( key_t     *clusterRecs          ,
-			long long *docIds               ,
+			int64_t *docIds               ,
 			long       numRecs              ,
 			long       maxDocIdsPerHostname ,
 			bool       doHostnameClustering ,
@@ -104,7 +104,7 @@ class Msg51 {
 	// . returns false if blocked, true otherwise
 	// . sets g_errno on error
 	// . we just store the "long" part of the cluster rec
-	bool getClusterRecs ( long long     *docIds                   ,
+	bool getClusterRecs ( int64_t     *docIds                   ,
 			      char          *clusterLevels            ,
 			      key_t         *clusterRecs              ,
 			      long           numDocIds                ,
@@ -144,7 +144,7 @@ class Msg51 {
 	void gotClusterRec  ( class Msg0 *msg0 );
 
 	// docIds we're getting clusterRecs for
-	long long   *m_docIds;
+	int64_t   *m_docIds;
 	long         m_numDocIds;
 
 	// the lower 64 bits of each cluster rec

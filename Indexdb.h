@@ -60,38 +60,38 @@ class Indexdb {
 	// . get start/end keys for IndexList from a termId
 	// . keys correspond to the start/end of the IndexList for this termId
 	// . NOTE: score is complemented when stored in the key
-	key_t makeStartKey ( long long termId );
-	key_t makeEndKey   ( long long termId );
+	key_t makeStartKey ( int64_t termId );
+	key_t makeEndKey   ( int64_t termId );
 
 	// . make a 12-byte key from all these components
 	// . since it is 12 bytes, the big bit will be set
-	key_t makeKey ( long long          termId   , 
+	key_t makeKey ( int64_t          termId   , 
 			unsigned char      score    , 
 			uint64_t docId    , 
 			bool               isDelKey );
 
-	key_t makeFirstKey ( long long termId ) {
+	key_t makeFirstKey ( int64_t termId ) {
 		return makeKey ( termId , 255 , 0LL , true ); };
-	key_t makeLastKey  ( long long termId ) {
+	key_t makeLastKey  ( int64_t termId ) {
 		return makeKey ( termId , 0   , DOCID_MASK , false ); };
 
 	// get a termId from a prefixHash and termHash
-	long long getTermId ( long long prefixHash , long long termHash ) {
+	int64_t getTermId ( int64_t prefixHash , int64_t termHash ) {
 		return hash64 ( prefixHash , termHash ) & TERMID_MASK;};
 
 	// extract the termId from a key
-	long long getTermId ( key_t *k ) {
-		long long termId = 0LL;
+	int64_t getTermId ( key_t *k ) {
+		int64_t termId = 0LL;
 		memcpy ( &termId , ((char *)k) + 6 , 6 );
 		return termId ;
 	};
-	long long getTermId ( key_t k ) { return getTermId ( &k ); };
+	int64_t getTermId ( key_t k ) { return getTermId ( &k ); };
 
-	long long getDocId ( key_t k ) {
+	int64_t getDocId ( key_t k ) {
 		char *rec = (char *)&k;
 		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
 
-	long long getDocId ( key_t *k ) {
+	int64_t getDocId ( key_t *k ) {
 		return ((*(uint64_t *)(k)) >> 2) & DOCID_MASK; };
 
 	unsigned char getScore ( key_t k ) {
@@ -101,7 +101,7 @@ class Indexdb {
 	unsigned char getScore ( char *k ) {return ~k[5]; };
 
 	/*
-	unsigned long getGroupId ( long long termId, long long docId ) {
+	unsigned long getGroupId ( int64_t termId, int64_t docId ) {
 		if ( g_conf.m_fullSplit )
 			return g_titledb.getGroupId ( docId );
 //#ifdef SPLIT_INDEXDB
@@ -164,7 +164,7 @@ class Indexdb {
 	// . accesses RdbMap to estimate size of the indexList for this termId
 	// . returns a pretty tight upper bound if indexList not truncated
 	// . if truncated, it's does linear interpolation (use exponential!)
-	long long getTermFreq ( collnum_t collnum , long long termId ) ;
+	int64_t getTermFreq ( collnum_t collnum , int64_t termId ) ;
 
 	//long getTruncationLimit ( ){return g_conf.m_indexdbTruncationLimit;};
 

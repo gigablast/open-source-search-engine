@@ -18,7 +18,7 @@ static int       s_fds           [ MAX_NUM_VFDS ]; // the real fd
                                                    // -1 means not opened
                                                    // -2 means available
 //static char   *s_filenames     [ MAX_NUM_VFDS ]; // in case we gotta re-open
-static long long s_timestamps    [ MAX_NUM_VFDS ]; // when was it last accessed
+static int64_t s_timestamps    [ MAX_NUM_VFDS ]; // when was it last accessed
 static char      s_writing       [ MAX_NUM_VFDS ]; // is it being written to?
 static char      s_unlinking     [ MAX_NUM_VFDS ]; // is being unlinked/renamed
 
@@ -461,7 +461,7 @@ int File::getfd () {
 	// what was the filename/mode of this timed-out fd?
 	//char *filename    = s_filenames   [ m_vfd ];
 	// time the calls to open just in case they are hurting us
-	long long t1 = -1LL;
+	int64_t t1 = -1LL;
 	// . re-open the sleeping file descriptor
 	// . if a rename thread was queued or spawned, try old guy first
 	//if ( m_oldFilename[0] ) {
@@ -501,7 +501,7 @@ int File::getfd () {
 		m_closeCount = s_closeCounts[fd];
 	}
 	if ( t1 >= 0 ) {
-		long long dt = gettimeofdayInMilliseconds() - t1 ;
+		int64_t dt = gettimeofdayInMilliseconds() - t1 ;
 		if ( dt > 1 ) log(LOG_INFO,
 				  "disk: call to open(%s) blocked for "
 				  "%lli ms.",m_filename,dt);
@@ -531,9 +531,9 @@ int File::getfd () {
 // we don't touch files opened for writing, however.
 bool File::closeLeastUsed () {
 
-	long long min  ;
+	int64_t min  ;
 	int    mini = -1;
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 
 	// get the least used of all the actively opened file descriptors.
 	// we can't get files that were opened for writing!!!

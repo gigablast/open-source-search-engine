@@ -36,8 +36,8 @@ bool Msg2::getLists ( long     rdbId       ,
 		      // put list of sites to restrict to in here
 		      // or perhaps make it collections for federated search?
 		      char *whiteList ,
-		      long long docIdStart,
-		      long long docIdEnd,
+		      int64_t docIdStart,
+		      int64_t docIdEnd,
 		      long    *minRecSizes ,
 		      //long     numLists    ,
 		      // make max MAX_MSG39_LISTS
@@ -171,8 +171,8 @@ bool Msg2::getLists ( ) {
 			key144_t *ek ;
 			sk = (key144_t *)m_qterms[m_i].m_startKey;
 			ek = (key144_t *)m_qterms[m_i].m_endKey;
-			long long docId0 = g_posdb.getDocId(sk);
-			long long docId1 = g_posdb.getDocId(ek);
+			int64_t docId0 = g_posdb.getDocId(sk);
+			int64_t docId1 = g_posdb.getDocId(ek);
 			log("query: reading termlist #%li "//from "
 			    //"distributed cache on host #%li. "
 			    "termId=%lli. k=%s mr=%li (docid0=%lli -"
@@ -229,7 +229,7 @@ bool Msg2::getLists ( ) {
 		// because it is probably stored remotely!
 		if ( m_query->m_docIdRestriction ) {
 			// try to just ask one host for this termlist
-			long long d = m_query->m_docIdRestriction;
+			int64_t d = m_query->m_docIdRestriction;
 			unsigned long gid = g_hostdb.getGroupIdFromDocId ( d );
 			Host *group = g_hostdb.getGroupFromGroupId ( gid );
 			long hoff = d % g_hostdb.getNumHostsPerShard();
@@ -361,11 +361,11 @@ bool Msg2::getLists ( ) {
 		// . convert whiteList term into key
 		// . put the "site:" prefix before it first
 		// . see XmlDoc::hashUrl() where prefix = "site"
-		long long prefixHash = hash64b ( "site" );
-		//long long termId = hash64(current,end-current);
+		int64_t prefixHash = hash64b ( "site" );
+		//int64_t termId = hash64(current,end-current);
 		// crap, Query.cpp i guess turns xyz.com into http://xyz.com/
 		long conti = 0;
-		long long termId = 0LL;
+		int64_t termId = 0LL;
 		termId = hash64_cont("http://",7,termId,&conti);
 		termId = hash64_cont(current,end-current,termId,&conti);
 		termId = hash64_cont("/",1,termId,&conti);
@@ -373,9 +373,9 @@ bool Msg2::getLists ( ) {
 		//tt.safePrintf("http://");
 		//tt.safeMemcpy(current,end-current);
 		//tt.pushChar('/');
-		//long long yy = hash64n(tt.getBufStart());
+		//int64_t yy = hash64n(tt.getBufStart());
 		//if ( yy != termId ) { char *xx=NULL;*xx=0; }
-		long long finalTermId = hash64 ( termId , prefixHash );
+		int64_t finalTermId = hash64 ( termId , prefixHash );
 		// mask to 48 bits
 		finalTermId &= TERMID_MASK;
 		// . make key. be sure to limit to provided docid range
@@ -604,7 +604,7 @@ bool Msg2::gotList ( RdbList *list ) {
 	}
 
 	// debug msg
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// . add the stat
 	// . use yellow for our color (Y= g -b
 	if(m_niceness > 0) {

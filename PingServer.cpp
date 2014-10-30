@@ -272,7 +272,7 @@ void PingServer::sendPingsToAll ( ) {
 
 class HostStatus {
 public:
-	long long m_lastPing;
+	int64_t m_lastPing;
 	char m_repairMode;
 	char m_kernelError;
 	char m_loadAvg;
@@ -346,8 +346,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( ip == h->m_ip && h->m_inProgress1 ) return;
 	if ( ip != h->m_ip && h->m_inProgress2 ) return;
 	// time now
-	long long nowmsLocal = gettimeofdayInMillisecondsLocal();
-	//long long now2 = gettimeofdayInMillisecondsLocal();
+	int64_t nowmsLocal = gettimeofdayInMillisecondsLocal();
+	//int64_t now2 = gettimeofdayInMillisecondsLocal();
 	// only ping a host once every 5 seconds tops
 	//if ( now - h->m_lastPing < 5000 ) return;
 	// stamp it
@@ -401,7 +401,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	char *request = h->m_requestBuf;
 	char *p       = h->m_requestBuf;
 	// store the last ping we got from it first
-	*(long long *)p = h->m_lastPing; p += sizeof(long long);
+	*(int64_t *)p = h->m_lastPing; p += sizeof(int64_t);
 	// let the receiver know our repair mode
 	*p = g_repairMode; p++;
 	// problem is that we know when the error occurs, but don't know when 
@@ -561,9 +561,9 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 	// don't let udp server free our send buf, we own it
 	slot->m_sendBufAlloc = NULL;
 	// update ping time
-	long long nowms    = gettimeofdayInMillisecondsLocal();
-	//long long now2     = gettimeofdayInMillisecondsLocal();
-	long long tripTime = nowms - slot->m_firstSendTime ;
+	int64_t nowms    = gettimeofdayInMillisecondsLocal();
+	//int64_t now2     = gettimeofdayInMillisecondsLocal();
+	int64_t tripTime = nowms - slot->m_firstSendTime ;
 	// what port were we sending to?
 	//unsigned short port = slot->m_port;
 	// ensure not negative, clock might have been adjusted!
@@ -608,7 +608,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 		     //h->m_groupId == g_hostdb.m_myHost->m_groupId ) {
 		     h->m_shardNum == getMyShardNum() ) {
 			// how long dead for?
-			long long delta = nowms - h->m_timeOfDeath;
+			int64_t delta = nowms - h->m_timeOfDeath;
 			// we did it once, do not repeat
 			h->m_timeOfDeath = 0;
 			// num collections
@@ -731,7 +731,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
                  slot->m_readBufSize == 9 && slot->m_readBuf ) {
 		h->m_syncStatus = *(slot->m_readBuf);
                 if ( *pingPtr < 200 ) {
-                        long long time = *(long long*)(slot->m_readBuf+1);
+                        int64_t time = *(int64_t*)(slot->m_readBuf+1);
                         settimeofdayInMillisecondsGlobal(time);
                         //time_t tmt = time/1000;
                         //log("net: Proxy got time of %s", ctime(&tmt));
@@ -809,7 +809,7 @@ void gotReplyWrapperP3 ( void *state , UdpSlot *slot ) {
 }
 
 // record time in the ping request iff from hostId #0
-static long long s_deltaTime = 0;
+static int64_t s_deltaTime = 0;
 
 // this may be called from a signal handler now...
 void handleRequest11 ( UdpSlot *slot , long niceness ) {
@@ -1107,7 +1107,7 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		// only commit sender's time if from hostId #0
 		if ( setClock ) {
 			// what time is it now?
-			long long nowmsLocal=gettimeofdayInMillisecondsLocal();
+			int64_t nowmsLocal=gettimeofdayInMillisecondsLocal();
 			// log it
 			log(LOG_DEBUG,"admin: Got ping of %li ms. Updating "
 			     "clock. drift=%li delta=%li s_deltaTime=%llims "
@@ -1115,7 +1115,7 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 			     (long)g_pingServer.m_currentPing,drift,delta,
 			     s_deltaTime,nowmsLocal);
 			// what should the new time be? (local mobo time)
-			long long newTime = s_deltaTime + nowmsLocal;
+			int64_t newTime = s_deltaTime + nowmsLocal;
 			// update clock
 			settimeofdayInMillisecondsGlobal ( newTime );
 			// time stamps
@@ -1132,27 +1132,27 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		// only record sender's time if from hostId #0
 		if ( h && h->m_hostId == 0 && !h->m_isProxy) {
 			// what time is it now?
-			long long nowmsLocal=gettimeofdayInMillisecondsLocal();
+			int64_t nowmsLocal=gettimeofdayInMillisecondsLocal();
 			// . seems these servers drift by 1 ms every 5 secs
 			// . or that is about 17 seconds a day
 			// . we do NOT know how accurate host #0's supplied
 			//   time is because the request may have been delayed
 			log(LOG_DEBUG,"admin: host #0 time is %lli ms and "
 			    "our local time is %lli ms, delta=%lli ms",
-			    *(long long *)request,nowmsLocal ,
-			    *(long long *)request - nowmsLocal );
+			    *(int64_t *)request,nowmsLocal ,
+			    *(int64_t *)request - nowmsLocal );
 			// update s_delta in case host #0 sends us a 
 			// request size of 4, telling us to sync up with this
-			s_deltaTime =*(long long *)request - nowmsLocal;
+			s_deltaTime =*(int64_t *)request - nowmsLocal;
 		}
                 // Reply to the proxy with a time stamp to sync with
                 /*
                 else if ( h && h->m_isProxy && g_hostdb.m_hostId == 0 &&
                           g_conf.m_timeSyncProxy ) {
-                        long long time = gettimeofdayInMillisecondsLocal();
+                        int64_t time = gettimeofdayInMillisecondsLocal();
                         // skip the syncstatus byte and write the time
-                        *(long long *)(reply+1) = time;
-                        replySize = sizeof(long long);
+                        *(int64_t *)(reply+1) = time;
+                        replySize = sizeof(int64_t);
                 }
                 */
 		// send back a 1 byte msg with our sync status now
@@ -1167,7 +1167,7 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 	}
 	// a tap request -- to store the sync point in the sync file
 	//else if ( requestSize == 9 )
-	//	g_sync.addOp ( OP_SYNCPT , "" , *(long long *)request );
+	//	g_sync.addOp ( OP_SYNCPT , "" , *(int64_t *)request );
 	// otherwise, unknown request size
 	else {
 		log(LOG_LOGIC,"net: pingserver: Unknown request size of "
@@ -2473,7 +2473,7 @@ void sleepWrapper10 ( int fd , void *state ) {
 		return;
 	}
 	// request is 9 bytes to distinguish from 8-byte requests
-	long long stamp = gettimeofdayInMilliseconds();
+	int64_t stamp = gettimeofdayInMilliseconds();
 	// . keep incrementing this if already used to avoid repeat stamps
 	// . should be extremely rare
 	// . even with this we can still have repeat stamps if we are not
@@ -2481,7 +2481,7 @@ void sleepWrapper10 ( int fd , void *state ) {
 	// . -1 is reserved for meaning no stamp (see Msg0.h)
 	//while ( g_sync.hasStamp ( stamp ) || stamp == -1 ) stamp++;
 	// save it for distributing
-	*(long long *) s_lastSyncPoint = stamp;
+	*(int64_t *) s_lastSyncPoint = stamp;
 	// reset loop parms
 	s_nextTapHostId = 0;
 	// do the tap loop
@@ -2712,11 +2712,11 @@ void updatePingTime ( Host *h , long *pingPtr , long tripTime ) {
 void checkKernelErrors( int fd, void *state ){
 	Host *me = g_hostdb.m_myHost;
 
-	long long st = gettimeofdayInMilliseconds();
+	int64_t st = gettimeofdayInMilliseconds();
 	char buf[4098];
 	// klogctl reads the last 4k lines of the kernel ring buffer
 	short bufLen = klogctl(3,buf,4096);
-	long long took = gettimeofdayInMilliseconds() - st;
+	int64_t took = gettimeofdayInMilliseconds() - st;
 	if ( took >= 3 ) {
 		long len = bufLen;
 		if ( len > 200 ) len = 200;

@@ -77,7 +77,7 @@ class IndexTable {
 
 	// . these are set from calling addLists() above
 	// . we log all matching topDocIds if isDebug is true
-	long long *getTopDocIds ( long tier ) { return m_topDocIds[tier]; };
+	int64_t *getTopDocIds ( long tier ) { return m_topDocIds[tier]; };
 
 	unsigned char *getTopBitScores ( long tier ) 
 		{ return m_topBitScores[tier]; };
@@ -110,7 +110,7 @@ class IndexTable {
 	void filterTopDocIds ( ) ;
 
 	// how long to add the last batch of lists
-	long long       m_addListsTime;
+	int64_t       m_addListsTime;
 	unsigned long   m_totalDocIds;
 	long            m_numPanics;
 	long            m_numCollisions;
@@ -118,9 +118,9 @@ class IndexTable {
 	long            m_numLoops;
 
 	// how long to get top docIds
-	long long       m_setTopDocIdsTime;
+	int64_t       m_setTopDocIdsTime;
 
-	long long       m_estimatedTotalHits;
+	int64_t       m_estimatedTotalHits;
 
 	long            m_numSlots;
 
@@ -189,7 +189,7 @@ class IndexTable {
 	long       m_scoreWeights  [ MAX_QUERY_TERMS ];
 
 	// for each tier we have a list of the top docids
-	long long       m_topDocIds       [ MAX_TIERS ] [ MAX_RESULTS ];
+	int64_t       m_topDocIds       [ MAX_TIERS ] [ MAX_RESULTS ];
 	char           *m_topDocIdPtrs    [ MAX_TIERS ] [ MAX_RESULTS ];
 	long            m_topScores       [ MAX_TIERS ] [ MAX_RESULTS ];
 	//short           m_topHardCounts   [ MAX_TIERS ] [ MAX_RESULTS ];
@@ -202,7 +202,7 @@ class IndexTable {
 
 	// when filterTopDocIds() is called it uniquifies and combines
 	// m_topDocIds[*][] into m_finalDocIds
-	/*	long long       m_finalTopDocIds    [ MAX_RESULTS ];
+	/*	int64_t       m_finalTopDocIds    [ MAX_RESULTS ];
 	long            m_finalTopScores    [ MAX_RESULTS ];
 	//unsigned long   m_finalTopBitScores [ MAX_RESULTS ];
 	long            m_finalNumExactExplicitMatches ;
@@ -273,7 +273,7 @@ inline long IndexTable::getWeakestTopDocId ( char          **topp         ,
 					     unsigned char  *minBitScore2 ,
 					     long           *score        ,
 					     char          **docIdPtr     ) {
-	long long      tmp         = 0LL;
+	int64_t      tmp         = 0LL;
 	long           minScore    = 0x7fffffff;
 	unsigned char  minBitScore = 0xff;
 	char          *minDocIdPtr = (char *)&tmp; 

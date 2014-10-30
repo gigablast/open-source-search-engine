@@ -21,11 +21,11 @@ long s_n = 0;
 long s_isServer = 0;
 long s_blast = 0;
 
-long long gettimeofdayInMilliseconds() ;
-inline long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() ;
+inline int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -124,11 +124,11 @@ int main ( int argc , char *argv[] ) {
 	sockaddr_in from;
 	unsigned int fromLen;
 	long count = 0;
-	long long startTime;
+	int64_t startTime;
 	long bytes = 0;
 	char *s;
 	unsigned long fromport;
-	//long long took;
+	//int64_t took;
 	// send more than expected to make up for losses
 	long nn = s_n * 10;
 	if ( ! s_isServer ) goto doClient;

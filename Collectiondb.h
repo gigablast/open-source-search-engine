@@ -109,7 +109,7 @@ class Collectiondb  {
 	// what collnum will be used the next time a coll is added?
 	collnum_t reserveCollNum ( ) ;
 
-	//long long getLastUpdateTime () { return m_lastUpdateTime; };
+	//int64_t getLastUpdateTime () { return m_lastUpdateTime; };
 	// updates m_lastUpdateTime so g_spiderCache know when to reload
 	//void     updateTime         ();
 
@@ -165,7 +165,7 @@ class Collectiondb  {
 	SafeBuf m_recPtrBuf;
 
 	//bool            m_needsSave      [ MAX_COLLS ];
-	//long long       m_lastUpdateTime [ MAX_COLLS ];
+	//int64_t       m_lastUpdateTime [ MAX_COLLS ];
 	long            m_numRecs;
 	long            m_numRecsUsed;
 	
@@ -173,7 +173,7 @@ class Collectiondb  {
 
 	long m_numCollsSwappedOut;
 
-	//long long            m_lastUpdateTime;
+	//int64_t            m_lastUpdateTime;
 };
 
 extern class Collectiondb g_collectiondb;
@@ -264,14 +264,14 @@ class CrawlInfo {
 	// which is in the OLD format!
 	//
 
-	long long m_objectsDeleted;        // 1
-	long long m_objectsAdded;          // 2
-	long long m_urlsConsideredNOTUSED; // 3
-	long long m_pageDownloadAttempts;  // 4
-	long long m_pageDownloadSuccesses; // 5
-	long long m_pageProcessAttempts;   // 6
-	long long m_pageProcessSuccesses;  // 7
-	long long m_urlsHarvested;         // 8
+	int64_t m_objectsDeleted;        // 1
+	int64_t m_objectsAdded;          // 2
+	int64_t m_urlsConsideredNOTUSED; // 3
+	int64_t m_pageDownloadAttempts;  // 4
+	int64_t m_pageDownloadSuccesses; // 5
+	int64_t m_pageProcessAttempts;   // 6
+	int64_t m_pageProcessSuccesses;  // 7
+	int64_t m_urlsHarvested;         // 8
 
 
 	long m_lastUpdateTime;
@@ -295,8 +295,8 @@ class CrawlInfo {
 
 	// keep separate because when we receive a crawlinfo struct from
 	// a host we only add these in if it matches our round #
-	long long m_pageDownloadSuccessesThisRound;
-	long long m_pageProcessSuccessesThisRound;
+	int64_t m_pageDownloadSuccessesThisRound;
+	int64_t m_pageProcessSuccessesThisRound;
 
 
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
@@ -335,7 +335,7 @@ class CollectionRec {
 	// is this ip from a spam assassin?
 	bool isAssassin ( long ip );
 
-	long long getNumDocsIndexed();
+	int64_t getNumDocsIndexed();
 
 	// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
 	// so we do not have to keep sending this huge msg!
@@ -397,7 +397,7 @@ class CollectionRec {
 	//HashTableX m_pageCountTable;
 
 	// . when was the last time we changed?
-	//long long m_lastUpdateTime;
+	//int64_t m_lastUpdateTime;
 
 	// the all important collection name, NULL terminated
 	char  m_coll [ MAX_COLL_LEN + 1 ] ;
@@ -632,7 +632,7 @@ class CollectionRec {
 	char  m_useCurrentTime          ; // ... for m_spiderTime2
 
 	// max # of pages for this collection
-	long long  m_maxNumPages;
+	int64_t  m_maxNumPages;
 
 	//double m_maxPagesPerSecond;
 	float m_maxPagesPerSecond;
@@ -710,8 +710,8 @@ class CollectionRec {
 	//SafeBuf m_diffbotFormat;
 	// what fields to return in the json output: (api dependent)
 	//SafeBuf m_diffbotFields;
-	long long m_maxToCrawl;
-	long long m_maxToProcess;
+	int64_t m_maxToCrawl;
+	int64_t m_maxToProcess;
 	long      m_maxCrawlRounds;
 
 	// in seconds now
@@ -806,7 +806,7 @@ class CollectionRec {
 	//long      m_defaultSiteFileNum;
 	char      m_defaultSpiderPriority;
 	float     m_defaultSpiderFrequency ;
-	long long m_defaultSpiderQuota;
+	int64_t m_defaultSpiderQuota;
 	*/
 
 	//this is the current default siterec.
@@ -990,7 +990,7 @@ class CollectionRec {
 	char      	m_qualityAgentEnabled;
 	char      	m_qualityAgentLoop;
 	char            m_qualityAgentBanSubSites;
-	long long 	m_qualityAgentStartDoc;
+	int64_t 	m_qualityAgentStartDoc;
 	long      	m_tagdbRefreshRate;
 	long      	m_linkSamplesToGet;	//was 256
 	long    	m_linkQualityDivisor;	//was 8

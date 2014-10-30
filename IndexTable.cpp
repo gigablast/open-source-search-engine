@@ -116,7 +116,7 @@ void IndexTable::init ( Query *q , bool isDebug , void *logstate ,
 	m_requireAllTerms = requireAllTerms;
 	// make sure our max score isn't too big
 	//long a     = MAX_QUERY_TERMS * MAX_QUERY_TERMS * 300   * 255   + 255;
-	//long long aa=MAX_QUERY_TERMS * MAX_QUERY_TERMS * 300LL * 255LL + 255;
+	//int64_t aa=MAX_QUERY_TERMS * MAX_QUERY_TERMS * 300LL * 255LL + 255;
 	//if ( a != aa ) { 
 	//log("IndexTable::set: MAX_QUERY_TERMS too big"); exit(-1); }
 	// save it
@@ -171,7 +171,7 @@ void IndexTable::setScoreWeights ( Query *q ) {
 
 void IndexTable::setScoreWeights ( Query *q , bool phrases ) {
 	// get an estimate on # of docs in the database
-	//long long numDocs = g_titledb.getGlobalNumDocs();
+	//int64_t numDocs = g_titledb.getGlobalNumDocs();
 	// this should only be zero if we have 0 docs, so make it 1 if so
 	//if ( numDocs <= 0 ) numDocs = 1;
 	// . compute the total termfreqs
@@ -202,9 +202,9 @@ void IndexTable::setScoreWeights ( Query *q , bool phrases ) {
 	// loop through each term computing the score weight for it
 	for ( long i = 0 ; i < q->getNumTerms() ; i++ ) {
 		// reserve half the weight for up to 4 plus signs
-		//long long max = MAX_SCORE_WEIGHT / 3;
+		//int64_t max = MAX_SCORE_WEIGHT / 3;
 		// i eliminated the multi-plus thing
-		//long long max = MAX_SCORE_WEIGHT ;
+		//int64_t max = MAX_SCORE_WEIGHT ;
 		// . 3 extra plusses can triple the score weight
 		// . each extra plus adds "extra" to the score weight
 		//long extra = (2 * MAX_SCORE_WEIGHT) / 9;
@@ -272,12 +272,12 @@ void IndexTable::setScoreWeights ( Query *q , bool phrases ) {
 		// . apply user-defined weights
 		// . we add this with completed disregard with date weighting
 		QueryTerm *qt = &q->m_qterms[i];
-		long long w ;
-		if ( qt->m_userType == 'r' ) w = (long long)m_scoreWeights[i] ;
+		int64_t w ;
+		if ( qt->m_userType == 'r' ) w = (int64_t)m_scoreWeights[i] ;
 		else                         w = 1LL;
-		w *= (long long)qt->m_userWeight;
+		w *= (int64_t)qt->m_userWeight;
 		// it can be multiplied by up to 256 (the term count)
-		long long max = 0x7fffffff / 256;
+		int64_t max = 0x7fffffff / 256;
 		if ( w > max ) {
 		 log("query: Weight breech. Truncating to %llu.",max);
 			w = max;
@@ -407,7 +407,7 @@ bool IndexTable::alloc (IndexList lists[MAX_TIERS][MAX_QUERY_TERMS],
 			bool      sortByDate                ) {
 
 	// pre-allocate all the space we need for intersecting the lists
-	long long need = 0;
+	int64_t need = 0;
 	long nqt = numListsPerTier; // number of query terms
 	// component lists are merged into compound lists
 	nqt -= m_q->getNumComponentTerms();
@@ -443,7 +443,7 @@ bool IndexTable::alloc (IndexList lists[MAX_TIERS][MAX_QUERY_TERMS],
 		}
 		// how big to make hash table?
 		long slotSize  = 4+4+2+sizeof(qvec_t);
-		long long need = slotSize * max;
+		int64_t need = slotSize * max;
 	        // have some extra slots in between for speed
 		need = (need * 5 ) / 4;
 		// . do not go overboard
@@ -528,7 +528,7 @@ bool IndexTable::alloc (IndexList lists[MAX_TIERS][MAX_QUERY_TERMS],
 	// bail now if we have none!
 	if ( m_nb <= 0 ) return true;
 
-	long long min = 0;
+	int64_t min = 0;
 	for ( long i = 0 ; i < m_blocksize[0]; i++ )
 		for ( long j = 0 ; j < numTiers ; j++ )
 			min += lists[j][m_imap[i]].getListSize() / 6 ;
@@ -538,7 +538,7 @@ bool IndexTable::alloc (IndexList lists[MAX_TIERS][MAX_QUERY_TERMS],
 
 	// now add in space for m_topDocIdPtrs2 (holds winners of a
 	// 2 list intersection (more than 2 lists if we have phrases) [imap]
-	long long nd = (105 * min) / 100 + 10 ;
+	int64_t nd = (105 * min) / 100 + 10 ;
 	need += (4+               // m_topDocIdPtrs2
 		 4+               // m_topScores2
 		 sizeof(qvec_t)+  // m_topExplicits2
@@ -612,7 +612,7 @@ void IndexTable::addLists_r (IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS],
 	if ( ! m_buf /*m_nb <= 0*/ ) return;
 
 	// set start time
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 
 	char hks  = 6; // half key size (size of everything except the termid)
 	char fks  = 12;
@@ -814,7 +814,7 @@ swapBack:
 	}
 	}
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// store the addLists time
 	m_addListsTime = now - t1;
 	// . measure time to add the lists in bright green
@@ -1002,7 +1002,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	// only log this error message once per call to this routine
 	char pflag = 0;
 	// time the gbsorting for the datelists
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 
 	for ( long i = 0 ; i < numListsPerTier ; i++ ) {
 		// map i to a list number
@@ -1214,7 +1214,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 
 	// time the gbsorting for the datelists
 	if ( m_isDebug || g_conf.m_logDebugQuery ) {
-		long long t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds();
 		logf(LOG_DEBUG,"query: Took %lli ms to prepare list ptrs. "
 		     "numDocIds=%lu numSorts=%li",
 		     t2 - t1 , numDocIds , numSorts );
@@ -1236,7 +1236,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	long j;
 
 	// a dummy var
-	long long tmpHi = 0x7fffffffffffffffLL;
+	int64_t tmpHi = 0x7fffffffffffffffLL;
 
 	// . the info of the weakest entry in the top winners
 	// . if its is full and we get another winner, the weakest will be
@@ -1469,7 +1469,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		// save start position so we can see if we chain too much
 		nnstart = nn;
 		// debug point
-		//long long ddd ;
+		//int64_t ddd ;
 		//memcpy ( &ddd , ptrs[i] , 6 );
 		//ddd >>= 2;
 		//ddd &= DOCID_MASK;
@@ -1483,10 +1483,10 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 			     "nt=%li i=%li max=%llu sc=%hhu sc2=%lu d=%llu",
 			    (long)numTiers,
 			    (long)i,
-			    (long long)(((long long)maxDocId)<<6) | 0x3fLL, 
+			    (int64_t)(((int64_t)maxDocId)<<6) | 0x3fLL, 
 			     255-ss, 
 			     sss,
-			    (long long)ddd );
+			    (int64_t)ddd );
 		}
 		*/
 
@@ -1585,7 +1585,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		// got dup docid for the same termid due to index corruption?
 		if ( /*! rat &&*/ explicitBits[nn] & ebits ) {
 			// no point in logging since in thread!
-			//long long dd ;
+			//int64_t dd ;
 			//memcpy ( &dd , ptrs[i] , 6 );
 			//dd >>= 2;
 			//dd &= DOCID_MASK;
@@ -1851,7 +1851,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		//      boolean queries, however...
 		// MDW: we could support boolean queries with long 
 		//      sequences of ORs by making all the ORs to one bit!
-		// MDW: we could use the long long bit vector, one per bucket
+		// MDW: we could use the int64_t bit vector, one per bucket
 		//      but we should probably OR in the implicits at 
 		//      intersection time, AND we should keep a separate count
 		//      for the number of explicits. but all of this would
@@ -1866,7 +1866,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		// . hard-required terms typically have + signs
 		// . boolean logic also works with hard required terms
 		// . if we don't meet that standard, skip this guy
-		// . TODO: make bit vector a long long so we can have 64
+		// . TODO: make bit vector a int64_t so we can have 64
 		//         query terms. then AND this with the hardRequired
 		//         bit vector to make sure we got it all. Or better
 		//         yet, have a hardCount that gets inc'd everytime
@@ -2115,7 +2115,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 
  done:
 
-	long long *topd;
+	int64_t *topd;
 	bool       didSwap ;
 
 	// . if we're rat and we've hashed all the termlists for this tier
@@ -2154,12 +2154,12 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		//unsigned char  minb = 0 ;
 		short          minb = 0 ;
 		long           mins = 0 ;
-		long long      mind = 0 ;
+		int64_t      mind = 0 ;
 		char          *minp = NULL ;
 		long           mini = -1 ;
 		long i = 0 ;
 		// point to final docids and scores
-		long long  *topd = m_topDocIds [ tier ];
+		int64_t  *topd = m_topDocIds [ tier ];
 		long       *tops = m_topScores [ tier ];
 		char      **tdp2 = m_topDocIdPtrs2 ;
 		long count = 0;
@@ -2241,7 +2241,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 				mini = j; 
 			}
 			//log("mini=%li minb=%li mins=%li mind=%lli",
-			//    mini,(long)minb,(long)mins,(long long )mind);
+			//    mini,(long)minb,(long)mins,(int64_t )mind);
 		}
 		// how many top docids do we have? don't exceed "docsWanted"
 		numTopDocIds  = count; 
@@ -2284,7 +2284,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	doSwap:
 		long           tmpScore     = tops [i-1];
 		unsigned char  tmpBitScore  = topb [i-1];
-		long long      tmpDocId     = topd [i-1];
+		int64_t      tmpDocId     = topd [i-1];
 		char           tmpe         = tope [i-1];
 		tops [i-1]  = tops [i  ];
 		topb [i-1]  = topb [i  ];
@@ -2327,7 +2327,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		double untried = 1.0;
 		double noretry = 1.0;
 		// minimum term frequency of the eligible query terms
-		long long mintf = 0x7fffffffffffffffLL;
+		int64_t mintf = 0x7fffffffffffffffLL;
 		// . total hits we got now
 		// . we use explicit, because we're only taking combinations
 		//   of non-negative terms and positive phrase terms, using
@@ -2359,7 +2359,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 				total += size;
 			}
 			// how many docs have this term?
-			long long tf = m_q->m_termFreqs[i];
+			int64_t tf = m_q->m_termFreqs[i];
 			// . multiply to get initial # of combinations of terms
 			// . "tried" means we tried these combinations to 
 			//   produce the "totalHits" search results
@@ -2386,7 +2386,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		double percent = (double)totalHits / (double)tried;
 		// out of the untried combinations,how many hits can we expect?
 		m_estimatedTotalHits = totalHits + 
-			(long long) (untried * percent);
+			(int64_t) (untried * percent);
 		// don't exceed the max tf of any one list (safety catch)
 		if ( m_estimatedTotalHits > mintf ) 
 			m_estimatedTotalHits = mintf;
@@ -2566,7 +2566,7 @@ skip:
 
 	// combine all docIds and bit scores from m_topDocIds[X] into 
 	// these 2 arrays:
-	long long      docIds    [ MAX_RESULTS * MAX_TIERS ];
+	int64_t      docIds    [ MAX_RESULTS * MAX_TIERS ];
 	unsigned char  bitScores [ MAX_RESULTS * MAX_TIERS ];
 	char           explicits [ MAX_RESULTS * MAX_TIERS ];
 	long           scores    [ MAX_RESULTS * MAX_TIERS ];
@@ -2601,12 +2601,12 @@ skip:
 	// . a call stage auto advances to the next if ANY one of it's docIds
 	//   does not have ALL terms in it! (including phrase termIds)
 	// . convenience ptrs
-	long long      *topd = docIds;
+	int64_t      *topd = docIds;
 	long           *tops = scores;
 	unsigned char  *topb = bitScores;
 	char           *tope = explicits;
 	char           *topt = tiers;
-	long long       tmpd;
+	int64_t       tmpd;
 	long            tmps;
 	unsigned char   tmpb;
 	char            tmpe;
@@ -2703,7 +2703,7 @@ skip:
 	long nf = 0;
 
 	// tmp vars
-	long long docId;
+	int64_t docId;
 	long j;
 
 	// uniquify docIds from docIds[] into m_filtered
@@ -2742,7 +2742,7 @@ skip:
 		// just count as an error for now
 		//return NULL;
 		// pad it with doc of the last one, maybe nobody will notice
-		long long lastDocId = 0;
+		int64_t lastDocId = 0;
 		if ( nf > 0 ) lastDocId = m_finalTopDocIds [ nf - 1 ];
 		while ( nf < min && nf < MAX_RESULTS )
 			m_finalTopDocIds [ nf++ ] = lastDocId;

@@ -408,7 +408,7 @@ class Spiderdb {
 	// this rdb holds urls waiting to be spidered or being spidered
 	Rdb m_rdb;
 
-	long long getUrlHash48 ( key128_t *k ) {
+	int64_t getUrlHash48 ( key128_t *k ) {
 		return (((k->n1)<<16) | k->n0>>(64-16)) & 0xffffffffffffLL; };
 	
 	bool isSpiderRequest ( key128_t *k ) {
@@ -416,16 +416,16 @@ class Spiderdb {
 	bool isSpiderReply   ( key128_t *k ) {
 		return ((k->n0>>(64-17))&0x01)==0x00; };
 
-	long long getParentDocId ( key128_t *k ) {return (k->n0>>9)&DOCID_MASK;};
+	int64_t getParentDocId ( key128_t *k ) {return (k->n0>>9)&DOCID_MASK;};
 	// same as above
-	long long getDocId ( key128_t *k ) {return (k->n0>>9)&DOCID_MASK;};
+	int64_t getDocId ( key128_t *k ) {return (k->n0>>9)&DOCID_MASK;};
 
 	long getFirstIp ( key128_t *k ) { return (k->n1>>32); }
 	
 	key128_t makeKey ( long      firstIp     ,
-			   long long urlHash48   ,
+			   int64_t urlHash48   ,
 			   bool      isRequest   ,
-			   long long parentDocId ,
+			   int64_t parentDocId ,
 			   bool      isDel       ) ;
 
 	key128_t makeFirstKey ( long firstIp ) {
@@ -434,9 +434,9 @@ class Spiderdb {
 		return makeKey ( firstIp,0xffffffffffffLL,true,
 				 MAX_DOCID,false); };
 
-	key128_t makeFirstKey2 ( long firstIp , long long uh48 ) {
+	key128_t makeFirstKey2 ( long firstIp , int64_t uh48 ) {
 		return makeKey ( firstIp,uh48,false,0LL,true); };
-	key128_t makeLastKey2 ( long firstIp  , long long uh48 ) {
+	key128_t makeLastKey2 ( long firstIp  , int64_t uh48 ) {
 		return makeKey ( firstIp,uh48,true,MAX_DOCID,false); };
 
 	// what groupId (shardid) spiders this url?
@@ -517,7 +517,7 @@ class SpiderRequest {
 
 	// the PROBABLE DOCID. if there is a collision with another docid
 	// then we increment the last 8 bits or so. see Msg22.cpp.
-	long long m_probDocId;
+	int64_t m_probDocId;
 
 	//long  m_parentPubDate;
 
@@ -767,19 +767,19 @@ class SpiderRequest {
 	//long getUrlLen() { return gbstrlen(m_url); };
 
 	void setKey ( long firstIp ,
-		      long long parentDocId , 
-		      long long uh48 , 
+		      int64_t parentDocId , 
+		      int64_t uh48 , 
 		      bool isDel ) ;
 
-	void setKey ( long firstIp, long long parentDocId , bool isDel ) { 
-		long long uh48 = hash64b ( m_url );
+	void setKey ( long firstIp, int64_t parentDocId , bool isDel ) { 
+		int64_t uh48 = hash64b ( m_url );
 		setKey ( firstIp , parentDocId, uh48, isDel );
 	}
 
 	void setDataSize ( );
 
-	long long  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
-	long long getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
+	int64_t  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
+	int64_t getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
 
 	long print( class SafeBuf *sb );
 
@@ -856,7 +856,7 @@ class SpiderReply {
 	// . when we basically finished DOWNLOADING it
 	// . use 0 if we did not download at all
 	// . used by Spider.cpp to space out urls using sameIpWait
-	long long  m_downloadEndTime;
+	int64_t  m_downloadEndTime;
 	// how many errors have we had in a row?
 	//long    m_retryNum;
 	// . like "404" etc. "200" means successfully downloaded
@@ -938,14 +938,14 @@ class SpiderReply {
 	void reset() { memset ( this , 0 , sizeof(SpiderReply) ); };
 
 	void setKey ( long firstIp,
-		      long long parentDocId , 
-		      long long uh48 , 
+		      int64_t parentDocId , 
+		      int64_t uh48 , 
 		      bool isDel ) ;
 
 	long print ( class SafeBuf *sbarg );
 
-	long long  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
-	long long getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
+	int64_t  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
+	int64_t getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
 };
 
 // are we responsible for this ip?
@@ -975,7 +975,7 @@ class Doledb {
 	//   so i am making the 7 reserved bits part of the urlhash48...
 	key_t makeKey ( long      priority   ,
 			time_t    spiderTime ,
-			long long urlHash48  ,
+			int64_t urlHash48  ,
 			bool      isDelete   ) {
 		// sanity checks
 		if ( priority  & 0xffffff00           ) { char *xx=NULL;*xx=0;}
@@ -1004,7 +1004,7 @@ class Doledb {
 	// . crap, might we have collisions between a uh48 and docid????
 	key_t makeReindexKey ( long priority ,
 			       time_t spiderTime ,
-			       long long docId ,
+			       int64_t docId ,
 			       bool isDelete ) {
 		return makeKey ( priority,spiderTime,docId,isDelete); };
 
@@ -1041,7 +1041,7 @@ class Doledb {
 	long getIsDel     ( key_t *k ) {
 		if ( (k->n0 & 0x01) ) return 0;
 		return 1; };
-	long long getUrlHash48 ( key_t *k ) {
+	int64_t getUrlHash48 ( key_t *k ) {
 		return (k->n0>>8)&0x0000ffffffffffffLL; }
 
 	key_t makeFirstKey ( ) { key_t k; k.setMin(); return k;};
@@ -1080,7 +1080,7 @@ class SpiderColl {
 
 	bool      load();
 
-	long long m_msg4Start;
+	int64_t m_msg4Start;
 
 	long getTotalOutstandingSpiders ( ) ;
 
@@ -1095,7 +1095,7 @@ class SpiderColl {
 
 	//bool m_lastDoledbReadEmpty;
 	//bool m_encounteredDoledbRecs;
-	//long long m_numRoundsDone;
+	//int64_t m_numRoundsDone;
 
 	//bool           m_bestRequestValid;
 	//char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
@@ -1135,10 +1135,10 @@ class SpiderColl {
 	HashTableX m_winnerTable;
 	long m_tailIp;
 	long m_tailPriority;
-	long long m_tailTimeMS;
-	long long m_tailUh48;
+	int64_t m_tailTimeMS;
+	int64_t m_tailUh48;
 	long      m_tailHopCount;
-	long long m_minFutureTimeMS;
+	int64_t m_minFutureTimeMS;
 
 	// . do not re-send CrawlInfoLocal for a coll if not update
 	// . we store the flags in here as true if we should send our
@@ -1154,7 +1154,7 @@ class SpiderColl {
 
 	// Rdb.cpp calls this
 	bool  addSpiderReply   ( SpiderReply   *srep );
-	bool  addSpiderRequest ( SpiderRequest *sreq , long long nowGlobalMS );
+	bool  addSpiderRequest ( SpiderRequest *sreq , int64_t nowGlobalMS );
 
 	void removeFromDoledbTable ( long firstIp );
 
@@ -1202,8 +1202,8 @@ class SpiderColl {
 	time_t   m_lastScanTime;
 	bool     m_waitingTreeNeedsRebuild;
 	long     m_numAdded;
-	long long m_numBytesScanned;
-	long long m_lastPrintCount;
+	int64_t m_numBytesScanned;
+	int64_t m_lastPrintCount;
 
 	// used by SpiderLoop.cpp
 	long m_spidersOut;
@@ -1228,9 +1228,9 @@ class SpiderColl {
 
 	bool m_countingPagesIndexed;
 	HashTableX m_localTable;
-	long long m_lastReqUh48a;
-	long long m_lastReqUh48b;
-	long long m_lastRepUh48;
+	int64_t m_lastReqUh48a;
+	int64_t m_lastReqUh48b;
+	int64_t m_lastRepUh48;
 	// move to CollectionRec so it can load at startup and save it
 	//HashTableX m_pageCountTable;
 
@@ -1238,7 +1238,7 @@ class SpiderColl {
 	bool makeWaitingTable    ( );
 	bool makeWaitingTree     ( );
 
-	long long getEarliestSpiderTimeFromWaitingTree ( long firstIp ) ;
+	int64_t getEarliestSpiderTimeFromWaitingTree ( long firstIp ) ;
 
 	bool printWaitingTree ( ) ;
 
@@ -1268,7 +1268,7 @@ class SpiderColl {
 	long       m_gotNewDataForScanningIp;
 	long       m_lastListSize;
 	long       m_lastScanningIp;
-	long long  m_totalBytesScanned;
+	int64_t  m_totalBytesScanned;
 
 	char m_deleteMyself;
 
@@ -1342,22 +1342,22 @@ extern class SpiderCache g_spiderCache;
 // the dup spider request right away and double increment the round.
 //
 /////////
-inline long long makeLockTableKey ( long long uh48 , long firstIp ) {
+inline int64_t makeLockTableKey ( int64_t uh48 , long firstIp ) {
 	return uh48 ^ (unsigned long)firstIp;
 }
 
-inline long long makeLockTableKey ( SpiderRequest *sreq ) {
+inline int64_t makeLockTableKey ( SpiderRequest *sreq ) {
 	return makeLockTableKey(sreq->getUrlHash48(),sreq->m_firstIp);
 }
 
-inline long long makeLockTableKey ( SpiderReply *srep ) {
+inline int64_t makeLockTableKey ( SpiderReply *srep ) {
 	return makeLockTableKey(srep->getUrlHash48(),srep->m_firstIp);
 }
 
 
 class LockRequest {
 public:
-	long long m_lockKeyUh48;
+	int64_t m_lockKeyUh48;
 	long m_lockSequence;
 	long m_firstIp;
 	char m_removeLock;
@@ -1366,7 +1366,7 @@ public:
 
 class ConfirmRequest {
 public:
-	long long m_lockKeyUh48;
+	int64_t m_lockKeyUh48;
 	collnum_t m_collnum;
 	key_t m_doledbKey;
 	long  m_firstIp;
@@ -1399,7 +1399,7 @@ class Msg12 {
 	ConfirmRequest m_confirmRequest;
 
 	// stuff for getting the msg12 lock for spidering a url
-	bool getLocks       ( long long probDocId,
+	bool getLocks       ( int64_t probDocId,
 			      char *url ,
 			      DOLEDBKEY *doledbKey,
 			      collnum_t collnum,
@@ -1417,7 +1417,7 @@ class Msg12 {
 	uint64_t  m_lockKeyUh48;
 	long                m_lockSequence;
 
-	long long  m_origUh48;
+	int64_t  m_origUh48;
 	long       m_numReplies;
 	long       m_numRequests;
 	long       m_grants;
@@ -1458,7 +1458,7 @@ class SpiderLoop {
 	~SpiderLoop();
 	SpiderLoop();
 
-	bool isInLockTable ( long long probDocId );
+	bool isInLockTable ( int64_t probDocId );
 
 	bool printLockTable ( );
 
@@ -1510,7 +1510,7 @@ class SpiderLoop {
 	// . the one that was just indexed
 	// . Msg7.cpp uses this to see what docid the injected doc got so it
 	//   can forward it to external program
-	long long getLastDocId ( );
+	int64_t getLastDocId ( );
 
 	// delete m_msg14[i], decrement m_numSpiders, m_maxUsed
 	void cleanUp ( long i );
@@ -1554,7 +1554,7 @@ class SpiderLoop {
 	// for round robining in SpiderLoop::doleUrls(), etc.
 	long m_cri;
 
-	long long m_doleStart;
+	int64_t m_doleStart;
 
 	long m_processed;
 };

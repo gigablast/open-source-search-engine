@@ -14,8 +14,8 @@ bool Tfndb::init ( ) {
 
 	// key sanity tests
 	char      tfn   = 33;
-	long long docId = 123456789;
-	long long urlHash48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
+	int64_t docId = 123456789;
+	int64_t urlHash48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
 	key_t k = makeKey(docId,urlHash48,tfn,false);
 	if ( getDocId(&k) != docId ) { char *xx=NULL;*xx=0;}
 	if ( getUrlHash48(&k) != urlHash48 ) { char *xx=NULL;*xx=0;}
@@ -211,7 +211,7 @@ bool Tfndb::verify ( char *coll ) {
 }
 
 // see Tfndb.h for bitmap of this key
-key_t Tfndb::makeKey (long long docId,long long uh48,long tfn,bool isDelete) {
+key_t Tfndb::makeKey (int64_t docId,int64_t uh48,long tfn,bool isDelete) {
 	// sanity check
 	if ( tfn > 255 || tfn < 0 ) { char *xx=NULL;*xx=0; }
 	// init the key

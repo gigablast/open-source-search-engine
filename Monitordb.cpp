@@ -11,8 +11,8 @@ bool Monitordb::init ( ) {
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
 	long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
-	//long long maxTreeMem = 1000000;
-	long long maxTreeMem = 10000000; // 10MB
+	//int64_t maxTreeMem = 1000000;
+	int64_t maxTreeMem = 10000000; // 10MB
 	// . what's max # of tree nodes?
 	// . key+4+left+right+parents+dataPtr = sizeof(key96_t)+4 +4+4+4+4
 	// . 32 bytes per record when in the tree

@@ -233,8 +233,8 @@ class TagRec {
 		       long        *timeStamp = NULL ,
 		       char       **user      = NULL );
 	
-	long long getLongLong ( char        *tagTypeStr,
-				long long    defalt    , 
+	int64_t getLongLong ( char        *tagTypeStr,
+				int64_t    defalt    , 
 				Tag        **bookmark  = NULL ,
 				long        *timeStamp = NULL ,
 				char       **user      = NULL );
@@ -562,7 +562,7 @@ class Msg9a {
 };
 */
 
-long getY ( long long X , long long *x , long long *y , long n ) ;
+long getY ( int64_t X , int64_t *x , int64_t *y , long n ) ;
 
 #endif
 

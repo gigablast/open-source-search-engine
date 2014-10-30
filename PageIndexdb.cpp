@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Indexdb.h"     // makeKey(long long docId)
+#include "Indexdb.h"     // makeKey(int64_t docId)
 #include "Msg0.h"
 #include "Msg1.h"
 #include "IndexList.h"
@@ -41,15 +41,15 @@ public:
 	bool      m_useCache;
 	bool      m_add;
 	bool      m_del;
-	long long m_termId;
+	int64_t m_termId;
 	long      m_numRecs;
 	TcpSocket *m_socket;
 	HttpRequest m_r;
 	bool      m_isRootAdmin;
 	bool      m_isLocal;
 	Msg36     m_msg36;    // term freqs (term popularity)
-	long long m_termFreq;
-	long long m_docId;
+	int64_t m_termFreq;
+	int64_t m_docId;
 	unsigned char m_score;
 	key_t         m_key;
 	RdbList       m_keyList;
@@ -385,7 +385,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 	/*
 	// get termId
 	key_t k = *(key_t *)st->m_list.getStartKey();
-	long long termId = g_indexdb.getTermId ( k );
+	int64_t termId = g_indexdb.getTermId ( k );
 	// get groupId from termId
 	//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 	unsigned long groupId = g_indexdb.getGroupIdFromKey ( &k );
@@ -499,7 +499,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		//if ( p + 1024 >= pend ) break;
 		// but set the ip/port to a host that has this titleRec
 		// stored locally!
-		long long     docId   = st->m_list.getCurrentDocId () ;
+		int64_t     docId   = st->m_list.getCurrentDocId () ;
 		//unsigned long groupId = getGroupIdFromDocId ( docId );
 		long shardNum = getShardNumFromDocId ( docId );
 		// get the first host's hostId in this groupId
@@ -573,7 +573,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		if ( p + 1024 >= pend ) break;
 		// but set the ip/port to a host that has this titleRec
 		// stored locally!
-		long long     docId   = st->m_list2.getCurrentDocId () ;
+		int64_t     docId   = st->m_list2.getCurrentDocId () ;
 		unsigned long groupId = g_titledb.getGroupId ( docId );
 		// get the first host's hostId in this groupId
 		Host *h = g_hostdb.getFastestHostInGroup ( groupId );
@@ -594,7 +594,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		char kb[16];
 		st->m_list2.getCurrentKey(kb);
 		//log(LOG_INFO,"debug: n1=%016llx n0=%016llx",
-		//    *(long long *)(kb+8),*(long long *)(kb+0));
+		//    *(int64_t *)(kb+8),*(int64_t *)(kb+0));
 		//if ( (unsigned long)st->m_list2.getCurrentDate() == 0 )
 		//	log("STOP");
 		sprintf ( p , 

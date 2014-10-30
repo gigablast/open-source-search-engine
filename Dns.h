@@ -39,7 +39,7 @@ class Dns;
 struct DnsState {
 	key_t       m_hostnameKey;
 	// key for lookup into s_dnsTable hash table
-	long long   m_tableKey; 
+	int64_t   m_tableKey; 
 	Dns        *m_this  ;
 	void       *m_state ;
 	void      (*m_callback) ( void *state , long ip ) ;
@@ -122,7 +122,7 @@ public:
 	//class CallbackEntry *m_next;
 	// we can't use a data ptr because slots get moved around when one
 	// is deleted.
-	long long m_nextKey;
+	int64_t m_nextKey;
 	// debug info
 	long m_listSize;
 	long m_listId;

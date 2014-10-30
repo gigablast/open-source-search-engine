@@ -141,9 +141,9 @@ bool sendReply ( void *state ) {
 	//if ( msg7->m_url[0] ) xd->logIt();
 
 	// msg7 has the docid for what we injected, iff g_errno is not set
-	//long long docId  = msg7->m_msg7.m_docId;
+	//int64_t docId  = msg7->m_msg7.m_docId;
 	//long      hostId = msg7->m_msg7.m_hostId;
-	long long docId  = xd->m_docId;
+	int64_t docId  = xd->m_docId;
 	long      hostId = 0;//msg7->m_msg7.m_hostId;
 
 	// set g_errno to index code
@@ -606,7 +606,7 @@ bool Msg7::inject ( void *state ,
 	// be injected, we must create unique urls for each item.
 	if ( delim && ! modifiedUrl ) {
 		// use hash of the content
-		long long ch64 = hash64n ( start , 0LL );
+		int64_t ch64 = hash64n ( start , 0LL );
 		// normalize it
 		Url u; u.set ( gr->m_url );
 		// reset it
@@ -853,15 +853,15 @@ public:
 	// collection we are importing INTO
 	collnum_t m_collnum;
 
-	long long m_numIn;
-	long long m_numOut;
+	int64_t m_numIn;
+	int64_t m_numOut;
 
 	// bookmarking helpers
-	long long m_fileOffset;
+	int64_t m_fileOffset;
 	long m_bfFileId;
 	BigFile m_bf;
 	bool m_loadedPlaceHolder;
-	long long m_bfFileSize;
+	int64_t m_bfFileSize;
 
 	class Multicast *getAvailMulticast();// Msg7();
 
@@ -1103,7 +1103,7 @@ bool ImportState::importLoop ( ) {
  INJECTLOOP:
 
 	// stop if waiting on outstanding injects
-	long long out = m_numOut - m_numIn;
+	int64_t out = m_numOut - m_numIn;
 	if ( out >= cr->m_numImportInjects ) {
 		g_errno = 0;
 		return false;
@@ -1127,7 +1127,7 @@ bool ImportState::importLoop ( ) {
 	// scan each titledb file scanning titledb0001.dat first,
 	// titledb0003.dat second etc.
 
-	//long long offset = -1;
+	//int64_t offset = -1;
 	// . when offset is too big for current m_bigFile file then
 	//   we go to the next and set offset to 0.
 	// . sets m_bf and m_fileOffset
@@ -1145,7 +1145,7 @@ bool ImportState::importLoop ( ) {
 		return true;
 	}
 
-	long long saved = m_fileOffset;
+	int64_t saved = m_fileOffset;
 
 	//Msg7 *msg7;
 	//GigablastRequest *gr;
@@ -1158,7 +1158,7 @@ bool ImportState::importLoop ( ) {
 	bool status;
 	SafeBuf tmp;
 	SafeBuf *sbuf = &tmp;
-	long long docId;
+	int64_t docId;
 	long shardNum;
 	long key;
 	Multicast *mcast;
@@ -1447,7 +1447,7 @@ Multicast *ImportState::getAvailMulticast() { // Msg7 ( ) {
 	}
 
 	// respect the user limit for this coll
-	long long out = m_numOut - m_numIn;
+	int64_t out = m_numOut - m_numIn;
 	if ( out >= cr->m_numImportInjects ) {
 		g_errno = 0;
 		return NULL;
@@ -1480,11 +1480,11 @@ void saveImportStates ( ) {
 // "xd" is the XmlDoc that just completed injecting
 void ImportState::saveFileBookMark ( ) { //Msg7 *msg7 ) {
 
-	long long minOff = -1LL;
+	int64_t minOff = -1LL;
 	long minFileId = -1;
 
 	//long fileId  = msg7->m_hackFileId;
-	//long long fileOff = msg7->m_hackFileOff;
+	//int64_t fileOff = msg7->m_hackFileOff;
 
 	// if there is one outstanding the preceeded us, we can't update
 	// the bookmark just yet.

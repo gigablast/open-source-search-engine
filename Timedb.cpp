@@ -50,7 +50,7 @@ bool Timedb::init ( ) {
 		return false;
 
 	// test out makekey
-	long long docId = 0x34097534;
+	int64_t docId = 0x34097534;
 	long eventId = 156;
 	// shave off the SECONDS since makeKey does that
 	long stime = ((g_now / 1000)/60) * 60;
@@ -201,7 +201,7 @@ bool Timedb::verify ( char *coll ) {
 
 // all times are in UTC
 key128_t Timedb::makeKey ( time_t    startTime ,
-			   long long docId , 
+			   int64_t docId , 
 			   uint16_t  eventId ,
 			   time_t    endTime ,
 			   time_t    nextStartTime ,

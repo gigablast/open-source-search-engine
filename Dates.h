@@ -16,7 +16,7 @@ char *getDOWName ( long dow ) ;
 char *getMonthName ( long month ) ;
 
 
-typedef long long dateflags_t;
+typedef int64_t dateflags_t;
 
 // . values for Date::m_flags
 // . these are of type dateflags_t
@@ -199,7 +199,7 @@ typedef uint32_t suppflags_t;
 long getDOW  ( time_t t );
 long getYear ( time_t t );
 
-bool isTicketDate ( long a , long b , long long *wids , Bits *bits ,
+bool isTicketDate ( long a , long b , int64_t *wids , Bits *bits ,
 		    long niceness ) ;
 
 class Date {
@@ -468,7 +468,7 @@ public:
 			Url *redirUrl, // char             *redirUrl        ,
 			uint8_t           contentType     ,
 			long              ip              ,
-			long long         docId           ,
+			int64_t         docId           ,
 			long              siteHash        ,
 			class Xml        *xml             ,
 			class Words      *words           ,	
@@ -488,7 +488,7 @@ public:
 	bool addVotes ( class SectionVotingTable *nsvt ) ;
 
 	bool hasKitchenHours ( class Section *si ) ;
-	//bool isTicketDate ( long a , long b , long long *wids ) ;
+	//bool isTicketDate ( long a , long b , int64_t *wids ) ;
 	bool isFuneralDate ( long a , long b ) ;
 	bool isCloseHeader ( class Section *si ) ;
 
@@ -553,7 +553,7 @@ public:
 
 
 	datetype_t getDateType ( long i , long *val , long *endWord ,
-				 long long *wids , long nw ,
+				 int64_t *wids , long nw ,
 				 bool onPreceeds ) ;
 
 	bool addRanges ( class Words *words ,
@@ -608,7 +608,7 @@ public:
 	// XmlDoc::hash() calls this to index the Dates stored in the
 	// TitleRec. pages from the same site can use these special termlists
 	// to see if their tag hashes are likely indicative of a clock or not
-	bool hash ( long long         docId ,
+	bool hash ( int64_t         docId ,
 		    class HashTableX *tt    ,
 		    class XmlDoc     *xd    );
 
@@ -734,11 +734,11 @@ public:
 	class Words    *m_words;
 	char          **m_wptrs;
 	long           *m_wlens;
-	long long      *m_wids;
+	int64_t      *m_wids;
 	nodeid_t       *m_tids;
 	long            m_nw;
 	class Sections *m_sections;
-	long long       m_docId;
+	int64_t       m_docId;
 	long            m_spiderTime;
 
 	class Addresses *m_addresses;
@@ -813,13 +813,13 @@ long getTimeZone ( char *s ) ;
 
 // . returns how many words starting at i are in the time zone
 // . 0 means not a timezone
-long getTimeZoneWord ( long i , long long *wids , long nw , 
+long getTimeZoneWord ( long i , int64_t *wids , long nw , 
 		       TimeZone **tzptr , long niceness );
 
-bool isDateType ( long long *pwid ) ;
+bool isDateType ( int64_t *pwid ) ;
 
 // returns false and sets g_errno on error
-bool getMonth ( long long wid , long *retMonth ) ;
+bool getMonth ( int64_t wid , long *retMonth ) ;
 
 void resetDateTables ( );
 

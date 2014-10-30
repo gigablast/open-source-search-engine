@@ -98,8 +98,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	// . use darker brown if xml feed
 	long color = 0x00b58869;
 	if ( si->m_format != FORMAT_HTML )color = 0x00753d30 ;
-	long long nowms = gettimeofdayInMilliseconds();
-	long long took  = nowms - st->m_startTime ;
+	int64_t nowms = gettimeofdayInMilliseconds();
+	int64_t took  = nowms - st->m_startTime ;
 	g_stats.addStat_r ( took            ,
 			    st->m_startTime , 
 			    nowms,
@@ -831,7 +831,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 	bool first = true;
 	bool second = false;
 	bool printedSecond = false;
-	//long long lastDocId = -1LL;
+	//int64_t lastDocId = -1LL;
 	long saveOffset = 0;
 	for ( long i = 0 ; i < numFacts ; i++ ) {
 		Fact *fi = &facts[i];
@@ -1106,9 +1106,9 @@ bool gotResults ( void *state ) {
 	// cast our State0 class from this
 	State0 *st = (State0 *) state;
 
-	long long nowMS = gettimeofdayInMilliseconds();
+	int64_t nowMS = gettimeofdayInMilliseconds();
 	// log the time
-	long long took = nowMS - st->m_startTime;
+	int64_t took = nowMS - st->m_startTime;
 	// record that
 	st->m_took = took;
 
@@ -1310,15 +1310,15 @@ bool gotResults ( void *state ) {
 	//long numInvisible = 0;
 	long numAbove = 0;
 	HttpRequest *hr = &st->m_hr;
-	long long oldTop = 0LL;
-	long long lastDocId = 0LL;
+	int64_t oldTop = 0LL;
+	int64_t lastDocId = 0LL;
 	double lastSerpScore = 0.0;
 	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
 		// sanity, no stream mode here, it won't work
 		if ( si->m_streamResults )
 			log("results: do not use stream=1 for widget");
 		// get current top docid
-		long long topDocId = hr->getLongLong("topdocid",0LL);
+		int64_t topDocId = hr->getLongLong("topdocid",0LL);
 
 		// DEBUG: force it on for now
 		//topDocId = 4961990748LL;
@@ -2249,16 +2249,16 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      "encoding=\"UTF-8\" ?>\n"
 			      "<response>\n" );
 
-	long long nowMS = gettimeofdayInMillisecondsLocal();
+	int64_t nowMS = gettimeofdayInMillisecondsLocal();
 
 	// show current time
 	if ( si->m_format == FORMAT_XML ) {
-		long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
+		int64_t globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
 			      (long)(globalNowMS/1000));
 	} 
 	else if ( st->m_header && si->m_format == FORMAT_JSON ) {
-	    long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
+	    int64_t globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", 
 			   (long)(globalNowMS/1000));
 	}
@@ -2325,7 +2325,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	// save how many docs are in this collection
-	long long docsInColl = -1;
+	int64_t docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
 	RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , st->m_collnum );
 	//if ( base ) docsInColl = base->getNumGlobalRecs();
@@ -2347,14 +2347,14 @@ bool printSearchResultsHeader ( State0 *st ) {
  	long numResults = msg40->getNumResults();
 	bool moreFollow = msg40->moreResultsFollow();
 	// an estimate of the # of total hits
-	long long totalHits = msg40->getNumTotalHits();
+	int64_t totalHits = msg40->getNumTotalHits();
 	// only adjust upwards for first page now so it doesn't keep chaning
 	if ( totalHits < numResults ) totalHits = numResults;
 
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t<hits>%lli</hits>\n",(long long)totalHits);
+		sb->safePrintf("\t<hits>%lli</hits>\n",(int64_t)totalHits);
 	else if ( st->m_header && si->m_format == FORMAT_JSON )
-		sb->safePrintf("\"hits\":%lli,\n", (long long)totalHits);
+		sb->safePrintf("\"hits\":%lli,\n", (int64_t)totalHits);
 
 	// if streaming results we just don't know if we will require
 	// a "Next 10" link or not! we can print that after we print out
@@ -3357,7 +3357,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 	bool printedInlinkText = false;
 	bool firstTime = true;
 	long inlinkId = 0;
-	long long  starttime = gettimeofdayInMillisecondsLocal();
+	int64_t  starttime = gettimeofdayInMillisecondsLocal();
 
 	//long icount = 0;
 	//long ecount = 0;
@@ -3479,7 +3479,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		*numPrinted = *numPrinted + 1;
 	}
 
-	long long took = gettimeofdayInMillisecondsLocal() - starttime;
+	int64_t took = gettimeofdayInMillisecondsLocal() - starttime;
         if ( took > 2 )
                 log("timing: took %lli ms to highlight %li links."
                     ,took,numLinks);
@@ -3611,7 +3611,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		logf(LOG_DEBUG,"query: result #%li clusterlevel=%li",
 		     ix, (long)msg40->getClusterLevel(ix));
 
-	long long d = msg40->getDocId(ix);
+	int64_t d = msg40->getDocId(ix);
 
 	// do not print if it is a summary dup or had some error
 	// long level = (long)msg40->getClusterLevel(ix);
@@ -5730,12 +5730,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( ps->m_isHalfStopWikiBigram1 ) wbw1 = WIKI_BIGRAM_WEIGHT;
 	if ( ps->m_isHalfStopWikiBigram2 ) wbw2 = WIKI_BIGRAM_WEIGHT;
 	
-	//long long sz1 = ps->m_listSize1;
-	//long long sz2 = ps->m_listSize2;
-	//long long tf1 = ps->m_termFreq1;//sz1 / 10;
-	//long long tf2 = ps->m_termFreq2;//sz2 / 10;
-	long long tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
-	long long tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
+	//int64_t sz1 = ps->m_listSize1;
+	//int64_t sz2 = ps->m_listSize2;
+	//int64_t tf1 = ps->m_termFreq1;//sz1 / 10;
+	//int64_t tf2 = ps->m_termFreq2;//sz2 / 10;
+	int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
+	int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
 	float tfw1 = ps->m_tfWeight1;
 	float tfw2 = ps->m_tfWeight2;
 	
@@ -6446,9 +6446,9 @@ bool printSingleScore ( SafeBuf *sb ,
 	if ( ss->m_hashGroup == HASHGROUP_INLINKTEXT )
 		wsw = getLinkerWeight(ss->m_wordSpamRank);
 	
-	//long long tf = ss->m_termFreq;//ss->m_listSize;
+	//int64_t tf = ss->m_termFreq;//ss->m_listSize;
 	long qtn = ss->m_qtermNum;
-	long long tf = msg40->m_msg3a.m_termFreqs[qtn];
+	int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
 	float tfw = ss->m_tfWeight;
 	
 	if ( si->m_format == FORMAT_XML ) {
@@ -7625,7 +7625,7 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 				return false;
 
 			// is it new?
-			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			int64_t h64 = hash64n ( tmpBuf.getBufStart() );
 			if ( nameTable.isInTable ( &h64 ) ) continue;
 
 			// record offset of the name for our hash table
@@ -7669,7 +7669,7 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
 		// record the hash of each one for printing out further json
 		// objects in the same order so columns are aligned!
-		long long h64 = hash64n ( ptrs[i] );
+		int64_t h64 = hash64n ( ptrs[i] );
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
@@ -7740,7 +7740,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 			continue;
 
 		// is it new?
-		long long h64 = hash64n ( tmpBuf.getBufStart() );
+		int64_t h64 = hash64n ( tmpBuf.getBufStart() );
 
 		long slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there

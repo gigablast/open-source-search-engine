@@ -34,7 +34,7 @@ int main ( int argc , char *argv[] ) {
 	BigFile f1;
 	f1.set ( olddir , iname );
 	// get the file size
-	long long fsize = f1.getFileSize();
+	int64_t fsize = f1.getFileSize();
 	// open it
 	if ( ! f1.open ( O_RDONLY ) ) {
 		printf("convert: error opening %s/%s\n",olddir,iname);
@@ -94,8 +94,8 @@ int main ( int argc , char *argv[] ) {
 convert: hashinit failed" ); return 1; }
 
 	// read in 12 byte key, 4 byte size then data of that size
-	long long offset  = 0;
-	long long woffset = 0;
+	int64_t offset  = 0;
+	int64_t woffset = 0;
 	unsigned char ophi[6];
 	memset ( ophi , 0 , 6 );
 
@@ -192,7 +192,7 @@ convert: hashinit failed" ); return 1; }
 			if ( trashTop == trashBot ) {
 				//fprintf(stderr,"TRASH FULL!\n");
 				//fprintf(stderr,"skip n1=%08lx n0=%016llx\n",
-				//	*(long *)(p+8),*(long long *)p);
+				//	*(long *)(p+8),*(int64_t *)p);
 				trashTop -= 12;
 				if ( trashTop < trash )
 					trashTop = trashEnd - 12;
@@ -329,7 +329,7 @@ convert: hashinit failed" ); return 1; }
 	}
 
 	// read in 12 byte key, 4 byte size then data of that size
-	long long offset = 0;
+	int64_t offset = 0;
 
 	// start and end keys
 	key_t startKey ;
@@ -367,12 +367,12 @@ convert: hashinit failed" ); return 1; }
 		char score = 255 - ((unsigned char)p[5]);
 		// extract termid from the key
 		// get the upper 32 bits of the termId
-		long long termId = ilist.getTermId12 ( p );
+		int64_t termId = ilist.getTermId12 ( p );
 		// remove date codes for now
 		//if ( termId == 0xdadadadaLL || 
 		//     termId == 0xdadadad2LL  ) continue;
 		// extract docid from the old format key
-		uint64_t docId = *(long long *)p;
+		uint64_t docId = *(int64_t *)p;
 		docId >>= 1;
 		docId &= DOCID_MASK;
 		// was it a delete key?

@@ -2997,7 +2997,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 
 				char      *ww    = w.getWord    ( lastj );
 				long       wwlen = w.getWordLen ( lastj );
-				long long  wid   = w.getWordId  ( lastj );
+				int64_t  wid   = w.getWordId  ( lastj );
 				bool       isStop = ::isStopWord(ww,wwlen,wid);
 				// BUT ok if Capitalized or number
 				if ( isStop ) {
@@ -3379,7 +3379,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 
 				char      *ww    = w.getWord    ( lastj );
 				long       wwlen = w.getWordLen ( lastj );
-				long long  wid   = w.getWordId  ( lastj );
+				int64_t  wid   = w.getWordId  ( lastj );
 				
 				isStop =::isStopWord(ww,wwlen,wid);
 
@@ -3956,7 +3956,7 @@ bool StateWik::getSummary( ){
 	long numLaunched = 0;
 	// launch MAX_FRAG_SIZE msg20's at a time, wait for all of them
 	while ( numLaunched < MAX_FRAG_SIZE && !m_list.isExhausted() ){
-		long long docId   = m_list.getCurrentDocId () ;
+		int64_t docId   = m_list.getCurrentDocId () ;
 		// set the summary request then get it!
 		Msg20Request req;
 		Query *q = &m_q;
@@ -4189,7 +4189,7 @@ bool Language::makeDict(){
 
 	// alloc space to make them into termids
 	st->m_bufSize = st->m_numTuples * ( sizeof (char*) + 
-					    2 * sizeof (long long) );
+					    2 * sizeof (int64_t) );
 	st->m_buf = (char *) mmalloc ( st->m_bufSize, "LanguagePtrs" );
 	if ( !st->m_buf ) {
 		log ( LOG_WARN,"lang: could not alloc %li bytes", 
@@ -4200,10 +4200,10 @@ bool Language::makeDict(){
 	char *p = st->m_buf;
 	st->m_wordsPtr = (char **) p;
 	p += st->m_numTuples * sizeof(char *);
-	st->m_termIds = (long long *)p;
-	p += st->m_numTuples * sizeof(long long);
-	st->m_termFreqs = (long long *)p;
-	p += st->m_numTuples * sizeof(long long);
+	st->m_termIds = (int64_t *)p;
+	p += st->m_numTuples * sizeof(int64_t);
+	st->m_termFreqs = (int64_t *)p;
+	p += st->m_numTuples * sizeof(int64_t);
 
 	char *coll    = g_conf.m_defaultColl;
 	long collLen  = gbstrlen(coll);
@@ -4257,7 +4257,7 @@ bool Language::gotTermFreqs( StateDict *st ){
 		st->m_numTuples = 0;
 	}
 
-	long long max = 0LL;
+	int64_t max = 0LL;
 	for ( long i = 0; i < st->m_numTuples; i++ ){
 		if ( st->m_termFreqs[i] > max )
 			max = st->m_termFreqs[i];
@@ -4278,7 +4278,7 @@ bool Language::gotTermFreqs( StateDict *st ){
 		getPhonetic ( cleanWord, gbstrlen(cleanWord), 
 			      phonetic, MAX_PHRASE_LEN );
 		
-		long long freq = ( st->m_termFreqs[i] * 32000 ) / max ;
+		int64_t freq = ( st->m_termFreqs[i] * 32000 ) / max ;
 		sprintf(tmp,"%lli\t%s\t%s\n", freq,
 			st->m_wordsPtr[i], phonetic);
 
@@ -4648,7 +4648,7 @@ bool Language::makePhonet( char *infile){
 			p++;
 		// first is the popularity score
 		scorePtr = p;
-		long long score = (long long ) atoi(scorePtr);
+		int64_t score = (int64_t ) atoi(scorePtr);
 		// normalize score
 		score =  ( score * 32000 )/ max;
 

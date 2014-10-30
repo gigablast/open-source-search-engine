@@ -419,9 +419,9 @@ Mem::~Mem() {
 }
 
 //long Mem::getUsedMem    () { return 0; }; //return mallinfo().usmblks; };
-long long Mem::getAvailMem   () { return 0; };
-//long long Mem::getMaxAlloced () { return 0; };
-long long Mem::getMaxMem     () { return g_conf.m_maxMem; }
+int64_t Mem::getAvailMem   () { return 0; };
+//int64_t Mem::getMaxAlloced () { return 0; };
+int64_t Mem::getMaxMem     () { return g_conf.m_maxMem; }
 long Mem::getNumChunks  () { return 0; };
 
 // process id of the main process
@@ -437,7 +437,7 @@ pid_t Mem::getPid() {
 	return s_pid;
 }
 
-bool Mem::init  ( long long maxMem ) { 
+bool Mem::init  ( int64_t maxMem ) { 
 	// set main process pid
 	s_pid = getpid();
 
@@ -468,11 +468,11 @@ bool Mem::init  ( long long maxMem ) {
 
 #ifndef TITAN
 	// if we can't alloc 3gb exit and retry
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 	char *pools[30];
-	long long count = 0LL;
-	long long chunk = 100000000LL; // 100MB chunks
-	long long need = 3000000000LL; // 3GB
+	int64_t count = 0LL;
+	int64_t chunk = 100000000LL; // 100MB chunks
+	int64_t need = 3000000000LL; // 3GB
 	long i = 0; for ( i = 0 ; i < 30 ; i++ ) {
 		pools[i] = (char *)mmalloc(chunk,"testmem");
 		count += chunk;
@@ -484,8 +484,8 @@ bool Mem::init  ( long long maxMem ) {
 	}
 	for ( long j = 0 ; j < i ; j++ )
 		mfree ( pools[j] , chunk , "testmem" );
-	long long now = gettimeofdayInMilliseconds();
-	long long took = now - start;
+	int64_t now = gettimeofdayInMilliseconds();
+	int64_t took = now - start;
 	if ( took > 20 ) log("mem: took %lli ms to check memory ceiling",took);
 	// return if could not alloc the full 3GB
 	if ( i < 30 ) return false;
@@ -503,7 +503,7 @@ bool Mem::init  ( long long maxMem ) {
 	return true;
 }
 
-//bool  Mem::reserveMem ( long long bytesToReserve ) {
+//bool  Mem::reserveMem ( int64_t bytesToReserve ) {
 	// TODO: use sbrk()?
 //	char *s = (char *) malloc ( bytesToReserve );
 //	if ( s ) { free ( s ); return true; }
@@ -1049,7 +1049,7 @@ bool Mem::rmMem  ( void *mem , long size , const char *note ) {
 long Mem::validate ( ) {
 	if ( ! s_mptrs ) return 1;
 	// stock up "p" and compute total bytes alloced
-	long long total = 0;
+	int64_t total = 0;
 	long count = 0;
 	for ( long i = 0 ; i < (long)m_memtablesize ; i++ ) {
 		// skip empty buckets
@@ -1231,7 +1231,7 @@ int Mem::printMem ( ) {
 	long *p = (long *)sysmalloc ( m_memtablesize * 4 );
 	if ( ! p ) return 0;
 	// stock up "p" and compute total bytes alloced
-	long long total = 0;
+	int64_t total = 0;
 	long np    = 0;
 	for ( long i = 0 ; i < (long)m_memtablesize ; i++ ) {
 		// skip empty buckets
@@ -1345,11 +1345,11 @@ mallocmemloop:
 		// try to free temp mem. returns true if it freed some.
 		if ( freeCacheMem() ) goto retry;
 		g_errno = errno;
-		static long long s_lastTime;
+		static int64_t s_lastTime;
 		static long s_missed = 0;
-		long long now = gettimeofdayInMillisecondsLocal();
-		long long avail = (long long)m_maxMem - 
-			(long long)m_used;
+		int64_t now = gettimeofdayInMillisecondsLocal();
+		int64_t avail = (int64_t)m_maxMem - 
+			(int64_t)m_used;
 		if ( now - s_lastTime >= 1000LL ) {
 			log("mem: system malloc(%i,%s) availShouldBe=%lli: "
 			    "%s (%s) (ooms suppressed since "
@@ -1375,7 +1375,7 @@ mallocmemloop:
 		static bool s_sentEmail = true;
 		// assume only 90% is really available because of 
 		// inefficient mallocing
-		avail = (long long)((float)avail * 0.80);
+		avail = (int64_t)((float)avail * 0.80);
 		// but if it is within about 15MB of what is theoretically
 		// available, don't send an email, because there is always some
 		// minor fragmentation
@@ -1597,8 +1597,8 @@ uint64_t getHighestLitBitValueLL ( uint64_t bits ) {
 }
 
 // TODO: speed up
-long long htonll ( uint64_t a ) {
-	long long b;
+int64_t htonll ( uint64_t a ) {
+	int64_t b;
 	unsigned int int0 = htonl ( ((unsigned long *)&a)[0] );
 	unsigned int int1 = htonl ( ((unsigned long *)&a)[1] );
 
@@ -1608,7 +1608,7 @@ long long htonll ( uint64_t a ) {
 }
 
 // just swap 'em back
-long long ntohll ( uint64_t a ) { 
+int64_t ntohll ( uint64_t a ) { 
 	return htonll ( a );
 }
 
@@ -1799,7 +1799,7 @@ void memcpy_ass ( register void *dest2, register const void *src2, long len ) {
 	register long *src  = (long *)src2 ;
 	register long *end  = dest + (len >> 2);
 	long *oldEnd = end;
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 	//fprintf(stderr,"ln=%li,dest=%li,src=%li\n",len,(long)dest,(long)src);
 	if ((len&0x03)!=0 || ((long)dest&0x03)!=0 || ((long)src&0x03)!=0 ) 
 		goto byteCopy;
@@ -2073,7 +2073,7 @@ static FreeInfo *s_cursorEnd   = &s_freeBuf[4000];
 static FreeInfo *s_cursorStart = &s_freeBuf[0];
 static bool      s_looped = false;
 static FreeInfo *s_freeCursor  = &s_freeBuf[0];
-static long long s_totalInRing = 0LL;
+static int64_t s_totalInRing = 0LL;
 
 // . now we must unprotect before freeing
 // . let's do delayed freeing because i think the nasty bug that is

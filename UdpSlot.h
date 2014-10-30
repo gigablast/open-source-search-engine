@@ -100,7 +100,7 @@ class UdpSlot {
 		       long         hostId   ,
 		       long         transId  ,
 		       long         timeout  , // in seconds
-		       long long    now      ,
+		       int64_t    now      ,
 		       long         niceness );
 
 	// same as above
@@ -111,7 +111,7 @@ class UdpSlot {
 		       long            hostId   ,
 		       long            transId  ,
 		       long            timeout  , // in seconds
-		       long long       now      ,
+		       int64_t       now      ,
 		       long            niceness );
 
 	// reset the slot if ip/port has changed
@@ -125,7 +125,7 @@ class UdpSlot {
 			 char      *alloc       ,
 			 long       allocSize   ,
 			 unsigned char msgType     ,
-			 long long  now         ,
+			 int64_t  now         ,
 			 void      *state       ,
 			 void      (*callback)(void *state,class UdpSlot *) ,
 			 long       niceness    ,
@@ -137,32 +137,32 @@ class UdpSlot {
 	// . send a datagram from this slot on "sock" (call after sendSetup())
 	// . returns -2 if nothing to send, -1 on error, 0 if blocked, 
 	//   1 if sent something
-	long sendDatagramOrAck ( int sock , bool allowResends , long long now);
+	long sendDatagramOrAck ( int sock , bool allowResends , int64_t now);
 
 	// . returns false and sets errno on error, true otherwise
 	// . tries to send ACK on "sock" if we read a dgram
 	// . tries to send a dgram if we read an ACK
 	// . sets *discard to true if caller should discard the dgram
 	bool readDatagramOrAck ( int sock , char *header , long numRead ,
-				 long long now , bool *discard ,
+				 int64_t now , bool *discard ,
 				 long *readSize );
 
 	// . send an ACK
 	// . returns -2 if nothing to send, -1 on error, 0 if blocked, 
 	//   1 if sent something
 	// . should only be called by sendDatagramOrAck() above
-	long sendAck ( int sock , long long now ,
+	long sendAck ( int sock , int64_t now ,
 		       long dgramNum = -1, long weInitiated = -2 ,
 		       bool cancelTrans = false );
 	//, bool reset = false );
 
 	// . or by readDataGramOrAck() to read a faked ack for protocols that 
 	//   don't use ACKs
-	void readAck  ( int sock , long dgramNum , long long now );
+	void readAck  ( int sock , long dgramNum , int64_t now );
 
 	// . will reset to send() will start sending at the first unacked dgram
 	// . if "reset" is true then will resend ALL dgrams
-	void prepareForResend ( long long now , bool resendAll ) ;
+	void prepareForResend ( int64_t now , bool resendAll ) ;
 
 	// reset/set m_resendTime based on m_resendCount
 	void setResendTime ();
@@ -260,11 +260,11 @@ class UdpSlot {
 	//	memset ( bits , 0 , (numBits >> 3) + 1 ); };
 
 	// set the time we first sent this dgram
-	//void      setSendTime ( long dgramNum , long long now ) {
+	//void      setSendTime ( long dgramNum , int64_t now ) {
 	//	m_sendTimes [ dgramNum ] = (now - m_startTime); };
 	// get the time we first sent this dgram
-	//long long getSendTime ( long dgramNum ) {
-	//	return (long long)m_sendTimes [ dgramNum ] + m_startTime ; };
+	//int64_t getSendTime ( long dgramNum ) {
+	//	return (int64_t)m_sendTimes [ dgramNum ] + m_startTime ; };
 
 	// . get the first lit bit position after bit #i
 	// . returns numBits if no bits AFTER i are lit
@@ -284,9 +284,9 @@ class UdpSlot {
 
 	// . for sending purposes, the max scoring UdpSlot sends first
 	// . return < 0 if nothing to send
-	//long getScore ( long long now , UdpSlot *s_token , 
+	//long getScore ( int64_t now , UdpSlot *s_token , 
 	//		unsigned long s_tokenTime , long LARGE_MSG ) ;
-	long getScore ( long long now );
+	long getScore ( int64_t now );
 
 	// what is our niceness level?
 	long getNiceness ( ) { return m_niceness; };
@@ -364,12 +364,12 @@ class UdpSlot {
 
 	// . birth time of the udpslot
 	// . m_sendTimes are relative to this
-	long long      m_startTime;
+	int64_t      m_startTime;
 
 	// when the request/reply was read, we set this to the current time so
 	// we can measure how long it sits in the queue until the handler
 	// or callback is called
-	long long      m_queuedTime;
+	int64_t      m_queuedTime;
 
 	// reception-related variables
 	char          *m_readBuf;      // store recv'd msg in here.
@@ -378,18 +378,18 @@ class UdpSlot {
 	long           m_dgramsToRead; // closely related to m_bytesToRead.
 
 	// last times of a read/send on this slot in milliseconds since epoch
-	long long      m_lastReadTime;
-	long long      m_lastSendTime;
+	int64_t      m_lastReadTime;
+	int64_t      m_lastSendTime;
 
 	// remember our niceness level
 	long           m_niceness;
 
 	// when did we call it (ms)
-	long long      m_calledHandlerTime;
+	int64_t      m_calledHandlerTime;
 
 	// these are for measuring bps (bandwidth) for g_stats
-	long long      m_firstReadTime;
-	long long      m_firstSendTime;
+	int64_t      m_firstReadTime;
+	int64_t      m_firstSendTime;
 
 	// . this is bigger for loopback sends/reads
 	// . we set it just low enough to avoid IP layer fragmentation

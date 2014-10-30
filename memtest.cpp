@@ -20,7 +20,7 @@ int main ( ) {
 	// access it
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	char c; //long c; // char c;
 	long loops = 1;
 	for ( long k = 0 ; k < loops ; k++ ) 
@@ -28,11 +28,11 @@ int main ( ) {
 			//c = *(long *)ptrs[i];
 			c = *ptrs[i];
 	gettimeofday ( &tv , NULL );
-       long long now2=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+       int64_t now2=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
        
 	fprintf(stderr,"did %li accesss in %lli ms.\n",loops*np,now2-now);
 	fprintf(stderr,"did %lli accesss per second.\n",
-		(1000LL*(((long long)loops)*((long long)np)))/(now2-now));
+		(1000LL*(((int64_t)loops)*((int64_t)np)))/(now2-now));
 	return 0;
 
  loop:

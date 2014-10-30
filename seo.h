@@ -19,7 +19,7 @@ void handleRequest4f ( class UdpSlot *slot , long netnice ) ;
 void handleRequest95 ( class UdpSlot *slot , long netnice ) ;
 bool loadQueryLog();
 
-long long getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
+int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
 
 extern char *g_secret_tran_key;
 extern char *g_secret_api_key;
@@ -67,7 +67,7 @@ public:
 
 	
 	// for matching to our InsertableTerms when done
-	long long m_termHash64;
+	int64_t m_termHash64;
 	long      m_queryHash32;
 
 	// and the term's position range this applies to
@@ -117,7 +117,7 @@ public:
 class TermInfo {
 public:
 	uint64_t m_termId64;
-	//long long m_termFreq64;
+	//int64_t m_termFreq64;
 };
 
 
@@ -125,9 +125,9 @@ public:
 class WordFreqInfo {
  public:
 	// 32 bit termid
-	long long m_wordId64;
+	int64_t m_wordId64;
 	// it's term freq
-	long long m_wordFreq64;
+	int64_t m_wordFreq64;
 };
 */
 
@@ -135,7 +135,7 @@ class WordFreqInfo {
 class Msg95Request {
 
  public:
-	long long m_docId;
+	int64_t m_docId;
 
 	uint8_t m_docLangId;
 
@@ -194,7 +194,7 @@ class TopDocIds {
 public:
 	long      m_queryNum; // in the matchingquerybuf
 	long      m_numDocIds;
-	long long m_topDocIds[NUM_RESULTS_FOR_RELATED_DOCIDS];
+	int64_t m_topDocIds[NUM_RESULTS_FOR_RELATED_DOCIDS];
 	float     m_topScores[NUM_RESULTS_FOR_RELATED_DOCIDS];
 	long      m_topSiteHashes26[NUM_RESULTS_FOR_RELATED_DOCIDS];
 };
@@ -221,9 +221,9 @@ public:
 	short m_numControlWordForms;
 	float m_smallestNormTermFreq;
 	// hash of wids in query. see Query::getHash() function.
-	long long m_queryExactHash64; 
+	int64_t m_queryExactHash64; 
 	// hash of smallest syn of each wid in qry
-	long long m_querySynBaseHash64; 
+	int64_t m_querySynBaseHash64; 
 	// this is set by setQueryImportance()
 	float m_queryImportance;
 	// . how many docids are in our linked list, QueryRel::m_next
@@ -327,7 +327,7 @@ public:
 	// score of the query
 	float     m_myScore;                
 	// docid of related query, set after getting reply
-	long long m_myDocId;
+	int64_t m_myDocId;
 	// hmmm. what's this? the top 300 or so scoring docids, set by
 	// getMatchingQueriesScoredForThisUrl() .
 	//class TopDocIds *m_topDocIds;
@@ -349,7 +349,7 @@ public:
 	// "search+engine" is too similar to "search+engines" so this
 	// will allow us to skip them because they yield like the exact
 	// same related docids!!!!
-	long long m_querySynBaseHash64;
+	int64_t m_querySynBaseHash64;
 	// . how important is this query to the main url?
 	// . now a function of m_numTotalResultsInSlice and query's traffic
 	// . this is set when processing the msg99replies in 
@@ -378,7 +378,7 @@ public:
 	//char *m_termStr;
 	//long  m_termLen;
 	// need this for matching to QueryChange::m_termHash64
-	long long m_termHash64;
+	int64_t m_termHash64;
 	// . sum of traffic of all queries that had this term
 	// . maybe sort by this after m_bestTrafficGain?
 	long  m_trafficSum;
@@ -413,7 +413,7 @@ public:
 
 class RelatedDocId {
 public:
-	long long m_docId;
+	int64_t m_docId;
 	// from clusterdb from doing a search:
 	long m_siteHash26;
 	// how many queries we have in common with the main url
@@ -485,7 +485,7 @@ public:
 	// the siterank of this inlink
 	char  m_rl_siteRank;
 	// docid of the link
-	long long m_rl_docId;
+	int64_t m_rl_docId;
 	long m_rl_firstIp;
 	// offsets into XmlDoc::m_relatedDocIdBuf of the related docids
 	// that this link links to
@@ -579,8 +579,8 @@ public:
 	uint8_t m_uniqueRound;
 
 
-	//long long getQueryLinkHash64 ( ) {
-	//	long long h64 = m_queryHostId;
+	//int64_t getQueryLinkHash64 ( ) {
+	//	int64_t h64 = m_queryHostId;
 	//	h64 <<= 32;
 	//	h64 |= m_queryDataOffset;
 	//	return h64;
@@ -644,7 +644,7 @@ public:
 	float m_importance;//score;
 
 	// sum of traffic of all related queries that had this term
-	long long m_traffic;
+	int64_t m_traffic;
 
 	// linked list of synonyms
 	//class MissingTerm *m_synNext;

@@ -121,7 +121,7 @@ void HashTableT<Key_t, Val_t>::clear ( ) {
 template<class Key_t, class Val_t> 
 long HashTableT<Key_t, Val_t>::getOccupiedSlotNum ( Key_t& key ) const {
 	if ( m_numSlots <= 0 ) return -1;
-        long long n;
+        int64_t n;
 	/*
 	switch(sizeof(Key_t)) {
 	case 8:
@@ -176,11 +176,11 @@ template<class Key_t, class Val_t>
 bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , long *slot) {
 	// check to see if we should grow the table
 	if ( 100 * (m_numSlotsUsed+1) >= m_numSlots * 75 ) {
-		long growTo = ((long long) m_numSlots * 120LL ) / 100LL +128LL;
+		long growTo = ((int64_t) m_numSlots * 120LL ) / 100LL +128LL;
 		if ( ! setTableSize ( growTo, NULL, 0 ) ) return false;
 	}
 
-        long long n;
+        int64_t n;
 	/*
 	switch(sizeof(Key_t)) {
 	case 8:
@@ -331,7 +331,7 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 			// skip the empty slots 
 			if ( m_keys [ i ] == 0 ) continue;
 			// get the new slot # for this slot (might be the same)
-			long long num;
+			int64_t num;
 			/*
 			switch(sizeof(Key_t)) {
 			case 8:
@@ -481,7 +481,7 @@ bool HashTableT<Key_t, Val_t>::save ( char* filename , char *tbuf , long tsize )
 // hash the space (or +) separated list of numbers in this string
 //template<class Key_t, class Val_t> 
 //bool HashTableT<Key_t,Val_t>::hashFromString ( HashTableT *ht , char *x ) {
-bool hashFromString ( HashTableT<long long,char> *ht , char *x ) {
+bool hashFromString ( HashTableT<int64_t,char> *ht , char *x ) {
 	if ( ! x ) return true;
 	char *xend = x + gbstrlen(x);
 	long  n    = 1;
@@ -496,8 +496,8 @@ bool hashFromString ( HashTableT<long long,char> *ht , char *x ) {
 		while ( s < xend && (is_wspace_a(*s) || *s == '+') ) s++;
 		// are we done?
 		if ( s >= xend ) break;
-		// get the docid, a long long (64 bits)
-		long long d = atoll ( s );
+		// get the docid, a int64_t (64 bits)
+		int64_t d = atoll ( s );
 		// add it, should never fail!
 		if ( ! ht->addKey ( d , 1 ) ) return false;
 		// skip till +
@@ -510,16 +510,16 @@ bool hashFromString ( HashTableT<long long,char> *ht , char *x ) {
 
 template class HashTableT<long, char>;
 template class HashTableT<long, long>;
-template class HashTableT<long long , long long>;
-template class HashTableT<long , long long>;
-template class HashTableT<long long , long>;
-template class HashTableT<long long, uint32_t>;
+template class HashTableT<int64_t , int64_t>;
+template class HashTableT<long , int64_t>;
+template class HashTableT<int64_t , long>;
+template class HashTableT<int64_t, uint32_t>;
 template class HashTableT<uint64_t , unsigned long>;
 template class HashTableT<uint64_t , uint64_t>;
 template class HashTableT<uint64_t , char*>;
 template class HashTableT<unsigned long, unsigned long>;
 template class HashTableT<unsigned long, bool>;
-template class HashTableT<long long , bool>;
+template class HashTableT<int64_t , bool>;
 template class HashTableT<uint64_t, float>;
 template class HashTableT<uint64_t, char>;
 template class HashTableT<unsigned long, char*>;
@@ -527,22 +527,22 @@ template class HashTableT<unsigned long, FnInfo>;
 template class HashTableT<unsigned long, FnInfo*>;
 template class HashTableT<unsigned long, QuickPollInfo*>;
 template class HashTableT<unsigned long, HashTableT<uint64_t, float>* >;
-template class HashTableT<long long, char>;
-template class HashTableT<unsigned long, long long>;
+template class HashTableT<int64_t, char>;
+template class HashTableT<unsigned long, int64_t>;
 template class HashTableT<unsigned long, long>;
 template class HashTableT<uint64_t, 
 			  HashTableT<uint64_t, float> *>;
-template class HashTableT<long long, CallbackEntry>;	// Dns.cpp
+template class HashTableT<int64_t, CallbackEntry>;	// Dns.cpp
 template class HashTableT<uint32_t, TLDIPEntry>;	// Dns.cpp
 template class HashTableT<long, short>;
 template class HashTableT<uint32_t, uint32_t>;
 template class HashTableT<uint32_t, uint64_t>;
 class FrameTrace;
 template class HashTableT<uint32_t, FrameTrace *>;
-//template class HashTableT<long long, Title::InLinkInfo>;
+//template class HashTableT<int64_t, Title::InLinkInfo>;
 template class HashTableT<uint64_t, long>;
 //template class HashTableT<uint64_t, SynonymLinkGroup>;
-template class HashTableT<uint64_t, long long>;
+template class HashTableT<uint64_t, int64_t>;
 template class HashTableT<long, ComTopInDmozRec>;
 template class HashTableT<unsigned short, const char *>;
 template class HashTableT<unsigned short, int>;

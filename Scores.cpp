@@ -285,7 +285,7 @@ bool Scores::set ( Words    *words                   ,
 	for ( long i = 0 ; i < nw ; i++ ) m_scores[i] = NORM_WORD_SCORE;
 
 	nodeid_t   *tids  = words->getTagIds  ();
-	long long  *wids  = words->getWordIds ();		
+	int64_t  *wids  = words->getWordIds ();		
 	char      **w     = words->m_words;
 	long       *wlens = words->m_wordLens;
 
@@ -415,7 +415,7 @@ bool Scores::setScoresBySection ( Words *words,
 				  long minAvgWordScore         ) {
 
 	long       nw     = words->getNumWords();
-	long long *wids   = words->getWordIds ();
+	int64_t *wids   = words->getWordIds ();
 	nodeid_t  *tids   = words->getTagIds  ();
 	bool       inLink = false;
 	long       score  = 0;

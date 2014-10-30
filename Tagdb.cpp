@@ -283,7 +283,7 @@ long Tag::setFromBuf ( char *p , char *pend ) {
 	// get the tag identifier
 	//m_tagId = atol(p);
 	//sscanf ( p , "%lu,",&m_tagId);
-	//long long big = atoll(p);
+	//int64_t big = atoll(p);
 	//m_tagId = (long)big;
 	// skip until comma again
 	//while ( p < pend && *p != ',' ) p++;
@@ -683,8 +683,8 @@ long TagRec::getLong ( long         tagType   ,
 	return defalt;
 }
 
-long long TagRec::getLongLong ( char        *tagTypeStr,
-				long long    defalt    , 
+int64_t TagRec::getLongLong ( char        *tagTypeStr,
+				int64_t    defalt    , 
 				Tag        **bookmark  ,
 				long        *timestamp ,
 				char       **user      ) {
@@ -700,7 +700,7 @@ long long TagRec::getLongLong ( char        *tagTypeStr,
 		// skip dups
 		if ( tag->m_type == TT_DUP ) continue;
 		// get the value as a long
-		long long score = 0;
+		int64_t score = 0;
 		// the size
 		char *data     = tag->getTagData();
 		long  dataSize = tag->getTagDataSize();
@@ -1156,9 +1156,9 @@ bool TagRec::setFromHttpRequest ( HttpRequest *r, TcpSocket *s ) {
 
 		// for supporting dumping/adding of tagdb using wget
 		sprintf ( buf , "tagn1key%lib" , i );
-		long long v1 = r->getLongLong ( buf, key.n1 );
+		int64_t v1 = r->getLongLong ( buf, key.n1 );
 		sprintf ( buf , "tagn0key%lib" , i );
-		long long v0 = r->getLongLong ( buf, key.n0 );
+		int64_t v0 = r->getLongLong ( buf, key.n0 );
 		bool hackKey = ( v1 || v0 );
 		key.n1 = v1;
 		key.n0 = v0;
@@ -1184,7 +1184,7 @@ bool TagRec::setFromHttpRequest ( HttpRequest *r, TcpSocket *s ) {
 		long dataSize = gbstrlen(dataPtr) + 1;
 		// if numeric store in tag buf
 		/*
-		long long data;
+		int64_t data;
 		if ( isNum ) {
 			data = atoll ( dataPtr );//r->getLongLong(val,-1);
 			dataSize = 1;
@@ -1768,7 +1768,7 @@ Tagdb g_tagdb2;
 // a fake site for Tagdb::convert()
 //Tagdb g_sitedb;
 
-//static HashTableT<long long,long> s_lockTable;
+//static HashTableT<int64_t,long> s_lockTable;
 //static HashTableX s_lockTable2;
 
 // reset rdb and Xmls
@@ -1819,9 +1819,9 @@ bool Tagdb::init ( ) {
 	// . NOTE: 32 bytes of the 82 are overhead
 	long maxTreeNodes = g_conf.m_tagdbMaxTreeMem  / 82;
 
-	//long long pcmem = 250000000; // 250MB
+	//int64_t pcmem = 250000000; // 250MB
 	// TODO: make it a biased disk page cache!
-	long long pcmem = 160000000; // 160MB
+	int64_t pcmem = 160000000; // 160MB
 	// turn it off for rebuilding posdb, to 10MB anyway
 	pcmem = 10000000;
 	//long pcmem = 100000000;
@@ -3016,7 +3016,7 @@ void TagRec::gotAllReplies ( ) {
 	// if any had an error, don't do anything
 	if ( m_errno ) return;
 	// time how long this takes and log it
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 	// how many TagRecs we matched
 	long n = 0;
 	// arrays for pointing to best matching TagRecs
@@ -3256,7 +3256,7 @@ void TagRec::gotAllReplies ( ) {
 	reset();
 		
 	// time it
-	long long took = gettimeofdayInMilliseconds() - startTime;
+	int64_t took = gettimeofdayInMilliseconds() - startTime;
 	if(took>10) log(LOG_INFO, "admin: gotreply for msg8a took %lli",took);
 }
 */
@@ -3997,7 +3997,7 @@ void sendReply9a ( void *state ) {
 //
 ///////////////////////////////////////////////
 
-long getY ( long long X , long long *x , long long *y , long n ) {
+long getY ( int64_t X , int64_t *x , int64_t *y , long n ) {
 	// if we only have one point then there'll be no interpolation
 	if ( n == 1 ) return y[0];
 	// find the first x after our "X"
@@ -4007,17 +4007,17 @@ long getY ( long long X , long long *x , long long *y , long n ) {
 	if ( j <= 0 ) return y[0  ];
 	if ( j >= n ) return y[n-1];
 	// linear interpolate between our 2 points (x0,y0) and (x1,y1)
-	long long x0 = x[j-1];
-	long long x1 = x[j  ];
-	long long y0 = y[j-1];
-	long long y1 = y[j  ];
+	int64_t x0 = x[j-1];
+	int64_t x1 = x[j  ];
+	int64_t y0 = y[j-1];
+	int64_t y1 = y[j  ];
 	// error if x1 less than x0
 	if ( x1 <= x0 ) {
 		log("tagdb: X coordinates are not in ascending order for map");
 		char *xx=NULL;*xx=0;
 	}
 	// otherwise we have a sloping line
-	return  y0 + ( ((long long)X - x0) * (y1-y0) ) /(x1-x0) ;
+	return  y0 + ( ((int64_t)X - x0) * (y1-y0) ) /(x1-x0) ;
 }
 
 ///////////////////////////////////////////////

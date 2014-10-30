@@ -98,7 +98,7 @@ class PingServer {
 
 	//long m_launched ;
 	//long m_totalLaunched ;
-	//long long m_startTime;
+	//int64_t m_startTime;
 	long m_i;
 
 	char m_useShotgun;

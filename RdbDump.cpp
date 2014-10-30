@@ -12,9 +12,9 @@
 #include "Accessdb.h"
 
 extern void dumpDatedb   ( char *coll,long sfn,long numFiles,bool includeTree, 
-			   long long termId , bool justVerify ) ;
+			   int64_t termId , bool justVerify ) ;
 extern void dumpPosdb    ( char *coll,long sfn,long numFiles,bool includeTree, 
-			   long long termId , bool justVerify ) ;
+			   int64_t termId , bool justVerify ) ;
 
 void doneReadingForVerifyWrapper ( void *state ) ;
 //void gotTfndbListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) ;
@@ -37,12 +37,12 @@ bool RdbDump::set ( //char     *coll          ,
 		    void     *state         ,
 		    void      (* callback) ( void *state ) ,
 		    bool      useHalfKeys   ,
-		    long long startOffset   ,
+		    int64_t startOffset   ,
 		    //key_t     prevLastKey   ,
 		    char     *prevLastKey   ,
 		    char      keySize       ,
 		    class DiskPageCache *pc     ,
-		    long long maxFileSize   ,
+		    int64_t maxFileSize   ,
 		    Rdb      *rdb           ) {
 
 	if ( ! orderedDump ) {
@@ -369,7 +369,7 @@ bool RdbDump::dumpTree ( bool recall ) {
 
 
 	skip:
-		long long t2;
+		int64_t t2;
 		//key_t lastKey;
 		char *lastKey;
 		// if error getting list (out of memory?)
@@ -603,7 +603,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 		return true;
 	}
 	// tab to the old offset
-	long long offset = m_offset;
+	int64_t offset = m_offset;
 	// might as well update the offset now, even before write is done
 	m_offset += m_bytesToWrite ;
 	// write thread is out
@@ -747,7 +747,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 		return dumpList ( m_list , m_niceness , true );
 	}
 	// time dump to disk (and tfndb bins)
-	long long t ;
+	int64_t t ;
 	// start timing on first call only
 	if ( m_addToMap ) t = gettimeofdayInMilliseconds();
 	// sanity check
@@ -771,7 +771,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 	}
 
 	// debug msg
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	log(LOG_TIMING,"db: adding to map took %llu ms" , now - t );
 
 	// . Msg5.cpp and RdbList::merge_r() should remove titleRecs
@@ -858,7 +858,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// . balancing will be restored once we're done deleting this list
 	// debug msg
 	//log("RdbDump:: deleting list");
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 	// convert to number, this is -1 if no longer exists
 	//collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
 	//if ( collnum < 0 && m_rdb->m_isCollectionLess ) {
@@ -894,7 +894,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// tell rdb he needs saving now
 	//if ( m_rdb ) m_rdb->m_needsSave = true;
 	// debug msg
-	long long t2 = gettimeofdayInMilliseconds();
+	int64_t t2 = gettimeofdayInMilliseconds();
 	log(LOG_TIMING,"db: dump: deleteList: took %lli",t2-t1);
 	return true;
 }
@@ -945,9 +945,9 @@ bool RdbDump::updateTfndbLoop () {
 	//   takes a "tfndbList" as input just to weed out titleRecs that
 	//   are not supported by a tfndb record
 	// . make the tfndb key
-	long long d = g_titledb.getDocIdFromKey ((key_t *) k );
+	int64_t d = g_titledb.getDocIdFromKey ((key_t *) k );
 	//long e = g_titledb.getHostHash ( (key_t *)k );
-	long long uh48 = g_titledb.getUrlHash48 ( (key_t *)k );
+	int64_t uh48 = g_titledb.getUrlHash48 ( (key_t *)k );
 	long tfn = m_id2;
 	// delete=false
 	key_t tk = g_tfndb.makeKey ( d, uh48, tfn, false );

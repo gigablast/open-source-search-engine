@@ -11,9 +11,9 @@ static void gotTermFreqWrapper ( void *state ) ;
 //   the same time, too
 bool Msg37::getTermFreqs ( collnum_t collnum,//char       *coll       ,
 			   long        maxAge     ,
-			   long long  *termIds    ,
+			   int64_t  *termIds    ,
 			   long        numTerms   ,
-			   long long  *termFreqs  ,
+			   int64_t  *termFreqs  ,
 			   void       *state      ,
 			   void (* callback)(void *state ) ,
 			   long        niceness   ,

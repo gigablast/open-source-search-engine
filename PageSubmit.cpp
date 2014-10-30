@@ -88,7 +88,7 @@ public:
 
 	// then put the event search result pageget.cpp into the
 	// bottom right frame.
-	long long m_formDocId;
+	int64_t m_formDocId;
 	long      m_formEventId;
 	long      m_formClockSet;
 
@@ -617,7 +617,7 @@ void processLoop24 ( void *state ) {
 	long nw = w->getNumWords();
 	char **wptrs = w->getWords();
 	long  *wlens = w->getWordLens();
-	long long *wids = w->getWordIds();
+	int64_t *wids = w->getWordIds();
 	nodeid_t *tids = w->getTagIds();
 
 	for ( long i = 0 ; i < nw ; i++ ) {

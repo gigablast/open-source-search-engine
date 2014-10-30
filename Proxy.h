@@ -85,12 +85,12 @@ class Proxy {
 	bool hasAccessPermission ( class StateControl *stC );
 	long getAccessType ( HttpRequest *hr );
 	float getPrice ( long accessType ) ;
-	bool addAccessPoint ( class StateControl *stC ,long long nowms,
+	bool addAccessPoint ( class StateControl *stC ,int64_t nowms,
 				     long httpStatus );
 	bool addAccessPoint2 ( class UserInfo *ui , 
 			       char accessType ,
-			       long long nowms ,
-			       long long startTime ) ;
+			       int64_t nowms ,
+			       int64_t startTime ) ;
 	class SummaryRec *getSummaryRec ( long userId32 , char accessType );
 	class UserInfo *getUserInfoFromId ( long userId32 ) ;
 	class UserInfo *getLoggedInUserInfo2 ( HttpRequest *hr,

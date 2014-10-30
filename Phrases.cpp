@@ -75,13 +75,13 @@ bool Phrases::set( Words    *words,
 	m_bufSize = need;
 	// set up arrays
 	char *p = m_buf;
-	//m_phraseIds      = (long long *)p ; p += m_numPhrases * 8;
+	//m_phraseIds      = (int64_t *)p ; p += m_numPhrases * 8;
 	// phrase not using stop words
-	m_phraseIds2     = (long long *)p ; p += m_numPhrases * 8;
-	m_phraseIds3     = (long long *)p ; p += m_numPhrases * 8;
-	//m_phraseIds4     = (long long *)p ; p += m_numPhrases * 8;
-	//m_phraseIds5     = (long long *)p ; p += m_numPhrases * 8;
-	//m_stripPhraseIds = (long long *)p ; p += m_numPhrases * 8;
+	m_phraseIds2     = (int64_t *)p ; p += m_numPhrases * 8;
+	m_phraseIds3     = (int64_t *)p ; p += m_numPhrases * 8;
+	//m_phraseIds4     = (int64_t *)p ; p += m_numPhrases * 8;
+	//m_phraseIds5     = (int64_t *)p ; p += m_numPhrases * 8;
+	//m_stripPhraseIds = (int64_t *)p ; p += m_numPhrases * 8;
 	//if ( m_wordScores ) {
 	//	m_phraseScores  = (long  *)p ;
 	//	p += m_numPhrases * 4;
@@ -150,12 +150,12 @@ void Phrases::setPhrase ( long i, long niceness ) {
 	//}
 
 	// hash of the phrase
-	long long h   = 0LL; 
+	int64_t h   = 0LL; 
 	// the hash of the two-word phrase (now we do 3,4 and 5 word phrases)
-	long long h2  = 0LL; 
-	long long h3  = 0LL; 
-	//long long h4  = 0LL; 
-	//long long h5  = 0LL; 
+	int64_t h2  = 0LL; 
+	int64_t h3  = 0LL; 
+	//int64_t h4  = 0LL; 
+	//int64_t h5  = 0LL; 
 	// reset
 	unsigned char pos = 0;
 	// now look for other tokens that should follow the ith token
@@ -555,7 +555,7 @@ bool Phrases::hash ( TermTable      *table          ,
 		     Weights        *weightsPtr     ,
 		     unsigned long   baseScore      ,
 		     unsigned long   maxScore       ,
-		     long long       startHash      ,
+		     int64_t       startHash      ,
 		     char           *prefix1        ,
 		     long            prefixLen1     ,
 		     char           *prefix2        ,
@@ -607,13 +607,13 @@ bool Phrases::hash ( TermTable      *table          ,
 		// should hash just enough to index the phrase
 		if ( ! score ) { score = 1; huo = true; }
 		// get the phrase hash (includes coll,field prefixes)
-		long long h = g_indexdb.getTermId (startHash ,m_phraseIds[i]) ;
+		int64_t h = g_indexdb.getTermId (startHash ,m_phraseIds[i]) ;
 		
-		//long long h2 = 0LL;
+		//int64_t h2 = 0LL;
 		//if (m_stripPhraseIds[i])
 		//	h2 = g_indexdb.getTermId (startHash ,
 		//				  m_stripPhraseIds[i]) ;
-		long long h2 = g_indexdb.getTermId(startHash,m_phraseIds2[i]);
+		int64_t h2 = g_indexdb.getTermId(startHash,m_phraseIds2[i]);
 		// we must mask it before adding it to the table because
 		// this table is also used to hash IndexLists into that come
 		// from LinkInfo classes (incoming link text). And when
@@ -722,19 +722,19 @@ long Phrases::getLeftPhraseIndex( long i ) {
 // . get the id of the phrase we are in that we do not start
 // . returns 0 if none, even though 0 may be a valid phraseId!! TODO: fix
 
-long long Phrases::getLeftPhraseId ( long i ) {
+int64_t Phrases::getLeftPhraseId ( long i ) {
 	long index = getLeftPhraseIndex(i);
 	if ( index < 0 ) return 0LL;
 	return getPhraseId(index);
 }
 
-long long Phrases::getLeftStripPhraseId ( long i ) {
+int64_t Phrases::getLeftStripPhraseId ( long i ) {
 	long index = getLeftPhraseIndex(i);
 	if ( index < 0 ) return 0LL;
 	return getStripPhraseId(index);
 }
 */
-long Phrases::getMaxWordsInPhrase ( long i , long long *pid ) { 
+long Phrases::getMaxWordsInPhrase ( long i , int64_t *pid ) { 
 
 	*pid = 0LL;
 
@@ -763,7 +763,7 @@ long Phrases::getMaxWordsInPhrase ( long i , long long *pid ) {
 }
 
 
-long Phrases::getMinWordsInPhrase ( long i , long long *pid ) { 
+long Phrases::getMinWordsInPhrase ( long i , int64_t *pid ) { 
 
 	*pid = 0LL;
 

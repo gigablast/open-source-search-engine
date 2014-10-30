@@ -109,11 +109,11 @@ bool DiskPageCache::init ( const char *dbname ,
 			   bool minimizeDiskSeeks ) {
 			//   long maxMem ,
 			//   void (*getPages2)(DiskPageCache*, long, char*,
-			//		     long, long long, long*,
-			//		     long long*),
+			//		     long, int64_t, long*,
+			//		     int64_t*),
 			//   void (*addPages2)(DiskPageCache*, long, char*,
-			//	   	     long, long long),
-			//   long (*getVfd2)(DiskPageCache*, long long),
+			//	   	     long, int64_t),
+			//   long (*getVfd2)(DiskPageCache*, int64_t),
 			//   void (*rmVfd2)(DiskPageCache*, long) ) {
 	reset();
 
@@ -308,9 +308,9 @@ bool DiskPageCache::initRAMDisk( const char *dbname, long maxMem ){
 void DiskPageCache::getPages   ( long       vfd         ,
 				 char     **buf         ,
 				 long       numBytes    ,
-				 long long  offset      ,
+				 int64_t  offset      ,
 				 long      *newNumBytes ,
-				 long long *newOffset   ,
+				 int64_t *newOffset   ,
 				 char     **allocBuf    ,
 				 long      *allocSize   ,
 				 long       allocOff    ) {
@@ -489,7 +489,7 @@ void DiskPageCache::getPages   ( long       vfd         ,
 void DiskPageCache::addPages ( long vfd,
 			       char *buf,
 			       long numBytes,
-			       long long offset ,
+			       int64_t offset ,
 			       long niceness ){
 	// check for override function
 	//if ( m_isOverriden ) {
@@ -515,7 +515,7 @@ void DiskPageCache::addPages ( long vfd,
 	// for some reason profiler cores all the time in here
 	if ( g_profiler.m_realTimeProfilerRunning ) return;
 	// what is the page range?
-	long long sp = offset / m_pageSize ;
+	int64_t sp = offset / m_pageSize ;
 	// point to it
 	char *bufPtr = buf;
 	char *bufEnd = buf + numBytes;
@@ -821,7 +821,7 @@ void DiskPageCache::excisePage ( long poff ) {
 // . returns false and sets g_errno on error
 // . called by DiskPageCache::open()/close() respectively
 // . fileSize is so we can alloc m_memOff[vfd] big enough for all pgs
-long DiskPageCache::getVfd ( long long maxFileSize, bool vfdAllowed ) {
+long DiskPageCache::getVfd ( int64_t maxFileSize, bool vfdAllowed ) {
 	// check for override function
 	//if ( m_isOverriden ) {
 	//	return m_getVfd2 ( this, maxFileSize );
@@ -1101,8 +1101,8 @@ bool DiskPageCache::verify ( BigFile *f ) {
 		FileState fstate;
 		if ( ! f->read ( buf           ,
 				 size          ,
-				 ((long long)i * (long long)m_pageSize) + 
-				                 (long long)skip ,
+				 ((int64_t)i * (int64_t)m_pageSize) + 
+				                 (int64_t)skip ,
 				 &fstate       ,
 				 NULL          ,  // state
 				 NULL          ,  // callback
@@ -1151,7 +1151,7 @@ void DiskPageCache::writeToCache( long bigOff, long smallOff,  void *inBuf,
 		//   COPIED back into system mem?
 		if ( shmid != s_shmid ) {
 			// time it
-			//long long start = gettimeofdayInMicroseconds();
+			//int64_t start = gettimeofdayInMicroseconds();
 			// free current i guess
 			if ( s_mem && shmdt ( s_mem ) == -1 ) {
 				log("disk: shmdt: %s",mstrerror(errno));
@@ -1169,7 +1169,7 @@ void DiskPageCache::writeToCache( long bigOff, long smallOff,  void *inBuf,
 			s_mem   = mem;
 			s_shmid = shmid;
 			// time it
-			//long long took = gettimeofdayInMicroseconds() -start;
+			//int64_t took = gettimeofdayInMicroseconds() -start;
 			//if ( took > 1 ) 
 			//	logf(LOG_DEBUG,"disk: took %lli us to write "
 			//	     "to shm page cache shmid=%li.",took,
@@ -1216,7 +1216,7 @@ void DiskPageCache::readFromCache( void *outBuf, long bigOff, long smallOff,
 		//   writeToCache() above.
 		if ( shmid != s_shmid ) {
 			// time it
-			//long long start = gettimeofdayInMilliseconds();
+			//int64_t start = gettimeofdayInMilliseconds();
 			// free current first so shmat has some room?
 			if ( s_mem && shmdt ( s_mem ) == -1 ) {
 				log("disk: shmdt: %s",mstrerror(errno));
@@ -1234,7 +1234,7 @@ void DiskPageCache::readFromCache( void *outBuf, long bigOff, long smallOff,
 			s_mem   = mem;
 			s_shmid = shmid;
 			// time it
-			//long long took = gettimeofdayInMilliseconds() -start;
+			//int64_t took = gettimeofdayInMilliseconds() -start;
 			//if ( took > 1 ) 
 			//	logf(LOG_DEBUG,"disk: took %lli ms to read "
 			//	     "to shm page cache shmid=%li.",took,

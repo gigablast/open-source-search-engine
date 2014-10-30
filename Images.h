@@ -92,7 +92,7 @@ class Images {
 	// . sets *termFreq to UPPER BOUND on # of records with that "termId"
 	bool getThumbnail ( char *pageSite ,
 			    long  siteLen  ,
-			    long long docId ,
+			    int64_t docId ,
 			    class XmlDoc *xd ,
 			    collnum_t collnum,
 			    //char **statusPtr ,
@@ -143,7 +143,7 @@ class Images {
 	char      m_statusBuf[128];
 	collnum_t m_collnum;
 
-	long long   m_docId;
+	int64_t   m_docId;
 	IndexList   m_list;
 
 	long m_latestIp;
@@ -153,7 +153,7 @@ class Images {
 	long      m_numImages;
 	long      m_imageNodes[MAX_IMAGES];
 	// termids for doing gbimage:<url> lookups for uniqueness
-	long long m_termIds   [MAX_IMAGES];
+	int64_t m_termIds   [MAX_IMAGES];
 	// for the msg0 lookup, did we have an error?
 	long      m_errors    [MAX_IMAGES];
 

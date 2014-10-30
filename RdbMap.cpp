@@ -112,7 +112,7 @@ bool RdbMap::writeMap ( ) {
 
 bool RdbMap::writeMap2 ( ) {
 	// the current disk offset
-	long long offset = 0LL;
+	int64_t offset = 0LL;
 	g_errno = 0;
 	// first 8 bytes are the size of the DATA file we're mapping
 	m_file.write ( &m_offset , 8 , offset );
@@ -156,7 +156,7 @@ bool RdbMap::writeMap2 ( ) {
 	return true;
 }
 
-long long RdbMap::writeSegment ( long seg , long long offset ) {
+int64_t RdbMap::writeSegment ( long seg , int64_t offset ) {
 	// how many pages have we written?
 	long pagesWritten = seg * PAGES_PER_SEGMENT;
 	// how many pages are left to write?
@@ -218,7 +218,7 @@ bool RdbMap::readMap ( BigFile *dataFile ) {
 
 bool RdbMap::verifyMap ( BigFile *dataFile ) {
 
-	long long diff = m_offset - m_fileStartOffset;
+	int64_t diff = m_offset - m_fileStartOffset;
 	diff -= dataFile->getFileSize();
 	// make it positive
 	if ( diff < 0 ) diff = diff * -1LL;
@@ -251,9 +251,9 @@ bool RdbMap::verifyMap ( BigFile *dataFile ) {
 		//return true;
 	}
 	// are we a 16k page size map?
-	long long maxSize =(long long)(m_numPages + 1)*(long long)m_pageSize;
-	long long minSize =(long long)(m_numPages - 1)*(long long)m_pageSize;
-	long long dfs = dataFile->getFileSize();
+	int64_t maxSize =(int64_t)(m_numPages + 1)*(int64_t)m_pageSize;
+	int64_t minSize =(int64_t)(m_numPages - 1)*(int64_t)m_pageSize;
+	int64_t dfs = dataFile->getFileSize();
 	if ( dfs < minSize || dfs > maxSize ) {
 		//log("db: File is not mapped with PAGE_SIZE of %li. Please "
 		//    "delete map file %s and restart in order to regenerate "
@@ -321,7 +321,7 @@ bool RdbMap::verifyMap2 ( ) {
 		    "page = %li. key offset = %lli. Map or data file is "
 		    "corrupt, but it is probably the data file.", 
 		    m_file.getFilename() ,
-		    i,(long long)m_pageSize*(long long)i+getOffset(i));
+		    i,(int64_t)m_pageSize*(int64_t)i+getOffset(i));
 
 		//log("db: oldk.n1=%08lx n0=%016llx",
 		//    lastKey.n1,lastKey.n0);
@@ -392,7 +392,7 @@ bool RdbMap::verifyMap2 ( ) {
 
 bool RdbMap::readMap2 ( ) {
 	// keep track of read offset
-	long long offset = 0;
+	int64_t offset = 0;
 	g_errno = 0;
 	// first 8 bytes are the size of the DATA file we're mapping
 	m_file.read ( &m_offset , 8 , offset );
@@ -438,7 +438,7 @@ bool RdbMap::readMap2 ( ) {
 	return true;
 }
 
-long long RdbMap::readSegment ( long seg , long long offset , long fileSize ) {
+int64_t RdbMap::readSegment ( long seg , int64_t offset , long fileSize ) {
 	// . add a new segment for this
 	// . increments m_numSegments and increases m_maxNumPages
 	if ( ! addSegment () ) return -1;
@@ -448,7 +448,7 @@ long long RdbMap::readSegment ( long seg , long long offset , long fileSize ) {
 	// how much will we read now?
 	long totalReadSize = PAGES_PER_SEGMENT * slotSize;
 	// how much left in the map file?
-	long long avail = fileSize - offset;
+	int64_t avail = fileSize - offset;
 	// . what's available MUST always be a multiple of 16
 	// . sanity check
 	if ( ( avail % slotSize ) != 0 ) {
@@ -881,7 +881,7 @@ bool RdbMap::addIndexList ( IndexList *list ) {
 //   *rep all records will have their key in [startKey,endKey]
 // . the relative offset (m_offset[sp]) may be -1
 // . this can now return negative sizes
-long long RdbMap::getMinRecSizes ( long   sp       , 
+int64_t RdbMap::getMinRecSizes ( long   sp       , 
 			      long   ep       , 
 			      //key_t  startKey , 
 			      //key_t  endKey   ,
@@ -905,7 +905,7 @@ long long RdbMap::getMinRecSizes ( long   sp       ,
 }
 
 // . like above, but sets an upper bound for recs in [startKey,endKey]
-long long RdbMap::getMaxRecSizes ( long   sp       , 
+int64_t RdbMap::getMaxRecSizes ( long   sp       , 
 			      long   ep       , 
 			      //key_t  startKey , 
 			      //key_t  endKey   ,
@@ -931,7 +931,7 @@ long long RdbMap::getMaxRecSizes ( long   sp       ,
 // . range is from first key on startPage UP TO first key on endPage
 // . if endPage is >= m_numPages then range is UP TO the end of the file
 // . this can now return negative sizes
-long long RdbMap::getRecSizes ( long startPage ,
+int64_t RdbMap::getRecSizes ( long startPage ,
 				long endPage ,
 				bool subtract ) {
 	// . assume a minimum of one page if key range not well mapped
@@ -946,8 +946,8 @@ long long RdbMap::getRecSizes ( long startPage ,
 	//   bytes were garbage we did NOT read from disk... phew!
 	if ( startPage == endPage ) return 0; // return (long)m_pageSize;
 
-	long long offset1;
-	long long offset2;
+	int64_t offset1;
+	int64_t offset2;
 
 	if ( ! subtract ) {
 		offset1 = getAbsoluteOffset ( startPage );
@@ -957,7 +957,7 @@ long long RdbMap::getRecSizes ( long startPage ,
 
 	// . but take into account delete keys, so we can have a negative size!
 	// . use random sampling
-	long long size = 0;
+	int64_t size = 0;
 	//key_t     k;
 	char *k;
 	for ( long i = startPage ; i < endPage ; i++ ) {
@@ -976,12 +976,12 @@ long long RdbMap::getRecSizes ( long startPage ,
 }
 
 // if page has relative offset of -1, use the next page
-long long RdbMap::getAbsoluteOffset ( long page ) {
+int64_t RdbMap::getAbsoluteOffset ( long page ) {
  top:
 	if ( page >= m_numPages ) return m_offset; // fileSize
-	long long offset = 
-		(long long)getOffset(page) +
-		(long long)m_pageSize * (long long)page; 
+	int64_t offset = 
+		(int64_t)getOffset(page) +
+		(int64_t)m_pageSize * (int64_t)page; 
 	if ( getOffset(page) != -1 ) return offset + m_fileStartOffset;
 	// just use end of page if in the middle of a record
 	while ( page < m_numPages && getOffset(page) == -1 ) page++;
@@ -991,7 +991,7 @@ long long RdbMap::getAbsoluteOffset ( long page ) {
 // . get offset of next known key after the one in page
 // . do a while to skip rec on page "page" if it spans multiple pages
 // . watch out for eof
-long long RdbMap::getNextAbsoluteOffset ( long page ) {
+int64_t RdbMap::getNextAbsoluteOffset ( long page ) {
 	// advance to next page
 	page++;
 	// inc page as long as we need to
@@ -1032,7 +1032,7 @@ bool RdbMap::getPageRange ( char  *startKey  ,
 			    long  *endPage   ,
 			    //key_t *maxKey    ,
 			    char  *maxKey    ,
-			    long long oldTruncationLimit ) {
+			    int64_t oldTruncationLimit ) {
 	// the first key on n1 is usually <= startKey, but can be > startKey
 	// if the page (n-1) has only 1 rec whose key is < startKey
 	long n1 = getPage ( startKey );
@@ -1196,13 +1196,13 @@ void RdbMap::printMap () {
 //	return true;
 //}
 
-long long RdbMap::getMemAlloced ( ) {
+int64_t RdbMap::getMemAlloced ( ) {
 	// . how much space per segment?
 	// . each page has a key and a 2 byte offset
-	//long long space = PAGES_PER_SEGMENT * (sizeof(key_t) + 2);
-	long long space = PAGES_PER_SEGMENT * (m_ks + 2);
+	//int64_t space = PAGES_PER_SEGMENT * (sizeof(key_t) + 2);
+	int64_t space = PAGES_PER_SEGMENT * (m_ks + 2);
 	// how many segments we use * segment allocation
-	return (long long)m_numSegments * space;
+	return (int64_t)m_numSegments * space;
 }
 
 bool RdbMap::addSegmentPtr ( long n ) {
@@ -1354,14 +1354,14 @@ bool RdbMap::generateMap ( BigFile *f ) {
 			   "headless data files yet.");
 	}
 	// scan through all the recs in f
-	long long offset = 0;
-	long long fileSize = f->getFileSize();
+	int64_t offset = 0;
+	int64_t fileSize = f->getFileSize();
 	// if file is length 0, we don't need to do much
 	if ( fileSize == 0 ) return true;
 	// g_errno should be set on error
 	if ( fileSize < 0 ) return false;
 	// don't read in more than 10 megs at a time initially
-	long long  bufSize = fileSize;
+	int64_t  bufSize = fileSize;
 	if ( bufSize > 10*1024*1024 ) bufSize = 10*1024*1024;
 	char *buf = (char *)mmalloc ( bufSize , "RdbMap" );
 	// use extremes
@@ -1386,7 +1386,7 @@ bool RdbMap::generateMap ( BigFile *f ) {
 	char key[MAX_KEY_BYTES];
 	long  recSize = 0;
 	char *rec     = buf;
-	long long next = 0LL;
+	int64_t next = 0LL;
 	m_generatingMap = true;
 	// read in at most "bufSize" bytes with each read
  readLoop:
@@ -1396,7 +1396,7 @@ bool RdbMap::generateMap ( BigFile *f ) {
 		next += 500000000; // 500MB
 	}
 	// our reads should always block
-	long long readSize = fileSize - offset;
+	int64_t readSize = fileSize - offset;
 	if ( readSize > bufSize ) readSize = bufSize;
 	// if the readSize is less than the minRecSize, we got a bad cutoff
 	// so we can't go any more
@@ -1460,7 +1460,7 @@ bool RdbMap::generateMap ( BigFile *f ) {
 	// do we have a breech?
 	if ( rec + recSize > buf + readSize ) {
 		// save old
-		long long oldOffset = offset;
+		int64_t oldOffset = offset;
 		// set up so next read starts at this rec that got cut off
 		offset += (rec - buf);
 		// . if we advanced nothing, then we'll end up looping forever
@@ -1554,8 +1554,8 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 	// right now just use for indexdb, datedb, tfnb, etc.
 	//if ( m_fixedDataSize != 0 ) return false;
 	// how big is the big file
-	long long fileSize = f->getFileSize();
-	long long tail = fileSize - m_offset;
+	int64_t fileSize = f->getFileSize();
+	int64_t tail = fileSize - m_offset;
 
 	//if ( tail > 20*1024*1024 )
 	//	return log("db: Cannot truncate data file because bad tail is "
@@ -1563,9 +1563,9 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 
 	// up to 20MB is ok to remove if most just bytes that are zeroes
 	log("db: Counting bytes that are zeroes in the tail.");
-	long long count = 0;
+	int64_t count = 0;
 	char buf [100000];
-	long long off = m_offset;
+	int64_t off = m_offset;
  loop:
 	long readSize = fileSize - off;
 	if ( readSize > 100000 ) readSize = 100000;
@@ -1597,7 +1597,7 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 	File *p = f->getFile ( partnum );
 	if ( ! p ) return log("db: Unable to get part file.");
 	// get offset relative to the part file
-	long newSize = m_offset % (long long)MAX_PART_SIZE;
+	long newSize = m_offset % (int64_t)MAX_PART_SIZE;
 
 	// log what we are doing
 	long oldSize = p->getFileSize();

@@ -1405,7 +1405,7 @@ bool Url::isBadExtension ( long version ) {
 		//version 72 and before.
 		do {
 			int tlen = gbstrlen(s_badExtensions[i]);
-			long long swh = hash64Lower_a(s_badExtensions[i],tlen);
+			int64_t swh = hash64Lower_a(s_badExtensions[i],tlen);
 			if(!s_badExtTable.addKey(swh,(long)50))
 				return false;
 			i++;
@@ -1744,7 +1744,7 @@ long Url::getHostHash32 ( ) {
 	return hash32 ( m_host , m_hlen ); 
 }
 
-long long Url::getHostHash64 ( ) { 
+int64_t Url::getHostHash64 ( ) { 
 	return hash64 ( m_host , m_hlen ); 
 }
 
@@ -1752,7 +1752,7 @@ long Url::getDomainHash32 ( ) {
 	return hash32 ( m_domain , m_dlen ); 
 }
 
-long long Url::getDomainHash64 ( ) { 
+int64_t Url::getDomainHash64 ( ) { 
 	return hash64 ( m_domain , m_dlen ); 
 }
 
@@ -1760,7 +1760,7 @@ long Url::getUrlHash32 ( ) {
 	return hash32(m_url,m_ulen); 
 }
 
-long long Url::getUrlHash64 ( ) { 
+int64_t Url::getUrlHash64 ( ) { 
 	return hash64(m_url,m_ulen); 
 }
 

@@ -63,10 +63,10 @@ class DiskPageCache {
 		    bool minimizeDiskSeeks = false );
 		//    long maxMem ,
 		//    void (*getPages2)(DiskPageCache*, long, char*, long, 
-		//	    	      long long, long*, long long*) = NULL,
+		//	    	      int64_t, long*, int64_t*) = NULL,
 		//    void (*addPages2)(DiskPageCache*, long, char*, long,
-		//	    	      long long) = NULL,
-		//    long (*getVfd2)(DiskPageCache*, long long) = NULL,
+		//	    	      int64_t) = NULL,
+		//    long (*getVfd2)(DiskPageCache*, int64_t) = NULL,
 		//    void (*rmVfd2)(DiskPageCache*, long) = NULL );
 
 	bool initRAMDisk( const char *dbname, long maxMem );
@@ -76,7 +76,7 @@ class DiskPageCache {
 	// . called by DiskPageCache::open()/close() respectively
 	// . maxFileSize is so we can alloc m_memOff[vfd] big enough for all
 	//   pages that are in or will be in the file (if it is being created)
-	long getVfd ( long long maxFileSize, bool vfdAllowed );
+	long getVfd ( int64_t maxFileSize, bool vfdAllowed );
 	void rmVfd  ( long vfd );
 
 	// . this returns true iff the entire read was copied into
@@ -85,19 +85,19 @@ class DiskPageCache {
 	void getPages   ( long       vfd         ,
 			  char     **buf         ,
 			  long       numBytes    ,
-			  long long  offset      ,
+			  int64_t  offset      ,
 			  long      *newNumBytes ,
-			  long long *newOffset   ,
+			  int64_t *newOffset   ,
 			  char     **allocBuf    , //we alloc this if buf==NULL
 			  long      *allocSize   , //size of the alloc
 			  long       allocOff    );
 
 	// after you read/write from/to disk, copy into the page cache
-	void addPages ( long vfd, char *buf , long numBytes, long long offset,
+	void addPages ( long vfd, char *buf , long numBytes, int64_t offset,
 			long niceness );
 
-	long long getNumHits   () { return m_hits; };
-	long long getNumMisses () { return m_misses; };
+	int64_t getNumHits   () { return m_hits; };
+	int64_t getNumMisses () { return m_misses; };
 	void      resetStats   () { m_hits = 0 ; m_misses = 0; };
 
 	long getMemUsed    () ;
@@ -182,8 +182,8 @@ class DiskPageCache {
 	long m_memAlloced;
 
 	// stats (partial hits/misses supported)
-	long long m_hits;
-	long long m_misses;
+	int64_t m_hits;
+	int64_t m_misses;
 
 	// . linked list boundary info
 	// . linked list is actually stored in bytes 2-8 (next/prev) of pages
@@ -220,10 +220,10 @@ class DiskPageCache {
 
 	// for overriding the disk page cache with custom functions
 	//bool m_isOverriden;
-	//void (*m_getPages2)(DiskPageCache*, long, char*, long, long long, 
-	//		    long*, long long*);
-	//void (*m_addPages2)(DiskPageCache*, long, char*, long, long long);
-	//long (*m_getVfd2)(DiskPageCache*, long long);
+	//void (*m_getPages2)(DiskPageCache*, long, char*, long, int64_t, 
+	//		    long*, int64_t*);
+	//void (*m_addPages2)(DiskPageCache*, long, char*, long, int64_t);
+	//long (*m_getVfd2)(DiskPageCache*, int64_t);
 	//void (*m_rmVfd2)(DiskPageCache*, long);
 };
 

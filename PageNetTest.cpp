@@ -411,8 +411,8 @@ void PageNetTest::threadControl() {
 
 
 bool PageNetTest::netTestStart_r( bool amThread, long num ) {
-	long long endTime   = 0;
-	long long calcTime  = 0;
+	int64_t endTime   = 0;
+	int64_t calcTime  = 0;
 	long      count;
 	long      index     = 0;
 
@@ -799,7 +799,7 @@ bool PageNetTest::resultsPage( TcpSocket *s ) {//, HttpRequest *r ) {
 	// HostId TestHostId SendRate RcvRate\r\n (TEST #2)
 
 
-	long long avg[4];
+	int64_t avg[4];
 	for( long j = 0; j < 4 ; j++ ) {
 		avg[j] = 0;
 		long i;

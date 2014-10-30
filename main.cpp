@@ -154,7 +154,7 @@ void rmTest();
 
 //#ifndef _LARS_
 static void dumpTitledb  ( char *coll,long sfn,long numFiles,bool includeTree,
-			   long long docId , char justPrintDups ,
+			   int64_t docId , char justPrintDups ,
 			   bool dumpSentences ,
 			   bool dumpWords );
 //static void dumpTfndb    (char *coll,long sfn,long numFiles,bool includeTree,
@@ -166,14 +166,14 @@ static void dumpRevdb    ( char *coll,long sfn,long numFiles,bool includeTree);
 static void dumpTagdb   ( char *coll,long sfn,long numFiles,bool includeTree,
 			   long c, char rec=0, long rdbId = RDB_TAGDB );
 static void dumpIndexdb  ( char *coll,long sfn,long numFiles,bool includeTree, 
-			   long long termId ) ;
+			   int64_t termId ) ;
 void dumpPosdb  ( char *coll,long sfn,long numFiles,bool includeTree, 
-		  long long termId , bool justVerify ) ;
+		  int64_t termId , bool justVerify ) ;
 static void dumpWaitingTree( char *coll );
 static void dumpDoledb  ( char *coll,long sfn,long numFiles,bool includeTree);
 
 void dumpDatedb   ( char *coll,long sfn,long numFiles,bool includeTree, 
-		    long long termId , bool justVerify ) ;
+		    int64_t termId , bool justVerify ) ;
 void dumpClusterdb       ( char *coll,long sfn,long numFiles,bool includeTree);
 //void dumpChecksumdb      ( char *coll,long sfn,long numFiles,bool includeTree);
 //void dumpStatsdb 	 ( long startFileNum, long numFiles, bool includeTree,
@@ -218,16 +218,16 @@ void dumpMissing ( char *coll );
 void dumpDups    ( char *coll );
 void removeDocIds ( char *coll , char *filename );
 
-static void dumpIndexdbFile ( long fn , long long off , char *f , long ks ,
+static void dumpIndexdbFile ( long fn , int64_t off , char *f , long ks ,
 			      char *NAME = NULL );
 
 //static void dumpCachedRecs  ( char *coll,long sfn,long numFiles,bool includeTree,
-//			   long long docId );
+//			   int64_t docId );
 //static bool testBoolean() ;
 //static void qaTest(char *s1, char *s2, char *u, char *q);
 //static void xmlDiffTest(char *f1, char *f2, DiffOpt *opt);
 //void testSpamRules(char *coll,long startFileNum,long numFiles,bool includeTree,
-//		   long long docid);
+//		   int64_t docid);
 
 //void takeSnapshotWrapper( int status, void *state);
 
@@ -238,13 +238,13 @@ static void dumpIndexdbFile ( long fn , long long off , char *f , long ks ,
 
 static long checkDirPerms ( char *dir ) ;
 //static bool fixTitleRecs( char *coll ) ;
-//static long getRecSize ( BigFile *f , long long off ) ;
+//static long getRecSize ( BigFile *f , int64_t off ) ;
 //static bool addToChecksumdb ( char *coll , TitleRec *tr ) ;
 //static bool addToSpiderdb   ( char *coll , TitleRec *tr ) ;
 
 //Need these two if tr's in addtospiderdb are getting their quality from
 // their root urls.
-/*static HashTableT <long long,char> s_rootUrls;
+/*static HashTableT <int64_t,char> s_rootUrls;
   static bool loadRootUrls    ( char *filename);*/
 //static bool addToTfndb      ( char *coll , TitleRec  *tr , long id2 ) ;
 //static bool addToTfndb2     ( char *coll , SpiderRec *sr , long id2 ) ;
@@ -265,17 +265,17 @@ bool treetest    ( ) ;
 bool bucketstest ( char *dbname ) ;
 bool hashtest    ( ) ;
 // how fast to parse the content of this docId?
-bool parseTest ( char *coll , long long docId , char *query );
+bool parseTest ( char *coll , int64_t docId , char *query );
 //bool carveTest ( uint32_t radius, char *fname, char* query );
-bool summaryTest1   ( char *rec, long listSize, char *coll , long long docId ,
+bool summaryTest1   ( char *rec, long listSize, char *coll , int64_t docId ,
 		      char *query );
-//bool summaryTest2   ( char *rec, long listSize, char *coll , long long docId ,
+//bool summaryTest2   ( char *rec, long listSize, char *coll , int64_t docId ,
 //		      char *query );
-//bool summaryTest3   ( char *rec, long listSize, char *coll , long long docId ,
+//bool summaryTest3   ( char *rec, long listSize, char *coll , int64_t docId ,
 //		      char *query );
 
 // time a big write, read and then seeks
-bool thrutest ( char *testdir , long long fileSize ) ;
+bool thrutest ( char *testdir , int64_t fileSize ) ;
 void seektest ( char *testdir , long numThreads , long maxReadSize ,
 		char *filename );
 
@@ -334,8 +334,8 @@ int collcopy ( char *newHostsConf , char *coll , long collnum ) ;
 bool doCmd ( const char *cmd , long hostId , char *filename , bool sendToHosts,
 	     bool sendToProxies, long hostId2=-1 );
 int injectFile ( char *filename , char *ips , 
-		 long long startDocId ,
-		 long long endDocId ,
+		 int64_t startDocId ,
+		 int64_t endDocId ,
 		 bool isDelete ) ;
 int injectFileTest ( long  reqLen  , long hid ); // generates the file
 void membustest ( long nb , long loops , bool readf ) ;
@@ -1222,7 +1222,7 @@ int main2 ( int argc , char *argv[] ) {
 		if ( ! hashinit() ) {
 			log("db: Failed to init hashtable." ); return 1; }
 
-		long long docid = atoll1(argv[cmdarg+1]);
+		int64_t docid = atoll1(argv[cmdarg+1]);
 		char *coll   = "";
 		char *query  = "";
 		if ( cmdarg+3 <= argc ) coll  = argv[cmdarg+2];
@@ -1314,7 +1314,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "thrutest" ) == 0 ) {
 		if ( cmdarg+2 >= argc ) goto printHelp;
 		char     *testdir         = argv[cmdarg+1];
-		long long fileSize        = atoll1 ( argv[cmdarg+2] );
+		int64_t fileSize        = atoll1 ( argv[cmdarg+2] );
 		thrutest ( testdir , fileSize );
 		return 0;
 	}
@@ -1322,7 +1322,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "seektest" ) == 0 ) {
 		char     *testdir         = "/tmp/";
 		long      numThreads      = 20; //30;
-		long long maxReadSize     = 20000;
+		int64_t maxReadSize     = 20000;
 		char     *filename        = NULL;
 		if ( cmdarg+1 < argc ) testdir     = argv[cmdarg+1];
 		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
@@ -1434,8 +1434,8 @@ int main2 ( int argc , char *argv[] ) {
 			goto printHelp;
 		char *file = argv[cmdarg+1];
 		char *ips  = argv[cmdarg+2];
-		long long startDocId = 0LL;
-		long long endDocId   = DOCID_MASK;
+		int64_t startDocId = 0LL;
+		int64_t endDocId   = DOCID_MASK;
 		if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
 		injectFile ( file , ips , startDocId , endDocId , false );
@@ -1960,8 +1960,8 @@ int main2 ( int argc , char *argv[] ) {
 			goto printHelp;
 		char *file = argv[cmdarg+1];
 		char *ips  = argv[cmdarg+2];
-		long long startDocId = 0LL;
-		long long endDocId   = DOCID_MASK;
+		int64_t startDocId = 0LL;
+		int64_t endDocId   = DOCID_MASK;
 		if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
 		injectFile ( file , ips , startDocId , endDocId , false );
@@ -1975,8 +1975,8 @@ int main2 ( int argc , char *argv[] ) {
 			goto printHelp;
 		char *file = argv[cmdarg+1];
 		char *ips  = argv[cmdarg+2];
-		long long startDocId = 0LL;
-		long long endDocId   = DOCID_MASK;
+		int64_t startDocId = 0LL;
+		int64_t endDocId   = DOCID_MASK;
 		//if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
 		//if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
 		injectFile ( file , ips , startDocId , endDocId , true );
@@ -2650,7 +2650,7 @@ int main2 ( int argc , char *argv[] ) {
 		//}
 
 		long      fileNum = 0;
-		long long off     = 0LL;
+		int64_t off     = 0LL;
 		char     *NAME = NULL;
 		//if ( cmdarg + 2 < argc ) fileNum = atoi  (argv[cmdarg+2]);
 		if ( cmdarg + 2 < argc ) NAME = argv[cmdarg+2];
@@ -2675,7 +2675,7 @@ int main2 ( int argc , char *argv[] ) {
 		//}
 
 		long      fileNum = 0;
-		long long off     = 0LL;
+		int64_t off     = 0LL;
 		if ( cmdarg + 2 < argc ) fileNum = atoi  (argv[cmdarg+2]);
 		if ( cmdarg + 3 < argc ) off     = atoll1(argv[cmdarg+3]);
 		dumpIndexdbFile ( fileNum , off , "datedb" , 16 );
@@ -2705,7 +2705,7 @@ int main2 ( int argc , char *argv[] ) {
 		long startFileNum =  0;
 		long numFiles     = -1;
 		long includeTree  =  1;
-		long long termId  = -1;
+		int64_t termId  = -1;
 		char *coll = "";
 
 		// so we do not log every collection coll.conf we load
@@ -2724,7 +2724,7 @@ int main2 ( int argc , char *argv[] ) {
 			char *targ = argv[cmdarg+6];
 			if ( is_alpha_a(targ[0]) ) {
 				char *colon = strstr(targ,":");
-				long long prefix64 = 0LL;
+				int64_t prefix64 = 0LL;
 				if ( colon ) {
 					*colon = '\0';
 					prefix64 = hash64n(targ);
@@ -2742,7 +2742,7 @@ int main2 ( int argc , char *argv[] ) {
 			}
 		}
 		if      ( argv[cmdarg+1][0] == 't' ) {
-			long long docId = 0LL;
+			int64_t docId = 0LL;
 			if ( cmdarg+6 < argc ) docId = atoll1(argv[cmdarg+6]);
 			bool justPrintSentences = false;
 			bool justPrintWords     = false;
@@ -2760,7 +2760,7 @@ int main2 ( int argc , char *argv[] ) {
 
 		}
 		else if ( argv[cmdarg+1][0] == 'D' ) {
-			long long docId = 0LL;
+			int64_t docId = 0LL;
 			if ( cmdarg+6 < argc ) docId = atoll1(argv[cmdarg+6]);
 			dumpTitledb(coll,startFileNum,numFiles,includeTree,
 				     docId,1,false,false);
@@ -2847,7 +2847,7 @@ int main2 ( int argc , char *argv[] ) {
 #endif
 		/*
 		else if      ( argv[cmdarg+1][0] == 'c' ) {
-			long long docId = 0LL;
+			int64_t docId = 0LL;
 			if ( cmdarg+6 < argc ) docId = atoll1(argv[cmdarg+6]);
 			dumpCachedRecs (coll,startFileNum,numFiles,includeTree,
 					docId);
@@ -2855,7 +2855,7 @@ int main2 ( int argc , char *argv[] ) {
 		*/
 		/*
 		else if      ( argv[cmdarg+1][0] == 'R' ) {
-			long long docId = 0LL;
+			int64_t docId = 0LL;
 			if ( cmdarg+6 < argc ) docId = atoll1(argv[cmdarg+6]);
 			testSpamRules (coll,startFileNum,numFiles,includeTree,
 				       docId);
@@ -3059,7 +3059,7 @@ int main2 ( int argc , char *argv[] ) {
 
 	{
 		pid_t pid = getpid();
-		log("host: Process ID is %llu",(long long)pid);
+		log("host: Process ID is %llu",(int64_t)pid);
 	}
 
 	// from Hostdb.cpp
@@ -3690,7 +3690,7 @@ int main2 ( int argc , char *argv[] ) {
 	/*
 	if ( strcmp ( cmd , "queryserializetest" ) == 0 ) {
 		if ( argc != cmdarg + 2 ) goto printHelp;
-		long long starttime = gettimeofdayInMilliseconds();
+		int64_t starttime = gettimeofdayInMilliseconds();
 		QuerySerializeTest( argv[cmdarg + 1] );
 		log(LOG_INFO, "query: took %lldmsecs for query serialize" \
 			"test on %s", gettimeofdayInMilliseconds() - starttime,
@@ -3701,8 +3701,8 @@ int main2 ( int argc , char *argv[] ) {
 
 #ifdef _LIMIT10_
 	// how many pages have we indexed so far?
-	//long long numPages = g_titledb.getRdb()->getNumGlobalRecs();
-	long long numPages = g_clusterdb.getRdb()->getNumGlobalRecs();
+	//int64_t numPages = g_titledb.getRdb()->getNumGlobalRecs();
+	int64_t numPages = g_clusterdb.getRdb()->getNumGlobalRecs();
 	if ( numPages > 10123466 ) 
 		log("WARNING: Over 10 million documents are in the index. "
 		     "You have exceeded the terms of your license. "
@@ -3837,7 +3837,7 @@ int main2 ( int argc , char *argv[] ) {
 	// . poll the fd's searching for socket closes
 	// . this takes 113ms with the FD_SET() stuff, and 35ms without
 	//   for doing 10,000 loops... pretty fast.
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 	long i = 0;
 	for ( i = 0 ; i < 10000 ; i++ ) {
 		// descriptor bits for calling select()
@@ -3868,7 +3868,7 @@ int main2 ( int argc , char *argv[] ) {
 		log("loop: select: %s.",strerror(g_errno));
 		break;
 	}
-	long long t2 = gettimeofdayInMilliseconds();
+	int64_t t2 = gettimeofdayInMilliseconds();
 	log(LOG_INFO,"loop: %li selects() called in %lli ms.",i,t2-t1);
 	*/
 
@@ -6156,7 +6156,7 @@ void zlibtest() {
 //
 
 void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
-		  long long docid , char justPrintDups ,
+		  int64_t docid , char justPrintDups ,
 		  bool justPrintSentences, 
 		  bool justPrintWords ) {
 
@@ -6188,7 +6188,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
-	long long prevId = 0LL;
+	int64_t prevId = 0LL;
 	long count = 0;
 	char ttt[2048+MAX_URL_LEN];
 	HashTableX dedupTable;
@@ -6241,7 +6241,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		key_t k       = list.getCurrentKey();
 		char *rec     = list.getCurrentRec();
 		long  recSize = list.getCurrentRecSize();
-		long long docId       = g_titledb.getDocIdFromKey ( k );
+		int64_t docId       = g_titledb.getDocIdFromKey ( k );
 		//long      hostHash    = g_titledb.getHostHash     ( k );
 		//long      contentHash = g_titledb.getContentHash  ( k );
 		if ( k <= lastKey ) 
@@ -6416,7 +6416,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		//	if ( k->m_baseScore > (long)ms ) ms = k->m_baseScore;
 		//}
 		// normalize
-		//ms = ((long long)ms * 100LL) / 256LL;
+		//ms = ((int64_t)ms * 100LL) / 256LL;
 
 		char foo[1024];
 		foo[0] = '\0';
@@ -6544,7 +6544,7 @@ void dumpTfndb (char *coll,long startFileNum,long numFiles,bool includeTree ,
 			oldk = k;
 			continue;
 		}
-		long long docId = g_tfndb.getDocId        ( &k );
+		int64_t docId = g_tfndb.getDocId        ( &k );
 		//long      e     = g_tfndb.getExt          ( k );
 		long      tfn   = g_tfndb.getTfn ( &k );
 		//long  clean = 0  ; if ( g_tfndb.isClean ( k ) ) clean= 1;
@@ -6845,9 +6845,9 @@ long dumpSpiderdb ( char *coll,
 	long  count   = 0;
 	long  countReplies = 0;
 	long  countRequests = 0;
-	long long offset = 0LL;
+	int64_t offset = 0LL;
 	long now;
-	static long long s_lastRepUh48 = 0LL;
+	static int64_t s_lastRepUh48 = 0LL;
 	static long s_lastErrCode = 0;
 	static long s_lastErrCount = 0;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
@@ -6886,7 +6886,7 @@ long dumpSpiderdb ( char *coll,
 		char *srec = list.getCurrentRec();
 
 		// save it
-		long long curOff = offset;
+		int64_t curOff = offset;
 		// and advance
 		offset += list.getCurrentRecSize();
 
@@ -6915,7 +6915,7 @@ long dumpSpiderdb ( char *coll,
 
 		countRequests++;
 
-		long long uh48 = sreq->getUrlHash48();
+		int64_t uh48 = sreq->getUrlHash48();
 		// count how many requests had replies and how many did not
 		bool hadReply = ( uh48 == s_lastRepUh48 );
 
@@ -7151,14 +7151,14 @@ long dumpSpiderdb ( char *coll,
 
 /*
 static bool makeNewTitleRecKey ( char *rec , long recSize , key_t *newk ,
-				 TitleRec *tr , long long *h ) ;
+				 TitleRec *tr , int64_t *h ) ;
 
 // how big can a compressed title record be?
 #define MAX_TR_SIZE (2*1024*1024)
 
 // returns false and sets g_errno on error
 bool makeNewTitleRecKey ( char *rec , long recSize , key_t *newk ,
-			  TitleRec *tr , long long *h ) {
+			  TitleRec *tr , int64_t *h ) {
 	// if uncompress failed, just keep looping
 	if ( ! xd->set
 	if ( ! tr->set ( rec , MAX_TR_SIZE , false ) )
@@ -7206,7 +7206,7 @@ if ( ! r->dumpTree ( 0 ) ) // niceness
 bool addToTfndb2 ( char *coll , SpiderRec *sr , long id2 ) {
 	// add to tfndb if we should
 	long e = g_tfndb.makeExtQuick ( sr->getUrl() );
-	long long d = g_titledb.getProbableDocId ( sr->getUrl() );
+	int64_t d = g_titledb.getProbableDocId ( sr->getUrl() );
 key_t k = g_tfndb.makeKey ( d, e, 255 , // tfn
 	0 , false ); // is clean?, del?
 	// get the rdb of the tfndb
@@ -7265,7 +7265,7 @@ if ( ! r->dumpTree ( 0 ) ) // niceness
 		buf[i]='\0';
 	}
 	char q;
-	long long h;
+	int64_t h;
 	while (p<pend){
 		char *p1 = strstr(p,"q=");
 		if(!p1) {
@@ -7396,7 +7396,7 @@ bool addToSpiderdb ( char *coll , TitleRec *tr ) {
 }
 
 BigFile     s_cf    [ MAX_HOSTS ];
-long long   s_cfoff [ MAX_HOSTS ] ; // file offsets
+int64_t   s_cfoff [ MAX_HOSTS ] ; // file offsets
 static bool s_cdbInit = false;
 
 bool addToChecksumdb ( char *coll , TitleRec *tr ) {
@@ -7457,7 +7457,7 @@ bool addToChecksumdb ( char *coll , TitleRec *tr ) {
 	
 	// MDW: we should have the xml already parsed here!
 	//Xml *xml = m_oldDoc.getXmlDoc()->getXml();
-	long long h;
+	int64_t h;
 	// get link infos
 	LinkInfo *linkInfo  = otr->getLinkInfo ();
 	//LinkInfo *linkInfo2 = otr->getLinkInfo2();
@@ -7512,7 +7512,7 @@ bool mergeChecksumFiles ( ) {
 
 	// open up one checksumdb FLAT file for each group
 	bool flag = false;
-	long long count = 0;
+	int64_t count = 0;
 	long ng = g_hostdb.getNumShards();
 	for ( long i = 0 ; i < ng ; i++ ) {
 		// . initialize our own internal rdb
@@ -7539,13 +7539,13 @@ bool mergeChecksumFiles ( ) {
 		}
 		// mention it
 		log("db: mergeChecksumdbs: merging %s",name);
-		long long off = 0LL;
+		int64_t off = 0LL;
 		// now add them one at a time to our g_checksumdb
 		//key_t k;
 		long cKeySize = g_conf.m_checksumdbKeySize;
 		char k[16];
 		// how big is the file?
-		long long fileSize = f.getFileSize();
+		int64_t fileSize = f.getFileSize();
 	loop:
 		//if ( ! f.read ( &k, sizeof(key_t) , off ) ) {
 		if ( ! f.read ( k , cKeySize , off ) ) {
@@ -7617,7 +7617,7 @@ bool fixTitleRecs( char *coll ) {
 	long   recSize;
 	TitleRec tr;
 	key_t newk;
-	long long h;
+	int64_t h;
 	bool isNegative = false;
 	long count = 0;
 	// change the keys of TitleRecs in the RdbTree
@@ -7691,7 +7691,7 @@ bool fixTitleRecs( char *coll ) {
 		// . this also happens if negative key has been converted in 
 		//   the tree, but positive key on disk have not been...
 		if ( ! tlist.isExhausted() ) {
-			long long d = g_titledb.getDocIdFromKey ( k );
+			int64_t d = g_titledb.getDocIdFromKey ( k );
 			log("db: docId %lli has negative but no positive",d);
 			continue;
 		}
@@ -7740,11 +7740,11 @@ bool fixTitleRecs( char *coll ) {
 		return log("fixTitleRecs: open: %s",
 			   mstrerror(g_errno));
 	f.setBlocking ( );
-	long long off = 0;
+	int64_t off = 0;
 	// get one rec at a time and store in this buffer
 	char *buf = (char *)mmalloc ( MAX_TR_SIZE , "main");
 	if ( ! buf ) return log("fixTitleRecs: malloc failed");
-	long long fsize = f.getFileSize();
+	int64_t fsize = f.getFileSize();
 	if ( fsize <= 0 ) {
 		mfree ( buf , MAX_TR_SIZE , "main" );
 		return log("filesize of %s is %lli",
@@ -7892,7 +7892,7 @@ bool fixTitleRecs( char *coll ) {
 
 // . when a titleRec has an impossible size, there was disk corruption
 // . try all possible size combinations, up to 1 million
-long getRecSize ( BigFile *f , long long off ) {
+long getRecSize ( BigFile *f , int64_t off ) {
 	char *buf = (char *) mmalloc ( 50*1024*1024 , "main" );
 	if ( ! buf ) return -1;
 	f->read ( buf , 50*1024*1024 , off );
@@ -7999,7 +7999,7 @@ bool genDbs ( char *coll ) {
 	// we have to make multiple checksumdbs since we won't store all of 
 	// them locally ourselves
 	BigFile   cf    [ MAX_HOSTS ];
-	long long cfoff [ MAX_HOSTS ] ; // file offsets
+	int64_t cfoff [ MAX_HOSTS ] ; // file offsets
 	// open up one checksumdb FLAT file for each group
 	for ( long i = 0 ; doChecksumdb && i < ng ; i++ ){
 		char name[64];
@@ -8173,7 +8173,7 @@ bool genTfndb ( char *coll ) {
 	long fn = 0;
 	long id2;
 	long local = 0;
-	long long dd;
+	int64_t dd;
 
 	SpiderRec sr;
 	static unsigned long count = 0;
@@ -8380,7 +8380,7 @@ bool genTfndb ( char *coll ) {
 	}
 	// set the titleRec we got
 if ( ! tr.set ( rec , listSize , false ) ) { // own data?
-		long long d = g_titledb.getDocIdFromKey ( tkey );
+		int64_t d = g_titledb.getDocIdFromKey ( tkey );
 		log("db: gotList: Error setting titleRec. docId=%lli. "
 		    "Skipping." , d );
 		goto loop2; // skip2;
@@ -8429,8 +8429,8 @@ void dumpMissing ( char *coll ) {
 	// . just get the docids from tfndb...
 	// . this tfndb rec count is for ALL colls!! DOH!
 	// MDW FIX THIS RIGHT!
-	long long numRecs = 12345;//g_tfndb.getRdb()->getNumTotalRecs();
-	long long oldNumSlots = (numRecs * 100) / 80;
+	int64_t numRecs = 12345;//g_tfndb.getRdb()->getNumTotalRecs();
+	int64_t oldNumSlots = (numRecs * 100) / 80;
 	// make a power of 2
 	// make it a power of 2
 	//oldNumSlots *= 2;
@@ -8463,7 +8463,7 @@ void dumpMissing ( char *coll ) {
 
 	logf(LOG_INFO,"db: Loading tfndb for hostId %li, has %lli recs.",
 	     g_hostdb.m_hostId,numRecs);
-	long long count = 0;
+	int64_t count = 0;
 	long next = 0;
 	long used = 0;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
@@ -8546,7 +8546,7 @@ void dumpMissing ( char *coll ) {
 	unsigned long shardNum = g_hostdb.getMyShardNum();
 	count = 0;
 	long scanned = 0;
-	//HashTableT <long long,char> repeat;
+	//HashTableT <int64_t,char> repeat;
 	HashTableX repeat;
 	if ( ! repeat.set ( 8,1,1000000,NULL,0,false,0,"rpttbl" ) ) {
 		log("db: Failed to init repeat hash table.");
@@ -8642,15 +8642,15 @@ void dumpDups ( char *coll ) {
 	// get a meg at a time
 	long minRecSizes = 6*1024*1024;
 	long numSlots = 2 * 1024 * 1024;
-	long long * slots;
+	int64_t * slots;
 	char * scores;
-	slots = (long long *) mmalloc ( numSlots * 8, "main-dumpDups");
+	slots = (int64_t *) mmalloc ( numSlots * 8, "main-dumpDups");
 	scores = (char *) mmalloc ( numSlots, "main-dumpDups");
 	if(!slots || !scores) {
 		if(!slots)
 			log(LOG_INFO,"admin: Could not allocate %lld "
 				   "bytes for dumpDups" , 
-				   (long long) numSlots * 8 );
+				   (int64_t) numSlots * 8 );
 		else mfree(slots, numSlots * 8, "main-dumpDups" );
 
 		if(!scores)
@@ -8663,18 +8663,18 @@ void dumpDups ( char *coll ) {
 
 	long offset1 = 0;
 	long offset2 = 0;
-	long long tempTid = -1;
-	long long lastTid = -1;
-	long long tid = -1;
+	int64_t tempTid = -1;
+	int64_t lastTid = -1;
+	int64_t tid = -1;
 
-	long long indexdbCount = 0;
+	int64_t indexdbCount = 0;
 	char * tempListPtr;
 	char * tempListPtrHi;
 	key_t k;
-	long long d;
+	int64_t d;
 	long hashMod;
 	uint64_t n2;
-	long long endTid;
+	int64_t endTid;
 	char filename[30];
 	char buff[100];
 	long numParsed = 0;
@@ -8715,14 +8715,14 @@ void dumpDups ( char *coll ) {
 	Msg5 msg5b;
 	unsigned long count = 0;
 	unsigned long count2 = 0;
-	long long byteCount = 0;
+	int64_t byteCount = 0;
 	unsigned long highLitBit;
 	char *p;
 	//unsigned long groupId = g_hostdb.m_groupId;
 	count = 0;
-	long long scanned = 0;
+	int64_t scanned = 0;
 
-	long long dups = 0LL;
+	int64_t dups = 0LL;
 	char lookup[256] = { 8, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 
 			     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
 			     5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
@@ -8739,8 +8739,8 @@ void dumpDups ( char *coll ) {
 			     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
 			     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
 			     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-	//	HashTableT <long long,char> repeat;
-	//	HashTableT <long long,char> local;
+	//	HashTableT <int64_t,char> repeat;
+	//	HashTableT <int64_t,char> local;
 
 
 	logf(LOG_INFO,"db: Scanning indexdb for repeated docids.");
@@ -8760,7 +8760,7 @@ void dumpDups ( char *coll ) {
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
 			      cr->m_collnum          ,
@@ -8780,7 +8780,7 @@ void dumpDups ( char *coll ) {
 		log(LOG_LOGIC,"db: getList did not block.");
 		return;
 	}
-	//long long endTime = gettimeofdayInMilliseconds();
+	//int64_t endTime = gettimeofdayInMilliseconds();
 	//log(LOG_INFO,"dumpdups Msg5 time = %li",(long)endTime - startTime);
 	// all done if empty
 	if ( list.isEmpty() ) {
@@ -9074,8 +9074,8 @@ void removeDocIds  ( char *coll , char *filename ) {
 		return ;
 	}
 
-	long long dcount = 0;
-	long long offset ;
+	int64_t dcount = 0;
+	int64_t offset ;
 	char buf [ 1024*1024*2+1 ];
 	long readSize ;
 	long n ;
@@ -9113,7 +9113,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 	// note it
 	logf(LOG_INFO,"db: Counted %lli docids in file %s.",dcount,filename);
 
-	long long oldNumSlots = (dcount * 100LL) / 80LL;
+	int64_t oldNumSlots = (dcount * 100LL) / 80LL;
 	oldNumSlots *= 2;
 	oldNumSlots -= 1;
 	long numSlots = getHighestLitBitValue ((unsigned long)oldNumSlots);
@@ -9267,10 +9267,10 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//
 
 	r = g_indexdb.getRdb();
-	long long count = 0;
+	int64_t count = 0;
 	long scanned = 0;
-	long long recs = 0;
-	long long removed = 0;
+	int64_t recs = 0;
+	int64_t removed = 0;
 	RdbTree *tree = &r->m_tree;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 
@@ -9682,7 +9682,7 @@ bool fixTfndb ( char *coll ) {
 
 	BigFile *f = NULL;
 	RdbMap  *m = NULL;
-	long long offset = 0LL;
+	int64_t offset = 0LL;
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TFNDB     ,
@@ -9733,7 +9733,7 @@ bool fixTfndb ( char *coll ) {
 		for ( ; i < nf ; i++ ) if ( base->m_fileIds2[i] == tfn ) break;
 		if ( i < nf ) continue;
 		// does not correspond to a tfn, remove it
-		long long docId = g_tfndb.getDocId        ( k );
+		int64_t docId = g_tfndb.getDocId        ( k );
 		long      e     = g_tfndb.getExt          ( k );
 		long  clean = 0  ; if ( g_tfndb.isClean ( k ) ) clean= 1;
 		long  half  = 0  ; if ( k.n0 & 0x02           ) half = 1;
@@ -9780,7 +9780,7 @@ bool syncIndexdb ( ) {
 	// restore working dir
 	strcpy ( g_hostdb.m_dir , olddir );
 	// count diffs
-	long long count = 0;
+	int64_t count = 0;
 	// always block
 	g_threads.disableThreads();
 
@@ -9941,7 +9941,7 @@ loop:
 	list.reset();
 	// always clear last bit of g_nextKey
 	nextKey.n0 &= 0xfffffffffffffffeLL;
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	// a niceness of 0 tells it to block until it gets results!!
 	bool status = msg5.getList ( 
 				 RDB_TITLEDB    ,
@@ -10100,7 +10100,7 @@ loop:
 	list.reset();
 	// always clear last bit of g_nextKey
 	nextKey.n0 &= 0xfffffffffffffffeLL;
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 	// a niceness of 0 tells it to block until it gets results!!
 	bool status = msg5.getList ( 
 				 RDB_TITLEDB    ,
@@ -10452,12 +10452,12 @@ bool gbgzip (char *filename) {
 	g_conf.m_maxMem = 2000000000LL;
 	g_mem.m_maxMem  = 2000000000LL;
 
-	long long fileSize = f.getFileSize();
+	int64_t fileSize = f.getFileSize();
 	if(g_conf.m_maxMem < fileSize)
 		return log("FATAL: file too large:%s",
 			   filename);
 	char* srcbuf = (char*)mmalloc(fileSize,"gzip src");
-	long long dstbufSize = (long long)(fileSize*1.001 + 32);
+	int64_t dstbufSize = (int64_t)(fileSize*1.001 + 32);
 	char* dstbuf = (char*)mmalloc(dstbufSize,"gzip dst");
 	if(srcbuf == NULL || dstbuf == NULL) 
 		return log("FATAL: file too large:%s, out of memory.",
@@ -10508,7 +10508,7 @@ bool gbgunzip (char *filename) {
 	g_conf.m_maxMem = 2000000000LL;
 	g_mem.m_maxMem  = 2000000000LL;
 
-	long long fileSize = f.getFileSize();
+	int64_t fileSize = f.getFileSize();
 	if(g_conf.m_maxMem < fileSize)
 		return log("FATAL: file too large:%s",
 			   filename);
@@ -10611,7 +10611,7 @@ bool bucketstest ( char* dbname ) {
 			keySize) ) // own data?
 		return log("speedTest: tree init failed.");
 	// add to regular tree
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < numKeys * keySize; i += keySize ) {
 		char* key = k+i;
 		KEYSET(oppKey,key,keySize);
@@ -10626,7 +10626,7 @@ bool bucketstest ( char* dbname ) {
 				   "failed");
 	}
 	// print time it took
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	log("db: added %li keys to rdb tree in %lli ms, "
 	    "now have %li keys",numKeys,e - t, rt.getNumUsedNodes());
 
@@ -10688,8 +10688,8 @@ bool bucketstest ( char* dbname ) {
 	//now test finding of individual keys
 	long tests = numKeys * 2;
 	log("db: Testing retrival of %li individual keys",tests );
-	long long ttook = 0;
-	long long btook = 0;
+	int64_t ttook = 0;
+	int64_t btook = 0;
 	long tgot = 0;
 	long bgot = 0;
 	long found = 0;
@@ -10712,9 +10712,9 @@ bool bucketstest ( char* dbname ) {
 			}
 			log("speedTest: node not found in tree, but found in buckets! "
 			    "looked up %016llx%08lx, got %016llx%08lx",
-			    *(long long*)((char*)&k[j]+(sizeof(long))),
+			    *(int64_t*)((char*)&k[j]+(sizeof(long))),
 			    *(long*)(char*)&k[j],
-			    *(long long*)(foundKey+(sizeof(long))),
+			    *(int64_t*)(foundKey+(sizeof(long))),
 			    *(long*)foundKey);
 			rdbb.printBuckets();
 			char* xx = NULL; *xx = 0;
@@ -10725,7 +10725,7 @@ bool bucketstest ( char* dbname ) {
 			}
 			log("speedTest: node not found in buckets, but found in tree! "
 			    "%016llx%08lx",
-			    *(long long*)((char*)&k[j]+(sizeof(long))),
+			    *(int64_t*)((char*)&k[j]+(sizeof(long))),
 			    *(long*)(char*)&k[j]);
 
 			rdbb.printBuckets();
@@ -10803,8 +10803,8 @@ bool bucketstest ( char* dbname ) {
 		    treelist.getNumRecs(),
 		    numPosRecs, 
 		    numNegRecs,
-		    *(long long*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
-		    *(long long*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
+		    *(int64_t*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
+		    *(int64_t*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
 		    t - e  );
 		*/
 
@@ -10834,8 +10834,8 @@ bool bucketstest ( char* dbname ) {
 		    bucketlist.getNumRecs(),
 		    numPosRecs, 
 		    numNegRecs,
-		    *(long long*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
-		    *(long long*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
+		    *(int64_t*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
+		    *(int64_t*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
 		    t - e  );
 		*/
 		//check for consistency
@@ -10849,7 +10849,7 @@ bool bucketstest ( char* dbname ) {
 				    "inconsistency"
 				    " remaining key in buckets is "
 				    "%016llx%08lx.  ",
-				    *(long long*)(bkey+(sizeof(long))),
+				    *(int64_t*)(bkey+(sizeof(long))),
 				    *(long*)bkey);
 
 				char* xx = NULL; *xx = 0;
@@ -10860,7 +10860,7 @@ bool bucketstest ( char* dbname ) {
 				    "inconsistency"
 				    " remaining key in tree is "
 				    "%016llx%08lx.  ",
-				    *(long long*)(tkey+(sizeof(long))),
+				    *(int64_t*)(tkey+(sizeof(long))),
 				    *(long*)tkey);
 				char* xx = NULL; *xx = 0;
 			}
@@ -10872,9 +10872,9 @@ bool bucketstest ( char* dbname ) {
 				    "inconsistency "
 				    "%016llx%08lx and "
 				    "%016llx%08lx.  ",
-				    *(long long*)(tkey+(sizeof(long))),
+				    *(int64_t*)(tkey+(sizeof(long))),
 				    *(long*)tkey,
-				    *(long long*)(bkey+(sizeof(long))),
+				    *(int64_t*)(bkey+(sizeof(long))),
 				    *(long*)bkey);
 				char* xx = NULL; *xx = 0;
 			}
@@ -10886,12 +10886,12 @@ bool bucketstest ( char* dbname ) {
 	log("db: List retrieval successful. ");
 	log("db: rdbtree took %lli ms for %li recs ", ttook, tgot);
 	log("db: rdbbuckets took %lli ms for %li recs",   btook, bgot);
-	long long tAddTook = 0;
-	long long bAddTook = 0;
-	long long tgetListTook = 0;
-	long long bgetListTook = 0;
-	long long tdelListTook = 0;
-	long long bdelListTook = 0;
+	int64_t tAddTook = 0;
+	int64_t bAddTook = 0;
+	int64_t tgetListTook = 0;
+	int64_t bgetListTook = 0;
+	int64_t tdelListTook = 0;
+	int64_t bdelListTook = 0;
 
 	ttook = 0;
 	btook = 0;
@@ -10926,7 +10926,7 @@ bool bucketstest ( char* dbname ) {
 		    "%016llx%08lx.  ",
 		    rdbb.getNumKeys(), numBefore - rdbb.getNumKeys(),
 		    list.getNumRecs(),
-		    *(long long*)(key1+(sizeof(long))),
+		    *(int64_t*)(key1+(sizeof(long))),
 		    *(long*)key1);;
 
 		if(numBefore - rdbb.getNumKeys() != list.getNumRecs()) 
@@ -11033,8 +11033,8 @@ bool bucketstest ( char* dbname ) {
 			    treelist.getNumRecs(),
 			    numPosRecs, 
 			    numNegRecs,
-			    *(long long*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
-			    *(long long*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
+			    *(int64_t*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
+			    *(int64_t*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
 			    t - e ,tgetListTook );
 		}
 
@@ -11068,8 +11068,8 @@ bool bucketstest ( char* dbname ) {
 			    bucketlist.getNumRecs(),
 			    numPosRecs, 
 			    numNegRecs,
-			    *(long long*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
-			    *(long long*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
+			    *(int64_t*)(tmpkey1+(sizeof(long))), *(long*)tmpkey1,
+			    *(int64_t*)(tmpkey2+(sizeof(long))), *(long*)tmpkey2,
 			    t - e , bgetListTook);
 		}
 
@@ -11086,7 +11086,7 @@ bool bucketstest ( char* dbname ) {
 				    "inconsistency"
 				    " remaining key in buckets is "
 				    "%016llx%08lx.  ",
-				    *(long long*)(bkey+(sizeof(long))),
+				    *(int64_t*)(bkey+(sizeof(long))),
 				    *(long*)bkey);
 
 				char* xx = NULL; *xx = 0;
@@ -11097,7 +11097,7 @@ bool bucketstest ( char* dbname ) {
 				    "inconsistency"
 				    " remaining key in tree is "
 				    "%016llx%08lx.  ",
-				    *(long long*)(tkey+(sizeof(long))),
+				    *(int64_t*)(tkey+(sizeof(long))),
 				    *(long*)tkey);
 				char* xx = NULL; *xx = 0;
 			}
@@ -11109,9 +11109,9 @@ bool bucketstest ( char* dbname ) {
 				    "inconsistency "
 				    "%016llx%08lx and "
 				    "%016llx%08lx.  ",
-				    *(long long*)(tkey+(sizeof(long))),
+				    *(int64_t*)(tkey+(sizeof(long))),
 				    *(long*)tkey,
-				    *(long long*)(bkey+(sizeof(long))),
+				    *(int64_t*)(bkey+(sizeof(long))),
 				    *(long*)bkey);
 				char* xx = NULL; *xx = 0;
 			}
@@ -11210,7 +11210,7 @@ bool treetest ( ) {
 			"tree-test"    ) )
 		return log("speedTest: tree init failed.");
 	// add to regular tree
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < numKeys ; i++ ) {
 		//if ( k[i].n1 == 1234567 )
 		//	fprintf(stderr,"i=%li\n",i);
@@ -11219,7 +11219,7 @@ bool treetest ( ) {
 				   "failed");
 	}
 	// print time it took
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	log("db: added %li keys to rdb tree in %lli ms",numKeys,e - t);
 
 	// sort the list of keys
@@ -11265,12 +11265,12 @@ bool hashtest ( ) {
 	HashTable ht;
 	ht.set ( (long)(1.1 * numKeys) );
 	// add to regular tree
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < numKeys ; i++ ) 
 		if ( ! ht.addKey ( r[i] , 1 ) )
 			return log("hashtest: add key failed.");
 	// print time it took
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	// add times
 	log("db: added %li keys in %lli ms",numKeys,e - t);
 
@@ -11289,14 +11289,14 @@ bool hashtest ( ) {
 
 
 // time speed of big write, read and the seeks
-bool thrutest ( char *testdir , long long fileSize ) {
+bool thrutest ( char *testdir , int64_t fileSize ) {
 
 	// always block
 	g_threads.disableThreads();
 
 	// a read/write buffer of 30M
 	long bufSize = 30000000;  // 30M
-	//long long fileSize = 4000000000LL; // 4G
+	//int64_t fileSize = 4000000000LL; // 4G
 #undef malloc
 	char *buf = (char *) malloc ( bufSize );
 #define malloc coreme
@@ -11342,9 +11342,9 @@ bool thrutest ( char *testdir , long long fileSize ) {
 
 	// write  2 gigs to the file, 1M at a time
 	{
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 	long numLoops = fileSize / bufSize;
-	long long off = 0LL;
+	int64_t off = 0LL;
 	long next = 0;
 	for ( long i = 0 ; i < numLoops ; i++ ) {
 		f.write ( buf , bufSize , off );
@@ -11355,7 +11355,7 @@ bool thrutest ( char *testdir , long long fileSize ) {
 		if ( i + 1 < numLoops && next < 100000000 ) continue;
 		next = 0;
 		// print speed every X seconds
-		long long t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds();
 		float mBps = (float)off / (float)(t2-t1) / 1000.0 ;
 		fprintf(stderr,"wrote %lli bytes in %lli ms (%.1f MB/s)\n",
 			off,t2-t1,mBps);
@@ -11365,9 +11365,9 @@ bool thrutest ( char *testdir , long long fileSize ) {
  doreadtest:
 
 	{
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 	long numLoops = fileSize / bufSize;
-	long long off = 0LL;
+	int64_t off = 0LL;
 	long next = 0;
 	for ( long i = 0 ; i < numLoops ; i++ ) {
 		f.read ( buf , bufSize , off );
@@ -11378,7 +11378,7 @@ bool thrutest ( char *testdir , long long fileSize ) {
 		if ( i + 1 < numLoops && next < 100000000 ) continue;
 		next = 0;
 		// print speed every X seconds
-		long long t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds();
 		float mBps = (float)off / (float)(t2-t1) / 1000.0 ;
 		fprintf(stderr,"read %lli bytes in %lli ms (%.1f MB/s)\n",
 			off,t2-t1,mBps);
@@ -11405,14 +11405,14 @@ bool thrutest ( char *testdir , long long fileSize ) {
 //static int startUp ( void *state ) ;
 static void *startUp ( void *state , ThreadEntry *t ) ;
 static long s_count = 0;
-static long long s_filesize = 0;
+static int64_t s_filesize = 0;
 //static long s_lock = 1;
 static long s_launched = 0;
 //static int s_fd1 ; // , s_fd2;
 static BigFile s_f;
 static long s_numThreads = 0;
-static long long s_maxReadSize = 1;
-static long long s_startTime = 0;
+static int64_t s_maxReadSize = 1;
+static int64_t s_startTime = 0;
 //#define MAX_READ_SIZE (2000000)
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -11558,7 +11558,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	//while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
 	//long j, off , size;
-	long long off , size;
+	int64_t off , size;
 	for ( long i = 0 ; i < 100000 ; i++ ) {
 		uint64_t r = rand();
 		r <<= 32 ;
@@ -11569,12 +11569,12 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		size = s_maxReadSize;
 		//if ( size < 32*1024 ) size = 32*1024;
 		// time it
-		long long start = gettimeofdayInMilliseconds();
+		int64_t start = gettimeofdayInMilliseconds();
 		//fprintf(stderr,"%li) i=%li start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
 		s_f.read ( buf , size , off );
 		//fprintf(stderr,"%li) i=%li done\n",id,i );
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 #undef usleep
 		usleep(0);
 #define usleep(a) { char *xx=NULL;*xx=0; }
@@ -11584,7 +11584,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		fprintf(stderr,"count=%li off=%012lli size=%li time=%lims "
 			"(%.2f seeks/sec)\n",
 			(long)s_count,
-			(long long)off,
+			(int64_t)off,
 			(long)size,
 			(long)(now - start) , 
 			sps );
@@ -11675,7 +11675,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		}
 		// parse it up
 		SectionVote *sv = (SectionVote *)data;
-		long long termId = g_datedb.getTermId ( k );
+		int64_t termId = g_datedb.getTermId ( k );
 		// score is the section type
 		unsigned char score2 = g_datedb.getScore(k);
 		char *stype = "unknown";
@@ -11690,7 +11690,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		if ( score2 == SV_CURRENT_DATE   ) stype = "currentdate   ";
 		if ( score2 == SV_SITE_VOTER     ) stype = "sitevoter     ";
 		if ( score2 == SV_TURKTAGHASH    ) stype = "turktaghash   ";
-		long long d = g_datedb.getDocId(k);
+		int64_t d = g_datedb.getDocId(k);
 		long date = g_datedb.getDate(k);
 		// dump it
 		printf("k=%s "
@@ -11771,7 +11771,7 @@ void dumpRevdb(char *coll,long startFileNum,long numFiles, bool includeTree) {
 		char *data = list.getCurrentData();
 		long  size = list.getCurrentDataSize();
 		// get docid from key
-		long long d = g_revdb.getDocId(k);
+		int64_t d = g_revdb.getDocId(k);
 		// is it a delete?
 		if ( (k->n0 & 0x01) == 0 ) {
 			printf("k.n1=%08lx k.n0=%016llx d=%llu (delete)\n",
@@ -11925,7 +11925,7 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	goto loop;
 }
 
-bool parseTest ( char *coll , long long docId , char *query ) {
+bool parseTest ( char *coll , int64_t docId , char *query ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
 	g_mem.m_maxMem  = 2000000000LL; // 2G
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
@@ -12008,10 +12008,10 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	// 0.35 ms to getText()
 
 	// speed test
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 	for ( long k = 0 ; k < 100 ; k++ )
 		xd.set2 (rec, listSize, coll , NULL , 0 );
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	logf(LOG_DEBUG,"build: Took %.3f ms to set title rec.",
 	     (float)(e-t)/100.0);
 
@@ -12378,14 +12378,14 @@ bool carveTest ( uint32_t radius, char *fname, char* query ) {
 	return true;
 }
 */
-bool summaryTest1   ( char *rec , long listSize, char *coll , long long docId ,
+bool summaryTest1   ( char *rec , long listSize, char *coll , int64_t docId ,
 		      char *query ) {
 
 	//long collLen = gbstrlen(coll);
 	// CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 
 	//long titleMaxLen               = cr->m_titleMaxLen;
 	//bool considerTitlesFromBody    = false;
@@ -12441,7 +12441,7 @@ bool summaryTest1   ( char *rec , long listSize, char *coll , long long docId ,
 	}
 
 	// print time it took
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	log("build: V1  Summary/Title/Gigabits generation took %.3f ms for docId "
 	    "%lli.", 
 	    (double)(e - t)/100.0,docId);
@@ -12452,14 +12452,14 @@ bool summaryTest1   ( char *rec , long listSize, char *coll , long long docId ,
 
 // mostly taken from Msg20.cpp
 /*
-bool summaryTest2   ( char *rec , long listSize, char *coll , long long docId ,
+bool summaryTest2   ( char *rec , long listSize, char *coll , int64_t docId ,
 		      char *query ) {
 
 	//long collLen = gbstrlen(coll);
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 
 	long titleMaxLen               = cr->m_titleMaxLen;
 	long summaryMaxLen             = cr->m_summaryMaxLen;
@@ -12565,7 +12565,7 @@ bool summaryTest2   ( char *rec , long listSize, char *coll , long long docId ,
 	}
 
 	// print time it took
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	log("build: V2  Summary/Title/Gigabits generation took %.3f ms for "
 	    "docId %lli.",
 	    (double)(e - t)/100.0,docId);
@@ -12574,7 +12574,7 @@ bool summaryTest2   ( char *rec , long listSize, char *coll , long long docId ,
 	return true;
 }
 
-bool summaryTest3   ( char *rec , long listSize, char *coll , long long docId ,
+bool summaryTest3   ( char *rec , long listSize, char *coll , int64_t docId ,
 		      char *query ) {
 
 	//log(LOG_DEBUG, "HTML mem %d %d %d",
@@ -12584,7 +12584,7 @@ bool summaryTest3   ( char *rec , long listSize, char *coll , long long docId ,
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 
 	long titleMaxLen               = cr->m_titleMaxLen;
 	long summaryMaxLen             = cr->m_summaryMaxLen;
@@ -12722,7 +12722,7 @@ bool summaryTest3   ( char *rec , long listSize, char *coll , long long docId ,
 	}
 
 	// print time it took
-	long long e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds();
 	log("build: V3  Summary/Title/Gigabits generation took %.3f ms for "
 	    "docId %lli.",
 	    (double)(e - t)/100.0,docId);
@@ -12734,7 +12734,7 @@ bool summaryTest3   ( char *rec , long listSize, char *coll , long long docId ,
 }
 */
 
-void dumpIndexdbFile ( long fn , long long off , char *ff , long ks ,
+void dumpIndexdbFile ( long fn , int64_t off , char *ff , long ks ,
 		       char *NAME ) {
 	// this is confidential data format
 #ifdef _CLIENT_
@@ -12758,14 +12758,14 @@ void dumpIndexdbFile ( long fn , long long off , char *ff , long ks ,
 	memset ( top , 0 , 6 );
 	bool warned = false;
 	// how big is this guy?
-	long long filesize = f.getFileSize();
+	int64_t filesize = f.getFileSize();
 	fprintf(stderr,"filesize=%lli\n",filesize);
 	fprintf(stderr,"off=%lli\n",off);
 	// reset error number
 	g_errno = 0;
 	// the big read loop
  loop:
-	long long readSize = bufSize;
+	int64_t readSize = bufSize;
 	if ( off + readSize > filesize ) readSize = filesize - off;
 	// return if we're done reading the whole file
 	if ( readSize <= 0 ) return;
@@ -12806,11 +12806,11 @@ void dumpIndexdbFile ( long fn , long long off , char *ff , long ks ,
 	if ( ks == 12 )
 		fprintf(stdout,"%08lli) %08lx %016llx\n",
 			off + (p - buf) ,
-			*(long *)(tmp+8),*(long long *)tmp );
+			*(long *)(tmp+8),*(int64_t *)tmp );
 	else
 		fprintf(stdout,"%08lli) %016llx %016llx\n",
 			off + (p - buf) ,
-			*(long long *)(tmp+8),*(long long *)tmp );
+			*(int64_t *)(tmp+8),*(int64_t *)tmp );
 	// go to next key
 	p += size;
 	// loop up
@@ -12818,7 +12818,7 @@ void dumpIndexdbFile ( long fn , long long off , char *ff , long ks ,
 }
 
 void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree, 
-		   long long termId ) {
+		   int64_t termId ) {
 	// this is confidential data format
 #ifdef _CLIENT_
 #ifndef _GLOBALSPEC_
@@ -12888,12 +12888,12 @@ void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		// is it a delete?
 		char *dd = "";
 		if ( (k.n0 & 0x01) == 0x00 ) dd = " (delete)";
-		long long d = g_indexdb.getDocId(k);
+		int64_t d = g_indexdb.getDocId(k);
 		uint8_t dh = g_titledb.getDomHash8FromDocId(d);
 		if ( termId < 0 )
 			printf("k.n1=%08lx k.n0=%016llx "
 			       "tid=%015llu score=%03li docId=%012lli dh=0x%02lx%s\n" , 
-			       k.n1, k.n0, (long long)g_indexdb.getTermId(k),
+			       k.n1, k.n0, (int64_t)g_indexdb.getTermId(k),
 			       (long)g_indexdb.getScore(k) ,
 			       d , (long)dh, dd );
 		else
@@ -12914,7 +12914,7 @@ void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 }
 
 void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree, 
-		   long long termId , bool justVerify ) {
+		   int64_t termId , bool justVerify ) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 
 	if ( ! justVerify ) {
@@ -13000,7 +13000,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		// is it a delete?
 		char *dd = "";
 		if ( (k.n0 & 0x01) == 0x00 ) dd = " (delete)";
-		long long d = g_posdb.getDocId(&k);
+		int64_t d = g_posdb.getDocId(&k);
 		uint8_t dh = g_titledb.getDomHash8FromDocId(d);
 		char *rec = list.m_listPtr;
 		long recSize = 18;
@@ -13008,11 +13008,11 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		else if ( rec[0] & 0x02 ) recSize = 12;
 		// alignment bits check
 		if ( recSize == 6  && !(rec[1] & 0x02) ) {
-			long long nd1 = g_posdb.getDocId(rec+6);
+			int64_t nd1 = g_posdb.getDocId(rec+6);
 			// seems like nd2 is it, so it really is 12 bytes but
 			// does not have the alignment bit set...
-			//long long nd2 = g_posdb.getDocId(rec+12);
-			//long long nd3 = g_posdb.getDocId(rec+18);
+			//int64_t nd2 = g_posdb.getDocId(rec+12);
+			//int64_t nd3 = g_posdb.getDocId(rec+18);
 			// what size is it really?
 			// seems like 12 bytes
 			//log("debug1: d=%lli nd1=%lli nd2=%lli nd3=%lli",
@@ -13022,11 +13022,11 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			//char *xx=NULL;*xx=0;
 		}
 		if ( recSize == 12 && !(rec[1] & 0x02) )  {
-			//long long nd1 = g_posdb.getDocId(rec+6);
+			//int64_t nd1 = g_posdb.getDocId(rec+6);
 			// seems like nd2 is it, so it really is 12 bytes but
 			// does not have the alignment bit set...
-			long long nd2 = g_posdb.getDocId(rec+12);
-			//long long nd3 = g_posdb.getDocId(rec+18);
+			int64_t nd2 = g_posdb.getDocId(rec+12);
+			//int64_t nd3 = g_posdb.getDocId(rec+18);
 			// what size is it really?
 			// seems like 12 bytes
 			//log("debug1: d=%lli nd1=%lli nd2=%lli nd3=%lli",
@@ -13038,11 +13038,11 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		}
 		// if it 
 		if ( recSize == 12 &&  (rec[7] & 0x02)) { 
-			//long long nd1 = g_posdb.getDocId(rec+6);
+			//int64_t nd1 = g_posdb.getDocId(rec+6);
 			// seems like nd2 is it, so it really is 12 bytes but
 			// does not have the alignment bit set...
-			long long nd2 = g_posdb.getDocId(rec+12);
-			//long long nd3 = g_posdb.getDocId(rec+18);
+			int64_t nd2 = g_posdb.getDocId(rec+12);
+			//int64_t nd3 = g_posdb.getDocId(rec+18);
 			// what size is it really?
 			// seems like 12 bytes really as well!
 			//log("debug2: d=%lli nd1=%lli nd2=%lli nd3=%lli",
@@ -13082,7 +13082,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       "%s" // err
 			       "\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
-			       (long long)g_posdb.getTermId(&k),
+			       (int64_t)g_posdb.getTermId(&k),
 			       d , 
 			       (long)g_posdb.getSiteRank(&k),
 			       (long)g_posdb.getLangId(&k),
@@ -13119,7 +13119,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       "recSize=%li "
 			       "dh=0x%02lx%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
-			       (long long)g_posdb.getTermId(&k),
+			       (int64_t)g_posdb.getTermId(&k),
 			       d , 
 			       (long)g_posdb.getSiteRank(&k),
 			       (long)g_posdb.getLangId(&k),
@@ -13148,7 +13148,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 }
 
 void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree, 
-		 long long termId , bool justVerify ) {
+		 int64_t termId , bool justVerify ) {
 	// this is confidential data format
 #ifdef _CLIENT_
 	return;
@@ -13164,8 +13164,8 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	}
 	char startKey[16];
 	char endKey  [16];
-	long long termId1 = 0x0000000000000000LL;
-	long long termId2 = 0xffffffffffffffffLL;
+	int64_t termId1 = 0x0000000000000000LL;
+	int64_t termId2 = 0xffffffffffffffffLL;
 	if ( termId >= 0 ) {
 		termId1 = termId;
 		termId2 = termId;
@@ -13224,14 +13224,14 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		return;
 	}
 	uint8_t a,b;
-	long long lattid  = hash64n("gbxlatitude") & TERMID_MASK;
-	long long lontid  = hash64n("gbxlongitude")& TERMID_MASK;
-	//long long lattid2 = hash64n("gbxlatitudecity") & TERMID_MASK;
-	long long lattid2 = hash64n("gbxlatitude2") & TERMID_MASK;
-	//long long lontid2 = hash64n("gbxlongitudecity")& TERMID_MASK;
-	long long lontid2 = hash64n("gbxlongitude2")& TERMID_MASK;
-	long long starttid= hash64n("gbxstart")& TERMID_MASK;
-	long long endtid  = hash64n("gbxend")& TERMID_MASK;
+	int64_t lattid  = hash64n("gbxlatitude") & TERMID_MASK;
+	int64_t lontid  = hash64n("gbxlongitude")& TERMID_MASK;
+	//int64_t lattid2 = hash64n("gbxlatitudecity") & TERMID_MASK;
+	int64_t lattid2 = hash64n("gbxlatitude2") & TERMID_MASK;
+	//int64_t lontid2 = hash64n("gbxlongitudecity")& TERMID_MASK;
+	int64_t lontid2 = hash64n("gbxlongitude2")& TERMID_MASK;
+	int64_t starttid= hash64n("gbxstart")& TERMID_MASK;
+	int64_t endtid  = hash64n("gbxend")& TERMID_MASK;
 	// sanity check
 	if ( list.m_ks != 16 ) { char *xx = NULL; *xx = 0; }
 	// loop over entries in list
@@ -13252,7 +13252,7 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		// hack flag for indexing tag terms (complemented)
 		bool isTagTerm = (k[9] == 0x7f);
 		
-		long long tid =(long long)list.getTermId16((char *)k);
+		int64_t tid =(int64_t)list.getTermId16((char *)k);
 
 		// print out for events
 		if ( tid && 
@@ -13338,7 +13338,7 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       "tid=%015llu date=%010lu "
 			       "score=%03li docId=%012lli%s\n" , 
 			       KEY1(k,16),KEY0(k),
-			       (long long)list.getTermId16(k),
+			       (int64_t)list.getTermId16(k),
 			       list.getCurrentDate(),
 			       (long)list.getScore(k),
 			       list.getCurrentDocId() , dd );
@@ -13817,7 +13817,7 @@ void dumpLinkdb ( char *coll,
 		Url u;
 		u.set ( url , gbstrlen(url) , true ); // addWWW?
 		unsigned long h32 = u.getHostHash32();//g_linkdb.getUrlHash(&u)
-		long long uh64 = hash64n(url,0);
+		int64_t uh64 = hash64n(url,0);
 		startKey = g_linkdb.makeStartKey_uk ( h32 , uh64 );
 		endKey   = g_linkdb.makeEndKey_uk   ( h32 , uh64 );
 	}
@@ -13869,7 +13869,7 @@ void dumpLinkdb ( char *coll,
 		// is it a delete?
 		char *dd = "";
 		if ( (k.n0 & 0x01) == 0x00 ) dd = " (delete)";
-		long long docId = (long long)g_linkdb.getLinkerDocId_uk(&k);
+		int64_t docId = (int64_t)g_linkdb.getLinkerDocId_uk(&k);
 		//if ( docId != 74785425291LL && docId != 88145066810LL )
 		//	log("hey");
 		//if ( list.m_listPtr-list.m_list >= 11784-24 )
@@ -13902,7 +13902,7 @@ void dumpLinkdb ( char *coll,
 		       "%s\n",
 		       KEYSTR(&k,sizeof(key224_t)),
 		       (long)g_linkdb.getLinkeeSiteHash32_uk(&k),
-		       (long long)g_linkdb.getLinkeeUrlHash64_uk(&k),
+		       (int64_t)g_linkdb.getLinkeeUrlHash64_uk(&k),
 		       (long)g_linkdb.isLinkSpam_uk(&k),
 		       (long)g_linkdb.getLinkerSiteRank_uk(&k),
 		       //hc,//g_linkdb.getLinkerHopCount_uk(&k),
@@ -13967,7 +13967,7 @@ bool pingTest ( long hid , unsigned short clientPort ) {
 	struct sockaddr_in to;
 	sockaddr_in from;
 	socklen_t fromLen;
-	long long startTime;
+	int64_t startTime;
 
 	// make the dgram
 	UdpProtocol *up = &g_dp; // udpServer2.getProtocol();
@@ -14009,7 +14009,7 @@ bool pingTest ( long hid , unsigned short clientPort ) {
 	long msgSize = 3; // indicates a debug ping packet to PingServer.cpp
 	up->setHeader ( dgram, msgSize, 0x11, dnum, transId, true, false , 0 );
 	long size = up->getHeaderSize(0) + msgSize;
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 	// debug
 	//log("db: sending %li bytes",size);
 	n = sendto(sock,dgram,size,0,(struct sockaddr *)&to,sizeof(to));
@@ -14043,7 +14043,7 @@ bool pingTest ( long hid , unsigned short clientPort ) {
 	// debug
 	//log("db: read %li bytes",n);
 	// mark the time
-	long long took = gettimeofdayInMilliseconds()-start;
+	int64_t took = gettimeofdayInMilliseconds()-start;
 	if ( took > 1 ) log("net: pingtest: got reply #%li (tid=%li) "
 			    "in %lli ms",replies,transId,took);
 	// make average
@@ -14134,7 +14134,7 @@ static void doInject ( int fd , void *state ) ;
 static void injectedWrapper ( void *state , TcpSocket *s ) ;
 static TcpServer s_tcp;
 static File      s_file;
-static long long s_off = 0; // offset into file
+static int64_t s_off = 0; // offset into file
 static long      s_ip;
 static short     s_port;
 static Hostdb s_hosts2;
@@ -14146,13 +14146,13 @@ static bool s_isDelete;
 static long s_injectTitledb;
 static key_t s_titledbKey;
 static char *s_req  [MAX_INJECT_SOCKETS];
-static long long s_docId[MAX_INJECT_SOCKETS];
+static int64_t s_docId[MAX_INJECT_SOCKETS];
 static char s_init5 = false;
-static long long s_endDocId;
+static int64_t s_endDocId;
 
 int injectFile ( char *filename , char *ips , 
-		 long long startDocId ,
-		 long long endDocId ,
+		 int64_t startDocId ,
+		 int64_t endDocId ,
 		 bool isDelete ) {
 
 	g_mem.init ( 4000000000LL );
@@ -14237,7 +14237,7 @@ int injectFile ( char *filename , char *ips ,
 		SafeBuf ff;
 		ff.fillFromFile(fname);
 		if ( ff.length() > 1 ) {
-			long long ffdocId = atoll(ff.getBufStart() );
+			int64_t ffdocId = atoll(ff.getBufStart() );
 			// if process got killed in the middle of write
 			// i guess the stored docid could be corrupted!
 			// so make sure its in startDocId,endDocId range
@@ -14351,7 +14351,7 @@ void doInject ( int fd , void *state ) {
 		g_loop.unregisterSleepCallback ( NULL, doInject );
 	}
 	
-	long long fsize ;
+	int64_t fsize ;
 	if ( ! s_injectTitledb ) fsize = s_file.getFileSize();
 
 	// turn off threads so this happens right away
@@ -14814,7 +14814,7 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 
 	// save docid every 10 seconds
 	if ( now - s_last > 10 ) {
-		long long minDocId = 0x0000ffffffffffffLL;
+		int64_t minDocId = 0x0000ffffffffffffLL;
 		// get min outstanding docid inject request
 		for ( i = 0 ; i < MAX_INJECT_SOCKETS ; i++ ) {
 			// skip if occupied
@@ -14853,17 +14853,17 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 }
 
 void saveRdbs ( int fd , void *state ) {
-	long long now = gettimeofdayInMilliseconds();
-	long long last;
+	int64_t now = gettimeofdayInMilliseconds();
+	int64_t last;
 	Rdb *rdb ;
 	// . try saving every 10 minutes from time of last write to disk
 	// . if nothing more added to tree since then, Rdb::close() return true
-	//long long delta = 10LL*60LL*1000LL;
+	//int64_t delta = 10LL*60LL*1000LL;
 	// . this is in MINUTES
-	long long delta = (long long)g_conf.m_autoSaveFrequency *60000LL;
+	int64_t delta = (int64_t)g_conf.m_autoSaveFrequency *60000LL;
 	if ( delta <= 0 ) return;
 	// jitter it up a bit so not all hostIds save at same time, 15 secs
-	delta += (long long)(g_hostdb.m_hostId % 10) * 15000LL + (rand()%7500);
+	delta += (int64_t)(g_hostdb.m_hostId % 10) * 15000LL + (rand()%7500);
 	rdb = g_tagdb.getRdb();
 	last = rdb->getLastWriteTime();
 	if ( now - last > delta )
@@ -15203,7 +15203,7 @@ void membustest ( long nb , long loops , bool readf ) {
 	for ( long i = 0 ; i < n ; i++ ) buf[i] = 1;
 
 	// time stamp
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 
 	// . time the read loop
 	// . each read should only be 2 assenbly movl instructions:
@@ -15257,7 +15257,7 @@ void membustest ( long nb , long loops , bool readf ) {
 	}
 
 	// completed
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// multiply by 4 since these are longs
 	char *op = "read";
 	if ( ! readf ) op = "wrote";
@@ -15560,7 +15560,7 @@ void  dosOpenCB( void *state, TcpSocket *s) {
 
 /*
 void dumpCachedRecs (char *coll,long startFileNum,long numFiles,bool includeTree,
-		     long long docid) {
+		     int64_t docid) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
@@ -15589,7 +15589,7 @@ void dumpCachedRecs (char *coll,long startFileNum,long numFiles,bool includeTree
 	g_collectiondb.init(true);
 	g_tfndb.getRdb()->addRdbBase1 ( coll );
 
-	long long lastDocId = 0;
+	int64_t lastDocId = 0;
 	long compressBufSize = 0;
 	char* compressBuf = NULL;
 	fprintf(stderr, "Dumping Records:\n");
@@ -15633,7 +15633,7 @@ void dumpCachedRecs (char *coll,long startFileNum,long numFiles,bool includeTree
 		key_t k       = list.getCurrentKey();
 		char *rec     = list.getCurrentRec();
 		long  recSize = list.getCurrentRecSize();
-		long long docId       = g_titledb.getDocIdFromKey ( k );
+		int64_t docId       = g_titledb.getDocIdFromKey ( k );
 		if ( k <= lastKey ) 
 			log("key out of order. "
 			    "lastKey.n1=%lx n0=%llx "
@@ -15783,7 +15783,7 @@ struct dom_info {
 	long           domLen;
 	long           dHash;
 	long           pages;
-	//long long      quality;
+	//int64_t      quality;
 	long  	      *ip_list;
 	long           numIp;		
 	//HashTable     *dht;
@@ -15796,7 +15796,7 @@ struct dom_info {
 struct ip_info {
 	unsigned long  ip;
 	long           pages;
-	//long long      quality;
+	//int64_t      quality;
 	long          *dom_list;
 	long           numDom;
 };
@@ -15836,7 +15836,7 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 	g_titledb.getRdb()->addRdbBase1(coll );
 
 	log( LOG_INFO, "cntDm: parms: %s, %ld", coll, numRecs );
-	long long time_start = gettimeofdayInMilliseconds();
+	int64_t time_start = gettimeofdayInMilliseconds();
 
 	// turn off threads
 	g_threads.disableThreads();
@@ -15893,7 +15893,7 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 		key_t k       = list.getCurrentKey();
 		char *rec     = list.getCurrentRec();
 		long  recSize = list.getCurrentRecSize();
-		long long docId       = g_titledb.getDocId        ( &k );
+		int64_t docId       = g_titledb.getDocId        ( &k );
 		//long      hostHash    = g_titledb.getHostHash     ( k );
 		//long      contentHash = g_titledb.getContentHash  ( k );
 		attempts++;
@@ -16310,7 +16310,7 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 			log( LOG_INFO, "cntDm: File Open Failed." );
 			return;
 		}		
-		long long total = g_titledb.getGlobalNumDocs();
+		int64_t total = g_titledb.getGlobalNumDocs();
 		char link_ip[]  = "http://www.gigablast.com/search?"
 			          "code=gbmonitor&q=ip%3A";
 		char link_dom[] = "http://www.gigablast.com/search?"
@@ -16577,7 +16577,7 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 					
 		mfree( dom_table, numRecs * sizeof(long), "main-dcfdt" );
 
-		long long time_end = gettimeofdayInMilliseconds();
+		int64_t time_end = gettimeofdayInMilliseconds();
 		log( LOG_INFO, "cntDm: Took %lldms to count domains in %ld recs.",
 		     time_end-time_start, countDocs );
 		log( LOG_INFO, "cntDm: %li bytes of Total Memory Used.", 
@@ -16599,8 +16599,8 @@ int ip_hcmp (const void *p1, const void *p2) {
 	long n1, n2;
 	struct ip_info *ii1;
 	struct ip_info *ii2;
-	long long n3 = 0;
-	long long n4 = 0;
+	int64_t n3 = 0;
+	int64_t n4 = 0;
 
 	*(((unsigned char *)(&n1))+0) = *(((char *)p1)+0);
 	*(((unsigned char *)(&n1))+1) = *(((char *)p1)+1);
@@ -16904,8 +16904,8 @@ bool testBoolean() {
 			sbuf.safeMemcpy(qt->m_term, qt->m_termLen);
 			log("query: term #%d: ebit=0x08%llx ibit=0x08%llx %s", 
 			    j, 
-			    (long long) q.m_qterms[j].m_explicitBit,
-			    (long long) q.m_qterms[j].m_implicitBits,
+			    (int64_t) q.m_qterms[j].m_explicitBit,
+			    (int64_t) q.m_qterms[j].m_implicitBits,
 			    sbuf.getBufStart());
 		}
 		//some problem queries give no terms, and a zero bitmask 
@@ -16918,7 +16918,7 @@ bool testBoolean() {
 		printBits(bitMask, q.m_numExplicitBits, bitBuf);
 		
 		log("query: bit mask: 0x%08llx (%s)", 
-		    (long long) bitMask, bitBuf);
+		    (int64_t) bitMask, bitBuf);
 		for (int j=0;j<numCombos;j++){
 			qvec_t bits = j & bitMask;
 			char ttval = truthTables[i][bits]-'0';
@@ -16933,7 +16933,7 @@ bool testBoolean() {
 			printBits(bits,q.m_numExplicitBits,bitBuf);
 			if (q.m_bitScores[bits]) 
 				log(LOG_INIT, "query: 0x%04llx: (%s) true", 
-				    (long long) bits, bitBuf);
+				    (int64_t) bits, bitBuf);
 
 			if (q.m_bitScores[bits] && ttval)
 				continue;
@@ -16942,7 +16942,7 @@ bool testBoolean() {
 			errorCount++;
 			printBits(bits, q.m_numExplicitBits, bitBuf);
 			log("query: ERROR! 0x%04llx: %s %s",
-			    (long long)bits, bitBuf, 
+			    (int64_t)bits, bitBuf, 
 			    q.m_bitScores[bits]?"true":"false");
 		}
 		if (!errorCount) log(LOG_INIT,
@@ -16964,7 +16964,7 @@ void testSpamRules(char *coll,
 		   long startFileNum,
 		   long numFiles,
 		   bool includeTree,
-		   long long docid) {
+		   int64_t docid) {
 	//long collLen = gbstrlen(coll);
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
@@ -17032,7 +17032,7 @@ void testSpamRules(char *coll,
 		key_t k       = list.getCurrentKey();
 		char *rec     = list.getCurrentRec();
 		long  recSize = list.getCurrentRecSize();
-		//long long docId       = g_titledb.getDocIdFromKey ( k );
+		//int64_t docId       = g_titledb.getDocIdFromKey ( k );
 		if ( k <= lastKey ) 
 			log("key out of order. "
 			    "lastKey.n1=%lx n0=%llx "
@@ -17250,7 +17250,7 @@ char *getcwd2 ( char *arg2 ) {
 	/*
 	pid_t pid = getpid();
 	char ff[128];
-	sprintf(ff,"/proc/%lli/cmdline",(long long)pid);
+	sprintf(ff,"/proc/%lli/cmdline",(int64_t)pid);
 
 	int fd = open ( ff , O_RDONLY, 0 );
 	if ( ! fd ) return NULL;
@@ -17482,7 +17482,7 @@ void rmTest() {
 
 	// now delete
 	fprintf(stderr,"Deleting files\n");
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 
 	for ( long i = 0 ; i < max ; i++ ) {
 		SafeBuf fn;
@@ -17492,7 +17492,7 @@ void rmTest() {
 		f.unlink();
 	}
 
-	long long took = gettimeofdayInMillisecondsLocal() - now;
+	int64_t took = gettimeofdayInMillisecondsLocal() - now;
 
 	fprintf(stderr,"Deleting files took %lli ms\n",took);
 

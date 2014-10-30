@@ -112,7 +112,7 @@ class Log {
 	// . if "asterisk" is true we print an asterisk to indicate that
 	//   the msg was actually logged earlier but only printed now because
 	//   we were in a signal handler at the time
-	bool logR ( long long now, long type, char *msg, bool asterisk ,
+	bool logR ( int64_t now, long type, char *msg, bool asterisk ,
 		    bool forced = false );
 
 	// returns false if msg should not be logged, true if it should
@@ -136,7 +136,7 @@ class Log {
 	void printBuf ( );
 
 	// this is only called when in a signal handler
-	bool logLater ( long long now , long type , char *formatString , 
+	bool logLater ( int64_t now , long type , char *formatString , 
 			va_list ap );
 
 	bool          m_disabled;
@@ -156,7 +156,7 @@ class Log {
 
 	char         *m_errorMsg      [ MAX_LOG_MSGS ];
 	short int     m_errorMsgLen   [ MAX_LOG_MSGS ];
-	long long     m_errorTime     [ MAX_LOG_MSGS ];
+	int64_t     m_errorTime     [ MAX_LOG_MSGS ];
 	unsigned char m_errorType     [ MAX_LOG_MSGS ];
 	int           m_numErrors;
 

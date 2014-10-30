@@ -100,7 +100,7 @@ main ( int argc , char *argv[] ) {
 	list.prepareForMerge (lists,numToMerge,numKeysWanted * sizeof(key_t));
 	// start time
 	fprintf(stderr,"starting merge\n");
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 	// do it
 	if ( numToMerge == 2 )
 		list.superMerge2 ( &list0 ,
@@ -115,7 +115,7 @@ main ( int argc , char *argv[] ) {
 				   minKey ,
 				   maxKey );
 	// completed
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	fprintf(stderr,"smt:: %li list NEW MERGE took %llu ms\n",
 		numToMerge,now-t);
 	// time per key

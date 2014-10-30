@@ -25,7 +25,7 @@ void Catdb::reset() {
 bool Catdb::init (  ) {
 	// clear our m_keys/m_bufs arrays
 	//	memset ( m_xml , 0 , MAXNUMSITEFILES * sizeof(Xml     *) );
-	//memset ( m_keys, 0 , MAXNUMSITEFILES * sizeof(long long) );
+	//memset ( m_keys, 0 , MAXNUMSITEFILES * sizeof(int64_t) );
 	// . what's max # of tree nodes?
 	// . assume avg tagdb rec size (siteUrl) is about 82 bytes we get:
 	// . NOTE: 32 bytes of the 82 are overhead
@@ -394,8 +394,8 @@ void Catdb::listSearch ( RdbList *list,
 char *Catdb::getRec ( RdbList *list , Url *url , long *recSize,
 		       char* coll, long collLen  ) {
 	key_t exactKey;
-	long long startTime = gettimeofdayInMilliseconds();
-	long long took;
+	int64_t startTime = gettimeofdayInMilliseconds();
+	int64_t took;
 	char *data;
 	long  dataSize;
 	// for now, only get exact hits for catdb

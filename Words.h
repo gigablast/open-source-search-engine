@@ -104,7 +104,7 @@ class Words {
 		    class Weights  *weights     ,
 		    unsigned long   baseScore   ,
 		    unsigned long   maxScore    ,
-		    long long       startHash   ,
+		    int64_t       startHash   ,
 		    char           *prefix1     ,
 		    long            prefixLen1  ,
 		    char           *prefix2     ,
@@ -127,7 +127,7 @@ class Words {
 	char     *getWord          ( long n ) const { return m_words   [n];};
 	long      getWordLen       ( long n ) const { return m_wordLens[n];};
 
-	//long long getNextWid ( long i , long toscan , long niceness ) {
+	//int64_t getNextWid ( long i , long toscan , long niceness ) {
 	//	long max = i + toscan;
 	//	if ( max > m_numWords ) max = m_numWords;
 	//	for ( ; i < max ; i++ ) {
@@ -156,7 +156,7 @@ class Words {
 	long getWordAt ( char *charPos ); // long charPos );
 	// . CAUTION: don't call this for punct "words"... it's bogus for them
 	// . this is only for alnum "words"
-	long long getWordId        ( long n ) const { return m_wordIds [n];};
+	int64_t getWordId        ( long n ) const { return m_wordIds [n];};
 
 	bool isStopWord ( long n ) {
 		return ::isStopWord(m_words   [n],
@@ -256,7 +256,7 @@ class Words {
 	char      **getWords   () { return m_words; };
 	char      **getWordPtrs() { return m_words; };
 	long       *getWordLens() { return m_wordLens; };
-	long long  *getWordIds () { return m_wordIds; };
+	int64_t  *getWordIds () { return m_wordIds; };
 	// 2 types of "words": punctuation and alnum
 	// isPunct() will return true on tags, too, so they are "punct"
 	bool      isPunct  ( long n ) const { return m_wordIds[n] == 0;};
@@ -378,7 +378,7 @@ class Words {
 	long           m_preCount  ; // estimate of number of words in the doc
 	char          **m_words    ;  // pointers to the word
 	long           *m_wordLens ;  // length of each word
-	long long      *m_wordIds  ;  // lower ascii hash of word
+	int64_t      *m_wordIds  ;  // lower ascii hash of word
 	long           *m_nodes    ;  // Xml.cpp node # (for tags only)
 	nodeid_t       *m_tagIds   ;  // tag for xml "words"
 

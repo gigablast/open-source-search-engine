@@ -119,7 +119,7 @@ bool getWordVector ( char *s ,
 		     long *nd ,
 		     long ndmax ) ;
 
-bool getDensityRanks ( long long *wids , 
+bool getDensityRanks ( int64_t *wids , 
 		       long nw,
 		       //long wordStart , 
 		       //long wordEnd ,
@@ -173,7 +173,7 @@ long getDirtyPoints ( char *s , long len , long niceness , char *logUrl ) ;
 
 bool storeTerm ( char             *s        ,
                  long              slen     ,
-                 long long         termId   ,
+                 int64_t         termId   ,
                  class HashInfo   *hi       ,
                  long              wordNum  ,
 		 long              wordPos  ,
@@ -360,8 +360,8 @@ class XmlDoc {
 	char      *ptr_rootTitleBuf;
 	long      *ptr_gigabitHashes;
 	long      *ptr_gigabitScores;
-	long long *ptr_adVector;
-	long long *ptr_wikiDocIds;
+	int64_t *ptr_adVector;
+	int64_t *ptr_wikiDocIds;
 	rscore_t  *ptr_wikiScores;
 	char      *ptr_imageData;
 	long      *ptr_catIds;
@@ -459,7 +459,7 @@ class XmlDoc {
 	// . since being set from a docId, we will load the old title rec
 	//   and use that!
 	// . used by PageGet.cpp
-	bool set3 ( long long  docId       , 
+	bool set3 ( int64_t  docId       , 
 		    char      *coll        ,
 		    long       niceness    );
 
@@ -502,7 +502,7 @@ class XmlDoc {
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
 	// store TitleRec into "buf" so it can be added to metalist
-	bool setTitleRecBuf ( SafeBuf *buf , long long docId, long long uh48 );
+	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
 	SafeBuf *getSpiderReplyMetaList ( class SpiderReply *reply ) ;
@@ -519,7 +519,7 @@ class XmlDoc {
 	char **getDmozAnchors ( ) ;
 	bool setDmozInfo () ;
 
-	long long **getWikiDocIds ( ) ;
+	int64_t **getWikiDocIds ( ) ;
 	void gotWikiResults ( class UdpSlot *slot );
 	long *getPubDate ( ) ;
 	//class DateParse2 *getDateParse2 ( ) ;
@@ -570,24 +570,24 @@ class XmlDoc {
 	float *getPageSimilarity ( class XmlDoc *xd2 ) ;
 	float *getPercentChanged ( );
 	uint64_t *getFuzzyDupHash ( );
-	long long *getExactContentHash64();
-	long long *getLooseContentHash64();
+	int64_t *getExactContentHash64();
+	int64_t *getLooseContentHash64();
 	class RdbList *getDupList ( ) ;
 	class RdbList *getLikedbListForReq ( );
 	class RdbList *getLikedbListForIndexing ( );
 	long addLikedbRecords ( bool justGetSize ) ;
 	char *getIsDup ( ) ;
-	char *isDupOfUs ( long long d ) ;
+	char *isDupOfUs ( int64_t d ) ;
 	uint32_t *getGigabitVectorScorelessHash ( ) ;
 	long *getGigabitHashes ( );
 	char *getGigabitQuery ( ) ;
 	char *getMetaDescription( long *mdlen ) ;
 	char *getMetaSummary ( long *mslen ) ;
 	char *getMetaKeywords( long *mklen ) ;
-	bool addGigabits ( char *s , long long docId , uint8_t langId ) ;
-	bool addGigabits2 ( char *s,long slen,long long docId,uint8_t langId);
+	bool addGigabits ( char *s , int64_t docId , uint8_t langId ) ;
+	bool addGigabits2 ( char *s,long slen,int64_t docId,uint8_t langId);
 	bool addGigabits ( class Words *ww , 
-			   long long docId,
+			   int64_t docId,
 			   class Sections *sections,
 			   //class Weights  *we ,
 			   uint8_t langId );
@@ -595,8 +595,8 @@ class XmlDoc {
 	long *getSiteSpiderQuota ( ) ;
 	class Url *getCurrentUrl ( ) ;
 	class Url *getFirstUrl() ;
-	long long getFirstUrlHash48();
-	long long getFirstUrlHash64();
+	int64_t getFirstUrlHash48();
+	int64_t getFirstUrlHash64();
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
 	class Url **getCanonicalRedirUrl ( ) ;
@@ -619,8 +619,8 @@ class XmlDoc {
 	//bool *updateRootLangId ( );
 	char **getRootTitleRec ( ) ;
 	//char **getContactTitleRec ( char *url ) ;
-	long long *getAvailDocIdOnly ( long long preferredDocId ) ;
-	long long *getDocId ( ) ;
+	int64_t *getAvailDocIdOnly ( int64_t preferredDocId ) ;
+	int64_t *getDocId ( ) ;
 	char *getIsIndexed ( ) ;
 	class TagRec *getTagRec ( ) ;
 	char *getHasContactInfo ( ) ;
@@ -662,14 +662,14 @@ class XmlDoc {
 	class LinkInfo **getLinkInfo2 ( ) ;
 	char *getSite ( ) ;
 	void  gotSite ( ) ;
-	long long *getSiteHash64 ( ) ;
+	int64_t *getSiteHash64 ( ) ;
 	long *getSiteHash32 ( ) ;
 	char **getHttpReply ( ) ;
 	char **getHttpReply2 ( ) ;
 	char **gotHttpReply ( ) ;
 	char *getIsContentTruncated ( );
 	long *getDownloadStatus ( ) ;
-	long long *getDownloadEndTime ( ) ;
+	int64_t *getDownloadEndTime ( ) ;
 	int16_t *getHttpStatus ( );
 	char waitForTimeSync ( ) ;
 	bool m_alreadyRegistered;
@@ -759,7 +759,7 @@ class XmlDoc {
 
 	long getSiteRank ();
 	bool addTable144 ( class HashTableX *tt1 , 
-			   long long docId ,
+			   int64_t docId ,
 			   class SafeBuf *buf = NULL );
 
 	bool addTable224 ( HashTableX *tt1 ) ;
@@ -833,7 +833,7 @@ class XmlDoc {
 	long *getUrlFilterNum();
 	//long *getDiffbotApiNum();
 	SafeBuf *getDiffbotApiUrl();
-	long long **getAdVector ( ) ;
+	int64_t **getAdVector ( ) ;
 	char *getIsLinkSpam ( ) ;
 	char *getIsHijacked();
 	char *getIsErrorPage ( ) ;
@@ -842,7 +842,7 @@ class XmlDoc {
 	bool hashWords  ( //long            wordStart ,
 			  //long            wordEnd   ,
 			  class HashInfo *hi        ) ;
-	bool hashSingleTerm ( long long       termId , 
+	bool hashSingleTerm ( int64_t       termId , 
 			      class HashInfo *hi     ) ;
 	bool hashSingleTerm ( char            *s    ,
 			      long             slen ,
@@ -954,7 +954,7 @@ class XmlDoc {
 
 	// stuff set from the key of the titleRec, above the compression area
 	//key_t     m_key;
-	long long m_docId;
+	int64_t m_docId;
 
 	char     *m_ubuf;
 	long      m_ubufSize;
@@ -967,22 +967,22 @@ class XmlDoc {
 	// private:
 
 	// we we started spidering it, in milliseconds since the epoch
-	long long    m_startTime;
+	int64_t    m_startTime;
 
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
-	long long    m_setTime;
-	long long    m_cpuSummaryStartTime;
+	int64_t    m_setTime;
+	int64_t    m_cpuSummaryStartTime;
 
 	// timers
-	long long m_beginSEOTime;
-	long long m_beginTimeAllMatch;
-	long long m_beginTimeMatchUrl;
-	long long m_beginTimeFullQueries;
-	long long m_beginTimeLinks;
-	//long long m_beginMsg98s;
-	long long m_beginRelatedQueries;
-	long long m_beginMsg95s;
+	int64_t m_beginSEOTime;
+	int64_t m_beginTimeAllMatch;
+	int64_t m_beginTimeMatchUrl;
+	int64_t m_beginTimeFullQueries;
+	int64_t m_beginTimeLinks;
+	//int64_t m_beginMsg98s;
+	int64_t m_beginRelatedQueries;
+	int64_t m_beginMsg95s;
 
 	// . these should all be set using set*() function calls so their
 	//   individual validity flags can bet set to true, and successive
@@ -999,8 +999,8 @@ class XmlDoc {
 	long       m_redirError;
 	char       m_allowSimplifiedRedirs;
 	Url        m_firstUrl;
-	long long  m_firstUrlHash48;
-	long long  m_firstUrlHash64;
+	int64_t  m_firstUrlHash48;
+	int64_t  m_firstUrlHash64;
 	Url        m_currentUrl;
 
 	//char      *m_coll;
@@ -1478,12 +1478,12 @@ class XmlDoc {
 	RdbList m_dupList;
 	RdbList m_likedbList;
 	uint64_t m_dupHash;
-	long long m_exactContentHash64;
-	long long m_looseContentHash64;
+	int64_t m_exactContentHash64;
+	int64_t m_looseContentHash64;
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;
-	long long m_docIdWeAreADupOf;
+	int64_t m_docIdWeAreADupOf;
 	long m_ei;
 	long m_lastLaunch;
 	Msg22Request m_msg22Request;
@@ -1626,7 +1626,7 @@ class XmlDoc {
 	long m_minInlinkerHopCount;
 	//class LinkInfo *m_linkInfo2Ptr;
 	SiteGetter m_siteGetter;
-	long long  m_siteHash64;
+	int64_t  m_siteHash64;
 	//char *m_site;
 	//long m_siteLen;
 	//Url m_siteUrl;
@@ -1731,7 +1731,7 @@ class XmlDoc {
 	SafeBuf *getRelatedDocIds();
 	SafeBuf *getRelatedDocIdsScored();
 	SafeBuf *getTopMatchingQueryBuf();
-	bool     addRelatedDocIdInfo ( long long docId ,
+	bool     addRelatedDocIdInfo ( int64_t docId ,
 				       long queryNum , 
 				       float score ,
 				       long  rank ,
@@ -1852,7 +1852,7 @@ class XmlDoc {
 	long    m_numMsg8eRequests;
 	long    m_numMsg8eReplies;
 	//bool    m_launchedAll;
-	long long m_tlbufTimer;
+	int64_t m_tlbufTimer;
 
 	SafeBuf m_missingTermBuf;
 	SafeBuf m_matchingTermBuf;
@@ -1942,7 +1942,7 @@ class XmlDoc {
 	bool m_printedScoredInsertableTerms;
 	bool m_printedRecommendedLinks;
 	bool m_loggedMsg3;
-	long long m_lastPrintedDocId;
+	int64_t m_lastPrintedDocId;
 	//bool m_docIndexed;
 	//bool m_sentMsg99Requests;
 	bool m_didSet3;
@@ -2114,7 +2114,7 @@ class XmlDoc {
 	//bool m_calledMsg22a             ;
 	//bool m_calledMsg22b             ;
 	//bool m_calledMsg22c             ;
-	long long m_calledMsg22d             ;
+	int64_t m_calledMsg22d             ;
 	bool m_didDelay                 ;
 	bool m_didDelayUnregister       ;
 	bool m_calledMsg22e             ;
@@ -2213,7 +2213,7 @@ class XmlDoc {
 	// . used to set SpiderReply::m_downloadEndTime because we need
 	//   high resolution for that so we can dole out the next spiderrequest
 	//   from that IP quickly if the sameipwait is like 500ms.
-	long long m_downloadEndTime;
+	int64_t m_downloadEndTime;
 
 	//char *m_metaListEnd;
 	long  m_metaListAllocSize;
@@ -2223,13 +2223,13 @@ class XmlDoc {
 	long  m_maxCacheAge;
 
 	// a list of 32-bit ints followed by a zero 32-bit int to terminate
-	long long m_adIds [ XD_MAX_AD_IDS ];
+	int64_t m_adIds [ XD_MAX_AD_IDS ];
 	//char *m_adVector;// [XMLDOC_MAX_AD_IDS];
 	//long  m_adVectorSize;
 
 	char     *m_wikiqbuf;
 	long      m_wikiqbufSize;
-	long long m_wikiDocIds [ MAX_WIKI_DOCIDS ];
+	int64_t m_wikiDocIds [ MAX_WIKI_DOCIDS ];
 	rscore_t  m_wikiScores [ MAX_WIKI_DOCIDS ];
 
 	bool      m_registeredSleepCallback;
@@ -2376,7 +2376,7 @@ class XmlDoc {
 	void (* m_finalCallback) ( void *state );
 	char  m_used[MAX_XML_DOCS];
 	class XmlDoc *m_xmlDocs[MAX_XML_DOCS];
-	long long m_cacheStartTime;
+	int64_t m_cacheStartTime;
 };
 
 // . PageParser.cpp uses this class for printing hashed terms out by calling
@@ -2393,7 +2393,7 @@ class TermDebugInfo {
 	//uint32_t  m_score32;
 	long      m_descOff;   // the description offset
 	long      m_prefixOff; // the prefix offset, like "site" or "gbadid"
-	long long m_termId;
+	int64_t m_termId;
 	long      m_date;
 	bool      m_shardByTermId;
 
@@ -2409,7 +2409,7 @@ class TermDebugInfo {
 	//bool      m_isSynonym;
 	// 0 = not a syn, 1 = syn from presets,2=wikt,3=generated
 	char      m_synSrc;
-	long long  m_langBitVec64;
+	int64_t  m_langBitVec64;
 	// used for gbsectionhash:xxxx terms to hack in the inner content
 	// hash, aka sentHash32 for doing xpath histograms on a site
 	//long m_sentHash32;

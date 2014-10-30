@@ -496,8 +496,8 @@ bool Msg40::gotCacheReply ( ) {
 	}
 	// log the time it took for cache lookup
 	if ( g_conf.m_logTimingQuery ) {
-		long long now  = gettimeofdayInMilliseconds();
-		long long took = now - m_startTime;
+		int64_t now  = gettimeofdayInMilliseconds();
+		int64_t took = now - m_startTime;
 		log(LOG_TIMING,
 		    "query: [%lu] found in cache. "
 		    "lookup took %lli ms.",(long)this,took);
@@ -512,8 +512,8 @@ bool Msg40::prepareToGetDocIds ( ) {
 
 	// log the time it took for cache lookup
 	if ( g_conf.m_logTimingQuery || m_si->m_debug ) {
-		long long now  = gettimeofdayInMilliseconds();
-		long long took = now - m_startTime;
+		int64_t now  = gettimeofdayInMilliseconds();
+		int64_t took = now - m_startTime;
 		logf(LOG_TIMING,"query: [%lu] Not found in cache. "
 		     "Lookup took %lli ms.",(long)this,took);
 		m_startTime = now;
@@ -640,7 +640,7 @@ bool Msg40::federatedLoop ( ) {
 	CollectionRec *cr = g_collectiondb.getRec(m_firstCollnum);
 	RdbBase *base = NULL;
 	if ( cr ) g_titledb.getRdb()->getBase(cr->m_collnum);
-	long long numDocs = 0;
+	int64_t numDocs = 0;
 	if ( base ) numDocs = base->getNumTotalRecs();
 	// for every 5M docids per host, lets split up the docid range
 	// to avoid going OOM
@@ -752,10 +752,10 @@ bool Msg40::gotDocIds ( ) {
 
 
 	// log the time it took for cache lookup
-	long long now  = gettimeofdayInMilliseconds();
+	int64_t now  = gettimeofdayInMilliseconds();
 
 	if ( g_conf.m_logTimingQuery || m_si->m_debug||g_conf.m_logDebugQuery){
-		long long took = now - m_startTime;
+		int64_t took = now - m_startTime;
 		logf(LOG_DEBUG,"query: msg40: [%lu] Got %li docids in %lli ms",
 		     (long)this,m_msg3a.getNumDocIds(),took);
 		logf(LOG_DEBUG,"query: msg40: [%lu] Getting up to %li "
@@ -949,7 +949,7 @@ bool Msg40::mergeDocIdsIntoBaseMsg3a() {
 	if ( ! m_msg3a.m_finalBuf ) return true;
 	// parse the memory up into arrays
 	char *p = m_msg3a.m_finalBuf;
-	m_msg3a.m_docIds        = (long long *)p; p += td * 8;
+	m_msg3a.m_docIds        = (int64_t *)p; p += td * 8;
 	m_msg3a.m_scores        = (double    *)p; p += td * sizeof(double);
 	m_msg3a.m_clusterRecs   = (key_t     *)p; p += td * sizeof(key_t);
 	m_msg3a.m_clusterLevels = (char      *)p; p += td * 1;
@@ -1032,8 +1032,8 @@ bool Msg40::reallocMsg20Buf ( ) {
 		if ( m_si->m_streamResults ) { char *xx=NULL;*xx=0; }
 		// use these 3 vars for mismatch stat reporting
 		//long      mismatches = 0;
-		//long long mismatch1  = 0LL;
-		//long long mismatch2  = 0LL;
+		//int64_t mismatch1  = 0LL;
+		//int64_t mismatch2  = 0LL;
 		// make new buf
 		char *newBuf = (char *)mmalloc(need,"Msg40d");
 		// return false if it fails
@@ -2179,8 +2179,8 @@ bool Msg40::gotSummary ( ) {
 	//m_numContiguous = m_numReplies;
 
 
-	long long startTime = gettimeofdayInMilliseconds();
-	long long took;
+	int64_t startTime = gettimeofdayInMilliseconds();
+	int64_t took;
 
 	// shortcut
 	//Query *q = m_msg3a.m_q;
@@ -2642,7 +2642,7 @@ bool Msg40::gotSummary ( ) {
 	*/
 
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// . add the stat for how long to get all the summaries
 	// . use purple for tie to get all summaries
 	// . THIS INCLUDES Msg3a/Msg39 RECALLS!!!
@@ -2703,7 +2703,7 @@ bool Msg40::gotSummary ( ) {
 		// can hash 'cd rom' as "cdrom". but i think we do this
 		// now, so use m_termId as see...
 		uint64_t qh = hash64d(s, slen);
-		//long long qh = qt->m_termId;
+		//int64_t qh = qt->m_termId;
 		long qpop;
 		qpop = g_speller.getPhrasePopularity(s, qh, true,lang);
 		long qpopWeight;
@@ -2739,7 +2739,7 @@ bool Msg40::gotSummary ( ) {
 	/////////////
 	if ( m_docsToScanForTopics > 0 ) {
 		// time it
-		long long stt = gettimeofdayInMilliseconds();
+		int64_t stt = gettimeofdayInMilliseconds();
 		// get the fist one, just use that for now
 		TopicGroup *tg = &m_si->m_topicGroups[0];
 
@@ -2797,7 +2797,7 @@ bool Msg40::gotSummary ( ) {
 		// sanity check
 		//if ( ng > 50 ) { char *xx=NULL;*xx=0; }
 		// time it
-		long long took = gettimeofdayInMilliseconds() - stt;
+		int64_t took = gettimeofdayInMilliseconds() - stt;
 		if ( took > 5 )
 			logf(LOG_DEBUG,"query: make gigabits took %lli ms",
 			     took);
@@ -2980,12 +2980,12 @@ void Msg40::uncluster ( long m ) {
 	return;
 
 	key_t     crec1 = m_msg3a.m_clusterRecs[m];
-	long long sh1   = g_clusterdb.getSiteHash26 ( (char *)&crec1 );
+	int64_t sh1   = g_clusterdb.getSiteHash26 ( (char *)&crec1 );
 
 	for ( long k = 0 ; k < m_msg3a.m_numDocIds ; k++ ) {
 		// skip docid #k if not from same hostname
 		key_t     crec2 = m_msg3a.m_clusterRecs[k];
-		long long sh2   = g_clusterdb.getSiteHash26 ( (char *)&crec2 );
+		int64_t sh2   = g_clusterdb.getSiteHash26 ( (char *)&crec2 );
 		if ( sh2 != sh1 ) continue;
 		// skip if not OK or CLUSTERED
 		if ( m_msg3a.m_clusterLevels[k] != CR_CLUSTERED ) continue;
@@ -3328,7 +3328,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 
 	//return true;
 
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 
 	long niceness = 0;
 
@@ -3870,9 +3870,9 @@ bool hashSample ( Query *q,
 	// skip if empty
 	if ( bigSampleLen<=0 || ! bigSampleBuf ) return true;
 	// the docid
-	long long docId = reply->m_docId;
+	int64_t docId = reply->m_docId;
 
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 
 	//
 	// termtable. for hashing all excerpts in a sample
@@ -3935,7 +3935,7 @@ bool hashSample ( Query *q,
 		// skip if not deduping
 		if ( tg->m_dedupSamplePercent <= 0 ) continue;
 		// make a vector out of words
-		long long *wids = ww.getWordIds();
+		int64_t *wids = ww.getWordIds();
 		long nw = ww.getNumWords();
 		for ( long i = 0 ; i < nw ; i++ ) {
 			// make it this
@@ -4012,7 +4012,7 @@ bool hashSample ( Query *q,
 		// watch out for 0
 		//if ( score <= 0 ) continue;
 		// get termid
-		long long termId64 = *(long long *)localGigabitTable.getKey(i);
+		int64_t termId64 = *(int64_t *)localGigabitTable.getKey(i);
 		// . get the bucket
 		// . may be or may not be full (score is 0 if empty)
 		//long n = master->getTermNum ( tt.getTermId(i) );
@@ -4105,7 +4105,7 @@ public:
 	// the raw QTR scores (aac)
 	float m_proxScore;//qtr;
 	// a hash for looking up in the popularity dictionary
-	//long long dwid64;
+	//int64_t dwid64;
 	// . from 0 to 100. 100 means not repeated.
 	// . set in setRepeatScores() function
 	char m_repeatScore;
@@ -4217,7 +4217,7 @@ void hashExcerpt ( Query *q ,
 	// record the positions of all query words
 	char **wp   = words.m_words;
 	long  *wlen = words.m_wordLens;
-	long long *wids = words.getWordIds();
+	int64_t *wids = words.getWordIds();
 
 	// loop over the words in our EXCERPT
 	for ( ; i < nw ; i++ ) {
@@ -4911,7 +4911,7 @@ void hashExcerpt ( Query *q ,
 			else if  ( pop < 50 ) ss = (score * 60) / 100;
 			else                  ss = (score * 40) / 100;
 			*/
-			//if ( tt->getScoreFromTermId((long long)h) > 0 )
+			//if ( tt->getScoreFromTermId((int64_t)h) > 0 )
 			//	continue;
 			// debug msg
 			//char c     = ww[wwlen];
@@ -4956,7 +4956,7 @@ void hashExcerpt ( Query *q ,
 			//if ( scores && mm != NORM_WORD_SCORE )
 			//	ss = (ss * mm) / NORM_WORD_SCORE;
 			// only count the highest scoring guy once per page
-			//long tn = tt->getTermNum((long long)h);
+			//long tn = tt->getTermNum((int64_t)h);
 			//maxScore = ss;
 			//if ( tn >= 0 ) {
 			//	long sc = tt->getScoreFromTermNum(tn);
@@ -4965,7 +4965,7 @@ void hashExcerpt ( Query *q ,
 			// . add it
 			// . now store the popularity, too, so we can display
 			//   it for the winning gigabits
-			//if ( ! tt->addTerm ((long long)h,ss,maxScore,false,
+			//if ( ! tt->addTerm ((int64_t)h,ss,maxScore,false,
 			//		    ww,wwlen,tn,NULL,pop) ) 
 			// . weight score by pop
 			// . lets try weighting more popular phrases more!
@@ -5087,14 +5087,14 @@ void setRepeatScores ( Words *words ,
 
 	//char      *ptr      = repeatTable;
 	//long       numSlots = repeatTableNumSlots;
-	//long long *hashes   = (long long *)ptr; ptr += numSlots * 8;
+	//int64_t *hashes   = (int64_t *)ptr; ptr += numSlots * 8;
 	//long      *vals     = (long      *)ptr; ptr += numSlots * 4;
 
-	long long   ringWids [ 5 ];
+	int64_t   ringWids [ 5 ];
 	long        ringPos  [ 5 ];
 	long        ringi = 0;
 	long        count = 0;
-	long long   h     = 0;
+	int64_t   h     = 0;
 
 	//long numSlots = repeatTable->getNumSlots();
 
@@ -5102,7 +5102,7 @@ void setRepeatScores ( Words *words ,
 	//unsigned long mask = numSlots - 1;
 
 	// clear ring of hashes
-	memset ( ringWids , 0 , 5 * sizeof(long long) );
+	memset ( ringWids , 0 , 5 * sizeof(int64_t) );
 
 	// for sanity check
 	//long lastStart = -1;
@@ -5119,7 +5119,7 @@ void setRepeatScores ( Words *words ,
 	// return until we fix the infinite loop bug
 	//return;
 
-	long long *wids = words->getWordIds();
+	int64_t *wids = words->getWordIds();
 
 	// . hash EVERY 5-word sequence in the document
 	// . if we get a match look and see what sequences it matches
@@ -5259,7 +5259,7 @@ bool Msg40::computeFastFacts ( ) {
 		// parse into words
 		Words ww;
 		ww.setx ( gi->m_term , gi->m_termLen , 0 );
-		long long *wids = ww.getWordIds();
+		int64_t *wids = ww.getWordIds();
 		// fix mere here
 		//if ( ! wids[0] ) { char *xx=NULL;*xx=0; }
 		if ( ! wids[0] )  {
@@ -5419,7 +5419,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	if ( ! ww.set11 ( pstart,pend , 0 ) ) return false;
 
 	long nw = ww.getNumWords();
-	long long *wids = ww.getWordIds();
+	int64_t *wids = ww.getWordIds();
 
 	// initialize the sentence/fact we might add to factBuf if score>0
 	Fact fact;
@@ -5733,7 +5733,7 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 				continue;
 
 			// is it new?
-			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			int64_t h64 = hash64n ( tmpBuf.getBufStart() );
 			if ( nameTable.isInTable ( &h64 ) ) continue;
 
 			// record offset of the name for our hash table
@@ -5778,7 +5778,7 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
 		// record the hash of each one for printing out further json
 		// objects in the same order so columns are aligned!
-		long long h64 = hash64n ( ptrs[i] );
+		int64_t h64 = hash64n ( ptrs[i] );
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
@@ -5862,7 +5862,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 			return false;
 
 		// is it new?
-		long long h64 = hash64n ( tmpBuf.getBufStart() );
+		int64_t h64 = hash64n ( tmpBuf.getBufStart() );
 
 		// ignore the "html" column
 		if ( strcmp(tmpBuf.getBufStart(),"html") == 0 ) continue;
@@ -6087,7 +6087,7 @@ void Msg40::lookupFacets2 ( ) {
 			// how many docids in the results had this valud?
 			//long      count = fe->m_count;
 			// one of the docids that had it
-			long long docId = fe->m_docId;
+			int64_t docId = fe->m_docId;
 
 			// more than 50 already outstanding?
 			if ( m_numMsg20sOut - m_numMsg20sIn >= MAX2 )

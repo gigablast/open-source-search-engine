@@ -94,7 +94,7 @@ class StateT {
 public:
 	long m_ip;
 	char m_buf[1024];
-	long long m_time;
+	int64_t m_time;
 };
 
 static long s_count = 0;
@@ -142,7 +142,7 @@ void timeWrapper ( int fd , void *state ) {
 
 void dnsWrapper ( void *state , long ip ) {
 	StateT *st = (StateT *)state;
-	long long time = gettimeofdayInMilliseconds() - st->m_time ;
+	int64_t time = gettimeofdayInMilliseconds() - st->m_time ;
 	fprintf ( stderr,"Response: %llims %s %s (%s)\n", time, 
 			st->m_buf , iptoa(ip) , mstrerror(g_errno));
 	//if ( g_errno == ETRYAGAIN )

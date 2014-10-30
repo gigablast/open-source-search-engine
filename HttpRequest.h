@@ -139,13 +139,13 @@ class HttpRequest {
 				 char *defaultString = NULL , long *next=NULL);
 	bool       getBool     ( char *field, bool defaultBool );
 	long       getLong     ( char *field, long defaultLong           );
-	long long  getLongLong ( char *field, long long defaultLongLong    );
+	int64_t  getLongLong ( char *field, int64_t defaultLongLong    );
 	float      getFloat    ( char *field, double defaultFloat );
 	double     getDouble   ( char *field, double defaultDouble );
 
 	float      getFloatFromCookie    ( char *field, float def );
 	long       getLongFromCookie    ( char *field, long def );
-	long long  getLongLongFromCookie( char *field, long long def );
+	int64_t  getLongLongFromCookie( char *field, int64_t def );
 	bool       getBoolFromCookie    ( char *field, bool def );
 	char      *getStringFromCookie  ( char *field, long *len = NULL,
 					  char *defaultString = NULL , 

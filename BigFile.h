@@ -42,11 +42,11 @@ public:
 	//struct aiocb   m_aiostate;
 	char           *m_buf;
 	long            m_bytesToGo;
-	long long       m_offset;
+	int64_t       m_offset;
 	// . the original offset, because we set m_offset to m_currentOffset
 	//   if the original offset specified is -1
 	// . we also advance BigFile::m_currentOffset when done w/ read/write
-	//long long       m_origOffset;
+	//int64_t       m_origOffset;
 	bool            m_doWrite;
 	long            m_bytesDone;
 	void           *m_state ;
@@ -69,8 +69,8 @@ public:
 	// just for flagging unlinked/renamed thread ops
 	long            m_errno2;
 	// when we started for graphing purposes (in milliseconds)
-	long long       m_startTime;
-	long long       m_doneTime;
+	int64_t       m_startTime;
+	int64_t       m_doneTime;
 	// this is used for calling DiskPageCache::addPages() when done 
 	// with the read/write
 	class DiskPageCache *m_pc;
@@ -131,7 +131,7 @@ class BigFile {
 	//   if you pass in a DiskPageCache ptr
 	bool open  ( int flags , 
 		     class DiskPageCache *pc = NULL ,
-		     long long maxFileSize = -1 ,
+		     int64_t maxFileSize = -1 ,
 		     int permissions    = 
 		     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 
@@ -143,8 +143,8 @@ class BigFile {
 	// . return -2 on error
 	// . return -1 if does not exist
 	// . otherwise return the big file's complete file size (can b >2gb)
-	long long getFileSize ( );
-	long long getSize     ( ) { return getFileSize(); };
+	int64_t getFileSize ( );
+	int64_t getSize     ( ) { return getFileSize(); };
 
 	// use the base filename as our filename
 	char *getFilename() { return m_baseFilename; };
@@ -155,7 +155,7 @@ class BigFile {
 	// . decides what 2gb part file(s) we should read from
 	bool read  ( void       *buf    , 
 		     long        size   , 
-		     long long   offset                         , 
+		     int64_t   offset                         , 
 		     FileState  *fs                      = NULL , 
 		     void       *state                   = NULL , 
 		     void      (* callback)(void *state) = NULL ,
@@ -171,7 +171,7 @@ class BigFile {
 	//   responsible for maintaining current write offset
 	bool  write ( void       *buf    , 
 		      long        size   , 
-		      long long   offset                         , 
+		      int64_t   offset                         , 
 		      FileState  *fs                      = NULL , 
 		      void       *state                   = NULL , 
 		      void      (* callback)(void *state) = NULL ,
@@ -210,10 +210,10 @@ class BigFile {
 	// just close all the fds of the part files, used by RdbMap.cpp.
 	bool closeFds ( ) ;
 
-	//int getfdByOffset ( long long offset );
+	//int getfdByOffset ( int64_t offset );
 
 	// what part (little File) of this BigFile has offset "offset"?
-	int getPartNum ( long long offset ) { return offset / MAX_PART_SIZE; };
+	int getPartNum ( int64_t offset ) { return offset / MAX_PART_SIZE; };
 
 	// . opens the nth file if necessary to get it's fd
 	// . returns -1 if none, >=0 on success
@@ -222,7 +222,7 @@ class BigFile {
 	// public for wrapper to call
 	//bool readwrite_r ( FileState *fstate );
 
-	long long m_currentOffset;
+	int64_t m_currentOffset;
 
 	DiskPageCache *getDiskPageCache ( ) { return m_pc;  };
 	long       getVfd       ( ) { return m_vfd; };
@@ -272,7 +272,7 @@ class BigFile {
 	// . returns false and sets errno on error, true on success
 	bool readwrite ( void       *buf, 
 			 long        size, 
-			 long long   offset, 
+			 int64_t   offset, 
 			 bool        doWrite,
 			 FileState  *fstate   ,
 			 void       *state    ,
@@ -327,7 +327,7 @@ class BigFile {
 	// prevent circular calls to BigFile::close() with this
 	char m_isClosing;
 
-	long long m_fileSize;
+	int64_t m_fileSize;
 
 	// oldest of the last modified dates of all the part files
 	time_t m_lastModified;
@@ -336,8 +336,8 @@ class BigFile {
 
 extern long g_unlinkRenameThreads;
 
-extern long long g_lastDiskReadStarted;
-extern long long g_lastDiskReadCompleted;
+extern int64_t g_lastDiskReadStarted;
+extern int64_t g_lastDiskReadCompleted;
 extern bool      g_diskIsStuck;
 
 extern void *readwriteWrapper_r ( void *state , class ThreadEntry *t ) ;

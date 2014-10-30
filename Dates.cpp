@@ -1430,236 +1430,236 @@ sections. -- todo -- might be an alignment issue... check out later
 #define HD_MW              61
 #define HD_MWF             62
 
-static long long h_funeral;
-static long long h_mortuary;
-static long long h_visitation;
-static long long h_memorial;
-static long long h_services;
-static long long h_service  ;
-static long long h_founded;
-static long long h_established;
+static int64_t h_funeral;
+static int64_t h_mortuary;
+static int64_t h_visitation;
+static int64_t h_memorial;
+static int64_t h_services;
+static int64_t h_service  ;
+static int64_t h_founded;
+static int64_t h_established;
 
-static long long h_seniors;
-static long long h_a;
-static long long h_daily;
-static long long h_sunday;
-static long long h_monday;
-static long long h_tuesday;
-static long long h_wednesday;
-static long long h_thursday;
-static long long h_friday;
-static long long h_saturday;
-static long long h_mon;
-static long long h_tues;
-static long long h_tue;
-static long long h_wed;
-static long long h_wednes;
-static long long h_thurs;
-static long long h_thu;
-static long long h_thr;
-static long long h_fri;
-static long long h_sat;
+static int64_t h_seniors;
+static int64_t h_a;
+static int64_t h_daily;
+static int64_t h_sunday;
+static int64_t h_monday;
+static int64_t h_tuesday;
+static int64_t h_wednesday;
+static int64_t h_thursday;
+static int64_t h_friday;
+static int64_t h_saturday;
+static int64_t h_mon;
+static int64_t h_tues;
+static int64_t h_tue;
+static int64_t h_wed;
+static int64_t h_wednes;
+static int64_t h_thurs;
+static int64_t h_thu;
+static int64_t h_thr;
+static int64_t h_fri;
+static int64_t h_sat;
 
-static long long h_details;
-static long long h_more;
+static int64_t h_details;
+static int64_t h_more;
 
-static long long h_to;
-static long long h_and;
-static long long h_or;
-static long long h_sun;
-static long long h_next;
-static long long h_this;
-static long long h_children;
-static long long h_age;
-static long long h_ages;
-static long long h_kids;
-static long long h_toddlers;
-static long long h_youngsters;
-static long long h_grade;
-static long long h_grades;
-static long long h_day;
-static long long h_years;
-static long long h_continuing;
-static long long h_through;
-static long long h_though; // misspelling
-static long long h_thru;
-static long long h_until;
-static long long h_til;
-static long long h_till;
-static long long h_ongoing;
-static long long h_lasting;
-static long long h_runs; // and runs through
-static long long h_results;
-static long long h_nightly;
-static long long h_lasts; // and lasts through
-static long long h_at;
-static long long h_on;
-static long long h_starts;
-static long long h_begins;
-static long long h_between;
-static long long h_from;
-static long long h_before;
-static long long h_after;
-static long long h_ends;
-static long long h_conclude;
-static long long h_concludes;
-static long long h_time;
-static long long h_date;
-static long long h_the;
-static long long h_copyright;
+static int64_t h_to;
+static int64_t h_and;
+static int64_t h_or;
+static int64_t h_sun;
+static int64_t h_next;
+static int64_t h_this;
+static int64_t h_children;
+static int64_t h_age;
+static int64_t h_ages;
+static int64_t h_kids;
+static int64_t h_toddlers;
+static int64_t h_youngsters;
+static int64_t h_grade;
+static int64_t h_grades;
+static int64_t h_day;
+static int64_t h_years;
+static int64_t h_continuing;
+static int64_t h_through;
+static int64_t h_though; // misspelling
+static int64_t h_thru;
+static int64_t h_until;
+static int64_t h_til;
+static int64_t h_till;
+static int64_t h_ongoing;
+static int64_t h_lasting;
+static int64_t h_runs; // and runs through
+static int64_t h_results;
+static int64_t h_nightly;
+static int64_t h_lasts; // and lasts through
+static int64_t h_at;
+static int64_t h_on;
+static int64_t h_starts;
+static int64_t h_begins;
+static int64_t h_between;
+static int64_t h_from;
+static int64_t h_before;
+static int64_t h_after;
+static int64_t h_ends;
+static int64_t h_conclude;
+static int64_t h_concludes;
+static int64_t h_time;
+static int64_t h_date;
+static int64_t h_the;
+static int64_t h_copyright;
 
-static long long h_non    ;
-static long long h_mid    ;
-static long long h_each   ;
-static long long h_every  ;
-static long long h_first  ;
-static long long h_second ;
-static long long h_third  ;
-static long long h_fourth ;
-static long long h_fifth  ;
-static long long h_1st;
-static long long h_2nd;
-static long long h_3rd;
-static long long h_4th;
-static long long h_5th;
+static int64_t h_non    ;
+static int64_t h_mid    ;
+static int64_t h_each   ;
+static int64_t h_every  ;
+static int64_t h_first  ;
+static int64_t h_second ;
+static int64_t h_third  ;
+static int64_t h_fourth ;
+static int64_t h_fifth  ;
+static int64_t h_1st;
+static int64_t h_2nd;
+static int64_t h_3rd;
+static int64_t h_4th;
+static int64_t h_5th;
 
-static long long h_1;
-static long long h_2;
-static long long h_3;
-static long long h_4;
-static long long h_5;
+static int64_t h_1;
+static int64_t h_2;
+static int64_t h_3;
+static int64_t h_4;
+static int64_t h_5;
 
-static long long h_of     ;
-static long long h_year   ;
-static long long h_month  ;
-static long long h_week   ;
+static int64_t h_of     ;
+static int64_t h_year   ;
+static int64_t h_month  ;
+static int64_t h_week   ;
 
-static long long h_weeks  ;
-static long long h_days;
-static long long h_months;
-static long long h_miles;
-static long long h_mile;
-static long long h_mi;
-static long long h_km;
-static long long h_kilometers;
-static long long h_kilometer;
+static int64_t h_weeks  ;
+static int64_t h_days;
+static int64_t h_months;
+static int64_t h_miles;
+static int64_t h_mile;
+static int64_t h_mi;
+static int64_t h_km;
+static int64_t h_kilometers;
+static int64_t h_kilometer;
 
-static long long h_night      ;
-static long long h_nights     ;
-static long long h_evening    ;
-static long long h_evenings   ;
-static long long h_morning    ;
-static long long h_mornings   ;
-static long long h_afternoon  ;
-static long long h_afternoons ;
-static long long h_in         ;
-static long long h_hours      ;
-static long long h_are        ;
-static long long h_is         ;
-static long long h_semester   ;
-static long long h_box ;
-static long long h_office ;
-static long long h_during     ;
-static long long h_closed     ;
-static long long h_closure    ;
-static long long h_closures   ;
-static long long h_desk;
-static long long h_reception;
+static int64_t h_night      ;
+static int64_t h_nights     ;
+static int64_t h_evening    ;
+static int64_t h_evenings   ;
+static int64_t h_morning    ;
+static int64_t h_mornings   ;
+static int64_t h_afternoon  ;
+static int64_t h_afternoons ;
+static int64_t h_in         ;
+static int64_t h_hours      ;
+static int64_t h_are        ;
+static int64_t h_is         ;
+static int64_t h_semester   ;
+static int64_t h_box ;
+static int64_t h_office ;
+static int64_t h_during     ;
+static int64_t h_closed     ;
+static int64_t h_closure    ;
+static int64_t h_closures   ;
+static int64_t h_desk;
+static int64_t h_reception;
 
-static long long h_st ;
-static long long h_nd ;
-static long long h_rd ;
-static long long h_th ;
+static int64_t h_st ;
+static int64_t h_nd ;
+static int64_t h_rd ;
+static int64_t h_th ;
 
-static long long h_sundays;
-static long long h_mondays;
-static long long h_tuesdays;
-static long long h_wednesdays;
-static long long h_thursdays;
-static long long h_fridays;
-static long long h_saturdays;
+static int64_t h_sundays;
+static int64_t h_mondays;
+static int64_t h_tuesdays;
+static int64_t h_wednesdays;
+static int64_t h_thursdays;
+static int64_t h_fridays;
+static int64_t h_saturdays;
 
-static long long h_summers ;
-static long long h_autumns ;
-static long long h_winters ;
+static int64_t h_summers ;
+static int64_t h_autumns ;
+static int64_t h_winters ;
 
-static long long h_noon     ;
-static long long h_midnight ;
-static long long h_midday   ;
-static long long h_sunset   ;
-static long long h_sundown  ;
-static long long h_dusk     ;
-static long long h_sunrise  ;
-static long long h_dawn     ;
+static int64_t h_noon     ;
+static int64_t h_midnight ;
+static int64_t h_midday   ;
+static int64_t h_sunset   ;
+static int64_t h_sundown  ;
+static int64_t h_dusk     ;
+static int64_t h_sunrise  ;
+static int64_t h_dawn     ;
 
-static long long h_s;
+static int64_t h_s;
 
-static long long h_last;
-static long long h_modified;
-static long long h_posted;
-static long long h_updated;
-static long long h_by;
+static int64_t h_last;
+static int64_t h_modified;
+static int64_t h_posted;
+static int64_t h_updated;
+static int64_t h_by;
 
-static long long h_festival;
+static int64_t h_festival;
 
-static long long h_register;
-static long long h_registration;
-static long long h_phone;
-static long long h_please;
-static long long h_call;
-static long long h_us;
-static long long h_anytime;
-static long long h_be;
-static long long h_will;
-static long long h_sign;
-static long long h_up;
-static long long h_signup;
-static long long h_tickets;
-static long long h_advance;
-static long long h_purchase;
-static long long h_get;
-static long long h_enroll;
-static long long h_buy;
-static long long h_presale ;
-static long long h_pre ;
-static long long h_sale ;
-static long long h_sales ;
-static long long h_end ;
-static long long h_begin ;
-static long long h_start ;
+static int64_t h_register;
+static int64_t h_registration;
+static int64_t h_phone;
+static int64_t h_please;
+static int64_t h_call;
+static int64_t h_us;
+static int64_t h_anytime;
+static int64_t h_be;
+static int64_t h_will;
+static int64_t h_sign;
+static int64_t h_up;
+static int64_t h_signup;
+static int64_t h_tickets;
+static int64_t h_advance;
+static int64_t h_purchase;
+static int64_t h_get;
+static int64_t h_enroll;
+static int64_t h_buy;
+static int64_t h_presale ;
+static int64_t h_pre ;
+static int64_t h_sale ;
+static int64_t h_sales ;
+static int64_t h_end ;
+static int64_t h_begin ;
+static int64_t h_start ;
 
-//static long long h_closed ;
-static long long h_closes ;
-static long long h_close  ;
-static long long h_except ;
-static long long h_open   ;
-static long long h_opens  ;
-static long long h_happy;
-static long long h_kitchen;
-static long long h_hour;
-static long long h_m;
-static long long h_mo;
-static long long h_f;
+//static int64_t h_closed ;
+static int64_t h_closes ;
+static int64_t h_close  ;
+static int64_t h_except ;
+static int64_t h_open   ;
+static int64_t h_opens  ;
+static int64_t h_happy;
+static int64_t h_kitchen;
+static int64_t h_hour;
+static int64_t h_m;
+static int64_t h_mo;
+static int64_t h_f;
 
-static long long h_late;
-static long long h_early;
+static int64_t h_late;
+static int64_t h_early;
 
-static long long h_since ;
-static long long h_rsvp ;
-static long long h_checkin ;
-static long long h_checkout ;
-static long long h_check ;
-static long long h_out ;
-static long long h_deadline ;
-static long long h_am;
-static long long h_pm;
+static int64_t h_since ;
+static int64_t h_rsvp ;
+static int64_t h_checkin ;
+static int64_t h_checkout ;
+static int64_t h_check ;
+static int64_t h_out ;
+static int64_t h_deadline ;
+static int64_t h_am;
+static int64_t h_pm;
 
 // . record the event times out this many days from the current date.
 // . make i 12 months out 365... but need to fix min/maxpubdate first
 #define DAYLIMIT (8*30)
 
-static bool isMonth ( long long wid ) ;
-static char getMonth ( long long wid ) ;
+static bool isMonth ( int64_t wid ) ;
+static char getMonth ( int64_t wid ) ;
 
 static bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 			       Date *fullDate ) ;
@@ -2385,7 +2385,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		       Url        *redirUrl ,
 		       uint8_t     ctype    , // contenttype,like gif,jpeg,html
 		       long        ip       , // ip of url "u"
-		       long long   docId    ,
+		       int64_t   docId    ,
 		       long        siteHash ,
 		       Xml        *xml      ,
 		       Words      *words    ,
@@ -2940,8 +2940,8 @@ bool Dates::setPart1 ( //char       *u        ,
 	// 1. do another container limiting algo where it is based on 
 	//    find dj's matching type?
 
-	//long long h_noon     = hash64b("noon");
-	//long long h_midnight = hash64b("midnight");
+	//int64_t h_noon     = hash64b("noon");
+	//int64_t h_midnight = hash64b("midnight");
 
 
 	//
@@ -3008,13 +3008,13 @@ bool Dates::setPart1 ( //char       *u        ,
 			break;
 		}
 
-		long long last = 0LL;
+		int64_t last = 0LL;
 		long wcount = 0;
 		// similarly, scan back but don't stop at first alnum word
 		for ( long b = di->m_a - 1; b >= 0 ; b-- ) {
 			QUICKPOLL(m_niceness);
 			if ( ! m_wids[b] ) continue;
-			long long prev = last;
+			int64_t prev = last;
 			last = m_wids[b];
 			// check in/out times for hotels
 			if ( m_wids[b] == h_checkin  ) { flag=1; break; }
@@ -3346,8 +3346,8 @@ bool Dates::setPart1 ( //char       *u        ,
 
 		// search for it in the old document
 		// make the key
-		long long key = di->m_tagHash ;
-		key |= ((long long)di->m_occNum) << 32;
+		int64_t key = di->m_tagHash ;
+		key |= ((int64_t)di->m_occNum) << 32;
 		long *val = (long *)cct->getValue ( &key );
 		// skip if not in the old document
 		if ( ! val ) continue;
@@ -3586,7 +3586,7 @@ long parseDateFromUrl ( char *url         ,
 		// must not be end, we need a day to follow
 		if ( ! *mend ) continue;
 		// make it a wid
-		long long wid = hash64Lower_utf8 ( m , mend - m , 0LL );
+		int64_t wid = hash64Lower_utf8 ( m , mend - m , 0LL );
 		// get it as a month
 		long month = getMonth ( wid ) ;
 		// skip if not valid month
@@ -4057,7 +4057,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 	if ( ! w ) return true;
 
-	long long   *wids  = w->getWordIds  ();
+	int64_t   *wids  = w->getWordIds  ();
 	long           nw  = w->getNumWords ();
 	char       **wptrs = w->getWords    ();
 	long        *wlens = w->getWordLens ();
@@ -4123,7 +4123,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//
 	/////////////////////////////////
 
-	long long prevWid = 0;
+	int64_t prevWid = 0;
 	// simple flag
 	bool monthPreceeds = false;
 	// ignore trumba <xCal>someDate</xCal> tags, they are junky
@@ -4214,7 +4214,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 
 		// save this
-		long long savedWid = prevWid;
+		int64_t savedWid = prevWid;
 		// and update
 		prevWid = wids[i];
 		// getDateType() needs this
@@ -4686,7 +4686,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			break;
 		}
 		// get number to the right of that!
-		long long nextWid = 0LL;
+		int64_t nextWid = 0LL;
 		long rightNum2 = -1;
 		long ri2       = -1;
 		for ( j++ ; j < maxj ; j++ ) {
@@ -5284,10 +5284,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// get previous two alnum words
 			long kmin = i - 20;
 			if ( kmin < 0 ) kmin = 0;
-			long long prev1 = 0LL;
-			long long prev2 = 0LL;
+			int64_t prev1 = 0LL;
+			int64_t prev2 = 0LL;
 			// these ignore tags
-			long long PREV1 = 0LL;
+			int64_t PREV1 = 0LL;
 			bool hitTag = false;
 			for ( long k = i - 1 ; k >= kmin ; k-- ) {
 				QUICKPOLL(m_niceness);
@@ -5321,8 +5321,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// whose after us
 			long kmax = i + 20;
 			if ( kmax > nw ) kmax = nw;
-			long long after1 = 0LL;
-			long long after2 = 0LL;
+			int64_t after1 = 0LL;
+			int64_t after2 = 0LL;
 			long ai1 = -1;
 			for ( long k = i + 1 ; k < kmax ; k++ ) {
 				QUICKPOLL(m_niceness);
@@ -6112,7 +6112,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// . i use these for when have a time like "9:30"
 		//   that has no am or pm, and if we have SF_NIGHT
 		//   set we can adjust for it in addIntervals()
-		long long wid = wids[left];
+		int64_t wid = wids[left];
 		if ( wid == h_night      ) sflags |= SF_NIGHT;
 		if ( wid == h_nights     ) sflags |= SF_NIGHT;
 		if ( wid == h_evening    ) sflags |= SF_NIGHT;
@@ -6171,7 +6171,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// limit range
 		long kmin = left - 30;
 		if ( kmin < 0  ) kmin = 0;
-		long long last = 0LL;
+		int64_t last = 0LL;
 		// scan backwards
 		for ( long k = left - 1 ; modCheck && k > kmin ; k-- ) {
 			// skip non-breaking or br tags
@@ -6187,7 +6187,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// skip punct words
 			if ( ! wids[k] ) continue;
 			// shortcut
-			long long wid = wids[k];
+			int64_t wid = wids[k];
 			// skip transitionals
 			if ( wid == h_and    ||
 			     wid == h_the    ||
@@ -6274,7 +6274,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// skip punct words
 			if ( ! wids[k] ) continue;
 			// shortcut
-			long long wid = wids[k];
+			int64_t wid = wids[k];
 			// skip transitionals
 			if ( wid == h_and   ) continue;
 			if ( wid == h_the   ) continue;
@@ -6868,14 +6868,14 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// "in Sunday's Albuquerque Journal" fix for villr.com
 		// was causing "in Sunday" to telescope to tod hours
 		if ( di->m_type == DT_DOW && di->m_a >= 0 ) {
-			long long wid = wids[di->m_a];
+			int64_t wid = wids[di->m_a];
 			if ( wid == h_in ) {
 				di->m_flags |= DF_FUZZY;
 				continue;
 			}
 		}
 		// get alnum word before date
-		long long prevWid = 0;
+		int64_t prevWid = 0;
 		long jmin = di->m_a - 20;
 		if ( jmin < 0 ) jmin = 0;
 		for ( long j = di->m_a - 1 ; j >= jmin ; j-- ) {
@@ -7065,7 +7065,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			long j = di->m_a+1;
 			long jmax = j + 20;
 			if ( jmax > nw ) jmax = nw;
-			long long nextWid = 0LL;
+			int64_t nextWid = 0LL;
 			for ( ; j < jmax ; j++ ) {
 				QUICKPOLL(m_niceness);
 				if ( ! wids[j] ) continue;
@@ -7449,7 +7449,7 @@ bool Dates::hasKitchenHours ( Section *si ) {
 	if ( ! si ) return false;
 	long a = si->m_a;
 	long b = si->m_b;
-	long long prevWid = 0LL;
+	int64_t prevWid = 0LL;
 	//long count = 0;
 	// now scan forward from there
 	for ( long j = a ; j < b ; j++ ) {
@@ -7469,7 +7469,7 @@ bool Dates::hasKitchenHours ( Section *si ) {
 }
 
 
-bool isTicketDate ( long a , long b , long long *wids , Bits *bits ,
+bool isTicketDate ( long a , long b , int64_t *wids , Bits *bits ,
 		    long niceness ) {
 
 	// sanity check
@@ -7478,7 +7478,7 @@ bool isTicketDate ( long a , long b , long long *wids , Bits *bits ,
 	wbit_t *bb = NULL; 
 	if ( bits ) bb = bits->m_bits;
 
-	long long prevWid = 0LL;
+	int64_t prevWid = 0LL;
 	// now scan forward from there
 	for ( long j = a ; j < b ; j++ ) {
 		// breathe man
@@ -7515,7 +7515,7 @@ bool isTicketDate ( long a , long b , long long *wids , Bits *bits ,
 }
 
 bool Dates::isFuneralDate ( long a , long b ) {
-	long long prevWid = 0LL;
+	int64_t prevWid = 0LL;
 	// now scan forward from there
 	for ( long j = a ; j < b ; j++ ) {
 		// breathe
@@ -8164,7 +8164,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// set DF_PUB_DATE
 	//
 	//////////////////////////////
-	long long lastWid = 0LL;
+	int64_t lastWid = 0LL;
 	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -8208,7 +8208,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			// skip if punct word
 			if ( ! m_wids[a] ) continue;
 			// preserve this
-			long long saved = lastWid;
+			int64_t saved = lastWid;
 			// update it for an easy continue
 			lastWid = m_wids[a];
 			// count it
@@ -8635,7 +8635,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		if ( min < 0 ) min = 0;
 		// limit scan to 7 alnums back...
 		long alnumCount = 0;
-		long long lastWid = 0LL;
+		int64_t lastWid = 0LL;
 		for ( ; a >= min ; a-- ) {
 			// breathe
 			QUICKPOLL(m_niceness);
@@ -12285,12 +12285,12 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		if ( si->contains ( s2 ) ) break;
 		/*
 		if ( pt ) { 
-			long long *ph = (long long *)pt->getValue ( &si );
+			int64_t *ph = (int64_t *)pt->getValue ( &si );
 			if ( ph && ( phFinal1 ^ *ph ) ) phFinal1 ^= *ph;
 		}
 		// get any email hash as we go along
 		if ( et ) {
-			long long *eh = (long long *)et->getValue ( &si );
+			int64_t *eh = (int64_t *)et->getValue ( &si );
 			if ( eh && ( ehFinal1 ^ *eh ) ) ehFinal1 ^= *eh;
 		}
 		if ( rt ) {
@@ -12365,9 +12365,9 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	}
 
 
-	long long phFinal2 = 0;
-	long long ehFinal2 = 0;
-	long long ahFinal2 = 0;
+	int64_t phFinal2 = 0;
+	int64_t ehFinal2 = 0;
+	int64_t ahFinal2 = 0;
 	long      priceFinal2 = 0;
 
 	// blow up "s2" until we hit last section that does NOT contain "s2"
@@ -12380,12 +12380,12 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		/*
 		// get any phone number hash as we go along
 		if ( pt ) { 
-			long long *ph = (long long *)pt->getValue ( &si );
+			int64_t *ph = (int64_t *)pt->getValue ( &si );
 			if ( ph && ( phFinal2 ^ *ph ) ) phFinal2 ^= *ph;
 		}
 		// get any email hash as we go along
 		if ( et ) {
-			long long *eh = (long long *)et->getValue ( &si );
+			int64_t *eh = (int64_t *)et->getValue ( &si );
 			if ( eh && ( ehFinal2 ^ *eh ) ) ehFinal2 ^= *eh;
 		}
 		if ( rt ) {
@@ -12516,7 +12516,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
         cmp1.set(4,0,256,cbuf1,130000,false,m_niceness,"dates-cmp1");
 
 	// for log
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 
 	// now for section "last1" get range of all subsections to scan
 	//for(long i = last1->m_sortedIndex ; i<m_sections->m_numSections;i++){
@@ -12541,7 +12541,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		}
 	}
 
-	long long took = start - gettimeofdayInMilliseconds();
+	int64_t took = start - gettimeofdayInMilliseconds();
 
 	// for log
 	if ( took > 2 ) log("dates: CHECK subfield took %lli ms",took);
@@ -12885,7 +12885,7 @@ void Dates::setPhoneXors ( ) {
 		// must be 3 long
 		if ( m_wlens[i] != 4 ) continue;
 		// we got one!
-		long long h64 = m_wids[i-2] ^ m_wids[i];
+		int64_t h64 = m_wids[i-2] ^ m_wids[i];
 		// only need 32 bits
 		long h32 = (long)h64;
 		// get section
@@ -12949,7 +12949,7 @@ void Dates::setEmailXors ( ) {
 		if ( right - p < 3 ) continue;
 		if ( p - left  < 1 ) continue;
 		// hash it up
-		long long h32 = hash32Lower_utf8 ( left , right - left );
+		int64_t h32 = hash32Lower_utf8 ( left , right - left );
 		// if a not found, keep scanning
 		if ( h32 == 0LL ) continue;
 		// get section
@@ -12975,7 +12975,7 @@ void Dates::setPriceXors ( ) {
 	long price;
 	// init?
 	static bool s_init56 = false;
-	static long long h_free;
+	static int64_t h_free;
 	if ( ! s_init56 ) {
 		s_init56 = true;
 		h_free = hash64n("free");
@@ -13007,7 +13007,7 @@ void Dates::setPriceXors ( ) {
 		// hash that price
 		long h32 = (long)m_wids[i];
 		// we got one!
-		//long long h = m_wids[i-2] ^ m_wids[i];
+		//int64_t h = m_wids[i-2] ^ m_wids[i];
 		// get section
 		Section *sp = m_sections->m_sectionPtrs[k];
 		// telescope up!
@@ -13074,7 +13074,7 @@ void Dates::setTODXors ( ) {
 		if ( a < 0 ) continue;
 		char *sa = m_wptrs[a];
 		char *sb = m_wptrs[b-1] + m_wlens[b];
-		long long h = hash64 ( sa , sb - sa );
+		int64_t h = hash64 ( sa , sb - sa );
 		*/
 		// try this now
 		uint64_t h = di->m_dateHash64;
@@ -13140,7 +13140,7 @@ void Dates::setDayXors ( ) {
 		if ( a < 0 ) continue;
 		char *sa = m_wptrs[a];
 		char *sb = m_wptrs[b-1] + m_wlens[b];
-		long long h = hash64 ( sa , sb - sa );
+		int64_t h = hash64 ( sa , sb - sa );
 		// set section::m_dayXor
 		Section *sp = fd->m_section; 
 		// telescope up!
@@ -13171,7 +13171,7 @@ HashTableX *Dates::getFieldTable ( ) {
 	// declare this
 	HashTableX *tt = NULL;
 
-	long long h = 0LL;
+	int64_t h = 0LL;
 
 	// set it
 	for ( long i = 0 ; i < m_nw ; i++ ) {
@@ -13239,7 +13239,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 
 	char       **wptrs = words->getWords    ();
 	long        *wlens = words->getWordLens ();
-	long long   *wids  = words->getWordIds  ();
+	int64_t   *wids  = words->getWordIds  ();
 	nodeid_t    *tids  = words->getTagIds   ();
 
 	// do not create ranges of ranges or lists
@@ -13423,7 +13423,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 		// count em
 		long andcount = 0;
 		bool hyphen = false;
-		long long prevWid = 0LL;
+		int64_t prevWid = 0LL;
 		bool brokenRange = false;
 		long badWords = 0;
 		// scan what is between them to determine if is a range!
@@ -13914,7 +13914,7 @@ bool Dates::addLists ( Words *words , bool ignoreBreakingTags ) {
 
 	char       **wptrs = words->getWords    ();
 	long        *wlens = words->getWordLens ();
-	long long   *wids  = words->getWordIds  ();
+	int64_t   *wids  = words->getWordIds  ();
 	nodeid_t    *tids  = words->getTagIds   ();
 
 	// shortcut
@@ -14383,7 +14383,7 @@ bool Dates::makeCompounds ( Words *words ,
 
 	char       **wptrs = words->getWords    ();
 	long        *wlens = words->getWordLens ();
-	long long   *wids  = words->getWordIds  ();
+	int64_t   *wids  = words->getWordIds  ();
 	nodeid_t    *tids  = words->getTagIds   ();
 
 	// this range algo only works on simple date types for now
@@ -15032,7 +15032,7 @@ uint64_t Dates::getDateHash2 ( Date *di , Date *orig ) {
 			SF_FOURTH|
 			SF_FIFTH;
 		suppflags_t sf = di->m_suppFlags & rmask;
-		if ( sf ) h = hash64h ((long long)sf,h);
+		if ( sf ) h = hash64h ((int64_t)sf,h);
 		return h;
 	}
 	if ( dt == DT_TOD ) return hash64h(dt,di->m_num);
@@ -15063,7 +15063,7 @@ long Dates::printDateNeighborhood ( Date *di , Words *w ) {
 	char      **wptrs = w->getWords   ();
 	long       *wlens = w->getWordLens();
 	nodeid_t    *tids = w->m_tagIds;
-	long long   *wids = w->getWordIds();
+	int64_t   *wids = w->getWordIds();
 	SafeBuf sb;
 	long a = di->m_a;
 	long b = di->m_b;
@@ -15293,7 +15293,7 @@ void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 	nodeid_t *tids = words->getTagIds();
 	char **wptrs = words->getWords();
 	long  *wlens = words->getWordLens ();
-	long long   *wids = words->getWordIds();
+	int64_t   *wids = words->getWordIds();
 
 	//if ( m_numPtrs == 0 && (m_flags & DF_CLOSE_DATE) )
 	if ( (m_flags & DF_CLOSE_DATE) && inHtml )
@@ -16886,7 +16886,7 @@ void Date::print ( SafeBuf *sbArg ,
 
 
 	// make this
-	long long termId = hash64 ( m_clockHash , siteHash );
+	int64_t termId = hash64 ( m_clockHash , siteHash );
 	// mask it
 	termId &= TERMID_MASK;
 
@@ -17003,7 +17003,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	char      **wptrs = w->getWords   ();
 	long       *wlens = w->getWordLens();
 	nodeid_t    *tids = w->m_tagIds;
-	long long   *wids = w->getWordIds();
+	int64_t   *wids = w->getWordIds();
 
 	// save it
 	long savei = i;
@@ -17084,10 +17084,10 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	bool isMil = false;
 
 	// shortcuts
-	//long long h_and      = hash64b("and");
-	//long long h_to       = hash64b("to");
-	//long long h_noon     = hash64b("noon");
-	//long long h_midnight = hash64b("midnight");
+	//int64_t h_and      = hash64b("and");
+	//int64_t h_to       = hash64b("to");
+	//int64_t h_noon     = hash64b("noon");
+	//int64_t h_midnight = hash64b("midnight");
 
 	// does "noon" follow the number, which must be 12
 	if ( i + 2 < nw && hour == 12 && minute==0 && wids[i+2]==h_noon ) {
@@ -17405,7 +17405,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	// now we should be pointing to the timezone
 	*tzPtr = NULL;
 	// skip if word is "at", not a good timezone!
-	//long long h_at = hash64("at",2);
+	//int64_t h_at = hash64("at",2);
 	// tzptr will be set to NULL if not recognized as a timezone
 	long tznw = 0;
 	if ( wids[i] ) {
@@ -17781,13 +17781,13 @@ TimeZone tzs[] = {
 // hash table of timezone information
 static HashTableX s_tzt;
 
-static long long h_mountain;
-static long long h_eastern;
-static long long h_central;
-static long long h_pacific;
-static long long h_time2;
-static long long h_mdt;
-static long long h_at2;
+static int64_t h_mountain;
+static int64_t h_eastern;
+static int64_t h_central;
+static int64_t h_pacific;
+static int64_t h_time2;
+static int64_t h_mdt;
+static int64_t h_at2;
 
 bool initTimeZoneTable ( ) {
 
@@ -17843,7 +17843,7 @@ long getTimeZone ( char *s ) {
 // . returns how many words starting at i are in the time zone
 // . 0 means not a timezone
 long getTimeZoneWord ( long i ,
-		       long long *wids, 
+		       int64_t *wids, 
 		       long nw ,
 		       TimeZone **tzptr , 
 		       long niceness ) {
@@ -17900,7 +17900,7 @@ struct DateVal {
 	datetype_t m_type;
 	long       m_val;
 	char       m_numWids;
-	long long  m_wids[MAX_WIDS];
+	int64_t  m_wids[MAX_WIDS];
 };
 
 struct DateVal dvs[] = {
@@ -18249,9 +18249,9 @@ bool initDateTypes ( ) {
 		if ( ! tmp.setxi ( dv->m_str,localBuf,localBufSize,0)){
 			char *xx=NULL;*xx=0;}
 		// get wids
-		long long *kwids = tmp.m_wordIds;
+		int64_t *kwids = tmp.m_wordIds;
 		// first word hash is the key
-		long long h = kwids[0];
+		int64_t h = kwids[0];
 		// must be valid
 		if ( ! h ) { char *xx=NULL;*xx=0; }
 		// reset wid count
@@ -18284,7 +18284,7 @@ bool initDateTypes ( ) {
 }
 
 
-bool isMonth ( long long wid ) {
+bool isMonth ( int64_t wid ) {
 	// sanity check
 	if ( ! s_init98 ) { char *xx=NULL;*xx=0; }
 	// get slot
@@ -18300,7 +18300,7 @@ bool isMonth ( long long wid ) {
 }
 
 // used by Sections::addSentences()
-bool isDateType ( long long *pwid ) {
+bool isDateType ( int64_t *pwid ) {
 	// sanity check
 	if ( ! s_init98 ) { initDateTypes(); } // char *xx=NULL;*xx=0; }
 	// get slot
@@ -18331,7 +18331,7 @@ bool isDateType ( long long *pwid ) {
 // . get the DT_* type of date this is
 // . SUPPORT: "13th day of","12th month",...   "second week"(is a range)
 datetype_t Dates::getDateType ( long i , long *val , long *endWord ,
-				long long *wids , long nw ,
+				int64_t *wids , long nw ,
 				// does the word "on" preceed word #i?
 				bool onPreceeds ) {
 	// only init the table once
@@ -22977,7 +22977,7 @@ static HashTableX s_mt;
 static char       s_mbuf [ 6000 ];
 
 // returns -1 if not a valid month
-char getMonth ( long long wid ) {
+char getMonth ( int64_t wid ) {
 	// only init the table once
 	static bool s_init12 = false;
 	// set up the month name hashtable
@@ -24515,7 +24515,7 @@ long Dates::intersect2 ( Interval *int1 ,
 #endif
 
 	char buf[8];
-	long long *key = (long long *)buf;
+	int64_t *key = (int64_t *)buf;
 	long *A = (long *)&buf[0];
 	long *B = (long *)&buf[4];
 	char dbuf[10000];
@@ -25128,7 +25128,7 @@ void Dates::setEventBrotherBits ( ) {
 		for ( long i = 0 ; i < n ; i++ ) {
 			// set words
 			char *s = s_gwords[i];
-			long long h = hash64n(s);
+			int64_t h = hash64n(s);
 			s_gt.addKey ( &h );
 		}
 	}
@@ -25520,7 +25520,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			long min = a - 30;
 			if ( min < 0 ) min = 0;
 			long alnumCount = 0;
-			long long lastWid = 0LL;
+			int64_t lastWid = 0LL;
 			for ( ; a >= min ; a-- ) {
 				// breathe
 				QUICKPOLL(m_niceness);
@@ -26382,7 +26382,7 @@ bool Date::printTextNorm2 ( Interval **intervals ,
 			continue;
 		}
 		// grab a tod to process
-		long long key64 = (tod1<<32) | tod2;
+		int64_t key64 = (tod1<<32) | tod2;
 		// already did?
 		if ( dedup.isInTable ( &key64 ) ) continue;
 		// add it

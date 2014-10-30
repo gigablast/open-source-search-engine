@@ -28,7 +28,7 @@ static void gotReplyWrapper22     ( void *state1 , void *state2 ) ;
 // . calls callback(state) when done
 // . returns false if blocked true otherwise
 bool Msg22::getAvailDocIdOnly ( Msg22Request  *r              ,
-				long long preferredDocId ,
+				int64_t preferredDocId ,
 				char *coll ,
 				void *state ,
 				void (* callback)(void *state) ,
@@ -60,7 +60,7 @@ bool Msg22::getAvailDocIdOnly ( Msg22Request  *r              ,
 // . "url" must be NULL terminated
 bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  char          *url            ,
-			  long long      docId          ,
+			  int64_t      docId          ,
 			  char          *coll           ,
 			  char         **titleRecPtrPtr ,
 			  long          *titleRecSizePtr,
@@ -149,8 +149,8 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	// i don't see why not to always bias it, this makes tfndb page cache
 	// twice as effective for all lookups
 	long numTwins = g_hostdb.getNumHostsPerShard();
-	//long long bias=((0x0000003fffffffffLL)/(long long)numTwins);
-	long long sectionWidth = (DOCID_MASK/(long long)numTwins) + 1;
+	//int64_t bias=((0x0000003fffffffffLL)/(int64_t)numTwins);
+	int64_t sectionWidth = (DOCID_MASK/(int64_t)numTwins) + 1;
 	long hostNum = (docId & DOCID_MASK) / sectionWidth;
 	long numHosts = g_hostdb.getNumHostsPerShard();
 	Host *hosts = g_hostdb.getGroup ( groupId );
@@ -164,7 +164,7 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 
 	// put all alive hosts in this array
 	Host *cand[32];
-	long long  nc = 0;
+	int64_t  nc = 0;
 	for ( long i = 0 ; i < allNumHosts ; i++ ) {
 		// get that host
 		Host *hh = &allHosts[i];
@@ -180,7 +180,7 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 
 	// route based on docid region, not parity, because we want to hit
 	// the urldb page cache as much as possible
-	long long sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
+	int64_t sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
 	// we mod by 1MB since tied scores resort to sorting by docid
 	// so we don't want to overload the host responsible for the lowest
 	// range of docids. CAUTION: do this for msg22 too!
@@ -295,7 +295,7 @@ void Msg22::gotReply ( ) {
 		// we did not find it
 		m_found = false;
 		// get docid provided
-		long long d = *(long long *)reply;
+		int64_t d = *(int64_t *)reply;
 		// this is -1 or 0 if none available
 		m_availDocId = d;
 		// nuke the reply
@@ -340,15 +340,15 @@ public:
 	UdpSlot   *m_slot;
 	//long       m_tfn;
 	//long       m_tfn2;
-	long long  m_pd;
-	long long  m_docId1;
-	long long  m_docId2;
+	int64_t  m_pd;
+	int64_t  m_docId1;
+	int64_t  m_docId2;
 	//RdbList    m_ulist;
 	RdbList    m_tlist;
 	Msg5       m_msg5;
 	Msg5       m_msg5b;
-	long long  m_availDocId;
-	long long  m_uh48;
+	int64_t  m_availDocId;
+	int64_t  m_uh48;
 	class Msg22Request *m_r;
 	// free slot request here too
 	char *m_slotReadBuf;
@@ -452,9 +452,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        // but if we are requesting an available docid, it might be taken
        // so try the range
        if ( r->m_getAvailDocIdOnly ) {
-	       long long pd = r->m_docId;
-	       long long d1 = g_titledb.getFirstProbableDocId ( pd );
-	       long long d2 = g_titledb.getLastProbableDocId  ( pd );
+	       int64_t pd = r->m_docId;
+	       int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+	       int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
 	       // sanity - bad url with bad subdomain?
 	       if ( pd < d1 || pd > d2 ) { char *xx=NULL;*xx=0; }
 	       // make sure we get a decent sample in titledb then in 
@@ -481,9 +481,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 		       delete ( st );
 		       return; 
 	       }
-	       long long pd = g_titledb.getProbableDocId (r->m_url,dom,dlen);
-	       long long d1 = g_titledb.getFirstProbableDocId ( pd );
-	       long long d2 = g_titledb.getLastProbableDocId  ( pd );
+	       int64_t pd = g_titledb.getProbableDocId (r->m_url,dom,dlen);
+	       int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+	       int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
 	       // sanity - bad url with bad subdomain?
 	       if ( pd < d1 || pd > d2 ) { char *xx=NULL;*xx=0; }
 	       // there are no del bits in tfndb
@@ -539,7 +539,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	       // if we had a url make sure uh48 matches
 	       if ( r->m_url[0] ) {
 		       // get it
-		       long long uh48 = g_titledb.getUrlHash48(&k);
+		       int64_t uh48 = g_titledb.getUrlHash48(&k);
 		       // sanity check
 		       if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
 		       // we must match this exactly
@@ -669,7 +669,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	RdbBase *tbase = getRdbBase(RDB_TITLEDB,coll);
 
 	// set probable docid
-	long long pd = 0LL;
+	int64_t pd = 0LL;
 	if ( r->m_url[0] ) {
 		pd = g_titledb.getProbableDocId(r->m_url);
 		// sanity
@@ -678,8 +678,8 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
-	long long ad1 = st->m_docId1;
-	long long ad2 = pd;
+	int64_t ad1 = st->m_docId1;
+	int64_t ad2 = pd;
 
 
 	long tfn = -1;
@@ -702,7 +702,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// if we have a url and no docid, we gotta check uh48!
 		if ( r->m_url[0] && g_tfndb.getUrlHash48(&k)!=st->m_uh48){
 			// get docid of that guy
-			long long dd = g_tfndb.getDocId(&k);
+			int64_t dd = g_tfndb.getDocId(&k);
 			// if matches avail docid, inc it
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
@@ -727,7 +727,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( ad1 >= pd           ) ad1 = 0LL;
 	if ( ad2 >  st->m_docId2 ) ad2 = 0LL;
 	// get best
-	long long ad = ad2;
+	int64_t ad = ad2;
 	// but wrap around if we need to
 	if ( ad == 0LL ) ad = ad1;
 
@@ -772,7 +772,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// store docid in reply
 		char *p = st->m_slot->m_tmpBuf;
 		// send back the available docid
-		*(long long *)p = ad;
+		*(int64_t *)p = ad;
 		// send it
 		us->sendReply_ass ( p , 8 , p , 8 , st->m_slot );
 		// don't forget to free state
@@ -888,7 +888,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	RdbList *tlist = &st->m_tlist;
 
 	// set probable docid
-	long long pd = 0LL;
+	int64_t pd = 0LL;
 	if ( r->m_url[0] ) {
 		pd = g_titledb.getProbableDocId(r->m_url);
 		if ( pd != st->m_pd ) { 
@@ -906,8 +906,8 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
-	long long ad1 = st->m_docId1;
-	long long ad2 = pd;
+	int64_t ad1 = st->m_docId1;
+	int64_t ad2 = pd;
 
 
 	bool docIdWasFound = false;
@@ -925,7 +925,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		if ( ( k->n0 & 0x01 ) == 0x00 ) continue;
 
 		// get docid of that titlerec
-		long long dd = g_titledb.getDocId(k);
+		int64_t dd = g_titledb.getDocId(k);
 
 		if ( r->m_getAvailDocIdOnly ) {
 			// make sure our available docids are availble!
@@ -936,7 +936,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// if we had a url make sure uh48 matches
 		else if ( r->m_url[0] ) {
 			// get it
-			long long uh48 = g_titledb.getUrlHash48(k);
+			int64_t uh48 = g_titledb.getUrlHash48(k);
 			// sanity check
 			if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
 			// make sure our available docids are availble!
@@ -996,7 +996,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( ad1 >= pd           ) ad1 = 0LL;
 	if ( ad2 >  st->m_docId2 ) ad2 = 0LL;
 	// get best
-	long long ad = ad2;
+	int64_t ad = ad2;
 	// but wrap around if we need to
 	if ( ad == 0LL ) ad = ad1;
 	// if "docId" was unmatched that should be the preferred available
@@ -1014,7 +1014,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// store docid in reply
 		char *p = st->m_slot->m_tmpBuf;
 		// send back the available docid
-		*(long long *)p = st->m_availDocId;
+		*(int64_t *)p = st->m_availDocId;
 		// send it
 		us->sendReply_ass ( p , 8 , p , 8 , st->m_slot );
 		// don't forget to free state

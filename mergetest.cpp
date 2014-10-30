@@ -241,7 +241,7 @@ void test1 ( int arg ) {
 	list.prepareForMerge (lists,numToMerge,numKeysWanted * sizeof(key_t));
 	// start time
 	fprintf(stderr,"starting merge\n");
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 	// do it
 	list.indexMerge_r ( lists         ,
 			    numToMerge    ,
@@ -272,7 +272,7 @@ void test1 ( int arg ) {
 				   maxKey );
 	*/
 	// completed
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	fprintf(stderr,"smt:: %li list NEW MERGE took %llu ms\n",
 		numToMerge,now-t);
 	// time per key

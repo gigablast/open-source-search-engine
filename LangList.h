@@ -27,7 +27,7 @@ public:
 
 	// . lookup word in language lists
 	// . returns false if unknown true if found and lang set
-	bool lookup ( long long      termId,
+	bool lookup ( int64_t      termId,
 		      unsigned char *lang   );
 	
 	char* getCountryFromTld(char* tld, long tldLen);

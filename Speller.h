@@ -85,8 +85,8 @@ class Speller {
 
 	void test (char *ff);
 
-	//uint8_t getUniqueLang ( long long *wid );
-	long long getLangBits64 ( long long *wid ) ;
+	//uint8_t getUniqueLang ( int64_t *wid );
+	int64_t getLangBits64 ( int64_t *wid ) ;
 
 	long getPhrasePopularity ( char *s, uint64_t h,
 				   bool checkTitleRecDict,
@@ -146,9 +146,9 @@ class Speller {
 	void dictLookupTest ( char *ff );
 
 	char *getPhraseRecord(char *phrase, int len);
-	long long *getPhraseLanguages(char *phrase, int len);
-	bool getPhraseLanguages(char *phrase, int len, long long *array);
-	bool getPhraseLanguages2 (char *phraseRec , long long *array) ;
+	int64_t *getPhraseLanguages(char *phrase, int len);
+	bool getPhraseLanguages(char *phrase, int len, int64_t *array);
+	bool getPhraseLanguages2 (char *phraseRec , int64_t *array) ;
 	char getPhraseLanguage(char *phrase, int len );
 	bool getSynsInEnglish ( char *w , 
 				long wlen ,

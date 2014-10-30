@@ -215,7 +215,7 @@ bool Collectiondb::cleanTrees ( ) {
 /*
 void Collectiondb::updateTime() {
 	// get time now in milliseconds
-	long long newTime = gettimeofdayInMilliseconds();
+	int64_t newTime = gettimeofdayInMilliseconds();
 	// change it
 	if ( m_lastUpdateTime == newTime ) newTime++;
 	// update it
@@ -342,7 +342,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	if ( newCollnum < 0 ) { char *xx=NULL;*xx=0; }
 
 	// ceiling?
-	//long long maxColls = 1LL<<(sizeof(collnum_t)*8);
+	//int64_t maxColls = 1LL<<(sizeof(collnum_t)*8);
 	//if ( i >= maxColls ) {
 	//	g_errno = ENOBUFS;
 	//	return log("admin: Limit of %lli collection reached. "
@@ -1095,7 +1095,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 		// tally it up
 		m_numRecsUsed--;
 		// delete key
-		long long h64 = hash64n(oc->m_coll);
+		int64_t h64 = hash64n(oc->m_coll);
 		// if in the hashtable UNDER OUR COLLNUM then nuke it
 		// otherwise, we might be called from resetColl2()
 		void *vp = g_collTable.getValue ( &h64 );
@@ -1114,7 +1114,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	if ( cr->m_collnum != collnum ) { char *xx=NULL;*xx=0; }
 
 	// add to hash table to map name to collnum_t
-	long long h64 = hash64n(cr->m_coll);
+	int64_t h64 = hash64n(cr->m_coll);
 	// debug
 	//log("coll: adding key %lli for %s",h64,cr->m_coll);
 	if ( ! g_collTable.addKey ( &h64 , &collnum ) ) 
@@ -1379,7 +1379,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 // a hack function
 bool addCollToTable ( char *coll , collnum_t collnum ) {
 	// readd it to the hashtable that maps name to collnum too
-	long long h64 = hash64n(coll);
+	int64_t h64 = hash64n(coll);
 	g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
 			false,0,"nhshtbl");
 	return g_collTable.addKey ( &h64 , &collnum );
@@ -1534,7 +1534,7 @@ collnum_t Collectiondb::getCollnum ( char *coll ) {
 
 	// because diffbot may have thousands of crawls/collections
 	// let's improve the speed here. try hashing it...
-	long long h64 = hash64n(coll);
+	int64_t h64 = hash64n(coll);
 	void *vp = g_collTable.getValue ( &h64 );
 	if ( ! vp ) return -1; // not found
 	return *(collnum_t *)vp;
@@ -1582,7 +1582,7 @@ collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
 
 	// because diffbot may have thousands of crawls/collections
 	// let's improve the speed here. try hashing it...
-	long long h64 = hash64(coll,clen);
+	int64_t h64 = hash64(coll,clen);
 	void *vp = g_collTable.getValue ( &h64 );
 	if ( ! vp ) return -1; // not found
 	return *(collnum_t *)vp;
@@ -1973,7 +1973,7 @@ bool CollectionRec::countEvents ( ) {
 	// 1MB at a time
 	long minRecSizes = 1000000;
 	// look up this termlist, gbeventcount which we index in XmlDoc.cpp
-	long long termId = hash64n("gbeventcount") & TERMID_MASK;
+	int64_t termId = hash64n("gbeventcount") & TERMID_MASK;
 	// make datedb key from it
 	key128_t startKey = g_datedb.makeStartKey ( termId , 0xffffffff );
 	key128_t endKey   = g_datedb.makeEndKey ( termId , 0 );
@@ -3724,7 +3724,7 @@ void testRegex ( ) {
 	exit(0);
 }
 
-long long CollectionRec::getNumDocsIndexed() {
+int64_t CollectionRec::getNumDocsIndexed() {
 	RdbBase *base = getBase(RDB_TITLEDB);//m_bases[RDB_TITLEDB];
 	if ( ! base ) return 0LL;
 	return base->getNumGlobalRecs();

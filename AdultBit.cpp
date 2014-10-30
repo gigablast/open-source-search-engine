@@ -99,14 +99,14 @@ bool AdultBit::isDirty ( char *s , long len ) {
 		// now add in all the dirty words
 		long n = (long)sizeof(s_dirty)/ sizeof(char *); 
 		for ( long i = 0 ; i < n ; i++ ) {
-			long long h = hash64b ( s_dirty  [i] );
+			int64_t h = hash64b ( s_dirty  [i] );
 			if ( ! s_dtable.addTerm (&h, i+1) ) return false;
 		}
 		s_isInitialized = true;
 	} 
 
 	// compute the hash of the word "s"
-	long long h = hash64Lower_a ( s , len );
+	int64_t h = hash64Lower_a ( s , len );
 
 	// get from table
 	return s_dtable.getScore ( &h );
@@ -146,14 +146,14 @@ bool AdultBit::isObscene ( char *s , long len ) {
 		// now add in all the stop words
 		long n = sizeof(s_obscene) / sizeof(char *);
 		for ( long i = 0 ; i < n ; i++ ) {
-			long long h = hash64b ( s_obscene[i] );
+			int64_t h = hash64b ( s_obscene[i] );
 			if ( ! s_otable.addTerm ( &h, i+1 ) ) return false;
 		}
 		s_isInitialized = true;
 	} 
 
 	// compute the hash of the word "s"
-	long long h = hash64Lower_a ( s , len );
+	int64_t h = hash64Lower_a ( s , len );
 
 	// get from table
 	return s_otable.getScore ( &h );

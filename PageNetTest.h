@@ -84,9 +84,9 @@ class PageNetTest {
 	struct sockaddr_in m_from;
 
 
-	long long          m_startTime;
-	long long          m_endTime;
-	long long          m_calcTime;
+	int64_t          m_startTime;
+	int64_t          m_endTime;
+	int64_t          m_calcTime;
 
 	long		   m_hostId;
 	long		   m_switchId;

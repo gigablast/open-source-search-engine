@@ -18,23 +18,23 @@ bool isClockInSync() {
 
 bool print96 ( char *k ) {
         key_t *kp = (key_t *)k;
-        printf("n1=0x%lx n0=0x%llx\n",(long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%lx n0=0x%llx\n",(long)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
 bool print96 ( key_t *kp ) {
-        printf("n1=0x%lx n0=0x%llx\n",(long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%lx n0=0x%llx\n",(long)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
 bool print128 ( char *k ) {
         key128_t *kp = (key128_t *)k;
-        printf("n1=0x%llx n0=0x%llx\n",(long long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%llx n0=0x%llx\n",(int64_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
 bool print128 ( key128_t *kp ) {
-        printf("n1=0x%llx n0=0x%llx\n",(long long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%llx n0=0x%llx\n",(int64_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
@@ -980,18 +980,18 @@ long atol2 ( const char *s, long len ) {
 	return val;
 }
 
-long long atoll1 ( const char *s ) {
+int64_t atoll1 ( const char *s ) {
 	return atoll ( s );
 }
 
-long long atoll2 ( const char *s, long len ) {
+int64_t atoll2 ( const char *s, long len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) s++;
 	// return 0 if all spaces
 	if ( s == end ) return 0;
 	long i   = 0;
-	long long val = 0LL;
+	int64_t val = 0LL;
 	bool negative = false;
 	if ( s[0] == '-' ) { negative = true; i++; }
 	while ( i < len && is_digit(s[i]) ) val = val * 10LL + ( s[i++] - '0');
@@ -1053,14 +1053,14 @@ bool atob ( const char *s, long len ) {
 }
 
 // hexadecimal ascii to key_t
-long long htolonglong ( const char *s, long len ) {
+int64_t htolonglong ( const char *s, long len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) s++;
 	// return 0 if all spaces
 	if ( s == end ) return 0;
 	long i   = 0;
-	long long val = 0;
+	int64_t val = 0;
 	while ( i < len && is_hex(s[i]) )
 		val = val * 16 + htob ( s[i++] );
 	return val;
@@ -1690,16 +1690,16 @@ long getNumWords ( char *s ) {
 	goto loop;
 }
 
-static long long s_adjustment = 0;
+static int64_t s_adjustment = 0;
 
-long long globalToLocalTimeMilliseconds ( long long global ) {
+int64_t globalToLocalTimeMilliseconds ( int64_t global ) {
 	// sanity check
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Converting global time but clock not in sync.");
 	return global - s_adjustment;
 }
 
-long long localToGlobalTimeMilliseconds ( long long local ) {
+int64_t localToGlobalTimeMilliseconds ( int64_t local ) {
 	// sanity check
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Converting global time but clock not in sync.");
@@ -1760,12 +1760,12 @@ bool loadTimeAdjustment ( ) {
 	}
 	close(fd);
 	// parse the text line
-	long long stampTime = 0LL;
-	long long clockAdj  = 0LL;
+	int64_t stampTime = 0LL;
+	int64_t clockAdj  = 0LL;
 	sscanf ( rbuf , "%llu %lli", &stampTime, &clockAdj );
 	// get stamp age
-	long long local = gettimeofdayInMillisecondsLocal();
-	long long stampAge = local - stampTime;
+	int64_t local = gettimeofdayInMillisecondsLocal();
+	int64_t stampAge = local - stampTime;
 	// if too old forget about it
 	if ( stampAge > 2*86400 ) return true;
 	// update adjustment
@@ -1788,7 +1788,7 @@ bool saveTimeAdjustment ( ) {
 	// must be in sync!
 	if ( ! g_clockInSync ) return true;
 	// store it
-	long long local = gettimeofdayInMillisecondsLocal();
+	int64_t local = gettimeofdayInMillisecondsLocal();
 	char wbuf[1024];
 	sprintf (wbuf,"%llu %lli\n",local,s_adjustment);
 	// write it out
@@ -1817,19 +1817,19 @@ bool saveTimeAdjustment ( ) {
 }
 
 // a "fake" settimeofdayInMilliseconds()
-void settimeofdayInMillisecondsGlobal ( long long newTime ) {
+void settimeofdayInMillisecondsGlobal ( int64_t newTime ) {
 	// can't do this in sig handler
 	if ( g_inSigHandler ) return;
 	// this isn't async signal safe...
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// bail if no change... UNLESS we need to sync clock!!
 	if ( s_adjustment == newTime - now && g_clockInSync ) return;
 	// log it, that way we know if there is another issue
 	// with flip-flopping (before we synced with host #0 and also
 	// with proxy #0)
-	long long delta = s_adjustment - (newTime - now) ;
+	int64_t delta = s_adjustment - (newTime - now) ;
 	if ( delta > 100 || delta < -100 )
 		logf(LOG_INFO,"gb: Updating clock adjustment from "
 		     "%lli ms to %lli ms", s_adjustment , newTime - now );
@@ -1863,13 +1863,13 @@ long getTimeSynced() {
 	return gettimeofdayInMillisecondsSynced() / 1000;
 }
 
-long long gettimeofdayInMillisecondsGlobal() {
+int64_t gettimeofdayInMillisecondsGlobal() {
 	return gettimeofdayInMillisecondsSynced();
 }
 
 #include "Threads.h"
 
-long long gettimeofdayInMillisecondsSynced() {
+int64_t gettimeofdayInMillisecondsSynced() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_nowGlobal;
 	// i find that a pthread can call this function even though
@@ -1886,7 +1886,7 @@ long long gettimeofdayInMillisecondsSynced() {
 	// this isn't async signal safe...
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
 	// adjust from Msg0x11 time adjustments
@@ -1896,7 +1896,7 @@ long long gettimeofdayInMillisecondsSynced() {
 	return now;
 }
 
-long long gettimeofdayInMillisecondsGlobalNoCore() {
+int64_t gettimeofdayInMillisecondsGlobalNoCore() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_nowGlobal;
 	// i find that a pthread can call this function even though
@@ -1910,7 +1910,7 @@ long long gettimeofdayInMillisecondsGlobalNoCore() {
 	// this isn't async signal safe...
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
 	// adjust from Msg0x11 time adjustments
@@ -1920,7 +1920,7 @@ long long gettimeofdayInMillisecondsGlobalNoCore() {
 	return now;
 }
 
-long long gettimeofdayInMillisecondsLocal() {
+int64_t gettimeofdayInMillisecondsLocal() {
 	return gettimeofdayInMilliseconds();
 }
 
@@ -1931,7 +1931,7 @@ uint64_t gettimeofdayInMicroseconds(void) {
 }
 
 // "local" means the time on this machine itself, NOT a timezone thing.
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_now;
 	// i find that a pthread can call this function even though
@@ -1943,7 +1943,7 @@ long long gettimeofdayInMilliseconds() {
 	//g_loop.disableTimer();
 	gettimeofday ( &tv , NULL );
 	//g_loop.enableTimer();
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
 	// adjust from Msg0x11 time adjustments
@@ -2016,7 +2016,7 @@ long saftenTags2 ( char *s , long slen , char *t , long tlen ) {
 	return s - start;
 }
 
-void getCalendarFromMs(long long ms, 
+void getCalendarFromMs(int64_t ms, 
 		       long* days, 
 		       long* hours, 
 		       long* minutes, 
@@ -2028,7 +2028,7 @@ void getCalendarFromMs(long long ms,
 	long d = h * 24;
 
 	*days = ms / d;
-	long long tmp = ms % d;
+	int64_t tmp = ms % d;
 	*hours = tmp / h;
 	tmp = tmp % h;
 	*minutes = tmp / m;

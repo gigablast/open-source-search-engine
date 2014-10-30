@@ -1146,16 +1146,16 @@ long HttpRequest::getLongFromCookie    ( char *field, long def ) {
 	long flen;
 	char *cs = getStringFromCookie ( field , &flen , NULL );
 	if ( ! cs ) return def;
-	long long cv = atoll(cs);
+	int64_t cv = atoll(cs);
 	// convert
 	return (long)cv;
 }
 
-long long HttpRequest::getLongLongFromCookie ( char *field, long long def ) {
+int64_t HttpRequest::getLongLongFromCookie ( char *field, int64_t def ) {
 	long flen;
 	char *cs = getStringFromCookie ( field , &flen , NULL );
 	if ( ! cs ) return def;
-	long long cv = strtoull(cs,NULL,10);
+	int64_t cv = strtoull(cs,NULL,10);
 	return cv;
 }
 
@@ -1313,8 +1313,8 @@ long HttpRequest::getLong ( char *field , long defaultLong ) {
 	 return res;
 }
 
-long long HttpRequest::getLongLong   ( char *field , 
-					long long defaultLongLong ) {
+int64_t HttpRequest::getLongLong   ( char *field , 
+					int64_t defaultLongLong ) {
 	 long len;
 	 char *value = getValue ( field, &len, NULL );
 	 // return default if no match
@@ -1322,7 +1322,7 @@ long long HttpRequest::getLongLong   ( char *field ,
 	 // otherwise, it's a match
 	 char c = value[len];
 	 value[len] = '\0';
-	 long long res = strtoull ( value , NULL, 10 );
+	 int64_t res = strtoull ( value , NULL, 10 );
 	 value[len] = c;
 	 if ( res == 0 ) {
 		 // may be an error. if so return the default

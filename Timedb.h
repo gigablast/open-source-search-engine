@@ -53,7 +53,7 @@ class Timedb {
 	bool init2 ( long treeMem ) ;
 
 	key128_t makeKey ( time_t    startTime ,
-			   long long docId , 
+			   int64_t docId , 
 			   uint16_t  eventId ,
 			   time_t    endTime ,
 			   time_t    nextStartTime ,
@@ -77,7 +77,7 @@ class Timedb {
 	time_t   getNextStartTime32 ( key128_t *k ) {
 		return (((k->n0 >>  1)&0x03ffffff) * 60 + START2009); }
 	// a simple mask on this one
-	long long getDocId   ( key128_t *k ) {
+	int64_t getDocId   ( key128_t *k ) {
 		return (k->n1 & DOCID_MASK); };
 	// need to mask out 11 bits
 	uint16_t  getEventId ( key128_t *k ) {

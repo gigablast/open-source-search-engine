@@ -326,7 +326,7 @@ class RdbTree {
 	// to fix lar's machine
 	bool oldLoad  ( BigFile *f , RdbMem *memStack ) ;
 	long oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
-			    long long offset );
+			    int64_t offset );
 
 	long getMinUnusedNode () { return m_minUnusedNode; };
 
@@ -369,20 +369,20 @@ class RdbTree {
 	void     *m_state; 
 	void    (* m_callback) (void *state );
 
-	long long getBytesWritten ( ) { return m_bytesWritten; };
-	long long getBytesRead    ( ) { return m_bytesRead   ; };
+	int64_t getBytesWritten ( ) { return m_bytesWritten; };
+	int64_t getBytesRead    ( ) { return m_bytesRead   ; };
 
 	// private:
 
 	// used by fastSave() and fastLoad()
 	long fastSaveBlock_r ( int        fd         ,
 			       long       start      , 
-			       long long  offset     ) ;
+			       int64_t  offset     ) ;
 	long fastLoadBlock ( BigFile *f            , 
 			     long       start      , 
 			     long       totalNodes ,
 			     RdbMem    *stack      ,
-			     long long  offset     );
+			     int64_t  offset     );
 
 	void setDepths    ( long bottomNode );
 	long rotateRight  ( long pivotNode );
@@ -449,8 +449,8 @@ class RdbTree {
 	char *m_allocName;
 
 	// so we can save the tree within a file that has other stuff
-	long long m_bytesWritten;
-	long long m_bytesRead;
+	int64_t m_bytesWritten;
+	int64_t m_bytesRead;
 
 	long m_saveErrno;
 	char m_ks;

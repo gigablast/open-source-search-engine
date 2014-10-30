@@ -980,7 +980,7 @@ bool Repair::save ( ) {
 	// first 8 bytes are the size of the DATA file we're mapping
 	g_errno = 0;
 	long      size   = &m_SAVE_END - &m_SAVE_START;
-	long long offset = 0LL;
+	int64_t offset = 0LL;
 	ff.write ( &m_SAVE_START , size , offset ) ;
 	ff.close();
 	return true;
@@ -1001,7 +1001,7 @@ bool Repair::load ( ) {
 	// first 8 bytes are the size of the DATA file we're mapping
 	g_errno = 0;
 	long      size   = &m_SAVE_END - &m_SAVE_START;
-	long long offset = 0LL;
+	int64_t offset = 0LL;
 	ff.read ( &m_SAVE_START, size , offset ) ;
 	ff.close();
 
@@ -1474,7 +1474,7 @@ bool Repair::gotScanRecList ( ) {
 		m_nextTitledbKey = next;
 		*/
 		// get the docid
-		//long long dd = g_titledb.getDocIdFromKey(&m_nextTitledbKey);
+		//int64_t dd = g_titledb.getDocIdFromKey(&m_nextTitledbKey);
 		// inc it
 		//dd++;
 		// re-make key
@@ -1526,7 +1526,7 @@ bool Repair::gotScanRecList ( ) {
 
 	// nextRec2:
 	key_t tkey = m_titleRecList.getCurrentKey();
-	long long docId = g_titledb.getDocId ( &tkey );
+	int64_t docId = g_titledb.getDocId ( &tkey );
 	// save it
 	//m_currentTitleRecKey = tkey;
 
@@ -1890,7 +1890,7 @@ bool Repair::injectTitleRec ( ) {
 		// skip negative recs, first one should not be negative however
 		if ( ( k->n0 & 0x01 ) == 0x00 ) continue;
 		// get docid of that guy
-		long long dd = g_titledb.getDocId(k);
+		int64_t dd = g_titledb.getDocId(k);
 		// compare that
 		if ( m_docId != dd ) continue;
 		// we got it!
@@ -2224,10 +2224,10 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 		status = "waiting for power to return";
 
 	// the titledb scan stats (phase 1)
-	long long ns     = m_recsScanned ;
-	long long nr     = g_titledb.getRdb()->getNumTotalRecs() ;
+	int64_t ns     = m_recsScanned ;
+	int64_t nr     = g_titledb.getRdb()->getNumTotalRecs() ;
 	float     ratio  = ((float)ns * 100.0) / (float)nr;
-	long long errors = 
+	int64_t errors = 
 		m_recsOutOfOrder +
 		m_recsetErrors   +
 		m_recsCorruptErrors +
@@ -2235,10 +2235,10 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 		m_recsDupDocIds    ;
 
 	// the spiderdb scan stats (phase 2)
-	long long ns2     = m_spiderRecsScanned ;
-	long long nr2     = g_spiderdb.getRdb()->getNumTotalRecs() ;
+	int64_t ns2     = m_spiderRecsScanned ;
+	int64_t nr2     = g_spiderdb.getRdb()->getNumTotalRecs() ;
 	float     ratio2  = ((float)ns2 * 100.0) / (float)nr2;
-	long long errors2 = 
+	int64_t errors2 = 
 		m_spiderRecSetErrors;
 
 	char *newColl = " &nbsp; ";
@@ -2470,7 +2470,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	for ( long i = 0 ; i < nsr ; i++ ) {
 		char *bg = DARK_BLUE;
 		Rdb *rdb = rdbs[i];
-		long long tr = rdb->getNumTotalRecs();
+		int64_t tr = rdb->getNumTotalRecs();
 		// skip if init2() as not called on it b/c the
 		// m_dbname will be 0
 		if ( tr == 0 ) continue;

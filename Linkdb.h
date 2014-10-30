@@ -46,7 +46,7 @@ public:
 	// either MODE_PAGELINKINFO or MODE_SITELINKINFO
 	char       m_mode; // bool       m_isSiteLinkInfo    ;
 	long       m_ip                ;
-	long long  m_docId             ;
+	int64_t  m_docId             ;
 	collnum_t  m_collnum           ;
 	bool       m_isInjecting       ;
 	bool       m_printInXml        ;
@@ -78,8 +78,8 @@ public:
 
 	// new stuff
 	long       m_siteHash32;
-	long long  m_siteHash64;
-	long long  m_linkHash64;
+	int64_t  m_siteHash64;
+	int64_t  m_linkHash64;
 	// for linked list of these guys in g_lineTable in Linkdb.cpp
 	// but only used on the server end, not client end
 	class Msg25Request *m_next;
@@ -115,7 +115,7 @@ bool getLinkInfo ( SafeBuf *reqBuf , // store msg25 request in here
 		   char      *url  ,
 		   bool       isSiteLinkInfo ,
 		   long       ip                  ,
-		   long long  docId               ,
+		   int64_t  docId               ,
 		   collnum_t collnum ,
 		   char      *qbuf                ,
 		   long       qbufSize            ,
@@ -177,7 +177,7 @@ class Linkdb {
 			      unsigned char linkerSiteRank , // 0-15 i guess
 			      unsigned char linkerHopCount ,
 			      uint32_t  linkerIp       ,
-			      long long linkerDocId    ,
+			      int64_t linkerDocId    ,
 			      unsigned long      discoveryDate  ,
 			      unsigned long      lostDate       ,
 			      bool      newAddToOldPage   ,
@@ -219,13 +219,13 @@ class Linkdb {
 	}
 
 	/*
-	long long getUrlHash ( Url *url ) {
+	int64_t getUrlHash ( Url *url ) {
 		// . now use the probable docid (UNMASKED)
 		// . this makes it so we reside on the same host as the
 		//   titleRec and spiderRec of this url. that way Msg14
 		//   is assured of adding the Linkdb rec before the Spiderdb
 		//   rec and therefore of getting its parent as an inlinker.
-		long long h = g_titledb.getProbableDocId(url,false);
+		int64_t h = g_titledb.getProbableDocId(url,false);
 		// now it is the lower 47 bits since we added the spam bit
 		return h & 0x00007fffffffffffLL;	}
 	*/
@@ -284,7 +284,7 @@ class Linkdb {
 		return (long)((k->n2>>8)&0x00ffffff); 
 	}
 
-	long long getLinkerDocId_uk( key224_t *k ) {
+	int64_t getLinkerDocId_uk( key224_t *k ) {
 		uint64_t d = k->n2 & 0xff;
 		d <<= 30;
 		d |= k->n1 >>34;
@@ -428,7 +428,7 @@ class Msg25 {
 			   char      *url  ,
 			   bool       isSiteLinkInfo ,
 			   long       ip                  ,
-			   long long  docId               ,
+			   int64_t  docId               ,
 			   //char      *coll                ,
 			   collnum_t collnum,
 			   char      *qbuf                ,
@@ -489,7 +489,7 @@ class Msg25 {
 	class Msg20Reply *getLoser (class Msg20Reply *r, class Msg20Reply *p);
 	char             *isDup    (class Msg20Reply *r, class Msg20Reply *p);
 
-	bool addNote ( char *note , long noteLen , long long docId );
+	bool addNote ( char *note , long noteLen , int64_t docId );
 
 	//class LinkInfo *getLinkInfo () { return m_linkInfo; };
 
@@ -532,7 +532,7 @@ class Msg25 {
 	bool       m_prependWWW;
 	bool       m_onlyNeedGoodInlinks;
 	bool       m_getLinkerTitles;
-	long long  m_docId;
+	int64_t  m_docId;
 	//char      *m_coll;
 	collnum_t m_collnum;
 	//long       m_collLen;
@@ -592,7 +592,7 @@ class Msg25 {
 
 	// make this dynamic to avoid wasting so much space when must pages
 	// have *very* few inlinkers. make it point to m_dbuf by default.
-	//long long m_docIds    [ MAX_DOCIDS_TO_SAMPLE ];
+	//int64_t m_docIds    [ MAX_DOCIDS_TO_SAMPLE ];
 
 	//char      m_hasLinkText [ MAX_LINKERS ];
 
@@ -604,7 +604,7 @@ class Msg25 {
 	long      m_uniqueIps;
 
 	// new stuff for getting term freqs for really huge links: termlists
-	//long long m_termId;
+	//int64_t m_termId;
 	//Msg42     m_msg42;
 	long      m_minRecSizes;
 	//long      m_termFreq;
@@ -674,7 +674,7 @@ class Msg25 {
 
 	// this is for deduping docids because we now combine the linkdb
 	// list of docids with the old inlinks in the old link info
-	//HashTableT <long long, char> m_docIdTable;
+	//HashTableT <int64_t, char> m_docIdTable;
 	HashTableX m_docIdTable;
 
 	// special counts
@@ -685,7 +685,7 @@ class Msg25 {
 	long      m_ipDups;
 
 	unsigned long  m_groupId;
-	long long      m_probDocId;
+	int64_t      m_probDocId;
 
 	LinkInfo *m_oldLinkInfo;
 
@@ -716,7 +716,7 @@ class NoteEntry {
 public:
 	long             m_count;
 	char            *m_note;
-	long long        m_docIds[MAX_ENTRY_DOCIDS];
+	int64_t        m_docIds[MAX_ENTRY_DOCIDS];
 };
 
 // . takes a bunch of Msg20Replies and makes a serialized buffer, LinkInfo
@@ -871,7 +871,7 @@ class Inlink { // : public Msg {
 	char *getLinkTextAsUtf8 ( long *len = NULL ) ;
 
 	long       m_ip                  ;
-	long long  m_docId               ;
+	int64_t  m_docId               ;
 	long       m_firstSpidered       ;
 	long       m_lastSpidered        ;
 	long	   m_nextSpiderDate	 ;
@@ -1017,7 +1017,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			 // if link spam give this weight
 			 long         spamWeight              ,
 			 bool         oneVotePerIpTop         ,
-			 long long    linkeeDocId             ,
+			 int64_t    linkeeDocId             ,
 			 long         lastUpdateTime          ,
 			 bool         onlyNeedGoodInlinks      ,
 			 long         niceness                ,

@@ -47,8 +47,8 @@ class Msg2 {
 			char *whiteList,
 			// for intersecting ranges of docids separately
 			// to prevent OOM errors
-			long long docIdStart,
-			long long docIdEnd,
+			int64_t docIdStart,
+			int64_t docIdEnd,
 			// isSplit[i] is true if list #i is split.
 			// i.e. gbdom:xyz.com, etc.
 			//char    *isSplit , 
@@ -71,8 +71,8 @@ class Msg2 {
 
 	// list of sites to restrict search results to. space separated
 	char *m_whiteList;
-	long long m_docIdStart;
-	long long m_docIdEnd;
+	int64_t m_docIdStart;
+	int64_t m_docIdEnd;
 	char *m_p;
 	long  m_w;
 	RdbList m_whiteLists [ MAX_WHITELISTS ];
@@ -157,7 +157,7 @@ class Msg2 {
 	//long m_totalRead;
 
 	// start time
-	long long m_startTime;
+	int64_t m_startTime;
 };
 
 #endif

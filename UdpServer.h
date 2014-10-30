@@ -204,28 +204,28 @@ class UdpServer {
 	// . returns false if it read nothing and had no errors
 	// . returns true  if it read something or had an error so you can
 	//   call it again ASAP because it has unfinished business
-	bool readPoll ( long long now );
+	bool readPoll ( int64_t now );
 
 	// . this is called by main/Loop.cpp when m_sock is ready for writing
 	// . actually it calls sendPollWrapper()
 	// . it sends as much as it can from all UdpSlots until one blocks
 	//   or until it's done 
 	// . sends both dgrams AND ACKs
-	bool sendPoll_ass ( bool allowResends , long long now );
+	bool sendPoll_ass ( bool allowResends , int64_t now );
 
 	// called every 30ms to get tokens? not any more...
 	void timePoll ( );
 
 	// called by readPoll()/sendPoll()/readTimeoutPoll() to do
 	// reading/sending/callbacks in that order until nothing left to do
-	void process_ass ( long long now , long maxNiceness = 100);
+	void process_ass ( int64_t now , long maxNiceness = 100);
 
 	// . this is called by main/Loop.cpp every second
 	// . actually it calls readTimeoutPollWrapper()
 	// . call the callback of reception slots that have timed out
 	// . return true if we did something, like reset a slot for resend
 	//   or timed a slot out so it's callback should be called
-	bool readTimeoutPoll ( long long now ) ;
+	bool readTimeoutPoll ( int64_t now ) ;
 
 	// how nice as a server are we?
 	//long getNiceness ( ) { return m_niceness; };
@@ -317,7 +317,7 @@ class UdpServer {
 
 	// . send as many dgrams as you can from slot's m_sendBuf
 	// . returns false and sets errno on error, true otherwise
-	bool doSending_ass ( UdpSlot *slot, bool allowResends, long long now );
+	bool doSending_ass ( UdpSlot *slot, bool allowResends, int64_t now );
 
 	// . calls a m_handler request handler if slot->m_callback is NULL
 	//   which means it was an incoming request
@@ -328,12 +328,12 @@ class UdpServer {
 	// . picks the slot that is most caught up to it's ACKs
 	// . picks resends first, however
 	// . then we send a dgram from that slot
-	UdpSlot *getBestSlotToSend ( long long now );
+	UdpSlot *getBestSlotToSend ( int64_t now );
 
 	// . reads a pending dgram on the udp stack
 	// . returns -1 on error, 0 if blocked, 1 if completed reading dgram
 	// . called by readPoll()
-	long readSock_ass ( UdpSlot **slot , long long now );
+	long readSock_ass ( UdpSlot **slot , int64_t now );
 
 	// a debug util
 	void dumpdgram ( char *dgram , long dgramSize );
@@ -438,19 +438,19 @@ class UdpServer {
 
 	// stats
  public:
-	long long       m_eth0BytesIn;
-	long long       m_eth0BytesOut;
-	long long       m_eth0PacketsIn;
-	long long       m_eth0PacketsOut;
-	long long       m_eth1BytesIn;
-	long long       m_eth1BytesOut;
-	long long       m_eth1PacketsIn;
-	long long       m_eth1PacketsOut;
+	int64_t       m_eth0BytesIn;
+	int64_t       m_eth0BytesOut;
+	int64_t       m_eth0PacketsIn;
+	int64_t       m_eth0PacketsOut;
+	int64_t       m_eth1BytesIn;
+	int64_t       m_eth1BytesOut;
+	int64_t       m_eth1PacketsIn;
+	int64_t       m_eth1PacketsOut;
 
-	long long       m_outsiderPacketsIn;
-	long long       m_outsiderPacketsOut;
-	long long       m_outsiderBytesIn;
-	long long       m_outsiderBytesOut;
+	int64_t       m_outsiderPacketsIn;
+	int64_t       m_outsiderPacketsOut;
+	int64_t       m_outsiderBytesIn;
+	int64_t       m_outsiderBytesOut;
 };
 
 extern class UdpServer g_udpServer;

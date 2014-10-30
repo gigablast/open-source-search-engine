@@ -53,7 +53,7 @@ int main (int argc, char **argv) {
 	struct timezone tz1, tz2;
 
 	long times[test_count];
-	long long total=0;
+	int64_t total=0;
 	long max_time=-1L;
 	long min_time=999999999L;
 	long avg_time;

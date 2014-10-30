@@ -26,7 +26,7 @@ bool Linkdb::init ( ) {
 	unsigned char      hopCount         = 7;
 	long      ip               = rand();
 	long      ipdom3 = ipdom(ip);
-	long long docId = ((uint64_t)rand() << 32 | rand()) & DOCID_MASK;
+	int64_t docId = ((uint64_t)rand() << 32 | rand()) & DOCID_MASK;
 	long discoveryDate = 1339784732;
 	long lostDate      = discoveryDate + 86400*23;
 	char linkSpam = 1;
@@ -103,8 +103,8 @@ bool Linkdb::init ( ) {
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
 	long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
-	//long long maxTreeMem = 1000000;
-	long long maxTreeMem = 40000000; // 40MB
+	//int64_t maxTreeMem = 1000000;
+	int64_t maxTreeMem = 40000000; // 40MB
 	// . what's max # of tree nodes?
 	// . key+4+left+right+parents+dataPtr = sizeof(key192_t)+4 +4+4+4+4
 	// . 32 bytes per record when in the tree
@@ -290,7 +290,7 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 			      unsigned char      linkerSiteRank   ,
 			      unsigned char      linkerHopCount         ,
 			      uint32_t  linkerIp               ,
-			      long long linkerDocId ,
+			      int64_t linkerDocId ,
 			      unsigned long      discoveryDate ,
 			      unsigned long      lostDate ,
 			      bool      newAddToOldPage ,
@@ -482,7 +482,7 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 		   char      *url                 ,
 		   bool       isSiteLinkInfo      ,
 		   long       ip                  ,
-		   long long  docId               ,
+		   int64_t  docId               ,
 		   collnum_t  collnum             ,
 		   char      *qbuf,
 		   long       qbufSize,
@@ -570,7 +570,7 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	req->m_siteHash64 = 0LL;
 	if ( req->ptr_site ) {
 		// hash collection # in with it
-		long long h64 = hash64n ( req->ptr_site );
+		int64_t h64 = hash64n ( req->ptr_site );
 		h64 = hash64 ((char *)&req->m_collnum,sizeof(collnum_t),h64);
 		req->m_siteHash64 = h64;
 		req->m_siteHash32 = hash32n ( req->ptr_site );
@@ -589,7 +589,7 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	unsigned long shardNum = getShardNum ( RDB_LINKDB, &startKey );
 	// use a biased lookup
 	long numTwins = g_hostdb.getNumHostsPerShard();
-	long long sectionWidth = (0xffffffff/(long long)numTwins) + 1;
+	int64_t sectionWidth = (0xffffffff/(int64_t)numTwins) + 1;
 	// these are 192 bit keys, top 32 bits are a hash of the url
 	unsigned long x = req->m_siteHash32;//(startKey.n1 >> 32);
 	long hostNum = x / sectionWidth;
@@ -864,7 +864,7 @@ bool Msg25::getLinkInfo2( char      *site                ,
 			  // either MODE_PAGELINKINFO or MODE_SITELINKINFO
 			  bool       isSiteLinkInfo      ,
 			  long       ip                  ,
-			  long long  docId               ,
+			  int64_t  docId               ,
 			  //char      *coll                ,
 			  collnum_t collnum,
 			  char      *qbuf                ,
@@ -1080,7 +1080,7 @@ bool Msg25::doReadLoop ( ) {
 	unsigned long shardNum = getShardNum ( RDB_LINKDB, &startKey );
 	// use a biased lookup
 	long numTwins = g_hostdb.getNumHostsPerShard();
-	long long sectionWidth = (0xffffffff/(long long)numTwins) + 1;
+	int64_t sectionWidth = (0xffffffff/(int64_t)numTwins) + 1;
 	// these are 192 bit keys, top 32 bits are a hash of the url
 	unsigned long x = siteHash32;//(startKey.n1 >> 32);
 	long hostNum = x / sectionWidth;
@@ -1257,7 +1257,7 @@ bool Msg25::gotTermFreq ( bool msg42Called ) {
 	// was msg42 called?
 	if ( msg42Called ) {
 		// set the new one
-		long long tf = m_msg42.getTermFreq();
+		int64_t tf = m_msg42.getTermFreq();
 		logf(LOG_DEBUG,"build: Upping linkers from %li to %lli",
 		     m_numDocIds,tf);
 		if ( tf > m_numDocIds ) m_numDocIds = tf;
@@ -1283,7 +1283,7 @@ bool Msg25::gotTermFreq ( bool msg42Called ) {
 		//m_ipTable.set(256);
 		if (!m_ipTable.set(4,0,256,NULL,0,false,m_niceness,"msg25ips"))
 			return true;
-		long long needSlots = m_list.getListSize() / LDBKS;
+		int64_t needSlots = m_list.getListSize() / LDBKS;
 		// wtf?
 		if ( m_list.getListSize() > READSIZE + 10000 ) {
 			//char *xx=NULL;*xx=0; }
@@ -1517,7 +1517,7 @@ bool Msg25::sendRequests ( ) {
 		if ( ! m_doLinkSpamCheck ) isLinkSpam = false;
 
 		// mangle it so hashtable does not collide so much
-		//long long dh = hash64h ( docId , docId );
+		//int64_t dh = hash64h ( docId , docId );
 
 		// dedup docid, since we now try to keep old Inlinks from
 		// the previous LinkInfo. this allows us to preserve RSS
@@ -1956,7 +1956,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	// just log then reset g_errno if it's set
 	if ( g_errno ) {
 		// a dummy docid
-		long long docId = -1LL;
+		int64_t docId = -1LL;
 		// set it right
 		if ( r ) docId = r->m_docId;
 		// we often restrict link: termlist lookup to indexdb root
@@ -2290,9 +2290,9 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	// linkdb list, extroplate "m_numReplyPtrs" to what it probably should
 	// have been. it is a non-linear. we could go out to more derivatives,
 	// m_deltaDiff2, etc. if necessary.
-	long long extrapolated = m_numReplyPtrs;
-	long long bonus        = m_numReplyPtrs;
-	long long step         = (long)MAX_DOCIDS_TO_SAMPLE * 2 ;
+	int64_t extrapolated = m_numReplyPtrs;
+	int64_t bonus        = m_numReplyPtrs;
+	int64_t step         = (long)MAX_DOCIDS_TO_SAMPLE * 2 ;
 	// add in "bonus" X docids sampled
 	long nd;
 	for ( nd = m_numReplies ; nd + step <= m_numDocIds ; nd += step ) {
@@ -2304,7 +2304,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	// . do linear estimation of remainder however. 
 	// . hey i don't want to get into crazy logs...
 	/*
-	long long rem = m_numDocIds - nd;
+	int64_t rem = m_numDocIds - nd;
 	if ( step > 0 && rem > 0 ) extrapolated += (bonus * rem) / step;
 	// sanity check
 	if ( rem > step ) { char *xx = NULL; *xx = 0; }
@@ -2325,7 +2325,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	// the x factor
 	long x = 100;
 	if ( m_numReplyPtrs > 0 ) 
-		x = ((long long)extrapolated * 100LL) / m_numReplyPtrs;
+		x = ((int64_t)extrapolated * 100LL) / m_numReplyPtrs;
 	*/
 
 	// skip making link info?
@@ -2397,8 +2397,8 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 			char q2 = m_replyPtrs[i  ]->m_siteRank;//docQuality;
 			if ( q1 > q2 ) continue;
 			// if tied, check docids
-			long long d1 = m_replyPtrs[i-1]->m_docId;
-			long long d2 = m_replyPtrs[i  ]->m_docId;
+			int64_t d1 = m_replyPtrs[i-1]->m_docId;
+			int64_t d2 = m_replyPtrs[i  ]->m_docId;
 			if ( d1 == d2 )
 				log("build: got same docid in msg25 "
 				    "d=%lli url=%s",d1,
@@ -2454,9 +2454,9 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 			m_pbuf->safePrintf("\t<site><![CDATA[%s]]></site>\n",
 					   site);
 
-		//long long d = 0LL;
+		//int64_t d = 0LL;
 		//if ( m_xd ) d = m_xd->m_docId;
-		long long d = m_docId;
+		int64_t d = m_docId;
 		if ( d && d != -1LL )
 			m_pbuf->safePrintf("\t<docId>%lli</docId>\n",d);
 			
@@ -3278,7 +3278,7 @@ char *Msg25::isDup ( Msg20Reply *r , Msg20Reply *p ) {
 	*/
 }
 
-bool Msg25::addNote ( char *note , long noteLen , long long docId ) {
+bool Msg25::addNote ( char *note , long noteLen , int64_t docId ) {
 	// return right away if no note
 	if ( ! note || noteLen <= 0 ) return true;
 	// get hash
@@ -3653,7 +3653,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			 // if link spam give this weight
 			 long         spamWeight              ,
 			 bool         oneVotePerIpTop         ,
-			 long long    linkeeDocId             ,
+			 int64_t    linkeeDocId             ,
 			 long         lastUpdateTime          ,
 			 bool         onlyNeedGoodInlinks      ,
 			 long         niceness                ,
@@ -3728,7 +3728,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			continue;
 		}
 		long kc = r->m_pageNumInlinks + r->m_siteNumInlinks;
-		long long b2 ;
+		int64_t b2 ;
 		if      ( kc >= 5000 ) b2 = 100;
 		else if ( kc >= 2500 ) b2 =  95;
 		else if ( kc >= 1000 ) b2 =  80;
@@ -3771,7 +3771,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			// don't count punct
 			if ( words.isPunct(k) ) continue;
 			// get the word Id of the ith word
-			long long wid = words.getWordId(k);
+			int64_t wid = words.getWordId(k);
 			// does it match a word in this same link text?
 			long j;
 			for ( j = 0 ; j < k ; j++ ) {
@@ -3834,7 +3834,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			// do not count stop words (uncapitalized)
 			if ( words.isStopWord(k) ) continue;
 			// get the word Id of the ith word
-			long long wid = words.getWordId(k);
+			int64_t wid = words.getWordId(k);
 			// filter out this LinkText if has an anomalous word
 			if ( tt.getScore ( &wid ) < minCount )
 				break;
@@ -4192,13 +4192,13 @@ bool LinkInfo::hash ( TermTable     *table                  ,
 		// count external inlinks we have for indexing gbmininlinks:
 		if ( ! internal ) ecount++;
 		// get score
-		long long baseScore = k->m_baseScore;
+		int64_t baseScore = k->m_baseScore;
                 // get the weight
-		long long ww ;
+		int64_t ww ;
 		if ( internal ) ww = internalLinkTextWeight;
 		else            ww = externalLinkTextWeight;
 		// modify the baseScore
-		long long final = (baseScore * ww) / 100LL;
+		int64_t final = (baseScore * ww) / 100LL;
 		// get length of link text
 		long tlen = k->size_linkText;
 		if ( tlen > 0 ) tlen--;
@@ -4307,7 +4307,7 @@ bool LinkInfo::hash ( TermTable     *table                  ,
 */
 
 /*
-long long getBoostFromLinkeeQuality ( char docQuality ) {
+int64_t getBoostFromLinkeeQuality ( char docQuality ) {
 	// hard code this
 	float fboost    = 1.0;
 	float myQuality = (float)docQuality;
@@ -4328,7 +4328,7 @@ long long getBoostFromLinkeeQuality ( char docQuality ) {
 		fboost    *= 1.05;
 	}
 	// assign
-	return (long long )(fboost * 100.0);
+	return (int64_t )(fboost * 100.0);
 }
 */
 
@@ -6350,7 +6350,7 @@ bool Links::flagOldLinks ( Links *old ) {
 		char *u    = old->m_linkPtrs[i];
 		long  ulen = old->m_linkLens[i];
 		// hash it
-		long long uh = hash32 ( u , ulen );
+		int64_t uh = hash32 ( u , ulen );
 		// it does not like keys of 0, that means empty slot
 		if ( uh == 0 ) uh = 1;
 		// add to hash table
@@ -6362,7 +6362,7 @@ bool Links::flagOldLinks ( Links *old ) {
 		char *u    = m_linkPtrs[i];
 		long  ulen = m_linkLens[i];
 		// get our hash
-		long long uh = hash32 ( u , ulen );
+		int64_t uh = hash32 ( u , ulen );
 		// it does not like keys of 0, that means empty slot
 		if ( uh == 0 ) uh = 1;
 		// check if our hash is in this hash table, if not, then

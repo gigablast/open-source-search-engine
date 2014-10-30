@@ -157,7 +157,7 @@ class Multicast {
 	// . we delete all the slots only after cast is done
 	long        m_startTime;   // seconds since the epoch
 	// so Msg3a can time response
-	long long   m_startTimeMS;
+	int64_t   m_startTimeMS;
 
 	// # of replies we've received
 	long        m_numReplies;
@@ -180,7 +180,7 @@ class Multicast {
 	long        m_errnos     [MAX_HOSTS_PER_GROUP]; 
 	// transaction in progress?
 	char        m_inProgress [MAX_HOSTS_PER_GROUP]; 
-	long long   m_launchTime [MAX_HOSTS_PER_GROUP];
+	int64_t   m_launchTime [MAX_HOSTS_PER_GROUP];
 
 	// steal this from the slot(s) we get
 	char       *m_readBuf;
@@ -203,7 +203,7 @@ class Multicast {
 
 	// . last sending of the request to ONE host in a group (pick & send)
 	// . in milliseconds
-	long long   m_lastLaunch;
+	int64_t   m_lastLaunch;
 	Host       *m_lastLaunchHost;
 	// how many launched requests are current outstanding
 	long        m_numLaunched;
@@ -239,15 +239,15 @@ class Multicast {
 	// host we got reply from. used by Msg3a for timing.
 	Host      *m_replyingHost;
 	// when the request was launched to the m_replyingHost
-	long long  m_replyLaunchTime;
+	int64_t  m_replyLaunchTime;
 
 	// used by XmlDoc.cpp for gbfacet: stuff
 	long       m_hack32; 
-	long long  m_hack64;
+	int64_t  m_hack64;
 
 	// more hack stuff used by PageInject.cpp
 	long m_hackFileId;
-	long long m_hackFileOff;
+	int64_t m_hackFileOff;
 	class ImportState *m_importState;
 
 	// hacky crunk use by seo pipeline in xmldoc.cpp

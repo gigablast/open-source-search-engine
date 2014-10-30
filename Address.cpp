@@ -10,7 +10,7 @@ class Address *g_address; // for debug
 //
 // if you have "in <city/adm1 name>" in same sentence as street then
 // require that that item be a city/adm1 in any address you try to do.
-// i would set "long long inPrepPhrase" to be the city/adm1 place hash. 
+// i would set "int64_t inPrepPhrase" to be the city/adm1 place hash. 
 // so if it is not zero, check for it. but add it with addProperPlaces()
 // first to see if it added anything!! then we can 
 //
@@ -86,16 +86,16 @@ bool getBestLatLon ( RdbList *list      ,
 char *getLatLonPtrFromStr ( char *data ) ;
 void getLatLonFromStr ( char *data , double *lat , double *lon);
 char *getStateAbbr ( uint64_t bit ) ;
-long long getWordXorHash ( char *s ) ;
-long long getWordXorHash2 ( char *s ) ;
-long getStateOffset ( long long *h ) ;
+int64_t getWordXorHash ( char *s ) ;
+int64_t getWordXorHash2 ( char *s ) ;
+long getStateOffset ( int64_t *h ) ;
 class StateDesc *getStateDescFromBits ( uint64_t bit ) ;
 // returns 0 if not a state:
-uint64_t getStateBitFromHash ( long long *h ) ;
+uint64_t getStateBitFromHash ( int64_t *h ) ;
 static bool setHashes ( class Place *p , Words *ww , long niceness ) ;
 
 static bool    addIndicator ( char *s     , char bit , float boost );
-static bool    addIndicator ( long long h , char bit , float boost );
+static bool    addIndicator ( int64_t h , char bit , float boost );
 //static void  printAddress ( class Address *A , class SafeBuf *pbuf , long i);
 static void    printPlaces  ( PlaceMem *pm , SafeBuf *pbuf ,
 			      class Sections *sections ,
@@ -151,7 +151,7 @@ bool getZip_new ( long a ,
 		  float *zipLat,
 		  float *zipLon) ;
 
-PlaceDesc *getMostPopularPlace_new ( long long cityHash64, 
+PlaceDesc *getMostPopularPlace_new ( int64_t cityHash64, 
 				     uint8_t crid ,
 				     uint8_t placeType,
 				     long niceness );
@@ -244,7 +244,7 @@ public:
 	// a single byte country id (converted to from a 2 char country id)
 	//uint8_t m_crid;
 	// hash of the city it is in
-	long long m_cityHash;
+	int64_t m_cityHash;
 	// offset into g_cityBuf of the city name
 	long m_cityOffset;
 	// now we use the adm1 bits since US-only now
@@ -334,7 +334,7 @@ static StateDesc s_states[] = {
 #include "StopWords.h"
 static HashTableX s_doyTable;
 static bool       s_doyInit = false;
-long getDayOfWeek ( long long h ) {
+long getDayOfWeek ( int64_t h ) {
 	if ( ! s_doyInit ) {
 		s_doyInit = initWordTable(&s_doyTable, s_days ,sizeof(s_days),
 					  "doytbl");
@@ -440,200 +440,200 @@ void Addresses::reset ( ) {
 	m_uniqueStreetHashes = 0;
 }
 
-static long long h_court;
-static long long h_i;
-static long long h_interstate;
-static long long h_page    ;
-static long long h_corner  ;
-static long long h_between ;
-static long long h_btwn    ;
-static long long h_bet     ;
-static long long h_streets ;
-static long long h_sts     ;
-static long long h_at      ;
-static long long h_come    ;
-static long long h_is      ;
-static long long h_located ;
-static long long h_intersection;
-static long long h_law     ;
-static long long h_address ;
-static long long h_added   ;
-static long long h_copy    ;
-static long long h_search  ;
-static long long h_find    ;
-static long long h_go      ;
-static long long h_town    ;
-static long long h_city    ;
-static long long h_street  ;
-static long long h_telephone; 
-static long long h_tel       ;
-static long long h_ph       ;
-static long long h_fax      ;
-static long long h_where   ;
-static long long h_location;
-static long long h_venue   ;
-static long long h_map     ;
-static long long h_office  ;
-static long long h_center  ;
-static long long h_mailing ;
-static long long h_mail    ;
-static long long h_snail   ;
-static long long h_edit    ;
-static long long h_email   ;
-static long long h_phone   ;
-static long long h_inc     ;
-static long long h_llc     ;
-static long long h_review  ;
-static long long h_reviews ;
-static long long h_write   ;
-static long long h_add          ; 
-static long long h_view         ; 
-static long long h_favorites    ; 
-static long long h_more         ; 
-static long long h_info         ; 
-static long long h_information  ; 
-static long long h_the          ; 
-static long long h_in           ; 
-static long long h_a            ; 
-static long long h_paseo        ; 
-static long long h_de           ; 
-static long long h_del          ; 
-static long long h_all          ; 
-static long long h_rights       ; 
-static long long h_reserved     ; 
-static long long h_contact      ; 
-static long long h_us           ; 
-static long long h_by           ; 
-static long long h_of           ; 
-static long long h_for          ; 
-static long long h_arrangements ; 
-static long long h_arranged     ; 
-static long long h_sponsored    ; 
-static long long h_to        ; 
-static long long h_every     ; 
-static long long h_p         ; 
-static long long h_b         ; 
-static long long h_hwy       ; 
-static long long h_state     ; 
-static long long h_county    ; 
-static long long h_cnty      ; 
-static long long h_cty       ; 
-static long long h_road      ; 
-static long long h_route     ; 
-static long long h_rte       ; 
-static long long h_rt        ; 
-static long long h_highway   ; 
-static long long h_hiway     ; 
-static long long h_cr        ; 
-static long long h_o         ;
-static long long h_po        ;
-static long long h_post      ;
-static long long h_box       ;
-static long long h_top       ; 
-static long long h_one       ; 
-static long long h_noon      ; 
-static long long h_midnight  ; 
-static long long h_daily     ; 
-static long long h_st        ; 
-static long long h_nd        ; 
-static long long h_rd        ; 
-static long long h_th        ; 
-static long long h_away      ; 
-static long long h_results   ; 
-static long long h_days      ; 
-static long long h_blocks    ; 
-static long long h_block     ; 
-static long long h_miles     ; 
-static long long h_mile      ; 
-static long long h_year      ;
-static long long h_years     ;
-static long long h_yr        ;
-static long long h_yrs       ;
-static long long h_hours     ; 
-static long long h_hrs       ; 
-static long long h_hour      ; 
-static long long h_hr        ; 
-static long long h_mi        ; 
-static long long h_kilometers; 
-static long long h_km        ; 
-static long long h_copyright ; 
-static long long h_and       ; 
-static long long h_or        ; 
-static long long h_suite     ; 
-static long long h_ste       ; 
-static long long h_bldg      ; 
-static long long h_bld       ; 
-static long long h_building  ; 
-static long long h_unit      ; 
-static long long h_room      ; 
-static long long h_pier      ; 
-static long long h_rm        ; 
-static long long h_run ;
-static long long h_ne        ; 
-static long long h_nw        ; 
-static long long h_se        ; 
-static long long h_sw        ; 
-static long long h_n         ; 
-static long long h_s         ; 
-static long long h_e         ; 
-static long long h_w         ; 
-static long long h_north;
-static long long h_northeast;
-static long long h_northwest;
-static long long h_east;
-static long long h_west;
-static long long h_south;
-static long long h_southeast;
-static long long h_southwest;
-static long long h_heart ;
-static long long h_core  ;
-static long long h_least ;
-static long long h_most  ;
-static long long h_this  ;
-static long long h_appeared  ;
-static long long h_role  ;
-static long long h_studied;
-static long long h_prize;
-static long long h_finish;
-static long long h_door;
-static long long h_entrance;
-static long long h_area;
-static long long h_left  ;
-static long long h_right ;
-static long long h_stare  ;
-static long long h_sea  ;
-static long long h_discount  ;
-static long long h_discounted  ;
-static long long h_www;
-static long long h_gaze   ;
-static long long h_look  ;
-static long long h_looking;
-static long long h_be ;
-static long long h_determined ;
-static long long h_call ;
-static long long h_details;
-static long long h_tba;
-static long long h_avenue;
-static long long h_ave;
-static long long h_register;
-static long long h_sign;
-static long long h_up;
-static long long h_signup;
-static long long h_tickets;
-static long long h_purchase;
-static long long h_get;
-static long long h_enroll;
-static long long h_buy;
-static long long h_presale ;
-static long long h_pre ;
-static long long h_sale ;
-static long long h_on ;
-static long long h_sales ;
-static long long h_end ;
-static long long h_begin ;
-static long long h_start ;
-static long long h_am;
-static long long h_fm;
+static int64_t h_court;
+static int64_t h_i;
+static int64_t h_interstate;
+static int64_t h_page    ;
+static int64_t h_corner  ;
+static int64_t h_between ;
+static int64_t h_btwn    ;
+static int64_t h_bet     ;
+static int64_t h_streets ;
+static int64_t h_sts     ;
+static int64_t h_at      ;
+static int64_t h_come    ;
+static int64_t h_is      ;
+static int64_t h_located ;
+static int64_t h_intersection;
+static int64_t h_law     ;
+static int64_t h_address ;
+static int64_t h_added   ;
+static int64_t h_copy    ;
+static int64_t h_search  ;
+static int64_t h_find    ;
+static int64_t h_go      ;
+static int64_t h_town    ;
+static int64_t h_city    ;
+static int64_t h_street  ;
+static int64_t h_telephone; 
+static int64_t h_tel       ;
+static int64_t h_ph       ;
+static int64_t h_fax      ;
+static int64_t h_where   ;
+static int64_t h_location;
+static int64_t h_venue   ;
+static int64_t h_map     ;
+static int64_t h_office  ;
+static int64_t h_center  ;
+static int64_t h_mailing ;
+static int64_t h_mail    ;
+static int64_t h_snail   ;
+static int64_t h_edit    ;
+static int64_t h_email   ;
+static int64_t h_phone   ;
+static int64_t h_inc     ;
+static int64_t h_llc     ;
+static int64_t h_review  ;
+static int64_t h_reviews ;
+static int64_t h_write   ;
+static int64_t h_add          ; 
+static int64_t h_view         ; 
+static int64_t h_favorites    ; 
+static int64_t h_more         ; 
+static int64_t h_info         ; 
+static int64_t h_information  ; 
+static int64_t h_the          ; 
+static int64_t h_in           ; 
+static int64_t h_a            ; 
+static int64_t h_paseo        ; 
+static int64_t h_de           ; 
+static int64_t h_del          ; 
+static int64_t h_all          ; 
+static int64_t h_rights       ; 
+static int64_t h_reserved     ; 
+static int64_t h_contact      ; 
+static int64_t h_us           ; 
+static int64_t h_by           ; 
+static int64_t h_of           ; 
+static int64_t h_for          ; 
+static int64_t h_arrangements ; 
+static int64_t h_arranged     ; 
+static int64_t h_sponsored    ; 
+static int64_t h_to        ; 
+static int64_t h_every     ; 
+static int64_t h_p         ; 
+static int64_t h_b         ; 
+static int64_t h_hwy       ; 
+static int64_t h_state     ; 
+static int64_t h_county    ; 
+static int64_t h_cnty      ; 
+static int64_t h_cty       ; 
+static int64_t h_road      ; 
+static int64_t h_route     ; 
+static int64_t h_rte       ; 
+static int64_t h_rt        ; 
+static int64_t h_highway   ; 
+static int64_t h_hiway     ; 
+static int64_t h_cr        ; 
+static int64_t h_o         ;
+static int64_t h_po        ;
+static int64_t h_post      ;
+static int64_t h_box       ;
+static int64_t h_top       ; 
+static int64_t h_one       ; 
+static int64_t h_noon      ; 
+static int64_t h_midnight  ; 
+static int64_t h_daily     ; 
+static int64_t h_st        ; 
+static int64_t h_nd        ; 
+static int64_t h_rd        ; 
+static int64_t h_th        ; 
+static int64_t h_away      ; 
+static int64_t h_results   ; 
+static int64_t h_days      ; 
+static int64_t h_blocks    ; 
+static int64_t h_block     ; 
+static int64_t h_miles     ; 
+static int64_t h_mile      ; 
+static int64_t h_year      ;
+static int64_t h_years     ;
+static int64_t h_yr        ;
+static int64_t h_yrs       ;
+static int64_t h_hours     ; 
+static int64_t h_hrs       ; 
+static int64_t h_hour      ; 
+static int64_t h_hr        ; 
+static int64_t h_mi        ; 
+static int64_t h_kilometers; 
+static int64_t h_km        ; 
+static int64_t h_copyright ; 
+static int64_t h_and       ; 
+static int64_t h_or        ; 
+static int64_t h_suite     ; 
+static int64_t h_ste       ; 
+static int64_t h_bldg      ; 
+static int64_t h_bld       ; 
+static int64_t h_building  ; 
+static int64_t h_unit      ; 
+static int64_t h_room      ; 
+static int64_t h_pier      ; 
+static int64_t h_rm        ; 
+static int64_t h_run ;
+static int64_t h_ne        ; 
+static int64_t h_nw        ; 
+static int64_t h_se        ; 
+static int64_t h_sw        ; 
+static int64_t h_n         ; 
+static int64_t h_s         ; 
+static int64_t h_e         ; 
+static int64_t h_w         ; 
+static int64_t h_north;
+static int64_t h_northeast;
+static int64_t h_northwest;
+static int64_t h_east;
+static int64_t h_west;
+static int64_t h_south;
+static int64_t h_southeast;
+static int64_t h_southwest;
+static int64_t h_heart ;
+static int64_t h_core  ;
+static int64_t h_least ;
+static int64_t h_most  ;
+static int64_t h_this  ;
+static int64_t h_appeared  ;
+static int64_t h_role  ;
+static int64_t h_studied;
+static int64_t h_prize;
+static int64_t h_finish;
+static int64_t h_door;
+static int64_t h_entrance;
+static int64_t h_area;
+static int64_t h_left  ;
+static int64_t h_right ;
+static int64_t h_stare  ;
+static int64_t h_sea  ;
+static int64_t h_discount  ;
+static int64_t h_discounted  ;
+static int64_t h_www;
+static int64_t h_gaze   ;
+static int64_t h_look  ;
+static int64_t h_looking;
+static int64_t h_be ;
+static int64_t h_determined ;
+static int64_t h_call ;
+static int64_t h_details;
+static int64_t h_tba;
+static int64_t h_avenue;
+static int64_t h_ave;
+static int64_t h_register;
+static int64_t h_sign;
+static int64_t h_up;
+static int64_t h_signup;
+static int64_t h_tickets;
+static int64_t h_purchase;
+static int64_t h_get;
+static int64_t h_enroll;
+static int64_t h_buy;
+static int64_t h_presale ;
+static int64_t h_pre ;
+static int64_t h_sale ;
+static int64_t h_on ;
+static int64_t h_sales ;
+static int64_t h_end ;
+static int64_t h_begin ;
+static int64_t h_start ;
+static int64_t h_am;
+static int64_t h_fm;
 
 // . first identifies all the "Places" using the rules above
 // . then clusters the "Places" together into an "Address"
@@ -645,7 +645,7 @@ bool Addresses::set ( Sections  *sections    ,
 		      Bits      *bits        ,
 		      TagRec    *gr          ,
 		      Url       *url         ,
-		      long long  docId       ,
+		      int64_t  docId       ,
 		      //char      *coll        ,
 		      collnum_t collnum ,
 		      long       domHash32   ,
@@ -963,7 +963,7 @@ bool Addresses::set ( Sections  *sections    ,
 		// must not have a place name in place of the street name
 		if ( a->m_street.m_flags2 & PLF2_IS_NAME ) continue;
 		// hash into table only if valid
-		long long h1 = a->m_name1.m_hash;
+		int64_t h1 = a->m_name1.m_hash;
 		// adjust it since setHashes() xors in 0x123456 for street
 		// names that are actually place names in disguise
 		h1 ^= 0x123456;
@@ -975,7 +975,7 @@ bool Addresses::set ( Sections  *sections    ,
 		if ( a->m_name1.m_strlen && ! pt.addKey ( (char *)&h1, &a ) ) 
 			return true;
 		// same for second place name
-		long long h2 = a->m_name2.m_hash;
+		int64_t h2 = a->m_name2.m_hash;
 		// adjust it since setHashes() xors in 0x123456 for street
 		// names that are actually place names in disguise
 		h2 ^= 0x123456;
@@ -998,7 +998,7 @@ bool Addresses::set ( Sections  *sections    ,
 		// . USE the STREET here, not the name
 		// . it should already have had the 0x123456 xor'ed in
 		//   in the logic below because PLF2_IS_NAME is set.
-		long long h1 = a->m_street.m_hash;
+		int64_t h1 = a->m_street.m_hash;
 		// incorporate the adm1 and city and ctry
 		h1 = hash64 ( a->m_city.m_hash , h1 );
 		h1 = hash64 ( a->m_adm1.m_hash , h1 );
@@ -1405,7 +1405,7 @@ bool Addresses::updateAddresses ( ) {
 		// get address
 		Address *a = (Address *)m_am.getPtr(i);//&m_addresses[i];
 		// get street hash
-		long long sh = a->m_street->m_hash;
+		int64_t sh = a->m_street->m_hash;
 		// skip if already got
 		if ( ds.isInTable ( &sh ) ) continue;
 		// add it. i guess ignore if on error
@@ -1622,7 +1622,7 @@ bool Addresses::updateAddresses ( ) {
 		}
 
 		// hash their street hash and street num hash
-		long long ch = 0;
+		int64_t ch = 0;
 		ch ^= ad->m_street->m_hash;
 		ch ^= ad->m_street->m_streetNumHash;
 		ch ^= ad->m_street->m_streetIndHash;
@@ -1681,7 +1681,7 @@ bool Addresses::updateAddresses ( ) {
 		// other is not!
 		if ( ! isName ) {
 			// make special hash
-			long long ch = 0;
+			int64_t ch = 0;
 			ch ^= street->m_hash;
 			ch ^= street->m_streetNumHash;
 			ch ^= street->m_streetIndHash;
@@ -1793,7 +1793,7 @@ bool Addresses::updateAddresses ( ) {
 				// so let them ride.
 
 				// store in match table, add one point
-				if(!mt.addTerm((long long *)&val))return false;
+				if(!mt.addTerm((int64_t *)&val))return false;
 			}
 		}
 		
@@ -2079,7 +2079,7 @@ bool Addresses::updateAddresses ( ) {
 		long a;
 		long b;
 		bool good;
-		long long commonIds[32];
+		int64_t commonIds[32];
 		long nc;
 		// loop over both
 	subloop:
@@ -2125,7 +2125,7 @@ bool Addresses::updateAddresses ( ) {
 						m_niceness );
 			for ( long k = 0 ; k < nc ; k++ ) {
 				// get it
-				long long cid = commonIds[k];
+				int64_t cid = commonIds[k];
 				// skip if indicator, must be non-indicator
 				IndDesc *id;
 				id = (IndDesc *)g_indicators.getValue(&cid);
@@ -2194,7 +2194,7 @@ bool Addresses::updateAddresses ( ) {
 		// see if matches one non-indicator in street
 		for ( long j = first->m_a ; j < first->m_b ; j++ ) {
 			// get it
-			long long h = m_wids[j];
+			int64_t h = m_wids[j];
 			// skip punct
 			if ( ! h ) continue;
 			// skip if indicator
@@ -2207,7 +2207,7 @@ bool Addresses::updateAddresses ( ) {
 		// now compare to our intersection streets
 		for ( long j = street->m_a ; j < street->m_b ; j++ ) {
 			// get it
-			long long h = m_wids[j];
+			int64_t h = m_wids[j];
 			// skip punct
 			if ( ! h ) continue;
 			// skip if indicator
@@ -2811,8 +2811,8 @@ bool Addresses::updateAddresses ( ) {
 			retAddr->m_street = pp;
 			pp->m_str    = savePos;//start;
 			pp->m_strlen = p - savePos;//start;
-			long long h1 = *(long long *)&retAddr->m_latitude;
-			long long h2 = *(long long *)&retAddr->m_longitude;
+			int64_t h1 = *(int64_t *)&retAddr->m_latitude;
+			int64_t h2 = *(int64_t *)&retAddr->m_longitude;
 			pp->m_hash = hash64h ( h1 , h2 );
 			pp->m_bits = 0; // |= PLF_FROMTAG;//|PLF_FROMTITLE;
 			pp->m_a = wn1;
@@ -2956,11 +2956,11 @@ bool Addresses::updateAddresses ( ) {
 		cc.lat = ad->m_latitude;
 		cc.lon = ad->m_longitude;
 		// get it as a hash
-		//long long h1 = *(long long *)((double *)&ad->m_latitude);
-		//long long h2 = *(long long *)((double *)&ad->m_latitude);
-		//long long h = hash64 ( h1 , h2 );
+		//int64_t h1 = *(int64_t *)((double *)&ad->m_latitude);
+		//int64_t h2 = *(int64_t *)((double *)&ad->m_latitude);
+		//int64_t h = hash64 ( h1 , h2 );
 		//double pr = ad->m_latitude*ad->m_longitude;
-		//long long h = *(long long *) &pr;
+		//int64_t h = *(int64_t *) &pr;
 		// mix it up some more
 		//h = hash64 ( h , h1 );
 		//h = hash64 ( h , h2 );
@@ -3344,7 +3344,7 @@ bool Addresses::setGeocoderLatLons ( void *state,
 			continue;
 		}
 		// check the cache first!!! used by Repair.cpp to speed up!!
-		long long key64 = aa->m_hash;
+		int64_t key64 = aa->m_hash;
 		double *recs;
 		long    recSize;
 		bool inCache = m_latLonCache.getRecord ( (collnum_t) 0,
@@ -3652,7 +3652,7 @@ bool hashPlaceName ( HashTableX *nt1,
 		     long b ,
 		     uint64_t v ) {
 
-	long long *wids = words->m_wordIds;
+	int64_t *wids = words->m_wordIds;
 	// hash
 	for ( long k = a ; k < b ; k++ ) {
 		// skip if not word
@@ -3668,8 +3668,8 @@ bool hashPlaceName ( HashTableX *nt1,
 // returns -1 and sets g_errno on error
 long getCommonWordIds ( long a1 , long b1 ,
 			long a2 , long b2 ,
-			long long *wids      ,
-			long long *commonIds ,
+			int64_t *wids      ,
+			int64_t *commonIds ,
 			long max ,
 			long niceness ) {
 	long nc = 0;
@@ -3716,7 +3716,7 @@ Place *Addresses::getAssociatedPlace ( long i ) {
 		if ( pi < 0 ) continue;
 		// count them
 		//long count = 0;
-		long long lasth = 0LL;
+		int64_t lasth = 0LL;
 		Place *lastpp = NULL;
 		// . scan the addresses in section "si"
 		// . the places in m_sorted[] are streets or are verfied
@@ -3738,7 +3738,7 @@ Place *Addresses::getAssociatedPlace ( long i ) {
 			// to an address whose street is 2823 2nd St NW. as
 			// are all the places around this url's only pair of
 			// valid lat/lon coordinates.
-			long long h = pp->m_hash;
+			int64_t h = pp->m_hash;
 			if ( aa ) h = aa->m_street->m_hash;
 			// compare to last h
 			if ( lasth && h != lasth ) { lastpp = NULL; break; }
@@ -3838,26 +3838,26 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 		b = ww->m_numWords;
 	}
 
-	long long *wids  = ww->m_wordIds;
+	int64_t *wids  = ww->m_wordIds;
 	long      *wlens = ww->m_wordLens;
 	char     **wptrs = ww->m_words;
 	long       nw    = ww->m_numWords;
 
 	// the straight up hash
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// hash of the non indicator alpha words in street name
-	long long h1  = 0;
+	int64_t h1  = 0;
 	// . includes hash of directional indicators
 	// . we only use this if street name is a directional indicator
-	long long h2  = 0;
-	long long h2b = 0;
-	long long h3  = 0;
-	long long h4  = 0;
+	int64_t h2  = 0;
+	int64_t h2b = 0;
+	int64_t h3  = 0;
+	int64_t h4  = 0;
 	// word id of previous word
-	long long pi  = 0LL;
+	int64_t pi  = 0LL;
 
 	long alphaCount = 0;
-	long long prevIndId = 0LL;
+	int64_t prevIndId = 0LL;
 
 	// to fix the street that is "25 School" we cannot map "school"
 	// to h_zero
@@ -3880,7 +3880,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 		if ( p->m_simpleHash32 == 0 )
 			p->m_simpleHash32 = 123456;
 		// get synonym of word id
-		long long *swid = getSynonymWord ( &wids[i] , &pi , isStreet );
+		int64_t *swid = getSynonymWord ( &wids[i] , &pi , isStreet );
 		// word id of previous word
 		pi = wids[i];
 		
@@ -3997,7 +3997,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 	// . we now fixed getAddressHash() so this logic is not needed
 	//if ( p->m_type == PT_CITY ) { // && (p->m_flags & PF_IS_ALIAS) ) {
 	//	// convert hash to alias hash
-	//	long long *newh = (long long *)g_aliases.getValue ( &h );
+	//	int64_t *newh = (int64_t *)g_aliases.getValue ( &h );
 	//	// set that to h now
 	//	if ( newh ) p->m_hash = *newh;
 	//	// could not find this city in the table... strange
@@ -4253,7 +4253,7 @@ bool Addresses::set2 ( ) {
 
 	// shortcuts
 	Words     *ww    = m_words;
-	long long *wids  = ww->getWordIds();
+	int64_t *wids  = ww->getWordIds();
 	char     **wptrs = ww->getWordPtrs();
 	long      *wlens = ww->getWordLens();
 	nodeid_t   *tids = ww->getTagIds();
@@ -4273,7 +4273,7 @@ bool Addresses::set2 ( ) {
 	// "b" of last street added
 	long lastb = -1;
 	// previous word id
-	long long savedPrevWid = 0LL;
+	int64_t savedPrevWid = 0LL;
 	// scan the entire document
 	for ( long i = 0 ; i < nw ; i++ ) {
 		// breathe
@@ -4294,7 +4294,7 @@ bool Addresses::set2 ( ) {
 		// stop if streets are maxed
 		//if ( m_ns >= MAX_STREETS ) break;
 		// record
-		long long prevWid = savedPrevWid;
+		int64_t prevWid = savedPrevWid;
 		// and update
 		savedPrevWid = wids[i];
 		// it's an alnum OR has "  &  " (see above)
@@ -4314,7 +4314,7 @@ bool Addresses::set2 ( ) {
 			// assume none
 			long j = -1;
 			// the hash
-			//long long poh = 0LL;
+			//int64_t poh = 0LL;
 			// "box 123"
 			if ( i + 2 < nw &&
 			     wids[i  ] == h_box &&
@@ -4581,17 +4581,17 @@ bool Addresses::set2 ( ) {
 		bool lastWasDir     = false;
 		long commaCount     =  0;
 		long alnumsInPhrase =  0;
-		long long lastIndStreetHash = 0LL;
+		int64_t lastIndStreetHash = 0LL;
 		// hash of the non indicator alpha words in street name
-		//long long h1             =  0;
+		//int64_t h1             =  0;
 		// . includes hash of directional indicators
 		// . we only use this if street name is a directional indicator
-		//long long h2             =  0;
-		//long long h2b            =  0;
-		//long long h3             =  0;
-		//long long h4             =  0;
+		//int64_t h2             =  0;
+		//int64_t h2b            =  0;
+		//int64_t h3             =  0;
+		//int64_t h4             =  0;
 		// word id of previous word
-		//long long pi = 0LL;
+		//int64_t pi = 0LL;
 		// punct right before us is a left bookend
 		//if ( i-1 >= 0 && wlens[i-1] >= 2 ) leftEnd = true;
 		//if ( i-1 >= 0 && wptrs[i-1][0] != ' ' && 
@@ -5184,7 +5184,7 @@ bool Addresses::set2 ( ) {
 				break;
 
 			// get synonym of word id
-			//long long *swid = getSynonymWord ( &wids[j] , &pi );
+			//int64_t *swid = getSynonymWord ( &wids[j] , &pi );
 			// word id of previous word
 			//pi = wids[j];
 			// this too
@@ -5551,7 +5551,7 @@ bool Addresses::set2 ( ) {
 	alnumPos = -1;
 	long ignoreUntil = -1;
 	long lastCityAlnumB = -1;
-	long long prevWid = 0LL;
+	int64_t prevWid = 0LL;
 	bool inCityIndicator = false;
 	bool inStateIndicator = false;
 
@@ -5593,7 +5593,7 @@ bool Addresses::set2 ( ) {
 		if ( i < ignoreUntil ) continue;
 
 		// get it
-		long long lastWid = prevWid;
+		int64_t lastWid = prevWid;
 		// update it
 		prevWid = m_wids[i];
 
@@ -5602,7 +5602,7 @@ bool Addresses::set2 ( ) {
 			// shortcut
 			// this crashed for h=70799779105646092LL
 			// word="60527"
-			long long h = m_wids[i];
+			int64_t h = m_wids[i];
 			// 5 digits
 			if ( m_wlens[i] != 5 ) continue;
 			// check for zip code
@@ -6046,7 +6046,7 @@ bool Addresses::set2 ( ) {
 	alnumPos = -1;
 	// set if at preceeds the name
 	bool atFlag = false;
-	long long lastWid = 0LL;
+	int64_t lastWid = 0LL;
 	// do not do this if we are javascript
 	long ni = nw;
 	if ( m_contentType == CT_JS ) ni = 0;
@@ -6098,7 +6098,7 @@ bool Addresses::set2 ( ) {
 		// and update to the new one
 		atFlag = false;
 		// save this
-		long long savedWid = lastWid;
+		int64_t savedWid = lastWid;
 		// update it now
 		lastWid = wids[i];
 		// do not start with a date
@@ -6278,8 +6278,8 @@ bool Addresses::set2 ( ) {
 		//if ( m_ns >= MAX_STREETS ) break;
 		// ok, we got a candidate, reset this
 		lastWasBreak = 0;
-		//long long h = 0LL;
-		long long pi = 0LL;
+		//int64_t h = 0LL;
+		int64_t pi = 0LL;
 		bool prevUpper = false;
 		bool prevAdded = false; // added prev to the street array?
 		// count em
@@ -6287,8 +6287,8 @@ bool Addresses::set2 ( ) {
 		long numCount   = 0;
 		// subalnum count
 		long subAlnumCount = 0;
-		long long h = 0LL;
-		long long lastWid2 = 0LL;
+		int64_t h = 0LL;
+		int64_t lastWid2 = 0LL;
 		// . now make a hash of all substrings of the following words
 		//   for lookup into namedb
 		// . ADD CANDIDATE
@@ -6336,7 +6336,7 @@ bool Addresses::set2 ( ) {
 			// . convert place name word into base word
 			// . synonyms
 			// . converts 4th to fourth, theatre to theater, etc.
-			//long long *hw = getSynonymWord ( &wids[j] , &pi );
+			//int64_t *hw = getSynonymWord ( &wids[j] , &pi );
 			// wordid of previous word
 			pi = wids[j];
 			// shift and store
@@ -6344,7 +6344,7 @@ bool Addresses::set2 ( ) {
 			// xor it in
 			h ^= wids[j];
 			// save it
-			long long savedWid2 = lastWid2;
+			int64_t savedWid2 = lastWid2;
 			lastWid2 = wids[j];
 			// do not shorten "Center of Arts" to "Center" because
 			// it is causing the "Performing Arts Center of the 
@@ -6862,7 +6862,7 @@ bool Addresses::set2 ( ) {
 		// ptr
 		Place *suiteBefore = NULL;
 		// suite hash
-		long long suh = 0LL;
+		int64_t suh = 0LL;
 		// start alnumPos
 		long akPos = -1;
 		// now scan for suite, stop after hitting our first alnum word
@@ -7150,7 +7150,7 @@ bool Addresses::set2 ( ) {
 
 		long parensCount = 0;
 		// keep an ongoing hash of alnum words in the name
-		//long long h = 0LL;
+		//int64_t h = 0LL;
 		// backup until we hit an alnum
 		for ( ; i >= 0 ; i-- ) {
 
@@ -8122,9 +8122,9 @@ bool Addresses::set2 ( ) {
 			pp->m_bits    = 0;//PLF_INFILE;
 			pp->m_flags2  = 0;
 			// reset hash
-			//long long h = 0LL;
+			//int64_t h = 0LL;
 			// word if of previous word
-			//long long pi = 0LL;
+			//int64_t pi = 0LL;
 			// we WERE looping backwards, so we need to
 			// compute the hash here
 			setHashes ( pp , m_words , m_niceness );
@@ -8192,7 +8192,7 @@ bool Addresses::set2 ( ) {
 				// . convert place name word into base word
 				// . synonyms
 				// . converts 4th to fourth, etc.
-				long long *hw = getSynonymWord (&wids[k],&pi);
+				int64_t *hw = getSynonymWord (&wids[k],&pi);
 				// set previous id
 				pi = wids[k];
 				// ignore it if returned 0 (ignore) (school)
@@ -8874,7 +8874,7 @@ bool Addresses::set2 ( ) {
 			if ( zip && adm1 && adm1->m_adm1Bits!=zip->m_adm1Bits)
 				zip = NULL;//continue;
 			//if ( adm1->m_crid   !=zip->m_crid    )continue;
-			// cut the long long to a long for this compare
+			// cut the int64_t to a long for this compare
 			if ( zip && city && city->m_hash != zip->m_cityHash ) 
 				zip = NULL;//continue;
 			*/
@@ -8977,9 +8977,9 @@ bool Addresses::set2 ( ) {
 		// skip if not inlined
 		if ( ! ( a->m_flags & AF_INLINED ) ) continue;
 		// get street hash
-		long long sh = a->m_street->m_hash;
+		int64_t sh = a->m_street->m_hash;
 		// get city hash
-		long long ch = a->m_city.m_hash;
+		int64_t ch = a->m_city.m_hash;
 		// hash it. return false with g_errno set on error
 		if ( ! su.addKey ( &sh , &ch ) ) return false;
 	}
@@ -8991,7 +8991,7 @@ bool Addresses::set2 ( ) {
 		// skip if not inlined
 		if ( ! ( a->m_flags & AF_INLINED ) ) continue;
 		// get street hash
-		long long sh = a->m_street->m_hash;
+		int64_t sh = a->m_street->m_hash;
 		// how many different cities have this same street?
 		long slot = su.getSlot ( &sh );
 		// reset count
@@ -9031,7 +9031,7 @@ Place *getZipPlace ( long a , long alnumPos , Words *words ) {
 	// return this if we got one
 	static Place p;
 	// make hash
-	long long h = 0 ^ words->m_wordIds[a];
+	int64_t h = 0 ^ words->m_wordIds[a];
 	// check for zip code
 	long slot = g_zips.getSlot(&h);
 	// skip if not
@@ -9060,7 +9060,7 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 	// return this if we got one
 	static Place p;
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
 	long count = 0;
 	// record start
@@ -9071,8 +9071,8 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 	Place *retp = NULL;
 	// for some filtering
 	static bool s_flag = false;
-	static long long h_university;
-	static long long h_of;
+	static int64_t h_university;
+	static int64_t h_of;
 	if ( ! s_flag ) {
 		s_flag = true;
 		h_university = hash64n("university");
@@ -9092,7 +9092,7 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 		// only up to 4 words in a city name
 		if ( ++count >= 5 ) break;
 		// get the hash of potential place name
-		long long wid = words->m_wordIds[k];
+		int64_t wid = words->m_wordIds[k];
 		// shortcut
 		long  wlen = words->m_wordLens[k];
 		char *wptr = words->m_words[k];
@@ -9107,7 +9107,7 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 		// hash it into our ongoing hash
 		h ^= wid; // words->m_wordIds[k];
 		// might be alias
-		//long long *ah1 = (long long *) g_aliases.getValue(&h); 
+		//int64_t *ah1 = (int64_t *) g_aliases.getValue(&h); 
 		//if ( ah1 ) h = *ah1;
 		// ignore "University" if "of" follows
 		if ( h == h_university && 
@@ -9160,7 +9160,7 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 	// return this if we got one
 	static Place p;
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
 	long count = 0;
 	// record start
@@ -9178,7 +9178,7 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 		// only up to 3 words "district of columbia"
 		if ( ++count >= 4 ) break;
 		// get the hash of potential place name
-		long long wid = words->m_wordIds[k];
+		int64_t wid = words->m_wordIds[k];
 		// shortcut
 		long  wlen = words->m_wordLens[k];
 		char *wptr = words->m_words[k];
@@ -9200,7 +9200,7 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 		char **wptrs = words->getWords();
 		long  *wlens = words->getWordLens();
 		// otherwise, set it
-		long long stateBit = 1LL << pos;
+		int64_t stateBit = 1LL << pos;
 		p.m_adm1Bits = stateBit;
 		p.m_type     = PT_STATE;
 		p.m_a        = a;
@@ -9222,17 +9222,17 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 
 // . returns -1 and sets g_errno on error
 // . returns false if not city/state combo, true otherwise
-long Addresses::isCityState3 ( long long h1 , long long h2 ) {
+long Addresses::isCityState3 ( int64_t h1 , int64_t h2 ) {
 
-	long long nh1 = h1;
-	long long nh2 = h2;
+	int64_t nh1 = h1;
+	int64_t nh2 = h2;
 
 	// we now put the aliases into g_cities as if they were their own
 	// cities!
 	// convert aliases -- only for cities methinks
-	//long long *ah1 = (long long *) g_aliases.getValue(&h1);
+	//int64_t *ah1 = (int64_t *) g_aliases.getValue(&h1);
 	//if ( ah1 ) nh1 = *ah1;
-	//long long *ah2 = (long long *) g_aliases.getValue(&h2);
+	//int64_t *ah2 = (int64_t *) g_aliases.getValue(&h2);
 	//if ( ah2 ) nh2 = *ah2;
 
 	// get the places
@@ -9268,7 +9268,7 @@ long Addresses::isCityState3 ( long long h1 , long long h2 ) {
 // words range is [a,b)
 bool Addresses::isCityName ( long a , long b ) {
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// loop over words in [a,b)
 	for ( long k = a ; k < b ; k++ ) {
 		// skip if not alnum
@@ -9279,7 +9279,7 @@ bool Addresses::isCityName ( long a , long b ) {
 		h ^= m_wids[k];
 	}
 	// might be alias
-	//long long *ah1 = (long long *) g_aliases.getValue(&h);	
+	//int64_t *ah1 = (int64_t *) g_aliases.getValue(&h);	
 	//if ( ah1 ) h = *ah1;
 	// get it
 	return g_cities.isInTable(&h);
@@ -9288,7 +9288,7 @@ bool Addresses::isCityName ( long a , long b ) {
 // words range is [a,b)
 bool Addresses::isStateName ( long a ) {
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
 	long count = 0;
 	// loop over words in [a,b)
@@ -10054,14 +10054,14 @@ static bool s_synInit = false;
 // . 4th --> fourth
 // . theatre --> theater
 // . school --> {0}
-long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
+int64_t *getSynonymWord ( int64_t *h, int64_t *prevId, bool isStreet ) {
 
-	static long long h_cafeteria;
-	static long long h_auditorium;
-	static long long h_school;
-	static long long h_library;
-	static long long h_zero;
-	static long long h_the;
+	static int64_t h_cafeteria;
+	static int64_t h_auditorium;
+	static int64_t h_school;
+	static int64_t h_library;
+	static int64_t h_zero;
+	static int64_t h_the;
 	// set syn table?
 	if ( ! s_synInit ) {
 		// init it
@@ -10077,8 +10077,8 @@ long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
 			char      *s2   = s_synList[i].m_s2;
 			long       len1 = gbstrlen ( s1 );
 			long       len2 = gbstrlen ( s2 );
-			long long  sh1  = hash64Lower_utf8 ( s1 , len1 );
-			long long  sh2  = hash64Lower_utf8 ( s2 , len2 );
+			int64_t  sh1  = hash64Lower_utf8 ( s1 , len1 );
+			int64_t  sh2  = hash64Lower_utf8 ( s2 , len2 );
 			// skip if the same
 			if ( sh1 == sh2 ) continue;
 			// sanity check
@@ -10114,13 +10114,13 @@ long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
 	// TODO: uncomment this later and replace h_the logic above
 	if ( *h == h_the && *prevId == 0LL ) return &h_zero;
 
-	long long *p = (long long *)s_syn.getValue64 ( *h );
+	int64_t *p = (int64_t *)s_syn.getValue64 ( *h );
 
 	// check city aliases table. we no longer store city aliases
 	// in the synonym list
 	// . no! might have "SF Smith" not "Santa Fe Smith"
 	//if ( ! p ) {
-	//	long long *ah1 = (long long *) g_aliases.getValue(h);
+	//	int64_t *ah1 = (int64_t *) g_aliases.getValue(h);
 	//	if ( ah1 ) return ah1;
 	//}
 
@@ -10131,7 +10131,7 @@ long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
 	return p;
 }
 
-void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
+void Addresses::print ( SafeBuf *pbuf , int64_t uh64 ) {
 
 	// print the streets first
 	printPlaces( &m_sm , pbuf , m_sections , NULL);//&m_addresses[0] );
@@ -10278,15 +10278,15 @@ long Addresses::addProperPlaces ( long    a             ,
 	// shortcuts
 	Words     *ww    = m_words;
 	long       nw    = ww->getNumWords();
-	long long *wids  = ww->getWordIds();
+	int64_t *wids  = ww->getWordIds();
 	char     **wptrs = ww->getWordPtrs();
 	long      *wlens = ww->getWordLens();
 	nodeid_t   *tids = ww->getTagIds();
 	// "4 miles" and "miles" does not mean "miles, california", the city
-	long long h_miles     = hash64 ( "miles",5);
-	long long h_mi        = hash64 ( "mi",2);
-	long long h_kilometers= hash64 ( "kilometers",10);
-	long long h_km        = hash64 ( "km",2);
+	int64_t h_miles     = hash64 ( "miles",5);
+	int64_t h_mi        = hash64 ( "mi",2);
+	int64_t h_kilometers= hash64 ( "kilometers",10);
+	int64_t h_km        = hash64 ( "km",2);
 	// reset this count again
 	long alnumCount = 0;
 	// after the street is an optional city
@@ -10319,7 +10319,7 @@ long Addresses::addProperPlaces ( long    a             ,
 		// truncate?
 		if ( max > nw ) max = nw;
 		// init hash
-		long long h = 0LL;
+		int64_t h = 0LL;
 		// the alnumcount for this
 		long subcount = 0;
 		// scan for city/adm1/zip after this street address
@@ -10403,7 +10403,7 @@ long Addresses::addProperPlaces ( long    a             ,
 				// . that way when we lookup this place in
 				//   placedb it will use the right hash
 				if ( slot2 >= 0 )
-		  pp->m_hash = *(long long *)g_cities.getKeyFromSlot(slot2);
+		  pp->m_hash = *(int64_t *)g_cities.getKeyFromSlot(slot2);
 
 				pp->m_adm1[0] = pd->m_adm1[0];
 				pp->m_adm1[1] = pd->m_adm1[1];
@@ -10617,11 +10617,11 @@ bool Addresses::addAddress ( Place   *name1   ,
 		return true;
 
 	static bool hset = false;
-	static long long h_zip;
-	static long long h_code;
-	static long long h_postal;
-	static long long h_zipcode;
-	static long long h_usa;
+	static int64_t h_zip;
+	static int64_t h_code;
+	static int64_t h_postal;
+	static int64_t h_zipcode;
+	static int64_t h_usa;
 	if ( ! hset ) {
 		hset      = true;
 		h_zip     = hash64n("zip");
@@ -10897,7 +10897,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	// gets "University" as a city in "Washington" state!
 	if ( adm1 ) {
 		long ab = adm1->m_b;
-		long long *wids  = m_words->getWordIds();
+		int64_t *wids  = m_words->getWordIds();
 		char     **wptrs = m_words->getWordPtrs();
 		long      *wlens = m_words->getWordLens();
 		nodeid_t   *tids = m_words->getTagIds();
@@ -11174,7 +11174,7 @@ uint64_t  getAddressHash ( Place *street ,
 			   Place *adm1   ,
 			   Place *zip    ) {
 
-	long long ch = 0;
+	int64_t ch = 0;
 	ch ^= street->m_hash;
 	ch ^= street->m_streetNumHash;
 	ch ^= street->m_streetIndHash;
@@ -11185,7 +11185,7 @@ uint64_t  getAddressHash ( Place *street ,
 	else if ( city && city->m_adm1[0] ) adm1Str = city->m_adm1;
 	else               { char *xx=NULL;*xx=0; }
 	// xor in adm1
-	//ch ^= (long long)*((uint16_t *)adm1Str);
+	//ch ^= (int64_t)*((uint16_t *)adm1Str);
 	// and city hash
 	uint64_t cityHash = 0;
 	if      ( city ) cityHash = city->m_hash;
@@ -11399,9 +11399,9 @@ bool setFromStr ( Address *a, char *s, pbits_t flags ,
 			if ( ! w.set (p->m_str , p->m_strlen,0,true,niceness)) 
 				return false;
 			// shortcut
-			long long *wids = w.getWordIds();
+			int64_t *wids = w.getWordIds();
 			// zero out the hash
-			long long h = 0LL;
+			int64_t h = 0LL;
 			// loop em
 			for ( long j = 0 ; j < w.m_numWords ; j++ ) {
 				// skip if not alnum
@@ -11674,7 +11674,7 @@ uint32_t getCityIdFromAddr ( char *addr ) {
 	// fix Denver's so we do not return unknown timezone
 	if ( semi1[-1]=='s' && semi1[-2]=='\'' ) semi1[-2]='\0';
 	// get city hash
-	long long h = getWordXorHash(city);
+	int64_t h = getWordXorHash(city);
 	// TODO: make state into two letter abbr?
 	//if ( gbstrlen(adm1) != 2 ) { char *xx=NULL;*xx=0; }
 	// use this now
@@ -11787,11 +11787,11 @@ char getTimeZone2 ( char *city , char *state , char *useDST ) {
 	// get the words
 	//Words ww; ww.set3 ( city );
 	// shortcut
-	//long long *wids = ww.m_wordIds;
+	//int64_t *wids = ww.m_wordIds;
 	// limit hash
 	//long count = 0;
 	// get city hash
-	long long h = getWordXorHash(city);
+	int64_t h = getWordXorHash(city);
 	// TODO: make state into two letter abbr?
 	// crap, if state is taken from class ZipDesc it is only
 	// 2 letters and has no \0 in it
@@ -12599,7 +12599,7 @@ long Address::print ( ) {
 	return print2 ( 0,NULL,0);
 }
 
-long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) { 
+long Address::print2 ( long i , SafeBuf *pbuf , int64_t uh64 ) { 
 
 	// print out each candidate for debug
 	SafeBuf sb;
@@ -12738,7 +12738,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		else if ( m_flags3 & AF2_LATLON );
 		else  { char *xx=NULL;*xx=0; }
 		// city
-		long long cityHash = 0LL;
+		int64_t cityHash = 0LL;
 		if      ( m_city ) cityHash = m_city->m_hash;
 		else if ( m_zip  ) cityHash = m_zip->m_cityHash;
 		else if ( m_flags3 & AF2_LATLON );
@@ -12746,14 +12746,14 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		uint32_t cityId = getCityId32(cityHash,adm1Str);
 		// ripped from XmlDoc.cpp placedb logic
 		key128_t *k2      = &m_placedbKey;
-		long long bigHash = g_placedb.getBigHash       ( k2 );
-		long long docId   = g_placedb.getDocId         ( k2 );
+		int64_t bigHash = g_placedb.getBigHash       ( k2 );
+		int64_t docId   = g_placedb.getDocId         ( k2 );
 		long      snh     = g_placedb.getStreetNumHash ( k2 );
-		long long nh1 = 0;
-		long long nh2 = 0;
+		int64_t nh1 = 0;
+		int64_t nh2 = 0;
 		if ( m_name1 ) nh1 = m_name1->m_hash;
 		if ( m_name2 ) nh2 = m_name2->m_hash;
-		long long strh = 0LL;
+		int64_t strh = 0LL;
 		if ( m_street ) strh = m_street->m_hash;
 		pbuf->safePrintf("<td><nobr>"
 				 "k.n1=0x%16llx n0=0x%16llx "
@@ -12901,7 +12901,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 }
 
 void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
-				long long uh64 ) {
+				int64_t uh64 ) {
 
 
 	pbuf->safePrintf ( "<td><nobr>");
@@ -13765,7 +13765,7 @@ bool initPlaceDescTable ( ) {
 	/*
 	if ( g_indicators.load ( g_hostdb.m_dir , "indicators.dat" ) ) {
 		loadedIndicators = true;
-		long long h = hash64 ( "highway" , 7 );
+		int64_t h = hash64 ( "highway" , 7 );
 		// test the indicators
 		if ( g_indicators.getSlot ( &h ) < 0 ){char *xx=NULL;*xx=0; }
 		// test the indicators
@@ -14293,7 +14293,7 @@ bool initPlaceDescTable ( ) {
 		//if ( g_zips.m_numSlotsUsed != 89471 ) { char*xx=NULL;*xx=0;}
 		if ( g_zips.m_numSlotsUsed != 43595 ) { char*xx=NULL;*xx=0;}
 		loadedZips = true;
-		long long h = hash64 ( "87109" , 5 );
+		int64_t h = hash64 ( "87109" , 5 );
 		// test the zips table
 		if ( g_zips.getSlot ( &h ) < 0 ){char *xx=NULL;*xx=0; }
 		// . assign it
@@ -14312,7 +14312,7 @@ bool initPlaceDescTable ( ) {
 		// get it
 		StateDesc *sd = &s_states[i];
 		// get hash of abbr
-		long long h = hash64n ( sd->m_adm1 );
+		int64_t h = hash64n ( sd->m_adm1 );
 		// make the value
 		//long val = 0;
 		// shift up
@@ -14432,8 +14432,8 @@ bool initPlaceDescTable ( ) {
 		char *str;
 		//char *str = "nm";
 		//str = "madrid";
-		//long long h = hash64 (str,gbstrlen(str));
-		long long h = 0;
+		//int64_t h = hash64 (str,gbstrlen(str));
+		int64_t h = 0;
 		//h =  hash64 ("santa",5);
 		//h ^= hash64 ("n",1);
 		h =  hash64n ("jemez");
@@ -14472,14 +14472,14 @@ bool initPlaceDescTable ( ) {
 		if ( ! ( cd->m_adm1Bits & abits ) ) { char *xx=NULL;*xx=0;}
 
 		// check city ids
-		long long abqh1 = getWordXorHash("abq");
-		long long abqh2 = getWordXorHash("albuquerque");
+		int64_t abqh1 = getWordXorHash("abq");
+		int64_t abqh2 = getWordXorHash("albuquerque");
 		uint32_t cid1 = getCityId32(abqh1,"nm");
 		uint32_t cid2 = getCityId32(abqh2,"nm");
 		if ( cid1 != cid2 ) { char *xx=NULL;*xx=0; }
 
 		// get nm
-		long long hnm = getWordXorHash("new mexico");
+		int64_t hnm = getWordXorHash("new mexico");
 		// get state descriptor
 		long pos = getStateOffset ( &hnm );
 		// sanity
@@ -14511,9 +14511,9 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		*/
 		// now hash for zip code
 		//h = hash64Lower_a("BC",2);
-		//long long h1 = hash64("n",1);
-		//long long h2 = hash64("m",1);
-		//long long h3 = (h1<<1LL) ^ h2;
+		//int64_t h1 = hash64("n",1);
+		//int64_t h2 = hash64("m",1);
+		//int64_t h3 = (h1<<1LL) ^ h2;
 
 		char *zstr = "87102";
 		h = hash64 ( zstr,gbstrlen(zstr));
@@ -14523,7 +14523,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 
 		//char *city="Corpus Christi";
 		char *city="Albuquerque";
-		long long ch = hash64Lower_utf8(city,gbstrlen(city));
+		int64_t ch = hash64Lower_utf8(city,gbstrlen(city));
 		//long ch = (long)(th64&0xffffffff);
 		log("places: %s hash = %llu",city,ch);
 		// a nested loop
@@ -15378,14 +15378,14 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		// try to convert it
 		PlaceDesc *tpd ;
 		long ss;
-		long long th;
-		long long *twids;
+		int64_t th;
+		int64_t *twids;
 		Words tw;
 
 		// make a city hash that would match Place::m_hash
-		//long long cityHash = hashStringXor ( cityName );
+		//int64_t cityHash = hashStringXor ( cityName );
 
-		//long long tmpHash ;
+		//int64_t tmpHash ;
 		//tmpHash = hash64Lower_utf8 ( cityName , gbstrlen(cityName) ) ;
 		//long cityHash = (long)(ch & 0xffffffff);
 		//if ( strncmp(cityName,"Budlake",7)==0 ) 
@@ -15400,7 +15400,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		redo:
 			if ( ! use ) { char *xx=NULL;*xx=0; }
 			// hash the name
-			long long uh = hashStringXor ( use );
+			int64_t uh = hashStringXor ( use );
 			// see if we got it
 			City *c = (City *) g_cities.getValue ( &uh );
 			// set adm1 i guess
@@ -15453,7 +15453,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 
 		if ( ! a1name ) continue;
 		// hash the proper name of the adm1
-		long long HH = getWordXorHash ( a1name );
+		int64_t HH = getWordXorHash ( a1name );
 		// skip if empty
 		if ( HH == 0 ) continue;
 		// now get state
@@ -15486,7 +15486,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		// update zd
 		zd.m_cityOffset = cityOffset;
 
-		long long zh = getWordXorHash ( zip );
+		int64_t zh = getWordXorHash ( zip );
 		// skip if bad
 		if ( ! zh ) { badEntry++; continue; }
 
@@ -15552,7 +15552,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		if ( zip[6] != '\"' ) zip[6] = '\0';
 		else { char *xx=NULL;*xx=0; }
 		// look it up
-		long long zh = getWordXorHash ( zip );
+		int64_t zh = getWordXorHash ( zip );
 		// skip if bad
 		ZipDesc *zd = (ZipDesc *)g_zips.getValue ( &zh );
 		// must be there
@@ -15607,7 +15607,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		// limit it to 1.5 for now...
 		//if ( boost > 1.5 ) boost = 1.5;
 		// get wid
-		//long long *wid = (long long *)ct.getKey ( i );
+		//int64_t *wid = (int64_t *)ct.getKey ( i );
 		// . add it
 		// . use a boost of just 0.25 for now
 		//if(! addIndicator ( *wid , IND_NAME , 0.25 ) ) // boost ) ) 
@@ -15766,11 +15766,11 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 // . "boost" is how much to boost the Place's score by if it has this indicator
 bool addIndicator ( char *s , char bit , float indScore ) {
 	// hash it
-	long long h = hash64Lower_utf8 ( s , gbstrlen(s) );
+	int64_t h = hash64Lower_utf8 ( s , gbstrlen(s) );
 	return addIndicator ( h , bit , indScore );
 }
 
-bool addIndicator ( long long h , char bit , float indScore ) {
+bool addIndicator ( int64_t h , char bit , float indScore ) {
 	// plaza is two types of indicator, street and name
 	IndDesc *pid = (IndDesc *)g_indicators.getValue (&h);
 	// if there, augment the bits
@@ -15803,7 +15803,7 @@ bool Address::hash ( long        baseScore ,
 
 
 // . returns false and sets g_errno on error
-bool Addresses::hashForPlacedb ( long long   docId    ,
+bool Addresses::hashForPlacedb ( int64_t   docId    ,
 				 long        siteHash32 ,
 				 long        ip       ,
 				 HashTableX *dt       ) {
@@ -15927,7 +15927,7 @@ bool Addresses::hashForPlacedb ( long long   docId    ,
 // . "streetname" should exclude any indicators
 // . we determine the group responsible for this key by the 64 bit hash (H)
 //   alone... see Hostdb::getGroupId()
-key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
+key128_t Address::makePlacedbKey (int64_t docId,bool useName1,bool useName2){
 
 	// the key we are setting
 	key128_t k;
@@ -15941,7 +15941,7 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	long snh = m_street->m_streetNumHash & 0x01ffffff;
 
 	// add in street name (not including indicators)
-	long long h = m_street->m_hash;
+	int64_t h = m_street->m_hash;
 	// . use place name 1 instead of street name?
 	// . we use this for when "Tingley Colesium" is given and no street!
 	if ( useName1 || useName2 ) {
@@ -15960,7 +15960,7 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	}
 
 	// country id
-	//h = hash64 ( (long long)m_adm1.m_crid , h );
+	//h = hash64 ( (int64_t)m_adm1.m_crid , h );
 	// adm1
 	// get the two-letter state abbreviation code (nm = new mexico)
 	char *adm1Str = NULL;
@@ -15969,9 +15969,9 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	// unique cities like "Albuquerque" imply a state
 	//else if ( m_city && m_city->m_adm1[0] ) adm1Str = m_city->m_adm1;
 	else               { char *xx=NULL;*xx=0; }
-	h = hash64 ( (long long)(*(uint16_t *)adm1Str) , h );
+	h = hash64 ( (int64_t)(*(uint16_t *)adm1Str) , h );
 	// city
-	long long cityHash = 0LL;
+	int64_t cityHash = 0LL;
 	if      ( m_city ) cityHash = m_city->m_hash;
 	else if ( m_zip  ) cityHash = m_zip->m_cityHash;
 	else              { char *xx=NULL;*xx=0; }
@@ -15979,11 +15979,11 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	uint64_t cid64 = (uint64_t)getCityId32 ( cityHash , adm1Str );
 	// incorporate that into "h"
 	h = hash64 ( cid64 , h );
-	// store that in most signficant long long
+	// store that in most signficant int64_t
 	k.n1 = h;
 
 	// street hash
-	long long n0 = snh;
+	int64_t n0 = snh;
 	// shift up for docid
 	n0 <<= 38;
 	// sanity
@@ -16007,9 +16007,9 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 
 /*
 // similar to Address::serialize()
-long long Address::makeAddressVotingTableKey ( ) {
+int64_t Address::makeAddressVotingTableKey ( ) {
 
-	long long h = 0LL;
+	int64_t h = 0LL;
 	Place *d = NULL;
 
 	// incorporate place name into the hash
@@ -16558,7 +16558,7 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 
 	// get our street num hash
 	key128_t *pk = &st->m_placedbKey;
-	long long myBigHash       = g_placedb.getBigHash(pk);
+	int64_t myBigHash       = g_placedb.getBigHash(pk);
 	long      myStreetNumHash = g_placedb.getStreetNumHash(pk);
 
 	// point to the place name
@@ -16887,7 +16887,7 @@ void sendBackAddress ( State2c *st ) {
 	UdpSlot *slot = st->m_slot;
 	// set myBigHash for comparing
 	key128_t *pk = &st->m_placedbKey;
-	long long myBigHash = g_placedb.getBigHash(pk);
+	int64_t myBigHash = g_placedb.getBigHash(pk);
 
 	// set up a little voting table
 	char vbuf[30000];
@@ -17065,9 +17065,9 @@ bool getBestLatLon ( RdbList *list      ,
 		// sanity check
 		if ( sizeof(double) != 8 ) { char *xx=NULL;*xx=0; }
 		// get hash for them
-		long long h1 = *(long long *)&lat;
-		long long h2 = *(long long *)&lon;
-		long long h = (h1<<1) ^ h2;
+		int64_t h1 = *(int64_t *)&lat;
+		int64_t h2 = *(int64_t *)&lon;
+		int64_t h = (h1<<1) ^ h2;
 		// add to table
 		if ( ! gpsTable.addTerm ( &h ) ) 
 			return false;
@@ -17428,7 +17428,7 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	long wcount1 = 0;
 	long icount1 = 0;
 	bool firstWord = true;
-	long long lastWid1 = 0LL;
+	int64_t lastWid1 = 0LL;
 	bool explicit1 = false;
 	bool hadPage1 = false;
 	bool lastWasStreetInd = false;
@@ -17960,7 +17960,7 @@ bool Addresses::isInStreet ( long j ) {
 	if ( m_wids[j] == h_intersection )
 		return false;
 
-	long long postWid = 0LL;
+	int64_t postWid = 0LL;
 	long maxj = j+15; if ( j > m_nw ) j = m_nw;
 	for ( long pi = j + 1 ; pi < maxj ; pi++ ) {
 		if ( ! m_wids[pi] ) continue;
@@ -18059,13 +18059,13 @@ bool setCountryTable ( ) {
 }
 
 // access g_countries table to find it
-CountryDesc *getCountryDesc ( long long wid ) {
+CountryDesc *getCountryDesc ( int64_t wid ) {
 	return NULL;
 }
 
 // two letter country code
 CountryDesc *getCountryDesc ( char *countryCode ) {
-	long long wid = hash64Lower_a ( countryCode , 2 );
+	int64_t wid = hash64Lower_a ( countryCode , 2 );
 	return getCountryDesc ( wid );
 }
 
@@ -18089,7 +18089,7 @@ StateDesc *getStateDescByNum ( long i ) {
 }
 
 
-inline long getStateOffset ( long long *h ) {
+inline long getStateOffset ( int64_t *h ) {
 	StateDesc **sdp = (StateDesc **)g_states.getValue(h);
 	if ( ! sdp ) return -1;
 	// return the POSITION though
@@ -18097,7 +18097,7 @@ inline long getStateOffset ( long long *h ) {
 }
 
 // from hash of state
-uint64_t getStateBitFromHash ( long long *h ) {
+uint64_t getStateBitFromHash ( int64_t *h ) {
 	long pos = getStateOffset ( h );
 	if ( pos < 0 ) return 0;
 	return (1LL << pos);
@@ -18127,20 +18127,20 @@ char *getStateAbbr ( uint64_t bit ) {
 	return s_states[pos].m_adm1;
 }
 
-long long getWordXorHash2 ( char *s , long slen ) {
+int64_t getWordXorHash2 ( char *s , long slen ) {
 	// tmp save
 	char c = s[slen];
 	s[slen] = '\0';
-	long long h = getWordXorHash(s);
+	int64_t h = getWordXorHash(s);
 	// put back
 	s[slen] = c;
 	return h;
 }
 
-long long getWordXorHash ( char *s ) {
+int64_t getWordXorHash ( char *s ) {
 	Words tmp;
 	tmp.set9 ( s , 0 );
-	long long *wids = tmp.m_wordIds;
+	int64_t *wids = tmp.m_wordIds;
 	uint64_t h = 0LL;
 	for ( long i = 0 ; i < tmp.m_numWords ; i++ ) {
 		if ( !wids[i] ) continue;
@@ -18641,12 +18641,12 @@ bool getLatLonFromUserInput ( float  *radius,
 	long finalZipB  = -1;
 
 	// shortcuts
-	long long *wids = w.getWordIds();
+	int64_t *wids = w.getWordIds();
 	char **wptrs = w.getWords();
 	long  *wlens = w.getWordLens();
 
 	// set lastWidPos
-	long long lastWidPos = w.m_numWords;
+	int64_t lastWidPos = w.m_numWords;
 	for ( long i = 0 ; i < w.m_numWords ; i++ )
 		if ( wids[i] ) lastWidPos = i;
 
@@ -19477,7 +19477,7 @@ bool getZipLatLon ( char  *zip    ,
 	// only 5 digits i guess
 	if ( zipLen != 5 ) return false;
 	// hash it
-	long long zh = getWordXorHash2(zip,zipLen);
+	int64_t zh = getWordXorHash2(zip,zipLen);
 	// get it
 	ZipDesc *zd = (ZipDesc *)g_zips.getValue(&zh);
 	// mine it
@@ -19867,7 +19867,7 @@ bool generatePlacesFile ( ) {
 			 , &off2
 			 );
 		// make a table
-		long long tzh64 = getWordXorHash ( timeZoneStr );
+		int64_t tzh64 = getWordXorHash ( timeZoneStr );
 		// make the value
 		TZVal tzval;
 		tzval.m_tzoff = off1;
@@ -20270,7 +20270,7 @@ bool generatePlacesFile ( ) {
 	PlaceDesc *pd2 = getCity2_new ( "abq", "nm", CRID_US,0);
 	if ( ! pd2 ) { char *xx=NULL;*xx=0; }
 
-	long long ph64 = getWordXorHash ( "Tokyo" );
+	int64_t ph64 = getWordXorHash ( "Tokyo" );
 	pd2 = getMostPopularPlace_new ( ph64 ,CRID_ANY ,PDF_CITY,0 );
 	if ( ! pd2 ) { char *xx=NULL;*xx=0; }
 
@@ -20423,7 +20423,7 @@ bool getLongestPlaceName_new ( long a,
 	// assume none
 	if ( placeHash64 ) *placeHash64 = 0LL;
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
 	long count = 0;
 	// record start
@@ -20432,8 +20432,8 @@ bool getLongestPlaceName_new ( long a,
 	alnumPos--;
 	// for some filtering
 	static bool s_flag = false;
-	static long long h_university;
-	static long long h_of;
+	static int64_t h_university;
+	static int64_t h_of;
 	if ( ! s_flag ) {
 		s_flag = true;
 		h_university = hash64n("university");
@@ -20453,7 +20453,7 @@ bool getLongestPlaceName_new ( long a,
 		// only up to 4 words in a place name
 		if ( ++count >= 5 ) break;
 		// get the hash of potential place name
-		long long wid = words->m_wordIds[k];
+		int64_t wid = words->m_wordIds[k];
 		// shortcut
 		long  wlen = words->m_wordLens[k];
 		char *wptr = words->m_words[k];
@@ -20546,7 +20546,7 @@ bool getZip_new ( long a ,
 	// must be a number
 	if ( ! is_digit(words->m_words[a][0]) ) return true;
 	// make hash
-	long long h = 0 ^ words->m_wordIds[a];
+	int64_t h = 0 ^ words->m_wordIds[a];
 	// check for zip code
 	long slot = g_zips.getSlot(&h);
 	// skip if not
@@ -20567,7 +20567,7 @@ bool getZip_new ( long a ,
 	return true;
 }
 
-PlaceDesc *getMostPopularPlace_new ( long long placeHash64, 
+PlaceDesc *getMostPopularPlace_new ( int64_t placeHash64, 
 				     uint8_t crid ,
 				     uint8_t placeType,
 				     long niceness ) {

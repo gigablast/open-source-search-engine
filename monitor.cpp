@@ -392,7 +392,7 @@ void sleepWrapper ( int fd , void *state ) {
 	// save this
 	long old = g_qn;
 
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	bool status;
 
@@ -421,7 +421,7 @@ void sleepWrapper ( int fd , void *state ) {
 	s[strlen(s)-1] = '\0';
 	char buf [ 30024 ];
 
-	long long took = gettimeofdayInMilliseconds() - startTime;
+	int64_t took = gettimeofdayInMilliseconds() - startTime;
 
 	// if ok, loop back
 	if ( status ) { 
@@ -695,7 +695,7 @@ int connectSock ( char *host , unsigned short port ) {
 	to.sin_port        = htons (port);
 	bzero ( &(to.sin_zero) , 8 );
 
-	long long start = gettimeofdayInMillisecondsLocal();
+	int64_t start = gettimeofdayInMillisecondsLocal();
 
  connectLoop:
 	// NON-BLOCKING!
@@ -710,8 +710,8 @@ int connectSock ( char *host , unsigned short port ) {
 	}
 
 	// if it has been 10 seconds, forget it!
-	long long now = gettimeofdayInMillisecondsLocal();
-	long long elapsed = now - start;
+	int64_t now = gettimeofdayInMillisecondsLocal();
+	int64_t elapsed = now - start;
 	if ( elapsed >= 10000 ) {
 		sprintf ( s_errbuf ,"connectSock: connect: TIMEDOUT!", 
 			  strerror(errno) );

@@ -469,13 +469,13 @@ class Events {
 
 	// print a table of the events
 	bool print ( class SafeBuf *pbuf , long siteHash32 ,
-		     long long uh64 ) ;
+		     int64_t uh64 ) ;
 
-	bool printEvent ( class SafeBuf *pbuf , long i , long long uh64 );
+	bool printEvent ( class SafeBuf *pbuf , long i , int64_t uh64 );
 
 	bool printEventForCheckbox ( class Event *ev , 
 				     class SafeBuf *pbuf , 
-				     long long uh64 ,
+				     int64_t uh64 ,
 				     long i ,
 				     char *boxPrefix );
 
@@ -502,11 +502,11 @@ class Events {
 	// all the Timedb keys to store into timedb
 	long getIntervalsNeed();
 	char *addIntervals ( char *metaList, 
-			     long long docId ,
+			     int64_t docId ,
 			     char rdbId ) ;
 	char *addIntervals2 ( class Event *ev , 
 			      char *metaList, 
-			      long long docId ,
+			      int64_t docId ,
 			      char rdbId ) ;
 
 	// . returns -1 and sets g_errno on error
@@ -595,7 +595,7 @@ class Events {
 	// shortcuts
 	char          **m_wptrs;
 	long           *m_wlens;
-	long long      *m_wids;
+	int64_t      *m_wids;
 	nodeid_t       *m_tids;
 	long            m_nw;
 

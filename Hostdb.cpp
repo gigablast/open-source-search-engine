@@ -1692,15 +1692,15 @@ long Hostdb::getAliveIp ( Host *h ) {
 	return h->m_ip;
 }
 
-long long Hostdb::getNumGlobalRecs ( ) {
-	long long n = 0;
+int64_t Hostdb::getNumGlobalRecs ( ) {
+	int64_t n = 0;
 	for ( long i = 0 ; i < m_numHosts ; i++ )
 		n += getHost ( i )->m_docsIndexed;
 	return n / m_numHostsPerShard;
 }
 
-long long Hostdb::getNumGlobalEvents ( ) {
-	long long n = 0;
+int64_t Hostdb::getNumGlobalEvents ( ) {
+	int64_t n = 0;
 	for ( long i = 0 ; i < m_numHosts ; i++ )
 		n += getHost ( i )->m_eventsIndexed;
 	return n / m_numHostsPerShard;
@@ -2354,7 +2354,7 @@ uint32_t Hostdb::getShardNumByTermId ( void *k ) {
 	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 }
 
-long getShardNumFromTermId ( long long termId ) {
+long getShardNumFromTermId ( int64_t termId ) {
  	key144_t sk;
  	// make fake posdb key
  	g_posdb.makeStartKey ( &sk, termId );
@@ -2405,7 +2405,7 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
 	else if ( rdbId == RDB_SPIDERDB || rdbId == RDB2_SPIDERDB2 ) {
-		//long long d = g_spiderdb.getDocId ( (key_t *)k );
+		//int64_t d = g_spiderdb.getDocId ( (key_t *)k );
 		//return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 		// HACK:!!! only the responsible group can nuke a spiderdb key
 		//if ( ( ((char *)k)[0] & 0x01 ) == 0x00 )
@@ -2456,7 +2456,7 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 	}
 	else if ( rdbId == RDB_REVDB || rdbId == RDB2_REVDB2 ) {
 		// key is formed like title key is
-		//long long d = g_titledb.getDocId ( (key_t *)k );
+		//int64_t d = g_titledb.getDocId ( (key_t *)k );
 		uint64_t d = g_revdb.getDocId( (key_t *)k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
@@ -2478,7 +2478,7 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 	return 0;
 }
 
-uint32_t Hostdb::getShardNumFromDocId ( long long d ) {
+uint32_t Hostdb::getShardNumFromDocId ( int64_t d ) {
 	return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 }
 

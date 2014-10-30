@@ -203,10 +203,10 @@ bool SafeBuf::pushLong ( long i) {
 	return true;
 }
 
-bool SafeBuf::pushLongLong ( long long i) {
+bool SafeBuf::pushLongLong ( int64_t i) {
 	if ( m_length + 8 > m_capacity && ! reserve(8) )
 		return false;
-	*(long long *)(m_buf+m_length) = i;
+	*(int64_t *)(m_buf+m_length) = i;
 	m_length += 8;
 	return true;
 }
@@ -1571,8 +1571,8 @@ bool SafeBuf::operator += (uint64_t i) {
 	return safeMemcpy((char*)&i, sizeof(uint64_t));
 }
 
-bool SafeBuf::operator += (long long i) {
-	return safeMemcpy((char*)&i, sizeof(long long));
+bool SafeBuf::operator += (int64_t i) {
+	return safeMemcpy((char*)&i, sizeof(int64_t));
 }
 
 bool SafeBuf::operator += (long i) {
@@ -1653,12 +1653,12 @@ bool SafeBuf::printKey(char* key, char ks) {
 	switch (ks) {
 	case 12:
 		safePrintf("%016llx%08lx",
-			   *(long long*)(key+(sizeof(long))), *(long*)key);
+			   *(int64_t*)(key+(sizeof(long))), *(long*)key);
 		break;
 	case 16:
 		safePrintf("%016llx%016llx ",
-			   *(long long*)(key+(sizeof(long long))),
-			   *(long long *)key);
+			   *(int64_t*)(key+(sizeof(int64_t))),
+			   *(int64_t *)key);
 		break;
 	default:
 		break;
@@ -3218,7 +3218,7 @@ bool SafeBuf::brify ( char *s ,
 // . return false with g_errno set on error
 bool SafeBuf::compress() {
 	// how much space do we need, worst case?
-	long need = ((long long)length() * 1001LL) / 1000LL + 13 + 12;
+	long need = ((int64_t)length() * 1001LL) / 1000LL + 13 + 12;
 	// alloc new buf then
 	char *newBuf = (char *)mmalloc(need,"sbcomp");
 	if ( ! newBuf ) return false;

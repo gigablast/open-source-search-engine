@@ -52,7 +52,7 @@ void test0 ( int arg ) {
 		// store radnom docIds in this list
 		char *p = kp;
 		// value
-		long long value = 0LL;
+		int64_t value = 0LL;
 		// first key is 12 bytes
 		key_t firstKey;
 		firstKey.n0 = 1LL;
@@ -88,14 +88,14 @@ void test0 ( int arg ) {
 
 	printf("beginning intersection\n");
 
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	table.addLists_r ( lists    ,
 			   1        , // num tiers
 			   numLists , // lists per tier
 			   15       );// docs wanted
 
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	printf("intersection took %llu ms\n" , now - startTime );
 
 	log("addLists_r: took %lli ms docids=%lu "

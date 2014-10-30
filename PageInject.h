@@ -38,7 +38,7 @@ public:
 	void *m_state;
 	void (* m_callback )(void *state);
 
-	//long long m_hackFileOff;
+	//int64_t m_hackFileOff;
 	//long m_hackFileId;
 
 	//long m_crawlbotAPI;

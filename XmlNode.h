@@ -28,7 +28,7 @@ class XmlNode {
 	bool  isHtmlTag    () { return m_nodeId >  1; };
 	bool  isXmlTag     () { return m_nodeId == 1; };
 	nodeid_t getNodeId    () { return m_nodeId; };
-	long long getNodeHash() { return m_hash; };
+	int64_t getNodeHash() { return m_hash; };
 	char *getNode      () { return m_node; };
 	// m_nodeLen is in bytes
 	long  getNodeLen   () { return m_nodeLen; };
@@ -74,14 +74,14 @@ class XmlNode {
 
 	// . called by set() to get nodeId and isBreaking of a tag node
 	// . returns the nodeId
-	nodeid_t setNodeInfo    ( long long  nodeHash );
+	nodeid_t setNodeInfo    ( int64_t  nodeHash );
 
 	char      *m_node;             // tag data, or text data if not a tag
 	long       m_nodeLen;          // m_nodeLen is in bytes
 	char      *m_tagName;          // iff this node is a tag
 	long       m_tagNameLen;
-	long long  m_hash;             // iff this node is a tag
-	//long long  m_compoundHash;     // set by Xml class
+	int64_t  m_hash;             // iff this node is a tag
+	//int64_t  m_compoundHash;     // set by Xml class
 	//long       m_parentTagNum;     // set by Xml class
 	//long       m_xmlParentTagNum;  // set by Xml class
 	short      m_depth;            // set by Xml class (xml depth only)

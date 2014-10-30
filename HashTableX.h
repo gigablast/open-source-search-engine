@@ -67,7 +67,7 @@ class HashTableX {
 
 
 	// a replacement for TermTable.cpp
-	bool addTerm ( long long *wid , long score = 1 ) {
+	bool addTerm ( int64_t *wid , long score = 1 ) {
 		long slot = getSlot ( wid );
                 if ( slot<0 ) return addKey( wid ,&score,&slot);
                 uint32_t *val = (uint32_t *)getValueFromSlot ( slot );
@@ -78,12 +78,12 @@ class HashTableX {
 	};
 	bool addTerm64 ( char *str ) {
 		uint64_t wid64 = hash64n ( str );
-		return addTerm64 ( (long long *)&wid64 );
+		return addTerm64 ( (int64_t *)&wid64 );
 	};
-	bool addTerm64 ( long long *wid , long score = 1 ) {
+	bool addTerm64 ( int64_t *wid , long score = 1 ) {
 		return addTerm(wid,score); }
 	// a replacement for TermTable.cpp
-	uint32_t getScore ( long long *wid ) {
+	uint32_t getScore ( int64_t *wid ) {
 		long slot = getSlot ( wid );
 		if ( slot < 0 ) return 0;
 		return *(uint32_t *)getValueFromSlot ( slot );
@@ -146,8 +146,8 @@ class HashTableX {
 		// grow it!
 		if ( (m_numSlots < 20 || 4 * m_numSlotsUsed >= m_numSlots) &&
 		     m_numSlots < m_maxSlots ) {
-			long long growTo ;
-			growTo = ((long long)m_numSlots * 150LL )/100LL+20LL;
+			int64_t growTo ;
+			growTo = ((int64_t)m_numSlots * 150LL )/100LL+20LL;
 			if ( growTo > m_maxSlots ) growTo = m_maxSlots;
 			if ( ! setTableSize ( (long)growTo , NULL , 0 ) ) 
 				return false;
@@ -219,7 +219,7 @@ class HashTableX {
 	void *getValue ( void *key ) {
 		// make it fast
 		if ( m_ks == 4 ) return getValue32 ( *(long *)key );
-		if ( m_ks == 8 ) return getValue64 ( *(long long *)key );
+		if ( m_ks == 8 ) return getValue64 ( *(int64_t *)key );
 		// returns -1 if key not in hash table
 		long n = getOccupiedSlotNum ( key );
 		if ( n < 0 ) return NULL;
@@ -293,7 +293,7 @@ class HashTableX {
 
 	// . specialized for 64-bit keys for speed
 	// . returns NULL if not in table
-	void *getValue64 ( long long key ) {
+	void *getValue64 ( int64_t key ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return NULL;
 		// sanity check
@@ -316,7 +316,7 @@ class HashTableX {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return NULL;
 			// get the key there
-			if (((long long *)m_keys)[n] == key) 
+			if (((int64_t *)m_keys)[n] == key) 
 				return &m_vals[n*m_ds]; 
 			// advance otherwise
 			if ( ++n == m_numSlots ) n = 0;
@@ -336,8 +336,8 @@ class HashTableX {
 	void *getKey ( long n ) { return m_keys + n * m_ks; };
 	void *getKeyFromSlot ( long n ) { return m_keys + n * m_ks; };
 
-	long long getKey64FromSlot ( long n ) {
-		return *(long long *)(m_keys+n*m_ks); }
+	int64_t getKey64FromSlot ( long n ) {
+		return *(int64_t *)(m_keys+n*m_ks); }
 
 	long getKey32FromSlot ( long n ) {
 		return *(long *)(m_keys+n*m_ks); }
@@ -346,7 +346,7 @@ class HashTableX {
 
 	// . specialized for 64-bit keys for speed
 	// . returns -1 if not in table
-	long getSlot64 ( long long *key ) {
+	long getSlot64 ( int64_t *key ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return -1;
 		// sanity check
@@ -368,7 +368,7 @@ class HashTableX {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return -1;
 			// get the key there
-			if (((long long *)m_keys)[n] == *key) 
+			if (((int64_t *)m_keys)[n] == *key) 
 				return n;
 			// advance otherwise
 			if ( ++n == m_numSlots ) n = 0;
@@ -495,7 +495,7 @@ class HashTableX {
 	long  m_tsize    ;
 
 	// limits growing to this # of slots total
-	long long  m_maxSlots;
+	int64_t  m_maxSlots;
 
 	char *m_allocName;
 	

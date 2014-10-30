@@ -655,7 +655,7 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 }
 #endif
 
-long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
+int64_testCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 			 long *outbuf2,  // xml2 indexes of nodes in lcs
 			 long *outlens, // number of consecutive nodes lcsBuf
 			 long outbuflen, // Size of output bufs (elts not bytes)
@@ -1239,8 +1239,8 @@ int xmlTagCompare(void *elt1, void *elt2){
 	if (id1 != id2) return id2 - id1;
 	
 	// compare tag hashes 
-	const long long h1 = node1->getNodeHash();
-	const long long h2 = node2->getNodeHash();
+	const int64_t h1 = node1->getNodeHash();
+	const int64_t h2 = node2->getNodeHash();
 	return h2 - h1;
 }
 
@@ -1271,8 +1271,8 @@ int xmlTagCompare2(void *elt1, void *elt2){
 
 	}
 	// compare tag hashes 
-	const long long h1 = node1->getNodeHash();
-	const long long h2 = node2->getNodeHash();
+	const int64_t h1 = node1->getNodeHash();
+	const int64_t h2 = node2->getNodeHash();
 	if (h1 != h2) return h2 - h1;
 
 	const long len1 = node1->getNodeLen();

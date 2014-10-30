@@ -464,7 +464,7 @@ long Pages::getPageNumber ( char *filename ){
 		for ( long i=0; i < PAGE_NONE; i++ ){
 			if ( ! s_pages[i].m_filename  ) continue;
 			if (   s_pages[i].m_flen <= 0 ) continue;
-			long long pageHash = hash64( s_pages[i].m_filename,
+			int64_t pageHash = hash64( s_pages[i].m_filename,
 			                             s_pages[i].m_flen    );
 			if ( ! s_ht.addKey(&pageHash,&i) ){
 				char *xx = NULL; *xx = 0;
@@ -474,7 +474,7 @@ long Pages::getPageNumber ( char *filename ){
 		// make sure stay in s_buff
 		if ( s_ht.m_buf != s_buff ) { char *xx=NULL;*xx=0; }
 	}
-	long long pageHash = hash64(filename,gbstrlen(filename));
+	int64_t pageHash = hash64(filename,gbstrlen(filename));
 	long slot = s_ht.getSlot(&pageHash);
 	if ( slot== -1 )  return -1;
 	long value = *(long *)s_ht.getValueFromSlot(slot);

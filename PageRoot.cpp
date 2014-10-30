@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Indexdb.h"     // makeKey(long long docId)
+#include "Indexdb.h"     // makeKey(int64_t docId)
 #include "Titledb.h"
 #include "Spider.h"
 #include "Tagdb.h"
@@ -34,7 +34,7 @@ static bool expandRootHtml  ( SafeBuf& sb,
 			      char *q    , long qlen    ,
 			      HttpRequest *r ,
 			      TcpSocket   *s ,
-			      long long docsInColl ,
+			      int64_t docsInColl ,
 			      CollectionRec *cr ) ;
 */
 
@@ -461,9 +461,9 @@ bool expandHtml (  SafeBuf& sb,
 		}
 		if ( head[i+1] == 'N' ) { 
 			// now we got the %N, insert the global doc count
-			//long long c=g_checksumdb.getRdb()->getNumGlobalRecs();
+			//int64_t c=g_checksumdb.getRdb()->getNumGlobalRecs();
 			//now each host tells us how many docs it has in itsping
-			long long c = g_hostdb.getNumGlobalRecs();
+			int64_t c = g_hostdb.getNumGlobalRecs();
 			c += g_conf.m_docCountAdjustment;
 			// never allow to go negative
 			if ( c < 0 ) c = 0;
@@ -480,7 +480,7 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 'E' ) { 
 			// now each host tells us how many docs it has in its
 			// ping request
-			long long c = g_hostdb.getNumGlobalEvents();
+			int64_t c = g_hostdb.getNumGlobalEvents();
 			char *p = (char*) sb.getBuf();
 			sb.reserve2x(16);
 			long len = ulltoa(p, c);
@@ -495,7 +495,7 @@ bool expandHtml (  SafeBuf& sb,
 			//p+=ulltoa(p,docsInColl);
 			char *p = (char*) sb.getBuf();
 			sb.reserve2x(16);
-			long long docsInColl = 0;
+			int64_t docsInColl = 0;
 			if ( cr ) docsInColl = cr->getNumDocsIndexed();
 			long len = ulltoa(p, docsInColl);
 			sb.incrementLength(len);
@@ -1853,7 +1853,7 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	uint8_t *hp = NULL;
 	long  hpLen;
-	long long  docsInColl = -1;
+	int64_t  docsInColl = -1;
 	if ( ! cr ) {
 		// use the default 
 		Parm *pp = g_parms.getParm ( "hp" );

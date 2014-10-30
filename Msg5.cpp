@@ -137,7 +137,7 @@ bool Msg5::getList ( char     rdbId         ,
 		     long     retryNum      ,
 		     long     maxRetries    ,
 		     bool     compensateForMerge ,
-		     long long syncPoint ,
+		     int64_t syncPoint ,
 		     class Msg5 *msg5b   ,
 		     bool        isRealMerge ,
 		     bool        allowPageCache ,
@@ -367,7 +367,7 @@ bool Msg5::getList ( char     rdbId         ,
 	if ( inTable ) {
 		// log debug msg
 		if ( added && rdbId == RDB_POSDB && m_addToCache ) {
-			long long cks;
+			int64_t cks;
 			cks = getTermListCacheKey(m_startKey,m_endKey);
 			log("msg5: waiting for      rdbid=%li wkey=%llx "
 			    "startkey=%s ckey=%llx",
@@ -385,7 +385,7 @@ bool Msg5::getList ( char     rdbId         ,
 	// . you should NEVER see a dup waiting key or cks because
 	//   it should all be cached!!!!
 	if ( rdbId == RDB_POSDB && m_addToCache ) {
-		long long cks = getTermListCacheKey(m_startKey,m_endKey);
+		int64_t cks = getTermListCacheKey(m_startKey,m_endKey);
 		log("msg5: hitting disk for rdbid=%li wkey=%llx "
 		    "startkey=%s ckey=%llx",
 		    (long)rdbId,m_waitingKey,KEYSTR(m_startKey,m_ks),cks);
@@ -394,11 +394,11 @@ bool Msg5::getList ( char     rdbId         ,
 
 	/*
 	// use g_termListCache for single docid lookups
-	long long singleDocId = 0LL;
+	int64_t singleDocId = 0LL;
 
 	if ( rdbId == RDB_POSDB ) {
-		long long d1 = g_posdb.getDocId(startKey);
-		long long d2 = g_posdb.getDocId(endKey);
+		int64_t d1 = g_posdb.getDocId(startKey);
+		int64_t d2 = g_posdb.getDocId(endKey);
 		if ( d1+1 == d2 ) singleDocId = d1;
 	}
 
@@ -585,7 +585,7 @@ bool Msg5::readList ( ) {
 		long numNegativeRecs = 0;
 		long numPositiveRecs = 0;
 		// set start time
-		long long start ;
+		int64_t start ;
 		if ( m_newMinRecSizes > 64 ) 
 			start = gettimeofdayInMilliseconds();
 		// save for later
@@ -621,10 +621,10 @@ bool Msg5::readList ( ) {
 			structName = "buckets";
 		}
 
-		long long now  ;
+		int64_t now  ;
 		if ( m_newMinRecSizes > 64 ) {
 			now  = gettimeofdayInMilliseconds();
-			long long took = now - start ;
+			int64_t took = now - start ;
 			if ( took > 9 )
 				logf(LOG_INFO,"net: Got list from %s "
 				     "in %llu ms. size=%li db=%s "
@@ -720,7 +720,7 @@ bool Msg5::readList ( ) {
 		//   been constrained with m_minRecSizes, but constrained
 		//   with m_newMinRecSizes (x2%) and be too big for our UdpSlot
 		if ( numSources >= 2 ) {
-			long long newmin = (long long)m_newMinRecSizes ;
+			int64_t newmin = (int64_t)m_newMinRecSizes ;
 			newmin = (newmin * 50LL) / 49LL ;
 			// watch out for wrap around
 			if ( (long)newmin < m_newMinRecSizes ) 
@@ -1037,8 +1037,8 @@ bool Msg5::gotList ( ) {
 		char *xx = NULL; *xx = 0;
 	}
 	m_time1 = gettimeofdayInMilliseconds();
-	long long docId1  =g_titledb.getDocIdFromKey((key_t *)m_fileStartKey);
-	long long docId2  =g_titledb.getDocIdFromKey((key_t *)m_msg3.m_endKey);
+	int64_t docId1  =g_titledb.getDocIdFromKey((key_t *)m_fileStartKey);
+	int64_t docId2  =g_titledb.getDocIdFromKey((key_t *)m_msg3.m_endKey);
 	key_t     startKey = g_tfndb.makeMinKey ( docId1 ) ;
 	key_t     endKey   = g_tfndb.makeMaxKey ( docId2 ) ;
 
@@ -1147,8 +1147,8 @@ bool Msg5::gotList2 ( ) {
 	// merging two really small titledb files we could potentially be 
 	// reading in a much bigger tfndb list.
 	if ( m_rdbId == RDB_TITLEDB && m_isRealMerge && ! g_errno ) {
-		long long time2 = gettimeofdayInMilliseconds();
-		long long diff  =  time2 - m_time1 ;
+		int64_t time2 = gettimeofdayInMilliseconds();
+		int64_t diff  =  time2 - m_time1 ;
 		log(LOG_DEBUG,"db: Read tfndblist in %lli ms "
 		    "(size=%li).",diff,m_tfndbList.m_listSize);
 		// cut it down to m_msg3.m_endKey because that's what we used 
@@ -1168,7 +1168,7 @@ bool Msg5::gotList2 ( ) {
 			// it's smaller
 			//key_t     ekey  = m_tfndbList.getEndKey();
 			char     *ekey  = m_tfndbList.getEndKey();
-			long long docid = g_tfndb.getDocId ( (key_t *)ekey );
+			int64_t docid = g_tfndb.getDocId ( (key_t *)ekey );
 			if ( docid >  0 ) docid = docid - 1;
 			//key_t nkey = g_titledb.makeLastKey ( docid );
 			char nkey[MAX_KEY_BYTES];
@@ -1621,7 +1621,7 @@ void Msg5::mergeLists_r ( ) {
 	if ( m_hadCorruption ) return;
 
 	// start the timer
-	//long long startTime = gettimeofdayInMilliseconds();
+	//int64_t startTime = gettimeofdayInMilliseconds();
 
 	// . if the key of the last key of the previous list we read from
 	//   is not below startKey, reset the truncation count to avoid errors
@@ -1873,11 +1873,11 @@ bool Msg5::doneMerging ( ) {
 		    m_list->m_listSize);
 
 	// log it
-	long long now ;
+	int64_t now ;
 	// only time it if we actually did a merge, check m_startTime
 	if ( m_startTime ) now = gettimeofdayInMilliseconds();
 	else               now = 0;
-	long long took = now - m_startTime ;
+	int64_t took = now - m_startTime ;
 	if ( g_conf.m_logTimingNet ) {
 		if ( took > 5 )
 			log(LOG_INFO,
@@ -1923,13 +1923,13 @@ bool Msg5::doneMerging ( ) {
 	m_treeList.freeList();
 	// . update our m_newMinRecSizes
 	// . NOTE: this now ignores the negative records in the tree
-	long long newListSize = m_list->getListSize();
+	int64_t newListSize = m_list->getListSize();
 
 	// scale proportionally based on how many got removed during the merge
-	long long percent = 100LL;
-	long long net = newListSize - m_oldListSize;
+	int64_t percent = 100LL;
+	int64_t net = newListSize - m_oldListSize;
 	// add 5% for inconsistencies
-	if ( net > 0 ) percent =(((long long)m_newMinRecSizes*100LL)/net)+5LL;
+	if ( net > 0 ) percent =(((int64_t)m_newMinRecSizes*100LL)/net)+5LL;
 	else           percent = 200;
 	if ( percent <= 0 ) percent = 1;
 	// set old list size in case we get called again
@@ -1948,7 +1948,7 @@ bool Msg5::doneMerging ( ) {
 
 
 	// otherwise, scale proportionately
-	long nn = ((long long)m_newMinRecSizes * percent ) / 100LL;
+	long nn = ((int64_t)m_newMinRecSizes * percent ) / 100LL;
 	if ( percent > 100 ) {
 		if ( nn > m_newMinRecSizes ) m_newMinRecSizes = nn;
 		else                         m_newMinRecSizes = 0x7fffffff;

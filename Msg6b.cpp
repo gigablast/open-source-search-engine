@@ -222,7 +222,7 @@ bool Msg6b::gotDocIdList() {
 bool Msg6b::getMsg22s(long sampleNum) {
 	//just send them over the network now, matt seems to think
 	//that it will not slow things down much
-	long long goodDocId = -1;
+	int64_t goodDocId = -1;
 	if(m_docIdPtr < m_lastDocIdPtr && 
 	   m_numOutstanding < m_numToKeep &&
 	   m_numGotten < m_numToGet ) {

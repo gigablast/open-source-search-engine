@@ -77,7 +77,7 @@ uint64_t       hash64Upper_a    ( char *s, long len, uint64_t startHash = 0 );
 // . used to setup hashing of collection/fields over a body of words for a
 //   document or query
 // . used in TermTable.cpp and in SimpleQuery.cpp
-//long long getPrefixHash ( const char *prefix1 , long prefixLen1 ,
+//int64_t getPrefixHash ( const char *prefix1 , long prefixLen1 ,
 //			  const char *prefix2 , long prefixLen2 ) ;
 
 

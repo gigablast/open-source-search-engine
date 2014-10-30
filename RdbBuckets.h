@@ -61,8 +61,8 @@ public:
 	bool deleteList(RdbList *list);
 
 	//Save State
-	long long fastSave_r(int fd, long long offset);
-	long long fastLoad(BigFile *f, long long offset);
+	int64_t fastSave_r(int fd, int64_t offset);
+	int64_t fastLoad(BigFile *f, int64_t offset);
 	
 	//Debug
 	bool selfTest ( char *prevKey);
@@ -121,7 +121,7 @@ class RdbBuckets {
 
 	bool deleteList(collnum_t collnum, RdbList *list);
 
-	long long getListSize ( collnum_t collnum,
+	int64_t getListSize ( collnum_t collnum,
 				char *startKey, char *endKey, 
 				char *minKey, char *maxKey );
 
@@ -190,12 +190,12 @@ class RdbBuckets {
 				  void    *state     ,
 				  void    (*callback) (void *state) );
 	bool      fastSave_r    ();
-	long long fastSaveColl_r( int fd, long long offset);
+	int64_t fastSaveColl_r( int fd, int64_t offset);
 	bool      loadBuckets   ( char* dbname);
 	bool      fastLoad      ( BigFile *f , char* dbname);
-	long long fastLoadColl  ( BigFile *f,
+	int64_t fastLoadColl  ( BigFile *f,
 				  char* dbname,
-				  long long offset );
+				  int64_t offset );
 
 
 	//private:

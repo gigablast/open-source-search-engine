@@ -64,8 +64,8 @@ class TcpSocket {
 
 	int         m_sd;               // socket descriptor
 	char       *m_hostname;         // may be NULL
- 	long long   m_startTime;        // time the send/read started
-	long long   m_lastActionTime;   // of send or receive or connect
+ 	int64_t   m_startTime;        // time the send/read started
+	int64_t   m_lastActionTime;   // of send or receive or connect
 
 	// m_ip is 0 on dns lookup error, -1 if not found
 	long        m_ip;               // ip of connected host

@@ -44,16 +44,16 @@ class Phrases {
 		   long      titleRecVersion,
 		   long      niceness);
 
-	//long long getPhraseId   ( long n ) { return m_phraseIds [n]; };
-	long long getPhraseId2  ( long n ) { return m_phraseIds2[n]; };
-	//long long *getPhraseIds (        ) { return m_phraseIds ; };
-	long long *getPhraseIds2(        ) { return m_phraseIds2; };
-	long long *getPhraseIds3(        ) { return m_phraseIds3; };
-	//long long *getPhraseIds4(        ) { return m_phraseIds4; };
-	//long long *getPhraseIds5(        ) { return m_phraseIds5; };
+	//int64_t getPhraseId   ( long n ) { return m_phraseIds [n]; };
+	int64_t getPhraseId2  ( long n ) { return m_phraseIds2[n]; };
+	//int64_t *getPhraseIds (        ) { return m_phraseIds ; };
+	int64_t *getPhraseIds2(        ) { return m_phraseIds2; };
+	int64_t *getPhraseIds3(        ) { return m_phraseIds3; };
+	//int64_t *getPhraseIds4(        ) { return m_phraseIds4; };
+	//int64_t *getPhraseIds5(        ) { return m_phraseIds5; };
 
-	//long long *getStripPhraseIds (      ) { return m_stripPhraseIds ; };
-	//long long getStripPhraseId   ( long n ) 
+	//int64_t *getStripPhraseIds (      ) { return m_stripPhraseIds ; };
+	//int64_t getStripPhraseId   ( long n ) 
 	//{ return m_stripPhraseIds [n]; };
 	long      getPhraseSpam ( long n ) { return m_phraseSpam[n]; };
 	bool      hasPhraseId   ( long n ) { return (m_phraseSpam[n]!=PSKIP);};
@@ -63,8 +63,8 @@ class Phrases {
 	// . m_phraseIds[i] only holds the one he starts
 	// . this gets the one he's in the middle of or on the right of
 	// . used by Query.cpp for phrase-forcing
-	//long long getLeftPhraseId       ( long i ) ;
-	//long long getLeftStripPhraseId  ( long i ) ;
+	//int64_t getLeftPhraseId       ( long i ) ;
+	//int64_t getLeftStripPhraseId  ( long i ) ;
 	//long      getLeftPhraseIndex    ( long i ) ;
 
 	// . each non-spammy occurence of phrase adds "baseScore" to it's score
@@ -73,7 +73,7 @@ class Phrases {
 		    Weights        *weightsPtr  ,
 		    unsigned long   baseScore   ,
 		    unsigned long   maxScore    ,
-		    long long       startHash   ,
+		    int64_t       startHash   ,
 		    char           *prefix1     ,
 		    long            prefixLen1  ,
 		    char           *prefix2     ,
@@ -94,8 +94,8 @@ class Phrases {
 	//long  getNumWordsInPhrase ( long i ) { return m_numWordsTotal [i]; };
 	long  getNumWordsInPhrase2( long i ) { return m_numWordsTotal2[i]; };
 
-	long  getMaxWordsInPhrase( long i , long long *pid ) ;
-	long  getMinWordsInPhrase( long i , long long *pid ) ;
+	long  getMaxWordsInPhrase( long i , int64_t *pid ) ;
+	long  getMinWordsInPhrase( long i , int64_t *pid ) ;
 
 	// . leave this public so SimpleQuery.cpp can mess with it
 	// . called by Phrases::set() above for each i
@@ -113,13 +113,13 @@ class Phrases {
 
 	// . these are 1-1 with the words in the Words class
 	// . phraseSpam is PSKIP if the phraseId is invalid
-	//long long     *m_phraseIds  ;
+	//int64_t     *m_phraseIds  ;
 	// the two word hash
-	long long     *m_phraseIds2  ;
-	long long     *m_phraseIds3  ;
-	//long long     *m_phraseIds4  ;
-	//long long     *m_phraseIds5  ;
-	//long long     *m_stripPhraseIds  ;
+	int64_t     *m_phraseIds2  ;
+	int64_t     *m_phraseIds3  ;
+	//int64_t     *m_phraseIds4  ;
+	//int64_t     *m_phraseIds5  ;
+	//int64_t     *m_stripPhraseIds  ;
 	unsigned char *m_phraseSpam ;
 	// . # words in phrase TOTAL (including punct words)
 	// . used for printing
@@ -135,7 +135,7 @@ class Phrases {
 
 	// placeholders to avoid passing to subroutine
 	Words      *m_words;
-	long long  *m_wids;
+	int64_t  *m_wids;
 	char      **m_wptrs;
 	long       *m_wlens;
 

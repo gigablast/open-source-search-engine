@@ -84,8 +84,8 @@ void Stats::clearMsgStats() {
 //static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void Stats::addStat_r ( long        numBytes    , 
-			long long   startTime   ,
-			long long   endTime     ,
+			int64_t   startTime   ,
+			int64_t   endTime     ,
 			long        color       ,
 			char        type        ,
 			char *fname) {
@@ -139,7 +139,7 @@ void Stats::addStat_r ( long        numBytes    ,
 // . dump a graph to /tmp/diskGraph.gif
 // . use libplotter.a or .so ?
 // . docs at http://www.gnu.org/manual/plotutils/html_mono/plotutils.html#SEC54
-void Stats::dumpGIF ( long long startTime , long long endTime ) {
+void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 
 	char fname [ 1024 ];
 	sprintf ( fname , "%s/diskGraph%li.gif" ,
@@ -208,7 +208,7 @@ void Stats::dumpGIF ( long long startTime , long long endTime ) {
 	//plotter.alabel    ( 'c' , 'c' , "disk accesses" );
 
 	// find time ranges
-	long long t2 = 0;
+	int64_t t2 = 0;
 	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
 		if ( m_pts[i].m_startTime == 0 ) continue;
@@ -216,7 +216,7 @@ void Stats::dumpGIF ( long long startTime , long long endTime ) {
 		if ( m_pts[i].m_endTime   > t2 ) t2 = m_pts[i].m_endTime;
 	}
 	// now compute the start time for the graph
-	long long t1 = 0x7fffffffffffffffLL;
+	int64_t t1 = 0x7fffffffffffffffLL;
 	// now recompute t1
 	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
@@ -227,11 +227,11 @@ void Stats::dumpGIF ( long long startTime , long long endTime ) {
 		if ( m_pts[i].m_startTime < t1 ) t1 = m_pts[i].m_startTime;
 	}
 	// what's the delta t? just make it 1000 ms
-	//long long dt = 1000; // t2 - t1;
+	//int64_t dt = 1000; // t2 - t1;
 
 	// get time range scaling info
-	//long long t1 = m_minWindowStartTime;
-	//long long t2 = gettimeofdayInMilliseconds();
+	//int64_t t1 = m_minWindowStartTime;
+	//int64_t t2 = gettimeofdayInMilliseconds();
 	//if ( startTime > 0 && t1 < startTime ) t1 = startTime;
 	//if ( endTime   > 0 && t2 > endTime   ) t2 = endTime;
 
@@ -242,7 +242,7 @@ void Stats::dumpGIF ( long long startTime , long long endTime ) {
 		// generate label
 		char buf [ 32 ];
 		sprintf ( buf , "%li" , 
-			  (long)(DT * (long long)x / (long long)DX) );
+			  (long)(DT * (int64_t)x / (int64_t)DX) );
 		// move cursor
 		plotter.move ( x , -by / 2 - 9 );
 		// plot label
@@ -297,8 +297,8 @@ void Stats::dumpGIF ( long long startTime , long long endTime ) {
 		// get the point
 		StatPoint *p =  points[MAX_POINTS * i + j];
 		// transform time to x coordinates
-		int x1 = (p->m_startTime - t1) * (long long)DX / DT;
-		int x2 = (p->m_endTime   - t1) * (long long)DX / DT;
+		int x1 = (p->m_startTime - t1) * (int64_t)DX / DT;
+		int x2 = (p->m_endTime   - t1) * (int64_t)DX / DT;
 		// if x2 is negative, skip it
 		if ( x2 < 0 ) continue;
 		// if x1 is negative, boost it to -2
@@ -357,8 +357,8 @@ void Stats::addPoint (StatPoint **points    ,
 		if ( n >= MAX_POINTS ) continue;
 		long j;
 		// make a boundary around point there already
-		long long a = p->m_startTime;
-		long long b = p->m_endTime;
+		int64_t a = p->m_startTime;
+		int64_t b = p->m_endTime;
 		// . for a space to appear we need to be separated
 		//   by this many milliseconds
 		// . this is milliseconds per pixel
@@ -390,7 +390,7 @@ void Stats::addPoint (StatPoint **points    ,
 
 
 void Stats::calcQueryStats() {
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	m_upTime = now - m_startTime;
 	m_avgQueryTime  = (float)m_queryTimes /
 		((float)m_numQueries * 1000.0);
@@ -402,15 +402,15 @@ void Stats::calcQueryStats() {
 }
 
 
-void Stats::logAvgQueryTime(long long startTime) {
-	long long now = gettimeofdayInMilliseconds();
-	long long took = now - startTime;
+void Stats::logAvgQueryTime(int64_t startTime) {
+	int64_t now = gettimeofdayInMilliseconds();
+	int64_t took = now - startTime;
 	static long s_lastSendTime = 0;
 	// if just one query took an insanely long time,
 	// do not sound the alarm. this is in seconds,
 	// so multiply by 1000.
-	//long long maxTook = 
-	//	(long long)(g_conf.m_maxQueryTime*1000.0) ;
+	//int64_t maxTook = 
+	//	(int64_t)(g_conf.m_maxQueryTime*1000.0) ;
 	//if ( took > maxTook ) took = maxTook;
 	m_queryTimes += took;
 	m_numQueries++;
@@ -535,7 +535,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 	//plotter.line ( 0 , 0 ,  0 , DY );
 
 	// find time ranges
-	long long t2 = 0;
+	int64_t t2 = 0;
 	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
 		if ( m_pts[i].m_startTime == 0 ) continue;
@@ -543,7 +543,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		if ( m_pts[i].m_endTime   > t2 ) t2 = m_pts[i].m_endTime;
 	}
 	// now compute the start time for the graph
-	long long t1 = 0x7fffffffffffffffLL;
+	int64_t t1 = 0x7fffffffffffffffLL;
 	// now recompute t1
 	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
@@ -598,7 +598,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		// generate label
 		//char buf [ 32 ];
 		//sprintf ( buf , "%li" , 
-		//	  (long)(DT * (long long)x / (long long)DX) );
+		//	  (long)(DT * (int64_t)x / (int64_t)DX) );
 		// LABEL
 		sb.safePrintf("<div style=\"position:absolute;"
 			      "left:%li;"
@@ -609,7 +609,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 			      "min-width:3px;\">%.01fs</div>\n"
 			      , (long)x-10
 			      // the label:
-			      ,(float)(DT* (long long)x / (long long)DX)/1000.0
+			      ,(float)(DT* (int64_t)x / (int64_t)DX)/1000.0
 			      );
 
 		// move cursor
@@ -666,8 +666,8 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		// get the point
 		StatPoint *p =  points[MAX_POINTS * i + j];
 		// transform time to x coordinates
-		int x1 = (p->m_startTime - t1) * (long long)DX / DT;
-		int x2 = (p->m_endTime   - t1) * (long long)DX / DT;
+		int x1 = (p->m_startTime - t1) * (int64_t)DX / DT;
+		int x2 = (p->m_endTime   - t1) * (int64_t)DX / DT;
 		// if x2 is negative, skip it
 		if ( x2 < 0 ) continue;
 		// if x1 is negative, boost it to -2

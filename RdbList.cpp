@@ -523,9 +523,9 @@ void RdbList::getKey ( char *rec , char *key ) {
 		// next 2 bytes from hi key
 		*(short *)(&key[22]) = *(short *)m_listPtrHi;
 		// next 8 bytes from rec
-		*(long long *)(&key[ 14]) = *(long long *)&rec    [14];
+		*(int64_t *)(&key[ 14]) = *(int64_t *)&rec    [14];
 		// next 8 bytes from rec
-		*(long long *)(&key[  6]) = *(long long *)&rec    [ 6];
+		*(int64_t *)(&key[  6]) = *(int64_t *)&rec    [ 6];
 		// next 4 bytes from rec
 		*(long *)(&key[  2]) = *(long *)&rec    [ 2];
 		// last 2 bytes from rec
@@ -540,9 +540,9 @@ void RdbList::getKey ( char *rec , char *key ) {
 		// next 2 bytes from hi key
 		*(short *)(&key[18]) = *(short *)m_listPtrHi;
 		// next 8 bytes from rec
-		*(long long *)(&key[ 10]) = *(long long *)&rec    [10];
+		*(int64_t *)(&key[ 10]) = *(int64_t *)&rec    [10];
 		// next 8 bytes from rec
-		*(long long *)(&key[  2]) = *(long long *)&rec    [ 2];
+		*(int64_t *)(&key[  2]) = *(int64_t *)&rec    [ 2];
 		// last 2 bytes from rec
 		*(short *)(&key[ 0]) = *(short *) rec;
 		// turn half bit off since this is the full 16 bytes
@@ -1727,13 +1727,13 @@ void RdbList::merge_r ( RdbList **lists         ,
 	//key_t mkey;
 	char ckey[MAX_KEY_BYTES];
 	char mkey[MAX_KEY_BYTES];
-	//long long prevDocId = 0LL;
+	//int64_t prevDocId = 0LL;
 	// set the yield point for yielding the processor
 	char *yieldPoint = NULL;
 	char minKey[MAX_KEY_BYTES];
 
-	long long tt1 = getTagTypeFromStr( "sitenuminlinksfresh");
-	long long tt2 = getTagTypeFromStr( "sitepop");
+	int64_t tt1 = getTagTypeFromStr( "sitenuminlinksfresh");
+	int64_t tt2 = getTagTypeFromStr( "sitepop");
 
 #ifdef ALLOW_SCALE
 	// remove keys that don't belong -- for when scaling number of servers
@@ -2222,10 +2222,10 @@ void RdbList::testIndexMerge ( ) {
 	KEYMIN(sk2,m_ks);
 	//0004b12da1019f01 docId=005038106688 e=0x33 tfn=224 clean=0 half=0 
 	//k1.n0 = 0x0004b12da1019f01LL; 
-	*(long long *)sk1 = 0x0004b12da1019f01LL; 
+	*(int64_t *)sk1 = 0x0004b12da1019f01LL; 
 	//0004b12da1019809 docId=005038106688 e=0x33 tfn=001 clean=0 half=0 
 	//k2.n0 = 0x0004b12da1019809LL; 
-	*(long long *)sk2 = 0x0004b12da1019809LL;
+	*(int64_t *)sk2 = 0x0004b12da1019809LL;
 	set ( big , 0 , big , 1000 , startKey , endKey , 0 , false , true, 12);
 	//list1.set ( (char *)&k1, 12, (char *)&k1, 12, 
 	list1.set ( sk1, 12, sk1, 12, 
@@ -2707,7 +2707,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	}
 	// otherwise, store 10 for 16 byte keys
 	else {
-		*(long long *)  m_listPtr     = *(long long *)  minPtrLo;
+		*(int64_t *)  m_listPtr     = *(int64_t *)  minPtrLo;
 		*(short     *)(&m_listPtr[8]) = *(short     *)(&minPtrLo[8]) ;
 	}
 

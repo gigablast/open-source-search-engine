@@ -40,7 +40,7 @@ void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
 	long score;
 	char reco[MAX_PHRASE_LEN];
 	long pop;
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 	bool recommendation = g_speller.m_language[langEnglish].
 		getRecommendation( request, gbstrlen(request), 
 				   reco, MAX_PHRASE_LEN, 
@@ -107,7 +107,7 @@ void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
 		char *xx = NULL; *xx = 0;
 	}
 
-	long long end = gettimeofdayInMilliseconds();
+	int64_t end = gettimeofdayInMilliseconds();
 	if ( end - start > 1 )
 		log (LOG_INFO,"speller: took %lli ms to spellcheck "
 		     "fragment %s", end-  start, request);
@@ -844,7 +844,7 @@ long Speller::getWords ( const char *s ,
 	// is it a stop word?
 	if ( isstop ) {
 		// TODO: make the stop words utf8!!!
-		long long h = hash64Lower_utf8 ( ww , slen ) ;
+		int64_t h = hash64Lower_utf8 ( ww , slen ) ;
 		bool stop = ::isStopWord       ( ww , slen , h ) ;
 		// BUT ok if Capitalized or number
 		if ( stop ) {
@@ -966,7 +966,7 @@ void Speller::gotFrags( void *state ){
 	if ( !recommendation )
 		*st->m_dst = '\0';
 	
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	if ( now - st->m_start > 50 )
 		log(LOG_INFO,"speller: Took %lli ms to spell check %s",
 		    now - st->m_start, st->m_q->getQuery() );
@@ -1032,15 +1032,15 @@ bool Speller::loadUnifiedDict() {
 		if ( ! g_conf.m_isLive ) return true;
 
 		// the size
-		long long h1 = m_unifiedDict.getNumSlotsUsed();
-		long long h2 = m_unifiedBuf .length();
-		long long h = hash64 ( h1 , h2 );
+		int64_t h1 = m_unifiedDict.getNumSlotsUsed();
+		int64_t h2 = m_unifiedBuf .length();
+		int64_t h = hash64 ( h1 , h2 );
 		char *tail1 = (char *)m_unifiedDict.m_keys;
 		char *tail2 = m_unifiedBuf.getBufStart()+h2-1000;
 		h = hash64 ( tail1 , 1000 , h );
 		h = hash64 ( tail2 , 1000 , h );
-		//long long n = 8346765853685546681LL;
-		long long n = -14450509118443930LL;
+		//int64_t n = 8346765853685546681LL;
+		int64_t n = -14450509118443930LL;
 		if ( h != n ) {
 			log("gb: unifiedDict-buf.txt or "
 			    "unifiedDict-map.dat "
@@ -1123,7 +1123,7 @@ bool Speller::loadUnifiedDict() {
 		char *end = p;
 		for ( ; *end && *end != '\n' ; end++ ) ;
 		// so hash it up
-		long long wid = hash64d ( word , end - word );
+		int64_t wid = hash64d ( word , end - word );
 		// debug point
 		//if ( wid == 5000864073612302341LL )
 		//	log("download");
@@ -1195,7 +1195,7 @@ bool Speller::loadUnifiedDict() {
 		}
 
 		// reset lang vector
-		long long pops[MAX_LANGUAGES];
+		int64_t pops[MAX_LANGUAGES];
 		memset ( pops , 0 , MAX_LANGUAGES * 8 );
 
 		// see how many langs this key is in in unifiedDict.txt file
@@ -1324,7 +1324,7 @@ bool Speller::loadUnifiedDict() {
 		if ( word[0] == '.' ) continue;
 
 		// hash the word
-		long long key = hash64d ( word , wordLen );
+		int64_t key = hash64d ( word , wordLen );
 
 		// skip if we did it in the above loop
 		if ( m_unifiedDict.isInTable ( &key ) ) continue;
@@ -1334,7 +1334,7 @@ bool Speller::loadUnifiedDict() {
 		if ( ! dedup.addKey ( &key ) ) return false;
 
 		// reset lang vector
-		long long pops[MAX_LANGUAGES];
+		int64_t pops[MAX_LANGUAGES];
 		memset ( pops , 0 , MAX_LANGUAGES * 8 );
 
 		// now add in from wiktionary map
@@ -1935,7 +1935,7 @@ char *Speller::getPhraseRecord(char *phrase, int len ) {
 	//char *xx=NULL;*xx=0;
 	if ( !phrase ) return NULL;
 	//char *rv = NULL;
-	long long h = hash64d(phrase, len);
+	int64_t h = hash64d(phrase, len);
 	long slot = m_unifiedDict.getSlot(&h);
 	//log("speller: h=%llu len=%i slot=%li",h,len,slot);
 	if ( slot < 0 ) return NULL;
@@ -1946,7 +1946,7 @@ char *Speller::getPhraseRecord(char *phrase, int len ) {
 }
 
 /*
-uint8_t Speller::getUniqueLang ( long long *wid ) {
+uint8_t Speller::getUniqueLang ( int64_t *wid ) {
 	long slot = m_unifiedDict.getSlot(wid);
 	if (slot < 0) return langUnknown;
 	//char *p = *(char **)m_unifiedDict.getValueFromSlot(slot);
@@ -2006,7 +2006,7 @@ uint8_t Speller::getUniqueLang ( long long *wid ) {
 }
 */
 
-long long Speller::getLangBits64 ( long long *wid ) {
+int64_t Speller::getLangBits64 ( int64_t *wid ) {
 	long slot = m_unifiedDict.getSlot(wid);
 	if (slot < 0) return 0LL;
 	long offset =  *(long *)m_unifiedDict.getValueFromSlot(slot);
@@ -2024,7 +2024,7 @@ long long Speller::getLangBits64 ( long long *wid ) {
 	// skip tab
 	p++;
 	// init
-	long long bits = 0LL;
+	int64_t bits = 0LL;
 	// loop over langid/pop pairs
 	while ( *p ) {
 		// get langid
@@ -2064,16 +2064,16 @@ long long Speller::getLangBits64 ( long long *wid ) {
 }
 
 /*
-long long *Speller::getPhraseLanguages(char *phrase, int len ) {
+int64_t *Speller::getPhraseLanguages(char *phrase, int len ) {
 	//char *xx=NULL;*xx=0;
 
 	char *phraseRec = getPhraseRecord(phrase, len );
 	if(!phraseRec) return(NULL);
-	long long *rv = (long long *)mmalloc(sizeof(long long) * MAX_LANGUAGES,
+	int64_t *rv = (int64_t *)mmalloc(sizeof(int64_t) * MAX_LANGUAGES,
 					     "PhraseRec");
 	if(!rv) return(NULL);
 	if(!getPhraseLanguages(phrase, len, rv)) {
-		mfree(rv, sizeof(long long) * MAX_LANGUAGES,
+		mfree(rv, sizeof(int64_t) * MAX_LANGUAGES,
 		      "PhraseRec");
 		return(NULL);
 	}
@@ -2082,7 +2082,7 @@ long long *Speller::getPhraseLanguages(char *phrase, int len ) {
 */
  
 bool Speller::getPhraseLanguages(char *phrase, int len,
-				 long long *array) {
+				 int64_t *array) {
 	//char *xx=NULL;*xx=0;
 
 	char *phraseRec = getPhraseRecord(phrase, len);
@@ -2090,10 +2090,10 @@ bool Speller::getPhraseLanguages(char *phrase, int len,
 	return getPhraseLanguages2 ( phraseRec,array );
 }
 
-bool Speller::getPhraseLanguages2 (char *phraseRec , long long *array) {
+bool Speller::getPhraseLanguages2 (char *phraseRec , int64_t *array) {
 
-	long long l = 0;
-	memset(array, 0, sizeof(long long)*MAX_LANGUAGES);
+	int64_t l = 0;
+	memset(array, 0, sizeof(int64_t)*MAX_LANGUAGES);
 
 	while(*phraseRec) {
 		l = 0;
@@ -2104,7 +2104,7 @@ bool Speller::getPhraseLanguages2 (char *phraseRec , long long *array) {
 
 		if(!*phraseRec) break;
 
-		long long l = atoi(phraseRec);
+		int64_t l = atoi(phraseRec);
 		// l = abs(l); // not using score method anymore, so this is moot.
 
 		// skip to next delimiter
@@ -2188,8 +2188,8 @@ bool Speller::getSynsInEnglish ( char *w ,
 }
 
 /*
-static inline int s_findMaxVal(long long *vals, int numVals) {
-	long long max, oldmax, val;
+static inline int s_findMaxVal(int64_t *vals, int numVals) {
+	int64_t max, oldmax, val;
 	if(!vals) return(0);
 	max = oldmax = INT_MIN;
 	val = 0;
@@ -2208,7 +2208,7 @@ char Speller::getPhraseLanguage(char *phrase, int len) {
 	//char *xx=NULL;*xx=0;
 
 	char lang;
-	long long *langs = getPhraseLanguages(phrase, len);
+	int64_t *langs = getPhraseLanguages(phrase, len);
 	if(!langs) return(0);
 	lang = s_findMaxVal(langs, MAX_LANGUAGES);
 	if ( lang < 0 ) { char *xx=NULL;*xx=0; }
@@ -2226,7 +2226,7 @@ void Speller::dictLookupTest ( char *ff ){
 		    "reading: %s.", ff,strerror(errno));
 		return;
 	}
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 	char buf[1026];
 	long count = 0;
 	// go through the words

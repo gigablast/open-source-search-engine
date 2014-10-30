@@ -467,7 +467,7 @@ void HttpDoc::get(void *state, httpdoc_callback_t callback){
 void gotHttpDoc ( void *state , TcpSocket *ts ) {
 	HttpDoc *doc = (HttpDoc*) state;
 	doc->m_done = true;
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	doc->m_elapsed = now - doc->m_startTime;
 
 	if (g_errno){

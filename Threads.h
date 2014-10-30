@@ -43,10 +43,10 @@ class ThreadEntry {
 	long         m_allocSize                ; // BigFile.cpp stuck reads
 	long         m_errno                    ; // BigFile.cpp stuck reads
 	long         m_bytesToGo                ; // BigFile.cpp stuck reads
-	long long    m_queuedTime               ; // when call() was called
-	long long    m_launchedTime             ; // when thread was launched
-	long long    m_preExitTime              ; // when thread was about done
-	long long    m_exitTime                 ; // when thread was done
+	int64_t    m_queuedTime               ; // when call() was called
+	int64_t    m_launchedTime             ; // when thread was launched
+	int64_t    m_preExitTime              ; // when thread was about done
+	int64_t    m_exitTime                 ; // when thread was done
 	char         m_qnum                     ; // what thread queue we r in
 	char         m_doWrite                  ; // BigFile.cpp stuck reads
 	char         m_isCancelled              ; // got cancel sig?
@@ -68,9 +68,9 @@ class ThreadQueue {
 	// what type of threads are in this queue (used-defined)?
 	char         m_threadType;
 	// how many threads have been launched total over time?
-	long long    m_launched;
+	int64_t    m_launched;
 	// how many threads have returned total over time?
-	long long    m_returned;
+	int64_t    m_returned;
 	// how many can we launch at one time?
 	long         m_maxLaunched;
 	// how many are in the queue now?
@@ -84,34 +84,34 @@ class ThreadQueue {
 	long         m_maxEntries;
 
 	// counts the high/low priority (niceness <= 0) threads
-	long long   m_hiLaunched;
-	long long   m_hiReturned;
-	long long   m_mdLaunched;
-	long long   m_mdReturned;
-	long long   m_loLaunched;
-	long long   m_loReturned;
+	int64_t   m_hiLaunched;
+	int64_t   m_hiReturned;
+	int64_t   m_mdLaunched;
+	int64_t   m_mdReturned;
+	int64_t   m_loLaunched;
+	int64_t   m_loReturned;
 	// disk writing
-	long long   m_writesLaunched;
-	long long   m_writesReturned;
+	int64_t   m_writesLaunched;
+	int64_t   m_writesReturned;
 	// now for disk threads we partition by the read size
-	long long   m_hiLaunchedBig;
-	long long   m_hiReturnedBig;
-	long long   m_mdLaunchedBig;
-	long long   m_mdReturnedBig;
-	long long   m_loLaunchedBig;
-	long long   m_loReturnedBig;
-	long long   m_hiLaunchedMed;
-	long long   m_hiReturnedMed;
-	long long   m_mdLaunchedMed;
-	long long   m_mdReturnedMed;
-	long long   m_loLaunchedMed;
-	long long   m_loReturnedMed;
-	long long   m_hiLaunchedSma;
-	long long   m_hiReturnedSma;
-	long long   m_mdLaunchedSma;
-	long long   m_mdReturnedSma;
-	long long   m_loLaunchedSma;
-	long long   m_loReturnedSma;
+	int64_t   m_hiLaunchedBig;
+	int64_t   m_hiReturnedBig;
+	int64_t   m_mdLaunchedBig;
+	int64_t   m_mdReturnedBig;
+	int64_t   m_loLaunchedBig;
+	int64_t   m_loReturnedBig;
+	int64_t   m_hiLaunchedMed;
+	int64_t   m_hiReturnedMed;
+	int64_t   m_mdLaunchedMed;
+	int64_t   m_mdReturnedMed;
+	int64_t   m_loLaunchedMed;
+	int64_t   m_loReturnedMed;
+	int64_t   m_hiLaunchedSma;
+	int64_t   m_hiReturnedSma;
+	int64_t   m_mdLaunchedSma;
+	int64_t   m_mdReturnedSma;
+	int64_t   m_loLaunchedSma;
+	int64_t   m_loReturnedSma;
 
 	// init
 	bool         init (char threadType, long maxThreads, long maxEntries);
@@ -250,10 +250,10 @@ class Threads {
 	long getNumThreadsOutOrQueued();
 
 	// counts the high/low priority (niceness <= 0) threads
-	//long long   m_hiLaunched;
-	//long long   m_hiReturned;
-	//long long   m_loLaunched;
-	//long long   m_loReturned;
+	//int64_t   m_hiLaunched;
+	//int64_t   m_hiReturned;
+	//int64_t   m_loLaunched;
+	//int64_t   m_loReturned;
 
 	bool m_needsCleanup;
 	//bool m_needBottom;

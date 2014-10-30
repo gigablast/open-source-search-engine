@@ -5,17 +5,17 @@
 class fslot {
 public:
 	long           m_score;
-	long long      m_docIdBits;
+	int64_t      m_docIdBits;
 	unsigned short m_termBits;
 	//unsigned short align;
 };
 
-static long long gettimeofdayInMilliseconds() ;
+static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -55,7 +55,7 @@ main ( ) {
 	fprintf (stderr,"hashtest:: randomizing begin."
 		 " %li 6-byte docIds.\n",nd);
 	// space em out 1 million to simulate suburl:com
-	long long count = 1000000;
+	int64_t count = 1000000;
 	// random docIds
 	for ( long i = 0 ; i < nd ; i++ ) {
 		/*
@@ -106,21 +106,21 @@ main ( ) {
 	unsigned long n6;
 	unsigned long n7;
 	unsigned long n8;
-	long long docIdBits;
-	long long docIdBits2;
-	long long docIdBits3;
-	long long docIdBits4;
-	long long docIdBits5;
-	long long docIdBits6;
-	long long docIdBits7;
-	long long docIdBits8;
+	int64_t docIdBits;
+	int64_t docIdBits2;
+	int64_t docIdBits3;
+	int64_t docIdBits4;
+	int64_t docIdBits5;
+	int64_t docIdBits6;
+	int64_t docIdBits7;
+	int64_t docIdBits8;
 	unsigned short termBitMask = 1;
 	unsigned long  mask = numSlots - 1;
 	long scoreWeight = 13;
 	// debug msg
 	fprintf (stderr,"hashtest::starting loop\n");
 	// time stamp
-	long long t   = gettimeofdayInMilliseconds();
+	int64_t t   = gettimeofdayInMilliseconds();
 	// tell the memory cache to only bring in 16 bytes at a time
 	// since our fslot class is 16 bytes big
 
@@ -159,7 +159,7 @@ main ( ) {
 
 
 	// completed
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	fprintf (stderr,"hashtest:: addList took %llu ms\n" , now - t );
 	// stats
 	double d = (1000.0*(double)nd) / ((double)(now - t));

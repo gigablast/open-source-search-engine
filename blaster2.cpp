@@ -256,11 +256,11 @@ void startSpidering ( ) {
 	// url class for parsing/normalizing url
 	Url u;
 	// count total urls done
-	static long long s_startTime = 0;
+	static int64_t s_startTime = 0;
 	// set startTime
 	if ( s_startTime == 0 ) s_startTime = gettimeofdayInMilliseconds();
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// elapsed time to do all urls
 	double took = (double)(now - s_startTime) / 1000.0 ;
 	// log this every 20 urls
@@ -369,7 +369,7 @@ void gotDocWrapper ( void *state , TcpSocket *s ) {
 	// allow printing
 	s_printIt = true;
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// get hash
 	char *reply = s->m_readBuf ;
 	long  size  = s->m_readOffset;

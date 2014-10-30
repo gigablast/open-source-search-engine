@@ -250,8 +250,8 @@ void Statsdb::addDocsIndexed ( ) {
 	if ( now - s_lastTime < 5 ) return;
 	s_lastTime = now;
 
-	long long total = 0LL;
-	static long long s_lastTotal = 0LL;
+	int64_t total = 0LL;
+	static int64_t s_lastTotal = 0LL;
 	// every 5 seconds update docs indexed count
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
@@ -268,7 +268,7 @@ void Statsdb::addDocsIndexed ( ) {
 	s_lastTotal = total;
 
 	// add it if changed though
-	long long nowms = gettimeofdayInMillisecondsGlobal();
+	int64_t nowms = gettimeofdayInMillisecondsGlobal();
 	addStat ( MAX_NICENESS,"docs_indexed", nowms, nowms, (float)total );
 }
 
@@ -290,8 +290,8 @@ void Statsdb::addDocsIndexed ( ) {
 //   value of a parm. typically for such things t1 equals t2
 bool Statsdb::addStat ( long        niceness ,
 			char       *label    ,
-			long long   t1Arg    ,
-			long long   t2Arg    ,
+			int64_t   t1Arg    ,
+			int64_t   t2Arg    ,
 			float       value    , // y-value really, "numBytes"
 			long        parmHash ,
 			float       oldVal   ,
@@ -343,10 +343,10 @@ bool Statsdb::addStat ( long        niceness ,
 		return true;
 	}
 
-	long long nextup;
+	int64_t nextup;
 
 	// loop over all "second" buckets
-	for ( long long tx = t1Arg ; tx < t2Arg ; tx = nextup ) {
+	for ( int64_t tx = t1Arg ; tx < t2Arg ; tx = nextup ) {
 		// get next second-aligned point in milliseconds
 		nextup = ((tx +1000)/ 1000) * 1000;
 		// truncate if we need to
@@ -474,8 +474,8 @@ bool Statsdb::makeGIF ( long t1Arg ,
 	m_state    = state;
 	m_callback = callback;
 
-	m_t1 = t1Arg;//(long long)t1Arg * 1000LL;
-	m_t2 = t2Arg;//(long long)t2Arg * 1000LL;
+	m_t1 = t1Arg;//(int64_t)t1Arg * 1000LL;
+	m_t2 = t2Arg;//(int64_t)t2Arg * 1000LL;
 
 	if ( m_t1 >= m_t2 ) { char *xx=NULL;*xx=0; }
 
@@ -664,7 +664,7 @@ bool Statsdb::gifLoop ( ) {
 			      "min-width:3px;\"></div>\n"
 			      , m_bx + (long)x-1
 			      );
-		long xv = (long)(dt * (long long)x/(long long)DX2)-(long)dt;
+		long xv = (long)(dt * (int64_t)x/(int64_t)DX2)-(long)dt;
 		// LABEL
 		m_gw.safePrintf("<div style=\"position:absolute;"
 				"left:%li;"

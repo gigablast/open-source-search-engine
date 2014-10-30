@@ -153,7 +153,7 @@ static long    s_numCallbacks = 0;
 
 class CBEntry {
 public:
-	long long m_timestamp;
+	int64_t m_timestamp;
 	void (*m_callback)(void *);
 	void *m_callbackState;
 };
@@ -212,7 +212,7 @@ bool flushMsg4Buffers ( void *state , void (* callback) (void *) ) {
 	// have start times STRICTLY GREATER THAN that, then we will
 	// be guaranteed that everything we added has been replied to!
 	UdpSlot *slot = g_udpServer.getActiveHead();
-	long long max = 0LL;
+	int64_t max = 0LL;
 	for ( ; slot ; slot = slot->m_next ) {
 		// get its time stamp 
 		if ( slot->m_msgType != 0x04 ) continue;
@@ -1006,7 +1006,7 @@ void gotReplyWrapper4 ( void *state , void *state2 ) {
 
 	// get the oldest msg4 slot starttime
 	UdpSlot *slot = g_udpServer.getActiveHead();
-	long long min = 0LL;
+	int64_t min = 0LL;
 	for ( ; slot ; slot = slot->m_next ) {
 		// get its time stamp
 		if ( slot->m_msgType != 0x04 ) continue;
@@ -1237,7 +1237,7 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 
 	if ( g_conf.m_logDebugSpider )
 		logf(LOG_DEBUG,"syncdb: calling addMetalist zid=%llu",
-		     *(long long *)(p+4));
+		     *(int64_t *)(p+4));
 
 	// get total buf used
 	long used = *(long *)p;
@@ -1771,14 +1771,14 @@ void processSpecialSignal ( collnum_t collnum , char *p ) {
 	// must be 96 bits
 	//if ( m_ks != 12 ) { char *xx=NULL;*xx=0; }
 	// get docid that was locked
-	//long long d = g_titledb.getDocId ( (key_t *)key);
-	long long d = fake->n0;
+	//int64_t d = g_titledb.getDocId ( (key_t *)key);
+	int64_t d = fake->n0;
 	// . make it the first probable, that is the lock key
 	// . we do that so if we are locking a new url that
 	//   is not yet indexed, its probable docid may collide
 	//   and be incremented, so we do not know what its
 	//   actual docid will end up being...
-	long long lockKey = g_titledb.getFirstProbableDocId(d);
+	int64_t lockKey = g_titledb.getFirstProbableDocId(d);
 	// log debug msg
 	if ( g_conf.m_logDebugSpider)
 		// log debug

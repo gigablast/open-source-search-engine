@@ -24,8 +24,8 @@ void Posdb::reset() {
 bool Posdb::init ( ) {
 	// sanity check
 	key144_t k;
-	long long termId = 123456789LL;
-	long long docId = 34567292222LL;
+	int64_t termId = 123456789LL;
+	int64_t docId = 34567292222LL;
 	long dist = MAXWORDPOS-1;//54415;
 	long densityRank = 10;
 	long diversityRank = MAXDIVERSITYRANK-1;//11;
@@ -52,7 +52,7 @@ bool Posdb::init ( ) {
 			  shardedByTermId );
 	// test it out
 	if ( g_posdb.getTermId ( &k ) != termId ) { char *xx=NULL;*xx=0; }
-	//long long d2 = g_posdb.getDocId(&k);
+	//int64_t d2 = g_posdb.getDocId(&k);
 	if ( g_posdb.getDocId (&k ) != docId ) { char *xx=NULL;*xx=0; }
 	if ( g_posdb.getHashGroup ( &k ) !=hashGroup) { char *xx=NULL;*xx=0; }
 	if ( g_posdb.getWordPos ( &k ) !=  dist ) { char *xx=NULL;*xx=0; }
@@ -115,7 +115,7 @@ bool Posdb::init ( ) {
 	char *xx=NULL;*xx=0;
 	*/
 
-	long long  maxTreeMem = 350000000; // 350MB
+	int64_t  maxTreeMem = 350000000; // 350MB
 	// make it lower now for debugging
 	//maxTreeMem = 5000000;
 	// . what's max # of tree nodes?
@@ -374,7 +374,7 @@ void Posdb::makeKey48 ( char              *vkp            ,
 // . see Posdb.h for format of the 12 byte key
 // . TODO: substitute var ptrs if you want extra speed
 void Posdb::makeKey ( void              *vkp            ,
-		      long long          termId         ,
+		      int64_t          termId         ,
 		      uint64_t docId          , 
 		      long               wordPos        ,
 		      char               densityRank    ,
@@ -461,7 +461,7 @@ static bool s_cacheInit = false;
 
 // . accesses RdbMap to estimate size of the indexList for this termId
 // . returns an UPPER BOUND
-long long Posdb::getTermFreq ( collnum_t collnum, long long termId ) {
+int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
@@ -489,7 +489,7 @@ long long Posdb::getTermFreq ( collnum_t collnum, long long termId ) {
 	// . check cache for super speed
 	// . TODO: make key incorporate collection
 	// . colnum is 0 for now
-	long long val = g_termFreqCache.getLongLong2 ( collnum ,
+	int64_t val = g_termFreqCache.getLongLong2 ( collnum ,
 						       termId  , // key
 						       86400   , // maxage
 						       true    );// promote?
@@ -507,12 +507,12 @@ long long Posdb::getTermFreq ( collnum_t collnum, long long termId ) {
 	// . ask rdb for an upper bound on this list size
 	// . but actually, it will be somewhat of an estimate 'cuz of RdbTree
 	key144_t maxKey;
-	long long maxRecs;
+	int64_t maxRecs;
 	// . don't count more than these many in the map
 	// . that's our old truncation limit, the new stuff isn't as dense
 	//long oldTrunc = 100000;
 	// turn this off for this
-	long long oldTrunc = -1;
+	int64_t oldTrunc = -1;
 	// get maxKey for only the top "oldTruncLimit" docids because when
 	// we increase the trunc limit we screw up our extrapolation! BIG TIME!
 	maxRecs = m_rdb.getListSize(collnum,
@@ -812,7 +812,7 @@ bool PosdbTable::allocTopTree ( ) {
 	  when we bring back fast intersections we can bring this back
 	  when doAlternativeAlgo is true again
 	// merge buf
-	long long total = 0LL;
+	int64_t total = 0LL;
 	for ( long k = 0 ; k < m_msg2->getNumLists() ; k++ ) {
 		// count
 		RdbList *list = m_msg2->getList(k);
@@ -838,7 +838,7 @@ bool PosdbTable::allocTopTree ( ) {
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
 		// how big?
-		long long total = m_msg2->m_lists[i].getListSize();
+		int64_t total = m_msg2->m_lists[i].getListSize();
 		// skip if empty
 		if ( total == 0 ) continue;
 		// need this
@@ -1014,7 +1014,7 @@ float getLinkerWeight ( unsigned char wordSpamRank ) {
 	return s_linkerWeights[wordSpamRank];
 }
 
-float getTermFreqWeight ( long long termFreq , long long numDocsInColl ) {
+float getTermFreqWeight ( int64_t termFreq , int64_t numDocsInColl ) {
 	// do not include top 6 bytes at top of list that are termid
 	//float fw = listSize - 6;
 	// sanity
@@ -1360,7 +1360,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		char *p    =     list->getList    ();
 		char *pend = p + list->getListSize();
 		// test
-		//long long final = 5663137686803656554LL;
+		//int64_t final = 5663137686803656554LL;
 		//final &= TERMID_MASK;
 		//if ( p<pend && g_posdb.getTermId(p) == final )
 		//	log("boo");
@@ -1369,7 +1369,7 @@ void PosdbTable::intersectLists9_r ( ) {
 			// . first key is the full size
 			// . uses the w,G,s,v and F bits to hold this
 			long sh32 = g_posdb.getSectionSentHash32 ( p );
-			//long long d = g_posdb.getDocId(p);
+			//int64_t d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
 			p += list->getRecSize ( p );
@@ -1423,7 +1423,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	m_t1 = 0LL;
 
 	// set start time
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 
 	//char *modListPtrs  [MAX_QUERY_TERMS];
 	//long  modListSizes [MAX_QUERY_TERMS];
@@ -1441,7 +1441,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	//for ( long k = 0 ; k < m_msg2->getNumLists() ; k++ ) {
 	for ( long k = 0 ; k < m_q->m_numTerms ; k++ ) {
 		// count
-		long long total = 0LL;
+		int64_t total = 0LL;
 		// loop over each list in this group
 		//for ( long i = 0 ; i < m_msg2->getNumListsInGroup(k); i++ ) {
 		// get the list
@@ -1516,8 +1516,8 @@ void PosdbTable::intersectLists9_r ( ) {
 		QueryTerm *rightTerm = qt->m_rightPhraseTerm;
 		bool leftAlreadyAdded = false;
 		bool rightAlreadyAdded = false;
-		//long long totalTermFreq = 0;
-		//long long *tfreqs = (long long *)m_r->ptr_termFreqs;
+		//int64_t totalTermFreq = 0;
+		//int64_t *tfreqs = (int64_t *)m_r->ptr_termFreqs;
 		//
 		// add the non-bigram list AFTER the
 		// bigrams, which we like to do when we PREFER the bigram
@@ -1740,16 +1740,16 @@ void PosdbTable::intersectLists9_r ( ) {
 	}
 
 	// get the smallest termlist
-	long long minListSize = 0;
+	int64_t minListSize = 0;
 	long mini = -1;
-	//long long freqs   [MAX_QUERY_TERMS];
+	//int64_t freqs   [MAX_QUERY_TERMS];
 	//float freqWeights [MAX_QUERY_TERMS];
 	// hopefully no more than 100 sublists per term
 	char *listEnds  [ MAX_QUERY_TERMS ][ MAX_SUBLISTS ];
 	// set ptrs now i guess
 	for ( long i = 0 ; i < nrg ; i++ ) {
 		// compute total sizes
-		long long total = 0LL;
+		int64_t total = 0LL;
 		// do not consider for first termlist if negative
 		if ( bigramFlags[i][0] & BF_NEGATIVE ) continue;
 		// add to it
@@ -1759,7 +1759,7 @@ void PosdbTable::intersectLists9_r ( ) {
 			// set end ptr
 			listEnds[i][q] = list->m_list + list->m_listSize;
 			// get it
-			long long listSize = list->getListSize();
+			int64_t listSize = list->getListSize();
 			// add it up
 			total += listSize;
 		}
@@ -1818,7 +1818,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	//
 	//
 	// time it
-	long long startTime = 0LL;
+	int64_t startTime = 0LL;
 	if ( doAlternativeAlgo ) startTime = gettimeofdayInMilliseconds();
 	// . only do this if smallest list is big!
 	// . if smallest list is small it's faster to do the binary jumping
@@ -1853,7 +1853,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		}
 		// get the min key and add into the list buf
 		mergedList[j] = mptr;
-		long long prevDocId = -1LL;
+		int64_t prevDocId = -1LL;
 
 	mergeMore2:
 		long mink = -1;
@@ -1910,13 +1910,13 @@ void PosdbTable::intersectLists9_r ( ) {
 			continue;
 		}
 		// get docid
-		long long docId = g_posdb.getDocId(nwp12[mink]);
+		int64_t docId = g_posdb.getDocId(nwp12[mink]);
 		// if this key matches our previously stored docid, then
 		// it's 6 bytes, otherwise 12
 		if ( docId != prevDocId ) {
 			// TODO: make this not use memset
 			//memcpy ( mptr , nwp[mink] , 12 );
-			*(long long *)mptr = *(long long *)nwp[mink];
+			*(int64_t *)mptr = *(int64_t *)nwp[mink];
 			*(long *)(mptr+8) = *(long *)(nwp[mink]+8);
 			// set the synbit so we know if its a synonym of term
 			if ( nwpFlags[mink] & (BF_BIGRAM|BF_SYNONYM)) 
@@ -1979,8 +1979,8 @@ void PosdbTable::intersectLists9_r ( ) {
 	if ( doAlternativeAlgo ) {
 		// sanity check
 		if ( mptr > mend ) { char *xx=NULL;*xx=0; }
-		long long endTime = gettimeofdayInMilliseconds();
-		long long took = endTime - startTime;
+		int64_t endTime = gettimeofdayInMilliseconds();
+		int64_t took = endTime - startTime;
 		log("posdb: synlist merge took %lli ms", took);
 	}
 	//
@@ -2004,7 +2004,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	//
 	/////////
 
-	long long lastDocId = 0LL;
+	int64_t lastDocId = 0LL;
 	long lastLen = 0;
 	char siteRank =0;
 	char docLang =0;
@@ -2012,7 +2012,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	float minScore;
 	float minPairScore;
 	float minSingleScore;
-	long long docId;
+	int64_t docId;
 
 	char *ptrs  [MAX_QUERY_TERMS];
 	char *ends  [MAX_QUERY_TERMS];
@@ -2033,11 +2033,11 @@ void PosdbTable::intersectLists9_r ( ) {
 	//float  scoreStack [MAX_QUERY_TERMS * MAX_QUERY_TERMS];
 	char *winnerStack[MAX_QUERY_TERMS];
 
-	long long prevDocId = 0LL;
+	int64_t prevDocId = 0LL;
 	// scan the posdb keys in the smallest list
 	long minddd =0;
 	char *saved;
-	long long dtmp;
+	int64_t dtmp;
 	// raised from 200 to 300,000 for 'da da da' query
 	char mbuf[300000];
 	char *mptrEnd = mbuf + 299000;
@@ -2092,7 +2092,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		// reset match count, we match term in "mini" list
 		long match ;
 		// get current docid
-		long long currentDocId = g_posdb.getDocId(mergedList[mini]);
+		int64_t currentDocId = g_posdb.getDocId(mergedList[mini]);
 		// if second pass, must be in the hashtable
 		if ( secondPass && ! m_docIdTable.isInTable(&currentDocId) ) {
 			match = 0;
@@ -2868,7 +2868,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	}
 
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// store the addLists time
 	m_addListsTime = now - t1;
 	m_t1 = t1;
@@ -3084,7 +3084,7 @@ float PosdbTable::getSingleTermScore ( long i,
 		sx->m_finalScore = score;
 		sx->m_tfWeight = m_freqWeights[i];
 		sx->m_qtermNum = m_qtermNums[i];
-		//long long *termFreqs = (long long *)m_r->ptr_termFreqs;
+		//int64_t *termFreqs = (int64_t *)m_r->ptr_termFreqs;
 		//sx->m_termFreq = termFreqs[sx->m_qtermNum];
 		sx->m_bflags   = m_bflags[i];
 	}
@@ -4061,7 +4061,7 @@ float PosdbTable::getTermPairScoreForAny ( long i, long j,
 		px->m_fixedDistance  = fixedDist;
 		px->m_qtermNum1      = m_qtermNums[i];
 		px->m_qtermNum2      = m_qtermNums[j];
-		//long long *termFreqs = (long long *)m_r->ptr_termFreqs;
+		//int64_t *termFreqs = (int64_t *)m_r->ptr_termFreqs;
 		//px->m_termFreq1      = termFreqs[px->m_qtermNum1];
 		//px->m_termFreq2      = termFreqs[px->m_qtermNum2];
 		px->m_tfWeight1      = m_freqWeights[i];//sfw[i];
@@ -4231,8 +4231,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		QueryTerm *rightTerm = qt->m_rightPhraseTerm;
 		bool leftAlreadyAdded = false;
 		bool rightAlreadyAdded = false;
-		//long long totalTermFreq = 0;
-		//long long *tfreqs = (long long *)m_r->ptr_termFreqs;
+		//int64_t totalTermFreq = 0;
+		//int64_t *tfreqs = (int64_t *)m_r->ptr_termFreqs;
 		//
 		// add the non-bigram list AFTER the
 		// bigrams, which we like to do when we PREFER the bigram
@@ -4530,7 +4530,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			// set end ptr
 			//qti->m_subListEnds[q]=list->m_list +list->m_listSize;
 			// get it
-			long long listSize = list->getListSize();
+			int64_t listSize = list->getListSize();
 			// add it up
 			qti->m_totalSubListsSize += listSize;
 		}
@@ -4566,13 +4566,13 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	//
 	m_minListSize = 0;
 	m_minListi    = -1;
-	long long grand = 0LL;
+	int64_t grand = 0LL;
 	// hopefully no more than 100 sublists per term
 	//char *listEnds  [ MAX_QUERY_TERMS ][ MAX_SUBLISTS ];
 	// set ptrs now i guess
 	for ( long i = 0 ; i < nrg ; i++ ) {
 		// compute total sizes
-		long long total = 0LL;
+		int64_t total = 0LL;
 		// get it
 		QueryTermInfo *qti = &qip[i];
 		// do not consider for first termlist if negative
@@ -4605,7 +4605,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// they could all be OR'd together!
 	if ( m_q->m_isBoolean ) need = grand;
 
-	// so we can always cast a long long from a ptr in there
+	// so we can always cast a int64_t from a ptr in there
 	// for setting m_docId when m_booleanQuery is true below
 	need += 8;
 
@@ -5052,7 +5052,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 
 	/*
 	// debug
-	long long dd = g_posdb.getDocId(minRecPtr);
+	int64_t dd = g_posdb.getDocId(minRecPtr);
 	log("posdb: adding docid %lli", dd);
 	// test
 	uint64_t actualDocId;
@@ -5113,7 +5113,7 @@ void PosdbTable::shrinkSubLists ( QueryTermInfo *qti ) {
 			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
 				continue;
 			// copy over the 12 byte key
-			*(long long *)dst = *(long long *)recPtr;
+			*(int64_t *)dst = *(int64_t *)recPtr;
 			*(long *)(dst+8) = *(long *)(recPtr+8);
 			// skip that 
 			dst    += 12;
@@ -5215,7 +5215,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		char *p    =     list->getList    ();
 		char *pend = p + list->getListSize();
 		// test
-		//long long final = 5663137686803656554LL;
+		//int64_t final = 5663137686803656554LL;
 		//final &= TERMID_MASK;
 		//if ( p<pend && g_posdb.getTermId(p) == final )
 		//	log("boo");
@@ -5227,7 +5227,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			//   can be any val, like now FacetStats is using
 			//   it for the innerHtml sentence content hash32
 			long sh32 = g_posdb.getFacetVal32 ( p );
-			//long long d = g_posdb.getDocId(p);
+			//int64_t d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
 			p += list->getRecSize ( p );
@@ -5289,7 +5289,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		RdbList *list = &whiteLists[i];
 		if ( list->isEmpty() ) continue;
 		// sanity test
-		long long d1 = g_posdb.getDocId(list->getList());
+		int64_t d1 = g_posdb.getDocId(list->getList());
 		if ( d1 > m_msg2->m_docIdEnd ) { 
 			log("posdb: d1=%lli > %lli",
 			    d1,m_msg2->m_docIdEnd);
@@ -5368,9 +5368,9 @@ void PosdbTable::intersectLists10_r ( ) {
 	m_t1 = 0LL;
 
 	// set start time
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 
-	long long lastTime = t1;
+	int64_t lastTime = t1;
 
 	// assume we return early
 	m_addListsTime = 0;
@@ -5391,7 +5391,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	// case.
 	for ( long k = 0 ; ! seoHack && k < m_q->m_numTerms ; k++ ) {
 		// count
-		long long total = 0LL;
+		int64_t total = 0LL;
 		// loop over each list in this group
 		//for ( long i = 0 ; i < m_msg2->getNumListsInGroup(k); i++ ) {
 		// get the list
@@ -5441,7 +5441,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	/*
 	for ( long k = 0 ; seoHack && k < m_q->m_numTerms ; k++ ) {
 		// count
-		long long total = 0LL;
+		int64_t total = 0LL;
 		RdbList *list = m_q->m_qterms[k].m_posdbListPtr;
 		// skip if null
 		if ( ! list ) continue;
@@ -5455,8 +5455,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	}
 	*/
 
-	long long now;
-	long long took;
+	int64_t now;
+	int64_t took;
 	long phase = 1;
 
 	long listGroupNum = 0;
@@ -5677,7 +5677,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	float minScore;
 	float minPairScore;
 	float minSingleScore;
-	//long long docId;
+	//int64_t docId;
 	char *miniMergedList [MAX_QUERY_TERMS];
 	char *miniMergedEnd  [MAX_QUERY_TERMS];
 	char  bflags         [MAX_QUERY_TERMS];
@@ -5836,14 +5836,14 @@ void PosdbTable::intersectLists10_r ( ) {
 	if ( docIdPtr >= docIdEnd ) goto done;
 
 	// assume all sublists exhausted for this query term
-	//docId = *(long long *)docIdPtr;
+	//docId = *(int64_t *)docIdPtr;
 
 	// advance for next loop iteration
 	//docIdPtr += 6;
 
 	// docid ptr points to 5 bytes of docid shifted up 2
 	/*
-	long long tmpDocId;
+	int64_t tmpDocId;
 	tmpDocId = *(unsigned long *)(docIdPtr+1);
 	tmpDocId <<= 8;
 	tmpDocId |= (unsigned char)docIdPtr[0];
@@ -5907,8 +5907,8 @@ void PosdbTable::intersectLists10_r ( ) {
 				for ( ; ; ) {
 					if ( px >= xlistEnd ) {px=NULL;break;}
 					if ( px[0] & 0x04 ) { px+=6; continue;}
-					long long dx = g_posdb.getDocId(px);
-					if ( dx == (long long)m_docId ) break;
+					int64_t dx = g_posdb.getDocId(px);
+					if ( dx == (int64_t)m_docId ) break;
 					px += 12;
 				}
 				// sanity check
@@ -6974,14 +6974,14 @@ void PosdbTable::intersectLists10_r ( ) {
 			if ( intScore > (long)m_r->m_maxSerpScore )
 				goto advance;
 			if ( intScore == (long)m_r->m_maxSerpScore &&
-			     (long long)m_docId <= m_r->m_minSerpDocId ) 
+			     (int64_t)m_docId <= m_r->m_minSerpDocId ) 
 				goto advance;
 		}
 		else {
 			if ( score > (float)m_r->m_maxSerpScore ) 
 				goto advance;
 			if ( score == m_r->m_maxSerpScore &&
-			     (long long)m_docId <= m_r->m_minSerpDocId ) 
+			     (int64_t)m_docId <= m_r->m_minSerpDocId ) 
 				goto advance;
 		}
 	}
@@ -7092,7 +7092,7 @@ void PosdbTable::intersectLists10_r ( ) {
 				ft->addKey(&val32,&ff);
 			}
 			// only one vote per docid
-			else if ( fe->m_docId != (long long)m_docId ) {
+			else if ( fe->m_docId != (int64_t)m_docId ) {
 				fe->m_count++;
 			}
 		}
@@ -7599,12 +7599,12 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			char *p = qti->m_subLists[j]->getList();
 			char *pend = qti->m_subLists[j]->getListEnd();
 
-			//long long lastDocId = 0LL;
+			//int64_t lastDocId = 0LL;
 
 			// scan the sub termlist #j
 			for ( ; p < pend ; ) {
 				// place holder
-				long long docId = g_posdb.getDocId(p);
+				int64_t docId = g_posdb.getDocId(p);
 
 				// assume this docid is not in range if we
 				// had a range term like gbmin:offerprice:190
@@ -7649,15 +7649,15 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 					continue;
 
 				// convert docid into hash key
-				//long long docId = *(long long *)dp;
+				//int64_t docId = *(int64_t *)dp;
 				// shift down 2 bits
 				//docId >>= 2;
 				// and mask
 				//docId &= DOCID_MASK;
 				// test it
-				//long long docId = g_posdb.getDocId(dp-8);
+				//int64_t docId = g_posdb.getDocId(dp-8);
 				//if ( d2 != docId ) { char *xx=NULL;*xx=0; }
-				// store this docid though. treat as long long
+				// store this docid though. treat as int64_t
 				// but we mask with keymask
 				long slot = m_bt.getSlot ( &docId );
 				if ( slot < 0 ) {
@@ -7684,7 +7684,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// get the bit vector
 		unsigned char *vec = (unsigned char *)m_bt.getValueFromSlot(i);
 		// hash the vector
-		long long h64 = 0LL;
+		int64_t h64 = 0LL;
 		for ( long k = 0 ; k < m_vecSize ; k++ )
 		       h64^=g_hashtab[(unsigned char)vec[k]][(unsigned char)k];
 		// check in hash table
@@ -7692,7 +7692,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 
 		// it passes, add the ocid
 		if ( m_debug ) {
-			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
+			int64_t docId =*(int64_t *)m_bt.getKeyFromSlot(i);
 			log("query: eval d=%llu vec[0]=%lx h64=%lli",
 			    docId,(long)vec[0],h64);
 			//if ( docId == 47801316261LL )
@@ -7702,7 +7702,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// add him to the good table
 		if ( val && *val ) {
 			// it passes, add the ocid
-			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
+			int64_t docId =*(int64_t *)m_bt.getKeyFromSlot(i);
 			// fix it up
 			if ( m_debug ) {
 				log("query: adding d=%llu bitVecSize=%li "
@@ -7721,7 +7721,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 						        m_vecSize );
 		if ( include ) {
 			// it passes, add the ocid
-			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
+			int64_t docId =*(int64_t *)m_bt.getKeyFromSlot(i);
 			// fix it up
 			if ( m_debug ) {
 				log("query: adding d=%llu vec[0]=0x%lx",
@@ -7732,7 +7732,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// a 6 byte key means you pass
 			memcpy ( dst , &docId , 6 );
 			// test it
-			long long d2;
+			int64_t d2;
 			d2 = *(unsigned long *)(dst+1);
 			d2 <<= 8;
 			d2 |= (unsigned char)dst[0];

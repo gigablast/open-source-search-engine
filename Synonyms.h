@@ -22,7 +22,7 @@
 
 #define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4+4))
 
-long long getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
+int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
 
 char *getSourceString ( char source );
 
@@ -59,9 +59,9 @@ class Synonyms {
 	SafeBuf m_synWordBuf;
 
 	// for each synonym of this word we fill out these:
-	long long  *m_aids;
-	long long  *m_wids0;
-	long long  *m_wids1;
+	int64_t  *m_aids;
+	int64_t  *m_wids0;
+	int64_t  *m_wids1;
 	char      **m_termPtrs;
 	long       *m_termOffs;
 	long       *m_termLens;
@@ -69,9 +69,9 @@ class Synonyms {
 	long       *m_numAlnumWordsInBase;
 	char       *m_src;
 
-	long long *m_aidsPtr;
-	long long *m_wids0Ptr;
-	long long *m_wids1Ptr;
+	int64_t *m_aidsPtr;
+	int64_t *m_wids0Ptr;
+	int64_t *m_wids1Ptr;
 	char     **m_termPtrsPtr;
 	long      *m_termOffsPtr;
 	long      *m_termLensPtr;

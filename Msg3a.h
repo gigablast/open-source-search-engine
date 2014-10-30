@@ -13,7 +13,7 @@
 
 void setTermFreqWeights ( collnum_t collnum, // char *coll,
 			  class Query *q , 
-			  long long *termFreqs, 
+			  int64_t *termFreqs, 
 			  float *termFreqWeights ) ;
 
 //#define MSG3A_TMP_BUFSIZE (MAX_RESULTS*18)
@@ -56,7 +56,7 @@ public:
 	Query *getQuery ( ) { return m_q ; };
 
 	// Msg40 calls these to get the data pointing into the reply
-	long long *getDocIds        ( ) { return m_docIds;        };
+	int64_t *getDocIds        ( ) { return m_docIds;        };
 	char      *getClusterLevels ( ) { return m_clusterLevels; };
 	// we basically turn the scores we get from each msg39 split into
 	// floats (rscore_t) and store them as floats so that PostQueryRerank
@@ -76,7 +76,7 @@ public:
 
 	// . estimates based on m_termFreqs, m_termSigns and m_numTerms
 	// . received in reply
-	long long  getNumTotalEstimatedHits ( ) { 
+	int64_t  getNumTotalEstimatedHits ( ) { 
 		return m_numTotalEstimatedHits; };
 
 	// called when we got a reply of docIds
@@ -130,21 +130,21 @@ public:
 
 	// use msg37 to get TermFreqs
 	//Msg37      m_msg37;
-	long long  m_termFreqs      [MAX_QUERY_TERMS];
+	int64_t  m_termFreqs      [MAX_QUERY_TERMS];
 	float      m_termFreqWeights[MAX_QUERY_TERMS];
 
 	// a multicast class to send the request, one for each split
 	Multicast  m_mcast[MAX_SHARDS];
 
 	// for timing how long things take
-	long long  m_startTime;
+	int64_t  m_startTime;
 
 	// this buffer should be big enough to hold all requests
 	//char       m_request [MAX_MSG39_REQUEST_SIZE * MAX_SHARDS];
 	long       m_numReplies;
 
 	// . # estimated total hits
-	long long  m_numTotalEstimatedHits;
+	int64_t  m_numTotalEstimatedHits;
 
 	// we have one request that we send to each split
 	class Msg39Request *m_r;
@@ -162,7 +162,7 @@ public:
 	char m_debug;
 
 	// final merged lists go here
-	long long      *m_docIds        ;
+	int64_t      *m_docIds        ;
 	double         *m_scores        ;
 	class DocIdScore **m_scoreInfos ;
 	//key_t          *m_recs          ; // clusterdb recs

@@ -129,7 +129,7 @@ bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
 	}
 
 	logf(LOG_DEBUG,"syncdb: added a b c and d keys to quick tree "
-	     "tid=%lu sid=%lu zid=%llu",(long)tid,(long)sid,(long long)zid);
+	     "tid=%lu sid=%lu zid=%llu",(long)tid,(long)sid,(int64_t)zid);
 
 
 	// success
@@ -522,7 +522,7 @@ bool Syncdb::loop4 ( ) {
 	// get group we are in
 	//Host *group = g_hostdb.getMyShard();
 	// use this for determining approximate age of meta lists
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 	// do the loop
 	for ( ; nn >= 0 ; nn = m_qt.getNextNode ( nn ) ) {
 		// breathe
@@ -568,7 +568,7 @@ bool Syncdb::loop4 ( ) {
 		// get sid
 		uint32_t sid = getSid ( &k );
 		// get its approximate age
-		long long age = nowms - zid;
+		int64_t age = nowms - zid;
 		// go to next sid if not 60 seconds yet for this one
 		if ( age < 60000 ) {
 			// no use banging away at this sid any more since we

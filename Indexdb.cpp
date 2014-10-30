@@ -360,7 +360,7 @@ deepLoop:
 
 // . see Indexdb.h for format of the 12 byte key
 // . TODO: substitute var ptrs if you want extra speed
-key_t Indexdb::makeKey ( long long          termId   , 
+key_t Indexdb::makeKey ( int64_t          termId   , 
 			 unsigned char      score    , 
 			 uint64_t docId    , 
 			 bool               isDelKey ) {
@@ -391,7 +391,7 @@ key_t Indexdb::makeKey ( long long          termId   ,
 
 // . accesses RdbMap to estimate size of the indexList for this termId
 // . returns an UPPER BOUND
-long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
+int64_t Indexdb::getTermFreq ( collnum_t collnum , int64_t termId ) {
 	// establish the list boundary keys
 	key_t startKey = makeStartKey ( termId );
 	key_t endKey   = makeEndKey   ( termId );
@@ -399,7 +399,7 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 	// . but actually, it will be somewhat of an estimate 'cuz of RdbTree
 	key_t maxKey;
 	// divide by 6 since indexdb's recs are 6 bytes each, except for first
-	long long maxRecs;
+	int64_t maxRecs;
 	// . don't count more than these many in the map
 	// . that's our old truncation limit, the new stuff isn't as dense
 	long oldTrunc = 100000;
@@ -411,7 +411,7 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 	
 	// . is this termId truncated in this indexdb?
 	// . truncationLimit of Indexdb is max # of records for one termId
-	//if ( (long long)maxRecs < getTruncationLimit() ) return maxRecs;
+	//if ( (int64_t)maxRecs < getTruncationLimit() ) return maxRecs;
 	// . no, i like to raise truncation limit on the fly, so if we
 	//   still have that line above then nothing would seem to be
 	//   truncated, would it?
@@ -419,12 +419,12 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 	if ( maxRecs < MIN_TRUNC ) return maxRecs;
 
 	// this var is so we can adjust the # of recs lost due to truncation
-	long long numRecs = maxRecs ;
+	int64_t numRecs = maxRecs ;
 
 	// . get last score we got
 	// . if it is > 1 then we probably got the 1's truncated off
 	unsigned char shy       = g_indexdb.getScore ( maxKey );
-	long long     lastDocId = g_indexdb.getDocId ( maxKey );
+	int64_t     lastDocId = g_indexdb.getDocId ( maxKey );
 	// . which page has first key with this score (shy)?
 	// . modify maxKey
 	key_t midKey = g_indexdb.makeKey   ( termId , shy , 0LL , true );
@@ -432,8 +432,8 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 	long  lastChunk = m_rdb.getListSize(collnum,
 					    midKey,endKey,&maxKey,oldTrunc)/ 6;
 	// now interpolate number of uncounted docids for the score "shy"
-	long remaining = (((long long)lastChunk) * lastDocId) / 
-		(long long)DOCID_MASK ;
+	long remaining = (((int64_t)lastChunk) * lastDocId) / 
+		(int64_t)DOCID_MASK ;
 
 	// add in remaining # of docids from the score "shy"
 	numRecs += remaining;
@@ -489,10 +489,10 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 	// . see PageRoot.cpp for explanation of this:
 	// . so starting with Lars we'll use checksumdb
 	//#ifdef _LARS_
-	//long long trecs = g_checksumdb.getRdb()->getNumGlobalRecs();
-	long long trecs = g_clusterdb.getRdb()->getNumGlobalRecs();
+	//int64_t trecs = g_checksumdb.getRdb()->getNumGlobalRecs();
+	int64_t trecs = g_clusterdb.getRdb()->getNumGlobalRecs();
 	//#else
-	//long long trecs = g_clusterdb.getRdb()->getNumGlobalRecs() ;
+	//int64_t trecs = g_clusterdb.getRdb()->getNumGlobalRecs() ;
 	//#endif
 	if ( numRecs > trecs ) numRecs = trecs;
 
@@ -502,11 +502,11 @@ long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 }
 
 // keys are stored from lowest to highest
-key_t Indexdb::makeStartKey ( long long termId ) {
+key_t Indexdb::makeStartKey ( int64_t termId ) {
 	return makeKey ( termId , 255/*score*/ , 
 			 0x0000000000000000LL/*docId*/ , true/*delKey?*/ );
 }
-key_t Indexdb::makeEndKey   ( long long termId ) {
+key_t Indexdb::makeEndKey   ( int64_t termId ) {
 	return makeKey ( termId , 0/*score*/ , 
 			 0xffffffffffffffffLL/*docId*/ , false/*delKey?*/ );
 }

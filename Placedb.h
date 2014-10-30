@@ -28,14 +28,14 @@ class Placedb {
 	//
 
 	// hash of street, adm1, city and street number
-	long long getBigHash   ( key128_t *placedbKey ) {
+	int64_t getBigHash   ( key128_t *placedbKey ) {
 		return placedbKey->n1; };
 
 	long getStreetNumHash   ( key128_t *placedbKey ) {
 		return placedbKey->n0 >> 39; };
 
 	// docid is top 38 bits
-	long long getDocId     ( key128_t *placedbKey ) {
+	int64_t getDocId     ( key128_t *placedbKey ) {
 		return  (placedbKey->n0 >> 1) & DOCID_MASK; };
 
 	// the hash of the place name with the street indicator(s)

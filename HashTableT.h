@@ -105,7 +105,7 @@ class HashTableT {
 	// char m_buf2 [ HT_BUF_SIZE ];
 };
 
-bool hashFromString ( HashTableT<long long,char> *ht , char *x ) ;
+bool hashFromString ( HashTableT<int64_t,char> *ht , char *x ) ;
 
 #endif
 
