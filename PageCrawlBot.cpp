@@ -1817,6 +1817,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		tmp.safePrintf("{\"response\":\"Successfully %s job.\"}",
 			       msg);
 		char *reply = tmp.getBufStart();
+		if ( ! reply ) {
+			if ( ! g_errno ) g_errno = ENOMEM;
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 		return g_httpServer.sendDynamicPage( socket,
 						     reply,
 						     gbstrlen(reply),

@@ -296,8 +296,9 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// must have had one
 	if ( ! cr ) {
 		log("si: si. collection does not exist");
-		//g_errno = ENOCOLLREC;
-		//return false;
+		// if we comment the below out then it cores in setToDefault!
+		g_errno = ENOCOLLREC;
+		return false;
 	}
 
 	// and set from the http request. will set m_coll, etc.
