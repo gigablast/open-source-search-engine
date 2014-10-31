@@ -3628,6 +3628,44 @@ bool Parms::setFromFile ( void *THIS        ,
 		continue;
 	}
 
+	// backwards compatible hack for old <masterPassword> tags
+	for ( long i = 1 ; i < numNodes ; i++ ) {
+		XmlNode *pn = &xml.m_nodes[i-1];
+		XmlNode *xn = &xml.m_nodes[i];
+		// look for <masterPassword>
+		if ( pn->m_tagNameLen != 14 ) continue;
+		if ( xn->m_tagNameLen != 8 ) continue;
+		// if it is not the OLD supported tag then skip
+		if ( strncmp ( pn->m_tagName,"masterPassword",14 ) ) continue;
+		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
+		// otherwise append to buf
+		char *text = xn->m_node + 9;
+		long  tlen = xn->m_nodeLen - 12;
+		g_conf.m_masterPwds.safeMemcpy(text,tlen);
+		// a \n
+		g_conf.m_masterPwds.pushChar('\n');
+		g_conf.m_masterPwds.nullTerm();
+	}
+	// another backwards compatible hack for old masterIp tags
+	for ( long i = 1 ; i < numNodes ; i++ ) {
+		XmlNode *xn = &xml.m_nodes[i];
+		XmlNode *pn = &xml.m_nodes[i-1];
+		// look for <masterPassword>
+		if ( pn->m_tagNameLen != 8 ) continue;
+		if ( xn->m_tagNameLen != 8 ) continue;
+		// if it is not the OLD supported tag then skip
+		if ( strncmp ( pn->m_tagName,"masterIp",8 ) ) continue;
+		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
+		// otherwise append to buf
+		char *text = xn->m_node + 9;
+		long  tlen = xn->m_nodeLen - 12;
+		// otherwise append to buf
+		g_conf.m_connectIps.safeMemcpy(text,tlen);
+		// a \n
+		g_conf.m_connectIps.pushChar('\n');
+		g_conf.m_connectIps.nullTerm();
+	}
+
 	/*
 
 	  // no! now we warn with a redbox alert
@@ -18539,8 +18577,8 @@ void Parms::init ( ) {
 		//"If no Admin Password or Admin IP is specified then "
 		//"Gigablast will only allow local IPs to connect to it "
 		//"as the master admin.";
-	m->m_cgi   = "masterpwd";
-	m->m_xml   = "masterPassword";
+	m->m_cgi   = "masterpwds";
+	m->m_xml   = "masterPasswords";
 	m->m_def   = "";
 	m->m_obj   = OBJ_CONF;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
@@ -18566,8 +18604,8 @@ void Parms::init ( ) {
 	m->m_desc  = "Whitespace separated list of Ips. "
 		"Any IPs in this list will have administrative access "
 		"to Gigablast and all collections.";
-	m->m_cgi   = "masterip";
-	m->m_xml   = "masterIp";
+	m->m_cgi   = "masterips";
+	m->m_xml   = "masterIps";
 	m->m_page  = PAGE_ROOTPASSWORDS;
 	m->m_off   = (char *)&g_conf.m_connectIps - g;
 	m->m_type  = TYPE_SAFEBUF;//IP;
