@@ -486,7 +486,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_diffbotPageProcessPattern.set ( "" );
 		cr->m_diffbotUrlCrawlRegEx.set ( "" );
 		cr->m_diffbotUrlProcessRegEx.set ( "" );
-		cr->m_spiderStatus = SP_INITIALIZING;
+    cr->m_diffbotHopcount = -1; 
+    
+    cr->m_spiderStatus = SP_INITIALIZING;
 		// do not spider more than this many urls total. 
 		// -1 means no max.
 		cr->m_maxToCrawl = 100000;
@@ -3248,91 +3250,8 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
 void nukeDoledb ( collnum_t collnum );
 
-// . anytime the url filters are updated, this function is called
-// . it is also called on load of the collection at startup
-bool CollectionRec::rebuildUrlFilters ( ) {
-
-	if ( ! g_conf.m_doingCommandLine )
-		log("coll: Rebuilding url filters for %s ufp=%s",m_coll,
-		    m_urlFiltersProfile.getBufStart());
-
-	// if not a custom crawl, and no expressions, add a default one
-	//if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
-	//	setUrlFiltersToDefaults();
-	//}
-
-	// if not a custom crawl then set the url filters based on 
-	// the url filter profile, if any
-	if ( ! m_isCustomCrawl )
-		rebuildUrlFilters2();
-
-	// set this so we know whether we have to keep track of page counts
-	// per subdomain/site and per domain. if the url filters have
-	// 'sitepages' 'domainpages' 'domainadds' or 'siteadds' we have to keep
-	// the count table SpiderColl::m_pageCountTable.
-	m_urlFiltersHavePageCounts = false;
-	for ( long i = 0 ; i < m_numRegExs ; i++ ) {
-		// get the ith rule
-		SafeBuf *sb = &m_regExs[i];
-		char *p = sb->getBufStart();
-		if ( strstr(p,"sitepages") ||
-		     strstr(p,"domainpages") ||
-		     strstr(p,"siteadds") ||
-		     strstr(p,"domainadds") ) {
-			m_urlFiltersHavePageCounts = true;
-			break;
-		}
-	}
-
-	// if collection is brand new being called from addNewColl()
-	// then sc will be NULL
-	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
-
-	// . do not do this at startup
-	// . this essentially resets doledb
-	if ( g_doledb.m_rdb.m_initialized && 
-	     // somehow this is initialized before we set m_recs[m_collnum]
-	     // so we gotta do the two checks below...
-	     sc &&
-	     // must be a valid coll
-	     m_collnum < g_collectiondb.m_numRecs &&
-	     g_collectiondb.m_recs[m_collnum] ) {
-
-
-		log("coll: resetting doledb for %s (%li)",m_coll,
-		    (long)m_collnum);
-		
-		// clear doledb recs from tree
-		//g_doledb.getRdb()->deleteAllRecs ( m_collnum );
-		nukeDoledb ( m_collnum );
-		
-		// add it back
-		//if ( ! g_doledb.getRdb()->addRdbBase2 ( m_collnum ) ) 
-		//	log("coll: error re-adding doledb for %s",m_coll);
-		
-		// just start this over...
-		// . MDW left off here
-		//tryToDelete ( sc );
-		// maybe this is good enough
-		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
-		
-		//CollectionRec *cr = sc->m_cr;
-
-		// . rebuild sitetable? in PageBasic.cpp.
-		// . re-adds seed spdierrequests using msg4
-		// . true = addSeeds
-		// . no, don't do this now because we call updateSiteList()
-		//   when we have &sitelist=xxxx in the request which will
-		//   handle updating those tables
-		//updateSiteListTables ( m_collnum , 
-		//		       true , 
-		//		       cr->m_siteListBuf.getBufStart() );
-	}
-
-
-	// the code beow is only for diffbot custom crawls
-	if ( ! m_isCustomCrawl ) return true;//!= 1 && // crawl api
-
+bool CollectionRec::rebuildUrlFiltersDiffbot() {
+  
 	//logf(LOG_DEBUG,"db: rebuilding url filters");
 
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
@@ -3341,8 +3260,6 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// if we had a regex, that works for this purpose as well
 	if ( ! ucp ) ucp = m_diffbotUrlCrawlRegEx.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
-
-
 
 	char *upp = m_diffbotUrlProcessPattern.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
@@ -3470,10 +3387,28 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_spiderPriorities   [i] = 70;
 	i++;
 
-	// 2nd default url filter
+	// 2nd default url 
 	m_regExs[i].set("ismedia && !ismanualadd");
 	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	i++;
+
+  // hopcount filter if asked for
+  if( m_diffbotHopcount >= 0 ) {
+
+    // transform long to string
+    char numstr[21]; // enough to hold all numbers up to 64-bits
+    sprintf(numstr, "%lu", m_diffbotHopcount); 
+    
+    // form regEx like: hopcount>3
+    char hopcountStr[30];
+    strcpy(hopcountStr, "hopcount>");
+    strcat(hopcountStr, numstr);
+
+    m_regExs[i].set(hopcountStr);
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED; // means DELETE 
+		m_spiderFreqs[i] = 0.0; // compatibility with m_spiderRoundStartTime
+		i++;
+  }
 
 	// 2nd default filter
 	// always turn this on for now. they need to add domains they want
@@ -3666,6 +3601,99 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	//if(m_hasupr && regexec(&m_upr,x,0,NULL,0) ) { char *xx=NULL;*xx=0; }
 
 	return true;
+
+
+}
+
+
+// . anytime the url filters are updated, this function is called
+// . it is also called on load of the collection at startup
+bool CollectionRec::rebuildUrlFilters ( ) {
+
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: Rebuilding url filters for %s ufp=%s",m_coll,
+		    m_urlFiltersProfile.getBufStart());
+
+	// if not a custom crawl, and no expressions, add a default one
+	//if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
+	//	setUrlFiltersToDefaults();
+	//}
+
+	// if not a custom crawl then set the url filters based on 
+	// the url filter profile, if any
+	if ( ! m_isCustomCrawl )
+		rebuildUrlFilters2();
+
+	// set this so we know whether we have to keep track of page counts
+	// per subdomain/site and per domain. if the url filters have
+	// 'sitepages' 'domainpages' 'domainadds' or 'siteadds' we have to keep
+	// the count table SpiderColl::m_pageCountTable.
+	m_urlFiltersHavePageCounts = false;
+	for ( long i = 0 ; i < m_numRegExs ; i++ ) {
+		// get the ith rule
+		SafeBuf *sb = &m_regExs[i];
+		char *p = sb->getBufStart();
+		if ( strstr(p,"sitepages") ||
+		     strstr(p,"domainpages") ||
+		     strstr(p,"siteadds") ||
+		     strstr(p,"domainadds") ) {
+			m_urlFiltersHavePageCounts = true;
+			break;
+		}
+	}
+
+	// if collection is brand new being called from addNewColl()
+	// then sc will be NULL
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
+
+	// . do not do this at startup
+	// . this essentially resets doledb
+	if ( g_doledb.m_rdb.m_initialized && 
+	     // somehow this is initialized before we set m_recs[m_collnum]
+	     // so we gotta do the two checks below...
+	     sc &&
+	     // must be a valid coll
+	     m_collnum < g_collectiondb.m_numRecs &&
+	     g_collectiondb.m_recs[m_collnum] ) {
+
+
+		log("coll: resetting doledb for %s (%li)",m_coll,
+		    (long)m_collnum);
+		
+		// clear doledb recs from tree
+		//g_doledb.getRdb()->deleteAllRecs ( m_collnum );
+		nukeDoledb ( m_collnum );
+		
+		// add it back
+		//if ( ! g_doledb.getRdb()->addRdbBase2 ( m_collnum ) ) 
+		//	log("coll: error re-adding doledb for %s",m_coll);
+		
+		// just start this over...
+		// . MDW left off here
+		//tryToDelete ( sc );
+		// maybe this is good enough
+		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
+		
+		//CollectionRec *cr = sc->m_cr;
+
+		// . rebuild sitetable? in PageBasic.cpp.
+		// . re-adds seed spdierrequests using msg4
+		// . true = addSeeds
+		// . no, don't do this now because we call updateSiteList()
+		//   when we have &sitelist=xxxx in the request which will
+		//   handle updating those tables
+		//updateSiteListTables ( m_collnum , 
+		//		       true , 
+		//		       cr->m_siteListBuf.getBufStart() );
+	}
+
+
+	// the code beow is only for diffbot custom crawls
+	if ( ! m_isCustomCrawl ) {
+      return true;//!= 1 && // crawl api
+  } else {
+      return rebuildUrlFiltersDiffbot();
+  }
 }
 
 // for some reason the libc we use doesn't support these shortcuts,
