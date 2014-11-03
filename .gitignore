@@ -1,0 +1,11 @@
+*.o
+/.project
+/coll.main.0/
+/catdb/
+/cachedb/
+*.dat
+*.txt
+*.conf.saving
+*.conf
+/diskusage
+*.cache
