@@ -32758,6 +32758,8 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	//static long long s_facetPrefixHash = 0LL;
 	//if ( ! s_facetPrefixHash )
 	//	s_facetPrefixHash = hash64n ( "gbfacet" );
+
+	// this is case-sensitive
 	long long prefixHash = hash64n ( prefix );
 
 	// term is like something like "object.price" or whatever.
