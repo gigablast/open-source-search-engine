@@ -754,8 +754,11 @@ bool PosdbTable::allocTopTree ( ) {
 		log("toptree: toptree: initializing %li nodes",nn);
 
 	// this actually sets the # of nodes to MORE than nn!!!
-	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) 
+	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
+		log("toptree: toptree: error allocating nodes: %s",
+		    mstrerror(g_errno));
 		return false;
+	}
 	// let's use nn*4 to try to get as many score as possible, although
 	// it may still not work!
 	long xx = m_r->m_docsToGet ;
