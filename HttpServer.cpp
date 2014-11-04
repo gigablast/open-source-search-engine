@@ -199,6 +199,7 @@ bool HttpServer::getDoc ( char   *url      ,
 			       // url, not just a relative path.
 			       additionalHeader , pcLen , proxyIp ) ) {
 			log("http: http req error: %s",mstrerror(g_errno));
+			// TODO: ensure we close the socket on this error!
 			return true;
 		}
 		reqSize = r.getRequestLen();

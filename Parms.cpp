@@ -3637,6 +3637,7 @@ bool Parms::setFromFile ( void *THIS        ,
 
 	// backwards compatible hack for old <masterPassword> tags
 	for ( long i = 1 ; i < numNodes ; i++ ) {
+		if ( objType != OBJ_CONF ) break;
 		XmlNode *pn = &xml.m_nodes[i-1];
 		XmlNode *xn = &xml.m_nodes[i];
 		// look for <masterPassword>
@@ -3655,6 +3656,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	}
 	// another backwards compatible hack for old masterIp tags
 	for ( long i = 1 ; i < numNodes ; i++ ) {
+		if ( objType != OBJ_CONF ) break;
 		XmlNode *xn = &xml.m_nodes[i];
 		XmlNode *pn = &xml.m_nodes[i-1];
 		// look for <masterPassword>
