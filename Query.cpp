@@ -2515,8 +2515,24 @@ bool Query::setQWords ( char boolFlag ,
 			       fieldCode == FIELD_GBNUMBERMININT ||
 			       fieldCode == FIELD_GBNUMBERMAXINT ||
 			       fieldCode == FIELD_GBFIELDMATCH ) ) {
+
+				// hack to fix gbfieldmatch:pageUrl:http://
+				// which registers an extra colon!
+				if ( fieldCode == FIELD_GBFIELDMATCH ) {
+					lastColonLen = firstColonLen;
+					colonCount = 1;
+				}
+
 				// record the field
 				wid = hash64Lower_utf8(w,lastColonLen , 0LL );
+
+				// gbfacetstr fields are case sensitive as 
+				// seen in XmlDoc.cpp::hashFacet2().
+				// the other fields are hashed in 
+				// XmlDoc.cpp::hashNumber3().
+				if ( fieldCode == FIELD_GBFIELDMATCH )
+					wid = hash64 ( w , lastColonLen , 0LL);
+
 				// fix gbminint:gbfacetstr:gbxpath...:165004297
 				if ( colonCount == 2 ) {
 					long long wid1;

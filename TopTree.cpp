@@ -113,6 +113,11 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 	char *nn ;
 	long oldsize = (m_numNodes+1) * ( sizeof(TopNode) );
 	long newsize = (  numNodes+1) * ( sizeof(TopNode) );
+	// if they ask for to many, this can go negative
+	if ( newsize < 0 ) {
+		g_errno = ENOMEM;
+		return false;
+	}
 	bool updated = false;
 	if (! m_nodes) {
 		nn=(char *)mmalloc (newsize,"TopTree");
