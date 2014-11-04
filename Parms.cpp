@@ -16223,9 +16223,10 @@ void Parms::init ( ) {
 
 	m->m_title = "use proxies for spidering";
 	m->m_desc  = "If this is true Gigablast will use the proxies "
-		"listed on the <i>proxies</i> page for spidering for "
+		"listed on the <a href=/admin/proxies>proxies</a> page for "
+		"spidering for "
 		"this collection regardless whether the proxies are enabled "
-		"on the <i>proxies</i> page.";
+		"on the <a href=/admin/proxies>proxies</a> page.";
 	m->m_cgi   = "useproxies";
 	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
 	m->m_type  = TYPE_BOOL;
