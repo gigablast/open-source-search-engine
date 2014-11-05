@@ -486,7 +486,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_diffbotPageProcessPattern.set ( "" );
 		cr->m_diffbotUrlCrawlRegEx.set ( "" );
 		cr->m_diffbotUrlProcessRegEx.set ( "" );
-    cr->m_diffbotHopcount = -1; 
+    cr->m_diffbotMaxHops = -1; 
     
     cr->m_spiderStatus = SP_INITIALIZING;
 		// do not spider more than this many urls total. 
@@ -3393,11 +3393,11 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	i++;
 
   // hopcount filter if asked for
-  if( m_diffbotHopcount >= 0 ) {
+  if( m_diffbotMaxHops >= 0 ) {
 
     // transform long to string
     char numstr[21]; // enough to hold all numbers up to 64-bits
-    sprintf(numstr, "%lu", m_diffbotHopcount); 
+    sprintf(numstr, "%lu", m_diffbotMaxHops); 
     
     // form regEx like: hopcount>3
     char hopcountStr[30];

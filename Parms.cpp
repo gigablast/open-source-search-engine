@@ -6094,10 +6094,10 @@ void Parms::init ( ) {
 	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
   
-	m->m_cgi   = "diffbotHopcount";
+	m->m_cgi   = "maxHops";
 	m->m_xml   = "diffbotHopcount";
 	m->m_title = "diffbot max hopcount";
-	m->m_off   = (char *)&cr.m_diffbotHopcount - x;
+	m->m_off   = (char *)&cr.m_diffbotMaxHops - x;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
