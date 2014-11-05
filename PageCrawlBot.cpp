@@ -1889,7 +1889,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// i guess bail if not there?
 	if ( ! cr ) {
 		log("crawlbot: missing coll rec for coll %s",collName);
-		char *msg = "invalid or missing collection rec";
+		//char *msg = "invalid or missing collection rec";
+		char *msg = "Could not create job because missing seeds or "
+			"urls.";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 

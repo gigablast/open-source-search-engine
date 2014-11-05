@@ -2557,7 +2557,12 @@ bool XmlDoc::indexDoc2 ( ) {
 	// error?
 	if ( ! metaList ) {
 		// sanity check. g_errno must be set
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		if ( ! g_errno ) { 
+			log("build: Error UNKNOWN error spidering. setting "
+			    "to bad engineer.");
+			g_errno = EBADENGINEER;
+			//char *xx=NULL;*xx=0; }
+		}
 		log("build: Error spidering for doc %s: %s",
 		    m_firstUrl.m_url,mstrerror(g_errno));
 		return true;

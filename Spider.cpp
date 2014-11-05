@@ -1248,16 +1248,16 @@ bool SpiderColl::load ( ) {
 	// a restart request from crawlbottesting for this collnum which
 	// calls Collectiondb::resetColl2() which calls deleteSpiderColl()
 	// on THIS spidercoll, but our m_loading flag is set
-	if (!m_sniTable.set   ( 4,8,5000,NULL,0,false,MAX_NICENESS,"snitbl") )
+	if (!m_sniTable.set   ( 4,8,0,NULL,0,false,MAX_NICENESS,"snitbl") )
 		return false;
-	if (!m_cdTable.set    (4,4,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
+	if (!m_cdTable.set    (4,4,0,NULL,0,false,MAX_NICENESS,"cdtbl"))
 		return false;
 	// doledb seems to have like 32000 entries in it
 	long numSlots = 0; // was 128000
 	if(!m_doleIpTable.set(4,4,numSlots,NULL,0,false,MAX_NICENESS,"doleip"))
 		return false;
 	// this should grow dynamically...
-	if (!m_waitingTable.set (4,8,100,NULL,0,false,MAX_NICENESS,"waittbl"))
+	if (!m_waitingTable.set (4,8,16,NULL,0,false,MAX_NICENESS,"waittbl"))
 		return false;
 	// . a tree of keys, key is earliestSpiderTime|ip (key=12 bytes)
 	// . earliestSpiderTime is 0 if unknown

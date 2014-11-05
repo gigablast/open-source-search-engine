@@ -863,7 +863,11 @@ bool sendBuffer ( long hostId , long niceness ) {
 
 	// sanity check. our clock must be in sync with host #0's or with
 	// a host from his group, group #0
-	if ( ! isClockInSync() ) { char *xx=NULL ; *xx=0; }
+	if ( ! isClockInSync() ) { 
+		log("msg4: msg4: warning sending out adds but clock not in "
+		    "sync with host #0");
+		//char *xx=NULL ; *xx=0; }
+	}
 	// try to keep all zids unique, regardless of their group
 	static uint64_t s_lastZid = 0;
 	// select a "zid", a sync id
