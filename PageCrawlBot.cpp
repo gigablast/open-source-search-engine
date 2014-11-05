@@ -2546,7 +2546,7 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 	sb->safeUtf8ToJSON ( cx->m_diffbotUrlProcessRegEx.getBufStart() );
 	sb->safePrintf("\",\n");
 
-  sb->safePrintf("\"diffbotHopcount\":%li,\n", cx->m_diffbotHopcount);
+  sb->safePrintf("\"maxHops\":%li,\n", cx->m_diffbotMaxHops);
 
 	char *token = cx->m_diffbotToken.getBufStart();
 	char *name = cx->m_diffbotCrawlName.getBufStart();
@@ -3710,7 +3710,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Max hopcount to seeds:</b> "
 			      "</td><td>"
-			      "<input type=text name=diffbotHopcount "
+			      "<input type=text name=maxHops "
 			      "size=9 value=%li> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -3825,7 +3825,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , rrr1.getBufStart()
 			      , rrr2.getBufStart()
             
-            , cr->m_diffbotHopcount
+            , cr->m_diffbotMaxHops
 
 			      , isNewYes
 			      , isNewNo

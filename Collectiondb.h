@@ -706,7 +706,7 @@ class CollectionRec {
 	long    m_hasupr:1;
   
   // only crawl pages within hopcount of a seed. 0 for no limit 
-  long m_diffbotHopcount;
+  long m_diffbotMaxHops;
 
 	char    m_diffbotOnlyProcessIfNewUrl;
 
