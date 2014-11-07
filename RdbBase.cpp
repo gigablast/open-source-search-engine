@@ -754,6 +754,9 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	g_mem.m_maxMem = mm;
 	// sanity check
 	if ( id2 < 0 && m_isTitledb ) { char *xx = NULL; *xx = 0; }
+
+	CollectionRec *cr = NULL;
+
 	// set the data file's filename
 	char name[256];
 	// if we're converting, just add to m_filesIds and m_fileIds2
@@ -856,6 +859,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	}
 	if ( ! isNew ) log(LOG_DEBUG,"db: Added %s for collnum=%li pages=%li",
 			    name ,(long)m_collnum,m->getNumPages());
+
 	// open this big data file for reading only
 	if ( ! isNew ) {
 		if ( mergeNum < 0 ) 
@@ -884,6 +888,11 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	m_fileIds2 [i] = id2;
 	m_files    [i] = f;
 	m_maps     [i] = m;
+
+	// to free up mem for diffbot's many collections...
+	cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! isNew && cr && cr->m_isCustomCrawl )
+		m->reduceMemFootPrint();
 
 	// are we resuming a killed merge?
 	if ( g_conf.m_readOnlyMode && ((id & 0x01)==0) ) {
