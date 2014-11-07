@@ -4079,7 +4079,7 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 		//p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
 		// we can't do proper cdata and be backwards compatible
 		//sb->cdataEncode ( buf );//, blen );//, true ); // #?*
-		sb->htmlEncode ( buf );
+		if ( buf ) sb->htmlEncode ( buf );
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
