@@ -33,7 +33,7 @@ class Wiktionary {
 
 	/*
 	uint8_t getLangId ( int64_t *wid ) {
-		long slot = m_langTable.getSlot ( wid );
+		int32_t slot = m_langTable.getSlot ( wid );
 		if ( slot < 0 ) return langUnknown;
 		// amibguous?
 		//if ( m_langTable.getNextSlot(slot,wid) >= 0 ) 
@@ -45,7 +45,7 @@ class Wiktionary {
 	};
 
 	uint8_t getPosFlags ( int64_t *wid , uint8_t langId ) {
-		long slot = m_langTable.getSlot ( wid );
+		int32_t slot = m_langTable.getSlot ( wid );
 		if ( slot < 0 ) return 0;
 		// amibguous?
 		if ( m_langTable.getNextSlot(slot,wid) >= 0 ) 
@@ -69,15 +69,15 @@ class Wiktionary {
 		// hash it up like we did when adding to m_tmp table
 		wid ^= g_hashtab[0][langId];
 		//wid ^= g_hashtab[1][posFlag];
-		long *offPtr ;
+		int32_t *offPtr ;
 		// . try local table first so it overrides
 		// . now this will be the one and only synset so that
 		//   we can fix 'wells' from mapping to 'well,better,...'
 		//   in the wikitionary-buf.txt file!
-		offPtr = (long *)m_localTable.getValue ( &wid );
+		offPtr = (int32_t *)m_localTable.getValue ( &wid );
 		if ( offPtr ) return m_localBuf.getBufStart() + *offPtr;
 		// try wiktionary table now
-		offPtr = (long *)m_synTable.getValue ( &wid );
+		offPtr = (int32_t *)m_synTable.getValue ( &wid );
 		// got one?
 		if ( offPtr ) return m_synBuf.getBufStart() + *offPtr;
 		// nothing!
@@ -90,12 +90,12 @@ class Wiktionary {
 	char *getNextSynSet ( int64_t wid , uint8_t langId , char *prev ) {
 		// hash it up like we did when adding to m_tmp table
 		wid ^= g_hashtab[0][langId];
-		long slot;
+		int32_t slot;
 		bool gotIt = false;
 		// try local table BEFORE wiktionary table
 		slot = m_localTable.getSlot ( &wid );
 		for ( ; slot >= 0 ; slot =m_localTable.getNextSlot(slot,&wid)){
-		      long *offPtr=(long *)m_localTable.getValueFromSlot(slot);
+		      int32_t *offPtr=(int32_t *)m_localTable.getValueFromSlot(slot);
 		      char *ptr = m_localBuf.getBufStart() + *offPtr;
 		      // make sure our mysynonyms.txt table OVERRIDES
 		      // the wiktionary junk, cuz we need to do that to
@@ -109,7 +109,7 @@ class Wiktionary {
 		//wid ^= g_hashtab[1][posFlag];
 		slot = m_synTable.getSlot ( &wid );
 		for ( ; slot >= 0 ; slot = m_synTable.getNextSlot(slot,&wid)){
-		      long *offPtr = (long *)m_synTable.getValueFromSlot(slot);
+		      int32_t *offPtr = (int32_t *)m_synTable.getValueFromSlot(slot);
 		      char *ptr = m_synBuf.getBufStart() + *offPtr;
 		      if ( gotIt ) return ptr;
 		      if ( ptr == prev ) gotIt = true;
@@ -129,7 +129,7 @@ class Wiktionary {
 
 	bool generateWiktionaryTxt ();
 
-	bool generateHashTableFromWiktionaryTxt ( long fileSize );
+	bool generateHashTableFromWiktionaryTxt ( int32_t fileSize );
 
 	bool addSynsets ( char *filename ) ;
 
@@ -167,9 +167,9 @@ class Wiktionary {
 	void *m_state;
 	void (* m_callback)(void *);
 
-	long m_txtSize;
+	int32_t m_txtSize;
 
-	long m_errno;
+	int32_t m_errno;
 
 	char m_opened;
 	FileState m_fs;

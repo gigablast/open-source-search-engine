@@ -15,8 +15,8 @@
 #include <fcntl.h>
 
 bool     hashinit () ;
-uint32_t hash32 ( const char *s, long len ) ;
-long     mysystem ( char *cmd );
+uint32_t hash32 ( const char *s, int32_t len ) ;
+int32_t     mysystem ( char *cmd );
 
 #define HAS_SM_GIF   0x01
 #define HAS_LG_GIF   0x02
@@ -35,17 +35,17 @@ public:
 	int64_t m_timestamp;
 	// the camera name, NULL terminated
 	char *m_camera;
-	long  m_cameraLen;
+	int32_t  m_cameraLen;
 	// the hash of the filename excluding extension
 	uint32_t m_h;
 	// and the flags
 	uint8_t m_flags;
 	// when the base file was created (uploaded by camera)
-	long m_ctime;
-	// shortcuts
-	long m_year;
-	long m_month;
-	long m_day;
+	int32_t m_ctime;
+	// int16_tcuts
+	int32_t m_year;
+	int32_t m_month;
+	int32_t m_day;
 	// linked list
 	class Entry *m_next;
 };
@@ -92,7 +92,7 @@ void main2 ( char *dirname ) {
 	}
 
 	// start with a million buckets, must be power of 2
-	long numBuckets = 1024 * 1024;
+	int32_t numBuckets = 1024 * 1024;
 	// make the hash table
 	Entry *buckets = (Entry *)calloc ( sizeof(Entry) * numBuckets , 1 );
 	if ( ! buckets ) { 
@@ -122,7 +122,7 @@ void main2 ( char *dirname ) {
 	uint32_t bb[1024 * 32];
 	memset ( bb , 0 , 10000 * 8 );
 
-	long now = time(NULL);
+	int32_t now = time(NULL);
 
 	// loop over all the log files in this directory
 	struct dirent *ent;
@@ -165,25 +165,25 @@ void main2 ( char *dirname ) {
 		//
 
 		// get length w/o extension
-		long len = ext - filename;
+		int32_t len = ext - filename;
 		// must be . or ..
 		if ( len == 0 ) continue;
 		// hash it
 		uint32_t h = hash32 ( filename , len );
 		// debug
-		//fprintf(stderr,"filename %s h=%lu\n",filename,
-		//(unsigned long)h);
+		//fprintf(stderr,"filename %s h=%"UINT32"\n",filename,
+		//(uint32_t)h);
 		// never allow 0, that means empty bucket
 		if ( h == 0LL ) h = 1LL;
 		// get it
-		long i = h & (numBuckets - 1);
+		int32_t i = h & (numBuckets - 1);
 		// chain
 		while ( buckets[i].m_h && buckets[i].m_h != h ) 
 			if ( ++i == numBuckets ) i = 0;
 		// was it found?
 		bool found = false;
 		if ( buckets[i].m_h ) found = true;
-		// shortcut
+		// int16_tcut
 		Entry *e = &buckets[i];
 
 		// and add in flags
@@ -208,13 +208,13 @@ void main2 ( char *dirname ) {
 		e->m_cameraLen = d - filename;
 
 		// get year
-		long y = 
+		int32_t y = 
 			(d[0]-'0') * 1000 + 
 			(d[1]-'0') * 100  + 
 			(d[2]-'0') * 10   + 
 			(d[3]-'0');
 		// get month
-		long mon = 
+		int32_t mon = 
 			(d[4]-'0') * 10   + 
 			(d[5]-'0');
 		// sanity
@@ -224,7 +224,7 @@ void main2 ( char *dirname ) {
 			continue;
 		}
 		// get day
-		long day =
+		int32_t day =
 			(d[6]-'0') * 10   + 
 			(d[7]-'0');
 		// sanity
@@ -246,7 +246,7 @@ void main2 ( char *dirname ) {
 		if ( *p == 's' ) { delme = p; p++; }
 
 		// now the hour
-		long hour = 
+		int32_t hour = 
 			(p[0]-'0') * 10   + 
 			(p[1]-'0');
 		// sanity
@@ -256,7 +256,7 @@ void main2 ( char *dirname ) {
 			continue;
 		}
 		// minute
-		long min =
+		int32_t min =
 			(p[2]-'0') * 10   + 
 			(p[3]-'0');
 		// sanity
@@ -279,7 +279,7 @@ void main2 ( char *dirname ) {
 		// get that as numeric
 		*MM = '\0';
 
-		long ms = atoi(p);
+		int32_t ms = atoi(p);
 		// now convert to seconds since epoch
 		tm ts1;
 		memset(&ts1, 0, sizeof(tm));
@@ -299,7 +299,7 @@ void main2 ( char *dirname ) {
 		e->m_timestamp = timestamp;
 
 		// debug
-		//fprintf(stderr,"animate: timestamp %s = %lli\n",filename,timestamp);
+		//fprintf(stderr,"animate: timestamp %s = %"INT64"\n",filename,timestamp);
 
 		// store filename, might already be set
 		char *src = filename;
@@ -327,8 +327,8 @@ void main2 ( char *dirname ) {
 
 
 		// add it to the linked list
-		//fprintf(stderr,"animate: adding h=%lu file=%s ts=%lli\n",
-		//	(long)e->m_h,filename,e->m_timestamp);
+		//fprintf(stderr,"animate: adding h=%"UINT32" file=%s ts=%"INT64"\n",
+		//	(int32_t)e->m_h,filename,e->m_timestamp);
 		if ( tail ) { tail->m_next = e; tail = e; }
 		else        head = tail  = e;
 
@@ -373,7 +373,7 @@ void main2 ( char *dirname ) {
 		e->m_flags |= HAS_ROOT;
 
 
-		//fprintf(stderr,"animate: ctime %s = %li\n",filename,e->m_ctime);
+		//fprintf(stderr,"animate: ctime %s = %"INT32"\n",filename,e->m_ctime);
 	}
 
 	// sort the entries by their timestamp
@@ -415,7 +415,7 @@ void main2 ( char *dirname ) {
 		// skip if already has a large gif
 		if ( e->m_flags & HAS_LG_GIF ) continue;
 		// get our local time
-		long now = time(NULL);
+		int32_t now = time(NULL);
 		// skip if too young! allow it to finish uploading, give
 		// it 2 minutes
 		if ( now - e->m_ctime < 120 ) continue;
@@ -437,10 +437,10 @@ void main2 ( char *dirname ) {
 
 	// . animate the small gif thumbs
 	// . CAUTION: make sure timestamp of entry is at least 20 seconds old before
-	//   animating to avoid cutting animations short!
+	//   animating to avoid cutting animations int16_t!
 	for ( Entry *e = head ; e ; e = e->m_next ) {
 		// note it
-		//fprintf(stderr,"animate: file=%s ts=%llu\n",
+		//fprintf(stderr,"animate: file=%s ts=%"UINT64"\n",
 		//	e->m_root,e->m_timestamp);
 
 		// skip if already done
@@ -463,7 +463,7 @@ void main2 ( char *dirname ) {
 		int64_t r = e->m_timestamp;
 		// get our camera name and length
 		char *c    = e->m_camera;
-		long  clen = e->m_cameraLen;
+		int32_t  clen = e->m_cameraLen;
 
 		int64_t min  = r;
 		int64_t max  = r;
@@ -480,7 +480,7 @@ void main2 ( char *dirname ) {
 		Entry *parent = NULL;
 
 		Entry *list [10000];
-		long n = 0;
+		int32_t n = 0;
 
 		char flag = 0;
 		// ok, find the guys closest to our timestamp
@@ -519,7 +519,7 @@ void main2 ( char *dirname ) {
 		}
 
 		// if ANY one of our brothers is too close to the current time, 
-		// then wait a little longer
+		// then wait a little int32_ter
 		if ( abort ) continue;
 
 		// if we increased our range, keep going
@@ -548,7 +548,7 @@ void main2 ( char *dirname ) {
 		char swapped = 1;
 		while ( swapped ) {
 			swapped = 0;
-			for ( long i = 1 ; i < n ; i++ ) {
+			for ( int32_t i = 1 ; i < n ; i++ ) {
 				if ( list[i-1]->m_timestamp <= 
 				     list[i  ]->m_timestamp ) continue;
 				Entry *tmp = list[i-1];
@@ -574,7 +574,7 @@ void main2 ( char *dirname ) {
 			  res);
 		cmd += gbstrlen(cmd);
 
-		for ( long i = 0 ; i < n ; i++ ) {
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// get it
 			Entry *k = list[i];
 			// ok, mark it as processed
@@ -613,7 +613,7 @@ void main2 ( char *dirname ) {
 		//
 
 		// now delete all the big gifs we used in gifsicle
-		for ( long i = 0 ; i < n ; i++ ) {
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// get it
 			Entry *k = list[i];
 			// delete the big gif
@@ -645,7 +645,7 @@ void main2 ( char *dirname ) {
 		if ( mysystem ( buf ) == -1 ) return;
 
 		// move each jpeg we used into there!
-		for ( long i = 0 ; i < n ; i++ ) {
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// get it
 			Entry *k = list[i];
 			// store it in its jpeg subdir
@@ -668,7 +668,7 @@ void main2 ( char *dirname ) {
 	for ( Entry *e = head ; ! issubdir && e ; e = e->m_next ) {
 		// make the dirname for this entry
 		char subdir[128];
-		sprintf(subdir,"%li%02li%02li", e->m_year,
+		sprintf(subdir,"%"INT32"%02"INT32"%02"INT32"", e->m_year,
 			e->m_month,e->m_day);
 		// hash it
 		uint32_t h = hash32 ( subdir , 8 );
@@ -717,7 +717,7 @@ void main2 ( char *dirname ) {
 		if ( ! (e->m_flags & IS_PARENT ) ) continue;
 		// make the dirname for this entry
 		char subdir[128];
-		sprintf(subdir,"%li%02li%02li", e->m_year,
+		sprintf(subdir,"%"INT32"%02"INT32"%02"INT32"", e->m_year,
 			e->m_month,e->m_day);
 		// move it all!
 		char buf[128];
@@ -739,7 +739,7 @@ void main2 ( char *dirname ) {
 	}
 }
 
-long mysystem ( char *cmd ) {
+int32_t mysystem ( char *cmd ) {
 	// log it as well
 	fprintf(stderr,"%s\n",cmd );
 	// skip for now
@@ -760,11 +760,11 @@ bool hashinit () {
 	// bail if we already called this
 	if ( s_initialized ) return true;
 	// show RAND_MAX
-	//printf("RAND_MAX = %lu\n", RAND_MAX ); it's 0x7fffffff
+	//printf("RAND_MAX = %"UINT32"\n", RAND_MAX ); it's 0x7fffffff
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
-	for ( long i = 0 ; i < 256 ; i++ )
-		for ( long j = 0 ; j < 256 ; j++ ) {
+	for ( int32_t i = 0 ; i < 256 ; i++ )
+		for ( int32_t j = 0 ; j < 256 ; j++ ) {
 			g_hashtab [i][j]  = (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
@@ -780,15 +780,15 @@ bool hashinit () {
 	return true;
 }
 
-uint32_t hash32 ( const char *s, long len ) {
-	unsigned long h = 0;
-	long i = 0;
-	long j = 0;
+uint32_t hash32 ( const char *s, int32_t len ) {
+	uint32_t h = 0;
+	int32_t i = 0;
+	int32_t j = 0;
 	for ( ; i < len ; i++ ) {
 		// skip stupid s from daylight savings time
 		if ( s[i]=='s' && i>0 && isdigit(s[i-1]) && isdigit(s[i+1]))
 			continue;
-		h ^= (unsigned long) g_hashtab [(unsigned char)j]
+		h ^= (uint32_t) g_hashtab [(unsigned char)j]
 			[(unsigned char)s[i]];
 		j++;
 	}

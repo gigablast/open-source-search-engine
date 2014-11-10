@@ -22,10 +22,10 @@
 
 #define MAX_MATCHGROUPS 300
 
-typedef long mf_t;
+typedef int32_t mf_t;
 
 // . values for Match::m_flags
-// . dictates the "match group" that the match belongs to
+// . dictates the "match group" that the match beint32_ts to
 #define MF_TITLEGEN                   0x0001 // in generated title?
 #define MF_TITLETAG                   0x0002
 #define MF_LINK                       0x0004 // in non-anomalous link text
@@ -46,28 +46,28 @@ typedef long mf_t;
 class Match {
  public:
 	// word # we match in the document using "m_words" below
-	long m_wordNum;
+	int32_t m_wordNum;
 	// # of words in this match, like if we match a phrase
 	// we have > 1 words in the match
-	long m_numWords;
+	int32_t m_numWords;
 	// word # we match in the query
-	long m_qwordNum;
+	int32_t m_qwordNum;
 	// # of query words we match if we are a phrase, otherwise
 	// this is 1
-	long m_numQWords;
+	int32_t m_numQWords;
 	// . used for highlighting under different colors (Highlight.cpp)
 	// . words in the same quote should use the same highlight color
-	long m_colorNum;
+	int32_t m_colorNum;
 
 	// . max score of all contained query terms in this match
 	// . uses provided m_tscores[] array to get scores of the query terms
-	//long m_score;
+	//int32_t m_score;
 
 	// "match group" or type of match. i.e. MF_TITLETAG, MF_METASUMM, ...
 	mf_t m_flags;
 
 	// improve summary generation parms
-	long m_dist;
+	int32_t m_dist;
 	//bool m_crossedSection;
 
 	// . for convenience, these four class ptrs are used by Summary.cpp
@@ -82,7 +82,7 @@ class Matches {
 
  public:
 
-	void setQuery ( Query *q );//, long *tscores = NULL ) ;
+	void setQuery ( Query *q );//, int32_t *tscores = NULL ) ;
 
 	bool set ( class XmlDoc   *xd           ,
 		   class Words    *bodyWords    ,
@@ -93,13 +93,13 @@ class Matches {
 		   class Pos      *bodyPos      ,
 		   class Xml      *xml          ,
 		   class Title    *tt           ,
-		   long            niceness     ) ;
+		   int32_t            niceness     ) ;
 
 	bool addMatches ( char      *s         ,
-			  long       slen      ,
+			  int32_t       slen      ,
 			  mf_t       flags     ,
 			  int64_t  docId     ,
-			  long       niceness  ) ;
+			  int32_t       niceness  ) ;
 
 	// . this sets the m_matches[] array
 	// . m_matches[i] is -1 if it matches no term in the query
@@ -111,32 +111,32 @@ class Matches {
 			  Sections *sections            = NULL ,
 			  Bits     *bits                = NULL ,
 			  Pos      *pos                 = NULL ,
-			  long      fieldCode           = 0    , // wrds,0=none
+			  int32_t      fieldCode           = 0    , // wrds,0=none
 			  bool      allowPunctInPhrase  = true ,
 			  bool      exclQTOnlyInAnchTxt = false,
 			  qvec_t    reqMask             = 0    ,
 			  qvec_t    negMask             = 0    ,
-			  long      diversityWeight     = 1    ,
+			  int32_t      diversityWeight     = 1    ,
 			  int64_t docId               = 0    ,
 			  mf_t      flags               = 0    );
 
 	// this is NULL terminated
-	//char getTermNum  ( long i ) { return m_termNums[i]; };
-	//char getTermNum2 ( long i ) { return m_termNums2[i]; };
+	//char getTermNum  ( int32_t i ) { return m_termNums[i]; };
+	//char getTermNum2 ( int32_t i ) { return m_termNums2[i]; };
 
 	// get the whole array
 	//char *getTermNums ( ) { return m_termNums; };
 	//char *getPhraseNums ( ) { return m_phraseNums; };
 
 	// how many words matched a rawTermId?
-	long getNumMatches ( ) { return m_numMatches; };
+	int32_t getNumMatches ( ) { return m_numMatches; };
 
 	//void clearBitsMatched( void       ) { m_explicitBitsMatched = 0x00; };
 	//void addBitMatched   ( qvec_t bit ) { m_explicitBitsMatched |= bit; };
 	//qvec_t getBitsMatched( void       ) { return m_explicitBitsMatched; };
 
 	// set m_termNums from a to b to 0
-	//void clearMatches ( long a , long b );
+	//void clearMatches ( int32_t a , int32_t b );
 
 	// janitorial stuff
 	Matches ( ) ;
@@ -144,25 +144,25 @@ class Matches {
 	void reset ( ) ;
 
 	// BIG HACK support
-	//long getTermsFound ( bool *hadPhrases , bool *hadWords );
-	unsigned long getTermsFound2(bool *hadPhrases, bool *hadWords);
+	//int32_t getTermsFound ( bool *hadPhrases , bool *hadWords );
+	uint32_t getTermsFound2(bool *hadPhrases, bool *hadWords);
 	//bool negTermsFound ( );
 
 	// used internally and by PageGet.cpp
-	bool isMatchableTerm ( class QueryTerm *qt );//, long i );
+	bool isMatchableTerm ( class QueryTerm *qt );//, int32_t i );
 
 	// used internally
-	long getNumWordsInMatch ( Words *words     ,
-				  long   wn        , 
-				  long   n         , 
-				  long  *numQWords ,
-				  long  *qwn       ,
+	int32_t getNumWordsInMatch ( Words *words     ,
+				  int32_t   wn        , 
+				  int32_t   n         , 
+				  int32_t  *numQWords ,
+				  int32_t  *qwn       ,
 				  bool   allowPunctInPhrase = true ) ;
 
 	// how many words matched a rawTermId?
 	Match  m_matches[MAX_MATCHES_FOR_BIG_HACK];
-	long   m_numMatches;
-	//long   m_numNegTerms;
+	int32_t   m_numMatches;
+	//int32_t   m_numNegTerms;
 
 	// found term vector, 1-1 with m_q->m_qterms[]
 	//char   m_foundTermVector    [ MAX_QUERY_TERMS ];
@@ -172,14 +172,14 @@ class Matches {
 	// . hash query word ids into a small hash table
 	// . we use this to see what words in the document are query terms
 	int64_t m_qtableIds      [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
-	long      m_qtableWordNums [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
+	int32_t      m_qtableWordNums [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
 	char      m_qtableFlags    [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
 	//int64_t m_qtableNegIds   [ MAX_QUERY_WORDS_TO_MATCH * 3 ];
-	long      m_numSlots;
+	int32_t      m_numSlots;
 	Query    *m_q;
-	long      m_maxNQW;
-	long     *m_tscores;
-	long      m_numAlnums;
+	int32_t      m_maxNQW;
+	int32_t     *m_tscores;
+	int32_t      m_numAlnums;
 
 	// . 1-1 with Query::m_qwords[] array of QWords
 	// . shows the match flags for that query word
@@ -188,20 +188,20 @@ class Matches {
 	//stuff for detecting whether a match is part of a larger phrase
 	void setSubPhraseDetection();
 	void detectSubPhrase(Words* w, 
-			     long matchWordNum,
-			     long numMatchedWords,
-			     long queryWordNum,
-			     long diversityWeight );
+			     int32_t matchWordNum,
+			     int32_t numMatchedWords,
+			     int32_t queryWordNum,
+			     int32_t diversityWeight );
 	float getDiversity();
 
 	bool m_detectSubPhrases;
-	long m_leftDiversity;
-	long m_rightDiversity;
+	int32_t m_leftDiversity;
+	int32_t m_rightDiversity;
 
-	static const long m_htSize = 128 * (sizeof(int64_t) + sizeof(long));
+	static const int32_t m_htSize = 128 * (sizeof(int64_t) + sizeof(int32_t));
 	char m_subPhraseBuf[2 * m_htSize];
-	HashTableT<int64_t, long> m_pre;
-	HashTableT<int64_t, long> m_post;
+	HashTableT<int64_t, int32_t> m_pre;
+	HashTableT<int64_t, int32_t> m_post;
 
 	// . one words/scores/bits/pos/flags class per "match group"
 	// . match groups examples = body, a single link text, a meta tag, etc.
@@ -214,7 +214,7 @@ class Matches {
 	Bits     *m_bitsPtr     [MAX_MATCHGROUPS];
 	Pos      *m_posPtr      [MAX_MATCHGROUPS];
 	mf_t      m_flags       [MAX_MATCHGROUPS];
-	long      m_numMatchGroups;
+	int32_t      m_numMatchGroups;
 
 	Words    m_wordsArray    [MAX_MATCHGROUPS];
 	Bits     m_bitsArray     [MAX_MATCHGROUPS];
@@ -254,17 +254,17 @@ public:
 	bool set(Xml *xml, Words *words, Matches *matches, 
 		 unsigned char offsetType);
 
-	long getStoredSize();
-	long serialize(char *buf, long buflen);
-	long deserialize(char *buf, long buflen);
+	int32_t getStoredSize();
+	int32_t serialize(char *buf, int32_t buflen);
+	int32_t deserialize(char *buf, int32_t buflen);
 
-	long m_numMatches;
+	int32_t m_numMatches;
 	unsigned char m_queryWords[MAX_MATCHES];
-	long m_matchOffsets[MAX_MATCHES];
+	int32_t m_matchOffsets[MAX_MATCHES];
 	// keep track of breaks between matches
-	long m_numBreaks;
-	long m_breakOffsets[MAX_MATCHES];
+	int32_t m_numBreaks;
+	int32_t m_breakOffsets[MAX_MATCHES];
 	// and total number of alnums in the document
-	long m_numAlnums;
+	int32_t m_numAlnums;
 };
 #endif

@@ -83,10 +83,10 @@ void Stats::clearMsgStats() {
 
 //static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void Stats::addStat_r ( long        numBytes    , 
+void Stats::addStat_r ( int32_t        numBytes    , 
 			int64_t   startTime   ,
 			int64_t   endTime     ,
-			long        color       ,
+			int32_t        color       ,
 			char        type        ,
 			char *fname) {
 
@@ -99,7 +99,7 @@ void Stats::addStat_r ( long        numBytes    ,
 	//     m_pts [ m_next ].m_endTime   > m_minWindowStartTime   )
 	//		m_minWindowStartTime = m_pts[m_next].m_endTime;
 	// claim next before another thread does
-	long n = m_next++;
+	int32_t n = m_next++;
 	// watch out if another thread just inc'ed n
 	if ( n >= MAX_POINTS ) n = 0;
 	// stick our point in the array
@@ -142,7 +142,7 @@ void Stats::addStat_r ( long        numBytes    ,
 void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 
 	char fname [ 1024 ];
-	sprintf ( fname , "%s/diskGraph%li.gif" ,
+	sprintf ( fname , "%s/diskGraph%"INT32".gif" ,
 		  g_hostdb.m_httpRootDir , g_hostdb.m_hostId );
 	FILE *fd = fopen ( fname,"w" );
 	if ( ! fd ) { 
@@ -169,7 +169,7 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 
 	// gif size
 	char tmp[64];
-	sprintf ( tmp , "%lix%li", (long)DX+40 , (long)DY+40 ); // "1040x440"
+	sprintf ( tmp , "%"INT32"x%"INT32"", (int32_t)DX+40 , (int32_t)DY+40 ); // "1040x440"
 
 #ifdef _USEPLOTTER_
 
@@ -209,7 +209,7 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 
 	// find time ranges
 	int64_t t2 = 0;
-	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
 		if ( m_pts[i].m_startTime == 0 ) continue;
 		// set min/max
@@ -218,7 +218,7 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 	// now compute the start time for the graph
 	int64_t t1 = 0x7fffffffffffffffLL;
 	// now recompute t1
-	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
 		if ( m_pts[i].m_startTime == 0 ) continue;
 		// can't be behind more than 1 second
@@ -241,8 +241,8 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 		plotter.line ( x , -20 , x , 20 );
 		// generate label
 		char buf [ 32 ];
-		sprintf ( buf , "%li" , 
-			  (long)(DT * (int64_t)x / (int64_t)DX) );
+		sprintf ( buf , "%"INT32"" , 
+			  (int32_t)(DT * (int64_t)x / (int64_t)DX) );
 		// move cursor
 		plotter.move ( x , -by / 2 - 9 );
 		// plot label
@@ -255,25 +255,25 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 	// . each line can contain multiple data points
 	// . each data point is expressed as a horizontal line segment
 	void *lrgBuf;
-	long lrgSize = 0;
+	int32_t lrgSize = 0;
 	lrgSize += MAX_LINES * MAX_POINTS * sizeof(StatPoint *);
-	lrgSize += MAX_LINES * sizeof(long);
+	lrgSize += MAX_LINES * sizeof(int32_t);
 	lrgBuf = (char *) mmalloc(lrgSize, "Stats.cpp"); 
 	if (! lrgBuf) {
 	    log("could not allocate memory for local buffer in Stats.cpp"
-		"%li bytes needed", lrgSize);
+		"%"INT32" bytes needed", lrgSize);
 	    return;
 	}
 	char *lrgPtr = (char *)lrgBuf;
 	StatPoint **points = (StatPoint **)lrgPtr;   
 	lrgPtr += MAX_LINES * MAX_POINTS * sizeof(StatPoint *);
-	long *numPoints = (long *)lrgPtr;
-	lrgPtr += MAX_LINES * sizeof(long);
-	memset ( (char *)numPoints , 0 , MAX_LINES * sizeof(long) );
+	int32_t *numPoints = (int32_t *)lrgPtr;
+	lrgPtr += MAX_LINES * sizeof(int32_t);
+	memset ( (char *)numPoints , 0 , MAX_LINES * sizeof(int32_t) );
 
 	// store the data points into "lines"
-	long count = MAX_POINTS;
-	for ( long i = m_next ; count >= 0 ; i++ , count-- ) {
+	int32_t count = MAX_POINTS;
+	for ( int32_t i = m_next ; count >= 0 ; i++ , count-- ) {
 		// wrap around the array
 		if ( i >= MAX_POINTS ) i = 0;
 		// skip point if empty
@@ -287,13 +287,13 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 
 	int y1 = 21;
 	// plot the points (lines) in each line
-	for ( long i = 0 ; i < MAX_LINES    ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_LINES    ; i++ ) {
 		// increase vert
 		y1 += MAX_WIDTH + 1;
 		// wrap back down if necessary
 		if ( y1 >= DY ) y1 = 21;
 		// plt all points in this row
-	for ( long j = 0 ; j < numPoints[i] ; j++ ) {
+	for ( int32_t j = 0 ; j < numPoints[i] ; j++ ) {
 		// get the point
 		StatPoint *p =  points[MAX_POINTS * i + j];
 		// transform time to x coordinates
@@ -306,7 +306,7 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 		// . line thickness is function of read/write size
 		// . take logs
 		int w = (int)log(((double)p->m_numBytes)/8192.0) + 3;
-		//log("log of %li is %i",m_pts[i].m_numBytes,w);
+		//log("log of %"INT32" is %i",m_pts[i].m_numBytes,w);
 		if ( w < 3         ) w = 3;
 		if ( w > MAX_WIDTH ) w = MAX_WIDTH;
 		plotter.linewidth ( w );       
@@ -318,13 +318,13 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 		if ( x2 < x1 + 3 ) x2 = x1 + 3;
 		// . flip the y so we don't have to scroll the browser down
 		// . DY does not include the axis and tick marks
-		long fy1 = DY - y1 + 20 ;
+		int32_t fy1 = DY - y1 + 20 ;
 		// plot it
 		plotter.line ( x1 , fy1 , x2 , fy1 );
 		// debug msg
 		//log("line (%i,%i, %i,%i) ", x1 , vert , x2 , vert );
-		//log("bytes = %li width = %li ", m_pts[i].m_numBytes,w);
-		//log("st=%i, end=%i color=%lx " ,
+		//log("bytes = %"INT32" width = %"INT32" ", m_pts[i].m_numBytes,w);
+		//log("st=%i, end=%i color=%"XINT32" " ,
 		//      (int)m_pts[i].m_startTime , 
 		//      (int)m_pts[i].m_endTime   , 
 		//      m_pts[i].m_color );
@@ -347,15 +347,15 @@ void Stats::dumpGIF ( int64_t startTime , int64_t endTime ) {
 */
 
 void Stats::addPoint (StatPoint **points    , 
-		      long       *numPoints ,
+		      int32_t       *numPoints ,
 		      StatPoint  *p         ) {
 	// go down each line of points
-	for ( long i = 0 ; i < MAX_LINES ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_LINES ; i++ ) {
 		// is there room for us in this line?
-		long n = numPoints[i];
+		int32_t n = numPoints[i];
 		// if line is full, skip it
 		if ( n >= MAX_POINTS ) continue;
-		long j;
+		int32_t j;
 		// make a boundary around point there already
 		int64_t a = p->m_startTime;
 		int64_t b = p->m_endTime;
@@ -363,12 +363,12 @@ void Stats::addPoint (StatPoint **points    ,
 		//   by this many milliseconds
 		// . this is milliseconds per pixel
 		// . right now it's about 5
-		long border = DT / DX ;
+		int32_t border = DT / DX ;
 		if ( border <= 0 ) border = 1;
 		a -= 4*border;
 		b += 4*border;
 		// debug
-		//log("a=%lli b=%lli d=%li",a,b,4*border);
+		//log("a=%"INT64" b=%"INT64" d=%"INT32"",a,b,4*border);
 		for ( j = 0 ; j < n ; j++ ) {
 			// get that point
 			StatPoint *pp = points[MAX_POINTS * i + j];
@@ -405,8 +405,8 @@ void Stats::calcQueryStats() {
 void Stats::logAvgQueryTime(int64_t startTime) {
 	int64_t now = gettimeofdayInMilliseconds();
 	int64_t took = now - startTime;
-	static long s_lastSendTime = 0;
-	// if just one query took an insanely long time,
+	static int32_t s_lastSendTime = 0;
+	// if just one query took an insanely int32_t time,
 	// do not sound the alarm. this is in seconds,
 	// so multiply by 1000.
 	//int64_t maxTook = 
@@ -442,7 +442,7 @@ void Stats::logAvgQueryTime(int64_t startTime) {
 			 iptoa(h->m_ip));
 		log(LOG_WARN, "query: %s",msgbuf);
 		// prevent machinegunning text msgs
-		long now = getTimeLocal();
+		int32_t now = getTimeLocal();
 		if ( now - s_lastSendTime > 300 ) {
 			s_lastSendTime = now;
 			g_pingServer.sendEmail(NULL, msgbuf);
@@ -464,9 +464,9 @@ void Stats::logAvgQueryTime(int64_t startTime) {
 	m_numFails = 0;
 }
 
-void Stats::addSpiderPoint ( long errCode, bool isNew ) {
+void Stats::addSpiderPoint ( int32_t errCode, bool isNew ) {
 	// keep track of last 1000 urls spidered
-	long i = m_spiderSample % 1000;
+	int32_t i = m_spiderSample % 1000;
 	if ( m_errCodes[i] ) m_spiderErrors--;
 	if ( m_isSampleNew[i] ) m_spiderNew--;
 	if ( m_errCodes[i] && m_isSampleNew[i] ) m_spiderErrorsNew--;
@@ -492,19 +492,19 @@ void Stats::addSpiderPoint ( long errCode, bool isNew ) {
 
 // draw a HORIZONTAL line in html
 void drawLine2 ( SafeBuf &sb ,
-		 long x1 , 
-		 long x2 ,
-		 long fy1 , 
-		 long color ,
-		 long width ) {
+		 int32_t x1 , 
+		 int32_t x2 ,
+		 int32_t fy1 , 
+		 int32_t color ,
+		 int32_t width ) {
 
 	sb.safePrintf("<div style=\"position:absolute;"
-		      "left:%li;"
-		      "top:%li;"
-		      "background-color:#%06lx;"
+		      "left:%"INT32";"
+		      "top:%"INT32";"
+		      "background-color:#%06"XINT32";"
 		      "z-index:5;"
-		      "min-height:%lipx;"
-		      "min-width:%lipx;\"></div>\n"
+		      "min-height:%"INT32"px;"
+		      "min-width:%"INT32"px;\"></div>\n"
 		      , x1
 		      , (fy1 - width/2) - 20 //- 300
 		      , color
@@ -522,7 +522,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 
 	// gif size
 	char tmp[64];
-	sprintf ( tmp , "%lix%li", (long)DX+40 , (long)DY+40 ); // "1040x440"
+	sprintf ( tmp , "%"INT32"x%"INT32"", (int32_t)DX+40 , (int32_t)DY+40 ); // "1040x440"
 
 	// 20 pixel borders
 	//int bx = 10;
@@ -536,7 +536,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 
 	// find time ranges
 	int64_t t2 = 0;
-	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
 		if ( m_pts[i].m_startTime == 0 ) continue;
 		// set min/max
@@ -545,7 +545,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 	// now compute the start time for the graph
 	int64_t t1 = 0x7fffffffffffffffLL;
 	// now recompute t1
-	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_POINTS ; i++ ) {
 		// skip empties
 		if ( m_pts[i].m_startTime == 0 ) continue;
 		// can't be behind more than 1 second
@@ -570,8 +570,8 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		      // the tick marks we print below are based on it
 		      // being a window of the last 20 seconds... and using
 		      // DX pixels
-		      "min-width:%lipx;"
-		      "min-height:%lipx;"
+		      "min-width:%"INT32"px;"
+		      "min-height:%"INT32"px;"
 		      //"width:100%%;"
 		      //"min-height:600px;"
 		      //"margin-top:10px;"
@@ -579,35 +579,35 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		      //"margin-right:10px;"
 		      //"margin-left:10px;"
 		      "\">"
-		      ,(long)DX
-		      ,(long)DY +20); // add 10 more for "2s" labels etc.
+		      ,(int32_t)DX
+		      ,(int32_t)DY +20); // add 10 more for "2s" labels etc.
 
 	// 10 x-axis tick marks
 	for ( int x = DX/20 ; x <= DX ; x += DX/20 ) {
 		// tick mark
 		//plotter.line ( x , -20 , x , 20 );
 		sb.safePrintf("<div style=\"position:absolute;"
-			      "left:%li;"
+			      "left:%"INT32";"
 			      "bottom:0;"
 			      "background-color:#000000;"
 			      "z-index:110;"
 			      "min-height:20px;"
 			      "min-width:3px;\"></div>\n"
-			      , (long)x-1
+			      , (int32_t)x-1
 			      );
 		// generate label
 		//char buf [ 32 ];
-		//sprintf ( buf , "%li" , 
-		//	  (long)(DT * (int64_t)x / (int64_t)DX) );
+		//sprintf ( buf , "%"INT32"" , 
+		//	  (int32_t)(DT * (int64_t)x / (int64_t)DX) );
 		// LABEL
 		sb.safePrintf("<div style=\"position:absolute;"
-			      "left:%li;"
+			      "left:%"INT32";"
 			      "bottom:20;"
 			      //"background-color:#000000;"
 			      "z-index:110;"
 			      "min-height:20px;"
 			      "min-width:3px;\">%.01fs</div>\n"
-			      , (long)x-10
+			      , (int32_t)x-10
 			      // the label:
 			      ,(float)(DT* (int64_t)x / (int64_t)DX)/1000.0
 			      );
@@ -624,25 +624,25 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 	// . each line can contain multiple data points
 	// . each data point is expressed as a horizontal line segment
 	void *lrgBuf;
-	long lrgSize = 0;
+	int32_t lrgSize = 0;
 	lrgSize += MAX_LINES * MAX_POINTS * sizeof(StatPoint *);
-	lrgSize += MAX_LINES * sizeof(long);
+	lrgSize += MAX_LINES * sizeof(int32_t);
 	lrgBuf = (char *) mmalloc(lrgSize, "Stats.cpp"); 
 	if (! lrgBuf) {
 	    log("could not allocate memory for local buffer in Stats.cpp"
-		"%li bytes needed", lrgSize);
+		"%"INT32" bytes needed", lrgSize);
 	    return;
 	}
 	char *lrgPtr = (char *)lrgBuf;
 	StatPoint **points = (StatPoint **)lrgPtr;   
 	lrgPtr += MAX_LINES * MAX_POINTS * sizeof(StatPoint *);
-	long *numPoints = (long *)lrgPtr;
-	lrgPtr += MAX_LINES * sizeof(long);
-	memset ( (char *)numPoints , 0 , MAX_LINES * sizeof(long) );
+	int32_t *numPoints = (int32_t *)lrgPtr;
+	lrgPtr += MAX_LINES * sizeof(int32_t);
+	memset ( (char *)numPoints , 0 , MAX_LINES * sizeof(int32_t) );
 
 	// store the data points into "lines"
-	long count = MAX_POINTS;
-	for ( long i = m_next ; count >= 0 ; i++ , count-- ) {
+	int32_t count = MAX_POINTS;
+	for ( int32_t i = m_next ; count >= 0 ; i++ , count-- ) {
 		// wrap around the array
 		if ( i >= MAX_POINTS ) i = 0;
 		// skip point if empty
@@ -656,13 +656,13 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 
 	int y1 = 21;
 	// plot the points (lines) in each line
-	for ( long i = 0 ; i < MAX_LINES    ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_LINES    ; i++ ) {
 		// increase vert
 		y1 += MAX_WIDTH + 1;
 		// wrap back down if necessary
 		if ( y1 >= DY ) y1 = 21;
 		// plt all points in this row
-	for ( long j = 0 ; j < numPoints[i] ; j++ ) {
+	for ( int32_t j = 0 ; j < numPoints[i] ; j++ ) {
 		// get the point
 		StatPoint *p =  points[MAX_POINTS * i + j];
 		// transform time to x coordinates
@@ -675,7 +675,7 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		// . line thickness is function of read/write size
 		// . take logs
 		int w = (int)log(((double)p->m_numBytes)/8192.0) + 3;
-		//log("log of %li is %i",m_pts[i].m_numBytes,w);
+		//log("log of %"INT32" is %i",m_pts[i].m_numBytes,w);
 		if ( w < 3         ) w = 3;
 		if ( w > MAX_WIDTH ) w = MAX_WIDTH;
 		//plotter.linewidth ( w );       
@@ -687,14 +687,14 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		if ( x2 < x1 + 3 ) x2 = x1 + 3;
 		// . flip the y so we don't have to scroll the browser down
 		// . DY does not include the axis and tick marks
-		long fy1 = DY - y1 + 20 ;
+		int32_t fy1 = DY - y1 + 20 ;
 		// plot it
 		//plotter.line ( x1 , fy1 , x2 , fy1 );
 		drawLine2 ( sb , x1 , x2 , fy1 , p->m_color , w );
 		// debug msg
 		//log("line (%i,%i, %i,%i) ", x1 , vert , x2 , vert );
-		//log("bytes = %li width = %li ", m_pts[i].m_numBytes,w);
-		//log("st=%i, end=%i color=%lx " ,
+		//log("bytes = %"INT32" width = %"INT32" ", m_pts[i].m_numBytes,w);
+		//log("st=%i, end=%i color=%"XINT32" " ,
 		//      (int)m_pts[i].m_startTime , 
 		//      (int)m_pts[i].m_endTime   , 
 		//      m_pts[i].m_color );

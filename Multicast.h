@@ -70,48 +70,48 @@ class Multicast {
 	//   call Msg34::getLoad() again before that Msg0/Msg20 request was
 	//   acknowledge, the added load will be included.
 	bool send ( char       *msg             ,
-		    long        msgSize         ,
+		    int32_t        msgSize         ,
 		    uint8_t     msgType         ,
 		    // does this Multicast own this "msg"? if so, it will
 		    // free it when done with it.
 		    bool        ownMsg          , 
 		    // send this request to a host or hosts who have
 		    // m_groupId equal to this
-		    //unsigned long groupId       , 
-		    unsigned long shardNum ,
+		    //uint32_t groupId       , 
+		    uint32_t shardNum ,
 		    // should the request be sent to all hosts in the group
 		    // "groupId", or just one host. Msg1 adds data to all 
 		    /// hosts in the group so it sets this to true.
 		    bool        sendToWholeShard, // Group, 
 		    // if "key" is not 0 then it is used to select
 		    // a host in the group "groupId" to send to.
-		    long        key             ,
+		    int32_t        key             ,
 		    void       *state           , // callback state
 		    void       *state2          , // callback state
 		    void      (*callback)(void *state,void *state2),
-		    long        totalTimeout    , // usually 60 seconds 
-		    long        niceness        = MAX_NICENESS ,
+		    int32_t        totalTimeout    , // usually 60 seconds 
+		    int32_t        niceness        = MAX_NICENESS ,
 		    bool        realTimeUdp     = false ,
-		    long        firstHostId     = -1 ,// first host to try
+		    int32_t        firstHostId     = -1 ,// first host to try
 		    char       *replyBuf        = NULL ,
-		    long        replyBufMaxSize = 0 ,
+		    int32_t        replyBufMaxSize = 0 ,
 		    bool        freeReplyBuf    = true ,
 		    bool        doDiskLoadBalancing = false ,
-		    long        maxCacheAge     = -1   , // no age limit
+		    int32_t        maxCacheAge     = -1   , // no age limit
 		    key_t       cacheKey        =  0   ,
 		    char        rdbId           =  0   , // bogus rdbId
-		    long        minRecSizes     = -1   ,// unknown read size
+		    int32_t        minRecSizes     = -1   ,// unknown read size
 		    bool        sendToSelf      = true ,// if we should.
 		    bool        retryForever    = true ,// for pick & send
 		    class Hostdb *hostdb        = NULL ,
-		    long        redirectTimeout = -1 ,
+		    int32_t        redirectTimeout = -1 ,
 		    class Host *firstProxyHost  = NULL );
 
 	// . get the reply from your NON groupSend
 	// . if *freeReply is true then you are responsible for freeing this 
 	//   reply now, otherwise, don't free it
-	char *getBestReply ( long *replySize , 
-			     long *replyMaxSize, 
+	char *getBestReply ( int32_t *replySize , 
+			     int32_t *replyMaxSize, 
 			     bool *freeReply ,
 			     bool  steal = false);
 
@@ -123,13 +123,13 @@ class Multicast {
 	void destroySlotsInProgress ( UdpSlot *slot );
 
 	// keep these public so C wrapper can call them
-	bool sendToHostLoop ( long key, long hostNumToTry, long firstHostId );
-	bool sendToHost    ( long i ); 
-	long pickBestHost2 ( unsigned long key , long hostNumToTry ,
+	bool sendToHostLoop ( int32_t key, int32_t hostNumToTry, int32_t firstHostId );
+	bool sendToHost    ( int32_t i ); 
+	int32_t pickBestHost2 ( uint32_t key , int32_t hostNumToTry ,
 			     bool preferLocal );
-	long pickBestHost  ( unsigned long key , long hostNumToTry ,
+	int32_t pickBestHost  ( uint32_t key , int32_t hostNumToTry ,
 			     bool preferLocal );
-	long pickRandomHost( ) ;
+	int32_t pickRandomHost( ) ;
 	void gotReply1     ( UdpSlot *slot ) ;
 	void closeUpShop   ( UdpSlot *slot ) ;
 
@@ -138,35 +138,35 @@ class Multicast {
 
 	// . stuff set directly by send() parameters
 	char       *m_msg;
-	long        m_msgSize;
+	int32_t        m_msgSize;
 	uint8_t     m_msgType;
 	bool        m_ownMsg;
-	long        m_numGroups;
-	//unsigned long m_groupId;
-	unsigned long m_shardNum;
+	int32_t        m_numGroups;
+	//uint32_t m_groupId;
+	uint32_t m_shardNum;
 	bool        m_sendToWholeGroup;
 	void       *m_state;
 	void       *m_state2;
 	void       (* m_callback)( void *state , void *state2 );
-	long       m_timeoutPerHost; // in seconds
-	long       m_totalTimeout;   // in seconds
+	int32_t       m_timeoutPerHost; // in seconds
+	int32_t       m_totalTimeout;   // in seconds
 
 	class UdpSlot *m_slot;
 
 	// . m_slots[] is our list of concurrent transactions
 	// . we delete all the slots only after cast is done
-	long        m_startTime;   // seconds since the epoch
+	int32_t        m_startTime;   // seconds since the epoch
 	// so Msg3a can time response
 	int64_t   m_startTimeMS;
 
 	// # of replies we've received
-	long        m_numReplies;
+	int32_t        m_numReplies;
 
 	// . the group we're sending to or picking from
 	// . up to MAX_HOSTS_PER_GROUP hosts
 	// . m_retired, m_slots, m_errnos correspond with these 1-1
 	Host       *m_hostPtrs[16];
-	long        m_numHosts;
+	int32_t        m_numHosts;
 
 	class Hostdb *m_hostdb;
 
@@ -177,20 +177,20 @@ class Multicast {
 	// we can have up to 8 hosts per group
 	UdpSlot    *m_slots      [MAX_HOSTS_PER_GROUP]; 
 	// did we have an errno with this slot?
-	long        m_errnos     [MAX_HOSTS_PER_GROUP]; 
+	int32_t        m_errnos     [MAX_HOSTS_PER_GROUP]; 
 	// transaction in progress?
 	char        m_inProgress [MAX_HOSTS_PER_GROUP]; 
 	int64_t   m_launchTime [MAX_HOSTS_PER_GROUP];
 
 	// steal this from the slot(s) we get
 	char       *m_readBuf;
-	long        m_readBufSize;
-	long        m_readBufMaxSize;
+	int32_t        m_readBufSize;
+	int32_t        m_readBufMaxSize;
 
 	// if caller passes in a reply buf then we reference it here
 	char       *m_replyBuf;
-	long        m_replyBufSize;
-	long        m_replyBufMaxSize;
+	int32_t        m_replyBufSize;
+	int32_t        m_replyBufMaxSize;
 
 	// we own it until caller calls getBestReply()
 	bool        m_ownReadBuf;
@@ -198,7 +198,7 @@ class Multicast {
 	bool        m_registeredSleep;
 	bool        m_registeredSleep2;
 
-	long        m_niceness;
+	int32_t        m_niceness;
 	bool        m_realtime;
 
 	// . last sending of the request to ONE host in a group (pick & send)
@@ -206,31 +206,31 @@ class Multicast {
 	int64_t   m_lastLaunch;
 	Host       *m_lastLaunchHost;
 	// how many launched requests are current outstanding
-	long        m_numLaunched;
+	int32_t        m_numLaunched;
 
 	// only free m_reply if this is true
 	bool        m_freeReadBuf;
 
-	long        m_key;
+	int32_t        m_key;
 
 	// Msg34 stuff -- for disk load balancing
 	//Msg34 m_msg34;
 	//bool  m_doDiskLoadBalancing;
 	key_t m_cacheKey           ;
-	long  m_maxCacheAge        ;
+	int32_t  m_maxCacheAge        ;
 	char  m_rdbId              ;
-	long  m_minRecSizes        ;
+	int32_t  m_minRecSizes        ;
 
 	// Msg1 might be able to add data to our tree to save a net trans.
 	bool        m_sendToSelf;
 
 	bool        m_retryForever;
-	long        m_retryCount;
+	int32_t        m_retryCount;
 
 	char        m_sentToTwin;
 	bool        m_callbackCalled;
 
-	long        m_redirectTimeout;
+	int32_t        m_redirectTimeout;
 	char        m_inUse;
 
 	// for linked list of available Multicasts in Msg4.cpp
@@ -242,11 +242,11 @@ class Multicast {
 	int64_t  m_replyLaunchTime;
 
 	// used by XmlDoc.cpp for gbfacet: stuff
-	long       m_hack32; 
+	int32_t       m_hack32; 
 	int64_t  m_hack64;
 
 	// more hack stuff used by PageInject.cpp
-	long m_hackFileId;
+	int32_t m_hackFileId;
 	int64_t m_hackFileOff;
 	class ImportState *m_importState;
 
@@ -254,7 +254,7 @@ class Multicast {
 	//void *m_hackxd;
 	//void *m_hackHost;
 	//void *m_hackQPtr;
-	//long  m_hackPtrCursor;
+	//int32_t  m_hackPtrCursor;
 	//char  m_hackIsMsg99ReplyPtr;
 };
 

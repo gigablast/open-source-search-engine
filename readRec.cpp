@@ -13,14 +13,14 @@
 
 int main ( int argc , char *argv[] ) {
 	//	char rbuf[16777216];
-	long recSize;
+	int32_t recSize;
 	char* rbuf = NULL;
-	long rbufSize = 0;
+	int32_t rbufSize = 0;
 	char* cbuf = NULL;
-	long cbufSize = 0;
-	long printUpdates = 0;
-	long startOffset = 0;
-	long totalRead = 0;
+	int32_t cbufSize = 0;
+	int32_t printUpdates = 0;
+	int32_t startOffset = 0;
+	int32_t totalRead = 0;
 	if(argc < 1)  {
 		fprintf(stderr, "usage: readRecs [filename] [printUpdates:0|1] [startoffset]");
 		exit(1);
@@ -45,7 +45,7 @@ int main ( int argc , char *argv[] ) {
 
 	while(1) {
 		//read the record size
-		int bytesRead = read(fileno,  &recSize, sizeof(long));
+		int bytesRead = read(fileno,  &recSize, sizeof(int32_t));
 		if(bytesRead == 0 || recSize == 0) {
 			fprintf(stderr, "done.\n");
 			exit(1);
@@ -54,40 +54,40 @@ int main ( int argc , char *argv[] ) {
 		if(recSize > rbufSize) {
 			char* tmpBuf = (char*)realloc(rbuf, recSize);
 			if(!tmpBuf) {
-				fprintf(stderr, "no memory, needed %li.", recSize);
+				fprintf(stderr, "no memory, needed %"INT32".", recSize);
 				exit(1);
 			}
 			rbuf = tmpBuf;
 		}
-		long bytesRead2 = read(fileno, rbuf, recSize);
+		int32_t bytesRead2 = read(fileno, rbuf, recSize);
 		if (bytesRead2 != recSize) {
-			printf("couldn't read %li", recSize);
+			printf("couldn't read %"INT32"", recSize);
 			exit(1);
 		}
 
 		char* p = rbuf;
 		char* url = p;
-		long urlLen = gbstrlen(url);
+		int32_t urlLen = gbstrlen(url);
 		p += urlLen + 1;
-		long docSize = *(long*)p; 
-		p += sizeof(long);
-		long compressedDocSize = *(long*)p; 
-		p += sizeof(long);
+		int32_t docSize = *(int32_t*)p; 
+		p += sizeof(int32_t);
+		int32_t compressedDocSize = *(int32_t*)p; 
+		p += sizeof(int32_t);
 
-		long need = docSize + urlLen + 64;
+		int32_t need = docSize + urlLen + 64;
 		if( need > cbufSize) {
 			char* tmpBuf = (char*)realloc(cbuf, need);
 			if(!tmpBuf) {
-				fprintf(stderr, "no memory, needed %li", need);
+				fprintf(stderr, "no memory, needed %"INT32"", need);
 				exit(1);
 			}
 			cbuf = tmpBuf;
 			cbufSize = need;
 		}
 		char* writeBuf = cbuf;
-		long writeLen = sprintf(writeBuf, "%s\n%li\n", url, docSize);
+		int32_t writeLen = sprintf(writeBuf, "%s\n%"INT32"\n", url, docSize);
 		writeBuf += writeLen;
-		unsigned long destLen = docSize;
+		uint32_t destLen = docSize;
 		int stat = uncompress((unsigned char*)writeBuf, 
 				      &destLen, 
 				      (unsigned char*)p, 
@@ -97,11 +97,11 @@ int main ( int argc , char *argv[] ) {
 		if(stat != Z_OK) fprintf(stderr, "bad record.");
 		p += compressedDocSize;
 
-		//fprintf(stdout, "%s\n%li\n", url, docSize);
+		//fprintf(stdout, "%s\n%"INT32"\n", url, docSize);
 		write(STDOUT_FILENO, cbuf, writeLen+destLen);
 		if(printUpdates) {
 			totalRead += bytesRead + bytesRead2;
-			fprintf(stderr, "%li bytes read...\n",totalRead);
+			fprintf(stderr, "%"INT32" bytes read...\n",totalRead);
 		}
 	}
 }

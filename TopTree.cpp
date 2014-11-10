@@ -61,7 +61,7 @@ void TopTree::deleteNodes ( ) {
 
 // . pre-allocate memory
 // . returns false and sets g_errno on error
-bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
+bool TopTree::setNumNodes ( int32_t docsWanted , bool doSiteClustering ) {
 
 	// save this
 	m_docsWanted       = docsWanted;
@@ -74,7 +74,7 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 	// how many nodes to we need to accomodate "docsWanted" docids?
 	m_ridiculousMax = docsWanted * 2;
 	if ( m_ridiculousMax < 50 ) m_ridiculousMax = 50;
-	long numNodes = m_ridiculousMax * 256;
+	int32_t numNodes = m_ridiculousMax * 256;
 	// i would say limit it to 100,000 nodes regarless
 	if ( numNodes > MAXDOCIDSTOCOMPUTE ) numNodes = MAXDOCIDSTOCOMPUTE;
 	// craziness overflow?
@@ -99,7 +99,7 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 	memset ( m_domCount , 0 , 4 * 256 );
 
 	// reset domain min nodes
-	for ( long i = 0 ; i < 256 ; i++ )
+	for ( int32_t i = 0 ; i < 256 ; i++ )
 		m_domMinNode[i] = -1;
 
 	// return if nothing needs to be done
@@ -108,11 +108,11 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 	//m_useSampleVectors = useSampleVectors;
 	// . grow using realloc if we should
 	// . alloc for one extra to use as the "empty node"
-	//long vecSize = 0;
+	//int32_t vecSize = 0;
 	//if ( useSampleVectors ) vecSize = SAMPLE_VECTOR_SIZE ;
 	char *nn ;
-	long oldsize = (m_numNodes+1) * ( sizeof(TopNode) );
-	long newsize = (  numNodes+1) * ( sizeof(TopNode) );
+	int32_t oldsize = (m_numNodes+1) * ( sizeof(TopNode) );
+	int32_t newsize = (  numNodes+1) * ( sizeof(TopNode) );
 	bool updated = false;
 	if (! m_nodes) {
 		nn=(char *)mmalloc (newsize,"TopTree");
@@ -122,7 +122,7 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 		nn=(char *)mrealloc(m_nodes,oldsize,newsize,"TopTree");
 		updated = true;
 	}
-	if ( ! nn ) return log("query: Can not allocate %li bytes for "
+	if ( ! nn ) return log("query: Can not allocate %"INT32" bytes for "
 			       "holding resulting docids.",  newsize);
 	// save this for freeing
 	m_allocSize = newsize;
@@ -132,7 +132,7 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 	m_numNodes = numNodes;
 	p += (numNodes+1) * sizeof(TopNode);
 	// vectors
-	//if ( m_useSampleVectors ) m_sampleVectors = (long *)p;
+	//if ( m_useSampleVectors ) m_sampleVectors = (int32_t *)p;
 	// bail now if just realloced
 	if ( updated ) return true;
 	// make empty the last
@@ -144,7 +144,7 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 	m_highNode = -1;
 
 	// setup the linked list of empty nodes
-	for ( long i = 0 ; i < m_numNodes ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numNodes ; i++ ) {
 		m_nodes[i].m_parent = -2;
 		m_nodes[i].m_right  = i+1;
 	}
@@ -180,10 +180,10 @@ bool TopTree::setNumNodes ( long docsWanted , bool doSiteClustering ) {
 
 // . we only compute this when we need to, no need to keep it going on
 // . no, because we re-use the tree
-long TopTree::getHighNode ( ) {
+int32_t TopTree::getHighNode ( ) {
 	if ( m_headNode == -1 ) return -1;
-	long tn2;
-	long tn = m_headNode;
+	int32_t tn2;
+	int32_t tn = m_headNode;
 	while ( (tn2=RIGHT(tn)) >= 0 ) tn = tn2;
 	return tn;
 	//m_highNode = tn;
@@ -191,7 +191,7 @@ long TopTree::getHighNode ( ) {
 }
 
 // returns true if added node. returns false if did not add node
-bool TopTree::addNode ( TopNode *t , long tnn ) {
+bool TopTree::addNode ( TopNode *t , int32_t tnn ) {
 
 	// respect the dom hashes
 	//uint8_t domHash = g_titledb.getDomHash8((uint8_t*)t->m_docIdPtr);
@@ -199,7 +199,7 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 
 	// if vcount is satisfied, only add if better score than tail
 	if ( m_vcount >= m_docsWanted ) {
-		long i = m_lowNode;
+		int32_t i = m_lowNode;
 
 		if ( m_useIntScores ) {
 			if ( t->m_intScore < m_nodes[i].m_intScore ) {
@@ -220,11 +220,11 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		// we got a winner
 		goto addIt;
 		/*
-		if ( *(unsigned long  *)(t->m_docIdPtr+1) >
-		     *(unsigned long  *)(m_nodes[i].m_docIdPtr+1) ) {
+		if ( *(uint32_t  *)(t->m_docIdPtr+1) >
+		     *(uint32_t  *)(m_nodes[i].m_docIdPtr+1) ) {
 			m_kickedOutDocIds = true; return false; }
-		if ( *(unsigned long  *)(t->m_docIdPtr+1) <
-		     *(unsigned long  *)(m_nodes[i].m_docIdPtr+1) ) goto addIt;
+		if ( *(uint32_t  *)(t->m_docIdPtr+1) <
+		     *(uint32_t  *)(m_nodes[i].m_docIdPtr+1) ) goto addIt;
 		if ( (*(unsigned char  *)(t->m_docIdPtr)&0xfc) >
 		     (*(unsigned char  *)(m_nodes[i].m_docIdPtr)&0xfc)) {
 			m_kickedOutDocIds = true; return false; }
@@ -239,9 +239,9 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 
  addIt:
 
-	long iparent = -1;
+	int32_t iparent = -1;
 	// this is -1 iff there are no nodes used in the tree
-	long i = m_headNode;
+	int32_t i = m_headNode;
 	// JAB: gcc-3.4
 	char dir = 0;
 	// if we're the first node we become the head node and our parent is -1
@@ -280,11 +280,11 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		return false;
 
 		/*
-		if ( *(unsigned long  *)(t->m_docIdPtr+1) >
-		     *(unsigned long  *)(m_nodes[i].m_docIdPtr+1) ) {
+		if ( *(uint32_t  *)(t->m_docIdPtr+1) >
+		     *(uint32_t  *)(m_nodes[i].m_docIdPtr+1) ) {
 			i = LEFT(i); dir = 0; continue; }
-		if ( *(unsigned long  *)(t->m_docIdPtr+1) <
-		     *(unsigned long  *)(m_nodes[i].m_docIdPtr+1) ) {
+		if ( *(uint32_t  *)(t->m_docIdPtr+1) <
+		     *(uint32_t  *)(m_nodes[i].m_docIdPtr+1) ) {
 			i = RIGHT(i); dir = 1; continue; }
 		if ( (*(unsigned char  *)(t->m_docIdPtr)&0xfc) >
 		     (*(unsigned char  *)(m_nodes[i].m_docIdPtr)&0xfc) ) {
@@ -330,15 +330,15 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 	k.n0 |=  t->m_docId; // getDocIdFromPtr ( t->m_docIdPtr );
 
 	// do not add dups
-	//long dd = m_t2.getNode ( 0 , k );
+	//int32_t dd = m_t2.getNode ( 0 , k );
 	//if ( dd >= 0 ) return false;
 
 	// get min node now for this dom
-	long min = m_domMinNode[domHash];
+	int32_t min = m_domMinNode[domHash];
 	// the node we add ourselves to
-	long n;
+	int32_t n;
 	// delete this node
-	long deleteMe = -1;
+	int32_t deleteMe = -1;
 	// do not even try to add if ridiculous count for this domain
 	if ( m_domCount[domHash] >= m_ridiculousMax ) {
 		// sanity check
@@ -349,9 +349,9 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		// . dataPtr is not really a ptr, but the node
 		n = m_t2.addNode ( 0 , k , NULL , 4 );
 		//if ( n == 52 )
-		//	log("r2 node 52 has domHash=%li",domHash);
+		//	log("r2 node 52 has domHash=%"INT32"",domHash);
 		// the next node before the current min will be the next min
-		long next = m_t2.getNextNode(min);
+		int32_t next = m_t2.getNextNode(min);
 		// sanity check
 		//if ( next < 0 ) { char *xx=NULL;*xx=0; }
 		// sanity check
@@ -364,18 +364,18 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		// get his "node number" in the top tree, "nn" so we can
 		// delete him from the top tree as well as m_t2. it is 
 		// "hidden" in the dataPtr
-		deleteMe = (long)m_t2.m_data[min];
+		deleteMe = (int32_t)m_t2.m_data[min];
 		// delete him from the top tree now as well
 		//deleteNode ( nn , domHash );
 		// then delete him from the m_t2 tree
 		m_t2.deleteNode ( min , false );
-		//logf(LOG_DEBUG,"deleting1 %li",min);
+		//logf(LOG_DEBUG,"deleting1 %"INT32"",min);
 	}
 	// if we have not violated the ridiculous max, just add ourselves
 	else if ( m_doSiteClustering ) {
 		n = m_t2.addNode ( 0 , k , NULL , 4 );
 		//if ( n == 52 )
-		//	log("r2 nodeb 52 has domHash=%li",domHash);
+		//	log("r2 nodeb 52 has domHash=%"INT32"",domHash);
 		// sanity check
 		//if ( min > 0 ) {
 		//	key_t *kp1 = (key_t *)m_t2.getKey(min);
@@ -433,7 +433,7 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 	// remove as many docids as we should
 	while ( m_vcount-1.0 >= m_docsWanted || m_numUsedNodes == m_numNodes) {
 		// he becomes the new empty node
-		long tn = m_lowNode;
+		int32_t tn = m_lowNode;
 		// sanity check
 		if ( tn < 0 ) { char *xx=NULL; *xx=0; }
 		// sanity check
@@ -468,14 +468,14 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		if ( ! m_doSiteClustering ) continue;
 
 		// get the node from t2
-		long min = m_t2.getNode ( 0 , (char *)&k );
+		int32_t min = m_t2.getNode ( 0 , (char *)&k );
 		// sanity check. LEAVE THIS HERE!
 		if ( min < 0 ) { break; char *xx=NULL; *xx=0; }
 		// sanity check
 		//key_t *kp1 = (key_t *)m_t2.getKey(min);
 		//if ( (kp1->n1) >>24 != domHash2 ) {char*xx=NULL;*xx=0;}
 		// get next node from t2
-		long next = m_t2.getNextNode ( min );
+		int32_t next = m_t2.getNextNode ( min );
 		// delete from m_t2
 		m_t2.deleteNode ( min , false );
 		// skip if not th emin
@@ -498,7 +498,7 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		//if ( (kp2->n1) >>24 != domHash2 ) {char*xx=NULL;*xx=0;}
 		// the new min is the "next" of the old min
 		m_domMinNode[domHash2] = next;
-		//logf(LOG_DEBUG,"deleting %li",on);
+		//logf(LOG_DEBUG,"deleting %"INT32"",on);
 	}
 	return true;
 }
@@ -506,7 +506,7 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 
 // . remove this node from the tree
 // . used to remove the last node and replace it with a higher scorer
-void TopTree::deleteNode ( long i , uint8_t domHash ) {
+void TopTree::deleteNode ( int32_t i , uint8_t domHash ) {
 	// sanity check
 	if ( PARENT(i) == -2 ) { char *xx=NULL;*xx=0; }
 	// get node
@@ -520,9 +520,9 @@ void TopTree::deleteNode ( long i , uint8_t domHash ) {
 	if ( i == m_lowNode ) {
 		m_lowNode = getNext ( i );
 		if ( m_lowNode == -1 ) { 
-			log("toptree: toptree delete error node #%li "
-			    "domHash=%li because next node is -1 numnodes=%li",
-			    i,(long)domHash,m_numUsedNodes);
+			log("toptree: toptree delete error node #%"INT32" "
+			    "domHash=%"INT32" because next node is -1 numnodes=%"INT32"",
+			    i,(int32_t)domHash,m_numUsedNodes);
 		//char *xx=NULL;*xx=0; }
 			//return;
 		}
@@ -535,13 +535,13 @@ void TopTree::deleteNode ( long i , uint8_t domHash ) {
 	m_domCount[domHash]--;
 	// debug
 	//if ( domHash == 0x35 )
-	//	log("top: domCount down for 0x%lx now %li",domHash,m_domCount[domHash]);
+	//	log("top: domCount down for 0x%"XINT32" now %"INT32"",domHash,m_domCount[domHash]);
 
 	// parent of i
-	long iparent ;
-	long jparent ;
+	int32_t iparent ;
+	int32_t jparent ;
 	// j will be the node that replace node #i
-	long j = i;
+	int32_t j = i;
 	// . now find a node to replace node #i
 	// . get a node whose key is just to the right or left of i's key
 	// . get i's right kid
@@ -644,7 +644,7 @@ void TopTree::deleteNode ( long i , uint8_t domHash ) {
 	// up to i decreases the total depth, in which case setDepths() fixes
 	DEPTH ( j ) = DEPTH ( i );
 	// debug msg
-	//fprintf(stderr,"... replaced %li it with %li (-1 means none)\n",i,j);
+	//fprintf(stderr,"... replaced %"INT32" it with %"INT32" (-1 means none)\n",i,j);
 	// . recalculate depths starting at old parent of j
 	// . stops at the first node to have the correct depth
 	// . will balance at pivot nodes that need it
@@ -669,7 +669,7 @@ void TopTree::deleteNode ( long i , uint8_t domHash ) {
 	//if ( ! checkTree ( true ) ) { char *xx = NULL; *xx = 0; }
 }
 	
-long TopTree::getPrev ( long i ) { 
+int32_t TopTree::getPrev ( int32_t i ) { 
 	// cruise the kids if we have a left one
 	if ( LEFT(i) >= 0 ) {
 		// go to the left kid
@@ -680,7 +680,7 @@ long TopTree::getPrev ( long i ) {
 		return i;
 	}
 	// now keep getting parents until one has a key bigger than i's key
-	long p = PARENT(i);
+	int32_t p = PARENT(i);
 	// if we're the right kid of the parent, then the parent is the
 	// next least node
 	if ( RIGHT(p) == i ) return p;
@@ -688,14 +688,14 @@ long TopTree::getPrev ( long i ) {
 	if ( i == m_lowNode ) return -1;
 	// keep getting the parent until it has a bigger key
 	// or until we're the RIGHT kid of the parent. that's better
-	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
+	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
 	//while ( p >= 0   &&  m_keys(p) > m_keys(i) ) p = PARENT(p);
 	while ( p >= 0   &&  LEFT(p) == i ) { i = p; p = PARENT(p); }
 	// p will be -1 if none are left
 	return p;
 }
 
-long TopTree::getNext ( long i ) {
+int32_t TopTree::getNext ( int32_t i ) {
 	// cruise the kids if we have a right one
 	if ( RIGHT(i) >= 0 ) {
 		// go to the right kid
@@ -706,7 +706,7 @@ long TopTree::getNext ( long i ) {
 		return i;
 	}
 	// now keep getting parents until one has a key bigger than i's key
-	long p = PARENT(i);
+	int32_t p = PARENT(i);
 	// if parent is negative we're done
 	if ( p < 0 ) return -1;
 	// if we're the left kid of the parent, then the parent is the
@@ -717,7 +717,7 @@ long TopTree::getNext ( long i ) {
 	//if ( i == m_highNode ) return -1;
 	// otherwise keep getting the parent until it has a bigger key
 	// or until we're the LEFT kid of the parent. that's better
-	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
+	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
 	//while ( p >= 0  &&  m_keys[p] < m_keys[i] ) p = m_parents[p];
 	while ( p >= 0   &&  RIGHT(p) == i ) { i = p; p = PARENT(p); }
 	// p will be -1 if none are left
@@ -726,27 +726,27 @@ long TopTree::getNext ( long i ) {
 
 // . recompute depths of nodes starting at i and ascending the tree
 // . call rotateRight/Left() when depth of children differs by 2 or more
-void TopTree::setDepths ( long i ) {
+void TopTree::setDepths ( int32_t i ) {
 	// inc the depth of all parents if it changes for them
 	while ( i >= 0 ) {
 		// . compute the new depth for node i
 		// . get depth of left kid
 		// . left/rightDepth is depth of subtree on left/right
-		long leftDepth  = 0;
-		long rightDepth = 0;
+		int32_t leftDepth  = 0;
+		int32_t rightDepth = 0;
 		if ( LEFT (i) >= 0 ) leftDepth  = DEPTH ( LEFT (i) ) ;
 		if ( RIGHT(i) >= 0 ) rightDepth = DEPTH ( RIGHT(i) ) ;
 		// . get the new depth for node i
 		// . add 1 cuz we include ourself in our DEPTH
-		long newDepth ;
+		int32_t newDepth ;
 		if ( leftDepth > rightDepth ) newDepth = leftDepth  + 1;
 		else                          newDepth = rightDepth + 1;
 		// if the depth did not change for i then we're done
-		long oldDepth = DEPTH(i) ;
+		int32_t oldDepth = DEPTH(i) ;
 		// set our new depth
 		DEPTH(i) = newDepth;
 		// diff can be -2, -1, 0, +1 or +2
-		long diff = leftDepth - rightDepth;
+		int32_t diff = leftDepth - rightDepth;
 		// . if it's -1, 0 or 1 then we don't need to balance
 		// . if rightside is deeper rotate left, i is the pivot
 		// . otherwise, rotate left
@@ -757,7 +757,7 @@ void TopTree::setDepths ( long i ) {
 		// . i may have change if we rotated, but same logic applies
 		if ( DEPTH(i) == oldDepth ) break;
 		// debug msg
-		//fprintf (stderr,"changed node %li's depth from %li to %li\n",
+		//fprintf (stderr,"changed node %"INT32"'s depth from %"INT32" to %"INT32"\n",
 		//i,oldDepth,newDepth);
 		// get his parent to continue the ascension
 		i = PARENT ( i );
@@ -800,28 +800,28 @@ void TopTree::setDepths ( long i ) {
 // . the parameter "i" is the node # for A in the illustration above
 // . return the node # that replaced A so the balance() routine can continue
 // . TODO: check our depth modifications below
-long TopTree::rotateRight ( long i ) {
+int32_t TopTree::rotateRight ( int32_t i ) {
 	// i's left kid's RIGHT kid takes his place
-	long A = i;
-	long N = LEFT  ( A );
-	long W = LEFT  ( N );
-	long X = RIGHT ( N );
-	long Q = -1;
-	long T = -1;
+	int32_t A = i;
+	int32_t N = LEFT  ( A );
+	int32_t W = LEFT  ( N );
+	int32_t X = RIGHT ( N );
+	int32_t Q = -1;
+	int32_t T = -1;
 	if ( X >= 0 ) {
 		Q = LEFT  ( X );
 		T = RIGHT ( X );
 	}
 	// let AP be A's parent
-	long AP = PARENT ( A );
+	int32_t AP = PARENT ( A );
 	// whose the bigger subtree, W or X? (depth includes W or X itself)
-	long Wdepth = 0;
-	long Xdepth = 0;
+	int32_t Wdepth = 0;
+	int32_t Xdepth = 0;
 	if ( W >= 0 ) Wdepth = DEPTH(W);
 	if ( X >= 0 ) Xdepth = DEPTH(X);
 	// debug msg
-	//fprintf(stderr,"A=%li AP=%li N=%li W=%li X=%li Q=%li T=%li "
-	//"Wdepth=%li Xdepth=%li\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
+	//fprintf(stderr,"A=%"INT32" AP=%"INT32" N=%"INT32" W=%"INT32" X=%"INT32" Q=%"INT32" T=%"INT32" "
+	//"Wdepth=%"INT32" Xdepth=%"INT32"\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
 	// goto Xdeeper if X is deeper
 	if ( Wdepth < Xdepth ) goto Xdeeper;
 	// N's parent becomes A's parent
@@ -837,7 +837,7 @@ long TopTree::rotateRight ( long i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node from %li to %li\n",
+		//fprintf(stderr,"changing head node from %"INT32" to %"INT32"\n",
 		//m_headNode,N);
 		m_headNode = N;
 	}
@@ -873,7 +873,7 @@ long TopTree::rotateRight ( long i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node2 from %li to %li\n",
+		//fprintf(stderr,"changing head node2 from %"INT32" to %"INT32"\n",
 		//m_headNode,X);
 		m_headNode = X;
 	}
@@ -896,28 +896,28 @@ long TopTree::rotateRight ( long i ) {
 }
 
 // this is the same as above but LEFT and RIGHT are swapped
-long TopTree::rotateLeft ( long i ) {
+int32_t TopTree::rotateLeft ( int32_t i ) {
 	// i's left kid's LEFT kid takes his place
-	long A = i;
-	long N = RIGHT  ( A );
-	long W = RIGHT  ( N );
-	long X = LEFT ( N );
-	long Q = -1;
-	long T = -1;
+	int32_t A = i;
+	int32_t N = RIGHT  ( A );
+	int32_t W = RIGHT  ( N );
+	int32_t X = LEFT ( N );
+	int32_t Q = -1;
+	int32_t T = -1;
 	if ( X >= 0 ) {
 		Q = RIGHT  ( X );
 		T = LEFT ( X );
 	}
 	// let AP be A's parent
-	long AP = PARENT ( A );
+	int32_t AP = PARENT ( A );
 	// whose the bigger subtree, W or X? (depth includes W or X itself)
-	long Wdepth = 0;
-	long Xdepth = 0;
+	int32_t Wdepth = 0;
+	int32_t Xdepth = 0;
 	if ( W >= 0 ) Wdepth = DEPTH(W);
 	if ( X >= 0 ) Xdepth = DEPTH(X);
 	// debug msg
-	//fprintf(stderr,"A=%li AP=%li N=%li W=%li X=%li Q=%li T=%li "
-	//"Wdepth=%li Xdepth=%li\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
+	//fprintf(stderr,"A=%"INT32" AP=%"INT32" N=%"INT32" W=%"INT32" X=%"INT32" Q=%"INT32" T=%"INT32" "
+	//"Wdepth=%"INT32" Xdepth=%"INT32"\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
 	// goto Xdeeper if X is deeper
 	if ( Wdepth < Xdepth ) goto Xdeeper;
 	// N's parent becomes A's parent
@@ -933,7 +933,7 @@ long TopTree::rotateLeft ( long i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node from %li to %li\n",
+		//fprintf(stderr,"changing head node from %"INT32" to %"INT32"\n",
 		//m_headNode,N);
 		m_headNode = N;
 	}
@@ -969,7 +969,7 @@ long TopTree::rotateLeft ( long i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node2 from %li to %li\n",
+		//fprintf(stderr,"changing head node2 from %"INT32" to %"INT32"\n",
 		//m_headNode,X);
 		m_headNode = X;
 	}
@@ -994,60 +994,60 @@ long TopTree::rotateLeft ( long i ) {
 // returns false if tree had problem, true otherwise
 bool TopTree::checkTree ( bool printMsgs ) {
 	// now check parent kid correlations
-	for ( long i = 0 ; i < m_numUsedNodes ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numUsedNodes ; i++ ) {
 		// skip node if parents is -2 (unoccupied)
 		if ( PARENT(i) == -2 ) continue;
 		// if no left/right kid it MUST be -1
 		if ( LEFT(i) < -1 )
 			return log("query: toptree: checktree: left "
-				   "kid %li < -1",i);
+				   "kid %"INT32" < -1",i);
 		if ( RIGHT(i) < -1 )
 			return log("query: toptree: checktree: right "
-				   "kid %li < -1",i);
+				   "kid %"INT32" < -1",i);
 		// check left kid
 		if ( LEFT(i) >= 0 && PARENT(LEFT(i)) != i ) 
 			return log("query: toptree: checktree: tree has "
-				   "error %li",i);
+				   "error %"INT32"",i);
 		// then right kid
 		if ( RIGHT(i) >= 0 && PARENT(RIGHT(i)) != i )
                        return log("query: toptree: checktree: tree has "
-				  "error2 %li",i);
+				  "error2 %"INT32"",i);
 	}
 	// now return if we aren't doing active balancing
 	//if ( ! DEPTH ) return true;
 	// debug -- just always return now
-	if ( printMsgs ) log("***m_headNode=%li, m_numUsedNodes=%li",
+	if ( printMsgs ) log("***m_headNode=%"INT32", m_numUsedNodes=%"INT32"",
 			      m_headNode,m_numUsedNodes);
 	// verify that parent links correspond to kids
-	for ( long i = 0 ; i < m_numUsedNodes ; i++ ) {
-		long P = PARENT (i);
+	for ( int32_t i = 0 ; i < m_numUsedNodes ; i++ ) {
+		int32_t P = PARENT (i);
 		if ( P == -2 ) continue; // deleted node
 		if ( P == -1 && i != m_headNode ) 
-			return log("query: toptree: checktree: node %li has "
+			return log("query: toptree: checktree: node %"INT32" has "
 				   "no parent",i);
 		// check kids
 		if ( P>=0 && LEFT(P) != i && RIGHT(P) != i ) 
-			return log("query: toptree: checktree: node %li's "
+			return log("query: toptree: checktree: node %"INT32"'s "
 				    "parent disowned",i);
 		// ensure i goes back to head node
-		long j = i;
+		int32_t j = i;
 		while ( j >= 0 ) { 
 			if ( j == m_headNode ) break;
 			j = PARENT(j);
 		}
 		if ( j != m_headNode ) 
-			return log("query: toptree: checktree: node %li's no "
+			return log("query: toptree: checktree: node %"INT32"'s no "
 				   "head node above",i);
 		if ( printMsgs ) 
-			fprintf(stderr,"***node=%li left=%li rght=%li "
-				"prnt=%li, depth=%li\n",
+			fprintf(stderr,"***node=%"INT32" left=%"INT32" rght=%"INT32" "
+				"prnt=%"INT32", depth=%"INT32"\n",
 				i,LEFT(i),RIGHT(i),PARENT(i),
-				(long)DEPTH(i));
+				(int32_t)DEPTH(i));
 		//ensure depth
-		long newDepth = computeDepth ( i );
+		int32_t newDepth = computeDepth ( i );
 		if ( DEPTH(i) != newDepth ) 
-			return log("query: toptree: checktree: node %li's "
-				   "depth should be %li",i,newDepth);
+			return log("query: toptree: checktree: node %"INT32"'s "
+				   "depth should be %"INT32"",i,newDepth);
 	}
 	if ( printMsgs ) log("query: ---------------");
 	// no problems found
@@ -1056,9 +1056,9 @@ bool TopTree::checkTree ( bool printMsgs ) {
 
 // . depth of subtree with i as the head node
 // . includes i, so minimal depth is 1
-long TopTree::computeDepth ( long i ) {
-	long leftDepth  = 0;
-	long rightDepth = 0;
+int32_t TopTree::computeDepth ( int32_t i ) {
+	int32_t leftDepth  = 0;
+	int32_t rightDepth = 0;
 	if ( LEFT (i) >= 0 ) leftDepth  = DEPTH ( LEFT (i) ) ;
 	if ( RIGHT(i) >= 0 ) rightDepth = DEPTH ( RIGHT(i) ) ;
 	// . get the new depth for node i
@@ -1068,7 +1068,7 @@ long TopTree::computeDepth ( long i ) {
 }	
 
 bool TopTree::hasDocId ( int64_t d ) {
-	long i = getLowNode ( );
+	int32_t i = getLowNode ( );
 	// scan the nodes
 	for ( ; i >= 0 ; i = getNext ( i ) ) {
 		//if ( PARENT(i) == -2 ) continue; // deleted node

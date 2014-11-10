@@ -25,8 +25,8 @@ static int64_t s_antiLockCount = 1LL;
 #define TIMEOUT_TOTAL       90
 
 static void gotIpWrapper ( void *state , UdpSlot *slot ) ;
-static void gotIpOfDNSWrapper ( void *state , long ip ) ;
-static void returnIp ( DnsState *ds , long ip ) ;
+static void gotIpOfDNSWrapper ( void *state , int32_t ip ) ;
+static void returnIp ( DnsState *ds , int32_t ip ) ;
 
 // CallbackEntry now defined in HashTableT.cpp
 static HashTableT<int64_t,CallbackEntry> s_dnstable;
@@ -59,17 +59,17 @@ void Dns::reset() {
 // . use 1 socket for recving and sending
 // . we can use a shared rdb cache
 // . we use the dbId to separate our cache entries from other db's entries
-bool Dns::init ( unsigned short clientPort ) {
+bool Dns::init ( uint16_t clientPort ) {
 	// get primary dns server info from the conf class
 	m_dnsClientPort = clientPort; // g_conf.m_dnsClientPort;
 	// set the name of the cache. it will save to WORKDIR/{name}.dat
-	long maxMem = g_conf.m_dnsMaxCacheMem ;
+	int32_t maxMem = g_conf.m_dnsMaxCacheMem ;
 	// . how many nodes in cache tree can we fit?
 	// . each rec is key (12) and ip(4)
 	// . overhead in cache is 56
 	// . that makes 56 + 4 = 60
 	// . not correct? stats suggest it's less than 25 bytes each
-	long maxCacheNodes = maxMem / 25;
+	int32_t maxCacheNodes = maxMem / 25;
 	// make a copy of our protocol to pass to udp server
 	// static DnsProtocol proto;
 	// set the cache
@@ -85,7 +85,7 @@ bool Dns::init ( unsigned short clientPort ) {
 	// make a copy of our protocol to pass to udp server
 	// static DnsProtocol proto;
 	// set the cache
-	long maxMemLocal = 100000;
+	int32_t maxMemLocal = 100000;
 	if ( ! m_rdbCacheLocal.init ( maxMemLocal   ,
 				      4             , // fixed data size of rec
 				      false         , // support lists of recs?
@@ -107,11 +107,11 @@ bool Dns::init ( unsigned short clientPort ) {
 				  true           ))// is dns?
 		return log ("dns: Udp server init failed.");
 	// innocent log msg
-	log ( LOG_INIT,"dns: Sending requests on client port %li "
+	log ( LOG_INIT,"dns: Sending requests on client port %"INT32" "
 	      "using socket descriptor %i.", 
-	      (long)m_dnsClientPort , m_udpServer.m_sock );
+	      (int32_t)m_dnsClientPort , m_udpServer.m_sock );
 
-	for ( long i = 0 ; i < g_conf.m_numDns ; i++ ) {
+	for ( int32_t i = 0 ; i < g_conf.m_numDns ; i++ ) {
 		if ( !g_conf.m_dnsIps[i] ) continue;
 		log ( LOG_INIT, "dns: Using nameserver %s:%i.",
 		      iptoa(g_conf.m_dnsIps[i]) , g_conf.m_dnsPorts[i] );
@@ -124,7 +124,7 @@ bool Dns::init ( unsigned short clientPort ) {
 	static bool s_init = false;
 	if ( s_init ) return true;
 	// just 30k for this little guy
-	long maxCacheMem = 30000;
+	int32_t maxCacheMem = 30000;
 	maxCacheNodes = maxCacheMem / 25;
 	g_timedoutCache.init ( maxCacheMem ,
 			       4     ,  // fixed data size of rec
@@ -136,12 +136,12 @@ bool Dns::init ( unsigned short clientPort ) {
 	return true;
 }
 
-bool isTimedOut(long ip) {
+bool isTimedOut(int32_t ip) {
 	// is this ip address in the "timed out" cache. if so,
 	// then do not try again for at least 1 hour
 	char *rec;
-	long  recSize;
-	long  maxAge = 3600; // 1 hour in seconds
+	int32_t  recSize;
+	int32_t  maxAge = 3600; // 1 hour in seconds
 	key_t k;
 	k.n0 = 0LL;
 	k.n1 = ip;
@@ -223,8 +223,8 @@ static const TLDIPEntry* getTLDIP(DnsState* ds) {
 		return NULL;
 	}
 
-	log(LOG_DEBUG,"dns: TLD cache hit .%s NS depth %li for %s.",
-		buf, (long) ds->m_depth, ds->m_hostname);
+	log(LOG_DEBUG,"dns: TLD cache hit .%s NS depth %"INT32" for %s.",
+		buf, (int32_t) ds->m_depth, ds->m_hostname);
 
 	return tldip;
 }
@@ -290,16 +290,16 @@ static const TLDIPEntry* getTLDIP(DnsState* ds) {
 // . sets *ip to 0 if none (does not exist)
 // . sets *ip to -1 and sets g_errno if there was an error
 bool Dns::getIp ( char *hostname , 
-		  long  hostnameLen ,
-		  long *ip       ,
+		  int32_t  hostnameLen ,
+		  int32_t *ip       ,
 		  void *state    ,
-		  void (* callback ) ( void *state , long ip ) ,
+		  void (* callback ) ( void *state , int32_t ip ) ,
 		  DnsState *ds ,
 		  //char **dnsNames ,
-		  //long   numDnsNames ,
-		  //long  *dnsIps      ,
-		  //long   numDnsIps   ,
-		  long   timeout     ,
+		  //int32_t   numDnsNames ,
+		  //int32_t  *dnsIps      ,
+		  //int32_t   numDnsIps   ,
+		  int32_t   timeout     ,
 		  bool   dnsLookup   ,
 		  // monitor.cpp passes in false for this:
 		  bool   cacheNotFounds ) {
@@ -309,7 +309,7 @@ bool Dns::getIp ( char *hostname ,
 	if ( hostnameLen >= 254 ) {
 		g_errno = EHOSTNAMETOOBIG;
 		log("dns: Asked to get IP of hostname over 253 "
-		    "characters long.");
+		    "characters int32_t.");
 		*ip=0;
 		return true;
 	}
@@ -381,11 +381,11 @@ bool Dns::getIp ( char *hostname ,
 	if ( ptr && 
 	     // we do not store hostnameLen in ds, so make sure this is 0 
 	     ! ptr->m_ds->m_hostname[hostnameLen] &&
-	     (long)gbstrlen(ptr->m_ds->m_hostname) == hostnameLen && 
+	     (int32_t)gbstrlen(ptr->m_ds->m_hostname) == hostnameLen && 
 	     strncmp ( ptr->m_ds->m_hostname, hostname, hostnameLen ) != 0 ) {
 		g_errno = EBADENGINEER;
 		log("dns: Found key collision in wait queue. host %s has "
-		    "same key as %s. key=%llu.",
+		    "same key as %s. key=%"UINT64".",
 		    ptr->m_ds->m_hostname, tmp, hostKey64);
 		//char *xx = NULL; *xx = 0;
 		// we should just error out if this happens, it is better
@@ -459,7 +459,7 @@ bool Dns::getIp ( char *hostname ,
 	//    never to get out of it, if it were not for the following circular
 	//    dependency check:
 	// example url: www.hagener-schulen.de
-	long loopCount = 0;
+	int32_t loopCount = 0;
 	// loopCount is how many times we've had to ask for the ip of a 
 	// nameserver recursively.
 	if ( ds ) loopCount = ds->m_loopCount;
@@ -485,9 +485,9 @@ bool Dns::getIp ( char *hostname ,
 	}
 
 	// debug msg
-	log(LOG_DEBUG,"dns: Adding key %llu from table. "
-	    "parentKey=%llu callback=%lu state=%lu.",
-	    finalKey,parentKey,(unsigned long)callback,(unsigned long)state);
+	log(LOG_DEBUG,"dns: Adding key %"UINT64" from table. "
+	    "parentKey=%"UINT64" callback=%"UINT32" state=%"UINT32".",
+	    finalKey,parentKey,(uint32_t)callback,(uint32_t)state);
 	// ensure "bogus" key not already present in table, otherwise,
 	// addKey will just overwrite the value!!
 	while ( ptr && s_dnstable.getValuePointer ( finalKey ) ) {
@@ -498,7 +498,7 @@ bool Dns::getIp ( char *hostname ,
 	// we need to be able to add ourselves to the table so our callback
 	// can get called, otherwise it is pointless. this returns false
 	// and sets g_errno on error.
-	long slotNum = -1;
+	int32_t slotNum = -1;
 	if ( ! s_dnstable.addKey ( finalKey , ce , &slotNum ) ) {
 		log("dns: Failed to add key to table: %s.",mstrerror(g_errno));
 		return true;
@@ -529,9 +529,9 @@ bool Dns::getIp ( char *hostname ,
 		// so put it into us, too
 		ppp->m_listId = ptr->m_listId;
 		if ( g_conf.m_logDebugDns )
-			log(LOG_DEBUG,"dns: Waiting in line for %s. key=%llu. "
-			    "nextKey=%llu listSize=%li listId=%li "
-			    "numSlots=%li.",
+			log(LOG_DEBUG,"dns: Waiting in line for %s. key=%"UINT64". "
+			    "nextKey=%"UINT64" listSize=%"INT32" listId=%"INT32" "
+			    "numSlots=%"INT32".",
 			    tmp,finalKey,oldNext,
 			    ptr->m_listSize,ptr->m_listId,
 			    s_dnstable.getNumSlots());
@@ -542,7 +542,7 @@ bool Dns::getIp ( char *hostname ,
 	// init our linked list size count
 	ppp->m_listSize = 1;
 	// it is the parent, use 0 to indicate none
-	static long s_listId = 0;
+	static int32_t s_listId = 0;
 	ppp->m_listId = s_listId++;
 
 	// . make a DnsState
@@ -554,10 +554,10 @@ bool Dns::getIp ( char *hostname ,
 		if ( ! ds ) {
 			log("dns: Failed to allocate mem for ip lookup.");
 			// debug msg
-			log(LOG_DEBUG,"dns: Removing2 key %llu from table. "
-			    "parentKey=%llu callback=%lu state=%lu.",
+			log(LOG_DEBUG,"dns: Removing2 key %"UINT64" from table. "
+			    "parentKey=%"UINT64" callback=%"UINT32" state=%"UINT32".",
 			    hostKey64,parentKey,
-				(unsigned long)callback,(unsigned long)state);
+				(uint32_t)callback,(uint32_t)state);
 			s_dnstable.removeKey ( finalKey );
 			return true;
 		}
@@ -586,7 +586,7 @@ bool Dns::getIp ( char *hostname ,
 	ds->m_errno        = 0;
 	ds->m_recursionDesired = 1;
 	// debug msg
-	//log("dns::getIp: %s (key=%llu) NOT in cache...",tmp,key.n0);
+	//log("dns::getIp: %s (key=%"UINT64") NOT in cache...",tmp,key.n0);
 
 	// reset m_loopCount and startTime if we are just starting
 	if ( ds && callback != gotIpOfDNSWrapper ) {
@@ -608,7 +608,7 @@ bool Dns::getIp ( char *hostname ,
 	ds->m_this        = this;
 	ds->m_state       = state;
 	ds->m_callback    = callback;	
-	long newlen = hostnameLen;
+	int32_t newlen = hostnameLen;
 	if ( newlen > 127 ) newlen = 127;
 	memcpy ( ds->m_hostname , hostname , newlen );
 	ds->m_hostname [ newlen ] = '\0';
@@ -620,8 +620,8 @@ bool Dns::getIp ( char *hostname ,
 	//	return -1; 
 	//}
 	// hack this for now
-	//long numDns = 0; 
-	//long dnsIps[MAX_DNSIPS];
+	//int32_t numDns = 0; 
+	//int32_t dnsIps[MAX_DNSIPS];
 
 	// copy the initial nameserver ips into ds->m_dnsIps[0] (depth 0)
 	if ( g_conf.m_askRootNameservers ) {
@@ -650,8 +650,8 @@ bool Dns::getIp ( char *hostname ,
 	// otherwise, use the local bind9 servers
 	else {
 		//memcpy(ds->m_dnsIps[0],g_conf.m_dnsIps,g_conf.m_numDns * 4);
-		long numDns = 0;
-		for ( long i = 0; i < MAX_DNSIPS; i++ ) {
+		int32_t numDns = 0;
+		for ( int32_t i = 0; i < MAX_DNSIPS; i++ ) {
 			if ( g_conf.m_dnsIps[i] == 0 ) continue;
 			ds->m_dnsIps[0][numDns] = g_conf.m_dnsIps[i];
 			numDns++;
@@ -668,10 +668,10 @@ bool Dns::getIp ( char *hostname ,
 	if ( ! sendToNextDNS ( ds , TIMEOUT_SINGLE_HOST ) ) return false;
 
 	// debug msg
-	log(LOG_DEBUG,"dns: Removing3 key %llu from table. "
-	    "parentKey=%llu callback=%lu state=%lu.",
+	log(LOG_DEBUG,"dns: Removing3 key %"UINT64" from table. "
+	    "parentKey=%"UINT64" callback=%"UINT32" state=%"UINT32".",
 	    hostKey64,parentKey,
-		(unsigned long)callback,(unsigned long)state);
+		(uint32_t)callback,(uint32_t)state);
 	// if we made it here, remove from table
 	s_dnstable.removeKey ( finalKey ) ;
 	// should we free it
@@ -703,8 +703,8 @@ bool Dns::getIpOfDNS ( DnsState *ds ) {
 	}
 	// sanity check
 	if ( LOOP_BUF_SIZE / (sizeof(DnsState) - LOOP_BUF_SIZE) < 3 ) {
-		log("dns: Increase LOOP_BUF_SIZE, %li, in Dns.h.",
-		    (long)LOOP_BUF_SIZE);
+		log("dns: Increase LOOP_BUF_SIZE, %"INT32", in Dns.h.",
+		    (int32_t)LOOP_BUF_SIZE);
 		char *xx = NULL; *xx = 0; 
 	}
 	// increment the loop count, we can only use m_buf so many times
@@ -714,21 +714,21 @@ bool Dns::getIpOfDNS ( DnsState *ds ) {
 	ds2->m_startTime = ds->m_startTime;
 	// or if we have too many ips already, do not bother adding more
 	if (ds->m_numDnsIps[ds->m_depth]>=MAX_DNS_IPS){
-		log("dns: Already have %li ips at depth %li.",
-		    (long)MAX_DNS_IPS,(long)ds->m_depth);
+		log("dns: Already have %"INT32" ips at depth %"INT32".",
+		    (int32_t)MAX_DNS_IPS,(int32_t)ds->m_depth);
 		g_errno=EBUFTOOSMALL;
 		return true;
 	}
 	// do not do this!  this will break!
-	// long n         = ds->m_hostnameKey.n0 % numNames;
-	long  n           = 0; // first is usually ns1, usually better
+	// int32_t n         = ds->m_hostnameKey.n0 % numNames;
+	int32_t  n           = 0; // first is usually ns1, usually better
  loop:
 	// get the name to get the ip for
-	long  depth       = ds->m_depth;
-	long  numNames    = ds->m_numDnsNames[depth];
+	int32_t  depth       = ds->m_depth;
+	int32_t  numNames    = ds->m_numDnsNames[depth];
 	char *hostname    = ds->m_dnsNames[depth][n];
-	long  hostnameLen = gbstrlen(hostname);
-	long  ip          = 0;
+	int32_t  hostnameLen = gbstrlen(hostname);
+	int32_t  ip          = 0;
 	// loop over all dnsnames in case one causes a circular dependency
 	// . remove him from the array so we do not do him again
 	// . actually, this is not a guarantee, so we put a circular
@@ -786,11 +786,11 @@ bool Dns::getIpOfDNS ( DnsState *ds ) {
 			    iptoa(ip));
 		}
 		else {
-			long depth = ds->m_depth;
+			int32_t depth = ds->m_depth;
 			log(LOG_DEBUG,
-				"dns: Added ip [1-%ld] %s to depth %li for %s.",
+				"dns: Added ip [1-%"INT32"] %s to depth %"INT32" for %s.",
 		    		ds->m_numDnsIps[depth],
-		    		iptoa(ip),(long)depth,ds->m_hostname);
+		    		iptoa(ip),(int32_t)depth,ds->m_hostname);
 			ds->m_dnsIps[depth][ds->m_numDnsIps[depth]++] = ip ;
 		}
 	}
@@ -798,7 +798,7 @@ bool Dns::getIpOfDNS ( DnsState *ds ) {
 	return true;
 }
 
-void gotIpOfDNSWrapper ( void *state , long ip ) {
+void gotIpOfDNSWrapper ( void *state , int32_t ip ) {
 	DnsState *ds = (DnsState *)state;
 	// log debug msg
 	//DnsState *ds2 = (DnsState *)ds->m_buf;
@@ -819,12 +819,12 @@ void gotIpOfDNSWrapper ( void *state , long ip ) {
 			    iptoa(ip));
 		}
 		else {
-			long depth = ds->m_depth;
+			int32_t depth = ds->m_depth;
 			ds->m_dnsIps[depth][ds->m_numDnsIps[depth]++] = ip ;
 			log(LOG_DEBUG,
-				"dns: Added ip [2-%ld] %s to depth %li for %s.",
+				"dns: Added ip [2-%"INT32"] %s to depth %"INT32" for %s.",
 				ds->m_numDnsIps[depth],
-		    		iptoa(ip),(long)depth,ds->m_hostname);
+		    		iptoa(ip),(int32_t)depth,ds->m_hostname);
 		}
 	}
 	// disregard any g_errnos cuz we will try again
@@ -849,20 +849,20 @@ void gotIpOfDNSWrapper ( void *state , long ip ) {
 }
 
 // returns false if blocked, sets g_errno and returns true otherwise
-bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
+bool Dns::sendToNextDNS ( DnsState *ds , int32_t timeout ) {
 	//log(LOG_DEBUG, "dns: sendToNextDNS depth %d", ds->m_depth);
 	// let's clear g_errno since caller may have set it in gotIp()
 	g_errno = 0;
-	// if we have been at this too long, give up
-	long now = getTime(); // time(NULL);//getTimeLocal();
-	long delta = now - ds->m_startTime;
+	// if we have been at this too int32_t, give up
+	int32_t now = getTime(); // time(NULL);//getTimeLocal();
+	int32_t delta = now - ds->m_startTime;
 	// quick fix if the system clock was changed on us
 	if ( delta < 0   ) ds->m_startTime = now;
 	//if ( delta > 100 ) ds->m_startTime = now;
 	if ( delta > TIMEOUT_TOTAL  ) {
 		log(LOG_DEBUG,"dns: Timing out the request for %s. Took over "
-		    "%li seconds. delta=%li. now=%li.",
-		    ds->m_hostname,(long)TIMEOUT_TOTAL,delta,now);
+		    "%"INT32" seconds. delta=%"INT32". now=%"INT32".",
+		    ds->m_hostname,(int32_t)TIMEOUT_TOTAL,delta,now);
 		if ( ds->m_errno ) g_errno = ds->m_errno;
 		else               g_errno = EDNSTIMEDOUT; 
 		return true;
@@ -871,7 +871,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 	// we've tried to ask too many nameservers already
 	if ( ds->m_numTried >= MAX_TRIED_IPS ) {
 		log(LOG_INFO,"dns: Asked maximum number of name servers, "
-		     "%li, for %s. Timing out.",(long)MAX_TRIED_IPS,
+		     "%"INT32", for %s. Timing out.",(int32_t)MAX_TRIED_IPS,
 		    ds->m_hostname);
 		if ( ds->m_errno ) g_errno = ds->m_errno;
 		else               g_errno = EDNSTIMEDOUT; 
@@ -880,28 +880,28 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 	// get the current depth. if we exhaust all nameserver ips at this
 	// depth we may have to decrease it until we find some nameservers
 	// we haven't yet asked.
-	long depth = ds->m_depth;
+	int32_t depth = ds->m_depth;
 
  top:
  	log(LOG_DEBUG, "dns: at 'top' for '%s'", ds->m_hostname);
-	long n = -1;
+	int32_t n = -1;
 	// how many ip do we have at this depth level? save this for 
 	// comparing down below.
-	long numDnsIps = ds->m_numDnsIps[depth];
+	int32_t numDnsIps = ds->m_numDnsIps[depth];
 	// each DnsState has a list of ips of the nameservers to ask
 	// but which one we ask first depends on this hash
 	if ( ds->m_numDnsIps[depth] > 0 ) {
 		// easy var
-		long num = ds->m_numDnsIps[depth];
+		int32_t num = ds->m_numDnsIps[depth];
 		// . pick the first candidate to send to
 		// . this should not always be zero because picking the groupId
 		//   and hostId to send to is now in Dns::getResponsibleHost()
 		//   and uses key.n1 exclusively
 		n = ds->m_hostnameKey.n0 % num;
 		// conenvience ptr
-		long *ips = ds->m_dnsIps[depth];
+		int32_t *ips = ds->m_dnsIps[depth];
 		// save
-		long orign = n;
+		int32_t orign = n;
 		do {
 			if (!isTimedOut(ips[n]))
 				break;
@@ -917,17 +917,17 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 
 	// . save n for wrap check below, to make sure we do not re-ask him
 	// . this may be -1 if we did not have any dns ips to pick from
-	long startn = n;
+	int32_t startn = n;
 
 	// is the nth ip the next best candidate to send the request to?
  checkip:
 	// get the nth ip
-	long ip = 0;
+	int32_t ip = 0;
 	if ( n >= 0 ) ip = ds->m_dnsIps[depth][n];
 	// loop over all the ips of nameservers we've already tried and make 
 	// sure this one is not one of them. only check if n is valid (>=0)
 	bool tried = false;
-	for ( long i = 0 ; n >=0 && i < ds->m_numTried ; i++ ) {
+	for ( int32_t i = 0 ; n >=0 && i < ds->m_numTried ; i++ ) {
 		// check next tried ip if this one does not match.
 		if ( ip != ds->m_triedIps[i] ) continue;
 		// we've already tried this ip, do not send to it again
@@ -1002,7 +1002,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 		// log this...
 		ds->m_fallbacks[depth]++;
 		log(LOG_DEBUG,
-			"dns: depth %ld/%ld rootTLD %d #fb %ld #ip %ld #name %ld",
+			"dns: depth %"INT32"/%"INT32" rootTLD %d #fb %"INT32" #ip %"INT32" #name %"INT32"",
 			depth, ds->m_depth,
 			ds->m_rootTLD[depth],
 			ds->m_fallbacks[depth],
@@ -1042,12 +1042,12 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 	char *msg = ds->m_request;
 
 	// . the dns header has this format:
-        // . u_short dns_id;          /* client query ID number */
-        // . u_short dns_flags;       /* qualify contents <see below> */
-        // . u_short dns_q_count;     /* number of questions */
-        // . u_short dns_rr_count;    /* number of answer RRs */
-        // . u_short dns_auth_count;  /* number of authority RRs */
-        // . u_short dns_add_count;   /* number of additional RRs */
+        // . u_int16_t dns_id;          /* client query ID number */
+        // . u_int16_t dns_flags;       /* qualify contents <see below> */
+        // . u_int16_t dns_q_count;     /* number of questions */
+        // . u_int16_t dns_rr_count;    /* number of answer RRs */
+        // . u_int16_t dns_auth_count;  /* number of authority RRs */
+        // . u_int16_t dns_add_count;   /* number of additional RRs */
 
 	// HACK: if udpserver's transId is too big for us, reset it
 	if(m_udpServer.m_nextTransId > 65535 ) 
@@ -1055,11 +1055,11 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 	// . first word is id (not really that releveant since queried domain
 	//   should also be in response)
 	// . steal the transId from our g_udpServer
-	unsigned short transId = m_udpServer.m_nextTransId;
-	// . *(unsigned short *) msg = htons ( m_dnsTransId++ );
+	uint16_t transId = m_udpServer.m_nextTransId;
+	// . *(uint16_t *) msg = htons ( m_dnsTransId++ );
 	// . UdpServer will inc it's m_transId in UdpServer::sendRequest()
 	//   when it calls getTransId()
-	*(unsigned short *) msg = htons ( transId );
+	*(uint16_t *) msg = htons ( transId );
 	// . some fancy foot work (big endian here) this byte is msg[2]
 	// .     qr: 1; /* response flag (high bit)*/
 	// . opcode: 4; /* purpose of message */   0 = query, 1=invQuery, ...
@@ -1090,10 +1090,10 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 	//msg[2] = 0x04;
 	msg[3] = 0;
 	// rr means resource record
-	*(short *)(msg + 4  ) = htons ( 1 ); // we have 1 question
-	*(short *)(msg + 6  ) = 0          ; // we have 0 answer    rr's
-	*(short *)(msg + 8  ) = 0          ; // we have 0 authority rr's
-	*(short *)(msg + 10 ) = 0          ; // we have 0 addition  rr's
+	*(int16_t *)(msg + 4  ) = htons ( 1 ); // we have 1 question
+	*(int16_t *)(msg + 6  ) = 0          ; // we have 0 answer    rr's
+	*(int16_t *)(msg + 8  ) = 0          ; // we have 0 authority rr's
+	*(int16_t *)(msg + 10 ) = 0          ; // we have 0 addition  rr's
 
 	// ask for MX record? used by Emailer in Facebook.cpp.
 	char *hostname = ds->m_hostname;
@@ -1125,10 +1125,10 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 		//log(LOG_DEBUG,"dns: name delimit");
 		// . each "name" in the hostname must be less than 64 bytes
 		// . the 2 high bits are set for compression
-		long nlen = start - end;
+		int32_t nlen = start - end;
 		if ( nlen >= 64 ) {
 			g_errno = EHOSTNAMETOOBIG;
-			log(LOG_INFO,"dns: Request's host component is %li bytes. "
+			log(LOG_INFO,"dns: Request's host component is %"INT32" bytes. "
 			    "Must be under 64.",nlen);
 			return true;
 		}
@@ -1155,7 +1155,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 	len[3] = 0; // query class (network order)
 	len[4] = 1; // query class (network order)
 	// compute the msgSize
-	//long msgSize = (char *)len - msg + 5 ;
+	//int32_t msgSize = (char *)len - msg + 5 ;
 	ds->m_requestSize = (char *)len - msg + 5 ;
 	// copy the msg into an alloc'd buffer
 	// char *copy = mdup ( msg , msgSize );
@@ -1163,10 +1163,10 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 
 	// debug msg
 	log(LOG_DEBUG,
-		"dns: Asking %s (depth=%li,%li) att %li "
-		"for ip of %s (tid=%li)",
-		iptoa(ds->m_dnsIps[depth][n]), (long)depth,(long)n,
-		(long) ds->m_numTried, ds->m_hostname , (long)transId);
+		"dns: Asking %s (depth=%"INT32",%"INT32") att %"INT32" "
+		"for ip of %s (tid=%"INT32")",
+		iptoa(ds->m_dnsIps[depth][n]), (int32_t)depth,(int32_t)n,
+		(int32_t) ds->m_numTried, ds->m_hostname , (int32_t)transId);
 
 	UdpSlot *slotPtr = NULL;
 	// . queue a send
@@ -1205,7 +1205,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , long timeout ) {
 		return true;
 	}
 	// store a hack for PageSockets.cpp to print out the hostname
-	slotPtr->m_tmpVar = (long)ds->m_hostname;
+	slotPtr->m_tmpVar = (int32_t)ds->m_hostname;
 	// return 0 cuz we're blocking on the reply
 	log(LOG_DEBUG, "dns: SendToNextDNS blocking on reply for '%s'",
 		ds->m_hostname);
@@ -1225,7 +1225,7 @@ void gotIpWrapper ( void *state , UdpSlot *slot ) {
 	// get our Dns server
 	// Dns *THIS = ds->m_this;
 	// set ip to -1 to indicate dns transaction error
-	long ip = -1;
+	int32_t ip = -1;
 	// THIS is obsolete because we got s_dnstable now.
 	// sometimes a parallel request might have thrown it in the cache
 	// and we timeout because the dns is pissed at us hitting it with
@@ -1255,7 +1255,7 @@ void gotIpWrapper ( void *state , UdpSlot *slot ) {
 			    iptoa(slot->m_ip));
 		}
 		// try again? yes, if we timed out on router1's bind9
-		long len = gbstrlen(BACKUPDNS);
+		int32_t len = gbstrlen(BACKUPDNS);
 		if ( ds->m_dnsIps[0][0] != atoip(BACKUPDNS,len) ) {
 			g_errno = ETRYAGAIN;
 			//ds->m_depth++;
@@ -1267,10 +1267,10 @@ void gotIpWrapper ( void *state , UdpSlot *slot ) {
 		}
 	}
 	// debug msg
-	//log("got %s [%lu] for %s",iptoa(ip),ip,ds->m_hostname );
+	//log("got %s [%"UINT32"] for %s",iptoa(ip),ip,ds->m_hostname );
 	// bitch on error
 	if ( g_errno ) {
-		//long type = LOG_WARN;
+		//int32_t type = LOG_WARN;
 		// . these can be those SERVFAIL messages we get from nslookup
 		//   usually when a domain name has disappeared from radar
 		// . might also happen if recursive-clients is set too low
@@ -1295,7 +1295,7 @@ void gotIpWrapper ( void *state , UdpSlot *slot ) {
 		     // was then logging "skipping ip 8.8.8.8 - timed out"
 		     // and we were missing out!
 		     g_conf.m_askRootNameservers ) {
-			long timestamp = getTime();
+			int32_t timestamp = getTime();
 			key_t k;
 			k.n0 = 0LL;
 			k.n1 = slot->m_ip;
@@ -1342,7 +1342,7 @@ void gotIpWrapper ( void *state , UdpSlot *slot ) {
 }
 
 // caller should set g_errno because we call the callbacks here
-void returnIp ( DnsState *ds , long ip ) {
+void returnIp ( DnsState *ds , int32_t ip ) {
 	// ok, we got the final answer at this point
 	// debug msg
 	char *pre = "";
@@ -1358,7 +1358,7 @@ void returnIp ( DnsState *ds , long ip ) {
 	// not thread safe
 	//if ( g_threads.amThread() ) { char *xx = NULL; *xx = 0; }
 	// save g_errno
-	long err = g_errno;
+	int32_t err = g_errno;
 	// if we timed out, cache this so future lookups are fast
 	// but only give it a ttl of about a day so we can retry a day later
 	// with a fresh lookup. and add a -1 to the cache instead of a zero
@@ -1372,7 +1372,7 @@ void returnIp ( DnsState *ds , long ip ) {
 	// like www.castleburyinn.com then we don't wait for a 30 second
 	// timeout 100 times in a row. 
 	bool cache = false;
-	// no longer cache these! i think the spider should evenly sample
+	// no int32_ter cache these! i think the spider should evenly sample
 	// every other IP address before returning to the timed out IP address...
 	// ideally. plus i added the google public dns 8.8.8.8 as a secondary
 	// dns ip to fallback to in the case of timeouts i guess... so make
@@ -1425,23 +1425,27 @@ void returnIp ( DnsState *ds , long ip ) {
 	// save parent for debugging purposes
 	int64_t parentKey = key;
 	// how many in the list?
-	long listSize = ce->m_listSize;
+	int32_t listSize = ce->m_listSize;
 	// only the nodes in this list have this id
-	long listId   = ce->m_listId;
+	int32_t listId   = ce->m_listId;
 	// go through each node in the linked list
-	long count = 0;
+	int32_t count = 0;
 	while ( ce ) {
 		// restore g_errno
 		g_errno = err;
 		// get the next one to call in the linked list
 		int64_t nextKey = ce->m_nextKey;
 		// debug msg
-		log(LOG_DEBUG,"dns: Removing key %llu from table. "
-		    "parentKey=%llu nextKey=%llu callback=%lu state=0x%lx.",
-		    key,parentKey,nextKey,
-			(unsigned long)ce->m_callback,(unsigned long)ce->m_state);
+		log(LOG_DEBUG,"dns: Removing key %"UINT64" from table. "
+		    "parentKey=%"UINT64" nextKey=%"UINT64" callback=%"UINT32" "
+		    "state=0x%"XINT32".",
+		    key,
+		    parentKey,
+		    nextKey,
+		    (uint32_t)ce->m_callback,
+		    (uint32_t)ce->m_state);
 		// get stuff
-		void (* callback ) ( void *state , long ip );
+		void (* callback ) ( void *state , int32_t ip );
 		callback    = ce->m_callback;
 		void *state = ce->m_state;
 		// remove from hash table, so if this was the parent node
@@ -1451,8 +1455,8 @@ void returnIp ( DnsState *ds , long ip ) {
 		// and NEVER get called.
 		s_dnstable.removeKey ( key );
 		// debug msg
-		log(LOG_DEBUG,"dns: table now has %li used slots.",
-		    (long)s_dnstable.getNumSlotsUsed());
+		log(LOG_DEBUG,"dns: table now has %"INT32" used slots.",
+		    (int32_t)s_dnstable.getNumSlotsUsed());
 		// then call the callback
 		// CAREFUL: calling this callback can alter the hash
 		// table (if it is a dns wrapper callback) and move what
@@ -1490,7 +1494,7 @@ void returnIp ( DnsState *ds , long ip ) {
 
 	// debug msg
 	if ( g_conf.m_logDebugDns ) 
-		log(LOG_DEBUG,"dns: Called %li callbacks for %s.",
+		log(LOG_DEBUG,"dns: Called %"INT32" callbacks for %s.",
 		    count,tmp);
 
 	// free our state holding structure
@@ -1499,12 +1503,12 @@ void returnIp ( DnsState *ds , long ip ) {
 	// debug check
 	if ( count == listSize ) return;
 
-	log("dns: Only called %li callbacks out of %li. Critical "
+	log("dns: Only called %"INT32" callbacks out of %"INT32". Critical "
 	    "error. Scanning table for missing callback.",count,listSize);
 
  loop:
 	// scan for the missing guys
-	for ( long i = 0 ; i < s_dnstable.getNumSlots() ; i++ ) {
+	for ( int32_t i = 0 ; i < s_dnstable.getNumSlots() ; i++ ) {
 		// get its key
 		key = s_dnstable.getKey(i);
 		// skip if empty. a key of 0LL signifies an empty bucket/slot.
@@ -1516,7 +1520,7 @@ void returnIp ( DnsState *ds , long ip ) {
 		// call its callback
 		ce->m_callback ( ce->m_state , ip );
 		// note it
-		log("dns: Calling callback for slot #%li.",i);
+		log("dns: Calling callback for slot #%"INT32".",i);
 		// remove it. restart from top in case table shrank
 		s_dnstable.removeKey ( key );
 		goto loop;
@@ -1536,7 +1540,7 @@ char *getRRName ( char *rr , char *dgram, char *end ) {
 		// is compression bit set?
 		while ( *p & 0xc0 ) {
 			// we are jumping within the dgram
-			p = dgram +(ntohs(*(short *)p)&0x3fff);
+			p = dgram +(ntohs(*(int16_t *)p)&0x3fff);
 			// bust out of while loop if we should
 			if ( !*p || p>=end || p<dgram ) break;
 		}
@@ -1567,7 +1571,7 @@ char *getRRName ( char *rr , char *dgram, char *end ) {
 // . otherwise, returns the ip
 // . NOTE: we also call HostMap::stampHost() here rather than override readPoll
 // . TODO: update timestamp for this dns server
-long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
+int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	log(LOG_DEBUG, "dns: gotIp called for '%s'", ds->m_hostname);
 	//log(LOG_DEBUG, "dns: gotIp depth %d", ds->m_depth);
 	// get the hostname from the request's query record
@@ -1577,7 +1581,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		return 0;
 	}
 	// how many query records in the record heap?
-	short qdcount = ntohs (*(short *)(dgram + 4 )) ; 
+	int16_t qdcount = ntohs (*(int16_t *)(dgram + 4 )) ; 
 	// we better have 1 and only 1 query record
 	if ( qdcount != 1 ) {
 		log(LOG_DEBUG, "dns: more than one query record for '%s'",
@@ -1594,17 +1598,17 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		return -1; 
 	}
 	// get the size of the read buf
-	long dgramSize = slot->m_readBufSize;
+	int32_t dgramSize = slot->m_readBufSize;
 	// return -1 if too small
 	if ( dgramSize < 12 ) { 
 		log(LOG_INFO,"dns: Nameserver (%s) returned bad "
-		    "reply size of %li bytes which is less than 12 bytes.",
+		    "reply size of %"INT32" bytes which is less than 12 bytes.",
 		    iptoa(slot->m_ip),dgramSize);
 		g_errno = EBADREPLY; 
 		return -1; 
 	}
 	// get the response code (lower 4 bits of byte #3)
-	long rcode = dgram[3] & 0x0f;
+	int32_t rcode = dgram[3] & 0x0f;
 	// . return -1 if response code indicates an error
 	// . set g_errno as well
 	switch ( rcode ) {
@@ -1651,7 +1655,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		g_errno = EDNSREFUSED;
 		return -1;
 	default: log(LOG_INFO,"dns: Nameserver (%s) returned unknown "
-		    "return code = %li.",
+		    "return code = %"INT32".",
 		    iptoa(slot->m_ip), rcode ); 
 		g_errno = EBADREPLY;
 		return -1;
@@ -1669,13 +1673,13 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	// otherwise if rcode is 3 then the name really does not exist so ret 0
 	if ( rcode == 3 ) return 0;
 	// how many query & answer records in the record heap?
-	qdcount = ntohs (*(short *)(dgram + 4 )) ; 
+	qdcount = ntohs (*(int16_t *)(dgram + 4 )) ; 
 	// . we better have 1 query record
 	// . return -1 on error
 	if ( qdcount != 1 ) { 
 		g_errno = EBADREPLY; 
 		log (LOG_INFO,"dns: Nameserver (%s) returned query count "
-		     "of %li (not 1).", iptoa(slot->m_ip),(long)qdcount);
+		     "of %"INT32" (not 1).", iptoa(slot->m_ip),(int32_t)qdcount);
 		return -1; 
 	}
 	// . now we should have our answer here
@@ -1684,13 +1688,13 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	//   we need to ask those servers. and the additional section
 	//   will have the ip addresses of those servers sometimes. that is
 	//   why we need to check that section first for ips.
-	short ancount = ntohs (*(short *)(dgram + 6 )) ; // answer
-	short nscount = ntohs (*(short *)(dgram + 8 )) ; // authority
-        short arcount = ntohs (*(short *)(dgram + 10 )); // additional
+	int16_t ancount = ntohs (*(int16_t *)(dgram + 6 )) ; // answer
+	int16_t nscount = ntohs (*(int16_t *)(dgram + 8 )) ; // authority
+        int16_t arcount = ntohs (*(int16_t *)(dgram + 10 )); // additional
  	if ( ancount < 0 ) { 
 		g_errno = EBADREPLY; 
 		log ("dns: Nameserver (%s) returned a negative answer count "
-		     "of %li.", iptoa(slot->m_ip),(long)ancount);
+		     "of %"INT32".", iptoa(slot->m_ip),(int32_t)ancount);
 		return -1; 
 	}
 
@@ -1721,11 +1725,11 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	// . now we should point to to the meat of the resource record
 	// . we should have "ancount" resource records
 	// . here's the format of one resource record (length is 12 bytes)
-	// . u_short rr_type;     /* RR type code (e.g. A, MX, NS, etc.) */
-        // . u_short rr_class;    /* RR class code (IN for Internet) */
-        // . u_long  rr_ttl;      /* Time-to-live for resource */
-        // . u_short rr_rdlength; /* length of RDATA field (in octets) */
-        // . u_short rr_rdata;    /* (fieldname used as a ptr) */
+	// . u_int16_t rr_type;     /* RR type code (e.g. A, MX, NS, etc.) */
+        // . u_int16_t rr_class;    /* RR class code (IN for Internet) */
+        // . u_int32_t  rr_ttl;      /* Time-to-live for resource */
+        // . u_int16_t rr_rdlength; /* length of RDATA field (in octets) */
+        // . u_int16_t rr_rdata;    /* (fieldname used as a ptr) */
 
 	// . here's SOME values for rr_type field
 	// . A     1   IP Address (32-bit IP version 4)
@@ -1789,8 +1793,8 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	}
 	// . store the ips of the nameservers we have to ask into "ips"
 	// . throw these ips into the next depth level, though
-	long *ips = NULL;
-	long  numIps = 0;
+	int32_t *ips = NULL;
+	int32_t  numIps = 0;
 	// but may be too deep, make sure we can increase the depth by 1
 	if ( ds->m_depth + 1 < MAX_DEPTH ) {
 		ips         = ds->m_dnsIps  [ds->m_depth+1];
@@ -1805,13 +1809,13 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	if ( strncmp(ds->m_hostname,"gbmxrec-",8) == 0 ) 
 		getmx = true;
 
-	short mailPreference = -1;
+	int16_t mailPreference = -1;
 	// scan ALL answer records for ips and select the minimum
-	unsigned long minIp = 0;
-	long          minttl = 15;
+	uint32_t minIp = 0;
+	int32_t          minttl = 15;
 	bool gotIp = false;
 	//while ( ancount-- ) {
-	long maxi = ancount;
+	int32_t maxi = ancount;
 	// seems like mx records themselves are type 15 and are only
 	// text, the answer sections has the ips
 	if ( getmx ) maxi = ancount + nscount + arcount;
@@ -1820,7 +1824,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	tldip.numTLDIPs = 0;
 	int64_t answerHash64 = 0LL;
 
-	for ( long i = 0 ; i < maxi; i++ ) {
+	for ( int32_t i = 0 ; i < maxi; i++ ) {
 		// well, this is the name of the record
 		// kinda, so this is how we will map
 		// an MX resource record to its A record
@@ -1858,15 +1862,15 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 			return -1;
 		}
 		// the type (A=1,CNAME=5,...)
-		short rrtype = ntohs ( *(short *)rr);
+		int16_t rrtype = ntohs ( *(int16_t *)rr);
 		rr += 2;
 		// skip the rr class(2)
 		rr += 2;
 		// skip the ttl(4)
-		long ttl = ntohl(*(long *)rr);
+		int32_t ttl = ntohl(*(int32_t *)rr);
 		rr += 4;
 		// get the length of the rr data (sometimes ip)
-		short rlen = ntohs ( *(short *)rr);
+		int16_t rlen = ntohs ( *(int16_t *)rr);
 		// skip to the actual resource data
 		rr += 2;
 
@@ -1920,9 +1924,9 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 			char *p = rr;
 			char *pend = p + rlen;
 
-			// for mx records, i think we got a short mx #
+			// for mx records, i think we got a int16_t mx #
 			if ( rrtype == 15 ) {
-				mailPreference = ntohs(*(short *)p);
+				mailPreference = ntohs(*(int16_t *)p);
 				p += 2;
 			}
 
@@ -1930,7 +1934,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 				// is compression bit set?
 				while ( *p & 0xc0 ) {
 					// we are jumping within the dgram
-					p = dgram +(ntohs(*(short *)p)&0x3fff);
+					p = dgram +(ntohs(*(int16_t *)p)&0x3fff);
 					// bust out of while loop if we should
 					if ( !*p || p>=pend || p<dgram ) break;
 				}
@@ -1968,11 +1972,11 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 			// if it was a NS name, do that
 			if ( rrtype == 2 ) {
 				log(LOG_DEBUG,
-					"dns: Added name [0-%ld] %s to "
-					"depth %li for %s.",
+					"dns: Added name [0-%"INT32"] %s to "
+					"depth %"INT32" for %s.",
 					ds->m_numDnsNames[ds->m_depth+1],
 					ds->m_nameBufPtr,
-					(long)ds->m_depth+1,
+					(int32_t)ds->m_depth+1,
 					ds->m_hostname);
 				ds->m_dnsNames[ds->m_depth+1]
 					[ds->m_numDnsNames[ds->m_depth+1]++] = 
@@ -1996,13 +2000,13 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 				// we will fail looking up www.astronomy.org.nz
 				ds->m_numTried = 0;
 				// hostname changes now
-				long len = gbstrlen(ds->m_nameBufPtr);
+				int32_t len = gbstrlen(ds->m_nameBufPtr);
 				if ( len > 127 ) {
 					/*
 					  this spams the log!
 					log(LOG_INFO,
-					    "dns: Aliased hostname %s is %li > "
-					    "127 chars long.",ds->m_nameBufPtr,len);
+					    "dns: Aliased hostname %s is %"INT32" > "
+					    "127 chars int32_t.",ds->m_nameBufPtr,len);
 					*/
 					g_errno = EBUFTOOSMALL;
 					return -1;
@@ -2013,7 +2017,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 				ds->m_hostname[len] = 0;
 
 				// so we have to start over...
-				long d = ds->m_depth+1;
+				int32_t d = ds->m_depth+1;
 				const TLDIPEntry*	cached;
 				if ( g_conf.m_askRootNameservers && 
 				    (cached = getTLDIP(ds))) {
@@ -2059,8 +2063,8 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		//if ( rrtype != 5 ) {
 		//	g_errno = EBADREPLY;
 		//	log("dns: Nameserver (%s) returned "
-		//	    "a bad rr type of %li.", iptoa(slot->m_ip),
-		//	    (long)rrtype);
+		//	    "a bad rr type of %"INT32".", iptoa(slot->m_ip),
+		//	    (int32_t)rrtype);
 		//	return -1;
 		//}
 	
@@ -2075,10 +2079,10 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		// . now "s" should pt to the resource data, hopefully the ip
 		// . add another ip to our array and inc numIps
 		// . ips should be in network order
-		unsigned long ip ; memcpy ( (char *)&ip , rr , 4 );
+		uint32_t ip ; memcpy ( (char *)&ip , rr , 4 );
 
 		// verisign's ip is a does not exist
-		if ( (long)ip == 0x0b6e5e40) { //atoip ( "64.94.110.11",12)) {
+		if ( (int32_t)ip == 0x0b6e5e40) { //atoip ( "64.94.110.11",12)) {
 			log( LOG_INFO,
 			     "dns: Nameserver (%s) got Verislime's IP. "
 			     "Assuming domain name "
@@ -2088,7 +2092,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		}
 
 		unsigned char *ipstr = (unsigned char *)&ip;
-		if ( (long)ip == 0x0100007f || // aotip("127.0.0.1")
+		if ( (int32_t)ip == 0x0100007f || // aotip("127.0.0.1")
 		     (ipstr[0]==192 && ipstr[1]==168) ||
 		     (ipstr[0]==172 && ipstr[1]>=16 && ipstr[1]<=31) ||
 		     (ipstr[0]==10 ) ) {
@@ -2120,9 +2124,9 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 			else {
 				ips[numIps] = ip;
 				log(LOG_DEBUG,
-					"dns: Added ip [0-%ld] %s to depth %li "
+					"dns: Added ip [0-%"INT32"] %s to depth %"INT32" "
 					"for %s.",
-					numIps, iptoa(ip),(long)ds->m_depth+1,
+					numIps, iptoa(ip),(int32_t)ds->m_depth+1,
 					ds->m_hostname);
 				numIps++;
 			}
@@ -2169,8 +2173,8 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	// bail if already went too deep
 	if ( ! ips ) {
 		g_errno = EBADREPLY;
-		log(LOG_INFO,"dns: Exceeded max recursion depth of %li for %s",
-		    (long)MAX_DEPTH,ds->m_hostname);
+		log(LOG_INFO,"dns: Exceeded max recursion depth of %"INT32" for %s",
+		    (int32_t)MAX_DEPTH,ds->m_hostname);
 		return -1;
 	}
 	// if we did not get more nameserver ips to ask, this was a dead end
@@ -2185,7 +2189,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	// set up ds2
 	ds->m_numDnsIps[ds->m_depth] = numIps;
 	log(LOG_DEBUG,
-		"dns: depth +%ld rootTLD %d #fb %ld #ip %ld #name %ld",
+		"dns: depth +%"INT32" rootTLD %d #fb %"INT32" #ip %"INT32" #name %"INT32"",
 		ds->m_depth,
 		ds->m_rootTLD[ds->m_depth],
 		ds->m_fallbacks[ds->m_depth],
@@ -2193,7 +2197,7 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		ds->m_numDnsNames[ds->m_depth]);
 
 	// initialize next depth level
-	long d1 = ds->m_depth + 1;
+	int32_t d1 = ds->m_depth + 1;
 	ds->m_rootTLD[d1] = false;
 	ds->m_fallbacks[d1] = 0;
 	ds->m_numDnsIps[d1] = 0;
@@ -2205,14 +2209,14 @@ long Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 	return -1;
 }
 
-bool Dns::isInCache ( key_t key , long *ip ) {
+bool Dns::isInCache ( key_t key , int32_t *ip ) {
 	// debug msg
 	//log("dns::isInCache: checking");
 	// . returns 0 if not in cache
 	// . returns -1 if a cached not-found
 	// . otherwise returns ip of "hostname"
 	// . any cache entry over 24hrs is stale
-	long   maxAge = DNS_CACHE_MAX_AGE; // 60*60*24; 
+	int32_t   maxAge = DNS_CACHE_MAX_AGE; // 60*60*24; 
 	// . look up the ip in the cache
 	// . TODO: can you pass a NULL ptr for the dataSize?
 	// . TODO: is it ok to leave the caller hanging??
@@ -2221,7 +2225,7 @@ bool Dns::isInCache ( key_t key , long *ip ) {
 	RdbList list;
 	// if not found, return false;
 	char *rec;
-	long  recSize;
+	int32_t  recSize;
 	// return false if not in cache
 	if ( ! m_rdbCache.getRecord ( (collnum_t)0 ,
 				      key      , 
@@ -2233,24 +2237,24 @@ bool Dns::isInCache ( key_t key , long *ip ) {
 		return false;
 	// recSize must be 4 -- sanity check
 	if ( recSize != 4 ) 
-		return log("dns: Got bad record of size %li from cache.",
+		return log("dns: Got bad record of size %"INT32" from cache.",
 			   recSize);
 	// the data ptr itself is the ip
-	*ip = *(long *)rec ;
+	*ip = *(int32_t *)rec ;
 	// return true since we found it
 	return true;
 }
 
 // ttl is in seconds
-void Dns::addToCache ( key_t hostnameKey , long ip , long ttl ) {
+void Dns::addToCache ( key_t hostnameKey , int32_t ip , int32_t ttl ) {
 	// debug msg
-	log(LOG_DEBUG, "dns: addToCache added key %llu ip %s ttl %ld to cache",
+	log(LOG_DEBUG, "dns: addToCache added key %"UINT64" ip %s ttl %"INT32" to cache",
 		hostnameKey.n0, iptoa(ip), ttl);
         // set timestamp to be maxTime (24 hours = 8640 sec) - ttl
-        long timestamp;
+        int32_t timestamp;
 	// watch out for crazy ttls, bigger than 2 days
 	if ( ttl > 60*60*24*2 ) ttl = 60*60*24*2;
-	// if ttl is less than how long we trust the cached ip for, reduce
+	// if ttl is less than how int32_t we trust the cached ip for, reduce
 	// the timestamp to fool Dns::isInCache()
         if   ( ttl > 0 ) timestamp = getTime() - DNS_CACHE_MAX_AGE + ttl;
         else             timestamp = getTime();
@@ -2278,16 +2282,16 @@ bool Dns::extractHostname ( char *dgram    ,
 			    char *hostname ) {
 
 	hostname[0] = '\0';
-	long    i = 0;
+	int32_t    i = 0;
 	char *end = dgram + DGRAM_SIZE; 
 
 	while ( *record ) {
-		short  len   = (u_char)(*record);
+		int16_t  len   = (u_char)(*record);
 		char  *src   =  record + 1;
-		long   times = 0;
+		int32_t   times = 0;
 		// if 2 hi bits on "len" are set it's a label offset
 		while ( (len & 0xc0) && times++ < 5 ) {
-			short offset = (len & 0x3f) << 8 | src[0];
+			int16_t offset = (len & 0x3f) << 8 | src[0];
 			if ( dgram + offset >= end ) {
 				g_errno = EBADREPLY; return false; }
 			len    = (u_char)(*(dgram + offset));
@@ -2319,10 +2323,10 @@ bool Dns::extractHostname ( char *dgram    ,
 
 // TODO: hostname key collision is possible, so watch out. 
 //       should we also store ptr to the whole hostname in hash table?
-bool Dns::isInFile ( key_t key , long *ip ) {
+bool Dns::isInFile ( key_t key , int32_t *ip ) {
 	// flush and reload our /etc/hosts hash table every minute
-	static long s_lastTime = 0;
-	long now = getTime();
+	static int32_t s_lastTime = 0;
+	int32_t now = getTime();
 	if ( now - 60 >= s_lastTime ) {
 		s_lastTime = now;
 		loadFile ();
@@ -2332,7 +2336,7 @@ bool Dns::isInFile ( key_t key , long *ip ) {
 	// bail if no hash table
 	if ( m_numSlots <= 0 ) return false;
 	// check hash table
-	long n = key.n1 % m_numSlots;
+	int32_t n = key.n1 % m_numSlots;
 	while ( m_ips[n] && m_keys[n] != key )
 		if ( ++n >= m_numSlots ) n = 0;
 	// return false if not found in our hash table (/etc/hosts file)
@@ -2347,12 +2351,12 @@ bool Dns::isInFile ( key_t key , long *ip ) {
 bool Dns::loadFile ( ) {
 	File f;
 	f.set ("/etc/","hosts");
-	long fsize = f.getFileSize();
+	int32_t fsize = f.getFileSize();
 	if ( fsize < 0 ) 
 		return log("dns: Getting file size of /etc/hosts : %s.",
 			     mstrerror(g_errno) );
 	// add 1 so we can NULL terminate
-	long bufSize = fsize + 1;
+	int32_t bufSize = fsize + 1;
 	// make mem
 	char *buf = (char *)mmalloc ( bufSize , "Dns" );
 	if ( ! buf ) return log("dns: Could not read /etc/hosts : %s.",
@@ -2376,11 +2380,11 @@ bool Dns::loadFile ( ) {
 	m_numSlots = 0;
 	// count # of lines in buf as upper bound for number of entries
 	char *p     = buf;
-	long  count = 0;
+	int32_t  count = 0;
 	for ( ; *p ; p++ ) if ( *p == '\n' ) count++;
 	// alloc the hash table
 	m_numSlots = count * 2;
-	m_ips  = (long  *) mmalloc ( 4             * m_numSlots , "Dns" );
+	m_ips  = (int32_t  *) mmalloc ( 4             * m_numSlots , "Dns" );
 	m_keys = (key_t *) mmalloc ( sizeof(key_t) * m_numSlots , "Dns" );
 	if ( ! m_ips || ! m_keys ) {
 		if ( m_ips ) mfree ( m_ips  , m_numSlots*4            , "Dns");
@@ -2394,9 +2398,9 @@ bool Dns::loadFile ( ) {
 	memset ( m_ips , 0 , 4 * m_numSlots );
 	// declare vars here
 	char *e;
-	long  ip;
+	int32_t  ip;
 	key_t key;
-	long  n;
+	int32_t  n;
 	// point to first line
 	p = buf;
  loop:
@@ -2443,10 +2447,10 @@ bool Dns::loadFile ( ) {
 	return true;
 }		
 
-key_t Dns::getKey ( char *hostname , long hostnameLen ) {
+key_t Dns::getKey ( char *hostname , int32_t hostnameLen ) {
 	// use the domain name name. so *.blogspot.com does not flood their dns
 	return hash96 ( hostname , hostnameLen );
-	//long  dlen = 0;
+	//int32_t  dlen = 0;
 	//char *dom  = getDomFastFromHostname ( hostname , &dlen );
 	//if ( ! dom || dlen <=2 ) return hash96 ( hostname , hostnameLen );
 	//return hash96 ( dom , dlen );
@@ -2459,18 +2463,18 @@ Host *Dns::getResponsibleHost ( key_t key ) {
 	// just keep this on this cluster now
 	Hostdb *hostdb = &g_hostdb;
 	// get the hostNum that should handle this
-	long hostId = key.n1 % hostdb->getNumHosts();
+	int32_t hostId = key.n1 % hostdb->getNumHosts();
 	// return it if it is alive
 	if ( ! hostdb->isDead ( hostId ) ) return hostdb->getHost ( hostId );
 	// how many are up?
-	long numAlive = hostdb->getNumHostsAlive();
+	int32_t numAlive = hostdb->getNumHostsAlive();
 	// NULL if none
 	if ( numAlive == 0 ) return NULL;
 	// try another hostNum
-	long hostNum = key.n1 % numAlive;
+	int32_t hostNum = key.n1 % numAlive;
 	// otherwise, chain to him
-	long count = 0;
-	for ( long i = 0 ; i < hostdb->m_numHosts ; i++ ) {
+	int32_t count = 0;
+	for ( int32_t i = 0 ; i < hostdb->m_numHosts ; i++ ) {
 		// get the ith host
 		Host *host = &hostdb->m_hosts[i];
 		// skip him if he is dead

@@ -40,9 +40,9 @@ class UdpProtocol {
 	 virtual ~UdpProtocol() {}
 
 	// every dgram needs a transaction id so we can link reply w/ request
-	virtual long  getTransId    ( const char *peek, long peekSize ) {
+	virtual int32_t  getTransId    ( const char *peek, int32_t peekSize ) {
 		if ( peekSize < 8 ) return -1;
-		return (ntohl (*(long *)(peek+4))) & 0x3fffffff;    };
+		return (ntohl (*(int32_t *)(peek+4))) & 0x3fffffff;    };
 
 	// . dns server returns false for this
 	virtual bool  useAcks () { return true; };
@@ -53,17 +53,17 @@ class UdpProtocol {
 	// . this is to avoid collisions between 2 transactions, with the
 	//   same transactionId (transId) where one of the transactions was
 	//   initiated by us and the other was initiated remotely.
-	virtual bool  didWeInitiate ( const char *peek, long peekSize ) {
+	virtual bool  didWeInitiate ( const char *peek, int32_t peekSize ) {
 		if ( peekSize < 8 ) return false;
-		return ( ntohl(*(long *)(peek+4)) & 0x80000000 ); };
+		return ( ntohl(*(int32_t *)(peek+4)) & 0x80000000 ); };
 
 	// . this bit is flipped from dns protocol
 	// . dns uses it to signify a reply, it's our weInitiated (request) bit
-	virtual bool  isReply ( const char *peek, long peekSize ) {
+	virtual bool  isReply ( const char *peek, int32_t peekSize ) {
 		return ! didWeInitiate ( peek , peekSize ); };
 
-	virtual bool hadError       ( const char *peek, long peekSize ) {
-		if ( ntohl(*(long *)(peek+4)) & 0x40000000) return true;
+	virtual bool hadError       ( const char *peek, int32_t peekSize ) {
+		if ( ntohl(*(int32_t *)(peek+4)) & 0x40000000) return true;
 		return false;
 	}
 
@@ -71,34 +71,34 @@ class UdpProtocol {
 	virtual bool stripHeaders ( ) { return true; };
 
 	// peek ahead for header (12 bytes) then 4 bytes for possible errno
-	virtual long getMaxPeekSize ( ) { return 24; };
+	virtual int32_t getMaxPeekSize ( ) { return 24; };
 
 	// . returns 0 if hadError bit is NOT set
 	// . otherwise, returns first 4 bytes of msg CONTENT as an errno
-	virtual long getErrno       ( const char *peek, long peekSize ) {
+	virtual int32_t getErrno       ( const char *peek, int32_t peekSize ) {
 		if ( peekSize < 16 ) return 0;
 		if ( ! hadError (peek,peekSize)  ) return 0;
-		return ntohl (*(long *)(peek + 12 ) ); };
+		return ntohl (*(int32_t *)(peek + 12 ) ); };
 
 	// is this dgram an ACK?
-	virtual bool  isAck         ( const char *peek, long peekSize ) {
+	virtual bool  isAck         ( const char *peek, int32_t peekSize ) {
 		if ( peekSize != 8 ) return false;
-		return ( ntohl(*(long *)peek) & 0x00800000 ); };
+		return ( ntohl(*(int32_t *)peek) & 0x00800000 ); };
 
-	virtual bool  isCancelTrans ( const char *peek, long peekSize ) {
-		return ( ntohl(*(long *)peek) & 0x00400000 ); };
+	virtual bool  isCancelTrans ( const char *peek, int32_t peekSize ) {
+		return ( ntohl(*(int32_t *)peek) & 0x00400000 ); };
 
-	virtual bool  isNice ( const char *peek, long peekSize ) {
-		return ( ntohl(*(long *)peek) & 0x00200000 ); };
+	virtual bool  isNice ( const char *peek, int32_t peekSize ) {
+		return ( ntohl(*(int32_t *)peek) & 0x00200000 ); };
 
-	// . get the key of the slot this dgram belongs to
+	// . get the key of the slot this dgram beint32_ts to
 	// . ip is in network order BUT port is in host order
 	// . this dgram is one that we read, so flip weInitiated bit
 	// . this will make the key of a reply match the key of the request
 	virtual key_t makeKey        ( const char     *header    ,
-				       long            peekSize ,
-				       unsigned long   ip , 
-				       unsigned short  port ) {
+				       int32_t            peekSize ,
+				       uint32_t   ip , 
+				       uint16_t  port ) {
 		return makeKey ( ip , port , 
 				 getTransId    ( header , 12 ) ,
 				 ! didWeInitiate ( header , 12 ) );
@@ -106,9 +106,9 @@ class UdpProtocol {
 
 	// . weInitiated is true iff we initiated this transaction
 	// . that applies to ACKs as well
-	virtual key_t makeKey ( unsigned long  ip , 
-				unsigned short port, 
-				long           transId ,
+	virtual key_t makeKey ( uint32_t  ip , 
+				uint16_t port, 
+				int32_t           transId ,
 				bool           weInitiated ) {
 		key_t key;
 		key.n1 = transId;
@@ -120,46 +120,46 @@ class UdpProtocol {
 	};
 
 	// need this so we can re-assemble dgrams in order
-	virtual long  getDgramNum   ( const char *peek, long peekSize ) {
-		return ntohl (*(long *)(peek  ))  & 0x001fffff ;  };
+	virtual int32_t  getDgramNum   ( const char *peek, int32_t peekSize ) {
+		return ntohl (*(int32_t *)(peek  ))  & 0x001fffff ;  };
 
 	// . msgSize without the dgram headers
 	// . returns -1 is unknown, but less than a dgrams worth of bytes
-        virtual long  getMsgSize     ( const char *peek , long peekSize ) { 
+        virtual int32_t  getMsgSize     ( const char *peek , int32_t peekSize ) { 
 		if ( peekSize < 12 ) return 0;
-		return ntohl (*(long *)(peek+8)) ; };
+		return ntohl (*(int32_t *)(peek+8)) ; };
 
 	// . how many dgram in the msg?
 	// . similar to UdpSlot::sendSetup(...)
-	virtual long  getNumDgrams  ( long msgSize , long maxDgramSize ) {
+	virtual int32_t  getNumDgrams  ( int32_t msgSize , int32_t maxDgramSize ) {
 		if ( msgSize == -1 ) return 1;
-		long n = msgSize / (maxDgramSize - 12);
+		int32_t n = msgSize / (maxDgramSize - 12);
 		if      ( n == 0              ) n = 1;
 		else if ( msgSize % (maxDgramSize - 12) != 0 ) n++;
 		return n;
 	};
 
-	virtual unsigned char getMsgType ( const char *peek, long peekSize ) {
+	virtual unsigned char getMsgType ( const char *peek, int32_t peekSize ) {
 		if ( peekSize <  1 ) return 0xff;
 		return *peek & 0xff;
 	};
 
 	// how big is the header? used so we can extract the msg w/o header.
-	virtual long  getHeaderSize ( const char *peek, long peekSize ) {
+	virtual int32_t  getHeaderSize ( const char *peek, int32_t peekSize ) {
 		return 12; };
 
 	// given a msg to send, how big is the header per dgram?
 	// TODO: fix this!
-	virtual long  getHeaderSize ( long msgSize ) { 
+	virtual int32_t  getHeaderSize ( int32_t msgSize ) { 
 		return 12; };
 
 	// we don't accept any dgrams from a msg bigger than this
-	virtual long  getMaxMsgSize ( ) { 
+	virtual int32_t  getMaxMsgSize ( ) { 
 		return 0x7fffffff; };
 
 	// . make an ACK dgram for this dgram # and this transId
 	// . return the dgram size
-	virtual long makeAck ( char *dgram, long dgramNum, long transId ,
+	virtual int32_t makeAck ( char *dgram, int32_t dgramNum, int32_t transId ,
 			       bool  weInitiated , bool cancelTrans ) {
 		// set ack bit in dgramNum
 		dgramNum = (dgramNum & 0x001fffff) | 0x00800000;
@@ -168,9 +168,9 @@ class UdpProtocol {
 		if ( weInitiated ) transId  |= 0x80000000;
 		if ( cancelTrans ) dgramNum |= 0x00400000;
 		// set dgram # w/ ack bit on
-		*(long *)(dgram+0) = htonl ( dgramNum );
+		*(int32_t *)(dgram+0) = htonl ( dgramNum );
 		// store the transId
-		*(long *)(dgram+4) = htonl ( transId  );
+		*(int32_t *)(dgram+4) = htonl ( transId  );
 		// return size of the dgram
 		return 8; 
 	};
@@ -179,16 +179,16 @@ class UdpProtocol {
 	// . return the size of the dgram INCLUDING HEADER!
 	// . WEtttttt Annnnnnn nnnnnnnn nnnnnnnn  W = weInitiated?, E=hadError?
 	virtual void setHeader ( char   *buf         ,
-				 long    msgSize     , 
+				 int32_t    msgSize     , 
 				 unsigned char msgType     ,
-				 long    dgramNum    , 
-				 long    transId     ,
+				 int32_t    dgramNum    , 
+				 int32_t    transId     ,
 				 bool    weInitiated ,
 				 bool    hadError    ,
-				 long    niceness    ) {
+				 int32_t    niceness    ) {
 		// copy msg first since we alter dgramNum
-		//long offset    = dgramNum * ( maxDgramSize - 12);
-		//long size      = msgSize - offset;
+		//int32_t offset    = dgramNum * ( maxDgramSize - 12);
+		//int32_t size      = msgSize - offset;
 		//if ( size > maxDgramSize - 12 ) size = maxDgramSize - 12;
 		// memcpy is not async signal safe!! why not???
 		//memcpy ( dgram + 12 , msg + offset , size );
@@ -205,21 +205,21 @@ class UdpProtocol {
 		//if ( weInitiated ) dgramNum |= 0x80000000;
 		//if ( hadError    ) dgramNum |= 0x40000000;
 		// set msgType
-		dgramNum |= ((unsigned long)(msgType)) << 24 ;
+		dgramNum |= ((uint32_t)(msgType)) << 24 ;
 		// niceness bit
 		if ( niceness    ) dgramNum |= 0x00200000;
 		// store dgram # and it's flags
-		*(long *)buf = htonl ( dgramNum );
+		*(int32_t *)buf = htonl ( dgramNum );
 		// set the transaction id
-		long t = transId;
+		int32_t t = transId;
 		if ( t & 0xc0000000 ) {
 			log(LOG_LOGIC,"udp: Transid too big."); return; }
 		// store top 2 bits here now
 		if ( weInitiated ) t |= 0x80000000;
 		if ( hadError    ) t |= 0x40000000;
-		*(long *)(buf + 4) = htonl ( t );
+		*(int32_t *)(buf + 4) = htonl ( t );
 		// set msg Size
-		*(long *)(buf + 8) = htonl ( msgSize );
+		*(int32_t *)(buf + 8) = htonl ( msgSize );
 		// return the total dgramSize
 		//return size + 12;   
 	};

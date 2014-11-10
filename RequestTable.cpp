@@ -16,18 +16,18 @@ void RequestTable::reset ( ) {
 	m_processHash = 0;
 }
 
-long RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
+int32_t RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 	// sanity check
 	if ( requestHash == 0 ){
 		char *xx = NULL; *xx = 0;
 	}
 
 	// check if we have the state already in the hashtable
-	/*long n = m_htable.getOccupiedSlotNum ( requestHash );
+	/*int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
 	while ( m_htable.m_keys[n] ){
 		// count if same key
 		if ( m_htable.m_keys[n] == requestHash &&
-		     m_htable.m_vals[n] == ( long ) state2 ){
+		     m_htable.m_vals[n] == ( int32_t ) state2 ){
 			char *xx = NULL; *xx = 0;
 		}
 		// advance n, wrapping if necessary
@@ -35,12 +35,12 @@ long RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 		}*/
 
 	// returns false and set g_errno on error, so we should return -1
-	if ( ! m_htable.addKey(requestHash, (long)state2) ) return -1;
+	if ( ! m_htable.addKey(requestHash, (int32_t)state2) ) return -1;
 
- 	//log ( "requesttable: added hash=%lli state2=%lx", requestHash,
-	//     (long) state2 );
+ 	//log ( "requesttable: added hash=%"INT64" state2=%"XINT32"", requestHash,
+	//     (int32_t) state2 );
 	// count the slots that have this key
-	long n = m_htable.getOccupiedSlotNum ( requestHash );
+	int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
 	// sanity check
 	if ( n < 0 ) { char *xx = NULL; *xx = 0; }
 	
@@ -50,7 +50,7 @@ long RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 		return 2;
 
 	// count how many of our key are in the table, since we allow dup keys
-	long count = 0;
+	int32_t count = 0;
 
 	while ( m_htable.m_keys[n] ){
 		// count if same key
@@ -59,17 +59,17 @@ long RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 		if ( ++n >= m_htable.m_numSlots ) n = 0;
 	}
 	/*if ( count == 1 )
-		log( "requesttable: hash=%lli state2=%lx is getting quality",
-		requestHash, (long) state2 );*/
+		log( "requesttable: hash=%"INT64" state2=%"XINT32" is getting quality",
+		requestHash, (int32_t) state2 );*/
 	return count;
 }
 
 void RequestTable::gotReply ( int64_t  requestHash ,
 			      char      *reply       ,
-			      long       replySize   ,
+			      int32_t       replySize   ,
 			      void      *state1      ,
 			      void     (*callback)( char *reply     ,
-						    long  replySize ,
+						    int32_t  replySize ,
 						    void *state1    ,
 						    void *state2    )){
 	// sanity check. 
@@ -81,8 +81,8 @@ void RequestTable::gotReply ( int64_t  requestHash ,
 	m_processHash = requestHash;
 
 	// save g_errno in case callback resets it
-	long saved = g_errno;
-	long n = m_htable.getOccupiedSlotNum ( requestHash );
+	int32_t saved = g_errno;
+	int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
 	while ( n >= 0 ) {
 		// restore it before returning
 		g_errno = saved;
@@ -93,8 +93,8 @@ void RequestTable::gotReply ( int64_t  requestHash ,
 		// somehow alters the table!
 		//m_htable.removeKey ( requestHash );
 		m_htable.removeSlot ( n );
-		/*log ( "requesttable: removed hash=%lli state1=%lx state2=%lx", 
-		  requestHash, (long) state1, (long) state2 );*/
+		/*log ( "requesttable: removed hash=%"INT64" state1=%"XINT32" state2=%"XINT32"", 
+		  requestHash, (int32_t) state1, (int32_t) state2 );*/
 
 		// restore it before calling callback
 		g_errno = saved;
@@ -110,7 +110,7 @@ void RequestTable::gotReply ( int64_t  requestHash ,
 
 void RequestTable::cancelRequest ( int64_t requestHash , void *state2 ) {
 	// there should only be one request for this request hash
-	long n = m_htable.getOccupiedSlotNum ( requestHash );
+	int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
 	if ( n < 0 ){
 		char *xx = NULL; *xx = 0;
 	}
@@ -120,7 +120,7 @@ void RequestTable::cancelRequest ( int64_t requestHash , void *state2 ) {
 	if ( n >= 0 ){
 		char *xx = NULL; *xx = 0;
 	}
-	log( LOG_INFO, "reqtable: cancelled request hash=%lli state2=%lx", 
-	     requestHash, (long) state2 );
+	log( LOG_INFO, "reqtable: cancelled request hash=%"INT64" state2=%"XINT32"", 
+	     requestHash, (int32_t) state2 );
 	return;
 }

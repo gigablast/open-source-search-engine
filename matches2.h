@@ -14,27 +14,27 @@ public:
 	// if m_isSection is true, getMatch() only matches if haystack 
 	// ptr is < linkPos
 	char  m_isSection; 
-	long  m_count;
+	int32_t  m_count;
 	char *m_stringSave;
 	char  m_stringSizeSave;
 	char *m_firstMatch;
 	// used by XmlDoc::getEventSummary()
 	float m_score;
 	// used by XmlDoc::getEventSummary() to point to query word #
-	long  m_qwn;
+	int32_t  m_qwn;
 };
 
 
 char *getMatches2 ( Needle *needles          , 
-		    long    numNeedles       ,
+		    int32_t    numNeedles       ,
 		    char   *haystack         , 
-		    long    haystackSize     ,
+		    int32_t    haystackSize     ,
 		    char   *linkPos          ,
-		    long   *n                ,
+		    int32_t   *n                ,
 		    bool    stopAtFirstMatch ,
 		    bool   *hadPreMatch      ,
 		    bool    saveQuickTables  ,
-		    long    niceness         );
+		    int32_t    niceness         );
 
 
 

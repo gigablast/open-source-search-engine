@@ -8,7 +8,7 @@
 #include "XmlDoc.h" // Z_BUF_ERROR
 
 static void gotReplyWrapper17  ( void *state , UdpSlot *slot ) ;
-static void handleRequest17    ( UdpSlot *slot , long niceness ) ;
+static void handleRequest17    ( UdpSlot *slot , int32_t niceness ) ;
 static void gotReplyWrapper17b ( void *state , UdpSlot *slot ) ;
 
 // our caches
@@ -23,15 +23,15 @@ RdbCache g_genericCache[MAX_GENERIC_CACHES];
 char g_genericCacheCompress[MAX_GENERIC_CACHES] = { 1 };
 //						    0 }; // seoresults
 
-//static long s_noMax = -1;
-//static long s_oneMonth = 86400*30;
+//static int32_t s_noMax = -1;
+//static int32_t s_oneMonth = 86400*30;
 
-long *g_genericCacheMaxAge[MAX_GENERIC_CACHES] = {
+int32_t *g_genericCacheMaxAge[MAX_GENERIC_CACHES] = {
 	&g_conf.m_searchResultsMaxCacheAge 
 	//&s_oneMonth // seoresultscache
 	//&g_conf.m_siteLinkInfoMaxCacheAge ,
 	// Msg50.cpp now has a dynamic max cache age which is higher
-	// for higher qualities, since those take longer to recompute and
+	// for higher qualities, since those take int32_ter to recompute and
 	// are usually much more stable...
 	//&s_noMax // &g_conf.m_siteQualityMaxCacheAge
 };
@@ -66,13 +66,13 @@ bool Msg17::registerHandler ( ) {
 bool Msg17::getFromCache ( char   cacheId,
 			   key_t  key,
 			   char **recPtr,
-			   long  *recSize,
+			   int32_t  *recSize,
 			   //char  *coll ,
 			   collnum_t collnum ,
 			   void  *state ,
 			   void (*callback) (void *state) ,
-			   long   niceness ,
-			   long   timeout ) {
+			   int32_t   niceness ,
+			   int32_t   timeout ) {
 	// assume not in cache
 	m_found = false;
 	// use a fake recSize if we should
@@ -88,7 +88,7 @@ bool Msg17::getFromCache ( char   cacheId,
 	m_recSize = recSize;
 	// . only one machine will cache the query results
 	// . if it goes down we are SOL
-	//long hostId = key.n0 % g_hostdb.getNumHosts(); 
+	//int32_t hostId = key.n0 % g_hostdb.getNumHosts(); 
 	Host *host = getResponsibleHost ( key , &g_hostdb ) ;
 	// if all in group are dead, we can't do it
 	if ( ! host ) return true;
@@ -193,11 +193,11 @@ void gotReplyWrapper17 ( void *state , UdpSlot *slot ) {
 
 // . reply should hold our new docId
 // . returns false on error and sets g_errno
-bool Msg17::gotReply ( UdpSlot *slot , char *cbuf , long cbufSize ,
+bool Msg17::gotReply ( UdpSlot *slot , char *cbuf , int32_t cbufSize ,
 		       bool includesCachedTime ) {
 	// bitch about any error we got
 	if ( g_errno ) return log("query: Reply for cache cacheId=%i "
-				  "(niceness=%li) had error: %s.",
+				  "(niceness=%"INT32") had error: %s.",
 				  m_cacheId,m_niceness,mstrerror(g_errno));
 	// assume we were not able to get the cached Msg40
 	m_found = false;
@@ -205,7 +205,7 @@ bool Msg17::gotReply ( UdpSlot *slot , char *cbuf , long cbufSize ,
 	if ( cbufSize <= 0 ) return false;
 	// first 4 bytes is cached time
 	if ( includesCachedTime ) {
-		m_cachedTimeDelta = *(long *)cbuf; 
+		m_cachedTimeDelta = *(int32_t *)cbuf; 
 		cbuf     += 4;
 		cbufSize -= 4;
 	}
@@ -218,7 +218,7 @@ bool Msg17::gotReply ( UdpSlot *slot , char *cbuf , long cbufSize ,
 					   k        ,
 					   p        ,
 					   pend - p ) )
-			log("query: Had error storing cache cacheId=%li: "
+			log("query: Had error storing cache cacheId=%"INT32": "
 			    "%s.", cacheId, mstrerror(g_errno));
 	}
 	*/
@@ -226,29 +226,29 @@ bool Msg17::gotReply ( UdpSlot *slot , char *cbuf , long cbufSize ,
 	//char ubuf [ 32*1024 ];
 	if ( g_genericCacheCompress[(int)m_cacheId] ) {
 		// the uncompressed size is always preceeds the compressed data
-		long recSize = *(long *)cbuf;
+		int32_t recSize = *(int32_t *)cbuf;
 		// sanity check
 		if ( recSize < 0 ) {
-			log("query: got bad cached rec size=%li cacheid=%li",
-			    recSize,(long)m_cacheId);
+			log("query: got bad cached rec size=%"INT32" cacheid=%"INT32"",
+			    recSize,(int32_t)m_cacheId);
 			return false;
 		}
 		cbuf     += 4;
 		cbufSize -= 4;
-		//long  ubufMaxSize = 32*1024;
-		//long  ubufSize = ubufMaxSize;
-		long  ubufSize = recSize;
+		//int32_t  ubufMaxSize = 32*1024;
+		//int32_t  ubufSize = ubufMaxSize;
+		int32_t  ubufSize = recSize;
 		char *ubuf = (char *)mmalloc ( ubufSize , "Msg17" );
 		if ( ! ubuf ) 
-			return log("query: Could not allocate %li bytes for "
+			return log("query: Could not allocate %"INT32" bytes for "
 				   "uncompressing cache cacheId=%i: "
 				   "%s.",
 				   ubufSize,m_cacheId,mstrerror(g_errno));
 		// uncompress the reply
 		int err = gbuncompress ( (unsigned char *)  ubuf     ,
-					 (unsigned long *) &ubufSize ,
+					 (uint32_t *) &ubufSize ,
 					 (unsigned char *)  cbuf     ,
-					 (unsigned long  )  cbufSize );
+					 (uint32_t  )  cbufSize );
 		// hmmmm...
 		if ( err == Z_BUF_ERROR ) {
 			mfree ( ubuf , ubufSize , "Msg17");
@@ -294,16 +294,16 @@ bool Msg17::gotReply ( UdpSlot *slot , char *cbuf , long cbufSize ,
 
 // . only return false if you want slot to be nuked w/o replying
 // . MUST always call g_udpServer::sendReply() or sendErrorReply()
-void handleRequest17 ( UdpSlot *slot , long niceness  ) {
+void handleRequest17 ( UdpSlot *slot , int32_t niceness  ) {
 	// get the request, should be a full url
 	char *request     = slot->m_readBuf;
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 
 	UdpServer            *us = &g_udpServer;
 	//if ( niceness == 0 )  us = &g_udpServer2;
 
 	// need at least a key in the request
-	if ( requestSize < (long)sizeof(key_t) ) {
+	if ( requestSize < (int32_t)sizeof(key_t) ) {
 		log("query: Request size for cache (%d) "
 		    "is too small for some reason.", sizeof(key_t));
 		us->sendErrorReply ( slot , EBADREQUESTSIZE );
@@ -338,7 +338,7 @@ void handleRequest17 ( UdpSlot *slot , long niceness  ) {
 	}
 
 	char  *rec;
-	long   recSize;
+	int32_t   recSize;
 	time_t cachedTime;
 	// send back nothing if not in cache
 	if ( ! c->getRecord ( collnum  ,
@@ -353,7 +353,7 @@ void handleRequest17 ( UdpSlot *slot , long niceness  ) {
 		return;
 	}
 	// alloc a buf to hold reply and 4 bytes for cachedTime
-	long  bufSize = 4 + recSize;
+	int32_t  bufSize = 4 + recSize;
 	char *buf = (char *)mmalloc ( bufSize , "Msg17");
 	if ( ! buf ) {
 		us->sendReply_ass ( NULL , 0 , NULL , 0 , slot );
@@ -365,7 +365,7 @@ void handleRequest17 ( UdpSlot *slot , long niceness  ) {
 	time_t cachedTimeDelta = getTime() - cachedTime;
 
 	char *x = buf;
-	*(long *)x = cachedTimeDelta; x += 4;
+	*(int32_t *)x = cachedTimeDelta; x += 4;
 	memcpy ( x , rec , recSize );
 
 	// . set the msg40 from the cached record
@@ -378,7 +378,7 @@ void handleRequest17 ( UdpSlot *slot , long niceness  ) {
 			    2       ); // timeout in 2 secs
 }
 
-static long s_numInProgress = 0;
+static int32_t s_numInProgress = 0;
 
 // . if you had to make your own Msg40 class because it wasn't cached
 //   then you should store it in the cache here
@@ -388,10 +388,10 @@ static long s_numInProgress = 0;
 bool Msg17::storeInCache ( char   cacheId ,
 			   key_t  key ,
 			   char  *recPtr ,
-			   long   recSize ,
+			   int32_t   recSize ,
 			   collnum_t collnum, // char  *coll ,
-			   long   niceness ,
-			   long   timeout  ) {
+			   int32_t   niceness ,
+			   int32_t   timeout  ) {
 
 	// only allow 200 launched in progress stores at a time to
 	// save UdpSlots
@@ -401,24 +401,24 @@ bool Msg17::storeInCache ( char   cacheId ,
 		return true;
 	}
 //	// how much room?
-//	long tmpSize = msg40->getStoredSize();
+//	int32_t tmpSize = msg40->getStoredSize();
 //	// store in this buffer
 //	char tmp [ 32 * 1024 ];
 //	// bail if too much
 //	if ( tmpSize > 32*1024 ) {
 //		log(LOG_LIMIT,
 //		    "query: Size of cached search results page (and all "
-//		    "associated data) is %li bytes. Max is %li. "
+//		    "associated data) is %"INT32" bytes. Max is %"INT32". "
 //		    "Page not cached.",tmpSize,32*1024);
 //		return true; 
 //	}
 //	// serialize into tmp
-//	long nb = msg40->serialize ( tmp , tmpSize );
+//	int32_t nb = msg40->serialize ( tmp , tmpSize );
 //	// it must fit exactly
 //	if ( nb != tmpSize || nb == 0 ) {
 //		log(LOG_LOGIC,
-//		    "query: Size of cached search results page (%li) does not "
-//		    "match what it should be. (%li)" , nb , tmpSize );
+//		    "query: Size of cached search results page (%"INT32") does not "
+//		    "match what it should be. (%"INT32")" , nb , tmpSize );
 //		return true;
 //	}
 //	// make key
@@ -427,7 +427,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 	m_key = key;
 	m_cacheId = cacheId;
 	// get this host responsible for holding this
-	//long hostId = key.n0 % g_hostdb.getNumHosts(); 
+	//int32_t hostId = key.n0 % g_hostdb.getNumHosts(); 
 	Host *host = getResponsibleHost ( key , &g_hostdb ) ;
 	// if all in the group are dead, can't do it
 	if ( ! host ) return true;
@@ -463,30 +463,30 @@ bool Msg17::storeInCache ( char   cacheId ,
 
 	if ( g_genericCacheCompress[(int)m_cacheId] ) {
 		// uncompressed size
-		*(long *)p = recSize; p += 4;
+		*(int32_t *)p = recSize; p += 4;
 		// sanity check
 		if ( recSize < 0 ) { char *xx = NULL; *xx = 0; }
 		// how much left over
-		long avail = pend - p;
+		int32_t avail = pend - p;
 		// save it
-		long saved = avail;
-		//long clen = gbstrlen(coll);
+		int32_t saved = avail;
+		//int32_t clen = gbstrlen(coll);
 		// compress "tmp" into m_buf, but leave leading bytes
 		// for the key
 		int err = gbcompress ( (unsigned char *)p ,
-				       (unsigned long *)&avail  ,
+				       (uint32_t *)&avail  ,
 				       (unsigned char *)recPtr  ,
-				       (unsigned long  )recSize );
+				       (uint32_t  )recSize );
 		// advance p by how many bytes we stored into "p"
 		p += avail;
 		// check for error
 		if ( err != Z_OK ) { 
 			g_errno = ECOMPRESSFAILED; 
 			log("query: Compression of cache cacheId=%i "
-			    "failed err=%li avail=%li collnum=%li "
-			    "recSize=%li.", 
-			    cacheId , (long)err ,
-			    saved , (long)collnum , recSize );
+			    "failed err=%"INT32" avail=%"INT32" collnum=%"INT32" "
+			    "recSize=%"INT32".", 
+			    cacheId , (int32_t)err ,
+			    saved , (int32_t)collnum , recSize );
 			return true;
 		}
 	}
@@ -500,10 +500,10 @@ bool Msg17::storeInCache ( char   cacheId ,
 	}
 	// . size of whole request, key and the serialized/compressed Msg40
 	// . "size" is set by call to ::compress() above
-	long requestSize = p - buf; // p - buf + size 
+	int32_t requestSize = p - buf; // p - buf + size 
 
 	// size of the part of the request that goes into the cache
-	long cacheRecSize = p - cacheRec ;
+	int32_t cacheRecSize = p - cacheRec ;
 
 	// store the key
 	*(key_t *) buf = key;
@@ -523,7 +523,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 	char *request = (char *) mdup ( buf , requestSize , "Msg17" );
 	if ( ! request ) {
 		log("query: Failed to allocate %i bytes to hold cache "
-		    "cacheId=%li for transmission to caching host.",
+		    "cacheId=%"INT32" for transmission to caching host.",
 		    cacheId, requestSize);
 		return true;
 	}
@@ -571,18 +571,18 @@ void gotReplyWrapper17b ( void *state , UdpSlot *slot ) {
 //   saved caches
 Host *Msg17::getResponsibleHost ( key_t key , Hostdb * hostdb ) {
 	// get the hostNum that should handle this
-	long hostId = key.n0 % hostdb->getNumHosts();
+	int32_t hostId = key.n0 % hostdb->getNumHosts();
 	// return it if it is alive
 	if ( ! hostdb->isDead ( hostId ) ) return hostdb->getHost ( hostId );
 	// how many hosts are up?
-	long numAlive = hostdb->getNumHostsAlive();
+	int32_t numAlive = hostdb->getNumHostsAlive();
 	// if all dead return NULL
 	if ( numAlive == 0 ) return NULL;
 	// try another hostNum
-	long hostNum = key.n0 % numAlive;
+	int32_t hostNum = key.n0 % numAlive;
 	// otherwise, chain to him
-	long count = 0;
-	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+	int32_t count = 0;
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		// get the ith host
 		Host *host = &hostdb->m_hosts[i];
 		// skip him if he is dead

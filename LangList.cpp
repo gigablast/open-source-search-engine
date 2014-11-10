@@ -10,10 +10,10 @@ struct TldInfo {
   char* m_tld;
   char* m_country;
   char* m_languages;
-  unsigned long  m_languagebv;
+  uint32_t  m_languagebv;
 };
 
-static long s_numTlds = 0;
+static int32_t s_numTlds = 0;
 
 static TldInfo s_tldInfo[] = {
 { "arpa", "Address and Routing Parameter Area", "unknown", 0xffffffff },
@@ -382,15 +382,15 @@ bool LangList::loadLists ( ) {
 	// init the term table
 	m_langTable.set(8,4,100000*MAX_LANGUAGES,NULL,0,false,0,"tbl-lang");
 	// loop over the languages and load the files
-	long listCount = 0;
-	long dupCount  = 0;
-	long allocSize   = 0;
+	int32_t listCount = 0;
+	int32_t dupCount  = 0;
+	int32_t allocSize   = 0;
 	char *buf = NULL;
 	Words w;
-	for ( long i = 0; i < MAX_LANGUAGES; i++ ) {
+	for ( int32_t i = 0; i < MAX_LANGUAGES; i++ ) {
 		// load the file for reading
 		char ff[128];
-		sprintf(ff, "%slanglist/langlist.%li", g_hostdb.m_dir, i );
+		sprintf(ff, "%slanglist/langlist.%"INT32"", g_hostdb.m_dir, i );
 		int fd = open ( ff, O_RDONLY );
 		// no language file, don't complain
 		if ( fd < 0 ) continue;
@@ -404,9 +404,9 @@ bool LangList::loadLists ( ) {
 			      ff, strerror(errno) );
 			return false;
 		}
-		long fileSize = stats.st_size;
+		int32_t fileSize = stats.st_size;
 		// read the file into a buffer
-		long thisAllocSize = 3 * fileSize;
+		int32_t thisAllocSize = 3 * fileSize;
 		if(thisAllocSize > allocSize) {
 			buf = (char*)mrealloc(buf, allocSize, thisAllocSize,
 					      "LangList");
@@ -414,7 +414,7 @@ bool LangList::loadLists ( ) {
 		}
 		if ( !buf ) {
 			close(fd);
-			log ( "lang: Could not allocate %li bytes for "
+			log ( "lang: Could not allocate %"INT32" bytes for "
 			      "langlist buffer: %s.",
 			      thisAllocSize, mstrerror(g_errno) );
 			return false;
@@ -432,10 +432,10 @@ bool LangList::loadLists ( ) {
 		//		*pEnd = '\0';
 		
 		//UChar* ucBuf = (UChar*)(buf + fileSize);
-		//long   ucBufLen = fileSize * 2;
-		long wordsInList = 0;
-		long writtenLen = gbstrlen(buf);
-		//long writtenLen = ucToUnicode(ucBuf, ucBufLen, 
+		//int32_t   ucBufLen = fileSize * 2;
+		int32_t wordsInList = 0;
+		int32_t writtenLen = gbstrlen(buf);
+		//int32_t writtenLen = ucToUnicode(ucBuf, ucBufLen, 
 		//			      buf, fileSize, 
 		//			      "UTF-8", -1, 
 		//			      TITLEREC_CURRENT_VERSION);
@@ -451,16 +451,16 @@ bool LangList::loadLists ( ) {
 			return false;
 		}
 		
-		long numWords = w.getNumWords();
-		for(long j = 0; j < numWords; j++) {
+		int32_t numWords = w.getNumWords();
+		for(int32_t j = 0; j < numWords; j++) {
 			int64_t wordId = w.m_wordIds[j];
 			if(wordId == 0) continue;
 			// add it to the table
-			unsigned long score = m_langTable.getScore(&wordId);
+			uint32_t score = m_langTable.getScore(&wordId);
 			//log(LOG_WARN, 
-			//    "lang: Successfully hash %lli from %s dictionary.", 
+			//    "lang: Successfully hash %"INT64" from %s dictionary.", 
 			//wordId, getLanguageString(i));
-			if ( score !=  (unsigned long)i ) {
+			if ( score !=  (uint32_t)i ) {
 				if ( score > 0 ) {
 					dupCount++;
 					if ( score != 0x7fffffff )
@@ -479,7 +479,7 @@ bool LangList::loadLists ( ) {
 		
 		if ( wordsInList > 0 )
 		log ( LOG_DEBUG, 
-		      "lang: Successfully Loaded %li out of %li (%li bytes) "
+		      "lang: Successfully Loaded %"INT32" out of %"INT32" (%"INT32" bytes) "
 		      "words from %s dictionary.",
 		      wordsInList, numWords>>1, writtenLen, getLanguageString(i) );
 		
@@ -490,8 +490,8 @@ bool LangList::loadLists ( ) {
 	if(buf)	mfree ( buf, allocSize, "LangList" );
 
 
-	log ( LOG_INIT, "lang: Successfully Loaded %li Language Lists and "
-			"%li duplicate word hashes.",
+	log ( LOG_INIT, "lang: Successfully Loaded %"INT32" Language Lists and "
+			"%"INT32" duplicate word hashes.",
 			listCount, dupCount );
 	// all good
 	return true;
@@ -502,7 +502,7 @@ bool LangList::loadLists ( ) {
 bool LangList::lookup ( int64_t      termId,
 			unsigned char *lang    ) {
 	// lookup the termId in the table
-	unsigned long score = m_langTable.getScore(&termId);
+	uint32_t score = m_langTable.getScore(&termId);
 	// is it unknown?
 	if ( score == 0 || score >= MAX_LANGUAGES ) {
 		*lang = 0;
@@ -514,11 +514,11 @@ bool LangList::lookup ( int64_t      termId,
 }
 
 
-char* LangList::getCountryFromTld(char* tld, long tldLen) {
+char* LangList::getCountryFromTld(char* tld, int32_t tldLen) {
 	//initialize if not already initialized.
 	if(s_numTlds == 0) tldInit();
 
-	long j = 0;
+	int32_t j = 0;
 	for(; j < tldLen; j++) {
 		if(tld[j] != '.') continue;
 		j++; //skip .
@@ -527,20 +527,20 @@ char* LangList::getCountryFromTld(char* tld, long tldLen) {
 		break;
 	}
 
-	long index = hash32(tld, tldLen);
-	long slot = m_tldToCountry.getSlot(&index);
+	int32_t index = hash32(tld, tldLen);
+	int32_t slot = m_tldToCountry.getSlot(&index);
 
 	if(slot < 0) return NULL;
-	return s_tldInfo[*(long *)m_tldToCountry.getValueFromSlot(slot)].m_country;
+	return s_tldInfo[*(int32_t *)m_tldToCountry.getValueFromSlot(slot)].m_country;
 }
 
 
-bool LangList::isLangValidForTld(char* tld, long tldLen, unsigned char lang) {
+bool LangList::isLangValidForTld(char* tld, int32_t tldLen, unsigned char lang) {
 	if(lang == langUnknown) return true; //not much we can do here.
 	//initialize if not already initialized.
 	if(s_numTlds == 0) tldInit();
 
-	long j = 0;
+	int32_t j = 0;
 	for(; j < tldLen; j++) {
 		if(tld[j] != '.') continue;
 		j++; //skip .
@@ -549,17 +549,17 @@ bool LangList::isLangValidForTld(char* tld, long tldLen, unsigned char lang) {
 		break;
 	}
 
-	long index = hash32(tld, tldLen);
-	long slot = m_tldToCountry.getSlot(&index);
+	int32_t index = hash32(tld, tldLen);
+	int32_t slot = m_tldToCountry.getSlot(&index);
 
 	if(slot < 0) return true;
-	long *tip = (long *)m_tldToCountry.getValueFromSlot(slot);
+	int32_t *tip = (int32_t *)m_tldToCountry.getValueFromSlot(slot);
 	if ( ! tip ) { char *xx=NULL;*xx=0; }
 	TldInfo* t = &s_tldInfo[*tip];
 	//it is uninitalized, init on demand.
 	if(t->m_languagebv == 0xffffffff) { 
 		t->m_languagebv = 0;
-		for(long i = 1; i <= langTagalog; i++) {
+		for(int32_t i = 1; i <= langTagalog; i++) {
 			if(strstr(t->m_languages,getLanguageString(i)) == NULL)
 				continue;
 			//set the bit corresponding to lang
@@ -569,7 +569,7 @@ bool LangList::isLangValidForTld(char* tld, long tldLen, unsigned char lang) {
 
 	if(t->m_languagebv == 0) return true; //its unknown.
 
-	long mask = 0x1 << (lang-1);
+	int32_t mask = 0x1 << (lang-1);
 	return mask & t->m_languagebv; 
 }
 
@@ -577,8 +577,8 @@ bool LangList::isLangValidForTld(char* tld, long tldLen, unsigned char lang) {
 bool LangList::tldInit() {
   s_numTlds = sizeof(s_tldInfo) / sizeof(TldInfo);
   m_tldToCountry.set(4,4,0,NULL,0,false,0,"tldctrytbl");
-  for(long i = 0; i < s_numTlds; i++) {
-    long ndx = hash32n(s_tldInfo[i].m_tld);
+  for(int32_t i = 0; i < s_numTlds; i++) {
+    int32_t ndx = hash32n(s_tldInfo[i].m_tld);
     if ( ! m_tldToCountry.addKey(&ndx , &i ) ) return false;
   }
   return true;

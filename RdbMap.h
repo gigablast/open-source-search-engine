@@ -74,9 +74,9 @@ class RdbMap {
 
 	// set the filename, and if it's fixed data size or not
 	void set ( char *dir , char *mapFilename, 
-		   //long fixedDataSize , bool useHalfKeys );
-		   long fixedDataSize , bool useHalfKeys , char keySize ,
-		   long pageSize );
+		   //int32_t fixedDataSize , bool useHalfKeys );
+		   int32_t fixedDataSize , bool useHalfKeys , char keySize ,
+		   int32_t pageSize );
 
 	bool rename ( char *newMapFilename ) {
 		return m_file.rename ( newMapFilename ); };
@@ -99,7 +99,7 @@ class RdbMap {
 
 	// . we store the fixed dataSize in the map file
 	// . if it's -1 then each record's data is of variable size
-	long getFixedDataSize() { return m_fixedDataSize; };
+	int32_t getFixedDataSize() { return m_fixedDataSize; };
 
 	// . this is called automatically when close() is called
 	// . however, we may wish to call it externally to ensure no data loss
@@ -111,7 +111,7 @@ class RdbMap {
 	// . flushes when done
 	bool writeMap  ( );
 	bool writeMap2 ( );
-	int64_t writeSegment ( long segment , int64_t offset );
+	int64_t writeSegment ( int32_t segment , int64_t offset );
 
 	// . calls addRecord() for each record in the list
 	// . returns false and sets errno on error
@@ -137,13 +137,13 @@ class RdbMap {
 	// . gets total size of all recs in this page range
 	// . if subtract is true we subtract the sizes of pages that begin
 	//   with a delete key (low bit is clear)
-	int64_t getRecSizes ( long startPage , 
-			   long endPage   , 
+	int64_t getRecSizes ( int32_t startPage , 
+			   int32_t endPage   , 
 			   bool subtract  );
 
 	// like above, but recSizes is guaranteed to be in [startKey,endKey]
-	int64_t getMinRecSizes ( long   sp       , 
-			      long   ep       , 
+	int64_t getMinRecSizes ( int32_t   sp       , 
+			      int32_t   ep       , 
 			      //key_t  startKey , 
 			      //key_t  endKey   ,
 			      char  *startKey ,
@@ -151,8 +151,8 @@ class RdbMap {
 			      bool   subtract );
 
 	// like above, but sets an upper bound for recs in [startKey,endKey]
-	int64_t getMaxRecSizes ( long   sp       , 
-			      long   ep       , 
+	int64_t getMaxRecSizes ( int32_t   sp       , 
+			      int32_t   ep       , 
 			      //key_t  startKey , 
 			      //key_t  endKey   ,
 			      char  *startKey , 
@@ -160,7 +160,7 @@ class RdbMap {
 			      bool   subtract );
 
 	// get a key range from a page range
-	void getKeyRange  ( long   startPage , long   endPage ,
+	void getKeyRange  ( int32_t   startPage , int32_t   endPage ,
 			    //key_t *minKey    , key_t *maxKey  );
 			    char *minKey , char *maxKey );
 	// . get a page range from a key range
@@ -169,29 +169,29 @@ class RdbMap {
 	//   can increase the trunc limit w/o messing up Indexdb::getTermFreq()
 	//bool getPageRange ( key_t  startKey  , key_t endKey  ,
 	bool getPageRange ( char  *startKey  , char *endKey ,
-			    long  *startPage , long *endPage ,
+			    int32_t  *startPage , int32_t *endPage ,
 			    //key_t *maxKey    ,
 			    char  *maxKey ,
 			    int64_t oldTruncationLimit = -1 ) ;
 
 	// get the ending page so that [startPage,endPage] has ALL the recs
 	// whose keys are in [startKey,endKey] 
-	//long getEndPage   ( long startPage , key_t endKey );
-	long getEndPage   ( long startPage , char *endKey );
+	//int32_t getEndPage   ( int32_t startPage , key_t endKey );
+	int32_t getEndPage   ( int32_t startPage , char *endKey );
 
-	// like above, but endPage may be smaller as long as we cover at least
+	// like above, but endPage may be smaller as int32_t as we cover at least
 	// minRecSizes worth of records in [startKey,endKey]
 	//bool getPageRange ( key_t  startKey  , key_t endKey  ,
-	//long   minRecSizes ,
-	//long  *startPage , long *endPage ) ;
+	//int32_t   minRecSizes ,
+	//int32_t  *startPage , int32_t *endPage ) ;
 	
 	// . offset of first key wholly on page # "page"
 	// . return length of the whole mapped file if "page" > m_numPages
 	// . use m_offset as the size of the file that we're mapping
-	int64_t getAbsoluteOffset     ( long page ) ;
+	int64_t getAbsoluteOffset     ( int32_t page ) ;
 	// . the offset of a page after "page" that is a different key
 	// . returns m_offset if page >= m_numPages
-	int64_t getNextAbsoluteOffset ( long page ) ;
+	int64_t getNextAbsoluteOffset ( int32_t page ) ;
 
 
 	//key_t getLastKey ( ) { return m_lastKey; };
@@ -201,15 +201,15 @@ class RdbMap {
 	// . these functions operate on one page
 	// . get the first key wholly on page # "page"
 	// . if page >= m_numPages use the lastKey in the file
-	//key_t getKey              ( long page ) { 
-	void getKey ( long page , char *k ) { 
+	//key_t getKey              ( int32_t page ) { 
+	void getKey ( int32_t page , char *k ) { 
 		if ( page >= m_numPages ) {KEYSET(k,m_lastKey,m_ks);return;}
 		//return m_keys[page/PAGES_PER_SEG][page%PAGES_PER_SEG];
 	 KEYSET(k,&m_keys[page/PAGES_PER_SEG][(page%PAGES_PER_SEG)*m_ks],m_ks);
 	 return;
 	}
-	//const key_t *getKeyPtr ( long page ) { 
-	char *getKeyPtr ( long page ) { 
+	//const key_t *getKeyPtr ( int32_t page ) { 
+	char *getKeyPtr ( int32_t page ) { 
 		//if ( page >= m_numPages ) return &m_lastKey;
 		//if ( page >= m_numPages ) return m_lastKey;
 		if ( page >= m_numPages ) return m_lastKey;
@@ -217,15 +217,15 @@ class RdbMap {
 	}
 	//	return getKey ( page ); };
 	// if page >= m_numPages return 0
-	short getOffset           ( long page ) { 
+	int16_t getOffset           ( int32_t page ) { 
 		if ( page >= m_numPages ) {
 			log(LOG_LOGIC,"RdbMap::getOffset: bad engineer");
 			return 0;
 		}
 		return m_offsets [page/PAGES_PER_SEG][page%PAGES_PER_SEG]; 
 	};
-	//void setKey               ( long page , key_t &k ) { 
-	void setKey ( long page , char *k ) { 
+	//void setKey               ( int32_t page , key_t &k ) { 
+	void setKey ( int32_t page , char *k ) { 
 		//#ifdef _SANITYCHECK_
 		if ( page >= m_maxNumPages ) {
 			char *xx = NULL; *xx = 0;
@@ -236,12 +236,12 @@ class RdbMap {
 		       k,m_ks);
 	};
 
-	void setOffset            ( long page , short offset ) {
+	void setOffset            ( int32_t page , int16_t offset ) {
 		m_offsets[page/PAGES_PER_SEG][page%PAGES_PER_SEG] = offset;};
 
 	// . total recSizes = positive + negative rec sizes
 	// . used to read all the recs in Msg3 and RdbScan
-	//long  getRecSizes         ( long page ) {
+	//int32_t  getRecSizes         ( int32_t page ) {
 	//return getRecSizes         ( page , page + 1 ); };
 	
 	// . returns true on success
@@ -252,7 +252,7 @@ class RdbMap {
 	// . reads the keys and offsets into buffers allocated during open().
 	bool readMap     ( BigFile *dataFile );
 	bool readMap2    ( );
-	int64_t readSegment ( long segment, int64_t offset, long fileSize);
+	int64_t readSegment ( int32_t segment, int64_t offset, int32_t fileSize);
 
 	// due to disk corruption keys or offsets can be out of order in map
 	bool verifyMap   ( BigFile *dataFile );
@@ -263,7 +263,7 @@ class RdbMap {
 	bool unlink ( void (* callback)(void *state) , void *state ) { 
 		return m_file.unlink ( callback , state ); };
 
-	long getNumPages ( ) { return m_numPages; };
+	int32_t getNumPages ( ) { return m_numPages; };
 
 	// . return first page #, "N",  to read to get the record w/ this key
 	//   if it exists
@@ -272,19 +272,19 @@ class RdbMap {
 	//   are strictly less than "startKey" and "startKey" does not exist
 	// . if m_keys[N] > startKey then m_keys[N-1] spans multiple pages so 
 	//   that the key immediately after it on disk is in fact, m_keys[N]
-	//long getPage ( key_t startKey ) ;
-	long getPage ( char *startKey ) ;
+	//int32_t getPage ( key_t startKey ) ;
+	int32_t getPage ( char *startKey ) ;
 
 	// used in Rdb class before calling setMapSize
-	//long setMapSizeFromFile ( long fileSize ) ;
+	//int32_t setMapSizeFromFile ( int32_t fileSize ) ;
 
 	// . call this before calling addList() or addRecord()
 	// . returns false if realloc had problems
 	// . sets m_maxNumPages to maxNumPages if successfull
 	// . used to grow the map, too
-	//bool setMapSize ( long maxNumPages );
+	//bool setMapSize ( int32_t maxNumPages );
 
-	bool addSegmentPtr ( long n ) ;
+	bool addSegmentPtr ( int32_t n ) ;
 
 	// called by setMapSize() to increase the # of segments
 	bool addSegment (  ) ;
@@ -295,7 +295,7 @@ class RdbMap {
 	// . returns false and sets errno on error
 	// . the first "fileSize" bytes of the BigFile was chopped off
 	// . we must remove our segments
-	bool chopHead (long fileSize );
+	bool chopHead (int32_t fileSize );
 
 	// how much mem is being used by this map?
 	int64_t getMemAlloced ();
@@ -306,8 +306,8 @@ class RdbMap {
 
 	// . add a slot to the map
 	// . returns false if map size would be exceed by adding this slot
-	bool addRecord ( char *key, char *rec , long recSize );
-	bool addRecord ( key_t &key, char *rec , long recSize ) {
+	bool addRecord ( char *key, char *rec , int32_t recSize );
+	bool addRecord ( key_t &key, char *rec , int32_t recSize ) {
 		return addRecord((char *)&key,rec,recSize);};
 
 	bool truncateFile ( BigFile *f ) ;
@@ -328,32 +328,32 @@ class RdbMap {
 	// . these 3 arrays define the map
 	// . see explanation at top of this file for map description
 	// . IMPORTANT: if growing m_pageSize might need to change m_offsets 
-	//   from short to long
+	//   from int16_t to int32_t
 	//key_t         *m_keys    [ MAX_SEGMENTS ]; 
 	//char          *m_keys    [ MAX_SEGMENTS ]; 
 	char          **m_keys;
-	long            m_numSegmentPtrs;
+	int32_t            m_numSegmentPtrs;
 	//key96_t      **m_keys96; // set to m_keys
 	//key128_t     **m_keys128; // set to m_keys
 
-	//short         *m_offsets [ MAX_SEGMENTS ]; 
-	short         **m_offsets;
-	long            m_numSegmentOffs;
+	//int16_t         *m_offsets [ MAX_SEGMENTS ]; 
+	int16_t         **m_offsets;
+	int32_t            m_numSegmentOffs;
 
 
 
 	// number of valid pages in the map.
-	long          m_numPages;     
+	int32_t          m_numPages;     
 
 	// . size of m_keys, m_offsets arrays 
 	// . not all slots are used, however
 	// . this is sum of all pages in all segments
-	long   m_maxNumPages;      
+	int32_t   m_maxNumPages;      
 	// each segment holds PAGES_PER_SEGMENT pages of info
-	long   m_numSegments;
+	int32_t   m_numSegments;
 
 	// is the rdb file's dataSize fixed?  -1 means it's not.
-	long   m_fixedDataSize;    
+	int32_t   m_fixedDataSize;    
 
 	// . to keep track of disk offsets of added records
         // . if this is > 0 we know a key was added to map so we should call
@@ -384,10 +384,10 @@ class RdbMap {
 
 	bool m_generatingMap;
 
-	long m_pageSize;
-	long m_pageSizeBits;
+	int32_t m_pageSize;
+	int32_t m_pageSizeBits;
 
-	long      m_lastLogTime ;
+	int32_t      m_lastLogTime ;
 	int64_t m_badKeys     ;
 	bool      m_needVerify  ;
 

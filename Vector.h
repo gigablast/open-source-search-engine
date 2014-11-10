@@ -17,7 +17,7 @@
 
 #define MAX_PAIR_HASHES 100
 
-long getSimilarity ( class Vector *v0 , class Vector *v1 ) ;
+int32_t getSimilarity ( class Vector *v0 , class Vector *v1 ) ;
 
 class Vector {
 
@@ -26,35 +26,35 @@ class Vector {
 	Vector();
 
 	// serialize into "buf" and returns bytes written
-	//long store ( char *buf , long bufMaxSize );
+	//int32_t store ( char *buf , int32_t bufMaxSize );
 
 	// deserialize and return bytes read
-	//long set ( char *buf , long bufMaxSize );
+	//int32_t set ( char *buf , int32_t bufMaxSize );
 
-	//long set2  ( char *buf , long numPairHashes ) ;
+	//int32_t set2  ( char *buf , int32_t numPairHashes ) ;
 
 	// how many bytes required to store currently held data
-	//long getStoredSize ( );
-	long getNumPairHashes() {return m_numPairHashes;};
+	//int32_t getStoredSize ( );
+	int32_t getNumPairHashes() {return m_numPairHashes;};
 	uint32_t getVectorHash();
 	// . set ourselves from a a document (xml) and set of links
 	//   and the URL of that document
 	// . returns false and sets g_errno on error
-	//bool set ( Xml *xml , Links *links , Url *url , long linkNode ,
-	//	   char *buf , long bufSize );
+	//bool set ( Xml *xml , Links *links , Url *url , int32_t linkNode ,
+	//	   char *buf , int32_t bufSize );
 
 	//bool setForDates ( class Words    *w1       , 
 	//		   class Sections *sections ,
-	//		   long            niceness ) ;
+	//		   int32_t            niceness ) ;
 
 	void reset();
 
 	// is vector "v" a link-farm brother?
-	long getLinkBrotherProbability ( Vector *v , bool removeMatches ) ;
+	int32_t getLinkBrotherProbability ( Vector *v , bool removeMatches ) ;
 
 	// private:
 
-	bool setPairHashes ( Xml *xml, long linkNode, long niceness );
+	bool setPairHashes ( Xml *xml, int32_t linkNode, int32_t niceness );
 	bool setLocalPairHashes ( Xml *xml , Links *links , Url *url ) ;
 	bool setLinkHashes ( Links *links , Url *url ) ;
 
@@ -62,14 +62,14 @@ class Vector {
 	// have in common? used in LinkInfo::merge() to see if similar.
 	bool setPathComponentHashes ( Url *url ) ;
 
-	bool setTagPairHashes ( Xml *xml, long niceness );
+	bool setTagPairHashes ( Xml *xml, int32_t niceness );
 
 	// total # of non-local outgoing links
-	//long          m_numRemoteLinks;
+	//int32_t          m_numRemoteLinks;
 
-	long getSize ( ) { 
-		//long size = ((char *)m_pairHashes - (char *)&m_init);
-		long size = 4;
+	int32_t getSize ( ) { 
+		//int32_t size = ((char *)m_pairHashes - (char *)&m_init);
+		int32_t size = 4;
 		// add in pair hashes
 		size += m_numPairHashes * 4;
 		return size; 
@@ -83,9 +83,9 @@ class Vector {
 
 	// . store top word pair hases in here
 	// . these can also be link hashes now, too
-	//unsigned long m_pairHashes [ MAX_PAIR_HASHES ];
-	long           m_numPairHashes ;
-	unsigned long  m_pairHashes[ MAX_PAIR_HASHES ]  ;
+	//uint32_t m_pairHashes [ MAX_PAIR_HASHES ];
+	int32_t           m_numPairHashes ;
+	uint32_t  m_pairHashes[ MAX_PAIR_HASHES ]  ;
 };
 
 #endif

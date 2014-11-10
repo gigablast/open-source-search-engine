@@ -47,7 +47,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// get local time
 	int64_t nowLocalMS = gettimeofdayInMillisecondsLocal();
 	// get our hostid
-	long hid = g_hostdb.m_myHost->m_hostId;
+	int32_t hid = g_hostdb.m_myHost->m_hostId;
 	// if process only recently started (1 min ago or less)
 	// then do not immediately do this...
 	if (hid==0 && nowLocalMS - g_process.m_processStartTime < 1*60*1000)
@@ -59,7 +59,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	struct tm *tt ;
 	// how many MINUTES into the day are we? (in UTC)
 	tt = gmtime ( &nowSynced );
-	long elapsedMins = tt->tm_hour * 60 + tt->tm_min ;
+	int32_t elapsedMins = tt->tm_hour * 60 + tt->tm_min ;
 
 	// what collnum to merge?
 	collnum_t i ;
@@ -80,7 +80,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 		// if it is valid, the CollectionRec MUST be there
 		CollectionRec *cr = g_collectiondb.getRec ( i );
 		if ( ! cr ) { 
-			log("daily: host #0 bad collnum %li",(long)i);return;}
+			log("daily: host #0 bad collnum %"INT32"",(int32_t)i);return;}
 		// if valid, use it
 		m_cr = cr;
 		// we set m_cr, go to next mode
@@ -100,15 +100,15 @@ void DailyMerge::dailyMergeLoop ( ) {
 		if ( cr->m_dailyMergeTrigger < 0 ) continue;
 		// . skip if not time yet
 		// . !!!!!THIS IS IN MINUTES!!!!!!!!
-		if ( (long)elapsedMins < (long)cr->m_dailyMergeTrigger ) 
+		if ( (int32_t)elapsedMins < (int32_t)cr->m_dailyMergeTrigger ) 
 			continue;
 		// do not start more than 15 mins after the trigger time,
 		// if we miss that cuz we are down, then too bad
-		if ( (long)elapsedMins > (long)cr->m_dailyMergeTrigger + 15 )
+		if ( (int32_t)elapsedMins > (int32_t)cr->m_dailyMergeTrigger + 15 )
 			continue;
- 		// . how long has it been (in seconds)
+ 		// . how int32_t has it been (in seconds)
 		// . !!!!!THIS IS IN SECONDS!!!!!!!!
-		long diff = nowSynced - cr->m_dailyMergeStarted;
+		int32_t diff = nowSynced - cr->m_dailyMergeStarted;
 		// crazy?
 		if ( diff < 0 ) continue;
 		// if less than 24 hours ago, we already did it
@@ -123,13 +123,13 @@ void DailyMerge::dailyMergeLoop ( ) {
 		memset(dowCounts,0,8);
 		for ( ; *s ; s++ ) {
 			if ( ! is_digit(*s) ) continue;
-			long num = atoi(s);
+			int32_t num = atoi(s);
 			if ( num < 0 ) continue;
 			if ( num > 6 ) continue;
 			dowCounts[num]++;
 		}
 		// get our dow
-		long todayDOW = tt->tm_wday + 1;
+		int32_t todayDOW = tt->tm_wday + 1;
 		// make sure 1 to 7
 		if ( todayDOW < 0 ) { char *xx=NULL;*xx=0; }
 		if ( todayDOW > 6 ) { char *xx=NULL;*xx=0; }
@@ -147,7 +147,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 		//   satisfied our "second time around" (so we must complete
 		//   one daily merge before checking this again). that is why
 		//   i added "m_didDaily". -- MDW
-		for ( long i = 0 ; m_didDaily && i<g_hostdb.m_numHosts ; i++){
+		for ( int32_t i = 0 ; m_didDaily && i<g_hostdb.m_numHosts ; i++){
 			// skip ourselves, obviously we are in merge mode 2
 			if ( &g_hostdb.m_hosts[i] == g_hostdb.m_myHost )
 				continue;
@@ -187,7 +187,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// wait for everyone to make it to mode 1+ before going on
 	if ( m_mergeMode == 2 ) {
 		// check the ping packet flags
-		for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 			// get the host
 			Host *h = &g_hostdb.m_hosts[i];
 			// skip ourselves, obviously we are in merge mode 2
@@ -213,7 +213,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 		if ( g_spiderLoop.m_numSpidersOut > 0 )
 			return;
 		// check the ping packet flags
-		for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 			// skip ourselves, obviously we are in merge mode 2
 			if ( &g_hostdb.m_hosts[i] == g_hostdb.m_myHost )
 				continue;
@@ -309,7 +309,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// wait for all to finish before re-enabling spiders
 	if ( m_mergeMode == 6 ) {
 		// check the ping packet flags
-		for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 			// skip ourselves, obviously we are ok
 			if ( &g_hostdb.m_hosts[i] == g_hostdb.m_myHost )
 				continue;

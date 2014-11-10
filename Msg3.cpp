@@ -13,7 +13,7 @@ static void  doneScanningWrapper ( void *state ) ;
 
 //bool mainShutdown ( bool urgent );
 
-long g_numIOErrors = 0;
+int32_t g_numIOErrors = 0;
 
 Msg3::Msg3() {
 	m_alloc = NULL;
@@ -33,7 +33,7 @@ void Msg3::reset() {
 	m_numScansStarted = 0;
 	if ( ! m_alloc        ) return;
 	// call destructors
-	for ( long i = 0 ; i < m_numChunks ; i++ ) m_lists[i].destructor();
+	for ( int32_t i = 0 ; i < m_numChunks ; i++ ) m_lists[i].destructor();
 	if ( m_alloc == m_buf ) return;
 	mfree ( m_alloc , m_allocSize , "Msg3" );
 	m_alloc = NULL;
@@ -52,10 +52,10 @@ void Msg3::reset() {
 // . we try to shrink the endKey if minRecSizes is >= 0 in order to
 //   avoid excessive reading
 // . by shrinking the endKey we cannot take into account the size of deleted
-//   records, so therefore we may fall short of "minRecSizes" in actuality,
+//   records, so therefore we may fall int16_t of "minRecSizes" in actuality,
 //   in fact, the returned list may even be empty with a shrunken endKey
 // . we merge all lists read from disk into the provided "list"
-// . caller should call Msg3.getList(long i) and Msg3:getNumLists() to retrieve
+// . caller should call Msg3.getList(int32_t i) and Msg3:getNumLists() to retrieve
 // . this makes the query engine faster since we don't need to merge the docIds
 //   and can just send them across the network separately and they will be
 //   hashed into IndexTable's table w/o having to do time-wasting merging.
@@ -68,14 +68,14 @@ bool Msg3::readList  ( char           rdbId         ,
 		       //key_t          endKey        , 
 		       char          *startKeyArg      , 
 		       char          *endKeyArg        , 
-		       long           minRecSizes   , // max size of scan
-		       long           startFileNum  , // first file to scan
-		       long           numFiles      , // rel. to startFileNum
+		       int32_t           minRecSizes   , // max size of scan
+		       int32_t           startFileNum  , // first file to scan
+		       int32_t           numFiles      , // rel. to startFileNum
 		       void          *state         , // for callback
 		       void        (* callback ) ( void *state ) ,
-		       long           niceness      ,
-		       long           retryNum      ,
-		       long           maxRetries    ,
+		       int32_t           niceness      ,
+		       int32_t           retryNum      ,
+		       int32_t           maxRetries    ,
 		       bool           compensateForMerge ,
 		       int64_t      syncPoint     ,
 		       bool           justGetEndKey ,
@@ -87,7 +87,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	m_listsChecked = false;
 	// warn
 	if ( minRecSizes < -1 ) {
-		log(LOG_LOGIC,"db: Msg3 got minRecSizes of %li, changing "
+		log(LOG_LOGIC,"db: Msg3 got minRecSizes of %"INT32", changing "
 		    "to -1.",minRecSizes);
 		minRecSizes = -1;
 	}
@@ -114,7 +114,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	m_errno    = 0;
 	// . reset all our lists 
 	// . these are reset in call the RdbScan::setRead() below
-	//for ( long i = 0 ; i < MAX_RDB_FILES ; i++ ) m_lists[i].reset();
+	//for ( int32_t i = 0 ; i < MAX_RDB_FILES ; i++ ) m_lists[i].reset();
 	// . ensure startKey last bit clear, endKey last bit set
 	// . no! this warning is now only in Msg5
 	// . if RdbMerge is merging some files, not involving the root 
@@ -132,8 +132,8 @@ bool Msg3::readList  ( char           rdbId         ,
 		log(LOG_REMIND,"net: msg3: EndKey lastbit clear."); 
 
 	// declare vars here becaues of 'goto skip' below
-	long mergeFileNum = -1 ;
-	long max ;
+	int32_t mergeFileNum = -1 ;
+	int32_t max ;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
@@ -145,7 +145,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		// . store them all
 		// . what if we merged one of these files (or are merging)???
 		// . then sync class should not discard syncpoints until no
-		//   longer syncing and we'll know about it
+		//   int32_ter syncing and we'll know about it
 		// . this should compensate for merges by including any files
 		//   that are merging a file in m_fileNums
 		m_numFileNums = g_sync.getFileNums ( m_rdbId       ,
@@ -156,10 +156,10 @@ bool Msg3::readList  ( char           rdbId         ,
 		log("NOOOOOO. we do not alloc if we go to skip!!");
 		char *xx = NULL; *xx = 0;
 		// bring back the comment below... i removed it because i added
-		// "long chunk" et al below and didn't want to move them.
+		// "int32_t chunk" et al below and didn't want to move them.
 		//if ( m_numFileNums > 0 ) goto skip;
 		log("net: Trying to read data in %s from files generated after"
-		    " a sync point %llu in \"sync\" file, but none found.",
+		    " a sync point %"UINT64" in \"sync\" file, but none found.",
 		    base->m_dbname,m_syncPoint);
 		return true;
 	}
@@ -191,11 +191,11 @@ bool Msg3::readList  ( char           rdbId         ,
 	if ( g_conf.m_logDebugQuery )
 		log(LOG_DEBUG,
 		    "net: msg3: "
-		    "c=%li hmf=%li sfn=%li msfn=%li nf=%li db=%s.",
-		     (long)compensateForMerge,(long)base->hasMergeFile(),
-		     (long)startFileNum,(long)base->m_mergeStartFileNum-1,
-		     (long)numFiles,base->m_dbname);
-	long pre = -10;
+		    "c=%"INT32" hmf=%"INT32" sfn=%"INT32" msfn=%"INT32" nf=%"INT32" db=%s.",
+		     (int32_t)compensateForMerge,(int32_t)base->hasMergeFile(),
+		     (int32_t)startFileNum,(int32_t)base->m_mergeStartFileNum-1,
+		     (int32_t)numFiles,base->m_dbname);
+	int32_t pre = -10;
 	if ( compensateForMerge && base->hasMergeFile() && 
 	     startFileNum >= base->m_mergeStartFileNum - 1 &&
 	     (startFileNum > 0 || numFiles != -1) ) {
@@ -209,7 +209,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		// debug msg
 		if ( g_conf.m_logDebugQuery )
 			log(LOG_DEBUG,
-			   "net: msg3: startFileNum from %li to %li (mfn=%li)",
+			   "net: msg3: startFileNum from %"INT32" to %"INT32" (mfn=%"INT32")",
 			    startFileNum,startFileNum+1,mergeFileNum);
 		// if merge file was inserted before us, inc our file number
 		startFileNum++;
@@ -239,7 +239,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	// set g_errno and return true if it is < 0
 	if ( numFiles < 0 ) { 
 		log(LOG_LOGIC,
-		   "net: msg3: readList: numFiles = %li < 0 (max=%li)(sf=%li)",
+		   "net: msg3: readList: numFiles = %"INT32" < 0 (max=%"INT32")(sf=%"INT32")",
 		    numFiles , max , startFileNum );
 		g_errno = EBADENGINEER; 
 		// force core dump
@@ -250,7 +250,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	// . allocate buffer space
 	// . m_scans, m_startpg, m_endpg, m_hintKeys, m_hintOffsets,
 	//   m_fileNums, m_lists, m_tfns
-	long chunk = sizeof(RdbScan) + // m_scans
+	int32_t chunk = sizeof(RdbScan) + // m_scans
 		4 +                    // m_startpg
 		4 +                    // m_endpg
 		//sizeof(key_t) +        // m_hintKeys
@@ -259,42 +259,42 @@ bool Msg3::readList  ( char           rdbId         ,
 		4 +                    // m_fileNums
 		sizeof(RdbList) +      // m_lists
 		4 ;                    // m_tfns
-	long nn   = numFiles;
+	int32_t nn   = numFiles;
 	if ( pre != -10 ) nn++;
 	m_numChunks = nn;
-	long need = nn * (chunk);
+	int32_t need = nn * (chunk);
 	m_alloc = m_buf;
-	if ( need > (long)MSG3_BUF_SIZE ) {
+	if ( need > (int32_t)MSG3_BUF_SIZE ) {
 		m_allocSize = need;
 		m_alloc = (char *)mcalloc ( need , "Msg3" );
 		if ( ! m_alloc ) {
-			log("disk: Could not allocate %li bytes read "
+			log("disk: Could not allocate %"INT32" bytes read "
 			    "structures to read %s.",need,base->m_dbname);
 			return true;
 		}
 	}
 	char *p = m_alloc;
 	m_scans       = (RdbScan *)p; p += nn * sizeof(RdbScan);
-	m_startpg     = (long    *)p; p += nn * 4;
-	m_endpg       = (long    *)p; p += nn * 4;
+	m_startpg     = (int32_t    *)p; p += nn * 4;
+	m_endpg       = (int32_t    *)p; p += nn * 4;
 	//m_hintKeys    = (key_t   *)p; p += nn * sizeof(key_t);
 	m_hintKeys    = (char    *)p; p += nn * m_ks;
-	m_hintOffsets = (long    *)p; p += nn * 4;
-	m_fileNums    = (long    *)p; p += nn * 4;
+	m_hintOffsets = (int32_t    *)p; p += nn * 4;
+	m_fileNums    = (int32_t    *)p; p += nn * 4;
 	m_lists       = (RdbList *)p; p += nn * sizeof(RdbList);
-	m_tfns        = (long    *)p; p += nn * 4;
+	m_tfns        = (int32_t    *)p; p += nn * 4;
 	// sanity check
 	if ( p - m_alloc != need ) {
 		log(LOG_LOGIC,"disk: Bad malloc in Msg3.cpp.");
 		char *xx = NULL; *xx = 0;
 	}
 	// call constructors
-	for ( long i = 0 ; i < nn ; i++ ) m_lists[i].constructor();
+	for ( int32_t i = 0 ; i < nn ; i++ ) m_lists[i].constructor();
 	// make fix from up top
 	if ( pre != -10 ) m_fileNums [ m_numFileNums++ ] = pre;
 
 	// store them all
-	for ( long i = startFileNum ; i < startFileNum + numFiles ; i++ )
+	for ( int32_t i = startFileNum ; i < startFileNum + numFiles ; i++ )
 		m_fileNums [ m_numFileNums++ ] = i;
 
 	// we skip down to here when a syncPoint was used to set the
@@ -303,8 +303,8 @@ bool Msg3::readList  ( char           rdbId         ,
 // skip:
 	// . remove file nums that are being unlinked after a merge now
 	// . keep it here (below skip: label) so sync point reads can use it
-	long n = 0;
-	for ( long i = 0 ; i < m_numFileNums ; i++ ) {
+	int32_t n = 0;
+	for ( int32_t i = 0 ; i < m_numFileNums ; i++ ) {
 		// skip those that are being unlinked after the merge
 		if ( base->m_isUnlinking && 
 		     m_fileNums[i] >= base->m_mergeStartFileNum &&
@@ -373,7 +373,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	// . we will use this key to call constrain() with
 	//m_constrainKey = m_endKey;
 	//if ( ( m_constrainKey.n0 & 0x01) == 0x00 ) 
-	//	m_constrainKey -= (unsigned long)1;
+	//	m_constrainKey -= (uint32_t)1;
 	KEYSET(m_constrainKey,m_endKey,m_ks);
 	if ( KEYNEG(m_constrainKey) )
 		KEYSUB(m_constrainKey,1,m_ks);
@@ -399,7 +399,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		//m_constrainKey.n0 |= 0x02;
 		*m_constrainKey |= 0x02;
 		// note it
-		//logf(LOG_DEBUG,"oldukey.n1=%lx n0=%llx new.n1=%lx n0=%llx",
+		//logf(LOG_DEBUG,"oldukey.n1=%"XINT32" n0=%"XINT64" new.n1=%"XINT32" n0=%"XINT64"",
 		//     m_endKey.n1,m_endKey.n0,
 		//     m_constrainKey.n1,m_constrainKey.n0);
 	}
@@ -415,7 +415,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	}
 
 	// debug msg
-	//log("msg3 getting list (msg5=%lu)",m_state);
+	//log("msg3 getting list (msg5=%"UINT32")",m_state);
 	// . MDW removed this -- go ahead an end on a delete key
 	// . RdbMerge might not pick it up this round, but oh well
 	// . so we can have both positive and negative co-existing in same file
@@ -423,15 +423,15 @@ bool Msg3::readList  ( char           rdbId         ,
 	//m_endKey.n0 |= 0x01LL;
 	// . now start reading/scanning the files
 	// . our m_scans array starts at 0
-	for ( long i = 0 ; i < m_numFileNums ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numFileNums ; i++ ) {
 		// get the page range
-		//long p1 = m_startpg [ i ];
-		//long p2 = m_endpg   [ i ];
+		//int32_t p1 = m_startpg [ i ];
+		//int32_t p2 = m_endpg   [ i ];
 		//#ifdef _SANITYCHECK_
-		long fn = m_fileNums[i];
+		int32_t fn = m_fileNums[i];
 		// this can happen somehow!
 		if ( fn < 0 ) {
-			log(LOG_LOGIC,"net: msg3: fn=%li. Bad engineer.",fn);
+			log(LOG_LOGIC,"net: msg3: fn=%"INT32". Bad engineer.",fn);
 			continue;
 		}
 		// sanity check
@@ -446,7 +446,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		}
 		// . sanity check?
 		// . no, we must get again since we turn on endKey's last bit
-		long p1 , p2;
+		int32_t p1 , p2;
 		maps[fn]->getPageRange ( m_fileStartKey , 
 					m_endKey       , 
 					&p1            , 
@@ -463,16 +463,16 @@ bool Msg3::readList  ( char           rdbId         ,
 		//	sleep(50000);
 		//}
 		//#endif
-		//long p1 , p2; 
+		//int32_t p1 , p2; 
 		//maps[fn]->getPageRange (startKey,endKey,minRecSizes,&p1,&p2);
 		// now get some read info
 		int64_t offset      = maps[fn]->getAbsoluteOffset ( p1 );
-		long      bytesToRead = maps[fn]->getRecSizes ( p1, p2, false);
+		int32_t      bytesToRead = maps[fn]->getRecSizes ( p1, p2, false);
 		// max out the endkey for this list
 		// debug msg
 		//#ifdef _DEBUG_		
 		//if ( minRecSizes == 2000000 ) 
-		//log("Msg3:: reading %li bytes from file #%li",bytesToRead,i);
+		//log("Msg3:: reading %"INT32" bytes from file #%"INT32"",bytesToRead,i);
 		//#endif
 		// inc our m_numScans
 		m_numScansStarted++;
@@ -504,7 +504,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		// . but iff p2 is NOT the last page in the map/file
 		// . maps[fn]->getKey(lastPage) will return the LAST KEY
 		//   and maps[fn]->getOffset(lastPage) the length of the file
-		//if ( maps[fn]->getNumPages()!=p2) endKey -=(unsigned long)1;
+		//if ( maps[fn]->getNumPages()!=p2) endKey -=(uint32_t)1;
 		if ( maps[fn]->getNumPages() != p2 ) KEYSUB(endKey2,1,m_ks);
 		// otherwise, if we're reading all pages, then force the
 		// endKey to virtual inifinite
@@ -516,7 +516,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		// . these are used to call constrain() so we can constrain
 		//   the end of the list w/o looping through all the recs
 		//   in the list
-		long h2 = p2 ;
+		int32_t h2 = p2 ;
 		// decrease by one page if we're on the last page
 		if ( h2 > p1 && maps[fn]->getNumPages() == h2 ) h2--;
 		// . decrease hint page until key is <= endKey on that page
@@ -547,13 +547,13 @@ bool Msg3::readList  ( char           rdbId         ,
 		//   a rec with key "lastMinKey" even though we don't read
 		//   in the first key on the end page, so don't subtract 1...
 		//if ( endKey != m_endKeyOrig ) 
-		//	endKey += (unsigned long) 1;
+		//	endKey += (uint32_t) 1;
 
 		// timing debug
 		if ( g_conf.m_logTimingDb )
 			log(LOG_TIMING,
-			    "net: msg: reading %li bytes from %s file #%li "
-			     "(niceness=%li)",
+			    "net: msg: reading %"INT32" bytes from %s file #%"INT32" "
+			     "(niceness=%"INT32")",
 			     bytesToRead,base->m_dbname,i,m_niceness);
 
 		// set the tfn
@@ -562,7 +562,7 @@ bool Msg3::readList  ( char           rdbId         ,
 
 		// log huge reads, those hurt us
 		if ( bytesToRead > 150000000 ) {
-			logf(LOG_INFO,"disk: Reading %li bytes at offset %lli "
+			logf(LOG_INFO,"disk: Reading %"INT32" bytes at offset %"INT64" "
 			    "from %s.",
 			    bytesToRead,offset,base->m_dbname);
 		}
@@ -570,11 +570,11 @@ bool Msg3::readList  ( char           rdbId         ,
 		// if any keys in the map are the same report corruption
 		char tmpKey    [16];
 		char lastTmpKey[16];
-		long ccount = 0;
+		int32_t ccount = 0;
 		if ( bytesToRead     > 10000000      && 
 		     bytesToRead / 2 > m_minRecSizes &&
 		     base->m_fixedDataSize >= 0        ) {
-			for ( long pn = p1 ; pn <= p2 ; pn++ ) {
+			for ( int32_t pn = p1 ; pn <= p2 ; pn++ ) {
 				maps[fn]->getKey ( pn , tmpKey );
 				if ( KEYCMP(tmpKey,lastTmpKey,m_ks) == 0 ) 
 					ccount++;
@@ -582,16 +582,16 @@ bool Msg3::readList  ( char           rdbId         ,
 			}
 		}
 		if ( ccount > 10 ) {
-			logf(LOG_INFO,"disk: Reading %li bytes from %s file #"
-			     "%li when min "
-			     "required is %li. Map is corrupt and has %li "
+			logf(LOG_INFO,"disk: Reading %"INT32" bytes from %s file #"
+			     "%"INT32" when min "
+			     "required is %"INT32". Map is corrupt and has %"INT32" "
 			     "identical consecutive page keys because the "
 			     "map was \"repaired\" because out of order keys "
 			     "in the index.",
-			     (long)bytesToRead,
+			     (int32_t)bytesToRead,
 			     base->m_dbname,fn,
-			     (long)m_minRecSizes,
-			     (long)ccount);
+			     (int32_t)m_minRecSizes,
+			     (int32_t)ccount);
 			m_numScansCompleted++;
 			m_errno = ECORRUPTDATA;
 			m_hadCorruption = true;
@@ -629,11 +629,11 @@ bool Msg3::readList  ( char           rdbId         ,
 			g_errno = 0;
 		}
 		// debug msg
-		//fprintf(stderr,"Msg3:: reading %li bytes from file #%li,"
-		//	"done=%li,offset=%lli,g_errno=%s,"
-		//	"startKey=n1=%lu,n0=%llu,  "
-		//	"endKey=n1=%lu,n0=%llu\n",
-		//	bytesToRead,i,(long)done,offset,mstrerror(g_errno),
+		//fprintf(stderr,"Msg3:: reading %"INT32" bytes from file #%"INT32","
+		//	"done=%"INT32",offset=%"INT64",g_errno=%s,"
+		//	"startKey=n1=%"UINT32",n0=%"UINT64",  "
+		//	"endKey=n1=%"UINT32",n0=%"UINT64"\n",
+		//	bytesToRead,i,(int32_t)done,offset,mstrerror(g_errno),
 		//	m_startKey,m_endKey);
 		//if ( bytesToRead == 0 )
 		//	fprintf(stderr,"shit\n");
@@ -641,7 +641,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		if ( done ) m_numScansCompleted++;
 		// break on an error, and remember g_errno in case we block
 		if ( g_errno && g_errno != ENOTHREADSLOTS ) { 
-			long tt = LOG_WARN;
+			int32_t tt = LOG_WARN;
 			if ( g_errno == EFILECLOSED ) tt = LOG_INFO;
 			log(tt,"disk: Reading %s had error: %s.",
 			    base->m_dbname, mstrerror(g_errno));
@@ -676,7 +676,7 @@ void doneScanningWrapper ( void *state ) {
 		RdbBase *base; base=getRdbBase(THIS->m_rdbId,THIS->m_collnum);
 		char *dbname = "NOT FOUND";
 		if ( base ) dbname = base->m_dbname;
-		long tt = LOG_WARN;
+		int32_t tt = LOG_WARN;
 		if ( g_errno == EFILECLOSED ) tt = LOG_INFO;
 		log(tt,"net: Reading %s had error: %s.",
 		    dbname,mstrerror(g_errno));
@@ -705,7 +705,7 @@ bool Msg3::doneScanning ( ) {
 	// . if so, repeat ALL of the scans
 	g_errno = m_errno;
 	// 2 retry is the default
-	long max = 2;
+	int32_t max = 2;
 	// see if explicitly provided by the caller
 	if ( m_maxRetries >= 0 ) max = m_maxRetries;
 	// now use -1 (no max) as the default no matter what
@@ -767,13 +767,13 @@ bool Msg3::doneScanning ( ) {
 	// this may be the same scenario as when the rdbmap has consecutive
 	// same keys. see above where we set m_errno to ECORRUPTDATA...
 	if ( g_errno == EBUFTOOSMALL ) { 
-		long biggest = 0;
-		for ( long i = 0 ; i < m_numFileNums ; i++ ) {
+		int32_t biggest = 0;
+		for ( int32_t i = 0 ; i < m_numFileNums ; i++ ) {
 			if ( m_scans[i].m_bytesToRead < biggest ) continue;
 			biggest = m_scans[i].m_bytesToRead;
 		}
 		if ( biggest > 500000000 ) {
-			log("db: Max read size was %li > 500000000. Assuming "
+			log("db: Max read size was %"INT32" > 500000000. Assuming "
 			    "corrupt data in data file.",biggest);
 			m_errno = ECORRUPTDATA;
 			m_hadCorruption = true;
@@ -790,7 +790,7 @@ bool Msg3::doneScanning ( ) {
 #ifdef _SANITY_CHECK_
 	// check for corruption here, do not do it again in Msg5 if we pass
 	if ( ! g_errno ) { // && g_conf.m_doErrorCorrection ) {
-		long i;
+		int32_t i;
 		for ( i = 0 ; i < m_numFileNums ; i++ )
 			if ( ! m_lists[i].checkList_r ( false, false ) ) break;
 		if ( i < m_numFileNums ) {
@@ -821,13 +821,13 @@ bool Msg3::doneScanning ( ) {
 		time_t now = getTime();
 		if ( now - s_time > 5 || g_errno != ENOTHREADSLOTS ) {
 			log("net: Had error reading %s: %s. Retrying. "
-			    "(retry #%li)", 
+			    "(retry #%"INT32")", 
 			    base->m_dbname,mstrerror(g_errno) , m_retryNum );
 			s_time = now;
 		}
 		// send email alert if in an infinite loop, but don't send
 		// more than once every 2 hours
-		static long s_lastSendTime = 0;
+		static int32_t s_lastSendTime = 0;
 		if ( m_retryNum == 100 && getTime() - s_lastSendTime > 3600*2){
 			// remove this for now it is going off all the time
 			//g_pingServer.sendEmail(NULL,//g_hostdb.getMyHost(),
@@ -838,12 +838,12 @@ bool Msg3::doneScanning ( ) {
 		g_errno = 0;
 		// free the list buffer since if we have 1000 Msg3s retrying
 		// it will totally use all of our memory
-		for ( long i = 0 ; i < m_numChunks ; i++ ) 
+		for ( int32_t i = 0 ; i < m_numChunks ; i++ ) 
 			m_lists[i].destructor();
 		// count retries
 		m_retryNum++;
 		// backoff scheme, wait 100ms more each time
-		long wait ;
+		int32_t wait ;
 		if ( m_retryNum == 1 ) wait = 10;
 		else                   wait = 200 * m_retryNum;
 		// . don't wait more than 10 secs between tries
@@ -868,7 +868,7 @@ bool Msg3::doneScanning ( ) {
 	// if we got an error and should not retry any more then give up
 	if ( g_errno ) {
 		log(
-		    "net: Had error reading %s: %s. Giving up after %li "
+		    "net: Had error reading %s: %s. Giving up after %"INT32" "
 		    "retries.",
 		    base->m_dbname,mstrerror(g_errno) , m_retryNum );
 		return true;
@@ -876,17 +876,17 @@ bool Msg3::doneScanning ( ) {
 
 	// note it if the retry finally worked
 	if ( m_retryNum > 0 ) 
-		log(LOG_INFO,"disk: Read succeeded after retrying %li times.",
-		    (long)m_retryNum);
+		log(LOG_INFO,"disk: Read succeeded after retrying %"INT32" times.",
+		    (int32_t)m_retryNum);
 
 	// count total bytes for logging
-	long count = 0;
+	int32_t count = 0;
 	// . constrain all lists to make merging easier
 	// . if we have only one list, then that's nice cuz the constrain
 	//   will allow us to send it right away w/ zero copying
 	// . if we have only 1 list, it won't be merged into a final list,
 	//   that is, we'll just set m_list = &m_lists[i]
-	for ( long i = 0 ; i < m_numFileNums ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numFileNums ; i++ ) {
 		QUICKPOLL(m_niceness);
 		// count total bytes for logging
 		count += m_lists[i].getListSize();
@@ -911,7 +911,7 @@ bool Msg3::doneScanning ( ) {
 		// . if we only read from one file then constrain based 
 		//   on minRecSizes so we can send the list back w/o merging
 		//   OR if just merging with RdbTree's list
-		long mrs ;
+		int32_t mrs ;
 		// . constrain to m_minRecSizesOrig, not m_minRecSizes cuz 
 		//   that  could be adjusted by compensateForNegativeRecs()
 		// . but, really, they should be the same if we only read from
@@ -930,12 +930,12 @@ bool Msg3::doneScanning ( ) {
 					      ff->getFilename() ,
 					      m_niceness ) ) {
 			log("net: Had error while constraining list read from "
-			    "%s: %s/%s. vfd=%li parts=%li. "
+			    "%s: %s/%s. vfd=%"INT32" parts=%"INT32". "
 			    "This is likely caused by corrupted "
 			    "data on disk.", 
 			    mstrerror(g_errno), ff->m_dir ,
 			    ff->getFilename(), ff->m_vfd , 
-			    (long)ff->m_numParts );
+			    (int32_t)ff->m_numParts );
 		}
 	}
 
@@ -944,8 +944,8 @@ bool Msg3::doneScanning ( ) {
 		int64_t now = gettimeofdayInMilliseconds();
 		int64_t took = now - m_startTime;
 		log(LOG_TIMING,
-		    "net: Took %lli ms to read %li lists of %li bytes total"
-		     " from %s (niceness=%li).",
+		    "net: Took %"INT64" ms to read %"INT32" lists of %"INT32" bytes total"
+		     " from %s (niceness=%"INT32").",
 		     took,m_numFileNums,count,base->m_dbname,m_niceness);
 	}
 	return true;
@@ -989,13 +989,13 @@ bool Msg3::doneSleeping ( ) {
 // . this now OVERWRITES endKey with the new one
 //key_t Msg3::setPageRanges ( RdbBase *base ,
 void  Msg3::setPageRanges ( RdbBase *base ,
-			    long  *fileNums      ,
-			    long   numFileNums   ,
+			    int32_t  *fileNums      ,
+			    int32_t   numFileNums   ,
 			    //key_t  startKey      , 
 			    //key_t  endKey        ,
 			    char  *startKey      , 
 			    char  *endKey        ,
-			    long   minRecSizes   ) {
+			    int32_t   minRecSizes   ) {
 	// sanity check
 	//if ( m_ks != 12 && m_ks != 16 ) { char *xx=NULL;*xx=0; }
 	// get the file maps from the rdb
@@ -1003,8 +1003,8 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 	// . initialize the startpg/endpg for each file
 	// . we read from the first offset on m_startpg to offset on m_endpg
 	// . since we set them equal that means an empty range for each file
-	for ( long i = 0 ; i < numFileNums ; i++ ) {
-		long fn = fileNums[i];
+	for ( int32_t i = 0 ; i < numFileNums ; i++ ) {
+		int32_t fn = fileNums[i];
 		if ( fn < 0 ) { char *xx = NULL; *xx = 0; }
 		m_startpg[i] = maps[fn]->getPage( startKey );
 		m_endpg  [i] = m_startpg[i];
@@ -1019,17 +1019,17 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 	// loop until we find the page ranges that barely satisfy "minRecSizes"
   loop:
 	// find the map whose next page has the lowest key
-	long  minpg   = -1;
+	int32_t  minpg   = -1;
 	//key_t minKey; 
 	char minKey[MAX_KEY_BYTES];
-	for ( long i = 0 ; i < numFileNums ; i++ ) {
-		long fn = fileNums[i];
+	for ( int32_t i = 0 ; i < numFileNums ; i++ ) {
+		int32_t fn = fileNums[i];
 		// this guy is out of race if his end key > "endKey" already
 		//if ( maps[fn]->getKey ( m_endpg[i] ) > endKey ) continue;
 		if(KEYCMP(maps[fn]->getKeyPtr(m_endpg[i]),endKey,m_ks)>0)
 			continue;
 		// get the next page after m_endpg[i]
-		long nextpg = m_endpg[i] + 1;
+		int32_t nextpg = m_endpg[i] + 1;
 		// if endpg[i]+1 == m_numPages then we maxed out this range
 		if ( nextpg > maps[fn]->getNumPages() ) continue;
 		// . but this may have an offset of -1
@@ -1056,7 +1056,7 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 		//if ( minKey != maps[fn]->getKey ( m_endpg[i] ) ) continue;
 		if ( KEYCMP(minKey,maps[fn]->getKeyPtr(m_endpg[i]),m_ks)!=0) 
 			continue;
-		//minKey += (unsigned long) 1;
+		//minKey += (uint32_t) 1;
 		KEYADD(minKey,1,m_ks);
 	}
 	// . we're done if we hit the end of all maps in the race
@@ -1088,7 +1088,7 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 	//if ( minKey > endKey ) {
 	if ( KEYCMP(minKey,endKey,m_ks)>0 ) {
 		//minKey      = endKey ;
-		//minKey     += (unsigned long) 1;
+		//minKey     += (uint32_t) 1;
 		//lastMinKey  = endKey;
 		KEYSET(minKey,endKey,m_ks);
 		KEYADD(minKey,1,m_ks);
@@ -1096,7 +1096,7 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 	}
 	else {
 		//lastMinKey = minKey ;
-		//lastMinKey -= (unsigned long) 1;
+		//lastMinKey -= (uint32_t) 1;
 		KEYSET(lastMinKey,minKey,m_ks);
 		KEYSUB(lastMinKey,1,m_ks);
 	}
@@ -1104,8 +1104,8 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 	lastMinKeyIsValid = 1;
 	// . advance m_endpg[i] so that next page < minKey 
 	// . we want to read UP TO the first key on m_endpg[i]
-	for ( long i = 0 ; i < m_numFileNums ; i++ ) {
-		long fn = fileNums[i];
+	for ( int32_t i = 0 ; i < m_numFileNums ; i++ ) {
+		int32_t fn = fileNums[i];
 		m_endpg[i] = maps[fn]->getEndPage ( m_endpg[i], lastMinKey );
 	}
 	// . if the minKey is BIGGER than the provided endKey we're done
@@ -1116,11 +1116,11 @@ void  Msg3::setPageRanges ( RdbBase *base ,
 	// . compute bytes of records in [startKey,minKey-1] for each map
 	// . this includes negative records so we may have annihilations
 	//   when merging into "diskList" and get less than what we wanted
-	//   but endKey should be shortened, so our caller will know to call
+	//   but endKey should be int16_tened, so our caller will know to call
 	//   again if he wants more
-	long recSizes = 0;
-	for ( long i = 0 ; i < m_numFileNums ; i++ ) {
-		long fn = fileNums[i];
+	int32_t recSizes = 0;
+	for ( int32_t i = 0 ; i < m_numFileNums ; i++ ) {
+		int32_t fn = fileNums[i];
 		recSizes += maps[fn]->getMinRecSizes ( m_startpg[i] , 
 						       m_endpg  [i] ,
 						       startKey     , 
@@ -1153,13 +1153,13 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 	int64_t totalNegatives = 0;
 	int64_t totalPositives = 0;
 	int64_t totalFileSize  = 0;
-	for (long i = 0 ; i < m_numFileNums ; i++) {
-		long fn = m_fileNums[i];
+	for (int32_t i = 0 ; i < m_numFileNums ; i++) {
+		int32_t fn = m_fileNums[i];
 		// . this cored on me before when fn was -1, how'd that happen?
 		// . it happened right after startup before a merge should
 		//   have been attempted
 		if ( fn < 0 ) {
-			log(LOG_LOGIC,"net: msg3: fn=%li. bad engineer.",fn);
+			log(LOG_LOGIC,"net: msg3: fn=%"INT32". bad engineer.",fn);
 			continue;
 		}
 		totalNegatives += maps[fn]->getNumNegativeRecs();
@@ -1171,8 +1171,8 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 	// if we have no records on disk, why are we reading from disk?
 	if ( totalNumRecs == 0 ) return ;
 	// what is the size of a negative record?
-	//long negRecSize  = sizeof(key_t);
-	long negRecSize  = m_ks;
+	//int32_t negRecSize  = sizeof(key_t);
+	int32_t negRecSize  = m_ks;
 	if ( base->getFixedDataSize() == -1 ) negRecSize += 4;
 	// what is the size of all positive recs combined?
 	int64_t posFileSize = totalFileSize - negRecSize * totalNegatives;
@@ -1182,19 +1182,19 @@ void Msg3::compensateForNegativeRecs ( RdbBase *base ) {
 	//   a newMin of 0x7fffffff which really fucks us up
 	if ( posFileSize < 0 ) posFileSize = 0;
 	// what is the average size of a positive record?
-	long posRecSize  = 0;
+	int32_t posRecSize  = 0;
 	if ( totalPositives > 0 ) posRecSize = posFileSize / totalPositives;
 	// we annihilate the negative recs and their positive pairs
 	int64_t loss   = totalNegatives * (negRecSize + posRecSize);
 	// what is the percentage lost?
 	int64_t lostPercent = (100LL * loss) / totalFileSize;
 	// how much more should we read to compensate?
-	long newMin = ((int64_t)m_minRecSizes * (lostPercent + 100LL))/100LL;
+	int32_t newMin = ((int64_t)m_minRecSizes * (lostPercent + 100LL))/100LL;
 	// newMin will never be smaller unless it overflows
 	if ( newMin < m_minRecSizes ) newMin = 0x7fffffff;
 	// print msg if we changed m_minRecSizes
 	//if ( newMin != m_minRecSizes )
-	//	log("Msg3::compensated from minRecSizes from %li to %li",
+	//	log("Msg3::compensated from minRecSizes from %"INT32" to %"INT32"",
 	//	    m_minRecSizes, newMin );
 	// set the new min
 	m_minRecSizes = newMin;

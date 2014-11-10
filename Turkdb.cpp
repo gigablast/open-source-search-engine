@@ -17,7 +17,7 @@ public:
 
 bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 	// get the current timestamp
-	long now = getTimeGlobal ();
+	int32_t now = getTimeGlobal ();
 	
 
 
@@ -45,7 +45,7 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 
 	if ( ! username )
 		return g_httpServer.sendErrorReply(s,500,"No username");
-	long ulen = gbsrlen(username);
+	int32_t ulen = gbsrlen(username);
 	if ( ulen >= MAX_USER_SIZE )
 		return g_httpServer.sendErrorReply(s,500,"Bad username");
 
@@ -138,7 +138,7 @@ bool sendPageTurkStats ( State60 *st ) {
 class Trans {
 public:
 	char      m_actionType;
-	long      m_ip;
+	int32_t      m_ip;
 	float     m_number; // amount of money involved, or # of action pts.
 	int64_t m_docId;
 	char      m_desc[]; // username who verfied you, etc.
@@ -165,7 +165,7 @@ void gotTransdbList ( State60 *st ) {
 
 	SafeBuf sb;
 
-	// shortcut
+	// int16_tcut
 	TcpSocket *s = st->m_s;
 
 	// make about 200k of mem to write into
@@ -254,21 +254,21 @@ void gotTransdbList ( State60 *st ) {
 		      "<td>desc</td>"
 		      "</tr>\n");
 
-	// shortcut
+	// int16_tcut
 	RdbList *list = &st->m_list;
 
-	long lastDay        = -1;
-	long totalReceives  = 0;
-	long totalSubmits   = 0;
-	long totalPasses    = 0;
-	long totalFails     = 0;
+	int32_t lastDay        = -1;
+	int32_t totalReceives  = 0;
+	int32_t totalSubmits   = 0;
+	int32_t totalPasses    = 0;
+	int32_t totalFails     = 0;
 
 	// scan the list
 	for ( ; ! list->isExhausted() ; ) {
 		// get rec
 		char *rec      = list->getCurrentRecord();
 		char *data     = list->getCurrentData();
-		long  dataSize = list->getCurrentDataSize();
+		int32_t  dataSize = list->getCurrentDataSize();
 		// skip that
 		list->skipCurrentRecord();
 		// skip if negative
@@ -276,7 +276,7 @@ void gotTransdbList ( State60 *st ) {
 		// get the time (global time - sync'd with host #0)
 		time_t tt = g_transdb.getTimeStamp ( rec );
 		// get day #
-		long daynum = tt / (24*3600);
+		int32_t daynum = tt / (24*3600);
 		// is it today?
 		bool isToday = ( daynum >= dayStart );
 		// point to the Transaction
@@ -296,37 +296,37 @@ void gotTransdbList ( State60 *st ) {
 			// then stats
 			if ( trans->m_actionType == AT_RECEIVE_DOC )
 				sb.safePrintf("<td>receive</td>"
-					      "<td>%li pts</td>"
-					      "<td>docid=%llu</td>",
-					      (long)trans->m_number,
+					      "<td>%"INT32" pts</td>"
+					      "<td>docid=%"UINT64"</td>",
+					      (int32_t)trans->m_number,
 					      trans->m_docId);
 			else if ( trans->m_actionType == AT_SUBMIT_DOC )
 				sb.safePrintf("<td>submit</td>"
-					      "<td>%li pts</td>"
-					      "<td>docid=%llu</td>",
-					      (long)trans->m_number,
+					      "<td>%"INT32" pts</td>"
+					      "<td>docid=%"UINT64"</td>",
+					      (int32_t)trans->m_number,
 					      trans->m_docId);
 			else if ( trans->m_actionType == AT_PASS_DOC )
 				sb.safePrintf("<td>verify</td>"
-					      "<td>%li pts</td>"
-					      "<td>docid=%llu was verified "
+					      "<td>%"INT32" pts</td>"
+					      "<td>docid=%"UINT64" was verified "
 					      "by user=\"%s\"</td>",
-					      (long)trans->m_number,
+					      (int32_t)trans->m_number,
 					      trans->m_docId,
 					      trans->m_desc);
 			else if ( trans->m_actionType == AT_FAIL_DOC )
 				sb.safePrintf("<td>verify</td>"
-					      "<td>%li pts</td>"
-					      "<td>docid=%llu was deemed to "
+					      "<td>%"INT32" pts</td>"
+					      "<td>docid=%"UINT64" was deemed to "
 					      "be incorrect "
 					      "by user=\"%s\"</td>",
-					      (long)trans->m_number,
+					      (int32_t)trans->m_number,
 					      trans->m_docId,
 					      trans->m_desc);
 			else if ( trans->m_actionType == AT_ACCURACY_EVAL)
 				sb.safePrintf("<td>accuracy eval</td>"
 					      "<td>%.02f</td>"
-					      "<td>docid=%llu</td>",
+					      "<td>docid=%"UINT64"</td>",
 					      trans->m_number,
 					      trans->m_docId);
 			else if ( trans->m_actionType == AT_CHARGE)
@@ -370,25 +370,25 @@ void gotTransdbList ( State60 *st ) {
 			// then stats
 			sb.safePrintf("<tr>"
 				      "<td>receive</td>"
-				      "<td>%li</td>"
+				      "<td>%"INT32"</td>"
 				      "<td>Total received</td>"
 				      "</tr>\n",
 				      totalReceives);
 			sb.safePrintf("<tr>"
 				      "<td>submit</td>"
-				      "<td>%li</td>"
+				      "<td>%"INT32"</td>"
 				      "<td>Total submitted</td>"
 				      "</tr>\n",
 				      totalSubmits);
 			sb.safePrintf("<tr>"
 				      "<td>pass</td>"
-				      "<td>%li</td>"
+				      "<td>%"INT32"</td>"
 				      "<td>Total accuracy tests passed</td>"
 				      "</tr>\n",
 				      totalPasses);
 			sb.safePrintf("<tr>"
 				      "<td>fail</td>"
-				      "<td>%li</td>"
+				      "<td>%"INT32"</td>"
 				      "<td>Total accuracy tests failed</td>"
 				      "</tr>\n",
 				      totalFails);
@@ -494,7 +494,7 @@ void gotDatedbList ( State60 *st ) {
 	}
 
 	time_t now = getTimeGlobal();
-	// shortcut
+	// int16_tcut
 	RdbList *list = &st->m_list;
 	// the best docid
 	int64_t best = 0LL;
@@ -577,7 +577,7 @@ bool sendReply ( SafeBuf *sb ) {
 	// get page to send back
 	char *buf = sb->getBufStart();
 	// does this include the \0???
-	long  bufLen = sb->length();
+	int32_t  bufLen = sb->length();
 	// remove \0 i guess if we had one
 	if ( bufLen > 0 && buf[bufLen-1] == '\0' ) bufLen--;
 	// and send that back
@@ -595,7 +595,7 @@ bool sendReply ( SafeBuf *sb ) {
 }
 
 // returns true
-bool sendErrorReply ( void *state , long err ) {
+bool sendErrorReply ( void *state , int32_t err ) {
 	// ensure this is set
 	if ( ! err ) { char *xx=NULL;*xx=0; }
 	// get it
@@ -646,7 +646,7 @@ bool processLoop ( void *state ) {
 
 	// get the utf8 content
 	char **utf8 = xd->getUtf8Content();
-	//long   len  = xd->size_utf8Content - 1;
+	//int32_t   len  = xd->size_utf8Content - 1;
 	// wait if blocked???
 	if ( utf8 == (void *)-1 ) return false;
 	// strange
@@ -671,12 +671,12 @@ bool sendTurkPageReply ( State60 *st ) {
 
 	XmlDoc *xd = &st->m_xd;
 	//char *content    = xd->ptr_utf8Content;
-	//long  contentLen = xd->size_utf8Content - 1;
+	//int32_t  contentLen = xd->size_utf8Content - 1;
 
 	// count the total number of EventDesc classes for all evids
 	//char *evd = xd->ptr_eventData;
 	//EventDisplay *ed = (EventDisplay *)evd;
-	//char *addr = evd + (long)ed->m_addr;
+	//char *addr = evd + (int32_t)ed->m_addr;
 	//char timeZoneOffset = getTimeZoneFromAddr ( addr );
 
 	// in case getSections() block come right back in
@@ -774,12 +774,12 @@ bool sendTurkPageReply ( State60 *st ) {
 
 	SafeBuf sb;
 
-	// shortcuts
+	// int16_tcuts
 	if ( ! xd->m_wordsValid ) { char *xx=NULL;*xx=0; }
 	Words     *words = &xd->m_words;
-	long       nw    = words->getNumWords();
+	int32_t       nw    = words->getNumWords();
 	char     **wptrs = words->getWords();
-	long      *wlens = words->getWordLens();
+	int32_t      *wlens = words->getWordLens();
 	nodeid_t  *tids  = words->getTagIds();
 
 	// a special array for printing </div> tags
@@ -793,7 +793,7 @@ bool sendTurkPageReply ( State60 *st ) {
 	// tag to be activated if the turkey activates us.
 	// CAUTION: word may start multiple sections.
 	//
-	for ( long i = 0 ; i < nw ; i++ ) { 
+	for ( int32_t i = 0 ; i < nw ; i++ ) { 
 		// get section ptr
 		Section *sj = ss->m_sectionPtrs[i];
 		// sanity check. sj must be first section ptr that starts @ a
@@ -810,11 +810,11 @@ bool sendTurkPageReply ( State60 *st ) {
 				// back end? we need to send back the colors
 				// of the sections that have been activated
 				// i guess. just do a loop over them.
-				sb.safePrintf("<div nobreak gbsecid=%lu "
-					      "bgcolor=#%lx "
+				sb.safePrintf("<div nobreak gbsecid=%"UINT32" "
+					      "bgcolor=#%"XINT32" "
 					      "onclick=gbtogglecolor()>",
-					      (unsigned long)sj->m_tagHash,
-					      (unsigned long)sj->m_tagHash);
+					      (uint32_t)sj->m_tagHash,
+					      (uint32_t)sj->m_tagHash);
 				// sanity check
 				if ( sj->m_b < 0  ) { char *xx=NULL;*xx=0; }
 				if ( sj->m_b > nw ) { char *xx=NULL;*xx=0; }
@@ -832,7 +832,7 @@ bool sendTurkPageReply ( State60 *st ) {
 		// end a div tag?
 		if ( ! endCounts[i] ) continue;
 		// might be many so loop it
-		for ( long j = 0 ; j < endCounts[i] ; j++ )
+		for ( int32_t j = 0 ; j < endCounts[i] ; j++ )
 			sb.safePrintf("</div>");
 	}			
 

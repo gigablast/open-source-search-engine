@@ -6,7 +6,7 @@
 #include "HashTable.h"
 #include "Speller.h"
 
-static void print_string ( char *s , long len );
+static void print_string ( char *s , int32_t len );
 
 void Url::reset() {
 	m_scheme    = NULL; 
@@ -41,8 +41,8 @@ void Url::set ( Url *url , bool addWWW ) {
 }
 
 
-void Url::set (Url *baseUrl,char *s,long len,bool addWWW,bool stripSessionId,
-	       bool stripPound , bool stripCommonFile, long titleRecVersion ) {
+void Url::set (Url *baseUrl,char *s,int32_t len,bool addWWW,bool stripSessionId,
+	       bool stripPound , bool stripCommonFile, int32_t titleRecVersion ) {
 
 	reset();
 	// debug msg
@@ -52,7 +52,7 @@ void Url::set (Url *baseUrl,char *s,long len,bool addWWW,bool stripSessionId,
 	if ( ! baseUrl ) { set ( s , len , addWWW ); return; }
 
 	char *base = (char *) baseUrl->m_url;
-	long  blen =          baseUrl->m_ulen;
+	int32_t  blen =          baseUrl->m_ulen;
 	// don't include cgi crap
 	if ( baseUrl->m_query ) blen -= (baseUrl->m_qlen + 1);
 
@@ -77,7 +77,7 @@ void Url::set (Url *baseUrl,char *s,long len,bool addWWW,bool stripSessionId,
 	// . is s a relative url? search for ://, but break at first /
 	// . but break at any non-alnum or non-hyphen
 	bool isAbsolute = false;
-	long i;
+	int32_t i;
 	for ( i = 0; i < len && (is_alnum_a(s[i]) || s[i]=='-') ; i++ );
         //for ( i = 0 ; s[i] && (is_alnum_a(s[i]) || s[i]=='-') ; i++ );
 	if ( ! isAbsolute )
@@ -134,9 +134,9 @@ void Url::set (Url *baseUrl,char *s,long len,bool addWWW,bool stripSessionId,
 //    reserved purposes may be used unencoded within a URL."
 // . i know sun.com has urls like "http://sun.com/;$sessionid=123ABC$"
 // . url should be ENCODED PROPERLY for this to work properly
-void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
+void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		bool stripPound , bool stripCommonFile , 
-		long titleRecVersion ) {
+		int32_t titleRecVersion ) {
 	reset();
 	// debug
 	//t = "http://www.ac.uk/../../news/.asp";
@@ -144,7 +144,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	if ( ! t || tlen == 0 ) return ;
 	// we may add a "www." a trailing backslash and \0, ...
 	if ( tlen > MAX_URL_LEN - 10 ) {
-		log( LOG_LIMIT,"db: Encountered url of length %li. "
+		log( LOG_LIMIT,"db: Encountered url of length %"INT32". "
 		     "Truncating to %i" , tlen , MAX_URL_LEN - 10 );
 		tlen = MAX_URL_LEN - 10;
 	}
@@ -155,7 +155,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	while ( tlen > 0 && !is_alnum_a(*t) && *t!='-' && *t!='/'){t++;tlen--;}
 	// . stop t at first space or binary char
 	// . url should be in encoded form!
-	long i ;
+	int32_t i ;
 	for ( i = 0 ; i < tlen ; i++ )	{
 		if ( ! is_ascii(t[i]) ) break; // no non-ascii chars allowed
 		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
@@ -165,7 +165,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	// . decode characters that should not have been encoded
 	// . also NULL terminates
 	//char tmp[MAX_URL_LEN];
-	//long tmpLen;
+	//int32_t tmpLen;
 	//tmpLen = safeDecode ( t , tlen , tmp );
 	// . jump over http:// if it starts with http://http://
 	// . a common mistake...
@@ -176,9 +176,9 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	//t += 13; tlen -= 13; }
 
 	// strip the "#anchor" from http://www.xyz.com/somepage.html#anchor"
-	long anchorPos = 0;
-	long anchorLen = 0;
-	for ( long i = 0 ; i < tlen ; i++ ) {
+	int32_t anchorPos = 0;
+	int32_t anchorLen = 0;
+	for ( int32_t i = 0 ; i < tlen ; i++ ) {
 		if ( t[i] != '#' ) continue;
 		anchorPos = i;
 		anchorLen = tlen - i;
@@ -189,7 +189,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 
 	// copy to "s" so we can NULL terminate it
 	char s [ MAX_URL_LEN ];
-	long len = tlen;
+	int32_t len = tlen;
 	// store filtered url into s
 	memcpy ( s , t , tlen );
 	s[len]='\0';
@@ -214,14 +214,14 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	if ( stripSessionId ) {
 		// CHECK FOR A SESSION ID USING SEMICOLONS
 		// or don't...bad for dmoz urls and apparently has ligit use
-//		long i = 0;
+//		int32_t i = 0;
 //		while ( s[i] && s[i]!=';' ) i++;
 //		// did we get a semi colon?
 //		if ( s[i] == ';' ) {
 //			// i is start of it
-//			long a = i;
+//			int32_t a = i;
 //			// find the end of the session id
-//			long b = i + 1;
+//			int32_t b = i + 1;
 //			while ( s[b] && s[b] != '?' ) b++;
 //			// remove the session id by covering it up
 //			memmove ( &s[a] , &s[b] , len - b );
@@ -237,7 +237,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 		if ( ! *p ) goto skip;
 		// now search for severl strings in the cgi query string
 		char *tt = NULL;
-		long x;
+		int32_t x;
 		if ( ! tt ) { tt = gb_strcasestr ( p , "PHPSESSID=" ); x = 10;}
 		if ( ! tt ) { tt = strstr        ( p , "SID="       ); x =  4;}
 		// . osCsid and XTCsid are new session ids
@@ -312,7 +312,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 		if ( ! tt && (tt = strstr ( p-4 , ".php?s=" )) ) {
 			// point to the value of the s=
 			char *pp = tt + 7; 
-			long i = 0;
+			int32_t i = 0;
 			// ensure we got 32 hexadecimal chars
 			while ( pp[i] && 
 				( is_digit(pp[i]) || 
@@ -328,9 +328,9 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 		// . prevent "DAVESID=" from being labeled as session id
 		if ( is_alnum_a ( *(tt-1) ) ) goto skip;
 		// start of the shit
-		long a = tt - s;
+		int32_t a = tt - s;
 		// get the end of the shit
-		long b = a + x;
+		int32_t b = a + x;
 		// back up until we hit a ? or & or / or ;
 		while ( a > 0 && s[a-1] != '?' && s[a-1] != '&' &&
 			s[a-1] != '/' && s[a-1] != ';' ) a--;
@@ -402,7 +402,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	
 
 	// replace the "\" with "/" -- a common mistake
-	long j;
+	int32_t j;
 	for ( j = 0 ; s[j] ; j++) if (s[j]=='\\') s[j]='/';
 	// . dig out the protocol/scheme for this s (check for ://)
 	// . protocol may only have alnums and hyphens in it
@@ -466,7 +466,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	// NULL terminate for strchr()
 	m_host [ m_hlen ] = '\0';
 	// . common mistake: if hostname has no '.' in it append a ".com"
-	// . now that we use hosts in /etc/hosts we no longer do this
+	// . now that we use hosts in /etc/hosts we no int32_ter do this
 	//if ( m_hlen > 0 && strchr ( m_host ,'.' ) == NULL ) {
 	//	memcpy ( &m_host[m_hlen] , ".com" , 4 );
 	//	m_hlen += 4;
@@ -530,7 +530,7 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	// see if a port was provided in the hostname after a colon
 	if ( s[i] == ':' ) { 
 		// remember the ptr so far
-		long savedLen = m_ulen;
+		int32_t savedLen = m_ulen;
 		// add a colon to our m_url
 		m_url [ m_ulen++ ] = ':';
 		// scan for a '/' 
@@ -657,10 +657,10 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
  done:
 	// debug msg
 	//log("--------------%s has domain \"",s);
-	//for (long k=0;k <m_dlen; k++ ) log("%c",m_domain[k]);
+	//for (int32_t k=0;k <m_dlen; k++ ) log("%c",m_domain[k]);
 	//log("\"\n");
 	// check for iterative stablization
-	static long flag = 0;
+	static int32_t flag = 0;
 	if ( flag == 1 ) return;
 	Url u2;
 	flag = 1;
@@ -674,10 +674,10 @@ void Url::set ( char *t , long tlen , bool addWWW , bool stripSessionId ,
 	flag = 0;
 }
 
-char Url::isSessionId ( char *hh, long titleRecVersion ) {
-	long count = 0;
-	long step = 0;
-	long nonNumCount = 0;
+char Url::isSessionId ( char *hh, int32_t titleRecVersion ) {
+	int32_t count = 0;
+	int32_t step = 0;
+	int32_t nonNumCount = 0;
 	// old bug didn't step through characters
 	if (titleRecVersion >= 69) step = 1;
 	// do not limit count to 12, the hex numbers may only be
@@ -708,7 +708,7 @@ bool Url::isRoot() {
 	// because i don't want to dis' stuff like espn.go.com
 	return true;
 	// get just the hostname w/o the domain (includes '.' following name)
-	//long nameLen = m_hlen - m_dlen ;
+	//int32_t nameLen = m_hlen - m_dlen ;
 	//if ( nameLen   <= 0   ) return true;
 	//if ( nameLen   != 4   ) return false; // "www."
 	//if ( strncmp ( m_host , "www" , 3 ) != 0 ) return false;
@@ -739,10 +739,10 @@ bool Url::isSimpleSubdomain ( ) {
 // . basically like adding j /.. to the end of the url
 // . sub-url #0 is the full url
 // . includes /~ as it's own path
-long Url::getSubUrlLen ( long j ) {
+int32_t Url::getSubUrlLen ( int32_t j ) {
 
 	// assume it's the whole url
-	long len = m_ulen;
+	int32_t len = m_ulen;
 
 	// subtract the m_query (cgi) part at the end of the url
 	if ( m_query ) len -= m_qlen + 1; //and the ?
@@ -751,7 +751,7 @@ long Url::getSubUrlLen ( long j ) {
 	if ( j == 0 ) return len;
 
 	// . start right past the http://m_host.domain.com/
-	long start = m_slen + 3 + m_hlen + 1 + m_portLen ;
+	int32_t start = m_slen + 3 + m_hlen + 1 + m_portLen ;
 	while ( len > start ) {
 		if ( m_url [ len - 1 ] == '/'                            ) j--;
 		if ( m_url [ len - 2 ] == '/' && m_url [ len - 1 ] == '~') j--;
@@ -767,8 +767,8 @@ long Url::getSubUrlLen ( long j ) {
 
 // . similar to getSubUrlLen() above but only works on the path
 // . if j is 0 that's the whole url path!
-long Url::getSubPathLen ( long j ) {
-	long subUrlLen = getSubUrlLen ( j );
+int32_t Url::getSubPathLen ( int32_t j ) {
+	int32_t subUrlLen = getSubUrlLen ( j );
 	if ( subUrlLen <= 0 ) return 0; 
 	// . the subPath length includes the root backslash
 	// . portLen includes the whole :8080 thing (for non default ports)
@@ -797,7 +797,7 @@ void Url::print() {
 
 	printf("query: %s\n",m_query);
 
-	printf("port: %li\n", m_port );
+	printf("port: %"INT32"\n", m_port );
 
 	printf("domain: ");
 	print_string(m_domain, m_dlen );
@@ -810,8 +810,8 @@ void Url::print() {
 	printf("is root %i\n",isRoot());
 }
 
-void print_string ( char *s , long len ) {
-	long i = 0;
+void print_string ( char *s , int32_t len ) {
+	int32_t i = 0;
 	if ( ! s ) return;
 	while ( i < len ) printf("%c",s[i++]);
 }
@@ -889,9 +889,9 @@ bool Url::isExtensionIndexable () {
 // . without trailing / if path is just "/"
 // . without "www." if in hostname and "rmWWW" is true
 // . sets *len to it's length
-char *Url::getShorthandUrl  ( bool rmWWW , long *len ) {
+char *Url::getShorthandUrl  ( bool rmWWW , int32_t *len ) {
 	char *u    = m_url;
-	long  ulen = m_ulen;
+	int32_t  ulen = m_ulen;
 	if ( ulen > 7 && strncasecmp ( u , "http://" , 7 ) == 0) { 
 		u    += 7 ; 
 		ulen -= 7 ;
@@ -905,26 +905,26 @@ char *Url::getShorthandUrl  ( bool rmWWW , long *len ) {
 	if ( m_plen == 1 && m_path[0]=='/'  && m_query == NULL ) ulen--;
 	// set the length
 	*len = ulen;
-	// return the url shorthand
+	// return the url int16_thand
 	return u;
 }
 
-long  Url::getPathDepth ( bool countFilename ) {
+int32_t  Url::getPathDepth ( bool countFilename ) {
 	char *s     = m_path + 1;
 	char *send  = m_url + m_ulen;
-	long  count = 0;
+	int32_t  count = 0;
 	while ( s < send ) if ( *s++ == '/' ) count++;
 	// if we're counting the filename as a path component...
 	if ( countFilename && *(send-1) != '/' ) count++;
 	return count;
 }
 
-char *Url::getPathComponent ( long num , long *clen ) {
+char *Url::getPathComponent ( int32_t num , int32_t *clen ) {
 	// start countint at path
 	char *start = m_path;
 	char *p     = m_path;
 	char *pend  = m_path + m_plen;
-	long  count = 0;
+	int32_t  count = 0;
 	// loop up here for each component
  loop:
 	// skip the '/'
@@ -945,9 +945,9 @@ char *Url::getPathComponent ( long num , long *clen ) {
 	goto loop;
 }
 
-//char *Url::getPathEnd ( long num ) {
+//char *Url::getPathEnd ( int32_t num ) {
 //	// get component
-//	long  pclen = 0;
+//	int32_t  pclen = 0;
 //	char *pc    = getPathComponent ( num , &pclen );
 //	// return the end of it
 //	return pc + pclen;
@@ -964,17 +964,17 @@ bool Url::isHostWWW ( ) {
 
 // . is the url a porn/spam url?
 // . i use /usr/share/dict/words to check for legit words
-// . if it's long and has 4+ hyphens, consider it spam
+// . if it's int32_t and has 4+ hyphens, consider it spam
 // . if you add a word here, add it to PageResults.cpp:isQueryDirty()
 bool Url::isSpam() {
 	// store the hostname in a buf since we strtok it
 	char s [ MAX_URL_LEN ];
 	// don't store the .com or .org while searching for isSpam
-	long  slen = m_hlen - m_tldLen - 1;
+	int32_t  slen = m_hlen - m_tldLen - 1;
 	memcpy ( s , m_host , slen );
 	if ( ! m_domain ) return false;
 	if ( ! m_dlen   ) return false;
-	//long  len = m_dlen;
+	//int32_t  len = m_dlen;
 	//memcpy ( s , m_domain , len );
 	// if tld is gov or edu or org, not porn
 	if ( m_tldLen >= 3 && strncmp ( m_tld , "edu" , 3 )==0 ) return false;
@@ -984,7 +984,7 @@ bool Url::isSpam() {
 	// . if there is 4 or more hyphens, and hostLen > 30 consider it spam
 	// . actually there seems to be a lot of legit sites with many hyphens
 	if ( slen > 30 ) {
-		long count = 0;
+		int32_t count = 0;
 		char *p = s;
 		while ( *p ) if ( *p++ == '-' ) count++;
 		if ( count >= 4 ) return true;
@@ -1014,7 +1014,7 @@ bool Url::isSpam() {
 	goto loop;
 }
 
-bool Url::isSpam ( char *s , long slen ) {	
+bool Url::isSpam ( char *s , int32_t slen ) {	
 
 	// no need to indent below, keep it clearer
 	if ( ! isAdult ( s, slen ) ) return false;
@@ -1396,17 +1396,17 @@ static HashTable s_badExtTable;
 static bool s_badExtInitialized;
 
 //returns True if the extension is listed as bad
-bool Url::isBadExtension ( long version ) {
+bool Url::isBadExtension ( int32_t version ) {
 	//	return !isExtensionIndexable();
 	
 	if ( ! m_extension || m_elen == 0 ) return false;
 	if(!s_badExtInitialized) { //if hash has not been created-create one
-		long i=0;
+		int32_t i=0;
 		//version 72 and before.
 		do {
 			int tlen = gbstrlen(s_badExtensions[i]);
 			int64_t swh = hash64Lower_a(s_badExtensions[i],tlen);
-			if(!s_badExtTable.addKey(swh,(long)50))
+			if(!s_badExtTable.addKey(swh,(int32_t)50))
 				return false;
 			i++;
 
@@ -1415,11 +1415,11 @@ bool Url::isBadExtension ( long version ) {
 
 		//version 73 and after.
 		if(!s_badExtTable.addKey(hash64Lower_a("wmv", 3),
-					 (long)73) ||
+					 (int32_t)73) ||
 		   !s_badExtTable.addKey(hash64Lower_a("wma", 3),
-					 (long)73) ||    
+					 (int32_t)73) ||    
 		   !s_badExtTable.addKey(hash64Lower_a("ogg", 3),
-					 (long)73))
+					 (int32_t)73))
 			return false;
 		
 		s_badExtInitialized = true;
@@ -1429,7 +1429,7 @@ bool Url::isBadExtension ( long version ) {
 	int myKey = hash64Lower_a(m_extension,m_elen);
 	//zero unless we have a bad extention, otherwise
 	//we return TR version in which it was banned
-	long badVersion = s_badExtTable.getValue(myKey);
+	int32_t badVersion = s_badExtTable.getValue(myKey);
 	if (badVersion == 0) return false;
 	if(badVersion <= version) return true;
 	return false;
@@ -1439,8 +1439,8 @@ bool Url::isBadExtension ( long version ) {
 bool Url::isLinkLoop ( ) {
 	char *s             = m_path ;
 	char *send          = m_url + m_ulen;
-	long  count         = 0;
-	long  components    = 0;
+	int32_t  count         = 0;
+	int32_t  components    = 0;
 	bool  prevWasDouble = false;
 	char *last          = NULL;
 	if (!s) return false;
@@ -1455,11 +1455,11 @@ bool Url::isLinkLoop ( ) {
 		// give up after 50 components
 		if ( components++ >= 50 ) return false;
 		// hash him
-		unsigned long h = hash32 ( last , s - last );
+		uint32_t h = hash32 ( last , s - last );
 		// is he in there?
-		long slot = t.getSlot ( h );
+		int32_t slot = t.getSlot ( h );
 		// get his val (count)
-		long val = 0;
+		int32_t val = 0;
 		if ( slot >= 0 ) val = t.getValueFromSlot ( slot );
 		// if not in there put him in a slot
 		if ( slot < 0 ) {
@@ -1506,8 +1506,8 @@ bool Url::isIp() {
 
 /*
 bool Url::isSiteRoot ( char *coll , TagRec *tagRec ,
-		       char **retSite , long *retSiteLen ) {
-	long  siteLen;
+		       char **retSite , int32_t *retSiteLen ) {
+	int32_t  siteLen;
 	// use the DOMAIN as the default site
 	char *site = getSite ( &siteLen , coll , false , tagRec );
 	// check end of site
@@ -1532,18 +1532,18 @@ bool Url::isSiteRoot ( char *coll , TagRec *tagRec ,
 // . returns NULL and sets g_errno on error
 // . if "defaultToHostname" is true we default to the hostname
 //   as opposed to the domain name.
-char *Url::getSite ( long *siteLen , char *coll , bool defaultToHostname ,
+char *Url::getSite ( int32_t *siteLen , char *coll , bool defaultToHostname ,
 		     TagRec *tagRec ,
 		     bool *isDefault ) {
 	// clear just in case
 	g_errno = 0;
 	// convenience vars
 	char *p;
-	long  len = 0;
+	int32_t  len = 0;
 	// assume we return the default
 	if ( isDefault ) *isDefault = true;
 
-	long sitepathdepth = -1;
+	int32_t sitepathdepth = -1;
 	// we may have a defined path depth
 	Tag *tag = NULL;
 	// see if we do
@@ -1551,7 +1551,7 @@ char *Url::getSite ( long *siteLen , char *coll , bool defaultToHostname ,
 	// sanity check
 	if ( tag && tag->m_dataSize != 1 ) { char *xx=NULL;*xx=0; }
 	// if there, get the sitepathdepth value it contains
-	if ( tag ) sitepathdepth = (long)tag->m_data[0];
+	if ( tag ) sitepathdepth = (int32_t)tag->m_data[0];
 
 	// . deal with site indicators
 	// . these are applied to all domains uniformly
@@ -1623,14 +1623,14 @@ char *Url::getSite ( long *siteLen , char *coll , bool defaultToHostname ,
 		// fill in the hash tables with domain hashes
 		cr->m_siteRulesTable.reset();
 		cr->m_siteRulesTable.set(cr->m_numSiteExpressions*2);
-		for ( long i = 0; i < cr->m_numSiteExpressions ; i++ ) {
+		for ( int32_t i = 0; i < cr->m_numSiteExpressions ; i++ ) {
 			Url f;
 			char *u    = cr->m_siteExpressions[i];
-			long  ulen = gbstrlen ( u );
+			int32_t  ulen = gbstrlen ( u );
 			// do not add "www."
 			f.set(u,ulen,false);
 			// hash the whole hostname (might be just domain)
-			long h = hash32 ( f.getHost(), f.getHostLen() );
+			int32_t h = hash32 ( f.getHost(), f.getHostLen() );
 			// also hash scheme and port
 			h = hash32 ( f.getScheme() , f.getSchemeLen() , h );
 			h = hash32 ( h , f.getPort() );
@@ -1644,39 +1644,39 @@ char *Url::getSite ( long *siteLen , char *coll , bool defaultToHostname ,
 	// . you can only have on entry per domain or subdomain in the table!
 	// . that entry will be a domain or a subdomain
 	// . so check for both in the hash table
-	long t = 2;
+	int32_t t = 2;
 loop:
 	t--;
 	// return the DEFAULT SITE if no matches
 	if ( t < 0 ) return site;
 	// check hash table for this domain or subdomain
-	long h ;
+	int32_t h ;
 	if ( t == 1 ) h = hash32 ( getHost  () , getHostLen  () );
 	else          h = hash32 ( getDomain() , getDomainLen() );
 	// also hash scheme and port
 	h = hash32 ( getScheme(), getSchemeLen(), h);
 	h = hash32 ( h, getPort());
 	// is it in the table?
-	long s = cr->m_siteRulesTable.getSlot(h);
+	int32_t s = cr->m_siteRulesTable.getSlot(h);
 	// if not found, try the domain next
 	if ( s < 0 ) goto loop;
 
 
 	// found, grab the index #
-	long i = cr->m_siteRulesTable.getValueFromSlot(s) - 1;
+	int32_t i = cr->m_siteRulesTable.getValueFromSlot(s) - 1;
 	// . see if the url properly matches a filter
 	// . do NOT add "www." to the domain/subdomain of the filter url
 	char *e = cr->m_siteExpressions[i];
 	Url f; f.set (e,gbstrlen(e),false);
 	// what is the rule #? if rule is 0, that means the "hostname" rule
 	// otherwise this specifies a path depth that defines the site...
-	long r = cr->m_siteRules[i];
+	int32_t r = cr->m_siteRules[i];
 	// get the full hostname of it
 	//char *h    = f.getHost();
-	//long  hlen = f.getHostLen();
+	//int32_t  hlen = f.getHostLen();
 	// get its hostname (might just be a domain name)
 	char *sub    = f.getHost();
-	long  subLen = f.getUrlLen() - f.getSchemeLen() - 3;
+	int32_t  subLen = f.getUrlLen() - f.getSchemeLen() - 3;
 	// assume we did not match it
 	char matched = 0;
 	// is the filtered url "f" a "substring" of us?
@@ -1705,7 +1705,7 @@ loop:
 	// do not count the first "/"
 	p++;
 	// how many /'s to count to?
-	long  count ;
+	int32_t  count ;
 	// count them
 	for ( count = r ; count > 0 ; count-- ) {
 		// inc p
@@ -1731,8 +1731,8 @@ loop:
 	return m_domain;
 }
 
-long Url::getSiteHash32 ( char *coll ) {
-	long siteLen;
+int32_t Url::getSiteHash32 ( char *coll ) {
+	int32_t siteLen;
 	// prefer domain as default, not hostname
 	char *site = getSite ( &siteLen , coll , false );
 	return hash32 ( site , siteLen );
@@ -1740,7 +1740,7 @@ long Url::getSiteHash32 ( char *coll ) {
 */
 
 
-long Url::getHostHash32 ( ) { 
+int32_t Url::getHostHash32 ( ) { 
 	return hash32 ( m_host , m_hlen ); 
 }
 
@@ -1748,7 +1748,7 @@ int64_t Url::getHostHash64 ( ) {
 	return hash64 ( m_host , m_hlen ); 
 }
 
-long Url::getDomainHash32 ( ) { 
+int32_t Url::getDomainHash32 ( ) { 
 	return hash32 ( m_domain , m_dlen ); 
 }
 
@@ -1756,7 +1756,7 @@ int64_t Url::getDomainHash64 ( ) {
 	return hash64 ( m_domain , m_dlen ); 
 }
 
-long Url::getUrlHash32 ( ) { 
+int32_t Url::getUrlHash32 ( ) { 
 	return hash32(m_url,m_ulen); 
 }
 
@@ -1764,7 +1764,7 @@ int64_t Url::getUrlHash64 ( ) {
 	return hash64(m_url,m_ulen); 
 }
 
-char *getHostFast ( char *url , long *hostLen , long *port ) {
+char *getHostFast ( char *url , int32_t *hostLen , int32_t *port ) {
 	// point to the url
 	char *pp = url;
 	// skip http(s):// or ftp:// (always there?)
@@ -1808,7 +1808,7 @@ char *getPathFast ( char *url ) {
 	return pe;
 }
 
-char *getTLDFast ( char *url , long *tldLen , bool hasHttp ) {
+char *getTLDFast ( char *url , int32_t *tldLen , bool hasHttp ) {
 	// point to the url
 	char *pp = url;
 	// only do this for some
@@ -1831,7 +1831,7 @@ char *getTLDFast ( char *url , long *tldLen , bool hasHttp ) {
 	// but not if something follows the '/'
 	if ( *pe == '/' && *(pe+1) ) isRoot = false;
 	// set length of host
-	long uhostLen = pp - uhost;
+	int32_t uhostLen = pp - uhost;
 	// . is the hostname just an IP address?
 	// . if it is an ip based url make domain the hostname
 	char *ss = uhost;
@@ -1884,7 +1884,7 @@ bool hasSubdomain ( char *url ) {
 	// but not if something follows the '/'
 	//if ( *pe == '/' && *(pe+1) ) isRoot = false;
 	// set length
-	long uhostLen = pp - uhost;
+	int32_t uhostLen = pp - uhost;
 	// get end
 	//char *hostEnd = uhost + uhostLen;
 	// . is the hostname just an IP address?
@@ -1916,7 +1916,7 @@ bool hasSubdomain ( char *url ) {
 // was happening when a host gave us a bad redir url and xmldoc tried
 // to set extra doc's robot.txt url to it "http://2010/robots.txt" where
 // the host said "Location: 2010 ...".
-char *getDomFast ( char *url , long *domLen , bool hasHttp ) {
+char *getDomFast ( char *url , int32_t *domLen , bool hasHttp ) {
 	// point to the url
 	char *pp = url;
 	// skip http if there
@@ -1939,7 +1939,7 @@ char *getDomFast ( char *url , long *domLen , bool hasHttp ) {
 	// but not if something follows the '/'
 	if ( *pe == '/' && *(pe+1) ) isRoot = false;
 	// set length
-	long uhostLen = pp - uhost;
+	int32_t uhostLen = pp - uhost;
 	// get end
 	char *hostEnd = uhost + uhostLen;
 	// . is the hostname just an IP address?
@@ -1976,7 +1976,7 @@ char *getDomFast ( char *url , long *domLen , bool hasHttp ) {
 	if ( ! utld ) return NULL;
 	// the domain, can only be gotten once we know the TLD
 	// set utldLen
-	//long utldLen = hostEnd - utld;
+	//int32_t utldLen = hostEnd - utld;
 	// back up a couple chars
 	char *udom = utld - 2;
 	// backup until we hit a '.' or hit the beginning
@@ -1997,7 +1997,7 @@ bool isPermalinky ( char *u ) {
 	// our ptr
 	char *p = path;
 	// we must have a sequence of 3 or more digits in the path
-	long  dcount = 0;
+	int32_t  dcount = 0;
 	// start scanning at the path
 	for ( ; *p && *p !='?'  ; p++ ) {
 		// if not a digit, reset count
@@ -2007,7 +2007,7 @@ bool isPermalinky ( char *u ) {
 	}
 	// it can also have 2+ hyphens or 2+ underscores in a single
 	// path component to be a permalink
-	long hcount = 0;
+	int32_t hcount = 0;
 	p = path;
 	for ( ; *p && *p !='?'  ; p++ ) {
 		// if not a digit, reset count
@@ -2028,7 +2028,7 @@ bool Url::isRSSFormat ( ) {
 	// if it ends in .rss, .xml or .rdf ASSUME rss
 	bool isRSS = false;
 	char *e    = getExtension();
-	long  elen = getExtensionLen();
+	int32_t  elen = getExtensionLen();
 	if ( elen == 3 && strcmp(e,"rss")==0 ) isRSS = true;
 	if ( elen == 3 && strcmp(e,"xml")==0 ) isRSS = true;
 	if ( elen == 3 && strcmp(e,"rdf")==0 ) isRSS = true;
@@ -2041,29 +2041,29 @@ bool Url::isRSSFormat ( ) {
 }
 */
 
-// is it http://rpc.weblogs.com/shortChanges.xml, etc.?
+// is it http://rpc.weblogs.com/int16_tChanges.xml, etc.?
 bool Url::isPingServer ( ) {
-	if ( strcmp ( m_url , "http://rpc.weblogs.com/shortChanges.xml") == 0 )
+	if ( strcmp ( m_url , "http://rpc.weblogs.com/int16_tChanges.xml") == 0 )
 		return true;
 	// testing page
-	if ( strcmp ( m_url , "http://127.0.0.1:8000/shortChanges.xml") == 0 )
+	if ( strcmp ( m_url , "http://127.0.0.1:8000/int16_tChanges.xml") == 0 )
 		return true;
 	// default
 	return false;
 }
 
 bool isPingServer ( char *s ) {
-	if ( strstr ( s , "rpc.weblogs.com/shortChanges.xml") )
+	if ( strstr ( s , "rpc.weblogs.com/int16_tChanges.xml") )
 		return true;
 	// testing page
-	if ( strstr ( s , "127.0.0.1:8000/shortChanges.xml") )
+	if ( strstr ( s , "127.0.0.1:8000/int16_tChanges.xml") )
 		return true;
 	// default
 	return false;
 }
 
 // "s" point to the start of a normalized url (includes http://, etc.)
-char *getHost ( char *s , long *hostLen ) {
+char *getHost ( char *s , int32_t *hostLen ) {
 	// skip proto
 	while ( *s != ':' ) s++;
 	// skip ://
@@ -2078,7 +2078,7 @@ char *getHost ( char *s , long *hostLen ) {
 	return host;
 }
 
-char *getFilenameFast ( char *s , long *filenameLen ) {
+char *getFilenameFast ( char *s , int32_t *filenameLen ) {
 	// skip proto
 	while ( *s != ':' ) s++;
 	// skip ://
@@ -2113,7 +2113,7 @@ char *getFilenameFast ( char *s , long *filenameLen ) {
 
 // . return ptrs to the end
 // . the character it points to SHOULD NOT BE part of the site
-char *getPathEnd ( char *s , long desiredDepth ) {
+char *getPathEnd ( char *s , int32_t desiredDepth ) {
 	// skip proto
 	while ( *s != ':' ) s++;
 	// skip ://
@@ -2125,7 +2125,7 @@ char *getPathEnd ( char *s , long desiredDepth ) {
 	// skip that
 	s++;
 	// init depth
-	long depth = 0;
+	int32_t depth = 0;
 	// do a character loop
 	for ( ; depth <= desiredDepth && *s ; s++ ) 
 		// count the '/'
@@ -2134,7 +2134,7 @@ char *getPathEnd ( char *s , long desiredDepth ) {
 	return s;
 	/*
 	// save for below
-	long saved = depth;
+	int32_t saved = depth;
 	// keep going
 	while ( depth-- > 0 ) {
 		for ( s++; *s && *s != '/' && *s != '?' ; s++ );
@@ -2157,7 +2157,7 @@ char *getPathEnd ( char *s , long desiredDepth ) {
 // . pathDepth==1 for "www.xyz.com/foo/x"
 // . pathDepth==2 for "www.xyz.com/foo/x/"
 // . pathDepth==2 for "www.xyz.com/foo/x/y"
-long getPathDepth ( char *s , bool hasHttp ) {
+int32_t getPathDepth ( char *s , bool hasHttp ) {
 	// skip http:// if we got it
 	if ( hasHttp ) {
 		// skip proto
@@ -2176,7 +2176,7 @@ long getPathDepth ( char *s , bool hasHttp ) {
 	// skip that
 	s++;
 	// init depth
-	long depth = 0;
+	int32_t depth = 0;
 	// do a character loop
 	for ( ; *s ; s++ ) {
 		// stop if we hit ? or #
@@ -2201,7 +2201,7 @@ bool isHijackerFormat ( char *url ) {
 	if ( strstr(p,"/show.php?p=") ) return true;
 
 	// count the /'s
-	long pc = 0;
+	int32_t pc = 0;
 
 	for ( ; *p=='-' || *p=='_' || *p=='/' || (*p>='a'&&*p<='z') || 
 		      is_digit(*p); p++) 

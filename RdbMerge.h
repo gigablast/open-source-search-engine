@@ -62,10 +62,10 @@ class RdbMerge {
 		     collnum_t collnum ,
 		     BigFile   *target       ,
 		     RdbMap    *targetMap    ,
-		     long       id2          ,
-		     long       startFileNum ,
-		     long       numFiles     ,
-		     long       niceness     ,
+		     int32_t       id2          ,
+		     int32_t       startFileNum ,
+		     int32_t       numFiles     ,
+		     int32_t       niceness     ,
 		     class DiskPageCache *pc     ,
 		     int64_t maxTargetFileSize ,
 		     char       keySize      );
@@ -103,20 +103,20 @@ class RdbMerge {
 
 	void doSleep();
 
-	long      m_numThreads;
+	int32_t      m_numThreads;
 
 	// private:
 
 	// . used when growing the database
-	// . removes keys that would no longer be stored by us
+	// . removes keys that would no int32_ter be stored by us
 	//void filterList    ( RdbList *list ) ;
 
 	// . we get the units from the master and the mergees from the units
 	class RdbBase  *m_base;
-	long        m_startFileNum;
-	long        m_numFiles;
+	int32_t        m_startFileNum;
+	int32_t        m_numFiles;
 	bool        m_dedup;
-	long        m_fixedDataSize;
+	int32_t        m_fixedDataSize;
 	BigFile    *m_target;
 	RdbMap     *m_targetMap;
 
@@ -125,7 +125,7 @@ class RdbMerge {
 	//key_t       m_lastMaskedKey;
 	char        m_truncationMask[MAX_KEY_BYTES];
 	char        m_lastMaskedKey[MAX_KEY_BYTES];
-	long        m_lastNumRecs;
+	int32_t        m_lastNumRecs;
 
 	//key_t       m_startKey;
 	//key_t       m_endKey;
@@ -145,7 +145,7 @@ class RdbMerge {
 
 	RdbList     m_list;
 
-	long        m_niceness;
+	int32_t        m_niceness;
 
 	// count for indexdb
 	int64_t   m_dupsRemoved;
@@ -153,7 +153,7 @@ class RdbMerge {
 	class DiskPageCache *m_pc;
 	int64_t m_maxTargetFileSize;
 
-	long      m_id2;
+	int32_t      m_id2;
 
 	// for getting the RdbBase class doing the merge
 	uint8_t   m_rdbId;

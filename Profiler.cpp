@@ -5,7 +5,7 @@ Profiler::Profiler(){return;}
 Profiler::~Profiler(){return;}
 bool Profiler::reset(){return true;}
 bool Profiler::init(){return true;}
-char *Profiler::getFnName(unsigned long address,long *nameLen){return NULL;}
+char *Profiler::getFnName(uint32_t address,int32_t *nameLen){return NULL;}
 void Profiler::stopRealTimeProfiler(const bool keepData){return;}
 void Profiler::cleanup(){return;}
 bool Profiler:: readSymbolTable(){return true;}
@@ -26,8 +26,8 @@ Profiler g_profiler;
 
 static int decend_cmpUll ( const void *h1 , const void *h2 );
 static int decend_cmpF ( const void *h1 , const void *h2 );
-unsigned long *indexTable;
-unsigned long *keyTable;
+uint32_t *indexTable;
+uint32_t *keyTable;
 uint64_t *valueTableUll;
 float *valueTableF;
 //HashTableT<uint32_t, uint64_t> realTimeProfilerData;
@@ -57,7 +57,7 @@ Profiler::~Profiler() {//reset();
 bool Profiler::reset(){
 	m_fn.reset();
 	m_lastQPUsed = 0;
-	for (long i=0;i<11;i++)
+	for (int32_t i=0;i<11;i++)
 		m_fnTmp[i].reset();
 	if(hitEntries)
 		mfree(hitEntries, sizeof(HitEntry) * rtNumEntries,
@@ -76,7 +76,7 @@ bool Profiler::init() {
 	m_lastQPUsed = 0;
 	realTimeProfilerData.set(4,8,0,NULL,0,false,0,"rtprof");
         m_quickpolls.set(4,4,0,NULL,0,false,0,"qckpllcnt");
-	for (long i=0;i<11;i++)
+	for (int32_t i=0;i<11;i++)
 		//m_fnTmp[i].set(256);
 		if ( ! m_fnTmp[i].set(4,sizeof(FnInfo),256,NULL,0,false,0,
 				      "fntmp"))
@@ -131,7 +131,7 @@ bool Profiler:: readSymbolTable(){
 	processSymbolTable (m_file);
 	
 	int64_t end=gettimeofdayInMillisecondsLocal();
-	log(LOG_INIT,"admin: Took %lli milliseconds to build symbol table",
+	log(LOG_INIT,"admin: Took %"INT64" milliseconds to build symbol table",
 		end-start);
 	mfree(m_sectionHeaders,m_elfHeader.e_shnum * sizeof (Elf_Internal_Shdr),
 		"ProfilerD");
@@ -148,7 +148,7 @@ bool Profiler:: getFileHeader (FILE * file){
 	
 	/* Determine how to read the rest of the header.  */
 	//Found that gb is little_endian
-	//Found that bfd_vma type is unsigned long	
+	//Found that bfd_vma type is uint32_t	
 	//gb is supposed to be 32-bit
 	/* Read in the rest of the header.  */
 	Elf32_External_Ehdr ehdr32;
@@ -172,7 +172,7 @@ bool Profiler:: getFileHeader (FILE * file){
 	return 1;
 }
 
-unsigned long Profiler::getByte (unsigned char * field,int size){
+uint32_t Profiler::getByte (unsigned char * field,int size){
 	switch (size)
 	{
 	case 1:
@@ -188,10 +188,10 @@ unsigned long Profiler::getByte (unsigned char * field,int size){
 		   endian source we can juts use the 4 byte extraction code.  */
 		/* Fall through.  */
 	case 4:
-		return  ((unsigned long) (field [0]))
-			|    (((unsigned long) (field [1])) << 8)
-			|    (((unsigned long) (field [2])) << 16)
-			|    (((unsigned long) (field [3])) << 24);
+		return  ((uint32_t) (field [0]))
+			|    (((uint32_t) (field [1])) << 8)
+			|    (((uint32_t) (field [2])) << 16)
+			|    (((uint32_t) (field [3])) << 24);
 	default:
 		log(LOG_INIT,"admin: Unhandled data length: %d", size);
 		char *xx=NULL; xx=0;
@@ -230,7 +230,7 @@ bool Profiler::processSymbolTable (FILE * file){
 		for (si = 0, psym = symtab;
 		     si < section->sh_size / section->sh_entsize;
 		     si ++, psym ++)
-			if (((long)psym->st_size)>0)
+			if (((int32_t)psym->st_size)>0)
 				++m_addressMapSize;
 		mfree (symtab,
 		       (section->sh_size/section->sh_entsize)*sizeof(Elf32_External_Sym),
@@ -252,9 +252,9 @@ bool Profiler::processSymbolTable (FILE * file){
 		       && section->sh_type != SHT_DYNSYM)
 			continue;
 	  
-		log(LOG_INIT,"admin: Symbol table '%s' contains %lu entries",
+		log(LOG_INIT,"admin: Symbol table '%s' contains %"UINT32" entries",
 		    m_stringTable+section->sh_name,
-		    (unsigned long) (section->sh_size / section->sh_entsize));
+		    (uint32_t) (section->sh_size / section->sh_entsize));
 		//log(LOG_WARN,"Profiler:   Num\t   Value\t  Size\t    Name");
 		symtab = get32bitElfSymbols(file, section->sh_offset,
 					    section->sh_size / section->sh_entsize);
@@ -268,7 +268,7 @@ bool Profiler::processSymbolTable (FILE * file){
 
 			if (fseek (m_file,string_sec->sh_offset, SEEK_SET)){
 				log(LOG_INIT,"admin: Unable to seek to start "
-				    "of %s at %lx", "string table",
+				    "of %s at %"XINT32"", "string table",
 				    string_sec->sh_offset);
 				return 0;
 			}
@@ -276,12 +276,12 @@ bool Profiler::processSymbolTable (FILE * file){
 						   "ProfilerG");
 			if (strtab == NULL){
 				log(LOG_INIT,"admin: Out of memory allocating "
-				    "%ld bytes for %s", string_sec->sh_size,
+				    "%"INT32" bytes for %s", string_sec->sh_size,
 				    "string table");
 			}
 			if (fread ( strtab, string_sec->sh_size, 1, 
 				    m_file) != 1 ){
-				log(LOG_INIT,"admin: Unable to read in %ld "
+				log(LOG_INIT,"admin: Unable to read in %"INT32" "
 				    "bytes of %s", string_sec->sh_size,
 				    "string table");
 				mfree (strtab,string_sec->sh_size,"ProfilerG");
@@ -292,10 +292,10 @@ bool Profiler::processSymbolTable (FILE * file){
 		for (si = 0, psym = symtab;
 		     si < section->sh_size / section->sh_entsize;
 		     si ++, psym ++){
-			if (((long)psym->st_size)>0){
+			if (((int32_t)psym->st_size)>0){
 				//				FnInfo *fnInfo;
-				long key = psym->st_value;
-				long slot=m_fn.getSlot(&key);
+				int32_t key = psym->st_value;
+				int32_t slot=m_fn.getSlot(&key);
 				if (slot!=-1){
 					//fnInfo=m_fn.getValuePointerFromSlot(slot);
 					//This is happeninig because the 
@@ -306,8 +306,8 @@ bool Profiler::processSymbolTable (FILE * file){
 					// problem for the profiler
 					// log(LOG_WARN,"Profiler: Two "
 					// "functions pointing to "
-					// "same address space %li",
-					// (long)psym->st_value);
+					// "same address space %"INT32"",
+					// (int32_t)psym->st_value);
 				}
 				else{
 					FnInfo fnInfoTmp;
@@ -329,17 +329,17 @@ bool Profiler::processSymbolTable (FILE * file){
 					fnInfoTmp.m_maxBlockedTime = 0;
 					fnInfoTmp.m_lastQpoll = "";
 					fnInfoTmp.m_prevQpoll = "";
-					unsigned long address=(long)psym->st_value;
-					//log(LOG_WARN,"Profiler: Adding fninfo name=%s, key=%li",
+					uint32_t address=(int32_t)psym->st_value;
+					//log(LOG_WARN,"Profiler: Adding fninfo name=%s, key=%"INT32"",
 					// fnInfo->m_fnName,address);
-					long key = (long)address;
+					int32_t key = (int32_t)address;
 					m_fn.addKey(&key,&fnInfoTmp);
 					m_addressMap[m_lastAddressMapIndex++] = address;
 				}
 			}
 			/*log(LOG_WARN,"%6d\t %8.8lx\t   %5ld\t   %s", 
-			    si,(unsigned long)psym->st_value,
-			    (long)psym->st_size,strtab + psym->st_name);*/
+			    si,(uint32_t)psym->st_value,
+			    (int32_t)psym->st_size,strtab + psym->st_name);*/
 		}
 		mfree (symtab,
 		       (section->sh_size/section->sh_entsize)*sizeof(Elf32_External_Sym),
@@ -352,8 +352,8 @@ bool Profiler::processSymbolTable (FILE * file){
 }
 
 Elf_Internal_Sym *Profiler::get32bitElfSymbols(FILE * file,
-					       unsigned long offset,
-					       unsigned long number){	
+					       uint32_t offset,
+					       uint32_t number){	
 	Elf32_External_Sym* esyms;
 	Elf_Internal_Sym *isyms;
 	Elf_Internal_Sym *psym;
@@ -363,25 +363,25 @@ Elf_Internal_Sym *Profiler::get32bitElfSymbols(FILE * file,
 	//  esyms, Elf32_External_Sym *, "symbols");
 	
 	if (fseek(file, offset, SEEK_SET)){
-		log(LOG_INIT,"admin: Unable to seek to start of %s at %lx", "symbols", offset);
+		log(LOG_INIT,"admin: Unable to seek to start of %s at %"XINT32"", "symbols", offset);
 		return 0;
 	}
 	esyms = (Elf32_External_Sym *) 
 		mmalloc (number * sizeof (Elf32_External_Sym),"ProfilerE");
 	if (esyms==NULL){
-		log(LOG_INIT,"admin: Out of memory allocating %ld bytes for %s",
+		log(LOG_INIT,"admin: Out of memory allocating %"INT32" bytes for %s",
 		    number *sizeof (Elf32_External_Sym),"Symbols");
 		return 0;
 	}
 
 	if (fread (esyms,number * sizeof (Elf32_External_Sym), 1, file) != 1){ 
-		log(LOG_INIT,"admin: Unable to read in %ld bytes of %s", 
+		log(LOG_INIT,"admin: Unable to read in %"INT32" bytes of %s", 
 		    number * sizeof (Elf32_External_Sym), "symbols");
 		mfree (esyms,number * sizeof (Elf32_External_Sym),"ProfilerE");
 		esyms = NULL;
 		return 0;
 	}
-	long need = number * sizeof (Elf_Internal_Sym);
+	int32_t need = number * sizeof (Elf_Internal_Sym);
 	isyms = (Elf_Internal_Sym *) mmalloc (need,"ProfilerF");
 	
 	if (isyms == NULL){
@@ -428,19 +428,19 @@ bool Profiler::processSectionHeaders (FILE * file){
 	{
 		if (fseek (m_file,section->sh_offset,SEEK_SET)){
 			log(LOG_INIT,"admin: Unable to seek to start of %s "
-			    "at %lx\n","string table",section->sh_offset);
+			    "at %"XINT32"\n","string table",section->sh_offset);
 			return 0;
 		}
 		m_stringTableSize=section->sh_size;
 		m_stringTable = (char *) mmalloc (m_stringTableSize,
 						  "ProfilerB");
 		if (m_stringTable == NULL){
-			log(LOG_INIT,"admin: Out of memory allocating %ld "
+			log(LOG_INIT,"admin: Out of memory allocating %"INT32" "
 			    "bytes for %s\n", section->sh_size,"string table");
 			return 0;
 		}
 		if (fread (m_stringTable, section->sh_size, 1, m_file) != 1){
-			log(LOG_INIT,"admin: Unable to read in %ld bytes of "
+			log(LOG_INIT,"admin: Unable to read in %"INT32" bytes of "
 			    "%s\n",section->sh_size,"section table");
 			mfree (m_stringTable,m_stringTableSize,"ProfilerB");
 			m_stringTable = NULL;
@@ -457,7 +457,7 @@ bool Profiler::get32bitSectionHeaders (FILE * file){
 	unsigned int          i;
 
 	if (fseek (m_file, m_elfHeader.e_shoff, SEEK_SET)){
-		log(LOG_INIT,"admin: Unable to seek to start of %s at %lx\n",
+		log(LOG_INIT,"admin: Unable to seek to start of %s at %"XINT32"\n",
 		    "section headers", m_elfHeader.e_shoff);
 		return 0;
 	}
@@ -510,11 +510,11 @@ bool Profiler::get32bitSectionHeaders (FILE * file){
 }
 
 
-bool Profiler::startTimer(long address, const char* caller) {
+bool Profiler::startTimer(int32_t address, const char* caller) {
 	// disable - we do interrupt based profiling now
 	return true;
 	if(g_inSigHandler) return 1;
-	long slot = m_fn.getSlot(&address);
+	int32_t slot = m_fn.getSlot(&address);
 	FnInfo *fnInfo;
 	if (slot == -1) return false;
 	fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
@@ -533,14 +533,14 @@ inline uint64_t gettimeofdayInMicroseconds(void) {
 	gettimeofday(&tv, NULL);
 	return(((uint64_t)tv.tv_sec * 1000000LL) + (uint64_t)tv.tv_usec);
 }
-bool Profiler::pause(const char* caller, long lineno, long took) {
+bool Profiler::pause(const char* caller, int32_t lineno, int32_t took) {
 	lastQuickPollTime = gettimeofdayInMicroseconds(); 
 	uint64_t nowLocal = lastQuickPollTime / 1000;
 	void *trace[3];
 	backtrace(trace, 3);
 	const void *stackPtr = trace[2];
 	lastQuickPollAddress = (uint32_t)stackPtr; 
-	for(long i = 0; i < m_activeFns.getNumSlots(); i++) {
+	for(int32_t i = 0; i < m_activeFns.getNumSlots(); i++) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
 		FnInfo* fnInfo = *(FnInfo **)m_activeFns.getValueFromSlot(i);
@@ -560,10 +560,10 @@ bool Profiler::pause(const char* caller, long lineno, long took) {
 	//break here in gdb and go up on the stack if you want to find a place
 	//to add a quickpoll!!!!1!!
 //   	if(took > 50)
-// 	   log(LOG_WARN, "admin qp %s--%li took %li",
+// 	   log(LOG_WARN, "admin qp %s--%"INT32" took %"INT32"",
 // 	       caller, lineno, took);
-	long qpkey = (long)caller + lineno;
-	long slot = m_quickpolls.getSlot(&qpkey);
+	int32_t qpkey = (int32_t)caller + lineno;
+	int32_t slot = m_quickpolls.getSlot(&qpkey);
 	if(slot < 0) {
 		if(m_lastQPUsed >= 512) {
 			log(LOG_WARN, "admin: profiler refusing to add to "
@@ -603,7 +603,7 @@ bool Profiler::pause(const char* caller, long lineno, long took) {
 
 bool Profiler::unpause() {
 	uint64_t nowLocal = gettimeofdayInMillisecondsLocal();
- 	for(long i = 0; i < m_activeFns.getNumSlots(); i++) {
+ 	for(int32_t i = 0; i < m_activeFns.getNumSlots(); i++) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
 		FnInfo* fnInfo = *(FnInfo **)m_activeFns.getValueFromSlot(i);
@@ -612,16 +612,16 @@ bool Profiler::unpause() {
 	return true;
 }
 
-bool Profiler::endTimer(long address,
+bool Profiler::endTimer(int32_t address,
 			const char *caller,
 			bool isThread ) {
 	// disable - we do interrupt based profiling now
 	if(g_inSigHandler) return 1;
 	FnInfo *fnInfo;
-	long slot = m_activeFns.getSlot(&address);
+	int32_t slot = m_activeFns.getSlot(&address);
 	if (slot < 0 ) {
 		//log(LOG_WARN,"Profiler: got a non added function at 
-		// address %li",address);
+		// address %"INT32"",address);
 		// This happens because at closing the profiler is still on
 		// after destructor has been called. Not displaying address
 		// because is is of no use
@@ -654,9 +654,9 @@ bool Profiler::endTimer(long address,
 	char* name = getFnName(address);
 
 
-	if (timeTaken > (unsigned long)g_conf.m_minProfThreshold) {
+	if (timeTaken > (uint32_t)g_conf.m_minProfThreshold) {
 		if(g_conf.m_sequentialProfiling)
-			log(LOG_TIMING, "admin: %lli ms in %s from %s", 
+			log(LOG_TIMING, "admin: %"INT64" ms in %s from %s", 
 			    timeTaken, 
 			    name,
 			    caller?caller:"");
@@ -675,15 +675,15 @@ bool Profiler::endTimer(long address,
 		*/
 	}
 
-	for (long i=0;i<11;i++){
+	for (int32_t i=0;i<11;i++){
 		//if we find a hashtable is less than 1 second old
 		uint64_t diffTime=nowLocal-m_fnTime[i];
 		if((diffTime<1000)&&(m_fnTime[i]!=0)){
 			//Add this function. Don't add the function name,
 			//shall get that from m_fn
 			//log(LOG_WARN,"Profiler: adding funtion to existing "
-			//"hashtable i=%li,now=%lli,"
-			// "m_fnTime=%lli, diffTime=%lli",i,now,
+			//"hashtable i=%"INT32",now=%"INT64","
+			// "m_fnTime=%"INT64", diffTime=%"INT64"",i,now,
 			// m_fnTime[i],diffTime);
 			slot=m_fnTmp[i].getSlot(&address);
 			if (slot!=-1){
@@ -712,10 +712,10 @@ bool Profiler::endTimer(long address,
 	}
 	//if not, then find a hashtable that is more than 10 seconds old
 	//and replace it with the new hashtable
-	for (long i=0;i<11;i++){
+	for (int32_t i=0;i<11;i++){
 		uint64_t diffTime=nowLocal-m_fnTime[i];
 		if((diffTime>=10000) || (m_fnTime[i]==0)){
-			/*log(LOG_WARN,"Profiler: m_fntime=%lli,i=%li,now=%lli,diffTime=%lli",
+			/*log(LOG_WARN,"Profiler: m_fntime=%"INT64",i=%"INT32",now=%"INT64",diffTime=%"INT64"",
 			  m_fnTime[i],i,now,diffTime);*/
 			//First clear the hashtable
 			m_fnTmp[i].clear();						
@@ -739,21 +739,21 @@ bool Profiler::endTimer(long address,
 	return true;
 }
 
-bool Profiler::printInfo(SafeBuf *sb,char *username, //long user, 
+bool Profiler::printInfo(SafeBuf *sb,char *username, //int32_t user, 
                          char *pwd, char *coll, 
 			 int sorts,int sort10, int qpreset,
 			 int profilerreset) {
 	// sort by max blocked time by default
 	if ( sorts == 0 ) sorts = 8;
 
-	long slot;
-	unsigned long key(0);
-	long numSlots = m_fn.getNumSlots();
-	long numSlotsUsed = m_fn.getNumSlotsUsed();
+	int32_t slot;
+	uint32_t key(0);
+	int32_t numSlots = m_fn.getNumSlots();
+	int32_t numSlotsUsed = m_fn.getNumSlotsUsed();
 	FnInfo *fnInfo;
 
 	if ( profilerreset ) {
-		for ( long i = 0; i < m_fn.getNumSlots(); i++ ){
+		for ( int32_t i = 0; i < m_fn.getNumSlots(); i++ ){
 			//key=m_fn.getKey(i);
 			//if (key!=0){
 			if ( ! m_fn.isEmpty(i) ) {
@@ -797,10 +797,10 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 // 	sb->safePrintf("<td><b><a href=/admin/profiler?sorts=8&c=%s>"
 // 		       "Between Quick Polls</a></b></td></tr>",coll);
 
-	indexTable=(unsigned long*) 
-		mcalloc(numSlotsUsed*sizeof(unsigned long),"ProfilerW");
-	keyTable=(unsigned long*) mcalloc
-		(numSlotsUsed*sizeof(unsigned long),"ProfilerX");
+	indexTable=(uint32_t*) 
+		mcalloc(numSlotsUsed*sizeof(uint32_t),"ProfilerW");
+	keyTable=(uint32_t*) mcalloc
+		(numSlotsUsed*sizeof(uint32_t),"ProfilerX");
 	if(sorts==5 ||sort10==5)
 		valueTableF=(float*) 
 			mcalloc(numSlotsUsed*sizeof(float),"ProfilerY");
@@ -808,8 +808,8 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		valueTableUll=(uint64_t*) 
 			mcalloc(numSlotsUsed*sizeof(uint64_t),
 				"ProfilerY");
-	long numFnsCalled=0;
-	for (long i=0;i<numSlots;i++){
+	int32_t numFnsCalled=0;
+	for (int32_t i=0;i<numSlots;i++){
 		//key=m_fn.getKey(i);
 		//if (key!=0){
 		if ( !m_fn.isEmpty(i) ) {
@@ -849,19 +849,19 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		}
 	}
 	if (sorts==5)
-		gbqsort(indexTable,numFnsCalled,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled,sizeof(uint32_t),
 		      decend_cmpF);
 	else
-		gbqsort(indexTable,numFnsCalled,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled,sizeof(uint32_t),
 		      decend_cmpUll);
 
 	//Now print the sorted values
-	for (long i=0;i<numFnsCalled;i++){
+	for (int32_t i=0;i<numFnsCalled;i++){
 		slot=m_fn.getSlot(&keyTable[indexTable[i]]);
 		fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
 		//Don't print functions that have not been called
-		sb->safePrintf("<tr><td>%lx</td><td>%s</td><td>%li</td><td>%li</td>"
-			       "<td>%.4f</td><td>%li</td><td>%li</td><td>%li</td>"
+		sb->safePrintf("<tr><td>%"XINT32"</td><td>%s</td><td>%"INT32"</td><td>%"INT32"</td>"
+			       "<td>%.4f</td><td>%"INT32"</td><td>%"INT32"</td><td>%"INT32"</td>"
 			       "</tr>",
 			       keyTable[indexTable[i]],
 			       fnInfo->m_fnName,
@@ -901,14 +901,14 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		       ">"
 		       "Times From Thread</a></b></td></tr>",coll);
 	uint64_t now=gettimeofdayInMillisecondsLocal();
-	long numFnsCalled10=0;;
-	for(long i=0;i<numFnsCalled;i++){
+	int32_t numFnsCalled10=0;;
+	for(int32_t i=0;i<numFnsCalled;i++){
 		uint64_t timesCalled=0;
 		uint64_t totalTimeTaken=0;
 		uint64_t maxTimeTaken=0;
 		uint64_t numCalledFromThread=0;
 		//If hashtable is less than 10 secs old, use it
-		for(long j=0;j<11;j++){
+		for(int32_t j=0;j<11;j++){
 			if ((now-m_fnTime[i]) < 10000){
 				//From the keyTable, we know the keys of the
 				// functions that have been called
@@ -951,19 +951,19 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	}
 
 	if (sort10==5)
-		gbqsort(indexTable,numFnsCalled10,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled10,sizeof(uint32_t),
 		      decend_cmpF);
 	else
-		gbqsort(indexTable,numFnsCalled10,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled10,sizeof(uint32_t),
 		      decend_cmpUll);
 
-	for(long i=0;i<numFnsCalled10;i++){
+	for(int32_t i=0;i<numFnsCalled10;i++){
 		uint64_t timesCalled=0;		
 		uint64_t totalTimeTaken=0;
 		uint64_t maxTimeTaken=0;
 		uint64_t numCalledFromThread=0;
 		//If hashtable is less than 10 secs old, continue
-		for(long j=0;j<11;j++){
+		for(int32_t j=0;j<11;j++){
 			if ((now-m_fnTime[i])<10000){
 				// From the keyTable, we know the keys of the
 				// functions that have been called
@@ -989,9 +989,9 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		slot=m_fn.getSlot(&keyTable[indexTable[i]]);
 		fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
 		//Don't print functions that have not been called
-		sb->safePrintf("<tr><td>%lx</td><td>%s</td><td>%lli</td>"
-			       "<td>%lli</td>"
-			       "<td>%.4f</td><td>%lli</td><td>%lli</td></tr>",
+		sb->safePrintf("<tr><td>%"XINT32"</td><td>%s</td><td>%"INT64"</td>"
+			       "<td>%"INT64"</td>"
+			       "<td>%.4f</td><td>%"INT64"</td><td>%"INT64"</td></tr>",
 			       keyTable[indexTable[i]],
 			       fnInfo->m_fnName,
 			       timesCalled,
@@ -1004,8 +1004,8 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 
 	
 	
-	mfree(indexTable,numSlotsUsed*sizeof(unsigned long),"ProfilerX");
-	mfree(keyTable,numSlotsUsed*sizeof(unsigned long),"ProfilerX");
+	mfree(indexTable,numSlotsUsed*sizeof(uint32_t),"ProfilerX");
+	mfree(keyTable,numSlotsUsed*sizeof(uint32_t),"ProfilerX");
 	if (sorts==5 || sort10==5)
 		mfree(valueTableF,
 		      numSlotsUsed*sizeof(float),
@@ -1055,23 +1055,23 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		return true;
 	}
 
-	indexTable = (unsigned long*)mcalloc(numSlotsUsed * 
-					     sizeof(unsigned long),
+	indexTable = (uint32_t*)mcalloc(numSlotsUsed * 
+					     sizeof(uint32_t),
 					     "ProfilerZ");
 	if(!indexTable) {
 		mfree(indexTable,   
-		      numSlotsUsed*sizeof(unsigned long),
+		      numSlotsUsed*sizeof(uint32_t),
 		      "ProfilerZ");
 		sb->safePrintf("</table>");
 		return true;
 	}
 
-	keyTable = (unsigned long*)mcalloc(numSlotsUsed * 
-					   sizeof(unsigned long),
+	keyTable = (uint32_t*)mcalloc(numSlotsUsed * 
+					   sizeof(uint32_t),
 					   "ProfilerZ");
 	if(!keyTable) {
 		mfree(indexTable,   
-		      numSlotsUsed*sizeof(unsigned long),
+		      numSlotsUsed*sizeof(uint32_t),
 		      "ProfilerZ");
 		mfree(valueTableUll,
 		      numSlotsUsed*sizeof(uint64_t),
@@ -1080,28 +1080,28 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		return true;
 	}
 
-	long j = 0;
-	for (long i = 0; i < numSlots; i++) {
+	int32_t j = 0;
+	for (int32_t i = 0; i < numSlots; i++) {
 		//if((key = m_quickpolls.getKey(i)) == 0) continue;
 		if ( m_quickpolls.isEmpty(i) ) continue;
 		QuickPollInfo* q = *(QuickPollInfo **)m_quickpolls.getValueFromSlot(i);
-		long took = q->m_maxTime;
+		int32_t took = q->m_maxTime;
 		valueTableUll[j] = took;
 		indexTable[j] = j; 
 		keyTable[j] = i; 
 		j++;
 	}
-	gbqsort(indexTable, j, sizeof(unsigned long), decend_cmpUll);
+	gbqsort(indexTable, j, sizeof(uint32_t), decend_cmpUll);
 	
-	for (long i = 0; i < numSlotsUsed; i++){
-		long slot = keyTable[indexTable[i]];
+	for (int32_t i = 0; i < numSlotsUsed; i++){
+		int32_t slot = keyTable[indexTable[i]];
 		//key = m_quickpolls.getKey(slot);
 		QuickPollInfo* q = *(QuickPollInfo **)m_quickpolls.getValueFromSlot(slot);
-		sb->safePrintf("<tr><td>%s:%li<br>%s:%li</td>"
-			       "<td>%li</td>"
+		sb->safePrintf("<tr><td>%s:%"INT32"<br>%s:%"INT32"</td>"
+			       "<td>%"INT32"</td>"
 			       "<td>%f</td>"
-			       "<td>%li</td>"
-			       "<td>%li</td>"
+			       "<td>%"INT32"</td>"
+			       "<td>%"INT32"</td>"
 			       "</tr>",
 			       q->m_caller,  q->m_lineno, q->m_last, 
 			       q->m_lastlineno,q->m_maxTime,
@@ -1112,16 +1112,16 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	sb->safePrintf("</table>");
 
 	mfree(valueTableUll,numSlotsUsed*sizeof(uint64_t),"ProfilerZ");
-	mfree(indexTable,   numSlotsUsed*sizeof(unsigned long),"ProfilerZ");
-	mfree(keyTable,     numSlotsUsed*sizeof(unsigned long),"ProfilerZ");
+	mfree(indexTable,   numSlotsUsed*sizeof(uint32_t),"ProfilerZ");
+	mfree(keyTable,     numSlotsUsed*sizeof(uint32_t),"ProfilerZ");
 	return true;
 }
 
 //backwards so we get highest scores first.
 static int decend_cmpUll ( const void *h1 , const void *h2 ) {
-        unsigned long tmp1, tmp2;
-        tmp1 = *(unsigned long *)h1;
-	tmp2 = *(unsigned long *)h2;
+        uint32_t tmp1, tmp2;
+        tmp1 = *(uint32_t *)h1;
+	tmp2 = *(uint32_t *)h2;
 	if (valueTableUll[tmp1]>valueTableUll[tmp2]) {
 		return -1;	
 	}
@@ -1133,9 +1133,9 @@ static int decend_cmpUll ( const void *h1 , const void *h2 ) {
 
 //backwards so we get highest scores first.
 static int decend_cmpF ( const void *h1 , const void *h2 ) {
-        unsigned long tmp1, tmp2;
-        tmp1 = *(unsigned long *)h1;
-	tmp2 = *(unsigned long *)h2;
+        uint32_t tmp1, tmp2;
+        tmp1 = *(uint32_t *)h1;
+	tmp2 = *(uint32_t *)h2;
 	if (valueTableF[tmp1]>valueTableF[tmp2]) {
 		return -1;	
 	}
@@ -1146,9 +1146,9 @@ static int decend_cmpF ( const void *h1 , const void *h2 ) {
 }
 
 
-char* Profiler::getFnName(unsigned long address,long *nameLen){
+char* Profiler::getFnName(uint32_t address,int32_t *nameLen){
 	FnInfo *fnInfo;
-	long slot=m_fn.getSlot(&address);
+	int32_t slot=m_fn.getSlot(&address);
 	if(slot!=-1)
 		fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
 	else 
@@ -1165,12 +1165,12 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 	
 
 	//read in all of the possible cgi parms off the bat:
-	//long  user     = g_pages.getUserType( s , r );
+	//int32_t  user     = g_pages.getUserType( s , r );
 	char *username = g_users.getUsername(r);
 	//char *pwd  = r->getString ("pwd");
 
 	char *coll = r->getString ("c");
-	long collLen;
+	int32_t collLen;
 	if ( ! coll || ! coll[0] ) {
 		//coll    = g_conf.m_defaultColl;
 		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
@@ -1555,7 +1555,7 @@ Profiler::sortRealTimeData(const uint8_t type, const uint32_t num) {
 
 bool
 Profiler::printRealTimeInfo(SafeBuf *sb,
-			    //long user,
+			    //int32_t user,
 			    char *username,
 			    char *pwd,
 			    char *coll,

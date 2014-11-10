@@ -13,9 +13,9 @@ bool allExit ( ) { return true; }
 bool closeAll ( void *state , void (* callback)(void *state) ) {return true;}
 
 static void timeWrapper ( int fd , void *state ) ;
-static void dnsWrapper ( void *state , long ip ) ;
+static void dnsWrapper ( void *state , int32_t ip ) ;
 
-static long s_max = 10;
+static int32_t s_max = 10;
 
 bool mainShutdown ( bool urgent ) { return true; }
 
@@ -92,12 +92,12 @@ int main ( int argc , char *argv[] ) {
 
 class StateT {
 public:
-	long m_ip;
+	int32_t m_ip;
 	char m_buf[1024];
 	int64_t m_time;
 };
 
-static long s_count = 0;
+static int32_t s_count = 0;
 
 void timeWrapper ( int fd , void *state ) { 
  top:
@@ -115,7 +115,7 @@ void timeWrapper ( int fd , void *state ) {
 	// then look it up
 	Url url;
 	url.set ( p , gbstrlen(p) );
-	long status = g_dns.getIp( url.getHost() , 
+	int32_t status = g_dns.getIp( url.getHost() , 
 			url.getHostLen() , &st->m_ip , st , dnsWrapper );
 	logf(LOG_INFO, "dnstest: Looking up %s", url.getHost());
 	if(g_errno) {
@@ -140,10 +140,10 @@ void timeWrapper ( int fd , void *state ) {
 	goto top;
 }
 
-void dnsWrapper ( void *state , long ip ) {
+void dnsWrapper ( void *state , int32_t ip ) {
 	StateT *st = (StateT *)state;
 	int64_t time = gettimeofdayInMilliseconds() - st->m_time ;
-	fprintf ( stderr,"Response: %llims %s %s (%s)\n", time, 
+	fprintf ( stderr,"Response: %"INT64"ms %s %s (%s)\n", time, 
 			st->m_buf , iptoa(ip) , mstrerror(g_errno));
 	//if ( g_errno == ETRYAGAIN )
 	//	log("hey");

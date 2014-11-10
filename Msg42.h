@@ -25,11 +25,11 @@ class Msg42 {
 	// . "termFreq" should NOT be on the stack in case we block
 	// . sets *termFreq to UPPER BOUND on # of records with that "termId"
 	bool getTermFreq ( char       *coll       ,
-			   long        maxAge     ,
+			   int32_t        maxAge     ,
 			   int64_t   termId     ,
 			   void       *state      ,
 			   void (* callback)(void *state ) ,
-			   long        niceness = MAX_NICENESS );
+			   int32_t        niceness = MAX_NICENESS );
 
 	int64_t getTermFreq () { return m_termFreq; };
 
@@ -51,7 +51,7 @@ class Msg42 {
 
 	// for sending the request
 	Multicast m_mcast;
-	long      m_errno;
+	int32_t      m_errno;
 };
 
 #endif

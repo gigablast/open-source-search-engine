@@ -20,9 +20,9 @@ bool sendPageDelColl ( TcpSocket *s , HttpRequest *r ) {
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// get collection name
-	//long  nclen;
+	//int32_t  nclen;
 	//char *nc   = r->getString ( "nc" , &nclen );
-	//long  cpclen;
+	//int32_t  cpclen;
 	//char *cpc  = r->getString ( "cpc" , &cpclen );
 
 	g_errno = 0;
@@ -59,7 +59,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		// no addcoll given?
-		long  page = g_pages.getDynamicPageNumber ( r );
+		int32_t  page = g_pages.getDynamicPageNumber ( r );
 		char *addcoll = r->getString("addcoll",NULL);
 		char *delcoll = r->getString("delcoll",NULL);
 		if ( ! addcoll ) addcoll = r->getString("addColl",NULL);
@@ -98,7 +98,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	char *gmsg = NULL;
 	// is it too big?
 	if ( action && addColl && gbstrlen(addColl) > MAX_COLL_LEN ) {
-		gtmp.safePrintf("search engine name is too long");
+		gtmp.safePrintf("search engine name is too int32_t");
 		gmsg = gtmp.getBufStart();
 	}
 	// from Collectiondb.cpp::addNewColl() ensure coll name is legit
@@ -160,11 +160,11 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 
 
-	//long  page     = g_pages.getDynamicPageNumber ( r );
+	//int32_t  page     = g_pages.getDynamicPageNumber ( r );
 	//char *coll     = r->getString    ( "c"    );
 	//char *pwd      = r->getString    ( "pwd" );
 	//char *username = g_users.getUsername( r );
-	//long  user = g_pages.getUserType ( s , r );
+	//int32_t  user = g_pages.getUserType ( s , r );
 	//if ( ! coll )  coll = "";
 
 	//if ( ! nc   )    nc = "";
@@ -288,7 +288,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 		// wrap up the form started by printAdminTop
 		g_pages.printAdminBottom ( &p );
-		long bufLen = p.length();
+		int32_t bufLen = p.length();
 		return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 	}
 
@@ -318,7 +318,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		  DARK_BLUE
 		      );
 
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		p.safePrintf (
@@ -332,7 +332,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 skip:
 	// wrap up the form started by printAdminTop
 	g_pages.printAdminBottom ( &p );
-	long bufLen = p.length();
+	int32_t bufLen = p.length();
 	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 }
 
@@ -396,7 +396,7 @@ bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf ( "</table></center><br>\n");
 	// wrap up the form started by printAdminTop
 	g_pages.printAdminBottom ( &p );
-	long bufLen = p.length();
+	int32_t bufLen = p.length();
 	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 
 }

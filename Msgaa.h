@@ -27,15 +27,15 @@ public:
 	char   *m_coll;
 	void   *m_state;
 	void  (*m_callback) (void *state );
-	long    m_sitePathDepth;
+	int32_t    m_sitePathDepth;
 
 	class Msg40 *m_msg40;
-	long m_pathDepth;
+	int32_t m_pathDepth;
 	char m_qbuf[MAX_QBUF_SIZE];
-	//long m_niceness;
+	//int32_t m_niceness;
 
-	long m_oldSitePathDepth;
-	long m_newSitePathDepth;
+	int32_t m_oldSitePathDepth;
+	int32_t m_newSitePathDepth;
 
 };
 

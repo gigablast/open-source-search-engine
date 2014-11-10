@@ -66,37 +66,37 @@ class IndexTable {
 	// . returns false on error and sets errno
 	// . we assume there are "m_numTerms" lists passed in (see set() above)
 	void addLists_r ( IndexList   lists[MAX_TIERS][MAX_QUERY_TERMS] ,
-			  long        numTiers        ,
-			  long        numListsPerTier ,
+			  int32_t        numTiers        ,
+			  int32_t        numListsPerTier ,
 			  Query      *q               ,
-			  long        docsWanted      ,
-			  long       *totalListSizes  ,
+			  int32_t        docsWanted      ,
+			  int32_t       *totalListSizes  ,
 			  bool        useDateLists    ,
 			  bool        sortByDate      ,
 			  float       sortByDateWeight );
 
 	// . these are set from calling addLists() above
 	// . we log all matching topDocIds if isDebug is true
-	int64_t *getTopDocIds ( long tier ) { return m_topDocIds[tier]; };
+	int64_t *getTopDocIds ( int32_t tier ) { return m_topDocIds[tier]; };
 
-	unsigned char *getTopBitScores ( long tier ) 
+	unsigned char *getTopBitScores ( int32_t tier ) 
 		{ return m_topBitScores[tier]; };
 
-	char *getTopExplicits ( long tier ) { return m_topExplicits[tier]; };
+	char *getTopExplicits ( int32_t tier ) { return m_topExplicits[tier]; };
 
-	long      *getTopScores ( long tier ) { return m_topScores[tier]; };
-	//unsigned long *getTopBitScores () { return m_finalTopBitScores; };
+	int32_t      *getTopScores ( int32_t tier ) { return m_topScores[tier]; };
+	//uint32_t *getTopBitScores () { return m_finalTopBitScores; };
 
 	// make sure to call getTopDocIds() before calling this
-	long   getNumTopDocIds ( long tier ) { return m_numTopDocIds[tier]; };
+	int32_t   getNumTopDocIds ( int32_t tier ) { return m_numTopDocIds[tier]; };
 
 	// . get how many results we have in the topDocIds list
 	// . if "thatIncludeAllTerms" is true, results must have all terms
 	//   from all indexLists that we haven't read ALL of yet
-	long getNumExactExplicitMatches ( long tier ) { 
+	int32_t getNumExactExplicitMatches ( int32_t tier ) { 
 		return m_numExactExplicitMatches[tier];};
 
-	long getNumExactImplicitMatches ( long tier ) { 
+	int32_t getNumExactImplicitMatches ( int32_t tier ) { 
 		return m_numExactImplicitMatches[tier];};
 
 	// some generic stuff
@@ -109,105 +109,105 @@ class IndexTable {
 	//   getTopDocIds(), getNumTopDocIds() or getNumExactMatches()
 	void filterTopDocIds ( ) ;
 
-	// how long to add the last batch of lists
+	// how int32_t to add the last batch of lists
 	int64_t       m_addListsTime;
-	unsigned long   m_totalDocIds;
-	long            m_numPanics;
-	long            m_numCollisions;
-	long            m_numPtrs; // in the beginning at least
-	long            m_numLoops;
+	uint32_t   m_totalDocIds;
+	int32_t            m_numPanics;
+	int32_t            m_numCollisions;
+	int32_t            m_numPtrs; // in the beginning at least
+	int32_t            m_numLoops;
 
-	// how long to get top docIds
+	// how int32_t to get top docIds
 	int64_t       m_setTopDocIdsTime;
 
 	int64_t       m_estimatedTotalHits;
 
-	long            m_numSlots;
+	int32_t            m_numSlots;
 
 	// Msg39 needs to call these
 	void freeMem ( ) ;
 	bool alloc (IndexList lists[MAX_TIERS][MAX_QUERY_TERMS],
-		    long      numTiers                  ,
-		    long      numListsPerTier           ,
-		    long      docsWanted                ,
+		    int32_t      numTiers                  ,
+		    int32_t      numListsPerTier           ,
+		    int32_t      docsWanted                ,
 		    bool      sortByDate                );
 
 	bool        doRecall() { return m_doRecall; };
 
-	long getNumDocsInTier ( long i ) { return m_numDocsInTier[i]; };
+	int32_t getNumDocsInTier ( int32_t i ) { return m_numDocsInTier[i]; };
 
 	// . sets m_scoreWeights[] based on termFreqs (IDF)
 	void setScoreWeights ( Query *q );
 	void setScoreWeights ( Query *q , bool phrase );
-	long *getScoreWeights ( ) { return m_scoreWeights; };
+	int32_t *getScoreWeights ( ) { return m_scoreWeights; };
 
  private:
 
 	void addLists2_r ( IndexList   lists[MAX_TIERS][MAX_QUERY_TERMS] ,
-			   long        numTiers        ,
-			   long        numListsPerTier ,
+			   int32_t        numTiers        ,
+			   int32_t        numListsPerTier ,
 			   Query      *q               ,
-			   long        docsWanted      ,
-			   long       *imap            ,
+			   int32_t        docsWanted      ,
+			   int32_t       *imap            ,
 			   bool        lastRound       ,
-			   long        numBaseLists    ,
+			   int32_t        numBaseLists    ,
 			   bool        useDateLists    ,
 			   bool        sortByDate      ,
 			   float       sortByDateWeight,
-			   long       *minHardCountPtr );
+			   int32_t       *minHardCountPtr );
 
-	void hashTopDocIds2 ( unsigned long  *maxDocId     ,
+	void hashTopDocIds2 ( uint32_t  *maxDocId     ,
 			      char          **docIdPtrs    ,
-			      long           *scores       ,
+			      int32_t           *scores       ,
 			      qvec_t         *explicitBits ,
-			      short          *hardCounts   ,
-			      unsigned long   mask         ,
-			      long            numSlots     ) ;
+			      int16_t          *hardCounts   ,
+			      uint32_t   mask         ,
+			      int32_t            numSlots     ) ;
 
 
 	// . used for getting which topDocId to kick out of the top list
-	long getWeakestTopDocId ( char          **topp         ,
-				  long           *tops         ,
+	int32_t getWeakestTopDocId ( char          **topp         ,
+				  int32_t           *tops         ,
 				  unsigned char  *topb         ,
-				  long            numTop       ,
+				  int32_t            numTop       ,
 				  unsigned char  *minBitScore2 ,
-				  long           *score        ,
+				  int32_t           *score        ,
 				  char          **docIdPtr     ) ;
 
 	// . get the termBits for the termId represented by this list
 	// . only phrases may set multiple bits
-	qvec_t getTermImplicitBitMask_r ( long i );
+	qvec_t getTermImplicitBitMask_r ( int32_t i );
 
 	// . set the m_bitScores[] array
 	// . "count" is the # of query term (single or phrase) bit combinations
-	void setBitScores ( long count );
+	void setBitScores ( int32_t count );
 
 	// are lists swapped?
 	bool m_swapped [ MAX_TIERS ] [ MAX_QUERY_TERMS ] ;
 
 	// these describe the lists associated with each m_termId
-	long       m_scoreWeights  [ MAX_QUERY_TERMS ];
+	int32_t       m_scoreWeights  [ MAX_QUERY_TERMS ];
 
 	// for each tier we have a list of the top docids
 	int64_t       m_topDocIds       [ MAX_TIERS ] [ MAX_RESULTS ];
 	char           *m_topDocIdPtrs    [ MAX_TIERS ] [ MAX_RESULTS ];
-	long            m_topScores       [ MAX_TIERS ] [ MAX_RESULTS ];
-	//short           m_topHardCounts   [ MAX_TIERS ] [ MAX_RESULTS ];
+	int32_t            m_topScores       [ MAX_TIERS ] [ MAX_RESULTS ];
+	//int16_t           m_topHardCounts   [ MAX_TIERS ] [ MAX_RESULTS ];
 	unsigned char   m_topBitScores    [ MAX_TIERS ] [ MAX_RESULTS ];
 	char            m_topExplicits    [ MAX_TIERS ] [ MAX_RESULTS ];
-	long            m_numTopDocIds    [ MAX_TIERS ] ;
-	long            m_numExactExplicitMatches [ MAX_TIERS ];
-	long            m_numExactImplicitMatches [ MAX_TIERS ];
-	long            m_numTiers;
+	int32_t            m_numTopDocIds    [ MAX_TIERS ] ;
+	int32_t            m_numExactExplicitMatches [ MAX_TIERS ];
+	int32_t            m_numExactImplicitMatches [ MAX_TIERS ];
+	int32_t            m_numTiers;
 
 	// when filterTopDocIds() is called it uniquifies and combines
 	// m_topDocIds[*][] into m_finalDocIds
 	/*	int64_t       m_finalTopDocIds    [ MAX_RESULTS ];
-	long            m_finalTopScores    [ MAX_RESULTS ];
-	//unsigned long   m_finalTopBitScores [ MAX_RESULTS ];
-	long            m_finalNumExactExplicitMatches ;
-	long            m_finalNumExactImplicitMatches ;
-	long            m_finalNumTopDocIds ;*/
+	int32_t            m_finalTopScores    [ MAX_RESULTS ];
+	//uint32_t   m_finalTopBitScores [ MAX_RESULTS ];
+	int32_t            m_finalNumExactExplicitMatches ;
+	int32_t            m_finalNumExactImplicitMatches ;
+	int32_t            m_finalNumTopDocIds ;*/
 
 	// a reference to the query
 	Query          *m_q;
@@ -219,7 +219,7 @@ class IndexTable {
 	bool            m_isDebug;
 
 	// for debug msgs
-	long            m_logstate;
+	int32_t            m_logstate;
 
 	// . did we already call m_q->setBitScores() for this query?
 	// . don't call it more than once
@@ -229,64 +229,64 @@ class IndexTable {
 
 	bool             m_requireAllTerms;
 	char           **m_topDocIdPtrs2;
-	long            *m_topScores2;
+	int32_t            *m_topScores2;
 	qvec_t          *m_topExplicits2;
-	short           *m_topHardCounts2;
-	long             m_maxTopDocIds2;
-	long             m_numTopDocIds2;
-	long             m_nexti;
-	long             m_oldnexti;
+	int16_t           *m_topHardCounts2;
+	int32_t             m_maxTopDocIds2;
+	int32_t             m_numTopDocIds2;
+	int32_t             m_nexti;
+	int32_t             m_oldnexti;
 	bool             m_doRecall;
 
 	// allocated memory
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 	char *m_bufMiddle;
 
 	// for large hashtable for sortByDate
 	char *m_bigBuf;
-	long  m_bigBufSize;
+	int32_t  m_bigBufSize;
 
 	// the imap stuff
-	long m_imap      [ MAX_QUERY_TERMS ];
-	long m_sizes     [ MAX_QUERY_TERMS ];
-	long m_blocksize [ MAX_QUERY_TERMS ];
-	long m_nb;
+	int32_t m_imap      [ MAX_QUERY_TERMS ];
+	int32_t m_sizes     [ MAX_QUERY_TERMS ];
+	int32_t m_blocksize [ MAX_QUERY_TERMS ];
+	int32_t m_nb;
 
 	class TopTree *m_topTree;
 
 	// these are for removing component lists replaced by their compounds
-	long *m_componentCodes;
+	int32_t *m_componentCodes;
 	//char       *m_ignore;
 	//bool        m_scoresSet;
-	long  m_numDocsInTier [ MAX_TIERS ] ;
+	int32_t  m_numDocsInTier [ MAX_TIERS ] ;
 };
 
 // . get the LOWEST scoring docId from our list of top docIds
 // . set "minBitScore22" and "score" for that lowest docId
 // . inline this for speed
 // . BUT lower docIds are considered higher scoring than higher docIds
-inline long IndexTable::getWeakestTopDocId ( char          **topp         ,
-					     long           *tops         ,
+inline int32_t IndexTable::getWeakestTopDocId ( char          **topp         ,
+					     int32_t           *tops         ,
 					     unsigned char  *topb         ,
-					     long            numTop       ,
+					     int32_t            numTop       ,
 					     unsigned char  *minBitScore2 ,
-					     long           *score        ,
+					     int32_t           *score        ,
 					     char          **docIdPtr     ) {
 	int64_t      tmp         = 0LL;
-	long           minScore    = 0x7fffffff;
+	int32_t           minScore    = 0x7fffffff;
 	unsigned char  minBitScore = 0xff;
 	char          *minDocIdPtr = (char *)&tmp; 
-	long           mini        = 0;
-	for ( long i = 0 ; i < numTop ; i++ ) {
+	int32_t           mini        = 0;
+	for ( int32_t i = 0 ; i < numTop ; i++ ) {
 		if ( topb [i] > minBitScore ) continue;
 		if ( topb [i] < minBitScore ) goto gotIt;
 		if ( tops [i] > minScore    ) continue;
 		if ( tops [i] < minScore    ) goto gotIt;
-		if ( *(unsigned long *)(topp[i]+1  )  < 
-		     *(unsigned long *)(minDocIdPtr+1)    ) continue;
-		if ( *(unsigned long *)(topp[i]+1  )  > 
-		     *(unsigned long *)(minDocIdPtr+1)    ) goto gotIt;
+		if ( *(uint32_t *)(topp[i]+1  )  < 
+		     *(uint32_t *)(minDocIdPtr+1)    ) continue;
+		if ( *(uint32_t *)(topp[i]+1  )  > 
+		     *(uint32_t *)(minDocIdPtr+1)    ) goto gotIt;
 		if ( (*(unsigned char *)(topp[i]    ) & 0xfc) <
 		     (*(unsigned char *)(minDocIdPtr) & 0xfc) ) continue;
 		// ties should not be happening for docid, unless

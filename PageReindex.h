@@ -14,10 +14,10 @@ public:
 
 	bool reindexQuery ( char *query ,
 			    collnum_t collnum, // char *coll  ,
-			    long startNum ,
-			    long endNum ,
+			    int32_t startNum ,
+			    int32_t endNum ,
 			    bool forceDel ,
-			    long langId,
+			    int32_t langId,
 			    void *state ,
 			    void (* callback) (void *state ) ) ;
 	
@@ -25,20 +25,20 @@ public:
 	
 	//char *m_coll;
 	collnum_t m_collnum;
-	long m_startNum;
-	long m_endNum;
+	int32_t m_startNum;
+	int32_t m_endNum;
 	bool m_forceDel;
 	void *m_state;
 	void (* m_callback) (void *state);
-	long m_niceness;
+	int32_t m_niceness;
 	Msg39Request m_req;
 	Msg3a m_msg3a;
 	//Msg1 m_msg1;
 	//RdbList m_list2;
 	Msg4 m_msg4;
 	SafeBuf m_sb;
-	long m_numDocIds;
-	long m_numDocIdsAdded;
+	int32_t m_numDocIds;
+	int32_t m_numDocIdsAdded;
 	Query  m_qq;
 };
 
@@ -54,18 +54,18 @@ public:
 			    HttpRequest *r,
 			    TcpSocket *sock,
 			    char *coll  ,
-			    long startNum ,
-			    long endNum ,
+			    int32_t startNum ,
+			    int32_t endNum ,
 			    void *state ,
 			    void (* callback) (void *state ) ) ;
 	
 	bool updateTagTerms ( ) ;
 
 	bool getMetaList ( int64_t docId , 
-			   long eventId , 
+			   int32_t eventId , 
 			   TagRec *egr ,
 			   RdbList *oldList ,
-			   long niceness ,
+			   int32_t niceness ,
 			   SafeBuf *addBuf ) ;
 
 	void *m_state;
@@ -73,33 +73,33 @@ public:
 
 	Msg40 m_msg40;
 	SearchInput m_si;
-	long m_startNum;
-	long m_endNum;
-	long m_numDocIds;
-	long m_i;
+	int32_t m_startNum;
+	int32_t m_endNum;
+	int32_t m_numDocIds;
+	int32_t m_i;
 	Msg12 m_msg12;
 	Msg8a m_msg8a;
 	Msg0  m_msg0;
 	char *m_coll;
-	long  m_niceness;
+	int32_t  m_niceness;
 	TagRec m_tagRec;
 	RdbList m_revdbList;
 	SafeBuf m_addBuf;
 	SafeBuf m_rr;
 	char *m_metaList;
-	long  m_metaListSize;
+	int32_t  m_metaListSize;
 	Msg4 m_msg4;
 	Query      m_qq;
 
 	Url  m_fakeUrl;
 
-	long m_gotLock;
-	long m_gotTagRec;
-	long m_gotRevdbRec;
-	long m_madeList;
-	long m_addedList;
-	long m_removeLock;
-	long m_flushedList;
+	int32_t m_gotLock;
+	int32_t m_gotTagRec;
+	int32_t m_gotRevdbRec;
+	int32_t m_madeList;
+	int32_t m_addedList;
+	int32_t m_removeLock;
+	int32_t m_flushedList;
 };
 */
 #endif

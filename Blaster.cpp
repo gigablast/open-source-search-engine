@@ -109,7 +109,7 @@ bool Blaster::init(){
 }
 	
 void Blaster::runBlaster(char *file1,char *file2,
-			 long maxNumThreads, long wait, bool isLogFile,
+			 int32_t maxNumThreads, int32_t wait, bool isLogFile,
 			 bool verbose,bool justDisplay,
 			 bool useProxy ,
 			 bool injectUrlWithLinks ,
@@ -131,9 +131,9 @@ void Blaster::runBlaster(char *file1,char *file2,
 	}
 
 	// get file size
-	long fileSize1 = f1.getFileSize() ;
+	int32_t fileSize1 = f1.getFileSize() ;
 	// store a \0 at the end
-	long m_bufSize1 = fileSize1 + 1;
+	int32_t m_bufSize1 = fileSize1 + 1;
 
 	m_doInjectionWithLinks = injectUrlWithLinks;
 	m_doInjection = injectUrl;
@@ -159,8 +159,8 @@ void Blaster::runBlaster(char *file1,char *file2,
 
 	// change \n to \0
 	//char *p = buf;
-	long  n = 0;
-	for ( long i = 0 ; i < m_bufSize1 ; i++ ) {
+	int32_t  n = 0;
+	for ( int32_t i = 0 ; i < m_bufSize1 ; i++ ) {
 		if ( m_buf1[i] != '\n' ) continue;
 		m_buf1[i] = '\0';
 		n++;
@@ -174,8 +174,8 @@ void Blaster::runBlaster(char *file1,char *file2,
 			log("blaster:open: %s %s",file2,mstrerror(g_errno)); 
 			return; 
 		}
-		long fileSize2 = f2.getFileSize() ;
-		long m_bufSize2 = fileSize2 + 1;
+		int32_t fileSize2 = f2.getFileSize() ;
+		int32_t m_bufSize2 = fileSize2 + 1;
 		m_buf2 = (char *) mmalloc ( m_bufSize2 , "blaster2" );
 		if ( ! m_buf2) {
 			log("blaster:mmalloc: %s",mstrerror(errno));
@@ -188,8 +188,8 @@ void Blaster::runBlaster(char *file1,char *file2,
 			log("blaster:read: %s %s",file2,mstrerror(g_errno));
 			return;
 		}
-		long m=0;
-		for ( long i = 0 ; i < m_bufSize2 ; i++ ) {
+		int32_t m=0;
+		for ( int32_t i = 0 ; i < m_bufSize2 ; i++ ) {
 			if ( m_buf2[i] != '\n' ) continue;
 			m_buf2[i] = '\0';
 			m++;
@@ -244,7 +244,7 @@ void Blaster::runBlaster(char *file1,char *file2,
 			}
 		}
 	}
-	log(LOG_INIT,"blaster: read %li urls into memory", 
+	log(LOG_INIT,"blaster: read %"INT32" urls into memory", 
 	    m_totalUrls );
 
 	if(!isLogFile){
@@ -319,9 +319,9 @@ void Blaster:: processLogFile(void *state){
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("blaster: Failed. "
-		    "Could not allocate %li bytes for query. "
+		    "Could not allocate %"INT32" bytes for query. "
 		    "Returning HTTP status of 500.",
-		    (long)sizeof(StateBD));
+		    (int32_t)sizeof(StateBD));
 		return;
 	}
 	mnew ( st , sizeof(StateBD) , "BlasterDiff3" );
@@ -351,8 +351,8 @@ void Blaster:: processLogFile(void *state){
 void Blaster::startBlastering(){
 	int64_t now=gettimeofdayInMilliseconds();
 	if(m_print && m_totalDone>0 && (m_totalDone % 20)==0){
-		log("blaster: Processed %li urls in %li ms",m_totalDone,
-		    (long) (now-m_startTime));
+		log("blaster: Processed %"INT32" urls in %"INT32" ms",m_totalDone,
+		    (int32_t) (now-m_startTime));
 		m_print=false;
 	}
 	//Launch the maximum number of threads that are allowed
@@ -365,9 +365,9 @@ void Blaster::startBlastering(){
 		catch ( ... ) {
 			g_errno = ENOMEM;
 			log("blaster: Failed. "
-			    "Could not allocate %li bytes for query. "
+			    "Could not allocate %"INT32" bytes for query. "
 			    "Returning HTTP status of 500.",
-			    (long)sizeof(StateBD));
+			    (int32_t)sizeof(StateBD));
 			return;
 		}
 		mnew ( st , sizeof(StateBD) , "BlasterDiff3" );
@@ -385,9 +385,9 @@ void Blaster::startBlastering(){
 			if ( s_flag ) {
 				s_flag = false;
 				log("blaster: injecting to host #0 at %s on "
-				    "http/tcp port %li",
+				    "http/tcp port %"INT32"",
 				    iptoa(h0->m_ip),
-				    (long)h0->m_httpPort);
+				    (int32_t)h0->m_httpPort);
 			}
 			// use spiderlinks=1 so we add the outlinks to spiderdb
 			// but that will slow the spider rate down since it 
@@ -416,14 +416,14 @@ void Blaster::startBlastering(){
 		log(LOG_WARN,"blaster: Downloading %s",st->m_u1);
 		// set port if port switch is true
 		//if ( m_portSwitch ) {
-		//	long r = rand() % 32;
+		//	int32_t r = rand() % 32;
 		//	u.setPort ( 8000 + r );
 		//}
 
 		// count it
 		m_launched++;
-		long ip=0;
-		long port=0;
+		int32_t ip=0;
+		int32_t port=0;
 		if (m_useProxy){
 			ip=atoip("66.154.102.20",13);
 			port=3128;
@@ -487,24 +487,24 @@ void Blaster::gotDoc1( void *state, TcpSocket *s){
 	int64_t now = gettimeofdayInMilliseconds();
 	// get hash
 	char *reply = s->m_readBuf ;
-	long  size  = s->m_readOffset;
+	int32_t  size  = s->m_readOffset;
 	HttpMime mime;
 	mime.set ( reply , size , NULL );
 	char *content    = reply + mime.getMimeLen();
-	long  contentLen = size  - mime.getMimeLen();
-	unsigned long h = hash32 ( content , contentLen );
+	int32_t  contentLen = size  - mime.getMimeLen();
+	uint32_t h = hash32 ( content , contentLen );
 	// log msg
 	if ( g_errno ) 
-		logf(LOG_INFO,"blaster: got doc (%li) (%li ms) %s : %s",
+		logf(LOG_INFO,"blaster: got doc (%"INT32") (%"INT32" ms) %s : %s",
 		     s->m_readOffset      , 
-		     (long)(now - s->m_startTime) , 
+		     (int32_t)(now - s->m_startTime) , 
 		     st->m_u1   , 
 		     mstrerror(g_errno)   );
 	else
-		logf(LOG_INFO,"blaster: got doc (%li) (%li ms) "
-		     "(hash=%lx) %s",
+		logf(LOG_INFO,"blaster: got doc (%"INT32") (%"INT32" ms) "
+		     "(hash=%"XINT32") %s",
 		     s->m_readOffset      , 
-		     (long)(now - s->m_startTime) , 
+		     (int32_t)(now - s->m_startTime) , 
 		     h ,
 		     st->m_u1       );
 	if (!m_blasterDiff){
@@ -588,41 +588,41 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	int64_t now = gettimeofdayInMilliseconds();
 	// So now after getting both docIds, get their contents
 	char *reply1 = st->m_buf1 ;
-	long  size1  = st->m_buf1Len;
+	int32_t  size1  = st->m_buf1Len;
 	HttpMime mime1;
 	mime1.set ( reply1 , size1 , NULL );
 	char *content1    = reply1 + mime1.getMimeLen();
-	long  content1Len = size1  - mime1.getMimeLen();
-	unsigned long h = hash32 ( content1 , content1Len );
+	int32_t  content1Len = size1  - mime1.getMimeLen();
+	uint32_t h = hash32 ( content1 , content1Len );
 	// log msg
 	if ( g_errno ) 
-		logf(LOG_INFO,"blaster: got doc (%li) (%li ms) %s : %s",
+		logf(LOG_INFO,"blaster: got doc (%"INT32") (%"INT32" ms) %s : %s",
 		     s->m_readOffset      , 
-		     (long)(now - s->m_startTime) , 
+		     (int32_t)(now - s->m_startTime) , 
 		     st->m_u2   , 
 		     mstrerror(g_errno)   );
 	else
-		logf(LOG_INFO,"blaster: got doc (%li) (%li ms) "
-		     "(hash=%lx) %s",
+		logf(LOG_INFO,"blaster: got doc (%"INT32") (%"INT32" ms) "
+		     "(hash=%"XINT32") %s",
 		     s->m_readOffset      , 
-		     (long)(now - s->m_startTime) , 
+		     (int32_t)(now - s->m_startTime) , 
 		     h ,
 		     st->m_u2       );
 
 
 	if (m_verbose){
-		log(LOG_WARN,"blaster: content1len=%li, Content1 is =%s",
+		log(LOG_WARN,"blaster: content1len=%"INT32", Content1 is =%s",
 		    content1Len,content1);
 		log(LOG_WARN,"\n");
 	}
 	char *reply2 = s->m_readBuf ;
-	long  size2  = s->m_readOffset;
+	int32_t  size2  = s->m_readOffset;
 	HttpMime mime2;
 	mime2.set ( reply2 , size2 , NULL );
 	char *content2    = reply2 + mime2.getMimeLen();
-	long  content2Len = size2  - mime2.getMimeLen();
+	int32_t  content2Len = size2  - mime2.getMimeLen();
 	if (m_verbose)	
-		log(LOG_WARN,"blaster: content2len=%li, Content2 is =%s",
+		log(LOG_WARN,"blaster: content2len=%"INT32", Content2 is =%s",
 		    content2Len,content2);
 
 	// Now that we've got the contents, lets get the url links out 
@@ -633,14 +633,14 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	st->m_numLinks1=100;
 	st->m_numLinks2=100;*/
 
-	/*	long numLinks1=getSearchLinks(content1,content1Len,
+	/*	int32_t numLinks1=getSearchLinks(content1,content1Len,
 				      st->m_links1,st->m_numLinks1);
-	long numLinks2=getSearchLinks(content2,content2Len,
+	int32_t numLinks2=getSearchLinks(content2,content2Len,
 	st->m_links2,st->m_numLinks2);*/
 
 
 	content1[content1Len]='\0';
-	//short csEnum1= get_iana_charset(mime1.getCharset(), 
+	//int16_t csEnum1= get_iana_charset(mime1.getCharset(), 
 	//				mime1.getCharsetLen());
 	/*	if (csEnum1== csUnknown)
 		log(LOG_DEBUG, "blaster: Unknown charset : %s", mime2.getCharset());*/
@@ -672,7 +672,7 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	}
 
 	content2[content2Len]='\0';
-	//short csEnum2= get_iana_charset(mime2.getCharset(), 
+	//int16_t csEnum2= get_iana_charset(mime2.getCharset(), 
 	//				mime2.getCharsetLen());
 	/*	if (csEnum2== csUnknown)
 		log(LOG_DEBUG, "blaster: Unknown charset : %s", mime2.getCharset());*/
@@ -705,16 +705,16 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 
 	// put the hash of the sites into a hashtable, since we have
 	// about a 100 or so of them
-	HashTableT<unsigned long, bool> urlHash;
+	HashTableT<uint32_t, bool> urlHash;
 	// put the urls from doc2 into the hastable, but first check if
 	// they are links to google or gigablast (for now). For msn and
 	// yahoo we have to add other checks.
 	char domain2[256];
-	long dlen = 0;
+	int32_t dlen = 0;
 	char *dom = getDomFast ( st->m_u2 , &dlen );
 	if ( dom ) strncpy(domain2,dom,dlen);
 	domain2[dlen]='\0';
-	for (long i=0;i<links2.getNumLinks();i++){
+	for (int32_t i=0;i<links2.getNumLinks();i++){
 		// The dots check if exactly google or gigablast are present
 		// in the link
 		char *ss=links2.getLink(i);
@@ -744,7 +744,7 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 		if (m_verbose)
 			log(LOG_WARN,"blaster: link in Doc2=%s"
 			    ,links2.getLink(i));
-		unsigned long h=hash32Lower_a(links2.getLink(i),
+		uint32_t h=hash32Lower_a(links2.getLink(i),
 					    links2.getLinkLen(i));
 		//should i check for conflict. no, because it doesn't matter
 		urlHash.addKey(h,1);
@@ -752,8 +752,8 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	// now check if the urls from doc1 are in doc2. save the
 	// ones that are not
 	// in there for later.
-	/*	long numUrlsToCheck=links2.getNumLinks();*/
-	long numUrlsNotFound=0;
+	/*	int32_t numUrlsToCheck=links2.getNumLinks();*/
+	int32_t numUrlsNotFound=0;
 	/*if (numLinks1<numUrlsToCheck)
 	numUrlsToCheck=numLinks1;*/
 	char domain1[256];
@@ -761,7 +761,7 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	dom = getDomFast ( st->m_u1 ,&dlen );
 	if ( dom ) strncpy(domain1,dom,dlen);
 	domain1[dlen]='\0';
-	for (long i=0;i<links1.getNumLinks();i++){
+	for (int32_t i=0;i<links1.getNumLinks();i++){
 		char *ss=links1.getLink(i);
 		char *p;
 		p=strstr(ss,domain1);
@@ -789,9 +789,9 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 		if (m_verbose)
 			log(LOG_WARN,"blaster: link in Doc1=%s"
 			    ,links1.getLink(i));
-		unsigned long h=hash32Lower_a(links1.getLink(i),
+		uint32_t h=hash32Lower_a(links1.getLink(i),
 					    links1.getLinkLen(i));
-		long slot= urlHash.getSlot(h);		
+		int32_t slot= urlHash.getSlot(h);		
 		if(slot!=-1) continue;
 
 		// if url is not present, get its doc.
@@ -810,9 +810,9 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 		catch ( ... ) {
 			g_errno = ENOMEM;
 			log("blaster: Failed. "
-			    "Could not allocate %li bytes for query. "
+			    "Could not allocate %"INT32" bytes for query. "
 			    "Returning HTTP status of 500.",
-			    (long)sizeof(StateBD2));
+			    (int32_t)sizeof(StateBD2));
 			return;
 		}
 		mnew ( st2 , sizeof(StateBD2) , "Blaster4" );
@@ -847,7 +847,7 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 	//has been put a check
 	if ( st->m_numUrlDocsReceived > 0 && 
 	     st->m_numUrlDocsReceived <= st->m_numUrlDocsSent ){
-		log(LOG_WARN,"blaster: %li docs could not be sent due to "
+		log(LOG_WARN,"blaster: %"INT32" docs could not be sent due to "
 		    "error",st->m_numUrlDocsReceived);
 		m_launched--;
 		freeStateBD(st);
@@ -863,7 +863,7 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 		freeStateBD(st);
 		return;
 	}
-	log(LOG_WARN,"blaster: %li urls from %s Not found in %s",
+	log(LOG_WARN,"blaster: %"INT32" urls from %s Not found in %s",
 	    numUrlsNotFound,domain1,domain2);
 	if(m_justDisplay){
 		m_launched--;
@@ -879,21 +879,21 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 // the length of the array as arguments.Returns number of links it found in
 // the page. This function is not being used as yet as Xml and Links are used
 #if 0
-long Blaster::getSearchLinks(char *content,
-				 long contentLen,
+int32_t Blaster::getSearchLinks(char *content,
+				 int32_t contentLen,
 				 char *links,
-				 long numLinks){
+				 int32_t numLinks){
 	char *p=content;
 	char *pend=content+contentLen;
 	char *p2;
-	long linksFound=0;
+	int32_t linksFound=0;
 
 	//considering code given is raw=1
 	/*	while (p<pend){
 		if (p=strstr(p,"http://"))
 			p2=strstr(p,"\n");
 		else break;
-		long length=p2-p;
+		int32_t length=p2-p;
 		if (length>=MAX_URL_LEN) length=255;
 		strncpy(links+linksFound*MAX_URL_LEN,p,length);
 		links[linksFound*MAX_URL_LEN+length]='\0';
@@ -905,7 +905,7 @@ long Blaster::getSearchLinks(char *content,
 	return linksFound;*/
 
 	// Deciding if it is gigablast 1 or google 0 or else 2
-	long isGB;
+	int32_t isGB;
 	if (contentLen<19) {
 		log(LOG_WARN,"blaster: Contentlen is less");
 		return 0;
@@ -926,7 +926,7 @@ long Blaster::getSearchLinks(char *content,
 			p+=18;
 			//Check if it is in bounds. Also need to put '\0' at
 			// the end.
-			long length=p2-p;
+			int32_t length=p2-p;
 			if (length>=MAX_URL_LEN) length=MAX_URL_LEN-1;
 			//Copy into the links buffer
 			strncpy(links+linksFound*MAX_URL_LEN,p,length);
@@ -949,7 +949,7 @@ long Blaster::getSearchLinks(char *content,
 			p+=20;
 			//Check if it is in bounds. Also need to put '\0' at
 			// the end.
-			long length=p2-p;
+			int32_t length=p2-p;
 			if (length>=MAX_URL_LEN) length=255;
 			//Copy into the links buffer
 			strncpy(links+linksFound*MAX_URL_LEN,p,length);
@@ -999,11 +999,11 @@ void Blaster::gotDoc3 ( void *state, TcpSocket *s){
 		return;
 	}
 	char *reply = s->m_readBuf ;
-	long  size  = s->m_readOffset;
+	int32_t  size  = s->m_readOffset;
 	HttpMime mime;
 	mime.set(reply,size,NULL);
 
-	long httpStatus=mime.getHttpStatus();
+	int32_t httpStatus=mime.getHttpStatus();
 	if(httpStatus==404){
 		if (m_verbose)
 			log(LOG_WARN,"blaster: The page was not found - 404");
@@ -1063,7 +1063,7 @@ void Blaster::gotDoc3 ( void *state, TcpSocket *s){
 		}
 	}
 	else if(httpStatus<200){
-		log(LOG_WARN,"blaster: Bad HTTP status %li",httpStatus);
+		log(LOG_WARN,"blaster: Bad HTTP status %"INT32"",httpStatus);
 		st->m_numUrlDocsReceived++;
 	}
 	else{
@@ -1078,8 +1078,8 @@ void Blaster::gotDoc3 ( void *state, TcpSocket *s){
 		// The site name is in st->m_u2.getSite()
 		// But copy it because it is not nulled.
 		char tmp[1024];
-		//char site[1024];//how long could a site be?
-		long siteLen = 0;
+		//char site[1024];//how int32_t could a site be?
+		int32_t siteLen = 0;
 		char *site    = getHostFast(st->m_u2,&siteLen);
 		char c = site[siteLen];
 		site[siteLen] = 0;
@@ -1158,13 +1158,13 @@ void Blaster::gotDoc4 ( void *state, TcpSocket *s){
 		return;
 	}
 	char *reply = s->m_readBuf ;
-	long  size  = s->m_readOffset;
+	int32_t  size  = s->m_readOffset;
 	HttpMime mime;
 	mime.set ( reply , size , NULL );
 	char *content    = reply + mime.getMimeLen();
-	long  contentLen = size  - mime.getMimeLen();
+	int32_t  contentLen = size  - mime.getMimeLen();
 
-	//short csEnum = get_iana_charset(mime.getCharset(), 
+	//int16_t csEnum = get_iana_charset(mime.getCharset(), 
 	//				mime.getCharsetLen());
 	/*	if (csEnum == csUnknown)
 		log(LOG_DEBUG, "blaster: Unknown charset : %s", mime.getCharset());*/
@@ -1195,7 +1195,7 @@ void Blaster::gotDoc4 ( void *state, TcpSocket *s){
 		       NULL)){
 		log(LOG_WARN, "blaster: Coudn't set Links class in gotDoc4");
 	}
-	for (long i=0;i<links.getNumLinks();i++){
+	for (int32_t i=0;i<links.getNumLinks();i++){
 		char *ss=links.getLink(i);
 		char *p;
 		// This page *should* always be a gigablast page. So not adding
@@ -1250,7 +1250,7 @@ void Blaster::gotDoc4 ( void *state, TcpSocket *s){
 		//log(LOG_WARN,"blaster: tmp in gotDoc4 = %s",tmp);
 		bool isFound=false;
 		// So now we search for tmp in the links
-		for (long i=0;i<links.getNumLinks();i++){
+		for (int32_t i=0;i<links.getNumLinks();i++){
 			if(strstr(links.getLink(i),tmp) && 
 			   links.getLinkLen(i)==(int)gbstrlen(tmp)){
 				isFound=true;

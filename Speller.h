@@ -9,7 +9,7 @@
 #ifndef _SPELLER_H_
 #define _SPELLER_H_
 
-// max long returned by getPhrasePopularity() function
+// max int32_t returned by getPhrasePopularity() function
 #define MAX_PHRASE_POP 16800
 
 #include "StopWords.h"
@@ -24,30 +24,30 @@ class StateFrag{
  public:
 	// ALL THESE ARE CONCERNED WITH THE FRAG
 	void *m_state;//StateSpeller
-	long  m_errno;
+	int32_t  m_errno;
 	Query *m_q;
-	long  m_startQword;
-	long  m_endQword;
+	int32_t  m_startQword;
+	int32_t  m_endQword;
 	bool  m_recommended;
 	// break the frag into word ptrs, it must be NULL terminated
 	char *m_wp     [MAX_FRAG_SIZE];//[ MAX_QUERY_WORDS ];
-	long  m_wplen  [MAX_FRAG_SIZE];//[ MAX_QUERY_WORDS ];
+	int32_t  m_wplen  [MAX_FRAG_SIZE];//[ MAX_QUERY_WORDS ];
 	bool  m_isstop [MAX_FRAG_SIZE];//[ MAX_QUERY_WORDS ];
 	bool  m_isfound[MAX_FRAG_SIZE];//[ MAX_QUERY_WORDS ];
 	// total number of words that have had recommendations
-	long  m_numFound;
+	int32_t  m_numFound;
 	char  m_dst[MAX_FRAG_SIZE];
 	Multicast m_mcast[MAX_UNIQUE_HOSTS_PER_SPLIT];
-	long  m_numRequests;
-	long  m_numReplies;
-	long  m_pLen;
-	long  m_pPosn;
+	int32_t  m_numRequests;
+	int32_t  m_numReplies;
+	int32_t  m_pLen;
+	int32_t  m_pPosn;
 	char *m_a;
-	long  m_alen;
+	int32_t  m_alen;
 	char *m_b;
 	char  m_c;
 	bool  m_narrowPhrase;
-	long  m_numNarrowPhrases;
+	int32_t  m_numNarrowPhrases;
 	char  m_narrowPhrases[MAX_NARROW_SEARCHES][MAX_FRAG_SIZE];
 };
 
@@ -63,10 +63,10 @@ class StateSpeller{
 	bool   m_narrowSearch;
 	char  *m_nrw;
 	char  *m_nend;
-	long  *m_numNarrow;
+	int32_t  *m_numNarrow;
 	uint64_t m_start;
-	long   m_numFrags;
-	long   m_numFragsReceived;
+	int32_t   m_numFrags;
+	int32_t   m_numFragsReceived;
 	StateFrag *m_stFrag[MAX_FRAG_SIZE];
 };
 
@@ -88,18 +88,18 @@ class Speller {
 	//uint8_t getUniqueLang ( int64_t *wid );
 	int64_t getLangBits64 ( int64_t *wid ) ;
 
-	long getPhrasePopularity ( char *s, uint64_t h,
+	int32_t getPhrasePopularity ( char *s, uint64_t h,
 				   bool checkTitleRecDict,
 				   unsigned char langId = langEnglish );
 
-	bool canSplitWords ( char *s, long slen, bool *isPorn, 
+	bool canSplitWords ( char *s, int32_t slen, bool *isPorn, 
 			     char *splitWords,
-			     unsigned char langId, long encodeType);
+			     unsigned char langId, int32_t encodeType);
 	
 	bool findNext( char *s, char *send, char **nextWord, bool *isPorn,
-			unsigned char langId, long encodeType );
+			unsigned char langId, int32_t encodeType );
 
-	long checkDict ( char *s, long slen, char encodeType, 
+	int32_t checkDict ( char *s, int32_t slen, char encodeType, 
 			 unsigned char lang = langEnglish ){
 		return m_language[lang].checkDict(s,slen,encodeType);
 	}
@@ -111,15 +111,15 @@ class Speller {
 	// . dump out the first "numWordsToDump" words and phrases
 	//   encountered will scanning the records in Titledb
 	// . use these words/phrases to make the dictionaries
-	bool generateDicts ( long numWordsToDump , char *coll );
+	bool generateDicts ( int32_t numWordsToDump , char *coll );
 
 	bool getPhonetic( char *word, char *target );
 
 	bool getRecommendation ( Query *q, bool spellcheck, 
-				 char *dst, long dstLen, 
+				 char *dst, int32_t dstLen, 
 				 bool narrowSearch,
-				 char *narrow, long narrowLen, 
-				 long *numNarrows, void *state,
+				 char *narrow, int32_t narrowLen, 
+				 int32_t *numNarrows, void *state,
 				 void (*callback)(void *state));
 
 	bool getRecommendation ( StateFrag *st );
@@ -130,11 +130,11 @@ class Speller {
 
 	void gotFrags( void *state );
 
-	bool getRecommendation ( char *frag , char *dst , long  dstLen );
+	bool getRecommendation ( char *frag , char *dst , int32_t  dstLen );
 
-	long getWords ( const char *s ,
+	int32_t getWords ( const char *s ,
 			char *wp     [MAX_FRAG_SIZE] ,
-			long  wplen  [MAX_FRAG_SIZE] ,
+			int32_t  wplen  [MAX_FRAG_SIZE] ,
 			bool *isstop                   );
 
 	Language m_language[MAX_LANGUAGES];
@@ -151,7 +151,7 @@ class Speller {
 	bool getPhraseLanguages2 (char *phraseRec , int64_t *array) ;
 	char getPhraseLanguage(char *phrase, int len );
 	bool getSynsInEnglish ( char *w , 
-				long wlen ,
+				int32_t wlen ,
 				char nativeLang ,
 				char wikiLang ) ;
 	void CheckWordRecs(const char *filename);
@@ -167,9 +167,9 @@ class Speller {
 	bool canStart( QueryWord *qw );
 
 	//char *m_unifiedBuf;
-	//long  m_unifiedBufSize;
+	//int32_t  m_unifiedBufSize;
 	SafeBuf m_unifiedBuf;
-	long  m_hostsPerSplit;
+	int32_t  m_hostsPerSplit;
 };
 
 extern class Speller g_speller;

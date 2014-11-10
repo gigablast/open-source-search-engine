@@ -7,7 +7,7 @@ static char s_vbuf[32];
 
 // includes \0
 // "Sep 19 2014 12:10:58\0"
-long getVersionSize () {
+int32_t getVersionSize () {
 	return 20 + 1;
 }
 
@@ -18,9 +18,9 @@ char *getVersion ( ) {
 	sprintf(s_vbuf,"%s %s", __DATE__, __TIME__ );
 	// PingServer.cpp needs this exactly to be 24
 	if ( gbstrlen(s_vbuf) != getVersionSize() - 1 ) { 
-		log("getVersion: %s %li != %li",
+		log("getVersion: %s %"INT32" != %"INT32"",
 		    s_vbuf,
-		    (long)gbstrlen(s_vbuf),
+		    (int32_t)gbstrlen(s_vbuf),
 		    getVersionSize() - 1);
 		char *xx=NULL;*xx=0; 
 	}

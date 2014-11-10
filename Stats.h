@@ -15,7 +15,7 @@
 
 class StatPoint {
  public:
-	long        m_numBytes  ;
+	int32_t        m_numBytes  ;
 	int64_t   m_startTime ;
 	int64_t   m_endTime   ;
 	int         m_color     ;
@@ -43,10 +43,10 @@ class Stats {
 	Stats ( ) ;
 
 	// we take lower 3 bytes of "color" for the rgb color of this line/pt
-	void addStat_r ( long        numBytes    , 
+	void addStat_r ( int32_t        numBytes    , 
 			 int64_t   startTime   ,
 			 int64_t   endTime     ,
-			 long        color       = 0x00000000 , // black 
+			 int32_t        color       = 0x00000000 , // black 
 			 char        type        = STAT_GENERIC,
 			 char       *fnName      = NULL);
 
@@ -69,7 +69,7 @@ class Stats {
 
 	// store the points here
 	StatPoint m_pts [ MAX_POINTS ];
-	long      m_next;
+	int32_t      m_next;
 
 	// don't graph any points that start BEFORE this time because our
 	// sampling is not accurate because we had to throw points away
@@ -86,7 +86,7 @@ class Stats {
 	//int64_t m_bytesRead;
 	//int64_t m_bytesWritten;
 	void addPoint ( StatPoint **points    , 
-			long        *numPoints ,
+			int32_t        *numPoints ,
 			StatPoint   *p         ) ;
 
 
@@ -102,30 +102,30 @@ class Stats {
 	int64_t m_lastQueryLogTime;
 	int64_t m_queryTimes;
 	float     m_avgQueriesPerSec;
-	long      m_numQueries;
-	long      m_numSuccess;
-	long      m_numFails;
-	long      m_totalNumQueries;
-	long      m_totalNumSuccess;
-	long      m_totalNumFails;
+	int32_t      m_numQueries;
+	int32_t      m_numSuccess;
+	int32_t      m_numFails;
+	int32_t      m_totalNumQueries;
+	int32_t      m_totalNumSuccess;
+	int32_t      m_totalNumFails;
 	float     m_avgQueryTime;
 	float     m_successRate;
 	//int64_t m_readSignals;
 	//int64_t m_writeSignals;
 
 	// set in BigFile.cpp
-	long      m_slowDiskReads;
+	int32_t      m_slowDiskReads;
 
 	// when we have to close a socket because too many are open.. count it
-	long      m_closedSockets;
+	int32_t      m_closedSockets;
 
 	// keep track of last 1000 urls spidered for reporting spider stats
-	void addSpiderPoint ( long errCode, bool isNew ) ;
-	long m_spiderSample;
-	long m_spiderErrors;
-	long m_spiderNew;
-	long m_spiderErrorsNew;
-	long m_errCodes[1000];
+	void addSpiderPoint ( int32_t errCode, bool isNew ) ;
+	int32_t m_spiderSample;
+	int32_t m_spiderErrors;
+	int32_t m_spiderNew;
+	int32_t m_spiderErrorsNew;
+	int32_t m_errCodes[1000];
 	char m_isSampleNew[1000];
 	int64_t m_totalSpiderSuccessNew;
 	int64_t m_totalSpiderErrorsNew;
@@ -137,41 +137,41 @@ class Stats {
 	time_t m_uptimeStart;
 
 	// Deduped stats
-	long m_msg3aRecallCnt;
+	int32_t m_msg3aRecallCnt;
 	// when we have to re-requrest docid lists for each split, inc this one
-	long m_msg3aSlowRecalls;
+	int32_t m_msg3aSlowRecalls;
 	// when we just request more docids from the same tier
-	long m_msg3aFastRecalls;
+	int32_t m_msg3aFastRecalls;
 	// how many resolutions did we get on each tier
-	long      m_tierHits [MAX_TIERS];
+	int32_t      m_tierHits [MAX_TIERS];
 	int64_t m_tierTimes[MAX_TIERS];
 	// how many searches did not get enough results?
-	long m_tier2Misses;
+	int32_t m_tier2Misses;
 	// one count for each CR_* defined in Msg51.h
-	long m_filterStats[30];
-	//long m_totalDedupCand;
-	//long m_dedupedCand;
-	//long m_bannedDups;
-	//long m_bigHackDups;
-	//long m_summaryDups;
-	//long m_contentDups;
-	//long m_clusteredTier1;
-	//long m_clusteredTier2;
-	//long m_errored;
-	long m_msg3aRecalls[6];
+	int32_t m_filterStats[30];
+	//int32_t m_totalDedupCand;
+	//int32_t m_dedupedCand;
+	//int32_t m_bannedDups;
+	//int32_t m_bigHackDups;
+	//int32_t m_summaryDups;
+	//int32_t m_contentDups;
+	//int32_t m_clusteredTier1;
+	//int32_t m_clusteredTier2;
+	//int32_t m_errored;
+	int32_t m_msg3aRecalls[6];
 	SafeBuf m_keyCols;
-	long m_numTermsVsTier[14][MAX_TIERS];
-	long m_termsVsTierExp[14][MAX_TIERS][7];
+	int32_t m_numTermsVsTier[14][MAX_TIERS];
+	int32_t m_termsVsTierExp[14][MAX_TIERS][7];
 
 	// use m_start so we know what msg stats to clear with memset
 	char      m_start;
-	// and stats for how long to send a request or reply from
+	// and stats for how int32_t to send a request or reply from
 	// start to finish. the first "2" is the niceness, 0 or 1, and
 	// the second "2" is 0 if sending a reply and 1 if sending a request.
 	int64_t m_msgTotalOfSendTimes    [MAX_MSG_TYPES][2][2];
 	int64_t m_msgTotalSent           [MAX_MSG_TYPES][2][2];
 	int64_t m_msgTotalSentByTime     [MAX_MSG_TYPES][2][2][MAX_BUCKETS];
-	// how long we wait after receiving the request until handler is called
+	// how int32_t we wait after receiving the request until handler is called
 	int64_t m_msgTotalOfQueuedTimes  [MAX_MSG_TYPES][2];
 	int64_t m_msgTotalQueued         [MAX_MSG_TYPES][2];
 	int64_t m_msgTotalQueuedByTime   [MAX_MSG_TYPES][2][MAX_BUCKETS];
@@ -183,37 +183,37 @@ class Stats {
 	int64_t m_msgTotalHandlersCalled [MAX_MSG_TYPES][2];
 	int64_t m_msgTotalHandlersByTime [MAX_MSG_TYPES][2][MAX_BUCKETS];
 
-	long m_packetsIn  [MAX_MSG_TYPES][2];
-	long m_packetsOut [MAX_MSG_TYPES][2];
-	long m_acksIn     [MAX_MSG_TYPES][2];
-	long m_acksOut    [MAX_MSG_TYPES][2];
-	long m_reroutes   [MAX_MSG_TYPES][2];
-	long m_errors     [MAX_MSG_TYPES][2];
-	long m_timeouts   [MAX_MSG_TYPES][2]; // specific error
-	long m_nomem      [MAX_MSG_TYPES][2]; // specific error
-	long m_dropped    [MAX_MSG_TYPES][2]; // dropped dgram
-	long m_cancelRead [MAX_MSG_TYPES][2]; // dropped dgram
+	int32_t m_packetsIn  [MAX_MSG_TYPES][2];
+	int32_t m_packetsOut [MAX_MSG_TYPES][2];
+	int32_t m_acksIn     [MAX_MSG_TYPES][2];
+	int32_t m_acksOut    [MAX_MSG_TYPES][2];
+	int32_t m_reroutes   [MAX_MSG_TYPES][2];
+	int32_t m_errors     [MAX_MSG_TYPES][2];
+	int32_t m_timeouts   [MAX_MSG_TYPES][2]; // specific error
+	int32_t m_nomem      [MAX_MSG_TYPES][2]; // specific error
+	int32_t m_dropped    [MAX_MSG_TYPES][2]; // dropped dgram
+	int32_t m_cancelRead [MAX_MSG_TYPES][2]; // dropped dgram
 
-	long m_parsingInconsistencies;
+	int32_t m_parsingInconsistencies;
 
 	// count ip and domain hammer for Msg13.cpp here
-	//long m_numBackoffs;
+	//int32_t m_numBackoffs;
 
 	// used by msg39
-	long m_recomputeCacheMissess;
+	int32_t m_recomputeCacheMissess;
 	// if the msg3a advances to the next tier, of course, it will be
 	// a cache miss, so don't count those, they are justified 
 	// recomputeCacheMisses
-	long m_icacheTierJumps;
+	int32_t m_icacheTierJumps;
 
 	// when SpiderLoop calls SpiderCache::getSpiderRec() how many times
 	// does it actually get back a url to spider? and how many times does
 	// it miss (not get a url to spider)?
-	//long m_spiderUrlsHit;
-	//long m_spiderUrlsMissed;
+	//int32_t m_spiderUrlsHit;
+	//int32_t m_spiderUrlsMissed;
 
-	long m_compressedBytesIn;
-	long m_uncompressedBytesIn;
+	int32_t m_compressedBytesIn;
+	int32_t m_uncompressedBytesIn;
 
 
 	// spider compression proxy stats set in Msg13.cpp

@@ -21,18 +21,18 @@ bool addRecToTermListCache ( char *coll,
 			     char *startKey , 
 			     char *endKey , 
 			     char *list ,
-			     long  listSize ) ;
+			     int32_t  listSize ) ;
 bool getListFromTermListCache ( char *coll,
 				char *startKey,
 				char *endKey,
-				long  maxCacheAge,
+				int32_t  maxCacheAge,
 				RdbList *list ) ;
 bool getRecFromTermListCache ( char *coll,
 			       char *startKey,
 			       char *endKey,
-			       long  maxCacheAge,
+			       int32_t  maxCacheAge,
 			       char **rec ,
-			       long *recSize ) ;
+			       int32_t *recSize ) ;
 */
 
 //#define MSG0_REQ_SIZE (8 + 2 * sizeof(key_t) + 16 + 5 + MAX_COLL_LEN + 1 )
@@ -63,9 +63,9 @@ class Msg0 {
 	//   out of sync with the data
 	// . a maxCacheAge of 0 (or negative) means not to check the cache
 	bool getList ( int64_t hostId      , // -1 if unspecified
-		       long      ip          , // info on hostId
-		       short     port        ,
-		       long      maxCacheAge , // max cached age in seconds
+		       int32_t      ip          , // info on hostId
+		       int16_t     port        ,
+		       int32_t      maxCacheAge , // max cached age in seconds
 		       bool      addToCache  , // add net recv'd list to cache?
 		       char      rdbId       , // specifies the rdb
 		       //char     *coll        ,
@@ -75,20 +75,20 @@ class Msg0 {
 		       //key_t     endKey      , 
 		       char     *startKey    ,
 		       char     *endKey      ,
-		       long      minRecSizes ,  // Positive values only
+		       int32_t      minRecSizes ,  // Positive values only
 		       void     *state       ,
 		       //void  (* callback)(void *state , class RdbList *list),
 		       void  (* callback)(void *state ),
-		       long      niceness    ,
+		       int32_t      niceness    ,
 		       bool      doErrorCorrection = true ,
 		       bool      includeTree       = true ,
 		       bool      doMerge           = true ,
-		       long      firstHostId       = -1   ,
-		       long      startFileNum      =  0   ,
-		       long      numFiles          = -1   ,
-		       long      timeout           = 30   ,
+		       int32_t      firstHostId       = -1   ,
+		       int32_t      startFileNum      =  0   ,
+		       int32_t      numFiles          = -1   ,
+		       int32_t      timeout           = 30   ,
 		       int64_t syncPoint         = -1   ,
-		       long      preferLocalReads  = -1   , // -1=use g_conf
+		       int32_t      preferLocalReads  = -1   , // -1=use g_conf
 		       class Msg5 *msg5            = NULL ,
 		       class Msg5 *msg5b           = NULL ,
 		       bool        isRealMerge     = false , // file merge?
@@ -96,15 +96,15 @@ class Msg0 {
 		       bool        allowPageCache  = true ,
 		       bool        forceLocalIndexdb = false,
 		       bool        noSplit           = false , // MDW ????
-		       long        forceParitySplit = -1    );
+		       int32_t        forceParitySplit = -1    );
 //#else
 //		       bool        allowPageCache  = true );
 //#endif
 
 	bool getList ( int64_t hostId      , // -1 if unspecified
-		       long      ip          , // info on hostId
-		       short     port        ,
-		       long      maxCacheAge , // max cached age in seconds
+		       int32_t      ip          , // info on hostId
+		       int16_t     port        ,
+		       int32_t      maxCacheAge , // max cached age in seconds
 		       bool      addToCache  , // add net recv'd list to cache?
 		       char      rdbId       , // specifies the rdb
 		       //char     *coll        ,
@@ -112,20 +112,20 @@ class Msg0 {
 		       class RdbList  *list  ,
 		       key_t     startKey    , 
 		       key_t     endKey      , 
-		       long      minRecSizes , // Positive values only 
+		       int32_t      minRecSizes , // Positive values only 
 		       void     *state       ,
 		       //void (* callback)(void *state , class RdbList *list),
 		       void    (* callback)(void *state ),
-		       long      niceness    ,
+		       int32_t      niceness    ,
 		       bool      doErrorCorrection = true ,
 		       bool      includeTree       = true ,
 		       bool      doMerge           = true ,
-		       long      firstHostId       = -1   ,
-		       long      startFileNum      =  0   ,
-		       long      numFiles          = -1   ,
-		       long      timeout           = 30   ,
+		       int32_t      firstHostId       = -1   ,
+		       int32_t      startFileNum      =  0   ,
+		       int32_t      numFiles          = -1   ,
+		       int32_t      timeout           = 30   ,
 		       int64_t syncPoint         = -1   ,
-		       long      preferLocalReads  = -1   , // -1=use g_conf
+		       int32_t      preferLocalReads  = -1   , // -1=use g_conf
 		       class Msg5 *msg5            = NULL ,
 		       class Msg5 *msg5b           = NULL ,
 		       bool        isRealMerge     = false, // file merge?
@@ -135,7 +135,7 @@ class Msg0 {
 		       // default for this should be false, because true
 		       // means to send a msg0 to every indexdb split!
 		       bool        doIndexdbSplit    = false ,
-		       long        forceParitySplit = -1    ) {
+		       int32_t        forceParitySplit = -1    ) {
 //#else
 //		       bool        allowPageCache  = true ) {
 //#endif
@@ -180,10 +180,10 @@ class Msg0 {
 
 	bool gotLoadReply ( ) ;
 
-	bool getList ( long firstHostId ) ;
+	bool getList ( int32_t firstHostId ) ;
 
 	// gotta keep this handler public so the C wrappers can call them
-	void gotReply   ( char *reply , long replySize , long replyMaxSize );
+	void gotReply   ( char *reply , int32_t replySize , int32_t replyMaxSize );
 //#ifdef SPLIT_INDEXDB
 	void gotSplitReply ( );
 //#endif
@@ -200,18 +200,18 @@ class Msg0 {
 
 	// host we sent RdbList request to 
 	int64_t m_hostId;
-	long      m_ip;
-	short     m_port;
+	int32_t      m_ip;
+	int16_t     m_port;
 
 	// group we sent RdbList request to
-	//unsigned long  m_groupId;    
-	unsigned long  m_shardNum;
+	//uint32_t  m_groupId;    
+	uint32_t  m_shardNum;
 
 	UdpSlot  *m_slot;
 
 	// 2*4 + 1 + 2 * keySize
 	char      m_request [ MSG0_REQ_SIZE ];
-	long      m_requestSize;
+	int32_t      m_requestSize;
 
 	// used for multicasting the request
 //#ifdef SPLIT_INDEXDB
@@ -222,13 +222,13 @@ class Msg0 {
 	Multicast  m_mcast;
 	Multicast *m_mcasts;
 
-	long      m_numRequests;
-	long      m_numReplies;
-	//long      m_numSplit;
-	long      m_errno;
+	int32_t      m_numRequests;
+	int32_t      m_numReplies;
+	//int32_t      m_numSplit;
+	int32_t      m_errno;
 	// local reply, need to handle it for splitting
 	char     *m_replyBuf;
-	long      m_replyBufSize;
+	int32_t      m_replyBufSize;
 //#else
 //	Multicast m_mcast;
 //#endif
@@ -242,13 +242,13 @@ class Msg0 {
 	// . local rdb as specified by m_rdbId and gotten by getRdb(char rdbId)
 	// . also, it's fixedDataSize
 	//class Rdb      *m_rdb;
-	long      m_fixedDataSize;
+	int32_t      m_fixedDataSize;
 	bool      m_useHalfKeys;
 
 	// should we add an received lists from across network to our cache?
 	bool  m_addToCache;
 
-	long m_hackxd;
+	int32_t m_hackxd;
 
 	// . parameters that define the RdbList we want
 	// . we use precisely this block to define a network request 
@@ -256,7 +256,7 @@ class Msg0 {
 	//key_t m_endKey      ;
 	char  m_startKey[MAX_KEY_BYTES];
 	char  m_endKey[MAX_KEY_BYTES];
-	long  m_minRecSizes ;
+	int32_t  m_minRecSizes ;
 	char  m_rdbId       ;
 	//char *m_coll        ;
 	collnum_t m_collnum;
@@ -271,7 +271,7 @@ class Msg0 {
 	int64_t m_startTime;
 
 	// and for reporting niceness
-	long m_niceness;
+	int32_t m_niceness;
 
 	char m_ks;
 
@@ -280,7 +280,7 @@ class Msg0 {
 
 	// this is a hack so Msg51 can store his this ptr here
 	void *m_parent;  // used by Msg51 and by Msg2.cpp
-	long  m_slot51;  // for resending on same Msg0 slot in array
+	int32_t  m_slot51;  // for resending on same Msg0 slot in array
 	void *m_dataPtr; // for holding recepient record ptr of TopNode ptr
 	char  m_inUse;
 };

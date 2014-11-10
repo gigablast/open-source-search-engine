@@ -19,8 +19,8 @@ int main ( int argc , char *argv[] ) {
 	char data1 [ 32 ] , data2[32];
 	*(int64_t *)data1 = 273777931569279933;
 	*(int64_t *)data2 = 273777931569279932;
-	*(long *)(data1 + 8) = 0;
-	*(long *)(data2 + 8) = 0;
+	*(int32_t *)(data1 + 8) = 0;
+	*(int32_t *)(data2 + 8) = 0;
 
 	list1.set ( data1 , 16 , 16 , 4 , false );
 	list2.set ( data2 , 16 , 16 , 4 , false );
@@ -79,15 +79,15 @@ static key_t keys[50000];
 
 void *gohere ( void *) {
 	// make a bunch of random keys
-	for ( long i = 0 ; i < 25000 ; i++ ) {
+	for ( int32_t i = 0 ; i < 25000 ; i++ ) {
 		keys[i].n1 = rand();
-		long r = rand();
+		int32_t r = rand();
 		keys[i].n0 = ((int64_t)r << 32) | rand();
 		// for to be a positive key
 		keys[i].n0 |= 0x01;
 	}
 	// make the negative counterparts in same order
-	for ( long i = 25000 ; i < 50000 ; i++ ) {
+	for ( int32_t i = 25000 ; i < 50000 ; i++ ) {
 		keys[i] = keys[i-25000];
 		// for to be a negative key
 		keys[i].n0 &= 0xfffffffffffffffeLL;
@@ -97,9 +97,9 @@ void *gohere ( void *) {
 	RdbList list;
 	
 	
-	for ( long i = 0 ; i < 50000 ; i++ ) {
+	for ( int32_t i = 0 ; i < 50000 ; i++ ) {
 		key_t k = keys[i];
-		if ( (i % 1000) == 0 ) fprintf(stderr,"%li\n",i);
+		if ( (i % 1000) == 0 ) fprintf(stderr,"%"INT32"\n",i);
 		if ( rdb.addRecord ( k, NULL ,0, false ) >= 0 ) continue;
 		fprintf(stderr,"rdb::addRecord: %s\n",mstrerror(errno));
 		exit(-1);

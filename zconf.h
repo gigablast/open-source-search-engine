@@ -261,7 +261,7 @@
 typedef unsigned char  Byte;  /* 8 bits */
 #endif
 typedef unsigned int   uInt;  /* 16 bits or more */
-typedef unsigned long  uLong; /* 32 bits or more */
+typedef uint32_t  uLong; /* 32 bits or more */
 
 #ifdef SMALL_MEDIUM
    /* Borland C/C++ and some old MSC versions ignore FAR inside typedef */
@@ -298,7 +298,7 @@ typedef uLong FAR uLongf;
 #  define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
 #endif
 #ifndef z_off_t
-#  define z_off_t long
+#  define z_off_t int32_t
 #endif
 
 #if defined(__OS400__)

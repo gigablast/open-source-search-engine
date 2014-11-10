@@ -4,6 +4,16 @@
 //#define memcpy memcpy_ass
 //#define memset memset_ass
 
+#include <inttypes.h>
+#define UINT32 PRIu32
+#define INT32  PRId32
+
+#define UINT64 PRIu64
+#define INT64  PRId64
+
+#define XINT64 PRIX64
+#define XINT32 PRIX32
+
 #include <ctype.h>	// Log.h
 #include <errno.h>	// Errno.h
 #include <sys/errno.h>	// Errno.h

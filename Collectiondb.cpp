@@ -40,15 +40,15 @@ Collectiondb::Collectiondb ( ) {
 	m_needsSave = false;
 	// sanity
 	if ( RDB_END2 >= RDB_END ) return;
-	log("db: increase RDB_END2 to at least %li in "
-	    "Collectiondb.h",(long)RDB_END);
+	log("db: increase RDB_END2 to at least %"INT32" in "
+	    "Collectiondb.h",(int32_t)RDB_END);
 	char *xx=NULL;*xx=0;
 }
 
 // reset rdb
 void Collectiondb::reset() {
 	log(LOG_INFO,"db: resetting collectiondb.");
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
 		mdelete ( m_recs[i], sizeof(CollectionRec), "CollectionRec" ); 
 		delete ( m_recs[i] );
@@ -75,8 +75,8 @@ bool Collectiondb::init ( bool isDump ) {
 	m_needsSave = false;
 	// sanity
 	if ( RDB_END2 < RDB_END ) { 
-		log("db: increase RDB_END2 to at least %li in "
-		    "Collectiondb.h",(long)RDB_END);
+		log("db: increase RDB_END2 to at least %"INT32" in "
+		    "Collectiondb.h",(int32_t)RDB_END);
 		char *xx=NULL;*xx=0;
 	}
 	// if it set g_errno, return false
@@ -93,12 +93,12 @@ bool Collectiondb::init ( bool isDump ) {
 bool Collectiondb::save ( ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// which collection rec needs a save
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i]              ) continue;
 		// temp debug message
-		//logf(LOG_DEBUG,"admin: SAVING collection #%li ANYWAY",i);
+		//logf(LOG_DEBUG,"admin: SAVING collection #%"INT32" ANYWAY",i);
 		if ( ! m_recs[i]->m_needsSave ) continue;
-		//log(LOG_INFO,"admin: Saving collection #%li.",i);
+		//log(LOG_INFO,"admin: Saving collection #%"INT32".",i);
 		m_recs[i]->save ( );
 	}
 	// oh well
@@ -118,7 +118,7 @@ bool Collectiondb::loadAllCollRecs ( ) {
 	d.set ( dname );
 	if ( ! d.open ()) return log("admin: Could not load collection config "
 				     "files.");
-	long count = 0;
+	int32_t count = 0;
 	char *f;
 	while ( ( f = d.getNextFilename ( "*" ) ) ) {
 		// skip if first char not "coll."
@@ -173,8 +173,8 @@ bool Collectiondb::loadAllCollRecs ( ) {
 	}
 
 	// note it
-	//log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
-	//    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
+	//log(LOG_INFO,"db: Loaded data for %"INT32" collections. Ranging from "
+	//    "collection #0 to #%"INT32".",m_numRecsUsed,m_numRecs-1);
 	// update the time
 	//updateTime();
 	// don't clean the tree if just dumpin
@@ -232,7 +232,7 @@ void Collectiondb::updateTime() {
 // same as addOldColl()
 bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
-	long i = collnum;
+	int32_t i = collnum;
 
 	// ensure does not already exist in memory
 	collnum_t oldCollnum = getCollnum(coll);
@@ -248,9 +248,9 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	// create the record in memory
 	CollectionRec *cr = new (CollectionRec);
 	if ( ! cr ) 
-		return log("admin: Failed to allocated %li bytes for new "
+		return log("admin: Failed to allocated %"INT32" bytes for new "
 			   "collection record for \"%s\".",
-			   (long)sizeof(CollectionRec),coll);
+			   (int32_t)sizeof(CollectionRec),coll);
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
 	// set collnum right for g_parms.setToDefault() call just in case
@@ -276,7 +276,7 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	// load coll.conf file
 	if ( ! cr->load ( coll , i ) ) {
 		mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
-		log("admin: Failed to load coll.%s.%li/coll.conf",coll,i);
+		log("admin: Failed to load coll.%s.%"INT32"/coll.conf",coll,i);
 		delete ( cr );
 		if ( m_recs ) m_recs[i] = NULL;
 		return false;
@@ -301,7 +301,7 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 bool Collectiondb::addNewColl ( char *coll , 
 				char customCrawl ,
 				char *cpc , 
-				long cpclen , 
+				int32_t cpclen , 
 				bool saveIt ,
 				// Parms.cpp reserves this so it can be sure
 				// to add the same collnum to every shard
@@ -323,12 +323,12 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 	// . scan for holes
 	// . i is also known as the collection id
-	//long i = (long)newCollnum;
-	// no longer fill empty slots because if they do a reset then
+	//int32_t i = (int32_t)newCollnum;
+	// no int32_ter fill empty slots because if they do a reset then
 	// a new rec right away it will be filled with msg4 recs not
 	// destined for it. Later we will have to recycle some how!!
 	//else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
-	// right now we #define collnum_t short. so do not breach that!
+	// right now we #define collnum_t int16_t. so do not breach that!
 	//if ( m_numRecs < 0x7fff ) {
 	//	// set it
 	//	i = m_numRecs;
@@ -345,10 +345,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 	//int64_t maxColls = 1LL<<(sizeof(collnum_t)*8);
 	//if ( i >= maxColls ) {
 	//	g_errno = ENOBUFS;
-	//	return log("admin: Limit of %lli collection reached. "
+	//	return log("admin: Limit of %"INT64" collection reached. "
 	//		   "Collection not created.",maxColls);
 	//}
-	// if empty... bail, no longer accepted, use "main"
+	// if empty... bail, no int32_ter accepted, use "main"
 	if ( ! coll || !coll[0] ) {
 		g_errno = EBADENGINEER;
 		return log("admin: Trying to create a new collection "
@@ -359,9 +359,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	if ( gbstrlen(coll) > MAX_COLL_LEN ) {
 		g_errno = ENOBUFS;
 		return log("admin: Trying to create a new collection "
-			   "whose name \"%s\" of %i chars is longer than the "
-			   "max of %li chars.",coll,gbstrlen(coll),
-			   (long)MAX_COLL_LEN);
+			   "whose name \"%s\" of %i chars is int32_ter than the "
+			   "max of %"INT32" chars.",coll,gbstrlen(coll),
+			   (int32_t)MAX_COLL_LEN);
 	}
 		
 	// ensure does not already exist in memory
@@ -375,7 +375,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];
-	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,(long)newCollnum);
+	sprintf(dname, "%scoll.%s.%"INT32"/",g_hostdb.m_dir,coll,(int32_t)newCollnum);
 	DIR *dir = opendir ( dname );
 	if ( dir ) closedir ( dir );
 	if ( dir ) {
@@ -387,9 +387,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// create the record in memory
 	CollectionRec *cr = new (CollectionRec);
 	if ( ! cr ) 
-		return log("admin: Failed to allocated %li bytes for new "
+		return log("admin: Failed to allocated %"INT32" bytes for new "
 			   "collection record for \"%s\".",
-			   (long)sizeof(CollectionRec),coll);
+			   (int32_t)sizeof(CollectionRec),coll);
 	// register the mem
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
@@ -423,7 +423,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// this will override all
 	// if ( cpcrec ) {
 	// 	// copy it, but not the timedb hashtable, etc.
-	// 	long size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
+	// 	int32_t size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
 	// 	// JAB: bad memcpy - no donut!
 	// 	// this is not how objects are supposed to be copied!!!
 	// 	memcpy ( cr , cpcrec , size);
@@ -552,7 +552,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// END NEW CODE
 	//
 
-	//log("admin: adding coll \"%s\" (new=%li)",coll,(long)isNew);
+	//log("admin: adding coll \"%s\" (new=%"INT32")",coll,(int32_t)isNew);
 
 	// MDW: create the new directory
  retry22:
@@ -614,7 +614,7 @@ RdbBase *CollectionRec::getBase ( char rdbId ) {
 
 	if ( ! m_swappedOut ) return m_bases[(unsigned char)rdbId];
 
-	log("cdb: swapin collnum=%li",(long)m_collnum);
+	log("cdb: swapin collnum=%"INT32"",(int32_t)m_collnum);
 
 	// sanity!
 	if ( g_threads.amThread() ) { char *xx=NULL;*xx=0; }
@@ -623,7 +623,7 @@ RdbBase *CollectionRec::getBase ( char rdbId ) {
 
 	// turn off quickpoll to avoid getbase() being re-called and
 	// coring from s_inside being true
-	long saved = g_conf.m_useQuickpoll;
+	int32_t saved = g_conf.m_useQuickpoll;
 	g_conf.m_useQuickpoll = false;
 
 	// load them back in. return NULL w/ g_errno set on error.
@@ -640,7 +640,7 @@ RdbBase *CollectionRec::getBase ( char rdbId ) {
 	g_collectiondb.m_numCollsSwappedOut--;
 	m_swappedOut = false;
 
-	log("coll: swapin was successful for collnum=%li",(long)m_collnum);
+	log("coll: swapin was successful for collnum=%"INT32"",(int32_t)m_collnum);
 
 	return m_bases[(unsigned char)rdbId];	
 }
@@ -649,17 +649,17 @@ bool CollectionRec::swapOut ( ) {
 
 	if ( m_swappedOut ) return true;
 
-	log("cdb: swapout collnum=%li",(long)m_collnum);
+	log("cdb: swapout collnum=%"INT32"",(int32_t)m_collnum);
 
 	// free all RdbBases in each rdb
-	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_process.m_numRdbs ; i++ ) {
 	     Rdb *rdb = g_process.m_rdbs[i];
 	     // this frees all the RdbBase::m_files and m_maps for the base
 	     rdb->resetBase ( m_collnum );
 	}
 
 	// now free each base itself
-	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_process.m_numRdbs ; i++ ) {
 		RdbBase *base = m_bases[i];
 		if ( ! base ) continue;
 		mdelete (base, sizeof(RdbBase), "Rdb Coll");
@@ -685,7 +685,7 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,  bool isNew ) {
 
 // swap it in
 bool Collectiondb::addRdbBaseToAllRdbsForEachCollRec ( ) {
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		CollectionRec *cr = m_recs[i];
 		if ( ! cr ) continue;
 		// skip if swapped out
@@ -734,8 +734,8 @@ bool Collectiondb::addRdbBasesForCollRec ( CollectionRec *cr ) {
 	//cleanTrees();
 
 	// debug message
-	//log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
-	//      coll,(long)cr->m_collnum);
+	//log ( LOG_INFO, "db: verified collection \"%s\" (%"INT32").",
+	//      coll,(int32_t)cr->m_collnum);
 
 	// tell SpiderCache about this collection, it will create a 
 	// SpiderCollection class for it.
@@ -793,12 +793,12 @@ void savingCheckWrapper2 ( int fd , void *state ) {
 /*
 // delete all records checked in the list
 bool Collectiondb::deleteRecs ( HttpRequest *r ) {
-	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
+	for ( int32_t i = 0 ; i < r->getNumFields() ; i++ ) {
 		char *f = r->getField ( i );
 		if ( strncmp ( f , "del" , 3 ) != 0 ) continue;
 		char *coll = f + 3;
 		//if ( ! is_digit ( f[3] )            ) continue;
-		//long h = atol ( f + 3 );
+		//int32_t h = atol ( f + 3 );
 		deleteRec ( coll , NULL );
 	}
 	return true;
@@ -862,8 +862,8 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// bitch if not found
 	if ( collnum < 0 ) {
 		g_errno = ENOTFOUND;
-		log(LOG_LOGIC,"admin: Collection #%li is bad, "
-		    "delete failed.",(long)collnum);
+		log(LOG_LOGIC,"admin: Collection #%"INT32" is bad, "
+		    "delete failed.",(int32_t)collnum);
 		return true;
 	}
 	CollectionRec *cr = m_recs [ collnum ];
@@ -892,8 +892,8 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	char *coll = cr->m_coll;
 
 	// note it
-	log(LOG_INFO,"db: deleting coll \"%s\" (%li)",coll,
-	    (long)cr->m_collnum);
+	log(LOG_INFO,"db: deleting coll \"%s\" (%"INT32")",coll,
+	    (int32_t)cr->m_collnum);
 
 	// we need a save
 	m_needsSave = true;
@@ -945,7 +945,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		// you have to set this for tryToDeleteSpiderColl to
 		// actually have a shot at deleting it
 		sc->m_deleteMyself = true;
-		// cr will be invalid shortly after this
+		// cr will be invalid int16_tly after this
 		// MDW: this is causing the core...
 		// use fake ptrs for easier debugging
 		//sc->m_cr = (CollectionRec *)0x99999;//NULL;
@@ -1027,9 +1027,9 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 bool Collectiondb::growRecPtrBuf ( collnum_t collnum ) {
 
 	// an add, make sure big enough
-	long need = ((long)collnum+1)*sizeof(CollectionRec *);
-	long have = m_recPtrBuf.getLength();
-	long need2 = need - have;
+	int32_t need = ((int32_t)collnum+1)*sizeof(CollectionRec *);
+	int32_t have = m_recPtrBuf.getLength();
+	int32_t need2 = need - have;
 
 	// if already big enough
 	if ( need2 <= 0 ) {
@@ -1054,7 +1054,7 @@ bool Collectiondb::growRecPtrBuf ( collnum_t collnum ) {
 	m_recPtrBuf.setLength ( need );
 
 	// re-max
-	long max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+	int32_t max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
 	// sanity
 	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
 
@@ -1077,7 +1077,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	if ( collnum < 0 ) { char *xx=NULL;*xx=0; }
 
 	// sanity
-	long max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+	int32_t max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
 
 	// set it
 	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
@@ -1116,7 +1116,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	// add to hash table to map name to collnum_t
 	int64_t h64 = hash64n(cr->m_coll);
 	// debug
-	//log("coll: adding key %lli for %s",h64,cr->m_coll);
+	//log("coll: adding key %"INT64" for %s",h64,cr->m_coll);
 	if ( ! g_collTable.addKey ( &h64 , &collnum ) ) 
 		return false;
 
@@ -1126,14 +1126,14 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	// count it
 	m_numRecsUsed++;
 
-	//log("coll: adding key4 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
-	//    (long)i);
+	//log("coll: adding key4 %"UINT64" for coll \"%s\" (%"INT32")",h64,cr->m_coll,
+	//    (int32_t)i);
 
 	// reserve it
 	if ( collnum >= m_numRecs ) m_numRecs = collnum + 1;
 
 	// sanity to make sure collectionrec ptrs are legit
-	for ( long j = 0 ; j < m_numRecs ; j++ ) {
+	for ( int32_t j = 0 ; j < m_numRecs ; j++ ) {
 		if ( ! m_recs[j] ) continue;
 		if ( m_recs[j]->m_collnum == 1 ) continue;
 	}
@@ -1205,7 +1205,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		return true;
 	}
 
-	//log("admin: resetting collnum %li",(long)oldCollnum);
+	//log("admin: resetting collnum %"INT32"",(int32_t)oldCollnum);
 
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
@@ -1228,11 +1228,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// now i just store in the root working dir... MDW
 	/*
 	char oldbulkurlsname[1036];
-	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)oldCollnum);
+	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%"INT32"/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(int32_t)oldCollnum);
 	char newbulkurlsname[1036];
-	snprintf(newbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)newCollnum);
+	snprintf(newbulkurlsname, 1036, "%scoll.%s.%"INT32"/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(int32_t)newCollnum);
 	char tmpbulkurlsname[1036];
-	snprintf(tmpbulkurlsname, 1036, "/tmp/coll.%s.%li.bulkurls.txt",cr->m_coll,(long)oldCollnum);
+	snprintf(tmpbulkurlsname, 1036, "/tmp/coll.%s.%"INT32".bulkurls.txt",cr->m_coll,(int32_t)oldCollnum);
 
 	if (cr->m_isCustomCrawl == 2)
 	    mv( oldbulkurlsname , tmpbulkurlsname );
@@ -1277,10 +1277,10 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	cr->m_lastResetCount++;
 
 
-	if ( newCollnum >= m_numRecs ) m_numRecs = (long)newCollnum + 1;
+	if ( newCollnum >= m_numRecs ) m_numRecs = (int32_t)newCollnum + 1;
 
 	// advance sanity check. did we wrap around?
-	// right now we #define collnum_t short
+	// right now we #define collnum_t int16_t
 	if ( m_numRecs > 0x7fff ) { char *xx=NULL;*xx=0; }
 
 	// make a new collnum so records in transit will not be added
@@ -1304,10 +1304,10 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	// a new directory then since we changed the collnum
 	char dname[512];
-	sprintf(dname, "%scoll.%s.%li/",
+	sprintf(dname, "%scoll.%s.%"INT32"/",
 		g_hostdb.m_dir,
 		cr->m_coll,
-		(long)newCollnum);
+		(int32_t)newCollnum);
 	DIR *dir = opendir ( dname );
 	if ( dir )
 	     closedir ( dir );
@@ -1453,11 +1453,11 @@ CollectionRec *Collectiondb::getRec ( char *coll ) {
 	return getRec ( coll , gbstrlen(coll) );
 }
 
-CollectionRec *Collectiondb::getRec ( char *coll , long collLen ) {
+CollectionRec *Collectiondb::getRec ( char *coll , int32_t collLen ) {
 	if ( ! coll ) coll = "";
 	collnum_t collnum = getCollnum ( coll , collLen );
 	if ( collnum < 0 ) return NULL;
-	return m_recs [ (long)collnum ]; 
+	return m_recs [ (int32_t)collnum ]; 
 }
 
 CollectionRec *Collectiondb::getRec ( collnum_t collnum) { 
@@ -1466,8 +1466,8 @@ CollectionRec *Collectiondb::getRec ( collnum_t collnum) {
 		// it is called from CollectionRec::reset() which is called
 		// from the CollectionRec constructor and ::load() so
 		// it won't have anything in rdb at that time
-		//log("colldb: collnum %li > numrecs = %li",
-		//    (long)collnum,(long)m_numRecs);
+		//log("colldb: collnum %"INT32" > numrecs = %"INT32"",
+		//    (int32_t)collnum,(int32_t)m_numRecs);
 		return NULL;
 	}
 	return m_recs[collnum]; 
@@ -1478,36 +1478,36 @@ CollectionRec *Collectiondb::getRec ( collnum_t collnum) {
 //	if ( ! g_conf.m_defaultColl[0] ) return NULL; // no default?
 //	collnum_t collnum = getCollnum ( g_conf.m_defaultColl );	
 //	if ( collnum < (collnum_t)0 ) return NULL;
-//	return m_recs[(long)collnum];
+//	return m_recs[(int32_t)collnum];
 //}
 
 CollectionRec *Collectiondb::getFirstRec ( ) {
-	for ( long i = 0 ; i < m_numRecs ; i++ )
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ )
 		if ( m_recs[i] ) return m_recs[i];
 	return NULL;
 }
 
 collnum_t Collectiondb::getFirstCollnum ( ) {
-	for ( long i = 0 ; i < m_numRecs ; i++ )
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ )
 		if ( m_recs[i] ) return i;
 	return (collnum_t)-1;
 }
 
 char *Collectiondb::getFirstCollName ( ) {
-	for ( long i = 0 ; i < m_numRecs ; i++ )
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ )
 		if ( m_recs[i] ) return m_recs[i]->m_coll;
 	return NULL;
 }
 
 char *Collectiondb::getCollName ( collnum_t collnum ) {
 	if ( collnum < 0 || collnum > m_numRecs ) return NULL;
-	if ( ! m_recs[(long)collnum] ) return NULL;
+	if ( ! m_recs[(int32_t)collnum] ) return NULL;
 	return m_recs[collnum]->m_coll;
 }
 
 collnum_t Collectiondb::getCollnum ( char *coll ) {
 
-	long clen = 0;
+	int32_t clen = 0;
 	if ( coll ) clen = gbstrlen(coll );
 	return getCollnum ( coll , clen );
 	/*
@@ -1540,7 +1540,7 @@ collnum_t Collectiondb::getCollnum ( char *coll ) {
 	return *(collnum_t *)vp;
 	*/
 	/*
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
 		if ( m_recs[i]->m_coll[0] != coll[0] ) continue;
 		if ( strcmp ( m_recs[i]->m_coll , coll ) == 0 ) return i;
@@ -1550,7 +1550,7 @@ collnum_t Collectiondb::getCollnum ( char *coll ) {
 	*/
 }
 
-collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
+collnum_t Collectiondb::getCollnum ( char *coll , int32_t clen ) {
 
 	// default empty collection names
 	if ( coll && ! coll[0] ) coll = NULL;
@@ -1588,7 +1588,7 @@ collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
 	return *(collnum_t *)vp;
 
 	/*
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
 		if ( m_recs[i]->m_collLen != clen ) continue;
 		if ( strncmp(m_recs[i]->m_coll,coll,clen) == 0 ) return i;
@@ -1600,7 +1600,7 @@ collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
 }
 
 //collnum_t Collectiondb::getNextCollnum ( collnum_t collnum ) {
-//	for ( long i = (long)collnum + 1 ; i < m_numRecs ; i++ ) 
+//	for ( int32_t i = (int32_t)collnum + 1 ; i < m_numRecs ; i++ ) 
 //		if ( m_recs[i] ) return i;
 //	// no next one, use -1
 //	return (collnum_t) -1;
@@ -1619,12 +1619,12 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 	}
 
 	// search for an empty slot
-	for ( long i = m_wrapped ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = m_wrapped ; i < m_numRecs ; i++ ) {
 		if ( m_recs[i] ) continue;
 		// start after this one next time
 		m_wrapped = i+1;
 		// note it
-		log("colldb: returning wrapped collnum of %li",(long)i);
+		log("colldb: returning wrapped collnum of %"INT32"",(int32_t)i);
 		return (collnum_t)i;
 	}
 
@@ -1668,8 +1668,8 @@ CollectionRec::CollectionRec() {
 	//m_numAdminIps   = 0;
 	memset ( m_bases , 0 , 4*RDB_END );
 	// how many keys in the tree of each rdb? we now store this stuff
-	// here and not in RdbTree.cpp because we no longer have a maximum
-	// # of collection recs... MAX_COLLS. each is a 32-bit "long" so
+	// here and not in RdbTree.cpp because we no int32_ter have a maximum
+	// # of collection recs... MAX_COLLS. each is a 32-bit "int32_t" so
 	// it is 4 * RDB_END...
 	memset ( m_numNegKeysInTree , 0 , 4*RDB_END );
 	memset ( m_numPosKeysInTree , 0 , 4*RDB_END );
@@ -1747,7 +1747,7 @@ void CollectionRec::setToDefaults ( ) {
 
 void CollectionRec::reset() {
 
-	//log("coll: resetting collnum=%li",(long)m_collnum);
+	//log("coll: resetting collnum=%"INT32"",(int32_t)m_collnum);
 
 	// . grows dynamically
 	// . setting to 0 buckets should never have error
@@ -1770,12 +1770,12 @@ void CollectionRec::reset() {
 	//m_requests = 0;
 	//m_replies = 0;
 	// free all RdbBases in each rdb
-	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_process.m_numRdbs ; i++ ) {
 	     Rdb *rdb = g_process.m_rdbs[i];
 	     rdb->resetBase ( m_collnum );
 	}
 
-	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_process.m_numRdbs ; i++ ) {
 		RdbBase *base = m_bases[i];
 		if ( ! base ) continue;
 		mdelete (base, sizeof(RdbBase), "Rdb Coll");
@@ -1809,7 +1809,7 @@ CollectionRec *g_cr = NULL;
 //   collection config file. if it does not have them then we use
 //   the value we received from call to setToDefaults()
 // . returns false and sets g_errno on load error
-bool CollectionRec::load ( char *coll , long i ) {
+bool CollectionRec::load ( char *coll , int32_t i ) {
 	// also reset some counts not included in parms list
 	reset();
 	// before we load, set to defaults in case some are not in xml file
@@ -1817,7 +1817,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// get the filename with that id
 	File f;
 	char tmp2[1024];
-	sprintf ( tmp2 , "%scoll.%s.%li/coll.conf", g_hostdb.m_dir , coll,i);
+	sprintf ( tmp2 , "%scoll.%s.%"INT32"/coll.conf", g_hostdb.m_dir , coll,i);
 	f.set ( tmp2 );
 	if ( ! f.doesExist () ) return log("admin: %s does not exist.",tmp2);
 	// set our collection number
@@ -1827,8 +1827,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	strcpy ( m_coll , coll );
 
 	if ( ! g_conf.m_doingCommandLine )
-		log(LOG_INFO,"db: Loading conf for collection %s (%li)",coll,
-		    (long)m_collnum);
+		log(LOG_INFO,"db: Loading conf for collection %s (%"INT32")",coll,
+		    (int32_t)m_collnum);
 
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {
@@ -1857,8 +1857,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD the crawlinfo class in the collectionrec for diffbot
 	//
 	// LOAD LOCAL
-	snprintf ( tmp1 , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
-		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	snprintf ( tmp1 , 1023, "%scoll.%s.%"INT32"/localcrawlinfo.dat",
+		  g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
 	log(LOG_DEBUG,"db: Loading %s",tmp1);
 	m_localCrawlInfo.reset();
 	SafeBuf sb;
@@ -1870,10 +1870,10 @@ bool CollectionRec::load ( char *coll , long i ) {
 
 
 	if ( ! g_conf.m_doingCommandLine )
-		log("coll: Loaded %s (%li) local hasurlsready=%li",
+		log("coll: Loaded %s (%"INT32") local hasurlsready=%"INT32"",
 		    m_coll,
-		    (long)m_collnum,
-		    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
+		    (int32_t)m_collnum,
+		    (int32_t)m_localCrawlInfo.m_hasUrlsReadyToSpider);
 
 
 	// we introduced the this round counts, so don't start them at 0!!
@@ -1898,16 +1898,16 @@ bool CollectionRec::load ( char *coll , long i ) {
 	//if ( m_spiderRoundNum == 0 &&
 	//     m_collectiveRespiderFrequency > 0.0 &&
 	//     m_localCrawlInfo.m_sentCrawlDoneAlert ) {
-	//	log("coll: bug fix: resending email alert for coll %s (%li) "
-	//	    "of respider freq %f",m_coll,(long)m_collnum,
+	//	log("coll: bug fix: resending email alert for coll %s (%"INT32") "
+	//	    "of respider freq %f",m_coll,(int32_t)m_collnum,
 	//	    m_collectiveRespiderFrequency);
 	//	m_localCrawlInfo.m_sentCrawlDoneAlert = false;
 	//}
 
 
 	// LOAD GLOBAL
-	snprintf ( tmp1 , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
-		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	snprintf ( tmp1 , 1023, "%scoll.%s.%"INT32"/globalcrawlinfo.dat",
+		  g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
 	log(LOG_DEBUG,"db: Loading %s",tmp1);
 	m_globalCrawlInfo.reset();
 	sb.reset();
@@ -1917,10 +1917,10 @@ bool CollectionRec::load ( char *coll , long i ) {
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
 	if ( ! g_conf.m_doingCommandLine )
-		log("coll: Loaded %s (%li) global hasurlsready=%li",
+		log("coll: Loaded %s (%"INT32") global hasurlsready=%"INT32"",
 		    m_coll,
-		    (long)m_collnum,
-		    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+		    (int32_t)m_collnum,
+		    (int32_t)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
 	
 
 	////////////
@@ -1929,8 +1929,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	//
 	/////////////
 	// log it up if there on disk
-	//snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
-	//	   m_coll , (long)m_collnum );
+	//snprintf ( tmp1 , 1023, "/coll.%s.%"INT32"/pagecounts.dat",
+	//	   m_coll , (int32_t)m_collnum );
 	//if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) && g_errno )
 	//	log("db: failed to load page count table: %s",
 	//	    mstrerror(g_errno));
@@ -1971,7 +1971,7 @@ bool CollectionRec::countEvents ( ) {
 	// count them
 	m_numEventsOnHost = 0;
 	// 1MB at a time
-	long minRecSizes = 1000000;
+	int32_t minRecSizes = 1000000;
 	// look up this termlist, gbeventcount which we index in XmlDoc.cpp
 	int64_t termId = hash64n("gbeventcount") & TERMID_MASK;
 	// make datedb key from it
@@ -2014,7 +2014,7 @@ bool CollectionRec::countEvents ( ) {
 		// not allowed to block!
 		char *xx=NULL;*xx=0; }
 	// scan the list, score is how many valid events from that docid
-	unsigned long total = 0;
+	uint32_t total = 0;
 	for ( ; ! list.isExhausted() ; list.skipCurrentRec() ) {
 		unsigned char *rec = (unsigned char *)list.getCurrentRec();
 		// in datedb score is byte #5
@@ -2055,7 +2055,7 @@ bool CollectionRec::countEvents ( ) {
 	g_collectiondb.m_numEventsAllColls += m_numEventsOnHost;
 
 	if ( enabled ) g_threads.enableThreads();
-	log("coll: got %li local events in termlist",m_numEventsOnHost);
+	log("coll: got %"INT32" local events in termlist",m_numEventsOnHost);
 
 	// set "m_hasDocQualityFiler"
 	//updateFilters();
@@ -2068,7 +2068,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	bool rebuild = true;
 	if ( m_numRegExs == 0 ) 
 		rebuild = true;
-	// don't touch it if not supposed to as long as we have some already
+	// don't touch it if not supposed to as int32_t as we have some already
 	//if ( m_urlFiltersProfile != UFP_NONE )
 	//	rebuild = true;
 	// never for custom crawls however
@@ -2139,7 +2139,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 		return rebuildLangRules( "zh_cn,zh_tw","cn");
 
 
-	long n = 0;
+	int32_t n = 0;
 
 	/*
 	m_regExs[n].set("default");
@@ -2387,7 +2387,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 
 bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 
-	long n = 0;
+	int32_t n = 0;
 
 	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
@@ -2791,7 +2791,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 
 bool CollectionRec::rebuildShallowRules ( ) {
 
-	long n = 0;
+	int32_t n = 0;
 
 	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
@@ -3009,14 +3009,14 @@ bool CollectionRec::rebuildShallowRules ( ) {
 
 /*
 bool CrawlInfo::print (SafeBuf *sb ) {
-	return sb->safePrintf("objectsAdded:%lli\n"
-			      "objectsDeleted:%lli\n"
-			      "urlsConsidered:%lli\n"
-			      "downloadAttempts:%lli\n"
-			      "downloadSuccesses:%lli\n"
-			      "processAttempts:%lli\n"
-			      "processSuccesses:%lli\n"
-			      "lastupdate:%lu\n"
+	return sb->safePrintf("objectsAdded:%"INT64"\n"
+			      "objectsDeleted:%"INT64"\n"
+			      "urlsConsidered:%"INT64"\n"
+			      "downloadAttempts:%"INT64"\n"
+			      "downloadSuccesses:%"INT64"\n"
+			      "processAttempts:%"INT64"\n"
+			      "processSuccesses:%"INT64"\n"
+			      "lastupdate:%"UINT32"\n"
 			      , m_objectsAdded
 			      , m_objectsDeleted
 			      , m_urlsConsidered
@@ -3030,14 +3030,14 @@ bool CrawlInfo::print (SafeBuf *sb ) {
 
 bool CrawlInfo::setFromSafeBuf (SafeBuf *sb ) {
 	return sscanf(sb->getBufStart(),
-		      "objectsAdded:%lli\n"
-		      "objectsDeleted:%lli\n"
-		      "urlsConsidered:%lli\n"
-		      "downloadAttempts:%lli\n"
-		      "downloadSuccesses:%lli\n"
-		      "processAttempts:%lli\n"
-		      "processSuccesses:%lli\n"
-		      "lastupdate:%lu\n"
+		      "objectsAdded:%"INT64"\n"
+		      "objectsDeleted:%"INT64"\n"
+		      "urlsConsidered:%"INT64"\n"
+		      "downloadAttempts:%"INT64"\n"
+		      "downloadSuccesses:%"INT64"\n"
+		      "processAttempts:%"INT64"\n"
+		      "processSuccesses:%"INT64"\n"
+		      "lastupdate:%"UINT32"\n"
 		      , &m_objectsAdded
 		      , &m_objectsDeleted
 		      , &m_urlsConsidered
@@ -3055,14 +3055,14 @@ bool CollectionRec::save ( ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	//File f;
 	char tmp[1024];
-	//sprintf ( tmp , "%scollections/%li.%s/c.conf",
+	//sprintf ( tmp , "%scollections/%"INT32".%s/c.conf",
 	//	  g_hostdb.m_dir,m_id,m_coll);
 	// collection name HACK for backwards compatibility
 	//if ( m_collLen == 0 )
 	//	sprintf ( tmp , "%scoll.main/coll.conf", g_hostdb.m_dir);
 	//else
-	snprintf ( tmp , 1023, "%scoll.%s.%li/coll.conf", 
-		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	snprintf ( tmp , 1023, "%scoll.%s.%"INT32"/coll.conf", 
+		  g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
 	if ( ! g_parms.saveToXml ( (char *)this , tmp ,OBJ_COLL)) return false;
 	// log msg
 	//log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
@@ -3071,8 +3071,8 @@ bool CollectionRec::save ( ) {
 	// save the crawlinfo class in the collectionrec for diffbot
 	//
 	// SAVE LOCAL
-	snprintf ( tmp , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
-		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	snprintf ( tmp , 1023, "%scoll.%s.%"INT32"/localcrawlinfo.dat",
+		  g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
 	//log("coll: saving %s",tmp);
 	// in case emergency save from malloc core, do not alloc
 	char stack[1024];
@@ -3086,8 +3086,8 @@ bool CollectionRec::save ( ) {
 		g_errno = 0;
 	}
 	// SAVE GLOBAL
-	snprintf ( tmp , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
-		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	snprintf ( tmp , 1023, "%scoll.%s.%"INT32"/globalcrawlinfo.dat",
+		  g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
 	//log("coll: saving %s",tmp);
 	sb.reset();
 	//m_globalCrawlInfo.print ( &sb );
@@ -3108,8 +3108,8 @@ bool CollectionRec::save ( ) {
 
 	// save page count table which has # of pages indexed per 
 	// subdomain/site and firstip for doing quotas in url filters table
-	//snprintf ( tmp , 1023, "coll.%s.%li/pagecounts.dat",
-	//	   m_coll , (long)m_collnum );
+	//snprintf ( tmp , 1023, "coll.%s.%"INT32"/pagecounts.dat",
+	//	   m_coll , (int32_t)m_collnum );
 	//if ( ! m_pageCountTable.save ( g_hostdb.m_dir , tmp ) ) {
 	//	log("db: failed to save file %s : %s",tmp,mstrerror(g_errno));
 	//	g_errno = 0;
@@ -3121,34 +3121,34 @@ bool CollectionRec::save ( ) {
 
 // calls hasPermissin() below
 bool CollectionRec::hasPermission ( HttpRequest *r , TcpSocket *s ) {
-	long  plen;
+	int32_t  plen;
 	char *p     = r->getString ( "pwd" , &plen );
-	long  ip    = s->m_ip;
+	int32_t  ip    = s->m_ip;
 	return hasPermission ( p , plen , ip );
 }
 
 
 // . does this password work for this collection?
-bool CollectionRec::isAssassin ( long ip ) {
+bool CollectionRec::isAssassin ( int32_t ip ) {
 	// ok, make sure they came from an acceptable IP
-	//for ( long i = 0 ; i < m_numSpamIps ; i++ ) 
+	//for ( int32_t i = 0 ; i < m_numSpamIps ; i++ ) 
 	//	// they also have a matching IP, so they now have permission
 	//	if ( m_spamIps[i] == ip ) return true;
 	return false;
 }
 
 // . does this password work for this collection?
-bool CollectionRec::hasPermission ( char *p, long plen , long ip ) {
+bool CollectionRec::hasPermission ( char *p, int32_t plen , int32_t ip ) {
 	// just return true
 	// collection permission is checked from Users::verifyColl 
 	// in User::getUserType for every request
 	return true;
 
 	// scan the passwords
-	// MDW: no longer, this is too vulnerable!!!
+	// MDW: no int32_ter, this is too vulnerable!!!
 	/*
-	for ( long i = 0 ; i < m_numAdminPwds ; i++ ) {
-		long len = gbstrlen ( m_adminPwds[i] );
+	for ( int32_t i = 0 ; i < m_numAdminPwds ; i++ ) {
+		int32_t len = gbstrlen ( m_adminPwds[i] );
 		if ( len != plen ) continue;
 		if ( strncmp ( m_adminPwds[i] , p , plen ) != 0 ) continue;
 		// otherwise it's a match!
@@ -3164,7 +3164,7 @@ bool CollectionRec::hasPermission ( char *p, long plen , long ip ) {
 	//if ( m_numPasswords > 0 ) return false;
 	// checkIp:
 	// ok, make sure they came from an acceptable IP
-	//for ( long i = 0 ; i < m_numAdminIps ; i++ ) 
+	//for ( int32_t i = 0 ; i < m_numAdminIps ; i++ ) 
 	//	// they also have a matching IP, so they now have permission
 	//	if ( m_adminIps[i] == ip ) return true;
 	// if no security, allow all NONONONONONONONONO!!!!!!!!!!!!!!
@@ -3180,16 +3180,16 @@ bool CollectionRec::hasPermission ( char *p, long plen , long ip ) {
 }
 
 // can this ip perform a search or add url on this collection?
-bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
+bool CollectionRec::hasSearchPermission ( TcpSocket *s , int32_t encapIp ) {
 	// get the ip
-	long ip = 0; if ( s ) ip = s->m_ip;
+	int32_t ip = 0; if ( s ) ip = s->m_ip;
 	// and the ip domain
-	long ipd = 0; if ( s ) ipd = ipdom ( s->m_ip );
+	int32_t ipd = 0; if ( s ) ipd = ipdom ( s->m_ip );
 	// and top 2 bytes for the israel isp that has this huge block
-	long ipt = 0; if ( s ) ipt = iptop ( s->m_ip );
+	int32_t ipt = 0; if ( s ) ipt = iptop ( s->m_ip );
 	// is it in the ban list?
 	/*
-	for ( long i = 0 ; i < m_numBanIps ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numBanIps ; i++ ) {
 		if ( isIpTop ( m_banIps[i] ) ) {
 			if ( m_banIps[i] == ipt ) return false;
 			continue;
@@ -3211,7 +3211,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	if ( encapIp ) {
 		ipd = ipdom ( encapIp );
 		ip  = encapIp;
-		for ( long i = 0 ; i < m_numBanIps ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numBanIps ; i++ ) {
 			if ( isIpDom ( m_banIps[i] ) ) {
 				if ( m_banIps[i] == ipd ) return false; 
 				continue;
@@ -3230,7 +3230,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	// do we have an "only" list?
 	if ( m_numSearchIps == 0 ) return true;
 	// it must be in that list if we do
-	for ( long i = 0 ; i < m_numSearchIps ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSearchIps ; i++ ) {
 		// check for ip domain match if this banned ip is an ip domain
 		if ( isIpDom ( m_searchIps[i] ) ) {
 			if ( m_searchIps[i] == ipd ) return true;
@@ -3271,7 +3271,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// 'sitepages' 'domainpages' 'domainadds' or 'siteadds' we have to keep
 	// the count table SpiderColl::m_pageCountTable.
 	m_urlFiltersHavePageCounts = false;
-	for ( long i = 0 ; i < m_numRegExs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRegExs ; i++ ) {
 		// get the ith rule
 		SafeBuf *sb = &m_regExs[i];
 		char *p = sb->getBufStart();
@@ -3299,8 +3299,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	     g_collectiondb.m_recs[m_collnum] ) {
 
 
-		log("coll: resetting doledb for %s (%li)",m_coll,
-		    (long)m_collnum);
+		log("coll: resetting doledb for %s (%"INT32")",m_coll,
+		    (int32_t)m_collnum);
 		
 		// clear doledb recs from tree
 		//g_doledb.getRdb()->deleteAllRecs ( m_collnum );
@@ -3417,7 +3417,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( api && ! api[0] ) api = NULL;
 
 	// convert from seconds to milliseconds. default is 250ms?
-	long wait = (long)(m_collectiveCrawlDelay * 1000.0);
+	int32_t wait = (int32_t)(m_collectiveCrawlDelay * 1000.0);
 	// default to 250ms i guess. -1 means unset i think.
 	if ( m_collectiveCrawlDelay < 0.0 ) wait = 250;
 
@@ -3440,7 +3440,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// filtering, but accepts all urls. we will add code to pass the urls
 	// through m_diffbotUrlCrawlPattern alternatively. if that itself
 	// is empty, we will just restrict to the seed urls subdomain.
-	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_FILTERS ; i++ ) {
 		m_regExs[i].purge();
 		m_spiderPriorities[i] = 0;
 		m_maxSpidersPerRule [i] = 100;
@@ -3462,7 +3462,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_harvestLinks[i] = true;
 	}
 
-	long i = 0;
+	int32_t i = 0;
 
 	// 1st one! for query reindex/ query delete
 	m_regExs[i].set("isreindex");
@@ -3668,7 +3668,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	return true;
 }
 
-// for some reason the libc we use doesn't support these shortcuts,
+// for some reason the libc we use doesn't support these int16_tcuts,
 // so expand them to something it does support
 bool expandRegExShortcuts ( SafeBuf *sb ) {
 	if ( ! sb->safeReplace3 ( "\\d" , "[0-9]" ) ) return false;
@@ -3732,7 +3732,7 @@ int64_t CollectionRec::getNumDocsIndexed() {
 
 // messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
 // so we do not have to keep sending this huge msg!
-bool CollectionRec::shouldSendLocalCrawlInfoToHost ( long hostId ) {
+bool CollectionRec::shouldSendLocalCrawlInfoToHost ( int32_t hostId ) {
 	if ( ! m_spiderColl ) return false;
 	if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
 	if ( hostId >= g_hostdb.m_numHosts ) { char *xx=NULL;*xx=0; }
@@ -3748,7 +3748,7 @@ void CollectionRec::localCrawlInfoUpdate() {
 
 // right after we send copy it for sending we set this so we do not send
 // again unless localCrawlInfoUpdate() is called
-void CollectionRec::sentLocalCrawlInfoToHost ( long hostId ) {
+void CollectionRec::sentLocalCrawlInfoToHost ( int32_t hostId ) {
 	if ( ! m_spiderColl ) return;
 	m_spiderColl->m_sendLocalCrawlInfoToHost[hostId] = 0;
 }

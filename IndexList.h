@@ -34,7 +34,7 @@ class IndexList : public RdbList {
  public:
 
 	// why do i have to repeat this for LinkInfo::set() calling our set()??
-	void set ( char *list , long  listSize  , bool  ownData   ) {
+	void set ( char *list , int32_t  listSize  , bool  ownData   ) {
 		RdbList::set ( list     ,
 			       listSize ,
 			       list     , // alloc
@@ -52,12 +52,12 @@ class IndexList : public RdbList {
 		   int64_t           docId       ,
 		   class IndexList    *oldList     ,
 		   class IndexList    *newDateList ,
-		   long                newDate     ,
+		   int32_t                newDate     ,
 		   class IndexList    *oldDateList ,
 		   class Sections     *newSections ,
 		   class Sections     *oldSections ,
 		   uint64_t *chksum1Ptr  , // = NULL,
-		   long                niceness    ); // = 2);
+		   int32_t                niceness    ); // = 2);
 	bool subtract ( TermTable *ourTable , class IndexList *oldList1 );
 	*/
 
@@ -67,8 +67,8 @@ class IndexList : public RdbList {
 
 	void print();
 
-	//unsigned char score32to8 ( unsigned long score ) ;
-	//static unsigned long score8to32(unsigned char score8);
+	//unsigned char score32to8 ( uint32_t score ) ;
+	//static uint32_t score8to32(unsigned char score8);
 
 	// . these are made for special IndexLists, too
 	// . getTermId() assumes as 12 byte key
@@ -81,8 +81,8 @@ class IndexList : public RdbList {
 		return (*(uint64_t *)(&rec[8])) >> 16 ;
 	};
 	//int64_t getTermId12 ( char *rec ) {
-	//	return ((int64_t)(*(unsigned long *)(m_listPtrHi+2))<<14) | 
-	//		((*(unsigned short *)(m_listPtrHi))>>2) ;
+	//	return ((int64_t)(*(uint32_t *)(m_listPtrHi+2))<<14) | 
+	//		((*(uint16_t *)(m_listPtrHi))>>2) ;
 	//};
 	// these 2 assume 12 and 6 byte keys respectively
 	int64_t getCurrentDocId () {
@@ -98,12 +98,12 @@ class IndexList : public RdbList {
 	int64_t getDocId12 ( char *rec ) {
 		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
 	//int64_t getDocId12 ( char *rec ) {
-	//	((*(unsigned long *)rec)>>10) |
-	//		(((int64_t)(*(unsigned short *)(rec+4)))<<22);
+	//	((*(uint32_t *)rec)>>10) |
+	//		(((int64_t)(*(uint16_t *)(rec+4)))<<22);
 	//};
 	int64_t getDocId6 ( char *rec ) {
 		int64_t docid;
-		*(long *)(&docid) = *(long *)rec;
+		*(int32_t *)(&docid) = *(int32_t *)rec;
 		((char *)&docid)[4] = rec[4];
 		docid >>= 2;
 		return docid & DOCID_MASK;
@@ -117,7 +117,7 @@ class IndexList : public RdbList {
 	void setScore ( char *rec , char score ) { rec[5] = score; };
 
 	// for date lists only...
-	long getCurrentDate ( ) { return ~*(long *)(m_listPtr+6); };
+	int32_t getCurrentDate ( ) { return ~*(int32_t *)(m_listPtr+6); };
 };
 
 #endif

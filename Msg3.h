@@ -56,14 +56,14 @@ class Msg3 {
 			 //key_t          endKey        , 
 			 char          *startKey      , 
 			 char          *endKey        , 
-			 long           minRecSizes   , // scan size(-1 all)
-			 long           startFileNum  , // first file to scan
-			 long           numFiles      , // rel.2 startFileNum
+			 int32_t           minRecSizes   , // scan size(-1 all)
+			 int32_t           startFileNum  , // first file to scan
+			 int32_t           numFiles      , // rel.2 startFileNum
 			 void          *state         , // for callback
 			 void         (* callback ) ( void *state ) ,
-			 long           niceness      , // = MAX_NICENESS ,
-			 long           retryNum      , // = 0             ,
-			 long           maxRetries    , // = -1
+			 int32_t           niceness      , // = MAX_NICENESS ,
+			 int32_t           retryNum      , // = 0             ,
+			 int32_t           maxRetries    , // = -1
 			 bool           compensateForMerge ,
 			 int64_t      syncPoint     , // = -1 (none)
 			 bool           justGetEndKey = false ,
@@ -71,9 +71,9 @@ class Msg3 {
 			 bool           hitDisk        = true );
 
 	// for retrieving unmerged lists
-	RdbList *getList       ( long i ) {return &m_lists[i];};
-	long     getTfn        ( long i ) {return  m_tfns[i];};
-	long     getNumLists   (        ) {return m_numScansCompleted; };
+	RdbList *getList       ( int32_t i ) {return &m_lists[i];};
+	int32_t     getTfn        ( int32_t i ) {return  m_tfns[i];};
+	int32_t     getNumLists   (        ) {return m_numScansCompleted; };
 
 	// keep public for doneScanningWrapper to use
 	bool      doneScanning    ( );
@@ -81,8 +81,8 @@ class Msg3 {
 	// on read/write error we sleep and retry
 	bool doneSleeping ();
 
-	long      m_numScansStarted;
-	long      m_numScansCompleted;
+	int32_t      m_numScansStarted;
+	int32_t      m_numScansCompleted;
 	void     *m_state       ;
 	void    (* m_callback )( void *state );
 
@@ -95,19 +95,19 @@ class Msg3 {
 	// . returns the endKey for all RdbScans
 	//key_t setPageRanges ( class RdbBase *base     ,
 	void  setPageRanges ( class RdbBase *base     ,
-			      long      *fileNums     ,
-			      long       numFileNums  ,
+			      int32_t      *fileNums     ,
+			      int32_t       numFileNums  ,
 			      //key_t      startKey     , 
 			      //key_t      endKey       ,
 			      char      *startKey     , 
 			      char      *endKey       ,
-			      //long       minRecSizes  );
-			      long       minRecSizes  );
+			      //int32_t       minRecSizes  );
+			      int32_t       minRecSizes  );
 
 	// . buries bad pages from the m_lists we read from disk
 	// . usually modifies m_badStartKey, m_badEndKey
 	// . "n" is the bad list index into m_lists[]
-	void extractBadness ( long n );
+	void extractBadness ( int32_t n );
 
 	// the rdb we're scanning for
 	char  m_rdbId;
@@ -118,22 +118,22 @@ class Msg3 {
 	RdbScan *m_scans ; // [ MAX_RDB_FILES ];
 
 	// page ranges for each scan computed in setPageRanges()
-	long    *m_startpg ; //    [ MAX_RDB_FILES ];
-	long    *m_endpg   ; //    [ MAX_RDB_FILES ];
+	int32_t    *m_startpg ; //    [ MAX_RDB_FILES ];
+	int32_t    *m_endpg   ; //    [ MAX_RDB_FILES ];
 
 	//key_t   *m_hintKeys    ; // [ MAX_RDB_FILES ];
 	char    *m_hintKeys    ; // [ MAX_RDB_FILES ];
-	long    *m_hintOffsets ; // [ MAX_RDB_FILES ];
+	int32_t    *m_hintOffsets ; // [ MAX_RDB_FILES ];
 
-	long     m_startFileNum;
-	long     m_numFiles    ;
+	int32_t     m_startFileNum;
+	int32_t     m_numFiles    ;
 
-	long    *m_fileNums    ; // [ MAX_RDB_FILES ];
-	long     m_numFileNums;
+	int32_t    *m_fileNums    ; // [ MAX_RDB_FILES ];
+	int32_t     m_numFileNums;
 
 	// hold the lists we read from disk here
 	RdbList  *m_lists ; // [ MAX_RDB_FILES ];
-	long     *m_tfns  ; // [ MAX_RDB_FILES ];
+	int32_t     *m_tfns  ; // [ MAX_RDB_FILES ];
 
 	// key range to read
 	//key_t     m_fileStartKey;
@@ -148,28 +148,28 @@ class Msg3 {
 	char      m_constrainKey[MAX_KEY_BYTES];
 
 	// min bytes to read
-	long      m_minRecSizes;
+	int32_t      m_minRecSizes;
 
 	// keep some original copies incase errno == ETRYAGAIN
 	//key_t     m_endKeyOrig;
 	char      m_endKeyOrig[MAX_KEY_BYTES];
-	long      m_minRecSizesOrig;
+	int32_t      m_minRecSizesOrig;
 
-	long      m_niceness;
+	int32_t      m_niceness;
 
 	// last error received from doing all reads
 	int       m_errno;
 
 	// only retry up to m_maxRetries times in case it was a fluke
-	long        m_retryNum;
-	long        m_maxRetries;
+	int32_t        m_retryNum;
+	int32_t        m_maxRetries;
 
 	// for debugging
 	int64_t   m_startTime;
 
 	// . these hints make a call to constrain() fast
 	// . used to quickly contrain the tail of a 1-list read
-	long        m_hintOffset;
+	int32_t        m_hintOffset;
 	//key_t       m_hintKey;
 	char        m_hintKey[MAX_KEY_BYTES];
 
@@ -179,8 +179,8 @@ class Msg3 {
 
 	char  m_buf[MSG3_BUF_SIZE];
 	char *m_alloc;
-	long  m_allocSize;
-	long  m_numChunks;
+	int32_t  m_allocSize;
+	int32_t  m_numChunks;
 	char  m_ks;
 
 	// for allowing the page cache
@@ -193,6 +193,6 @@ class Msg3 {
 	bool  m_hitDisk;
 };
 
-extern long g_numIOErrors;
+extern int32_t g_numIOErrors;
 
 #endif

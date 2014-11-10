@@ -45,7 +45,7 @@ class Titledb {
 	bool init ();
 
 	// init secondary/rebuild titledb
-	bool init2 ( long treeMem ) ;
+	bool init2 ( int32_t treeMem ) ;
 
 	// . get the probable docId from a url/coll
 	// . it's "probable" because it may not be the actual docId because
@@ -59,7 +59,7 @@ class Titledb {
 		// clear bits 6-13 because we want to put the domain hash there
 		// dddddddd dddddddd ddhhhhhh hhdddddd
 		probableDocId &= 0xffffffffffffc03fULL;
-		unsigned long h = hash8(url->getDomain(), url->getDomainLen());
+		uint32_t h = hash8(url->getDomain(), url->getDomainLen());
 		//shift the hash by 6
 		h <<= 6;
 		// OR in the hash
@@ -75,12 +75,12 @@ class Titledb {
 	};
 
 	// a different way to do it
-	uint64_t getProbableDocId(char *url,char *dom,long domLen) {
+	uint64_t getProbableDocId(char *url,char *dom,int32_t domLen) {
 		uint64_t probableDocId = hash64b(url,0) & 
 			DOCID_MASK;
 		// clear bits 6-13 because we want to put the domain hash there
 		probableDocId &= 0xffffffffffffc03fULL;
-		unsigned long h = hash8(dom,domLen);
+		uint32_t h = hash8(dom,domLen);
 		//shift the hash by 6
 		h <<= 6;
 		// OR in the hash
@@ -152,9 +152,9 @@ class Titledb {
 		return m_rdb.getNumTotalRecs()*
 			(int64_t)g_hostdb.m_numShards;};
 
-	long getLocalNumDocs () { return m_rdb.getNumTotalRecs(); };
-	long getNumDocsInMem () { return m_rdb.m_tree.getNumUsedNodes(); };
-	long getMemUsed      () { return m_rdb.m_tree.getMemOccupied(); };
+	int32_t getLocalNumDocs () { return m_rdb.getNumTotalRecs(); };
+	int32_t getNumDocsInMem () { return m_rdb.m_tree.getNumUsedNodes(); };
+	int32_t getMemUsed      () { return m_rdb.m_tree.getMemOccupied(); };
 
 	// holds binary format title entries
 	Rdb m_rdb;

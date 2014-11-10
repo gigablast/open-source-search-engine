@@ -16,15 +16,15 @@ bool Placedb::init ( ) {
 	// . 25 bytes per key
 	// . now we have an addition sizeof(collnum_t) bytes per node
 	// . assume about 100 chars for each place in the data
-	long nodeSize      = 25 + sizeof(collnum_t) + 100;
-	long maxTreeMem    = 30000000;
-	//long maxTreeNodes  = g_conf.m_placedbMaxTreeMem  / nodeSize ;
-	long maxTreeNodes  = maxTreeMem / nodeSize ;
+	int32_t nodeSize      = 25 + sizeof(collnum_t) + 100;
+	int32_t maxTreeMem    = 30000000;
+	//int32_t maxTreeNodes  = g_conf.m_placedbMaxTreeMem  / nodeSize ;
+	int32_t maxTreeNodes  = maxTreeMem / nodeSize ;
 
 	// . use 30MB for disk page cache. 
 	// . Events.cpp should be doing biased distribution to twins
 	//   to maximize effective use of this disk page cache
-	long pcmem = 30000000;
+	int32_t pcmem = 30000000;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
@@ -33,7 +33,7 @@ bool Placedb::init ( ) {
 
 	// . each cahched list is just one key in the tree...
 	// . 25(treeoverhead) + 24(cacheoverhead) = 49
-	//long maxCacheNodes = g_conf.m_placedbMaxCacheMem / 49;
+	//int32_t maxCacheNodes = g_conf.m_placedbMaxCacheMem / 49;
 	// we now use a page cache
 	if ( ! m_pc.init ( "placedb",RDB_PLACEDB,pcmem,GB_INDEXDB_PAGE_SIZE ) )
 		return log("db: Placedb page cache init failed.");
@@ -60,14 +60,14 @@ bool Placedb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Placedb::init2 ( long treeMem ) {
+bool Placedb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . key+left+right+parents+balance = 12+4+4+4+1 = 25
 	// . 25 bytes per key
 	// . now we have an addition sizeof(collnum_t) bytes per node
 	// . assume 100 bytes per place in the data
-	long nodeSize      = 25 + sizeof(collnum_t) + 100 ;
-	long maxTreeNodes  = treeMem  / nodeSize ;
+	int32_t nodeSize      = 25 + sizeof(collnum_t) + 100 ;
+	int32_t maxTreeNodes  = treeMem  / nodeSize ;
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir,
 			    "placedbRebuild",
@@ -142,8 +142,8 @@ bool Placedb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	bool printedKey = false;
 	bool printedZeroKey = false;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
@@ -156,7 +156,7 @@ bool Placedb::verify ( char *coll ) {
 			got++;
 		else if ( !printedKey ) {
 			log ("db: Found bad key in list (only printing once): "
-			      "%lx %llx", k.n1, k.n0 );
+			      "%"XINT32" %"XINT64"", k.n1, k.n0 );
 			printedKey = true;
 		}
 		if ( k.n1 == 0 && k.n0 == 0 ) {
@@ -171,7 +171,7 @@ bool Placedb::verify ( char *coll ) {
 		}
 	}
 	if ( got != count ) {
-		log("db: Out of first %li records in placedb, only %li passed "
+		log("db: Out of first %"INT32" records in placedb, only %"INT32" passed "
 		     "verification.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
@@ -186,7 +186,7 @@ bool Placedb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 
-	log ( LOG_INFO, "db: Placedb passed verification successfully for %li "
+	log ( LOG_INFO, "db: Placedb passed verification successfully for %"INT32" "
 			"recs.", count );
 	// DONE
 	g_threads.enableThreads();

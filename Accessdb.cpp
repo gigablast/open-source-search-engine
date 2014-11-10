@@ -7,15 +7,15 @@
 
 static bool printCalendars ( SafeBuf &sb , time_t startDate ) ;
 static bool printCalendar ( SafeBuf &sb ,
-			    long showDay,
-			    long showMonth,
-			    long showYear ) ;
+			    int32_t showDay,
+			    int32_t showMonth,
+			    int32_t showYear ) ;
 
 
 
 Accessdb g_accessdb;
 
-static void handleRequestaa ( UdpSlot *slot , long niceness ) ;
+static void handleRequestaa ( UdpSlot *slot , int32_t niceness ) ;
 
 bool Accessdb::registerHandler ( ) {
 	// . register ourselves with the udp server
@@ -28,8 +28,8 @@ bool Accessdb::registerHandler ( ) {
 
 bool Accessdb::init ( ) {
 
-	long maxTreeMem = 3000000; // g_conf.m_accessdbMaxTreeMem;
-	long nodeSize = sizeof(AccessRec)+8+12+4 + sizeof(collnum_t);
+	int32_t maxTreeMem = 3000000; // g_conf.m_accessdbMaxTreeMem;
+	int32_t nodeSize = sizeof(AccessRec)+8+12+4 + sizeof(collnum_t);
 	// . We take a snapshot of g_stats every minute.
 	// . Each sample struct taken from g_stats ranges from 1k - 2k
 	//   after compression depending on the state of the
@@ -103,7 +103,7 @@ key128_t Accessdb::makeKey2 ( int64_t now, int64_t widgetId64 ) {
 // . time64|widgetid64|ip|fbid
 // . widgetid64|time64|ip|fbid
 // . storing group is based on the lower bits of the time64
-bool Accessdb::addAccess ( HttpRequest *hr , long ip ) {
+bool Accessdb::addAccess ( HttpRequest *hr , int32_t ip ) {
 
 	int64_t now = gettimeofdayInMillisecondsGlobalNoCore(); 
 	int64_t fbId = hr->getLongLongFromCookie("fbid",0LL);
@@ -128,12 +128,12 @@ bool Accessdb::addAccess ( HttpRequest *hr , long ip ) {
 	m_arec[1].m_key128 = g_accessdb.makeKey2(now,widgetId64);
 	m_arec[1].m_ip     = ip;
 	m_arec[1].m_fbId   = fbId;
-	//log("msg4: timestamp = %llu",now);
+	//log("msg4: timestamp = %"UINT64"",now);
 	// this has like a 1 second delay before it flushes so you might
 	// not see you current access until that passes
 	if ( ! m_msg4InUse &&
 	     ! m_msg4.addMetaList ( (char *)&m_arec[0] ,
-				    (long)2*sizeof(AccessRec),
+				    (int32_t)2*sizeof(AccessRec),
 				    (collnum_t)0, // collnum
 				    NULL, // state
 				    addedAccessRecWrapper,
@@ -146,24 +146,24 @@ bool Accessdb::addAccess ( HttpRequest *hr , long ip ) {
 
 class MsgaaRequest {
 public:
-	long      m_startDate;
+	int32_t      m_startDate;
 	int64_t m_widgetId;
-	long      m_minRecSizes;
+	int32_t      m_minRecSizes;
 };
 
 
 
 class Stateaa {
 public:
-	long m_replies;
-	long m_requests;
-	long m_errno;
+	int32_t m_replies;
+	int32_t m_requests;
+	int32_t m_errno;
 	TcpSocket *m_socket;
 	Msgfb m_msgfb;
 
 	MsgaaRequest m_request;
 	// for allocating usually like 32 multicasts
-	long m_numMulticasts;
+	int32_t m_numMulticasts;
 	Multicast m_mcasts[MAX_HOSTS];
 };
 
@@ -194,7 +194,7 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *r ) {
 	st->m_socket = s;
 
 	// get startdate
-	long startDate = r->getLong("sd",0);
+	int32_t startDate = r->getLong("sd",0);
 	if ( startDate == 0 ) startDate = getTimeGlobalNoCore() - 7*86400;
 
 	// get widgetid
@@ -227,7 +227,7 @@ void gotFBUserInfoWrapper ( void *state ) {
 bool printLoginScript ( SafeBuf &sb , char *redirUrl = NULL ) ;
 bool printHtmlHeader ( SafeBuf &sb , char *title , bool printPrimaryDiv ,
 		       SearchInput *si , bool staticPage );
-bool printBlackBar(SafeBuf &sb,Msgfb *msgfb,char *page,long ip,bool printLogo,
+bool printBlackBar(SafeBuf &sb,Msgfb *msgfb,char *page,int32_t ip,bool printLogo,
 		   bool igoogle, class State7 *st );
 bool printPageTitle ( SafeBuf &sb, char *title );
 bool printHtmlTail ( SafeBuf *sb , Msgfb *msgfb , bool printUnsubscribedPopup);
@@ -276,7 +276,7 @@ bool gotFBUserInfo ( Stateaa *st ) {
 		// nuke the state now
 		mdelete ( st , sizeof(Stateaa) , "Stateaa" );
 		delete (st);
-		long bufLen = sb.length();
+		int32_t bufLen = sb.length();
 		// . send this page
 		// . encapsulates in html header and tail
 		// . make a Mime
@@ -289,15 +289,15 @@ bool gotFBUserInfo ( Stateaa *st ) {
 		st->m_request.m_widgetId  = st->m_msgfb.m_fbId;
 
 	char *request = (char *)&st->m_request;
-	long  requestSize = sizeof(MsgaaRequest);
+	int32_t  requestSize = sizeof(MsgaaRequest);
 
 	// send the request to every host in the network
-	for ( long i = 0 ; i < g_hostdb.getNumGroups() ; i++ ) {
+	for ( int32_t i = 0 ; i < g_hostdb.getNumGroups() ; i++ ) {
 		// count send outs
 		st->m_requests++;
 		// get group id
-		unsigned long gid = g_hostdb.getGroupId ( i );
-		// get the multicast for this group, shortcut
+		uint32_t gid = g_hostdb.getGroupId ( i );
+		// get the multicast for this group, int16_tcut
 		Multicast *m = &st->m_mcasts[i];
 		// send it out
 		if ( ! m->send ( request    , 
@@ -352,8 +352,8 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 	ek.setMax();
 	char *startKey = (char *)&sk;
 	char *endKey   = (char *)&ek;
-	long ks = sizeof(key128_t);
-	long ds = sizeof(AccessRec) - ks;
+	int32_t ks = sizeof(key128_t);
+	int32_t ds = sizeof(AccessRec) - ks;
 
 	// ptrs to fbrecs that have your widgetid
 	SafeBuf ptrBuf;
@@ -365,15 +365,15 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 	RdbList lists[MAX_HOSTS];
 	RdbList *plists[MAX_HOSTS];
 	char    *m_freeMe    [MAX_HOSTS];
-	long     m_freeMeSize[MAX_HOSTS];
+	int32_t     m_freeMeSize[MAX_HOSTS];
 
-	long numLists = g_hostdb.getNumGroups();
-	for ( long i = 0 ; i < numLists ; i++ ) {
-		// get the multicast for this group, shortcut
+	int32_t numLists = g_hostdb.getNumGroups();
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
+		// get the multicast for this group, int16_tcut
 		Multicast *m = &st->m_mcasts[i];
 		// get the reply
-		long  replySize;
-		long  replyMaxSize;
+		int32_t  replySize;
+		int32_t  replyMaxSize;
 		bool  freeReply;
 		char *reply = m->getBestReply ( &replySize , 
 						&replyMaxSize , 
@@ -390,7 +390,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		// first is size of the first list
 		char *p = reply;
 		char *pend = p + replySize;
-		long firstListSize = *(long *)p;
+		int32_t firstListSize = *(int32_t *)p;
 		p += 4;
 
 
@@ -409,7 +409,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		// a facebook list follows that
 		p += firstListSize;
 
-		long secondListSize = pend - p;
+		int32_t secondListSize = pend - p;
 
 
 		// point to each facebook rec
@@ -428,7 +428,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		for ( ; ! fblist.isExhausted() ; fblist.skipCurrentRec() ) {
 			// point to it
 			FBRec *fbrec = (FBRec *)fblist.getCurrentRec();
-			ptrBuf.pushLong((long)fbrec);
+			ptrBuf.pushLong((int32_t)fbrec);
 		}
 	}
 
@@ -456,7 +456,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		      "<font color=black>"
 		      "<b>"
 		      "Displaying traffic data for the widget of id "
-		      "<a href=http://www.facebook.com/%llu>%llu</a>"
+		      "<a href=http://www.facebook.com/%"UINT64">%"UINT64"</a>"
 		      "</b>"
 		      "</font>"
 		      "</center>"
@@ -481,11 +481,11 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		      "<td>%s</td></tr>"
 		      "<tr><td>Your Facebook ID</td>"
 		      "<td>"
-		      "<a href=\"http://www.facebook.com/%lli\">%lli</a>"
+		      "<a href=\"http://www.facebook.com/%"INT64"\">%"INT64"</a>"
 		      "</td></tr>"
 		      "<tr><td>Your Widget ID</td>"
 		      "<td>"
-		      "<a href=\"http://www.facebook.com/%lli\">%lli</a>"
+		      "<a href=\"http://www.facebook.com/%"INT64"\">%"INT64"</a>"
 		      "</td></tr>"
 		      "</table><br>"
 		      ,st->m_msgfb.m_fbrecPtr->ptr_name
@@ -520,8 +520,8 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 		      "<td><nobr>Payout*</nobr></td>"
 		      "</tr>" );
 	FBRec **ppp = (FBRec **)ptrBuf.getBufStart();
-	long n = ptrBuf.length() / 4;
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = ptrBuf.length() / 4;
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		FBRec *fbrec = ppp[i];
 		// skip if its you! you can't visit your own widget...
 		if ( fbrec->m_fbId == fbrec->m_originatingWidgetId ) continue;
@@ -534,9 +534,9 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 			      "<td><nobr>%s</nobr></td>"
 			      "<td>%s</td>"
 			      "<td>%s</td>"
-			      "<td><a href=http://www.facebook.com/%llu>"
-			      "%llu</a></td>"
-			      "<td>%llu</td>"
+			      "<td><a href=http://www.facebook.com/%"UINT64">"
+			      "%"UINT64"</a></td>"
+			      "<td>%"UINT64"</td>"
 			      "<td>$%.02f</td>"
 			      "</tr>"
 			      ,time // fbrec->m_firstFacebookLogin
@@ -552,7 +552,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 
 	sb.safePrintf("</div>");
 
-	long minRecSizes = st->m_request.m_minRecSizes;
+	int32_t minRecSizes = st->m_request.m_minRecSizes;
 
 	// merge them together into a single list
 	RdbList final;
@@ -612,12 +612,12 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 			widgetId = timestamp;
 			timestamp = tmp;
 		}
-		long timestamp32 = timestamp / 1000;
+		int32_t timestamp32 = timestamp / 1000;
 		struct tm *timeStruct = gmtime ( &timestamp32 );
 		char time[256];
 		strftime ( time , 256 , "%b %e %T %Y", timeStruct );
 		sb.safePrintf("<tr>"
-			      //"<td>%llu</td>"
+			      //"<td>%"UINT64"</td>"
 			      "<td><nobr>%s</nobr></td>"
 			      "<td>%s</td>"
 			      "<td>"
@@ -626,16 +626,16 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 			      );
 		if ( ar->m_fbId )
 			sb.safePrintf("<a href=http://www.facebook."
-				      "com/%llu>%llu"
+				      "com/%"UINT64">%"UINT64""
 				      "</a>"
 				      , ar->m_fbId
 				      , ar->m_fbId
 				      );
 		else
-			sb.safePrintf("%llu" , ar->m_fbId );
+			sb.safePrintf("%"UINT64"" , ar->m_fbId );
 
 		sb.safePrintf ( "</td>"
-				"<td>%llu</td>"
+				"<td>%"UINT64"</td>"
 				"</tr>"
 				, widgetId
 				);
@@ -647,7 +647,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 	printHtmlTail ( &sb , &st->m_msgfb, false );
 	
 	// free the multicast replies here
-	for ( long i = 0 ; i < numLists ; i++ ) {
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
 		if ( ! m_freeMe[i] ) continue;
 		mfree ( m_freeMe[i] ,m_freeMeSize[i],"acmcrep");
 	}
@@ -656,7 +656,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 	// otherwise the login doesn't "stick"
 	SafeBuf cb;
 	if ( st->m_msgfb.m_fbId )
-		cb.safePrintf("Set-Cookie: fbid=%llu;\r\n",
+		cb.safePrintf("Set-Cookie: fbid=%"UINT64";\r\n",
 			      st->m_msgfb.m_fbId);
 	char *cookiePtr = NULL;
 	if ( cb.length() ) cookiePtr = cb.getBufStart();
@@ -668,7 +668,7 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 	mdelete ( st , sizeof(Stateaa) , "Stateaa" );
 	delete (st);
 
-	long bufLen = sb.length();
+	int32_t bufLen = sb.length();
 	// . send this page
 	// . encapsulates in html header and tail
 	// . make a Mime
@@ -689,11 +689,11 @@ void gotMulticastReplyWrapperaa ( void *state , void *state2 ) {
 
 class Stateab {
 public:
-	long m_startDate;
+	int32_t m_startDate;
 	int64_t m_widgetId;
-	long m_minRecSizes;
+	int32_t m_minRecSizes;
 	UdpSlot *m_slot;
-	long m_niceness;
+	int32_t m_niceness;
 
 	Msg5 m_msg5;
 	RdbList m_accessList;
@@ -706,7 +706,7 @@ public:
 static void gotAccessListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) ;
 
 
-void handleRequestaa  ( UdpSlot *slot , long niceness ) {
+void handleRequestaa  ( UdpSlot *slot , int32_t niceness ) {
 
 	Stateab *st ;
 	try { st = new (Stateab); }
@@ -729,7 +729,7 @@ void handleRequestaa  ( UdpSlot *slot , long niceness ) {
 	st->m_slot        = slot;
 	st->m_niceness    = niceness;
 
-	// shortcut
+	// int16_tcut
 	int64_t wgid = req->m_widgetId;
 	// convert into milliseconds
 	int64_t timestamp = ((int64_t)req->m_startDate) * 1000;
@@ -740,15 +740,15 @@ void handleRequestaa  ( UdpSlot *slot , long niceness ) {
 		timestamp -= 7*86400*1000;
 	}
 
-	int64_t longTime = 86400LL*365LL*1000LL*10; // 10 years in millisecs
+	int64_t int32_tTime = 86400LL*365LL*1000LL*10; // 10 years in millisecs
 	// use the 2nd type of key... those have widgetid first and then
 	// the timestamp
 	key128_t startKey  = g_accessdb.makeKey2 ( timestamp ,wgid );
-	key128_t endKey    = g_accessdb.makeKey2 ( timestamp + longTime, wgid);
+	key128_t endKey    = g_accessdb.makeKey2 ( timestamp + int32_tTime, wgid);
 	// widget id of 0 means ANY widget
 	if ( wgid == 0 ) {
 		startKey = g_accessdb.makeKey1(timestamp , 0 );
-		endKey   = g_accessdb.makeKey1(timestamp + longTime, 0 );
+		endKey   = g_accessdb.makeKey1(timestamp + int32_tTime, 0 );
 	}
 	// lookup accessdb records from that time going forward
 	if ( ! st->m_msg5.getList ( RDB_ACCESSDB ,
@@ -813,7 +813,7 @@ bool scanLoop ( Stateab *st ) {
 	key96_t endKey   ;
 	endKey.setMax();
 	// get a meg at a time
-	long minRecSizes = 1024*1024;
+	int32_t minRecSizes = 1024*1024;
 	key96_t oldk; oldk.setMin();
 
  loop:
@@ -857,8 +857,8 @@ void gotScanListWrapper ( void *state, RdbList *list , Msg5 *msg5 ) {
 
 void gotScanList ( Stateab *st ) {
 
-	//long now = getTimeGlobal();
-	//long dayStart = now  - ( now % 86400 );
+	//int32_t now = getTimeGlobal();
+	//int32_t dayStart = now  - ( now % 86400 );
 
 	if ( st->m_facebookList.isEmpty() ) return;
 
@@ -868,7 +868,7 @@ void gotScanList ( Stateab *st ) {
 	      st->m_facebookList.skipCurrentRecord() ) {
 		// get it
 		char *drec = st->m_facebookList.getCurrentRec();
-		long drecSize = st->m_facebookList.getCurrentRecSize();
+		int32_t drecSize = st->m_facebookList.getCurrentRecSize();
 		// sanity check. delete key?
 		if ( (drec[0] & 0x01) == 0x00 ) continue;
 		// get widgetit
@@ -882,7 +882,7 @@ void gotScanList ( Stateab *st ) {
 		st->m_retBuf.safeMemcpy ( drec , drecSize );
 	}
 	st->m_fbstartKey = *(key96_t *)st->m_facebookList.getLastKey();
-	st->m_fbstartKey += (unsigned long) 1;
+	st->m_fbstartKey += (uint32_t) 1;
 	// watch out for wrap around
 	//if ( startKey < *(key96_t *)list.getLastKey() ) return;
 }
@@ -892,8 +892,8 @@ void gotScanList ( Stateab *st ) {
 void sendListsBack ( Stateab *st ) {
 
 	char *data = st->m_retBuf.getBufStart();
-	long  dataSize = st->m_retBuf.length();
-	long  allocSize = st->m_retBuf.getCapacity();
+	int32_t  dataSize = st->m_retBuf.length();
+	int32_t  allocSize = st->m_retBuf.getCapacity();
 
 	// release it so udpserver can free it
 	st->m_retBuf.detachBuf();
@@ -926,20 +926,20 @@ void sendListsBack ( Stateab *st ) {
 
 // . print 5 calendars in a row, with current one in the middle
 // . all are in UTC
-bool printCalendars ( SafeBuf &sb , long startDate ) {
+bool printCalendars ( SafeBuf &sb , int32_t startDate ) {
 	// parse it up
-	long now = startDate; // getTimeGlobalNoCore();
+	int32_t now = startDate; // getTimeGlobalNoCore();
 	struct tm *timeStruct = gmtime ( &now );
 
 	// get month number (0 to 11)
-	long thisMonth = timeStruct->tm_mon; // 0-11
-	long thisDay   = timeStruct->tm_mday;
-	long thisYear  = timeStruct->tm_year + 1900;
+	int32_t thisMonth = timeStruct->tm_mon; // 0-11
+	int32_t thisDay   = timeStruct->tm_mday;
+	int32_t thisYear  = timeStruct->tm_year + 1900;
 
-	long prevMonth1;
-	long prevYear1;
-	long postMonth1;
-	long postYear1;
+	int32_t prevMonth1;
+	int32_t prevYear1;
+	int32_t postMonth1;
+	int32_t postYear1;
 
 	prevMonth1 = thisMonth - 1;
 	prevYear1  = thisYear;
@@ -984,9 +984,9 @@ bool printCalendars ( SafeBuf &sb , long startDate ) {
 
 // "now" is from the msg40 we used
 bool printCalendar ( SafeBuf &sb ,
-		     long showDay,
-		     long showMonth,
-		     long showYear ) {
+		     int32_t showDay,
+		     int32_t showMonth,
+		     int32_t showYear ) {
 
 
 	// compute show dow
@@ -1000,21 +1000,21 @@ bool printCalendar ( SafeBuf &sb ,
 	time_t mt = mktime ( &tss );
 	// now get dow of the first day of this month
 	struct tm *tt = gmtime ( &mt );
-	long firstDayOfWeek = tt->tm_wday; // 0-6
+	int32_t firstDayOfWeek = tt->tm_wday; // 0-6
 	// this is that day
 	time_t startDate = mt;
 
 
 	// get today's month/day/year
-	long now = getTimeGlobalNoCore();
+	int32_t now = getTimeGlobalNoCore();
 	struct tm *nt = gmtime ( &now );
-	long nowDay   = nt->tm_mday;
-	long nowMonth = nt->tm_mon;
-	long nowYear  = nt->tm_year + 1900;
+	int32_t nowDay   = nt->tm_mday;
+	int32_t nowMonth = nt->tm_mon;
+	int32_t nowYear  = nt->tm_year + 1900;
 
 	
 	// we got days per month. leap year?
-	long daysInMonth = getNumDaysInMonth ( showMonth , showYear );
+	int32_t daysInMonth = getNumDaysInMonth ( showMonth , showYear );
 
 	// prev month abbr
 	char *nextStr, *str, *prevStr;
@@ -1031,14 +1031,14 @@ bool printCalendar ( SafeBuf &sb ,
 	if ( showMonth == 10 ) { prevStr = "Oct"; str="Nov"; nextStr = "Dec"; }
 	if ( showMonth == 11 ) { prevStr = "Nov"; str="Dec"; nextStr = "Jan"; }
 
-	long prevYear  = showYear;
-	long prevMonth = showMonth - 1;
+	int32_t prevYear  = showYear;
+	int32_t prevMonth = showMonth - 1;
 	if ( prevMonth < 0 ) {
 		prevMonth = 11;
 		prevYear--;
 	}
-	long nextYear = showYear;
-	long nextMonth = showMonth + 1;
+	int32_t nextYear = showYear;
+	int32_t nextMonth = showMonth + 1;
 	if ( nextMonth >= 12 ) {
 		nextMonth = 0;
 		nextYear++;
@@ -1051,15 +1051,15 @@ bool printCalendar ( SafeBuf &sb ,
 		      //"<font size=-2>"
 		      //"<a "
 		      //"style=\"color:black\" "
-		      //"href=/traffic?displayyear=%li&displaymonth=%li>%s</a>"
+		      //"href=/traffic?displayyear=%"INT32"&displaymonth=%"INT32">%s</a>"
 		      //"</font>"
 		      "</td>"
-		      "<td colspan=5><center>%s %li</center></td>"
+		      "<td colspan=5><center>%s %"INT32"</center></td>"
 		      "<td>"
 		      //"<font size=-2>"
 		      //"<a "
 		      //"style=\"color:black\" "
-		      //"href=/traffic?displayyear=%li&displaymonth=%li>%s</a>"
+		      //"href=/traffic?displayyear=%"INT32"&displaymonth=%"INT32">%s</a>"
 		      //"</font>"
 		      "</td>"
 		      "</tr>\n"
@@ -1084,12 +1084,12 @@ bool printCalendar ( SafeBuf &sb ,
 		      //, nextStr 
 		      );
 	bool printed = false;
-	long count = 1;
+	int32_t count = 1;
 
 	bool showCursor = true;
 
 	// print out days of the week header
-	for ( long i = 0 ; i < 35 ; i++ ) {
+	for ( int32_t i = 0 ; i < 35 ; i++ ) {
 		if ( i % 7 == 0 )
 			sb.safePrintf("<tr>");
 		// is it today?
@@ -1124,11 +1124,11 @@ bool printCalendar ( SafeBuf &sb ,
 				      // set hidden tag clockset val
 				      // set all to gray if not yellow
 				      // set clicked to red if not yellow
-				      "top.window.href='/traffic?sd=%lu';\">"
+				      "top.window.href='/traffic?sd=%"UINT32"';\">"
 				      , startDate + (count-1)*86400
 				      );
 			*/
-			sb.safePrintf("><a href=/account.html?sd=%lu>%li</a>"
+			sb.safePrintf("><a href=/account.html?sd=%"UINT32">%"INT32"</a>"
 				      "</td>" 
 				      , startDate + (count-1)*86400
 				      , count );

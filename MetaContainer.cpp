@@ -8,10 +8,10 @@ MetaContainer::MetaContainer() {
 }
 
 MetaContainer::~MetaContainer() {};
-void MetaContainer::parse ( char *page, long pageLen ) {
+void MetaContainer::parse ( char *page, int32_t pageLen ) {
 	log( "build: USING VIRTUAL PARSE" );
 };
-long MetaContainer::buildPage ( char *page ) { 
+int32_t MetaContainer::buildPage ( char *page ) { 
 	log( "build: USING VIRTUAL BUILDPAGE!" ); 
 	return 0; 
 };

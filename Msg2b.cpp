@@ -28,7 +28,7 @@ Msg2b::~Msg2b ( ) {
 // Generate sorted sub categories in m_subCats Array
 // m_catBuffer stores sub category names and prefixes
 //
-bool Msg2b::generateDirectory ( long   dirId,
+bool Msg2b::generateDirectory ( int32_t   dirId,
 				void  *state,
 				void (*callback)(void *state) ) {
 	m_dirId    = dirId;
@@ -39,7 +39,7 @@ bool Msg2b::generateDirectory ( long   dirId,
 	m_numSubCats  = 0;
 	m_subCats = (SubCategory*)mmalloc(m_subCatsSize, "Msg2b");
 	if (!m_subCats) {
-		log("Msg2b: Could not allocate %li bytes for m_subCats.",
+		log("Msg2b: Could not allocate %"INT32" bytes for m_subCats.",
 		    m_subCatsSize);
 		g_errno = ENOMEM;
 		return true;
@@ -49,7 +49,7 @@ bool Msg2b::generateDirectory ( long   dirId,
 	m_catBufferLen  = 0;
 	m_catBuffer = (char*)mmalloc(m_catBufferSize, "PageResults");
 	if (!m_catBuffer) {
-		log("Msg2b: Could not allocate %li bytes for m_catBuffer.",
+		log("Msg2b: Could not allocate %"INT32" bytes for m_catBuffer.",
 		    m_catBufferSize);
 		g_errno = ENOMEM;
 		return true;
@@ -77,15 +77,15 @@ int sortSubCats ( const void *c1, const void *c2 ) {
 	else if (subCat1->m_type - subCat2->m_type >= 10)
 		return 1;
 	// otherwise compare by prefix
-	long preLen;
+	int32_t preLen;
 	if (subCat1->m_prefixLen < subCat2->m_prefixLen)
 		preLen = subCat1->m_prefixLen;
 	else
 		preLen = subCat2->m_prefixLen;
-	long preCmp = strncasecmp(&gCatBuffer[subCat1->m_prefixOffset],
+	int32_t preCmp = strncasecmp(&gCatBuffer[subCat1->m_prefixOffset],
 				  &gCatBuffer[subCat2->m_prefixOffset],
 				  preLen);
-	// if equal, shorter is less
+	// if equal, int16_ter is less
 	if (preCmp == 0)
 		return (subCat1->m_prefixLen - subCat2->m_prefixLen);
 	else
@@ -95,22 +95,22 @@ int sortSubCats ( const void *c1, const void *c2 ) {
 //
 // Serialize/Deserialize functions
 //
-long Msg2b::getStoredSize ( ) {
-	return ( sizeof(long)*3 + // m_dirId + m_numSubCats + m_catBufferLen
+int32_t Msg2b::getStoredSize ( ) {
+	return ( sizeof(int32_t)*3 + // m_dirId + m_numSubCats + m_catBufferLen
 		 sizeof(SubCategory) * m_numSubCats + // sub cats
 		 m_catBufferLen ); // cat buffer
 }
 
-long Msg2b::serialize ( char *buf, long bufLen ) {
+int32_t Msg2b::serialize ( char *buf, int32_t bufLen ) {
 	// make sure we have room
-	long storedSize = getStoredSize();
+	int32_t storedSize = getStoredSize();
 	if (bufLen < storedSize)
 		return -1;
 	char *p = buf;
 	// m_dirId + m_numSubCats + m_catBufferLen
-	*(long *)p = m_dirId;        p += sizeof(long);
-	*(long *)p = m_numSubCats;   p += sizeof(long);
-	*(long *)p = m_catBufferLen; p += sizeof(long);
+	*(int32_t *)p = m_dirId;        p += sizeof(int32_t);
+	*(int32_t *)p = m_numSubCats;   p += sizeof(int32_t);
+	*(int32_t *)p = m_catBufferLen; p += sizeof(int32_t);
 	// sub cats
 	memcpy(p, m_subCats, sizeof(SubCategory)*m_numSubCats);
 	p += sizeof(SubCategory)*m_numSubCats;
@@ -119,7 +119,7 @@ long Msg2b::serialize ( char *buf, long bufLen ) {
 	p += m_catBufferLen;
 	// sanity check
 	if (p - buf != storedSize) {
-		log("Msg2b: Bad serialize size, %i != %li, bad engineer.",
+		log("Msg2b: Bad serialize size, %i != %"INT32", bad engineer.",
 		    p - buf, storedSize);
 		char *xx = NULL; *xx = 0;
 	}
@@ -127,16 +127,16 @@ long Msg2b::serialize ( char *buf, long bufLen ) {
 	return storedSize;
 }
 
-long Msg2b::deserialize ( char *buf, long bufLen ) {
+int32_t Msg2b::deserialize ( char *buf, int32_t bufLen ) {
 	char *p = buf;
-	if ( bufLen < (long)sizeof(long)*3 )
+	if ( bufLen < (int32_t)sizeof(int32_t)*3 )
 		return -1;
 	// m_dirId + m_numSubCats + m_catBufferLen
-	m_dirId        = *(long *)p; p += sizeof(long);
-	m_numSubCats   = *(long *)p; p += sizeof(long);
-	m_catBufferLen = *(long *)p; p += sizeof(long);
-	if ( bufLen < (long)sizeof(long)*3 +
-		      (long)sizeof(SubCategory)*m_numSubCats +
+	m_dirId        = *(int32_t *)p; p += sizeof(int32_t);
+	m_numSubCats   = *(int32_t *)p; p += sizeof(int32_t);
+	m_catBufferLen = *(int32_t *)p; p += sizeof(int32_t);
+	if ( bufLen < (int32_t)sizeof(int32_t)*3 +
+		      (int32_t)sizeof(SubCategory)*m_numSubCats +
 		      m_catBufferLen )
 		return -1;
 	// sub cats
@@ -150,7 +150,7 @@ long Msg2b::deserialize ( char *buf, long bufLen ) {
 	// sanity check
 	if (p - buf > bufLen) {
 		log("Msg2b: Overstepped deserialize buffer length, "
-		    "%i > %li, bad engineer.",
+		    "%i > %"INT32", bad engineer.",
 		    p - buf, bufLen);
 		char *xx = NULL; *xx = 0;
 	}

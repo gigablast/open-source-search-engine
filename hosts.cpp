@@ -2,8 +2,8 @@
 
 int main ( int argc , char *argv[] ) {
 
-	//for ( long i = 0 ; i < 137 ; i++ ) 
-	//	printf("66.154.103.%li gk%li\n",i+36,136+i);
+	//for ( int32_t i = 0 ; i < 137 ; i++ ) 
+	//	printf("66.154.103.%"INT32" gk%"INT32"\n",i+36,136+i);
 
 	printf ("# the new hosts.conf format:\n"
 "\n"
@@ -20,18 +20,18 @@ int main ( int argc , char *argv[] ) {
 "\n"
 		);
 
-	long gk = 0;
-	for ( long i = 0 ; i < 256 ; i++ ) {
+	int32_t gk = 0;
+	for ( int32_t i = 0 ; i < 256 ; i++ ) {
 		if ( i && (i%16==0) ) gk += 16;
 		// wrap to lower rack half at 128
 		if ( i == 128 ) gk = 16;
-		printf("%03li\tgk%li\n",i,gk);
+		printf("%03"INT32"\tgk%"INT32"\n",i,gk);
 		gk++;
 	}
 
 
-	for ( long i = 256 ; i < 271 ; i++ )
-		printf ("spare\tgk%li\n",i);
+	for ( int32_t i = 256 ; i < 271 ; i++ )
+		printf ("spare\tgk%"INT32"\n",i);
 
 	printf ("#proxy\tproxy0\n");
 	printf ("#proxy\tproxy1\n");

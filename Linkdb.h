@@ -35,7 +35,7 @@
 #include "DiskPageCache.h"
 #include "Titledb.h"
 
-void  handleRequest25 ( UdpSlot *slot , long netnice ) ;
+void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) ;
 
 // . get the inlinkers to this SITE (any page on this site)
 // . use that to compute a site quality
@@ -45,7 +45,7 @@ class Msg25Request {
 public:
 	// either MODE_PAGELINKINFO or MODE_SITELINKINFO
 	char       m_mode; // bool       m_isSiteLinkInfo    ;
-	long       m_ip                ;
+	int32_t       m_ip                ;
 	int64_t  m_docId             ;
 	collnum_t  m_collnum           ;
 	bool       m_isInjecting       ;
@@ -61,23 +61,23 @@ public:
 
 	//char    *coll              ;
 	//char    *qbuf              ;
-	//long     qbufSize          ;
+	//int32_t     qbufSize          ;
 	//XmlDoc  *xd                ;
 
-	long       m_siteNumInlinks      ;
+	int32_t       m_siteNumInlinks      ;
 	class LinkInfo  *m_oldLinkInfo         ;
-	long       m_niceness            ;
+	int32_t       m_niceness            ;
 	bool       m_doLinkSpamCheck     ;
 	bool       m_oneVotePerIpDom     ;
 	bool       m_canBeCancelled      ;
-	long       m_lastUpdateTime      ;
+	int32_t       m_lastUpdateTime      ;
 	bool       m_onlyNeedGoodInlinks  ;
 	bool       m_getLinkerTitles ;
-	long       m_ourHostHash32 ;
-	long       m_ourDomHash32 ;
+	int32_t       m_ourHostHash32 ;
+	int32_t       m_ourDomHash32 ;
 
 	// new stuff
-	long       m_siteHash32;
+	int32_t       m_siteHash32;
 	int64_t  m_siteHash64;
 	int64_t  m_linkHash64;
 	// for linked list of these guys in g_lineTable in Linkdb.cpp
@@ -95,13 +95,13 @@ public:
 	char      *ptr_url;
 	char      *ptr_oldLinkInfo;
 
-	long       size_site;
-	long       size_url;
-	long       size_oldLinkInfo;
+	int32_t       size_site;
+	int32_t       size_url;
+	int32_t       size_oldLinkInfo;
 
 	char m_buf[0];
 
-	long getStoredSize();
+	int32_t getStoredSize();
 	void serialize();
 	void deserialize();
 };
@@ -114,25 +114,25 @@ bool getLinkInfo ( SafeBuf *reqBuf , // store msg25 request in here
 		   char      *site ,
 		   char      *url  ,
 		   bool       isSiteLinkInfo ,
-		   long       ip                  ,
+		   int32_t       ip                  ,
 		   int64_t  docId               ,
 		   collnum_t collnum ,
 		   char      *qbuf                ,
-		   long       qbufSize            ,
+		   int32_t       qbufSize            ,
 		   void      *state               ,
 		   void (* callback)(void *state) ,
 		   bool       isInjecting         ,
 		   SafeBuf   *pbuf                ,
 		   //class XmlDoc *xd ,
 		   bool printInXml ,
-		   long       siteNumInlinks      ,
-		   //long       sitePop             ,
+		   int32_t       siteNumInlinks      ,
+		   //int32_t       sitePop             ,
 		   LinkInfo  *oldLinkInfo         ,
-		   long       niceness            ,
+		   int32_t       niceness            ,
 		   bool       doLinkSpamCheck     ,
 		   bool       oneVotePerIpDom     ,
 		   bool       canBeCancelled      ,
-		   long       lastUpdateTime      ,
+		   int32_t       lastUpdateTime      ,
 		   bool       onlyNeedGoodInlinks  ,
 		   bool       getLinkerTitles , //= false ,
 		   // if an inlinking document has an outlink
@@ -145,21 +145,21 @@ bool getLinkInfo ( SafeBuf *reqBuf , // store msg25 request in here
 		   // on your domain or hostname. set BOTH to zero
 		   // to not perform this algo in handleRequest20()'s
 		   // call to XmlDoc::getMsg20Reply().
-		   long       ourHostHash32 , // = 0 ,
-		   long       ourDomHash32 , // = 0 );
+		   int32_t       ourHostHash32 , // = 0 ,
+		   int32_t       ourDomHash32 , // = 0 );
 		   SafeBuf *myLinkInfoBuf );
 
 
-void  handleRequest25 ( UdpSlot *slot , long netnice ) ;
+void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) ;
 
-long getSiteRank ( long sni ) ;
+int32_t getSiteRank ( int32_t sni ) ;
 
 class Linkdb {
  public:
 	void reset();
 
 	bool init    ( );
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 	bool verify  ( char *coll );
 	bool addColl ( char *coll, bool doVerify = true );
 
@@ -167,8 +167,8 @@ class Linkdb {
 			   char    *metaListEnd     ,
 			   class XmlDoc  *oldDoc          ,
 			   class XmlDoc  *newDoc          ,
-			   long     niceness        ,
-			   long    *numBytesWritten ) ;
+			   int32_t     niceness        ,
+			   int32_t    *numBytesWritten ) ;
 
 	// this makes a "url" key
 	key224_t makeKey_uk ( uint32_t  linkeeSiteHash32 ,
@@ -178,8 +178,8 @@ class Linkdb {
 			      unsigned char linkerHopCount ,
 			      uint32_t  linkerIp       ,
 			      int64_t linkerDocId    ,
-			      unsigned long      discoveryDate  ,
-			      unsigned long      lostDate       ,
+			      uint32_t      discoveryDate  ,
+			      uint32_t      lostDate       ,
 			      bool      newAddToOldPage   ,
 			      uint32_t linkerSiteHash32 ,
 			      bool      isDelete       );
@@ -234,7 +234,7 @@ class Linkdb {
 	// accessors for "url" keys in linkdb
 	//
 
-	unsigned long getLinkeeSiteHash32_uk ( key224_t *key ) {
+	uint32_t getLinkeeSiteHash32_uk ( key224_t *key ) {
 		return (key->n3) >> 32; }
 
 	uint64_t getLinkeeUrlHash64_uk ( key224_t *key ) {
@@ -261,15 +261,15 @@ class Linkdb {
 	//	return (k->n2 >> 32) & 0xff; 
 	//}
 	
-	long getLinkerIp_uk ( key224_t *k ) {
-		unsigned long ip ;
+	int32_t getLinkerIp_uk ( key224_t *k ) {
+		uint32_t ip ;
 		// the most significant part of the ip is the lower byte!!!
-		ip = (unsigned long)((k->n2>>8)&0x00ffffff);
+		ip = (uint32_t)((k->n2>>8)&0x00ffffff);
 		ip |= ((k->n2>>8) & 0xff000000);
 		return ip;
 	}
 
-	void setIp32_uk ( void *k , unsigned long ip ) {
+	void setIp32_uk ( void *k , uint32_t ip ) {
 		char *ips = (char *)&ip;
 		char *ks = (char *)k;
 		ks[16] = ips[3];
@@ -280,8 +280,8 @@ class Linkdb {
 
 
 	// we are missing the lower byte, it will be zero
-	long getLinkerIp24_uk ( key224_t *k ) {
-		return (long)((k->n2>>8)&0x00ffffff); 
+	int32_t getLinkerIp24_uk ( key224_t *k ) {
+		return (int32_t)((k->n2>>8)&0x00ffffff); 
 	}
 
 	int64_t getLinkerDocId_uk( key224_t *k ) {
@@ -293,7 +293,7 @@ class Linkdb {
 
 	// . in days since jan 1, 2012 utc
 	// . timestamp of jan 1, 2012 utc is 1325376000
-	long getDiscoveryDate_uk ( void *k ) {
+	int32_t getDiscoveryDate_uk ( void *k ) {
 		uint32_t date = ((key224_t *)k)->n1 >> 18;
 		date &= 0x00003fff;
 		// if 0 return that
@@ -308,7 +308,7 @@ class Linkdb {
 
 	// . in days since jan 1, 2012 utc
 	// . timestamp of jan 1, 2012 utc is 1325376000
-	void setDiscoveryDate_uk ( void *k , long date ) {
+	void setDiscoveryDate_uk ( void *k , int32_t date ) {
 		// subtract jan 1 2012
 		date -= LINKDBEPOCH;
 		// convert into days
@@ -321,7 +321,7 @@ class Linkdb {
 		((key224_t *)k)->n1 |= ((uint64_t)date) << 18;
 	}
 
-	long getLostDate_uk ( void *k ) {
+	int32_t getLostDate_uk ( void *k ) {
 		uint32_t date = ((key224_t *)k)->n1 >> 2;
 		date &= 0x00003fff;
 		// if 0 return that
@@ -336,7 +336,7 @@ class Linkdb {
 
 	// . in days since jan 1, 2012 utc
 	// . timestamp of jan 1, 2012 utc is 1325376000
-	void setLostDate_uk ( void *k , long date ) {
+	void setLostDate_uk ( void *k , int32_t date ) {
 		// subtract jan 1 2012
 		date -= LINKDBEPOCH;
 		// convert into days
@@ -410,7 +410,7 @@ extern class Linkdb g_linkdb2;
 
 //#define MSG25_MAX_REPLY_SIZE   1024
 
-void  handleRequest25 ( UdpSlot *slot , long netnice ) ;
+void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) ;
 
 class Msg25 {
 
@@ -427,12 +427,12 @@ class Msg25 {
 	bool getLinkInfo2 (char      *site ,
 			   char      *url  ,
 			   bool       isSiteLinkInfo ,
-			   long       ip                  ,
+			   int32_t       ip                  ,
 			   int64_t  docId               ,
 			   //char      *coll                ,
 			   collnum_t collnum,
 			   char      *qbuf                ,
-			   long       qbufSize            ,
+			   int32_t       qbufSize            ,
 			   void      *state               ,
 			   void (* callback)(void *state) ,
 			   bool       isInjecting         ,
@@ -440,14 +440,14 @@ class Msg25 {
 			   bool       printDebugMsgs , // into "Msg25::m_pbuf"
 			   //class XmlDoc *xd ,
 			   bool       printInXml ,
-			   long       siteNumInlinks      ,
-			   //long       sitePop             ,
+			   int32_t       siteNumInlinks      ,
+			   //int32_t       sitePop             ,
 			   LinkInfo  *oldLinkInfo         ,
-			   long       niceness            ,
+			   int32_t       niceness            ,
 			   bool       doLinkSpamCheck     ,
 			   bool       oneVotePerIpDom     ,
 			   bool       canBeCancelled      ,
-			   long       lastUpdateTime      ,
+			   int32_t       lastUpdateTime      ,
 			   bool       onlyNeedGoodInlinks  ,
 			   bool       getLinkerTitles , //= false ,
 			   // if an inlinking document has an outlink
@@ -460,8 +460,8 @@ class Msg25 {
 			   // on your domain or hostname. set BOTH to zero
 			   // to not perform this algo in handleRequest20()'s
 			   // call to XmlDoc::getMsg20Reply().
-			   long       ourHostHash32 , // = 0 ,
-			   long       ourDomHash32 , // = 0 );
+			   int32_t       ourHostHash32 , // = 0 ,
+			   int32_t       ourDomHash32 , // = 0 );
 			   SafeBuf *myLinkInfoBuf );
 	Msg25();
 	~Msg25();
@@ -489,7 +489,7 @@ class Msg25 {
 	class Msg20Reply *getLoser (class Msg20Reply *r, class Msg20Reply *p);
 	char             *isDup    (class Msg20Reply *r, class Msg20Reply *p);
 
-	bool addNote ( char *note , long noteLen , int64_t docId );
+	bool addNote ( char *note , int32_t noteLen , int64_t docId );
 
 	//class LinkInfo *getLinkInfo () { return m_linkInfo; };
 
@@ -511,7 +511,7 @@ class Msg25 {
 	bool gotList     ( ) ;
 	bool gotClusterRecs ( ) ;
 	bool sendRequests ( );
-	bool gotLinkText  ( class Msg20Request *req ) ; //long j );
+	bool gotLinkText  ( class Msg20Request *req ) ; //int32_t j );
 	bool gotMsg25Reply ( ) ;
 	bool doReadLoop ( );
 
@@ -521,10 +521,10 @@ class Msg25 {
 	char *m_url;
 	char *m_site;
 
-	long m_ourHostHash32;
-	long m_ourDomHash32;
+	int32_t m_ourHostHash32;
+	int32_t m_ourDomHash32;
 
-	long m_round;
+	int32_t m_round;
 	uint64_t m_linkHash64;
 	key224_t m_nextKey;
 
@@ -535,28 +535,28 @@ class Msg25 {
 	int64_t  m_docId;
 	//char      *m_coll;
 	collnum_t m_collnum;
-	//long       m_collLen;
+	//int32_t       m_collLen;
 	//LinkInfo  *m_linkInfo;
 	void      *m_state;
 	void     (* m_callback) ( void *state );
 
-	long m_siteNumInlinks;
-	//long m_sitePop;
-	long m_mode;
+	int32_t m_siteNumInlinks;
+	//int32_t m_sitePop;
+	int32_t m_mode;
 	bool m_printInXml;
 	//class XmlDoc  *m_xd;
 
 	// private:
 
 	// url info
-	long m_ip;
-	long m_top;
-	long m_midDomHash;
+	int32_t m_ip;
+	int32_t m_top;
+	int32_t m_midDomHash;
 
 	bool m_gettingList;
 
 	// hack for seo pipeline in xmldoc.cpp
-	long m_hackrd;
+	int32_t m_hackrd;
 	
 	// . we use Msg0 to get an indexList for href: terms 
 	// . the href: IndexList's docIds are docs that link to us
@@ -571,7 +571,7 @@ class Msg25 {
 	// for getting the root title rec so we can share its pwids
 	Msg22 m_msg22;
 
-	long      m_maxNumLinkers;
+	int32_t      m_maxNumLinkers;
 
 	// should we free the m_replyPtrs on destruction? default=true
 	bool m_ownReplies;
@@ -580,8 +580,8 @@ class Msg25 {
 	// We point to them with a LinkTextReply, which is just a pointer
 	// and some access functions. 
  	Msg20Reply    *m_replyPtrs  [ MAX_LINKERS ];
-	long           m_replySizes [ MAX_LINKERS ];
-	long           m_numReplyPtrs;
+	int32_t           m_replySizes [ MAX_LINKERS ];
+	int32_t           m_numReplyPtrs;
 
 	//LinkText *m_linkTexts [ MAX_LINKERS ];
 	Msg20        m_msg20s        [ MAX_MSG20_OUTSTANDING ];
@@ -599,28 +599,28 @@ class Msg25 {
 	// make this dynamic as well! (see m_docIds comment above)
 	//char      m_scores    [ MAX_DOCIDS_TO_SAMPLE ];
 
-	long      m_numDocIds;
-	long      m_cblocks;
-	long      m_uniqueIps;
+	int32_t      m_numDocIds;
+	int32_t      m_cblocks;
+	int32_t      m_uniqueIps;
 
 	// new stuff for getting term freqs for really huge links: termlists
 	//int64_t m_termId;
 	//Msg42     m_msg42;
-	long      m_minRecSizes;
-	//long      m_termFreq;
+	int32_t      m_minRecSizes;
+	//int32_t      m_termFreq;
 
 	// Msg20 is for getting the LinkInfo class from this same url's
 	// titleRec from another (usually much larger) gigablast cluster/netwrk
 	Msg20     m_msg20; 
 
 	// how many msg20s have we sent/recvd?
-	long      m_numRequests;
-	long      m_numReplies;  
+	int32_t      m_numRequests;
+	int32_t      m_numReplies;  
 
-	long      m_linkSpamOut;
+	int32_t      m_linkSpamOut;
 
 	// have we had an error for any transaction?
-	long      m_errno;
+	int32_t      m_errno;
 
 	// this is used for link ban checks
 	//Msg18     m_msg18;
@@ -636,38 +636,38 @@ class Msg25 {
 	bool  m_doLinkSpamCheck           ;
 	bool  m_isInjecting               ;
 	char  m_canBeCancelled            ;
-	long  m_lastUpdateTime            ;
+	int32_t  m_lastUpdateTime            ;
 
 	Multicast m_mcast;
 
 	//char **m_statusPtr;
 
-	long m_good;
-	long m_errors;
-	long m_noText;
-	long m_reciprocal;
+	int32_t m_good;
+	int32_t m_errors;
+	int32_t m_noText;
+	int32_t m_reciprocal;
 
 	bool m_spideringEnabled;
 
 	//TermTable m_ipTable;
-	//long      m_ipdups;
-	long      m_dupCount;
-	long      m_vectorDups;
-	long      m_spamLinks;
-	long      m_niceness;
-	long      m_numFromSameIp;
-	long      m_sameMidDomain;
+	//int32_t      m_ipdups;
+	int32_t      m_dupCount;
+	int32_t      m_vectorDups;
+	int32_t      m_spamLinks;
+	int32_t      m_niceness;
+	int32_t      m_numFromSameIp;
+	int32_t      m_sameMidDomain;
 
 	// stats for allow some link spam inlinks to vote
-	long m_spamCount;
-	long m_spamWeight;
-	long m_maxSpam;
+	int32_t m_spamCount;
+	int32_t m_spamWeight;
+	int32_t m_maxSpam;
 
 	char m_siteQuality;
-	long m_siteNumFreshInlinks;
+	int32_t m_siteNumFreshInlinks;
 
 	// this is used for the linkdb list
-	//HashTableT <long, char> m_ipTable;
+	//HashTableT <int32_t, char> m_ipTable;
 	HashTableX m_ipTable;
 	HashTableX m_fullIpTable;
 	HashTableX m_firstIpTable;
@@ -678,13 +678,13 @@ class Msg25 {
 	HashTableX m_docIdTable;
 
 	// special counts
-	long      m_ipDupsLinkdb;
-	long      m_docIdDupsLinkdb;
-	long      m_linkSpamLinkdb;
-	long      m_lostLinks;
-	long      m_ipDups;
+	int32_t      m_ipDupsLinkdb;
+	int32_t      m_docIdDupsLinkdb;
+	int32_t      m_linkSpamLinkdb;
+	int32_t      m_lostLinks;
+	int32_t      m_ipDups;
 
-	unsigned long  m_groupId;
+	uint32_t  m_groupId;
 	int64_t      m_probDocId;
 
 	LinkInfo *m_oldLinkInfo;
@@ -695,7 +695,7 @@ class Msg25 {
 	HashTableX m_table;
 
 	char      m_request [ MSG25_MAX_REQUEST_SIZE ];
-	long      m_requestSize;
+	int32_t      m_requestSize;
 
 	//char      m_replyBuf [ MSG25_MAX_REQUEST_SIZE ];
 
@@ -707,14 +707,14 @@ class Msg25 {
 	// for setting <absScore2> or determining if a search results 
 	// inlinkers also have the query terms. buzz.
 	char *m_qbuf;
-	long  m_qbufSize;
+	int32_t  m_qbufSize;
 };
 
 // used by Msg25::addNote()
 #define MAX_ENTRY_DOCIDS 10
 class NoteEntry {
 public:
-	long             m_count;
+	int32_t             m_count;
 	char            *m_note;
 	int64_t        m_docIds[MAX_ENTRY_DOCIDS];
 };
@@ -733,28 +733,28 @@ class LinkInfo {
 
  public:
 
-	long   getStoredSize  ( ) { return m_size; };
-	long   getSize        ( ) { return m_size; };
+	int32_t   getStoredSize  ( ) { return m_size; };
+	int32_t   getSize        ( ) { return m_size; };
 	time_t getLastUpdated ( ) { return m_lastUpdated; };
 
-	//long   getNumTotalInlinks   ( ) { 
+	//int32_t   getNumTotalInlinks   ( ) { 
 	//	if ( this == NULL ) return 0; return m_numTotalInlinks; };
-	long   getNumLinkTexts ( ) { 
+	int32_t   getNumLinkTexts ( ) { 
 		if ( this == NULL ) return 0; return m_numStoredInlinks; };
 
-	long   getNumGoodInlinks   ( ) { 
+	int32_t   getNumGoodInlinks   ( ) { 
 		if ( this == NULL ) return 0; return m_numGoodInlinks; };
 
 	// how many of the inlinks are from the same ip top?
-	//long   getNumInternalInlinks( ) { 
+	//int32_t   getNumInternalInlinks( ) { 
 	//	if ( this == NULL ) return 0; return m_numInlinksInternal; };
 
 	// how many inlinks are from a different ip top?
-	//long   getNumExternalInlinks( ) { 
+	//int32_t   getNumExternalInlinks( ) { 
 	//	if ( this == NULL ) return 0; 
 	//	return m_numInlinks - m_numInlinksInternal; };
 
-	//long   getNumInlinksExtrapolated ( ){
+	//int32_t   getNumInlinksExtrapolated ( ){
 	//	if ( this == NULL ) return 0;return m_numInlinksExtrapolated;};
 
 	// update them for each Inlink. calls for each Inlink.
@@ -766,28 +766,28 @@ class LinkInfo {
 	// do not call this one
 	class Inlink *getNextInlink2 ( class Inlink *k ) ;
 
-	bool getItemXml ( Xml *xml , long niceness ) ;
+	bool getItemXml ( Xml *xml , int32_t niceness ) ;
 
 	bool hasLinkText ( );
 
 	/*
 	bool hash ( TermTable      *table                  ,
-		    long            externalLinkTextWeight ,
-		    long            internalLinkTextWeight ,
-		    long            ip                     ,
-		    long            version                ,
-		    long            siteNumInlinks         ,
+		    int32_t            externalLinkTextWeight ,
+		    int32_t            internalLinkTextWeight ,
+		    int32_t            ip                     ,
+		    int32_t            version                ,
+		    int32_t            siteNumInlinks         ,
 		    TermTable      *countTable             ,
 		    char           *note                   ,
-		    long            niceness               ) ;
+		    int32_t            niceness               ) ;
 	*/
 
 	// for PageTitledb
 	bool print ( class SafeBuf *sb , char *coll );
 
-	// adds up the page pops of the inlinkers as long as they are from
+	// adds up the page pops of the inlinkers as int32_t as they are from
 	// a different site than "u" is
-	//long computePagePop ( class Url *u , char *coll ) ;
+	//int32_t computePagePop ( class Url *u , char *coll ) ;
 
 	bool hasRSSItem();
 
@@ -798,29 +798,29 @@ class LinkInfo {
 	char       m_numInlinksInternal;
 	char       m_reserved1; // was m_siteRootQuality
 	char       m_reserved2;
-	long       m_size;
+	int32_t       m_size;
 	time_t     m_lastUpdated;
 	// this is precisely how many inlinks we stored in m_buf[] below
-	long       m_numStoredInlinks;//m_numTotalInlinks;
+	int32_t       m_numStoredInlinks;//m_numTotalInlinks;
 	// . only valid if titleRec version >= 119, otherwise its always 0
 	// . this count includes internal as well as external links, i.e. just
 	//   the total inlinks we got, counting at most one inlink per page. 
 	//   it is not very useful i guess, but steve wants it.
-	long       m_totalInlinkingDocIds;//reserved3;
+	int32_t       m_totalInlinkingDocIds;//reserved3;
 	// . how many inlinks did we have that were "good"?
 	// . this is typically less than the # of Inlinks stored in m_buf below
 	//   because it does not include internal cblock inlinks
-	long       m_numGoodInlinks;
+	int32_t       m_numGoodInlinks;
 	// . # of c blocks linking to this page/site
 	// . only valid if titlerecversion >= 119
 	// . includes your own intenral cblock
-	long       m_numUniqueCBlocks;//m_pagePop;
+	int32_t       m_numUniqueCBlocks;//m_pagePop;
 	// . # of IPs linking to this page/site
 	// . only valid if titlerecversion >= 119
 	// . includes your own internal ip
-	long       m_numUniqueIps;//numInlinksFresh; // was m_reserved3;
-	//long       m_sitePop;
-	//long       m_siteNumInlinks;
+	int32_t       m_numUniqueIps;//numInlinksFresh; // was m_reserved3;
+	//int32_t       m_sitePop;
+	//int32_t       m_siteNumInlinks;
 
 	// serialize "Inlinks" into this buffer, m_buf[]
 	char   m_buf[0];
@@ -831,13 +831,13 @@ class Inlink { // : public Msg {
 
  public:
 
-	long  *getFirstSizeParm () { return &size_urlBuf; };
-	long  *getLastSizeParm  () { return &size_rssItem; };
+	int32_t  *getFirstSizeParm () { return &size_urlBuf; };
+	int32_t  *getLastSizeParm  () { return &size_rssItem; };
 	char **getFirstStrPtr   () { return &ptr_urlBuf; };
-	long   getBaseSize      () { return sizeof(Inlink);};
+	int32_t   getBaseSize      () { return sizeof(Inlink);};
 	char  *getStringBuf     () { return m_buf; };
 
-	long getBaseNumStrings() { 
+	int32_t getBaseNumStrings() { 
 		return (char **)&size_urlBuf - (char **)&ptr_urlBuf; };
 	
 	// zero ourselves out
@@ -848,7 +848,7 @@ class Inlink { // : public Msg {
 	// set ourselves from a serialized older-versioned Inlink
 	void set2 ( class Inlink *old );
 
-	bool setXmlFromRSS      ( Xml *xml , long niceness ) ;
+	bool setXmlFromRSS      ( Xml *xml , int32_t niceness ) ;
 	//bool setXmlFromLinkText ( Xml *xml ) ;
 
 	// . set a Msg20Reply from ourselves
@@ -856,44 +856,44 @@ class Inlink { // : public Msg {
 	// . allows us to preserve ptr_rssInfo, etc.
 	void setMsg20Reply ( class Msg20Reply *r ) ;
 
-	long getStoredSize ( ) ;
+	int32_t getStoredSize ( ) ;
 
 	// . return ptr to the buffer we serialize into
 	// . return NULL and set g_errno on error
-	char *serialize ( long *retSize     ,
+	char *serialize ( int32_t *retSize     ,
 			  char *userBuf     ,
-			  long  userBufSize ,
+			  int32_t  userBufSize ,
 			  bool  makePtrsRefNewBuf ) ;
 
-	long updateStringPtrs ( char *buf );
+	int32_t updateStringPtrs ( char *buf );
 
 	// returns a ptr into a static buffer
-	char *getLinkTextAsUtf8 ( long *len = NULL ) ;
+	char *getLinkTextAsUtf8 ( int32_t *len = NULL ) ;
 
-	long       m_ip                  ;
+	int32_t       m_ip                  ;
 	int64_t  m_docId               ;
-	long       m_firstSpidered       ;
-	long       m_lastSpidered        ;
-	long	   m_nextSpiderDate	 ;
+	int32_t       m_firstSpidered       ;
+	int32_t       m_lastSpidered        ;
+	int32_t	   m_nextSpiderDate	 ;
 	// like in the titleRec, the lower 2 bits of the datedbDate have
 	// special meaning. 
 	// 0x00 --> datedb date extracted from content (pubdate)
 	// 0x01 --> datedb date based on estimated "modified" time (moddate)
 	// 0x10 --> datedb date is when same-site root was estimated to have
 	//          first added that url as an outlink (discoverdate) (TODO)
-	long       m_datedbDate          ;
+	int32_t       m_datedbDate          ;
 	// this date is used as the discovery date for purposes of computing
 	// LinkInfo::m_numInlinksFresh
-	long       m_firstIndexedDate    ;
-	//long       m_baseScore           ;
-	long       m_pageNumInlinks      ;
-	long       m_siteNumInlinks      ;
+	int32_t       m_firstIndexedDate    ;
+	//int32_t       m_baseScore           ;
+	int32_t       m_pageNumInlinks      ;
+	int32_t       m_siteNumInlinks      ;
 	// record the word position we hashed this link text with
 	// so we can match it to the DocIdScoringInfo stuff
-	long       m_wordPosStart;//reservedc;//pagePop             ;
-	long       m_firstIp;//wordPosEnd;//reservedd;//sitePop             ;
+	int32_t       m_wordPosStart;//reservedc;//pagePop             ;
+	int32_t       m_firstIp;//wordPosEnd;//reservedd;//sitePop             ;
 
-	// . long     m_reserved1           ;
+	// . int32_t     m_reserved1           ;
 	// . how many strings do we have?
 	// . makes it easy to add new strings later
 	uint16_t   m_numStrings          ;
@@ -908,9 +908,9 @@ class Inlink { // : public Msg {
 	// we compute the site in SiteGetter.cpp, so it is more complicated!!!
 	// we get the tag rec of each outlink, and get the site from that
 	// and hash that and store it here
-	long       m_siteHash            ; // www.hompages.com/~fred/
-	//long     m_hostHash            ; // www.ibm.com
-	//long     m_midDomHash          ; // the ibm in ibm.com
+	int32_t       m_siteHash            ; // www.hompages.com/~fred/
+	//int32_t     m_hostHash            ; // www.ibm.com
+	//int32_t     m_midDomHash          ; // the ibm in ibm.com
 
 	// single bit flags
 	uint16_t   m_isPermalink      : 1 ;
@@ -973,7 +973,7 @@ class Inlink { // : public Msg {
 	// . comma-separated (in ascii)
 	char      *ptr_categories        ;
 	// . augments our own gigabits vector, used for finding related docs
-	// . used along with the template vector for deduping pgs at index time
+	// . used aint32_t with the template vector for deduping pgs at index time
 	// . now we used for finding similar docs AND categorizing
 	// . comma-separated
 	// . each gigabit has a count in []'s. score in body x1, title x5,
@@ -982,7 +982,7 @@ class Inlink { // : public Msg {
 	char      *ptr_gigabitQuery      ;
 	// . the html tag vector. 
 	// . used for deduping voters (anti-spam tech)
-	// . used along with the gigabit vector for deduping pgs at index time
+	// . used aint32_t with the gigabit vector for deduping pgs at index time
 	// . now we used for finding similar docs and for categorizing (spam)
 	char      *ptr_templateVector    ;
 
@@ -990,13 +990,13 @@ class Inlink { // : public Msg {
 	// add new strings right above this line
 	//
 
-	long       size_urlBuf           ;
-	long       size_linkText         ;
-	long       size_surroundingText  ;
-	long       size_rssItem          ;
-	long       size_categories       ;
-	long       size_gigabitQuery     ;
-	long       size_templateVector   ;
+	int32_t       size_urlBuf           ;
+	int32_t       size_linkText         ;
+	int32_t       size_surroundingText  ;
+	int32_t       size_rssItem          ;
+	int32_t       size_categories       ;
+	int32_t       size_gigabitQuery     ;
+	int32_t       size_templateVector   ;
 
 
 	char       m_buf[0]              ;
@@ -1006,21 +1006,21 @@ class Inlink { // : public Msg {
 //   to create a new LinkInfo based on a bunch of Msg20 replies
 // . returns NULL and sets g_errno on error
 LinkInfo *makeLinkInfo ( char        *coll                    ,
-			 long         ip                      ,
+			 int32_t         ip                      ,
 			 //char       siteRootQuality         ,
-			 //long         sitePop                 ,
-			 long         siteNumInlinks          ,
+			 //int32_t         sitePop                 ,
+			 int32_t         siteNumInlinks          ,
 			 Msg20Reply **replies                 ,
-			 long         numReplies              ,
-			 //long         extrapolated            ,
-			 //long         xfactor                 ,
+			 int32_t         numReplies              ,
+			 //int32_t         extrapolated            ,
+			 //int32_t         xfactor                 ,
 			 // if link spam give this weight
-			 long         spamWeight              ,
+			 int32_t         spamWeight              ,
 			 bool         oneVotePerIpTop         ,
 			 int64_t    linkeeDocId             ,
-			 long         lastUpdateTime          ,
+			 int32_t         lastUpdateTime          ,
 			 bool         onlyNeedGoodInlinks      ,
-			 long         niceness                ,
+			 int32_t         niceness                ,
 			 class Msg25 *msg25 ,
 			 SafeBuf *linkInfoBuf ) ;
 
@@ -1028,7 +1028,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 // . Msg20 uses this to set the LinkInfo class to the "outlinks"
 // . if an outlink has no docid, it is not stored, because it was
 //   therefore not in the index.
-LinkInfo *makeLinkInfo ( class MsgE *m , long niceness ) ;
+LinkInfo *makeLinkInfo ( class MsgE *m , int32_t niceness ) ;
 
 
 ////////
@@ -1037,8 +1037,8 @@ LinkInfo *makeLinkInfo ( class MsgE *m , long niceness ) ;
 //
 ////////
 
-//typedef short linkflags_t;
-typedef long linkflags_t;
+//typedef int16_t linkflags_t;
+typedef int32_t linkflags_t;
 
 // all the links (urls), separated by \0's, are put into a buf of this size
 #define LINK_BUF_SIZE (100*1024)
@@ -1052,9 +1052,9 @@ typedef long linkflags_t;
 //class MiniSiteRec {
 //public:
 //	bool hadRec() { return m_flags & MSR_HAD_REC; };
-//	short    m_siteOffset;
-//	short    m_siteLen;
-//	long     m_filenum;
+//	int16_t    m_siteOffset;
+//	int16_t    m_siteLen;
+//	int32_t     m_filenum;
 //	uint8_t  m_flags;
 //	char     m_siteQuality;
 //	SiteType m_types[NUM_TYPES_IN_MSR];
@@ -1106,8 +1106,8 @@ public:
 		   bool setLinkHashes ,
 		   // use NULL for this if you do not have a baseUrl
 		   Url *baseUrl , 
-		   long version, 
-		   long niceness ,
+		   int32_t version, 
+		   int32_t niceness ,
 		   //bool addSiteRootFlag = false ,
 		   //char *coll           = NULL  ,
 		   bool  parentIsPermalink , // = false ,
@@ -1117,29 +1117,29 @@ public:
 		   bool doQuickSet = false );
 
 	// set from a simple text buffer
-	bool set ( char *buf , long niceness ) ;
+	bool set ( char *buf , int32_t niceness ) ;
 
 	// Link in ascii text
-	bool addLink(char *link,long linkLen,long nodeNum,bool setLinkHashes,
-		     long titleRecVersion, long niceness , bool isRSS ,
-		     long tagId , linkflags_t flagsArg );
+	bool addLink(char *link,int32_t linkLen,int32_t nodeNum,bool setLinkHashes,
+		     int32_t titleRecVersion, int32_t niceness , bool isRSS ,
+		     int32_t tagId , linkflags_t flagsArg );
 
 	// . link spam functions. used by linkspam.cpp's setLinkSpam().
 	// . also used by Linkdb.cpp to create a linkdb list to add to rdb
 	// . we do not add outlinks to linkdb if they are "link spam"
 	bool setAllSpamBits ( char *note ) { m_spamNote = note; return true; }
-	void setSpamBit  ( char *note , long i ) { m_spamNotes[i] = note; }
-	void setSpamBits ( char *note , long i ) { 
-		for (long j=i ; j<m_numLinks ; j++) m_spamNotes[j] = note;};
+	void setSpamBit  ( char *note , int32_t i ) { m_spamNotes[i] = note; }
+	void setSpamBits ( char *note , int32_t i ) { 
+		for (int32_t j=i ; j<m_numLinks ; j++) m_spamNotes[j] = note;};
 	// . m_spamNote is set if it is ALL link spam... set above
 	// . internal outlinks are never considered link spam since we "dedup"
 	//   them by ip in Msg25/LinkInfo::merge() anyway
-	bool isLinkSpam ( long i ) { 
+	bool isLinkSpam ( int32_t i ) { 
 		if ( isInternalDom(i) ) return false; 
 		if ( m_spamNote       ) return true; 
 		return m_spamNotes[i]; 
 	}
-	const char *getSpamNote ( long i ) {
+	const char *getSpamNote ( int32_t i ) {
 	        if ( isInternalDom(i) ) return "good";
 		if ( m_spamNote       ) return m_spamNote;
 		if ( m_spamNotes[i]   ) return m_spamNotes[i];
@@ -1148,14 +1148,14 @@ public:
 
 	// for spidering links purposes, we consider "internal" to be same 
 	// hostname
-	bool isInternal     ( long i ) {return (m_linkFlags[i] & LF_SAMEHOST);}
-	bool isInternalHost ( long i ) {return (m_linkFlags[i] & LF_SAMEHOST);}
+	bool isInternal     ( int32_t i ) {return (m_linkFlags[i] & LF_SAMEHOST);}
+	bool isInternalHost ( int32_t i ) {return (m_linkFlags[i] & LF_SAMEHOST);}
 
 	// we do not subjugate same domain links to link spam detection in
 	// linkspam.cpp::setLinkSpam()
-	bool isInternalDom  ( long i ) { return (m_linkFlags[i] & LF_SAMEDOM);}
+	bool isInternalDom  ( int32_t i ) { return (m_linkFlags[i] & LF_SAMEDOM);}
 
-	bool isOld ( long i ) { return m_linkFlags[i] & LF_OLDLINK; };
+	bool isOld ( int32_t i ) { return m_linkFlags[i] & LF_OLDLINK; };
 
 	// remove all links from the link buf that do not have the same 
 	// hostname as "url". Used in Msg14 to avoid adding such links and 
@@ -1179,77 +1179,77 @@ public:
 	bool hash ( TermTable *table , // SiteRec *sr ,
 		    Url *url , 
 		    Url *redirUrl , 
-		    long version, 
-		    long niceness ,
+		    int32_t version, 
+		    int32_t niceness ,
 		    bool isRSSFeed );
 	*/
 
 	// hash for Linkdb keys
 	//bool hash ( class HashTableX *dt , // <key128_t,char> *dt ,
 	//	    class XmlDoc     *xd ,
-	//	    long        niceness );
+	//	    int32_t        niceness );
 
 	// . does link #n have link text that has at least 1 alnum char in it?
 	// . used for scoring link: terms to make link-text adds more efficient
-	bool hasLinkText ( long n, long version );
+	bool hasLinkText ( int32_t n, int32_t version );
 
 	// . returns false on error and sets errno
 	// . get our outgoing link text for this url
 	// . store it into "buf"
-	long getLinkText ( char  *linkee ,
+	int32_t getLinkText ( char  *linkee ,
 			   bool   getSiteLinkInfo ,
 			   char  *buf       ,
-			   long   maxBufLen ,
+			   int32_t   maxBufLen ,
 			   //bool   filter    ,
 			   char **itemPtr   ,
-			   long  *itemLen   ,
-			   long   *retNode1 , // = NULL ,
-			   long   *retLinkNum ,
-			   long    niceness );
+			   int32_t  *itemLen   ,
+			   int32_t   *retNode1 , // = NULL ,
+			   int32_t   *retLinkNum ,
+			   int32_t    niceness );
 
-	long getLinkText2 ( long i,
+	int32_t getLinkText2 ( int32_t i,
 			   char  *buf       ,
-			   long   maxBufLen ,
+			   int32_t   maxBufLen ,
 			   //bool   filter    ,
 			   char **itemPtr   ,
-			   long  *itemLen   ,
-			   long   *retNode1 , // = NULL ,
-			   long    niceness );
+			   int32_t  *itemLen   ,
+			   int32_t   *retNode1 , // = NULL ,
+			   int32_t    niceness );
 
 	// quick n dirty check for substrings in linktext
-	char *linkTextSubstr(long linkNum, char *string, long niceness);
+	char *linkTextSubstr(int32_t linkNum, char *string, int32_t niceness);
 
 	// returns list of \0 terminated, normalized links
 	char          *getLinkBuf    () { 
 		return m_allocBuf; 
 	};
-	long           getLinkBufLen () { 
+	int32_t           getLinkBufLen () { 
 		if ( m_allocBuf ) return m_bufPtr - m_allocBuf;
 		return 0;
 		//return m_allocBuf?m_bufPtr-m_allocBuf:0; 
 	};
-	//unsigned long *getLinkHashes () { return m_linkHashes; };
-	long           getNumLinks   () { return m_numLinks; };
+	//uint32_t *getLinkHashes () { return m_linkHashes; };
+	int32_t           getNumLinks   () { return m_numLinks; };
 
 	// was there a link to gigablast.com or www.gigablast.com?
 	bool           linksToGigablast() { return m_linksToGigablast; };
 
-	long           getLinkLen    ( long i ) { return m_linkLens  [i]; };
-	char          *getLink       ( long i ) { return m_linkPtrs  [i]; };
-	char          *getLinkPtr    ( long i ) { return m_linkPtrs  [i]; };
-	uint32_t       getLinkHash32 ( long i ) { 
+	int32_t           getLinkLen    ( int32_t i ) { return m_linkLens  [i]; };
+	char          *getLink       ( int32_t i ) { return m_linkPtrs  [i]; };
+	char          *getLinkPtr    ( int32_t i ) { return m_linkPtrs  [i]; };
+	uint32_t       getLinkHash32 ( int32_t i ) { 
 		return (uint32_t)m_linkHashes[i]; };
-	uint64_t       getLinkHash64 ( long i ) { return m_linkHashes[i]; };
-	uint64_t       getHostHash64 ( long i ) { return m_hostHashes[i]; };
-	long           getDomHash32  ( long i ) { return m_domHashes[i]; };
-	long           getNodeNum    ( long i ) { return m_linkNodes[i];  };
+	uint64_t       getLinkHash64 ( int32_t i ) { return m_linkHashes[i]; };
+	uint64_t       getHostHash64 ( int32_t i ) { return m_hostHashes[i]; };
+	int32_t           getDomHash32  ( int32_t i ) { return m_domHashes[i]; };
+	int32_t           getNodeNum    ( int32_t i ) { return m_linkNodes[i];  };
 	bool hasRelNoFollow() { return m_hasRelNoFollow; };
 
-	char *getLinkHost ( long i , long *hostLen ) ;
+	char *getLinkHost ( int32_t i , int32_t *hostLen ) ;
 
-	long findLinkNum(char* url, long urlLen);
+	int32_t findLinkNum(char* url, int32_t urlLen);
 
-	long getMemUsed () { return m_allocSize; };
+	int32_t getMemUsed () { return m_allocSize; };
 
 	bool hasSelfPermalink ( ) { return m_hasSelfPermalink; };
 	bool hasRSSOutlink    ( ) { return m_hasRSSOutlink; };
@@ -1266,14 +1266,14 @@ public:
 			      class XmlDoc    *old         ,
 			      char           *coll         ,
 			      class MsgE     *msge         ,
-			      long            niceness     ,
+			      int32_t            niceness     ,
 			      Url            *quickLink         = NULL  ,
 			      linkflags_t     quickLinkFlags    = 0     ,
 			      bool            isAddUrl          = false ,
 			      bool            forceAll          = false ,
 			      bool            skipExternalLinks = false ,
 			      bool            unforceAll        = false ,
-			      long            explicitPriority  = -1    );
+			      int32_t            explicitPriority  = -1    );
 	*/
 
 	// private:
@@ -1284,7 +1284,7 @@ public:
 	bool   m_parentIsPermalink;
 
 	char  *m_baseSite;
-	long   m_baseSiteLen;
+	int32_t   m_baseSiteLen;
 
 	// set <base href>, if any, into m_tmpUrl so m_baseUrl can point to it
 	Url    m_tmpUrl;
@@ -1297,7 +1297,7 @@ public:
 	// pointer to the end of the buffer
 	char  *m_bufPtr;
 	// running count of the bufsize, including static and dynamic
-	// long   m_bufSize; 
+	// int32_t   m_bufSize; 
 
 	// this is non-NULL if all outlinks are considered link spam, 
 	// otherwise, individual outlinks will have their m_spamNotes[i] be
@@ -1306,11 +1306,11 @@ public:
 	char  *m_spamNote;
 
 	char          **m_linkPtrs;//   [MAX_LINKS];
-	long           *m_linkLens;//   [MAX_LINKS];
-	long           *m_linkNodes;//  [MAX_LINKS];
+	int32_t           *m_linkLens;//   [MAX_LINKS];
+	int32_t           *m_linkNodes;//  [MAX_LINKS];
 	uint64_t       *m_linkHashes;// [MAX_LINKS];
 	uint64_t       *m_hostHashes;// [MAX_LINKS];
-	long           *m_domHashes;// [MAX_LINKS];
+	int32_t           *m_domHashes;// [MAX_LINKS];
 	linkflags_t    *m_linkFlags;
 	char           *m_linkContactyTypes; // for XmlDoc's isContacty() algo
 	char          **m_spamNotes;
@@ -1322,9 +1322,9 @@ public:
 	bool           m_isFeedBurner;
 
 	char          *m_linkBuf;
-	long           m_allocLinks;
-	long           m_numLinks;
-	long           m_numNodes;
+	int32_t           m_allocLinks;
+	int32_t           m_numLinks;
+	int32_t           m_numNodes;
 
 	// . should we extract redirects from links? (like for yahoo's links)
 	// . this is set based on the SiteRec
@@ -1336,11 +1336,11 @@ public:
 
 	bool m_stripIds;
 	
-	unsigned long  m_allocSize;
+	uint32_t  m_allocSize;
 	char          *m_allocBuf;
 
 	// queue the blog roll links into the turk for voting
-	bool queueBlogRoll ( class TagRec **tagRecPtrs , long niceness ) ;
+	bool queueBlogRoll ( class TagRec **tagRecPtrs , int32_t niceness ) ;
 	bool  m_addSiteRootFlags;
 	char *m_coll;
 
@@ -1350,28 +1350,28 @@ public:
 	char  m_hasRSSOutlink;
 	char  m_hasSubdirOutlink;
 	char *m_rssOutlinkPtr;
-	long  m_rssOutlinkLen;
+	int32_t  m_rssOutlinkLen;
 
 	// . returns  0 if probably not a permalink
 	// . returns  1 if probably is a permalink
 	// . returns -1 if not enough information to make a decision
 	char isPermalink ( char **note ) { return -1; };
 
-	long m_numOutlinksAdded;
+	int32_t m_numOutlinksAdded;
 };
 
-long getRegExpNumOfOutlink ( Url           *up              ,
+int32_t getRegExpNumOfOutlink ( Url           *up              ,
 			     linkflags_t    linkFlags       ,
 			     TagRec        *tagRec          ,
-			     long           quality         ,
-			     long           ip              ,
+			     int32_t           quality         ,
+			     int32_t           ip              ,
 			     CollectionRec *cr              ,
 			     Url           *parentUrl       ,
-			     long           sourceHostHash  ,
-			     long           parentHopCount  ,
-			     long           parentPriority  ,
-			     long           hopCount        , // our hop count
-			     long           h               , // hostHash
+			     int32_t           sourceHostHash  ,
+			     int32_t           parentHopCount  ,
+			     int32_t           parentPriority  ,
+			     int32_t           hopCount        , // our hop count
+			     int32_t           h               , // hostHash
 			     bool           newOutlink      , // are we new?
 			     bool           isAddUrl        , // from addUrl?
 			     // use -1 if unknown for these 3 values

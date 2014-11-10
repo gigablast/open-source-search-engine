@@ -59,7 +59,7 @@ class LanguagePages {
 		/// @param *len if not NULL, filled with the length of the page text
 		///
 		/// @return the page text, or NULL if no entry
-		uint8_t *getLanguagePage(uint8_t lang, long *len = NULL);
+		uint8_t *getLanguagePage(uint8_t lang, int32_t *len = NULL);
 
 		/// Returns header text for a given language.
 		///
@@ -67,7 +67,7 @@ class LanguagePages {
 		/// @param *len if not NULL, filled with the length of the header text
 		///
 		/// @return the header text, or NULL if no entry
-		uint8_t *getLanguageHeader(uint8_t lang, long *len = NULL);
+		uint8_t *getLanguageHeader(uint8_t lang, int32_t *len = NULL);
 
 		/// Returns footer text for a given language.
 		///
@@ -75,7 +75,7 @@ class LanguagePages {
 		/// @param *len if not NULL, filled with the length of the footer text
 		///
 		/// @return the footer text, or NULL if no entry
-		uint8_t *getLanguageFooter(uint8_t lang, long *len = NULL);
+		uint8_t *getLanguageFooter(uint8_t lang, int32_t *len = NULL);
 
 		/// Reload all page, header, and footer entries from disk.
 		void reloadPages(void);

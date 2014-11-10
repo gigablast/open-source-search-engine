@@ -94,17 +94,17 @@ public:
 	// id of the fron tag we pushed
 	nodeid_t m_tid;
 	// cumulative hash of all tag ids containing this one, includes us
-	//long     m_cumHash;
+	//int32_t     m_cumHash;
 	// section number we represent
-	long     m_secNum;
+	int32_t     m_secNum;
 	// hash of all the alnum words in this section
-	//long     m_contentHash;
+	//int32_t     m_contentHash;
 	// set to TXF_MATCHED
 	char     m_flags;
 };
 
 // i lowered from 1000 to 300 so that we more sensitive to malformed pages
-// because typically they seem to take longer to parse. i also added some
+// because typically they seem to take int32_ter to parse. i also added some
 // new logic for dealing with table tr and td back tags that allow us to
 // pop off the other contained tags right away rather than delaying it until
 // we are done because that will often breach this stack.
@@ -122,7 +122,7 @@ bool Sections::set ( Words     *w                       ,
 		     int64_t  docId                   ,
 		     int64_t  siteHash64              ,
 		     char      *coll                    ,
-		     long       niceness                ,
+		     int32_t       niceness                ,
 		     void      *state                   ,
 		     void     (*callback)(void *state)  ,
 		     uint8_t    contentType             ,
@@ -133,7 +133,7 @@ bool Sections::set ( Words     *w                       ,
 		     char      *sectionsVotes           ,
 		     //uint64_t   tagPairHash             ,
 		     char      *buf                     ,
-		     long       bufSize                 ) {
+		     int32_t       bufSize                 ) {
 
 	reset();
 
@@ -164,12 +164,12 @@ bool Sections::set ( Words     *w                       ,
 
 	if ( w->getNumWords() <= 0 ) return true;
 
-	// shortcuts
+	// int16_tcuts
 	int64_t   *wids  = w->getWordIds  ();
 	nodeid_t    *tids  = w->getTagIds   ();
-	long           nw  = w->getNumWords ();
+	int32_t           nw  = w->getNumWords ();
 	char      **wptrs  = w->getWords    ();
-	long        *wlens = w->getWordLens ();
+	int32_t        *wlens = w->getWordLens ();
 
 	// set these up for isDelimeter() function to use and for
 	// isCompatible() as well
@@ -189,7 +189,7 @@ bool Sections::set ( Words     *w                       ,
 	// event titles so that we get the correct event title. fixes
 	// tumba.com "Guided Nature Walk : ..." title
 	char *dom  = m_url->getDomain();
-	long  dlen = m_url->getDomainLen();
+	int32_t  dlen = m_url->getDomainLen();
 	m_isTrumba     = false;
 	m_isFacebook   = false;
 	m_isEventBrite = false;
@@ -205,8 +205,8 @@ bool Sections::set ( Words     *w                       ,
 
 	// . how many sections do we have max?
 	// . init at one to count the root section
-	long max = 1;
-	for ( long i = 0 ; i < nw ; i++ ) {
+	int32_t max = 1;
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// . count all front tags
@@ -245,7 +245,7 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 	//max += 5000;
-	long need = max * sizeof(Section);
+	int32_t need = max * sizeof(Section);
 
 
 	// and we need one section ptr for every word!
@@ -327,23 +327,23 @@ bool Sections::set ( Words     *w                       ,
 	//m_numSections = 0;
 
 	// initialize the ongoing cumulative tag hash
-	//long h = 0;
-	//long h2 = 0;
+	//int32_t h = 0;
+	//int32_t h2 = 0;
 	// the content hash ongoing
-	//long ch = 0;
+	//int32_t ch = 0;
 	// stack of front tags we encounter
 	Tagx stack[MAXTAGSTACK];
 	Tagx *stackPtr = stack;
 
 	/*
 	// stack of cumulative tag hashes
-	long  stack      [1000];
-	long  cumHash    [1000];
-	long  secNums    [1000];
-	long  contentHash[1000];
-	long *cumHashPtr = cumHash;
-	long *secNumPtr  = secNums;
-	long *chPtr      = contentHash;
+	int32_t  stack      [1000];
+	int32_t  cumHash    [1000];
+	int32_t  secNums    [1000];
+	int32_t  contentHash[1000];
+	int32_t *cumHashPtr = cumHash;
+	int32_t *secNumPtr  = secNums;
+	int32_t *chPtr      = contentHash;
 	*/
 
 	// determine what tags we are within
@@ -375,12 +375,12 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 	// count this
-	long alnumCount = 0;
+	int32_t alnumCount = 0;
 	// for debug
 	g_sections = this;
 
-	// Sections are no longer 1-1 with words, just with front tags
-	for ( long i = 0 ; i < nw ; i++ ) {
+	// Sections are no int32_ter 1-1 with words, just with front tags
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// we got it
@@ -399,7 +399,7 @@ bool Sections::set ( Words     *w                       ,
 			//   section because we can have a large menu
 			//   section with a little bit of text, and we
 			// contain some non-menu sections.
-			//ch = hash32h ( (long)wids[i] , ch );
+			//ch = hash32h ( (int32_t)wids[i] , ch );
 			// if not in an anchor, script, etc. tag
 			//if ( ! inFlag ) current->m_plain++;
 			// inc count in current section
@@ -456,10 +456,10 @@ bool Sections::set ( Words     *w                       ,
 			// init the flags of the section
 			//sn->m_flags = inFlag ;
 			// count em up
-			long brcnt = 1;
+			int32_t brcnt = 1;
 			// scan for whole sequence
-			long lastBrPos = i;
-			for ( long j = i + 1 ; j < nw ; j++ ) {
+			int32_t lastBrPos = i;
+			for ( int32_t j = i + 1 ; j < nw ; j++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				// claim br tags
@@ -690,8 +690,8 @@ bool Sections::set ( Words     *w                       ,
 			if ( p < stack ) continue;
 
 			// get section number of the front tag
-			//long xn = *(secNumPtr-1);
-			long xn = spp->m_secNum;
+			//int32_t xn = *(secNumPtr-1);
+			int32_t xn = spp->m_secNum;
 			// sanity
 			if ( xn<0 || xn>=m_numSections ) {char*xx=NULL;*xx=0;}
 			// get it
@@ -713,7 +713,7 @@ bool Sections::set ( Words     *w                       ,
 			/*
 			// if our parent got closed before "sn" closed because
 			// of an out-of-order back tag issue, then if it
-			// no longer contains sn->m_a, then reparent "sn"
+			// no int32_ter contains sn->m_a, then reparent "sn"
 			// to its grandparent.
 			Section *ps = sn->m_parent;
 			for ( ; ps && ps->m_b >= 0 && ps->m_b <= sn->m_a ;
@@ -734,11 +734,11 @@ bool Sections::set ( Words     *w                       ,
 
 			// if our parent got closed before "sn" closed because
 			// it hit its back tag before we hit ours, then we
-			// must cut ourselves short and try to match this
+			// must cut ourselves int16_t and try to match this
 			// back tag to another front tag on the stack
 			Section *ps = sn->m_parent;
 			for ( ; ps != rootSection ; ps = ps->m_parent ) {
-				// skip if parent no longer contains us!
+				// skip if parent no int32_ter contains us!
 				if ( ps->m_b <= sn->m_a ) continue;
 				// skip if this parent is still open
 				if ( ps->m_b <= 0 ) continue;
@@ -747,7 +747,7 @@ bool Sections::set ( Words     *w                       ,
 				// we had no matching tag, or it was unbalanced
 				// but i do not know which...!
 				sn->m_flags |= SEC_OPEN_ENDED;
-				// cut our end shorter
+				// cut our end int16_ter
 				sn->m_b = ps->m_b;
 				// our TXF_MATCHED bit should still be set
 				// for spp->m_flags, so try to match ANOTHER
@@ -756,8 +756,8 @@ bool Sections::set ( Words     *w                       ,
 					char *xx=NULL;*xx=0; }
 				// ok, try to match this back tag with another
 				// front tag on the stack, because the front
-				// tag we had selected got cut short because
-				// its parent forced it to cut short.
+				// tag we had selected got cut int16_t because
+				// its parent forced it to cut int16_t.
 				goto subloop;
 			}
    
@@ -826,14 +826,14 @@ bool Sections::set ( Words     *w                       ,
 				if ( stackPtr->m_tid != ptid) ms =" UNMATCHED";
 				char *back ="";
 				if ( fullPopTid & BACKBIT ) back = "/";
-				logf(LOG_DEBUG,"section: pop tid=%li "
-				     "i=%li "
-				     "level=%li "
+				logf(LOG_DEBUG,"section: pop tid=%"INT32" "
+				     "i=%"INT32" "
+				     "level=%"INT32" "
 				     "%s%s "
-				     //"h=0x%lx"
-				     "%s",(long)tid,
+				     //"h=0x%"XINT32""
+				     "%s",(int32_t)tid,
 				     i,
-				     (long)(stackPtr - stack),
+				     (int32_t)(stackPtr - stack),
 				     back,g_nodes[tid].m_nodeName,
 				     //h,
 				     ms);
@@ -975,15 +975,15 @@ bool Sections::set ( Words     *w                       ,
 		/*
 		// . get our parents enumerated tagHash
 		// . all tag hashes are enumerated except his tagHash
-		long ph = sn->m_parent->m_tagHash;
+		int32_t ph = sn->m_parent->m_tagHash;
 		// put his enumeration into it
-		long eh = hash32h ( ph , sn->m_parent->m_occNum );
+		int32_t eh = hash32h ( ph , sn->m_parent->m_occNum );
 		// cap it off with our tag hash with no enumeration
 		eh = hash32h ( h , eh );
 		// store that
 		sn->m_tagHash = eh;
 		// what kid # are we for this particular parent?
-		long occNum = m_ot.getScore ( (int64_t *)&eh );
+		int32_t occNum = m_ot.getScore ( (int64_t *)&eh );
 		// save our kid #
 		sn->m_occNum = occNum;
 		// inc it for the next guy
@@ -1042,19 +1042,19 @@ bool Sections::set ( Words     *w                       ,
 		//sn->m_depth = stackPtr - stack;
 		// debug log
 		if ( ! g_conf.m_logDebugSections ) continue;
-		//long back = 0;
+		//int32_t back = 0;
 		//if ( fullTid & BACKBIT ) back = 1;
-		logf(LOG_DEBUG,"section: push tid=%li "
-		     "i=%li "
-		     "level=%li "
+		logf(LOG_DEBUG,"section: push tid=%"INT32" "
+		     "i=%"INT32" "
+		     "level=%"INT32" "
 		     "%s "
-		     //"back=%li"
-		     //" h=0x%lx",
+		     //"back=%"INT32""
+		     //" h=0x%"XINT32"",
 		     ,
-		     (long)tid,
+		     (int32_t)tid,
 		     i,
-		     (long)(stackPtr - stack)-1,
-		     g_nodes[(long)tid].m_nodeName
+		     (int32_t)(stackPtr - stack)-1,
+		     g_nodes[(int32_t)tid].m_nodeName
 		     //,back);//,h);
 		     );
 	}
@@ -1064,7 +1064,7 @@ bool Sections::set ( Words     *w                       ,
 	// OR we could end it after our FIRST CHILD... or if text
 	// follows, after that text... well the browser seems to not
 	// close these center tags... sooo. let's comment this out
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -1083,7 +1083,7 @@ bool Sections::set ( Words     *w                       ,
 	// if first word in a section false outside of the parent section
 	// then reparent to the grandparent. this can happen when we end
 	// up closing a parent section before ???????
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// get it
 		Section *si = &m_sections[i];
 		// skip if we are still open-ended
@@ -1114,20 +1114,20 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 	bool inFrame = false;
-	long gbFrameNum = 0;
+	int32_t gbFrameNum = 0;
 
 	//
 	// . set Section::m_xmlNameHash for xml tags here
 	// . set Section::m_frameNum and SEC_IN_GBFRAME bit
 	//
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
 		Section *sn = &m_sections[i];
 		// get it
-		long ws = sn->m_a;
-		// shortcut
+		int32_t ws = sn->m_a;
+		// int16_tcut
 		nodeid_t tid = tids[ws];
 
 		// set SEC_IN_FRAME
@@ -1166,13 +1166,13 @@ bool Sections::set ( Words     *w                       ,
 		// sanity check
 		if ( ! xh ) { char *xx=NULL;*xx=0; }
 		// store that
-		sn->m_xmlNameHash = (long)xh;
+		sn->m_xmlNameHash = (int32_t)xh;
 	}
 
 
 
 	// find any open ended tags and constrain them based on their parent
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -1190,7 +1190,7 @@ bool Sections::set ( Words     *w                       ,
 		}
 
 		// assume end is end of doc
-		long end = m_words->getNumWords();
+		int32_t end = m_words->getNumWords();
 		// get end of parent
 		if ( ps ) end = ps->m_b;
 		// flag it
@@ -1199,12 +1199,12 @@ bool Sections::set ( Words     *w                       ,
 		// are open ended
 		if ( si->m_b != -1 && si->m_b <= end ) continue;
 		// this might constrain someone's parent such that
-		// that someone no longer can use that parent!!
+		// that someone no int32_ter can use that parent!!
 		si->m_b = end;
 		// . get our tag type
-		// . use long instead of nodeid_t so we can re-set this
+		// . use int32_t instead of nodeid_t so we can re-set this
 		//   to the xml tag hash if we need to
-		long tid1 = m_tids[si->m_a];
+		int32_t tid1 = m_tids[si->m_a];
 		// use the tag hash if this is an xml tag
 		if ( tid1 == TAG_XMLTAG ) {
 			// we computed this above
@@ -1222,13 +1222,13 @@ bool Sections::set ( Words     *w                       ,
 		// this hurts <p><table><tr><td><p>.... because it
 		// uses that 2nd <p> tag to constrain si->m_b of the first
 		// <p> tag which is not right! sunsetpromotions.com has that.
-		for ( long j = i + 1 ; j < m_numSections ; j++ ) {
+		for ( int32_t j = i + 1 ; j < m_numSections ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
 			Section *sj = &m_sections[j];
 			// get word start
-			long a = sj->m_a;
+			int32_t a = sj->m_a;
 			// skip if ties with us already
 			if ( a == si->m_a ) continue;
 			// stop if out
@@ -1242,7 +1242,7 @@ bool Sections::set ( Words     *w                       ,
 			// fix sunsetpromotions.com bug. see above.
 			if ( sj->m_parent != si->m_parent ) continue;
 			// get its tid
-			long tid2 = tids[a];
+			int32_t tid2 = tids[a];
 			// use base hash if xml tag
 			if ( tid2 == TAG_XMLTAG )
 				tid2 = sj->m_xmlNameHash;
@@ -1257,7 +1257,7 @@ bool Sections::set ( Words     *w                       ,
 
 
 	// reparent again now that things are closed
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// get it
 		Section *si = &m_sections[i];
 		// skip if we are still open-ended
@@ -1297,12 +1297,12 @@ bool Sections::set ( Words     *w                       ,
 	//
 	//
 	Section *dstack[MAXTAGSTACK];
-	long     ns = 0;
-	long      j = 0;
+	int32_t     ns = 0;
+	int32_t      j = 0;
 	current       = m_rootSection;//&m_sections[0];
 	Section *next = m_rootSection;//&m_sections[0];
 	// first print the html lines out
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// pop all off the stack that match us
 		for ( ; ns>0 && dstack[ns-1]->m_b == i ; ) {
 			ns--;
@@ -1329,7 +1329,7 @@ bool Sections::set ( Words     *w                       ,
 
 	if ( m_isTestColl ) {
 		// map each word to a section that contains it at least
-		for ( long i = 0 ; i < m_nw ; i++ ) {
+		for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 			Section *si = m_sectionPtrs[i];
 			if ( si->m_a >  i ) { char *xx=NULL;*xx=0; }
 			if ( si->m_b <= i ) { char *xx=NULL;*xx=0; }
@@ -1338,7 +1338,7 @@ bool Sections::set ( Words     *w                       ,
 
 	// . addImpliedSections() requires Section::m_baseHash
 	// . set Section::m_baseHash
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// these have to be in order of sn->m_a to work right
@@ -1348,8 +1348,8 @@ bool Sections::set ( Words     *w                       ,
 		// a br section added afterwards.
 		Section *sn = &m_sections[i];
 		// get word start into "ws"
-		long ws = sn->m_a;
-		// shortcut
+		int32_t ws = sn->m_a;
+		// int16_tcut
 		nodeid_t tid = tids[ws];
 		// sanity check, <a> guys are not sections
 		//if ( tid == TAG_A &&
@@ -1534,7 +1534,7 @@ bool Sections::set ( Words     *w                       ,
 
 	// set up our linked list, the functions below will insert sections
 	// and modify this linked list
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// set it
@@ -1545,7 +1545,7 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 	// i would say <hr> is kinda like an <h0>, so do it first
-	//splitSections ( "<hr" , (long)BH_HR );
+	//splitSections ( "<hr" , (int32_t)BH_HR );
 
 	// init to -1 to indicate none
 	for ( Section *si = m_rootSection ; si ; si = si->m_next ) {
@@ -1561,7 +1561,7 @@ bool Sections::set ( Words     *w                       ,
 		si->m_headColSection = NULL;
 	}
 	// now set position of first word each section contains
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// skip if not alnum word
@@ -1579,7 +1579,7 @@ bool Sections::set ( Words     *w                       ,
 		}
 	}
 	// and last word position
-	for ( long i = m_nw - 1 ; i > 0 ; i-- ) {
+	for ( int32_t i = m_nw - 1 ; i > 0 ; i-- ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// skip if not alnum word
@@ -1596,9 +1596,9 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 	sec_t inFlag = 0;
-	long  istack[1000];
+	int32_t  istack[1000];
 	sec_t iflags[1000];
-	long  ni = 0;
+	int32_t  ni = 0;
 	// 
 	// now set the inFlags here because the tags might not have all
 	// been closed, making tags like SEC_STYLE overflow from where
@@ -1676,10 +1676,10 @@ bool Sections::set ( Words     *w                       ,
 	// and those sections contain h3 tags! which results in us capturing
 	// the wrong event header in each event section, so i commented this
 	// out... and santafeplayhouse.com still seems to work!
-	//splitSections ("<h1", (long)BH_H1 );
-	//splitSections ("<h2", (long)BH_H2 );
-	//splitSections ("<h3", (long)BH_H3 );
-	//splitSections ("<h4", (long)BH_H4 );
+	//splitSections ("<h1", (int32_t)BH_H1 );
+	//splitSections ("<h2", (int32_t)BH_H2 );
+	//splitSections ("<h3", (int32_t)BH_H3 );
+	//splitSections ("<h4", (int32_t)BH_H4 );
 
 
 	// . set m_nextBrother
@@ -1726,10 +1726,10 @@ bool Sections::set ( Words     *w                       ,
 
 
 	// HACK: back to back br tags
-	//splitSections ( (char *)0x01 , (long)BH_BRBR );
+	//splitSections ( (char *)0x01 , (int32_t)BH_BRBR );
 
 	// single br tags
-	//splitSections ( "<br" , (long)BH_BR );
+	//splitSections ( "<br" , (int32_t)BH_BR );
 
 
 	// just in case we added more sections
@@ -1740,7 +1740,7 @@ bool Sections::set ( Words     *w                       ,
 	// now add implied sections based on dates
 	//
  again:
-	long added = addDateBasedImpliedSections();
+	int32_t added = addDateBasedImpliedSections();
 	// g_errno should be set when we return -1 on error
 	if ( added < 0 ) return true;
 	// if added something, try again
@@ -1765,13 +1765,13 @@ bool Sections::set ( Words     *w                       ,
 
 	/*
 	// now set m_sorted since we added some sections out of order
-	for ( long i = 0 ; i < m_numSections ; i++ ) 
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) 
 		m_sorted[i] = &m_sections[i];
 	// sort them
 	char tmpBuf[30000];
 	char *useBuf = tmpBuf;
 	// do not breach buffer
-	long need2 = m_numSections * sizeof(Section *) + 32 ;
+	int32_t need2 = m_numSections * sizeof(Section *) + 32 ;
 	if ( need2 > 30000 ) {
 		useBuf = (char *)mmalloc ( need2, "gbmrgtmp");
 		if ( ! useBuf ) return true;
@@ -1790,7 +1790,7 @@ bool Sections::set ( Words     *w                       ,
 	// now set m_sortedIndex of each section so getSubfieldTable() can use
 	// that in Address.cpp to just check to see if each subsection has
 	// and address/email/fieldname/etc. 
-	for ( long i = 0 ; i < m_numSections ; i++ ) 
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) 
 		m_sorted[i]->m_sortedIndex = i;
 	*/
 
@@ -1817,14 +1817,14 @@ bool Sections::set ( Words     *w                       ,
 
 	// clear this
 	bool isHidden  = false;
-	long startHide = 0x7fffffff;
-	long endHide   = 0 ;
-	//long numTitles = 0;
+	int32_t startHide = 0x7fffffff;
+	int32_t endHide   = 0 ;
+	//int32_t numTitles = 0;
 	//Section *lastTitleParent = NULL;
 	Section *firstTitle = NULL;
 	// now that we have closed any open tag, set the SEC_HIDDEN bit
 	// for all sections that are like <div style=display:none>
-	//for ( long i = 0 ; i < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 	for ( Section *sn = m_rootSection ; sn ; sn = sn->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -1849,7 +1849,7 @@ bool Sections::set ( Words     *w                       ,
 		// get it
 		//Section *sn = m_sorted[i]; // sections[i];
 		// set this
-		long wn = sn->m_a;
+		int32_t wn = sn->m_a;
 		// stop hiding it?
 		if ( isHidden ) {
 			// turn it off if not contained
@@ -1877,7 +1877,7 @@ bool Sections::set ( Words     *w                       ,
 		//   below the calendar.
 
 		// get the style tag in there and check it for "display: none"!
-		long  slen = wlens[wn];
+		int32_t  slen = wlens[wn];
 		char *s    = wptrs[wn];
 		char *send = s + slen;
 		// check out any div tag that has a style
@@ -1906,7 +1906,7 @@ bool Sections::set ( Words     *w                       ,
 
 
 	// now set the content hash of each section
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// must be an alnum word
@@ -1949,7 +1949,7 @@ bool Sections::set ( Words     *w                       ,
 	m_numInvalids = 0;
 
 	// now set SEC_NOTEXT flag if content hash is zero!
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -1965,7 +1965,7 @@ bool Sections::set ( Words     *w                       ,
 	//
 	// set m_sentenceContentHash for sentence that need it
 	//
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -1985,9 +1985,9 @@ bool Sections::set ( Words     *w                       ,
 
 		// scan the wids of the whole sentence, which may not
 		// be completely contained in the "sn" section!!
-		long a = sn->m_senta;
-		long b = sn->m_sentb;
-		for ( long j = a ; j < b ; j++ ) {
+		int32_t a = sn->m_senta;
+		int32_t b = sn->m_sentb;
+		for ( int32_t j = a ; j < b ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// must be an alnum word
@@ -2054,8 +2054,8 @@ bool Sections::set ( Words     *w                       ,
 	//
 	// set Section::m_alnumPosA/m_alnumPosB
 	//
-	long alnumCount2 = 0;
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	int32_t alnumCount2 = 0;
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2066,9 +2066,9 @@ bool Sections::set ( Words     *w                       ,
 		sn->m_alnumPosA = alnumCount2;
 		// scan the wids of the whole sentence, which may not
 		// be completely contained in the "sn" section!!
-		long a = sn->m_senta;
-		long b = sn->m_sentb;
-		for ( long j = a ; j < b ; j++ ) {
+		int32_t a = sn->m_senta;
+		int32_t b = sn->m_sentb;
+		for ( int32_t j = a ; j < b ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// must be an alnum word
@@ -2095,7 +2095,7 @@ bool Sections::set ( Words     *w                       ,
 
 	}
 	// propagate up alnumPosB now
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2127,7 +2127,7 @@ bool Sections::set ( Words     *w                       ,
 	//  we use to invalidate dates as event dates)
 	//
 	/////////////////////////////
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2143,7 +2143,7 @@ bool Sections::set ( Words     *w                       ,
 	// table. dmjuice.com actually uses headRows and not columns. so
 	// we need to detect if the table header is the first row or the first
 	// column.
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2169,7 +2169,7 @@ bool Sections::set ( Words     *w                       ,
 
 
 	// set the m_ot hash table for use below
-	for ( long i = 1 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 1 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2179,7 +2179,7 @@ bool Sections::set ( Words     *w                       ,
 		// try to get it
 		uint64_t *vp = (uint64_t *)m_ot.getValue ( &sn->m_tagHash );
 		// assume these are zeroes
-		long occNum = 0;
+		int32_t occNum = 0;
 		// if there, set these to something
 		if ( vp ) {
 			// set it
@@ -2194,7 +2194,7 @@ bool Sections::set ( Words     *w                       ,
 		// mask our prevSibling
 		vote &= 0x00000000ffffffff;
 		// we are the new prevSiblinkg now
-		vote |= ((uint64_t)((unsigned long)sn))<<32;
+		vote |= ((uint64_t)((uint32_t)sn))<<32;
 		// inc occNum for the next guy
 		vote++;
 		// store back. return true with g_errno set on error
@@ -2203,11 +2203,11 @@ bool Sections::set ( Words     *w                       ,
 		// use the secondary content hash which will be non-zero
 		// if the section indirectly contains some text, i.e.
 		// contains a subsection which directly contains text
-		//long ch = sn->m_contentHash;
+		//int32_t ch = sn->m_contentHash;
 		// skip if no content 
 		//if ( ! ch ) continue;
 		// use this as the "modified taghash" now
-		//long modified = sn->m_tagHash ^ ch;
+		//int32_t modified = sn->m_tagHash ^ ch;
 		// add the content hash to this table as well!
 		//if ( ! m_cht2.addKey ( &modified ) ) return true;
 	}
@@ -2224,7 +2224,7 @@ bool Sections::set ( Words     *w                       ,
 	// . set Section::m_numOccurences
 	// . the first section is the god section and has a 0 for tagHash
 	//   so skip that!
-	for ( long i = 1 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 1 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2241,7 +2241,7 @@ bool Sections::set ( Words     *w                       ,
 		// otherwise, use it
 		vote = *slot;
 		// get slot for it
-		long numKids = vote & 0xffffffff;
+		int32_t numKids = vote & 0xffffffff;
 		// must be at least 1 i guess
 		if ( numKids < 1 && i > 0 ) { char *xx=NULL;*xx=0; }
 		// how many siblings do we have total?
@@ -2291,7 +2291,7 @@ bool Sections::set ( Words     *w                       ,
 	// now set SENT_LIST flags on m_sentFlags
 	//
 	// try to capture sentences that are not menus but are a list of
-	// things. if the sentence itself has a list of short items, or a bunch
+	// things. if the sentence itself has a list of int16_t items, or a bunch
 	// of commas, then also set the SEC_LIST flag on it. or if sentence
 	// is part of a sequence of sentences that are a list of sentences then
 	// set it for them as well. typically such sentences will be separated
@@ -2331,7 +2331,7 @@ bool Sections::set ( Words     *w                       ,
 	/*
 	  - mdw: i got rid of m_plain, so i commented this out
 	// put votes on SV_TEXTY section type into m_nsvt
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get the ith section
@@ -2363,7 +2363,7 @@ bool Sections::set ( Words     *w                       ,
 
 	// . add our checksum votes as well
 	// . we use this for menu identification between web pages
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get the ith section
@@ -2371,7 +2371,7 @@ bool Sections::set ( Words     *w                       ,
 		// skip if not a section with its own words
 		if ( sn->m_flags & SEC_NOTEXT ) continue;
 		// combine the tag hash with the content hash #2
-		long modified = sn->m_tagHash ^ sn->m_contentHash;
+		int32_t modified = sn->m_tagHash ^ sn->m_contentHash;
 		// . update m_nsvt voting table now
 		// . the tagHash is the content hash for this one
 		// . this will return false with g_errno set
@@ -2479,7 +2479,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 
 	m_aa = aa;
 
-	// shortcut
+	// int16_tcut
 	sec_t badFlags =SEC_MARQUEE|SEC_STYLE|SEC_SCRIPT|SEC_SELECT|
 		SEC_HIDDEN|SEC_NOSCRIPT;
 
@@ -2505,7 +2505,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 	// scan the dates and set a section's SEC_HAS_DOM/DOW
 	// and SEC_HAS_TOD for all the sections containing it either directly
 	// or indirectly
-	for ( long i = 0 ; i < m_dates->m_numTotalPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_dates->m_numTotalPtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2523,7 +2523,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 		if ( di->m_numPtrs != 0 ) continue;
 		// sanity check
 		if ( di->m_a < 0 ) { char *xx=NULL;*xx=0; }
-		// shortcut
+		// int16_tcut
 		datetype_t dt = di->m_hasType;
 		// need a DOW, DOM or TOD
 		sec_t flags = 0;
@@ -2603,7 +2603,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 	// put everything into <p> tags which would imply these sections
 	// anyhow! this will fix sunsetpromotions which has no real
 	// sections except these brbr things.
-	//splitSections ( (char *)0x01 , (long)BH_BRBR );
+	//splitSections ( (char *)0x01 , (int32_t)BH_BRBR );
 	// HACK: back to back br tags
 	// . this also splits on any double space really:
 	//   including text-free tr tags
@@ -2616,7 +2616,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 	// now add implied sections based on dates
 	//
  again:
-	long added = addImpliedSections3();
+	int32_t added = addImpliedSections3();
 	// g_errno should be set when we return -1 on error
 	if ( added < 0 ) return true;
 	// if added something, try again
@@ -2657,7 +2657,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 	//   similarities now that we have different subsections to divide
 	// . should fix santafeplayhouse.org
  again2:
-	long added2 = addImpliedSections3();
+	int32_t added2 = addImpliedSections3();
 	// g_errno should be set when we return -1 on error
 	if ( added2 < 0 ) return true;
 	// if added something, try again
@@ -2686,7 +2686,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 		sk->m_flags &= ~SEC_NOTEXT;
 	}
 	// now set the content hash of each section
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// must be an alnum word
@@ -2698,7 +2698,7 @@ bool Sections::addImpliedSections ( Addresses *aa ) {
 			m_sectionPtrs[i]->m_contentHash64 = 123456;
 	}
 	// now set SEC_NOTEXT flag if content hash is zero!
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -3105,8 +3105,8 @@ bool initPlaceIndicatorTable ( ) {
 	// store these words into table
 	s_init9 = true;
 	s_pit.set(8,0,128,s_pitbuf,2000,false,0,"ti1tab");
-	long n = (long)sizeof(s_pindicators)/ sizeof(char *); 
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)sizeof(s_pindicators)/ sizeof(char *); 
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// set words
 		char *s = s_pindicators[i];
 		int64_t h = hash64n(s);
@@ -3124,13 +3124,13 @@ static HashTableX s_igt;
 static char s_igtbuf[10000];
 static bool s_init3 = false;
 
-void initGenericTable ( long niceness ) {
+void initGenericTable ( int32_t niceness ) {
 
 	// . now we create strings of things that are somewhat generic
 	//   and should be excluded from titles. 
 	// . we set the GENERIC bit for each word or phrase in the sentence
 	//   that matches one in this list of generic words/phrases
-	// . then we ignore the longest generic phrase that is two words or
+	// . then we ignore the int32_test generic phrase that is two words or
 	//   more, within the sentence, for the purposes of forming titles
 	// . so if we had "buy tickets for Spiderman" we would ignore
 	//   "buy tickets for" and the title would just be Spiderman
@@ -3958,10 +3958,10 @@ void initGenericTable ( long niceness ) {
 
 	s_init3 = true;
 	s_igt.set(8,0,512,s_igtbuf,10000,false,niceness,"igt-tab");
-	long n = (long)sizeof(s_ignore)/ sizeof(char *); 
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)sizeof(s_ignore)/ sizeof(char *); 
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		char      *w    = s_ignore[i];
-		long       wlen = gbstrlen ( w );
+		int32_t       wlen = gbstrlen ( w );
 		int64_t  h    = hash64Lower_utf8 ( w , wlen );
 		if ( ! s_igt.addKey (&h) ) { char *xx=NULL;*xx=0; }
 	}
@@ -3972,7 +3972,7 @@ void initGenericTable ( long niceness ) {
 // it to be fuzzy since it is not header material
 bool Sections::setSentFlagsPart1 ( ) {
 
-	// shortcut
+	// int16_tcut
 	wbit_t *bits = m_bits->m_bits;
 
 	static int64_t h_i;
@@ -4012,8 +4012,8 @@ bool Sections::setSentFlagsPart1 ( ) {
 
 
 		bool firstWord = true;
-		long lowerCount = 0;
-		for ( long i = si->m_senta ; i < si->m_sentb ; i++ ) {
+		int32_t lowerCount = 0;
+		for ( int32_t i = si->m_senta ; i < si->m_sentb ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not alnum
@@ -4063,7 +4063,7 @@ bool Sections::setSentFlagsPart1 ( ) {
 			     //   title prevention for americantowns.com
 			     (m_wlens[i] >= 3 || firstWord) )
 				lowerCount++;
-			// no longer first word in sentence
+			// no int32_ter first word in sentence
 			firstWord = false;
 		}
 		// does it end in period? slight penalty for that since
@@ -4073,11 +4073,11 @@ bool Sections::setSentFlagsPart1 ( ) {
 		// name for "Ragnar Bohlin" and "Malin Christennsson" whose
 		// first sentence was for the most part properly capitalized
 		// just by sheer luck because it used proper nouns and was
-		// short.
+		// int16_t.
 		bool endsInPeriod = false;
 		char *p = NULL;
 		//if ( si->m_b < m_nw ) p = m_wptrs[si->m_b];
-		long lastPunct = si->m_sentb;
+		int32_t lastPunct = si->m_sentb;
 		// skip over tags to fix nonamejustfriends.com sentence
 		for ( ; lastPunct < m_nw && m_tids[lastPunct] ; lastPunct++);
 		// now assume, possibly incorrectly, that it is punct
@@ -4522,15 +4522,15 @@ bool Sections::setSentFlagsPart2 ( ) {
 		s_init6 = true;
 		s_ti1.set(8,4,128,s_tibuf1,2000,false,m_niceness,"ti1tab");
 		s_ti2.set(8,4,128,s_tibuf2,2000,false,m_niceness,"ti2tab");
-		long n = (long)sizeof(s_titleFields)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_titleFields)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set words
 			char *s = s_titleFields[i];
 			Words w; w.set3 ( s );
 			int64_t *wi = w.getWordIds();
 			int64_t h = 0;
 			// scan words
-			for ( long j = 0 ; j < w.getNumWords(); j++ )
+			for ( int32_t j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
 			// . store hash of all words, value is ptr to it
 			// . put all exact matches into ti1 and the substring
@@ -4563,20 +4563,20 @@ bool Sections::setSentFlagsPart2 ( ) {
 	if ( ! s_init4 ) {
 		s_init4 = true;
 		s_ext.set(8,0,512,s_ebuf,10000,false,m_niceness,"excp-tab");
-		long n = (long)sizeof(s_exceptPhrases)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_exceptPhrases)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set words
 			Words w; w.set3 ( s_exceptPhrases[i] );
 			int64_t *wi = w.getWordIds();
 			int64_t h = 0;
 			// scan words
-			for ( long j = 0 ; j < w.getNumWords(); j++ )
+			for ( int32_t j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
 			// store hash of all words
 			s_ext.addKey ( &h );
 		}
 	}
-	// shortcut
+	// int16_tcut
 	Sections *ss = this;
 
 	// init table
@@ -4607,7 +4607,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 	// for checking if title contains phone #
 	//HashTableX *pt = m_dates->getPhoneTable   ();		
 	m_dates->setPhoneXors();
-	// shortcut
+	// int16_tcut
 	wbit_t *bits = m_bits->m_bits;
 
 	bool afterColon = false;
@@ -4636,8 +4636,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// now with our new logic in Sections::addSentence() [a,b) may
 		// actually not be completely contained in "si". this fixes
 		// such sentences in aliconference.com and abqtango.com
-		long senta = si->m_senta;
-		long sentb = si->m_sentb;
+		int32_t senta = si->m_senta;
+		int32_t sentb = si->m_sentb;
 
 		////////////
 		//
@@ -4652,7 +4652,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// word # senta must be alnum!
 		if ( ! m_wids[senta] ) { char *xx=NULL;*xx=0; }
 		// start our backwards scan right before the first word
-		for ( long i = senta - 1; i >= 0 ; i-- ) {
+		for ( int32_t i = senta - 1; i >= 0 ; i-- ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// need punct
@@ -4726,7 +4726,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 
 		// sometimes title starts with a word and the ( or [
 		// is before that word! so back up one word to capture it
-		long a = senta;
+		int32_t a = senta;
 		// if prev word is punct back up
 		if ( a-1>=0 && ! m_wids[a-1] && ! m_tids[a-1] ) a--;
 		// backup over prev fron tag
@@ -4734,11 +4734,11 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// and punct
 		if ( a-1>=0 && ! m_wids[a-1] && ! m_tids[a-1] ) a--;
 		// init our flags
-		//long nonGenerics = 0;
+		//int32_t nonGenerics = 0;
 		bool inParens = false;
 		bool inSquare = false;
 
-		for ( long j = a ; j < sentb ; j++ ) {
+		for ( int32_t j = a ; j < sentb ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip non alnm wor
@@ -4767,9 +4767,9 @@ bool Sections::setSentFlagsPart2 ( ) {
 			if ( s_igt.isInTable(&m_wids[j]) ) {
 				// see if phrase is an exception
 				int64_t h = m_wids[j];
-				long wcount = 1;
+				int32_t wcount = 1;
 				bool hadException = false;
-				for ( long k = j + 1 ; k < sentb ; k++ ) {
+				for ( int32_t k = j + 1 ; k < sentb ; k++ ) {
 					// breathe
 					QUICKPOLL(m_niceness);
 					// skip if not word
@@ -4801,17 +4801,17 @@ bool Sections::setSentFlagsPart2 ( ) {
 			}
 		}
 
-		//long upperCount = 0;
-		long alphas = 0;
+		//int32_t upperCount = 0;
+		int32_t alphas = 0;
 		bool lastStop = false;
 		bool inDate = true;
 		bool inAddress = false;
 		bool notInAddress = false;
 		bool inAddressName = false;
-		long stops = 0;
+		int32_t stops = 0;
 		inParens = false;
-		long dollarCount = 0;
-		long priceWordCount = 0;
+		int32_t dollarCount = 0;
+		int32_t priceWordCount = 0;
 		bool hadAt = false;
 
 		// punish for huge # of words
@@ -4854,9 +4854,9 @@ bool Sections::setSentFlagsPart2 ( ) {
 		//
 		////////////////
 		int64_t h = 0;
-		long wcount = 0;
+		int32_t wcount = 0;
 		// scan BACKWARDS
-		for ( long i = sentb - 1 ; i >= senta ; i-- ) {
+		for ( int32_t i = sentb - 1 ; i >= senta ; i-- ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not alnum
@@ -4892,9 +4892,9 @@ bool Sections::setSentFlagsPart2 ( ) {
 			// Fix: "Sort by: Date | Title | Photo" so Title
 			// is not a title field in this case. scan for
 			// | after the word.
-			long pcount = 0;
+			int32_t pcount = 0;
 			bool hadPipeAfter = false;
-			for ( long j = i + 1 ; j < m_nw ; j++ ) {
+			for ( int32_t j = i + 1 ; j < m_nw ; j++ ) {
 				QUICKPOLL(m_niceness);
 				if ( m_tids[j] ) continue;
 				if ( m_wids[j] ) break;
@@ -4942,8 +4942,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 		if ( ! hdr ) hdr = si->m_headRowSection;
 
 		// ok, set to it
-		long csentb = 0;
-		long csenta = 0;
+		int32_t csentb = 0;
+		int32_t csenta = 0;
 		if ( hdr && hdr->m_firstWordPos >= 0 && 
 		     // do not allow the the header row to get its
 		     // SENT_PLACE_INDICATED set, etc. it's a field not a value
@@ -4954,7 +4954,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		h = 0;
 		wcount = 0;
 		// scan BACKWARDS
-		for ( long i = csentb - 1 ; i >= csenta ; i-- ) {
+		for ( int32_t i = csentb - 1 ; i >= csenta ; i-- ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not alnum
@@ -5038,7 +5038,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		//
 		///////////////////
 		int64_t lastWid = 0LL;
-		for ( long i = senta ; i < sentb ; i++ ) {
+		for ( int32_t i = senta ; i < sentb ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not alnum
@@ -5112,7 +5112,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 					dollarCount = 0;
 				// number can't be too big!
 				char *p = m_wptrs[i];
-				long digits =0;
+				int32_t digits =0;
 				char *pmax = p + 30;
 				bool hadPeriod = false;
 				for ( ; *p && p < pmax ; p++ ) {
@@ -5137,8 +5137,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 					dollarCount = 0;
 				// if word after the digits is million
 				// thousand billion, etc. then nuke it
-				long n = i + 1;
-				long nmax = i + 10;
+				int32_t n = i + 1;
+				int32_t nmax = i + 10;
 				if ( nmax > m_nw ) nmax = m_nw;
 				for ( ; n < nmax ; n++ ) {
 					if ( ! m_wids[n] ) continue;
@@ -5387,7 +5387,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		//
 
 		char *p = NULL;
-		long lastPunct = si->m_sentb;
+		int32_t lastPunct = si->m_sentb;
 		// skip over tags to fix nonamejustfriends.com sentence
 		for ( ; lastPunct < m_nw && m_tids[lastPunct] ; lastPunct++);
 		// now assume, possibly incorrectly, that it is punct
@@ -5440,7 +5440,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// fixes newmexico.org where event title is "Looking Ahead: 
 		// Portraits from the Mott-Warsh Collection, Las Cruces"
 		/*
-		long cc = si->m_a - 1;
+		int32_t cc = si->m_a - 1;
 		Section *leftSent = NULL;
 		if ( cc - 1 >= 0 ) leftSent = ss->m_sectionPtrs [ cc - 1 ];
 		if ( leftSent && 
@@ -5457,7 +5457,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 
 	// are we a trumba.com url? we trust the event titles for those
 	//char *dom  = m_url->getDomain();
-	//long  dlen = m_url->getDomainLen();
+	//int32_t  dlen = m_url->getDomainLen();
 	//bool  isTrumba = false;
 	//bool  isFacebook = false;
 	//if ( dlen == 10 && strncmp ( dom , "trumba.com" , 10 ) == 0 )
@@ -5502,16 +5502,16 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// assume we do not end in a colon
 		//lastSentenceHadColon = false;
 
-		long sa = si->m_senta;
-		long sb = si->m_sentb;
+		int32_t sa = si->m_senta;
+		int32_t sb = si->m_sentb;
 
 		// if breaking tag between "sa" and last word of prev sentence
 		// AND now breaking tag between our last word and beginning
 		// of next sentence, that's a "word sandwich" and not 
 		// conducive to titles... treat format change tags as 
 		// breaking tags for this purpose...
-		long na = sb;
-		long maxna = na + 40;
+		int32_t na = sb;
+		int32_t maxna = na + 40;
 		if ( maxna > m_nw ) maxna = m_nw;
 		bool hadRightTag = true;
 		for ( ; na < maxna ; na++ ) {
@@ -5527,7 +5527,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		}
 		bool hadLeftTag = true;
 		na = sa - 1;
-		long minna = na - 40;
+		int32_t minna = na - 40;
 		if ( minna < 0 ) minna = 0;
 		for ( ; na >= minna ; na-- ) {
 			// breathe
@@ -5691,7 +5691,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		//if ( si->m_sentFlags & SENT_IN_HEADER ) ip = NULL;
 		// ignore <title> tags if we are not an rss feed (trumba fix)
 		if ( ip && ip->m_tagId == TAG_TITLE && ! m_isRSSExt) ip = NULL;
-		// keep telescoping up as long as parent just contains this
+		// keep telescoping up as int32_t as parent just contains this
 		// sentence, si.
 		for ( ; ip ; ip = ip->m_parent ) {
 			// parent must only contain us
@@ -5749,8 +5749,8 @@ bool Sections::setSentFlagsPart2 ( ) {
 		Section *biggest = NULL;
 		// loop over this
 		Section *pp = si;
-		long ca = si->m_firstWordPos;
-		long cb = si->m_lastWordPos;
+		int32_t ca = si->m_firstWordPos;
+		int32_t cb = si->m_lastWordPos;
 		// blow up until contain prev
 		for ( ; pp ; pp = pp->m_parent ) {
 			// breathe
@@ -5788,7 +5788,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		if ( bro && bro->m_tagHash != biggest->m_tagHash ) bro = NULL;
 		// get smallest section containing first word of bro
 		Section *smbro = NULL;
-		long fwp = -1;
+		int32_t fwp = -1;
 		if ( bro ) fwp = bro->m_firstWordPos;
 		if ( fwp >= 0) smbro = sp[fwp];
 		// discard brother if its in lower case issues and we are not
@@ -5815,11 +5815,11 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// hurts "5:30-7pm Beginning African w/ Romy" which is
 		// legit and repeated for different days of the week for
 		// texasdrums.drums.org, so ease off a bit
-		long chtscore = cht.getScore ( &modified ) ;
+		int32_t chtscore = cht.getScore ( &modified ) ;
 		if ( chtscore > 1 ) 
 			si->m_sentFlags |= SENT_PAGE_REPEAT;
 		/*
-		for ( long cc = chtscore ; cc > 1 ; cc-- ) {
+		for ( int32_t cc = chtscore ; cc > 1 ; cc-- ) {
 			//if ( chtscore == cc ) tscore *= .80;//.40;
 			// punish a little more for every repeat so that
 			// "HEADLINER" will lose to "That 1 Guy" for 
@@ -5829,9 +5829,9 @@ bool Sections::setSentFlagsPart2 ( ) {
 		}
 		*/
 		// advance to first word
-		//long f = a; for ( ; ! m_wids[f] && f < b ; f++ );
-		long f = si->m_senta;//si->m_firstWordPos;
-		long L = si->m_sentb;//si->m_lastWordPos;
+		//int32_t f = a; for ( ; ! m_wids[f] && f < b ; f++ );
+		int32_t f = si->m_senta;//si->m_firstWordPos;
+		int32_t L = si->m_sentb;//si->m_lastWordPos;
 		if ( f < 0 ) { char *xx=NULL;*xx=0; }
 		if ( L < 0 ) { char *xx=NULL;*xx=0; }
 		// single word?
@@ -6086,13 +6086,13 @@ bool Sections::setSentFlagsPart2 ( ) {
 		if ( si->m_sentFlags & SENT_IN_MENU ) continue;
 		if ( si->m_sentFlags & SENT_IN_MENU_HEADER ) continue;
 		// how many alnum words we got?
-		long na = si->m_alnumPosB - si->m_alnumPosA ;
+		int32_t na = si->m_alnumPosB - si->m_alnumPosA ;
 		// skip if only one word
 		if ( na <= 1 ) continue;
 		// skip if more than 7
 		if ( na > 7 ) continue;
 		// last word in sentence is "last"
-		long last = si->m_sentb - 1;
+		int32_t last = si->m_sentb - 1;
 		// back up if "last" is numeric like "Studio 3" or "Room 127"
 		for ( ; last > si->m_senta ; last-- ) {
 			// skip until alnumword
@@ -6102,7 +6102,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		}
 		// make a phrase wid for "night club"
 		int64_t pid = 0LL;
-		for ( long k = last - 1 ; k >= si->m_senta ; k-- ) {
+		for ( int32_t k = last - 1 ; k >= si->m_senta ; k-- ) {
 			QUICKPOLL(m_niceness);
 			if ( ! m_wids[k] ) continue;
 			pid = m_pids[k];
@@ -6122,7 +6122,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// "use of museums"
 		if ( m_wids[last-2] == h_of ) continue;
 		// first word
-		long i = si->m_senta;
+		int32_t i = si->m_senta;
 		// "add/contact/use/search store"
 		if ( m_wids[i] == h_add     ) continue;
 		if ( m_wids[i] == h_contact ) continue;
@@ -6145,7 +6145,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		     m_wids[last-2] == h_media ) )
 			continue;
 		// if contains "at" or "by" or blah blah, stop it
-		long j; for ( j = si->m_senta ; j < si->m_sentb ; j++ ) {
+		int32_t j; for ( j = si->m_senta ; j < si->m_sentb ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip tags
@@ -6206,9 +6206,9 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// only works on sentences for now
 		if ( ! ( si->m_flags & SEC_SENTENCE ) ) continue;
 		// compute this
-		long alnumCount = si->m_alnumPosB - si->m_alnumPosA ;
+		int32_t alnumCount = si->m_alnumPosB - si->m_alnumPosA ;
 		// set event ending/beginning
-		long val = hasTitleWords(si->m_sentFlags,si->m_a,si->m_b,
+		int32_t val = hasTitleWords(si->m_sentFlags,si->m_a,si->m_b,
 					 alnumCount,m_bits,m_words,true,
 					 m_niceness);
 		if ( val == 1 )
@@ -6247,15 +6247,15 @@ bool Sections::setSentFlagsPart2 ( ) {
 	if ( ! s_init8 ) {
 		s_init8 = true;
 		s_sw.set(8,4,128,s_swbuf,2000,false,m_niceness,"swtab");
-		long n = (long)sizeof(s_starters)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_starters)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set words
 			char *s = s_starters[i];
 			Words w; w.set3 ( s );
 			int64_t *wi = w.getWordIds();
 			int64_t h = 0;
 			// scan words
-			for ( long j = 0 ; j < w.getNumWords(); j++ )
+			for ( int32_t j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
 			// . store hash of all words, value is ptr to it
 			// . put all exact matches into sw1 and the substring
@@ -6273,15 +6273,15 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// only works on sentences for now
 		if ( ! ( si->m_flags & SEC_SENTENCE ) ) continue;
 		// how many alnum words in it?
-		long na = si->m_alnumPosB - si->m_alnumPosA ;
+		int32_t na = si->m_alnumPosB - si->m_alnumPosA ;
 		// need at least two words
 		if ( na <= 1 ) continue;
-		// skip if too long and not capitalized
+		// skip if too int32_t and not capitalized
 		if ( na > 7 && (si->m_sentFlags & SENT_MIXED_CASE ) ) continue;
 		// get FIRST word in potential event title
-		long i = si->m_senta;
-		long a = si->m_senta;
-		long b = si->m_sentb;
+		int32_t i = si->m_senta;
+		int32_t a = si->m_senta;
+		int32_t b = si->m_sentb;
 		// skip cruft though
 		for ( ; i < a ; i++ ) {
 			QUICKPOLL(m_niceness);
@@ -6296,7 +6296,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		// go to next section if word not in our list
 		if ( ! s_sw.isInTable ( &m_wids[i] ) ) continue;
 		// must have at least one word after that
-		long next = i + 2;
+		int32_t next = i + 2;
 		// skip tags
 		for ( ; next < b && ! m_wids[next] ; next++ );
 		// if no more words, forget it, go to next section
@@ -6334,18 +6334,18 @@ bool Sections::setSentFlagsPart2 ( ) {
 // returns +1 if has positive title words/phrases
 // returns -1 if has negative title words/phrases
 // return   0 otherwise
-long hasTitleWords ( sentflags_t sflags ,
-		     long a ,
-		     long b ,
-		     long alnumCount ,
+int32_t hasTitleWords ( sentflags_t sflags ,
+		     int32_t a ,
+		     int32_t b ,
+		     int32_t alnumCount ,
 		     Bits *bitsClass ,
 		     Words *words ,
 		     bool useAsterisk ,
-		     long niceness ) {
+		     int32_t niceness ) {
 
 	// need at least two alnum words
 	if ( alnumCount <= 0 ) return 0;
-	// skip if too long and not capitalized
+	// skip if too int32_t and not capitalized
 	if ( alnumCount > 7 && (sflags & SENT_MIXED_CASE ) ) return 0;
 
 	// sanity. we need s_pit to be initialized
@@ -6355,10 +6355,10 @@ long hasTitleWords ( sentflags_t sflags ,
 	int64_t *wids = words->getWordIds();
 	nodeid_t *tids = words->getTagIds();
 	char **wptrs = words->getWords();
-	long *wlens = words->getWordLens();
-	long  nw = words->getNumWords();
+	int32_t *wlens = words->getWordLens();
+	int32_t  nw = words->getNumWords();
 
-	// . shortcut
+	// . int16_tcut
 	// . we are also called from dates.cpp and m_bits is NULL!
 	wbit_t *bits = NULL;
 	if ( bitsClass ) bits = bitsClass->m_bits;
@@ -6469,8 +6469,8 @@ long hasTitleWords ( sentflags_t sflags ,
 	// . fixes "This series" for denver.org
 	// . fixes "Practica" for abqtango.org
 	// . we have to have another beefy word besides just the event ending
-	long goodCount = 0;
-	for ( long k = a ; k < b ; k++ ) {
+	int32_t goodCount = 0;
+	for ( int32_t k = a ; k < b ; k++ ) {
 		QUICKPOLL(niceness);
 		if ( ! wids[k] ) continue;
 		if ( bits && (bits[k] & D_IS_IN_DATE) ) continue;
@@ -6500,7 +6500,7 @@ long hasTitleWords ( sentflags_t sflags ,
 	// "9th annual...."
 	// "THE 9th annual..."
 	// 2012 annual
-	for ( long k = a ; k < b ; k++ ) {
+	for ( int32_t k = a ; k < b ; k++ ) {
 		if ( !is_digit(wptrs[k][0]))  continue;
 		if ( k+2>=nw ) continue;
 		if ( wids[k+2] == h_annual ) return true;
@@ -7122,8 +7122,8 @@ long hasTitleWords ( sentflags_t sflags ,
 		"|bowling",
 		"*$bowl", // orange bowl, super bowl
 		"|singing", // Children's+Choirs+Singing
-		"|sing along", // Messiah+Sing-Along
-		"|singalong",
+		"|sing aint32_t", // Messiah+Sing-Aint32_t
+		"|singaint32_t",
 		"^sing", // community sing
 		"$singers", // Lakeside+Singers+at+NCC
 		"|soapmaking", // Girls+Spa+Day:+Lip+balm,Perfume&Soapmaking:
@@ -7459,7 +7459,7 @@ long hasTitleWords ( sentflags_t sflags ,
 		"$polka", 
 		"$musical", // menopause the musical
 		"$swing",
-		"$milonga", // type of dance
+		"$miint32_ta", // type of dance
 		"$bachata",
 		"|salsa", // Salsa in New Mexico
 		"$tap",
@@ -7568,8 +7568,8 @@ long hasTitleWords ( sentflags_t sflags ,
 	if ( ! s_init10 ) {
 		s_init10 = true;
 		s_twt.set(8,4,128,s_twtbuf,4000,false,0,"ti1tab");
-		long n = (long)sizeof(s_twords)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_twords)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set words
 			char *s = s_twords[i];
 			// set words
@@ -7577,7 +7577,7 @@ long hasTitleWords ( sentflags_t sflags ,
 			int64_t *wi = w.getWordIds();
 			int64_t h = 0;
 			// scan words
-			for ( long j = 0 ; j < w.getNumWords(); j++ ) {
+			for ( int32_t j = 0 ; j < w.getNumWords(); j++ ) {
 				// fix "art of" = "of art"
 				if (! wi[j] ) continue;
 				h <<= 1LL;
@@ -7601,7 +7601,7 @@ long hasTitleWords ( sentflags_t sflags ,
 	// ok, now scan forward. the word can also be next to
 	// strange punct like a colon like 
 	// "Hebrew Conversation Class: Beginning" for dailylobo.com
-	long i = a;
+	int32_t i = a;
 	int64_t firstWid = 0LL;
 	int64_t lastWid  = 0LL;
 	bool hadAnnual = false;
@@ -7634,7 +7634,7 @@ long hasTitleWords ( sentflags_t sflags ,
 		}
 		// get next wid after us
 		int64_t nextWid = 0LL;
-		for ( long k = i + 1 ; k < b ; k++ ) {
+		for ( int32_t k = i + 1 ; k < b ; k++ ) {
 			QUICKPOLL(niceness);
 			if ( ! wids[k] )  continue;
 			nextWid = wids[k];
@@ -7722,7 +7722,7 @@ long hasTitleWords ( sentflags_t sflags ,
 		// the gerunds mismatch easily and therefore we require for
 		// the match to be complete that we not be mixed case. fixes
 		// "Looking forward to seeing you again"
-		long pplen = gbstrlen(pp);
+		int32_t pplen = gbstrlen(pp);
 		if ( pp[pplen-1]=='g' &&
 		     pp[pplen-2]=='n' &&
 		     pp[pplen-3]=='i' &&
@@ -7800,7 +7800,7 @@ long hasTitleWords ( sentflags_t sflags ,
 			// assume none
 			bool gotPlaceInd = false;
 			// scan for place indicator or in address bit
-			for ( long j = i + 4 ; j < b ; j++ ) {
+			for ( int32_t j = i + 4 ; j < b ; j++ ) {
 				if ( ! isPlaceIndicator(&wids[j]) ) continue;
 				gotPlaceInd = true;
 				break;
@@ -7863,7 +7863,7 @@ long hasTitleWords ( sentflags_t sflags ,
 			if ( *p != ':' ) continue;
 			// . phone number not allowed after it!
 			// . fix "Adult Services: 881-001" for unm.edu
-			long next = i + 1;
+			int32_t next = i + 1;
 			for ( ; next < b && ! wids[next]; next++ );
 			// no phone number, so allow this ending!
 			if ( next >= b ) break;
@@ -7891,7 +7891,7 @@ long hasTitleWords ( sentflags_t sflags ,
 	// . if it has quotes, with, at, @, *ing, "w/" set it
 	// . if has mixed case do not do this loop
 	if ( sflags & SENT_MIXED_CASE ) b = 0;
-	long hadNonDateWord = 0;
+	int32_t hadNonDateWord = 0;
 	int64_t lastWordId = 0LL;
 	bool lastWordPastTense = false;
 	// loop over all words in the title
@@ -7985,7 +7985,7 @@ long hasTitleWords ( sentflags_t sflags ,
 		// assume not past tense
 		lastWordPastTense = false;
 		// is it past tense like "studied"?
-		long wlen = wlens[i];
+		int32_t wlen = wlens[i];
 		if ( to_lower_a(wptrs[i][wlen-1]) != 'd' ) continue;
 		if ( to_lower_a(wptrs[i][wlen-2]) != 'e' ) continue;
 		// exceptions: feed need
@@ -8002,7 +8002,7 @@ long hasTitleWords ( sentflags_t sflags ,
 	return 0;
 }
 /*
-bool Sections::isPlaceOrBusinessWord ( long i ) {
+bool Sections::isPlaceOrBusinessWord ( int32_t i ) {
 
 	isPlaceIndicator ( &wids[i] ) return true;
 	if ( wids[i] == h_news ) return true;
@@ -8017,10 +8017,10 @@ bool Sections::isPlaceOrBusinessWord ( long i ) {
 */
 
 void Sections::setSentPrettyFlag ( Section *si ) {
-	// shortcut
+	// int16_tcut
 	sentflags_t sflags = si->m_sentFlags;
 
-	// shortcut
+	// int16_tcut
 	wbit_t *bits = m_bits->m_bits;
 
 	static int64_t h_click;
@@ -8046,14 +8046,14 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 	//   event description without every having been voted on!
 	bool periodEnds = (sflags & SENT_PERIOD_ENDS);
 	// if enough mixed case words, allow it through anyway
-	long numAlnums = si->m_alnumPosB - si->m_alnumPosA + 1;
+	int32_t numAlnums = si->m_alnumPosB - si->m_alnumPosA + 1;
 	if ( (sflags & SENT_MIXED_CASE) && numAlnums >= 6 &&
 	     // watch out for urls like get?q=gbeventhash668419539....
 	     !(sflags & SENT_HASNOSPACE) )
 		periodEnds = true;
 	// or if it has commas
 	bool hasComma = false;
-	for ( long i = si->m_senta ; i < si->m_sentb ; i++ ) {
+	for ( int32_t i = si->m_senta ; i < si->m_sentb ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if not word
@@ -8067,11 +8067,11 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 	// if no period ends, nuke
 	if ( periodEnds ) pretty = true;
 	// BUT if its all generic words it is not pretty!
-	long lastWidPos = -1;
+	int32_t lastWidPos = -1;
 	// assume all generic words
 	bool allGeneric = true;
 	// is all generic words?
-	for ( long i = si->m_senta ; i < si->m_sentb ; i++ ) {
+	for ( int32_t i = si->m_senta ; i < si->m_sentb ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if not word
@@ -8135,7 +8135,7 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 		// skip if not in description right now, no need to score it!
 		if ( si->m_minEventId <= 0 ) continue;
 		// insert into table, score one
-		if ( ! rtt.addTerm32((long *)&si->m_tagHash) ) return false;
+		if ( ! rtt.addTerm32((int32_t *)&si->m_tagHash) ) return false;
 	}
 	// now punish the repeaters
 	for ( Section *si = ss->m_rootSection ; si ; si = si->m_next ) {
@@ -8146,7 +8146,7 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 		// skip if not in description right now, no need to score it!
 		if ( si->m_minEventId <= 0 ) continue;
 		// insert into table, score one
-		long score = rtt.getScore32((long *)&si->m_tagHash) ;
+		int32_t score = rtt.getScore32((int32_t *)&si->m_tagHash) ;
 		// punish?
 		if ( score > 1 ) continue;
 		// yes
@@ -8188,20 +8188,20 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 		// skip if not in description right now, no need to score it!
 		if ( si->m_minEventId <= 0 ) continue;
 		// get sentence
-		long senta = si->m_senta;
-		long sentb = si->m_sentb;
+		int32_t senta = si->m_senta;
+		int32_t sentb = si->m_sentb;
 		// do not match title tag with itself!
 		if ( senta >= titleSec->m_a && senta < titleSec->m_b ) 
 			continue;
 		// title sentence
-		long ta = titleSec->m_a;
-		long tb = titleSec->m_b;
+		int32_t ta = titleSec->m_a;
+		int32_t tb = titleSec->m_b;
 		// record max words matched
-		long max = 0;
+		int32_t max = 0;
 		bool allMatched = false;
-		long matchedWords = 0;
+		int32_t matchedWords = 0;
 		// compare to sentence in title
-		for ( long i = ta ; i < tb ; i++ ) {
+		for ( int32_t i = ta ; i < tb ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not alnum
@@ -8267,9 +8267,9 @@ void Sections::setSentPrettyFlag ( Section *si ) {
 
 class Partition {
 public:
-	long m_np;
-	long m_a[MAXCELLS];
-	long m_b[MAXCELLS];
+	int32_t m_np;
+	int32_t m_a[MAXCELLS];
+	int32_t m_b[MAXCELLS];
 	class Section *m_firstBro[MAXCELLS];
 };
 
@@ -8308,7 +8308,7 @@ public:
 //   and we compare vectors from each cell in the partition with all the other
 //   cells in the partition to get the similarity score.
 // . returns false with g_errno set on error
-long Sections::addImpliedSections3 ( ) {
+int32_t Sections::addImpliedSections3 ( ) {
 
 	// . try skipping for xml
 	// . eventbrite.com has a bunch of dates per event item and
@@ -8352,9 +8352,9 @@ long Sections::addImpliedSections3 ( ) {
 		//m_totalHdrCount = 0;
 
 		// tally some stats for thist list of brothers
-		long count1 = 0;
-		long count2 = 0;
-		//long bothCount = 0;
+		int32_t count1 = 0;
+		int32_t count2 = 0;
+		//int32_t bothCount = 0;
 		// scan the brothers now
 		Section *bro = sk;
 		// until the end of the list
@@ -8396,7 +8396,7 @@ long Sections::addImpliedSections3 ( ) {
 		// to group tods with doms/dows.
 		// this was hurting blackbirdbuvette.com which needed the
 		// hr partition to split up some sections so it got
-		// "Geeks Who Drink" as the title because it would no longer
+		// "Geeks Who Drink" as the title because it would no int32_ter
 		// have the multevent penalty!
 		//if ( count1 + count2 == 2 * bothCount ) continue;
 
@@ -8411,7 +8411,7 @@ long Sections::addImpliedSections3 ( ) {
 		Partition parts[METHOD_MAX];
 
 		// reset these
-		long bestMethodScore[METHOD_MAX];
+		int32_t bestMethodScore[METHOD_MAX];
 		memset ( bestMethodScore , 0 , METHOD_MAX * 4 );
 
 		//
@@ -8422,12 +8422,12 @@ long Sections::addImpliedSections3 ( ) {
 		// reset scan
 		//bro = sk;
 		// assume no winner
-		long       bestScore  = 0;
+		int32_t       bestScore  = 0;
 		Section   *bestBro    = NULL;
 		char       bestMethod = -1;
 		Partition *bestPart   = NULL;
 		// loop over all enumerated methods
-		for ( long m = 0 ; m < METHOD_MAX ; m++ ) {
+		for ( int32_t m = 0 ; m < METHOD_MAX ; m++ ) {
 			// try skipping these
 			if ( m == METHOD_TAGID ) continue;
 			if ( m == METHOD_INNER_TAGID ) continue;
@@ -8445,7 +8445,7 @@ long Sections::addImpliedSections3 ( ) {
 				Partition tmpp;
 				// . try each tagid once i guess
 				// . returns -1 if we already did it!
-				long score = getDelimScore(sk,m,bro,&tmpp);
+				int32_t score = getDelimScore(sk,m,bro,&tmpp);
 				// error? g_errno should be set
 				if ( score == -3 ) return -1;
 				// skip if not legit
@@ -8470,7 +8470,7 @@ long Sections::addImpliedSections3 ( ) {
 				bestMethodScore[m] = score;
 				// if so, store it for this method
 				parts[m].m_np = tmpp.m_np;
-				for ( long i = 0 ; i < tmpp.m_np ; i++ ) {
+				for ( int32_t i = 0 ; i < tmpp.m_np ; i++ ) {
 					// rbeathe
 					QUICKPOLL(m_niceness);
 					parts[m].m_a[i] = tmpp.m_a[i];
@@ -8493,7 +8493,7 @@ long Sections::addImpliedSections3 ( ) {
 
 		/*
 		Partition *bestSuper = NULL;
-		long       bestSuperMethod;
+		int32_t       bestSuperMethod;
 		// . before inserting the winning partition see if another
 		//   partition is a "super partition" of that and insert that
 		//   first if it is. 
@@ -8501,7 +8501,7 @@ long Sections::addImpliedSections3 ( ) {
 		//   because one section in the partition is much larger
 		//   than another, possibly empty, section...
 		// . prefer the super partition with the lest # of cells
-		for ( long m = 0 ; m < METHOD_MAX ; m++ ) {
+		for ( int32_t m = 0 ; m < METHOD_MAX ; m++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// skip if winner
@@ -8520,10 +8520,10 @@ long Sections::addImpliedSections3 ( ) {
 			// assume it is a super partition
 			bool isSuper = true;
 			// w is cursor into the subpartitions cells/intervals
-			long w = 0;
+			int32_t w = 0;
 			// now every startpoint in the super partition must
 			// be right before a point in the subpartition
-			long k; for ( k = 0 ; k < super->m_np ; k++ ) {
+			int32_t k; for ( k = 0 ; k < super->m_np ; k++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				// get last partition if we have a sequence
@@ -8573,7 +8573,7 @@ long Sections::addImpliedSections3 ( ) {
 		*/
 				
 		// select the winning partition
-	        long       winnerMethod = bestMethod;
+	        int32_t       winnerMethod = bestMethod;
 		Partition *winnerPart   = bestPart;
 		// if no super paritition...
 		//if ( bestSuper ) {
@@ -8600,10 +8600,10 @@ long Sections::addImpliedSections3 ( ) {
 		log("sections: inserting winner method=%s",ms);
 
 		// loop over his paritions and insert each one
-		for ( long i = 0 ; i < winnerPart->m_np ; i++ ) {
+		for ( int32_t i = 0 ; i < winnerPart->m_np ; i++ ) {
 			// get partition
-			long a = winnerPart->m_a[i];
-			long b = winnerPart->m_b[i];
+			int32_t a = winnerPart->m_a[i];
+			int32_t b = winnerPart->m_b[i];
 			// if it is a container around another container
 			// then it is pointeless
 			Section *cc = m_sectionPtrs[a];
@@ -8630,15 +8630,15 @@ long Sections::addImpliedSections3 ( ) {
 }
 
 // . vec? now has dups!
-float computeSimilarity2 ( long   *vec0 , 
-			  long   *vec1 ,
-			  long   *s0   , // corresponding scores vector
-			  long   *s1   , // corresponding scores vector
-			  long    niceness ,
+float computeSimilarity2 ( int32_t   *vec0 , 
+			  int32_t   *vec1 ,
+			  int32_t   *s0   , // corresponding scores vector
+			  int32_t   *s1   , // corresponding scores vector
+			  int32_t    niceness ,
 			  SafeBuf *pbuf ,
 			  HashTableX *labelTable ,
-			  long nv0 ,
-			  long nv1 ) {
+			  int32_t nv0 ,
+			  int32_t nv1 ) {
 	// if both empty, assume not similar at all
 	if ( *vec0 == 0 && *vec1 == 0 ) return 0;
 	// if either is empty, return 0 to be on the safe side
@@ -8647,10 +8647,10 @@ float computeSimilarity2 ( long   *vec0 ,
 
 	HashTableX ht;
 	char  hbuf[200000];
-	long  phsize = 200000;
+	int32_t  phsize = 200000;
 	char *phbuf  = hbuf;
 	// how many slots to allocate initially?
-	long need = 1024;
+	int32_t need = 1024;
 	if ( nv0 > 0 ) need = nv0 * 4;
 	// do not use the buf on stack if need more...
 	if ( need > 16384 ) { phbuf = NULL; phsize = 0; }
@@ -8665,18 +8665,18 @@ float computeSimilarity2 ( long   *vec0 ,
 
 	bool useScores  = (bool)s0;
 
-	long matches    = 0;
-	long total      = 0;
+	int32_t matches    = 0;
+	int32_t total      = 0;
 
-	long matchScore = 0;
-	long totalScore = 0;
+	int32_t matchScore = 0;
+	int32_t totalScore = 0;
 
 	// hash first vector. accumulating score total and total count
-	for ( long *p = vec0; *p ; p++ , s0++ ) {
+	for ( int32_t *p = vec0; *p ; p++ , s0++ ) {
 		// count it
 		total++;
 		// get it
-		long score = 1;
+		int32_t score = 1;
 		// get the score if valid
 		if ( useScores ) score = *s0;
 		// total it up
@@ -8686,29 +8686,29 @@ float computeSimilarity2 ( long   *vec0 ,
 		if ( ! ht.addTerm32 ( p , score ) ) return -1;
 	}
 
-	//long zero = 0;
+	//int32_t zero = 0;
 
 	// see what components of this vector match
-	for ( long *p = vec1; *p ; p++ , s1++ ) {
+	for ( int32_t *p = vec1; *p ; p++ , s1++ ) {
 		// count it
 		total++;
 		// get it
-		long score = 1;
+		int32_t score = 1;
 		// get the score if valid
 		if ( useScores ) score = *s1;
 		// and total scores
 		totalScore += score;
 		// is it in there?
-		long slot = ht.getSlot ( p );
+		int32_t slot = ht.getSlot ( p );
 		// skip if unmatched
 		if ( slot < 0 ) {
 			// skip if not debugging
 			if ( ! pbuf ) continue;
 			// get the label ptr
-			char *pptr = (char *)labelTable->getValue((long *)p);
+			char *pptr = (char *)labelTable->getValue((int32_t *)p);
 			// record label in safeBuf if provided
-			dedupLabels.addTerm32 ( (long *)&pptr , score );
-			//dedupLabels.addTerm32 ( (long *)p );
+			dedupLabels.addTerm32 ( (int32_t *)&pptr , score );
+			//dedupLabels.addTerm32 ( (int32_t *)p );
 			// and then skip
 			continue;
 		}
@@ -8717,11 +8717,11 @@ float computeSimilarity2 ( long   *vec0 ,
 		matches++;
 
 		// and score of what we matched
-		long *val = (long *)ht.getValueFromSlot ( slot );
+		int32_t *val = (int32_t *)ht.getValueFromSlot ( slot );
 		// sanity check. does "vec1" have dups in it? shouldn't...
 		if ( *val == 0 ) { char *xx=NULL;*xx=0; }
 		// we get the min
-		long minScore ;
+		int32_t minScore ;
 		if ( *val < score ) minScore = *val;
 		else                minScore = score;
 
@@ -8730,7 +8730,7 @@ float computeSimilarity2 ( long   *vec0 ,
 		// he is hit too
 		//matchScore += *val;
 		// how many were unmatched?
-		long unmatched = *val + score - (2*minScore);
+		int32_t unmatched = *val + score - (2*minScore);
 
 		// remove it as we match it to deal with dups
 		// once we match it once, do not match again, score was
@@ -8742,15 +8742,15 @@ float computeSimilarity2 ( long   *vec0 ,
 	}
 
 	// for debug add all remaining into dedup table
-	for ( long i = 0 ; labelTable && i < ht.getNumSlots(); i++ ) {
+	for ( int32_t i = 0 ; labelTable && i < ht.getNumSlots(); i++ ) {
 		QUICKPOLL(niceness);
 		if ( ! ht.m_flags[i] ) continue;
 		uint32_t *unmatched = (uint32_t *)ht.getValueFromSlot (i);
 		if ( *unmatched == 0 ) continue;
 		// use the key to get the label ptr
-		long key = *(long *)ht.getKeyFromSlot(i);
+		int32_t key = *(int32_t *)ht.getKeyFromSlot(i);
 		char *pptr = (char *)labelTable->getValue(&key);
-		dedupLabels.addTerm32 ( (long *)&pptr , *unmatched );
+		dedupLabels.addTerm32 ( (int32_t *)&pptr , *unmatched );
 	}
 
 
@@ -8766,7 +8766,7 @@ float computeSimilarity2 ( long   *vec0 ,
 	if ( ! labelTable ) return percent;
 
 	// scan label table for labels
-	for ( long i = 0 ; i < dedupLabels.getNumSlots(); i++ ) {
+	for ( int32_t i = 0 ; i < dedupLabels.getNumSlots(); i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// skip empties
@@ -8774,10 +8774,10 @@ float computeSimilarity2 ( long   *vec0 ,
 		// get hash
 		char **pptr = (char **)dedupLabels.getKeyFromSlot(i);
 		// and count
-		long count = dedupLabels.getScoreFromSlot(i);
+		int32_t count = dedupLabels.getScoreFromSlot(i);
 		// get label and count
 		char *str = *pptr;//(char *)labelTable->getValue(&h);
-		if ( count != 1 ) pbuf->safePrintf ( "%s(%li) ",str,count);
+		if ( count != 1 ) pbuf->safePrintf ( "%s(%"INT32") ",str,count);
 		else              pbuf->safePrintf ( "%s ",str);
 	}
 
@@ -8794,7 +8794,7 @@ float computeSimilarity2 ( long   *vec0 ,
 // . otherwise returns a postive score of the strength of the partition
 // . assumes all sections with the same "getDelimHash() as "delim" are the
 //   first section in a particular partition cell
-long Sections::getDelimScore ( Section *bro , 
+int32_t Sections::getDelimScore ( Section *bro , 
 			       char method , 
 			       Section *delim ,
 			       Partition *part ) {
@@ -8802,7 +8802,7 @@ long Sections::getDelimScore ( Section *bro ,
 	// save it
 	Section *start = bro;
 
-	long dh = getDelimHash ( method , delim , start );
+	int32_t dh = getDelimHash ( method , delim , start );
 
 	// bro must be certain type for some methods
 	if ( dh == -1 ) return -2;
@@ -8821,40 +8821,40 @@ long Sections::getDelimScore ( Section *bro ,
 	// the head section of a particular partition's section
 	Section *currDelim = bro;
 	// scores
-	long brosWithWords = 0;
-	long maxBrosWithWords = 0;
-	long bonus1    = 0;
-	long bonus2    = 0;
-	long bonus3    = 0;
+	int32_t brosWithWords = 0;
+	int32_t maxBrosWithWords = 0;
+	int32_t bonus1    = 0;
+	int32_t bonus2    = 0;
+	int32_t bonus3    = 0;
 #define MAX_COMPONENTS 15000
-	long pva[MAX_COMPONENTS];
-	long pvb[MAX_COMPONENTS];
-	long sva[MAX_COMPONENTS];
-	long svb[MAX_COMPONENTS];
-	long  nva  = 0;
-	long  nvb  = 0;
+	int32_t pva[MAX_COMPONENTS];
+	int32_t pvb[MAX_COMPONENTS];
+	int32_t sva[MAX_COMPONENTS];
+	int32_t svb[MAX_COMPONENTS];
+	int32_t  nva  = 0;
+	int32_t  nvb  = 0;
 	pva[0] = 0;
 	pvb[0] = 0;
-	long *pvec    = NULL;
-	long *pnum    = NULL;
-	long *pscore  = NULL;
+	int32_t *pvec    = NULL;
+	int32_t *pnum    = NULL;
+	int32_t *pscore  = NULL;
 	bool  firstDelim = true;
 	float simTotal = 0;
 	float minSim = 101.0;
-	long mina1 = -2;
-	long mina2 = -2;
-	long minTotalComponents=0;
+	int32_t mina1 = -2;
+	int32_t mina2 = -2;
+	int32_t minTotalComponents=0;
 	Section *prevPrevStart = NULL;
 	Section *prevStart = NULL;
-	long  simCount = 0;
-	long inserts = 0;
-	long skips = 0;
+	int32_t  simCount = 0;
+	int32_t inserts = 0;
+	int32_t skips = 0;
 
-	// no longer allow dups, keep a count of each hash now
+	// no int32_ter allow dups, keep a count of each hash now
 	char vhtbuf[92000];
 	HashTableX vht;
 	vht.set ( 4, 4 ,256,vhtbuf,92000,false,m_niceness,"vhttab");
-	long cellCount = 0;
+	int32_t cellCount = 0;
 	SafeBuf minBuf;
 
 	HashTableX labels;
@@ -8869,8 +8869,8 @@ long Sections::getDelimScore ( Section *bro ,
 	//dbt = &labels;
 	//pbuf = &sb;
 
-	long np = 0;
-	long nonDelims = 0;
+	int32_t np = 0;
+	int32_t nonDelims = 0;
 
 	bool ignoreAbove = true;
 	// if delimeter is like an hr tag without text in it, then do include
@@ -8896,7 +8896,7 @@ long Sections::getDelimScore ( Section *bro ,
 		if ( bro && (bro->m_baseHash == BH_IMPLIED ) ) return -2;
 
 		// get its hash
-		long h = 0LL ;
+		int32_t h = 0LL ;
 		if ( bro ) h = getDelimHash ( method , bro , start );
 
 		// . check this out
@@ -8912,12 +8912,12 @@ long Sections::getDelimScore ( Section *bro ,
 
 		// count the section delimeter itself in this if not firstTime,
 		// and then we need two sections after that...?
-		//long need = 3;
+		//int32_t need = 3;
 		// i guess the first time is reduced since it started
 		// the secCount at 0, and normally it starts at 1 (see below)
 		// but if we have like an hr tag delimeter then we only
 		// need two sections above it. this fixed cabq.gov so it
-		// got the first implied section and no longer missed it.
+		// got the first implied section and no int32_ter missed it.
 		//if ( firstTime ) need = 2;
 
 		// update this for insertSubSection()
@@ -9003,15 +9003,15 @@ long Sections::getDelimScore ( Section *bro ,
 			// reset vector size
 			*pnum = 0;
 			// convert vht to vector
-			for ( long i = 0 ; i < vht.m_numSlots ; i++ ) {
+			for ( int32_t i = 0 ; i < vht.m_numSlots ; i++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				// skip if empty
 				if ( ! vht.m_flags[i] ) continue;
 				// add it otherwise
-				pvec[*pnum] = *(long *)(&vht.m_keys[i*4]);
+				pvec[*pnum] = *(int32_t *)(&vht.m_keys[i*4]);
 				// add score
-				pscore[*pnum] = *(long *)(&vht.m_vals[i*4]);
+				pscore[*pnum] = *(int32_t *)(&vht.m_vals[i*4]);
 				// sanity
 				if ( pscore[*pnum] <= 0){char *xx=NULL;*xx=0;}
 				// inc component count
@@ -9237,14 +9237,14 @@ long Sections::getDelimScore ( Section *bro ,
 	//   then paritioning those larger sections further. like looking 
 	//   ahead a move in a chess game. should better partition 
 	//   santafeplayhouse.org methinks this way
-	//bonus1 = (long)(avgSim * 100);
-	bonus1 = (long)(minSim * 1000);
+	//bonus1 = (int32_t)(avgSim * 100);
+	bonus1 = (int32_t)(minSim * 1000);
 
 	// i added the "* 2" to fix unm.edu because it was starting each
 	// section the the <table> tag section but had a high badCount,
 	// so this is kind of a hack...
-	//long total = goodCount * 10000 - badCount * 2 * 9000;
-	long total = 0;
+	//int32_t total = goodCount * 10000 - badCount * 2 * 9000;
+	int32_t total = 0;
 	total += bonus1;
 
 	// debug output
@@ -9266,20 +9266,20 @@ long Sections::getDelimScore ( Section *bro ,
 	// skip this for now
 	//return total;
 
-	logf(LOG_DEBUG,"sec: 1stbro=%lu "
-	     "nondelims=%li "
-	     "total=%li "
-	     "bonus1=%li "
-	     "bonus2=%li "
-	     "bonus3=%li "
+	logf(LOG_DEBUG,"sec: 1stbro=%"UINT32" "
+	     "nondelims=%"INT32" "
+	     "total=%"INT32" "
+	     "bonus1=%"INT32" "
+	     "bonus2=%"INT32" "
+	     "bonus3=%"INT32" "
 	     "avgSim=%.02f "
 	     "minSim=%.02f "
-	     "totalcomps=%li "
-	     "inserts=%li "
-	     "skips=%li "
-	     "containera=%li "
-	     //"goodcount=%li badcount=%li "
-	     "dhA=%li method=%s",
+	     "totalcomps=%"INT32" "
+	     "inserts=%"INT32" "
+	     "skips=%"INT32" "
+	     "containera=%"INT32" "
+	     //"goodcount=%"INT32" badcount=%"INT32" "
+	     "dhA=%"INT32" method=%s",
 	     start->m_a,
 	     nonDelims,
 	     total,
@@ -9291,14 +9291,14 @@ long Sections::getDelimScore ( Section *bro ,
 	     minTotalComponents,
 	     inserts,
 	     skips,
-	     (long)container->m_a,
+	     (int32_t)container->m_a,
 	     //goodCount,badCount,
 	     delim->m_a,ms);
 
 	// show the difference in the two adjacent brother sections that
 	// resulted in the min similarity
 	// NOTE: using the log() it was truncating us!! so use stderr
-	fprintf(stderr,"sec: mina1=%li mina2=%li "
+	fprintf(stderr,"sec: mina1=%"INT32" mina2=%"INT32" "
 	     "missingbits=%s\n", mina1,mina2, minBuf.getBufStart());
 
 	// return score
@@ -9433,7 +9433,7 @@ static sec_t s_secFlags[] = {
 #define MAXLABELSIZE 64
 
 bool addLabel ( HashTableX *labelTable ,
-		long        key ,
+		int32_t        key ,
 		char       *label ) {
 
 	if ( key == 1021574190 )
@@ -9447,12 +9447,12 @@ bool addLabel ( HashTableX *labelTable ,
 	}
 
 	// see if label already exists under different key
-	for ( long i = 0 ; i < labelTable->m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < labelTable->m_numSlots ; i++ ) {
 		if ( ! labelTable->m_flags[i] ) continue;
 		char *v = (char *)labelTable->getValueFromSlot(i);
 		if ( strcmp(v,label) ) continue;
-		long k1 = *(long *)labelTable->getKeyFromSlot(i);
-		log("sec: key=%li oldk=%li",key,k1);
+		int32_t k1 = *(int32_t *)labelTable->getKeyFromSlot(i);
+		log("sec: key=%"INT32" oldk=%"INT32"",key,k1);
 		char *xx=NULL;*xx=0;
 	}
 
@@ -9469,8 +9469,8 @@ bool Sections::hashSentBits (Section    *sx         ,
 			     HashTableX *labelTable ,
 			     char       *modLabel   ) {
 
-	long n;
-	long count = 0;
+	int32_t n;
+	int32_t count = 0;
 	char sbuf [ MAXLABELSIZE ];
 	
 	if ( ! sx ) {
@@ -9490,7 +9490,7 @@ bool Sections::hashSentBits (Section    *sx         ,
 
 	n = sizeof(s_sentFlags)/sizeof(sentflags_t);
 	// handle SENT_* flags
-	for ( long i = 0 ; i < n ; i++ , count++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ , count++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if bit is off
@@ -9518,7 +9518,7 @@ bool Sections::hashSentBits (Section    *sx         ,
 
 	n = sizeof(s_secFlags)/sizeof(sec_t);
 	// and for SEC_* flags
-	for ( long i = 0 ; i < n ; i++ , count++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ , count++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// mod it with the value for sentence "sx"
@@ -9584,8 +9584,8 @@ bool Sections::hashSentPairs (Section    *sx ,
 	// only one can be NULL
 	if ( ! sx && ! sb ) return true;
 
-	long n;
-	long count = 0;
+	int32_t n;
+	int32_t count = 0;
 	char *str = NULL;
 	char sbuf [ MAXLABELSIZE ];
 
@@ -9601,7 +9601,7 @@ bool Sections::hashSentPairs (Section    *sx ,
 
 	n = sizeof(s_sentFlags)/sizeof(sentflags_t);
 	// handle SENT_* flags
-	for ( long i = 0 ; i < n ; i++ , count++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ , count++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// mod it with the value for sentence "sx"
@@ -9626,7 +9626,7 @@ bool Sections::hashSentPairs (Section    *sx ,
 
 	n = sizeof(s_secFlags)/sizeof(sec_t);
 	// and for SEC_* flags
-	for ( long i = 0 ; i < n ; i++ , count++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ , count++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// mod it with the value for sentence "sx"
@@ -9678,14 +9678,14 @@ bool Sections::hashSentPairs (Section    *sx ,
 
 // . don't return 0 because we make a vector of these hashes
 //   and computeSimilarity() assumes vectors are NULL term'd. return -1 instead
-long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
+int32_t Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 
 	// now all must have text!
 	//if ( bro->m_firstWordPos < 0 ) return -1;
 
 	// if has no text give it a slightly different hash because these
 	// sections are often seen as delimeters
-	long mod = 0;
+	int32_t mod = 0;
 	if ( bro->m_firstWordPos < 0 ) mod = 3405873;
 
 	// this is really a fix for the screwed up sections in 
@@ -9710,12 +9710,12 @@ long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 		// section after must have dom
 		if ( ! (next->m_flags & SEC_HAS_DOM) ) return -1;
 		// now it must be all date words
-		long a = next->m_firstWordPos;
-		long b = next->m_lastWordPos;
+		int32_t a = next->m_firstWordPos;
+		int32_t b = next->m_lastWordPos;
 		// sanity check
 		if ( a < 0 ) { char *xx=NULL;*xx=0; }
 		// scan
-		for ( long i = a ; i <= b ; i++ ) {
+		for ( int32_t i = a ; i <= b ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not wid
@@ -9775,12 +9775,12 @@ long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 		if ( (bro->m_flags & SEC_HAS_DOM) ) 
 			return -1;
 		// now it must be all date words
-		long a = bro->m_firstWordPos;
-		long b = bro->m_lastWordPos;
+		int32_t a = bro->m_firstWordPos;
+		int32_t b = bro->m_lastWordPos;
 		// sanity check
 		if ( a < 0 ) { char *xx=NULL;*xx=0; }
 		// scan
-		for ( long i = a ; i <= b ; i++ ) {
+		for ( int32_t i = a ; i <= b ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not wid
@@ -9794,7 +9794,7 @@ long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 	}
 	// are we partitioning by tagid?
 	if ( method == METHOD_TAGID ) {
-		long tid = bro->m_tagId;
+		int32_t tid = bro->m_tagId;
 		// . map a strong tag to h4 since they look the same!
 		// . should fix metropolis url
 		if ( tid == TAG_STRONG ) tid = TAG_H4;
@@ -9814,7 +9814,7 @@ long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 	// stole this function logic from getBaseHash2()
 	if ( method == METHOD_ATTRIBUTE ) {
 		// assume this
-		long bh = bro->m_tagHash; // Id;
+		int32_t bh = bro->m_tagHash; // Id;
 		// for sentence sections, etc...
 		if ( bh == 0 ) bh = bro->m_baseHash;
 		// do not allow sentences (see comment above)
@@ -9905,12 +9905,12 @@ long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 		if ( ! (bro->m_flags & SEC_HAS_DOM) ) 
 			return -1;
 		// now it must be all date words
-		long a = bro->m_firstWordPos;
-		long b = bro->m_lastWordPos;
+		int32_t a = bro->m_firstWordPos;
+		int32_t b = bro->m_lastWordPos;
 		// sanity check
 		if ( a < 0 ) { char *xx=NULL;*xx=0; }
 		// scan
-		for ( long i = a ; i <= b ; i++ ) {
+		for ( int32_t i = a ; i <= b ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not wid
@@ -9974,12 +9974,12 @@ long Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 		// this is causing core
 		if ( bro->m_tagId == TAG_TC ) return -1;
 		// now it must be all date words
-		long a = bro->m_firstWordPos;
-		long b = bro->m_lastWordPos;
+		int32_t a = bro->m_firstWordPos;
+		int32_t b = bro->m_lastWordPos;
 		// sanity check
 		if ( a < 0 ) { char *xx=NULL;*xx=0; }
 		// scan
-		for ( long i = a ; i <= b ; i++ ) {
+		for ( int32_t i = a ; i <= b ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not wid
@@ -10105,7 +10105,7 @@ bool Sections::addSentenceSections ( ) {
 		SEC_HIDDEN|
 		SEC_NOSCRIPT;
 
-	// shortcut
+	// int16_tcut
 	Section **sp = m_sectionPtrs;
 
 	static bool s_init = false;
@@ -10116,7 +10116,7 @@ bool Sections::addSentenceSections ( ) {
 	static int64_t h_on;
 	static int64_t h_under;
 	static int64_t h_with;
-	static int64_t h_along;
+	static int64_t h_aint32_t;
 	static int64_t h_from;
 	static int64_t h_by;
 	static int64_t h_of;
@@ -10157,7 +10157,7 @@ bool Sections::addSentenceSections ( ) {
 		h_on = hash64n("on");
 		h_under = hash64n("under");
 		h_with = hash64n("with");
-		h_along = hash64n("along");
+		h_aint32_t = hash64n("aint32_t");
 		h_from = hash64n("from");
 		h_by = hash64n("by");
 		h_of = hash64n("of");
@@ -10176,15 +10176,15 @@ bool Sections::addSentenceSections ( ) {
 
 	// need D_IS_IN_URL bits to be valid
 	m_bits->setInUrlBits ( m_niceness );
-	// shortcut
+	// int16_tcut
 	wbit_t *bb = m_bits->m_bits;
 	/*
-	// shortcut
+	// int16_tcut
 	Date **datePtrs = m_dates->m_datePtrs;
-	// shortcut. this should not include telescoped dates!!!
-	long maxnd = m_dates->m_numDatePtrs;
+	// int16_tcut. this should not include telescoped dates!!!
+	int32_t maxnd = m_dates->m_numDatePtrs;
 	// set up nd to reference first date in the document
-	long nd = 0;
+	int32_t nd = 0;
 	// what date we are currently in
 	Date *inDate = NULL;
 	// get first date
@@ -10203,7 +10203,7 @@ bool Sections::addSentenceSections ( ) {
 	// is the abbr. a noun? like "appt."
 	bool hasWordAfter = false;
 
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// need a wid
@@ -10216,19 +10216,19 @@ bool Sections::addSentenceSections ( ) {
 		int64_t prevWid = m_wids[i];
 		int64_t prevPrevWid = 0LL;
 		// flag
-		long lastWidPos = i;//-1;
+		int32_t lastWidPos = i;//-1;
 		bool lastWasComma = false;
 		nodeid_t includedTag = -2;
-		long lastbr = -1;
+		int32_t lastbr = -1;
 		bool hasColon = false;
 		bool endOnBr = false;
 		bool endOnBold = false;
 		bool capped = true;
-		long upper = 0;
-		long numAlnums = 0;
-		long verbCount = 0;
+		int32_t upper = 0;
+		int32_t numAlnums = 0;
+		int32_t verbCount = 0;
 		// scan for sentence end
-		long j; for ( j = i ; j < m_nw ; j++ ) {
+		int32_t j; for ( j = i ; j < m_nw ; j++ ) {
 			// skip words
 			if ( m_wids[j] ) {
 				// prev prev
@@ -10258,7 +10258,7 @@ bool Sections::addSentenceSections ( ) {
 			}
 			// tag?
 			if ( m_tids[j] ) {
-				// shortcut
+				// int16_tcut
 				nodeid_t tid = m_tids[j] & BACKBITCOMP;
 
 				// "shelter: 123-4567"
@@ -10358,8 +10358,8 @@ bool Sections::addSentenceSections ( ) {
 						continue;
 					// if first alnum word after tag
 					// is lower case, that is good too
-					long aw = j + 1;
-					long maxaw = j + 12;
+					int32_t aw = j + 1;
+					int32_t maxaw = j + 12;
 					if ( maxaw > m_nw ) maxaw = m_nw;
 					for ( ; aw < maxaw ; aw++ )
 						if ( m_wids[aw] ) break;
@@ -10387,8 +10387,8 @@ bool Sections::addSentenceSections ( ) {
 					//     m_wids[aw] == h_midnight )
 					if ( tid == TAG_P &&
 					     isLower &&
-					     // Oscar G<p>along with xxxx
-					     m_wids[aw] != h_along &&
+					     // Oscar G<p>aint32_t with xxxx
+					     m_wids[aw] != h_aint32_t &&
 					     m_wids[aw] != h_with )
 						isLower = false;
 
@@ -10647,9 +10647,9 @@ bool Sections::addSentenceSections ( ) {
 					goto redo;
 
 				// set "next" to next alnum word after us
-				long next = j+1;
+				int32_t next = j+1;
 				int64_t nwid = 0LL;
-				long max  = next + 10;
+				int32_t max  = next + 10;
 				if ( max > m_nw ) max = m_nw;
 				for ( ; next < max ; next++ ) {
 					if ( ! m_wids[next] ) continue;
@@ -10723,11 +10723,11 @@ bool Sections::addSentenceSections ( ) {
 			if ( m_wids[j-1] ) break;
 
 		// make our sentence endpoints now
-		long senta = i;
+		int32_t senta = i;
 		// make the sentence defined by [senta,sentb) where sentb
 		// defines a half-open interval like we do for almost 
 		// everything else
-		long sentb = j;
+		int32_t sentb = j;
 
 		// update i for next iteration
 		i = sentb - 1;
@@ -10755,14 +10755,14 @@ bool Sections::addSentenceSections ( ) {
 		// to determine the parent section we inserting the sentence
 		// into as a child section.
 		//Section *parent = NULL;
-		long     start  = -1;
+		int32_t     start  = -1;
 		Section *pp;
 		//Section *np;
-		long     lastk = 0;
+		int32_t     lastk = 0;
 		Section *splitSection = NULL;
 		Section *lastGuy = NULL;
 
-		for ( long k = senta ; k <= sentb ; k++ ) {
+		for ( int32_t k = senta ; k <= sentb ; k++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// add final piece
@@ -10786,7 +10786,7 @@ bool Sections::addSentenceSections ( ) {
 			lastGuy = pp;
 			// . i'd say blow up "pp" until its contains "start"
 			// . but if before it contains start it breaches
-			//   [senta,sentb) then we have to cut things short
+			//   [senta,sentb) then we have to cut things int16_t
 			for ( ; pp ; pp = pp->m_parent ) {
 				// breathe
 				QUICKPOLL(m_niceness);
@@ -10817,7 +10817,7 @@ bool Sections::addSentenceSections ( ) {
 			// add the final piece if we go to this label
 		addit:
 			// use this flag
-			long bh = BH_SENTENCE;
+			int32_t bh = BH_SENTENCE;
 			// determine parent section, smallest section 
 			// containing [start,lastk]
 			Section *parent = m_sectionPtrs[start];
@@ -10831,8 +10831,8 @@ bool Sections::addSentenceSections ( ) {
 			// for "<span>Albuquerque</span>, New Mexico" 
 			// "start" points to "Albuquerque" but needs to 
 			// point to the "<span>" so its parent is "parent"
-			long adda = start;
-			long addb = lastk;
+			int32_t adda = start;
+			int32_t addb = lastk;
 			// need to update "start" to so its parent is the new 
 			// "parent" now so insertSubSection() does not core
 			for ( ; adda >= 0 ; ) {
@@ -10899,7 +10899,7 @@ bool Sections::addSentenceSections ( ) {
 				// ry/buffalo-ny-usa/places-to-go/tourist-stops
 				// like <a><b>...</div> with no ending </a> or
 				// </b> tags then we have to get the parent
-				// of the parent as long as its m_b is the
+				// of the parent as int32_t as its m_b is the
 				// same and check that before advancing addb
 				// otherwise we can miss the parent section
 				// that we want! (this is because the kid
@@ -10940,7 +10940,7 @@ bool Sections::addSentenceSections ( ) {
 			if ( is->m_flags & SEC_SPLIT_SENT )
 				tt.safePrintf(" [split]");
 			tt.pushChar(0);
-			fprintf(stderr,"a=%li %s\n",start,tt.m_buf);
+			fprintf(stderr,"a=%"INT32" %s\n",start,tt.m_buf);
 			*/
 			// . set this
 			// . sentence is from [senta,sentb)
@@ -10963,7 +10963,7 @@ bool Sections::addSentenceSections ( ) {
 		}
 	}
 
-	long     inSentTil = 0;
+	int32_t     inSentTil = 0;
 	Section *lastSent = NULL;
 	// get the section of each word. if not a sentence section then
 	// make its m_sentenceSection point to its parent that is a sentence
@@ -11090,8 +11090,8 @@ bool Sections::addSentenceSections ( ) {
 		// do no split the sections lasta and lastb. we need our new
 		// inserted section to contain "lasta" and "lastb" but be
 		// a child of "big"
-		long maxa ;
-		long minb ;
+		int32_t maxa ;
+		int32_t minb ;
 		// but if these are the same as big
 		if ( ! lasta ) maxa = senta;
 		else           maxa = lasta->m_a;
@@ -11099,8 +11099,8 @@ bool Sections::addSentenceSections ( ) {
 		else           minb = lastb->m_b;
 
 		// save for debug
-		//long saveda = senta;
-		//long savedb = sentb;
+		//int32_t saveda = senta;
+		//int32_t savedb = sentb;
 
 		// apply the constraints
 		if ( senta > maxa ) senta = maxa;
@@ -11127,10 +11127,10 @@ bool Sections::addSentenceSections ( ) {
 		*/
 }
 
-Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
-				      long newBaseHash ) {
+Section *Sections::insertSubSection ( Section *parentArg , int32_t a , int32_t b ,
+				      int32_t newBaseHash ) {
 	// debug
-	//log("sect: inserting subsection [%li,%li)",a,b);
+	//log("sect: inserting subsection [%"INT32",%"INT32")",a,b);
 
 	// try to realloc i guess. should keep ptrs in tact.
 	if ( m_numSections >= m_maxNumSections )
@@ -11177,7 +11177,7 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	}
 
 	// . try using section before us if it is contained by "si"
-	// . like in the case when word #a belongs to the root section
+	// . like in the case when word #a beint32_ts to the root section
 	//   and there are thousands of child sections of the root before "a"
 	//   we really want to get the child section of the root before us
 	//   as the prev section, "si", otherwise the 2nd for loop below here
@@ -11334,10 +11334,10 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	// . TODO: use hashtable?
 	// . TODO: aren't these sections in order by m_a??? could just use that
 	//
-	//for ( long xx = 0 ; xx < m_numSections ; xx++ ) {
+	//for ( int32_t xx = 0 ; xx < m_numSections ; xx++ ) {
 
 	// set sk->m_firstWordPos
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		// and first/last word pos
 		if ( ! m_wids[i] ) continue;
 		// mark this
@@ -11346,7 +11346,7 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	}
 
 	// set sk->m_lastWordPos
-	for ( long i = b-1 ; i >= a ; i-- ) {
+	for ( int32_t i = b-1 ; i >= a ; i-- ) {
 		// and first/last word pos
 		if ( ! m_wids[i] ) continue;
 		// mark this
@@ -11360,7 +11360,7 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	// a sentence section i guess, because our parent can have a ton
 	// of children sections!!
 	//
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get current parent of that word
@@ -11399,7 +11399,7 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	// start scanning here
 	Section *start = parent->m_next;
 
-	long lastb = -1;
+	int32_t lastb = -1;
 	// try just scanning sections in parent
 	for ( Section *sx = start ; sx ; sx = sx->m_next ) {
 		// breathe
@@ -11465,7 +11465,7 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	bool needsFirst = true;
 	// . set the words ptrs to it
 	// . TODO: can later speed up with ptr to ptr logic
-	for ( long yy = a ; yy < b ; yy++ ) {
+	for ( int32_t yy = a ; yy < b ; yy++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// and first/last word pos
@@ -11488,7 +11488,7 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 }
 
 // for brbr and hr splitting delimeters
-long Sections::splitSectionsByTag ( nodeid_t tagid ) {
+int32_t Sections::splitSectionsByTag ( nodeid_t tagid ) {
 
 	// . try skipping for xml
 	// . eventbrite.com has a bunch of dates per event item and
@@ -11501,7 +11501,7 @@ long Sections::splitSectionsByTag ( nodeid_t tagid ) {
 	       m_isFacebook ) )
 		return 0;
 
-	long numAdded = 0;
+	int32_t numAdded = 0;
 	// . now, split sections up if they contain one or more <hr> tags
 	// . just append some "hr" sections under that parent to m_sections[]
 	// . need to update m_sectionPtrs[] after this of course!!!!!
@@ -11528,7 +11528,7 @@ long Sections::splitSectionsByTag ( nodeid_t tagid ) {
 		first->m_processedHash = 1;
 
 		// start of insertion section is right after tag
-		long a = first->m_b;
+		int32_t a = first->m_b;
 
 		// but if first is not a tag delimeter than use m_a
 		if ( ! isTagDelimeter ( first , tagid ) ) a = first->m_a;
@@ -11538,9 +11538,9 @@ long Sections::splitSectionsByTag ( nodeid_t tagid ) {
 		if ( first->m_firstWordPos >= 0 ) a = first->m_a;
 
 		// end of inserted section is "b"
-		long b = -1;
+		int32_t b = -1;
 
-		long numTextSections = 0;
+		int32_t numTextSections = 0;
 		// count this
 		if ( first->m_firstWordPos >= 0 ) numTextSections++;
 		// start scanning right after "first"
@@ -11592,7 +11592,7 @@ long Sections::splitSectionsByTag ( nodeid_t tagid ) {
 	return numAdded;
 }
 
-bool Sections::splitSections ( char *delimeter , long dh ) {
+bool Sections::splitSections ( char *delimeter , int32_t dh ) {
 
 	// . try skipping for xml
 	// . eventbrite.com has a bunch of dates per event item and
@@ -11606,11 +11606,11 @@ bool Sections::splitSections ( char *delimeter , long dh ) {
 		return 0;
 
 	// use this for ultimately setting Section::m_tagHash in loop above
-	//long dh ;
+	//int32_t dh ;
 	//if ( delimeter == (char *)0x01 ) dh = 3947503;
 	//else                             dh = hash32n ( delimeter );
 
-	//long th = hash32n("<br");
+	//int32_t th = hash32n("<br");
 
 	// . is the delimeter a section starting tag itself?
 	// . right now, just <hN> tags
@@ -11618,17 +11618,17 @@ bool Sections::splitSections ( char *delimeter , long dh ) {
 	//if ( delimeter != (char *)0x01 && is_digit(delimeter[2] ) ) 
 	//	delimIsSection = true;
 
-	//long ns = m_numSections;
+	//int32_t ns = m_numSections;
 
 
-	long saved = -1;
-	long delimEnd = -1000;
+	int32_t saved = -1;
+	int32_t delimEnd = -1000;
 
 	// . now, split sections up if they contain one or more <hr> tags
 	// . just append some "hr" sections under that parent to m_sections[]
 	// . need to update m_sectionPtrs[] after this of course!!!!!
 	// . now we also support various other delimeters, like bullets
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// sanity check
@@ -11654,18 +11654,18 @@ bool Sections::splitSections ( char *delimeter , long dh ) {
 		// . or if we equal start of section
 		// . it was created, not processed
 		//if ( sn->m_a == i ) continue;
-		// shortcut
+		// int16_tcut
 		//Section *sk ;
 		// what section # is section "sn"?
-		long offset = sn - m_sections;
+		int32_t offset = sn - m_sections;
 		// sanity check
 		if ( &m_sections[offset] != sn ) { char *xx=NULL;*xx=0; }
 		// point to the section after "sn"
-		//long xx = offset + 1;
+		//int32_t xx = offset + 1;
 		// point to words in the new section
-		//long yy = sn->m_a ;
+		//int32_t yy = sn->m_a ;
 		// init this
-		long start = sn->m_a;
+		int32_t start = sn->m_a;
 		// CAUTION: sn->m_a can equal "i" for something like:
 		// "<div><h2>blah</h2> <hr> </div>"
 		// where when splitting h2 sections we are at the start
@@ -11721,8 +11721,8 @@ bool Sections::splitSections ( char *delimeter , long dh ) {
 		//sk->m_flags &= ~SEC_PROCESSED;
 
 		// quick hack sanity check
-		//for ( long w = 0 ; w < m_numSections ; w++ ){
-		//for ( long u = w+1 ; u < m_numSections ; u++ ) {
+		//for ( int32_t w = 0 ; w < m_numSections ; w++ ){
+		//for ( int32_t u = w+1 ; u < m_numSections ; u++ ) {
 		//	if ( m_sections[w].m_a == m_sections[u].m_a &&
 		//	     m_sections[w].m_b == m_sections[u].m_b ) {
 		//		char *xx=NULL;*xx=0; }
@@ -11821,14 +11821,14 @@ bool Sections::...( ) {
 	// datedb to see if we got adequate data as to what sections
 	// are the article sections
 
-	long minRecSizes = SECTIONDB_MINRECSIZES;
+	int32_t minRecSizes = SECTIONDB_MINRECSIZES;
 	// get the group this list is in
-	unsigned long gid ;
+	uint32_t gid ;
 	// split = false 
 	gid = getGroupId ( RDB_SECTIONDB , (char *)&m_startKey, false );
 	// we need a group # from the groupId
-	long split = g_hostdb.getGroupNum ( gid );
-	// shortcut
+	int32_t split = g_hostdb.getGroupNum ( gid );
+	// int16_tcut
 	Msg0 *m = &m_msg0;
 
  loop:
@@ -11916,10 +11916,10 @@ bool Sections::addVotes ( SectionVotingTable *nsvt , uint32_t tagPairHash ) {
 		//if ( sn->m_flags & SEC_NOTEXT ) continue;
 		// . combine the tag hash with the content hash #2
 		// . for some reason m_contentHash is 0 for like menu-y sectns
-		long modified = sn->m_turkTagHash32;
+		int32_t modified = sn->m_turkTagHash32;
 		modified ^= sn->m_sentenceContentHash64;
 		// now we use votehash32 which ignores dates and numbers
-		//long modified = sn->m_turkTagHash32 ^ sn->m_voteHash32;
+		//int32_t modified = sn->m_turkTagHash32 ^ sn->m_voteHash32;
 		// . update m_nsvt voting table now
 		// . the tagHash is the content hash for this one
 		// . this will return false with g_errno set
@@ -11949,7 +11949,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 					  key128_t **lastKey ,
 					  uint32_t tagPairHash ,
 					  int64_t myDocId ,
-					  long niceness ) {
+					  int32_t niceness ) {
 
 	int64_t lastDocId = 0LL;
 	int64_t lastsh48 = 0LL;
@@ -11970,7 +11970,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		key128_t *key = (key128_t *)rec;
 		// the score is the bit which is was set in Section::m_flags
 		// for that docid
-		long secType = g_indexdb.getScore ( (char *)key );
+		int32_t secType = g_indexdb.getScore ( (char *)key );
 		// treat key like a datedb key and get the taghash
 		uint32_t turkTagHash32 = g_datedb.getDate ( key );
 		// get this
@@ -12073,7 +12073,7 @@ void Sections::setNextBrotherPtrs ( bool setContainer ) {
 	}
 
 
-	//for ( long i = 0 ; i + 1 < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i + 1 < m_numSections ; i++ ) {
 	for ( Section *si = m_rootSection ; si ; si = si->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -12082,7 +12082,7 @@ void Sections::setNextBrotherPtrs ( bool setContainer ) {
 		// we already set their m_next/prevBrother members in the
 		// swoggleTable() function
 		//if ( si->m_tagId == TAG_TC ) continue;
-		// shortcut
+		// int16_tcut
 		//Section *si = &m_sections[i];
 		// assume none
 		//si->m_nextBrother = NULL;
@@ -12099,8 +12099,8 @@ void Sections::setNextBrotherPtrs ( bool setContainer ) {
 		Section *sj = NULL;
 
 		// get word after us
-		long wn = si->m_b;
-		long nw2 = m_nw;
+		int32_t wn = si->m_b;
+		int32_t nw2 = m_nw;
 
 		// if we hit a word in our parent.. then increment wn
 		// PROBLEM "<root><t1>hey</t1> blah blah blah x 1 mill</root>"
@@ -12229,8 +12229,8 @@ void Sections::setNextSentPtrs ( ) {
 }
 
 // returns false and sets g_errno on error
-bool SectionVotingTable::addVote3 ( long        turkTagHash ,
-				    long        sectionType ,
+bool SectionVotingTable::addVote3 ( int32_t        turkTagHash ,
+				    int32_t        sectionType ,
 				    float       score       ,
 				    float       numSampled  ,
 				    bool        hackFix     ) {
@@ -12249,11 +12249,11 @@ bool SectionVotingTable::addVote3 ( long        turkTagHash ,
 	if ( sectionType < 0 ) { char *xx=NULL;*xx=0; }
 
 	// print out for debug
-	//log("section: adding vote #%li) th=%lu-%li",
+	//log("section: adding vote #%"INT32") th=%"UINT32"-%"INT32"",
 	//    m_numVotes++,tagHash,sectionType);
 	
 	// get existing vote statistics for this vk from hash table
-	long slot = ttt->getSlot ( &vk );
+	int32_t slot = ttt->getSlot ( &vk );
 	// return true with g_errno set on error
 	if ( slot < 0 ) {
 		SectionVote nv;
@@ -12276,14 +12276,14 @@ bool SectionVotingTable::addVote3 ( long        turkTagHash ,
 }
 
 /*
-// . no longer use single bit flags, sec_t
+// . no int32_ter use single bit flags, sec_t
 // . just use enumerated section types now
 // . each section type has a score and number sampled to get that score
 // . returns -1 if no data
 // . otherwise returns score from 0.0 to 1.0 which is probability that
 //   sections with the given tagHash are of type "sectionType" where
 //   "sectionType" is like SEC_TEXTY, SEC_DUP, SEC_CLOCK, etc.
-float SectionVotingTable::getScore ( long turkTagHash , long sectionType ) {
+float SectionVotingTable::getScore ( int32_t turkTagHash , int32_t sectionType ) {
 	// make the vote key
 	int64_t vk = ((uint64_t)sectionType) << 32 | (uint32_t)turkTagHash;
 	//int64_t vk = ((uint64_t)tagHash) << 32 | (uint32_t)sectionType;
@@ -12314,7 +12314,7 @@ float SectionVotingTable::getScore ( long turkTagHash , long sectionType ) {
 */
 
 /*
-float SectionVotingTable::getOldScore ( Section *sn , long sectionType ) {
+float SectionVotingTable::getOldScore ( Section *sn , int32_t sectionType ) {
 	// make the vote key
 	int64_t vk = ((uint64_t)sectionType) << 32|(uint32_t)sn->m_tagHash;
 	//int64_t vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
@@ -12333,7 +12333,7 @@ float SectionVotingTable::getOldScore ( Section *sn , long sectionType ) {
 	return score / numSampled;
 }
 
-float SectionVotingTable::getNewScore ( Section *sn , long sectionType ) {
+float SectionVotingTable::getNewScore ( Section *sn , int32_t sectionType ) {
 	// make the vote key
 	int64_t vk = ((uint64_t)sectionType) << 32|(uint32_t)sn->m_tagHash;
 	//int64_t vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
@@ -12354,7 +12354,7 @@ float SectionVotingTable::getNewScore ( Section *sn , long sectionType ) {
 */
 
 // just like getScore() above basically
-float SectionVotingTable::getNumSampled ( long turkTagHash, long sectionType) {
+float SectionVotingTable::getNumSampled ( int32_t turkTagHash, int32_t sectionType) {
 	// make the vote key
 	int64_t vk = ((uint64_t)sectionType) << 32 | (uint32_t)turkTagHash;
 	//int64_t vk = ((uint64_t)tagHash) << 32 | (uint32_t)sectionType;
@@ -12381,7 +12381,7 @@ float SectionVotingTable::getNumSampled ( long turkTagHash, long sectionType) {
 
 /*
 // just like getScore() above basically
-float SectionVotingTable::getOldNumSampled ( Section *sn , long sectionType ) {
+float SectionVotingTable::getOldNumSampled ( Section *sn , int32_t sectionType ) {
 	// make the vote key
 	int64_t vk=((uint64_t)sectionType) << 32 | (uint32_t)sn->m_tagHash;
 	//int64_t vk=((uint64_t)sn->m_tagHash) << 32 | (uint32_t)sectionType;
@@ -12401,7 +12401,7 @@ float SectionVotingTable::getOldNumSampled ( Section *sn , long sectionType ) {
 /*
 // . returns false if no article
 // . otherwise sets a and b to the range in word #'s and returns true
-void Sections::getArticleRange ( long *start , long *end ) {
+void Sections::getArticleRange ( int32_t *start , int32_t *end ) {
 	// assume no section
 	*start = -1;
 	*end   = -1;
@@ -12413,12 +12413,12 @@ void Sections::getArticleRange ( long *start , long *end ) {
 		*end   = m_articleEndWord;
 		return;
 	}
-	long a   = -1;
-	long b   = -1;
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	int32_t a   = -1;
+	int32_t b   = -1;
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Section *sn = &m_sections[i];
 		// skip if not article section
 		if ( ! ( sn->m_flags & SEC_ARTICLE ) ) continue;
@@ -12449,7 +12449,7 @@ void Sections::getArticleRange ( long *start , long *end ) {
 bool SectionVotingTable::hash ( int64_t docId , 
 				HashTableX *dt ,
 				uint64_t siteHash64 ,
-				long niceness ) {
+				int32_t niceness ) {
 
 	// let's try skipping this always for now and going without using
 	// sectiondb. we do not use it for the test parser anyway and we
@@ -12459,7 +12459,7 @@ bool SectionVotingTable::hash ( int64_t docId ,
 	// . do not index more recs to sectiondb if we have enough!
 	// . this is now in XmlDoc.cpp
 	//if ( m_totalSiteVoters >= MAX_SITE_VOTERS ) {
-	//     //log("sect: got %li site voters. skipping.",m_totalSiteVoters);
+	//     //log("sect: got %"INT32" site voters. skipping.",m_totalSiteVoters);
 	//	return true;
 	//}
 
@@ -12501,7 +12501,7 @@ bool SectionVotingTable::hash ( int64_t docId ,
 	// . however, we do serialize both tables in the TitleRec and we
 	//   only serialize m_nsvt right now because of SEC_DUP having
 	//   been computed by volatile Msg20s.. to ensure parsing consistency
-	for ( long i = 0 ; i < m_svt.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_svt.m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL ( niceness );
 		// skip if empty
@@ -12509,17 +12509,17 @@ bool SectionVotingTable::hash ( int64_t docId ,
 		// get key
 		uint64_t vk = *(uint64_t *)m_svt.getKey(i);
 		// get section type from key
-		long sectionType = vk >> 32;
-		//long sectionType = vk & 0xffffffff;
+		int32_t sectionType = vk >> 32;
+		//int32_t sectionType = vk & 0xffffffff;
 		// sanity check
 		if ( sectionType > 255 ) { char *xx=NULL;*xx=0; }
 		if ( sectionType < 0   ) { char *xx=NULL;*xx=0; }
 		// and tagHash from key
 		uint32_t secHash32 = vk & 0xffffffff;
 		// check for "what"
-		//if ( tagHash == (unsigned long)-1024871986 )
+		//if ( tagHash == (uint32_t)-1024871986 )
 		//	log("hey");
-		//long tagHash = vk >> 32;
+		//int32_t tagHash = vk >> 32;
 		// make the record key first
 		key128_t k;
 		k = g_datedb.makeKey ( termId    , // termId
@@ -12539,8 +12539,8 @@ bool SectionVotingTable::hash ( int64_t docId ,
 		// this returns false and sets g_errno on error
 		if ( ! dt->addKey ( &k , sv ) ) return false;
 		// log this for now! last hash is the date format hash!
-		//logf(LOG_DEBUG,"section: added tagHash=0x%lx "
-		//     "sectionType=%li score=%.02f numSampled=%.02f",
+		//logf(LOG_DEBUG,"section: added tagHash=0x%"XINT32" "
+		//     "sectionType=%"INT32" score=%.02f numSampled=%.02f",
 		//     tagHash,sectionType,sv->m_score,sv->m_numSampled);
 	}
 
@@ -12553,10 +12553,10 @@ char *Sections::respiderLineWaiters ( char *metaList    ,
 				      char *metaListEnd ) {
 				      // these are from the parent
 				      //Url  *url         ,
-				      //long  ip          ,
-				      //long  priority    ) {
+				      //int32_t  ip          ,
+				      //int32_t  priority    ) {
 	
-	// shortcut
+	// int16_tcut
 	char *p    = metaList;
 	char *pend = metaListEnd;
 
@@ -12571,10 +12571,10 @@ char *Sections::respiderLineWaiters ( char *metaList    ,
 	// guilty url: www.lis.illinois.edu/newsroom/events?dt=2011-01-15
 	return p;
 
-	//long now = getTimeSynced();
+	//int32_t now = getTimeSynced();
 
 	// host hash
-	//long h = hash32 ( url->getHost() , url->getHostLen() );
+	//int32_t h = hash32 ( url->getHost() , url->getHostLen() );
 	// make sure not 0
 	//if ( h == 0 ) h = 1;
 
@@ -12583,13 +12583,13 @@ char *Sections::respiderLineWaiters ( char *metaList    ,
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// does it match us?
-		long tagPairHash = m_list.getCurrentDate();
+		int32_t tagPairHash = m_list.getCurrentDate();
 		// skip if not line waiter
 		if ( tagPairHash != m_tagPairHash ) continue;
 		// key128_t
 		key128_t *key = (key128_t *)m_list.getCurrentRec();
 		// get section type of this sectiondb vote/key
-		long secType = g_indexdb.getScore ( (char *)key );
+		int32_t secType = g_indexdb.getScore ( (char *)key );
 		// must be this
 		if ( secType != SV_WAITINLINE ) continue;
 		// get docid
@@ -12606,9 +12606,9 @@ char *Sections::respiderLineWaiters ( char *metaList    ,
 		sreq->m_urlIsDocId   = 1;
 		sreq->m_fakeFirstIp  = 1;
 		// copy url
-		sprintf(sreq->m_url,"%llu",docId);
+		sprintf(sreq->m_url,"%"UINT64"",docId);
 		// fake
-		long firstIp = hash32n(sreq->m_url);
+		int32_t firstIp = hash32n(sreq->m_url);
 		if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
 		sreq->m_firstIp = firstIp;
 		// set the key!
@@ -12618,7 +12618,7 @@ char *Sections::respiderLineWaiters ( char *metaList    ,
 		// sanity check
 		if ( p > pend ) { char *xx=NULL;*xx=0; }
 		// debug
-		logf(LOG_DEBUG,"section: respider line waiter d=%lli",docId);
+		logf(LOG_DEBUG,"section: respider line waiter d=%"INT64"",docId);
 	}
 	return p;
 }		
@@ -12642,7 +12642,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 	sbuf->safePrintf("<b>Sections in Document</b>\n");
 
 	// section sanity checks
-	for ( long i =0  ; i < m_numSections ; i++ ) {
+	for ( int32_t i =0  ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get section
@@ -12656,12 +12656,12 @@ bool Sections::print ( SafeBuf *sbuf ,
 	}
 
 	char  **wptrs = m_words->getWords    ();
-	long   *wlens = m_words->getWordLens ();
+	int32_t   *wlens = m_words->getWordLens ();
 	nodeid_t *tids = m_words->getTagIds();
-	long    nw    = m_words->getNumWords ();
+	int32_t    nw    = m_words->getNumWords ();
 
 	// check words
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get section
@@ -12673,11 +12673,11 @@ bool Sections::print ( SafeBuf *sbuf ,
 	bool hadWords = false;
 	Section *lastSection = NULL; // TagHash = -1;
 	Section *dstack[MAXTAGSTACK];
-	long    ns = 0;
-	long printedi = -1;
+	int32_t    ns = 0;
+	int32_t printedi = -1;
 	//sbuf->safePrintf("<pre>\n");
 	// first print the html lines out
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get section
@@ -12693,8 +12693,8 @@ bool Sections::print ( SafeBuf *sbuf ,
 		}
 		// punch out some </divs>
 		for ( ; ns>0 && dstack[ns-1]->m_b == i ; ns-- ) {
-			//sbuf->safePrintf("</div id=0x%lx>\n",
-			//(long)dstack[ns-1]);
+			//sbuf->safePrintf("</div id=0x%"XINT32">\n",
+			//(int32_t)dstack[ns-1]);
 			sbuf->safePrintf("</div>\n");
 		}
 		// . put in a div if its a new section changing front tag
@@ -12711,7 +12711,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 			Section *spbuf[20];
 			// one div per parent!
 			Section *sp = sn;
-			long qq = 0;
+			int32_t qq = 0;
 			for ( ; sp && sp->m_a == sn->m_a ; sp = sp->m_parent )
 				spbuf[qq++] = sp;
 			// sanity check
@@ -12722,7 +12722,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 			Section *lastk = NULL;
 			bool printFirstWord = false;
 			// now reverse loop for div sections
-			for ( long k = qq-1 ; k >= 0 ; k-- ) {
+			for ( int32_t k = qq-1 ; k >= 0 ; k-- ) {
 				// get it
 				Section *sk = spbuf[k];
 				// must be good
@@ -12736,9 +12736,9 @@ bool Sections::print ( SafeBuf *sbuf ,
 				if ( sk->m_flags & SEC_SENTENCE )
 					printFirstWord = true;
 				// only make font color different
-				long bcolor = (long)sk->m_tagHash& 0x00ffffff;
-				long fcolor = 0x000000;
-				long rcolor = 0x000000;
+				int32_t bcolor = (int32_t)sk->m_tagHash& 0x00ffffff;
+				int32_t fcolor = 0x000000;
+				int32_t rcolor = 0x000000;
 				uint8_t *bp = (uint8_t *)&bcolor;
 				bool dark = false;
 				if ( bp[0]<128 && bp[1]<128 && bp[2]<128 ) 
@@ -12753,20 +12753,20 @@ bool Sections::print ( SafeBuf *sbuf ,
 					rcolor = 0x00ffffff;
 				}
 				// start the new div
-				//sbuf->safePrintf("<div id=0x%lx "//e%li "
+				//sbuf->safePrintf("<div id=0x%"XINT32" "//e%"INT32" "
 				sbuf->safePrintf("<div "
 						 "style=\""
-						 "background-color:#%06lx;"
+						 "background-color:#%06"XINT32";"
 						 "margin-left:20px;"
-						 "border:#%06lx 1px solid;"
-						 "color:#%06lx\">",
-						 //(long)sk,
+						 "border:#%06"XINT32" 1px solid;"
+						 "color:#%06"XINT32"\">",
+						 //(int32_t)sk,
 						 bcolor,
 						 rcolor,
 						 fcolor);
 				// print event id range
 				if ( sk->m_minEventId >= 1 )
-					sbuf->safePrintf("%li-%li ",
+					sbuf->safePrintf("%"INT32"-%"INT32" ",
 							 sk->m_minEventId,
 							 sk->m_maxEventId);
 				// push that
@@ -12780,12 +12780,12 @@ bool Sections::print ( SafeBuf *sbuf ,
 					// only print the contents once
 					printedi = i; // = true;
 					// "<br>" might be a sequnce of brs
-					long last = i;
+					int32_t last = i;
 					if ( tids[i] == TAG_BR )
 						last = sk->m_b - 1;
 					char *end = m_wptrs[last] +
 						m_wlens[last];
-					long tlen = end - wptrs[i];
+					int32_t tlen = end - wptrs[i];
 					// only encode if it is a tag
 					if ( tids[i] )
 						sbuf->htmlEncode(wptrs[i],
@@ -12800,33 +12800,33 @@ bool Sections::print ( SafeBuf *sbuf ,
 				sbuf->safePrintf("<i>");
 
 				if ( sk ) 
-				 sbuf->safePrintf("A=%li ",sk->m_a);
+				 sbuf->safePrintf("A=%"INT32" ",sk->m_a);
 
 				//sbuf->
-				//safePrintf("fwp=%li ",sk->m_firstWordPos);
+				//safePrintf("fwp=%"INT32" ",sk->m_firstWordPos);
 
 				// print tag hash now
 				if ( sk )
-				 sbuf->safePrintf("hash=0x%lx ",
-						  (long)sk->m_tagHash);
+				 sbuf->safePrintf("hash=0x%"XINT32" ",
+						  (int32_t)sk->m_tagHash);
 
 				if ( sk->m_contentHash)
-					sbuf->safePrintf("ch=0x%lx ",
-						 (long)sk->m_contentHash);
+					sbuf->safePrintf("ch=0x%"XINT32" ",
+						 (int32_t)sk->m_contentHash);
 				//else if ( sk->m_contentHash2 )
-				//	sbuf->safePrintf("ch2=0x%lx ",
-				//		 (long)sk->m_contentHash2);
+				//	sbuf->safePrintf("ch2=0x%"XINT32" ",
+				//		 (int32_t)sk->m_contentHash2);
 				else if ( sk->m_sentenceContentHash )
-					sbuf->safePrintf("sch=0x%lx ",
-					     (long)sk->m_sentenceContentHash);
+					sbuf->safePrintf("sch=0x%"XINT32" ",
+					     (int32_t)sk->m_sentenceContentHash);
 
 
 				// show dup votes if any
 				if ( sk->m_votesForDup )
-					sbuf->safePrintf("dupvotes=%li ",
+					sbuf->safePrintf("dupvotes=%"INT32" ",
 							 sk->m_votesForDup);
 				if ( sk->m_votesForNotDup )
-					sbuf->safePrintf("notdupvotes=%li ",
+					sbuf->safePrintf("notdupvotes=%"INT32" ",
 							 sk->m_votesForNotDup);
 
 				printFlags ( sbuf , sk , false );
@@ -12841,10 +12841,10 @@ bool Sections::print ( SafeBuf *sbuf ,
 					inPriceTable = 
 						priceTable->isInTable(&sk);
 				// get addr index ptr if any (could be mult)
-				long acount = 0;
+				int32_t acount = 0;
 				int64_t sh = 0LL;
 				if ( at ) {
-					long slot = at->getSlot(&sk);
+					int32_t slot = at->getSlot(&sk);
 					for(;slot>=0;
 					    slot=at->getNextSlot(slot,&sk)) {
 						// get min
@@ -12860,7 +12860,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 					}
 				}
 				// date #
-				//long *ti = (long *)tt->getValue(&sk);
+				//int32_t *ti = (int32_t *)tt->getValue(&sk);
 				// print those out
 				if ( ph ) 
 				       sbuf->safePrintf("hasphone ");
@@ -12873,31 +12873,31 @@ bool Sections::print ( SafeBuf *sbuf ,
 					sbuf->safePrintf("hasprice ");
 					
 				//if ( sk )
-				//sbuf->safePrintf("dh=0x%lx ",
+				//sbuf->safePrintf("dh=0x%"XINT32" ",
 				//getDelimHash(METHOD_INNER_TAGID,sk));
 
 
 				if ( sh )
-					sbuf->safePrintf("placehash=0x%llx",
+					sbuf->safePrintf("placehash=0x%"XINT64"",
 							 sh);
 				if ( sh && acount >= 2 )
-					sbuf->safePrintf(" (%li total)",
+					sbuf->safePrintf(" (%"INT32" total)",
 							 acount);
 
 				if ( isHardSection(sk) )
 					sbuf->safePrintf("hardsec ");
 					
 				//if ( ph ) 
-				//     sbuf->safePrintf("phonehash=%llx ",*ph);
+				//     sbuf->safePrintf("phonehash=%"XINT64" ",*ph);
 				//if ( eh ) 
-				//     sbuf->safePrintf("emailhash=%llx ",*eh);
+				//     sbuf->safePrintf("emailhash=%"XINT64" ",*eh);
 				// consider actually print the address out
 				// if you want to, but don't show the pointer
 				// because it causes problems in the diff
 				// that the qa loop does.
 				// addr #
 				//if ( ai ) 
-				//sbuf->safePrintf("addrindex=%li ",*ai);
+				//sbuf->safePrintf("addrindex=%"INT32" ",*ai);
 				//if ( ai ) 
 				//sbuf->safePrintf("hasaddress ");
 				// tod #
@@ -12922,7 +12922,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 			continue;
 		}
 		// based on depth
-		//for ( long k = 0 ; 
+		//for ( int32_t k = 0 ; 
 		//      lastSection != sn && k < sn->m_depth + 1 ; 
 		//      k++ )
 		//	sbuf->safePrintf("-");
@@ -12936,11 +12936,11 @@ bool Sections::print ( SafeBuf *sbuf ,
 	}
 	bool unbal = (ns > 0 );
 	//sbuf->safePrintf("</pre>\n");
-	for ( long i = 0 ; i < ns ; i++ )
+	for ( int32_t i = 0 ; i < ns ; i++ )
 		sbuf->safePrintf("</div>\n");
 	// sanity check
 	if ( unbal ) 
-		sbuf->safePrintf("<br><b>%li UNBALANCED SECTIONS</b><br><br>",
+		sbuf->safePrintf("<br><b>%"INT32" UNBALANCED SECTIONS</b><br><br>",
 				 ns);
 
 
@@ -12969,12 +12969,12 @@ bool Sections::print ( SafeBuf *sbuf ,
 		"</tr>\n";
 	sbuf->safePrintf("%s",hdr);
 
-	long rcount = 0;
-	long scount = 0;
+	int32_t rcount = 0;
+	int32_t scount = 0;
 	// show word # of each section so we can look in PageParser.cpp's
 	// output to see exactly where it starts, since we now label all
 	// the words
-	//for ( long i = 0 ; i < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 	for ( Section *sn = m_rootSection ; sn ; sn = sn->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -12989,35 +12989,35 @@ bool Sections::print ( SafeBuf *sbuf ,
 		char *xs = "--";
 		char ttt[100];
 		if ( sn->m_contentHash ) {
-			long modified = sn->m_tagHash ^ sn->m_contentHash;
-			sprintf(ttt,"0x%lx",modified);
+			int32_t modified = sn->m_tagHash ^ sn->m_contentHash;
+			sprintf(ttt,"0x%"XINT32"",modified);
 			xs = ttt;
 		}
-		// shortcut
+		// int16_tcut
 		Section *parent = sn->m_parent;
-		long pswn = -1;
-		long pewn = -1;
+		int32_t pswn = -1;
+		int32_t pewn = -1;
 		if ( parent ) pswn = parent->m_a;
 		if ( parent ) pewn = parent->m_b;
 		// print it
-		sbuf->safePrintf("<!--ignore--><tr><td>%li</td>\n"
-				 "<td>0x%lx</td>"
-				 "<td>0x%lx</td>"
-				 "<td>%li</td>"
-				 "<td>%li</td>"
-				 "<td>0x%lx</td>"
+		sbuf->safePrintf("<!--ignore--><tr><td>%"INT32"</td>\n"
+				 "<td>0x%"XINT32"</td>"
+				 "<td>0x%"XINT32"</td>"
+				 "<td>%"INT32"</td>"
+				 "<td>%"INT32"</td>"
+				 "<td>0x%"XINT32"</td>"
 				 "<td>%s</td>"
-				 "<td>%li</td>"
-				 "<td>%li</td>"
-				 "<td><nobr>%li to %li</nobr></td>"
-				 "<td>%li</td>"
+				 "<td>%"INT32"</td>"
+				 "<td>%"INT32"</td>"
+				 "<td><nobr>%"INT32" to %"INT32"</nobr></td>"
+				 "<td>%"INT32"</td>"
 				 "<td><nobr>" ,
 				 scount++,//i,
-				 (long)sn->m_baseHash,
-				 (long)sn->m_tagHash,
+				 (int32_t)sn->m_baseHash,
+				 (int32_t)sn->m_tagHash,
 				 sn->m_a,
 				 sn->m_b,
-				 (long)sn->m_contentHash,
+				 (int32_t)sn->m_contentHash,
 				 xs,
 				 sn->m_exclusive,
 				 sn->m_depth,
@@ -13027,27 +13027,27 @@ bool Sections::print ( SafeBuf *sbuf ,
 		// now show the flags
 		printFlags ( sbuf , sn , false );
 		// first few words of section
-		long a = sn->m_a;
-		long b = sn->m_b;
-		// -1 means an unclosed tag!! should no longer be the case
+		int32_t a = sn->m_a;
+		int32_t b = sn->m_b;
+		// -1 means an unclosed tag!! should no int32_ter be the case
 		if ( b == -1 ) { char *xx=NULL;*xx=0; }//b=m_words->m_numWords;
 		sbuf->safePrintf("</nobr></td>");
 
 		if ( sn->m_minEventId >= 1 )
-			sbuf->safePrintf("<td><nobr>%li-%li</nobr></td>",
+			sbuf->safePrintf("<td><nobr>%"INT32"-%"INT32"</nobr></td>",
 					 sn->m_minEventId,sn->m_maxEventId);
 		else
 			sbuf->safePrintf("<td>&nbsp;</td>");
 
 		sbuf->safePrintf("<td><nobr>");
 		// 70 chars max
-		long   max   = 70; 
-		long   count = 0;
+		int32_t   max   = 70; 
+		int32_t   count = 0;
 		char   truncated = 0;
 		// do not print last word/tag in section
-		for ( long i = a ; i < b - 1 && count < max ; i++ ) {
+		for ( int32_t i = a ; i < b - 1 && count < max ; i++ ) {
 			char *s    = wptrs[i];
-			long  slen = wlens[i];
+			int32_t  slen = wlens[i];
 			if ( count + slen > max ) {
 				truncated = 1; 
 				slen = max - count;
@@ -13063,7 +13063,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 		if ( truncated ) sbuf->safePrintf("<b>...</b>");
 		// then print ending tag
 		if ( b < nw ) {
-			long blen = wlens[b-1];
+			int32_t blen = wlens[b-1];
 			if ( blen>20 ) blen = 20;
 			sbuf->safePrintf("<b>");
 			sbuf->htmlEncode(wptrs[b-1],blen,false);
@@ -13101,7 +13101,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 	sbuf->safePrintf("%s",hdr2);
 	HashTableX *st = &m_nsvt;
 	rcount = 0;
-	for ( long i = 0 ; i < st->m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < st->m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if empty
@@ -13114,17 +13114,17 @@ bool Sections::print ( SafeBuf *sbuf ,
 		// get the data
 		SectionVote *sv = (SectionVote *)st->getValueFromSlot ( i );
 		// parse key
-		long tagHash     = (long)(k & 0xffffffff);
-		long sectionType = (long)(k >> 32);
-		//long tagHash     = (long)(k >> 32);
-		//long sectionType = (long)(k & 0xffffffff);
+		int32_t tagHash     = (int32_t)(k & 0xffffffff);
+		int32_t sectionType = (int32_t)(k >> 32);
+		//int32_t tagHash     = (int32_t)(k >> 32);
+		//int32_t sectionType = (int32_t)(k & 0xffffffff);
 		// convert to string
 		char *st = getSectionTypeAsStr ( sectionType );
 		float avg = 0.0;
 		if ( sv->m_numSampled > 0 ) avg = sv->m_score/sv->m_numSampled;
 		sbuf->safePrintf("<tr>"
 				 "<td>--</td>"
-				 "<td>0x%lx</td>"
+				 "<td>0x%"XINT32"</td>"
 				 "<td>%s</td>"
 				 "<td>%.02f</td>"
 				 "<td>%.02f</td>"
@@ -13154,7 +13154,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 	sbuf->safePrintf("%s",hdr2);
 	st = &m_osvt;
 	rcount = 0;
-	for ( long i = 0 ; i < st->m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < st->m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if empty
@@ -13167,17 +13167,17 @@ bool Sections::print ( SafeBuf *sbuf ,
 		// get the data
 		SectionVote *sv = (SectionVote *)st->getValueFromSlot ( i );
 		// parse key
-		long tagHash     = (long)(k & 0xffffffff);
-		long sectionType = (long)(k >> 32);
-		//long tagHash     = (long)(k >> 32);
-		//long sectionType = (long)(k & 0xffffffff);
+		int32_t tagHash     = (int32_t)(k & 0xffffffff);
+		int32_t sectionType = (int32_t)(k >> 32);
+		//int32_t tagHash     = (int32_t)(k >> 32);
+		//int32_t sectionType = (int32_t)(k & 0xffffffff);
 		// convert to string
 		char *st = getSectionTypeAsStr ( sectionType );
 		float avg = 0.0;
 		if ( sv->m_numSampled > 0 ) avg = sv->m_score/sv->m_numSampled;
 		sbuf->safePrintf("<tr>"
 				 "<td>--</td>"
-				 "<td>0x%lx</td>"
+				 "<td>0x%"XINT32"</td>"
 				 "<td>%s</td>"
 				 "<td>%.02f</td>"
 				 "<td>%.02f</td>"
@@ -13280,7 +13280,7 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 	if ( f & SEC_HASHXPATH )
 		sbuf->safePrintf("hashxpath ");
 
-	sbuf->safePrintf("indsenthash64=%llu ",sn->m_indirectSentHash64);
+	sbuf->safePrintf("indsenthash64=%"UINT64" ",sn->m_indirectSentHash64);
 
 
 	if ( f & SEC_TOD_EVENT )
@@ -13294,7 +13294,7 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 	//if ( f & SEC_TOD_EVENT_3 )
 	//	sbuf->safePrintf("containsmulttodevents ");
 	//if ( sn->m_numTods >= 1 )
-	//	sbuf->safePrintf("numtods=%li ",sn->m_numTods );
+	//	sbuf->safePrintf("numtods=%"INT32" ",sn->m_numTods );
 
 
 	if ( f & SEC_HAS_REGISTRATION )
@@ -13429,13 +13429,13 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 
 
 	if ( sn->m_colNum ) 
-		sbuf->safePrintf("colnum=%li ",sn->m_colNum );
+		sbuf->safePrintf("colnum=%"INT32" ",sn->m_colNum );
 	if ( sn->m_rowNum ) 
-		sbuf->safePrintf("rownum=%li ",sn->m_rowNum );
+		sbuf->safePrintf("rownum=%"INT32" ",sn->m_rowNum );
 	if ( sn->m_headColSection )
-		sbuf->safePrintf("headcola=%li ",sn->m_headColSection->m_a);
+		sbuf->safePrintf("headcola=%"INT32" ",sn->m_headColSection->m_a);
 	if ( sn->m_headRowSection )
-		sbuf->safePrintf("headrowa=%li ",sn->m_headRowSection->m_a);
+		sbuf->safePrintf("headrowa=%"INT32" ",sn->m_headRowSection->m_a);
 
 	if ( f & SEC_IN_TABLE )
 		sbuf->safePrintf("intable ");
@@ -13467,7 +13467,7 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 	if ( f & SEC_OPEN_ENDED )
 		sbuf->safePrintf("openended " );
 
-	//for ( long i = 0 ; i < (long)sizeof(turkbits_t)*8 ; i++ ) {
+	//for ( int32_t i = 0 ; i < (int32_t)sizeof(turkbits_t)*8 ; i++ ) {
 	//	uint64_t mask = ((turkbits_t)1) << (turkbits_t)i;
 	//	if ( ! ((sn->m_turkBits) & mask ) ) continue;
 	//	sbuf->safePrintf("%s ",getTurkBitLabel(mask));
@@ -13475,7 +13475,7 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 
 	// sentence flags
 	sentflags_t sf = sn->m_sentFlags;
-	for ( long i = 0 ; i < 64 ; i++ ) {
+	for ( int32_t i = 0 ; i < 64 ; i++ ) {
 		// get mask
 		uint64_t mask = ((uint64_t)1) << (uint64_t)i;
 		if ( sf & mask )
@@ -13487,7 +13487,7 @@ void Sections::printFlags ( SafeBuf *sbuf , Section *sn , bool justEvents ) {
 	//if ( ! f ) sbuf->safePrintf("&nbsp;");
 }
 
-char *getSectionTypeAsStr ( long sectionType ) {
+char *getSectionTypeAsStr ( int32_t sectionType ) {
 	//if ( sectionType == SV_TEXTY             ) return "texty";
 	if ( sectionType == SV_CLOCK             ) return "clock";
 	if ( sectionType == SV_EURDATEFMT        ) return "eurdatefmt";
@@ -13514,7 +13514,7 @@ char *getSectionTypeAsStr ( long sectionType ) {
 // . because sectiondb is volatile we need to store m_osvt, which is a tally
 //   of all the relevant votes for our sections that we extracted from 
 //   sectiondb
-char *Sections::getSectionsReply ( long *size ) {
+char *Sections::getSectionsReply ( int32_t *size ) {
 	// assume none
 	*size = 0;
 	// how much buf do we need?
@@ -13525,7 +13525,7 @@ char *Sections::getSectionsReply ( long *size ) {
 	m_buf = (char *)mmalloc ( m_bufSize , "sdata" );
 	if ( ! m_buf ) return (char *)-1;
 	// store it
-	long bytes = m_osvt.serialize ( m_buf , m_bufSize );
+	int32_t bytes = m_osvt.serialize ( m_buf , m_bufSize );
 	// sanity check
 	if ( bytes != m_bufSize ) { char *xx=NULL;*xx=0; }
 	// save this
@@ -13539,7 +13539,7 @@ char *Sections::getSectionsReply ( long *size ) {
 // . because sectiondb is volatile we need to store m_osvt, which is a tally
 //   of all the relevant votes for our sections that we extracted from 
 //   sectiondb
-char *Sections::getSectionsVotes ( long *size ) {
+char *Sections::getSectionsVotes ( int32_t *size ) {
 	// assume none
 	*size = 0;
 	// how much buf do we need?
@@ -13550,7 +13550,7 @@ char *Sections::getSectionsVotes ( long *size ) {
 	m_buf2 = (char *)mmalloc ( m_bufSize2 , "sdata" );
 	if ( ! m_buf2 ) return (char *)-1;
 	// store it
-	long bytes = m_nsvt.serialize ( m_buf2 , m_bufSize2 );
+	int32_t bytes = m_nsvt.serialize ( m_buf2 , m_bufSize2 );
 	// sanity check
 	if ( bytes != m_bufSize2 ) { char *xx=NULL;*xx=0; }
 	// save this
@@ -13560,7 +13560,7 @@ char *Sections::getSectionsVotes ( long *size ) {
 }
 */
 bool Sections::isHardSection ( Section *sn ) {
-	long a = sn->m_a;
+	int32_t a = sn->m_a;
 	// . treat this as hard... kinda like a div section...
 	//   fixes gwair.org date from stealing address of another date
 	//   because the span tags are fucked up...
@@ -13620,14 +13620,14 @@ bool Sections::setMenus ( ) {
 		// mark that
 		sk->m_flags |= SEC_LINK_TEXT;
 		// set boundaries
-		long a = sk->m_a;
-		long b = sk->m_b;
-		// mark parents as long as they have no more text than this!
+		int32_t a = sk->m_a;
+		int32_t b = sk->m_b;
+		// mark parents as int32_t as they have no more text than this!
 		sk = sk->m_parent;
 		// stop if no more
 		if ( ! sk ) continue;
 		// check
-		long i;
+		int32_t i;
 		for ( i = sk->m_a ; i < a ; i++ ) 
 			if ( m_wids[i] ) break;
 		// skip this section if has text outside
@@ -13690,12 +13690,12 @@ bool Sections::setMenus ( ) {
 	// . this bits array is 1-1 with the words
 	m_bits->setInLinkBits(this);
 
-	// shortcut
+	// int16_tcut
 	wbit_t *bb = m_bits->m_bits;
 
 	sec_t flag;
 	// set SEC_PLAIN_TEXT and SEC_LINK_TEXT for all sections
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// need alnum word
@@ -13733,7 +13733,7 @@ bool Sections::setMenus ( ) {
 		// . if it is a mailto link forget it
 		// . fixes abtango.com from detecting a bad menu
 		char *ptr  = m_wptrs[si->m_a];
-		long  plen = m_wlens[si->m_a];
+		int32_t  plen = m_wlens[si->m_a];
 		char *mailto = strncasestr(ptr,plen,"mailto:");
 		if ( mailto ) last = NULL;
 		// bail if no last
@@ -13846,7 +13846,7 @@ bool Sections::setMenus ( ) {
 	// . set text around input radio checkboxes text boxes and text areas
 	// . we need input tags to be their own sections though!
 	//for ( Section *sk = m_rootSection ; sk ; sk = sk->m_next ) {
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// need a tag
@@ -13858,14 +13858,14 @@ bool Sections::setMenus ( ) {
 			continue;
 		// get tag as a word
 		char *tag    = m_wptrs[i];
-		long  tagLen = m_wlens[i];
+		int32_t  tagLen = m_wlens[i];
 		// what type of input tag is this? hidden? radio? checkbox?...
-		long  itlen;
+		int32_t  itlen;
 		char *it = getFieldValue ( tag , tagLen , "type" , &itlen );
 		// skip if hidden
 		if ( itlen==6 && !strncasecmp ( it,"hidden",6) ) continue;
 		// get word before first item in list
-		long r = i - 1;
+		int32_t r = i - 1;
 		for ( ; r >= 0 ; r-- ) {
 			QUICKPOLL(m_niceness);
 			// skip if not wordid
@@ -13882,7 +13882,7 @@ bool Sections::setMenus ( ) {
 		if ( r < 0 ) continue;
 		// we are the first item
 		//Section *first = sk;
-		//long firsta = i;
+		//int32_t firsta = i;
 		Section *first = m_sectionPtrs[i];
 		// set SEC_INPUT_HEADER
 		setHeader ( r , first , SEC_INPUT_HEADER );
@@ -13894,7 +13894,7 @@ bool Sections::setMenus ( ) {
 		if ( r >= m_nw ) continue;
 		// we are the first item
 		//Section *first = sk;
-		//long firsta = i;
+		//int32_t firsta = i;
 		//Section *first = m_sectionPtrs[i];
 		// set SEC_INPUT_FOOTER
 		setHeader ( r , first , SEC_INPUT_FOOTER );
@@ -13911,7 +13911,7 @@ bool Sections::setMenus ( ) {
 	copy[2] = 0x00;
 	// scan all years, lists and ranges of years, and look for
 	// a preceeding copyright sign. mark such years as DF_COPYRIGHT
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// skip if tag
 		if ( m_tids[i] ) continue;
 		// do we have an alnum word before us here?
@@ -13983,7 +13983,7 @@ bool Sections::setMenus ( ) {
 		// ok, every item in list is a menu item, so try to set header
 		//
 		// get word before first item in list
-		long r = sk->m_a - 1;
+		int32_t r = sk->m_a - 1;
 		for ( ; r >= 0 && ! m_wids[r] ; r-- )
 			QUICKPOLL(m_niceness);
 		// if no header, skip
@@ -14060,10 +14060,10 @@ bool Sections::setMenus ( ) {
 	// . now set generic list headers
 	// . list headers can only contain one hard section with text
 	// . list headers cannot have a previous brother section
-	for ( long i = 0 ; i + 1 < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i + 1 < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Section *si = &m_sections[i];
 		// get container
 		Section *c = si->m_listContainer;
@@ -14079,7 +14079,7 @@ bool Sections::setMenus ( ) {
 		continue;
 		/*
 		// get first word before the list container
-		long r = c->m_a - 1;
+		int32_t r = c->m_a - 1;
 		for ( ; r >= 0 && ! m_wids[r] ; r-- ) QUICKPOLL(m_niceness);
 		// if no header, skip
 		if ( r < 0 ) continue;
@@ -14178,11 +14178,11 @@ bool Sections::setMenus ( ) {
 		// skip if not a href section
 		if ( si->m_baseHash != TAG_A ) continue;
 		// set points to scan
-		long a = si->m_a;
-		long b = si->m_b;
+		int32_t a = si->m_a;
+		int32_t b = si->m_b;
 		// assume not bad
 		bool bad = false;
-		long i;
+		int32_t i;
 		// scan words if any
 		for ( i = a ; i < b ; i++ ) {
 			// skip if not word
@@ -14238,7 +14238,7 @@ bool Sections::setMenus ( ) {
 }
 
 // "first" is first item in the list we are getting header for
-void Sections::setHeader ( long r , Section *first , sec_t flag ) {
+void Sections::setHeader ( int32_t r , Section *first , sec_t flag ) {
 	// get smallest section containing word #r
 	Section *sr = m_sectionPtrs[r];
 	// save orig
@@ -14306,7 +14306,7 @@ void Sections::setHeader ( long r , Section *first , sec_t flag ) {
 	// . scan all subsections of the header section
 	// . only allowed to have one hard section containing text
 	Section *hdr = biggest;
-	for ( long i = biggest->m_a ; i < biggest->m_b ; i++ ) {
+	for ( int32_t i = biggest->m_a ; i < biggest->m_b ; i++ ) {
 		// need word
 		if ( ! m_wids[i] ) continue;
 		// get smallest *hard* section containg word
@@ -14354,7 +14354,7 @@ void Sections::setHeader ( long r , Section *first , sec_t flag ) {
 	// strange?
 	if ( ! sr ) { char *xx=NULL;*xx=0; }
 	// scan until outside biggest
-	long lastb = biggest->m_b;
+	int32_t lastb = biggest->m_b;
 	// . make sure sr does not contain any list in it
 	// . scan all sections between sr and "saved"
 	for ( ; sr ; sr = sr->m_next ) {
@@ -14400,7 +14400,7 @@ void Sections::setHeader ( long r , Section *first , sec_t flag ) {
 //   so be extra strict in our rules here.
 bool Sections::setHeadingBit ( ) {
 
-	long headings = 0;
+	int32_t headings = 0;
 	// scan the sections
 	for ( Section *si = m_rootSection ; si ; si = si->m_next ) {
 		// breathe
@@ -14408,7 +14408,7 @@ bool Sections::setHeadingBit ( ) {
 		// skip if directly contains no text
 		//if ( si->m_flags & SEC_NOTEXT ) continue;
 		// SEC_NOTEXT is not set at this point
-		long fwp = si->m_firstWordPos;
+		int32_t fwp = si->m_firstWordPos;
 		if ( fwp == -1 ) continue;
 		// we must be the smallest container around this text
 		if ( m_sectionPtrs[fwp] != si ) continue;
@@ -14416,8 +14416,8 @@ bool Sections::setHeadingBit ( ) {
 		// . make sure we are in our own hard section
 		// . TODO: allow for bold or strong, etc. tags as well
 		bool hasHard = false;
-		long a = si->m_firstWordPos;
-		long b = si->m_lastWordPos;
+		int32_t a = si->m_firstWordPos;
+		int32_t b = si->m_lastWordPos;
 		// go to parent
 		Section *pp = si;
 		Section *biggest = NULL;
@@ -14487,10 +14487,10 @@ bool Sections::setHeadingBit ( ) {
 		// now make sure the text is capitalized etc
 		bool hadUpper = false;
 		//bool hadLower = false;
-		long lowerCount = 0;
+		int32_t lowerCount = 0;
 		bool hadYear  = false;
 		bool hadAlpha = false;
-		long i;
+		int32_t i;
 		// scan the alnum words we contain
 		for ( i = a ; i <= b ; i++ ) {
 			// breathe
@@ -14512,7 +14512,7 @@ bool Sections::setHeadingBit ( ) {
 				//   section, when they should have been in
 				//   their own section! and now they are in
 				//   their own implied section...
-				long num = m_words->getAsLong(i);
+				int32_t num = m_words->getAsLong(i);
 				if ( num < 1800 ) continue;
 				if ( num > 2100 ) continue;
 				// mark it
@@ -14528,7 +14528,7 @@ bool Sections::setHeadingBit ( ) {
 			}
 			// skip stop words
 			if ( m_words->isStopWord(i) ) continue;
-			// . skip short words
+			// . skip int16_t words
 			// . November 4<sup>th</sup> for facebook.com
 			if ( m_wlens[i] <= 2 ) continue;
 			// is it lower?
@@ -14650,7 +14650,7 @@ void Sections::setTagHashes ( ) {
 
 	// now recompute the tagHashes and depths and content hashes since
 	// we have eliminate open-ended sections in the loop above
-	//for ( long i = 0 ; i < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 	for ( Section *sn = m_rootSection ; sn ; sn = sn->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -14660,7 +14660,7 @@ void Sections::setTagHashes ( ) {
 		// parent section could have SEC_FAKE flag set because it is
 		// a br section added afterwards.
 		//Section *sn = m_sorted[i]; // sections[i];
-		// shortcut
+		// int16_tcut
 		int64_t bh = (int64_t)sn->m_baseHash;
 		//int64_t fh = sn->m_tagId;
 		// sanity check
@@ -14719,8 +14719,8 @@ void Sections::setTagHashes ( ) {
 
 bool Sections::containsTagId ( Section *si, nodeid_t tagId ) {
 	// scan sections to right
-	long a = si->m_a + 1;
-	// scan as long as contained by us
+	int32_t a = si->m_a + 1;
+	// scan as int32_t as contained by us
 	for ( ; a < m_nw && a < si->m_b ; a++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
@@ -14733,7 +14733,7 @@ bool Sections::setTableStuff ( ) {
 	char tbuf[1024];
 	HashTableX tdups;
 	tdups.set(4,0,64,tbuf,1024,false,m_niceness,"tdupt");
-	for ( long i = 0 ; i < m_dates->m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_dates->m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -14782,14 +14782,14 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 	// sanity check
 	//if ( ! m_firstDateValid ) { char *xx=NULL;*xx=0; }
 	// return right away if table contains no dates
-	//long dn = ts->m_firstDate - 1;
+	//int32_t dn = ts->m_firstDate - 1;
 	//if ( dn < 0 ) return true;
-	long dn = 0;
+	int32_t dn = 0;
 
 	Section *headerCol = NULL;
 	Section *headerRow = NULL;
 
-	for ( long i = dn ; i < m_dates->m_numDatePtrs ; i++ ) {
+	for ( int32_t i = dn ; i < m_dates->m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -14823,7 +14823,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		wbit_t *bb = NULL;
 		if ( m_bits ) bb = m_bits->m_bits;
 		bool hasWord = false;
-		for ( long j = cell->m_a ; j < cell->m_b ; j++ ) {
+		for ( int32_t j = cell->m_a ; j < cell->m_b ; j++ ) {
 			QUICKPOLL(m_niceness);
 			if ( ! bb ) break;
 			if ( ! m_wids[j] ) continue;
@@ -14838,15 +14838,15 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		// get date types
 		datetype_t dt = di->m_hasType;
 		// see if same date type in prev row or col
-		long row = si->m_rowNum;
-		long col = si->m_colNum;
-		long prevRow = row - 1;
-		long prevCol = col - 1;
-		long h;
+		int32_t row = si->m_rowNum;
+		int32_t col = si->m_colNum;
+		int32_t prevRow = row - 1;
+		int32_t prevCol = col - 1;
+		int32_t h;
 		// zero is invalid row
 		if ( prevRow >= 1 && ! headerCol ) {
 			h = hash32h ( prevRow , col );
-			h = hash32h ( (long)ts , h );
+			h = hash32h ( (int32_t)ts , h );
 			h = hash32h ( dt , h ); // datetype
 			if ( adt.isInTable ( &h ) ) {
 				headerCol = cell;
@@ -14856,7 +14856,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		// zero is invalid col
 		if ( prevCol >= 1 && ! headerRow ) {
 			h = hash32h ( row , prevCol );
-			h = hash32h ( (long)ts , h );
+			h = hash32h ( (int32_t)ts , h );
 			h = hash32h ( dt , h ); // datetype
 			if ( adt.isInTable ( &h ) ) {
 				headerRow = cell;
@@ -14865,7 +14865,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		}
 		// add our hash
 		h = hash32h ( row , col );
-		h = hash32h ( (long)ts , h );
+		h = hash32h ( (int32_t)ts , h );
 		h = hash32h ( dt , h ); // datetype
 		if ( ! adt.addKey ( &h ) ) return false;
 	}
@@ -14883,7 +14883,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 	//   weekly schedule then
 	// . we are setting implied sections so we do not have telescoped
 	//   dates at this point.
-	for ( long i = dn ; i < m_dates->m_numDatePtrs ; i++ ) {
+	for ( int32_t i = dn ; i < m_dates->m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -14919,7 +14919,7 @@ bool Sections::swoggleTables ( ) {
 
 	Section *lastTable = NULL;
 	// scan dates until we find one in a table
-	for ( long i = 0 ; i < m_dates->m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_dates->m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -14949,7 +14949,7 @@ bool Sections::swoggleTables ( ) {
 
 // . swoggle the table at section "ts"
 // . start at date #dn
-bool Sections::swoggleTable ( long dn , Section *ts ) { 
+bool Sections::swoggleTable ( int32_t dn , Section *ts ) { 
 
 	char adtbuf[1000];
 	HashTableX adt;
@@ -14957,7 +14957,7 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 
 	bool adjacentColumns = false;
 	bool adjacentRows    = false;
-	for ( long i = dn ; i < m_dates->m_numDatePtrs ; i++ ) {
+	for ( int32_t i = dn ; i < m_dates->m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -14975,14 +14975,14 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 		// get date types
 		datetype_t dt = di->m_hasType;
 		// see if same date type in prev row or col
-		long row = si->m_rowNum;
-		long col = si->m_colNum;
-		long prevRow = row - 1;
-		long prevCol = col - 1;
-		long h;
+		int32_t row = si->m_rowNum;
+		int32_t col = si->m_colNum;
+		int32_t prevRow = row - 1;
+		int32_t prevCol = col - 1;
+		int32_t h;
 		if ( prevRow >= 0 ) {
 			h = hash32h ( prevRow , col );
-			h = hash32h ( (long)ts , h );
+			h = hash32h ( (int32_t)ts , h );
 			h = hash32h ( dt , h ); // datetype
 			if ( adt.isInTable ( &h ) ) {
 				adjacentColumns = true;
@@ -14991,7 +14991,7 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 		}
 		if ( prevCol >= 0 ) {
 			h = hash32h ( row , prevCol );
-			h = hash32h ( (long)ts , h );
+			h = hash32h ( (int32_t)ts , h );
 			h = hash32h ( dt , h ); // datetype
 			if ( adt.isInTable ( &h ) ) {
 				adjacentRows = true;
@@ -15000,7 +15000,7 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 		}
 		// add our hash
 		h = hash32h ( row , col );
-		h = hash32h ( (long)ts , h );
+		h = hash32h ( (int32_t)ts , h );
 		h = hash32h ( dt , h ); // datetype
 		if ( ! adt.addKey ( &h ) ) return false;
 	}
@@ -15039,12 +15039,12 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 	Section *colSections[MAXCOLS];
 	Section *lastColCell[MAXCOLS];
 	Section *lastColKid [MAXCOLS];
-	for ( long i = 0 ; i < MAXCOLS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAXCOLS ; i++ ) {
 		colSections[i] = NULL;
 		lastColCell[i] = NULL;
 		lastColKid [i] = NULL;
 	}
-	long maxColnum = 0;
+	int32_t maxColnum = 0;
 
 	// scan the <td> sections in the table
 	for ( Section *si = ts ; si ; si = next ) {
@@ -15067,8 +15067,8 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 		// its a doubly linked list
 		//si->m_next->m_prev = si->m_prev;
 		//si->m_prev->m_next = si->m_next;
-		// shortcut
-		long colnum = si->m_colNum;
+		// int16_tcut
+		int32_t colnum = si->m_colNum;
 		// cram everything into last column in case of too many cols
 		if ( colnum >= MAXCOLS ) colnum = MAXCOLS-1;
 		// sanity
@@ -15087,7 +15087,7 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 			// get the previous colnum from us that is non-NULL, 
 			// but use the table itself if we are the first.
 			Section *prevCol = NULL;
-			for ( long pc = colnum - 1; pc >= 1 ; pc-- ) {
+			for ( int32_t pc = colnum - 1; pc >= 1 ; pc-- ) {
 				if ( ! colSections[pc] ) continue;
 				prevCol = colSections[pc];
 				break;
@@ -15135,14 +15135,14 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 		// get last section in this th/td cell
 		Section *lastKid = si;
 		// endpoint of that th/td cell
-		long b = lastKid->m_b;
+		int32_t b = lastKid->m_b;
 		// and find the true last kid in this cell
 		for ( ; lastKid ; lastKid = lastKid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// stop if we are the last section period
 			if ( ! lastKid->m_next ) break;
-			// keep looping as long as the "lastKid" 
+			// keep looping as int32_t as the "lastKid" 
 			// section is contained in this td/th cell
 			if ( lastKid->m_next->m_a >= b ) break;
 		}
@@ -15174,7 +15174,7 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 	// now set the m_prev/m_next members of each column section
 	//
 	Section *prevLastKid = NULL;
-	for ( long i = 1 ; i <= maxColnum ; i++ ) {
+	for ( int32_t i = 1 ; i <= maxColnum ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -15209,7 +15209,7 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 
 
 // . just the voting info for passing into diffbot in json
-// . along w/ the title/summary/etc. we can return this json blob for each search result
+// . aint32_t w/ the title/summary/etc. we can return this json blob for each search result
 bool Sections::printVotingInfoInJSON ( SafeBuf *sb ) {
 
 	// save ptrs
@@ -15223,7 +15223,7 @@ bool Sections::printVotingInfoInJSON ( SafeBuf *sb ) {
 		// print this section
 		printSectionDiv ( sk , FORMAT_JSON ); // forProCog );
 		// advance
-		long b = sk->m_b;
+		int32_t b = sk->m_b;
 		// stop if last
 		if ( b >= m_nw ) break;
 		// get section after that
@@ -15239,8 +15239,8 @@ bool Sections::printVotingInfoInJSON ( SafeBuf *sb ) {
 
 // make this replace ::print() when it works
 bool Sections::print2 ( SafeBuf *sbuf ,
-			long hiPos,
-			long *wposVec,
+			int32_t hiPos,
+			int32_t *wposVec,
 			char *densityVec,
 			char *diversityVec,
 			char *wordSpamVec,
@@ -15274,12 +15274,12 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 	//verifySections();
 
 	char  **wptrs = m_words->getWords    ();
-	long   *wlens = m_words->getWordLens ();
+	int32_t   *wlens = m_words->getWordLens ();
 	//nodeid_t *tids = m_words->getTagIds();
-	long    nw    = m_words->getNumWords ();
+	int32_t    nw    = m_words->getNumWords ();
 
 	// check words
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get section
@@ -15296,7 +15296,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		// print this section
 		printSectionDiv ( sk , format );//forProCog );
 		// advance
-		long b = sk->m_b;
+		int32_t b = sk->m_b;
 		// stop if last
 		if ( b >= m_nw ) break;
 		// get section after that
@@ -15331,12 +15331,12 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		"</tr>\n";
 	sbuf->safePrintf("%s",hdr);
 
-	long rcount = 0;
-	long scount = 0;
+	int32_t rcount = 0;
+	int32_t scount = 0;
 	// show word # of each section so we can look in PageParser.cpp's
 	// output to see exactly where it starts, since we now label all
 	// the words
-	//for ( long i = 0 ; i < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 	for ( Section *sn = m_rootSection ; sn ; sn = sn->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -15351,37 +15351,37 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		char *xs = "--";
 		char ttt[100];
 		if ( sn->m_contentHash64 ) {
-			long modified = sn->m_tagHash ^ sn->m_contentHash64;
-			sprintf(ttt,"0x%lx",modified);
+			int32_t modified = sn->m_tagHash ^ sn->m_contentHash64;
+			sprintf(ttt,"0x%"XINT32"",modified);
 			xs = ttt;
 		}
-		// shortcut
+		// int16_tcut
 		Section *parent = sn->m_parent;
-		long pswn = -1;
-		long pewn = -1;
+		int32_t pswn = -1;
+		int32_t pewn = -1;
 		if ( parent ) pswn = parent->m_a;
 		if ( parent ) pewn = parent->m_b;
 		// print it
-		sbuf->safePrintf("<!--ignore--><tr><td>%li</td>\n"
-				 "<td>%li</td>"
-				 "<td>%li</td>"
-				 "<td>0x%lx</td>"
-				 "<td>0x%lx</td>"
-				 "<td>0x%lx</td>"
-				 "<td>0x%lx</td>"
+		sbuf->safePrintf("<!--ignore--><tr><td>%"INT32"</td>\n"
+				 "<td>%"INT32"</td>"
+				 "<td>%"INT32"</td>"
+				 "<td>0x%"XINT32"</td>"
+				 "<td>0x%"XINT32"</td>"
+				 "<td>0x%"XINT32"</td>"
+				 "<td>0x%"XINT32"</td>"
 				 "<td>%s</td>"
-				 "<td>%li</td>"
-				 "<td>%li</td>"
-				 "<td><nobr>%li to %li</nobr></td>"
-				 "<td>%li</td>"
+				 "<td>%"INT32"</td>"
+				 "<td>%"INT32"</td>"
+				 "<td><nobr>%"INT32" to %"INT32"</nobr></td>"
+				 "<td>%"INT32"</td>"
 				 "<td><nobr>" ,
 				 scount++,//i,
 				 sn->m_a,
 				 sn->m_b,
-				 (long)sn->m_baseHash,
-				 (long)sn->m_tagHash,
-				 (long)sn->m_contentHash64,
-				 (long)(sn->m_contentHash64^sn->m_tagHash),
+				 (int32_t)sn->m_baseHash,
+				 (int32_t)sn->m_tagHash,
+				 (int32_t)sn->m_contentHash64,
+				 (int32_t)(sn->m_contentHash64^sn->m_tagHash),
 				 xs,
 				 sn->m_exclusive,
 				 sn->m_depth,
@@ -15391,9 +15391,9 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		// now show the flags
 		printFlags ( sbuf , sn , false );
 		// first few words of section
-		long a = sn->m_a;
-		long b = sn->m_b;
-		// -1 means an unclosed tag!! should no longer be the case
+		int32_t a = sn->m_a;
+		int32_t b = sn->m_b;
+		// -1 means an unclosed tag!! should no int32_ter be the case
 		if ( b == -1 ) { char *xx=NULL;*xx=0; }//b=m_words->m_numWords;
 		sbuf->safePrintf("</nobr></td>");
 
@@ -15401,13 +15401,13 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 
 		sbuf->safePrintf("<td><nobr>");
 		// 70 chars max
-		long   max   = 70; 
-		long   count = 0;
+		int32_t   max   = 70; 
+		int32_t   count = 0;
 		char   truncated = 0;
 		// do not print last word/tag in section
-		for ( long i = a ; i < b - 1 && count < max ; i++ ) {
+		for ( int32_t i = a ; i < b - 1 && count < max ; i++ ) {
 			char *s    = wptrs[i];
-			long  slen = wlens[i];
+			int32_t  slen = wlens[i];
 			if ( count + slen > max ) {
 				truncated = 1; 
 				slen = max - count;
@@ -15423,7 +15423,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		if ( truncated ) sbuf->safePrintf("<b>...</b>");
 		// then print ending tag
 		if ( b < nw ) {
-			long blen = wlens[b-1];
+			int32_t blen = wlens[b-1];
 			if ( blen>20 ) blen = 20;
 			sbuf->safePrintf("<b>");
 			sbuf->htmlEncode(wptrs[b-1],blen,false);
@@ -15467,8 +15467,8 @@ bool SectionVotingTable::print ( SafeBuf *sbuf , char *title ) {
 		"</tr>\n";
 	sbuf->safePrintf("%s",hdr2);
 	HashTableX *st = &m_svt;
-	long rcount = 0;
-	for ( long i = 0 ; i < st->m_numSlots ; i++ ) {
+	int32_t rcount = 0;
+	for ( int32_t i = 0 ; i < st->m_numSlots ; i++ ) {
 		// breathe
 		//QUICKPOLL(m_niceness);
 		// skip if empty
@@ -15481,17 +15481,17 @@ bool SectionVotingTable::print ( SafeBuf *sbuf , char *title ) {
 		// get the data
 		SectionVote *sv = (SectionVote *)st->getValueFromSlot ( i );
 		// parse key
-		long turkTagHash = (long)(k & 0xffffffff);
-		long sectionType = (long)(k >> 32);
-		//long tagHash     = (long)(k >> 32);
-		//long sectionType = (long)(k & 0xffffffff);
+		int32_t turkTagHash = (int32_t)(k & 0xffffffff);
+		int32_t sectionType = (int32_t)(k >> 32);
+		//int32_t tagHash     = (int32_t)(k >> 32);
+		//int32_t sectionType = (int32_t)(k & 0xffffffff);
 		// convert to string
 		char *st = getSectionTypeAsStr ( sectionType );
 		float avg = 0.0;
 		if ( sv->m_numSampled > 0 ) avg = sv->m_score/sv->m_numSampled;
 		sbuf->safePrintf("<tr>"
 				 "<td>--</td>"
-				 "<td>0x%lx</td>"
+				 "<td>0x%"XINT32"</td>"
 				 "<td>%s</td>"
 				 "<td>%.02f</td>"
 				 "<td>%.02f</td>"
@@ -15567,13 +15567,13 @@ bool SectionVotingTable::print ( SafeBuf *sbuf , char *title ) {
 */
 
 bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog ) {
-	//log("sk=%li",sk->m_a);
+	//log("sk=%"INT32"",sk->m_a);
 	// enter a new div section now
 	m_sbuf->safePrintf("<br>");
 	// only make font color different
-	long bcolor = (long)sk->m_colorHash& 0x00ffffff;
-	long fcolor = 0x000000;
-	long rcolor = 0x000000;
+	int32_t bcolor = (int32_t)sk->m_colorHash& 0x00ffffff;
+	int32_t fcolor = 0x000000;
+	int32_t rcolor = 0x000000;
 	uint8_t *bp = (uint8_t *)&bcolor;
 	bool dark = false;
 	if ( bp[0]<128 && bp[1]<128 && bp[2]<128 ) 
@@ -15590,11 +15590,11 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 	// start the new div
 	m_sbuf->safePrintf("<div "
 			 "style=\""
-			 "background-color:#%06lx;"
+			 "background-color:#%06"XINT32";"
 			 "margin-left:20px;"
-			 "border:#%06lx 1px solid;"
-			 "color:#%06lx\">",
-			 //(long)sk,
+			 "border:#%06"XINT32" 1px solid;"
+			 "color:#%06"XINT32"\">",
+			 //(int32_t)sk,
 			 bcolor,
 			 rcolor,
 			 fcolor);
@@ -15609,7 +15609,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		m_sbuf->htmlEncode(m_wptrs[sk->m_a],m_wlens[sk->m_a],false );
 
 	//if ( forProCog )
-	//	m_sbuf->safePrintf("A=%li ",sk->m_a);
+	//	m_sbuf->safePrintf("A=%"INT32" ",sk->m_a);
 
 
 	/*
@@ -15623,13 +15623,13 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 				   "dr=0&"
 				   // turn ON site clustering
 				   "sc=1&"
-				   "q=gbsectionhash:%llu\">"
-				   "sitedups=%li"
+				   "q=gbsectionhash:%"UINT64"\">"
+				   "sitedups=%"INT32""
 				   "</a>"
 				   "</font>"
 				   "</i> "
 				   , sk->m_sentenceContentHash64
-				   ,(long)sk->m_stats.m_numUniqueSites-1);
+				   ,(int32_t)sk->m_stats.m_numUniqueSites-1);
 	}
 	*/
 
@@ -15650,31 +15650,31 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 
 	//if ( sk->m_sentenceContentHash64 && 
 	//     sk->m_sentenceContentHash64 ) // != sk->m_contentHash64 )
-	//	m_sbuf->safePrintf("sch=%llu ",
+	//	m_sbuf->safePrintf("sch=%"UINT64" ",
 	//			   sk->m_sentenceContentHash64);
 
 	// show dup votes if any
 	//if ( sk->m_votesForDup )
-	//	m_sbuf->safePrintf("dupvotes=%li ",sk->m_votesForDup);
+	//	m_sbuf->safePrintf("dupvotes=%"INT32" ",sk->m_votesForDup);
 	//if ( sk->m_votesForNotDup )
-	//	m_sbuf->safePrintf("notdupvotes=%li ",
+	//	m_sbuf->safePrintf("notdupvotes=%"INT32" ",
 	//			   sk->m_votesForNotDup);
 	
 	if ( format != FORMAT_PROCOG ) {
 		// print the flags
-		m_sbuf->safePrintf("A=%li ",sk->m_a);
+		m_sbuf->safePrintf("A=%"INT32" ",sk->m_a);
 		
 		// print tag hash now
-		m_sbuf->safePrintf("taghash=%lu ",(long)sk->m_tagHash);
+		m_sbuf->safePrintf("taghash=%"UINT32" ",(int32_t)sk->m_tagHash);
 		
-		m_sbuf->safePrintf("turktaghash=%lu ",
-				   (long)sk->m_turkTagHash32);
+		m_sbuf->safePrintf("turktaghash=%"UINT32" ",
+				   (int32_t)sk->m_turkTagHash32);
 		
 		if ( sk->m_contentHash64 )
-			m_sbuf->safePrintf("ch64=%llu ",sk->m_contentHash64);
+			m_sbuf->safePrintf("ch64=%"UINT64" ",sk->m_contentHash64);
 		if ( sk->m_sentenceContentHash64 && 
 		     sk->m_sentenceContentHash64 != sk->m_contentHash64 )
-			m_sbuf->safePrintf("sch=%llu ",
+			m_sbuf->safePrintf("sch=%"UINT64" ",
 					   sk->m_sentenceContentHash64);
 
 
@@ -15687,14 +15687,14 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// markup on all tags
 		//if ( sk->m_indirectSentHash64 && sk->m_tagId !=TAG_TEXTNODE){
 		//if ( sk->m_stats.m_totalDocIds ) {
-			mod = (unsigned long)sk->m_turkTagHash32;
-			mod ^= (unsigned long)(uint64_t)m_siteHash64;
+			mod = (uint32_t)sk->m_turkTagHash32;
+			mod ^= (uint32_t)(uint64_t)m_siteHash64;
 			m_sbuf->safePrintf("<a style=decoration:none; "
 					   "href=/search?c=%s&"
 					   "q=gbfacetstr%%3A"
-					   "gbxpathsitehash%llu>"
+					   "gbxpathsitehash%"UINT64">"
 					   //"<u>"
-					   "xpathsitehash=%llu"
+					   "xpathsitehash=%"UINT64""
 					   //"</u>"
 					   "</a> "
 					   //"</font> "
@@ -15707,19 +15707,19 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 
 		// also the value of the inner html hashed
 		if ( sk->m_flags & SEC_HASHXPATH ) {//ss->m_totalMatches > 0) {
-			unsigned long val ;
-			val = (unsigned long) sk->m_indirectSentHash64 ;
-			m_sbuf->safePrintf("xpathsitehashval=%lu ", val );
+			uint32_t val ;
+			val = (uint32_t) sk->m_indirectSentHash64 ;
+			m_sbuf->safePrintf("xpathsitehashval=%"UINT32" ", val );
 		}
 
 		// some voting stats
 		if ( sk->m_flags & SEC_HASHXPATH ) {//ss->m_totalMatches > 0) {
-			m_sbuf->safePrintf("_s=M%liD%lin%liu%lih%lu "
-					   ,(long)ss->m_totalMatches
-					   ,(long)ss->m_totalDocIds
-					   ,(long)ss->m_totalEntries
-					   ,(long)ss->m_numUniqueVals
-					   ,(unsigned long)mod
+			m_sbuf->safePrintf("_s=M%"INT32"D%"INT32"n%"INT32"u%"INT32"h%"UINT32" "
+					   ,(int32_t)ss->m_totalMatches
+					   ,(int32_t)ss->m_totalDocIds
+					   ,(int32_t)ss->m_totalEntries
+					   ,(int32_t)ss->m_numUniqueVals
+					   ,(uint32_t)mod
 					   );
 		}
 
@@ -15727,31 +15727,31 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 
 		// // for the gbsectionhash:xxxxx terms we index
 		// if ( sk->m_sentenceContentHash64 ) {
-		// 	unsigned long mod = (unsigned long)sk->m_turkTagHash32;
-		// 	mod ^= (unsigned long)m_siteHash64;
+		// 	uint32_t mod = (uint32_t)sk->m_turkTagHash32;
+		// 	mod ^= (uint32_t)m_siteHash64;
 		// 	m_sbuf->safePrintf(//"<font color=red>"
-		// 			   "gbsectionhash32=%lu "
+		// 			   "gbsectionhash32=%"UINT32" "
 		// 			   //"</font> "
 		// 			   ,mod);
 		// }
 		// if ( sk->m_contentHash64 )
 		// 	m_sbuf->safePrintf(//"<font color=red>"
-		// 			   "ch32=%lu"
+		// 			   "ch32=%"UINT32""
 		// 			   //"</font> "
 		// 			   ,
-		// 			   (unsigned long)sk->m_contentHash64);
+		// 			   (uint32_t)sk->m_contentHash64);
 					   
 		
 		if ( sk->m_lastLinkContentHash32 )
-			m_sbuf->safePrintf("llch=%lu ",
-					   (long)sk->m_lastLinkContentHash32);
+			m_sbuf->safePrintf("llch=%"UINT32" ",
+					   (int32_t)sk->m_lastLinkContentHash32);
 		
 		if ( sk->m_leftCell )
-			m_sbuf->safePrintf("leftcellA=%li ",
-					   (long)sk->m_leftCell->m_a);
+			m_sbuf->safePrintf("leftcellA=%"INT32" ",
+					   (int32_t)sk->m_leftCell->m_a);
 		if ( sk->m_aboveCell )
-			m_sbuf->safePrintf("abovecellA=%li ",
-					   (long)sk->m_aboveCell->m_a);
+			m_sbuf->safePrintf("abovecellA=%"INT32" ",
+					   (int32_t)sk->m_aboveCell->m_a);
 		
 		printFlags ( m_sbuf , sk , false );
 	
@@ -15759,10 +15759,10 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			m_sbuf->safePrintf("hardsec ");
 	
 		// get addr index ptr if any (could be mult)
-		long acount = 0;
+		int32_t acount = 0;
 		//int64_t sh = 0LL;
-		long pi = sk->m_firstPlaceNum;
-		long np = m_aa->m_numSorted;
+		int32_t pi = sk->m_firstPlaceNum;
+		int32_t np = m_aa->m_numSorted;
 		for ( ; pi >= 0 && pi < np ; pi++ ) {
 			Place *p = m_aa->m_sorted[pi];
 			// stop if not in section any more
@@ -15776,34 +15776,34 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		}
 		// print those out
 		if ( sk->m_dateBits )
-			m_sbuf->safePrintf("datebits=0x%lx ",
-					   (long)sk->m_dateBits);
+			m_sbuf->safePrintf("datebits=0x%"XINT32" ",
+					   (int32_t)sk->m_dateBits);
 		if ( sk->m_phoneXor ) 
-			m_sbuf->safePrintf("phonexor=0x%lx ",sk->m_phoneXor);
+			m_sbuf->safePrintf("phonexor=0x%"XINT32" ",sk->m_phoneXor);
 		if ( sk->m_emailXor ) 
-			m_sbuf->safePrintf("emailxor=0x%lx ",sk->m_emailXor);
+			m_sbuf->safePrintf("emailxor=0x%"XINT32" ",sk->m_emailXor);
 		if ( sk->m_priceXor ) 
-			m_sbuf->safePrintf("pricexor=0x%lx ",sk->m_priceXor);
+			m_sbuf->safePrintf("pricexor=0x%"XINT32" ",sk->m_priceXor);
 		if ( sk->m_todXor )
-			m_sbuf->safePrintf("todxor=0x%lx ",sk->m_todXor);
+			m_sbuf->safePrintf("todxor=0x%"XINT32" ",sk->m_todXor);
 		if ( sk->m_dayXor )
-			m_sbuf->safePrintf("dayxor=0x%lx ",sk->m_dayXor);
+			m_sbuf->safePrintf("dayxor=0x%"XINT32" ",sk->m_dayXor);
 		if ( sk->m_addrXor )
-			m_sbuf->safePrintf("addrxor=0x%lx ",sk->m_addrXor);
+			m_sbuf->safePrintf("addrxor=0x%"XINT32" ",sk->m_addrXor);
 		if ( acount >= 2 )
-			m_sbuf->safePrintf(" (%li places)",acount);
+			m_sbuf->safePrintf(" (%"INT32" places)",acount);
 	}
 
 	m_sbuf->safePrintf("</i>\n");
 
 	// now print each word and subsections in this section
-	long a = sk->m_a;
-	long b = sk->m_b;
-	for ( long i = a ; i < b ; i++ ) {
+	int32_t a = sk->m_a;
+	int32_t b = sk->m_b;
+	for ( int32_t i = a ; i < b ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// . if its a and us, skip
-		// . BUT if we are root then really this tag belongs to
+		// . BUT if we are root then really this tag beint32_ts to
 		//   our first child, so make an exception for root!
 		if ( i == a && m_tids[i] && (sk->m_parent) ) continue;
 
@@ -15819,7 +15819,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			if ( ws->m_parent->m_a != ws->m_a ) break;
 			if ( ws->m_parent == sk ) break;
 		}
-		// if it belongs to another sections, print that section
+		// if it beint32_ts to another sections, print that section
 		if ( ws != sk ) {
 			// print out this subsection
 			printSectionDiv ( ws , format ); // forProCog );
@@ -15864,24 +15864,24 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 					   "font-size:10px;"
 					   "border:black 1px solid;"
 					   "color:black;\">");
-			m_sbuf->safePrintf("%li",m_wposVec[i]);
+			m_sbuf->safePrintf("%"INT32"",m_wposVec[i]);
 			if ( m_densityVec[i] != MAXDENSITYRANK )
-				m_sbuf->safePrintf("/<font color=purple><b>%li"
+				m_sbuf->safePrintf("/<font color=purple><b>%"INT32""
 						   "</b></font>"
 						   ,
-						   (long)m_densityVec[i]);
+						   (int32_t)m_densityVec[i]);
 			/*
 			if ( m_diversityVec[i] != MAXDIVERSITYRANK )
-				m_sbuf->safePrintf("/<font color=green><b>%li"
+				m_sbuf->safePrintf("/<font color=green><b>%"INT32""
 						   "</b></font>"
 						   ,
-						   (long)m_diversityVec[i]);
+						   (int32_t)m_diversityVec[i]);
 			*/
 			if ( m_wordSpamVec[i] != MAXWORDSPAMRANK )
-				m_sbuf->safePrintf("/<font color=red><b>%li"
+				m_sbuf->safePrintf("/<font color=red><b>%"INT32""
 						   "</b></font>"
 						   ,
-						   (long)m_wordSpamVec[i]);
+						   (int32_t)m_wordSpamVec[i]);
 			m_sbuf->safePrintf("</sub></nobr>");
 		}
 	}
@@ -15893,7 +15893,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 bool Sections::verifySections ( ) {
 
 	// make sure we map each word to a section that contains it at least
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		Section *si = m_sectionPtrs[i];
 		if ( si->m_a >  i ) { char *xx=NULL;*xx=0; }
 		if ( si->m_b <= i ) { char *xx=NULL;*xx=0; }
@@ -15911,7 +15911,7 @@ bool Sections::verifySections ( ) {
 		QUICKPOLL ( m_niceness );
 
 	// sanity check
-	//for ( long i = 0 ; i < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 	for ( Section *sn = m_rootSection ; sn ; sn = sn->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -15933,18 +15933,18 @@ bool Sections::verifySections ( ) {
 	}
 
 	// sanity check
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		Section *sn = &m_sections[i];
 		if ( sn->m_a >= sn->m_b ) { char *xx=NULL;*xx=0; }
 	}
 
 	// sanity check, make sure each section is contained by the
 	// smallest section containing it
-	//for ( long i = 0 ; i < m_numSections ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 	for ( Section *si = m_rootSection ; si ; si = si->m_next ) {
 		//Section *si = &m_sections[i];
 		//if ( ! si ) continue;
-		//for ( long j = 0 ; j < m_numSections ; j++ ) {
+		//for ( int32_t j = 0 ; j < m_numSections ; j++ ) {
 		for ( Section *sj = m_rootSection ; sj ; sj = sj->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
@@ -15982,7 +15982,7 @@ bool Sections::verifySections ( ) {
 	}
 	
 	// make sure we map each word to a section that contains it at least
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		Section *si = m_sectionPtrs[i];
 		if ( si->m_a >  i ) { char *xx=NULL;*xx=0; }
 		if ( si->m_b <= i ) { char *xx=NULL;*xx=0; }
@@ -16033,16 +16033,16 @@ bool Sections::isTagDelimeter ( class Section *si , nodeid_t tagId ) {
 	//if ( si->m_tagId != tagId ) return false;
 	if ( tagId != TAG_BR ) return true;
 	// need double brs (or p tags)
-	long a = si->m_a + 1;
+	int32_t a = si->m_a + 1;
 	//if ( a + 2 >= m_nw ) return false;
 	//if ( m_tids[a+1] == TAG_BR ) return true;
 	//if ( m_wids[a+1]           ) return false;
 	//if ( m_tids[a+2] == TAG_BR ) return true;
 	// guynsdollsllc.com homepage has some crazy br tags
 	// in their own em strong tags, etc.
-	long kmax = a+10;
+	int32_t kmax = a+10;
 	if ( kmax > m_nw ) kmax = m_nw;
-	for ( long k = a ; k < kmax ; k++ ) {
+	for ( int32_t k = a ; k < kmax ; k++ ) {
 		if ( m_wids[k]           ) return false;
 		if ( m_tids[k] == TAG_BR ) return true;
 		if ( m_tids[k] == TAG_P  ) return true;
@@ -16206,13 +16206,13 @@ bool Sections::setRegistrationBits ( ) {
 	// this maps a section ptr to the dates it contains
 	//HashTableX *tt = m_dates->getTODTable ();
 
-	// shortcut
+	// int16_tcut
 	//int64_t *wids = m_wids;
 
 	m_bits->setInLinkBits ( this ); // m_sections );
 
 	// scan all words
-	for ( long j = 0 ; j < m_nw ; j++ ) {
+	for ( int32_t j = 0 ; j < m_nw ; j++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip punct words
@@ -16227,7 +16227,7 @@ bool Sections::setRegistrationBits ( ) {
 		/*
 		if ( (m_bits[j] & D_IS_IN_DATE) ) {
 			// must be a year
-			long num = m_words->getAsLong(j);
+			int32_t num = m_words->getAsLong(j);
 			if ( num <  1700 ) continue;
 			if ( num >= 2009 ) continue;
 			// get section
@@ -16239,7 +16239,7 @@ bool Sections::setRegistrationBits ( ) {
 		}
 		*/
 
-		// shortcut
+		// int16_tcut
 		int64_t wid = m_wids[j];
 
 		// "ictickets office" for http://www.ictickets.com/Event/
@@ -16264,9 +16264,9 @@ bool Sections::setRegistrationBits ( ) {
 		if( ! s_kt.isInTable(&wid)) continue;
 
 		// get next word
-		long max = j + 10; if ( max > m_nw ) max = m_nw;
+		int32_t max = j + 10; if ( max > m_nw ) max = m_nw;
 		// assume right after us
-		long next = j + 2;
+		int32_t next = j + 2;
 		// set nextWid to its id
 		int64_t nextWid = 0LL;
 		for ( ; next < max ; next++ ) {
@@ -16369,8 +16369,8 @@ bool Sections::setRegistrationBits ( ) {
 		// save it
 		//Section *orig = sk;
 
-		long sa = sk->m_firstWordPos;
-		//long sb = sk->m_lastWordPos;
+		int32_t sa = sk->m_firstWordPos;
+		//int32_t sb = sk->m_lastWordPos;
 		//bool expanded = false;
 		Section *lastsk = NULL;
 
@@ -16379,12 +16379,12 @@ bool Sections::setRegistrationBits ( ) {
 
 		// ok, now telescope up this section
 		// get first word
-		//long fw = sk->m_a - 1;
+		//int32_t fw = sk->m_a - 1;
 		// find alnum right before that
 		//for ( ; fw >= 0 ; fw-- )
 		//	if ( wids[fw] ) break;
 		// get first word below us
-		//long fw2 = sk->m_b;
+		//int32_t fw2 = sk->m_b;
 		// scan for it
 		//for ( ; fw2 < m_nw ; fw2++ )
 		//	if ( wids[fw2] ) break;
@@ -16404,7 +16404,7 @@ bool Sections::setRegistrationBits ( ) {
 			//if ( sk->m_tagId == TAG_TITLE ) break;
 
 			// . stop if this section is in a list of other
-			// . we should hash each sections tag hash along with
+			// . we should hash each sections tag hash aint32_t with
 			//   their parent section ptr for this
 			//if ( sk->m_container ) break;
 
@@ -16469,7 +16469,7 @@ bool Sections::setRegistrationBits ( ) {
 			*/
 
 			// stop if title tag hit
-			long a = sk->m_a;
+			int32_t a = sk->m_a;
 			if ( m_tids[a] == TAG_TITLE ) break;
 			// . stop if we hit a place
 			// . this was causing signmeup.com which had the
@@ -16502,7 +16502,7 @@ bool Sections::setRegistrationBits ( ) {
 		if ( ! sk ) { char *xx=NULL;*xx=0; }
 
 
-		// shortcut
+		// int16_tcut
 		Section **sp = m_sectionPtrs;		
 
 		//
@@ -16517,9 +16517,9 @@ bool Sections::setRegistrationBits ( ) {
 		// sections. like "Performance Dates" for santafeplayhouse.org.
 		// and for adobetheater.org we should stop at the </tr> tag
 		// so we can pick up that "Friday from 9 AM to 4 PM" that
-		// we were missing because "sb" stopped short.
+		// we were missing because "sb" stopped int16_t.
 
-		for ( long i = j ; i < sk->m_b ; i++ ) {
+		for ( int32_t i = j ; i < sk->m_b ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// stop if certain tag id
@@ -16656,18 +16656,18 @@ bool Sections::setRegistrationBits ( ) {
 
 sentflags_t getMixedCaseFlags ( Words *words , 
 				wbit_t *bits ,
-				long senta , 
-				long sentb , 
-				long niceness ) {
+				int32_t senta , 
+				int32_t sentb , 
+				int32_t niceness ) {
 	
 	int64_t *wids = words->getWordIds();
-	long *wlens = words->getWordLens();
+	int32_t *wlens = words->getWordLens();
 	char **wptrs = words->getWordPtrs();
-	long lowerCount = 0;
-	long upperCount = 0;
+	int32_t lowerCount = 0;
+	int32_t upperCount = 0;
 	bool firstWord = true;
 	bool inParens = false;
-	for ( long i = senta ; i < sentb ; i++ ) {
+	for ( int32_t i = senta ; i < sentb ; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// skip if not alnum
@@ -16754,7 +16754,7 @@ uint32_t getSectionContentTagHash3 ( Section *sn ) {
 	// 3 parents for a total of 4
 	uint32_t th = sn->m_tagId;
 	// telescope up through the next 3 parents
-	long pcount = 0;
+	int32_t pcount = 0;
 	for ( Section *ps = sn->m_parent; ps ; ps = ps->m_parent ) {
 		// limit to 3
 		if ( ++pcount >= 4 ) break;
@@ -16782,7 +16782,7 @@ bool Sections::setFormTableBits ( ) {
 		QUICKPOLL ( m_niceness );
 		// must be sentence
 		//if ( ! ( si->m_flags & SEC_SENTENCE ) ) continue;
-		// shortcut
+		// int16_tcut
 		sentflags_t sf = si->m_sentFlags;
 		// . fortable field must not end in period
 		// . i.e. "Good For Kids:"
@@ -16849,8 +16849,8 @@ void Sections::setAddrXors ( Addresses *aa ) {
 	// sanity check
 	if ( ! aa->m_sortedValid ) { char *xx=NULL;*xx=0; }
 	// loop over the places, sorted by Place::m_a
-	long np = aa->m_numSorted;
-	for ( long i = 0 ; i < np ; i++ ) {
+	int32_t np = aa->m_numSorted;
+	for ( int32_t i = 0 ; i < np ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get place #i
@@ -16858,22 +16858,22 @@ void Sections::setAddrXors ( Addresses *aa ) {
 		// get the address?
 		Address *ad = p->m_address;
 		// assume none
-		long h = 0;
+		int32_t h = 0;
 		// or alias
 		if ( ! ad ) ad = p->m_alias;
 		// or just use place hash i guess!
 		if ( ! ad ) 
-			h = (long)p;
+			h = (int32_t)p;
 		else if ( ad->m_flags3 & AF2_LATLON )
-			h = (long)p;
+			h = (int32_t)p;
 		// otherwise hash up address street etc.
 		else {
-			h  =(long)ad->m_street->m_hash;
-			h ^=(long)ad->m_street->m_streetNumHash;
+			h  =(int32_t)ad->m_street->m_hash;
+			h ^=(int32_t)ad->m_street->m_streetNumHash;
 			//h ^= ad->m_adm1->m_cid; // country id
-			//h ^= (long)ad->m_adm1Bits;
-			//h ^= (long)ad->m_cityHash;
-			h ^= (long)ad->m_cityId32;
+			//h ^= (int32_t)ad->m_adm1Bits;
+			//h ^= (int32_t)ad->m_cityHash;
+			h ^= (int32_t)ad->m_cityId32;
 			// sanity check
 			//if ( ! ad->m_adm1Bits ||
 			//     ! ad->m_cityHash ) {
@@ -16897,22 +16897,22 @@ void Sections::setAddrXors ( Addresses *aa ) {
 
 bool Sections::setTableRowsAndCols ( Section *tableSec ) {
 
-	//long rowCount = -1;
-	long colCount = -1;
-	long maxColCount = -1;
-	long maxRowCount = -1;
+	//int32_t rowCount = -1;
+	int32_t colCount = -1;
+	int32_t maxColCount = -1;
+	int32_t maxRowCount = -1;
 	Section *headCol[100];
 	Section *headRow[300];
-	long rowspanAcc[300];
+	int32_t rowspanAcc[300];
 
-	long maxCol = -1;
-	long minCol =  99999;
-	long maxRow = -1;
-	long minRow =  99999;
+	int32_t maxCol = -1;
+	int32_t minCol =  99999;
+	int32_t maxRow = -1;
+	int32_t minRow =  99999;
 
-	long rowCount = 0;
+	int32_t rowCount = 0;
 	// init rowspan info
-	for ( long k = 0 ; k < 300 ; k++ ) rowspanAcc[k] = 1;
+	for ( int32_t k = 0 ; k < 300 ; k++ ) rowspanAcc[k] = 1;
 
 	Section *prev = NULL;
 	Section *above[100];
@@ -16932,7 +16932,7 @@ bool Sections::setTableRowsAndCols ( Section *tableSec ) {
 		}
 		// must not be within another table in our table
 		if ( p != tableSec ) continue;
-		// shortcut
+		// int16_tcut
 		nodeid_t tid = ss->m_tagId;
 		// . ok, we are a section the the table "tableSec" now
 		// . row?
@@ -16955,12 +16955,12 @@ bool Sections::setTableRowsAndCols ( Section *tableSec ) {
 		// is it wacko? we should check this in Dates.cpp
 		// and ignore all dates in such tables or at least
 		// not allow them to pair up with each other
-		long  rslen;
+		int32_t  rslen;
 		char *rs = getFieldValue ( m_wptrs[ss->m_a] , // tag
 					   m_wlens[ss->m_a] , // tagLen
 					   "rowspan"  , 
 					   &rslen );
-		long rowspan = 1;
+		int32_t rowspan = 1;
 		if ( rs ) rowspan = atol2(rs,rslen);
 		//if ( rowspan != 1 ) 
 		//	tableSec->m_flags |= SEC_WACKO_TABLE;
@@ -17028,12 +17028,12 @@ bool Sections::setTableRowsAndCols ( Section *tableSec ) {
 		//
 		// propagate to all child sections in our section
 		//
-		long maxb = ss->m_b;
+		int32_t maxb = ss->m_b;
 		Section *kid = ss->m_next;
 		for ( ; kid && kid->m_b <= maxb ; kid = kid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// skip if belongs to another table already
+			// skip if beint32_ts to another table already
 			if ( kid->m_tableSec &&
 			     tableSec->contains ( kid->m_tableSec) ) 
 				continue;
@@ -17100,15 +17100,15 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 	if ( ! s_init0 ) {
 		s_init0 = true;
 		s_ft.set(8,4,128,s_ftbuf,2000,false,m_niceness,"ftbuf");
-		long n = (long)sizeof(s_tableFields)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_tableFields)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set words
 			char *s = s_tableFields[i];
 			Words w; w.set3 ( s );
 			int64_t *wi = w.getWordIds();
 			int64_t h = 0;
 			// scan words
-			for ( long j = 0 ; j < w.getNumWords(); j++ )
+			for ( int32_t j = 0 ; j < w.getNumWords(); j++ )
 				if ( wi[j] ) h ^= wi[j];
 			// . store hash of all words, value is ptr to it
 			// . put all exact matches into ti1 and the substring
@@ -17118,10 +17118,10 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 	}
 
 
-	long colVotes = 0;
-	long rowVotes = 0;
-	long maxCol = 0;
-	long maxRow = 0;
+	int32_t colVotes = 0;
+	int32_t rowVotes = 0;
+	int32_t maxCol = 0;
+	int32_t maxRow = 0;
 	Section *sn = ts;
 	// scan the sections in the table
 	for ( ; sn ; sn = sn->m_next ) {
@@ -17147,7 +17147,7 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 		if ( ! hdrFormatting ) continue;
 		// look for certain words like "location:" or "venue", those
 		// are very strong indicators of a header row or header col
-		for ( long i = sn->m_a ; i < sn->m_b ; i++ ) {
+		for ( int32_t i = sn->m_a ; i < sn->m_b ; i++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			if ( ! s_ft.isInTable ( &m_wids[i] ) ) continue;
@@ -17193,7 +17193,7 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 		for ( ; kid && kid->m_b <= sn->m_b ; kid = kid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// skip if does not belong to our table
+			// skip if does not beint32_t to our table
 			if ( kid->m_tableSec &&
 			     kid->m_tableSec != sn->m_tableSec ) continue;
 			// set it
@@ -17247,7 +17247,7 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 		for ( ; kid && kid->m_b <= sn->m_b ; kid = kid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// skip if does not belong to our table
+			// skip if does not beint32_t to our table
 			if ( kid->m_tableSec != ts ) continue;
 			// set his junk
 			//kid->m_colNum         = sn->m_colNum;
@@ -17276,18 +17276,18 @@ bool Sectiondb::init ( ) {
 	// . what's max # of tree nodes?
         // . key+4+left+right+parents+dataPtr = sizeof(key128_t)+4 +4+4+4+4
         // . 32 bytes per record when in the tree
-	long node = 16+4+4+4+4+4 + sizeof(SectionVote);
+	int32_t node = 16+4+4+4+4+4 + sizeof(SectionVote);
 	// . assume avg TitleRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	//long maxTreeNodes  = g_conf.m_sectiondbMaxTreeMem  / node;
-	long maxTreeMem    = 200000000;
-	long maxTreeNodes  = maxTreeMem / node;
+	//int32_t maxTreeNodes  = g_conf.m_sectiondbMaxTreeMem  / node;
+	int32_t maxTreeMem    = 200000000;
+	int32_t maxTreeNodes  = maxTreeMem / node;
 	// . we now use a disk page cache for sectiondb as opposed to the
 	//   old rec cache. i am trying to do away with the Rdb::m_cache rec
 	//   cache in favor of cleverly used disk page caches, because
 	//   the rec caches are not real-time and get stale.
 	// . just hard-code 5MB for now
-	long pcmem = 5000000; // = g_conf.m_sectiondbMaxDiskPageCacheMem;
+	int32_t pcmem = 5000000; // = g_conf.m_sectiondbMaxDiskPageCacheMem;
 
 	// do not use for now i think we use posdb and store the 32bit
 	// val in the key for facet type stuff
@@ -17316,7 +17316,7 @@ bool Sectiondb::init ( ) {
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-	long pageSize = GB_INDEXDB_PAGE_SIZE;
+	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// init the page cache
 	if ( ! m_pc.init ( "sectiondb",
 			   RDB_SECTIONDB,
@@ -17350,13 +17350,13 @@ bool Sectiondb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Sectiondb::init2 ( long treeMem ) {
+bool Sectiondb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
         // . key+4+left+right+parents+dataPtr = sizeof(key128_t)+4 +4+4+4+4
         // . 32 bytes per record when in the tree
-	long node = 16+4+4+4+4+4 + sizeof(SectionVote);
+	int32_t node = 16+4+4+4+4+4 + sizeof(SectionVote);
 	// . NOTE: overhead is about 32 bytes per node
-	long maxTreeNodes  = treeMem / node;
+	int32_t maxTreeNodes  = treeMem / node;
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
 			    "sectiondbRebuild"          ,
@@ -17429,19 +17429,19 @@ bool Sectiondb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key128_t k;
 		list.getCurrentKey(&k);
 		count++;
-		unsigned long shardNum = getShardNum ( RDB_SECTIONDB , &k );
+		uint32_t shardNum = getShardNum ( RDB_SECTIONDB , &k );
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in sectiondb, "
-		     "only %li belong to our group.",count,got);
+		log ("db: Out of first %"INT32" records in sectiondb, "
+		     "only %"INT32" beint32_t to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
@@ -17453,7 +17453,7 @@ bool Sectiondb::verify ( char *coll ) {
 	}
 
 	log ( LOG_INFO, "db: Sectiondb passed verification successfully for "
-	      "%li recs.", count );
+	      "%"INT32" recs.", count );
 	// DONE
 	g_threads.enableThreads();
 	return true;
@@ -17469,7 +17469,7 @@ bool Sections::setListFlags ( ) {
 	for ( Section *si = m_firstSent ; si ; si = si->m_nextSent ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		sentflags_t sf = si->m_sentFlags;
 		// . fortable field must not end in period
 		// . i.e. "Good For Kids:"
@@ -17498,7 +17498,7 @@ bool Sections::growSections ( ) {
 	// set the new max
 	m_maxNumSections = m_sectionBuf.getCapacity() / sizeof(Section);
 	// update ptrs in the old sections
-	for ( long i = 0 ; i < m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSections ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		Section *si = &m_sections[i];

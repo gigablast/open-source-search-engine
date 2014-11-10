@@ -68,7 +68,7 @@ class Datedb {
 	bool init ( );
 
 	// init the rebuild/secondary rdb, used by PageRepair.cpp
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 
 	bool verify ( char *coll );
 
@@ -78,14 +78,14 @@ class Datedb {
 	// . make a 16-byte key from all these components
 	// . since it is 16 bytes, the big bit will be set
 	key128_t makeKey ( int64_t          termId   , 
-			   unsigned long      date     ,
+			   uint32_t      date     ,
 			   unsigned char      score    , 
 			   uint64_t docId    , 
 			   bool               isDelKey );
 
-	key128_t makeStartKey ( int64_t termId , unsigned long date1 ) {
+	key128_t makeStartKey ( int64_t termId , uint32_t date1 ) {
 		return makeKey ( termId , date1, 255 , 0LL , true ); };
-	key128_t makeEndKey  ( int64_t termId , unsigned long date2 ) {
+	key128_t makeEndKey  ( int64_t termId , uint32_t date2 ) {
 		return makeKey ( termId , date2, 0   , DOCID_MASK , false ); };
 
 	// works on 16 byte full key or 10 byte half key
@@ -95,25 +95,25 @@ class Datedb {
 	unsigned char getScore ( void *key ) {
 		return ~(((unsigned char *)key)[5]); };
 
-	// use the very top long only
+	// use the very top int32_t only
 	/*
-	unsigned long getGroupIdFromKey ( key128_t *key ) {
+	uint32_t getGroupIdFromKey ( key128_t *key ) {
 		if ( g_conf.m_fullSplit )
 			return g_titledb.getGroupId ( getDocId((char *)key) );
 //#ifdef SPLIT_INDEXDB
 		if ( g_conf.m_indexdbSplit > 1 ) {
-			unsigned long groupId =
-				(((unsigned long*)key)[3]) &
+			uint32_t groupId =
+				(((uint32_t*)key)[3]) &
 				g_hostdb.m_groupMask;
 			groupId >>= g_indexdb.m_groupIdShift;
-			unsigned long offset = (key->n0 >> 2) &
+			uint32_t offset = (key->n0 >> 2) &
 				DOCID_OFFSET_MASK;
 			return g_indexdb.m_groupIdTable [ groupId+
 				(offset*g_indexdb.m_numGroups) ];
 		}
 //#else
 		else
-			return (((unsigned long *)key)[3]) &
+			return (((uint32_t *)key)[3]) &
 				g_hostdb.m_groupMask;
 //#endif
 	};
@@ -126,18 +126,18 @@ class Datedb {
 	// while spidering, cuz we use such terms for deduping and for
 	// doing quotas.
 	// ---> IS THIS RIGHT???? MDW
-	unsigned long getNoSplitGroupId ( key128_t *k ) {
+	uint32_t getNoSplitGroupId ( key128_t *k ) {
 		char *xx=NULL;*xx=0; 
 		return 0;
 		// wtf is this? still being used?
-		//return (((unsigned long *)k)[3]) & g_hostdb.m_groupMask;
-		//unsigned long bgid = getBaseGroupId(k);
+		//return (((uint32_t *)k)[3]) & g_hostdb.m_groupMask;
+		//uint32_t bgid = getBaseGroupId(k);
 		//return g_indexdb.getSplitGroupId(bgid,0);
 		//return bgid;
 	}
 
-	//unsigned long getBaseGroupId ( key128_t *k ) {
-	//	return (((unsigned long *)k)[3]) & g_hostdb.m_groupMask;
+	//uint32_t getBaseGroupId ( key128_t *k ) {
+	//	return (((uint32_t *)k)[3]) & g_hostdb.m_groupMask;
 	//}
 //#endif
 
@@ -148,20 +148,20 @@ class Datedb {
 		return termId ;
 	};
 
-	long getDate ( key128_t *k ) {
-                unsigned long date = 0;
-                date  = (unsigned long)(k->n1 & 0x000000000000ffffULL);
+	int32_t getDate ( key128_t *k ) {
+                uint32_t date = 0;
+                date  = (uint32_t)(k->n1 & 0x000000000000ffffULL);
                 date <<= 16;
-                date |= (unsigned long)((k->n0 & 0xffff000000000000ULL) >> 48);
+                date |= (uint32_t)((k->n0 & 0xffff000000000000ULL) >> 48);
                 return ~date;
         }
 
-	long getEventIdStart ( void *k ) {
+	int32_t getEventIdStart ( void *k ) {
 		uint32_t d = getDate ( (key128_t *)k );
 		return ((uint8_t *)(&d))[1];
 	};
 
-	long getEventIdEnd ( void *k ) {
+	int32_t getEventIdEnd ( void *k ) {
 		uint32_t d = getDate ( (key128_t *)k );
 		return ((uint8_t *)(&d))[0];
 	};

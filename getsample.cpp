@@ -74,11 +74,11 @@ bool hashinit () {
 	// bail if we already called this
 	if ( s_initialized ) return true;
 	// show RAND_MAX
-	//printf("RAND_MAX = %lu\n", RAND_MAX ); it's 0x7fffffff
+	//printf("RAND_MAX = %"UINT32"\n", RAND_MAX ); it's 0x7fffffff
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
-	for ( long i = 0 ; i < 256 ; i++ )
-		for ( long j = 0 ; j < 256 ; j++ ) {
+	for ( int32_t i = 0 ; i < 256 ; i++ )
+		for ( int32_t j = 0 ; j < 256 ; j++ ) {
 			g_hashtab [i][j]  = (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
@@ -94,11 +94,11 @@ bool hashinit () {
 	return true;
 }
 
-unsigned long hash32 ( const char *s, long len ) {
-	unsigned long h = 0;
-	long i = 0;
+uint32_t hash32 ( const char *s, int32_t len ) {
+	uint32_t h = 0;
+	int32_t i = 0;
 	while ( i < len ) {
-		h ^= (unsigned long) g_hashtab [(unsigned char)i]
+		h ^= (uint32_t) g_hashtab [(unsigned char)i]
 			[(unsigned char)s[i]];
 		i++;
 	}
@@ -106,12 +106,12 @@ unsigned long hash32 ( const char *s, long len ) {
 }
 
 bool processLog(FILE *fdip, FILE *fdop){
-	//some urls are very long, so keeping 10k
+	//some urls are very int32_t, so keeping 10k
 	char line[10*1024];
 	//buffer to store
 	char buf[10*1024];
 	char *p=line;
-	long i=0;
+	int32_t i=0;
 	while(fgets(line,10*1024,fdip)){
 		char *q=buf;
 		char *lineStart=p;
@@ -173,7 +173,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 		strncpy(ip,ipStart,urlStart-ipStart);
 		ip[urlStart-ipStart]='\0';
 	       
-		unsigned long ipHash=hash32(ip,gbstrlen(ip));
+		uint32_t ipHash=hash32(ip,gbstrlen(ip));
 		sprintf(q,"%u.%u.%u.%u \0",(unsigned char)(ipHash>>24),
 			(unsigned char)(ipHash>>16),
 			(unsigned char)(ipHash>>8),
@@ -195,7 +195,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 			q+=gbstrlen(q);
 			//I've seen some bad codes being junk and > 50 chars
 			char code[50];
-			long i=0;
+			int32_t i=0;
 			while (codeStart[i]!='\0' && codeStart[i]!='&' && 
 				     codeStart[i]!=' ' && i<50){
 				code[i]=codeStart[i];
@@ -203,7 +203,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 			}
 			code[i]='\0';
 			codeStart+=i;
-			unsigned long codeHash=hash32(code,gbstrlen(code));
+			uint32_t codeHash=hash32(code,gbstrlen(code));
 			sprintf(q,"%u\0",codeHash);
 			q+=gbstrlen(q);
 			
@@ -213,7 +213,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 				q[uipStart-codeStart]='\0';
 				q+=gbstrlen(q);
 				char uip[50];
-				long j=0;
+				int32_t j=0;
 				while(uipStart[j]!='\0' && 
 				      uipStart[j]!='&' &&
 				      uipStart[j]!=' ' && j<50){
@@ -222,7 +222,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 				}
 				uip[j]='\0';
 				uipStart+=j;
-				unsigned long uipHash=hash32(uip,gbstrlen(uip));
+				uint32_t uipHash=hash32(uip,gbstrlen(uip));
 				sprintf(q,"%u.%u.%u.%u\0",
 					(unsigned char)(uipHash>>24),
 					(unsigned char)(uipHash>>16),
@@ -246,7 +246,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 			q[uipStart-urlStart]='\0';
 			q+=gbstrlen(q);
 			char uip[50];
-			long i=0;
+			int32_t i=0;
 			while(uipStart[i]!='\0' && 
 			      uipStart[i]!='&' &&
 			      uipStart[i]!=' ' && i<50){
@@ -255,7 +255,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 			}
 			uip[i]='\0';
 			uipStart+=i;
-			unsigned long uipHash=hash32(uip,gbstrlen(uip));
+			uint32_t uipHash=hash32(uip,gbstrlen(uip));
 			sprintf(q,"%u.%u.%u.%u\0",
 				(unsigned char)(uipHash>>24),
 				(unsigned char)(uipHash>>16),
@@ -269,7 +269,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 				q[codeStart-uipStart]='\0';
 				q+=gbstrlen(q);
 				char code[50];
-				long j=0;
+				int32_t j=0;
 				while (codeStart[j]!='\0' && 
 				       codeStart[j]!='&' && 
 				       codeStart[j]!=' ' && j<50){
@@ -278,7 +278,7 @@ bool processLog(FILE *fdip, FILE *fdop){
 				}
 				code[j]='\0';
 				codeStart+=j;
-				unsigned long codeHash=hash32(code,
+				uint32_t codeHash=hash32(code,
 							      gbstrlen(code));
 				sprintf(q,"%u\0",codeHash);
 				q+=gbstrlen(q);
@@ -330,9 +330,9 @@ usage:
 		return -1;
 	}
 
-	long ipArg=0;
-	long opArg=0;
-	long i=1;
+	int32_t ipArg=0;
+	int32_t opArg=0;
+	int32_t i=1;
 	while (i < argc){
 		if(strncmp(argv[i],"-i",2)==0)
 			ipArg=i+1;
@@ -357,13 +357,13 @@ usage:
 		rawTime-=3600;
 		//timeInfo stores the lasthour UTC time
 		timeInfo=localtime(&rawTime);
-		long year = timeInfo->tm_year;
+		int32_t year = timeInfo->tm_year;
 		if (year > 100 )
 			year -= 100;
-		sprintf(g_getSample.m_hour,"%02li",timeInfo->tm_hour);
-		sprintf(g_getSample.m_day,"%02li",timeInfo->tm_mday);
-		sprintf(g_getSample.m_month,"%02li",timeInfo->tm_mon+1);
-		sprintf(g_getSample.m_year,"%02li",year);
+		sprintf(g_getSample.m_hour,"%02"INT32"",timeInfo->tm_hour);
+		sprintf(g_getSample.m_day,"%02"INT32"",timeInfo->tm_mday);
+		sprintf(g_getSample.m_month,"%02"INT32"",timeInfo->tm_mon+1);
+		sprintf(g_getSample.m_year,"%02"INT32"",year);
 	}
 	else{
 		if (gbstrlen(argv[argc-1]) != 8){
@@ -436,7 +436,7 @@ usage:
 			//if it is a current log file, eg. log0, then do it
 			if (p){
 				p++;
-				long m,d,h;
+				int32_t m,d,h;
 				m=atoi(p);
 				p+=3;
 				d=atoi(p);

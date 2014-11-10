@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-bool testChunk ( unsigned char *mem , long memSize ) {
+bool testChunk ( unsigned char *mem , int32_t memSize ) {
 
 	unsigned char *pend = mem + memSize;
 	for ( unsigned char *p = mem ; p < pend ; p++ ) {
@@ -53,8 +53,8 @@ int main ( int argc , char *argv[] ) {
 
 	int64_t maxMem = atoi(argv[1]); // 1GB?
 	int64_t chunkSize = 300000;
-	long n = 0;
-	long max = (long)(maxMem / chunkSize) + 10;
+	int32_t n = 0;
+	int32_t max = (int32_t)(maxMem / chunkSize) + 10;
 	char *mem [ max ];
 	int64_t total = 0LL;
 	for ( ; ; ) {
@@ -64,11 +64,11 @@ int main ( int argc , char *argv[] ) {
 		n++;
 		if ( total >= maxMem ) break;
 		if ( (n % 1000) == 0 )
-			fprintf(stderr,"quarantine: alloc block #%li\n",n);
+			fprintf(stderr,"quarantine: alloc block #%"INT32"\n",n);
 	}
 	fprintf(stderr,
-		"quarantine: grabbed %li chunks of ram for "
-		"total of %llu : %s\n",
+		"quarantine: grabbed %"INT32" chunks of ram for "
+		"total of %"UINT64" : %s\n",
 		n,total,strerror(errno));
 
 	fprintf(stderr,
@@ -76,7 +76,7 @@ int main ( int argc , char *argv[] ) {
 
 	int64_t badRam = 0;
 	// scan each chunk
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// erturns true if passes
 		if ( testChunk ( (unsigned char *)mem[i], chunkSize ) )
 			free ( mem[i] );
@@ -87,12 +87,12 @@ int main ( int argc , char *argv[] ) {
 			mlock ( mem[i] , chunkSize );
 		}
 		if ( (i % 1000) == 0 )
-			fprintf(stderr,"quarantine: test block #%li\n",i);
+			fprintf(stderr,"quarantine: test block #%"INT32"\n",i);
 	}
 
 	if ( badRam ) {
 		fprintf(stderr,
-			"quarantine: quarantining %llu bytes of bad ram.\n",
+			"quarantine: quarantining %"UINT64" bytes of bad ram.\n",
 			badRam);
 		// sleep forever
 		for ( ; ; ) sleep ( 100 );

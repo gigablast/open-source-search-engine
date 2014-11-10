@@ -46,25 +46,25 @@ public:
 	key_t     m_startKey;
 	key_t     m_endKey;
 	char     *m_coll;
-	long      m_collLen;
+	int32_t      m_collLen;
 	int64_t m_termId;
-	long      m_minRecSize;
+	int32_t      m_minRecSize;
 	Msg20     m_msg20s[MAX_FRAG_SIZE];
-	long      m_numMsg20sOutstanding;
-	long      m_numMsg20sLaunched;
-	long      m_numMsg20sReceived;
+	int32_t      m_numMsg20sOutstanding;
+	int32_t      m_numMsg20sLaunched;
+	int32_t      m_numMsg20sReceived;
 };
 
 class StateDict{
  public:
 	char      *m_dictBuf;
-	long       m_dictBufSize;
+	int32_t       m_dictBufSize;
 	char      *m_buf;
-	long       m_bufSize;
+	int32_t       m_bufSize;
 	char     **m_wordsPtr;
 	int64_t *m_termIds;
 	int64_t *m_termFreqs;
-	long       m_numTuples;
+	int32_t       m_numTuples;
 	Msg37      m_msg37;
 };
 */
@@ -79,7 +79,7 @@ class StateDict{
 
 	FILE      *m_fdr;
 	int        m_fdw;
-	long       m_fileNum;
+	int32_t       m_fileNum;
 	char       m_buf[1026];
 	Msg3a      m_msg3a;
 	Query      m_q;
@@ -89,7 +89,7 @@ class StateDict{
 
 typedef struct Reco{
 	char reco[MAX_PHRASE_LEN];
-	long score;
+	int32_t score;
 }Reco;
 
 class Language {
@@ -101,27 +101,27 @@ class Language {
 
 	void reset();
 
-	bool init( char *unifiedBuf, long unifiedBufSize, long lang, 
-		   long hostsPerSplit, unsigned long myHash );
+	bool init( char *unifiedBuf, int32_t unifiedBufSize, int32_t lang, 
+		   int32_t hostsPerSplit, uint32_t myHash );
 
-	void setLang( long lang ) { m_lang = lang; };
+	void setLang( int32_t lang ) { m_lang = lang; };
 	
 	//bool makeAffinities();
 
-	//long getPhrasePopularity ( char *s, uint64_t h,
+	//int32_t getPhrasePopularity ( char *s, uint64_t h,
 	//		       bool checkTitleRecDict );
 
-	bool checkDict(char *s, long slen, char encodeType);
+	bool checkDict(char *s, int32_t slen, char encodeType);
 
-	bool getRecommendation( char *origWord, long origWordLen,
-				char *recommendation, long recommendationLen,
-				bool *found, long *score, long *popularity, 
+	bool getRecommendation( char *origWord, int32_t origWordLen,
+				char *recommendation, int32_t recommendationLen,
+				bool *found, int32_t *score, int32_t *popularity, 
 				bool  forceReco = false );
 
-	//long narrowPhrase ( char *request, char *phrases, long *pops, 
-	//		    long maxPhrases );
+	//int32_t narrowPhrase ( char *request, char *phrases, int32_t *pops, 
+	//		    int32_t maxPhrases );
 
-	//bool generateDicts ( long numWordsToDump , char *coll );
+	//bool generateDicts ( int32_t numWordsToDump , char *coll );
 
 	//bool convertLatin1DictToUTF8 ( char *infile );
 
@@ -130,36 +130,36 @@ class Language {
 	//StateDict *m_stateDict;
 
 	// hash table of the dictionary
-	HashTableT <uint64_t, long>m_dict;
+	HashTableT <uint64_t, int32_t>m_dict;
 
  private:
-	long spellcheckDict();
+	int32_t spellcheckDict();
 
 	// always accepts only ascii chars. makeClean() converts unicode into
 	// ascii
-	bool getPhonetic( char *origWord, long origWordLen,
-			  char *target, long targetLen );
+	bool getPhonetic( char *origWord, int32_t origWordLen,
+			  char *target, int32_t targetLen );
 
 	bool loadRules();
 
-	bool loadSpellerDict( char *spellerBuf, long spellerbufSize,
-			      long hostsPerSplit, unsigned long myHash );
+	bool loadSpellerDict( char *spellerBuf, int32_t spellerbufSize,
+			      int32_t hostsPerSplit, uint32_t myHash );
 
 	//bool loadTitleRecDicts( );
 
-	//bool loadNarrow( char *spellerBuf, long spellerBufSize, 
-	//		 long hostsPerSplit, unsigned long myHash );
+	//bool loadNarrow( char *spellerBuf, int32_t spellerBufSize, 
+	//		 int32_t hostsPerSplit, uint32_t myHash );
 
 	bool loadDictHashTable( );
 
 	//bool genTopPopFile ( char *infile );
 
-	bool genDistributedPopFile ( char *infile, unsigned long myHash );
+	bool genDistributedPopFile ( char *infile, uint32_t myHash );
 	
 	//bool cleanDictFile ( );
 
-	bool makeClean( char *inBuf, long inBufSize,
-			char *outBuf, long outBufSize );//, bool isUTF16 );
+	bool makeClean( char *inBuf, int32_t inBufSize,
+			char *outBuf, int32_t outBufSize );//, bool isUTF16 );
 	
 	//bool makePhonet( char *infile);
 
@@ -173,38 +173,38 @@ class Language {
 
 	bool loadMispelledWords();
 	
-	bool hasMispelling(char *phrase, long phraseLen);
+	bool hasMispelling(char *phrase, int32_t phraseLen);
 
-	long tryPhonet( char *phonetTmp, char *origPhonet,
-			char *origClean, long tryForScore,
-			Reco *recos, long numRecos, long *lowestScore );
+	int32_t tryPhonet( char *phonetTmp, char *origPhonet,
+			char *origClean, int32_t tryForScore,
+			Reco *recos, int32_t numRecos, int32_t *lowestScore );
 
-	long editDistance( char *a, char *b, long level, // starting level
-			   long limit ); // maximum level
+	int32_t editDistance( char *a, char *b, int32_t level, // starting level
+			   int32_t limit ); // maximum level
 
-	long weightedAverage(long soundslikeScore, long wordScore);
+	int32_t weightedAverage(int32_t soundslikeScore, int32_t wordScore);
 
-	long limitEditDistance( char *a, char *b, long limit );
+	int32_t limitEditDistance( char *a, char *b, int32_t limit );
 
-	long limit1EditDistance( char *a, char *b );
+	int32_t limit1EditDistance( char *a, char *b );
 
-	long limit2EditDistance( char *a, char *b );
+	int32_t limit2EditDistance( char *a, char *b );
 
-	long checkRest( char *a, char *b, long w, char *amax, long min );
+	int32_t checkRest( char *a, char *b, int32_t w, char *amax, int32_t min );
 
-	long check2( char *a, char *b, long w, char *amax, long min );
+	int32_t check2( char *a, char *b, int32_t w, char *amax, int32_t min );
 
-	short editDistance( char *a0, char *b0 );
+	int16_t editDistance( char *a0, char *b0 );
 
-	short reduceScore ( char *a, char *b );
+	int16_t reduceScore ( char *a, char *b );
 
-	//bool makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
+	//bool makeWordFiles ( int32_t numWordsToDump , int32_t numWordsPerPhrase ,
 	//		     char *coll );
 
-	//bool makePopFiles ( long numWordsToDump , long numWordsPerPhrase ,
+	//bool makePopFiles ( int32_t numWordsToDump , int32_t numWordsPerPhrase ,
 	//			    char *coll);
 
-	//bool makeScoreFiles ( long maxWordsPerFile );
+	//bool makeScoreFiles ( int32_t maxWordsPerFile );
 
 	// this map maps a char to a "dict char"
 	//unsigned char m_map [ 256 ];
@@ -223,40 +223,40 @@ class Language {
 	//};
 
 	// what language loaded
-	long  m_lang;
+	int32_t  m_lang;
 
 	// what charset does this language use
 	unsigned char    m_charset;
 
 	// buffer to store the phonetic rules
 	char   *m_rulesBuf;
-	long    m_rulesBufSize;
+	int32_t    m_rulesBufSize;
 	char  **m_rulesPtr;
-	long    m_rulesPtrSize;
-	long    m_numRules;
+	int32_t    m_rulesPtrSize;
+	int32_t    m_numRules;
 	// points to the index of each rule that starts with a new character
-	long    m_ruleStarts[MAX_CHARS];
+	int32_t    m_ruleStarts[MAX_CHARS];
 	// the chars that are in a phonet
 	bool    m_ruleChars[MAX_CHARS];
 
 	// buffers to store the dictionaries
 	char  *m_distributedBuf;
-	long   m_distributedBufSize;
+	int32_t   m_distributedBufSize;
 	char **m_tuplePtr;
-	long   m_tuplePtrSize;
-	long   m_numTuples;
+	int32_t   m_tuplePtrSize;
+	int32_t   m_numTuples;
 
 	// total number of phonets
-	long m_numPhonets;
+	int32_t m_numPhonets;
 
 	// narrow phrase
 	char  *m_narrowBuf;
-	long   m_narrowBufSize;
-	long   m_numNarrowPtrs;
+	int32_t   m_narrowBufSize;
+	int32_t   m_numNarrowPtrs;
 	char **m_frntPtrs;
 	char **m_bckPtrs;
-	long  *m_frntCharPtrs;//[NUM_CHARS][NUM_CHARS][NUM_CHARS];
-	long  *m_bckCharPtrs;//[NUM_CHARS][NUM_CHARS][NUM_CHARS];
+	int32_t  *m_frntCharPtrs;//[NUM_CHARS][NUM_CHARS][NUM_CHARS];
+	int32_t  *m_bckCharPtrs;//[NUM_CHARS][NUM_CHARS][NUM_CHARS];
 
 	// m_phonetics stores the hash of the phonetic as the key.
 	// the value is a composite of index in m_tuplePtrs where the list
@@ -265,32 +265,32 @@ class Language {
 	HashTableT <uint64_t, uint64_t > m_phonetics;
 
 	// hash table of the distributed pop words dictionary
-	//	HashTableT <unsigned long, long> m_titlerecDict;
+	//	HashTableT <uint32_t, int32_t> m_titlerecDict;
 
 	// hash table of the distributed pop words dictionary
-	HashTableT <uint64_t, long>m_distributedPopPhrases;
+	HashTableT <uint64_t, int32_t>m_distributedPopPhrases;
 
 	// hash table of the top popular words in the dictionary
-	//	HashTableT <unsigned long, char *> m_topPopPhrases;
+	//	HashTableT <uint32_t, char *> m_topPopPhrases;
 
 	// hash table of mispelled words
-	HashTableT <unsigned long, bool>m_misp;
+	HashTableT <uint32_t, bool>m_misp;
 
 	// hash table of wikipedia words
-	HashTableT <unsigned long, bool>m_wiki;
+	HashTableT <uint32_t, bool>m_wiki;
 
 	// PARMS, which can be adjusted. Currently all languages have the 
 	// same adjustments, so using the same parms.
-	long m_editDistanceWeightsDel1;
-	long m_editDistanceWeightsDel2;
-	long m_editDistanceWeightsSwap;
-	long m_editDistanceWeightsSub;
-	long m_editDistanceWeightsSimilar;
-	long m_editDistanceWeightsMin;
-	long m_editDistanceWeightsMax;
-	long m_soundslikeWeight;
-	long m_wordWeight;
-	long m_span;
+	int32_t m_editDistanceWeightsDel1;
+	int32_t m_editDistanceWeightsDel2;
+	int32_t m_editDistanceWeightsSwap;
+	int32_t m_editDistanceWeightsSub;
+	int32_t m_editDistanceWeightsSimilar;
+	int32_t m_editDistanceWeightsMin;
+	int32_t m_editDistanceWeightsMax;
+	int32_t m_soundslikeWeight;
+	int32_t m_wordWeight;
+	int32_t m_span;
 
 	bool m_followup;
 	bool m_collapseResult;

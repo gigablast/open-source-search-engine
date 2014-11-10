@@ -6,20 +6,20 @@
 
 bool mainShutdown(bool urgent);
 bool mainShutdown(bool urgent){return true;}
-// JAB: this program has not been run in a long time and required these...
+// JAB: this program has not been run in a int32_t time and required these...
 bool closeAll(void*, void(*)(void *)) {return true;}
 bool allExit(void) {return true;}
 
 
 
-bool loadUnidataProps(char *s, void (*handler)(u_long, char**, u_long));
+bool loadUnidataProps(char *s, void (*handler)(u_int32_t, char**, u_int32_t));
 
-void handleUnicodeData(u_long, char **col, u_long colCount);
-void handleDerivedCoreProps(u_long, char **col, u_long colCount);
-void handleDerivedNormalizationProps(u_long, char **col, u_long colCount);
-void handlePropList(u_long, char **col, u_long colCount);
-void handleNormalizationTest(u_long, char **col, u_long colCount);
-void handleScripts(u_long, char **col, u_long colCount);
+void handleUnicodeData(u_int32_t, char **col, u_int32_t colCount);
+void handleDerivedCoreProps(u_int32_t, char **col, u_int32_t colCount);
+void handleDerivedNormalizationProps(u_int32_t, char **col, u_int32_t colCount);
+void handlePropList(u_int32_t, char **col, u_int32_t colCount);
+void handleNormalizationTest(u_int32_t, char **col, u_int32_t colCount);
+void handleScripts(u_int32_t, char **col, u_int32_t colCount);
 void decomposeHangul();
 
 
@@ -104,12 +104,12 @@ int main(int argc, char **argv) {
 	}
 }
 
-void handleUnicodeData(u_long line, char **col, u_long colCount) {
+void handleUnicodeData(u_int32_t line, char **col, u_int32_t colCount) {
 
 	UChar32 codePoint = strtol(col[0], NULL, 16);
 
 // 	if ((colCount < 14) || (codePoint == 0)){
-// 		printf("line %ld: no data (%ld cols)\n", line, colCount);
+// 		printf("line %"INT32": no data (%"INT32" cols)\n", line, colCount);
 // 		return;
 // 	}
 	char *name = col[1];
@@ -154,7 +154,7 @@ void handleUnicodeData(u_long line, char **col, u_long colCount) {
 			p = pend+1;
 		}
 
-//  		printf ("Code Point U+%04lx, %s: %s (%d chars)\n", 
+//  		printf ("Code Point U+%04"XINT32", %s: %s (%d chars)\n", 
 //  			codePoint, name, kompat?"(Kompatable)":"", decompCount);
 // 		g_decompCount++;
 // 		if (decompStr[0] != '<')
@@ -175,9 +175,9 @@ void handleUnicodeData(u_long line, char **col, u_long colCount) {
 	}
 }
 
-void handlePropList(u_long line, char **col, u_long colCount) {
-	//printf("Line %ld: ", line);
-	//for (u_long i=0;i<colCount;i++) 
+void handlePropList(u_int32_t line, char **col, u_int32_t colCount) {
+	//printf("Line %"INT32": ", line);
+	//for (u_int32_t i=0;i<colCount;i++) 
 	//	printf("'%s' ", col[i]);
 	//printf("\n");
 	char *range = NULL;
@@ -205,9 +205,9 @@ void handlePropList(u_long line, char **col, u_long colCount) {
 	
 }
 
-void handleDerivedCoreProps(u_long line, char **col, u_long colCount) {
-	//printf("Line %ld: ", line);
-	//for (u_long i=0;i<colCount;i++) 
+void handleDerivedCoreProps(u_int32_t line, char **col, u_int32_t colCount) {
+	//printf("Line %"INT32": ", line);
+	//for (u_int32_t i=0;i<colCount;i++) 
 	//	printf("'%s' ", col[i]);
 	//printf("\n");
 	char *range = NULL;
@@ -232,18 +232,18 @@ void handleDerivedCoreProps(u_long line, char **col, u_long colCount) {
 		if (props)
 			g_ucProps.setValue(c, &props);
 // 		if (c == ' ' && (props&UC_WORDCHAR)) 
-// 			printf("Yow: line %ld\n", line);
+// 			printf("Yow: line %"INT32"\n", line);
 // 		if (c == 0 && props)
-// 			printf("!!!\nHey: line %ld!!!\n\n", line);
+// 			printf("!!!\nHey: line %"INT32"!!!\n\n", line);
 	}
 	//printf("\n");
 	
 }
 
-void handleDerivedNormalizationProps(u_long line, char **col, 
-				     u_long colCount) {
-	//printf("Line %ld: ", line);
-	//for (u_long i=0;i<colCount;i++) 
+void handleDerivedNormalizationProps(u_int32_t line, char **col, 
+				     u_int32_t colCount) {
+	//printf("Line %"INT32": ", line);
+	//for (u_int32_t i=0;i<colCount;i++) 
 	//	printf("'%s' ", col[i]);
 	//printf("\n");
 	char *range = NULL;
@@ -270,7 +270,7 @@ void handleDerivedNormalizationProps(u_long line, char **col,
 	
 }
 
-void handleScripts(u_long, char **col, u_long colCount){
+void handleScripts(u_int32_t, char **col, u_int32_t colCount){
 	char *range = NULL;
 	UChar32 codePointStart = strtol(col[0], &range, 16);
 	UChar32 codePointEnd = codePointStart;
@@ -298,16 +298,16 @@ void handleScripts(u_long, char **col, u_long colCount){
 
 }
 
-void handleNormalizationTest(u_long line, char **col, u_long colCount) {
+void handleNormalizationTest(u_int32_t line, char **col, u_int32_t colCount) {
 	//NFKC Test:
 	// c4 == NFKC(c1) == NFKC(c2) == NFKC(c3) == NCFK(c4) == NFKC(c5)
-	UChar c[5][32]; long len[5];
+	UChar c[5][32]; int32_t len[5];
 	
 	if (colCount < 5) {
-		//log("Line %ld: only %ld columns!", line, colCount);
+		//log("Line %"INT32": only %"INT32" columns!", line, colCount);
 		return;
 	}
-	for (unsigned long i = 0 ; i < 5 ; i++) {
+	for (uint32_t i = 0 ; i < 5 ; i++) {
 		char *p = col[i];
 		int clen = gbstrlen(p);
 		UChar *q = c[i];
@@ -322,13 +322,13 @@ void handleNormalizationTest(u_long line, char **col, u_long colCount) {
 		len[i] = q - c[i];
 		
 	}
-	for (unsigned long i = 0; i < 5 ; i++ ) {
+	for (uint32_t i = 0; i < 5 ; i++ ) {
 		UChar normString[256];
-		long normLen = ucNormalizeNFKD(normString, 256, 
+		int32_t normLen = ucNormalizeNFKD(normString, 256, 
 					       c[i], len[i]);
 		//ucDebug(normString, normLen);
 		if (ucStrCmp(normString, normLen, c[4], len[4])){
-			printf("Line %ld col %ld: KD Normalization failed: \n bad: \"",
+			printf("Line %"INT32" col %"INT32": KD Normalization failed: \n bad: \"",
 			       line, i+1);
 			UChar *p = normString;
 			while(p < normString+normLen) {
@@ -351,7 +351,7 @@ void handleNormalizationTest(u_long line, char **col, u_long colCount) {
 					       c[i], len[i]);
 
 		if (ucStrCmp(normString, normLen, c[3], len[3])){
-			printf("Line %ld col %ld: KC Normalization failed: \n bad: \"",
+			printf("Line %"INT32" col %"INT32": KC Normalization failed: \n bad: \"",
 			       line, i+1);
 			UChar *p = normString;
 			while(p < normString+normLen) {
@@ -370,7 +370,7 @@ void handleNormalizationTest(u_long line, char **col, u_long colCount) {
 	}
 }
 bool loadUnidataProps(char *filename, 
-		      void (*handler)(u_long, char**, u_long)) {
+		      void (*handler)(u_int32_t, char**, u_int32_t)) {
 	printf("Loading %s\n", filename);
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
@@ -395,13 +395,13 @@ bool loadUnidataProps(char *filename,
 
 	char *lineStart = buf;
 	char *lineEnd = lineStart;
-	u_long line = 0;
+	u_int32_t line = 0;
 
 	while ((lineStart < buf+nread) && *lineStart) {
 		while (*lineEnd && *lineEnd != '\n') lineEnd++;
 
 		char *tokStart = lineStart;
-		u_long colCount = 0;
+		u_int32_t colCount = 0;
 
 		bool lineDone = false;
 		char *col[16];
@@ -427,7 +427,7 @@ bool loadUnidataProps(char *filename,
 
 			}
 
-			//printf("Line %ld col %ld Token: '%s'\n",
+			//printf("Line %"INT32" col %"INT32" Token: '%s'\n",
 			//       line, col, tokStart);
 			col[colCount] = tokStart;
 			
@@ -435,7 +435,7 @@ bool loadUnidataProps(char *filename,
 			colCount++;
 			if (lineDone) break;			
 		}
-		//if (col != 14)printf("uh oh: %ld\n", col);
+		//if (col != 14)printf("uh oh: %"INT32"\n", col);
 		//eol:
 		if (colCount && col[0][0] != 0){
 			handler(line, col, colCount);

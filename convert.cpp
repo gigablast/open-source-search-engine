@@ -52,10 +52,10 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// RdbMap needs like 14 bytes per page
-	long maxmem = (long) ((fsize / PAGE_SIZE) * 14LL + 5000000LL);
+	int32_t maxmem = (int32_t) ((fsize / PAGE_SIZE) * 14LL + 5000000LL);
 	g_mem.init ( maxmem ); 
 
-	fprintf(stderr,"convert: converting %s/%s to %s/%s (maxmem=%li)\n",
+	fprintf(stderr,"convert: converting %s/%s to %s/%s (maxmem=%"INT32")\n",
 		olddir,iname,newdir,iname,maxmem);
 	
 	// always make the hash table
@@ -115,9 +115,9 @@ convert: hashinit failed" ); return 1; }
 	unsigned char *trashTop = trash;
 	unsigned char *trashBot = trash;
 
-	long trashed = 0;
-	long recycled = 0;
-	long removed = 0;
+	int32_t trashed = 0;
+	int32_t recycled = 0;
+	int32_t removed = 0;
 
 	RdbMap map;
 	char mname[256];
@@ -125,7 +125,7 @@ convert: hashinit failed" ); return 1; }
 	map.set (mname, 0);
 
  loop:
-	long toRead = sizeof(key_t) * 32000;
+	int32_t toRead = sizeof(key_t) * 32000;
 	// truncate by file size
 	if ( offset + toRead > fsize ) toRead = fsize - offset;
 
@@ -154,7 +154,7 @@ convert: hashinit failed" ); return 1; }
 		pend -= (b - a);
 		// count it
 		removed += (b-a)/12;
-		//fprintf(stderr,"removed %li bad keys\n",(long)(b-a)/12);
+		//fprintf(stderr,"removed %"INT32" bad keys\n",(int32_t)(b-a)/12);
 		goto again;
 	}
 	// reset p
@@ -191,8 +191,8 @@ convert: hashinit failed" ); return 1; }
 			// might be full
 			if ( trashTop == trashBot ) {
 				//fprintf(stderr,"TRASH FULL!\n");
-				//fprintf(stderr,"skip n1=%08lx n0=%016llx\n",
-				//	*(long *)(p+8),*(int64_t *)p);
+				//fprintf(stderr,"skip n1=%08"XINT32" n0=%016"XINT64"\n",
+				//	*(int32_t *)(p+8),*(int64_t *)p);
 				trashTop -= 12;
 				if ( trashTop < trash )
 					trashTop = trashEnd - 12;
@@ -237,25 +237,25 @@ convert: hashinit failed" ); return 1; }
 
 		// . add to new file
 		// . should we only add low 6 bytes?
-		if ( *(long  *) ophi    == *(long  *)(p+6 ) &&
-		     *(short *)(ophi+4) == *(short *)(p+10)  ) {
+		if ( *(int32_t  *) ophi    == *(int32_t  *)(p+6 ) &&
+		     *(int16_t *)(ophi+4) == *(int16_t *)(p+10)  ) {
 			// set half bit
 			p[0] |= 0x02;
 			// store low 6 bytes
-			*(long  *) op    = *(long  *) p;
-			*(short *)(op+4) = *(short *)(p+4);
+			*(int32_t  *) op    = *(int32_t  *) p;
+			*(int16_t *)(op+4) = *(int16_t *)(p+4);
 			op += 6;
 		}
 		else {
 			// clear half bit
 			p[0] &= 0xfd;
 			// store low 6 bytes
-			*(long *) op    = *(long *)p;
-			*(long *)(op+4) = *(long *)(p+4);
-			*(long *)(op+8) = *(long *)(p+8);
+			*(int32_t *) op    = *(int32_t *)p;
+			*(int32_t *)(op+4) = *(int32_t *)(p+4);
+			*(int32_t *)(op+8) = *(int32_t *)(p+8);
 			// if we're the first 12, save hi 6 bytes
-			*(long  *) ophi    = *(long  *)(p+6);
-			*(short *)(ophi+4) = *(short *)(p+10);
+			*(int32_t  *) ophi    = *(int32_t  *)(p+6);
+			*(int16_t *)(ophi+4) = *(int16_t *)(p+10);
 			//ophi = op + 6;
 			op += 12;
 		}
@@ -305,9 +305,9 @@ convert: hashinit failed" ); return 1; }
 
 	// print final message
 	fprintf(stderr,"convert: done converting %s/%s\n",olddir,iname);
-	fprintf(stderr,"convert: recycled %li of the %li trashed\n",
+	fprintf(stderr,"convert: recycled %"INT32" of the %"INT32" trashed\n",
 		recycled,trashed);
-	fprintf(stderr,"convert: removed %li bad keys\n",removed);
+	fprintf(stderr,"convert: removed %"INT32" bad keys\n",removed);
 }
 
 /*
@@ -340,7 +340,7 @@ convert: hashinit failed" ); return 1; }
 	endKey.n1   = 0xffffffff;
 
  loop:
-	long toRead = sizeof(key_t) * 32000;
+	int32_t toRead = sizeof(key_t) * 32000;
 	// truncate by file size
 	if ( offset + toRead > fsize ) toRead = fsize - offset;
 
@@ -386,7 +386,7 @@ convert: hashinit failed" ); return 1; }
 					      isDelKey );
 		// add new key to new indexdb
 		// from Msg1.cpp:55
-		unsigned long groupId = k.n1 & g_conf.m_groupMask;
+		uint32_t groupId = k.n1 & g_conf.m_groupMask;
 		// bitch if it's not us!
 		if ( groupId != g_conf.m_groupId ) {
 			log("convert: termId would escape!");

@@ -21,16 +21,16 @@ int64_t gettimeofdayInMilliseconds() {
 
 static pthread_attr_t s_attr;
 static void *startUp ( void *state ) ;
-static long s_count = 0;
-static long s_filesize = 0;
-static long s_lock = 1;
-static long s_launched = 0;
+static int32_t s_count = 0;
+static int32_t s_filesize = 0;
+static int32_t s_lock = 1;
+static int32_t s_launched = 0;
 
 static int s_fd1, s_fd2;
 
-static long s_numThreads = 0;
+static int32_t s_numThreads = 0;
 
-static long s_maxReadSize = 1;
+static int32_t s_maxReadSize = 1;
 
 static int64_t s_startTime = 0;
 
@@ -46,7 +46,7 @@ main ( int argc , char *argv[] ) {
 
 	s_numThreads = atoi(argv[2]);
 	s_maxReadSize = atoi(argv[3]);
-	fprintf(stderr,"threads = %li  maxReadSize = %li\n",
+	fprintf(stderr,"threads = %"INT32"  maxReadSize = %"INT32"\n",
 		s_numThreads, s_maxReadSize );
 
 	if ( s_maxReadSize <= 0 ) s_maxReadSize = 1;
@@ -62,7 +62,7 @@ main ( int argc , char *argv[] ) {
 		exit(-1);
 	}
 	s_filesize = stats.st_size;
-	fprintf(stderr,"file size = %li\n",s_filesize);
+	fprintf(stderr,"file size = %"INT32"\n",s_filesize);
 	// seed rand
 	srand(time(NULL));
 	// open 2 file descriptors
@@ -86,7 +86,7 @@ main ( int argc , char *argv[] ) {
 	// set time
 	s_startTime = gettimeofdayInMilliseconds();
 
-	for ( long i = 0 ; i < s_numThreads ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numThreads ; i++ ) {
 		int err = pthread_create ( &tid1,&s_attr,startUp,(void *)i) ;
 		if ( err != 0     ) return -1;
 	}
@@ -97,7 +97,7 @@ main ( int argc , char *argv[] ) {
 }
 
 void *startUp ( void *state ) {
-	long id = (long) state;
+	int32_t id = (int32_t) state;
 	// . what this lwp's priority be?
 	// . can range from -20 to +20
 	// . the lower p, the more cpu time it gets
@@ -116,12 +116,12 @@ void *startUp ( void *state ) {
 	// we got ourselves
 	s_launched++;
 	// msg
-	fprintf(stderr,"id = %li launched\n",id);
+	fprintf(stderr,"id = %"INT32" launched\n",id);
 	// wait for lock to be unleashed
 	while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
-	long j, off , size;
-	for ( long i = 0 ; i < 100000 ; i++ ) {
+	int32_t j, off , size;
+	for ( int32_t i = 0 ; i < 100000 ; i++ ) {
 		off = rand() % (s_filesize - s_maxReadSize );
 		// rand size
 		//size = rand() % s_maxReadSize;
@@ -129,19 +129,19 @@ void *startUp ( void *state ) {
 		//if ( size < 32*1024 ) size = 32*1024;
 		// time it
 		int64_t start = gettimeofdayInMilliseconds();
-		//fprintf(stderr,"%li) i=%li start\n",id,i );
+		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		pread ( s_fd1 , buf , size , off );
-		//fprintf(stderr,"%li) i=%li done\n",id,i );
+		//fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
 		int64_t now = gettimeofdayInMilliseconds();
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);
-		fprintf(stderr,"count=%li off=%li size=%li time=%lims "
+		fprintf(stderr,"count=%"INT32" off=%"INT32" size=%"INT32" time=%"INT32"ms "
 			"(%.2f seeks/sec)\n",
-			(long)s_count,
-			(long)off,
-			(long)size,
-			(long)(now - start) , 
+			(int32_t)s_count,
+			(int32_t)off,
+			(int32_t)size,
+			(int32_t)(now - start) , 
 			sps );
 	}
 		

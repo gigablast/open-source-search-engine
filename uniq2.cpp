@@ -20,7 +20,7 @@ int main ( int argc , char *argv[] ) {
 	// one line at a time
 	char s[1024];
 	char last[1024];
-	long count = 1;
+	int32_t count = 1;
 	bool first = true;
 	while ( fgets ( s , 1023 , fd ) ) {
 		// remove \n
@@ -30,7 +30,7 @@ int main ( int argc , char *argv[] ) {
 		// same as last?
 		if ( strcmp(s,last) == 0 ) { count++; continue; }
 		// print out the old last
-		fprintf(stdout,"%li %s\n",count,last);
+		fprintf(stdout,"%"INT32" %s\n",count,last);
 		// otherwise, we become last
 		strcpy ( last , s );
 		// and count is reset

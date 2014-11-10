@@ -7,32 +7,32 @@
 #include "ip.h"
 //#include "TermTable.h"
 
-bool setLinkSpam ( long             ip                 ,
-                   long            *indCatIds          ,
-                   long             numIndCatIds       ,
+bool setLinkSpam ( int32_t             ip                 ,
+                   int32_t            *indCatIds          ,
+                   int32_t             numIndCatIds       ,
                    class Url       *linker             ,
-                   long             siteNumInlinks     ,
+                   int32_t             siteNumInlinks     ,
 		   class Xml       *xml                ,
 		   class Links     *links              ,
 		   bool             isContentTruncated ,
-		   long             niceness           );
+		   int32_t             niceness           );
 
 bool isLinkSpam  ( class Url       *linker         ,
-		   long             ip             ,
-		   long            *indCatIds      ,
-		   long             numIndCatIds   ,
-		   long             siteNumInlinks ,
+		   int32_t             ip             ,
+		   int32_t            *indCatIds      ,
+		   int32_t             numIndCatIds   ,
+		   int32_t             siteNumInlinks ,
 		   class Xml       *xml            ,
 		   class Links     *links          ,
-		   long             maxDocLen      , 
+		   int32_t             maxDocLen      , 
 		   char           **note           , 
 		   Url             *linkee         ,
-		   long             linkNode       , 
+		   int32_t             linkNode       , 
 		   char            *coll           ,
-		   long             niceness       );
+		   int32_t             niceness       );
 
 char *getCommentSection ( char *haystack     ,
-			  long  haystackSize ,
+			  int32_t  haystackSize ,
 			  bool  isUnicode    ,
-			  long  niceness     );
+			  int32_t  niceness     );
 #endif

@@ -5,8 +5,8 @@
 #include "Sanity.h"
 #include "Timer.h"
 
-const long Flags::NoMin = 2147483647;
-const long Flags::NoMax = -1; 
+const int32_t Flags::NoMin = 2147483647;
+const int32_t Flags::NoMax = -1; 
 
 Flags::Flags() {
 	m_flags      = NULL;
@@ -30,7 +30,7 @@ void Flags::reset() {
 	m_lowestSet  = NoMin;
 }
 
-bool Flags::resize( long size ) { 
+bool Flags::resize( int32_t size ) { 
 	if ( size < 0           ) return false;
 	if ( size == m_numFlags ) return true;
 	
@@ -42,13 +42,13 @@ bool Flags::resize( long size ) {
 	m_lowestSet  = NoMin;
 	if ( m_flags ) {
 		// copy as many of old flags over as possible
-		long min = m_numFlags;
+		int32_t min = m_numFlags;
 		if ( min > size ) min = size;
 		memcpy( newFlags, m_flags, min*sizeof(char) );
 		mfree( m_flags, m_numFlags*sizeof(char), "Flags" );
 		m_flags = NULL;
 		// find new values for member variables
-		for ( long i = 0; i < min; i++ ) {
+		for ( int32_t i = 0; i < min; i++ ) {
 			if ( newFlags[i] ) {
 				m_numSet++;
 				if ( i > m_highestSet ) m_highestSet = i;
@@ -62,7 +62,7 @@ bool Flags::resize( long size ) {
 	return (m_flags != NULL);
 }
 
-void Flags::setFlag( long n, char set ) { 
+void Flags::setFlag( int32_t n, char set ) { 
 	if ( m_flags[n] == set ) return;
 
 	// set the value of flag[n]
@@ -109,8 +109,8 @@ void Flags::setFlag( long n, char set ) {
 }
 
 void Flags::dumpFlags() {
-	for ( long i = 0; i < m_numFlags; i++ ) {
-		log(LOG_DEBUG, "AWL: Flag %ld:%d", i, (int)m_flags[i]);
+	for ( int32_t i = 0; i < m_numFlags; i++ ) {
+		log(LOG_DEBUG, "AWL: Flag %"INT32":%d", i, (int)m_flags[i]);
 	}
 }
 
@@ -198,7 +198,7 @@ void testFlags() {
 	log(LOG_DEBUG, "AWL: testing Flags 10...");
 	flags.reset();
 	SANITYCHECK( flags.getNumFlags() == 5 );
-	for ( long i = 0; i < flags.getNumFlags(); i++ ) {
+	for ( int32_t i = 0; i < flags.getNumFlags(); i++ ) {
 		SANITYCHECK( ! flags.getFlag( i ) );
 	}
 	SANITYCHECK( flags.getLowestSet() == flags.NoMin );
@@ -237,10 +237,10 @@ void testFlags() {
 	SANITYCHECK( flags.getNumFlags() == 1 );
 	SANITYCHECK( flags.getLowestSet() == flags.NoMin );
 	SANITYCHECK( flags.getHighestSet() == flags.NoMax );
-	for ( long i = 0; i < flags.getNumFlags(); i++ ) {
+	for ( int32_t i = 0; i < flags.getNumFlags(); i++ ) {
 		SANITYCHECK( ! flags.getFlag( i ) );
 	}	
-	const long TESTCASESIZE = 100000;
+	const int32_t TESTCASESIZE = 100000;
 	if ( ! flags.resize( TESTCASESIZE ) ) {
 		log(LOG_DEBUG, "AWL: Cannot allocate memory to test Flags!");
 		return;
@@ -250,18 +250,18 @@ void testFlags() {
 	SANITYCHECK( flags.getLowestSet() == flags.NoMin );
 	SANITYCHECK( flags.getHighestSet() == flags.NoMax );
 	//flags.dumpFlags();
-	for ( long i = 0; i < flags.getNumFlags(); i++ ) {
+	for ( int32_t i = 0; i < flags.getNumFlags(); i++ ) {
 		SANITYCHECK( ! flags.getFlag( i ) );
 	}
-	log(LOG_DEBUG, "AWL: Testing Flags 15 (test case size:%ld)...", 
+	log(LOG_DEBUG, "AWL: Testing Flags 15 (test case size:%"INT32")...", 
 	    TESTCASESIZE);
 	Timer timer;
 	timer.start();
-	long cnt = 0;
-	long ls = flags.NoMin;
-	long hs = flags.NoMax;
-	for ( long i = 0; i < TESTCASESIZE; i++ ) {
-		long j = random() % TESTCASESIZE;
+	int32_t cnt = 0;
+	int32_t ls = flags.NoMin;
+	int32_t hs = flags.NoMax;
+	for ( int32_t i = 0; i < TESTCASESIZE; i++ ) {
+		int32_t j = random() % TESTCASESIZE;
 		char r = random() % 2;
 		if ( 0 == r ) {
 			r = random() % 256;
@@ -270,7 +270,7 @@ void testFlags() {
 			if ( ! wasSet ) cnt++;
 			flags.setFlag( j, r );
 			SANITYCHECK( flags.getFlag( j ) == r );
-			//log(LOG_DEBUG, "AWL: set j:%ld wasSet:%d set:%ld, cnt:%ld", 
+			//log(LOG_DEBUG, "AWL: set j:%"INT32" wasSet:%d set:%"INT32", cnt:%"INT32"", 
 			//    j, wasSet, flags.getNumSet(), cnt);
 			SANITYCHECK( flags.getNumSet() == cnt );
 			SANITYCHECK( flags.getNumFlags() == TESTCASESIZE );
@@ -298,7 +298,7 @@ void testFlags() {
 					     flags.getHighestSet() < j );
 				hs = flags.getHighestSet();
 			}
-			//log(LOG_DEBUG, "AWL: unset j:%ld wasSet:%d set:%ld, cnt:%ld", 
+			//log(LOG_DEBUG, "AWL: unset j:%"INT32" wasSet:%d set:%"INT32", cnt:%"INT32"", 
 			//    j, wasSet, flags.getNumSet(), cnt);
 			SANITYCHECK( ! flags.getFlag( j ) );
 			SANITYCHECK( flags.getNumSet() == cnt );
@@ -318,10 +318,10 @@ void testFlags() {
 	SANITYCHECK( flags.getHighestSet() == flags.NoMax );
 	SANITYCHECK( flags.getLowestSet() == flags.NoMin );
 	SANITYCHECK( flags.getNumSet() == 0 );
-	for ( long i = 0; i < flags.getNumFlags(); i++ ) {
+	for ( int32_t i = 0; i < flags.getNumFlags(); i++ ) {
 		SANITYCHECK( ! flags.getFlag( i ) );
 	}
 	timer.stop();
-	log("AWL: Flags %ld tests took %lld ms", TESTCASESIZE, timer.getSpan());
+	log("AWL: Flags %"INT32" tests took %lld ms", TESTCASESIZE, timer.getSpan());
 	log(LOG_DEBUG, "AWL: Flags tests passed. :)");
 }

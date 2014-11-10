@@ -66,7 +66,7 @@ bool Wiktionary::test ( ) {
 	// first # is number of forms
 	//if ( *p < 0 || *p > 100 ) { char *xx =NULL;*xx=0; }
 	// first is count!
-	//long n = *p;
+	//int32_t n = *p;
 	// skip that
 	//p++;
 	// find new line
@@ -180,20 +180,20 @@ bool Wiktionary::test2 ( ) {
 
 	Words words;
 	words.set3 ( str );
-	long wordNum = 0;
+	int32_t wordNum = 0;
 	char tmpBuf[1000];
-	long niceness = 0;
+	int32_t niceness = 0;
 	Synonyms syn;
-	long naids = syn.getSynonyms ( &words,
+	int32_t naids = syn.getSynonyms ( &words,
 				       wordNum , 
 				       langId ,
 				       tmpBuf ,
 				       niceness );
 	// print those out
 	SafeBuf sb;
-	for ( long k = 0 ; k < naids ; k++ ) {
+	for ( int32_t k = 0 ; k < naids ; k++ ) {
 		char *str = syn.m_termPtrs[k];
-		long  len = syn.m_termLens[k];
+		int32_t  len = syn.m_termLens[k];
 		sb.safeMemcpy(str,len);
 		if ( k+1<naids) sb.pushChar(',');
 	}
@@ -239,10 +239,10 @@ bool Wiktionary::load() {
 	//struct stat stats2;
 	struct stat stats3;
 	struct stat stats4;
-	long errno1 = 0;
-	//long errno2 = 0;
-	long errno3 = 0;
-	long errno4 = 0;
+	int32_t errno1 = 0;
+	//int32_t errno2 = 0;
+	int32_t errno3 = 0;
+	int32_t errno4 = 0;
 	if ( fstat ( fd1 , &stats1 ) == -1 ) errno1 = errno;
 	//if ( fstat ( fd2 , &stats2 ) == -1 ) errno1 = errno;
 	if ( fstat ( fd3 , &stats3 ) == -1 ) errno3 = errno;
@@ -287,7 +287,7 @@ bool Wiktionary::load() {
 		int64_t nn2 = -2511412928924361809LL;
 		if ( h != nn && h != nn2 ) {
 			log("gb: %s or %s checksum is not approved for "
-			    "live service (%lli != %lli)", ff3, ff4,
+			    "live service (%"INT64" != %"INT64")", ff3, ff4,
 			    h,nn);
 			//return false;
 		}
@@ -320,7 +320,7 @@ bool Wiktionary::load() {
 	//m_debugMap.set ( 6 , 4 , 8388608  , NULL , 0 , false, 0,"dbgmap");
 
 	// get the size of it
-	long size = stats1.st_size;
+	int32_t size = stats1.st_size;
 	// now we have to load the text file
 	// returns false and sets g_errno on error
 	if ( ! generateHashTableFromWiktionaryTxt ( size ) ) return false;
@@ -443,7 +443,7 @@ bool Wiktionary::addSynsets ( char *filename ) {
 	//
 
 	// make it an offset
-	long firstLineOffset = lang - m_localBuf.getBufStart();
+	int32_t firstLineOffset = lang - m_localBuf.getBufStart();
 
 	// remember first word
 	//char *first = p;
@@ -489,11 +489,11 @@ bool Wiktionary::addSynsets ( char *filename ) {
 	return true;
 }
 
-bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
+bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 
 	// for debug
 	//sizen = 10000000;
-	long round = 0;
+	int32_t round = 0;
 
 	// 
 	// FILE FORMAT HELP:
@@ -538,7 +538,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
  readInSomeFile:
 
 	// limit to 300MB
-	long readSize = sizen;
+	int32_t readSize = sizen;
 	if ( readSize > maxReadSize ) readSize = maxReadSize;
 
 	// do not breach file size
@@ -581,7 +581,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 		if ( ! compile() ) return false;
 
 		// add unified dict entries into m_langTable if they
-		// belong to one and only one language.
+		// beint32_t to one and only one language.
 		// right now, this just cleans out m_langTable.
 		if ( ! integrateUnifiedDict() ) return false;
 
@@ -636,10 +636,10 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	}
 
 	// log it
-	log("wikt: reading %li bytes of %s @ %lli (filesize=%li)",
+	log("wikt: reading %"INT32" bytes of %s @ %"INT64" (filesize=%"INT32")",
 	    readSize,ff1,offset,sizen);
 
-	long n = pread ( fd1 , buf , readSize , offset );
+	int32_t n = pread ( fd1 , buf , readSize , offset );
 
 	if ( n != readSize ) { 
 		log("wikt: read: %s",mstrerror(errno));
@@ -859,7 +859,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 		// # Short form of [[hippopotamus]].
 		if ( ! strncasecmp(p-5 ,"past form of",12) )
 			name = p + 7;
-		if ( ! strncasecmp(p-6 ,"short form of",13) )
+		if ( ! strncasecmp(p-6 ,"int16_t form of",13) )
 			name = p + 7;
 		if ( ! strncasecmp(p-6 ,"tense form of",13) )
 			name = p + 7;
@@ -879,7 +879,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 			name = p + 7;
 		if ( ! strncasecmp(p-9 ,"genitive form of",16) )
 			name = p + 7;
-		if ( ! strncasecmp(p-10 ,"shortened form of",17) )
+		if ( ! strncasecmp(p-10 ,"int16_tened form of",17) )
 			name = p + 7;
 		if ( ! strncasecmp(p-10 ,"inflected form of",17) )
 			name = p + 7;
@@ -1006,7 +1006,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 
 	// . scan from title to next title
 	// . if it contains "Shavian" then bail! those are stupid
-	//   shavian script characters. one of them is short for "of"
+	//   shavian script characters. one of them is int16_t for "of"
 	//   so it shows up in of's synset!
 	char c;
 	if ( nextTitle ) {c = *nextTitle;*nextTitle = '\0';}
@@ -1046,7 +1046,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	//if ( strcmp(word,"haves")== 0 )
 	//	log("hey");
 
-	long flag = 0;
+	int32_t flag = 0;
 	uint8_t langId = langUnknown;
 
 	bool debug = false;
@@ -1091,15 +1091,15 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	// we got a header, set langid or set POS
 	if ( *wp == '=' ) {
 		// count em
-		long equalCount = 0;
+		int32_t equalCount = 0;
 		// skip any extra ='s
 		for ( ; *wp == '=' ; wp++ ) equalCount++;
 		// if newline follows this equal, it was at the end of
 		// an equal pair like "==English=="
 		if ( *wp == '\n' )  goto lineLoop;
 		// debug
-		//long diff = wp - buf;
-		//log("diff = %li",diff);
+		//int32_t diff = wp - buf;
+		//log("diff = %"INT32"",diff);
 		// a pos?
 		if ( ! strncasecmp(wp,"noun",4) ) {
 			flag = WF_NOUN;
@@ -1200,11 +1200,11 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 			goto lineLoop;
 		}
 		// is it a language we support?
-		long n = sizeof(s_lowerLangWikiStrings) / sizeof(char *);
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = sizeof(s_lowerLangWikiStrings) / sizeof(char *);
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char *str = s_lowerLangWikiStrings[i];
 			if ( ! str ) { char *xx=NULL;*xx=0; }
-			long  len = strlen(str);
+			int32_t  len = strlen(str);
 			if ( ! strncasecmp(wp,str,len) ) {
 				langId = i;
 				if ( debug ) 
@@ -1453,7 +1453,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	// CRAP: # {{sports}} {{initialism of|[[championship|Championship]] [[record|Record]] or [[competition|Competition]] Record}}
 	// is messing up on converting pipes to \0 because it
 	// ends up mapping "CR" to "championship".
-	long inBrackets = 0;
+	int32_t inBrackets = 0;
 	for ( char *s = wp ; s < end ; s++ ) {
 		if ( *s == '[' ) inBrackets++;
 		if ( *s == ']' ) inBrackets--;
@@ -1461,7 +1461,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	}
 	// scan the strings now
 	char *start = NULL;
-	long slen;
+	int32_t slen;
 	bool skipNext = false;
 	for ( char *s = wp ; s < end ; s += slen + 1 ) {
 		slen = strlen(s);
@@ -1557,7 +1557,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 		if ( ! strcmp(s,"capitalized form") ) continue;
 		if ( ! strcmp(s,"obsolete capitalization") ) continue;
 		if ( ! strcmp(s,"archaic form") ) continue;
-		if ( ! strcmp(s,"shortened form") ) continue;
+		if ( ! strcmp(s,"int16_tened form") ) continue;
 		if ( ! strcmp(s,"reduced form") ) continue;
 		if ( ! strcmp(s,"unstressed form") ) continue;
 		if ( ! strcmp(s,"lowercase form") ) continue;
@@ -1622,7 +1622,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	// CRAP: # {{sports}} {{initialism of|[[championship|Championship]] [[record|Record]] or [[competition|Competition]] Record}}
 	// cuz it gets too complicated!!!
 	a = start;
-	long pipeCount = 0;
+	int32_t pipeCount = 0;
 	for ( ; *a ; a++ ) { if ( *a == '|' ) pipeCount++; }
 	a = start;
 	// too many pipes?
@@ -1760,8 +1760,8 @@ bool Wiktionary::addWord ( char *word ,
 	}
 
 	// store word so we can map word it to a string
-	long len = m_debugBuf.length();
-	long wlen = gbstrlen(word);
+	int32_t len = m_debugBuf.length();
+	int32_t wlen = gbstrlen(word);
 	if ( ! m_debugMap.isInTable ( &wid ) ) {
 		m_debugBuf.safeMemcpy ( word, wlen );
 		m_debugBuf.pushChar('\0');
@@ -1815,7 +1815,7 @@ bool Wiktionary::addWord ( char *word ,
 	if ( ! m_dedup.isInTable ( &dk64 ) ) {
 		/*
 		// the data now includes popularity of wid
-		long pop = g_speller.getPhrasePopularity(NULL,
+		int32_t pop = g_speller.getPhrasePopularity(NULL,
 							 wid,
 							 true,
 							 langId);
@@ -1843,7 +1843,7 @@ bool Wiktionary::addWord ( char *word ,
 	if ( ! m_dedup.isInTable ( &dk64 ) ) {
 		/*
 		// the data now includes popularity of wid
-		long pop = g_speller.getPhrasePopularity(NULL,
+		int32_t pop = g_speller.getPhrasePopularity(NULL,
 							 baseForm,
 							 true,
 							 langId);
@@ -1885,7 +1885,7 @@ bool Wiktionary::compile ( ) {
 	dedup.set ( 8,0,16777216,NULL,0,false,0,"cdtab");
 
 	// scan the m_tmp table
-	for ( long i = 0 ; i < m_tmp.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_tmp.m_numSlots ; i++ ) {
 		// skip empty slots
 		if ( ! m_tmp.m_flags[i] ) continue;
 		// get this guys key
@@ -1904,9 +1904,9 @@ bool Wiktionary::compile ( ) {
 		char dbuf2[512];
 		dd2.set(8,0,8,dbuf2,512,false,0,"ddttt2");
 		// how many forms? must be 2+ to get added to syntable
-		long formCount = 0;
-		long stripCount = 0;
-		for ( long j = i ; ; j++ ) {
+		int32_t formCount = 0;
+		int32_t stripCount = 0;
+		for ( int32_t j = i ; ; j++ ) {
 			// wrap around
 			if ( j >= m_tmp.m_numSlots ) j = 0;
 			// chain stops when we hit empty slot
@@ -1919,7 +1919,7 @@ bool Wiktionary::compile ( ) {
 			char *data = (char *)m_tmp.getDataFromSlot(j);
 
 			// must be there
-			long *offPtr = (long *)m_debugMap.getValue(data);
+			int32_t *offPtr = (int32_t *)m_debugMap.getValue(data);
 			if ( ! offPtr ) { char *xx=NULL;*xx=0; }
 			char *word = m_debugBuf.getBufStart() + *offPtr;
 			// now re-hash it as lower case
@@ -1940,13 +1940,13 @@ bool Wiktionary::compile ( ) {
 			// store the stripped version in wiktionary-buf.txt
 			// because it is just a waste of space.
 			char a[1024];
-			long stripLen = stripAccentMarks(a,
+			int32_t stripLen = stripAccentMarks(a,
 							 1023,
 							 (unsigned char *)word,
 							 gbstrlen(word));
 			if ( stripLen <= 0 ) continue;
 			// if same as original word, skip
-			long wlen = gbstrlen(word);
+			int32_t wlen = gbstrlen(word);
 			if ( wlen==stripLen && strncmp(a,word,wlen)==0) 
 				continue;
 			// count as additional form
@@ -1957,7 +1957,7 @@ bool Wiktionary::compile ( ) {
 		// base form
 		//int64_t wid = *(int64_t *)m_tmp.getDataFromSlot(i);
 		// remember buf start
-		long bufLen = m_synBuf.length();
+		int32_t bufLen = m_synBuf.length();
 		// remove dups
 		HashTableX dd;
 		char dbuf[512];
@@ -1965,10 +1965,10 @@ bool Wiktionary::compile ( ) {
 		// a byte for storing the # of synonym forms
 		//m_synBuf.pushChar(0);
 		// push the langid!
-		//m_synBuf.safePrintf("%li,",langId);
-		long count = 0;
+		//m_synBuf.safePrintf("%"INT32",",langId);
+		int32_t count = 0;
 		// chain for all keys that are the same
-		for ( long j = i ; ; j++ ) {
+		for ( int32_t j = i ; ; j++ ) {
 			// wrap around
 			if ( j >= m_tmp.m_numSlots ) j = 0;
 			// chain stops when we hit empty slot
@@ -1989,7 +1989,7 @@ bool Wiktionary::compile ( ) {
 			// have been established based on case, since 
 			// wiktionary is highly case-dependent.
 			// get the word itself
-			long *offPtr = (long *)m_debugMap.getValue(data);
+			int32_t *offPtr = (int32_t *)m_debugMap.getValue(data);
 			// must be there
 			if ( ! offPtr ) { char *xx=NULL;*xx=0; }
 			char *word = m_debugBuf.getBufStart() + *offPtr;
@@ -2040,19 +2040,19 @@ bool Wiktionary::compile ( ) {
 			//   actually map to multiple words! so who knows
 			//   what to pick, maybe all of them!
 			char a[1024];
-			long stripLen = stripAccentMarks(a,
+			int32_t stripLen = stripAccentMarks(a,
 							 1023,
 							 (unsigned char *)word,
 							 gbstrlen(word));
 			// debug time
 			if ( stripLen > 0 ) a[stripLen] = 0;
 			//if ( stripLen > 0 ) 
-			//	log("wikt: %li) %s->%s",i,word,a);
+			//	log("wikt: %"INT32") %s->%s",i,word,a);
 			//if ( i==5133265 )
 			//	log("hey");
 			// if same as original word, ignore it
 			if ( stripLen > 0 ) {
-				long wlen = gbstrlen(word);
+				int32_t wlen = gbstrlen(word);
 				if ( wlen==stripLen && 
 				     strncmp(a,word,wlen) == 0 ) 
 					stripLen = 0;
@@ -2091,16 +2091,16 @@ bool Wiktionary::compile ( ) {
 }
 
 // add unified dict entries into m_langTable if they
-// belong to one and only one language
+// beint32_t to one and only one language
 bool Wiktionary::integrateUnifiedDict ( ) {
 
 	/*
 	// scan unified dict
-	for ( long i = 0 ; i < numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < numSlots ; i++ ) {
 		// skip empty slots
 		if ( ! ud->m_flags[i] ) continue;
 		// get ptrs
-		long off = *(long *)ud->getDataFromSlot(i);
+		int32_t off = *(int32_t *)ud->getDataFromSlot(i);
 		// refernce
 		char *p = g_speller.m_unifiedBuf + off;
 		// just one lang?
@@ -2114,7 +2114,7 @@ bool Wiktionary::integrateUnifiedDict ( ) {
 
 	/*
 	// scan langtable and remove translingual entries
-	for ( long i = 0 ; i < m_langTableTmp.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_langTableTmp.m_numSlots ; i++ ) {
 		// skip empty slots
 		if ( ! m_langTableTmp.m_flags[i] ) continue;
 		// check it

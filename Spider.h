@@ -48,10 +48,10 @@ bool doesStringContainPattern ( char *content , char *pattern ) ;
 
 bool getSpiderStatusMsg ( class CollectionRec *cx , 
 			  class SafeBuf *msg , 
-			  long *status ) ;
+			  int32_t *status ) ;
 
-long getFakeIpForUrl1 ( char *url1 ) ;
-long getFakeIpForUrl2 ( Url  *url2 ) ;
+int32_t getFakeIpForUrl1 ( char *url1 ) ;
+int32_t getFakeIpForUrl2 ( Url  *url2 ) ;
 
 // Overview of Spider
 //
@@ -154,7 +154,7 @@ long getFakeIpForUrl2 ( Url  *url2 ) ;
 // waiting tree with a spiderTime of 0. so when the waiting tree scan happens
 // it will pick that up and look in spiderdb for the best SpiderRequest with
 // that same firstIP that can be spidered now, and then it adds that to
-// doledb. (To prevent from having to scan long spiderdb lists and speed 
+// doledb. (To prevent from having to scan int32_t spiderdb lists and speed 
 // things up we might want to keep a little cache that maps a firstIP to 
 // a few SpiderRequests ready to be spidered).
 
@@ -358,13 +358,13 @@ long getFakeIpForUrl2 ( Url  *url2 ) ;
 // . what groupId (shardId) should spider/index this spider request?
 // . CAUTION: NOT the same group (shard) that stores it in spiderdb!!!
 // . CAUTION: NOT the same group (shard) that doles it out to spider!!!
-//unsigned long getGroupIdToSpider ( char *spiderRec );
+//uint32_t getGroupIdToSpider ( char *spiderRec );
 
 // now used by xmldoc.cpp
-bool isAggregator ( long siteHash32 , 
-		    long domHash32 , 
+bool isAggregator ( int32_t siteHash32 , 
+		    int32_t domHash32 , 
 		    char *url ,
-		    long urlLen ) ;
+		    int32_t urlLen ) ;
 
 // The 128-bit Spiderdb record key128_t for a rec in Spiderdb is as follows:
 //
@@ -395,7 +395,7 @@ class Spiderdb {
 	bool init ( );
 
 	// init the rebuild/secondary rdb, used by PageRepair.cpp
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 
 	bool verify ( char *coll );
 
@@ -420,46 +420,46 @@ class Spiderdb {
 	// same as above
 	int64_t getDocId ( key128_t *k ) {return (k->n0>>9)&DOCID_MASK;};
 
-	long getFirstIp ( key128_t *k ) { return (k->n1>>32); }
+	int32_t getFirstIp ( key128_t *k ) { return (k->n1>>32); }
 	
-	key128_t makeKey ( long      firstIp     ,
+	key128_t makeKey ( int32_t      firstIp     ,
 			   int64_t urlHash48   ,
 			   bool      isRequest   ,
 			   int64_t parentDocId ,
 			   bool      isDel       ) ;
 
-	key128_t makeFirstKey ( long firstIp ) {
+	key128_t makeFirstKey ( int32_t firstIp ) {
 		return makeKey ( firstIp,0LL,false,0LL,true); };
-	key128_t makeLastKey ( long firstIp ) {
+	key128_t makeLastKey ( int32_t firstIp ) {
 		return makeKey ( firstIp,0xffffffffffffLL,true,
 				 MAX_DOCID,false); };
 
-	key128_t makeFirstKey2 ( long firstIp , int64_t uh48 ) {
+	key128_t makeFirstKey2 ( int32_t firstIp , int64_t uh48 ) {
 		return makeKey ( firstIp,uh48,false,0LL,true); };
-	key128_t makeLastKey2 ( long firstIp  , int64_t uh48 ) {
+	key128_t makeLastKey2 ( int32_t firstIp  , int64_t uh48 ) {
 		return makeKey ( firstIp,uh48,true,MAX_DOCID,false); };
 
 	// what groupId (shardid) spiders this url?
 	/*
-	inline unsigned long getShardNum ( long firstIp ) {
+	inline uint32_t getShardNum ( int32_t firstIp ) {
 		// must be valid
 		if ( firstIp == 0 || firstIp == -1 ) {char *xx=NULL;*xx=0; }
 		// mix it up
-		unsigned long h = (unsigned long)hash32h ( firstIp, 0x123456 );
+		uint32_t h = (uint32_t)hash32h ( firstIp, 0x123456 );
 		// get it
 		return h % g_hostdb.m_numShards;
 	};
 	*/
 
 	// print the spider rec
-	long print( char *srec );
+	int32_t print( char *srec );
 
   private:
 
 	DiskPageCache m_pc;
 };
 
-void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs );
+void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs );
 
 extern class Spiderdb g_spiderdb;
 extern class Spiderdb g_spiderdb2;
@@ -472,7 +472,7 @@ class SpiderRequest {
 	// a SpiderRec outright
 	key128_t   m_key;
 	
-	long    m_dataSize;
+	int32_t    m_dataSize;
 
 	// this ip is taken from the TagRec for the domain of the m_url,
 	// but we do a dns lookup initially if not in tagdb and we put it in
@@ -484,22 +484,22 @@ class SpiderRequest {
 	// domain will always be spidered by the same group (shard) of hosts 
 	// even if the ip changes later on. this also increases performance 
 	// since we do a lot fewer dns lookups on the outlinks.
-	long    m_firstIp;
-	//long getFirstIp ( ) { return g_spiderdb.getFirstIp(&m_key); };
+	int32_t    m_firstIp;
+	//int32_t getFirstIp ( ) { return g_spiderdb.getFirstIp(&m_key); };
 
-	long    m_hostHash32;
-	long    m_domHash32;
-	long    m_siteHash32;
+	int32_t    m_hostHash32;
+	int32_t    m_domHash32;
+	int32_t    m_siteHash32;
 
 	// this is computed from every outlink's tagdb record but i guess
 	// we can update it when adding a spider rec reply
-	long    m_siteNumInlinks;
+	int32_t    m_siteNumInlinks;
 
 	// . when this request was first was added to spiderdb
 	// . Spider.cpp dedups the oldest SpiderRequests that have the
 	//   same bit flags as this one. that way, we get the most uptodate
 	//   date in the request... UNFORTUNATELY we lose m_addedTime then!!!
-	time_t  m_addedTime;
+	uint32_t  m_addedTime; // time_t
 
 	// if m_isNewOutlink is true, then this SpiderRequest is being added 
 	// for a link that did not exist on this page the last time it was
@@ -507,32 +507,32 @@ class SpiderRequest {
 	// m_url. if m_url's content does not contain a pub date explicitly
 	// then we can estimate it based on when m_url's parent was last
 	// spidered (when m_url was not an outlink on its parent page)
-	time_t  m_parentPrevSpiderTime;
+	uint32_t  m_parentPrevSpiderTime; // time_t
 
 	// info on the page we were harvest from
-	long    m_parentFirstIp;
-	long    m_parentHostHash32;
-	long    m_parentDomHash32;
-	long    m_parentSiteHash32;
+	int32_t    m_parentFirstIp;
+	int32_t    m_parentHostHash32;
+	int32_t    m_parentDomHash32;
+	int32_t    m_parentSiteHash32;
 
 	// the PROBABLE DOCID. if there is a collision with another docid
 	// then we increment the last 8 bits or so. see Msg22.cpp.
 	int64_t m_probDocId;
 
-	//long  m_parentPubDate;
+	//int32_t  m_parentPubDate;
 
 	// . pub date taken from url directly, not content
 	// . ie. http://mysite.com/blog/nov-06-2009/food.html
 	// . ie. http://mysite.com/blog/11062009/food.html
-	//long    m_urlPubDate;
+	//int32_t    m_urlPubDate;
 	// . replace this with something we need for smart compression
 	// . this is zero if none or invalid
-	long    m_contentHash32;
+	int32_t    m_contentHash32;
 
 	// . each request can have a different hop count
 	// . this is only valid if m_hopCountValid is true!
-	// . i made this a short from long to support m_parentLangId etc above
-	short   m_hopCount;
+	// . i made this a int16_t from int32_t to support m_parentLangId etc above
+	int16_t   m_hopCount;
 	
 	// when creating a chinese search engine for instance it is nice
 	// to know the language of the page we are spidering's parent.
@@ -559,7 +559,7 @@ class SpiderRequest {
 	char    m_reserved2h:1;
 
 
-	//long    m_hopCount;
+	//int32_t    m_hopCount;
 
 	// . this is now computed dynamically often based on the latest
 	//   m_addedTime and m_percentChanged of all the SpideRec *replies*.
@@ -573,48 +573,48 @@ class SpiderRequest {
 	// our bit flags
 	//
 
-	long    m_hopCountValid:1;
+	int32_t    m_hopCountValid:1;
 	// are we a request/reply from the add url page?
-	long    m_isAddUrl:1; 
+	int32_t    m_isAddUrl:1; 
 	// are we a request/reply from PageReindex.cpp
-	long    m_isPageReindex:1; 
+	int32_t    m_isPageReindex:1; 
 	// are we a request/reply from PageInject.cpp
-	long    m_isPageInject:1; 
+	int32_t    m_isPageInject:1; 
 	// or from PageParser.cpp directly
-	long    m_isPageParser:1; 
+	int32_t    m_isPageParser:1; 
 	// should we use the test-spider-dir for caching test coll requests?
-	long    m_useTestSpiderDir:1;
+	int32_t    m_useTestSpiderDir:1;
 	// . is the url a docid (not an actual url)
 	// . could be a "query reindex"
-	long    m_urlIsDocId:1;
+	int32_t    m_urlIsDocId:1;
 	// does m_url end in .rss? or a related rss file extension?
-	long    m_isRSSExt:1;
+	int32_t    m_isRSSExt:1;
 	// is url in a format known to be a permalink format?
-	long    m_isUrlPermalinkFormat:1;
-	// is url "rpc.weblogs.com/shortChanges.xml"?
-	long    m_isPingServer:1; 
+	int32_t    m_isUrlPermalinkFormat:1;
+	// is url "rpc.weblogs.com/int16_tChanges.xml"?
+	int32_t    m_isPingServer:1; 
 	// . are we a delete instruction? (from Msg7.cpp as well)
 	// . if you want it to be permanently banned you should ban or filter
 	//   it in the urlfilters/tagdb. so this is kinda useless...
-	long    m_forceDelete:1; 
+	int32_t    m_forceDelete:1; 
 	// are we a fake spider rec? called from Test.cpp now!
-	long    m_isInjecting:1; 
+	int32_t    m_isInjecting:1; 
 	// are we a respider request from Sections.cpp
-	//long    m_fromSections:1;
+	//int32_t    m_fromSections:1;
 	// a new flag. replaced above. did we have a corresponding SpiderReply?
-	long    m_hadReply:1;
+	int32_t    m_hadReply:1;
 	// are we scraping from google, etc.?
-	long    m_isScraping:1; 
+	int32_t    m_isScraping:1; 
 	// page add url can be updated to store content for the web page
 	// into titledb or something to simulate injections of yore. we can
 	// use that content as the content of the web page. the add url can
 	// accept it from a form and we store it right away into titledb i
 	// guess using msg4, then we look it up when we spider the url.
-	long    m_hasContent:1;
+	int32_t    m_hasContent:1;
 	// is first ip a hash of url or docid or whatever?
-	long    m_fakeFirstIp:1;
+	int32_t    m_fakeFirstIp:1;
 	// www.xxx.com/*? or xxx.com/*?
-	long    m_isWWWSubdomain:1;
+	int32_t    m_isWWWSubdomain:1;
 
 	//
 	// these "parent" bits are invalid if m_parentHostHash32 is 0!
@@ -623,17 +623,17 @@ class SpiderRequest {
 
 	// if the parent was respidered and the outlink was there last time
 	// and is there now, then this is "0", otherwise, this is "1"
-	long    m_isNewOutlink      :1;
-	long    m_sameDom           :1;
-	long    m_sameHost          :1;
-	long    m_sameSite          :1;
-	long    m_wasParentIndexed  :1;
-	long    m_parentIsRSS       :1;
-	long    m_parentIsPermalink :1;
-	long    m_parentIsPingServer:1;
-	long    m_parentHasAddress  :1;
+	int32_t    m_isNewOutlink      :1;
+	int32_t    m_sameDom           :1;
+	int32_t    m_sameHost          :1;
+	int32_t    m_sameSite          :1;
+	int32_t    m_wasParentIndexed  :1;
+	int32_t    m_parentIsRSS       :1;
+	int32_t    m_parentIsPermalink :1;
+	int32_t    m_parentIsPingServer:1;
+	int32_t    m_parentHasAddress  :1;
 	// is this outlink from content or menu?
-	long    m_isMenuOutlink     :1; 
+	int32_t    m_isMenuOutlink     :1; 
 
 
 	// 
@@ -641,64 +641,64 @@ class SpiderRequest {
 	//
 
 	// was it in google's index?
-	long    m_inGoogle:1;
+	int32_t    m_inGoogle:1;
 	// expires after a certain time or if ownership changed
 	// did it have an inlink from a really nice site?
-	long    m_hasAuthorityInlink :1;
-	long    m_hasContactInfo     :1;
-	long    m_isContacty         :1;
-	long    m_hasSiteVenue       :1;
+	int32_t    m_hasAuthorityInlink :1;
+	int32_t    m_hasContactInfo     :1;
+	int32_t    m_isContacty         :1;
+	int32_t    m_hasSiteVenue       :1;
 
 
 	// are the 3 bits above valid? 
 	// if site ownership changes might be invalidated. 
-	// "inGoogle" also may expire after so long too
-	long    m_inGoogleValid           :1;
-	long    m_hasAuthorityInlinkValid :1;
-	long    m_hasContactInfoValid     :1;
-	long    m_isContactyValid         :1;
-	long    m_hasAddressValid         :1;
-	//long    m_matchesUrlCrawlPattern  :1;
-	//long    m_matchesUrlProcessPattern:1;
-	long    m_hasTODValid             :1;
-	long    m_hasSiteVenueValid       :1;
-	long    m_siteNumInlinksValid     :1;
+	// "inGoogle" also may expire after so int32_t too
+	int32_t    m_inGoogleValid           :1;
+	int32_t    m_hasAuthorityInlinkValid :1;
+	int32_t    m_hasContactInfoValid     :1;
+	int32_t    m_isContactyValid         :1;
+	int32_t    m_hasAddressValid         :1;
+	//int32_t    m_matchesUrlCrawlPattern  :1;
+	//int32_t    m_matchesUrlProcessPattern:1;
+	int32_t    m_hasTODValid             :1;
+	int32_t    m_hasSiteVenueValid       :1;
+	int32_t    m_siteNumInlinksValid     :1;
 
 	// . only support certain tags in url filters now i guess
 	// . use the tag value from most recent SpiderRequest only
 	// . the "deep" tag is popular for hitting certain sites hard
-	//long    m_tagDeep:1;
+	//int32_t    m_tagDeep:1;
 	// we set this to one from Diffbot.cpp when urldata does not
 	// want the url's to have their links spidered. default is to make
 	// this 0 and to not avoid spidering the links.
-	long    m_avoidSpiderLinks:1;
+	int32_t    m_avoidSpiderLinks:1;
 	// for identifying address heavy sites...
-	//long    m_tagYellowPages:1;
+	//int32_t    m_tagYellowPages:1;
 	// when indexing urls for dmoz, i.e. the urls outputted from
 	// 'dmozparse urldump -s' we need to index them even if there
 	// was a ETCPTIMEDOUT because we have to have indexed the same
 	// urls that dmoz has in it in order to be identical to dmoz.
-	long    m_ignoreExternalErrors:1;
+	int32_t    m_ignoreExternalErrors:1;
 
 	// called XmlDoc::set4() from PageSubmit.cpp?
-	//long    m_isPageSubmit:1;
+	//int32_t    m_isPageSubmit:1;
 
 	//
 	// INTERNAL USE ONLY
 	//
 
 	// are we in the m_orderTree/m_doleTables/m_ipTree
-	//long    m_inOrderTree:1;
+	//int32_t    m_inOrderTree:1;
 	// are we doled out?
-	//long    m_doled:1;
+	//int32_t    m_doled:1;
 	// are we a re-add of a spiderrequest already in spiderdb added
 	// from xmldoc.cpp when done spidering so that the spider request
 	// gets back in the cache quickly?
-	//long    m_readd:1;
+	//int32_t    m_readd:1;
 
 	// . what url filter num do we match in the url filters table?
 	// . determines our spider priority and wait time
-	short   m_ufn;
+	int16_t   m_ufn;
 
 	// . m_priority is dynamically computed like m_spiderTime
 	// . can be negative to indicate filtered, banned, skipped, etc.
@@ -719,7 +719,7 @@ class SpiderRequest {
 	// . basic functions
 	// . clear all
 	void reset() { 
-		memset ( this , 0 , (long)m_url - (long)&m_key ); 
+		memset ( this , 0 , (int32_t)m_url - (int32_t)&m_key ); 
 		// -1 means uninitialized, this is required now
 		m_ufn = -1;
 		// this too
@@ -728,20 +728,20 @@ class SpiderRequest {
 		m_parentLangId = langUnknown;
 	};
 
-	static long getNeededSize ( long urlLen ) {
-		return sizeof(SpiderRequest) - (long)MAX_URL_LEN + urlLen; };
+	static int32_t getNeededSize ( int32_t urlLen ) {
+		return sizeof(SpiderRequest) - (int32_t)MAX_URL_LEN + urlLen; };
 
-	long getRecSize () { return m_dataSize + 4 + sizeof(key128_t); }
+	int32_t getRecSize () { return m_dataSize + 4 + sizeof(key128_t); }
 
 	// how much buf will we need to serialize ourselves?
-	//long getRecSize () { 
+	//int32_t getRecSize () { 
 	//	//return m_dataSize + 4 + sizeof(key128_t); }
 	//	return (m_url - (char *)this) + gbstrlen(m_url) + 1
 	//		// subtract m_key and m_dataSize
 	//		- sizeof(key_t) - 4 ;
 	//};
 
-	long getUrlLen() { return m_dataSize -
+	int32_t getUrlLen() { return m_dataSize -
 				   // subtract the \0
 				   ((char *)m_url-(char *)&m_firstIp) - 1;};
 
@@ -764,14 +764,14 @@ class SpiderRequest {
 		return p;
 	};		
 
-	//long getUrlLen() { return gbstrlen(m_url); };
+	//int32_t getUrlLen() { return gbstrlen(m_url); };
 
-	void setKey ( long firstIp ,
+	void setKey ( int32_t firstIp ,
 		      int64_t parentDocId , 
 		      int64_t uh48 , 
 		      bool isDel ) ;
 
-	void setKey ( long firstIp, int64_t parentDocId , bool isDel ) { 
+	void setKey ( int32_t firstIp, int64_t parentDocId , bool isDel ) { 
 		int64_t uh48 = hash64b ( m_url );
 		setKey ( firstIp , parentDocId, uh48, isDel );
 	}
@@ -781,15 +781,15 @@ class SpiderRequest {
 	int64_t  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
 	int64_t getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
 
-	long print( class SafeBuf *sb );
+	int32_t print( class SafeBuf *sb );
 
-	long printToTable     ( SafeBuf *sb , char *status ,
-				class XmlDoc *xd , long row ) ;
+	int32_t printToTable     ( SafeBuf *sb , char *status ,
+				class XmlDoc *xd , int32_t row ) ;
 	// for diffbot...
-	long printToTableSimple     ( SafeBuf *sb , char *status ,
-				      class XmlDoc *xd , long row ) ;
-	static long printTableHeader ( SafeBuf *sb , bool currentlSpidering ) ;
-	static long printTableHeaderSimple ( SafeBuf *sb , 
+	int32_t printToTableSimple     ( SafeBuf *sb , char *status ,
+				      class XmlDoc *xd , int32_t row ) ;
+	static int32_t printTableHeader ( SafeBuf *sb , bool currentlSpidering ) ;
+	static int32_t printTableHeaderSimple ( SafeBuf *sb , 
 					     bool currentlSpidering ) ;
 
 	// returns false and sets g_errno on error
@@ -819,50 +819,50 @@ class SpiderReply {
 	// a SpiderRec outright
 	key128_t   m_key;
 
-	long    m_dataSize;
+	int32_t    m_dataSize;
 
 	// for calling getHostIdToDole()
-	long    m_firstIp;
-	//long getFirstIp ( ) { return g_spiderdb.getFirstIp(&m_key); };
+	int32_t    m_firstIp;
+	//int32_t getFirstIp ( ) { return g_spiderdb.getFirstIp(&m_key); };
 
 	// we need this too in case it changes!
-	long    m_siteHash32;
+	int32_t    m_siteHash32;
 	// and this for updating crawl delay in m_cdTable
-	long    m_domHash32;
+	int32_t    m_domHash32;
 	// since the last successful SpiderRecReply
 	float   m_percentChangedPerDay;
 	// when we attempted to spider it
-	time_t  m_spideredTime;
+	uint32_t  m_spideredTime; // time_t
 	// . value of g_errno/m_indexCode. 0 means successfully indexed.
 	// . might be EDOCBANNED or EDOCFILTERED
-	long    m_errCode;
+	int32_t    m_errCode;
 	// this is fresher usually so we can use it to override 
 	// SpiderRequest's m_siteNumLinks
-	long    m_siteNumInlinks;
+	int32_t    m_siteNumInlinks;
 	// how many inlinks does this particular page have?
-	//long    m_pageNumInlinks;
+	//int32_t    m_pageNumInlinks;
 	// the actual pub date we extracted (0 means none, -1 unknown)
-	long    m_pubDate;
+	int32_t    m_pubDate;
 	// . SpiderRequests added to spiderdb since m_spideredTime
 	// . XmlDoc.cpp's ::getUrlFilterNum() uses this as "newinlinks" arg
-	//long    m_newRequests;
+	//int32_t    m_newRequests;
 	// . replaced m_newRequests
 	// . this is zero if none or invalid
-	long    m_contentHash32;
+	int32_t    m_contentHash32;
 	// in milliseconds, from robots.txt (-1 means none)
 	// TODO: store in tagdb, lookup when we lookup tagdb recs for all
 	// out outlinks
-	long    m_crawlDelayMS; 
+	int32_t    m_crawlDelayMS; 
 	// . when we basically finished DOWNLOADING it
 	// . use 0 if we did not download at all
 	// . used by Spider.cpp to space out urls using sameIpWait
 	int64_t  m_downloadEndTime;
 	// how many errors have we had in a row?
-	//long    m_retryNum;
+	//int32_t    m_retryNum;
 	// . like "404" etc. "200" means successfully downloaded
 	// . we can still successfully index pages that are 404 or permission
 	//   denied, because we might have link text for them.
-	short   m_httpStatus;
+	int16_t   m_httpStatus;
 
 	// . only non-zero if errCode is set!
 	// . 1 means it is the first time we tried to download and got an error
@@ -879,77 +879,77 @@ class SpiderReply {
 	// XmlDoc::isSpam() returned true for it!
 	//char    m_isSpam:1; 
 	// was the page in rss format?
-	long    m_isRSS:1;
+	int32_t    m_isRSS:1;
 	// was the page a permalink?
-	long    m_isPermalink:1;
+	int32_t    m_isPermalink:1;
 	// are we a pingserver page?
-	long    m_isPingServer:1; 
+	int32_t    m_isPingServer:1; 
 	// did we delete the doc from the index?
-	//long    m_deleted:1;  
+	//int32_t    m_deleted:1;  
 	// was it in the index when we were done?
-	long    m_isIndexed:1;
+	int32_t    m_isIndexed:1;
 
 	// 
 	// these bits also in SpiderRequest
 	//
 
 	// was it in google's index?
-	long    m_inGoogle:1;
+	int32_t    m_inGoogle:1;
 	// did it have an inlink from a really nice site?
-	long    m_hasAuthorityInlink:1;
+	int32_t    m_hasAuthorityInlink:1;
 	// does it have contact info
-	long    m_hasContactInfo:1;
-	long    m_isContacty    :1;
-	long    m_hasAddress    :1;
-	long    m_hasTOD        :1;
+	int32_t    m_hasContactInfo:1;
+	int32_t    m_isContacty    :1;
+	int32_t    m_hasAddress    :1;
+	int32_t    m_hasTOD        :1;
 
 	// make this "INvalid" not valid since it was set to 0 before
 	// and we want to be backwards compatible
-	long    m_isIndexedINValid :1;
-	//long    m_hasSiteVenue  :1;
+	int32_t    m_isIndexedINValid :1;
+	//int32_t    m_hasSiteVenue  :1;
 
 	// expires after a certain time or if ownership changed
-	long    m_inGoogleValid           :1;
-	long    m_hasContactInfoValid     :1;
-	long    m_hasAuthorityInlinkValid :1;
-	long    m_isContactyValid         :1;
-	long    m_hasAddressValid         :1;
-	long    m_hasTODValid             :1;
-	//long    m_hasSiteVenueValid       :1;
-	long    m_reserved2               :1;
-	long    m_siteNumInlinksValid     :1;
+	int32_t    m_inGoogleValid           :1;
+	int32_t    m_hasContactInfoValid     :1;
+	int32_t    m_hasAuthorityInlinkValid :1;
+	int32_t    m_isContactyValid         :1;
+	int32_t    m_hasAddressValid         :1;
+	int32_t    m_hasTODValid             :1;
+	//int32_t    m_hasSiteVenueValid       :1;
+	int32_t    m_reserved2               :1;
+	int32_t    m_siteNumInlinksValid     :1;
 	// was the request an injection request
-	long    m_fromInjectionRequest    :1; 
+	int32_t    m_fromInjectionRequest    :1; 
 	// did we TRY to send it to the diffbot backend filter? might be err?
-	long    m_sentToDiffbot           :1;
-	long    m_hadDiffbotError         :1;
+	int32_t    m_sentToDiffbot           :1;
+	int32_t    m_hadDiffbotError         :1;
 	// . was it in the index when we started?
 	// . we use this with m_isIndexed above to adjust quota counts for
 	//   this m_siteHash32 which is basically just the subdomain/host
 	//   for SpiderColl::m_quotaTable
-	long    m_wasIndexed              :1;
+	int32_t    m_wasIndexed              :1;
 	// this also pertains to m_isIndexed as well:
-	long    m_wasIndexedValid         :1;
+	int32_t    m_wasIndexedValid         :1;
 
 	// how much buf will we need to serialize ourselves?
-	long getRecSize () { return m_dataSize + 4 + sizeof(key128_t); }
+	int32_t getRecSize () { return m_dataSize + 4 + sizeof(key128_t); }
 
 	// clear all
 	void reset() { memset ( this , 0 , sizeof(SpiderReply) ); };
 
-	void setKey ( long firstIp,
+	void setKey ( int32_t firstIp,
 		      int64_t parentDocId , 
 		      int64_t uh48 , 
 		      bool isDel ) ;
 
-	long print ( class SafeBuf *sbarg );
+	int32_t print ( class SafeBuf *sbarg );
 
 	int64_t  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
 	int64_t getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
 };
 
 // are we responsible for this ip?
-bool isAssignedToUs ( long firstIp ) ;
+bool isAssignedToUs ( int32_t firstIp ) ;
 
 #define DOLEDBKEY key_t
 
@@ -973,8 +973,8 @@ class Doledb {
 	// . see "overview of spidercache" below for key definition
 	// . these keys when hashed are clogging up the hash table
 	//   so i am making the 7 reserved bits part of the urlhash48...
-	key_t makeKey ( long      priority   ,
-			time_t    spiderTime ,
+	key_t makeKey ( int32_t      priority   ,
+			uint32_t    spiderTime , // time_t
 			int64_t urlHash48  ,
 			bool      isDelete   ) {
 		// sanity checks
@@ -1002,14 +1002,14 @@ class Doledb {
 	// . use this for a query reindex
 	// . a docid-based spider request
 	// . crap, might we have collisions between a uh48 and docid????
-	key_t makeReindexKey ( long priority ,
-			       time_t spiderTime ,
+	key_t makeReindexKey ( int32_t priority ,
+			       uint32_t spiderTime , // time_t
 			       int64_t docId ,
 			       bool isDelete ) {
 		return makeKey ( priority,spiderTime,docId,isDelete); };
 
 
-	key_t makeFirstKey2 ( long priority ) { 
+	key_t makeFirstKey2 ( int32_t priority ) { 
 		key_t k; 
 		k.setMin(); 
 		// set priority
@@ -1019,7 +1019,7 @@ class Doledb {
 	};
 
 
-	key_t makeLastKey2 ( long priority ) { 
+	key_t makeLastKey2 ( int32_t priority ) { 
 		key_t k; 
 		k.setMax(); 
 		// set priority
@@ -1029,16 +1029,16 @@ class Doledb {
 		return k;
 	};
 
-	long getPriority  ( key_t *k ) {
+	int32_t getPriority  ( key_t *k ) {
 		return 255 - ((k->n1 >> 24) & 0xff); };
-	long getSpiderTime ( key_t *k ) {
-		unsigned long spiderTime = (k->n1) & 0xffffff;
+	int32_t getSpiderTime ( key_t *k ) {
+		uint32_t spiderTime = (k->n1) & 0xffffff;
 		spiderTime <<= 8;
 		// upper 8 bits of k.n0 are lower 8 bits of spiderTime
-		spiderTime |= (unsigned long)((k->n0) >> (64-8));
-		return (long)spiderTime;
+		spiderTime |= (uint32_t)((k->n0) >> (64-8));
+		return (int32_t)spiderTime;
 	};
-	long getIsDel     ( key_t *k ) {
+	int32_t getIsDel     ( key_t *k ) {
 		if ( (k->n0 & 0x01) ) return 0;
 		return 1; };
 	int64_t getUrlHash48 ( key_t *k ) {
@@ -1082,7 +1082,7 @@ class SpiderColl {
 
 	int64_t m_msg4Start;
 
-	long getTotalOutstandingSpiders ( ) ;
+	int32_t getTotalOutstandingSpiders ( ) ;
 
 	void urlFiltersChanged();
 
@@ -1101,7 +1101,7 @@ class SpiderColl {
 	//char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
 	//SpiderRequest *m_bestRequest;
 	//uint64_t       m_bestSpiderTimeMS;
-	//long           m_bestMaxSpidersPerIp;
+	//int32_t           m_bestMaxSpidersPerIp;
 
 	bool           m_lastReplyValid;
 	char           m_lastReplyBuf[MAX_SP_REPLY_SIZE];
@@ -1133,11 +1133,11 @@ class SpiderColl {
 	RdbCache m_dupCache;
 	RdbTree m_winnerTree;
 	HashTableX m_winnerTable;
-	long m_tailIp;
-	long m_tailPriority;
+	int32_t m_tailIp;
+	int32_t m_tailPriority;
 	int64_t m_tailTimeMS;
 	int64_t m_tailUh48;
-	long      m_tailHopCount;
+	int32_t      m_tailHopCount;
 	int64_t m_minFutureTimeMS;
 
 	// . do not re-send CrawlInfoLocal for a coll if not update
@@ -1156,15 +1156,16 @@ class SpiderColl {
 	bool  addSpiderReply   ( SpiderReply   *srep );
 	bool  addSpiderRequest ( SpiderRequest *sreq , int64_t nowGlobalMS );
 
-	void removeFromDoledbTable ( long firstIp );
+	void removeFromDoledbTable ( int32_t firstIp );
 
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
 
-	bool updateSiteNumInlinksTable ( long siteHash32,long sni,long tstamp);
+	bool updateSiteNumInlinksTable ( int32_t siteHash32,int32_t sni,
+					 time_t tstamp); // time_t
 
 	uint64_t getSpiderTimeMS ( SpiderRequest *sreq,
-				   long ufn,
+				   int32_t ufn,
 				   SpiderReply *srep,
 				   uint64_t nowGlobalMS);
 
@@ -1175,8 +1176,8 @@ class SpiderColl {
 	char m_isDoledbEmpty [MAX_SPIDER_PRIORITIES];
 
 	// are all priority slots empt?
-	//long m_allDoledbPrioritiesEmpty;
-	//long m_lastEmptyCheck; 
+	//int32_t m_allDoledbPrioritiesEmpty;
+	//int32_t m_lastEmptyCheck; 
 
 	// maps priority to first ufn that uses that
 	// priority. map to -1 if no ufn uses it. that way when we scan
@@ -1184,7 +1185,7 @@ class SpiderColl {
 	// priority 63 and see what the max spiders or same ip wait are
 	// because we need the ufn to get the maxSpiders from the url filters
 	// table.
-	long m_priorityToUfn[MAX_SPIDER_PRIORITIES];
+	int32_t m_priorityToUfn[MAX_SPIDER_PRIORITIES];
 	// init this to false, and also set to false on reset, then when
 	// it is false we re-stock m_ufns. re-stock if user changes the
 	// url filters table...
@@ -1201,12 +1202,12 @@ class SpiderColl {
 	key128_t m_endKey2;
 	time_t   m_lastScanTime;
 	bool     m_waitingTreeNeedsRebuild;
-	long     m_numAdded;
+	int32_t     m_numAdded;
 	int64_t m_numBytesScanned;
 	int64_t m_lastPrintCount;
 
 	// used by SpiderLoop.cpp
-	long m_spidersOut;
+	int32_t m_spidersOut;
 
 	// . hash of collection name this arena represents
 	// . 0 for main collection
@@ -1238,13 +1239,13 @@ class SpiderColl {
 	bool makeWaitingTable    ( );
 	bool makeWaitingTree     ( );
 
-	int64_t getEarliestSpiderTimeFromWaitingTree ( long firstIp ) ;
+	int64_t getEarliestSpiderTimeFromWaitingTree ( int32_t firstIp ) ;
 
 	bool printWaitingTree ( ) ;
 
-	bool addToWaitingTree    ( uint64_t spiderTime , long firstIp ,
+	bool addToWaitingTree    ( uint64_t spiderTime , int32_t firstIp ,
 				   bool callForScan );
-	long getNextIpFromWaitingTree ( );
+	int32_t getNextIpFromWaitingTree ( );
 	void populateDoledbFromWaitingTree ( );
 
 	//bool scanSpiderdb        ( bool needList );
@@ -1264,10 +1265,10 @@ class SpiderColl {
 	RdbMem     m_waitingMem; // used by m_waitingTree
 	key_t      m_waitingTreeKey;
 	bool       m_waitingTreeKeyValid;
-	long       m_scanningIp;
-	long       m_gotNewDataForScanningIp;
-	long       m_lastListSize;
-	long       m_lastScanningIp;
+	int32_t       m_scanningIp;
+	int32_t       m_gotNewDataForScanningIp;
+	int32_t       m_lastListSize;
+	int32_t       m_lastScanningIp;
 	int64_t  m_totalBytesScanned;
 
 	char m_deleteMyself;
@@ -1279,16 +1280,16 @@ class SpiderColl {
 
 	key_t m_nextDoledbKey;
 	bool  m_didRound;
-	long  m_pri2;
+	int32_t  m_pri2;
 	bool  m_twinDied;
-	long  m_lastUrlFiltersUpdate;
+	int32_t  m_lastUrlFiltersUpdate;
 
 	// for reading lists from spiderdb
 	Msg5 m_msg5;
 	bool m_gettingList1;
 
 	// how many outstanding spiders a priority has
-	long m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
+	int32_t m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
 
 	bool printStats ( SafeBuf &sb ) ;
 
@@ -1305,7 +1306,7 @@ class SpiderCache {
 
 	SpiderCache ( ) ;
 
-	// what SpiderColl does a SpiderRec with this key belong?
+	// what SpiderColl does a SpiderRec with this key beint32_t?
 	SpiderColl *getSpiderColl ( collnum_t collNum ) ;
 
 	SpiderColl *getSpiderCollIffNonNull ( collnum_t collNum ) ;
@@ -1327,7 +1328,7 @@ class SpiderCache {
 	// . NOW, this is a ptr in the CollectionRec.. only new'd if
 	//   in use, and deleted if not being used...
 	//SpiderColl *m_spiderColls [ MAX_COLL_RECS ];
-	//long        m_numSpiderColls;
+	//int32_t        m_numSpiderColls;
 };
 
 extern class SpiderCache g_spiderCache;
@@ -1342,8 +1343,8 @@ extern class SpiderCache g_spiderCache;
 // the dup spider request right away and double increment the round.
 //
 /////////
-inline int64_t makeLockTableKey ( int64_t uh48 , long firstIp ) {
-	return uh48 ^ (unsigned long)firstIp;
+inline int64_t makeLockTableKey ( int64_t uh48 , int32_t firstIp ) {
+	return uh48 ^ (uint32_t)firstIp;
 }
 
 inline int64_t makeLockTableKey ( SpiderRequest *sreq ) {
@@ -1358,8 +1359,8 @@ inline int64_t makeLockTableKey ( SpiderReply *srep ) {
 class LockRequest {
 public:
 	int64_t m_lockKeyUh48;
-	long m_lockSequence;
-	long m_firstIp;
+	int32_t m_lockSequence;
+	int32_t m_firstIp;
 	char m_removeLock;
 	collnum_t m_collnum;
 };
@@ -1369,17 +1370,17 @@ public:
 	int64_t m_lockKeyUh48;
 	collnum_t m_collnum;
 	key_t m_doledbKey;
-	long  m_firstIp;
-	long m_maxSpidersOutPerIp;
+	int32_t  m_firstIp;
+	int32_t m_maxSpidersOutPerIp;
 };
 
 class UrlLock {
 public:
-	long m_hostId;
-	long m_lockSequence;
-	long m_timestamp;
-	long m_expires;
-	long m_firstIp;
+	int32_t m_hostId;
+	int32_t m_lockSequence;
+	int32_t m_timestamp;
+	int32_t m_expires;
+	int32_t m_firstIp;
 	char m_spiderOutstanding;
 	char m_confirmed;
 	collnum_t m_collnum;
@@ -1392,7 +1393,7 @@ class Msg12 {
 
 	bool confirmLockAcquisition ( ) ;
 
-	//unsigned long m_lockGroupId;
+	//uint32_t m_lockGroupId;
 
 	LockRequest m_lockRequest;
 
@@ -1403,9 +1404,9 @@ class Msg12 {
 			      char *url ,
 			      DOLEDBKEY *doledbKey,
 			      collnum_t collnum,
-			      long sameIpWaitTime, // in milliseconds
-			      long maxSpidersOutPerIp,
-			      long firstIp,
+			      int32_t sameIpWaitTime, // in milliseconds
+			      int32_t maxSpidersOutPerIp,
+			      int32_t firstIp,
 			      void *state,
 			      void (* callback)(void *state) );
 	bool gotLockReply   ( class UdpSlot *slot );
@@ -1415,12 +1416,12 @@ class Msg12 {
 	//uint64_t  m_lockKey;
 	// this is the new lock key. just use docid for docid-only spider reqs.
 	uint64_t  m_lockKeyUh48;
-	long                m_lockSequence;
+	int32_t                m_lockSequence;
 
 	int64_t  m_origUh48;
-	long       m_numReplies;
-	long       m_numRequests;
-	long       m_grants;
+	int32_t       m_numReplies;
+	int32_t       m_numRequests;
+	int32_t       m_grants;
 	bool       m_removing;
 	bool       m_confirming;
 	char      *m_url; // for debugging
@@ -1431,14 +1432,14 @@ class Msg12 {
 
 	collnum_t  m_collnum;
 	DOLEDBKEY  m_doledbKey;
-	long       m_sameIpWaitTime;
-	long       m_maxSpidersOutPerIp;
-	long       m_firstIp;
+	int32_t       m_sameIpWaitTime;
+	int32_t       m_maxSpidersOutPerIp;
+	int32_t       m_firstIp;
 	Msg4       m_msg4;
 };
 
-void handleRequest12 ( UdpSlot *udpSlot , long niceness ) ;
-void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
+void handleRequest12 ( UdpSlot *udpSlot , int32_t niceness ) ;
+void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) ;
 
 // . the spider loop
 // . it gets urls to spider from the SpiderCache global class, g_spiderCache
@@ -1462,7 +1463,7 @@ class SpiderLoop {
 
 	bool printLockTable ( );
 
-	long getNumSpidersOutPerIp ( long firstIp , collnum_t collnum ) ;
+	int32_t getNumSpidersOutPerIp ( int32_t firstIp , collnum_t collnum ) ;
 
 	// free all XmlDocs and m_list
 	void reset();
@@ -1477,7 +1478,7 @@ class SpiderLoop {
 	void doleUrls1();
 	void doleUrls2();
 
-	long getMaxAllowableSpidersOut ( long pri ) ;
+	int32_t getMaxAllowableSpidersOut ( int32_t pri ) ;
 
 	void spiderDoledUrls ( ) ;
 	bool gotDoledbList2  ( ) ;
@@ -1488,8 +1489,8 @@ class SpiderLoop {
 	bool spiderUrl9 ( class SpiderRequest *sreq ,
 			 key_t *doledbKey       ,
 			  collnum_t collnum,//char  *coll            ,
-			  long sameIpWaitTime , // in milliseconds
-			  long maxSpidersOutPerIp );
+			  int32_t sameIpWaitTime , // in milliseconds
+			  int32_t maxSpidersOutPerIp );
 
 	bool spiderUrl2 ( );
 
@@ -1501,7 +1502,7 @@ class SpiderLoop {
 	//char      *m_coll;
 	collnum_t  m_collnum;
 	char      *m_content;
-	long       m_contentLen;
+	int32_t       m_contentLen;
 	char       m_contentHasMime;
 	key_t     *m_doledbKey;
 	void      *m_state;
@@ -1513,7 +1514,7 @@ class SpiderLoop {
 	int64_t getLastDocId ( );
 
 	// delete m_msg14[i], decrement m_numSpiders, m_maxUsed
-	void cleanUp ( long i );
+	void cleanUp ( int32_t i );
 
 	// registers sleep callback iff not already registered
 	void doSleep ( ) ;
@@ -1523,14 +1524,14 @@ class SpiderLoop {
 	// are we registered for sleep callbacks
 	bool m_isRegistered;
 
-	long m_numSpidersOut;
+	int32_t m_numSpidersOut;
 
 	// for spidering/parsing/indexing a url(s)
 	class XmlDoc *m_docs [ MAX_SPIDERS ];
 
 	// . this is "i" where m_msg14[i] is the highest m_msg14 in use
 	// . we use it to limit our scanning to the first "i" m_msg14's
-	long m_maxUsed;
+	int32_t m_maxUsed;
 
 	// . list for getting next url(s) to spider
 	RdbList m_list;
@@ -1543,7 +1544,7 @@ class SpiderLoop {
 	// used to avoid calling getRec() twice!
 	//bool m_gettingList0;
 
-	long m_outstanding1;
+	int32_t m_outstanding1;
 	bool m_gettingDoledbList;
 	HashTableX m_lockTable;
 	// save on msg12 lookups! keep somewhat local...
@@ -1552,22 +1553,22 @@ class SpiderLoop {
 	//bool m_gettingLocks;
 
 	// for round robining in SpiderLoop::doleUrls(), etc.
-	long m_cri;
+	int32_t m_cri;
 
 	int64_t m_doleStart;
 
-	long m_processed;
+	int32_t m_processed;
 };
 
 extern class SpiderLoop g_spiderLoop;
 
 void clearUfnTable ( ) ;
 
-long getUrlFilterNum ( class SpiderRequest *sreq , 
+int32_t getUrlFilterNum ( class SpiderRequest *sreq , 
 		       class SpiderReply   *srep , 
-		       long nowGlobal , 
+		       int32_t nowGlobal , 
 		       bool isForMsg20 ,
-		       long niceness , 
+		       int32_t niceness , 
 		       class CollectionRec *cr ,
 		       bool isOutlink , // = false ,
 		       HashTableX *quotaTable );//= NULL ) ;

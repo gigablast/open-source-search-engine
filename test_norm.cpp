@@ -10,7 +10,7 @@ bool mainShutdown ( bool urgent ) {return true;}
 // Test first 255 chars of unicode (iso-8859-1) for normalization
 int main(int argc, char*argv){
 	ucInit();
-	long count = 0;
+	int32_t count = 0;
 	for (UChar32 c = 0; c < 0x10000; c++){
 		//UErrorCode err = U_ZERO_ERROR;
 		//bool isNorm = unorm_isNormalized(&c, 

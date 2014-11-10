@@ -5,7 +5,7 @@
 #include "Collectiondb.h"
 
 static void gotReplyWrapper30 ( void *state , UdpSlot *slot ) ;
-static void handleRequest30   ( UdpSlot *slot , long niceness ) ;
+static void handleRequest30   ( UdpSlot *slot , int32_t niceness ) ;
 
 bool Msg30::registerHandler ( ) {
 	// . register ourselves with the udp server
@@ -46,8 +46,8 @@ bool Msg30::update ( CollectionRec *rec      ,
 	m_requests = 0;
 	m_replies  = 0;
 	// send a Msg30 to all hosts so they update it!
-	long n = g_hostdb.getNumHosts();
-	for ( long i = 0; i < n ; i++ ) {
+	int32_t n = g_hostdb.getNumHosts();
+	for ( int32_t i = 0; i < n ; i++ ) {
 		// get the ith host
 		Host *h = g_hostdb.getHost ( i );
 		// not to THIS host, however
@@ -101,12 +101,12 @@ void gotReplyWrapper30 ( void *state , UdpSlot *slot ) {
 // . reply to a request for an RdbList
 // . MUST call g_udpServer::sendReply or sendErrorReply() so slot can
 //   be destroyed
-void handleRequest30 ( UdpSlot *slot , long niceness ) {
+void handleRequest30 ( UdpSlot *slot , int32_t niceness ) {
 	// get what we've read
 	char *readBuf     = slot->m_readBuf;
-	long  readBufSize = slot->m_readBufSize;
+	int32_t  readBufSize = slot->m_readBufSize;
 	// is it a delete?
-	if ( readBufSize < (long)sizeof(CollectionRec) ) {
+	if ( readBufSize < (int32_t)sizeof(CollectionRec) ) {
 		char *coll = readBuf;
 		g_collectiondb.deleteRec ( coll );
 		return;

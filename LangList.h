@@ -2,7 +2,7 @@
 // Author: Javier Olivares <jolivares@gigablast.com>
 //
 // . stores lists of common words for various languages
-// . used to determine what language a word/page belongs to
+// . used to determine what language a word/page beint32_ts to
 //
 
 #ifndef _LANGLIST_H_
@@ -30,8 +30,8 @@ public:
 	bool lookup ( int64_t      termId,
 		      unsigned char *lang   );
 	
-	char* getCountryFromTld(char* tld, long tldLen);
-	bool  isLangValidForTld(char* tld, long tldLen, unsigned char lang);
+	char* getCountryFromTld(char* tld, int32_t tldLen);
+	bool  isLangValidForTld(char* tld, int32_t tldLen, unsigned char lang);
 	bool  tldInit();
 
 	inline uint8_t catIdToLang(uint32_t catid);
@@ -41,7 +41,7 @@ public:
 
 private:
 	//TermTable langTable;
-	//HashTableT<long, short> m_tldToCountry;
+	//HashTableT<int32_t, int16_t> m_tldToCountry;
 	HashTableX m_langTable;
 	HashTableX m_tldToCountry;
 };

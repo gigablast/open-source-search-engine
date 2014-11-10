@@ -56,7 +56,7 @@ class Process {
 	int64_t m_totalDocsIndexed;
 
 	class Rdb *m_rdbs[32];
-	long       m_numRdbs;
+	int32_t       m_numRdbs;
 	bool       m_urgent;
 	char       m_mode;
 	int64_t  m_lastSaveTime;
@@ -64,7 +64,7 @@ class Process {
 	bool       m_sentShutdownNote;
 	bool       m_blockersNeedSave;
 	bool       m_repairNeedsSave;
-	long       m_try;
+	int32_t       m_try;
 	int64_t  m_firstShutdownTime;
 
 	void        *m_callbackState;
@@ -93,8 +93,8 @@ class Process {
 	bool m_fanReqOut;
 	float m_dataCtrTemp;
 	float m_roofTemp;
-	long  m_currentFanState;
-	long  m_desiredFanState;
+	int32_t  m_currentFanState;
+	int32_t  m_desiredFanState;
 	float m_diskUsage;
 	int64_t m_diskAvail;
 	char m_swapEnabled;

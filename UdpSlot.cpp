@@ -5,8 +5,8 @@
 #include "Stats.h"
 #include "Proxy.h"
 
-long g_cancelAcksSent = 0;
-long g_cancelAcksRead = 0;
+int32_t g_cancelAcksSent = 0;
+int32_t g_cancelAcksRead = 0;
 
 // max resend time (max backoff) for niceness 0
 //#define MAX_RESEND_0 700
@@ -59,7 +59,7 @@ long g_cancelAcksRead = 0;
 // let it all spray out like a wild hose
 //#define RESEND_0 30
 
-// . for short msgs we can resend more rapidly
+// . for int16_t msgs we can resend more rapidly
 // . it doesn't help to go lower than 20ms cuz that's sigtimedwait()'s limit
 //#define RESEND_0_SHORT 20
 // keep it to 40ms due to kernel time slicing problems
@@ -114,18 +114,18 @@ long g_cancelAcksRead = 0;
 static char s_shotgunBit = 0;
 
 // i add this to resend time to jiggle it so it doesn't collide as much
-//static long s_incDelay = 0;
+//static int32_t s_incDelay = 0;
 
 void UdpSlot::connect ( UdpProtocol *proto    ,
 			sockaddr_in *endPoint ,
 			Host        *host     ,
-			long         hostId   ,
-			long         transId  ,
-			long         timeout  , // in seconds
+			int32_t         hostId   ,
+			int32_t         transId  ,
+			int32_t         timeout  , // in seconds
 			int64_t    now      ,
-			long         niceness ) {
+			int32_t         niceness ) {
 	// map loopback ip to our ip
-	unsigned long ip = endPoint->sin_addr.s_addr ;
+	uint32_t ip = endPoint->sin_addr.s_addr ;
 	if ( //!g_conf.m_interfaceMachine &&
 	      ip == g_hostdb.getLoopbackIp() )
 		ip = g_hostdb.getMyIp();
@@ -144,14 +144,14 @@ void UdpSlot::connect ( UdpProtocol *proto    ,
 // . make new slot using mcalloc() so it's zero'd out
 // . NOTE: callback must be non-NULL if you're going to send a request
 void UdpSlot::connect ( UdpProtocol    *proto    ,
-			unsigned long   ip       ,
-			unsigned short  port     ,
+			uint32_t   ip       ,
+			uint16_t  port     ,
 			Host           *host     ,
-			long            hostId   ,
-			long            transId  ,
-			long            timeout  , // in seconds
+			int32_t            hostId   ,
+			int32_t            transId  ,
+			int32_t            timeout  , // in seconds
 			int64_t       now      ,
-			long            niceness ) {
+			int32_t            niceness ) {
 	// clear bufs
 	//m_sendBuf  = NULL;
 	//m_readBuf  = NULL;
@@ -159,13 +159,13 @@ void UdpSlot::connect ( UdpProtocol    *proto    ,
 	//memset ( this , 0 , sizeof(UdpSlot) );
 	// . make async signal safe
 	// . TODO: this is slow to clear all those m_*bits, we got 1.7k of slot
-	//long size = (unsigned long)m_tmpBuf - (unsigned long)this ;
-	//long size = (unsigned long)&m_next - (unsigned long)this ;
+	//int32_t size = (uint32_t)m_tmpBuf - (uint32_t)this ;
+	//int32_t size = (uint32_t)&m_next - (uint32_t)this ;
 	//memset_ass ( (char *)this , 0 , size );
 	// avoid that heavy memset_ass() call using this logic.
 	// we will clear on demand using m_numBitsInitialized logic
 	// in UdpSlot.h
-	long size = (unsigned long)&m_sentBits2 - (unsigned long)this ;
+	int32_t size = (uint32_t)&m_sentBits2 - (uint32_t)this ;
 	memset_ass ( (char *)this , 0 , size );
 	// store this info
 	m_proto    = proto    ;
@@ -182,7 +182,7 @@ void UdpSlot::connect ( UdpProtocol    *proto    ,
 	m_queuedTime = -1;
 	// is it a local ip?
 	bool isLocal = false;
-	// shortcut
+	// int16_tcut
 	uint8_t *p = (uint8_t *)&m_ip;
 	// this is local
 	if ( p[0] == 10 ) isLocal = true;
@@ -254,15 +254,15 @@ void UdpSlot::resetConnect ( ) {
 	m_nextToSend = 0;
 	m_firstUnlitSentAckBit = 0;
 	m_numBitsInitialized = 0;
-	// for ( long b = 0; b < m_dgramsToSend; b++ ) {
+	// for ( int32_t b = 0; b < m_dgramsToSend; b++ ) {
 	// 	clrBit(b, m_sentBits2);
 	// 	clrBit(b, m_readBits2);
 	// 	clrBit(b, m_sentAckBits2);
 	// 	clrBit(b, m_readAckBits2);
 	// }
 	// . set m_dgramsToSend
-	// . similar to UdpProtocol::getNumDgrams(char *dgram,long dgramSize)
-	long dataSpace  = m_maxDgramSize ;
+	// . similar to UdpProtocol::getNumDgrams(char *dgram,int32_t dgramSize)
+	int32_t dataSpace  = m_maxDgramSize ;
 	if ( m_proto->stripHeaders() ) 
 		dataSpace -= m_proto->getHeaderSize ( m_sendBufSize );
 	m_dgramsToSend  = m_sendBufSize / dataSpace;
@@ -276,28 +276,28 @@ void UdpSlot::resetConnect ( ) {
 // . callback is NULL     ifd you're sending a reply
 // . returns false and sets g_errno on error
 bool UdpSlot::sendSetup ( char      *msg         , 
-			  long       msgSize     ,
+			  int32_t       msgSize     ,
 			  char      *alloc       ,
-			  long       allocSize   ,
+			  int32_t       allocSize   ,
 			  unsigned char     msgType     ,
 			  int64_t  now         ,
 			  void      *state       ,
 			  void      (*callback)(void *state, UdpSlot *slot) ,
-			  long       niceness    ,
-			  short      backoff     ,
-			  short      maxWait     ,
+			  int32_t       niceness    ,
+			  int16_t      backoff     ,
+			  int16_t      maxWait     ,
 			  char      *replyBuf    ,
-			  long       replyBufMaxSize ) {
+			  int32_t       replyBufMaxSize ) {
 
 	// can't be too big
 	if ( msgSize / m_maxDgramSize + 1 >= MAX_DGRAMS ) {
 		g_errno = EMSGTOOBIG;//EBADENGINEER;
-		long maxMsgSize = m_maxDgramSize * MAX_DGRAMS;
-		log(LOG_LOGIC,"udp: Msg size of %li bytes is too big "
-		    "to send. Max dgram size = %li. Max dgrams = "
-		    "%li. Max msg size = %li.",
-		    (long)msgSize,(long)m_maxDgramSize,
-		    (long)MAX_DGRAMS,maxMsgSize);
+		int32_t maxMsgSize = m_maxDgramSize * MAX_DGRAMS;
+		log(LOG_LOGIC,"udp: Msg size of %"INT32" bytes is too big "
+		    "to send. Max dgram size = %"INT32". Max dgrams = "
+		    "%"INT32". Max msg size = %"INT32".",
+		    (int32_t)msgSize,(int32_t)m_maxDgramSize,
+		    (int32_t)MAX_DGRAMS,maxMsgSize);
 		char *xx=NULL; *xx=0;
 		return false;
 		//msgSize = MAX_DGRAMS * DGRAM_SIZE;
@@ -343,8 +343,8 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 	// set m_resendTime, based on m_resendCount and m_niceness
 	setResendTime();
 	// . set m_dgramsToSend
-	// . similar to UdpProtocol::getNumDgrams(char *dgram,long dgramSize)
-	long dataSpace  = m_maxDgramSize ;
+	// . similar to UdpProtocol::getNumDgrams(char *dgram,int32_t dgramSize)
+	int32_t dataSpace  = m_maxDgramSize ;
 	if ( m_proto->stripHeaders() ) 
 		dataSpace -= m_proto->getHeaderSize ( msgSize );
 	m_dgramsToSend  = msgSize / dataSpace;
@@ -369,23 +369,23 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 	// debug msg
 	//if ( g_conf.m_logDebugUdp ) 
 	//	log(LOG_DEBUG,"udp: resending slot "
-	//	    "all=%li "
-	//	    "tid=%li "
+	//	    "all=%"INT32" "
+	//	    "tid=%"INT32" "
 	//	    "dst=%s:%hu." ,
-	//	    (long)resendAll ,
-	//	    (long)m_transId ,
+	//	    (int32_t)resendAll ,
+	//	    (int32_t)m_transId ,
 	//	    iptoa(m_ip),
-	//	    (unsigned short)m_port);
+	//	    (uint16_t)m_port);
 	// clear all if reset is true
 	if ( resendAll ) {
-		for ( long i = 0 ; i < m_dgramsToSend ; i++ ) 
+		for ( int32_t i = 0 ; i < m_dgramsToSend ; i++ ) 
 			clrBit ( i , m_readAckBits2 );
 		m_readAckBitsOn = 0;
 	}
 	// how many sentBits we cleared
-	long cleared = 0;
+	int32_t cleared = 0;
 	// clear each sent bit if it hasn't gotten an ACK
-	for ( long i = 0 ; i < m_dgramsToSend ; i++ ) {
+	for ( int32_t i = 0 ; i < m_dgramsToSend ; i++ ) {
 		// continue if we already have an ack for this one
 		if ( isOn ( i , m_readAckBits2 ) ) continue;
 		// continue if it's already cleared
@@ -428,8 +428,8 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 			// log it if changing
 			if ( g_conf.m_logDebugUdp )
 				logf(LOG_DEBUG,
-				     "udp: switching to eth1 for host #%li "
-				    "tid=%li", m_host->m_hostId,m_transId);
+				     "udp: switching to eth1 for host #%"INT32" "
+				    "tid=%"INT32"", m_host->m_hostId,m_transId);
 		}
 		// . otherwise, we were using the eth1 (shotgun) ip
 		// . do not switch though if the ping is really bad for eth0
@@ -444,13 +444,13 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 			// log it
 			if ( g_conf.m_logDebugUdp )
 				logf(LOG_DEBUG,
-				     "udp: switching to eth0 for host #%li "
-				     "tid=%li",m_host->m_hostId,m_transId);
+				     "udp: switching to eth0 for host #%"INT32" "
+				     "tid=%"INT32"",m_host->m_hostId,m_transId);
 		}
 		// . just some debug notes
 		// . this happens when host cores and both eth0 and eth1 r dead
-		//logf(LOG_DEBUG,"udp: not switching. preferEth=%li "
-		//     "pingSHotgun=%li ping=%li",(long)m_host->m_preferEth,
+		//logf(LOG_DEBUG,"udp: not switching. preferEth=%"INT32" "
+		//     "pingSHotgun=%"INT32" ping=%"INT32"",(int32_t)m_host->m_preferEth,
 		//     m_host->m_pingShotgun,m_host->m_ping);
 	}
 
@@ -461,19 +461,19 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 	if ( g_conf.m_logDebugUdp || 
 	     (g_conf.m_logDebugDns && !m_proto->useAcks()) ) 
 		logf(LOG_DEBUG,"udp: resending slot "
-		    "all=%li "
-		    "tid=%li "
+		    "all=%"INT32" "
+		    "tid=%"INT32" "
 		    "dst=%s:%hu "
-		     "count=%li "
-		     "host=0x%lx "
-		    "cleared=%li" ,
-		    (long)resendAll ,
-		    (long)m_transId ,
+		     "count=%"INT32" "
+		     "host=0x%"XINT32" "
+		    "cleared=%"INT32"" ,
+		    (int32_t)resendAll ,
+		    (int32_t)m_transId ,
 		     iptoa(m_ip),//+9,
-		    (unsigned short)m_port,
-		     (long)m_resendCount,
-		     (long)m_host,
-		     (long)cleared);
+		    (uint16_t)m_port,
+		     (int32_t)m_resendCount,
+		     (int32_t)m_host,
+		     (int32_t)cleared);
 	// . after UdpServer::readTimeOutPoll() calls this prepareForResend()
 	//   he then calls doSending()
 	// . but we cannot send unless the token is free or we're older (500ms)
@@ -488,22 +488,22 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 	// otheriwise, calculate how much time since our last send
 	// these values are computed, but not used, it seems as though
 	//the functionality was moved into setResendTime.
-	// 	long max ;
+	// 	int32_t max ;
 	// 	if      ( m_maxWait  >= 0 ) max = m_maxWait;
 	// 	else if ( m_niceness == 0 ) max = MAX_RESEND_0;
 	// 	else                        max = MAX_RESEND_1;
 	// 	// . how many milliseconds have we been trying to send to it?
 	// 	// . each retry doubles the previous (up to 30,000ms)
-	// 	long elapsed = m_resendCount;
-	// 	for ( long i = 0 ; i < m_resendCount ; i++ ) {
-	// 		long step = m_resendCount << (i+1) ;
+	// 	int32_t elapsed = m_resendCount;
+	// 	for ( int32_t i = 0 ; i < m_resendCount ; i++ ) {
+	// 		int32_t step = m_resendCount << (i+1) ;
 	// 		// watch out for huge numbers
 	// 		if ( i >= 16    ) step = max;
 	// 		if ( step > max ) step = max;
 	// 		elapsed += step;
 	// 	}
 	// debug msg
-	//log("(resend) tripTime = %li", m_resendTime );
+	//log("(resend) tripTime = %"INT32"", m_resendTime );
 	// . we haven't gotten a read in m_resendTime milliseconds!
 	// . stamp host's times to show the affect of the slowdown
 	// . "timedOut" being true means host will only be stamped if it makes
@@ -524,17 +524,17 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 
 void UdpSlot::setResendTime() {
 	// otherwise, calculate how much time since our last send
-	long max ;
+	int32_t max ;
 	if      ( m_maxWait  >= 0 ) max = m_maxWait;
 	else if ( m_niceness == 0 ) max = MAX_RESEND_0;
 	else                        max = MAX_RESEND_1;
 	// if backoff not negative use that
 	if ( m_backoff >= 0 ) { 
 		// compute resend time
-		long bs  = ( 1 << m_resendCount );
-		long val = ((long)m_backoff) * bs;
+		int32_t bs  = ( 1 << m_resendCount );
+		int32_t val = ((int32_t)m_backoff) * bs;
 		// check for overflow
-		if       ( val < (long)m_backoff )
+		if       ( val < (int32_t)m_backoff )
 			m_resendTime = max;
 		else if  ( val < bs )
 			m_resendTime = max;
@@ -551,7 +551,7 @@ void UdpSlot::setResendTime() {
 	}
 	// is it a local ip?
 	bool isLocal = false;
-	// shortcut
+	// int16_tcut
 	uint8_t *p = (uint8_t *)&m_ip;
 	// this is local
 	if ( p[0] == 10 ) isLocal = true;
@@ -568,11 +568,11 @@ void UdpSlot::setResendTime() {
 	// . these times may change every time we receive an ACK for this host
 	// . the new resend time is like double
 	if ( m_niceness == 0 ) {
-		// if size is short we typically use smaller resend time
+		// if size is int16_t we typically use smaller resend time
 		if ( m_dgramsToSend <= 1 ) m_resendTime = RESEND_0_SHORT;
 		else                       m_resendTime = RESEND_0;
 		// save for checking for overflow
-		long tt = m_resendTime;
+		int32_t tt = m_resendTime;
 		// 30 ms resend time for starters for high priority slots
 		m_resendTime *= ( 1 << m_resendCount );
 		// watch out for overflow
@@ -583,7 +583,7 @@ void UdpSlot::setResendTime() {
 		if ( m_resendTime <= 0 ) m_resendTime = max;
 	}
 	else {
-		long base = RESEND_1;
+		int32_t base = RESEND_1;
 		if ( isLocal ) base = RESEND_1_LOCAL;
 		m_resendTime = base * ( 1 << m_resendCount );
 		// watch out for overflow
@@ -615,7 +615,7 @@ void UdpSlot::setResendTime() {
 // . this is only called by UdpServer::doSending()
 // . we try to do ALL the reading before calling this so we can send
 //   many ACKs back in one packet
-long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
+int32_t UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	//log("sendDatagramOrAck");
 	// if acks we've sent isn't caught up to what we read, send an ack
 	if ( m_sentAckBitsOn < m_readBitsOn && m_proto->useAcks() ) 
@@ -631,14 +631,14 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	// then m_nextToSend must have been too high
 	if ( m_nextToSend >= m_dgramsToSend ) {
 		log(LOG_LOGIC,
-		    "udp: senddatagramorack: m_nextToSend=%li >= %li. "
+		    "udp: senddatagramorack: m_nextToSend=%"INT32" >= %"INT32". "
 		    "Fixing it. Do not panic.", 
 		    m_nextToSend , m_dgramsToSend );
 		fixSlot();
 		return 1;
 	}
 	// get the ip
-	long ip = m_ip;
+	int32_t ip = m_ip;
 	// . if this is a send to our ip use the loopback interface
 	// . MTU is very high here
 	//if ( !g_conf.m_interfaceMachine && m_ip == g_hostdb.getMyIp() )
@@ -646,7 +646,7 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	if ( g_hostdb.isMyIp(m_ip) )
 		ip = g_hostdb.getLoopbackIp();
 	// pick a dgram to send
-	long dgramNum = m_nextToSend;
+	int32_t dgramNum = m_nextToSend;
 	// debug msg
 	//log("setDgram");
 	// . store dgram #dgramNum from this send buf into "dgram"
@@ -655,26 +655,26 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	// should hold all headers
 	char saved [ 32 ];
 	// the header size
-	long headerSize = m_proto->getHeaderSize(0);
+	int32_t headerSize = m_proto->getHeaderSize(0);
 	// bitch if too big
 	if ( headerSize > 32 ) {
-		log(LOG_LOGIC,"udp: senddatagramorack: header size of %li "
+		log(LOG_LOGIC,"udp: senddatagramorack: header size of %"INT32" "
 		    "is bigger than 32.",headerSize); return -1; }
 	// . now from here on we only use headerSize so we can strip the header
 	// . so if the protocol wants the headers, leave them in...
 	if ( ! m_proto->stripHeaders() ) headerSize = 0;
 	// offset into send buffer, the data to send
-	long offset = dgramNum * ( m_maxDgramSize - headerSize );
+	int32_t offset = dgramNum * ( m_maxDgramSize - headerSize );
 	// what should we send, and how much?
 	char *send      = m_sendBuf     + offset;
-	long  sendSize  = m_sendBufSize - offset;
+	int32_t  sendSize  = m_sendBufSize - offset;
 	// truncate to max size of dgram we're allowed
 	if ( sendSize > m_maxDgramSize - headerSize ) 
 		sendSize = m_maxDgramSize - headerSize;
 	// where to store the dgram, header and data, assume "buf"
 	char *dgram = buf;
 	// size of dgram, header and data
-	long  dgramSize = headerSize + sendSize;
+	int32_t  dgramSize = headerSize + sendSize;
 	// if we're NOT the 1st dgram we can store into send buf directly
 	if ( dgramNum != 0 ) {
 		// where to store the header? right into send buf
@@ -717,7 +717,7 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	// amount of internal bandwidth and besides that it was very cpu
 	// intensive to send dgrams because the kernel sucks for that! MDW
 	s_shotgunBit = 0;
-	//to.sin_addr.s_addr = htonl ( (unsigned long ) (m_ip  ) );
+	//to.sin_addr.s_addr = htonl ( (uint32_t ) (m_ip  ) );
 	// are we sending to loopback? if so, treat as eth0.
 	if ( ip == 0x0100007f ) { // "127.0.0.1"
 		to.sin_addr.s_addr = ip;
@@ -780,7 +780,7 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	// debug msg
 	//log("sendto");
 	// debug msg
-	//log("sending dgram of size=%li (max=%li)",dgramSize,m_maxDgramSize);
+	//log("sending dgram of size=%"INT32" (max=%"INT32")",dgramSize,m_maxDgramSize);
 	// . this socket should be non-blocking (i.e. return immediately)
 	// . this should set g_errno on error!
 	int bytesSent = sendto ( sock      , 
@@ -809,13 +809,13 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 		//   problem up, the kernel's kmalloc fails...
 		if ( g_errno == ENOBUFS ) { 
 			// log it once every 3 seconds so they know
-			static long s_lastTime = 0;
-			static long s_count    = 0;
-			long t = getTime();
+			static int32_t s_lastTime = 0;
+			static int32_t s_count    = 0;
+			int32_t t = getTime();
 			if ( t - s_lastTime > 3 ||
 			     s_lastTime - t > 3   ) { // clock skew?
 				s_lastTime = getTime();
-				log("udp: got ENOBUFS kernel bug %li times.",
+				log("udp: got ENOBUFS kernel bug %"INT32" times.",
 				    ++s_count);
 			}
 			//g_errno = 0; 
@@ -834,7 +834,7 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	// this should not happen
 	if ( bytesSent != dgramSize ) {
 		g_errno = EBADENGINEER;
-		log("udp: sendto only sent %i bytes, not %li. Undersend.",
+		log("udp: sendto only sent %i bytes, not %"INT32". Undersend.",
 		    bytesSent,dgramSize);
 		return -1;
 	}
@@ -862,57 +862,57 @@ long UdpSlot::sendDatagramOrAck ( int sock, bool allowResends, int64_t now ){
 	m_nextToSend = getNextUnlitBit ( dgramNum, m_sentBits2,m_dgramsToSend);
 	// log network info
 	if ( g_conf.m_logDebugUdp ) {
-		//long shotgun = 0;
+		//int32_t shotgun = 0;
 		//if ( g_conf.m_useShotgun && ! s_shotgunBit ) shotgun = 1;
 		//if ( g_conf.m_useShotgun &&   s_useShotgunIp ) shotgun = 1;
-		long eth = 1;
+		int32_t eth = 1;
 		if ( m_host && m_host->m_ip == to.sin_addr.s_addr ) eth = 0;
 		// if sending outside, always use eth0
 		if ( ! m_host ) eth = 0;
 		//if ( m_host->m_ip == (uint32_t)ip ) eth = 0;
-		long hid = -1;
+		int32_t hid = -1;
 		if ( m_host && m_host->m_hostdb == &g_hostdb ) 
 			hid = m_host->m_hostId;
 		//#ifdef _UDPDEBUG_
 		//if ( ! m_proto->useAcks() ) {
-		long kk = 0; if ( m_callback ) kk = 1;
+		int32_t kk = 0; if ( m_callback ) kk = 1;
 		log(LOG_DEBUG,
 		    "udp: sent dgram "
-		    "dgram=%li "
-		    "dgrams=%li "
+		    "dgram=%"INT32" "
+		    "dgrams=%"INT32" "
 		    "msg=0x%hx "
-		    "tid=%li "
+		    "tid=%"INT32" "
 		    "dst=%s:%hu "
-		    "eth=%li "
-		    "init=%li "
-		    "age=%lu "
-		    "dsent=%li "
-		    "aread=%li "
-		    "len=%li "
-		    "msgSz=%li "
-		    "cnt=%li "
-		    "wait=%li "
-		    "error=%li "
-		    "k.n1=%lu n0=%llu "
-		    "maxdgramsz=%li "
-		    "hid=%li",
-		    (long)dgramNum, 
-		    (long)m_dgramsToSend,
-		    (short)m_msgType,
-		    (long)m_transId,
+		    "eth=%"INT32" "
+		    "init=%"INT32" "
+		    "age=%"INT32" "
+		    "dsent=%"INT32" "
+		    "aread=%"INT32" "
+		    "len=%"INT32" "
+		    "msgSz=%"INT32" "
+		    "cnt=%"INT32" "
+		    "wait=%"INT32" "
+		    "error=%"INT32" "
+		    "k.n1=%"UINT32" n0=%"UINT64" "
+		    "maxdgramsz=%"INT32" "
+		    "hid=%"INT32"",
+		    (int32_t)dgramNum, 
+		    (int32_t)m_dgramsToSend,
+		    (int16_t)m_msgType,
+		    (int32_t)m_transId,
 		    //iptoa(m_ip),//+9,
 		    iptoa(to.sin_addr.s_addr),
-		    (unsigned short)m_port,
+		    (uint16_t)m_port,
 		    eth,//shotgun,
-		    (long)kk ,
-		    (long)(now-m_startTime) ,
-		    (long)m_sentBitsOn , 
-		    (long)m_readAckBitsOn ,
-		    (long)bytesSent ,
-		    (long)m_sendBufSize, 
-		    (long)m_resendCount, 
-		    (long)m_resendTime ,
-		    (long)m_localErrno ,
+		    (int32_t)kk ,
+		    (int32_t)(now-m_startTime) ,
+		    (int32_t)m_sentBitsOn , 
+		    (int32_t)m_readAckBitsOn ,
+		    (int32_t)bytesSent ,
+		    (int32_t)m_sendBufSize, 
+		    (int32_t)m_resendCount, 
+		    (int32_t)m_resendTime ,
+		    (int32_t)m_localErrno ,
 		    m_key.n1,m_key.n0 ,
 		    m_maxDgramSize ,
 		    hid );
@@ -936,12 +936,12 @@ void UdpSlot::fixSlot ( ) {
 	// log it
 	log(LOG_LOGIC,
 	    "udp: before fixSlot(): "
-	    "m_readBitsOn=%li "
-	    "m_readAckBitsOn=%li "
-	    "m_sentBitsOn=%li "
-	    "m_sentAckBitsOn=%li "
-	    "m_firstUnlitSentAckBit=%li "
-	    "m_nextToSend=%li " ,
+	    "m_readBitsOn=%"INT32" "
+	    "m_readAckBitsOn=%"INT32" "
+	    "m_sentBitsOn=%"INT32" "
+	    "m_sentAckBitsOn=%"INT32" "
+	    "m_firstUnlitSentAckBit=%"INT32" "
+	    "m_nextToSend=%"INT32" " ,
 	    m_readBitsOn,
 	    m_readAckBitsOn,
 	    m_sentBitsOn,
@@ -953,12 +953,12 @@ void UdpSlot::fixSlot ( ) {
 	m_readAckBitsOn = 0;
 	m_sentBitsOn    = 0;
 	m_sentAckBitsOn = 0;
-	for ( long i = 0 ; i < m_dgramsToRead ; i++ ) {
+	for ( int32_t i = 0 ; i < m_dgramsToRead ; i++ ) {
 		if ( isOn ( i , m_readBits2    ) ) m_readBitsOn++;
 		// we send back an ack for every dgram read
 		if ( isOn ( i , m_sentAckBits2 ) ) m_sentAckBitsOn++;
 	}
-	for ( long i = 0 ; i < m_dgramsToSend ; i++ ) {
+	for ( int32_t i = 0 ; i < m_dgramsToSend ; i++ ) {
 		if ( isOn ( i , m_sentBits2    ) ) m_sentBitsOn++;
 		// we must read an ack for every dgram sent
 		if ( isOn ( i , m_readAckBits2 ) ) m_readAckBitsOn++;
@@ -970,12 +970,12 @@ void UdpSlot::fixSlot ( ) {
 
 	log(LOG_LOGIC,
 	    "udp: after fixSlot(): "
-	    "m_readBitsOn=%li "
-	    "m_readAckBitsOn=%li "
-	    "m_sentBitsOn=%li "
-	    "m_sentAckBitsOn=%li "
-	    "m_firstUnlitSentAckBit=%li "
-	    "m_nextToSend=%li " ,
+	    "m_readBitsOn=%"INT32" "
+	    "m_readAckBitsOn=%"INT32" "
+	    "m_sentBitsOn=%"INT32" "
+	    "m_sentAckBitsOn=%"INT32" "
+	    "m_firstUnlitSentAckBit=%"INT32" "
+	    "m_nextToSend=%"INT32" " ,
 	    m_readBitsOn,
 	    m_readAckBitsOn,
 	    m_sentBitsOn,
@@ -997,18 +997,18 @@ void UdpSlot::fixSlot ( ) {
 // . if m_callback is NULL we did NOT intiate the transaction
 // . we should only be called if m_sentAckBitsOn < m_readBitsOn, i.e.
 //   when we're not caught up with ACKing with what we've read
-long UdpSlot::sendAck ( int sock , int64_t now , 
-			long dgramNum , long weInitiated ,
+int32_t UdpSlot::sendAck ( int sock , int64_t now , 
+			int32_t dgramNum , int32_t weInitiated ,
 			bool cancelTrans ) {
 	// protection from garbled dgrams
 	if ( dgramNum >= MAX_DGRAMS ) {
 		log(LOG_LOGIC,
-		    "udp: Sending ack for dgram #%li > max dgram of %li.",
-		    dgramNum,(long)MAX_DGRAMS); return 1; }
+		    "udp: Sending ack for dgram #%"INT32" > max dgram of %"INT32".",
+		    dgramNum,(int32_t)MAX_DGRAMS); return 1; }
 	// remember if forced or not
-	//long forced = dgramNum;
+	//int32_t forced = dgramNum;
 	// if this was not supplied, look at m_callback to determine it
-	if ( weInitiated == -2 ) weInitiated = (long)m_callback;
+	if ( weInitiated == -2 ) weInitiated = (int32_t)m_callback;
 	// a little dgram buffer
 	char dgram[DGRAM_SIZE_CEILING];
 
@@ -1034,8 +1034,8 @@ long UdpSlot::sendAck ( int sock , int64_t now ,
 		// if we had no match, that's an error!
 		if ( dgramNum >= m_dgramsToRead ) {
 			log(LOG_LOGIC,
-			    "udp: Sending ack for dgram #%li which is passed "
-			    "the number of dgrams we have to read, %li. "
+			    "udp: Sending ack for dgram #%"INT32" which is passed "
+			    "the number of dgrams we have to read, %"INT32". "
 			    "Fixing. Do not panic.",
 			    dgramNum , m_dgramsToRead );
 			fixSlot();
@@ -1047,13 +1047,13 @@ long UdpSlot::sendAck ( int sock , int64_t now ,
 	}
 	// . ask the protocol class to make an ACK for us and store in "dgram"
 	// . we initiated the transaction if our callback is non-NULL
-	long dgramSize = m_proto->makeAck ( dgram        , 
+	int32_t dgramSize = m_proto->makeAck ( dgram        , 
 					    dgramNum     ,
 					    m_transId    ,
 					    weInitiated  ,
 					    cancelTrans  );
 	// get the ip
-	unsigned long ip = m_ip;
+	uint32_t ip = m_ip;
 	// . if this is a send to our ip use the loopback interface
 	// . MTU is very high here
 	//if ( !g_conf.m_interfaceMachine &&
@@ -1114,7 +1114,7 @@ long UdpSlot::sendAck ( int sock , int64_t now ,
 	// this should not happen
 	if ( bytesSent != dgramSize ) {
 		g_errno = EBADENGINEER;
-		log("udp: sendto only sent %i bytes, not %li. Undersend.",
+		log("udp: sendto only sent %i bytes, not %"INT32". Undersend.",
 		    bytesSent,dgramSize);
 		//sleep(50000);
 		return -1;
@@ -1142,9 +1142,9 @@ long UdpSlot::sendAck ( int sock , int64_t now ,
 	if ( dgramNum < m_firstUnlitSentAckBit ) {
 		g_errno = EBADENGINEER;
 		log(LOG_LOGIC,
-		    "udp: Sending ack for dgram #%li which should have "
+		    "udp: Sending ack for dgram #%"INT32" which should have "
 		    "already been sent. Next ack to send should be for dgram "
-		    "# %li. Fixing. Do not panic.",
+		    "# %"INT32". Fixing. Do not panic.",
 		    dgramNum , m_firstUnlitSentAckBit );
 		//char *xx = NULL; *xx = 0;
 		fixSlot();
@@ -1160,32 +1160,32 @@ long UdpSlot::sendAck ( int sock , int64_t now ,
 	// log msg
 	if ( g_conf.m_logDebugUdp ) { // || cancelTrans ) {
 		//#ifdef _UDPDEBUG_
-		long kk = 0; if ( m_callback ) kk = 1;
-		long hid = -1;
+		int32_t kk = 0; if ( m_callback ) kk = 1;
+		int32_t hid = -1;
 		if ( m_host && m_host->m_hostdb == &g_hostdb ) 
 			hid = m_host->m_hostId;
 		logf(LOG_DEBUG,
 		    "udp: sent ACK   "
-		    "dgram=%li "
+		    "dgram=%"INT32" "
 		    "msg=0x%hx "
-		    "tid=%li "
+		    "tid=%"INT32" "
 		    "src=%s:%hu "
-		    "init=%li "
-		    "age=%lu " 
-		    "cancel=%li "
-		    "dread=%li "
-		    "asent=%li "
-		     "hid=%li",
-		    (long)dgramNum, 
-		    (short)m_msgType , 
-		    (long)m_transId, 
+		    "init=%"INT32" "
+		    "age=%"INT32" " 
+		    "cancel=%"INT32" "
+		    "dread=%"INT32" "
+		    "asent=%"INT32" "
+		     "hid=%"INT32"",
+		    (int32_t)dgramNum, 
+		    (int16_t)m_msgType , 
+		    (int32_t)m_transId, 
 		     iptoa(m_ip),//+9 , 
-		    (unsigned short)m_port, 
-		    (long)kk , 
-		    (long)(gettimeofdayInMilliseconds() - m_startTime) , 
-		    (long)cancelTrans,
-		    (long)m_readBitsOn , 
-		    (long)m_sentAckBitsOn  ,
+		    (uint16_t)m_port, 
+		    (int32_t)kk , 
+		    (int32_t)(gettimeofdayInMilliseconds() - m_startTime) , 
+		    (int32_t)cancelTrans,
+		    (int32_t)m_readBitsOn , 
+		    (int32_t)m_sentAckBitsOn  ,
 		     hid);
 		//#endif
 	}
@@ -1200,19 +1200,19 @@ long UdpSlot::sendAck ( int sock , int64_t now ,
 //            m_firstUnlitSentAckBit
 bool UdpSlot::readDatagramOrAck ( int        sock    , 
 				  char      *peek    ,
-				  long       peekSize,
+				  int32_t       peekSize,
 				  int64_t  now     ,
 				  bool      *discard ,
-				  long      *readSize ) {
+				  int32_t      *readSize ) {
 	// assume discard
 	*discard = true;
 	// get dgram Number
-	long dgramNum = m_proto->getDgramNum ( peek , peekSize );
+	int32_t dgramNum = m_proto->getDgramNum ( peek , peekSize );
 	// protection from garbled dgrams
 	if ( dgramNum >= MAX_DGRAMS ) {
 		log(LOG_LOGIC,
-		    "udp: Reading for dgram #%li > max dgram of %li.",
-		    dgramNum,(long)MAX_DGRAMS);
+		    "udp: Reading for dgram #%"INT32" > max dgram of %"INT32".",
+		    dgramNum,(int32_t)MAX_DGRAMS);
 		return true;
 	}
 	// was it a cancel signal?
@@ -1220,16 +1220,16 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 		//if ( g_conf.m_logDebugUdp ) 
 		//logf(LOG_INFO,//LOG_DEBUG,
 		log(LOG_DEBUG,
-		     "udp: Read cancel ack hdrlen=%li tid=%li "
-		     "src=%s:%hu msgType=0x%hhx weInitiated=%li sent=%li "
-		    "sendbufalloc=%lu sendbufsize=%lu",
+		     "udp: Read cancel ack hdrlen=%"INT32" tid=%"INT32" "
+		     "src=%s:%hu msgType=0x%hhx weInitiated=%"INT32" sent=%"INT32" "
+		    "sendbufalloc=%"UINT32" sendbufsize=%"UINT32"",
 		     peekSize , m_proto->getTransId ( peek,peekSize ),
 		     iptoa(m_ip),m_port,
 		     m_proto->getMsgType(peek,peekSize),
-		     (long)m_callback,
+		     (int32_t)m_callback,
 		    m_sentBitsOn,
-		    (unsigned long)m_sendBufAlloc,
-		    m_sendBufSize);
+		    (uint32_t)m_sendBufAlloc,
+		    (uint32_t)m_sendBufSize);
 		// stat count
 		g_cancelAcksRead++;
 		// what happens is that if we are handling a request and we
@@ -1286,38 +1286,38 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	//int64_t  now = gettimeofdayInMilliseconds();
 	// log msg
 	if ( g_conf.m_logDebugUdp ) {
-		long hid = -1;
+		int32_t hid = -1;
 		if ( m_host && m_host->m_hostdb == &g_hostdb ) 
 			hid = m_host->m_hostId;
 		//#ifdef _UDPDEBUG_
 		//if ( ! m_proto->useAcks() ) {
-		long kk = 0; if ( m_callback ) kk = 1;
+		int32_t kk = 0; if ( m_callback ) kk = 1;
 		log(LOG_DEBUG,
 		    "udp: Read dgram "
-		    "dgram=%li "
+		    "dgram=%"INT32" "
 		    "msg=0x%hx "
-		    "tid=%li "
+		    "tid=%"INT32" "
 		    "src=%s:%hu "
-		    "init=%li "
-		    "age=%lu " 
-		    "dread=%li "
-		    "asent=%li "
-		    //"len=%li "
-		    "msgSz=%li "
-		    "error=%li "
-		    "hid=%li",
-		    (long)dgramNum,
-		    (short)m_proto->getMsgType(peek,peekSize),
-		    (long)m_proto->getTransId(peek,peekSize),
+		    "init=%"INT32" "
+		    "age=%"INT32" "
+		    "dread=%"INT32" "
+		    "asent=%"INT32" "
+		    //"len=%"INT32" "
+		    "msgSz=%"INT32" "
+		    "error=%"INT32" "
+		    "hid=%"INT32"",
+		    (int32_t)dgramNum,
+		    (int16_t)m_proto->getMsgType(peek,peekSize),
+		    (int32_t)m_proto->getTransId(peek,peekSize),
 		    iptoa(m_ip), 
-		    (unsigned short)m_port,
-		    (long)kk,
-		    (long)(gettimeofdayInMilliseconds() - m_startTime) ,
-		    (long)m_readBitsOn , 
-		    (long)m_sentAckBitsOn , 
-		    //(long)peekSize ,
-		    (long)m_proto->getMsgSize(peek,peekSize) ,
-		    (long)(m_proto->hadError(peek,peekSize)),
+		    (uint16_t)m_port,
+		    (int32_t)kk,
+		    (int32_t)(gettimeofdayInMilliseconds() - m_startTime) ,
+		    (int32_t)m_readBitsOn , 
+		    (int32_t)m_sentAckBitsOn , 
+		    //(int32_t)peekSize ,
+		    (int32_t)m_proto->getMsgSize(peek,peekSize) ,
+		    (int32_t)(m_proto->hadError(peek,peekSize)),
 		    hid);
 		//	}
 		//#endif
@@ -1350,16 +1350,16 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// . AND did we miss some ACKs he sent to us?
 	if ( m_callback && m_readAckBitsOn != m_dgramsToSend ) { 
 		// catch em all up
-		for ( long i = 0 ; i < m_dgramsToSend ; i++ ) 
+		for ( int32_t i = 0 ; i < m_dgramsToSend ; i++ ) 
 			setBit ( i , m_readAckBits2 );
 		m_readAckBitsOn = m_dgramsToSend;
 		if ( g_conf.m_logDebugUdp ) 
 			log(LOG_DEBUG,"udp: Cramming ACKs "
-			    "tid=%li "
+			    "tid=%"INT32" "
 			    "dst=%s:%hu" ,
-			    (long)m_transId ,
+			    (int32_t)m_transId ,
 			    iptoa(m_ip),
-			    (unsigned short)m_port);
+			    (uint16_t)m_port);
 	}
 
 	// . if it's our first, mark this for g_stats UDP_*_IN_BPS
@@ -1383,14 +1383,14 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 
 	// . copy the msg meat into our m_readBuf
 	// . how big is the dgram header?
-	long headerSize  = m_proto->getHeaderSize ( peek , peekSize );
+	int32_t headerSize  = m_proto->getHeaderSize ( peek , peekSize );
 	// make it zero if proto wants them in m_readBuf
 	if ( ! m_proto->stripHeaders() ) headerSize = 0;
 	// . we store transId, size, type, etc. in the UdpSlot
 	// . we store the msg in it's pre-sent form (w/o dgram headers)
 	// . "maxDataSize" is max bytes of msg data per dgram (w/o hdr)
-	long maxDataSize = m_maxDgramSize - headerSize;
-	long offset      = dgramNum       * maxDataSize;
+	int32_t maxDataSize = m_maxDgramSize - headerSize;
+	int32_t offset      = dgramNum       * maxDataSize;
 	/*
 	// . this checks for undersends (dgrams with not enough data)
 	// . we set "size" to the space available in readBuf for dgram's data
@@ -1420,7 +1420,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// . how many bytes should be in this dgram?
 	// . this will be -1 if unknown, but under a dgram's worth of bytes
 	// . -1 is used for the DNS protocol
-	long msgSize = m_proto->getMsgSize ( peek , peekSize );
+	int32_t msgSize = m_proto->getMsgSize ( peek , peekSize );
 
 	// if this is the first dgram then set this shit
 	if ( m_readBitsOn == 0 ) {
@@ -1469,11 +1469,11 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
  retry:
 	if ( ! m_readBuf ) {
 		if ( ! makeReadBuf ( msgSize , m_dgramsToRead ) )
-			return log("udp: Failed to allocate %li bytes to read "
+			return log("udp: Failed to allocate %"INT32" bytes to read "
 				   "request or reply for udp socket.",msgSize);
 		// track down the mem leak.
 		// someone is not freeing their read buf!!
-		//logf(LOG_DEBUG,"udpslot alloc %li at 0x%lx msgType=%hhx",
+		//logf(LOG_DEBUG,"udpslot alloc %"INT32" at 0x%"XINT32" msgType=%hhx",
 		//     msgSize,m_readBuf,m_msgType);
 	}
 	
@@ -1487,8 +1487,8 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// return false if we have no room for the entire reply
 	if ( msgSize > m_readBufMaxSize ) {
 		g_errno = EBUFTOOSMALL;
-		return log("udp: Msg size of %li bytes is too big for the "
-			   "buffer size, %li, we allocated. msgType=0x%hhx.",
+		return log("udp: Msg size of %"INT32" bytes is too big for the "
+			   "buffer size, %"INT32", we allocated. msgType=0x%hhx.",
 			   msgSize, m_readBufMaxSize , m_msgType );
 	}
 
@@ -1502,20 +1502,20 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 		if ( m_proto->getMaxPeekSize() < 24 ) { char *xx=NULL;*xx=0;}
 		if ( headerSize != 12 )               { char *xx=NULL;*xx=0;}
 		// ips must match. like a checksum kinda.
-		long ip1 = *(long *)(peek+headerSize);
-		long ip2 = *(long *)(peek+headerSize+4);
-		long crc = *(long *)(peek+headerSize+8);
+		int32_t ip1 = *(int32_t *)(peek+headerSize);
+		int32_t ip2 = *(int32_t *)(peek+headerSize+4);
+		int32_t crc = *(int32_t *)(peek+headerSize+8);
 		// one more check since ip1 seems to equal ip2 sometimes
 		// when it should not!
-		long h32 = hash32h ( ip1 , 0 );
+		int32_t h32 = hash32h ( ip1 , 0 );
 		if ( ip1 != ip2 || h32 != crc ) {
-			static long s_lastTime = 0;
+			static int32_t s_lastTime = 0;
 			g_corruptPackets++;
-			long tt = getTimeLocal();
+			int32_t tt = getTimeLocal();
 			if ( tt > s_lastTime + 5 ) {
 				s_lastTime = tt;
 				log("dns: dropping corrupt msgc reply dgram. "
-				    "count=%li.",g_corruptPackets);
+				    "count=%"INT32".",g_corruptPackets);
 				return true;
 			}
 			return true;
@@ -1528,10 +1528,10 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// dgram #'s above 0 can be copied directly into m_readBuf
 	if ( dgramNum > 0 ) { 
 		// how much DATA can we read from this dgram?
-		long avail  = m_readBufMaxSize - offset;
+		int32_t avail  = m_readBufMaxSize - offset;
 		if ( avail  > maxDataSize ) avail = maxDataSize;
 		// include header too
-		long toRead = avail + headerSize;
+		int32_t toRead = avail + headerSize;
 		// where to put it?
 		char *dest = m_readBuf + offset - headerSize;
 		// sanity check, watch out for bad headers...
@@ -1540,15 +1540,15 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 			*discard = true;
 			//g_errno = ECORRUPTDATA;
 			// do not spam the logs
-			static long s_badCount = 0;
+			static int32_t s_badCount = 0;
 			s_badCount++;
 			// only log it once every 1024 times it happens
 			//if ( ((s_badCount++) & 1023 ) == 0 )
-			log("udp: got %li bad dgram headers. "
-			    "dgramNum=%li offset=%li "
-			    "readBufMaxSize=%li. IS hosts.conf OUT OF SYNC???",
-			    s_badCount,(long)dgramNum,(long)offset,
-			    (long)m_readBufMaxSize);
+			log("udp: got %"INT32" bad dgram headers. "
+			    "dgramNum=%"INT32" offset=%"INT32" "
+			    "readBufMaxSize=%"INT32". IS hosts.conf OUT OF SYNC???",
+			    s_badCount,(int32_t)dgramNum,(int32_t)offset,
+			    (int32_t)m_readBufMaxSize);
 			// this actually helps us to identify when hosts.conf
 			// is out of sync between hosts, so core
 			// SEEMS like the roadrunner wireless connection
@@ -1631,7 +1631,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// what to put?
 	char *src  = dgram + headerSize ;
 	// how much to put
-	long  len  = dgramSize - headerSize;
+	int32_t  len  = dgramSize - headerSize;
 	// if msgSize was -1 then m_readBufSize will be -1
 	if ( m_readBufSize == -1 ) m_readBufSize = len;
 	// bounce it back into m_readBuf
@@ -1650,12 +1650,12 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 }
 
 // called to process an ack we read for dgram # "dgramNum"
-void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
+void UdpSlot::readAck ( int sock , int32_t dgramNum , int64_t now ) {
 	// protection from garbled dgrams
 	if ( dgramNum >= MAX_DGRAMS ) {
 		log(LOG_LOGIC,
-		    "udp: Reading ack for dgram #%li > max dgram of %li.",
-		    dgramNum,(long)MAX_DGRAMS); 
+		    "udp: Reading ack for dgram #%"INT32" > max dgram of %"INT32".",
+		    dgramNum,(int32_t)MAX_DGRAMS); 
                 return ; }
 	// . get time now
 	// . make async safe
@@ -1690,7 +1690,7 @@ void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
 	// . we detect this gap and automatically re-send the dgrams w/o delay
 	// . if our right neighbor read ack bit is off then mark all off bits 
 	//   on our right as having sent bits of 0, until we hit a lit ack bit
-	for ( long i = dgramNum - 1 ; i >= 0 ; i-- ) {
+	for ( int32_t i = dgramNum - 1 ; i >= 0 ; i-- ) {
 		// stop after hitting a lit bit
 		if ( isOn ( i , m_readAckBits2 ) ) break;
 		// mark as unsent iff it's marked as sent
@@ -1709,15 +1709,15 @@ void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
 		//if ( m_msgType == 0x39 )
 		//	log("jey");
 		int64_t now = gettimeofdayInMilliseconds();
-		long delta = now - m_startTime;
+		int32_t delta = now - m_startTime;
 		// but if we were sending a reply, use m_queuedTime
 		// as the start time of the send. we set m_queuedTime
 		// to the current time in sendReply().
 		if ( ! m_callback ) delta = now - m_queuedTime; 
-		long n = m_niceness;
+		int32_t n = m_niceness;
 		if ( n < 0 ) n = 0;
 		if ( n > 1 ) n = 1;
-		long r = 0;
+		int32_t r = 0;
 		// if m_callback then we are sending a request, not a reply,
 		// because only the sender of the request has a callback
 		if ( m_callback ) r = 1;
@@ -1726,9 +1726,9 @@ void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
 		g_stats.m_msgTotalSent       [m_msgType][n][r]++;
 		// bucket number is log base 2 of the delta
 		if ( delta > 64000 ) delta = 64000;
-		long bucket = getHighestLitBit ( (unsigned short)delta );
+		int32_t bucket = getHighestLitBit ( (uint16_t)delta );
 		g_stats.m_msgTotalSentByTime [m_msgType][n][r][bucket]++;
-		// set the queued time for stats on how long it sits in the
+		// set the queued time for stats on how int32_t it sits in the
 		// queue.
 		m_queuedTime = now;
 	}
@@ -1738,9 +1738,9 @@ void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
 		// get when we sent this dgram
 		//int64_t start = getSendTime ( dgramNum >> 3 ) ;
 		// trip time
-		//long   tripTime = now - start;
+		//int32_t   tripTime = now - start;
 		// debug msg
-		//log("tripTime = %li", tripTime );
+		//log("tripTime = %"INT32"", tripTime );
 		// . update host time
 		// . we should also stamp the host each time we re-send, too
 		// . this is now handled by g_hostdb::pingHost()
@@ -1749,37 +1749,37 @@ void UdpSlot::readAck ( int sock , long dgramNum , int64_t now ) {
 	// log msg
 	if ( g_conf.m_logDebugUdp ) {
 		//#ifdef _UDPDEBUG_
-		long kk = 0; if ( m_callback ) kk = 1;
-		long hid = -1;
+		int32_t kk = 0; if ( m_callback ) kk = 1;
+		int32_t hid = -1;
 		if ( m_host && m_host->m_hostdb == &g_hostdb ) 
 			hid = m_host->m_hostId;
 		log(LOG_DEBUG,
 		    "udp: Read ACK   "
-		    "dgram=%li "
+		    "dgram=%"INT32" "
 		    "msg=0x%hx "
-		    "tid=%li "
+		    "tid=%"INT32" "
 		    "src=%s:%hu "
-		    "init=%li "
-		    "age=%lu "
-		    "dsent=%li "
-		    "aread=%li "
-		    "hid=%li",
-		    (long)dgramNum, 
-		    (short)m_msgType , 
-		    (long)m_transId, 
+		    "init=%"INT32" "
+		    "age=%"INT32" "
+		    "dsent=%"INT32" "
+		    "aread=%"INT32" "
+		    "hid=%"INT32"",
+		    (int32_t)dgramNum, 
+		    (int16_t)m_msgType , 
+		    (int32_t)m_transId, 
 		    iptoa(m_ip) , 
-		    (unsigned short)m_port, 
-		    (long)kk , 
-		    (long)(now -m_startTime) , 
-		    (long)m_sentBitsOn , 
-		    (long)m_readAckBitsOn ,
+		    (uint16_t)m_port, 
+		    (int32_t)kk , 
+		    (int32_t)(now -m_startTime) , 
+		    (int32_t)m_sentBitsOn , 
+		    (int32_t)m_readAckBitsOn ,
 		    hid);
 		//#endif
 	}
 }
 
 // returns false and sets g_errno on error
-bool UdpSlot::makeReadBuf ( long msgSize , long numDgrams ) {
+bool UdpSlot::makeReadBuf ( int32_t msgSize , int32_t numDgrams ) {
 	// bitch if it's already there
 	if ( m_readBuf ) {
 		g_errno = EBADENGINEER;
@@ -1791,9 +1791,9 @@ bool UdpSlot::makeReadBuf ( long msgSize , long numDgrams ) {
 	// ensure msg not too big
 	if ( msgSize > m_proto->getMaxMsgSize() ) {
 		g_errno = EMSGTOOBIG;
-		return log(LOG_LOGIC,"udp: makereadbuf: msg size of %li is "
-			   "too big. Max is %li.",msgSize,
-			   (long)m_proto->getMaxMsgSize());
+		return log(LOG_LOGIC,"udp: makereadbuf: msg size of %"INT32" is "
+			   "too big. Max is %"INT32".",msgSize,
+			   (int32_t)m_proto->getMaxMsgSize());
 	}
 	// if msgSize is -1 then it is under 1 dgram, but assume the worst
 	if ( msgSize == -1 ) msgSize = m_maxDgramSize;
@@ -1808,7 +1808,7 @@ bool UdpSlot::makeReadBuf ( long msgSize , long numDgrams ) {
 		if ( msgSize > TMPBUFSIZE ) {
 			g_errno = EBUFTOOSMALL;
 			return log(LOG_LOGIC,"udp: makereadbuf: buffer size "
-				   "of %li is too big for async udp socket.",
+				   "of %"INT32" is too big for async udp socket.",
 				   msgSize);
 		}
 		m_readBuf        = m_tmpBuf;
@@ -1843,7 +1843,7 @@ bool UdpSlot::makeReadBuf ( long msgSize , long numDgrams ) {
 	m_readBuf = (char *) mmalloc ( msgSize , bb ); // "UdpSlot") ;
 	if ( ! m_readBuf ) {
 		m_readBufSize = 0;
-		return log("udp: Failed to allocate %li bytes to "
+		return log("udp: Failed to allocate %"INT32" bytes to "
 			   "read request or reply on udp socket.",
 			   msgSize);
 	}
@@ -1857,13 +1857,13 @@ bool UdpSlot::makeReadBuf ( long msgSize , long numDgrams ) {
 // . may have ACKs to send or plain old dgrams to send
 // . now is current time in milliseconds since the epoch
 // . returns -2 if token required to send more
-//long UdpSlot::getScore (int64_t now, UdpSlot *s_token , 
-//			unsigned long s_tokenTime , long LARGE_MSG ) {
-long UdpSlot::getScore ( int64_t now ) {
+//int32_t UdpSlot::getScore (int64_t now, UdpSlot *s_token , 
+//			uint32_t s_tokenTime , int32_t LARGE_MSG ) {
+int32_t UdpSlot::getScore ( int64_t now ) {
 	// . allow tokens 500ms older than the current possessor of the token
 	//   to send with an ack window of 1
 	// . if you change the 500 here change it in UdpServer::readSock() too
-	//bool old = ( (unsigned long)m_startTime + 100 < s_tokenTime );
+	//bool old = ( (uint32_t)m_startTime + 100 < s_tokenTime );
 	// . do not send acks back for any large reply if s_token is in use
 	// . m_callback is non-NULL if we initiated the transaction
 	// . but it's ok if it's local, on the same host. NO!!! FIX!
@@ -1926,7 +1926,7 @@ long UdpSlot::getScore ( int64_t now ) {
 	// . if we've resent before, wait enough time to send again!
 	// . m_resendCount resets when we read an ack (in readAck())
 	//if ( m_resendCount > 0 && now - m_lastReadTime < m_resendTime ) {
-	//log("now=%lli-lastRead=%lli <%li" , now,m_lastReadTime,m_resendTime);
+	//log("now=%"INT64"-lastRead=%"INT64" <%"INT32"" , now,m_lastReadTime,m_resendTime);
 	//	return -1;
 	//}
 	// let's give smaller msgs more pts to reduce latency
@@ -1947,7 +1947,12 @@ long UdpSlot::getScore ( int64_t now ) {
 void UdpSlot::printState() {
 	//int64_t now = gettimeofdayInMilliseconds();
 	log(LOG_TIMING, 
-	    "admin: UdpSlot - type:Msg%2lx nice:%li queued:%li handlerCalled:%li", 
-	    (long)m_msgType, m_niceness, (long)m_isQueued, (long)m_calledHandler);
+	    "admin: UdpSlot - type:Msg%2"XINT32" nice:%"INT32" "
+	    "queued:%"INT32" "
+	    "handlerCalled:%"INT32"", 
+	    (int32_t)m_msgType, 
+	    m_niceness, 
+	    (int32_t)m_isQueued, 
+	    (int32_t)m_calledHandler);
 	
 }

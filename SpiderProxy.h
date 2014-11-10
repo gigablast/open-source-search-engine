@@ -31,9 +31,9 @@ bool saveSpiderProxyStats();
 //class ProxyRequest {
 //public:
 //	// ip of url we want to download
-//	long m_urlIp;
+//	int32_t m_urlIp;
 //	// retry count
-//	long m_retryCount;
+//	int32_t m_retryCount;
 //	// OP_GETPROXY or OP_RETPROXY (return proxy)
 //	char m_opCode;
 //};
@@ -42,15 +42,15 @@ bool saveSpiderProxyStats();
 class ProxyReply {
 public:
 	// proxy ip to use
-	long  m_proxyIp;
+	int32_t  m_proxyIp;
 	// id of the transaction
-	long  m_lbId;
+	int32_t  m_lbId;
 	// proxy port to use
-	short m_proxyPort;
+	int16_t m_proxyPort;
 	// if this proxy fails us are there more proxies to try?
 	bool  m_hasMoreProxiesToTry;
 	// how many proxies do we have that are banned by the urlip?
-	long  m_numBannedProxies;
+	int32_t  m_numBannedProxies;
 };
 
 #endif

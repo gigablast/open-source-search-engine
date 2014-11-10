@@ -169,12 +169,12 @@ inline bool LanguageIdentifier::isAmbiguousTLD(char *tld, int len) {
 	return(false);
 }
 
-uint8_t getLanguageFromAbbr2 ( char *str , long len ) {
+uint8_t getLanguageFromAbbr2 ( char *str , int32_t len ) {
 	// truncate
 	if ( len > 5 ) len = 5;
 	// copy it and check it
 	char lang[6];
-	for ( long j = 0 ; j < len ; j++ )
+	for ( int32_t j = 0 ; j < len ; j++ )
 		lang[j] = to_lower_a(str[j]);
 	lang[len]='\0';
 	return getLanguageFromAbbr(lang);
@@ -182,14 +182,14 @@ uint8_t getLanguageFromAbbr2 ( char *str , long len ) {
 
 uint8_t LanguageIdentifier::guessLanguageFromTag(Xml *xml) {
 	uint8_t rv = langUnknown;
-	long len = 0;
+	int32_t len = 0;
 	//char lang[6];
 	int id;
 	char *str;
 
 	if(!xml) return(langUnknown);
 
-	for(long i = 0; i < xml->getNumNodes(); i++) {
+	for(int32_t i = 0; i < xml->getNumNodes(); i++) {
 		id = xml->getNodeId(i);
 
 		// look for meta tag
@@ -336,9 +336,9 @@ uint8_t LanguageIdentifier::guessLanguageFromTld(char *linktext) {
 
 }
 
-uint8_t LanguageIdentifier::guessLanguageFromInlinks(LinkInfo *linkInfo, long ip) {
-	long x;
-	//long y;
+uint8_t LanguageIdentifier::guessLanguageFromInlinks(LinkInfo *linkInfo, int32_t ip) {
+	int32_t x;
+	//int32_t y;
 	uint8_t languages[32];
 	uint8_t max = langUnknown;
 	uint8_t oldmax = langUnknown;
@@ -348,7 +348,7 @@ uint8_t LanguageIdentifier::guessLanguageFromInlinks(LinkInfo *linkInfo, long ip
 
 	// sanity check
 	//if(linkInfo->m_numLangs != linkInfo->getNumDocIds()) {
-	//	log(LOG_DEBUG, "build: Number of languages (%ld) != number of docids (%ld)\n",
+	//	log(LOG_DEBUG, "build: Number of languages (%"INT32") != number of docids (%"INT32")\n",
 	//			linkInfo->m_numLangs, linkInfo->getNumDocIds());
 	//	return(langUnknown);
 	//}
@@ -361,11 +361,11 @@ uint8_t LanguageIdentifier::guessLanguageFromInlinks(LinkInfo *linkInfo, long ip
 	// on some monstrous sites.
 	//for(x = 0; x < linkInfo->m_numLangs && x < 100; x++) {
 	for (Inlink*k=NULL;(k=linkInfo->getNextInlink(k)); ) {
-		//long id = linkInfo->getLanguageId(x);
-		long id = k->m_language;
+		//int32_t id = linkInfo->getLanguageId(x);
+		int32_t id = k->m_language;
 		// sanity check, we are still getting bad lang ids!!
 		if ( id < 0 || id >= 32 ) {
-			log("build: Got bad lang id of %li. how can this "
+			log("build: Got bad lang id of %"INT32". how can this "
 			    "happen?",id);
 			continue;
 		}
@@ -412,14 +412,14 @@ uint8_t LanguageIdentifier::guessLanguageFromDoctype(Xml *xml, char *content) {
 
 	if(!content) return(langUnknown);
 
-	for(long i = 0; i < xml->getNumNodes(); i++) {
+	for(int32_t i = 0; i < xml->getNumNodes(); i++) {
 		id = xml->getNodeId(i);
 		// skip if not DOCTYPE
 		if ( id != TAG_DOCTYPE ) continue;
 		// get the tag ptr to the tag
 		char *tag    = xml->getNode(i);
 		// this is in BYTES
-		//long  tagLen = xml->getNodeLen(i);
+		//int32_t  tagLen = xml->getNodeLen(i);
 		// case might be upper, so we change
 		// the first two letters to lower.
 		str = FindLanguageIndex(tag);
@@ -628,14 +628,14 @@ uint8_t LanguageIdentifier::getBestLanguage(char** method,
 
 uint8_t LanguageIdentifier::getBestLangsFromVec(char* langCount,
 						//SiteType* typeVec,
-						long *langIds ,
+						int32_t *langIds ,
 						uint8_t *langScores ,
-						long tagVecSize) {
-	long bestCount = -1;
+						int32_t tagVecSize) {
+	int32_t bestCount = -1;
 	uint8_t numTags = 0;
 
-	long langTotal = 0;
-	for(long j = 0; j < MAX_LANGUAGES; j++) {	
+	int32_t langTotal = 0;
+	for(int32_t j = 0; j < MAX_LANGUAGES; j++) {	
 		langTotal += langCount[j];
 	}
 	if(langTotal == 0 || langCount[langUnknown] == langTotal)
@@ -646,10 +646,10 @@ uint8_t LanguageIdentifier::getBestLangsFromVec(char* langCount,
 	langCount[langUnknown] = 0;
 	
 
-	for(long i = 0; i < tagVecSize; i++) {
-		long maxCount = 0;
-		long maxCountNdx = 0;
-		for(long j = 0; j < MAX_LANGUAGES; j++) {	
+	for(int32_t i = 0; i < tagVecSize; i++) {
+		int32_t maxCount = 0;
+		int32_t maxCountNdx = 0;
+		for(int32_t j = 0; j < MAX_LANGUAGES; j++) {	
 			if(langCount[j] > maxCount) {
 				maxCount = langCount[j];
 				maxCountNdx = j;
@@ -856,9 +856,9 @@ uint8_t LanguageIdentifier::guessLanguageFreqCount(Xml *xml,
 
 	// Do term frequency count
 	for(int x = 0; x < limit; x++) {
-		if(xml->isTag(x) || xml->getNodeLen((long)x) < 2) continue;
-		char *cp = g_speller.getPhraseRecord(xml->getNode((long)x),
-						     xml->getNodeLen((long)x));
+		if(xml->isTag(x) || xml->getNodeLen((int32_t)x) < 2) continue;
+		char *cp = g_speller.getPhraseRecord(xml->getNode((int32_t)x),
+						     xml->getNodeLen((int32_t)x));
 		if(!cp) continue;
 		memset(scores, 0, sizeof(int) * MAX_LANGUAGES);
 		while(*cp) {
@@ -892,7 +892,7 @@ uint8_t LanguageIdentifier::guessLanguageFreqCount(Xml *xml,
 	if(max == 0) maxidx = 0;
 
 #if 0
-	// English, British, and Australian are no longer separate
+	// English, British, and Australian are no int32_ter separate
 	// If it's a toss up between any version of English, go with it.
 	if((max == langEnglish || max == langAustralia || max == langBritish) &&
 			(oldmax == langEnglish || oldmax == langAustralia || oldmax == langBritish))

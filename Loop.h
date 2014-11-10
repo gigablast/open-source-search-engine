@@ -31,16 +31,16 @@ class Slot {
 	// the next Slot thats registerd on this fd
 	Slot   *m_next;
 	// save niceness level for doPoll() to segregate
-	long    m_niceness;
+	int32_t    m_niceness;
 	// last time we called m_callback for this fd
 	//	time_t  m_lastActivity;
 	// . when should this fd timeout and we call the callback with
 	//   errno set to ETIMEDOUT
 	// . set to -1 for never timeout
 	// . m_timeout is in seconds
-	//	long    m_timeout;     
+	//	int32_t    m_timeout;     
 	// this callback should be called every X milliseconds
-	long      m_tick;
+	int32_t      m_tick;
 	// when we were last called in ms time (only valid for sleep callbacks)
 	int64_t m_lastCall;
 	// linked list of available slots
@@ -90,13 +90,13 @@ extern int64_t g_now;
 extern int64_t g_nowApprox;
 
 // count of how many SIGVTALRM signals we had so far
-extern long g_numAlarms;
-extern long g_numVTAlarms;
-extern long g_numQuickPolls;
+extern int32_t g_numAlarms;
+extern int32_t g_numVTAlarms;
+extern int32_t g_numQuickPolls;
 
-extern long g_numSigChlds;
-extern long g_numSigQueues;
-extern long g_numSigOthers;
+extern int32_t g_numSigChlds;
+extern int32_t g_numSigQueues;
+extern int32_t g_numSigOthers;
 
 
 extern char g_niceness ;
@@ -129,7 +129,7 @@ class Loop {
 	bool registerReadCallback  ( int   fd    ,
 				     void *state , 
 				     void (* callback)(int fd,void *state ) ,
-				     long  niceness );//= MAX_NICENESS ) ;
+				     int32_t  niceness );//= MAX_NICENESS ) ;
 
 	// . register this "fd" with "callback"
 	// . "callback" will be called when fd is ready for reading
@@ -137,14 +137,14 @@ class Loop {
 	bool registerWriteCallback ( int   fd    ,
 				     void *state ,
 				     void (* callback)(int fd, void *state ) , 
-	 			     long   niceness ); 
+	 			     int32_t   niceness ); 
 
 	// . register this callback to be called every second
 	// . TODO: implement "seconds" parameter
-	bool registerSleepCallback ( long milliseconds ,
+	bool registerSleepCallback ( int32_t milliseconds ,
 				     void *state, 
 				     void (* callback)(int fd,void *state ) ,
-				     long niceness = 1 );
+				     int32_t niceness = 1 );
 
 	// unregister call back for reading, writing or sleeping
 	void unregisterReadCallback  ( int fd, void *state ,
@@ -156,13 +156,13 @@ class Loop {
 				       void (* callback)(int fd,void *state));
 
 	// sets up for signal capture by us, g_loop
-	bool setNonBlocking ( int fd , long niceness ) ;
+	bool setNonBlocking ( int fd , int32_t niceness ) ;
 
 	// . keep this public so sighandler() can call it
 	// . we also call it from HttpServer::getMsgPieceWrapper() to
 	//   notify a socket that it's m_sendBuf got some new data to send
 	void callCallbacks_ass (bool forReading, int fd, int64_t now = 0LL,
-				long niceness = -1 );
+				int32_t niceness = -1 );
 
 	// set to true by sigioHandler() so doPoll() will be called
 	bool m_needToPoll;
@@ -186,13 +186,13 @@ class Loop {
 	char m_shutdown;
 
 	void startBlockedCpuTimer();
-	void canQuickPoll(long niceness);
-	void setitimerInterval(long niceness);
+	void canQuickPoll(int32_t niceness);
+	void setitimerInterval(int32_t niceness);
 
 	void disableTimer();
 	void enableTimer();
 
-	void quickPoll(long niceness, const char* caller = NULL, long lineno = 0);
+	void quickPoll(int32_t niceness, const char* caller = NULL, int32_t lineno = 0);
 
 	// called when sigqueue overflows and we gotta do a select() or poll()
 	void doPoll ( );
@@ -205,10 +205,10 @@ class Loop {
 
 	bool addSlot ( bool forReading , int fd , void *state , 
 		       void (* callback)(int fd , void *state ) ,
-		       long niceness , long tick = 0x7fffffff ) ;
+		       int32_t niceness , int32_t tick = 0x7fffffff ) ;
 
-	// set how long to pause waiting for singals (in milliseconds)
-	void setSigWaitTime ( long ms ) ;
+	// set how int32_t to pause waiting for singals (in milliseconds)
+	void setSigWaitTime ( int32_t ms ) ;
 
 	// now we use a linked list of pre-allocated slots to avoid a malloc
 	// failure which can cause the merge to dump with "URGENT MERGE FAILED"
@@ -227,7 +227,7 @@ class Loop {
 	Slot *m_writeSlots [MAX_NUM_FDS+2];
 
 	// the minimal tick time in milliseconds (ms)
-	long m_minTick;
+	int32_t m_minTick;
 
 	// now we pre-allocate our slots to prevent nasty coredumps from merge
 	// because it could not register a sleep callback with us

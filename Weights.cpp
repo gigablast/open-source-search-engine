@@ -1,5 +1,5 @@
 // TODO: pass spam class to weight class and modify weights based on the spam
-//       then we can just serialize the weight vector in the title rec along
+//       then we can just serialize the weight vector in the title rec aint32_t
 //       with ptr offsets to the words that we index. carver can just scan
 //       through the word ptrs rather than 1 char at a time. summary generator
 //       can just use the weights to score each sample then. 
@@ -105,7 +105,7 @@ void Weights::reset() {
 // Demote the weight of the words and phrases in repeated sentence fragments.
 // Fixes message boards which include the same msg over again in the reply. 
 // The first title and first header tag have amnesty, those often repeat 
-// anyway. What about long titles? The demotion will be more the longer
+// anyway. What about int32_t titles? The demotion will be more the int32_ter
 // the repeated fragment. TODO: Fragments have to have a minimum length of
 // 5 words unless they are surrounded by breaking tags. Hey, but we will demote
 // those words for being in a small section via RULE #6.
@@ -183,11 +183,11 @@ void Weights::reset() {
 // phrase like like "spam-free email" we should demote the phrase "free email".
 // it splits a STRONG_CONNECTOR.
 
-// RULE #26 ("long" phrases) (not implemented -- using PQR, post query rerank)
+// RULE #26 ("int32_t" phrases) (not implemented -- using PQR, post query rerank)
 // if phrase is very popular we usually weight it high and the individual words
 // low. however, if the phrase term to the left or right of the phrase term
 // has a very similar count, we should cut each phrase term's weights in half
-// because it is probably a long phrase. the more phrases in the chain that
+// because it is probably a int32_t phrase. the more phrases in the chain that
 // have the similar count, the more we should doc the phrase term weights
 // of all involved. this is very similar to the anti-spam logic we have in
 // set3(), repeated sentence frags, rule #13...
@@ -211,14 +211,14 @@ bool Weights::set ( Words      *words              ,
 		    SafeBuf    *pbuf               , // debug?
 		    bool        eliminateMenus     ,
 		    bool        isPreformattedText ,
-		    long        titleRecVersion    ,
-		    long        titleWeight        ,
-		    long        headerWeight       ,
+		    int32_t        titleRecVersion    ,
+		    int32_t        titleWeight        ,
+		    int32_t        headerWeight       ,
 		    HashTableX *countTablePtr      ,
 		    bool        isLinkText         ,
 		    bool        isCountTable       ,
-		    long        siteNumInlinks     ,
-		    long        niceness           ) {
+		    int32_t        siteNumInlinks     ,
+		    int32_t        niceness           ) {
 
 	reset();
 
@@ -244,8 +244,8 @@ bool Weights::set ( Words      *words              ,
 	}
 
 	// allocate memory
-	long nw = words->getNumWords();
-	long need = nw * (4 + 4 );
+	int32_t nw = words->getNumWords();
+	int32_t need = nw * (4 + 4 );
 
 	// one float for each rule per word so we can print out the weight
 	// associated with each algorithm (RULE #) for XmlDoc::print() as
@@ -258,8 +258,8 @@ bool Weights::set ( Words      *words              ,
 	if ( ! m_buf ) return false;
 	// assign ptrs
 	char *p = m_buf;
-	m_ww = (long *)p; p += 4 * nw;
-	m_pw = (long *)p; p += 4 * nw;
+	m_ww = (int32_t *)p; p += 4 * nw;
+	m_pw = (int32_t *)p; p += 4 * nw;
 
 	// the rule weight vector used for debugging by XmlDoc::print()
 	m_rvw = NULL;
@@ -277,7 +277,7 @@ bool Weights::set ( Words      *words              ,
 	// . set all weights to default if weighting incoming link text
 	// . we only want to apply the word to phrase ratio weights really
 	if ( m_isLinkText || m_isCountTable ) {
-		for ( long i = 0 ; i < nw ;i++ ) {
+		for ( int32_t i = 0 ; i < nw ;i++ ) {
 			m_ww[i] = DW;
 			m_pw[i] = DW;
 		}
@@ -337,8 +337,8 @@ bool Weights::set ( Words      *words              ,
 	// . Sections replaces Scores for menu elimination technology
 	// . eliminate words in script, style, etc. tags
 	// . google seems to index marquee junk so i took SEC_MARQUEE out
-	long badFlags  = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
-	long goodFlags = SEC_IN_TITLE|SEC_IN_HEADER;//SEC_ARTICLE
+	int32_t badFlags  = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
+	int32_t goodFlags = SEC_IN_TITLE|SEC_IN_HEADER;//SEC_ARTICLE
 	// if not enough voters do not eliminate menus, cuz we are not
 	// that sure...
 	//if ( sections && sections->m_totalSimilarLayouts < 5 ) 
@@ -347,16 +347,16 @@ bool Weights::set ( Words      *words              ,
 	if ( ! sections ) nw = 0;
 	// might have no identified sections
 	if ( sections && sections->m_numSections <= 0 ) nw = 0;
-	// shortcut
+	// int16_tcut
 	Section *sn;
 	// loop over all words
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get section
 		sn = sections->m_sectionPtrs[i];
 		// get the flags of the section containing this word
-		long flags = 0;
+		int32_t flags = 0;
 		// set 'em if we got 'em. a root level meta tag has NULL sect.
 		if ( sn ) flags = sn->m_flags;
 		// is it in marquee, select, script or style tag?
@@ -396,8 +396,8 @@ bool Weights::set ( Words      *words              ,
 		// . reduce dynamic, non-unique sections (top stories)
 		// . reduce static sections (menus)
 		// . also reduces EVERYTHING if we are "invalid"...
-		m_ww[i] = (long)(m_ww[i] * .10);
-		m_pw[i] = (long)(m_pw[i] * .10);
+		m_ww[i] = (int32_t)(m_ww[i] * .10);
+		m_pw[i] = (int32_t)(m_pw[i] * .10);
 		// debug purposes
 		if ( m_rvw ) {
 			m_rvw[i*MAX_RULES+27] = 0.10;
@@ -410,7 +410,7 @@ bool Weights::set ( Words      *words              ,
 	if ( ! scores ) return true;
 
 	// now if the score is 0, make the m_ww and m_pw BOTH 0
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// skip if score is good
 		if ( scores->m_scores[i] > 0 ) continue;
 		// otherwise nukey!
@@ -432,7 +432,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 
 	// ez vars
 	int64_t  *wids  = words->getWordIds ();		
-	long        nw    = words->getNumWords();
+	int32_t        nw    = words->getNumWords();
 
 	// if no words, nothing to do
 	if ( nw == 0 ) return true;
@@ -445,27 +445,27 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	if ( nw > 80000 ) nw = 80000;
 
 	int64_t   ringWids [ NUMWORDS ];
-	long        ringPos  [ NUMWORDS ];
-	long        ringi = 0;
-	long        count = 0;
+	int32_t        ringPos  [ NUMWORDS ];
+	int32_t        ringi = 0;
+	int32_t        count = 0;
 	int64_t   h     = 0;
 
 	// . make the hash table
-	// . make it big enough so there are gaps, so chains are not too long
-	long       minBuckets = (long)(nw * 1.5);
-	long       nb         = 2 * getHighestLitBitValue ( minBuckets ) ;
-	long       need       = nb * (8+4);
+	// . make it big enough so there are gaps, so chains are not too int32_t
+	int32_t       minBuckets = (int32_t)(nw * 1.5);
+	int32_t       nb         = 2 * getHighestLitBitValue ( minBuckets ) ;
+	int32_t       need       = nb * (8+4);
 	char      *buf        = NULL;
 	char       tmpBuf[50000];
 	if ( need < 50000 ) buf = tmpBuf;
 	else                buf = (char *)mmalloc ( need , "WeightsSet3" );
 	char      *ptr        = buf;
 	int64_t *hashes     = (int64_t *)ptr; ptr += nb * 8;
-	long      *vals       = (long      *)ptr; ptr += nb * 4;
+	int32_t      *vals       = (int32_t      *)ptr; ptr += nb * 4;
 	if ( ! buf ) return false;
 
 	// make the mask
-	unsigned long mask = nb - 1;
+	uint32_t mask = nb - 1;
 
 	// clear the hash table
 	memset ( hashes , 0 , nb * 8 );
@@ -474,7 +474,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	memset ( ringWids , 0 , NUMWORDS * 8 );
 
 	// for sanity check
-	long lastStart = -1;
+	int32_t lastStart = -1;
 
 	// . hash EVERY NUMWORDS-word sequence in the document
 	// . if we get a match look and see what sequences it matches
@@ -485,7 +485,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	// . get the max words that matched from all of the candidates
 	// . demote the word and phrase weights based on the total/max
 	//   number of words matching
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if not alnum word
 		if ( ! wids[i] ) continue;
 		// yield
@@ -502,7 +502,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 		// wrap the ring ptr if we need to, that is why we are a ring
 		if ( ++ringi >= NUMWORDS ) ringi = 0;
 		// this 5-word sequence starts with word # "start"
-		long start = ringPos[ringi];
+		int32_t start = ringPos[ringi];
 		// need at least NUMWORDS words in ring buffer to do analysis
 		if ( ++count < NUMWORDS ) continue;
 		// . skip if it starts with a word which can not start phrases
@@ -513,9 +513,9 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 		// sanity check
 		if ( start <= lastStart ) { char *xx = NULL; *xx = 0; }
 		// reset max matched
-		long max = 0;
+		int32_t max = 0;
 		// look up in the hash table
-		long n = h & mask;
+		int32_t n = h & mask;
 	loop:
 		// all done if empty
 		if ( ! hashes[n] ) {
@@ -540,7 +540,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 			if ( demote >= 1.0 ) continue;
 			if ( demote <  0.0 ) demote = 0.0;
 
-			// . RULE #26 ("long" phrases)
+			// . RULE #26 ("int32_t" phrases)
 			// . if we got 3, 4 or 5 in our matching sequence
 			// . basically divide by the # of *phrase* terms
 			// . multiply by 1/(N-1) 
@@ -553,16 +553,16 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 			//if ( max >= 15 ) demote = 0.0;
 
 			// demote the next "max" words
-			long mc = 0;
-			long j;
+			int32_t mc = 0;
+			int32_t j;
 			for ( j = start ; mc < max ; j++ ) {
 				// skip if not an alnum word
 				if ( ! wids[j] ) continue;
 				// count it
 				mc++;
 				// demote it
-				m_ww[j] = (long)(m_ww[j] * demote);
-				m_pw[j] = (long)(m_pw[j] * demote);
+				m_ww[j] = (int32_t)(m_ww[j] * demote);
+				m_pw[j] = (int32_t)(m_pw[j] * demote);
 				if ( m_ww[j] <= 0 ) m_ww[j] = 2;
 				if ( m_pw[j] <= 0 ) m_pw[j] = 2;
 				// debug purposes
@@ -572,7 +572,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 				}
 			}
 			// save the original i
-			long mini = i;
+			int32_t mini = i;
 			// advance i, it will be incremented by 1 immediately
 			// after hitting the "continue" statement
 			i = j - 1;
@@ -592,19 +592,19 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 			goto loop; 
 		}
 		// how many words match so far
-		long matched = 0;
+		int32_t matched = 0;
 		// . we have to check starting at the beginning of each word
 		//   sequence since the XOR compositional hash is order
 		//   independent
 		// . see what word offset this guy has
-		long j = vals[n] ;
+		int32_t j = vals[n] ;
 		// k becomes the start of the current 5-word sequence
-		long k = start;
+		int32_t k = start;
 		// sanity check
 		if ( j == k ) { char *xx = NULL; *xx = 0; }
 		// skip to next in chain to check later
 		if ( ++n >= nb ) n = 0;
-		// keep advancing k and j as long as the words match
+		// keep advancing k and j as int32_t as the words match
 	matchLoop:
 		// get next wid for k and j
 		while ( k < nw && ! wids[k] ) k++;
@@ -644,20 +644,20 @@ bool Weights::set2 ( Words   *words   ,
 	int64_t  *wids  = words->getWordIds ();		
 	nodeid_t   *tids  = words->getTagIds  ();
 	//char      **wptrs = words->m_words;
-	//long       *wlens = words->m_wordLens;
-	long        nw    = words->getNumWords();
+	//int32_t       *wlens = words->m_wordLens;
+	int32_t        nw    = words->getNumWords();
 	int64_t  *pids  = phrases->getPhraseIds();
 	HashTableX *tt1   = m_countTablePtr;
 
-	//long      phrcountLast = 0;
-	long      nexti        = -10;
+	//int32_t      phrcountLast = 0;
+	int32_t      nexti        = -10;
 	int64_t pidLast      = 0;
 
-	//logf(LOG_DEBUG,"build: still doing long sanity check in here");
+	//logf(LOG_DEBUG,"build: still doing int32_t sanity check in here");
 
 	// . now consider ourselves the last word in a phrase
 	// . adjust the score of the first word in the phrase to be
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if not alnum word
 		if ( ! wids[i] ) continue;
 		//if ( i == 38 )
@@ -672,7 +672,7 @@ bool Weights::set2 ( Words   *words   ,
 		// . try to inline this
 		int64_t nextWid = 0;
 		int64_t lastPid = 0;
-		long      nwp = phrases->getNumWordsInPhrase(i);
+		int32_t      nwp = phrases->getNumWordsInPhrase(i);
 		if ( nwp > 0 ) nextWid = wids [i + nwp - 1] ;
 		if ( i == nexti ) lastPid = pidLast;
 		// get current pid
@@ -684,8 +684,8 @@ bool Weights::set2 ( Words   *words   ,
 		/*
 		if ( pid == 0LL ) {
 			// get the next wid in line
-			long j    = i+ 2;
-			long maxj = i+15;
+			int32_t j    = i+ 2;
+			int32_t maxj = i+15;
 			if ( maxj >= nw ) maxj = nw;
 			for ( ; j < maxj ; j++ ) if ( wids[j] ) break;
 			if ( j < maxj ) {
@@ -719,13 +719,13 @@ bool Weights::set2 ( Words   *words   ,
 		// . do not hit all the way down to zero though...
 		// . Words.cpp::hash() will not index it then...
 		if ( m_ww[i] > 0 ) {
-			m_ww[i] = (long)(m_ww[i] * ww);
+			m_ww[i] = (int32_t)(m_ww[i] * ww);
 			if ( m_ww[i] <= 0 ) m_ww[i] = 1;
 			// debug purposes
 			if ( m_rvw ) m_rvw[i*MAX_RULES+15] *= ww;
 		}
 		if ( m_pw[i] > 0 ) {
-			m_pw[i] = (long)(m_pw[i] * pw);
+			m_pw[i] = (int32_t)(m_pw[i] * pw);
 			if ( m_pw[i] <= 0 ) m_pw[i] = 1;
 			// debug purposes
 			if ( m_rvw ) m_rvp[i*MAX_RULES+15] *= pw;
@@ -747,29 +747,29 @@ bool Weights::set2 ( Words   *words   ,
 		//   and  demote the phrase
 		// . if a word repeats in pretty much the same phrase, promote 
 		//   the  phrase and demote the word
-		long phrcount = 0 ;
+		int32_t phrcount = 0 ;
 		if ( pids[i] ) 
 			phrcount=tt1->getScore (pids[i]);
-		long wrdcount =  tt1->getScore (wids[i]);
+		int32_t wrdcount =  tt1->getScore (wids[i]);
 		// if we are always ending the same phrase, like "Mexico"
 		// in "New Mexico"... get the most popular phrase this word is
 		// in...
-		long phrcountMax;
+		int32_t phrcountMax;
 		if ( i == lastj && phrcountLast > phrcount ) 
 			phrcountMax = phrcountLast;
 		else
 			phrcountMax = phrcount;
 		// save wordcount before possibly truncating it
-		long wrdcountMin = wrdcount;
+		int32_t wrdcountMin = wrdcount;
 		// watch out for breeches
 		if ( wrdcount > 29 ) {
 			float ratio = (float)phrcountMax / (float)wrdcount;
-			phrcountMax = (long)((29.0 * ratio) + 0.5);
+			phrcountMax = (int32_t)((29.0 * ratio) + 0.5);
 			wrdcount    = 29;
 		}
 		if ( phrcountMax > 29 ) {
 			float ratio = (float)wrdcount / (float)phrcountMax;
-			wrdcount    = (long)((29.0 * ratio) + 0.5);
+			wrdcount    = (int32_t)((29.0 * ratio) + 0.5);
 			phrcountMax = 29;
 		}
 		// . sanity check
@@ -778,9 +778,9 @@ bool Weights::set2 ( Words   *words   ,
 		//   sanity check, so let's comment it out
 		//if ( phrcountMax > wrdcount ) { char *xx = NULL; *xx = 0; }
 		// apply the weights from the table we computed above
-		m_ww[i] = (long)(m_ww[i] * g_wtab[wrdcount][phrcountMax]);
+		m_ww[i] = (int32_t)(m_ww[i] * g_wtab[wrdcount][phrcountMax]);
 		// get length of phrase in words
-		//long nwp = phrases->getNumWords(i);
+		//int32_t nwp = phrases->getNumWords(i);
 		// save the last phrase id
 		if ( nwp > 0 ) {
 			lastj        = i + nwp - 1;
@@ -802,24 +802,24 @@ bool Weights::set2 ( Words   *words   ,
 		if ( nwp > 0 ) {
 			// get the word count of the next word
 			nextWid = wids [i + nwp - 1] ;
-			long wc = tt1->getScore(nextWid);
+			int32_t wc = tt1->getScore(nextWid);
 			// if it is smaller than current word, set wrdcountMin
 			if ( wc < wrdcountMin ) wrdcountMin = wc;
 		}
 		// watch out for breeches
 		if ( wrdcountMin > 29 ) {
 			float ratio = (float)phrcount / (float)wrdcountMin;
-			phrcount    = (long)((29.0 * ratio) + 0.5);
+			phrcount    = (int32_t)((29.0 * ratio) + 0.5);
 			wrdcountMin = 29;
 		}
 		if ( phrcount > 29 ) {
 			float ratio = (float)wrdcountMin / (float)phrcount;
-			wrdcountMin = (long)((29.0 * ratio) + 0.5);
+			wrdcountMin = (int32_t)((29.0 * ratio) + 0.5);
 			phrcount    = 29;
 		}
 		// try to seek the highest weight possible for this phrase
 		// by choosing the lowest word count possible
-		m_pw[i] = (long)(m_pw[i] * g_ptab[wrdcountMin][phrcount]);
+		m_pw[i] = (int32_t)(m_pw[i] * g_ptab[wrdcountMin][phrcount]);
 		// temp sanity checks until the inlined function works
 		if ( g_wtab[wrdcount][phrcountMax] != ww ) {
 			char *xx = NULL; *xx = 0; }
@@ -870,10 +870,10 @@ bool Weights::set2 ( Words   *words   ,
 
 		//if ( i  >0  && !wids[i-1] && 
 		//     (!tids || !tids[i-1]) && m_pw[i-1]!=DW )
-		//	m_ww[i] = (long)(m_ww[i] * .75);
+		//	m_ww[i] = (int32_t)(m_ww[i] * .75);
 		//if ( i+1<nw && !wids[i+1] && 
 		//    (!tids || !tids[i+1]) && m_pw[i+1]!=DW )
-		//	m_ww[i] = (long)(m_ww[i] * .75);
+		//	m_ww[i] = (int32_t)(m_ww[i] * .75);
 
 		// skip if phrase score is 0
 		if ( ! m_pw[i] ) continue;
@@ -888,7 +888,7 @@ bool Weights::set2 ( Words   *words   ,
 		// now mod the score
 		int64_t avg = m_pw[i];
 		// weight by punct in between
-		for ( long j = i+1 ; j < i+nwp ; j++ ) {
+		for ( int32_t j = i+1 ; j < i+nwp ; j++ ) {
 			if ( wids[j] ) continue;
 			avg = (avg * (int64_t)m_pw[j]) / DW;
 		}
@@ -919,7 +919,7 @@ bool Weights::set2 ( Words   *words   ,
 //   wid1 is "mexico"
 //   pid2 is "mexico good"
 //   wid2 is "good"
-// . we store sliderParm in titleRec so we can update it along
+// . we store sliderParm in titleRec so we can update it aint32_t
 //   with title and header weights on the fly from the spider controls
 void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 				   int64_t   wid1 ,
@@ -928,7 +928,7 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 				   float      *ww   ,
 				   float      *pw   ,
 				   HashTableX *tt1  ,
-				   long        titleRecVersion ) {
+				   int32_t        titleRecVersion ) {
 
 	static float s_fsp;
 	// from 0 to 100
@@ -951,17 +951,17 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 		if ( s_fsp < 0.0 || s_fsp > 1.0 ) { char *xx = NULL; *xx = 0; }
 		// i is the word count, how many times a particular word
 		// occurs in the document
-		for ( long i = 0 ; i < 30 ; i++ ) {
+		for ( int32_t i = 0 ; i < 30 ; i++ ) {
 		// . k is the phrase count, how many times a particular phrase
 		//   occurs in the document
 		// . k can be GREATER than i because we index only phrase terms
 		//   sometimes when indexing neighborhoods, and not the
 		//   single words that compose them
-		for ( long k = 0 ; k < 30 ; k++ ) {
+		for ( int32_t k = 0 ; k < 30 ; k++ ) {
 			// do not allow phrase count to be greater than
 			// word count, even though it can happen since we
 			// add imported neighborhood pwids to the count table
-			long j = k;
+			int32_t j = k;
 			if ( k > i ) j = i;
 			// get ratio
 			//float ratio = (float)phrcount / (float)wrdcount;
@@ -1026,16 +1026,16 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 			//if ( ww > 2.0 ) ww = 2.0;
 			g_wtab[i][k] = ww; 
 			g_ptab[i][k] = newPW;
-			//logf(LOG_DEBUG,"build: wc=%li pc=%li ww=%.2f "
+			//logf(LOG_DEBUG,"build: wc=%"INT32" pc=%"INT32" ww=%.2f "
 			//"pw=%.2f",i,k,g_wtab[i][k],g_ptab[i][k]);
 		}
 		}
 	}			
 
-	long phrcount1 = 0;
-	long phrcount2 = 0;
-	long wrdcount1 = 0;
-	long wrdcount2 = 0;
+	int32_t phrcount1 = 0;
+	int32_t phrcount2 = 0;
+	int32_t wrdcount1 = 0;
+	int32_t wrdcount2 = 0;
 	if ( tt1->m_numSlotsUsed > 0 ) {
 		if (pid1) phrcount1 = tt1->getScore(&pid1);
 		if (pid2) phrcount2 = tt1->getScore(&pid2);
@@ -1045,8 +1045,8 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 	// if we are always ending the same phrase, like "Mexico"
 	// in "New Mexico"... get the most popular phrase this word is
 	// in...
-	long phrcountMax = phrcount1;
-	long wrdcountMin = wrdcount1;
+	int32_t phrcountMax = phrcount1;
+	int32_t wrdcountMin = wrdcount1;
 	// these must actually exist to be part of the selection
 	if ( pid2 && phrcount2 > phrcountMax ) phrcountMax = phrcount2;
 	if ( wid2 && wrdcount2 < wrdcountMin ) wrdcountMin = wrdcount2;
@@ -1072,12 +1072,12 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 	// scale wrdcount1/phrcountMax down for the g_wtab table
 	if ( wrdcount1 > 29 ) {
 		float ratio = (float)phrcountMax / (float)wrdcount1;
-		phrcountMax = (long)((29.0 * ratio) + 0.5);
+		phrcountMax = (int32_t)((29.0 * ratio) + 0.5);
 		wrdcount1   = 29;
 	}
 	if ( phrcountMax > 29 ) {
 		float ratio = (float)wrdcount1 / (float)phrcountMax;
-		wrdcount1   = (long)((29.0 * ratio) + 0.5);
+		wrdcount1   = (int32_t)((29.0 * ratio) + 0.5);
 		phrcountMax = 29;
 	}
 	
@@ -1100,8 +1100,8 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 	if ( phrcountMax >= 0 ) {
 		int64_t sh = getPrefixHash ( (char *)NULL , 0 , NULL , 0 );
 		int64_t tid = g_indexdb.getTermId ( sh , wid1 );
-		logf(LOG_DEBUG,"build: phrcountMax=%li wrdCount1=%li "
-		     "*ww=%.4f for word with tid=%llu",
+		logf(LOG_DEBUG,"build: phrcountMax=%"INT32" wrdCount1=%"INT32" "
+		     "*ww=%.4f for word with tid=%"UINT64"",
 		     phrcountMax,wrdcount1,(float)*ww,tid);
 		//if ( phrcountMax < 10 && tid == 16944700235015LL ) 
 		//	log("hey");
@@ -1114,12 +1114,12 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 	// scale wrdcountMin/phrcount down for the g_ptab table
 	if ( wrdcountMin > 29 ) {
 		float ratio = (float)phrcount2 / (float)wrdcountMin;
-		phrcount2   = (long)((29.0 * ratio) + 0.5);
+		phrcount2   = (int32_t)((29.0 * ratio) + 0.5);
 		wrdcountMin = 29;
 	}
 	if ( phrcount2 > 29 ) {
 		float ratio = (float)wrdcountMin / (float)phrcount2;
-		wrdcountMin = (long)((29.0 * ratio) + 0.5);
+		wrdcountMin = (int32_t)((29.0 * ratio) + 0.5);
 		phrcount2   = 29;
 	}
 	// . if the word is Mexico in 'New Mexico good times' then 
@@ -1166,12 +1166,12 @@ bool Weights::set1 ( Words    *words              ,
 	nodeid_t   *tids  = words->getTagIds  ();
 	int64_t  *wids  = words->getWordIds ();		
 	char      **wptrs = words->m_words;
-	long       *wlens = words->m_wordLens;
+	int32_t       *wlens = words->m_wordLens;
 	int64_t  *pids  = phrases->getPhraseIds();
-	long tid = 0;
+	int32_t tid = 0;
 
 	// these punct weights are used for RULE #4
-        for ( long i = 0 ; i < m_nw ; i++ ) {
+        for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// skip alnum words
 		if ( wids[i] ) continue;
 		// skip tags
@@ -1184,7 +1184,7 @@ bool Weights::set1 ( Words    *words              ,
 
 	//HashTableT<uint64_t,char> titleRepeatTable;
 	HashTableX titleRepeatTable;
-	long bufSize = 1024 * 20; // 10 bytes per record 
+	int32_t bufSize = 1024 * 20; // 10 bytes per record 
 	char buf[bufSize]; 
 	// false = allowDupKeys
 	titleRepeatTable.set(8,0,2048,buf,bufSize,false,m_niceness,"titlerpt");
@@ -1204,31 +1204,31 @@ bool Weights::set1 ( Words    *words              ,
 	char inPre     = 0;
 	char afterNum  = 0;
 	char afterQuote= 0;
-	long hcount    = 0;
-	long tcount    = 0;
-	long bcount    = 0;
-	long pcount    = 0;
-	long brcount   = 0;
-	long qcount    = 0;
+	int32_t hcount    = 0;
+	int32_t tcount    = 0;
+	int32_t bcount    = 0;
+	int32_t pcount    = 0;
+	int32_t brcount   = 0;
+	int32_t qcount    = 0;
 	// start with fragNum 1 since TermTable::addScore() does not like
 	// scores of 0
-	long fragNum   = 1;
-	long fragPos   = 0;
+	int32_t fragNum   = 1;
+	int32_t fragPos   = 0;
 
 	if ( isPreformattedText ) inPre = 1;
 
 	// section vars
-	long sectionStart     = 0;
-	long sectionWordCount = 0;
-	long sectionWeightSum = 0;
+	int32_t sectionStart     = 0;
+	int32_t sectionWordCount = 0;
+	int32_t sectionWeightSum = 0;
 	// start with section 1 since TermTable::addScore() does not like
 	// scores of 0
-	long section          = 1;
+	int32_t section          = 1;
 
 	// comma vars
-	long commaWordCount     = 0;
-	long lastCommaWordCount = 0;
-	long lastCommai         = 0;
+	int32_t commaWordCount     = 0;
+	int32_t lastCommaWordCount = 0;
+	int32_t lastCommai         = 0;
 
 	char charLen = 1;
 
@@ -1252,14 +1252,14 @@ bool Weights::set1 ( Words    *words              ,
 	HashTableX  tt4;
 
 	// allow for 33% of the slots to be empty to avoid excessive chaining
-	if ( ! tt2.set ( 8,4,(long int)(m_nw * 4),NULL,0,false,m_niceness,
+	if ( ! tt2.set ( 8,4,(int32_t)(m_nw * 4),NULL,0,false,m_niceness,
 			 "weight2") ) 
 		return false;
-	if ( ! tt3.set ( 8,4,(long int)(m_nw * 4),NULL,0,false,m_niceness,
+	if ( ! tt3.set ( 8,4,(int32_t)(m_nw * 4),NULL,0,false,m_niceness,
 			 "weight3") ) 
 		return false;
 	// this is for all words and phrases
-	if ( ! tt4.set ( 8,4,(long int)(m_nw * 4),NULL,0,false,m_niceness,
+	if ( ! tt4.set ( 8,4,(int32_t)(m_nw * 4),NULL,0,false,m_niceness,
 			 "weight4") ) 
 		return false;
 
@@ -1286,9 +1286,9 @@ bool Weights::set1 ( Words    *words              ,
 	tagPtrs[ 52] = &inItalic;
 	tagPtrs[ 10] = &inBold;
 	tagPtrs[ 89] = &inBold; // strong
-	long i = -1;
-	long tiw = m_titleWeight;
-	long hdw = m_headerWeight;
+	int32_t i = -1;
+	int32_t tiw = m_titleWeight;
+	int32_t hdw = m_headerWeight;
 	// sanity check, we cannot support this as we are now since we 
 	// subtract 42 from the tagId before setting tagPtrs[x] to it 
 	// (see below)
@@ -1371,10 +1371,10 @@ bool Weights::set1 ( Words    *words              ,
 		// . adjust word/phrase scores of this section that just ended
 		// . do not count words in links for "sectionWordCount"
 		// . these are based on default weights of 128
-		// . it is not necessarily bad for the word to be in a short
+		// . it is not necessarily bad for the word to be in a int16_t
 		//   fragment, like when searching for 'denver weather', for
-		//   example, you want to find those words in short header 
-		//   fragments. so do not demote weight for short frags so much
+		//   example, you want to find those words in int16_t header 
+		//   fragments. so do not demote weight for int16_t frags so much
 		float sw;
 		if      ( sectionWordCount <   10 ) sw = 0.8;
 		else if ( sectionWordCount <   30 ) sw = 1.1;
@@ -1385,7 +1385,7 @@ bool Weights::set1 ( Words    *words              ,
 		else                                sw = 1.6;
 		// TODO: get the average word score of the lowest scoring
 		// half of all words in this section
-		for ( long j = sectionStart ; j < i ; j++ ) {
+		for ( int32_t j = sectionStart ; j < i ; j++ ) {
 			// skip if not a word
 			if ( ! wids[j] ) continue;
 			// hash the word and phrase ids with the section num
@@ -1397,12 +1397,12 @@ bool Weights::set1 ( Words    *words              ,
 			//   This allows for headers in separate sections.
 			// . get the special hash
 			if ( tt2.getScore(&hw) > 1 || sw >= DW ) {
-				m_ww[j] = (long)(m_ww[j] * sw);
+				m_ww[j] = (int32_t)(m_ww[j] * sw);
 				// debug purposes
 				if ( m_rvw ) m_rvw [i*MAX_RULES+6]*=(float)sw;
 			}
 			if ( tt2.getScore(&hp) > 1 || sw >= DW ) {
-				m_pw[j] = (long)(m_pw[j] * sw);
+				m_pw[j] = (int32_t)(m_pw[j] * sw);
 				// debug purposes
 				if ( m_rvp ) m_rvp [i*MAX_RULES+6]*=(float)sw;
 			}
@@ -1431,7 +1431,7 @@ bool Weights::set1 ( Words    *words              ,
 	if ( inMarquee ) goto loop;
 
 	char *w    = wptrs[i];
-	long  wlen = wlens[i];
+	int32_t  wlen = wlens[i];
 
 	//
 	//  is the word a "punct word"? if so, wids[i] will be zero.
@@ -1446,7 +1446,7 @@ bool Weights::set1 ( Words    *words              ,
 		char *p ;
 		char *wend     = w + wlen;
 		char  hasComma = false;
-		long  nlcount  = 0;
+		int32_t  nlcount  = 0;
 		// . scan the chars in the word
 		// . this might not work super well for unicode... :(
 		for ( p = w ; p < wend ; p++ ) {
@@ -1494,7 +1494,7 @@ bool Weights::set1 ( Words    *words              ,
 		//         or when we hit a breaking tag
 		if ( commaWordCount - lastCommaWordCount > 5 ) goto loop;
 		// reduce the scores of all in between these two commas
-		long j = lastCommai - 2;
+		int32_t j = lastCommai - 2;
 		if ( j < 0 ) j = 0;
 		for ( ; j < i ; j++ ) {
 			// only demote scores of alnum words
@@ -1502,9 +1502,9 @@ bool Weights::set1 ( Words    *words              ,
 			// do not hit it too hard since we also demote words
 			// and phrase weights that are next to punctuation
 			// words in the set2() function above
-			m_ww[j] = (long)(m_ww[j] * .75);
-			//m_pw[j]=(long)(m_ww[j] * .75);
-			m_pw[j] = (long)(m_pw[j] * .75);
+			m_ww[j] = (int32_t)(m_ww[j] * .75);
+			//m_pw[j]=(int32_t)(m_ww[j] * .75);
+			m_pw[j] = (int32_t)(m_pw[j] * .75);
 			// debug purposes
 			if ( m_rvw ) {
 				m_rvw [j*MAX_RULES+10] *= (float).75;
@@ -1566,7 +1566,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . actually if each bullet point in the list is beefy it is pretty
 	//   good, so be careful...
 	if ( inList ) {
-		m_ww[i] = (long)(m_ww[i] * 0.75);
+		m_ww[i] = (int32_t)(m_ww[i] * 0.75);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+8] *= 0.75;
 	}
@@ -1574,7 +1574,7 @@ bool Weights::set1 ( Words    *words              ,
 	
 
 	// in quotes is usually not that good, unless it is
-	// a long quotation!!! TODO
+	// a int32_t quotation!!! TODO
 	//if ( inQuotes && qcount++ < 40 ) m_ww[i] /= 2;
 	
 	
@@ -1590,9 +1590,9 @@ bool Weights::set1 ( Words    *words              ,
                 // <h2> tag
                 else if ( inHeader == 2 ) m_ww[i] *= 2;
                 // <h3> tag
-                else if ( inHeader == 3 ) m_ww[i] = (long)(m_ww[i] * 1.5);
+                else if ( inHeader == 3 ) m_ww[i] = (int32_t)(m_ww[i] * 1.5);
                 // others
-                else                      m_ww[i] = (long)(m_ww[i] * 1.2);
+                else                      m_ww[i] = (int32_t)(m_ww[i] * 1.2);
         }
 	*/
 
@@ -1629,7 +1629,7 @@ bool Weights::set1 ( Words    *words              ,
 		}
 		// . degrade it by .8 each time
 		// . but only start degrading the 6th term in title
-		if ( ++hcount >= 30 ) hdw = (long)((float)hdw * .90);
+		if ( ++hcount >= 30 ) hdw = (int32_t)((float)hdw * .90);
 	}
 
 
@@ -1665,7 +1665,7 @@ bool Weights::set1 ( Words    *words              ,
 		}
 		// . degrade it by .8 each time
 		// . but only start degrading the 4th term in title
-		if ( ++tcount >= 3 ) tiw = (long)((float)tiw * .80);
+		if ( ++tcount >= 3 ) tiw = (int32_t)((float)tiw * .80);
 		// do not weight for italics or bold now either
 		goto skipBoldWeight;
 
@@ -1698,12 +1698,12 @@ bool Weights::set1 ( Words    *words              ,
 	// . RULE #7
 	// . use same count, bcount, for both these
 	if      ( inBold   && bcount++ < 20 ) {
-		m_ww[i] = (long)(m_ww[i] * 1.5);
+		m_ww[i] = (int32_t)(m_ww[i] * 1.5);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+7] *= 1.5;
 	}
 	else if ( inItalic && bcount++ < 20 ) {
-		m_ww[i] = (long)(m_ww[i] * 1.5);
+		m_ww[i] = (int32_t)(m_ww[i] * 1.5);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+7] *= 1.5;
 	}
@@ -1716,7 +1716,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . if we are following a number, demote us
 	// . TODO: make this a numbered list detector!! more accurate.
 	if ( afterNum && ! is_digit(wptrs[i][0]) ) {
-		m_ww[i] = (long)(m_ww[i] * 0.5);
+		m_ww[i] = (int32_t)(m_ww[i] * 0.5);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+24] *= 0.5;
 	}
@@ -1725,7 +1725,7 @@ bool Weights::set1 ( Words    *words              ,
 	else                         afterNum = false;
 	// if a number follow us, demote us, too
 	if ( i+2<m_nw && is_digit(wptrs[i+2][0]) ) {
-		m_ww[i] = (long)(m_ww[i] * 0.5);
+		m_ww[i] = (int32_t)(m_ww[i] * 0.5);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+24] *= 0.5;
 	}
@@ -1734,12 +1734,12 @@ bool Weights::set1 ( Words    *words              ,
 	// . RULE #13
 	// . is previous occurence in a different section?
 	// . this is -1 if no previous occurence
-	long lastSection = tt3.getScore ( &wids[i] );
+	int32_t lastSection = tt3.getScore ( &wids[i] );
 	// . if this is the first occurence ever, boost it
 	// . if the last occurence was not this section, boost it
 	// . this rewards uniformly distributed words.
 	if ( lastSection != section ) {
-		m_ww[i] = (long)(m_ww[i]*1.3);
+		m_ww[i] = (int32_t)(m_ww[i]*1.3);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+13] *= 1.3;
 		// subtract lastSection from the score since TermTable will 
@@ -1751,22 +1751,22 @@ bool Weights::set1 ( Words    *words              ,
 	// . RULE #16
 	// . if at beginning of sentence/fragment, boost
 	if ( fragPos < 50 ) {
-		m_ww[i] = (long)(m_ww[i] * ((200.0 - (float)fragPos)/150.0));
+		m_ww[i] = (int32_t)(m_ww[i] * ((200.0 - (float)fragPos)/150.0));
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+16] *= 
 				     ((200.0 - (float)fragPos)/150.0);
 	}
-	//if      ( fragPos <= 4  ) m_ww[i] = (long)(m_ww[i] * 1.30);
-	//else if ( fragPos <= 7  ) m_ww[i] = (long)(m_ww[i] * 1.20);
-	//else if ( fragPos <= 13 ) m_ww[i] = (long)(m_ww[i] * 1.10);
+	//if      ( fragPos <= 4  ) m_ww[i] = (int32_t)(m_ww[i] * 1.30);
+	//else if ( fragPos <= 7  ) m_ww[i] = (int32_t)(m_ww[i] * 1.20);
+	//else if ( fragPos <= 13 ) m_ww[i] = (int32_t)(m_ww[i] * 1.10);
 
 
 	// . RULE #4
 	// . if word adjacent to "bad" punct, demote it
 	//if ( i  >0  && !wids[i-1] && !tids[i-1] && !bits->canPairAcross(i-1))
-	//	m_ww[i] = (long)(m_ww[i] * .75);
+	//	m_ww[i] = (int32_t)(m_ww[i] * .75);
 	//if ( i+1<nw && !wids[i+1] && !tids[i+1] && !bits->canPairAcross(i+1))
-	//	m_ww[i] = (long)(m_ww[i] * .75);
+	//	m_ww[i] = (int32_t)(m_ww[i] * .75);
 	
 	//
 	// phrase weight inherits word weight at this point
@@ -1784,7 +1784,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . int64_t h = hash64 ( wids[i] , fragNum );
 	int64_t h = wids[i] * (int64_t)fragNum;
 	if ( tt4.getScore(&h)) {
-		m_ww[i] = (long)(m_ww[i]*.25);
+		m_ww[i] = (int32_t)(m_ww[i]*.25);
 		// debug purposes
 		if ( m_rvw ) m_rvw[i*MAX_RULES+9] *= .25;
 	}
@@ -1792,7 +1792,7 @@ bool Weights::set1 ( Words    *words              ,
 	if ( pids[i] ) {
 		h = pids[i] * (int64_t)fragNum;
 		if ( tt4.getScore(&h)) {
-			m_pw[i] = (long)(m_pw[i]*.25);
+			m_pw[i] = (int32_t)(m_pw[i]*.25);
 			if ( m_rvw ) m_rvp[i*MAX_RULES+9] *= .25;
 		}
 		if ( ! tt4.addTerm ( &h ) ) return false;
@@ -1858,9 +1858,9 @@ bool Weights::set1 ( Words    *words              ,
 	// . if word has hyphen to right, do not demote.
 	// . if phrase contains junk like commas, it will be demoted
 	//   via RULE #4 
-	long nwp = phrases->getNumWordsInPhrase(i);
+	int32_t nwp = phrases->getNumWordsInPhrase(i);
 	if ( iscap && pids[i] && nwp>0 && bits->isCap(i + nwp - 1) ) {
-		m_pw[i] = (long)(m_pw[i] * 2.0);
+		m_pw[i] = (int32_t)(m_pw[i] * 2.0);
 		if ( m_rvw ) m_rvp[i*MAX_RULES+18] *= 2.0;
 		promoted = true;
 	}
@@ -1869,13 +1869,13 @@ bool Weights::set1 ( Words    *words              ,
 	//   not contain a hyphen after the first word, demote it
 	else if ( ! afterQuote && ! rightHyphen ) {
 		// only demote if phrase occured only once or twice
-		long count = m_countTablePtr->getScore ( &pids[i] );
+		int32_t count = m_countTablePtr->getScore ( &pids[i] );
 		if      ( count <= 1 ) {
-			m_pw[i] = (long)(m_pw[i] * 0.1);
+			m_pw[i] = (int32_t)(m_pw[i] * 0.1);
 			if ( m_rvw ) m_rvp[i*MAX_RULES+18] *= 0.1;
 		}
 		else if ( count == 2 ) {
-			m_pw[i] = (long)(m_pw[i] * 0.4);
+			m_pw[i] = (int32_t)(m_pw[i] * 0.4);
 			if ( m_rvw ) m_rvp[i*MAX_RULES+18] *= 0.4;
 		}
 	}
@@ -1885,7 +1885,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . if this phrase is immediately preceeded by double quote then
 	//   promote it. but only if not promoted from rule #18 above.
 	if ( afterQuote && ! promoted ) {
-		m_pw[i] = (long)(m_pw[i] * 2.0);
+		m_pw[i] = (int32_t)(m_pw[i] * 2.0);
 		if ( m_rvw ) m_rvp[i*MAX_RULES+17] *= 2.0;
 	}
 
@@ -1899,7 +1899,7 @@ bool Weights::set1 ( Words    *words              ,
 	// demote the phrase "free email". it splits a STRONG_CONNECTOR.
 	// '22-year-old man' should demote "old man".
 	if ( leftHyphen && ! rightHyphen ) {
-		m_pw[i] = (long)(m_pw[i] * 0.25);
+		m_pw[i] = (int32_t)(m_pw[i] * 0.25);
 		if ( m_rvw ) m_rvp[i*MAX_RULES+25] *= 0.25;
 	}
 
@@ -1940,7 +1940,7 @@ bool Weights::set1 ( Words    *words              ,
 //   scores lowered all the way to 0, and sometimes even boosted
 // . normal modifier is 128, to keep things fast and float-free
 /*
-long Weights::getPunctPhraseWeight ( long i , char *s , long len ) {
+int32_t Weights::getPunctPhraseWeight ( int32_t i , char *s , int32_t len ) {
 
 	if ( len != 2 ) goto tryLen1;
 
@@ -1951,7 +1951,7 @@ long Weights::getPunctPhraseWeight ( long i , char *s , long len ) {
 	if ( s[0]=='/' && s[1]=='~') return DW/8;
 
 	// double spaces, are ok, but not as good as a single space
-	if ( is_space(s[0]) && is_space(s[1]) ) return DW;//(long)(DW*1.8);
+	if ( is_space(s[0]) && is_space(s[1]) ) return DW;//(int32_t)(DW*1.8);
 
 	if ( s[0]=='.' && is_space(s[1]) && i+1 < m_nw && m_wids[i+1] ) {
 		if ( i == 0 ) return 0;
@@ -2017,21 +2017,21 @@ long Weights::getPunctPhraseWeight ( long i , char *s , long len ) {
 	case '<' : return 0;
 	case '>' : return 0;
 	case '.' : return DW;
-	case ',' : return (long)(DW*0.25);
-	case '_' : return (long)(DW*0.25);
-	case '@' : return (long)(DW*0.25);
-	case '&' : return (long)(DW*0.80);
-	case '\t': return (long)(DW*0.80);
+	case ',' : return (int32_t)(DW*0.25);
+	case '_' : return (int32_t)(DW*0.25);
+	case '@' : return (int32_t)(DW*0.25);
+	case '&' : return (int32_t)(DW*0.80);
+	case '\t': return (int32_t)(DW*0.80);
 	case '\n': return DW;
 	case '\r': return DW;
 	case ' ' : return DW;
-	case '\'': return (long)(DW*1.5); // tom's
-	case '-' : return (long)(DW*2.00);
+	case '\'': return (int32_t)(DW*1.5); // tom's
+	case '-' : return (int32_t)(DW*2.00);
 	case 171 : return 0;
 	case 187 : return 0;
 	case 191 : return 0;
 	case 161 : return 0;
-	default  : return (long)(DW*0.25);
+	default  : return (int32_t)(DW*0.25);
 	}
 
  tryLen3:
@@ -2040,7 +2040,7 @@ long Weights::getPunctPhraseWeight ( long i , char *s , long len ) {
 	// space in html and Microsoft Front Page separates lines by a 
 	// bunch of spaces
 	if ( is_space(s[0]) && is_space(s[1]) && is_space(s[2]) ) {
-		long k = 3;
+		int32_t k = 3;
 		while ( k < len ) if ( ! is_space(s[k++]) ) return 0;
 		return DW;
 	}
@@ -2049,7 +2049,7 @@ long Weights::getPunctPhraseWeight ( long i , char *s , long len ) {
 	if (len != 3) return 0;
 
 	// "://" is indicative of a url
-	if (s[0]==':' && s[1]=='/'&&s[2]=='/') return (long)(DW*.025);
+	if (s[0]==':' && s[1]=='/'&&s[2]=='/') return (int32_t)(DW*.025);
 
 	// we can pair across:
 	// "://"
@@ -2072,9 +2072,9 @@ struct PunctWeight {
 	float  m_wordWeightFloat;
 	float  m_phraseWeightFloat;
 	char  *m_str;
-	long   m_hash;
-	long   m_wordWeight;
-	long   m_phraseWeight;
+	int32_t   m_hash;
+	int32_t   m_wordWeight;
+	int32_t   m_phraseWeight;
 };
 
 // . each PunctWeight contains both a word and phrase weight
@@ -2162,20 +2162,20 @@ static PunctWeight s_punctWeights[] = {
 bool initPunctWeights ( ) {
 
 	PunctWeight *pws = s_punctWeights;
-	long         npw = sizeof(s_punctWeights) / sizeof(PunctWeight);
+	int32_t         npw = sizeof(s_punctWeights) / sizeof(PunctWeight);
 
 	if ( ! s_punctTable.set ( 1024 , NULL , 0 ) ) return false;
 
-	for ( long i = 0 ; i < npw ; i++ ) {
+	for ( int32_t i = 0 ; i < npw ; i++ ) {
 		PunctWeight *PW = &pws[i];
 		// set hash
-		//long len = gbstrlen ( PW->m_str       );
-		long h   = hash32n ( PW->m_str );//, len );
+		//int32_t len = gbstrlen ( PW->m_str       );
+		int32_t h   = hash32n ( PW->m_str );//, len );
 		// store the hash
 		PW->m_hash = h;
-		// set long weights from float weights
-		long xww = (long)(PW->m_wordWeightFloat   * DW);
-		long xpw = (long)(PW->m_phraseWeightFloat * DW);
+		// set int32_t weights from float weights
+		int32_t xww = (int32_t)(PW->m_wordWeightFloat   * DW);
+		int32_t xpw = (int32_t)(PW->m_phraseWeightFloat * DW);
 		// ensure minimums, do not go all the way to 0 because we
 		// want to still index a phrase or word with minimal score
 		// just in case someone searches for it. it will come up, but
@@ -2186,7 +2186,7 @@ bool initPunctWeights ( ) {
 		PW->m_wordWeight   = xww;
 		PW->m_phraseWeight = xpw;
 		// add this PunctWeight class to the hash table
-		if ( ! s_punctTable.addKey ( h , (long)PW ) ) return false;
+		if ( ! s_punctTable.addKey ( h , (int32_t)PW ) ) return false;
 	}
 	return true;
 }
@@ -2194,11 +2194,11 @@ bool initPunctWeights ( ) {
 // . set m_ww[k] and m_pw[k] for a punctuation word which is a sequence of 
 //   non-alnum chars (as defined in Words.cpp)
 // . caller can divide the returned weight by DW to make it a proper percentage
-void Weights::setPunctWeights ( long k , char *s , long len ) {
+void Weights::setPunctWeights ( int32_t k , char *s , int32_t len ) {
 	// convert the punct word into a normalized hash for look-up
 	unsigned char c;
-	long          j = 0;
-	unsigned long h = 0;
+	int32_t          j = 0;
+	uint32_t h = 0;
 	char          lastSpace = false;
 
 	uint8_t *p    = (uint8_t *)s;
@@ -2226,7 +2226,7 @@ void Weights::setPunctWeights ( long k , char *s , long len ) {
 		// . incorporate it into hash
 		// . taken from hash32() in hash.cpp so it matches with the
 		//   hash32() function in initPunctWeights() above
-		h ^= (unsigned long) g_hashtab
+		h ^= (uint32_t) g_hashtab
 			[(unsigned char)j]
 			[(unsigned char)c] ;
 		// advance j for next char
@@ -2235,7 +2235,7 @@ void Weights::setPunctWeights ( long k , char *s , long len ) {
 
 	// tag follows? if so, append a space to hash if does not end in one
 	if ( k+1<m_nw && s[len] == '<' && ! lastSpace )
-		h ^= (unsigned long) g_hashtab
+		h ^= (uint32_t) g_hashtab
 			[(unsigned char)j++]
 			[(unsigned char)' '] ;
 
@@ -2255,7 +2255,7 @@ void Weights::setPunctWeights ( long k , char *s , long len ) {
 		// debug, see if we are missing anything special
 		/*
 		char dbuf[256];
-		long dlen = len;
+		int32_t dlen = len;
 		if ( dlen > 100 ) dlen = 100;
 		memcpy ( dbuf , s , dlen );
 		dbuf[dlen]=0;
@@ -2281,7 +2281,7 @@ void Weights::setPunctWeights ( long k , char *s , long len ) {
 }
 
 /*
-float Weights::getPunctWordWeight ( char *s , long len ) {
+float Weights::getPunctWordWeight ( char *s , int32_t len ) {
 
 
 	// must be a tag right after, or possible EOF
@@ -2379,8 +2379,8 @@ float Weights::getPunctWordWeight ( char *s , long len ) {
 	// space in html and Microsoft Front Page separates lines by a 
 	// bunch of spaces
 	if ( is_space(s[0]) && is_space(s[1]) && is_space(s[2]) ) {
-		long k = 3;
-		// a long string of more than spaces sucks...
+		int32_t k = 3;
+		// a int32_t string of more than spaces sucks...
 		while ( k < len ) if ( ! is_space(s[k++] ) ) return 0.3;
 		// it was all spaces, do not hurt it
 		return 1.0;
@@ -2442,18 +2442,18 @@ bool Weights::set4 ( ) {
 	if ( m_isLinkText   ) return true;
 	if ( m_isCountTable ) return true;
 
-	// shortcuts
+	// int16_tcuts
 	Words *words = m_words;
 	Bits  *bits  = m_bits;
 
 	// if 20 words totally spammed, call it all spam?
 	m_numRepeatSpam = 20;
 
-	// shortcut
-	long sni = m_siteNumInlinks;
+	// int16_tcut
+	int32_t sni = m_siteNumInlinks;
 
 	// set "m_maxPercent"
-	long maxPercent = 6;
+	int32_t maxPercent = 6;
 	if ( sni > 10  ) maxPercent = 8;
         if ( sni > 30  ) maxPercent = 10;
         if ( sni > 100 ) maxPercent = 20;
@@ -2462,21 +2462,21 @@ bool Weights::set4 ( ) {
 	// assume not totally spammed
 	m_totallySpammed = false;
 	// get # of words we have to set spam for
-	long numWords = words->getNumWords();
+	int32_t numWords = words->getNumWords();
 
 	// set up the size of the hash table (number of buckets)
-	long  size = numWords * 3;
+	int32_t  size = numWords * 3;
 
 	// . add a tmp buf as a scratch pad -- will be freed right after
 	// . allocate this second to avoid mem fragmentation more
 	// . * 2 for double the buckets
 	char  tmpBuf [ WTMPBUFSIZE ];
 	char *tmp     = tmpBuf;
-	long  need    = (numWords * 21) * 3 + numWords;
+	int32_t  need    = (numWords * 21) * 3 + numWords;
 	if ( need > WTMPBUFSIZE ) {
 		tmp = (char *) mmalloc ( need , "Spam" );
 		if ( ! tmp ) 
-			return log("build: Failed to allocate %li more "
+			return log("build: Failed to allocate %"INT32" more "
 				   "bytes for spam detection:  %s.",
 				   need,mstrerror(g_errno));
 	}
@@ -2488,13 +2488,13 @@ bool Weights::set4 ( ) {
 	unsigned char *spam      = (unsigned char *)p; p += numWords ;
 	// . this allows us to make linked lists of indices of words
 	// . i.e. next[13] = 23--> word #23 FOLLOWS word #13 in the linked list
-	long      *next          = (long      *)p;  p += size * 4;  
+	int32_t      *next          = (int32_t      *)p;  p += size * 4;  
 	// hash of this word's stem (or word itself if useStem if false)
 	int64_t *bucketHash    = (int64_t *)p;  p += size * 8;
 	// that word's position in document
-	long      *bucketWordPos = (long      *)p;  p += size * 4;
+	int32_t      *bucketWordPos = (int32_t      *)p;  p += size * 4;
 	// profile of a word
-	long      *profile       = (long      *)p;  p += size * 4;
+	int32_t      *profile       = (int32_t      *)p;  p += size * 4;
 	// is it a common word?
 	char      *commonWords   = (char      *)p;  p += size * 1;
 
@@ -2504,9 +2504,9 @@ bool Weights::set4 ( ) {
 	// clear all our spam percentages for these words
 	memset ( spam , 0 , numWords );
 
-	long np;
+	int32_t np;
         // clear the hash table
-        long i;
+        int32_t i;
         for ( i = 0 ; i < size ; i++ ) {
                 bucketHash   [i] =  0;
                 bucketWordPos[i] = -1;
@@ -2515,7 +2515,7 @@ bool Weights::set4 ( ) {
 
 	// count position since Words class can now have tags in it
 	//
-	//long pos = 0;
+	//int32_t pos = 0;
 	//bool usePos = false;
 	//if ( words->m_tagIds ) usePos = true;
 
@@ -2533,7 +2533,7 @@ bool Weights::set4 ( ) {
 		//if ( wscores && wscores[i] <= 0 ) continue;
 		QUICKPOLL(m_niceness);
 		// TODO: get phrase stem if stemming is on
-		// store the phrase stem this word longo the buffer
+		// store the phrase stem this word int32_to the buffer
 		//		blen = words->getPhraseStem(i,buf,100);
 		//		if (blen<=0) continue;
 		// get the hash of the ith word
@@ -2542,7 +2542,7 @@ bool Weights::set4 ( ) {
 		//if ( words->getStripWordId(i) ) 
 		//	h = words->getStripWordId(i);
 		// "j" is the bucket index
-		long j = (uint64_t)h % size;
+		int32_t j = (uint64_t)h % size;
 		// make sure j points to the right bucket
 		while (bucketHash[j]) {
 			if ( h == bucketHash[j] ) break;
@@ -2583,8 +2583,8 @@ bool Weights::set4 ( ) {
 		if ( words->isNum ( i )  ) commonWords[j] = 1;
 	}
 	// count distinct candidates that had spam and did not have spam
-	long spamWords = 0;
-	long goodWords = 0;
+	int32_t spamWords = 0;
+	int32_t goodWords = 0;
 	// . now cruise down the hash table looking for filled buckets
 	// . grab the linked list of indices and make a "profile"
 	for ( i = 0 ; i < size ; i++ ) {
@@ -2592,7 +2592,7 @@ bool Weights::set4 ( ) {
 		if (bucketHash[i] == 0) continue; 
 		np=0;
 		// word #j is in bucket #i
-		long j = bucketWordPos[i];  
+		int32_t j = bucketWordPos[i];  
 		// . cruise down the linked list for this word
 		while ( j!=-1) {
 			// store position of occurence of this word in profile
@@ -2609,14 +2609,14 @@ bool Weights::set4 ( ) {
 		// look for a word repeated in phrases, in a big list,
 		// where each phrase is different
 		//
-		long max = 0;
-		long count = 0;
-		long knp = np;
+		int32_t max = 0;
+		int32_t count = 0;
+		int32_t knp = np;
 		// must be 3+ letters, not a stop word, not a number
 		if ( words->m_wordLens[profile[0]] <= 2 || commonWords[i] )
 			knp = 0;
 		// scan to see if they are a tight list
-		for ( long k = 1 ; k < knp ; k++ ) {
+		for ( int32_t k = 1 ; k < knp ; k++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// are they close together? if not, bail
@@ -2627,11 +2627,11 @@ bool Weights::set4 ( ) {
 			// otherwise inc it
 			count++;
 			// must have another word in between or tag
-			long a = profile[k];
-			long b = profile[k-1];
+			int32_t a = profile[k];
+			int32_t b = profile[k-1];
 			bool gotSep = false;
 			bool inLink = false;
-			for ( long j = a+1 ; j <b ; j++ ) {
+			for ( int32_t j = a+1 ; j <b ; j++ ) {
 				// if in link do not count, chinese spammer
 				// does not have his crap in links
 				if ( words->m_words[j][0] == '<' &&
@@ -2678,9 +2678,9 @@ bool Weights::set4 ( ) {
 		else          goodWords++;
 	}
 	// what percent of distinct cadidate words were spammed?
-	long totalWords = spamWords + goodWords;
+	int32_t totalWords = spamWords + goodWords;
 	// if no or ver few words return true
-	long percent;
+	int32_t percent;
 	if ( totalWords <= 10 ) goto done;
 	percent    = ( spamWords * 100 ) / totalWords;
 	// if 20% of words we're spammed punish everybody now to 100% spam
@@ -2722,11 +2722,11 @@ bool Weights::set4 ( ) {
 //   many subProfiles
 // . so after the first 25 words, it's automatically considered spam
 // . return true if one word was spammed w/ probability > 20%
-bool Weights::setSpam ( long *profile, long plen , long numWords ,
+bool Weights::setSpam ( int32_t *profile, int32_t plen , int32_t numWords ,
 			unsigned char *spam ) {
 	// don't bother detecting spam if 2 or less occurences of the word
 	if ( plen < 3 ) return false;
-	long i;
+	int32_t i;
 	// if we have more than 10 words and this word is 20% or more of 
 	// them then all but the first occurence is spammed
 	//log(LOG_INFO,"setSpam numRepeatSpam = %f", m_numRepeatSpam);
@@ -2762,13 +2762,13 @@ bool Weights::setSpam ( long *profile, long plen , long numWords ,
 	// higher quality docs allow more "freebies", but only starting with
 	// version 93... (see Titledb.h)
 	// profile[i] is actually in reverse order so we subtract off from wlen
-	//long off ;
+	//int32_t off ;
 	//if ( m_version >= 93 ) {
 	//	off = (m_docQuality - 30) / 3;
 	//	if ( off < 0 ) off = 0;
 	//}
 	// just use 40% "quality"
-	long off = 3;
+	int32_t off = 3;
 
 	// . now the nitty-gritty part
 	// . compute all sub sequences of the profile
@@ -2778,10 +2778,10 @@ bool Weights::setSpam ( long *profile, long plen , long numWords ,
 	// . if "step" is 1 we look at every       word position in the profile
 	// . if "step" is 2 we look at every other word position 
 	// . if "step" is 3 we look at every 3rd   word position, etc...
-	long maxStep = plen / 4; 
+	int32_t maxStep = plen / 4; 
 	if ( maxStep > 4 ) maxStep = 4; 
 	// . loop through all possible tuples
-	long window, wlen, step, prob;
+	int32_t window, wlen, step, prob;
 	 for ( step = 1 ; step <= maxStep ; step++ ) { 
 		for ( window = 0 ; window + 3 < plen ; window+=1) {
 			for (wlen = 3; window+wlen <= plen ; wlen+=1) {

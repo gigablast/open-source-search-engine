@@ -3,7 +3,7 @@
 
 // stjohnscollege.edu
 // - lost event because we changed the implied sections algo and no
-//   longer adds the address and store hours as a single implied section
+//   int32_ter adds the address and store hours as a single implied section
 // - probably should write this one off
 
 
@@ -147,7 +147,7 @@
 // - what about stoart.com, it would prevent the one list of tods from
 //   combining with the other list of dows. so we would lose most of our
 //   events for stoart.com
-// - this basically would short-circuit our combinatorics approach???
+// - this basically would int16_t-circuit our combinatorics approach???
 //   i.e. "comboTable" in Dates.cpp?
 // - i might go so far to say that any time you have different dates in 
 //   a section that you are compatible with, then things are ambiguous
@@ -169,7 +169,7 @@
 // - how did we get "Sunday [[]] 4pm - 6pm" ???
 // - brbrtagdelim (double br) should be enough to keep the right dow mapping
 //   to the right tod.
-// - bad titles because we think the strong tag portion is part of a longer
+// - bad titles because we think the strong tag portion is part of a int32_ter
 //   sentence. so do not make sentence go across the strong or bold tag
 //   or italic or underline tag UNLESS the next word is lower case, etc.
 //   so treat these non-breaking tags as we treat the other breaking tags.
@@ -460,7 +460,7 @@
 
 // http://www.meetup.com/Ballroom-Dance-in-Albuquerque/
 // - has a list of languages (language menu)
-// - has a trademark blurb "trademarks belong to their respective owners"
+// - has a trademark blurb "trademarks beint32_t to their respective owners"
 // - has a "Read more" link that goes to another page at end of event desc.
 // * LANGUAGE MENU
 
@@ -689,7 +689,7 @@
 // - "Asst." should be in Abbreviations.h list so that "Asst. Organizers:"
 //   will be just one section, and will have tiny title and desc. score since
 //   prceeds a colon.
-// - "Trademarks belong to their..." will have high SV_DUP count and therefore
+// - "Trademarks beint32_t to their..." will have high SV_DUP count and therefore
 //   minimal title and desc. score.
 // - language names in a list should have minimal title and desc score.
 //   but probably no need to detect since SV_DUP will be high eventually.
@@ -1032,7 +1032,7 @@ apply to renegade links as well?
 //              * CLOCK DETECTION
 //              * RESPIDER TESTBED
 
-// http://www.dukecityfix.com/events/shelter-space-place-belonging
+// http://www.dukecityfix.com/events/shelter-space-place-beint32_ting
 //              has "808 park ave sw albuquerque" but no state. so we
 //              should assume its abq NM since that is the only city with that
 //              name.
@@ -1085,7 +1085,7 @@ apply to renegade links as well?
 // - streets like "3 Espacios"
 // - streets like "4 Barack"
 //              we need partition detection here. seems like all events are
-//              unclear on which addresses belong to them!
+//              unclear on which addresses beint32_t to them!
 //  - misses "opens on Dec 20th and runs through Feb 7th". needs to
 //           support "runs" so we can make that date a single range.
 
@@ -1684,7 +1684,7 @@ Dates::~Dates() {
 
 void Dates::reset ( ) {
 	// free pool mem
-	for ( long i = 0 ; i < m_numPools ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numPools ; i++ ) {
 		mfree ( m_pools[i] , POOLSIZE , "datemempool" );
 		// to be safe
 		m_pools[i] = NULL;
@@ -1740,7 +1740,7 @@ void Dates::reset ( ) {
 }
 
 // returns NULL with g_errno set on error
-Date *Dates::getMem ( long need ) {
+Date *Dates::getMem ( int32_t need ) {
 	// sanity check. once we overflow, forget it! you should stop!
 	if ( m_overflowed ) { char *xx=NULL;*xx=0; }
 	// just use multiple pools
@@ -1774,12 +1774,12 @@ Date *Dates::getMem ( long need ) {
 }
 
 // returns NULL and sets g_errno on error
-Date *Dates::addDate ( datetype_t dt, dateflags_t df,long a, long b, long num){
+Date *Dates::addDate ( datetype_t dt, dateflags_t df,int32_t a, int32_t b, int32_t num){
 
 	// make sure we got an acceptable range of word #'s
 	if ( b <= a && b != 0 && a>=0 ) { char *xx=NULL;*xx=0; }
 	// assume up to 100 Date::m_ptrs[]
-	long need = sizeof(Date) + 100 * 4;
+	int32_t need = sizeof(Date) + 100 * 4;
 	// point to the new mem
 	Date *DD = getMem ( need );
 	// problem? g_errno should be set
@@ -1787,9 +1787,9 @@ Date *Dates::addDate ( datetype_t dt, dateflags_t df,long a, long b, long num){
 	// sanity check
 	if ( m_numDatePtrs>=m_maxDatePtrs || m_numTotalPtrs>=m_maxDatePtrs){
 		// inc by 8k each time
-		long newMax = m_maxDatePtrs + 8000;
+		int32_t newMax = m_maxDatePtrs + 8000;
 		// how much to realloc to? 8k chunks.
-		long need = newMax * 8;
+		int32_t need = newMax * 8;
 		// realloc more
 		char *pmem = (char *)mmalloc(need,"pmem");
 		// on error g_errno should be set (ENOMEM, etc.)
@@ -1805,7 +1805,7 @@ Date *Dates::addDate ( datetype_t dt, dateflags_t df,long a, long b, long num){
 		// skip over
 		p += newMax* 4;
 		// copy over from old arrays
-		for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// and copy
@@ -1814,7 +1814,7 @@ Date *Dates::addDate ( datetype_t dt, dateflags_t df,long a, long b, long num){
 			m_datePtrs[i] = NULL;
 		}
 		// same for other array
-		for ( long i = 0 ; i < m_numTotalPtrs ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numTotalPtrs ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// and copy
@@ -2019,7 +2019,7 @@ Date *Dates::addDate ( datetype_t dt, dateflags_t df,long a, long b, long num){
 
 	// get section
 	//Section *sp = m_sections->m_sectionPtrs[DD->m_a];
-	// shortcut
+	// int16_tcut
 	//DD->m_tagHash = sp->m_tagHash;
 
 	// indicate if we are a regular holiday like thanksgiving
@@ -2030,9 +2030,9 @@ Date *Dates::addDate ( datetype_t dt, dateflags_t df,long a, long b, long num){
 	return DD;
 }
 
-long Dates::getDateNum ( Date *di ) {
+int32_t Dates::getDateNum ( Date *di ) {
 	// what date # are we?
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		if ( m_datePtrs[i] == di ) return i;
@@ -2044,7 +2044,7 @@ long Dates::getDateNum ( Date *di ) {
 //#define MAX_TOD (24*3600-1)
 //static char s_numDaysInMonth[] = { 31,28,31, 30,31,30, 31,31,30, 31,30,31 };
 
-void Date::addPtr ( Date *ptr , long i , class Dates *parent ) {
+void Date::addPtr ( Date *ptr , int32_t i , class Dates *parent ) {
 
 	// sanity check - do not overflow
 	if ( m_numPtrs >= 100 ) { char *xx=NULL;*xx=0; }
@@ -2104,10 +2104,10 @@ void Date::addPtr ( Date *ptr , long i , class Dates *parent ) {
 	//if ( m_b - m_a > 50 ) { char *xx=NULL;*xx=0; }
 
 	// ptr hash
-	if ( m_numPtrs == 0 ) m_ptrHash = (unsigned long)ptr;
+	if ( m_numPtrs == 0 ) m_ptrHash = (uint32_t)ptr;
 	else {
 		m_ptrHash *= 439523;
-		m_ptrHash ^= (unsigned long)ptr;
+		m_ptrHash ^= (uint32_t)ptr;
 		if ( m_ptrHash == 0 ) m_ptrHash = 1234567;
 	}
 
@@ -2178,7 +2178,7 @@ void Date::addPtr ( Date *ptr , long i , class Dates *parent ) {
 	if ( m_a >= 0 ) { // m_type && ( m_flags & DF_FROM_BODY ) ) {
 		// get section
 		Section *ss = parent->m_sections->m_sectionPtrs[m_a];
-		// shortcut
+		// int16_tcut
 		m_tagHash = ss->m_tagHash;
 		// panic - no, parent section has no taghash
 		//if ( m_tagHash == 0 || m_tagHash ==-1) {char *xx=NULL;*xx=0;}
@@ -2364,7 +2364,7 @@ void Date::addPtr ( Date *ptr , long i , class Dates *parent ) {
 	ts1.tm_mday = m_dayNum;
 	ts1.tm_year = m_year - 1900;
 	// use noon as time of day (tod)
-	long tod = m_tod;
+	int32_t tod = m_tod;
 	if ( tod < 0 ) tod = 0;
 	ts1.tm_hour = (tod / 3600);
 	ts1.tm_min  = (tod % 3600) / 60;
@@ -2384,9 +2384,9 @@ bool Dates::setPart1 ( //char       *u        ,
 		       Url        *url      ,
 		       Url        *redirUrl ,
 		       uint8_t     ctype    , // contenttype,like gif,jpeg,html
-		       long        ip       , // ip of url "u"
+		       int32_t        ip       , // ip of url "u"
 		       int64_t   docId    ,
-		       long        siteHash ,
+		       int32_t        siteHash ,
 		       Xml        *xml      ,
 		       Words      *words    ,
 		       Bits       *bits     ,
@@ -2397,7 +2397,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		       XmlDoc     *nd       , // new XmlDoc (this)
 		       XmlDoc     *od       , // old XmlDoc
 		       char       *coll     ,
-		       long        niceness ) {
+		       int32_t        niceness ) {
 
 	//reset();
 	// if empty, set to NULL
@@ -2421,7 +2421,7 @@ bool Dates::setPart1 ( //char       *u        ,
 
 	// sanity. parseDates() should have set this when XmlDoc
 	// called it explicitly before calling setPart1(). 
-	// well now it no longer needs to call it explicitly since
+	// well now it no int32_ter needs to call it explicitly since
 	// xmldoc calls getAddresses() before setting the implied
 	// sections. and getAddresses() calls getSimpleDates() which calls
 	// this function, setPart1() which will call parseDates() below.
@@ -2443,11 +2443,12 @@ bool Dates::setPart1 ( //char       *u        ,
 	m_docId    = docId;
 	// for getting m_spideredTime
 	m_nd       = nd;
-	// shortcut
+	// int16_tcut
 	//Sections *ss = sections;
 
 	// parse up spidered time if we are an open-ended range from here on
-	m_spts = localtime ( &nd->m_spideredTime );
+	time_t ts = nd->m_spideredTime;
+	m_spts = localtime ( &ts );
 
 	// . the date specified in the rss/atom feed is the best
 	// . the <pubDate> tage from the rss
@@ -2468,7 +2469,7 @@ bool Dates::setPart1 ( //char       *u        ,
 			return false;
 		// . get the date tag
 		// . is it rss or atom?
-		long  dateLen;
+		int32_t  dateLen;
 		// false = skip leading spaces
 		char *date = itemXml.getString   ( "pubDate",&dateLen,false );
 		// atom?
@@ -2476,7 +2477,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		// if nothing, go to next
 		if ( ! date ) continue;
 		// rdf? look for dc:date
-		for ( long i = 0; i < itemXml.m_numNodes-1; i++ ) {
+		for ( int32_t i = 0; i < itemXml.m_numNodes-1; i++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			XmlNode *nn = &itemXml.m_nodes[i];
@@ -2518,14 +2519,14 @@ bool Dates::setPart1 ( //char       *u        ,
 	// . for search for meta date
 	// . sometimes "xml" is NULL if just parsing the url
 	if ( xml ) {
-		long metaDate = -1;
+		int32_t metaDate = -1;
 		char buf [ 32 ];
-		long bufLen ;
+		int32_t bufLen ;
 		// do they got this meta tag?
 		bufLen = xml->getMetaContent ( buf,32,"datenum",7);
 		// should be in seconds since the epoch
 		if ( bufLen > 0 ) metaDate = atoi ( buf );
-		// shortcut
+		// int16_tcut
 		dateflags_t df = DF_FROM_META;
 		// . add that now too
 		// . this returns false and sets g_errno on error
@@ -2534,7 +2535,7 @@ bool Dates::setPart1 ( //char       *u        ,
 			return false;
 	}
 
-	// shortcut
+	// int16_tcut
 	char *u = ""; 
 	if ( m_url ) u = m_url->getUrl();
 
@@ -2544,17 +2545,17 @@ bool Dates::setPart1 ( //char       *u        ,
 	m_urlYear  = 0;
 	m_urlMonth = 0;
 	m_urlDay   = 0;
-	long urlTimeStamp=parseDateFromUrl(u,&m_urlYear,&m_urlMonth,&m_urlDay);
+	int32_t urlTimeStamp=parseDateFromUrl(u,&m_urlYear,&m_urlMonth,&m_urlDay);
 	// add the url date if we had one
 	if ( urlTimeStamp && m_urlDay && m_urlMonth && m_urlYear ) {
-		// shortcut
+		// int16_tcut
 		dateflags_t df = DF_FROM_URL ; // | DF_NOTIMEOFDAY;
 		// use noon for time of day, which is 17:00 UTC
-		//long tod = (12 + 5) * 3600;
+		//int32_t tod = (12 + 5) * 3600;
 		// make 3 simple dates
-		long ni = m_numDatePtrs;
-		long nj = m_numDatePtrs+1;
-		long nk = m_numDatePtrs+2;
+		int32_t ni = m_numDatePtrs;
+		int32_t nj = m_numDatePtrs+1;
+		int32_t nk = m_numDatePtrs+2;
 		Date *di = addDate (DT_DAYNUM,df,-1,-1,m_urlDay);
 		if ( ! di ) return false;
 		Date *dj = addDate (DT_MONTH ,df,-1,-1,m_urlMonth);
@@ -2603,9 +2604,9 @@ bool Dates::setPart1 ( //char       *u        ,
 	if ( h_open == 0 ) { char *xx=NULL;*xx=0; }
 
 	//
-	// now since we no longer set Date::m_section and m_hardSection
+	// now since we no int32_ter set Date::m_section and m_hardSection
 	// in addDate() and addPtr() we have to make up for it here. we are
-	// no longer allowed to use the Sections class in Dates::parseDates()
+	// no int32_ter allowed to use the Sections class in Dates::parseDates()
 	// because Sections::set() calls parseDates() because it uses the dates
 	// to set implied sections that consist of a dom/dow header and tod
 	// subjects. i did hack Date::addPtr() to inherit the m_hardSection,
@@ -2616,16 +2617,16 @@ bool Dates::setPart1 ( //char       *u        ,
 	// sections. because the sections class does not have implied sections
 	// inserted at this point.
 	//
-	for ( long i = 0 ; i < m_numTotalPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTotalPtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		//Date *di = m_datePtrs[i];
 		Date *di = m_totalPtrs[i];
 		// skip if none
 		//if ( ! di ) continue;
 		// get this
-		long a = di->m_a;
+		int32_t a = di->m_a;
 		// skip if in url
 		if ( a < 0 ) continue;
 		// get section date is in, if any
@@ -2655,10 +2656,10 @@ bool Dates::setPart1 ( //char       *u        ,
 	// . the div style display none tags are SEC_HIDDEN now
 	sec_t badFlags =SEC_MARQUEE|SEC_STYLE|SEC_SCRIPT|SEC_SELECT|
 		SEC_HIDDEN|SEC_NOSCRIPT;
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -2680,7 +2681,7 @@ bool Dates::setPart1 ( //char       *u        ,
 	/*
 	// do not allow any dates to be headers if we are javascript because
 	// all dates are pretty much bogus and slow us down!
-	long ndp = m_numDatePtrs;
+	int32_t ndp = m_numDatePtrs;
 	// or if a javascript file -- do not do telescoping algo! tends to
 	// really slow things down!!
 	if ( m_contentType == CT_JS ) ndp = 0;
@@ -2691,11 +2692,11 @@ bool Dates::setPart1 ( //char       *u        ,
 	// set Date::m_sentenceId, m_sentStart, m_sentEnd
 	//
 	///////////////////////////////////
-	long sentenceId = 1;
-	long sentStart  = -1;
-	long k = 0;
+	int32_t sentenceId = 1;
+	int32_t sentStart  = -1;
+	int32_t k = 0;
 	// set the sentence id of each date
-	for ( long i = 0 ; i <= nw ; i++ ) {
+	for ( int32_t i = 0 ; i <= nw ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// take care of the tail
@@ -2718,7 +2719,7 @@ bool Dates::setPart1 ( //char       *u        ,
 			// uses it as a section breaker so we need that 
 			// otherwise we miss the event on Longview dr.
 			// no, header algo is much loser now so i think we
-			// get the longview dr. ok
+			// get the int32_tview dr. ok
 			//if ( tids[i] == TAG_BR ) continue;
 			// otherwise, break the sentence
 			goto skip;
@@ -2735,7 +2736,7 @@ bool Dates::setPart1 ( //char       *u        ,
 	skip:
 		// now assign sentence id of the past dates
 		for ( ; k < ndp ; k++ ) {
-			// shortcut
+			// int16_tcut
 			Date *dk = m_datePtrs[k];
 			// skip if none
 			if ( ! dk ) continue;
@@ -2765,12 +2766,12 @@ bool Dates::setPart1 ( //char       *u        ,
 	//
 	///////////////////////////////////
 
-	long ci = 0;
+	int32_t ci = 0;
 
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -2789,18 +2790,18 @@ bool Dates::setPart1 ( //char       *u        ,
 		// if ( m_contentType != CT_JS && ! addSentenceSections() )
 		if ( ! sd ) continue;
 		// get range of sentence
-		long a = sd->m_a;
-		long b = sd->m_b;
+		int32_t a = sd->m_a;
+		int32_t b = sd->m_b;
 		// make sure in doc body
 		if ( a < 0 ) continue;
 		// is the word "open" or "opens" in there?
-		long open = -1;
-		long closed = -1;
+		int32_t open = -1;
+		int32_t closed = -1;
 		// assume this
-		long dateStart = a;
-		long dateEnd   = b;
+		int32_t dateStart = a;
+		int32_t dateEnd   = b;
 		// scan setence for the word "closed" or "except"
-		long k; for ( k = a ; k < b ; k++ ) {
+		int32_t k; for ( k = a ; k < b ; k++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not wid
@@ -2828,7 +2829,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		//
 
 		// scan the sentence to see if we are in parentheses
-		for ( long x = a ; x < k ; x++ ) {
+		for ( int32_t x = a ; x < k ; x++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not punct
@@ -2841,7 +2842,7 @@ bool Dates::setPart1 ( //char       *u        ,
 			dateStart = x;
 		}
 		// stop prematurely at any ending parens
-		for ( long y = k + 1 ; y < b ; y++ ) {
+		for ( int32_t y = k + 1 ; y < b ; y++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not punct
@@ -2859,7 +2860,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		for ( ; ci < m_numDatePtrs ; ci++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// shortcut
+			// int16_tcut
 			Date *dc = m_datePtrs[ci];
 			// skip if none
 			if ( ! dc ) continue;
@@ -2887,10 +2888,10 @@ bool Dates::setPart1 ( //char       *u        ,
 
 	// the same algorithm but for table row/col headers! might
 	// have "closed" in the column header in the table
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -2964,13 +2965,13 @@ bool Dates::setPart1 ( //char       *u        ,
 	/////////////////////////////
 	// do not do this logic if we are javascript because we do not set
 	// SEC_SENTENCE if the file is javascript
-	long imax = m_numDatePtrs;
+	int32_t imax = m_numDatePtrs;
 	if ( m_contentType == CT_JS ) imax = 0;
 	//
 	// if it is a place to buy tickets or register for an event then
 	// let's set this flag so Events.cpp can ignore it!
-	for ( long i = 0 ; i < imax ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < imax ; i++ ) {
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -2994,7 +2995,7 @@ bool Dates::setPart1 ( //char       *u        ,
 
 		// if it has "since" or "by" before it, call it a ticket date
 		bool flag = 0;
-		for ( long b = di->m_a - 1; b >= 0 ; b-- ) {
+		for ( int32_t b = di->m_a - 1; b >= 0 ; b-- ) {
 			QUICKPOLL(m_niceness);
 			if ( ! m_wids[b] ) continue;
 			// in business since August
@@ -3009,9 +3010,9 @@ bool Dates::setPart1 ( //char       *u        ,
 		}
 
 		int64_t last = 0LL;
-		long wcount = 0;
+		int32_t wcount = 0;
 		// similarly, scan back but don't stop at first alnum word
-		for ( long b = di->m_a - 1; b >= 0 ; b-- ) {
+		for ( int32_t b = di->m_a - 1; b >= 0 ; b-- ) {
 			QUICKPOLL(m_niceness);
 			if ( ! m_wids[b] ) continue;
 			int64_t prev = last;
@@ -3041,7 +3042,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		// like to telescope to follows a sentence with "register"
 		// in it! so to fix triple door be more restrictive.
 		Section *ps = NULL;
-		for ( long b = ss->m_a - 1; b >= 0 ; b-- ) {
+		for ( int32_t b = ss->m_a - 1; b >= 0 ; b-- ) {
 			QUICKPOLL(m_niceness);
 			if ( ! m_wids[b] ) continue;
 			ps = m_sections->m_sectionPtrs[b];
@@ -3068,10 +3069,10 @@ bool Dates::setPart1 ( //char       *u        ,
 	// of closing or ticket sales respectively and not of events per se.
 	//
 	//////////////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -3116,10 +3117,10 @@ bool Dates::setPart1 ( //char       *u        ,
 	// now if the date is in a table and the table row/col header has
 	// some of the words above in it, then assume the date is
 	// a date for buying tickets, etc.
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -3169,10 +3170,10 @@ bool Dates::setPart1 ( //char       *u        ,
 
 	// . hash the tag hashes of the sections of each date
 	// . for telescoped dates we use the first innermost date's section
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nullified
 		if ( ! di ) continue;
@@ -3186,18 +3187,18 @@ bool Dates::setPart1 ( //char       *u        ,
 		if ( di->m_a < 0 ) { char *xx=NULL;*xx=0; }
 		// get section
 		//Section *sp = m_sections->m_sectionPtrs[di->m_a];
-		// shortcut
-		//long tagHash = sp->m_tagHash;
+		// int16_tcut
+		//int32_t tagHash = sp->m_tagHash;
 		// panic
 		//if ( tagHash == 0 || tagHash == -1 ) { char *xx=NULL;*xx=0; }
 		// save it
 		//di->m_tagHash = tagHash;
 		// get tag hash
-		long slot = tht.getSlot ( &di->m_tagHash );
+		int32_t slot = tht.getSlot ( &di->m_tagHash );
 		// assume not there
-		long occNum = 0;
+		int32_t occNum = 0;
 		// if there update
-		if ( slot >= 0 ) occNum=*(long *)tht.getValueFromSlot(slot);
+		if ( slot >= 0 ) occNum=*(int32_t *)tht.getValueFromSlot(slot);
 		// store it, start at 0 this time
 		di->m_occNum = occNum;
 		// . only set this if tagHash is valid (not -1)
@@ -3216,21 +3217,21 @@ bool Dates::setPart1 ( //char       *u        ,
 	}
 
 	// set the "is unique" flag for dates in body
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nullified
 		if ( ! di ) continue;
 		// skip if not in body - no tag hash then
 		if ( ! ( di->m_flags & DF_FROM_BODY ) ) continue;
 		// look in the occurence table
-		long slot = tht.getSlot ( &di->m_tagHash );
+		int32_t slot = tht.getSlot ( &di->m_tagHash );
 		// must be there
 		if ( slot < 0 ) { char *xx=NULL;*xx=0; }
 		// get occ num
-		long numOccurences = *(long *)tht.getValueFromSlot ( slot );
+		int32_t numOccurences = *(int32_t *)tht.getValueFromSlot ( slot );
 		// sanity check
 		if ( numOccurences <= 0 ) { char *xx=NULL;*xx=0; }
 		// 1 means unique
@@ -3252,24 +3253,24 @@ bool Dates::setPart1 ( //char       *u        ,
 
 		// . get the sample vector of the new and the old doc
 		// . TODO: ensure does not include dates!!!!!!!
-		long *s1 = nd->getPageSampleVector();
-		long *s2 = od->getPageSampleVector();
+		int32_t *s1 = nd->getPageSampleVector();
+		int32_t *s2 = od->getPageSampleVector();
 
 		// sanity check
 		if ( ! s1 || ! s2 || s1 == (void *)-1 || s2 == (void *)-1 ) {
 			char *xx=NULL;*xx=0; }
 
 		// otherwise, estimate a pub date.
-		long t1 = od->m_spideredTime;
-		long t2 = nd->m_spideredTime;
+		int32_t t1 = od->m_spideredTime;
+		int32_t t2 = nd->m_spideredTime;
 		// this is strange
 		if ( t1 == -1 ) { char *xx=NULL;*xx=0; }
 		// bisection method
-		long t3 = t1 + ( (t2 - t1) / 2);
+		int32_t t3 = t1 + ( (t2 - t1) / 2);
 		// get how similar they are from 0 to 100
 		float sim = computeSimilarity(s1,s2,NULL,NULL,NULL,m_niceness);
 		// convert into percent changed
-		m_changed = 100 - (long)sim;
+		m_changed = 100 - (int32_t)sim;
 		// add "t3" as an estimated pub date if change was 20% or more
 		if ( m_changed >= 20 && 
 		     ! addDate (DT_TIMESTAMP,DF_ESTIMATED,-1,-1,t3))
@@ -3285,9 +3286,9 @@ bool Dates::setPart1 ( //char       *u        ,
 	// . current time. sync'd with host #0 who uses ntp supposedly...! :(
 	// . to ensure that the "qatest123" subdir re-injects docs exactly the
 	//   same, we need to use this date now
-	long now = nd->m_spideredTime; 
-	// how long has elapsed since we downloaded it last approx.?
-	long elapsed = 0; 
+	int32_t now = nd->m_spideredTime; 
+	// how int32_t has elapsed since we downloaded it last approx.?
+	int32_t elapsed = 0; 
 	if ( od ) elapsed = now - od->m_spideredTime;
 	// sanity check.
 	// when a different twin downloaded this in the past, its clock
@@ -3299,12 +3300,12 @@ bool Dates::setPart1 ( //char       *u        ,
 		elapsed = 0;
 	// is true.
 	if ( elapsed < 0 ) { 
-		log("date: CRAZY! elasped=%li<0",elapsed);
+		log("date: CRAZY! elasped=%"INT32"<0",elapsed);
 		elapsed = 0;
 		//char *xx=NULL;*xx=0; }
 	}
 	// get the same date table now
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -3348,12 +3349,12 @@ bool Dates::setPart1 ( //char       *u        ,
 		// make the key
 		int64_t key = di->m_tagHash ;
 		key |= ((int64_t)di->m_occNum) << 32;
-		long *val = (long *)cct->getValue ( &key );
+		int32_t *val = (int32_t *)cct->getValue ( &key );
 		// skip if not in the old document
 		if ( ! val ) continue;
 
 		// search for it in the old document
-		//long j ;
+		//int32_t j ;
 		//Date *dj;
 		//for ( j = 0 ; j < odp->m_numDatePtrs ; j++ ) {
 		//	// get it
@@ -3390,9 +3391,9 @@ bool Dates::setPart1 ( //char       *u        ,
 	/*
 	// now unset any DF_AMIBUGOUS flags if just one date in the doc's
 	// body is not ambiguous and has a numeric month
-	long american = 0;
-	long european = 0;
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) { // && odp ; i++ ) {
+	int32_t american = 0;
+	int32_t european = 0;
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) { // && odp ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3423,7 +3424,7 @@ bool Dates::setPart1 ( //char       *u        ,
 	}
 
 	// unset the ambigous flags now
-	for ( long i = 0 ; i < m_numDatePtrs && m_dateFormat ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs && m_dateFormat ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3459,10 +3460,10 @@ bool Dates::setPart1 ( //char       *u        ,
 //  princessofgod87.blogdrive.com/archive/cm-12_cy-2008_m-1_d-5_y-2009_o-0.html
 //   www.hot001.com/index.php/htm/recruitment/2009-01-03/35061.html 
 //   torrentfreak.com/the-pirate-bay-sees-traffic-and-peers-surge-081115/ 
-long parseDateFromUrl ( char *url         , 
-			long *retUrlYear  ,
-			long *retUrlMonth ,
-			long *retUrlDay   ) {
+int32_t parseDateFromUrl ( char *url         , 
+			int32_t *retUrlYear  ,
+			int32_t *retUrlMonth ,
+			int32_t *retUrlDay   ) {
 
 	// return 0 to indicate no date
 	if ( ! url ) return 0;
@@ -3477,12 +3478,12 @@ long parseDateFromUrl ( char *url         ,
 	bool hadDate = false;
 
 	// we use these
-	long urlYear  = 0;
-	long urlMonth = 0;
-	long urlDay   = 0;
+	int32_t urlYear  = 0;
+	int32_t urlMonth = 0;
+	int32_t urlDay   = 0;
 
 	// look for stuff like "/2008/12/10" in the url itself
-	for ( long i = 0 ; ; i++ ) {
+	for ( int32_t i = 0 ; ; i++ ) {
 
 		// skip to next /
 		while ( *p && *p != '/' ) p++;
@@ -3503,8 +3504,8 @@ long parseDateFromUrl ( char *url         ,
 		     is_digit(p[5]) &&
 		     is_digit(p[6]) &&
 		     p[7] == '/'   ) {
-			long y = atol2(p  ,4);
-			long m = atol2(p+5,2);
+			int32_t y = atol2(p  ,4);
+			int32_t m = atol2(p+5,2);
 			if ( y > 1980 && y < 2050 &&
 			     m > 0    && m < 13   ) {
 				hadDate  = true;
@@ -3524,9 +3525,9 @@ long parseDateFromUrl ( char *url         ,
 		     is_digit(p[6]) &&
 		     is_digit(p[7]) &&
 		     !is_digit(p[8]) ) {
-			long y = atol2(p  ,4);
-			long m = atol2(p+4,2);
-			long d = atol2(p+6,2);
+			int32_t y = atol2(p  ,4);
+			int32_t m = atol2(p+4,2);
+			int32_t d = atol2(p+6,2);
 			if ( y > 1980 && y < 2050 &&
 			     m > 0    && m < 13   &&
 			     d > 0    && d < 32    ) {
@@ -3548,9 +3549,9 @@ long parseDateFromUrl ( char *url         ,
 		     is_digit(p[6]) &&
 		     is_digit(p[7]) &&
 		     !is_digit(p[8]) ) {
-			long m = atol2(p  ,2);
-			long d = atol2(p+2,2);
-			long y = atol2(p+4,4);
+			int32_t m = atol2(p  ,2);
+			int32_t d = atol2(p+2,2);
+			int32_t y = atol2(p+4,4);
 			if ( y > 1980 && y < 2050 &&
 			     m > 0    && m < 13   &&
 			     d > 0    && d < 32    ) {
@@ -3572,7 +3573,7 @@ long parseDateFromUrl ( char *url         ,
 		// p == "2010\0" ?
 		if ( ! p[4] ) continue;
 		// must be in range
-		long year = atol2(p,4);
+		int32_t year = atol2(p,4);
 		// we need to support all dates in 1900+ i guess
 		if ( year < 1900 || year > 2032 ) continue;
 		
@@ -3588,7 +3589,7 @@ long parseDateFromUrl ( char *url         ,
 		// make it a wid
 		int64_t wid = hash64Lower_utf8 ( m , mend - m , 0LL );
 		// get it as a month
-		long month = getMonth ( wid ) ;
+		int32_t month = getMonth ( wid ) ;
 		// skip if not valid month
 		if ( month <= 0 || month > 12 ) continue;
 
@@ -3601,7 +3602,7 @@ long parseDateFromUrl ( char *url         ,
 		if ( is_digit ( *dend ) ) dend++;
 		if ( is_alnum_a ( *dend ) ) continue;
 		// must be in range
-		long day = atol2(d,dend-d);
+		int32_t day = atol2(d,dend-d);
 		if ( day <= 0 || day > 31 ) continue;
 		// save it
 		hadDate = true;
@@ -3635,7 +3636,7 @@ long parseDateFromUrl ( char *url         ,
 // is this punct word suitable for being
 // only allow certain punct between the month and day
 // specifically a / or - or . or | or 
-bool Dates::checkPunct ( long i , Words *words , char *singleChar ) {
+bool Dates::checkPunct ( int32_t i , Words *words , char *singleChar ) {
 
 	*singleChar = '\0';
 
@@ -3795,7 +3796,7 @@ static bool s_init42 = false;
 
 // returns false with g_errno set on error
 bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
-			 Sections *sections , long niceness ,
+			 Sections *sections , int32_t niceness ,
 			 Url *url ,
 			 uint8_t ctype ) {
 
@@ -3815,7 +3816,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		m_bodySet = true;
 	}
 
-	// shortcuts
+	// int16_tcuts
 	if ( ! s_init42 ) {
 		// only do once
 		s_init42 = true;
@@ -4058,9 +4059,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	if ( ! w ) return true;
 
 	int64_t   *wids  = w->getWordIds  ();
-	long           nw  = w->getNumWords ();
+	int32_t           nw  = w->getNumWords ();
 	char       **wptrs = w->getWords    ();
-	long        *wlens = w->getWordLens ();
+	int32_t        *wlens = w->getWordLens ();
 	Words       *words = w;
 
 	// the div style display none tags are SEC_HIDDEN now
@@ -4082,7 +4083,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	bool isStubHub  = false;
 	bool isEventBrite = false;
 	if ( url && ctype == CT_XML ) {
-		long dlen = url->getDomainLen();
+		int32_t dlen = url->getDomainLen();
 		char *dom = url->getDomain();
 		if ( dlen == 12 && strncmp ( dom , "facebook.com" , 12 ) == 0 )
 			isFacebook = true;
@@ -4128,13 +4129,13 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	bool monthPreceeds = false;
 	// ignore trumba <xCal>someDate</xCal> tags, they are junky
 	//bool ignoreLastTag = false;
-	// shortcut
+	// int16_tcut
 	nodeid_t    *tids  = w->m_tagIds;
 	// for supporting "m-f" logic below
-	long mondayFlag = -10;
+	int32_t mondayFlag = -10;
 	bool inStrike = false;
 
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -4226,10 +4227,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 		// deal with date types that do not start with a digit
 		if ( ! is_digit(wptrs[i][0]) ) {
-			// shortcut
-			long val;
+			// int16_tcut
+			int32_t val;
 			// sometimes it can be 2+ words
-			long endWord ;
+			int32_t endWord ;
 
 			// . skip all dates but <start_time> for facebook
 			// . no, we need to label them at least so "at 1pm" 
@@ -4298,7 +4299,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 			// set SF_PLURAL in the supplemental flags
 			if ( to_lower_a(wptrs[i][wlens[i]-1])=='s' &&
-			     // no longer count "Friday's" as Fridays though
+			     // no int32_ter count "Friday's" as Fridays though
 			     // to fix albertcadabra.com
 			     wptrs[i][wlens[i]-2] != '\'' &&
 			     // fix "tues". wednes thurs
@@ -4343,9 +4344,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     // 2012-10-23T19:30:00 (like trumba)
 		     wlens[i] >= 10 ) {
 			// verysimple
-			long fbtimestamp = atol(wptrs[i]);
+			int32_t fbtimestamp = atol(wptrs[i]);
 			// make the timestamp date
-			long ni = m_numDatePtrs;
+			int32_t ni = m_numDatePtrs;
 			Date *di = addDate(DT_TIMESTAMP,
 					   DF_OFFICIAL|DF_FROM_BODY,
 					   i,i+1,fbtimestamp);
@@ -4361,8 +4362,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			//
 			// scan for end time and make a range if there
 			//
-			long j = i;
-			long maxj = j + 10;
+			int32_t j = i;
+			int32_t maxj = j + 10;
 			if ( maxj > nw ) maxj = nw; 
 			for ( ; j < maxj ; j++ ) 
 				if ( tids[j] == TAG_FBENDTIME ) break;
@@ -4379,11 +4380,11 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// must be number now
 			if ( ! wids[j] ) continue;
 			// there was an end time, add it
-			long fbtimestamp2 = atol(wptrs[j]);
+			int32_t fbtimestamp2 = atol(wptrs[j]);
 			// crazy? needs to be bigger than previous timestamp
 			if ( fbtimestamp2 < fbtimestamp ) continue;
 			// make the timestamp date
-			long nj = m_numDatePtrs;
+			int32_t nj = m_numDatePtrs;
 			Date *dj = addDate(DT_TIMESTAMP,
 					   DF_OFFICIAL|DF_FROM_BODY,
 					   j,j+1,fbtimestamp2);
@@ -4478,17 +4479,17 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		}
 
 		// get the hour
-		long num = w->getAsLong(i);
+		int32_t num = w->getAsLong(i);
 		// skip if crazy useless
 		if ( num > 2050 ) continue;
 
 		// if "age" or "ages" preceeds in same sentence then its
 		// an age! fixes downtowndancecorvallis.com
-		long kmax = i - 15;
+		int32_t kmax = i - 15;
 		if ( kmax < 0 ) kmax = 0;
 		bool isAge = false;
 		// never if am/pm follows the number (8am/8pm/10pm)
-		long wlen = wlens[i];
+		int32_t wlen = wlens[i];
 		if ( wlen>=2 && to_lower_a(wptrs[i][wlen-1]=='m'))kmax=i;
 		if ( wlen>=2 && to_lower_a(wptrs[i][wlen-1]=='p'))kmax=i; //8p
 		if ( wlen>=2 && to_lower_a(wptrs[i][wlen-1]=='a'))kmax=i; //8a
@@ -4501,7 +4502,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     words->isNum(i+2) )
 			kmax = i;
 		// ok, scan for age inidicators
-		for ( long k = i - 1; k >= kmax ; k-- ) {
+		for ( int32_t k = i - 1; k >= kmax ; k-- ) {
 			if ( ! wids[k] ) continue;
 			// skip if number
 			if ( is_digit(wptrs[k][0]) ) continue;
@@ -4519,10 +4520,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		if ( isAge ) 
 			continue;
 
-		// shortcut
-		long val;
+		// int16_tcut
+		int32_t val;
 		// sometimes it can be 2+ words
-		long endWord ;
+		int32_t endWord ;
 		// "7 days a week" for corralesbosquegallery.com
 		datetype_t dt = getDateType ( i, &val , &endWord , wids ,nw,
 					      // onPreceeds?
@@ -4568,8 +4569,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		if ( num >= 0 && num <= 24 ) {
 			// get its timezone if specified (i.e. "GMT" "MDT",...)
 			TimeZone *tz = NULL ;
-			long e;
-			long tod;
+			int32_t e;
+			int32_t tod;
 			// if period on left that is bad (javascript?)
 			if ( i>0 && wptrs[i][-1]=='.' ) goto notTOD;
 			// watch out for dates like 12-15-05 for
@@ -4657,17 +4658,17 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
  notTOD:
 		// get the section hash. hash of all parent tags.
-		//long th = sn->m_tagHash;
-		// shortcut
-		long j;
-		long minj = i - 20;
-		long maxj = i + 20;
+		//int32_t th = sn->m_tagHash;
+		// int16_tcut
+		int32_t j;
+		int32_t minj = i - 20;
+		int32_t maxj = i + 20;
 		if ( minj <  0 ) minj =  0;
 		if ( maxj > nw ) maxj = nw;
 
 		// get number to the left of us
-		long leftNum = -1;
-		long li      = -1;
+		int32_t leftNum = -1;
+		int32_t li      = -1;
 		for ( j = i - 1 ; j >= minj ; j-- ) {
 			if ( wids[j] == 0LL           ) continue;
 			if ( ! is_digit(wptrs[j][0] ) ) break;//continue;
@@ -4676,8 +4677,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			break;
 		}
 		// get number to the right of us
-		long rightNum = -1;
-		long ri       = -1;
+		int32_t rightNum = -1;
+		int32_t ri       = -1;
 		for ( j = i + 1 ; j < maxj ; j++ ) {
 			if ( wids[j] == 0LL           ) continue;
 			if ( ! is_digit(wptrs[j][0] ) ) break;//continue;
@@ -4687,8 +4688,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		}
 		// get number to the right of that!
 		int64_t nextWid = 0LL;
-		long rightNum2 = -1;
-		long ri2       = -1;
+		int32_t rightNum2 = -1;
+		int32_t ri2       = -1;
 		for ( j++ ; j < maxj ; j++ ) {
 			if ( wids[j] == 0LL           ) continue;
 			if ( ! is_digit(wptrs[j][0] ) ) {
@@ -4739,24 +4740,24 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     // no slash before year (embedded url)
 		     (i<=0 || wptrs[i][-1]!='/') ) {
 			// get it
-			long year  = num       ;
-			long month = rightNum  ;
-			long day   = rightNum2 ;
+			int32_t year  = num       ;
+			int32_t month = rightNum  ;
+			int32_t day   = rightNum2 ;
 			char *tpos = &wptrs[ri2][1];
 			if ( *tpos != 'T' ) tpos = &wptrs[ri2][2];
 			// must be there - sanity check
 			if ( *tpos != 'T' ) { char *xx=NULL;*xx=0; }
 			// and hour
-			long hour = atol(tpos+1);
+			int32_t hour = atol(tpos+1);
 			// after <day>T<hour>:<minute>:<second>
-			long endi = ri2 + 5; // ri3
+			int32_t endi = ri2 + 5; // ri3
 			// minute pos
 			char *mpos = tpos + 2;
 			if ( *mpos != ':' ) mpos++;
-			long minute = 0;
+			int32_t minute = 0;
 			if ( *mpos == ':' ) minute = atol(mpos+1);
 			// make a tod
-			long tod = hour * 3600 + minute * 60;
+			int32_t tod = hour * 3600 + minute * 60;
 			// tmp flag
 			dateflags_t df2 = defFlags;//DF_FROM_BODY;
 			// let's say neigher because it is messing up
@@ -4768,10 +4769,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// in a style, script, select, marquee tag?
 			//if ( flags & badFlags ) df2 |= DF_INBADTAG;
 			// make 3 simple dates
-			long ni = m_numDatePtrs;
-			long nj = m_numDatePtrs+1;
-			long nk = m_numDatePtrs+2;
-			long nx = m_numDatePtrs+3;
+			int32_t ni = m_numDatePtrs;
+			int32_t nj = m_numDatePtrs+1;
+			int32_t nk = m_numDatePtrs+2;
+			int32_t nx = m_numDatePtrs+3;
 			Date *di = addDate (DT_DAYNUM ,df2,ri2,ri2+1,day);
 			if ( ! di ) return false;
 			Date *dj = addDate (DT_MONTH  ,df2,ri,ri+1,month);
@@ -4848,9 +4849,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 			// if a ':'
 			// get it
-			//long month = num;
-			//long day   = rightNum ;
-			long year  = rightNum2;
+			//int32_t month = num;
+			//int32_t day   = rightNum ;
+			int32_t year  = rightNum2;
 			// adjust year if it was only two digits
 			if ( year <= 99 ) {
 				// otherwise, it is probably a year ending
@@ -4863,9 +4864,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 				df2 |= DF_AMERICAN;
 				if ( rightNum <= 12 ) df2 |= DF_AMBIGUOUS;
 				// make 3 simple dates
-				long ni = m_numDatePtrs;
-				long nj = m_numDatePtrs+1;
-				long nk = m_numDatePtrs+2;
+				int32_t ni = m_numDatePtrs;
+				int32_t nj = m_numDatePtrs+1;
+				int32_t nk = m_numDatePtrs+2;
 				Date *di ;
 				di = addDate (DT_DAYNUM,df2,ri,ri+1,rightNum);
 				if ( ! di ) return false;
@@ -4887,9 +4888,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 				df2 |= DF_EUROPEAN;
 				if ( num <= 12 ) df2 |= DF_AMBIGUOUS;
 				// make 3 simple dates
-				long ni = m_numDatePtrs;
-				long nj = m_numDatePtrs+1;
-				long nk = m_numDatePtrs+2;
+				int32_t ni = m_numDatePtrs;
+				int32_t nj = m_numDatePtrs+1;
+				int32_t nk = m_numDatePtrs+2;
 				Date *di = addDate(DT_DAYNUM,df2,i,i+1,num);
 				if ( ! di ) return false;
 				Date *dj;
@@ -4942,9 +4943,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     // fix trumba.com's "2009-11-23T10:00:00" date
 		      //!words->isNum(ri))) {
 			// get it
-			long year  = num       ;
-			long month = rightNum  ;
-			long day   = rightNum2 ;
+			int32_t year  = num       ;
+			int32_t month = rightNum  ;
+			int32_t day   = rightNum2 ;
 			// tmp flag
 			dateflags_t df2 = defFlags;//DF_FROM_BODY;
 			// let's say neigher because it is messing up
@@ -4957,9 +4958,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			//if ( flags & badFlags ) df2 |= DF_INBADTAG;
 
 			// make 3 simple dates
-			long ni = m_numDatePtrs;
-			long nj = m_numDatePtrs+1;
-			long nk = m_numDatePtrs+2;
+			int32_t ni = m_numDatePtrs;
+			int32_t nj = m_numDatePtrs+1;
+			int32_t nk = m_numDatePtrs+2;
 			Date *di = addDate (DT_DAYNUM ,df2,ri2,ri2+1,day);
 			if ( ! di ) return false;
 			Date *dj = addDate (DT_MONTH  ,df2,ri,ri+1,month);
@@ -5007,13 +5008,13 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     !is_digit(wptrs[ri+1][1]))){
 			// if a ':'
 			// get it
-			long month = num;
-			long year  = rightNum;
+			int32_t month = num;
+			int32_t year  = rightNum;
 			// tmp flag
 			dateflags_t df2 = defFlags;//DF_FROM_BODY;
 			// make 2 simple dates
-			long nj = m_numDatePtrs;
-			long nk = m_numDatePtrs+1;
+			int32_t nj = m_numDatePtrs;
+			int32_t nk = m_numDatePtrs+1;
 			Date *dj = addDate (DT_MONTH ,df2,i ,i +1,month);
 			if ( ! dj ) return false;
 			Date *dk = addDate (DT_YEAR  ,df2,ri,ri+1,year);
@@ -5064,8 +5065,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// american format (MONTH/DAY)
 			if ( num <= 12 ) {
 				// make 2 simple dates
-				long ni = m_numDatePtrs;
-				long nj = m_numDatePtrs+1;
+				int32_t ni = m_numDatePtrs;
+				int32_t nj = m_numDatePtrs+1;
 				Date *di;
 				Date *dj;
 				dateflags_t df2;
@@ -5087,8 +5088,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// european format (DAY/MONTH)
 			if ( rightNum <= 12 ) {
 				// make 2 simple dates
-				long ni = m_numDatePtrs;
-				long nj = m_numDatePtrs+1;
+				int32_t ni = m_numDatePtrs;
+				int32_t nj = m_numDatePtrs+1;
 				Date *di;
 				Date *dj;
 				dateflags_t df2;
@@ -5123,7 +5124,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     // require tick, like "'09"
 		     i>0 && wptrs[i][-1]=='\'' ) {
 			// set value
-			long year ;
+			int32_t year ;
 			if ( num < 20 ) year = 2000 + num;
 			else            year = 1900 + num;
 			// use this now
@@ -5149,11 +5150,11 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     singleChar3 == '-' &&
 		     // fix trumba's 2009-11-25T02:00:00Z crap
 		     singleChar1 != '-' ) {
-			// shortcut
+			// int16_tcut
 			dateflags_t df2 = defFlags;//DF_FROM_BODY;
 			// the century
-			long ccc = (leftNum / 100) * 100;
-			long rightYear = num + ccc;
+			int32_t ccc = (leftNum / 100) * 100;
+			int32_t rightYear = num + ccc;
 			// sanity check
 			if ( num >= rightYear ) { char *xx=NULL;*xx=0; }
 			// sanity
@@ -5163,8 +5164,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// sanity
 			if ( di->m_type != DT_YEAR ) { char *xx=NULL;*xx=0; }
 			// use this now
-			long ni = m_numDatePtrs-1;
-			long nj = m_numDatePtrs;
+			int32_t ni = m_numDatePtrs-1;
+			int32_t nj = m_numDatePtrs;
 			//Date *di = addDate (DT_YEAR ,df2,i,i+1,num);
 			//if ( ! di ) return false;
 			Date *dj = addDate (DT_YEAR ,df2,i,i+1,num+ccc);
@@ -5202,7 +5203,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			char *end = wptrs[i] + wlens[i] - 2;
 			// do we got it?
 			bool good = false;
-			// shortcut
+			// int16_tcut
 			char c0 = to_lower_a(end[0]);
 			char c1 = to_lower_a(end[1]);
 			// check it
@@ -5218,8 +5219,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// crap! breaks "27th of November" for
 			// nelsoncountylife.com,  so scan forward as well
 			// before giving up on it...
-			long k = i + 1; 
-			long kmax = i + 10;
+			int32_t k = i + 1; 
+			int32_t kmax = i + 10;
 			if ( kmax > nw ) kmax = nw;
 			for ( ; k < kmax ; k++ )
 				if ( wids[k] ) break;
@@ -5268,7 +5269,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// hyphen after us? "1-2 blocks"  "9-10 nightly"
 			bool hyphenAfter = false;
 			bool inRange     = false;
-			long endPoint    = -1;
+			int32_t endPoint    = -1;
 			if ( i + 1 < nw && words->hasChar(i+1,'-') )
 				hyphenAfter = true;
 			// to find alnum word after us, skip possible " - x"
@@ -5282,14 +5283,14 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 				if ( endPoint >= 32  ) continue;
 			}
 			// get previous two alnum words
-			long kmin = i - 20;
+			int32_t kmin = i - 20;
 			if ( kmin < 0 ) kmin = 0;
 			int64_t prev1 = 0LL;
 			int64_t prev2 = 0LL;
 			// these ignore tags
 			int64_t PREV1 = 0LL;
 			bool hitTag = false;
-			for ( long k = i - 1 ; k >= kmin ; k-- ) {
+			for ( int32_t k = i - 1 ; k >= kmin ; k-- ) {
 				QUICKPOLL(m_niceness);
 				// stop if non-br and breaking tid to fix
 				// calendars i guess
@@ -5319,12 +5320,12 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 				break;
 			}
 			// whose after us
-			long kmax = i + 20;
+			int32_t kmax = i + 20;
 			if ( kmax > nw ) kmax = nw;
 			int64_t after1 = 0LL;
 			int64_t after2 = 0LL;
-			long ai1 = -1;
-			for ( long k = i + 1 ; k < kmax ; k++ ) {
+			int32_t ai1 = -1;
+			for ( int32_t k = i + 1 ; k < kmax ; k++ ) {
 				QUICKPOLL(m_niceness);
 				// stop if non-br and breaking tid to fix
 				// calendars i guess
@@ -5479,8 +5480,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			if ( ! good ) 
 				continue;
 			// add these as the numbers
-			long val1 = num;
-			long val2 = endPoint;
+			int32_t val1 = num;
+			int32_t val2 = endPoint;
 			// convert into seconds if a tod
 			if ( adt == DT_TOD ) {
 				val1 *= 3600;
@@ -5541,9 +5542,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// resolve american/european date formats
 	//
 	///////////////////
-	long american = 0;
-	long european = 0;
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	int32_t american = 0;
+	int32_t european = 0;
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -5568,7 +5569,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	if ( european > 0 && american == 0 ) m_dateFormat = DF_EUROPEAN;
 	// if format are not clear, assume american since we are in america
 	if ( european == 0 && american == 0 ) m_dateFormat = DF_AMERICAN;
-	// shortcut
+	// int16_tcut
 	char *u = ""; if ( m_url ) u = m_url->getUrl();
 	// . if we are confused, panic!
 	// . XmlDoc::getIndexCode() should abort!
@@ -5580,7 +5581,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	}
 
 	// nuke the ambig guys that are the wrong format
-	for ( long i = 0 ; i < m_numDatePtrs && m_dateFormat ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs && m_dateFormat ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -5640,10 +5641,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// 
 	/*
 	Date *last = NULL;
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
@@ -5665,7 +5666,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// get date right before di
 		if ( saved ) { 
 			// get alnum words in between it and di, if any
-			long k = saved->m_b;
+			int32_t k = saved->m_b;
 			for ( ; k < di->m_a && ! wids[k] ; k++ ) ;
 			// if not adjacent to the previous Date then forget
 			// it, leave it as a daynum range
@@ -5677,9 +5678,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			continue;
 		// must be a range
 		if ( di->m_type != DT_RANGE_DAYNUM ) { char *xx=NULL;*xx=0; }
-		// shortcuts
-		long num1 = d1->m_num;
-		long num2 = d2->m_num;
+		// int16_tcuts
+		int32_t num1 = d1->m_num;
+		int32_t num2 = d2->m_num;
 		// anything from 1 to 5 should be pm i guess
 		if ( num1 <= 5    ) { 
 			num1 += 12;
@@ -5723,10 +5724,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// calendar. we do not even have sections class at this point so
 	// we can't use that.
 	//
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
@@ -5737,7 +5738,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// must be in body
 		if ( di->m_a < 0 ) continue;
 		// get first word or tag before it
-		long k = di->m_a - 1;
+		int32_t k = di->m_a - 1;
 		// must have something
 		if ( k < 0 ) continue;
 		// skip punct crap
@@ -5749,14 +5750,14 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// remember tag id, other daynums must match
 		//nodeid_t tagid = tids[k];
 		// keep tabs
-		long next = 2;
+		int32_t next = 2;
 		// assume a cal
 		bool gotCal = true;
 		// see if we got a complete sequence
-		for ( long j = i + 1 ; j < m_numDatePtrs ; j++ ) {
+		for ( int32_t j = i + 1 ; j < m_numDatePtrs ; j++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// shortcut
+			// int16_tcut
 			Date *dj = m_datePtrs[j];
 			// skip if nuked from range logic above
 			if ( ! dj ) continue;
@@ -5765,7 +5766,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// must be in body
 			if ( dj->m_a < 0 ) break;
 			// get first word or tag before it
-			long k = di->m_a - 1;
+			int32_t k = di->m_a - 1;
 			// must have something
 			if ( k < 0 ) continue;
 			// skip punct crap
@@ -5799,10 +5800,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// reset this
 		next = 1;
 		// flag them all!
-		for ( long j = i ; j < m_numDatePtrs ; j++ ) {
+		for ( int32_t j = i ; j < m_numDatePtrs ; j++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// shortcut
+			// int16_tcut
 			Date *dj = m_datePtrs[j];
 			// skip if nuked from range logic above
 			if ( ! dj ) continue;
@@ -5849,30 +5850,30 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// . "nov 11,12-15 '08"   (DT_MONTHDAYYEAR, canonical)
 	//
 	///////////////////////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
 		// must be canonical month
 		if ( di->m_type != DT_MONTH ) continue;
 		// set this
-		//long month = di->m_num1;
+		//int32_t month = di->m_num1;
 		
-		long start = di->m_a;
+		int32_t start = di->m_a;
 
-		long a;
-		long b;
+		int32_t a;
+		int32_t b;
 		char *p;
 		char *pend;
 
 		//
 		// init the "j" loop for the day
 		//
-		long j = i + 1;
-		// shortcut
+		int32_t j = i + 1;
+		// int16_tcut
 		Date *dj = NULL;
 		// scan over atomic dates after the month
 		for ( ; j < m_numDatePtrs ; j++ ) {
@@ -5905,9 +5906,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// skip if unacceptable punct in between
 		if ( p < pend ) continue;
 		// set it
-		//long day = dj->m_num1;
+		//int32_t day = dj->m_num1;
 		// this too
-		long end = dj->m_b;
+		int32_t end = dj->m_b;
 
 		/*
 		  adding in the year here messes up our ability to get
@@ -5917,7 +5918,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		//
 		// init the "k" loop for the year
 		//
-		long k = j + 1;
+		int32_t k = j + 1;
 		// TRY to get year after it
 		Date *dk = NULL;
 		// scan over atomic dates after the month
@@ -5928,7 +5929,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			if ( dk ) break;
 		}
 		// assume no year
-		long year = 0;
+		int32_t year = 0;
 		// zap it if not year
 		if ( dk && dk->m_type != DT_YEAR ) dk = NULL;
 		// must be an isolated day (list or range is ok)
@@ -5978,22 +5979,22 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// . "01 nov"       (DT_MONTHDAY , canonical)
 	//
 	///////////////////////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
 		// must be canonical month
 		if ( di->m_type != DT_MONTH ) continue;
-		long a;
-		long b;
+		int32_t a;
+		int32_t b;
 		char *p;
 		char *pend;
 		// init the "j" loop for the day
-		long j = i - 1;
-		// shortcut
+		int32_t j = i - 1;
+		// int16_tcut
 		Date *dj = NULL;
 		// scan over atomic dates before the month
 		for ( ; j >= 0 ; j-- ) {
@@ -6028,7 +6029,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// . but did put the remove logic back because telescoping
 		//   to an individual daynum proved quite spammy and made
 		//   a few urls worse...
-		long w; for ( w = a+1 ; w < b ; w++ ) {
+		int32_t w; for ( w = a+1 ; w < b ; w++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// no other words allowed
@@ -6044,7 +6045,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			p    =     wptrs[w];
 			pend = p + wlens[w];
 			// only one punctuation mark allowed though
-			long pcount = 0;
+			int32_t pcount = 0;
 			// must just have punct in between 
 			for ( ; p < pend ; p++ ) {
 				// space is ok
@@ -6065,8 +6066,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		if ( w < b ) break;
 
 		// this too
-		long start = dj->m_a;
-		long end   = di->m_b;
+		int32_t start = dj->m_a;
+		int32_t end   = di->m_b;
 		// use this now
 		Date *DD = addDate ( DT_COMPOUND,DF_CANONICAL,start,end,0);
 		if ( ! DD ) return false;
@@ -6082,17 +6083,17 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// . update each Date::m_a/m_b if necessary to include modifiers
 	//
 	///////////////////
-	for ( long x = 0 ; x < m_numDatePtrs ; x++ ) {
+	for ( int32_t x = 0 ; x < m_numDatePtrs ; x++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[x];
 		// skip if none
 		if ( ! di ) continue;
 
 		// save the endpoints, they might be expanded here
-		long left  = di->m_a;
-		long right = di->m_b;
+		int32_t left  = di->m_a;
+		int32_t right = di->m_b;
 
 		// skip if not in the document body (i.e. in url itself)
 		if ( left < 0 ) continue;
@@ -6106,7 +6107,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		suppflags_t sflags = 0;
 
 		datetype_t dt  = di->m_type;
-		//long       val = di->m_num;
+		//int32_t       val = di->m_num;
 
 		// . more special flags
 		// . i use these for when have a time like "9:30"
@@ -6169,11 +6170,11 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			modCheck = true;
 		
 		// limit range
-		long kmin = left - 30;
+		int32_t kmin = left - 30;
 		if ( kmin < 0  ) kmin = 0;
 		int64_t last = 0LL;
 		// scan backwards
-		for ( long k = left - 1 ; modCheck && k > kmin ; k-- ) {
+		for ( int32_t k = left - 1 ; modCheck && k > kmin ; k-- ) {
 			// skip non-breaking or br tags
 			if ( tids[k] ) {
 				// microsoft front page uses
@@ -6186,7 +6187,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			}
 			// skip punct words
 			if ( ! wids[k] ) continue;
-			// shortcut
+			// int16_tcut
 			int64_t wid = wids[k];
 			// skip transitionals
 			if ( wid == h_and    ||
@@ -6254,10 +6255,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		}
 
 		// limit range
-		long kmax = right + 30;
+		int32_t kmax = right + 30;
 		if ( kmax > nw ) kmax = nw;
 		// include the ith word itself too i guess
-		for ( long k = right + 1 ; modCheck && k < kmax ; k++ ) {
+		for ( int32_t k = right + 1 ; modCheck && k < kmax ; k++ ) {
 			// skip non-=breaking and br tags
 			if ( tids[k] ) {
 				// microsoft front page uses
@@ -6273,7 +6274,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			}
 			// skip punct words
 			if ( ! wids[k] ) continue;
-			// shortcut
+			// int16_tcut
 			int64_t wid = wids[k];
 			// skip transitionals
 			if ( wid == h_and   ) continue;
@@ -6342,7 +6343,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     di->m_b+1 < nw &&
 		     ( strncasecmp("services",wptrs[di->m_b+1],8)==0 ||
 		       //strncasecmp("session" ,wptrs[di->m_b+1],7)==0 ||
-		       //strncasecmp("milonga" ,wptrs[di->m_b+1],7)==0 ||
+		       //strncasecmp("miint32_ta" ,wptrs[di->m_b+1],7)==0 ||
 		       //strncasecmp("special" ,wptrs[di->m_b+1],7)==0 ||
 		       // sunday school
 		       strncasecmp("school"  ,wptrs[di->m_b+1],6)==0 ) )
@@ -6370,10 +6371,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// . invalidate previous dates if they used our modifiers!
 		// . fixes "1st and 3rd saturdays" from allowing "1st and 3rd"
 		//   to be a list of daynums
-		for ( long y = x - 1 ; y >= 0 ; y-- ) {
+		for ( int32_t y = x - 1 ; y >= 0 ; y-- ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// shortcut
+			// int16_tcut
 			Date *dy = m_datePtrs[y];
 			// skip if none
 			if ( ! dy ) continue;
@@ -6543,10 +6544,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//
 	// set DF_LEFT_BOOKEND and DF_RIGHT_BOOKEND flags
 	//
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -6560,7 +6561,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// skip dates taken from in the url
 		if ( di->m_a < 0 ) continue;
 		// look left
-		long a = di->m_a - 1;
+		int32_t a = di->m_a - 1;
 		// loop backwards
 		for ( ; a >= 0 ; a-- ) {
 			// tag is good?
@@ -6626,7 +6627,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			break;
 		}
 		// and go right
-		long b = di->m_b;
+		int32_t b = di->m_b;
 		// loop forwards
 		for ( ; b < nw ; b++ ) {
 			// tag is good?
@@ -6706,10 +6707,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	copy[2] = 0x00;
 	// scan all years, lists and ranges of years, and look for
 	// a preceeding copyright sign. mark such years as DF_COPYRIGHT
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -6720,10 +6721,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// scan backwards for copyright
 		bool ignore = false;
 		// limit min back
-		long min = di->m_a - 20;
+		int32_t min = di->m_a - 20;
 		if ( min < 0 ) min = 0;
 		// check for copyright word or sign
-		for ( long a = di->m_a - 1; a >= min ; a-- ) {
+		for ( int32_t a = di->m_a - 1; a >= min ; a-- ) {
 			// skip if tag
 			if ( tids[a] ) continue;
 			// do we have an alnum word before us here?
@@ -6755,10 +6756,10 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//   no isolated as "Sunday Valley", part of a phrase
 	//
 	/////////////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -6787,19 +6788,19 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	// current relative to when it was spidered!
 	// this segaults because m_nd is NULL when we call parseDates()
 	// in XmlDoc::getExplicitSections
-	//long currentYear = getYear ( m_nd->m_spideredTime );
-	long now = getTimeGlobal();
-	long currentYear = getYear ( now );
+	//int32_t currentYear = getYear ( m_nd->m_spideredTime );
+	int32_t now = getTimeGlobal();
+	int32_t currentYear = getYear ( now );
 
 	/////////////////////
 	//
 	// set the fuzzy date flag, DF_FUZZY
 	//
 	/////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -6811,7 +6812,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// only "<date name="event_date_time_local">
 			// 2012-05-04T18:00:00Z</date>" is good
 			// get tag before it
-			long pre = di->m_a - 1;
+			int32_t pre = di->m_a - 1;
 			if ( pre > 0 &&
 			     wlens[pre] == 35 &&
 			     !strncmp(wptrs[pre],"<date name=\"event_date_"
@@ -6823,7 +6824,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			continue;
 		}
 
-		// shortcut setups for eventbrite
+		// int16_tcut setups for eventbrite
 		Section *sk = NULL;
 		if ( di->m_a >= 0 ) sk = m_sections->m_sectionPtrs[di->m_a];
 		// check out the parent section
@@ -6851,7 +6852,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			continue;
 		}
 
-		// stupid facebook json format no longer has plain
+		// stupid facebook json format no int32_ter has plain
 		// unix timestamps, it has trumba style timestamps.
 		// by definition official times are non-fuzzy
 		if ( di->m_flags & DF_OFFICIAL ) continue;
@@ -6876,9 +6877,9 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		}
 		// get alnum word before date
 		int64_t prevWid = 0;
-		long jmin = di->m_a - 20;
+		int32_t jmin = di->m_a - 20;
 		if ( jmin < 0 ) jmin = 0;
-		for ( long j = di->m_a - 1 ; j >= jmin ; j-- ) {
+		for ( int32_t j = di->m_a - 1 ; j >= jmin ; j-- ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			if ( ! wids[j] ) continue;
@@ -7062,8 +7063,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// debug for now
 			//fuzzy = false;
 			// get word after it
-			long j = di->m_a+1;
-			long jmax = j + 20;
+			int32_t j = di->m_a+1;
+			int32_t jmax = j + 20;
 			if ( jmax > nw ) jmax = nw;
 			int64_t nextWid = 0LL;
 			for ( ; j < jmax ; j++ ) {
@@ -7077,8 +7078,8 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// "SUNDAY SHOW" "SUNDAY RODEO" ...
 			// "show" "rodeo" "showcase" "class" ... big list
 			//if ( isEventEnding ( &nextWid ) ) fuzzy = false;
-			long a = j;
-			long b = j+1;
+			int32_t a = j;
+			int32_t b = j+1;
 			if ( b > nw ) b = nw;
 			if ( a > nw ) a = nw;
 			if (hasTitleWords(0,a,b,1,bits,words,false,niceness))
@@ -7140,7 +7141,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// established/founded in 2003
 			//if(prevWid == h_in && prevWid2IsLower ) fuzzy = true;
 			// or founded in ...
-			for ( long i = ss->m_a ; i < ss->m_b ; i++ ) {
+			for ( int32_t i = ss->m_a ; i < ss->m_b ; i++ ) {
 				// skip if not alnum word
 				if ( ! wids[i] ) continue;
 				if ( wids[i] == h_founded ) fuzzy = true;
@@ -7157,12 +7158,12 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			// get word after date, if any. see if part of
 			// a street address like 2001 Main Street. these
 			// are only verified or inlined streets methinks...
-			long a2 = di->m_a + 2;
+			int32_t a2 = di->m_a + 2;
 			if ( a2<nw && (bb[a2] & D_IS_IN_ADDRESS) )
 				fuzzy = true;
 			// see if a street indicator follows the year in
 			// the same sentence
-			for ( long i = di->m_a + 2 ; i < ss->m_b ; i++ ) {
+			for ( int32_t i = di->m_a + 2 ; i < ss->m_b ; i++ ) {
 				// skip if not alnum word
 				if ( ! wids[i] ) continue;
 				// get indicator class
@@ -7208,7 +7209,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//wbit_t *bb = bits->m_bits;
 
 	// now scan the dates we found and set the bits for the words involved
-	for ( long i = 0 ; bb && i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; bb && i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -7238,7 +7239,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// actually any single date should not be excluded!
 		bool forsure = false;
 		// . skip if single isolated DOW
-		// . fixes "Sun City Plumbing" since "Sun" is no longer
+		// . fixes "Sun City Plumbing" since "Sun" is no int32_ter
 		//   considered DF_FUZZY because it has DF_LEFT_BOOKEND set.
 		//   and we did that to fix "Sunday Services" for abqcsl.org
 		if ( di->m_type == DT_DOW ) {
@@ -7296,15 +7297,15 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		if ( di->m_a < 0 || di->m_a > di->m_b ) { char *xx=NULL;*xx=0;}
 		// . set those words bits
 		// . assume [a,b) interval (half open)
-		for ( long k = di->m_a ; k < di->m_b ; k++ )
+		for ( int32_t k = di->m_a ; k < di->m_b ; k++ )
 			bb[k] |= D_IS_IN_DATE;
 	}
 
 	// set D_IS_TOD
-	for ( long i = 0 ; i < m_numTotalPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTotalPtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_totalPtrs[i];
 		// must be tod or year i guess
 		wbit_t bf = 0;
@@ -7312,11 +7313,11 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		if ( di->m_type == DT_DAYNUM ) bf = D_IS_DAYNUM;
 		if ( ! bf ) continue;
 		// get this
-		long a = di->m_a;
+		int32_t a = di->m_a;
 		// skip if in url
 		if ( a < 0 ) continue;
 		// set those words bits
-		for ( long k = di->m_a ; k < di->m_b ; k++ )
+		for ( int32_t k = di->m_a ; k < di->m_b ; k++ )
 			bb[k] |= bf;
 	}
 
@@ -7331,12 +7332,12 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//
 	////////////////////
 	// 
-	// fixes "Tuseday Night Milonga" so we set SF_RECURRING_DOW which
+	// fixes "Tuseday Night Miint32_ta" so we set SF_RECURRING_DOW which
 	// means that it happens every tuesday night
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -7352,7 +7353,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			continue;
 		// all words in date must be capitalized except like
 		// apostrophe s
-		long j; for ( j = di->m_a ; j < di->m_b ; j++ ) {
+		int32_t j; for ( j = di->m_a ; j < di->m_b ; j++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// skip if not alnum
@@ -7367,7 +7368,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// now word before or after must be upper and only
 		// separate by spaces
 		j = di->m_a - 1;
-		long minj = j - 7;
+		int32_t minj = j - 7;
 		if ( minj < 0 ) minj = 0;
 		for ( ; j > minj ; j++ ) {
 			// breathe
@@ -7404,7 +7405,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		if ( di->m_suppFlags & SF_DOW_IN_TITLE ) continue;
 		// otherwise check to the right of us
 		j = di->m_b;
-		long maxj = j + 7;
+		int32_t maxj = j + 7;
 		if ( maxj > nw ) maxj = nw;
 		for ( ; j < maxj ; j++ ) {
 			// breathe
@@ -7447,12 +7448,12 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 bool Dates::hasKitchenHours ( Section *si ) {
 	if ( ! si ) return false;
-	long a = si->m_a;
-	long b = si->m_b;
+	int32_t a = si->m_a;
+	int32_t b = si->m_b;
 	int64_t prevWid = 0LL;
-	//long count = 0;
+	//int32_t count = 0;
 	// now scan forward from there
-	for ( long j = a ; j < b ; j++ ) {
+	for ( int32_t j = a ; j < b ; j++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip punct words
@@ -7469,18 +7470,18 @@ bool Dates::hasKitchenHours ( Section *si ) {
 }
 
 
-bool isTicketDate ( long a , long b , int64_t *wids , Bits *bits ,
-		    long niceness ) {
+bool isTicketDate ( int32_t a , int32_t b , int64_t *wids , Bits *bits ,
+		    int32_t niceness ) {
 
 	// sanity check
 	if ( bits && ! bits->m_inLinkBitsSet ) { char *xx=NULL;*xx=0; }
-	// shortcut
+	// int16_tcut
 	wbit_t *bb = NULL; 
 	if ( bits ) bb = bits->m_bits;
 
 	int64_t prevWid = 0LL;
 	// now scan forward from there
-	for ( long j = a ; j < b ; j++ ) {
+	for ( int32_t j = a ; j < b ; j++ ) {
 		// breathe man
 		QUICKPOLL(niceness);
 		// skip punct words
@@ -7514,10 +7515,10 @@ bool isTicketDate ( long a , long b , int64_t *wids , Bits *bits ,
 	return false;
 }
 
-bool Dates::isFuneralDate ( long a , long b ) {
+bool Dates::isFuneralDate ( int32_t a , int32_t b ) {
 	int64_t prevWid = 0LL;
 	// now scan forward from there
-	for ( long j = a ; j < b ; j++ ) {
+	for ( int32_t j = a ; j < b ; j++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip punct words
@@ -7535,10 +7536,10 @@ bool Dates::isFuneralDate ( long a , long b ) {
 
 bool Dates::isCloseHeader ( Section *si ) {
 	if ( ! si ) return false;
-	long a = si->m_a;
-	long b = si->m_b;
+	int32_t a = si->m_a;
+	int32_t b = si->m_b;
 	// now scan forward from there
-	for ( long j = a ; j < b ; j++ ) {
+	for ( int32_t j = a ; j < b ; j++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip punct words
@@ -7557,7 +7558,7 @@ bool Dates::addVotes ( SectionVotingTable *nsvt ) {
 
 	// . ok, now rank the pub dates in order of most probable to least
 	// . the date with the smallest penalty wins
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -7607,27 +7608,27 @@ bool Dates::addVotes ( SectionVotingTable *nsvt ) {
 	//   or a clock date.
 	//
 	////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
 		// must have a valid timestamp then!
 		if ( ! di->m_timestamp ) continue;
 		// the section flag type
-		long sectionType = SV_CURRENT_DATE;
+		int32_t sectionType = SV_CURRENT_DATE;
 		// past, current or future?
-		if ( di->m_timestamp < m_nd->m_spideredTime - 24*3600 )
+		if ( di->m_timestamp < (time_t)m_nd->m_spideredTime - 24*3600 )
 			sectionType = SV_PAST_DATE;
-		if ( di->m_timestamp > m_nd->m_spideredTime + 24*3600 )
+		if ( di->m_timestamp > (time_t)m_nd->m_spideredTime + 24*3600 )
 			sectionType = SV_FUTURE_DATE;
 		// . get section that contains this date's first component
 		// . might be a telescoped date that touches several sections
 		Section *sn = di->m_section;
 		// the diff
-		long delta = di->m_timestamp - m_nd->m_spideredTime;
+		int32_t delta = di->m_timestamp - (time_t)m_nd->m_spideredTime;
 		// set the appropriate bit
 		if ( ! nsvt->addVote1(sn,sectionType,delta) ) return false;
 	}
@@ -7637,7 +7638,7 @@ bool Dates::addVotes ( SectionVotingTable *nsvt ) {
 
 // setting the Addresses needs the D_IS_IN_DATE bit we set above, so we
 // have to interlace these functions!
-bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
+bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 		       // the old one - we read from that
 		       //SectionVotingTable *osvt ,
 		       bool isXml ,
@@ -7658,10 +7659,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// . set SF_RECURRING_DOW based on table headers
 	// . fix for daily schedules
 	//
-	for ( long x = 0 ; x < m_numDatePtrs ; x++ ) {
+	for ( int32_t x = 0 ; x < m_numDatePtrs ; x++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[x];
 		// skip if none
 		if ( ! di ) continue;
@@ -7696,7 +7697,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// now call it again and ignore tags this time
 	// only do this after we have implied sections
 	// otherwise we get bad pairing of dates from different sections
-	// that do not belong together!
+	// that do not beint32_t together!
 	// "Nov 13-15 (last showing) 1pm,3pm<br><br>Nov 25th no showing"
 	// ends up paring 1pm,3pm with Nov 25th!! which is wrong!!
 	// for http://www.glsc.org/visit/omnimax.php?id=45
@@ -7730,19 +7731,19 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// set Date::m_compoundSection to possible be bigger than 
 	// Date::m_section so that it holds all dates in a compound date
 	// that may span multiple sentence sections
-	for ( long i = 0 ; i < m_numTotalPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTotalPtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_totalPtrs[i];
 		// skip if no ptrs
 		if ( di->m_numPtrs <= 0 ) continue;
 		// and in body
 		if ( di->m_a < 0 ) continue;
 		// get left and right most points
-		long mina = 99999999;
-		long maxb = -1;
-		for ( long k = 0 ; k < di->m_numPtrs; k++ ) {
+		int32_t mina = 99999999;
+		int32_t maxb = -1;
+		for ( int32_t k = 0 ; k < di->m_numPtrs; k++ ) {
 			Date *pd = di->m_ptrs[k];
 			if ( pd->m_a < mina ) mina = pd->m_a;
 			if ( pd->m_b > maxb ) maxb = pd->m_b;
@@ -7769,7 +7770,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// for setting SEC_DATE_LIST_CONTAINER bit we need to first set
 	// Section::m_firstDate
 	//
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -7819,7 +7820,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// and first in the list
 		if ( si->m_prevBrother ) continue;
 		// reset stuff
-		long lastbv = 0;
+		int32_t lastbv = 0;
 		bool matched = false;
 		// scan the brother list
 		for ( Section *bro = si; bro ; bro = bro->m_nextBrother ) {
@@ -7837,11 +7838,11 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			//}
 			// . scan the dates in here
 			// . subtract one since we added it above
-			long ii = bro->m_firstDate - 1;
+			int32_t ii = bro->m_firstDate - 1;
 			// skip if has no date we are interested in
 			if ( ii < 0 ) { lastbv = 0; continue; }
 			// reset bit vector for computing it for this brother
-			long bv = 0;
+			int32_t bv = 0;
 			// . loop over them
 			// . CAUTION some dates like "1</b><sup<b>st</b></sup>"
 			//   can span two brother sections
@@ -7938,14 +7939,14 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 
 
 
-	// shortcut
+	// int16_tcut
 	wbit_t *bb = m_bits->m_bits;
 	
 	// invalidate daynum dates that are in addresses!
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -7963,10 +7964,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// word festival in the same hyperlink are probably talking about
 	// a festival on another page, so consider these dates to be
 	// fuzzy as well
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -7979,9 +7980,9 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// disqualifies it as well! because it is referring to
 		// another page... this fixes
 		// http://texasdrums.drums.org/albuquerque.htm
-		long k = di->m_a;
+		int32_t k = di->m_a;
 		// set min for scan
-		long kmin = di->m_a - 30;
+		int32_t kmin = di->m_a - 30;
 		// do not leave section. no! could be <a><span>...
 		//if ( kmin < si->m_a ) kmin = si->m_a;
 		// assume not in an href tag
@@ -8003,7 +8004,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// try next date if not in anchor tag
 		if ( ! inAnchorTag ) continue;
 		// set max of scan
-		long kmax = di->m_b + 30;
+		int32_t kmax = di->m_b + 30;
 		// limit max
 		if ( kmax > m_nw ) kmax = m_nw;
 		// scan forward for festival if we need to
@@ -8029,10 +8030,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// like how stoart.com has 3 dows in a vertical list and tries
 	// to align them by hand to tods in a table column to their right.
 	//
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
@@ -8042,8 +8043,8 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		Date *lastDate = di;
 
 		// init the "j" loop
-		long j = i + 1 ;
-		// shortcut
+		int32_t j = i + 1 ;
+		// int16_tcut
 		Date *dj = NULL;
 		// scan over atomic dates after the month
 		for ( ; j < m_numDatePtrs ; j++ ) {
@@ -8074,7 +8075,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			// assume not veritcal
 			bool vertical = false;
 			// declare outside for loop
-			long a = lastDate->m_b;
+			int32_t a = lastDate->m_b;
 			// scan words in between date "di" and date "dj"
 			for ( ; a < dj->m_a ; a++ ) {
 				// stop on any alnum
@@ -8124,10 +8125,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	//
 	///////////////////////////////
 	/*
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -8141,8 +8142,8 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		if ( di->m_timestamp <= 0 ) continue;
 		// if well into the future it can't be a comment then...
 		if ( di->m_timestamp >= m_nd->m_spideredTime+24*3600) continue;
-		// shortcut
-		long th = sn->m_tagHash;
+		// int16_tcut
+		int32_t th = sn->m_tagHash;
 		// otherwise, it is close to the current time so check it
 		// to see if it is a probable comment date or clock date
 		if ( m_sections->getNumSampled(th,SV_FUTURE_DATE)>=1) continue;
@@ -8165,15 +8166,15 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	//
 	//////////////////////////////
 	int64_t lastWid = 0LL;
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
 		// check out words before it
-		long a = di->m_a;
+		int32_t a = di->m_a;
 		// skip if not in body
 		if ( a < 0 ) continue;
 		// get section
@@ -8183,10 +8184,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// if no sentence we must be in javascript
 		if ( m_contentType == CT_JS && ! ss ) continue;
 		// get sentence start
-		long sa = ss->m_a;
+		int32_t sa = ss->m_a;
 		// stop here
-		long amin = a - 20; if ( amin < 0 ) amin = 0;
-		long alnumCount = 0;
+		int32_t amin = a - 20; if ( amin < 0 ) amin = 0;
+		int32_t alnumCount = 0;
 		// reset
 		lastWid = 0LL;
 		// skip date for scan
@@ -8258,10 +8259,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// . needed by setTODXors()
 	//
 	///////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -8328,7 +8329,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// . "buf" is 1-1 with the sections
 	char  tmp[20000];
 	char *tbuf     = tmp;
-	long  tbufSize = 20000;
+	int32_t  tbufSize = 20000;
 	// just allocate if we can not fit it in the stack
 	if ( m_sections->m_numSections > 2000 ) { 
 		tbuf     = NULL; 
@@ -8358,10 +8359,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// i think the isCompatible() function handles the logic i commented
 	// out above. so let's just make sure that "ht" maps a section ptr
 	// to all the dates that that section contains!
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -8421,9 +8422,9 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// disqualifies it as well! because it is referring to
 		// another page... this fixes
 		// http://texasdrums.drums.org/albuquerque.htm
-		long k = di->m_a;
+		int32_t k = di->m_a;
 		// set min for scan
-		long kmin = di->m_a - 30;
+		int32_t kmin = di->m_a - 30;
 		// do not leave section. no! could be <a><span>...
 		//if ( kmin < si->m_a ) kmin = si->m_a;
 		// assume not in an href tag
@@ -8520,10 +8521,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	//   were getting set, thereby allowing the 10pm in Friday and 
 	//   Saturdays section to telescope up to other DOWs.
 	//
-	for ( long i = 0 ; i < m_numTotalPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTotalPtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_totalPtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -8555,7 +8556,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// convert a holiday like thanksgiving to a month and daynum
 		// everything except generic "holiday" word
 		if ( dt & specialTypes ) {
-			// shortcut
+			// int16_tcut
 			suppflags_t sf = di->m_suppFlags;
 			// remove the bit
 			//dt &= ~specialTypes;
@@ -8620,21 +8621,21 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// so just scan backwards, skipping words that are dates and
 	// see if we hit "closure", etc. basically the same algo in
 	// setStoreHours()
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
-		long a = di->m_a;
-		long min = a - 200;
+		int32_t a = di->m_a;
+		int32_t min = a - 200;
 		// limit to beginning of section, "ds"
 		//if ( ds && min < ds->m_a ) min = ds->m_a;
 		// and do not go below zero of course
 		if ( min < 0 ) min = 0;
 		// limit scan to 7 alnums back...
-		long alnumCount = 0;
+		int32_t alnumCount = 0;
 		int64_t lastWid = 0LL;
 		for ( ; a >= min ; a-- ) {
 			// breathe
@@ -8696,7 +8697,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// . should help us fix web pages that have the store hours repeated
 	//   on every page so that just because the page might mention a
 	//   location we do not apply the store hours to that location!!!
-	for ( long i = 0 ; m_osvt && i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; m_osvt && i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// . but if we are the root page, there is no other page
@@ -8707,7 +8708,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// and don't apply if we are xml either to fix dups in
 		// the trumba.com feeds
 		if ( m_isXml ) break;
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -8730,14 +8731,14 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// set Date::m_calendarSection for isCompatible() to use
 	//
 	///////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
-		// shortcut
+		// int16_tcut
 		Date *dj = di->m_lastDateInCalendar;
 		// point to last one
 		if ( ! dj ) continue;
@@ -8754,10 +8755,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		}
 		// scan above for month or month/year
 		Date *monthDate = NULL;
-		for ( long k = i - 1 ; k >= 0 ; k-- ) {
+		for ( int32_t k = i - 1 ; k >= 0 ; k-- ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// shortcut
+			// int16_tcut
 			Date *dk = m_datePtrs[k];
 			// skip if not there
 			if ( ! dk ) continue;
@@ -8776,12 +8777,12 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			break;
 		}
 		// sometimes the assholes put it below! mesaartscenter.com
-		for ( long k = i + 1 ; k < m_numDatePtrs ; k++ ) {
+		for ( int32_t k = i + 1 ; k < m_numDatePtrs ; k++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// stop if was above
 			if ( monthDate ) break;
-			// shortcut
+			// int16_tcut
 			Date *dk = m_datePtrs[k];
 			// skip if not there
 			if ( ! dk ) continue;
@@ -8799,7 +8800,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		}
 		// get first date after cs->m_b
 		Date *dx = NULL;
-		for ( long x = i + 1 ; x < m_numDatePtrs ; x++ ) {
+		for ( int32_t x = i + 1 ; x < m_numDatePtrs ; x++ ) {
 			QUICKPOLL ( m_niceness );
 			dx = m_datePtrs[x];
 			if ( ! dx ) continue;
@@ -8821,10 +8822,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			if ( cs->contains2 ( monthDate->m_a ) ) break;
 		}
 		// flag them all! including the month/year if there
-		for ( long j = 0 ; j < m_numDatePtrs ; j++ ) {
+		for ( int32_t j = 0 ; j < m_numDatePtrs ; j++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// shortcut
+			// int16_tcut
 			Date *dj = m_datePtrs[j];
 			// skip if nuked from range logic above
 			if ( ! dj ) continue;
@@ -8861,9 +8862,9 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// i.e. "<div> D1 <div3>d3</div3> D2 <div4>d4</div4> </div>"
 
 	// we mod this in the loop, so set it here and use "ndp" for the loop
-	//long ndp = m_numDatePtrs;
+	//int32_t ndp = m_numDatePtrs;
 
-	// shortcut
+	// int16_tcut
 	//dateflags_t msk = DT_DOW|DT_TOD|DT_MONTH|DT_YEAR|DT_DAYNUM;
 
 	// we loop backwards now to set DF_USEDASHEADER flag right to fix
@@ -8871,10 +8872,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// "nov 7pm" as a telescoped date
 	// -- http://www.imbibenobhill.com/calendar/index.html
 	// MDW: the new isCompatible() function fixes that case...
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -8968,7 +8969,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		comboTable.set(4,0,32,cbuf,2000,false,m_niceness,"datecombos");
 
 		// reset this
-		long maxPtrs = 0;
+		int32_t maxPtrs = 0;
 
 		// repeat telescoping algo for the same date, "di" but
 		// select different components this time
@@ -8983,12 +8984,12 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		Date *lastdi = di;
 		//datetype_t accum = di->m_hasType;
 		//Date *last = di;
-		// shortcut
+		// int16_tcut
 		//Section **ss = m_sections->m_sectionPtrs;
 
 	redo:
 
-		long storeHoursCount = 0;
+		int32_t storeHoursCount = 0;
 		// get our section
 		Section *pp = m_sections->m_sectionPtrs[lastdi->m_a];
 		// . grab parent
@@ -8996,7 +8997,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		//   "November 27, 8:30PM; (Doors open at 8:30 PM. Show 
 		//    starts at 9:00 PM)"
 		//pp = pp->m_parent;
-		//long alreadyAdded = 0;
+		//int32_t alreadyAdded = 0;
 		// set this
 		//Section *lastpp = NULL;
 
@@ -9004,7 +9005,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		for ( ; pp ; ) { // ; pp = pp->m_parent ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// we no longer need this now because if we are
+			// we no int32_ter need this now because if we are
 			// comaptible with a date we have to telescope to it,
 			// we can't just skip it. the "s3" algo should fix
 			// the rest of thewoodencow.com in isCompatible()
@@ -9016,15 +9017,15 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			//lastpp = pp;
 
 			// pick the one *right above* us
-			long slot = ht.getSlot ( &pp );
+			int32_t slot = ht.getSlot ( &pp );
 			// get best date that telescoped into this section
 			Date *bestdp = NULL;
-			long  bestpn;
-			long  bestDist;
+			int32_t  bestpn;
+			int32_t  bestDist;
 			// loop over all dates that telescoped up to this sec.
 			for ( ; slot >= 0 ; slot = ht.getNextSlot(slot,&pp) ) {
 				// get it
-				long pn = *(long *)ht.getValueFromSlot(slot);
+				int32_t pn = *(int32_t *)ht.getValueFromSlot(slot);
 				// get the date index
 				Date *dp = m_datePtrs[pn];
 				// if this is NULL now then it got absorbed
@@ -9043,7 +9044,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 				// if an isolated year, must have tag before
 				if ( dp->m_type == DT_YEAR ) {
 					// get guy before it
-					long pre = dp->m_a - 1;
+					int32_t pre = dp->m_a - 1;
 					// backup over punct
 					if (pre>0&&!m_wids[pre]&&!m_tids[pre])
 						pre--;
@@ -9078,13 +9079,13 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 				//if ( dp->m_flags & DF_IN_VERTICAL_LIST )
 				//	break;
 
-				uint64_t key = (unsigned long)di;
+				uint64_t key = (uint32_t)di;
 				// shift up
 				key <<= 32LL;
 				// need DD now, if there
 				if ( DD ) key |= DD->m_ptrHash;
 
-				long ret;
+				int32_t ret;
 				// do we know the result?
 				if ( dp->m_norepeatKey == key && key ) {
 					ret = dp->m_norepeatResult;
@@ -9096,7 +9097,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 					ret = isCompatible(di,dp,&ht,DD,
 							 &hasMultipleHeaders) ;
 					/*
-					static long dcount = 0;
+					static int32_t dcount = 0;
 					// print for debug
 					SafeBuf dbuf;
 					char *is;
@@ -9109,7 +9110,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 					pd->printText(&dbuf,m_words,false);
 					dbuf.safePrintf(" dp=");
 					dp->printText(&dbuf,m_words,false);
-					log("%s (dcount=%li)",
+					log("%s (dcount=%"INT32")",
 					    dbuf.getBufStart(),dcount);
 					dcount++;
 					*/
@@ -9147,10 +9148,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 
 				// now that headers can be below us, get
 				// the distance as an absolute value
-				//long dist = di->m_a - dp->m_a;
+				//int32_t dist = di->m_a - dp->m_a;
 				// fix "July 19, 2010 [[]] noon - 5:00pm [[]] 
 				// Wednesday - Saturday" for woodencow.com
-				long dist = lastdi->m_a - dp->m_a;
+				int32_t dist = lastdi->m_a - dp->m_a;
 				// is it negative? i.e. header below us?
 				if ( dist < 0 ) {
 					// make negatives into positives
@@ -9181,7 +9182,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 				// they are brother sections. maybe instead the
 				// fix relies on adding better implied sections
 				// around such beasties!!
-				if ( pp->m_mark == (long)di &&
+				if ( pp->m_mark == (int32_t)di &&
 				     // store hours can always skip over
 				     // this section to fix thewoodencow.com
 				     ! storeHoursCount &&
@@ -9218,7 +9219,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			// make sure we always grab a date from section "pp"
 			// from now on, now that we know it has a date that
 			// is compatible with us
-			pp->m_mark = (long)di;
+			pp->m_mark = (int32_t)di;
 			// . do not repeat this guy in another parent sec
 			// . no, only the last date in the telescope should
 			//   have this set for our MULTIPLE HEADER algo
@@ -9295,7 +9296,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			bestdp->m_flags |= DF_USEDASHEADER;
 			// accumulate
 			//accum |= bestdp->m_hasType;
-			// remember the max so we can eliminate shorties
+			// remember the max so we can eliminate int16_ties
 			if ( DD->m_numPtrs > maxPtrs )
 				maxPtrs = DD->m_numPtrs;
 			// stop telescoping to avoid a breach
@@ -9310,7 +9311,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// "goto repeat" to add another telescope that did not
 		// work out
 		if ( ! DD ) continue;
-		// set flag on shorties
+		// set flag on int16_ties
 		//if ( DD->m_numPtrs < maxPtrs )
 		//	DD->m_flags |= DF_SUB_DATE;
 
@@ -9350,8 +9351,8 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			//   to use "Friday, Jul 30" again...  so maybe if
 			//   we just record the ptr hash of the final product
 			//   and just not allow that again!
-			//for ( long c = 1 ; c < DD->m_numPtrs - 1 ; c++ )
-			for ( long c = 1 ; c < DD->m_numPtrs ; c++ )
+			//for ( int32_t c = 1 ; c < DD->m_numPtrs - 1 ; c++ )
+			for ( int32_t c = 1 ; c < DD->m_numPtrs ; c++ )
 				DD->m_ptrs[c]->m_used = NULL;
 			// re-do this same di
 			goto repeat;
@@ -9385,10 +9386,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	ht.reset();
 
 	// set headerCount on all double telescopes
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -9396,8 +9397,8 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		if ( di->m_type != DT_TELESCOPE ) continue;
 		// skip if not exactly 2 ptrs...
 		//if ( di->m_numPtrs != 2 ) continue;
-		// shortcut
-		long np = di->m_numPtrs;
+		// int16_tcut
+		int32_t np = di->m_numPtrs;
 		// if we do not have this it hurts
 		// http://www.reverbnation.com/venue/448772 by making the
 		// "8pm" of the first event as the header
@@ -9415,10 +9416,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	HashTableX dt;
 	char dtbuf[2000];
 	dt.set ( 4 , 4 , 128 , dtbuf , 2000 , true , m_niceness,"dfduptab" );
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -9427,13 +9428,13 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// must be telescope
 		//if ( di->m_type != DT_TELESCOPE ) continue;
 		// make a hash
-		unsigned long h1 = 0;
-		unsigned long h2 = 0;
+		uint32_t h1 = 0;
+		uint32_t h2 = 0;
 		// sanity check
 		if ( di->m_numPtrs == 0 ) { 
 			// use the ptr as the base of the hash
-			//unsigned long nh = (unsigned long)di;
-			unsigned long nh = di->m_arrayNum;
+			//uint32_t nh = (uint32_t)di;
+			uint32_t nh = di->m_arrayNum;
 			// always add one to fix 0,20 colliding with 20
 			// where those numbers are arraynums
 			nh += 1;
@@ -9447,18 +9448,18 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			h2 = h1;
 		}
 		// count how many we hash
-		long numProcessed = 0;
+		int32_t numProcessed = 0;
 		Date *lastGood = NULL;
-		unsigned long nh = 0;
+		uint32_t nh = 0;
 		// hash the ptrs together
-		for ( long j = 0 ; j < di->m_numPtrs; j++ ) {
-			// shortcut
+		for ( int32_t j = 0 ; j < di->m_numPtrs; j++ ) {
+			// int16_tcut
 			Date *dj = di->m_ptrs[j];
 			// hash for all subdates
 			if ( h1 ) subdates.addKey ( &h1 , &di );
 			// convert ptr to really random #
-			//long nh=hash32h ( (unsigned long)di->m_ptrs[j] ,123);
-			//unsigned long nh = (unsigned long)dj;
+			//int32_t nh=hash32h ( (uint32_t)di->m_ptrs[j] ,123);
+			//uint32_t nh = (uint32_t)dj;
 
 			// we have to fix a date for dmjuice.com that had
 			// "X [[]] Y [[]] Z" so "X [[]] Z" is a subdate.
@@ -9468,7 +9469,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			// it!!! TODO: permute properly for subdate detector.
 			if ( di->m_type == DT_TELESCOPE && j == 2 ) {
 				// undo last date hash
-				unsigned long fh = h1 ^ nh;
+				uint32_t fh = h1 ^ nh;
 				// put ours in
 				fh ^= dj->m_tmph;
 				// and add that
@@ -9499,7 +9500,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 
 			// if it is a weak dow and we have a strong, we ignore
 			// it in general, like in addIntervals() we will add 
-			// it in a hacked way as a single infintitely long 
+			// it in a hacked way as a single infintitely int32_t 
 			// interval if it is weak, because the strong dow 
 			// overrides it. this fixes southgatehouse.com which 
 			// has "Sunday Valley" as a band name playing on a 
@@ -9525,7 +9526,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// to set the hash as if we only had one date ptr
 		if ( numProcessed == 1 ) {
 			// use the ptr as the base of the hash
-			//unsigned long nh = (unsigned long)lastGood;
+			//uint32_t nh = (uint32_t)lastGood;
 			// mix it up some. i even had to add nh here to
 			// fix unm.edu collision
 			//nh = hash32h ( nh , 8466587+nh );
@@ -9550,16 +9551,16 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		if ( ! dt.addKey ( &h2 , &di ) ) return false;
 	}
 
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
 
-		// shortcut
-		unsigned long key = di->m_tmph;
+		// int16_tcut
+		uint32_t key = di->m_tmph;
 
 		// are we a sub-date?
 		bool isSubDate = subdates.isInTable ( &key );
@@ -9597,7 +9598,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		if ( di->m_type != DT_TELESCOPE ) continue;
 
 		// see if a dup
-		long slot = dt.getSlot ( &key );
+		int32_t slot = dt.getSlot ( &key );
 		// scan it
 		for ( ; slot >= 0 ; slot = dt.getNextSlot(slot,&key) ) {
 			// get value
@@ -9668,10 +9669,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// since fake sections would be for Dates.cpp maybe make them
 	// look for sections that just have a date and use those as headers?
 	// 
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -9712,7 +9713,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	//
 	//////////////////////////////	
 
-	long is = m_numDatePtrs * 4;
+	int32_t is = m_numDatePtrs * 4;
 	// just init it, fast and does not allocate
 	if ( ! m_tt.set(4,4,is,NULL,0,true,m_niceness,"todtable") )
 		return false;
@@ -9720,10 +9721,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	if ( ! m_tnt.set(4,4,is,NULL,0,true,m_niceness,"todnumtable") )
 		return false;
 	// a flag to only init once
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -9777,14 +9778,14 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			// hash it, return NULL with g_errno set on error
 			if ( ! m_tt.addKey ( &sp , &di ) ) return false;
 			// counts
-			if ( ! m_tnt.addTerm32 ( (long *)&sp, 1)) return false;
+			if ( ! m_tnt.addTerm32 ( (int32_t *)&sp, 1)) return false;
 		}
 	}
 
 
 	// sanity check
 	if ( ! m_nd->m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
-	// shortcut
+	// int16_tcut
 	//Sections *ss = m_sections;
 	/*
 	//////////////// 
@@ -9796,10 +9797,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	//   or a clock date.
 	//
 	////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -9809,7 +9810,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// must have a valid timestamp then!
 		if ( ! di->m_timestamp ) continue;
 		// the section flag type
-		long sectionType = SV_CURRENT_DATE;
+		int32_t sectionType = SV_CURRENT_DATE;
 		// past, current or future?
 		if ( di->m_timestamp < m_nd->m_spideredTime - 24*3600 )
 			sectionType = SV_PAST_DATE;
@@ -9819,7 +9820,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// . might be a telescoped date that touches several sections
 		Section *sn = di->m_section;
 		// the diff
-		long delta = di->m_timestamp - m_nd->m_spideredTime;
+		int32_t delta = di->m_timestamp - m_nd->m_spideredTime;
 		// set the appropriate bit
 		if ( ! ss->addVote(sn,sectionType,delta) ) return false;
 	}
@@ -9851,10 +9852,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// if we got just a DOW and no daynum, no dow range, and not plural
 	// DOW and does not have "each" or "every" before it, then we
 	// are invalid, not recurring. set DF_BADDATEFORMAT
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -9878,9 +9879,9 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// the telescope loop
 	subloop:
 		// get first slot in this section
-		long slot = m_tt.getSlot ( &sp );
+		int32_t slot = m_tt.getSlot ( &sp );
 		// count all that are not us
-		long count = 0;
+		int32_t count = 0;
 		// loop over all tods that telescoped up to this sec.
 		for ( ; slot >= 0 ; slot = m_tt.getNextSlot(slot,&sp) ) {
 			// get it
@@ -9932,11 +9933,11 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// http://www.zvents.com/albuquerque-nm/events/show/88543421-the-love-song-of-j-robert-oppenheimer-by-carson-kreitzer
 
 	/*
-	long year = -1;
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	int32_t year = -1;
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -9976,10 +9977,10 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		break;
 	}
 	// add in the assumed year
-	for ( long i = 0 ; year > 0 && i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; year > 0 && i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -10018,7 +10019,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 
 	// . ok, now rank the pub dates in order of most probable to least
 	// . the date with the smallest penalty wins
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10153,12 +10154,12 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		//   section, the better
 		// . get our word pos
 		// . the delta
-		long delta1 = m_firstGood - di->m_a;
+		int32_t delta1 = m_firstGood - di->m_a;
 		// make positive
 		if ( delta1 < 0 ) delta1 *= -1;
 		// . same for the bottom of the positive scoring section
 		// . that delta
-		long delta2 = m_lastGood - di->m_a;
+		int32_t delta2 = m_lastGood - di->m_a;
 		// make positive
 		if ( delta2 < 0 ) delta2 *= -1;
 		// make into scores. top is better than bottom a bit
@@ -10173,7 +10174,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 
 	// . get the current best pub date
 	// . the best date is the one with the smallest penalty
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10207,7 +10208,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		m_best = NULL;
 	}
 
-	// shortcut
+	// int16_tcut
 	char *u = ""; if ( m_url ) u = m_url->getUrl();
 
 	// or if its ambiguous and not sure sure if american or european
@@ -10264,20 +10265,20 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	//}
 
 	// get year
-	//long y1 = getYear ( minPubDate );
-	//long y2 = getYear ( maxPubDate );
+	//int32_t y1 = getYear ( minPubDate );
+	//int32_t y2 = getYear ( maxPubDate );
 	// if not same, bail!
 	//if ( y1 != y2 ) return true;
 	// set it
-	//long year = y1;
+	//int32_t year = y1;
 	// ok, now set the assumed year to this for all dates that do
 	// not have a year!
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// must agree on year! otherwise, not sure which it could be!
 		//if ( y1 != y2 ) break;
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -10301,7 +10302,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// skip close dates
 		if ( di->m_flags & DF_CLOSE_DATE ) continue;
 		// limit to this interval
-		long a = m_nd->m_spideredTime;
+		int32_t a = m_nd->m_spideredTime;
 		// this spidertime is in UTC and the date is not, so the spider
 		// time is like 5 hours off or so. so it made an event
 		// that started right around the spider time get a 
@@ -10311,16 +10312,16 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		a -= 24 * 3600;
 		// eveisays.com/jazz.html is 
 		// 8 months from when we spidered it
-		long b = m_nd->m_spideredTime + DAYLIMIT*24*3600;
+		int32_t b = m_nd->m_spideredTime + DAYLIMIT*24*3600;
 		// get max guess year
-		long gy = di->m_maxYearGuess;
+		int32_t gy = di->m_maxYearGuess;
 		// . restrict b some more 
 		// . guess year is > 0 if valid
 		// . get max timepoint from end of max year from all dates
 		//   we checked out on the page
 		if ( gy > 0 ) {
 			// get end of that year in time_t format
-			long ye = getYearMonthStart(gy+1,1) - 1;
+			int32_t ye = getYearMonthStart(gy+1,1) - 1;
 			// go out 6 months into that year... if
 			// the date has a recurring dow like "ever wednesday"
 			// or "every day"
@@ -10356,9 +10357,12 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// that would probably indicate some parsing issues!
 	//
 	/////////////////////
-	if ( m_od && m_od->m_pubDate != m_pubDate ) {
+	if ( m_od && (time_t)m_od->m_pubDate != m_pubDate ) {
 		log("build: pub date change since last spider u=%s from "
-		    "%li to %li",u,m_od->m_pubDate,m_pubDate);
+		    "%"UINT32" to %"UINT32""
+		    ,u
+		    ,m_od->m_pubDate
+		    ,(uint32_t)m_pubDate);
 		// ignore it now
 		m_pubDate = -1;
 		//char *xx=NULL;*xx=0;
@@ -10368,8 +10372,9 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	if ( ! m_nd->m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 
 	// no future pub dates allowed
-	//long nowGlobal = getTimeGlobal();
-	if ( m_best && m_best->m_timestamp>m_nd->m_spideredTime){//nowGlobal){
+	//int32_t nowGlobal = getTimeGlobal();
+	if ( m_best && 
+	     m_best->m_timestamp>(time_t)m_nd->m_spideredTime){//nowGlobal){
 		// i've seen this happen for
 		// http://www.lis.illinois.edu/events/2011/02/18/mix-it-lively-event-community-informatics-seed-fund-recipients-community-partners-
 		// because it has the future date in the url...
@@ -10407,7 +10412,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// set DF_IN_LIST if date is in a list
 	//
 	////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10415,11 +10420,11 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// skip if none
 		if ( ! di ) continue;
 		// loop over the date elements of di
-		long ne;
+		int32_t ne;
 		Date **de = getDateElements(di,&ne);
-		long dh32 = 0;
+		int32_t dh32 = 0;
 		// date elements are sorted by m_a
-		for ( long j = 0 ; j < ne ; j++ ) {
+		for ( int32_t j = 0 ; j < ne ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
@@ -10456,7 +10461,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			// incorporate the tag hash otherwise
 			else dh32 = hash32h ( dh32 , dj->m_turkTagHash );
 			// however, we also now add in the date type
-			dh32 = hash32h ( dh32 , (long)dj->m_type );
+			dh32 = hash32h ( dh32 , (int32_t)dj->m_type );
 		}
 		// sanity
 		if ( dh32 == 0 ) { char *xx=NULL;*xx=0; }
@@ -10483,7 +10488,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// . all non-telscoped dates get this set by default
 	// . if there's any potential wrongness in the telscoped date we
 	//   do not set this...
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10499,9 +10504,9 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// make sure that these dates are in their own section
 		Section *ds = di->m_ptrs[0]->m_section;
 		// compute date's mina and maxb
-		long mina = 9999999;
-		long maxb = -1;
-		for ( long j = 0 ; j < di->m_numPtrs ; j++ ) {
+		int32_t mina = 9999999;
+		int32_t maxb = -1;
+		for ( int32_t j = 0 ; j < di->m_numPtrs ; j++ ) {
 			// get sub date
 			Date *sj = di->m_ptrs[j];
 			// skip if from url
@@ -10524,12 +10529,12 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// how'd this happen?
 		if ( ! ds ) continue;
 		// ok, now scan all dates in this section. they must all
-		// belong to "di" in order for "di" to be tight.
-		long fdi = ds->m_firstDate;
+		// beint32_t to "di" in order for "di" to be tight.
+		int32_t fdi = ds->m_firstDate;
 		// assume "di" is a tight date
 		bool tight = true;
 		// scan
-		for ( long j = fdi ; j < m_numDatePtrs ; j++ ) {
+		for ( int32_t j = fdi ; j < m_numDatePtrs ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get that date
@@ -10540,8 +10545,8 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			if ( dj->m_a >= ds->m_b ) break;
 			// or telescope, stop
 			if ( dj->m_type == DT_TELESCOPE ) break;
-			// skip if belongs to us
-			long k; for ( k = 0 ; k < di->m_numPtrs ; k++ ) {
+			// skip if beint32_ts to us
+			int32_t k; for ( k = 0 ; k < di->m_numPtrs ; k++ ) {
 				// did the date "dj" match one of our
 				// date components??? break if so
 				if ( di->m_ptrs[k] == dj ) break;
@@ -10568,7 +10573,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 		// 3. if the section contains date of different type than
 		//    the date whose section we are expanding then its
 		//    ambiguous and we should not set DF_TIGHT
-		long j; for ( j = 0 ; j < di->m_numPtrs ; j++ ) {
+		int32_t j; for ( j = 0 ; j < di->m_numPtrs ; j++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
@@ -10584,7 +10589,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 			Section *ps = sp;
 			for ( ; ps ; ps = ps->m_parent ) {
 				// scan the other dates
-				long k;for ( k = 0 ; k < di->m_numPtrs ; k++ ){
+				int32_t k;for ( k = 0 ; k < di->m_numPtrs ; k++ ){
 					// breathe
 					QUICKPOLL(m_niceness);
 					// ge tit
@@ -10641,17 +10646,17 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 	// parsing ability for now. it has dows in the row header and
 	// tods in the first column header.
 	//
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
-		long ne;
+		int32_t ne;
 		Date **de = getDateElements(di,&ne);
 		// so scan each date element then
-		long x; for ( x = 0 ; x < ne ; x++ ) {
+		int32_t x; for ( x = 0 ; x < ne ; x++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
@@ -10679,7 +10684,7 @@ bool Dates::setPart2 ( Addresses *aa , long minPubDate , long maxPubDate ,
 
 // set these for printing normalized crap
 void Dates::setDateParents ( ) {
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10695,7 +10700,7 @@ void Dates::setDateParentsRecursive ( Date *di , Date *parent ) {
 	// set parent for him
 	di->m_dateParent = parent;
 	// scan his ptrs
-	for ( long j = 0 ; j < di->m_numPtrs ; j++ ) {
+	for ( int32_t j = 0 ; j < di->m_numPtrs ; j++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10784,7 +10789,7 @@ void Dates::setDateParentsRecursive ( Date *di , Date *parent ) {
 //   then outside those subsections you have a phone number. each of the
 //   tods technically owns the phone number, but when telescoping out the
 //   tod section you do not want to own necessarily any other phone number
-//   contained by the telescoped section because it might belong to another
+//   contained by the telescoped section because it might beint32_t to another
 //   tod or list of tods entirely! that is why we have to make a hash table
 //   for every item we want to compare, so we have getPhoneTable() etc. and
 //   those tables telescope out their items until they hit a TOD section.
@@ -10794,7 +10799,7 @@ void Dates::setDateParentsRecursive ( Date *di , Date *parent ) {
 // . is "s1" a compatible "header" of "s2" (or vice versa)
 // . return -1 on error with g_errno set
 // . "di" is the first date in the telescope
-long Dates::isCompatible ( Date *di , 
+int32_t Dates::isCompatible ( Date *di , 
 			   Date *dp , 
 			   HashTableX *ht ,
 			   Date *DDarg ,
@@ -11396,13 +11401,13 @@ long Dates::isCompatible ( Date *di ,
 
 	/*
 	// loop over all text sections owned 
-	for ( long k = last1->m_a ; k < last1->m_b ; k++ ) {
+	for ( int32_t k = last1->m_a ; k < last1->m_b ; k++ ) {
 		// need a tid
 		if ( ! m_tids[k] ) continue;
 		// get its smallest containing section
 		Section *sp = m_sections->m_sectionPtrs[k];
 		// get its content hash
-		long ch = sp->m_contentHash;
+		int32_t ch = sp->m_contentHash;
 		// hash that
 		if ( ! ct.addKey ( 
 		// skip if in date
@@ -11434,7 +11439,7 @@ long Dates::isCompatible ( Date *di ,
 		// in its section, otherwise we might be mistaking it
 		// for another event or something!
 		// so scan for words not in a date
-		for ( long k = last1->m_a ; k < last1->m_b ; k++ ) {
+		for ( int32_t k = last1->m_a ; k < last1->m_b ; k++ ) {
 			// skip if in date
 			if ( m_bits[k] & D_IS_IN_DATE ) continue;
 			// otherwise, that's bad, we can't be a header
@@ -11619,7 +11624,7 @@ long Dates::isCompatible ( Date *di ,
 	if ( hasType != 0 && accum == hasType && check )
 		return 0;
 
-	long ret = isCompatible2 ( s1 , s2 , true );
+	int32_t ret = isCompatible2 ( s1 , s2 , true );
 	// return -1 on error with g_errno set
 	if ( ret == -1 ) { 
 		if ( ! g_errno ) { char *xx=NULL;*xx=0;}
@@ -11694,13 +11699,13 @@ long Dates::isCompatible ( Date *di ,
 		datetype_t mask1;
 		mask1=DT_DOW|DT_MONTH|DT_DAYNUM|DT_YEAR|DT_TOD|DT_RANGE_ANY;
 		// get a header date in the s1 section
-		long slot = ht->getSlot(&s1);
+		int32_t slot = ht->getSlot(&s1);
 		// loop over all dates that telescoped up to that section
 		for ( ; slot >= 0 ; slot = ht->getNextSlot(slot,&s1 ) ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
-			long pn = *(long *)ht->getValueFromSlot(slot);
+			int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 			// get the date index
 			Date *hd = m_datePtrs[pn];
 			// skip if us
@@ -11838,7 +11843,7 @@ long Dates::isCompatible ( Date *di ,
 		// check brothers
 		Section *bro = thdr->m_prevBrother;
 		// get header dates in there
-		long slot ;
+		int32_t slot ;
 		// come up here for "next" bro as well
 	subloop:
 		// get it
@@ -11849,7 +11854,7 @@ long Dates::isCompatible ( Date *di ,
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
-			long pn = *(long *)ht->getValueFromSlot(slot);
+			int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 			// get the date index
 			Date *dx = m_datePtrs[pn];
 			// sanity check
@@ -11873,7 +11878,7 @@ long Dates::isCompatible ( Date *di ,
 	}
 	*/
 
-	//long slot = -1;
+	//int32_t slot = -1;
 
 	/*
 	// now loop over all dates in each section and see what types we got
@@ -11883,7 +11888,7 @@ long Dates::isCompatible ( Date *di ,
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
-		long pn = *(long *)ht->getValueFromSlot(slot);
+		int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 		// get the date index
 		Date *dx = m_datePtrs[pn];
 		// skip if our guy
@@ -11953,7 +11958,7 @@ long Dates::isCompatible ( Date *di ,
 	// loop over all dates that telescoped up to this sec.
 	for ( ; slot >= 0 ; slot = ht->getNextSlot(slot,&last1) ) {
 		// get it
-		long pn = *(long *)ht->getValueFromSlot(slot);
+		int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 		// get the date index
 		Date *dx = m_datePtrs[pn];
 		// get its type
@@ -12008,7 +12013,7 @@ long Dates::isCompatible ( Date *di ,
 	// loop over all dates that telescoped up to this sec.
 	for ( ; slot >= 0 ; slot = ht->getNextSlot(slot,&last2) ) {
 		// get it
-		long pn = *(long *)ht->getValueFromSlot(slot);
+		int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 		// get the date index
 		Date *dx = m_datePtrs[pn];
 		// get its type
@@ -12043,7 +12048,7 @@ long Dates::isCompatible ( Date *di ,
 	// loop over all dates that telescoped up to this sec.
 	for ( ; slot >= 0 ; slot = ht->getNextSlot(slot,&last3) ) {
 		// get it
-		long pn = *(long *)ht->getValueFromSlot(slot);
+		int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 		// get the date index
 		Date *dx = m_datePtrs[pn];
 		// get its type
@@ -12094,12 +12099,12 @@ long Dates::isCompatible ( Date *di ,
 
 	// . if both have daynums, then do not allow
 	// . fixes peachpundit.com from telescoping its pubdate to the
-	//   tod range in the article, which belongs to a month/daynum 
+	//   tod range in the article, which beint32_ts to a month/daynum 
 	//   mentioned in the article.
 	// . crap this also breaks signmeup.com
 	// . this breaks thewoodencow.com because the store hours section
 	//   contains a list of monthdays below it which is included in acc1
-	// . it no longer seems to be needed by peachpundit.com but taking
+	// . it no int32_ter seems to be needed by peachpundit.com but taking
 	//   it out caused a few anomalies. not sure if good or bad really,
 	//   so i left this in and fixed thewoodencow.com
 	if ( (acc1 & DT_DAYNUM) && (acc2 & DT_DAYNUM) &&
@@ -12109,7 +12114,7 @@ long Dates::isCompatible ( Date *di ,
 	     // a daynum to a range "Dec x - Jan y", so allow range headers
 	     // to be compatible
 	     !(acc1 & (DT_RANGE|DT_RANGE_MONTHDAY|DT_RANGE_DAYNUM)) &&
-	     // along the same lines allow lists
+	     // aint32_t the same lines allow lists
 	     // breaks www.missioncvb.org which has
 	     // "10:15 pm on both Friday and Saturday night" telescoping to
 	     // "Friday, May 9 and Saturday, May 10, 2008"
@@ -12211,7 +12216,7 @@ long Dates::isCompatible ( Date *di ,
 	// stop Sep 1 - Sep 25 [[]] Wed - Sat [[]] noon - 5pm
 	// for thewoodencow.com.
 	// s3 is "Wed - Sat" section and acc1 is "noon - 5pm" section
-	// the "noon - 5pm" belongs with "Sunday" not "Wed - Sat". these two
+	// the "noon - 5pm" beint32_ts with "Sunday" not "Wed - Sat". these two
 	// critters are in different sections i think, so this fixes that.
 	//if ( s3 && (acc1 & acc3) == acc1 ) return 0;
 	// no, header can completely contain the last date's section because
@@ -12243,7 +12248,7 @@ long Dates::isCompatible ( Date *di ,
 
 
 // return 0 for false, 1 for true and -1 on error
-long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
+int32_t Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 
 	if ( s1 == s2 ) return 1;
 
@@ -12269,12 +12274,12 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	// tod, etc. then they are not compatible. the header should
 	// not have such things in common with the headee, otherwise it is
 	// more likely just another item in a list!
-	long phFinal1 = 0;
-	long ehFinal1 = 0;
-	long ahFinal1 = 0;
+	int32_t phFinal1 = 0;
+	int32_t ehFinal1 = 0;
+	int32_t ahFinal1 = 0;
 	// . -1 indicates none, since free is a cost of "0".
 	// . no, now free is like 999999
-	long priceFinal1 = 0;
+	int32_t priceFinal1 = 0;
 
 	// blow up "s1" until we hit last section that does NOT contain "s2"
 	Section *last1 = s1;
@@ -12288,20 +12293,20 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 			int64_t *ph = (int64_t *)pt->getValue ( &si );
 			if ( ph && ( phFinal1 ^ *ph ) ) phFinal1 ^= *ph;
 		}
-		// get any email hash as we go along
+		// get any email hash as we go aint32_t
 		if ( et ) {
 			int64_t *eh = (int64_t *)et->getValue ( &si );
 			if ( eh && ( ehFinal1 ^ *eh ) ) ehFinal1 ^= *eh;
 		}
 		if ( rt ) {
-			long *price = (long *)rt->getValue ( &si );
+			int32_t *price = (int32_t *)rt->getValue ( &si );
 			if ( price && priceFinal1 == -1 )
 				priceFinal1 = *price;
 		}
 		// address table, data values are Address ptrs really
 		//if ( at ) {
 		//	// these are Address indexes really
-		//	long *ah = (long *)at->getValue ( &si );
+		//	int32_t *ah = (int32_t *)at->getValue ( &si );
 		//	if ( ah && ( ahFinal1 ^ *ah ) ) ahFinal1 ^= *ah;
 		//}
 		// . address table, data values are Address ptrs really
@@ -12313,7 +12318,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		//   new logic here.
 		if ( at ) {
 			// key mixing now
-			long key = hash32h((long)si,456789);
+			int32_t key = hash32h((int32_t)si,456789);
 			// these are Address indexes really
 			Place **pp = (Place **)at->getValue ( &key );
 			// get the address?
@@ -12321,19 +12326,19 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 				// get that
 				Address *ad = (*pp)->m_address;
 				// assume none
-				long h = 0;
+				int32_t h = 0;
 				// or alias
 				if ( ! ad ) ad = (*pp)->m_alias;
 				// or just use place hash i guess!
-				if ( ! ad ) h = (long)*pp;
+				if ( ! ad ) h = (int32_t)*pp;
 				// otherwise hash up address street etc.
 				else {
-					h =(long)ad->m_street->m_hash;
-					h^=(long)ad->m_street->m_streetNumHash;
+					h =(int32_t)ad->m_street->m_hash;
+					h^=(int32_t)ad->m_street->m_streetNumHash;
 					//h ^= ad->m_adm1->m_cid; // country id
-					//h ^= (long)ad->m_adm1Bits;
-					//h ^= (long)ad->m_cityHash;
-					h ^= (long)ad->m_cityId32;
+					//h ^= (int32_t)ad->m_adm1Bits;
+					//h ^= (int32_t)ad->m_cityHash;
+					h ^= (int32_t)ad->m_cityId32;
 					// sanity check
 					//if ( ! ad->m_adm1Bits ||
 					//     ! ad->m_cityHash ) {
@@ -12342,7 +12347,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 						char *xx=NULL;*xx=0; }
 				}
 				// old way
-				//h = (long)*pp;
+				//h = (int32_t)*pp;
 				// and use that now
 				if ( ( ahFinal1 ^ h ) ) ahFinal1 ^= h;
 			}
@@ -12356,7 +12361,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	// . i guess we are compatible then...
 	//if ( ! last1 ) return 1;
 
-	// get any phone number hash as we go along
+	// get any phone number hash as we go aint32_t
 	if ( last1 && useXors ) {
 		phFinal1    = last1->m_phoneXor;
 		ehFinal1    = last1->m_emailXor;
@@ -12368,7 +12373,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	int64_t phFinal2 = 0;
 	int64_t ehFinal2 = 0;
 	int64_t ahFinal2 = 0;
-	long      priceFinal2 = 0;
+	int32_t      priceFinal2 = 0;
 
 	// blow up "s2" until we hit last section that does NOT contain "s2"
 	Section *last2 = s2;
@@ -12378,31 +12383,31 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		// if si contains s1 then stop
 		if ( si->contains ( s1 ) ) break;
 		/*
-		// get any phone number hash as we go along
+		// get any phone number hash as we go aint32_t
 		if ( pt ) { 
 			int64_t *ph = (int64_t *)pt->getValue ( &si );
 			if ( ph && ( phFinal2 ^ *ph ) ) phFinal2 ^= *ph;
 		}
-		// get any email hash as we go along
+		// get any email hash as we go aint32_t
 		if ( et ) {
 			int64_t *eh = (int64_t *)et->getValue ( &si );
 			if ( eh && ( ehFinal2 ^ *eh ) ) ehFinal2 ^= *eh;
 		}
 		if ( rt ) {
-			long *price = (long *)rt->getValue ( &si );
+			int32_t *price = (int32_t *)rt->getValue ( &si );
 			if ( price && priceFinal2 == -1 )
 				priceFinal2 = *price;
 		}
 		// address table, data values are Address ptrs really
 		//if ( at ) {
 		//	// these are Address indexes really
-		//	long *ah = (long *)at->getValue ( &si );
+		//	int32_t *ah = (int32_t *)at->getValue ( &si );
 		//	if ( ah && ( ahFinal2 ^ *ah ) ) ahFinal2 ^= *ah;
 		//}
 		// address table, data values are Address ptrs really
 		if ( at ) {
 			// key mixing now
-			long key = hash32h((long)si,456789);
+			int32_t key = hash32h((int32_t)si,456789);
 			// these are Address indexes really
 			Place **pp = (Place **)at->getValue ( &key );
 			// get the address?
@@ -12410,19 +12415,19 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 				// get that
 				Address *ad = (*pp)->m_address;
 				// assume none
-				long h = 0;
+				int32_t h = 0;
 				// or alias
 				if ( ! ad ) ad = (*pp)->m_alias;
 				// or just use place hash i guess!
-				if ( ! ad ) h = (long)*pp;
+				if ( ! ad ) h = (int32_t)*pp;
 				// otherwise hash up address street etc.
 				else {
-					h =(long)ad->m_street->m_hash;
-					h^=(long)ad->m_street->m_streetNumHash;
+					h =(int32_t)ad->m_street->m_hash;
+					h^=(int32_t)ad->m_street->m_streetNumHash;
 					//h ^= ad->m_adm1->m_cid; // country id
-					//h ^= (long)ad->m_adm1Bits;
-					//h ^= (long)ad->m_cityHash;
-					h ^= (long)ad->m_cityId32;
+					//h ^= (int32_t)ad->m_adm1Bits;
+					//h ^= (int32_t)ad->m_cityHash;
+					h ^= (int32_t)ad->m_cityId32;
 					// sanity check
 					//if ( ! ad->m_adm1Bits ||
 					//     ! ad->m_cityHash ) {
@@ -12431,7 +12436,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 						char *xx=NULL;*xx=0; }
 				}
 				// old way
-				//h = (long)*pp;
+				//h = (int32_t)*pp;
 				// and use that now
 				if ( ( ahFinal2 ^ h ) ) ahFinal2 ^= h;
 			}
@@ -12441,7 +12446,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		last2 = si;
 	}
 
-	// get any phone number hash as we go along
+	// get any phone number hash as we go aint32_t
 	if ( last2 && useXors ) {
 		phFinal2    = last2->m_phoneXor;
 		ehFinal2    = last2->m_emailXor;
@@ -12496,12 +12501,12 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	// is repeated. then if last1 and last2 have a bit in common that
 	// means they have a field in common and are not compatible
 	// use new method for testing against old
-	long *bits1 = (long *)m_bitTable.getValue(&last1);
-	long *bits2 = (long *)m_bitTable.getValue(&last2);
+	int32_t *bits1 = (int32_t *)m_bitTable.getValue(&last1);
+	int32_t *bits2 = (int32_t *)m_bitTable.getValue(&last2);
 	bool compat = true;
-	long ni = m_numLongs; // InBitTable;
+	int32_t ni = m_numLongs; // InBitTable;
 	if ( ! bits1 || ! bits2 ) ni = 0;
-	for ( long i = 0 ; i < ni ; i++ ) {
+	for ( int32_t i = 0 ; i < ni ; i++ ) {
 		if ( bits1[i] & bits2[i] ) { compat = false; break; }
 	}
 
@@ -12519,7 +12524,7 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	int64_t start = gettimeofdayInMilliseconds();
 
 	// now for section "last1" get range of all subsections to scan
-	//for(long i = last1->m_sortedIndex ; i<m_sections->m_numSections;i++){
+	//for(int32_t i = last1->m_sortedIndex ; i<m_sections->m_numSections;i++){
 	for ( Section *si1 = last1 ; si1 ; si1 = si1->m_next ) {
 		// this section may have hashed multiple keys if it had
 		// multiple fields in it
@@ -12527,12 +12532,12 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		// stop if this section not contain in last1
 		if ( si1->m_a >= last1->m_b ) break;
 		// scan last1 and all all text sections into cmp1
-		long slot1 = sft->getSlot ( &si1 );
+		int32_t slot1 = sft->getSlot ( &si1 );
 		for ( ; slot1 >= 0 ; slot1 = sft->getNextSlot(slot1,&si1) ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get its tagHash^contentHash value
-			long h = *(long *)sft->getValueFromSlot(slot1);
+			int32_t h = *(int32_t *)sft->getValueFromSlot(slot1);
 			// add to table, just the key
 			if ( ! cmp1.addKey ( &h ) ) {
 				if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -12544,10 +12549,10 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	int64_t took = start - gettimeofdayInMilliseconds();
 
 	// for log
-	if ( took > 2 ) log("dates: CHECK subfield took %lli ms",took);
+	if ( took > 2 ) log("dates: CHECK subfield took %"INT64" ms",took);
 
 	// do the same subsection scan for last2
-	//for( long i = last2->m_sortedIndex;i<m_sections->m_numSections;i++) {
+	//for( int32_t i = last2->m_sortedIndex;i<m_sections->m_numSections;i++) {
 	for ( Section *si2 = last2 ; si2 ; si2 = si2->m_next ) {
 		// this section may have hashed multiple keys if it had
 		// multiple fields in it
@@ -12555,12 +12560,12 @@ long Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		// stop if this section not contain in last1
 		if ( si2->m_a >= last2->m_b ) break;
 		// now scan the hashes in last2 and see which are in "cmp1"
-		long slot2 = sft->getSlot ( &si2 );
+		int32_t slot2 = sft->getSlot ( &si2 );
 		for ( ; slot2 >= 0 ; slot2 = sft->getNextSlot(slot2,&si2) ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get its tagHash^contentHash value
-			long h = *(long *)sft->getValueFromSlot(slot2);
+			int32_t h = *(int32_t *)sft->getValueFromSlot(slot2);
 			// if this same guy is in last1, that is bad
 			if ( cmp1.isInTable(&h) ) {
 				// sanity check
@@ -12581,15 +12586,15 @@ HashTableX *Dates::getSubfieldTable ( ) {
 	// return it if we got it
 	if ( m_sftValid ) return &m_sft;
 	// scan the sections
-	long ns = m_sections->m_numSections ;
+	int32_t ns = m_sections->m_numSections ;
 	// for log
 	//log("dates: subfield start");
 	// just init it, fast and does not allocate
 	//m_sft.set(4,4,128,NULL,0,true,m_niceness);
 	// count what we need
-	long needSlots = 0;
+	int32_t needSlots = 0;
 	// loop it
-	for ( long k = 0 ; k < ns ; k++ ) {
+	for ( int32_t k = 0 ; k < ns ; k++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get section
@@ -12615,7 +12620,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 	if(!hts.set(4,4,5000,NULL,0,true,m_niceness,"sec-fields")) return NULL;
 
 	// loop it
-	for ( long k = 0 ; k < ns ; k++ ) {
+	for ( int32_t k = 0 ; k < ns ; k++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get section
@@ -12625,13 +12630,13 @@ HashTableX *Dates::getSubfieldTable ( ) {
 		// how is this?
 		if ( sk->m_contentHash64 == 0 ) { char *xx=NULL;*xx=0; }
 		// get the tag id the delimits section if any
-		//long a = sk->m_a;
+		//int32_t a = sk->m_a;
 		// might not be there
 		//nodeid_t tid = m_tids[a];
 		// if it is bold, ignore it
 		//if ( tid == TAG_B ) continue;
 		// hash tag id and its content hash together
-		long h = sk->m_contentHash64 ^ sk->m_tagHash;
+		int32_t h = sk->m_contentHash64 ^ sk->m_tagHash;
 		// 0 is bad
 		if ( h == 0 ) { char *xx=NULL;*xx=0; }
 		// debug point
@@ -12660,7 +12665,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 
 	// now scan the words for fields preceeding colons, like "At:"
 	// or "Squares:"
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if not alnum
@@ -12670,16 +12675,16 @@ HashTableX *Dates::getSubfieldTable ( ) {
 		// must not be a digit (stop 4:30pm)
 		if ( is_digit(m_wptrs[i][0]) ) continue;
 		// back up up to 4 alnum words to look for tag
-		long kmin = i - 8;
+		int32_t kmin = i - 8;
 		if ( kmin < 0 ) kmin = 0;
 		// make hash of alnum words
-		long h = 0;
+		int32_t h = 0;
 		// loop
-		long k ; for ( k = i ; k >= kmin ; k-- ) {
+		int32_t k ; for ( k = i ; k >= kmin ; k-- ) {
 			// hash wids together
 			if ( m_wids[k] ) {
 				// see if its zero
-				long newh = h ^ (unsigned long)m_wids[k];
+				int32_t newh = h ^ (uint32_t)m_wids[k];
 				//  use that if not zero
 				if ( newh ) h = newh;
 			}
@@ -12718,17 +12723,17 @@ HashTableX *Dates::getSubfieldTable ( ) {
 		//}
 	}
 
-	// no longer use bitnum, use a list of 32-bit hashes for the fields
+	// no int32_ter use bitnum, use a list of 32-bit hashes for the fields
 	// we contain. really just using sth (section to hash) table would
 	// be nice. or better yet just make a buffer and store a ptr into
 	// the section class that points into this buffer into a list of
 	// "bit #'s" that are on. so a list like "5,33,99" or something.
 	//uint64_t bitNum = 1LL;
 
-	long numBits = 0;
+	int32_t numBits = 0;
 	// scan for the duplicated subfields, those are the only important
 	// ones. then map them to an array of bits, up to 32 bits.
-	for ( long i = 0 ; i < dt.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < dt.m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip empty slots
@@ -12746,10 +12751,10 @@ HashTableX *Dates::getSubfieldTable ( ) {
 	if ( numBits <= 0 ) return &m_sft;
 
 
-	long bitNum = 0;
+	int32_t bitNum = 0;
 	if ( numBits > MAXBYTES*8 ) numBits = MAXBYTES*8;
-	long numLongs = (numBits+31)/32;
-	// make it long aligned for speed in checking intersections of
+	int32_t numLongs = (numBits+31)/32;
+	// make it int32_t aligned for speed in checking intersections of
 	// two different bitBufs in m_bitTable
 	char bitBuf[MAXBYTES];
 	if ( numLongs*4 > MAXBYTES ) { char *xx=NULL;*xx=0; }
@@ -12761,7 +12766,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 	// save this for checking bittable above
 	m_numLongs = numLongs;
 
-	for ( long i = 0 ; i < dt.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < dt.m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip empty slots
@@ -12772,7 +12777,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 		uint32_t *h = (uint32_t *)dt.getKeyFromSlot(i);
 
 		// now what sections have that hash?
-		long slot = hts.getSlot(h);
+		int32_t slot = hts.getSlot(h);
 		// must be there! dup table, dt, says so!
 		if ( slot < 0 ) { char *xx=NULL;*xx=0; }
 		// scan all sections that had this field name and make sure
@@ -12797,7 +12802,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 				if ( ! bits ) { char *xx=NULL;*xx=0; }
 			}
 			// make a bitvec for this
-			long byteOff = bitNum / 8;
+			int32_t byteOff = bitNum / 8;
 			char bitOff  = bitNum % 8;
 			// set that
 			bits[byteOff] |= (1<<bitOff);
@@ -12809,7 +12814,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 	}
 		
 	// . now propagate your section's bits to all your parents
-	// . use long ptrs for speed
+	// . use int32_t ptrs for speed
 	for ( Section *si = m_sections->m_rootSection ; si ; si = si->m_next) {
 		// breathe
 		QUICKPOLL(m_niceness);
@@ -12837,12 +12842,12 @@ HashTableX *Dates::getSubfieldTable ( ) {
 				// and moved all the data around
 				bits = (char *)m_bitTable.getValue(&si);
 			}
-			// or in each long
-			long *dst = (long *)pbits;
-			long *src = (long *) bits;
-			long  count = 0;
+			// or in each int32_t
+			int32_t *dst = (int32_t *)pbits;
+			int32_t *src = (int32_t *) bits;
+			int32_t  count = 0;
 			for ( ; count < numLongs ; count++ )
-				// or in each long
+				// or in each int32_t
 				*dst++ |= *src++;
 		}
 	}
@@ -12859,16 +12864,16 @@ void Dates::setPhoneXors ( ) {
 	if ( m_phoneXorsValid ) return;
 	m_phoneXorsValid = true;
 	// set it
-	for ( long k = 0 ; k < m_nw ; k++ ) {
+	for ( int32_t k = 0 ; k < m_nw ; k++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// use this so we can inc it
-		long i = k;
+		int32_t i = k;
 		// skip if tag or punct word
 		if ( ! m_wids[i] ) continue;
 		// need 3 digit number followed by hyphen then 4 digits
 		if ( ! is_digit(m_wptrs[i][0]) ) continue;
-		// must be 3 long
+		// must be 3 int32_t
 		if ( m_wlens[i] != 3 ) continue;
 		// skip that
 		if ( ++i >= m_nw ) break;
@@ -12882,12 +12887,12 @@ void Dates::setPhoneXors ( ) {
 		if ( ++i >= m_nw ) break;
 		// need 3 digit number followed by hyphen then 4 digits
 		if ( ! is_digit(m_wptrs[i][0]) ) continue;
-		// must be 3 long
+		// must be 3 int32_t
 		if ( m_wlens[i] != 4 ) continue;
 		// we got one!
 		int64_t h64 = m_wids[i-2] ^ m_wids[i];
 		// only need 32 bits
-		long h32 = (long)h64;
+		int32_t h32 = (int32_t)h64;
 		// get section
 		Section *sp = m_sections->m_sectionPtrs[k];
 		// telescope up!
@@ -12906,13 +12911,13 @@ void Dates::setEmailXors ( ) {
 	if ( m_emailXorsValid ) return;
 	m_emailXorsValid = true;
 	// set it
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if NOT punct word
 		if ( m_wids[i] ) continue;
 		if ( m_tids[i] ) continue;
-		// shortcut
+		// int16_tcut
 		char *p = m_wptrs[i];
 		// skip if not @ sign
 		if ( *p != '@' ) continue;
@@ -12972,7 +12977,7 @@ void Dates::setEmailXors ( ) {
 void Dates::setPriceXors ( ) {
 	if ( m_priceXorsValid ) return;
 	m_priceXorsValid = true;
-	long price;
+	int32_t price;
 	// init?
 	static bool s_init56 = false;
 	static int64_t h_free;
@@ -12981,11 +12986,11 @@ void Dates::setPriceXors ( ) {
 		h_free = hash64n("free");
 	}
 	// set it
-	for ( long k = 1 ; k < m_nw ; k++ ) {
+	for ( int32_t k = 1 ; k < m_nw ; k++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// use this so we can inc it
-		long i = k;
+		int32_t i = k;
 		// skip if tag or punct word
 		if ( ! m_wids[i] ) continue;
 		// might be free
@@ -13005,7 +13010,7 @@ void Dates::setPriceXors ( ) {
 		// jump here
 	addToTable:
 		// hash that price
-		long h32 = (long)m_wids[i];
+		int32_t h32 = (int32_t)m_wids[i];
 		// we got one!
 		//int64_t h = m_wids[i-2] ^ m_wids[i];
 		// get section
@@ -13026,10 +13031,10 @@ void Dates::setTODXors ( ) {
 	if ( m_todXorsValid ) return;
 	m_todXorsValid = true;
 	// set it
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -13068,8 +13073,8 @@ void Dates::setTODXors ( ) {
 		}
 		/*
 		// get its hash
-		long a = di->m_a;
-		long b = di->m_b;
+		int32_t a = di->m_a;
+		int32_t b = di->m_b;
 		// skip if not in body
 		if ( a < 0 ) continue;
 		char *sa = m_wptrs[a];
@@ -13106,10 +13111,10 @@ void Dates::setDayXors ( ) {
 	if ( m_dayXorsValid ) return;
 	m_dayXorsValid = true;
 	// set it
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -13134,8 +13139,8 @@ void Dates::setDayXors ( ) {
 		//   like you see on burtstikilounge.com...
 		if ( fd->m_hasType != DT_DAYNUM ) continue;
 		// get its hash
-		long a = fd->m_a;
-		long b = fd->m_b;
+		int32_t a = fd->m_a;
+		int32_t b = fd->m_b;
 		// skip if not in body
 		if ( a < 0 ) continue;
 		char *sa = m_wptrs[a];
@@ -13174,7 +13179,7 @@ HashTableX *Dates::getFieldTable ( ) {
 	int64_t h = 0LL;
 
 	// set it
-	for ( long i = 0 ; i < m_nw ; i++ ) {
+	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if NOT punct word
@@ -13213,11 +13218,11 @@ Date *Dates::getFirstParentOfType ( Date *di, Date *last , HashTableX *ht) {
 	// loop over "pp" and all its parents
 	for ( ; pp ; pp = pp->m_parent ) {
 		// pick the one *right above* us
-		long slot = ht->getSlot ( &pp );
+		int32_t slot = ht->getSlot ( &pp );
 		// loop over all dates that telescoped up to this sec.
 		for ( ; slot >= 0 ; slot = ht->getNextSlot(slot,&pp) ) {
 			// get it
-			long pn = *(long *)ht->getValueFromSlot(slot);
+			int32_t pn = *(int32_t *)ht->getValueFromSlot(slot);
 			// get the date index
 			Date *dp = m_datePtrs[pn];
 			// skip if me
@@ -13238,7 +13243,7 @@ Date *Dates::getFirstParentOfType ( Date *di, Date *last , HashTableX *ht) {
 bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 
 	char       **wptrs = words->getWords    ();
-	long        *wlens = words->getWordLens ();
+	int32_t        *wlens = words->getWordLens ();
 	int64_t   *wids  = words->getWordIds  ();
 	nodeid_t    *tids  = words->getTagIds   ();
 
@@ -13254,10 +13259,10 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 		DT_SEASON       | // summers
 		DT_ALL_HOLIDAYS ; // "holidays"
 
-	for ( long i = 0 ; i < m_numDatePtrs - 1 ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs - 1 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -13268,9 +13273,9 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 		// first see if this is an open-ended range
 		//
 		// get previous two words
-		long pre = di->m_a - 1;
+		int32_t pre = di->m_a - 1;
 		// set a min
-		long min = di->m_a - 10;
+		int32_t min = di->m_a - 10;
 		if ( min < 0 ) min = 0;
 		// . previous word must be in same sentence otherwise
 		//   "No cover before 9PM - $5 After"<br><br>"Every Sunday:..."
@@ -13288,7 +13293,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			if ( ++brcount >= 2 ) break;
 		}
 		// get word before that
-		long pre2 = pre - 1;
+		int32_t pre2 = pre - 1;
 		for ( ; pre2 > min ; pre2-- ) {
 			QUICKPOLL(m_niceness);
 			if ( wids[pre2] ) break;
@@ -13370,8 +13375,8 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 		// the weekend is like endpoints for the weekday
 		if ( di->m_type == DT_SUBWEEK ) continue;
 		// get the neighbor to the right now
-		long j = i + 1;
-		// shortcut
+		int32_t j = i + 1;
+		// int16_tcut
 		Date *dj = NULL;
 		// advance while ptr is NULL
 		for ( ; j < m_numDatePtrs ; j++ ) {
@@ -13407,25 +13412,25 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 		// must be in ascending order! be it a dow,dom,month, year...
 		//if ( di->m_num < dj->m_num ) continue;
 		// get the word range between the two atomic dates
-		long a = di->m_b;
-		long b = dj->m_a;
+		int32_t a = di->m_b;
+		int32_t b = dj->m_a;
 		// too many words in between? forget it!
 		if ( b - a > 20 ) continue;
 		// count the associated alnums
-		long alnumcount = 0;
+		int32_t alnumcount = 0;
 		// get word before us. looking for "between X and Y" phrase
 		if ( pre > min && wids[pre] == h_between ) 
 			alnumcount++;
 		else
 			pre = di->m_a;
 		// init j for the scan of the junk between the two dates
-		long k = a;
+		int32_t k = a;
 		// count em
-		long andcount = 0;
+		int32_t andcount = 0;
 		bool hyphen = false;
 		int64_t prevWid = 0LL;
 		bool brokenRange = false;
-		long badWords = 0;
+		int32_t badWords = 0;
 		// scan what is between them to determine if is a range!
 		for ( ; k < b ; k++ ) {
 			// count em
@@ -13539,7 +13544,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 				if ( *p == ',' ) continue;
 				/*
 				// utf8 hyphen from unm.edu url
-				// no longer needed since XmlDoc.cpp now 
+				// no int32_ter needed since XmlDoc.cpp now 
 				// converts all utf8 hyphens into ascii
 				if ( p[0] == -30 &&
 				     p[1] == -128 &&
@@ -13580,14 +13585,14 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 		if ( di->m_type == DT_DAYNUM && di->m_a >= 0 ) {
 			// get prev date
 			Date *prev = NULL;
-			for ( long pi = i - 1 ; pi >= 0 ; pi-- ) {
+			for ( int32_t pi = i - 1 ; pi >= 0 ; pi-- ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				prev = m_datePtrs[pi];
 				if ( prev ) break;
 			}
 			// scan before us but do not go past "min"
-			long min = di->m_a - 20;
+			int32_t min = di->m_a - 20;
 			// or the prev date
 			if ( prev && prev->m_b > min ) min = prev->m_b;
 			// sanity. i can equal "a"... i've seen that
@@ -13598,7 +13603,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			bool age = false;
 			// scan before us and remain in sentence and after
 			// the previous date...
-			for ( long w = di->m_a - 1 ; w >= min ; w-- ) {
+			for ( int32_t w = di->m_a - 1 ; w >= min ; w-- ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				if ( wids[w] == h_children ) age = true;
@@ -13608,11 +13613,11 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			// do not add this as a daynum range if its age range
 			if ( age ) continue;
 			// set a max now
-			long max = di->m_b + 20;
+			int32_t max = di->m_b + 20;
 			// do not breach our words array
 			if ( max > m_nw ) max = m_nw;
 			// scan right for "years" "youngster 2-12 years"
-			for ( long w = di->m_b ; w < max ; w++ ) {
+			for ( int32_t w = di->m_b ; w < max ; w++ ) {
 				QUICKPOLL(m_niceness);
 				// 2-12 years old
 				if ( wids[w] == h_years ) age = true;
@@ -13631,7 +13636,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			// get next date after dj
 			Date *next = NULL;
 			// scan to right of dj
-			for ( long nj = j+1 ; nj < m_numDatePtrs ; nj++ ) {
+			for ( int32_t nj = j+1 ; nj < m_numDatePtrs ; nj++ ) {
 				QUICKPOLL(m_niceness);
 				next = m_datePtrs[nj];
 				if ( next ) break;
@@ -13642,13 +13647,13 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			if ( next && next->m_type == DT_DAYNUM )
 				isdaynum = true;
 			// set max to scan
-			long kmax = dj->m_b + 10;
+			int32_t kmax = dj->m_b + 10;
 			// do not hit daynum
 			if ( next && kmax > next->m_a ) kmax = next->m_a;
 			// no scanning if not daynum
 			if ( ! isdaynum ) kmax = -1;
 			// and no words in between
-			for ( long k = dj->m_b ; k < kmax ; k++ ) {
+			for ( int32_t k = dj->m_b ; k < kmax ; k++ ) {
 				if ( ! wids[k] ) continue;
 				// if we hit another alnum word in between
 				// the dj month and daynum, then do not
@@ -13667,17 +13672,17 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			if ( DD ) DD->m_dow = -1;
 			// set all the m_dowBits now
 			if ( DD ) {
-				long dow1 = di->m_num;
-				long dow2 = dj->m_num;
+				int32_t dow1 = di->m_num;
+				int32_t dow2 = dj->m_num;
 				if ( dow1 < 0 ) { char *xx=NULL;*xx=0; }
 				if ( dow2 < 0 ) { char *xx=NULL;*xx=0; }
 				// fix "Tuesday through Sunday"
 				//if ( minDow > maxDow ) {
-				//	long tt = minDow;
+				//	int32_t tt = minDow;
 				//	minDow = maxDow;
 				//	maxDow = tt;
 				//}
-				for ( long i = 1 ; i <= 7 ; i++ ) {
+				for ( int32_t i = 1 ; i <= 7 ; i++ ) {
 					// skip if not in range
 					if ( dow1 <= dow2 ) {
 						if ( i < dow1 ) continue;
@@ -13770,7 +13775,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			dj->m_maxTod += 24*3600;
 			// note it. shift DEFINTION of day up by 2 hours
 			// if "num" was like 2am...
-			long shiftDay = dj->m_num - 24*3600;
+			int32_t shiftDay = dj->m_num - 24*3600;
 			if ( m_shiftDay && shiftDay > m_shiftDay )
 				m_shiftDay = shiftDay;
 			else if ( m_shiftDay == 0 )
@@ -13831,19 +13836,19 @@ void Dates::addOpenEndedRanges ( ) {
 	// now look for "ongoing through Saturday, January 2, 2010" ...
 	// and other open ended ranges.
 	//
-	for ( long i = 0 ; i < m_numDatePtrs - 1 ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs - 1 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
 		// skip if is a list or range already
 		if ( di->m_flags & skipFlags ) continue;
 		// get previous two words
-		long pre = di->m_a - 2;
+		int32_t pre = di->m_a - 2;
 		// set a min
-		long min = di->m_a - 10;
+		int32_t min = di->m_a - 10;
 		if ( min < 0 ) min = 0;
 		// backup over tags and punct
 		for ( ; pre > min && ! m_wids[pre] ; pre-- ) ;
@@ -13874,18 +13879,18 @@ void Dates::addOpenEndedRanges ( ) {
 	// now loop over all dates with DF_ONGOING set either in the above
 	// loop or in makeCompoundLists() and adjust the min endpoint.
 	// similar to addPtr()
-	for ( long i = 0 ; i < m_numDatePtrs - 1 ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs - 1 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
 		// skip if not part of an open-ended range
 		if ( ! ( di->m_flags & DF_ONGOING ) ) continue;
 		// scan through each ptr looking for the ongoing flag
-		for ( long j = 0 ; j < di->m_numPtrs ; j++ ) {
-			// shortcut
+		for ( int32_t j = 0 ; j < di->m_numPtrs ; j++ ) {
+			// int16_tcut
 			Date *dj = di->m_ptrs[j];
 			// skip if not part of an open-ended range
 			if ( ! ( dj->m_flags & DF_ONGOING ) ) continue;
@@ -13913,18 +13918,18 @@ bool Dates::addLists ( Words *words , bool ignoreBreakingTags ) {
 	//ignoreBreakingTags = true;
 
 	char       **wptrs = words->getWords    ();
-	long        *wlens = words->getWordLens ();
+	int32_t        *wlens = words->getWordLens ();
 	int64_t   *wids  = words->getWordIds  ();
 	nodeid_t    *tids  = words->getTagIds   ();
 
-	// shortcut
+	// int16_tcut
 	Section **sp = NULL;
 	if ( m_sections ) sp = m_sections->m_sectionPtrs;
 
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
@@ -13958,12 +13963,12 @@ bool Dates::addLists ( Words *words , bool ignoreBreakingTags ) {
 			continue;
 
 		// reset this
-		long np = 0;
+		int32_t np = 0;
 
 		Date *DD = NULL;
 		// init the "j" loop
-		long j = i + 1 ;
-		// shortcut
+		int32_t j = i + 1 ;
+		// int16_tcut
 		Date *dj = NULL;
 		// used for list of TODs
 		bool lastHadAMPM = false;
@@ -14092,7 +14097,7 @@ bool Dates::addLists ( Words *words , bool ignoreBreakingTags ) {
 			// and fails on gotBreak2 because dj->m_b hits the 
 			// "Sun. 10 am..." date and not a breaking tag.
 			Date *dx = NULL;
-			for ( long x = j + 1 ; 
+			for ( int32_t x = j + 1 ; 
 			      x < m_numDatePtrs;x++) {
 				QUICKPOLL(m_niceness);
 				dx = m_datePtrs[x];
@@ -14102,7 +14107,7 @@ bool Dates::addLists ( Words *words , bool ignoreBreakingTags ) {
 
 
 			// declare outside for loop
-			long a;
+			int32_t a;
 			// scan words in between date "di" and date "dj"
 			for ( a = di->m_b ; a < dj->m_a ; a++ ) {
 				// "and" is ok
@@ -14158,7 +14163,7 @@ bool Dates::addLists ( Words *words , bool ignoreBreakingTags ) {
 					// the list item shares the line with
 					// other text... like how we check
 					// in makeCompounds()
-					long k;
+					int32_t k;
 
 					/*
 					// scan to left of di
@@ -14382,7 +14387,7 @@ bool Dates::makeCompounds ( Words *words ,
 			    bool ignoreBreakingTags ) {
 
 	char       **wptrs = words->getWords    ();
-	long        *wlens = words->getWordLens ();
+	int32_t        *wlens = words->getWordLens ();
 	int64_t   *wids  = words->getWordIds  ();
 	nodeid_t    *tids  = words->getTagIds   ();
 
@@ -14398,15 +14403,15 @@ bool Dates::makeCompounds ( Words *words ,
 		DT_SEASON       | // summers
 		DT_ALL_HOLIDAYS ; // "holidays"
 
-	// shortcut
+	// int16_tcut
 	Section **sp = NULL;
 	//if ( linkDatesInSameSentence ) sp = m_sections->m_sectionPtrs;
 	if ( m_sections ) sp = m_sections->m_sectionPtrs;
 
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -14426,17 +14431,17 @@ bool Dates::makeCompounds ( Words *words ,
 		// reset
 		datetype_t lastType = di->m_hasType;//0
 		// count them
-		//long np = 0;
+		//int32_t np = 0;
 		// init j loop
-		long j = i + 1;
-		// shortcut
+		int32_t j = i + 1;
+		// int16_tcut
 		//Date *DD = NULL;
 		// mark as gotten
 		datetype_t got = di->m_hasType;
 		// make a list of ptrs
 		Date *ptrs[100];
-		long  index[100];
-		long np = 0;
+		int32_t  index[100];
+		int32_t np = 0;
 		// add di
 		ptrs[np] = di;
 		// save index
@@ -14543,8 +14548,8 @@ bool Dates::makeCompounds ( Words *words ,
 			lastType = dj->m_hasType;
 
 			// get word range
-			long a = prev->m_b;
-			long b = dj->m_a;
+			int32_t a = prev->m_b;
+			int32_t b = dj->m_a;
 
 			// can't include a date in the url now
 			if ( prev->m_flags & DF_FROM_URL ) continue;
@@ -14606,7 +14611,7 @@ bool Dates::makeCompounds ( Words *words ,
 
 			// assume not "onoing"
 			//bool ongoing = false;
-			// see if they belong together
+			// see if they beint32_t together
 			for ( ; a < b ; a++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
@@ -14678,7 +14683,7 @@ bool Dates::makeCompounds ( Words *words ,
 					// so get each sentence...
 
 					// scan to left of di
-					long k = di->m_a - 1;
+					int32_t k = di->m_a - 1;
 					// backup over punct word
 					if ( k >= 0 && ! wids[k] && ! tids[k] )
 						k--;
@@ -14939,7 +14944,7 @@ bool Dates::makeCompounds ( Words *words ,
 		if ( ! DD ) return false;
 
 		// ok, now make the compound date from the list
-		for ( long j = 0 ; j < np ; j++ ) {
+		for ( int32_t j = 0 ; j < np ; j++ ) {
 			// update
 			DD->addPtr ( ptrs[j] , index[j] , this );
 			// update m_b
@@ -14955,10 +14960,10 @@ bool Dates::makeCompounds ( Words *words ,
 // . normalizes
 // . i.e. "11/12/11 = Nov 12th 2011" or "11:00am = 11 in the morning"
 void Dates::setDateHashes ( ) {
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -14992,7 +14997,7 @@ uint64_t Dates::getDateHash2 ( Date *di , Date *orig ) {
 		uint64_t h = 0;
 		//uint64_t lasttt = 0;
 		// loop over ptrs
-		for ( long i = 0 ; i < di->m_numPtrs ; i++ ) {
+		for ( int32_t i = 0 ; i < di->m_numPtrs ; i++ ) {
 			uint64_t tt = getDateHash ( di->m_ptrs[i] , orig );
 			h = hash32h ( tt, h );
 			// . watch out for lists of just the same thing!
@@ -15058,22 +15063,22 @@ uint64_t Dates::getDateHash2 ( Date *di , Date *orig ) {
 
 
 
-long Dates::printDateNeighborhood ( Date *di , Words *w ) {
-	long           nw = w->getNumWords();
+int32_t Dates::printDateNeighborhood ( Date *di , Words *w ) {
+	int32_t           nw = w->getNumWords();
 	char      **wptrs = w->getWords   ();
-	long       *wlens = w->getWordLens();
+	int32_t       *wlens = w->getWordLens();
 	nodeid_t    *tids = w->m_tagIds;
 	int64_t   *wids = w->getWordIds();
 	SafeBuf sb;
-	long a = di->m_a;
-	long b = di->m_b;
+	int32_t a = di->m_a;
+	int32_t b = di->m_b;
 	if ( a < 0 ) return 0;
 	a -= 10;
 	b += 10;
 	if ( a < 0 ) a = 0;
 	if ( b > nw ) b = nw;
 	bool lastWasSpace = false;
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		if ( i == di->m_a )
 			sb.pushChar('*');
 		if ( i == di->m_b )
@@ -15099,12 +15104,12 @@ long Dates::printDateNeighborhood ( Date *di , Words *w ) {
 }
 
 // for gdb to call
-long Dates::printDates2 ( ) { 
+int32_t Dates::printDates2 ( ) { 
 	printDates ( NULL ); 
 	return 1; 
 }
 
-long Dates::print ( Date *d ) {
+int32_t Dates::print ( Date *d ) {
 	SafeBuf sb;
 	d->printText ( &sb , m_words , false);
 	fprintf(stderr,"%s\n",sb.getBufStart() );
@@ -15113,7 +15118,7 @@ long Dates::print ( Date *d ) {
 
 // make an array of the Date ptrs that are in a date such that each ptr
 // does not consist of any other ptrs, but is atomic
-Date **Dates::getDateElements ( Date *di , long *ne ) {
+Date **Dates::getDateElements ( Date *di , int32_t *ne ) {
 	// already did it?
 	if ( di->m_numFlatPtrs > 0 ) {
 		*ne = di->m_numFlatPtrs;
@@ -15121,15 +15126,15 @@ Date **Dates::getDateElements ( Date *di , long *ne ) {
 	}
 	// use cbuf for this
 	if ( ! m_cbuf.reserve ( 20*sizeof(Date *) ) ) return NULL;
-	// shortcut
-	long startOffset = m_cbuf.length();
+	// int16_tcut
+	int32_t startOffset = m_cbuf.length();
 	// store here
 	di->m_flatPtrsBufOffset = startOffset;
 	// . store all ptrs into there
 	// . it returns NULL with g_errno set on error
 	if ( ! addPtrToArray ( di ) ) return NULL;
 	// get the ending offset after adding the date ptrs
-	long endOffset = m_cbuf.length();
+	int32_t endOffset = m_cbuf.length();
 	// set length
 	*ne = (endOffset - startOffset)/4;
 	// set that
@@ -15141,7 +15146,7 @@ Date **Dates::getDateElements ( Date *di , long *ne ) {
 	// sort it by Date::m_a so Events::makeEventDisplay2() works right
  bubbleSortLoop:
 	char flag = 0;
-	for ( long i = 1 ; i < *ne ; i++ ) {
+	for ( int32_t i = 1 ; i < *ne ; i++ ) {
 		if ( p[i]->m_a >= p[i-1]->m_a ) continue;
 		Date *tmp = p[i-1];
 		p[i-1] = p[i];
@@ -15156,11 +15161,11 @@ Date **Dates::getDateElements ( Date *di , long *ne ) {
 bool Dates::addPtrToArray ( Date *dp ) {
 	// only add base types
 	if ( dp->m_numPtrs == 0 ) {
-		if ( ! m_cbuf.pushLong((long)dp) ) return false;
+		if ( ! m_cbuf.pushLong((int32_t)dp) ) return false;
 		return true;
 	}
 	// recursive otherwise
-	for ( long i = 0 ; i < dp->m_numPtrs ; i++ )
+	for ( int32_t i = 0 ; i < dp->m_numPtrs ; i++ )
 		if ( ! addPtrToArray ( dp->m_ptrs[i] ) )
 			return false;
 	return true;
@@ -15180,7 +15185,7 @@ bool Dates::printDates ( SafeBuf *sbArg ) {
 	if ( m_dateFormat == DF_AMERICAN ) format = "american";
 	if ( m_dateFormat == DF_EUROPEAN ) format = "european";
 
-	// shortcut 
+	// int16_tcut 
 	//Sections *ss = m_sections;
 
 	char *bh = "";
@@ -15190,9 +15195,9 @@ bool Dates::printDates ( SafeBuf *sbArg ) {
 		sb->safePrintf("<table width=100%% border=1 cellpadding=4>"
 			       "<tr><td colspan=20><b>"
 			       "Dates</b>"
-			       " (format=%s) (firstgood=%li lastgood=%li)"
-			       " 25hrRespider=%li"
-			       "(sitehash=0x%lx)%s"
+			       " (format=%s) (firstgood=%"INT32" lastgood=%"INT32")"
+			       " 25hrRespider=%"INT32""
+			       "(sitehash=0x%"XINT32")%s"
 			       "</td></tr>\n"
 			       "<tr><td>#</td>"
 			       "<td>startWord</td>"
@@ -15211,13 +15216,13 @@ bool Dates::printDates ( SafeBuf *sbArg ) {
 			       "<td>termid</td>"
 			       "</tr>\n",
 			       format,m_firstGood,m_lastGood,
-			       (long)m_needQuickRespider,m_siteHash,bh);
+			       (int32_t)m_needQuickRespider,m_siteHash,bh);
 	else
 		sb->safePrintf(
 			       "Publication Date Candidates "
-			       " (format=%s) (firstgood=%li lastgood=%li)"
-			       " 25hrRespider=%li"
-			       "(sitehash=0x%lx)%s"
+			       " (format=%s) (firstgood=%"INT32" lastgood=%"INT32")"
+			       " 25hrRespider=%"INT32""
+			       "(sitehash=0x%"XINT32")%s"
 			       "\n"
 			       "# | "
 			       "startWord | "
@@ -15233,14 +15238,14 @@ bool Dates::printDates ( SafeBuf *sbArg ) {
 			       "termid "
 			       "\n",
 			       format,m_firstGood,m_lastGood,
-			       (long)m_needQuickRespider,m_siteHash,bh);
+			       (int32_t)m_needQuickRespider,m_siteHash,bh);
 
 
 	// dates from body
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
@@ -15252,10 +15257,10 @@ bool Dates::printDates ( SafeBuf *sbArg ) {
 
 
 	// dates from body
-	for ( long i = 0 ; i < m_numTotalPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTotalPtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_totalPtrs[i];
 		// skip if nuked from range logic above
 		if ( ! di ) continue;
@@ -15292,7 +15297,7 @@ bool Dates::printDates ( SafeBuf *sbArg ) {
 void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 	nodeid_t *tids = words->getTagIds();
 	char **wptrs = words->getWords();
-	long  *wlens = words->getWordLens ();
+	int32_t  *wlens = words->getWordLens ();
 	int64_t   *wids = words->getWordIds();
 
 	//if ( m_numPtrs == 0 && (m_flags & DF_CLOSE_DATE) )
@@ -15305,7 +15310,7 @@ void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 	bool lastWasBullet = false;
 	bool lastWasSpace  = false;
 	// print out each word
-	for ( long j = m_a ; j < m_b ; j++ ) {
+	for ( int32_t j = m_a ; j < m_b ; j++ ) {
 		// skip if tag
 		if ( tids[j] ) {
 			// print a comma for breaking tags separating list elms
@@ -15340,7 +15345,7 @@ void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 		sb->safePrintf("</font>");
 
 	// telescope ptrs
-	for ( long i = 1 ; m_type==DT_TELESCOPE && i<m_numPtrs;i++) {
+	for ( int32_t i = 1 ; m_type==DT_TELESCOPE && i<m_numPtrs;i++) {
 		// get next ptr
 		Date *dp = m_ptrs[i];
 		// print delim
@@ -15354,7 +15359,7 @@ void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 
 		// print out each word
 		dp->printText ( sb , words, false );
-		//for ( long j = dp->m_a ; j < dp->m_b ; j++ ) {
+		//for ( int32_t j = dp->m_a ; j < dp->m_b ; j++ ) {
 		//	// skip if tag
 		//	if ( tids[j] ) continue;
 		//	// print it otherwise
@@ -15370,9 +15375,9 @@ void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 	}
 	// end in assumed year
 	if ( m_flags & DF_ASSUMED_YEAR ) {
-		//long t1 = m_minPubDate;
-		long t1 = m_minStartFocus;
-		long t2 = m_maxStartFocus;
+		//int32_t t1 = m_minPubDate;
+		time_t t1 = m_minStartFocus;
+		time_t t2 = m_maxStartFocus;
 		if ( inHtml ) sb->safePrintf("<font color=blue>");
 		sb->safePrintf(" ** %s- ",ctime(&t1));
 		sb->safePrintf("%s",ctime(&t2));
@@ -15382,7 +15387,7 @@ void Date::printText ( SafeBuf *sb , Words *words , bool inHtml ) {
 /*
 static void setGroupNumRecursive ( Date       *dp          ,
 				   datetype_t *accMaskPtr  ,
-				   long       *groupNumPtr ) {
+				   int32_t       *groupNumPtr ) {
 	// if any of our siblings is a repeat type we have to inc group
 	if ( *accMaskPtr & dp->m_hasType ) {
 		*accMaskPtr = 0;
@@ -15390,8 +15395,8 @@ static void setGroupNumRecursive ( Date       *dp          ,
 	}
 
 	// set group #s on our brothers first before descending!!!
-	for ( long i = 0 ; i < dp->m_numPtrs ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < dp->m_numPtrs ; i++ ) {
+		// int16_tcut
 		Date *di = dp->m_ptrs[i];
 		// same?
 		if ( di->m_hasType &  *accMaskPtr ) {
@@ -15408,8 +15413,8 @@ static void setGroupNumRecursive ( Date       *dp          ,
 	*accMaskPtr = 0;
 
 	// then descend into each one
-	for ( long i = 0 ; i < dp->m_numPtrs ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < dp->m_numPtrs ; i++ ) {
+		// int16_tcut
 		Date *di = dp->m_ptrs[i];
 		// reset?
 		setGroupNumRecursive ( di, accMaskPtr, groupNumPtr );
@@ -15442,19 +15447,19 @@ char *s_dnames[8] = {
 	"Saturday"
 };
 
-char *getDOWName ( long dow ) {
+char *getDOWName ( int32_t dow ) {
 	if ( dow < 0 || dow > 6 ) { char *xx=NULL;*xx=0; }
 	return s_dnames[dow];
 }
 
-char *getMonthName ( long month ) {
+char *getMonthName ( int32_t month ) {
 	if ( month < 0 || month > 11 ) { char *xx=NULL;*xx=0; }
 	return s_mnames[month];
 }
 
 
 bool printDOW ( SafeBuf *sb , Date *dp ) {
-	long mi = dp->m_dow;
+	int32_t mi = dp->m_dow;
 	if ( mi <= 0 || mi >= 8 ) { char *xx=NULL;*xx=0; }
 	char *ev = NULL;
 	// get the full date
@@ -15463,7 +15468,7 @@ bool printDOW ( SafeBuf *sb , Date *dp ) {
 	// plural?
 	if ( dp->m_suppFlags & SF_RECURRING_DOW )
 		ev = "every";
-	// shortcut
+	// int16_tcut
 	Date *parent = dp->m_dateParent;
 	// fix for "10pm Monday NIGHTS" for zipscene. only the
 	// NIGHTS had this set
@@ -15507,10 +15512,10 @@ bool printDOW ( SafeBuf *sb , Date *dp ) {
 	sfmask |= SF_FIFTH;
 	sfmask |= SF_LAST;
 	// how many do we have?
-	suppflags_t mybits = (unsigned long)(sfmask&dp->m_suppFlags);
-	long nsf = getNumBitsOn32 ( mybits );
+	suppflags_t mybits = (uint32_t)(sfmask&dp->m_suppFlags);
+	int32_t nsf = getNumBitsOn32 ( mybits );
 	// count each bit that we have in the loop too
-	long nc  = 0;
+	int32_t nc  = 0;
 	// loop over the bits
 	for ( suppflags_t k = SF_FIRST ; k <= SF_LAST ; k <<= 1 ) {
 		if ( ! (dp->m_suppFlags & k ) ) continue;
@@ -15550,12 +15555,12 @@ bool printDOW ( SafeBuf *sb , Date *dp ) {
 	
 static bool printTOD ( SafeBuf *sb , time_t ttt ) {
 	// seconds since start of day
-	long relativeTod = ttt % 86400;
+	int32_t relativeTod = ttt % 86400;
 	// convert to minutes since start of day
-	long totalMins = relativeTod / 60;
+	int32_t totalMins = relativeTod / 60;
 	// hours since start of day
-	long hour = totalMins / 60;
-	long min  = totalMins % 60;
+	int32_t hour = totalMins / 60;
+	int32_t min  = totalMins % 60;
 
 	// print noon to avoid ambiguity with midnight
 	if ( hour == 0 && min == 0 )
@@ -15579,20 +15584,20 @@ static bool printTOD ( SafeBuf *sb , time_t ttt ) {
 	if ( hour == 0 ) hour = 12;
 
 	if ( min != 0 ) 
-		return sb->safePrintf("%li:%02li%s",hour,min,ap);
+		return sb->safePrintf("%"INT32":%02"INT32"%s",hour,min,ap);
 	
-	return sb->safePrintf("%li%s",hour,ap) ;
+	return sb->safePrintf("%"INT32"%s",hour,ap) ;
 }
 
-static bool printMonthDay ( SafeBuf *sb , long month , long dayNum ) {
+static bool printMonthDay ( SafeBuf *sb , int32_t month , int32_t dayNum ) {
 	// print that out
 	char *suffix = "th";
-	long md = dayNum;
+	int32_t md = dayNum;
 	if ( md == 1 || md == 21 || md == 31 ) suffix = "st";
 	if ( md == 2 || md == 22             ) suffix = "nd";
 	if ( md == 3 || md == 23             ) suffix = "rd";
 	// February 12th, etc.
-	if ( ! sb->safePrintf(" %s %li%s ",
+	if ( ! sb->safePrintf(" %s %"INT32"%s ",
 			      s_mnames[month],
 			      dayNum,
 			      suffix))
@@ -15606,20 +15611,20 @@ static bool printMonthDayRange ( SafeBuf *sb ,
 				 Event *ev ,
 				 Interval *int3 ,
 				 Date **all ,
-				 long numAll ) {
+				 int32_t numAll ) {
 
 	bool rangeSet = false;
-	long bestMonth1;
-	long bestMonth2;
-	long bestDay1;
-	long bestDay2;
-	long bestYear1;
-	long bestYear2;
+	int32_t bestMonth1;
+	int32_t bestMonth2;
+	int32_t bestDay1;
+	int32_t bestDay2;
+	int32_t bestYear1;
+	int32_t bestYear2;
 	// . first try to print symbolically.
 	// . identify all monthday ranges in teh date and do a symbolic
 	//   intersection if necessary, then print that out i fpossible
-	for ( long i = 0 ; i < numAll ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < numAll ; i++ ) {
+		// int16_tcut
 		Date *di = all[i];
 		// need daynum
 		if ( di->m_type != DT_DAYNUM ) continue;
@@ -15635,13 +15640,13 @@ static bool printMonthDayRange ( SafeBuf *sb ,
 		// and we must be first
 		if ( p2->m_ptrs[0] != p1 ) continue;
 		// record min max
-		long month1 = p1->m_month;
-		long day1   = di->m_num;
-		long year1  = p1->m_year;
+		int32_t month1 = p1->m_month;
+		int32_t day1   = di->m_num;
+		int32_t year1  = p1->m_year;
 		// get end point
-		long month2 = p2->m_ptrs[1]->m_month;
-		long day2   = p2->m_ptrs[1]->m_dayNum;
-		long year2  = p2->m_ptrs[1]->m_year;
+		int32_t month2 = p2->m_ptrs[1]->m_month;
+		int32_t day2   = p2->m_ptrs[1]->m_dayNum;
+		int32_t year2  = p2->m_ptrs[1]->m_year;
 		// sanity
 		if ( ! rangeSet ) {
 			bestMonth1 = month1;
@@ -15684,7 +15689,7 @@ static bool printMonthDayRange ( SafeBuf *sb ,
 	// apply that to the time
 	ttt1 += 3600 * tz;
 	// now we also deal with DST too!
-	long bonus = 0;
+	int32_t bonus = 0;
 	if ( useDST && getIsDST(ttt1,tz) ) bonus = 3600;
 	ttt1 += bonus;
 	// make into time
@@ -15723,7 +15728,7 @@ bool Date::printTextNorm ( SafeBuf *sb , Words *words , bool inHtml ,
 	if ( ! sb->safePrintf(" closed ") ) return false;
 
 	// store all closed dates in here too
-	for ( long i = 0 ; i < ev->m_numCloseDates ; i++ ) {
+	for ( int32_t i = 0 ; i < ev->m_numCloseDates ; i++ ) {
 		// breathe
 		//QUICKPOLL(m_niceness);
 		// get it
@@ -15747,7 +15752,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 	Interval *int3     = NULL;
 	if ( intBuf ) {
 		bufStart = intBuf->getBufStart();
-		// shortcuts to the list of intervals this event has
+		// int16_tcuts to the list of intervals this event has
 		int3 = (Interval *)(ev->m_intervalsOff + bufStart);
 	}
 
@@ -15761,31 +15766,31 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 		char tz = ev->m_address->getTimeZone(&useDST);
 		// sanity
 		if ( tz >= 25 ) { 
-			log("date: got bad timezone of %li. resetting to -6.",
-			    (long)tz);
+			log("date: got bad timezone of %"INT32". resetting to -6.",
+			    (int32_t)tz);
 			useDST = true;
 			tz = -6;
 		}
 		// apply that to the time
 		ttt1 += 3600 * tz;
 		// now we also deal with DST too!
-		long bonus = 0;
+		int32_t bonus = 0;
 		if ( useDST && getIsDST(ttt1,tz) ) bonus = 3600;
 		ttt1 += bonus;
 		// make into time
 		struct tm *ts = gmtime ( &ttt1 );
 		char *suffix = "th";
-		long md = ts->tm_mday;
+		int32_t md = ts->tm_mday;
 		if ( md == 1 || md == 21 || md == 31 ) suffix = "st";
 		if ( md == 2 || md == 22             ) suffix = "nd";
 		if ( md == 3 || md == 23             ) suffix = "rd";
 		// February 12th
-		sb->safePrintf("%s %s %li%s %li ",
+		sb->safePrintf("%s %s %"INT32"%s %"INT32" ",
 			       s_dnames[ts->tm_wday],
 			       s_mnames[ts->tm_mon],
-			       (long)ts->tm_mday,
+			       (int32_t)ts->tm_mday,
 			       suffix,
-			       (long)ts->tm_year+1900);
+			       (int32_t)ts->tm_year+1900);
 		// endpoint
 		time_t ttt2 = int3->m_b + 3600 * tz + bonus;
 		// only if not same
@@ -15811,11 +15816,11 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 	// fix for "26 [[]] April 2011 [[]] ..."
 	// put ALL ptrs into here
 	// http://www.pridesource.com/calendar_item.html?item=9045
-	// breaches the 256 limit. it has a long list of compound dates
+	// breaches the 256 limit. it has a int32_t list of compound dates
 	//Date *all[1024];
-	//long numAll = 0;
+	//int32_t numAll = 0;
 	//::addPtrToArray ( all , &numAll , this , NULL );//&dnp );
-	long numAll = 0;
+	int32_t numAll = 0;
 	Date **all = m_dates->getDateElements ( this , &numAll );
 	// error?
 	if ( ! all ) return false;
@@ -15895,7 +15900,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 		// apply that to the time
 		ttt1 += 3600 * tz;
 		// now we also deal with DST too!
-		long bonus = 0;
+		int32_t bonus = 0;
 		if ( useDST && getIsDST(ttt1,tz) ) bonus = 3600;
 		ttt1 += bonus;
 		// every wednesday
@@ -15928,7 +15933,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 
 
 
-	long np = m_numPtrs;
+	int32_t np = m_numPtrs;
 	// fake it if we are it
 	if ( np == 0 ) np = 1;
 
@@ -15939,24 +15944,24 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 	//addDoNotPrintDates ( &dnp );
 
 	// we need to do the group # thing recursively i think
-	//long       groupNum = 0;
+	//int32_t       groupNum = 0;
 	//setGroupNumRecursive ( this , &accMask , &groupNum );
 	//datetype_t accMask  = 0;
 
 	// now move a single daynum telescope to after the month
-	for ( long i = 0 ; i < numAll ; i++ ) {
+	for ( int32_t i = 0 ; i < numAll ; i++ ) {
 		if ( all[i]->m_type != DT_DAYNUM ) continue;
 		if ( all[i]->m_dateParent->m_type != DT_TELESCOPE ) continue;
 		// fix "7:30pm [[]] 2 [[]] SAT [[]] April 2011"
 		// find next month on right
-		long k; for ( k = i+1 ; k < numAll ; k++ )
+		int32_t k; for ( k = i+1 ; k < numAll ; k++ )
 			if ( all[k]->m_type == DT_MONTH ) break;
 		// skip if none
 		if ( k >= numAll ) continue;
 		// save it
 		Date *tmp = all[i];
 		// otherwise, put ourselves after it! shift down
-		for ( long j = i ; j < k ; j++ ) 
+		for ( int32_t j = i ; j < k ; j++ ) 
 			all[j] = all[j+1];
 		// go after it
 		all[k] = tmp;
@@ -15968,7 +15973,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 	// . fix "after 12a.m [[]] Thursday Weekly" from printing out
 	//   "after midnight every Thursday daily"
 	bool recurringDow = false;
-	for ( long i = 0 ; i < numAll ; i++ ) {
+	for ( int32_t i = 0 ; i < numAll ; i++ ) {
 		// get next ptr
 		Date *di = all[i];
 		// get parent
@@ -15993,7 +15998,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 	//	log("hey");
 
 	// telescope ptrs
-	for ( long i = 0 ; i < numAll ; i++ ) {
+	for ( int32_t i = 0 ; i < numAll ; i++ ) {
 		// get next ptr
 		Date *dp = all[i];
 		// fake it if we are it...
@@ -16041,10 +16046,10 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 	/*
 	// end in assumed year
 	if ( m_flags & DF_ASSUMED_YEAR ) {
-		long t1 = m_minPubDate;
+		int32_t t1 = m_minPubDate;
 		// use 90 days instead of 365 since usually people will
 		// indicate the year if the date is so far out
-		long t2 = t1 + 90*24*3600;
+		int32_t t2 = t1 + 90*24*3600;
 		if ( inHtml ) sb->safePrintf("<font color=blue>");
 		sb->safePrintf(" ** %s- ",ctime(&t1));
 		sb->safePrintf("%s",ctime(&t2));
@@ -16113,10 +16118,10 @@ bool Date::addDoNotPrintDates ( HashTableX *dnp ) {
 	datetype_t accTypes = 0;
 
 	// scan date ptrs of di a
-	for ( long j = 0 ; j < m_numPtrs ; j++ ) {
+	for ( int32_t j = 0 ; j < m_numPtrs ; j++ ) {
 		// breathe
 		//QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *dj = m_ptrs[j];
 		// dedup
 		datetype_t rmTypes = accTypes ;
@@ -16147,8 +16152,8 @@ bool Date::addDoNotPrintRecursive (datetype_t dt, HashTableX *dnp) {
 	if ( dt == 0 ) return true;
 	// skip for now
 	//return true;
-	// shortcut
-	long key = (long)this;
+	// int16_tcut
+	int32_t key = (int32_t)this;
 	// ranges actually have ptrs, so check for them up top...
 	if ( m_type & dt ) return dnp->addKey ( &key );
 	// . stop on tod ranges...
@@ -16166,10 +16171,10 @@ bool Date::addDoNotPrintRecursive (datetype_t dt, HashTableX *dnp) {
 
 	if ( m_type & DT_COMPOUND ) return true;
 
-	for ( long j = 0 ; j < m_numPtrs ; j++ ) {
+	for ( int32_t j = 0 ; j < m_numPtrs ; j++ ) {
 		// breathe
 		//QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *dj = m_ptrs[j];
 		// test
 		if ( ! dj->addDoNotPrintRecursive ( dt , dnp ) ) return false;
@@ -16189,13 +16194,13 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 	//   the turks and those users viewing the event cached page
 	//if ( dp->m_flags & DF_DONOTPRINT ) return true;
 
-	// shortcut
-	//long key = (long)dp;
+	// int16_tcut
+	//int32_t key = (int32_t)dp;
 	// skip if do not print is basically set
 	//if ( dnp->isInTable ( &key ) ) return true;
 
 
-	//for ( long i = 0 ; i < dp->m_numPtrs ; i++ )
+	//for ( int32_t i = 0 ; i < dp->m_numPtrs ; i++ )
 	//	if (!printDateElement(dp->m_ptrs[i],sb,words,dp,dnp,fullDate))
 	//		return false;
 
@@ -16203,7 +16208,7 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 
 	//nodeid_t *tids = words->getTagIds();
 	char **wptrs = words->getWords();
-	long  *wlens = words->getWordLens ();
+	int32_t  *wlens = words->getWordLens ();
 
 	Date *parent = dp->m_dateParent;
 
@@ -16353,7 +16358,7 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 
 	// a month? make it full name
 	if ( dp->m_type == DT_MONTH ) {
-		long mi = dp->m_month;
+		int32_t mi = dp->m_month;
 		if ( mi < 0 || mi >= 13 ) { char *xx=NULL;*xx=0; }
 		if ( dp->m_suppFlags & SF_MID )
 			if ( ! sb->safePrintf("mid-") )
@@ -16372,7 +16377,7 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 	}		
 	// a daynum?
 	else if ( dp->m_type == DT_DAYNUM ) {
-		long dn = dp->m_dayNum;
+		int32_t dn = dp->m_dayNum;
 		char *suffix = "th";
 		if ( dn == 1 || dn == 21 || dn == 31 )
 			suffix = "st";
@@ -16380,11 +16385,11 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 			suffix = "nd";
 		if ( dn == 3 || dn == 23 )
 			suffix = "rd";
-		if ( ! sb->safePrintf("%li%s",dn,suffix) ) return false;
+		if ( ! sb->safePrintf("%"INT32"%s",dn,suffix) ) return false;
 	}
 	// year
 	else if ( dp->m_type == DT_YEAR ) {
-		if ( ! sb->safePrintf("%li",dp->m_year ) ) return false;
+		if ( ! sb->safePrintf("%"INT32"",dp->m_year ) ) return false;
 	}
 	else if ( dp->m_type == DT_EVERY_DAY ) {
 		if ( ! sb->safePrintf("daily" ) ) return false;
@@ -16419,12 +16424,12 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 	// what is this???? summers, weekends...
 	else {
 		char *s  = wptrs[dp->m_a];
-		long len = wptrs[dp->m_b-1] - wptrs[dp->m_a] +wlens[dp->m_b-1];
+		int32_t len = wptrs[dp->m_b-1] - wptrs[dp->m_a] +wlens[dp->m_b-1];
 		if ( ! sb->safeMemcpy( s , len ) ) return false;
 	}
 
 	// print groupnumright before then
-	//if(! sb->safePrintf("<sub>%li</sub>",dp->m_groupNum) ) return false;
+	//if(! sb->safePrintf("<sub>%"INT32"</sub>",dp->m_groupNum) ) return false;
 
 	return true;
 }
@@ -16433,8 +16438,8 @@ bool printDateElement ( Date *dp , SafeBuf *sb , Words *words ,
 void Date::print ( SafeBuf *sbArg , 
 		   Sections *ss , 
 		   Words    *words ,
-		   long      siteHash ,
-		   long num , 
+		   int32_t      siteHash ,
+		   int32_t num , 
 		   Date *best ,
 		   Dates *dates ) {
 
@@ -16458,15 +16463,15 @@ void Date::print ( SafeBuf *sbArg ,
 	if ( sbArg ) 
 		sb->safePrintf("<tr>\n"
 			       // tell diff to ignore
-			       "<!--ignore--><td>%s%s#%li%s%s</td>\n" 
-			       "<td>%li</td>"
-			       "<td>%li</td>"    ,
+			       "<!--ignore--><td>%s%s#%"INT32"%s%s</td>\n" 
+			       "<td>%"INT32"</td>"
+			       "<td>%"INT32"</td>"    ,
 			       f1,b1,num,b2,f2,
 			       m_a,m_b );
 	else
-		sb->safePrintf("%s#%li%s | " 
-			       "%li | "
-			       "%li | "    ,
+		sb->safePrintf("%s#%"INT32"%s | " 
+			       "%"INT32" | "
+			       "%"INT32" | "    ,
 			       b1,num,b2,
 			       m_a,m_b );
 		
@@ -16485,7 +16490,7 @@ void Date::print ( SafeBuf *sbArg ,
 
 	// end in assumed year
 	//if ( m_flags & DF_ASSUMED_YEAR )
-	//	sb->safePrintf(" ** %li",m_year);
+	//	sb->safePrintf(" ** %"INT32"",m_year);
 
 
 	if ( sbArg ) sb->safePrintf("</nobr></td>");
@@ -16507,7 +16512,7 @@ void Date::print ( SafeBuf *sbArg ,
 
 	// some other junk
 	if ( sbArg ) {
-		sb->safePrintf("<td><nobr>%s%li%s</nobr></td>"      // score
+		sb->safePrintf("<td><nobr>%s%"INT32"%s</nobr></td>"      // score
 			       "<td><nobr>%s</nobr></td>" // timetamp
 			       "<td>%s</td>",
 			       b1,-1 * m_penalty,b2,
@@ -16515,7 +16520,7 @@ void Date::print ( SafeBuf *sbArg ,
 			       "---");//tzStr);
 	}
 	else
-		sb->safePrintf("%s%li%s | "      // score
+		sb->safePrintf("%s%"INT32"%s | "      // score
 			       "%s | " // timetamp
 			       // timezone
 			       "%s"
@@ -16525,13 +16530,13 @@ void Date::print ( SafeBuf *sbArg ,
 			       "---");//tzStr);
 
 	// sentence id
-	//sb->safePrintf("<td>%li</td>",m_sentenceId);
+	//sb->safePrintf("<td>%"INT32"</td>",m_sentenceId);
 
 	// datehash64
-	sb->safePrintf("<td>%llu</td>",m_dateHash64);
+	sb->safePrintf("<td>%"UINT64"</td>",m_dateHash64);
 	// . tag hash
 	// . turkTagHash is for date elements really
-	sb->safePrintf("<td>%lu</td>",m_dateTypeAndTagHash32);//m_turkTagHash);
+	sb->safePrintf("<td>%"UINT32"</td>",m_dateTypeAndTagHash32);//m_turkTagHash);
 	
 	// flag row
 	sb->safePrintf("<td><nobr>");
@@ -16539,21 +16544,21 @@ void Date::print ( SafeBuf *sbArg ,
 	// print each flag
 
 	if ( m_headerCount )
-		sb->safePrintf("(hdrcnt=%li) ",m_headerCount);
+		sb->safePrintf("(hdrcnt=%"INT32") ",m_headerCount);
 	if ( m_tmph )
-		sb->safePrintf("(deduphash=0x%lx) ",m_tmph);
+		sb->safePrintf("(deduphash=0x%"XINT32") ",m_tmph);
 	if ( m_maxYearGuess )
-		sb->safePrintf("(maxyearguess=%li) ",m_maxYearGuess);
+		sb->safePrintf("(maxyearguess=%"INT32") ",m_maxYearGuess);
 	if ( m_dowBasedYear )
-		sb->safePrintf("(dowbasedyear=%li) ",m_dowBasedYear);
+		sb->safePrintf("(dowbasedyear=%"INT32") ",m_dowBasedYear);
 
 	if ( m_flags & DF_DUP ) {
-		long dupNum = dates->getDateNum(m_dupOf);
-		sb->safePrintf("dupof%li ",dupNum);
+		int32_t dupNum = dates->getDateNum(m_dupOf);
+		sb->safePrintf("dupof%"INT32" ",dupNum);
 	}
 	if ( m_flags & DF_SUB_DATE ) {
-		long dnum = dates->getDateNum(m_subdateOf);
-		sb->safePrintf("subdateof%li ",dnum);
+		int32_t dnum = dates->getDateNum(m_subdateOf);
+		sb->safePrintf("subdateof%"INT32" ",dnum);
 	}
 
 	if ( m_flags & DF_EVENT_CANDIDATE )
@@ -16698,9 +16703,9 @@ void Date::print ( SafeBuf *sbArg ,
 	if ( m_flags & DF_EXACT_TOD )
 		sb->safePrintf("exacttod ");
 	if ( m_tableCell ) {
-	       sb->safePrintf("tablesec=0x%lx ",(long)m_tableCell->m_tableSec);
-		sb->safePrintf("row=%li ",m_tableCell->m_rowNum);
-		sb->safePrintf("col=%li ",m_tableCell->m_colNum);
+	       sb->safePrintf("tablesec=0x%"XINT32" ",(int32_t)m_tableCell->m_tableSec);
+		sb->safePrintf("row=%"INT32" ",m_tableCell->m_rowNum);
+		sb->safePrintf("col=%"INT32" ",m_tableCell->m_colNum);
 	}
 
 	if ( m_flags & DF_LEFT_BOOKEND )
@@ -16859,30 +16864,30 @@ void Date::print ( SafeBuf *sbArg ,
 		sb->safePrintf("canonical ");
 
 	if ( m_dayNum >= 0 )
-		sb->safePrintf("daynum=%li ",(long)m_dayNum);
+		sb->safePrintf("daynum=%"INT32" ",(int32_t)m_dayNum);
 	if ( m_minDayNum < 32 )
-		sb->safePrintf("mindaynum=%li ",(long)m_minDayNum);
+		sb->safePrintf("mindaynum=%"INT32" ",(int32_t)m_minDayNum);
 	if ( m_maxDayNum > 0 )
-		sb->safePrintf("maxdaynum=%li ",(long)m_maxDayNum);
+		sb->safePrintf("maxdaynum=%"INT32" ",(int32_t)m_maxDayNum);
 	if ( m_month >= 0 )
-		sb->safePrintf("month=%li ",(long)m_month);
+		sb->safePrintf("month=%"INT32" ",(int32_t)m_month);
 	if ( m_tod >= 0 )
-		sb->safePrintf("tod=%li ",(long)m_tod);
+		sb->safePrintf("tod=%"INT32" ",(int32_t)m_tod);
 	if ( m_minTod < 30*3600 )
-		sb->safePrintf("mintod=%li ",(long)m_minTod);
+		sb->safePrintf("mintod=%"INT32" ",(int32_t)m_minTod);
 	if ( m_maxTod > 0 )
-		sb->safePrintf("maxtod=%li ",(long)m_maxTod);
+		sb->safePrintf("maxtod=%"INT32" ",(int32_t)m_maxTod);
 	if ( m_dowBits )
-		sb->safePrintf("dowbits=0x%lx[%li] ",
-			       (unsigned long)((unsigned char)m_dowBits),
+		sb->safePrintf("dowbits=0x%"XINT32"[%"INT32"] ",
+			       (uint32_t)((unsigned char)m_dowBits),
 			       getNumBitsOn8(m_dowBits));
 	if ( m_minYear != 2050 )
-		sb->safePrintf("minyear=%li ",(long)m_minYear);
+		sb->safePrintf("minyear=%"INT32" ",(int32_t)m_minYear);
 	if ( m_maxYear != 1900 )
-		sb->safePrintf("maxyear=%li ",(long)m_maxYear);
+		sb->safePrintf("maxyear=%"INT32" ",(int32_t)m_maxYear);
 	
 
-	sb->safePrintf("datehash=0x%llx ",m_dateHash64);
+	sb->safePrintf("datehash=0x%"XINT64" ",m_dateHash64);
 
 
 	// make this
@@ -16892,21 +16897,21 @@ void Date::print ( SafeBuf *sbArg ,
 
 	if ( sbArg )
 		sb->safePrintf("</nobr></td>"
-			       //"<td>%li</td>"      // wordNum
-			       "<td>0x%08lx</td>"  // tagHash
-			       "<td>%lu</td>"      // occNum
-			       "<td>0x%08lx</td>"  // clockhash
-			       "<td>%llu</td>" // termid
+			       //"<td>%"INT32"</td>"      // wordNum
+			       "<td>0x%08"XINT32"</td>"  // tagHash
+			       "<td>%"UINT32"</td>"      // occNum
+			       "<td>0x%08"XINT32"</td>"  // clockhash
+			       "<td>%"UINT64"</td>" // termid
 			       "</tr>\n"           ,
 			       m_tagHash    ,
 			       m_occNum     ,
 			       m_clockHash  ,
 			       termId       );
 	else
-		sb->safePrintf("0x%08lx | "  // tagHash
-			       "%lu | "      // occNum
-			       "0x%08lx | "  // clockhash
-			       "%llu" // termid
+		sb->safePrintf("0x%08"XINT32" | "  // tagHash
+			       "%"UINT32" | "      // occNum
+			       "0x%08"XINT32" | "  // clockhash
+			       "%"UINT64"" // termid
 			       "\n"           ,
 			       m_tagHash    ,
 			       m_occNum     ,
@@ -16920,15 +16925,15 @@ void Date::print ( SafeBuf *sbArg ,
 
 // returns false if no dates
 bool Dates::getDateOffsets ( Date *date ,
-			     long  num ,
-			     long *dateStartOff ,
-			     long *dateEndOff   ,
-			     long *dateSentStartOff ,
-			     long *dateSentEndOff ) {
+			     int32_t  num ,
+			     int32_t *dateStartOff ,
+			     int32_t *dateEndOff   ,
+			     int32_t *dateSentStartOff ,
+			     int32_t *dateSentEndOff ) {
 	
 	//nodeid_t *tids = words->getTagIds();
 	char **wptrs = m_words->getWords();
-	long  *wlens = m_words->getWordLens ();
+	int32_t  *wlens = m_words->getWordLens ();
 
 	//if ( m_numPtrs == 0 && (m_flags & DF_CLOSE_DATE) )
 	//if ( (m_flags & DF_CLOSE_DATE) )
@@ -16988,10 +16993,10 @@ bool Dates::getDateOffsets ( Date *date ,
 
 // . also for movie times like " 11:45am, 2:20, 4:55, 7:30, 7:55, 10:05, 10:30"
 //   assume that all times with a colon are pm unless otherwise stated.
-long Dates::parseTimeOfDay3 ( Words     *w             ,
-			      long       i             ,
-			      long       niceness      ,
-			      long      *endWordNum    ,
+int32_t Dates::parseTimeOfDay3 ( Words     *w             ,
+			      int32_t       i             ,
+			      int32_t       niceness      ,
+			      int32_t      *endWordNum    ,
 			      TimeZone **tzPtr         ,
 			      bool       monthPreceeds ,
 			      // do we KNOW if it was am or pm?
@@ -16999,14 +17004,14 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 			      bool      *hadMinute     ,
 			      bool      *isMilitary    ) {
 
-	long           nw = w->getNumWords();
+	int32_t           nw = w->getNumWords();
 	char      **wptrs = w->getWords   ();
-	long       *wlens = w->getWordLens();
+	int32_t       *wlens = w->getWordLens();
 	nodeid_t    *tids = w->m_tagIds;
 	int64_t   *wids = w->getWordIds();
 
 	// save it
-	long savei = i;
+	int32_t savei = i;
 
 	// must start with a number
 	//if ( ! is_digit(wptrs[i][0]) ) { 
@@ -17022,7 +17027,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	// 5+ is bad ("12pm" is like the biggest?)
 	if ( wlens[i] >= 5 ) return -2;
 	// get as number
-	long hour = w->getAsLong(i);
+	int32_t hour = w->getAsLong(i);
 	// . must be valid hour
 	// . allow for 00:29:00 GMT like for trumba.com!
 	if ( hour < 0 || hour > 24 ) return -2;
@@ -17039,13 +17044,13 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	bool hadMin = false;
 	bool hadPeriod = false;
 	// a period after the number?
-	long numDigits = 0;
+	int32_t numDigits = 0;
 	if ( numDigits == 0 && is_digit(wptrs[i][0]) ) numDigits++;
 	if ( numDigits == 1 && is_digit(wptrs[i][1]) ) numDigits++;
 	if ( numDigits == 2 && is_digit(wptrs[i][2]) ) numDigits++;
 	if ( numDigits >= 3 ) return -2;
 	// if a minute follows, must be like 04:32
-	long minute = 0;
+	int32_t minute = 0;
 	// support ceder.net's "6:30 - 8.00PM" !!!! allow periods
 	if ( i+2<nw && (wptrs[i+1][0] == ':' || wptrs[i][numDigits]=='.')) {
 		minute = w->getAsLong(i+2);
@@ -17063,7 +17068,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 		*hadMinute = true;
 	}
 	// does a second follow? "19:35:12 GMT"
-	long sec = 0;
+	int32_t sec = 0;
 	if ( i+2<nw && wptrs[i+1][0] == ':' ) {
 		sec = w->getAsLong(i+2);
 		if ( sec < 0 || sec > 59 ) return -2;
@@ -17083,7 +17088,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	bool isAM = false;
 	bool isMil = false;
 
-	// shortcuts
+	// int16_tcuts
 	//int64_t h_and      = hash64b("and");
 	//int64_t h_to       = hash64b("to");
 	//int64_t h_noon     = hash64b("noon");
@@ -17112,7 +17117,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	}
 
 	// limit am/pm scan to 10 words
-	long kmax = i + 10;
+	int32_t kmax = i + 10;
 	if ( kmax > nw ) kmax = nw;
 	char *s;
 	// falg
@@ -17124,14 +17129,14 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 
 	// count words after the numeric time stuff. looking for am or a. m.
 	// etc. kinda cruft
-	//long additional = 0;
-	//long hadPunct   = 0;
-	long scannedHours =  0;
-	long followingNum = -1;
+	//int32_t additional = 0;
+	//int32_t hadPunct   = 0;
+	int32_t scannedHours =  0;
+	int32_t followingNum = -1;
 	// flag init
-	//long end = -1;
+	//int32_t end = -1;
 	// start with current word, it might have "pm" in it as substr
-	for ( long k = savei ; k < kmax ; k++ ) { 
+	for ( int32_t k = savei ; k < kmax ; k++ ) { 
 		// breathe
 		QUICKPOLL(niceness);
 		// stop if a tag. no some crappy pages have tags between
@@ -17227,7 +17232,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 			// set this
 			hadCrap = true;
 			// get the number
-			long num = w->getAsLong(k);
+			int32_t num = w->getAsLong(k);
 			// stop if a year or something
 			if ( num < 0 || num >= 60 ) break;
 			// count it
@@ -17302,7 +17307,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 		// were not "am" or "pm" per se 
 		if ( hadCrap ) break;
 		// reset this
-		long qq;
+		int32_t qq;
 		// now identify the last word in our time because
 		// we must identify a range of words in the time.
 		for ( qq = *endWordNum ; qq < nw ; qq++ )
@@ -17407,7 +17412,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	// skip if word is "at", not a good timezone!
 	//int64_t h_at = hash64("at",2);
 	// tzptr will be set to NULL if not recognized as a timezone
-	long tznw = 0;
+	int32_t tznw = 0;
 	if ( wids[i] ) {
 		tznw = getTimeZoneWord ( i , wids, nw,tzPtr , m_niceness );
 		// return -1 with g_errno set on error
@@ -17428,7 +17433,7 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	}
 	
 	// make it
-	long seconds = hour * 3600 + minute * 60;
+	int32_t seconds = hour * 3600 + minute * 60;
 	// sanity check
 	if ( seconds < 0 ) { char *xx=NULL;*xx=0; }
 	// sanity check
@@ -17447,9 +17452,9 @@ long Dates::parseTimeOfDay3 ( Words     *w             ,
 	// BEGIN XML MILITARY TAG TIME CHECK
 	//
 	///////////
-	long kmin = i - 20;
+	int32_t kmin = i - 20;
 	if ( kmin < 0 ) kmin = 0;
-	long k = i - 1;
+	int32_t k = i - 1;
 	bool hitLeftTag = false;
 	for ( ; k >= kmin ; k-- ) {
 		// stop on tag word
@@ -17806,9 +17811,9 @@ bool initTimeZoneTable ( ) {
 	if ( ! s_tzt.set( 8,4, 300,NULL,0,false,0,"tzts"))
 		return false;
 	// load time zone names and their modifiers into hashtable
-	for ( long i = 0 ; *tzs[i].m_name ; i++ ) {
+	for ( int32_t i = 0 ; *tzs[i].m_name ; i++ ) {
 		char *t    = tzs[i].m_name;
-		long  tlen = gbstrlen(t);
+		int32_t  tlen = gbstrlen(t);
 		// hash like Words.cpp computeWordIds
 		uint64_t h    = hash64Lower_utf8( t , tlen );
 		// use the ptr as the value
@@ -17820,7 +17825,7 @@ bool initTimeZoneTable ( ) {
 
 // return what we have to add to UTC to get time in locale specified by "s"
 // where "s" is like "PDT" "MST" "EST" etc. if unknown return 999999
-long getTimeZone ( char *s ) {
+int32_t getTimeZone ( char *s ) {
 	if ( ! s ) return BADTIMEZONE;
 	char *send = s;
 	// point to end of the potential timezone
@@ -17830,23 +17835,23 @@ long getTimeZone ( char *s ) {
 	// make sure table is ready
 	initTimeZoneTable();
 	// look it up
-	long slot = s_tzt.getSlot( &h );
+	int32_t slot = s_tzt.getSlot( &h );
 	if ( slot < 0 ) return 999999;
 	// did we find it in the table?
 	TimeZone *tzptr = (TimeZone *)s_tzt.getValueFromSlot ( slot );
 	// no error, return true
-	long secs = tzptr->m_hourMod * 3600;
+	int32_t secs = tzptr->m_hourMod * 3600;
 	secs += tzptr->m_minMod * 60;
 	return secs;
 }
 
 // . returns how many words starting at i are in the time zone
 // . 0 means not a timezone
-long getTimeZoneWord ( long i ,
+int32_t getTimeZoneWord ( int32_t i ,
 		       int64_t *wids, 
-		       long nw ,
+		       int32_t nw ,
 		       TimeZone **tzptr , 
-		       long niceness ) {
+		       int32_t niceness ) {
 
 	// no ptr
 	*tzptr = NULL;
@@ -17861,9 +17866,9 @@ long getTimeZoneWord ( long i ,
 	// this is too common of a word!
 	if ( wids[i] == h_at2 ) return 0;
 
-	long slot = s_tzt.getSlot( &wids[i] );
+	int32_t slot = s_tzt.getSlot( &wids[i] );
 	// return this, assume just one word
-	long tznw = 1;
+	int32_t tznw = 1;
 	// . "mountain time"
 	// . this removes the event title "M-F 8:30 AM-5:30 PM Mountain Time"
 	//   from the event (horus) on http://www.sfreporter.com/contact_us/
@@ -17898,7 +17903,7 @@ long getTimeZoneWord ( long i ,
 struct DateVal {
 	char       m_str[32];
 	datetype_t m_type;
-	long       m_val;
+	int32_t       m_val;
 	char       m_numWids;
 	int64_t  m_wids[MAX_WIDS];
 };
@@ -18236,9 +18241,9 @@ bool initDateTypes ( ) {
 		return false;
 	// mark this
 	char localBuf[1000];
-	long localBufSize = 1000;
+	int32_t localBufSize = 1000;
 	// load month names and their values into hashtable from above
-	for ( long j = 0 ; j<(long)(sizeof(dvs)/sizeof(DateVal));j++){
+	for ( int32_t j = 0 ; j<(int32_t)(sizeof(dvs)/sizeof(DateVal));j++){
 		// breathe
 		//QUICKPOLL(m_niceness);
 		// ref it
@@ -18257,7 +18262,7 @@ bool initDateTypes ( ) {
 		// reset wid count
 		dv->m_numWids = 0;
 		// loop over words
-		for ( long k = 0 ; k < tmp.m_numWords ;k++ ) {
+		for ( int32_t k = 0 ; k < tmp.m_numWords ;k++ ) {
 			// skip if not word alnum
 			if ( ! kwids[k] ) 
 				continue;
@@ -18265,13 +18270,13 @@ bool initDateTypes ( ) {
 			if ( dv->m_numWids >= MAX_WIDS ) {
 				char *xx=NULL;*xx=0; }
 			// set initial hash
-			dv->m_wids[(long)dv->m_numWids] = kwids[k];
+			dv->m_wids[(int32_t)dv->m_numWids] = kwids[k];
 			// inc it
 			dv->m_numWids++;
 		}
 		// get it
 		//DateVal *dv = &dvs[j];
-		//long      len = gbstrlen(dv->m_str);
+		//int32_t      len = gbstrlen(dv->m_str);
 		//uint64_t  h   = hash64Lower_utf8(dv->m_str,len);
 		// sanity check
 		if ( dv->m_val ==  0 ) { char *xx=NULL;*xx=0; }
@@ -18288,7 +18293,7 @@ bool isMonth ( int64_t wid ) {
 	// sanity check
 	if ( ! s_init98 ) { char *xx=NULL;*xx=0; }
 	// get slot
-	long slot = s_dvt.getSlot64 ( &wid );
+	int32_t slot = s_dvt.getSlot64 ( &wid );
 	// none? no date type then
 	if ( slot < 0 ) return false;
 	// see if it is a match
@@ -18304,7 +18309,7 @@ bool isDateType ( int64_t *pwid ) {
 	// sanity check
 	if ( ! s_init98 ) { initDateTypes(); } // char *xx=NULL;*xx=0; }
 	// get slot
-	long slot = s_dvt.getSlot64 ( pwid );
+	int32_t slot = s_dvt.getSlot64 ( pwid );
 	// none? no date type then
 	if ( slot < 0 ) return false;
 	// see if it is a match
@@ -18330,8 +18335,8 @@ bool isDateType ( int64_t *pwid ) {
 
 // . get the DT_* type of date this is
 // . SUPPORT: "13th day of","12th month",...   "second week"(is a range)
-datetype_t Dates::getDateType ( long i , long *val , long *endWord ,
-				int64_t *wids , long nw ,
+datetype_t Dates::getDateType ( int32_t i , int32_t *val , int32_t *endWord ,
+				int64_t *wids , int32_t nw ,
 				// does the word "on" preceed word #i?
 				bool onPreceeds ) {
 	// only init the table once
@@ -18340,12 +18345,12 @@ datetype_t Dates::getDateType ( long i , long *val , long *endWord ,
 	if ( ! s_init98 ) initDateTypes();
 
 	// sum for compounds like twenty-first or nineteen hundred and nine
-	//long sum = 0;
+	//int32_t sum = 0;
 
 	// breathe 
 	QUICKPOLL ( m_niceness );
 	// get slot
-	long slot = s_dvt.getSlot64 ( &wids[i] );
+	int32_t slot = s_dvt.getSlot64 ( &wids[i] );
 	// none? no date type then
 	if ( slot < 0 ) return 0;
 
@@ -18419,13 +18424,13 @@ datetype_t Dates::getDateType ( long i , long *val , long *endWord ,
 			continue;
 		}
 		// limit scan below
-		long max = i + 10;
+		int32_t max = i + 10;
 		// limit the limit
 		if ( max > nw ) max = nw;
 		// the next word
-		long next = 1;
+		int32_t next = 1;
 		// start right after i
-		long j = i + 1;
+		int32_t j = i + 1;
 		// . if holiday has multiple words, we gotta scan!
 		// . i.e. "New Year's Eve"
 		for ( ; j < max ; j++ ) {
@@ -22986,9 +22991,9 @@ char getMonth ( int64_t wid ) {
 		if ( ! s_mt.set( 8,1,300,s_mbuf,6000,false,0,"months")) 
 			return false;
 		// load month names and their values into hashtable from above
-		for ( long i = 0 ; *months[i].month ; i++ ) {
+		for ( int32_t i = 0 ; *months[i].month ; i++ ) {
 			char     *m    = months[i].month;
-			long      mlen = gbstrlen(m);
+			int32_t      mlen = gbstrlen(m);
 			uint64_t  h    = hash64Lower_utf8(m,mlen);
 			// add should always be success since we are pre-alloc
 			if ( ! s_mt.addKey(&h,&months[i].value)){
@@ -23013,10 +23018,10 @@ char getMonth ( int64_t wid ) {
 // . constrain intervals to [year0,year1) year range
 bool Dates::getIntervals2 ( Date *dp , 
 			    SafeBuf *sb, 
-			    long year0 , 
-			    long year1 ,
+			    int32_t year0 , 
+			    int32_t year1 ,
 			    Date **closeDates ,
-			    long  numCloseDates ,
+			    int32_t  numCloseDates ,
 			    char  timeZone ,
 			    char  useDST   ,
 			    Words *words ) {
@@ -23058,14 +23063,14 @@ bool Dates::getIntervals2 ( Date *dp ,
 	// . each Interval is a range of time_t's like [a,b), closed on
 	//   the left and open on the right.
 	// . may dates in m_datePtrs are ranges, and this takes care of it
-	long ni = addIntervals ( dp , 0 , finalInt , 0 , dp );
+	int32_t ni = addIntervals ( dp , 0 , finalInt , 0 , dp );
 
 	// this would have set this to -1 and g_errno on error
 	if ( ni == -1 ) return false;
 
 	// the return ptr
 	Interval *retInt = finalInt;
-	long      retni  = ni;
+	int32_t      retni  = ni;
 
 	// store result here
 	Interval int3 [ MAX_INTERVALS + 1 ];
@@ -23073,8 +23078,8 @@ bool Dates::getIntervals2 ( Date *dp ,
 	Interval *arg1 = finalInt;
 	Interval *arg3 = int3;
 	// this is int1
-	long       ni1 = ni;
-	long       ni3 = 0;
+	int32_t       ni1 = ni;
+	int32_t       ni3 = 0;
 
 
 	// . now intersect with our 365 day assumed range
@@ -23110,15 +23115,15 @@ bool Dates::getIntervals2 ( Date *dp ,
 
 
 	// subtract the close dates
-	for ( long i = 0 ; i < numCloseDates ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < numCloseDates ; i++ ) {
+		// int16_tcut
 		Date *cd = closeDates[i];
 		// sanity check
 		if ( ! ( cd->m_flags & DF_CLOSE_DATE )){char *xx=NULL;*xx=0; }
 		// fill this up
 		Interval int2 [ MAX_INTERVALS + 1 ];
 		// subtract them!
-		long ni2 = addIntervals ( cd,0,int2,0,cd);
+		int32_t ni2 = addIntervals ( cd,0,int2,0,cd);
 		// int1 - int2 and stored into int3. subtract = true
 		ni3 = intersect3 ( arg1,int2,arg3,ni1,ni2,0 , true,false);
 		// error?
@@ -23146,7 +23151,7 @@ bool Dates::getIntervals2 ( Date *dp ,
 	     // for http://www.seattle24x7.com/calendar/calendar.htm 
 	     !(dp->m_hasType & DT_RANGE_TIMEPOINT) ) {
 		// loop over every interval
-		for ( long i = 0 ; i < retni ; i++ ) {
+		for ( int32_t i = 0 ; i < retni ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// set to -1
@@ -23169,7 +23174,7 @@ bool Dates::getIntervals2 ( Date *dp ,
 	dateflags_t mask = DF_STORE_HOURS | DF_SUBSTORE_HOURS;
 	if ( !(dp->m_flags & mask) ) {
 		// loop over every interval and nuke the end time
-		for ( long i = 0 ; i < retni ; i++ ) {
+		for ( int32_t i = 0 ; i < retni ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// set to -1
@@ -23181,25 +23186,25 @@ bool Dates::getIntervals2 ( Date *dp ,
 	//
 	// now convert the interval times from local times into UTC
 	//
-	long i = 0;
-	long j = 0;
+	int32_t i = 0;
+	int32_t j = 0;
 	// timeZone is in hours, usually -5,-6,-7,-8 (EST/CST/MST/PST)
-	long tzoff = timeZone * 3600;
+	int32_t tzoff = timeZone * 3600;
 	// . now convert from local time into utc... and handle dst
 	// . set then dst intervals for each year
-	for ( long y = m_year0 ; y <= m_year1 ; y++ ) {
+	for ( int32_t y = m_year0 ; y <= m_year1 ; y++ ) {
 		// not if facebook though! they are already in utc
 		//if ( isFacebook ) break;
 		// set daylight start for UTC
-		long daylightStart ;
-		long daylightEnd   ;
+		int32_t daylightStart ;
+		int32_t daylightEnd   ;
 		// . this function is in Address.cpp above getIsDst()
 		// . daylightStart is time_t in UTC when daylight savings time
 		//   starts for this year.
 		getDSTInterval ( y , &daylightStart, &daylightEnd );
 		// get year range
-		long ystart = getYearMonthStart(y  ,1);
-		long yend   = getYearMonthStart(y+1,1);
+		int32_t ystart = getYearMonthStart(y  ,1);
+		int32_t yend   = getYearMonthStart(y+1,1);
 		// breathe
 		QUICKPOLL(m_niceness);
 		// now scan the intervals that fall into this year
@@ -23263,14 +23268,14 @@ bool Dates::getIntervals2 ( Date *dp ,
 // . TODO: SUPPORT: "nov 1 7pm - nov 3 8pm" will have an end tod > 1 day
 // . TODO: SUPPORT: "dev 11,12, 15 jan 4" (list of two MONTH|DAYNUMs where
 //                  one has a list of daynums...
-long Dates::addIntervals ( Date       *di     ,
+int32_t Dates::addIntervals ( Date       *di     ,
 			   char        hflag  ,
 			   // fill up this buffer with the intervals
 			   Interval   *retInt ,
-			   long        depth  ,
+			   int32_t        depth  ,
 			   Date       *orig   ) {
 
-	long ni = addIntervalsB ( di,hflag,retInt,depth,orig);
+	int32_t ni = addIntervalsB ( di,hflag,retInt,depth,orig);
 
 	// . now if we had the word "non" before the date then we must
 	//   complement the intervals.
@@ -23285,9 +23290,9 @@ long Dates::addIntervals ( Date       *di     ,
 
 	// store here
 	Interval *dst = retInt;
-	long j = 0;
+	int32_t j = 0;
 	// complement them
-	for ( long i = 0 ; i < ni ; i++ ) {
+	for ( int32_t i = 0 ; i < ni ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// finish last one
@@ -23304,17 +23309,17 @@ long Dates::addIntervals ( Date       *di     ,
 	return j;
 }
 
-//long nd = s_numDaysInMonth[m-1];
+//int32_t nd = s_numDaysInMonth[m-1];
 char s_numDaysInMonth [] = {31,28,31,30,31,30,31, 31,30,31,30,31};
 
 // month = 0 to 11. 0=jan 1=feb ...
-long getNumDaysInMonth ( long month , long year ) {
+int32_t getNumDaysInMonth ( int32_t month , int32_t year ) {
 	// sanity. month is 0 to 11, not 1 to 12
 	if ( month >= 12 ) { char *xx=NULL;*xx=0; }
 	// sanity more. year is like 1900+
 	if ( year < 100 ) { char  *xx=NULL;*xx=0; }
 	// get days in month
-	long nd = s_numDaysInMonth[month];
+	int32_t nd = s_numDaysInMonth[month];
 	// are we a leap year?
 	bool isLeapYear = ( (year % 4) == 0 );
 	// but every century we skip a leap year
@@ -23327,31 +23332,31 @@ long getNumDaysInMonth ( long month , long year ) {
 }
 
 
-long Dates::addIntervalsB ( Date       *di     ,
+int32_t Dates::addIntervalsB ( Date       *di     ,
 			   char        hflag  ,
 			   // fill up this buffer with the intervals
 			   Interval   *retInt ,
-			   long        depth  ,
+			   int32_t        depth  ,
 			   Date       *orig   ) {
 
-	// shortcut
+	// int16_tcut
 	char *u = ""; if ( m_url ) u = m_url->getUrl();
 
 	// each simple date type uses this to store its intervals before
 	// intersecting
 	Interval  tmp1[MAX_INTERVALS];
 	Interval *int1 = tmp1;
-	long      ni1  = 0;
+	int32_t      ni1  = 0;
 
 	// and we intersect those with m_int2, the accumulator
 	Interval  tmp2[MAX_INTERVALS];
 	Interval *int2 = tmp2;
-	long      ni2  = 0;
+	int32_t      ni2  = 0;
 
 	// . and store intersection into m_int3
 	// . and right after swap m_int2 with m_int3
 	Interval *int3 = retInt;
-	long      ni3  = 0;
+	int32_t      ni3  = 0;
 
 	// . quick skip if totally wrong year
 	// . fixes obits.abqjournal.com some
@@ -23391,9 +23396,9 @@ long Dates::addIntervalsB ( Date       *di     ,
 	if ( di->m_type == DT_RANGE_YEAR ) ps = "rangeyear";
 	// a depth indicator
 	char ds[40];
-	for ( long k = 0 ; k < depth ; k++ ) ds[k]='-';
+	for ( int32_t k = 0 ; k < depth ; k++ ) ds[k]='-';
 	ds[depth]='\0';
-	logf(LOG_DEBUG,"dates: %s adding intervals for date type %s num=%li",
+	logf(LOG_DEBUG,"dates: %s adding intervals for date type %s num=%"INT32"",
 	     ds,ps,di->m_num);
 #endif
 
@@ -23429,7 +23434,7 @@ long Dates::addIntervalsB ( Date       *di     ,
 		}
 		
 		// correction? for boundary conditions
-		long corr = 0;
+		int32_t corr = 0;
 		// if endpoint of first time interval of tmp2 array
 		// is less than edpoint of first time interval of
 		// tmp1 array, then skip the first time interval
@@ -23468,8 +23473,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// reset
 		ni3 = 0;
 		// get year constraints
-		long yoff1 = getYearMonthStart ( m_year0 , 1 );
-		long yoff2 = getYearMonthStart ( m_year1 , 1 );
+		int32_t yoff1 = getYearMonthStart ( m_year0 , 1 );
+		int32_t yoff2 = getYearMonthStart ( m_year1 , 1 );
 		// if end point intervals are first, then correct that
 		if ( corr == 1 ) {
 			int3[ni3].m_a = yoff1;
@@ -23487,14 +23492,14 @@ long Dates::addIntervalsB ( Date       *di     ,
 		     di->m_ptrs[0]->m_type == DT_YEAR &&
 		     di->m_ptrs[0]->m_year > 1 &&
 		     di->m_ptrs[0]->m_year < m_year0 ) {
-			for ( long k = 0 ; k < ni2 ; k++ ) {
+			for ( int32_t k = 0 ; k < ni2 ; k++ ) {
 				int3[ni3].m_a = yoff1;
 				int3[ni3].m_b = int2[k].m_b;
 				ni3++;
 			}
 		}
 		// loop over intervals
-		for ( long k = 0 ; k < ni1 ; k++ ) {
+		for ( int32_t k = 0 ; k < ni1 ; k++ ) {
 			int3[ni3].m_a = tmp1[k].m_a;
 			// if ran out of intervals in tmp2,use year end
 			if ( k+corr >= ni2 ) {
@@ -23524,9 +23529,9 @@ long Dates::addIntervalsB ( Date       *di     ,
 		return ni3;
 	}
 
-	long dcount = 0;
+	int32_t dcount = 0;
 	// scan ptrs if we are a complex date type
-	for ( long x = 0 ; x < di->m_numPtrs ; x++ ) {
+	for ( int32_t x = 0 ; x < di->m_numPtrs ; x++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get done
@@ -23635,8 +23640,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 		return ni1;
 	}
 
-	// shortcut
-	long num = di->m_num;
+	// int16_tcut
+	int32_t num = di->m_num;
 	// sanity check
 	if ( num < 0 ) { char*xx=NULL;*xx=0; }
 
@@ -23649,7 +23654,7 @@ long Dates::addIntervalsB ( Date       *di     ,
 		SF_THIRD|
 		SF_FOURTH|
 		SF_FIFTH;
-	// shortcut
+	// int16_tcut
 	suppflags_t sflags = di->m_suppFlags;
 
 	// . deal with "first thursday of the month", "second tuesday"
@@ -23658,21 +23663,21 @@ long Dates::addIntervalsB ( Date       *di     ,
 	//   above, so only do this if supp <= 17 now
 	if ( dt == DT_DOW && (sflags & sfmask) ) {
 		// cycle through the years
-		for ( long y = m_year0 ; y < m_year1 ; y++ ) {
+		for ( int32_t y = m_year0 ; y < m_year1 ; y++ ) {
 		// loop over months
-		for ( long m = 1 ; m < 13 ; m++ ) {
+		for ( int32_t m = 1 ; m < 13 ; m++ ) {
 			// get year/month start 
-			long ym1 = getYearMonthStart ( y , m );
-			long ym2 = getYearMonthStart ( y , m+1 );
+			int32_t ym1 = getYearMonthStart ( y , m );
+			int32_t ym2 = getYearMonthStart ( y , m+1 );
 			// . get dow for the first of that month
 			// . dow goes from 1 to 7
-			long dow = getDOW ( ym1 + 1 );
+			int32_t dow = getDOW ( ym1 + 1 );
 			// start it at 1
-			long count = 1;
+			int32_t count = 1;
 			// reset this
-			long lastMatch = -1;
+			int32_t lastMatch = -1;
 			// count out "sup occruences"
-			for ( long d = ym1 ; d < ym2 ; d += 3600*24 , dow++ ) {
+			for ( int32_t d = ym1 ; d < ym2 ; d += 3600*24 , dow++ ) {
 				// wrap it
 				if ( dow > 7 ) dow = 1;
 				// skip if not our day
@@ -23699,8 +23704,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 				// skip if no match
 				if ( ! match ) continue;
 				// got a match
-				long a = d;
-				long b = d + 3600*24;
+				int32_t a = d;
+				int32_t b = d + 3600*24;
 				if ( ! addInterval(a,b,retInt,&ni3,depth)) 
 					return -1;
 				// that was it!
@@ -23709,8 +23714,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 			// the month is over, if had "last monday of the month"
 			// we now have to add that...
 			if ( lastMatch > 0 ) {
-				long a = lastMatch;
-				long b = lastMatch + 3600*24;
+				int32_t a = lastMatch;
+				int32_t b = lastMatch + 3600*24;
 				if ( ! addInterval(a,b,retInt,&ni3,depth)) 
 					return -1;
 			}
@@ -23721,27 +23726,27 @@ long Dates::addIntervalsB ( Date       *di     ,
 	// "wednesday" or "every tuesday"
 	else if ( dt == DT_DOW ) {
 		// get start of year in seconds since epoch (month=jan=1)
-		long yoff1 = getYearMonthStart ( m_year0 , 1 );
-		long yoff2 = getYearMonthStart ( m_year1 , 1 );
+		int32_t yoff1 = getYearMonthStart ( m_year0 , 1 );
+		int32_t yoff2 = getYearMonthStart ( m_year1 , 1 );
 		// . get dow (day of week) at that time (first day of year)
 		// . just do a mod of 24*3600
 		// . dow goes from 1 to 7
-		long dow = getDOW ( yoff1 + 1 );
+		int32_t dow = getDOW ( yoff1 + 1 );
 		// get first day then
-		long diff = num - dow;
+		int32_t diff = num - dow;
 		// if before us, catch up
 		if ( diff < 0 ) diff += 7;
 		// make it into seconds
-		long sdiff = diff * 24*3600;
+		int32_t sdiff = diff * 24*3600;
 		// to end of 2nd year in seconds since start of 1st year
-		//long dend = yoff + 24*3600* 366*2;
+		//int32_t dend = yoff + 24*3600* 366*2;
 		// . step through the next two years, one week a a time
 		// . TODO: ignore dows for "Wed nov 17 2009 - thurs dec 3 2009"
 		//         type things, since we are bounding by weeks!
-		for (  long d = yoff1 ; d < yoff2 ; d += 24*3600*7 ) {
+		for (  int32_t d = yoff1 ; d < yoff2 ; d += 24*3600*7 ) {
 			// adjust min/max for ranges
-			long a = d + sdiff;
-			long b = a + 3600 * 24;
+			int32_t a = d + sdiff;
+			int32_t b = a + 3600 * 24;
 			//if ( hflag == MIN_UNBOUNDED ) a = d;
 			//if ( hflag == MAX_UNBOUNDED ) b = d + 7 * 24*3600;
 			// . add interval [a,b) to m_tree1
@@ -23753,11 +23758,11 @@ long Dates::addIntervalsB ( Date       *di     ,
 	// "dec"
 	if ( dt == DT_MONTH ) {
 		// cycle through the years
-		for ( long y = m_year0 ; y < m_year1 ; y++ ) {
+		for ( int32_t y = m_year0 ; y < m_year1 ; y++ ) {
 			// get year/month start 
 			// . "num" is the month and goes from 1-12
-			long a = getYearMonthStart ( y , num );
-			long b = getYearMonthStart ( y , num + 1 );
+			int32_t a = getYearMonthStart ( y , num );
+			int32_t b = getYearMonthStart ( y , num + 1 );
 			// just paint the middle 10 days or so for 
 			// mid-novemeber for villr.com
 			if ( di->m_suppFlags & SF_MID ) {
@@ -23776,22 +23781,22 @@ long Dates::addIntervalsB ( Date       *di     ,
 	// "12th"
 	if ( dt == DT_DAYNUM ) {
 		// cycle through the years
-		for ( long y = m_year0 ; y < m_year1 ; y++ ) {
+		for ( int32_t y = m_year0 ; y < m_year1 ; y++ ) {
 		// loop over months
-		for ( long m = 1 ; m < 13 ; m++ ) {
+		for ( int32_t m = 1 ; m < 13 ; m++ ) {
 			// get year/month start 
-			long ym = getYearMonthStart ( y , m );
+			int32_t ym = getYearMonthStart ( y , m );
 			// fix for "Mar 31" -- some months may not have
 			// that day #, like Feb might only have 28 days...
 			if ( num >= 29 ) {
 				// get days in month
-				long nd = getNumDaysInMonth(m-1,y);
+				int32_t nd = getNumDaysInMonth(m-1,y);
 				// skip if overflow
 				if ( num > nd ) continue;
 			}
 			// add the day to it
-			long a = ym + (num - 1 )* 24 * 3600;
-			long b = ym + (num     )* 24 * 3600;
+			int32_t a = ym + (num - 1 )* 24 * 3600;
+			int32_t b = ym + (num     )* 24 * 3600;
 			// TODO: fix for leap year!!
 			//if ( hflag==MIN_UNBOUNDED) a=ym;
 			//if( hflag==MAX_UNBOUNDED) b=getYearMonthStart(y,m+1);
@@ -23801,8 +23806,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 	}
 	// "7pm" (every day assumed)
 	if ( dt == DT_TOD ) {
-		long a = num;
-		long b = 24*3600;
+		int32_t a = num;
+		int32_t b = 24*3600;
 		// do special ranges like "through 1pm" or "before 3pm"
 		if ( di->m_flags & DF_ONGOING ) {
 			a = 0;
@@ -23828,8 +23833,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 		if ( a >=b ) 
 			b = a + 3600*3;
 		// loop over all days in year0 up to and including year1
-		long ym0 = getYearMonthStart ( m_year0 , 1 );
-		long ym1 = getYearMonthStart ( m_year1 , 1 );
+		int32_t ym0 = getYearMonthStart ( m_year0 , 1 );
+		int32_t ym1 = getYearMonthStart ( m_year1 , 1 );
 
 		// fix for "8 [[]] Monday nights" and "9:30 [[]] Monday nights"
 		// for salsapower.com
@@ -23857,9 +23862,9 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// sanity check
 		//if ( (ym0 % (24*3600) ) != 0 ) { char *xx=NULL;*xx=0;}
 		// loop over every day (assume leap year, 366 days)
-		for ( long d = ym0 ; d < ym1 ; d += 24*3600 ) {
-			long A = a+d;
-			long B = b+d;
+		for ( int32_t d = ym0 ; d < ym1 ; d += 24*3600 ) {
+			int32_t A = a+d;
+			int32_t B = b+d;
 			//if ( hflag == MIN_UNBOUNDED ) A = 0       + d;
 			//if ( hflag == MAX_UNBOUNDED ) B = 24*3600 + d;
 			// add it in with yearly offsets in seconds since epoch
@@ -23869,8 +23874,8 @@ long Dates::addIntervalsB ( Date       *di     ,
 	}
 	// years
 	if ( dt == DT_YEAR ) {
-		long a = getYearMonthStart ( num     , 1 );
-		long b = getYearMonthStart ( num + 1 , 1 );
+		int32_t a = getYearMonthStart ( num     , 1 );
+		int32_t b = getYearMonthStart ( num + 1 , 1 );
 		//if ( hflag == MIN_UNBOUNDED ) a = 0;
 		//if ( hflag == MAX_UNBOUNDED ) b = 0x7fffffff;
 		if ( ! addInterval ( a , b,retInt,&ni3,depth ) ) return -1;
@@ -23889,10 +23894,10 @@ long Dates::addIntervalsB ( Date       *di     ,
 	// all done if not holiday
 	if ( ! ( dt & specialTypes ) ) return ni3;
 
-	long a;
-	long b;
+	int32_t a;
+	int32_t b;
 	// scan the years
-	for ( long y = m_year0 ; y < m_year1 ; y++ ) {
+	for ( int32_t y = m_year0 ; y < m_year1 ; y++ ) {
 
 		// jan 1st, all day
 		if ( num == HD_NEW_YEARS_DAY || num == HD_HOLIDAYS ) {
@@ -23987,10 +23992,10 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// wednesday of the last FULL week in april
 		if ( num == HD_EARTH_DAY || num == HD_SECRETARY_DAY ) {
 			// either the 3rd or 4th wednesday of april
-			long a1 = getDOWStart (y,4,4,3);
-			long a2 = getDOWStart (y,4,4,4);
+			int32_t a1 = getDOWStart (y,4,4,3);
+			int32_t a2 = getDOWStart (y,4,4,4);
 			// get start of may
-			long a3 = getYearMonthStart(y,5);
+			int32_t a3 = getYearMonthStart(y,5);
 			// add thursday+friday+saturday to it
 			// and if still in april, it's good!
 			if ( a2 + 3*24*3600 < a3 ) a = a2;
@@ -24002,10 +24007,10 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// last friday of april (4th or 5th friday)
 		if ( num == HD_ARBOR_DAY ) {
 			// either the 4th or 5th friday
-			long a1 = getDOWStart (y,4,6,4);
-			long a2 = getDOWStart (y,4,6,5);
+			int32_t a1 = getDOWStart (y,4,6,4);
+			int32_t a2 = getDOWStart (y,4,6,5);
 			// get start of may
-			long a3 = getYearMonthStart(y,5);
+			int32_t a3 = getYearMonthStart(y,5);
 			// and if still in april, it's good!
 			if ( a2 < a3 ) a = a2;
 			else           a = a1;
@@ -24033,10 +24038,10 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// last monday of may
 		if ( num == HD_MEMORIAL_DAY  || num == HD_HOLIDAYS ) {
 			// either the 4th or 5th monday
-			long a1 = getDOWStart (y,5,2,4);
-			long a2 = getDOWStart (y,5,2,5);
+			int32_t a1 = getDOWStart (y,5,2,4);
+			int32_t a2 = getDOWStart (y,5,2,5);
 			// get start of june
-			long a3 = getYearMonthStart(y,6);
+			int32_t a3 = getYearMonthStart(y,6);
 			// and if still in may, it's good!
 			if ( a2 < a3 ) a = a2;
 			else           a = a1;
@@ -24160,13 +24165,13 @@ long Dates::addIntervalsB ( Date       *di     ,
 		if ( num == HD_WEEKENDS ) {
 			// just use this
 			// sunday = 1, saturday = 7
-			long mask = 0;
+			int32_t mask = 0;
 			mask |= 1<<1;
 			mask |= 1<<7;
 			addIntervalsForDOW ( mask,retInt,&ni3,depth,y );
 		}
 		if ( num == HD_WEEKDAYS ) {
-			long mask = 0;
+			int32_t mask = 0;
 			mask |= 1<<2;
 			mask |= 1<<3;
 			mask |= 1<<4;
@@ -24215,48 +24220,48 @@ long Dates::addIntervalsB ( Date       *di     ,
 			if ( ! addInterval(a,b,retInt,&ni3,depth)) return -1;
 		}
 		if ( num == HD_MORNING ) {
-			long ym0 = getYearMonthStart ( y     , 1 );
-			long ym1 = getYearMonthStart ( y + 1 , 1 );
+			int32_t ym0 = getYearMonthStart ( y     , 1 );
+			int32_t ym1 = getYearMonthStart ( y + 1 , 1 );
 			// loop over every day (assume leap year, 366 days)
-			for ( long d = ym0 ; d < ym1 ; d += 24*3600 ) {
+			for ( int32_t d = ym0 ; d < ym1 ; d += 24*3600 ) {
 				// get morning
-				long a = d;
+				int32_t a = d;
 				// up until noon
-				long b = d + 12*3600;
+				int32_t b = d + 12*3600;
 				// in seconds since epoch
 				if ( !addInterval(a,b,retInt,&ni3,depth,false))
 					return -1;
 			}
 		}
 		if ( num == HD_AFTERNOON ) {
-			long ym0 = getYearMonthStart ( y     , 1 );
-			long ym1 = getYearMonthStart ( y + 1 , 1 );
+			int32_t ym0 = getYearMonthStart ( y     , 1 );
+			int32_t ym1 = getYearMonthStart ( y + 1 , 1 );
 			// loop over every day (assume leap year, 366 days)
-			for ( long d = ym0 ; d < ym1 ; d += 24*3600 ) {
+			for ( int32_t d = ym0 ; d < ym1 ; d += 24*3600 ) {
 				// from noon
-				long a = d + 12*3600;
+				int32_t a = d + 12*3600;
 				// up til 6pm
-				long b = d + 18*3600; 
+				int32_t b = d + 18*3600; 
 				// in seconds since epoch
 				if ( !addInterval(a,b,retInt,&ni3,depth,false))
 					return -1;
 			}
 		}
 		if ( num == HD_NIGHT ) {
-			long ym0 = getYearMonthStart ( y     , 1 );
-			long ym1 = getYearMonthStart ( y + 1 , 1 );
+			int32_t ym0 = getYearMonthStart ( y     , 1 );
+			int32_t ym1 = getYearMonthStart ( y + 1 , 1 );
 			// loop over every day (assume leap year, 366 days)
-			for ( long d = ym0 ; d < ym1 ; d += 24*3600 ) {
+			for ( int32_t d = ym0 ; d < ym1 ; d += 24*3600 ) {
 				// . from 6pm
 				// . but that messes up juvaejazz.com
 				//   which has evening and 5pm! so make 5pm...
-				long a = d + 17*3600;
+				int32_t a = d + 17*3600;
 				// up til midnight -- no! 3am
 				// make b be 3am now so "saturday night" and 
 				// "until 12:30am" is not empty set
 				// fixes www.bentfestival.org
-				long b = d + 27*3600;
-				//long b = d + 24*3600; 
+				int32_t b = d + 27*3600;
+				//int32_t b = d + 24*3600; 
 				// . in seconds since epoch
 				// . do not do day shifting on this!
 				if ( !addInterval(a,b,retInt,&ni3,depth,false))
@@ -24266,13 +24271,13 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// "last day of the month"
 		if ( num == HD_MONTH_LAST_DAY ) {
 			// loop over every day (assume leap year, 366 days)
-			for ( long m = 1 ; m <= 12 ; m++ ) {
+			for ( int32_t m = 1 ; m <= 12 ; m++ ) {
 				// get first day of following month
-				long ym0 = getYearMonthStart ( y , m+1 );
+				int32_t ym0 = getYearMonthStart ( y , m+1 );
 				// subtract one day to get last day of month
-				long a = ym0 - 24*3600;
+				int32_t a = ym0 - 24*3600;
 				// up til midnight
-				long b = a + 24*3600; 
+				int32_t b = a + 24*3600; 
 				// in seconds since epoch
 				if ( ! addInterval(a,b,retInt,&ni3,depth))
 					return -1;
@@ -24281,13 +24286,13 @@ long Dates::addIntervalsB ( Date       *di     ,
 		// "first day of the month"
 		if ( num == HD_MONTH_FIRST_DAY ) {
 			// loop over every day (assume leap year, 366 days)
-			for ( long m = 1 ; m <= 12 ; m++ ) {
+			for ( int32_t m = 1 ; m <= 12 ; m++ ) {
 				// get first day of following month
-				long ym0 = getYearMonthStart ( y , m );
+				int32_t ym0 = getYearMonthStart ( y , m );
 				// that is it
-				long a = ym0 ;
+				int32_t a = ym0 ;
 				// up til midnight
-				long b = a + 24*3600; 
+				int32_t b = a + 24*3600; 
 				// in seconds since epoch
 				if ( ! addInterval(a,b,retInt,&ni3,depth))
 					return -1;
@@ -24305,30 +24310,30 @@ long Dates::addIntervalsB ( Date       *di     ,
 }
 
 
-bool Dates::addIntervalsForDOW ( long      mask   ,
+bool Dates::addIntervalsForDOW ( int32_t      mask   ,
 				 Interval *retInt ,
-				 long     *ni3    ,
-				 long      depth  ,
-				 long      year   ) {
+				 int32_t     *ni3    ,
+				 int32_t      depth  ,
+				 int32_t      year   ) {
 
 	// get start of year in seconds since epoch (month=jan=1)
-	long yoff1 = getYearMonthStart ( year     , 1 );
-	long yoff2 = getYearMonthStart ( year + 1 , 1 );
+	int32_t yoff1 = getYearMonthStart ( year     , 1 );
+	int32_t yoff2 = getYearMonthStart ( year + 1 , 1 );
 	// . get dow (day of week) at that time (first day of year)
 	// . just do a mod of 24*3600
 	// . dow goes from 1 to 7
-	long dow = getDOW ( yoff1 + 1 );
+	int32_t dow = getDOW ( yoff1 + 1 );
 	// back up for first inc in the loop
 	dow--;
 	// step through the next two years, one day at a time
-	for (  long d = yoff1 ; d < yoff2 ; d += 24*3600 ) {
+	for (  int32_t d = yoff1 ; d < yoff2 ; d += 24*3600 ) {
 		// inc dow
 		if ( ++dow >= 8 ) dow = 1;
 		// skip if no match
 		if ( ! ( mask & (1<<dow) ) ) continue;
 		// adjust min/max for ranges
-		long a = d ;//+ sdiff;
-		long b = a + 3600 * 24;
+		int32_t a = d ;//+ sdiff;
+		int32_t b = a + 3600 * 24;
 		// add interval [a,b) to retInt[] array
 		if ( ! addInterval(a,b,retInt,ni3,depth)) return false;
 	}
@@ -24337,7 +24342,7 @@ bool Dates::addIntervalsForDOW ( long      mask   ,
 
 // . month is from 1 to 13 (jan-dec-jan)
 // . returns start of specified month/year in seconds since epoch
-time_t getYearMonthStart ( long y , long m ) {
+time_t getYearMonthStart ( int32_t y , int32_t m ) {
 	// hack
 	while ( m >= 13 ) { y++; m -= 12; }
 	// convert to timestamp in seconds since the epoch
@@ -24365,7 +24370,7 @@ time_t getYearMonthStart ( long y , long m ) {
 }
 
 
-time_t getDOWStart ( long y , long m, long dowArg, long count ) {
+time_t getDOWStart ( int32_t y , int32_t m, int32_t dowArg, int32_t count ) {
 	// count starts at 1 (first monday of the month, etc.)
 	if ( count < 1 ) { char *xx=NULL;*xx=0; }
 	if ( count > 5 ) { char *xx=NULL;*xx=0; }
@@ -24374,17 +24379,17 @@ time_t getDOWStart ( long y , long m, long dowArg, long count ) {
 	if ( dowArg > 7 ) { char *xx=NULL;*xx=0; }
 
 	// start in seconds since epoch for this year month
-	long start = getYearMonthStart ( y , m );
+	int32_t start = getYearMonthStart ( y , m );
 	// . what dow is? get delta in seconds
 	// . day of epoch is jan 1, 1970, which was a thursday
 	//   so add 3 days to make start of sunday
 	// . epoch is a time_t of 0
-	long delta = start - 3*24*3600;
+	int32_t delta = start - 3*24*3600;
 	// sanity check
 	if ( delta < 0 ) { char *xx=NULL;*xx=0; }
 	// div by seconds in day to get what day of the week it is
 	// for the first of this month on this year
-	long dow = (delta / (24*3600)) % 7;
+	int32_t dow = (delta / (24*3600)) % 7;
 	// add one since dowArg is 1-7
 	dow++;
 	// now align to our dow
@@ -24401,19 +24406,19 @@ time_t getDOWStart ( long y , long m, long dowArg, long count ) {
 }
 
 
-long getDOW ( time_t t ) {
+int32_t getDOW ( time_t t ) {
 	struct tm *ts = gmtime ( &t );
 	return ts->tm_wday + 1;
 }
 
-long getYear ( time_t t ) {
+int32_t getYear ( time_t t ) {
 	struct tm *ts = gmtime ( &t );
 	return ts->tm_year + 1900;
 }
 
 // add the interval to m_int1/m_ni1/m_map1
-bool Dates::addInterval ( long a , long b , Interval *int3 , long *ni3 ,
-			  long depth , bool useDayShift ) {
+bool Dates::addInterval ( int32_t a , int32_t b , Interval *int3 , int32_t *ni3 ,
+			  int32_t depth , bool useDayShift ) {
 	// limit it
 	if ( *ni3 >= MAX_INTERVALS ) { char *xx=NULL;*xx=0; }
 
@@ -24447,9 +24452,9 @@ bool Dates::addInterval ( long a , long b , Interval *int3 , long *ni3 ,
 	// log it for debug
 	// a depth indicator
 	char ds[40];
-	for ( long k = 0 ; k < depth ; k++ ) ds[k]='-';
+	for ( int32_t k = 0 ; k < depth ; k++ ) ds[k]='-';
 	ds[depth]='\0';
-	logf(LOG_DEBUG,"dates: %s [%li,%li)",ds,a,b);
+	logf(LOG_DEBUG,"dates: %s [%"INT32",%"INT32")",ds,a,b);
 #endif
 
 	return true;
@@ -24465,16 +24470,16 @@ bool Dates::addInterval ( long a , long b , Interval *int3 , long *ni3 ,
 // . TODO: add dedup table to prevent same interval from being re-added
 // . returns # of intervals stored into int3
 // . returns -1 and sets g_errno on error
-long Dates::intersect ( Interval *int1 , 
+int32_t Dates::intersect ( Interval *int1 , 
 			Interval *int2 ,
 			Interval *int3 ,
-			long      ni1  ,
-			long      ni2  ,
-			long      depth ) {
+			int32_t      ni1  ,
+			int32_t      ni2  ,
+			int32_t      depth ) {
 
 
 	// then call the new way
-	long ni3 = intersect3 (int1,int2,int3,ni1,ni2,depth,false,false);
+	int32_t ni3 = intersect3 (int1,int2,int3,ni1,ni2,depth,false,false);
 
 	/*
 	// now we are phasing in merge based intersection and need to
@@ -24482,12 +24487,12 @@ long Dates::intersect ( Interval *int1 ,
 	Interval tmp3[MAX_INTERVALS];
 	
 	// call the original way
-	long tmpni3 = intersect2 (int1,int2,tmp3,ni1,ni2,depth);
+	int32_t tmpni3 = intersect2 (int1,int2,tmp3,ni1,ni2,depth);
 
 	// compare
 	if ( tmpni3 != ni3 ) { char *xx=NULL;*xx=0; }
 
-	for ( long x = 0 ; x < ni3 ; x++ ) {
+	for ( int32_t x = 0 ; x < ni3 ; x++ ) {
 		if ( tmp3[x].m_a != int3[x].m_a ) { char *xx=NULL;*xx=0; }
 		if ( tmp3[x].m_b != int3[x].m_b ) { char *xx=NULL;*xx=0; }
 	}
@@ -24497,27 +24502,27 @@ long Dates::intersect ( Interval *int1 ,
 	return ni3;
 }
 
-long Dates::intersect2 ( Interval *int1 , 
+int32_t Dates::intersect2 ( Interval *int1 , 
 			 Interval *int2 ,
 			 Interval *int3 ,
-			 long      ni1  ,
-			 long      ni2  ,
-			 long      depth ) {
-	long ni3 = 0;
+			 int32_t      ni1  ,
+			 int32_t      ni2  ,
+			 int32_t      depth ) {
+	int32_t ni3 = 0;
 
 #ifdef _DLOG_	
 	// log it for debug
 	// a depth indicator
 	char ds[40];
-	for ( long k = 0 ; k < depth ; k++ ) ds[k]='-';
+	for ( int32_t k = 0 ; k < depth ; k++ ) ds[k]='-';
 	ds[depth]='\0';
 	logf(LOG_DEBUG,"dates: %s INTERSECTING",ds);
 #endif
 
 	char buf[8];
 	int64_t *key = (int64_t *)buf;
-	long *A = (long *)&buf[0];
-	long *B = (long *)&buf[4];
+	int32_t *A = (int32_t *)&buf[0];
+	int32_t *B = (int32_t *)&buf[4];
 	char dbuf[10000];
 	HashTableX dt;
 	dt.set ( 8, 0, 1000 , dbuf,10000, false,m_niceness,"dedupint");
@@ -24526,38 +24531,38 @@ long Dates::intersect2 ( Interval *int1 ,
 	char mapBuf1[10000];
 	HashTableX map1;
 	map1.set ( 4, 4, 1000 , mapBuf1, 10000, true,m_niceness,"intmap1");
-	for ( long i = 0 ; i < ni1 ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < ni1 ; i++ ) {
+		// int16_tcut
 		Interval *ii = &int1[i];
 		// get day range
-		long d1 =  ii->m_a       / (24*3600);
-		long d2 = (ii->m_b - 1 ) / (24*3600);
+		int32_t d1 =  ii->m_a       / (24*3600);
+		int32_t d2 = (ii->m_b - 1 ) / (24*3600);
 		// see what intervals touch these days in "int1"
-		for ( long d = d1 ; d <= d2 ; d++ ) {
+		for ( int32_t d = d1 ; d <= d2 ; d++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// . get who touches day #d
 			// . map data ptr pts to our ptr
 			if ( ! map1.addKey ( &d , &ii ) ) return -1;
 			// debug log for nowe
-			//logf(LOG_DEBUG,"map add d=%li",d);
+			//logf(LOG_DEBUG,"map add d=%"INT32"",d);
 		}
 	}
 
 	// scan all intervals in our accumulator
-	for ( long i = 0 ; i < ni2 ; i++ ) {
+	for ( int32_t i = 0 ; i < ni2 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get the interval endpoints
-		long a = int2[i].m_a;
-		long b = int2[i].m_b;
+		int32_t a = int2[i].m_a;
+		int32_t b = int2[i].m_b;
 		// convert into day units
-		long d1 = a / (24*3600);
-		long d2 = (b-1) / (24*3600);
+		int32_t d1 = a / (24*3600);
+		int32_t d2 = (b-1) / (24*3600);
 		// see what intervals in "int1" touch these days
-		for ( long d = d1 ; d <= d2 ; d++ ) {
+		for ( int32_t d = d1 ; d <= d2 ; d++ ) {
 		// get who touches day #d in the int1 intervals
-		long slot = map1.getSlot ( &d );
+		int32_t slot = map1.getSlot ( &d );
 		// chain over those intervals in "int1"
 		for ( ; slot >= 0 ; slot = map1.getNextSlot(slot,&d) ) {
 			// breathe
@@ -24610,15 +24615,15 @@ long Dates::intersect2 ( Interval *int1 ,
 // then the merge performs a subtract rather than intersection.
 // the sign of int3 will always be positive, unless both int1 and int2
 // are negative.
-long Dates::intersect3 ( Interval *int1 , 
+int32_t Dates::intersect3 ( Interval *int1 , 
 			 Interval *int2 ,
 			 Interval *int3 ,
-			 long      ni1  ,
-			 long      ni2  ,
-			 long      depth ,
+			 int32_t      ni1  ,
+			 int32_t      ni2  ,
+			 int32_t      depth ,
 			 bool      subtractint2 ,
 			 bool      unionOp      ) {
-	// shortcut
+	// int16_tcut
 	char *u = ""; if ( m_url ) u = m_url->getUrl();
 
 	// sanity check
@@ -24630,7 +24635,7 @@ long Dates::intersect3 ( Interval *int1 ,
 	// log it for debug
 	// a depth indicator
 	char ds[40];
-	for ( long k = 0 ; k < depth ; k++ ) ds[k]='-';
+	for ( int32_t k = 0 ; k < depth ; k++ ) ds[k]='-';
 	ds[depth]='\0';
 	logf(LOG_DEBUG,"dates: %s INTERSECTING",ds);
 #endif
@@ -24846,14 +24851,14 @@ long Dates::intersect3 ( Interval *int1 ,
 }
 
 /*
-bool Dates::printNormalized1 ( SafeBuf *sb ,  Event *ev , long niceness ) { 
+bool Dates::printNormalized1 ( SafeBuf *sb ,  Event *ev , int32_t niceness ) { 
 	ev->m_date->printNormalized2 ( sb , niceness ,m_words);
 	if ( ev->m_numCloseDates <= 0 ) return true;
 	if ( ! sb->safePrintf(" closed ") ) return false;
-	for ( long i = 0 ; i < ev->m_numCloseDates ; i++ ) {
+	for ( int32_t i = 0 ; i < ev->m_numCloseDates ; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
-		// shortcut
+		// int16_tcut
 		Date *cd = ev->m_closeDates[i];
 		// print it
 		if ( ! cd->printNormalized2(sb,niceness,m_words)) return false;
@@ -24862,10 +24867,10 @@ bool Dates::printNormalized1 ( SafeBuf *sb ,  Event *ev , long niceness ) {
 }
 
 // just print the date itself
-bool Date::printNormalized2 ( SafeBuf *sb , long niceness , Words *words ) {
+bool Date::printNormalized2 ( SafeBuf *sb , int32_t niceness , Words *words ) {
 	nodeid_t *tids = words->getTagIds();
 	char **wptrs = words->getWords();
-	long  *wlens = words->getWordLens ();
+	int32_t  *wlens = words->getWordLens ();
 
 	//if ( m_numPtrs == 0 && (m_flags & DF_CLOSE_DATE) )
 	//if ( (m_flags & DF_CLOSE_DATE) )
@@ -24875,7 +24880,7 @@ bool Date::printNormalized2 ( SafeBuf *sb , long niceness , Words *words ) {
 	//	sb->safePrintf("<u>");
 
 	// print out each word
-	for ( long j = m_a ; j < m_b ; j++ ) {
+	for ( int32_t j = m_a ; j < m_b ; j++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// skip if tag
@@ -24892,7 +24897,7 @@ bool Date::printNormalized2 ( SafeBuf *sb , long niceness , Words *words ) {
 	//	sb->safePrintf("</font>");
 
 	// telescope ptrs
-	for ( long i = 1 ; m_type==DT_TELESCOPE && i<m_numPtrs;i++) {
+	for ( int32_t i = 1 ; m_type==DT_TELESCOPE && i<m_numPtrs;i++) {
 		// get next ptr
 		Date *dp = m_ptrs[i];
 		// print delim
@@ -24905,7 +24910,7 @@ bool Date::printNormalized2 ( SafeBuf *sb , long niceness , Words *words ) {
 		//	sb->safePrintf("<u>");
 
 		// print out each word
-		for ( long j = dp->m_a ; j < dp->m_b ; j++ ) {
+		for ( int32_t j = dp->m_a ; j < dp->m_b ; j++ ) {
 			// skip if tag
 			if ( tids[j] ) continue;
 			// print it otherwise
@@ -24921,10 +24926,10 @@ bool Date::printNormalized2 ( SafeBuf *sb , long niceness , Words *words ) {
 	}
 	// end in assumed year
 	//if ( m_flags & DF_ASSUMED_YEAR ) {
-	//	long t1 = m_minPubDate;
+	//	int32_t t1 = m_minPubDate;
 	//	// use 90 days instead of 365 since usually people will
 	//	// indicate the year if the date is so far out
-	//	long t2 = t1 + 90*24*3600;
+	//	int32_t t2 = t1 + 90*24*3600;
 	//	sb->safePrintf("<font color=blue>");
 	//	sb->safePrintf(" ** %s- ",ctime(&t1));
 	//	sb->safePrintf("%s",ctime(&t2));
@@ -24967,7 +24972,7 @@ bool Date::isSubDate ( Date *di ) {
 void Dates::setEventBrotherBits ( ) {
 
 	char *dom  = m_url->getDomain();
-	long  dlen = m_url->getDomainLen();
+	int32_t  dlen = m_url->getDomainLen();
 	if ( m_contentType != CT_XML ) dlen = 0;
 	bool isFacebook   = false;
 	bool isEventBrite = false;
@@ -24992,10 +24997,10 @@ void Dates::setEventBrotherBits ( ) {
 	// . used for setting SEC_EVENT_BROTHER bits
 	//
 	///////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if was incorporated into a compound date, range or list
 		if ( ! di ) continue;
@@ -25009,7 +25014,7 @@ void Dates::setEventBrotherBits ( ) {
 		if ( di->m_flags & DF_REGISTRATION ) continue;
 		if ( di->m_flags & DF_NONEVENT_DATE  ) continue;
 		if ( di->m_flags5 & DF5_IGNORE ) continue;
-		// shortcut
+		// int16_tcut
 		datetype_t dt = (DT_MONTH|DT_DAYNUM);
 		bool match = false;
 		// need month or dow
@@ -25066,12 +25071,12 @@ void Dates::setEventBrotherBits ( ) {
 		if ( si->m_tagId != TAG_A ) continue;
 		// get the hash. it is not in the <a> section so
 		// we have to scan
-		long kmax = si->m_a + 20;
+		int32_t kmax = si->m_a + 20;
 		if ( kmax > m_nw ) kmax = m_nw;
 		if ( kmax > si->m_b ) kmax = si->m_b;
 		uint32_t tagh = 0;
 		bool gotOne = false;
-		for ( long k = si->m_a ; k < kmax ; k++ ) {
+		for ( int32_t k = si->m_a ; k < kmax ; k++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// skip if not alnum
@@ -25124,8 +25129,8 @@ void Dates::setEventBrotherBits ( ) {
 	if ( ! s_init3 ) {
 		s_init3 = true;
 		s_gt.set(8,0,128,s_gtbuf,2000,false,m_niceness,"gttab");
-		long n = (long)sizeof(s_gwords)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_gwords)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set words
 			char *s = s_gwords[i];
 			int64_t h = hash64n(s);
@@ -25133,7 +25138,7 @@ void Dates::setEventBrotherBits ( ) {
 		}
 	}
 
-	// shortcut
+	// int16_tcut
 	wbit_t *bb = m_bits->m_bits;
 	// scan the sections
 	for ( Section *si = m_sections->m_rootSection ; si ; si = si->m_next) {
@@ -25176,13 +25181,13 @@ void Dates::setEventBrotherBits ( ) {
 		Section *last = NULL;
 		bool diffTODs = false;
 		bool diffDays = false;
-		long px1;
-		long rx1;
-		long ex1;
-		long tx1;
-		long dx1;
-		long ax1;
-		long lh1;
+		int32_t px1;
+		int32_t rx1;
+		int32_t ex1;
+		int32_t tx1;
+		int32_t dx1;
+		int32_t ax1;
+		int32_t lh1;
 		// scan the brother list
 		for ( ; bro ; bro = bro->m_nextBrother ) {
 			// breathe
@@ -25198,15 +25203,15 @@ void Dates::setEventBrotherBits ( ) {
 			// . TODO: storehours detection
 			// . TODO: adjacent date/price/email detection
 			// skip if has nothing special
-			long px2 = bro->m_phoneXor;
-			long rx2 = bro->m_priceXor;
-			long ex2 = bro->m_emailXor;
-			long ax2 = bro->m_addrXor;
+			int32_t px2 = bro->m_phoneXor;
+			int32_t rx2 = bro->m_priceXor;
+			int32_t ex2 = bro->m_emailXor;
+			int32_t ax2 = bro->m_addrXor;
 			// should help fix pagraphs that repeat the same date
 			// like denver.org single's day soiree
-			long tx2 = bro->m_todXor;
-			long dx2 = bro->m_dayXor;
-			long lh2 = bro->m_lastLinkContentHash32;
+			int32_t tx2 = bro->m_todXor;
+			int32_t dx2 = bro->m_dayXor;
+			int32_t lh2 = bro->m_lastLinkContentHash32;
 			// cancel date xor if not in tod and dom/dow section
 			//if ( ! (bro->m_flags & SEC_HAS_TOD) ) 
 			//	tx2 = 0;
@@ -25338,12 +25343,12 @@ void Dates::setEventBrotherBits ( ) {
 			// and they are not *event* brothers. fixes stuff
 			// like "Mon-Fri 9-5" and "Sat 9-3" so they are not
 			// event brothers.
-			long a,b;
+			int32_t a,b;
 			bool pure1 = true;
 			bool pure2 = true;
 			a = s1->m_a;
 			b = s1->m_b;
-			for ( long i = a ; i < b ; i++ ) {
+			for ( int32_t i = a ; i < b ; i++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				// skip if not wid
@@ -25364,7 +25369,7 @@ void Dates::setEventBrotherBits ( ) {
 			a = s2->m_a;
 			b = s2->m_b;
 			// see if 2nd brother is all pure words too
-			for ( long i = a ; i < b ; i++ ) {
+			for ( int32_t i = a ; i < b ; i++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				// skip if not wid
@@ -25449,7 +25454,7 @@ void Dates::setEventBrotherBits ( ) {
 // . evaluate all dates in that section, must all be legit schedule dates
 void Dates::setStoreHours ( bool telescopesOnly ) {
 
-	// shortcut
+	// int16_tcut
 	//wbit_t *bb = m_bits->m_bits;
 
 	datetype_t specialTypes = 
@@ -25462,14 +25467,14 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		DT_ALL_HOLIDAYS ; // "holidays"
 
 
-	// shortcut
+	// int16_tcut
 	wbit_t *bb = m_bits->m_bits;
 
 	// detect words before this date like "hours:" or "open:"
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -25486,7 +25491,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		// December 22 - 26, 2011"
 		if ( ! (di->m_hasType & DT_DOW) ) continue;
 		// 2+ dows required to fix "Fri, Nov 27, 8:00p"
-		long numDow = getNumBitsOn8(di->m_dowBits);
+		int32_t numDow = getNumBitsOn8(di->m_dowBits);
 		if ( numDow <= 1 ) continue;
 		// . now month unless in a month range or monthdaynum range
 		// . if month, it needs like Nov x - y or Nov x - Dec y
@@ -25495,7 +25500,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			continue;
 		*/
 		// scan the words before each date element in "di"
-		long ne;
+		int32_t ne;
 		Date **de = getDateElements(di,&ne);
 		// starts with a dow like "Monday-Friday.."
 		// no. okstate.edu starts with "Aug 22 - Dec 16 2011"
@@ -25510,16 +25515,16 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		//     m_wids[de[0]->m_b-1] == h_hours )
 		//	goto gotOne;
 		// so scan each date element then
-		long x; for ( x = 0 ; x < ne ; x++ ) {
+		int32_t x; for ( x = 0 ; x < ne ; x++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
 			Date *dx = de[x];
 			// scan for words before
-			long a = dx->m_a;
-			long min = a - 30;
+			int32_t a = dx->m_a;
+			int32_t min = a - 30;
 			if ( min < 0 ) min = 0;
-			long alnumCount = 0;
+			int32_t alnumCount = 0;
 			int64_t lastWid = 0LL;
 			for ( ; a >= min ; a-- ) {
 				// breathe
@@ -25578,10 +25583,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		//
 		Section *sp = di->m_section;
 		// initial dates xor in "sd"
-		long todXor = sp->m_todXor;
+		int32_t todXor = sp->m_todXor;
 		// can't be zero - we contain the store hours
 		if ( ! todXor ) continue;//{ char *xx=NULL;*xx=0; }
-		// keep setting up as long as datexor remains unchanged
+		// keep setting up as int32_t as datexor remains unchanged
 		for ( ; sp ; sp = sp->m_parent ) {
 			// breathe
 			QUICKPOLL(m_niceness);
@@ -25594,10 +25599,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 
 	
 	// scan all dates we got
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -25632,10 +25637,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 	}
 
 
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -25647,7 +25652,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		// get date after us
 		Date *dj = NULL;
 		// scan for it
-		for ( long j = i + 1 ; j < m_numDatePtrs ; j++ ) {
+		for ( int32_t j = i + 1 ; j < m_numDatePtrs ; j++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// get it
@@ -25662,9 +25667,9 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		/*
 		// or if too many words in between di and dj, they are not
 		// part of the same store hours then
-		long acount = 0;
-		long tcount = 0;
-		for ( long r = di->m_b ; dj && r < dj->m_a ; r++ ) {
+		int32_t acount = 0;
+		int32_t tcount = 0;
+		for ( int32_t r = di->m_b ; dj && r < dj->m_a ; r++ ) {
 			// do not scan too far
 			if ( ++tcount >= 20 ) break;
 			// count alnums
@@ -25688,7 +25693,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 	redo:
 		
 		// all dates in section must be legit now too
-		long       fd = sd->m_firstDate - 1;
+		int32_t       fd = sd->m_firstDate - 1;
 		// craziness! if there are two sentences "...before. "
 		// "The spring..." the date can span those two sentences
 		// "before. The spring" and cause fd to be -1. like for
@@ -25700,12 +25705,12 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		bool       openRange = true;
 		datetype_t acc = 0;
 		char       dowBits = 0;
-		long       numSecondsOpen = 0;
-		long       hadNoEndTime = 0;
+		int32_t       numSecondsOpen = 0;
+		int32_t       hadNoEndTime = 0;
 		bool isStoreHours = false;
 		Date      *last = NULL;
-		long       lastNumDow = 0;
-		long kmax = m_numDatePtrs;
+		int32_t       lastNumDow = 0;
+		int32_t kmax = m_numDatePtrs;
 
 		// di might be a telescope so we need this
 		if ( di->m_type == DT_TELESCOPE ) {
@@ -25716,7 +25721,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		}
 
 		// scan those
-		for ( long k = fd ; k < kmax ; k++ ) {
+		for ( int32_t k = fd ; k < kmax ; k++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// test
@@ -25749,9 +25754,9 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			// . should fix abqtango.com ...
 			if ( last && dj ) {
 				// reset counters
-				long acount = 0;
-				long tcount = 0;
-				long r = last->m_b;
+				int32_t acount = 0;
+				int32_t tcount = 0;
+				int32_t r = last->m_b;
 				for ( ; r < dk->m_a ; r++ ) {
 					// do not scan too far
 					if ( ++tcount >= 20 ) break;
@@ -25776,7 +25781,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			// and days of the week as well
 			dowBits |= dk->m_dowBits;
 			// how many days of the week are mentioned
-			long numDow = getNumBitsOn8(dk->m_dowBits);
+			int32_t numDow = getNumBitsOn8(dk->m_dowBits);
 			// fix "Wednesday - Saturday [[]] 10:00am - 6:00pm"
 			// for woodencow.com url
 			if ( numDow <= 0 ) numDow = lastNumDow;
@@ -25795,8 +25800,8 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 				continue;
 			}
 			// and total hours open per week
-			long min = dk->m_minTod;
-			long max = dk->m_maxTod;
+			int32_t min = dk->m_minTod;
+			int32_t max = dk->m_maxTod;
 			if ( min < 0   ) continue;
 			if ( min > max ) { char *xx=NULL;*xx=0; }
 			// this will be zero if not a tod range
@@ -25828,10 +25833,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			     ! (di->m_flags & DF_ONGOING ) ) 
 				openRange = false;
 			// how many days of the week are mentioned
-			long numDow = getNumBitsOn8(dowBits);
+			int32_t numDow = getNumBitsOn8(dowBits);
 			// and total hours open per week
-			long min = di->m_minTod;
-			long max = di->m_maxTod;
+			int32_t min = di->m_minTod;
+			int32_t max = di->m_maxTod;
 			// this will be zero if not a tod range
 			if ( min >= 0 && max > min )
 				numSecondsOpen += numDow * (max - min);
@@ -25858,7 +25863,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		if ( openRange ) continue;
 
 		// get # dow it is on
-		long numDow = getNumBitsOn8 ( dowBits );
+		int32_t numDow = getNumBitsOn8 ( dowBits );
 		// . must be open at least 4 days a week
 		// . no, let's make it 2+ for a weekly schedule so that
 		//   date like "11:30 sat and sun only" on unm.edu are
@@ -25886,7 +25891,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			di->m_flags |= df;
 
 		// mark all in our section now (only if not telescope)
-		for ( long k = fd ; k < kmax ; k++ ) {
+		for ( int32_t k = fd ; k < kmax ; k++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// test
@@ -25915,10 +25920,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 
 		Section *sp = sd;
 		// initial dates xor in "sd"
-		long todXor = sd->m_todXor;
+		int32_t todXor = sd->m_todXor;
 		// can't be zero - we contain the store hours
 		if ( ! todXor ) { char *xx=NULL;*xx=0; }
-		// keep setting up as long as datexor remains unchanged
+		// keep setting up as int32_t as datexor remains unchanged
 		for ( ; sp ; sp = sp->m_parent ) {
 			// breathe
 			QUICKPOLL(m_niceness);
@@ -25941,10 +25946,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 	//   telescope to the store hours
 	//
 	/////////////////////////////
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -25998,10 +26003,10 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 	//   unless we have a specific daynum or list of daynums. daynum
 	//   ranges are ok.
 	//
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -26012,7 +26017,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 		// skip if store hours already set
 		if ( di->m_flags & DF_STORE_HOURS ) continue;
 		// must have one store hours ptr in it
-		long j; for ( j = 0 ; j < di->m_numPtrs ; j++ ) 
+		int32_t j; for ( j = 0 ; j < di->m_numPtrs ; j++ ) 
 			if ( di->m_ptrs[j]->m_flags & DF_STORE_HOURS ) break;
 		if ( j >= di->m_numPtrs ) continue;
 		// ok, we got store hours, do we have a single
@@ -26037,17 +26042,17 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 // years. so neighbors must be non-fuzzy dates.
 void Dates::setMaxYearGuesses ( ) {
 
-	long minYear = 9999;
-	long maxYear = 0000;
+	int32_t minYear = 9999;
+	int32_t maxYear = 0000;
 	// for drivechicago.com the "May-Sep '10" date throws us off. but if
 	// we recognize that there are years from 2010-2011 on the page then
 	// we can allow the dow/month/daynum-based event dates to imply one of
 	// those years. we can set their Date::m_guessedYearFromDow and use 
 	// that to set leftGuess/rightGuess for other dates.
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -26066,14 +26071,14 @@ void Dates::setMaxYearGuesses ( ) {
 	}
 	
 	// now set m_dowBasedYear for each date that has a dow and a monthday
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// stop?
 		if ( minYear == 9999 ) break;
 		// to be sure, must be within 4 years
 		if ( maxYear - minYear > 4 ) break;
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -26105,10 +26110,10 @@ void Dates::setMaxYearGuesses ( ) {
 	}
 
 	// scan all the dates
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -26128,20 +26133,20 @@ void Dates::setMaxYearGuesses ( ) {
 // . sometimes there are multiple years with the event dates
 // . we don't always pick the biggest year, we pick the one closest to
 //   our date topologically.
-long Dates::guessMaxYear ( long i ) {
+int32_t Dates::guessMaxYear ( int32_t i ) {
 
 	// get it
 	Date *di = m_datePtrs[i];
 
-	long leftGuess  = 0;
-	long rightGuess = 0;
+	int32_t leftGuess  = 0;
+	int32_t rightGuess = 0;
 
 	// if we are so fortunate
 	if ( di->m_dowBasedYear ) return di->m_dowBasedYear;
 
 	Date *dj = NULL;
 	// scan for date to the left
-	for ( long j = i - 1 ; j >= 0 ; j-- ) {
+	for ( int32_t j = i - 1 ; j >= 0 ; j-- ) {
 		QUICKPOLL(m_niceness);
 		dj = m_datePtrs[j];
 		if ( ! dj ) continue;
@@ -26171,7 +26176,7 @@ long Dates::guessMaxYear ( long i ) {
 
 	Date *dk = NULL;
 	// scan for date to the left
-	for ( long j = i + 1 ; j < m_numDatePtrs ; j++ ) {
+	for ( int32_t j = i + 1 ; j < m_numDatePtrs ; j++ ) {
 		QUICKPOLL(m_niceness);
 		dk = m_datePtrs[j];
 		if ( ! dk ) continue;
@@ -26227,20 +26232,20 @@ long Dates::guessMaxYear ( long i ) {
 }
 
 // return the dow based year
-long Dates::calculateYearBasedOnDOW ( long minYear, long maxYear, Date *di ) {
+int32_t Dates::calculateYearBasedOnDOW ( int32_t minYear, int32_t maxYear, Date *di ) {
 	// if month is -1 must be a range or list, skip it
 	if ( di->m_month < 0 ) return 0;
 	// must have just one dow
-	long numDow = getNumBitsOn8(di->m_dowBits);
+	int32_t numDow = getNumBitsOn8(di->m_dowBits);
 	if ( numDow != 1 ) return 0;
-	long month = di->m_month;
+	int32_t month = di->m_month;
 	// sanity check for month, 1 to 12 are legit
 	if ( month <= 0 || month >= 13 ) { char *xx=NULL;*xx=0; }
-	long day   = di->m_minDayNum;
+	int32_t day   = di->m_minDayNum;
 	// between 1 and 31 sanity check
 	if ( day < 1 || day > 31 ) { char *xx=NULL;*xx=0; }
 	// bit #0 to x
-	long dow = getHighestLitBit((unsigned char)(di->m_dowBits));
+	int32_t dow = getHighestLitBit((unsigned char)(di->m_dowBits));
 	// between 0 and 6
 	if ( dow >= 7 ) { char *xx=NULL;*xx=0; }
 
@@ -26259,8 +26264,8 @@ long Dates::calculateYearBasedOnDOW ( long minYear, long maxYear, Date *di ) {
 	// . Jan 1, 2012 fell on a sunday
 	
 	// how many days into the year are we (assume not leap year)?
-	long daysIn = 0;
-	for ( long i = 1 ; i < month ; i++ ) 
+	int32_t daysIn = 0;
+	for ( int32_t i = 1 ; i < month ; i++ ) 
 		daysIn += s_numDaysInMonth[i-1];
 	// add in current daynum, subtract 1
 	daysIn += day - 1;
@@ -26272,13 +26277,13 @@ long Dates::calculateYearBasedOnDOW ( long minYear, long maxYear, Date *di ) {
 	if ( dow >= 7 ) { char *xx=NULL;*xx=0; }
 	// jan 1 2008 was a tuesday  = 2
 	// jan 1 2000 was a saturday = 6
-	long jan1dow = 6;
+	int32_t jan1dow = 6;
 	// scan the years. include up to 1 year from now (spideredtime)
-	for ( long y = 2000 ; y <= 2030 ; y++ ) {
+	for ( int32_t y = 2000 ; y <= 2030 ; y++ ) {
 		// stop if b
 		QUICKPOLL(m_niceness);
 		// save it
-		long saved = jan1dow;
+		int32_t saved = jan1dow;
 		// inc for compare now if in leap year and past feb
 		if ( (y % 4)==0 && month >= 3 )
 			saved = jan1dow + 1;
@@ -26332,7 +26337,7 @@ long Dates::calculateYearBasedOnDOW ( long minYear, long maxYear, Date *di ) {
 // . 2. find the smallest monthdayyear interval that contains all dow points
 // . 3. set the recurring dowbits. i.e. if the dow is monday and every 2nd 
 //      monday is empty then zero out that dow bit. 1st/2nd/4rd/4th/5th/last
-// . 4. find longest time_t interval that covers the necessary recurring dow
+// . 4. find int32_test time_t interval that covers the necessary recurring dow
 //      days without exception. store them all in an array. record a
 //      min and max interval for each one. i.e. the min's endpoints are
 //      the necessary dows. the max's endpoints are past those usually up
@@ -26357,23 +26362,23 @@ long Dates::calculateYearBasedOnDOW ( long minYear, long maxYear, Date *di ) {
 // . do not print a dow or dow range if we have a dom
 // . do not print a dom range if we have an exact dom
 bool Date::printTextNorm2 ( Interval **intervals ,
-			    long numIntervals ,
+			    int32_t numIntervals ,
 			    SafeBuf *sb ,
-			    long thisYear ) {
+			    int32_t thisYear ) {
 
 	char dbuf[256];
 	dedup.set ( 8,0,16,dbuf,256,false,niceness,"dadbuf");
 	// now combine CronDates in same month and same tod
 	// and use the day bits to hold that info
-	for ( long i = 0 ; i < m_numIntervals ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numIntervals ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		// shortcut
+		// int16_tcut
 		Interval *ii = intervals[i];
 		// seconds relative to that day
 		uint64_t tod1 = ii->m_a % 86400;
 		uint64_t tod2 = tod1 + ii->m_b - ii->m-a;
-		// . if more than 24 hours long... wtf?
+		// . if more than 24 hours int32_t... wtf?
 		// . Aug 2, 2010 2pm - Oct 10,2011 4pm
 		if ( tod2 - tod1 > 24*3600 ) {
 			log("dates: interval > 24 hrs. special normalization "
@@ -26393,12 +26398,12 @@ bool Date::printTextNorm2 ( Interval **intervals ,
 	return true;
 }
 
-bool Date::processTODRange ( unsigned long TOD1 ,
-			     unsigned long TOD2 ,
+bool Date::processTODRange ( uint32_t TOD1 ,
+			     uint32_t TOD2 ,
 			     Interval **intervals ,
-			     long numIntervals ,
+			     int32_t numIntervals ,
 			     SafeBuf *sb ,
-			     long thisYear ) {
+			     int32_t thisYear ) {
 
 
 	// . map each day this year and next two years to a "rom"
@@ -26410,7 +26415,7 @@ bool Date::processTODRange ( unsigned long TOD1 ,
 	char hasTod[365*3];
 	char month [365*3];
 	char dayNum[365*3];
-	long nr = 0;
+	int32_t nr = 0;
 
 	// . make a day map for ALL of spidered year, plus following year.
 	// . then just start combinating over all possible things like
@@ -26439,21 +26444,21 @@ bool Date::processTODRange ( unsigned long TOD1 ,
 
 
 	// loop over all dows
-	for ( long dow = 0 ; dow < 7 ; dow++ ) {
+	for ( int32_t dow = 0 ; dow < 7 ; dow++ ) {
 		// ptrs to every thursday etc.
 		Interval *dows[150];
 		char      roms[150];
-		long ndows = 0;
+		int32_t ndows = 0;
 		// get all the intervals that have a START time
 		// that falls on this DOW
-		for ( long i = 0 ; i < m_numIntervals ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numIntervals ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// shortcut
+			// int16_tcut
 			Interval *ii = intervals[i];
 			// seconds relative to that day
-			unsigned long tod1 = ii->m_a % 86400;
-			unsigned long tod2 = tod1 + ii->m_b - ii->m-a;
+			uint32_t tod1 = ii->m_a % 86400;
+			uint32_t tod2 = tod1 + ii->m_b - ii->m-a;
 			// a match?
 			if ( tod1 != TOD1 ) continue;
 			if ( tod1 != TOD2 ) continue;
@@ -26466,7 +26471,7 @@ bool Date::processTODRange ( unsigned long TOD1 ,
 		// now loop through 1 through 6, where 6 stands
 		// for the "last day {DOW} of the month" where
 		// {DOW} is "dow".
-		for ( long r = 0 ; r <= 6 ; r++ ) {
+		for ( int32_t r = 0 ; r <= 6 ; r++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// . 0 means the 1st "monday" etc of the month
@@ -26476,7 +26481,7 @@ bool Date::processTODRange ( unsigned long TOD1 ,
 			// init
 			bool inPositive = false;
 			Span spans[1000];
-			long numSpans = 0;
+			int32_t numSpans = 0;
 			Span *cursor = &spans[numSpans++];
 			// . this is a time_t when page was spidered i guess
 			//   but it is UTC and event is local time!!!
@@ -26565,29 +26570,29 @@ bool Date::processTODRange ( unsigned long TOD1 ,
 class CronDate {
 public:
 	// year range, like 2011-2012 or 2011-2011
-	long m_year1;
-	long m_year2;
+	int32_t m_year1;
+	int32_t m_year2;
 	// for month range (i.e. oct-dec)
-	long m_month1;
-	long m_month2;
+	int32_t m_month1;
+	int32_t m_month2;
 	// days of month relative to m_month1 and m_month2 to make
 	// a month range like "oct 11 - dec22"
-	long m_mday1;
-	long m_mday2;
+	int32_t m_mday1;
+	int32_t m_mday2;
 	// what months we represent, jan-dec
-	long m_monthMask;
+	int32_t m_monthMask;
 	// if m_month1==m_month2, these bits represent up to 31 days
-	long m_mdayMask;
+	int32_t m_mdayMask;
 	// sunday thru saturday, 1 bit each
 	char m_dowEveryMask;
 	// the time-of-day time range (i.e. 1pm-3pm)
-	long m_tod1;
-	long m_tod2;
+	int32_t m_tod1;
+	int32_t m_tod2;
 	// everyweekend,everyweekday,every 1/2/3/4/5th mask
-	long m_bits;
+	int32_t m_bits;
 	// how many syllables does it take to print out the current date
 	// as represented by this class in english?
-	long m_numSylables;
+	int32_t m_numSylables;
 	class EnglishDate *m_exceptions1;
 	class EnglishDate *m_exceptions2;
 };
@@ -26595,16 +26600,16 @@ public:
 
 bool Dates::printNormalizedTime ( Date *dx , 
 				  Interval **intervals ,
-				  long numIntervals ,
+				  int32_t numIntervals ,
 				  SafeBuf *sb ,
-				  long thisYear ) {
+				  int32_t thisYear ) {
 
 	// return now if no intervals
 	if ( numIntervals == 0 ) return true;
 
-	long cdsize = sizeof(CronDate);
+	int32_t cdsize = sizeof(CronDate);
 	// make space for the CronDates
-	long need = cdsize * numIntervals;
+	int32_t need = cdsize * numIntervals;
 	CronDate *cd1 = (struct tm *)mmalloc ( need );
 	if ( ! cd1 ) return false;
 	CronDate *cd2 = (struct tm *)mmalloc ( need );
@@ -26616,10 +26621,10 @@ bool Dates::printNormalizedTime ( Date *dx ,
 	m_numCronDates = numIntervals;
 
 	// assign a month and daynum for each interval and dow for that year
-	for ( long i = 0 ; i < numIntervals ; i++ ) {
+	for ( int32_t i = 0 ; i < numIntervals ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
-		// shortcut
+		// int16_tcut
 		Interval *ii = intervals[i];
 		// decode it
 		struct tm *ts;
@@ -26651,7 +26656,7 @@ bool Dates::printNormalizedTime ( Date *dx ,
 		// scan months if multiple and or them in
 		cd[i]->m_monthMask = 0;
 		//cd[i]->m_monthMaskExceptions = 0;
-		for ( long j = tm1->m_mon ; j <= tm2->m_mon ; j++ )
+		for ( int32_t j = tm1->m_mon ; j <= tm2->m_mon ; j++ )
 			cd[i]->m_monthMask |= 1 << j;
 		// same for days, BUT IFF SAME MONTH!
 		cd[i]->m_mdayMask = 0;
@@ -26662,11 +26667,11 @@ bool Dates::printNormalizedTime ( Date *dx ,
 
 	// now combine CronDates in same month and same tod
 	// and use the day bits to hold that info
-	for ( long i = 0 ; i < m_numCronDates ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numCronDates ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// grab a tod to process
-		long tod = cd[i].m_tod1 % 24*3600;
+		int32_t tod = cd[i].m_tod1 % 24*3600;
 		// already did?
 		if ( dedup.isInTable ( &tod ) ) continue;
 		// add it
@@ -26686,12 +26691,12 @@ bool Dates::printNormalizedTime ( Date *dx ,
 
 // combine similar CronDates and set m_mdayBits to keep track of what
 // days of the month we are representing.
-bool Dates::compressCronDates ( long todArg ) {
+bool Dates::compressCronDates ( int32_t todArg ) {
 
 	CronDate *prev = NULL;
 
 	// combine crondates with same tod and month and year range together
-	for ( long i = 0 ; i < m_numCronDates ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numCronDates ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -26703,7 +26708,7 @@ bool Dates::compressCronDates ( long todArg ) {
 		// update prev for next guy
 		prev = cd;
 		// grab a tod to process
-		long tod = cd[i].m_tod1 % 24*3600;
+		int32_t tod = cd[i].m_tod1 % 24*3600;
 		// must match
 		if ( tod != todArg ) continue;
 		// get last?
@@ -26725,7 +26730,7 @@ bool Dates::compressCronDates ( long todArg ) {
 	//
 	prev = NULL;
 	// combine crondates with same tod and month and year range together
-	for ( long i = 0 ; i < m_numCronDates ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numCronDates ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -26737,7 +26742,7 @@ bool Dates::compressCronDates ( long todArg ) {
 		// update prev for next guy
 		prev = cd;
 		// grab a tod to process
-		long tod = cd[i].m_tod1 % 24*3600;
+		int32_t tod = cd[i].m_tod1 % 24*3600;
 		// must match
 		if ( tod != todArg ) continue;
 		// get last?
@@ -26869,8 +26874,8 @@ bool Dates::compressCronDates ( long todArg ) {
 
 	// scan our parent for us
 	if ( 
-	long ptrNum = -1;
-	for ( long k = 0 ; k < parent->m_numPtrs ; k++ ) {
+	int32_t ptrNum = -1;
+	for ( int32_t k = 0 ; k < parent->m_numPtrs ; k++ ) {
 		QUICKPOLL(m_niceness);
 		if ( parent->m_ptrs[k] != dp ) continue;
 		ptrNum = k;
@@ -26889,16 +26894,16 @@ bool Dates::compressCronDates ( long todArg ) {
 /* old code
 
 void Dates::setMinMaxYearsOnPage ( ) {
-	long minYear1 = 9999;
-	long maxYear1 = 0;
+	int32_t minYear1 = 9999;
+	int32_t maxYear1 = 0;
 	// get current year... when the doc was spidered
-	long currentYear = getYear ( m_nd->m_spideredTime );
+	int32_t currentYear = getYear ( m_nd->m_spideredTime );
 
 	// scan all the dates
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -26926,14 +26931,14 @@ void Dates::setMinMaxYearsOnPage ( ) {
 		if ( di->m_maxYear > maxYear1 ) maxYear1 = di->m_maxYear;
 	}
 
-	long minYear2 = 9999;
-	long maxYear2 = 0;
+	int32_t minYear2 = 9999;
+	int32_t maxYear2 = 0;
 
 	// now repeat the loop but for implied years, i.e. "Wed Nov 13"
-	for ( long i = 0 ; i < m_numDatePtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
-		// shortcut
+		// int16_tcut
 		Date *di = m_datePtrs[i];
 		// skip if none
 		if ( ! di ) continue;
@@ -26946,16 +26951,16 @@ void Dates::setMinMaxYearsOnPage ( ) {
 		// if month is -1 must be a range or list, skip it
 		if ( di->m_month < 0 ) continue;
 		// must have just one dow
-		long numDow = getNumBitsOn8(di->m_dowBits);
+		int32_t numDow = getNumBitsOn8(di->m_dowBits);
 		if ( numDow != 1 ) continue;
-		long month = di->m_month;
+		int32_t month = di->m_month;
 		// sanity check for month, 1 to 12 are legit
 		if ( month <= 0 || month >= 13 ) { char *xx=NULL;*xx=0; }
-		long day   = di->m_minDayNum;
+		int32_t day   = di->m_minDayNum;
 		// between 1 and 31 sanity check
 		if ( day < 1 || day > 31 ) { char *xx=NULL;*xx=0; }
 		// bit #0 to x
-		long dow = getHighestLitBit((unsigned char)(di->m_dowBits));
+		int32_t dow = getHighestLitBit((unsigned char)(di->m_dowBits));
 		// between 0 and 6
 		if ( dow >= 7 ) { char *xx=NULL;*xx=0; }
 
@@ -26974,8 +26979,8 @@ void Dates::setMinMaxYearsOnPage ( ) {
 		// . Jan 1, 2012 fell on a sunday
 
 		// how many days into the year are we (assume not leap year)?
-		long daysIn = 0;
-		for ( long i = 1 ; i < month ; i++ ) 
+		int32_t daysIn = 0;
+		for ( int32_t i = 1 ; i < month ; i++ ) 
 			daysIn += s_numDaysInMonth[i-1];
 		// add in current daynum, subtract 1
 		daysIn += day - 1;
@@ -26987,13 +26992,13 @@ void Dates::setMinMaxYearsOnPage ( ) {
 		if ( dow >= 7 ) { char *xx=NULL;*xx=0; }
 		// jan 1 2008 was a tuesday  = 2
 		// jan 1 2000 was a saturday = 6
-		long jan1dow = 2;
+		int32_t jan1dow = 2;
 		// scan the years. include up to 1 year from now (spideredtime)
-		for ( long y = 2008 ; y <= currentYear+1 ; y++ ) {
+		for ( int32_t y = 2008 ; y <= currentYear+1 ; y++ ) {
 			// stop if b
 			QUICKPOLL(m_niceness);
 			// save it
-			long saved = jan1dow;
+			int32_t saved = jan1dow;
 			// inc for compare now if in leap year and past feb
 			if ( (y % 4)==0 && month >= 3 )
 				saved = jan1dow + 1;

@@ -25,11 +25,11 @@ bool Tfndb::init ( ) {
 	// . key+left+right+parents+balance = 12+4+4+4+1 = 25
 	// . 25 bytes per key
 	// . now we have an addition sizeof(collnum_t) bytes per node
-	long maxTreeMem    = 2000000; // 2MB
-	long nodeSize      = 25 + sizeof(collnum_t);
-	long maxTreeNodes  = maxTreeMem  / nodeSize ;
+	int32_t maxTreeMem    = 2000000; // 2MB
+	int32_t nodeSize      = 25 + sizeof(collnum_t);
+	int32_t maxTreeNodes  = maxTreeMem  / nodeSize ;
 
-	long pcmem = g_conf.m_tfndbMaxDiskPageCacheMem ;
+	int32_t pcmem = g_conf.m_tfndbMaxDiskPageCacheMem ;
 	// keep this low if we are the tmp cluster
 	if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
 	// do not use any page cache if doing tmp cluster in order to
@@ -38,7 +38,7 @@ bool Tfndb::init ( ) {
 
 	// . each cahched list is just one key in the tree...
 	// . 25(treeoverhead) + 24(cacheoverhead) = 49
-	//long maxCacheNodes = g_conf.m_tfndbMaxCacheMem / 49;
+	//int32_t maxCacheNodes = g_conf.m_tfndbMaxCacheMem / 49;
 	// we now use a page cache
 	if ( ! m_pc.init ( "tfndb" , RDB_TFNDB , pcmem ,
 			    GB_TFNDB_PAGE_SIZE ) )
@@ -71,18 +71,18 @@ bool Tfndb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Tfndb::init2 ( long treeMem ) {
+bool Tfndb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . key+left+right+parents+balance = 12+4+4+4+1 = 25
 	// . 25 bytes per key
 	// . now we have an addition sizeof(collnum_t) bytes per node
-	long nodeSize      = 25 + sizeof(collnum_t);
-	long maxTreeNodes  = treeMem  / nodeSize ;
+	int32_t nodeSize      = 25 + sizeof(collnum_t);
+	int32_t maxTreeNodes  = treeMem  / nodeSize ;
 	// we now use a page cache
 	//if ( ! m_pc.init ( "tfndb" , g_conf.m_tfndbMaxDiskPageCacheMem ) )
 	//	return log("db: Tfndb page cache init failed.");
 	// note
-	//logf(LOG_INIT, "db: -- Tfndb extended bits set to %li.",
+	//logf(LOG_INIT, "db: -- Tfndb extended bits set to %"INT32".",
 	//     g_conf.m_tfndbExtBits );
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir,
@@ -129,7 +129,7 @@ bool Tfndb::verify ( char *coll ) {
 	startKey.setMin();
 	key_t endKey;
 	endKey.setMax();
-	//long minRecSizes = 64000;
+	//int32_t minRecSizes = 64000;
 	
 	if ( ! msg5.getList ( RDB_TFNDB     ,
 			      coll          ,
@@ -158,8 +158,8 @@ bool Tfndb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	bool printedKey = false;
 	bool printedZeroKey = false;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
@@ -168,12 +168,12 @@ bool Tfndb::verify ( char *coll ) {
 		count++;
 		// verify the group
 		//uint32_t shardNum = getShardNum ( RDB_TFNDB , (char *)&k );
-		long shardNum = g_hostdb.getShardNum(RDB_TFNDB , (char *)&k );
+		int32_t shardNum = g_hostdb.getShardNum(RDB_TFNDB , (char *)&k );
 		if ( shardNum == g_hostdb.getMyShardNum() )
 			got++;
 		else if ( !printedKey ) {
 			log ( "db: Found bad key in list (only printing once): "
-			      "%lx %llx", k.n1, k.n0 );
+			      "%"XINT32" %"XINT64"", k.n1, k.n0 );
 			printedKey = true;
 		}
 		if ( k.n1 == 0 && k.n0 == 0 ) {
@@ -188,7 +188,7 @@ bool Tfndb::verify ( char *coll ) {
 		}
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in tfndb, only %li passed "
+		log ("db: Out of first %"INT32" records in tfndb, only %"INT32" passed "
 		     "verification.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
@@ -203,7 +203,7 @@ bool Tfndb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 
-	log ( LOG_INFO, "db: Tfndb passed verification successfully for %li "
+	log ( LOG_INFO, "db: Tfndb passed verification successfully for %"INT32" "
 			"recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -211,12 +211,12 @@ bool Tfndb::verify ( char *coll ) {
 }
 
 // see Tfndb.h for bitmap of this key
-key_t Tfndb::makeKey (int64_t docId,int64_t uh48,long tfn,bool isDelete) {
+key_t Tfndb::makeKey (int64_t docId,int64_t uh48,int32_t tfn,bool isDelete) {
 	// sanity check
 	if ( tfn > 255 || tfn < 0 ) { char *xx=NULL;*xx=0; }
 	// init the key
 	key_t k; 
-	k.n1 = (unsigned long)(docId >> (NUMDOCIDBITS-32));
+	k.n1 = (uint32_t)(docId >> (NUMDOCIDBITS-32));
 	// keep the lower 6 bits here
 	k.n0 = (docId & 0x3f);
 	// sanity check

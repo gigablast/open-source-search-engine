@@ -10,9 +10,9 @@ bool closeAll ( void *state, void(*callback)(void *state) ) { return true; }
 bool allExit() { return true; }
 
 int main ( int argc , char *argv[] ) {
-	long count = 0;
+	int32_t count = 0;
 	// check for arguments
-	for (long i = 1; i < argc; i++) {
+	for (int32_t i = 1; i < argc; i++) {
 	}
 loop:
 	// read a url from stdin
@@ -21,14 +21,14 @@ loop:
 		if ( count == 0 )
 			printf ( "\nFound All Urls.\n" );
 		else
-			printf ( "\n Did Not Find %li Urls.\n", count );
+			printf ( "\n Did Not Find %"INT32" Urls.\n", count );
 		exit(1);
 	}
 	printf("\n\n%s",s);
-	long sLen = gbstrlen(s);
+	int32_t sLen = gbstrlen(s);
 	// url encode the string
 	char url[2048];
-	long urlLen = urlEncode(url, 2048, s, sLen );
+	int32_t urlLen = urlEncode(url, 2048, s, sLen );
 	// make the WGET call
 	char wget[4096];
 	sprintf ( wget, "wget -q -O gbtitletest.out.tmp "
@@ -44,7 +44,7 @@ loop:
 		exit(1);
 	}
 	char tmpBuf[1024];
-	long r = read ( fd, tmpBuf, 1024 );
+	int32_t r = read ( fd, tmpBuf, 1024 );
 	if ( r < 12 || strncasecmp ( tmpBuf, "<pre>\n</pre>", 12 ) == 0 ) {
 		printf ( "NOT FOUND: %s\n", s );
 		count++;

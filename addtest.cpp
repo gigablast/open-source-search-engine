@@ -34,16 +34,16 @@ void test0 ( int arg ) {
 	Query q;
 	q.set ( qs , gbstrlen(qs) , NULL , 0 , false );
 
-	long numLists = q.getNumTerms();
+	int32_t numLists = q.getNumTerms();
 
 	// how many keys per list?
-	long nk = 100000;
+	int32_t nk = 100000;
 
-	printf("intersecting %li keys total from %li lists\n", 
+	printf("intersecting %"INT32" keys total from %"INT32" lists\n", 
 	       nk*numLists , numLists );
 
-	for ( long i = 0 ; i < numLists ; i++ ) {
-		printf("loading list #%li\n",i);
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
+		printf("loading list #%"INT32"\n",i);
 		RdbList *list = &lists[0][i]; 
 		// make a list of compressed (6 byte) docIds
 		key_t *keys = (key_t *) malloc ( 12 + 6 * nk );
@@ -60,8 +60,8 @@ void test0 ( int arg ) {
 		memcpy ( p , &firstKey , 12 );
 		p += 12;
 		// random docIds
-		for ( long i = 0 ; i < nk ; i++ ) {
-			long toAdd = rand() % 65536 + 2;
+		for ( int32_t i = 0 ; i < nk ; i++ ) {
+			int32_t toAdd = rand() % 65536 + 2;
 			value += toAdd;
 			*(char *)&value |= 0x03;
 			memcpy ( p , &value , 6 );
@@ -70,7 +70,7 @@ void test0 ( int arg ) {
 		// sort em up
 		//gbsort ( keys , nk , sizeof(key_t) , cmp );
 		// set the list
-		long listSize = p - (char *)keys;
+		int32_t listSize = p - (char *)keys;
 		list->set ( kp       ,
 			    listSize ,
 			    kp       ,
@@ -96,10 +96,10 @@ void test0 ( int arg ) {
 			   15       );// docs wanted
 
 	int64_t now = gettimeofdayInMilliseconds();
-	printf("intersection took %llu ms\n" , now - startTime );
+	printf("intersection took %"UINT64" ms\n" , now - startTime );
 
-	log("addLists_r: took %lli ms docids=%lu "
-	    "panics=%li chains=%li ptrs=%li loops=%li.",
+	log("addLists_r: took %"INT64" ms docids=%"UINT32" "
+	    "panics=%"INT32" chains=%"INT32" ptrs=%"INT32" loops=%"INT32".",
 	    table.m_addListsTime  ,
 	    table.m_totalDocIds   ,
 	    table.m_numPanics     ,

@@ -13,7 +13,7 @@ void Cachedb::reset() {
 
 bool Cachedb::init ( ) {
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	long pageSize = GB_INDEXDB_PAGE_SIZE;
+	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	// i've seen some debug entries like 33MB because of
@@ -24,9 +24,9 @@ bool Cachedb::init ( ) {
 	// . key+4+left+right+parents+dataPtr = sizeof(key96_t)+4 +4+4+4+4
 	// . 32 bytes per record when in the tree
 	// . >1000 bytes of data per rec
-	long maxTreeNodes = maxTreeMem /(sizeof(key96_t)+16+1000);
+	int32_t maxTreeNodes = maxTreeMem /(sizeof(key96_t)+16+1000);
 	// disk page cache mem, 100MB on gk0 now
-	long pcmem = 0; // g_conf.m_cachedbMaxDiskPageCacheMem;
+	int32_t pcmem = 0; // g_conf.m_cachedbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
@@ -98,7 +98,7 @@ bool Cachedb::verify ( char *coll ) {
 	key224_t endKey;
 	startKey.setMin();
 	endKey.setMax();
-	long minRecSizes = 64000;
+	int32_t minRecSizes = 64000;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 
 	if ( ! msg5.getList ( m_rdbId,//RDB_CACHEDB   ,
@@ -127,8 +127,8 @@ bool Cachedb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key224_t k;
@@ -138,8 +138,8 @@ bool Cachedb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in %s , "
-		     "only %li belong to our group.",count,m_name,got);
+		log ("db: Out of first %"INT32" records in %s , "
+		     "only %"INT32" beint32_t to our group.",count,m_name,got);
 
 		/*
 		// repeat with log
@@ -149,12 +149,12 @@ bool Cachedb::verify ( char *coll ) {
 			key224_t k;
 			list.getCurrentKey((char*)&k);
 			uint32_t shardNum = getShardNum ( RDB_CACHEDB , &k );
-			long groupNum = g_hostdb.getGroupNum(groupId);
-			unsigned long sh32 ;
+			int32_t groupNum = g_hostdb.getGroupNum(groupId);
+			uint32_t sh32 ;
 			sh32 = g_cachedb.getLinkeeSiteHash32_uk(&k);
 			uint16_t sh16 = sh32 >> 19;
-			log("db: sh16=0x%lx group=%li",
-			    (long)sh16,groupNum);
+			log("db: sh16=0x%"XINT32" group=%"INT32"",
+			    (int32_t)sh16,groupNum);
 		}
 		*/
 
@@ -169,7 +169,7 @@ bool Cachedb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 	log ( LOG_DEBUG, "db: %s passed verification successfully for "
-	      "%li recs.", m_name,count );
+	      "%"INT32" recs.", m_name,count );
 	// DONE
 	g_threads.enableThreads();
 	return true;

@@ -7,7 +7,7 @@
 #include "HashTableX.h"
 #include "Sections.h"
 
-void printEventIds ( char *evs , long esize , uint8_t *bits ) ;
+void printEventIds ( char *evs , int32_t esize , uint8_t *bits ) ;
 
 typedef uint64_t evflags_t;
 //typedef uint32_t evflags_t;
@@ -71,29 +71,29 @@ typedef uint64_t evflags_t;
 
 #define MAX_CLOSE_DATES 15
 
-bool printConfirmFlags ( class SafeBuf *sb , long confirmed  ) ;
-bool printEventDescFlags ( SafeBuf *sb, long dflags ) ;
+bool printConfirmFlags ( class SafeBuf *sb , int32_t confirmed  ) ;
+bool printEventDescFlags ( SafeBuf *sb, int32_t dflags ) ;
 bool printEventFlags ( class SafeBuf *sb , evflags_t eventFlags );
 bool printEventDisplays ( SafeBuf *sb ,
-			  long numHashableEvents ,
+			  int32_t numHashableEvents ,
 			  char *ptr_eventData ,
-			  long size_eventData ,
+			  int32_t size_eventData ,
 			  //char *ptr_eventTagbuf ,
 			  char *ptr_utf8Contet );
 bool cacheEventLatLons ( char     *ptr_eventsData  ,
-			 long      size_eventsData ,
+			 int32_t      size_eventsData ,
 			 class RdbCache *latLonCache     ,
-			 long      niceness        ) ;
+			 int32_t      niceness        ) ;
 
 // an event in the document
 class Event {
  public:
 	// used by Events.cpp. start of event. usually nearest pub date.
 	// includes m_startHour already...
-	//long m_startTime;
+	//int32_t m_startTime;
 	// the title of the event, word #'s in Words class
-	long m_titleStart;
-	long m_titleEnd;
+	int32_t m_titleStart;
+	int32_t m_titleEnd;
 	float m_titleScore;
 	class Section *m_titleSection;
 
@@ -126,18 +126,18 @@ class Event {
 
 	// . for indexing into datedb 
 	// . see Dates.cpp::hashStartDates() and Events::hash()
-	long m_eventId;
+	int32_t m_eventId;
 
 	// what we store in the event db index
-	long m_indexedEventId;
+	int32_t m_indexedEventId;
 
 	class TagRec *m_tagRec;
 	// offset into XmlDoc::m_eventTagRecsBuf, a SafeBuf. after we look
 	// up all TagRecs for all events, then we set m_tagRec, otherwise
 	// SafeBuf could grow and realloc and change the ptrs!
-	//long          m_tagRecOffset;
+	//int32_t          m_tagRecOffset;
 
-	// turk votes now have their own adth32-%llu-<domain>.com tag rec
+	// turk votes now have their own adth32-%"UINT64"-<domain>.com tag rec
 	class TagRec *m_turkVoteTagRec;
 
 	// point to comma separated list of tag words/phrases referecing
@@ -155,16 +155,16 @@ class Event {
 	uint64_t  m_eventHash64;
 
 	// tag hash of the most specific date
-	unsigned long m_dateTagHash32;
+	uint32_t m_dateTagHash32;
 	// tag hash for the tag containing the street or place name if no strt
-	unsigned long m_addressTagHash32;
+	uint32_t m_addressTagHash32;
 	// tag hash of tag containing the event title
-	unsigned long m_titleTagHash32;
+	uint32_t m_titleTagHash32;
 
 	// address/date content hash
-	unsigned long m_adch32;
+	uint32_t m_adch32;
 	// address/date tag hash
-	unsigned long m_adth32;
+	uint32_t m_adth32;
 
 	// hash of description, first 50 sentences in description
 	uint64_t m_descHash64;
@@ -174,7 +174,7 @@ class Event {
 	//   of same site, or even different sites
 	uint64_t m_dedupHash64;
 
-	long m_numDescriptions;
+	int32_t m_numDescriptions;
 
 	// turk voting info is compiled into these counts in 
 	// XmlDoc::hashTagRecForEvents() so we can index turk terms for
@@ -190,23 +190,23 @@ class Event {
 	bool m_confirmedError;
 	bool m_confirmedTitle;
 	bool m_confirmedVenue;
-	long m_unconfirmedAccepts;
-	long m_unconfirmedRejects;
+	int32_t m_unconfirmedAccepts;
+	int32_t m_unconfirmedRejects;
 	// how many turks directly turked this event?
-	//long m_directVotes;
+	//int32_t m_directVotes;
 
-	unsigned long m_confirmedTitleContentHash32;
-	unsigned long m_confirmedVenueContentHash32;
+	uint32_t m_confirmedTitleContentHash32;
+	uint32_t m_confirmedVenueContentHash32;
 
 	// index into Events::m_dates->m_datePtrs[] of the first date that
-	// belongs to this event section
-	//long m_firstDatePtrNum;
+	// beint32_ts to this event section
+	//int32_t m_firstDatePtrNum;
 
 	// the first TOD date we use
 	class Date *m_date;
 
-	//long m_eventCmpId;
-	long m_tmp;
+	//int32_t m_eventCmpId;
+	int32_t m_tmp;
 
 	// max interval start time of all intervals we got
 	time_t m_maxStartTime;
@@ -214,12 +214,12 @@ class Event {
 	// . offset of our Intervals into a SafeBuf buffer
 	// . these Interval classes are time_t ranges that are when the
 	//   event is taking place. we have m_ni such Intervals.
-	long m_intervalsOff;
-	long m_ni;
+	int32_t m_intervalsOff;
+	int32_t m_ni;
 
 	// dates when venue is closed
 	class Date *m_closeDates[MAX_CLOSE_DATES];
-	long        m_numCloseDates;
+	int32_t        m_numCloseDates;
 };
 
 //#define EDIF_STORE_HOURS 0x01
@@ -230,8 +230,8 @@ class Event {
 // super fast, given a docId and an eventId for that docId
 class EventDisplay {
 public:
-	long  m_indexedEventId;
-	long  m_totalSize;
+	int32_t  m_indexedEventId;
+	int32_t  m_totalSize;
 
 	//char *m_tagsPtr;
 
@@ -253,21 +253,21 @@ public:
 
 	// now hash of the date types in order? 
 	// TODO: consider putting this into m_adth32
-	//unsigned long m_dateTypeHash32;
+	//uint32_t m_dateTypeHash32;
 
 	// tag hash of the most specific date
-	unsigned long m_dateTagHash32;
+	uint32_t m_dateTagHash32;
 	// tag hash for the tag containing the street or place name if no strt
-	unsigned long m_addressTagHash32;
+	uint32_t m_addressTagHash32;
 	// tag hash of tag containing the event title
-	unsigned long m_titleTagHash32;
+	uint32_t m_titleTagHash32;
 
 	// address/date content hash
-	unsigned long m_adch32;
+	uint32_t m_adch32;
 	// address/date tag hash
-	unsigned long m_adth32;
+	uint32_t m_adth32;
 
-	long  m_numDescriptions;
+	int32_t  m_numDescriptions;
 
 	// the lat/lon we lookedup from the geocoder. will be NO_LATITUDE
 	// if is invalid.
@@ -278,30 +278,30 @@ public:
 	char m_confirmed;
 
 	// for EDIF_STORE_HOURS bit
-	//long  m_edflags;
+	//int32_t  m_edflags;
 
 	class EventDesc *m_desc;
 	char            *m_addr;
-	long            *m_int;
+	int32_t            *m_int;
 	char            *m_normDate;
 
 	// these are in bytes
-	long  m_descSize;
-	long  m_addrSize;
-	long  m_intSize;
-	long  m_normDateSize;
+	int32_t  m_descSize;
+	int32_t  m_addrSize;
+	int32_t  m_intSize;
+	int32_t  m_normDateSize;
 
 	// byte offsets into the docStart of the compound date pieces
-	long m_dateStarts[MAX_ED_DATES];
-	long m_dateEnds  [MAX_ED_DATES];
-	long m_numDates;
+	int32_t m_dateStarts[MAX_ED_DATES];
+	int32_t m_dateEnds  [MAX_ED_DATES];
+	int32_t m_numDates;
 	
-	//long m_dateStart1;
-	//long m_dateStart2;
-	//long m_dateStart3;
-	//long m_dateEnd1;
-	//long m_dateEnd2;
-	//long m_dateEnd3;
+	//int32_t m_dateStart1;
+	//int32_t m_dateStart2;
+	//int32_t m_dateStart3;
+	//int32_t m_dateEnd1;
+	//int32_t m_dateEnd2;
+	//int32_t m_dateEnd3;
 	// the sentence the date is in. we show the date in this sentence
 	// in the summary. the date itself will be highlighted somehow.
 	// this way if an event has a different description
@@ -312,12 +312,12 @@ public:
 	// then we will show that special day's description in its sentence.
 	// this will happen if someone searches for "motorcross". this is
 	// the sentence that contains the date in m_dateStart1/m_dateSize1.
-	//long m_dateSentStart1;
-	//long m_dateSentStart2;
-	//long m_dateSentStart3;
-	//long m_dateSentEnd1;
-	//long m_dateSentEnd2;
-	//long m_dateSentEnd3;
+	//int32_t m_dateSentStart1;
+	//int32_t m_dateSentStart2;
+	//int32_t m_dateSentStart3;
+	//int32_t m_dateSentEnd1;
+	//int32_t m_dateSentEnd2;
+	//int32_t m_dateSentEnd3;
 
 	bool printEventDisplay ( class SafeBuf *sb , char *ptr_utf8Content );
 
@@ -380,24 +380,24 @@ public:
 class EventDesc {
  public:
 	// offset into doc in bytes [m_off1,m_off2) of desc
-	long  m_off1;
-	long  m_off2;
+	int32_t  m_off1;
+	int32_t  m_off2;
 	float m_titleScore;
 	float m_descScore;
 	// EDF_TITLE|EDF_IN_SUMMARY|EDF_DATE_ONLY|...
-	long  m_dflags;
+	int32_t  m_dflags;
 	// the turk now stores the content hash of this sentence
 	// in tagdb for this eventhash/docid
-	unsigned long m_sentContentHash32;
+	uint32_t m_sentContentHash32;
 	// . hash of the last 5 tagids containing us
 	// . turk votes on this tag hash being title/desc/nondesc
-	//long  m_turkTagHash5;
-	unsigned long m_tagHash32;
+	//int32_t  m_turkTagHash5;
+	uint32_t m_tagHash32;
 	// for the SummaryLline generation algo in XmlDoc.cpp, we like
 	// to know if the SummaryLines are adjacent to avoid printing a
 	// "..." between them
-	long  m_alnumPosA;
-	long  m_alnumPosB;
+	int32_t  m_alnumPosA;
+	int32_t  m_alnumPosB;
 
 	bool printEventDesc ( class SafeBuf *sb , char *ptr_utf8Content );
 };
@@ -407,9 +407,9 @@ class EventDesc {
 // XmlDoc::getMsg20Reply() calls this to parse up ptr_eventsData into
 // Msg20Reply::ptr_eventTitle, ... when Msg20Request::m_eventId >= 0 ...
 // when user is searching events
-EventDisplay *getEventDisplay ( long  eventId         ,
+EventDisplay *getEventDisplay ( int32_t  eventId         ,
 				char *ptr_eventsData  , 
-				long  size_eventsData );
+				int32_t  size_eventsData );
 				//char *ptr_tagBuf      ) ;
 
 // . the list of all the events described in the document
@@ -427,15 +427,15 @@ class Events {
 		   class Bits        *bits      ,
 		   class Sections    *sections  ,
 		   class SubSent     *subSents  ,
-		   long               numSubSents,
+		   int32_t               numSubSents,
 		   class SectionVotingTable *osvt ,
 		   class Dates       *dp        ,
 		   class Addresses   *addresses ,
 		   class TagRec      *gr        ,
 		   class XmlDoc      *xd        ,
-		   long               spideredTime ,
+		   int32_t               spideredTime ,
 		   class SafeBuf     *pbuf      ,
-		   long               niceness  ) ;
+		   int32_t               niceness  ) ;
 
 	// tbt = turk bits table
 	bool setTitlesAndVenueNames ( class HashTableX  *tbt ,
@@ -443,40 +443,40 @@ class Events {
 
 	bool setTitle ( class Event *ev );
 
-	float getSimilarity ( long a0 , long b0 , long a1 , long b1 ) ;
+	float getSimilarity ( int32_t a0 , int32_t b0 , int32_t a1 , int32_t b1 ) ;
 
 	bool setBestVenueName ( class Event *ev );
 
-	bool hash ( //long              baseScore ,
-		    //long              version   ,
+	bool hash ( //int32_t              baseScore ,
+		    //int32_t              version   ,
 		    class HashTableX *dt        ,
 		    class SafeBuf    *pbuf      ,
 		    class HashTableX *wts       ,
 		    class SafeBuf    *wbuf      ,
-		    long              numHashableEvents ) ;
+		    int32_t              numHashableEvents ) ;
 
 	bool hashIntervals ( class Event *ev , class HashTableX *dt ) ;
 
 	float getSentTitleScore ( class Section *si ,
 				  sentflags_t sflags ,
 				  esflags_t esflags ,
-				  long sa ,
-				  long sb ,
+				  int32_t sa ,
+				  int32_t sb ,
 				  bool isStoreHoursEvent ,
 				  class Event *ev ,
 				  float *retDescScore ,
 				  bool isSubSent );
 
 	// print a table of the events
-	bool print ( class SafeBuf *pbuf , long siteHash32 ,
+	bool print ( class SafeBuf *pbuf , int32_t siteHash32 ,
 		     int64_t uh64 ) ;
 
-	bool printEvent ( class SafeBuf *pbuf , long i , int64_t uh64 );
+	bool printEvent ( class SafeBuf *pbuf , int32_t i , int64_t uh64 );
 
 	bool printEventForCheckbox ( class Event *ev , 
 				     class SafeBuf *pbuf , 
 				     int64_t uh64 ,
-				     long i ,
+				     int32_t i ,
 				     char *boxPrefix );
 
 	// if in the div no display tag for validation, we set hidden to true
@@ -487,8 +487,8 @@ class Events {
 				  class Event *ev,
 				  sentflags_t sflags ,
 				  esflags_t esflags ,
-				  long a ,
-				  long b ,
+				  int32_t a ,
+				  int32_t b ,
 				  bool hidden ,
 				  float tscore ,
 				  //float dscore ,
@@ -500,7 +500,7 @@ class Events {
 
 	// how much space in XmlDoc::m_metaList we need to write out
 	// all the Timedb keys to store into timedb
-	long getIntervalsNeed();
+	int32_t getIntervalsNeed();
 	char *addIntervals ( char *metaList, 
 			     int64_t docId ,
 			     char rdbId ) ;
@@ -511,17 +511,17 @@ class Events {
 
 	// . returns -1 and sets g_errno on error
 	// . returns NULL if no event data
-	char *makeEventDisplay ( long *size , long *retNumDisplays );
+	char *makeEventDisplay ( int32_t *size , int32_t *retNumDisplays );
 
 	// we use this to set XmlDoc::ptr_eventsData/size_eventsData blob
 	// that describes our events using the EventDisplay class
-	bool makeEventDisplay ( class SafeBuf *sb , long *numDisplaysMade );
+	bool makeEventDisplay ( class SafeBuf *sb , int32_t *numDisplaysMade );
 
 	bool makeEventDisplay2 ( class Event *ev , class SafeBuf *sb );
 
 	bool isIndexable ( class Event *ev , class Section *si ) ;
 
-	long getNumEvents ( ) { return m_numEvents; };
+	int32_t getNumEvents ( ) { return m_numEvents; };
 
 	// save these for hashing
 	class Words    *m_words;
@@ -536,7 +536,7 @@ class Events {
 	class XmlDoc   *m_xd;
 	class Sections *m_sections;
 	class SubSent  *m_subSents;
-	long            m_numSubSents;
+	int32_t            m_numSubSents;
 	class SectionVotingTable *m_osvt;
 	class Addresses *m_addresses;
 	class Url       *m_url;
@@ -554,10 +554,10 @@ class Events {
 	bool m_isStubHub;
 	bool m_isEventBrite;
 
-	long     m_niceness;
+	int32_t     m_niceness;
 
 	// from XmlDoc
-	long m_spideredTime;
+	int32_t m_spideredTime;
 
 	// for holding the event data
 	SafeBuf m_sb2;
@@ -567,41 +567,41 @@ class Events {
 
 	// only compute and hash intervals within [m_year0,m_year1), otherwise
 	// we'd have an infinite # of intervals
-	long m_year0;
-	long m_year1;
+	int32_t m_year0;
+	int32_t m_year1;
 
 	char *m_note;
 
 	Event m_events[MAX_EVENTS];
-	long  m_numEvents;
+	int32_t  m_numEvents;
 
 	// . of those, how many were legit
 	// . this is referenced by eventid now, which starts at 1! so
 	//   add one to this array
 	//Event *m_validEvents[MAX_EVENTS+1];
 	Event *m_idToEvent[MAX_EVENTS+1];
-	long   m_numIds;
+	int32_t   m_numIds;
 
 	// # of events in m_events[] that do not have a EV_BAD_EVENT flag set
-	//long  m_numValidEvents;
+	//int32_t  m_numValidEvents;
 
-	Event *getEventFromId ( long id ) {return m_idToEvent[id]; };
+	Event *getEventFromId ( int32_t id ) {return m_idToEvent[id]; };
 
 	// this excludes the outlinked titles
-	//long  m_revisedValid;
+	//int32_t  m_revisedValid;
 
 	SafeBuf *m_pbuf;
 
-	// shortcuts
+	// int16_tcuts
 	char          **m_wptrs;
-	long           *m_wlens;
+	int32_t           *m_wlens;
 	int64_t      *m_wids;
 	nodeid_t       *m_tids;
-	long            m_nw;
+	int32_t            m_nw;
 
-	long m_numFutureDates    ;
-	long m_numRecurringDates ;
-	long m_numTODs           ;
+	int32_t m_numFutureDates    ;
+	int32_t m_numRecurringDates ;
+	int32_t m_numTODs           ;
 
 	//bool m_regTableValid;
 	//HashTableX m_regTable;
@@ -609,7 +609,7 @@ class Events {
 	//bool setRegistrationBits();
 	//bool m_setRegBits;
 
-	//long m_maxIndexedEventId;
+	//int32_t m_maxIndexedEventId;
 
 	// for printing out score of each title candidate
 	HashTableX m_titleScoreTable;
@@ -624,9 +624,9 @@ class EventIdBits {
  public:
 	uint8_t m_bits[32];
 
-	void addEventId ( long eid ) {
+	void addEventId ( int32_t eid ) {
 		// get our event id bit
-		long byteOff = eid / 8;
+		int32_t byteOff = eid / 8;
 		// bit mask
 		uint8_t bitMask = 1 << ( eid % 8 );
 		// update the byte
@@ -636,34 +636,34 @@ class EventIdBits {
 	void clear ( ) { memset ( m_bits , 0 , 32 ); };
 
 	bool isEmpty () {
-		for ( long i = 0 ; i < 32 ; i++ )
+		for ( int32_t i = 0 ; i < 32 ; i++ )
 			if ( m_bits[i] ) return false;
 		return true;
 	};
 
-	bool hasEventId ( long eid ) {
+	bool hasEventId ( int32_t eid ) {
 		// get our event id bit
-		long byteOff = eid / 8;
+		int32_t byteOff = eid / 8;
 		// bit mask
 		uint8_t bitMask = 1 << ( eid % 8 );
 		// update the byte
 		return ( m_bits[byteOff] & bitMask );
 	};
 
-	void print ( char *evs , long esize ) {
+	void print ( char *evs , int32_t esize ) {
 		char *pe = evs;
 		pe += sprintf(evs," eventIds=");
 		bool first = true;
-		for ( long j = 0 ; j<32 ; j++ ) {
+		for ( int32_t j = 0 ; j<32 ; j++ ) {
 			// get bit mask
-			long byteOff = j/8;
+			int32_t byteOff = j/8;
 			uint8_t bitMask = 1<<(j%8);
 			if ( !( m_bits[byteOff] & bitMask))
 				continue;
 			if ( ! first )
 				pe += sprintf(pe,",");
 			first = false;
-			pe += sprintf(pe,"%li",j);
+			pe += sprintf(pe,"%"INT32"",j);
 		}
 	};
 

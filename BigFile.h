@@ -2,7 +2,7 @@
 
 // . this class makes the 2gb file limit transparent
 // . you can actually set you own file size limit to whatever you want as 
-//   long as it's greater than zero
+//   int32_t as it's greater than zero
 // . this is usually 2gb
 // . TODO: fix the O_SYNC option
 // . TODO: provide ability to pass flags
@@ -41,18 +41,18 @@ public:
 	class BigFile  *m_this;
 	//struct aiocb   m_aiostate;
 	char           *m_buf;
-	long            m_bytesToGo;
+	int32_t            m_bytesToGo;
 	int64_t       m_offset;
 	// . the original offset, because we set m_offset to m_currentOffset
 	//   if the original offset specified is -1
 	// . we also advance BigFile::m_currentOffset when done w/ read/write
 	//int64_t       m_origOffset;
 	bool            m_doWrite;
-	long            m_bytesDone;
+	int32_t            m_bytesDone;
 	void           *m_state ;
 	void          (*m_callback) ( void *state ) ;
 	// goes from 0 to 1, the lower the niceness, the higher the priority
-	long            m_niceness;
+	int32_t            m_niceness;
 	// . if signal is still pending we need to know if BigFile got deleted
 	// . m_files must be NULL terminated
 	//class BigFile **m_files;
@@ -60,14 +60,14 @@ public:
 	//   problems with accessing m_files since RdbMerge may call unlinkPart
 	//   from the main thread while we're trying to get these things
 	// . no read should span more than 2 file descriptors
-	long            m_filenum1;
-	long            m_filenum2;
+	int32_t            m_filenum1;
+	int32_t            m_filenum2;
 	int             m_fd1 ;
 	int             m_fd2 ;
 	// hold the errno from the threaded read/write here
-	long            m_errno;
+	int32_t            m_errno;
 	// just for flagging unlinked/renamed thread ops
-	long            m_errno2;
+	int32_t            m_errno2;
 	// when we started for graphing purposes (in milliseconds)
 	int64_t       m_startTime;
 	int64_t       m_doneTime;
@@ -76,28 +76,28 @@ public:
 	class DiskPageCache *m_pc;
 	// this is just used for accessing the DiskPageCache, m_pc, it is
 	// a "virtual fd" for this whole file
-	long            m_vfd;
+	int32_t            m_vfd;
 	// test parms
-	//long  m_osize;
+	//int32_t  m_osize;
 	//char *m_obuf;
 	// for avoiding unlink/reopens while doing a threaded read
-	long m_closeCount1 ;
-	long m_closeCount2 ;
-	long m_vfd1;
-	long m_vfd2;
+	int32_t m_closeCount1 ;
+	int32_t m_closeCount2 ;
+	int32_t m_vfd1;
+	int32_t m_vfd2;
 
 	//char m_baseFilename[32];
-	long m_flags;	
+	int32_t m_flags;	
 	// when we are given a NULL buffer to read into we must allocate
 	// it either in DiskPageCache.cpp or in Threads.cpp right before the
 	// thread is launched. this will stop us from having 19000 unlaunched
 	// threads each hogging up 32KB of memory waiting to read tfndb.
 	// m_allocBuf points to what we allocated.
 	char *m_allocBuf;
-	long  m_allocSize;
+	int32_t  m_allocSize;
 	// m_allocOff is offset into m_allocBuf where we start reading into 
 	// from the file
-	long  m_allocOff;
+	int32_t  m_allocOff;
 	// do not call pthread_create() for every read we do. use async io
 	// because it should be much much faster
 #ifdef ASYNCIO
@@ -122,7 +122,7 @@ class BigFile {
 	bool doesExist ( ) ;
 
 	// does file part #n exist?
-	bool doesPartExist ( long n ) ;
+	bool doesPartExist ( int32_t n ) ;
 
 	// . does not actually open any part file we have
 	// . waits for a read/write operation before doing that
@@ -137,7 +137,7 @@ class BigFile {
 
 	int getFlags() { return m_flags; };
 
-	void setBlocking    ( ) { m_flags &= ~((long)O_NONBLOCK); };
+	void setBlocking    ( ) { m_flags &= ~((int32_t)O_NONBLOCK); };
 	void setNonBlocking ( ) { m_flags |=         O_NONBLOCK ; };
 
 	// . return -2 on error
@@ -154,15 +154,15 @@ class BigFile {
 	// . otherwise, returns 1 if the read was completed
 	// . decides what 2gb part file(s) we should read from
 	bool read  ( void       *buf    , 
-		     long        size   , 
+		     int32_t        size   , 
 		     int64_t   offset                         , 
 		     FileState  *fs                      = NULL , 
 		     void       *state                   = NULL , 
 		     void      (* callback)(void *state) = NULL ,
-		     long        niceness                = 1    ,
+		     int32_t        niceness                = 1    ,
 		     bool        allowPageCache          = true ,
 		     bool        hitDisk                 = true ,
-		     long        allocOff                = 0    );
+		     int32_t        allocOff                = 0    );
 
 	// . returns false if blocked, true otherwise
 	// . sets g_errno on error
@@ -170,12 +170,12 @@ class BigFile {
 	//   successfully to OTHER parts that's why caller should be 
 	//   responsible for maintaining current write offset
 	bool  write ( void       *buf    , 
-		      long        size   , 
+		      int32_t        size   , 
 		      int64_t   offset                         , 
 		      FileState  *fs                      = NULL , 
 		      void       *state                   = NULL , 
 		      void      (* callback)(void *state) = NULL ,
-		      long       niceness                 = 1    ,
+		      int32_t       niceness                 = 1    ,
 		      bool       allowPageCache           = true );
 
 	// unlinks all part files
@@ -190,7 +190,7 @@ class BigFile {
 
 	// . returns false and sets g_errno on failure
 	// . chop only parts LESS THAN "part"
-	bool chopHead ( long part );
+	bool chopHead ( int32_t part );
 
 	// . these here all use threads and call your callback when done
 	// . they return false if blocked, true otherwise
@@ -200,7 +200,7 @@ class BigFile {
 	bool rename   ( char *newBaseFilename ,
 		        void (* callback) ( void *state ) , 
 		        void *state ) ;
-	bool chopHead ( long part , 
+	bool chopHead ( int32_t part , 
 			void (* callback) ( void *state ) , 
 			void *state ) ;
 
@@ -217,7 +217,7 @@ class BigFile {
 
 	// . opens the nth file if necessary to get it's fd
 	// . returns -1 if none, >=0 on success
-	int getfd ( long n , bool forReading , long *vfd = NULL );
+	int getfd ( int32_t n , bool forReading , int32_t *vfd = NULL );
 
 	// public for wrapper to call
 	//bool readwrite_r ( FileState *fstate );
@@ -225,33 +225,33 @@ class BigFile {
 	int64_t m_currentOffset;
 
 	DiskPageCache *getDiskPageCache ( ) { return m_pc;  };
-	long       getVfd       ( ) { return m_vfd; };
+	int32_t       getVfd       ( ) { return m_vfd; };
 
 	// WARNING: some may have been unlinked from call to chopHead()
-	long getNumParts ( ) { return m_numParts; };
+	int32_t getNumParts ( ) { return m_numParts; };
 
-	File *getFile ( long n ) { return m_files[n]; };
+	File *getFile ( int32_t n ) { return m_files[n]; };
 
 	// makes the filename of part file #n
 	void makeFilename_r ( char *baseFilename    , 
 			      char *baseFilenameDir ,
-			      long  n               , 
+			      int32_t  n               , 
 			      char *buf             );
 
-	void removePart ( long i ) ;
+	void removePart ( int32_t i ) ;
 
 	// don't launch a threaded rename/unlink if one already in progress
 	// since we only have one callback, m_callback
-	long m_numThreads;
+	int32_t m_numThreads;
 
 	void (*m_callback)(void *state);
 	void  *m_state;
 	// is the threaded op an unlink? (or rename?)
 	bool   m_isUnlink;
-	long   m_part; // part # to unlink (-1 for all)
+	int32_t   m_part; // part # to unlink (-1 for all)
 
 	// number of parts remaining to be unlinked/renamed
-	long   m_partsRemaining;
+	int32_t   m_partsRemaining;
 
 	// rename stores the new name here so we can rename the m_files[i] 
 	// after the rename has completed and the rename thread returns
@@ -271,21 +271,21 @@ class BigFile {
 	// . if doWrite is true then we'll do a write, otherwise we do a read
 	// . returns false and sets errno on error, true on success
 	bool readwrite ( void       *buf, 
-			 long        size, 
+			 int32_t        size, 
 			 int64_t   offset, 
 			 bool        doWrite,
 			 FileState  *fstate   ,
 			 void       *state    ,
 			 void      (* callback) ( void *state ) ,
-			 long        niceness ,
+			 int32_t        niceness ,
 			 bool        allowPageCache ,
 			 bool        hitDisk        ,
-			 long        allocOff       );
+			 int32_t        allocOff       );
 
 	// . returns false if blocked, true otherwise
 	// . sets g_errno on error
 	bool unlinkRename ( char *newBaseFilename             ,
-			    long  part                        ,
+			    int32_t  part                        ,
 			    bool  useThread                   ,
 			    void (* callback) ( void *state ) ,
 			    void *state                       ,
@@ -295,12 +295,12 @@ class BigFile {
 	// . called by set() above for normal dir as well as stripe dir
 	bool addParts ( char *dirname ) ;
 
-	bool addPart ( long n ) ;
+	bool addPart ( int32_t n ) ;
 
-	//bool unlinkPart ( long n , bool block );
+	//bool unlinkPart ( int32_t n , bool block );
 
 	// if part file not created, will create it
-	File *getPartFile ( long n ) { return m_files[n]; };
+	File *getPartFile ( int32_t n ) { return m_files[n]; };
 
 	// . put a signal on the queue to do reading/writing
 	// . we call readwrite ( FileState *) when we handle the signal
@@ -312,16 +312,16 @@ class BigFile {
 	char m_dir          [256];
 	char m_stripeDir    [256];
 
-	long m_permissions;
-	long m_flags;
+	int32_t m_permissions;
+	int32_t m_flags;
 
 	// determined in open() override
 	int       m_numParts;
 	// maximum part #
-	long      m_maxParts;
+	int32_t      m_maxParts;
 
 	class DiskPageCache *m_pc;
-	long             m_vfd;
+	int32_t             m_vfd;
 	bool             m_vfdAllowed;
 
 	// prevent circular calls to BigFile::close() with this
@@ -334,7 +334,7 @@ class BigFile {
 	time_t getLastModifiedTime();
 };
 
-extern long g_unlinkRenameThreads;
+extern int32_t g_unlinkRenameThreads;
 
 extern int64_t g_lastDiskReadStarted;
 extern int64_t g_lastDiskReadCompleted;

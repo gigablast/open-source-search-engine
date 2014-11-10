@@ -70,7 +70,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 			  "cannot distribute during rebuild"
 			  "</font></b></center>");
 		} else {
-			for ( long i = 0; i < g_hostdb.getNumHosts() ; i++ ) {
+			for ( int32_t i = 0; i < g_hostdb.getNumHosts() ; i++ ) {
 				Host *h = g_hostdb.getHost(i);
 				snprintf(cmd, 512,
 					"rcp -r "
@@ -108,7 +108,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		}
 	}
 
-	long manualAddLen = 0;
+	int32_t manualAddLen = 0;
 	char *manualAdd = NULL;
 	SafeBuf manualAddBuf;
 	if ((manualAdd = r->getString("manualadd", &manualAddLen))) {
@@ -144,7 +144,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		}
 	}
 
-	long affinityAddLen = 0;
+	int32_t affinityAddLen = 0;
 	char *affinityAdd = NULL;
 	SafeBuf affinityAddBuf;
 	if ((affinityAdd = r->getString("affinityadd", &affinityAddLen))) {
@@ -183,7 +183,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 	
 
 	char *syn = r->getString("synonym");
-	long len = 0;
+	int32_t len = 0;
 	if (syn) len = gbstrlen(syn);
 
 	if (len) {
@@ -194,7 +194,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
 		  "<tr>"
 		  "<td colspan=2 bgcolor=#%s>"
-		  "<center><b>Synonym List (%ld)</b></center>"
+		  "<center><b>Synonym List (%"INT32")</b></center>"
 		  "</td>"
 		  "</tr>\n",
 		  LIGHT_BLUE, DARK_BLUE, info.m_numSyns);
@@ -205,9 +205,9 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 			  "<tt>1.000/%08lX (1.000/%08lX)</tt>"
 			  "</td>"
 			  "</tr>\n", syn, MAX_AFFINITY, MAX_AFFINITY);
-			for (long i = 0; i < info.m_numSyns; i++) {
+			for (int32_t i = 0; i < info.m_numSyns; i++) {
 				// get the reverse affinity as well
-				long aff = g_thesaurus.getAffinity(
+				int32_t aff = g_thesaurus.getAffinity(
 					info.m_syn[i], syn,
 					info.m_len[i], len);
 				p.safePrintf( 
@@ -234,9 +234,9 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 				} else {
 					p.safePrintf("(u) ");
 				}
-				p.safePrintf("(%ld) (%ld) (%ld) (%ld) "
+				p.safePrintf("(%"INT32") (%"INT32") (%"INT32") (%"INT32") "
 					     "(%lld) (%lld)",
-				  (long)info.m_type[i], (long)info.m_sort[i],
+				  (int32_t)info.m_type[i], (int32_t)info.m_sort[i],
 				  info.m_firstId[i], info.m_lastId[i],
 				  info.m_leftSynHash[i], 
 				  info.m_rightSynHash[i]);
@@ -490,27 +490,27 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 	}
 	p.safePrintf (
 		  "<tr><td><b># of total pairs</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of pairs remaining</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of pairs processed</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b>elapsed time in seconds</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b>estimated remaining time in seconds</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of requests sent</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of requests received</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of request errors</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of old values reused</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b># of cache hits</b></td>"
-		  "<td>%lli</td></tr>\n"
+		  "<td>%"INT64"</td></tr>\n"
 		  "<tr><td><b>cache size</b></td>"
-		  "<td>%lli</td></tr>\n",
+		  "<td>%"INT64"</td></tr>\n",
 		  a, b, c, d, e, f, g, h, i, j, k);
 	p.safePrintf ( "</table>\n" );
 

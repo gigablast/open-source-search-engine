@@ -47,10 +47,10 @@ static int       s_numOpenFiles    = 0;
 //           because i now call ::close1_r() in the unlink or rename thread.
 
 #include "Loop.h" // MAX_NUM_FDS
-static long s_closeCounts [ MAX_NUM_FDS ];
+static int32_t s_closeCounts [ MAX_NUM_FDS ];
 
 // for avoiding unlink/opens that mess up our threaded read
-long getCloseCount_r ( int fd ) {
+int32_t getCloseCount_r ( int fd ) {
 	if ( fd < 0 ) return 0;
 	return s_closeCounts [ fd ];
 }
@@ -99,12 +99,12 @@ void File::set ( char *filename ) {
 		log ( LOG_LOGIC,"disk: Provided filename is NULL");
 		return;
 	}
-	// bail if too long
-	long len = gbstrlen ( filename );
+	// bail if too int32_t
+	int32_t len = gbstrlen ( filename );
 	// account for terminating '\0'
 	if ( len + 1 >= MAX_FILENAME_LEN ) { 
-		log ( "disk: Provdied filename %s length of %li is bigger "
-		      "than %li.",filename,len,(long)MAX_FILENAME_LEN-1); 
+		log ( "disk: Provdied filename %s length of %"INT32" is bigger "
+		      "than %"INT32".",filename,len,(int32_t)MAX_FILENAME_LEN-1); 
 		return; 
 	}
 	// if we already had another file open then we must close it first.
@@ -142,10 +142,10 @@ bool File::open ( int flags , int permissions ) {
 	m_flags       = flags;
 	m_permissions = permissions;
 	// sanity check
-	//long ss = 0;
-	//for ( long i = 0 ; i < MAX_NUM_VFDS ; i++ ) 
+	//int32_t ss = 0;
+	//for ( int32_t i = 0 ; i < MAX_NUM_VFDS ; i++ ) 
 	//	if (s_fds [ i ] >= 0 && s_writing[i] ) ss++;
-	//log("got %li doing writes",ss);
+	//log("got %"INT32" doing writes",ss);
 	
 	// we must assign this to a virtual descriptor
 	// scan down our list looking for an m_fd of -2 (available) [-1 means 
@@ -156,13 +156,13 @@ bool File::open ( int flags , int permissions ) {
 	if ( i >= MAX_NUM_VFDS ) {
 		g_errno = EBADENGINEER;
 		return log ( 
-			     "disk: All %li virtual fd's are in use. Panic.",
-			     (long)MAX_NUM_VFDS);
+			     "disk: All %"INT32" virtual fd's are in use. Panic.",
+			     (int32_t)MAX_NUM_VFDS);
 	}
 	// remember OUR virtual file descriptor for successive calls to 
 	// read/write/...
 	m_vfd      = i;
-	// we are not open at this point, but no longer available at least
+	// we are not open at this point, but no int32_ter available at least
 	s_fds [ m_vfd ] = -1;
 	// open for real, return true on success
 	if ( getfd () >= 0 ) return true;
@@ -178,8 +178,8 @@ bool File::open ( int flags , int permissions ) {
 // . returns -1 on error
 // . may return < numBytesToWrite if non-blocking
 int File::write ( void *buf             , 
-		  long  numBytesToWrite , 
-		  long  offset          ) {
+		  int32_t  numBytesToWrite , 
+		  int32_t  offset          ) {
 	// safety catch!
 	if ( g_conf.m_readOnlyMode ) {
 		logf(LOG_DEBUG,"disk: Trying to write while in "
@@ -212,8 +212,8 @@ int File::write ( void *buf             ,
 }
 
 int File::read ( void *buf            , 
-		 long  numBytesToRead , 
-		 long  offset         ) {
+		 int32_t  numBytesToRead , 
+		 int32_t  offset         ) {
 	// this return -2 if never opened, -1 on error, fd on success
 	int fd = getfd();
 	if ( fd < 0 ) { 
@@ -239,8 +239,8 @@ int File::read ( void *buf            ,
 }
 
 // uses lseek to get file's current position
-long File::getCurrentPos ( ) {
-	return (long) ::lseek (s_fds[m_vfd] , 0 , SEEK_CUR );
+int32_t File::getCurrentPos ( ) {
+	return (int32_t) ::lseek (s_fds[m_vfd] , 0 , SEEK_CUR );
 }
 
 bool File::isNonBlocking () {
@@ -363,7 +363,7 @@ bool File::close ( ) {
 	// mark this virtual file descriptor as available.
 	s_fds       [ m_vfd ] = -2;
 	// save
-	long vfd = m_vfd;
+	int32_t vfd = m_vfd;
 	//s_filenames [ m_vfd ] = NULL;
 	// no more virtual file descriptor
 	m_vfd = -1;
@@ -390,7 +390,7 @@ bool File::close ( ) {
 			   m_filename,strerror(g_errno));
 	} 
 	// . tally up another close for this fd, if any
-	// . so if an open happens shortly here after, and 
+	// . so if an open happens int16_tly here after, and 
 	//   gets this fd, then any read that was started 
 	//   before that open will know it!
 	//s_closeCounts [ fd ]++;
@@ -441,8 +441,8 @@ int File::getfd () {
 	// return true if it's already opened
 	if ( fd >=  0 ) { 
 		// debug msg
-		log(LOG_DEBUG,"disk: Opened vfd #%li of %li.",
-		    (long)m_vfd,(long)s_fds[m_vfd]);
+		log(LOG_DEBUG,"disk: Opened vfd #%"INT32" of %"INT32".",
+		    (int32_t)m_vfd,(int32_t)s_fds[m_vfd]);
 		// but update the timestamp to reduce chance it closes on us
 		//s_timestamps [ m_vfd ] = getTime();
 		s_timestamps [ m_vfd ] = gettimeofdayInMillisecondsLocal();
@@ -504,7 +504,7 @@ int File::getfd () {
 		int64_t dt = gettimeofdayInMilliseconds() - t1 ;
 		if ( dt > 1 ) log(LOG_INFO,
 				  "disk: call to open(%s) blocked for "
-				  "%lli ms.",m_filename,dt);
+				  "%"INT64" ms.",m_filename,dt);
 	}
 	// copy errno to g_errno
 	if ( fd == -1 ) {
@@ -564,13 +564,13 @@ bool File::closeLeastUsed () {
 
 	// if nothing to free then return false
 	if ( mini == -1 ) 
-		return log("File: closeLeastUsed: failed. All %li descriptors "
+		return log("File: closeLeastUsed: failed. All %"INT32" descriptors "
 			   "are unavailable to be closed and re-used to read "
-			   "from another file.",(long)s_maxNumOpenFiles);
+			   "from another file.",(int32_t)s_maxNumOpenFiles);
 
 	// debug msg
-	log(LOG_DEBUG,"disk: Closing vfd #%i of %li. delta=%lli",
-	    mini,(long)s_fds[mini],now-s_timestamps[mini]);
+	log(LOG_DEBUG,"disk: Closing vfd #%i of %"INT32". delta=%"INT64"",
+	    mini,(int32_t)s_fds[mini],now-s_timestamps[mini]);
 
 	// always block on close
 	int fd    = s_fds[mini];
@@ -589,7 +589,7 @@ bool File::closeLeastUsed () {
 	}
 
 	// . tally up another close for this fd, if any
-	// . so if an open happens shortly here after, and 
+	// . so if an open happens int16_tly here after, and 
 	//   gets this fd, then any read that was started 
 	//   before that open will know it!
 	//s_closeCounts [ fd ]++;
@@ -615,7 +615,7 @@ bool File::closeLeastUsed () {
 // . returns -2 on error
 // . returns -1 if does not exist
 // . otherwise returns file size in bytes
-long File::getFileSize ( ) {
+int32_t File::getFileSize ( ) {
 
 	// allow the substitution of another filename
         //struct stat stats;
@@ -632,7 +632,7 @@ long File::getFileSize ( ) {
 	}
 
 	fseek(fd,0,SEEK_END);
-	long fileSize = ftell ( fd );
+	int32_t fileSize = ftell ( fd );
 
 	fclose ( fd );
 
@@ -679,7 +679,7 @@ time_t File::getLastModifiedTime ( ) {
 // . returns -1 on error
 // . returns  0 if does not exist
 // . returns  1 if it exists
-long File::doesExist ( ) {
+int32_t File::doesExist ( ) {
 	// preserve g_errno
 	int old_errno = g_errno;
 	// allow the substitution of another filename
@@ -710,7 +710,7 @@ bool File::unlink ( ) {
 	// give the fd back to the pull, free the m_vfd
 	close ();
 	// avoid unneccessary unlinking
-	long status = doesExist();
+	int32_t status = doesExist();
 	// return true if we don't exist anyway
 	if ( status == 0 ) return true;
 	// return false and set g_errno on error
@@ -741,16 +741,16 @@ bool File::flush ( ) {
 }
 
 // a wrapper for lseek
-long File::lseek ( long offset , int whence ) {
+int32_t File::lseek ( int32_t offset , int whence ) {
 
-	long position = (long) ::lseek (s_fds [ m_vfd ] , offset , whence );
+	int32_t position = (int32_t) ::lseek (s_fds [ m_vfd ] , offset , whence );
 
 	if ( position >= 0 ) return position;
 
 	// copy errno to g_errno
 	g_errno = errno;
 
-	log("disk: lseek ( %s(%i) , %li , whence ): %s" , m_filename , 
+	log("disk: lseek ( %s(%i) , %"INT32" , whence ): %s" , m_filename , 
 	      s_fds [m_vfd], offset , strerror ( g_errno ) );
 
 	return -1;
@@ -772,7 +772,7 @@ bool File::initialize ( ) {
 		s_unlinking   [ i ] = 0;
 	}
 
-	for ( long i = 0 ; i < MAX_NUM_FDS ; i++ ) 
+	for ( int32_t i = 0 ; i < MAX_NUM_FDS ; i++ ) 
 		s_closeCounts[i] = 0;
 
 	s_isInitialized = true;
@@ -782,7 +782,7 @@ bool File::initialize ( ) {
 
 char *File::getExtension ( ) {
 	// keep backing up over m_filename till we hit a . or / or beginning
-	long i = gbstrlen(m_filename) ;
+	int32_t i = gbstrlen(m_filename) ;
 	while ( --i > 0 ) {
 		if ( m_filename[i] == '.' ) break;
 		if ( m_filename[i] == '/' ) break;
@@ -799,17 +799,17 @@ char *File::getExtension ( ) {
 // and the merge guy gets a new fd which happens to be the old fd of the
 // dump, so when the dump thread lets its write go it writes into the merge
 // file.
-void enterWriteMode ( long vfd ) {
+void enterWriteMode ( int32_t vfd ) {
 	if ( vfd >= 0 ) s_writing [ vfd ] = 1;
 }
-void exitWriteMode ( long vfd ) {
+void exitWriteMode ( int32_t vfd ) {
 	if ( vfd >= 0 ) s_writing [ vfd ] = 0;
 }
 // error correction routine used by BigFile.cpp
-void releaseVfd ( long vfd ) {
+void releaseVfd ( int32_t vfd ) {
 	if ( vfd >= 0 && s_fds [ vfd ] >= 0 ) s_fds [ vfd ] = -1;
 }
-int  getfdFromVfd ( long vfd ) {
+int  getfdFromVfd ( int32_t vfd ) {
 	if ( vfd <= 0 ) return -1;
 	return s_fds [ vfd ];
 }

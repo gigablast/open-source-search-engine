@@ -30,7 +30,7 @@ enum {
 	EBADREPLYSIZE    , // reply is wrong length
 	EBADREPLY        , // something is wrong w/ reply
 	EREPLYTOOSMALL   , // reply is too small  32778
-	EREQUESTTOOSHORT , // request length too short
+	EREQUESTTOOSHORT , // request length too int16_t
 	EBADREQUESTSIZE  , // request length not correct 32780
 	EBADREQUEST      , // a bad request
 	ENOTSUPPORTED    , // operation not yet supported
@@ -112,7 +112,7 @@ enum {
 	EDNSREFUSED      , //dns refused to talk to us
 	EDNSDEAD         , //dns is dead
 	EDNSTIMEDOUT     , //was just EUDPTIMEDOUT
-	ECOLLTOOBIG      , //collection is too long
+	ECOLLTOOBIG      , //collection is too int32_t
 	ESTRIKEOUT       , //retried enough times; deleting doc & giving up
 	ENOPERM          , //permission denied
 	ECORRUPTDATA     , //corrupt data
@@ -120,7 +120,7 @@ enum {
 	ESHUTTINGDOWN    , //shutting down the server
 	EHOSTDEAD        , // host is dead
 	EBADFILE         , //file is bad
-	ETOOEARLY        , //need to wait longer
+	ETOOEARLY        , //need to wait int32_ter
 	EFILECLOSED      , //read on closed file?
 	ELISTTOOBIG      , //Rdb::addList() calls this
 	ECANCELLED       , //transaction was cancelled

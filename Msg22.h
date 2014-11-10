@@ -12,8 +12,8 @@
 class Msg22Request {
 public:
 	int64_t m_docId;
-	long      m_niceness;
-	long      m_maxCacheAge;
+	int32_t      m_niceness;
+	int32_t      m_maxCacheAge;
 	collnum_t m_collnum;
 	char      m_justCheckTfndb  :1;
 	char      m_getAvailDocIdOnly:1;
@@ -22,9 +22,9 @@ public:
 	char      m_inUse           :1;
 	char      m_url[MAX_URL_LEN+1];
 
-	long getSize () {
+	int32_t getSize () {
 		return (m_url - (char *)&m_docId) + 1+gbstrlen(m_url); };
-	long getMinSize() {
+	int32_t getMinSize() {
 		return (m_url - (char *)&m_docId) + 1; };
 
 	Msg22Request() { m_inUse = 0; }
@@ -43,7 +43,7 @@ class Msg22 {
 				 char *coll ,
 				 void *state ,
 				 void (* callback)(void *state) ,
-				 long niceness ) ;
+				 int32_t niceness ) ;
 
 	// . make sure you keep url/coll on your stack cuz we just point to it
 	// . see the other getTitleRec() description below for more details
@@ -53,15 +53,15 @@ class Msg22 {
 			   int64_t  docId   ,
 			   char      *coll    ,
 			   char     **titleRecPtrPtr  ,
-			   long      *titleRecSizePtr ,
+			   int32_t      *titleRecSizePtr ,
 			   bool       justCheckTfndb ,
 			   bool       getAvailDocIdOnly  ,
 			   void      *state          , 
 			   void     (* callback) (void *state ),
-			   long       niceness       ,
+			   int32_t       niceness       ,
 			   bool       addToCache     ,
-			   long       maxCacheAge    ,
-			   long       timeout        ,
+			   int32_t       maxCacheAge    ,
+			   int32_t       timeout        ,
 			   bool       doLoadBalancing = false );
 
 	int64_t getAvailDocId ( ) { return m_availDocId; };
@@ -71,11 +71,11 @@ class Msg22 {
 
 	// this is a hack so Msg38 can store his this ptr here
 	//void *m_parent; // used by Msg38
-	//long  m_slot;   // for resending on same Msg22 slot in array
+	//int32_t  m_slot;   // for resending on same Msg22 slot in array
 	//void *m_dataPtr;// for holding recepient record ptr of TopNode ptr
 
 	char **m_titleRecPtrPtr;
-	long  *m_titleRecSizePtr;
+	int32_t  *m_titleRecSizePtr;
 
 	void    (* m_callback ) (void *state);
 	void     *m_state       ;
@@ -85,7 +85,7 @@ class Msg22 {
 	bool      m_found;
 	int64_t m_availDocId;
 	// the error getting the title rec is stored here
-	long      m_errno;
+	int32_t      m_errno;
 
 	bool m_outstanding ;
 

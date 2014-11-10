@@ -26,7 +26,7 @@ int main ( int argc , char *argv[] ) {
 	inet_aton ( "192.168.1.10" , &in );
 
 	to.sin_addr.s_addr =  in.s_addr;
-	to.sin_port        = htons ((unsigned short)( 8000));
+	to.sin_port        = htons ((uint16_t)( 8000));
 	bzero ( &(to.sin_zero) , 8 ); // TODO: bzero too slow?
 	if ( connect ( sd, (sockaddr *)&to, sizeof(to) ) != 0 ) {
 		fprintf(stderr,"connect failed\n"); 
@@ -73,14 +73,14 @@ int main ( int argc , char *argv[] ) {
 	}
 	fprintf(stderr,"read %i bytes of %s\n",n,filename); 
 	p += n;
-	long size = p - buf;
+	int32_t size = p - buf;
 	// set content length
-	long clen = size - gbstrlen(mime);
+	int32_t clen = size - gbstrlen(mime);
 	char ttt[16];
-	sprintf ( ttt , "%07li", clen );
-	fprintf(stderr,"clen=%li\n",clen);
-	fprintf(stderr,"lastchar=%li\n",(long)buf[size-1]);
-	fprintf(stderr,"lastchar-1=%li\n",(long)buf[size-2]);
+	sprintf ( ttt , "%07"INT32"", clen );
+	fprintf(stderr,"clen=%"INT32"\n",clen);
+	fprintf(stderr,"lastchar=%"INT32"\n",(int32_t)buf[size-1]);
+	fprintf(stderr,"lastchar-1=%"INT32"\n",(int32_t)buf[size-2]);
 	char *cptr = strstr ( buf , "Content-Length: ");
 	if ( ! cptr ) { fprintf(stderr,"cptr NULL\n"); return -1; }
 	cptr += 16; // point to it
@@ -91,21 +91,21 @@ int main ( int argc , char *argv[] ) {
 	*xx = '\0';
 	fprintf(stderr,"mime=%s",buf);
 	*xx = c;
-	fprintf(stderr,"\nsending %li bytes\n",size);
+	fprintf(stderr,"\nsending %"INT32" bytes\n",size);
 	// now inject it
-	long sent = 0;
+	int32_t sent = 0;
  loop:
 	n = send ( sd , buf + sent , size - sent , 0 );
 	fprintf(stderr,"n=%i\n",n);
 	if ( n == 0 && sent != size ) goto loop;
 	if ( n > 0 ) { 
-		fprintf(stderr,"did %li\n",n);
+		fprintf(stderr,"did %"INT32"\n",n);
 		sent += n; 
 		goto loop; 
 	}
 	//if ( n == -1 && errno == EAGAIN ) goto loop;
 	if ( sent != size ) {
-		fprintf(stderr,"only sent %i bytes of %li\n",sent,size);
+		fprintf(stderr,"only sent %i bytes of %"INT32"\n",sent,size);
 		fprintf(stderr,"err=%s\n",strerror(errno));
 		return -1;
 	}

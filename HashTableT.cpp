@@ -67,7 +67,7 @@ void HashTableT<Key_t, Val_t>::constructor(){
 
 // returns false and sets errno on error
 template<class Key_t, class Val_t> 
-bool HashTableT<Key_t, Val_t>::set ( long initialNumTerms, char *buf, long bufSize, bool allowDupKeys) {
+bool HashTableT<Key_t, Val_t>::set ( int32_t initialNumTerms, char *buf, int32_t bufSize, bool allowDupKeys) {
 	reset();
 	m_allowDupKeys = allowDupKeys;
 //	return setTableSize ( initialNumTerms );
@@ -82,9 +82,9 @@ HashTableT<Key_t, Val_t>::~HashTableT() { reset ( ); }
 
 template<class Key_t, class Val_t>
 bool HashTableT<Key_t, Val_t>::copy(HashTableT<Key_t, Val_t>* src) {
-	long numSlots = src->m_numSlots;
-	long keySize = numSlots * sizeof(Key_t);
-	long valSize = numSlots * sizeof(Val_t);
+	int32_t numSlots = src->m_numSlots;
+	int32_t keySize = numSlots * sizeof(Key_t);
+	int32_t valSize = numSlots * sizeof(Val_t);
 	Key_t *newKeys = (Key_t *)mmalloc(keySize, "HashTableTk");
 	Val_t *newVals = (Val_t *)mmalloc(valSize, "HashTableTv");
 	if(!newKeys || !newVals) {
@@ -119,25 +119,25 @@ void HashTableT<Key_t, Val_t>::clear ( ) {
 // . returns the slot number for "key"
 // . returns -1 if key not in hash table
 template<class Key_t, class Val_t> 
-long HashTableT<Key_t, Val_t>::getOccupiedSlotNum ( Key_t& key ) const {
+int32_t HashTableT<Key_t, Val_t>::getOccupiedSlotNum ( Key_t& key ) const {
 	if ( m_numSlots <= 0 ) return -1;
         int64_t n;
 	/*
 	switch(sizeof(Key_t)) {
 	case 8:
-		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((uint32_t)m_numSlots);
 		break;		
 	default:
-		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
+		n = ((uint32_t)key) % ((uint32_t)m_numSlots);
 		break;
 	}
 	*/
 	if ( sizeof(Key_t) == 8 )
-		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((uint32_t)m_numSlots);
 	else
-		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
+		n = ((uint32_t)key) % ((uint32_t)m_numSlots);
 
-        long count = 0;
+        int32_t count = 0;
         while ( count++ < m_numSlots ) {
                 if ( m_keys [ n ] == (Key_t)0   ) return -1;
 		if ( m_keys [ n ] == key ) return  n;
@@ -148,7 +148,7 @@ long HashTableT<Key_t, Val_t>::getOccupiedSlotNum ( Key_t& key ) const {
 }
 
 template<class Key_t, class Val_t> 
-long HashTableT<Key_t, Val_t>::getNextSlot ( Key_t& key , long n ) const {
+int32_t HashTableT<Key_t, Val_t>::getNextSlot ( Key_t& key , int32_t n ) const {
 	// inc and wrap if we need to
 	if ( ++n >= m_numSlots ) n = 0;
 
@@ -165,7 +165,7 @@ long HashTableT<Key_t, Val_t>::getNextSlot ( Key_t& key , long n ) const {
 template<class Key_t, class Val_t> 
 Val_t* HashTableT<Key_t, Val_t>::getValuePointer ( Key_t key ) const {
 	// returns -1 if key not in hash table
-	long n = getOccupiedSlotNum ( key );
+	int32_t n = getOccupiedSlotNum ( key );
 	if ( n < 0 ) return NULL;
 	return &m_vals[n];
 	}
@@ -173,10 +173,10 @@ Val_t* HashTableT<Key_t, Val_t>::getValuePointer ( Key_t key ) const {
 // . returns false and sets g_errno on error, returns true otherwise
 // . adds scores if termId already exists in table
 template<class Key_t, class Val_t> 
-bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , long *slot) {
+bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , int32_t *slot) {
 	// check to see if we should grow the table
 	if ( 100 * (m_numSlotsUsed+1) >= m_numSlots * 75 ) {
-		long growTo = ((int64_t) m_numSlots * 120LL ) / 100LL +128LL;
+		int32_t growTo = ((int64_t) m_numSlots * 120LL ) / 100LL +128LL;
 		if ( ! setTableSize ( growTo, NULL, 0 ) ) return false;
 	}
 
@@ -184,19 +184,19 @@ bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , long *slot) {
 	/*
 	switch(sizeof(Key_t)) {
 	case 8:
-		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((uint32_t)m_numSlots);
 		break;		
 	default:
-		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
+		n = ((uint32_t)key) % ((uint32_t)m_numSlots);
 		break;
 	}
 	*/
 	if ( sizeof(Key_t) == 8 )
-		n = ((uint64_t)key) % ((unsigned long)m_numSlots);
+		n = ((uint64_t)key) % ((uint32_t)m_numSlots);
 	else
-		n = ((unsigned long)key) % ((unsigned long)m_numSlots);
+		n = ((uint32_t)key) % ((uint32_t)m_numSlots);
 
-        long count;
+        int32_t count;
         for ( count = 0 ; count < m_numSlots ; count++ ) {
                 if ( m_keys [ n ] == (Key_t)0   ) break;
 		// if we allow dups, skip as if he is full...
@@ -224,7 +224,7 @@ bool HashTableT<Key_t, Val_t>::addKey (Key_t key , Val_t value , long *slot) {
 template<class Key_t, class Val_t> 
 bool HashTableT<Key_t, Val_t>::removeKey ( Key_t key ) {
 	// returns -1 if key not in hash table
-	long n = getOccupiedSlotNum(key);
+	int32_t n = getOccupiedSlotNum(key);
 	if ( n < 0 ) return true;
 	m_keys[n] = 0;
 	m_numSlotsUsed--;
@@ -244,9 +244,9 @@ bool HashTableT<Key_t, Val_t>::removeKey ( Key_t key ) {
 
 // same as removeKey() above
 template<class Key_t, class Val_t> 
-void HashTableT<Key_t, Val_t>::removeSlot ( long n ) {
+void HashTableT<Key_t, Val_t>::removeSlot ( int32_t n ) {
 	// returns -1 if key not in hash table
-	//long n = getOccupiedSlotNum(key);
+	//int32_t n = getOccupiedSlotNum(key);
 	if ( n < 0 ) return;
 	// save it
 	Key_t key = m_keys[n];
@@ -273,7 +273,7 @@ void HashTableT<Key_t, Val_t>::removeSlot ( long n ) {
 // . rehashes the termId/score pairs into new table
 // . returns false and sets errno on error
 template<class Key_t, class Val_t> 
-bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) {
+bool HashTableT<Key_t, Val_t>::setTableSize ( int32_t n, char *buf, int32_t bufSize ) {
 	// don't change size if we do not need to
 	if ( n == m_numSlots ) return true;
 
@@ -283,7 +283,7 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 	// set the bufSize
 	Key_t *newKeys = (Key_t *)NULL;
 	Val_t *newVals = (Val_t *)NULL;
-	long need = n * ((long)sizeof(Key_t) + (long)sizeof(Val_t));
+	int32_t need = n * ((int32_t)sizeof(Key_t) + (int32_t)sizeof(Val_t));
 
 	// set the buffer and buffer size
 	m_buf = buf;
@@ -303,7 +303,7 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 
 	if( need <= m_bufSize && m_buf){
 		newKeys = (Key_t *)m_buf;
-		newVals = (Val_t *)(m_buf + (n*(long)sizeof(Key_t)));
+		newVals = (Val_t *)(m_buf + (n*(int32_t)sizeof(Key_t)));
 		memset ( newKeys , 0 , sizeof(Key_t) * n );
 		m_doFree = false;
 	}
@@ -327,7 +327,7 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 
 	// rehash the slots if we had some
 	if ( m_keys ) {
-		for ( long i = 0 ; i < m_numSlots ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
 			// skip the empty slots 
 			if ( m_keys [ i ] == 0 ) continue;
 			// get the new slot # for this slot (might be the same)
@@ -335,19 +335,19 @@ bool HashTableT<Key_t, Val_t>::setTableSize ( long n, char *buf, long bufSize ) 
 			/*
 			switch(sizeof(Key_t)) {
 			case 8:
-				num=((uint64_t)m_keys[i])%((unsigned long)n);
+				num=((uint64_t)m_keys[i])%((uint32_t)n);
 				break;		
 			default:
-				num=((unsigned long)m_keys[i])%((unsigned long)n);
+				num=((uint32_t)m_keys[i])%((uint32_t)n);
 				break;
 			}
 			*/
 			if ( sizeof(Key_t) == 8 )
 				num=((uint64_t)m_keys[i])%
-					((unsigned long)n);
+					((uint32_t)n);
 			else
-				num=((unsigned long)m_keys[i])%
-					((unsigned long)n);
+				num=((uint32_t)m_keys[i])%
+					((uint32_t)n);
 
 			while ( newKeys [ num ] ) if ( ++num >= n ) num = 0;
 			// move the slotPtr/key/size to this new slot
@@ -382,12 +382,12 @@ bool HashTableT<Key_t, Val_t>::serialize(SafeBuf& sb) {
 }
 
 template<class Key_t, class Val_t> 
-long HashTableT<Key_t, Val_t>::deserialize(char* s) {
+int32_t HashTableT<Key_t, Val_t>::deserialize(char* s) {
 	char *p = s;
-	long numSlots = *(long*)p;
-	p += sizeof(long);
-	long numSlotsUsed = *(long*)p;
-	p += sizeof(long);
+	int32_t numSlots = *(int32_t*)p;
+	p += sizeof(int32_t);
+	int32_t numSlotsUsed = *(int32_t*)p;
+	p += sizeof(int32_t);
 	setTableSize(numSlots, m_buf, m_bufSize );
 	if(m_numSlots != numSlots) {
 		return -1;
@@ -408,23 +408,23 @@ long HashTableT<Key_t, Val_t>::deserialize(char* s) {
 
 // both return false and set g_errno on error, true otherwise
 template<class Key_t, class Val_t> 
-bool HashTableT<Key_t, Val_t>::load ( char* filename , char **tbuf , long *tsize ) {
+bool HashTableT<Key_t, Val_t>::load ( char* filename , char **tbuf , int32_t *tsize ) {
 	reset();
 	File f;
 	f.set ( filename );
 	if ( ! f.doesExist() ) return true;
 	log(LOG_INFO,"admin: Loading hashtable from %s",filename);
 	if ( ! f.open ( O_RDONLY) ) return false;
-	long numSlots;
-	long numSlotsUsed;
-	long off = 0;
+	int32_t numSlots;
+	int32_t numSlotsUsed;
+	int32_t off = 0;
 	if ( ! f.read ( &numSlots     , 4 , off ) ) return false;
 	off += 4;
 	if ( ! f.read ( &numSlotsUsed , 4 , off ) ) return false;
 	off += 4;
 	if ( ! setTableSize ( numSlots , NULL , 0 ) ) return false;
-	long ks = sizeof(Key_t);
-	long vs = sizeof(Val_t);
+	int32_t ks = sizeof(Key_t);
+	int32_t vs = sizeof(Val_t);
 	// corruption check
 	if ( f.getFileSize() < ks * numSlots + vs * numSlots - 8 ) return false;
 	if ( ! f.read ( m_keys        , numSlots * ks , off ) ) return false;
@@ -449,20 +449,20 @@ bool HashTableT<Key_t, Val_t>::load ( char* filename , char **tbuf , long *tsize
 }
 
 template<class Key_t, class Val_t> 
-bool HashTableT<Key_t, Val_t>::save ( char* filename , char *tbuf , long tsize ) {
+bool HashTableT<Key_t, Val_t>::save ( char* filename , char *tbuf , int32_t tsize ) {
 	File f;
 	f.set ( filename );
 	log(LOG_INFO,"admin: Saving hashtable from %s",filename);
 	if ( ! f.open ( O_RDWR | O_CREAT ) ) return false;
-	long numSlots     = m_numSlots;
-	long numSlotsUsed = m_numSlotsUsed;
-	long off = 0;
+	int32_t numSlots     = m_numSlots;
+	int32_t numSlotsUsed = m_numSlotsUsed;
+	int32_t off = 0;
 	if ( ! f.write ( &numSlots     , 4 , off ) ) return false;
 	off += 4;
 	if ( ! f.write ( &numSlotsUsed , 4 , off ) ) return false;
 	off += 4;
-	long ks = sizeof(Key_t);
-	long vs = sizeof(Val_t);
+	int32_t ks = sizeof(Key_t);
+	int32_t vs = sizeof(Val_t);
 	if ( ! f.write ( m_keys        , numSlots * ks , off ) ) return false;
 	off += numSlots * ks;
 	if ( ! f.write ( m_vals        , numSlots * vs , off ) ) return false;
@@ -484,7 +484,7 @@ bool HashTableT<Key_t, Val_t>::save ( char* filename , char *tbuf , long tsize )
 bool hashFromString ( HashTableT<int64_t,char> *ht , char *x ) {
 	if ( ! x ) return true;
 	char *xend = x + gbstrlen(x);
-	long  n    = 1;
+	int32_t  n    = 1;
 	for ( char *s = x ; s < xend ; s++ ) 
 		// i am assuming this is ascii here!
 		if (is_wspace_a(*s)||*s == '+') n++;
@@ -508,57 +508,57 @@ bool hashFromString ( HashTableT<int64_t,char> *ht , char *x ) {
 	return true;
 }
 
-template class HashTableT<long, char>;
-template class HashTableT<long, long>;
+template class HashTableT<int32_t, char>;
+template class HashTableT<int32_t, int32_t>;
 template class HashTableT<int64_t , int64_t>;
-template class HashTableT<long , int64_t>;
-template class HashTableT<int64_t , long>;
+template class HashTableT<int32_t , int64_t>;
+template class HashTableT<int64_t , int32_t>;
 template class HashTableT<int64_t, uint32_t>;
-template class HashTableT<uint64_t , unsigned long>;
+template class HashTableT<uint64_t , uint32_t>;
 template class HashTableT<uint64_t , uint64_t>;
 template class HashTableT<uint64_t , char*>;
-template class HashTableT<unsigned long, unsigned long>;
-template class HashTableT<unsigned long, bool>;
+template class HashTableT<uint32_t, uint32_t>;
+template class HashTableT<uint32_t, bool>;
 template class HashTableT<int64_t , bool>;
 template class HashTableT<uint64_t, float>;
 template class HashTableT<uint64_t, char>;
-template class HashTableT<unsigned long, char*>;
-template class HashTableT<unsigned long, FnInfo>;
-template class HashTableT<unsigned long, FnInfo*>;
-template class HashTableT<unsigned long, QuickPollInfo*>;
-template class HashTableT<unsigned long, HashTableT<uint64_t, float>* >;
+template class HashTableT<uint32_t, char*>;
+template class HashTableT<uint32_t, FnInfo>;
+template class HashTableT<uint32_t, FnInfo*>;
+template class HashTableT<uint32_t, QuickPollInfo*>;
+template class HashTableT<uint32_t, HashTableT<uint64_t, float>* >;
 template class HashTableT<int64_t, char>;
-template class HashTableT<unsigned long, int64_t>;
-template class HashTableT<unsigned long, long>;
+template class HashTableT<uint32_t, int64_t>;
+template class HashTableT<uint32_t, int32_t>;
 template class HashTableT<uint64_t, 
 			  HashTableT<uint64_t, float> *>;
 template class HashTableT<int64_t, CallbackEntry>;	// Dns.cpp
 template class HashTableT<uint32_t, TLDIPEntry>;	// Dns.cpp
-template class HashTableT<long, short>;
-template class HashTableT<uint32_t, uint32_t>;
+template class HashTableT<int32_t, int16_t>;
+//template class HashTableT<uint32_t, uint32_t>;
 template class HashTableT<uint32_t, uint64_t>;
 class FrameTrace;
 template class HashTableT<uint32_t, FrameTrace *>;
 //template class HashTableT<int64_t, Title::InLinkInfo>;
-template class HashTableT<uint64_t, long>;
+template class HashTableT<uint64_t, int32_t>;
 //template class HashTableT<uint64_t, SynonymLinkGroup>;
 template class HashTableT<uint64_t, int64_t>;
-template class HashTableT<long, ComTopInDmozRec>;
-template class HashTableT<unsigned short, const char *>;
-template class HashTableT<unsigned short, int>;
-template class HashTableT<long,uint64_t>;
+template class HashTableT<int32_t, ComTopInDmozRec>;
+template class HashTableT<uint16_t, const char *>;
+template class HashTableT<uint16_t, int>;
+template class HashTableT<int32_t,uint64_t>;
 //template class HashTableT<ull_t, TimeZoneInfo>;
-//template class HashTableT<long, DivSectInfo>;
-//template class HashTableT<long, DivLevelInfo>;
+//template class HashTableT<int32_t, DivSectInfo>;
+//template class HashTableT<int32_t, DivLevelInfo>;
 template class HashTableT<uint32_t, char>;
 template class HashTableT<uint64_t, bool>;
-template class HashTableT<uint32_t, long>;
-//template class HashTableT<long, TurkUserState>;
-template class HashTableT<long, float>;
+//template class HashTableT<uint32_t, int32_t>;
+//template class HashTableT<int32_t, TurkUserState>;
+template class HashTableT<int32_t, float>;
 //template class HashTableT<uint64_t,SiteRec>;
 //#include "Spider.h"
 //template class HashTableT<uint64_t,DomSlot>;
-//template class HashTableT<long,IpSlot>;
+//template class HashTableT<int32_t,IpSlot>;
 //template class HashTableT<uint32_t,float>;
 #include "AutoBan.h"
-template class HashTableT<long,CodeVal>;
+template class HashTableT<int32_t,CodeVal>;

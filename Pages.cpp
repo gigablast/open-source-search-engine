@@ -23,7 +23,7 @@ class WebPage {
  public:
 	char  m_pageNum;  // see enum array below for this
 	char *m_filename;
-	long  m_flen;
+	int32_t  m_flen;
 	char *m_name;     // for printing the links to the pages in admin sect.
 	bool  m_cast;     // broadcast input to all hosts?
 	bool  m_usePost;  // use a POST request/reply instead of GET?
@@ -31,7 +31,7 @@ class WebPage {
 	//char  m_perm;     // permissions, see USER_* #define's below
 	char *m_desc; // page description
 	bool (* m_function)(TcpSocket *s , HttpRequest *r);
-	long  m_niceness;
+	int32_t  m_niceness;
 };
 */
 
@@ -39,7 +39,7 @@ class WebPage {
 //   functions that generate that page
 // . IMPORTANT: these must be in the same order as the PAGE_* enum in Pages.h
 //   otherwise you'll get a malformed error when running
-static long s_numPages = 0;
+static int32_t s_numPages = 0;
 static WebPage s_pages[] = {
 
 	/*
@@ -424,15 +424,15 @@ static WebPage s_pages[] = {
         //  sendPageTurkHome, 0 }
 };
 
-WebPage *Pages::getPage ( long page ) {
+WebPage *Pages::getPage ( int32_t page ) {
 	return &s_pages[page];
 }
 
-char *Pages::getPath ( long page ) { 
+char *Pages::getPath ( int32_t page ) { 
 	return s_pages[page].m_filename; 
 }
 
-long Pages::getNumPages(){
+int32_t Pages::getNumPages(){
 	return s_numPages;
 }
 
@@ -440,7 +440,7 @@ void Pages::init ( ) {
 	// array of dynamic page descriptions
 	s_numPages = sizeof(s_pages) / sizeof(WebPage);
 	// sanity check, ensure PAGE_* corresponds to position
-	for ( long i = 0 ; i < s_numPages ; i++ ) 
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) 
 		if ( s_pages[i].m_pageNum != i ) {
 			log(LOG_LOGIC,"conf: Bad engineer. WebPage array is "
 			    "malformed. It must be 1-1 with the "
@@ -449,19 +449,19 @@ void Pages::init ( ) {
 			//exit ( -1 );
 		}
 	// set the m_flen member
-	for ( long i = 0 ; i < s_numPages ; i++ ) 
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) 
 		s_pages[i].m_flen = gbstrlen ( s_pages[i].m_filename );
 }
 
 // Used by Users.cpp to get PAGE_* from the given filename
-long Pages::getPageNumber ( char *filename ){
+int32_t Pages::getPageNumber ( char *filename ){
 	//
 	static bool s_init = false;
 	static char s_buff[8192];
 	static HashTableX s_ht;
 	if ( !s_init ){
 		s_ht.set(8,4,256,s_buff,8192,false,0,"pgnummap");
-		for ( long i=0; i < PAGE_NONE; i++ ){
+		for ( int32_t i=0; i < PAGE_NONE; i++ ){
 			if ( ! s_pages[i].m_filename  ) continue;
 			if (   s_pages[i].m_flen <= 0 ) continue;
 			int64_t pageHash = hash64( s_pages[i].m_filename,
@@ -475,17 +475,17 @@ long Pages::getPageNumber ( char *filename ){
 		if ( s_ht.m_buf != s_buff ) { char *xx=NULL;*xx=0; }
 	}
 	int64_t pageHash = hash64(filename,gbstrlen(filename));
-	long slot = s_ht.getSlot(&pageHash);
+	int32_t slot = s_ht.getSlot(&pageHash);
 	if ( slot== -1 )  return -1;
-	long value = *(long *)s_ht.getValueFromSlot(slot);
+	int32_t value = *(int32_t *)s_ht.getValueFromSlot(slot);
 	
 	return value;
 }
 
 // return the PAGE_* number thingy
-long Pages::getDynamicPageNumber ( HttpRequest *r ) {
+int32_t Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	char *path    = r->getFilename();
-	long  pathLen = r->getFilenameLen();
+	int32_t  pathLen = r->getFilenameLen();
 	if ( pathLen > 0 && path[0]=='/' ) { path++; pathLen--; }
 	// historical backwards compatibility fix
 	if ( pathLen == 9 && strncmp ( path , "cgi/0.cgi" , 9 ) == 0 ) {
@@ -516,7 +516,7 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	// 	return PAGE_RESULTS;
 
 	// go down the list comparing the pathname to dynamic page names
-	for ( long i = 0 ; i < s_numPages ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) {
 		if ( pathLen != s_pages[i].m_flen ) continue;
 		if ( strncmp ( path , s_pages[i].m_filename , pathLen ) == 0 )
 			return i;
@@ -529,9 +529,9 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 		pathLen = MAX_HTTP_FILENAME_LEN - 1;
 	// decode the path
 	char decodedPath[MAX_HTTP_FILENAME_LEN];
-	long decodedPathLen = urlDecode(decodedPath, path, pathLen);
+	int32_t decodedPathLen = urlDecode(decodedPath, path, pathLen);
 	// remove cgi
-	for (long i = 0; i < decodedPathLen; i++) {
+	for (int32_t i = 0; i < decodedPathLen; i++) {
 		if (decodedPath[i] == '?') {
 			decodedPathLen = i;
 			break;
@@ -571,7 +571,7 @@ void doneBroadcastingParms ( void *state ) {
 
 // . returns false if blocked, true otherwise
 // . send an error page on error
-bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
+bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	// error out if page number out of range
 	if ( page < PAGE_ROOT || page >= s_numPages ) 
 		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
@@ -615,7 +615,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	////////////////////
 	////////////////////
 
-	// no longer, we let anyone snoop around to check out the gui
+	// no int32_ter, we let anyone snoop around to check out the gui
 	//char guest = r->getLong("guest",0);
 
 	//if ( ! publicPage && ! isRootAdmin && ! guest )
@@ -631,7 +631,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	bool isLoopback = false;
 	if ( iptop(s->m_ip) == iptop(h->m_ip       ) ) isLocal = true;
 	if ( iptop(s->m_ip) == iptop(h->m_ipShotgun) ) isLocal = true;
-        // shortcut
+        // int16_tcut
         uint8_t *p = (uint8_t *)&s->m_ip;
 	// 127.0.0.1
 	if ( s->m_ip == 16777343 ) { isLocal = true; isLoopback = true; }
@@ -829,7 +829,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
 		// save ip in case "s" gets destroyed
-		long ip = s->m_ip;
+		int32_t ip = s->m_ip;
 		logf (LOG_INFO,"http: %s %s %s %s %s",
 		      buf,iptoa(ip),r->getRequest(),ref,
 		      r->getUserAgent());
@@ -842,7 +842,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 
 	// broadcast request to ALL hosts if we should
 	// should this request be broadcasted?
-	long cast = r->getLong("cast",-1) ;
+	int32_t cast = r->getLong("cast",-1) ;
 
 	// 0 is the default
 	// UNLESS we are the crawlbot page, john does not send a &cast=1
@@ -935,7 +935,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
 		// save ip in case "s" gets destroyed
-		long ip = s->m_ip;
+		int32_t ip = s->m_ip;
 		logf (LOG_INFO,"http: %s %s %s %s %s",
 		      buf,iptoa(ip),r->getRequest(),ref,
 		      r->getUserAgent());
@@ -987,14 +987,14 @@ static Msg28        s_msg28;
 static TcpSocket   *s_s;
 static HttpRequest  s_r;
 static bool         s_locked = false;
-static long         s_page;
+static int32_t         s_page;
 
 static void doneWrapper ( void *state ) ;
 
 // . all dynamic page requests should call this
 // . returns false if blocked, true otherwise,
 // . sets g_errno on error
-bool Pages::broadcastRequest ( TcpSocket *s , HttpRequest *r , long page ) {
+bool Pages::broadcastRequest ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	// otherwise we may block
 	if ( g_hostdb.m_hostId != 0 ) {
 		log("admin: You can only make config changes from host #0.");
@@ -1038,11 +1038,11 @@ void doneWrapper ( void *state ) {
 // because they are menus of configurable parameters for either g_conf
 // or for a particular CollectionRec record for a collection.
 bool sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
-	//long page = g_pages.getDynamicPageNumber ( r );
+	//int32_t page = g_pages.getDynamicPageNumber ( r );
 	return g_parms.sendPageGeneric ( s , r );//, page );
 }
 
-bool Pages::getNiceness ( long page ) {
+bool Pages::getNiceness ( int32_t page ) {
 	// error out if page number out of range
 	if ( page < 0 || page >= s_numPages ) 
 		return 0;
@@ -1215,8 +1215,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 			   HttpRequest *r    ,
 			   char        *qs   ,
 			   char* bodyJavascript) {
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
+	int32_t  page   = getDynamicPageNumber ( r );
+	//int32_t  user   = getUserType          ( s , r );
 	//char *username   = g_users.getUsername ( r );
 	char *username = NULL;
 	//char *coll   = r->getString ( "c"   );
@@ -1279,8 +1279,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//	sb->safePrintf("<input type=hidden name=master value=0>\n");
 	//}
 	// should any changes be broadcasted to all hosts?
-	//sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
-	//		(long)s_pages[page].m_cast);
+	//sb->safePrintf ("<input type=hidden name=cast value=\"%"INT32"\">\n",
+	//		(int32_t)s_pages[page].m_cast);
 
 
 	// center all
@@ -1425,11 +1425,11 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	status&=printCollectionNavBar ( sb, page , username, coll,pwd, qs,s,r);
 
 	// count the statuses
-	long emptyCount = 0;
-	long doneCount = 0;
-	long activeCount = 0;
-	long pauseCount = 0;
-	for (long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	int32_t emptyCount = 0;
+	int32_t doneCount = 0;
+	int32_t activeCount = 0;
+	int32_t pauseCount = 0;
+	for (int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		CrawlInfo *ci = &cc->m_globalCrawlInfo;
@@ -1456,19 +1456,19 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       );
 	sb->safePrintf(
 		       "<font color=black>"
-		       "&#x25cf;</font> spider is done (%li)"
+		       "&#x25cf;</font> spider is done (%"INT32")"
 		       "<br>"
 
 		       "<font color=orange>"
-		       "&#x25cf;</font> spider is paused (%li)"
+		       "&#x25cf;</font> spider is paused (%"INT32")"
 		       "<br>"
 
 		       "<font color=green>"
-		       "&#x25cf;</font> spider is active (%li)"
+		       "&#x25cf;</font> spider is active (%"INT32")"
 		       "<br>"
 
 		       "<font color=gray>"
-		       "&#x25cf;</font> spider queue empty (%li)"
+		       "&#x25cf;</font> spider queue empty (%"INT32")"
 		       "<br>"
 		       "</div>"
 
@@ -1642,7 +1642,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 }
 
 bool printGigabotAdvice ( SafeBuf *sb , 
-			  long page , 
+			  int32_t page , 
 			  HttpRequest *hr ,
 			  char *errMsg ) {
 
@@ -1770,28 +1770,28 @@ bool Pages::printAdminTop2 (SafeBuf     *sb   ,
 			   //char        *qs   ) {
 			   char        *qs   ,
 			   char	       *scripts    ,
-			   long		scriptsLen ) {
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
+			   int32_t		scriptsLen ) {
+	int32_t  page   = getDynamicPageNumber ( r );
+	//int32_t  user   = getUserType          ( s , r );
 	char *username =g_users.getUsername(r);
 	char *coll   = r->getString ( "c"   );
 	//char *pwd    = r->getString ( "pwd" );
-	long  fromIp = s->m_ip;
+	int32_t  fromIp = s->m_ip;
 	return printAdminTop2 ( sb, page, username, coll, NULL, fromIp , qs ,
 			       scripts, scriptsLen );
 }
 
 bool Pages::printAdminTop2 ( SafeBuf *sb    ,
-			    long    page   ,
-			    //long    user   ,
+			    int32_t    page   ,
+			    //int32_t    user   ,
 			    char   *username,
 			    char   *coll   ,
 			    char   *pwd    ,
-			    long    fromIp ,
+			    int32_t    fromIp ,
 			    //char   *qs     ) {
 			    char   *qs     ,
 			    char   *scripts,
-			    long    scriptsLen ) {
+			    int32_t    scriptsLen ) {
 	bool status = true;
 
 	sb->safePrintf(
@@ -1837,11 +1837,11 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 	//			"Quality Control</b></font>" );
 	//}
 //#ifdef SPLIT_INDEXDB
-//	long split = INDEXDB_SPLIT;
+//	int32_t split = INDEXDB_SPLIT;
 //#else
-//	long split = 1;
+//	int32_t split = 1;
 //#endif
-	//long split = g_hostdb.m_indexSplits;
+	//int32_t split = g_hostdb.m_indexSplits;
 	// the version info
 	//sb->safePrintf ("<br/><b>%s</b>", GBVersion );
 			
@@ -1872,7 +1872,7 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 */
 
 void Pages::printFormTop( SafeBuf *sb, HttpRequest *r ) {
-	long  page   = getDynamicPageNumber ( r );
+	int32_t  page   = getDynamicPageNumber ( r );
 	// . the form
 	// . we cannot use the GET method if there is more than a few k of
 	//   parameters, like in the case of the Search Controls page. The
@@ -1889,8 +1889,8 @@ void Pages::printFormTop( SafeBuf *sb, HttpRequest *r ) {
 
 void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
+	int32_t  page   = getDynamicPageNumber ( r );
+	//int32_t  user   = getUserType          ( s , r );
 	//char *username =g_users.getUsername(r);
 	//char *pwd    = r->getString ( "pwd" );
 	char *coll   = r->getString ( "c"   );
@@ -1909,9 +1909,9 @@ void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 	//}
 
 	// should any changes be broadcasted to all hosts?
-	sb->safePrintf ("<input type=\"hidden\" name=\"cast\" value=\"%li\" "
+	sb->safePrintf ("<input type=\"hidden\" name=\"cast\" value=\"%"INT32"\" "
 			"/>\n",
-			(long)s_pages[page].m_cast);
+			(int32_t)s_pages[page].m_cast);
 
 }
 
@@ -2216,12 +2216,12 @@ char *Pages::printLogo ( char *p , char *pend , char *coll ) {
 */
 
 bool Pages::printHostLinks ( SafeBuf* sb     ,
-			     long     page   ,
+			     int32_t     page   ,
 			     char    *username ,
 			     char    *password ,
 			     char    *coll   ,
 			     char    *pwd    ,
-			     long     fromIp ,
+			     int32_t     fromIp ,
 			     char    *qs     ) {
 	bool status = true;
 
@@ -2234,7 +2234,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	}
 	if ( ! password ) password = "";
 
-	long total = 0;
+	int32_t total = 0;
 	// add in hosts
 	total += g_hostdb.m_numHosts;
 	// and proxies
@@ -2251,11 +2251,11 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	if ( ! coll ) coll = "";
 
 	// print the 64 hosts before and after us
-	long radius = 512;//64;
-	long hid = g_hostdb.m_hostId;
-	long a = hid - radius;
-	long b = hid + radius;
-	long diff ;
+	int32_t radius = 512;//64;
+	int32_t hid = g_hostdb.m_hostId;
+	int32_t a = hid - radius;
+	int32_t b = hid + radius;
+	int32_t diff ;
 	if ( a < 0 ) { 
 		diff = -1 * a; 
 		a += diff; 
@@ -2265,15 +2265,15 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 		diff = b - g_hostdb.m_numHosts;
 		a -= diff; if ( a < 0 ) a = 0;
 	}
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		// skip if negative
 		if ( i < 0 ) continue;
 		if ( i >= g_hostdb.m_numHosts ) continue;
 		// get it
 		Host *h = g_hostdb.getHost ( i );
-		unsigned short port = h->m_httpPort;
+		uint16_t port = h->m_httpPort;
 		// use the ip that is not dead, prefer eth0
-		unsigned long ip = g_hostdb.getBestIp ( h , fromIp );
+		uint32_t ip = g_hostdb.getBestIp ( h , fromIp );
 		// convert our current page number to a path
 		char *path = s_pages[page].m_filename;
 		// highlight itself
@@ -2287,14 +2287,14 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 		sb->safePrintf("%s<a href=\"http://%s:%hu/%s?"
 			       //"username=%s&pwd=%s&"
 			       "c=%s%s\">"
-			       "%li</a>%s ",
+			       "%"INT32"</a>%s ",
 			       ft,iptoa(ip),port,path,
 			       //username,password,
 			       coll,qs,i,bt);
 	}		
 
 	// print the proxies
-	for ( long i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
+	for ( int32_t i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
 		char *ft = "";
 		char *bt = "";
 		if ( i == hid && g_proxy.isProxy() ) {
@@ -2302,14 +2302,14 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 			bt = "</font></b>";
 		}
 		Host *h = g_hostdb.getProxy( i );
-		unsigned short port = h->m_httpPort;
+		uint16_t port = h->m_httpPort;
 		// use the ip that is not dead, prefer eth0
-		unsigned long ip = g_hostdb.getBestIp ( h , fromIp );
+		uint32_t ip = g_hostdb.getBestIp ( h , fromIp );
 		char *path = s_pages[page].m_filename;
 		sb->safePrintf("%s<a href=\"http://%s:%hu/%s?"
 			       //"username=%s&pwd=%s&"
 			       "c=%s%s\">"
-			       "proxy%li</a>%s ",
+			       "proxy%"INT32"</a>%s ",
 			       ft,iptoa(ip),port,path,
 			       //username,password,
 			       coll,qs,i,bt);
@@ -2322,7 +2322,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 // . print the master     admin links if "user" is USER_MASTER 
 // . print the collection admin links if "user" is USER_ADMIN
 bool  Pages::printAdminLinks ( SafeBuf *sb,
-			       long  page ,
+			       int32_t  page ,
 			       char *coll ,
 			       bool  isBasic ) {
 
@@ -2360,9 +2360,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	// visible window... so just try 1000px max
 	sb->safePrintf("<div style=max-width:800px;>");
 
-	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
-	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_BASIC_SETTINGS ; i < s_numPages ; i++ ) {
+	//int32_t matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
+	//int32_t matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
+	for ( int32_t i = PAGE_BASIC_SETTINGS ; i < s_numPages ; i++ ) {
 		// do not print link if no permission for that page
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;
@@ -2524,8 +2524,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 
 bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
-				    long  page     ,
-				    //long  user     ,
+				    int32_t  page     ,
+				    //int32_t  user     ,
 				    char *username,
 				    char *coll     ,
 				    char *pwd      ,
@@ -2559,12 +2559,12 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		highlight = false; collnum=g_collectiondb.getFirstCollnum(); }
 	if ( collnum < (collnum_t)0) return status;
 	
-	long a = collnum;
-	long counta = 1;
+	int32_t a = collnum;
+	int32_t counta = 1;
 	while ( a > 0 && counta < 15 ) 
 		if ( g_collectiondb.m_recs[--a] ) counta++;
-	long b = collnum + 1;
-	long countb = 0;
+	int32_t b = collnum + 1;
+	int32_t countb = 0;
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
@@ -2574,7 +2574,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
 
 	if ( isRootAdmin )
-		sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
+		sb->safePrintf ( "<center><nobr><b>%"INT32" Collection%s</b></nobr>"
 				 "</center>\n",
 				 g_collectiondb.m_numRecsUsed , s );
 	else
@@ -2605,10 +2605,10 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		       ".e{background-color:#e0e0e0;}"
 		       "</style>\n");
 
-	long row = 0;
+	int32_t row = 0;
 
-	//for ( long i = a ; i < b ; i++ ) {
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	//for ( int32_t i = a ; i < b ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 
@@ -2695,8 +2695,8 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 /*
 char *Pages::printCollectionNavBar ( char *p        ,
 				     char *pend     ,
-				     long  page     ,
-				     //long  user     ,
+				     int32_t  page     ,
+				     //int32_t  user     ,
 				     char *username ,
 				     char *coll     ,
 				     char *pwd      ,
@@ -2728,12 +2728,12 @@ char *Pages::printCollectionNavBar ( char *p        ,
 		highlight = false; collnum=g_collectiondb.getFirstCollnum(); }
 	if ( collnum < (collnum_t)0) return p;
 	
-	long a = collnum;
-	long counta = 1;
+	int32_t a = collnum;
+	int32_t counta = 1;
 	while ( a > 0 && counta < 15 ) 
 		if ( g_collectiondb.m_recs[--a] ) counta++;
-	long b = collnum + 1;
-	long countb = 0;
+	int32_t b = collnum + 1;
+	int32_t countb = 0;
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
@@ -2744,7 +2744,7 @@ char *Pages::printCollectionNavBar ( char *p        ,
 	if ( page >= PAGE_OVERVIEW ) color = "red";
 	else                         color = "black";
 
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		char *cname = cc->m_coll;
@@ -2773,10 +2773,10 @@ char *Pages::printCollectionNavBar ( char *p        ,
 // print the drop down menu of rulesets used by Sitedb and URL Filters page
 char *Pages::printRulesetDropDown ( char *p            , 
 				    char *pend         ,
-				    long  user         ,
+				    int32_t  user         ,
 				    char *cgi          ,
-				    long  selectedNum  ,
-				    long  subscript    ) {
+				    int32_t  selectedNum  ,
+				    int32_t  subscript    ) {
 	// . print pulldown menu of different site filenums
 	// . 0 - default site
 	// . 1 - banned  site
@@ -2785,7 +2785,7 @@ char *Pages::printRulesetDropDown ( char *p            ,
 	// . 4 - good    site
 	// . 5 - super   site
 	if ( subscript <= 0 ) sprintf(p,"<select name=%s>\n"   ,cgi);
-	else                  sprintf(p,"<select name=%s%li>\n",cgi,subscript);
+	else                  sprintf(p,"<select name=%s%"INT32">\n",cgi,subscript);
 	p += gbstrlen ( p );
 	// print NONE (PageReindex.cpp uses this one)
 
@@ -2794,7 +2794,7 @@ char *Pages::printRulesetDropDown ( char *p            ,
 	p += gbstrlen ( p );
 	//	}
 
-	long i = 0;
+	int32_t i = 0;
 	for ( ; i < 10000 ; i++ ) {
 		// . get the ruleset's xml
 		// . this did accept the coll/collLen but now i think we 
@@ -2811,7 +2811,7 @@ char *Pages::printRulesetDropDown ( char *p            ,
 		char *rr = "";
 		if ( retired ) rr = "retired - ";
 		// get the name of the record
-		long  slen;
+		int32_t  slen;
 		char *s = xml->getString ( "name" , &slen );
 		// set pp to "selected" if it matches "fileNum"
 		char *pp = "";
@@ -2820,18 +2820,18 @@ char *Pages::printRulesetDropDown ( char *p            ,
 		if ( s && slen > 0 ) {
 			char c = s[slen];
 			s[slen] = '\0';
-			sprintf ( p , "<option value=%li%s>%s%s "
-				  "[tagdb%li.xml]",i,pp,rr,s,i);
+			sprintf ( p , "<option value=%"INT32"%s>%s%s "
+				  "[tagdb%"INT32".xml]",i,pp,rr,s,i);
 			s[slen] = c;
 		}
 		// otherwise, print as number
 		else  
-			sprintf ( p , "<option value=%li%s>%stagdb%li.xml",
+			sprintf ( p , "<option value=%"INT32"%s>%stagdb%"INT32".xml",
 				  i,pp,rr,i);
 		p += gbstrlen ( p );
 	}
-	sprintf ( p , "<option value=%li>Always Use Default", 
-		  (long)USEDEFAULTSITEREC);
+	sprintf ( p , "<option value=%"INT32">Always Use Default", 
+		  (int32_t)USEDEFAULTSITEREC);
 	p += gbstrlen ( p );
 
 	sprintf ( p , "</select>\n" );
@@ -2841,10 +2841,10 @@ char *Pages::printRulesetDropDown ( char *p            ,
 
 
 bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
-				   long  user         ,
+				   int32_t  user         ,
 				   char *cgi          ,
-				   long  selectedNum  ,
-				   long  subscript    ) {
+				   int32_t  selectedNum  ,
+				   int32_t  subscript    ) {
 	// . print pulldown menu of different site filenums
 	// . 0 - default site
 	// . 1 - banned  site
@@ -2853,7 +2853,7 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 	// . 4 - good    site
 	// . 5 - super   site
 	if ( subscript <= 0 ) sb->safePrintf("<select name=%s>\n"   ,cgi);
-	else                  sb->safePrintf("<select name=%s%li>\n",cgi,
+	else                  sb->safePrintf("<select name=%s%"INT32">\n",cgi,
 					     subscript);
 	// print NONE (PageReindex.cpp uses this one)
 
@@ -2861,7 +2861,7 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 	sb->safePrintf ("<option value=-1>NONE");
 	//	}
 
-	long i = 0;
+	int32_t i = 0;
 	for ( ; i < 10000 ; i++ ) {
 		// . get the ruleset's xml
 		// . this did accept the coll/collLen but now i think we 
@@ -2878,7 +2878,7 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 		char *rr = "";
 		if ( retired ) rr = "retired - ";
 		// get the name of the record
-		long  slen;
+		int32_t  slen;
 		char *s = xml->getString ( "name" , &slen );
 		// set pp to "selected" if it matches "fileNum"
 		char *pp = "";
@@ -2887,27 +2887,27 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 		if ( s && slen > 0 ) {
 			char c = s[slen];
 			s[slen] = '\0';
-			sb->safePrintf ( "<option value=%li%s>%s%s "
-					 "[tagdb%li.xml]",i,pp,rr,s,i);
+			sb->safePrintf ( "<option value=%"INT32"%s>%s%s "
+					 "[tagdb%"INT32".xml]",i,pp,rr,s,i);
 			s[slen] = c;
 		}
 		// otherwise, print as number
 		else  
-			sb->safePrintf ( "<option value=%li%s>%stagdb%li.xml",
+			sb->safePrintf ( "<option value=%"INT32"%s>%stagdb%"INT32".xml",
 					 i,pp,rr,i);
 	}
-	sb->safePrintf ( "<option value=%li>Always Use Default", 
-			 (long)USEDEFAULTSITEREC);
+	sb->safePrintf ( "<option value=%"INT32">Always Use Default", 
+			 (int32_t)USEDEFAULTSITEREC);
 
 	sb->safePrintf ( "</select>\n" );
 	return true;
 }
 
-char *Pages::printRulesetDescriptions ( char *p , char *pend , long user ) {
+char *Pages::printRulesetDescriptions ( char *p , char *pend , int32_t user ) {
 	sprintf ( p , "<table width=100%% cellpadding=2>" );
 	p += gbstrlen ( p );	
 	// print the descriptions of each one if we have them
-	for ( long i = 0 ; i < 10000 ; i++ ) {
+	for ( int32_t i = 0 ; i < 10000 ; i++ ) {
 		Xml *xml = g_tagdb.getSiteXml(i,g_conf.m_defaultColl, 
 					       gbstrlen(g_conf.m_defaultColl));
 		// if NULL, we're finished
@@ -2919,10 +2919,10 @@ char *Pages::printRulesetDescriptions ( char *p , char *pend , long user ) {
 		char *rr="";
 		if ( retired ) rr = " <i>(retired)</i>";
 		// skip if no description
-		long slen;
+		int32_t slen;
 		if ( ! xml->getString ( "description" , &slen ) ) continue;
 		// print number of ruleset
-		sprintf ( p , "<tr><td><b>tagdb%li.xml</b></td><td>",i );
+		sprintf ( p , "<tr><td><b>tagdb%"INT32".xml</b></td><td>",i );
 		p += gbstrlen(p);
 		// print the name of ruleset, if any
 		char *s = xml->getString ( "name" , &slen );
@@ -2954,11 +2954,11 @@ char *Pages::printRulesetDescriptions ( char *p , char *pend , long user ) {
 }
 
 // returns false if failed to print (out of mem, probably)
-bool Pages::printRulesetDescriptions ( SafeBuf *sb , long user ) {
+bool Pages::printRulesetDescriptions ( SafeBuf *sb , int32_t user ) {
 	if ( ! sb->safePrintf (  "<table width=100%% cellpadding=2>" ) )
 		return false;
 	// print the descriptions of each one if we have them
-	for ( long i = 0 ; i < 10000 ; i++ ) {
+	for ( int32_t i = 0 ; i < 10000 ; i++ ) {
 		Xml *xml = g_tagdb.getSiteXml(i,g_conf.m_defaultColl, 
 					       gbstrlen(g_conf.m_defaultColl));
 		// if NULL, we're finished
@@ -2970,10 +2970,10 @@ bool Pages::printRulesetDescriptions ( SafeBuf *sb , long user ) {
 		char *rr="";
 		if ( retired ) rr = " <i>(retired)</i>";
 		// skip if no description
-		long slen;
+		int32_t slen;
 		if ( ! xml->getString ( "description" , &slen ) ) continue;
 		// print number of ruleset
-		if ( ! sb->safePrintf( "<tr><td><b>tagdb%li.xml</b>"
+		if ( ! sb->safePrintf( "<tr><td><b>tagdb%"INT32".xml</b>"
 				       "</td><td>",i ))
 			return false;
 		// print the name of ruleset, if any
@@ -3006,7 +3006,7 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf("<html><head><title>Help Fight Search Engine Spam</title></head><body>");
 
-	long clen;
+	int32_t clen;
 	char* coll = r->getString("c", &clen, "");
 	p.safePrintf ("<a href=\"/?c=%s\">"
 		      "<img width=\"295\" height=\"64\" border=\"0\" "
@@ -3021,7 +3021,7 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("</body></html>");
 
 	char* sbuf = p.getBufStart();
-	long sbufLen = p.length();
+	int32_t sbufLen = p.length();
 
 	bool retval = g_httpServer.sendDynamicPage(s,
 						   sbuf,
@@ -3110,7 +3110,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "<ul>"
 		     );
 
-	for ( long i = 0 ; i < s_numPages ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) {
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
 		char *pageStr = s_pages[i].m_filename;
 		// unknown?
@@ -3143,7 +3143,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<hr>\n");
 
 	bool printed = false;
-	for ( long i = 0 ; i < s_numPages ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) {
 		if ( i == PAGE_NONE ) continue;
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
 		if ( printed )
@@ -3173,8 +3173,8 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		       "</td></tr>\n",
 		       TABLE_STYLE );
 	// table of the query keywords
-	long n = getNumFieldCodes();
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = getNumFieldCodes();
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get field #i
 		QueryField *f = &g_fields[i];
 		// print it out
@@ -3190,7 +3190,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("</table></center></body></html>");
 
 	char* sbuf = p.getBufStart();
-	long sbufLen = p.length();
+	int32_t sbufLen = p.length();
 
 	bool retval = g_httpServer.sendDynamicPage(s,
 						   sbuf,
@@ -3200,7 +3200,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 }
 
 
-bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
+bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 
 	if ( PAGENUM == PAGE_NONE ) return true;
 
@@ -3318,7 +3318,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			, DARK_BLUE );
 	
 	const char *blues[] = {DARK_BLUE,LIGHT_BLUE};
-	long count = 1;
+	int32_t count = 1;
 
 	//
 	// every page supports the:
@@ -3335,7 +3335,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	// page display/output parms
 	sb->safePrintf("<tr bgcolor=%s>"
-		       "<td>%li</td>\n"
+		       "<td>%"INT32"</td>\n"
 		       "<td><b>format</b></td>"
 		       "<td>STRING</td>"
 		       "<td>output format</td>"
@@ -3353,7 +3353,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//      PAGENUM == PAGE_SEARCH ||
 	//      PAGENUM == PAGE_SPIDER ) {
 	sb->safePrintf("<tr bgcolor=%s>"
-		       "<td>%li</td>\n"
+		       "<td>%"INT32"</td>\n"
 		       "<td><b>showinput</b></td>"
 		       "<td>BOOL (0 or 1)</td>"
 		       "<td>show input and settings</td>"
@@ -3373,7 +3373,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//   show for selected pages here
 	// if ( PAGENUM != PAGE_MASTER ) {
 	// 	sb->safePrintf("<tr bgcolor=%s>"
-	// 		       "<td>%li</td>\n"
+	// 		       "<td>%"INT32"</td>\n"
 	// 		       "<td><b>c</b></td>"
 	// 		       "<td>STRING</td>"
 	// 		       "<td>Collection</td>"
@@ -3391,7 +3391,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//char *lastPage = NULL;
 	//Parm *lastParm = NULL;
 
-	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
+	for ( int32_t i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
 		// assume do not print
 		//parm->m_pstr = NULL;
@@ -3407,7 +3407,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		//if ( ! (parm->m_flags & PF_API) ) continue;
 		//if ( parm->m_page == PAGE_FILTERS ) continue;
 
-		long pageNum = parm->m_page;
+		int32_t pageNum = parm->m_page;
 
 		// these have PAGE_NONE for some reason
 		if ( parm->m_obj == OBJ_SI ) pageNum = PAGE_RESULTS;
@@ -3443,7 +3443,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		else
 			sb->safePrintf ( "<tr bgcolor=#%s>",blues[count%2]);
 
-		sb->safePrintf("<td>%li</td>",count++);
+		sb->safePrintf("<td>%"INT32"</td>",count++);
 
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
@@ -3691,7 +3691,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// get the collection
-	long  collLen = 0;
+	int32_t  collLen = 0;
 	char *coll    = hr->getString("c",&collLen);
 
 	// default to main collection. if you can login to main then you
@@ -3737,10 +3737,10 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( hasPermission && emsg.length() ) { char *xx=NULL;*xx=0; }
 
 	// what page are they originally trying to get to?
-	long page = g_pages.getDynamicPageNumber(hr);
+	int32_t page = g_pages.getDynamicPageNumber(hr);
 
 	// try to the get reference Page
-	long refPage = hr->getLong("ref",-1);
+	int32_t refPage = hr->getLong("ref",-1);
 	// if they cam to login page directly... to to basic page then
 	if ( refPage == PAGE_LOGIN ||
 	     refPage == PAGE_LOGIN2 ||
@@ -3779,7 +3779,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		      , ff );
 
 	sb.safePrintf(
-		  "<input type=hidden name=ref value=\"%li\">"
+		  "<input type=hidden name=ref value=\"%"INT32"\">"
 		  "<center>"
 		  "<br><br>"
 		  "<font color=ff0000><b>%s</b></font>"
@@ -3852,12 +3852,12 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	char *boxEnd =
 		"</td></tr></table>";
 
-	long adds = 0;
+	int32_t adds = 0;
 
 
 	mb->safePrintf("<div style=max-width:500px;>");
 
-	long page = g_pages.getDynamicPageNumber ( hr );
+	int32_t page = g_pages.getDynamicPageNumber ( hr );
 
 	// are we just starting off? give them a little help.
 	CollectionRec *crm = g_collectiondb.getRec("main");
@@ -3912,8 +3912,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	}
 
 	// out of disk space?
-	long out = 0;
-	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+	int32_t out = 0;
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		if ( h->m_diskUsage < 98.0 ) continue;
 		out++;
@@ -3924,7 +3924,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		char *s = "s are";
 		if ( out == 1 ) s = " is";
 		mb->safePrintf("%s",box);
-		mb->safePrintf("%li host%s over 98%% disk usage. "
+		mb->safePrintf("%"INT32" host%s over 98%% disk usage. "
 			       "See the <a href=/admin/hosts>"
 			       "hosts</a> table.",out,s);
 		mb->safePrintf("%s",boxEnd);
@@ -3932,7 +3932,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 
 
 	bool sameVersions = true;
-	for ( long i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
+	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		// count if not dead
 		Host *h1 = &g_hostdb.m_hosts[i-1];
 		Host *h2 = &g_hostdb.m_hosts[i];
@@ -4026,7 +4026,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		char *s = "hosts are";
 		if ( ps->m_numHostsDead == 1 ) s = "host is";
 		mb->safePrintf("%s",box);
-		mb->safePrintf("%li %s dead and not responding to "
+		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
 			       "<a href=/admin/host>hosts table</a>.",
 			       ps->m_numHostsDead ,s );
@@ -4040,7 +4040,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("All Threads are disabled. "
 			       "Might hurt performance for doing system "
 			       "calls which call 3rd party executables and "
-			       "can take a long time to run, like pdf2html.");
+			       "can take a int32_t time to run, like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4062,7 +4062,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "Might hurt performance because these "
 			       "are calls to "
 			       "3rd party executables and "
-			       "can take a long time to run, like pdf2html.");
+			       "can take a int32_t time to run, like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 

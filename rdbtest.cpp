@@ -19,8 +19,8 @@ int main ( int argc , char *argv[] ) {
 	char data1 [ 32 ] , data2[32];
 	*(int64_t *)data1 = 273777931569279933;
 	*(int64_t *)data2 = 273777931569279932;
-	*(long *)(data1 + 8) = 1059574105;
-	*(long *)(data2 + 8) = 1059574105;
+	*(int32_t *)(data1 + 8) = 1059574105;
+	*(int32_t *)(data2 + 8) = 1059574105;
 
 	key_t startKey ;
 	key_t endKey   ;
@@ -60,7 +60,7 @@ int main ( int argc , char *argv[] ) {
 
 	final.merge_r ( ptrs , 2 , false , startKey , endKey , true , 16 );
 
-	log("final listsize = %li", final.getListSize() );
+	log("final listsize = %"INT32"", final.getListSize() );
 
 	return 0;
 }

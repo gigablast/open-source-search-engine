@@ -26,13 +26,13 @@ class Msg28 {
 	// . sets g_errno on error
 	// . sendToProxy only used to stop the proxy
 	bool massConfig ( class TcpSocket *s, class HttpRequest *r , 
-			  long hostId , 
+			  int32_t hostId , 
 			  void *state , void (* callback) (void *state) ,
 			  bool ourselvesLast = true ,
 			  bool sendToProxy = false ,
 			  // this not -1 if specifying a range of docids
 			  // in the closed interval, [hostId,hostId2]
-			  long hostId2 = -1 );
+			  int32_t hostId2 = -1 );
 
 	bool registerHandler ( ) ;
 
@@ -42,21 +42,21 @@ class Msg28 {
 	void        *m_state;
 	void      (* m_callback ) ( void *state );
 
-	long  m_i;
+	int32_t  m_i;
 
 	char *m_buf;
-	long  m_bufSize;
-	long  m_bufLen;
+	int32_t  m_bufSize;
+	int32_t  m_bufLen;
 
-	long  m_numRequests;
-	long  m_numReplies;
-	long  m_numHosts;
+	int32_t  m_numRequests;
+	int32_t  m_numReplies;
+	int32_t  m_numHosts;
 
-	long  m_hostId;
-	long  m_hostId2;
+	int32_t  m_hostId;
+	int32_t  m_hostId2;
 
 	bool  m_sendToProxy;
-	long  m_sendTotal;
+	int32_t  m_sendTotal;
 
 	bool  m_freeBuf;
 };

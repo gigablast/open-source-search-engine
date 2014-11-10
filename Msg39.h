@@ -19,7 +19,7 @@
 
 #define MAX_MSG39_REQUEST_SIZE (500+MAX_QUERY_LEN)
 
-void  handleRequest39 ( UdpSlot *slot , long netnice ) ;
+void  handleRequest39 ( UdpSlot *slot , int32_t netnice ) ;
 
 class Msg39Request {
 
@@ -90,15 +90,15 @@ class Msg39Request {
 	// we are requesting that this many docids be returned. Msg40 requests
 	// of Msg3a a little more docids than it needs because it assumes
 	// some will be de-duped at summary gen time.
-	long    m_docsToGet;
-	long    m_nqt; // # of query terms
+	int32_t    m_docsToGet;
+	int32_t    m_nqt; // # of query terms
 	char    m_niceness;
-	long    m_maxAge;
-	long    m_maxQueryTerms;
-	long    m_numDocIdSplits;
+	int32_t    m_maxAge;
+	int32_t    m_maxQueryTerms;
+	int32_t    m_numDocIdSplits;
 	float   m_sameLangWeight;
 
-	//long    m_compoundListMaxSize;
+	//int32_t    m_compoundListMaxSize;
 	char    m_boolFlag;
 	uint8_t m_language;
 
@@ -124,7 +124,7 @@ class Msg39Request {
 	char    m_forSectionStats;
 
 	// Msg3a still uses this
-	//long    m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
+	//int32_t    m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
 
 	//char    m_useMinAlgo;
 	//char    m_fastIntersection;
@@ -140,7 +140,7 @@ class Msg39Request {
 	int64_t m_minSerpDocId;
 
 	// msg3a stuff
-	long    m_timeout; // in seconds
+	int32_t    m_timeout; // in seconds
 
 	time_t  m_nowUTC;
 
@@ -154,11 +154,11 @@ class Msg39Request {
 	
 	// do not add new string parms before size_readSizes or
 	// after size_whiteList so serializeMsg() calls still work
-	long    size_readSizes;
-	long    size_termFreqWeights;
-	long    size_query;
-	long    size_whiteList;
-	//long    size_coll;
+	int32_t    size_readSizes;
+	int32_t    size_termFreqWeights;
+	int32_t    size_query;
+	int32_t    size_whiteList;
+	//int32_t    size_coll;
 
 	char    m_buf[0];
 };
@@ -171,13 +171,13 @@ public:
 	// zero ourselves out
 	void reset() { memset ( (char *)this,0,sizeof(Msg39Reply) ); };
 
-	long   m_numDocIds;
+	int32_t   m_numDocIds;
 	// # of "unignored" query terms
-	long   m_nqt;
+	int32_t   m_nqt;
 	// # of estimated hits we had
-	long   m_estimatedHits;
+	int32_t   m_estimatedHits;
 	// error code
-	long   m_errno;
+	int32_t   m_errno;
 
 	// do not add new string parms before ptr_docIds or
 	// after ptr_clusterRecs so serializeMsg() calls still work
@@ -192,13 +192,13 @@ public:
 	
 	// do not add new string parms before size_docIds or
 	// after size_clusterRecs so serializeMsg() calls still work
-	long   size_docIds;
-	long   size_scores;
-	long   size_scoreInfo;
-	long   size_pairScoreBuf  ;
-	long   size_singleScoreBuf;
-	long   size_facetHashList;
-	long   size_clusterRecs;
+	int32_t   size_docIds;
+	int32_t   size_scores;
+	int32_t   size_scoreInfo;
+	int32_t   size_pairScoreBuf  ;
+	int32_t   size_singleScoreBuf;
+	int32_t   size_facetHashList;
+	int32_t   size_clusterRecs;
 
 	// . this is the "string buffer" and it is a variable size
 	// . this whole class is cast to a udp reply, so the size of "buf"
@@ -254,7 +254,7 @@ class Msg39 {
 
 	char       m_debug;
 
-	//long m_numDocIdSplits;
+	//int32_t m_numDocIdSplits;
 	bool m_allocedTree;
 	int64_t m_ddd;
 	int64_t m_dddEnd;
@@ -268,41 +268,41 @@ class Msg39 {
 	int64_t  m_startTime;
 
 	// this is set if PosdbTable::addLists() had an error
-	long       m_errno;
+	int32_t       m_errno;
 
 	// always use top tree now
 	TopTree    m_tt;
 
 	char       m_boolFlag;
 
-	long       m_firstResultNum;
+	int32_t       m_firstResultNum;
 
 	int64_t  m_numTotalHits;
 
-	long       m_numCensored;
+	int32_t       m_numCensored;
 
 	// for indexdb splitting
 	char      m_paritySplit;
 
-	long        m_bufSize;
+	int32_t        m_bufSize;
 	char       *m_buf;
 	int64_t  *m_clusterDocIds;
 	char       *m_clusterLevels;
 	key_t      *m_clusterRecs;
-	long        m_numClusterDocIds;
-	long        m_numVisible;
-	long        m_numDocIds;
+	int32_t        m_numClusterDocIds;
+	int32_t        m_numVisible;
+	int32_t        m_numDocIds;
 	Msg51       m_msg51;
 	bool        m_gotClusterRecs;
 	bool        controlLoop();
-	long m_phase;
+	int32_t m_phase;
 	void        estimateHitsAndSendReply   ();
 	bool        setClusterRecs ();
 	bool        gotClusterRecs ();
 
 	// hack stuff
 	void *m_tmp;
-	long  m_tmp2;
+	int32_t  m_tmp2;
 	bool  m_blocked;
 	void (*m_callback)( void *state );
 	void  *m_state;

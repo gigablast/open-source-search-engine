@@ -22,7 +22,7 @@ int64_t gettimeofdayInMilliseconds() {
 
 static pthread_attr_t s_attr;
 static void *startUp ( void *state ) ;
-static long s_lock ;
+static int32_t s_lock ;
 
 static int s_fd1;
 //static int s_fd2;
@@ -64,7 +64,7 @@ int main ( ) {
 }
 
 void *startUp ( void *state ) {
-	long id = (long) state;
+	int32_t id = (int32_t) state;
 	s_lock =0;
 	fprintf(stderr,"got\n");
 	// exit now to test pthread_create overhead
@@ -85,17 +85,17 @@ void *startUp ( void *state ) {
 	// read buf
 	char buf [ 100*1024 ];
 	// msg
-	fprintf(stderr,"priority = %li launched\n",(long)p);
+	fprintf(stderr,"priority = %"INT32" launched\n",(int32_t)p);
 	// now do a stupid loop
-	long j, off;
-	for ( long i = 0 ; i < 30000000 ; i++ ) {
+	int32_t j, off;
+	for ( int32_t i = 0 ; i < 30000000 ; i++ ) {
 		j = i % 1000000;
-		//if ( j == 0 ) fprintf(stderr,"%li) i=%li\n",p,i );
+		//if ( j == 0 ) fprintf(stderr,"%"INT32") i=%"INT32"\n",p,i );
 		if ( j == 0 ) {
 			off = 0; //rand() % 70000000 ;
-			fprintf(stderr,"%li) i=%li start\n",id,i );
+			fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 			pread ( s_fd1 , buf , 1024*2 , off );
-			fprintf(stderr,"%li) i=%li done\n",id,i );
+			fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
 		}
 	}
 		

@@ -28,13 +28,13 @@ Hostdb g_hostdb;
 // for harvesting link text from the larger index
 Hostdb g_hostdb2;
 
-HashTableT <uint64_t, unsigned long> g_hostTableUdp;
-HashTableT <uint64_t, unsigned long> g_hostTableTcp;
+HashTableT <uint64_t, uint32_t> g_hostTableUdp;
+HashTableT <uint64_t, uint32_t> g_hostTableTcp;
 
 Host     *g_listHosts [ MAX_HOSTS * 4 ];
 uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
-long      g_listNumTotal = 0;
+int32_t      g_listNumTotal = 0;
 
 
 void Hostdb::resetPortTables () {
@@ -51,8 +51,8 @@ static int cmp  ( const void *h1 , const void *h2 ) ;
 //static void  syncWrapper        ( int fd, void *state );
 
 //pid_t g_syncpid     = -1;
-//long  g_syncticker  = 0;
-//long  g_syncTimeout = -1;
+//int32_t  g_syncticker  = 0;
+//int32_t  g_syncTimeout = -1;
 
 Hostdb::Hostdb ( ) {
 	m_hosts = NULL;
@@ -71,7 +71,7 @@ Hostdb::~Hostdb () {
 
 void Hostdb::reset ( ) {
 
-	// for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
+	// for ( int32_t i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
 	// 	Host *h = &m_hosts[i];
 	// 	// if nothing do not try to free it
 	// 	if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
@@ -99,7 +99,7 @@ char *Hostdb::getNetName ( ) {
 // . gets filename that contains the hosts from the Conf file
 // . return false on errro
 // . g_errno may NOT be set
-bool Hostdb::init ( long hostIdArg , char *netName ,
+bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		    bool proxyHost , char useTmpCluster , char *cwd ) {
 	// reset my ip and port
 	m_myIp             = 0;
@@ -130,7 +130,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 	/*
 	// for yippy use host as port
-	long yippyPort;
+	int32_t yippyPort;
 	if ( g_isYippy ) {
 		yippyPort = hostId;
 		hostId = 0;
@@ -145,20 +145,20 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// make sure our hostId is in our conf file
 	//if ( hostId < 0 ) 
 	//	return log(
-	//		   "conf: Negative hostId %li supplied",hostId);
+	//		   "conf: Negative hostId %"INT32" supplied",hostId);
 	// set early for calling log()
 	//m_hostId = hostId;
 	// set clock in sync in fctypes.cpp
 	//if ( m_hostId == 0 ) g_clockInSync = true;
 	// log it
-	//if(this == &g_hostdb) logf(LOG_INIT,"conf: HostId is %li.",m_hostId);
+	//if(this == &g_hostdb) logf(LOG_INIT,"conf: HostId is %"INT32".",m_hostId);
 	// . File::open() open old if it exists, otherwise,
 	File f;
 	f.set ( dir , filename );
 	// . returns -1 on error and sets g_errno
 	// . returns false if does not exist, true otherwise
-	long status = f.doesExist();
-	long numRead;
+	int32_t status = f.doesExist();
+	int32_t numRead;
 
 	// skip config file for yippy
 	/*
@@ -207,9 +207,9 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		g_errno = EBUFTOOSMALL; 
 		return log(
 			   "conf: %s has filesize "
-			   "of %li bytes, which is greater than %li max.",
+			   "of %"INT32" bytes, which is greater than %"INT32" max.",
 			   filename,m_bufSize,
-			   (long)(MAX_HOSTS+MAX_SPARES)*128);
+			   (int32_t)(MAX_HOSTS+MAX_SPARES)*128);
 	}
 	// note it
 	//log("host: reading %s",f.getFilename());
@@ -232,7 +232,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// how many hosts do we have?
 	char *p    = m_buf;
 	char *pend = m_buf + m_bufSize;
-	long  i = 0;
+	int32_t  i = 0;
 	m_numSpareHosts = 0;
 	m_numProxyHosts = 0;
 	m_numHosts      = 0;
@@ -295,22 +295,22 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	if ( ! m_hosts ) return log(
 				    "conf: Memory allocation failed.");
 
-	//unsigned long maxShard = 0;
-	long numGrunts = 0;
+	//uint32_t maxShard = 0;
+	int32_t numGrunts = 0;
 
 	// now fill up m_hosts
 	p = m_buf;
 	i = 0;
-	long line = 1;
-	//unsigned long lastShard = 0;
-	long proxyNum = 0;
+	int32_t line = 1;
+	//uint32_t lastShard = 0;
+	int32_t proxyNum = 0;
 
 	// assume defaults
-	//long portOffset = -99999;
-	long indexSplits = 0;
+	//int32_t portOffset = -99999;
+	int32_t indexSplits = 0;
 	char *wdir2 = NULL;
-	long  wdirlen2 = 0;
-	long numMirrors = -1;
+	int32_t  wdirlen2 = 0;
+	int32_t numMirrors = -1;
 
 	for ( ; *p ; p++ , line++ ) {
 		if ( is_wspace_a (*p) ) continue;
@@ -405,7 +405,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		//	isProxy = true;
 
 		char *wdir;
-		long  wdirlen;
+		int32_t  wdirlen;
 
 		// reset this
 		h->m_pingMax = -1;
@@ -435,10 +435,10 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		}			
 		*/
 
-		long port1 = 6002;
-		long port2 = 7002;
-		long port3 = 8002;
-		long port4 = 9002;
+		int32_t port1 = 6002;
+		int32_t port2 = 7002;
+		int32_t port3 = 8002;
+		int32_t port4 = 9002;
 
 		// support old format "000 gk0" and use default ports above
 		//if ( p[0] == 'g' && p[1] == 'k' ) goto skip;
@@ -491,11 +491,11 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		// skip hostname (can be an ip now)
 		while ( *p && (*p=='.'||is_alnum_a(*p)) ) p++;
 		// get length
-		long hlen = p - host;
+		int32_t hlen = p - host;
 		// limit
 		if ( hlen > 15 ) {
 			g_errno = EBADENGINEER;
-			log("admin: hostname too long in hosts.conf");
+			log("admin: hostname too int32_t in hosts.conf");
 			return false;
 		}
 		// copy it
@@ -505,7 +505,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		// need this for hashing
 		hashinit();
 		// if hostname is an ip that's ok i guess
-		long ip = atoip ( h->m_hostname );
+		int32_t ip = atoip ( h->m_hostname );
 		// for localhost
 		//if ( ! ip && host &&
 		//     ! strncasecmp(host,"localhost",9) ) {
@@ -541,7 +541,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		for ( ; *p == ' ' ; p++ );
 		// must be a 2nd hostname
 		char *hostname2 = NULL;
-		long hlen2 = 0;
+		int32_t hlen2 = 0;
 		if ( *p != '\n' ) {
 			hostname2 = p;
 			// find end of it
@@ -550,8 +550,8 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 				      is_alnum_a(*p) ; p++ );
 			hlen2 = p - hostname2;
 		}
-		long inc = 0;
-		long ip2 = 0;
+		int32_t inc = 0;
+		int32_t ip2 = 0;
 		// was it "retired"?
 		if ( hostname2 && strncasecmp(hostname2,"retired",7) == 0 ) {
 			h->m_retired = true;
@@ -561,14 +561,14 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		// if no secondary hostname for "gk2" (e.g.) try "gki2"
 		char tmp2[32];
 		if ( ! hostname2 && host[0]=='g' && host[1]=='k') {
-			long hn = atol(host+2);
-			sprintf(tmp2,"gki%li",hn);
+			int32_t hn = atol(host+2);
+			sprintf(tmp2,"gki%"INT32"",hn);
 			hostname2 = tmp2;
 		}
 		// limit
 		if ( hlen2 > 15 ) {
 			g_errno = EBADENGINEER;
-			log("admin: hostname too long in hosts.conf");
+			log("admin: hostname too int32_t in hosts.conf");
 			return false;
 		}
 		// a direct ip address?
@@ -579,7 +579,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		}
 		if ( ! ip2 && hostname2 ) {
 			// set this ip
-			//long nextip;
+			//int32_t nextip;
 			// now that must have the eth1 ip in /etc/hosts
 			key_t k = hash96 ( h->m_hostname2 , hlen2 );
 			// get eth1 ip of hostname in /etc/hosts
@@ -619,9 +619,9 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		if ( h->m_type & HT_QCPROXY ) {
 			char *s = p;
 			for ( ; *s && *s!=':' ; s++ );
-			long ip = 0;
+			int32_t ip = 0;
 			if ( *s == ':' ) ip = atoip(p,s-p);
-			long port = 0;
+			int32_t port = 0;
 			if ( *s ) port = atol(s+1);
 			// sanity
 			if ( ip == 0 || port == 0 ) {
@@ -680,7 +680,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		if ( ! wdir ) {
 			g_errno = EBADENGINEER;
 			log("admin: need working-dir for host "
-			    "in hosts.conf line %li",line);
+			    "in hosts.conf line %"INT32"",line);
 			return false;
 		}
 		
@@ -692,7 +692,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 			// save the note
 			char *n = p;
 			while ( *n && *n != '\n' && n < pend ) n++;
-			long noteSize = n - p;
+			int32_t noteSize = n - p;
 			if ( noteSize > 127 ) noteSize = 127;
 			memcpy(h->m_note, p, noteSize);
 			*p++ = '\0'; // NULL terminate for atoip
@@ -702,7 +702,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 		/*
 		sscanf ( p , 
-			 "%li %s %s %hu %hu %hu %hu %hu %li %li %s" ,
+			 "%"INT32" %s %s %hu %hu %hu %hu %hu %"INT32" %"INT32" %s" ,
 			 &h->m_hostId ,
 			 ipbuf1 ,
 			 ipbuf2 ,
@@ -730,7 +730,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		if ( h->m_shardNum <= lastShard && h->m_shardNum != 0 
 		     && !(h->m_type&(HT_ALL_PROXIES)) ) {
 		      g_errno = EBADENGINEER;
-		      return log("conf: Host has bad shard # in %s line %li. "
+		      return log("conf: Host has bad shard # in %s line %"INT32". "
 				 "Shard #'s must be strictly increasing, with "
 				 "the exception of going from the last "
 				 "shard # to the shard # of zero.",
@@ -747,8 +747,8 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		if ( h->m_type==HT_GRUNT && h->m_hostId != i ) {
 		     g_errno = EBADHOSTID; 
 		     return log(
-				"conf: Unordered hostId of %li, should be %li "
-				"in %s line %li.",
+				"conf: Unordered hostId of %"INT32", should be %"INT32" "
+				"in %s line %"INT32".",
 				h->m_hostId,i,filename,line);
 		}
 
@@ -756,21 +756,21 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		if ( wdirlen > 127 ) {
 		      g_errno = EBADENGINEER;
 		      return log(
-				 "conf: Host working dir too long in "
-				 "%s line %li.",filename,line);
+				 "conf: Host working dir too int32_t in "
+				 "%s line %"INT32".",filename,line);
 		}
 		if ( wdirlen <= 0 ) {
 		      g_errno = EBADENGINEER;
 		      return log(
 				 "conf: No working dir supplied in "
-				 "%s line %li.",filename,line);
+				 "%s line %"INT32".",filename,line);
 		}
 		// make sure it is legit
 		if ( wdir[0] != '/' ) {
 		      g_errno = EBADENGINEER;
 		      return log(
 				 "conf: working dir must start "
-				 "with / in %s line %li",filename,line);
+				 "with / in %s line %"INT32"",filename,line);
 		}
 		//wdir [ wdirlen ] = '\0';
 
@@ -779,7 +779,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 		// get real path (no symlinks symbolic links)
 		char tmp[256];
-		long tlen = readlink ( wdir , tmp , 250 );
+		int32_t tlen = readlink ( wdir , tmp , 250 );
 		// if we got the actual path, copy that over
 		if ( tlen != -1 ) {
 			// wdir currently references into the hosts.conf buf
@@ -794,7 +794,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 			
 		// don't breach Host::m_dir[128] buffer
 		if ( wdirlen >= 128 ) {
-			log("conf: working dir %s is too long, >= 128 chars.",
+			log("conf: working dir %s is too int32_t, >= 128 chars.",
 			    wdir);
 			return false;
 		}
@@ -859,14 +859,14 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	//
 	// set Host::m_shardNum
 	//
-	for ( long i = 0 ; i < numGrunts ; i++ ) {
+	for ( int32_t i = 0 ; i < numGrunts ; i++ ) {
 		Host *h = &m_hosts[i];
 		h->m_shardNum = i % indexSplits;
 	}
 
 	// assign spare hosts
 	if ( m_numSpareHosts > MAX_SPARES ) {
-		log ( "conf: Number of spares (%li) exceeds max of %i, "
+		log ( "conf: Number of spares (%"INT32") exceeds max of %i, "
 		      "truncating.", m_numSpareHosts, MAX_SPARES );
 		m_numSpareHosts = MAX_SPARES;
 	}
@@ -876,7 +876,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	
 	// assign proxy hosts
 	if ( m_numProxyHosts > MAX_PROXIES ) {
-		log ( "conf: Number of proxies (%li) exceeds max of %i, "
+		log ( "conf: Number of proxies (%"INT32") exceeds max of %i, "
 		      "truncating.", m_numProxyHosts, MAX_PROXIES );
 		char *xx=NULL;*xx=0;
 		m_numProxyHosts = MAX_PROXIES;
@@ -889,22 +889,22 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	}
 
 	// log discovered hosts
-	log ( LOG_INFO, "conf: Discovered %li hosts and %li spares and "
-	      "%li proxies.",m_numHosts, m_numSpareHosts, m_numProxyHosts );
+	log ( LOG_INFO, "conf: Discovered %"INT32" hosts and %"INT32" spares and "
+	      "%"INT32" proxies.",m_numHosts, m_numSpareHosts, m_numProxyHosts );
 
 	// if we have m_numShards we must have 
-	long hostsPerShard  = m_numHosts / m_numShards;
+	int32_t hostsPerShard  = m_numHosts / m_numShards;
 	// must be exact fit
 	if ( hostsPerShard * m_numShards != m_numHosts ) {
 		g_errno = EBADENGINEER;
-		return log("conf: Bad number of hosts for %li shards "
+		return log("conf: Bad number of hosts for %"INT32" shards "
 			   "in hosts.conf.",m_numShards);
 	}
 	// count number of hosts in each shard
 	for ( i = 0 ; i < m_numShards ; i++ ) {
-		long count = 0;
-		for ( long j = 0 ; j < m_numHosts ; j++ )
-			if ( m_hosts[j].m_shardNum == (unsigned long)i ) 
+		int32_t count = 0;
+		for ( int32_t j = 0 ; j < m_numHosts ; j++ )
+			if ( m_hosts[j].m_shardNum == (uint32_t)i ) 
 				count++;
 		if ( count != hostsPerShard ) {
 			g_errno = EBADENGINEER;
@@ -919,9 +919,9 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// . print warning
 	// . TODO: speed this up when we get a lot of hosts
 	/*
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
-		long count = 0;
-		for ( long j = 0 ; j < m_numHosts ; j++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
+		int32_t count = 0;
+		for ( int32_t j = 0 ; j < m_numHosts ; j++ ) {
 			if ( m_hosts[i].m_ip == m_hosts[j].m_ip &&
 			     m_hosts[i].m_ideChannel ==m_hosts[j].m_ideChannel)
 				count++;
@@ -935,13 +935,13 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// . numGroups should divide it evenly
 	// . TODO: actually should be a power of 2!!
 	/*
-	//if ( getNumBitsOn ( (unsigned long)m_numHosts ) != 1 ) { 
+	//if ( getNumBitsOn ( (uint32_t)m_numHosts ) != 1 ) { 
 	//	g_errno = EBADNUMHOSTS; 
 	//	return log(
 	//		   "conf: Number of hosts in %s is not power "
 	//		   "of 2",hostsPerGroup,filename);
 	//}
-	if ( getNumBitsOn ( (unsigned long)m_numHosts ) != 1 ) { 
+	if ( getNumBitsOn ( (uint32_t)m_numHosts ) != 1 ) { 
 		g_errno = EBADNUMHOSTS; 
 		return log(
 			   "conf: Number of hosts in %s is not power "
@@ -969,7 +969,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// . m_shards[i] is the first host in shardId "i"
 	// . any other hosts w/ same shardId immediately follow it
 	// . loop through each shard
-	long j;
+	int32_t j;
 	for ( i = 0 ; i < m_numShards ; i++ ) {
 		for ( j = 0 ; j < m_numHosts ; j++ ) 
 			if ( m_hosts[j].m_hostId == i ) break;
@@ -980,7 +980,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// . set m_hostPtrs now so Hostdb::getHost() works
 	// . the hosts are sorted by shard first so we must be careful
 	for ( i = 0 ; i < m_numHosts ; i++ ) {
-		long j = m_hosts[i].m_hostId;
+		int32_t j = m_hosts[i].m_hostId;
 		m_hostPtrs[j] = &m_hosts[i];
 	}
 	// reset this count to 1, 1 counts for ourselves
@@ -994,11 +994,11 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		//m_numProxyAlive = m_numProxyHosts;
 	}
 	// sometimes g_conf is not loaded, so fake it
-	long deadHostTimeout = g_conf.m_deadHostTimeout;
+	int32_t deadHostTimeout = g_conf.m_deadHostTimeout;
 	// make sure it is bigger than anything
 	if ( deadHostTimeout == 0 ) deadHostTimeout = 0x7fffffff;
 	// reset ping/stdDev times
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		//m_hosts[i].m_pingAvg    = 100; // 100 ms
 		//m_hosts[i].m_pingStdDev =  50; // with a std.dev of 50 ms
 		// assume everybody is dead, except us
@@ -1022,7 +1022,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		m_hosts[i].m_numPingReplies = 0;
 		m_hosts[i].m_preferEth      = 0;
 		// reset m_ping
-		//for ( long j = 0 ; j < 4; j++ ) m_hosts[i].m_pings[j] = 100;
+		//for ( int32_t j = 0 ; j < 4; j++ ) m_hosts[i].m_pings[j] = 100;
 	}
 
 	// a debug note
@@ -1032,8 +1032,8 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	// . hostPtrs are sorted by hostId which means should also be sorted
 	//   by IP so we can get a good machine number assignment
 	if ( m_numHosts > 0 ) m_hostPtrs[0]->m_machineNum = 0;
-	long next = 1;
-	for ( long i = 1 ; i < m_numHosts ; i++ ) {
+	int32_t next = 1;
+	for ( int32_t i = 1 ; i < m_numHosts ; i++ ) {
 		// see if on a machine we already numbered
 		// debug comment out
 		for ( j = 0 ; j < i ; j++ ) 
@@ -1054,7 +1054,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	m_numMachines = next;
 
 	// get IPs of this server. last entry is 0.
-	long *localIps = getLocalIps();
+	int32_t *localIps = getLocalIps();
 	if ( ! localIps )
 		return log("conf: Failed to get local IP address. Exiting.");
 
@@ -1088,12 +1088,12 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 	/*
 	// set the m_tokenGroupNum member of each Host class we have
-	for ( long i = 0 ; i < m_numHosts ; i++ ) 
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) 
 		m_hosts[i].m_tokenGroupNum = -1;
-	for ( long i = 0 ; i < m_numHosts ; i++ ) 
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) 
 		m_hosts[i].m_tokenGroupNum = getTokenGroupNum ( &m_hosts[i] );
 	// do a second pass to resolve indirections
-	for ( long i = 0 ; i < m_numHosts ; i++ ) 
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) 
 		m_hosts[i].m_tokenGroupNum = getTokenGroupNum ( &m_hosts[i] );
 
 	// . order the hostIds by their token group num
@@ -1101,24 +1101,24 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	//   they are in the same mirror group, then they are in the same
 	//   token group (only one host in group can have the token and the
 	//   token is required for merging if "use merge token" is "YES")
-	for ( long i = 0 ; i < m_numHosts ; i++ ) m_hostPtrs2[i] = &m_hosts[i];
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) m_hostPtrs2[i] = &m_hosts[i];
 	gbsort ( m_hostPtrs2 , m_numHosts , sizeof(Host *) , cmp2 );
 	// now set m_hostIdToTokenGroupNum for fast lookups by Msg35.cpp
 	// for call to Hostdb::getTokenGroup()
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		// find first host in token group #i
-		long j = 0;
+		int32_t j = 0;
 		for ( j = 0 ; j < m_numHosts ; j++ ) 
 			if ( m_hostPtrs2[j]->m_tokenGroupNum == i ) break;
 		// if nobody start with host #i, try next one
 		if ( j >= m_numHosts ) continue;
 		// mark him
-		long start = j;
+		int32_t start = j;
 		// map all hosts in group #i to the jth host, the starter
-		long gsize = 0;
+		int32_t gsize = 0;
 		for ( j = 0 ; j < m_numHosts ; j++ ) 
 			if ( m_hostPtrs2[j]->m_tokenGroupNum == i ) {
-				long hid = m_hostPtrs2[j]->m_hostId;
+				int32_t hid = m_hostPtrs2[j]->m_hostId;
 				m_hostIdToTokenGroupNum[hid] = start;
 				gsize++;
 			}
@@ -1126,15 +1126,15 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		m_groupSize [ start ] = gsize;
 	}
 	// debug the token groups out
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
-		long n;
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
+		int32_t n;
 		Host **g = getTokenGroup ( i , &n );
 		char buf [ 1024 ];
 		char *p = buf;
-		sprintf ( p , "db: Token group of hid #%li is", i );
+		sprintf ( p , "db: Token group of hid #%"INT32" is", i );
 		p += gbstrlen ( p );
-		for ( long j = 0 ; j < n ; j++ ) {
-			sprintf ( p , " %li." , g[j]->m_hostId );
+		for ( int32_t j = 0 ; j < n ; j++ ) {
+			sprintf ( p , " %"INT32"." , g[j]->m_hostId );
 			p += gbstrlen ( p );
 		}
 		log ( LOG_DEBUG , "%s", buf );
@@ -1156,18 +1156,18 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 
 	// set m_stripe (aka m_twinNum) for each host
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		// get this host
 		Host *h = &m_hosts[i];
 		// get his shard, array of hosts
 		Host *shard = getShard ( h->m_shardNum );
 		// how many hosts in the shard?
-		long ng = getNumHostsPerShard();
+		int32_t ng = getNumHostsPerShard();
 		// hosts in shard should be sorted by hostid i think, anyway,
 		// they *need* to be. see above, hosts are in order in the
 		// m_hosts[] array by shard then by hostId, so we should be
 		// good to go.
-		for ( long j = 0 ; j < ng ; j++ ) {
+		for ( int32_t j = 0 ; j < ng ; j++ ) {
 			if ( &shard[j] != h ) continue;
 			h->m_stripe = j;
 			break;
@@ -1179,26 +1179,26 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	if ( proxyHost )
 		h = getProxy ( m_hostId );
 	if ( ! h ) return log(
-			      "conf: HostId %li not found in %s.",
+			      "conf: HostId %"INT32" not found in %s.",
 			      m_hostId,filename);
 	// set m_dir to THIS host's working dir
 	strcpy ( m_dir , h->m_dir );
 	// likewise, set m_htmlDir to this host's html dir
 	sprintf ( m_httpRootDir , "%shtml/" , m_dir );
-	sprintf ( m_logFilename , "%slog%03li", m_dir , m_hostId );
+	sprintf ( m_logFilename , "%slog%03"INT32"", m_dir , m_hostId );
 
 	if ( ! g_conf.m_runAsDaemon )
 		sprintf(m_logFilename,"/dev/stderr");
 
 
-	long gcount = 0;
-	for ( long i = 0 ; i < MAX_KSLOTS && m_numHosts ; i++ ) {
+	int32_t gcount = 0;
+	for ( int32_t i = 0 ; i < MAX_KSLOTS && m_numHosts ; i++ ) {
 		// set its group id from groupNum, which is "gcount"
 		//m_map[i] = getGroupId ( gcount++ );
-		//unsigned long gid = getGroupId_old(gcount);
-		//long groupNum = getGroupNum (gid);
+		//uint32_t gid = getGroupId_old(gcount);
+		//int32_t groupNum = getGroupNum (gid);
 		// TODO: test this later
-		//long oldVal = getGroupId_old ( gcount );
+		//int32_t oldVal = getGroupId_old ( gcount );
 		// now just map to the shard # not the groupId... simpler...
 		m_map[i] = gcount % m_numShards;
 		// inc it
@@ -1218,11 +1218,11 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 bool Hostdb::hashHosts ( ) {
 
 	// this also holds g_hosts2 as well as g_hosts so we cannot preallocate
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		Host *h = &m_hosts[i];
 		// init shotgun bit here, 0 or 1 depending on our hostId
 		h->m_shotgunBit = m_hostId & 0x01;
-		long ip;
+		int32_t ip;
 		ip = h->m_ip;
 		if ( ! hashHost ( 1,h,ip, h->m_port     )) return false;
 		if ( ! hashHost ( 0,h,ip, h->m_httpPort )) return false;
@@ -1247,21 +1247,21 @@ bool Hostdb::hashHosts ( ) {
 	// . udpserver needs this?
 	// . only do this if they did not already specify a 127.0.0.1 in
 	//   the hosts.conf i guess
-	long lbip = atoip("127.0.0.1");
+	int32_t lbip = atoip("127.0.0.1");
 	Host *hxx = getHost ( lbip , m_myHost->m_port );
 	// only do this if not explicitly assigned to 127.0.0.1 in hosts.conf
-	if ( ! hxx && (long)m_myHost->m_ip != lbip ) {
-		long loopbackIP = atoip("127.0.0.1",9);
+	if ( ! hxx && (int32_t)m_myHost->m_ip != lbip ) {
+		int32_t loopbackIP = atoip("127.0.0.1",9);
 		if ( ! hashHost(1,m_myHost,loopbackIP,m_myHost->m_port)) 
 			return false;
 	}
 
 	// and the proxies as well
-	for ( long i = 0 ; i < m_numProxyHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numProxyHosts ; i++ ) {
 		Host *h = getProxy(i);
 		// init shotgun bit here, 0 or 1 depending on our hostId
 		h->m_shotgunBit = m_hostId & 0x01;
-		long ip;
+		int32_t ip;
 		ip = h->m_ip;
 		if ( ! hashHost ( 1,h,ip, h->m_port     )) return false;
 		if ( ! hashHost ( 0,h,ip, h->m_httpPort )) return false;
@@ -1283,36 +1283,36 @@ bool Hostdb::hashHosts ( ) {
 	}
 
 	// verify g_hostTableUdp
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		// get the ith host
 		Host *h = &m_hosts[i];
 		Host *h2 ;
 		h2 = getUdpHost ( h->m_ip , h->m_port );
 		if ( h != h2 ) 
-			return log("db: Host lookup failed for hostId %li.",
+			return log("db: Host lookup failed for hostId %"INT32".",
 				   h->m_hostId);
 		h2 = getUdpHost ( h->m_ipShotgun , h->m_port );
 		if ( h != h2 ) 
-			return log("db: Host lookup2 failed for hostId %li.",
+			return log("db: Host lookup2 failed for hostId %"INT32".",
 				   h->m_hostId);
 		if ( ! isIpInNetwork ( h->m_ip ) )
-			return log("db: Host lookup5 failed for hostId %li.",
+			return log("db: Host lookup5 failed for hostId %"INT32".",
 				   h->m_hostId);
 	}
 
 	// verify g_hostTableTcp
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		// get the ith host
 		Host *h = &m_hosts[i];
 		Host *h2 ;
 		h2 = getTcpHost ( h->m_ip , h->m_httpPort );
 		if ( h != h2 ) 
-			return log("db: Host lookup3 failed for hostId %li. "
+			return log("db: Host lookup3 failed for hostId %"INT32". "
 				   "ip=%s port=%hu",
 				   h->m_hostId,iptoa(h->m_ip),h->m_httpPort);
 		h2 = getTcpHost ( h->m_ip , h->m_httpsPort );
 		if ( h != h2 ) 
-			return log("db: Host lookup4 failed for hostId %li.",
+			return log("db: Host lookup4 failed for hostId %"INT32".",
 				   h->m_hostId);
 	}
 
@@ -1335,14 +1335,14 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 	if ( this == &g_hostdb2 ) hs = "hosts2.conf";
 	if ( this == &g_hostdb  ) hs = "hosts.conf";
 	
-	//logf(LOG_INFO,"db: adding %s ip=%s port=%li isUdp=%li",// (%s)",
-	//     h->m_hostname,iptoa(ip),(long)port,(long)udp);//,hs);
+	//logf(LOG_INFO,"db: adding %s ip=%s port=%"INT32" isUdp=%"INT32"",// (%s)",
+	//     h->m_hostname,iptoa(ip),(int32_t)port,(int32_t)udp);//,hs);
 
 	if ( hh && port ) { 
 		log("db: Must hash hosts.conf first, then hosts2.conf.");
 		log("db: or there is a repeated ip/port in hosts.conf.");
-		log("db: repeated host ip=%s port=%li "
-		    "name=%s",iptoa(ip),(long)port,h->m_hostname);
+		log("db: repeated host ip=%s port=%"INT32" "
+		    "name=%s",iptoa(ip),(int32_t)port,h->m_hostname);
 		return false;//char *xx=NULL;*xx=0;
 	}
 
@@ -1356,8 +1356,8 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 		g_listNumTotal++;
 	}
 
-	// shortcut
-	HashTableT <uint64_t, unsigned long> *t;
+	// int16_tcut
+	HashTableT <uint64_t, uint32_t> *t;
 	if ( udp ) t = &g_hostTableUdp;
 	else       t = &g_hostTableTcp;
 	// get his key
@@ -1375,7 +1375,7 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 	dst[4] = src2[1];
 	dst[5] = src2[0];
 	// look it up
-	long slot = t->getSlot ( key );
+	int32_t slot = t->getSlot ( key );
 	// see if there is a collision
 	Host *old = NULL;
 	if ( slot >= 0 ) {
@@ -1384,16 +1384,16 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 		// to make isIpInNetwork() function work.
 		if ( port == 0 ) return true;
 		old = (Host *)t->getValueFromSlot(slot);
-		return log("db: Got collision between hostId %li and "
-			   "%li(proxy=%li). Both have same ip/port. Does "
+		return log("db: Got collision between hostId %"INT32" and "
+			   "%"INT32"(proxy=%"INT32"). Both have same ip/port. Does "
 			   "hosts.conf match hosts2.conf?",
-			   old->m_hostId,h->m_hostId,(long)h->m_isProxy);
+			   old->m_hostId,h->m_hostId,(int32_t)h->m_isProxy);
 	}
 	// add the new key with a ptr to host using m_port
-	return t->addKey ( key , (unsigned long)h ) ;
+	return t->addKey ( key , (uint32_t)h ) ;
 }
 
-long Hostdb::getHostId ( uint32_t ip , uint16_t port ) {
+int32_t Hostdb::getHostId ( uint32_t ip , uint16_t port ) {
 	Host *h = getUdpHost ( ip , port );
 	if ( ! h ) return -1;
 	return h->m_hostId;
@@ -1430,8 +1430,8 @@ bool Hostdb::isIpInNetwork ( uint32_t ip ) {
 // . this works on proxy hosts as well!
 // . use a port of 0 if we should disregard port
 Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
-	// shortcut
-	HashTableT <uint64_t, unsigned long> *t;
+	// int16_tcut
+	HashTableT <uint64_t, uint32_t> *t;
 	if ( udp ) t = &g_hostTableUdp;
 	else       t = &g_hostTableTcp;
 	// reset key
@@ -1449,7 +1449,7 @@ Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
 	dst[4] = src2[1];
 	dst[5] = src2[0];
 	// look it up
-	long slot = t->getSlot ( key );
+	int32_t slot = t->getSlot ( key );
 	// return NULL if not found
 	if ( slot < 0 ) return NULL;
 	return (Host *) t->getValueFromSlot ( slot );
@@ -1459,9 +1459,9 @@ Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
 
 
 /*
-Host **Hostdb::getTokenGroup ( unsigned long hostId , long *numHosts ) {
+Host **Hostdb::getTokenGroup ( uint32_t hostId , int32_t *numHosts ) {
 	// map groupId to hostId
-	long hid = m_hostIdToTokenGroupNum [ hostId ];
+	int32_t hid = m_hostIdToTokenGroupNum [ hostId ];
 	if ( numHosts ) *numHosts = m_groupSize [ hid ];
 	return &m_hostPtrs2 [ hid ];
 }
@@ -1469,8 +1469,8 @@ Host **Hostdb::getTokenGroup ( unsigned long hostId , long *numHosts ) {
 // . use the lowest hostId of the all the hosts that are in our token group
 //   as our token group number
 // . ha's must be passed in order of the hostId
-long Hostdb::getTokenGroupNum ( Host *ha ) {
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+int32_t Hostdb::getTokenGroupNum ( Host *ha ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		Host *hb = m_hostPtrs [ i ];
 		// is he the lowest hostid so far? yes... return the hostid
 		if ( hb->m_groupId    == ha->m_groupId   ) goto gotit;
@@ -1478,8 +1478,8 @@ long Hostdb::getTokenGroupNum ( Host *ha ) {
 		if ( hb->m_machineNum != ha->m_machineNum) continue;
 	gotit:
 		// start a new token group if we have to
-		long tg1 = ha->m_tokenGroupNum;
-		long tg2 = hb->m_tokenGroupNum;
+		int32_t tg1 = ha->m_tokenGroupNum;
+		int32_t tg2 = hb->m_tokenGroupNum;
 		// if both negative, use hostId to start new token group
 		if ( tg1 < 0 && tg2 < 0 ) return hb->m_hostId;
 		// if it is us, skip
@@ -1521,22 +1521,22 @@ int cmp (const void *v1, const void *v2) {
 // . this host has the lowest hostId of all hosts in that group
 // . reverse bit order to get hostId from groupId
 // . this hostId will be the lowest numbered hostId in the group
-long Hostdb::makeHostId ( unsigned long groupId ) {
+int32_t Hostdb::makeHostId ( uint32_t groupId ) {
 	return reverseBits ( groupId );
 }
 
 
-long Hostdb::makeHostIdFast ( unsigned long groupId ) {
+int32_t Hostdb::makeHostIdFast ( uint32_t groupId ) {
 	// sanity check
 	if ( m_numHosts > 655536 ) { char *xx = NULL; *xx = 0; }
 	// init a table that takes the top 2 bytes of the groupId
 	// and maps to a table
 	static bool           s_init = false;
-	static unsigned short s_gidTable [ 64*1024 ];
+	static uint16_t s_gidTable [ 64*1024 ];
 
 	// sanity check -- temporary (REMOVE!!)
 	if ( s_init ) {
-		long tmpHostId = makeHostId ( groupId );
+		int32_t tmpHostId = makeHostId ( groupId );
 		if ( tmpHostId != s_gidTable [ groupId>>16 ] ) {
 			char *xx = NULL; *xx = 0; }
 	}
@@ -1545,9 +1545,9 @@ long Hostdb::makeHostIdFast ( unsigned long groupId ) {
 
 	memset ( s_gidTable , 0 , 2*64*1024 );
 	// init s_gidTable
-	for ( long i = 0 ; i < m_numGroups ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numGroups ; i++ ) {
 		// get their groupId
-		unsigned long groupId = m_groups[i]->m_groupId;
+		uint32_t groupId = m_groups[i]->m_groupId;
 		// make the table entry using the top 2 bytes of the groupId,
 		// those are the only bits that matter
 		s_gidTable [ groupId>>16 ] = m_groups[i]->m_hostId;
@@ -1569,21 +1569,21 @@ long Hostdb::makeHostIdFast ( unsigned long groupId ) {
 //   hostId = 5 , groupId = 5 & 0x03 = 1
 //   hostId = 6 , groupId = 6 & 0x03 = 2
 //   hostId = 7 , groupId = 7 & 0x03 = 3
-unsigned long Hostdb::makeGroupId ( long hostId , long numGroups ) {
+uint32_t Hostdb::makeGroupId ( int32_t hostId , int32_t numGroups ) {
 	return reverseBits ( hostId & (numGroups - 1) );
 }
 
 // hi bits are set
-unsigned long Hostdb::makeGroupMask ( long numGroups ) {
+uint32_t Hostdb::makeGroupMask ( int32_t numGroups ) {
 	return makeGroupId ( numGroups - 1 , numGroups );
 }
 */
 
 // return first alive host in a shard
-Host *Hostdb::getLiveHostInShard ( long shardNum ) {
+Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	Host *shard = getShard ( shardNum );
 	//Host *live = NULL;
-	for ( long i = 0 ; i < m_numHostsPerShard ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHostsPerShard ; i++ ) {
 		// get it
 		Host *h = &shard[i];
 		// skip if dead
@@ -1597,7 +1597,7 @@ Host *Hostdb::getLiveHostInShard ( long shardNum ) {
 
 // if all are dead just return host #0
 Host *Hostdb::getFirstAliveHost ( ) {
-	for ( long i = 0 ; i < m_numHosts ; i++ )
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
 		// if host #i is alive, return her
 		if ( ! isDead ( i ) ) return getHost(i);
 	// if all are dead just return host #0
@@ -1606,12 +1606,12 @@ Host *Hostdb::getFirstAliveHost ( ) {
 
 /*
 // . get the Hosts in group with "groupId"
-Host *Hostdb::getGroup ( unsigned long groupId , long *numHosts ) {
+Host *Hostdb::getGroup ( uint32_t groupId , int32_t *numHosts ) {
 	// set hosts per group
 	if ( numHosts ) *numHosts = m_numHostsPerShard;
 	// . translate groupId to a hostId
 	// . this hostId should be the lowest hostId in this groupId
-	long hostId = makeHostId ( groupId );
+	int32_t hostId = makeHostId ( groupId );
 	// watch out for bogus groupIds
 	if ( hostId >= m_numHosts ) {
 		if ( numHosts ) *numHosts = 0;
@@ -1624,13 +1624,13 @@ Host *Hostdb::getGroup ( unsigned long groupId , long *numHosts ) {
 	return m_groups [ hostId ];
 }
 
-Host *Hostdb::getFastestHostInGroup ( unsigned long groupId ) {
+Host *Hostdb::getFastestHostInGroup ( uint32_t groupId ) {
 	Host *hosts = getGroup ( groupId );
 	if ( ! hosts ) return NULL;
 	// scan for smallest average roundtrip time (i.e. ping time)
-	long minPing = 0x7fffffff;
-	long mini    = -1;
-	for ( long i = 0 ; i < m_numHostsPerShard ; i++ ) {
+	int32_t minPing = 0x7fffffff;
+	int32_t mini    = -1;
+	for ( int32_t i = 0 ; i < m_numHostsPerShard ; i++ ) {
 		//if ( hosts[i].m_pingAvg >= minPing ) continue;
 		if ( hosts[i].m_ping >= minPing ) continue;
 		//minPing = hosts[i].m_pingAvg;
@@ -1649,7 +1649,7 @@ Host *Hostdb::getFastestHostInGroup ( unsigned long groupId ) {
 Host *Hostdb::getSharer ( Host *h ) {
 	// return quickly if we know nobody shares an ide channel
 	if ( ! m_ideSharing ) return NULL;
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		// skip self
 		if ( m_hosts[i].m_hostId     == h->m_hostId     ) continue;
 		if ( m_hosts[i].m_ip         != h->m_ip         ) continue;
@@ -1661,12 +1661,12 @@ Host *Hostdb::getSharer ( Host *h ) {
 */
 
 bool Hostdb::hasDeadHost ( ) {
-	for ( long i = 0 ; i < m_numHosts ; i++ )
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
 		if ( isDead ( i ) ) return true;
 	return false;
 }
 
-bool Hostdb::isDead ( long hostId ) {
+bool Hostdb::isDead ( int32_t hostId ) {
 	Host *h = getHost ( hostId );
 	return isDead ( h );
 }
@@ -1682,7 +1682,7 @@ bool Hostdb::isDead ( Host *h ) {
 	return true;
 }
 
-long Hostdb::getAliveIp ( Host *h ) {
+int32_t Hostdb::getAliveIp ( Host *h ) {
 	if ( ! g_conf.m_useShotgun ) 
 		return h->m_ip;
 	if ( h->m_ping        < g_conf.m_deadHostTimeout ) 
@@ -1694,19 +1694,19 @@ long Hostdb::getAliveIp ( Host *h ) {
 
 int64_t Hostdb::getNumGlobalRecs ( ) {
 	int64_t n = 0;
-	for ( long i = 0 ; i < m_numHosts ; i++ )
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
 		n += getHost ( i )->m_docsIndexed;
 	return n / m_numHostsPerShard;
 }
 
 int64_t Hostdb::getNumGlobalEvents ( ) {
 	int64_t n = 0;
-	for ( long i = 0 ; i < m_numHosts ; i++ )
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
 		n += getHost ( i )->m_eventsIndexed;
 	return n / m_numHostsPerShard;
 }
 
-bool Hostdb::setNote ( long hostId, char *note, long noteLen ) {
+bool Hostdb::setNote ( int32_t hostId, char *note, int32_t noteLen ) {
 	// replace the note on the host
 	if ( noteLen > 125 ) noteLen = 125;
 	Host *h = getHost ( hostId );
@@ -1719,7 +1719,7 @@ bool Hostdb::setNote ( long hostId, char *note, long noteLen ) {
 	return saveHostsConf();
 }
 
-bool Hostdb::setSpareNote ( long spareId, char *note, long noteLen ) {
+bool Hostdb::setSpareNote ( int32_t spareId, char *note, int32_t noteLen ) {
 	// replace the note on the host
 	if ( noteLen > 125 ) noteLen = 125;
 	Host *h = getSpare ( spareId );
@@ -1732,7 +1732,7 @@ bool Hostdb::setSpareNote ( long spareId, char *note, long noteLen ) {
 	return saveHostsConf();
 }
 
-bool Hostdb::replaceHost ( long origHostId, long spareHostId ) {
+bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	Host *oldHost = getHost(origHostId);
 	Host *spareHost = getSpare(spareHostId);
 	if ( !oldHost || !spareHost )
@@ -1798,18 +1798,18 @@ bool Hostdb::replaceHost ( long origHostId, long spareHostId ) {
 	// . just swap ips and ports and directories
 	// . first store all the old info so we can put it away
 	/*
-	unsigned long oldIp  = oldHost->m_ip;
-	unsigned long oldIp2 = oldHost->m_ipShotgun;
-	unsigned short oldExtHttpPort  = oldHost->m_externalHttpPort;
-	unsigned short oldExtHttpsPort = oldHost->m_externalHttpsPort;
-	unsigned short oldPort  = oldHost->m_port;
-	unsigned short oldPort2 = oldHost->m_port2;
-	unsigned short oldHttpPort = oldHost->m_httpPort;
-	unsigned short oldHttpsPort = oldHost->m_httpsPort;
-	long oldMachineNum = oldHost->m_machineNum;
-	long oldIdeChannel = oldHost->m_ideChannel;
+	uint32_t oldIp  = oldHost->m_ip;
+	uint32_t oldIp2 = oldHost->m_ipShotgun;
+	uint16_t oldExtHttpPort  = oldHost->m_externalHttpPort;
+	uint16_t oldExtHttpsPort = oldHost->m_externalHttpsPort;
+	uint16_t oldPort  = oldHost->m_port;
+	uint16_t oldPort2 = oldHost->m_port2;
+	uint16_t oldHttpPort = oldHost->m_httpPort;
+	uint16_t oldHttpsPort = oldHost->m_httpsPort;
+	int32_t oldMachineNum = oldHost->m_machineNum;
+	int32_t oldIdeChannel = oldHost->m_ideChannel;
 	char oldSwitchId  = oldHost->m_switchId;
-	unsigned short oldDnsPort = oldHost->m_dnsClientPort;
+	uint16_t oldDnsPort = oldHost->m_dnsClientPort;
 	char oldDir[128];
 	memcpy(oldDir, oldHost->m_dir, 128);
 	char oldNote[128];
@@ -1872,28 +1872,28 @@ bool Hostdb::replaceHost ( long origHostId, long spareHostId ) {
 /*
 void Hostdb::setOnProperSwitchFlags ( ) {
 
-	long split = g_hostdb.m_indexSplits;
+	int32_t split = g_hostdb.m_indexSplits;
 
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		Host *h = &m_hosts[i];
 		// get switch group
-		long switchGroup = 0;
+		int32_t switchGroup = 0;
 		if ( split > 0 ) switchGroup = h->m_group % split;
 		// and switch id
-		long switchId    = h->m_switchId;
+		int32_t switchId    = h->m_switchId;
 		// reset counts
-		long          diffSwitch = 0;
-		long          sameSwitch = 0;
+		int32_t          diffSwitch = 0;
+		int32_t          sameSwitch = 0;
 		char          inMajority = true;
-		unsigned long minIp      = 0;
+		uint32_t minIp      = 0;
 		// does his switch id match the majority of the hosts
 		// with his same switch group? if so, he is on the proper
 		// switch, otherwise, he is not
-		for ( long j = 0 ; j < m_numHosts ; j++ ) {
+		for ( int32_t j = 0 ; j < m_numHosts ; j++ ) {
 			// get the jth host
 			Host *h2 = &m_hosts[j];
 			// get his switch group
-			long switchGroup2 = 0;
+			int32_t switchGroup2 = 0;
 			if ( split > 0 ) switchGroup2 = h2->m_group % split;
 			// skip if not a match
 			if ( switchGroup2 != switchGroup ) continue;
@@ -1937,7 +1937,7 @@ bool Hostdb::saveHostsConf ( ) {
 	sprintf ( filename, "%shosts.conf", m_dir );
 	log ( LOG_INFO, "conf: Writing hosts.conf file to: %s",
 			filename );
-	long fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
+	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 			 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( !fd ) {
 		log ( "conf: Failed to open %s for writing.", filename );
@@ -1961,16 +1961,16 @@ bool Hostdb::saveHostsConf ( ) {
 		"# we insert an 'i' into hostname to get ip of eth1\n"
 		"\n"
 		"working-dir: %s\n"
-		//"port-offset: %li\n"
-		"index-splits: %li\n"
+		//"port-offset: %"INT32"\n"
+		"index-splits: %"INT32"\n"
 		"\n"
 		,
 		g_hostdb.m_dir,
-		//(long)g_hostdb.m_myHost->m_httpPort - 8000,
+		//(int32_t)g_hostdb.m_myHost->m_httpPort - 8000,
 		g_hostdb.m_indexSplits );
 	write(fd, temp, gbstrlen(temp));
 	// loop over each host and write the conf line
-	for ( long i = 0; i < m_numTotalHosts; i++ ) {
+	for ( int32_t i = 0; i < m_numTotalHosts; i++ ) {
 		Host *h;
 		if ( i < m_numHosts )
 			h = getHost(i);
@@ -1985,15 +1985,15 @@ bool Hostdb::saveHostsConf ( ) {
 			sprintf(temp, "spare ");
 
 		else if ( i < 10 )
-			sprintf(temp, "00%li   ", i);
+			sprintf(temp, "00%"INT32"   ", i);
 		else if ( i < 100 )
-			sprintf(temp, "0%li   ", i);
+			sprintf(temp, "0%"INT32"   ", i);
 		else
-			sprintf(temp, "%li   ", i);
+			sprintf(temp, "%"INT32"   ", i);
 		write(fd, temp, gbstrlen(temp));
 
-		long spaces;
-		//long g;
+		int32_t spaces;
+		//int32_t g;
 
 		// the new format is just the hostname then note
 		sprintf(temp,"%s ",h->m_hostname);
@@ -2004,53 +2004,53 @@ bool Hostdb::saveHostsConf ( ) {
 		strcpy(temp, iptoa(h->m_ip));
 		write(fd, temp, gbstrlen(temp));
 		spaces = 16 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// generate the ip2 string
 		strcpy(temp, iptoa(h->m_ipShotgun));
 		write(fd, temp, gbstrlen(temp));
 		spaces = 16 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// udp1 port
 		sprintf(temp, "%hu ", h->m_port);
 		write(fd, temp, gbstrlen(temp));
 		spaces = 6 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// udp2 port
 		//sprintf(temp, "%hu ", h->m_port2);
 		sprintf(temp, "0 " );
 		write(fd, temp, gbstrlen(temp));
 		spaces = 6 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// dns port
 		sprintf(temp, "%hu ", h->m_dnsClientPort);
 		write(fd, temp, gbstrlen(temp));
 		spaces = 6 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// http port
 		sprintf(temp, "%hu ", h->m_httpPort);
 		write(fd, temp, gbstrlen(temp));
 		spaces = 6 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// https port
 		sprintf(temp, "%hu ", h->m_httpsPort);
 		write(fd, temp, gbstrlen(temp));
 		spaces = 6 - gbstrlen(temp);
-		for ( long s = 0; s < spaces; s++ ) write(fd, " ", 1);
+		for ( int32_t s = 0; s < spaces; s++ ) write(fd, " ", 1);
 		// IDE channel
-		sprintf(temp, "%li ", h->m_ideChannel);
+		sprintf(temp, "%"INT32" ", h->m_ideChannel);
 		write(fd, temp, gbstrlen(temp));
 		// switch ID
-		sprintf(temp, "%li ", (long)h->m_switchId);
+		sprintf(temp, "%"INT32" ", (int32_t)h->m_switchId);
 		write(fd, temp, gbstrlen(temp));
 		// Group ID
 		/*
 		g = h->m_group;
 		if ( g < 10 )
-			sprintf(temp, "00%li ", g);
+			sprintf(temp, "00%"INT32" ", g);
 		else if ( g < 100 )
-			sprintf(temp, "0%li ", g);
+			sprintf(temp, "0%"INT32" ", g);
 		else
-			sprintf(temp, "%li ", g);
+			sprintf(temp, "%"INT32" ", g);
 		write(fd, temp, gbstrlen(temp));
 		*/
 		// directory
@@ -2078,14 +2078,14 @@ void *syncStartWrapper_r ( void *state , ThreadEntry *t ) {
 }
 
 // sync a host with its twin
-bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
+bool Hostdb::syncHost ( int32_t syncHostId, bool useSecondaryIps ) {
 
 	// can't do two syncs
 	if ( m_syncHost )
 		return log(LOG_WARN, "conf: Cannot manage two syncs on this "
 				     "host. Aborting.");
 	// log the start
-	log ( LOG_INFO, "init: Syncing host %li with twin.", syncHostId );
+	log ( LOG_INFO, "init: Syncing host %"INT32" with twin.", syncHostId );
 	// if no twins, can't do it
 	if ( m_numHostsPerShard == 1 )
 		return log(LOG_WARN, "conf: Cannot sync host, no twins. "
@@ -2097,12 +2097,12 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 	// first, the host must be marked as dead
 	Host *h = getHost(syncHostId);
 	if ( ! h )
-		log("conf: Cannot get host with host id #%li",
-		    (long)syncHostId);
+		log("conf: Cannot get host with host id #%"INT32"",
+		    (int32_t)syncHostId);
 	if ( !isDead(h) )
 		return log(LOG_WARN, "conf: Cannot sync live host. Aborting.");
 	// now check it for a clean directory
-	long ip1 = h->m_ip;
+	int32_t ip1 = h->m_ip;
 	if ( useSecondaryIps ) ip1 = h->m_ipShotgun;
 	char ip1str[32];
 	sprintf ( ip1str, "%hhu.%hhu.%hhu.%hhu",
@@ -2115,19 +2115,19 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 		  ip1str, h->m_dir );
 	log ( LOG_INFO, "init: %s", cmd );
 	gbsystem(cmd);
-	long fd = open ( "./synccheck.txt", O_RDONLY );
+	int32_t fd = open ( "./synccheck.txt", O_RDONLY );
 	if ( fd < 0 )
 		return log(LOG_WARN, "conf: Unable to open synccheck.txt. "
 				     "Aborting.");
-	long len = read ( fd, cmd, 1023 );
+	int32_t len = read ( fd, cmd, 1023 );
 	cmd[len] = '\0';
 	close(fd);
 	// delete the file to make sure we don't reuse it
 	gbsystem ( "rm ./synccheck.txt" );
 	// check the size
-	long checkSize = atol(cmd);
+	int32_t checkSize = atol(cmd);
 	if ( checkSize > 4096 || checkSize <= 0 )
-		return log(LOG_WARN, "conf: Detected %li bytes in "
+		return log(LOG_WARN, "conf: Detected %"INT32" bytes in "
 			   "directory to "
 			   "sync.  Must be empty.  Aborting.",
 			   checkSize);
@@ -2149,12 +2149,12 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 }
 
 // MDW: take out for now
-//int my_system_r ( char *cmd , long timeout );
+//int my_system_r ( char *cmd , int32_t timeout );
 int startUp ( void *cmd );
 
 void Hostdb::syncStart_r ( bool amThread ) {
 	// get the twin we'll copy from
-	long numHostsInShard;
+	int32_t numHostsInShard;
 	//Host *hostGroup = getGroup(m_syncHost->m_groupId, &numHostsInGroup);
 	Host *shard = getShard(m_syncHost->m_shardNum, &numHostsInShard);
 	if ( numHostsInShard == 1 ) {
@@ -2167,7 +2167,7 @@ void Hostdb::syncStart_r ( bool amThread ) {
 	if ( srcHost == m_syncHost ) srcHost = &shard[numHostsInShard-2];
 	// create the rcp command
 	char cmd[1024];
-	long ip1 = m_syncHost->m_ip;
+	int32_t ip1 = m_syncHost->m_ip;
 	if ( m_syncSecondaryIps ) ip1 = m_syncHost->m_ipShotgun;
 	char ip1str[32];
 	sprintf ( ip1str, "%hhu.%hhu.%hhu.%hhu",
@@ -2175,7 +2175,7 @@ void Hostdb::syncStart_r ( bool amThread ) {
 		  (unsigned char)(ip1 >>  8)&0xff,
 		  (unsigned char)(ip1 >> 16)&0xff,
 		  (unsigned char)(ip1 >> 24)&0xff );
-	long ip2 = srcHost->m_ip;
+	int32_t ip2 = srcHost->m_ip;
 	if ( m_syncSecondaryIps ) ip2 = srcHost->m_ipShotgun;
 	char ip2str[32];
 	sprintf ( ip2str, "%hhu.%hhu.%hhu.%hhu",
@@ -2237,14 +2237,14 @@ void Hostdb::syncDone ( ) {
 	log ( LOG_INFO, "init: Sync copy done.  Starting host." );
 	m_syncHost->m_doingSync = 0;
 	char cmd[1024];
-	sprintf(cmd, "./gb start %li", m_syncHost->m_hostId);
+	sprintf(cmd, "./gb start %"INT32"", m_syncHost->m_hostId);
 	log ( LOG_INFO, "init: %s", cmd );
 	gbsystem(cmd);
 	m_syncHost = NULL;
 }
 
 // use the ip that is not dead, prefer eth0
-long Hostdb::getBestIp ( Host *h , long fromIp ) {
+int32_t Hostdb::getBestIp ( Host *h , int32_t fromIp ) {
 	// if shotgun/eth1 ip is dead, returh eth0 ip
 	if ( h->m_pingShotgun >= g_conf.m_deadHostTimeout ) return h->m_ip;
 	// if eth0 dead, return shotgun ip
@@ -2284,7 +2284,7 @@ long Hostdb::getBestIp ( Host *h , long fromIp ) {
 // . "h" is from g_hostdb2, the "external" cluster
 // . should we send to its primary or shotgun ip?
 // . this returns which ip we should send to
-long Hostdb::getBestHosts2IP ( Host  *h ) {
+int32_t Hostdb::getBestHosts2IP ( Host  *h ) {
 	// sanity check
 	if ( this != &g_hostdb ) { char *xx = NULL; *xx = 0; }
 	// get external ips
@@ -2354,7 +2354,7 @@ uint32_t Hostdb::getShardNumByTermId ( void *k ) {
 	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 }
 
-long getShardNumFromTermId ( int64_t termId ) {
+int32_t getShardNumFromTermId ( int64_t termId ) {
  	key144_t sk;
  	// make fake posdb key
  	g_posdb.makeStartKey ( &sk, termId );
@@ -2413,10 +2413,10 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 		// . otherwise, check the ip!
 		// . this must be a full rec... cast it
 		//SpiderRequest *sreq = (SpiderRequest *)k;
-		long firstIp = g_spiderdb.getFirstIp((key128_t *)k);
+		int32_t firstIp = g_spiderdb.getFirstIp((key128_t *)k);
 		// do what Spider.h getGroupId() used to do so we are
 		// backwards compatible
-		unsigned long h = (unsigned long)hash32h(firstIp,0x123456);
+		uint32_t h = (uint32_t)hash32h(firstIp,0x123456);
 		// use that for getting the group
 		//return g_spiderdb.getGroupId( firstIp );
 		return m_map [ h & (MAX_KSLOTS-1)];
@@ -2439,7 +2439,7 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 	// . least significant bits are first
 	else if ( rdbId == RDB_PLACEDB || rdbId == RDB2_PLACEDB2 ) {
 		// hash those guys hashes into a single hash
-		unsigned long h = hash32 ( ((char *)k) + 8 , 8 );
+		uint32_t h = hash32 ( ((char *)k) + 8 , 8 );
 		// use that to lookup in m_map then
 		return m_map [ h & (MAX_KSLOTS-1) ];
 	}
@@ -2482,10 +2482,10 @@ uint32_t Hostdb::getShardNumFromDocId ( int64_t d ) {
 	return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 }
 
-Host *Hostdb::getBestSpiderCompressionProxy ( long *key ) {
+Host *Hostdb::getBestSpiderCompressionProxy ( int32_t *key ) {
 
-	static long s_numTotal = 0;
-	static long s_numAlive = 0;
+	static int32_t s_numTotal = 0;
+	static int32_t s_numAlive = 0;
 	static Host *s_alive[64];
 	static Host *s_lastResort = NULL;
 	static bool s_aliveValid = false;
@@ -2494,7 +2494,7 @@ Host *Hostdb::getBestSpiderCompressionProxy ( long *key ) {
 		// come up to "redo" from below if a host goes dead
 	redo:
 		s_aliveValid = true;
-		for ( long i = 0 ; i < m_numProxyHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numProxyHosts ; i++ ) {
 			Host *h = getProxy(i);
 			if ( ! (h->m_type & HT_SCPROXY ) ) continue;
 			// if all dead use this
@@ -2517,7 +2517,7 @@ Host *Hostdb::getBestSpiderCompressionProxy ( long *key ) {
 	if ( s_numAlive == 0 ) return s_lastResort;
 
 	// pick one based on the key
-	long ni = hash32((char *)key , 4 ) % s_numAlive;
+	int32_t ni = hash32((char *)key , 4 ) % s_numAlive;
 	// get it
 	Host *h = s_alive[ni];
 	// if dead, recompute alive[] table and try again!
@@ -2526,19 +2526,19 @@ Host *Hostdb::getBestSpiderCompressionProxy ( long *key ) {
 	return h;
 }
 
-long Hostdb::getCRC ( ) {
+int32_t Hostdb::getCRC ( ) {
 	if ( m_crcValid ) return m_crc;
 	// hash up all host entries, just the grunts really.
 	SafeBuf str;
-	for ( long i = 0 ; i < getNumGrunts() ; i++ ) {
+	for ( int32_t i = 0 ; i < getNumGrunts() ; i++ ) {
 		Host *h = &m_hosts[i];
 		// dns client port not so important
-		str.safePrintf("%li,", i);
+		str.safePrintf("%"INT32",", i);
 		str.safePrintf("%s," , iptoa(h->m_ip));
 		str.safePrintf("%s," , iptoa(h->m_ipShotgun));
-		str.safePrintf("%li,", (long)h->m_httpPort);
-		str.safePrintf("%li,", (long)h->m_httpsPort);
-		str.safePrintf("%li,", (long)h->m_port);
+		str.safePrintf("%"INT32",", (int32_t)h->m_httpPort);
+		str.safePrintf("%"INT32",", (int32_t)h->m_httpsPort);
+		str.safePrintf("%"INT32",", (int32_t)h->m_port);
 		str.pushChar('\n');
 	}
 	str.nullTerm();
@@ -2685,10 +2685,10 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	return true;
 }
 
-static long s_localIps[20];
+static int32_t s_localIps[20];
 #include <sys/types.h>
 #include <ifaddrs.h>
-long *getLocalIps ( ) {
+int32_t *getLocalIps ( ) {
 	static bool s_valid = false;
 	if ( s_valid ) return s_localIps;
 	s_valid = true;
@@ -2698,18 +2698,18 @@ long *getLocalIps ( ) {
 		return NULL;
 	}
 	ifaddrs *p = ifap;
-	long ni = 0;
+	int32_t ni = 0;
 	// store loopback just in case
-	long loopback = atoip("127.0.0.1");
+	int32_t loopback = atoip("127.0.0.1");
 	s_localIps[ni++] = loopback;
 	for ( ; p && ni < 18 ; p = p->ifa_next ) {
 		// avoid possible core dump
 		if ( ! p->ifa_addr ) continue;
-		long ip = ((struct sockaddr_in*)p->ifa_addr)->sin_addr.s_addr;
+		int32_t ip = ((struct sockaddr_in*)p->ifa_addr)->sin_addr.s_addr;
 		// skip if loopback we stored above
 		if ( ip == loopback ) continue;
 		// skip bogus ones
-		if ( (unsigned long)ip <= 10 ) continue;
+		if ( (uint32_t)ip <= 10 ) continue;
 		// show it
 		//log("host: detected local ip %s",iptoa(ip));
 		// otherwise store it
@@ -2723,8 +2723,8 @@ long *getLocalIps ( ) {
 	return s_localIps;
 }
 
-Host *Hostdb::getHost2 ( char *cwd , long *localIps ) {
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+Host *Hostdb::getHost2 ( char *cwd , int32_t *localIps ) {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
 		Host *h = &m_hosts[i];
 		// . get the path. guaranteed to end in '/'
 		//   as well as cwd!
@@ -2732,17 +2732,17 @@ Host *Hostdb::getHost2 ( char *cwd , long *localIps ) {
 		//   for this host, skip it, it's not our host
 		if ( strcmp(h->m_dir,cwd) ) continue;
 		// now it must be our ip as well!
-		long *ipPtr = localIps;
+		int32_t *ipPtr = localIps;
 		for ( ; *ipPtr ; ipPtr++ ) 
 			// return the host if it also matches the ip!
-			if ( (long)h->m_ip == *ipPtr ) return h;
+			if ( (int32_t)h->m_ip == *ipPtr ) return h;
 	}
 	// what, no host?
 	return NULL;
 }
 
-Host *Hostdb::getProxy2 ( char *cwd , long *localIps ) {
-	for ( long i = 0 ; i < m_numProxyHosts ; i++ ) {
+Host *Hostdb::getProxy2 ( char *cwd , int32_t *localIps ) {
+	for ( int32_t i = 0 ; i < m_numProxyHosts ; i++ ) {
 		Host *h = getProxy(i);
 		if ( ! (h->m_type & HT_PROXY ) ) continue;
 		// . get the path. guaranteed to end in '/'
@@ -2751,10 +2751,10 @@ Host *Hostdb::getProxy2 ( char *cwd , long *localIps ) {
 		//   for this host, skip it, it's not our host
 		if ( strcmp(h->m_dir,cwd) ) continue;
 		// now it must be our ip as well!
-		long *ipPtr = localIps;
+		int32_t *ipPtr = localIps;
 		for ( ; *ipPtr ; ipPtr++ ) 
 			// return the host if it also matches the ip!
-			if ( (long)h->m_ip == *ipPtr ) return h;
+			if ( (int32_t)h->m_ip == *ipPtr ) return h;
 	}
 	// what, no host?
 	return NULL;

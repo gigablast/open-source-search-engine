@@ -74,15 +74,15 @@ void Msg51::reset ( ) {
 bool Msg51::getClusterRecs ( int64_t     *docIds                   ,
 			     char          *clusterLevels            ,
 			     key_t         *clusterRecs              ,
-			     long           numDocIds                ,
+			     int32_t           numDocIds                ,
 			     //char          *coll                     ,
 			     collnum_t collnum ,
-			     long           maxCacheAge              ,
+			     int32_t           maxCacheAge              ,
 			     bool           addToCache               ,
 			     void          *state                    ,
 			     void        (* callback)( void *state ) ,
 			     // blacklisted sites
-			     long           niceness                 ,
+			     int32_t           niceness                 ,
 			     // output
 			     bool           isDebug                  ) {
 	// reset this msg
@@ -93,8 +93,8 @@ bool Msg51::getClusterRecs ( int64_t     *docIds                   ,
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// return true on error, g_errno should already be set
 	if ( ! cr ) {
-		log("db: msg51. Collection rec null for collnum %li.", 
-		    (long)collnum);
+		log("db: msg51. Collection rec null for collnum %"INT32".", 
+		    (int32_t)collnum);
 		g_errno = EBADENGINEER;
 		char *xx=NULL; *xx=0;
 		return true;
@@ -135,7 +135,7 @@ bool Msg51::getClusterRecs ( int64_t     *docIds                   ,
 	m_numRequests = 0;
 	m_numReplies  = 0;
 	// clear these
-	for ( long i = 0 ; i < MSG51_MAX_REQUESTS ; i++ )
+	for ( int32_t i = 0 ; i < MSG51_MAX_REQUESTS ; i++ )
 		m_msg0[i].m_inUse = false;
 	// . do gathering
 	// . returns false if blocked, true otherwise
@@ -147,7 +147,7 @@ bool Msg51::getClusterRecs ( int64_t     *docIds                   ,
 // . sets g_errno on error (and m_errno)
 // . k is a hint of which msg0 to use
 // . if k is -1 we do a complete scan to find available m_msg0[x]
-bool Msg51::sendRequests ( long k ) {
+bool Msg51::sendRequests ( int32_t k ) {
 
  sendLoop:
 
@@ -183,7 +183,7 @@ bool Msg51::sendRequests ( long k ) {
 	//   recs for the same docids we did a second ago
 	RdbCache *c = &s_clusterdbQuickCache;
 	if ( ! s_cacheInit ) c = NULL;
-	long      crecSize;
+	int32_t      crecSize;
 	// key_t     crec;
 	char     *crecPtr = NULL;
 	key_t     ckey = (key_t)m_docIds[m_nexti];
@@ -201,10 +201,10 @@ bool Msg51::sendRequests ( long k ) {
 		// sanity check
 		if ( crecSize != sizeof(key_t) ) { char *xx = NULL; *xx = 0; }
 		m_clusterRecs[m_nexti] = *(key_t *)crecPtr;
-		// it is no longer CR_UNINIT, we got the rec now
+		// it is no int32_ter CR_UNINIT, we got the rec now
 		m_clusterLevels[m_nexti] = CR_GOT_REC;
 		// debug msg
-		//logf(LOG_DEBUG,"query: msg51 getRec k.n0=%llu rec.n0=%llu",
+		//logf(LOG_DEBUG,"query: msg51 getRec k.n0=%"UINT64" rec.n0=%"UINT64"",
 		//     ckey.n0,m_clusterRecs[m_nexti].n0);
 		m_nexti++;
 		goto sendLoop;
@@ -217,7 +217,7 @@ bool Msg51::sendRequests ( long k ) {
 	     m_numRequests > m_numReplies ) return false;
 
 	// find empty slot
-	long slot ;
+	int32_t slot ;
 
 	// ignore bogus hints
 	if ( k >= MSG51_MAX_REQUESTS ) k = -1;
@@ -244,7 +244,7 @@ bool Msg51::sendRequests ( long k ) {
 }
 
 // . send using m_msg0s[i] class
-bool Msg51::sendRequest ( long    i ) {
+bool Msg51::sendRequest ( int32_t    i ) {
 	// what is the docid?
 	int64_t  d;
 	// point to where we want the last 64 bits of the cluster rec
@@ -252,7 +252,7 @@ bool Msg51::sendRequest ( long    i ) {
 	void    *dataPtr = NULL;
 
 	// save it
-	long ci = m_nexti;
+	int32_t ci = m_nexti;
 	// store where the cluster rec will go
 	dataPtr = (void *)ci;
 	// what's the docid?
@@ -272,14 +272,14 @@ bool Msg51::sendRequest ( long    i ) {
 	key_t endKey   = g_clusterdb.makeLastClusterRecKey  ( d );
 	
 	// bias clusterdb lookups (from Msg22.cpp)
-	long           numTwins     = g_hostdb.getNumHostsPerShard();
+	int32_t           numTwins     = g_hostdb.getNumHostsPerShard();
 	int64_t      sectionWidth = (DOCID_MASK/(int64_t)numTwins) + 1;
-	long           hostNum      = (d & DOCID_MASK) / sectionWidth;
-	long           numHosts     = g_hostdb.getNumHostsPerShard();
-	unsigned long  shardNum     = getShardNum(RDB_CLUSTERDB,&startKey);
+	int32_t           hostNum      = (d & DOCID_MASK) / sectionWidth;
+	int32_t           numHosts     = g_hostdb.getNumHostsPerShard();
+	uint32_t  shardNum     = getShardNum(RDB_CLUSTERDB,&startKey);
 	Host          *hosts        = g_hostdb.getShard ( shardNum );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
-	long firstHostId = hosts [ hostNum ].m_hostId ;
+	int32_t firstHostId = hosts [ hostNum ].m_hostId ;
 
 	// if we are doing a full split, keep it local, going across the net
 	// is too slow!
@@ -343,7 +343,7 @@ void gotClusterRecWrapper51 ( void *state ) {//, RdbList *rdblist ) {
 	// process it
 	THIS->gotClusterRec ( msg0 ) ;
 	// get slot number for re-send on this slot
-	long    k = msg0->m_slot51;
+	int32_t    k = msg0->m_slot51;
 	// . if not all done, launch the next one
 	// . this returns false if blocks, true otherwise
 	if ( ! THIS->sendRequests ( k ) ) return;
@@ -377,7 +377,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	//int64_t docId = g_clusterdb.getDocId ( *startKey );
 
 	// this doubles as a ptr to a cluster rec
-	long    ci = (long   )msg0->m_dataPtr;
+	int32_t    ci = (int32_t   )msg0->m_dataPtr;
 	// get docid
 	int64_t docId = m_docIds[ci];
 	// assume error!
@@ -386,22 +386,22 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	// bail on error
 	if ( g_errno || list->getListSize() < 12 ) {
 		//log(LOG_DEBUG,
-		//    "build: clusterdb rec for d=%lli dptr=%lu "
-		//     "not found. where is it?", docId, (long)ci);
+		//    "build: clusterdb rec for d=%"INT64" dptr=%"UINT32" "
+		//     "not found. where is it?", docId, (int32_t)ci);
 		g_errno = 0;
 		return;
 	}
 
 	// . steal rec from this multicast
-	// . point to cluster rec, a long   
+	// . point to cluster rec, a int32_t   
 	key_t *rec = &m_clusterRecs[ci];
 
 	// store the cluster rec itself
 	*rec = *(key_t *)(list->m_list);
 	// debug note
 	log(LOG_DEBUG,
-	    "build: had clusterdb SUCCESS for d=%lli dptr=%lu "
-	    "rec.n1=%lx,%016llx sitehash26=0x%lx.", (int64_t)docId, (long)ci,
+	    "build: had clusterdb SUCCESS for d=%"INT64" dptr=%"UINT32" "
+	    "rec.n1=%"XINT32",%016"XINT64" sitehash26=0x%"XINT32".", (int64_t)docId, (int32_t)ci,
 	    rec->n1,rec->n0,
 	    g_clusterdb.getSiteHash26((char *)rec));
 
@@ -415,7 +415,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	// it is legit, set to CR_OK
 	m_clusterLevels[ci] = CR_OK;
 
-	// shortcut
+	// int16_tcut
 	RdbCache *c = &s_clusterdbQuickCache;
 	
 	// . init the quick cache
@@ -434,7 +434,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 		s_cacheInit = true;
 
 	// debug msg
-	//logf(LOG_DEBUG,"query: msg51 addRec k.n0=%llu rec.n0=%llu",docId,
+	//logf(LOG_DEBUG,"query: msg51 addRec k.n0=%"UINT64" rec.n0=%"UINT64"",docId,
 	//     rec->n0);
 
 	// . add the record to our quick cache as a int64_t
@@ -455,8 +455,8 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 // . if maxDocIdsPerHostname is -1 do not do hostname clsutering
 bool setClusterLevels ( key_t     *clusterRecs          ,
 			int64_t *docIds               ,
-			long       numRecs              ,
-			long       maxDocIdsPerHostname ,
+			int32_t       numRecs              ,
+			int32_t       maxDocIdsPerHostname ,
 			bool       doHostnameClustering ,
 			bool       familyFilter         ,
 			char       langFilter           ,
@@ -488,9 +488,9 @@ bool setClusterLevels ( key_t     *clusterRecs          ,
 	u_int64_t startTime = gettimeofdayInMilliseconds();
 
 	// init loop counter vars
-	long           i     = -1;
-	long           count = 0;
-	unsigned long  score = 0;
+	int32_t           i     = -1;
+	int32_t           count = 0;
+	uint32_t  score = 0;
 	char          *crec ;
 	int64_t      h  ;
 	char          *level ;
@@ -532,7 +532,7 @@ loop:
 	// look it up
 	score = ctab.getScore ( &h ) ;
 	// if still visible, just continue
-	if ( score < (unsigned long)maxDocIdsPerHostname ) {
+	if ( score < (uint32_t)maxDocIdsPerHostname ) {
 		if ( ! ctab.addTerm(&h))
 			return false;
 		goto loop;
@@ -545,26 +545,26 @@ loop:
  done:
 
 	// debug
-	for ( long i = 0 ; i < numRecs && isDebug ; i++ ) {
+	for ( int32_t i = 0 ; i < numRecs && isDebug ; i++ ) {
 		crec = (char *)&clusterRecs[i];
-		unsigned long siteHash26=g_clusterdb.getSiteHash26(crec);
-		logf(LOG_DEBUG,"query: msg51: hit #%li) sitehash26=%lu "
-		     "rec.n0=%llx docid=%lli cl=%li (%s)",
-		     (long)count++,
-		     (long)siteHash26,
+		uint32_t siteHash26=g_clusterdb.getSiteHash26(crec);
+		logf(LOG_DEBUG,"query: msg51: hit #%"INT32") sitehash26=%"UINT32" "
+		     "rec.n0=%"XINT64" docid=%"INT64" cl=%"INT32" (%s)",
+		     (int32_t)count++,
+		     (int32_t)siteHash26,
 		     clusterRecs[i].n0,
 		     (int64_t)docIds[i],
-		     (long)clusterLevels[i],
-		     g_crStrings[(long)clusterLevels[i]] );
+		     (int32_t)clusterLevels[i],
+		     g_crStrings[(int32_t)clusterLevels[i]] );
 	}
 
 
-	//log(LOG_DEBUG,"build: numVisible=%li numClustered=%li numErrors=%li",
+	//log(LOG_DEBUG,"build: numVisible=%"INT32" numClustered=%"INT32" numErrors=%"INT32"",
 	//    *numVisible,*numClustered,*numErrors);
 	// show time
 	uint64_t took = gettimeofdayInMilliseconds() - startTime;
 	if ( took <= 3 ) return true;
-	log(LOG_INFO,"build: Took %lli ms to do clustering.",took);
+	log(LOG_INFO,"build: Took %"INT64" ms to do clustering.",took);
 
 	// we are all done
 	return true;

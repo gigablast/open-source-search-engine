@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this library; see the file COPYING.  If not, write to the Free
+aint32_t with this library; see the file COPYING.  If not, write to the Free
 Software Foundation, 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 As a special exception, if you link this library with files
@@ -58,7 +58,7 @@ extern "C" {
 #if _G_IO_IO_FILE_VERSION == 0x20001
 #define _IO_wchar_t _G_wchar_t
 #else
-#define _IO_wchar_t short
+#define _IO_wchar_t int16_t
 #endif
 #endif
 
@@ -79,7 +79,7 @@ typedef _IO_off_t streampos;
 #endif
 typedef _IO_ssize_t streamsize;
 
-typedef unsigned long __fmtflags;
+typedef uint32_t __fmtflags;
 typedef unsigned char __iostate;
 
 struct _ios_fields
@@ -188,7 +188,7 @@ class ios : public _ios_fields {
 	fmtflags old_val = _flags; _flags = new_val; return old_val; }
     int precision() const { return _precision; }
     int precision(int newp) {
-	unsigned short oldp = _precision; _precision = (unsigned short)newp;
+	uint16_t oldp = _precision; _precision = (uint16_t)newp;
 	return oldp; }
     fmtflags setf(fmtflags val) {
 	fmtflags oldbits = _flags;
@@ -236,8 +236,8 @@ class ios : public _ios_fields {
     static int xalloc();
     void*& pword(int);
     void* pword(int) const;
-    long& iword(int);
-    long iword(int) const;
+    int32_t& iword(int);
+    int32_t iword(int) const;
 
 #ifdef _STREAM_COMPAT
     void unset(state_value flag) { _state &= ~flag; }
@@ -322,7 +322,7 @@ struct streambuf : public _IO_FILE { // protected??
     void setg(char* eb, char* g, char *eg) {
       if (_IO_file_flags & _IO_IN_BACKUP) _IO_free_backup_area(this); 
       _IO_read_base = eb; _IO_read_ptr = g; _IO_read_end = eg; }
-    char *shortbuf() { return _shortbuf; }
+    char *int16_tbuf() { return _int16_tbuf; }
 
     int in_backup() { return _flags & _IO_IN_BACKUP; }
     // The start of the main get area:  FIXME:  wrong for write-mode filebuf?
@@ -380,7 +380,7 @@ struct streambuf : public _IO_FILE { // protected??
     int allocate() { // For AT&T compatibility
 	if (base() || unbuffered()) return 0;
 	else return doallocate(); }
-    // Allocate a buffer if needed; use _shortbuf if appropriate.
+    // Allocate a buffer if needed; use _int16_tbuf if appropriate.
     void allocbuf() { if (base() == NULL) doallocbuf(); }
     void doallocbuf();
     int in_avail() { return _IO_read_end - _IO_read_ptr; }
@@ -391,7 +391,7 @@ struct streambuf : public _IO_FILE { // protected??
     int ignore(int);
     int get_column();
     int set_column(int);
-    long sgetline(char* buf, _IO_size_t n, char delim, int putback_delim);
+    int32_t sgetline(char* buf, _IO_size_t n, char delim, int putback_delim);
     int sputc(int c) { return _IO_putc(c, this); }
     int sbumpc() { return _IO_getc(this); }
     int sgetc() { return _IO_peekc(this); }

@@ -14,11 +14,11 @@
 #include "ip.h"      // atoip ( s,len)
 
 char *getPathFast  ( char *url );
-char *getFilenameFast ( char *url , long *filenameLen ) ;
-char *getTLDFast   ( char *url , long *tldLen  , bool hasHttp = true ) ;
-char *getDomFast   ( char *url , long *domLen  , bool hasHttp = true ) ;
+char *getFilenameFast ( char *url , int32_t *filenameLen ) ;
+char *getTLDFast   ( char *url , int32_t *tldLen  , bool hasHttp = true ) ;
+char *getDomFast   ( char *url , int32_t *domLen  , bool hasHttp = true ) ;
 bool  hasSubdomain ( char *url );
-char *getHostFast  ( char *url , long *hostLen , long *port = NULL ) ;
+char *getHostFast  ( char *url , int32_t *hostLen , int32_t *port = NULL ) ;
 bool  isPermalinky ( char *url );
 
 bool isHijackerFormat ( char *url );
@@ -28,15 +28,15 @@ bool  isPingServer ( char *s ) ;
 // . returns the host of a normalized url pointed to by "s"
 // . i.e. "s" must start with the protocol (i.e. http:// or https:// etc.)
 // . used by Links.cpp for fast parsing and SiteGetter.cpp too
-char *getHost ( char *s , long *hostLen ) ;
+char *getHost ( char *s , int32_t *hostLen ) ;
 
 // . get the path end of a normalized url
 // . used by SiteGetter.cpp
 // . if num==0 just use "www.xyz.com" as site (the hostname)
 // . if num==1 just use "www.xyz.com/foo/" as site
-char *getPathEnd ( char *s , long num );
+char *getPathEnd ( char *s , int32_t num );
 
-long getPathDepth ( char *s , bool hasHttp );
+int32_t getPathDepth ( char *s , bool hasHttp );
 
 class Url {
 
@@ -57,17 +57,17 @@ public:
 		set ( baseUrl , s , strlen(s) ); }
 
 	// . "s" must be an ENCODED url
-	void set    ( char *s , long len , bool addWWW = false,
+	void set    ( char *s , int32_t len , bool addWWW = false,
 		      bool stripSessionIds = false , bool stripPound = false ,
 		      bool stripCommonFile = false ,
-		      long titleRecVersion = 0x7fffffff );
-	void set    ( Url *baseUrl , char *s , long len , bool addWWW = false,
+		      int32_t titleRecVersion = 0x7fffffff );
+	void set    ( Url *baseUrl , char *s , int32_t len , bool addWWW = false,
 		      bool stripSessionIds = false , bool stripPound = false ,
 		      bool stripCommonFile = false ,
-		      long titleRecVersion = 0x7fffffff );
-	void setIp  ( long ip ) { m_ip = ip; };
+		      int32_t titleRecVersion = 0x7fffffff );
+	void setIp  ( int32_t ip ) { m_ip = ip; };
 
-	char isSessionId ( char *hh, long titleRecVersion ) ;
+	char isSessionId ( char *hh, int32_t titleRecVersion ) ;
 
 	// compare another url to us
 	bool equals ( Url *u ) {
@@ -89,23 +89,23 @@ public:
 
 	//returns True if the extension is in the list of 
 	//badExtensions - extensions not to be parsed
-	bool isBadExtension(long int);
+	bool isBadExtension(int32_t xxx);
 	bool isSet()            { return m_ulen != 0; }
 
 	// does it end in .xml, .rdb or .rss, etc. kinda thing
 	//bool isRSSFormat ( ) ;
 
-	// is it http://rpc.weblogs.com/shortChanges.xml, etc.?
+	// is it http://rpc.weblogs.com/int16_tChanges.xml, etc.?
 	bool isPingServer ( ) ;
 
-	void setPort             (unsigned short port ) { m_port = port; };
+	void setPort             (uint16_t port ) { m_port = port; };
 
-	long getSubUrlLen        (long i);
-	long getSubPathLen       (long i);
+	int32_t getSubUrlLen        (int32_t i);
+	int32_t getSubPathLen       (int32_t i);
 
-	long getPort             () { return m_port;};
-	long getIp               () { return m_ip; };
-	long getIpDomain         () { return ipdom(m_ip); };
+	int32_t getPort             () { return m_port;};
+	int32_t getIp               () { return m_ip; };
+	int32_t getIpDomain         () { return ipdom(m_ip); };
 
 	char *getUrl         () { return m_url;};
 	char *getUrlEnd      () { return m_url + m_ulen;};
@@ -122,22 +122,22 @@ public:
 	char *getAnchor      () { return m_anchor;};
 	//char *getSite         () {return m_site;};
 	char *getPortStr     () { return m_portStr; }
-	long  getUrlLen         () { return m_ulen;};
-	long  getSchemeLen      () { return m_slen;};
-	long  getHostLen        () { return m_hlen;};
-	long  getDomainLen      () { return m_dlen;};
-	long  getPathLen        () { return m_plen;};
+	int32_t  getUrlLen         () { return m_ulen;};
+	int32_t  getSchemeLen      () { return m_slen;};
+	int32_t  getHostLen        () { return m_hlen;};
+	int32_t  getDomainLen      () { return m_dlen;};
+	int32_t  getPathLen        () { return m_plen;};
 	char *getPathEnd        () { return m_path + m_plen; };
-	long  getFilenameLen    () { return m_flen;};
-	long  getExtensionLen   () { return m_elen;};
-	long  getQueryLen       () { return m_qlen;};
-	long  getTLDLen         () { return m_tldLen; };
-	long  getMidDomainLen   () { return m_mdlen;};
-	long  getPortLen        () { return m_portLen;};
-	long  getAnchorLen      () { return m_anchorLen;};
-	long  getDefaultPort    () { return m_defPort;};
-	//long  getSiteLen         () {return m_siteLen;};
-	long  getPathLenWithCgi () {
+	int32_t  getFilenameLen    () { return m_flen;};
+	int32_t  getExtensionLen   () { return m_elen;};
+	int32_t  getQueryLen       () { return m_qlen;};
+	int32_t  getTLDLen         () { return m_tldLen; };
+	int32_t  getMidDomainLen   () { return m_mdlen;};
+	int32_t  getPortLen        () { return m_portLen;};
+	int32_t  getAnchorLen      () { return m_anchorLen;};
+	int32_t  getDefaultPort    () { return m_defPort;};
+	//int32_t  getSiteLen         () {return m_siteLen;};
+	int32_t  getPathLenWithCgi () {
 		if ( ! m_query ) return m_plen;	return m_plen + 1 + m_qlen; };
 	bool  isHttp            () { 
 		if ( m_ulen  < 4 ) return false;
@@ -166,23 +166,23 @@ public:
 	//bool isSiteRoot(char *coll,
 	//		class TagRec *tagRec = NULL ,
 	//		char **retSite=NULL,
-	//		long *retSiteLen=NULL);
+	//		int32_t *retSiteLen=NULL);
 
 	// . returns the site and sets *siteLen
 	// . returns NULL and sets g_errno on error
 	// . returns NULL without g_errno set if our domain is invalid
 	// . sets "*isDefault" to true if we just returned the default site,
 	//   otherwise false
-	//char *getSite ( long *siteLen , char *coll , 
+	//char *getSite ( int32_t *siteLen , char *coll , 
 	//		bool defaultToHostname , 
 	//		class TagRec *tagRec = NULL ,
 	//		bool *isDefault = NULL );
 
 	// used by buzz i guess
-	//long  getSiteHash32   ( char *coll );
-	long      getUrlHash32    ( ) ;
-	long      getHostHash32   ( ) ;
-	long      getDomainHash32 ( ) ;
+	//int32_t  getSiteHash32   ( char *coll );
+	int32_t      getUrlHash32    ( ) ;
+	int32_t      getHostHash32   ( ) ;
+	int32_t      getDomainHash32 ( ) ;
 
 	int64_t getUrlHash64    ( ) ;
 	int64_t getHostHash64   ( ) ;
@@ -195,15 +195,15 @@ public:
 	// . without trailing / if path is just "/"
 	// . without "www." if in hostname and "rmWWW" is true
 	// . returns length
-	// . if "buf" is NULL just returns the shorthand-form length
-	char *getShorthandUrl    ( bool rmWWW , long *len );
+	// . if "buf" is NULL just returns the int16_thand-form length
+	char *getShorthandUrl    ( bool rmWWW , int32_t *len );
 
 	// count the path components (root url as 0 path components)
-	long  getPathDepth ( bool countFilename = false );
+	int32_t  getPathDepth ( bool countFilename = false );
 
 	// get path component #num. starts at 0.
-	char *getPathComponent ( long num , long *clen );
-	//char *getPathEnd       ( long num );
+	char *getPathComponent ( int32_t num , int32_t *clen );
+	//char *getPathEnd       ( int32_t num );
 
 	// is our hostname "www" ?
 	bool isHostWWW ( ) ;
@@ -220,7 +220,7 @@ public:
 	bool isSpam();
 
 	// this is private
-	bool isSpam ( char *s , long slen ) ;
+	bool isSpam ( char *s , int32_t slen ) ;
 
 	// . detects crazy repetetive urls like this:
 	//   http://www.pittsburghlive.com:8000/x/tribune-review/opinion/
@@ -237,57 +237,57 @@ public:
 	// private:
 
 	char    m_url[MAX_URL_LEN]; // the normalized url
-	long    m_ulen;
+	int32_t    m_ulen;
 
 	// points into "url" (http, ftp, mailto, ...)(all lowercase)
 	char   *m_scheme;           
-	long    m_slen;
+	int32_t    m_slen;
 
 	// points into "url" (a.com, www.yahoo.com, 1.2.3.4, ...)(allLowercase)
 	char   *m_host;             
-	long    m_hlen;
+	int32_t    m_hlen;
 
 	// it's 0 if we don't have one
-	long    m_ip;  
+	int32_t    m_ip;  
 
 	// points into "url" (/  /~mwells/  /a/b/ ...) (always ends in /)
 	char   *m_path;             
-	long    m_plen;
+	int32_t    m_plen;
 
 	// points into "url" (a=hi+there, ...)
 	char   *m_query;            
-	long    m_qlen;
+	int32_t    m_qlen;
 
 	// points into "url" (html, mpg, wav, doc, ...)
 	char   *m_extension;        
-	long    m_elen;
+	int32_t    m_elen;
 
 	// (a.html NULL index.html) (can be NULL)
 	char   *m_filename;         
-	long    m_flen;
+	int32_t    m_flen;
 
 	char   *m_domain;
-	long    m_dlen;
+	int32_t    m_dlen;
 
 	char   *m_tld;
-	long    m_tldLen;
+	int32_t    m_tldLen;
 
 	// char *m_midDomain equals m_domain
-	long    m_mdlen;
+	int32_t    m_mdlen;
 
 	// (80, 8080, 8000, ...)
-	long    m_port;             
-	long    m_defPort;
-	long    m_portLen;
+	int32_t    m_port;             
+	int32_t    m_defPort;
+	int32_t    m_portLen;
 	char   *m_portStr;
 
 	// anchor
 	char   *m_anchor;
-	long    m_anchorLen;
+	int32_t    m_anchorLen;
 	
 	// Base site url
 	//char *m_site;
-	//long m_siteLen;
+	//int32_t m_siteLen;
 };
 
 #endif

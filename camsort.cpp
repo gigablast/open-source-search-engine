@@ -66,7 +66,7 @@ int main () {
 char *getNextFilename ( DIR *dir , char *pattern ) {
 
 	struct dirent *ent;
-	long plen = gbstrlen ( pattern );
+	int32_t plen = gbstrlen ( pattern );
 	while ( (ent = readdir ( dir ))  ) {
 		char *filename = ent->d_name;
 		if ( ! pattern ) return filename;

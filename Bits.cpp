@@ -29,8 +29,8 @@ void Bits::reset() {
 // . set bits for each word
 // . these bits are used for phrasing and by spam detector
 // . returns false and sets errno on error
-bool Bits::set ( Words *words , char titleRecVersion , long niceness ,
-		 char *buf , long bufSize ) {
+bool Bits::set ( Words *words , char titleRecVersion , int32_t niceness ,
+		 char *buf , int32_t bufSize ) {
 	reset();
 	// save words so printBits works
 	m_words = words;
@@ -38,9 +38,9 @@ bool Bits::set ( Words *words , char titleRecVersion , long niceness ,
 	m_titleRecVersion = titleRecVersion;
 	m_niceness        = niceness;
 	// how many words?
-	long numBits = words->getNumWords();
+	int32_t numBits = words->getNumWords();
 	// how much space do we need?
-	long need = numBits * sizeof(wbit_t);
+	int32_t need = numBits * sizeof(wbit_t);
 	// assume no malloc
 	m_needsFree = false;
 
@@ -72,23 +72,23 @@ bool Bits::set ( Words *words , char titleRecVersion , long niceness ,
 
 	int64_t prevWid = 0LL;
 
-	//long  *wlens     = words->getWordLens();
-	long   brcount   = 0;
+	//int32_t  *wlens     = words->getWordLens();
+	int32_t   brcount   = 0;
 
 	wbit_t bits;
 	bool isInSentence = false;
 
-	for ( long i = 0 ; i < numBits ; i++ ) {
+	for ( int32_t i = 0 ; i < numBits ; i++ ) {
 		// get the word text and it's length
 		//char         *s    = words->getWord    ( i );
-		//long          slen = words->getWordLen ( i );
+		//int32_t          slen = words->getWordLen ( i );
 		//wbit_t bits;
 
 		// breathe
 		QUICKPOLL ( m_niceness );
 
 		if ( tagIds && tagIds[i] ) {
-			// shortcut
+			// int16_tcut
 			nodeid_t tid = tagIds[i] & BACKBITCOMP;
 			// count the <br>s, we can't pair across more than 1
 			if ( g_nodes[tid].m_isBreaking ) 
@@ -111,7 +111,7 @@ bool Bits::set ( Words *words , char titleRecVersion , long niceness ,
 		}
 		else {
 			// . just allow anything now!
-			// . the curved quote in utf8 is 3 bytes long and with
+			// . the curved quote in utf8 is 3 bytes int32_t and with
 			//   a space before it, was causing issues here!
 			bits= D_CAN_PAIR_ACROSS;
 			//bits = getPunctuationBits(w[i],wlens[i]);
@@ -181,7 +181,7 @@ bool Bits::set ( Words *words , char titleRecVersion , long niceness ,
 
 
 		//
-		// pick the longest line in a hard section which ends in
+		// pick the int32_test line in a hard section which ends in
 		// a period and contains a br tag.  then any line that
 		// is 80%+ of that line's number of chars is also a line
 		// where the br should not terminate it as a sentence.
@@ -205,21 +205,21 @@ void Bits::setInLinkBits ( Sections *ss ) {
 		// skip if not a href section
 		if ( si->m_baseHash != TAG_A ) continue;
 		// set boundaries
-		long a = si->m_a;
-		long b = si->m_b;
-		for ( long i = a ; i < b ; i++ )
+		int32_t a = si->m_a;
+		int32_t b = si->m_b;
+		for ( int32_t i = a ; i < b ; i++ )
 			m_bits[i] |= D_IN_LINK;
 	}
 }	
 
-void Bits::setInUrlBits ( long niceness ) {
+void Bits::setInUrlBits ( int32_t niceness ) {
 	if ( m_inUrlBitsSet ) return;
 	m_inUrlBitsSet = true;
 	nodeid_t *tids  = m_words->getTagIds();
 	int64_t *wids = m_words->getWordIds();
 	char **wptrs    = m_words->getWords();
-	long nw = m_words->getNumWords();
-	for ( long i = 0 ; i < nw; i++ ) {
+	int32_t nw = m_words->getNumWords();
+	for ( int32_t i = 0 ; i < nw; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// look for protocol
@@ -231,7 +231,7 @@ void Bits::setInUrlBits ( long niceness ) {
 		// set them up
 		if ( i<= 0 ) continue;
 		// scan for end of it. stop at tag or space
-		long j = i - 1;
+		int32_t j = i - 1;
 		for ( ; j < nw ; j++ ) {
 			// breathe
 			QUICKPOLL(niceness);
@@ -251,7 +251,7 @@ void Bits::setInUrlBits ( long niceness ) {
 }
 
 void Bits::printBits ( ) {
-	for ( long i = 0 ; i < m_words->getNumWords(); i++ ) {
+	for ( int32_t i = 0 ; i < m_words->getNumWords(); i++ ) {
 		m_words->printWord(i);
 		fprintf(stderr," ");
 		printBit(i);
@@ -259,7 +259,7 @@ void Bits::printBits ( ) {
 	}
 }
 
-void Bits::printBit ( long i ) {
+void Bits::printBit ( int32_t i ) {
 	if (m_bits[i]&D_CAN_BE_IN_PHRASE ) fprintf(stderr," canBeInPhrse");
 	else                               fprintf(stderr,"             ");
 	if (m_bits[i]&D_IS_STOPWORD ) fprintf(stderr," stopword");
@@ -276,10 +276,10 @@ void Bits::printBit ( long i ) {
 
 // . if we're a stop word and previous word was an apostrophe
 //   then set D_CAN_APOSTROPHE_PRECEED to true and PERIOD_PRECEED to false
-wbit_t Bits::getAlnumBits ( long i , wbit_t prevBits ) {
+wbit_t Bits::getAlnumBits ( int32_t i , wbit_t prevBits ) {
 
 	char      *s   = m_words->getWord    ( i );
-	long       len = m_words->getWordLen ( i );
+	int32_t       len = m_words->getWordLen ( i );
 	int64_t  wid = m_words->getWordId  ( i );
 
 	//if ( m_titleRecVersion < 36 && m_words->getStripWordId(i) )
@@ -308,7 +308,7 @@ wbit_t Bits::getAlnumBits ( long i , wbit_t prevBits ) {
 	if ( is_upper_utf8(s) ) return bits | D_CAN_START_PHRASE;
 
 	// if the previous word could not be paired across then
-	// this stop word can start a phrase.  ( short end.  it happened 
+	// this stop word can start a phrase.  ( int16_t end.  it happened 
 	// yesterday. )
 	if ((prevBits & D_CAN_PAIR_ACROSS) == 0)
 		return bits | D_CAN_START_PHRASE;
@@ -320,9 +320,9 @@ wbit_t Bits::getAlnumBits ( long i , wbit_t prevBits ) {
 	return bits;
 }
 
-// TODO: fuckin' ms frontpage puts long sequences of spaces
+// TODO: fuckin' ms frontpage puts int32_t sequences of spaces
 //       between words that are next to each other
-wbit_t Bits::getPunctuationBits ( char *s , long len ) {
+wbit_t Bits::getPunctuationBits ( char *s , int32_t len ) {
 
 	uint8_t cs;
 	if ( len != 2 ) goto tryLen1;
@@ -401,7 +401,7 @@ wbit_t Bits::getPunctuationBits ( char *s , long len ) {
 	// space in html and Microsoft Front Page separates lines by a 
 	// bunch of spaces
 	if ( is_wspace_a(s[0]) && is_wspace_a(s[1]) && is_wspace_a(s[2]) ) {
-		long k = 3;
+		int32_t k = 3;
 		while ( k < len ) if ( ! is_wspace_a(s[k++] ) ) return 0;
 		return D_CAN_PAIR_ACROSS;
 	}
@@ -428,7 +428,7 @@ nodeid_t s_bt [ 1000 ];
 // . set bits for each word
 // . these bits are used for phrasing and by spam detector
 // . returns false and sets errno on error
-bool Bits::setForSummary ( Words *words , char *buf , long bufSize ) {
+bool Bits::setForSummary ( Words *words , char *buf , int32_t bufSize ) {
 	// clear the mem
 	reset();
 
@@ -456,9 +456,9 @@ bool Bits::setForSummary ( Words *words , char *buf , long bufSize ) {
 	// save for convenience/speed
 	//m_titleRecVersion = 0;
 	// how many words?
-	long numBits = words->getNumWords();
+	int32_t numBits = words->getNumWords();
 	// how much space do we need?
-	long need = sizeof(swbit_t) * numBits;
+	int32_t need = sizeof(swbit_t) * numBits;
 	// assume no malloc
 	m_needsFree = false;
 
@@ -484,7 +484,7 @@ bool Bits::setForSummary ( Words *words , char *buf , long bufSize ) {
 
 	nodeid_t   *tagIds = words->getTagIds();
 	char      **w      = words->getWords();
-	long       *wlens  = words->getWordLens();
+	int32_t       *wlens  = words->getWordLens();
 	int64_t  *wids   = words->getWordIds();
 
 	char          startSent = 1;
@@ -492,19 +492,19 @@ bool Bits::setForSummary ( Words *words , char *buf , long bufSize ) {
 	char          inQuote   = 0;
 	char          inParens  = 0;
 
-	long          wlen;
+	int32_t          wlen;
 	char         *wp;
 
 	// the ongoing accumulation flag we apply to each word
 	swbit_t flags = 0;
 
-	for ( long i = 0 ; i < numBits ; i++ ) {
+	for ( int32_t i = 0 ; i < numBits ; i++ ) {
 		// assume none are set
 		m_swbits[i] = 0;
 		// if a breaking tag, next guy can "start a sentence"
 		if ( tagIds && tagIds[i] ) {
 			// get the tag id minus the high "back bit"
-			long tid = tagIds[i] & BACKBITCOMP;
+			int32_t tid = tagIds[i] & BACKBITCOMP;
 			// is it a "breaking tag"?
 			if ( g_nodes[tid].m_isBreaking ) {
 				startSent = 1;

@@ -23,8 +23,8 @@ Xml::~Xml () {
 }
 
 // . for parsing xml conf files
-bool Xml::getBool ( long n0 , long n1 , char *tagName , bool defaultBool ) {
-	long len;
+bool Xml::getBool ( int32_t n0 , int32_t n1 , char *tagName , bool defaultBool ) {
+	int32_t len;
 	char *s = getTextForXmlTag ( n0 , n1 , tagName , &len , true );
 	if ( s ) return atob ( s , len );
 	// return the default if no non-white-space text
@@ -32,8 +32,8 @@ bool Xml::getBool ( long n0 , long n1 , char *tagName , bool defaultBool ) {
 }
 
 // . for parsing xml conf files
-long Xml::getLong ( long n0 , long n1 , char *tagName , long defaultLong ) {
-	long len;
+int32_t Xml::getLong ( int32_t n0 , int32_t n1 , char *tagName , int32_t defaultLong ) {
+	int32_t len;
 	char *s = getTextForXmlTag ( n0 , n1 , tagName , &len , false );
 	if ( s ) return atol2 ( s , len );
 	// return the default if no non-white-space text
@@ -41,9 +41,9 @@ long Xml::getLong ( long n0 , long n1 , char *tagName , long defaultLong ) {
 }
 
 // . for parsing xml conf files
-int64_t Xml::getLongLong ( long n0 , long n1 , char *tagName , 
+int64_t Xml::getLongLong ( int32_t n0 , int32_t n1 , char *tagName , 
 			     int64_t defaultLongLong         ) {
-	long len;
+	int32_t len;
 	char *s = getTextForXmlTag ( n0 , n1 , tagName , &len , false );
 	if ( s ) return atoll2 ( s , len );
 	// return the default if no non-white-space text
@@ -51,15 +51,15 @@ int64_t Xml::getLongLong ( long n0 , long n1 , char *tagName ,
 }
 
 // . for parsing xml conf files
-float Xml::getFloat (long n0 , long n1 , char *tagName,float defaultFloat){
-	long len;
+float Xml::getFloat (int32_t n0 , int32_t n1 , char *tagName,float defaultFloat){
+	int32_t len;
 	char *s = getTextForXmlTag ( n0 , n1 , tagName , &len , false );
 	if ( s ) return atof2 ( s , len );
 	// return the default if no non-white-space text
 	return defaultFloat;
 }
 
-char *Xml::getString ( long n0 , long n1 , char *tagName, long *len ,
+char *Xml::getString ( int32_t n0 , int32_t n1 , char *tagName, int32_t *len ,
 		       bool skipLeadingSpaces ) const {
 	char *s = getTextForXmlTag ( n0, n1, tagName, len, skipLeadingSpaces );
 	if ( s ) return s;
@@ -70,18 +70,18 @@ char *Xml::getString ( long n0 , long n1 , char *tagName, long *len ,
 // . used by getValueAsBool/Long/String()
 // . tagName is compound for xml tags, simple for html tags
 // . NOTE: we skip over leading spaces
-char *Xml::getTextForXmlTag ( long n0 , long n1 , char *tagName , long *len ,
+char *Xml::getTextForXmlTag ( int32_t n0 , int32_t n1 , char *tagName , int32_t *len ,
 			      bool skipLeadingSpaces ) const {
 	// assume len is 0
 	*len = 0;
 	// get a matching xml TAG
-	long num = getNodeNum ( n0 , n1 , tagName , gbstrlen(tagName) );
+	int32_t num = getNodeNum ( n0 , n1 , tagName , gbstrlen(tagName) );
 	if ( num < 0                 ) return NULL;
 	return getString ( num , skipLeadingSpaces , len );
 }
 
 
-char *Xml::getString ( long num , bool skipLeadingSpaces , long *len ) const {
+char *Xml::getString ( int32_t num , bool skipLeadingSpaces , int32_t *len ) const {
 	// get the text of this tag (if any)
 	if ( ++num >= m_numNodes     ) { *len = 0; return NULL; }
 	if ( ! m_nodes[num].isText() ) { *len = 0; return NULL; }
@@ -94,7 +94,7 @@ char *Xml::getString ( long num , bool skipLeadingSpaces , long *len ) const {
 	// get the string
 	char *s    = m_nodes[num].m_node;
 	// set the length and return the string
-	long  slen = m_nodes[num].m_nodeLen;
+	int32_t  slen = m_nodes[num].m_nodeLen;
 	// skip leading spaces
 	while ( is_wspace_utf8 ( s ) && slen > 0 ) { s++; slen--; }
 	// set len
@@ -105,11 +105,11 @@ char *Xml::getString ( long num , bool skipLeadingSpaces , long *len ) const {
 	return s;
 }
 
-char *Xml::getNode ( char *tagName , long *len ) {
+char *Xml::getNode ( char *tagName , int32_t *len ) {
 	// assume len is 0
 	*len = 0;
 	// get a matching xml TAG
-	long num = getNodeNum ( 0 , m_numNodes, tagName , gbstrlen(tagName) );
+	int32_t num = getNodeNum ( 0 , m_numNodes, tagName , gbstrlen(tagName) );
 	if ( num < 0                 ) return NULL;
 
 	// no back tag if its like <languages/> it won't have one
@@ -117,7 +117,7 @@ char *Xml::getNode ( char *tagName , long *len ) {
 	if ( ! node->m_hasBackTag ) return NULL;
 
 	// scan for ending back tag
-	long i ; for ( i = num + 1 ; i < m_numNodes ; i++ ) {
+	int32_t i ; for ( i = num + 1 ; i < m_numNodes ; i++ ) {
 		if ( m_nodes[i].m_hash != node->m_hash ) continue;
 		break;
 	}
@@ -137,11 +137,11 @@ char *Xml::getNode ( char *tagName , long *len ) {
 
 
 
-int64_t Xml::getCompoundHash ( char *s , long len ) const {
+int64_t Xml::getCompoundHash ( char *s , int32_t len ) const {
 	// setup
 	char *p     = s;
 	char *start = s;
-	long i   = 0;
+	int32_t i   = 0;
 	int64_t h = 0;
  loop:
 	// find fisrt .
@@ -163,13 +163,13 @@ int64_t Xml::getCompoundHash ( char *s , long len ) const {
 
 // . return -1 if not found
 // . "tagName" is compound (i.e. "myhouse.myroom" )
-long Xml::getNodeNum ( long n0 , long n1 , char *tagName , long tagNameLen ) const {
+int32_t Xml::getNodeNum ( int32_t n0 , int32_t n1 , char *tagName , int32_t tagNameLen ) const {
 	// . since i changed the hash to a zobrist hash, hashing
 	//   "dns.ip" is not the same as hashing "dns" then "." then "ip"
 	//   by passing the hash of the last to the next as the startHash
 	// . therefore, i now parse it up
 	int64_t h = getCompoundHash ( tagName , tagNameLen );
-	long i;
+	int32_t i;
 	if ( n1 > m_numNodes ) n1 = m_numNodes;
 	if ( n0 > m_numNodes ) n0 = m_numNodes;
 	if ( n1 < 0 ) n1 = 0;
@@ -197,10 +197,10 @@ void Xml::reset ( ) {
 }
 
 
-bool Xml::getCompoundName ( long node , SafeBuf *sb ) {
+bool Xml::getCompoundName ( int32_t node , SafeBuf *sb ) {
 	XmlNode *buf[256];
 	XmlNode *xn = &m_nodes[node];
-	long np = 0;
+	int32_t np = 0;
 	for ( ; xn ; xn = xn->m_parent ) {
 		if ( ! xn->m_nodeId ) continue;
 		if ( np >= 256 ) {g_errno = EBUFTOOSMALL;return false;}
@@ -213,7 +213,7 @@ bool Xml::getCompoundName ( long node , SafeBuf *sb ) {
 	     strncasecmp(buf[np-1]->m_tagName,"xml",3) == 0 )
 		np--;
 
-	for ( long i = np - 1 ; i >= 0 ; i-- ) {
+	for ( int32_t i = np - 1 ; i >= 0 ; i-- ) {
 		XmlNode *xn = buf[i];
 		sb->safeMemcpy ( xn->m_tagName , xn->m_tagNameLen );
 		sb->pushChar('.');
@@ -229,13 +229,13 @@ bool Xml::getCompoundName ( long node , SafeBuf *sb ) {
 
 // "s" must be in utf8
 bool Xml::set ( char  *s             , 
-	        long   slen          , 
+	        int32_t   slen          , 
 	        bool   ownData       , 
-	        long   allocSize     ,
+	        int32_t   allocSize     ,
 	        bool   pureXml       ,
-	        long   version       ,
+	        int32_t   version       ,
 	        bool   setParentsArg ,
-	        long   niceness      ,
+	        int32_t   niceness      ,
 		char   contentType ) {
 
 	// just in case
@@ -255,7 +255,7 @@ bool Xml::set ( char  *s             ,
 	// debug msg time
 	if ( g_conf.m_logTimingBuild )
 		logf(LOG_TIMING,
-		    "build: xml: set: 4a. %llu",gettimeofdayInMilliseconds());
+		    "build: xml: set: 4a. %"UINT64"",gettimeofdayInMilliseconds());
 	// sanity check
 	if ( !s || slen <= 0) return true;
 	if ( s[slen] != '\0' ) {
@@ -293,7 +293,7 @@ bool Xml::set ( char  *s             ,
 
 
 	QUICKPOLL((niceness));
-	long i;
+	int32_t i;
 
 	// . replacing NULL bytes with spaces in the buffer
 	// . utf8 should never have any 0 bytes in it either!
@@ -310,19 +310,19 @@ bool Xml::set ( char  *s             ,
 	// debug msg time
 	if ( g_conf.m_logTimingBuild )
 		logf(LOG_TIMING,
-		    "build: xml: set: 4b. %llu",gettimeofdayInMilliseconds());
+		    "build: xml: set: 4b. %"UINT64"",gettimeofdayInMilliseconds());
 
 	// . truncate it to avoid spammers
 	// . now i limit to 30k nodes because of those damned xls docs!
 	// . they have 300,000+ nodes some of 'em
 
 	// now allow 35k nodes for every 100k doclen
-	long num100k = slen/(100*1024);
+	int32_t num100k = slen/(100*1024);
 	if (num100k <= 0) num100k = 1;
-	long bigMax = 35*1024 * num100k;
+	int32_t bigMax = 35*1024 * num100k;
 	if (m_maxNumNodes > bigMax){
-		log(LOG_WARN, "build: xml: doclen %ld, "
-		    "too many nodes: counted %ld, max %ld "
+		log(LOG_WARN, "build: xml: doclen %"INT32", "
+		    "too many nodes: counted %"INT32", max %"INT32" "
 		    "...truncating", slen, m_maxNumNodes, bigMax);
 		m_maxNumNodes = bigMax;
 	}
@@ -333,7 +333,7 @@ bool Xml::set ( char  *s             ,
 	m_nodes = (XmlNode *) mmalloc (sizeof(XmlNode) * m_maxNumNodes,"Xml1");
 	if ( ! m_nodes ) { 
 		reset(); 
-		return log("build: Could not allocate %li "
+		return log("build: Could not allocate %"INT32" "
 			   "bytes need to parse document.",
 			   sizeof(XmlNode)*m_maxNumNodes);
 	}
@@ -341,7 +341,7 @@ bool Xml::set ( char  *s             ,
 	// debug msg time
 	if ( g_conf.m_logTimingBuild )
 		logf(LOG_TIMING,
-		    "build: xml: set: 4c. %llu",gettimeofdayInMilliseconds());
+		    "build: xml: set: 4c. %"UINT64"",gettimeofdayInMilliseconds());
 
 	XmlNode *parent = NULL;
 	XmlNode *parentStackStart[256];
@@ -352,7 +352,7 @@ bool Xml::set ( char  *s             ,
 	// . now fill our nodes array
 	// . loop over the xml
 	// . i is byte-index in buffer
-	long oldi;
+	int32_t oldi;
 	for ( i = 0 ; i < m_xmlLen && m_numNodes < m_maxNumNodes ; ) {
 		// breathe
 		QUICKPOLL(niceness);
@@ -470,7 +470,7 @@ bool Xml::set ( char  *s             ,
 	// debug msg time
 	if ( g_conf.m_logTimingBuild )
 		logf(LOG_TIMING,
-		    "build: xml: set: 4d. %llu",gettimeofdayInMilliseconds());
+		    "build: xml: set: 4d. %"UINT64"",gettimeofdayInMilliseconds());
 
 	return true;
 }
@@ -487,10 +487,10 @@ bool Xml::set ( char  *s             ,
 // . must write to your buf rather than just return a pointer since we may
 //   have to concatenate several nodes together, we may have to replace tags,..
 // . TODO: nuke this in favor of Pos.cpp::filter() -- but that needs Words.cpp
-long Xml::getText ( char  *buf             ,
-		    long   bufMaxSize      ,
-		    long   node1           ,
-		    long   node2           ,
+int32_t Xml::getText ( char  *buf             ,
+		    int32_t   bufMaxSize      ,
+		    int32_t   node1           ,
+		    int32_t   node2           ,
 		    bool   includeTags     ,
 		    bool   visibleTextOnly ,
 		    bool   filter          , // convert entities, \r's
@@ -498,12 +498,12 @@ long Xml::getText ( char  *buf             ,
 		    bool   useStopIndexTag ) { // indexable text only?
 
 	// init some vars
-	long i    = node1;
-	long n    = node2;
+	int32_t i    = node1;
+	int32_t n    = node2;
 	// truncate n to the # of nodes we have
 	if ( n > m_numNodes ) n = m_numNodes;
 	// keep a non visible tag stack
-	long notVisible = 0;
+	int32_t notVisible = 0;
 	// are we in indexable area?
 	bool inStopTag = false;
 
@@ -669,17 +669,17 @@ long Xml::getText ( char  *buf             ,
 
 // just get a pointer to it
 char *Xml::getMetaContentPointer ( char *field    ,
-				   long  fieldLen ,
+				   int32_t  fieldLen ,
 				   char *name     ,
-				   long *slen     ) {
+				   int32_t *slen     ) {
 	// find the first meta summary node
-	for ( long i = 0 ; i < m_numNodes ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numNodes ; i++ ) {
 		// continue if not a meta tag
 		if ( m_nodes[i].m_nodeId != 68 ) continue;
 		// . does it have a type field that's "summary"
 		// . <meta name=summary content="...">
 		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
-		long len;
+		int32_t len;
 		char *s = getString ( i , name , &len );
 		// continue if name doesn't match field
 		if ( len != fieldLen ) continue;
@@ -704,9 +704,9 @@ char *Xml::getMetaContentPointer ( char *field    ,
 // . "name" is usually "name" or "http-equiv"
 // . if "convertHtmlEntities" is true we turn < into &lt; and > in &gt;
 
-long Xml::getMetaContent (char *buf, long bufLen, char *field, long fieldLen ,
+int32_t Xml::getMetaContent (char *buf, int32_t bufLen, char *field, int32_t fieldLen ,
 			  char *name , bool convertHtmlEntities , 
-			  long startNode , long *matchedNode ) {
+			  int32_t startNode , int32_t *matchedNode ) {
 	// return 0 length if no buffer space
 	if ( bufLen <= 0 ) return 0;
 	// assume it's empty
@@ -717,7 +717,7 @@ long Xml::getMetaContent (char *buf, long bufLen, char *field, long fieldLen ,
 	char *dst    = buf;
 	char *dstEnd = buf + bufLen;
 	// find the first meta summary node
-	for ( long i = startNode ; i < m_numNodes ; i++ ) {
+	for ( int32_t i = startNode ; i < m_numNodes ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// continue if not a meta tag
@@ -725,7 +725,7 @@ long Xml::getMetaContent (char *buf, long bufLen, char *field, long fieldLen ,
 		// . does it have a type field that's "summary"
 		// . <meta name=summary content="...">
 		// . <meta http-equiv="refresh" content="0;URL=http://y.com/">
-		long len;
+		int32_t len;
 		char *s = getString ( i , name , &len );
 		// continue if name doesn't match field
 		// field can be "summary","description","keywords",...
@@ -791,13 +791,13 @@ long Xml::getMetaContent (char *buf, long bufLen, char *field, long fieldLen ,
 	return 0;
 }
 
-bool Xml::hasGigablastForm(char **url, long *urlLen) {
+bool Xml::hasGigablastForm(char **url, int32_t *urlLen) {
 	// find the first meta summary node
-	for ( long i = 0 ; i < m_numNodes ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numNodes ; i++ ) {
 		// continue if not a FORM tag
 		if ( m_nodes[i].m_nodeId != 40 ) continue;
 		// <form method=get action=/cgi/0.cgi name=f>
-		long len;
+		int32_t len;
 		char *s = getString ( i , "action" , &len );
 		if (url) *url = s;
 		if (urlLen) *urlLen = len;
@@ -837,9 +837,9 @@ bool Xml::hasGigablastForm(char **url, long *urlLen) {
 //. this is NOT rss, but has an rdf:rdf tag in it!
 //  http://www.silverstripe.com/silverstripe-adds-a-touch-of-design-and-a-whole-lot-more/
 //  http://government.zdnet.com/?p=4245
-long Xml::isRSSFeed ( ) {
+int32_t Xml::isRSSFeed ( ) {
 	// must have atleast one rss.channel.item.link node
-	//long rssLink = getNodeNum ( "rss.channel.item.link" );
+	//int32_t rssLink = getNodeNum ( "rss.channel.item.link" );
 	//if ( rssLink >= 0 )
 	//	return true;
 	// rdf: must have atleast one rss.channel.item.link node
@@ -847,9 +847,9 @@ long Xml::isRSSFeed ( ) {
 	//if ( rssLink >= 0 )
 	//	return true;
 	//bool hasTag  = false;
-	long type = 0;
-	long tag  = 0;
-	long i;
+	int32_t type = 0;
+	int32_t tag  = 0;
+	int32_t i;
 	for ( i = 0; i < m_numNodes; i++ ) {
 		// skip text nodes (nodeId is 0)
 		if ( m_nodes[i].m_nodeId == TAG_TEXTNODE ) continue;
@@ -877,12 +877,12 @@ long Xml::isRSSFeed ( ) {
 	return 0;
 }
 
-char *Xml::getRSSTitle ( long *titleLen , bool *isHtmlEncoded ) const {
+char *Xml::getRSSTitle ( int32_t *titleLen , bool *isHtmlEncoded ) const {
 	// assume it is html encoded (i.e. <'s are encoded as &lt;'s)
 	*isHtmlEncoded = true;
 	// . extract the RSS/Atom title
 	// rss/rdf
-	long tLen;
+	int32_t tLen;
 	//char *title = getString ( "item.title",
 	//			  &tLen       ,
 	//			  true        );
@@ -905,12 +905,12 @@ char *Xml::getRSSTitle ( long *titleLen , bool *isHtmlEncoded ) const {
 	return title;
 }
 
-char *Xml::getRSSDescription ( long *descLen , bool *isHtmlEncoded ) {
+char *Xml::getRSSDescription ( int32_t *descLen , bool *isHtmlEncoded ) {
 	// assume it is html encoded (i.e. <'s are encoded as &lt;'s)
 	*isHtmlEncoded = true;
 	// . extract the RSS/Atom description
 	// rss/rdf
-	long dLen;
+	int32_t dLen;
 	char *desc  = getString ( "description", // "item.description",
 				  &dLen        ,
 				  true         );
@@ -936,16 +936,16 @@ char *Xml::getRSSDescription ( long *descLen , bool *isHtmlEncoded ) {
 }
 
 // get a link to an RSS feed for this page
-char *Xml::getRSSPointer ( long *length, long  startNode, long *matchedNode ) {
+char *Xml::getRSSPointer ( int32_t *length, int32_t  startNode, int32_t *matchedNode ) {
 	// assume no tag matched
 	if ( matchedNode ) *matchedNode = -1;
 	*length = 0;
 	// find the first meta summary node
-	for ( long i = startNode ; i < m_numNodes ; i++ ) {
+	for ( int32_t i = startNode ; i < m_numNodes ; i++ ) {
 		// continue if not a <link> tag
 		if ( m_nodes[i].m_nodeId != TAG_LINK ) continue;
 		// . check for rel="alternate"
-		long len;
+		int32_t len;
 		char *s = getString ( i, "rel", &len );
 		// continue if name doesn't match field
 		// field can be "summary","description","keywords",...
@@ -976,12 +976,12 @@ char *Xml::getRSSPointer ( long *length, long  startNode, long *matchedNode ) {
 }
 
 // get the link pointed to by this RSS item
-char *Xml::getItemLink ( long *linkLen ) {
+char *Xml::getItemLink ( int32_t *linkLen ) {
 	char *link = NULL;
 	*linkLen = 0;
 
 	// find the first meta summary node
-	for ( long i = 0; i < m_numNodes ; i++ ) {
+	for ( int32_t i = 0; i < m_numNodes ; i++ ) {
 
 		// skip node if not an xml tag node
 		//if ( m_nodes[i].m_nodeId != 1 ) continue;
@@ -1014,7 +1014,7 @@ char *Xml::getItemLink ( long *linkLen ) {
 
 		// if not in href, get the following text node
 		char *node    = m_nodes[i].m_node;
-		long  nodeLen = m_nodes[i].m_nodeLen;
+		int32_t  nodeLen = m_nodes[i].m_nodeLen;
 		// must not end in "/>"
 		if (node[nodeLen-2] == '/' ) continue;
 		// expect <link> url </link>
@@ -1032,16 +1032,16 @@ char *Xml::getItemLink ( long *linkLen ) {
 }
 
 
-long Xml::findNodeNum(char *nodeText) {
+int32_t Xml::findNodeNum(char *nodeText) {
         // do a binary search to find the node whose text begins at 
         // this pointer
-	long a = 0;
-	long b = m_numNodes - 1;
+	int32_t a = 0;
+	int32_t b = m_numNodes - 1;
 	if ( nodeText < m_nodes[a].m_node ) return -1;
 	if ( nodeText > m_nodes[b].m_node ) return -1;
 	
 	while (a < b) {
-		long mid = ((b-a)>>1) + a;
+		int32_t mid = ((b-a)>>1) + a;
 		if ( nodeText == m_nodes[a].m_node ) return a;
 		if ( nodeText == m_nodes[b].m_node ) return b;
 		if ( nodeText == m_nodes[mid].m_node ) return mid;
@@ -1054,14 +1054,14 @@ long Xml::findNodeNum(char *nodeText) {
 }
 
 // returns -1 if no count found
-long Xml::getPingServerCount ( ) {
-	for ( long i = 0 ; i < m_numNodes && i < 40 ; i++ ) {
+int32_t Xml::getPingServerCount ( ) {
+	for ( int32_t i = 0 ; i < m_numNodes && i < 40 ; i++ ) {
 		if ( ! m_nodes[i].isXmlTag() ) continue;
 		// must be "weblogUpdates"
-		long  slen = 0;
+		int32_t  slen = 0;
 		char *s = getString ( i,"count",&slen);
 		if ( ! s || slen <= 0 ) continue;
-		long count = atoi(s);
+		int32_t count = atoi(s);
 		if ( count == -1 ) continue;
 		// got it
 		return count;

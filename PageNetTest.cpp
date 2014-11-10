@@ -34,10 +34,10 @@ void controlNetTest( int fd, void *state ) {
 
 
 void PageNetTest::destructor() {
-	long numHst = g_hostdb.getNumHosts();
-	for( long i = 0; i < MAX_TEST_THREADS; i++ ) {
+	int32_t numHst = g_hostdb.getNumHosts();
+	for( int32_t i = 0; i < MAX_TEST_THREADS; i++ ) {
 		if( m_hostRates[i] ) mfree( m_hostRates[i],
-					    sizeof(unsigned long *)*numHst,
+					    sizeof(uint32_t *)*numHst,
 					    "NT-fHostRate" );
 		m_hostRates[i] = NULL;
 	}
@@ -66,24 +66,24 @@ bool PageNetTest::init() {
 					   g_hostdb.getMyPort() );
 	m_switchId   = g_hostdb.getHost( m_hostId )->m_switchId;
 
-	long numHst = g_hostdb.getNumHosts();
+	int32_t numHst = g_hostdb.getNumHosts();
 
-	for( long i = 0; i < 4; i++ ) {
-		m_hostRates[i]=(unsigned long *)mmalloc(sizeof(unsigned long *)*
+	for( int32_t i = 0; i < 4; i++ ) {
+		m_hostRates[i]=(uint32_t *)mmalloc(sizeof(uint32_t *)*
 							numHst,
 							"NT-HostRate" );
 		if( !m_hostRates[i] ) {
 			g_errno = ENOMEM;
-			log( "net: nettest: could not allocate %li bytes.",
-			     sizeof(unsigned long *) * numHst);
+			log( "net: nettest: could not allocate %"INT32" bytes.",
+			     sizeof(uint32_t *) * numHst);
 			return false;
 		}
-		memset( m_hostRates[i], 0, numHst * sizeof(unsigned long *) );
+		memset( m_hostRates[i], 0, numHst * sizeof(uint32_t *) );
 	}
 
 	/*
-	long switchId = -1;
-	for( long i = 0; i < g_hostdb.getNumHosts(); i++ ) {
+	int32_t switchId = -1;
+	for( int32_t i = 0; i < g_hostdb.getNumHosts(); i++ ) {
 		Host *h = g_hostdb.getHost( i );
 
 		if( switchId != h.m_switchId ) {
@@ -124,13 +124,13 @@ bool PageNetTest::init() {
 		m_type[2]       = TEST_SEND   ; m_type[3]       = TEST_READ   ;
 	}
 
-	for( long i = 0; i < MAX_TEST_THREADS; i++ ) {
+	for( int32_t i = 0; i < MAX_TEST_THREADS; i++ ) {
 		if( m_testHostId[i] < 0 ) 
 			m_testHostId[i] = g_hostdb.getNumHosts()-1;
 		if( m_testHostId[i] >= g_hostdb.getNumHosts() ) 
 			m_testHostId[i] = 0;	
 		m_testIp[i] = g_hostdb.getHost( m_testHostId[i] )->m_ip;
-		if( (unsigned long)m_testIp[i] == g_hostdb.getMyIp() ) 
+		if( (uint32_t)m_testIp[i] == g_hostdb.getMyIp() ) 
 			log( "net: nettest: cannot test two processes on the "
 			     "same IP." );
 
@@ -141,9 +141,9 @@ bool PageNetTest::init() {
 	char buf2[16];
 	strcpy( buf2, iptoa(m_testIp[0]) );
 
-	log( LOG_DEBUG, "net: nettest: hostId %ld (%s) is on switch %ld and "
-	     "will test hostId %ld (%s) as a %s on port %ld first", m_hostId, 
-	     buf, m_switchId, (long)m_testHostId, buf2, 
+	log( LOG_DEBUG, "net: nettest: hostId %"INT32" (%s) is on switch %"INT32" and "
+	     "will test hostId %"INT32" (%s) as a %s on port %"INT32" first", m_hostId, 
+	     buf, m_switchId, (int32_t)m_testHostId, buf2, 
 	     (m_type[0] == TEST_SEND)?"sender":"receiver", m_port[0] );
 
 	memset ( m_sdgram , 'X' , NTDGRAM_SIZE );
@@ -156,9 +156,9 @@ void PageNetTest::reset() {
 	m_threadNum = 0;
 	m_threadReturned = 0;
 	memset ( m_calcTable, 0, MAX_TEST_THREADS*AVG_TABLE_SIZE );
-	for( long i = 0; i < 4; i++ )
+	for( int32_t i = 0; i < 4; i++ )
 		memset( m_hostRates[i], 0, 
-			g_hostdb.getNumHosts() * sizeof(unsigned long *) );
+			g_hostdb.getNumHosts() * sizeof(uint32_t *) );
 }
 
 
@@ -237,10 +237,10 @@ bool PageNetTest::collectResults() {
 	if( m_numResultsSent >= g_hostdb.getNumHosts() ) return true;
 		
 	char temp[64];
-	long ip = g_hostdb.getHost( m_numResultsSent )->m_ip;
-	long port = g_hostdb.getHost( m_numResultsSent )->m_httpPort;
-	//long len = 0;
-	sprintf(temp, "http://%s:%li/get?rnettest=1", iptoa(ip), port);
+	int32_t ip = g_hostdb.getHost( m_numResultsSent )->m_ip;
+	int32_t port = g_hostdb.getHost( m_numResultsSent )->m_httpPort;
+	//int32_t len = 0;
+	sprintf(temp, "http://%s:%"INT32"/get?rnettest=1", iptoa(ip), port);
 	log( LOG_DEBUG, "net: nettest: queried results from: %s", temp );
 	
 	//Url u;
@@ -276,7 +276,7 @@ void gotResultsWrapper ( void *state, TcpSocket *s ) {
 
 bool PageNetTest::gotResults( TcpSocket *s ) {
 	char *buf;
-	long  bufLen, bufMaxLen;
+	int32_t  bufLen, bufMaxLen;
 	HttpMime mime;
 
 	if ( g_errno ) {
@@ -292,7 +292,7 @@ bool PageNetTest::gotResults( TcpSocket *s ) {
 	bufMaxLen = s->m_readBufSize;
 
 	char temp[64];
-	long len = 0;
+	int32_t len = 0;
 	len = sprintf(temp, "http://%s:%i/get?rnettest=1", 
 		      iptoa(s->m_ip), s->m_port);
 	Url u;
@@ -307,16 +307,16 @@ bool PageNetTest::gotResults( TcpSocket *s ) {
 	        return false;
 	}
 
-	long state = 0;
-	long hostId = 0;
-	long testId = 0;
+	int32_t state = 0;
+	int32_t hostId = 0;
+	int32_t testId = 0;
 
 	if( !bufLen ) log( LOG_INFO, "net: nettest: we got an empty doc." );
 
 	buf += mime.getMimeLen();
 	bufLen -= mime.getMimeLen();
 
-	for( long i = 0; i < bufLen; i++ ){		
+	for( int32_t i = 0; i < bufLen; i++ ){		
 		if( buf[i] == ' '  ) continue;
 		if( buf[i] == '\r' ) continue;
 		if( buf[i] == '\n' ) continue;
@@ -324,13 +324,13 @@ bool PageNetTest::gotResults( TcpSocket *s ) {
 
 		if( state == 0 ) {
 			hostId = atoi(&buf[i]);
-			log( LOG_DEBUG, "net: nettest: host id is %ld",
+			log( LOG_DEBUG, "net: nettest: host id is %"INT32"",
 			     hostId);
 			state = 1;
 		}
 		else if( state == 1 ) {
 			testId = atoi(&buf[i]);
-			log( LOG_DEBUG, "net: nettest: test id is %ld",
+			log( LOG_DEBUG, "net: nettest: test id is %"INT32"",
 			     testId);
 			state = 2;
 		}
@@ -410,11 +410,11 @@ void PageNetTest::threadControl() {
 }
 
 
-bool PageNetTest::netTestStart_r( bool amThread, long num ) {
+bool PageNetTest::netTestStart_r( bool amThread, int32_t num ) {
 	int64_t endTime   = 0;
 	int64_t calcTime  = 0;
-	long      count;
-	long      index     = 0;
+	int32_t      count;
+	int32_t      index     = 0;
 
 	m_running = true;
 	m_startTime = gettimeofdayInMilliseconds();
@@ -438,13 +438,13 @@ bool PageNetTest::netTestStart_r( bool amThread, long num ) {
 		float secs = (endTime - calcTime)/1000.0;
 		float mb   = (float)count * 8.0 / (1024.0 * 1024.0);
 		float mbps = mb/secs;
-		log( LOG_INFO, "net: nettest: took %lli ms to %s %li bytes at "
+		log( LOG_INFO, "net: nettest: took %"INT64" ms to %s %"INT32" bytes at "
 		     "%.2f Mbps", endTime - calcTime, 
 		     (m_type[num] == TEST_READ)?"receive":"send", count, mbps );
-		log( LOG_INFO, "net: nettest: run time %lli s", 
+		log( LOG_INFO, "net: nettest: run time %"INT64" s", 
 		     (endTime-m_startTime)/1000 );
 
-		m_calcTable[num][index] = (unsigned long)mbps;
+		m_calcTable[num][index] = (uint32_t)mbps;
 		if( ++index >= AVG_TABLE_SIZE ) index = 0;
 
 		if( !m_runNetTest ) break;
@@ -455,8 +455,8 @@ bool PageNetTest::netTestStart_r( bool amThread, long num ) {
 }
 
 
-int PageNetTest::openSock( long num, long type, struct sockaddr_in *name, 
-			   long port ) {
+int PageNetTest::openSock( int32_t num, int32_t type, struct sockaddr_in *name, 
+			   int32_t port ) {
 	// set up our socket
         int sock  = socket ( AF_INET, SOCK_DGRAM , 0 );
         if ( sock < 0 ) {
@@ -489,7 +489,7 @@ int PageNetTest::openSock( long num, long type, struct sockaddr_in *name,
         // bind this name to the socket
         if ( bind ( sock, (struct sockaddr *)name, sizeof(*name)) < 0) {
                 close ( sock );
-                log( "net: nettest: bind on port %lu: %s", port, 
+                log( "net: nettest: bind on port %"UINT32": %s", port, 
 		     strerror(errno) );
 		return -1;
         }
@@ -501,7 +501,7 @@ int PageNetTest::openSock( long num, long type, struct sockaddr_in *name,
 		bzero ( &(m_to.sin_zero) , 8 );
 	}
 
-	log( LOG_DEBUG, "net: nettest: open socket for %s on port %ld to %s", 
+	log( LOG_DEBUG, "net: nettest: open socket for %s on port %"INT32" to %s", 
 	     (type == TEST_SEND)?"sending":"receiving", port, 
 	     iptoa(m_testIp[num]) );
 	return sock;
@@ -515,10 +515,10 @@ int PageNetTest::closeSock( int sock ) {
 }
 
 
-long PageNetTest::readSock( int sock ) {
+int32_t PageNetTest::readSock( int sock ) {
 	int n;
 	unsigned int fromLen;
-	long count = 0;
+	int32_t count = 0;
 	// send more than expected to make up for losses
 
 	while( count < m_testBytes ) {
@@ -540,12 +540,12 @@ long PageNetTest::readSock( int sock ) {
 }
 
 
-long PageNetTest::sendSock( int sock ) {
+int32_t PageNetTest::sendSock( int sock ) {
 	int n;
 	unsigned int toLen;
-	long count = 0;	
+	int32_t count = 0;	
 	// send more than expected to make up for losses
-	long nn = m_testBytes * 10;
+	int32_t nn = m_testBytes * 10;
 
 	toLen = sizeof(struct sockaddr);
 
@@ -571,22 +571,22 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 	char *p    = buf;
 	char *pend = buf + 64*1024;
 	// password, too
-	long pwdLen = 0;
+	int32_t pwdLen = 0;
 	char *pwd = r->getString ( "pwd" , &pwdLen );
 	if ( pwdLen > 31 ) pwdLen = 31;
 	char pbuf [32];
 	if ( pwdLen > 0 ) strncpy ( pbuf , pwd , pwdLen );
 	pbuf[pwdLen]='\0';
 
-	long hids[MAX_HOSTS];
-	long numHosts = g_hostdb.getNumHosts();
+	int32_t hids[MAX_HOSTS];
+	int32_t numHosts = g_hostdb.getNumHosts();
 
-	long len = 0;
+	int32_t len = 0;
 	char *coll = r->getString( "c", &len );
 	memcpy( m_coll, coll, len );
 
-	//long ntnd      = r->getLong( "ntnd", 0              );
-	//long rcv       = r->getLong( "ntrs", 0              );
+	//int32_t ntnd      = r->getLong( "ntnd", 0              );
+	//int32_t rcv       = r->getLong( "ntrs", 0              );
 	m_testBytes    = r->getLong( "ntb" , m_testBytes    );
 	m_port[0]      = r->getLong( "ntp1" , m_port[0]     );
 	m_port[1]      = r->getLong( "ntp2" , m_port[1]     );
@@ -594,7 +594,7 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 	m_port[3]      = m_port[1];
 	m_testDuration = r->getLong( "ntd" , m_testDuration );
 	m_fullDuplex   = r->getLong( "ntfd" , m_fullDuplex  );
-	long sort      = r->getLong( "sort", 7 );
+	int32_t sort      = r->getLong( "sort", 7 );
 	
 	m_runNetTest   = r->getLong( "rnt", m_runNetTest );	
 
@@ -618,19 +618,19 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 	sprintf( p, "<tr><td><span style=\"font-weight:bold;\">Test Duration"
 		 "</span><br><font size=-1>The number of seconds each test "
 		 "should last. Default: 10</font></td>"
-		 "<td><input name=ntd value=%li type=text></td></tr>"
+		 "<td><input name=ntd value=%"INT32" type=text></td></tr>"
 		 "<tr><td><span style=\"font-weight:bold;\">Test Port 1"
 		 "</span><br><font size=-1>The port number to use for testing."
 		 " Default:5066</font></td>"
-		 "<td><input name=ntp1 value=%li type=text></td></tr>"
+		 "<td><input name=ntp1 value=%"INT32" type=text></td></tr>"
 		 "<tr><td><span style=\"font-weight:bold;\">Test Port 2"
 		 "</span><br><font size=-1>The port number to use for testing."
 		 " Default:5067</font></td>"
-		 "<td><input name=ntp2 value=%li type=text></td></tr>"
+		 "<td><input name=ntp2 value=%"INT32" type=text></td></tr>"
 		 "<tr><td><span style=\"font-weight:bold;\">Test Bytes"
 		 "</span><br><font size=-1>The number of bytes to test the "
 		 "transfer rate. Default:10000000</font></td>"
-		 "<td><input name=ntb value=%li type=text></td></tr>"
+		 "<td><input name=ntb value=%"INT32" type=text></td></tr>"
 		 "<tr><td><span style=\"font-weight:bold;\">Test Full Duplex"
 		 "</span><br><font size=-1>Tests full duplex (transmit and "
 		 "receive simultaneously) otherwise runs half duplex.  "
@@ -664,18 +664,18 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 	//	only print on Host 0 page
 	if( m_hostId ) goto sendPage;
 
-	for( long i = 0; i < numHosts; i++ ) hids[i] = i;
+	for( int32_t i = 0; i < numHosts; i++ ) hids[i] = i;
 
 	switch( sort ) {
-	case 1: gbsort( hids, numHosts, sizeof(long), switchSort   ); break;
-	case 2: gbsort( hids, numHosts, sizeof(long), networkSort  ); break;
-	case 3: gbsort( hids, numHosts, sizeof(long), send1Sort    ); break;
-	case 4: gbsort( hids, numHosts, sizeof(long), receive1Sort ); break;
-	case 5: gbsort( hids, numHosts, sizeof(long), send2Sort    ); break;
-	case 6: gbsort( hids, numHosts, sizeof(long), receive2Sort ); break;
-	case 7: gbsort( hids, numHosts, sizeof(long), hostSort     ); break;
-	case 8: gbsort( hids, numHosts, sizeof(long), testId1Sort  ); break;
-	case 9: gbsort( hids, numHosts, sizeof(long), testId2Sort  ); break;
+	case 1: gbsort( hids, numHosts, sizeof(int32_t), switchSort   ); break;
+	case 2: gbsort( hids, numHosts, sizeof(int32_t), networkSort  ); break;
+	case 3: gbsort( hids, numHosts, sizeof(int32_t), send1Sort    ); break;
+	case 4: gbsort( hids, numHosts, sizeof(int32_t), receive1Sort ); break;
+	case 5: gbsort( hids, numHosts, sizeof(int32_t), send2Sort    ); break;
+	case 6: gbsort( hids, numHosts, sizeof(int32_t), receive2Sort ); break;
+	case 7: gbsort( hids, numHosts, sizeof(int32_t), hostSort     ); break;
+	case 8: gbsort( hids, numHosts, sizeof(int32_t), testId1Sort  ); break;
+	case 9: gbsort( hids, numHosts, sizeof(int32_t), testId2Sort  ); break;
 	}
 
 	// width=100%% ??
@@ -686,7 +686,7 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 		 "style=\"empty-cells: hide;\" bgcolor=#%s>", LIGHT_BLUE );
 	p += gbstrlen( p );
 
-	for( long i = 0; i < MAX_TEST_THREADS + 5; i++ ) {
+	for( int32_t i = 0; i < MAX_TEST_THREADS + 5; i++ ) {
 		if     ( i == 1 ) sprintf( p, "<tr><th width=20 bgcolor=#%s>"
 					   "<a href=\"/admin/nettest?c=%s&"
 					   "sort=1\">Switch Id</a></th>", 
@@ -725,41 +725,41 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 					   DARK_BLUE, coll );
 		p += gbstrlen( p );
 		
-		for( long j = 0; j < numHosts; j++ ) {
+		for( int32_t j = 0; j < numHosts; j++ ) {
 			if     ( i == 1 ) {
 				Host *h = g_hostdb.getHost(hids[j]);
-				long switchGroup = 0;
+				int32_t switchGroup = 0;
 				if ( g_hostdb.m_indexSplits > 1 )
 					switchGroup = h->m_shardNum %
 						g_hostdb.m_indexSplits;
-				sprintf( p, "<td>%li</td>", switchGroup );
+				sprintf( p, "<td>%"INT32"</td>", switchGroup );
 			}
 			else if( i == 2 ) {
 				Host *h = g_hostdb.getHost(hids[j]);
 				sprintf( p, "<td>%d</td>", h->m_switchId );
 			}
 			else if( i == 0 ) {
-				sprintf( p, "<th bgcolor=#%s>%lu</th>",
+				sprintf( p, "<th bgcolor=#%s>%"UINT32"</th>",
 					 DARK_BLUE, hids[j] );
 			}
 			else if( i == 3 ) {
-				long tid = (hids[j]%2)?(hids[j]+1):(hids[j]-1);
+				int32_t tid = (hids[j]%2)?(hids[j]+1):(hids[j]-1);
 				if( tid < 0         ) tid = numHosts-1;
 				if( tid >= numHosts ) tid = 0;
-				sprintf( p, "<td>%lu</td>", tid );
+				sprintf( p, "<td>%"UINT32"</td>", tid );
 			}
 			else if( i > 3 && i < 6 ) {
-				sprintf( p, "<td>%lu</td>",
+				sprintf( p, "<td>%"UINT32"</td>",
 					 m_hostRates[i-4][hids[j]] );
 			}
 			else if( i == 6 ) {
-				long tid = (hids[j]%2)?(hids[j]-1):(hids[j]+1);
+				int32_t tid = (hids[j]%2)?(hids[j]-1):(hids[j]+1);
 				if( tid < 0         ) tid = numHosts-1;
 				if( tid >= numHosts ) tid = 0;
-				sprintf( p, "<td>%lu</td>", tid );
+				sprintf( p, "<td>%"UINT32"</td>", tid );
 			}
 			else if( i > 6 ) {
-				sprintf( p, "<td>%lu</td>",
+				sprintf( p, "<td>%"UINT32"</td>",
 					 m_hostRates[i-5][hids[j]] );
 			}
 			p += gbstrlen( p );			
@@ -775,7 +775,7 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 	// PageNetTest html control page ends here.
 	//------------------------------------------
 
-	long bufLen = p - buf;
+	int32_t bufLen = p - buf;
 
 	return g_httpServer.sendDynamicPage ( s , buf , bufLen );
 }
@@ -800,9 +800,9 @@ bool PageNetTest::resultsPage( TcpSocket *s ) {//, HttpRequest *r ) {
 
 
 	int64_t avg[4];
-	for( long j = 0; j < 4 ; j++ ) {
+	for( int32_t j = 0; j < 4 ; j++ ) {
 		avg[j] = 0;
-		long i;
+		int32_t i;
 		for( i = 0; i < 50 && m_calcTable[j][i]; i++ )
 			avg[j] += m_calcTable[j][i];
 
@@ -810,25 +810,25 @@ bool PageNetTest::resultsPage( TcpSocket *s ) {//, HttpRequest *r ) {
 	}
 
 	if( m_type[0] == TEST_SEND )
-		sprintf( p, "%ld %ld %llu %llu\r\n", m_hostId, m_testHostId[0],
+		sprintf( p, "%"INT32" %"INT32" %"UINT64" %"UINT64"\r\n", m_hostId, m_testHostId[0],
 			 avg[0], avg[1] );
 	else
-		sprintf( p, "%ld %ld %llu %llu\r\n", m_hostId, m_testHostId[0],
+		sprintf( p, "%"INT32" %"INT32" %"UINT64" %"UINT64"\r\n", m_hostId, m_testHostId[0],
 			 avg[1], avg[0] );
 	p += gbstrlen( p );
 
 	if( m_type[2] == TEST_SEND )
-		sprintf( p, "%ld %ld %llu %llu\r\n", m_hostId, m_testHostId[1],
+		sprintf( p, "%"INT32" %"INT32" %"UINT64" %"UINT64"\r\n", m_hostId, m_testHostId[1],
 			 avg[2], avg[3] );
 	else
-		sprintf( p, "%ld %ld %llu %llu\r\n", m_hostId, m_testHostId[1],
+		sprintf( p, "%"INT32" %"INT32" %"UINT64" %"UINT64"\r\n", m_hostId, m_testHostId[1],
 			 avg[3], avg[2] );
 	p += gbstrlen( p );
 
 	// PageNetTest results page ends here.
 	//------------------------------------------
 
-	long bufLen = p - buf;
+	int32_t bufLen = p - buf;
 
 	return g_httpServer.sendDynamicPage ( s , buf , bufLen );
 }
@@ -845,10 +845,10 @@ bool sendPageNetResult( TcpSocket *s ) {//, HttpRequest *r ) {
 
 //Sort switch groups ascending.
 int switchSort( const void *p1, const void *p2 ) {
-	Host *h1 = g_hostdb.getHost(*(long *)p1);
-	Host *h2 = g_hostdb.getHost(*(long *)p2);
-	long sg1 = 0;
-	long sg2 = 0;
+	Host *h1 = g_hostdb.getHost(*(int32_t *)p1);
+	Host *h2 = g_hostdb.getHost(*(int32_t *)p2);
+	int32_t sg1 = 0;
+	int32_t sg2 = 0;
 	if ( g_hostdb.m_indexSplits > 1 ) {
 		sg1 = h1->m_shardNum % g_hostdb.m_indexSplits;
 		sg2 = h2->m_shardNum % g_hostdb.m_indexSplits;
@@ -859,8 +859,8 @@ int switchSort( const void *p1, const void *p2 ) {
 
 //Sort left neighbor send descending.
 int send1Sort( const void *p1, const void *p2 ) {
-	long s1 = g_pageNetTest.getSend1(*(long *)p1);
-	long s2 = g_pageNetTest.getSend1(*(long *)p2);
+	int32_t s1 = g_pageNetTest.getSend1(*(int32_t *)p1);
+	int32_t s2 = g_pageNetTest.getSend1(*(int32_t *)p2);
 
 	return (s2-s1);
 }
@@ -868,8 +868,8 @@ int send1Sort( const void *p1, const void *p2 ) {
 
 //Sort left neighbor receive descending.
 int receive1Sort( const void *p1, const void *p2 ) {
-	long r1 = g_pageNetTest.getReceive1(*(long *)p1);
-	long r2 = g_pageNetTest.getReceive1(*(long *)p2);
+	int32_t r1 = g_pageNetTest.getReceive1(*(int32_t *)p1);
+	int32_t r2 = g_pageNetTest.getReceive1(*(int32_t *)p2);
 
 	return (r2-r1);
 }
@@ -877,8 +877,8 @@ int receive1Sort( const void *p1, const void *p2 ) {
 
 //Sort right neighbor send descending.
 int send2Sort( const void *p1, const void *p2 ) {
-	long s1 = g_pageNetTest.getSend2(*(long *)p1);
-	long s2 = g_pageNetTest.getSend2(*(long *)p2);
+	int32_t s1 = g_pageNetTest.getSend2(*(int32_t *)p1);
+	int32_t s2 = g_pageNetTest.getSend2(*(int32_t *)p2);
 
 	return (s2-s1);
 }
@@ -886,8 +886,8 @@ int send2Sort( const void *p1, const void *p2 ) {
 
 //Sort right neighbor receive descending.
 int receive2Sort( const void *p1, const void *p2 ) {
-	long r1 = g_pageNetTest.getReceive2(*(long *)p1);
-	long r2 = g_pageNetTest.getReceive2(*(long *)p2);
+	int32_t r1 = g_pageNetTest.getReceive2(*(int32_t *)p1);
+	int32_t r2 = g_pageNetTest.getReceive2(*(int32_t *)p2);
 
 	return (r2-r1);
 }
@@ -895,14 +895,14 @@ int receive2Sort( const void *p1, const void *p2 ) {
 
 //Sort host ids ascending.
 int hostSort( const void *p1, const void *p2 ) {
-	return ((*(long *)p1) - (*(long *)p2));
+	return ((*(int32_t *)p1) - (*(int32_t *)p2));
 }
 
 
 //Sort switch ids ascending.
 int networkSort( const void *p1, const void *p2 ) {
-	Host *h1 = g_hostdb.getHost(*(long *)p1);
-	Host *h2 = g_hostdb.getHost(*(long *)p2);
+	Host *h1 = g_hostdb.getHost(*(int32_t *)p1);
+	Host *h2 = g_hostdb.getHost(*(int32_t *)p2);
 
 	return (h1->m_switchId-h2->m_switchId);
 }
@@ -910,10 +910,10 @@ int networkSort( const void *p1, const void *p2 ) {
 
 //Sort test #1 host ids ascending.
 int testId1Sort( const void *p1, const void *p2 ) {
-	long id1 = ((*(long *)p1)%2)?((*(long *)p1)+1):((*(long *)p1)-1);
-	long id2 = ((*(long *)p2)%2)?((*(long *)p2)+1):((*(long *)p2)-1);
+	int32_t id1 = ((*(int32_t *)p1)%2)?((*(int32_t *)p1)+1):((*(int32_t *)p1)-1);
+	int32_t id2 = ((*(int32_t *)p2)%2)?((*(int32_t *)p2)+1):((*(int32_t *)p2)-1);
 
-	long numHosts = g_hostdb.getNumHosts();
+	int32_t numHosts = g_hostdb.getNumHosts();
 	
 	if( id1 < 0         ) id1 = numHosts-1;
 	if( id1 >= numHosts ) id1 = 0;
@@ -926,10 +926,10 @@ int testId1Sort( const void *p1, const void *p2 ) {
 
 //Sort test #2 host ids ascending.
 int testId2Sort( const void *p1, const void *p2 ) {
-	long id1 = ((*(long *)p1)%2)?((*(long *)p1)-1):((*(long *)p1)+1);
-	long id2 = ((*(long *)p2)%2)?((*(long *)p2)-1):((*(long *)p2)+1);
+	int32_t id1 = ((*(int32_t *)p1)%2)?((*(int32_t *)p1)-1):((*(int32_t *)p1)+1);
+	int32_t id2 = ((*(int32_t *)p2)%2)?((*(int32_t *)p2)-1):((*(int32_t *)p2)+1);
 
-	long numHosts = g_hostdb.getNumHosts();
+	int32_t numHosts = g_hostdb.getNumHosts();
 
 	if( id1 < 0         ) id1 = numHosts-1;
 	if( id1 >= numHosts ) id1 = 0;

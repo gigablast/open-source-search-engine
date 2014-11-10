@@ -35,9 +35,9 @@ char g_repairMode = 0;
 // the global class
 Repair g_repair;
 
-Rdb **getSecondaryRdbs ( long *nsr ) {
+Rdb **getSecondaryRdbs ( int32_t *nsr ) {
 	static Rdb *s_rdbs[50];
-	static long s_nsr = 0;
+	static int32_t s_nsr = 0;
 	static bool s_init = false;
 	if ( ! s_init ) {
 		s_init = true;
@@ -59,9 +59,9 @@ Rdb **getSecondaryRdbs ( long *nsr ) {
 	return s_rdbs;
 }
 
-Rdb **getAllRdbs ( long *nsr ) {
+Rdb **getAllRdbs ( int32_t *nsr ) {
 	static Rdb *s_rdbs[50];
-	static long s_nsr = 0;
+	static int32_t s_nsr = 0;
 	static bool s_init = false;
 	if ( ! s_init ) {
 		s_init = true;
@@ -248,7 +248,7 @@ void repairWrapper ( int fd , void *state ) {
 		// . tell Msg4 to load state using the new filename now
 		// . load "repair-addsinprogress" file
 		loadAddsInProgress ( "repair-" );
-		//log("repair: Scanning titledb file #%li.",  g_repair.m_fn );
+		//log("repair: Scanning titledb file #%"INT32".",  g_repair.m_fn );
 		log("repair: Starting repair scan.");
 		// advance
 		g_repairMode = 4;
@@ -371,7 +371,7 @@ void repairWrapper ( int fd , void *state ) {
 		if ( g_pingServer.getMinRepairModeBesides0() != 8 ) return;
 
 		// note it
-		log("repair: Exiting repair mode.  took %lli ms", 
+		log("repair: Exiting repair mode.  took %"INT64" ms", 
 		    gettimeofdayInMilliseconds() - g_repair.m_startTime);
 		// turn it off to prevent going back to mode 1 again
 		g_conf.m_repairingEnabled = false;
@@ -642,35 +642,35 @@ void Repair::initScan ( ) {
 	//if ( m_rebuildSectiondb  ) weight +=   5.0;
 	//if ( m_rebuildRevdb      ) weight +=  80.0;
 	// assign memory based on weight
-	long titledbMem    = 0;
-	//long tfndbMem      = 0;
-	//long indexdbMem    = 0;
-	long posdbMem    = 0;
-	//long datedbMem     = 0;
-	long clusterdbMem  = 0;
-	//long checksumdbMem = 0;
-	long spiderdbMem   = 0;
-	long linkdbMem     = 0;
-	//long tagdbMem      = 0;
-	//long placedbMem    = 0;
-	//long sectiondbMem  = 0;
-	//long revdbMem      = 0;
+	int32_t titledbMem    = 0;
+	//int32_t tfndbMem      = 0;
+	//int32_t indexdbMem    = 0;
+	int32_t posdbMem    = 0;
+	//int32_t datedbMem     = 0;
+	int32_t clusterdbMem  = 0;
+	//int32_t checksumdbMem = 0;
+	int32_t spiderdbMem   = 0;
+	int32_t linkdbMem     = 0;
+	//int32_t tagdbMem      = 0;
+	//int32_t placedbMem    = 0;
+	//int32_t sectiondbMem  = 0;
+	//int32_t revdbMem      = 0;
 	float tt = (float)m_totalMem;
-	if ( m_rebuildTitledb    ) titledbMem    = (long)((100.0 * tt)/weight);
-	//if(m_rebuildTfndb      ) tfndbMem      = (long)((  1.0 * tt)/weight);
+	if ( m_rebuildTitledb    ) titledbMem    = (int32_t)((100.0 * tt)/weight);
+	//if(m_rebuildTfndb      ) tfndbMem      = (int32_t)((  1.0 * tt)/weight);
 	// HACK FIX CORE:
 	//if ( m_rebuildTfndb      ) tfndbMem      = 100*1024*1024;
-	//if(m_rebuildIndexdb    ) indexdbMem    = (long)((100.0 * tt)/weight);
-	if ( m_rebuildPosdb      ) posdbMem    = (long)((100.0 * tt)/weight);
-	//if(m_rebuildDatedb     ) datedbMem     = (long)(( 80.0 * tt)/weight);
-	if ( m_rebuildClusterdb  ) clusterdbMem  = (long)((  1.0 * tt)/weight);
-	//if(m_rebuildChecksumdb ) checksumdbMem = (long)((  1.0 * tt)/weight);
-	if ( m_rebuildSpiderdb   ) spiderdbMem   = (long)((  5.0 * tt)/weight);
-	if ( m_rebuildLinkdb     ) linkdbMem     = (long)(( 20.0 * tt)/weight);
-	//if ( m_rebuildTagdb    ) tagdbMem      = (long)((  5.0 * tt)/weight);
-	//if(m_rebuildPlacedb    ) placedbMem    = (long)(( 20.0 * tt)/weight);
-	//if(m_rebuildSectiondb  ) sectiondbMem  = (long)((  5.0 * tt)/weight);
-	//if(m_rebuildRevdb      ) revdbMem      = (long)(( 80.0 * tt)/weight);
+	//if(m_rebuildIndexdb    ) indexdbMem    = (int32_t)((100.0 * tt)/weight);
+	if ( m_rebuildPosdb      ) posdbMem    = (int32_t)((100.0 * tt)/weight);
+	//if(m_rebuildDatedb     ) datedbMem     = (int32_t)(( 80.0 * tt)/weight);
+	if ( m_rebuildClusterdb  ) clusterdbMem  = (int32_t)((  1.0 * tt)/weight);
+	//if(m_rebuildChecksumdb ) checksumdbMem = (int32_t)((  1.0 * tt)/weight);
+	if ( m_rebuildSpiderdb   ) spiderdbMem   = (int32_t)((  5.0 * tt)/weight);
+	if ( m_rebuildLinkdb     ) linkdbMem     = (int32_t)(( 20.0 * tt)/weight);
+	//if ( m_rebuildTagdb    ) tagdbMem      = (int32_t)((  5.0 * tt)/weight);
+	//if(m_rebuildPlacedb    ) placedbMem    = (int32_t)(( 20.0 * tt)/weight);
+	//if(m_rebuildSectiondb  ) sectiondbMem  = (int32_t)((  5.0 * tt)/weight);
+	//if(m_rebuildRevdb      ) revdbMem      = (int32_t)(( 80.0 * tt)/weight);
 
 	// debug hack
 	//posdbMem = 10000000;
@@ -736,7 +736,7 @@ void Repair::initScan ( ) {
 
 	// on any init2() error, reset all and return true
  hadError:
-	long saved = g_errno;
+	int32_t saved = g_errno;
 	// all done with these guys
 	resetSecondaryRdbs();
 	// pull back g_errno
@@ -979,7 +979,7 @@ bool Repair::save ( ) {
 			   ff.getFilename(),mstrerror(g_errno));
 	// first 8 bytes are the size of the DATA file we're mapping
 	g_errno = 0;
-	long      size   = &m_SAVE_END - &m_SAVE_START;
+	int32_t      size   = &m_SAVE_END - &m_SAVE_START;
 	int64_t offset = 0LL;
 	ff.write ( &m_SAVE_START , size , offset ) ;
 	ff.close();
@@ -1000,7 +1000,7 @@ bool Repair::load ( ) {
 			   ff.getFilename(),mstrerror(g_errno));
 	// first 8 bytes are the size of the DATA file we're mapping
 	g_errno = 0;
-	long      size   = &m_SAVE_END - &m_SAVE_START;
+	int32_t      size   = &m_SAVE_END - &m_SAVE_START;
 	int64_t offset = 0LL;
 	ff.read ( &m_SAVE_START, size , offset ) ;
 	ff.close();
@@ -1339,9 +1339,9 @@ void Repair::updateRdbs ( ) {
 }
 
 void Repair::resetSecondaryRdbs ( ) {
-	long nsr;
+	int32_t nsr;
 	Rdb **rdbs = getSecondaryRdbs ( &nsr );
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		Rdb *rdb = rdbs[i];
 		// use niceness of 1
 		rdb->reset();
@@ -1349,9 +1349,9 @@ void Repair::resetSecondaryRdbs ( ) {
 }
 
 bool Repair::dumpLoop ( ) {
-	long nsr;
+	int32_t nsr;
 	Rdb **rdbs = getSecondaryRdbs ( &nsr );
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		Rdb *rdb = rdbs[i];
 		// don't dump tfndb...
 		if ( rdb->m_rdbId == RDB2_TFNDB2 ) continue;
@@ -1365,9 +1365,9 @@ bool Repair::dumpLoop ( ) {
 }
 
 bool Repair::dumpsCompleted ( ) {
-	long nsr;
+	int32_t nsr;
 	Rdb **rdbs = getSecondaryRdbs ( &nsr );
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		Rdb *rdb = rdbs[i];
 		// we don't dump tfndb...
 		if ( rdb->m_rdbId == RDB2_TFNDB2 ) continue;
@@ -1386,7 +1386,7 @@ bool Repair::dumpsCompleted ( ) {
 // . grab the next scan record
 bool Repair::scanRecs ( ) {
 	// just the tree?
-	//long nf          = 1;
+	//int32_t nf          = 1;
 	//bool includeTree = false;
 	RdbBase *base = g_titledb.getRdb()->getBase ( m_collnum );
 	//if ( m_fn == base->getNumFiles() ) { nf = 0; includeTree = true; }
@@ -1395,13 +1395,13 @@ bool Repair::scanRecs ( ) {
 	// for saving
 	m_lastTitledbKey = m_nextTitledbKey;
 	log(LOG_DEBUG,"repair: nextKey=%s endKey=%s"
-	    "coll=%s collnum=%li "
-	    "bnf=%li",//fn=%li nf=%li",
+	    "coll=%s collnum=%"INT32" "
+	    "bnf=%"INT32"",//fn=%"INT32" nf=%"INT32"",
 	    KEYSTR(&m_nextTitledbKey,sizeof(key_t)),
 	    KEYSTR(&m_endKey,sizeof(key_t)),
 	    m_coll,
-	    (long)m_collnum,
-	    (long)base->getNumFiles());//,m_fn,nf);
+	    (int32_t)m_collnum,
+	    (int32_t)base->getNumFiles());//,m_fn,nf);
 	// sanity check
 	if ( m_msg5InUse ) {
 		char *xx = NULL; *xx = 0; }
@@ -1455,7 +1455,7 @@ bool Repair::gotScanRecList ( ) {
 		// get map for this file
 		RdbMap  *map  = base->getMap(m_fn);
 		// what page has this key?
-		long page = map->getPage ( (char *)&m_nextTitledbKey );
+		int32_t page = map->getPage ( (char *)&m_nextTitledbKey );
 		// advance the page number
 	advancePage:
 		page++;
@@ -1481,7 +1481,7 @@ bool Repair::gotScanRecList ( ) {
 		//m_nextTitledbKey = g_titledb.makeFirstTitleRecKey ( dd );
 		// advance one if positive, must always start on a neg
 		if ( (m_nextTitledbKey.n0 & 0x01) == 0x01 ) 
-			m_nextTitledbKey += (unsigned long)1;
+			m_nextTitledbKey += (uint32_t)1;
 		// count as error
 		m_recsCorruptErrors++;
 	}
@@ -1512,10 +1512,10 @@ bool Repair::gotScanRecList ( ) {
 	// all done with this bigfile if this list is empty
 	if ( m_titleRecList.isEmpty() ) { //||m_recsScanned > 10 ) {
 		// note it
-		//logf(LOG_INFO,"repair: Scanning ledb file #%li.",  m_fn );
+		//logf(LOG_INFO,"repair: Scanning ledb file #%"INT32".",  m_fn );
 		m_completedFirstScan = true;
 		logf(LOG_INFO,"repair: Completed titledb scan of "
-		     "%lli records.",m_recsScanned);
+		     "%"INT64" records.",m_recsScanned);
 		//logf(LOG_INFO,"repair: Starting spiderdb scan.");
 		m_stage = STAGE_SPIDERDB_0;
 		// force spider scan completed now too!
@@ -1545,30 +1545,30 @@ bool Repair::gotScanRecList ( ) {
 	if ( tkey < m_nextTitledbKey ) {
 		log("repair: Encountered corruption2 in titledb. "
 		    "key=%s < NextKey=%s"
-		    "FirstDocId=%llu.",
+		    "FirstDocId=%"UINT64".",
 		    //p1-1,
 		    KEYSTR(&tkey,sizeof(key_t)),
 		    KEYSTR(&m_nextTitledbKey,sizeof(key_t)),
 		    docId);
-		m_nextTitledbKey += (unsigned long)1;
+		m_nextTitledbKey += (uint32_t)1;
 		// advance one if positive, must always start on a negative key
 		if ( (m_nextTitledbKey.n0 & 0x01) == 0x01 ) 
-			m_nextTitledbKey += (unsigned long)1;
+			m_nextTitledbKey += (uint32_t)1;
 		m_stage = STAGE_TITLEDB_0;
 		return true;
 	}
 	else {
 		// advance m_nextTitledbKey to get next titleRec
 		m_nextTitledbKey = m_titleRecList.getCurrentKey();
-		m_nextTitledbKey += (unsigned long)1;
+		m_nextTitledbKey += (uint32_t)1;
 		// advance one if positive, must always start on a negative key
 		if ( (m_nextTitledbKey.n0 & 0x01) == 0x01 ) 
-			m_nextTitledbKey += (unsigned long)1;
+			m_nextTitledbKey += (uint32_t)1;
 	}
 
 	// are we the host this url is meant for?
 	//uint32_t gid = getGroupId ( RDB_TITLEDB , &tkey );
-	unsigned long shardNum = getShardNum (RDB_TITLEDB , &tkey );
+	uint32_t shardNum = getShardNum (RDB_TITLEDB , &tkey );
 	if ( shardNum != getMyShardNum() ) {
 		m_recsWrongGroupId++;
 		m_stage = STAGE_TITLEDB_0;
@@ -1578,10 +1578,10 @@ bool Repair::gotScanRecList ( ) {
 	// . if one of our twins is responsible for it...
 	// . is it assigned to us? taken from assigendToUs() in SpiderCache.cpp
 	// . get our group from our hostId
-	long  numHosts;
+	int32_t  numHosts;
 	//Host *hosts = g_hostdb.getGroup ( g_hostdb.m_groupId, &numHosts);
 	Host *hosts = g_hostdb.getShard ( shardNum , &numHosts );
-	long  ii =  docId % numHosts ;
+	int32_t  ii =  docId % numHosts ;
 	// . are we the host this url is meant for?
 	// . however, if you are rebuilding tfndb, each twin must scan all
 	//   title recs and make individual entries for those title recs
@@ -1593,7 +1593,7 @@ bool Repair::gotScanRecList ( ) {
 
 	/*
 	// is the list from the tree in memory?
-	long id2;
+	int32_t id2;
 	if ( m_fn == base->getNumFiles() ) id2 = 255;
 	else                               id2 = base->m_fileIds2[m_fn];
 
@@ -1626,7 +1626,7 @@ bool Repair::gotScanRecList ( ) {
 		char *rec     = m_list.getCurrentRec();
 		// use this first
 		m_doc.reset();
-		//long  recSize = m_list.getCurrentRecSize();
+		//int32_t  recSize = m_list.getCurrentRecSize();
 		//TitleRec *tr = m_doc.getTitleRec();
 		if ( ! m_doc.set2 ( rec, -1, m_coll, NULL, MAX_NICENESS ) ) {
 			m_recsetErrors++;
@@ -1699,7 +1699,7 @@ bool Repair::gotScanRecList ( ) {
 			      uk1               , // startKey
 			      uk2               , // endKey
 			      // use 0x7fffffff preceisely because it
-			      // will determine eactly how long the
+			      // will determine eactly how int32_t the
 			      // tree list needs to allocate in Msg5.cpp
 			      0x7fffffff        , // minRecSizes
 			      true              , // includeTree?
@@ -1767,7 +1767,7 @@ bool Repair::gotTfndbList ( ) {
 		//   of tfndb is in memory, otherwise, it might take a few
 		//   seconds. update call done in RdbMerge::incorporateMerge().
 		// . 255 means just in spiderdb OR titleRec is in tree
-		long tfn = g_tfndb.getTfn ( &k );
+		int32_t tfn = g_tfndb.getTfn ( &k );
 		// set "matched" to true if this titlerec is the latest
 		if ( tfn == m_tfn ) matched = true;
 		// break now that we've matched the title rec's docid
@@ -1776,7 +1776,7 @@ bool Repair::gotTfndbList ( ) {
 
 	// check if in tree
 	RdbTree *tree = &g_titledb.m_rdb.m_tree;
-	long node = tree->getNode ( m_collnum,(char *)&m_currentTitleRecKey );
+	int32_t node = tree->getNode ( m_collnum,(char *)&m_currentTitleRecKey );
 	// if there, that's a match
 	if ( node >= 0 ) matched = true;
 	// if not matched in tfndb and not in tree it must have been deleted!
@@ -1830,7 +1830,7 @@ bool Repair::getTitleRec ( ) {
 
 void doneWithIndexDoc ( XmlDoc *xd ) {
 	// preserve
-	long saved = g_errno;
+	int32_t saved = g_errno;
 	// nuke it
 	mdelete ( xd , sizeof(XmlDoc) , "xdprnuke");
 	delete ( xd );
@@ -1845,7 +1845,7 @@ void doneWithIndexDoc ( XmlDoc *xd ) {
 	QUICKPOLL(MAX_NICENESS);
 	/*
 	// find the i
-	long i ; for ( i = 0 ; i < MAX_OUT_REPAIR ; i++ ) {
+	int32_t i ; for ( i = 0 ; i < MAX_OUT_REPAIR ; i++ ) {
 		if ( ! s_inUse[i] ) continue;
 		if ( xd == &s_docs[i] ) break;
 	}
@@ -1875,7 +1875,7 @@ bool Repair::injectTitleRec ( ) {
 
 	// scan for our docid in the title rec list
 	char *titleRec = NULL;
-	long titleRecSize = 0;
+	int32_t titleRecSize = 0;
 	// convenience var
 	RdbList *tlist = &m_titleRecList;
 	// scan the titleRecs in the list
@@ -1884,7 +1884,7 @@ bool Repair::injectTitleRec ( ) {
 		QUICKPOLL ( MAX_NICENESS );
 		// get the rec
 		char *rec     = tlist->getCurrentRec();
-		long  recSize = tlist->getCurrentRecSize();
+		int32_t  recSize = tlist->getCurrentRecSize();
 		// get that key
 		key_t *k = (key_t *)rec;
 		// skip negative recs, first one should not be negative however
@@ -1908,7 +1908,7 @@ bool Repair::injectTitleRec ( ) {
 		// probably an eventless url and we just added sectiondb or
 		// placedb entries for it...
 		char *rec = m_scanList.getCurrentRec();
-		long  recSize = m_scanList.getCurrentRecSize();
+		int32_t  recSize = m_scanList.getCurrentRecSize();
 		if ( recSize <= 0 ) { char *xx=NULL;*xx=0; }
 		if ( ! m_msg4.addMetaList ( rec ,
 					    recSize ,
@@ -1941,7 +1941,7 @@ bool Repair::injectTitleRec ( ) {
 
 	// get raw rec from list
 	//char *rec = m_titleRecList.getCurrentRec();
-	//long  recSize = m_titleRecList.getCurrentRecSize();
+	//int32_t  recSize = m_titleRecList.getCurrentRecSize();
 
 
 	/*
@@ -1950,7 +1950,7 @@ bool Repair::injectTitleRec ( ) {
 	if ( ! s_init ) { memset (s_inUse,0,MAX_OUT_REPAIR); s_init = true; }
 	//TitleRec *tr = NULL;
 	XmlDoc *xd = NULL;
-	long i ;
+	int32_t i ;
 	for ( i = 0 ; i < MAX_OUT_REPAIR ; i++ ) {
 		if ( s_inUse[i] ) continue;
 		//tr = &s_trs[i];
@@ -1969,7 +1969,7 @@ bool Repair::injectTitleRec ( ) {
 	}
         mnew ( xd , sizeof(XmlDoc),"xmldocpr");    
 
-	// clear out first since set2 no longer does
+	// clear out first since set2 no int32_ter does
 	//xd->reset();
 	if ( ! xd->set2 ( titleRec , -1 , m_coll , NULL , MAX_NICENESS ) ) {
 		m_recsetErrors++;
@@ -2000,8 +2000,8 @@ bool Repair::injectTitleRec ( ) {
 	// . no.. no.. we already have a docid based assignment filter
 	//   in gotScanRecList(), it mods the docid with the # of hosts
 	//   in our group
-	//long hh = hash32n(fu->getUrl());
-	//long hostId = getHostIdToDole ( hh );
+	//int32_t hh = hash32n(fu->getUrl());
+	//int32_t hostId = getHostIdToDole ( hh );
 	//if ( ! isAssignedToUs ( hh ) ) {
 	//	m_stage = STAGE_TITLEDB_0;
 	//	return true;
@@ -2194,7 +2194,7 @@ bool Repair::addToTfndb2 ( ) {
 
 // . returns false if fails cuz buffer cannot be grown (oom)
 // . this is called by Parms.cpp
-bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
+bool Repair::printRepairStatus ( SafeBuf *sb , int32_t fromIp ) {
 	// default is a repairMode of 0, "not running"
 	char *status = "not running";
 	if ( g_repairMode == 0 && g_conf.m_repairingEnabled )
@@ -2248,13 +2248,13 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	if ( m_coll        ) oldColl = m_coll;
 
 	Host *mh = g_pingServer.m_minRepairModeHost;
-	long  minHostId = -1;
+	int32_t  minHostId = -1;
 	char  minIpBuf[64];
 	minIpBuf[0] = '\0';
-	short minPort = 80;
+	int16_t minPort = 80;
 	if ( mh ) {
 		minHostId = mh->m_hostId;
-		long minHostIp = g_hostdb.getBestIp ( mh , fromIp );
+		int32_t minHostIp = g_hostdb.getBestIp ( mh , fromIp );
 		strcpy(minIpBuf,iptoa(minHostIp));
 		minPort = mh->m_httpPort;
 	}
@@ -2280,17 +2280,17 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 
 			 "<tr bgcolor=#%s><td width=50%%><b>repair mode</b>"
 			 "</td>"
-			 "<td>%li</td></tr>\n"
+			 "<td>%"INT32"</td></tr>\n"
 
 			 "<tr bgcolor=#%s>"
 			 "<td width=50%%><b>min repair mode</b></td>"
-			 "<td>%li</td></tr>\n"
+			 "<td>%"INT32"</td></tr>\n"
 
 			 "<tr bgcolor=#%s>"
 			 "<td width=50%%><b>host ID with min repair mode"
 			 "</b></td>"
 			 "<td><a href=\"http://%s:%hu/admin/repair\">"
-			 "%li</a></td></tr>\n"
+			 "%"INT32"</a></td></tr>\n"
 
 			 "<tr bgcolor=#%s><td><b>old collection</b></td>"
 			 "<td>%s</td></tr>"
@@ -2307,15 +2307,15 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 status ,
 
 			 LIGHT_BLUE ,
-			 (long)g_repairMode,
+			 (int32_t)g_repairMode,
 
 			 LIGHT_BLUE ,
-			 (long)g_pingServer.m_minRepairMode,
+			 (int32_t)g_pingServer.m_minRepairMode,
 
 			 LIGHT_BLUE ,
 			 minIpBuf, // ip string
 			 minPort,  // port
-			 (long)minHostId,
+			 (int32_t)minHostId,
 
 			 LIGHT_BLUE ,
 			 oldColl ,
@@ -2327,7 +2327,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	sb->safePrintf ( 
 			 // docs done, includes overwritten title recs
 			 "<tr bgcolor=#%s><td><b>titledb recs scanned</b></td>"
-			 "<td>%lli of %lli</td></tr>\n"
+			 "<td>%"INT64" of %"INT64"</td></tr>\n"
 
 			 // percent complete
 			 "<tr bgcolor=#%s><td><b>titledb recs scanned "
@@ -2336,47 +2336,47 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 
 			 // title recs set errors, parsing errors, etc.
 			 //"<tr bgcolor=#%s><td><b>title recs injected</b></td>"
-			 //"<td>%lli</td></tr>\n"
+			 //"<td>%"INT64"</td></tr>\n"
 
 			 // title recs set errors, parsing errors, etc.
 			 "<tr bgcolor=#%s><td><b>titledb rec error count</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 
 			 // sub errors
 			 "<tr bgcolor=#%s><td> &nbsp; key out of order</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; set errors</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; corrupt errors</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; xml errors</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; dup docid errors</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; negative keys</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 //"<tr bgcolor=#%s><td> &nbsp; overwritten recs</b></td>"
-			 //"<td>%lli</td></tr>\n"
+			 //"<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; twin's "
 			 "respsponsibility</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 
 			 "<tr bgcolor=#%s><td> &nbsp; wrong shard</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 
 			 "<tr bgcolor=#%s><td> &nbsp; root urls</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 			 "<tr bgcolor=#%s><td> &nbsp; non-root urls</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 
 			 "<tr bgcolor=#%s><td> &nbsp; no title rec</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 
 			 //"<tr><td><b> &nbsp; Other errors</b></td>"
-			 //"<td>%lli</td></tr>\n"
+			 //"<td>%"INT64"</td></tr>\n"
 
 			 // time left in hours
-			 //"<tr><td><b>Time Left in Phase %li</b></td>"
+			 //"<tr><td><b>Time Left in Phase %"INT32"</b></td>"
 			 //"<td>%.2f hrs</td></tr>\n"
 
 			 ,
@@ -2422,7 +2422,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	sb->safePrintf(
 			 // spider recs done
 			 "<tr bgcolor=#%s><td><b>spider recs scanned</b></td>"
-			 "<td>%lli of %lli</td></tr>\n"
+			 "<td>%"INT64" of %"INT64"</td></tr>\n"
 
 			 // percent complete
 			 "<tr bgcolor=#%s><td><b>spider recs scanned "
@@ -2432,19 +2432,19 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 // spider recs set errors, parsing errors, etc.
 			 "<tr bgcolor=#%s><td><b>spider rec not "
 			 "assigned to us</b></td>"
-			 "<td>%li</td></tr>\n"
+			 "<td>%"INT32"</td></tr>\n"
 
 			 // spider recs set errors, parsing errors, etc.
 			 "<tr bgcolor=#%s><td><b>spider rec errors</b></td>"
-			 "<td>%lli</td></tr>\n"
+			 "<td>%"INT64"</td></tr>\n"
 
 			 // spider recs set errors, parsing errors, etc.
 			 "<tr bgcolor=#%s><td><b>spider rec bad tld</b></td>"
-			 "<td>%li</td></tr>\n"
+			 "<td>%"INT32"</td></tr>\n"
 
 			 // time left in hours
 			 //"<tr bgcolor=#%s><td><b>"
-			 //"Time Left in Phase %li</b></td>"
+			 //"Time Left in Phase %"INT32"</b></td>"
 			 //"<td>%.2f hrs</td></tr>\n"
 
 			 ,
@@ -2462,12 +2462,12 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 );
 
 
-	long nsr;
+	int32_t nsr;
 	Rdb **rdbs = getSecondaryRdbs ( &nsr );
 
 	// . count the recs in each secondary rdb
 	// . those are the rdbs we are adding the recs to
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		char *bg = DARK_BLUE;
 		Rdb *rdb = rdbs[i];
 		int64_t tr = rdb->getNumTotalRecs();
@@ -2476,7 +2476,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 		if ( tr == 0 ) continue;
 		sb->safePrintf(
 			 "<tr bgcolor=#%s><td><b>%s2 recs</b></td>"
-			 "<td>%lli</td></tr>\n" ,
+			 "<td>%"INT64"</td></tr>\n" ,
 			 bg,
 			 rdb->m_dbname,
 			 rdb->getNumTotalRecs());
@@ -2655,15 +2655,15 @@ bool saveAllRdbs ( void *state , void (* callback)(void *state) ) {
 	// set it
 	s_savingAll = true;
 	// TODO: why is this called like 100x per second when a merge is
-	// going on? why don't we sleep longer in between?
+	// going on? why don't we sleep int32_ter in between?
 	//bool close ( void *state , 
 	//	     void (* callback)(void *state ) ,
 	//	     bool urgent ,
 	//	     bool exitAfterClosing );
 
-	long nsr;
+	int32_t nsr;
 	Rdb **rdbs = getAllRdbs ( &nsr );
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		Rdb *rdb = rdbs[i];
 		// skip if not initialized
 		if ( ! rdb->isInitialized() ) continue;
@@ -2679,10 +2679,10 @@ bool saveAllRdbs ( void *state , void (* callback)(void *state) ) {
 
 // return false if one or more is still not closed yet
 bool anyRdbNeedsSave ( ) {
-	long count = 0;
-	long nsr;
+	int32_t count = 0;
+	int32_t nsr;
 	Rdb **rdbs = getAllRdbs ( &nsr );
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		Rdb *rdb = rdbs[i];
 		count += rdb->needsSave();
 	}

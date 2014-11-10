@@ -34,11 +34,11 @@ class Msg3e {
 	// request buffer is just 4 bytes
 	char m_request[ 4 ]; 
 	char *m_reply; 
-	long m_replySize;
+	int32_t m_replySize;
 
 	char m_goodReply;
 
-	long m_errno;
+	int32_t m_errno;
 };
 
 #endif

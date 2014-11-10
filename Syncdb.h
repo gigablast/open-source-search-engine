@@ -129,7 +129,7 @@
 //   this. 
 // . use Msg55 to sync a host whose twins are actively spidering. copies
 //   the rdb files over. suspends all merging operations on files.
-// . get rid of gb replacehost ("replacehost=1&rhost=%li&rspare=%li")
+// . get rid of gb replacehost ("replacehost=1&rhost=%"INT32"&rspare=%"INT32"")
 //   and have a "replace dead hosts" blue link in master controls.
 //   and have an 'automatically replace dead hosts' link in master controls.
 
@@ -152,7 +152,7 @@ class Syncdb {
 	Rdb *getRdb  ( ) { return &m_rdb; };
 
 	bool gotMetaListRequest ( class UdpSlot *slot ) ;
-	bool gotMetaListRequest ( char *req , long reqSize , uint32_t sid );
+	bool gotMetaListRequest ( char *req , int32_t reqSize , uint32_t sid );
 
 	key128_t makeKey ( char     a      ,
 			   char     b      ,
@@ -185,7 +185,7 @@ class Syncdb {
 	bool init ( ) ;
 	bool save ( ) ;
 	bool verify ( char *coll ) ;
-	bool syncHost ( long syncHostId ) ;
+	bool syncHost ( int32_t syncHostId ) ;
 	void rcpFiles ( ) ;
 	void syncStart_r ( bool amThread ) ;
 	void syncDone ( ) ;
@@ -215,11 +215,11 @@ class Syncdb {
 	key128_t m_syncKey;
 	key128_t m_nextk;
 	bool     m_outstanding;
-	long     m_addCount;
+	int32_t     m_addCount;
 
 	key128_t m_addMe[MAX_TO_ADD];
-	long     m_ia;
-	long     m_na;
+	int32_t     m_ia;
+	int32_t     m_na;
 	Msg5     m_msg5;
 	RdbList  m_list;
 
@@ -229,7 +229,7 @@ class Syncdb {
 
 	// checkoff requests
 	key128_t  m_keys [ MAX_CHECKOFF_KEYS ];
-	long      m_nk;
+	int32_t      m_nk;
 };
 
 extern class Syncdb g_syncdb;

@@ -21,14 +21,14 @@ int gbiconv_close(iconv_t cd) ;
 
 // Convert to Unicode (UTF-16) from the specified charset
 // set normalized to find out if the buffer is NFKC-normalized
-//long 	ucToUnicode(UChar *outbuf, long outbuflen, 
-//		    char *inbuf, long inbuflen, 
-//		    char *charset, long ignoreBadChars,
-//		    long titleRecVersion );
+//int32_t 	ucToUnicode(UChar *outbuf, int32_t outbuflen, 
+//		    char *inbuf, int32_t inbuflen, 
+//		    char *charset, int32_t ignoreBadChars,
+//		    int32_t titleRecVersion );
 
-long 	ucToAny(char *outbuf, long outbuflen, char *charset_out,
-		 char *inbuf, long inbuflen, char *charset_in,
-		 long ignoreBadChars,long niceness);
+int32_t 	ucToAny(char *outbuf, int32_t outbuflen, char *charset_out,
+		 char *inbuf, int32_t inbuflen, char *charset_in,
+		 int32_t ignoreBadChars,int32_t niceness);
 
 // table for decoding utf8...says how many bytes in the character
 // based on value of first byte.  0 is an illegal value
@@ -111,72 +111,72 @@ inline char *getPrevUtf8Char ( char *p , char *start ) {
 	return NULL;
 }
 
-inline long ucToUtf8(char *outbuf, long outbuflen, 
-			 char *inbuf, long inbuflen, 
-			 char *charset, long ignoreBadChars,
-		     long niceness) {
+inline int32_t ucToUtf8(char *outbuf, int32_t outbuflen, 
+			 char *inbuf, int32_t inbuflen, 
+			 char *charset, int32_t ignoreBadChars,
+		     int32_t niceness) {
   return ucToAny(outbuf, outbuflen, (char *)"UTF-8",
 		 inbuf, inbuflen, charset, ignoreBadChars,niceness);
 }
 
-/* long 	ucToUnicode_iconv(UChar *outbuf, long outbuflen,  */
-/* 		    char *inbuf, long inbuflen,  */
+/* int32_t 	ucToUnicode_iconv(UChar *outbuf, int32_t outbuflen,  */
+/* 		    char *inbuf, int32_t inbuflen,  */
 /* 		    char *charset, bool *normalized = NULL); */
 
 // Convert to a specified charset from Unicode (UTF-16)
-//long 	ucFromUnicode(char *outbuf, long outbuflen, 
-//		      const UChar *inbuf, long inbuflen, 
+//int32_t 	ucFromUnicode(char *outbuf, int32_t outbuflen, 
+//		      const UChar *inbuf, int32_t inbuflen, 
 //		      char *charset);
 
 // Normalize a UTF16 text buffer in Kompatibility Form
-//long 	ucNormalizeNFKC(UChar *outbuf, long outbufLen,
-//			const UChar *inbuf, long inbufLen);
+//int32_t 	ucNormalizeNFKC(UChar *outbuf, int32_t outbufLen,
+//			const UChar *inbuf, int32_t inbufLen);
 
 // JAB: Normalize a UTF-8 text buffer in Canonical Form
-//long utf8CDecompose(	char*       outBuf, long outBufSize,
-//			char* inBuf,  long inBufSize,
+//int32_t utf8CDecompose(	char*       outBuf, int32_t outBufSize,
+//			char* inBuf,  int32_t inBufSize,
 //			bool decodeEntities);
 
 // Encode a code point in UTF-16
-//long 	utf16Encode(UChar32 c, UChar *buf);
+//int32_t 	utf16Encode(UChar32 c, UChar *buf);
 
 // Encode a code point into latin-1, return 0 if not able to
 uint8_t latin1Encode ( UChar32 c ) ;
 // Encode a code point in UTF-8
-long	utf8Encode(UChar32 c, char* buf);
+int32_t	utf8Encode(UChar32 c, char* buf);
 
 // Try to detect the Byte Order Mark of a Unicode Document
-char *	ucDetectBOM(char *buf, long bufsize);
-//UChar32 utf16Decode(UChar *s, UChar **next, long maxLen=LONG_MAX);
-//UChar32 utf16EntityDecode(UChar *s, UChar **next, long maxLen = LONG_MAX);
-//long utf16Size(UChar32 c) ;
+char *	ucDetectBOM(char *buf, int32_t bufsize);
+//UChar32 utf16Decode(UChar *s, UChar **next, int32_t maxLen=LONG_MAX);
+//UChar32 utf16EntityDecode(UChar *s, UChar **next, int32_t maxLen = LONG_MAX);
+//int32_t utf16Size(UChar32 c) ;
 
 // . get the size of a utf16 character pointed to by "s"
 // . it will be either 1, 2 or 4 bytes
 //char usize ( char *s );
 
 // Special case converter...for web page output
-long latin1ToUtf8(char *outbuf, long outbufsize,
-		  char *inbuf, long inbuflen);
+int32_t latin1ToUtf8(char *outbuf, int32_t outbufsize,
+		  char *inbuf, int32_t inbuflen);
 
-//long utf8ToAscii(char *outbuf, long outbufsize,
-//		  unsigned char *inbuf, long inbuflen);
-long stripAccentMarks(char *outbuf, long outbufsize,
-		      unsigned char *inbuf, long inbuflen);
+//int32_t utf8ToAscii(char *outbuf, int32_t outbufsize,
+//		  unsigned char *inbuf, int32_t inbuflen);
+int32_t stripAccentMarks(char *outbuf, int32_t outbufsize,
+		      unsigned char *inbuf, int32_t inbuflen);
 
-//long utf16ToUtf8(char* outbuf, long outbufSize, 
-//		 UChar *s, long slen);
-//long utf16ToUtf8(char* outbuf, long outbufSize, 
-//		 char *s, long slen);
-//long utf16ToUtf8_iconv(char *outbuf, long outbufsize, 
-//		       UChar *inbuf, long inbuflen);
-//long utf16ToUtf8_intern(char *outbuf, long outbufsize, 
-//			UChar *inbuf, long inbuflen);
-//long utf16ToLatin1(char* outbuf, long outbufSize, 
-//		   UChar *s, long slen);
-//long utf16ToLatin1(char* outbuf, long outbufSize, 
-//		   char *s, long slen);
-//long utf16EncodeLatinStr(char *outbuf, long outbufLen, 
+//int32_t utf16ToUtf8(char* outbuf, int32_t outbufSize, 
+//		 UChar *s, int32_t slen);
+//int32_t utf16ToUtf8(char* outbuf, int32_t outbufSize, 
+//		 char *s, int32_t slen);
+//int32_t utf16ToUtf8_iconv(char *outbuf, int32_t outbufsize, 
+//		       UChar *inbuf, int32_t inbuflen);
+//int32_t utf16ToUtf8_intern(char *outbuf, int32_t outbufsize, 
+//			UChar *inbuf, int32_t inbuflen);
+//int32_t utf16ToLatin1(char* outbuf, int32_t outbufSize, 
+//		   UChar *s, int32_t slen);
+//int32_t utf16ToLatin1(char* outbuf, int32_t outbufSize, 
+//		   char *s, int32_t slen);
+//int32_t utf16EncodeLatinStr(char *outbuf, int32_t outbufLen, 
 //			 char *inbuf, char inbufLen);
 
 // Utility functions
@@ -185,24 +185,24 @@ long stripAccentMarks(char *outbuf, long outbufsize,
 
 // Is this character part of a "word"?
 //bool 	ucIsWordChar(UChar32 c);
-//long 	ucAtoL(UChar* buf, long len);
-//long 	ucTrimWhitespaceInplace(UChar*buf, long bufLen);
-//long 	ucTrimWhitespaceInplace(char *buf, long bufLen);
+//int32_t 	ucAtoL(UChar* buf, int32_t len);
+//int32_t 	ucTrimWhitespaceInplace(UChar*buf, int32_t bufLen);
+//int32_t 	ucTrimWhitespaceInplace(char *buf, int32_t bufLen);
 
 
 //bool utf16IsTrail(UChar c);
 //UChar32 utf16Prev(UChar *s, UChar **prev); 
-//long ucStrCaseCmp(UChar *s1, long slen1, UChar *s2, long slen2);
-//long ucStrCaseCmp(UChar *s1, long slen1, char *s2, long slen2);
-//long ucStrCmp(UChar *s1, long slen1, UChar*s2, long slen2) ;
-//long ucStrNLen(UChar *s, long maxLen) ;
-//long ucStrNLen(char *s, long maxLen) ;
+//int32_t ucStrCaseCmp(UChar *s1, int32_t slen1, UChar *s2, int32_t slen2);
+//int32_t ucStrCaseCmp(UChar *s1, int32_t slen1, char *s2, int32_t slen2);
+//int32_t ucStrCmp(UChar *s1, int32_t slen1, UChar*s2, int32_t slen2) ;
+//int32_t ucStrNLen(UChar *s, int32_t maxLen) ;
+//int32_t ucStrNLen(char *s, int32_t maxLen) ;
 
 // . determine needed size and convert utf16 to utf8 in 
 //   buffer or allocate space if no buffer
 // . returns NULL if error occurs
-//char *utf16ToUtf8Alloc( char *utf16Str, long utf16StrLen,
-//			char *buf, long *bufSize );
+//char *utf16ToUtf8Alloc( char *utf16Str, int32_t utf16StrLen,
+//			char *buf, int32_t *bufSize );
 
 
 
@@ -211,12 +211,12 @@ long stripAccentMarks(char *outbuf, long outbufsize,
 //////////////////////////////////////////////////////////
 // encode a UChar* string into ascii (for debugging, mostly)
 // slen in UChars
-//long 	ucToAscii(char *buf, long bufsize, UChar *s, long slen);
+//int32_t 	ucToAscii(char *buf, int32_t bufsize, UChar *s, int32_t slen);
 // slen in bytes
-//long 	ucToAscii(char *buf, long bufsize, char *s, long slen);
-//long 	ucAnyToAscii(char *buf, long bufsize,
-//			char *s, long slen, char* charset);
-//void 	uccDebug(UChar *s, long slen);
+//int32_t 	ucToAscii(char *buf, int32_t bufsize, char *s, int32_t slen);
+//int32_t 	ucAnyToAscii(char *buf, int32_t bufsize,
+//			char *s, int32_t slen, char* charset);
+//void 	uccDebug(UChar *s, int32_t slen);
 
 //#define CrashMe() {					     
 //		log("Unicode: Need to update %s, line %d!!!\n", 
@@ -231,7 +231,7 @@ long stripAccentMarks(char *outbuf, long outbufsize,
 //#if 0
 //int utf8_parse_buf(char *s);
 //#endif
-//long utf8_count_words ( char *p ) ;
+//int32_t utf8_count_words ( char *p ) ;
 //bool utf8_is_alnum(UChar32 c);
 
 
@@ -244,7 +244,7 @@ long stripAccentMarks(char *outbuf, long outbufsize,
 //////////////////////////////////////////////////////////////
 
 //inline 
-//long 	ucTrimWhitespaceInplace(char *buf, long bufLen) { 
+//int32_t 	ucTrimWhitespaceInplace(char *buf, int32_t bufLen) { 
 //	return ucTrimWhitespaceInplace((UChar *)buf, bufLen >> 1 ) << 1;
 //};
 
@@ -275,26 +275,26 @@ long stripAccentMarks(char *outbuf, long outbufsize,
 // }
 
 
-//inline long utf8EncodeStr(char *outbuf, long outbufsize, 
-//		   UChar *inbuf, long inbuflen)
+//inline int32_t utf8EncodeStr(char *outbuf, int32_t outbufsize, 
+//		   UChar *inbuf, int32_t inbuflen)
 //{
 //	return utf8EncodeStr(outbuf, outbufsize, (char*)inbuf, inbuflen<<1);
 //}
 
 /*
-inline long utf16ToUtf8(char* outbuf, long outbufSize, 
-			char *s, long slen) {
+inline int32_t utf16ToUtf8(char* outbuf, int32_t outbufSize, 
+			char *s, int32_t slen) {
 	return utf16ToUtf8(outbuf, outbufSize,
 			   (UChar*)s, slen >> 1);
 }
-inline long utf16ToLatin1(char* outbuf, long outbufSize, 
-			char *s, long slen) {
+inline int32_t utf16ToLatin1(char* outbuf, int32_t outbufSize, 
+			char *s, int32_t slen) {
 	return utf16ToLatin1(outbuf, outbufSize,
 			     (UChar*)s, slen >> 1);
 }
 
 inline // returns length of UChar sequence encoded
-long utf16Encode(UChar32 c, UChar *buf){
+int32_t utf16Encode(UChar32 c, UChar *buf){
 	// if character fits into 1 code unit
 	// AND it's not an invalid char that makes it look like the
 	// first half of a 2 unit char, just copy it in
@@ -312,10 +312,10 @@ long utf16Encode(UChar32 c, UChar *buf){
 // special case conversion...quickly convert latin1 to utf16 in a char* buffer
 // return # bytes written
 inline
-long utf16EncodeLatinStr(char *outbuf, long outbufLen, 
+int32_t utf16EncodeLatinStr(char *outbuf, int32_t outbufLen, 
 			char *inbuf, char inbufLen){
-	long j = 0;
-	for (long i = 0 ; i<inbufLen && j < outbufLen; i++) {
+	int32_t j = 0;
+	for (int32_t i = 0 ; i<inbufLen && j < outbufLen; i++) {
 		j += utf16Encode((UChar32)(unsigned char)inbuf[i], 
 				 ((UChar*)(outbuf))+j);
 	}
@@ -337,7 +337,7 @@ inline uint8_t latin1Encode ( UChar32 c ) {
 // . returns length of byte sequence encoded
 // . store the unicode character, "c", as a utf8 character
 // . return how many bytes were stored into "buf"
-inline long utf8Encode(UChar32 c, char* buf) {
+inline int32_t utf8Encode(UChar32 c, char* buf) {
 	if (!(c & 0xffffff80)){  
 		// 1 byte
 		buf[0] = (char)c;
@@ -406,16 +406,16 @@ inline UChar32 utf8Decode(char *p){//, char **next){
 
 //can't include Entities.h here...weird dependencies
 // JAB: const-ness for the optimizer...
-//extern long getEntity(char *s, long maxLen, unsigned long *c,
+//extern int32_t getEntity(char *s, int32_t maxLen, uint32_t *c,
 //			bool doUnicode);
 // JAB: const-ness for the optimizer
 //inline UChar32 utf8EntityDecode(char *s, char **next,
-//					long maxLen) {
+//					int32_t maxLen) {
 //	UChar32 c = utf8Decode(s, (char**) next);
 //	if (c != '&')
 //		return c;
 //	UChar32 entity;
-//	long skip = getEntity(s, maxLen, &entity, true /*doUnicode*/);
+//	int32_t skip = getEntity(s, maxLen, &entity, true /*doUnicode*/);
 //	if (skip) {
 //		*next = s+skip;
 //		return entity;
@@ -425,7 +425,7 @@ inline UChar32 utf8Decode(char *p){//, char **next){
 
 ////////////////////////////////////////////////////
 /*
-inline UChar32 utf16Decode(UChar *s, UChar **next, long maxLen){
+inline UChar32 utf16Decode(UChar *s, UChar **next, int32_t maxLen){
 	UChar32 ret = s[0];
 	*next = s+1; // 99% of common chars are in BMP (16 bit)
 	if ( ( ret & 0xfffffc00  ) != 0xd800 ) { //is this a 2 unit code point?
@@ -441,8 +441,8 @@ inline UChar32 utf16Decode(UChar *s, UChar **next, long maxLen){
 	return ret;
 }
 
-// returns the number of shorts required to encode character c in UTF-16
-inline long utf16Size(UChar32 c){
+// returns the number of int16_ts required to encode character c in UTF-16
+inline int32_t utf16Size(UChar32 c){
 	if (!(c & 0xffff0000L))
 		return 1;
 	return 2;
@@ -450,7 +450,7 @@ inline long utf16Size(UChar32 c){
 */
 
 // JAB: returns the number of bytes required to encode character c in UTF-8
-inline long utf8Size(UChar32 c){
+inline int32_t utf8Size(UChar32 c){
   if ((c & 0xFFFFFF80) == 0) return 1;
   if ((c & 0xFFFFF800) == 0) return 2;
   if ((c & 0xFFFF0000) == 0) return 3;
@@ -486,20 +486,20 @@ inline UChar32 utf8Prev(char* cur, char** prev) {
 	return utf8Decode(cur);//, &next);
 }
 
-//inline long ucStrNLen(char *s, long maxLen) {
+//inline int32_t ucStrNLen(char *s, int32_t maxLen) {
 //	return ucStrNLen((UChar*)s, maxLen>>1) << 1;
 //}
 
 //can't include Entities.h here...weird dependencies
 // JAB: const-ness for the optimizer...
-//extern long getEntity(const UChar*s, long maxLen, unsigned long *c);
+//extern int32_t getEntity(const UChar*s, int32_t maxLen, uint32_t *c);
 // JAB: const-ness for the optimizer...
 /*
-inline UChar32 utf16EntityDecode(UChar *s, UChar **next, long maxLen) {
+inline UChar32 utf16EntityDecode(UChar *s, UChar **next, int32_t maxLen) {
 	UChar32 c = utf16Decode(s, next);
 	if (c == '&'){
 		UChar32 entity;
-		long skip = getEntity(s, maxLen, &entity);
+		int32_t skip = getEntity(s, maxLen, &entity);
 		if (skip){
 			*next = s+skip;
 			return entity;
@@ -511,15 +511,15 @@ inline UChar32 utf16EntityDecode(UChar *s, UChar **next, long maxLen) {
 
 //can't include Entities.h here...weird dependencies
 // JAB: const-ness for the optimizer...
-//extern long getEntity(char *s, long maxLen, unsigned long *c,
+//extern int32_t getEntity(char *s, int32_t maxLen, uint32_t *c,
 //			bool doUnicode);
 
 // JAB: const-ness for the optimizer
-//inline UChar32 utf8EntityDecode(char *s, char **next,long maxLen) {
+//inline UChar32 utf8EntityDecode(char *s, char **next,int32_t maxLen) {
 //	UChar32 c = utf8Decode(s, next);
 //	if (c == '&') {
 //		UChar32 entity;
-//		long skip = getEntity(s, maxLen, &entity, true /*doUnicode*/);
+//		int32_t skip = getEntity(s, maxLen, &entity, true /*doUnicode*/);
 //		if (skip) {
 //			*next = (char*) s+skip;
 //			return entity;
@@ -560,16 +560,16 @@ inline UChar32 fixWindows1252(UChar32 c){
 
 /*
 // look for an ascii substring in a utf-16 string
-UChar *ucStrNCaseStr(UChar *haystack, long haylen, char *needle); 
-UChar *ucStrNCaseStr(UChar *haystack, long haylen, char *needle, 
-		     long needleLen);
+UChar *ucStrNCaseStr(UChar *haystack, int32_t haylen, char *needle); 
+UChar *ucStrNCaseStr(UChar *haystack, int32_t haylen, char *needle, 
+		     int32_t needleLen);
 // look for a utf-16 substring in a utf-16 string
-UChar *ucStrNCaseStr(UChar *haystack, long haylen,
-		     UChar *needle, long needleLen); 
+UChar *ucStrNCaseStr(UChar *haystack, int32_t haylen,
+		     UChar *needle, int32_t needleLen); 
 // look for a unicode substring in an ascii string
 char *ucStrNCaseStr(char *haystack,
-		    UChar *needle, long needleLen);
-char *ucStrNCaseStr(char *haystack, long haylen,
-		    UChar *needle, long needleLen);
+		    UChar *needle, int32_t needleLen);
+char *ucStrNCaseStr(char *haystack, int32_t haylen,
+		    UChar *needle, int32_t needleLen);
 */
 #endif

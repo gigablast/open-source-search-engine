@@ -95,7 +95,7 @@ void Dir::rewind ( ) {
 char *Dir::getNextFilename ( char *pattern ) {
 
 	struct dirent *ent;
-	long plen = gbstrlen ( pattern );
+	int32_t plen = gbstrlen ( pattern );
 	while ( (ent = readdir ( m_dir ))  ) {
 		char *filename = ent->d_name;
 		if ( ! pattern ) return filename;
@@ -156,7 +156,7 @@ char *Dir::getNewFilename ( char *pattern ) {
 	int j = gbstrlen ( buf );
 	for ( int i = 0 ; pattern[i] ; i++ ) {
 		if ( pattern[i] != '*' ) {buf[j++] = pattern[i]; continue;}
-		sprintf ( &buf[j] , "%lli" , id );
+		sprintf ( &buf[j] , "%"INT64"" , id );
 		j = gbstrlen ( buf );
 	}
 	buf[j++] = '\0';
@@ -198,6 +198,6 @@ int64_t Dir::getFileId ( char *filename ) {
 	if   ( end < 0 ) end = 0;
 	else             end++;
 	int64_t id = -1;
-	sscanf ( filename + end , "%lli." , & id );
+	sscanf ( filename + end , "%"INT64"." , & id );
 	return id;
 }

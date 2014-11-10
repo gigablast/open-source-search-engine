@@ -28,22 +28,22 @@ class JsonItem {
 	// . the NAME of the item
 	// . points into the ORIGINAL json string
 	char *m_name;
-	long m_nameLen;
+	int32_t m_nameLen;
 
 	// for JT_NUMBER
-	long m_valueLong;
+	int32_t m_valueLong;
 	// for JT_NUMBER
 	double m_valueDouble;
 
 	// for JT_String
-	long m_valueLen;
+	int32_t m_valueLen;
 
 	// for JT_String
-	long  getValueLen() { return m_valueLen; };
+	int32_t  getValueLen() { return m_valueLen; };
 
 	// for arrays (JT_ARRAY), hack the char ptr into m_valueLong
 	char *getArrayStart() { return (char *)m_valueLong; }
-	long  getArrayLen  () { return m_valueLen; };
+	int32_t  getArrayLen  () { return m_valueLen; };
 
 	// for JT_String
 	char *getValue () { 
@@ -56,7 +56,7 @@ class JsonItem {
 	};
 
 	// convert nubers and bools to strings for this one
-	char *getValueAsString ( long *valueLen ) ;
+	char *getValueAsString ( int32_t *valueLen ) ;
 
 	// like acme.product.offerPrice if "acme:{product:{offerprice:1.23}}"
 	bool getCompoundName ( SafeBuf &nameBuf ) ;
@@ -70,7 +70,7 @@ class Json {
 
 	void test();
 
-	JsonItem *parseJsonStringIntoJsonItems ( char *json , long niceness );
+	JsonItem *parseJsonStringIntoJsonItems ( char *json , int32_t niceness );
 
 	JsonItem *getFirstItem ( ) ;
 
@@ -82,7 +82,7 @@ class Json {
 	
 	SafeBuf m_sb;
 	JsonItem *m_stack[MAXJSONPARENTS];
-	long m_stackPtr;
+	int32_t m_stackPtr;
 	class JsonItem *m_prev;
 };
 

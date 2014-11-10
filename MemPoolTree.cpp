@@ -17,7 +17,7 @@ MemPoolTree::~MemPoolTree ( ) {
 }
 
 // "memMax" includes records plus the overhead
-bool MemPoolTree::init ( char *mem , long memSize ) {
+bool MemPoolTree::init ( char *mem , int32_t memSize ) {
 	// all the mem
 	m_mem = mem;
 	m_memSize = memSize;
@@ -32,7 +32,7 @@ bool MemPoolTree::init ( char *mem , long memSize ) {
 // . wrapper for getNode()
 MemNode *MemPoolTree::getNode ( MemKey &key ) {
 	// debug msg
-	//log("getting node for k.n1=%lu n0=%llu",key.n1,key.n0);
+	//log("getting node for k.n1=%"UINT32" n0=%"UINT64"",key.n1,key.n0);
 	// get the node (about 4 cycles per loop, 80cycles for 1 million items)
 	MemNode *i = m_headNode;
 	while ( i ) {
@@ -103,7 +103,7 @@ MemNode *MemPoolTree::getNextNode ( MemNode *i ) {
 	if ( p->m_left == i ) return p;
 	// otherwise keep getting the parent until it has a bigger key
 	// or until we're the LEFT kid of the parent. that's better
-	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
+	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
 	while ( p && p->m_key < i->m_key ) p = p->m_parent;
 	// p will be NULL if none are left
 	return p;
@@ -126,7 +126,7 @@ MemNode *MemPoolTree::getPrevNode ( MemNode *i ) {
 	if ( p->m_right == i ) return p;
 	// keep getting the parent until it has a bigger key
 	// or until we're the RIGHT kid of the parent. that's better
-	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
+	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
 	while ( p && p->m_key > i->m_key ) p = p->m_parent;
 	// p will be NULL if none are left
 	return p;
@@ -137,7 +137,7 @@ MemNode *MemPoolTree::getPrevNode ( MemNode *i ) {
 // . this will NOT replace any current node with the same key
 MemNode *MemPoolTree::addNode ( MemKey &key ) {
 	// debug msg
-	//log("adding k.n1=%lu n0=%llu",key.n1,key.n0);
+	//log("adding k.n1=%"UINT32" n0=%"UINT64"",key.n1,key.n0);
 	// set up vars
 	MemNode *iparent ;
 	// this is NULL iff there are no nodes used in the tree
@@ -333,12 +333,12 @@ void MemPoolTree::deleteNode ( MemNode *i ) {
 	// all kids don't have -2 for their parent... seems to be a rare bug
 	//printTree();
 	// debug msg
-	//fprintf(stderr,"- #%li %lli %li\n",i,m_keys[i].n0,iparent);
+	//fprintf(stderr,"- #%"INT32" %"INT64" %"INT32"\n",i,m_keys[i].n0,iparent);
 	// our depth becomes that of the node we replaced, unless moving j
 	// up to i decreases the total depth, in which case setDepths() fixes
 	j->m_depth = i->m_depth ;
 	// debug msg
-	//fprintf(stderr,"... replaced %li it with %li (-1 means none)\n",i,j);
+	//fprintf(stderr,"... replaced %"INT32" it with %"INT32" (-1 means none)\n",i,j);
 	// . recalculate depths starting at old parent of j
 	// . stops at the first node to have the correct depth
 	// . will balance at pivot nodes that need it
@@ -358,21 +358,21 @@ void MemPoolTree::setDepths ( MemNode *i ) {
 		// . compute the new depth for node i
 		// . get depth of left kid
 		// . left/rightDepth is depth of subtree on left/right
-		long leftDepth  = 0;
-		long rightDepth = 0;
+		int32_t leftDepth  = 0;
+		int32_t rightDepth = 0;
 		if ( i->m_left  ) leftDepth  = i->m_left->m_depth;
 		if ( i->m_right ) rightDepth = i->m_right->m_depth;
 		// . get the new depth for node i
 		// . add 1 cuz we include ourself in our m_depth
-		long newDepth ;
+		int32_t newDepth ;
 		if ( leftDepth > rightDepth ) newDepth = leftDepth  + 1;
 		else                          newDepth = rightDepth + 1;
 		// if the depth did not change for i then we're done
-		long oldDepth = i->m_depth;
+		int32_t oldDepth = i->m_depth;
 		// set our new depth
 		i->m_depth = newDepth;
 		// diff can be -2, -1, 0, +1 or +2
-		long diff = leftDepth - rightDepth;
+		int32_t diff = leftDepth - rightDepth;
 		// . if it's -1, 0 or 1 then we don't need to balance
 		// . if rightside is deeper rotate left, i is the pivot
 		// . otherwise, rotate left
@@ -383,7 +383,7 @@ void MemPoolTree::setDepths ( MemNode *i ) {
 		// . i may have change if we rotated, but same logic applies
 		if ( i->m_depth == oldDepth ) break;
 		// debug msg
-		//fprintf (stderr,"changed node %li's depth from %li to %li\n",
+		//fprintf (stderr,"changed node %"INT32"'s depth from %"INT32" to %"INT32"\n",
 		//i,oldDepth,newDepth);
 		// get his parent to continue the ascension
 		i = i->m_parent;
@@ -440,13 +440,13 @@ MemNode *MemPoolTree::rotateRight ( MemNode *i ) {
 	// let AP be A's parent
 	MemNode *AP = A->m_parent ;
 	// whose the bigger subtree, W or X? (depth includes W or X itself)
-	long Wdepth = 0;
-	long Xdepth = 0;
+	int32_t Wdepth = 0;
+	int32_t Xdepth = 0;
 	if ( W ) Wdepth = W->m_depth;
 	if ( X ) Xdepth = X->m_depth;
 	// debug msg
-	//fprintf(stderr,"A=%li AP=%li N=%li W=%li X=%li Q=%li T=%li "
-	//"Wdepth=%li Xdepth=%li\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
+	//fprintf(stderr,"A=%"INT32" AP=%"INT32" N=%"INT32" W=%"INT32" X=%"INT32" Q=%"INT32" T=%"INT32" "
+	//"Wdepth=%"INT32" Xdepth=%"INT32"\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
 	// goto Xdeeper if X is deeper
 	if ( Wdepth < Xdepth ) goto Xdeeper;
 	// N's parent becomes A's parent
@@ -462,7 +462,7 @@ MemNode *MemPoolTree::rotateRight ( MemNode *i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node from %li to %li\n",
+		//fprintf(stderr,"changing head node from %"INT32" to %"INT32"\n",
 		//m_headNode,N);
 		m_headNode = N;
 	}
@@ -498,7 +498,7 @@ MemNode *MemPoolTree::rotateRight ( MemNode *i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node2 from %li to %li\n",
+		//fprintf(stderr,"changing head node2 from %"INT32" to %"INT32"\n",
 		//m_headNode,X);
 		m_headNode = X;
 	}
@@ -536,13 +536,13 @@ MemNode *MemPoolTree::rotateLeft ( MemNode *i ) {
 	// let AP be A's parent
 	MemNode *AP = A->m_parent ;
 	// whose the bigger subtree, W or X? (depth includes W or X itself)
-	long Wdepth = 0;
-	long Xdepth = 0;
+	int32_t Wdepth = 0;
+	int32_t Xdepth = 0;
 	if ( W ) Wdepth = W->m_depth;
 	if ( X ) Xdepth = X->m_depth;
 	// debug msg
-	//fprintf(stderr,"A=%li AP=%li N=%li W=%li X=%li Q=%li T=%li "
-	//"Wdepth=%li Xdepth=%li\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
+	//fprintf(stderr,"A=%"INT32" AP=%"INT32" N=%"INT32" W=%"INT32" X=%"INT32" Q=%"INT32" T=%"INT32" "
+	//"Wdepth=%"INT32" Xdepth=%"INT32"\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
 	// goto Xdeeper if X is deeper
 	if ( Wdepth < Xdepth ) goto Xdeeper;
 	// N's parent becomes A's parent
@@ -558,7 +558,7 @@ MemNode *MemPoolTree::rotateLeft ( MemNode *i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node from %li to %li\n",
+		//fprintf(stderr,"changing head node from %"INT32" to %"INT32"\n",
 		//m_headNode,N);
 		m_headNode = N;
 	}
@@ -594,7 +594,7 @@ MemNode *MemPoolTree::rotateLeft ( MemNode *i ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node2 from %li to %li\n",
+		//fprintf(stderr,"changing head node2 from %"INT32" to %"INT32"\n",
 		//m_headNode,X);
 		m_headNode = X;
 	}

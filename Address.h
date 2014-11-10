@@ -69,11 +69,11 @@ public:
 
 bool printTesterPage ( SafeBuf &sb ) ;
 
-long memcpy2 ( char *dst , char *src , long bytes , bool filterCommas ,
+int32_t memcpy2 ( char *dst , char *src , int32_t bytes , bool filterCommas ,
 	       // do not store more than this many bytes into dst
-	       long dstMaxBytes = -1 ) ;
+	       int32_t dstMaxBytes = -1 ) ;
 
-bool getIPLocation ( long   ip     ,
+bool getIPLocation ( int32_t   ip     ,
 		     double *lat    ,
 		     double *lon    ,
 		     double *radius ,
@@ -81,7 +81,7 @@ bool getIPLocation ( long   ip     ,
 		     char  **state ,
 		     char  **ctry  ,
 		     char   *buf   ,
-		     long    bufSize ) ;
+		     int32_t    bufSize ) ;
 
 bool getLatLonFromUserInput ( float *radius,
 			      char *where ,
@@ -106,7 +106,7 @@ bool getLatLonFromUserInput ( float *radius,
 			      // country of search based on ip (two letters)
 			      uint8_t ipCrid,
 			      char   *gbaddressBuf ,
-			      long    gbaddressBufSize );
+			      int32_t    gbaddressBufSize );
 
 bool getLatLon ( uint32_t cityId , double *lat , double *lon ) ;
 bool getCityLatLonFromAddrStr ( char *addr , double *lat , double *lon ) ;
@@ -120,26 +120,26 @@ bool getZipLatLonFromAddress ( class Address *aa, float *lat, float *lon );
 
 bool hashPlaceName ( HashTableX *nt1,
 		     Words *words,
-		     long a ,
-		     long b ,
+		     int32_t a ,
+		     int32_t b ,
 		     uint64_t v ) ;
 
-class Place *getZipPlace   ( long a , long alnumPos , class Words *words );
-class Place *getCityPlace  ( long a , long alnumPos , class Words *words );
-class Place *getStatePlace ( long a , long alnumPos , class Words *words );
+class Place *getZipPlace   ( int32_t a , int32_t alnumPos , class Words *words );
+class Place *getCityPlace  ( int32_t a , int32_t alnumPos , class Words *words );
+class Place *getStatePlace ( int32_t a , int32_t alnumPos , class Words *words );
 
-long getCommonWordIds ( long a1 , long b1 ,
-			long a2 , long b2 ,
+int32_t getCommonWordIds ( int32_t a1 , int32_t b1 ,
+			int32_t a2 , int32_t b2 ,
 			int64_t *wids      ,
 			int64_t *commonIds ,
-			long max ,
-			long niceness ) ;
+			int32_t max ,
+			int32_t niceness ) ;
 
 // used by XmlDoc::makeSimpleWordVector() as well
 int64_t *getSynonymWord ( int64_t *h , int64_t *prevId , bool isStreet );
 
 // called by main.cpp
-void handleRequest2c ( class UdpSlot *slot , long nicenessWTF ) ;
+void handleRequest2c ( class UdpSlot *slot , int32_t nicenessWTF ) ;
 
 // called by main.cpp
 bool initPlaceDescTable ( ) ;
@@ -153,7 +153,7 @@ typedef uint8_t pflags_t;
 
 uint64_t getAdm1Bits ( char *stateAbbr ) ;
 class StateDesc *getStateDesc ( char *stateAbbr ) ;
-StateDesc *getStateDescByNum ( long i ) ;
+StateDesc *getStateDescByNum ( int32_t i ) ;
 
 // . values for Place::m_type
 // . now a place can be multiple types
@@ -174,18 +174,18 @@ typedef uint16_t placetype_t;
 class Place {
  public:
 	// first word in the place phrase
-	long m_a;
+	int32_t m_a;
 	// the last word plus one
-	long m_b;
+	int32_t m_b;
 	// . like m_a and m_b above but only over "alnum words"
 	// . m_alnumA is the first alnum word # in place phrase
 	// . used for seeing how many alnum words between two places
-	long m_alnumA;
-	long m_alnumB;
+	int32_t m_alnumA;
+	int32_t m_alnumB;
 
 	// list of all the Places that are compatible with this Place
 	//Place **m_brothers;
-	//long    m_numBrothers;
+	//int32_t    m_numBrothers;
 
 	// see above for these bit values
 	placetype_t m_type;
@@ -212,10 +212,10 @@ class Place {
 	uint64_t m_streetNumHash;
 	uint64_t m_streetIndHash;
 	// index into allCountries.txt, -1 means none
-	//long m_index;
+	//int32_t m_index;
 	// the string, "words" not intact if setting from tag (setFromTag())
 	char *m_str;
-	long  m_strlen;
+	int32_t  m_strlen;
 
 	// secondary bit/flags
 	pflags_t m_flags2;
@@ -230,10 +230,10 @@ class Place {
 	class Address *m_unverifiedAddress;
 
 	char *m_siteTitleBuf;
-	long  m_siteTitleBufSize;
+	int32_t  m_siteTitleBufSize;
 
 	// uesd by Events.cpp as a temporary storage
-	long m_eventDescOff;
+	int32_t m_eventDescOff;
 
 	// . what city is the place in
 	// . used for zip codes mostly
@@ -253,9 +253,9 @@ class Place {
 	// boost based on indicators only.
 	//float m_indScore;
 	// tag hash of section we are in
-	//long m_tagHash;
+	//int32_t m_tagHash;
 	// we can only pair up with a Place if its m_a < this m_rangeb
-	//long m_rangeb;
+	//int32_t m_rangeb;
 
 	// do we intersect place "p" ?
 	bool intersects ( class Place *p ) {
@@ -294,7 +294,7 @@ class Place {
 // an address consists of a set of Places of different types
 class Address {
  public:
-	bool hash ( long              baseScore ,
+	bool hash ( int32_t              baseScore ,
 		    class HashTableX *dt        ,
 		    uint32_t          date      ,
 		    class Words      *words     , 
@@ -302,20 +302,20 @@ class Address {
 		    class SafeBuf    *pbuf      ,
 		    class HashTableX *wts       ,
 		    class SafeBuf    *wbuf      ,
-		    long              version   ,
-		    long              niceness  ) ;
+		    int32_t              version   ,
+		    int32_t              niceness  ) ;
 
 	//bool addToTagRec ( class TagRec *gr , 
-	//		   long ip , 
-	//		   long timestamp ,
+	//		   int32_t ip , 
+	//		   int32_t timestamp ,
 	//		   char *origUrl ,  // = NULL
-	//		   long maxAddrBytes , // = -1 ,
+	//		   int32_t maxAddrBytes , // = -1 ,
 	//		   char *tagName ) ;
 
-	long getStoredSize ( long olen , bool includeHash );
+	int32_t getStoredSize ( int32_t olen , bool includeHash );
 	bool serializeVerified ( class SafeBuf *sb ) ;
-	long serialize ( char *buf , 
-			 long bufSize , 
+	int32_t serialize ( char *buf , 
+			 int32_t bufSize , 
 			 char *origUrl ,
 			 bool verifiedOnly ,
 			 bool includeHash ) ;
@@ -328,8 +328,8 @@ class Address {
 
 	//int64_t makeAddressVotingTableKey ( );
 
-	long print  ( );
-	long print2 ( long i, SafeBuf *pbuf , int64_t uh64 );
+	int32_t print  ( );
+	int32_t print2 ( int32_t i, SafeBuf *pbuf , int64_t uh64 );
 	void printEssentials ( SafeBuf *pbuf , bool forEvents ,
 			       int64_t uh64 );
 
@@ -395,14 +395,14 @@ class Address {
 
 	double m_latitude;
 	double m_longitude;
-	long   m_latLonScore;
-	long   m_latLonDist;
+	int32_t   m_latLonScore;
+	int32_t   m_latLonDist;
 
 	//char   m_timeZoneOffset;
 
 	double m_importedLatitude;
 	double m_importedLongitude;
-	long   m_importedVotes;
+	int32_t   m_importedVotes;
 
 	double m_geocoderLat;
 	double m_geocoderLon;
@@ -418,15 +418,15 @@ class Address {
 	// . we OR these into m_flags above
 	char m_replyFlags;
 	// bookends in word space
-	//long m_a;
-	//long m_b;
+	//int32_t m_a;
+	//int32_t m_b;
 
 	// extra stuff, AF_HAS_REQUIRED_CITY,...
 	char m_flags3;
 
 	// range of words in the body
-	//long m_wordStart;
-	//long m_wordEnd;
+	//int32_t m_wordStart;
+	//int32_t m_wordEnd;
 
 	// the scores
 	//float m_scoreBase;
@@ -443,21 +443,21 @@ class Address {
 	//int64_t m_avtKey;
 
 	// the dom and "firstip" this address came from
-	long m_domHash32;
-	long m_ip;
+	int32_t m_domHash32;
+	int32_t m_ip;
 
 	// used to see if two addresses are basically the same
 	uint64_t m_hash;
 	// score of address for deduping based on m_hash
-	long m_score2;
+	int32_t m_score2;
 
 	char getTimeZone ( char *useDST );
 
 	// these are used by msg2c to verify addresses in placedb
-	long m_reqBufNum;
-	long m_addrNum;
+	int32_t m_reqBufNum;
+	int32_t m_addrNum;
 
-	//long m_eventTagHash;
+	//int32_t m_eventTagHash;
 
 	//char m_requestBuf [ 64 ];
 
@@ -485,10 +485,10 @@ class Msg2c {
 	bool verifyAddresses ( class Addresses *aa         ,
 			       //char            *coll       , 
 			       collnum_t collnum,
-			       long             domHash32  ,
-			       long             ip         ,
+			       int32_t             domHash32  ,
+			       int32_t             ip         ,
 			       //HashTableX      *avt        ,
-			       long             niceness   ,
+			       int32_t             niceness   ,
 			       void            *state      ,
 			       void           (* callback)(void *state ) );
 	
@@ -496,19 +496,19 @@ class Msg2c {
 
 	// some specified input
 	//char  *m_coll;
-	//long   m_collLen;
+	//int32_t   m_collLen;
 	collnum_t m_collnum;
 	void    (*m_callback ) ( void *state );
 	void     *m_state;
-	long m_niceness;
-	long  m_requests;
-	long  m_replies;
+	int32_t m_niceness;
+	int32_t  m_requests;
+	int32_t  m_replies;
 	char  m_doneLaunching;
-	long  m_errno;
+	int32_t  m_errno;
 	//Multicast m_mcast;
-	long m_domHash32;
-	long m_ip;
-	long m_i;
+	int32_t m_domHash32;
+	int32_t m_ip;
+	int32_t m_i;
 	class Addresses *m_addresses;
 
 	// these are used for sending out multiple msg2c requests at the
@@ -527,56 +527,56 @@ class PlaceMem {
 
 	// if you just want to call setStr() and have it use stack mem to
 	// store up to 10 places, then init the PlaceMem with this very quickly
-	void init ( long  poolSize         , 
-		    long  initNumPoolPtrs  ,
-		    long  initNumPlacePtrs ,
+	void init ( int32_t  poolSize         , 
+		    int32_t  initNumPoolPtrs  ,
+		    int32_t  initNumPlacePtrs ,
 		    char *stackMem         , 
-		    long  stackMemSize     ,
-		    long  niceness         );
+		    int32_t  stackMemSize     ,
+		    int32_t  niceness         );
 
 	// . returns NULL and sets g_errno on error
 	// . stores ptr to the returned mem in m_placePtrs[placeNum]
-	void *getMem ( long need );
+	void *getMem ( int32_t need );
 
 	PlaceMem();
 	~PlaceMem();
 	void reset();
 
-	long  getNumPtrs ( ) { return m_numPlacePtrs; };
+	int32_t  getNumPtrs ( ) { return m_numPlacePtrs; };
 
-	void *getPtr ( long ptrNum ) {
+	void *getPtr ( int32_t ptrNum ) {
 		if ( ptrNum >= m_numPlacePtrs ) { char *xx=NULL;*xx=0; }
 		return (void *)m_placePtrs[ptrNum];
 	};
 
 	// sometimes we remove Places. two ways to do this:
-	void rewind     ( long numPtrsToRewind ) {
+	void rewind     ( int32_t numPtrsToRewind ) {
 		return setNumPtrs ( m_numPlacePtrs - numPtrsToRewind); };
 
-	void setNumPtrs ( long newNumPtrs      );
+	void setNumPtrs ( int32_t newNumPtrs      );
 
 	char **m_poolPtrs;
-	long   m_numPoolsAllocated;
-	long   m_numPoolPtrsAllocated;
+	int32_t   m_numPoolsAllocated;
+	int32_t   m_numPoolPtrsAllocated;
 
-	long   m_poolSize;
+	int32_t   m_poolSize;
 
 	// i guess we just gotta realloc this to keep it contiguous
 	char **m_placePtrs;
-	long   m_numPlacePtrs;
-	long   m_numPlacePtrsAllocated;
+	int32_t   m_numPlacePtrs;
+	int32_t   m_numPlacePtrsAllocated;
 
-	long   m_initNumPoolPtrs;
-	long   m_initNumPlacePtrs;
+	int32_t   m_initNumPoolPtrs;
+	int32_t   m_initNumPlacePtrs;
 
 	char  *m_cursor;
 	char  *m_cursorEnd;
-	long   m_cursorPoolNum;
+	int32_t   m_cursorPoolNum;
 
 	char  *m_stack;
-	long   m_stackSize;
+	int32_t   m_stackSize;
 
-	long   m_niceness;
+	int32_t   m_niceness;
 };
 
 //#define MAX_ADDRESSES 32000
@@ -600,20 +600,20 @@ class Addresses {
 		   int64_t       docId       ,
 		   //char           *coll        ,
 		   collnum_t collnum,
-		   long            domHash32   ,
-		   long            ip          ,
-		   //long            tagPairHash ,
-		   long            niceness    ,
+		   int32_t            domHash32   ,
+		   int32_t            ip          ,
+		   //int32_t            tagPairHash ,
+		   int32_t            niceness    ,
 		   class SafeBuf  *pbuf        ,
 		   void           *state       ,
 		   void          (*callback) (void *state) ,
 		   uint8_t         contentType ,
 		   // this is XmlDoc::ptr_addressReply
 		   //char           *addressReply ,
-		   //long            addressReplySize ,
+		   //int32_t            addressReplySize ,
 		   //bool            addressReplyValid ,
 		   char *siteTitleBuf     ,
-		   long  siteTitleBufSize ,
+		   int32_t  siteTitleBufSize ,
 		   class XmlDoc *xd );
 
 	bool set2 ( ) ;
@@ -629,89 +629,89 @@ class Addresses {
 			  class Place *zip    ,
 			  class Place *ctry   ,
 			  class Section *sn   ,
-			  long           startAlnum ,
+			  int32_t           startAlnum ,
 			  char   flags3    ,
 			  class Address **retAddr );
 
 	bool hashForPlacedb ( int64_t         docId    ,
-			      long              domHash  ,
-			      long              ip       ,
+			      int32_t              domHash  ,
+			      int32_t              ip       ,
 			      class HashTableX *dt       ) ;
 
-	bool isCityName ( long a , long b ) ;
+	bool isCityName ( int32_t a , int32_t b ) ;
 
-	bool isStateName ( long a ) ;
+	bool isStateName ( int32_t a ) ;
 
 	bool isCityState ( class Section *si ) ;
 
-	long isCityState3 ( int64_t h1 , int64_t h2 ) ;
+	int32_t isCityState3 ( int64_t h1 , int64_t h2 ) ;
 
-	long isCityState2 ( long a , long b ) ;
+	int32_t isCityState2 ( int32_t a , int32_t b ) ;
 
 	void setAmbiguousFlags ( ) ;
 
 	// . used by XmlDoc.cpp to update tagRec
 	// . adds all m_na addresses to the TagRec
-	//bool addToTagRec ( TagRec *gr , long ip , long timestamp ,
+	//bool addToTagRec ( TagRec *gr , int32_t ip , int32_t timestamp ,
 	//		   char *origUrl , // = NULL ,
-	//		   long maxAddrBytes , // = -1 ) ;
+	//		   int32_t maxAddrBytes , // = -1 ) ;
 	//		   char *tagName );
 
 	/*
-	long addProperPlaces  ( long         a             , 
-				long         b             ,
-				long         maxAlnumCount ,
+	int32_t addProperPlaces  ( int32_t         a             , 
+				int32_t         b             ,
+				int32_t         maxAlnumCount ,
 				class Place *pp            , 
-				long         maxPlaces     ,
-				long         np            ,
+				int32_t         maxPlaces     ,
+				int32_t         np            ,
 				pbits_t      flags         ,
-				long         alnumPos      ,
-				long         forcedEnd     );
+				int32_t         alnumPos      ,
+				int32_t         forcedEnd     );
 	*/
 
-	long cityAdm1Follows ( long a ) ;
+	int32_t cityAdm1Follows ( int32_t a ) ;
 
-	long setFromTag ( Address *a, class Tag *tag, PlaceMem *placeMem );
+	int32_t setFromTag ( Address *a, class Tag *tag, PlaceMem *placeMem );
 
-	long getNumAddresses ( ) { return m_am.getNumPtrs(); };
-	long getNumNonDupAddresses ( ) { return m_numNonDupAddresses; };
-	long getNumVenues ( ) { return m_numVenues; };
+	int32_t getNumAddresses ( ) { return m_am.getNumPtrs(); };
+	int32_t getNumNonDupAddresses ( ) { return m_numNonDupAddresses; };
+	int32_t getNumVenues ( ) { return m_numVenues; };
 
-	class Place *getAssociatedPlace ( long i ) ;
+	class Place *getAssociatedPlace ( int32_t i ) ;
 
 	// . before computing addresses we try to get the streets
 	// . this includes typical streets name "123 main street" as well
 	//   as potential names of places like "Dave's Bar"
 	//Place m_streets[ MAX_STREETS ];
-	//long  m_ns;
+	//int32_t  m_ns;
 	PlaceMem m_sm;
 
 	// if we got too many streets and fake streets set this to true
 	// in order to avoid parsing the doc any further since it will
-	// take too long!
+	// take too int32_t!
 	bool m_breached;
 
 	// cities, states and zips are in here
 	//Place m_places[ MAX_PLACES ];
-	//long  m_np;
+	//int32_t  m_np;
 	PlaceMem m_pm;
-	long  m_npSaved;
+	int32_t  m_npSaved;
 
 	//Address m_addresses[ MAX_ADDRESSES ];
-	//long    m_na;
+	//int32_t    m_na;
 	PlaceMem m_am;
-	long    m_numNonDupAddresses;
-	long    m_numVenues;
+	int32_t    m_numNonDupAddresses;
+	int32_t    m_numVenues;
 
 	Address m_venueDefault;
 
 	// store msg2c reply into m_sb
-	bool addToReplyBuf ( char *reply , long replySize , long addrNum );
+	bool addToReplyBuf ( char *reply , int32_t replySize , int32_t addrNum );
 	SafeBuf m_sb;
 
 	// final places we use for addresses are stored in here
 	//Place m_final [ MAX_FINAL_PLACES ];
-	//long  m_nf;
+	//int32_t  m_nf;
 
 	Msg2c          *m_msg2c;
 	Msg0            m_msg0;
@@ -721,19 +721,19 @@ class Addresses {
 	//char           *m_coll;
 	collnum_t m_collnum;
 	int64_t       m_termId;
-	long            m_domHash32;
-	long            m_ip;
-	//long            m_tagPairHash;
+	int32_t            m_domHash32;
+	int32_t            m_ip;
+	//int32_t            m_tagPairHash;
 	class Sections *m_sections;
 	class Words    *m_words;
 	char          **m_wptrs;
-	long           *m_wlens;
-	long            m_nw;
+	int32_t           *m_wlens;
+	int32_t            m_nw;
 	int64_t      *m_wids;
 	nodeid_t       *m_tids;
 	class Bits     *m_bits;
 	class TagRec   *m_gr;
-	long            m_niceness;
+	int32_t            m_niceness;
 	class SafeBuf  *m_pbuf;
 	void           *m_state;
 	void          (* m_callback) (void *state );
@@ -743,23 +743,23 @@ class Addresses {
 	//HashTableX      m_avt;
 	// table serialize into this buffer which we alloc
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 	// this is XmlDoc::ptr_addressReply
 	//char           *m_addressReply;
-	//long            m_addressReplySize;
+	//int32_t            m_addressReplySize;
 	//bool            m_addressReplyValid;
 
 	bool m_firstBreach;
 
 	char *m_siteTitleBuf     ;
-	long  m_siteTitleBufSize ;
+	int32_t  m_siteTitleBufSize ;
 
-	long m_uniqueStreetHashes;
+	int32_t m_uniqueStreetHashes;
 
 	class XmlDoc *m_xd;
 	
 	// XmlDoc sets its ptr_addressReply to this for storing in title rec
-	//char *getAddressReply ( long *size ) {
+	//char *getAddressReply ( int32_t *size ) {
 	//	*size = m_sb.length();	return m_sb.getBufStart(); };
 
 	// this sets the m_avt table from the m_addresses[]
@@ -774,29 +774,29 @@ class Addresses {
 	// so you can quickly scan the places contained by a section
 	bool setFirstPlaceNums ( );
 	Place **m_sorted;
-	long    m_sortedSize;
-	long    m_numSorted;
+	int32_t    m_sortedSize;
+	int32_t    m_numSorted;
 	bool    m_sortedValid;
 	//class HashTableX *getPlaceTable();
 	//bool m_ptValid;
 	//HashTableX m_pt;
 
 	// # of inlined or verified addresses out of the m_na we have
-	long m_numValid;
+	int32_t m_numValid;
 
-	bool addIntersection ( long i , long alnumPos ) ;
-	bool isInStreet ( long j ) ;
+	bool addIntersection ( int32_t i , int32_t alnumPos ) ;
+	bool isInStreet ( int32_t j ) ;
 
 	// used by Repair.cpp to cache the old event address's lat/lon
 	// to save us from slamming the poor geocoder!
 	RdbCache m_latLonCache;
 };
 
-extern void getDSTInterval ( long year, long *a , long *b );
-extern long getDayOfWeek ( int64_t h ) ;
+extern void getDSTInterval ( int32_t year, int32_t *a , int32_t *b );
+extern int32_t getDayOfWeek ( int64_t h ) ;
 extern bool setFromStr ( Address *a, char *s, pbits_t flags , 
 			 class PlaceMem *placeMem ,
-			 long niceness ) ;
+			 int32_t niceness ) ;
 extern void setFromStr2 ( char  *addr   ,
 			  char **name1  ,
 			  char **name2  ,
@@ -808,19 +808,19 @@ extern void setFromStr2 ( char  *addr   ,
 			  char **country,
 			  double *lat    ,
 			  double *lon    );
-			  //long  *tzoff  ) ;
+			  //int32_t  *tzoff  ) ;
 
 #define UNKNOWN_TIMEZONE 100
 
-extern bool getIsDST ( long nowUTC , char timezone ) ;
+extern bool getIsDST ( int32_t nowUTC , char timezone ) ;
 extern char getTimeZoneFromAddr ( char *addr , char *useDST ) ;
 // state is two letter state abbr
 extern char getTimeZone2 ( char *city , char *state , char *useDST );
 extern char getTimeZone3 ( uint32_t cid32 , char *useDST );
-extern char getTimeZoneFromUserIP ( long uip , long niceness , char *useDST ) ;
-extern char getTimeZoneFromLatLon ( float lat , float lon , long niceness ,
+extern char getTimeZoneFromUserIP ( int32_t uip , int32_t niceness , char *useDST ) ;
+extern char getTimeZoneFromLatLon ( float lat , float lon , int32_t niceness ,
 				    char *useDST ) ;
-extern uint32_t getNearestCityId ( float lat , float lon , long niceness ,
+extern uint32_t getNearestCityId ( float lat , float lon , int32_t niceness ,
 				   float *distInMiles = NULL ) ;
 
 extern uint64_t getHashFromAddr ( char *addr ) ;
@@ -862,17 +862,17 @@ public:
 	// one per country
 	uint8_t m_crid;
 	// population
-	long m_population;
+	int32_t m_population;
 	// the id assigned by the geonames ppl for looking up in
 	// alternateNames.txt
-	//long m_geoId;
+	//int32_t m_geoId;
 	// the lat lon of the place centroid
 	float m_lat;
 	float m_lon;
 	// from -12 to + 12 i guess
 	char  m_timeZoneOffset;
 	// the official name. offset into g_pbuf/g_pbufSize
-	long  m_officialNameOffset;
+	int32_t  m_officialNameOffset;
 	// the two letter state code
 	char  m_adm1[2];
 
@@ -890,11 +890,11 @@ PlaceDesc *getPlaceDesc ( uint64_t placeHash64 ,
 			  uint8_t placeType ,
 			  uint8_t crid,
 			  char *stateAbbr,
-			  long niceness ) ;
+			  int32_t niceness ) ;
 
 PlaceDesc *getNearestCity_new ( float  lat , 
 				float  lon , 
-				long   niceness ,
+				int32_t   niceness ,
 				float *distInMilesSquared ) ;
 
 int64_t getWordXorHash ( char *s ) ;

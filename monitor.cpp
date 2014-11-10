@@ -25,9 +25,9 @@ bool mainShutdown ( bool urgent ) { return true; }
 bool closeAll ( void *state , void (* callback)(void *state) ) { return true; }
 bool allExit ( ) { return true; }
 
-void checkPage ( char *host , unsigned short port , char *path ) ;
-bool getPage ( char *host , unsigned short port , char *path ) ;
-int connectSock ( char *host , unsigned short port ) ;
+void checkPage ( char *host , uint16_t port , char *path ) ;
+bool getPage ( char *host , uint16_t port , char *path ) ;
+int connectSock ( char *host , uint16_t port ) ;
 bool sendEmail ( char *errmsg ) ;
 //bool sendEmailSSL ( char *errmsg ) ;
 void sleepWrapper ( int fd , void *state ) ;
@@ -42,10 +42,10 @@ static char s_errbuf [ 50024 ];
 // for debugging
 //#define WAIT 2
 
-static long s_wait = WAIT;
+static int32_t s_wait = WAIT;
 
 // count # of consecutive errors
-static long s_count = 0;
+static int32_t s_count = 0;
 
 // last time we sent an email
 static time_t s_lastTime = 0;
@@ -53,7 +53,7 @@ static time_t s_lastTime = 0;
 //static bool s_buzz = false;
 
 char *g_host = NULL;
-long  g_port = 80;
+int32_t  g_port = 80;
 bool g_montest = false;
 bool g_isFlurbit = false;
 bool g_isProCog = false;
@@ -68,7 +68,7 @@ int main ( int argc , char *argv[] ) {
 	//}
 	bool badArgs = false;
 
-	for ( long i = 2 ; i < argc ; i++ ) {
+	for ( int32_t i = 2 ; i < argc ; i++ ) {
 
 		if ( argv[i][0]=='-' &&
 		     argv[i][1]=='t' ) {
@@ -229,7 +229,7 @@ int main ( int argc , char *argv[] ) {
 }
 
 // have a list of queries we cycle through
-long g_qn = 0;
+int32_t g_qn = 0;
 
 char *g_queries[] = {
 	//"buzzlogic",
@@ -292,10 +292,10 @@ char *g_substrings[][MAX_SUBSTRINGS] = {
 	// ... add more here...
 };
 
-static long s_goodMXIp = 0;
+static int32_t s_goodMXIp = 0;
 
 
-void gotMXIpWrapper ( void *state , long ip ) {
+void gotMXIpWrapper ( void *state , int32_t ip ) {
 	g_conf.m_logDebugDns = false;
 	log("monitor: gotmxipwrapper ip of %s for %s",
 		iptoa(ip),g_conf.m_email1MX);
@@ -333,7 +333,7 @@ void sleepWrapper ( int fd , void *state ) {
 	//char *host = "www1.gigablast.com";
 	// we need to use port 8002 if running from titan, but on voyager2
 	// we can still use port 80
-	short port = 80;
+	int16_t port = 80;
 
 	// hack for testing on titan
 	//port = 8002;
@@ -357,9 +357,9 @@ void sleepWrapper ( int fd , void *state ) {
 
 
 	// launch dns lookup every 30 minutes
-	long now = getTimeLocal();
-	static long s_lastDnsTime = 0;
-	static long s_mxip1;
+	int32_t now = getTimeLocal();
+	static int32_t s_lastDnsTime = 0;
+	static int32_t s_mxip1;
 	//static DnsState s_ds;
 	if ( now - s_lastDnsTime > 30*60 ) {
 		s_lastDnsTime = now;
@@ -390,7 +390,7 @@ void sleepWrapper ( int fd , void *state ) {
 	}
 
 	// save this
-	long old = g_qn;
+	int32_t old = g_qn;
 
 	int64_t startTime = gettimeofdayInMilliseconds();
 
@@ -413,7 +413,7 @@ void sleepWrapper ( int fd , void *state ) {
 			       query );
 
 	// check all hosts
-	//for ( unsigned short port = 8000 ; port < 8032 ; port++ ) 
+	//for ( uint16_t port = 8000 ; port < 8032 ; port++ ) 
 	//isUp("www.gigablast.com",port,"/cgi/0.cgi?q=test&usecache=0");
 
 	time_t t = time(NULL);
@@ -426,11 +426,11 @@ void sleepWrapper ( int fd , void *state ) {
 	// if ok, loop back
 	if ( status ) { 
 		if ( ! g_isFlurbit )
-			fprintf(stderr,"monitor: %s got page ok in %lli ms "
+			fprintf(stderr,"monitor: %s got page ok in %"INT64" ms "
 				"(%s)\n",
 				s,took,g_queries[old]);
 		else
-			fprintf(stderr,"monitor: %s got page ok in %lli ms "
+			fprintf(stderr,"monitor: %s got page ok in %"INT64" ms "
 				"(flurbit.com/Albuquerque/NM)\n",
 				s,took);
 		s_count = 0; 
@@ -441,11 +441,11 @@ void sleepWrapper ( int fd , void *state ) {
 
 	if ( strlen(s_errbuf) > 20000 ) s_errbuf[20000] = '\0';
 	// make a pretty error msg
-	sprintf ( buf , "monitor %s:%li: %s %s\n" , g_host,g_port,s,s_errbuf );
+	sprintf ( buf , "monitor %s:%"INT32": %s %s\n" , g_host,g_port,s,s_errbuf );
 	// log to console
 	//fprintf ( stderr , buf );
 	// there might %'s in the s_errbuf so do this!!
-	fprintf ( stderr , "monitor %s:%li: %s %s\n" , g_host,g_port,s,s_errbuf );
+	fprintf ( stderr , "monitor %s:%"INT32": %s %s\n" , g_host,g_port,s,s_errbuf );
 
 	// count the error
 	s_count++;
@@ -490,7 +490,7 @@ void sleepWrapper ( int fd , void *state ) {
 
 // . returns false and fills in s_errbuf on error
 // . returns true if no error
-bool getPage ( char *host , unsigned short port , char *path ) {
+bool getPage ( char *host , uint16_t port , char *path ) {
 	// get the socket fd
 	int sd = connectSock ( host , port );
 	if ( sd < 0 ) return false;
@@ -509,8 +509,8 @@ bool getPage ( char *host , unsigned short port , char *path ) {
 		return false;
 	}
 	// read the reply
-	long nb;
-	//long sum = 0;
+	int32_t nb;
+	//int32_t sum = 0;
 
 	// make it non blocking in case we don't get reply
 	int flags = fcntl ( sd , F_GETFL ) ;
@@ -532,8 +532,8 @@ bool getPage ( char *host , unsigned short port , char *path ) {
 		log("monitor: bad s_pid"); char *xx=NULL;*xx=0; }
 
 	// start time
-	long now = time(NULL);
-	long end = now + 25; // 25 seconds to read
+	int32_t now = time(NULL);
+	int32_t end = now + 25; // 25 seconds to read
  loop:
 
 	if ( (nb = read ( sd , tbuf , 1024*100 ) ) == -1 &&
@@ -568,7 +568,7 @@ bool getPage ( char *host , unsigned short port , char *path ) {
 	// . must have read something, at least this for the 'test' query!!!
 	// . no results page is only 
 	if ( sbuf.length() < 3*1024 ) {
-		sprintf ( s_errbuf ,"read: only read %li bytes for %s. "
+		sprintf ( s_errbuf ,"read: only read %"INT32" bytes for %s. "
 			  "readbuf=%s" , sbuf.length()-1, 
 			  g_queries[g_qn],
 			  sbuf.getBufStart());
@@ -589,7 +589,7 @@ bool getPage ( char *host , unsigned short port , char *path ) {
 	// in the search results, at least one should be there!
 	char *p = NULL;
 	// it must contain at least one substring
-	for ( long i = 0 ; i < MAX_SUBSTRINGS && ! g_isFlurbit ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_SUBSTRINGS && ! g_isFlurbit ; i++ ) {
 		// end of list...
 		if ( g_substrings[g_qn][i] == NULL ) break;
 		p = strstr(sbuf.getBufStart(), g_substrings[g_qn][i]);
@@ -606,12 +606,12 @@ bool getPage ( char *host , unsigned short port , char *path ) {
 	//p = NULL;
 
 	if ( ! p && ! g_isFlurbit ) { // && !s_buzz) {
-		long slen = sbuf.length();
+		int32_t slen = sbuf.length();
 		char *pbuf = sbuf.getBufStart();
 		//if ( slen > 30000 ) pbuf[30000] = '\0';
 		if ( slen > 1000 ) pbuf[1000] = '\0';
 		snprintf(s_errbuf,45000,
-			 "read: bad search results (len=%li) for %s "
+			 "read: bad search results (len=%"INT32") for %s "
 			"readbuf="
 			 //"????"
 			 "%s"
@@ -638,7 +638,7 @@ bool getPage ( char *host , unsigned short port , char *path ) {
 
 // . returns -1 and fill s_errbuf on error
 // . returns fd on success
-int connectSock ( char *host , unsigned short port ) {
+int connectSock ( char *host , uint16_t port ) {
 
 	/*
 	// use the same socket connection
@@ -655,20 +655,20 @@ int connectSock ( char *host , unsigned short port ) {
 		return -1;
 	}
 	// get first ip address
-	//long n = e->h_length;
-	unsigned long ip = *(long *)(e->h_addr_list[0]);
+	//int32_t n = e->h_length;
+	uint32_t ip = *(int32_t *)(e->h_addr_list[0]);
 	*/
 	pid_t pid = getpid();
 	char cmd[256];
-	sprintf(cmd,"/usr/bin/dig +short  %s | tail -1 > /tmp/ip.%lu",
-		host,(long)pid);
+	sprintf(cmd,"/usr/bin/dig +int16_t  %s | tail -1 > /tmp/ip.%"UINT32"",
+		host,(int32_t)pid);
 	system ( cmd );
 	char filename[256];
-	sprintf(filename,"/tmp/ip.%lu",(long)pid);
+	sprintf(filename,"/tmp/ip.%"UINT32"",(int32_t)pid);
 	FILE *fd = fopen( filename,"r");
 	char ipstring[256];
 	fscanf(fd,"%s",ipstring);
-	long ip = atoip(ipstring,strlen(ipstring));
+	int32_t ip = atoip(ipstring,strlen(ipstring));
 	fclose(fd);
 
 	// print that

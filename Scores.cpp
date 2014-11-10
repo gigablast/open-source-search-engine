@@ -36,14 +36,14 @@ void Scores::reset() {
 
 bool Scores::set ( Words    *words             ,
 		   Sections *sections          ,
-		   long      titleRecVersion   ,
+		   int32_t      titleRecVersion   ,
 		   bool      eliminateMenus    ,
 		   // provide it with a buffer to prevent a malloc
 		   char     *buf               ,
-		   long      bufSize           ,
-		   long      minIndexableWords ) {
+		   int32_t      bufSize           ,
+		   int32_t      minIndexableWords ) {
 
-	//long  defaultm = 40;
+	//int32_t  defaultm = 40;
 	//if ( titleRecVersion >= 56 ) defaultm = -1;
 
 	// "scoreBySection" (default is true)
@@ -136,8 +136,8 @@ bool Scores::set ( Words    *words             ,
 	/*
 	// there should only by one <index> block in the ruleset file that has 
 	// these special config switches
-	long n0 = 0;
-	long n1 = 0x7fffffff;
+	int32_t n0 = 0;
+	int32_t n1 = 0x7fffffff;
 
 	// this is used to decrease the scores of words in menu sections.
 	// this means that words will be scored based on their neighboring
@@ -166,7 +166,7 @@ bool Scores::set ( Words    *words             ,
 	// in that section will get indexed. each word in a section is
 	// counted as 128 points, but if the word is in a hyper link it is
 	// counted as -256 points (-2*128)
-	long minSectionScore = sx->getLong(n0,n1,"index.minSectionScore",
+	int32_t minSectionScore = sx->getLong(n0,n1,"index.minSectionScore",
 					   -1000000000);
 
 	// count words in links as 21 points, words not in links as 128.
@@ -174,23 +174,23 @@ bool Scores::set ( Words    *words             ,
 	// its 8 left and its 7 right neighbors divided by 16. if that
 	// average score is below this value, the word is not indexed.
 	// only valid if scoreBySection is true!
-	long minAvgWordScore = sx->getLong(n0,n1,"index.minAvgWordScore",0);
+	int32_t minAvgWordScore = sx->getLong(n0,n1,"index.minAvgWordScore",0);
 
 	// if the whole document has less than this many words with positive 
 	// scores, do not index any of the words (set their scores to 0)
-	long  minIndexableWords =
+	int32_t  minIndexableWords =
 		sx->getLong (n0,n1,"index.minIndexableWords",defaultm);//40);
 
 	// . for weighting the top portion of the document more, use these.
 	// . only applicable if using the new parser so we can use the new 
 	//   Scores class
-	long  numTopWords        =
+	int32_t  numTopWords        =
 		sx->getLong (n0,n1,"index.numTopWords",0);
 	float topWordsWeight     =
 		sx->getFloat(n0,n1,"index.topWordsWeight",3.0);
 	float topSentenceWeight  =
 		sx->getFloat(n0,n1,"index.topSentenceWeight",1.0);
-	long  maxWordsInSentence =
+	int32_t  maxWordsInSentence =
 		sx->getLong (n0,n1,"index.maxWordsInSentence",30);
 
 	return set ( words                   ,
@@ -233,19 +233,19 @@ bool Scores::set ( Words    *words             ,
 //   not index any words, set their scores to 0
 bool Scores::set ( Words    *words                   ,
 		   Sections *sections                ,
-		   long      titleRecVersion         ,
+		   int32_t      titleRecVersion         ,
 		   bool      scoreBySection          ,
 		   bool      indexContentSectionOnly ,
-		   long      minSectionScore         ,
-		   long      minAvgWordScore         ,
-		   long      minIndexableWords       ,
+		   int32_t      minSectionScore         ,
+		   int32_t      minAvgWordScore         ,
+		   int32_t      minIndexableWords       ,
 		   // these are for weighting top part of news articles
-		   long      numTopWords             ,
+		   int32_t      numTopWords             ,
 		   float     topWordsWeight          ,
 		   float     topSentenceWeight       ,
-		   long      maxWordsInSentence      ,
+		   int32_t      maxWordsInSentence      ,
 		   char     *buf                     ,
-		   long      bufSize                 ) {
+		   int32_t      bufSize                 ) {
 	
 	// sanity check
 	//if ( m_buf ) { char *xx = NULL; *xx = 0; }
@@ -264,8 +264,8 @@ bool Scores::set ( Words    *words                   ,
 
 	// allocate m_scores buffer, one byte score per word
 	m_scores = NULL;
-	long nw = words->getNumWords();
-	long need = nw * 4;
+	int32_t nw = words->getNumWords();
+	int32_t need = nw * 4;
 	// assume no malloc
 	m_needsFree = false;
 	if ( need < SCORES_LOCALBUFSIZE ) m_buf = m_localBuf;
@@ -277,17 +277,17 @@ bool Scores::set ( Words    *words                   ,
 	m_bufSize = need;
 	if ( ! m_buf ) return false;
 	char *p = m_buf;
-	m_scores = (long *)p;
+	m_scores = (int32_t *)p;
 	p += nw * 4;
-	//m_rerankScores = (long *) p;
+	//m_rerankScores = (int32_t *) p;
 
 	// all words start with a default normal score, 128 as of right now
-	for ( long i = 0 ; i < nw ; i++ ) m_scores[i] = NORM_WORD_SCORE;
+	for ( int32_t i = 0 ; i < nw ; i++ ) m_scores[i] = NORM_WORD_SCORE;
 
 	nodeid_t   *tids  = words->getTagIds  ();
 	int64_t  *wids  = words->getWordIds ();		
 	char      **w     = words->m_words;
-	long       *wlens = words->m_wordLens;
+	int32_t       *wlens = words->m_wordLens;
 
 	// . zero out scores of words in javascript and style tags
 	// . set scores to 1 if word in select or marquee tag
@@ -298,7 +298,7 @@ bool Scores::set ( Words    *words                   ,
 	char inStyle   = 0;
 	char inSelect  = 0;
 	char inMarquee = 0;
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if not tag
 		if ( ! tids[i] ) {
 			if (inScript || inStyle) { m_scores[i] = -1; continue;}
@@ -348,12 +348,12 @@ bool Scores::set ( Words    *words                   ,
 	}
 	// otherwise, give all indexable words a default normal score
 	//else if (titleRecVersion >= 60){
-	for ( long i = 0 ; i < nw ; i++ )
+	for ( int32_t i = 0 ; i < nw ; i++ )
 		if ( wids[i] && m_scores[i] > 0 ) 
 			m_scores[i] = NORM_WORD_SCORE; // 128;
 	//}
 	//else{ // old version...unignores script/select/style words
-	//	for ( long i = 0 ; i < nw ; i++ )
+	//	for ( int32_t i = 0 ; i < nw ; i++ )
 	//		if ( wids[i] ) 
 	//			m_scores[i] = NORM_WORD_SCORE; // 128;
 	//}
@@ -361,20 +361,20 @@ bool Scores::set ( Words    *words                   ,
 	// . we need at least this many positive scoring, indexable words
 	// . this is -1 if unused
 	if ( minIndexableWords > 0 ) {
-		long count = 0;
-		for ( long i = 0 ; i < nw ; i++ ) 
+		int32_t count = 0;
+		for ( int32_t i = 0 ; i < nw ; i++ ) 
 			if ( wids[i] && m_scores[i] > 1 ) count++;
 		if ( count < minIndexableWords )
-			for ( long i = 0 ; i < nw ; i++ ) m_scores[i] = 0 ;
+			for ( int32_t i = 0 ; i < nw ; i++ ) m_scores[i] = 0 ;
 	}
 
 	// . now weight the words in the top of the document more
 	// . news articles and other docs put the most important info first
 	if ( numTopWords == 0 ) return true;
 
-	long k;
-	long count = 0;
-	for ( long i = 0 ; i < nw ; i++ ) {
+	int32_t k;
+	int32_t count = 0;
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if not indexed (even though it may have a score > 0)
 		if ( wids[i] == 0 ) continue;
 		// skip over anything with a weight of 0 (ignored) or 1
@@ -392,10 +392,10 @@ bool Scores::set ( Words    *words                   ,
 		}
 		if ( count < numTopWords        ) 
 			m_scores[i] = 
-				(long)((float)m_scores[i] * topWordsWeight);
+				(int32_t)((float)m_scores[i] * topWordsWeight);
 		if ( count < maxWordsInSentence ) 
 			m_scores[i] = 
-				(long)((float)m_scores[i] * topSentenceWeight);
+				(int32_t)((float)m_scores[i] * topSentenceWeight);
 		count++;
 		if ( count >= maxWordsInSentence ) maxWordsInSentence = 0;
 		if ( count >= numTopWords        ) numTopWords        = 0;
@@ -411,30 +411,30 @@ bool Scores::set ( Words    *words                   ,
 
 bool Scores::setScoresBySection ( Words *words, 
 				  bool indexContentSectionOnly ,
-				  long minSectionScore         ,
-				  long minAvgWordScore         ) {
+				  int32_t minSectionScore         ,
+				  int32_t minAvgWordScore         ) {
 
-	long       nw     = words->getNumWords();
+	int32_t       nw     = words->getNumWords();
 	int64_t *wids   = words->getWordIds ();
 	nodeid_t  *tids   = words->getTagIds  ();
 	bool       inLink = false;
-	long       score  = 0;
-	long       level  = 0;
-	long       i;
+	int32_t       score  = 0;
+	int32_t       level  = 0;
+	int32_t       i;
 	nodeid_t   ids    [ MAX_LEVELS ]; // tag ids on stack
-	long       scores [ MAX_LEVELS ]; // scores on stack
-	long       starts [ MAX_LEVELS ]; // section start positions on stack
-	long       previs [ MAX_LEVELS ]; // linked list end
-	long       previ =  0;
+	int32_t       scores [ MAX_LEVELS ]; // scores on stack
+	int32_t       starts [ MAX_LEVELS ]; // section start positions on stack
+	int32_t       previs [ MAX_LEVELS ]; // linked list end
+	int32_t       previ =  0;
 	// for storing the winning section
-	long       max   =  -2000000000;
-	long       maxa  = -1;
-	long       maxb  = -1;
+	int32_t       max   =  -2000000000;
+	int32_t       maxa  = -1;
+	int32_t       maxb  = -1;
 	char       flag  =  0;
 
 	// . get the vector, 1-1 with the words
 	// . wscores is 1 byte, fscores is 4 bytes, wnext is 4 bytes
-	long need = nw * 6;
+	int32_t need = nw * 6;
 	char *tmp = NULL;
 	char tstack[1024*100];
 	if ( need > 1024*100 )
@@ -442,15 +442,15 @@ bool Scores::setScoresBySection ( Words *words,
 	else     
 		tmp = tstack;
 	// bail if alloc failed
-	if ( ! tmp ) return log("build: Scores failed to alloc %li bytes.",
+	if ( ! tmp ) return log("build: Scores failed to alloc %"INT32" bytes.",
 				  need);
 	char *p = (char *)tmp;
-	long   *wnext   = (long  *)p ; p += 4 * nw;
-	short  *wscores = (short *)p ; p += 2 * nw;
+	int32_t   *wnext   = (int32_t  *)p ; p += 4 * nw;
+	int16_t  *wscores = (int16_t *)p ; p += 2 * nw;
 	// init
 	wnext[0] = -1;
 	// point to our score buffer
-	long *fscores = m_scores;
+	int32_t *fscores = m_scores;
 	// convenience var
 	//char *wscores = m_wscores;
 	// -1 means score is unset
@@ -460,13 +460,13 @@ bool Scores::setScoresBySection ( Words *words,
 	// to be an unchangeable knob in the ruleset file.
 	float ratio = 8.0;
 	// how much to score a plain text word?
-	long plain = NORM_WORD_SCORE; // 128;
+	int32_t plain = NORM_WORD_SCORE; // 128;
 	// how much to score a word in hypertext?
-	long hyper = (long)((float)plain / ratio);
+	int32_t hyper = (int32_t)((float)plain / ratio);
 	// for scoring the section
-	long neg = plain * 4;
+	int32_t neg = plain * 4;
 	// misc vars
-	long mid,k,j,sj,rscore,lscore,bscore,count,cumscore;
+	int32_t mid,k,j,sj,rscore,lscore,bscore,count,cumscore;
 	nodeid_t tid;
 
 	for ( i = 0 ; i < nw ; i++ ) {
@@ -547,7 +547,7 @@ bool Scores::setScoresBySection ( Words *words,
 				continue; 
 			}
 			if ( g_conf.m_logDebugBuild ) 
-				log(LOG_DEBUG,"build: Scored section %ld: %ld",
+				log(LOG_DEBUG,"build: Scored section %"INT32": %"INT32"",
 				    level, score);
 			// push old info onto the stack
 			ids    [level] = tids[i];
@@ -597,10 +597,10 @@ bool Scores::setScoresBySection ( Words *words,
 			bscore += wscores[j];
 			// show score of each word
 			//char *s    = words->m_words   [j];
-			//long  slen = words->m_wordLens[j];
+			//int32_t  slen = words->m_wordLens[j];
 			//printstring(s,slen);
 			// then score of it
-			//fprintf(stderr,"(%li) ",(long)wscores[j]);
+			//fprintf(stderr,"(%"INT32") ",(int32_t)wscores[j]);
 		}
 		// save accumulation, not average
 		cumscore = bscore;
@@ -687,8 +687,8 @@ bool Scores::setScoresBySection ( Words *words,
 					fscores[j] = 0;
 			}
 			// this section is the new winning section
-			log(LOG_DEBUG, "build: Winning section: %ld, "
-			    "score: %ld", level, score);
+			log(LOG_DEBUG, "build: Winning section: %"INT32", "
+			    "score: %"INT32"", level, score);
 			max  = score;
 			maxa = sj; // starts[level];
 			maxb = i; // our section's last word # is < i
@@ -715,16 +715,16 @@ bool Scores::setScoresBySection ( Words *words,
 
 
 	/*
-	for (long i = 0 ; i < nw ; i++ ) {
+	for (int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if no wid
 		if ( words->m_wordIds[i] == 0LL ) continue;
 		if ( m_scores[i] == 0 ) continue;
 		// show score of each word
 		char *s    = words->m_words   [i];
-		long  slen = words->m_wordLens[i];
+		int32_t  slen = words->m_wordLens[i];
 		printstring(s,slen);
 		// then score of it
-		fprintf(stderr,"(%li) ",(long)m_scores[i]);
+		fprintf(stderr,"(%"INT32") ",(int32_t)m_scores[i]);
 	}
 	*/
 
@@ -744,11 +744,11 @@ bool Scores::setScoresBySection ( Words *words,
 	//}
 
 	// now set the individual word scores in each section
-	//for ( long i = 0 ; i < nsecs ; i++ )
+	//for ( int32_t i = 0 ; i < nsecs ; i++ )
 	//	setSectionScores ( i , secStarts , secEnds , wscores );
 
 	// copy scores
-	//for (long i = 0 ; i < nw ;i++) m_scores[i]=(unsigned char)fscores[i];
+	//for (int32_t i = 0 ; i < nw ;i++) m_scores[i]=(unsigned char)fscores[i];
 	// done
 	if ( tmp != tstack ) mfree ( tmp , need , "Scores" );
 

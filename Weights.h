@@ -26,7 +26,7 @@ void getWordToPhraseRatioWeights ( int64_t         pid1 , // pre phrase
 				   float            *ww   ,
 				   float            *pw   ,
 				   class HashTableX *tt1  ,
-				   long              titleRecVersion ) ;
+				   int32_t              titleRecVersion ) ;
 
 class Weights {
 
@@ -46,14 +46,14 @@ class Weights {
 		    //class LinkInfo *linkInfo           ,
 		    //class LinkInfo *linkInfo2          ,
 		    bool              isPreformattedText ,
-		    long              titleRecVersion    ,
-		    long              titleWeight        ,
-		    long              headerWeight       ,
+		    int32_t              titleRecVersion    ,
+		    int32_t              titleWeight        ,
+		    int32_t              headerWeight       ,
 		    class HashTableX *countTablePtr      ,
 		    bool              isLinkText         ,
 		    bool              isCountTable       ,
-		    long              siteNumInlinks     ,
-		    long              niceness           );
+		    int32_t              siteNumInlinks     ,
+		    int32_t              niceness           );
 	
 	bool set1 ( class Words    *words              ,
 		    class Phrases  *phrases            ,
@@ -72,15 +72,15 @@ class Weights {
 
  private:
 
-	//long getPunctPhraseWeight   ( long i , char  *s , long len ) ;
-	//float getPunctWordWeight    ( char  *s , long len ) ;
+	//int32_t getPunctPhraseWeight   ( int32_t i , char  *s , int32_t len ) ;
+	//float getPunctWordWeight    ( char  *s , int32_t len ) ;
 
-	void setPunctWeights ( long k , char *s , long len ) ;
+	void setPunctWeights ( int32_t k , char *s , int32_t len ) ;
 
-	bool  setSpam           ( long *profile, long plen , long numWords, 
+	bool  setSpam           ( int32_t *profile, int32_t plen , int32_t numWords, 
 				  unsigned char *spam );
 
-	//long  getProbSpam     ( long *profile, long plen , long step      );
+	//int32_t  getProbSpam     ( int32_t *profile, int32_t plen , int32_t step      );
  
  public:
 
@@ -88,29 +88,29 @@ class Weights {
 
 	bool       m_isLinkText;
 	bool       m_isCountTable;
-	long       m_titleWeight;
-	long       m_headerWeight;
-	long       m_version;
-	long       m_nw;
+	int32_t       m_titleWeight;
+	int32_t       m_headerWeight;
+	int32_t       m_version;
+	int32_t       m_nw;
 	int64_t *m_wids;
 
-	long       m_niceness;
+	int32_t       m_niceness;
 
-	long *m_ww;
-	long *m_pw;
+	int32_t *m_ww;
+	int32_t *m_pw;
 
 	// used for debug by XmlDoc::print()
 	float *m_rvw;
 	float *m_rvp;
 
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 	char  m_localBuf[LOCAL_BUF_SIZE];
 
 	class Words *m_words;
 	class Bits  *m_bits;
-	//long         m_numRepeatSpam;
-	long         m_siteNumInlinks;
+	//int32_t         m_numRepeatSpam;
+	int32_t         m_siteNumInlinks;
 	//bool         m_totallySpammed;
 };
 
@@ -127,7 +127,7 @@ extern float g_ptab[30][30];
 // . if "step" is 1 we look at every       word position in the profile
 // . if "step" is 2 we look at every other word position 
 // . if "step" is 3 we look at every 3rd   word position, etc...
-inline long Weights::getProbSpam(long *profile, long plen, long step) {
+inline int32_t Weights::getProbSpam(int32_t *profile, int32_t plen, int32_t step) {
 
 	// you can spam 2 or 1 letter words all you want to
 	if ( plen <= 2 ) return 0;
@@ -135,15 +135,15 @@ inline long Weights::getProbSpam(long *profile, long plen, long step) {
 	// if our step is bigger than the profile return 0
 	if ( step == plen ) return 0;
 
-	register long avgSpacing, stdDevSpacing;
-	long d,dev=0;
-	register long i;
+	register int32_t avgSpacing, stdDevSpacing;
+	int32_t d,dev=0;
+	register int32_t i;
 	
-	for (long j = 0; j < step; j++) {
+	for (int32_t j = 0; j < step; j++) {
 
 		// find avg. of gaps between consecutive tokens in subprofile
 		// TODO: isn't profile[i] < profile[i+1]??
-		long istop = plen-1;
+		int32_t istop = plen-1;
 		avgSpacing = 0;
 		for (i=0; i < istop; i += step ) 
 			avgSpacing += ( profile[i] - profile[i+1] ); 
@@ -178,14 +178,14 @@ inline long Weights::getProbSpam(long *profile, long plen, long step) {
 
 	// NOTE: dev has been multiplied by 256 to avoid using floats
 	if ( dev <= 51.2 ) return 100;  // (.2 * 256)
-	long prob = ( (256*100/7) * plen ) / dev;
+	int32_t prob = ( (256*100/7) * plen ) / dev;
 
 	if (prob>100) prob=100;
 
 	return prob;
 
 	//if (prob>=0) {
-	//	long i;
+	//	int32_t i;
 	//printf("dev=%i,plen=%i,nseq=%i,prob=%i----\n",dev,plen,step,prob);
 	//	for (i=0;i<plen;i++)
 	//		printf("%i#",profile[i]);

@@ -29,31 +29,31 @@ bool Catdb::init (  ) {
 	// . what's max # of tree nodes?
 	// . assume avg tagdb rec size (siteUrl) is about 82 bytes we get:
 	// . NOTE: 32 bytes of the 82 are overhead
-	//long treeMem = g_conf.m_catdbMaxTreeMem;
+	//int32_t treeMem = g_conf.m_catdbMaxTreeMem;
 	// speed up gen catdb, use 15MB. later maybe once gen is complete
 	// we can free this tree or something...
 	// TODO!
-	long treeMem = 15000000;
-	//long treeMem = 100000000;
-	//long maxTreeNodes = g_conf.m_catdbMaxTreeMem / 82;
-	long maxTreeNodes = treeMem / 82;
+	int32_t treeMem = 15000000;
+	//int32_t treeMem = 100000000;
+	//int32_t maxTreeNodes = g_conf.m_catdbMaxTreeMem / 82;
+	int32_t maxTreeNodes = treeMem / 82;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	long pcmem = g_conf.m_catdbMaxDiskPageCacheMem;
+	int32_t pcmem = g_conf.m_catdbMaxDiskPageCacheMem;
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 
 	pcmem = 0;
 	// each entry in the cache is usually just a single record, no lists,
 	// unless a hostname has multiple sites in it. has 24 bytes more 
 	// overhead in cache.
-	//long maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
+	//int32_t maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
 	// we now use a page cache
 	if ( ! m_pc.init ("catdb",RDB_CATDB,pcmem,
 			  GB_TFNDB_PAGE_SIZE) )
 		return log("db: Catdb init failed.");
 
 	// . initialize our own internal rdb
-	// . i no longer use cache so changes to tagdb are instant
+	// . i no int32_ter use cache so changes to tagdb are instant
 	// . we still use page cache however, which is good enough!
 	//if ( this == &g_catdb )
 	if ( !  m_rdb.init ( g_hostdb.m_dir               ,
@@ -87,11 +87,11 @@ bool Catdb::init (  ) {
 	return m_rdb.addRdbBase1 ( NULL );
 }
 
-bool Catdb::init2 ( long treeMem ) {
+bool Catdb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . assume avg tagdb rec size (siteUrl) is about 82 bytes we get:
 	// . NOTE: 32 bytes of the 82 are overhead
-	long maxTreeNodes = 0;
+	int32_t maxTreeNodes = 0;
 	
 	return m_rdb.init ( g_hostdb.m_dir             ,
 			    "tagdbRebuild"            ,
@@ -138,7 +138,7 @@ bool Catdb::verify ( char *coll ) {
 	key_t endKey;
 	startKey.setMin();
 	endKey.setMax();
-	//long minRecSizes = 64000;
+	//int32_t minRecSizes = 64000;
 	
 	if ( ! msg5.getList ( RDB_CATDB     ,
 			      0,//collnum          ,
@@ -166,20 +166,20 @@ bool Catdb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		//unsigned long groupId = g_catdb.getGroupId ( &k );
+		//uint32_t groupId = g_catdb.getGroupId ( &k );
 		//uint32_t shardNum = getShardNum ( RDB_CATDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;
 		uint32_t shardNum = getShardNum( RDB_CATDB , &k );
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in %s, only %li belong "
+		log ("db: Out of first %"INT32" records in %s, only %"INT32" beint32_t "
 		     "to our group.",count,rdbName,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
@@ -190,7 +190,7 @@ bool Catdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "db: %s passed verification successfully for %li recs.",
+	log ( LOG_INFO, "db: %s passed verification successfully for %"INT32" recs.",
 			rdbName, count );
 	// DONE
 	g_threads.enableThreads();
@@ -199,7 +199,7 @@ bool Catdb::verify ( char *coll ) {
 
 void Catdb::normalizeUrl ( Url *srcUrl, Url *dstUrl ) {
 	char urlStr[MAX_URL_LEN];
-	long urlStrLen = srcUrl->getUrlLen();
+	int32_t urlStrLen = srcUrl->getUrlLen();
 	memcpy(urlStr, srcUrl->getUrl(), urlStrLen);
 	// fix the url
 	urlStrLen = g_categories->fixUrl(urlStr, urlStrLen);
@@ -239,7 +239,7 @@ void Catdb::getKeyRange ( bool useIp , Url *url,
 		    "but url has no ip");
 	// . the upper 32 bits of the key is basically hash of the domain
 	// . mask out the low-order byte (hi byte in little endian order)
-	unsigned long h;
+	uint32_t h;
 	// . make sure we use htonl() on ip domain so top byte is not zero!
 	// . this made all our ip-based sites stored in group #0 before
 	//   if ( useIp ) h = htonl ( url->getIpDomain() ) ;
@@ -247,7 +247,7 @@ void Catdb::getKeyRange ( bool useIp , Url *url,
 	// . if rdbid is tagdb then use hostname as key else use domain
 	if   ( useIp ) {
 		// do htonl so most significant byte is first
-		long ipdom = htonl(url->getIpDomain());
+		int32_t ipdom = htonl(url->getIpDomain());
 		h = hash32 ( (char *)&ipdom , 3 ) ;
 	}
 	else
@@ -273,12 +273,12 @@ void Catdb::getKeyRange ( bool useIp , Url *url,
 // a valid key
 char *Catdb::moveToCorrectKey ( char    *listPtr,
 				 RdbList *list,
-				 unsigned long domainHash ) {
+				 uint32_t domainHash ) {
 	char *listEnd   = list->getListEnd();
 	char *listStart = list->getList();
 	char *p = listPtr;
 	// move back from the end
-	if (listEnd - p < (long)sizeof(key_t))
+	if (listEnd - p < (int32_t)sizeof(key_t))
 		p -= sizeof(key_t);
 	// loop until we get it
 	for ( ; p > listStart; p--){
@@ -287,7 +287,7 @@ char *Catdb::moveToCorrectKey ( char    *listPtr,
 			// . verify the match
 			//   get the current rec size and check
 			//   the next rec for correct data
-			long recSize = list->getRecSize(p);
+			int32_t recSize = list->getRecSize(p);
 			char *checkp = p + recSize;
 			// step 1, verify the start of the next rec is good
 			if ( recSize >= 0 && ( checkp == listEnd ||
@@ -316,7 +316,7 @@ char *Catdb::moveToCorrectKey ( char    *listPtr,
 void Catdb::listSearch ( RdbList *list,
 			  key_t    exactKey,
 			  char   **data,
-			  long    *dataSize ) {
+			  int32_t    *dataSize ) {
 	// init the data
 	*data = NULL;
 	*dataSize = 0;
@@ -331,10 +331,10 @@ void Catdb::listSearch ( RdbList *list,
 				   list->getCurrentData(),
 				   list->getCurrentDataSize(),
 				   false);
-			log("catdb: caturl=%s #catid=%li version=%li"
+			log("catdb: caturl=%s #catid=%"INT32" version=%"INT32""
 			    ,crec.m_url
-			    ,(long)crec.m_numCatids
-			    ,(long)crec.m_version
+			    ,(int32_t)crec.m_numCatids
+			    ,(int32_t)crec.m_version
 			    );
 			*/
 			// check the current key
@@ -360,7 +360,7 @@ void Catdb::listSearch ( RdbList *list,
 		char *currRec;
 		while ( low <= high ) {
 			// next check spot
-			long delta = high - low;
+			int32_t delta = high - low;
 			currRec = low + (delta / 2);
 			//currRec = (char*)(((uint64_t)low + 
 			//	           (uint64_t)high)/2);
@@ -391,13 +391,13 @@ void Catdb::listSearch ( RdbList *list,
 
 // now given an RdbList of SiteRecs can we find the best matching rec
 // for our site?
-char *Catdb::getRec ( RdbList *list , Url *url , long *recSize,
-		       char* coll, long collLen  ) {
+char *Catdb::getRec ( RdbList *list , Url *url , int32_t *recSize,
+		       char* coll, int32_t collLen  ) {
 	key_t exactKey;
 	int64_t startTime = gettimeofdayInMilliseconds();
 	int64_t took;
 	char *data;
-	long  dataSize;
+	int32_t  dataSize;
 	// for now, only get exact hits for catdb
 	// check for an exact key/url match
 	exactKey = makeKey(url, false);
@@ -412,14 +412,14 @@ char *Catdb::getRec ( RdbList *list , Url *url , long *recSize,
 		// get the url
 		/*
 		char *x;
-		long  xlen;
+		int32_t  xlen;
 		// hit, check the url
 		// for catdb, skip over the catids
 		if (m_rdbid == RDB_CATDB) {
 			unsigned char numCatids = *data;
 			// . point to stored url/site
 			// . skip dataSize/fileNum
-			long  skip = 1 + (4 * numCatids) + 4;
+			int32_t  skip = 1 + (4 * numCatids) + 4;
 			x    = data + skip;
 			xlen = dataSize - skip;
 		}
@@ -436,11 +436,11 @@ char *Catdb::getRec ( RdbList *list , Url *url , long *recSize,
 		CatRec site;
 		site.set (url, data, dataSize, false);
 		// check for an exact match against the full url
-		long  uflen = url->getUrlLen();
+		int32_t  uflen = url->getUrlLen();
 		char *ufull = url->getUrl();
-		//long  sflen = site.getUrlLen();
+		//int32_t  sflen = site.getUrlLen();
 		//char *sfull = site.getUrl();
-		long  sflen = site.m_urlLen;
+		int32_t  sflen = site.m_urlLen;
 		char *sfull = site.m_url;
 		// if we match, return this rec
 		if ( sflen == uflen &&
@@ -458,22 +458,22 @@ char *Catdb::getRec ( RdbList *list , Url *url , long *recSize,
 	}
 	took = gettimeofdayInMilliseconds() - startTime;
 	if ( took > 10 ) 
-		log(LOG_INFO, "catdb: catdb lookup took %lli ms, "
-		    "listSize=%li", took, list->getListSize() );
+		log(LOG_INFO, "catdb: catdb lookup took %"INT64" ms, "
+		    "listSize=%"INT32"", took, list->getListSize() );
 	return data;
 }
 
 // . find the indirect matches in the list which match a sub path
 //   of the url
-long  Catdb::getIndirectMatches ( RdbList  *list ,
+int32_t  Catdb::getIndirectMatches ( RdbList  *list ,
 				   Url      *url ,
 				   char    **matchRecs ,
-				   long     *matchRecSizes ,
-				   long      maxMatches ,
+				   int32_t     *matchRecSizes ,
+				   int32_t      maxMatches ,
 				   char     *coll,
-				   long      collLen) {
+				   int32_t      collLen) {
 	char  path[MAX_URL_LEN+1];
-	long  pathLen;
+	int32_t  pathLen;
 	Url   partialUrl;
 	key_t partialUrlKey;
 	// start with the whole url...include real catid in indirect
@@ -481,8 +481,8 @@ long  Catdb::getIndirectMatches ( RdbList  *list ,
 	pathLen = url->getUrlLen();
 	// loop looking for partial matches
 	char *data       = NULL;
-	long  dataSize   = 0;
-	long  numMatches = 0;
+	int32_t  dataSize   = 0;
+	int32_t  numMatches = 0;
 	while ( numMatches < maxMatches ) {
 		// make the partial url
 		partialUrl.set(path, pathLen, true);
@@ -495,14 +495,14 @@ long  Catdb::getIndirectMatches ( RdbList  *list ,
 		if ( data && dataSize > 0 ) {
 			// get the url
 			char *x;
-			long  xlen;
+			int32_t  xlen;
 			// hit, check the url
 			// for catdb, skip over the catids
 			/*
 			unsigned char numCatids = *data;
 			// . point to stored url/site
 			// . skip dataSize/fileNum
-			long  skip = 1 + (4 * numCatids) + 4;
+			int32_t  skip = 1 + (4 * numCatids) + 4;
 			x    = data + skip;
 			xlen = dataSize - skip;
 			*/

@@ -40,22 +40,22 @@ public:
 
 	char *getFirstKey();
 	char *getEndKey()  { return m_endKey;  }
-	long  getNumKeys() { return m_numKeys; }
+	int32_t  getNumKeys() { return m_numKeys; }
 	char *getKeys()    { return m_keys; }
 	collnum_t getCollnum()    { return m_collnum; }
 	void  setCollnum(collnum_t c){ m_collnum = c; }
 
-	bool  addKey(char *key , char *data , long dataSize);
-	char *getKeyVal ( char *key , char **data , long* dataSize ); 
-	long  getKeyNumExact(char* key); //returns -1 if not found
-	long  getNumNegativeKeys ( );
+	bool  addKey(char *key , char *data , int32_t dataSize);
+	char *getKeyVal ( char *key , char **data , int32_t* dataSize ); 
+	int32_t  getKeyNumExact(char* key); //returns -1 if not found
+	int32_t  getNumNegativeKeys ( );
 	void  resetLastSorted() { m_lastSorted = 0; }
 	bool  getList(RdbList* list, 
 		      char *startKey, 
 		      char *endKey,
-		      long minRecSizes,
-		      long *numPosRecs, 
-		      long *numNegRecs, 
+		      int32_t minRecSizes,
+		      int32_t *numPosRecs, 
+		      int32_t *numNegRecs, 
 		      bool useHalfKeys);
 
 	bool deleteList(RdbList *list);
@@ -76,8 +76,8 @@ private:
 	char       *m_endKey;
 	char       *m_keys;
 	RdbBuckets *m_parent;
-	long        m_numKeys;
-	long        m_lastSorted;
+	int32_t        m_numKeys;
+	int32_t        m_lastSorted;
 	collnum_t   m_collnum;
 };
 
@@ -93,8 +93,8 @@ class RdbBuckets {
 	void clear();
 	void reset();
 
-	bool set ( long fixedDataSize , 
-		   long maxMem, 
+	bool set ( int32_t fixedDataSize , 
+		   int32_t maxMem, 
 		   bool ownData ,
 		   char *allocName ,
 		   char rdbId ,
@@ -103,20 +103,20 @@ class RdbBuckets {
 		   char keySize ,//= 12 ,
 		   bool useProtection );//= false );
 
-	bool resizeTable(long numNeeded);
+	bool resizeTable(int32_t numNeeded);
 
 	
-	long addNode ( collnum_t collnum , 
-		       char *key , char *data , long dataSize );
+	int32_t addNode ( collnum_t collnum , 
+		       char *key , char *data , int32_t dataSize );
 	
 	bool addList(RdbList* list, collnum_t collnum);
 
 	char* getKeyVal ( collnum_t collnum , char *key , 
-			  char **data , long* dataSize ); 
+			  char **data , int32_t* dataSize ); 
 	
 	bool getList ( collnum_t collnum ,
-		       char *startKey, char *endKey, long minRecSizes ,
-		       RdbList *list , long *numPosRecs , long *numNegRecs ,
+		       char *startKey, char *endKey, int32_t minRecSizes ,
+		       RdbList *list , int32_t *numPosRecs , int32_t *numNegRecs ,
 		       bool useHalfKeys );
 
 	bool deleteList(collnum_t collnum, RdbList *list);
@@ -127,8 +127,8 @@ class RdbBuckets {
 
 
 
-	bool addBucket (RdbBucket *newBucket, long i);
-	long getBucketNum(char *key, collnum_t collnum);
+	bool addBucket (RdbBucket *newBucket, int32_t i);
+	int32_t getBucketNum(char *key, collnum_t collnum);
 	char bucketCmp(char *akey, collnum_t acoll, char *bkey, collnum_t bcoll);
 	char bucketCmp(char *akey, collnum_t acoll, RdbBucket* b);
 
@@ -137,47 +137,47 @@ class RdbBuckets {
 	//MEMBER ACCESS
 	char     *getDbname()         { return m_dbname;       }
 	uint8_t   getKeySize()        { return m_ks;           }
-	long      getFixedDataSize()  { return m_fixedDataSize;}
-	long      getRecSize()        { return m_recSize;      }
+	int32_t      getFixedDataSize()  { return m_fixedDataSize;}
+	int32_t      getRecSize()        { return m_recSize;      }
 	void      setSwapBuf(char *s) { m_swapBuf = s;         }
 	char     *getSwapBuf()        { return m_swapBuf;      }
 	bool      needsSave()         { return m_needsSave;    }
 	bool      isSaving()          { return m_isSaving;     }
 	char     *getSortBuf()        { return m_sortBuf;      }
-	long      getSortBufSize()    { return m_sortBufSize;  }
+	int32_t      getSortBufSize()    { return m_sortBufSize;  }
 	bool      isWritable()        { return m_isWritable;   }
 	void      disableWrites ()    { m_isWritable = false;  }
 	void      enableWrites  ()    { m_isWritable = true ;  }
-	long      getMaxMem()         { return m_maxMem;       }
+	int32_t      getMaxMem()         { return m_maxMem;       }
 	void      setNeedsSave(bool s);
 
 	
-	long      getMemAlloced ();
-	long      getMemAvailable();
+	int32_t      getMemAlloced ();
+	int32_t      getMemAvailable();
 	bool      is90PercentFull();
 	bool      needsDump();
-	bool      hasRoom ( long numRecs );
+	bool      hasRoom ( int32_t numRecs );
 
-	long      getNumKeys();
-	long      getMemOccupied( );
+	int32_t      getNumKeys();
+	int32_t      getMemOccupied( );
 
-	long      getNumNegativeKeys ( );
-	long      getNumPositiveKeys ( );
+	int32_t      getNumNegativeKeys ( );
+	int32_t      getNumPositiveKeys ( );
  	bool      delColl            ( collnum_t collnum );
 
 	//just for this collection
-// 	long      getMemOccupied     ( collnum_t collnum );
- 	long      getNumKeys         ( collnum_t collnum );
-//  	long      getNumNegativeKeys ( collnum_t collnum );
-//  	long      getNumPositiveKeys ( collnum_t collnum );
+// 	int32_t      getMemOccupied     ( collnum_t collnum );
+ 	int32_t      getNumKeys         ( collnum_t collnum );
+//  	int32_t      getNumNegativeKeys ( collnum_t collnum );
+//  	int32_t      getNumPositiveKeys ( collnum_t collnum );
 
 	//syntactic sugar
  	RdbBucket* bucketFactory();
-	void updateNumRecs(long n, long bytes, long numNeg);
+	void updateNumRecs(int32_t n, int32_t bytes, int32_t numNeg);
 
 	//DEBUG
 	bool selfTest(bool thorough, bool core);
-	long addTree(RdbTree *rt);
+	int32_t addTree(RdbTree *rt);
 	void printBuckets();
 	bool repair();
 	bool testAndRepair();
@@ -202,24 +202,24 @@ class RdbBuckets {
 	RdbBucket **m_buckets;
 	RdbBucket *m_bucketsSpace;
 	char      *m_masterPtr;
-	long       m_masterSize;
-	long       m_firstOpenSlot;
-	long       m_numBuckets;
-	long       m_maxBuckets;
+	int32_t       m_masterSize;
+	int32_t       m_firstOpenSlot;
+	int32_t       m_numBuckets;
+	int32_t       m_maxBuckets;
 	uint8_t    m_ks;
-	long       m_fixedDataSize;
-	long       m_recSize;
-	long       m_numKeysApprox;//includes dups
-	long       m_numNegKeys;
-	long       m_maxMem;
-	long       m_maxBucketsCapacity;
-	long       m_dataMemOccupied;
+	int32_t       m_fixedDataSize;
+	int32_t       m_recSize;
+	int32_t       m_numKeysApprox;//includes dups
+	int32_t       m_numNegKeys;
+	int32_t       m_maxMem;
+	int32_t       m_maxBucketsCapacity;
+	int32_t       m_dataMemOccupied;
 
 	char        m_rdbId;
 	char       *m_dbname;
 	char       *m_swapBuf;
 	char       *m_sortBuf;
-	long        m_sortBufSize;
+	int32_t        m_sortBufSize;
 
 	bool    m_repairMode;
 	bool    m_isWritable;
@@ -229,7 +229,7 @@ class RdbBuckets {
 	char   *m_dir;
 	void   *m_state; 
 	void  (*m_callback) (void *state);
-	long    m_saveErrno;
+	int32_t    m_saveErrno;
 	char   *m_allocName;
 };
 

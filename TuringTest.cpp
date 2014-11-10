@@ -302,24 +302,24 @@ TuringTest::~TuringTest() {}
 bool TuringTest::isHuman( HttpRequest *r) {
 	// . they need to answer the turing test question
 	// . get answer they gave
-	long ansLen;
+	int32_t ansLen;
 	char *ans = r->getString("ans",&ansLen,NULL);
 	// if no answer, bail
 	if ( ansLen <= 0 || ! ans ) return false;
 
-	long qid = r->getLong("qid",-1);
+	int32_t qid = r->getLong("qid",-1);
 	// convert to all upper
 	if ( ansLen > 0 && ans ) to_upper3_a ( ans , ansLen , ans );
 
 
 	if ( m_answers.getNumSlotsUsed() == 0 ) return false;
 	// get answer hash
-	long ansHash = hash32 ( ans , ansLen );
+	int32_t ansHash = hash32 ( ans , ansLen );
 	// do not allow zeroes
 	if ( ansHash == 0 ) ansHash = 1;
 	// . get answer from table
 	// . returns 0 if not in there
-	long realAns = m_answers.getValue ( qid );
+	int32_t realAns = m_answers.getValue ( qid );
 	// 0 means not in table
 	if ( realAns !=  ansHash ) return false;
 	// remove from table, so they can't use again
@@ -331,23 +331,23 @@ bool TuringTest::isHuman( HttpRequest *r) {
 bool TuringTest::printTest( SafeBuf* sb ) {
 	if ( ! m_tinit ) {
 		// clear all
-		for ( long a = 0 ; a < 26 ; a++ )
-			for ( long b = 0 ; b < TMAX_HEIGHT ; b++ )
-				for ( long c = 0 ; c < TMAX_WIDTH ; c++ )
+		for ( int32_t a = 0 ; a < 26 ; a++ )
+			for ( int32_t b = 0 ; b < TMAX_HEIGHT ; b++ )
+				for ( int32_t c = 0 ; c < TMAX_WIDTH ; c++ )
 					m_buf[a][b][c] = ' '; // space
 		// fill it up
-		long n = 0;
-		for ( long i = 0 ; n < 26 && s_map[i][0] != 'Q' ; i++ ) {
+		int32_t n = 0;
+		for ( int32_t i = 0 ; n < 26 && s_map[i][0] != 'Q' ; i++ ) {
 			// skip if no letter
 			if ( s_map[i][0] != 'X' ) continue;
 			// loop over each line for this letter
-			for ( long j = i+1 ; s_map[j][0] != 'X' &&
+			for ( int32_t j = i+1 ; s_map[j][0] != 'X' &&
 				             s_map[j][0] != 'Q'     ; j++ ) {
 				// these strings are actually columns since 
 				// banner's output is transposed
 				char *s = s_map[j];
 				// copy line and transpose into column
-				long k = 0;
+				int32_t k = 0;
 				while ( *s && k <= TMAX_HEIGHT ) {
 					m_buf[n][TMAX_HEIGHT-k-1][j-i+1] = *s++;
 					k++;
@@ -367,8 +367,8 @@ bool TuringTest::printTest( SafeBuf* sb ) {
 	ans[2] = 'A' + (rand() % 26);
 	ans[3] = 'A' + (rand() % 26);
 	ans[4] = '\0';
-	long ansLen = 4;
-	long ansHash = hash32 ( ans , ansLen );
+	int32_t ansLen = 4;
+	int32_t ansHash = hash32 ( ans , ansLen );
 	sb->safePrintf ( "<center>We suspect you might be a robot!<br>"
 			 "<br>"
 			 "Please Enter the 4 LARGE letters you see below "
@@ -376,7 +376,7 @@ bool TuringTest::printTest( SafeBuf* sb ) {
 			 "&nbsp; "
 			 "<input type=text name=ans size=5>\n"
 			 "<input type=hidden name=\"qid\" "
-			 "value=\"%li\">\n" ,
+			 "value=\"%"INT32"\">\n" ,
 			 m_nextQuestion );
 	if(m_answers.getNumSlotsUsed() > 25000) {
 		//we're going to lose answers in progress here,
@@ -391,16 +391,16 @@ bool TuringTest::printTest( SafeBuf* sb ) {
 
 	// . display letters pre-formatted
 	// . loop over starting at top row
-	for ( long a = 0 ; a < TMAX_HEIGHT ; a++ ) {
+	for ( int32_t a = 0 ; a < TMAX_HEIGHT ; a++ ) {
 		// loop over each letter
-		for ( long i = 0 ; i < ansLen ; i++ ) {
+		for ( int32_t i = 0 ; i < ansLen ; i++ ) {
 			char c = ans[i] - 'A' ;
 			//if ( c < 'A' ) c = 'A';
 			//if ( c > 'Z' ) c = 'Z';
 			char *s = m_buf[(int)c][a];
 			// print his row
 			sb->safeMemcpy(s, TMAX_WIDTH);
-			//for ( long b = 0 ; b < TMAX_WIDTH ; b++ ) 
+			//for ( int32_t b = 0 ; b < TMAX_WIDTH ; b++ ) 
 			//sb->pushChar(s[b]);
 
 			// print each line -- preformatted

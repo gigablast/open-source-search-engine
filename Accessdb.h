@@ -14,7 +14,7 @@ bool sendPageAccount ( class TcpSocket *s , class HttpRequest *r ) ;
 class AccessRec {
  public:
 	key128_t  m_key128;
-	long      m_ip;
+	int32_t      m_ip;
 	int64_t m_fbId; // facebook id, 0 if none
 };
 
@@ -34,13 +34,13 @@ class Accessdb {
 	key128_t makeKey1 ( int64_t now, int64_t widgetId64 ) ;
 	key128_t makeKey2 ( int64_t now, int64_t widgetId64 ) ;
 
-	bool addAccess ( class HttpRequest *r , long ip );
+	bool addAccess ( class HttpRequest *r , int32_t ip );
 
 	bool registerHandler ( ) ;
 
 	Rdb 	  m_rdb;
 	
-	long m_niceness;
+	int32_t m_niceness;
 	
 	AccessRec m_arec[2];
 

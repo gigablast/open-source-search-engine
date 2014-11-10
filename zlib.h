@@ -551,7 +551,7 @@ ZEXTERN int ZEXPORT deflateSetDictionary OF((z_streamp strm,
      The dictionary should consist of strings (byte sequences) that are likely
    to be encountered later in the data to be compressed, with the most commonly
    used strings preferably put towards the end of the dictionary. Using a
-   dictionary is most useful when the data to be compressed is short and can be
+   dictionary is most useful when the data to be compressed is int16_t and can be
    predicted with good accuracy; the data can then be compressed better than
    with the default empty dictionary.
 

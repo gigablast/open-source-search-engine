@@ -21,7 +21,7 @@
 #include "PageInject.h" // Msg7
 #include "PageReindex.h"
 
-//static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
+//static bool printInterface ( SafeBuf *sb , char *q ,//int32_t user ,
 //                              char *username, char *c , char *errmsg ,
 //			      char *qlangStr ) ;
 
@@ -99,7 +99,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 		return true;
 	}
 
-	long langId = getLangIdFromAbbr ( gr->m_qlang );
+	int32_t langId = getLangIdFromAbbr ( gr->m_qlang );
 
 	// let msg1d do all the work now
 	if ( ! st->m_msg1c.reindexQuery ( gr->m_query ,
@@ -159,7 +159,7 @@ void doneReindexing ( void *state ) {
 	/*
 	if ( st->m_updateTags )
 		sprintf ( mesg , "<center><font color=red><b>Success. "
-			  "Updated tagrecs and index for %li docid(s)"
+			  "Updated tagrecs and index for %"INT32" docid(s)"
 			  "</b></font></center><br>" , 
 			  st->m_msg1d.m_numDocIds );
 	else
@@ -186,7 +186,7 @@ void doneReindexing ( void *state ) {
 		sb.safePrintf("<response>\n"
 			      "\t<statusCode>0</statusCode>\n"
 			      "\t<statusMsg>Success</statusMsg>\n"
-			      "\t<matchingResults>%li</matchingResults>\n"
+			      "\t<matchingResults>%"INT32"</matchingResults>\n"
 			      "</response>"
 			      , st->m_msg1c.m_numDocIdsAdded
 			      );
@@ -206,7 +206,7 @@ void doneReindexing ( void *state ) {
 		sb.safePrintf("{\"response\":{\n"
 			      "\t\"statusCode\":0,\n"
 			      "\t\"statusMsg\":\"Success\",\n"
-			      "\t\"matchingResults\":%li\n"
+			      "\t\"matchingResults\":%"INT32"\n"
 			      "}\n"
 			      "}\n"
 			      , st->m_msg1c.m_numDocIdsAdded
@@ -237,7 +237,7 @@ void doneReindexing ( void *state ) {
 
 	if ( gr->m_query && gr->m_query[0] && ! g_errno )
 		sb.safePrintf ( "<center><font color=red><b>Success. "
-			  "Added %li docid(s) to "
+			  "Added %"INT32" docid(s) to "
 			  "spider queue.</b></font></center><br>" , 
 			  st->m_msg1c.m_numDocIdsAdded );
 
@@ -284,10 +284,10 @@ Msg1c::Msg1c() {
 
 bool Msg1c::reindexQuery ( char *query ,
 			   collnum_t collnum ,//char *coll  ,
-			   long startNum ,
-			   long endNum ,
+			   int32_t startNum ,
+			   int32_t endNum ,
 			   bool forceDel ,
-			   long langId,
+			   int32_t langId,
 			   void *state ,
 			   void (* callback) (void *state ) ) {
 
@@ -333,7 +333,7 @@ bool Msg1c::reindexQuery ( char *query ,
 	//m_req.m_debug = 1;
 
 	// log for now
-	logf(LOG_DEBUG,"reindex: qlangid=%li q=%s",langId,query);
+	logf(LOG_DEBUG,"reindex: qlangid=%"INT32" q=%s",langId,query);
 
 	g_errno = 0;
 	// . get the docIds
@@ -364,7 +364,7 @@ bool Msg1c::gotList ( ) {
 	if ( g_errno ) return true;
 
 	int64_t *tmpDocIds = m_msg3a.getDocIds();
-	long       numDocIds = m_msg3a.getNumDocIds();
+	int32_t       numDocIds = m_msg3a.getNumDocIds();
 
 	if ( m_startNum > 0) {
 		numDocIds -= m_startNum;
@@ -373,7 +373,7 @@ bool Msg1c::gotList ( ) {
 
 	m_numDocIds = numDocIds; // save for reporting
 	// log it
-	log(LOG_INFO,"admin: Got %li docIds for query reindex.", numDocIds);
+	log(LOG_INFO,"admin: Got %"INT32" docIds for query reindex.", numDocIds);
 	// bail if no need
 	if ( numDocIds <= 0 ) return true;
 
@@ -385,7 +385,7 @@ bool Msg1c::gotList ( ) {
 	// from these docIds
 	//SafeBuf sb;
 
-	long nowGlobal = getTimeGlobal();
+	int32_t nowGlobal = getTimeGlobal();
 
 	HashTableX dt;
 	char dbuf[1024];
@@ -394,9 +394,9 @@ bool Msg1c::gotList ( ) {
 	m_sb.setLabel("reiadd");
 
 	m_numDocIdsAdded = 0;
-	//long count = 0;
+	//int32_t count = 0;
 	// list consists of docIds, loop through each one
- 	for(long i = 0; i < numDocIds; i++) {
+ 	for(int32_t i = 0; i < numDocIds; i++) {
 		int64_t docId = tmpDocIds[i];
 		// when searching events we get multiple docids that are same
 		if ( dt.isInTable ( &docId ) ) continue;
@@ -408,16 +408,16 @@ bool Msg1c::gotList ( ) {
 		// this causes a sigalarm log msg to wait forever for lock
 		//char *msg = "Reindexing";
 		//if ( m_forceDel ) msg = "Deleting";
-		//logf(LOG_INFO,"build: %s docid #%li/%li) %lli",
+		//logf(LOG_INFO,"build: %s docid #%"INT32"/%"INT32") %"INT64"",
 		//     msg,i,count++,docId);
 
 		SpiderRequest sr;
 		sr.reset();
 
 		// url is a docid!
-		sprintf ( sr.m_url , "%llu" , docId );
+		sprintf ( sr.m_url , "%"UINT64"" , docId );
 		// make a fake first ip
-		long firstIp = (docId & 0xffffffff);
+		int32_t firstIp = (docId & 0xffffffff);
 		// use a fake ip
 		sr.m_firstIp        =  firstIp;//nowGlobal;
 		// we are not really injecting...
@@ -443,7 +443,7 @@ bool Msg1c::gotList ( ) {
 		// . this will set "uh48" to hash64b(m_url) which is the docid
 		sr.setKey( firstIp, 0LL , false );
 		// how big to serialize
-		long recSize = sr.getRecSize();
+		int32_t recSize = sr.getRecSize();
 
 		m_numDocIdsAdded++;
 	
@@ -453,9 +453,9 @@ bool Msg1c::gotList ( ) {
 			if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 			//s_isRunning = false;
 			log(LOG_LOGIC,
-			    "admin: Query reindex size of %li "
+			    "admin: Query reindex size of %"INT32" "
 			    "too big. Aborting. Bad engineer." , 
-			    (long)0);//m_list.getListSize() );
+			    (int32_t)0);//m_list.getListSize() );
 			return true;
 		}
 	}
@@ -532,8 +532,8 @@ bool Msg1d::updateQuery ( char *query ,
 			   HttpRequest *r,
 			   TcpSocket *sock,
 			   char *coll  ,
-			   long startNum ,
-			   long endNum ,
+			   int32_t startNum ,
+			   int32_t endNum ,
 			   void *state ,
 			   void (* callback) (void *state ) ) {
 
@@ -622,14 +622,14 @@ bool Msg1d::updateTagTerms ( ) {
 		// . TODO: make sure this doesn't hog the cpu looping!!
 		if ( ! m_msg12.m_hasLock ) m_gotLock = 0;
 
-		// shortcut
+		// int16_tcut
 		Msg20Reply *mr = m_msg40.m_msg20[m_i]->m_r;
 
 		// lock it
 		if ( ! m_gotLock++ ) {
 			// note it
 			//log("reindex: getting lock for %s",mr->ptr_ubuf);
-			log("reindex: getting lock for %llu",mr->m_urlHash48);
+			log("reindex: getting lock for %"UINT64"",mr->m_urlHash48);
 			// try to get the lock
 			if ( ! m_msg12.getLocks ( mr->m_docId,//urlHash48 ,
 						  mr->ptr_ubuf , // url
@@ -643,7 +643,7 @@ bool Msg1d::updateTagTerms ( ) {
 			//log("reindex: did not block");
 			// wait for lock?
 			if ( ! m_msg12.m_hasLock ) {
-				log("reindex: waiting for lock for uh=%llu",
+				log("reindex: waiting for lock for uh=%"UINT64"",
 				    mr->m_urlHash48);
 				g_loop.registerSleepCallback(100,this,
 							     sleepBack,0);
@@ -656,7 +656,7 @@ bool Msg1d::updateTagTerms ( ) {
 		if ( ! m_gotTagRec++ ) {
 			// make the fake url
 			char fbuf[1024];
-			sprintf(fbuf,"gbeventhash%llu.com",mr->m_eventHash64 );
+			sprintf(fbuf,"gbeventhash%"UINT64".com",mr->m_eventHash64 );
 			m_fakeUrl.set ( fbuf );
 			// note it
 			//log("reindex: getting tag rec for %s",mr->ptr_ubuf);
@@ -677,7 +677,7 @@ bool Msg1d::updateTagTerms ( ) {
 			// make the key range
 			key_t sk = g_revdb.makeKey ( mr->m_docId , true  );
 			key_t ek = g_revdb.makeKey ( mr->m_docId , false );
-			// shortcut
+			// int16_tcut
 			Msg0 *m = &m_msg0;
 			// this is a no-split lookup by default now
 			if ( ! m->getList ( -1    , // hostId
@@ -712,12 +712,12 @@ bool Msg1d::updateTagTerms ( ) {
 					     m_niceness ,
 					     &m_addBuf ) )
 				return true;
-			// shortcut
+			// int16_tcut
 			m_metaList     = m_addBuf.getBufStart();
 			m_metaListSize = m_addBuf.getBufUsed();
 			// debug log
-			log("reindex: event reindex d=%llu eid=%lu "
-			    "eventhash=%llu",
+			log("reindex: event reindex d=%"UINT64" eid=%"UINT32" "
+			    "eventhash=%"UINT64"",
 			    mr->m_docId,mr->m_eventId,mr->m_eventHash64);
 		}
 		// add using msg4
@@ -735,7 +735,7 @@ bool Msg1d::updateTagTerms ( ) {
 		// return lock just for our uh48
 		if ( ! m_removeLock++ ) {
 			// note it
-			log("reindex: removing lock for %llu",mr->m_urlHash48);
+			log("reindex: removing lock for %"UINT64"",mr->m_urlHash48);
 			if ( ! m_msg12.removeAllLocks ( ) )
 				return false;
 		}
@@ -763,10 +763,10 @@ bool Msg1d::updateTagTerms ( ) {
 // . put the meta list into "addBuf"
 // . returns false and sets g_errno on error
 bool Msg1d::getMetaList ( int64_t docId , 
-			  long eventId , 
+			  int32_t eventId , 
 			  TagRec *egr ,
 			  RdbList *oldList ,
-			  long niceness ,
+			  int32_t niceness ,
 			  SafeBuf *addBuf ) {
 
 	// . now make the positive tag terms
@@ -787,18 +787,18 @@ bool Msg1d::getMetaList ( int64_t docId ,
 
 	// point to the OLD meta list (inside the revdb record)
 	char *om    = NULL;
-	long  osize = 0;
+	int32_t  osize = 0;
 	char *omend = NULL;
 	// . only point to records in list record if there
 	// . taken from XmlDoc.cpp:15228
 	if ( oldList->m_listSize > 16 ) {
 		om    = oldList->m_list + 12 + 4;
-		osize = *(long *)(oldList->m_list + 12);
+		osize = *(int32_t *)(oldList->m_list + 12);
 		omend = om + osize;
 	}
 
 	// how much space in new revdb rec that will replace "oldList"?
-	long need = osize + dt.m_numSlotsUsed * (1+16);
+	int32_t need = osize + dt.m_numSlotsUsed * (1+16);
 	// make new revdb rec from that
 	if ( ! m_rr.reserve ( need ) ) return false;
 
@@ -813,7 +813,7 @@ bool Msg1d::getMetaList ( int64_t docId ,
 		// skip that
 		p++;
 		// get the key size
-		long ks = getKeySizeFromRdbId ( rdbId );
+		int32_t ks = getKeySizeFromRdbId ( rdbId );
 		// get that
 		char *k = p;
 		// store it in new revdb rec
@@ -845,7 +845,7 @@ bool Msg1d::getMetaList ( int64_t docId ,
 
 	// . scan each term in with prefix
 	// . the key formation code taken from XmlDoc::addTableDate()
-	for ( long i = 0 ; i < dt.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < dt.m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// skip if empty
@@ -888,7 +888,7 @@ bool Msg1d::getMetaList ( int64_t docId ,
 		if ( ! addBuf->safeMemcpy ( oldList->m_list , 12 ) ) 
 			return false;
 		// and datasize
-		long dataSize = m_rr.getBufUsed();
+		int32_t dataSize = m_rr.getBufUsed();
 		// store that after key
 		if ( ! addBuf->safeMemcpy ( (char *)&dataSize , 4 ) ) 
 			return false;

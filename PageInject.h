@@ -1,7 +1,7 @@
 #ifndef GBINJECT_H
 #define GBINJECT_H    
 
-void  handleRequest7 ( class UdpSlot *slot , long netnice ) ;
+void  handleRequest7 ( class UdpSlot *slot , int32_t netnice ) ;
 
 bool sendPageInject ( class TcpSocket *s, class HttpRequest *hr );
 
@@ -23,7 +23,7 @@ public:
 	bool m_firstTime;
 	char *m_start;
 	bool  m_fixMe;
-	long  m_injectCount;
+	int32_t  m_injectCount;
 
 	bool       m_needsSet;
 	XmlDoc     m_xd;
@@ -39,9 +39,9 @@ public:
 	void (* m_callback )(void *state);
 
 	//int64_t m_hackFileOff;
-	//long m_hackFileId;
+	//int32_t m_hackFileId;
 
-	//long m_crawlbotAPI;
+	//int32_t m_crawlbotAPI;
 
 	class ImportState *m_importState;
 
@@ -56,7 +56,7 @@ public:
 
 	bool inject ( char *coll,
 		      char *proxiedUrl,
-		      long  proxiedUrlLen,
+		      int32_t  proxiedUrlLen,
 		      char *content,
 		      void *state ,
 		      void (*callback)(void *state) );

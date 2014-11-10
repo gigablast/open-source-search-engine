@@ -60,10 +60,10 @@ public:
 	~AutoMicroTimer () {
 		stop();
 		if ( m_class ) 
-			log( LOG_TIMING, "%s: Took %llu microseconds for %s::%s",
+			log( LOG_TIMING, "%s: Took %"UINT64" microseconds for %s::%s",
 			     m_subtype, getSpan(), m_class, m_name );
 		else
-			log( LOG_TIMING, "%s: Took %llu microseconds for %s", 
+			log( LOG_TIMING, "%s: Took %"UINT64" microseconds for %s", 
 			     m_subtype, getSpan(), m_name );
 	};
 

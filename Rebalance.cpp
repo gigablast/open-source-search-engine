@@ -98,20 +98,20 @@ char *Rebalance::getNeedsRebalance ( ) {
 	// crc-saved.dat does not exist we have to scan. we can 
 	// periodically save our scan progress in case we get shutdown
 	// mid-stream i guess.
-	unsigned long x = 0;
-	long y = 0;
-	long z = 0;
-	long rebalancing = 0;
-	long cn;
+	int32_t x = 0;
+	int32_t y = 0;
+	int32_t z = 0;
+	int32_t rebalancing = 0;
+	int32_t cn;
 	// parse the file
 	char keyStr[128];
 	sscanf(sb.getBufStart(),
-	       "myshard: %li\n"
-	       "numshards: %li\n"
-	       "numhostspershard: %li\n"
-	       "rebalancing: %li\n"
-	       "collnum: %li\n"
-	       "rdbnum: %li\n"
+	       "myshard: %"INT32"\n"
+	       "numshards: %"INT32"\n"
+	       "numhostspershard: %"INT32"\n"
+	       "rebalancing: %"INT32"\n"
+	       "collnum: %"INT32"\n"
+	       "rdbnum: %"INT32"\n"
 	       "nextkey: %s\n",
 	       &x,
 	       &y,
@@ -135,7 +135,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 	m_needsRebalance = false;
 	// if hosts.conf is different and we are part of a different 
 	// shard then we must auto scale
-	if ( x != g_hostdb.m_myHost->m_shardNum ) m_needsRebalance = true;
+	if ( x != (int32_t)g_hostdb.m_myHost->m_shardNum) m_needsRebalance = true;
 	if ( y != g_hostdb.m_numShards          ) m_needsRebalance = true;
 	if ( z != g_hostdb.getNumHostsPerShard()) m_needsRebalance = true;
 	if ( rebalancing                        ) m_needsRebalance = true;
@@ -156,7 +156,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 // . this is called every 500ms from Process.cpp
 // . if all pings came in and all hosts have the same hosts.conf
 //   and if we detected any shard imbalance at startup we have to
-//   scan all rdbs for records that don't belong to us and send them
+//   scan all rdbs for records that don't beint32_t to us and send them
 //   where they should go
 void Rebalance::rebalanceLoop ( ) {
 
@@ -219,8 +219,8 @@ void Rebalance::scanLoop ( ) {
 			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
 			// log it as well
 			if ( m_lastRdb != rdb ) {
-				log("rebal: scanning %s (%li) [%s]",
-				    cr->m_coll,(long)cr->m_collnum,
+				log("rebal: scanning %s (%"INT32") [%s]",
+				    cr->m_coll,(int32_t)cr->m_collnum,
 				    rdb->m_dbname);
 				// only do this once per rdb/coll
 				m_lastRdb = rdb;
@@ -237,20 +237,20 @@ void Rebalance::scanLoop ( ) {
 
 			}
 			// percent update?
-			long percent = (unsigned char)m_nextKey[rdb->m_ks-1];
+			int32_t percent = (unsigned char)m_nextKey[rdb->m_ks-1];
 			percent *= 100;
 			percent /= 256;
 			if ( percent != m_lastPercent && percent ) {
-				log("rebal: %li%% complete",percent);
+				log("rebal: %"INT32"%% complete",percent);
 				m_lastPercent = percent;
 			}
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 			// note it
-			log("rebal: moved %lli of %lli recs scanned in "
-			    "%s for coll.%s.%li",
+			log("rebal: moved %"INT64" of %"INT64" recs scanned in "
+			    "%s for coll.%s.%"INT32"",
 			    m_rebalanceCount,m_scannedCount,
-			    rdb->m_dbname,cr->m_coll,(long)cr->m_collnum);
+			    rdb->m_dbname,cr->m_coll,(int32_t)cr->m_collnum);
 			//if ( m_rebalanceCount ) goto done;
 			m_rebalanceCount = 0;
 			m_scannedCount = 0;
@@ -297,21 +297,21 @@ bool Rebalance::saveRebalanceFile ( ) {
 
 	SafeBuf sb;
 	sb.safePrintf (
-		       "myshard: %li\n"
-		       "numshards: %li\n"
-		       "numhostspershard: %li\n"
-		       "rebalancing: %li\n"
-		       "collnum: %li\n"
-		       "rdbnum: %li\n"
+		       "myshard: %"INT32"\n"
+		       "numshards: %"INT32"\n"
+		       "numhostspershard: %"INT32"\n"
+		       "rebalancing: %"INT32"\n"
+		       "collnum: %"INT32"\n"
+		       "rdbnum: %"INT32"\n"
 		       "nextkey: %s\n",
-		       (long)g_hostdb.m_myHost->m_shardNum,
-		       (long)g_hostdb.m_numShards,
-		       (long)g_hostdb.getNumHostsPerShard(),
+		       (int32_t)g_hostdb.m_myHost->m_shardNum,
+		       (int32_t)g_hostdb.m_numShards,
+		       (int32_t)g_hostdb.getNumHostsPerShard(),
 		       // were we rebalancing last time?
-		       (long)m_isScanning,
+		       (int32_t)m_isScanning,
 		       // how far did we get?
-		       (long)m_collnum,
-		       (long)m_rdbNum,
+		       (int32_t)m_collnum,
+		       (int32_t)m_rdbNum,
 		       keyStr
 		       );
 
@@ -348,14 +348,14 @@ bool Rebalance::scanRdb ( ) {
 
 	// . if this rdb is merging wait until merge is done
 	// . we will be dumping out a lot of negative recs and if we are
-	//   short on disk space we need to merge them in immediately with
+	//   int16_t on disk space we need to merge them in immediately with
 	//   all our data so that they annihilate quickly with the positive
 	//   keys in there to free up more disk
 	RdbBase *base = rdb->getBase ( m_collnum );
 	// base is NULL for like monitordb...
 	if ( base && base->isMerging() ) {
-		log("rebal: waiting for merge on %s for coll #%li to complete",
-		    rdb->m_dbname,(long)m_collnum);
+		log("rebal: waiting for merge on %s for coll #%"INT32" to complete",
+		    rdb->m_dbname,(int32_t)m_collnum);
 		g_loop.registerSleepCallback ( 1000,NULL,sleepWrapper,1);
 		m_registered = true;
 		// we blocked, return false
@@ -438,13 +438,13 @@ bool Rebalance::gotList ( ) {
 
 	char rdbId = rdb->m_rdbId;
 
-	long ks = rdb->m_ks;//getKeySize();
+	int32_t ks = rdb->m_ks;//getKeySize();
 
-	long myShard = g_hostdb.m_myHost->m_shardNum;
+	int32_t myShard = g_hostdb.m_myHost->m_shardNum;
 
 	m_list.resetListPtr();
 
-	//log("rebal: got list of %li bytes",m_list.getListSize());
+	//log("rebal: got list of %"INT32" bytes",m_list.getListSize());
 
 	m_posMetaList.reset();
 	m_negMetaList.reset();
@@ -464,21 +464,21 @@ bool Rebalance::gotList ( ) {
 		// skip if negative... wtf?
 		if ( KEYNEG(m_nextKey) ) continue;
 		// get shard
-		long shard = getShardNum ( rdbId , m_nextKey );
+		int32_t shard = getShardNum ( rdbId , m_nextKey );
 		// save last ptr
 		//last = rec;
 		// debug!
 		//log("rebal: checking key %s",KEYSTR(m_nextKey,ks));
 		// count as scanned
 		m_scannedCount++;
-		// skip it if it belongs with us
+		// skip it if it beint32_ts with us
 		if ( shard == myShard ) continue;
 		// note it
-		//log("rebal: shard is %li",shard);
+		//log("rebal: shard is %"INT32"",shard);
 		// count it
 		m_rebalanceCount++;
 		// otherwise, it does not!
-		//long recSize = m_list.getCurrentRecSize();
+		//int32_t recSize = m_list.getCurrentRecSize();
 		// copy the full key into "key" buf because might be compressed
 		char key[MAX_KEY_BYTES];
 		m_list.getCurrentKey ( key );
@@ -487,7 +487,7 @@ bool Rebalance::gotList ( ) {
 		// first key
 		m_posMetaList.safeMemcpy ( key , ks );
 		// then record
-		long dataSize = rdb->m_fixedDataSize;
+		int32_t dataSize = rdb->m_fixedDataSize;
 		if ( rdb->m_fixedDataSize == -1 ) {
 			dataSize = m_list.getCurrentDataSize();
 			m_posMetaList.pushLong ( dataSize );

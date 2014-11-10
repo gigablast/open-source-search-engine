@@ -13,12 +13,12 @@ enum UCNormForm {
 
 
 // Combined Kompatibility Form
-long ucNormalizeNFKC(UChar *outBuf, long outBufSize,
-		     UChar *inBuf, long inBufSize, bool strip = false);
+int32_t ucNormalizeNFKC(UChar *outBuf, int32_t outBufSize,
+		     UChar *inBuf, int32_t inBufSize, bool strip = false);
 
 // Decomposed Kompatibility Form
-long ucNormalizeNFKD(UChar *outBuf, long outBufSize,
-		 UChar *inBuf, long inBufSize);
+int32_t ucNormalizeNFKD(UChar *outBuf, int32_t outBufSize,
+		 UChar *inBuf, int32_t inBufSize);
 
 bool initCompositionTable();
 void resetCompositionTable() ;

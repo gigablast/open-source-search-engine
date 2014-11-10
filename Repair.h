@@ -68,7 +68,7 @@ public:
 	//bool addToTfndb2Part2 ( );
 
 	// called by Pages.cpp
-	bool printRepairStatus ( SafeBuf *sb , long fromIp );
+	bool printRepairStatus ( SafeBuf *sb , int32_t fromIp );
 
 	// if we core, call these so repair can resume where it left off
 	bool save();
@@ -90,12 +90,12 @@ public:
 	char       m_isDelete;
 	RdbList    m_ulist;
 	RdbList    m_addlist;
-	//long       m_ruleset;
+	//int32_t       m_ruleset;
 	//LinkTextReply  m_rootLinkText;
 	int64_t  m_totalMem;
-	long       m_stage ;
-	long       m_tfn;
-	long       m_count;
+	int32_t       m_stage ;
+	int32_t       m_tfn;
+	int32_t       m_count;
 	bool       m_updated;
 	//key_t      m_currentTitleRecKey; // for tfndb
 
@@ -112,7 +112,7 @@ public:
 	int64_t  m_uh48;
 	//TitleRec   m_tr;
 	//Msg8a      m_msg8a;
-	long       m_priority;
+	int32_t       m_priority;
 	uint64_t   m_contentHash;
 	//key_t      m_tfndbKey;
 	//char       m_checksumdbKey[32];
@@ -160,13 +160,13 @@ public:
 	int64_t  m_recsRoot;
 	int64_t  m_recsNonRoot;
 	int64_t  m_recsInjected;
-	//long       m_fn;
+	//int32_t       m_fn;
 
 	// spiderdb scan stats
-	long       m_spiderRecsScanned  ;
-	long       m_spiderRecSetErrors ;
-	long       m_spiderRecNotAssigned ;
-	long       m_spiderRecBadTLD      ;
+	int32_t       m_spiderRecsScanned  ;
+	int32_t       m_spiderRecSetErrors ;
+	int32_t       m_spiderRecNotAssigned ;
+	int32_t       m_spiderRecBadTLD      ;
 
 	// generic scan parms
 	char       m_rebuildTitledb    ;
@@ -191,22 +191,22 @@ public:
 	char       m_rebuildNonRoots   ;
 
 	// current collection being repaired
-	long       m_collLen;
+	int32_t       m_collLen;
 	collnum_t  m_collnum;
 	char       m_newColl[MAX_COLL_LEN];
-	long       m_newCollLen;
+	int32_t       m_newCollLen;
 	collnum_t  m_newCollnum;
 
 	// . m_colli is the index into m_colls
 	// . m_colli is the index into g_collectiondb.m_recs if the list
 	//   of collections to repair was empty
-	long       m_colli;
+	int32_t       m_colli;
 
 	// list of collections to repair, only valid of g_conf.m_collsToRepair
 	// is not empty
-	long       m_collOffs[100];
-	long       m_collLens[100];
-	long       m_numColls;
+	int32_t       m_collOffs[100];
+	int32_t       m_collLens[100];
+	int32_t       m_numColls;
 	// end the stuff to be saved
 	char       m_SAVE_END;
 
@@ -221,7 +221,7 @@ public:
 	char       m_isSuspended;
 
 	// keep track of how many injects we have out
-	long       m_numOutstandingInjects;
+	int32_t       m_numOutstandingInjects;
 	bool       m_allowInjectToLoop;
 
 	// sanity check

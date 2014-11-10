@@ -42,7 +42,7 @@ struct DnsState {
 	int64_t   m_tableKey; 
 	Dns        *m_this  ;
 	void       *m_state ;
-	void      (*m_callback) ( void *state , long ip ) ;
+	void      (*m_callback) ( void *state , int32_t ip ) ;
 	char        m_freeit;
 	bool        m_cacheNotFounds;
 	char        m_hostname[128];
@@ -50,7 +50,7 @@ struct DnsState {
 	// . point to the replies received from dns servers
 	// . m_dnsNames[] should point into these reply buffers
 	//char *m_replyBufPtrs[6];
-	//long  m_numReplies;
+	//int32_t  m_numReplies;
 
 	// we can do a recursion up to 5 levels deep. sometimes the reply
 	// we get back is a list of ips of nameservers we need to ask.
@@ -58,10 +58,10 @@ struct DnsState {
 	// of the depth here. initially we set these ips to those of the
 	// root servers (or sometimes the local bind servers).
 	bool m_rootTLD  [MAX_DEPTH];
-	long m_fallbacks[MAX_DEPTH];
-	long m_dnsIps   [MAX_DEPTH][MAX_DNS_IPS];
-	long m_numDnsIps[MAX_DEPTH];
-	long m_depth;  // current depth
+	int32_t m_fallbacks[MAX_DEPTH];
+	int32_t m_dnsIps   [MAX_DEPTH][MAX_DNS_IPS];
+	int32_t m_numDnsIps[MAX_DEPTH];
+	int32_t m_depth;  // current depth
 
 	// . use these nameservers to do the lookup
 	// . if not provided, they default to the root nameservers
@@ -73,19 +73,19 @@ struct DnsState {
 	//   m_dnsNames are NULLified when getIPOfDNS() get their ip address
 	//   which is then added to m_dnsIps[]
 	char *m_dnsNames    [MAX_DEPTH][MAX_DNS_IPS];
-	long  m_numDnsNames [MAX_DEPTH];
+	int32_t  m_numDnsNames [MAX_DEPTH];
 	char  m_nameBuf     [512];
 	char *m_nameBufPtr;
 	char *m_nameBufEnd;
 
 	// this holds the one and only dns request
 	char  m_request[512];
-	long  m_requestSize;
+	int32_t  m_requestSize;
 
 	// after we send to a nameserver add its ip to this list so we don't 
 	// send to it again. or so we do not even add it to m_dnsIps again.
-	long m_triedIps[MAX_TRIED_IPS];
-	long m_numTried;
+	int32_t m_triedIps[MAX_TRIED_IPS];
+	int32_t m_numTried;
 
 	// if we have to get the ip of the dns, then we get back more dns
 	// that refer to that dns and we have to get the ip of those, ... etc.
@@ -93,20 +93,20 @@ struct DnsState {
 	// that to avoid having to allocate more memory. however, we have to
 	// keep track of how many times we do that recursively until we run
 	// out of m_buf.
-	long m_loopCount;
+	int32_t m_loopCount;
 
 	// set to EDNSDEAD (hostname does not exist) if we encounter that
 	// error, however, we continue to ask other dns servers about the
 	// hostname because we can often uncover the ip address that way.
 	// but if we never do, we want to return this error, not ETIMEDOUT.
-	long m_errno;
+	int32_t m_errno;
 
 	// we have to turn it off in some requests for some reason
 	// like for www.fsis.usda.gov, othewise we get a refused to talk error
 	char m_recursionDesired;
 
 	// have a total timeout function
-	long m_startTime;
+	int32_t m_startTime;
 
 	char m_buf [ LOOP_BUF_SIZE ];
 };
@@ -117,15 +117,15 @@ struct DnsState {
 class CallbackEntry {
 public:
 	void *m_state;
-	void (* m_callback ) ( void *state , long ip );
+	void (* m_callback ) ( void *state , int32_t ip );
 	struct DnsState *m_ds;
 	//class CallbackEntry *m_next;
 	// we can't use a data ptr because slots get moved around when one
 	// is deleted.
 	int64_t m_nextKey;
 	// debug info
-	long m_listSize;
-	long m_listId;
+	int32_t m_listSize;
+	int32_t m_listId;
 };
 
 class Dns { 
@@ -140,28 +140,28 @@ class Dns {
 	// . we create our own udpServer in here since we can't share that
 	//   because of the protocol differences
 	// . read our dns servers from the conf file
-	bool init ( unsigned short clientPort );
+	bool init ( uint16_t clientPort );
 
 	// . check errno to on return or on callback to ensure no error
 	// . we set ip to 0 if not found
 	// . returns -1 and sets errno on error
 	// . returns 0 if transaction blocked, 1 if completed
 	bool getIp ( char  *hostname    , 
-		     long   hostnameLen ,
-		     long  *ip ,
+		     int32_t   hostnameLen ,
+		     int32_t  *ip ,
 		     void  *state ,
-		     void (* callback) ( void *state , long ip ) ,
+		     void (* callback) ( void *state , int32_t ip ) ,
 		     DnsState *ds = NULL ,
 		     //char *dnsNames = NULL ,
-		     //long *numDnsNames = 0 ,
-		     //long  *dnsIps   = NULL ,
-		     //long   numDnsIps = 0 ,
-		     long   timeout   = 60    ,
+		     //int32_t *numDnsNames = 0 ,
+		     //int32_t  *dnsIps   = NULL ,
+		     //int32_t   numDnsIps = 0 ,
+		     int32_t   timeout   = 60    ,
 		     bool   dnsLookup = false ,
 		     // monitor.cpp passes in false for this:
 		     bool   cacheNotFounds = true );
 
-	bool sendToNextDNS ( struct DnsState *ds , long timeout = 60 ) ;
+	bool sendToNextDNS ( struct DnsState *ds , int32_t timeout = 60 ) ;
 
 	bool getIpOfDNS ( DnsState *ds ) ;
 
@@ -171,7 +171,7 @@ class Dns {
 	// . also update the timestamps in our private hostmap
 	// . returns -1 on error
 	// . returns 0 if ip does not exist
-	long gotIp ( UdpSlot *slot , struct DnsState *dnsState );
+	int32_t gotIp ( UdpSlot *slot , struct DnsState *dnsState );
 
 	// . we have our own udp server
 	// . it contains our HostMap and DnsProtocol ptrs
@@ -191,15 +191,15 @@ class Dns {
 
 
 	// returns true if in cache, and sets *ip
-	bool isInCache (key_t key , long *ip );
+	bool isInCache (key_t key , int32_t *ip );
 
 	// add this hostnamekey/ip pair to the cache
-	void addToCache ( key_t hostnameKey , long ip , long ttl = -1 ) ;
+	void addToCache ( key_t hostnameKey , int32_t ip , int32_t ttl = -1 ) ;
 
 	// is it in the /etc/hosts file?
-	bool isInFile (key_t key , long *ip );
+	bool isInFile (key_t key , int32_t *ip );
 
-	key_t getKey ( char *hostname , long hostnameLen ) ;
+	key_t getKey ( char *hostname , int32_t hostnameLen ) ;
 
 	Host *getResponsibleHost ( key_t key ) ;
 
@@ -207,7 +207,7 @@ class Dns {
 
 	bool loadFile ( );
 
-	//unsigned short m_dnsTransId;
+	//uint16_t m_dnsTransId;
 
 	// . key is a hash of hostname
 	// . record/slot contains a 4 byte ip entry (if in key is in cache)
@@ -217,17 +217,17 @@ class Dns {
 
 	DnsProtocol m_proto;
 
-	short  m_dnsClientPort;
+	int16_t  m_dnsClientPort;
 	//char  *m_dnsDir;
-	long   m_dnsIp;
-	short  m_dnsPort; // we talk to dns thru this port
+	int32_t   m_dnsIp;
+	int16_t  m_dnsPort; // we talk to dns thru this port
 
-	long m_numBind9Dns;
+	int32_t m_numBind9Dns;
 
 	// /etc/hosts in hashed into this table
-	long   *m_ips;
+	int32_t   *m_ips;
 	key_t  *m_keys;
-	long    m_numSlots;
+	int32_t    m_numSlots;
 };
 
 //This stores the ip's for the machine where 

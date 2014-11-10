@@ -22,68 +22,68 @@ extern uint64_t g_hashtab[256][256];
 
 bool hashinit ();
 
-unsigned char hash8            ( char *s , long len ) ;
-uint16_t      hash16           ( char *s , long len ) ;
-uint64_t      hash64n_nospaces ( char *s , long len ) ;
-unsigned long hash32n          ( char *s ) ;
-unsigned long hash32           ( char *s, long len,unsigned long startHash=0);
-unsigned long hash32h          ( unsigned long h1 , unsigned long h2 ) ;
+unsigned char hash8            ( char *s , int32_t len ) ;
+uint16_t      hash16           ( char *s , int32_t len ) ;
+uint64_t      hash64n_nospaces ( char *s , int32_t len ) ;
+uint32_t hash32n          ( char *s ) ;
+uint32_t hash32           ( char *s, int32_t len,uint32_t startHash=0);
+uint32_t hash32h          ( uint32_t h1 , uint32_t h2 ) ;
 uint64_t      hash64h          ( uint64_t h1 , uint64_t h2 );
 uint32_t      hash32Fast       ( uint32_t h1 , uint32_t h2 ) ;
-unsigned long hash32Lower_a    ( char *s, long len,unsigned long startHash=0);
-unsigned long hash32Lower_utf8  ( char *s, long len,unsigned long startHash=0);
-uint32_t      hash32b          (char *s,long len1,char *s2, long len2);
+uint32_t hash32Lower_a    ( char *s, int32_t len,uint32_t startHash=0);
+uint32_t hash32Lower_utf8  ( char *s, int32_t len,uint32_t startHash=0);
+uint32_t      hash32b          (char *s,int32_t len1,char *s2, int32_t len2);
 uint32_t      hash32_cont      ( char *s, char *slen,
-				 uint32_t startHash , long *conti );
+				 uint32_t startHash , int32_t *conti );
 uint64_t      hash64n          ( char *s, uint64_t startHash =0LL);
 uint64_t      hash64           ( uint64_t h1,uint64_t h2);
-uint64_t      hash64           ( char *s,long len,uint64_t startHash=0);
-uint64_t      hash64_cont      ( char *s,long len,
-				 uint64_t startHash,long *conti);
+uint64_t      hash64           ( char *s,int32_t len,uint64_t startHash=0);
+uint64_t      hash64_cont      ( char *s,int32_t len,
+				 uint64_t startHash,int32_t *conti);
 uint64_t      hash64b          ( char *s,         uint64_t startHash=0);
 uint64_t      hash64Fast       ( uint64_t h1 , uint64_t h2 ) ;
-uint64_t      hash64Lower_a    ( char *s, long len, uint64_t startHash = 0 );
-uint64_t      hash64Lower_utf8 ( char *s, long len, uint64_t startHash = 0 );
-uint64_t      hash64Lower_utf8_nospaces ( char *s, long len );
+uint64_t      hash64Lower_a    ( char *s, int32_t len, uint64_t startHash = 0 );
+uint64_t      hash64Lower_utf8 ( char *s, int32_t len, uint64_t startHash = 0 );
+uint64_t      hash64Lower_utf8_nospaces ( char *s, int32_t len );
 uint64_t      hash64Lower_utf8 ( char *s );
-uint64_t      hash64Lower_utf8_cont ( char *s, long len, uint64_t startHash ,
-				      long *conti );
+uint64_t      hash64Lower_utf8_cont ( char *s, int32_t len, uint64_t startHash ,
+				      int32_t *conti );
 uint64_t      hash64LowerAscii_utf8 ( char *s );
-uint96_t      hash96           ( char *s, long slen,uint96_t sh=(uint96_t)0);
+uint96_t      hash96           ( char *s, int32_t slen,uint96_t sh=(uint96_t)0);
 uint96_t      hash96           ( uint96_t  h1 ,  uint96_t h2 );
-uint96_t      hash96           ( long       h1 ,  uint96_t h2 );
+uint96_t      hash96           ( int32_t       h1 ,  uint96_t h2 );
 uint128_t     hash128          ( uint128_t h1 ,  uint128_t h2 );
-uint128_t     hash128          ( long       h1 ,  uint128_t h2 );
+uint128_t     hash128          ( int32_t       h1 ,  uint128_t h2 );
 void          hash2string      ( uint64_t h, char *buf ) ;
-unsigned long hashLong         ( unsigned long x ) ;
+uint32_t hashLong         ( uint32_t x ) ;
 
 // . these convert \n to \0 when hashing
 // . these hash all punct as a space, except for hyphen and single quote!
 // . these lower-case all alnum chars, even crazy utf8 chars that can be cap'd
 // . these only take utf8 strings
 uint32_t hash32d ( char *s, char *send );
-uint64_t hash64d ( char *s, long slen );
+uint64_t hash64d ( char *s, int32_t slen );
 
-inline uint32_t hash32d ( char *s, long slen ) { return hash32d ( s , s+slen); };
-//inline uint64_t hash64d ( char *s, long slen ) { return hash64d ( s , s+slen); };
+inline uint32_t hash32d ( char *s, int32_t slen ) { return hash32d ( s , s+slen); };
+//inline uint64_t hash64d ( char *s, int32_t slen ) { return hash64d ( s , s+slen); };
 
-uint64_t       hash64Upper_a    ( char *s, long len, uint64_t startHash = 0 );
-//uint64_t       hash64Ascii      ( char *s, long len, uint64_t startHash = 0 );
-//uint64_t       hash64AsciiLower ( char *s, long len,uint64_t startHash = 0 );
-//uint64_t       hash64AsciiLowerE( char *s, long len,uint64_t startHash = 0 );
-//uint64_t       hash64AsciiLowerAlnumOnly (char *s, long len, starthash=0);
-//uint64_t       hash64Cap        ( char *s, long len, uint64_t startHash = 0 );
-//uint64_t       hash64AsciiCap   ( char *s, long len, uint64_t startHash = 0 );
+uint64_t       hash64Upper_a    ( char *s, int32_t len, uint64_t startHash = 0 );
+//uint64_t       hash64Ascii      ( char *s, int32_t len, uint64_t startHash = 0 );
+//uint64_t       hash64AsciiLower ( char *s, int32_t len,uint64_t startHash = 0 );
+//uint64_t       hash64AsciiLowerE( char *s, int32_t len,uint64_t startHash = 0 );
+//uint64_t       hash64AsciiLowerAlnumOnly (char *s, int32_t len, starthash=0);
+//uint64_t       hash64Cap        ( char *s, int32_t len, uint64_t startHash = 0 );
+//uint64_t       hash64AsciiCap   ( char *s, int32_t len, uint64_t startHash = 0 );
 // . used to setup hashing of collection/fields over a body of words for a
 //   document or query
 // . used in TermTable.cpp and in SimpleQuery.cpp
-//int64_t getPrefixHash ( const char *prefix1 , long prefixLen1 ,
-//			  const char *prefix2 , long prefixLen2 ) ;
+//int64_t getPrefixHash ( const char *prefix1 , int32_t prefixLen1 ,
+//			  const char *prefix2 , int32_t prefixLen2 ) ;
 
 
 inline uint64_t hash64b ( char *s , uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( s[i] ) {
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
 		i++;
@@ -91,10 +91,10 @@ inline uint64_t hash64b ( char *s , uint64_t startHash ) {
 	return h;
 }
 
-inline uint64_t hash64 ( char *s, long len, 
+inline uint64_t hash64 ( char *s, int32_t len, 
 				   uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( i < len ) { 
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
 		i++;
@@ -102,11 +102,11 @@ inline uint64_t hash64 ( char *s, long len,
 	return h;
 }
 
-inline uint64_t hash64_cont ( char *s, long len, 
+inline uint64_t hash64_cont ( char *s, int32_t len, 
 					uint64_t startHash ,
-					long *conti ) {
+					int32_t *conti ) {
 	uint64_t h = startHash;
-	long i = 0;//*conti;
+	int32_t i = 0;//*conti;
 	while ( i < len ) { 
 		h ^= g_hashtab [(unsigned char)(i+*conti)][(unsigned char)s[i]];
 		i++;
@@ -152,10 +152,10 @@ inline uint64_t hash64 (uint64_t h1,uint64_t h2){
 }
 
 
-inline uint64_t hash64Lower_a ( char *s, long len, 
+inline uint64_t hash64Lower_a ( char *s, int32_t len, 
 					uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
 			[(unsigned char)to_lower_a(s[i])];
@@ -165,7 +165,7 @@ inline uint64_t hash64Lower_a ( char *s, long len,
 }
 
 // utf8
-inline uint64_t hash64Lower_utf8 ( char *p, long len, uint64_t startHash ) {
+inline uint64_t hash64Lower_utf8 ( char *p, int32_t len, uint64_t startHash ) {
 	uint64_t h = startHash;
 	uint8_t i = 0;
 	char *pend = p + len;
@@ -212,7 +212,7 @@ inline uint64_t hash64Lower_utf8 ( char *p, long len, uint64_t startHash ) {
 	return h;
 }
 
-inline uint64_t hash64Lower_utf8_nospaces ( char *p, long len  ) {
+inline uint64_t hash64Lower_utf8_nospaces ( char *p, int32_t len  ) {
 	uint64_t h = 0LL;
 	uint8_t i = 0;
 	char *pend = p + len;
@@ -253,9 +253,9 @@ inline uint64_t hash64Lower_utf8_nospaces ( char *p, long len  ) {
 
 
 inline uint64_t hash64Lower_utf8_cont ( char *p, 
-					long len, 
+					int32_t len, 
 					uint64_t startHash ,
-					long *conti ) {
+					int32_t *conti ) {
 	uint64_t h = startHash;
 	uint8_t i = *conti;
 	char *pend = p + len;
@@ -304,13 +304,13 @@ inline uint64_t hash64Lower_utf8_cont ( char *p,
 	return h;
 }
 
-inline uint32_t hash32_cont ( char *p, long plen,
-			      uint32_t startHash , long *conti ) {
+inline uint32_t hash32_cont ( char *p, int32_t plen,
+			      uint32_t startHash , int32_t *conti ) {
 	uint32_t h = startHash;
 	uint8_t i = *conti;
 	char *pend = p + plen;
 	for ( ; p < pend ; p++ ) {
-		h ^= (unsigned long)g_hashtab [i++] [(uint8_t)(*p)];
+		h ^= (uint32_t)g_hashtab [i++] [(uint8_t)(*p)];
 	}
 	// update this so caller can re-call with the right i
 	*conti = i;
@@ -319,14 +319,14 @@ inline uint32_t hash32_cont ( char *p, long plen,
 
 
 // utf8
-inline unsigned long hash32Lower_utf8 ( char *p, long len, 
-					unsigned long startHash ) {
-	return (unsigned long) hash64Lower_utf8 ( p , len , startHash );
+inline uint32_t hash32Lower_utf8 ( char *p, int32_t len, 
+					uint32_t startHash ) {
+	return (uint32_t) hash64Lower_utf8 ( p , len , startHash );
 }
 
-inline uint32_t hash32b (char *s1,long len1,char *s2, long len2) {
+inline uint32_t hash32b (char *s1,int32_t len1,char *s2, int32_t len2) {
 	uint32_t h = 0;//startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( i < len1 ) { 
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s1[i]];
 		i++;
@@ -379,7 +379,7 @@ inline uint64_t hash64Lower_utf8 ( char *p ) {
 
 
 // utf8
-inline uint64_t hash64LowerAscii_utf8 (char *p,long len,uint64_t startHash){
+inline uint64_t hash64LowerAscii_utf8 (char *p,int32_t len,uint64_t startHash){
 	uint64_t h = startHash;
 	uint8_t i = 0;
 	char *pend = p + len;
@@ -407,10 +407,10 @@ inline uint64_t hash64LowerAscii_utf8 (char *p,long len,uint64_t startHash){
 }
 
 
-inline uint64_t hash64Upper_a ( char *s , long len , 
+inline uint64_t hash64Upper_a ( char *s , int32_t len , 
 					  uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
 			[(unsigned char)to_upper_a(s[i])]; 
@@ -422,7 +422,7 @@ inline uint64_t hash64Upper_a ( char *s , long len ,
 
 /*
 // utf8
-inline uint64_t hash64AsciiLowerE ( char *s, long len, uint64_t startHash ) {
+inline uint64_t hash64AsciiLowerE ( char *s, int32_t len, uint64_t startHash ) {
 	uint64_t h = startHash;
 	uint8_t i = 0;
 	UChar32 x;
@@ -470,10 +470,10 @@ inline uint64_t hash64AsciiLowerE ( char *s, long len, uint64_t startHash ) {
 	return h;
 }
 
-inline uint64_t hash64Ascii ( char *s , long len , 
+inline uint64_t hash64Ascii ( char *s , int32_t len , 
 					uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
 			[(unsigned char)to_ascii(s[i])];
@@ -482,10 +482,10 @@ inline uint64_t hash64Ascii ( char *s , long len ,
 	return h;
 }
 
-inline uint64_t hash64AsciiLower (char *s, long len, 
+inline uint64_t hash64AsciiLower (char *s, int32_t len, 
 				   uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
+	int32_t i = 0;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i]
 			[(unsigned char)to_lower_ascii(s[i])];
@@ -494,14 +494,14 @@ inline uint64_t hash64AsciiLower (char *s, long len,
 	return h;
 }
 
-inline uint64_t hash64Cap( char *s , long len , 
+inline uint64_t hash64Cap( char *s , int32_t len , 
 				     uint64_t startHash ) {
 	uint64_t h = startHash;
 	// first letter is cap
 	if ( len < 1 ) return h;
 	h ^= g_hashtab [0] [(unsigned char)to_upper(s[0])];
 	// then hash rest normally
-	long i = 1;
+	int32_t i = 1;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i] 
 			[(unsigned char)to_lower(s[i])];
@@ -512,14 +512,14 @@ inline uint64_t hash64Cap( char *s , long len ,
 */
 
 /*
-inline uint64_t hash64AsciiCap( char *s , long len, 
+inline uint64_t hash64AsciiCap( char *s , int32_t len, 
 					  uint64_t startHash ) {
 	uint64_t h = startHash;
 	// first letter is cap
 	if ( len < 1 ) return h;
 	h ^= g_hashtab [0] [(unsigned char)to_upper(s[0])];
 	// then hash rest normally
-	long i = 1;
+	int32_t i = 1;
 	while ( i < len ) {
 		h ^= g_hashtab [(unsigned char)i]
 			[(unsigned char)to_lower_ascii(s[i])];
@@ -529,11 +529,11 @@ inline uint64_t hash64AsciiCap( char *s , long len,
 }
 
 // used by Checksumdb.cpp for comparing if docs are dups
-inline uint64_t hash64AsciiLowerAlnumOnly (char *s, long len, 
+inline uint64_t hash64AsciiLowerAlnumOnly (char *s, int32_t len, 
 				   uint64_t startHash ) {
 	uint64_t h = startHash;
-	long i = 0;
-	long count = 0;
+	int32_t i = 0;
+	int32_t count = 0;
 	while ( i < len ) {
 		// only hash alnum chars, no punct or spaces, etc.
 		if ( ! is_alnum(s[i]) ) { i++; continue; }
@@ -553,13 +553,13 @@ uint8_t getClean_a ( char c ) ;
 UChar32 getClean_utf8 ( char *src ) ;
 
 
-inline unsigned long hashLong ( unsigned long x ) {
-	unsigned long h = 0;
+inline uint32_t hashLong ( uint32_t x ) {
+	uint32_t h = 0;
 	unsigned char *p = (unsigned char *)&x;
-	h ^= (unsigned long) g_hashtab [0][p[0]];
-	h ^= (unsigned long) g_hashtab [1][p[1]];
-	h ^= (unsigned long) g_hashtab [2][p[2]];
-	h ^= (unsigned long) g_hashtab [3][p[3]];
+	h ^= (uint32_t) g_hashtab [0][p[0]];
+	h ^= (uint32_t) g_hashtab [1][p[1]];
+	h ^= (uint32_t) g_hashtab [2][p[2]];
+	h ^= (uint32_t) g_hashtab [3][p[3]];
 	return h;
 }
 

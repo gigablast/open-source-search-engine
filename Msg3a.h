@@ -62,9 +62,9 @@ public:
 	// floats (rscore_t) and store them as floats so that PostQueryRerank
 	// has an easier time
 	double *getScores        ( ) { return m_scores;        };
-	long   getNumDocIds     ( ) { return m_numDocIds; };
+	int32_t   getNumDocIds     ( ) { return m_numDocIds; };
 
-	long getSiteHash26 ( long i ) { 
+	int32_t getSiteHash26 ( int32_t i ) { 
 		// if it was in the seoResults cache this will be non-NULL
 		if ( m_siteHashes26 ) return m_siteHashes26[i];
 		// otherwise, this is the standard method:
@@ -95,34 +95,34 @@ public:
 	// . deserialize ourselves for the cache
 	// . returns bytes written
 	// . returns -1 and sets g_errno on error
-	long getStoredSize ( );
-	long serialize   ( char *buf , char *bufEnd );
-	long deserialize ( char *buf , char *bufEnd );
+	int32_t getStoredSize ( );
+	int32_t serialize   ( char *buf , char *bufEnd );
+	int32_t deserialize ( char *buf , char *bufEnd );
 
 
 	// incoming parameters passed to Msg39::getDocIds() function
 	Query     *m_q;
-	long       m_docsToGet;
+	int32_t       m_docsToGet;
 	void      *m_state;
 	void     (*m_callback ) ( void *state );
 
 	// set by Msg3a initially
-	//long       m_indexdbSplit;
-	long m_numHosts;
+	//int32_t       m_indexdbSplit;
+	int32_t m_numHosts;
 
 	// used in XmlDoc.cpp for doing the seo keyword tool
 	void      *m_hack;
-	long       m_hackQNum;
+	int32_t       m_hackQNum;
 	char      *m_hackQPtr;
 	char       m_inUse;
 
 	bool m_moreDocIdsAvail;
-	long m_totalDocCount;
+	int32_t m_totalDocCount;
 
 	// don't get more docIds than this from any one split
-	long       m_maxDocIdsToCompute;
+	int32_t       m_maxDocIdsToCompute;
 	// this is set if IndexTable::addLists() had an error
-	long       m_errno;
+	int32_t       m_errno;
 
 	// this is now in here so Msg40 can send out one Msg3a per
 	// collection if it wants to search an entire token
@@ -136,12 +136,12 @@ public:
 	// a multicast class to send the request, one for each split
 	Multicast  m_mcast[MAX_SHARDS];
 
-	// for timing how long things take
+	// for timing how int32_t things take
 	int64_t  m_startTime;
 
 	// this buffer should be big enough to hold all requests
 	//char       m_request [MAX_MSG39_REQUEST_SIZE * MAX_SHARDS];
-	long       m_numReplies;
+	int32_t       m_numReplies;
 
 	// . # estimated total hits
 	int64_t  m_numTotalEstimatedHits;
@@ -149,7 +149,7 @@ public:
 	// we have one request that we send to each split
 	class Msg39Request *m_r;
 	char               *m_rbufPtr;
-	long                m_rbufSize;
+	int32_t                m_rbufSize;
 	char                m_rbuf [ RBUF_SIZE ];
 
 	// now we send to the twin as well
@@ -157,7 +157,7 @@ public:
 
 	// each split gives us a reply
 	class Msg39Reply   *m_reply       [MAX_SHARDS];
-	long                m_replyMaxSize[MAX_SHARDS];
+	int32_t                m_replyMaxSize[MAX_SHARDS];
 
 	char m_debug;
 
@@ -170,14 +170,14 @@ public:
 	char           *m_clusterLevels ;
 	// this is new
 	collnum_t      *m_collnums;
-	long            m_numDocIds     ;
+	int32_t            m_numDocIds     ;
 	// the above ptrs point into this buffer
 	char           *m_finalBuf;
-	long            m_finalBufSize;
+	int32_t            m_finalBufSize;
 
 	// when merging this list of docids into a final list keep
 	// track of the cursor into m_docIds[]
-	long m_cursor;
+	int32_t m_cursor;
 
 	// what collection # are these docids from if m_collnums[] is NULL
 	//collnum_t m_collnum;
@@ -185,7 +185,7 @@ public:
 	//
 	// new things for seoresults cache
 	//
-	long           *m_siteHashes26;
+	int32_t           *m_siteHashes26;
 	key_t           m_ckey; // cachedb key
 	Msg0            m_msg0;
 	Msg1            m_msg1;

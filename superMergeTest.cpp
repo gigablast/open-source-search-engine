@@ -10,13 +10,13 @@ main ( int argc , char *argv[] ) {
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
 	// # of keys to in each list
-	long nk = 200000;
+	int32_t nk = 200000;
 	// # keys wanted
-	long numKeysWanted = 200000;
+	int32_t numKeysWanted = 200000;
 	// get # lists to merge
-	long numToMerge = atoi ( argv[1] );
+	int32_t numToMerge = atoi ( argv[1] );
 	// print start time
-	fprintf (stderr,"smt:: randomizing begin. %li lists of %li keys.\n",
+	fprintf (stderr,"smt:: randomizing begin. %"INT32" lists of %"INT32" keys.\n",
 		 numToMerge, nk);
 	// make a list of compressed (6 byte) docIds
         key_t *keys0 = (key_t *) malloc ( sizeof(key_t) * nk );
@@ -24,27 +24,27 @@ main ( int argc , char *argv[] ) {
         key_t *keys2 = (key_t *) malloc ( sizeof(key_t) * nk );
         key_t *keys3 = (key_t *) malloc ( sizeof(key_t) * nk );
 	// store radnom docIds in this list
-	unsigned long *p = (unsigned long *) keys0;
+	uint32_t *p = (uint32_t *) keys0;
 	// random docIds
-	for ( long i = 0 ; i < nk ; i++ ) {
+	for ( int32_t i = 0 ; i < nk ; i++ ) {
 		*p++ = rand() ;
 		*p++ = rand() ;
 		*p++ = rand() ;
 	}
-	p = (unsigned long *) keys1;
-	for ( long i = 0 ; i < nk ; i++ ) {
+	p = (uint32_t *) keys1;
+	for ( int32_t i = 0 ; i < nk ; i++ ) {
 		*p++ = rand() ;
 		*p++ = rand() ;
 		*p++ = rand() ;
 	}
-	p = (unsigned long *) keys2;
-	for ( long i = 0 ; i < nk ; i++ ) {
+	p = (uint32_t *) keys2;
+	for ( int32_t i = 0 ; i < nk ; i++ ) {
 		*p++ = rand() ;
 		*p++ = rand() ;
 		*p++ = rand() ;
 	}
-	p = (unsigned long *) keys3;
-	for ( long i = 0 ; i < nk ; i++ ) {
+	p = (uint32_t *) keys3;
+	for ( int32_t i = 0 ; i < nk ; i++ ) {
 		*p++ = rand() ;
 		*p++ = rand() ;
 		*p++ = rand() ;
@@ -116,10 +116,10 @@ main ( int argc , char *argv[] ) {
 				   maxKey );
 	// completed
 	int64_t now = gettimeofdayInMilliseconds();
-	fprintf(stderr,"smt:: %li list NEW MERGE took %llu ms\n",
+	fprintf(stderr,"smt:: %"INT32" list NEW MERGE took %"UINT64" ms\n",
 		numToMerge,now-t);
 	// time per key
-	long size = list.getListSize() / sizeof(key_t);
+	int32_t size = list.getListSize() / sizeof(key_t);
 	double tt = ((double)(now - t))*1000000.0 / ((double)size);
 	fprintf (stderr,"smt:: %f nanoseconds per key\n", tt);
 	// stats
@@ -127,9 +127,9 @@ main ( int argc , char *argv[] ) {
 	double d = (1000.0*(double)(size)) / ((double)(now - t));
 	fprintf (stderr,"smt:: %f cycles per final key\n" ,
 		 400000000.0 / d );
-	fprintf (stderr,"smt:: we can do %li adds per second\n" ,(long)d);
+	fprintf (stderr,"smt:: we can do %"INT32" adds per second\n" ,(int32_t)d);
 	
-	fprintf (stderr,"smt:: final list size = %li\n",list.getListSize());
+	fprintf (stderr,"smt:: final list size = %"INT32"\n",list.getListSize());
 	// now get list from the old merge routine
 	RdbList listOld;
 	listOld.prepareForMerge (lists,numToMerge,numKeysWanted*sizeof(key_t));
@@ -137,7 +137,7 @@ main ( int argc , char *argv[] ) {
 	listOld.merge_r ( lists , numToMerge , true , minKey , maxKey , false ,
 		       numKeysWanted * sizeof(key_t));
 	now = gettimeofdayInMilliseconds();
-	fprintf(stderr,"smt:: %li list OLD MERGE took %llu ms\n",
+	fprintf(stderr,"smt:: %"INT32" list OLD MERGE took %"UINT64" ms\n",
 		numToMerge,now-t);
 	// then compare
 

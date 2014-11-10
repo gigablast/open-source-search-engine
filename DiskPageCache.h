@@ -26,7 +26,7 @@
 // each page in memory has the bytes stored (4 bytes), store offset (4 bytes),
 // prev page char ptr (4 bytes) and next page char ptr (4 bytes) in addition
 // to PAGE_SIZE worth of bytes for holding the data from the disk.
-// the lsat 4 bytes are a long ptr to m_bufOffs[vfd][pageNum] so if page gets
+// the lsat 4 bytes are a int32_t ptr to m_bufOffs[vfd][pageNum] so if page gets
 // kicked out (cuz he's the tail) we can set *ptr to -1.
 #define HEADERSIZE 20
 
@@ -43,7 +43,7 @@
 #include "File.h"
 #define MAX_NUM_VFDS2 MAX_NUM_VFDS
 
-extern void freeAllSharedMem ( long max );
+extern void freeAllSharedMem ( int32_t max );
 
 class DiskPageCache {
 
@@ -57,52 +57,52 @@ class DiskPageCache {
 	// true otherwise
 	bool init ( const char *dbname ,
 		    char rdbId, // use 0 for none
-		    long maxMem ,
-		    long pageSize,
+		    int32_t maxMem ,
+		    int32_t pageSize,
 		    bool useRAMDisk = false,
 		    bool minimizeDiskSeeks = false );
-		//    long maxMem ,
-		//    void (*getPages2)(DiskPageCache*, long, char*, long, 
-		//	    	      int64_t, long*, int64_t*) = NULL,
-		//    void (*addPages2)(DiskPageCache*, long, char*, long,
+		//    int32_t maxMem ,
+		//    void (*getPages2)(DiskPageCache*, int32_t, char*, int32_t, 
+		//	    	      int64_t, int32_t*, int64_t*) = NULL,
+		//    void (*addPages2)(DiskPageCache*, int32_t, char*, int32_t,
 		//	    	      int64_t) = NULL,
-		//    long (*getVfd2)(DiskPageCache*, int64_t) = NULL,
-		//    void (*rmVfd2)(DiskPageCache*, long) = NULL );
+		//    int32_t (*getVfd2)(DiskPageCache*, int64_t) = NULL,
+		//    void (*rmVfd2)(DiskPageCache*, int32_t) = NULL );
 
-	bool initRAMDisk( const char *dbname, long maxMem );
+	bool initRAMDisk( const char *dbname, int32_t maxMem );
 
 	// . grow/shrink m_memOff[] which maps vfd/page to a mem offset
 	// . returns false and sets g_errno on error
 	// . called by DiskPageCache::open()/close() respectively
 	// . maxFileSize is so we can alloc m_memOff[vfd] big enough for all
 	//   pages that are in or will be in the file (if it is being created)
-	long getVfd ( int64_t maxFileSize, bool vfdAllowed );
-	void rmVfd  ( long vfd );
+	int32_t getVfd ( int64_t maxFileSize, bool vfdAllowed );
+	void rmVfd  ( int32_t vfd );
 
 	// . this returns true iff the entire read was copied into
 	//   "buf" from the page cache
 	// . it will move the used pages to the head of the linked list
-	void getPages   ( long       vfd         ,
+	void getPages   ( int32_t       vfd         ,
 			  char     **buf         ,
-			  long       numBytes    ,
+			  int32_t       numBytes    ,
 			  int64_t  offset      ,
-			  long      *newNumBytes ,
+			  int32_t      *newNumBytes ,
 			  int64_t *newOffset   ,
 			  char     **allocBuf    , //we alloc this if buf==NULL
-			  long      *allocSize   , //size of the alloc
-			  long       allocOff    );
+			  int32_t      *allocSize   , //size of the alloc
+			  int32_t       allocOff    );
 
 	// after you read/write from/to disk, copy into the page cache
-	void addPages ( long vfd, char *buf , long numBytes, int64_t offset,
-			long niceness );
+	void addPages ( int32_t vfd, char *buf , int32_t numBytes, int64_t offset,
+			int32_t niceness );
 
 	int64_t getNumHits   () { return m_hits; };
 	int64_t getNumMisses () { return m_misses; };
 	void      resetStats   () { m_hits = 0 ; m_misses = 0; };
 
-	long getMemUsed    () ;
-	long getMemAlloced () { return m_memAlloced; };
-	long getMemMax     () { return m_maxMemOff; };
+	int32_t getMemUsed    () ;
+	int32_t getMemAlloced () { return m_memAlloced; };
+	int32_t getMemMax     () { return m_maxMemOff; };
 
 	// verify each page in cache for this file is what is on disk
 	bool verify ( class BigFile *f );
@@ -112,29 +112,29 @@ class DiskPageCache {
 
 //private:
 
-	void addPage   (long vfd,long pageNum,char *page,long size,long skip);
-	void enhancePage ( long poff,char *page,long size,long skip) ;
-	void promotePage ( long poff , bool isNew ) ;
-	void excisePage  ( long poff ) ;
+	void addPage   (int32_t vfd,int32_t pageNum,char *page,int32_t size,int32_t skip);
+	void enhancePage ( int32_t poff,char *page,int32_t size,int32_t skip) ;
+	void promotePage ( int32_t poff , bool isNew ) ;
+	void excisePage  ( int32_t poff ) ;
 
-	bool growCache ( long mem );
+	bool growCache ( int32_t mem );
 
 	//bool needsMerge();
 
-	void writeToCache ( long bigOff, long smallOff, void *inBuf, 
-			    long size );
-	void readFromCache( void *outBuf, long bigOff, long smallOff,
-			    long size );
+	void writeToCache ( int32_t bigOff, int32_t smallOff, void *inBuf, 
+			    int32_t size );
+	void readFromCache( void *outBuf, int32_t bigOff, int32_t smallOff,
+			    int32_t size );
 
-	char *getMemPtrFromOff ( long off );
+	char *getMemPtrFromOff ( int32_t off );
 
 	// . the pages are here
 	// . there are 1024 page sets
 	// . each page set can have up to 128 megabytes of pages
 	// . much more than that and pthread_create() fails
 	char *m_pageSet     [ MAX_PAGE_SETS ];
-	long  m_pageSetSize [ MAX_PAGE_SETS ];
-	long  m_numPageSets;
+	int32_t  m_pageSetSize [ MAX_PAGE_SETS ];
+	int32_t  m_numPageSets;
 
 	// . next available page offset
 	// . when storing a page we read from disk into a pageSet we first
@@ -146,15 +146,15 @@ class DiskPageCache {
 	// . if m_upperMemOff would breech m_maxMemOff, then we kick out the
 	//   least used page using
 	// . we store a linked list in bytes 4-12 of each page in memory
-	long  m_nextMemOff;  // next available mem offset to hold a page
-	long  m_upperMemOff; // how many bytes are allocated in page sets?
-	long  m_maxMemOff;   // max we can allocate
+	int32_t  m_nextMemOff;  // next available mem offset to hold a page
+	int32_t  m_upperMemOff; // how many bytes are allocated in page sets?
+	int32_t  m_maxMemOff;   // max we can allocate
 
 	// . available offsets of released pages
 	// . offsets are into the page sets, m_pageSet[]
-	long *m_availMemOff;
-	long  m_numAvailMemOffs;
-	long  m_maxAvailMemOffs;
+	int32_t *m_availMemOff;
+	int32_t  m_numAvailMemOffs;
+	int32_t  m_maxAvailMemOffs;
 
 	// . m_memOff[vfd][diskPageNum] --> memOff
 	// . maps a vfd and disk page number to a memory offset
@@ -163,23 +163,23 @@ class DiskPageCache {
 	// . 100,000 pages would be about 800 megabytes
 	// . I am only planning on using this for tfndb and Checksumdb so
 	//   we should be under or around this limit
-	long  *m_memOff [ MAX_NUM_VFDS2 ];
+	int32_t  *m_memOff [ MAX_NUM_VFDS2 ];
 
 	// . how many offsets are in m_memOff?
 	// . we have one offset per page in the file
-	long m_maxPagesInFile [ MAX_NUM_VFDS2 ];
+	int32_t m_maxPagesInFile [ MAX_NUM_VFDS2 ];
 
 	// used for minimize disk seeks
 	bool m_minimizeDiskSeeks;
 	// max number of pages that this file shall have
-	long m_maxPagesPerFile [ MAX_NUM_VFDS2 ];
+	int32_t m_maxPagesPerFile [ MAX_NUM_VFDS2 ];
 	// max number of pages of file currently in the cache
-	long m_numPagesPresentOfFile[ MAX_NUM_VFDS2 ];
+	int32_t m_numPagesPresentOfFile[ MAX_NUM_VFDS2 ];
 	// mem that has not been used
-	long m_memFree;
+	int32_t m_memFree;
 
 	// how much memory is currently allocated?
-	long m_memAlloced;
+	int32_t m_memAlloced;
 
 	// stats (partial hits/misses supported)
 	int64_t m_hits;
@@ -188,18 +188,18 @@ class DiskPageCache {
 	// . linked list boundary info
 	// . linked list is actually stored in bytes 2-8 (next/prev) of pages
 	//   in memory
-	long m_headOff;
-	long m_tailOff;
+	int32_t m_headOff;
+	int32_t m_tailOff;
 
 	// for selecting the next vfd in line and preventing sudden closing
 	// and opening of a vfd, resulting in a thread returning and calling
 	// addPages() for the wrong file!!
-	long m_nexti;
+	int32_t m_nexti;
 
 	bool m_enabled;
 
-	long m_pageSize;
-	long m_maxPageSetSize;
+	int32_t m_pageSize;
+	int32_t m_maxPageSetSize;
 
 	const char *m_dbname;
 	char m_rdbId;
@@ -213,18 +213,18 @@ class DiskPageCache {
 	int m_ramfd;
 
 	int   m_shmids    [ 4096 ];
-	long  m_shmidSize [ 4096 ];
-	long  m_numShmids;
-	long  m_maxAllocSize;
-	long  m_spageSize;
+	int32_t  m_shmidSize [ 4096 ];
+	int32_t  m_numShmids;
+	int32_t  m_maxAllocSize;
+	int32_t  m_spageSize;
 
 	// for overriding the disk page cache with custom functions
 	//bool m_isOverriden;
-	//void (*m_getPages2)(DiskPageCache*, long, char*, long, int64_t, 
-	//		    long*, int64_t*);
-	//void (*m_addPages2)(DiskPageCache*, long, char*, long, int64_t);
-	//long (*m_getVfd2)(DiskPageCache*, int64_t);
-	//void (*m_rmVfd2)(DiskPageCache*, long);
+	//void (*m_getPages2)(DiskPageCache*, int32_t, char*, int32_t, int64_t, 
+	//		    int32_t*, int64_t*);
+	//void (*m_addPages2)(DiskPageCache*, int32_t, char*, int32_t, int64_t);
+	//int32_t (*m_getVfd2)(DiskPageCache*, int64_t);
+	//void (*m_rmVfd2)(DiskPageCache*, int32_t);
 };
 
 #endif

@@ -4,7 +4,7 @@
 #include "Parms.h"
 
 static void gotReplyWrapper3e ( void *state , UdpSlot *slot ) ;
-static void handleRequest3e ( UdpSlot *slot , long netnice ) ;
+static void handleRequest3e ( UdpSlot *slot , int32_t netnice ) ;
 static void trySyncConf ( int fd, void *state );
 
 
@@ -66,8 +66,8 @@ void Msg3e::checkForNewParms ( ) {
 // send the checksum to selected host
 void Msg3e::sendChecksum( Host *h ) {
 	// get our checksum
-	unsigned long cs = g_parms.calcChecksum();
-        unsigned long *request = (unsigned long *)mmalloc( sizeof( cs ),
+	uint32_t cs = g_parms.calcChecksum();
+        uint32_t *request = (uint32_t *)mmalloc( sizeof( cs ),
 							  "req checksum");
 	if ( ! request ) {
 		log("Unable to alloc memory for sync request");
@@ -112,15 +112,15 @@ void Msg3e::gotReply ( ) {
 }
 
 // . handle a request to set parms
-void handleRequest3e ( UdpSlot *slot , long netnice ) {
+void handleRequest3e ( UdpSlot *slot , int32_t netnice ) {
 	// get the request
         char *request     = slot->m_readBuf;
 
-	unsigned long otherChecksum = *(unsigned long *)request; 
-	unsigned long myChecksum  = g_parms.calcChecksum ();
+	uint32_t otherChecksum = *(uint32_t *)request; 
+	uint32_t myChecksum  = g_parms.calcChecksum ();
 
 	char *reply = NULL;
-	long replySize = 0L;
+	int32_t replySize = 0L;
 
 	// check if parms are the same
 	if ( myChecksum != otherChecksum ) { 
@@ -128,7 +128,7 @@ void handleRequest3e ( UdpSlot *slot , long netnice ) {
 		replySize = g_parms.getStoredSize ();
 		reply = (char *)mmalloc( replySize, "parms serialized buf" );
 		if ( ! reply ) {
-			log( LOG_WARN, "Cannot alloc %ld bytes for sync"
+			log( LOG_WARN, "Cannot alloc %"INT32" bytes for sync"
 			               "reply buffer", replySize );
 			return;
 		}

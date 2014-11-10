@@ -22,7 +22,7 @@ int main ( int argc , char *argv[] ) {
 	char *msg;
 	int64_t diff = now - last;
 	if ( last != -1LL && diff >= 2000 ) 
-		fprintf (stderr,"last=%lli now=%lli diff=%lli\n", 
+		fprintf (stderr,"last=%"INT64" now=%"INT64" diff=%"INT64"\n", 
 			 last,now,diff);
 	last = now;
 	sleep(1);

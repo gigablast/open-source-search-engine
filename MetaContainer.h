@@ -18,19 +18,19 @@ public:
 	virtual ~MetaContainer();
 
 	// parse a page into this container
-	virtual void parse     ( char *page, long pageLen );
+	virtual void parse     ( char *page, int32_t pageLen );
 
 	// build the meta html page from this container
-	virtual long buildPage ( char *page );
+	virtual int32_t buildPage ( char *page );
 	virtual void buildPage ( SafeBuf *sb );
 
 	// url
 	char m_url[MAX_URLLEN+1];
-	long m_urlLen;
+	int32_t m_urlLen;
 
 	// base container name
 	char m_baseName[MAX_URLLEN+1];
-	long m_baseNameLen;
+	int32_t m_baseNameLen;
 
 	// ID
 	int64_t m_id;

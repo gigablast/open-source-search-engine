@@ -258,8 +258,8 @@ enum eIANACharset{
 	csReserved = 3000
 };
 
-short get_iana_charset(char *cs, int len); 
-char *get_charset_str(short cs); 
-bool supportedCharset(short cs); 
-void setSupportedCharsets(short *cs, int numCharsets);
+int16_t get_iana_charset(char *cs, int len); 
+char *get_charset_str(int16_t cs); 
+bool supportedCharset(int16_t cs); 
+void setSupportedCharsets(int16_t *cs, int numCharsets);
 #endif

@@ -15,7 +15,7 @@
 #include "Msg5.h"                 // local getList()
 #include "XmlDoc.h"
 
-static void handleRequest0           ( UdpSlot *slot , long niceness ) ;
+static void handleRequest0           ( UdpSlot *slot , int32_t niceness ) ;
 static void gotMulticastReplyWrapper0( void *state , void *state2 ) ;
 static void gotSingleReplyWrapper    ( void *state , UdpSlot *slot ) ;
 static void gotListWrapper           ( void *state, RdbList *list, Msg5 *msg5);
@@ -30,8 +30,8 @@ void Msg0::constructor ( ) {
 	m_msg5  = NULL;
 	m_msg5b = NULL;
 //#ifdef SPLIT_INDEXDB
-	//for ( long i = 0; i < INDEXDB_SPLIT; i++ )
-	//for ( long i = 0; i < MAX_SHARDS; i++ )
+	//for ( int32_t i = 0; i < INDEXDB_SPLIT; i++ )
+	//for ( int32_t i = 0; i < MAX_SHARDS; i++ )
 	//	m_mcast[i].constructor();
 	m_mcast.constructor();
 	m_mcasts      = NULL;
@@ -72,7 +72,7 @@ void Msg0::reset ( ) {
 		mfree(m_mcasts,sizeof(Multicast),"msg0mcast");
 		m_mcasts = NULL;
 	}
-	// no longer do this because we call reset after the msg5 completes
+	// no int32_ter do this because we call reset after the msg5 completes
 	// and it was destroying our handylist... so just call freelist
 	// in the destructor now
 	//m_handyList.freeList();
@@ -93,14 +93,14 @@ bool Msg0::registerHandler ( ) {
 // . otherwise tries to get the list from the network
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-// . NOTE: i was having problems with queries being cached too long, you
+// . NOTE: i was having problems with queries being cached too int32_t, you
 //   see the cache here is a NETWORK cache, so when the machines that owns
 //   the list updates it on disk it can't flush our cache... so use a small
 //   maxCacheAge of like , 30 seconds or so...
 bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
-		     long      ip          , // info on hostId
-		     short     port        ,
-		     long      maxCacheAge , // max cached age in seconds
+		     int32_t      ip          , // info on hostId
+		     int16_t     port        ,
+		     int32_t      maxCacheAge , // max cached age in seconds
 		     bool      addToCache  , // add net recv'd list to cache?
 		     char      rdbId       , // specifies the rdb
 		     //char     *coll        ,
@@ -110,19 +110,19 @@ bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
 		     //key_t     endKey      , 
 		     char     *startKey    ,
 		     char     *endKey      ,
-		     long      minRecSizes ,  // use -1 for no max
+		     int32_t      minRecSizes ,  // use -1 for no max
 		     void     *state       ,
 		     void    (* callback)(void *state ),//, RdbList *list ) ,
-		     long      niceness    ,
+		     int32_t      niceness    ,
 		     bool      doErrorCorrection ,
 		     bool      includeTree ,
 		     bool      doMerge     ,
-		     long      firstHostId   ,
-		     long      startFileNum  ,
-		     long      numFiles      ,
-		     long      timeout       ,
+		     int32_t      firstHostId   ,
+		     int32_t      startFileNum  ,
+		     int32_t      numFiles      ,
+		     int32_t      timeout       ,
 		     int64_t syncPoint     ,
-		     long      preferLocalReads ,
+		     int32_t      preferLocalReads ,
 		     Msg5     *msg5             ,
 		     Msg5     *msg5b            ,
 		     bool      isRealMerge      ,
@@ -130,7 +130,7 @@ bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
 		     bool      allowPageCache    ,
 		     bool      forceLocalIndexdb ,
 		     bool      noSplit , // doIndexdbSplit    ,
-		     long      forceParitySplit  ) {
+		     int32_t      forceParitySplit  ) {
 //#else
 //		     bool      allowPageCache ) {
 //#endif
@@ -158,11 +158,11 @@ bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
 	// . reset hostid if it is dead
 	// . this is causing UOR queries to take forever when we have a dead
 	if ( hostId >= 0 && g_hostdb.isDead ( hostId ) ) hostId = -1;
-	// no longer accept negative minrecsize
+	// no int32_ter accept negative minrecsize
 	if ( minRecSizes < 0 ) {
 		g_errno = EBADENGINEER;
 		log(LOG_LOGIC,
-		    "net: msg0: Negative minRecSizes no longer supported.");
+		    "net: msg0: Negative minRecSizes no int32_ter supported.");
 		char *xx=NULL;*xx=0;
 		return true;
 	}
@@ -238,7 +238,7 @@ bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
 	//   UOR'd lists.
 	if ( maxCacheAge != 0 && ! addToCache && (numFiles > 0 || includeTree))
 		log(LOG_LOGIC,"net: msg0: "
-		    "Weird. check but don't add... rdbid=%li.",(long)m_rdbId);
+		    "Weird. check but don't add... rdbid=%"INT32".",(int32_t)m_rdbId);
 	// set this here since we may not call msg5 if list not local
 	//m_list->setFixedDataSize ( m_fixedDataSize );
 
@@ -380,19 +380,19 @@ skip:
 	// debug msg
 	if ( g_conf.m_logDebugQuery )
 		log(LOG_DEBUG,"net: msg0: Sending request for data to "
-		    "shard=%lu listPtr=%li minRecSizes=%li termId=%llu "
-		    //"startKey.n1=%lx,n0=%llx (niceness=%li)",
-		    "startKey.n1=%llx,n0=%llx (niceness=%li)",
+		    "shard=%"UINT32" listPtr=%"INT32" minRecSizes=%"INT32" termId=%"UINT64" "
+		    //"startKey.n1=%"XINT32",n0=%"XINT64" (niceness=%"INT32")",
+		    "startKey.n1=%"XINT64",n0=%"XINT64" (niceness=%"INT32")",
 		    //g_hostdb.makeHostId ( m_groupId ) ,
 		    m_shardNum,
-		    (long)m_list,
+		    (int32_t)m_list,
 		    m_minRecSizes, g_posdb.getTermId(m_startKey) , 
-		    //m_startKey.n1,m_startKey.n0 , (long)m_niceness);
+		    //m_startKey.n1,m_startKey.n0 , (int32_t)m_niceness);
 		    KEY1(m_startKey,m_ks),KEY0(m_startKey),
-		    (long)m_niceness);
+		    (int32_t)m_niceness);
 
 	char *replyBuf = NULL;
-	long  replyBufMaxSize = 0;
+	int32_t  replyBufMaxSize = 0;
 	bool  freeReply = true;
 
 	// adjust niceness for net transmission
@@ -414,7 +414,7 @@ skip:
 		//   but get 72
 		// . where is that coming from?
 		// . when getting titleRecs we often exceed the minRecSizes 
-		// . ?Msg8? was having trouble. was short 32 bytes sometimes.
+		// . ?Msg8? was having trouble. was int16_t 32 bytes sometimes.
 		replyBufMaxSize += 36;
 		// why add ten percent?
 		//replyBufMaxSize *= 110 ;
@@ -434,7 +434,7 @@ skip:
 			replyBuf = (char *) mmalloc(replyBufMaxSize , "Msg0");
 		// g_errno is set and we return true if it failed
 		if ( ! replyBuf ) {
-			log("net: Failed to pre-allocate %li bytes to hold "
+			log("net: Failed to pre-allocate %"INT32" bytes to hold "
 			    "data read remotely from %s: %s.",
 			    replyBufMaxSize,getDbnameFromId(m_rdbId),
 			    mstrerror(g_errno));
@@ -450,10 +450,10 @@ skip:
 	*(int64_t *) p = syncPoint        ; p += 8;
 	//*(key_t     *) p = m_startKey       ; p += sizeof(key_t);
 	//*(key_t     *) p = m_endKey         ; p += sizeof(key_t);
-	*(long      *) p = m_minRecSizes    ; p += 4;
-	*(long      *) p = startFileNum     ; p += 4;
-	*(long      *) p = numFiles         ; p += 4;
-	*(long      *) p = maxCacheAge      ; p += 4;
+	*(int32_t      *) p = m_minRecSizes    ; p += 4;
+	*(int32_t      *) p = startFileNum     ; p += 4;
+	*(int32_t      *) p = numFiles         ; p += 4;
+	*(int32_t      *) p = maxCacheAge      ; p += 4;
 	*p               = m_rdbId          ; p++;
 	*p               = addToCache       ; p++;
 	*p               = doErrorCorrection; p++;
@@ -472,13 +472,13 @@ skip:
 		Host *h = g_hostdb.getHost ( m_hostId );
 		if ( ! h ) { 
 			g_errno = EBADHOSTID; 
-			log(LOG_LOGIC,"net: msg0: Bad hostId of %lli.",
+			log(LOG_LOGIC,"net: msg0: Bad hostId of %"INT64".",
 			    m_hostId);
 			return true;
 		}
 		// if niceness is 0, use the higher priority udpServer
 		UdpServer *us ;
-		unsigned short port;
+		uint16_t port;
 		QUICKPOLL(m_niceness);
 		//if ( niceness <= 0 || netnice == 0 ) { 
 		//if ( realtime ) {
@@ -513,8 +513,8 @@ skip:
 	else
 		m_startTime = 0;
 	//if ( m_rdbId == RDB_INDEXDB ) log("Msg0:: getting remote indexlist. "
-	//			"termId=%llu, "
-	//			"groupNum=%lu",
+	//			"termId=%"UINT64", "
+	//			"groupNum=%"UINT32"",
 	//			g_indexdb.getTermId(m_startKey) ,
 	//			g_hostdb.makeHostId ( m_groupId ) );
 
@@ -532,18 +532,18 @@ skip:
 		       m_ks         );
 	*/
 
-	// . get the top long of the key
+	// . get the top int32_t of the key
 	// . i guess this will work for 128 bit keys... hmmmmm
-	long keyTop = hash32 ( (char *)startKey , m_ks );
+	int32_t keyTop = hash32 ( (char *)startKey , m_ks );
 
 	/*
 	// allocate space
 	if ( m_numSplit > 1 ) {
-		long  need = m_numSplit * sizeof(Multicast) ;
+		int32_t  need = m_numSplit * sizeof(Multicast) ;
 		char *buf  = (char *)mmalloc ( need,"msg0mcast" );
 		if ( ! buf ) return true;
 		m_mcasts = (Multicast *)buf;
-		for ( long i = 0; i < m_numSplit ; i++ )
+		for ( int32_t i = 0; i < m_numSplit ; i++ )
 			m_mcasts[i].constructor();
 	}
 	*/
@@ -557,10 +557,10 @@ skip:
 	// . need to send out to all the indexdb split hosts
 	m_numRequests = 0;
 	m_numReplies  = 0;
-	//for ( long i = 0; i < m_numSplit; i++ ) {
+	//for ( int32_t i = 0; i < m_numSplit; i++ ) {
 
 	QUICKPOLL(m_niceness);
-	//long gr;
+	//int32_t gr;
 	char *buf;
 	/*
 	if ( m_numSplit > 1 ) {
@@ -621,7 +621,7 @@ skip:
 			      rdbId           ,
 			      minRecSizes     ) ) {
 		log("net: Failed to send request for data from %s in shard "
-		    "#%lu over network: %s.",
+		    "#%"UINT32" over network: %s.",
 		    getDbnameFromId(m_rdbId),m_shardNum, mstrerror(g_errno));
 		// no, multicast will free this when it is destroyed
 		//if (replyBuf) mfree ( replyBuf , replyBufMaxSize , "Msg22" );
@@ -656,8 +656,8 @@ void gotListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
 void gotSingleReplyWrapper ( void *state , UdpSlot *slot ) {
 	Msg0 *THIS = (Msg0 *)state;
 	if ( ! g_errno ) { 
-		long  replySize    = slot->m_readBufSize;
-		long  replyMaxSize = slot->m_readBufMaxSize;
+		int32_t  replySize    = slot->m_readBufSize;
+		int32_t  replyMaxSize = slot->m_readBufMaxSize;
 		char *reply        = slot->m_readBuf;
 		THIS->gotReply( reply , replySize , replyMaxSize );
 		// don't let UdpServer free this since we own it now
@@ -703,8 +703,8 @@ void gotMulticastReplyWrapper0 ( void *state , void *state2 ) {
 	else {
 	*/
 	if ( ! g_errno ) {
-		long  replySize;
-		long  replyMaxSize;
+		int32_t  replySize;
+		int32_t  replyMaxSize;
 		bool  freeit;
 		char *reply = THIS->m_mcast.getBestReply (&replySize,
 							  &replyMaxSize,
@@ -725,13 +725,13 @@ void Msg0::gotSplitReply ( ) {
 	// i don't think we use this, otherwise need to update for posdb
 	char *xx=NULL;*xx=0;
 	// get all the split lists
-	long totalSize = 0;
+	int32_t totalSize = 0;
 	RdbList lists[MAX_SHARDS];
 	RdbList *listPtrs[MAX_SHARDS];
-	for ( long i = 0; i < m_numSplit; i++ ) {
+	for ( int32_t i = 0; i < m_numSplit; i++ ) {
 		listPtrs[i] = &lists[i];
-		long replySize;
-		long replyMaxSize;
+		int32_t replySize;
+		int32_t replyMaxSize;
 		bool freeit;
 		char *reply = m_mcasts[i].getBestReply ( &replySize,
 							&replyMaxSize,
@@ -749,9 +749,9 @@ void Msg0::gotSplitReply ( ) {
 		totalSize += lists[i].m_listSize;
 
 		QUICKPOLL(m_niceness);
-		//log(LOG_INFO, "Msg0: ls=%li rs=%li rms=%li fi=%li r=%lx",
+		//log(LOG_INFO, "Msg0: ls=%"INT32" rs=%"INT32" rms=%"INT32" fi=%"INT32" r=%"XINT32"",
 		//	      lists[i].m_listSize, replySize,
-		//	      replyMaxSize, (long)freeit, reply);
+		//	      replyMaxSize, (int32_t)freeit, reply);
 		//log(LOG_INFO, "Msg0: ------------------------------------");
 		//lists[i].printList();
 	}
@@ -771,7 +771,7 @@ void Msg0::gotSplitReply ( ) {
 	char *alloc = (char*)mmalloc(totalSize, "Msg0");
 	if ( !alloc ) {
 		g_errno = ENOMEM;
-		log ( "Msg0: Could not allocate %li bytes for split merge",
+		log ( "Msg0: Could not allocate %"INT32" bytes for split merge",
 		      totalSize );
 		return;
 	}
@@ -789,9 +789,9 @@ void Msg0::gotSplitReply ( ) {
 	// NOTE: This should only be happening for index lists
 	char prevKey[MAX_KEY_BYTES];
 	memset(prevKey, 0, MAX_KEY_BYTES);
-	long prevCount = 0;
-	long dupsRemoved = 0;
-	long filtered    = 0;
+	int32_t prevCount = 0;
+	int32_t dupsRemoved = 0;
+	int32_t filtered    = 0;
 	m_list->indexMerge_r ( (RdbList**)listPtrs,
 			       m_numSplit,
 			       m_startKey,
@@ -809,7 +809,7 @@ void Msg0::gotSplitReply ( ) {
 			       false         , // fast merge?
 			       m_niceness    );
 	//log(LOG_INFO, "Msg0: ------------------------------------");
-	//log(LOG_INFO, "Msg0: ls=%li",
+	//log(LOG_INFO, "Msg0: ls=%"INT32"",
 	//	      m_list->m_listSize);
 	//m_list->printList();
 	// cache?
@@ -821,11 +821,11 @@ void Msg0::gotSplitReply ( ) {
 
 // . returns false and sets g_errno on error
 // . we are responsible for freeing reply/replySize
-void Msg0::gotReply ( char *reply , long replySize , long replyMaxSize ) {
+void Msg0::gotReply ( char *reply , int32_t replySize , int32_t replyMaxSize ) {
 	// timing debug
 	if ( g_conf.m_logTimingNet && m_rdbId==RDB_POSDB && m_startTime > 0 )
-		log(LOG_TIMING,"net: msg0: Got termlist, termId=%llu. "
-		    "Took %lli ms, replySize=%li (niceness=%li).",
+		log(LOG_TIMING,"net: msg0: Got termlist, termId=%"UINT64". "
+		    "Took %"INT64" ms, replySize=%"INT32" (niceness=%"INT32").",
 		    g_posdb.getTermId ( m_startKey ) ,
 		    gettimeofdayInMilliseconds()-m_startTime,
 		    replySize,m_niceness);
@@ -881,7 +881,7 @@ public:
 	RdbList    m_list;
 	UdpSlot   *m_slot;
 	int64_t  m_startTime;
-	long       m_niceness;
+	int32_t       m_niceness;
 	UdpServer *m_us;
 	char       m_rdbId;
 };
@@ -892,18 +892,18 @@ public:
 HashTableX g_waitingTable;
 
 void callWaitingHandlers ( void *state ) {
-	long saved = g_errno;
+	int32_t saved = g_errno;
 	XmlDoc *xd = (XmlDoc *)state;
 	//slot = xd->m_hackSlot;
-	//long netnice = 1;
+	//int32_t netnice = 1;
 	//xd->m_hackSlot = NULL;
-	long niceness = xd->m_niceness;
+	int32_t niceness = xd->m_niceness;
 	int64_t docId = xd->m_docId;
 	delete ( xd );
 
 	// call everyone in wait queue's handler0 now
  slotLoop:
-	long tableSlot = g_waitingTable.getSlot ( &docId );
+	int32_t tableSlot = g_waitingTable.getSlot ( &docId );
 	if ( tableSlot < 0 ) return;
 	// get the udp socket that was waiting for the termlists to be cached
 	UdpSlot *x = *(UdpSlot **)g_waitingTable.getValueFromSlot(tableSlot);
@@ -923,17 +923,17 @@ void callWaitingHandlers ( void *state ) {
 // . reply to a request for an RdbList
 // . MUST call g_udpServer::sendReply or sendErrorReply() so slot can
 //   be destroyed
-void handleRequest0 ( UdpSlot *slot , long netnice ) {
+void handleRequest0 ( UdpSlot *slot , int32_t netnice ) {
 	// if niceness is 0, use the higher priority udpServer
 	UdpServer *us = &g_udpServer;
 	//if ( netnice == 0 ) us = &g_udpServer2;
 	// get the request
 	char *request     = slot->m_readBuf;
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 	// collection is now stored in the request, so i commented this out
 	//if ( requestSize != MSG0_REQ_SIZE ) {
-	//	log("net: Received bad data request size of %li bytes. "
-	//	    "Should be %li.", requestSize ,(long)MSG0_REQ_SIZE);
+	//	log("net: Received bad data request size of %"INT32" bytes. "
+	//	    "Should be %"INT32".", requestSize ,(int32_t)MSG0_REQ_SIZE);
 	//	us->sendErrorReply ( slot , EBADREQUESTSIZE );
 	//	return;
 	//}
@@ -942,16 +942,16 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 	int64_t syncPoint          = *(int64_t *)p ; p += 8;
 	//key_t     startKey           = *(key_t     *)p ; p += sizeof(key_t);
 	//key_t     endKey             = *(key_t     *)p ; p += sizeof(key_t);
-	long      minRecSizes        = *(long      *)p ; p += 4;
-	long      startFileNum       = *(long      *)p ; p += 4;
-	long      numFiles           = *(long      *)p ; p += 4;
-	long      maxCacheAge        = *(long      *)p ; p += 4;
+	int32_t      minRecSizes        = *(int32_t      *)p ; p += 4;
+	int32_t      startFileNum       = *(int32_t      *)p ; p += 4;
+	int32_t      numFiles           = *(int32_t      *)p ; p += 4;
+	int32_t      maxCacheAge        = *(int32_t      *)p ; p += 4;
 	char      rdbId              = *p++;
 	char      addToCache         = *p++;
 	char      doErrorCorrection  = *p++;
 	char      includeTree        = *p++;
 	// this was messing up our niceness conversion logic
-	long      niceness           = slot->m_niceness;//(long)(*p++);
+	int32_t      niceness           = slot->m_niceness;//(int32_t)(*p++);
 	// still need to skip it though!
 	p++;
 	bool      allowPageCache     = (bool)(*p++);
@@ -1000,7 +1000,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 
 	// if in the termlist cache, send it back right away
 	char *trec;
-	long trecSize;
+	int32_t trecSize;
 	if ( singleDocId2 &&
 	     getRecFromTermListCache(coll,
 				     startKey,
@@ -1114,7 +1114,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 		//int64_t sh48 = g_datedb.getTermId((key128_t *)startKey);
 		// use the start key now!!!
 		char *data;
-		long  dataSize;
+		int32_t  dataSize;
 		if (s_sectiondbCache.getRecord ( coll,
 						 startKey,//&sh48,
 						 &data,
@@ -1126,7 +1126,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 						 true // promoteRec?
 						 )){
 			// debug
-			//log("msg0: got sectiondblist in cache datasize=%li",
+			//log("msg0: got sectiondblist in cache datasize=%"INT32"",
 			//    dataSize);
 			// send that back
 			g_udpServer.sendReply_ass ( data            ,
@@ -1171,10 +1171,10 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 
 	// debug msg
 	if ( maxCacheAge != 0 && ! addToCache )
-		log(LOG_LOGIC,"net: msg0: check but don't add... rdbid=%li.",
-		    (long)rdbId);
+		log(LOG_LOGIC,"net: msg0: check but don't add... rdbid=%"INT32".",
+		    (int32_t)rdbId);
 	// . if this request came over on the high priority udp server
-	//   make sure the priority gets passed along
+	//   make sure the priority gets passed aint32_t
 	// . return if this blocks
 	// . we'll call sendReply later
 	if ( ! st0->m_msg5.getList ( rdbId             ,
@@ -1225,14 +1225,14 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 	//	log("HEY! niceness is not 0");
 	// timing debug
 	if ( g_conf.m_logTimingNet || g_conf.m_logDebugNet ) {
-		//log("Msg0:hndled request %llu",gettimeofdayInMilliseconds());
-		long size = -1;
+		//log("Msg0:hndled request %"UINT64"",gettimeofdayInMilliseconds());
+		int32_t size = -1;
 		if ( list ) size     = list->getListSize();
 		log(LOG_TIMING|LOG_DEBUG,
 		    "net: msg0: Handled request for data. "
-		    "Now sending data termId=%llu size=%li"
-		    " transId=%li ip=%s port=%i took=%lli "
-		    "(niceness=%li).",
+		    "Now sending data termId=%"UINT64" size=%"INT32""
+		    " transId=%"INT32" ip=%s port=%i took=%"INT64" "
+		    "(niceness=%"INT32").",
 		    g_posdb.getTermId(msg5->m_startKey),
 		    size,slot->m_transId,
 		    iptoa(slot->m_ip),slot->m_port,
@@ -1254,9 +1254,9 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 	QUICKPOLL(st0->m_niceness);
 	// point to the serialized list in "list"
 	char *data      = list->getList();
-	long  dataSize  = list->getListSize();
+	int32_t  dataSize  = list->getListSize();
 	char *alloc     = list->getAlloc();
-	long  allocSize = list->getAllocSize();
+	int32_t  allocSize = list->getAllocSize();
 	// tell list not to free the data since it is a reply so UdpServer
 	// will free it when it destroys the slot
 	list->setOwnData ( false );
@@ -1265,19 +1265,19 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 	if ( rdb ) rdb->sentReplyGet ( dataSize );
 	// TODO: can we free any memory here???
 
-	// keep track of how long it takes to complete the send
+	// keep track of how int32_t it takes to complete the send
 	st0->m_startTime = gettimeofdayInMilliseconds();
 	// debug point
-	long oldSize = msg5->m_minRecSizes;
-	long newSize = msg5->m_minRecSizes + 20;
+	int32_t oldSize = msg5->m_minRecSizes;
+	int32_t newSize = msg5->m_minRecSizes + 20;
 	// watch for wrap around
 	if ( newSize < oldSize ) newSize = 0x7fffffff;
 	if ( dataSize > newSize && list->getFixedDataSize() == 0 &&
 	     // do not annoy me with these linkdb msgs
 	     dataSize > newSize+100 ) 
 		log(LOG_LOGIC,"net: msg0: Sending more data than what was "
-		    "requested. Ineffcient. Bad engineer. dataSize=%li "
-		    "minRecSizes=%li.",dataSize,oldSize);
+		    "requested. Ineffcient. Bad engineer. dataSize=%"INT32" "
+		    "minRecSizes=%"INT32".",dataSize,oldSize);
 	/*
 	// always compress these lists
 	if ( st0->m_rdbId == RDB_SECTIONDB ) { // && 1 == 3) {
@@ -1287,18 +1287,18 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 		int64_t sh48 = g_datedb.getTermId(startKey);
 
 		// debug
-		//log("msg0: got sectiondblist from disk listsize=%li",
+		//log("msg0: got sectiondblist from disk listsize=%"INT32"",
 		//    list->getListSize());
 
 		if ( dataSize > 50000 )
-			log("msg0: sending back list rdb=%li "
-			    "listsize=%li sh48=0x%llx",
-			    (long)st0->m_rdbId,
+			log("msg0: sending back list rdb=%"INT32" "
+			    "listsize=%"INT32" sh48=0x%"XINT64"",
+			    (int32_t)st0->m_rdbId,
 			    dataSize,
 			    sh48);
 
 		// save it
-		long origDataSize = dataSize;
+		int32_t origDataSize = dataSize;
 		// store compressed list on itself
 		char *dst = list->m_list;
 		// warn if niceness is 0!
@@ -1316,7 +1316,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 			key128_t *key = (key128_t *)rec;
 			// the score is the bit which is was set in 
 			// Section::m_flags for that docid
-			long secType = g_indexdb.getScore ( (char *)key );
+			int32_t secType = g_indexdb.getScore ( (char *)key );
 			// 0 means it probably used to count # of voters
 			// from this site, so i don't think xmldoc uses
 			// that any more
@@ -1363,10 +1363,10 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 
 		// debug
 		//log("msg0: compressed sectiondblist from disk "
-		//    "newlistsize=%li", dataSize);
+		//    "newlistsize=%"INT32"", dataSize);
 		
 		// use this timestamp
-		long now = getTimeLocal();//Global();
+		int32_t now = getTimeLocal();//Global();
 		// finally, cache this sucker
 		s_sectiondbCache.addRecord ( msg5->m_coll,
 					     (char *)startKey,//(char *)&sh48
@@ -1386,9 +1386,9 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 		// store compressed list on itself
 		char *dst = list->m_list;
 		// keep stats
-		long totalOrigLinks = 0;
-		long ipDups = 0;
-		long lastIp32 = 0;
+		int32_t totalOrigLinks = 0;
+		int32_t ipDups = 0;
+		int32_t lastIp32 = 0;
 		char *listEnd = list->getListEnd();
 		// compress the list
 		for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
@@ -1398,7 +1398,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 			totalOrigLinks++;
 			// get rec
 			char *rec = list->getCurrentRec();
-			long ip32 = g_linkdb.getLinkerIp_uk((key224_t *)rec );
+			int32_t ip32 = g_linkdb.getLinkerIp_uk((key224_t *)rec );
 			// same as one before?
 			if ( ip32 == lastIp32 && 
 			     // are we the last rec? include that for
@@ -1418,9 +1418,9 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 		// . caller should recognize reply is not a multiple of
 		//   the linkdb key size LDBKS and no its there!
 		if ( ipDups ) {
-			//*(long *)dst = totalOrigLinks;
+			//*(int32_t *)dst = totalOrigLinks;
 			//dst += 4;
-			//*(long *)dst = ipDups;
+			//*(int32_t *)dst = ipDups;
 			//dst += 4;
 		}
 		// update list parms
@@ -1431,7 +1431,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 	}
 
 
-	//log("sending replySize=%li min=%li",dataSize,msg5->m_minRecSizes);
+	//log("sending replySize=%"INT32" min=%"INT32"",dataSize,msg5->m_minRecSizes);
 	// . TODO: dataSize may not equal list->getListMaxSize() so
 	//         Mem class may show an imblanace
 	// . now g_udpServer is responsible for freeing data/dataSize
@@ -1466,8 +1466,8 @@ void doneSending_ass ( void *state , UdpSlot *slot ) {
 		double mbps ;
 		mbps = (((double)slot->m_sendBufSize) * 8.0 / (1024.0*1024.0))/
 			(((double)slot->m_startTime)/1000.0);
-		log("net: msg0: Sent %li bytes of data in %lli ms (%3.1fMbps) "
-		      "(niceness=%li).",
+		log("net: msg0: Sent %"INT32" bytes of data in %"INT64" ms (%3.1fMbps) "
+		      "(niceness=%"INT32").",
 		      slot->m_sendBufSize , now - slot->m_startTime , mbps ,
 		      st0->m_niceness );
 	}
@@ -1508,8 +1508,8 @@ RdbCache *getTermListCache ( ) {
 	static bool s_init = false;
 	if ( s_init ) return c;
 	// 100MB!
-	long maxMem = 100000000;
-	long maxNodes = maxMem / 25;
+	int32_t maxMem = 100000000;
+	int32_t maxNodes = maxMem / 25;
 	if ( ! c->init( maxMem ,
 			-1 , // fixed data size
 			false, // support lists?
@@ -1531,8 +1531,8 @@ RdbCache *getTermListCache ( ) {
 // for posdb only!
 int64_t getTermListCacheKey ( char *startKey , char *endKey ) {
 	// make the cache key by hashing the startkey + endkey together
-	long ks = sizeof(POSDBKEY);
-	long conti = 0;
+	int32_t ks = sizeof(POSDBKEY);
+	int32_t conti = 0;
 	int64_t ck64;
 	ck64 = hash64_cont ( startKey , ks, 0LL, &conti );
 	ck64 = hash64_cont ( endKey , ks , ck64, &conti );
@@ -1543,11 +1543,11 @@ bool addRecToTermListCache ( char *coll,
 			     char *startKey , 
 			     char *endKey , 
 			     char *list ,
-			     long  listSize ) {
+			     int32_t  listSize ) {
 	RdbCache *c = getTermListCache();
 	if ( ! c ) return false;
 	int64_t ck64 = getTermListCacheKey ( startKey , endKey );
-	//long recSize = list->getListSize();
+	//int32_t recSize = list->getListSize();
 	//char *rec = list->getList();
 	return c->addRecord ( coll ,
 			      (char *)&ck64 , 
@@ -1559,13 +1559,13 @@ bool addRecToTermListCache ( char *coll,
 bool getListFromTermListCache ( char *coll,
 				char *startKey,
 				char *endKey,
-				long  maxCacheAge,
+				int32_t  maxCacheAge,
 				RdbList *list ) {
 
 	RdbCache *c = getTermListCache();
 	if ( ! c ) return false;
 	int64_t ck64 = getTermListCacheKey(startKey,endKey);
-	long recSize;
+	int32_t recSize;
 	char *rec;
 
 	// return false if not found
@@ -1598,9 +1598,9 @@ bool getListFromTermListCache ( char *coll,
 bool getRecFromTermListCache ( char *coll,
 			       char *startKey,
 			       char *endKey,
-			       long  maxCacheAge,
+			       int32_t  maxCacheAge,
 			       char **rec ,
-			       long *recSize ) {
+			       int32_t *recSize ) {
 
 	RdbCache *c = getTermListCache();
 	if ( ! c ) return false;
@@ -1622,7 +1622,7 @@ bool getRecFromTermListCache ( char *coll,
 bool isDocIdInTermListCache ( int64_t docId , char *coll ) {
 	RdbCache *c = getTermListCache();
 	char *rec;
-	long  recSize;
+	int32_t  recSize;
 	// return false if not found
 	if ( ! c->getRecord ( coll ,
 			      (char *)&docId, // docid is the key!

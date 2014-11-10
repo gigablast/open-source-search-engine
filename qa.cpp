@@ -5,9 +5,9 @@
 TcpSocket *g_qaSock = NULL;
 SafeBuf g_qaOutput;
 bool g_qaInProgress = false;
-long g_numErrors;
+int32_t g_numErrors;
 
-static long s_checkCRC = 0;
+static int32_t s_checkCRC = 0;
 
 static bool s_registered = false;
 
@@ -20,7 +20,7 @@ void qatestWrapper ( int fd , void *state ) {
 // wait X seconds, call sleep timer... then call qatest()
 void wait( float seconds ) {
 	// put into milliseconds
-	long delay = (long)(seconds * 1000.0);
+	int32_t delay = (int32_t)(seconds * 1000.0);
 
 	if ( g_loop.registerSleepCallback ( delay         ,
 					    NULL , // state
@@ -74,10 +74,10 @@ void markOut ( char *content , char *needle ) {
 }
 
 // do not hash 
-long qa_hash32 ( char *s ) {
-	unsigned long h = 0;
-	long k = 0;
-	for ( long i = 0 ; s[i] ; i++ ) {
+int32_t qa_hash32 ( char *s ) {
+	uint32_t h = 0;
+	int32_t k = 0;
+	for ( int32_t i = 0 ; s[i] ; i++ ) {
 		// skip if not first space and back to back spaces
 		if ( s[i] == ' ' &&i>0 && s[i-1]==' ') continue;
 		h ^= g_hashtab [(unsigned char)k] [(unsigned char)s[i]];
@@ -95,7 +95,7 @@ public:
 	char *m_testDesc;
 	char  m_doTest;
 	// we set s_flags to this
-	long  m_flags[MAXFLAGS];
+	int32_t  m_flags[MAXFLAGS];
 };
 
 static char *s_content = NULL;
@@ -123,7 +123,7 @@ void makeQADir ( ) {
 	char dir[1024];
 	snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
 	log("mkdir mkdir %s",dir);
-	long status = ::mkdir ( dir ,
+	int32_t status = ::mkdir ( dir ,
 				S_IRUSR | S_IWUSR | S_IXUSR | 
 				S_IRGRP | S_IWGRP | S_IXGRP | 
 				S_IROTH | S_IXOTH );
@@ -137,7 +137,7 @@ void makeQADir ( ) {
 	s_ht.load ( fn.getBufStart() , "crctable.dat" );
 }
 
-void processReply ( char *reply , long replyLen ) {
+void processReply ( char *reply , int32_t replyLen ) {
 
 	// store our current reply
 	SafeBuf fb2;
@@ -145,11 +145,11 @@ void processReply ( char *reply , long replyLen ) {
 	fb2.nullTerm();
 
 	// log that we got the reply
-	log("qa: got reply(len=%li)(errno=%s)=%s",
+	log("qa: got reply(len=%"INT32")(errno=%s)=%s",
 	    replyLen,mstrerror(g_errno),reply);
 
 	char *content = NULL;
-	long  contentLen = 0;
+	int32_t  contentLen = 0;
 
 	// get mime
 	if ( reply ) {
@@ -218,11 +218,11 @@ void processReply ( char *reply , long replyLen ) {
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
-	long contentCRC = 0; 
+	int32_t contentCRC = 0; 
 	if ( content ) contentCRC = qa_hash32 ( content );
 
 	// note it
-	log("qa: got contentCRC of %lu",contentCRC);
+	log("qa: got contentCRC of %"UINT32"",contentCRC);
 
 
 	// if what we expected, save to disk if not there yet, then
@@ -231,7 +231,7 @@ void processReply ( char *reply , long replyLen ) {
 	if ( contentCRC == s_expectedCRC ) {
 		// save content if good
 		char fn3[1024];
-		sprintf(fn3,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
+		sprintf(fn3,"%sqa/content.%"UINT32"",g_hostdb.m_dir,contentCRC);
 		File ff; ff.set ( fn3 );
 		if ( ! ff.doesExist() ) {
 			// if not there yet then save it
@@ -255,15 +255,15 @@ void processReply ( char *reply , long replyLen ) {
 		return;
 	}
 
-	//const char *emsg = "qa: bad contentCRC of %li should be %li "
-	//	"\n";//"phase=%li\n";
+	//const char *emsg = "qa: bad contentCRC of %"INT32" should be %"INT32" "
+	//	"\n";//"phase=%"INT32"\n";
 	//fprintf(stderr,emsg,contentCRC,s_expectedCRC);//,s_phase-1);
 
 	// hash url
-	long urlHash32 = hash32n ( s_url.getUrl() );
+	int32_t urlHash32 = hash32n ( s_url.getUrl() );
 
 	// combine test function too since two tests may use the same url
-	long nameHash = hash32n ( s_qt->m_testName );
+	int32_t nameHash = hash32n ( s_qt->m_testName );
 
 	// combine together
 	urlHash32 = hash32h ( nameHash , urlHash32 );
@@ -272,19 +272,19 @@ void processReply ( char *reply , long replyLen ) {
 
 	// break up into lines
 	char fn2[1024];
-	sprintf(fn2,"%sqa/content.%lu",g_hostdb.m_dir,contentCRC);
+	sprintf(fn2,"%sqa/content.%"UINT32"",g_hostdb.m_dir,contentCRC);
 	fb2.save ( fn2 );
 
 	// look up in hashtable to see what reply crc should be
-	long *val = (long *)s_ht.getValue ( &urlHash32 );
+	int32_t *val = (int32_t *)s_ht.getValue ( &urlHash32 );
 
 	// just return if the same
 	if ( val && contentCRC == *val ) {
 		g_qaOutput.safePrintf("<b style=color:green;>"
 				      "passed test</b><br>%s : "
-				      "<a href=%s>%s</a> (urlhash=%lu "
-				      "crc=<a href=/qa/content.%lu>"
-				      "%lu</a>)<br>"
+				      "<a href=%s>%s</a> (urlhash=%"UINT32" "
+				      "crc=<a href=/qa/content.%"UINT32">"
+				      "%"UINT32"</a>)<br>"
 				      "<hr>",
 				      s_qt->m_testName,
 				      s_url.getUrl(),
@@ -303,8 +303,8 @@ void processReply ( char *reply , long replyLen ) {
 		g_qaOutput.safePrintf("<b style=color:blue;>"
 				      "first time testing</b><br>%s : "
 				      "<a href=%s>%s</a> "
-				      "(urlhash=%lu "
-				      "crc=<a href=/qa/content.%lu>%lu"
+				      "(urlhash=%"UINT32" "
+				      "crc=<a href=/qa/content.%"UINT32">%"UINT32""
 				      "</a>)<br>"
 				      "<hr>",
 				      s_qt->m_testName,
@@ -317,13 +317,13 @@ void processReply ( char *reply , long replyLen ) {
 	}
 
 
-	log("qa: crc changed for url %s from %li to %li",
+	log("qa: crc changed for url %s from %"INT32" to %"INT32"",
 	    s_url.getUrl(),*val,contentCRC);
 
 	// get response on file
 	SafeBuf fb1;
 	char fn1[1024];
-	sprintf(fn1,"%sqa/content.%lu",g_hostdb.m_dir, *val);
+	sprintf(fn1,"%sqa/content.%"UINT32"",g_hostdb.m_dir, *val);
 	fb1.load(fn1);
 	fb1.nullTerm();
 
@@ -336,23 +336,23 @@ void processReply ( char *reply , long replyLen ) {
 	g_numErrors++;
 	
 	g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
-			      "<a href=%s>%s</a> (urlhash=%lu)<br>"
+			      "<a href=%s>%s</a> (urlhash=%"UINT32")<br>"
 
-			      "<input type=checkbox name=urlhash%lu value=1 "
+			      "<input type=checkbox name=urlhash%"UINT32" value=1 "
 			      // use ajax to update test crc. if you undo your
 			      // check then it should put the old val back.
 			      // when you first click the checkbox it should
 			      // gray out the diff i guess.
-			      "onclick=submitchanges(%lu,%lu);> "
+			      "onclick=submitchanges(%"UINT32",%"UINT32");> "
 			      "Accept changes"
 
 			      "<br>"
 			      "original on left, new on right. "
-			      "oldcrc = <a href=/qa/content.%lu>%lu</a>"
+			      "oldcrc = <a href=/qa/content.%"UINT32">%"UINT32"</a>"
 
-			      " != <a href=/qa/content.%lu>%lu</a> = newcrc"
+			      " != <a href=/qa/content.%"UINT32">%"UINT32"</a> = newcrc"
 			      "<br>diff output follows:<br>"
-			      "<pre id=%lu style=background-color:0xffffff;>",
+			      "<pre id=%"UINT32" style=background-color:0xffffff;>",
 			      s_qt->m_testName,
 			      s_url.getUrl(),
 			      s_url.getUrl(),
@@ -365,11 +365,11 @@ void processReply ( char *reply , long replyLen ) {
 			      urlHash32, 
 			      contentCRC,
 
-			      // original/old content.%lu
+			      // original/old content.%"UINT32"
 			      *val,
 			      *val,
 
-			      // new content.%lu
+			      // new content.%"UINT32"
 			      contentCRC,
 			      contentCRC,
 
@@ -405,12 +405,12 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 }
 
 // returns false if blocked, true otherwise, like on quick connect error
-bool getUrl( char *path , long checkCRC = 0 , char *post = NULL ) {
+bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
 
 	SafeBuf sb;
-	sb.safePrintf ( "http://%s:%li%s"
+	sb.safePrintf ( "http://%s:%"INT32"%s"
 			, iptoa(g_hostdb.m_myHost->m_ip)
-			, (long)g_hostdb.m_myHost->m_httpPort
+			, (int32_t)g_hostdb.m_myHost->m_httpPort
 			, path
 			);
 
@@ -469,11 +469,11 @@ bool loadUrls ( ) {
 		// null term it
 		if ( *e ) *e = '\0';
 		// store ptr
-		s_ubuf2.pushLong((long)s);
+		s_ubuf2.pushLong((int32_t)s);
 		// skip past that
 		s = e;
 		// point to content
-		s_cbuf2.pushLong((long)(s+1));
+		s_cbuf2.pushLong((int32_t)(s+1));
 	}
 	// make array of url ptrs
 	s_urlPtrs = (char **)s_ubuf2.getBufStart();
@@ -500,7 +500,7 @@ static char *s_queries[] = {
 //#undef usleep
 
 // nw use this
-static long *s_flags = NULL;
+static int32_t *s_flags = NULL;
 
 //
 // the injection qa test suite
@@ -541,7 +541,7 @@ bool qainject1 ( ) {
 
 	// this only loads once
 	loadUrls();
-	long max = s_ubuf2.length()/(long)sizeof(char *);
+	int32_t max = s_ubuf2.length()/(int32_t)sizeof(char *);
 	//max = 1;
 
 	//
@@ -550,7 +550,7 @@ bool qainject1 ( ) {
 	//static bool s_x4 = false;
 	if ( ! s_flags[2] ) {
 		// TODO: try delimeter based injection too
-		//static long s_ii = 0;
+		//static int32_t s_ii = 0;
 		for ( ; s_flags[20] < max ; ) {
 			// inject using html api
 			SafeBuf sb;
@@ -660,7 +660,7 @@ bool qainject1 ( ) {
 	//
 	// eject/delete the urls
 	//
-	//static long s_ii2 = 0;
+	//static int32_t s_ii2 = 0;
 	for ( ; s_flags[5] < max ; ) {
 		// reject using html api
 		SafeBuf sb;
@@ -1147,7 +1147,7 @@ bool qareindex() {
 
 	// this only loads once
 	loadUrls();
-	long max = s_ubuf2.length()/(long)sizeof(char *);
+	int32_t max = s_ubuf2.length()/(int32_t)sizeof(char *);
 	//max = 1;
 
 	//
@@ -1156,7 +1156,7 @@ bool qareindex() {
 	//static bool s_x4 = false;
 	if ( ! s_flags[2] ) {
 		// TODO: try delimeter based injection too
-		//static long s_ii = 0;
+		//static int32_t s_ii = 0;
 		for ( ; s_flags[20] < max ; ) {
 			// inject using html api
 			SafeBuf sb;
@@ -2457,8 +2457,8 @@ static QATest s_qatests[] = {
 };
 
 void resetFlags() {
-	long n = sizeof(s_qatests)/sizeof(QATest);
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = sizeof(s_qatests)/sizeof(QATest);
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
 		memset(qt->m_flags,0,4*MAXFLAGS);
 	}
@@ -2485,8 +2485,8 @@ bool qatest ( ) {
 	// returns true when done, false when blocked
 	//if ( ! qaspider ( ) ) return false;
 
-	long n = sizeof(s_qatests)/sizeof(QATest);
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = sizeof(s_qatests)/sizeof(QATest);
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
 		if ( ! qt->m_doTest ) continue;
 		// store that
@@ -2541,10 +2541,10 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	// . handle a request to update the crc for this test
 	// . test id identified by "ajaxUrlHash" which is the hash of the test's url
 	//   and the test name, QATest::m_testName
-	long ajax = hr->getLong("ajax",0);
-	unsigned long ajaxUrlHash ;
+	int32_t ajax = hr->getLong("ajax",0);
+	uint32_t ajaxUrlHash ;
 	ajaxUrlHash = (uint64_t)hr->getLongLong("uh",0LL);
-	unsigned long ajaxCrc ;
+	uint32_t ajaxCrc ;
 	ajaxCrc = (uint64_t)hr->getLongLong("crc",0LL);
 
 	if ( ajax ) {
@@ -2559,7 +2559,7 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		// send back the urlhash so the checkbox can turn the
 		// bg color of the "diff" gray
 		SafeBuf sb3;
-		sb3.safePrintf("%lu",ajaxUrlHash);
+		sb3.safePrintf("%"UINT32"",ajaxUrlHash);
 		g_httpServer.sendDynamicPage(sock,
 					     sb3.getBufStart(),
 					     sb3.length(),
@@ -2569,9 +2569,9 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		
 
 	// if they hit the submit button, begin the tests
-	long submit = hr->hasField("action");
+	int32_t submit = hr->hasField("action");
 
-	long n = sizeof(s_qatests)/sizeof(QATest);
+	int32_t n = sizeof(s_qatests)/sizeof(QATest);
 
 
 	if ( submit && g_qaInProgress ) {
@@ -2581,10 +2581,10 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 
 	// set m_doTest
-	for ( long i = 0 ; submit && i < n ; i++ ) {
+	for ( int32_t i = 0 ; submit && i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
 		char tmp[10];
-		sprintf(tmp,"test%li",i);
+		sprintf(tmp,"test%"INT32"",i);
 		qt->m_doTest = hr->getLong(tmp,0);
 	}
 
@@ -2624,7 +2624,7 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 				      "if(this.readyState != 4 )return;\n"
 				      // if error or empty reply then do nothing
 				      "if(!this.responseText)return;\n"
-				      // response text is the urlhash32, unsigned long
+				      // response text is the urlhash32, uint32_t
 				      "var id=this.responseText;\n"
 				      // use that to fix background to gray
 				      "var w=document.getElementById(id);\n"
@@ -2665,19 +2665,19 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 	// header row
 	sb.safePrintf("<tr><td><b>Do Test?</b> <a style=cursor:hand;"
 		      "cursor:pointer; "
-		      "onclick=\"checkAll('test', %li);\">(toggle)</a>",n);
+		      "onclick=\"checkAll('test', %"INT32");\">(toggle)</a>",n);
 	sb.safePrintf("</td><td><b>Test Name</b></td></tr>\n");
 	
 	// . we keep the ptr to each test in an array
 	// . print out each qa function
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];
 		char *bg;
 		if ( i % 2 == 0 ) bg = LIGHT_BLUE;
 		else              bg = DARK_BLUE;
 		sb.safePrintf("<tr bgcolor=#%s>"
-			      "<td><input type=checkbox value=1 name=test%li "
-			      "id=test%li></td>"
+			      "<td><input type=checkbox value=1 name=test%"INT32" "
+			      "id=test%"INT32"></td>"
 			      "<td>%s"
 			      "<br>"
 			      "<font color=gray size=-1>%s</font>"

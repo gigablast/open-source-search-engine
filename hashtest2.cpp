@@ -4,10 +4,10 @@
 
 class fslot {
 public:
-	long           m_score;
+	int32_t           m_score;
 	int64_t      m_docIdBits;
-	unsigned short m_termBits;
-	//unsigned short align;
+	uint16_t m_termBits;
+	//uint16_t align;
 };
 
 static int64_t gettimeofdayInMilliseconds() ;
@@ -21,18 +21,18 @@ int64_t gettimeofdayInMilliseconds() {
 
 
 main ( ) {
-	fprintf(stderr,"sizeof fslot=%li\n",-sizeof(fslot));
+	fprintf(stderr,"sizeof fslot=%"INT32"\n",-sizeof(fslot));
 	// fill our tbl
-	unsigned long g_hashtab[256];
+	uint32_t g_hashtab[256];
 	static bool s_initialized = false;
 	// bail if we already called this
 	if ( s_initialized ) return true;
 	// show RAND_MAX
-	//printf("RAND_MAX = %lu\n", RAND_MAX ); it's 0x7fffffff
+	//printf("RAND_MAX = %"UINT32"\n", RAND_MAX ); it's 0x7fffffff
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
-	for ( long i = 0 ; i < 256 ; i++ )
-			g_hashtab [i]  = (unsigned long)rand();
+	for ( int32_t i = 0 ; i < 256 ; i++ )
+			g_hashtab [i]  = (uint32_t)rand();
 			/*
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
@@ -47,18 +47,18 @@ main ( ) {
 
 
 	// # of docIds to hash
-	long nd = 300000;
+	int32_t nd = 300000;
 	// make a list of compressed (6 byte) docIds
         char *docIds = (char *) malloc ( 6 * nd );
 	// store radnom docIds in this list
 	unsigned char *p = (unsigned char *)docIds;
 	// print start time
 	fprintf (stderr,"hashtest:: randomizing begin."
-		 " %li 6-byte docIds.\n",nd);
+		 " %"INT32" 6-byte docIds.\n",nd);
 	// space em out 1 million to simulate suburl:com
 	int64_t count = 1000000;
 	// random docIds
-	for ( long i = 0 ; i < nd ; i++ ) {
+	for ( int32_t i = 0 ; i < nd ; i++ ) {
 		/*
 		p[0] = ((unsigned char *)&count)[0];
 		p[1] = ((unsigned char *)&count)[1];
@@ -70,22 +70,22 @@ main ( ) {
 		p += 6;
 		continue;
 		*/
-		// . the lower long
+		// . the lower int32_t
 		// . set lower bit so it's not a delete (delbit)
-		*(unsigned long  *)p = rand() | 0x01 ;
+		*(uint32_t  *)p = rand() | 0x01 ;
 		// skip 
 		p += 4;
 		// . the upper 2 bytes
 		// . top most byte is the 8-bit score
-		*(unsigned short *)p = rand() % 0xffff ;
+		*(uint16_t *)p = rand() % 0xffff ;
 		// skip
 		p += 2;
 	}
 	// make a hash table
-	long numSlots = 1048576 ; // about 300,000 * 3 rounded up to 2power
+	int32_t numSlots = 1048576 ; // about 300,000 * 3 rounded up to 2power
 	fslot *slots = (fslot *) calloc (sizeof(fslot), numSlots );
 	// set all scores to 0
-	//for ( long i = 0 ; i < numSlots ; i++ )
+	//for ( int32_t i = 0 ; i < numSlots ; i++ )
 	//	m_sc
 
 	// we can only have 6 outstanding prefetches on the athlon,
@@ -94,13 +94,13 @@ main ( ) {
 	// point to 6 byte docIds
 	unsigned char *end = p;
 	p   = (unsigned char *)docIds;
-	long score[PREFETCHES];
-	long collisions = 0;
-	unsigned long n[PREFETCHES];
+	int32_t score[PREFETCHES];
+	int32_t collisions = 0;
+	uint32_t n[PREFETCHES];
 	int64_t docIdBits[PREFETCHES];
-	unsigned short termBitMask = 1;
-	unsigned long  mask = numSlots - 1;
-	long scoreWeight = 13;
+	uint16_t termBitMask = 1;
+	uint32_t  mask = numSlots - 1;
+	int32_t scoreWeight = 13;
 	// debug msg
 	fprintf (stderr,"hashtest::starting loop\n");
 	// time stamp
@@ -110,7 +110,7 @@ main ( ) {
 
 	// hash em'
 	unsigned char c;
-	long j , k;
+	int32_t j , k;
 	unsigned char *r , *rend;
 	fslot *f;
 	fslot *s;
@@ -177,7 +177,7 @@ main ( ) {
 			goto set;
 		}
 		//collisions++;
-		if ( ++n[k] >= (unsigned long)numSlots ) n[k] = 0;
+		if ( ++n[k] >= (uint32_t)numSlots ) n[k] = 0;
 		goto chain;
 	}
 
@@ -186,13 +186,13 @@ main ( ) {
 
 	// completed
 	int64_t now = gettimeofdayInMilliseconds();
-	fprintf (stderr,"hashtest:: addList took %llu ms\n" , now - t );
+	fprintf (stderr,"hashtest:: addList took %"UINT64" ms\n" , now - t );
 	// stats
 	double d = (1000.0*(double)nd) / ((double)(now - t));
 	fprintf (stderr,"hashtest:: each add took %f cycles\n" ,
 		 400000000.0 / d );
-	fprintf (stderr,"hashtest:: we can do %li adds per second\n" ,(long)d);
-	fprintf (stderr,"hashtest:: collisions = %li\n", collisions);
+	fprintf (stderr,"hashtest:: we can do %"INT32" adds per second\n" ,(int32_t)d);
+	fprintf (stderr,"hashtest:: collisions = %"INT32"\n", collisions);
 	// exit gracefully
 	exit ( 0 );
 }

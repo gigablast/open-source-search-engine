@@ -54,26 +54,26 @@ class RdbList {
 	// . there may, however, be some keys in the list outside of the range
 	// . if "ownData" is true we free "list" on our reset/destruction
 	void set (char *list          , 
-		  long  listSize      , 
+		  int32_t  listSize      , 
 		  char *alloc         ,
-		  long  allocSize     ,
+		  int32_t  allocSize     ,
 		  //key_t startKey      , 
 		  //key_t endKey        ,
 		  char *startKey      , 
 		  char *endKey        ,
-		  long  fixedDataSize , 
+		  int32_t  fixedDataSize , 
 		  bool  ownData       ,
 		  bool  useHalfKeys   ,
 		  char  keySize       ); // 12 is default
 
 	// call the above set()
 	void set (char *list          , 
-		  long  listSize      , 
+		  int32_t  listSize      , 
 		  char *alloc         ,
-		  long  allocSize     ,
+		  int32_t  allocSize     ,
 		  key_t startKey      , 
 		  key_t endKey        ,
-		  long  fixedDataSize , 
+		  int32_t  fixedDataSize , 
 		  bool  ownData       ,
 		  bool  useHalfKeys   ) {
 		set(list,listSize,alloc,allocSize,(char *)&startKey,
@@ -83,10 +83,10 @@ class RdbList {
 
 	// like above but uses 0/maxKey for startKey/endKey
 	void set (char *list          , 
-		  long  listSize      , 
+		  int32_t  listSize      , 
 		  char *alloc         ,
-		  long  allocSize     ,
-		  long  fixedDataSize , 
+		  int32_t  allocSize     ,
+		  int32_t  fixedDataSize , 
 		  bool  ownData       ,
 		  bool  useHalfKeys   ,
 		  char  keySize       = sizeof(key_t) );
@@ -115,14 +115,14 @@ class RdbList {
 	// if you don't want data to be freed on destruction then don't own it
 	void setOwnData ( bool ownData ) { m_ownData = ownData; };
 
-	void setFixedDataSize ( long fixedDataSize ) { 
+	void setFixedDataSize ( int32_t fixedDataSize ) { 
 		m_fixedDataSize = fixedDataSize; };
 
 	//key_t getStartKey        () { return m_startKey; };
 	//key_t getEndKey          () { return m_endKey;   };
 	char *getStartKey        () { return m_startKey; };
 	char *getEndKey          () { return m_endKey;   };
-	long  getFixedDataSize   () { return m_fixedDataSize; };
+	int32_t  getFixedDataSize   () { return m_fixedDataSize; };
 	bool  getOwnData         () { return m_ownData; };
 
 	void  getStartKey        ( char *k ) { KEYSET(k,m_startKey,m_ks);};
@@ -133,11 +133,11 @@ class RdbList {
 		KEYSET(k,getLastKey(),m_ks);};
 
 	// will scan through each record if record size is variable
-	long  getNumRecs         () ;
+	int32_t  getNumRecs         () ;
 
 	// these operate on the whole list
 	char *getList            () { return m_list; };
-	long  getListSize        () { return m_listSize; };
+	int32_t  getListSize        () { return m_listSize; };
 	char *getListEnd         () { return m_list + m_listSize; };
 	//key_t getListStartKey    () { return m_startKey; };
 	//key_t getListEndKey      () { return m_endKey; };
@@ -147,7 +147,7 @@ class RdbList {
 
 	// often these equal m_list/m_listSize, but they may encompass
 	char *getAlloc           () { return m_alloc; };
-	long  getAllocSize       () { return m_allocSize; };
+	int32_t  getAllocSize       () { return m_allocSize; };
 
 	// . skip over the current record and point to the next one
 	// . returns false if we skipped into a black hole (end of list)
@@ -158,7 +158,7 @@ class RdbList {
 		return skipCurrentRec ( getRecSize ( m_listPtr ) ); };
 
 	// this is specially-made for RdbMap's processing of IndexLists
-	bool skipCurrentRec ( long recSize ) {
+	bool skipCurrentRec ( int32_t recSize ) {
 		m_listPtr += recSize;
 		if ( m_listPtr >= m_listEnd ) return false;
 		if ( m_ks == 18 ) {
@@ -184,10 +184,10 @@ class RdbList {
 	key_t getCurrentKey      () { 
 		key_t key ; getKey ( m_listPtr,(char *)&key ); return key; };
 	void  getCurrentKey      (void *key) { getKey(m_listPtr,(char *)key);};
-	long  getCurrentDataSize () { return getDataSize ( m_listPtr );};
+	int32_t  getCurrentDataSize () { return getDataSize ( m_listPtr );};
 	char *getCurrentData     () { return getData     ( m_listPtr );};
-	long  getCurrentRecSize  () { return getRecSize  ( m_listPtr );};
-	long  getCurrentSize     () { return m_listEnd - m_listPtr; };
+	int32_t  getCurrentRecSize  () { return getRecSize  ( m_listPtr );};
+	int32_t  getCurrentSize     () { return m_listEnd - m_listPtr; };
 	char *getCurrentRec      () { return m_listPtr; };
 	char *getListPtr         () { return m_listPtr; };
 	char *getListPtrHi       () { return m_listPtrHi; };
@@ -199,18 +199,18 @@ class RdbList {
 	// . add this record to the end of the list,  @ m_list+m_listSize
 	// . returns false and sets errno on error
 	// . grows list (m_allocSize) if we need more space
-	//bool addRecord ( key_t &key , long dataSize , char *data ,
-	bool addRecord ( key_t &key , long dataSize , char *data ,
+	//bool addRecord ( key_t &key , int32_t dataSize , char *data ,
+	bool addRecord ( key_t &key , int32_t dataSize , char *data ,
 			 bool bitch = true ) {
 		return addRecord ((char *)&key,dataSize,data,bitch); };
-	bool addRecord ( char *key , long dataSize , char *data ,
+	bool addRecord ( char *key , int32_t dataSize , char *data ,
 			 bool bitch = true );
 	//bool addKey    ( key_t &key );
 
 	// . record has key included in this case
 	// . returns false and sets errno on error
 	// . grows list (m_allocSize) if we need more space
-	bool addRecordRaw ( char *rec , long recSize );
+	bool addRecordRaw ( char *rec , int32_t recSize );
 
 	// . constrain a list to [startKey,endKey]
 	// . returns false and sets g_errno on error
@@ -221,78 +221,78 @@ class RdbList {
 	//		 key_t   endKey      ,
 	bool constrain ( char   *startKey    , 
 			 char   *endKey      ,
-			 long    minRecSizes ,
-			 long    hintOffset  ,
+			 int32_t    minRecSizes ,
+			 int32_t    hintOffset  ,
 			 //key_t   hintKey     ,
 			 char   *hintKey     ,
 			 char   *filename    ,
-			 long    niceness    ) ;
+			 int32_t    niceness    ) ;
 
 	// . this MUST be called before calling merge_r() 
 	// . will alloc enough space for m_listSize + sizes of "lists"
 	bool prepareForMerge ( RdbList **lists            , 
-			       long      numLists         , 
-			       long      minRecSizes = -1 );
+			       int32_t      numLists         , 
+			       int32_t      minRecSizes = -1 );
 
 	// . merge the lists into this list
 	// . set our startKey/endKey to "startKey"/"endKey"
 	// . exclude any records from lists not in that range
 	void merge_r ( RdbList **lists         , 
-		       long      numLists      , 
+		       int32_t      numLists      , 
 		       //key_t     startKey      , 
 		       //key_t     endKey        , 
 		       char     *startKey      , 
 		       char     *endKey        , 
-		       long      minRecSizes   ,
+		       int32_t      minRecSizes   ,
 		       bool      removeNegRecs ,
 		       char      rdbId         ,
-		       long     *filtered      ,
-		       long     *tfns          , // used for titledb
+		       int32_t     *filtered      ,
+		       int32_t     *tfns          , // used for titledb
 		       RdbList  *tfndbList     , // used for titledb
 		       bool      isRealMerge   ,
-		       long      niceness      );
+		       int32_t      niceness      );
 	/*
 	// . we now use half keys for Tfndb, cuts mem usage in half.
 	// . Tfndb keys are special in that we ignore the 'f' and C' bits
 	//   when comparing keys in this routine
 	bool indexMerge_r ( RdbList **lists         ,  
-			    long      numLists      ,
+			    int32_t      numLists      ,
 			    //key_t     startKey      ,
 			    //key_t     endKey        ,
 			    char     *startKey      ,
 			    char     *endKey        ,
-			    long      minRecSizes   ,
+			    int32_t      minRecSizes   ,
 			    bool      removeNegKeys ,
 			    //key_t     prevKey       ,
 			    char     *prevKey       ,
-			    long     *prevCountPtr  ,
-			    long      truncLimit    ,
-			    long     *dupsRemoved   ,
+			    int32_t     *prevCountPtr  ,
+			    int32_t      truncLimit    ,
+			    int32_t     *dupsRemoved   ,
 			    //bool      isTfndb       ,
 			    char      rdbId         ,
-			    long     *filtered      ,
+			    int32_t     *filtered      ,
 			    bool      doGroupMask   , //= true ,
 			    bool      isRealMerge   , //= false );
 			    bool      useBigRootList ,
-			    long      niceness       );
+			    int32_t      niceness       );
 
 	bool indexMerge_r ( RdbList **lists         ,  
-			    long      numLists      ,
+			    int32_t      numLists      ,
 			    key_t     startKey      ,
 			    key_t     endKey        ,
-			    long      minRecSizes   ,
+			    int32_t      minRecSizes   ,
 			    bool      removeNegKeys ,
 			    key_t     prevKey       ,
-			    long     *prevCountPtr  ,
-			    long      truncLimit    ,
-			    long     *dupsRemoved   ,
+			    int32_t     *prevCountPtr  ,
+			    int32_t      truncLimit    ,
+			    int32_t     *dupsRemoved   ,
 			    //bool      isTfndb       ,
 			    char      rdbId         ,
-			    long     *filtered      ,
+			    int32_t     *filtered      ,
 			    bool      doGroupMask   ,//= true ,
 			    bool      isRealMerge   ,//= false ) {
 			    bool      useBigRootList ,
-			    long      niceness       ) {
+			    int32_t      niceness       ) {
 		return indexMerge_r ( lists         ,  
 				      numLists      ,
 				      (char *)&startKey      ,
@@ -313,19 +313,19 @@ class RdbList {
 	*/
 
 	bool posdbMerge_r ( RdbList **lists         ,  
-			    long      numLists      ,
+			    int32_t      numLists      ,
 			    char     *startKey      ,
 			    char     *endKey        ,
-			    long      minRecSizes   ,
+			    int32_t      minRecSizes   ,
 			    bool      removeNegKeys ,
-			    long     *filtered      ,
+			    int32_t     *filtered      ,
 			    bool      doGroupMask   ,
 			    bool      isRealMerge   ,
-			    long      niceness       ) ;
+			    int32_t      niceness       ) ;
 
 
 	// returns false if we skipped into a black hole (end of list)
-	long getRecSize ( char *rec ) {
+	int32_t getRecSize ( char *rec ) {
 		// posdb?
 		if ( m_ks == 18 ) {
 			if ( rec[0]&0x04 ) return 6;
@@ -340,12 +340,12 @@ class RdbList {
 		}
 		//if (m_fixedDataSize == 0) return sizeof(key_t);
 		//if (m_fixedDataSize >0) return sizeof(key_t)+m_fixedDataSize;
-		//return *(long *)(rec + sizeof(key_t)) + sizeof(key_t) + 4 ;
+		//return *(int32_t *)(rec + sizeof(key_t)) + sizeof(key_t) + 4 ;
 		if (m_fixedDataSize == 0) return m_ks;
 		// negative keys always have no datasize entry
 		if ( (rec[0] & 0x01) == 0 ) return m_ks;
 		if (m_fixedDataSize >  0) return m_ks+m_fixedDataSize;
-		return *(long *)(rec + m_ks) + m_ks + 4 ;
+		return *(int32_t *)(rec + m_ks) + m_ks + 4 ;
 	};
 
 	// . is the format bit set? that means it's a 12-byte key
@@ -356,7 +356,7 @@ class RdbList {
 	bool useHalfKeys () { return m_useHalfKeys; };
 
 	char *getData     ( char *rec ) ;
-	long  getDataSize ( char *rec ) ;
+	int32_t  getDataSize ( char *rec ) ;
 	void  getKey      ( char *rec , char *key ) ;
 	key_t getKey      ( char *rec ) {
 		key_t k; getKey(rec,(char *)&k); return k; };
@@ -375,7 +375,7 @@ class RdbList {
 	char *getFirstKey ( ) { return m_list; };
 
 
-	bool growList ( long newSize ) ;
+	bool growList ( int32_t newSize ) ;
 
 	// . check to see if keys in order
 	// . logs any problems
@@ -393,7 +393,7 @@ class RdbList {
 
 	void  setListPtrs ( char *p , char *hi ) {m_listPtr=p;m_listPtrHi=hi;};
 
-	void setListSize ( long size ) { m_listSize = size; };
+	void setListSize ( int32_t size ) { m_listSize = size; };
 
 	//void testIndexMerge ( );
 
@@ -403,7 +403,7 @@ class RdbList {
 
 	// the unalterd raw list. keys may be outside of [m_startKey,m_endKey]
 	char  *m_list;
-	long   m_listSize;     // how many bytes we're using for a list
+	int32_t   m_listSize;     // how many bytes we're using for a list
 	//key_t  m_startKey;
 	//key_t  m_endKey;
 	char   m_startKey [ MAX_KEY_BYTES ];
@@ -415,12 +415,12 @@ class RdbList {
 	char  *m_listEnd;      // = m_list + m_listSize
 	char  *m_listPtr;      // points to current record in list
 
-	long   m_allocSize;  // how many bytes we've allocated at m_alloc
+	int32_t   m_allocSize;  // how many bytes we've allocated at m_alloc
 	char  *m_alloc    ;  // start of chunk that was allocated
 
 	// m_fixedDataSize is -1 if records are variable length,
 	// 0 for data-less records (keys only) and N for records of dataSize N
-	long  m_fixedDataSize;
+	int32_t  m_fixedDataSize;
 
 	// this is set to the last key in this list if we were made by merge()
 	//key_t m_lastKey;
@@ -428,7 +428,7 @@ class RdbList {
 	bool  m_lastKeyIsValid;
 
 	// max list rec sizes to merge as set by prepareForMerge()
-	long   m_mergeMinListSize;
+	int32_t   m_mergeMinListSize;
 
 	// . this points to the most significant 6 bytes of a key
 	// . only valid if m_useHalfKeys is true
@@ -456,101 +456,101 @@ class RdbList {
 //   so negative keys will always be ordered before their positive
 /*
 inline char cmp ( char *alo , char *ahi , char *blo , char *bhi ) {
-	if (*(unsigned long  *)(&ahi[2])<*(unsigned long  *)&bhi[2]) return -1;
-	if (*(unsigned long  *)(&ahi[2])>*(unsigned long  *)&bhi[2]) return  1;
-	if (*(unsigned short *)( ahi   )<*(unsigned short *)bhi    ) return -1;
-	if (*(unsigned short *)( ahi   )>*(unsigned short *)bhi    ) return  1;
-	if (*(unsigned long  *)(&alo[2])<*(unsigned long  *)&blo[2]) return -1;
-	if (*(unsigned long  *)(&alo[2])>*(unsigned long  *)&blo[2]) return  1;
+	if (*(uint32_t  *)(&ahi[2])<*(uint32_t  *)&bhi[2]) return -1;
+	if (*(uint32_t  *)(&ahi[2])>*(uint32_t  *)&bhi[2]) return  1;
+	if (*(uint16_t *)( ahi   )<*(uint16_t *)bhi    ) return -1;
+	if (*(uint16_t *)( ahi   )>*(uint16_t *)bhi    ) return  1;
+	if (*(uint32_t  *)(&alo[2])<*(uint32_t  *)&blo[2]) return -1;
+	if (*(uint32_t  *)(&alo[2])>*(uint32_t  *)&blo[2]) return  1;
 	// we now ignore the half bit
-	if ( ((*(unsigned short *)( alo   ))|0x02) <
-	     ((*(unsigned short *)  blo    )|0x02)  ) return -1;
-	if ( ((*(unsigned short *)( alo   ))|0x02) >
-	     ((*(unsigned short *)  blo    )|0x02)  ) return  1;
+	if ( ((*(uint16_t *)( alo   ))|0x02) <
+	     ((*(uint16_t *)  blo    )|0x02)  ) return -1;
+	if ( ((*(uint16_t *)( alo   ))|0x02) >
+	     ((*(uint16_t *)  blo    )|0x02)  ) return  1;
 	return 0;
 };
 */
 
 // man, inline is not working... don't count on it
 #define fcmp(alo,ahi,blo,bhi) \
-          (*(unsigned long  *)&((char *)ahi)[2] <      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)ahi)[2] >      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ?  1  \
-       :  (*(unsigned short *) ((char *)ahi)    <      \
-	   *(unsigned short *) ((char *)bhi)     ? -1  \
-       :  (*(unsigned short *) ((char *)ahi)    >      \
-	   *(unsigned short *) ((char *)bhi)     ?  1  \
-       :  (*(unsigned long  *)&((char *)alo)[2] <      \
-	   *(unsigned long  *)&((char *)blo)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)alo)[2] >      \
-	   *(unsigned long  *)&((char *)blo)[2]  ?  1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x02) <        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x02)    ? -1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x02) >        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x02)    ?  1  \
+          (*(uint32_t  *)&((char *)ahi)[2] <      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)ahi)[2] >      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ?  1  \
+       :  (*(uint16_t *) ((char *)ahi)    <      \
+	   *(uint16_t *) ((char *)bhi)     ? -1  \
+       :  (*(uint16_t *) ((char *)ahi)    >      \
+	   *(uint16_t *) ((char *)bhi)     ?  1  \
+       :  (*(uint32_t  *)&((char *)alo)[2] <      \
+	   *(uint32_t  *)&((char *)blo)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)alo)[2] >      \
+	   *(uint32_t  *)&((char *)blo)[2]  ?  1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x02) <        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x02)    ? -1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x02) >        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x02)    ?  1  \
 	 : 0 ))))))))
 
 // like above but we treat positive and negative keys as identical
 #define fcmp2(alo,ahi,blo,bhi) \
-          (*(unsigned long  *)&((char *)ahi)[2] <      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)ahi)[2] >      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ?  1  \
-       :  (*(unsigned short *) ((char *)ahi)    <      \
-	   *(unsigned short *) ((char *)bhi)     ? -1  \
-       :  (*(unsigned short *) ((char *)ahi)    >      \
-	   *(unsigned short *) ((char *)bhi)     ?  1  \
-       :  (*(unsigned long  *)&((char *)alo)[2] <      \
-	   *(unsigned long  *)&((char *)blo)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)alo)[2] >      \
-	   *(unsigned long  *)&((char *)blo)[2]  ?  1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x03) <        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ? -1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x03) >        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ?  1  \
+          (*(uint32_t  *)&((char *)ahi)[2] <      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)ahi)[2] >      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ?  1  \
+       :  (*(uint16_t *) ((char *)ahi)    <      \
+	   *(uint16_t *) ((char *)bhi)     ? -1  \
+       :  (*(uint16_t *) ((char *)ahi)    >      \
+	   *(uint16_t *) ((char *)bhi)     ?  1  \
+       :  (*(uint32_t  *)&((char *)alo)[2] <      \
+	   *(uint32_t  *)&((char *)blo)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)alo)[2] >      \
+	   *(uint32_t  *)&((char *)blo)[2]  ?  1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x03) <        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x03)    ? -1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x03) >        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x03)    ?  1  \
 	 : 0 ))))))))
 
 
 // like above but we treat positive and negative keys as identical
 #define fcmp2low(alo,blo) \
-          (*(unsigned long  *)&((char *)alo)[2] <      \
-	   *(unsigned long  *)&((char *)blo)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)alo)[2] >      \
-	   *(unsigned long  *)&((char *)blo)[2]  ?  1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x03) <        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ? -1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x03) >        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ?  1  \
+          (*(uint32_t  *)&((char *)alo)[2] <      \
+	   *(uint32_t  *)&((char *)blo)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)alo)[2] >      \
+	   *(uint32_t  *)&((char *)blo)[2]  ?  1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x03) <        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x03)    ? -1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x03) >        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x03)    ?  1  \
 	 : 0 ))))
 
 // . like above but this compares Tfndb keys so it ignores the tfn bits
 // . see Tfndb.h for the bit map of a Tfndb key
 inline char cmp2b ( char *alo , char *ahi , char *blo , char *bhi ) {
-	//if(*(unsigned long  *)(&ahi[2])<*(unsigned long  *)&bhi[2])return -1;
-	//if(*(unsigned long  *)(&ahi[2])>*(unsigned long  *)&bhi[2])return  1;
-	if (*(unsigned long  *)( ahi   )<*(unsigned long  *)bhi    ) return -1;
-	if (*(unsigned long  *)( ahi   )>*(unsigned long  *)bhi    ) return  1;
-	if (*(unsigned long  *)(&alo[2])<*(unsigned long  *)&blo[2]) return -1;
-	if (*(unsigned long  *)(&alo[2])>*(unsigned long  *)&blo[2]) return  1;
+	//if(*(uint32_t  *)(&ahi[2])<*(uint32_t  *)&bhi[2])return -1;
+	//if(*(uint32_t  *)(&ahi[2])>*(uint32_t  *)&bhi[2])return  1;
+	if (*(uint32_t  *)( ahi   )<*(uint32_t  *)bhi    ) return -1;
+	if (*(uint32_t  *)( ahi   )>*(uint32_t  *)bhi    ) return  1;
+	if (*(uint32_t  *)(&alo[2])<*(uint32_t  *)&blo[2]) return -1;
+	if (*(uint32_t  *)(&alo[2])>*(uint32_t  *)&blo[2]) return  1;
 	// . we ignore the half bit AND tfn bits (see Tfndb.h key bitmap)
 	// . now we also treat negative and positive keys as the same
-	if ( ((*(unsigned short *)( alo   ))|0x03ff) <
-	     ((*(unsigned short *)  blo    )|0x03ff)  ) return -1;
-	if ( ((*(unsigned short *)( alo   ))|0x03ff) >
-	     ((*(unsigned short *)  blo    )|0x03ff)  ) return  1;
+	if ( ((*(uint16_t *)( alo   ))|0x03ff) <
+	     ((*(uint16_t *)  blo    )|0x03ff)  ) return -1;
+	if ( ((*(uint16_t *)( alo   ))|0x03ff) >
+	     ((*(uint16_t *)  blo    )|0x03ff)  ) return  1;
 	return 0;
 };
 
 /*
 inline char cmp2b ( char *alo , char *ahi , char *blo , char *bhi ) {
-	if (*(unsigned long  *)(&ahi[2])!=*(unsigned long *)&bhi[2]) return 0;
-	if (*(unsigned short *)( ahi   )!=*(unsigned short *)bhi   ) return 0;
-	if (*(unsigned long  *)(&alo[2])!=*(unsigned long *)&blo[2]) return 0;
+	if (*(uint32_t  *)(&ahi[2])!=*(uint32_t *)&bhi[2]) return 0;
+	if (*(uint16_t *)( ahi   )!=*(uint16_t *)bhi   ) return 0;
+	if (*(uint32_t  *)(&alo[2])!=*(uint32_t *)&blo[2]) return 0;
 	// we now ignore the half bit AND f bits and C bit (see Tfndb.h bitmap)
 	// AND set negative bit on blo
-	if ( ((*(unsigned short *)( alo   ))|0x03fe) !=
-	     ((*(unsigned short *)  blo    )|0x03ff)  ) return 0;
+	if ( ((*(uint16_t *)( alo   ))|0x03fe) !=
+	     ((*(uint16_t *)  blo    )|0x03ff)  ) return 0;
 	return 1;
 };
 */
@@ -558,64 +558,64 @@ inline char cmp2b ( char *alo , char *ahi , char *blo , char *bhi ) {
 
 // this is for 16-byte keys
 #define bfcmp(alo,ahi,blo,bhi) \
-          (*(unsigned long  *)&((char *)ahi)[2] <      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)ahi)[2] >      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ?  1  \
-       :  (*(unsigned short *) ((char *)ahi)    <      \
-	   *(unsigned short *) ((char *)bhi)     ? -1  \
-       :  (*(unsigned short *) ((char *)ahi)    >      \
-	   *(unsigned short *) ((char *)bhi)     ?  1  \
+          (*(uint32_t  *)&((char *)ahi)[2] <      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)ahi)[2] >      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ?  1  \
+       :  (*(uint16_t *) ((char *)ahi)    <      \
+	   *(uint16_t *) ((char *)bhi)     ? -1  \
+       :  (*(uint16_t *) ((char *)ahi)    >      \
+	   *(uint16_t *) ((char *)bhi)     ?  1  \
        :  (*(uint64_t *)&((char *)alo)[2] <      \
 	   *(uint64_t *)&((char *)blo)[2]  ? -1  \
        :  (*(uint64_t *)&((char *)alo)[2] >      \
 	   *(uint64_t *)&((char *)blo)[2]  ?  1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x02) <        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x02)    ? -1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x02) >        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x02)    ?  1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x02) <        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x02)    ? -1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x02) >        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x02)    ?  1  \
 	 : 0 ))))))))
 
 // like above but we treat positive and negative keys as identical
 #define bfcmp2(alo,ahi,blo,bhi) \
-          (*(unsigned long  *)&((char *)ahi)[2] <      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ? -1  \
-       :  (*(unsigned long  *)&((char *)ahi)[2] >      \
-	   *(unsigned long  *)&((char *)bhi)[2]  ?  1  \
-       :  (*(unsigned short *) ((char *)ahi)    <      \
-	   *(unsigned short *) ((char *)bhi)     ? -1  \
-       :  (*(unsigned short *) ((char *)ahi)    >      \
-	   *(unsigned short *) ((char *)bhi)     ?  1  \
+          (*(uint32_t  *)&((char *)ahi)[2] <      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ? -1  \
+       :  (*(uint32_t  *)&((char *)ahi)[2] >      \
+	   *(uint32_t  *)&((char *)bhi)[2]  ?  1  \
+       :  (*(uint16_t *) ((char *)ahi)    <      \
+	   *(uint16_t *) ((char *)bhi)     ? -1  \
+       :  (*(uint16_t *) ((char *)ahi)    >      \
+	   *(uint16_t *) ((char *)bhi)     ?  1  \
        :  (*(uint64_t *)&((char *)alo)[2] <      \
 	   *(uint64_t *)&((char *)blo)[2]  ? -1  \
        :  (*(uint64_t *)&((char *)alo)[2] >      \
 	   *(uint64_t *)&((char *)blo)[2]  ?  1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x03) <        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ? -1  \
-       :(((*(unsigned short *) ((char *)alo)    )|0x03) >        \
-	 ((*(unsigned short *) ((char *)blo)    )|0x03)    ?  1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x03) <        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x03)    ? -1  \
+       :(((*(uint16_t *) ((char *)alo)    )|0x03) >        \
+	 ((*(uint16_t *) ((char *)blo)    )|0x03)    ?  1  \
 	 : 0 ))))))))
 
 
 inline char bfcmpPosdb ( char *alo , char *ame , char *ahi , 
 			 char *blo , char *bme , char *bhi ) {
-	if (*(unsigned long  *)( ahi+2 )<*(unsigned long  *)(bhi+2)) return -1;
-	if (*(unsigned long  *)( ahi+2 )>*(unsigned long  *)(bhi+2)) return  1;
-	if (*(unsigned short *)( ahi   )<*(unsigned short *)(bhi  )) return -1;
-	if (*(unsigned short *)( ahi   )>*(unsigned short *)(bhi  )) return  1;
+	if (*(uint32_t  *)( ahi+2 )<*(uint32_t  *)(bhi+2)) return -1;
+	if (*(uint32_t  *)( ahi+2 )>*(uint32_t  *)(bhi+2)) return  1;
+	if (*(uint16_t *)( ahi   )<*(uint16_t *)(bhi  )) return -1;
+	if (*(uint16_t *)( ahi   )>*(uint16_t *)(bhi  )) return  1;
 
-	if (*(unsigned long  *)( ame+2 )<*(unsigned long  *)(bme+2)) return -1;
-	if (*(unsigned long  *)( ame+2 )>*(unsigned long  *)(bme+2)) return  1;
-	if (*(unsigned short *)( ame   )<*(unsigned short *)(bme  )) return -1;
-	if (*(unsigned short *)( ame   )>*(unsigned short *)(bme  )) return  1;
+	if (*(uint32_t  *)( ame+2 )<*(uint32_t  *)(bme+2)) return -1;
+	if (*(uint32_t  *)( ame+2 )>*(uint32_t  *)(bme+2)) return  1;
+	if (*(uint16_t *)( ame   )<*(uint16_t *)(bme  )) return -1;
+	if (*(uint16_t *)( ame   )>*(uint16_t *)(bme  )) return  1;
 
-	if (*(unsigned long  *)( alo+2 )<*(unsigned long  *)(blo+2)) return -1;
-	if (*(unsigned long  *)( alo+2 )>*(unsigned long  *)(blo+2)) return  1;
+	if (*(uint32_t  *)( alo+2 )<*(uint32_t  *)(blo+2)) return -1;
+	if (*(uint32_t  *)( alo+2 )>*(uint32_t  *)(blo+2)) return  1;
 
-	if ( ((*(unsigned short *)( alo   ))|0x0007) <
-	     ((*(unsigned short *)  blo    )|0x0007)  ) return -1;
-	if ( ((*(unsigned short *)( alo   ))|0x0007) >
-	     ((*(unsigned short *)  blo    )|0x0007)  ) return  1;
+	if ( ((*(uint16_t *)( alo   ))|0x0007) <
+	     ((*(uint16_t *)  blo    )|0x0007)  ) return -1;
+	if ( ((*(uint16_t *)( alo   ))|0x0007) >
+	     ((*(uint16_t *)  blo    )|0x0007)  ) return  1;
 
 	return 0;
 };

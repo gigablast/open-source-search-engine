@@ -41,12 +41,12 @@ class IndexReadInfo {
 	//   -- dynamic truncation
 	void init ( Query *q , 
 		    int64_t *termFreqs ,
-		    long docsWanted , char callNum , long stage0 ,
-		    long *tierStage ,
+		    int32_t docsWanted , char callNum , int32_t stage0 ,
+		    int32_t *tierStage ,
 		    bool useDateLists ,
 		    bool sortByDate , 
-		    unsigned long date1 , 
-		    unsigned long date2 ,
+		    uint32_t date1 , 
+		    uint32_t date2 ,
 		    bool isDebug );
 
 	// . this updates the start keys and docsToRead for each list
@@ -55,34 +55,34 @@ class IndexReadInfo {
 	//   IndexTable::addLists() so it can hash them and calculate the #
 	//   of results it got
 	// . it advances m_startKey[i] to lastKey + 1 in lists[i]
-	void update ( IndexList *lists , long numLists , char callNum );
+	void update ( IndexList *lists , int32_t numLists , char callNum );
 
-	void update2 ( long tier ) ;
+	void update2 ( int32_t tier ) ;
 
 	/*	void updateForMsg3b ( char *lastParts,
 			      int64_t *termFreqs, 
-			      long numLists );*/
+			      int32_t numLists );*/
 
 	void update ( int64_t *termFreqs,
-		      long numLists,
+		      int32_t numLists,
 		      char callNum );
 
 	// update without the full lists, just the last part and size
 	void update ( char *lastParts,
-		      long *listSizes,
-		      long numLists );
+		      int32_t *listSizes,
+		      int32_t numLists );
 
 	// call this after calling update to determine read info per list
 	char *getStartKeys  ( ) { return (char *)m_startKeys  ; };
 	char *getEndKeys    ( ) { return (char *)m_endKeys    ; };
-	char  getIgnored    ( long i ) { return m_ignore[i]   ; };
+	char  getIgnored    ( int32_t i ) { return m_ignore[i]   ; };
 
 	char  getHalfKeySize( ) { return m_hks        ; };
 	
 	// getting info directly, like above
-	long   getReadSize ( long i ) { return m_readSizes[i]; };
+	int32_t   getReadSize ( int32_t i ) { return m_readSizes[i]; };
 
-	long  *getReadSizes(        ) { return m_readSizes; };
+	int32_t  *getReadSizes(        ) { return m_readSizes; };
 
 	// . did we get the # of required results
 	// . or are all our lists exhausted?
@@ -92,9 +92,9 @@ class IndexReadInfo {
 	// call only after calling init() to estimate # of results
 	int64_t getEstimatedTotalHits();
 
-	long getNumLists () { return m_numLists; };
+	int32_t getNumLists () { return m_numLists; };
 
-	long getStage0Default ( ) ;
+	int32_t getStage0Default ( ) ;
 
  private:
 
@@ -109,7 +109,7 @@ class IndexReadInfo {
 	char m_startKeys   [ MAX_QUERY_TERMS * MAX_KEY_BYTES ]; 
 	char m_endKeys     [ MAX_QUERY_TERMS * MAX_KEY_BYTES ]; 
 	// how many docIds/recs/keys should we read?
-	long  m_readSizes   [ MAX_QUERY_TERMS ];
+	int32_t  m_readSizes   [ MAX_QUERY_TERMS ];
 	char  m_ignore      [ MAX_QUERY_TERMS ];
 
 	// . the query we're doing
@@ -117,22 +117,22 @@ class IndexReadInfo {
 	Query *m_q;
 
 	// how many index lists we're reading
-	long  m_numLists;
+	int32_t  m_numLists;
 
 	// may be set to true after update() is called
 	bool  m_isDone;
 
 	// . for dynamic truncation, first # of docs to read from each list
 	// . stages can now be set dynamically on a per query basis
-	long  m_stage[MAX_TIERS];
-	//long  m_stageSum;
+	int32_t  m_stage[MAX_TIERS];
+	//int32_t  m_stageSum;
 
 	char  m_ks;
 	char  m_hks;
 	char  m_useDateLists;
         char  m_sortByDate;
-	unsigned long m_date1;
-	unsigned long m_date2;
+	uint32_t m_date1;
+	uint32_t m_date2;
 
 	bool m_isDebug;
 };

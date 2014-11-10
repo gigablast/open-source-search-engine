@@ -15,7 +15,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 	// . do not print big links if only an assassin, just print host ids
 	SafeBuf sb;
 	g_pages.printAdminTop ( &sb , s , r );
-	//long user = g_pages.getUserType ( s , r );
+	//int32_t user = g_pages.getUserType ( s , r );
 	//sprintf ( p , 
 	//"<html> \n"
 	//"<title>Gigablast Admin Overview</title>\n"
@@ -256,7 +256,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "<br><br>\n"
 "For performance reasons, most large search engines nowadays only return a rough estimate of the number of search results, but you may desire to get a better approximation or even an exact count. Gigablast allows you to do this, but it may be at the expense of query resonse time."
 "<br><br>\n"
-"By using the <b>t0</b> variable you can tell Gigablast to use a minimum number of docids from each termlist. Typically, <b>t0</b> defaults to something of around 10,000 docids. Often more docids than that are used, but this is just the minimum. So if Gigablast is forced to use more docids it will take longer to compute the search results on average, but it will give you a more precise hit count. By setting <b>t0</b> to the truncation limit or higher you will max out the hit count precision."
+"By using the <b>t0</b> variable you can tell Gigablast to use a minimum number of docids from each termlist. Typically, <b>t0</b> defaults to something of around 10,000 docids. Often more docids than that are used, but this is just the minimum. So if Gigablast is forced to use more docids it will take int32_ter to compute the search results on average, but it will give you a more precise hit count. By setting <b>t0</b> to the truncation limit or higher you will max out the hit count precision."
 "<br><br>\n"
 "Example: <b><a href=\"/search?q=test&t0=5000000\">http://www.gigablast.com/search?q=test&t0=5000000</a></b>\n"
 ""
@@ -333,11 +333,11 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "  # See all the <a href=#errors>Error Codes</a>, but the "
 "  # following errors are most likely:\n"
 "  # %5li - A cached page was not found when it should have been.\n"
-"  # %5li - There was a shortage of memory to properly process the request.\n"
+"  # %5li - There was a int16_tage of memory to properly process the request.\n"
 "  # %5li - Queried collection does not exist.\n",
-		  (long)ENOTFOUND,
-		  (long)ENOMEM,
-		  (long)ENOCOLLREC);
+		  (int32_t)ENOTFOUND,
+		  (int32_t)ENOMEM,
+		  (int32_t)ENOCOLLREC);
 
 	sprintf( p ,
 "  <b>&lt;errno&gt;32790&lt/errno&gt;</b>\n"
@@ -432,7 +432,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "      # Description of this page as listed in the directory.\n"
 "      <b>&lt;dmozDesc&gt;&lt;![CDATA[A Dentist's Home Page]]&gt;&lt;/dmozDesc&gt;</b>\n"
 "    <b>&lt;/dmoz&gt;</b>\n"
-"    # If the directory is being given along with the results, this is the number of\n"
+"    # If the directory is being given aint32_t with the results, this is the number of\n"
 "    # stars given to this page based on its quality.\n"
 "    <b>&lt;stars&gt;3&lt;/stars&gt;</b>\n"
 "    # Each result may have a sequence of &lt;display&gt; tags if the feed input\n"
@@ -446,7 +446,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "    # The size of the page in kilobytes. Accurate to the tenth of a kilobyte.\n"
 "    <b>&lt;size&gt;5.6&lt;/size&gt;</b>\n"
 "    # The time the page was last INDEXED. It may not have been indexed in a \n"
-"    # long time if the page's content has not changed. The time is expressed \n"
+"    # int32_t time if the page's content has not changed. The time is expressed \n"
 "    # in seconds since the epoch. (Jan 1, 1969)\n"
 "    <b>&lt;spidered&gt;1064367311&lt;/spidered&gt;</b> \n"
 "    # The time the page was last modified. This is taken from the HTTP reply \n"
@@ -632,9 +632,9 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 	// c errors
 	char *c = "eeeeee";
 	p += sprintf(p,"<tr><td colspan=3><b>C error codes</b></td></tr>\n");
-	for ( long i = 1 ; i <= EMEDIUMTYPE ; i++ ) {
+	for ( int32_t i = 1 ; i <= EMEDIUMTYPE ; i++ ) {
 		char *b = p;
-		p += sprintf(p,"<tr bgcolor=#%s><td>%li</td>"
+		p += sprintf(p,"<tr bgcolor=#%s><td>%"INT32"</td>"
 			     "<td>%s</td><td>",
 			     c,i,strerror(i));
 		char *s = p;
@@ -678,8 +678,8 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     "descriptor. This should not happen.");
 			break;
 		case ENOBUFS :
-			p += sprintf(p,"a - Collection name limit of %li is "
-				     "exceeded.",(long)MAX_COLL_LEN);
+			p += sprintf(p,"a - Collection name limit of %"INT32" is "
+				     "exceeded.",(int32_t)MAX_COLL_LEN);
 			break;
 		case ENOMEM: 
 			p += sprintf(p,"a,i,s - Out of memory."); 
@@ -694,9 +694,9 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 	// gigablast errors
 	p += sprintf(p,"<tr><td colspan=3><b>Gigablast error codes</b>"
 		     "</td></tr><br><br>\n");
-	for ( long i = EDUMPFAILED ; i <= ECANCELACK ; i++ ) {
+	for ( int32_t i = EDUMPFAILED ; i <= ECANCELACK ; i++ ) {
 		char *b = p;
-		p += sprintf(p,"<tr bgcolor=#%s><td>%li</td>"
+		p += sprintf(p,"<tr bgcolor=#%s><td>%"INT32"</td>"
 			     "<td>%s</td><td>",
 			     c,i,mstrerror(i));
 		char *s = p;
@@ -715,18 +715,18 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 			p += sprintf(p,"a - Collection name being added "
 				     "contains an illegal character, or an "
 				     "empty name was provided, or the name "
-				     "is more than %li characters.<br>",
-				     (long)MAX_COLL_LEN); 
+				     "is more than %"INT32" characters.<br>",
+				     (int32_t)MAX_COLL_LEN); 
 			// SpiderLoop.cpp Msg7.cpp PageInject.cpp
 			p += sprintf(p,"i - No URL was provided, or URL "
 				     "has no hostname. Or provided URL is "
-				     "currently being injected. Or %li "
+				     "currently being injected. Or %"INT32" "
 				     "injects are currently in progress.",
-				     (long)MAX_SPIDERS);
+				     (int32_t)MAX_SPIDERS);
 			break;
 	       	//case EURLTOOLONG :
-	       	//p += sprintf(p,"i - Injected URL was longer than "
-	       	//	     "%li characters.",(long)MAX_URL_LEN);
+	       	//p += sprintf(p,"i - Injected URL was int32_ter than "
+	       	//	     "%"INT32" characters.",(int32_t)MAX_URL_LEN);
 	       	//break;
 		case EBADREPLY:
 			p += sprintf(p,"i - Received bad internal reply. You "
@@ -748,12 +748,12 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     "reached its limit.");
 			break;
 		case EBUFTOOSMALL:
-			p += sprintf(p,"i - Injected URL was longer than "
-				     "%li characters. Or the injected "
+			p += sprintf(p,"i - Injected URL was int32_ter than "
+				     "%"INT32" characters. Or the injected "
 				     "document was too big to fit in memory, "
 				     "so consider increasing "
 				     "<titledbMaxTreeMem> in gb.conf." 
-				     ,(long)MAX_URL_LEN);
+				     ,(int32_t)MAX_URL_LEN);
 			break;
 		case ENOSITEDEFAULT:
 			p += sprintf(p,"i - The default tagdb*.xml (ruleset) "
@@ -774,7 +774,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     "not present or illegal.");
 			break;
 		case ENOSLOTS: 
-			p += sprintf(p,"a,i,s - There was a shortage of "
+			p += sprintf(p,"a,i,s - There was a int16_tage of "
 				     "sockets, please try again."); 
 			break;
 		case ECLOSING:
@@ -794,7 +794,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     "did not contain all the query terms.");
 			break;
 		case EQUERYTOOBIG:
-			p += sprintf(p,"s - Query was too long.");
+			p += sprintf(p,"s - Query was too int32_t.");
 			break;
 		case EQUERYTRUNCATED:
 			p += sprintf(p,"s - Query was truncated.");
@@ -1188,7 +1188,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "the last time each of these databases dumped to disk by looking at the "
 "timestamp on the corresponding files in the appropriate collection "
 "subdirectories contained in the working directory. If tfndb was "
-"dumped to disk the longest time ago, then use its timestamp "
+"dumped to disk the int32_test time ago, then use its timestamp "
 "to indicate when the last url was successfully added or injected. You might "
 "want to subtract thirty minutes from that timestamp to make sure because it "
 "is really the time that that file <b>started</b> being dumped to disk that "
@@ -1199,7 +1199,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 
 
 "<b>Gigablast is slow to respond to queries. How do I speed it up?</b><br>"
-"a. If you see long purple lines in the Performance graph when "
+"a. If you see int32_t purple lines in the Performance graph when "
 "Gigablast is slow then that "
 "means Gigablast is operating on a slow network OR your tier sizes, "
 "adjustable on the Search Controls page, are way "
@@ -1215,7 +1215,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "rebooting. I've found that there is about a 20%% chance that the reboot "
 "will make the card come back to 1000Mbps."
 "<br><br>"
-"b. If you see lots of long black lines on the Performance graph then that "
+"b. If you see lots of int32_t black lines on the Performance graph then that "
 "means your disk is slowing everything down. Make sure that if you are doing "
 "realtime queries that you do not have too many big indexdb files. If you "
 "tight merge everything it should fix that problem. Otherwise, consider "
@@ -1411,7 +1411,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "then you should adjust the time Gigablast waits between page requests to the\n"
 "same web server. To do this go to the \n"
 "<a href=\"/admin/spider\">Spider Controls</a> page for your collection and set\n"
-"the <b>same domain wait</b> and <b>same ip wait</b> values to how long you want Gigablast to wait in between page requests to the same domain or the same IP address respectively. This value is in milliseconds (ms). There are 1000"
+"the <b>same domain wait</b> and <b>same ip wait</b> values to how int32_t you want Gigablast to wait in between page requests to the same domain or the same IP address respectively. This value is in milliseconds (ms). There are 1000"
 "milliseconds in one second. That is, 1000 ms equals 1 second.\n"
 "You must then click on the\n"
 "<i>update</i> button at the bottom of that page to submit your new value.\n"
@@ -1463,7 +1463,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "<a name=\"spiderqueue\">\n"
 "<b>Spider Queues</b>\n"
 "<br><br>\n"
-"Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 7. Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it belongs. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href=\"/admin/filters\"></a>URL filters</a> page.\n"
+"Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 7. Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it beint32_ts. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href=\"/admin/filters\"></a>URL filters</a> page.\n"
 "<br><br>\n"
 "On the <a href=\"/admin/spider\">Spider Controls</a> page you can toggle the spidering of individual spider queues as well as link harvesting. More control on a per queue basis will be available soon, perhaps including the ability to assign a ruleset to a spider queue.\n"
 "<br><br>\n"
@@ -1626,25 +1626,25 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 
 "<table cellpadding=2>\n"
 "<tr><td><b>%5li %s</b></td>"
-"<td>There was a shortage of memory to properly "
+"<td>There was a int16_tage of memory to properly "
 "process the request.</td></tr>\n"
 
-"<tr><td><b>%05li %s</b></td>"
+"<tr><td><b>%05"INT32" %s</b></td>"
 "<td>A cached page was not found when it should have "
 "been, likely due to corrupt data on disk.</td></tr>\n"
 
 "<tr><td><b>%5li %s</b></td>"
-"<td>There was a shortage of resources so the "
+"<td>There was a int16_tage of resources so the "
 "request should be repeated.</td></tr>\n"
 
 "<tr><td><b>%5li %s</b></td>"
 "<td>The injection was to a collection that does "
 "not exist.</td></tr>\n"
 "</table>\n",
-		  (long)ENOMEM   ,mstrerror(ENOMEM),
-		  (long)ENOTFOUND,mstrerror(ENOTFOUND),
-		  (long)ETRYAGAIN,mstrerror(ETRYAGAIN),
-		  (long)ENOCOLLREC,mstrerror(ENOCOLLREC));
+		  (int32_t)ENOMEM   ,mstrerror(ENOMEM),
+		  (int32_t)ENOTFOUND,mstrerror(ENOTFOUND),
+		  (int32_t)ETRYAGAIN,mstrerror(ETRYAGAIN),
+		  (int32_t)ENOCOLLREC,mstrerror(ENOCOLLREC));
 
 	sprintf ( p , 
 ""
@@ -2100,7 +2100,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "After ensuring you have enough extra memory to handle the document size, you will need to make sure the document fits into the tree that is used to hold the documents in memory before they get dumped to disk. The documents are compressed using zlib before being added to the tree so you might expect a 5:1 compression for a typical web page. The memory used to hold document in this tree is controllable from the <b>&lt;titledbMaxTreeMem&gt;</b> parameter in the gb.conf file. Make sure that is big enough to hold the document you would like to add. If the tree could accomodate the big document, but at the time is partially full, Gigablast will automatically dump the tree to disk and keep trying to add the big document."
 "<br>\n"
 "<br>\n"
-"Finally, you need to ensure that the <b>max text doc len</b> and <b>max other doc len</b> controls on the <b>Spider Controls</b> page are set to accomodating sizes. Use -1 to indicate no maximum. <i>Other</i> documents are non-text and non-html documents, like PDF, for example. These controls will physically prohibit the spider from downloading more than this many bytes. This causes excessively long documents to be truncated. If the spider is downloading a PDF that gets truncated then it abandons it, because truncated PDFs are useless."
+"Finally, you need to ensure that the <b>max text doc len</b> and <b>max other doc len</b> controls on the <b>Spider Controls</b> page are set to accomodating sizes. Use -1 to indicate no maximum. <i>Other</i> documents are non-text and non-html documents, like PDF, for example. These controls will physically prohibit the spider from downloading more than this many bytes. This causes excessively int32_t documents to be truncated. If the spider is downloading a PDF that gets truncated then it abandons it, because truncated PDFs are useless."
 "<br>\n"
 "<br>\n"
 "<br>\n"
@@ -2122,7 +2122,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "This control covers some of the more popular "
 "characters sets in Asia, but if the character set is not recognized by "
 "Gigablast it will be indexed as if it were the Latin-1 character set. "
-"Likewise, all search queries are interpreted as belonging to the Latin-1 "
+"Likewise, all search queries are interpreted as beint32_ting to the Latin-1 "
 "character set."
 "<br><br>"
 "If Gigablast indexes a document as being from the Latin-1 character set "
@@ -2320,7 +2320,7 @@ z       122       7a                    {       123       7b\
 "<ul><li>Catdb is used to create a Web Directory based"
 " on DMOZ (www.dmoz.org).  The actual RDB known as"
 " <i>catdb</i> is a set of records containing the urls"
-" in the directory and which categories they belong to."
+" in the directory and which categories they beint32_t to."
 " Catdb is only required at spider time so that the"
 " url being spidered can be checked for category"
 " information.  Generating Catdb requires the"
@@ -2574,7 +2574,7 @@ z       122       7a                    {       123       7b\
 "</tr>\n"
 "<tr>\n"
 "<td>LIMIT</td>\n"
-"<td>Messages printed when a document was not indexed because the document quota specified in the ruleset was breeched. Also, urls that were truncated because they were too long. Or a robots.txt file was too big and was truncated.</td>\n"
+"<td>Messages printed when a document was not indexed because the document quota specified in the ruleset was breeched. Also, urls that were truncated because they were too int32_t. Or a robots.txt file was too big and was truncated.</td>\n"
 "</tr>\n"
 "<tr>\n"
 "<td>TIME</td>\n"
@@ -3015,7 +3015,7 @@ z       122       7a                    {       123       7b\
 "<tr><td><b>DNS</b></td><td>This is the client port we use locally when talking to the dns server.</td></tr>\n"
 "<tr><td><b>HTTP</b></td><td>This is the HTTP port used by the host. To avoid conflicts, hosts on the same computer must have different ports. Port numbers must be above 2000 or so, because only root has permission to use those ports.</td></tr>\n"
 "<tr><td><b>IDE</b></td><td>The IDE channel number that the host uses. Hosts on the same computer that share the same IDE bus must have this number be the same.</td></tr>\n"
-"<tr><td><b>GRP</b></td><td>The redundancy group number to which the host belongs. Hosts that are mirror images (twins) of each other have the same redundancy group number.</td></tr>\n"
+"<tr><td><b>GRP</b></td><td>The redundancy group number to which the host beint32_ts. Hosts that are mirror images (twins) of each other have the same redundancy group number.</td></tr>\n"
 "<tr><td><b>DIR</b></td><td>The working directory where the host stores all files related to the gb process.</td></tr>\n"
 "</table>\n"
 "\n"
@@ -3065,7 +3065,7 @@ z       122       7a                    {       123       7b\
 "# URL Filters pages.\n"
 "<b>&lt;description&gt;This is the default ruleset used for most urls.&lt;/&gt;</b>\n"
 "\n"
-"# If a ruleset is no longer actively used, it is not deleted, but retired.\n"
+"# If a ruleset is no int32_ter actively used, it is not deleted, but retired.\n"
 "# Retired rulesets are not displayed to spam assassins on the Sitedb tool \n"
 "# and URL Filters pages.\n"
 "<b>&lt;retired&gt;no&lt;/&gt;</b>\n"
@@ -3202,11 +3202,11 @@ z       122       7a                    {       123       7b\
 "#\n"
 "##############################################################################\n"
 "\n"
-"# How long to wait to respider for the first time.\n"
+"# How int32_t to wait to respider for the first time.\n"
 "# This is in DAYS. This tag overrides Spider Controls if present.\n"
 "&lt;firstRespiderWait&gt;3600&lt;/&gt; (default is to omit this tag)\n"
 "\n"
-//"# How long to wait to respider if there was an error.\n"
+//"# How int32_t to wait to respider if there was an error.\n"
 //"# This is in DAYS. This tag overrides Spider Controls if present.\n"
 //"&lt;errorRespiderWait&gt;3600&lt;/&gt; (default is to omit this tag)\n"
 //"\n"
@@ -4001,6 +4001,6 @@ z       122       7a                    {       123       7b\
 	if ( g_users.hasPermission( r, PAGE_MASTER ) ) p += gbstrlen(p); 
 
 	*p = '\0';
-	long bufLen = gbstrlen(buf);
+	int32_t bufLen = gbstrlen(buf);
 	return g_httpServer.sendDynamicPage ( s , buf , bufLen );
 }

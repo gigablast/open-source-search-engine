@@ -44,29 +44,29 @@
 #define SUBCAT_ALTLANG     110
 
 struct Category {
-	long  m_catid;
-	long  m_parentid;
-	//short m_numSymParents;
-	//long  m_symParentsOffset;
-	long  m_nameOffset;
-	short m_nameLen;
-	unsigned long m_structureOffset;
-	unsigned long m_contentOffset;
-	long  m_numUrls;
+	int32_t  m_catid;
+	int32_t  m_parentid;
+	//int16_t m_numSymParents;
+	//int32_t  m_symParentsOffset;
+	int32_t  m_nameOffset;
+	int16_t m_nameLen;
+	uint32_t m_structureOffset;
+	uint32_t m_contentOffset;
+	int32_t  m_numUrls;
 };
 
 struct CategoryHash {
-	unsigned long  m_hash;
-	long m_catIndex;
+	uint32_t  m_hash;
+	int32_t m_catIndex;
 };
 
 struct SubCategory {
-	//long  m_prefixOffset;
-	long  m_prefixLen;
-	//long  m_nameOffset;
-	long  m_nameLen;
+	//int32_t  m_prefixOffset;
+	int32_t  m_prefixLen;
+	//int32_t  m_nameOffset;
+	int32_t  m_nameLen;
 	char  m_type;
-	long getRecSize () { return sizeof(SubCategory)+m_prefixLen+m_nameLen+2;};
+	int32_t getRecSize () { return sizeof(SubCategory)+m_prefixLen+m_nameLen+2;};
 	char *getPrefix() { return m_buf; };
 	char *getName  () { return m_buf+m_prefixLen+1;};
 	char  m_buf[0];
@@ -77,108 +77,108 @@ public:
 	Categories();
 	~Categories();
 
-	long fileRead ( int fileid, void *buf, size_t count );
+	int32_t fileRead ( int fileid, void *buf, size_t count );
 
 	void reset();
 
 	// load the hierarchy from a file
-	long loadCategories ( char *filename );
+	int32_t loadCategories ( char *filename );
 
 	// . this is called by loadCategories() and constructs m_adultTable
 	// . it will load/save it from/to disk, too
 	bool makeBadHashTable ( ) ;
-	bool addUrlsToBadHashTable ( long catid ) ;
+	bool addUrlsToBadHashTable ( int32_t catid ) ;
 
 	// get the index of a cat from its id
 	// -1 if not found
-	long getIndexFromId   ( long catid );
-	long getIndexFromPath ( char *str, long strLen );
-	long getIdFromPath    ( char *str, long strLen );
+	int32_t getIndexFromId   ( int32_t catid );
+	int32_t getIndexFromPath ( char *str, int32_t strLen );
+	int32_t getIdFromPath    ( char *str, int32_t strLen );
 
 	// determine if a category should be printed RTL
-	bool isIdRTLStart    ( long catid );
-	bool isIndexRTLStart ( long catIndex );
-	bool isIdRTL         ( long catid );
-	bool isIndexRTL      ( long catIndex );
+	bool isIdRTLStart    ( int32_t catid );
+	bool isIndexRTLStart ( int32_t catIndex );
+	bool isIdRTL         ( int32_t catid );
+	bool isIndexRTL      ( int32_t catIndex );
 
 	// see if the category is Adult
-	bool isIdAdultStart    ( long catid );
-	bool isIndexAdultStart ( long catIndex );
-	bool isIdAdult         ( long catid );
-	bool isIndexAdult      ( long catIndex );
+	bool isIdAdultStart    ( int32_t catid );
+	bool isIndexAdultStart ( int32_t catIndex );
+	bool isIdAdult         ( int32_t catid );
+	bool isIndexAdult      ( int32_t catIndex );
 
 	// is it in a bad cat, like adult, gambling, online pharmacies
-	bool isIdBadStart    ( long catid );
-	bool isIndexBadStart ( long catIndex );
-	bool isIdBad         ( long catid );
-	bool isIndexBad      ( long catIndex );
+	bool isIdBadStart    ( int32_t catid );
+	bool isIndexBadStart ( int32_t catIndex );
+	bool isIdBad         ( int32_t catid );
+	bool isIndexBad      ( int32_t catIndex );
 	// is this url directly in a dmoz adult category?
 	bool isInBadCat      ( Url *u ) ;
-	bool isInBadCat      ( unsigned long urlHash );
+	bool isInBadCat      ( uint32_t urlHash );
 
 	// print info of cats
-	void printCats ( long start, long end );
+	void printCats ( int32_t start, int32_t end );
 
 	// print the path of this category
 	void printPathFromId ( SafeBuf *sb ,
-			       long  catid,
+			       int32_t  catid,
 			       bool  raw = false,
 			       bool  isRTL = false );
 	void printPathFromIndex ( SafeBuf *sb ,
-				  long  catIndex,
+				  int32_t  catIndex,
 				  bool  raw = false,
 				  bool  isRTL = false );
 
 	// print the path bread crumb links for this category
 	void printPathCrumbFromId    ( SafeBuf *sb ,
-				       long  catid,
+				       int32_t  catid,
 				       bool  isRTL = false );
 	void printPathCrumbFromIndex ( SafeBuf *sb ,
-				       long  catid,
+				       int32_t  catid,
 				       bool  isRTL = false );
 
-	bool printUrlsInTopic ( class SafeBuf *sb , long catid  ) ;
+	bool printUrlsInTopic ( class SafeBuf *sb , int32_t catid  ) ;
 
 	// . get the title and summary for a specific url
 	//   and catid
 	bool getTitleAndSummary ( char  *url,
-				  long   urlLen,
-				  long   catid,
+				  int32_t   urlLen,
+				  int32_t   catid,
 				  char  *title        = NULL,
-				  long  *titleLen     = NULL,
-				  long   maxTitleLen  = 0,
+				  int32_t  *titleLen     = NULL,
+				  int32_t   maxTitleLen  = 0,
 				  char  *summ         = NULL,
-				  long  *summLen      = NULL,
-				  long   maxSummLen   = 0,
+				  int32_t  *summLen      = NULL,
+				  int32_t   maxSummLen   = 0,
 				  char  *anchor       = NULL,
 				  unsigned char *anchorLen    = NULL,
-				  long   maxAnchorLen = 0 ,
-				  long   niceness     = 0 ,
+				  int32_t   maxAnchorLen = 0 ,
+				  int32_t   niceness     = 0 ,
 				  bool   justAddToTable = false );
 
 	// normalize a url string
-	long fixUrl ( char *url, long urlLen );
+	int32_t fixUrl ( char *url, int32_t urlLen );
 
 	// . generate sub categories for a given catid
 	// . store list of SubCategories into "subCatBuf" return # stored
 	// . hits disk without using threads... so kinda sucks...
-	long generateSubCats ( long catid, SafeBuf *subCatBuf );
+	int32_t generateSubCats ( int32_t catid, SafeBuf *subCatBuf );
 
-	long getNumUrlsFromIndex ( long catIndex ) {
+	int32_t getNumUrlsFromIndex ( int32_t catIndex ) {
 		if ( ! m_cats ) return 0;
 		return m_cats[catIndex].m_numUrls; };
 
 	// creates a directory search request url
 	//void createDirectorySearchUrl ( Url  *url,
-	long createDirSearchRequest ( char *requestBuf,
-				      long  requestBufSize,
-				      long  catid,
+	int32_t createDirSearchRequest ( char *requestBuf,
+				      int32_t  requestBufSize,
+				      int32_t  catid,
 				      char *hostname,
-				      long  hostnameLen,
+				      int32_t  hostnameLen,
 				      char *coll,
-				      long  collLen,
+				      int32_t  collLen,
 				      char *cgi ,//= NULL,
-				      long  cgiLen ,//= 0,
+				      int32_t  cgiLen ,//= 0,
 				      bool  cgiFromRequest ,//= false ,
 				      class HttpRequest *r );
 
@@ -188,30 +188,30 @@ public:
 
 	// Categories
 	Category *m_cats;
-	long      m_numCats;
+	int32_t      m_numCats;
 
 	// name buffer
 	char *m_nameBuffer;
-	long  m_nameBufferSize;
+	int32_t  m_nameBufferSize;
 
 	// symbolic parent buffer
-	//long *m_symParents;
-	//long  m_numSymParents;
+	//int32_t *m_symParents;
+	//int32_t  m_numSymParents;
 
 	// hash buffer
 	CategoryHash *m_catHash;
 
 	// full buffer
 	char *m_buffer;
-	long  m_bufferSize;
+	int32_t  m_bufferSize;
 
 protected:
 	// for parsing the original dmoz files
-	char* incRdfPtr   ( long skip = 1 );
-	long  rdfParse    ( char *tagName );
-	long  rdfNextTag  ( );
-	long  fillNextString  ( char *str, long max );
-	long  fillNextTagBody ( char *str, long max );
+	char* incRdfPtr   ( int32_t skip = 1 );
+	int32_t  rdfParse    ( char *tagName );
+	int32_t  rdfNextTag  ( );
+	int32_t  fillNextString  ( char *str, int32_t max );
+	int32_t  fillNextTagBody ( char *str, int32_t max );
 
 	// rdf stream
 	char *m_rdfPtr;
@@ -219,20 +219,20 @@ protected:
 	//std::ifstream m_rdfStream;
 	int   m_rdfStream;
 	char *m_rdfBuffer;
-	long  m_rdfBufferSize;
-	long  m_currOffset;
+	int32_t  m_rdfBufferSize;
+	int32_t  m_currOffset;
 	// static rdf buffer
 	char  m_rdfSmallBuffer[RDFSMALLBUFFER_SIZE];
 	// tag buffer
 	char  m_tagRecfer[MAX_TAG_LEN+1];
-	long  m_tagLen;
+	int32_t  m_tagLen;
 
 	HashTable m_badTable;
 
 
 	// sub category buffer
 	//SubCategory m_subCats[MAX_SUB_CATS];
-	//long m_numSubCats;
+	//int32_t m_numSubCats;
 };
 
 extern class Categories  g_categories1;

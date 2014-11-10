@@ -7,19 +7,19 @@
 // JAB: const-ness for optimizer...
 // don't call these, they're used internally
 static bool     initEntityTable();
-static uint32_t getTextEntity        ( char *s , long len );
-static uint32_t getDecimalEntity     ( char *s , long len );
-static uint32_t getHexadecimalEntity ( char *s , long len );
+static uint32_t getTextEntity        ( char *s , int32_t len );
+static uint32_t getDecimalEntity     ( char *s , int32_t len );
+static uint32_t getHexadecimalEntity ( char *s , int32_t len );
 
 // . s[maxLen] should be the NULL
 // . returns full length of entity @ "s" if there is a valid one, 0 otherwise
 // . sets *c to the iso character the entity represents (if there is one)
 // JAB: const-ness for optimizer...
-long getEntity_a ( char *s , long maxLen , uint32_t *c ) {
+int32_t getEntity_a ( char *s , int32_t maxLen , uint32_t *c ) {
 	// ensure there's an & as first char
 	if ( s[0] != '&' ) return 0;
 	// compute maximum length of entity, if it's indeed an entity
-	long len = 1;
+	int32_t len = 1;
 	if ( s[len]=='#' ) len++;
 	// cut it off after 9 chars to save time
 	while ( len < maxLen && len < 9 && is_alnum_a(s[len]) ) len++;
@@ -29,7 +29,7 @@ long getEntity_a ( char *s , long maxLen , uint32_t *c ) {
 	//	s[len]='\0';
 	//	fprintf(stderr,"got entity %s \n",s);
 	//	s[len]=d;
-	// we don't have entities longer than "&curren;"
+	// we don't have entities int32_ter than "&curren;"
 	if ( len > 10 ) return 0;
 	// all entites are 3 or more chars (&gt)
 	if ( len < 3 ) return 0;
@@ -51,10 +51,10 @@ long getEntity_a ( char *s , long maxLen , uint32_t *c ) {
 static HashTableX s_table;
 static bool       s_isInitialized = false;
 struct Entity {
-	long           unicode;
+	int32_t           unicode;
 	char          *entity;
 	unsigned char  c;
-	long           utf8Len;
+	int32_t           utf8Len;
 	unsigned char  utf8[4];
 };
 
@@ -365,8 +365,8 @@ static bool initEntityTable(){
 			return log("build: Could not init table of "
 					   "HTML entities.");
 		// now add in all the stop words
-		long n = (long)sizeof(s_entities) / (long)sizeof(Entity);
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_entities) / (int32_t)sizeof(Entity);
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			int64_t h = hash64b ( s_entities[i].entity );
 			// grab the unicode code point
 			UChar32 up = s_entities[i].unicode;
@@ -375,7 +375,7 @@ static bool initEntityTable(){
 			// point to it
 			char *buf = (char *)s_entities[i].utf8;
 			// if uchar32 not 0 then set the utf8 with it
-			long len = utf8Encode(up,buf);
+			int32_t len = utf8Encode(up,buf);
 			//
 			// make my own mods to make parsing easier
 			//
@@ -424,14 +424,14 @@ static bool initEntityTable(){
 // . return the 32-bit unicode char it represents
 // . returns 0 if none
 // . JAB: const-ness for optimizer...
-uint32_t getTextEntity ( char *s , long len ) {
+uint32_t getTextEntity ( char *s , int32_t len ) {
 	if ( !initEntityTable()) return 0;
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
 	// compute the hash of the entity including &, but not ;
 	int64_t h = hash64 ( s , len );
 	// get the entity index from table (stored in the score field)
-	long i = (long) s_table.getScore ( &h );
+	int32_t i = (int32_t) s_table.getScore ( &h );
 	// return 0 if no match
 	if ( i == 0 ) return 0;
 	// point to the utf8 char. these is 1 or 2 bytes it seems
@@ -451,7 +451,7 @@ uint32_t getTextEntity ( char *s , long len ) {
 // . get a decimal encoded entity
 // . s/len is the whol thing
 // . JAB: const-ness for optimizer...
-uint32_t getDecimalEntity ( char *s , long len ) {
+uint32_t getDecimalEntity ( char *s , int32_t len ) {
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
 	// . &#1 is smallest it can be
@@ -493,7 +493,7 @@ uint32_t getDecimalEntity ( char *s , long len ) {
 
 	//printf("Translated entity (dec)");
 	//for (int i=0;i<len;i++)putchar(s[i]);
-	//printf(" to [U+%ld]\n", v);
+	//printf(" to [U+%"INT32"]\n", v);
 
 	if (v < 32 || v>0x10ffff) return (uint32_t)' ';
 
@@ -504,7 +504,7 @@ uint32_t getDecimalEntity ( char *s , long len ) {
 // . get a hexadecimal encoded entity
 // . JAB: const-ness for optimizer...
 // . returns a UChar32
-uint32_t getHexadecimalEntity ( char *s , long len ) {
+uint32_t getHexadecimalEntity ( char *s , int32_t len ) {
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
 	// . &#x1  is smallest it can be

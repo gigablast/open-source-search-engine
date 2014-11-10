@@ -14,7 +14,7 @@
 
 #include <sys/ioctl.h>            // ioctl() - get our ip address from a socket
 #include <net/if.h>               // for struct ifreq passed to ioctl()    
-//#include "../../rsa/rsa.h"        // public_key private_key vlong (seals)
+//#include "../../rsa/rsa.h"        // public_key private_key vint32_t (seals)
 //#include "Conf.h"       // for getting m_groupId/m_groupMask
 #include "Xml.h" // host file in xml
 
@@ -63,19 +63,19 @@ enum {
 #define HT_SCPROXY 0x10
 #define HT_ALL_PROXIES (HT_PROXY|HT_QCPROXY|HT_SCPROXY)
 
-long *getLocalIps ( ) ;
+int32_t *getLocalIps ( ) ;
 
 class EventStats {
 public:
-	long m_expired;
-	long m_active;
+	int32_t m_expired;
+	int32_t m_active;
 
 	// these are all active
-	long m_experimental;
-	long m_resultSet1;
-	long m_resultSetOther;
-	long m_facebook;
-	long m_badGeocoder;
+	int32_t m_experimental;
+	int32_t m_resultSet1;
+	int32_t m_resultSetOther;
+	int32_t m_facebook;
+	int32_t m_badGeocoder;
 
 	void clear ( ) { memset ( this , 0 , sizeof(EventStats) ); };
 };
@@ -86,58 +86,58 @@ class Host {
 
 	//bool isDead ( ) { return m_hostdb->m_isDead (); };
 
-	long           m_hostId ;
-	//unsigned long  m_groupId ;
+	int32_t           m_hostId ;
+	//uint32_t  m_groupId ;
 
 	// shards and groups are basically the same, but let's keep it simple.
 	// since we use m_map in Hostdb.cpp to map the bits of a key to
 	// the shard # now (not a groupId anymore, since groupId does not
 	// work for non binary powers of shards)
-	unsigned long m_shardNum;
+	uint32_t m_shardNum;
 
-	//long           m_groupNum;
-//	char       m_pubKey[20];     // 128bit(16 byte) and a short/long
-	unsigned long  m_ip ;        // used for internal communcation (udp)
+	//int32_t           m_groupNum;
+//	char       m_pubKey[20];     // 128bit(16 byte) and a int16_t/int32_t
+	uint32_t  m_ip ;        // used for internal communcation (udp)
 
 	// what stripe are we in? i.e. what twin number are we?
-	long           m_stripe;
+	int32_t           m_stripe;
 
 	// . these are used for talking w/ a particular host from the outside
 	// . usually m_extHttpPort = m_httpPort, but if you are going through
 	//   a router it can do portmapping. It might portmap 80 to 8000 so
 	//   you should use 80 here then.
-	//unsigned long  m_externalIp; // used for web-based GUI, to the world
+	//uint32_t  m_externalIp; // used for web-based GUI, to the world
 	// this ip is now the shotgun ip. the problem with an "external" ip
 	// is that people internal to the network cannot usually see it!!
 	// so now this is just a secondary regular ip address for servers with
 	// dual gigabit ethernet ports. make performance much better.
-	unsigned long  m_ipShotgun;  
-	unsigned short m_externalHttpPort;
-	unsigned short m_externalHttpsPort;
+	uint32_t  m_ipShotgun;  
+	uint16_t m_externalHttpPort;
+	uint16_t m_externalHttpsPort;
 
 	// his checksum of his hosts.conf so we can ensure we have the
 	// same hosts.conf file! 0 means not legit.
-	long m_hostsConfCRC;
+	int32_t m_hostsConfCRC;
 
 	// used by Process.cpp to do midnight stat dumps and emails
 	EventStats m_eventStats;
 
 //	time_t     m_lastComm ;      // time of last communication
 //	time_t     m_lastAttempt ;   // time of last attempted communication
-//	long       m_bandwidth;      // bytes per second
+//	int32_t       m_bandwidth;      // bytes per second
 //	int64_t  m_bytesRecvdFrom; // why do we need this?
 //	int64_t  m_bytesSentTo;    // why do we need this?
-	unsigned short m_port ;          // Mattster Protocol (MP) UDP port
-	//unsigned short m_portShotgun;    // for shotgunning
-	//unsigned short m_port2;          // the high priority port
-	unsigned short m_httpPort ;      // http port
-	unsigned short m_httpsPort;
-	//long       m_pingAvg ;       // in ms
-	//long       m_pingStdDev;     // in ms
-	//long       m_pings[4];       // our window of the last 4 pings
-	long           m_ping;
-	long           m_pingShotgun;
-	long           m_pingMax;
+	uint16_t m_port ;          // Mattster Protocol (MP) UDP port
+	//uint16_t m_portShotgun;    // for shotgunning
+	//uint16_t m_port2;          // the high priority port
+	uint16_t m_httpPort ;      // http port
+	uint16_t m_httpsPort;
+	//int32_t       m_pingAvg ;       // in ms
+	//int32_t       m_pingStdDev;     // in ms
+	//int32_t       m_pings[4];       // our window of the last 4 pings
+	int32_t           m_ping;
+	int32_t           m_pingShotgun;
+	int32_t           m_pingMax;
 	// have we ever got a ping reply from him?
 	char           m_gotPingReply;
 	double         m_loadAvg;
@@ -149,22 +149,22 @@ class Host {
 
 	float          m_diskUsage;
 
-	long          m_slowDiskReads;
+	int32_t          m_slowDiskReads;
 
 	// doc count
-	long          m_docsIndexed;
-	long          m_urlsIndexed;
+	int32_t          m_docsIndexed;
+	int32_t          m_urlsIndexed;
 
-	long          m_eventsIndexed;
+	int32_t          m_eventsIndexed;
 
 	// did gb log system errors that were given in g_conf.m_errstr ?
 	char           m_kernelErrors;
 	bool           m_kernelErrorReported;
 
-	long           m_flags;
+	int32_t           m_flags;
 
 	// used be SEO pipeline in xmldoc.cpp
-	long           m_numOutstandingRequests;
+	int32_t           m_numOutstandingRequests;
 
 	// used by DailyMerge.cpp exclusively
 	collnum_t      m_dailyMergeCollnum;
@@ -184,7 +184,7 @@ class Host {
 	char           m_preferEth;
 
 	// machine #, a machine can have several hosts on it
-	long           m_machineNum;
+	int32_t           m_machineNum;
 	// . this is used for sending email alerts to admin about dead hosts
 	// .  0 means we can send an email for this host if he goes dead on us
 	// . +1 means we already sent an email for him since he was down and 
@@ -194,12 +194,12 @@ class Host {
 	// . -3 means another host was responsible for sending to him, not us
 	// . -4 means we are currently in progress sending an email for him
 	// . -5 means he went down before host we alerted admin about revived
-	long           m_emailCode;
+	int32_t           m_emailCode;
 	// . ide channel
 	// . Msg34 will add disk load from other gigablast process that are
 	//   using your channel and your ip
-	long           m_ideChannel;
-	//long           m_tokenGroupNum;
+	int32_t           m_ideChannel;
+	//int32_t           m_tokenGroupNum;
 	// 0 means no, 1 means yes, 2 means unknown
 	char           m_syncStatus;
 
@@ -213,13 +213,13 @@ class Host {
 	char           m_hostname2[16];
 
 	// client port
-	unsigned short m_dnsClientPort;
+	uint16_t m_dnsClientPort;
 
 	// . what set the host is in
 	// . its redundant twins are always in different sets
-	//long           m_group;
+	//int32_t           m_group;
 	// was host in gk0 cluster and retired because its twin got
-	// ssds, so it was no longer really needed.
+	// ssds, so it was no int32_ter really needed.
 	bool           m_retired;
 	// used for logging when a host goes dead for the first time
 	bool           m_wasAlive;
@@ -229,11 +229,11 @@ class Host {
 	// eth0 and eth1 of this host
 	char           m_shotgunBit;
 	// how many ETRYAGAINs we received as replies from this host
-	long           m_etryagains;
+	int32_t           m_etryagains;
 	// how many resends total we had to do to this host
-	long           m_totalResends;
+	int32_t           m_totalResends;
 	// how many total error replies we got from this host
-	long           m_errorReplies;
+	int32_t           m_errorReplies;
 
 	// now include a note for every host
 	char           m_note[128];
@@ -253,19 +253,19 @@ class Host {
 	// for m_type == HT_QCPROXY, we forward the query to the regular proxy
 	// at this Ip:Port. we should receive a compressed 0xfd reply and
 	// we uncompress it and return it to the browser.
-	long           m_forwardIp;
-	short          m_forwardPort;
+	int32_t           m_forwardIp;
+	int16_t          m_forwardPort;
 
 	int64_t      m_dgramsTo;
 	int64_t      m_dgramsFrom;
 
 	char           m_repairMode;
 
-	// for timing how long the msg39 takes from this host
-	long           m_splitsDone;
+	// for timing how int32_t the msg39 takes from this host
+	int32_t           m_splitsDone;
 	int64_t      m_splitTimes;
 
-	// . the hostdb to which this host belongs!
+	// . the hostdb to which this host beint32_ts!
 	// . getHost(ip,port) will return a Host ptr from either 
 	//   g_hostdb or g_hostdb2, so UdpServer.cpp needs to know which it
 	//   is from when making the UdpSlot key.
@@ -273,7 +273,7 @@ class Host {
 
 	// . temps in celsius of the hard drives
 	// . set in Process.cpp
-	short          m_hdtemps[4];
+	int16_t          m_hdtemps[4];
 
 	// 24 bytes including ending \0
 	char m_gbVersionStrBuf[24];
@@ -284,17 +284,17 @@ class Host {
 
 	//char *m_lastKnownGoodCrawlInfoReply;
 	//char *m_lastKnownGoodCrawlInfoReplyEnd;
-	//long  m_replyAllocSize;
+	//int32_t  m_replyAllocSize;
 
 	// . used by Parms.cpp for broadcasting parm change requests
 	// . each parm change request has an id
 	// . this let's us know which id is in progress and what the last
 	//   id completed was
-	long m_currentParmIdInProgress;
-	long m_lastParmIdCompleted;
+	int32_t m_currentParmIdInProgress;
+	int32_t m_lastParmIdCompleted;
 	class ParmNode *m_currentNodePtr;
-	long m_lastTryError;
-	long m_lastTryTime;
+	int32_t m_lastTryError;
+	int32_t m_lastTryTime;
 
 	char  m_requestBuf[MAX_PING_SIZE];
 };
@@ -319,7 +319,7 @@ class Hostdb {
 	// . sets itself from g_conf (our configuration class)
 	// . returns false on fatal error
 	// . gets filename from Conf.h class
-	bool init ( long hostId , char *netname = NULL,
+	bool init ( int32_t hostId , char *netname = NULL,
 		    bool proxyHost = false , char useTempCluster = 0 ,
 		    char *cwd = NULL );
 
@@ -327,7 +327,7 @@ class Hostdb {
 	bool registerHandler ( );
 
 	// if config changes this *should* change
-	long getCRC();
+	int32_t getCRC();
 
 	// . to prevent script kiddies from sending bogus udp packets to
 	//   our udp servers we make sure they are from an IP in our hosts.conf
@@ -335,7 +335,7 @@ class Hostdb {
 	//   then we just have to deal with malformed packets in the handlers.
 	// . this just hashes each ip into m_ipHashes at startup and checks 
 	//   for the ip in there
-	//bool isIpInNetwork ( long ip );
+	//bool isIpInNetwork ( int32_t ip );
 
 	// . add ips from all hosts to our validation table so isIpInNetwork()
 	//   returns true for them
@@ -348,17 +348,17 @@ class Hostdb {
 	~Hostdb();
 	void reset();
 
-	unsigned long  getMyIp         ( ) { return m_myIp; };
-	unsigned short getMyPort       ( ) { return m_myPort; };
-	//unsigned short getMyPort2      ( ) { return m_myPort2; };
-	long           getMyHostId     ( ) { return m_hostId; };
-	long           getMyMachineNum ( ) { return m_myMachineNum; };
-	unsigned long  getLoopbackIp   ( ) { return m_loopbackIp; };
+	uint32_t  getMyIp         ( ) { return m_myIp; };
+	uint16_t getMyPort       ( ) { return m_myPort; };
+	//uint16_t getMyPort2      ( ) { return m_myPort2; };
+	int32_t           getMyHostId     ( ) { return m_hostId; };
+	int32_t           getMyMachineNum ( ) { return m_myMachineNum; };
+	uint32_t  getLoopbackIp   ( ) { return m_loopbackIp; };
 	Host          *getMyHost       ( ) { return m_myHost; };
 	bool           amProxy         ( ) { return m_myHost->isProxy(); };
 	Host          *getMyShard      ( ) { return m_myShard; };
-	long getMyShardNum ( ) { return m_myHost->m_shardNum; };
-	bool           isMyIp ( unsigned long ip ) {
+	int32_t getMyShardNum ( ) { return m_myHost->m_shardNum; };
+	bool           isMyIp ( uint32_t ip ) {
 		if ( ip == m_myIp        ) return true;
 		if ( ip == m_myIpShotgun ) return true;
 		if ( ip == 0x0100007f    ) return true;
@@ -367,29 +367,29 @@ class Hostdb {
 
 	// . one machine may have several hosts
 	// . get the machine # the hostId resides on
-	long getMachineNum ( long hostId ) {
+	int32_t getMachineNum ( int32_t hostId ) {
 		return getHost(hostId)->m_machineNum; };
 
-	long getNumMachines ( ) { return m_numMachines; };
+	int32_t getNumMachines ( ) { return m_numMachines; };
 
 	// . some utility routines
 	// . hostIds go from 0 to N-1 where N is # of particiapting hosts
 	// . groupIds have hi bits set first & depend on # of groups
 	// . groupMask is just the highest groupId
-	//long          makeHostId     ( unsigned long groupId ) ;
-	//unsigned long makeGroupId    ( long hostId    , long numGroups );
-	//unsigned long makeGroupMask  ( long numGroups ) ;
+	//int32_t          makeHostId     ( uint32_t groupId ) ;
+	//uint32_t makeGroupId    ( int32_t hostId    , int32_t numGroups );
+	//uint32_t makeGroupMask  ( int32_t numGroups ) ;
 
 	// uses a table
-	//long          makeHostIdFast ( unsigned long groupId ) ;
+	//int32_t          makeHostIdFast ( uint32_t groupId ) ;
 
 	// we consider the host dead if we didn't get a ping reply back
 	// after 10 seconds
-	bool  isDead ( long hostId ) ;
+	bool  isDead ( int32_t hostId ) ;
 
 	bool  isDead ( Host *h ) ;
 
-	long getAliveIp ( Host *h ) ;
+	int32_t getAliveIp ( Host *h ) ;
 
 	bool hasDeadHost ( );
 
@@ -399,8 +399,8 @@ class Hostdb {
 
 	int64_t getNumGlobalEvents ( );
 
-	//Host *getLiveHostInGroup ( long groupId );
-	Host *getLiveHostInShard ( long shardNum );
+	//Host *getLiveHostInGroup ( int32_t groupId );
+	Host *getLiveHostInShard ( int32_t shardNum );
 
 	// in the entire cluster. return host #0 if its alive, otherwise
 	// host #1, etc.
@@ -414,100 +414,100 @@ class Hostdb {
 	// . RdbList will be populated with the hosts in that group
 	// . we do not create an RdbList, you must do that
 	// . callback passes your RdbList back to you
-	//Host *getGroup ( unsigned long groupId , long *numHosts = NULL );
-	Host *getShard ( unsigned long shardNum , long *numHosts = NULL ) {
+	//Host *getGroup ( uint32_t groupId , int32_t *numHosts = NULL );
+	Host *getShard ( uint32_t shardNum , int32_t *numHosts = NULL ) {
 		if ( numHosts ) *numHosts = m_numHostsPerShard;
 		return &m_hosts[shardNum * m_numHostsPerShard]; 
 	};
 
-	//Host *getGroupFromGroupId ( unsigned long gid ) {
+	//Host *getGroupFromGroupId ( uint32_t gid ) {
 	//	return getGroup ( gid ); 
 	//};
 
-	//Host *getGroupFromGroupNum ( long groupNum ) {
+	//Host *getGroupFromGroupNum ( int32_t groupNum ) {
 	//	// the array of Hosts that this points into is sorted
 	//	// by groupId first, so we should be ok
 	//	return m_groups[groupNum]; 
 	//};
 
 	// the row #
-	//long getStripe ( unsigned long groupId ) {
+	//int32_t getStripe ( uint32_t groupId ) {
 	//	Host *h = getGroup ( groupId );
 	//	if ( ! h ) return -1;
 	//	return h->m_stripe;//groupNum;
 	//};
 
 	// the column #
-	//long getGroupNum ( unsigned long groupId ) {
+	//int32_t getGroupNum ( uint32_t groupId ) {
 	//	Host *h = getGroup ( groupId );
 	//	if ( ! h ) return -1;
 	//	return h->m_group;
 	//};
 
 	// quickly get the lowest hostid in group "groupId"
-	//Host *getHostIdFast ( unsigned long groupId );
+	//Host *getHostIdFast ( uint32_t groupId );
 
 	// hosts in a token group share a token that is required for
 	// performing merges (big read/writes on disk)
-	//Host **getTokenGroup ( unsigned long hostId , long *numHosts = NULL);
+	//Host **getTokenGroup ( uint32_t hostId , int32_t *numHosts = NULL);
 
 	// this is used to set the Host::m_tokenGroupNum members
-	//long getTokenGroupNum ( Host *ha ) ;
+	//int32_t getTokenGroupNum ( Host *ha ) ;
 
 	// . map a group num to a groupId
 	// . used by titledb.h to find groupId for a docId
-	//unsigned long getGroupId_old ( long groupNum ) {
+	//uint32_t getGroupId_old ( int32_t groupNum ) {
 	//	return m_hostPtrs[groupNum]->m_groupId_old; }
 
-	//unsigned long getGroupIdFromHostId ( long hostId ) {
+	//uint32_t getGroupIdFromHostId ( int32_t hostId ) {
 	//	return m_hostPtrs[hostId]->m_groupId; };
 
 	// get the host in this group with the smallest avg roundtrip time
-	//Host *getFastestHostInGroup ( unsigned long groupId );
+	//Host *getFastestHostInGroup ( uint32_t groupId );
 
 	// get the host that has this path/ip
-	Host *getHost2 ( char *cwd , long *localIps ) ;
-	Host *getProxy2 ( char *cwd , long *localIps ) ;
+	Host *getHost2 ( char *cwd , int32_t *localIps ) ;
+	Host *getProxy2 ( char *cwd , int32_t *localIps ) ;
 
 	// . like above but just gets one host
-	// Host *getHost ( long hostId ) { return m_groups[hostId]; };
-	Host *getHost ( long hostId ) { 
+	// Host *getHost ( int32_t hostId ) { return m_groups[hostId]; };
+	Host *getHost ( int32_t hostId ) { 
 		if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
 		return m_hostPtrs[hostId]; 
 	};
 
-	Host *getSpare ( long spareId ) {
+	Host *getSpare ( int32_t spareId ) {
 		return m_spareHosts[spareId]; };
 
-	Host *getProxy ( long proxyId ) {
+	Host *getProxy ( int32_t proxyId ) {
 		return m_proxyHosts[proxyId]; };
 
-	long  getNumHosts ( ) { return m_numHosts; };
-	long  getNumProxy ( ) { return m_numProxyHosts; };
-	long getNumProxies ( ) { return m_numProxyHosts; };
-	long getNumGrunts  ( ) { return m_numHosts; };
+	int32_t  getNumHosts ( ) { return m_numHosts; };
+	int32_t  getNumProxy ( ) { return m_numProxyHosts; };
+	int32_t getNumProxies ( ) { return m_numProxyHosts; };
+	int32_t getNumGrunts  ( ) { return m_numHosts; };
 	// how many of the hosts are non-dead?
-	long  getNumHostsAlive ( ) { return m_numHostsAlive; };
-	long  getNumProxyAlive ( ) { return m_numProxyAlive; };
-	//long  getNumGroups () { return m_numGroups; };
-	long  getNumShards () { return m_numShards; };
-	long  getNumIndexSplits() { return m_indexSplits; };
+	int32_t  getNumHostsAlive ( ) { return m_numHostsAlive; };
+	int32_t  getNumProxyAlive ( ) { return m_numProxyAlive; };
+	//int32_t  getNumGroups () { return m_numGroups; };
+	int32_t  getNumShards () { return m_numShards; };
+	int32_t  getNumIndexSplits() { return m_indexSplits; };
 
 	// how many hosts in this group?
-	//long  getNumHostsPerShard ( ) { return m_numHostsPerShard; };
-	long  getNumHostsPerShard ( ) { return m_numHostsPerShard; };
+	//int32_t  getNumHostsPerShard ( ) { return m_numHostsPerShard; };
+	int32_t  getNumHostsPerShard ( ) { return m_numHostsPerShard; };
 
 	// goes with Host::m_stripe
-	long  getNumStripes ( ) { return m_numHostsPerShard; };
+	int32_t  getNumStripes ( ) { return m_numHostsPerShard; };
 
 	// . get a host entry from ip/port
 	// . returns NULL if no match
-	//Host *getHost  ( unsigned long ip , unsigned short port );
-	//Host *getProxy  ( unsigned long ip , unsigned short port );
+	//Host *getHost  ( uint32_t ip , uint16_t port );
+	//Host *getProxy  ( uint32_t ip , uint16_t port );
 
 	// from http/https ports
-	//Host *getHostFromTcpPort  ( unsigned long ip , unsigned short port );
-	//Host *getProxyFromTcpPort ( unsigned long ip , unsigned short port );
+	//Host *getHostFromTcpPort  ( uint32_t ip , uint16_t port );
+	//Host *getProxyFromTcpPort ( uint32_t ip , uint16_t port );
 
 	// . get the Host sharing m_hosts[n]'s ip and ide channel
 	// . used by Msg34.cpp to compute load on the channel
@@ -518,21 +518,21 @@ class Hostdb {
 	// . add ip to allowed packets table, if we receive a udp packet
 	//   from an ip not in this list, we discard it
 	// . returns true on success
-	bool addIp ( long ip ) ;
+	bool addIp ( int32_t ip ) ;
 
 	// . hostId of -1 means unknown
-	//void getTimes ( long hostId , long *avg , long *stdDev );
+	//void getTimes ( int32_t hostId , int32_t *avg , int32_t *stdDev );
 
 	// . update ping time info of this host
 	// . uses a 10-ping running average
 	// . "tripTime" is in milliseconds
 	// . hostId of -1 means unknown (will just return true)
-	//void  stampHost  ( long hostId , long tripTime , bool timedOut );
+	//void  stampHost  ( int32_t hostId , int32_t tripTime , bool timedOut );
 	
 	// hash the hosts into the hash tables for lookup
 	bool  hashHosts();
 	bool  hashHost ( bool udp , Host *h , uint32_t ip , uint16_t port ) ;
-	long  getHostId        ( uint32_t ip , uint16_t port ) ;
+	int32_t  getHostId        ( uint32_t ip , uint16_t port ) ;
 	Host *getHostByIp      ( uint32_t ip ) ;
 	Host *getHost          ( uint32_t ip , uint16_t port ) ;
 	Host *getUdpHost       ( uint32_t ip , uint16_t port ) ;
@@ -543,11 +543,11 @@ class Hostdb {
 
 
 	// sets the note for a host
-	bool setNote ( long hostId, char *note, long noteLen );
-	bool setSpareNote ( long spareId, char *note, long noteLen );
+	bool setNote ( int32_t hostId, char *note, int32_t noteLen );
+	bool setSpareNote ( int32_t spareId, char *note, int32_t noteLen );
 	
 	// replace a host with a spare
-	bool replaceHost ( long origHostId, long spareHostId );
+	bool replaceHost ( int32_t origHostId, int32_t spareHostId );
 
 	void setOnProperSwitchFlags ( ) ;
 
@@ -555,39 +555,39 @@ class Hostdb {
 	bool saveHostsConf ( );
 
 	// sync a host with its twin
-	bool syncHost ( long syncHostId, bool useSecondaryIps );
+	bool syncHost ( int32_t syncHostId, bool useSecondaryIps );
 	void syncStart_r ( bool amThread );
 	void syncDone ( );
 
-	long getBestIp ( Host *h , long fromIp ) ;
+	int32_t getBestIp ( Host *h , int32_t fromIp ) ;
 	
-	Host *getBestSpiderCompressionProxy ( long *key ) ;
+	Host *getBestSpiderCompressionProxy ( int32_t *key ) ;
 
 	// only used by 'gb scale <hostdb.conf>' cmd for now
 	void resetPortTables ();
 
 	// returns best IP to use for "h" which is a host in hosts2.conf
-	long getBestHosts2IP ( Host *h );
+	int32_t getBestHosts2IP ( Host *h );
 
 	// our host's info used by Udp* classes for internal communication
-	unsigned long  m_myIp;
-	unsigned long  m_myIpShotgun;
-	unsigned short m_myPort;
-	//unsigned short m_myPort2;
-	long           m_myMachineNum;
+	uint32_t  m_myIp;
+	uint32_t  m_myIpShotgun;
+	uint16_t m_myPort;
+	//uint16_t m_myPort2;
+	int32_t           m_myMachineNum;
 	Host          *m_myHost;
 	Host          *m_myShard;
 
 	// the loopback ip (127.0.0.1)
-	unsigned long  m_loopbackIp;
+	uint32_t  m_loopbackIp;
 
 	// . the hosts are stored from g_conf in xml to here
 	// . m_hosts[i] is the ith Host entry
 	Host  *m_hosts;
-	long   m_numHosts;
-	long   m_numHostsAlive;
+	int32_t   m_numHosts;
+	int32_t   m_numHostsAlive;
 
-	long   m_allocSize;
+	int32_t   m_allocSize;
 
 	// . this maps a hostId to the appropriate host!
 	// . we can't use m_hosts[i] because we sort it by groupId for getGroup
@@ -598,59 +598,59 @@ class Hostdb {
 	//   merge token group and the size of the group is m_groupSize [ tgn ]
 	// . used by getTokenGroup() which is used by Msg35.cpp
 	//Host  *m_hostPtrs2             [ MAX_HOSTS ] ;
-	//long   m_hostIdToTokenGroupNum [ MAX_HOSTS ] ;
-	//long   m_groupSize             [ MAX_HOSTS ];
+	//int32_t   m_hostIdToTokenGroupNum [ MAX_HOSTS ] ;
+	//int32_t   m_groupSize             [ MAX_HOSTS ];
 
 	// we must have the same number of hosts in each group
-	long   m_numHostsPerShard;
+	int32_t   m_numHostsPerShard;
 
 	// store the file in m_buf
 	char m_buf [MAX_HOSTS * 128];
-	long m_bufSize;
+	int32_t m_bufSize;
 
 	// this maps shard # to the array of hosts in that shard
 	Host *m_shards[MAX_HOSTS];
 
-	long    m_numMachines;
+	int32_t    m_numMachines;
 
 	// the hash table of the ips in hosts.conf
-	long *m_ips;
-	long  m_numIps;
+	int32_t *m_ips;
+	int32_t  m_numIps;
 
 	// does a host share an ide channel with another host?
 	//bool m_ideSharing;
 
 	// . our group info
-	long          m_hostId;      // our hostId
-	long          m_numShards;
-	//unsigned long m_groupId;     // hi bits are set before low bits
-	//unsigned long m_groupMask;   // hi bits are set before low bits
+	int32_t          m_hostId;      // our hostId
+	int32_t          m_numShards;
+	//uint32_t m_groupId;     // hi bits are set before low bits
+	//uint32_t m_groupMask;   // hi bits are set before low bits
 	char          m_dir[256];
 	char          m_httpRootDir[256];
 	char          m_logFilename[256];
 
-	long          m_indexSplits; 
+	int32_t          m_indexSplits; 
 
 	char          m_netName[32];
 
 	// spare hosts list
 	Host *m_spareHosts[MAX_SPARES];
-	long  m_numSpareHosts;
+	int32_t  m_numSpareHosts;
 
 	// proxy host list
 	Host *m_proxyHosts[MAX_PROXIES];
-	long  m_numProxyHosts;
-	long  m_numProxyAlive;
+	int32_t  m_numProxyHosts;
+	int32_t  m_numProxyAlive;
 
-	long  m_numTotalHosts;
+	int32_t  m_numTotalHosts;
 
 	bool m_initialized;
 
 	bool createHostsConf( char *cwd );
 	bool m_created;
 
-	long m_crc;
-	long m_crcValid;
+	int32_t m_crc;
+	int32_t m_crcValid;
 
 	// for sync
 	Host *m_syncHost;
@@ -676,7 +676,7 @@ extern class Hostdb g_hostdb2;
 extern Host     *g_listHosts [ MAX_HOSTS * 4 ];
 extern uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 extern uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
-extern long      g_listNumTotal;
+extern int32_t      g_listNumTotal;
 
 inline uint32_t getShardNum ( char rdbId, void *key ) {
 	return g_hostdb.getShardNum ( rdbId , key );
@@ -690,7 +690,7 @@ inline uint32_t getShardNumFromDocId ( int64_t d ) {
 	return g_hostdb.getShardNumFromDocId ( d );
 };
 
-long getShardNumFromTermId ( int64_t termId );
+int32_t getShardNumFromTermId ( int64_t termId );
 
 //inline uint32_t getGroupId ( char rdbId, void *key,bool split = true) {
 //	return g_hostdb.getGroupId ( rdbId , key , split );

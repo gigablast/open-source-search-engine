@@ -62,9 +62,9 @@ Msg6b::~Msg6b() { reset(); }
 
 bool Msg6b::getTitlerecSample(char* query,
 			      char* coll,
-			      long  collLen,
-			      long  numSamples,
-			      long  numToKeep,
+			      int32_t  collLen,
+			      int32_t  numSamples,
+			      int32_t  numToKeep,
 			      void  *state,
 			      bool  (*recordCallback) (void *state, 
 						       TitleRec* tr,
@@ -73,7 +73,7 @@ bool Msg6b::getTitlerecSample(char* query,
 			      bool  doSiteClustering,
 			      bool  doIpClustering,
 			      bool  getTagRecs,
-			      long  niceness) {
+			      int32_t  niceness) {
 	//clear it out;
 	reset();
 	strcpy(m_coll, coll);
@@ -99,13 +99,13 @@ bool Msg6b::getTitlerecSample(char* query,
 	if(m_numToGet < m_numToKeep) m_numToGet = m_numToKeep;
 
 	//get twice as many docids as they want to account for errors
-	long docsWanted = m_numToGet * 2;
+	int32_t docsWanted = m_numToGet * 2;
 	m_niceness = niceness;
 	m_getTagRecs = getTagRecs;
 
-	long tierStage0 = cr->m_tierStage0;
-	long tierStage1 = cr->m_tierStage1;
-	long tierStage2 = cr->m_tierStage2;
+	int32_t tierStage0 = cr->m_tierStage0;
+	int32_t tierStage1 = cr->m_tierStage1;
+	int32_t tierStage2 = cr->m_tierStage2;
 
 	// set our request
 	Msg39Request req;
@@ -147,7 +147,7 @@ bool Msg6b::gotDocIdList() {
 	m_docIdPtr = m_msg3a.getDocIds();
 	m_lastDocIdPtr = m_docIdPtr + m_msg3a.getNumDocIds();
 
-	//log(LOG_WARN, "Msg6b got %li docids.",m_msg3a.getNumDocIds());
+	//log(LOG_WARN, "Msg6b got %"INT32" docids.",m_msg3a.getNumDocIds());
 	if(m_docIdPtr == m_lastDocIdPtr) return true;
 	
 	
@@ -196,7 +196,7 @@ bool Msg6b::gotDocIdList() {
 		m_tagRecs = NULL;
 	}
 
-	for(long i = 0; i < m_numMsg22s; i++) {
+	for(int32_t i = 0; i < m_numMsg22s; i++) {
 		m_msg22s[i].m_slot = i;
 		m_msg22s[i].m_parent = this;
 		if(m_getTagRecs ) {//SiteRecs) {
@@ -211,7 +211,7 @@ bool Msg6b::gotDocIdList() {
 	m_lastSlotUsed = 0;
 
 	bool noBlock = true;
-	for(long i = 0; i < m_numToKeep; i++) {
+	for(int32_t i = 0; i < m_numToKeep; i++) {
 		noBlock &= getMsg22s(i);
 		m_lastSlotUsed++;
 	}
@@ -219,7 +219,7 @@ bool Msg6b::gotDocIdList() {
 }
 
 
-bool Msg6b::getMsg22s(long sampleNum) {
+bool Msg6b::getMsg22s(int32_t sampleNum) {
 	//just send them over the network now, matt seems to think
 	//that it will not slow things down much
 	int64_t goodDocId = -1;
@@ -262,7 +262,7 @@ void gotMsg22Wrapper(void *state) {
 	}
 }
 
-bool Msg6b::gotMsg22s(long sampleNum) {
+bool Msg6b::gotMsg22s(int32_t sampleNum) {
 	if(!m_getTagRecs) return gotMsg8as(sampleNum);
 
 	TitleRec* tr = m_msg22s[sampleNum].getTitleRec();
@@ -292,7 +292,7 @@ void gotMsg8aWrapper(void *state){
 }
 
 //note: we also come here if we were not getting siterecs
-bool Msg6b::gotMsg8as(long sampleNum) {
+bool Msg6b::gotMsg8as(int32_t sampleNum) {
 	m_numOutstanding--;
 	if(m_msg22s[sampleNum].m_errno != 0) return getMsg22s(sampleNum);
 

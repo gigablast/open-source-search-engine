@@ -101,13 +101,13 @@ void *startUp ( void *state ) {
 	// sleep 
 	sleep(2);
 	// put low priroity first
-	long niceness;
-	for ( long i = 0 ; i < 16 ; i++ ) {
+	int32_t niceness;
+	for ( int32_t i = 0 ; i < 16 ; i++ ) {
 		if ( i < 8 ) niceness = 0;
 		else         niceness = 1;
 		sigval_t svt; 
 		svt.sival_int = (int)niceness ; //(int)(t->m_state); // fd;
-		fprintf(stderr,"queuing niceness of %li\n",niceness);
+		fprintf(stderr,"queuing niceness of %"INT32"\n",niceness);
 		sigqueue ( s_pid , GB_SIGRTMIN + 1 + niceness, svt );
 	}
 }

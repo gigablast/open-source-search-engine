@@ -7,8 +7,8 @@
 #include <errno.h>
 #include "Unicode.h"
 
-static long test_count = 10000;
-long elapsed_usec(const timeval* tv1, const timeval *tv2);
+static int32_t test_count = 10000;
+int32_t elapsed_usec(const timeval* tv1, const timeval *tv2);
 // fake shutdown for Loop and Parms
 bool mainShutdown(bool urgent);
 bool mainShutdown(bool urgent){return true;}
@@ -44,23 +44,23 @@ int main (int argc, char **argv) {
 	}
 	file_buf[nread] = '\0';
 	
-	long ucBufSize = (long)(nread*2.5);
+	int32_t ucBufSize = (int32_t)(nread*2.5);
 	UChar *ucBuf = (UChar*)malloc(ucBufSize);
-	long ucLen = ucToUnicode(ucBuf, ucBufSize, file_buf, nread, 
+	int32_t ucLen = ucToUnicode(ucBuf, ucBufSize, file_buf, nread, 
 				 "utf-8", NULL);
 	
 	struct timeval tv1, tv2;
 	struct timezone tz1, tz2;
 
-	long times[test_count];
+	int32_t times[test_count];
 	int64_t total=0;
-	long max_time=-1L;
-	long min_time=999999999L;
-	long avg_time;
+	int32_t max_time=-1L;
+	int32_t min_time=999999999L;
+	int32_t avg_time;
 
-	//long u8size = nread*2;
+	//int32_t u8size = nread*2;
 	//char *u8buf = (char*)malloc(u8size);
-	long newsize = 0;
+	int32_t newsize = 0;
 	for (int i=0;i<test_count;i++ ){
 		gettimeofday(&tv1, &tz1);
 		newsize = ucToUnicode(ucBuf, ucBufSize, file_buf, nread, 
@@ -73,7 +73,7 @@ int main (int argc, char **argv) {
 	}
 	avg_time = total/test_count;
 
-	fprintf(stderr,"ICU size: %ld, count: %ld, avg: %ld, min: %ld, max: %ld\n",
+	fprintf(stderr,"ICU size: %"INT32", count: %"INT32", avg: %"INT32", min: %"INT32", max: %"INT32"\n",
 		newsize, test_count, avg_time, min_time, max_time);
 	int outfd = open("icu.out", O_CREAT|O_RDWR|O_TRUNC, 00666);
 	if (outfd < 0) {printf("Error creating output file: %s\n", 
@@ -95,7 +95,7 @@ int main (int argc, char **argv) {
 	}
 	avg_time = total/test_count;
 
-	fprintf(stderr,"iconv size: %ld, count: %ld, avg: %ld, min: %ld, max: %ld\n",
+	fprintf(stderr,"iconv size: %"INT32", count: %"INT32", avg: %"INT32", min: %"INT32", max: %"INT32"\n",
 		newsize, test_count, avg_time, min_time, max_time);
 	outfd = open("iconv.out", O_CREAT|O_RDWR|O_TRUNC, 00666);
 	if (outfd < 0) {printf("Error creating output file: %s\n", 
@@ -116,7 +116,7 @@ int main (int argc, char **argv) {
 	}
 	avg_time = total/test_count;
 
-	fprintf(stderr,"my size: %ld, count: %ld, avg: %ld, min: %ld, max: %ld\n",
+	fprintf(stderr,"my size: %"INT32", count: %"INT32", avg: %"INT32", min: %"INT32", max: %"INT32"\n",
 		newsize, test_count, avg_time, min_time, max_time);
 	outfd = open("my.out", O_CREAT|O_RDWR|O_TRUNC, 00666);
 	if (outfd < 0) {printf("Error creating output file: %s\n", 
@@ -127,10 +127,10 @@ int main (int argc, char **argv) {
 	//printf("%s\n", u8buf);
 
 }
-long elapsed_usec(const timeval* tv1, const timeval *tv2)
+int32_t elapsed_usec(const timeval* tv1, const timeval *tv2)
 {
-	long sec_elapsed = (tv2->tv_sec - tv1->tv_sec);
-	long usec_elapsed = tv2->tv_usec - tv1->tv_usec;
+	int32_t sec_elapsed = (tv2->tv_sec - tv1->tv_sec);
+	int32_t usec_elapsed = tv2->tv_usec - tv1->tv_usec;
 	if (usec_elapsed<0){
 		usec_elapsed += 1000000;
 		sec_elapsed -=1;

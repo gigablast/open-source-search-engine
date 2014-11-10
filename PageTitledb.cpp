@@ -31,7 +31,7 @@ public:
 	int64_t    m_docId;
 	char        *m_pwd;
 	char        *m_coll;
-	long         m_collLen;
+	int32_t         m_collLen;
 	XmlDoc       m_doc;
 	Msg20Request m_request;
 	HttpRequest  m_r;
@@ -64,7 +64,7 @@ bool sendPageTitledb ( TcpSocket *s , HttpRequest *r ) {
 	// password, too
 	st->m_pwd = r->getString ( "pwd" );
 	// get the collection
-	long  collLen = 0;
+	int32_t  collLen = 0;
 	char *coll    = st->m_r.getString("c",&collLen);
 	if ( ! coll || ! coll[0] ) {
 		//coll    = g_conf.m_defaultColl;
@@ -107,7 +107,7 @@ bool gotTitleRec ( void *state ) {
 	int64_t docId = st->m_docId;
 	// make the query string for passing to different hosts
 	char  qs[64];
-	sprintf(qs,"&d=%lli",docId);
+	sprintf(qs,"&d=%"INT64"",docId);
 	if ( docId==0LL ) qs[0] = 0;
 	// print standard header
 	sb.reserve2x ( 32768 );
@@ -115,7 +115,7 @@ bool gotTitleRec ( void *state ) {
 	//PAGE_TITLEDB,
 	//		       st->m_username,//NULL ,
 	//		       st->m_coll , st->m_pwd , s->m_ip , qs );
-	// shortcut
+	// int16_tcut
 	XmlDoc *xd = &st->m_xd;
 
 	// . deal with errors
@@ -123,7 +123,7 @@ bool gotTitleRec ( void *state ) {
 	if ( g_errno || docId == 0LL || xd->m_titleRecBuf.length() <= 0 ) {
 		// print docId in box
 		sb.safePrintf (  "<center>\nEnter docId: "
-				 "<input type=text name=d value=%lli size=15>",
+				 "<input type=text name=d value=%"INT64" size=15>",
 				 docId);
 		sb.safePrintf ( "</form><br>\n" );
 		if ( docId == 0 ) 
@@ -134,13 +134,13 @@ bool gotTitleRec ( void *state ) {
 			sb.safePrintf("<br><br>No titleRec for that docId "
 				      "or higher");
 		// print where it should be
-		//unsigned long gid = getGroupIdFromDocId ( docId );
+		//uint32_t gid = getGroupIdFromDocId ( docId );
 		//Host *hosts = g_hostdb.getGroup(gid);
-		long shardNum = getShardNumFromDocId ( docId );
+		int32_t shardNum = getShardNumFromDocId ( docId );
 		Host *hosts = g_hostdb.getShard ( shardNum );
-		long hostId = -1;
+		int32_t hostId = -1;
 		if ( hosts ) hostId = hosts[0].m_hostId;
-		sb.safePrintf("<br><br>docId on host #%li and twins.",hostId);
+		sb.safePrintf("<br><br>docId on host #%"INT32" and twins.",hostId);
 		sb.safePrintf ( "\n</center>" );
 		mdelete ( st , sizeof(State4) , "PageTitledb");
 		delete (st);
@@ -154,15 +154,15 @@ bool gotTitleRec ( void *state ) {
 	// print docId in box
 	sb.safePrintf ("<br>\n"
 		       "<center>Enter docId: "
-		       "<input type=text name=d value=%lli size=15>", docId );
+		       "<input type=text name=d value=%"INT64" size=15>", docId );
 	// print where it should be
-	//unsigned long gid = getGroupIdFromDocId ( docId );
+	//uint32_t gid = getGroupIdFromDocId ( docId );
 	//Host *hosts = g_hostdb.getGroup(gid);
-	long shardNum = getShardNumFromDocId ( docId );
+	int32_t shardNum = getShardNumFromDocId ( docId );
 	Host *hosts = g_hostdb.getShard ( shardNum );
-	long hostId = -1;
+	int32_t hostId = -1;
 	if ( hosts ) hostId = hosts[0].m_hostId;
-	sb.safePrintf("<br><br>docId on host #%li and twins.",hostId);
+	sb.safePrintf("<br><br>docId on host #%"INT32" and twins.",hostId);
 	sb.safePrintf ( "</form><br>\n" );
 
 	//char *coll    = st->m_coll;

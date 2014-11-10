@@ -28,9 +28,9 @@ class RdbScan {
 	//   reads on the same fd?
 	// . we need array of files so BigFile::filecb() knows when file nuked
 	bool setRead ( BigFile   *file          ,
-		       long       fixedDataSize ,
+		       int32_t       fixedDataSize ,
 		       int64_t  offset        ,
-		       long       bytesToRead   ,
+		       int32_t       bytesToRead   ,
 		       //key_t      startKey      , 
 		       //key_t      endKey        , 
 		       char      *startKey      , 
@@ -41,7 +41,7 @@ class RdbScan {
 		       void    (* callback ) ( void *state ) ,
 		       bool       useHalfKeys   ,
 		       char       rdbId,
-		       long       niceness , // = MAX_NICENESS ,
+		       int32_t       niceness , // = MAX_NICENESS ,
 		       bool       allowPageCache , // = true ,
 		       bool       hitDisk        ); // = true );
 
@@ -61,7 +61,7 @@ class RdbScan {
 	FileState m_fstate;
 
 	// for dealing with half keys
-	long m_off;
+	int32_t m_off;
 
 	// shifting it
 	char m_shifted;
@@ -72,9 +72,9 @@ class RdbScan {
 	//key_t  m_startKey;
 	char m_startKey[MAX_KEY_BYTES];
 	char m_endKey  [MAX_KEY_BYTES];
-	long m_fixedDataSize;
+	int32_t m_fixedDataSize;
 	char m_useHalfKeys;
-	long m_bytesToRead;
+	int32_t m_bytesToRead;
 	void (* m_callback ) ( void *state ) ;
 	void  *m_state;
 

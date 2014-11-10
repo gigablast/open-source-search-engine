@@ -4,9 +4,9 @@
 #include "Test.h"
 
 // utility functions
-bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
+bool getTestIp ( char *url , int32_t *retIp , bool *found , int32_t niceness ,
 		 char *testDir ) ;
-bool addTestIp ( char *host , long hostLen , long ip ) ;
+bool addTestIp ( char *host , int32_t hostLen , int32_t ip ) ;
 bool saveTestBuf ( char *testDir ) ;
 
 Msge1::Msge1() {
@@ -36,14 +36,14 @@ void Msge1::reset() {
 bool Msge1::getFirstIps ( TagRec **grv ,
 			  char   **urlPtrs                ,
 			  linkflags_t *urlFlags           ,//Links::m_linkFlags
-			  long     numUrls                ,
+			  int32_t     numUrls                ,
 			  // if skipOldLinks && urlFlags[i]&LF_OLDLINK, skip it
 			  bool     skipOldLinks           ,
 			  char    *coll                   ,
-			  long     niceness               ,
+			  int32_t     niceness               ,
 			  void    *state                  ,
 			  void   (*callback)(void *state) ,
-			  long     nowGlobal              ,
+			  int32_t     nowGlobal              ,
 			  bool     addTags                ,
 			  char    *testDir                ) {
 
@@ -67,7 +67,7 @@ bool Msge1::getFirstIps ( TagRec **grv ,
 
 	// . how much mem to alloc?
 	// . include an extra 4 bytes for each one to hold possible errno
-	long need = 4 + 4; // ip + error
+	int32_t need = 4 + 4; // ip + error
 	// one per url
 	need *= numUrls;
 	// allocate the buffer to hold all the info we gather
@@ -80,8 +80,8 @@ bool Msge1::getFirstIps ( TagRec **grv ,
 
 	// set the ptrs!
 	char *p = m_buf;
-	m_ipBuf             = (long *)p ; p += numUrls * 4;
-	m_ipErrors          = (long *)p ; p += numUrls * 4;
+	m_ipBuf             = (int32_t *)p ; p += numUrls * 4;
+	m_ipErrors          = (int32_t *)p ; p += numUrls * 4;
 
 	// initialize
 	m_numRequests = 0;
@@ -124,7 +124,7 @@ bool Msge1::getFirstIps ( TagRec **grv ,
 
 // we only come back up here 1) in the very beginning or 2) when a url 
 // completes its pipeline of requests
-bool Msge1::launchRequests ( long starti ) {
+bool Msge1::launchRequests ( int32_t starti ) {
 	// reset any error code
 	g_errno = 0;
  loop:
@@ -146,7 +146,7 @@ bool Msge1::launchRequests ( long starti ) {
 	TagRec *gr  = m_grv[m_n];
 	Tag    *tag = NULL;
 	if ( gr ) tag = gr->getTag("firstip");
-	long ip;
+	int32_t ip;
 	// grab the ip that was in there
 	if ( tag ) ip = atoip(tag->getTagData());
 	// if we had it but it was 0 or -1, then time that out
@@ -190,7 +190,7 @@ bool Msge1::launchRequests ( long starti ) {
 	char *p = m_urlPtrs[m_n];
 
 	// if it is ip based that makes things easy
-	long  hlen = 0;
+	int32_t  hlen = 0;
 	char *host = getHostFast ( p , &hlen );
 
 	// reset this again
@@ -199,7 +199,7 @@ bool Msge1::launchRequests ( long starti ) {
 	if ( host && is_digit(host[0]) ) ip = atoip ( host , hlen );
 	// if legit this is non-zero
 	if ( ip ) {
-		// what is this? i no longer have this bug really - i fixed
+		// what is this? i no int32_ter have this bug really - i fixed
 		// it - but it did core here probably from a bad dns reply!
 		// so take this out...
 		//if ( ip == 3 ) { char *xx=NULL;*xx=0; }
@@ -211,18 +211,18 @@ bool Msge1::launchRequests ( long starti ) {
 	}
 
 	// use domain, we are "firstip" only now!!!
-	//long  dlen = 0;
+	//int32_t  dlen = 0;
 	//char *dom  = getDomFast ( p , &dlen );
 
 	// get the length
-	//long  plen = gbstrlen(p);
+	//int32_t  plen = gbstrlen(p);
 
 	/*
 	// look up in our m_testBuf.
 	if ( m_coll && ! strcmp(m_coll,"qatest123") ) {
 		bool found = false;
 		// do we got it?
-		long quickIp ; bool status = getTestIp ( p , &quickIp, &found);
+		int32_t quickIp ; bool status = getTestIp ( p , &quickIp, &found);
 		// error?
 		if ( ! status ) { 
 			// save it
@@ -244,7 +244,7 @@ bool Msge1::launchRequests ( long starti ) {
 
 	// . grab a slot
 	// . m_msg8as[i], m_msgCs[i], m_msg50s[i], m_msg20s[i]
-	long i;
+	int32_t i;
 	for ( i = starti ; i < MAX_OUTSTANDING_MSGE1 ; i++ )
 		if ( ! m_used[i] ) break;
 	// sanity check
@@ -274,11 +274,11 @@ bool Msge1::launchRequests ( long starti ) {
 	goto loop;
 }
 
-static void gotMsgCWrapper ( void *state , long ip ) ;
+static void gotMsgCWrapper ( void *state , int32_t ip ) ;
 
-bool Msge1::sendMsgC ( long i , char *host , long hlen ) {
+bool Msge1::sendMsgC ( int32_t i , char *host , int32_t hlen ) {
 	// we are processing the nth url
-	long   n    = m_ns[i];
+	int32_t   n    = m_ns[i];
 	// set m_errno if we should at this point
 	if ( ! m_errno && g_errno != ENOTFOUND ) m_errno = g_errno;
 	// reset it
@@ -295,14 +295,14 @@ bool Msge1::sendMsgC ( long i , char *host , long hlen ) {
 	//	logf(LOG_DEBUG,"spider: msge1: getting ip for %s",
 	//	     m_urlPtrs[n]);
 
-	//long  hlen = 0;
+	//int32_t  hlen = 0;
 	//char *host = getHostFast ( m_urlPtrs[n] , &hlen );
 
 
 	// look up in our m_testBuf.
 	if ( m_coll && ! strcmp(m_coll,"qatest123") ) {
 		bool found = false;
-		// shortcut
+		// int16_tcut
 		//char *p = m_urlPtrs[n];
 		// do we got it?
 		//bool status = getTestIp ( p , &m_ipBuf[n], &found);
@@ -331,10 +331,10 @@ bool Msge1::sendMsgC ( long i , char *host , long hlen ) {
 	return doneSending ( i );
 }	
 
-void gotMsgCWrapper ( void *state , long ip ) {
+void gotMsgCWrapper ( void *state , int32_t ip ) {
 	MsgC   *m    = (MsgC  *)state;
 	Msge1  *THIS = (Msge1 *)m->m_state2;
-	long    i    = (long   )m->m_state3;
+	int32_t    i    = (int32_t   )m->m_state3;
 	if ( ! THIS->doneSending ( i ) ) return;
 	// try to launch more, returns false if not done
 	if ( ! THIS->launchRequests(i) ) return;
@@ -347,9 +347,9 @@ void gotMsgCWrapper ( void *state , long ip ) {
 
 void doneAddingTagWrapper ( void *state ) ;
 
-bool Msge1::doneSending ( long i ) {
+bool Msge1::doneSending ( int32_t i ) {
 	// we are processing the nth url
-	long n = m_ns[i];
+	int32_t n = m_ns[i];
 	// save the error
 	m_ipErrors[n] = g_errno;
 	// save m_errno
@@ -357,19 +357,19 @@ bool Msge1::doneSending ( long i ) {
 	// clear it
 	g_errno = 0;
 	// get ip we got
-	long ip = m_ipBuf[n];
+	int32_t ip = m_ipBuf[n];
 	// what is this?
 	//if ( ip == 3 ) { char *xx=NULL;*xx=0; }
-	//log ( LOG_DEBUG, "build: Finished Msge1 for url [%li,%li]: %s ip=%s",
+	//log ( LOG_DEBUG, "build: Finished Msge1 for url [%"INT32",%"INT32"]: %s ip=%s",
 	//      n, i,  m_urls[i].getUrl() ,iptoa(ip));
 
 	// store it?
 	if ( ! strcmp(m_coll,"qatest123") ) {
 		// get host
-		long  hlen = 0;
+		int32_t  hlen = 0;
 		char *host = getHostFast ( m_urlPtrs[n] , &hlen );
 		// use domain, we are "firstip" only now!!!
-		//long  dlen = 0;
+		//int32_t  dlen = 0;
 		//char *dom  = getDomFast ( m_urlPtrs[n] , &dlen );
 		// add it to "./test/ips.txt"
 		addTestIp ( host , hlen ,ip);
@@ -392,12 +392,12 @@ bool Msge1::doneSending ( long i ) {
 	return addTag ( i );
 }
 
-bool Msge1::addTag ( long i ) {
+bool Msge1::addTag ( int32_t i ) {
 
 	// we are processing the nth url
-	long n = m_ns[i];
+	int32_t n = m_ns[i];
 	// get ip we got
-	//long ip = m_ipBuf[n];
+	//int32_t ip = m_ipBuf[n];
 
 	//
 	// HACK: hijack this MsgC to use as a "state" for call to msg9a
@@ -412,13 +412,13 @@ bool Msge1::addTag ( long i ) {
 	// store the domain here
 	//char *domBuf = m->m_request;
 	// get the domain
-	//long  dlen = 0;
+	//int32_t  dlen = 0;
 	//char *dom  = getDomFast ( m_urlPtrs[n] , &dlen );
 
 	// make it all host based
 	//char *hostBuf = m->m_request;
 	// get the host
-	long  hlen = 0;
+	int32_t  hlen = 0;
 	char *host  = getHostFast ( m_urlPtrs[n] , &hlen );
 
 
@@ -442,7 +442,7 @@ bool Msge1::addTag ( long i ) {
 	hostBuf[hlen] = '\0';
 
 	// get time now synced with host #0
-	//long nowGlobal = getTimeGlobal();
+	//int32_t nowGlobal = getTimeGlobal();
 	// put in buf
 	char ipbuf[32];
 	sprintf(ipbuf,"%s",iptoa(ip) );
@@ -454,7 +454,7 @@ bool Msge1::addTag ( long i ) {
 		// should never have error
 		char *xx=NULL;*xx=0; }
 
-	// shortcut
+	// int16_tcut
 	Msg9a *m9 = &m_msg9as[i];
 	// . now add to "firstip" in tagdb
 	// . borrow the ith msg9a (only 40 bytes each)
@@ -481,7 +481,7 @@ void doneAddingTagWrapper ( void *state ) {
 	// get the hijacked msgc
 	MsgC   *m    = (MsgC  *)state;
 	Msge1  *THIS = (Msge1 *)m->m_state2;
-	long    i    = (long   )m->m_state3;
+	int32_t    i    = (int32_t   )m->m_state3;
 	// return if that blocked
 	if ( ! THIS->doneAddingTag ( i ) ) return;
 	// loop back for more
@@ -491,7 +491,7 @@ void doneAddingTagWrapper ( void *state ) {
 }
 
 
-bool Msge1::doneAddingTag ( long i ) {
+bool Msge1::doneAddingTag ( int32_t i ) {
 	// unmangle
 	//*m_pathPtr[i] = '/';
 	m_numReplies++;
@@ -504,29 +504,29 @@ bool Msge1::doneAddingTag ( long i ) {
 #include "HashTableX.h"
 static char *s_testBuf      = NULL ;
 static char *s_testBufPtr          ;
-static long  s_testBufSize         ;
+static int32_t  s_testBufSize         ;
 static char *s_testBufEnd          ;
 static char  s_needsReload  = true ;
 static char *s_last         = NULL ;
-static long  s_lastLen      = 0    ;
+static int32_t  s_lastLen      = 0    ;
 static HashTableX s_ht;
 
 // . only call this if the collection is "qatest123"
 // . we try to get the ip by accessing the "./test/ips.txt" file
 // . we also ad ips we lookup to that file in the collection is "qatest123"
 // . returns false and sets g_errno on error, true on success
-bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
+bool getTestIp ( char *url , int32_t *retIp , bool *found , int32_t niceness ,
 		 char *testDir ) {
 
 	// set the url from the url string, "us"
 	Url u; u.set ( url );
 	// get host of the url
 	char *host = u.getHost();
-	long  hlen = u.getHostLen();
+	int32_t  hlen = u.getHostLen();
 
 	// if it is an ip, that is easy!
 	if ( is_digit(host[0]) ) {
-		long aip = atoip(host,hlen);
+		int32_t aip = atoip(host,hlen);
 		if ( aip ) return aip;
 	}
 
@@ -553,11 +553,11 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 		// set it
 		File f; f.set ( fn );
 		// get size
-		long fsize = f.getFileSize ( );
+		int32_t fsize = f.getFileSize ( );
 		// < 0 means error? does not exist?
 		if ( fsize < 0 ) fsize = 0;
 		// how much to alloc? 1MB for all for now
-		long need = 3000001;
+		int32_t need = 3000001;
 		// and what we had
 		need += fsize;
 		// make buf big enough to hold the read
@@ -568,7 +568,7 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 		// error?
 		if ( ! s_testBuf ) {
 			// note it
-			log("test: failed to alloc %li bytes for ip buf",need);
+			log("test: failed to alloc %"INT32" bytes for ip buf",need);
 			// error out
 			return false;
 		}
@@ -579,11 +579,11 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 			// open it
 			f.open ( O_RDWR );
 			// read it in
-			long rs = f.read ( s_testBuf , fsize , 0 ) ;
+			int32_t rs = f.read ( s_testBuf , fsize , 0 ) ;
 			// check it
 			if ( rs != fsize ) {
 				// note it
-				log("test: failed to read %li bytes of "
+				log("test: failed to read %"INT32" bytes of "
 				    "./%s/ips.txt file",fsize,testDir);
 				// close it
 				f.close();
@@ -620,7 +620,7 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 		// update
 		p = next;
 		// get hash of that host
-		long u32 = hash32 ( us,next-us);
+		int32_t u32 = hash32 ( us,next-us);
 		// if no match, try the next hostname in s_testBuf
 		//if ( strncasecmp ( us , host , hlen ) )  goto loop;
 		// the url in the buf must be same length to be a match
@@ -646,7 +646,7 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 			// stop if not good char
 			if ( ! is_digit(*ie) && *ie != '.' ) break;
 		// get it
-		long ip = atoip ( ips , ie - ips );
+		int32_t ip = atoip ( ips , ie - ips );
 		// store in hash table for lookup below
 		if ( u32 && ! s_ht.addKey ( &u32 , &ip ) ) { 
 			char *xx=NULL;*xx=0; }
@@ -663,8 +663,8 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 	// return 0 if no ips.txt data
 	//if ( ! s_testBuf || s_testBufPtr == s_testBuf ) return true;
 	// look it up in hash table now
-	long h = hash32 ( host,hlen);
-	long *ipPtr = (long *)s_ht.getValue(&h);
+	int32_t h = hash32 ( host,hlen);
+	int32_t *ipPtr = (int32_t *)s_ht.getValue(&h);
 	// if missed, return now
 	if ( ! ipPtr ) 
 		return true;
@@ -683,14 +683,14 @@ void resetTestIpTable ( ) {
 }
 
 // returns false if unable to add, returns true if added
-bool addTestIp ( char *host , long hostLen , long ip ) {
+bool addTestIp ( char *host , int32_t hostLen , int32_t ip ) {
 	// must have first tried to get it
 	if ( s_needsReload ) { char *xx=NULL;*xx=0; }
 	// must have allocated this
 	if ( ! s_testBuf )
 		return log("test: no test buf to add ip %s",iptoa(ip));
 	// make sure enough room
-	long need = 1 + hostLen + 1 + (4*3+3) + 1;
+	int32_t need = 1 + hostLen + 1 + (4*3+3) + 1;
 	// add it to test buf
 	if ( s_testBufPtr + need >= s_testBufEnd ) 
 		return log("test: no room to add ip %s",iptoa(ip));
@@ -705,11 +705,11 @@ bool addTestIp ( char *host , long hostLen , long ip ) {
 	// skip it
 	s_testBufPtr += hostLen;
 	// then space and ip
-	long ps = sprintf ( s_testBufPtr , " %s\n",iptoa(ip));
+	int32_t ps = sprintf ( s_testBufPtr , " %s\n",iptoa(ip));
 	// skip that
 	s_testBufPtr += ps;
 	// add to hash table too
-	long u32 = hash32 ( host , hostLen );
+	int32_t u32 = hash32 ( host , hostLen );
 	if ( ! s_ht.addKey ( &u32 , &ip ) ) { char *xx=NULL;*xx=0; }
 	// success
 	return true;
@@ -730,14 +730,14 @@ bool saveTestBuf ( char *testDir ) {
 	// open it
 	f.open ( O_RDWR | O_CREAT );
 	// how much to write?
-	long size = s_testBufPtr - s_testBuf;
+	int32_t size = s_testBufPtr - s_testBuf;
 	// write it out
-	long ws = f.write ( s_testBuf , size , 0 );
+	int32_t ws = f.write ( s_testBuf , size , 0 );
 	// close it
 	f.close();
 	// bitch?
 	if ( ws != size ) 
-		return log("test: failed to write %li bytes to %s",size,fn);
+		return log("test: failed to write %"INT32" bytes to %s",size,fn);
 	// note it
 	log("test: saved ips.txt");
 	// ok

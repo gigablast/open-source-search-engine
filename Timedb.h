@@ -24,12 +24,12 @@
 
 bool initAllSortByDateTables ( ) ;
 bool initSortByDateTable ( char *coll ) ;
-bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , 
+bool addTimedbKey ( key128_t *kp , uint32_t nowGlobal , 
 		    class HashTableX *ht ) ;
 bool addTmpTimeList(RdbList *list,HashTableX *ht,time_t nowGlobal,
-		    long niceness ) ;
+		    int32_t niceness ) ;
 bool compareTimeTables ( HashTableX *ht1 , HashTableX *ht2 , 
-			 unsigned long now );
+			 uint32_t now );
 
 // mdw subtract 7hrs to get into utc, since all our date intervals are in utc
 #define START2009 (1230793200-7*3600)
@@ -50,7 +50,7 @@ class Timedb {
 	bool init ();
 
 	// init secondary/rebuild timedb
-	bool init2 ( long treeMem ) ;
+	bool init2 ( int32_t treeMem ) ;
 
 	key128_t makeKey ( time_t    startTime ,
 			   int64_t docId , 
@@ -86,10 +86,10 @@ class Timedb {
 
 	Rdb *getRdb() { return &m_rdb; };
 
-	long getNumTotalEvents() {
-		long total = 0;
+	int32_t getNumTotalEvents() {
+		int32_t total = 0;
 		// loop over all coll's sortbydate tables
-		for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 			CollectionRec *cr = g_collectiondb.m_recs[i];
 			if ( ! cr ) continue;
 			total += cr->m_sortByDateTable.getNumSlotsUsed();
@@ -106,9 +106,9 @@ extern class Timedb g_timedb2;
 
 class TimeSlot {
  public:
-	unsigned long m_startTime;
-	unsigned long m_endTime;
-	unsigned long m_nextStartTime;
+	uint32_t m_startTime;
+	uint32_t m_endTime;
+	uint32_t m_nextStartTime;
 };
 
 // . if event already in progress, list those that close first first
@@ -116,7 +116,7 @@ class TimeSlot {
 inline uint32_t getTimeScore ( //collnum_t collnum   ,
 			       uint64_t  docId     ,
 			       uint16_t  eventId   ,
-			       unsigned long nowGlobal ,
+			       uint32_t nowGlobal ,
 			       HashTableX *ht ,
 			       bool showInProgress ) {
 	// select the right table. each collection has its own...
@@ -143,7 +143,7 @@ inline uint32_t getTimeScore ( //collnum_t collnum   ,
 	// intervals ptr ends up being empty. and we print out a debug msg
 	// for that when computing ExpandedResults in Msg40.cpp!
 	/*
-	long slot = ht->getSlot(&key32);
+	int32_t slot = ht->getSlot(&key32);
 	if ( slot >= 0 && 
 	     slot+1 < ht->m_numSlots && 
 	     ht->m_flags[slot+1] &&
@@ -158,11 +158,11 @@ inline uint32_t getTimeScore ( //collnum_t collnum   ,
 	// bail if not there
 	if ( ! old ) {
 		// this happens when doing a clockset and we match the
-		// event's query terms but its been too long and timedb
+		// event's query terms but its been too int32_t and timedb
 		// does not have it anymore since we only like store
 		// a year out or so since spider time
-		//log("timedb: docid/eid not found d=%llu eid=%li.",
-		//    docId,(long)eventId);
+		//log("timedb: docid/eid not found d=%"UINT64" eid=%"INT32".",
+		//    docId,(int32_t)eventId);
 		return 0;
 	}
 	// over? return 1 then, next smallest score
@@ -174,7 +174,7 @@ inline uint32_t getTimeScore ( //collnum_t collnum   ,
 		// TODO: make sure these are always on top of the
 		//       guys that haven't started yet
 		// . well since most times are like
-		//   (gdb) p ~(unsigned long)1319584941
+		//   (gdb) p ~(uint32_t)1319584941
 		//   $2 = 2975382354
 		//   this should work. but once we cross the 2B midpoint
 		//   it will cause these scores to be below those event's 

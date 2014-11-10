@@ -16,24 +16,24 @@
 // a single serialized thumbnail:
 class ThumbnailInfo {
  public:
-	long  m_origDX;
-	long  m_origDY;
-	long  m_dx;
-	long  m_dy;
-	long  m_urlSize;
-	long  m_dataSize;
+	int32_t  m_origDX;
+	int32_t  m_origDY;
+	int32_t  m_dx;
+	int32_t  m_dy;
+	int32_t  m_urlSize;
+	int32_t  m_dataSize;
 	char  m_buf[];
 	char *getUrl() { return m_buf; };
 	char *getData() { return m_buf + m_urlSize; };
-	long  getDataSize() { return m_dataSize; };
-	long  getSize () { return sizeof(ThumbnailInfo)+m_urlSize+m_dataSize;};
+	int32_t  getDataSize() { return m_dataSize; };
+	int32_t  getSize () { return sizeof(ThumbnailInfo)+m_urlSize+m_dataSize;};
 
 	// make sure neither the x or y side is > maxSize
 	bool printThumbnailInHtml ( SafeBuf *sb , 
-				    long maxWidth,
-				    long maxHeight,
+				    int32_t maxWidth,
+				    int32_t maxHeight,
 				    bool printLink ,
-				    long *newdx ,
+				    int32_t *newdx ,
 				    char *style = NULL ,
 				    char format = FORMAT_HTML ) ;
 };
@@ -44,16 +44,16 @@ class ThumbnailArray {
 	// 1st byte if format version
 	char m_version;
 	// # of thumbs
-	long m_numThumbnails;
+	int32_t m_numThumbnails;
 	// list of ThumbnailInfos
 	char m_buf[];
 
-	long getNumThumbnails() { return m_numThumbnails;};
+	int32_t getNumThumbnails() { return m_numThumbnails;};
 
-	ThumbnailInfo *getThumbnailInfo ( long x ) {
+	ThumbnailInfo *getThumbnailInfo ( int32_t x ) {
 		if ( x >= m_numThumbnails ) return NULL;
 		char *p = m_buf;
-		for ( long i = 0 ; i < m_numThumbnails ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numThumbnails ; i++ ) {
 			if ( i == x ) return (ThumbnailInfo *)p;
 			ThumbnailInfo *ti = (ThumbnailInfo *)p;
 			p += ti->getSize();
@@ -73,11 +73,11 @@ class Images {
 	// . hash the candidates with a gbimage: prefix
 	// . called by XmlDoc.cpp
 	// . used by Image.cpp for determining uniqueness of image
-	//bool hash ( long trVersion ,
+	//bool hash ( int32_t trVersion ,
 	//	    class Xml       *xml             ,
 	//	    class Url *url ,
 	//	    class TermTable *table ,
-	//	    long        score );
+	//	    int32_t        score );
 
 	// set the m_imageNodes[] array to the potential thumbnails
 	void setCandidates ( class Url      *pageUrl , 
@@ -91,22 +91,22 @@ class Images {
 	// . "termFreq" should NOT be on the stack in case we block
 	// . sets *termFreq to UPPER BOUND on # of records with that "termId"
 	bool getThumbnail ( char *pageSite ,
-			    long  siteLen  ,
+			    int32_t  siteLen  ,
 			    int64_t docId ,
 			    class XmlDoc *xd ,
 			    collnum_t collnum,
 			    //char **statusPtr ,
-			    long hopCount,
+			    int32_t hopCount,
 			    void   *state ,
 			    void   (*callback)(void *state) );
 
 	//char *getImageData    () { return m_imgData; };
-	//long  getImageDataSize() { return m_imgDataSize; };
-	//long  getImageType    () { return m_imageType; };
+	//int32_t  getImageDataSize() { return m_imgDataSize; };
+	//int32_t  getImageType    () { return m_imageType; };
 
 	SafeBuf m_imageBuf;
 	bool m_imageBufValid;
-	long m_phase;
+	int32_t m_phase;
 
 	bool gotTermFreq();
 	bool launchRequests();
@@ -119,13 +119,13 @@ class Images {
 	bool downloadImage();
 	bool makeThumb();
 
-	char *getImageUrl ( long j , long *urlLen ) ;
+	char *getImageUrl ( int32_t j , int32_t *urlLen ) ;
 
 	//bool gotImage ( );
 	void thumbStart_r ( bool amThread );
 
-	long  m_i;
-	long  m_j;
+	int32_t  m_i;
+	int32_t  m_j;
 
 	class XmlDoc *m_xd;
 
@@ -133,11 +133,11 @@ class Images {
 	void  *m_state  ;
 	void (* m_callback)(void *state );
 
-	long m_xysize;
+	int32_t m_xysize;
 
 	bool      m_setCalled;
-	long      m_errno;
-	long      m_hadError;
+	int32_t      m_errno;
+	int32_t      m_hadError;
 	bool      m_stopDownloading;
 	//char    **m_statusPtr;
 	char      m_statusBuf[128];
@@ -146,16 +146,16 @@ class Images {
 	int64_t   m_docId;
 	IndexList   m_list;
 
-	long m_latestIp;
+	int32_t m_latestIp;
 	MsgC m_msgc;
 	Url m_imageUrl;
 
-	long      m_numImages;
-	long      m_imageNodes[MAX_IMAGES];
+	int32_t      m_numImages;
+	int32_t      m_imageNodes[MAX_IMAGES];
 	// termids for doing gbimage:<url> lookups for uniqueness
 	int64_t m_termIds   [MAX_IMAGES];
 	// for the msg0 lookup, did we have an error?
-	long      m_errors    [MAX_IMAGES];
+	int32_t      m_errors    [MAX_IMAGES];
 
 	class Url      *m_pageUrl;
 	class Xml      *m_xml;
@@ -173,25 +173,25 @@ class Images {
 	Msg13     m_msg13;
 
 	// download status
-	long  m_httpStatus;
+	int32_t  m_httpStatus;
 	// ptr to the image as downloaded
 	char *m_imgData;
-	long  m_imgDataSize;
-	long  m_imgType;
+	int32_t  m_imgDataSize;
+	int32_t  m_imgType;
 
 	// udp slot buffer
 	char *m_imgReply;
-	long  m_imgReplyLen;      // how many bytes the image is
-	long  m_imgReplyMaxLen;   // allocated for the image
-	long  m_dx;             // width of image in pixels
-	long  m_dy;             // height of image in pixels
+	int32_t  m_imgReplyLen;      // how many bytes the image is
+	int32_t  m_imgReplyMaxLen;   // allocated for the image
+	int32_t  m_dx;             // width of image in pixels
+	int32_t  m_dy;             // height of image in pixels
 	bool  m_thumbnailValid; // is it a valid thumbnail image
 
 	// we store the thumbnail into m_imgBuf, overwriting the original img
-	long  m_thumbnailSize;
+	int32_t  m_thumbnailSize;
 	// the thumbnail dimensions
-	long  m_tdx;
-	long  m_tdy;
+	int32_t  m_tdx;
+	int32_t  m_tdy;
 };
 
 #endif
