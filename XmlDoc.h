@@ -898,6 +898,8 @@ class XmlDoc {
 	bool hashFacet2 ( char *prefix,char *term,long val32, HashTableX *dt,
 			  bool shardByTermId = false ) ;
 
+	// gbfieldmatch:
+	bool hashFieldMatchTerm ( char *val, int32_t vlen, class HashInfo *hi);
 
 	bool hashNumber ( char *beginBuf ,
 			  char *buf , 

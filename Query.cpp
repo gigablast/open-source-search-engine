@@ -2319,9 +2319,11 @@ bool Query::setQWords ( char boolFlag ,
 
 		// really just like the gbfacetstr operator but we do not
 		// display the facets, instead we try to match the provided
-		// facet value exactly, case sensitvely
-		if ( fieldCode == FIELD_GBFIELDMATCH )
-			ph = hash64 ("gbfacetstr", 10);
+		// facet value exactly, case sensitvely.
+		// NOT any more because termlist is too big and we need it
+		// to be fast for diffbot.
+		//if ( fieldCode == FIELD_GBFIELDMATCH )
+		//	ph = hash64 ("gbfacetstr", 10);
 
 
 		if ( fieldCode == FIELD_GBFACETFLOAT )
@@ -2505,6 +2507,49 @@ bool Query::setQWords ( char boolFlag ,
 				qw->m_ignoreWordInBoolQuery = true;
 			}
 
+			if ( fieldCode == FIELD_GBFIELDMATCH ) {
+				// hash the json field name. (i.e. tag.uri)
+				// make it case sensitive as 
+				// seen in XmlDoc.cpp::hashFacet2().
+				// the other fields are hashed in 
+				// XmlDoc.cpp::hashNumber3().
+				wid = hash64 ( w , firstColonLen , 0LL);
+				// if it is like
+				// gbfieldmatch:tag.uri:"http://xyz.com/poo"
+				// then we should hash the string into
+				// an int just like how the field value would
+				// be hashed when adding gbfacetstr: terms
+				// in XmlDoc.cpp:hashFacet2(). the hash of
+				// the tag.uri field, for example, is set
+				// in hashFacet1() and set to "val32". so
+				// hash it just like that does here.
+				char *a = w + firstColonLen + 1;
+				// . skip over colon at start
+				if ( a[0] == ':' ) a++;
+				// . skip over quotes at start/end
+				bool inQuotes = false;
+				if ( a[0] == '\"' ) {
+					inQuotes = true;
+					a++;
+				}
+				// end of field
+				char *b = a;
+				// if not in quotes advance until
+				// we hit whitespace
+				char cs;
+				for ( ; ! inQuotes && *b ; b += cs ) {
+					cs = getUtf8CharSize(b);
+					if ( is_wspace_utf8(b) ) break;
+				}
+				// if in quotes, go until we hit quote
+				for ( ; inQuotes && *b != '\"';b++);
+				// now hash that up. this must be 64 bit
+				// to match in XmlDoc.cpp::hashFieldMatch()
+				uint64_t val64 = hash64 ( a , b-a );
+				// make a composite of tag.uri and http://...
+				// just like XmlDoc.cpp::hashFacet2() does
+				wid = hash64 ( val64 , wid );
+			}
 
 			// gbmin:price:1.23
 			if ( lastColonLen>0 &&
@@ -2513,25 +2558,10 @@ bool Query::setQWords ( char boolFlag ,
 			       fieldCode == FIELD_GBNUMBEREQUALFLOAT ||
 			       fieldCode == FIELD_GBNUMBEREQUALINT ||
 			       fieldCode == FIELD_GBNUMBERMININT ||
-			       fieldCode == FIELD_GBNUMBERMAXINT ||
-			       fieldCode == FIELD_GBFIELDMATCH ) ) {
-
-				// hack to fix gbfieldmatch:pageUrl:http://
-				// which registers an extra colon!
-				if ( fieldCode == FIELD_GBFIELDMATCH ) {
-					lastColonLen = firstColonLen;
-					colonCount = 1;
-				}
+			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
 
 				// record the field
 				wid = hash64Lower_utf8(w,lastColonLen , 0LL );
-
-				// gbfacetstr fields are case sensitive as 
-				// seen in XmlDoc.cpp::hashFacet2().
-				// the other fields are hashed in 
-				// XmlDoc.cpp::hashNumber3().
-				if ( fieldCode == FIELD_GBFIELDMATCH )
-					wid = hash64 ( w , lastColonLen , 0LL);
 
 				// fix gbminint:gbfacetstr:gbxpath...:165004297
 				if ( colonCount == 2 ) {
@@ -2551,63 +2581,6 @@ bool Query::setQWords ( char boolFlag ,
 				// and also the floating point after that
 				qw->m_float = atof ( w + lastColonLen + 1 );
 				qw->m_int = (long)atoll( w + lastColonLen+1);
-				// if it is like
-				// gbfieldmatch:tag.uri:"http://xyz.com/poo"
-				// then we should hash the string into
-				// an int just like how the field value would
-				// be hashed when adding gbfacetstr: terms
-				// in XmlDoc.cpp:hashFacet2(). the hash of
-				// the tag.uri field, for example, is set
-				// in hashFacet1() and set to "val32". so
-				// hash it just like that does here.
-				if ( colonCount >= 1 &&
-				     fieldCode == FIELD_GBFIELDMATCH &&
-				     firstColonLen > 0 ) {
-					char *a = w + firstColonLen + 1;
-					// . skip over colon at start
-					if ( a[0] == ':' ) a++;
-					// . skip over quotes at start/end
-					bool inQuotes = false;
-					if ( a[0] == '\"' ) {
-						inQuotes = true;
-						a++;
-					}
-					// end of field
-					char *b = a;
-					// if not in quotes advance until
-					// we hit whitespace
-					char cs;
-					for ( ; ! inQuotes && *b ; b += cs ) {
-						cs = getUtf8CharSize(b);
-						if ( is_wspace_utf8(b) ) break;
-					}
-					// if in quotes, go until we hit quote
-					for ( ; inQuotes && *b != '\"';b++);
-
-					// now hash the value
-					qw->m_int = hash32 ( a , b - a );
-					qw->m_float = (float)qw->m_int;
-					//
-					// hash it like
-					// gbfacetstr:object.price
-					// even though its 
-					// gbfieldmatch:object.title:"some foo"
-					//
-					/*
-					long long wid1;
-					long long wid2;
-					a = w;
-					b = w + firstColonLen;
-					wid1 = hash64Lower_utf8(a,b-a);
-					a = w + firstColonLen+1;
-					b = w + lastColonLen;
-					wid2 = hash64Lower_utf8(a,b-a);
-					// keep prefix as 2nd arg to this
-					wid = hash64 ( wid2 , wid1 );
-					// we need this for it to work
-					ph = 0LL;
-					*/
-				}
 			}
 
 
@@ -3431,7 +3404,8 @@ struct QueryField g_fields[] = {
 	 "Matches all the meta tag or JSON or XML fields that have "
 	 "the name \"strings.vendor\" and contain the exactly provided "
 	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
-	 "sensitive and includes punctuation, so it's exact match.",
+	 "sensitive and includes punctuation, so it's exact match. In "
+	 "general, it should be a very short termlist, so it should be fast.",
 	 "Advanced Query Operators",
 	 QTF_BEGINNEWTABLE },
 

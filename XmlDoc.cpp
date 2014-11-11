@@ -32875,6 +32875,99 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	return true;
 }
 
+bool XmlDoc::hashFieldMatchTerm ( char *val , int32_t vlen , HashInfo *hi ) {
+
+	HashTableX *tt = hi->m_tt;
+
+	uint64_t val64 = hash64 ( val , vlen );
+
+	// term is like something like "object.price" or whatever.
+	// it is the json field itself, or the meta tag name, etc.
+	uint64_t middlePrefix = hash64n ( hi->m_prefix );
+
+        // hash "This is a new product." with "object.desc".
+        // "object.desc" (termId64) is case-sensitive.
+        uint64_t composite = hash64 ( val64 , middlePrefix );
+
+        // hash that with "gbfieldmatch"
+	char *prefix = "gbfieldmatch";
+	uint64_t prefixHash = hash64n ( prefix );
+	uint64_t ph2 = hash64 ( composite , prefixHash );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  false ) ; // shardByTermId? no, by docid.
+
+	HashTableX *dt = tt;//hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer for display on pageparser.cpp output
+	char buf[128];
+	int32_t bufLen ;
+	bufLen = sprintf(buf,"gbfieldmatch:%s:%llu",hi->m_prefix,val64);
+
+	// make a special hashinfo for this facet
+	HashInfo hi2;
+	hi2.m_tt = tt;
+	// the full prefix
+	char fullPrefix[64];
+	snprintf(fullPrefix,64,"%s:%s",prefix,hi->m_prefix);
+	hi2.m_prefix = fullPrefix;//"gbfacet";
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   ph2, // prefixHash, // s_facetPrefixHash,
+			   &hi2,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ,
+			   k) )
+		return false;
+
+	return true;
+}
+
 
 // . we store numbers as floats in the top 4 bytes of the lower 6 bytes of the 
 //   posdb key
@@ -48711,7 +48804,6 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		}
 		
 
-
 		//
 		// for deduping search results we set m_contentHash32 here for
 		// diffbot json objects.
@@ -48735,6 +48827,11 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		// index like "title:whatever"
 		hi.m_prefix = name;
 		hashString ( val , vlen , &hi );
+
+		// hash gbfieldmatch:some.fieldInJson:"case-sens field Value"
+		if ( name ) 
+			hashFieldMatchTerm ( val , (int32_t)vlen , &hi );
+
 		// hash without the field name as well
 		hi.m_prefix = NULL;
 		hashString ( val , vlen , &hi );
