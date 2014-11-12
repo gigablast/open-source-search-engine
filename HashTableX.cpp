@@ -406,8 +406,8 @@ bool HashTableX::setTableSize ( int32_t oldn , char *buf , int32_t bufSize ) {
 		//	log("hey");
 		int64_t now = gettimeofdayInMilliseconds();
 		logf(LOG_DEBUG,"table: grewtable %s from %"INT32" to %"INT32" slots "
-		     "in %"INT64" ms (this=0x%"XINT32") (used=%"INT32")",  
-		     name,old,m_numSlots ,now - startTime,(int32_t)this,oldUsed);
+		     "in %"INT64" ms (this=0x%"PTRFMT") (used=%"INT32")",  
+		     name,old,m_numSlots ,now - startTime,(PTRTYPE)this,oldUsed);
 	}
 
 	// free the old guys

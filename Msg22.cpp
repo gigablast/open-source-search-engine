@@ -417,7 +417,7 @@ void handleRequest22 ( UdpSlot *slot , int32_t netnice ) {
        try { st = new (State22); }
        catch ( ... ) {
 	       g_errno = ENOMEM;
-	       log("query: Msg22: new(%i): %s", sizeof(State22),
+	       log("query: Msg22: new(%"INT32"): %s", (int32_t)sizeof(State22),
 		   mstrerror(g_errno));
 	       us->sendErrorReply ( slot , g_errno );
 	       return;

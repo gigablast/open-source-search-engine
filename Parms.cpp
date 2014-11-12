@@ -20742,7 +20742,7 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	slot->m_sendBufAlloc = NULL;
 
 	// in case host table is dynamically modified, go by #
-	Host *h = g_hostdb.getHost((int32_t)state);
+	Host *h = g_hostdb.getHost((int32_t)(PTRTYPE)state);
 
 	int32_t parmId = h->m_currentParmIdInProgress;
 
@@ -20949,7 +20949,7 @@ bool Parms::doParmSendingLoop ( ) {
 						 h->m_port, // port
 						 h->m_hostId ,
 						 NULL, // retslot
-						 (void *)h->m_hostId , // state
+						 (void *)(PTRTYPE)h->m_hostId , // state
 						 gotParmReplyWrapper ,
 						 30 , // timeout secs
 						 -1 , // backoff

@@ -194,6 +194,15 @@ bool SafeBuf::safeMemcpy ( Words *w , int32_t a , int32_t b ) {
 	return safeMemcpy ( p , pend - p );
 }
 
+bool SafeBuf::pushPtr ( void *ptr ) {
+	if ( m_length + (int32_t)sizeof(char *) > m_capacity ) 
+		if(!reserve(sizeof(char *)))//2*m_capacity + 1))
+			return false;
+	*(char **)(m_buf+m_length) = (char *)ptr;
+	m_length += sizeof(char *);
+	return true;
+}
+
 bool SafeBuf::pushLong ( int32_t i) {
 	if ( m_length + 4 > m_capacity ) 
 		if(!reserve(4))//2*m_capacity + 1))
@@ -2219,7 +2228,7 @@ bool SafeBuf::inlineStyleTags ( ) {
 		int32_t h32 = hash32 ( tagName , tagNameLen );
 		h32 = hash32 ( className , classNameLen , h32 );
 		// point that to our style and length
-		uint64_t val = (uint32_t)style;
+		uint64_t val = (uint64_t)style;
 		val <<= 32;
 		val |= (uint32_t)styleLen;
 		// and store it

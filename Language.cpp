@@ -661,7 +661,7 @@ bool Language::loadSpellerDict( char *spellerBuf, int32_t spellerBufSize,
 		       
 		int32_t slot = m_phonetics.getSlot ( phonetKey );
 		if ( slot != -1 ){
-			log(LOG_LOGIC, "speller: %"INT32" != -1, %16llx, %s", 
+			log(LOG_LOGIC, "speller: %"INT32" != -1, %16"XINT64", %s", 
 				slot, phonetKey, tuple);
 			char *xx = NULL; *xx = 0;
 		}

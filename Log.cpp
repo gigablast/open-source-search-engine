@@ -474,7 +474,7 @@ bool Log::logLater ( int64_t now, int32_t type, char *format, va_list ap ) {
 	memcpy_ass ( s_ptr , (char *)&apsize , 4 );
 	s_ptr += 4;
 	// dword align
-	int32_t rem = ((uint32_t)s_ptr) % 4;
+	int32_t rem = ((PTRTYPE)s_ptr) % 4;
 	if ( rem > 0 ) s_ptr +=  4 - rem;
 	// store the args themselves
 	memcpy_ass ( s_ptr , (char *)ap , apsize );
@@ -563,10 +563,12 @@ void Log::printBuf ( ) {
 	memcpy ( (char *)&apsize , p , 4 );
 	p += 4;
 	// dword align
-	int32_t rem = ((uint32_t)p) % 4;
+	int32_t rem = ((PTRTYPE)p) % 4;
 	if ( rem > 0 ) p +=  4 - rem;
 	// get va_list... needs to be word aligned!!
-	va_list ap = (char*)(void*)p;
+	va_list ap ;
+	// MDW FIX ME
+	//ap = (char *)(void*)p;
 	p += apsize;
 	// . sanity check
 	// . i've seen this happen a lot lately since i started logging cancel

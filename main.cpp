@@ -11527,7 +11527,7 @@ skip:
 
 //int startUp ( void *state ) {
 void *startUp ( void *state , ThreadEntry *t ) {
-	int32_t id = (int32_t) state;
+	int32_t id = (int32_t) (PTRTYPE)state;
 	// . what this lwp's priority be?
 	// . can range from -20 to +20
 	// . the lower p, the more cpu time it gets
@@ -14489,7 +14489,7 @@ void doInject ( int fd , void *state ) {
 				 //, ipStr
 				 , xd.m_firstIndexedDate
 				 , xd.m_spideredTime
-				 , (int32_t)xd.getHopCount()
+				 , (int32_t)*xd.getHopCount()
 				 , (int32_t)xd.m_charset
 				 //, contentLen
 				 , content
@@ -15788,7 +15788,7 @@ struct dom_info {
 	int32_t           dHash;
 	int32_t           pages;
 	//int64_t      quality;
-	int32_t  	      *ip_list;
+	struct ip_info 	      **ip_list;
 	int32_t           numIp;		
 	//HashTable     *dht;
 	int32_t 	      *lnk_table;
@@ -15801,7 +15801,7 @@ struct ip_info {
 	uint32_t  ip;
 	int32_t           pages;
 	//int64_t      quality;
-	int32_t          *dom_list;
+	struct dom_info **dom_list;
 	int32_t           numDom;
 };
 
@@ -15819,8 +15819,8 @@ static int dom_lcmp (const void *p1, const void *p2);
 //static int lnk_fcmp (const void *p1, const void *p2);
 
 void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t output ) {
-	int32_t *ip_table;
-	int32_t *dom_table;
+	struct ip_info **ip_table;
+	struct dom_info **dom_table;
 	//HashTable ipHT;
 	//HashTable domHT;
 	//ipHT.set ( numRecs+1 );
@@ -15854,14 +15854,14 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 	int32_t countDom = 0;
 	int32_t attempts = 0;
 
-	ip_table  = (int32_t *)mmalloc(sizeof(int32_t) * numRecs, 
+	ip_table  = (struct ip_info **)mmalloc(sizeof(struct ip_info *) * numRecs, 
 					     "main-dcit" );
-	dom_table = (int32_t *)mmalloc(sizeof(int32_t) * numRecs,
+	dom_table = (struct dom_info **)mmalloc(sizeof(struct dom_info *) * numRecs,
 					     "main-dcdt" );
 
 	for( int32_t i = 0; i < numRecs; i++ ) {
-		ip_table[i] = 0;
-		dom_table[i] = 0;
+		ip_table[i] = NULL;
+		dom_table[i] = NULL;
 	}
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
@@ -15953,7 +15953,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 							 "main-dcip" );
 			if( !sipi ) { char *XX=NULL; *XX=0; }
 			//ipHT.addKey( hkey_ip, (int32_t)sipi, 0 );
-			ip_table[countIp++]  = (int32_t)sipi;
+			ip_table[countIp++]  = sipi;
 			sipi->ip = xd.m_ip;//u->getIp();
 			sipi->pages = 1;
 			sipi->numDom = 0;
@@ -15985,7 +15985,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 							 "main-dcdm" );
 			if( !sdomi ) { char *XX=NULL; *XX=0; }
 			//domHT.addKey( hkey_dom, (int32_t)sdomi, 0 );
-			dom_table[countDom++] = (int32_t)sdomi;
+			dom_table[countDom++] = sdomi;
 			sdomi->dom = (char *)mmalloc( dlen,"main-dcsdm" );
 
 			strncpy( sdomi->dom, dom , dlen );
@@ -16087,51 +16087,51 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 		if( !sipi->numDom || !sdomi->numIp ){
 			sdomi->numIp++; sipi->numDom++;
 			//Add to IP list for Domain
-			sdomi->ip_list = (int32_t *)
+			sdomi->ip_list = (struct ip_info **)
 				mrealloc( sdomi->ip_list,
-					  (sdomi->numIp-1)*sizeof(int32_t),
-					  sdomi->numIp*sizeof(int32_t),
+					  (sdomi->numIp-1)*sizeof(char *),
+					  sdomi->numIp*sizeof(char *),
 					  "main-dcldm" );
-			sdomi->ip_list[sdomi->numIp-1] = (int32_t)sipi;
+			sdomi->ip_list[sdomi->numIp-1] = sipi;
 
 			//Add to domain list for IP
-			sipi->dom_list = (int32_t *)
+			sipi->dom_list = (struct dom_info **)
 				mrealloc( sipi->dom_list,
-					  (sipi->numDom-1)*sizeof(int32_t),
-					  sipi->numDom*sizeof(int32_t),
+					  (sipi->numDom-1)*sizeof(char *),
+					  sipi->numDom*sizeof(char *),
 					  "main-dclip" );
-			sipi->dom_list[sipi->numDom-1] = (int32_t)sdomi;
+			sipi->dom_list[sipi->numDom-1] = sdomi;
 		}
 		else {
 			int32_t i;
 			for( i = 0; 
 			     (i < sdomi->numIp) 
-				     && (sdomi->ip_list[i] != (int32_t)sipi);
+				     && (sdomi->ip_list[i] != sipi);
 			     i++ );
 			if( sdomi->numIp != i ) goto updateIp;
 
 			sdomi->numIp++;
-			sdomi->ip_list = (int32_t *)
+			sdomi->ip_list = (struct ip_info **)
 				mrealloc( sdomi->ip_list,
 					  (sdomi->numIp-1)*sizeof(int32_t),
 					  sdomi->numIp*sizeof(int32_t),
 					  "main-dcldm" );
-			sdomi->ip_list[sdomi->numIp-1] = (int32_t)sipi;
+			sdomi->ip_list[sdomi->numIp-1] = sipi;
 
 		updateIp:
 			for( i = 0; 
 			     (i < sipi->numDom) 
-				     && (sipi->dom_list[i] != (int32_t)sdomi);
+				     && (sipi->dom_list[i] != sdomi);
 			     i++ );
 			if( sipi->numDom != i ) goto endListUpdate;
 
 			sipi->numDom++;
-			sipi->dom_list = (int32_t *)
+			sipi->dom_list = (struct dom_info **)
 				mrealloc( sipi->dom_list,
 					  (sipi->numDom-1)*sizeof(int32_t),
 					  sipi->numDom*sizeof(int32_t),
 					  "main-dclip" );
-			sipi->dom_list[sipi->numDom-1] = (int32_t)sdomi;
+			sipi->dom_list[sipi->numDom-1] = sdomi;
 
 		endListUpdate:
 			i=0;
@@ -16171,7 +16171,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			return;
 		}
 
-		gbsort( dom_table, countDom, sizeof(int32_t), dom_fcmp );		
+		gbsort( dom_table, countDom, sizeof(struct dom_info *), dom_fcmp );		
 		for( int32_t i = 0; i < countDom; i++ ) {
 			if( !dom_table[i] ) continue;
 			tmpdomi = (struct dom_info *)dom_table[i];
@@ -16219,7 +16219,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 				"</rec1>\n");
 			*/
 		}
-		gbsort( ip_table, countIp, sizeof(int32_t), ip_fcmp );		
+		gbsort( ip_table, countIp, sizeof(struct ip_info *), ip_fcmp );		
 		for( int32_t i = 0; i < countIp; i++ ) {
 			if( !ip_table[i] ) continue;
 			tmpipi = (struct ip_info *)ip_table[i];
@@ -16388,7 +16388,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 		fprintf( fhndl, "<a name=\"pid\">\n"
 			 "<h2>Domains Sorted By Pages</h2>\n"
 			 "%s", menu );
-		gbsort( dom_table, countDom, sizeof(int32_t), dom_fcmp );
+		gbsort( dom_table, countDom, sizeof(struct dom_info *), dom_fcmp );
 	printDomLp:
 
 		fprintf( fhndl,"%s", hdr );
@@ -16448,7 +16448,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 		fprintf( fhndl, "</table>\n<br><br><br>" );
 		if( loop == 0 ) {
 			loop = 1;
-			gbsort( dom_table, countDom, sizeof(int32_t), dom_lcmp );
+			gbsort( dom_table, countDom, sizeof(struct dom_info *), dom_lcmp );
 			fprintf( fhndl, "<a name=\"lid\">"
 				 "<h2>Domains Sorted By Links</h2>\n%s", menu );
 
@@ -16460,7 +16460,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			 "<h2>IPs Sorted By Pages</h2>\n%s", menu );
 
 
-		gbsort( ip_table, countIp, sizeof(int32_t), ip_fcmp );
+		gbsort( ip_table, countIp, sizeof(struct ip_info *), ip_fcmp );
 	printIpLp:
 		fprintf( fhndl,"%s", hdr2 );
 		recsDisp = countIp;
@@ -16517,7 +16517,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 		fprintf( fhndl, "</table>\n<br><br><br>" );
 		if( loop == 0 ) {
 			loop = 1;
-			gbsort( ip_table, countIp, sizeof(int32_t), ip_dcmp );
+			gbsort( ip_table, countIp, sizeof(struct ip_table *), ip_dcmp );
 			fprintf( fhndl, "<a name=\"dii\">"
 				 "<h2>IPs Sorted By Domains</h2>\n%s", menu );
 			goto printIpLp;
@@ -16546,7 +16546,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			ima += sizeof(struct ip_info);
 			tmpipi = NULL;
 		}
-		mfree( ip_table, numRecs * sizeof(int32_t), "main-dcfit" );
+		mfree( ip_table, numRecs * sizeof(struct ip_table *), "main-dcfit" );
 
 		log( LOG_INFO, "cntDm: Freeing domain info struct..." );
 		for( int32_t i = 0; i < countDom; i++ ) {
@@ -16579,7 +16579,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			tmpdomi = NULL;
 		}
 					
-		mfree( dom_table, numRecs * sizeof(int32_t), "main-dcfdt" );
+		mfree( dom_table, numRecs * sizeof(struct dom_info *), "main-dcfdt" );
 
 		int64_t time_end = gettimeofdayInMilliseconds();
 		log( LOG_INFO, "cntDm: Took %lldms to count domains in %"INT32" recs.",

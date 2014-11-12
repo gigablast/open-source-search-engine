@@ -729,8 +729,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 			req->m_next = head->m_next;
 		head->m_next = req;
 		// note it for debugging
-		log("build: msg25 request waiting in line for %s slot=0x%"XINT32"",
-		    req->ptr_url,(int32_t)slot);
+		log("build: msg25 request waiting in line for %s slot=0x%"PTRFMT"",
+		    req->ptr_url,(PTRTYPE)slot);
 		// we will send a reply back for this guy when done
 		// getting the reply for the head msg25request
 		return;
@@ -741,8 +741,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 	try { m25 = new ( Msg25 ); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("build: msg25: new(%i): %s", 
-		    sizeof(Msg25),mstrerror(g_errno));
+		log("build: msg25: new(%"INT32"): %s", 
+		    (int32_t)sizeof(Msg25),mstrerror(g_errno));
 		g_udpServer.sendErrorReply ( slot , g_errno );
 		return;
 	}
@@ -4624,7 +4624,7 @@ bool LinkInfo::print ( SafeBuf *sb , char *coll ) {
 			       "("
 			       //"baseScore=%010"INT32", "
 			       "d=<a href=\"/admin/titledb?c=%s&"
-			       "d=%"INT64"\">%016lli</a>, "
+			       "d=%"INT64"\">%016"INT64"</a>, "
 			       "siterank=%"INT32", "
 			       "hopcount=%03"INT32" "
 			       "outlinks=%05"INT32", "

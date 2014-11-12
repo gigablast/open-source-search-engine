@@ -875,7 +875,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	if ( err2 ) {
 	hadError2:
 		g_errno = ENOMEM;
-		log("proxy: new(%i): %s",sizeof(StateControl),
+		log("proxy: new(%i): %s",(int32_t)sizeof(StateControl),
 		    mstrerror(g_errno));
 		g_msg = " (error: out of memory.)";
 		printRequest(s, &hr);
@@ -3198,7 +3198,7 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *hr2 ) {
 	if ( err5 ) {
 	hadError5:
 		g_errno = ENOMEM;
-		log("proxy: new(%i): %s",sizeof(StateUser),mstrerror(g_errno));
+		log("proxy: new(%"INT32"): %s",(int32_t)sizeof(StateUser),mstrerror(g_errno));
 		g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
 		return true;
 	}
@@ -5165,7 +5165,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	mp += 16;
 	// store our new content length as ascii into test buf
 	char test[64];
-	int32_t len = sprintf(test,"%"INT32"",(int32_t)(newReplySize-mimeLen));
+	int32_t len = sprintf(test,"%"INT32"",(int32_t)(*newReplySize-mimeLen));
 	// find end
 	char *end = mp;
 	while ( *end && is_digit(*end) ) end++;

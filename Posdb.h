@@ -661,7 +661,7 @@ class PosdbTable {
 	char            m_debug;
 
 	// for debug msgs
-	int32_t            m_logstate;
+	void *m_logstate;
 
 	//int64_t       m_numDocsInColl;
 

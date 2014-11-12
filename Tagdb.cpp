@@ -21,7 +21,7 @@ static void gotMsg0ReplyWrapper ( void *state );
 //static void gotList ( void *state , RdbList *xxx , Msg5 *yyy ) ;
 //static void sendReply9a ( void *state ) ;
 
-static HashTable s_ht;
+static HashTableX s_ht;
 
 static bool s_initialized = false;
 
@@ -1742,7 +1742,7 @@ int32_t getTagTypeFromStr( char *tagname , int32_t tagnameLen ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// sanity check, make sure it is a supported tag!
-	if ( ! s_ht.getValue ( tagType ) ) { 
+	if ( ! s_ht.getValue ( &tagType ) ) { 
 		log("tagdb: unsupported tagname \"%s\"",tagname);
 		char *xx=NULL;*xx=0;
 		return -1;
@@ -1754,7 +1754,7 @@ int32_t getTagTypeFromStr( char *tagname , int32_t tagnameLen ) {
 char *getTagStrFromType ( int32_t tagType ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
-	TagDesc *td = (TagDesc *)s_ht.getValue ( tagType );
+	TagDesc *td = (TagDesc *)s_ht.getValue ( &tagType );
 	// sanity check
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return it
@@ -1781,7 +1781,8 @@ bool Tagdb::setHashTable ( ) {
 	if ( s_initialized ) return true;
 	s_initialized = true;
 	// the hashtable of TagDescriptors
-	if ( ! s_ht.set ( 1024 ) ) 
+	//if ( ! s_ht.set ( 1024 ) ) 
+	if ( ! s_ht.set ( 4,sizeof(char *),1024,NULL,0,false,0,"tgdbtb" ) ) 
 		return log("tagdb: Tagdb hash init failed.");
 	// stock it
 	int32_t n = (int32_t)sizeof(s_tagDesc)/(int32_t)sizeof(TagDesc);
@@ -1792,14 +1793,14 @@ bool Tagdb::setHashTable ( ) {
 		// use the same algo that Words.cpp computeWordIds does 
 		int32_t h = hash64Lower_a ( s , slen );
 		// call it a bad name if already in there
-		TagDesc *etd = (TagDesc *)s_ht.getValue ( h );
+		TagDesc *etd = (TagDesc *)s_ht.getValue ( &h );
 		if ( etd )
 			return log("tagdb: Tag %s collides with old tag %s",
 				   td->m_name,etd->m_name);
 		// set the type
 		td->m_type = h;
 		// add it
-		s_ht.addKey ( h , (int32_t)td );
+		s_ht.addKey ( &h , (TagDesc **)&td );
 	}
 	return true;
 }
@@ -4103,8 +4104,8 @@ bool sendPageTagdb ( TcpSocket *s , HttpRequest *req ) {
 	try { st = new (State12); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("PageTagdb: new(%i): %s", 
-		    sizeof(State12),mstrerror(g_errno));
+		log("PageTagdb: new(%"INT32"): %s", 
+		    (int32_t)sizeof(State12),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State12) , "PageTagdb" );
 	//st->m_isRootAdmin    = isAdmin;
@@ -4859,7 +4860,7 @@ bool isTagTypeUnique ( int32_t tt ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
-	TagDesc *td = (TagDesc *)s_ht.getValue ( tt );
+	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
 	// if none, that is crazy
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return 
@@ -4873,7 +4874,7 @@ bool isTagTypeIndexable ( int32_t tt ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
-	TagDesc *td = (TagDesc *)s_ht.getValue ( tt );
+	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
 	// if none, that is crazy
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return false if we should not index it

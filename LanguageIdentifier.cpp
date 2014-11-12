@@ -112,10 +112,10 @@ static char * FindLanguageIndex(char *content) {
 	// Got second quote char, skip it
 	str++;
 	// now back up to slash character...
-	while(str && *str && (uint32_t)str > (uint32_t)content && *str != '/')
+	while(str && *str && str > content && *str != '/')
 		str--;
 	// make sure we found the slash...
-	if(str && *str && (uint32_t)str > (uint32_t)content && *str == '/') {
+	if(str && *str && str > content && *str == '/') {
 		str++;
 		return(str);
 	}

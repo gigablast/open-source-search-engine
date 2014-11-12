@@ -65,7 +65,8 @@ void handleRequest39 ( UdpSlot *slot , int32_t netnice ) {
 	try { THIS = new ( Msg39 ); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("msg39: new(%i): %s", sizeof(Msg39),mstrerror(g_errno));
+		log("msg39: new(%"INT32"): %s", 
+		    (int32_t)sizeof(Msg39),mstrerror(g_errno));
 		sendReply ( slot , NULL , NULL , 0 , 0 ,true);
 		return;
 	}
@@ -82,9 +83,9 @@ void sendReply ( UdpSlot *slot , Msg39 *msg39 , char *reply , int32_t replyLen ,
 		 int32_t replyMaxSize , bool hadError ) {
 	// debug msg
 	if ( g_conf.m_logDebugQuery || (msg39&&msg39->m_debug) ) 
-		logf(LOG_DEBUG,"query: msg39: [%"UINT32"] "
+		logf(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 		     "Sending reply len=%"INT32".",
-		     (uint32_t)msg39,replyLen);
+		     (PTRTYPE)msg39,replyLen);
 
 	// sanity
 	if ( hadError && ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -234,8 +235,8 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	}
 	// debug
 	if ( m_debug )
-		logf(LOG_DEBUG,"query: msg39: [%"UINT32"] Got request "
-		     "for q=%s", (uint32_t) this,m_tmpq.m_orig);
+		logf(LOG_DEBUG,"query: msg39: [%"PTRFMT"] Got request "
+		     "for q=%s", (PTRTYPE) this,m_tmpq.m_orig);
 
 	// reset this
 	m_tt.reset();
@@ -646,7 +647,7 @@ bool Msg39::getLists () {
 			//tt[ttlen]='\0';
 			//if ( c == '\0' ) c = ' ';
 			sb.safePrintf(
-			     "query: msg39: [%"UINT32"] "
+			     "query: msg39: [%"PTRFMT"] "
 			     "query term #%"INT32" \"%s\" "
 			     "phr=%"INT32" termId=%"UINT64" rawTermId=%"UINT64" "
 			     //"estimatedTermFreq=%"INT64" (+/- ~16000) "
@@ -656,8 +657,8 @@ bool Msg39::getLists () {
 			     "required=%"INT32" "
 			     "fielcode=%"INT32" "
 
-			     "ebit=0x%0llx "
-			     "impBits=0x%0llx "
+			     "ebit=0x%0"XINT64" "
+			     "impBits=0x%0"XINT64" "
 
 			     "wikiphrid=%"INT32" "
 			     "leftwikibigram=%"INT32" "
@@ -672,7 +673,7 @@ bool Msg39::getLists () {
 			     "otermLen=%"INT32" "
 			     "isSynonym=%"INT32" "
 			     "querylangid=%"INT32" " ,
-			     (uint32_t)this ,
+			     (PTRTYPE)this ,
 			     i          ,
 			     qt->m_term,//bb ,
 			     (int32_t)m_tmpq.isPhrase (i) ,
@@ -721,9 +722,9 @@ bool Msg39::getLists () {
 	}
 	// timestamp log
 	if ( m_debug ) 
-		log(LOG_DEBUG,"query: msg39: [%"UINT32"] "
+		log(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 		    "Getting %"INT32" index lists ",
-		     (uint32_t)this,m_tmpq.getNumTerms());
+		     (PTRTYPE)this,m_tmpq.getNumTerms());
 	// . now get the index lists themselves
 	// . return if it blocked
 	// . not doing a merge (last parm) means that the lists we receive
@@ -840,9 +841,9 @@ bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 	}
 	// timestamp log
 	if ( m_debug ) {
-		log(LOG_DEBUG,"query: msg39: [%"UINT32"] "
+		log(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 		    "Got %"INT32" lists in %"INT64" ms"
-		    , (uint32_t)this,m_tmpq.getNumTerms(),
+		    , (PTRTYPE)this,m_tmpq.getNumTerms(),
 		     gettimeofdayInMilliseconds() - m_startTime);
 		m_startTime = gettimeofdayInMilliseconds();
 	}
@@ -933,10 +934,10 @@ bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 
 	// timestamp log
 	if ( m_debug ) {
-		log(LOG_DEBUG,"query: msg39: [%"UINT32"] "
+		log(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 		    "Preparing to intersect "
 		     "took %"INT64" ms",
-		     (uint32_t)this, 
+		     (PTRTYPE)this, 
 		    gettimeofdayInMilliseconds() - m_startTime );
 		m_startTime = gettimeofdayInMilliseconds();
 	}
@@ -1568,9 +1569,9 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		if ( docCount <= 50 ) m_topScore50 = t->m_score;
 		
 		if ( m_debug ) {
-			log(LOG_DEBUG,"query: msg39: [%"UINT32"] "
+			log(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 			    "%03"INT32") docId=%012"UINT64" sum=%.02f",
-			    (uint32_t)this, docCount,
+			    (PTRTYPE)this, docCount,
 			    t->m_docId,t->m_score);
 		}
 		//don't send more than the docs that are wanted
@@ -1582,11 +1583,12 @@ void Msg39::estimateHitsAndSendReply ( ) {
 	// this is sensitive info
 	if ( m_debug ) {
 		log(LOG_DEBUG,
-		    "query: msg39: [%"INT32"] Intersected lists took %"INT64" (%"INT64") "
+		    "query: msg39: [%"PTRFMT"] "
+		    "Intersected lists took %"INT64" (%"INT64") "
 		    "ms "
 		    "docIdsToGet=%"INT32" docIdsGot=%"INT32" "
 		    "q=%s",
-		    (int32_t)this                        ,
+		    (PTRTYPE)this                        ,
 		    m_posdbTable.m_addListsTime       ,
 		    gettimeofdayInMilliseconds() - m_startTime ,
 		    m_r->m_docsToGet                       ,

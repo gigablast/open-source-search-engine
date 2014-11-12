@@ -719,7 +719,7 @@ class SpiderRequest {
 	// . basic functions
 	// . clear all
 	void reset() { 
-		memset ( this , 0 , (int32_t)m_url - (int32_t)&m_key ); 
+		memset ( this , 0 , (char *)m_url - (char *)&m_key ); 
 		// -1 means uninitialized, this is required now
 		m_ufn = -1;
 		// this too

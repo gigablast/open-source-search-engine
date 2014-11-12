@@ -98,6 +98,7 @@ LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a 
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
 #LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
+#LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
 
 endif
 

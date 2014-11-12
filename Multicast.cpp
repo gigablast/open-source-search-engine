@@ -1321,7 +1321,8 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 	// if he was marked as dead on the secondary cluster, mark him as up
 	Host *h = m_hostPtrs[i];
 	if ( m_hostdb == &g_hostdb2 && h && m_hostdb->isDead(h) ) {
-		log("net: Marking hostid %"INT32" in secondary cluster as alive.",
+		log("net: Marking hostid %"INT32" in secondary cluster "
+		    "as alive.",
 		    (int32_t)h->m_hostId);
 		h->m_ping = 0;
 	}
@@ -1331,8 +1332,9 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 	m_replyLaunchTime = m_launchTime[i];
 
 	if ( m_sentToTwin ) 
-		log("net: Twin msgType=0x%"XINT32" (this=0x%"XINT32") reply: %s.",
-		    (int32_t)m_msgType,(int32_t)this,mstrerror(g_errno));
+		log("net: Twin msgType=0x%"XINT32" (this=0x%"PTRFMT") "
+		    "reply: %s.",
+		    (int32_t)m_msgType,(PTRTYPE)this,mstrerror(g_errno));
 
 	// on error try sending the request to another host
 	// return if we kicked another request off ok
@@ -1350,8 +1352,10 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 		if ( slot->m_msgType == 0x20 && g_errno == EMISSINGQUERYTERMS )
 			logIt = false;
 		if ( h && logIt )
-			log("net: Multicast got error in reply from hostId %"INT32""
-			    " (msgType=0x%hhx transId=%"INT32" nice=%"INT32" net=%s): "
+			log("net: Multicast got error in reply from "
+			    "hostId %"INT32""
+			    " (msgType=0x%hhx transId=%"INT32" "
+			    "nice=%"INT32" net=%s): "
 			    "%s.",
 			    h->m_hostId, slot->m_msgType, slot->m_transId, 
 			    m_niceness,
@@ -1427,8 +1431,8 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 		// send to the twin
 		if ( sendToTwin && sendToHostLoop(0,-1,-1) ) {
 			log("net: Trying to send request msgType=0x%"XINT32" "
-			    "to a twin. (this=0x%"XINT32")",
-			    (int32_t)m_msgType,(int32_t)this);
+			    "to a twin. (this=0x%"PTRFMT")",
+			    (int32_t)m_msgType,(PTRTYPE)this);
 			m_sentToTwin = true;
 			// . keep stats
 			// . this is error based rerouting
@@ -1559,7 +1563,7 @@ void sleepWrapper1b ( int bogusfd , void *state ) {
 	Multicast *THIS = (Multicast *)state;
 	// clear m_retired, m_errnos, m_slots
 	memset ( THIS->m_retired, 0, sizeof(char     ) * MAX_HOSTS_PER_GROUP );
-	memset ( THIS->m_errnos , 0, sizeof(int32_t     ) * MAX_HOSTS_PER_GROUP );
+	memset ( THIS->m_errnos , 0, sizeof(int32_t  ) * MAX_HOSTS_PER_GROUP );
 	memset ( THIS->m_slots  , 0, sizeof(UdpSlot *) * MAX_HOSTS_PER_GROUP );
 	memset ( THIS->m_inProgress,0,sizeof(char    ) * MAX_HOSTS_PER_GROUP );
 	// retry the whole she-bang
@@ -1569,8 +1573,8 @@ void sleepWrapper1b ( int bogusfd , void *state ) {
 		return;
 	}
 	// otherwise, retry forever
-	log("net: Failed to launch multicast request. THIS=%"UINT32". Waiting "
-	    "and retrying.",(uint32_t)THIS);
+	log("net: Failed to launch multicast request. THIS=%"PTRFMT". Waiting "
+	    "and retrying.",(PTRTYPE)THIS);
 }
 
 // destroy all slots that may be in progress (except "slot")

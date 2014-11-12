@@ -499,8 +499,8 @@ bool Msg40::gotCacheReply ( ) {
 		int64_t now  = gettimeofdayInMilliseconds();
 		int64_t took = now - m_startTime;
 		log(LOG_TIMING,
-		    "query: [%"UINT32"] found in cache. "
-		    "lookup took %"INT64" ms.",(int32_t)this,took);
+		    "query: [%"PTRFMT"] found in cache. "
+		    "lookup took %"INT64" ms.",(PTRTYPE)this,took);
 	}
 	m_cachedTime = m_msg17.getCachedTime();
 	m_cachedResults = true;
@@ -514,11 +514,11 @@ bool Msg40::prepareToGetDocIds ( ) {
 	if ( g_conf.m_logTimingQuery || m_si->m_debug ) {
 		int64_t now  = gettimeofdayInMilliseconds();
 		int64_t took = now - m_startTime;
-		logf(LOG_TIMING,"query: [%"UINT32"] Not found in cache. "
-		     "Lookup took %"INT64" ms.",(int32_t)this,took);
+		logf(LOG_TIMING,"query: [%"PTRFMT"] Not found in cache. "
+		     "Lookup took %"INT64" ms.",(PTRTYPE)this,took);
 		m_startTime = now;
-		logf(LOG_TIMING,"query: msg40: [%"UINT32"] Getting up to %"INT32" "
-		     "(docToGet=%"INT32") docids", (int32_t)this,
+		logf(LOG_TIMING,"query: msg40: [%"PTRFMT"] Getting up to %"INT32" "
+		     "(docToGet=%"INT32") docids", (PTRTYPE)this,
 		     m_docsToGetVisible,  m_docsToGet);
 	}
 
@@ -756,10 +756,10 @@ bool Msg40::gotDocIds ( ) {
 
 	if ( g_conf.m_logTimingQuery || m_si->m_debug||g_conf.m_logDebugQuery){
 		int64_t took = now - m_startTime;
-		logf(LOG_DEBUG,"query: msg40: [%"UINT32"] Got %"INT32" docids in %"INT64" ms",
-		     (int32_t)this,m_msg3a.getNumDocIds(),took);
-		logf(LOG_DEBUG,"query: msg40: [%"UINT32"] Getting up to %"INT32" "
-		     "summaries", (int32_t)this,m_docsToGetVisible);
+		logf(LOG_DEBUG,"query: msg40: [%"PTRFMT"] Got %"INT32" docids in %"INT64" ms",
+		     (PTRTYPE)this,m_msg3a.getNumDocIds(),took);
+		logf(LOG_DEBUG,"query: msg40: [%"PTRFMT"] Getting up to %"INT32" "
+		     "summaries", (PTRTYPE)this,m_docsToGetVisible);
 	}
 
 	// save any covered up error
@@ -857,8 +857,8 @@ bool Msg40::gotDocIds ( ) {
 
 	// debug msg
 	if ( m_si->m_debug || g_conf.m_logDebugQuery )
-		logf(LOG_DEBUG,"query: [%"UINT32"] Getting topics/gigabits, "
-		     "reference pages and dir pages.",(uint32_t)this);
+		logf(LOG_DEBUG,"query: [%"PTRFMT"] Getting topics/gigabits, "
+		     "reference pages and dir pages.",(PTRTYPE)this);
 
 	// . do not bother getting topics if we are passed first page
 	// . AWL NOTE: pqr needs topics on all pages
@@ -1457,9 +1457,9 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		g_errno = 0;
 		// debug msg
 		if ( m_si->m_debug || g_conf.m_logDebugQuery )
-			logf(LOG_DEBUG,"query: msg40: [%"UINT32"] Getting "
+			logf(LOG_DEBUG,"query: msg40: [%"PTRFMT"] Getting "
 			     "summary #%"INT32" for docId=%"INT64"",
-			     (uint32_t)this,i,m_msg3a.m_docIds[i]);
+			     (PTRTYPE)this,i,m_msg3a.m_docIds[i]);
 		// launch it
 		m_numRequests++;
 		// keep for-loops int16_ter with this
@@ -1716,9 +1716,9 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 bool Msg40::gotSummary ( ) {
 	// now m_linkInfo[i] (for some i, i dunno which) is filled
 	if ( m_si->m_debug || g_conf.m_logDebugQuery )
-		logf(LOG_DEBUG,"query: msg40: [%"UINT32"] Got summary. "
+		logf(LOG_DEBUG,"query: msg40: [%"PTRFMT"] Got summary. "
 		     "Total got=#%"INT32".",
-		     (uint32_t)this,m_numReplies);
+		     (PTRTYPE)this,m_numReplies);
 
 	// come back up here if we have to get more docids from Msg3a and
 	// it gives us more right away without blocking, then we need to
@@ -2337,7 +2337,7 @@ bool Msg40::gotSummary ( ) {
 			if ( m_si->m_debug || g_conf.m_logDebugQuery )
 				logf( LOG_DEBUG, "query: result #%"INT32" "
 				      "(docid=%"INT64") is %.02f%% similar-"
-				      "summary of #%"INT32" (docid=%lld)", 
+				      "summary of #%"INT32" (docid=%"INT64")", 
 				      m, m_msg3a.m_docIds[m] , 
 				      s, i, m_msg3a.m_docIds[i] );
 			*level = CR_DUP_SUMMARY;
@@ -2415,7 +2415,7 @@ bool Msg40::gotSummary ( ) {
                                         logf(LOG_DEBUG, "query: result #%"INT32" "
                                                         "(docid=%"INT64") is the "
                                                         "same URL as "
-                                                        "(docid=%lld)", 
+                                                        "(docid=%"INT64")", 
                                                         i,m_msg3a.m_docIds[i], 
                                                         m_urlTable.
 					     getValueFromSlot(slot));
@@ -2654,9 +2654,9 @@ bool Msg40::gotSummary ( ) {
 			    0x008220ff  );
 	// timestamp log
 	if ( g_conf.m_logTimingQuery || m_si->m_debug )
-		logf(LOG_DEBUG,"query: msg40: [%"INT32"] Got %"INT32" summaries in "
+		logf(LOG_DEBUG,"query: msg40: [%"PTRFMT"] Got %"INT32" summaries in "
 		    "%"INT64" ms",
-		     (int32_t)this ,
+		     (PTRTYPE)this ,
 		     visible, // m_visibleContiguous,
 		     now - m_startTime );
 
@@ -2920,8 +2920,8 @@ bool Msg40::gotSummary ( ) {
 	if ( ! uc ) return true;
 	// debug
 	if ( m_si->m_debug )
-		logf(LOG_DEBUG,"query: [%"UINT32"] Storing output in cache.",
-		     (uint32_t)this);
+		logf(LOG_DEBUG,"query: [%"PTRFMT"] Storing output in cache.",
+		     (PTRTYPE)this);
 	// store in this buffer
 	char tmpBuf [ 64 * 1024 ];
 	// use that
@@ -3514,7 +3514,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 	//int32_t need = tg->m_maxTopics ;
 
 	SafeBuf gigabitPtrBuf;
-	int32_t need = master.m_numSlotsUsed * 4;
+	int32_t need = master.m_numSlotsUsed * sizeof(Gigabit *);
 	if ( ! gigabitPtrBuf.reserve ( need ) ) return false;
 
 	//int32_t  minScore = 0x7fffffff;
@@ -3561,7 +3561,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		//double frac2 = ((double)count * 100.0) / (double)sampled;
 		//score = (int32_t)((frac1 * frac2) / 100.0);
 		// we got a winner
-		gigabitPtrBuf.pushLong((int32_t)gb);
+		gigabitPtrBuf.pushPtr(gb);
 	}
 
 	//
@@ -3570,7 +3570,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 	//
 	//
 	Gigabit **ptrs = (Gigabit **)gigabitPtrBuf.getBufStart();
-	int32_t numPtrs = gigabitPtrBuf.length() / 4;
+	int32_t numPtrs = gigabitPtrBuf.length() / sizeof(Gigabit *);
 	gbqsort ( ptrs , numPtrs , sizeof(Gigabit *) , gigabitCmp , 0 );
 
 	// we are done if not deduping
@@ -4066,8 +4066,8 @@ bool hashSample ( Query *q,
 		char c      = ww[wwlen];
 		ww[wwlen]='\0';
 		logf(LOG_DEBUG,"gbits: master "
-		     "termId=%020llu "
-		     "d=%018lli "
+		     "termId=%020"UINT64" "
+		     "d=%018"INT64" "
 		     "score=%7.1f "
 		     "cumscore=%7.1f "
 		     "pages=%"INT32" "
@@ -5355,10 +5355,10 @@ bool Msg40::computeFastFacts ( ) {
 	int32_t numFacts = factBuf.getLength() / sizeof(Fact);
 	Fact *facts = (Fact *)factBuf.getBufStart();
 	SafeBuf ptrBuf;
-	if ( ! ptrBuf.reserve( numFacts * 4 ) ) return false;
+	if ( ! ptrBuf.reserve( numFacts * sizeof(Fact *) ) ) return false;
 	for ( int32_t i = 0 ; i < numFacts ; i++ ) {
 		Fact *fi = &facts[i];
-		ptrBuf.pushLong((int32_t)fi);
+		ptrBuf.pushPtr ( fi );
 	}
 	Fact **ptrs = (Fact **)ptrBuf.getBufStart();
 	gbqsort ( ptrs , numFacts , sizeof(Fact *) , factCmp , 0 );
@@ -6117,7 +6117,7 @@ void Msg40::lookupFacets2 ( ) {
 			// returns the first one. so tell it we want this one.
 			req.m_facetValHash  = fvh;
 
-			msg20->m_hack = (int32_t)this;
+			msg20->m_hack = this;//(int32_t)this;
 
 			req.m_state     = msg20;
 			req.m_callback  = gotFacetTextWrapper;

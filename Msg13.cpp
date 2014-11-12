@@ -914,11 +914,14 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log("spider: adding special \"in-progress\" time of %"INT64" for "
+		log("spider: adding special \"in-progress\" time "
+		    "of %"INT32" for "
 		    "firstIp=%s "
 		    "url=%s "
 		    "to msg13::hammerCache",
-		    -1LL,iptoa(r->m_firstIp),r->ptr_url);
+		    -1,
+		    iptoa(r->m_firstIp),
+		    r->ptr_url);
 
 
 

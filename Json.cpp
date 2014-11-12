@@ -175,7 +175,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// current ji is an object type then
 			ji->m_type = JT_ARRAY;
 			// start of array hack. HACK!
-			ji->m_valueLong = (int32_t)p;
+			//ji->m_valueLong = (int32_t)p;
+			ji->m_valueArray = p;
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
@@ -193,7 +194,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 				NAME    = px->m_name;
 				NAMELEN = px->m_nameLen;
 				// start of array hack. HACK!
-				char *start = (char *)px->m_valueLong;
+				char *start = (char *)px->m_valueArray;//Long;
 				// include ending ']' in length of array
 				px->m_valueLen = p - start + 1;
 				m_stackPtr--;

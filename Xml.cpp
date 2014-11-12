@@ -335,7 +335,7 @@ bool Xml::set ( char  *s             ,
 		reset(); 
 		return log("build: Could not allocate %"INT32" "
 			   "bytes need to parse document.",
-			   sizeof(XmlNode)*m_maxNumNodes);
+			   (int32_t)sizeof(XmlNode)*m_maxNumNodes);
 	}
 
 	// debug msg time

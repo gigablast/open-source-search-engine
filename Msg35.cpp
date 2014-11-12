@@ -485,8 +485,8 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 		// sanity check
 		if ( p != pend )
 			log(LOG_LOGIC,"merge: msg35: p != pend, bad engineer."
-			    "diff = %"UINT32".",
-			    (uint32_t)pend - (uint32_t)p);
+			    "diff = %"INT32".",
+			    (int32_t)(pend - p));
 			
 		// . what HOSTID do we think has the token? 
 		// . set tokenHid to -1 if we don't think anybody has it

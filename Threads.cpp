@@ -752,9 +752,9 @@ ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     ,
 	if ( i == m_top ) m_top++;
 	// debug msg
 	if ( g_conf.m_logDebugThread )
-		log(LOG_DEBUG,"thread: [t=0x%"XINT32"] "
+		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] "
 		    "queued %s thread for launch. "
-		    "niceness=%"INT32". ", (int32_t)t,
+		    "niceness=%"INT32". ", (PTRTYPE)t,
 		    getThreadType(), (int32_t)niceness );
 	// success
 	return t;
@@ -952,9 +952,9 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 			// debug msg
 			if ( g_conf.m_logDebugThread )
 				log(LOG_DEBUG,"thread: joined1 with "
-				    "t=0x%"XINT32" "
+				    "t=0x%"PTRFMT" "
 				    "jointid=0x%"XINT32".",
-				    (int32_t)t,(int32_t)t->m_joinTid);
+				    (PTRTYPE)t,(int32_t)t->m_joinTid);
 		}
 		
 #else
@@ -965,8 +965,9 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 		int err = errno;
 		// debug the waitpid
 		if ( g_conf.m_logDebugThread || g_process.m_exiting ) 
-			log(LOG_DEBUG,"thread: Waiting for t=0x%"XINT32" pid=%"INT32".",
-			    (uint32_t)t,(int32_t)t->m_pid);
+			log(LOG_DEBUG,"thread: Waiting for t=0x%"PTRFMT" "
+			    "pid=%"INT32".",
+			    (PTRTYPE)t,(int32_t)t->m_pid);
 		// bitch and continue if join failed
 		if ( pid != t->m_pid ) {
 			// waitpid() gets interrupted by various signals so
@@ -1111,13 +1112,13 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 
 		if ( g_conf.m_logDebugThread ) {
 			int64_t now = gettimeofdayInMilliseconds();
-			log(LOG_DEBUG,"thread: [t=0x%"XINT32"] %s done1. "
+			log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] %s done1. "
 			    "active=%"INT32" "
 			    "time since queued = %"UINT64" ms  "
 			    "time since launch = %"UINT64" ms  "
 			    "time since pre-exit = %"UINT64" ms  "
 			    "time since exit = %"UINT64" ms",
-			    (uint32_t)t, 
+			    (PTRTYPE)t, 
 			    getThreadType() ,
 			    (int32_t)(m_launched - m_returned) ,
 			    (uint64_t)(now - t->m_queuedTime),
@@ -1147,13 +1148,13 @@ void makeCallback ( ThreadEntry *t ) {
 
 	// log it now
 	if ( g_conf.m_logDebugLoop || g_conf.m_logDebugThread )
-		log(LOG_DEBUG,"thread: enter thread callback t=0x%"XINT32" "
+		log(LOG_DEBUG,"thread: enter thread callback t=0x%"PTRFMT" "
 		    //"type=%s "
-		    "state=0x%"XINT32" "
+		    "state=0x%"PTRFMT" "
 		    "nice=%"INT32"",
-		    (int32_t)t,
+		    (PTRTYPE)t,
 		    //getThreadType(),
-		    (int32_t)t->m_state,
+		    (PTRTYPE)t->m_state,
 		    (int32_t)t->m_niceness);
 
 	// time it?
@@ -1180,10 +1181,10 @@ void makeCallback ( ThreadEntry *t ) {
 
 	// log it now
 	if ( g_conf.m_logDebugLoop || g_conf.m_logDebugThread )
-		log(LOG_DEBUG,"loop: exit thread callback t=0x%"XINT32" "
+		log(LOG_DEBUG,"loop: exit thread callback t=0x%"PTRFMT" "
 		    //"type=%s "
 		    "nice=%"INT32"", 
-		    (int32_t)t,
+		    (PTRTYPE)t,
 		    //getThreadType(),
 		    (int32_t)t->m_niceness);
 	
@@ -1276,15 +1277,17 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 			//   call to sigqueue(), 
 			int32_t status =  pthread_join ( t->m_joinTid , NULL );
 			if ( status != 0 ) {
-				log("threads: pthread_join2 %"INT32" = %s (%"INT32")",
+				log("threads: "
+				    "pthread_join2 %"INT32" = %s (%"INT32")",
 				    (int32_t)t->m_joinTid,mstrerror(status),
 				    status);
 			}
 			// debug msg
 			if ( g_conf.m_logDebugThread )
-				log(LOG_DEBUG,"thread: joined2 with t=0x%"XINT32" "
+				log(LOG_DEBUG,"thread: joined2 with "
+				    "t=0x%"PTRFMT" "
 				    "jointid=0x%"XINT32".",
-				    (int32_t)t,(int32_t)t->m_joinTid);
+				    (PTRTYPE)t,(int32_t)t->m_joinTid);
 		}
 #else
 
@@ -1294,8 +1297,9 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 		int err = errno;
 		// debug the waitpid
 		if ( g_conf.m_logDebugThread ) 
-			log(LOG_DEBUG,"thread: Waiting for t=0x%"XINT32" pid=%"INT32".",
-			    (int32_t)t,(int32_t)t->m_pid);
+			log(LOG_DEBUG,"thread: Waiting for "
+			    "t=0x%"PTRFMT" pid=%"INT32".",
+			    (PTRTYPE)t,(int32_t)t->m_pid);
 		// bitch and continue if join failed
 		if ( pid != t->m_pid ) {
 			// waitpid() gets interrupted by various signals so
@@ -1469,13 +1473,13 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 
 		if ( g_conf.m_logDebugThread ) {
 			int64_t now = gettimeofdayInMilliseconds();
-			log(LOG_DEBUG,"thread: [t=0x%"XINT32"] %s done2. "
+			log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] %s done2. "
 			    "active=%"INT32" "
 			    "time since queued = %"UINT64" ms  "
 			    "time since launch = %"UINT64" ms  "
 			    "time since pre-exit = %"UINT64" ms  "
 			    "time since exit = %"UINT64" ms",
-			    (uint32_t)t, 
+			    (PTRTYPE)t, 
 			    getThreadType() ,
 			    (int32_t)(m_launched - m_returned) ,
 			    (uint64_t)(now - t->m_queuedTime),
@@ -1514,13 +1518,13 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 	if ( g_conf.m_logDebugThread ) {
 		int64_t now = gettimeofdayInMilliseconds();
 		for ( int32_t i = 0 ; i < numCallbacks ; i++ ) 
-			log(LOG_DEBUG,"thread: [tid=%"UINT32"] %s done3. "
+			log(LOG_DEBUG,"thread: [tid=%"PTRFMT"] %s done3. "
 			    "active=%"INT32" "
 			    "time since queued = %"UINT64" ms  "
 			    "time since launch = %"UINT64" ms  "
 			    "time since pre-exit = %"UINT64" ms  "
 			    "time since exit = %"UINT64" ms",
-			    (uint32_t)tids[i], 
+			    (PTRTYPE)tids[i], 
 			    getThreadType() ,
 			    (int32_t)(m_launched - m_returned) ,
 			    (uint64_t)(now - times [i]),
@@ -1999,10 +2003,10 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	if ( g_conf.m_logDebugThread ) {
 		active = m_launched - m_returned ;		
 		int64_t now = gettimeofdayInMilliseconds();
-		log(LOG_DEBUG,"thread: [t=0x%"XINT32"] launched %s thread. "
+		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] launched %s thread. "
 		    "active=%"INT64" "
 		     "niceness=%"INT32". waited %"UINT64" ms in queue.",
-		     (uint32_t)t, getThreadType(), active, realNiceness,
+		     (PTRTYPE)t, getThreadType(), active, realNiceness,
 		     now - t->m_queuedTime);
 	}
 	// be lazy with this since it uses a significant amount of cpu
@@ -2095,8 +2099,9 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 
 	// we're back from pthread_create
 	if ( g_conf.m_logDebugThread ) 
-		log(LOG_DEBUG,"thread: Back from clone t=0x%"XINT32" pid=%"INT32".",
-		    (int32_t)t,(int32_t)pid);
+		log(LOG_DEBUG,"thread: Back from clone "
+		    "t=0x%"PTRFMT" pid=%"INT32".",
+		    (PTRTYPE)t,(int32_t)pid);
 
 
 	// return true on successful creation of the thread
@@ -2279,8 +2284,9 @@ int startUp ( void *state ) {
 	//t->m_tid = pthread_self();
 	// debug
 	if ( g_conf.m_logDebugThread ) 
-		log(LOG_DEBUG,"thread: [t=0x%"XINT32"] in startup pid=%"INT32" pppid=%"INT32"",
-		    (uint32_t)t,(int32_t)getpidtid(),(int32_t)getppid());
+		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] "
+		    "in startup pid=%"INT32" pppid=%"INT32"",
+		    (PTRTYPE)t,(int32_t)getpidtid(),(int32_t)getppid());
 	// debug msg
 	//fprintf(stderr,"new thread tid=%"INT32" pid=%"INT32"\n",
 	//	(int32_t)t->m_tid,(int32_t)t->m_pid);
@@ -2327,8 +2333,10 @@ int startUp ( void *state ) {
 	// . the first 4 bytes of t->m_state should be t->m_callback
 	// . no! just use 1 to tell Loop to call g_threads.cleanUp()
 	// . TODO: pass in a ptr to cleanUpWrapper() instead of "t"
+	// . sival_int is only 4 bytes on a 64 bit arch...
 	sigval_t svt; 
-	svt.sival_int = (int)t ; //(int)(t->m_state); // fd;
+	svt.sival_int = 1;//(int64_t)t ; //(int)(t->m_state); // fd;
+
 
 	// set exit time
 	int64_t now = gettimeofdayInMilliseconds();
@@ -2336,8 +2344,9 @@ int startUp ( void *state ) {
 	t->m_exitTime    = now;
 	if ( g_conf.m_logDebugThread ) {
 
-		log(LOG_DEBUG,"thread: [t=0x%"XINT32"] done with startup pid=%"INT32"",
-		    (uint32_t)t,(int32_t)getpidtid());
+		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] "
+		    "done with startup pid=%"INT32"",
+		    (PTRTYPE)t,(int32_t)getpidtid());
 	}
 
 	// . now mark thread as ready for removal
@@ -2420,11 +2429,11 @@ void ThreadQueue::print ( ) {
 	for ( int32_t i = 0 ; i < m_top ; i++ ) {
 		ThreadEntry *t = &m_entries[i];
 		// print it
-		log(LOG_INIT,"thread: address=%"UINT32" "
-		    "pid=%u state=%"UINT32" "
+		log(LOG_INIT,"thread: address=%"PTRFMT" "
+		    "pid=%u state=%"PTRFMT" "
 		    "occ=%i done=%i lnch=%i",
-		     (uint32_t)t , t->m_pid , 
-		     (uint32_t)t->m_state , t->m_isOccupied , t->m_isDone ,
+		     (PTRTYPE)t , t->m_pid , 
+		     (PTRTYPE)t->m_state , t->m_isOccupied , t->m_isDone ,
 		     t->m_isLaunched );
 	}
 }
@@ -2516,7 +2525,7 @@ void ThreadQueue::removeThreads ( BigFile *bf ) {
 		fs->m_errno2 = EFILECLOSED;
 		// log it
 		logf(LOG_INFO,"disk: Removing/flagging operation in thread "
-		    "queue. fs=0x%"XINT32"", (int32_t)fs);
+		    "queue. fs=0x%"PTRFMT"", (PTRTYPE)fs);
 		// skip if already done
 		if ( t->m_isDone ) continue;
 		// skip if launched
@@ -2582,7 +2591,8 @@ void Threads::printState() {
 				    t->m_launchedTime - t->m_queuedTime, 
 				    t->m_exitTime - t->m_launchedTime, 
 				    now - t->m_exitTime,
-				    g_profiler.getFnName((int32_t)t->m_callback));
+				    g_profiler.
+				    getFnName((PTRTYPE)t->m_callback));
 				continue;
 			}
 			if(t->m_isLaunched) {
@@ -2597,7 +2607,8 @@ void Threads::printState() {
 				    now - t->m_queuedTime, 
 				    t->m_launchedTime - t->m_queuedTime, 
 				    now - t->m_launchedTime,
-				    g_profiler.getFnName((int32_t)t->m_callback));
+				    g_profiler.
+				    getFnName((PTRTYPE)t->m_callback));
 				continue;
 			}
 
@@ -2608,7 +2619,7 @@ void Threads::printState() {
 			    "callback:%s",
 			    t->m_niceness, 
 			    now - t->m_queuedTime, 
-			    g_profiler.getFnName((int32_t)t->m_callback));
+			    g_profiler.getFnName((PTRTYPE)t->m_callback));
 			
 		}
 	}

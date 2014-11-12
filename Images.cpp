@@ -893,8 +893,8 @@ bool Images::makeThumb ( ) {
 	log( LOG_DEBUG,"image: Image Link: %s", iu.getUrl() );
 	log( LOG_DEBUG,"image: Max Buffer Size: %"UINT32" bytes.",m_imgReplyMaxLen);
 	log( LOG_DEBUG,"image: Image Original Size: %"UINT32" bytes.",m_imgReplyLen);
-	log( LOG_DEBUG,"image: Image Buffer @ 0x%"XINT32" - 0x%"XINT32"",(int32_t)m_imgReply, 
-	     (int32_t)m_imgReply+m_imgReplyMaxLen );
+	log( LOG_DEBUG,"image: Image Buffer @ 0x%"PTRFMT" - 0x%"PTRFMT"",(PTRTYPE)m_imgReply, 
+	     (PTRTYPE)(m_imgReply+m_imgReplyMaxLen) );
 	log( LOG_DEBUG, "image: Size: %"UINT32"px x %"UINT32"px", m_dx, m_dy );
 
 	// what is this?

@@ -195,9 +195,9 @@ bool CatRec::set ( Url *url , char *data , int32_t dataSize , bool gotByIp ) {
 
 	// sanity check
 	if ( p - m_data != m_dataSize ) {
-		log ( "tagdb: Deserialized datasize %i != %"INT32" for url %s so "
+		log ( "tagdb: Deserialized datasize %"INT32" != %"INT32" for url %s so "
 		      "ignoring tagdb record.",
-		      p - m_data, m_dataSize , url->getUrl() );
+		      (int32_t)(p - m_data), m_dataSize , url->getUrl() );
 		return false;
 		char *xx = NULL; *xx = 0;
 	}

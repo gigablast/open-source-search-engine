@@ -380,12 +380,13 @@ skip:
 	// debug msg
 	if ( g_conf.m_logDebugQuery )
 		log(LOG_DEBUG,"net: msg0: Sending request for data to "
-		    "shard=%"UINT32" listPtr=%"INT32" minRecSizes=%"INT32" termId=%"UINT64" "
+		    "shard=%"UINT32" "
+		    "listPtr=%"PTRFMT" minRecSizes=%"INT32" termId=%"UINT64" "
 		    //"startKey.n1=%"XINT32",n0=%"XINT64" (niceness=%"INT32")",
 		    "startKey.n1=%"XINT64",n0=%"XINT64" (niceness=%"INT32")",
 		    //g_hostdb.makeHostId ( m_groupId ) ,
 		    m_shardNum,
-		    (int32_t)m_list,
+		    (PTRTYPE)m_list,
 		    m_minRecSizes, g_posdb.getTermId(m_startKey) , 
 		    //m_startKey.n1,m_startKey.n0 , (int32_t)m_niceness);
 		    KEY1(m_startKey,m_ks),KEY0(m_startKey),
@@ -1151,7 +1152,8 @@ void handleRequest0 ( UdpSlot *slot , int32_t netnice ) {
 	try { st0 = new (State00); }
 	catch ( ... ) { 
 		g_errno = ENOMEM;
-		log("Msg0: new(%i): %s", sizeof(State00),mstrerror(g_errno));
+		log("Msg0: new(%"INT32"): %s", 
+		    (int32_t)sizeof(State00),mstrerror(g_errno));
 		us->sendErrorReply ( slot , g_errno ); 
 		return; 
 	}

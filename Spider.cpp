@@ -1034,41 +1034,47 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	if ( ! sc->m_deleteMyself ) return false;
 	// otherwise always return true
 	if ( sc->m_msg5b.m_waitingForList ) {
-		log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" waiting1",
-		    (int32_t)sc,(int32_t)sc->m_collnum);
+		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
+		    "waiting1",
+		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
 		return true;
 	}
 	if ( sc->m_msg1.m_mcast.m_inUse ) {
-		log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" waiting2",
-		    (int32_t)sc,(int32_t)sc->m_collnum);
+		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
+		    "waiting2",
+		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
 		return true;
 	}
 	if ( sc->m_isLoading ) {
-		log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" waiting3",
-		    (int32_t)sc,(int32_t)sc->m_collnum);
+		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
+		    "waiting3",
+		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
 		return true;
 	}
 	// this means msg5 is out
 	if ( sc->m_msg5.m_waitingForList ) {
-		log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" waiting4",
-		    (int32_t)sc,(int32_t)sc->m_collnum);
+		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
+		    "waiting4",
+		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
 		return true;
 	}
 	// if ( sc->m_gettingList1 ) {
-	// 	log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" waiting5",
+	// 	log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" 
+	//"waiting5",
 	// 	    (int32_t)sc,(int32_t)sc->m_collnum);
 	// 	return true;
 	// }
 	// if ( sc->m_gettingList2 ) {
-	// 	log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" waiting6",
+	// 	log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" 
+	//"waiting6",
 	// 	    (int32_t)sc,(int32_t)sc->m_collnum);
 	// 	return true;
 	// }
 	// there's still a core of someone trying to write to someting
 	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
 	// or spider.cpp. everyone should get sc from cr everytime i'd think
-	log("spider: deleting sc=0x%"XINT32" for collnum=%"INT32" (msg=%s)",
-	    (int32_t)sc,(int32_t)sc->m_collnum,msg);
+	log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" (msg=%s)",
+	    (PTRTYPE)sc,(int32_t)sc->m_collnum,msg);
 	// . make sure nobody has it
 	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
 	//   have nuked it
@@ -1113,8 +1119,8 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	//m_spiderColls [ collnum ] = sc;
 	cr->m_spiderColl = sc;
 	// note it
-	logf(LOG_DEBUG,"spider: made spidercoll=%"XINT32" for cr=%"XINT32"",
-	    (int32_t)sc,(int32_t)cr);
+	logf(LOG_DEBUG,"spider: made spidercoll=%"PTRFMT" for cr=%"PTRFMT"",
+	    (PTRTYPE)sc,(PTRTYPE)cr);
 	// update this
 	//if ( m_numSpiderColls < collnum + 1 )
 	//	m_numSpiderColls = collnum + 1;
@@ -1168,11 +1174,13 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 void SpiderColl::setCollectionRec ( CollectionRec *cr ) {
 	m_cr = cr;
 	// this was useful for debugging a null m_cr bug
-	//log("sc: sc 0x%"XINT32" setting cr to 0x%"XINT32"",(int32_t)this,(int32_t)cr);
+	//log("sc: sc 0x%"PTRFMT" setting cr to 0x%"PTRFMT""
+	//,(int32_t)this,(int32_t)cr);
 }
 
 CollectionRec *SpiderColl::getCollectionRec ( ) {
-	//log("sc: sc 0x%"XINT32" getting cr of 0x%"XINT32"",(int32_t)this,(int32_t)m_cr);
+	//log("sc: sc 0x%"PTRFMT" getting cr of 0x%"PTRFMT""
+	//,(int32_t)this,(int32_t)m_cr);
 	return m_cr;
 }
 

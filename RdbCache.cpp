@@ -938,10 +938,10 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	addKey ( collnum , cacheKey , start ); // , crc ); // debug test
 	// debug msg time
 	log(LOG_TIMING,"db: cache: %s addRecord %"INT32" bytes took %"INT64" "
-	    "ms this=0x%"XINT32" key.n1=%"UINT32" n0=%"UINT64"",
+	    "ms this=0x%"PTRFMT" key.n1=%"UINT32" n0=%"UINT64"",
 	    m_dbname, (int32_t)(p - start) , 
 	    gettimeofdayInMillisecondsLocal()-t,
-	    (int32_t)this,
+	    (PTRTYPE)this,
 	    ((key_t *)(&cacheKey))->n1 ,
 	    ((key_t *)(&cacheKey))->n0 );
 	//log("%s addRecord %"INT32" bytes @ offset=%"INT32" k.n1=%"UINT32" n0=%"UINT64" "
@@ -1006,8 +1006,8 @@ bool RdbCache::deleteRec ( ) {
 			       //|| !g_collectiondb.m_recs[collnum]
 	     ) {
 		log (LOG_WARN,"db: cache: deleteRec: possible "
-		     "corruption, start=%"XINT32" collNum=%"INT32" "
-		     "maxCollNum=%"INT32" dbname=%s", (int32_t)start,
+		     "corruption, start=%"PTRFMT" collNum=%"INT32" "
+		     "maxCollNum=%"INT32" dbname=%s", (PTRTYPE)start,
 		     (int32_t)collnum, g_collectiondb.m_numRecsUsed,  
 		     m_dbname);
 		char *xx=NULL;*xx=0;
@@ -1079,7 +1079,8 @@ bool RdbCache::deleteRec ( ) {
 	m_tail += (p - start);
 	
 	// sanity. this must be failing due to a corrupt dataSize...
-	if ( m_tail < 0 || m_tail +sizeof(collnum_t)+m_cks+4>m_totalBufSize){
+	if ( m_tail < 0 || 
+	     m_tail +(int32_t)sizeof(collnum_t)+m_cks+4>m_totalBufSize){
 		char *xx = NULL; *xx = 0;}
 	
 	// delete key from hash table, iff is for THIS record
@@ -1621,7 +1622,7 @@ bool RdbCache::load ( char *dbname ) {
 	if ( n != total ) return false;
 	// convert back to absolute
 	for ( int32_t i = 0 ; i < m_numPtrsMax ; i++ ) {
-		int32_t j = (int32_t) m_ptrs[i];
+		SPTRTYPE j = (SPTRTYPE) m_ptrs[i];
 		// is it a NULL?
 		if ( j == -1 ) { m_ptrs[i] = NULL; continue; }
 		// get buffer

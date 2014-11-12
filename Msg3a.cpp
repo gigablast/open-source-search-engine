@@ -199,8 +199,8 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 		// show the query terms
 		printTerms ( );
 		m_startTime = gettimeofdayInMilliseconds();
-		logf(LOG_DEBUG,"query: msg3a: [%"UINT32"] getting termFreqs.", 
-		     (int32_t)this);
+		logf(LOG_DEBUG,"query: msg3a: [%"PTRFMT"] getting termFreqs.", 
+		     (PTRTYPE)this);
 	}
 
 	// . hit msg17 seoresults cache
@@ -479,9 +479,9 @@ bool Msg3a::gotCacheReply ( ) {
 		}
 		// debug log
 		if ( m_debug )
-			logf(LOG_DEBUG,"query: Msg3a[%"UINT32"]: forwarding request "
+			logf(LOG_DEBUG,"query: Msg3a[%"PTRFMT"]: forwarding request "
 			     "of query=%s to shard %"UINT32".", 
-			     (int32_t)this, m_q->getQuery(), shardNum);
+			     (PTRTYPE)this, m_q->getQuery(), shardNum);
 		// send to this guy
 		Multicast *m = &m_mcast[i];
 		// clear it for transmit
@@ -547,13 +547,13 @@ void gotReplyWrapper3a ( void *state , void *state2 ) {
 	Msg3a *THIS = (Msg3a *)state;
 	// timestamp log
 	if ( THIS->m_debug )
-		logf(LOG_DEBUG,"query: msg3a: [%"UINT32"] got reply #%"INT32" in %"INT64" ms."
-		     " err=%s", (int32_t)THIS, THIS->m_numReplies ,
+		logf(LOG_DEBUG,"query: msg3a: [%"PTRFMT"] got reply #%"INT32" in %"INT64" ms."
+		     " err=%s", (PTRTYPE)THIS, THIS->m_numReplies ,
 		     gettimeofdayInMilliseconds() -  THIS->m_startTime ,
 		     mstrerror(g_errno) );
 	else if ( g_errno )
-		logf(LOG_DEBUG,"msg3a: error reply. [%"UINT32"] got reply #%"INT32" "
-		     " err=%s", (int32_t)THIS, THIS->m_numReplies ,
+		logf(LOG_DEBUG,"msg3a: error reply. [%"PTRFMT"] got reply #%"INT32" "
+		     " err=%s", (PTRTYPE)THIS, THIS->m_numReplies ,
 		     mstrerror(g_errno) );
 
 	// if one shard times out, ignore it!
@@ -739,10 +739,10 @@ bool Msg3a::gotAllShardReplies ( ) {
 		for ( int32_t j = 0; j < mr->m_numDocIds ; j++ ) {
 			// print out score_t
 			logf( LOG_DEBUG,
-			     "query: msg3a: [%"UINT32"] %03"INT32") "
+			     "query: msg3a: [%"PTRFMT"] %03"INT32") "
 			     "shard=%"INT32" docId=%012"UINT64" domHash=0x%02"XINT32" "
 			     "score=%f"                     ,
-			     (uint32_t)this                      ,
+			     (PTRTYPE)this                      ,
 			     j                                        , 
 			     i                                        ,
 			     docIds [j] ,
@@ -1264,10 +1264,10 @@ bool Msg3a::mergeLists ( ) {
 
 	if ( m_debug ) {
 		// show how int32_t it took
-		logf( LOG_DEBUG,"query: msg3a: [%"UINT32"] merged %"INT32" docs from %"INT32" "
+		logf( LOG_DEBUG,"query: msg3a: [%"PTRFMT"] merged %"INT32" docs from %"INT32" "
 		      "shards in %"UINT64" ms. "
 		      ,
-		      (uint32_t)this, 
+		      (PTRTYPE)this, 
 		       m_numDocIds, (int32_t)m_numHosts,
 		       gettimeofdayInMilliseconds() - m_startTime 
 		      );
@@ -1278,10 +1278,10 @@ bool Msg3a::mergeLists ( ) {
 				sh=g_clusterdb.getSiteHash26((char *)
 							   &m_clusterRecs[i]);
 			// print out score_t
-			logf(LOG_DEBUG,"query: msg3a: [%"UINT32"] "
+			logf(LOG_DEBUG,"query: msg3a: [%"PTRFMT"] "
 			    "%03"INT32") merged docId=%012"UINT64" "
 			    "score=%f hosthash=0x%"XINT32"",
-			    (uint32_t)this, 
+			    (PTRTYPE)this, 
 			     i,
 			     m_docIds    [i] ,
 			     (double)m_scores    [i] ,

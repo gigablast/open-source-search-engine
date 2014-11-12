@@ -338,7 +338,7 @@ bool TopTree::addNode ( TopNode *t , int32_t tnn ) {
 	// the node we add ourselves to
 	int32_t n;
 	// delete this node
-	int32_t deleteMe = -1;
+	SPTRTYPE deleteMe = -1;
 	// do not even try to add if ridiculous count for this domain
 	if ( m_domCount[domHash] >= m_ridiculousMax ) {
 		// sanity check
@@ -364,7 +364,7 @@ bool TopTree::addNode ( TopNode *t , int32_t tnn ) {
 		// get his "node number" in the top tree, "nn" so we can
 		// delete him from the top tree as well as m_t2. it is 
 		// "hidden" in the dataPtr
-		deleteMe = (int32_t)m_t2.m_data[min];
+		deleteMe = (SPTRTYPE)m_t2.m_data[min];
 		// delete him from the top tree now as well
 		//deleteNode ( nn , domHash );
 		// then delete him from the m_t2 tree
@@ -390,7 +390,7 @@ bool TopTree::addNode ( TopNode *t , int32_t tnn ) {
 		// update the dataPtr so every node in m_t2 has a reference
 		// to the equivalent node in this top tree
 		if ( n < 0 || n > m_t2.m_numNodes ) { char *xx=NULL;*xx=0; }
-		m_t2.m_data[n] = (char *)tnn;
+		m_t2.m_data[n] = (char *)(PTRTYPE)tnn;
 	}
 
 	//

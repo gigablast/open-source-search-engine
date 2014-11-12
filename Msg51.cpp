@@ -254,7 +254,7 @@ bool Msg51::sendRequest ( int32_t    i ) {
 	// save it
 	int32_t ci = m_nexti;
 	// store where the cluster rec will go
-	dataPtr = (void *)ci;
+	dataPtr = (void *)(PTRTYPE)ci;
 	// what's the docid?
 	d = m_docIds[m_nexti];
 	// advance so we do not do this docid again 
@@ -377,7 +377,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	//int64_t docId = g_clusterdb.getDocId ( *startKey );
 
 	// this doubles as a ptr to a cluster rec
-	int32_t    ci = (int32_t   )msg0->m_dataPtr;
+	int32_t    ci = (int32_t   )(PTRTYPE)msg0->m_dataPtr;
 	// get docid
 	int64_t docId = m_docIds[ci];
 	// assume error!

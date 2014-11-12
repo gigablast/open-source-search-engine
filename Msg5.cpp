@@ -899,12 +899,12 @@ bool Msg5::needsRecall ( ) {
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %"INT32" again from %s (need %"INT32" total "
 		     "got %"INT32" totalListSizes=%"INT32" sk=%s) "
-		     "cn=%"INT32" this=0x%"XINT32" round=%"INT32".", 
+		     "cn=%"INT32" this=0x%"PTRFMT" round=%"INT32".", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
 		     m_list->m_listSize,
 		     m_totalSize,
 		     KEYSTR(m_startKey,m_ks),
-		     (int32_t)m_collnum,(int32_t)this, m_round );
+		     (int32_t)m_collnum,(PTRTYPE)this, m_round );
 	m_round++;
 	// record how many screw ups we had so we know if it hurts performance
 	base->m_rdb->didReSeek ( );

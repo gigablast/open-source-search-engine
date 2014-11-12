@@ -545,7 +545,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 		s_msg4Tail = this;
 		// debug log. seems to happen a lot if not using threads..
 		if ( g_conf.m_useThreads )
-			log("msg4: queueing body msg4=0x%"XINT32"",(int32_t)this);
+			log("msg4: queueing body msg4=0x%"PTRFMT"",(PTRTYPE)this);
 		// mark it
 		m_inUse = true;
 		// all done then, but return false so caller does not free
@@ -575,7 +575,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	// . spider hang bug
 	// . debug log. seems to happen a lot if not using threads..
 	if ( g_conf.m_useThreads )
-		logf(LOG_DEBUG,"msg4: queueing head msg4=0x%"XINT32"",(int32_t)this);
+		logf(LOG_DEBUG,"msg4: queueing head msg4=0x%"PTRFMT"",(PTRTYPE)this);
 
 	// mark it
 	m_inUse = true;
@@ -901,7 +901,7 @@ bool sendBuffer ( int32_t hostId , int32_t niceness ) {
 			   shardNum,//groupId , // group to send to (groupKey)
 			   true       , // send to whole group?
 			   0          , // key is useless for us
-			   (void *)allocSize  , // state data
+			   (void *)(PTRTYPE)allocSize  , // state data
 			   (void *)mcast      , // state data
 			   gotReplyWrapper4 ,
 			   // this was 60 seconds, but if we saved the
@@ -974,7 +974,7 @@ void returnMulticast ( Multicast *mcast ) {
 // just free the request
 void gotReplyWrapper4 ( void *state , void *state2 ) {
 	//logf(LOG_DEBUG,"build: got msg4 reply");
-	int32_t       allocSize = (int32_t)state;
+	int32_t       allocSize = (int32_t)(PTRTYPE)state;
 	Multicast *mcast     = (Multicast *)state2;
 	// get the request we sent
 	char *request     = mcast->m_msg;
@@ -1087,8 +1087,8 @@ void storeLineWaiters ( ) {
 	if ( ! msg4->m_callback ) { char *xx=NULL;*xx=0; }
 	// log this now i guess. seems to happen a lot if not using threads
 	if ( g_conf.m_useThreads )
-		logf(LOG_DEBUG,"msg4: calling callback for msg4=0x%"XINT32"",
-		     (int32_t)msg4);
+		logf(LOG_DEBUG,"msg4: calling callback for msg4=0x%"PTRFMT"",
+		     (PTRTYPE)msg4);
 	// release it
 	msg4->m_inUse = false;
 	// call his callback
@@ -1576,7 +1576,8 @@ bool loadAddsInProgress ( char *prefix ) {
 		// sanity
 		if ( nb != used ) {
 			// reset the buffer usage
-			*(int32_t *)(p-4) = 4;
+			//*(int32_t *)(p-4) = 4;
+			*(int32_t *)buf = 4;
 			// return false
 			return log("build: error reading addsinprogress.dat: "
 				   "%s", mstrerror(errno));

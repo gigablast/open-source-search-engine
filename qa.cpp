@@ -469,11 +469,11 @@ bool loadUrls ( ) {
 		// null term it
 		if ( *e ) *e = '\0';
 		// store ptr
-		s_ubuf2.pushLong((int32_t)s);
+		s_ubuf2.pushPtr(s);
 		// skip past that
 		s = e;
 		// point to content
-		s_cbuf2.pushLong((int32_t)(s+1));
+		s_cbuf2.pushPtr(s+1);
 	}
 	// make array of url ptrs
 	s_urlPtrs = (char **)s_ubuf2.getBufStart();

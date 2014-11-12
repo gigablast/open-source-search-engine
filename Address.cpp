@@ -1578,7 +1578,7 @@ bool Addresses::updateAddresses ( ) {
 		// count 
 		goodCount++;
 
-		uint64_t v = ((uint64_t)((uint32_t)ad));
+		uint64_t v = ((uint64_t)((uint32_t)(PTRTYPE)ad)); // WRONG!MDW
 
 		// . hash place name 1
 		// . use "0" for the name number
@@ -14538,14 +14538,14 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 			//if(!is_ascii(zd->m_adm1[0]) ) {char *xx=NULL;*xx=0;}
 			// print it
 			log("places: h=%s cityhash=%"UINT64" adm1=%s "//adm1=%c%c "
-			    "pd=0x%"XINT32"",
+			    "pd=0x%"PTRFMT"",
 			    zstr,
 			    zd->m_cityHash,
 			    sd->m_name1,
 			    //zd->m_adm1[0],
 			    //zd->m_adm1[1],
 			    //g_countryCode.getName(zd->m_crid-1),
-			    (int32_t)zd);
+			    (PTRTYPE)zd);
 			if ( zd->m_cityHash != ch ) { char*xx=NULL;*xx=0; }
 		}
 		// exit until we get "nm" and "bc" for british columbia!!!

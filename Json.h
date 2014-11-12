@@ -38,11 +38,14 @@ class JsonItem {
 	// for JT_String
 	int32_t m_valueLen;
 
+	char *m_valueArray;
+
+
 	// for JT_String
 	int32_t  getValueLen() { return m_valueLen; };
 
 	// for arrays (JT_ARRAY), hack the char ptr into m_valueLong
-	char *getArrayStart() { return (char *)m_valueLong; }
+	char *getArrayStart() { return m_valueArray;}; //(char *)m_valueLong; }
 	int32_t  getArrayLen  () { return m_valueLen; };
 
 	// for JT_String

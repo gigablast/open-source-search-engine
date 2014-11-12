@@ -2194,7 +2194,7 @@ bool Sections::set ( Words     *w                       ,
 		// mask our prevSibling
 		vote &= 0x00000000ffffffff;
 		// we are the new prevSiblinkg now
-		vote |= ((uint64_t)((uint32_t)sn))<<32;
+		vote |= ((uint64_t)((uint32_t)i))<<32; // rplcd sn w/ i
 		// inc occNum for the next guy
 		vote++;
 		// store back. return true with g_errno set on error
@@ -14846,7 +14846,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		// zero is invalid row
 		if ( prevRow >= 1 && ! headerCol ) {
 			h = hash32h ( prevRow , col );
-			h = hash32h ( (int32_t)ts , h );
+			h = hash32h ( (int32_t)(PTRTYPE)ts , h );
 			h = hash32h ( dt , h ); // datetype
 			if ( adt.isInTable ( &h ) ) {
 				headerCol = cell;
@@ -14856,7 +14856,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		// zero is invalid col
 		if ( prevCol >= 1 && ! headerRow ) {
 			h = hash32h ( row , prevCol );
-			h = hash32h ( (int32_t)ts , h );
+			h = hash32h ( (int32_t)(PTRTYPE)ts , h );
 			h = hash32h ( dt , h ); // datetype
 			if ( adt.isInTable ( &h ) ) {
 				headerRow = cell;
@@ -14865,7 +14865,7 @@ bool Sections::setTableDateHeaders ( Section *ts ) {
 		}
 		// add our hash
 		h = hash32h ( row , col );
-		h = hash32h ( (int32_t)ts , h );
+		h = hash32h ( (int32_t)(PTRTYPE)ts , h );
 		h = hash32h ( dt , h ); // datetype
 		if ( ! adt.addKey ( &h ) ) return false;
 	}
@@ -16863,9 +16863,9 @@ void Sections::setAddrXors ( Addresses *aa ) {
 		if ( ! ad ) ad = p->m_alias;
 		// or just use place hash i guess!
 		if ( ! ad ) 
-			h = (int32_t)p;
+			h = (int32_t)(PTRTYPE)p;
 		else if ( ad->m_flags3 & AF2_LATLON )
-			h = (int32_t)p;
+			h = (int32_t)(PTRTYPE)p;
 		// otherwise hash up address street etc.
 		else {
 			h  =(int32_t)ad->m_street->m_hash;

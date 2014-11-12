@@ -33,7 +33,7 @@ float *valueTableF;
 //HashTableT<uint32_t, uint64_t> realTimeProfilerData;
 #include "HashTableX.h"
 HashTableX realTimeProfilerData;
-uint32_t lastQuickPollAddress = 0;
+PTRTYPE lastQuickPollAddress = 0;
 uint64_t lastQuickPollTime = 0;
 
 Profiler::Profiler() : 
@@ -370,13 +370,13 @@ Elf_Internal_Sym *Profiler::get32bitElfSymbols(FILE * file,
 		mmalloc (number * sizeof (Elf32_External_Sym),"ProfilerE");
 	if (esyms==NULL){
 		log(LOG_INIT,"admin: Out of memory allocating %"INT32" bytes for %s",
-		    number *sizeof (Elf32_External_Sym),"Symbols");
+		    number *(int32_t)sizeof (Elf32_External_Sym),"Symbols");
 		return 0;
 	}
 
 	if (fread (esyms,number * sizeof (Elf32_External_Sym), 1, file) != 1){ 
 		log(LOG_INIT,"admin: Unable to read in %"INT32" bytes of %s", 
-		    number * sizeof (Elf32_External_Sym), "symbols");
+		    number * (int32_t)sizeof (Elf32_External_Sym), "symbols");
 		mfree (esyms,number * sizeof (Elf32_External_Sym),"ProfilerE");
 		esyms = NULL;
 		return 0;
@@ -539,7 +539,7 @@ bool Profiler::pause(const char* caller, int32_t lineno, int32_t took) {
 	void *trace[3];
 	backtrace(trace, 3);
 	const void *stackPtr = trace[2];
-	lastQuickPollAddress = (uint32_t)stackPtr; 
+	lastQuickPollAddress = (PTRTYPE)stackPtr; 
 	for(int32_t i = 0; i < m_activeFns.getNumSlots(); i++) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
@@ -562,7 +562,7 @@ bool Profiler::pause(const char* caller, int32_t lineno, int32_t took) {
 //   	if(took > 50)
 // 	   log(LOG_WARN, "admin qp %s--%"INT32" took %"INT32"",
 // 	       caller, lineno, took);
-	int32_t qpkey = (int32_t)caller + lineno;
+	PTRTYPE qpkey = (PTRTYPE)caller + lineno;
 	int32_t slot = m_quickpolls.getSlot(&qpkey);
 	if(slot < 0) {
 		if(m_lastQPUsed >= 512) {
@@ -1146,7 +1146,7 @@ static int decend_cmpF ( const void *h1 , const void *h2 ) {
 }
 
 
-char* Profiler::getFnName(uint32_t address,int32_t *nameLen){
+char* Profiler::getFnName( PTRTYPE address,int32_t *nameLen){
 	FnInfo *fnInfo;
 	int32_t slot=m_fn.getSlot(&address);
 	if(slot!=-1)
@@ -1319,9 +1319,13 @@ FrameTrace::getPrintLen(const uint32_t level) const {
 FrameTrace *
 Profiler::getFrameTrace(void **trace, const uint32_t numFrames) {
 	FrameTrace *frame = g_profiler.m_rootFrame;
+	if ( ! frame ) {
+		log("profiler: profiler frame was null");
+		return NULL;
+	}
 	for(uint32_t i = numFrames - 3; i > 1; --i) {
 		uint32_t base =
-			g_profiler.getFuncBaseAddr((uint32_t)trace[i]);
+			g_profiler.getFuncBaseAddr((PTRTYPE)trace[i]);
 		frame = frame->add(base);
 		if(!frame) return NULL;
 	}
@@ -1335,7 +1339,7 @@ Profiler::updateRealTimeData( 	void **trace,
 	// Find or create and set of stack frames which match this one.
 	FrameTrace *frame = getFrameTrace(trace, numFrames);
 	if(frame) ++frame->hits;
-	uint32_t stackPtr = (uint32_t)trace[2];
+	PTRTYPE stackPtr = (PTRTYPE)trace[2];
 	//*ptr = (uint32_t *)realTimeProfilerData.getValuePointer(stackPtr);
 	*ptr = (uint32_t *)realTimeProfilerData.getValue(&stackPtr);
 	uint64_t newHit = 1;
@@ -1395,7 +1399,7 @@ Profiler::getStackFrame(int sig) {
 	uint32_t numFrames = backtrace(trace, 32);
 	if(numFrames < 3) return;
 	const void *stackPtr = trace[2];
-	uint32_t baseAddress = g_profiler.getFuncBaseAddr((uint32_t)stackPtr);
+	uint32_t baseAddress = g_profiler.getFuncBaseAddr((PTRTYPE)stackPtr);
 	uint32_t *ptr;	
 	FrameTrace *frame = updateRealTimeData(trace, numFrames, &ptr);
 	if(baseAddress != g_profiler.m_lastDeltaAddress) {
@@ -1404,7 +1408,7 @@ Profiler::getStackFrame(int sig) {
 		g_profiler.m_lastDeltaAddress = baseAddress;
 	}
 	checkMissedQuickPoll( 	frame,
-				(uint32_t)stackPtr,
+				(PTRTYPE)stackPtr,
 				ptr);
 }
 

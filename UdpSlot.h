@@ -444,7 +444,8 @@ class UdpSlot {
 	// used by Msg50 to keep a ptr to the new state created by 
 	// handleRequest50() so we can spy on it in case it forgets to
 	// call a callback and hangs...
-	int32_t m_tmpVar;
+	//int32_t m_tmpVar;
+	char *m_tmpVar;
 };
 
 extern int32_t g_cancelAcksSent;

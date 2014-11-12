@@ -2878,8 +2878,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// debug
 	if ( si->m_debug )
 		logf(LOG_DEBUG,"query: Printing up to %"INT32" results. "
-		     "bufStart=0x%"XINT32"", 
-		     numResults,(int32_t)sb->getBuf());
+		     "bufStart=0x%"PTRFMT"", 
+		     numResults,
+		     (PTRTYPE)sb->getBuf());
 
 
 	//

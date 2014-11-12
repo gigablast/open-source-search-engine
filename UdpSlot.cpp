@@ -165,7 +165,7 @@ void UdpSlot::connect ( UdpProtocol    *proto    ,
 	// avoid that heavy memset_ass() call using this logic.
 	// we will clear on demand using m_numBitsInitialized logic
 	// in UdpSlot.h
-	int32_t size = (uint32_t)&m_sentBits2 - (uint32_t)this ;
+	int32_t size = (char *)&m_sentBits2 - (char *)this ;
 	memset_ass ( (char *)this , 0 , size );
 	// store this info
 	m_proto    = proto    ;
@@ -465,14 +465,14 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 		    "tid=%"INT32" "
 		    "dst=%s:%hu "
 		     "count=%"INT32" "
-		     "host=0x%"XINT32" "
+		     "host=0x%"PTRFMT" "
 		    "cleared=%"INT32"" ,
 		    (int32_t)resendAll ,
 		    (int32_t)m_transId ,
 		     iptoa(m_ip),//+9,
 		    (uint16_t)m_port,
 		     (int32_t)m_resendCount,
-		     (int32_t)m_host,
+		     (PTRTYPE)m_host,
 		     (int32_t)cleared);
 	// . after UdpServer::readTimeOutPoll() calls this prepareForResend()
 	//   he then calls doSending()
@@ -1008,7 +1008,10 @@ int32_t UdpSlot::sendAck ( int sock , int64_t now ,
 	// remember if forced or not
 	//int32_t forced = dgramNum;
 	// if this was not supplied, look at m_callback to determine it
-	if ( weInitiated == -2 ) weInitiated = (int32_t)m_callback;
+	if ( weInitiated == -2 ) {
+		if ( m_callback ) weInitiated = 1;
+		else              weInitiated = 0;
+	}
 	// a little dgram buffer
 	char dgram[DGRAM_SIZE_CEILING];
 
@@ -1221,14 +1224,15 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 		//logf(LOG_INFO,//LOG_DEBUG,
 		log(LOG_DEBUG,
 		     "udp: Read cancel ack hdrlen=%"INT32" tid=%"INT32" "
-		     "src=%s:%hu msgType=0x%hhx weInitiated=%"INT32" sent=%"INT32" "
-		    "sendbufalloc=%"UINT32" sendbufsize=%"UINT32"",
+		     "src=%s:%hu msgType=0x%hhx weInitiated=%"PTRFMT" "
+		    "sent=%"INT32" "
+		    "sendbufalloc=%"PTRFMT" sendbufsize=%"UINT32"",
 		     peekSize , m_proto->getTransId ( peek,peekSize ),
 		     iptoa(m_ip),m_port,
 		     m_proto->getMsgType(peek,peekSize),
-		     (int32_t)m_callback,
+		    (PTRTYPE)m_callback,
 		    m_sentBitsOn,
-		    (uint32_t)m_sendBufAlloc,
+		    (PTRTYPE)m_sendBufAlloc,
 		    (uint32_t)m_sendBufSize);
 		// stat count
 		g_cancelAcksRead++;

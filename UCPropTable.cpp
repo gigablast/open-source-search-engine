@@ -84,11 +84,11 @@ size_t UCPropTable::getStoredSize() {
 #define RECORD_END (u_int32_t)0xdeadbeef
 
 size_t UCPropTable::serialize(char *buf, size_t bufSize) {
-	u_int32_t size = getStoredSize();
+	uint32_t size = getStoredSize();
 	if (bufSize < size) return 0;
 	char *p = buf;
 	// Header
-	*(u_int32_t*)p = size; p += sizeof(u_int32_t);
+	*(uint32_t*)p = size; p += sizeof(u_int32_t);
 	*(u_char*)p = m_valueSize; p += sizeof(u_char);
 	*(u_char*)p = m_tableBits; p += sizeof(u_char);
 	if (m_data)
@@ -99,12 +99,12 @@ size_t UCPropTable::serialize(char *buf, size_t bufSize) {
 				p += m_tableSize;
 			}
 		}
-	*(u_int32_t*)p = RECORD_END; p += sizeof(u_int32_t);
+	*(uint32_t*)p = RECORD_END; p += sizeof(u_int32_t);
 	// sanity check
 	if (p != buf + size)
 		return log(LOG_WARN,
 			   "UCPropTable: size mismatch: expected %"INT32" bytes, "
-			   "but wrote %d instead", size, p-buf);
+			   "but wrote %"INT32" instead", (int32_t)size, (int32_t)(p-buf));
 	return p-buf;
 }
 
@@ -150,6 +150,6 @@ size_t UCPropTable::deserialize(char *buf, size_t bufSize) {
 		//printf ("Read %d bytes after table %d\n", p-buf, prefix);
 	}
 	// shouldn't get here
-	log("UCPropTable: read %d too many bytes\n", p-(buf+size));
+	log("UCPropTable: read %"INT32" too many bytes\n", (int32_t)(p-(buf+size)));
 	return 0;
 }

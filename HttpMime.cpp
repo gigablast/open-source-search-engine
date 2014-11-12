@@ -619,7 +619,7 @@ int32_t HttpMime::getContentTypePrivate ( char *s ) {
 }
 
 // the table that maps a file extension to a content type
-static HashTable s_mimeTable;
+static HashTableX s_mimeTable;
 bool s_init = false;
 
 void resetHttpMime ( ) {
@@ -632,10 +632,10 @@ const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
 	if ( elen <= 0 ) return "text/html";
 	// get hash for table look up
 	int32_t key = hash32 ( ext , elen );
-	char *ptr = (char *)s_mimeTable.getValue ( key );
-	if ( ptr ) return ptr;
+	char **pp = (char **)s_mimeTable.getValue ( &key );
 	// if not found in table, assume text/html
-	return "text/html";
+	if ( ! pp ) return "text/html";
+	return *pp;
 }
 
 
@@ -646,10 +646,10 @@ const char *HttpMime::getContentTypeFromExtension ( char *ext ) {
 	if ( ! ext || ! ext[0] ) return "text/html";
 	// get hash for table look up
 	int32_t key = hash32n ( ext );
-	char *ptr = (char *)s_mimeTable.getValue ( key );
-	if ( ptr ) return ptr;
+	char **pp = (char **)s_mimeTable.getValue ( &key );
 	// if not found in table, assume text/html
-	return "text/html";
+	if ( ! pp ) return "text/html";
+	return *pp;
 }
 
 const char *HttpMime::getContentEncodingFromExtension ( char *ext ) {
@@ -1063,11 +1063,13 @@ bool HttpMime::init ( ) {
 	// make sure only called once
 	s_init = true;
 	//s_mimeTable.set ( 256 );
-	s_mimeTable.setLabel("mimetbl");
+	//s_mimeTable.setLabel("mimetbl");
+	if ( ! s_mimeTable.set(4,sizeof(char *),256,NULL,0,false,1,"mimetbl"))
+		return false;
 	// set table from internal list
 	for ( uint32_t i = 0 ; i < sizeof(s_ext)/sizeof(char *) ; i+=2 ) {
 		int32_t key = hash32n ( s_ext[i] );
-		if ( ! s_mimeTable.addKey ( key , (int32_t)s_ext[i+1] ) ) 
+		if ( ! s_mimeTable.addKey ( &key , &s_ext[i+1] ) ) 
 			return log("HttpMime::init: failed to set table.");
 	}
 	// quick text

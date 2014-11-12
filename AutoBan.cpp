@@ -976,11 +976,11 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 						      "Increase "
 						      "AUTOBAN_TEXT_SIZE in "
 						      "Conf.h. "
-						      "Had %i need %"INT32"."
+						      "Had %"INT32" need %"INT32"."
 						      "</font>", 
-						      AUTOBAN_TEXT_SIZE,
-						      p - g_conf.m_allowIps + 
-						      allowLen + 2);
+						      (int32_t)AUTOBAN_TEXT_SIZE,
+						      (int32_t)(p - g_conf.m_allowIps + 
+								allowLen + 2));
 					goto dontRemove1;
 				}
 			}
@@ -1028,8 +1028,8 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 						      "Had %i need %"INT32"."
 						      "</font>", 
 						      AUTOBAN_TEXT_SIZE,
-						      p - g_conf.m_banIps +
-						      denyLen + 2);
+						      (int32_t)(p - g_conf.m_banIps +
+								denyLen + 2));
 					goto dontRemove2;
 				}
 			}

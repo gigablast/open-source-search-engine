@@ -339,8 +339,9 @@ void Msg8b::gotReply ( ) {
 		
 		// sanity check
 		if (p - reply != replySize) {
-			log("Msg8b: Deserialized reply size %i != %"INT32"",
-			    p - reply, replySize );
+			log("Msg8b: Deserialized reply size %"INT32" "
+			    "!= %"INT32"",
+			    (int32_t)(p - reply), replySize );
 			char *xx = NULL; *xx = 0;
 		}
 		QUICKPOLL(m_niceness);
@@ -401,8 +402,9 @@ void handleRequest8b ( UdpSlot *slot, int32_t netnice ) {
 	p += urlLen + 1;
 	// sanity check
 	if (p - request != requestSize) {
-		log("build: Msg8b: Read Request Size %i != %"INT32", bad engineer.",
-		    p - request, requestSize);
+		log("build: Msg8b: Read Request Size %"INT32" != %"INT32", "
+		    "bad engineer.",
+		    (int32_t)(p - request), requestSize);
 		char *xx = NULL; *xx = 0;
 	}
 	// create the state
@@ -489,8 +491,8 @@ void gotCatRecWrapper ( void *state ) { // , CatRec *catrec ) {
 
 	// sanity check
 	if (p - data != dataSize) {
-		log("Msg8b: Reply Size %i != %"INT32"",
-		    p - data, dataSize);
+		log("Msg8b: Reply Size %"INT32" != %"INT32"",
+		    (int32_t)(p - data), dataSize);
 		char *xx = NULL; *xx = 0;
 	}
 	// clean up the state

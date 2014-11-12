@@ -530,7 +530,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 
 		if ( isDns ) {
 			//p->safePrintf("<td>%s</td>",iptoa(s->m_ip));
-			char *hostname = (char *)s->m_tmpVar;
+			char *hostname = s->m_tmpVar;
 			p->safePrintf("<td><nobr>%s"
 				      ,hostname);
 			// get the domain from the hostname

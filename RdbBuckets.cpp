@@ -887,7 +887,8 @@ bool RdbBuckets::addBucket (RdbBucket* newBucket, int32_t i) {
 
 bool RdbBuckets::getList ( collnum_t collnum ,
 			   char *startKey, char *endKey, int32_t minRecSizes ,
-			   RdbList *list , int32_t *numPosRecs , int32_t *numNegRecs,
+			   RdbList *list , int32_t *numPosRecs , 
+			   int32_t *numNegRecs,
 			   bool useHalfKeys ) {
 
 	if ( numNegRecs ) *numNegRecs = 0;
@@ -910,7 +911,7 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 	}
 	// bail if minRecSizes is 0
 	if ( minRecSizes == 0 ) return true;
-	if ( minRecSizes < 0 ) minRecSizes = LONG_MAX;
+	if ( minRecSizes < 0 ) minRecSizes = 0x7fffffff;//LONG_MAX;
 
 	int32_t startBucket = getBucketNum(startKey, collnum);
 	if(startBucket > 0 && 

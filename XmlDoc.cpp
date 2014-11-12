@@ -123,7 +123,7 @@ XmlDoc::XmlDoc() {
 	// reset all *valid* flags to false
 	void *p    = &m_VALIDSTART;
 	void *pend = &m_VALIDEND;
-	memset ( p , 0 , (int32_t)pend - (int32_t)p );
+	memset ( p , 0 , (char *)pend - (char *)p );//(int32_t)pend-(int32_t)p
 	m_msg22Request.m_inUse = 0;
 	m_msg4Waiting = false;
 	m_msg4Launched = false;
@@ -629,7 +629,7 @@ void XmlDoc::reset ( ) {
 	// reset all *valid* flags to false
 	void *p    = &m_VALIDSTART;
 	void *pend = &m_VALIDEND;
-	memset ( p , 0 , (int32_t)pend - (int32_t)p );
+	memset ( p , 0 , (char *)pend - (char *)p );
 
 	m_hashedMetas = false;
 
@@ -850,7 +850,7 @@ void XmlDoc::reset ( ) {
 	// reset these ptrs too!
 	void *px    = &ptr_firstUrl;
 	void *pxend = &size_firstUrl;
-	memset ( px , 0 , (int32_t)pxend - (int32_t)px );
+	memset ( px , 0 , (char *)pxend - (char *)px );
 }
 
 // . set the url with the intention of adding it or deleting it from the index
@@ -1583,7 +1583,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	int32_t np = ((char *)&size_firstUrl  - (char *)&ptr_firstUrl) / 4;
 
 	// point to the first ptr
-	int32_t *pd = (int32_t *)&ptr_firstUrl;
+	char **pd = (char **)&ptr_firstUrl;
 	// point to the first size
 	int32_t *ps = (int32_t *)&size_firstUrl;
 
@@ -1607,8 +1607,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 		if ( *ps <= 0 ) { char *xx=NULL;*xx=0; }
 		// skip over to point to data
 		up += 4;
-		// point to the data
-		*pd = (int32_t)up;
+		// point to the data. could be 64-bit ptr.
+		*pd = up;//(int32_t)up;
 		// debug
 		if ( m_pbuf ) {
 			int32_t crc = hash32(up,*ps);
@@ -1878,9 +1878,10 @@ void XmlDoc::setStatus ( char *s ) {
 		if ( s_lastTimeStart == 0LL ) s_lastTimeStart = now;
 		int32_t took = now - s_lastTimeStart;
 		if ( took > 100 )
-			log("xmldoc: %s (xd=0x%"XINT32" u=%s) took %"INT32"ms",
+			log("xmldoc: %s (xd=0x%"PTRFMT" "
+			    "u=%s) took %"INT32"ms",
 			    s_last,
-			    (int32_t)this,
+			    (PTRTYPE)this,
 			    m_firstUrl.m_url,
 			    took);
 		s_lastTimeStart = now;
@@ -1891,12 +1892,12 @@ void XmlDoc::setStatus ( char *s ) {
 	if ( ! g_conf.m_logDebugBuild ) return ;
 	//return;
 	if ( m_firstUrlValid )
-		logf(LOG_DEBUG,"build: status = %s for %s (this=0x%"XINT32")",
-		     s,m_firstUrl.m_url,(int32_t)this);
+		logf(LOG_DEBUG,"build: status = %s for %s (this=0x%"PTRFMT")",
+		     s,m_firstUrl.m_url,(PTRTYPE)this);
 	else 
 		logf(LOG_DEBUG,"build: status = %s for docId %"INT64" "
-		     "(this=0x%"XINT32")",
-		     s,m_docId, (int32_t)this);
+		     "(this=0x%"PTRFMT")",
+		     s,m_docId, (PTRTYPE)this);
 }
 
 // caller must now call XmlDoc::setCallback()
@@ -2649,7 +2650,7 @@ bool XmlDoc::indexDoc2 ( ) {
 			// spider hang bug
 			if ( g_conf.m_testSpiderEnabled )
 				logf(LOG_DEBUG,"build: msg4 meta add blocked" 
-				     "msg4=0x%"XINT32"" ,(int32_t)&m_msg4);
+				     "msg4=0x%"PTRFMT"" ,(PTRTYPE)&m_msg4);
 			m_msg4Waiting = true;
 			return false;
 		}
@@ -2662,7 +2663,8 @@ bool XmlDoc::indexDoc2 ( ) {
 	if (m_msg4Waiting && isInMsg4LinkedList(&m_msg4)){char *xx=NULL;*xx=0;}
 
 	if ( m_msg4Waiting && g_conf.m_testSpiderEnabled )
-		logf(LOG_DEBUG,"build: msg4=0x%"XINT32" returned",(int32_t)&m_msg4);
+		logf(LOG_DEBUG,"build: msg4=0x%"PTRFMT" returned"
+		     ,(PTRTYPE)&m_msg4);
 
 	// we are not waiting for the msg4 to return
 	m_msg4Waiting = false;
@@ -8713,7 +8715,7 @@ RdbList *XmlDoc::getDupList ( ) {
 	g_posdb.makeStartKey ( &sk,termId ,0);
 	g_posdb.makeEndKey   ( &ek,termId ,MAX_DOCID);
 	// note it
-	log("dup: check termid=%"UINT64"",termId&TERMID_MASK);
+	log("dup: check termid=%"UINT64"",(uint64_t)(termId&TERMID_MASK));
 	// assume valid now
 	m_dupListValid = true;
 	// this is a no-split lookup by default now
@@ -12471,7 +12473,8 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// wait for clock to sync before calling getTimeGlobal
 	int32_t wfts = waitForTimeSync();
 	// 0 means error, i guess g_errno should be set, -1 means blocked
-	if ( ! wfts || wfts == -1 ) return (int32_t *)wfts;
+	if ( ! wfts ) return NULL;
+	if ( wfts == -1 ) return (int32_t *)-1;
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -12561,12 +12564,18 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 
 	// debug log
 	if ( g_conf.m_logDebugLinkInfo )
-		log("xmldoc: valid=%"INT32" age=%"INT32" ns=%"INT32" sni=%"INT32" "
-		    "maxage=%"INT32" tag=%"XINT32" "
-		    "tag2=%"XINT32" tag3=%"XINT32" "
+		log("xmldoc: valid=%"INT32" "
+		    "age=%"INT32" ns=%"INT32" sni=%"INT32" "
+		    "maxage=%"INT32" "
+		    "tag=%"PTRFMT" "
+		    "tag2=%"PTRFMT" "
+		    "tag3=%"PTRFMT" "
 		    "url=%s",
 		    (int32_t)valid,age,ns,sni,
-		    maxAge,(int32_t)tag,(int32_t)tag2,(int32_t)tag3,
+		    maxAge,
+		    (PTRTYPE)tag,
+		    (PTRTYPE)tag2,
+		    (PTRTYPE)tag3,
 		    m_firstUrl.m_url);
 
 	// if we are good return it
@@ -18041,7 +18050,7 @@ int32_t getContentHash32Fast ( unsigned char *p ,
 		memset(s_qtab0,0,256);
 		memset(s_qtab1,0,256);
 		memset(s_qtab2,0,256);
-		for ( int32_t i = 0 ; i < (int32_t)sizeof(s_skips)/4 ; i++ ) {
+		for ( int32_t i = 0 ; i < 19  ; i++ ) {
 			unsigned char *s = (unsigned char *)s_skips[i];
 			s_qtab0[(unsigned char)to_lower_a(s[0])] = 1;
 			s_qtab0[(unsigned char)to_upper_a(s[0])] = 1;
@@ -20170,11 +20179,11 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 			// sanity check
 			if(dataSize!=0){char*xx=NULL;*xx=0;}
 			sb->safePrintf("<td>"
-				       "termId=%020llu "
+				       "termId=%020"UINT64" "
 				       //"score8=%03"UINT32" "
 				       //"score32=%010"UINT32""
 				       "</td>"
-				       ,tid
+				       ,(uint64_t)tid
 				       //(int32_t)score8,
 				       //(int32_t)score32 
 				       );
@@ -20190,7 +20199,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 			// sanity check
 			if(dataSize!=0){char*xx=NULL;*xx=0;}
 			sb->safePrintf("<td>"
-				       "termId=%020llu "
+				       "termId=%020"UINT64" "
 				       "date=%010"UINT32" "
 				       "score8=%03"UINT32" "
 				       "score32=%010"UINT32""
@@ -30658,8 +30667,10 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , int32_t *dsize ) {
 		*dptr++  = '\0';
 		// bitch if we truncated
 		if ( dptr >= dbufEnd )
-			log("query: More than %i bytes of meta tag content "
-			    "was encountered. Truncating.",dbufEnd-m_dbuf);
+			log("query: More than %"INT32" bytes of meta tag "
+			    "content "
+			    "was encountered. Truncating.",
+			    (int32_t)(dbufEnd-m_dbuf));
 	}
 	// what is the size of the content of displayed meta tags?
 	m_dbufSize   = dptr - m_dbuf;
@@ -34603,14 +34614,13 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 		sb->safePrintf ( "</nobr></td>" );
 
-		sb->safePrintf ( "<td>%016llu</td>"
+		sb->safePrintf ( "<td>%016"UINT64"</td>"
 				 ,
 				 //ss , 
 				 //(uint32_t)tp[i]->m_score32 ,
 				 //dateStr          ,
 				 //desc, // start + tp[i]->m_descOff    ,
-				 (uint64_t)tp[i]->m_termId 
-				 & TERMID_MASK );
+				 (uint64_t)(tp[i]->m_termId & TERMID_MASK) );
 
 		if ( tp[i]->m_shardByTermId ) sb->safePrintf("<td><b>1</b></td>" );
 		else                    sb->safePrintf("<td>0</td>" );
@@ -38756,8 +38766,8 @@ bool XmlDoc::doInjectLoop ( ) {
 		else {
 			m_blocked++;
 			log("xmldoc: blockedout=%"INT32" slotj=%"INT32" "
-			    "(this=0x%"XINT32",xd=0x%"XINT32")",
-			    m_blocked,j,(int32_t)this,(int32_t)xd);
+			    "(this=0x%"PTRFMT",xd=0x%"PTRFMT")",
+			    m_blocked,j,(PTRTYPE)this,(PTRTYPE)xd);
 			m_used[j] = true;
 		}
 	}
@@ -38786,7 +38796,8 @@ void XmlDoc::doneInjecting ( XmlDoc *xd ) {
 	// uncount it as being outstanding
 	m_blocked--;
 	// log debug
-	log("xmldoc: blockedin=%"INT32" (this=0x%"XINT32")",m_blocked,(int32_t)this);
+	log("xmldoc: blockedin=%"INT32" (this=0x%"PTRFMT")",
+	    m_blocked,(PTRTYPE)this);
 	// return if still blocked
 	if ( ! doInjectLoop() ) return;
 	// log debug
@@ -40412,7 +40423,7 @@ bool XmlDoc::checkCachedb ( ) {
 			for ( ; p < pend ; p += sizeof(WordPosInfo) ) {
 				QUICKPOLL(m_niceness);
 				WordPosInfo *wp = (WordPosInfo *)p;
-				int32_t off = (int32_t)wp->m_wordPtr;
+				int64_t off = (int64_t)wp->m_wordPtr;
 				char *ptr = ptr_utf8Content + off;
 				if ( off == -1 ) ptr = NULL;
 				wp->m_wordPtr = ptr;
@@ -40501,7 +40512,7 @@ bool XmlDoc::checkCachedb ( ) {
 				InsertableTerm *it = (InsertableTerm *)p;
 				p += it->getSize();
 				// normalize m_firstQueryChange
-				int32_t off = (int32_t)(it->m_firstQueryChange);
+				int64_t off =(int64_t)(it->m_firstQueryChange);
 				// fix this
 				char *buf = m_queryChangeBuf.getBufStart();
 				// int16_tcut
@@ -40528,7 +40539,7 @@ bool XmlDoc::checkCachedb ( ) {
 				// cast it
 				QueryChange *qc = (QueryChange *)p;
 				// normalize m_next
-				int32_t off = (int32_t)qc->m_next;
+				int64_t off = (int64_t)qc->m_next;
 				// offset into this
 				char *buf = m_queryChangeBuf.getBufStart();
 				// put back
@@ -41138,7 +41149,7 @@ bool XmlDoc::storeWordPosInfoBufIntoCachedb ( ) {
 	for ( ; p8 < p9 ; p8 += sizeof(WordPosInfo) ) {
 		QUICKPOLL(m_niceness);
 		WordPosInfo *wp = (WordPosInfo *)p8;
-		int32_t off = wp->m_wordPtr - ptr_utf8Content;
+		int64_t off = wp->m_wordPtr - ptr_utf8Content;
 		// if its a tag or fielded term it won't be in the 
 		// html like ext:html or filetype:html
 		if ( wp->m_wordPtr< ptr_utf8Content ) 
@@ -41424,7 +41435,7 @@ bool XmlDoc::storeScoredInsertableTermsIntoCachedb ( ) {
 		InsertableTerm *it = (InsertableTerm *)p1;
 		p1 += it->getSize();
 		QueryChange *qc = it->m_firstQueryChange;
-		int32_t qoff =(char *)qc - m_queryChangeBuf.getBufStart();
+		int64_t qoff =(char *)qc - m_queryChangeBuf.getBufStart();
 		if ( qc == NULL ) qoff = -1;
 		it->m_firstQueryChange = (QueryChange *)qoff;
 		// and m_termStr
@@ -41436,7 +41447,7 @@ bool XmlDoc::storeScoredInsertableTermsIntoCachedb ( ) {
 		QUICKPOLL(m_niceness);
 		QueryChange *qc = (QueryChange *)p2;
 		QueryChange *next = qc->m_next;
-		int32_t noff =(char *)next-m_queryChangeBuf.getBufStart();
+		int64_t noff =(char *)next-m_queryChangeBuf.getBufStart();
 		if ( next == NULL ) noff = -1; 
 		qc->m_next = (QueryChange *)noff;
 	}
@@ -42833,7 +42844,7 @@ SafeBuf *XmlDoc::getRelatedDocIdsWithTitles ( ) {
 		// get the reply from it (might be NULL iff g_errno is set)
 		Msg20Reply *reply = msg20->getReply(); // m_r
 		// get the corresponding related docid
-		int32_t hisCursor = msg20->m_hack;
+		int32_t hisCursor = msg20->m_hack2;
 		// int16_tcut
 		RelatedDocId *rd = &rds[hisCursor];
 		// ok, it has a reply. could be NULL if g_errno was set.
@@ -42872,7 +42883,7 @@ SafeBuf *XmlDoc::getRelatedDocIdsWithTitles ( ) {
 		req.m_ourHostHash32 = getHostHash32a();
 		req.m_ourDomHash32  = getDomHash32();
 		// store cursor in msg20 itself so we know what rd it's using
-		msg20->m_hack = m_rdCursor;
+		msg20->m_hack2 = m_rdCursor;
 		// advance cursor!!!
 		m_rdCursor++;
 		// launch it
@@ -43335,8 +43346,8 @@ static int mtCmp ( const void *a, const void *b ) {
 	if ( wb->m_importance < wa->m_importance ) return -1;
 	if ( wb->m_votes > wa->m_votes ) return  1; // swap
 	if ( wb->m_votes < wa->m_votes ) return -1;
-	if ( (int32_t)b < (int32_t)a ) return 1;  // swap
-	if ( (int32_t)b > (int32_t)a ) return -1; 
+	if ( (int64_t)b < (int64_t)a ) return 1;  // swap
+	if ( (int64_t)b > (int64_t)a ) return -1; 
 	return 0;
 }
 
@@ -43497,11 +43508,11 @@ bool XmlDoc::sortTermsIntoBuf ( HashTableX *scoreTable ,
 	for ( ; p < pend ; ) {
 		MissingTerm *mt = (MissingTerm *)p;
 		p += mt->getSize();
-		ptrBuf.pushLong((int32_t)mt);
+		ptrBuf.pushPtr ( mt );
 	}
 	gbqsort ( ptrBuf.getBufStart(),
 		  numTerms,
-		  sizeof(int32_t),
+		  sizeof(MissingTerm *),
 		  mtCmp,
 		  m_niceness);	
 
@@ -45374,7 +45385,7 @@ bool XmlDoc::processMsg95Replies() {
 			// HACK that in. RELATIVE to m_queryLogBuf!!!
 			//qc->m_queryOffset3 = ref;//(int32_t)qe;
 			// add ptr to our global buffer
-			hugePtrBuf.pushLong((int32_t)qc);
+			hugePtrBuf.pushPtr ( qc );
 		}
 		// sum it up
 		ongoingOffset      += mr->size_queryLogBuf;
@@ -45393,7 +45404,7 @@ bool XmlDoc::processMsg95Replies() {
 	// this should breath with niceness!!
 	gbqsort ( hhh , 
 		  size/4 ,
-		  4 ,
+		  sizeof(QueryChange *),
 		  queryChangeCmp , 
 		  m_niceness ) ;
 
@@ -45408,7 +45419,7 @@ bool XmlDoc::processMsg95Replies() {
 	// copy over sorted into m_queryChangeBuf so we can cache it in cachedb
 	char *p = hhh;
 	char *pend = hhh + size;
-	for ( ; p < pend ; p += 4 ) {
+	for ( ; p < pend ; p += sizeof(QueryChange *) ) {
 		// cast it
 		QueryChange *qc = *(QueryChange **)p;
 		// save ptr to it
@@ -46315,7 +46326,7 @@ static int riCmp ( const void *a, const void *b ) {
 
 static void gotLinkdbListWrapper ( void *state ) {
 	Msg0 *msg0 = (Msg0 *)state;
-	XmlDoc *xd = (XmlDoc *)(msg0->m_hackxd);
+	XmlDoc *xd = msg0->m_hackxd;
 	// free it's memory here lest we have a leak
 	//msg0->reset();
 	xd->m_numLinkRequestsIn++;
@@ -46434,7 +46445,7 @@ SafeBuf *XmlDoc::getRecommendedLinksBuf ( ) {
 		endKey   = g_linkdb.makeEndKey_uk   (siteHash32,linkHash64 );
 
 		// hack that thing
-		msg0->m_hackxd = (int32_t)this;
+		msg0->m_hackxd = this;
 
 		// consider it outstanding
 		m_numLinkRequestsOut++;
@@ -46657,13 +46668,14 @@ SafeBuf *XmlDoc::getRecommendedLinksBuf ( ) {
 	// store this beastie in cachedb
 	SafeBuf ptrBuf;
 	int32_t maxNumPtrs = tmpBuf.length() / sizeof(RecommendedLink);
-	if ( ! ptrBuf.reserve ( maxNumPtrs * 4 ,"ptrbuf" ) ) return NULL;
+	if ( ! ptrBuf.reserve(maxNumPtrs *sizeof(RecommendedLink *),"ptrbuf"))
+		return NULL;
 	char *p = tmpBuf.getBufStart();
 	char *pend = tmpBuf.getBuf();
 	int32_t numPtrs = 0;
 	for ( ; p < pend ; ) {
 		RecommendedLink *ri = (RecommendedLink *)p;
-		ptrBuf.pushLong ( (int32_t)ri );
+		ptrBuf.pushPtr ( ri );
 		p += sizeof(RecommendedLink);
 		// we have no title or url at this point...
 		if ( ri->getSize() != sizeof(RecommendedLink) ) { 
@@ -46798,7 +46810,7 @@ SafeBuf *XmlDoc::lookupTitles ( ) {
 		req.m_ourDomHash32  = getDomHash32();
 
 		// store cursor in msg20 itself so we know what rd it's using
-		msg20->m_hack = m_titleCursor;
+		msg20->m_hack2 = m_titleCursor;
 
 		// assume outstanding
 		m_numMsg20sOut++;
@@ -46861,7 +46873,7 @@ bool XmlDoc::gotLinkerTitle ( Msg20 *msg20 ) {
 	// get the recommendedlink for this (titleCursor)
 	char *vvv = m_recommendedLinksBuf.getBufStart();
 	RecommendedLink *rptrs = (RecommendedLink *)vvv;
-	int32_t titleCursor = msg20->m_hack;
+	int32_t titleCursor = msg20->m_hack2;
 	RecommendedLink *rl = &rptrs[titleCursor];
 	// sanity
 	if ( titleCursor < 0 ) {char *xx=NULL;*xx=0;}
@@ -48189,7 +48201,7 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 			// count these!
 			m_numMsg20Requests++;
 			// store cursor in msg20 itself so we know the rd
-			//msg20->m_hack = i;
+			//msg20->m_hack2 = i;
 			// launch it
 			if ( ! msg20->getSummary ( &req ) ) continue;
 			// error?

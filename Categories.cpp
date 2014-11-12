@@ -1663,7 +1663,7 @@ bool Categories::initLangTables(void) {
 			loadLangTables();
 			stop = gettimeofdayInMicroseconds();
 			log(LOG_INFO,
-					"cat: Parsing content took %lld microseconds\n", stop - start);
+					"cat: Parsing content took %"INT64" microseconds\n", stop - start);
 			break;
 		}
 	}

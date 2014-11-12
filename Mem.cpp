@@ -246,7 +246,7 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	//else                                               unlock = false;
 
 	// don't go over max
-	if ( g_mem.m_used + size >= g_mem.m_maxMem &&
+	if ( g_mem.m_used + (int32_t)size >= g_mem.m_maxMem &&
 	     g_mem.m_maxMem > 1000000 ) {
 		log("mem: new(%"UINT32"): Out of memory.", (uint32_t)size );
 		//if ( unlock ) mutexUnlock();
@@ -270,23 +270,23 @@ newmemloop:
 	//void *mem = s_pool.malloc ( size );
 	if ( ! mem && size > 0 ) {
 		g_errno = errno;
-		log("mem: new(%i): %s",size, mstrerror(g_errno));
+		log("mem: new(%"INT32"): %s",(int32_t)size,mstrerror(g_errno));
 		//if ( unlock ) mutexUnlock();
 		throw std::bad_alloc();
 		//throw 1;
 		//return NULL;
 	}
-	if ( (uint32_t)mem < 0x00010000 ) {
+	if ( (PTRTYPE)mem < 0x00010000 ) {
 #ifdef EFENCE
 		void *remem = getElecMem(size);
 #else
 		void *remem = sysmalloc(size);
 #endif
 		log ( LOG_WARN, "mem: Caught low memory allocation "
-		      "at %08"XINT32", "
-		      "reallocated to %08"XINT32, 
-		      (uint32_t)mem,
-		      (uint32_t)remem );
+		      "at %08"PTRFMT", "
+		      "reallocated to %08"PTRFMT, 
+		      (PTRTYPE)mem,
+		      (PTRTYPE)remem );
 #ifdef EFENCE
 		freeElecMem (mem);
 #else
@@ -333,7 +333,7 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	//} 
 	
 	// don't go over max
-	if ( g_mem.m_used + size >= g_mem.m_maxMem &&
+	if ( g_mem.m_used + (int32_t)size >= g_mem.m_maxMem &&
 	     g_mem.m_maxMem > 1000000 ) {
 		log("mem: new(%"UINT32"): Out of memory.", (uint32_t)size );
 		throw std::bad_alloc();
@@ -364,15 +364,16 @@ newmemloop:
 		//throw 1;
 		//return NULL;
 	}
-	if ( (uint32_t)mem < 0x00010000 ) {
+	if ( (PTRTYPE)mem < 0x00010000 ) {
 #ifdef EFENCE
 		void *remem = getElecMem(size);
 #else
 		void *remem = sysmalloc(size);
 #endif
-		log ( LOG_WARN, "mem: Caught low memory allocation at %08"XINT32", "
-				"reallocated to %08"XINT32"", 
-		      (int32_t)mem, (int32_t)remem );
+		log ( LOG_WARN, "mem: Caught low memory allocation at "
+		      "%08"PTRFMT", "
+				"reallocated to %08"PTRFMT"", 
+		      (PTRTYPE)mem, (PTRTYPE)remem );
 #ifdef EFENCE
 		freeElecMem (mem);
 #else
@@ -546,8 +547,8 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	//	sprintf(bb," msgType=0x%"XINT32"",(int32_t)c);
 	//}
 	if ( g_conf.m_logDebugMem )
-		log("mem: add %08"XINT32" %"INT32" bytes (%"INT64") (%s)",
-		    (int32_t)mem,size,m_used,note);
+		log("mem: add %08"PTRFMT" %"INT32" bytes (%"INT64") (%s)",
+		    (PTRTYPE)mem,size,m_used,note);
 
 	//if ( strcmp(note,"RdbList") == 0 ) 
 	//	log("mem: freelist%08"XINT32" %"INT32"bytes (%s)",(int32_t)mem,size,note);
@@ -568,9 +569,11 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	}
 
 	// sanity check -- for machines with > 4GB ram?
-	if ( (uint32_t)mem + (uint32_t)size < (uint32_t)mem ) {
-		log(LOG_LOGIC,"mem: Kernel returned mem at %08"XINT32" of size %"INT32" "
-		    "which would wrap. Bad kernel.",(int32_t)mem,(int32_t)size);
+	if ( (PTRTYPE)mem + (PTRTYPE)size < (PTRTYPE)mem ) {
+		log(LOG_LOGIC,"mem: Kernel returned mem at "
+		    "%08"PTRFMT" of size %"INT32" "
+		    "which would wrap. Bad kernel.",
+		    (PTRTYPE)mem,(int32_t)size);
 		char *xx = NULL; 
 		*xx = 0;
 	}
@@ -630,7 +633,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 		return;
 	}
 	// hash into table
-	uint32_t u = (uint32_t)mem * (uint32_t)0x4bf60ade;
+	uint32_t u = (PTRTYPE)mem * (PTRTYPE)0x4bf60ade;
 	uint32_t h = u % (uint32_t)m_memtablesize;
 	// chain to an empty bucket
 	int32_t count = (int32_t)m_memtablesize;
@@ -673,8 +676,9 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	s_n++;
 	// debug
 	if ( size > MINMEM && g_conf.m_logDebugMemUsage )
-		log(LOG_INFO,"mem: addMem(%"INT32"): %s. ptr=0x%"XINT32" used=%"INT64"",
-		    size,note,(int32_t)mem,m_used);
+		log(LOG_INFO,"mem: addMem(%"INT32"): %s. ptr=0x%"PTRFMT" "
+		    "used=%"INT64"",
+		    size,note,(PTRTYPE)mem,m_used);
 	// now update used mem
 	// we do this here now since we always call addMem() now
 	m_used += size;
@@ -856,21 +860,23 @@ bool Mem::lblMem( void *mem, int32_t size, const char *note ) {
 		//     "relabeling.", mem );
 		return val;
 	}
-	else if( (uint32_t)mem == 0x7fffffff ) {
-		//log( "mem: lblMem: Mem addr (0x%08X) is dummy address, not "
-		//     "relabeling.", mem );
-		return val;
-	}
+	// else if( (uint32_t)mem == 0x7fffffff ) {
+	// 	//log( "mem: lblMem: Mem addr (0x%08X) is dummy address, not "
+	// 	//     "relabeling.", mem );
+	// 	return val;
+	// }
 
-	uint32_t u = (uint32_t)mem * (uint32_t)0x4bf60ade;
+	uint32_t u = (PTRTYPE)mem * (PTRTYPE)0x4bf60ade;
 	uint32_t h = u % (uint32_t)m_memtablesize;
 	// chain to bucket
 	while( s_mptrs[h] ) {
 		if( s_mptrs[h] == mem ) {
 			if( s_sizes[h] != size ) {
 				val = false;
-				log( "mem: lblMem: Mem addr (0x%08X) exists, "
-				     "size is %"INT32" off.", (unsigned int)mem,
+				log( "mem: lblMem: Mem addr (0x%08"PTRFMT") "
+				     "exists, "
+				     "size is %"INT32" off.", 
+				     (PTRTYPE)mem,
 					 s_sizes[h]-size );
 				break;
 			}
@@ -887,8 +893,8 @@ bool Mem::lblMem( void *mem, int32_t size, const char *note ) {
 		if ( h == m_memtablesize ) h = 0;
 	}
 
-	if( !val ) log( "mem: lblMem: Mem addr (0x%08X) not found.", 
-			(unsigned int)mem );
+	if( !val ) log( "mem: lblMem: Mem addr (0x%08"PTRFMT") not found.", 
+			(PTRTYPE)mem );
 
 	return val;
 }
@@ -905,7 +911,8 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 	}
 	// debug msg (mdw)
 	if ( g_conf.m_logDebugMem )
-		log("mem: free %08"XINT32" %"INT32"bytes (%s)",(int32_t)mem,size,note);
+		log("mem: free %08"PTRFMT" %"INT32"bytes (%s)",
+		    (PTRTYPE)mem,size,note);
 
 	//if ( strcmp(note,"RdbList") == 0 ) 
 	//	log("mem: freelist%08"XINT32" %"INT32"bytes (%s)",(int32_t)mem,size,note);
@@ -935,7 +942,7 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 	// . hash by first hashing "mem" to mix it up some
 	// . balance the mallocs/frees
 	// . hash into table
-	uint32_t u = (uint32_t)mem * (uint32_t)0x4bf60ade;
+	uint32_t u = (PTRTYPE)mem * (PTRTYPE)0x4bf60ade;
 	uint32_t h = u % (uint32_t)m_memtablesize;
 	// . chain to an empty bucket
 	// . CAUTION: loops forever if no empty bucket
@@ -992,7 +999,8 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
  keepgoing:
 	// debug
 	if ( size > MINMEM && g_conf.m_logDebugMemUsage )
-		log(LOG_INFO,"mem: rmMem (%"INT32"): ptr=0x%"XINT32" %s.",size,(int32_t)mem,note);
+		log(LOG_INFO,"mem: rmMem (%"INT32"): "
+		    "ptr=0x%"PTRFMT" %s.",size,(PTRTYPE)mem,note);
 
 	//
 	// we do this here now since we always call rmMem() now
@@ -1019,9 +1027,9 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 	// shit after us may has to be rehashed in case it chained over us
 	while ( s_mptrs[h] ) {
 		// get mem ptr in bucket #h
-		uint32_t mem = (uint32_t)s_mptrs[h];
+		char *mem = (char *)s_mptrs[h];
 		// find the most wanted bucket for this mem ptr
-		u = (uint32_t)mem * (uint32_t)0x4bf60ade;
+		u = (PTRTYPE)mem * (PTRTYPE)0x4bf60ade;
 		k= u % (uint32_t)m_memtablesize;
 		// if it's in it, continue
 		if ( k == h ) { h++; continue; }
@@ -1070,7 +1078,7 @@ int32_t Mem::validate ( ) {
 
 int32_t Mem::getMemSlot ( void *mem ) {
 	// hash into table
-	uint32_t u = (uint32_t)mem * (uint32_t)0x4bf60ade;
+	uint32_t u = (PTRTYPE)mem * (PTRTYPE)0x4bf60ade;
 	uint32_t h = u % (uint32_t)m_memtablesize;
 	// . chain to an empty bucket
 	// . CAUTION: loops forever if no empty bucket
@@ -1105,9 +1113,10 @@ int Mem::printBreech ( int32_t i , char core ) {
 	char *bp = NULL;
 	for ( int32_t j = 0 ; j < UNDERPAD ; j++ ) {
 		if ( (unsigned char)mem[0-j-1] == MAGICCHAR ) continue;
-		log(LOG_LOGIC,"mem: underrun at %"XINT32" loff=%"INT32" size=%"INT32" "
+		log(LOG_LOGIC,"mem: underrun at %"PTRFMT" loff=%"INT32" "
+		    "size=%"INT32" "
 		    "i=%"INT32" note=%s",
-		    (int32_t)mem,0-j-1,(int32_t)s_sizes[i],i,&s_labels[i*16]);
+		    (PTRTYPE)mem,0-j-1,(int32_t)s_sizes[i],i,&s_labels[i*16]);
 
 		// mark it for freed mem re-use check below
 		if ( ! bp ) bp = &mem[0-j-1];
@@ -1115,27 +1124,28 @@ int Mem::printBreech ( int32_t i , char core ) {
 		// now scan the whole hash table and find the mem buffer
 		// just before that! but only do this once
 		if ( flag == 1 ) continue;
-		uint32_t min = 0;
+		PTRTYPE min = 0;
 		int32_t mink = -1;
 		for ( int32_t k = 0 ; k < (int32_t)m_memtablesize ; k++ ) {
 			// skip empties
 			if ( ! s_mptrs[k] ) continue;
 			// do not look at mem after us
-			if ( (uint32_t)s_mptrs[k] >= (uint32_t)mem ) 
+			if ( (PTRTYPE)s_mptrs[k] >= (PTRTYPE)mem ) 
 				continue;
 			// get min diff
-			if ( mink != -1 && (uint32_t)s_mptrs[k] < min ) 
+			if ( mink != -1 && (PTRTYPE)s_mptrs[k] < min ) 
 				continue;
 			// new winner
-			min = (uint32_t)s_mptrs[k];
+			min = (PTRTYPE)s_mptrs[k];
 			mink = k;
 		}
 		// now report it
 		if ( mink == -1 ) continue;
 		log("mem: possible breeching buffer=%s dist=%"UINT32,
 		    &s_labels[mink*16],
-		    (uint32_t)mem-
-		  ((uint32_t)s_mptrs[mink]+(uint32_t)s_sizes[mink]));
+		    (uint32_t)(
+		    (PTRTYPE)mem-
+		    ((PTRTYPE)s_mptrs[mink]+(uint32_t)s_sizes[mink])));
 		flag = 1;
 	}		    
 
@@ -1143,8 +1153,9 @@ int Mem::printBreech ( int32_t i , char core ) {
 	int32_t size = s_sizes[i];
 	for ( int32_t j = 0 ; j < OVERPAD ; j++ ) {
 		if ( (unsigned char)mem[size+j] == MAGICCHAR ) continue;
-		log(LOG_LOGIC,"mem: overrun  at %"XINT32" roff=%"INT32" note=%s",
-		    (int32_t)mem,j,&s_labels[i*16]);
+		log(LOG_LOGIC,"mem: overrun  at %"PTRFMT" "
+		    "roff=%"INT32" note=%s",
+		    (PTRTYPE)mem,j,&s_labels[i*16]);
 
 		// mark it for freed mem re-use check below
 		if ( ! bp ) bp = &mem[size+j];
@@ -1152,26 +1163,26 @@ int Mem::printBreech ( int32_t i , char core ) {
 		// now scan the whole hash table and find the mem buffer
 		// just before that! but only do this once
 		if ( flag == 1 ) continue;
-		uint32_t min = 0;
+		PTRTYPE min = 0;
 		int32_t mink = -1;
 		for ( int32_t k = 0 ; k < (int32_t)m_memtablesize ; k++ ) {
 			// skip empties
 			if ( ! s_mptrs[k] ) continue;
 			// do not look at mem before us
-			if ( (uint32_t)s_mptrs[k] <= (uint32_t)mem ) 
+			if ( (PTRTYPE)s_mptrs[k] <= (PTRTYPE)mem ) 
 				continue;
 			// get min diff
-			if ( mink != -1 && (uint32_t)s_mptrs[k] > min ) 
+			if ( mink != -1 && (PTRTYPE)s_mptrs[k] > min ) 
 				continue;
 			// new winner
-			min = (uint32_t)s_mptrs[k];
+			min = (PTRTYPE)s_mptrs[k];
 			mink = k;
 		}
 		// now report it
 		if ( mink == -1 ) continue;
-		log("mem: possible breeching buffer=%s dist=%"INT32"",
+		log("mem: possible breeching buffer=%s dist=%"PTRFMT"",
 		    &s_labels[mink*16],
-		    (int32_t)s_mptrs[mink]-((int32_t)mem+s_sizes[i]));
+		    (PTRTYPE)s_mptrs[mink]-((PTRTYPE)mem+s_sizes[i]));
 		flag = 1;
 	}
 	
@@ -1265,8 +1276,8 @@ int Mem::printMem ( ) {
 	// print out table sorted by sizes
 	for ( int32_t i = 0 ; i < np ; i++ ) {
 		int32_t a = p[i];
-		log(LOG_INFO,"mem: %05"INT32") %"INT32" %"XINT32" %s", 
-		    i,s_sizes[a] , (int32_t)s_mptrs[a] , &s_labels[a*16] );
+		log(LOG_INFO,"mem: %05"INT32") %"INT32" %"PTRFMT" %s", 
+		    i,s_sizes[a] , (PTRTYPE)s_mptrs[a] , &s_labels[a*16] );
 	}
 	sysfree ( p );
 	log(LOG_INFO,"mem: # current objects allocated now = %"INT32"", np );
@@ -1396,16 +1407,16 @@ mallocmemloop:
 		}
 		return NULL;
 	}
-	if ( (uint32_t)mem < 0x00010000 ) {
+	if ( (PTRTYPE)mem < 0x00010000 ) {
 #ifdef EFENCE
 		void *remem = getElecMem(size);
 #else
 		void *remem = sysmalloc(size);
 #endif
 		log ( LOG_WARN, "mem: Caught low memory allocation "
-		      "at %08"XINT32", "
-		      "reallocated to %08"XINT32"",
-		      (uint32_t)mem, (uint32_t)remem );
+		      "at %08"PTRFMT", "
+		      "reallocated to %08"PTRFMT"",
+		      (PTRTYPE)mem, (PTRTYPE)remem );
 #ifdef EFENCE
 		freeElecMem (mem);
 #else
@@ -1883,10 +1894,10 @@ bool freeCacheMem() {
 // and find such ptrs closes to "target"
 int32_t Mem::findPtr ( void *target ) {
 	if ( ! s_mptrs ) return 0;
-	int32_t maxDelta = 0x7fffffff;
-	int32_t topDelta[MAXBEST];
-	int32_t topOff  [MAXBEST];
-	int32_t topi    [MAXBEST];
+	PTRTYPE maxDelta = (PTRTYPE)-1;
+	PTRTYPE topDelta[MAXBEST];
+	PTRTYPE topOff  [MAXBEST];
+	PTRTYPE topi    [MAXBEST];
 	int32_t nt = 0;
 	int32_t minnt = 0;
 	int32_t i;
@@ -1898,18 +1909,19 @@ int32_t Mem::findPtr ( void *target ) {
 		char *p    = (char *)s_mptrs[i];
 		int32_t  size = s_sizes[i];
 		char *pend = p + size;
-		int32_t bestDelta = 0x7fffffff;
-		int32_t bestOff   = 0x7fffffff;
+		PTRTYPE bestDelta = (PTRTYPE)-1;
+		PTRTYPE bestOff   = (PTRTYPE)-1;
 		char *note = &s_labels[i*16];
 		// skip thread stack
 		if ( strcmp(note,"ThreadStack") == 0 ) 
 			continue;
 		// scan that
-		for ( ; p +4 < pend ; p++ ) {
+		for ( ; p +sizeof(char *) < pend ; p++ ) {
 			// get ptr it might have
-			char *pp = (char *)(*(int32_t *)p);
+			//char *pp = (char *)(*(int32_t *)p);
+			char *pp = *(char **)p;
 			// delta from target
-			int32_t delta = (uint32_t)pp - (uint32_t)target;
+			PTRTYPE delta = (PTRTYPE)pp - (PTRTYPE)target;
 			// make positive
 			if ( delta < 0 ) delta *= -1;
 			// is it a min?
@@ -1917,7 +1929,7 @@ int32_t Mem::findPtr ( void *target ) {
 			// get top 10
 			if ( delta < bestDelta ) {
 				bestDelta = delta;
-				bestOff   = (int32_t)p - (int32_t)(s_mptrs[i]);
+				bestOff   = (PTRTYPE)p - (PTRTYPE)(s_mptrs[i]);
 			}
 		}
 		// bail if not good enough
@@ -1945,14 +1957,17 @@ int32_t Mem::findPtr ( void *target ) {
 	// memory the suspicious write ptr is in
 	for ( int32_t j = 0 ; j < nt ; j++ ) {
 		// get it
-		int32_t bi = topi[j];
+		PTRTYPE bi = topi[j];
 		char *note = (char *)&s_labels[bi*16];
 		if ( ! note ) note = "unknown";
-		int32_t *x = (int32_t *)((char *)s_mptrs[bi] + topOff[j]);
-		log("mem: topdelta=%"INT32" bytes away from corrupted mem. note=%s "
-		    "memblock=%"INT32" and memory of ptr is %"INT32" bytes into that "
-		    "memblock. and ptr is pointing to 0x%"XINT32"(%"UINT32")",
-		    topDelta[j],note,bi,topOff[j], *x,(uint32_t)*x);
+		PTRTYPE *x = (PTRTYPE *)((char *)s_mptrs[bi] + topOff[j]);
+		log("mem: topdelta=%"PTRFMT" bytes away from corrupted mem. "
+		    "note=%s "
+		    "memblock=%"PTRFMT" and memory of ptr is %"PTRFMT" "
+		    "bytes into that "
+		    "memblock. and ptr is pointing to 0x%"PTRFMT"(%"PTRFMT")",
+		    topDelta[j],
+		    note,bi,topOff[j], *x,*x);
 	}
 
 	return 0;
@@ -2033,13 +2048,13 @@ void *getElecMem ( int32_t size ) {
 	// back down from what we need
 	end -= MEMPAGESIZE;
 	// get remainder from that
-	int32_t remainder = (uint32_t)end % MEMPAGESIZE;
+	int32_t remainder = (PTRTYPE)end % MEMPAGESIZE;
 	// back down to that
 	char *protMem = end - remainder;
 	// get return mem
 	char *returnMem = protMem - size;
 	// back beyond that
-	int32_t leftover = (uint32_t)returnMem % MEMPAGESIZE;
+	int32_t leftover = (PTRTYPE)returnMem % MEMPAGESIZE;
 	// back up
 	char *p = returnMem - leftover;
 	// we are now on a page boundary, so we can protect this mem
@@ -2117,12 +2132,12 @@ void freeElecMem ( void *fakeMem ) {
 
 	// ok, back up to page boundary before us
 	char *protMem = realMem + (MEMPAGESIZE - 
-				   (((uint32_t)realMem) % MEMPAGESIZE));
+				   (((PTRTYPE)realMem) % MEMPAGESIZE));
 	// get end point
-	char *protEnd = realMemEnd - ((uint32_t)realMemEnd % MEMPAGESIZE);
+	char *protEnd = realMemEnd - ((PTRTYPE)realMemEnd % MEMPAGESIZE);
 	// sanity
 	if ( protMem < realMem ) { char *xx=NULL;*xx=0; }
-	if ( protMem - realMem > (int32_t)MEMPAGESIZE ) { char *xx=NULL;*xx=0; }
+	if ( protMem - realMem > (int32_t)MEMPAGESIZE) { char *xx=NULL;*xx=0; }
 	// before adding it into the ring, protect it
 	if ( mprotect ( protMem , protEnd-protMem, PROT_NONE) < 0 )
 		log("mem: mprotect2 failed: %s",mstrerror(errno));

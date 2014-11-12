@@ -82,7 +82,7 @@ bool PingServer::registerHandler ( ) {
 	// . so in a network of 128 hosts we'll cycle through in 12.8 seconds
 	//   and set a host to dead on avg will take about 13 seconds
 	if ( ! g_loop.registerSleepCallback ( g_conf.m_pingSpacer , // ~100ms
-					      (void *)m_callnum , // NULL , 
+					      (void *)(PTRTYPE)m_callnum,//NULL
 					      sleepWrapper , 0 ) )
 		return false;
 	// if not host #0, we're done
@@ -255,7 +255,7 @@ void PingServer::sendPingsToAll ( ) {
 	if ( m_pingSpacer == g_conf.m_pingSpacer ) return;
 	// register new one
 	if ( ! g_loop.registerSleepCallback ( m_pingSpacer , // ~100ms
-					      (void *)(m_callnum+1) ,
+					      (void *)(PTRTYPE)(m_callnum+1) ,
 					      sleepWrapper , 0 ) ) {
 		static char logged = 0;
 		if ( ! logged )
@@ -264,7 +264,8 @@ void PingServer::sendPingsToAll ( ) {
 		return;
 	}
 	// now it is safe to unregister last callback then
-	g_loop.unregisterSleepCallback((void *)m_callnum,sleepWrapper);
+	g_loop.unregisterSleepCallback((void *)(PTRTYPE)m_callnum,
+				       sleepWrapper);
 	// point to next one
 	m_callnum++;
 }
@@ -775,7 +776,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 				       slot->m_port  , // h->m_port2    ,
 				       hid   ,
 				       NULL          ,
-				       (void *)h->m_hostId, // callback state
+				       (void *)(PTRTYPE)h->m_hostId, //cb state
 				       gotReplyWrapperP3 ,
 				       // timeout
 				       (g_conf.m_deadHostTimeout/1000)+1 , 
@@ -2554,7 +2555,7 @@ void PingServer::tapHost ( int32_t hostId ) {
 					h->m_port       ,
 					h->m_hostId     ,
 					NULL            ,
-					(void *)h->m_hostId, // callback state
+				       (void *)(PTRTYPE)h->m_hostId,// cb state
 					gotTapReplyWrapper ,
 					30              , // timeout
 					1000            , // backoff

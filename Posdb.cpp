@@ -643,7 +643,7 @@ void PosdbTable::init ( Query     *q               ,
 	// remember the query class, it has all the info about the termIds
 	m_q = q;
 	// for debug msgs
-	m_logstate = (int32_t)logstate;
+	m_logstate = logstate;
 
 	m_realMaxTop = r->m_realMaxTop;
 	if ( m_realMaxTop > MAX_TOP ) m_realMaxTop = MAX_TOP;

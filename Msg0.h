@@ -248,7 +248,7 @@ class Msg0 {
 	// should we add an received lists from across network to our cache?
 	bool  m_addToCache;
 
-	int32_t m_hackxd;
+	class XmlDoc *m_hackxd;
 
 	// . parameters that define the RdbList we want
 	// . we use precisely this block to define a network request 

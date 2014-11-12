@@ -122,7 +122,8 @@ bool TcpServer::init ( void (* requestHandler)(TcpSocket *s) ,
 		s_stdinSock = fopen ( "stdin" , "r" );
 		// sanity - make sure 0 was opened as stdin!
 		if ( s_stdinSock != NULL ) { 
-			log("tcp: stdinSock = %"INT32" != 0", (int32_t)s_stdinSock);
+			log("tcp: stdinSock = %"PTRFMT" != 0", 
+			    (PTRTYPE)s_stdinSock);
 			char *xx=NULL;*xx=0;
 		}
 		s_openned = true;

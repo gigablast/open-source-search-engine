@@ -193,7 +193,7 @@ class Profiler {
 			       int realTimeShowAll);
 	void resetLastQpoll() {m_lastQpoll = "main loop"; m_lastQpollLine =0;}
 
-	char *getFnName(uint32_t address,int32_t *nameLen=NULL);
+	char *getFnName(PTRTYPE address,int32_t *nameLen=NULL);
 
 	//Functions for reading the symbol table of gb,
 	//which is a 32-bit ELF file. These functions are 

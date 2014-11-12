@@ -28,8 +28,10 @@ Hostdb g_hostdb;
 // for harvesting link text from the larger index
 Hostdb g_hostdb2;
 
-HashTableT <uint64_t, uint32_t> g_hostTableUdp;
-HashTableT <uint64_t, uint32_t> g_hostTableTcp;
+//HashTableT <uint64_t, uint32_t> g_hostTableUdp;
+//HashTableT <uint64_t, uint32_t> g_hostTableTcp;
+HashTableX g_hostTableUdp;
+HashTableX g_hostTableTcp;
 
 Host     *g_listHosts [ MAX_HOSTS * 4 ];
 uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
@@ -1289,7 +1291,7 @@ bool Hostdb::hashHosts ( ) {
 		Host *h2 ;
 		h2 = getUdpHost ( h->m_ip , h->m_port );
 		if ( h != h2 ) 
-			return log("db: Host lookup failed for hostId %"INT32".",
+			return log("db: Host lookup failed for hostId %i.",
 				   h->m_hostId);
 		h2 = getUdpHost ( h->m_ipShotgun , h->m_port );
 		if ( h != h2 ) 
@@ -1357,9 +1359,14 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 	}
 
 	// int16_tcut
-	HashTableT <uint64_t, uint32_t> *t;
+	//HashTableT <uint64_t, uint32_t> *t;
+	HashTableX *t;
 	if ( udp ) t = &g_hostTableUdp;
 	else       t = &g_hostTableTcp;
+	// initialize the table?
+	if ( t->m_ks == 0 ) {
+		t->set ( 8 , sizeof(char *),16,NULL,0,false,0,"hostbl");
+	}
 	// get his key
 	uint64_t key = 0;
 	// masking the low bits of the ip is not good because it is
@@ -1375,7 +1382,7 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 	dst[4] = src2[1];
 	dst[5] = src2[0];
 	// look it up
-	int32_t slot = t->getSlot ( key );
+	int32_t slot = t->getSlot ( &key );
 	// see if there is a collision
 	Host *old = NULL;
 	if ( slot >= 0 ) {
@@ -1383,14 +1390,14 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 		// have multiple hosts on the same ip. this call was just
 		// to make isIpInNetwork() function work.
 		if ( port == 0 ) return true;
-		old = (Host *)t->getValueFromSlot(slot);
+		old = *(Host **)t->getValueFromSlot(slot);
 		return log("db: Got collision between hostId %"INT32" and "
 			   "%"INT32"(proxy=%"INT32"). Both have same ip/port. Does "
 			   "hosts.conf match hosts2.conf?",
 			   old->m_hostId,h->m_hostId,(int32_t)h->m_isProxy);
 	}
 	// add the new key with a ptr to host using m_port
-	return t->addKey ( key , (uint32_t)h ) ;
+	return t->addKey ( &key , &h ); // (uint32_t)h ) ;
 }
 
 int32_t Hostdb::getHostId ( uint32_t ip , uint16_t port ) {
@@ -1431,7 +1438,8 @@ bool Hostdb::isIpInNetwork ( uint32_t ip ) {
 // . use a port of 0 if we should disregard port
 Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
 	// int16_tcut
-	HashTableT <uint64_t, uint32_t> *t;
+	//HashTableT <uint64_t, uint32_t> *t;
+	HashTableX *t;
 	if ( udp ) t = &g_hostTableUdp;
 	else       t = &g_hostTableTcp;
 	// reset key
@@ -1449,10 +1457,10 @@ Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
 	dst[4] = src2[1];
 	dst[5] = src2[0];
 	// look it up
-	int32_t slot = t->getSlot ( key );
+	int32_t slot = t->getSlot ( &key );
 	// return NULL if not found
 	if ( slot < 0 ) return NULL;
-	return (Host *) t->getValueFromSlot ( slot );
+	return *(Host **) t->getValueFromSlot ( slot );
 }
 
 

@@ -486,8 +486,8 @@ bool Dns::getIp ( char *hostname ,
 
 	// debug msg
 	log(LOG_DEBUG,"dns: Adding key %"UINT64" from table. "
-	    "parentKey=%"UINT64" callback=%"UINT32" state=%"UINT32".",
-	    finalKey,parentKey,(uint32_t)callback,(uint32_t)state);
+	    "parentKey=%"UINT64" callback=%"PTRFMT" state=%"PTRFMT".",
+	    finalKey,parentKey,(PTRTYPE)callback,(PTRTYPE)state);
 	// ensure "bogus" key not already present in table, otherwise,
 	// addKey will just overwrite the value!!
 	while ( ptr && s_dnstable.getValuePointer ( finalKey ) ) {
@@ -555,9 +555,9 @@ bool Dns::getIp ( char *hostname ,
 			log("dns: Failed to allocate mem for ip lookup.");
 			// debug msg
 			log(LOG_DEBUG,"dns: Removing2 key %"UINT64" from table. "
-			    "parentKey=%"UINT64" callback=%"UINT32" state=%"UINT32".",
+			    "parentKey=%"UINT64" callback=%"PTRFMT" state=%"PTRFMT".",
 			    hostKey64,parentKey,
-				(uint32_t)callback,(uint32_t)state);
+				(PTRTYPE)callback,(PTRTYPE)state);
 			s_dnstable.removeKey ( finalKey );
 			return true;
 		}
@@ -669,9 +669,9 @@ bool Dns::getIp ( char *hostname ,
 
 	// debug msg
 	log(LOG_DEBUG,"dns: Removing3 key %"UINT64" from table. "
-	    "parentKey=%"UINT64" callback=%"UINT32" state=%"UINT32".",
+	    "parentKey=%"UINT64" callback=%"PTRFMT" state=%"PTRFMT".",
 	    hostKey64,parentKey,
-		(uint32_t)callback,(uint32_t)state);
+		(PTRTYPE)callback,(PTRTYPE)state);
 	// if we made it here, remove from table
 	s_dnstable.removeKey ( finalKey ) ;
 	// should we free it
@@ -1205,7 +1205,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , int32_t timeout ) {
 		return true;
 	}
 	// store a hack for PageSockets.cpp to print out the hostname
-	slotPtr->m_tmpVar = (int32_t)ds->m_hostname;
+	slotPtr->m_tmpVar = ds->m_hostname;
 	// return 0 cuz we're blocking on the reply
 	log(LOG_DEBUG, "dns: SendToNextDNS blocking on reply for '%s'",
 		ds->m_hostname);
@@ -1437,13 +1437,13 @@ void returnIp ( DnsState *ds , int32_t ip ) {
 		int64_t nextKey = ce->m_nextKey;
 		// debug msg
 		log(LOG_DEBUG,"dns: Removing key %"UINT64" from table. "
-		    "parentKey=%"UINT64" nextKey=%"UINT64" callback=%"UINT32" "
-		    "state=0x%"XINT32".",
+		    "parentKey=%"UINT64" nextKey=%"UINT64" callback=%"PTRFMT" "
+		    "state=0x%"PTRFMT".",
 		    key,
 		    parentKey,
 		    nextKey,
-		    (uint32_t)ce->m_callback,
-		    (uint32_t)ce->m_state);
+		    (PTRTYPE)ce->m_callback,
+		    (PTRTYPE)ce->m_state);
 		// get stuff
 		void (* callback ) ( void *state , int32_t ip );
 		callback    = ce->m_callback;

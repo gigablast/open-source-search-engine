@@ -63,8 +63,8 @@ bool sendPageCatdb ( TcpSocket *s , HttpRequest *r ) {
 	try { st = new (StateCatdb); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("catdb: Unable to allocate %i bytes for StateCatdb",
-		    sizeof(StateCatdb) );
+		log("catdb: Unable to allocate %"INT32" bytes for StateCatdb",
+		    (int32_t)sizeof(StateCatdb) );
 		return true;
 	}
 	mnew ( st, sizeof(StateCatdb), "PageCatdb" );

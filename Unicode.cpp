@@ -7,7 +7,7 @@
 #include "iana_charset.h"
 #include "Titledb.h"
 
-static HashTable s_convTable;
+static HashTableX s_convTable;
 // JAB: warning abatement
 //static bool verifyIconvFiles();
 static bool openIconvDescriptors() ;
@@ -25,7 +25,9 @@ iconv_t gbiconv_open( char *tocode, char *fromcode) {
 	uint32_t hash = hash32h(hash1, hash2);
 
 	g_errno = 0;
-	iconv_t conv = (iconv_t)s_convTable.getValue(hash);
+	iconv_t *convp = (iconv_t *)s_convTable.getValue(&hash);
+	iconv_t conv = NULL;
+	if ( convp ) conv = *convp;
 	//log(LOG_DEBUG, "uni: convertor %s -> %s from hash 0x%"XINT32": 0x%"XINT32"",
 	//    fromcode, tocode,
 	//    hash, conv);
@@ -49,7 +51,7 @@ iconv_t gbiconv_open( char *tocode, char *fromcode) {
 		// add mem to table to keep track
 		g_mem.addMem((void*)conv, 52, "iconv", 1);
 		// cache convertor
-		s_convTable.addKey(hash, (int32_t)conv);
+		s_convTable.addKey(&hash, &conv);
 		//log(LOG_DEBUG, "uni: Saved convertor 0x%"INT32" under hash 0x%"XINT32"",
 		//    conv, hash);
 	}
@@ -74,7 +76,7 @@ int gbiconv_close(iconv_t cd) {
 
 void gbiconv_reset(){
 	for (int32_t i=0;i<s_convTable.getNumSlots();i++){
-		int32_t key = s_convTable.getKey(i);
+		int32_t key = *(int32_t *)s_convTable.getKey(i);
 		if (!key) continue;
 		iconv_t conv = (iconv_t)s_convTable.getValueFromSlot(i);
 		if (!conv) continue;
@@ -158,7 +160,9 @@ bool ucInit(char *path, bool verifyFiles){
 	if (!loadDecompTables(path) ||
 	    !initCompositionTable())
 		goto failed;
-	s_convTable.set(1024);
+	//s_convTable.set(1024);
+	if ( ! s_convTable.set(4,sizeof(iconv_t),1024,NULL,0,false,0,"cnvtbl"))
+		goto failed;
 	
 	// dont use these files anymore
 	if (verifyFiles){
@@ -1227,9 +1231,9 @@ int32_t ucToAscii(char *buf, int32_t bufsize, char *s, int32_t slen){
 static iconv_t cd_latin1_u8 = (iconv_t)-1;
 int32_t latin1ToUtf8(char *outbuf, int32_t outbufsize, 
 		  char *inbuf, int32_t inbuflen){
-	if ((int)cd_latin1_u8 < 0) {
+	if ( cd_latin1_u8 < 0) {
 		cd_latin1_u8 = gbiconv_open("UTF-8", "WINDOWS-1252");
-		if ((int)cd_latin1_u8 < 0) {	
+		if ( cd_latin1_u8 < 0) {	
 			log("uni: Error opening output conversion"
 			    " descriptor for utf-8: %s (%d)\n", 
 			    strerror(g_errno),g_errno);

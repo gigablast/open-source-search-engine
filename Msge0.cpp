@@ -255,7 +255,7 @@ void gotTagRecWrapper ( void *state ) {
 	Msg8a *m     = (Msg8a *)state;
 	//TagRec *m    = (TagRec *)state;
 	Msge0  *THIS = (Msge0  *)m->m_state2;
-	int32_t    i    = (int32_t   )m->m_state3;
+	int32_t    i    = (int32_t   )(PTRTYPE)m->m_state3;
 	if ( ! THIS->doneSending ( i ) ) return;
 	// try to launch more, returns false if not done
 	if ( ! THIS->launchRequests(i) ) return;

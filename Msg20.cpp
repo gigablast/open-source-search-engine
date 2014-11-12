@@ -394,7 +394,7 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 	try { xd = new (XmlDoc); }
 	catch ( ... ) { 
 		g_errno = ENOMEM;
-		log("query: msg20 new(%i): %s", sizeof(XmlDoc),
+		log("query: msg20 new(%"INT32"): %s", (int32_t)sizeof(XmlDoc),
 		    mstrerror(g_errno));
 		g_udpServer.sendErrorReply ( slot, g_errno ); 
 		return; 

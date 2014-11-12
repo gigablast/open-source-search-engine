@@ -111,8 +111,10 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	//cr->m_bases[(unsigned char)m_rdbId] = base;
 	cr->setBasePtr ( m_rdbId , base );
 	log ( LOG_DEBUG,"db: added base to collrec "
-	    "for rdb=%s rdbid=%"INT32" coll=%s collnum=%"INT32" base=0x%"XINT32"",
-	    m_dbname,(int32_t)m_rdbId,cr->m_coll,(int32_t)collnum,(int32_t)base);
+	    "for rdb=%s rdbid=%"INT32" coll=%s collnum=%"INT32" "
+	      "base=0x%"PTRFMT"",
+	    m_dbname,(int32_t)m_rdbId,cr->m_coll,(int32_t)collnum,
+	      (PTRTYPE)base);
 }
 
 

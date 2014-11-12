@@ -324,6 +324,7 @@ public:
 	};
 
 
+	bool  pushPtr  ( void *ptr );
 	bool  pushLong (int32_t i);
 	bool  pushLongLong (int64_t i);
 	bool  pushFloat (float i);

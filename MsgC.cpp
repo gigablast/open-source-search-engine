@@ -247,9 +247,9 @@ void gotReplyWrapper ( void *state , void *state2 ) {
 		char *s ="";
 		if ( THIS->m_forwardToProxy ) s = "from proxy ";
 		logf(LOG_DEBUG,"dns: msgc: got reply %sof %s for %s. "
-		     "state=0x%"XINT32" mcast=0x%"XINT32"",
-		     s,iptoa(*THIS->m_ipPtr),THIS->m_u.getUrl(),(int32_t)state2,
-		     (int32_t)&THIS->m_mcast);
+		     "state=0x%"PTRFMT" mcast=0x%"PTRFMT"",
+		     s,iptoa(*THIS->m_ipPtr),THIS->m_u.getUrl(),(PTRTYPE)state2,
+		     (PTRTYPE)&THIS->m_mcast);
 	}
 	THIS->m_callback(state2,ip);
 }
@@ -264,8 +264,8 @@ int32_t MsgC::gotReply(){
 	// sanity check
 	if (replySize != 12 || !reply ){
 		g_errno = EBADREPLYSIZE;
-		log( "dns: msgc: Bad reply size of %"INT32"",
-		     (uint32_t)reply );
+		log( "dns: msgc: Bad reply size of %"PTRFMT"",
+		     (PTRTYPE)reply );
 	}
         else {
 		*m_ipPtr = *(int32_t *)reply;
@@ -352,8 +352,8 @@ void handleRequest ( UdpSlot *slot , int32_t niceness  ) {
 
 	//char c = hostname[hostnameLen];
 	//if ( c != 0 ) hostname[hostnameLen] = 0;
-	log(LOG_DEBUG,"dns: msgc: handle request called for %s state=%"UINT32"",
-	    hostname,(int32_t)slot);
+	log(LOG_DEBUG,"dns: msgc: handle request called for %s state=%"PTRFMT"",
+	    hostname,(PTRTYPE)slot);
 	//if ( c != 0 ) hostname[hostnameLen] = c;
 
 
@@ -416,7 +416,7 @@ void handleRequest ( UdpSlot *slot , int32_t niceness  ) {
 void gotMsgCIpWrapper( void *state, int32_t ip){
 	UdpSlot *slot=(UdpSlot *) state;
 
-	log(LOG_DEBUG,"dns: msgc sending reply for state=%"UINT32".",(int32_t)state);
+	log(LOG_DEBUG,"dns: msgc sending reply for state=%"PTRFMT".",(PTRTYPE)state);
 
 	//to fit the ip address
 	char reply[12];

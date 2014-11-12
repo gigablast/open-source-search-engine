@@ -334,7 +334,7 @@ bool Msge1::sendMsgC ( int32_t i , char *host , int32_t hlen ) {
 void gotMsgCWrapper ( void *state , int32_t ip ) {
 	MsgC   *m    = (MsgC  *)state;
 	Msge1  *THIS = (Msge1 *)m->m_state2;
-	int32_t    i    = (int32_t   )m->m_state3;
+	int32_t    i    = (int32_t   )(PTRTYPE)m->m_state3;
 	if ( ! THIS->doneSending ( i ) ) return;
 	// try to launch more, returns false if not done
 	if ( ! THIS->launchRequests(i) ) return;
@@ -481,7 +481,7 @@ void doneAddingTagWrapper ( void *state ) {
 	// get the hijacked msgc
 	MsgC   *m    = (MsgC  *)state;
 	Msge1  *THIS = (Msge1 *)m->m_state2;
-	int32_t    i    = (int32_t   )m->m_state3;
+	int32_t    i    = (int32_t   )(PTRTYPE)m->m_state3;
 	// return if that blocked
 	if ( ! THIS->doneAddingTag ( i ) ) return;
 	// loop back for more

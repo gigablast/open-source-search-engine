@@ -1537,7 +1537,7 @@ void RdbTree::gbmprotect ( void *p , int32_t size , int prot ) {
 	//p = (p + PAGESIZE) & (PAGESIZE-1);
 	char *np = ((char *)p + (8*1024));
 	// mask out lower bits
-	np = (char *)((uint32_t)np & ~((8*1024)-1));
+	np = (char *)((PTRTYPE)np & ~((8*1024)-1));
 	size -= (np-(char *)p);
 	if ( size <= 0 ) return;
 	// align size, too

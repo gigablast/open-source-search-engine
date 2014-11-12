@@ -233,7 +233,7 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	if ( maxSlots < 100           ) maxSlots = 100;
 	m_slots =(UdpSlot *)mmalloc(maxSlots*sizeof(UdpSlot),"UdpServer");
 	if ( ! m_slots ) return log("udp: Failed to allocate %"INT32" bytes.",
-				    maxSlots*sizeof(UdpSlot));
+				    maxSlots*(int32_t)sizeof(UdpSlot));
 	log(LOG_DEBUG,"udp: Allocated %"INT32" bytes for %"INT32" sockets.",
 	     maxSlots*(int32_t)sizeof(UdpSlot),maxSlots);
 	m_maxSlots = maxSlots;
@@ -559,10 +559,13 @@ bool UdpServer::sendRequest ( char     *msg          ,
 		log(LOG_DEBUG,
 		    "udp: sendrequest: ip2=%s port=%"INT32" "
 		    "msgType=0x%hhx msgSize=%"INT32" "
-		    "transId=%"INT32" (niceness=%"INT32") slot=%"UINT32".",
+		    "transId=%"INT32" (niceness=%"INT32") slot=%"PTRFMT".",
 		    iptoa(ip2),(int32_t)port,
-		    (unsigned char)msgType, (int32_t)msgSize, (int32_t)transId, 
-		    (int32_t)niceness ,(uint32_t)slot );
+		    (unsigned char)msgType, 
+		    (int32_t)msgSize, 
+		    (int32_t)transId, 
+		    (int32_t)niceness ,
+		    (PTRTYPE)slot );
 	
 	// . get time 
 	// . returns g_now if we're in a signal handler
@@ -701,7 +704,8 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	if ( slot->m_convertedNiceness == 1 && slot->m_niceness == 0 ) {
 		// note it
 		if ( g_conf.m_logDebugUdp )
-			log("udp: unconverting slot=%"INT32"",(int32_t)slot);
+			log("udp: unconverting slot=%"PTRFMT"",
+			    (PTRTYPE)slot);
 		// go back to niceness 1 for sending back, otherwise their
 		// the callback will be called with niceness 0!!
 		//slot->m_niceness = 1;
@@ -1965,7 +1969,8 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 			// note it
 			if ( g_conf.m_logDebugUdp )
 				log("udp: converting slot from niceness 1 to "
-				    "0. slot=%"INT32" mmsgtype=0x%hhx",(int32_t)slot,
+				    "0. slot=%"PTRFMT" mmsgtype=0x%hhx",
+				    (PTRTYPE)slot,
 				    slot->m_msgType);
 			// convert the niceness
 			slot->m_niceness = 0;
@@ -1995,7 +2000,8 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 			// note it
 			if ( g_conf.m_logDebugUdp )
 				log("udp: converting slot2 from niceness 1 to "
-				    "0. slot=%"INT32" mmsgtype=0x%hhx",(int32_t)slot,
+				    "0. slot=%"PTRFMT" mmsgtype=0x%hhx",
+				    (PTRTYPE)slot,
 				    slot->m_msgType);
 			// convert the niceness
 			slot->m_niceness = 0;
@@ -2034,7 +2040,8 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 		// log that
 		if ( g_conf.m_logDebugUdp )
 			log(LOG_DEBUG,"udp: calling callback/handler for "
-			    "slot=%"INT32" pass=%"INT32" nice=%"INT32"",(int32_t)slot,
+			    "slot=%"PTRFMT" pass=%"INT32" nice=%"INT32"",
+			    (PTRTYPE)slot,
 			    (int32_t)pass,(int32_t)slot->m_niceness);
 
 		// save it
@@ -2053,11 +2060,13 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 		if ( took > 1000 || (slot->m_niceness==0 && took>100))
 			logf(LOG_DEBUG,"udp: took %"INT64" ms to call "
 			     "callback/handler for "
-			     "msgtype=0x%"XINT32" nice=%"INT32" callback=%"UINT32"",
+			     "msgtype=0x%"XINT32" "
+			     "nice=%"INT32" "
+			     "callback=%"PTRFMT"",
 			     took,
 			     (int32_t)slot->m_msgType,
 			     (int32_t)slot->m_niceness,
-			     (uint32_t)slot->m_callback);
+			     (PTRTYPE)slot->m_callback);
 		int64_t elapsed;
 		numCalled++;
 
@@ -2216,10 +2225,11 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 			    "msgType=0x%hhx "
 			    "g_errno=%s "
 			    "niceness=%"INT32" "
-			    "callback=%08"XINT32" took %"INT64" ms (%"INT32" Mbps).",
+			    "callback=%08"PTRFMT" "
+			    "took %"INT64" ms (%"INT32" Mbps).",
 			    slot->m_transId,msgType,mstrerror(g_errno),
 			    slot->m_niceness,
-			    (int32_t)slot->m_callback ,
+			    (PTRTYPE)slot->m_callback ,
 			    took , Mbps );
 			start = now;
 		}
@@ -2394,11 +2404,11 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 					log(LOG_DEBUG,
 					    "udp: Callback2 transId=%"INT32" "
 					    "msgType=0x%hhx "
-					    "g_errno=%s callback2=%08"XINT32""
+					    "g_errno=%s callback2=%08"PTRFMT""
 					    " took %"INT64" ms.",
 					    slot->m_transId,msgType,
 					    mstrerror(g_errno),
-					    (int32_t)slot->m_callback2,
+					    (PTRTYPE)slot->m_callback2,
 					    took );
 			}
 			// clear any g_errno that may have been set
@@ -2608,13 +2618,14 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// this is kinda obsolete now that we have the stats above
 	if ( g_conf.m_logDebugNet ) {
 		took = gettimeofdayInMillisecondsLocal() - start;
-		log(LOG_DEBUG,"net: Handler transId=%"INT32" slot=%"UINT32" "
-		    "msgType=0x%hhx msgSize=%"INT32" g_errno=%s callback=%08"XINT32" "
+		log(LOG_DEBUG,"net: Handler transId=%"INT32" slot=%"PTRFMT" "
+		    "msgType=0x%hhx msgSize=%"INT32" "
+		    "g_errno=%s callback=%08"PTRFMT" "
 		    "niceness=%"INT32" "
 		    "took %"INT64" ms.",
-		    (int32_t)slot->m_transId , (uint32_t)slot,
+		    (int32_t)slot->m_transId , (PTRTYPE)slot,
 		    msgType, (int32_t)slot->m_readBufSize , mstrerror(g_errno),
-		    (int32_t)slot->m_callback,
+		    (PTRTYPE)slot->m_callback,
 		    (int32_t)slot->m_niceness,
 		    took );
 	}
@@ -2638,8 +2649,8 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// debug msg
 	if ( g_conf.m_logDebugUdp ) 
 		log(LOG_DEBUG,"udp: Queuing makeCallbacks_ass() sig for "
-		    "msgType=0x%hhx slot=%"UINT32"", 
-		    slot->m_msgType,(uint32_t)slot);
+		    "msgType=0x%hhx slot=%"PTRFMT"", 
+		    slot->m_msgType,(PTRTYPE)slot);
 	// . if this fails it normally sends a SIGIO but I guess that won't
 	//   happen since we're already in an interrupt handler, so we have
 	//   to let g_loop know to poll
@@ -3243,12 +3254,13 @@ void UdpServer::freeUdpSlot_ass ( UdpSlot *slot ) {
 		char *xx = NULL; *xx = 0;
 	}
 	if ( g_conf.m_logDebugUdp )
-		log(LOG_DEBUG,"udp: freeUdpSlot_ass: Freeing slot tid=%"INT32" "
-		    "dst=%s:%"UINT32" slot=%"UINT32"",
+		log(LOG_DEBUG,"udp: freeUdpSlot_ass: Freeing slot "
+		    "tid=%"INT32" "
+		    "dst=%s:%"UINT32" slot=%"PTRFMT"",
 		    slot->m_transId,
 		    iptoa(slot->m_ip)+6,
 		    (uint32_t)slot->m_port,
-		    (uint32_t)slot);
+		    (PTRTYPE)slot);
 	// remove the bucket
 	m_ptrs [ i ] = NULL;
 	// rehash all buckets below
@@ -3324,12 +3336,14 @@ void UdpServer::replaceHost ( Host *oldHost, Host *newHost ) {
 			char *xx = NULL; *xx = 0;
 		}
 		if ( g_conf.m_logDebugUdp )
-			log(LOG_DEBUG,"udp: replaceHost: Rehashing slot "
-				      "tid=%"INT32" dst=%s:%"UINT32" slot=%"UINT32,
+			log(LOG_DEBUG,
+			    "udp: replaceHost: Rehashing slot "
+			    "tid=%"INT32" dst=%s:%"UINT32" "
+			    "slot=%"PTRFMT"",
 				      slot->m_transId,
 				      iptoa(slot->m_ip)+6,
 				      (uint32_t)slot->m_port,
-				      (uint32_t)slot);
+				      (PTRTYPE)slot);
 		// remove the bucket
 		m_ptrs [ i ] = NULL;
 		// rehash all buckets below

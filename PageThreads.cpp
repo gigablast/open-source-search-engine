@@ -85,8 +85,8 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				p.safePrintf("<td>%"INT64"</td>", t->m_exitTime - t->m_launchedTime); //run time
 				p.safePrintf("<td>%"INT64"</td>", now - t->m_exitTime); //cleanup
 				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime); //total
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((int32_t)t->m_callback));
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((int32_t)t->m_startRoutine));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs) {
 					int64_t took = (t->m_exitTime - t->m_launchedTime);
 					if(took <= 0) took = 1;
@@ -107,8 +107,8 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime);
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((int32_t)t->m_callback));
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((int32_t)t->m_startRoutine));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs ) {
 					int64_t took = (now - t->m_launchedTime);
 					if(took <= 0) took = 1;
@@ -129,8 +129,8 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime);
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((int32_t)t->m_callback));
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((int32_t)t->m_startRoutine));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs) {
 					p.safePrintf("<td>0/%"INT32"</td>", t->m_bytesToGo);
 					p.safePrintf("<td>--</td>");

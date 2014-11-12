@@ -83,7 +83,7 @@ bool Msg2a::makeCatdb( char  *coll,
 	m_urls = (char*)mmalloc(m_urlsBufferSize, "Msg2a");
 	if (!m_urls) {
 		log("db: Unable to allocate %"INT32" bytes for urls",
-		    sizeof(char)*m_urlsBufferSize);
+		    (int32_t)sizeof(char)*m_urlsBufferSize);
 		g_errno = ENOMEM;
 		return gotAllReplies();
 	}
@@ -92,7 +92,7 @@ bool Msg2a::makeCatdb( char  *coll,
 	m_catids = (int32_t*)mmalloc(sizeof(int32_t)*m_catidsBufferSize, "Msg2a");
 	if (!m_catids) {
 		log("db: Unable to allocate %"INT32" bytes for catids",
-		    sizeof(int32_t)*m_catidsBufferSize);
+		    (int32_t)sizeof(int32_t)*m_catidsBufferSize);
 		g_errno = ENOMEM;
 		return gotAllReplies();
 	}
@@ -131,7 +131,7 @@ bool Msg2a::makeCatdb( char  *coll,
 		// read in the number of urls to update/add
 		//diffInStream.read((char*)&m_numUpdateIndexes, sizeof(int32_t));
 		if ( fileRead(diffInStream, &m_numUpdateIndexes,
-				sizeof(int32_t)) != sizeof(int32_t) ) {
+			      sizeof(int32_t)) != sizeof(int32_t) ) {
 			log("db: Error reading content file: %s", inFile);
 			return gotAllReplies();
 		}
@@ -210,7 +210,7 @@ bool Msg2a::makeCatdb( char  *coll,
 				if (!re_urls) {
 					log("db: Unable to allocate %"INT32""
 					    " bytes for urls",
-					    sizeof(char)*m_urlsBufferSize+
+					    (int32_t)sizeof(char)*m_urlsBufferSize+
 					    URL_BUFFER_SIZE);
 					g_errno = ENOMEM;
 					return gotAllReplies();
@@ -394,7 +394,7 @@ bool Msg2a::makeCatdb( char  *coll,
 			if (!re_catids) {
 				log("db: Unable to allocate %"INT32""
 				    " bytes for catids",
-				    sizeof(int32_t)*m_catidsBufferSize+
+				    (int32_t)sizeof(int32_t)*m_catidsBufferSize+
 				    	CATID_BUFFER_SIZE);
 				g_errno = ENOMEM;
 				return gotAllReplies();
