@@ -38,7 +38,8 @@ void IndexList::print() {
 			     (int64_t)getCurrentDocId() );
 			continue;
 		}
-		logf(LOG_DEBUG,"db: %04"INT32") %020lli %03"INT32" %020lli" ,
+		logf(LOG_DEBUG,"db: %04"INT32") %020"INT64" "
+		     "%03"INT32" %020"INT64"" ,
 		     i++ ,
 		     (int64_t)getCurrentTermId12() ,
 		     (int32_t)getCurrentScore(),

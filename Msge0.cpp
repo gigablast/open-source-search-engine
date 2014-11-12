@@ -189,7 +189,7 @@ bool Msge0::sendMsg8a ( int32_t i ) {
 	//TagRec *m = &m_tagRecs[i];
 	// save state into Msg8a
 	m->m_state2 =  this;
-	m->m_state3 = (void *)i;
+	m->m_state3 = (void *)(PTRTYPE)i;
 
 	// how big are all the tags we got for this url
 	int32_t need = sizeof(TagRec);

@@ -476,7 +476,7 @@ void handleRequest36 ( UdpSlot *slot , int32_t netnice ) {
 		// at this point we should not have anyone waiting in line
 		// because we are the first, so just send an error reply back
 		// sanity check. BUT, we have to remove from request table...
-		s_requestTableServer36.m_htable.removeKey(requestHash);
+		s_requestTableServer36.m_htable.removeKey(&requestHash);
                 g_udpServer.sendErrorReply ( slot , g_errno );
 		return;
 	}

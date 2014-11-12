@@ -1194,7 +1194,7 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	log( LOG_DEBUG, "image: Thumbnail size: %"INT32" bytes.", m_imgDataSize );
 	log( LOG_DEBUG, "image: Thumbnail dx=%"INT32" dy=%"INT32".", m_tdx,m_tdy );
-	log( LOG_DEBUG, "image: Thumbnail generated in %lldms.", stop-start );
+	log( LOG_DEBUG, "image: Thumbnail generated in %"INT64"ms.", stop-start );
 }
 
 // . *it is the image type

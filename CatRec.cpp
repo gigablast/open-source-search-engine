@@ -415,8 +415,8 @@ bool CatRec::set ( Url *site ,
 
 	// sanity check
 	if ( p - m_data != m_dataSize ) {
-		log ( "catrec: Serialized datasize %i != %"INT32"",
-		      p - m_data, m_dataSize );
+		log ( "catrec: Serialized datasize %"INT32" != %"INT32"",
+		      (int32_t)(p - m_data), (int32_t)m_dataSize );
 		char *xx = NULL; *xx = 0;
 	}
 	// set our member vars correctly in addition to the site rec

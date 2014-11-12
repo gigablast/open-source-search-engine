@@ -3692,7 +3692,7 @@ int main2 ( int argc , char *argv[] ) {
 		if ( argc != cmdarg + 2 ) goto printHelp;
 		int64_t starttime = gettimeofdayInMilliseconds();
 		QuerySerializeTest( argv[cmdarg + 1] );
-		log(LOG_INFO, "query: took %lldmsecs for query serialize" \
+		log(LOG_INFO, "query: took %"INT64"msecs for query serialize" \
 			"test on %s", gettimeofdayInMilliseconds() - starttime,
 			argv[cmdarg + 1]);
 		return 0;
@@ -8648,7 +8648,7 @@ void dumpDups ( char *coll ) {
 	scores = (char *) mmalloc ( numSlots, "main-dumpDups");
 	if(!slots || !scores) {
 		if(!slots)
-			log(LOG_INFO,"admin: Could not allocate %lld "
+			log(LOG_INFO,"admin: Could not allocate %"INT64" "
 				   "bytes for dumpDups" , 
 				   (int64_t) numSlots * 8 );
 		else mfree(slots, numSlots * 8, "main-dumpDups" );
@@ -8836,7 +8836,7 @@ void dumpDups ( char *coll ) {
 			//is this tid the same as we process in the last run
 			if(tid == -1 && tempTid == lastTid) {
 				log(LOG_INFO,"admin: We broke termlist of "
-				    "termid=%lld. Some "
+				    "termid=%"INT64". Some "
 			   "docids may be repeated in this termlist and "
 			    "we will not know.",
 			    tempTid);
@@ -8987,7 +8987,7 @@ void dumpDups ( char *coll ) {
 			sprintf(buff,"%08"XINT32" %016"XINT64"\n",
 				k.n1, k.n0);
 			f.write(buff,gbstrlen(buff), -1);
-			sprintf(buff,"%lld\n",d);
+			sprintf(buff,"%"INT64"\n",d);
 			f2.write(buff, gbstrlen(buff), -1);
 			
 			k.n0 &= 0xfffffffffffffffeLL;
@@ -9045,7 +9045,7 @@ void dumpDups ( char *coll ) {
 	}
 	// watch out for wrap around
 
-	logf(LOG_INFO,"db: Done generating missing docids. Parsed %lld"
+	logf(LOG_INFO,"db: Done generating missing docids. Parsed %"INT64""
 	     " indexdb records", indexdbCount);
 	mfree ( slots, numSlots * 8, "main-dumpDups");
 	mfree ( scores, numSlots, "main-dumpDups");
@@ -10551,7 +10551,7 @@ bool bucketstest ( char* dbname ) {
 		if(strcmp(dbname, "indexdb") == 0) keySize = 12;
 		RdbBuckets rdbb;
 		rdbb.set (0, 
-			  LONG_MAX , 
+			  0x7fffffff, // LONG_MAX , 
 			  false ,//own data
 			  "buckets-test",
 			  RDB_INDEXDB,
@@ -10570,7 +10570,7 @@ bool bucketstest ( char* dbname ) {
 	RdbBuckets rdbb;
 	char keySize = 12;
 	rdbb.set (0, 
-		  LONG_MAX , 
+		  0x7fffffff,//LONG_MAX , 
 		  false ,//own data
 		  "buckets-test",
 		  RDB_INDEXDB,
@@ -11503,7 +11503,8 @@ skip:
 	//int pid;
 	for ( int32_t i = 0 ; i < s_numThreads ; i++ ) {
 		//int err = pthread_create ( &tid1,&s_attr,startUp,(void *)i) ;
-		if (!g_threads.call(GENERIC_THREAD,0,(void *)i,NULL,startUp)){
+		if (!g_threads.call(GENERIC_THREAD,0,
+				    (void *)(PTRTYPE)i,NULL,startUp)){
 			log("test: Thread launch failed."); return; }
 		//pid = clone ( startUp , buf + stksize * i ,
 		//      CLONE_FS | CLONE_FILES | CLONE_VM | //CLONE_SIGHAND |
@@ -12804,11 +12805,11 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 	memcpy ( tmp + ks-6 , top , 6 );
 	// print the key
 	if ( ks == 12 )
-		fprintf(stdout,"%08lli) %08"XINT32" %016"XINT64"\n",
+		fprintf(stdout,"%08"INT64") %08"XINT32" %016"XINT64"\n",
 			off + (p - buf) ,
 			*(int32_t *)(tmp+8),*(int64_t *)tmp );
 	else
-		fprintf(stdout,"%08lli) %016"XINT64" %016"XINT64"\n",
+		fprintf(stdout,"%08"INT64") %016"XINT64" %016"XINT64"\n",
 			off + (p - buf) ,
 			*(int64_t *)(tmp+8),*(int64_t *)tmp );
 	// go to next key
@@ -12892,7 +12893,8 @@ void dumpIndexdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 		uint8_t dh = g_titledb.getDomHash8FromDocId(d);
 		if ( termId < 0 )
 			printf("k.n1=%08"XINT32" k.n0=%016"XINT64" "
-			       "tid=%015llu score=%03"INT32" docId=%012"INT64" dh=0x%02"XINT32"%s\n" , 
+			       "tid=%015"UINT64" score=%03"INT32" "
+			       "docId=%012"INT64" dh=0x%02"XINT32"%s\n" , 
 			       k.n1, k.n0, (int64_t)g_indexdb.getTermId(k),
 			       (int32_t)g_indexdb.getScore(k) ,
 			       d , (int32_t)dh, dd );
@@ -13062,7 +13064,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		if ( termId < 0 )
 			printf(
 			       "k=%s "
-			       "tid=%015llu "
+			       "tid=%015"UINT64" "
 			       "docId=%012"INT64" "
 
 			       "siterank=%02"INT32" "
@@ -13102,7 +13104,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		else
 			printf(
 			       "k=%s "
-			       "tid=%015llu "
+			       "tid=%015"UINT64" "
 			       "docId=%012"INT64" "
 
 			       "siterank=%02"INT32" "
@@ -13265,7 +13267,7 @@ void dumpDatedb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 			char *ss = "";
 			if ( isTagTerm ) ss = " tagterm";
 			printf("k.n1=%016"XINT64" k.n0=%016"XINT64" "
-			       "tid=%015llu "
+			       "tid=%015"UINT64" "
 			       //"date=%010"UINT32" "
 			       "eidrng=%"INT32"-%"INT32" "
 			       "score=%03"INT32" docId=%012"INT64"%s%s\n" , 
@@ -13321,7 +13323,7 @@ void dumpDatedb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 			// otherwise a lat/lon/time key
 			printf("k.n1=%016"XINT64" "
 			       "k.n0=%016"XINT64" "
-			       "tid=%015llu "
+			       "tid=%015"UINT64" "
 			       "%s=%.06f "
 			       "eventId=%03"INT32" docId=%012"INT64"%s\n" , 
 			       KEY1((char *)k,16),
@@ -13891,7 +13893,7 @@ void dumpLinkdb ( char *coll,
 		//char *ipString = iptoa(ip);
 		printf("k=%s "
 		       "linkeesitehash32=0x%08"XINT32" "
-		       "linkeeurlhash=0x%012llx "
+		       "linkeeurlhash=0x%012"XINT64" "
 		       "linkspam=%"INT32" "
 		       "siterank=%02"INT32" "
 		       //"hopcount=%03hhu "
@@ -15153,15 +15155,15 @@ bool memTest() {
 	log(LOG_INIT, "memtest: Testing 8KB L1 cache.");
 	membustest ( 8000 , 100000 , true );
 
-	log(LOG_INIT, "memtest: Allocating up to %lld bytes",g_mem.m_maxMem);
+	log(LOG_INIT, "memtest: Allocating up to %"INT64" bytes",g_mem.m_maxMem);
 	for (i=0;i<4096;i++) {
 		ptrs[numPtrs] = mmalloc(1024*1024, "memtest");
 		if (!ptrs[numPtrs]) break;
 		numPtrs++;
 	}
 	
-	log(LOG_INIT, "memtest: Was able to allocate %lld bytes of a total of "
-	    "%lld bytes of memory attempted.",
+	log(LOG_INIT, "memtest: Was able to allocate %"INT64" bytes of a total of "
+	    "%"INT64" bytes of memory attempted.",
 	    g_mem.m_used,g_mem.m_maxMem);
 	log(LOG_INIT, "memtest: Dumping core to test max core file size.");
 	char *xx = NULL;
@@ -16182,7 +16184,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			fprintf(fhndl,
 				"<rec1>\n\t<domain>%s</domain>\n"
 				"\t<pages>%"INT32"</pages>\n"
-				//"\t<quality>%lld</quality>\n"
+				//"\t<quality>%"INT64"</quality>\n"
 				"\t<block>\n",
 				buf, tmpdomi->pages
 				//,(tmpdomi->quality/tmpdomi->pages)
@@ -16227,7 +16229,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			fprintf(fhndl,
 				"<rec2>\n\t<ip>%s</ip>\n"
 				"\t<pages>%"INT32"</pages>\n"
-				//"\t<quality>%lld</quality>\n"
+				//"\t<quality>%"INT64"</quality>\n"
 				"\t<block>\n",
 				buf, tmpipi->pages);
 			//(tmpipi->quality/tmpipi->pages));
@@ -16376,9 +16378,9 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			 "<tr><th align=\"left\">Number of Failed Attempts</th>"
 			 "<td>%"INT32"</td></tr><tr></tr><tr>\n"
 			 "<tr><th align=\"left\">Number of Documents in Index"
-			 "</th><td>%lld</td></tr>\n"
+			 "</th><td>%"INT64"</td></tr>\n"
 			 "<tr><th align=\"left\">Estimated Domains in index</th>"
-			 "<td>%lld</td></tr>"
+			 "<td>%"INT64"</td></tr>"
 			 "</table><br><br><br>\n"
 			 ,countDom,countIp,
 			 countDocs, attempts-countDocs,total, 
@@ -16408,9 +16410,9 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 			fprintf( fhndl, "<tr bgcolor=\"%s\"><td>"
 				 "<a href=\"%s%s\" target=\"_blank\">%s</a>"
 				 "</td><td>%"INT32"</td>"
-				 //"<td>%lld</td>"
+				 //"<td>%"INT64"</td>"
 				 "<td>%"INT32"</td>"
-				 "<td>%lld</td><td>", 
+				 "<td>%"INT64"</td><td>", 
 				 color, link_dom,
 				 buf, buf, tmpdomi->lnkCnt,
 				 //(tmpdomi->quality/tmpdomi->pages), 
@@ -16436,7 +16438,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 				buf[len] = '\0';
 				fprintf( fhndl, "\t\t<tr bgcolor=\"green\"><td>"
 					 "</td><td></td><td>%s</td><td></td><td>"
-					 "%"INT32"</td><td>%lld</td></tr>\n", buf, 
+					 "%"INT32"</td><td>%"INT64"</td></tr>\n", buf, 
 					 tmplnk->pages,
 					 ((tmplnk->pages*total)/countDocs) );
 			}
@@ -16482,9 +16484,9 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 				 "</td>"
 				 "<td>%"INT32"</td>"
 				 "<td>%"INT32"</td>"
-				 //"<td>%lld</td>"
+				 //"<td>%"INT64"</td>"
 				 "<td>%"INT32"</td>"
-				 "<td>%lld</td></tr>\n", 
+				 "<td>%"INT64"</td></tr>\n", 
 				 color,
 				 link_ip, buf, buf, tmpipi->numDom, linked,
 				 //(tmpipi->quality/tmpipi->pages), 
@@ -16502,8 +16504,8 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 				else color = clr3;
 				fprintf( fhndl, "<tr bgcolor=\"%s\"><td>"
 					 "</td><td><a href=\"%s%s\">%s</a></td>"
-					 "<td>%"INT32"</td><td>%lld"
-					 "</td><td>%"INT32"</td><td> %lld</td></tr>"
+					 "<td>%"INT32"</td><td>%"INT64""
+					 "</td><td>%"INT32"</td><td> %"INT64"</td></tr>"
 					 "\n", color, link_dom, buf,
 					 buf, tmpdomi->lnkCnt,
 					 (tmpdomi->quality/tmpdomi->pages), 
@@ -16582,7 +16584,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 		mfree( dom_table, numRecs * sizeof(struct dom_info *), "main-dcfdt" );
 
 		int64_t time_end = gettimeofdayInMilliseconds();
-		log( LOG_INFO, "cntDm: Took %lldms to count domains in %"INT32" recs.",
+		log( LOG_INFO, "cntDm: Took %"INT64"ms to count domains in %"INT32" recs.",
 		     time_end-time_start, countDocs );
 		log( LOG_INFO, "cntDm: %"INT32" bytes of Total Memory Used.", 
 		     ima + dma + (8 * numRecs) );
@@ -16635,7 +16637,10 @@ int ip_hcmp (const void *p1, const void *p2) {
 
 // Sort by IP frequency in pages 9->0
 int ip_fcmp (const void *p1, const void *p2) {
-	int32_t n1, n2;
+	//int32_t n1, n2;
+	// break this! need to fix later MDW 11/12/14
+	char *n1 ;
+	char *n2 ;
 	struct ip_info *ii1;
 	struct ip_info *ii2;
 
@@ -16657,7 +16662,11 @@ int ip_fcmp (const void *p1, const void *p2) {
 
 // Sort by number of domains linked to IP, descending
 int ip_dcmp (const void *p1, const void *p2) {
-	int32_t n1, n2;
+	//int32_t n1, n2;
+	// break this! need to fix later MDW 11/12/14
+	char *n1 ;
+	char *n2 ;
+
 	struct ip_info *ii1;
 	struct ip_info *ii2;
 
@@ -16707,7 +16716,10 @@ int dom_hcmp (const void *p1, const void *p2) {
 
 // Sort by page frequency in titlerec 9->0
 int dom_fcmp (const void *p1, const void *p2) {
-	int32_t n1, n2;
+	//int32_t n1, n2;
+	// break this! need to fix later MDW 11/12/14
+	char *n1 ;
+	char *n2 ;
 	struct dom_info *di1;
 	struct dom_info *di2;
 
@@ -16730,7 +16742,10 @@ int dom_fcmp (const void *p1, const void *p2) {
 
 // Sort by quantity of outgoing links 9-0
 int dom_lcmp (const void *p1, const void *p2) {
-	int32_t n1, n2;
+	//int32_t n1, n2;
+	// break this! need to fix later MDW 11/12/14
+	char *n1 ;
+	char *n2 ;
 	struct dom_info *di1;
 	struct dom_info *di2;
 
@@ -16784,7 +16799,10 @@ int lnk_hcmp (const void *p1, const void *p2) {
 #if 0
 // Sort by frequency of link use, 9-0
 int lnk_fcmp (const void *p1, const void *p2) {
-	int32_t n1, n2;
+	//int32_t n1, n2;
+	// break this! need to fix later MDW 11/12/14
+	char *n1 ;
+	char *n2 ;
 	struct lnk_info *li1;
 	struct lnk_info *li2;
 

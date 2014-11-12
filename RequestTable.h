@@ -28,7 +28,8 @@ class RequestTable {
 	void cancelRequest ( int64_t requestHash , void *state2 );
 	// . key of each slot is "requestHash"
 	// . value of each slot is "state2" from call to addRequest above
-	HashTableT <int64_t,int32_t> m_htable;
+	//HashTableT <int64_t,int32_t> m_htable;
+	HashTableX m_htable;
 	
 	// . hash table buffer
 	char m_buf[HT_BUF_SIZE];

@@ -2104,10 +2104,10 @@ void Date::addPtr ( Date *ptr , int32_t i , class Dates *parent ) {
 	//if ( m_b - m_a > 50 ) { char *xx=NULL;*xx=0; }
 
 	// ptr hash
-	if ( m_numPtrs == 0 ) m_ptrHash = (uint32_t)ptr;
+	if ( m_numPtrs == 0 ) m_ptrHash = (uint32_t)(PTRTYPE)ptr;
 	else {
 		m_ptrHash *= 439523;
-		m_ptrHash ^= (uint32_t)ptr;
+		m_ptrHash ^= (uint32_t)(PTRTYPE)ptr;
 		if ( m_ptrHash == 0 ) m_ptrHash = 1234567;
 	}
 
@@ -9079,7 +9079,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 				//if ( dp->m_flags & DF_IN_VERTICAL_LIST )
 				//	break;
 
-				uint64_t key = (uint32_t)di;
+				uint64_t key = (uint32_t)(PTRTYPE)di;
 				// shift up
 				key <<= 32LL;
 				// need DD now, if there
@@ -9135,9 +9135,9 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 				//   then do not allow it
 				uint32_t key2;
 				if ( DD ) key2 = (uint32_t)DD->m_ptrHash;
-				else      key2 = (uint32_t)di;
+				else      key2 = (uint32_t)(PTRTYPE)di;
 				key2 *= 439523;
-				key2 ^= (uint32_t)dp;
+				key2 ^= (uint32_t)(PTRTYPE)dp;
 				// if this would be a date we have already
 				// added, then skip it!
 				if ( comboTable.isInTable ( &key2 ) ) {
@@ -9182,7 +9182,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 				// they are brother sections. maybe instead the
 				// fix relies on adding better implied sections
 				// around such beasties!!
-				if ( pp->m_mark == (int32_t)di &&
+				if ( pp->m_mark == (int32_t)(PTRTYPE)di &&
 				     // store hours can always skip over
 				     // this section to fix thewoodencow.com
 				     ! storeHoursCount &&
@@ -9219,7 +9219,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 			// make sure we always grab a date from section "pp"
 			// from now on, now that we know it has a date that
 			// is compatible with us
-			pp->m_mark = (int32_t)di;
+			pp->m_mark = (int32_t)(PTRTYPE)di;
 			// . do not repeat this guy in another parent sec
 			// . no, only the last date in the telescope should
 			//   have this set for our MULTIPLE HEADER algo
@@ -15136,7 +15136,7 @@ Date **Dates::getDateElements ( Date *di , int32_t *ne ) {
 	// get the ending offset after adding the date ptrs
 	int32_t endOffset = m_cbuf.length();
 	// set length
-	*ne = (endOffset - startOffset)/4;
+	*ne = (endOffset - startOffset)/sizeof(Date *);
 	// set that
 	di->m_numFlatPtrs = *ne;
 	// must be > 0 
@@ -15161,7 +15161,7 @@ Date **Dates::getDateElements ( Date *di , int32_t *ne ) {
 bool Dates::addPtrToArray ( Date *dp ) {
 	// only add base types
 	if ( dp->m_numPtrs == 0 ) {
-		if ( ! m_cbuf.pushLong((int32_t)dp) ) return false;
+		if ( ! m_cbuf.pushPtr(dp) ) return false;
 		return true;
 	}
 	// recursive otherwise
@@ -16703,7 +16703,8 @@ void Date::print ( SafeBuf *sbArg ,
 	if ( m_flags & DF_EXACT_TOD )
 		sb->safePrintf("exacttod ");
 	if ( m_tableCell ) {
-	       sb->safePrintf("tablesec=0x%"XINT32" ",(int32_t)m_tableCell->m_tableSec);
+	       sb->safePrintf("tablesec=0x%"PTRFMT" ",
+			      (PTRTYPE)m_tableCell->m_tableSec);
 		sb->safePrintf("row=%"INT32" ",m_tableCell->m_rowNum);
 		sb->safePrintf("col=%"INT32" ",m_tableCell->m_colNum);
 	}

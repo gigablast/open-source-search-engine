@@ -1064,7 +1064,7 @@ bool Addresses::set ( Sections  *sections    ,
 	try { m_msg2c = new (Msg2c); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("addr: msg2c: new(%i): %s", sizeof(Msg2c), 
+		log("addr: msg2c: new(%"INT32"): %s", (int32_t)sizeof(Msg2c), 
 		    mstrerror(g_errno));
 		// return true on error with g_errno set
 		return true;
@@ -12756,7 +12756,7 @@ int32_t Address::print2 ( int32_t i , SafeBuf *pbuf , int64_t uh64 ) {
 		int64_t strh = 0LL;
 		if ( m_street ) strh = m_street->m_hash;
 		pbuf->safePrintf("<td><nobr>"
-				 "k.n1=0x%16llx n0=0x%16llx "
+				 "k.n1=0x%16"XINT64" n0=0x%16"XINT64" "
 				 //"addrhash=0x%"XINT64" "
 				 "bigHash64=0x%016"XINT64" "
 				 "docId=%"UINT64" "
@@ -16460,7 +16460,7 @@ void handleRequest2c ( UdpSlot *slot , int32_t nicenessWTF ) {
 	try { st = new (State2c); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("msg2c: new(%i): %s", sizeof(State2c), mstrerror(g_errno));
+		log("msg2c: new(%"INT32"): %s", (int32_t)sizeof(State2c), mstrerror(g_errno));
 		return g_udpServer.sendErrorReply ( slot, g_errno );
 	}
 	mnew ( st , sizeof(State2c) , "hndl2c" );

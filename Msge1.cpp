@@ -288,7 +288,7 @@ bool Msge1::sendMsgC ( int32_t i , char *host , int32_t hlen ) {
 	MsgC  *m    = &m_msgCs[i];
 	// save i and this in the msgC itself
 	m->m_state2 = this;
-	m->m_state3 = (void *)i;
+	m->m_state3 = (void *)(PTRTYPE)i;
 
 	// note it
 	//if ( g_conf.m_logDebugSpider )
@@ -408,7 +408,7 @@ bool Msge1::addTag ( int32_t i ) {
 	MsgC  *m    = &m_msgCs[i];
 	// save i and this in the msgC itself
 	m->m_state2 = this;
-	m->m_state3 = (void *)i;
+	m->m_state3 = (void *)(PTRTYPE)i;
 	// store the domain here
 	//char *domBuf = m->m_request;
 	// get the domain

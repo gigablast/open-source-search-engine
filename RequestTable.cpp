@@ -3,7 +3,7 @@
 
 RequestTable::RequestTable ( ) {
 	m_bufSize = 2 * HT_BUF_SIZE;
-	m_htable.set ( 50 , m_buf, m_bufSize, true ); // allow dup keys?
+	//m_htable.set ( 50 , m_buf, m_bufSize, true ); // allow dup keys?
 	m_processHash = 0;
 }
 
@@ -22,8 +22,15 @@ int32_t RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 		char *xx = NULL; *xx = 0;
 	}
 
+	if ( m_htable.m_ks == 0 ) {
+		//HashTableT <int64_t,int32_t> m_htable;
+		// allow dups!
+		m_htable.set(8,sizeof(char *),50,m_buf,m_bufSize,
+			     true,0,"rqstbl");
+	}
+
 	// check if we have the state already in the hashtable
-	/*int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
+	/*int32_t n = m_htable.getSlot ( requestHash );
 	while ( m_htable.m_keys[n] ){
 		// count if same key
 		if ( m_htable.m_keys[n] == requestHash &&
@@ -35,12 +42,12 @@ int32_t RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 		}*/
 
 	// returns false and set g_errno on error, so we should return -1
-	if ( ! m_htable.addKey(requestHash, (int32_t)state2) ) return -1;
+	if ( ! m_htable.addKey(&requestHash, &state2) ) return -1;
 
  	//log ( "requesttable: added hash=%"INT64" state2=%"XINT32"", requestHash,
 	//     (int32_t) state2 );
 	// count the slots that have this key
-	int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
+	int32_t n = m_htable.getSlot ( &requestHash );
 	// sanity check
 	if ( n < 0 ) { char *xx = NULL; *xx = 0; }
 	
@@ -52,9 +59,10 @@ int32_t RequestTable::addRequest ( int64_t requestHash , void *state2 ) {
 	// count how many of our key are in the table, since we allow dup keys
 	int32_t count = 0;
 
-	while ( m_htable.m_keys[n] ){
+	while ( m_htable.m_flags[n]) { // m_keys[n] ){
 		// count if same key
-		if ( m_htable.m_keys[n] == requestHash ) count++;
+		if ( *(int64_t *)m_htable.getValueFromSlot(n) == requestHash )
+			count++;
 		// advance n, wrapping if necessary
 		if ( ++n >= m_htable.m_numSlots ) n = 0;
 	}
@@ -82,13 +90,14 @@ void RequestTable::gotReply ( int64_t  requestHash ,
 
 	// save g_errno in case callback resets it
 	int32_t saved = g_errno;
-	int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
+	int32_t n = m_htable.getSlot ( &requestHash );
 	while ( n >= 0 ) {
 		// restore it before returning
 		g_errno = saved;
 		
 		// state2 is in the table
-		void *state2 = (void *)m_htable.m_vals[n];
+		//void *state2 = (void *)m_htable.m_vals[n];
+		void *state2 = *(void **)m_htable.getValueFromSlot(n);
 		// remove from table BEFORE calling callback in case callback
 		// somehow alters the table!
 		//m_htable.removeKey ( requestHash );
@@ -101,7 +110,7 @@ void RequestTable::gotReply ( int64_t  requestHash ,
 		// otherwise, it is, call callback
 		callback ( reply , replySize , state1 , state2 );
 		// get next
-		n = m_htable.getOccupiedSlotNum ( requestHash );
+		n = m_htable.getSlot ( &requestHash );
 	}
 	// all done, unlock the hash table.
 	m_processHash = 0;
@@ -110,17 +119,18 @@ void RequestTable::gotReply ( int64_t  requestHash ,
 
 void RequestTable::cancelRequest ( int64_t requestHash , void *state2 ) {
 	// there should only be one request for this request hash
-	int32_t n = m_htable.getOccupiedSlotNum ( requestHash );
+	int32_t n = m_htable.getSlot ( &requestHash );
 	if ( n < 0 ){
 		char *xx = NULL; *xx = 0;
 	}
-	m_htable.removeKey(requestHash);
+	m_htable.removeKey(&requestHash);
 	// check if there is any other remaining. core if there is
-	n = m_htable.getOccupiedSlotNum ( requestHash );
+	n = m_htable.getSlot ( &requestHash );
 	if ( n >= 0 ){
 		char *xx = NULL; *xx = 0;
 	}
-	log( LOG_INFO, "reqtable: cancelled request hash=%"INT64" state2=%"XINT32"", 
-	     requestHash, (int32_t) state2 );
+	log( LOG_INFO, "reqtable: cancelled "
+	     "request hash=%"INT64" state2=%"PTRFMT"", 
+	     requestHash, (PTRTYPE) state2 );
 	return;
 }
