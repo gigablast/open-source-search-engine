@@ -2175,8 +2175,10 @@ void XmlDoc::getRebuiltSpiderRequest ( SpiderRequest *sreq ) {
 	sreq->m_siteNumInlinks       = m_siteNumInlinks;
 	sreq->m_siteNumInlinksValid  = true;
 
+	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
 	// set other fields besides key
-	sreq->m_firstIp              = m_ip;
+	sreq->m_firstIp              = m_firstIp;
 	sreq->m_hostHash32           = m_hostHash32a;
 	//sreq->m_domHash32            = m_domHash32;
 	//sreq->m_siteNumInlinks       = m_siteNumInlinks;
@@ -2217,7 +2219,7 @@ void XmlDoc::getRebuiltSpiderRequest ( SpiderRequest *sreq ) {
 	long long uh48 = fu->getUrlHash48();
 	// set the key properly to reflect the new "first ip" 
 	// since we shard spiderdb by that.
-	sreq->m_key = g_spiderdb.makeKey ( m_ip,
+	sreq->m_key = g_spiderdb.makeKey ( m_firstIp,//ip,
 					   uh48,
 					   true,//is req?
 					   0LL, // parentDocId , 
@@ -22075,6 +22077,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//	odp = od->getDates();
 	//	if ( ! odp || odp==(void *)-1) return (char *)odp;
 	//}
+
+	// need firstip if adding a rebuilt spider request
+	if ( m_useSecondaryRdbs && ! m_isDiffbotJSONObject ) {
+		long *fip = getFirstIp();
+		if ( ! fip || fip == (void *)-1 ) return (char *)fip;
+	}
+
 
 	// shit, we need a spider reply so that it will not re-add the
 	// spider request to waiting tree, we ignore docid-based
