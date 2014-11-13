@@ -4029,7 +4029,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbfacetstr:product.color",
 	 "Returns facets in "
-	 "of the color field in a JSON document like "
+	 "the color field in a JSON document like "
 	 "<i>{ \"product\":{\"color\":\"red\"}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;color&gt;red&lt;/price&gt;&lt;/product&gt;"
@@ -4037,7 +4037,15 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
-
+	{"gbfacetstr", 
+	 FIELD_GBFACETSTR, 
+	 false,
+	 "gbfacetstr:gbtagsite cat",
+	 "Returns facets from the site names of all pages "
+	 "that contain the word 'cat' or 'cats', etc."
+	 ,
+	 NULL,
+	 0},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
 	 "gbfacetint:product.cores",
@@ -4063,6 +4071,13 @@ struct QueryField g_fields[] = {
 	 "Returns facets in "
 	 "of the <i>size</i> field (either in json, field or a meta tag) "
 	 "and cluster the results into the specified ranges.",
+	 NULL,
+	 0},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:gbsitenuminlinks",
+	 "Returns facets based on # of site inlinks the site of each "
+	 "result has.",
 	 NULL,
 	 0},
 
