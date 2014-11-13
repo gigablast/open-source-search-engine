@@ -349,7 +349,7 @@ bool Msg39::controlLoop ( ) {
 		// reset ourselves, partially, anyway, not tmpq etc.
 		reset2();
 		// debug log
-		if ( ! m_r->m_forSectionStats )
+		if ( ! m_r->m_forSectionStats && m_debug )
 			log("msg39: docid split phase %lli-%lli",d0,d1);
 		// wtf?
 		//if ( d0 >= d1 ) break;
