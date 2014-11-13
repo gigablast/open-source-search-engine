@@ -6926,7 +6926,7 @@ long dumpSpiderdb ( char *coll,
 		if ( ! printStats ) {
 			printf( "offset=%lli ",curOff);
 			g_spiderdb.print ( srec );
-			printf(" age=%lis",now-sreq->m_addedTime);
+			printf(" requestage=%lis",now-sreq->m_addedTime);
 			printf(" hadReply=%li",(long)hadReply);
 
 			printf(" errcount=%li",(long)s_lastErrCount);

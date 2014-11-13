@@ -2198,7 +2198,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	// default is a repairMode of 0, "not running"
 	char *status = "not running";
 	if ( g_repairMode == 0 && g_conf.m_repairingEnabled )
-		status = "waiting for previous repair to complete";
+		status = "waiting for previous rebuild to complete";
 	if ( g_repairMode == 1 )
 		status = "waiting for spiders or merge to stop";
 	if ( g_repairMode == 2 )			
@@ -2265,7 +2265,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 " id=\"repairstatustable\">"
 
 			 "<tr class=hdrow><td colspan=2><b><center>"
-			 "Repair Status</center></b></td></tr>\n"
+			 "Rebuild Status</center></b></td></tr>\n"
 
 			 "<tr bgcolor=#%s><td colspan=2>"
 			 "<font size=-2>"
@@ -2278,18 +2278,18 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "<tr bgcolor=#%s><td width=50%%><b>status</b></td>"
 			 "<td>%s</td></tr>\n"
 
-			 "<tr bgcolor=#%s><td width=50%%><b>repair mode</b>"
+			 "<tr bgcolor=#%s><td width=50%%><b>rebuild mode</b>"
 			 "</td>"
 			 "<td>%li</td></tr>\n"
 
 			 "<tr bgcolor=#%s>"
-			 "<td width=50%%><b>min repair mode</b></td>"
+			 "<td width=50%%><b>min rebuild mode</b></td>"
 			 "<td>%li</td></tr>\n"
 
 			 "<tr bgcolor=#%s>"
-			 "<td width=50%%><b>host ID with min repair mode"
+			 "<td width=50%%><b>host ID with min rebuild mode"
 			 "</b></td>"
-			 "<td><a href=\"http://%s:%hu/admin/repair\">"
+			 "<td><a href=\"http://%s:%hu/admin/rebuild\">"
 			 "%li</a></td></tr>\n"
 
 			 "<tr bgcolor=#%s><td><b>old collection</b></td>"
@@ -2536,7 +2536,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 
 			 // current collection being repaired
 			 "<tr class=hdrow><td colspan=2><b><center>"
-			 "Repair Settings In Use</center></b></td></tr>"
+			 "Rebuild Settings In Use</center></b></td></tr>"
 
 			 // . print parms for this repair
 			 // . they may differ than current controls because

@@ -3592,7 +3592,7 @@ bool SafeBuf::printTimeAgo ( long ago , long now , bool shorthand ) {
 	}
 	// do not show if more than 1 wk old! we want to seem as
 	// fresh as possible
-	if ( ! printed && ago > 0 ) { // && si->m_isRootAdmin ) {
+	if ( ! printed && ago > 0 ) { // && si->m_isMasterAdmin ) {
 		long ts = now - ago;
 		struct tm *timeStruct = localtime ( &ts );
 		char tmp[100];

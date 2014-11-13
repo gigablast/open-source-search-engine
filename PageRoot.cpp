@@ -2196,7 +2196,7 @@ public:
 	//Msg4       m_msg4;
 	Msg7       m_msg7;
 	TcpSocket *m_socket;
-        bool       m_isRootAdmin;
+        bool       m_isMasterAdmin;
 	char       m_coll[MAX_COLL_LEN+1];
 	bool       m_goodAnswer;
 	bool       m_doTuringTest;
@@ -2374,7 +2374,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin
 	st1->m_socket  = sock;
-	st1->m_isRootAdmin = isAdmin;
+	st1->m_isMasterAdmin = isAdmin;
 
 	/*
 	// save the url
@@ -2446,7 +2446,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	long now = getTimeGlobal();
 	// . allow 1 submit every 1 hour
 	// . restrict by submitter domain ip
-	if ( ! st1->m_isRootAdmin &&
+	if ( ! st1->m_isMasterAdmin &&
 	     ! canSubmit ( h , now , cr->m_maxAddUrlsPerIpDomPerDay ) ) {
 		// return error page
 		//g_errno = ETOOEARLY;
@@ -2472,7 +2472,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// check it, if turing test is enabled for this collection
 	/*
-	if ( ! st1->m_isRootAdmin && cr->m_doTuringTest && 
+	if ( ! st1->m_isMasterAdmin && cr->m_doTuringTest && 
 	     ! g_turingTest.isHuman(r) )  {
 		// log note so we know it didn't make it
 		g_msg = " (error: bad answer)";
@@ -2527,7 +2527,7 @@ void doneInjectingWrapper3 ( void *st ) {
 	log(LOG_INFO,"http: add url %s (%s)",url ,mstrerror(g_errno));
 	// extract info from state
 	TcpSocket *sock    = st1->m_socket;
-	//bool       isAdmin = st1->m_isRootAdmin;
+	//bool       isAdmin = st1->m_isMasterAdmin;
 	//char      *url     = NULL;
 	//if ( st1->m_urlLen ) url = st1->m_url;
 	// re-null it out if just http://

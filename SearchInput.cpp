@@ -358,8 +358,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//
 	//////
 
-	// set m_isRootAdmin to zero if no correct ip or password
-	if ( ! g_conf.isRootAdmin ( sock , &m_hr ) ) m_isRootAdmin = 0;
+	// set m_isMasterAdmin to zero if no correct ip or password
+	if ( ! g_conf.isMasterAdmin ( sock , &m_hr ) ) m_isMasterAdmin = 0;
 
 	// collection admin?
 	m_isCollAdmin = g_conf.isCollAdmin ( sock , &m_hr );

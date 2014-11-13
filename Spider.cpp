@@ -89,6 +89,9 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	sb->safePrintf("k=%s ",KEYSTR(this,
 				      getKeySizeFromRdbId(RDB_SPIDERDB)));
 
+	// indicate it's a request not a reply
+	sb->safePrintf("REQ ");
+
 	sb->safePrintf("uh48=%llu ",getUrlHash48());
 	// if negtaive bail early now
 	if ( (m_key.n0 & 0x01) == 0x00 ) {
@@ -206,10 +209,15 @@ long SpiderReply::print ( SafeBuf *sbarg ) {
 	SafeBuf tmp;
 	if ( ! sb ) sb = &tmp;
 
-	sb->safePrintf("k.n1=0x%llx ",m_key.n1);
-	sb->safePrintf("k.n0=0x%llx ",m_key.n0);
+	//sb->safePrintf("k.n1=0x%llx ",m_key.n1);
+	//sb->safePrintf("k.n0=0x%llx ",m_key.n0);
+	sb->safePrintf("k=%s ",KEYSTR(this,sizeof(SPIDERDBKEY)));
+
+	// indicate it's a reply
+	sb->safePrintf("REP ");
 
 	sb->safePrintf("uh48=%llu ",getUrlHash48());
+
 	sb->safePrintf("parentDocId=%llu ",getParentDocId());
 
 	// if negtaive bail early now
@@ -670,7 +678,10 @@ bool Spiderdb::init2 ( long treeMem ) {
 			    0             , // maxCacheNodes               ,
 			    false         , // half keys?
 			    false         , // save cache?
-			    NULL          );// &m_pc 
+			    NULL          , // &m_pc 
+			    false         , // isTitledb?
+			    false         , // preload diskpagecache
+			    sizeof(key128_t));
 }
 
 /*

@@ -347,7 +347,7 @@ class Parms {
 			  bool isCrawlbot ,
 			  char format, //bool isJSON,
 			  TcpSocket *sock,
-			  bool isRootAdmin,
+			  bool isMasterAdmin,
 			  bool isCollAdmin
 			  );
 
@@ -384,7 +384,7 @@ class Parms {
 			 bool lastRow ,
 			 bool isCrawlbot ,//= false,
 			 char format , //= FORMAT_HTML,
-			 bool isRootAdmin ,
+			 bool isMasterAdmin ,
 			 bool isCollAdmin ,
 			 class TcpSocket *sock );
 

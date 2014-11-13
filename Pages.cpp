@@ -142,12 +142,12 @@ static WebPage s_pages[] = {
 	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "hosts status", sendPageHosts    , 0 ,NULL,NULL,
-	  PG_STATUS|PG_ROOTADMIN},
+	  PG_STATUS|PG_MASTERADMIN},
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_ROOTADMIN},
+	  PG_MASTERADMIN},
 
 	// use POST for html head/tail and page root html. might be large.
 	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,1,M_POST,
@@ -163,12 +163,12 @@ static WebPage s_pages[] = {
 
 	{ PAGE_SPIDERPROXIES,"admin/proxies"   , 0 , "proxies" ,  1 , 0,
 	  "proxies", sendPageGeneric  , 0,NULL,NULL,
-	  PG_ROOTADMIN } ,
+	  PG_MASTERADMIN } ,
 
 	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "log controls", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_ROOTADMIN},
+	  PG_MASTERADMIN},
 
 	{ PAGE_COLLPASSWORDS2,//BASIC_SECURITY, 
 	  "admin/collectionpasswords2", 0,"collection passwords",0,0,
@@ -176,18 +176,18 @@ static WebPage s_pages[] = {
 	  PG_COLLADMIN|PG_NOAPI},
 
 
-	{ PAGE_ROOTPASSWORDS, "admin/rootpasswords", 
-	  0 , "root passwords" ,  1 , 0 ,
+	{ PAGE_MASTERPASSWORDS, "admin/masterpasswords", 
+	  0 , "master passwords" ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "root passwords", 
+	  "master passwords", 
 	  sendPageGeneric , 0 ,NULL,NULL,
-	  PG_ROOTADMIN},
+	  PG_MASTERADMIN},
 
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection",
 	  sendPageAddColl  , 0 ,NULL,NULL,
-	  PG_ROOTADMIN},
+	  PG_MASTERADMIN},
 
 	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
 	  //USER_MASTER , 
@@ -199,13 +199,13 @@ static WebPage s_pages[] = {
 	  //USER_MASTER , 
 	  "clone one collection's settings to another",
 	  sendPageCloneColl  , 0 ,NULL,NULL,
-	  PG_ROOTADMIN},
+	  PG_MASTERADMIN},
 
-	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
-	  "repair data",
+	{ PAGE_REPAIR    , "admin/rebuild"   , 0 , "rebuild" ,  1 , 0 ,
+	  "rebuild data",
 	  //USER_MASTER ,
 	  sendPageGeneric , 0 ,NULL,NULL,
-	  PG_ROOTADMIN },
+	  PG_MASTERADMIN },
 
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
 	  "prioritize urls for spidering",
@@ -235,31 +235,31 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY , 
 	  "general statistics",
 	  sendPageStats    , 0 ,NULL,NULL,
-	  PG_STATUS|PG_ROOTADMIN},
+	  PG_STATUS|PG_MASTERADMIN},
 
 	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
 	  "query stats graph",
 	  sendPageGraph  , 2  ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "function performance graph",
 	  sendPagePerf     , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "sockets",
 	  sendPageSockets  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
 	  //USER_MASTER ,  
 	  "logview",
 	  sendPageLogView  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
 
 //	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
 //	  //USER_MASTER , 
@@ -270,19 +270,19 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
 	  sendPageAutoban   , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 ,M_POST,
 	  //USER_MASTER , 
 	  "profiler",
 	  sendPageProfiler   , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads",
 	  sendPageThreads  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
 
 	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
@@ -299,12 +299,12 @@ static WebPage s_pages[] = {
 	{ PAGE_QA , "admin/qa"         , 0 , "qa" , 0 , 0 ,
 	  "quality assurance", 
 	  sendPageQA , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_IMPORT , "admin/import"         , 0 , "import" , 0 , 0 ,
 	  "import documents from another cluster", 
 	  sendPageGeneric , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
@@ -322,25 +322,25 @@ static WebPage s_pages[] = {
 	  //USER_MASTER ,
 	  "indexdb",
 	  sendPageIndexdb  , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_TITLEDB   , "admin/titledb" , 0 , "titledb"         ,  0 , 0,
 	  //USER_MASTER , 
 	  "titledb",
 	  sendPageTitledb  , 2,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 	// 1 = usePost
 
 	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
 	  "simplified spider controls",
 	  sendPageCrawlbot , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "spider queue",
 	  sendPageSpiderdb , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_ROOTADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
 
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
@@ -355,19 +355,19 @@ static WebPage s_pages[] = {
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
 	  sendPageSEO   , 2 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 #else
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
 	  sendPageResults  , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 #endif
 
 	{ PAGE_ACCESS    , "admin/access" , 0 , "access" ,  1 , M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "access password, ip, admin ips etc. all goes in here",
 	  sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_SEARCHBOX , "admin/searchbox", 0 , "search" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
@@ -391,7 +391,7 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb",
 	  sendPageCatdb    , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_ROOTADMIN},
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
@@ -601,7 +601,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//Host *h = g_hostdb.m_myHost;
 
 	// now use this...
-	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
 
 
 	CollectionRec *cr = g_collectiondb.getRec ( r , true );
@@ -618,10 +618,10 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// no longer, we let anyone snoop around to check out the gui
 	//char guest = r->getLong("guest",0);
 
-	//if ( ! publicPage && ! isRootAdmin && ! guest )
+	//if ( ! publicPage && ! isMasterAdmin && ! guest )
 	//	return sendPageLogin ( s , r );
 
-	if ( page == PAGE_CRAWLBOT && ! isRootAdmin )
+	if ( page == PAGE_CRAWLBOT && ! isMasterAdmin )
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
 
@@ -747,13 +747,13 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// if not the root admin only all user to change settings, etc.
 	// if the collection rec is a guest collection. i.e. in the cloud.
 	//
-	//bool isRootAdmin = g_conf.isRootAdmin(sock,hr);
+	//bool isMasterAdmin = g_conf.isMasterAdmin(sock,hr);
 	bool isRootColl = false;
 	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
 	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
 	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
 	// the main,dmoz and demo collections are root admin only
-	// if ( ! isRootAdmin && isRootColl ) {
+	// if ( ! isMasterAdmin && isRootColl ) {
 	// 	g_errno = ENOPERM;
 	// 	return log("parms: root admin can only change main/dmoz/demo"
 	// 		   " collections.");
@@ -761,7 +761,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// just knowing the collection name is enough for a cloud user to
 	// modify the collection's parms. however, to modify the master 
 	// controls or stuff in g_conf, you have to be root admin.
-	// if ( ! g_conf.m_allowCloudUsers && ! isRootAdmin ) {
+	// if ( ! g_conf.m_allowCloudUsers && ! isMasterAdmin ) {
 	// 	//g_errno = ENOPERM;
 	// 	//return log("parms: permission denied for user");
 	// 	return sendPageLogin ( s , r );
@@ -787,7 +787,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . convert http request to list of parmdb records
 	// . will only add parm recs we have permission to modify!!!
 	// . if no collection supplied will just return true with no g_errno
-	if ( //isRootAdmin &&
+	if ( //isMasterAdmin &&
 	     ! g_parms.convertHttpRequestToParmList ( r, parmList, page, s))
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
@@ -2404,6 +2404,12 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_DELCOLL ) continue;
 		if ( i == PAGE_CLONECOLL ) continue;
 
+		// ignore collection passwords if 
+		// g_conf.m_useCollectionPasswords is false
+		if ( ! g_conf.m_useCollectionPasswords &&
+		     (i == PAGE_COLLPASSWORDS||i == PAGE_COLLPASSWORDS2) )
+			continue;
+
 		// put this back in
 		//if ( i == PAGE_HOSTS ) continue;
 
@@ -2571,9 +2577,9 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	char *s = "s";
 	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
 
-	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
 
-	if ( isRootAdmin )
+	if ( isMasterAdmin )
 		sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
 				 "</center>\n",
 				 g_collectiondb.m_numRecsUsed , s );
@@ -2617,7 +2623,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		//
 		// if not root admin and collrec's password does not match
 		// the one we are logged in with (in the cookie) then skip it
-		// if ( ! isRootAdmin &&
+		// if ( ! isMasterAdmin &&
 		//      cr->m_password &&
 		//      ! strcmp(cr->m_password,pwd) )
 		// 	continue;
@@ -3726,11 +3732,11 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	bool hasPermission = false;
 
 	// this password applies to ALL collections. it's the root admin pwd
-	if ( cr && pwd && g_conf.isRootAdmin ( socket , hr ) ) 
+	if ( cr && pwd && g_conf.isMasterAdmin ( socket , hr ) ) 
 		hasPermission = true;
 
 	if ( emsg.length() == 0 && ! hasPermission && pwd )
-		emsg.safePrintf("Root password incorrect");
+		emsg.safePrintf("Master password incorrect");
 
 
 	// sanity
@@ -3793,7 +3799,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		  //"</td><td></td></tr>"
 		  //"<tr><td>"
 
-		  "<b>Root Password : &nbsp; </td>"
+		  "<b>Master Password : &nbsp; </td>"
 		  "<td><input id=ppp type=password name=pwd size=30>"
 		  "</td><td>"
 		  "<input type=submit value=ok border=0 onclick=\""
@@ -3885,9 +3891,9 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("URGENT. Please specify a ROOT password "
+		mb->safePrintf("URGENT. Please specify a MASTER password "
 			       "or IP address in the "
-			       "<a href=/admin/rootpasswords>root "
+			       "<a href=/admin/masterpasswords>master "
 			       "password</a> "
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
@@ -3897,6 +3903,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
 	if ( cr &&
+	     g_conf.m_useCollectionPasswords &&
 	     cr->m_collectionPasswords.length() == 0 && 
 	     cr->m_collectionIps.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
@@ -3987,8 +3994,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	WebPage *wp = g_pages.getPage(page);
 
 	if ( wp && 
-	     (wp->m_pgflags & (PG_ROOTADMIN|PG_COLLADMIN)) &&
-	     ! g_conf.isRootAdmin(sock,hr) &&
+	     (wp->m_pgflags & (PG_MASTERADMIN|PG_COLLADMIN)) &&
+	     ! g_conf.isMasterAdmin(sock,hr) &&
 	     ! g_conf.isCollAdmin(sock,hr) ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
@@ -3999,7 +4006,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 
 		mb->safePrintf("You have no write access to these "
 			       "controls. Please enter the collection or "
-			       "root password to get access: "
+			       "master password to get access: "
 
 			       "<form method=GET action=\"/%s\" name=xyz>"
 

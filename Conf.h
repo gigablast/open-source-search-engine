@@ -55,11 +55,11 @@ class Conf {
 			   class CollectionRec *cr) ;
 
 
-	bool isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
+	bool isMasterAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
 	//bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
 	//bool isSpamAssassin ( class TcpSocket *s , class HttpRequest *r );
-	bool hasRootPwd ( HttpRequest *hr ) ;
-	bool isRootIp      ( unsigned long ip );
+	bool hasMasterPwd ( HttpRequest *hr ) ;
+	bool isMasterIp      ( unsigned long ip );
 	bool isConnectIp    ( unsigned long ip );
 
 	// loads conf parms from this file "{dir}/gb.conf"
@@ -470,6 +470,8 @@ class Conf {
 	// redhat 9's NPTL doesn't like our async signals
 	bool   m_allowAsyncSignals;
 
+	bool   m_useCollectionPasswords;
+
 	bool   m_allowCloudUsers;
 
 	// if in read-only mode we do no spidering and load no saved trees
@@ -801,7 +803,7 @@ class Conf {
 	long  m_repairMem;
 	char  m_collsToRepair[1024];
 	char  m_fullRebuild       ;
-	char  m_fullRebuildKeepNewSpiderRecs;
+	char  m_rebuildAddOutlinks;
 	char  m_rebuildRecycleLinkInfo  ;
 	//char  m_rebuildRecycleLinkInfo2 ;
 	//char  m_removeBadPages    ;

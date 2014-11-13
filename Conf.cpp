@@ -74,7 +74,7 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	//	return true;
 	//}
 	// ok, make sure they came from an acceptable IP
-	if ( isRootIp ( ip ) )
+	if ( isMasterIp ( ip ) )
 		// they also have a matching IP, so they now have permission
 		return true;
 	// if no security, allow all
@@ -110,10 +110,10 @@ bool isInWhiteSpaceList ( char *p , char *buf ) {
 bool Conf::isCollAdmin ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// until we have coll tokens use this...
-	//return isRootAdmin ( socket , hr );
+	//return isMasterAdmin ( socket , hr );
 
-	// root always does
-	if ( isRootAdmin ( sock , hr ) ) return true;
+	// master always does
+	if ( isMasterAdmin ( sock , hr ) ) return true;
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) return false;
@@ -172,7 +172,7 @@ bool Conf::isCollAdmin2 ( TcpSocket *sock ,
 
 // . is user a root administrator?
 // . only need to be from root IP *OR* have password, not both
-bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
+bool Conf::isMasterAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// totally open access?
 	//if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
@@ -181,17 +181,17 @@ bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 
 	// coming from root gets you in
-	if ( isRootIp ( socket->m_ip ) ) return true;
+	if ( isMasterIp ( socket->m_ip ) ) return true;
 
 	//if ( isConnectIp ( socket->m_ip ) ) return true;
 
-	if ( hasRootPwd ( hr ) ) return true;
+	if ( hasMasterPwd ( hr ) ) return true;
 
 	return false;
 }
 
 
-bool Conf::hasRootPwd ( HttpRequest *hr ) {
+bool Conf::hasMasterPwd ( HttpRequest *hr ) {
 
 	//if ( m_numMasterPwds == 0 ) return false;
 	if ( m_masterPwds.length() <= 0 )
@@ -211,7 +211,7 @@ bool Conf::hasRootPwd ( HttpRequest *hr ) {
 }
 
 // . check this ip in the list of admin ips
-bool Conf::isRootIp ( unsigned long ip ) {
+bool Conf::isMasterIp ( unsigned long ip ) {
 
 	//if ( m_numMasterIps == 0 ) return false;
 	//if ( m_numConnectIps == 0 ) return false;
@@ -231,7 +231,7 @@ bool Conf::isRootIp ( unsigned long ip ) {
 
 bool Conf::isConnectIp ( unsigned long ip ) {
 
-	return isRootIp(ip);
+	return isMasterIp(ip);
 
 	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) {
 	// 	if ( m_connectIps[i] == (long)ip )

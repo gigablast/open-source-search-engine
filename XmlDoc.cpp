@@ -2158,7 +2158,73 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 						 true, // is request?
 						 parentDocId , 
 						 false );// isDel );
+	revisedReq->setDataSize();
 }
+
+void XmlDoc::getRebuiltSpiderRequest ( SpiderRequest *sreq ) {
+
+	// memset 0
+	sreq->reset();
+
+	// assume not valid
+	sreq->m_siteNumInlinks = -1;
+
+	if ( ! m_siteNumInlinksValid ) { char *xx=NULL;*xx=0; }
+
+	// how many site inlinks?
+	sreq->m_siteNumInlinks       = m_siteNumInlinks;
+	sreq->m_siteNumInlinksValid  = true;
+
+	// set other fields besides key
+	sreq->m_firstIp              = m_ip;
+	sreq->m_hostHash32           = m_hostHash32a;
+	//sreq->m_domHash32            = m_domHash32;
+	//sreq->m_siteNumInlinks       = m_siteNumInlinks;
+	//sreq->m_pageNumInlinks     = m_pageNumInlinks;
+	sreq->m_hopCount             = m_hopCount;
+
+	sreq->m_parentHostHash32     = 0;//m_sreq.m_parentHostHash32;
+	sreq->m_parentDomHash32      = 0;//m_sreq.m_parentDomHash32;
+	sreq->m_parentSiteHash32     = 0;//m_sreq.m_parentSiteHash32;
+	sreq->m_parentFirstIp        = 0;//m_sreq.m_parentFirstIp;
+
+	Url *fu = getFirstUrl();
+
+	sreq->m_isNewOutlink         = 0;
+	sreq->m_isAddUrl             = 0;//m_isAddUrl;
+	sreq->m_isPingServer         = fu->isPingServer();
+	//sreq->m_isUrlPermalinkFormat = m_isUrlPermalinkFormat;
+
+	// transcribe from old spider rec, stuff should be the same
+	sreq->m_addedTime            = m_firstIndexedDate;
+	sreq->m_sameDom              = 0;//m_sreq.m_sameDom;
+	sreq->m_sameHost             = 0;//m_sreq.m_sameHost;
+	sreq->m_sameSite             = 0;//m_sreq.m_sameSite;
+	sreq->m_wasParentIndexed     = 0;//m_sreq.m_parentWasIndexed;
+	sreq->m_parentIsRSS          = 0;//m_sreq.m_parentIsRSS;
+	sreq->m_parentIsPermalink    = 0;//m_sreq.m_parentIsPermalink;
+	sreq->m_parentIsPingServer   = 0;//m_sreq.m_parentIsPingServer;
+
+	// validate the stuff so getUrlFilterNum() acks it
+	sreq->m_hopCountValid = 1;
+
+	// we need this now for ucp ucr upp upr new url filters that do
+	// substring matching on the url
+	if ( m_firstUrlValid )
+		strcpy(sreq->m_url,m_firstUrl.m_url);
+
+	// re-make the key since it contains m_firstIp
+	long long uh48 = fu->getUrlHash48();
+	// set the key properly to reflect the new "first ip" 
+	// since we shard spiderdb by that.
+	sreq->m_key = g_spiderdb.makeKey ( m_ip,
+					   uh48,
+					   true,//is req?
+					   0LL, // parentDocId , 
+					   false );//isDel
+	sreq->setDataSize();
+}
+
 
 ////////////////////////////////////////////////////////////////////
 //   THIS IS THE HEART OF HOW THE PARSER ADDS TO THE RDBS
@@ -20474,6 +20540,8 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		//	if ( hc != 0 ){ char *xx=NULL;*xx=0; }
 		//}
 
+		char *rec = p;
+
 		// set this
 		//bool split = true;
 		//if(rdbId == RDB_POSDB && g_posdb.isShardedByTermId(p) ) 
@@ -20502,6 +20570,15 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		// . negative keys have no data
 		// . this is not the case unfortunately
 		if ( del ) dataSize = 0;
+
+		// ensure spiderdb request recs have data/url in them
+		if ( (rdbId == RDB_SPIDERDB || rdbId == RDB2_SPIDERDB2) &&
+		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)rec ) &&
+		     ! forDelete &&
+		     ! del &&
+		     dataSize == 0 ) {
+			char *xx=NULL;*xx=0; }
+
 		// if variable read that in
 		if ( dataSize == -1 ) {
 			// -1 means to read it in
@@ -22536,6 +22613,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
 	     ! m_isDiffbotJSONObject )
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
+
+	// or if we are rebuilding spiderdb
+	else if ( m_useSecondaryRdbs && ! m_isDiffbotJSONObject )
+		needSpiderdb3 = sizeof(SpiderRequest) + m_firstUrl.m_ulen+1;
+
 	need += needSpiderdb3;
 
 	//long needSpiderdb3 = 0;
@@ -23051,23 +23133,30 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		saved = m_p;
 		// store it here
 		SpiderRequest revisedReq;
+
+ 		// if doing a repair/rebuild of spiderdb...
+		if ( m_useSecondaryRdbs ) 
+			getRebuiltSpiderRequest ( &revisedReq );
+
 		// this fills it in
-		getRevisedSpiderRequest ( &revisedReq );
-
-		// sanity log
-		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
-
-		// sanity log
-		if ( m_firstIp == 0 || m_firstIp == -1 ) {
-			char *url = "unknown";
-			if ( m_sreqValid ) url = m_sreq.m_url;
-			log("build: error3 getting real firstip of %li for "
-			    "%s. not adding new request.",(long)m_firstIp,url);
-			goto skipNewAdd2;
+		if ( ! m_useSecondaryRdbs ) {
+			getRevisedSpiderRequest ( &revisedReq );
+			// sanity log
+			if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+			// sanity log
+			if ( m_firstIp == 0 || m_firstIp == -1 ) {
+				char *url = "unknown";
+				if ( m_sreqValid ) url = m_sreq.m_url;
+				log("build: error3 getting real firstip of "
+				    "%li for %s. not adding new request.",
+				    (long)m_firstIp,url);
+				goto skipNewAdd2;
+			}
 		}
 
 		// copy it
-		*m_p++ = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) *m_p++ = RDB2_SPIDERDB2;
+		else                      *m_p++ = RDB_SPIDERDB;
 		// store it back
 		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
@@ -24436,7 +24525,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( m_doingConsistencyCheck ) { char *xx=NULL;*xx=0; }
 
 	// do not do this if recycling content
-	if ( m_recycleContent ) return (char *)0x01;
+	// UNLESS REBUILDING...
+	if ( m_recycleContent && ! m_useSecondaryRdbs ) return (char *)0x01;
+
+
+	// for now skip in repair tool
+	if ( m_useSecondaryRdbs && ! g_conf.m_rebuildAddOutlinks )
+		return (char *)0x01;
+
 
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -24989,7 +25085,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// sanity check
 		if ( p + 1 + need > m_pend ) { char *xx=NULL;*xx=0; }
 		// store the rdbId
-		*p++ = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) *p++ = RDB2_SPIDERDB2;
+		else                      *p++ = RDB_SPIDERDB;
 		// print it for debug
 		if ( isTestColl ) {
 			SafeBuf tmp;

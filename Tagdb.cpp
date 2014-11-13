@@ -4045,7 +4045,7 @@ public:
 	//long         m_bufLen;
 	bool         m_isLocal;
 	//long         m_fileNum;
-	//bool         m_isRootAdmin;
+	//bool         m_isMasterAdmin;
 	//bool         m_isAssassin;
 	// . Commented by Gourav
 	// .  Reason:user perm no longer used
@@ -4107,7 +4107,7 @@ bool sendPageTagdb ( TcpSocket *s , HttpRequest *req ) {
 		    sizeof(State12),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State12) , "PageTagdb" );
-	//st->m_isRootAdmin    = isAdmin;
+	//st->m_isMasterAdmin    = isAdmin;
 	//st->m_isAssassin = isAssassin;
 	// . Commented by Gourav
 	// .  Reason:user perm no longer used
@@ -4541,13 +4541,13 @@ bool sendReply2 ( void *state ) {
 		       "%s</textarea></td></tr>" , uu );
 
 	// spam assassins should not use this much power, too risky
-	//if ( st->m_isRootAdmin ) {
+	//if ( st->m_isMasterAdmin ) {
 	//	sb.safePrintf ("<i><font size=-1>Note: use 1.2.3.<b>0</b> to "
 	//		       "specify ip domain.</i><br>");
 	//}
 
 	// allow filename to load them from
-	//if ( st->m_isRootAdmin ) {
+	//if ( st->m_isMasterAdmin ) {
 	sb.safePrintf("<tr class=poo>"
 		      "<td>"
 		      "<b>file of urls to tag</b>"

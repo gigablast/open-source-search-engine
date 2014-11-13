@@ -704,7 +704,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // reset our hostname
 	 m_hostLen = 0;
 	 // assume request is NOT from local network
-	 //m_isRootAdmin = false;
+	 //m_isMasterAdmin = false;
 	 m_isLocal = false;
 	 // get the virtual hostname they want to use
 	 char *s = strstr ( req ,"Host:" );
@@ -847,9 +847,9 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 m_plen = i - filenameStart;
 	 // we're local if hostname is 192.168.[0|1].y
 	 //if ( strncmp(iptoa(sock->m_ip),"192.168.1.",10) == 0) {
-	 //	m_isRootAdmin = true; m_isLocal = true; }
+	 //	m_isMasterAdmin = true; m_isLocal = true; }
 	 //if ( strncmp(iptoa(sock->m_ip),"192.168.0.",10) == 0) {
-	 //	m_isRootAdmin = true; m_isLocal = true; }
+	 //	m_isMasterAdmin = true; m_isLocal = true; }
 	 //if(strncmp(iptoa(sock->m_ip),"192.168.1.",10) == 0) m_isLocal = true;
 	 //if(strncmp(iptoa(sock->m_ip),"192.168.0.",10) == 0) m_isLocal = true;
 	 if ( sock && strncmp(iptoa(sock->m_ip),"192.168.",8) == 0) 
@@ -924,7 +924,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 
 	 // . also if we're coming from lenny at my house consider it local
 	 // . this is a security risk, however... TODO: FIX!!!
-	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isRootAdmin = true;
+	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isMasterAdmin = true;
 	 // . TODO: now add any cgi data from a POST.....
 	 // . look after the mime
 	 //char *d = NULL;
@@ -944,7 +944,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 if ( ! addCgi ( post , postLen ) ) return false;
 	 }
 	 // sometimes i don't want to be admin
-	 //if ( getLong ( "admin" , 1 ) == 0 ) m_isRootAdmin = false;
+	 //if ( getLong ( "admin" , 1 ) == 0 ) m_isMasterAdmin = false;
 	 // success
 	 
 	 /////
