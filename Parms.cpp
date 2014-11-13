@@ -12130,11 +12130,15 @@ void Parms::init ( ) {
 
 	m->m_title = "use threads for intersects and merges";
 	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
-		"Until pthreads is any good leave this off.";
+		"Default is now on in the event you have simultaneous queries "
+		"so one query does not hold back the other.";
+	        //"Until pthreads is any good leave this off.";
 	m->m_cgi   = "utfio";
 	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	// enable this in the event of multiple cores available and
+	// large simultaneous queries coming in
+	m->m_def   = "1";
 	m->m_flags = 0;//PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
