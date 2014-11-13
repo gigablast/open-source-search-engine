@@ -801,7 +801,8 @@ class Conf {
 	char  m_repairingEnabled  ;
 	long  m_maxRepairSpiders  ;
 	long  m_repairMem;
-	char  m_collsToRepair[1024];
+	SafeBuf m_collsToRepair;
+	char  m_rebuildAllCollections;
 	char  m_fullRebuild       ;
 	char  m_rebuildAddOutlinks;
 	char  m_rebuildRecycleLinkInfo  ;

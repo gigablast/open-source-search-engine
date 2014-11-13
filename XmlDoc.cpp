@@ -21631,10 +21631,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
 		// rdbid first
-		*m_p = RDB_SPIDERDB;
-		// use secondary?
-		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
-		m_p++;
+		*m_p++ = RDB_SPIDERDB;
 		// get this
 		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
@@ -22079,7 +22076,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//}
 
 	// need firstip if adding a rebuilt spider request
-	if ( m_useSecondaryRdbs && ! m_isDiffbotJSONObject ) {
+	if ( m_useSecondaryRdbs && ! m_isDiffbotJSONObject && m_useSpiderdb ) {
 		long *fip = getFirstIp();
 		if ( ! fip || fip == (void *)-1 ) return (char *)fip;
 	}
@@ -22624,7 +22621,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
 
 	// or if we are rebuilding spiderdb
-	else if ( m_useSecondaryRdbs && ! m_isDiffbotJSONObject )
+	else if (m_useSecondaryRdbs && !m_isDiffbotJSONObject && m_useSpiderdb)
 		needSpiderdb3 = sizeof(SpiderRequest) + m_firstUrl.m_ulen+1;
 
 	need += needSpiderdb3;
@@ -22692,8 +22689,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     ! m_isImporting &&
 		     m_version >= 120 &&
 		     m_metaListCheckSum8 != currentMetaListCheckSum8 )
-			log("xmldoc: checksum parsing inconsistency for %s",
-			    m_firstUrl.getUrl());
+			log("xmldoc: checksum parsing inconsistency for %s "
+			    "%i != %i",
+			    m_firstUrl.getUrl(),
+			    (int)m_metaListCheckSum8,
+			    (int)currentMetaListCheckSum8);
 		// assign the new one, getTitleRecBuf() call below needs this
 		m_metaListCheckSum8 = currentMetaListCheckSum8;
 		m_metaListCheckSum8Valid = true;

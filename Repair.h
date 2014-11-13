@@ -191,7 +191,7 @@ public:
 	char       m_rebuildNonRoots   ;
 
 	// current collection being repaired
-	long       m_collLen;
+	//long       m_collLen;
 	collnum_t  m_collnum;
 	char       m_newColl[MAX_COLL_LEN];
 	long       m_newCollLen;
@@ -211,7 +211,7 @@ public:
 	char       m_SAVE_END;
 
 	// i'd like to save these but they are ptrs
-	char      *m_coll;
+	//char      *m_coll;
 	CollectionRec *m_cr;
 
 	//for timing a repair process

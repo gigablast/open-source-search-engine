@@ -593,8 +593,11 @@ void Repair::initScan ( ) {
 	// . set the list of ptrs to the collections we have to repair
 	// . should be comma or space separated in g_conf.m_collsToRepair
 	// . none listed means to repair all collections
-	char *s    = g_conf.m_collsToRepair;
-	char *cbuf = g_conf.m_collsToRepair;
+	char *s    = g_conf.m_collsToRepair.getBufStart();
+	char *cbuf = g_conf.m_collsToRepair.getBufStart();
+	char emptyStr[1]; emptyStr[0] = '\0';
+	if ( ! s    ) s    = emptyStr;
+	if ( ! cbuf ) cbuf = emptyStr;
 	// reset the list of ptrs to colls to repair
 	m_numColls = 0;
 	// scan through the collections in the string, if there are any
@@ -615,7 +618,6 @@ void Repair::initScan ( ) {
 		// get the next collection if under 100 collections still
 		if ( m_numColls < 100 ) goto collLoop;
 	}
-
 
 	// split the mem we have available among the rdbs
 	m_totalMem = g_conf.m_repairMem;
@@ -674,6 +676,14 @@ void Repair::initScan ( ) {
 
 	// debug hack
 	//posdbMem = 10000000;
+
+
+	if ( m_numColls <= 0 ) {
+		log("rebuild: Rebuild had no collection specified. You need "
+		    "to enter a collection or list of collections.");
+		goto hadError;
+	}
+
 	
 	// init secondary rdbs
 	if ( m_rebuildTitledb )
@@ -708,7 +718,7 @@ void Repair::initScan ( ) {
 	g_errno = 0;
 
 	// reset current coll we are repairing
-	m_coll  = NULL;
+	//m_coll  = NULL;
 	m_colli = -1;
 	m_completedFirstScan  = false;
 
@@ -718,7 +728,7 @@ void Repair::initScan ( ) {
 	getNextCollToRepair();
 
 	// if could not get any, bail
-	if ( ! m_coll ) goto hadError;
+	if ( ! m_cr ) goto hadError;
 
 	g_errno = 0;
 
@@ -752,7 +762,7 @@ void Repair::initScan ( ) {
 	// mode 5 or 0.
 	//g_repairMode = 5;
 	// reset current coll we are repairing
-	m_coll  = NULL;
+	//m_coll  = NULL;
 	m_colli = -1;
 	g_conf.m_repairingEnabled = false;
 	
@@ -768,15 +778,16 @@ void Repair::getNextCollToRepair ( ) {
 	// ptr to first coll
 	if ( m_numColls ) {
 		if ( m_colli >= m_numColls ) {
-			m_coll = NULL;
-			m_collLen = 0;
+			//m_coll = NULL;
+			//m_collLen = 0;
 			return;
 		}
-		m_coll    = g_conf.m_collsToRepair + m_collOffs [m_colli];
-		m_collLen = m_collLens[m_colli];
-		m_cr = g_collectiondb.getRec (m_coll, m_collLen);
+		char *buf = g_conf.m_collsToRepair.getBufStart();
+		char *coll    = buf + m_collOffs [m_colli];
+		int collLen = m_collLens[m_colli];
+		m_cr = g_collectiondb.getRec (coll, collLen);
 		// if DNE, set m_coll to NULL to stop repairing
-		if ( ! m_cr ) { m_coll = NULL; g_errno = ENOCOLLREC; return; }
+		if ( ! m_cr ) { g_errno = ENOCOLLREC; return; }
 	}
 	// otherwise, we are repairing every collection by default
 	else {
@@ -785,17 +796,22 @@ void Repair::getNextCollToRepair ( ) {
 		while ( ! m_cr && m_colli < g_collectiondb.m_numRecs )
 			m_cr = g_collectiondb.m_recs [ ++m_colli ];
 		if ( ! m_cr ) {
-			m_coll = NULL;
-			m_collLen = 0;
+			//m_coll = NULL;
+			//m_collLen = 0;
 			g_errno = ENOCOLLREC;
 			return;
 		}
-		m_coll    = m_cr->m_coll;
-		m_collLen = m_cr->m_collLen;
+		//m_coll    = m_cr->m_coll;
+		//m_collLen = m_cr->m_collLen;
 	}
 
 	// collection cannot be deleted while we are in repair mode...
 	m_collnum = m_cr->m_collnum;
+
+	log("repair: now rebuilding for collection '%s' (%i)"
+	    , m_cr->m_coll
+	    , (int)m_collnum
+	    );
 
 	/*
 	if ( m_fullRebuild ) {
@@ -836,55 +852,57 @@ void Repair::getNextCollToRepair ( ) {
 	}
 	*/
 
+	char *coll = m_cr->m_coll;
+
 	// add collection to secondary rdbs
 	if ( m_rebuildTitledb ) {
 		if ( //! g_titledb2.addColl    ( m_coll ) &&
-		    ! g_titledb2.getRdb()->addRdbBase1(m_coll) &&
+		    ! g_titledb2.getRdb()->addRdbBase1(coll) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
 	//if ( m_rebuildTfndb ) {
-	//	if ( ! g_tfndb2.addColl      ( m_coll ) &&
+	//	if ( ! g_tfndb2.addColl      ( coll ) &&
 	//	     g_errno != EEXIST ) goto hadError;
 	//}
 
 	//if ( m_rebuildIndexdb ) {
-	//	if ( ! g_indexdb2.addColl    ( m_coll ) &&
+	//	if ( ! g_indexdb2.addColl    ( coll ) &&
 	//	     g_errno != EEXIST ) goto hadError;
 	//}
 
 	if ( m_rebuildPosdb ) {
-		if ( ! g_posdb2.getRdb()->addRdbBase1 ( m_coll ) &&
+		if ( ! g_posdb2.getRdb()->addRdbBase1 ( coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
 	//if ( m_rebuildDatedb ) {
-	//	if ( ! g_datedb2.addColl     ( m_coll ) &&
+	//	if ( ! g_datedb2.addColl     ( coll ) &&
 	//	     g_errno != EEXIST ) goto hadError;
 	//}
 
 	if ( m_rebuildClusterdb ) {
-		if ( ! g_clusterdb2.getRdb()->addRdbBase1 ( m_coll ) &&
+		if ( ! g_clusterdb2.getRdb()->addRdbBase1 ( coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
 	//if ( m_rebuildChecksumdb ) {
-	//	if ( ! g_checksumdb2.addColl ( m_coll ) &&
+	//	if ( ! g_checksumdb2.addColl ( coll ) &&
 	//	     g_errno != EEXIST ) goto hadError;
 	//}
 
 	if ( m_rebuildSpiderdb ) {
-		if ( ! g_spiderdb2.getRdb()->addRdbBase1 ( m_coll ) &&
+		if ( ! g_spiderdb2.getRdb()->addRdbBase1 ( coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
 	//if ( m_rebuildSitedb ) {
-	//	if ( ! g_tagdb2.addColl     ( m_coll ) &&
+	//	if ( ! g_tagdb2.addColl     ( coll ) &&
 	//	     g_errno != EEXIST ) goto hadError;
 	//}
 
 	if ( m_rebuildLinkdb ) {
-		if ( ! g_linkdb2.getRdb()->addRdbBase1 ( m_coll ) &&
+		if ( ! g_linkdb2.getRdb()->addRdbBase1 ( coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -1013,7 +1031,7 @@ bool Repair::load ( ) {
 
 	// reinstate the valuable vars
 	m_cr   = g_collectiondb.m_recs [ m_collnum ];
-	m_coll = m_cr->m_coll;
+	//m_coll = m_cr->m_coll;
 
 
 	m_stage = STAGE_TITLEDB_0;
@@ -1231,73 +1249,73 @@ void Repair::updateRdbs ( ) {
 	if ( m_rebuildTitledb ) {
 		rdb1 = g_titledb.getRdb ();
 		rdb2 = g_titledb2.getRdb();
-		rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+		rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	}
 	//if ( m_rebuildTfndb ) {
 	//	rdb1 = g_tfndb.getRdb();
 	//	rdb2 = g_tfndb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	//if ( m_rebuildIndexdb ) {
 	//	rdb1 = g_indexdb.getRdb();
 	//	rdb2 = g_indexdb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	if ( m_rebuildPosdb ) {
 		rdb1 = g_posdb.getRdb();
 		rdb2 = g_posdb2.getRdb();
-		rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+		rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	}
 	//if ( m_rebuildDatedb ) {
 	//	rdb1 = g_datedb.getRdb();
 	//	rdb2 = g_datedb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	if ( m_rebuildClusterdb ) {
 		rdb1 = g_clusterdb.getRdb();
 		rdb2 = g_clusterdb2.getRdb();
-		rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+		rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	}
 	//if ( m_rebuildChecksumdb ) {
 	//	rdb1 = g_checksumdb.getRdb();
 	//	rdb2 = g_checksumdb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	if ( m_rebuildSpiderdb ) {
 		rdb1 = g_spiderdb.getRdb();
 		rdb2 = g_spiderdb2.getRdb();
-		rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+		rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	}
 	//if ( m_rebuildSitedb ) {
 	//	rdb1 = g_tagdb.getRdb();
 	//	rdb2 = g_tagdb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	if ( m_rebuildLinkdb ) {
 		rdb1 = g_linkdb.getRdb();
 		rdb2 = g_linkdb2.getRdb();
-		rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+		rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	}
 
 	//if ( m_rebuildTagdb ) {
 	//	rdb1 = g_tagdb.getRdb();
 	//	rdb2 = g_tagdb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	//if ( m_rebuildPlacedb ) {
 	//	rdb1 = g_placedb.getRdb();
 	//	rdb2 = g_placedb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	//if ( m_rebuildSectiondb ) {
 	//	rdb1 = g_sectiondb.getRdb();
 	//	rdb2 = g_sectiondb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 	//if ( m_rebuildRevdb ) {
 	//	rdb1 = g_revdb.getRdb();
 	//	rdb2 = g_revdb2.getRdb();
-	//	rdb1->updateToRebuildFiles ( rdb2 , m_coll );
+	//	rdb1->updateToRebuildFiles ( rdb2 , m_cr->m_coll );
 	//}
 
 	// reset scan info
@@ -1399,7 +1417,7 @@ bool Repair::scanRecs ( ) {
 	    "bnf=%li",//fn=%li nf=%li",
 	    KEYSTR(&m_nextTitledbKey,sizeof(key_t)),
 	    KEYSTR(&m_endKey,sizeof(key_t)),
-	    m_coll,
+	    m_cr->m_coll,
 	    (long)m_collnum,
 	    (long)base->getNumFiles());//,m_fn,nf);
 	// sanity check
@@ -1971,7 +1989,7 @@ bool Repair::injectTitleRec ( ) {
 
 	// clear out first since set2 no longer does
 	//xd->reset();
-	if ( ! xd->set2 ( titleRec , -1 , m_coll , NULL , MAX_NICENESS ) ) {
+	if ( ! xd->set2 ( titleRec,-1,m_cr->m_coll , NULL , MAX_NICENESS ) ) {
 		m_recsetErrors++;
 		m_stage = STAGE_TITLEDB_0; // 0
 		return true;
@@ -2245,7 +2263,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	//if ( m_fullRebuild ) newColl = m_newColl;
 
 	char *oldColl = " &nbsp; ";
-	if ( m_coll        ) oldColl = m_coll;
+	if ( m_cr ) oldColl = m_cr->m_coll;
 
 	Host *mh = g_pingServer.m_minRepairModeHost;
 	long  minHostId = -1;

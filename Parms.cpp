@@ -1311,7 +1311,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_INJECT     ) tt = "Inject Url";
-	if ( page == PAGE_MASTERPASSWORDS ) tt = "Root Passwords";
+	if ( page == PAGE_MASTERPASSWORDS ) tt = "Master Passwords";
 	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
@@ -1323,7 +1323,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
 	//if ( page == PAGE_SYNC       ) tt = "Sync";
-	if ( page == PAGE_REPAIR     ) tt = "Repair Controls";
+	if ( page == PAGE_REPAIR     ) tt = "Rebuild Controls";
 	//if ( page == PAGE_ADFEED     ) tt = "Ad Feed Controls";
 
 	// special messages for spider controls
@@ -2633,9 +2633,18 @@ bool Parms::printParm ( SafeBuf* sb,
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
+
+
+			if ( cr && 
+			     (m->m_flags & PF_COLLDEFAULT) &&
+			     sx &&
+			     sx->length() <= 0 ) 
+				sb->dequote ( cr->m_coll,gbstrlen(cr->m_coll));
+
 			// if parm is OBJ_NONE there is no stored valued
-			if ( m->m_obj != OBJ_NONE )
+			else if ( m->m_obj != OBJ_NONE )
 				sb->dequote ( sx->getBufStart(), sx->length());
+
 			sb->safePrintf ("\">");
 		}
 	}
@@ -9807,9 +9816,25 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "use collection passwords";
+	m->m_desc  = "Should collections have individual password settings "
+		"so different users can administrer different collections? "
+		"If not the only the master passwords and IPs will be able "
+		"to administer any collection.";
+	m->m_cgi   = "ucp";
+	m->m_off   = (char *)&g_conf.m_useCollectionPasswords - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "allow cloud users";
-	m->m_desc  = "Can guest users create a collection?";
+	m->m_desc  = "Can guest users create and administer "
+		"a collection? Limit: 1 "
+		"collection per IP address. This is mainly for doing "
+		"demos on the gigablast.com domain.";
 	m->m_cgi   = "acu";
 	m->m_off   = (char *)&g_conf.m_allowCloudUsers - g;
 	m->m_type  = TYPE_BOOL;
@@ -18171,10 +18196,10 @@ void Parms::init ( ) {
 	//  PAGE REPAIR CONTROLS
 	///////////////////////////////////////////
 
-	m->m_title = "repair mode enabled";
-	m->m_desc  = "If enabled, gigablast will repair the rdbs as "
+	m->m_title = "rebuild mode enabled";
+	m->m_desc  = "If enabled, gigablast will rebuild the rdbs as "
 		"specified by the parameters below. When a particular "
-		"collection is in repair mode, it can not spider or merge "
+		"collection is in rebuild mode, it can not spider or merge "
 		"titledb files.";
 	m->m_cgi   = "rme";
 	m->m_off   = (char *)&g_conf.m_repairingEnabled - g;
@@ -18185,21 +18210,35 @@ void Parms::init ( ) {
 	m->m_sync  = false;  // do not sync this parm
 	m++;
 
-	m->m_title = "collections to repair or rebuild";
-	m->m_desc  = "Comma or space separated list of the collections "
-		"to repair or rebuild.";
+	m->m_title = "collection to rebuild";
+	m->m_xml   = "collectionToRebuild";
+	m->m_desc  = "Name of collection to rebuild.";
+	// m->m_desc  = "Comma or space separated list of the collections "
+	// 	"to rebuild.";
 	m->m_cgi   = "rctr"; // repair collections to repair
 	m->m_off   = (char *)&g_conf.m_collsToRepair - g;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 1024;
+	m->m_type  = TYPE_SAFEBUF;//STRING;
+	//m->m_size  = 1024;
 	m->m_def   = "";
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_flags = PF_REQUIRED | PF_NOHTML;
+	m->m_flags = PF_REQUIRED;// | PF_COLLDEFAULT;//| PF_NOHTML;
 	m++;
 
-	m->m_title = "memory to use for repair";
+	m->m_title = "rebuild ALL collections";
+	m->m_desc  = "If enabled, gigablast will rebuild all collections.";
+	m->m_cgi   = "rac";
+	m->m_off   = (char *)&g_conf.m_rebuildAllCollections - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_REPAIR;
+	m->m_obj   = OBJ_CONF;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++;
+
+
+	m->m_title = "memory to use for rebuild";
 	m->m_desc  = "In bytes.";
 	m->m_cgi   = "rmtu"; // repair mem to use
 	m->m_off   = (char *)&g_conf.m_repairMem - g;
@@ -18211,9 +18250,9 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "max repair spiders";
-	m->m_desc  = "Maximum number of outstanding inject spiders for "
-		"repair.";
+	m->m_title = "max rebuild injections";
+	m->m_desc  = "Maximum number of outstanding injections for "
+		"rebuild.";
 	m->m_cgi   = "mrps";
 	m->m_off   = (char *)&g_conf.m_maxRepairSpiders - g;
 	m->m_type  = TYPE_LONG;
@@ -18599,7 +18638,7 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 
 
-	m->m_title = "Root Passwords";
+	m->m_title = "Master Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
 		"to Gigablast and all collections.";
@@ -18620,7 +18659,7 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "Root IPs";
+	m->m_title = "Master IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
