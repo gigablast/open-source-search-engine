@@ -2693,6 +2693,17 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	return true;
 }
 
+void swapInts ( void *xx ) {
+	// do nothing if 32-bit arch
+	if ( sizeof(void *) == 4 ) return;
+	// otherwise swap the two 32-bit numbers in this ptr
+	int32_t *p1 = (int32_t *)xx;
+	int32_t *p2 = (int32_t *)(((char *)xx)+4);
+	int32_t tmp = *p1;
+	*p1 = *p2;
+	*p2 = tmp;
+}
+
 static int32_t s_localIps[20];
 #include <sys/types.h>
 #include <ifaddrs.h>
@@ -2713,7 +2724,11 @@ int32_t *getLocalIps ( ) {
 	for ( ; p && ni < 18 ; p = p->ifa_next ) {
 		// avoid possible core dump
 		if ( ! p->ifa_addr ) continue;
-		int32_t ip = ((struct sockaddr_in*)p->ifa_addr)->sin_addr.s_addr;
+		//break; // mdw hack...
+		struct sockaddr_in *xx = (sockaddr_in *)p->ifa_addr;
+		// fix the bug when compiling for 64-bit arch
+		swapInts ( &xx );
+		int32_t ip = xx->sin_addr.s_addr;
 		// skip if loopback we stored above
 		if ( ip == loopback ) continue;
 		// skip bogus ones

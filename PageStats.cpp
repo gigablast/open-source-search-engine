@@ -1803,7 +1803,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		//g_placedb.getRdb() ,
 		//g_sectiondb.getRdb()
 	};
-	int32_t nr = sizeof(rdbs) / 4;
+	int32_t nr = sizeof(rdbs) / sizeof(Rdb *);
 
 	// print dbname
 	p.safePrintf("<tr class=poo><td>&nbsp;</td>");

@@ -32,6 +32,8 @@
 #define key128_t  u_int128_t
 #define uint128_t u_int128_t
 
+#pragma pack(4)
+
 class u_int96_t {
 
  public:
@@ -193,6 +195,7 @@ class u_int96_t {
 		return n0 % mod; };
 
 };
+//__attribute__((packed));
 
 class u_int128_t {
 

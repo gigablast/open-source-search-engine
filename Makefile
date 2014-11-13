@@ -93,12 +93,18 @@ else
 # trying to use good ole' clone() again because it seems the errno location
 # thing is fixed by just ignoring it.
 #
-CPPFLAGS = -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+# Use -Wpadded flag to indicate padded structures.
+#
+# add -m32 flag to this line if you need to make a 32-bit gb.
+#
+CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
 #LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
-#LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
+
+# apt-get install libssl-dev
+LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
 
 endif
 
@@ -488,8 +494,9 @@ Msg6a.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -O3 -c $*.cpp 
 
 # Stupid gcc-2.95 stabs debug can't handle such a big file.
+# add -m32 flag to this line if you need to make a 32-bit gb.
 geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
-	$(CC) $(DEFS) -m32 -Wall -pipe -c $*.cpp 
+	$(CC) $(DEFS) -Wall -pipe -c $*.cpp 
 
 # dpkg-buildpackage calls 'make binary' to create the files for the deb pkg
 # which must all be stored in ./debian/gb/

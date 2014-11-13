@@ -1,6 +1,9 @@
 #ifndef __GB_INCLUDE_H__
 #define __GB_INCLUDE_H__
 
+// fix on 64-bit architectures so sizeof(uint96_t) is 12, not 16!
+//#pragma pack(0)
+
 //#define memcpy memcpy_ass
 //#define memset memset_ass
 

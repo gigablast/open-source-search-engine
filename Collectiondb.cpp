@@ -1666,7 +1666,7 @@ CollectionRec::CollectionRec() {
 	//m_numSpamIps    = 0;
 	//m_numAdminPwds  = 0;
 	//m_numAdminIps   = 0;
-	memset ( m_bases , 0 , 4*RDB_END );
+	memset ( m_bases , 0 , sizeof(RdbBase *)*RDB_END );
 	// how many keys in the tree of each rdb? we now store this stuff
 	// here and not in RdbTree.cpp because we no int32_ter have a maximum
 	// # of collection recs... MAX_COLLS. each is a 32-bit "int32_t" so

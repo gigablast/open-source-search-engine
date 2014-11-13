@@ -30,17 +30,21 @@ pthread_attr_t s_attr;
 #endif
 
 // main process id (or thread id if using pthreads)
-static pid_t  s_pid    = (pid_t) -1;
+//static pid_t  s_pid    = (pid_t) -1;
+// on 64-bit architectures pthread_t is 64 bit and pid_t is 32 bit:
+static pthread_t  s_pid    = (pid_t) -1;
 
-pid_t getpidtid() {
+//pid_t getpidtid() {
+// on 64-bit architectures pthread_t is 64 bit and pid_t is 32 bit:
+pthread_t getpidtid() {
 #ifdef PTHREADS
 	// gettid() is a bit newer so not in our libc32...
 	// so kinda fake it. return the "thread" id, not process id.
 	// Threads::amThread() should still work based on thread ids because
 	// the main process has a unique thread id as well.
-	return (pid_t)pthread_self();
+	return pthread_self();
 #else
-	return getpid();
+	return (pthread_t)getpid();
 #endif
 }
 
@@ -82,7 +86,7 @@ static void makeCallback ( ThreadEntry *t ) ;
 
 // is the caller a thread?
 bool Threads::amThread () {
-	if ( s_pid == -1 ) return false;
+	if ( s_pid == (pthread_t)-1 ) return false;
 	return ( getpidtid() != s_pid );
 }
 
@@ -208,7 +212,8 @@ bool Threads::init ( ) {
 	//m_needBottom = false;
 
 	// sanity check
-	if ( sizeof(pthread_t) > sizeof(pid_t) ) { char *xx=NULL;*xx=0; }
+	//if ( sizeof(pthread_t) > sizeof(pid_t) ) { char *xx=NULL;*xx=0; }
+	if ( sizeof(pid_t) > sizeof(pthread_t) ) { char *xx=NULL;*xx=0; }
 
 	setPid();
 

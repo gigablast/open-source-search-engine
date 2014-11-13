@@ -11,7 +11,9 @@
 #include <sys/types.h>  // pid_t
 
 // if we are a thread this gets the threadid, otherwise, the main process id
-pid_t getpidtid();
+//pid_t getpidtid();
+// on 64-bit architectures pthread_t is 64 bits and pid_t is still 32 bits
+pthread_t getpidtid();
 
 // user-defined thread types
 #define DISK_THREAD      0

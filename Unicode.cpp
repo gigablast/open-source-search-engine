@@ -1702,6 +1702,11 @@ void resetUnicode ( ) {
 }
 
 bool openIconvDescriptors() {
+
+	// why do this when we call gbiconv_open() directly from ucToAny()
+	// and other functions?
+	return true;
+
 	for (int i=2; i <= 2258 ; i++ ){
 		if (!supportedCharset(i)) continue;
 
@@ -1719,15 +1724,16 @@ bool openIconvDescriptors() {
 			csAlias = "CP932";
 		}
 		
-		iconv_t cd1 = gbiconv_open("UTF-16LE", csAlias);
-
+		//iconv_t cd1 = gbiconv_open("UTF-16LE", csAlias);
+		iconv_t cd1 = gbiconv_open("UTF-8", csAlias);
 		if (cd1 == (iconv_t)-1) {	
-			return false;
+		 	//return false;
 		}
-		iconv_t cd2 = gbiconv_open(csAlias, "UTF-16LE");
 
+		//iconv_t cd2 = gbiconv_open(csAlias, "UTF-16LE");
+		iconv_t cd2 = gbiconv_open(csAlias, "UTF-8");
 		if (cd2 == (iconv_t)-1) {	
-			return false;
+			//return false;
 		}
 	}
 	// ...and the ones that don't involve utf16
