@@ -9,6 +9,7 @@
 #include "Test.h"
 #include "Speller.h"
 #include "SpiderProxy.h" // OP_GETPROXY OP_RETPROXY
+#include "zlib.h"
 
 char *g_fakeReply = 
 	"HTTP/1.0 200 (OK)\r\n"
@@ -127,7 +128,7 @@ bool Msg13::registerHandler ( ) {
 
 	// . set up the request table (aka wait in line table)
 	// . allowDups = "true"
-	if ( ! s_rt.set ( 8 , 4 , 0 , NULL , 0 , true,0,"wait13tbl") )
+	if ( ! s_rt.set ( 8 ,sizeof(UdpSlot *),0,NULL,0,true,0,"wait13tbl") )
 		return false;
 
 	if ( ! g_loop.registerSleepCallback(10,NULL,scanHammerQueue) )
@@ -1780,7 +1781,9 @@ void gotHttpReply2 ( void *state ,
 					 (unsigned char*)reply, 
 					 replySize);
 		if(zipErr != Z_OK) {
-			log("spider: had error zipping Msg13 reply.");
+			log("spider: had error zipping Msg13 reply. %s "
+			    "(%"INT32")",
+			    zError(zipErr),(int32_t)zipErr);
 			mfree (compressedBuf, need, "Msg13ZipError");
 			g_errno = ECORRUPTDATA;
 			g_udpServer.sendErrorReply(slot,g_errno);

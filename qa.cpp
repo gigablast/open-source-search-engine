@@ -756,6 +756,7 @@ bool qainject2 ( ) {
 		SafeBuf ubuf;
 		ubuf.load("./injectme3");
 		sb.urlEncode(ubuf.getBufStart());
+		sb.nullTerm();
 		if ( ! getUrl ( "/admin/inject",
 				// check reply, seems to have only a single 
 				// docid in it
@@ -2007,6 +2008,7 @@ bool qajson ( ) {
 			      "&urls="//www.walmart.com+ibm.com"
 			      );
 		sb.urlEncode ( s_ubuf4 );
+		sb.nullTerm();
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
 		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
@@ -2227,6 +2229,7 @@ bool qaxml ( ) {
 			      "&urls="//www.walmart.com+ibm.com"
 			      );
 		sb.urlEncode ( s_ubuf5 );
+		sb.nullTerm();
 		// . now a list of websites we want to spider
 		// . the space is already encoded as +
 		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )

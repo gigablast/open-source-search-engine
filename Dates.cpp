@@ -18238,7 +18238,7 @@ bool initDateTypes ( ) {
 	s_init98 = true;
 	// set the keysize to 8 (wid) maps to a dv ptr
 	// use 0 for niceness
-	if ( !s_dvt.set(8,4,300,s_dvbuf,10000,true,0,"dvts")) 
+	if ( !s_dvt.set(8,sizeof(DateVal *),300,s_dvbuf,10000,true,0,"dvts")) 
 		return false;
 	// mark this
 	char localBuf[1000];

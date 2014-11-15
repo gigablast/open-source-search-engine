@@ -97,14 +97,16 @@ else
 #
 # add -m32 flag to this line if you need to make a 32-bit gb.
 #
-CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable
+CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 #LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
 #LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
 
-# apt-get install libssl-dev
-LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
+# apt-get install libssl-dev (to provide libssl and libcrypto)
+# to build static libiconv.a do a './configure --enable-static' then 'make'
+# in the iconv directory
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv64.a ./libz64.a
 
 endif
 

@@ -521,7 +521,11 @@ bool Words::addWords(char *s,int32_t nodeLen,bool computeWordIds, int32_t nicene
 // common to Unicode and ISO-8859-1
 bool Words::allocateWordBuffers(int32_t count, bool tagIds) {
 	// alloc if we need to (added 4 more for m_nodes[])
-	int32_t wordSize = 20;
+	int32_t wordSize = 0;
+	wordSize += sizeof(char *);
+	wordSize += sizeof(int32_t);
+	wordSize += sizeof(int64_t);
+	wordSize += sizeof(int32_t);
 	if ( tagIds ) wordSize += sizeof(nodeid_t);
 	m_bufSize = wordSize * count;
 	if(m_bufSize < 0) return log("build: word count overflow %"INT32" "
@@ -557,6 +561,8 @@ bool Words::allocateWordBuffers(int32_t count, bool tagIds) {
 		m_tagIds = (nodeid_t*) p;
 		p += sizeof(nodeid_t) * count;
 	}
+
+	if ( p > m_buf + m_bufSize ) { char *xx=NULL;*xx=0; }
 
 	return true;
 }

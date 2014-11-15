@@ -165,7 +165,7 @@ char *g_files[] = {
 	"libnetpbm.so.10",
 	"libpng12.so.0",
 	"libtiff.so.4",
-	"libz.so.1",
+	//"libz.so.1",
 	"LICENSE",
 	"pngtopnm",
 	"pnmscale",

@@ -353,7 +353,8 @@ void RdbCache::addLong ( collnum_t collnum ,
 	k.n1 = key;
 	// sanity check
 	if ( m_cks > (int32_t)sizeof(key_t) ) { char *xx = NULL; *xx = 0; }
-	addRecord ( collnum , (char *)&k , NULL , 0 , (char *)&value , 4 ,
+	addRecord ( collnum , (char *)&k , NULL , 0 , (char *)&value , 
+		    sizeof(char *), // 4 , now 8 for 64 bit archs
 		    0 , // timestamp=now
 		    retRecPtr );
 	// clear error in case addRecord set it
@@ -472,6 +473,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 		if ( incCounts ) m_numMisses++;
 		return false;
 	}
+	// skip timestamp
 	p += 4;
 	// store data size if our recs are var length or we cache lists of
 	// fixed length recs, and those lists need a dataSize
@@ -1216,7 +1218,7 @@ void RdbCache::removeKey ( collnum_t collnum , char *key , char *rec ) {
 		m_ptrs[n] = NULL;
 		// undo stats
 		m_numPtrsUsed--;
-		m_memOccupied -= 4;
+		m_memOccupied -= sizeof(char *);//4;
 		// re-hash it back to possibly fill the "gap"
 		addKey ( *(collnum_t *)ptr , kptr , ptr );
 		if ( ++n >= m_numPtrsMax ) n = 0;
@@ -1244,7 +1246,7 @@ void RdbCache::addKey ( collnum_t collnum , char *key , char *ptr ) {
 	// if already there don't inc the count
 	if ( ! m_ptrs[n] ) {
 		m_numPtrsUsed++;
-		m_memOccupied += 4;
+		m_memOccupied += sizeof(char *);
 		// debug msg 
 		//key_t *k = (key_t *)key;
 		//log("cache: %s added key.n1=%"UINT32" key.n0=%"UINT64" to slot #%"INT32" "

@@ -1988,7 +1988,7 @@ void *getElecMem ( int32_t size ) {
 	//   THEN possibly another MEMPAGESIZE-1 bytes to hit the next page
 	//   boundary for protecting the "freed" mem below, but can get
 	//   by with (MEMPAGESIZE-(size%MEMPAGESIZE)) more
-	int32_t need = size + 8 + MEMPAGESIZE + MEMPAGESIZE ;
+	int32_t need = size + sizeof(char *)*2 + MEMPAGESIZE + MEMPAGESIZE ;
 	// want to end on a page boundary too!
 	need += (MEMPAGESIZE-(size%MEMPAGESIZE));
 	// get that
@@ -2013,8 +2013,8 @@ void *getElecMem ( int32_t size ) {
 	// save this
 	char *returnMem = p;
 	// store the ptrs
-	*(char **)(returnMem- 4) = realMem;
-	*(char **)(returnMem- 8) = realMemEnd;
+	*(char **)(returnMem- sizeof(char *)) = realMem;
+	*(char **)(returnMem- sizeof(char *)*2) = realMemEnd;
 	// protect that after we wrote our ptr
 	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
@@ -2035,7 +2035,8 @@ void *getElecMem ( int32_t size ) {
 	return returnMem;
 #else
 	// how much to alloc
-	int32_t need = size + 8 + MEMPAGESIZE + MEMPAGESIZE + MEMPAGESIZE;
+	int32_t need = size + MEMPAGESIZE + MEMPAGESIZE + MEMPAGESIZE;
+	need += sizeof(char *)*2;
 	// get that
 	char *realMem = (char *)sysmalloc ( need );	
 	if ( ! realMem ) return NULL;
@@ -2061,10 +2062,10 @@ void *getElecMem ( int32_t size ) {
 	// after we "free" it below
 	if ( p < realMem ) { char *xx=NULL;*xx=0; }
 	// store mem ptrs before protecting
-	*(char **)(returnMem- 4) = realMem;
-	*(char **)(returnMem- 8) = realMemEnd;
+	*(char **)(returnMem- sizeof(char *)  ) = realMem;
+	*(char **)(returnMem- sizeof(char *)*2) = realMemEnd;
 	// sanity
-	if ( returnMem - 8 < realMem ) { char *xx=NULL;*xx=0; }
+	if ( returnMem - sizeof(char *)*2 < realMem ) { char *xx=NULL;*xx=0; }
 	// protect that after we wrote our ptr
 	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
@@ -2123,9 +2124,9 @@ void freeElecMem ( void *fakeMem ) {
 
 	// now original memptr is right before "p" and we can
 	// read it now that we are unprotected
-	char *realMem    = *(char **)(cp-4);
+	char *realMem    = *(char **)(cp-sizeof(char *));
 	// set real mem end (no!?)
-	char *realMemEnd = *(char **)(cp-8);
+	char *realMemEnd = *(char **)(cp-sizeof(char *)*2);
 
 	// set it all to 0x99
 	memset ( realMem , 0x99 , realMemEnd - realMem );

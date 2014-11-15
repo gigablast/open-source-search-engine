@@ -622,9 +622,9 @@ bool Msg40::federatedLoop ( ) {
 	mr.size_query                  = m_si->m_q.m_origLen+1;
 	//mr.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
 	//mr.size_whiteList              = m_si->m_whiteListBuf.length()+1;
-	int32_t slen = 0; if ( m_si->m_sites ) slen = gbstrlen(m_si->m_sites);
+	int32_t slen = 0; if ( m_si->m_sites ) slen=gbstrlen(m_si->m_sites)+1;
 	mr.ptr_whiteList               = m_si->m_sites;
-	mr.size_whiteList              = slen + 1;
+	mr.size_whiteList              = slen;
 	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
 	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
