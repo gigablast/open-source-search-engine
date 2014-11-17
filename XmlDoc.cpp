@@ -31580,7 +31580,16 @@ int gbcompress ( unsigned char *dest      ,
 	else                       err = deflateInit2(&stream, level,
 						      method, windowBits,
 						      memLevel, strategy);
-	if (err != Z_OK) return err;
+	if (err != Z_OK) {
+		// zlib's incompatible version error?
+		if ( err == -6 ) {
+			log("zlib: zlib did you forget to add #pragma pack(4) to "
+			    "zlib.h when compiling libz.a so it aligns on 4-byte "
+			    "boundaries because we have that pragma in "
+			    "gb-include.h so its used when including zlib.h");
+		}
+		return err;
+	}
 
 	// cygwin uses the system libz.a which is not hacked for our quickpoll
 #ifndef CYGWIN	
