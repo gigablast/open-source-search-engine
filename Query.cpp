@@ -2029,6 +2029,7 @@ bool Query::setQWords ( char boolFlag ,
 			qw->m_opcode = OP_PIPE;
 			continue;
 		}
+		// [133.0r]
 		// is it the bracket operator?
 		// " LeFtB 113 rp RiGhB "
 		if ( wlen == 5 &&
@@ -2055,16 +2056,16 @@ bool Query::setQWords ( char boolFlag ,
 				continue;
 			}
 			// get the number
-			long val = atol2 (s, slen);
+			float fval = atof2 (s, slen);
 			// s2 MUST point to the a,r,ap,rp string
 			char *s2 = words.getWord(i+4);
 			// is it a phrase?
 			if ( s2[1] == 'p' ) {
-				userWeightPhrase = val;
+				userWeightPhrase = fval;
 				userTypePhrase   = s2[0]; // a or r
 			}
 			else {
-				userWeight = val;
+				userWeight = fval;
 				userType   = s2[0]; // a or r
 			}
 			// ignore all following words up and inc. i+6
