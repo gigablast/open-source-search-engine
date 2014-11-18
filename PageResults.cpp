@@ -3357,7 +3357,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		if ( numLinks >= MAX_LINKERS ) break;
 	}
 	// sort them
-	gbsort ( ptrs , numLinks , 4 , linkSiteRankCmp );
+	gbsort ( ptrs , numLinks , sizeof(Inlink *) , linkSiteRankCmp );
 	// print xml starter
 	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t\t<inlinks>\n");
 	// loop through the inlinks
