@@ -13,7 +13,7 @@
 #include "Pages.h"
 
 // put me back
-#define EFENCE
+//#define EFENCE
 //#define EFENCE_SIZE 50000
 
 // uncomment this for EFENCE to do underflow checks instead of the
