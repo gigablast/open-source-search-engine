@@ -909,7 +909,7 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <b>Building the DMOZ Directory:</b>
 
 <br><ul><li>Create the <i>dmozparse</i> program.<br>        <b>$ make dmozparse</b><br>    
-
+<br>
 <li>Download the latest content.rdf.u8 and  structure.rdf.u8 files from http://rdf.dmoz.org/rdf into the <i>catdb/</i> directory onto host 0, the first host listed in the <a href=/hosts.conf.txt>hosts.conf</a> file.
 <b>
 <br> $ mkdir catdb
@@ -919,19 +919,23 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <br>           $ wget http://rdf.dmoz.org/rdf/structure.rdf.u8.gz
 <br>           $ gunzip structure.rdf.u8.gz</b>
 <br>    
+<br>
 <li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb .dat files. These .dat files are in Gigablast's special format so Gigablast can quickly get all the associated DMOZ entries given a url. Having several <i>Missing parent for catid ...</i> messages are normal. Ultimately, it should put two files into the <i>catdb/</i> subdirectory: <i>gbdmoz.structure.dat</i> and <i>gbdmoz.content.dat</i>.
 <br>        <b>$ cd ..</b>
 <br>        <b>$ ./dmozparse new</b>
 <br>    
 
+<br>
 <li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp from host 0 to the other hosts listed in <a href=/hosts.conf.txt>hosts.conf</a>.<br>        <b>$ ./gb installcat</b><br>
 
-    <li>Make sure all spiders are stopped and inactive.<br>
+<br>
+<li>Make sure all spiders are stopped and inactive.<br>
 
-    <li>Click the <a href=/admin/catdb>catdb</a> in the admin section of Gigablast and click "<b>Generate Catdb</b>" (NOT <i>Update Catdb</i>). This will make a huge list of <i>catdb</i> records and then add them to all the hosts in the network in a sharded manner.<br>
+<br>
+<li>Click the <a href=/admin/catdb>catdb</a> in the admin section of Gigablast and click "<b>Generate Catdb</b>" (NOT <i>Update Catdb</i>). This will make a huge list of <i>catdb</i> records and then add them to all the hosts in the network in a sharded manner.<br>
 
-
-    <li>Once the command returns, typically in 3-4 minutes, Catdb will be ready for use and spidering. It will have created some ./catdb/catdb*.dat files which are Gigablast's database of DMOZ entry records. Any documents added that are from a site in DMOZ will show up in the search results with their appropriate DMOZ categories listed beneath. This will affect all collections.<br></ul>
+<br>
+<li>Once the command returns, typically in 3-4 minutes, Catdb will be ready for use and spidering. It will have created some ./catdb/catdb*.dat files which are Gigablast's database of DMOZ entry records. Any documents added that are from a site in DMOZ will show up in the search results with their appropriate DMOZ categories listed beneath. This will affect all collections.<br></ul>
 
 
 <br><b>Testing DMOZ:</b>
@@ -946,6 +950,7 @@ So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html
 
 <br><b>$ ./dmozparse urldump -s</b>
 
+<br>
 <br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>main</i>. You can use the <a href=/admin/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl (or wget) like:
 <br>
 <b>
@@ -966,6 +971,7 @@ $ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.
 </b>
 
 <br><li>Each gbdmoz.urls.txt.* file contains a special meta tag which instructs Gigablast to index each DMOZ URL even if there was some external error, like a DNS or TCP timeout. If the error is internal, like an Out of Memory error, then the document will, of course, not be indexed, but it should be reported in the log. This is essential for making our version of DMOZ exactly like the official version.
+<br>
 <br><li>Finally, ensure spiders are enabled for your collection. In the above example, <i>main</i>. And ALSO ensure that spiders are enabled in the Master Controls for all collections. Then the URLs you added above should be spidered and indexed. Hit reload on the <a href=/admin/spiderdb>Spider Queue</a> tab to ensure you see some spider activity for your collection.
 
 <!--
