@@ -104,7 +104,7 @@ bool RdbMap::writeMap ( ) {
 	// on success, we don't need to write it anymore
 	if ( status ) m_needToWrite = false;
 	// . close map
-	// . no int32_ter since we use BigFile
+	// . no longer since we use BigFile
 	//m_file.close ( );
 	// return status
 	return status;
@@ -204,7 +204,7 @@ bool RdbMap::readMap ( BigFile *dataFile ) {
 			   m_file.getFilename(),mstrerror(g_errno));
 	bool status = readMap2 ( );
 	// . close map
-	// . no int32_ter since we use BigFile
+	// . no longer since we use BigFile
 	// . no, we have to close since we will hog all the fds
 	// . we cannot call BigFile::close() because then RdbMap::unlink() will
 	//   not work because BigFile::m_maxParts gets set to 0, and that is
@@ -1300,7 +1300,7 @@ bool RdbMap::chopHead ( int32_t fileHeadSize ) {
 	int32_t segNum = (fileHeadSize / m_pageSize) / PAGES_PER_SEGMENT;
 	// . must match exactly
 	// . not any more i guess, we can still have a segment that
-	//   corresponds in part to a PART file no int32_ter with us
+	//   corresponds in part to a PART file no longer with us
 	//if ( fileHeadSize * m_pageSize * PAGES_PER_SEGMENT != segNum )
 	//return log("RdbMap::chopHead: file head isn't multiple");
 	// return true if nothing to delete

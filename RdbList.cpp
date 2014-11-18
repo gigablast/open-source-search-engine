@@ -17,7 +17,7 @@
 
 /////
 //
-// we no int32_ter do ALLOW_SCALE! now user can click "rebalance shards"
+// we no longer do ALLOW_SCALE! now user can click "rebalance shards"
 // to scan all rdbs of every coll and move the recs to the appropriate
 // shard in real time.
 //
@@ -1566,7 +1566,7 @@ bool RdbList::constrain ( char   *startKey    ,
 // . all provided lists must have their recs in [startKey,endKey]
 //   so you should have called RdbList::constrain() on them
 // . should only be used by Msg5 to merge diskLists (Msg3) and treeList 
-// . we no int32_ter do annihilation, instead the newest key, be it negative
+// . we no longer do annihilation, instead the newest key, be it negative
 //   or positive, will override all the others
 // . the logic would have been much simpler had we chosen to use distinct 
 //   keys for distinct titleRecs, but that would hurt our incremental updates

@@ -162,7 +162,7 @@ bool File::open ( int flags , int permissions ) {
 	// remember OUR virtual file descriptor for successive calls to 
 	// read/write/...
 	m_vfd      = i;
-	// we are not open at this point, but no int32_ter available at least
+	// we are not open at this point, but no longer available at least
 	s_fds [ m_vfd ] = -1;
 	// open for real, return true on success
 	if ( getfd () >= 0 ) return true;

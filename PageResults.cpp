@@ -670,7 +670,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//   over the indexing process
 	// . this will copy our passed "query" and "coll" to it's own buffer
 	// . we print out matching docIds to int32_t if m_isDebug is true
-	// . no int32_ter forward this, since proxy will take care of evenly
+	// . no longer forward this, since proxy will take care of evenly
 	//   distributing its msg 0xfd "forward" requests now
 	st->m_gotResults=st->m_msg40.getResults(si,false,st,gotResultsWrapper);
 	// save error
@@ -3371,11 +3371,11 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 	//int32_t absSum = 0;
 	for ( int32_t i = 0 ; i < numLinks ; i++ ) {
 		k = ptrs[i];
-		if ( ! k->ptr_linkText ) continue;
+		if ( ! k->getLinkText() ) continue;
 		if ( ! si->m_doQueryHighlighting && 
 		     si->m_format == FORMAT_HTML ) 
 			continue;
-		char *str   = k-> ptr_linkText;
+		char *str   = k->getLinkText();//ptr_linkText;
 		int32_t strLen = k->size_linkText;
 		//char tt[1024*3];
 		//char *ttend = tt + 1024*3;
@@ -3416,7 +3416,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 				      "url=\"",
 				      k->m_docId );
 			// encode it for xml
-			sb->htmlEncode ( k->ptr_urlBuf,
+			sb->htmlEncode ( k->getUrl(),//ptr_urlBuf,
 					k->size_urlBuf - 1 , false );
 			sb->safePrintf("\" "
 				      //"hostId=\"%"UINT32"\" "
@@ -3472,12 +3472,12 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 			      //"page=7&"
 			      //"c=%s&"
 			      //"d=%"INT64"\">"
-			      //k->ptr_urlBuf);
+			      //k->getUrl());
 			      ,si->m_cr->m_coll
 			      ,k->m_docId);
 		if ( ! sb->safeMemcpy(&hb) ) return false;
 		int32_t hostLen = 0;
-		char *host = getHostFast(k->ptr_urlBuf,&hostLen,NULL);
+		char *host = getHostFast(k->getUrl(),&hostLen,NULL);
 		sb->safePrintf("</td><td>");
 		if ( host ) sb->safeMemcpy(host,hostLen);
 		sb->safePrintf("</td><td>%"INT32"</td></tr>",(int32_t)k->m_siteRank);
@@ -4391,7 +4391,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	//char *send;
 	// do the normal summary
 	str    = mr->ptr_displaySum;
-	// sometimes the summary is int32_ter than requested because for
+	// sometimes the summary is longer than requested because for
 	// summary deduping purposes (see "pss" parm in Parms.cpp) we do not
 	// get it as int16_t as request. so use mr->m_sumPrintSize here
 	// not mr->size_sum
@@ -5518,7 +5518,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				       si->m_sameLangWeight);//SAMELANGMULT);
 		// the actual min then
 		sb->safePrintf(" * %.03f",minScore);
-		// no int32_ter list all the scores
+		// no longer list all the scores
 		//sb->safeMemcpy ( &ft );
 		sb->safePrintf(//")"
 			      "]]>"
@@ -5885,7 +5885,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		LinkInfo *info = (LinkInfo *)mr->ptr_linkInfo;//inlinks;
 		Inlink *k = info->getNextInlink(NULL);
 		for (;k&&hg1==HASHGROUP_INLINKTEXT ; k=info->getNextInlink(k)){
-			if ( ! k->ptr_linkText ) continue;
+			if ( ! k->getLinkText() ) continue;
 			if ( k->m_wordPosStart > wp1 ) continue;
 			if ( k->m_wordPosStart + 50 < wp1 ) continue;
 			// got it. we HACKED this to put the id
@@ -5897,7 +5897,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 
 		k = info->getNextInlink(NULL);
 		for (;k&&hg2==HASHGROUP_INLINKTEXT ; k=info->getNextInlink(k)){
-			if ( ! k->ptr_linkText ) continue;
+			if ( ! k->getLinkText() ) continue;
 			if ( k->m_wordPosStart > wp2 ) continue;
 			if ( k->m_wordPosStart + 50 < wp2 ) continue;
 			// got it. we HACKED this to put the id
@@ -6528,7 +6528,7 @@ bool printSingleScore ( SafeBuf *sb ,
 		Inlink *k = info->getNextInlink(NULL);
 		for ( ; k && ss->m_hashGroup==HASHGROUP_INLINKTEXT ; 
 		      k=info->getNextInlink(k)){
-			if ( ! k->ptr_linkText ) continue;
+			if ( ! k->getLinkText() ) continue;
 			if ( k->m_wordPosStart > ss->m_wordPos ) continue;
 			if ( k->m_wordPosStart + 50 < ss->m_wordPos ) continue;
 			// got it. we HACKED this to put the id

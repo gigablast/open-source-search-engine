@@ -145,7 +145,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		// . store them all
 		// . what if we merged one of these files (or are merging)???
 		// . then sync class should not discard syncpoints until no
-		//   int32_ter syncing and we'll know about it
+		//   longer syncing and we'll know about it
 		// . this should compensate for merges by including any files
 		//   that are merging a file in m_fileNums
 		m_numFileNums = g_sync.getFileNums ( m_rdbId       ,

@@ -638,7 +638,7 @@ void RdbMerge::doneMerging ( ) {
 // . do not call this if "list" is empty
 // . remove records whose keys don't beint32_t
 // . when we split the db cuz we scaled to more groups this will rid us
-//   of data we no int32_ter control
+//   of data we no longer control
 // . a split is done by turning on the next bit in m_groupMask starting
 //   at the highest bit going down
 // . this spiderdb thang is a HACK

@@ -404,7 +404,7 @@ class UdpSlot {
 
 	// now caller can decide initial backoff, doubles each time no ack rcvd
 	int16_t          m_backoff;
-	// don't wait int32_ter than this, however
+	// don't wait longer than this, however
 	int16_t          m_maxWait;
 
 	// save cpu by not having to call memset() on m_sentBits et al

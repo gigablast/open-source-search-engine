@@ -433,7 +433,7 @@ bool Msg3a::gotCacheReply ( ) {
 	/////////////////////////////
 
 	// . set timeout based on docids requested!
-	// . the more docs requested the int32_ter it will take to get
+	// . the more docs requested the longer it will take to get
 	int32_t timeout = (50 * m_docsToGet) / 1000;
 	// at least 20 seconds
 	if ( timeout < 20 ) timeout = 20;

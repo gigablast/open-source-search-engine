@@ -170,6 +170,6 @@ void RdbMem::freeDumpedMem() {
 	// reset secondary (old primary mem was dumped out to disk)
 	if ( m_ptr2 > m_ptr1 ) m_ptr2  = m_mem + m_memSize;
 	else                   m_ptr2  = m_mem;
-	// no int32_ter 90% full
+	// no longer 90% full
 	m_is90PercentFull = false;
 }

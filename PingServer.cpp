@@ -552,7 +552,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 	int32_t hid = h->m_hostId;
 	// if host 0 special case.
 	//if ( hid == 0 && g_sendingToHost0 ) {
-	//	// no int32_ter sending to him
+	//	// no longer sending to him
 	//	g_sendingToHost0 = false;
 	//	// if he sent a reply, don't bother him so much any more
 	//	if ( ! g_errno ) g_host0Replied = true;

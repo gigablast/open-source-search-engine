@@ -278,7 +278,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 	m_docsToGetVisible = get;
 	// if site clustering is on, get more than we should in anticipation 
 	// that some docIds will be clustered.
-	// MDW: we no int32_ter do this here for full splits because Msg39 does
+	// MDW: we no longer do this here for full splits because Msg39 does
 	// clustering on its end now!
 	//if ( m_si->m_doSiteClustering ) get = (get*150LL)/100LL;
 	//if ( m_si->m_doSiteClustering && ! g_conf.m_fullSplit ) 
@@ -349,7 +349,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 		char *request = m_si->serializeForMsg40 ( &requestSize );
 		if ( ! request ) return true;
 		// . set timeout based on docids requested!
-		// . the more docs requested the int32_ter it will take to get
+		// . the more docs requested the longer it will take to get
 		// . use 50ms per docid requested
 		int32_t timeout = (50 * m_docsToGet) / 1000;
 		// always wait at least 20 seconds
@@ -1823,11 +1823,11 @@ bool Msg40::gotSummary ( ) {
 				if ( ! xx ) break;
 				if ( ! xx->m_r ) break;
 			}
-			// if not all have come back yet, wait int32_ter...
+			// if not all have come back yet, wait longer...
 			if ( k < m_needFirstReplies ) break;
 			// now make the csv header and print it
 			printCSVHeaderRow ( sb );
-			// and no int32_ter need to do this logic
+			// and no longer need to do this logic
 			m_needFirstReplies = 0;
 		}
 
@@ -2595,7 +2595,7 @@ bool Msg40::gotSummary ( ) {
 			m_docsToGet = get;
 			// let's do it all from the top!
 			return getDocIds ( true ) ;
-			// NOTE: we no int32_ter do msg3a re-calls for simplicity
+			// NOTE: we no longer do msg3a re-calls for simplicity
 			// so all re-calling is done from right here only
 			// MDW: hack it in msg3a too
 			//m_msg3a.m_docsToGet = get;
@@ -2864,7 +2864,7 @@ bool Msg40::gotSummary ( ) {
 		else if ( v++ < m_si->m_firstResultNum )
 			skip = true;
 		// . if skipping a valid msg20, give it a chance to destruct
-		// . no int32_ter do this because CR_SUMMARY_MERGED needs to keep
+		// . no longer do this because CR_SUMMARY_MERGED needs to keep
 		//   the msg20 reply around so PageResults.cpp can merge the 
 		//   event  descriptions
 		//if ( skip && m_msg20[i] ) m_msg20[i]->destructor();
@@ -2992,8 +2992,8 @@ void Msg40::uncluster ( int32_t m ) {
 		// UNHIDE IT
 		m_msg3a.m_clusterLevels[k] = CR_OK;
 		// we must UN-dedup anything after us because now that we are
-		// no int32_ter clustered, we could dedup a result below us,
-		// which deduped another result, which is now no int32_ter deduped
+		// no longer clustered, we could dedup a result below us,
+		// which deduped another result, which is now no longer deduped
 		// because its deduped was this unclustered results dup! ;)
 		for ( int32_t i = k+1 ; i < m_msg3a.m_numDocIds ; i++ ) {
 			// get current cluster level
@@ -3585,10 +3585,10 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		if ( gi->m_termLen == 0 ) continue;
 		// scan down to this score, but not below
 		//int32_t minScore = scores[i] - 25;
-		// if we get replaced by a int32_ter guy, remember him
+		// if we get replaced by a longer guy, remember him
 		//int32_t replacerj = -1;
-		// . a int32_ter term than encapsulates us can eliminate us
-		// . or, if we're the int32_ter, we eliminate the int16_ter
+		// . a longer term than encapsulates us can eliminate us
+		// . or, if we're the longer, we eliminate the int16_ter
 		for ( int32_t j = i + 1 ; j < numPtrs ; j++ ) {
 			// get it
 			Gigabit *gj = ptrs[j];
@@ -3600,11 +3600,11 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			// if page count not the same let it coexist
 			if ( gi->m_numPages != gj->m_numPages ) 
 				continue;
-			// if we are the int16_ter, nuke the int32_ter guy
+			// if we are the int16_ter, nuke the longer guy
 			// that contains us because we have a higher score
 			// since ptrs are sorted by score then length.
 			if ( gi->m_termLen < gj->m_termLen ) {
-				// just null term the int32_ter
+				// just null term the longer
 				char c1 = gi->m_term[gi->m_termLen];
 				gi->m_term[gi->m_termLen] = '\0';
 				char c2 = gj->m_term[gj->m_termLen];
@@ -3612,10 +3612,10 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 				// if int16_ter is contained
 				char *s;
 				s = gb_strcasestr (gj->m_term, gi->m_term);
-				// un-null term int32_ter
+				// un-null term longer
 				gi->m_term[gi->m_termLen] = c1;
 				gj->m_term[gj->m_termLen] = c2;
-				// even if he's int32_ter, if his score is too
+				// even if he's longer, if his score is too
 				// low then he cannot nuke us
 				// MDW: try doing page count!
 				//if ( scores[j] < minScore ) continue;
@@ -3654,12 +3654,12 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			}
 			
 			else {
-				// just null term the int32_ter
+				// just null term the longer
 				char c1 = gi->m_term[gi->m_termLen];
 				gi->m_term[gi->m_termLen] = '\0';
 				char c2 = gj->m_term[gj->m_termLen];
 				gj->m_term[gj->m_termLen] = '\0';
-				// . otherwise, we are the int32_ter
+				// . otherwise, we are the longer
 				// . we can nuke any int16_ter below us, all
 				//   scores
 				char *s;
@@ -3695,7 +3695,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		}
 
 		/*
-		// if we got replaced by a int32_ter guy, he replaces us
+		// if we got replaced by a longer guy, he replaces us
 		// and takes our score
 		if ( replacerj >= 0 ) {
 			// gigabit #i is now gigabit #j
@@ -3710,7 +3710,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			msg.safePrintf("\"[%.0f]",gj->m_gbscore);
 			logf(LOG_DEBUG,msg.getBufStart());
 
-			// make us int32_ter then!
+			// make us longer then!
 			gi->m_termLen = gj->m_termLen;
 			// and nuke him
 			gj->m_termLen = 0;
@@ -3745,8 +3745,8 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			gi->m_termLen = 0;
 	}
 
-	// now after int32_ter topics replaced the int16_ter topics which they
-	// contained, remove the int32_ter topics if they have too many words
+	// now after longer topics replaced the int16_ter topics which they
+	// contained, remove the longer topics if they have too many words
 	// remove common phrases
 	for ( int32_t i = 0 ; i < numPtrs ; i++ ) {
 		// get it
@@ -4527,7 +4527,7 @@ void hashExcerpt ( Query *q ,
 		//   terms...
 		wi->m_proxScore = proxScore;
 
-		// no int32_ter count closeness to query terms for score,
+		// no longer count closeness to query terms for score,
 		// just use # times topic is in doc(s) and popularity
 		//score = 1000;
 
@@ -5249,7 +5249,8 @@ bool Msg40::computeFastFacts ( ) {
 	//
 	HashTableX gbitTable;
 	char gbuf[30000];
-	if ( ! gbitTable.set(8,4,1024,gbuf,30000,false,0,"gbtbl") )
+	if ( ! gbitTable.set(8,sizeof(Gigabit *),1024,gbuf,30000,
+			     false,0,"gbtbl") )
 		return false;
 	int32_t numGigabits = m_gigabitBuf.length()/sizeof(Gigabit);
 	Gigabit *gigabits = (Gigabit *)m_gigabitBuf.getBufStart();
@@ -5279,7 +5280,8 @@ bool Msg40::computeFastFacts ( ) {
 	Query *q = &m_si->m_q;
 	HashTableX queryTable;
 	char qbuf[10000];
-	if ( ! queryTable.set(8,4,512,qbuf,10000,false,0,"qrttbl") )
+	if ( ! queryTable.set(8,sizeof(QueryTerm *),512,qbuf,
+			      10000,false,0,"qrttbl") )
 		return false;
 	for ( int32_t i = 0 ; i < q->m_numTerms ; i++ ) {
 		// int16_tcut

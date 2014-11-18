@@ -3074,7 +3074,7 @@ bool Addresses::updateAddresses ( ) {
 			if ( d1 < -.01 ) continue;
 			if ( d2 < -.01 ) continue;
 			// . ok, they are the same i guess
-			// . prefer the one with the int32_test digits as the orig
+			// . prefer the one with the longest digits as the orig
 			//   and the other as the alias
 			if ( ad->m_street->m_strlen > aj->m_street->m_strlen){
 				//aj->m_street->m_alias = ad;
@@ -4079,7 +4079,7 @@ bool setHashes ( Place *p , Words *ww , int32_t niceness ) {
 	// not a po box i guess
 	if ( k == -1 ) return true;
 
-	// xor it in aint32_t with h_po
+	// xor it in along with h_po
 	p->m_hash = h_po ^ wids[k];
 
 	return true;
@@ -5679,12 +5679,12 @@ bool Addresses::set2 ( ) {
 		Place *pp = NULL;
 		if ( ! pp ) pp = pc;
 		if ( ! pp ) pp = ps;
-		// . if tied prefer int32_ter. if length tied prefer state
+		// . if tied prefer longer. if length tied prefer state
 		// . "California" is both a state and a city
 		if ( pc && ps ) {
-			// kill state if city int32_ter
+			// kill state if city longer
 			if ( pc->m_alnumB > ps->m_alnumB ) ps = NULL;
-			// or kill city is state is int32_ter
+			// or kill city is state is longer
 			else if ( pc->m_alnumB < ps->m_alnumB ) pc = NULL;
 		}
 
@@ -7179,7 +7179,7 @@ bool Addresses::set2 ( ) {
 			//   plays somewhat nicely with menu cruft because
 			//   we have to verify the place names with another
 			//   website to really make the place name stick,
-			//   so let's no int32_ter use SEC_DUP or'ed in with
+			//   so let's no longer use SEC_DUP or'ed in with
 			//   the badFlags. mdw.
 			if ( sp && (sp[i]->m_flags & badFlags ) )  // |SEC_DUP)
 				continue;
@@ -10116,7 +10116,7 @@ int64_t *getSynonymWord ( int64_t *h, int64_t *prevId, bool isStreet ) {
 
 	int64_t *p = (int64_t *)s_syn.getValue64 ( *h );
 
-	// check city aliases table. we no int32_ter store city aliases
+	// check city aliases table. we no longer store city aliases
 	// in the synonym list
 	// . no! might have "SF Smith" not "Santa Fe Smith"
 	//if ( ! p ) {
@@ -12147,7 +12147,7 @@ bool Address::addToTagRec ( TagRec *gr , int32_t ip , int32_t timestamp ,
 			    char *tagName ) {
 
 	//
-	// we are no int32_ter storing contact info addresses
+	// we are no longer storing contact info addresses
 	//
 	//return true;
 
@@ -12968,7 +12968,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 		pbuf->pushChar(';');
 		//if ( m_ctry->m_str ) 
 		//	pbuf->javascriptEncode(m_ctry->m_str,m_ctry->m_strlen);
-		// now we include lat and int32_t, but only if we got both valid
+		// now we include lat and long, but only if we got both valid
 		if ( m_longitude != NO_LONGITUDE &&
 		     m_latitude  != NO_LONGITUDE ) {
 			pbuf->pushChar(';');
@@ -15839,7 +15839,7 @@ bool Addresses::hashForPlacedb ( int64_t   docId    ,
 		// no intersections
 		if ( a->m_street->m_flags2 & PLF2_INTERSECTION ) good = false;
 		// . skip if not good
-		// . we no int32_ter add non-inlined addresses cuz those are
+		// . we no longer add non-inlined addresses cuz those are
 		//   not as accurate. many pages have the street address
 		//   too far from the city and state, and we use one from the
 		//   tag and it ain't right.
@@ -18934,7 +18934,7 @@ bool getLatLonFromUserInput ( float  *radius,
 			cityA = city2A;
 			cityB = city2B;
 		}
-		// if both existed, prefer the int32_ter. if tied. prefer
+		// if both existed, prefer the longer. if tied. prefer
 		// the local one even if its population might be smaller
 		if ( crd && crd2 && city2B > cityB ) {
 			crd = crd2;

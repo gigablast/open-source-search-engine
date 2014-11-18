@@ -320,7 +320,7 @@ bool Speller::getRecommendation ( Query *q,
 
 		bool inQuotes  = qw->m_inQuotes;
 		char fieldCode = qw->m_fieldCode;
-		// . get int32_test continual fragment that starts with word #i
+		// . get longest continual fragment that starts with word #i
 		// . get the following words that can be in a fragment
 		//   that starts with word #i
 		// . start of the frag
@@ -903,7 +903,7 @@ void Speller::gotFrags( void *state ){
 		}
 		bool inQuotes  = qw->m_inQuotes;
 		char fieldCode = qw->m_fieldCode;
-		// . get int32_test continual fragment that starts with word #i
+		// . get longest continual fragment that starts with word #i
 		// . get the following words that can be in a fragment
 		//   that starts with word #i
 		// . start of the frag
@@ -1489,7 +1489,7 @@ int32_t Speller::getPhrasePopularity ( char *str, uint64_t h,
 // is showing up as porn because it has 'anal' in the hostname. So try to
 // find a combination of words such that they are NOT porn.
 // try this only after isAdult() succeeds.
-// Always tries to find int32_ter words first. so 'montanalinux' is split as
+// Always tries to find longer words first. so 'montanalinux' is split as
 // 'montana' and 'linux' and not as 'mont', 'analinux'
 // if it finds a seq of words leading upto a porn word, then it returns true
 // eg. shall split montanalinux into 'mont', 'anal', and return true without

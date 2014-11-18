@@ -53,7 +53,7 @@ bool Catdb::init (  ) {
 		return log("db: Catdb init failed.");
 
 	// . initialize our own internal rdb
-	// . i no int32_ter use cache so changes to tagdb are instant
+	// . i no longer use cache so changes to tagdb are instant
 	// . we still use page cache however, which is good enough!
 	//if ( this == &g_catdb )
 	if ( !  m_rdb.init ( g_hostdb.m_dir               ,

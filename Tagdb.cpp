@@ -1107,7 +1107,7 @@ bool TagRec::setFromHttpRequest ( HttpRequest *r, TcpSocket *s ) {
 	// the ST_SITE field anyway...
 	if ( ! ufu && ! us ) return true;
 
-	// make it null terminated since we no int32_ter do this automatically
+	// make it null terminated since we no longer do this automatically
 	fou.pushChar('\0');
 
 	// normalize it
@@ -1628,7 +1628,7 @@ static TagDesc s_tagDesc[] = {
 	{"sitenuminlinksuniquecblock"  ,0x00,0},
 	{"sitenuminlinkstotal"  ,0x00,0},
 
-	// keep these although no int32_ter used
+	// keep these although no longer used
 	{"sitepop"  ,0x00,0},
 	{"sitenuminlinksfresh"  ,0x00,0},
 
@@ -1754,11 +1754,11 @@ int32_t getTagTypeFromStr( char *tagname , int32_t tagnameLen ) {
 char *getTagStrFromType ( int32_t tagType ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
-	TagDesc *td = (TagDesc *)s_ht.getValue ( &tagType );
+	TagDesc **ptd = (TagDesc **)s_ht.getValue ( &tagType );
 	// sanity check
-	if ( ! td ) { char *xx=NULL;*xx=0; }
+	if ( ! ptd ) { char *xx=NULL;*xx=0; }
 	// return it
-	return td->m_name;
+	return (*ptd)->m_name;
 }
 
 // a global class extern'd in .h file
@@ -1782,7 +1782,7 @@ bool Tagdb::setHashTable ( ) {
 	s_initialized = true;
 	// the hashtable of TagDescriptors
 	//if ( ! s_ht.set ( 1024 ) ) 
-	if ( ! s_ht.set ( 4,sizeof(char *),1024,NULL,0,false,0,"tgdbtb" ) ) 
+	if ( ! s_ht.set ( 4,sizeof(TagDesc *),1024,NULL,0,false,0,"tgdbtb" ) ) 
 		return log("tagdb: Tagdb hash init failed.");
 	// stock it
 	int32_t n = (int32_t)sizeof(s_tagDesc)/(int32_t)sizeof(TagDesc);
@@ -1793,14 +1793,14 @@ bool Tagdb::setHashTable ( ) {
 		// use the same algo that Words.cpp computeWordIds does 
 		int32_t h = hash64Lower_a ( s , slen );
 		// call it a bad name if already in there
-		TagDesc *etd = (TagDesc *)s_ht.getValue ( &h );
-		if ( etd )
+		TagDesc **petd = (TagDesc **)s_ht.getValue ( &h );
+		if ( petd )
 			return log("tagdb: Tag %s collides with old tag %s",
-				   td->m_name,etd->m_name);
+				   td->m_name,(*petd)->m_name);
 		// set the type
 		td->m_type = h;
 		// add it
-		s_ht.addKey ( &h , (TagDesc **)&td );
+		s_ht.addKey ( &h , &td );
 	}
 	return true;
 }
@@ -1839,7 +1839,7 @@ bool Tagdb::init ( ) {
 	//	return log("tagdb: lock table init failed.");
 
 	// . initialize our own internal rdb
-	// . i no int32_ter use cache so changes to tagdb are instant
+	// . i no longer use cache so changes to tagdb are instant
 	// . we still use page cache however, which is good enough!
 	return m_rdb.init ( g_hostdb.m_dir               ,
 			    "tagdb"                     ,
@@ -1867,7 +1867,7 @@ bool Tagdb::init2 ( int32_t treeMem ) {
 	// . NOTE: 32 bytes of the 82 are overhead
 	int32_t maxTreeNodes = treeMem / 82;
 	// . initialize our own internal rdb
-	// . i no int32_ter use cache so changes to tagdb are instant
+	// . i no longer use cache so changes to tagdb are instant
 	// . we still use page cache however, which is good enough!
 	return m_rdb.init ( g_hostdb.m_dir               ,
 			    "tagdbRebuild"               ,
@@ -2503,7 +2503,7 @@ int32_t Tagdb::getMatchPoints ( Url *recUrl , Url *url ) {
 	if ( strncmp ( upath , rpath , rplen ) != 0 ) return 0;
 	// . now we got a solid match
 	// . add 1 pt for each char in recUrl's path
-	// . so the int32_ter recUrl's path the better the match (more specific)
+	// . so the longer recUrl's path the better the match (more specific)
 	// . this allows us to override TagRecs for deeper sub urls
 	pts += rplen;
 	// add in host size of the matching recUrl
@@ -2972,7 +2972,7 @@ void Msg8a::gotAllReplies ( ) {
 	cx.set ( 4,0,64,cbuf,2048,false,m_niceness,"tagtypetab");
 	// . loop over all tags in all lists in order by key
 	// . each list should be from a different suburl?
-	// . the first list should be the narrowest/int32_test?
+	// . the first list should be the narrowest/longest?
 	for ( ; tag ; tag = m_tagRec->getNextTag ( tag ) ) {
 		// breathe
 		QUICKPOLL(m_niceness);
@@ -4049,7 +4049,7 @@ public:
 	//bool         m_isRootAdmin;
 	//bool         m_isAssassin;
 	// . Commented by Gourav
-	// .  Reason:user perm no int32_ter used
+	// .  Reason:user perm no longer used
 	//char         m_userType;
 	HttpRequest  m_r;
 	//char        *m_username;
@@ -4111,7 +4111,7 @@ bool sendPageTagdb ( TcpSocket *s , HttpRequest *req ) {
 	//st->m_isRootAdmin    = isAdmin;
 	//st->m_isAssassin = isAssassin;
 	// . Commented by Gourav
-	// .  Reason:user perm no int32_ter used
+	// .  Reason:user perm no longer used
 	//st->m_userType   = g_pages.getUserType ( s , req );
 	// assume we've nothing to add
 	st->m_adding = false;
@@ -4405,7 +4405,7 @@ bool sendReply ( void *state ) {
 		    false ,
 		    sizeof(key128_t) );
 
-	// no int32_ter adding
+	// no longer adding
 	st->m_adding = false;
 
 	// . just use TagRec::m_msg1 now
@@ -4888,7 +4888,7 @@ bool isTagTypeIndexable ( int32_t tt ) {
 /*
 bool isTagTypeString ( int32_t tt ) {
 	// look up in hash table
-	TagDesc *td = (TagDesc *)s_ht.getValue ( tt );
+	TagDesc *td = (TagDesc **)s_ht.getValue ( tt );
 	// if none, that is crazy
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return 

@@ -1531,7 +1531,7 @@ bool Msg25::sendRequests ( ) {
 		//if ( ! m_docIdTable.addKey ( &dh ) ) 
 		//	return true;
 
-		// if it is no int32_ter there, just ignore
+		// if it is no longer there, just ignore
 		if ( lostDate ) {
 			m_lostLinks++;
 			continue;
@@ -1962,7 +1962,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		// we often restrict link: termlist lookup to indexdb root
 		// file, so we end up including terms from deleted docs...
 		// this we get a lot of ENOTFOUND errors. 
-		// MDW: we no int32_ter do this restriction...
+		// MDW: we no longer do this restriction...
 		log(LOG_DEBUG,
 		    "build: Got error getting link text from one document: "
 		    "%s. Will have to restart later. docid=%"INT64".",
@@ -2001,7 +2001,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 
 	// is the inlinker banned?
 	if ( r && good && r->m_isBanned ) {
-		// it is no int32_ter good
+		// it is no longer good
 		good = false;
 		// inc the general count, too
 		m_spamLinks++;
@@ -2051,7 +2051,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 
 	// banned by way of ad id?
 	if (r && good&& r->m_adIdHash&&m_adBanTable.getSlot(&r->m_adIdHash)>0){
-		// it is no int32_ter good
+		// it is no longer good
 		good = false;
 		// inc the general count, too
 		m_spamLinks++;
@@ -2088,7 +2088,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	if ( r && good && ! internal && r->m_isLinkSpam &&
 	     // we can no allow link spam iff it is below the max!
 	     ++m_spamCount >= m_maxSpam ) {
-		// it is no int32_ter good
+		// it is no longer good
 		good = false;
 		// inc the general count, too
 		m_spamLinks++;
@@ -4001,7 +4001,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 		// note it if recycled
 		if ( k.m_recycled )
 			logf(LOG_DEBUG,"build: recycling Inlink %s for linkee "
-			     "%"INT64"", k.ptr_urlBuf,linkeeDocId);
+			     "%"INT64"", k.getUrl(),linkeeDocId);
 		// advance
 		p += wrote;
 	}
@@ -4047,12 +4047,13 @@ Inlink *LinkInfo::getNextInlink ( Inlink *k ) {
 		p->m_numStrings        = 4;
 		p->m_firstStrPtrOffset = 64;
 	}
+	// MDW: now we just use offsets for 64bit conversion so no ptrs...
 	// if latest, return that
-	if ( p->m_numStrings        == p->getBaseNumStrings() &&
-	     p->m_firstStrPtrOffset == (char *)&p->ptr_urlBuf - (char *)p ) {
-		p->updateStringPtrs(NULL);
-		return p;
-	}
+	//if ( p->m_numStrings        == p->getBaseNumStrings() &&
+	//     p->m_firstStrPtrOffset == (char *)&p->off_urlBuf - (char *)p ) {
+	//	p->updateStringPtrs(NULL);
+	//	return p;
+	//}
 	// otherwise, set s_inlink to it
 	s_inlink.set2 ( (Inlink *)p );
 	// preserve p though for next call
@@ -4106,7 +4107,7 @@ bool Inlink::setXmlFromRSS ( Xml *xml , int32_t niceness ) {
 	// compute the length (excludes the \0's)
 	int32_t len = size_rssItem - 1;
 	// return false and set g_errno if this fails
-	return xml->set ( ptr_rssItem              ,
+	return xml->set ( getRSSItem(),//ptr_rssItem              ,
 			  len                      ,
 			  false                    , // own data?
 			  0                        , // allocSize
@@ -4338,7 +4339,7 @@ void Inlink::set ( Msg20Reply *r ) {
 	// . our current version has 5 strings
 	m_numStrings         = getBaseNumStrings();
 	// and our current string offset
-	m_firstStrPtrOffset  = (char *)getFirstStrPtr() - (char *)this;
+	m_firstStrPtrOffset  = (char *)getFirstOffPtr() - (char *)this;
 
 	// set ourselves now
 	m_ip                 = r->m_ip;
@@ -4379,6 +4380,47 @@ void Inlink::set ( Msg20Reply *r ) {
 	m_hopcount            = r->m_hopcount;
 	//m_linkTextScoreWeight = r->m_linkTextScoreWeight;
 
+	// MDW: use a new way. construct m_buf. 64-bit stuff.
+	int32_t poff = 0;
+	char *p = m_buf;
+
+	off_urlBuf = poff;
+	memcpy ( p , r->ptr_ubuf , r->size_ubuf );
+	poff += r->size_ubuf;
+	p    += r->size_ubuf;
+
+	off_linkText = poff;
+	memcpy ( p , r->ptr_linkText , r->size_linkText );
+	poff += r->size_linkText;
+	p    += r->size_linkText;
+
+	off_surroundingText = poff;
+	memcpy ( p , r->ptr_surroundingText , r->size_surroundingText );
+	poff += r->size_surroundingText;
+	p    += r->size_surroundingText;
+
+	off_rssItem = poff;
+	memcpy ( p , r->ptr_rssItem , r->size_rssItem );
+	poff += r->size_rssItem;
+	p    += r->size_rssItem;
+
+	off_categories = poff;
+	memcpy ( p , r->ptr_categories , r->size_categories );
+	poff += r->size_categories;
+	p    += r->size_categories;
+
+	off_gigabitQuery = poff;
+	memcpy ( p , r->ptr_gigabitQuery , r->size_gigabitQuery );
+	poff += r->size_gigabitQuery;
+	p    += r->size_gigabitQuery;
+
+	off_templateVector = poff;
+	memcpy ( p , r->ptr_templateVector , r->size_templateVector );
+	poff += r->size_templateVector;
+	p    += r->size_templateVector;
+	
+	/*
+	  MDW: take this out for 64 bit offset-only conversion
 	ptr_urlBuf            = r->ptr_ubuf;
 	ptr_linkText          = r->ptr_linkText;
 	ptr_surroundingText   = r->ptr_surroundingText;
@@ -4386,6 +4428,7 @@ void Inlink::set ( Msg20Reply *r ) {
 	ptr_categories        = r->ptr_categories;
 	ptr_gigabitQuery      = r->ptr_gigabitQuery;
 	ptr_templateVector    = r->ptr_templateVector;
+	*/
 
 	size_urlBuf           = r->size_ubuf;
 	size_linkText         = r->size_linkText;
@@ -4397,7 +4440,7 @@ void Inlink::set ( Msg20Reply *r ) {
 }
 
 // Msg25 calls this to make a "fake" msg20 reply for recycling Inlinks
-// that are no int32_ter there... preserves rssInfo, etc.
+// that are no longer there... preserves rssInfo, etc.
 void Inlink::setMsg20Reply ( Msg20Reply *r ) {
 
 	r->m_ip                  = m_ip;
@@ -4432,13 +4475,13 @@ void Inlink::setMsg20Reply ( Msg20Reply *r ) {
 	r->m_hopcount            = m_hopcount;
 	//r->m_linkTextScoreWeight = m_linkTextScoreWeight;
 	
-	r->ptr_ubuf              = ptr_urlBuf;
-	r->ptr_linkText          = ptr_linkText;
-	r->ptr_surroundingText   = ptr_surroundingText;
-	r->ptr_rssItem           = ptr_rssItem;
-	r->ptr_categories        = ptr_categories;
-	r->ptr_gigabitQuery      = ptr_gigabitQuery;
-	r->ptr_templateVector    = ptr_templateVector;
+	r->ptr_ubuf              = getUrl();//ptr_urlBuf;
+	r->ptr_linkText          = getLinkText();//ptr_linkText;
+	r->ptr_surroundingText   = getSurroundingText();//ptr_surroundingText;
+	r->ptr_rssItem           = getRSSItem();//ptr_rssItem;
+	r->ptr_categories        = getCategories();//ptr_categories;
+	r->ptr_gigabitQuery      = getGigabitQuery();//ptr_gigabitQuery;
+	r->ptr_templateVector    = getTemplateVector();//ptr_templateVector;
 	
 	r->size_ubuf             = size_urlBuf;
 	r->size_linkText         = size_linkText;
@@ -4450,6 +4493,9 @@ void Inlink::setMsg20Reply ( Msg20Reply *r ) {
 }
 
 // convert offsets back into ptrs
+// MDW: no, now they are always offsets since we are 64bits
+// this was kinda like Inlink::deserialize()
+/*
 int32_t Inlink::updateStringPtrs ( char *buf ) {
 	// point to our string buffer
 	char *p = buf;
@@ -4475,6 +4521,7 @@ int32_t Inlink::updateStringPtrs ( char *buf ) {
 	// return how many bytes we processed
 	return getBaseSize() + (p - getStringBuf());
 }
+*/
 
 void Inlink::reset ( ) {
 	// clear ourselves out
@@ -4487,6 +4534,18 @@ void Inlink::set2 ( Inlink *old ) {
 	// clear ouselves
 	reset();
 	// copy what is legit to us
+	int fullSize = sizeof(Inlink);
+	// add in the sizes of all strings
+	int32_t  *sizePtr = getFirstSizeParm(); // &size_qbuf;
+	int32_t  *sizeEnd = getLastSizeParm (); // &size_displayMetas;
+	for ( ; sizePtr <= sizeEnd ;  sizePtr++ ) 
+		fullSize += *sizePtr;
+	// return how many bytes we processed
+	memcpy ( (char *)this , (char *)old , fullSize );
+	return;
+
+	// this old way is pre-64bit
+	/*
 	memcpy ( (char *)this , (char *)old , old->m_firstStrPtrOffset );
 	// set our offset to the string ptrs
 	m_firstStrPtrOffset = (char *)&ptr_urlBuf - (char *)this;
@@ -4512,19 +4571,20 @@ void Inlink::set2 ( Inlink *old ) {
 	// we can't do this sanity check because we cast "old" as an Inlink
 	// whereas before it was an older version of "Inlink"
 	//if ( old->size_urlBuf != size_urlBuf ) { char *xx=NULL;*xx=0; }
+	*/
 }
 
 int32_t Inlink::getStoredSize ( ) {
 	//int32_t size = (int32_t)sizeof(Msg);
 	//int32_t size = getBaseSize();
 	int32_t size = m_firstStrPtrOffset;
-	// add in string AND size ptrs
+	// add in string offsets AND size ptrs
 	size += 8 * m_numStrings;
 	// add up string buffer sizes
 	//int32_t *sizePtr = getFirstSizeParm(); // &size_qbuf;
 	//int32_t *sizeEnd = getLastSizeParm (); // &size_displayMetas;
 	int32_t *sizePtr = 
-		(int32_t *)((char *)this + m_firstStrPtrOffset + 4*m_numStrings);
+		(int32_t *)((char *)this + m_firstStrPtrOffset+4*m_numStrings);
 	int32_t *sizeEnd = sizePtr + m_numStrings;
 	for ( ; sizePtr < sizeEnd ; sizePtr++ )
 		size += *sizePtr;
@@ -4550,32 +4610,38 @@ char *Inlink::serialize ( int32_t *retSize     ,
 	*retSize = need;
 	// copy the easy stuff
 	char *p = buf;
+	char *pend = buf + need;
 	memcpy ( p , (char *)this , getBaseSize() );
 	p += getBaseSize();
 	// then store the strings!
 	int32_t  *sizePtr = getFirstSizeParm(); // &size_qbuf;
 	int32_t  *sizeEnd = getLastSizeParm (); // &size_displayMetas;
-	char **strPtr  = getFirstStrPtr  (); // &ptr_qbuf;
+	int32_t  *offPtr  = getFirstOffPtr  (); // &ptr_qbuf;
 	for ( ; sizePtr <= sizeEnd ;  ) {
+		if ( p > pend ) { char *xx=NULL;*xx=0; }
 		// if we are NULL, we are a "bookmark", so
 		// we alloc'd space for it, but don't copy into
 		// the space until after this call toe serialize()
-		if ( ! *strPtr ) goto skip;
+		// MDW: we can't use NULL now because we are offsets and 0 is 
+		// legit. because of the 64bit conversion.
+		// well if empty, *sizePtr will be 0... so we don't need this.
+		//if ( *offPtr == -1 ) goto skip;
 		// sanity check -- cannot copy onto ourselves
-		if ( p > *strPtr && p < *strPtr + *sizePtr ) {
+		if ( p > m_buf+*offPtr && p < m_buf+*offPtr + *sizePtr ) {
 			char *xx = NULL; *xx = 0; }
 		// copy the string into the buffer
-		memcpy ( p , *strPtr , *sizePtr );
-	skip:
+		memcpy ( p , m_buf + *offPtr , *sizePtr );
+		//skip:
 		// . make it point into the buffer now
 		// . MDW: why? that is causing problems for the re-call in
 		//   Msg3a, it calls this twice with the same "m_r"
-		if ( makePtrsRefNewBuf ) *strPtr = p;
+		// . MDW: took out for 64bit
+		//if ( makePtrsRefNewBuf ) *offPtr = (p-buf);
 		// advance our destination ptr
 		p += *sizePtr;
 		// advance both ptrs to next string
 		sizePtr++;
-		strPtr++;
+		offPtr++;
 	}
 	return buf;
 }
@@ -4589,15 +4655,15 @@ bool LinkInfo::print ( SafeBuf *sb , char *coll ) {
 	int32_t count = 1;
 	// loop through the link texts
 	for ( Inlink *k = NULL; (k = getNextInlink(k)) ; count++ ) {
-		char *s    = k->ptr_linkText;
+		char *s    = k->getLinkText();//ptr_linkText;
 		int32_t  slen = k->size_linkText - 1;
-		char *d    = k->ptr_surroundingText;
+		char *d    = k->getSurroundingText();//ptr_surroundingText;
 		int32_t  dlen = k->size_surroundingText - 1;
-		char *r    = k->ptr_rssItem;
+		char *r    = k->getRSSItem();//ptr_rssItem;
 		int32_t  rlen = k->size_rssItem - 1;
-		char *g    = k->ptr_gigabitQuery;
+		char *g    = k->getGigabitQuery();//ptr_gigabitQuery;
 		int32_t  glen = k->size_gigabitQuery - 1;
-		char *c    = k->ptr_categories;
+		char *c    = k->getCategories();//ptr_categories;
 		int32_t  clen = k->size_categories - 1;
 		if ( slen < 0 ) slen = 0;
 		if ( dlen < 0 ) dlen = 0;
@@ -4656,7 +4722,7 @@ bool LinkInfo::print ( SafeBuf *sb , char *coll ) {
 			       //(int32_t)k->m_sitePop,
 			       (int32_t)k->m_siteNumInlinks,
 			       //(int32_t)k->m_isAnomaly,
-			       k->ptr_urlBuf, // the linker url
+			       k->getUrl(),//ptr_urlBuf, // the linker url
 			       s, // buf,
 			       d, // buf2,
 			       buf3b,
@@ -4996,7 +5062,7 @@ bool Links::set ( bool useRelNoFollow ,
 			static bool s_flag = 1;
 			if ( s_flag ) {
 				s_flag = 0;
-				log(LOG_INFO, "build: Link len %"INT32" is int32_ter "
+				log(LOG_INFO, "build: Link len %"INT32" is longer "
 					      "than max of %"INT32". Link will not "
 					      "be added to spider queue or "
 					      "indexed for link: search.",
@@ -6197,7 +6263,7 @@ bool Links::hash ( TermTable *table,
 			   version       );// used for new session id stripping
 		QUICKPOLL(niceness);
 		// . the score depends on some factors:
-		// . NOTE: these are no int32_ter valid! (see score bitmap above)
+		// . NOTE: these are no longer valid! (see score bitmap above)
 		// . 4 --> if link has different domain AND has link text
 		// . 3 --> if link has same domain AND has link text
 		// . 2 --> if link has different domain AND no link text

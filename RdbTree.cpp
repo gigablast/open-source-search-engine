@@ -249,7 +249,7 @@ int32_t RdbTree::clear ( ) {
 	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// skip node if parents is -2 (unoccupied)
 		if ( m_parents[i] == -2 ) continue;
-		// we no int32_ter count the overhead of this node as occupied
+		// we no longer count the overhead of this node as occupied
 		m_memOccupied -= m_overhead;
 		// make the ith node available for occupation
 		m_parents[i] = -2;
@@ -419,7 +419,7 @@ int32_t RdbTree::getNextNode ( int32_t i ) {
 	if ( m_left[p] == i ) return p;
 	// otherwise keep getting the parent until it has a bigger key
 	// or until we're the LEFT kid of the parent. that's better
-	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
+	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
 	while ( p >= 0  &&  (m_collnums[p] < m_collnums[i] ||
 			     ( m_collnums[p] == m_collnums[i] && 
 			       KEYCMP(m_keys,p,m_keys,i,m_ks) < 0 )) )
@@ -446,7 +446,7 @@ int32_t RdbTree::getPrevNode ( int32_t i ) {
 	if ( m_right[p] == i ) return p;
 	// keep getting the parent until it has a bigger key
 	// or until we're the RIGHT kid of the parent. that's better
-	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
+	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
 	while ( p >= 0  &&  (m_collnums[p] > m_collnums[i] ||
 			     ( m_collnums[p] == m_collnums[i] && 
 			       KEYCMP(m_keys,p,m_keys,i,m_ks) > 0 )) )
@@ -1701,7 +1701,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	if ( ! list->growList ( growth ) ) 
 		return log("db: Failed to grow list to %"INT32" bytes for storing "
 			   "records from tree: %s.",growth,mstrerror(g_errno));
-	// similar to above algorithm but we have data aint32_t with the keys
+	// similar to above algorithm but we have data along with the keys
 	int32_t dataSize;
 
 	// if a niceness 0 msg4 tries to add to the tree, return ETRYAGAIN
@@ -1714,7 +1714,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	// to 0. and it deleted a record from the tree that we had just read
 	// from the tree and added to the list. so then when RdbDump.cpp
 	// called deleteList() after dumping that list to disk, one of the
-	// recs was no int32_ter in the tree! that then caused a core. now we
+	// recs was no longer in the tree! that then caused a core. now we
 	// don't core, but i think i fixed it here.
 	m_gettingList++;
 
@@ -2772,7 +2772,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 		if ( ! checkTree( false ) ) return fixTree ( );
 	}
 	*/
-	// no int32_ter needs save
+	// no longer needs save
 	m_needsSave = false;
 	//printTree();
 	return true;

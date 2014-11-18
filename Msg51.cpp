@@ -201,7 +201,7 @@ bool Msg51::sendRequests ( int32_t k ) {
 		// sanity check
 		if ( crecSize != sizeof(key_t) ) { char *xx = NULL; *xx = 0; }
 		m_clusterRecs[m_nexti] = *(key_t *)crecPtr;
-		// it is no int32_ter CR_UNINIT, we got the rec now
+		// it is no longer CR_UNINIT, we got the rec now
 		m_clusterLevels[m_nexti] = CR_GOT_REC;
 		// debug msg
 		//logf(LOG_DEBUG,"query: msg51 getRec k.n0=%"UINT64" rec.n0=%"UINT64"",

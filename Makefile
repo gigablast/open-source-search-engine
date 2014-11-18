@@ -331,11 +331,11 @@ RdbMap.o:
 RdbBuckets.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
-Linkdb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+#Linkdb.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
-XmlDoc.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+#XmlDoc.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
 # final gigabit generation in here:
 Msg40.o:

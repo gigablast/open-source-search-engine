@@ -993,7 +993,7 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 	int scoreMult = 1;
 	char *pend = m_summary + maxSummaryLen - 2;
 	int32_t start = -1,  numConsecutive = 0;
-	int32_t bestStart = -1, bestEnd = -1, int32_testConsecutive = 0;
+	int32_t bestStart = -1, bestEnd = -1, longestConsecutive = 0;
 	int32_t lastAlnum = -1;
 	// google seems to index SEC_MARQUEE, so i took that out of here
 	int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_IN_TITLE;
@@ -1009,7 +1009,7 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 		if (start > 0 && bestStart == start &&
 		    ( words->m_words[i] - words->m_words[start] ) >= 
 		    ( maxSummaryLen - 8 )){
-			int32_testConsecutive = numConsecutive;
+			longestConsecutive = numConsecutive;
 			bestStart = start;
 			bestEnd = lastAlnum;//i-1;
 			break;
@@ -1056,8 +1056,8 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 		else if ( ! wids[i] ) continue;
 			
 		// end of consecutive words
-		if ( numConsecutive > int32_testConsecutive ) {
-			int32_testConsecutive = numConsecutive;
+		if ( numConsecutive > longestConsecutive ) {
+			longestConsecutive = numConsecutive;
 			bestStart = start;
 			bestEnd = i-1;
 		}

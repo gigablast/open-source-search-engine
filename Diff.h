@@ -32,7 +32,7 @@ public:
 void diffXmlFiles(char *file1, char *file2, DiffOpt *opt=NULL);
 void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *opt=NULL);
 
-// int32_test common subsequence of 2 xml objects
+// longest common subsequence of 2 xml objects
 int32_t lcsXml(int32_t *lcsBuf1,        // xml1 indexes of nodes in lcs
 	    int32_t *lcsBuf2,        // xml2 indexes of nodes in lcs
 	    int32_t *lcsLenBuf,      // number of consecutive nodes in each lcsBuf

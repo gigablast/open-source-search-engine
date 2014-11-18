@@ -263,7 +263,7 @@ bool HashTableX::addKey ( void *key , void *val , int32_t *slot ) {
 	if ( val ) setValue ( n , val );
 	// caller sometimes wants this
 	if ( slot ) *slot = n;
-	// no int32_ter empty
+	// no longer empty
 	m_flags[n] = 0x01;
 	return true;
 }

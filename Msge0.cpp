@@ -74,8 +74,8 @@ bool Msge0::getTagRecs ( char        **urlPtrs           ,
 	// . include an extra 4 bytes for each one to hold possible errno
 	int32_t need = 
 		4 + // error
-		4 + // tag ptr
-		4 ; // slab ptr
+		sizeof(TagRec *) + // tag ptr
+		sizeof(char *) ; // slab ptr
 	// one per url
 	need *= numUrls;
 	// allocate the buffer to hold all the info we gather
@@ -87,8 +87,8 @@ bool Msge0::getTagRecs ( char        **urlPtrs           ,
 	// set the ptrs!
 	char *p = m_buf;
 	m_tagRecErrors      = (int32_t    *)p ; p += numUrls * 4;
-	m_tagRecPtrs        = (TagRec **)p ; p += numUrls * 4;
-	m_slab              = (char   **)p ; p += numUrls * 4;
+	m_tagRecPtrs        = (TagRec **)p ; p += numUrls * sizeof(TagRec *);
+	m_slab              = (char   **)p ; p += numUrls * sizeof(char *);
 	// initialize
 	m_numRequests = 0;
 	m_numReplies  = 0;

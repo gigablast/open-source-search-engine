@@ -502,7 +502,7 @@ class QueryTerm {
 	char m_fieldCode  ;
 	bool isSplit();
 	// . weights and affinities calculated in IndexTable2
-	// . do not store in here, just pass aint32_t as a separate vector
+	// . do not store in here, just pass along as a separate vector
 	// . analogous to how Phrases is to Words is to Bits, etc.
 	//float m_termWeight;
 	//float m_phraseAffinity;

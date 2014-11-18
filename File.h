@@ -47,7 +47,7 @@ class File {
 
  public:
 
-	// aint32_t the same lines as getCloseCount_r()
+	// along the same lines as getCloseCount_r()
 	//void incCloseCount_r ( ) ;
 
 	 File ( );

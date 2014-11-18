@@ -1323,7 +1323,7 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	if ( bufSize > 400*1024 ) bufSize = 400*1024;
 	if ( bufSize < 200*1024 ) bufSize = 200*1024;
 	*/
-	// ok, no int32_ter need token to dump!!!
+	// ok, no longer need token to dump!!!
 
 
 	/*
@@ -1359,7 +1359,7 @@ void gotTokenForDumpWrapper ( void *state ) {
 
 // returns false and sets g_errno on error
 bool Rdb::gotTokenForDump ( ) {
-	// no int32_ter waiting for it
+	// no longer waiting for it
 	m_waitingForTokenForDump = false;
 	*/
 	// debug msg
@@ -1681,7 +1681,7 @@ void Rdb::doneDumping ( ) {
 	if ( ! m_dumpErrno ) m_mem.freeDumpedMem();
 	// . tell RdbDump it is done
 	// . we have to set this here otherwise RdbMem's memory ring buffer
-	//   will think the dumping is no int32_ter going on and use the primary
+	//   will think the dumping is no longer going on and use the primary
 	//   memory for allocating new titleRecs and such and that is not good!
 	m_inDumpLoop = false;
 	// . on g_errno the dumped file will be removed from "sync" file and

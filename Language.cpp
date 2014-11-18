@@ -2662,9 +2662,9 @@ bool Language::generateDicts ( int32_t numWordsToDump , char *coll ) {
 	for ( int32_t i = 0 ; i < NUM_CHARS ; i++ ) {
 		char tmp[1024];
 		// . sort should treat all lower chars as upper
-		// . sort in reverse order so int32_ter fragments are on top
+		// . sort in reverse order so longer fragments are on top
 		//   of their int16_ter sub fragments so if they have the
-		//   same score in the end, we'll keep the int32_ter fragment
+		//   same score in the end, we'll keep the longer fragment
 		sprintf(tmp,"sort -f -r %stmp/%s/%s.words.%"INT32" > "
 			"%stmp/%s/%s.words.%"INT32".sorted",
 			g_hostdb.m_dir, getLanguageAbbr(m_lang),
@@ -2975,7 +2975,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 				// advance it
 				tmpp += n;
 
-				// no int32_ter convert to utf8, cuz title rec
+				// no longer convert to utf8, cuz title rec
 				// is now already in utf8 by default!!
 				//tmpp += latin1ToUtf8( tmpp, 
 				//		      tmpend - tmpp,
@@ -3755,7 +3755,7 @@ bool Language::makeQueryFiles ( ) {
 				}
 				bool inQuotes  = qw->m_inQuotes;
 				char fieldCode = qw->m_fieldCode;
-				// . get int32_test continual fragment that 
+				// . get longest continual fragment that 
 				// . starts with word #i. get the following
 				//    words that can be in a fragment
 				//   that starts with word #i start of the frag

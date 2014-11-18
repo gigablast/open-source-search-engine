@@ -72,7 +72,7 @@ void Msg0::reset ( ) {
 		mfree(m_mcasts,sizeof(Multicast),"msg0mcast");
 		m_mcasts = NULL;
 	}
-	// no int32_ter do this because we call reset after the msg5 completes
+	// no longer do this because we call reset after the msg5 completes
 	// and it was destroying our handylist... so just call freelist
 	// in the destructor now
 	//m_handyList.freeList();
@@ -158,11 +158,11 @@ bool Msg0::getList ( int64_t hostId      , // host to ask (-1 if none)
 	// . reset hostid if it is dead
 	// . this is causing UOR queries to take forever when we have a dead
 	if ( hostId >= 0 && g_hostdb.isDead ( hostId ) ) hostId = -1;
-	// no int32_ter accept negative minrecsize
+	// no longer accept negative minrecsize
 	if ( minRecSizes < 0 ) {
 		g_errno = EBADENGINEER;
 		log(LOG_LOGIC,
-		    "net: msg0: Negative minRecSizes no int32_ter supported.");
+		    "net: msg0: Negative minRecSizes no longer supported.");
 		char *xx=NULL;*xx=0;
 		return true;
 	}
@@ -1176,7 +1176,7 @@ void handleRequest0 ( UdpSlot *slot , int32_t netnice ) {
 		log(LOG_LOGIC,"net: msg0: check but don't add... rdbid=%"INT32".",
 		    (int32_t)rdbId);
 	// . if this request came over on the high priority udp server
-	//   make sure the priority gets passed aint32_t
+	//   make sure the priority gets passed along
 	// . return if this blocks
 	// . we'll call sendReply later
 	if ( ! st0->m_msg5.getList ( rdbId             ,

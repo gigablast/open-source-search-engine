@@ -639,9 +639,9 @@ void DiskPageCache::addPage(int32_t vfd,int32_t pageNum,char *page,int32_t size,
 		poff = m_tailOff;
 		//char *p = getMemPtrFromOff ( poff );
 		excisePage ( poff );
-		// . the file no int32_ter owns him
+		// . the file no longer owns him
 		// . this is a int32_t ptr to &m_bufOffs[vfd][pageNum]
-		// . if that vfd no int32_ter exists it should have added all its
+		// . if that vfd no longer exists it should have added all its
 		//   pages to m_avail list
 		//int32_t tmp = -1;
 		int32_t *memOffPtr = NULL;
@@ -1290,7 +1290,7 @@ bool DiskPageCache::needsMerge( ){
 // 'ipcs -m' will show shared mem in linux
 void freeAllSharedMem ( int32_t max ) {
 
-	// free shared mem whose pid no int32_ter exists
+	// free shared mem whose pid no longer exists
 	//struct shmid_ds buf;
 	//shmctl ( 0 , SHM_STAT , &buf );
 	//int shmctl(int shmid, int cmd, struct shmid_ds *buf);

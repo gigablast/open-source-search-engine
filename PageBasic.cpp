@@ -121,7 +121,13 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	char *op = cr->m_siteListBuf.getBufStart();
 
 	// scan and hash each line in it
-	for ( ; *op ; op++ ) {
+	for ( ; ; ) {
+		// done?
+		if ( ! *op ) break;
+		// skip spaces
+		if ( is_wspace_a(*op) ) op++;
+		// done?
+		if ( ! *op ) break;
 		// get end
 		char *s = op;
 		// skip to end of line marker
@@ -1560,7 +1566,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 		char tmp3[64];
 		struct tm *timeStruct;
-		timeStruct = localtime((time_t *)&cr->m_diffbotCrawlStartTime);
+		time_t tt = (time_t)cr->m_diffbotCrawlStartTime;
+		timeStruct = localtime(&tt);
 		// Jan 01 1970 at 10:30:00
 		strftime ( tmp3,64 , "%b %d %Y at %H:%M:%S",timeStruct);
 		sb.safePrintf("<tr><td><b>Collection Created</b></td>"

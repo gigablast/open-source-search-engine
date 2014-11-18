@@ -295,7 +295,7 @@ int cmp ( const void *h1 , const void *h2 ) {
 
 /*
 // . TODO: use links->getDomHash(i) not getLinkHash() DOES NOT WORK NO MORE!!!
-// . get the 20 int32_test links on this page
+// . get the 20 longest links on this page
 // . do not include links from the same domain
 // . "links" class must have been set with "setLinkHashes" set to true
 bool Vector::setLinkHashes ( Links *links , Url *url ) {

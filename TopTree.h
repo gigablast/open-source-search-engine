@@ -26,7 +26,7 @@ class TopNode {
 	char     m_clusterLevel;
 	key_t    m_clusterRec;
 
-	// no int32_ter needed, Msg3a does not need, it has already
+	// no longer needed, Msg3a does not need, it has already
 	//unsigned char  m_tier     ;
 	float          m_score    ;
 	int64_t      m_docId;

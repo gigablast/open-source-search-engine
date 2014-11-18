@@ -1372,7 +1372,7 @@ void returnIp ( DnsState *ds , int32_t ip ) {
 	// like www.castleburyinn.com then we don't wait for a 30 second
 	// timeout 100 times in a row. 
 	bool cache = false;
-	// no int32_ter cache these! i think the spider should evenly sample
+	// no longer cache these! i think the spider should evenly sample
 	// every other IP address before returning to the timed out IP address...
 	// ideally. plus i added the google public dns 8.8.8.8 as a secondary
 	// dns ip to fallback to in the case of timeouts i guess... so make

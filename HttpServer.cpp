@@ -90,7 +90,7 @@ bool HttpServer::init ( int16_t port,
 			       &g_conf.m_httpsMaxSockets,
 			       true                    ) ) {
 		// this was required for communicating with an email alert
-		// web server, but no int32_ter do i use them
+		// web server, but no longer do i use them
 		//return false;
 		// don't break, just log and don't do SSL
 		log ( "https: SSL Server Failed To Init, Continuing..." );
@@ -1477,7 +1477,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//   UNLESS s->m_waitingonHandler was true, which should not be the
 	//   case, as it is only set to true in TcpServer::readSocketWrapper()
 	//   which should never be called by TcpServer::sendMsg() above.
-	//   so let cleanUp know it is no int32_ter valid
+	//   so let cleanUp know it is no longer valid
 	if ( ! f->isOpen() ) f->open( O_RDONLY );
 	int fd = f->getfd();
 	cleanUp ( f , NULL/*TcpSocket */ );
@@ -2824,7 +2824,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// have to modify the encoding and content length as we go.
 	// Basically we are unzipping the http reply into a new buffer here,
 	// so we need to rewrite the Content-Length: and the 
-	// Content-Encoding: http mime field values so they are no int32_ter
+	// Content-Encoding: http mime field values so they are no longer
 	// "gzip" and use the uncompressed content-length.
 	char *ptr1 = NULL;
 	char *ptr2 = NULL;

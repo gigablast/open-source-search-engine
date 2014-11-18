@@ -134,7 +134,7 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 	int32_t seq2  [4096];
 	int32_t seqLen[4096];
 	SafeBuf buf;
-	//int32_t numSeq = int32_testCommonSubsequence(seq1, seq2, seqLen,4096, 
+	//int32_t numSeq = longestCommonSubsequence(seq1, seq2, seqLen,4096, 
 	//				       &xml1-> &xml2->;
 	//printf("lcs length: %"INT32"\n", numSeq);
 	
@@ -648,7 +648,7 @@ int32_t lcsXml(int32_t *lcsBuf1, // xml1 indexes of nodes in lcs
 	if (n2<0) n2 = xml2->getNumNodes();
 	
 	
-	return int32_testCommonSubseq(lcsBuf1, lcsBuf2, lcsLenBuf,lcsBufLen, 
+	return longestCommonSubseq(lcsBuf1, lcsBuf2, lcsLenBuf,lcsBufLen, 
 				   (char*)nodes1, (char*)nodes2, opt,
 				   start1, start2, n1, n2,rlevel);
 
@@ -678,7 +678,7 @@ int64_testCommonSubseq(int32_t *outbuf1, // out1 indexes of nodes in lcs
 	
 	if (opt->m_debug){
 		for (int32_t i=0;i<rlevel;i++) printf("\t");
-		printf("int32_testCommonSubseq(%"INT32"): [%"INT32" , %"INT32"] [%"INT32" , %"INT32"] \n",
+		printf("longestCommonSubseq(%"INT32"): [%"INT32" , %"INT32"] [%"INT32" , %"INT32"] \n",
 		       rlevel,start1, start1+n1-1, start2, start2+n2-1);
 	}
 	// no space
@@ -776,7 +776,7 @@ int64_testCommonSubseq(int32_t *outbuf1, // out1 indexes of nodes in lcs
 			for (int32_t i=0;i<rlevel;i++) printf("\t");
 			printf("Recurse left:\n");
 		}
-		int32_t n = int32_testCommonSubseq(p1, p2,pLen,outbuflen-len, 
+		int32_t n = longestCommonSubseq(p1, p2,pLen,outbuflen-len, 
 					     seq1, seq2, opt,
 					     start1, start2, 
 					     mid1-start1, mid2-start2,
@@ -807,7 +807,7 @@ int64_testCommonSubseq(int32_t *outbuf1, // out1 indexes of nodes in lcs
 			for (int32_t i=0;i<rlevel;i++) printf("\t");
 			printf("Recurse right:\n");
 		}
-		n = int32_testCommonSubseq(p1, p2,pLen,outbuflen-len, 
+		n = longestCommonSubseq(p1, p2,pLen,outbuflen-len, 
 					seq1, seq2, opt,
 					mid1+midLen, mid2+midLen, 
 					start1+n1 - (mid1+midLen), 
@@ -940,7 +940,7 @@ int32_t xmlEditPath(Xml *xml1, Xml* xml2,
 			int32_t b = v1[IDX(VSIZE, k+1)];
 
 			int32_t x;
-			// select best path aint32_t diagonal k
+			// select best path along diagonal k
 			if (k == -d || k != d && a < b)	x = b;
 			else x = a+1;
 
@@ -995,7 +995,7 @@ int32_t xmlEditPath(Xml *xml1, Xml* xml2,
 			int32_t b = v2[IDX(VSIZE, k+1)];
 
 			int32_t u;
-			// select best path aint32_t diagonal k
+			// select best path along diagonal k
 			if (k == -d || k != d && a > b)  u = b;
 			else                             u = a-1;
 
@@ -1089,7 +1089,7 @@ int32_t editPath(char *seq1, char *seq2,
 			int32_t b = v1[IDX(VSIZE, k+1)];
 
 			int32_t x;
-			// select best path aint32_t diagonal k
+			// select best path along diagonal k
 			if (k == -d || k != d && a < b)	x = b;
 			else x = a+1;
 
@@ -1142,7 +1142,7 @@ int32_t editPath(char *seq1, char *seq2,
 			int32_t b = v2[IDX(VSIZE, k+1)];
 
 			int32_t u;
-			// select best path aint32_t diagonal k
+			// select best path along diagonal k
 			if (k == -d || k != d && a > b)  u = b;
 			else                             u = a-1;
 

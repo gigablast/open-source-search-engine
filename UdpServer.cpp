@@ -1116,7 +1116,7 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 	if(elapsed < 10) {
 		// we did not call any, so resort to nice callbacks
 		makeCallbacks_ass ( /*niceness level*/ 1 ) ;
-		// no int32_ter need to be called
+		// no longer need to be called
 		// if we did anything loop back up
 		// . but only if we haven't been looping forever,
 		// . if so we need to relinquish control to loop.
@@ -1819,7 +1819,7 @@ void UdpServer::resume ( ) {
 	// debug msg
 	if ( g_conf.m_logDebugUdp ) 
 		log(LOG_DEBUG,"udp: RESUMING UDPSERVER.");
-	// we are no int32_ter suspened
+	// we are no longer suspened
 	m_isSuspended = false;
 	// get time now
 	int64_t now = gettimeofdayInMillisecondsLocal();
@@ -3171,7 +3171,7 @@ UdpSlot *UdpServer::getEmptyUdpSlot_ass ( key_t k ) {
 	//m_head2          = slot;
 	// put the used slot at the tail so older slots are at the head and
 	// makeCallbacks() can take care of the callbacks that have been
-	// waiting the int32_test first...
+	// waiting the longest first...
 	if ( m_tail2 ) {
 		slot->m_next2    = NULL;
 		slot->m_prev2    = m_tail2;

@@ -494,7 +494,7 @@ void Users::setDatum ( char *data, int32_t column, User *user, bool hasStar){
 	case 6:{ 
 		// save the user permission
 		// only one user is allowed
-		// user permission keyword no int32_ter used
+		// user permission keyword no longer used
 		/*if ( ! user->m_permissions & 0xff ){
 			if (strcmp(data,"master")==0) 
 				user->m_permissions = USER_MASTER;
@@ -724,7 +724,7 @@ bool  Users::hasPermission ( HttpRequest *r, int32_t page , TcpSocket *s ) {
 		Host *h = g_hostdb.getHostByIp(s->m_ip);
 		// we often ssh tunnel in through router0 which is also
 		// the proxy, but now the proxy uses msg 0xfd to forward
-		// http requests, so we no int32_ter have to worry about this
+		// http requests, so we no longer have to worry about this
 		// being a security hazard
 		//Host *p = g_hostdb.getProxyByIp(s->m_ip);
 		//if ( h && ! p ) return true;

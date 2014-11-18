@@ -393,7 +393,7 @@ bool Syncdb::gotList ( ) {
 	// . add it using msg4.cpp::addMetaList()
 	// . sets g_errno and returns false on error
 	if ( ! addMetaList ( rec ) ) return false;
-	// we no int32_ter have to add it!
+	// we no longer have to add it!
 	m_qt.deleteNode ( 0 , (char *)&k , true );
 	// point to next
 	m_ia++;

@@ -428,7 +428,7 @@ class CollectionRec {
 	//char  m_newSpideringEnabled     ;
 	char m_spideringEnabled ;
 	float m_newSpiderWeight         ;
-	// m_inDeleteMode is no int32_ter used, just a place holder now
+	// m_inDeleteMode is no longer used, just a place holder now
 	//char  m_inDeleteMode            ;
 	//char  m_restrictTitledbForQuery ; // obsoleted
 	//char  m_recycleVotes            ;
@@ -1058,7 +1058,7 @@ class CollectionRec {
 
 	//char m_orig [ MAX_PARMS ];
 
-	// we no int32_ter truncate termlists on disk, so this is obsolete
+	// we no longer truncate termlists on disk, so this is obsolete
 	//int32_t m_indexdbTruncationLimit;
 
 	// collection name in the other/external cluster from which we

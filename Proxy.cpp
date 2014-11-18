@@ -1027,7 +1027,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		// get host #0
 		h = g_hostdb.getHost ( 0 );
 	/*
-	  no int32_ter - flurbit root page is the search page...
+	  no longer - flurbit root page is the search page...
 	else if ( n == PAGE_ADDURL || pathLen == 1 || 
 	     ( pathLen == 11 && strncmp ( path , "/index.html" ,11 ) == 0 ) ){
 		int32_t numTries = 0;
@@ -2165,7 +2165,7 @@ UserInfo *Proxy::getUserInfoForFeedAccess ( HttpRequest *hr ) {
 	g_errno = 0;
 
 	//char *user = hr->getString("user",NULL);
-	// we also store the username aint32_t with session id
+	// we also store the username along with session id
 	//if ( ! user ) user = r->getStringFromCookie("user",NULL);
 	int32_t userId32 = hr->getLong("userid",0);
 
@@ -4200,7 +4200,7 @@ bool Proxy::printEditForm ( StateUser *su ) {
 			    "color=red>%s</font>",su->m_fcError);
 	else
 		sb.safePrintf("<br><font size=-1 color=gray>"
-			      "A secret code used aint32_t with your userid "
+			      "A secret code used along with your userid "
 			      "to access the XML feeds."
 			      "</font>");
 

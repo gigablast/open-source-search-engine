@@ -660,7 +660,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// this table maps a url's current IP to a possibly MULTIPLE slots
 	// which tell us what proxy is downloading a page from that IP.
 	// so we can try to find a proxy that is not download a url from
-	// this IP currently, or hasn't been for the int32_test time...
+	// this IP currently, or hasn't been for the longest time...
 	int32_t hslot = s_loadTable.getSlot ( &urlIp );
 	// scan all proxies that have this urlip outstanding
 	for ( int32_t i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
@@ -826,7 +826,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		     sp->m_lastTimeUsedForThisIp >= oldest ) 
 			continue;
 
-		// pick the spider proxy used int32_test ago
+		// pick the spider proxy used longest ago
 		oldest   = sp->m_lastTimeUsedForThisIp;
 		minCount = sp->m_countForThisIp;
 		// got a new winner

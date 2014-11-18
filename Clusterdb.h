@@ -1,6 +1,6 @@
 // Copyright Matt Wells, Jul 2002
 
-// . a clusterRec now no int32_ter exists, per se
+// . a clusterRec now no longer exists, per se
 // . it is the same thing as the key of the titleRec in titledb
 // . titleRecs now contain the site and content hashes in the low bits
 //   of their key. 

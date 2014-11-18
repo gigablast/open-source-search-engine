@@ -3149,7 +3149,7 @@ void PosdbTable::getTermPairScoreForNonBody ( int32_t i, int32_t j,
 
 	if ( p1 <= p2 ) {
 		// . skip the pair if they are in different hashgroups
-		// . we no int32_ter allow either to be in the body in this
+		// . we no longer allow either to be in the body in this
 		//   algo because we handle those cases in the sliding window
 		//   algo!
 		if ( ! s_isCompatible[hg1][hg2] ) goto skip1;
@@ -3251,7 +3251,7 @@ void PosdbTable::getTermPairScoreForNonBody ( int32_t i, int32_t j,
 	}
 	else {
 		// . skip the pair if they are in different hashgroups
-		// . we no int32_ter allow either to be in the body in this
+		// . we no longer allow either to be in the body in this
 		//   algo because we handle those cases in the sliding window
 		//   algo!
 		if ( ! s_isCompatible[hg1][hg2] ) goto skip2;
@@ -4987,7 +4987,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	if ( isRangeTerm ) {
 		// a new docid i guess
 		inRange = false;
-		// no int32_ter in range
+		// no longer in range
 		if ( isInRange2(cursor[mini],cursorEnd[mini],qt))
 			inRange = true;
 	}
@@ -5223,7 +5223,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		for ( ; p < pend ; ) {
 			// . first key is the full size
 			// . uses the w,G,s,v and F bits to hold this
-			// . this is no int32_ter necessarily sitehash, but
+			// . this is no longer necessarily sitehash, but
 			//   can be any val, like now FacetStats is using
 			//   it for the innerHtml sentence content hash32
 			int32_t sh32 = g_posdb.getFacetVal32 ( p );
@@ -7037,7 +7037,7 @@ void PosdbTable::intersectLists10_r ( ) {
 
 		// . first key is the full size
 		// . uses the w,G,s,v and F bits to hold this
-		// . this is no int32_ter necessarily sitehash,but
+		// . this is no longer necessarily sitehash,but
 		//   can be any val, like now SectionStats is 
 		//   using it for the innerHtml sentence 
 		//   content hash32
@@ -7173,7 +7173,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// if we have not supplanted anyone yet, be on our way
 		for ( ; sx < sxEnd ; sx += sizeof(DocIdScore) ) {
 			si = (DocIdScore *)sx;
-			// if top tree no int32_ter has this docid, we must
+			// if top tree no longer has this docid, we must
 			// remove its associated scoring info so we do not
 			// breach our scoring info bufs
 			if ( ! m_topTree->hasDocId( si->m_docId ) ) break;

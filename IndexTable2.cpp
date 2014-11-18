@@ -1073,7 +1073,7 @@ bool IndexTable2::alloc ( ) {
 	// . alloc space for top tree
 	// . returns false and sets g_errno on error
 	// . increase docs to get if doing site clustering
-	// . this is no int32_ter done in Msg40.cpp for FULL SPLITS, we do it here
+	// . this is no longer done in Msg40.cpp for FULL SPLITS, we do it here
 	// . the top tree is only needed if m_recopute is true now!!
 	//if ( ! allocTopTree() ) return false;
 
@@ -1200,7 +1200,7 @@ bool IndexTable2::alloc ( ) {
 	// . but now we do need to store a lot of docids (NORAT_TMP_SLOTS)
 	//   in order to do our phrase and synonym affinity calculations
 	// . one we determine those affinities we can then determine scores
-	//   for docids as we get them, and we no int32_ter need to store all
+	//   for docids as we get them, and we no longer need to store all
 	//   of the result docids into m_tmpDocIdPtrs2[], HOWEVER, we do need
 	//   to store the top-scoring docids (usually 100 or so) in the
 	//   m_topDocIds[] array, which is easy and efficient.
@@ -1731,7 +1731,7 @@ void IndexTable2::addLists_r ( int32_t *totalListSizes , float sortByDateWeight 
 	// . follow up calls
 	// . intersect one block at a time into the "active intersection"
 	// . the "active intersection" is stored in the m_tmpDocIdPtrs2[]
-	//   array and is hashed into the hash table aint32_t with the lists
+	//   array and is hashed into the hash table along with the lists
 	//   in block #i.
 	// . this is the rat=1 algo that is the reason why it is much faster
 	//   than rat=0, because the intersection is ever-shrinking requiring
@@ -2748,7 +2748,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 		explicitBits[nn]  |= ebits;
 		// . else if we are using hardCounts for *many* query terms...
 		// . terms not explicitly required will still have ebits > 0
-		//   in order to support boolean expressions aint32_t side of
+		//   in order to support boolean expressions along side of
 		//   hard required terms
 		// . non-required phrases can all share the same ebit when we
 		//   have a lot of query terms, so they will not be
@@ -3929,7 +3929,7 @@ bool IndexTable2::eventHashLoop ( int32_t *listIndexes ,
 		explicitBits[nn]  |= ebits;
 		// . else if we are using hardCounts for *many* query terms...
 		// . terms not explicitly required will still have ebits > 0
-		//   in order to support boolean expressions aint32_t side of
+		//   in order to support boolean expressions along side of
 		//   hard required terms
 		// . non-required phrases can all share the same ebit when we
 		//   have a lot of query terms, so they will not be
@@ -5328,7 +5328,7 @@ int32_t IndexTable2::fillTopDocIds ( //char         **topp      ,
 			goto loop1;
 		}
 		// is it in progress (and showing in progress is disabled), 
-		// over or no int32_ter in timedb?
+		// over or no longer in timedb?
 		if ( score == 0 ) {
 			i++;
 			goto loop1;

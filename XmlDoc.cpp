@@ -1580,7 +1580,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	char *upend = m_ubuf + m_ubufSize;
 
 	// how many XmlDoc::ptr_* members do we have? set "np" to that
-	int32_t np = ((char *)&size_firstUrl  - (char *)&ptr_firstUrl) / 4;
+	int32_t np = ((char *)&size_firstUrl  - (char *)&ptr_firstUrl) ;
+	np /= sizeof(char *);
 
 	// point to the first ptr
 	char **pd = (char **)&ptr_firstUrl;
@@ -2659,7 +2660,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		
 	}
 
-	// make sure our msg4 is no int32_ter in the linked list!
+	// make sure our msg4 is no longer in the linked list!
 	if (m_msg4Waiting && isInMsg4LinkedList(&m_msg4)){char *xx=NULL;*xx=0;}
 
 	if ( m_msg4Waiting && g_conf.m_testSpiderEnabled )
@@ -3233,9 +3234,9 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 				break;
 			if ( k1->m_siteNumInlinks != k2->m_siteNumInlinks ) 
 				goto changed;
-			s1   = k1->ptr_linkText;
+			s1   = k1->getLinkText();
 			len1 = k1->size_linkText - 1; // exclude \0
-			s2   = k2->ptr_linkText;
+			s2   = k2->getLinkText();
 			len2 = k2->size_linkText - 1; // exclude \0
 			if ( len1 != len2 )
 				goto changed;
@@ -3790,7 +3791,8 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	// data ptr, consider a NULL to mean empty too!
 	char **pd = (char **)&ptr_firstUrl;
 	// how many XmlDoc::ptr_* members do we have? set "np" to that
-	int32_t np = ((char *)&size_firstUrl  - (char *)&ptr_firstUrl) / 4;
+	int32_t np = ((char *)&size_firstUrl  - (char *)&ptr_firstUrl) ;
+	np /= sizeof(char *);
 	// count up total we need to alloc
 	int32_t need1 = m_headerSize;
 	// clear these
@@ -4076,7 +4078,7 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	}
 	if ( ! m_utf8ContentValid            ) { char *xx=NULL;*xx=0; }
 	if ( ! m_datesValid                  ) { char *xx=NULL;*xx=0; }
-	// why do we need valid sections for a titlerec? we no int32_ter user
+	// why do we need valid sections for a titlerec? we no longer user
 	// ptr_sectiondbData...
 	//if ( ! m_sectionsValid               ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_sectionsReplyValid          ) { char *xx=NULL;*xx=0; }
@@ -6256,7 +6258,7 @@ Sections *XmlDoc::getImpliedSections ( ) {
 	// . This was called for the benefit of Sections::addImpliedSections()
 	//   but now getAddresses() which we call below ends up calling
 	//   getSimpleDates() which calls m_dates.setPart1() which calls
-	//   m_dates.parseDates() so this is no int32_ter needed i guess.
+	//   m_dates.parseDates() so this is no longer needed i guess.
 	/*
 	if ( ! m_dates.parseDates ( words , DF_FROM_BODY , bits,
 				    sections, m_niceness , &m_firstUrl ,
@@ -6499,7 +6501,7 @@ SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	// . only add the date votes, not the taghash/contenthash keys
 	//   from the root, since we add those from the root voting table
 	//   into m_osvt directly!
-	// . we no int32_ter have root voting table!
+	// . we no longer have root voting table!
 	// . this adds keys of the hash of each tag xpath
 	// . and it adds keys of the hash of each tag path PLUS its innerhtml
 	if ( ! ss->addVotes ( &m_nsvt , *tph ) ) return NULL;
@@ -7306,7 +7308,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 		recall = true;
 	}
 
-	// no int32_ter bother re-calling, because facebook is way slow...
+	// no longer bother re-calling, because facebook is way slow...
 	if ( limitSectiondb ) recall = false;
 
 	// . returns false and sets g_errno on error
@@ -7710,17 +7712,17 @@ HashTableX *XmlDoc::getCountTable ( ) {
 		char *p;
 		int32_t  plen;
 		// hash link text (was hashPwids())
-		p    = k-> ptr_linkText;
+		p    = k-> getLinkText();
 		plen = k->size_linkText - 1;
 		if ( ! verifyUtf8 ( p , plen ) ) {
 			log("xmldoc: bad link text 3 from url=%s for %s",
-			    k->ptr_urlBuf,m_firstUrl.m_url);
+			    k->getUrl(),m_firstUrl.m_url);
 			continue;
 		}
 		if ( ! hashString_ct ( ct , p , plen ) ) 
 		  return (HashTableX *)NULL;
 		// hash this stuff (was hashPwids())
-		p    = k-> ptr_surroundingText;
+		p    = k->getSurroundingText();
 		plen = k->size_surroundingText - 1;
 		if ( ! hashString_ct ( ct , p , plen ) ) 
 		  return (HashTableX *)NULL;
@@ -9083,18 +9085,19 @@ char *XmlDoc::getGigabitQuery ( ) {
 	// add gigabits from link info
 	for ( Inlink *k=NULL ; info1 && (k=info1->getNextInlink(k)) ; ) {
 		// sanity check
-		char *txt = k->ptr_linkText;
+		char *txt = k->getLinkText();
 		int32_t tlen = k->size_linkText;
 		if ( tlen > 0 ) tlen--;
 		if ( ! verifyUtf8 ( txt , tlen ) ) {
 			log("xmldoc: bad link text 0 from url=%s for %s",
-			    k->ptr_urlBuf,m_firstUrl.m_url);
+			    k->getUrl(),m_firstUrl.m_url);
 			continue;
 		}
 		// add those in
 		if (!addGigabits(txt, *d, *langId ) ) return NULL;
 		// add  in neighborhoods
-		if(!addGigabits(k->ptr_surroundingText,*d,*langId))return NULL;
+		if(!addGigabits(k->getSurroundingText(),*d,*langId))
+			return NULL;
 	}
 
 	// add in gigabits for meta keywords
@@ -9888,7 +9891,7 @@ Url **XmlDoc::getRedirUrl() {
 			  cu->getUrlLen() ,
 			  true ,  // addwww?
 			  true ); // strip sessid?
-		// if it no int32_ter has the session id, force redirect it
+		// if it no longer has the session id, force redirect it
 		if ( ! gb_strcasestr( tt->getUrl(), "sessionid") &&
 		     ! gb_strcasestr( tt->getUrl(), "oscsid")   )  {
 			m_redirUrlValid = true;
@@ -10134,7 +10137,7 @@ Url **XmlDoc::getRedirUrl() {
 	//	simplifiedRedir = false;
 
 	// special hack for nytimes.com. do not consider simplified redirs
-	// because it uses a cookie aint32_t with redirs to get to the final
+	// because it uses a cookie along with redirs to get to the final
 	// page.
 	char *dom2 = m_firstUrl.getDomain();
 	int32_t  dlen2 = m_firstUrl.getDomainLen();
@@ -10768,7 +10771,7 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 }
 
 /*
-// no int32_ter access Revdb to get the old metalist, now re-compute
+// no longer access Revdb to get the old metalist, now re-compute
 RdbList *XmlDoc::getOldMetaList ( ) {
 	// if valid return that
 	if ( m_oldMetaListValid ) return &m_oldMetaList;
@@ -11394,7 +11397,7 @@ int32_t getIsContacty ( Url *url ,
 		// skip if not local to site
 		//if ( ! internal ) continue;
 		// get the text
-		char *txt = k->ptr_linkText;
+		char *txt = k->getLinkText();
 		// get length of link text
 		int32_t tlen = k->size_linkText;
 		if ( tlen > 0 ) tlen--;
@@ -11403,7 +11406,7 @@ int32_t getIsContacty ( Url *url ,
 		// 2+ bytes and breaching the buffer
 		if ( ! verifyUtf8 ( txt , tlen ) ) {
 			log("xmldoc: bad link text 1 from url=%s for %s",
-			    k->ptr_urlBuf,url->m_url);
+			    k->getUrl(),url->m_url);
 			continue;
 		}
 		// convert into words i guess
@@ -12504,7 +12507,7 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// . well now we use the "ownershipchanged" tag to indicate that
 	//if (tag && age>14*3600*24) valid=false;
 	// . we also expire it periodically to keep the info uptodate
-	// . the higher quality the site, the int32_ter the expiration date
+	// . the higher quality the site, the longer the expiration date
 	int32_t ns = 0;
 	int32_t maxAge = 0;
 	int32_t sni = -1;
@@ -13274,7 +13277,7 @@ bool *XmlDoc::getIsAllowed ( ) {
 		//char *xx=NULL;*xx=0;
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
-		// since ENOMIME is no int32_ter causing the indexCode
+		// since ENOMIME is no longer causing the indexCode
 		// to be set, we are getting a core because crawlDelay
 		// is invalid in getNewSpiderReply()
 		m_crawlDelayValid = true;
@@ -13447,7 +13450,7 @@ char *XmlDoc::getIsWWWDup ( ) {
 		m_isWWWDupValid = true;
 		return &m_isWWWDup;
 	}
-	// get the FIRST URL... (no int32_ter current url after redirects)
+	// get the FIRST URL... (no longer current url after redirects)
 	Url *u = getFirstUrl(); // CurrentUrl();
 	// if we are NOT a DOMAIN-ONLY url, then no need to do this dup check
 	if ( u->getDomainLen() != u->getHostLen() ) {
@@ -13596,7 +13599,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	//}
 
 	// . now search for some link info for this url/doc
-	// . this queries the search engine to get linking docIds aint32_t
+	// . this queries the search engine to get linking docIds along
 	//   with their termIds/scores from anchor text and then compiles
 	//   it all into one IndexList
 	// . if we have no linkers to this url then we set siteHash, etc.
@@ -13778,7 +13781,7 @@ LinkInfo **XmlDoc::getLinkInfo2 ( ) {
 	if ( *od ) oldLinkInfo2 = *(*od)->getLinkInfo2();
 
 	// . now search for some link info for this url/doc
-	// . this queries the search engine to get linking docIds aint32_t
+	// . this queries the search engine to get linking docIds along
 	//   with their termIds/scores from anchor text and then compiles
 	//   it all into one IndexList
 	// . if we have no linkers to this url then we set siteHash, etc.
@@ -14769,7 +14772,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		// or not enough! (size includes \0)
 		if ( k->size_linkText <= 1 ) continue;
 		// sanity check
-		char *txt = k->ptr_linkText;
+		char *txt = k->getLinkText();
 		int32_t tlen = k->size_linkText;
 		if ( tlen > 0 ) tlen--;
 		// this seems to happen sometimes..
@@ -14777,7 +14780,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		// if anchor text has \0 skip it
 		if ( gbstrlen(txt) != tlen ) continue;
 		// or if surrounding text has \0 skip as well
-		char *surStr = k->ptr_surroundingText;
+		char *surStr = k->getSurroundingText();
 		int32_t  surLen = k->size_surroundingText;
 		if ( surLen > 0 ) surLen--;
 		if ( surStr && gbstrlen(surStr) != surLen ) continue;
@@ -14793,7 +14796,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		if ( ! headers.safePrintf("X-referring-url: ") ) 
 			return NULL;
 		// do not include the terminating \0, so -1
-		if ( ! headers.safeMemcpy(k->ptr_urlBuf , k->size_urlBuf-1 ))
+		if ( ! headers.safeMemcpy(k->getUrl() , k->size_urlBuf-1 ))
 			return NULL;
 		// and link text
 		if ( ! headers.safePrintf("\r\nX-anchor-text: ") ) 
@@ -15827,7 +15830,7 @@ HttpMime *XmlDoc::getMime () {
 	// . 304 is not modified since
 	// . >= 300 should only happen if redirect chain was too int32_t to follow
 	//int32_t httpStatus = m_mime.getHttpStatus();
-	// sanity check, these must be reserved! no int32_ter, we have
+	// sanity check, these must be reserved! no longer, we have
 	// a separate m_httpStatus in the SpiderReply class now
 	//if ( mstrerror(httpStatus) ) { char *xx=NULL;*xx=0; }
 	// sanity check
@@ -16624,7 +16627,7 @@ char *XmlDoc::getIsBinary ( ) {
 		// . the fctypes.cpp isBinary array takes into account
 		//   that people mix windows 1254 characters into 
 		//   latin-1. windows 1254 is a superset of latin-1. 
-		//   so the more common quotes and dashes are no int32_ter
+		//   so the more common quotes and dashes are no longer
 		//   counted as binary characters, but some of the 
 		//   rarer ones are! however, the "diff" count 
 		//   contraint helps us make up for that.
@@ -17745,7 +17748,7 @@ char **XmlDoc::getUtf8Content ( ) {
 	// know they are xml tags. because stuff like &lt;br&gt; will
 	// become <br> and will be within its xml tag like <gbdescription>
 	// or <gbtitle>.
-	// MDW: 9/28/2014. no int32_ter do this since i added hashXmlFields().
+	// MDW: 9/28/2014. no longer do this since i added hashXmlFields().
 	/*
 	if ( m_contentType == CT_XML ) {
 		// count the xml tags
@@ -17819,7 +17822,7 @@ char **XmlDoc::getUtf8Content ( ) {
 	//   utf8 chars so that Xml::set(), etc. still work properly and don't
 	//   add any more html tags than it should
 	// . this will decode in place
-	// . MDW: 9/28/2014. no int32_ter do for xml docs since i added
+	// . MDW: 9/28/2014. no longer do for xml docs since i added
 	//   hashXmlFields()
 	int32_t n = m_expandedUtf8ContentSize - 1;
 	if ( m_contentType != CT_XML )
@@ -17837,7 +17840,7 @@ char **XmlDoc::getUtf8Content ( ) {
 
 	// now rss has crap in it like "&amp;nbsp;" so we have to do another
 	// decoding pass
-	// . MDW: 9/28/2014. no int32_ter do for xml docs since i added
+	// . MDW: 9/28/2014. no longer do for xml docs since i added
 	//   hashXmlFields()
 	// if ( m_contentType == CT_XML ) // isRSSExt )
 	// 	n = htmlDecode(m_expandedUtf8Content,//ptr_utf8Content,
@@ -18543,7 +18546,7 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 		// set to those
 		m_fakeTagRec.reset();
 		// just make a bunch ptr to empty tag rec
-		int32_t need = links->m_numLinks * 4;
+		int32_t need = links->m_numLinks * sizeof(TagRec *);
 		if ( ! m_fakeTagRecPtrBuf.reserve ( need ) ) return NULL;
 		// make them all point to the fake empty tag rec
 		TagRec **grv = (TagRec **)m_fakeTagRecPtrBuf.getBufStart();
@@ -19297,7 +19300,7 @@ char *XmlDoc::getIsSpam() {
 
 // . "u" must be NORMALIZED. i.e. start with http:// or https:// etc.
 // . we call this on outlinks as well
-// . we no int32_ter look at the old and newip to determine ownership change,
+// . we no longer look at the old and newip to determine ownership change,
 //   because that is not reliable enough
 // . we now maybe rely on a major change to the site root page...
 bool XmlDoc::isSpam ( char   *u         ,
@@ -20453,7 +20456,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		// must always be negative if deleteing
 		// spiderdb is exempt because we add a spiderreply that is
 		// positive and a spiderdoc
-		// no, this is no int32_ter the case because we add spider
+		// no, this is no longer the case because we add spider
 		// replies to the index when deleting or rejecting a doc.
 		//if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
 		//	char *xx=NULL;*xx=0; }
@@ -21258,7 +21261,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		ksr.m_avoidSpiderLinks = 1;
 		// avoid EDOCUNCHANGED
 		ksr.m_ignoreDocUnchangedError = 1;
-		// no int32_ter docid based we set it to parentUrl
+		// no longer docid based we set it to parentUrl
 		ksr.m_urlIsDocId = 0;
 		// but consider it a manual add. this should already be set.
 		ksr.m_isPageReindex = 1;
@@ -21983,7 +21986,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	bool addSectionVotes = false;
 	if ( nd ) addSectionVotes = true;
 	if ( ! m_useSectiondb ) addSectionVotes = false;
-	// to save disk space no int32_ter add the roots! nto only saves sectiondb
+	// to save disk space no longer add the roots! nto only saves sectiondb
 	// but also saves space in revdb
 	//if ( nd && *isRoot ) addSectionVotes = true;
 	if ( addSectionVotes ) {
@@ -22754,14 +22757,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// ADD NOSPLIT INDEXDB/DATEDB TERMS
 	//
 	/*
-	  we added these now in hashAll() to tt1, no int32_ter ns1 since we
+	  we added these now in hashAll() to tt1, no longer ns1 since we
 	  have the sharded by termid bit in the actual posdb key now so
 	  Rebalance.cpp works
 
 	setStatus ( "adding posdb shardByTermId terms");
 	// checkpoint
 	saved = m_p;
-	// no int32_ter anything special now since the 
+	// no longer anything special now since the 
 	// Posdb::isShardedyTermId() bit
 	// is in the key now so Rebalance.cpp can work
 	if ( m_usePosdb && ! addTable144 ( &ns1 )) return NULL;
@@ -23220,7 +23223,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	saved = m_p;
 	/*
 
-	  See comment under DOLEDB above! this approach is no int32_ter used.
+	  See comment under DOLEDB above! this approach is no longer used.
 
 	// . remove from doledb if we had a valid key
 	// . DO THIS BEFORE adding the SpiderReply since 
@@ -23281,7 +23284,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// m_urlBuf and the associated orderTree,ipTree, etc. and now
 	// since we are un-doling (undoling) it we need to re-add and this
 	// is the easiest way. it really was never removed from spiderdb
-	// but it will no int32_ter be in the spider's cache since we delete
+	// but it will no longer be in the spider's cache since we delete
 	// it from there when we add it to doledb. so this is just a quick
 	// way of getting it back into the cache.
 	// now, we add this first since now Rdb.cpp calls evaluateAllReqeusts()
@@ -23358,9 +23361,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//dt12.set ( 12,1,2048,dbuf12,30000,false,m_niceness);
 		//dt16.set ( 16,1,2048,dbuf16,40000,false,m_niceness);
 		HashTableX dt8;
-		char dbuf8[30000];
+		char dbuf8[34900];
 		// value is the ptr to the rdbId/key in the oldList
-		dt8.set ( 8,4,2048,dbuf8,30000,false,m_niceness,"dt8-tab");
+		dt8.set ( 8,sizeof(char *),2048,dbuf8,34900,
+			  false,m_niceness,"dt8-tab");
 		// just for linkdb:
 		//HashTableX dt9;
 		//char dbuf9[30000];
@@ -26893,7 +26897,7 @@ bool XmlDoc::hashLinks ( HashTableX *tt ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// . the score depends on some factors:
-		// . NOTE: these are no int32_ter valid! (see score bitmap above)
+		// . NOTE: these are no longer valid! (see score bitmap above)
 		// . 4 --> if link has different domain AND has link text
 		// . 3 --> if link has same domain AND has link text
 		// . 2 --> if link has different domain AND no link text
@@ -27671,11 +27675,11 @@ bool XmlDoc::hashIncomingLinkText ( HashTableX *tt               ,
 		int32_t tlen = k->size_linkText;
 		if ( tlen > 0 ) tlen--;
 		// get the text
-		char *txt = k->ptr_linkText;
+		char *txt = k->getLinkText();
 		// sanity check
 		if ( ! verifyUtf8 ( txt , tlen ) ) {
 			log("xmldoc: bad link text 2 from url=%s for %s",
-			    k->ptr_urlBuf,m_firstUrl.m_url);
+			    k->getUrl(),m_firstUrl.m_url);
 			continue;
 		}
 		// if it is anomalous, set this, we don't
@@ -27771,7 +27775,7 @@ bool XmlDoc::hashNeighborhoods ( HashTableX *tt ) {
 	if ( (k->m_ip&0x0000ffff)==(m_ip&0x0000ffff) ) goto loop;
 
 	// get the left and right texts and hash both
-	char *s = k->ptr_surroundingText;
+	char *s = k->getSurroundingText();
 	if ( ! s || k->size_surroundingText <= 1 ) goto loop;
 
 	//int32_t inlinks = *getSiteNumInlinks();
@@ -28667,7 +28671,7 @@ Url *XmlDoc::getBaseUrl ( ) {
 	if ( ! xml || xml == (Xml *)-1 ) return (Url *)xml;
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (Url *)cu;
-	// no int32_ter set addWWW to true since tmblr.co has an IP but
+	// no longer set addWWW to true since tmblr.co has an IP but
 	// www.tmblr.co does not
 	m_baseUrl.set ( cu , false ); // addWWW = true
 	// look for base url
@@ -29574,7 +29578,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		//reply->m_proximityScore = s->getProximityScore();
 		reply-> ptr_displaySum = hsum;//s->getSummary();
 		reply->size_displaySum = hsumLen+1;//sumSize;//s->getSummaryLen
-		// this is unhighlighted for deduping, and it might be int32_ter
+		// this is unhighlighted for deduping, and it might be longer
 		// . seems like we are not using this for deduping but using
 		//   the gigabit vector in Msg40.cpp, so take out for now
 		//reply-> ptr_dedupSum = s->m_summary;
@@ -30938,7 +30942,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 //
 // This will get samples surrounding all the query terms for purposes 
 // of gigabits generation. We don't just generate gigabits from the 
-// WHOLE document because it takes much int32_ter?? is that still true?
+// WHOLE document because it takes much longer?? is that still true?
 // We assume that the first call to getTopLines() above set 
 // matches/numMatches. We use those arrays to
 // skip directly to just the query terms in the document and save time.
@@ -31959,7 +31963,7 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 	// HACK: mangle the key if its a gbsitehash:xxxx term
 	// used for doing "facets" like stuff on section xpaths.
 	//
-	// no int32_ter do this because we just hash the term 
+	// no longer do this because we just hash the term 
 	// gbxpathsitehash1234567 where 1234567 is that hash.
 	// but
 	//
@@ -33330,7 +33334,7 @@ char *XmlDoc::getIsErrorPage ( ) {
 	// default
 	LinkInfo  *li = info1;
 
-	//we have to be more sophisticated with int32_ter pages because they
+	//we have to be more sophisticated with longer pages because they
 	//are could actually be talking about an error message.
 	//if(xml->getContentLen() > 4096) return false;
 
@@ -33379,7 +33383,7 @@ char *XmlDoc::getIsErrorPage ( ) {
 		//if we can index some link text from the page, then do it
 		//if(nli > 5) return false;
 		//for ( int32_t i = 0 ; i < nli ; i++ ) {
-		s    = k->ptr_linkText;
+		s    = k->getLinkText();
 		len2 = k->size_linkText - 1; // exclude \0
 		//if(!s) break;
 		//allow error msg to contain link text or vice versa
@@ -35333,13 +35337,13 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 	// store mime first then content
 	if ( ! m_utf8ContentValid ) { char *xx=NULL;*xx=0; }
 	
-	// we no int32_ter use this through a proxy, so take this out
+	// we no longer use this through a proxy, so take this out
 	//sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
 	// but hack the Content-Length: field to something alien
 	// because we markup the html and the lenght will be different...
 	//sb->nullTerm();
 
-	// we no int32_ter use this through a proxy so take this out
+	// we no longer use this through a proxy so take this out
 	//char *cl = strstr(sb->getBufStart(),"\nContent-Length:");
 	//if ( cl ) cl[1] = 'Z';
 
@@ -36421,11 +36425,11 @@ char **XmlDoc::getTitleBuf ( ) {
 		int32_t tlen = k->size_linkText;
 		if ( tlen > 0 ) tlen--;
 		// get the text
-		char *txt = k->ptr_linkText;
+		char *txt = k->getLinkText();
 		// skip corrupted
 		if ( ! verifyUtf8 ( txt , tlen ) ) {
 			log("xmldoc: bad link text 4 from url=%s for %s",
-			    k->ptr_urlBuf,m_firstUrl.m_url);
+			    k->getUrl(),m_firstUrl.m_url);
 			continue;
 		}
 		// store these
@@ -38098,7 +38102,7 @@ float g_wtab[30][30];
 //   wid1 is "mexico"
 //   pid2 is "mexico good"
 //   wid2 is "good"
-// . we store sliderParm in titleRec so we can update it aint32_t
+// . we store sliderParm in titleRec so we can update it along
 //   with title and header weights on the fly from the spider controls
 void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 				   int64_t   wid1 ,
@@ -39687,21 +39691,21 @@ SafeBuf *XmlDoc::getTermInfoBuf ( ) {
 		if ( k->size_linkText <= 1 ) continue;
 		// set Url
 		Url u;
-		u.set ( k->ptr_urlBuf , k->size_urlBuf );
+		u.set ( k->getUrl() , k->size_urlBuf );
 		// do not allow anomalous link text to match query
 		//if ( k->m_isAnomaly ) continue;
-		char *p    = k-> ptr_linkText;
+		char *p    = k-> getLinkText();
 		int32_t  plen = k->size_linkText - 1;
 		if ( ! verifyUtf8 ( p , plen ) ) {
 			log("title: set4 bad link text from url=%s",
-			    k->ptr_urlBuf);
+			    k->getUrl());
 			continue;
 		}
 		// debug
-		//log("seo: counttable for link text '%s'",k->ptr_linkText);
+		//log("seo: counttable for link text '%s'",k->getLinkText());
 		// now the words.
 		Words ww2;
-		if ( ! ww2.set ( k->ptr_linkText   ,
+		if ( ! ww2.set ( k->getLinkText()   ,
 				 k->size_linkText-1, // len
 				 TITLEREC_CURRENT_VERSION ,
 				 true              , // computeIds
@@ -39733,19 +39737,19 @@ SafeBuf *XmlDoc::getTermInfoBuf ( ) {
 		if ( k->size_linkText <= 1 ) continue;
 		// set Url
 		Url u;
-		u.set ( k->ptr_urlBuf , k->size_urlBuf );
+		u.set ( k->getUrl() , k->size_urlBuf );
 		// do not allow anomalous link text to match query
 		//if ( k->m_isAnomaly ) continue;
-		char *p    = k-> ptr_linkText;
+		char *p    = k-> getLinkText();
 		int32_t  plen = k->size_linkText - 1;
 		if ( ! verifyUtf8 ( p , plen ) ) {
 			log("title: set4 bad link text from url=%s",
-			    k->ptr_urlBuf);
+			    k->getUrl());
 			continue;
 		}
 		// now the words.
 		Words ww2;
-		if ( ! ww2.set ( k->ptr_linkText   ,
+		if ( ! ww2.set ( k->getLinkText()   ,
 				 k->size_linkText-1, // len
 				 TITLEREC_CURRENT_VERSION ,
 				 true              , // computeIds
@@ -40375,7 +40379,7 @@ bool XmlDoc::checkCachedb ( ) {
 				QUICKPOLL(m_niceness);
 				int32_t qkOff = *(int32_t *)p;
 				QueryLink *qr = (QueryRel *)(base+qkOff);
-				// no, int32_ter, it is more complicated because
+				// no, longer, it is more complicated because
 				// if m_uniqueRound scoring addition
 				//if ( lastqr && 
 				//     lastqr->m_totalRelatedQueryImportance <
@@ -42423,7 +42427,7 @@ SafeBuf *XmlDoc::getRelatedDocIds ( ) {
 	QUICKPOLL(m_niceness);
 
 	// limit to top MAX_RELATED_DOCIDS related docids
-	// will take int32_ter to get titles/urls and related queries the
+	// will take longer to get titles/urls and related queries the
 	// higher this number is, but we will have more competitor backlinks
 	// and terms etc.
 	int32_t maxLen = sizeof(RelatedDocId) * MAX_RELATED_DOCIDS;
@@ -42601,7 +42605,7 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 		QUICKPOLL(m_niceness);
 
 		// limit to top MAX_RELATED_DOCIDS related docids
-		// will take int32_ter to get titles/urls and related queries the
+		// will take longer to get titles/urls and related queries the
 		// higher this number is, but we will have more competitor 
 		// backlinks and terms etc. less space in cachedb too!
 		int32_t maxLen = MAX_RELATED_DOCIDS * sizeof(RelatedDocId);
@@ -43324,7 +43328,7 @@ void XmlDoc::gotMsg98Reply ( UdpSlot *slot ) {
 		// . THIS OVERWRITES the g_qbuf offset that was in there!!!
 		qk->m_queryStringOffset = stringOff;
 		// to indicate that this QueryLink::m_queryStringOffset is now
-		// an offset into m_relatedQueryStringBuf and no int32_ter an
+		// an offset into m_relatedQueryStringBuf and no longer an
 		// offset into g_qbuf of the specific hostid, we set hostid
 		// to -1
 		qk->m_queryHostId = -1;
@@ -43821,7 +43825,7 @@ bool XmlDoc::sendBin ( int32_t i ) {
 // . THEN it can create a 'gbdocid:xxxx | <queryString>' query which
 //   it will send to a host in the network.
 // . it will try to keep each host in the network answering 5 such queries
-//   at any one time. bins are no int32_ter used.
+//   at any one time. bins are no longer used.
 // . we need to implement heavy termlist caching remotely and locally to
 //   ensure optimal speed
 // . returns false if blocked, true otherwise
@@ -44023,7 +44027,7 @@ bool XmlDoc::scoreDocIdRestrictedQueries ( Msg99Reply **replyPtrs ,
 			return false;
 		}
 	}
-	// i guess no int32_ter out
+	// i guess no longer out
 	if ( linkPtrs && m_newxd2->m_loaded ) 
 		m_newxd2Blocked = false;
 
@@ -44073,7 +44077,7 @@ bool XmlDoc::scoreDocIdRestrictedQueries ( Msg99Reply **replyPtrs ,
 			goto sendLoop;
 		}
 	}
-	// i guess no int32_ter out
+	// i guess no longer out
 	if ( linkPtrs ) {
 		//log("debug: newxd2 UNblocked in termlistbuf");
 		m_newxd2Blocked = false;
@@ -44381,7 +44385,7 @@ void XmlDoc::gotMsg3fReply ( Bin *bin ) { // Multicast *mcast ) {
 			    ,qe->m_topSERPScore // of a docid slice on 1 host
 			    );
 		//
-		// no int32_ter used queryrel!
+		// no longer used queryrel!
 		//
 		// if we are scoring QueryLinks then we add a QueryRel
 		//QueryRel qr;
@@ -44430,7 +44434,7 @@ void XmlDoc::gotMsg3fReply ( Bin *bin ) { // Multicast *mcast ) {
 	m_masterLoop ( m_masterState );
 
 	// if not done, just return... otherwise we double enter
-	// scoreDocIdRestrictedQueries() aint32_t with it's call to
+	// scoreDocIdRestrictedQueries() along with it's call to
 	// getTermListBuf()... and all hell breaks loose
 	return;
 }
@@ -46553,7 +46557,7 @@ SafeBuf *XmlDoc::getRecommendedLinksBuf ( ) {
 			int64_t docId = g_linkdb.getLinkerDocId_uk ( &key );
 			//int32_t discovered = g_linkdb.getDiscoveryDate_uk(&key);
 
-			// skip if no int32_ter there on page, we keep these
+			// skip if no longer there on page, we keep these
 			// only to graph lost links over time
 			int32_t lostDate = g_linkdb.getLostDate_uk ( &key );
 			if ( lostDate )
@@ -46669,7 +46673,7 @@ SafeBuf *XmlDoc::getRecommendedLinksBuf ( ) {
 		// free the mem and the handylist now that we've processed them
 		msg0->reset();
 	}
-	// no int32_ter need the msg0s and linkdb lists (Msg0::m_handyLists)
+	// no longer need the msg0s and linkdb lists (Msg0::m_handyLists)
 	m_tmpMsg0Buf.purge();
 	
 

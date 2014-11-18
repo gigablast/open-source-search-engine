@@ -1969,7 +1969,7 @@ bool Repair::injectTitleRec ( ) {
 	}
         mnew ( xd , sizeof(XmlDoc),"xmldocpr");    
 
-	// clear out first since set2 no int32_ter does
+	// clear out first since set2 no longer does
 	//xd->reset();
 	if ( ! xd->set2 ( titleRec , -1 , m_coll , NULL , MAX_NICENESS ) ) {
 		m_recsetErrors++;
@@ -2655,7 +2655,7 @@ bool saveAllRdbs ( void *state , void (* callback)(void *state) ) {
 	// set it
 	s_savingAll = true;
 	// TODO: why is this called like 100x per second when a merge is
-	// going on? why don't we sleep int32_ter in between?
+	// going on? why don't we sleep longer in between?
 	//bool close ( void *state , 
 	//	     void (* callback)(void *state ) ,
 	//	     bool urgent ,

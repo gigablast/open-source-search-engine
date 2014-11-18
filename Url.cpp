@@ -466,7 +466,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// NULL terminate for strchr()
 	m_host [ m_hlen ] = '\0';
 	// . common mistake: if hostname has no '.' in it append a ".com"
-	// . now that we use hosts in /etc/hosts we no int32_ter do this
+	// . now that we use hosts in /etc/hosts we no longer do this
 	//if ( m_hlen > 0 && strchr ( m_host ,'.' ) == NULL ) {
 	//	memcpy ( &m_host[m_hlen] , ".com" , 4 );
 	//	m_hlen += 4;

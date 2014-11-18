@@ -91,7 +91,7 @@ class CatRec {
 	char *getData     ( ) { return m_data; };
 	int32_t  getDataSize ( ) { return m_dataSize; };
 
-	// aint32_t with coll/collLen identifies a unique xml file
+	// along with coll/collLen identifies a unique xml file
 	//int32_t  getFilenum ( ) { return m_filenum; };
 	//int32_t  getRuleset ( ) { return m_filenum; };
 	

@@ -740,15 +740,15 @@ void handleRequestaa  ( UdpSlot *slot , int32_t niceness ) {
 		timestamp -= 7*86400*1000;
 	}
 
-	int64_t int32_tTime = 86400LL*365LL*1000LL*10; // 10 years in millisecs
+	int64_t longTime = 86400LL*365LL*1000LL*10; // 10 years in millisecs
 	// use the 2nd type of key... those have widgetid first and then
 	// the timestamp
 	key128_t startKey  = g_accessdb.makeKey2 ( timestamp ,wgid );
-	key128_t endKey    = g_accessdb.makeKey2 ( timestamp + int32_tTime, wgid);
+	key128_t endKey    = g_accessdb.makeKey2 ( timestamp + longTime, wgid);
 	// widget id of 0 means ANY widget
 	if ( wgid == 0 ) {
 		startKey = g_accessdb.makeKey1(timestamp , 0 );
-		endKey   = g_accessdb.makeKey1(timestamp + int32_tTime, 0 );
+		endKey   = g_accessdb.makeKey1(timestamp + longTime, 0 );
 	}
 	// lookup accessdb records from that time going forward
 	if ( ! st->m_msg5.getList ( RDB_ACCESSDB ,

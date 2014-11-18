@@ -976,7 +976,7 @@ bool getResults ( void *state ) {
 	//   over the indexing process
 	// . this will copy our passed "query" and "coll" to it's own buffer
 	// . we print out matching docIds to int32_t if m_isDebug is true
-	// . no int32_ter forward this, since proxy will take care of evenly
+	// . no longer forward this, since proxy will take care of evenly
 	//   distributing its msg 0xfd "forward" requests now
 	st->m_gotResults=st->m_msg40.getResults(si,false,st,gotResultsWrapper);
 	// save error
@@ -12144,7 +12144,7 @@ bool sendPageBack ( TcpSocket *s ,
 	// log that
 	//if ( cookiePtr ) log("gb: set-cookie=%s",cookiePtr );
 
-	// no int32_ter set cookie here, let the browser set its own cookies
+	// no longer set cookie here, let the browser set its own cookies
 	// using client-side javascript now. see the <scripts> above for that.
 	// every button/control/etc should set a cookie to its value when it
 	// is set. fo categories we might want to delete the cookie if it
@@ -12223,7 +12223,7 @@ bool gotResults ( void *state ) {
 	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
 	if ( ! cr || cr != si->m_cr ) {
 	       log("query: Query failed. "
-		   "Collection no int32_ter exists or was deleted and "
+		   "Collection no longer exists or was deleted and "
 		   "recreated.");
 		g_errno = ENOCOLLREC;
 		// should always return true
@@ -13725,7 +13725,7 @@ bool printEventTitle ( SafeBuf &sb , Msg20Reply *mr , State7 *st ) {
 		if ( ! first && 
 		     hadPunct &&
 		     ! sb.pushChar(' ') ) goto failed2;
-		// no int32_ter first
+		// no longer first
 		first = false;
 		// get length
 		str    = ss->m_buf;
@@ -13849,7 +13849,7 @@ bool printEventSummary ( SafeBuf &sb , Msg20Reply *mr , int32_t width ,
 		if ( lastWordPos >= 0 )
 			sb.pushChar(' ');
 
-		// no int32_ter first
+		// no longer first
 		first = false;
 		// save this
 		lastWordPos = ss->m_alnumPosB;

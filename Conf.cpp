@@ -570,7 +570,7 @@ char *Conf::getDefaultColl ( char *hostname, int32_t hostnameLen ) {
 			if ( cmpLen == 0 || cmpLen > hostnameLen )
 				continue;
 			// . check the hostname for a match
-			//   this will allow hostname to be int32_ter to allow for
+			//   this will allow hostname to be longer to allow for
 			//   a possible port at the end
 			if ( strncmp ( hostname,
 				       cmpHostname,

@@ -440,7 +440,7 @@ bool IndexTable::setTopDocIds ( int32_t topn , bool forcePhrases ) {
 	// get new lowest parms
 	getLowestTopDocId ( &minBitScore , &minScore , &minDocId );
 	// timing debug
-	// this chunk of code takes the int32_test (1-4 seconds), the bubble sort
+	// this chunk of code takes the longest (1-4 seconds), the bubble sort
 	// is only 15ms
 	log("setTopDocIds: phase 1 took %"INT64" ms", 
 	    gettimeofdayInMilliseconds() - startTime );

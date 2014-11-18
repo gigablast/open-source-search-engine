@@ -109,7 +109,7 @@ class UdpServer {
 	//   on the remote machine
 	// . backoff is how int32_t to wait for an ACK in ms before we resend
 	// . we double backoff each time we wait w/o getting any ACK
-	// . don't wait int32_ter than maxWait for a resend
+	// . don't wait longer than maxWait for a resend
 	// . if we try to resend a request dgram MORE than "maxResends" times,
 	//   we do not resend it and we returns with g_errno set to ENOACK, 
 	//   indicating we have not gotten ANY ack for a dgram. if a host dies
@@ -143,7 +143,7 @@ class UdpServer {
 	// . the "msg" will be freed unless slot->m_sendBufAlloc is set to NULL
 	// . backoff is how int32_t to wait for an ACK in ms before we resend
 	// . we double backoff each time we wait w/o getting any ACK
-	// . don't wait int32_ter than maxWait for a resend
+	// . don't wait longer than maxWait for a resend
 	void sendReply_ass (char     *msg        ,
 			    int32_t      msgSize    ,
 			    char     *alloc      ,

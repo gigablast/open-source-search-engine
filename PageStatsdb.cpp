@@ -122,7 +122,7 @@ bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 	}
 
 	//
-	// this is no int32_ter a gif, but an html graph in g_statsdb.m_sb
+	// this is no longer a gif, but an html graph in g_statsdb.m_sb
 	//
 	if ( ! g_statsdb.makeGIF ( st->m_endDateR   ,
 				   st->m_startDateR ,

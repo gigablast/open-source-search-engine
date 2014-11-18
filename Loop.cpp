@@ -502,7 +502,7 @@ void Loop::callCallbacks_ass ( bool forReading , int fd , int64_t now ,
 			log(LOG_DEBUG,"loop: enter fd callback fd=%"INT32" "
 			    "nice=%"INT32"",(int32_t)fd,(int32_t)s->m_niceness);
 
-		// sanity check. -1 no int32_ter supported
+		// sanity check. -1 no longer supported
 		if ( s->m_niceness < 0 ) { char *xx=NULL;*xx=0; }
 
 		// save it
@@ -650,7 +650,7 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 	// wtf is this?
 	g_numSigOthers++;
 
-	// the stuff below should no int32_ter be used since we
+	// the stuff below should no longer be used since we
 	// do not use F_SETSIG now
 	return;
 
@@ -1384,7 +1384,7 @@ bool Loop::runLoop ( ) {
 
 	//logf(LOG_DEBUG,"loop: sigNum=%"INT32" signo=%"INT32" alrm=%"INT32"",
 	//     (int32_t)sigNum,info.si_signo,(int32_t)SIGVTALRM);
-	// no int32_ter in a wait state...
+	// no longer in a wait state...
 	//g_inWaitState = false;
 
 
@@ -1806,7 +1806,7 @@ void Loop::doPoll ( ) {
 	else                 v.tv_usec = QUICKPOLL_INTERVAL * 1000;  
 
 	// set descriptors we should watch
-	// MDW: no int32_ter necessary since we have s_selectMaskRead, etc.
+	// MDW: no longer necessary since we have s_selectMaskRead, etc.
 	// for ( int32_t i = 0 ; i < MAX_NUM_FDS ; i++ ) {
 	// 	if ( m_readSlots [i] ) {
 	// 		FD_SET ( i , &readfds   );

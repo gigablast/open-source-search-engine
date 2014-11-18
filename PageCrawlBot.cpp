@@ -1810,7 +1810,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( msg ) { // delColl && cast ) {
 		// this was deleted... so is invalid now
 		name = NULL;
-		// no int32_ter a delete function, we need to set "name" below
+		// no longer a delete function, we need to set "name" below
 		//delColl = false;//NULL;
 		// john wants just a brief success reply
 		SafeBuf tmp;
@@ -2172,7 +2172,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		    spotsCopy[spotsLen] = '\0';
 		    fprintf(f, "%s", spotsCopy);
 		    fclose(f);
-		    mfree(spotsCopy, spotsLen+1, "no int32_ter need copy");
+		    mfree(spotsCopy, spotsLen+1, "no longer need copy");
 		}
 	}
 

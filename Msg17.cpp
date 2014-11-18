@@ -31,7 +31,7 @@ int32_t *g_genericCacheMaxAge[MAX_GENERIC_CACHES] = {
 	//&s_oneMonth // seoresultscache
 	//&g_conf.m_siteLinkInfoMaxCacheAge ,
 	// Msg50.cpp now has a dynamic max cache age which is higher
-	// for higher qualities, since those take int32_ter to recompute and
+	// for higher qualities, since those take longer to recompute and
 	// are usually much more stable...
 	//&s_noMax // &g_conf.m_siteQualityMaxCacheAge
 };

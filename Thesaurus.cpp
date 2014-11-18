@@ -1750,7 +1750,7 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 	Xml xml;
 	group->m_recv++;
 	aff->m_recv++;
-	// the stuff below might no int32_ter be valid (synonyms specifically)
+	// the stuff below might no longer be valid (synonyms specifically)
 	if (!aff->m_thes->m_rebuilding) {
 		// do cleanup
 		buildAffinityGroup(group);
@@ -2589,7 +2589,7 @@ bool Thesaurus::load() {
 	if (unknown) 
 		log(LOG_INIT, "build: %"INT32" synonyms with missing/"
 		    "invalid type", unknown);
-	// this no int32_ter resets m_synonymTable, why did we
+	// this no longer resets m_synonymTable, why did we
 	// want to do that anyway??? MDW
 	reset();
 

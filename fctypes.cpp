@@ -771,7 +771,7 @@ const char g_map_is_vowel[] = {
 		0,0,0,0,0,0,0,0, // 176
 		0,0,0,0,0,0,0,0,
 
-		// we are no int32_ter necessarily latin-1!!
+		// we are no longer necessarily latin-1!!
 		0,0,0,0,0,0,0,0, // 192
 		0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0, // 208
@@ -1251,7 +1251,7 @@ int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
 		// . make &lt; and &gt; special so Xml::set() still works
 		// . and make &amp; special so we do not screw up summaries
 		if ( doSpecial ) {
-			// no int32_ter use this!
+			// no longer use this!
 			//char *xx=NULL;*xx=0;
 			if ( c == '<' ) {
 				// using [ and ] looks bad in event titles...

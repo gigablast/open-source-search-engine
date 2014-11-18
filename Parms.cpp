@@ -3214,7 +3214,7 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 			*(int32_t *)(THIS + m->m_plen) = len ;
 		goto changed; }
  changed:
-	// tell gigablast the value is EXPLICITLY given -- no int32_ter based
+	// tell gigablast the value is EXPLICITLY given -- no longer based
 	// on default.conf
 	//if ( m->m_obj == OBJ_COLL ) ((CollectionRec *)THIS)->m_orig[mm] = 2;
 
@@ -6947,7 +6947,7 @@ void Parms::init ( ) {
 
 	m->m_title = "language detection samplesize";
 	m->m_desc  = "Language detection size. Higher values"
-		" mean more accuracy, but int32_ter processing time."
+		" mean more accuracy, but longer processing time."
 		" Suggested values are 300-1000";
 	m->m_cgi   = "lmsamples";
 	m->m_off   = (char *)&cr.m_languageSamples - x;
@@ -6959,7 +6959,7 @@ void Parms::init ( ) {
 
  	m->m_title = "language detection spider samplesize";
  	m->m_desc  = "Language detection page sample size. "
- 		"Higher values mean more accuracy, but int32_ter "
+ 		"Higher values mean more accuracy, but longer "
  		"spider time."
  		" Suggested values are 3000-10000";
  	m->m_cgi   = "lpsamples";
@@ -9429,7 +9429,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Recompute the quality of the root urls of each "
 		"search result in order to compute the quality of that "
 		"search result, since it depends on its root quality. This "
-		"can take a lot int32_ter when enabled.";
+		"can take a lot longer when enabled.";
 	m->m_off   = (char *)&si.m_artr - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
@@ -12150,7 +12150,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "mct";
 	m->m_off   = (char *)&g_conf.m_maxCpuThreads - g;
 	m->m_type  = TYPE_LONG;
-	// make it 3 for new gb in case one query takes way int32_ter 
+	// make it 3 for new gb in case one query takes way longer 
 	// than the others
 	m->m_def   = "6"; // "2";
 	m->m_units = "threads";
@@ -12443,7 +12443,7 @@ void Parms::init ( ) {
 	m->m_title = "merge buf size";
 	m->m_desc  = "Read and write this many bytes at a time when merging "
 		"files.  Smaller values are kinder to query performance, "
-		" but the merge takes int32_ter. Use at least 1000000 for "
+		" but the merge takes longer. Use at least 1000000 for "
 		"fast merging.";
 	m->m_cgi   = "mbs";
 	m->m_off   = (char *)&g_conf.m_mergeBufSize - g;
@@ -12533,7 +12533,7 @@ void Parms::init ( ) {
 
 	m->m_title = "sequential profiling.";
 	m->m_desc  = "Produce a LOG_TIMING log message for each "
-		"callback called, aint32_t with the time it took.  "
+		"callback called, along with the time it took.  "
 		"Profiler must be enabled.";
 	m->m_cgi   = "ensp";
 	m->m_off   = (char *)&g_conf.m_sequentialProfiling - g;
@@ -13249,7 +13249,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max respider wait (days)";
-	m->m_desc  = "Do not wait int32_ter than this before attempting to "
+	m->m_desc  = "Do not wait longer than this before attempting to "
 		"respider.";
 	m->m_cgi   = "xr";
 	m->m_xml   = "spiderPriorityMaxRespiderWait";
@@ -15639,7 +15639,7 @@ void Parms::init ( ) {
 	*/
 
 	m->m_title = "display indexed date";
-	m->m_desc  = "Display the indexed date aint32_t with results.";
+	m->m_desc  = "Display the indexed date along with results.";
 	m->m_cgi   = "didt";
 	m->m_off   = (char *)&cr.m_displayIndexedDate - x;
 	m->m_type  = TYPE_BOOL;
@@ -15650,7 +15650,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "display last modified date";
-	m->m_desc  = "Display the last modified date aint32_t with results.";
+	m->m_desc  = "Display the last modified date along with results.";
 	m->m_cgi   = "dlmdt";
 	m->m_off   = (char *)&cr.m_displayLastModDate - x;
 	m->m_type  = TYPE_BOOL;
@@ -15662,7 +15662,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "display published date";
-	m->m_desc  = "Display the published date aint32_t with results.";
+	m->m_desc  = "Display the published date along with results.";
 	m->m_cgi   = "dipt";
 	m->m_off   = (char *)&cr.m_displayPublishDate - x;
 	m->m_type  = TYPE_BOOL;
@@ -16557,7 +16557,7 @@ void Parms::init ( ) {
 
 	m->m_title = "delete 404s";
 	m->m_desc  = "Should pages be removed from the index if they are no "
-		"int32_ter accessible on the web?";
+		"longer accessible on the web?";
 	m->m_cgi   = "dnf";
 	m->m_off   = (char *)&cr.m_delete404s - x;
 	m->m_type  = TYPE_BOOL;
@@ -17504,7 +17504,7 @@ void Parms::init ( ) {
 	m->m_desc  = "This is in pixels and limits the size of the thumbnail. "
 		"Gigablast tries to make at least the width or the height "
 		"equal to this maximum, but, unless the thumbnail is sqaure, "
-		"one side will be int32_ter than the other.";
+		"one side will be longer than the other.";
 	m->m_cgi   = "mtwh";
 	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
 	m->m_type  = TYPE_LONG;
@@ -18778,7 +18778,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "log query time threshold";
-	m->m_desc  = "If query took this many millliseconds or int32_ter, then log the "
+	m->m_desc  = "If query took this many millliseconds or longer, then log the "
 		"query and the time it took to process.";
 	m->m_cgi   = "lqtt";
 	m->m_off   = (char *)&g_conf.m_logQueryTimeThreshold- g;
@@ -20133,7 +20133,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	if ( cr ) parmCollnum = cr->m_collnum;
 
 	// turn the collnum into an ascii string for providing as args
-	// when &reset=1 &restart=1 &delete=1 is given aint32_t with a
+	// when &reset=1 &restart=1 &delete=1 is given along with a
 	// &c= or a &name=/&token= pair.
 	char oldCollName[MAX_COLL_LEN+1];
 	oldCollName[0] = '\0';
@@ -21657,7 +21657,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		}
 		//return true;
 		// sanity
-		// we no int32_ter include the \0 in the dataSize...so a dataSize
+		// we no longer include the \0 in the dataSize...so a dataSize
 		// of 0 means empty string...
 		//if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}

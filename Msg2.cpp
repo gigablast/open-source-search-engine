@@ -314,7 +314,7 @@ bool Msg2::getLists ( ) {
 		// do not allow it to be re-used since now posdb
 		// calls Msg2::getListGroup()
 		//m_slotNum   [i] = i;
-		// that is no int32_ter the case!! we do a merge now... i
+		// that is no longer the case!! we do a merge now... i
 		// think we decided it was easier to deal with shit n posdb.cpp
 		// but i don't know how much this matters really
 		//m_avail     [i] = false;

@@ -159,7 +159,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	st->m_recycle  = r->getLong("recycle",0);
 	st->m_recycle2 = r->getLong("recycleimp",0);
 	st->m_render   = r->getLong("render" ,0);
-	// for quality computation... takes way int32_ter cuz we have to 
+	// for quality computation... takes way longer cuz we have to 
 	// lookup the IP address of every outlink, so we can get its root
 	// quality using Msg25 which needs to filter out voters from that IP
 	// range.
@@ -724,7 +724,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	st->m_recycle2 = r->getLong("recycleimp",0);
 	st->m_render   = r->getLong("render" ,0);
 	st->m_recompute = r->getLong("recompute" ,0);
-	// for quality computation... takes way int32_ter cuz we have to 
+	// for quality computation... takes way longer cuz we have to 
 	// lookup the IP address of every outlink, so we can get its root
 	// quality using Msg25 which needs to filter out voters from that IP
 	// range.

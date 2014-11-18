@@ -104,7 +104,7 @@ public:
 };
 
 // i lowered from 1000 to 300 so that we more sensitive to malformed pages
-// because typically they seem to take int32_ter to parse. i also added some
+// because typically they seem to take longer to parse. i also added some
 // new logic for dealing with table tr and td back tags that allow us to
 // pop off the other contained tags right away rather than delaying it until
 // we are done because that will often breach this stack.
@@ -379,7 +379,7 @@ bool Sections::set ( Words     *w                       ,
 	// for debug
 	g_sections = this;
 
-	// Sections are no int32_ter 1-1 with words, just with front tags
+	// Sections are no longer 1-1 with words, just with front tags
 	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -713,7 +713,7 @@ bool Sections::set ( Words     *w                       ,
 			/*
 			// if our parent got closed before "sn" closed because
 			// of an out-of-order back tag issue, then if it
-			// no int32_ter contains sn->m_a, then reparent "sn"
+			// no longer contains sn->m_a, then reparent "sn"
 			// to its grandparent.
 			Section *ps = sn->m_parent;
 			for ( ; ps && ps->m_b >= 0 && ps->m_b <= sn->m_a ;
@@ -738,7 +738,7 @@ bool Sections::set ( Words     *w                       ,
 			// back tag to another front tag on the stack
 			Section *ps = sn->m_parent;
 			for ( ; ps != rootSection ; ps = ps->m_parent ) {
-				// skip if parent no int32_ter contains us!
+				// skip if parent no longer contains us!
 				if ( ps->m_b <= sn->m_a ) continue;
 				// skip if this parent is still open
 				if ( ps->m_b <= 0 ) continue;
@@ -1199,7 +1199,7 @@ bool Sections::set ( Words     *w                       ,
 		// are open ended
 		if ( si->m_b != -1 && si->m_b <= end ) continue;
 		// this might constrain someone's parent such that
-		// that someone no int32_ter can use that parent!!
+		// that someone no longer can use that parent!!
 		si->m_b = end;
 		// . get our tag type
 		// . use int32_t instead of nodeid_t so we can re-set this
@@ -3130,7 +3130,7 @@ void initGenericTable ( int32_t niceness ) {
 	//   and should be excluded from titles. 
 	// . we set the GENERIC bit for each word or phrase in the sentence
 	//   that matches one in this list of generic words/phrases
-	// . then we ignore the int32_test generic phrase that is two words or
+	// . then we ignore the longest generic phrase that is two words or
 	//   more, within the sentence, for the purposes of forming titles
 	// . so if we had "buy tickets for Spiderman" we would ignore
 	//   "buy tickets for" and the title would just be Spiderman
@@ -4063,7 +4063,7 @@ bool Sections::setSentFlagsPart1 ( ) {
 			     //   title prevention for americantowns.com
 			     (m_wlens[i] >= 3 || firstWord) )
 				lowerCount++;
-			// no int32_ter first word in sentence
+			// no longer first word in sentence
 			firstWord = false;
 		}
 		// does it end in period? slight penalty for that since
@@ -7122,8 +7122,8 @@ int32_t hasTitleWords ( sentflags_t sflags ,
 		"|bowling",
 		"*$bowl", // orange bowl, super bowl
 		"|singing", // Children's+Choirs+Singing
-		"|sing aint32_t", // Messiah+Sing-Aint32_t
-		"|singaint32_t",
+		"|sing along", // Messiah+Sing-Aint32_t
+		"|singalong",
 		"^sing", // community sing
 		"$singers", // Lakeside+Singers+at+NCC
 		"|soapmaking", // Girls+Spa+Day:+Lip+balm,Perfume&Soapmaking:
@@ -8396,7 +8396,7 @@ int32_t Sections::addImpliedSections3 ( ) {
 		// to group tods with doms/dows.
 		// this was hurting blackbirdbuvette.com which needed the
 		// hr partition to split up some sections so it got
-		// "Geeks Who Drink" as the title because it would no int32_ter
+		// "Geeks Who Drink" as the title because it would no longer
 		// have the multevent penalty!
 		//if ( count1 + count2 == 2 * bothCount ) continue;
 
@@ -8850,7 +8850,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 	int32_t inserts = 0;
 	int32_t skips = 0;
 
-	// no int32_ter allow dups, keep a count of each hash now
+	// no longer allow dups, keep a count of each hash now
 	char vhtbuf[92000];
 	HashTableX vht;
 	vht.set ( 4, 4 ,256,vhtbuf,92000,false,m_niceness,"vhttab");
@@ -8917,7 +8917,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 		// the secCount at 0, and normally it starts at 1 (see below)
 		// but if we have like an hr tag delimeter then we only
 		// need two sections above it. this fixed cabq.gov so it
-		// got the first implied section and no int32_ter missed it.
+		// got the first implied section and no longer missed it.
 		//if ( firstTime ) need = 2;
 
 		// update this for insertSubSection()
@@ -10116,7 +10116,7 @@ bool Sections::addSentenceSections ( ) {
 	static int64_t h_on;
 	static int64_t h_under;
 	static int64_t h_with;
-	static int64_t h_aint32_t;
+	static int64_t h_along;
 	static int64_t h_from;
 	static int64_t h_by;
 	static int64_t h_of;
@@ -10157,7 +10157,7 @@ bool Sections::addSentenceSections ( ) {
 		h_on = hash64n("on");
 		h_under = hash64n("under");
 		h_with = hash64n("with");
-		h_aint32_t = hash64n("aint32_t");
+		h_along = hash64n("along");
 		h_from = hash64n("from");
 		h_by = hash64n("by");
 		h_of = hash64n("of");
@@ -10387,8 +10387,8 @@ bool Sections::addSentenceSections ( ) {
 					//     m_wids[aw] == h_midnight )
 					if ( tid == TAG_P &&
 					     isLower &&
-					     // Oscar G<p>aint32_t with xxxx
-					     m_wids[aw] != h_aint32_t &&
+					     // Oscar G<p>along with xxxx
+					     m_wids[aw] != h_along &&
 					     m_wids[aw] != h_with )
 						isLower = false;
 
@@ -12276,7 +12276,7 @@ bool SectionVotingTable::addVote3 ( int32_t        turkTagHash ,
 }
 
 /*
-// . no int32_ter use single bit flags, sec_t
+// . no longer use single bit flags, sec_t
 // . just use enumerated section types now
 // . each section type has a score and number sampled to get that score
 // . returns -1 if no data
@@ -13029,7 +13029,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 		// first few words of section
 		int32_t a = sn->m_a;
 		int32_t b = sn->m_b;
-		// -1 means an unclosed tag!! should no int32_ter be the case
+		// -1 means an unclosed tag!! should no longer be the case
 		if ( b == -1 ) { char *xx=NULL;*xx=0; }//b=m_words->m_numWords;
 		sbuf->safePrintf("</nobr></td>");
 
@@ -15209,7 +15209,7 @@ bool Sections::swoggleTable ( int32_t dn , Section *ts ) {
 
 
 // . just the voting info for passing into diffbot in json
-// . aint32_t w/ the title/summary/etc. we can return this json blob for each search result
+// . along w/ the title/summary/etc. we can return this json blob for each search result
 bool Sections::printVotingInfoInJSON ( SafeBuf *sb ) {
 
 	// save ptrs
@@ -15393,7 +15393,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		// first few words of section
 		int32_t a = sn->m_a;
 		int32_t b = sn->m_b;
-		// -1 means an unclosed tag!! should no int32_ter be the case
+		// -1 means an unclosed tag!! should no longer be the case
 		if ( b == -1 ) { char *xx=NULL;*xx=0; }//b=m_words->m_numWords;
 		sbuf->safePrintf("</nobr></td>");
 
@@ -16404,7 +16404,7 @@ bool Sections::setRegistrationBits ( ) {
 			//if ( sk->m_tagId == TAG_TITLE ) break;
 
 			// . stop if this section is in a list of other
-			// . we should hash each sections tag hash aint32_t with
+			// . we should hash each sections tag hash along with
 			//   their parent section ptr for this
 			//if ( sk->m_container ) break;
 

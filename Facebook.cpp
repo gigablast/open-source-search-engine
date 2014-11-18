@@ -1493,7 +1493,7 @@ static void doneProcessingWrapper ( void *state ) {
 	int32_t err = g_msgfb.m_errno;
 	// or inherit this. we might have forgotten to set m_errno
 	if ( ! err && g_errno ) err = g_errno;
-	// no int32_ter in progress
+	// no longer in progress
 	g_msgfb.m_inProgress = false;
 	g_msgfb.reset();
 	// note it
@@ -2819,7 +2819,7 @@ void Msgfb::queueLoop ( ) {
 		int32_t err = m_errno;
 		// or inherit this. we might have forgotten to set m_errno
 		if ( ! err && g_errno ) err = g_errno;
-		// no int32_ter in progress
+		// no longer in progress
 		m_inProgress = false;
 		// this will purge fullreply
 		reset();
@@ -2848,7 +2848,7 @@ void Msgfb::queueLoop ( ) {
  error:
 	log("facebook: queue fbid %"INT64" had error: %s",
 	    m_fbId,mstrerror(g_errno));
-	// no int32_ter in progress
+	// no longer in progress
 	m_inProgress = false;
 	// this will purge fullreply
 	reset();

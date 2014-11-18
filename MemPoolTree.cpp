@@ -103,7 +103,7 @@ MemNode *MemPoolTree::getNextNode ( MemNode *i ) {
 	if ( p->m_left == i ) return p;
 	// otherwise keep getting the parent until it has a bigger key
 	// or until we're the LEFT kid of the parent. that's better
-	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
+	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
 	while ( p && p->m_key < i->m_key ) p = p->m_parent;
 	// p will be NULL if none are left
 	return p;
@@ -126,7 +126,7 @@ MemNode *MemPoolTree::getPrevNode ( MemNode *i ) {
 	if ( p->m_right == i ) return p;
 	// keep getting the parent until it has a bigger key
 	// or until we're the RIGHT kid of the parent. that's better
-	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
+	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
 	while ( p && p->m_key > i->m_key ) p = p->m_parent;
 	// p will be NULL if none are left
 	return p;

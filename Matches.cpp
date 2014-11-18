@@ -412,7 +412,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		mf_t flags = MF_LINK;
 		//if ( k->m_isAnomaly ) flags = MF_ALINK;
 		// add it in
-		if ( ! addMatches ( k->ptr_linkText      ,
+		if ( ! addMatches ( k->getLinkText() ,
 				    k->size_linkText - 1 ,
 				    flags                ,
 				    xd->m_docId          ,
@@ -426,7 +426,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		flags = MF_HOOD;
 		//if ( k->m_isAnomaly ) flags = MF_AHOOD;
 		// add it in
-		if ( ! addMatches ( k->ptr_surroundingText      ,
+		if ( ! addMatches ( k->getSurroundingText() ,
 				    k->size_surroundingText - 1 ,
 				    flags                       ,
 				    xd->m_docId                 ,
@@ -1143,7 +1143,7 @@ bool Matches::addMatches ( Words    *words               ,
 		     qw->m_wordSign == '\0' &&
 		     (nq && nq->m_wordId) && // no field names can follow
 		     //(qw->m_isQueryStopWord || qw->m_isStopWord ) ) {
-		     // we no int32_ter consider single alnum chars to be
+		     // we no longer consider single alnum chars to be
 		     // query stop words as stated in StopWords.cpp to fix
 		     // the query 'j. w. eagan'
 		     qw->m_isQueryStopWord ) {

@@ -1133,7 +1133,7 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 		}
 	}
 
-	//since we need finer grained control in loop, we no int32_ter collect
+	//since we need finer grained control in loop, we no longer collect
 	//the callbacks, sort, then call them.  we now call them right away
 	//that way we can break out if we start taking too int32_t and 
 	//give control back to udpserver.
@@ -1513,7 +1513,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 		log(LOG_DEBUG, "threads: took %"INT64" ms to callback %"INT32" "
 		    "callbacks, nice: %"INT32"", took2, numCallbacks, maxNiceness);
 
-	//since we need finer grained control in loop, we no int32_ter collect
+	//since we need finer grained control in loop, we no longer collect
 	//the callbacks, sort, then call them.  we now call them right away
 	//that way we can break out if we start taking too int32_t and 
 	//give control back to udpserver.
@@ -1889,7 +1889,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	//	return false;
 	// . if the thread to launch has niceness > lowest launched then bail
 	// . i.e. don't launch a low-priority thread if we have highs running
-	// . we no int32_ter let a niceness of 1 prevent a niceness of 2 from
+	// . we no longer let a niceness of 1 prevent a niceness of 2 from
 	//   launching, this way we can launch merge threads at a niceness
 	//   of 1 w/o hurting the spidering too much, but still giving the
 	//   merge some preferential treatment over the disk so we don't

@@ -519,7 +519,7 @@ void main2 ( char *dirname ) {
 		}
 
 		// if ANY one of our brothers is too close to the current time, 
-		// then wait a little int32_ter
+		// then wait a little longer
 		if ( abort ) continue;
 
 		// if we increased our range, keep going

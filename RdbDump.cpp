@@ -186,7 +186,7 @@ bool RdbDump::set ( //char     *coll          ,
 	// . start dumping the tree 
 	// . return false if it blocked
 	if ( ! dumpTree ( false ) ) return false;
-	// no int32_ter dumping
+	// no longer dumping
 	doneDumping();
 	// return true since we didn't block
 	return true;
@@ -476,7 +476,7 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 #endif
 
 	// before calling RdbMap::addList(), always reset list ptr
-	// since we no int32_ter call this in RdbMap::addList() so we don't
+	// since we no longer call this in RdbMap::addList() so we don't
 	// mess up the possible HACK below
 	m_list->resetListPtr();
 
@@ -859,7 +859,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// debug msg
 	//log("RdbDump:: deleting list");
 	int64_t t1 = gettimeofdayInMilliseconds();
-	// convert to number, this is -1 if no int32_ter exists
+	// convert to number, this is -1 if no longer exists
 	//collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
 	//if ( collnum < 0 && m_rdb->m_isCollectionLess ) {
 	//	collnum = 0;

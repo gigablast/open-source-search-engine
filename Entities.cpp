@@ -29,7 +29,7 @@ int32_t getEntity_a ( char *s , int32_t maxLen , uint32_t *c ) {
 	//	s[len]='\0';
 	//	fprintf(stderr,"got entity %s \n",s);
 	//	s[len]=d;
-	// we don't have entities int32_ter than "&curren;"
+	// we don't have entities longer than "&curren;"
 	if ( len > 10 ) return 0;
 	// all entites are 3 or more chars (&gt)
 	if ( len < 3 ) return 0;

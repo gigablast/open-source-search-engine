@@ -181,7 +181,7 @@ bool Bits::set ( Words *words , char titleRecVersion , int32_t niceness ,
 
 
 		//
-		// pick the int32_test line in a hard section which ends in
+		// pick the longest line in a hard section which ends in
 		// a period and contains a br tag.  then any line that
 		// is 80%+ of that line's number of chars is also a line
 		// where the br should not terminate it as a sentence.

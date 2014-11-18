@@ -199,7 +199,7 @@ bool Msge1::launchRequests ( int32_t starti ) {
 	if ( host && is_digit(host[0]) ) ip = atoip ( host , hlen );
 	// if legit this is non-zero
 	if ( ip ) {
-		// what is this? i no int32_ter have this bug really - i fixed
+		// what is this? i no longer have this bug really - i fixed
 		// it - but it did core here probably from a bad dns reply!
 		// so take this out...
 		//if ( ip == 3 ) { char *xx=NULL;*xx=0; }

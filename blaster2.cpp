@@ -355,7 +355,7 @@ void startSpidering ( ) {
 }
 
 void gotDocWrapper ( void *state , TcpSocket *s ) {
-	// no int32_ter launched
+	// no longer launched
 	s_launched--;
 	char* url = (char*)state;
 	// bail if got cut off

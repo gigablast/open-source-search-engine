@@ -335,7 +335,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( k->size_rssItem > 10 && ++rcount >= 20 ) continue;
 		// set Url
 		Url u;
-		u.set ( k->ptr_urlBuf , k->size_urlBuf );
+		u.set ( k->getUrl() , k->size_urlBuf );
 		// is it the same host as us?
 		bool sh = true;
 		// the title url
@@ -353,15 +353,15 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			// set the words to it
 			//if ( ! k->setXmlFromLinkText ( &tx[ti] ) )
 			//	return false;
-			char *p    = k-> ptr_linkText;
+			char *p    = k->getLinkText();
 			int32_t  plen = k->size_linkText - 1;
 			if ( ! verifyUtf8 ( p , plen ) ) {
 				log("title: set4 bad link text from url=%s",
-				    k->ptr_urlBuf);
+				    k->getUrl());
 				continue;
 			}
 			// now the words.
-			if ( ! tw[ti].set ( k->ptr_linkText   ,
+			if ( ! tw[ti].set ( k->getLinkText() ,
 					    k->size_linkText-1, // len
 					    TITLEREC_CURRENT_VERSION ,
 					    true              , // computeIds

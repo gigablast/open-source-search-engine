@@ -88,7 +88,7 @@ void RdbBase::reset ( ) {
 	//m_numNetReadAdd = 0 ;
 	//m_numRepliesAdd = 0 ; 
 	//m_numNetSentAdd = 0 ;
-	// we no int32_ter need to be saved
+	// we no longer need to be saved
 	//m_needsSave = false;
 	//m_inWaiting = false;
 	// we're not in urgent merge mode yet
@@ -1232,7 +1232,7 @@ void RdbBase::doneWrapper4 ( ) {
 	}
 
 
-	// . we are no int32_ter unlinking
+	// . we are no longer unlinking
 	// . this is so Msg3.cpp can avoid reading the [a,b) files
 	m_isUnlinking = false;
 	// file #x is the merge file
@@ -1242,7 +1242,7 @@ void RdbBase::doneWrapper4 ( ) {
 	// sanity check
 	if ( m_numFilesToMerge != (b-a) ) {
 		log(LOG_LOGIC,"db: Bury oops."); char *xx = NULL; *xx = 0; }
-	// we no int32_ter have a merge file
+	// we no longer have a merge file
 	m_hasMergeFile = false;
 	// now unset m_mergeUrgent if we're close to our limit
 	if ( m_mergeUrgent && m_numFiles - 14 < m_minToMerge ) {
@@ -2185,7 +2185,7 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_pc                  ,
 			  mint /*maxTargetFileSize*/ ,
 			  m_ks                  ) ) return;
-	// hey, we're no int32_ter merging i guess
+	// hey, we're no longer merging i guess
 	m_isMerging = false;
 	// decerment this count
 	m_rdb->m_numMergesOut--;
@@ -2377,13 +2377,13 @@ int32_t RdbBase::getFileNumFromId2 ( int32_t id2 ) {
 	//log("Rdb:getFileNumFromId2: id2 of %"INT32" is invalid. returning "
 	//    "startFileNum of %"INT32".",id2,prev,id2);
 	log("db: titledb*-%"INT32".dat file in collection \"%s\" "
-	    "is referenced but no int32_ter exists. "
+	    "is referenced but no longer exists. "
 	    "To fix this do a tight merge on titledb; you may have to delete "
 	    "tfndb* and regenerate it using the 'gb gendbs' command after the "
 	    "tight merge completes if the document is indeed missing. Cause "
 	    "may have been an improper shutdown, or not saving tfndb or "
 	    "titledb, or a missing document in titledb.",id2,m_coll);
-	//log("DISK: titledb*-%"INT32".dat file is referenced but no int32_ter exists."
+	//log("DISK: titledb*-%"INT32".dat file is referenced but no longer exists."
 	//  " See section on Database Repair in overview.html to fix it.",id2);
 	return -1; // prev;
 }

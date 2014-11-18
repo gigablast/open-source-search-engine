@@ -102,7 +102,7 @@ class Msg40 {
 	// . set m_numDocIds to number of docIds in m_docIds
 	// . a useCache of -1 means default, 1 means use the cache,0 means dont
 	// . "displayMetas" is a space separated list of meta tag names
-	//   that you want the content for aint32_t with the summary
+	//   that you want the content for along with the summary
         bool getResults ( class SearchInput *si ,
 			  bool               forward ,
 			  void              *state    ,

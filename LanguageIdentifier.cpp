@@ -892,7 +892,7 @@ uint8_t LanguageIdentifier::guessLanguageFreqCount(Xml *xml,
 	if(max == 0) maxidx = 0;
 
 #if 0
-	// English, British, and Australian are no int32_ter separate
+	// English, British, and Australian are no longer separate
 	// If it's a toss up between any version of English, go with it.
 	if((max == langEnglish || max == langAustralia || max == langBritish) &&
 			(oldmax == langEnglish || oldmax == langAustralia || oldmax == langBritish))

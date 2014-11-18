@@ -1344,10 +1344,10 @@ bool getTopics ( State24       *st        ,
 		// scan down to this score, but not below
 		//int32_t minScore = (scores[i] * 75) / 100 ;
 		int32_t minScore = scores[i] - 25;
-		// if we get replaced by a int32_ter guy, remember him
+		// if we get replaced by a longer guy, remember him
 		int32_t replacerj = -1;
-		// . a int32_ter term than encapsulates us can eliminate us
-		// . or, if we're the int32_ter, we eliminate the int16_ter
+		// . a longer term than encapsulates us can eliminate us
+		// . or, if we're the longer, we eliminate the int16_ter
 		for ( int32_t j = i + 1 ; j < np ; j++ ) {
 			// skip if nuked already
 			if ( lens[j] == 0 ) continue;
@@ -1356,7 +1356,7 @@ bool getTopics ( State24       *st        ,
 			char c2 = ptrs2[j][lens2[j]];
 			ptrs2[i][lens2[i]] = '\0';
 			ptrs2[j][lens2[j]] = '\0';
-			// if we are the int16_ter, and int32_ter contains us
+			// if we are the int16_ter, and longer contains us
 			// then it nukes us... unless his score is too low
 			if ( lens2[i] < lens2[j] ) {
 				// if int16_ter is contained
@@ -1378,7 +1378,7 @@ bool getTopics ( State24       *st        ,
 				// un-null term both
 				ptrs2[i][lens2[i]] = c1;
 				ptrs2[j][lens2[j]] = c2;
-				// even if he's int32_ter, if his score is too
+				// even if he's longer, if his score is too
 				// low then he cannot nuke us
 				if ( scores[j] < minScore ) continue;
 				// if we were NOT contained by someone below...
@@ -1392,7 +1392,7 @@ bool getTopics ( State24       *st        ,
 				// see if we can nuke other guys at least
 				continue;
 			}
-			// . otherwise, we are the int32_ter
+			// . otherwise, we are the longer
 			// . we can nuke any int16_ter below us, all scores
 			char *s;
 			if (isunis[i] == 0 && isunis[j] == 0)
@@ -1426,7 +1426,7 @@ bool getTopics ( State24       *st        ,
 			//rflag = 1;
 
 		}
-		// if we got replaced by a int32_ter guy, he replaces us
+		// if we got replaced by a longer guy, he replaces us
 		// and takes our score
 		if ( replacerj >= 0 ) {
 			ptrs  [i] = ptrs  [replacerj];
@@ -1451,11 +1451,11 @@ bool getTopics ( State24       *st        ,
 	//   (do not count common words)
 
 	// . #3 or when all non-query, non-common terms match... pick the
-	//   int32_ter and remove the common words, but keep query words.
+	//   longer and remove the common words, but keep query words.
 
 	// again2:
 	//char rflag = 0;
-	// if two terms are close in score, and one is a int32_ter version
+	// if two terms are close in score, and one is a longer version
 	// of the other, choose it and remove the int16_ter
 	for ( int32_t i = 0 ; i < np - 1 ; i++ ) {
 		// skip if nuked already
@@ -1463,10 +1463,10 @@ bool getTopics ( State24       *st        ,
 		// scan down to this score, but not below
 		//int32_t minScore = (scores[i] * 75) / 100 ;
 		int32_t minScore = scores[i] - 15;
-		// if we get replaced by a int32_ter guy, remember him
+		// if we get replaced by a longer guy, remember him
 		int32_t replacerj = -1;
-		// . a int32_ter term than encapsulates us can eliminate us
-		// . or, if we're the int32_ter, we eliminate the int16_ter
+		// . a longer term than encapsulates us can eliminate us
+		// . or, if we're the longer, we eliminate the int16_ter
 		for ( int32_t j = i + 1 ; j < np ; j++ ) {
 			// skip if nuked already
 			if ( lens[j] == 0 ) continue;
@@ -1475,7 +1475,7 @@ bool getTopics ( State24       *st        ,
 			char c2 = ptrs[j][lens[j]];
 			ptrs[i][lens[i]] = '\0';
 			ptrs[j][lens[j]] = '\0';
-			// if we are the int16_ter, and int32_ter contains us
+			// if we are the int16_ter, and longer contains us
 			// then it nukes us... unless his score is too low
 			if ( lens[i] < lens[j] ) {
 				// if int16_ter is contained
@@ -1497,7 +1497,7 @@ bool getTopics ( State24       *st        ,
 				// un-null term both
 				ptrs[i][lens[i]] = c1;
 				ptrs[j][lens[j]] = c2;
-				// even if he's int32_ter, if his score is too
+				// even if he's longer, if his score is too
 				// low then he cannot nuke us
 				if ( scores[j] < minScore ) continue;
 				// if we were NOT contained by someone below...
@@ -1512,7 +1512,7 @@ bool getTopics ( State24       *st        ,
 				// see if we can nuke other guys at least
 				continue;
 			}
-			// . otherwise, we are the int32_ter
+			// . otherwise, we are the longer
 			// . we can nuke any int16_ter below us, all scores
 			char *s;
 			if (isunis[i] == 0 && isunis[j] == 0)
@@ -1549,7 +1549,7 @@ bool getTopics ( State24       *st        ,
 			//rflag = 1;
 
 		}
-		// if we got replaced by a int32_ter guy, he replaces us
+		// if we got replaced by a longer guy, he replaces us
 		// and takes our score
 		if ( replacerj >= 0 ) {
 			ptrs  [i] = ptrs  [replacerj];
@@ -1624,8 +1624,8 @@ bool getTopics ( State24       *st        ,
 		}
 	}
 	QUICKPOLL(niceness);
-	// now after int32_ter topics replaced the int16_ter topics which they
-	// contained, remove the int32_ter topics if they have too many words
+	// now after longer topics replaced the int16_ter topics which they
+	// contained, remove the longer topics if they have too many words
 	// remove common phrases
 	for ( int32_t i = 0 ; i < np ; i++ ) {
 		// skip if nuked already
@@ -2494,7 +2494,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , int32_t *qpops, int32_t nqi,
 		// skip if too far away from all query terms
 		if ( score <= 0 ) continue;
 
-		// no int32_ter count closeness to query terms for score,
+		// no longer count closeness to query terms for score,
 		// just use # times topic is in doc(s) and popularity
 		//score = 1000;
 

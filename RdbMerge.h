@@ -108,7 +108,7 @@ class RdbMerge {
 	// private:
 
 	// . used when growing the database
-	// . removes keys that would no int32_ter be stored by us
+	// . removes keys that would no longer be stored by us
 	//void filterList    ( RdbList *list ) ;
 
 	// . we get the units from the master and the mergees from the units

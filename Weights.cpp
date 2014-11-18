@@ -1,5 +1,5 @@
 // TODO: pass spam class to weight class and modify weights based on the spam
-//       then we can just serialize the weight vector in the title rec aint32_t
+//       then we can just serialize the weight vector in the title rec along
 //       with ptr offsets to the words that we index. carver can just scan
 //       through the word ptrs rather than 1 char at a time. summary generator
 //       can just use the weights to score each sample then. 
@@ -105,7 +105,7 @@ void Weights::reset() {
 // Demote the weight of the words and phrases in repeated sentence fragments.
 // Fixes message boards which include the same msg over again in the reply. 
 // The first title and first header tag have amnesty, those often repeat 
-// anyway. What about int32_t titles? The demotion will be more the int32_ter
+// anyway. What about int32_t titles? The demotion will be more the longer
 // the repeated fragment. TODO: Fragments have to have a minimum length of
 // 5 words unless they are surrounded by breaking tags. Hey, but we will demote
 // those words for being in a small section via RULE #6.
@@ -919,7 +919,7 @@ bool Weights::set2 ( Words   *words   ,
 //   wid1 is "mexico"
 //   pid2 is "mexico good"
 //   wid2 is "good"
-// . we store sliderParm in titleRec so we can update it aint32_t
+// . we store sliderParm in titleRec so we can update it along
 //   with title and header weights on the fly from the spider controls
 void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 				   int64_t   wid1 ,

@@ -615,7 +615,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	////////////////////
 	////////////////////
 
-	// no int32_ter, we let anyone snoop around to check out the gui
+	// no longer, we let anyone snoop around to check out the gui
 	//char guest = r->getLong("guest",0);
 
 	//if ( ! publicPage && ! isRootAdmin && ! guest )

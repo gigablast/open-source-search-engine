@@ -2101,7 +2101,7 @@ bool Query::setQWords ( char boolFlag ,
 			fieldCode = 0;
 			fieldLen  = 0;
 			field     = NULL;
-			// we no int32_ter have to ignore for link: et al
+			// we no longer have to ignore for link: et al
 			ignoreTilSpace = false;
 		}
 		// . maintain inQuotes and quoteStart
@@ -2155,7 +2155,7 @@ bool Query::setQWords ( char boolFlag ,
 			fieldCode = 0;
 			fieldLen  = 0;
 			field     = NULL;
-			// we no int32_ter have to ignore for link: et al
+			// we no longer have to ignore for link: et al
 			ignoreTilSpace = false;
 		}
 		// skip if we should
@@ -2873,7 +2873,7 @@ bool Query::setQWords ( char boolFlag ,
 
 	// . now since we may have prevented pairing across certain things
 	//   we need to set D_CAN_START_PHRASE for stop words whose left
-	//   punct word can no int32_ter be paired across
+	//   punct word can no longer be paired across
 	// . "dancing in the rain" is fun --> will include phrase "is fun".
 	// . title:"is it right"? --> will include phrase "is it"
 	for ( int32_t i = 1 ; i < numWords ; i++ ) {
@@ -2904,7 +2904,7 @@ bool Query::setQWords ( char boolFlag ,
 			// break the "quote", if any
 			qs = -1; continue; }
 		// if he is punctuation and qs is -1, skip him,
-		// punctuation words can no int32_ter start a quote
+		// punctuation words can no longer start a quote
 		if ( words.isPunct(j) && qs == -1 ) continue;
 		// uningore him if we should
 		if ( keepAllSingles ) m_qwords[j].m_ignoreWord = 0;

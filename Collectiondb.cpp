@@ -324,7 +324,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// . scan for holes
 	// . i is also known as the collection id
 	//int32_t i = (int32_t)newCollnum;
-	// no int32_ter fill empty slots because if they do a reset then
+	// no longer fill empty slots because if they do a reset then
 	// a new rec right away it will be filled with msg4 recs not
 	// destined for it. Later we will have to recycle some how!!
 	//else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
@@ -348,7 +348,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	//	return log("admin: Limit of %"INT64" collection reached. "
 	//		   "Collection not created.",maxColls);
 	//}
-	// if empty... bail, no int32_ter accepted, use "main"
+	// if empty... bail, no longer accepted, use "main"
 	if ( ! coll || !coll[0] ) {
 		g_errno = EBADENGINEER;
 		return log("admin: Trying to create a new collection "
@@ -359,7 +359,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	if ( gbstrlen(coll) > MAX_COLL_LEN ) {
 		g_errno = ENOBUFS;
 		return log("admin: Trying to create a new collection "
-			   "whose name \"%s\" of %i chars is int32_ter than the "
+			   "whose name \"%s\" of %i chars is longer than the "
 			   "max of %"INT32" chars.",coll,gbstrlen(coll),
 			   (int32_t)MAX_COLL_LEN);
 	}
@@ -1668,7 +1668,7 @@ CollectionRec::CollectionRec() {
 	//m_numAdminIps   = 0;
 	memset ( m_bases , 0 , sizeof(RdbBase *)*RDB_END );
 	// how many keys in the tree of each rdb? we now store this stuff
-	// here and not in RdbTree.cpp because we no int32_ter have a maximum
+	// here and not in RdbTree.cpp because we no longer have a maximum
 	// # of collection recs... MAX_COLLS. each is a 32-bit "int32_t" so
 	// it is 4 * RDB_END...
 	memset ( m_numNegKeysInTree , 0 , 4*RDB_END );
@@ -3145,7 +3145,7 @@ bool CollectionRec::hasPermission ( char *p, int32_t plen , int32_t ip ) {
 	return true;
 
 	// scan the passwords
-	// MDW: no int32_ter, this is too vulnerable!!!
+	// MDW: no longer, this is too vulnerable!!!
 	/*
 	for ( int32_t i = 0 ; i < m_numAdminPwds ; i++ ) {
 		int32_t len = gbstrlen ( m_adminPwds[i] );

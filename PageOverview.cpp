@@ -256,7 +256,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "<br><br>\n"
 "For performance reasons, most large search engines nowadays only return a rough estimate of the number of search results, but you may desire to get a better approximation or even an exact count. Gigablast allows you to do this, but it may be at the expense of query resonse time."
 "<br><br>\n"
-"By using the <b>t0</b> variable you can tell Gigablast to use a minimum number of docids from each termlist. Typically, <b>t0</b> defaults to something of around 10,000 docids. Often more docids than that are used, but this is just the minimum. So if Gigablast is forced to use more docids it will take int32_ter to compute the search results on average, but it will give you a more precise hit count. By setting <b>t0</b> to the truncation limit or higher you will max out the hit count precision."
+"By using the <b>t0</b> variable you can tell Gigablast to use a minimum number of docids from each termlist. Typically, <b>t0</b> defaults to something of around 10,000 docids. Often more docids than that are used, but this is just the minimum. So if Gigablast is forced to use more docids it will take longer to compute the search results on average, but it will give you a more precise hit count. By setting <b>t0</b> to the truncation limit or higher you will max out the hit count precision."
 "<br><br>\n"
 "Example: <b><a href=\"/search?q=test&t0=5000000\">http://www.gigablast.com/search?q=test&t0=5000000</a></b>\n"
 ""
@@ -432,7 +432,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "      # Description of this page as listed in the directory.\n"
 "      <b>&lt;dmozDesc&gt;&lt;![CDATA[A Dentist's Home Page]]&gt;&lt;/dmozDesc&gt;</b>\n"
 "    <b>&lt;/dmoz&gt;</b>\n"
-"    # If the directory is being given aint32_t with the results, this is the number of\n"
+"    # If the directory is being given along with the results, this is the number of\n"
 "    # stars given to this page based on its quality.\n"
 "    <b>&lt;stars&gt;3&lt;/stars&gt;</b>\n"
 "    # Each result may have a sequence of &lt;display&gt; tags if the feed input\n"
@@ -725,7 +725,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     (int32_t)MAX_SPIDERS);
 			break;
 	       	//case EURLTOOLONG :
-	       	//p += sprintf(p,"i - Injected URL was int32_ter than "
+	       	//p += sprintf(p,"i - Injected URL was longer than "
 	       	//	     "%"INT32" characters.",(int32_t)MAX_URL_LEN);
 	       	//break;
 		case EBADREPLY:
@@ -748,7 +748,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     "reached its limit.");
 			break;
 		case EBUFTOOSMALL:
-			p += sprintf(p,"i - Injected URL was int32_ter than "
+			p += sprintf(p,"i - Injected URL was longer than "
 				     "%"INT32" characters. Or the injected "
 				     "document was too big to fit in memory, "
 				     "so consider increasing "
@@ -1188,7 +1188,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "the last time each of these databases dumped to disk by looking at the "
 "timestamp on the corresponding files in the appropriate collection "
 "subdirectories contained in the working directory. If tfndb was "
-"dumped to disk the int32_test time ago, then use its timestamp "
+"dumped to disk the longest time ago, then use its timestamp "
 "to indicate when the last url was successfully added or injected. You might "
 "want to subtract thirty minutes from that timestamp to make sure because it "
 "is really the time that that file <b>started</b> being dumped to disk that "
@@ -3065,7 +3065,7 @@ z       122       7a                    {       123       7b\
 "# URL Filters pages.\n"
 "<b>&lt;description&gt;This is the default ruleset used for most urls.&lt;/&gt;</b>\n"
 "\n"
-"# If a ruleset is no int32_ter actively used, it is not deleted, but retired.\n"
+"# If a ruleset is no longer actively used, it is not deleted, but retired.\n"
 "# Retired rulesets are not displayed to spam assassins on the Sitedb tool \n"
 "# and URL Filters pages.\n"
 "<b>&lt;retired&gt;no&lt;/&gt;</b>\n"

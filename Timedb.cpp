@@ -627,7 +627,7 @@ bool addTimedbKey ( key128_t *kp , uint32_t nowGlobal , HashTableX *ht ) {
 		// . ok, nuke it i guess that was it
 		// . PROBLEM: revdb negative keys are added after the latest 
 		//   timedb keys for a doc, so if the best time was deleted
-		//   because event changed times, then it will no int32_ter have
+		//   because event changed times, then it will no longer have
 		//   any time in this table!
 		ht->removeKey(&key64);
 		return true;

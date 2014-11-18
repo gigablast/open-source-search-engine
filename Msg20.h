@@ -502,7 +502,7 @@ public:
 
 	// . if Msg20Request::m_forTurk is true then the ptr_turkForm will
 	//   be a little input form that lists every line in the title and
-	//   description of the event aint32_t with controls that allow the turk
+	//   description of the event along with controls that allow the turk
 	//   to turn descriptions on/off and pick different titles.
 	// . when they submit their changes then it should basically add
 	//   the turk tag hashes of each line to tagdb, but only if changed

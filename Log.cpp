@@ -489,7 +489,7 @@ bool Log::logLater ( int64_t now, int32_t type, char *format, va_list ap ) {
 	return false;
 }
 
-// once we're no int32_ter in a sig handler this is called by Loop.cpp
+// once we're no longer in a sig handler this is called by Loop.cpp
 // if g_log.needsPrinting() is true
 void Log::printBuf ( ) {
 	// not in sig handler

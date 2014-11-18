@@ -157,7 +157,7 @@ NodeType g_nodes[] = {
 	{"STOP"     , 0, 1, 1, 0,0, TAG_STOP	,0}, 
 	// . i added these tags for faisal, but don't really need them
 	//   since our XML tag condition handles this case
-	// . we can no int32_ter treat as a generic XML tags since faisal wanted
+	// . we can no longer treat as a generic XML tags since faisal wanted
 	//   the strip=2 option
 	{"SPAN"     , 1, 0, 1, 2,1, TAG_SPAN	,0}, // not breaking!
 	{"LEGEND"   , 1, 1, 1, 2,1, TAG_LEGEND	,0},

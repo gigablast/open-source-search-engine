@@ -1600,7 +1600,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		explicitBits[nn]  |= ebits;
 		// . else if we are using hardCounts for *many* query terms...
 		// . terms not explicitly required will still have ebits > 0
-		//   in order to support boolean expressions aint32_t side of
+		//   in order to support boolean expressions along side of
 		//   hard required terms
 		// . non-required phrases can all share the same ebit when we
 		//   have a lot of query terms, so they will not be
@@ -2751,7 +2751,7 @@ skip:
 	m_finalNumTopDocIds = nf;
 	
 	// . often the exact count is bigger than the docids we got
-	// . adjust it down so it's no int32_ter bigger in case we had dup docids
+	// . adjust it down so it's no longer bigger in case we had dup docids
 	m_finalNumExactExplicitMatches=m_numExactExplicitMatches[m_numTiers-1];
 
 	// store implict matches too so we can put the gray bar separating

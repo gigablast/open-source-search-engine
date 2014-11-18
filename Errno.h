@@ -120,7 +120,7 @@ enum {
 	ESHUTTINGDOWN    , //shutting down the server
 	EHOSTDEAD        , // host is dead
 	EBADFILE         , //file is bad
-	ETOOEARLY        , //need to wait int32_ter
+	ETOOEARLY        , //need to wait longer
 	EFILECLOSED      , //read on closed file?
 	ELISTTOOBIG      , //Rdb::addList() calls this
 	ECANCELLED       , //transaction was cancelled

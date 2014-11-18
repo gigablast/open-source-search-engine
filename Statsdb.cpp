@@ -151,8 +151,9 @@ bool Statsdb::init ( ) {
 	m_niceness = 0;
 
 	// init the label table
-	static char s_buf[576];
-	if ( ! m_labelTable.set(4,4,64,s_buf,576,false,0,"statcolors") )
+	static char s_buf[832];
+	if ( ! m_labelTable.set(4,sizeof(Label *),64,
+				s_buf,832,false,0,"statcolors") )
 		return false;
 	// stock the table
 	int32_t n = (int32_t)sizeof(s_labels)/ sizeof(Label);

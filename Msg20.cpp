@@ -274,7 +274,7 @@ void gotReplyWrapper20b ( void *state , UdpSlot *slot ) {
 void Msg20::gotReply ( UdpSlot *slot ) {
 	// we got the reply
 	m_gotReply = true;
-	// no int32_ter in progress, we got a reply
+	// no longer in progress, we got a reply
 	m_inProgress = false;
 	// sanity check
 	if ( m_r ) { char *xx = NULL; *xx = 0; }

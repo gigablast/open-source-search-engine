@@ -1314,7 +1314,7 @@ bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , int32_t linkNode ,
 		// if we hit a forward tag and inLink was false... we had
 		// no corresponding back tag, so disconsider any text
 		if ( ! inLink ) rightText = false;
-		// no int32_ter in an <a> tag
+		// no longer in an <a> tag
 		inLink = false;
 
 		// ok, get the url from this anchor tag

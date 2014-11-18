@@ -2670,7 +2670,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 	// ok, we got one
 	firstIp = (k->n0) & 0xffffffff;
 
-	// sometimes we take over for a dead host, but if he's no int32_ter
+	// sometimes we take over for a dead host, but if he's no longer
 	// dead then we can remove his keys. but first make sure we have had
 	// at least one ping from him so we do not remove at startup.
 	// if it is in doledb or in the middle of being added to doledb 
@@ -2970,7 +2970,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		m_numBytesScanned = 0;
 		// reset for next scan
 		m_nextKey2.setMin();
-		// no int32_ter need rebuild
+		// no longer need rebuild
 		m_waitingTreeNeedsRebuild = false;
 	}
 
@@ -3227,7 +3227,7 @@ static void doledWrapper ( void *state ) {
 		    "somehow reduce doleiptable score now...",
 		    mstrerror(g_errno));
 
-	// no int32_ter populating doledb. we also set to false in 
+	// no longer populating doledb. we also set to false in 
 	// gotSpiderListWrapper
 	//THIS->m_isPopulating = false;
 
@@ -3626,7 +3626,7 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 	if ( g_conf.m_logDebugSpider )
 		log("spider: back from msg5 spiderdb read of %"INT32" bytes",
 		    m_list.m_listSize);
-	// no int32_ter getting list
+	// no longer getting list
 	m_gettingList1 = false;
 
 	// got it without blocking. maybe all in tree or in cache
@@ -4856,7 +4856,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		if ( ! addToDoleTable ( sreq3 ) ) return true;	
 
 		// this logic is now in addToDoleTable()
-		// . if it was empty it is no int32_ter
+		// . if it was empty it is no longer
 		// . we have this flag here to avoid scanning empty doledb 
 		//   priorities because it saves us a msg5 call to doledb in 
 		//   the scanning loop
@@ -4866,7 +4866,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		//m_isDoledbEmpty [ bp ] = 0;
 	}
 
-	// and the whole thing is no int32_ter empty
+	// and the whole thing is no longer empty
 	//m_allDoledbPrioritiesEmpty = 0;//false;
 	//m_lastEmptyCheck = 0;
 
@@ -6532,7 +6532,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	//
 	// sanity check. verify the spiderrequest also exists in our
-	// spidercache. we no int32_ter store doled out spider requests in our
+	// spidercache. we no longer store doled out spider requests in our
 	// cache!! they are separate now.
 	//
 	//if ( g_conf.m_logDebugSpider ) {
@@ -6846,7 +6846,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 
 	// if we already have the lock then forget it. this can happen
 	// if spidering was turned off then back on.
-	// MDW: TODO: we can't do this anymore since we no int32_ter have
+	// MDW: TODO: we can't do this anymore since we no longer have
 	// the lockTable check above because we do not control our own
 	// lock now necessarily. it often is in another group's lockTable.
 	//if ( g_spiderLoop.m_lockTable.isInTable(&lockKey) ) {
@@ -6979,7 +6979,7 @@ bool SpiderLoop::spiderUrl2 ( ) {
 			  coll       ,
 			  pbuf         ,
 			  MAX_NICENESS ) ) {
-		// i guess m_coll is no int32_ter valid?
+		// i guess m_coll is no longer valid?
 		mdelete ( m_docs[i] , sizeof(XmlDoc) , "Doc" );
 		delete (m_docs[i]);
 		m_docs[i] = NULL;
@@ -7146,7 +7146,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// . but only the first time we spider it...
 	/*
 	if ( ! strcmp(xd->m_coll,"qatest123") && ! respider &&
-	     // no int32_ter need this when qa testing spider, not parser
+	     // no longer need this when qa testing spider, not parser
 	     g_conf.m_testParserEnabled ) {
 		// save the buffers
 		//saveTestBuf();
@@ -7648,7 +7648,7 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	// no need to remove them if none were granted because another
 	// host in our group might have it 100% locked. 
 	if ( m_grants == 0 ) {
-		// no int32_ter in locks operation mode
+		// no longer in locks operation mode
 		m_gettingLocks = false;
 		// ok, they are all back, resume loop
 		//if ( ! m_callback ) g_spiderLoop.spiderUrl2 ( );
@@ -10446,7 +10446,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			//if ( (bool)sreq->m_urlIsDocId==val ) continue;
 			if ( (bool)sreq->m_isPageReindex==val ) continue;
 			// skip
-			p += 10;
+			p += 12;
 			// skip to next constraint
 			p = strstr(p, "&&");
 			// all done?
@@ -10462,7 +10462,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			//if ( (bool)sreq->m_urlIsDocId==val ) continue;
 			if ( (bool)sreq->m_isPageReindex==val ) continue;
 			// skip
-			p += 10;
+			p += 9;
 			// skip to next constraint
 			p = strstr(p, "&&");
 			// all done?
@@ -11875,7 +11875,7 @@ bool SpiderColl::printStats ( SafeBuf &sb ) {
 //   sandwiched together just right because we only compare to the previous
 //   SpiderRequest we added when looking for dups. just need to hash the
 //   relevant input bits and use that for deduping.
-// . TODO: we can store ufn/priority/spiderTime in the SpiderRequest aint32_t
+// . TODO: we can store ufn/priority/spiderTime in the SpiderRequest along
 //   with the date now, so if url filters do not change then 
 //   gotSpiderdbList() can assume those to be valid and save time. BUT it does
 //   have siteNumInlinks...
@@ -12421,7 +12421,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			if ( ! stats->m_hasUrlsReadyToSpider ) continue;
 			// inc the count otherwise
 			gi->m_hasUrlsReadyToSpider++;
-			// . no int32_ter initializing?
+			// . no longer initializing?
 			// . sometimes other shards get the spider 
 			//  requests and not us!!!
 			if ( cr->m_spiderStatus == SP_INITIALIZING )
@@ -12462,7 +12462,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
 		if ( hadUrlsReady &&
-		     // and it no int32_ter does now...
+		     // and it no longer does now...
 		     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 			log("spider: all %"INT32" hosts report %s (%"INT32") has no "
 			    "more urls ready to spider",

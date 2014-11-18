@@ -509,7 +509,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 			 char       rdbId                    ,
 			 // Rebalance.cpp needs to add negative keys to
 			 // remove foreign records from where they no
-			 // int32_ter beint32_t because of a new hosts.conf file.
+			 // longer beint32_t because of a new hosts.conf file.
 			 // This will be -1 if not be overridden.
 			 int32_t       shardOverride ) {
 
@@ -1083,7 +1083,7 @@ void storeLineWaiters ( ) {
 	// empty? make tail NULL too then
 	if ( ! s_msg4Head ) s_msg4Tail = NULL;
 	// . if his callback was NULL, then was loaded in loadAddsInProgress()
-	// . we no int32_ter do that so callback should never be null now
+	// . we no longer do that so callback should never be null now
 	if ( ! msg4->m_callback ) { char *xx=NULL;*xx=0; }
 	// log this now i guess. seems to happen a lot if not using threads
 	if ( g_conf.m_useThreads )

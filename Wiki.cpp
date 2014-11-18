@@ -417,7 +417,7 @@ bool Wiki::setPhraseAffinityWeights ( Query *q , float *affWeights ,
 		if ( qw[i].m_rawWordId == 0LL ) continue;
 		// loop count
 		loopCount++;
-		// no int32_ter one title?
+		// no longer one title?
 		if ( loopCount > 1 && oneTitle && i >lasti ) *oneTitle = false;
 		// count it
 		int32_t count = 0;

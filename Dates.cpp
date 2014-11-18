@@ -3,7 +3,7 @@
 
 // stjohnscollege.edu
 // - lost event because we changed the implied sections algo and no
-//   int32_ter adds the address and store hours as a single implied section
+//   longer adds the address and store hours as a single implied section
 // - probably should write this one off
 
 
@@ -169,7 +169,7 @@
 // - how did we get "Sunday [[]] 4pm - 6pm" ???
 // - brbrtagdelim (double br) should be enough to keep the right dow mapping
 //   to the right tod.
-// - bad titles because we think the strong tag portion is part of a int32_ter
+// - bad titles because we think the strong tag portion is part of a longer
 //   sentence. so do not make sentence go across the strong or bold tag
 //   or italic or underline tag UNLESS the next word is lower case, etc.
 //   so treat these non-breaking tags as we treat the other breaking tags.
@@ -2421,7 +2421,7 @@ bool Dates::setPart1 ( //char       *u        ,
 
 	// sanity. parseDates() should have set this when XmlDoc
 	// called it explicitly before calling setPart1(). 
-	// well now it no int32_ter needs to call it explicitly since
+	// well now it no longer needs to call it explicitly since
 	// xmldoc calls getAddresses() before setting the implied
 	// sections. and getAddresses() calls getSimpleDates() which calls
 	// this function, setPart1() which will call parseDates() below.
@@ -2604,9 +2604,9 @@ bool Dates::setPart1 ( //char       *u        ,
 	if ( h_open == 0 ) { char *xx=NULL;*xx=0; }
 
 	//
-	// now since we no int32_ter set Date::m_section and m_hardSection
+	// now since we no longer set Date::m_section and m_hardSection
 	// in addDate() and addPtr() we have to make up for it here. we are
-	// no int32_ter allowed to use the Sections class in Dates::parseDates()
+	// no longer allowed to use the Sections class in Dates::parseDates()
 	// because Sections::set() calls parseDates() because it uses the dates
 	// to set implied sections that consist of a dom/dow header and tod
 	// subjects. i did hack Date::addPtr() to inherit the m_hardSection,
@@ -4299,7 +4299,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 
 			// set SF_PLURAL in the supplemental flags
 			if ( to_lower_a(wptrs[i][wlens[i]-1])=='s' &&
-			     // no int32_ter count "Friday's" as Fridays though
+			     // no longer count "Friday's" as Fridays though
 			     // to fix albertcadabra.com
 			     wptrs[i][wlens[i]-2] != '\'' &&
 			     // fix "tues". wednes thurs
@@ -6852,7 +6852,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			continue;
 		}
 
-		// stupid facebook json format no int32_ter has plain
+		// stupid facebook json format no longer has plain
 		// unix timestamps, it has trumba style timestamps.
 		// by definition official times are non-fuzzy
 		if ( di->m_flags & DF_OFFICIAL ) continue;
@@ -7239,7 +7239,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		// actually any single date should not be excluded!
 		bool forsure = false;
 		// . skip if single isolated DOW
-		// . fixes "Sun City Plumbing" since "Sun" is no int32_ter
+		// . fixes "Sun City Plumbing" since "Sun" is no longer
 		//   considered DF_FUZZY because it has DF_LEFT_BOOKEND set.
 		//   and we did that to fix "Sunday Services" for abqcsl.org
 		if ( di->m_type == DT_DOW ) {
@@ -9005,7 +9005,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 		for ( ; pp ; ) { // ; pp = pp->m_parent ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
-			// we no int32_ter need this now because if we are
+			// we no longer need this now because if we are
 			// comaptible with a date we have to telescope to it,
 			// we can't just skip it. the "s3" algo should fix
 			// the rest of thewoodencow.com in isCompatible()
@@ -12104,7 +12104,7 @@ int32_t Dates::isCompatible ( Date *di ,
 	// . crap this also breaks signmeup.com
 	// . this breaks thewoodencow.com because the store hours section
 	//   contains a list of monthdays below it which is included in acc1
-	// . it no int32_ter seems to be needed by peachpundit.com but taking
+	// . it no longer seems to be needed by peachpundit.com but taking
 	//   it out caused a few anomalies. not sure if good or bad really,
 	//   so i left this in and fixed thewoodencow.com
 	if ( (acc1 & DT_DAYNUM) && (acc2 & DT_DAYNUM) &&
@@ -12114,7 +12114,7 @@ int32_t Dates::isCompatible ( Date *di ,
 	     // a daynum to a range "Dec x - Jan y", so allow range headers
 	     // to be compatible
 	     !(acc1 & (DT_RANGE|DT_RANGE_MONTHDAY|DT_RANGE_DAYNUM)) &&
-	     // aint32_t the same lines allow lists
+	     // along the same lines allow lists
 	     // breaks www.missioncvb.org which has
 	     // "10:15 pm on both Friday and Saturday night" telescoping to
 	     // "Friday, May 9 and Saturday, May 10, 2008"
@@ -12293,7 +12293,7 @@ int32_t Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 			int64_t *ph = (int64_t *)pt->getValue ( &si );
 			if ( ph && ( phFinal1 ^ *ph ) ) phFinal1 ^= *ph;
 		}
-		// get any email hash as we go aint32_t
+		// get any email hash as we go along
 		if ( et ) {
 			int64_t *eh = (int64_t *)et->getValue ( &si );
 			if ( eh && ( ehFinal1 ^ *eh ) ) ehFinal1 ^= *eh;
@@ -12361,7 +12361,7 @@ int32_t Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 	// . i guess we are compatible then...
 	//if ( ! last1 ) return 1;
 
-	// get any phone number hash as we go aint32_t
+	// get any phone number hash as we go along
 	if ( last1 && useXors ) {
 		phFinal1    = last1->m_phoneXor;
 		ehFinal1    = last1->m_emailXor;
@@ -12383,12 +12383,12 @@ int32_t Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		// if si contains s1 then stop
 		if ( si->contains ( s1 ) ) break;
 		/*
-		// get any phone number hash as we go aint32_t
+		// get any phone number hash as we go along
 		if ( pt ) { 
 			int64_t *ph = (int64_t *)pt->getValue ( &si );
 			if ( ph && ( phFinal2 ^ *ph ) ) phFinal2 ^= *ph;
 		}
-		// get any email hash as we go aint32_t
+		// get any email hash as we go along
 		if ( et ) {
 			int64_t *eh = (int64_t *)et->getValue ( &si );
 			if ( eh && ( ehFinal2 ^ *eh ) ) ehFinal2 ^= *eh;
@@ -12446,7 +12446,7 @@ int32_t Dates::isCompatible2 ( Section *s1 , Section *s2 , bool useXors ) {
 		last2 = si;
 	}
 
-	// get any phone number hash as we go aint32_t
+	// get any phone number hash as we go along
 	if ( last2 && useXors ) {
 		phFinal2    = last2->m_phoneXor;
 		ehFinal2    = last2->m_emailXor;
@@ -12723,7 +12723,7 @@ HashTableX *Dates::getSubfieldTable ( ) {
 		//}
 	}
 
-	// no int32_ter use bitnum, use a list of 32-bit hashes for the fields
+	// no longer use bitnum, use a list of 32-bit hashes for the fields
 	// we contain. really just using sth (section to hash) table would
 	// be nice. or better yet just make a buffer and store a ptr into
 	// the section class that points into this buffer into a list of
@@ -13544,7 +13544,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 				if ( *p == ',' ) continue;
 				/*
 				// utf8 hyphen from unm.edu url
-				// no int32_ter needed since XmlDoc.cpp now 
+				// no longer needed since XmlDoc.cpp now 
 				// converts all utf8 hyphens into ascii
 				if ( p[0] == -30 &&
 				     p[1] == -128 &&
@@ -26338,7 +26338,7 @@ int32_t Dates::calculateYearBasedOnDOW ( int32_t minYear, int32_t maxYear, Date 
 // . 2. find the smallest monthdayyear interval that contains all dow points
 // . 3. set the recurring dowbits. i.e. if the dow is monday and every 2nd 
 //      monday is empty then zero out that dow bit. 1st/2nd/4rd/4th/5th/last
-// . 4. find int32_test time_t interval that covers the necessary recurring dow
+// . 4. find longest time_t interval that covers the necessary recurring dow
 //      days without exception. store them all in an array. record a
 //      min and max interval for each one. i.e. the min's endpoints are
 //      the necessary dows. the max's endpoints are past those usually up

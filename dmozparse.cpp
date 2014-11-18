@@ -178,7 +178,7 @@ int32_t rdfParse ( char *tagName ) {
 	do {
 		int32_t matchPos = 0;
 		// move to the next tag
-		// . quotes are no int32_ter escaped out in the newer
+		// . quotes are no longer escaped out in the newer
 		//   dmoz files in oct 2013... so take that out. i do
 		//   this < is &lt; though.. perhaps only check for
 		//   quotes when in a tag?

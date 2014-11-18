@@ -481,7 +481,7 @@ public:
 	// div and span tags, etc. to make them unique
 	uint32_t  m_baseHash;
 
-	// just hash the "class=" value aint32_t with the tagid
+	// just hash the "class=" value along with the tagid
 	uint32_t m_turkBaseHash;
 
 	// kinda like m_baseHash but for xml tags and only hashes the

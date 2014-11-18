@@ -1038,7 +1038,7 @@ TcpSocket *TcpServer::wrapSocket ( int sd , int32_t niceness , bool isIncoming )
  hadError:
 	log("tcp: Had error preparing socket: %s.",mstrerror(g_errno));
 	m_tcpSockets [ sd ] = NULL;
-	// clear it, this means no int32_ter in use
+	// clear it, this means no longer in use
 	s->m_startTime = 0LL;
 	//mfree ( s , sizeof(TcpSocket) ,"TcpServer" ); 
 	// uncount
@@ -1130,7 +1130,7 @@ bool TcpServer::closeLeastUsed ( int32_t maxIdleTime ) {
 // // . "available" means not being used but still connected
 // // . return false if we could not close any cuz they're all used
 // bool TcpServer::closeLeastUsed ( ) {
-// 	// . see who hasn't been used in the int32_test time
+// 	// . see who hasn't been used in the longest time
 // 	// . only check the available sockets (m_state == ST_AVAILABLE)
 // 	int64_t minTime = (int64_t) 0x7fffffffffffffffLL;
 // 	int32_t      mini    = -1;
@@ -1454,7 +1454,7 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	if ( s->m_totalToRead <= 0  ||
 	     s->m_readOffset  <  s->m_totalToRead ) goto loop; // return 0;
 	// . if it was a reply, keep looping until we read 0 byte packet
-	//   since we no int32_ter support keep-alive
+	//   since we no longer support keep-alive
 	// . NO! i think the linksys befsr81 nat/dsl router is blocking
 	//   some FINs so we never get that freakin 0 byte packet, so
 	//   let's force the close ourselves
@@ -2055,7 +2055,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	//log("unregistering sd=%"INT32"",sd);
 	// discount if it was an incoming connection
 	if ( s->m_isIncoming ) m_numIncomingUsed--;
-	// clear it, this means no int32_ter in use
+	// clear it, this means no longer in use
 	s->m_startTime = 0LL;
 
 	// count # of destroys in case a function is still referencing

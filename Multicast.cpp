@@ -277,7 +277,7 @@ void Multicast::sendToGroup ( ) {
 		// . timeout is just the time remaining for the whole groupcast
 		// int32_t timeout = m_startTime + m_totalTimeout - getTime();
 		// . since we now must get non-error replies from ALL hosts
-		//   in the group we no int32_ter have a "totalTimeout" per se
+		//   in the group we no longer have a "totalTimeout" per se
 		// reset the g_errno for host #i
 		m_errnos [i] = 0;
 		// if niceness is 0, use the higher priority udpServer
@@ -975,7 +975,7 @@ bool Multicast::sendToHost ( int32_t i ) {
 		log("net: Had error sending msgtype 0x%hhx to host "
 		    "#%"INT32": %s. Not retrying.", 
 		    m_msgType,h->m_hostId,mstrerror(g_errno));
-		// i've seen ENOUDPSLOTS available msg here aint32_t with oom
+		// i've seen ENOUDPSLOTS available msg here along with oom
 		// condition...
 		//char *xx=NULL;*xx=0; 
 		return false;
@@ -1162,7 +1162,7 @@ void sleepWrapper1 ( int bogusfd , void    *state ) {
 		break;
 	// these tagdb lookups are usually lickety split, should all be in mem
 	case 0x08: if ( elapsed <    10 ) return; break;
-	// this no int32_ter exists! it uses msg0
+	// this no longer exists! it uses msg0
 	//case 0x8a: if ( elapsed <    200 ) return; break;
 	case 0x8b: if ( elapsed <    10 ) return; break;
 	// don't relaunch anything else unless over 8 secs
@@ -1315,7 +1315,7 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 	// set m_errnos[i], if any
 	if ( g_errno ) m_errnos[i] = g_errno;
 
-	// mark it as no int32_ter in progress
+	// mark it as no longer in progress
 	m_inProgress[i] = 0;
 
 	// if he was marked as dead on the secondary cluster, mark him as up
@@ -1416,7 +1416,7 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 		// or a notfound on the external/secondary cluster
 		if ( g_errno == ENOTFOUND && m_hostdb == &g_hostdb2 )
 			sendToTwin = false;
-		// no int32_ter do this for titledb, too common since msg4
+		// no longer do this for titledb, too common since msg4
 		// cached stuff can make us slightly out of sync
 		//if ( g_errno == ENOTFOUND )
 		//	sendToTwin = false;
@@ -1583,7 +1583,7 @@ void Multicast::destroySlotsInProgress ( UdpSlot *slot ) {
 	// . if we re-route then we span new msg34 requests, and if we get
 	//   back an original reply we need to take out those msg34 requests
 	//   because if they get a reply they may try to access a Multicast
-	//   class that no int32_ter exists
+	//   class that no longer exists
 	//if ( m_doDiskLoadBalancing ) m_msg34.destroySlotsInProgress ( );
 	// do a loop over all hosts in the group
 	for (int32_t i = 0 ; i < m_numHosts ; i++ ) {
@@ -1610,7 +1610,7 @@ void Multicast::destroySlotsInProgress ( UdpSlot *slot ) {
 		//int64_t lastSendTime = m_slots[i]->m_lastSendTime;
 		//int64_t now          = gettimeofdayInMilliseconds() ;
 		//int64_t tripTime     = now - lastSendTime;
-		// . we no int32_ter stamp hosts here, leave that up to
+		// . we no longer stamp hosts here, leave that up to
 		//   Hostdb::pingHost()
 		// tripTime is always in milliseconds
 		//m_hostdb->stampHost ( hostId , tripTime , true/*timedOut?*/);
@@ -1625,7 +1625,7 @@ void Multicast::destroySlotsInProgress ( UdpSlot *slot ) {
 			m_slots[i]->m_readBuf = NULL;
 		// destroy this slot that's in progress
 		us->destroySlot ( m_slots[i] );
-		// do not re-destroy. consider no int32_ter in progress.
+		// do not re-destroy. consider no longer in progress.
 		m_inProgress[i] = 0;
 	}
 }

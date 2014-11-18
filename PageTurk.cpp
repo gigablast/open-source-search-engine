@@ -2426,7 +2426,7 @@ bool gotResults ( State61 *st ) {
 	if ( st->m_i >= numResults && st->m_isTurkSpecialQuery ) {
 		// tell them
 		if ( ! sb->safePrintf("<b>Sorry, the event that you evaluated "
-				      "no int32_ter exists in the index. Most "
+				      "no longer exists in the index. Most "
 				      "likely the web page was updated and "
 				      "the event was dropped by the "
 				      "webmaster."

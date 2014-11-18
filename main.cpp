@@ -752,7 +752,7 @@ int main2 ( int argc , char *argv[] ) {
 
 			//"gentfndb <coll> [hostId]\n\tgenerate missing tfndb. "
 			//"titledb disk dumps and tight merges are no "
-			//"int32_ter necessary. Also "
+			//"longer necessary. Also "
 			//"generates tfndb from spiderdb. tfndb-saved.dat "
 			//"and all tfndb* files in the collection subdir "
 			//"must not exist, so move them to a temp dir.\n\n"
@@ -5744,7 +5744,7 @@ bool mainShutdown2 ( ) {
 // . if easydown is true, we broadcast to all others and wait to complete
 //   the necessary transactions in each udpServer
 bool mainShutdown ( bool urgent ) {
-	// no int32_ter allow threads to do this
+	// no longer allow threads to do this
 	if ( g_threads.amThread() ) return true;
 	// hack for now
 	//log("FIX THIS HACK");
@@ -5847,7 +5847,7 @@ bool doneShutdownServer (  ) {
 // return false if blocked, true otherwise
 bool closeAll ( void *state , void (* callback)(void *state) ) {
 	// TODO: why is this called like 100x per second when a merge is
-	// going on? why don't we sleep int32_ter in between?
+	// going on? why don't we sleep longer in between?
 	g_tagdb.getRdb()->close(state,callback,s_urgent,true);
 	g_catdb.getRdb()->close(state,callback,s_urgent,true);
 	g_indexdb.getRdb()->close(state,callback,s_urgent,true);
@@ -11660,7 +11660,7 @@ void dumpSectiondb(char *coll,int32_t startFileNum,int32_t numFiles,
 			if ( k->n1 == lastk.n1 && k->n0 < lastk.n0 ) { 
 				char *xx=NULL;*xx=0; }
 		}
-		// no int32_ter a first key
+		// no longer a first key
 		firstKey = false;
 		// copy it
 		memcpy ( &lastk , k , sizeof(key128_t) );
@@ -11786,7 +11786,7 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 			if ( k->n1 == lastk.n1 && k->n0 < lastk.n0 ) { 
 				char *xx=NULL;*xx=0; }
 		}
-		// no int32_ter a first key
+		// no longer a first key
 		firstKey = false;
 		// copy it
 		memcpy ( &lastk , k , sizeof(key_t) );

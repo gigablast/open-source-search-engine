@@ -90,7 +90,7 @@ void sendReply ( UdpSlot *slot , Msg39 *msg39 , char *reply , int32_t replyLen ,
 	// sanity
 	if ( hadError && ! g_errno ) { char *xx=NULL;*xx=0; }
 
-	// no int32_ter in use. msg39 will be NULL if ENOMEM or something
+	// no longer in use. msg39 will be NULL if ENOMEM or something
 	if ( msg39 ) msg39->m_inUse = false;
 
 	// . if we enter from a local call and not from handling a udp slot
@@ -1100,7 +1100,7 @@ bool Msg39::addedLists ( ) {
 
 	// . save some memory,free m_topDocIdPtrs2,m_topScores2,m_topExplicits2
 	// . the m_topTree should have been filled from the call to
-	//   IndexTable2::fillTopDocIds() and it no int32_ter has ptrs to the
+	//   IndexTable2::fillTopDocIds() and it no longer has ptrs to the
 	//   docIds, but has the docIds themselves
 	//m_posdbTable.freeMem();
 
@@ -1293,7 +1293,7 @@ bool Msg39::gotClusterRecs ( ) {
 
 void Msg39::estimateHitsAndSendReply ( ) {
 
-	// no int32_ter in use
+	// no longer in use
 	m_inUse = false;
 
 	// now this for the query loop on the QueryLogEntries.

@@ -833,12 +833,12 @@ class Inlink { // : public Msg {
 
 	int32_t  *getFirstSizeParm () { return &size_urlBuf; };
 	int32_t  *getLastSizeParm  () { return &size_rssItem; };
-	char **getFirstStrPtr   () { return &ptr_urlBuf; };
+	int32_t  *getFirstOffPtr   () { return &off_urlBuf; };
 	int32_t   getBaseSize      () { return sizeof(Inlink);};
 	char  *getStringBuf     () { return m_buf; };
 
 	int32_t getBaseNumStrings() { 
-		return (char **)&size_urlBuf - (char **)&ptr_urlBuf; };
+		return (char **)&size_urlBuf - (char **)&off_urlBuf; };
 	
 	// zero ourselves out
 	void reset() ;
@@ -865,7 +865,7 @@ class Inlink { // : public Msg {
 			  int32_t  userBufSize ,
 			  bool  makePtrsRefNewBuf ) ;
 
-	int32_t updateStringPtrs ( char *buf );
+	//int32_t updateStringPtrs ( char *buf );
 
 	// returns a ptr into a static buffer
 	char *getLinkTextAsUtf8 ( int32_t *len = NULL ) ;
@@ -949,6 +949,36 @@ class Inlink { // : public Msg {
 	char       m_hopcount            ;
 	char       m_linkTextScoreWeight ; // 0-100% (was m_inlinkWeight)
 
+	char *getUrl ( ) { 
+		if ( size_urlBuf == 0 ) return NULL;
+		return m_buf + off_urlBuf; 
+	};
+	char *getLinkText ( ) { 
+		if ( size_linkText == 0 ) return NULL;
+		return m_buf + off_linkText; 
+	};
+	char *getSurroundingText ( ) { 
+		if ( size_surroundingText == 0 ) return NULL;
+		return m_buf + off_surroundingText; 
+	};
+	char *getRSSItem ( ) { 
+		if ( size_rssItem == 0 ) return NULL;
+		return m_buf + off_rssItem; 
+	};
+	char *getCategories ( ) { 
+		if ( size_categories == 0 ) return NULL;
+		return m_buf + off_categories; 
+	};
+	char *getGigabitQuery ( ) { 
+		if ( size_gigabitQuery == 0 ) return NULL;
+		return m_buf + off_gigabitQuery; 
+	};
+	char *getTemplateVector ( ) { 
+		if ( size_templateVector == 0 ) return NULL;
+		return m_buf + off_templateVector; 
+	};
+		
+
 	//
 	// add new non-strings right above this line
 	//
@@ -957,13 +987,13 @@ class Inlink { // : public Msg {
 	// . no need to store vector for voting deduping in here because
 	//   that use MsgE's Msg20Replies directly
 	// . this is just stuff we want in the title rec
-	char      *ptr_urlBuf            ;
-	char      *ptr_linkText          ;
-	char      *ptr_surroundingText   ; // neighborhoods
+	int32_t    off_urlBuf            ;
+	int32_t    off_linkText          ;
+	int32_t    off_surroundingText   ; // neighborhoods
 	// . this is the rss item that links to us
 	// . if calling Msg25::getLinkInfo() with getLinkerTitles set to
 	//   true then this is the title!
-	char      *ptr_rssItem           ;
+	int32_t    off_rssItem           ;
 	// . zakbot and the turk categorize site roots, and kids inherit
 	//   the categories from their parent inlinkers
 	// . we can't really use tagdb cuz that operates on subdirectories
@@ -971,20 +1001,20 @@ class Inlink { // : public Msg {
 	//   stories are not proper subdirectories...)
 	// . so inherit the category from our inlinkers. "sports", "world", ...
 	// . comma-separated (in ascii)
-	char      *ptr_categories        ;
+	int32_t    off_categories        ;
 	// . augments our own gigabits vector, used for finding related docs
-	// . used aint32_t with the template vector for deduping pgs at index time
+	// . used along with the template vector for deduping pgs at index time
 	// . now we used for finding similar docs AND categorizing
 	// . comma-separated
 	// . each gigabit has a count in []'s. score in body x1, title x5,
 	//   and inlink text x5. i.e. "News[10],blue devils[5],... 
 	// . always in UTF-8
-	char      *ptr_gigabitQuery      ;
+	int32_t    off_gigabitQuery      ;
 	// . the html tag vector. 
 	// . used for deduping voters (anti-spam tech)
-	// . used aint32_t with the gigabit vector for deduping pgs at index time
+	// . used along with the gigabit vector for deduping pgs at index time
 	// . now we used for finding similar docs and for categorizing (spam)
-	char      *ptr_templateVector    ;
+	int32_t    off_templateVector    ;
 
 	//
 	// add new strings right above this line

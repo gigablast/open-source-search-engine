@@ -219,7 +219,7 @@ class Host {
 	// . its redundant twins are always in different sets
 	//int32_t           m_group;
 	// was host in gk0 cluster and retired because its twin got
-	// ssds, so it was no int32_ter really needed.
+	// ssds, so it was no longer really needed.
 	bool           m_retired;
 	// used for logging when a host goes dead for the first time
 	bool           m_wasAlive;

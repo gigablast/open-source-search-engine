@@ -116,7 +116,7 @@ case    ENOCOLLREC       : return "No collection record";
 case	ESHUTTINGDOWN    : return "Shutting down the server";
 case    EHOSTDEAD        : return "Host is marked as dead";
 case	EBADFILE         : return "File is bad";
-case	ETOOEARLY        : return "Need to wait int32_ter";
+case	ETOOEARLY        : return "Need to wait longer";
 case	EFILECLOSED      : return "Read on closed file";//close on our thread
 case	ELISTTOOBIG      : return "List is too big";
 case	ECANCELLED       : return "Transaction was cancelled";

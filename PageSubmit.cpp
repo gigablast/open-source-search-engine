@@ -4,7 +4,7 @@
 // instead of inserting default values into input tags in processLoop24()
 // generate an HTTP reply and send it back. we have to use
 // <form enctype=multipart/form-data ...> to support the uploading of images
-// so that each input tag will be it's own Content-Type:... aint32_t with
+// so that each input tag will be it's own Content-Type:... along with
 // a boundary delimeter. make a fake form in the <form> tag in here 
 // with that enctype and you can see the multipart formatting.
 //

@@ -154,7 +154,7 @@ bool Msg5::getList ( char     rdbId         ,
 		g_errno = ENOCOLLREC;
 		return true;
 	}
-	// sanity check. we no int32_ter have record caches!
+	// sanity check. we no longer have record caches!
 	// now we do again for posdb gbdocid:xxx| restricted queries
 	//if ( addToCache || maxCacheAge ) {char *xx=NULL;*xx=0; }
 	// assume no error
@@ -180,7 +180,7 @@ bool Msg5::getList ( char     rdbId         ,
 	//if ( startKey > endKey ) return true;
 	if ( KEYCMP((char *)startKey,(char *)endKey,m_ks)>0 ) return true;
 	// log("Msg5::readList: startKey > endKey warning"); 
-	// we no int32_ter allow negative minRecSizes
+	// we no longer allow negative minRecSizes
 	if ( minRecSizes < 0 ) {
 		log(LOG_LOGIC,"net: msg5: MinRecSizes < 0, using 1.");
 		minRecSizes = 1;
@@ -978,7 +978,7 @@ void gotListWrapper ( void *state ) {
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
 	// set it now
 	THIS->m_calledCallback = 1;
-	// we are no int32_ter waiting for the list
+	// we are no longer waiting for the list
 	THIS->m_waitingForList = false;
 	// when completely done call the callback
 	THIS->m_callback ( THIS->m_state , THIS->m_list , THIS );
@@ -995,7 +995,7 @@ static void *mergeListsWrapper_r ( void *state , ThreadEntry *t ) ;
 // . sets g_errno on error
 bool Msg5::gotList ( ) {
 
-	// we are no int32_ter waiting for the list
+	// we are no longer waiting for the list
 	//m_waitingForList = false;
 
 	// debug msg
@@ -1265,7 +1265,7 @@ bool Msg5::gotList2 ( ) {
 	//    m_diskList.getListSize());
 	// ensure both lists are legit
 	// there may be negative keys in the tree
-	// diskList may now also have negative recs since Msg3 no int32_ter 
+	// diskList may now also have negative recs since Msg3 no longer 
 	// removes them for fears of delayed positive keys not finding their
 	// negative key because it was merged out by RdbMerge
 	for ( int32_t i = 0 ; i < m_numListPtrs ; i++ )
@@ -1522,7 +1522,7 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 	if ( THIS->needsRecall() && ! THIS->readList() ) return;
 	// sanity check
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
-	// we are no int32_ter waiting for the list
+	// we are no longer waiting for the list
 	THIS->m_waitingForList = false;
 	// set it now
 	THIS->m_calledCallback = 3;
@@ -2113,7 +2113,7 @@ void gotRemoteListWrapper( void *state ) { // , RdbList *list ) {
 	if ( ! THIS->gotRemoteList() ) return;
 	// sanity check
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
-	// we are no int32_ter waiting for the list
+	// we are no longer waiting for the list
 	THIS->m_waitingForList = false;
 	// set it now
 	THIS->m_calledCallback = 4;

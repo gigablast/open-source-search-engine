@@ -482,7 +482,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 // take this out until it stops losing descriptors and works
 		 //m_requestType = RT_CONNECT;
 		 //cmdLen = 7;
-		 // we no int32_ter insert section info. emmanuel gets section
+		 // we no longer insert section info. emmanuel gets section
 		 // info when injecting a doc now i think in PageInject.cpp.
 		 // we do not proxy https requests because we can't
 		 // decrypt the page contents to cache them or to insert

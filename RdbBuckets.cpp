@@ -215,7 +215,7 @@ bool RdbBucket::sort() {
 	//turn quickpoll off while we sort,
 	//because we do not know what sort of indeterminate state
 	//we will be in while sorting
-	// MDW: this no int32_ter disables it since it is based on g_niceness
+	// MDW: this no longer disables it since it is based on g_niceness
 	// now, but what is the point, does it use static vars or what?
 	//bool canQuickpoll = g_loop.m_canQuickPoll;
 	//g_loop.m_canQuickPoll = false;

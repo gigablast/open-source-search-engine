@@ -638,7 +638,7 @@ void QADiffTest::xmlDiff() {
 	int32_t seqLen[4096];
 
 	
-	int32_t lcsLen = int32_testCommonSubsequence(seq1, seq2, seqLen,4096, 
+	int32_t lcsLen = longestCommonSubsequence(seq1, seq2, seqLen,4096, 
 					       &xml1, &xml2);
 	printf("lcs length: %"INT32"\n", lcsLen);
 	lcsLen = lcsXml(seq1, seq2, seqLen,4096, 

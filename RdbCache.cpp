@@ -787,7 +787,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	need += 4;
 	// . trailing 0 collnum_t, key and trailing time stamp
 	// . this DELIMETER tells us to go to the next buf
-	//need += sizeof(collnum_t) + sizeof(key_t) + 4 ;
+	//need += sizeof(collnum_t) + sizeof(key_t) + 4 ; // timestamp
 	need += sizeof(collnum_t) + m_cks + 4 ;
 	// and size, if not fixed or we support lists
 	if ( m_fixedDataSize == -1 || m_supportLists ) need += 4;
@@ -890,7 +890,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	*(int32_t *)p = timestamp; p += 4;
 	// then dataSize if we need to
 	if ( m_fixedDataSize == -1 || m_supportLists ) { 
-		*(int32_t *)p = recSize1+recSize2; p +=4; }
+		*(int32_t *)p = recSize1+recSize2; p +=4; } //datasize
 	// sanity : check if the recSizes add up right
 	else if ( m_fixedDataSize != recSize1 + recSize2 ){
 		char *xx = NULL; *xx = 0; }
@@ -1034,7 +1034,7 @@ bool RdbCache::deleteRec ( ) {
 	if ( timestamp == 0 && KEYCMP(k,KEYMIN(),m_cks)==0 ) {
 		// if we wrap around back to first buffer then
 		// change the "wrapped" state to false. that means
-		// we are no int32_ter directly in front of the write
+		// we are no longer directly in front of the write
 		// head, but behind him again.
 		if ( ++bufNum >= m_numBufs ) { 
 			bufNum = 0; 
@@ -1206,7 +1206,7 @@ void RdbCache::removeKey ( collnum_t collnum , char *key , char *rec ) {
 	// clear it
 	m_ptrs[n] = NULL;
 	m_numPtrsUsed--;
-	m_memOccupied -= 4;
+	m_memOccupied -= sizeof(char *);//4;
 	// advance through list after us now
 	if ( ++n >= m_numPtrsMax ) n = 0;
 	// keep looping until we hit an empty slot
@@ -1620,16 +1620,24 @@ bool RdbCache::load ( char *dbname ) {
 	if ( ! m_ptrs ) return false;
 	// load 'em all in
 	int32_t total = sizeof(char *) * m_numPtrsMax ;
-	n = f.read ( m_ptrs , total , off ); off += total;
+
+	SafeBuf fix;
+	fix.reserve ( total );
+
+	//n = f.read ( m_ptrs , total , off ); off += total;
+	n = f.read ( fix.getBufStart() , total , off ); off += total;
 	if ( n != total ) return false;
+	int32_t *poff = (int32_t *)fix.getBufStart();
+
 	// convert back to absolute
-	for ( int32_t i = 0 ; i < m_numPtrsMax ; i++ ) {
-		SPTRTYPE j = (SPTRTYPE) m_ptrs[i];
+	for ( int32_t i = 0 ; i < m_numPtrsMax ; i++ , poff++ ) {
+		//uint32_t j = (SPTRTYPE) m_ptrs[i];
 		// is it a NULL?
-		if ( j == -1 ) { m_ptrs[i] = NULL; continue; }
+		//if ( j == -1 ) { m_ptrs[i] = NULL; continue; }
+		if ( *poff == -1 ) { m_ptrs[i] = NULL; continue; }
 		// get buffer
-		int32_t bufNum = j / BUFSIZE;
-		char *p = m_bufs[bufNum] + j % BUFSIZE ;
+		int32_t bufNum = (*poff) / BUFSIZE;
+		char *p = m_bufs[bufNum] + (*poff) % BUFSIZE ;
 		// re-assign
 		m_ptrs[i] = p;
 		// debug msg
@@ -1675,14 +1683,14 @@ void RdbCache::removeKeyRange ( collnum_t collnum ,
 			int32_t rem = n;
 			m_ptrs[rem] = NULL;
 			m_numPtrsUsed--;
-			m_memOccupied -= 4;
+			m_memOccupied -= sizeof(char *);
 			if ( ++rem >= m_numPtrsMax ) rem = 0;
 			// keep looping until we hit an empty slot
 			while ( m_ptrs[rem] ) {
 				char *ptr = m_ptrs[rem];
 				m_ptrs[rem] = NULL;
 				m_numPtrsUsed--;
-				m_memOccupied -= 4;
+				m_memOccupied -= sizeof(char *);
 				char k[MAX_KEY_BYTES];
 				KEYSET(k,ptr+sizeof(collnum_t),m_cks);
 				addKey ( *(collnum_t *)ptr ,

@@ -246,7 +246,7 @@ static void clusterRmVfd ( DiskPageCache *pc,
 // reset rdb
 void Clusterdb::reset() { m_rdb.reset(); }
 
-// . this no int32_ter maintains an rdb of cluster recs
+// . this no longer maintains an rdb of cluster recs
 // . Msg22 now just uses the cache to hold cluster recs that it computes
 //   from titlteRecs
 // . clusterRecs are now just TitleRec keys...

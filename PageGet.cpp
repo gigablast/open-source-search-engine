@@ -554,7 +554,7 @@ bool processLoop ( void *state ) {
 	uint16_t port = h->m_httpPort;
 	//}
 	//sprintf ( x , "http://%s:%"INT32"/get?q=" , iptoa ( ip ) , port );
-	// . we no int32_ter put the port in here
+	// . we no longer put the port in here
 	// . but still need http:// since we use <base href=>
 	if (port == 80) sprintf(x,"http://%s/get?q=",iptoa(ip));
 	else            sprintf(x,"http://%s:%hu/get?q=",iptoa(ip),port);

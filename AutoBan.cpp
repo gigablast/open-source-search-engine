@@ -675,7 +675,7 @@ checkSubstr:
 		char c = banRegex[i];
 		// NULL terminate
 		banRegex[i] = '\0';
-		// search for substr (must be int32_ter than 2 chars
+		// search for substr (must be longer than 2 chars
 		if ( i - start > 2){
 			if (strnstr2(reqStr, reqLen, &banRegex[start])) 
 				gotMatch = true;
@@ -1076,7 +1076,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 	//  ones to the conf parm; 
 	if (banIps) {
 		//ack, the browser puts in crlf when this comes back, so
-		//we will have a int32_ter string here than the one we sent 
+		//we will have a longer string here than the one we sent 
 		//out. trim back all extrainious whitespace before we do
 		//bounds checking.
 		trimWhite(banIps);

@@ -688,7 +688,7 @@ int32_t TopTree::getPrev ( int32_t i ) {
 	if ( i == m_lowNode ) return -1;
 	// keep getting the parent until it has a bigger key
 	// or until we're the RIGHT kid of the parent. that's better
-	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
+	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
 	//while ( p >= 0   &&  m_keys(p) > m_keys(i) ) p = PARENT(p);
 	while ( p >= 0   &&  LEFT(p) == i ) { i = p; p = PARENT(p); }
 	// p will be -1 if none are left
@@ -717,7 +717,7 @@ int32_t TopTree::getNext ( int32_t i ) {
 	//if ( i == m_highNode ) return -1;
 	// otherwise keep getting the parent until it has a bigger key
 	// or until we're the LEFT kid of the parent. that's better
-	// cuz comparing keys takes int32_ter. loop is 6 cycles per iteration.
+	// cuz comparing keys takes longer. loop is 6 cycles per iteration.
 	//while ( p >= 0  &&  m_keys[p] < m_keys[i] ) p = m_parents[p];
 	while ( p >= 0   &&  RIGHT(p) == i ) { i = p; p = PARENT(p); }
 	// p will be -1 if none are left
