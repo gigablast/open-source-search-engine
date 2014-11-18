@@ -5215,6 +5215,9 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 		else if ( installFlag == ifk_installcat ) {
 			// . copy catdb files to all hosts
 			// don't copy to ourselves
+			if ( h2->m_hostId == 0 )
+				continue;
+			/*
 			if ( h2->m_hostId == 0 ) {
 				sprintf(tmp,
 					"cp "
@@ -5228,6 +5231,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				system ( tmp );
 				continue;
 			}
+			*/
 			sprintf(tmp,
 				"scp "
 				"%scatdb/content.rdf.u8 "

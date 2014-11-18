@@ -1781,7 +1781,7 @@ hashLink:
 				urlInfos = (UrlInfo*)realloc((void*)urlInfos,
 					      sizeof(UrlInfo)*urlInfosSize);
 				printf("urlInfos: %"INT32" bytes\n",
-				       urlInfosSize*sizeof(UrlInfo));
+				      (int32_t)(urlInfosSize*sizeof(UrlInfo)));
 				if (!urlInfos) {
 					printf("Out of Memory!\n");
 					goto errExit1;
