@@ -9,7 +9,7 @@
 #include "Mem.h"
 
 // keep these down to save memory
-//#define MAX_QUERY_LEN   8000 // url:XXX can be quite int32_t! (MAX_URL_LEN)
+//#define MAX_QUERY_LEN   8000 // url:XXX can be quite long! (MAX_URL_LEN)
 #define MAX_QUERY_LEN 3200
 // . words need to deal with int32_t list of sites!
 // . remember, words can be string of punctuation, too

@@ -26379,7 +26379,7 @@ bool Date::printTextNorm2 ( Interval **intervals ,
 		// seconds relative to that day
 		uint64_t tod1 = ii->m_a % 86400;
 		uint64_t tod2 = tod1 + ii->m_b - ii->m-a;
-		// . if more than 24 hours int32_t... wtf?
+		// . if more than 24 hours long... wtf?
 		// . Aug 2, 2010 2pm - Oct 10,2011 4pm
 		if ( tod2 - tod1 > 24*3600 ) {
 			log("dates: interval > 24 hrs. special normalization "

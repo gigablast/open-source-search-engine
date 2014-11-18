@@ -1094,7 +1094,7 @@ void sleepWrapper1 ( int bogusfd , void    *state ) {
 		return;
 		break;
 	// msg to get a summary from a query (calls msg22)
-	// buzz takes extra int32_t! it calls Msg25 sometimes.
+	// buzz takes extra long! it calls Msg25 sometimes.
 	// no more buzz.. put back to 8 seconds.
 	// put to 5 seconds now since some hosts freezeup still it seems
 	// and i haven't seen a summary generation of 5 seconds

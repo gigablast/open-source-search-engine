@@ -1187,7 +1187,7 @@ bool RdbList::removeBadData_r ( ) {
 			orderCount++;
 			// we don't keep a stack of old rec sizes so we
 			// must start over from the top... can make us take
-			// quite int32_t... TODO: make it more efficient
+			// quite long... TODO: make it more efficient
 			goto top;
 		}
 		// save k for setting m_lastKey correctly

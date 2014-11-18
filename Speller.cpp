@@ -1567,7 +1567,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 		}
 	}
 	for ( char *a = send; a > s; a-- ){
-		// a hack, if the word is only one letter int32_t, check if it
+		// a hack, if the word is only one letter long, check if it
 		// is 'a' or 'i'. If not then continue
 		if ( a - s == 1 && *s != 'a' && *s != 'i')
 			continue;
@@ -1750,7 +1750,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
   // split the phrase into two or more phrases.
   for ( char *a = b; a > s; a-- ){
   //	while ( a > s ){
-  // a hack, if the word is only one letter int32_t, check if it
+  // a hack, if the word is only one letter long, check if it
   // is 'a' or 'i'. If not then continue
   if ( a - s == 1 && *s != 'a' && *s != 'i')
   continue;
