@@ -111,7 +111,7 @@ bool Bits::set ( Words *words , char titleRecVersion , int32_t niceness ,
 		}
 		else {
 			// . just allow anything now!
-			// . the curved quote in utf8 is 3 bytes int32_t and with
+			// . the curved quote in utf8 is 3 bytes long and with
 			//   a space before it, was causing issues here!
 			bits= D_CAN_PAIR_ACROSS;
 			//bits = getPunctuationBits(w[i],wlens[i]);

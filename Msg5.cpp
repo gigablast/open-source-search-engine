@@ -1575,7 +1575,7 @@ void Msg5::repairLists_r ( ) {
 		// if no errors, check the next list
 		if ( status ) continue;
 		// . show the culprit file
-		// . logging the key ranges gives us an idea of how int32_t
+		// . logging the key ranges gives us an idea of how long
 		//   it will take to patch the bad data
 		int32_t nn = m_msg3.m_numFileNums;
 		// TODO: fix this. can't call Collectiondb::getBase from
@@ -1869,7 +1869,7 @@ bool Msg5::doneMerging ( ) {
 	}
 
 	if ( m_isRealMerge )
-		log(LOG_DEBUG,"db: merged list is %"INT32" bytes int32_t.",
+		log(LOG_DEBUG,"db: merged list is %"INT32" bytes long.",
 		    m_list->m_listSize);
 
 	// log it
@@ -2138,7 +2138,7 @@ bool Msg5::gotRemoteList ( ) {
 			goto badList;
 		}
 		// . success messages
-		// . logging the key ranges gives us an idea of how int32_t
+		// . logging the key ranges gives us an idea of how long
 		//   it will take to patch the bad data
 		//key_t sk = m_list->getStartKey();
 		//key_t ek = m_list->getEndKey  ();

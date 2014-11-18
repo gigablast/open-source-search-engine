@@ -112,7 +112,7 @@ enum {
 	EDNSREFUSED      , //dns refused to talk to us
 	EDNSDEAD         , //dns is dead
 	EDNSTIMEDOUT     , //was just EUDPTIMEDOUT
-	ECOLLTOOBIG      , //collection is too int32_t
+	ECOLLTOOBIG      , //collection is too long
 	ESTRIKEOUT       , //retried enough times; deleting doc & giving up
 	ENOPERM          , //permission denied
 	ECORRUPTDATA     , //corrupt data

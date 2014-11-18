@@ -857,7 +857,7 @@ bool getTopics ( State24       *st        ,
 		    numMsg20Used++;
 		};
 	}
-	// make it big enough so there are gaps, so chains are not too int32_t
+	// make it big enough so there are gaps, so chains are not too long
 	int32_t  minBuckets = (int32_t)(maxWords * 1.5);
 	if(minBuckets < 512) minBuckets = 512;
 	int32_t  numSlots   = 2 * getHighestLitBitValue ( minBuckets ) ;

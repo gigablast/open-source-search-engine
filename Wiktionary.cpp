@@ -581,7 +581,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		if ( ! compile() ) return false;
 
 		// add unified dict entries into m_langTable if they
-		// beint32_t to one and only one language.
+		// belong to one and only one language.
 		// right now, this just cleans out m_langTable.
 		if ( ! integrateUnifiedDict() ) return false;
 
@@ -2091,7 +2091,7 @@ bool Wiktionary::compile ( ) {
 }
 
 // add unified dict entries into m_langTable if they
-// beint32_t to one and only one language
+// belong to one and only one language
 bool Wiktionary::integrateUnifiedDict ( ) {
 
 	/*

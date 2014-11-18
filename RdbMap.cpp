@@ -228,7 +228,7 @@ bool RdbMap::verifyMap ( BigFile *dataFile ) {
 	if ( diff ) {
 		log(
 		    "db: Map file %s says that file %s should be %"INT64" bytes "
-		    "int32_t, but it is %"INT64" bytes.",
+		    "long, but it is %"INT64" bytes.",
 		    m_file.getFilename(),
 		    dataFile->m_baseFilename ,
 		    m_offset - m_fileStartOffset ,

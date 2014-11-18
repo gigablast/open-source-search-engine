@@ -688,7 +688,7 @@ class Addresses {
 
 	// if we got too many streets and fake streets set this to true
 	// in order to avoid parsing the doc any further since it will
-	// take too int32_t!
+	// take too long!
 	bool m_breached;
 
 	// cities, states and zips are in here

@@ -98,7 +98,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	char *gmsg = NULL;
 	// is it too big?
 	if ( action && addColl && gbstrlen(addColl) > MAX_COLL_LEN ) {
-		gtmp.safePrintf("search engine name is too int32_t");
+		gtmp.safePrintf("search engine name is too long");
 		gmsg = gtmp.getBufStart();
 	}
 	// from Collectiondb.cpp::addNewColl() ensure coll name is legit

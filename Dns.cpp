@@ -309,7 +309,7 @@ bool Dns::getIp ( char *hostname ,
 	if ( hostnameLen >= 254 ) {
 		g_errno = EHOSTNAMETOOBIG;
 		log("dns: Asked to get IP of hostname over 253 "
-		    "characters int32_t.");
+		    "characters long.");
 		*ip=0;
 		return true;
 	}
@@ -853,7 +853,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , int32_t timeout ) {
 	//log(LOG_DEBUG, "dns: sendToNextDNS depth %d", ds->m_depth);
 	// let's clear g_errno since caller may have set it in gotIp()
 	g_errno = 0;
-	// if we have been at this too int32_t, give up
+	// if we have been at this too long, give up
 	int32_t now = getTime(); // time(NULL);//getTimeLocal();
 	int32_t delta = now - ds->m_startTime;
 	// quick fix if the system clock was changed on us
@@ -2006,7 +2006,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 					  this spams the log!
 					log(LOG_INFO,
 					    "dns: Aliased hostname %s is %"INT32" > "
-					    "127 chars int32_t.",ds->m_nameBufPtr,len);
+					    "127 chars long.",ds->m_nameBufPtr,len);
 					*/
 					g_errno = EBUFTOOSMALL;
 					return -1;
@@ -2254,7 +2254,7 @@ void Dns::addToCache ( key_t hostnameKey , int32_t ip , int32_t ttl ) {
         int32_t timestamp;
 	// watch out for crazy ttls, bigger than 2 days
 	if ( ttl > 60*60*24*2 ) ttl = 60*60*24*2;
-	// if ttl is less than how int32_t we trust the cached ip for, reduce
+	// if ttl is less than how long we trust the cached ip for, reduce
 	// the timestamp to fool Dns::isInCache()
         if   ( ttl > 0 ) timestamp = getTime() - DNS_CACHE_MAX_AGE + ttl;
         else             timestamp = getTime();

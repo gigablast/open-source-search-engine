@@ -2185,7 +2185,7 @@ void TcpServer::readTimeoutPoll ( ) {
 		// fix system clock advanced
 		if ( s->m_lastActionTime > now ) s->m_lastActionTime = now ;
 
-		// how int32_t since we started...
+		// how long since we started...
 		int64_t total = now - s->m_startTime;
 		// if it has been a minute or more, and averaging less than
 		// 20 bytes per second, time it out. otherwise we end up 

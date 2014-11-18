@@ -497,7 +497,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		// limit
 		if ( hlen > 15 ) {
 			g_errno = EBADENGINEER;
-			log("admin: hostname too int32_t in hosts.conf");
+			log("admin: hostname too long in hosts.conf");
 			return false;
 		}
 		// copy it
@@ -570,7 +570,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		// limit
 		if ( hlen2 > 15 ) {
 			g_errno = EBADENGINEER;
-			log("admin: hostname too int32_t in hosts.conf");
+			log("admin: hostname too long in hosts.conf");
 			return false;
 		}
 		// a direct ip address?
@@ -758,7 +758,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		if ( wdirlen > 127 ) {
 		      g_errno = EBADENGINEER;
 		      return log(
-				 "conf: Host working dir too int32_t in "
+				 "conf: Host working dir too long in "
 				 "%s line %"INT32".",filename,line);
 		}
 		if ( wdirlen <= 0 ) {
@@ -796,7 +796,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 			
 		// don't breach Host::m_dir[128] buffer
 		if ( wdirlen >= 128 ) {
-			log("conf: working dir %s is too int32_t, >= 128 chars.",
+			log("conf: working dir %s is too long, >= 128 chars.",
 			    wdir);
 			return false;
 		}

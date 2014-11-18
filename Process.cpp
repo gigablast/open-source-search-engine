@@ -1162,7 +1162,7 @@ void heartbeatWrapper ( int fd , void *state ) {
 	s_last = now;
 	s_lastNumAlarms = g_numAlarms;
 
-	// save this time so the sig alarm handler can see how int32_t
+	// save this time so the sig alarm handler can see how long
 	// it has been since we've been called, so after 10000 ms it
 	// can dump core and we can see what is holding things up
 	g_process.m_lastHeartbeatApprox = g_nowApprox;
@@ -1250,7 +1250,7 @@ void processSleepWrapper ( int fd , void *state ) {
 	// . i guess try to autoscale the cluster in cast hosts.conf changed
 	// . if all pings came in and all hosts have the same hosts.conf
 	//   and if we detected any shard imbalance at startup we have to
-	//   scan all rdbs for records that don't beint32_t to us and send them
+	//   scan all rdbs for records that don't belong to us and send them
 	//   where they should go
 	// . returns right away in most cases
 	g_rebalance.rebalanceLoop();

@@ -4528,7 +4528,7 @@ static Needle s_dirtyWordsPart2 []  = {
         {"lesbo"        ,0,2,0,0,NULL,0,NULL},
         {"lickadick"    ,0,2,0,0,NULL,0,NULL},
         {"lindalovelace"        ,0,2,0,0,NULL,0,NULL},
-        {"int32_tdick"     ,0,2,0,0,NULL,0,NULL},
+        {"longdick"     ,0,2,0,0,NULL,0,NULL},
         {"lovedoll"     ,0,2,0,0,NULL,0,NULL},
         {"makinglove"   ,0,2,0,0,NULL,0,NULL},
         {"mangax"       ,0,2,0,0,NULL,0,NULL},
@@ -8029,7 +8029,7 @@ bool getWordVector ( char *s ,
 		if ( ! is_alnum_utf8(s) ) continue;
 		// ok, we got a word then
 		char *start = s;
-		// see how int32_t the word is
+		// see how long the word is
 		for ( ; *s && is_alnum_utf8(s);s+=getUtf8CharSize(s));
 		// get wordid, a simple hash, just like Words.cpp does
 		uint64_t h = hash64Lower_utf8(start,s - start);
@@ -14592,10 +14592,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// by appending -diffbotxyz%"UINT32". see "fakeUrl" below.
 	if ( m_firstUrl.getUrlLen() + 24 >= MAX_URL_LEN ) {
 		if ( m_firstUrlValid )
-			log("build: diffbot url would be too int32_t for "
+			log("build: diffbot url would be too long for "
 			    "%s", m_firstUrl.getUrl() );
 		else
-			log("build: diffbot url would be too int32_t for "
+			log("build: diffbot url would be too long for "
 			    "%"INT64"", m_docId );
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
@@ -14767,7 +14767,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		QUICKPOLL(m_niceness);
 		// sanity
 		if ( k->size_urlBuf <= 1 ) continue;
-		// skip if too int32_t
+		// skip if too long
 		if ( k->size_linkText > 1024 ) continue;
 		// or not enough! (size includes \0)
 		if ( k->size_linkText <= 1 ) continue;
@@ -15363,7 +15363,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//char *userAgent = "EventGuruBot";
 	//int32_t uaLen = gbstrlen(userAgent);
 	//if ( uaLen > 12 ) {
-	//	log("spider: user agent string too int32_t");
+	//	log("spider: user agent string too long");
 	//	uaLen = 12;
 	//}
 	//strncpy(r->m_userAgent,userAgent,uaLen);
@@ -15828,7 +15828,7 @@ HttpMime *XmlDoc::getMime () {
 	// . spider should redirect on 3xx codes
 	// . 404 means not found, etc.
 	// . 304 is not modified since
-	// . >= 300 should only happen if redirect chain was too int32_t to follow
+	// . >= 300 should only happen if redirect chain was too long to follow
 	//int32_t httpStatus = m_mime.getHttpStatus();
 	// sanity check, these must be reserved! no longer, we have
 	// a separate m_httpStatus in the SpiderReply class now
@@ -17061,7 +17061,7 @@ int my_system_r ( char *cmd , int32_t timeout ) {
 	// the same HUP or kill signals he receives. uhhhh probably not...
 	//setpgid ( pid , pid );
 	// save the pid globally so Threads.cpp can kill(9,g_pid) it if it
-	// stalls too int32_t. but to measure how int32_t it is out for, keep a
+	// stalls too long. but to measure how long it is out for, keep a
 	// ticker count. this ticker count is incremented in the sleep wrapper
 	// in Threads.cpp.
 	g_ticker        = 0;
@@ -17188,7 +17188,7 @@ char **XmlDoc::getRawUtf8Content ( ) {
 		// clear this if successful, otherwise, it sets errno
 		if ( used > 0 ) g_errno = 0;
 		// unrecoverable error? bad charset is g_errno == 7
-		// which is like argument list too int32_t or something
+		// which is like argument list too long or something
 		// error from Unicode.cpp's call to iconv()
 		if ( g_errno )
 			log(LOG_INFO, "build: xml: failed parsing buffer: %s "
@@ -20495,7 +20495,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		// split =false;
 		// skip key
 		p += ks;
-		// . if key beint32_ts to same group as firstKey then continue
+		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
@@ -31009,7 +31009,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		}
 		int32_t naw = (b - sp->m_a) / 2;
 
-		// just skip even for gigabits if too int32_t. most likely
+		// just skip even for gigabits if too long. most likely
 		// a spammy list of nouns.
 		if ( naw >= 130 ) continue;
 
@@ -32379,7 +32379,7 @@ bool XmlDoc::hashWords3 ( //int32_t        wordStart ,
 			ws = hi->m_linkerSiteRank;
 
 		// default to the document's primary language if it is not
-		// clear what language this word beint32_ts to.
+		// clear what language this word belongs to.
 		// if the word is only in german it should be german,
 		// otherwise it will be the document's primary language.
 		char langId = langUnknown;
@@ -37886,7 +37886,7 @@ char *XmlDoc::getFragVec ( ) {
 	uint64_t   h     = 0;
 
 	// . make the hash table
-	// . make it big enough so there are gaps, so chains are not too int32_t
+	// . make it big enough so there are gaps, so chains are not too long
 	int32_t       minBuckets = (int32_t)(nw * 1.5);
 	uint32_t  nb     = 2 * getHighestLitBitValue ( minBuckets ) ;
 	int32_t       need       = nb * (8+4+4);
@@ -37982,7 +37982,7 @@ char *XmlDoc::getFragVec ( ) {
 			if ( demote >= 1.0 ) continue;
 			if ( demote <  0.0 ) demote = 0.0;
 
-			// . RULE #26 ("int32_t" phrases)
+			// . RULE #26 ("long" phrases)
 			// . if we got 3, 4 or 5 in our matching sequence
 			// . basically divide by the # of *phrase* terms
 			// . multiply by 1/(N-1) 
@@ -45144,7 +45144,7 @@ SafeBuf *XmlDoc::getScoredInsertableTerms ( ) {
 		// . queries that did not have us in the top 50 will not
 		//   be in the reply
 		processMsg95Replies();
-		// show how int32_t it took
+		// show how long it took
 		int64_t now = gettimeofdayInMilliseconds();
 		int64_t took = now - m_beginMsg95s;
 		log("seopipe: time: getscoredinsertableterms took %"INT64" ms",
@@ -45165,7 +45165,7 @@ SafeBuf *XmlDoc::getScoredInsertableTerms ( ) {
 	// then it will return InsertableTerm::m_wordPositions/m_trafficGain
 	// arrays for each InsertableTerm.
 
-	// time how int32_t this whole thing takes
+	// time how long this whole thing takes
 	m_beginMsg95s = gettimeofdayInMilliseconds();
 	// reset this crap i guess
 	m_numMsg95Requests = 0;

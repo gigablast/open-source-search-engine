@@ -3316,7 +3316,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( ! g_collectiondb.addRdbBaseToAllRdbsForEachCollRec ( ) ) {
 		log("db: Collectiondb init failed." ); return 1; }
 	// . now read in a little bit of each db and make sure the contained
-	//   records beint32_t in our group
+	//   records belong in our group
 	// . only do this if we have more than one group
 	// . we may have records from other groups if we are scaling, but
 	//   if we cannot find *any* records in our group we probably have
@@ -4651,7 +4651,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 	// this is a big scp so only do two at a time...
 	if  ( installFlag == ifk_install ) maxOut = 1;
 
-	// same with this. takes too int32_t on gk144, jams up
+	// same with this. takes too long on gk144, jams up
 	if  ( installFlag == ifk_installgb ) maxOut = 4;
 
 	if  ( installFlag == ifk_installgbrcp ) maxOut = 4;
@@ -7409,7 +7409,7 @@ bool addToChecksumdb ( char *coll , TitleRec *tr ) {
 			char name[64];
 			// . initialize our own internal rdb
 			// . the %"XINT32" in "g%"INT32"" is the group NUM to which the 
-			//   keys in this file beint32_t, the "h%"INT32"" is the host 
+			//   keys in this file belong, the "h%"INT32"" is the host 
 			//   number that generated these keys
 			sprintf(name,"checksumg%"INT32"h%"INT32"db",i,g_hostdb.m_hostId);
 			// unlink this file just in case
@@ -7517,7 +7517,7 @@ bool mergeChecksumFiles ( ) {
 	for ( int32_t i = 0 ; i < ng ; i++ ) {
 		// . initialize our own internal rdb
 		// . the %"XINT32" in "g%"XINT32"" is the group id to which the keys
-		//   in this file beint32_t, the "h%"INT32"" is the host number that
+		//   in this file belong, the "h%"INT32"" is the host number that
 		//   generated these keys
 		// . g_hostdb.m_hostId is also our group NUM
 		char name[64];
@@ -8005,7 +8005,7 @@ bool genDbs ( char *coll ) {
 		char name[64];
 		// . initialize our own internal rdb
 		// . the %"XINT32" in "g%"INT32"" is the group NUM to which the keys
-		//   in this file beint32_t, the "h%"INT32"" is the host number that
+		//   in this file belong, the "h%"INT32"" is the host number that
 		//   generated these keys
 		sprintf(name,"checksumg%"INT32"h%"INT32"db",i,g_hostdb.m_hostId);
 		// unlink this file just in case
@@ -11989,7 +11989,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 		return log("build: speedtestxml: Error setting "
 			   "xml doc." );
 	log("build: Doc url is %s",xd.ptr_firstUrl);//tr.getUrl()->getUrl());
-	log("build: Doc is %"INT32" bytes int32_t.",xd.size_utf8Content-1);
+	log("build: Doc is %"INT32" bytes long.",xd.size_utf8Content-1);
 	log("build: Doc charset is %s",get_charset_str(xd.m_charset));
 
 
@@ -14966,7 +14966,7 @@ bool checkDataParity ( ) {
 		if ( groupId == g_hostdb.m_groupId ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %"INT32" records in indexdb, only %"INT32" beint32_t "
+		log ("db: Out of first %"INT32" records in indexdb, only %"INT32" belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) return log("db: Are you sure you have the "
@@ -15015,7 +15015,7 @@ bool checkDataParity ( ) {
 		if ( groupId == g_hostdb.m_groupId ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %"INT32" records in titledb, only %"INT32" beint32_t "
+		log ("db: Out of first %"INT32" records in titledb, only %"INT32" belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
@@ -17371,7 +17371,7 @@ char *getcwd2 ( char *arg2 ) {
 		alen = a - arg + 1;
 	}
 	if ( alen > 512 ) {
-		log("db: path is too int32_t");
+		log("db: path is too long");
 		g_errno = EBADENGINEER;
 		return NULL;
 	}

@@ -434,7 +434,7 @@ bool gotReplyWrapperxd ( void *state ) {
 	int64_t took2 = now - xd->m_cpuSummaryStartTime;
 
 	// if there is a baclkog of msg20 summary generation requests this
-	// is really not the cpu it took to make the smmary, but how int32_t it
+	// is really not the cpu it took to make the smmary, but how long it
 	// took to get the reply. this request might have had to wait for the
 	// other summaries to finish computing before it got its turn, 
 	// meanwhile its clock was ticking. TODO: make this better?

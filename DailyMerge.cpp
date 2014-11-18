@@ -106,7 +106,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 		// if we miss that cuz we are down, then too bad
 		if ( (int32_t)elapsedMins > (int32_t)cr->m_dailyMergeTrigger + 15 )
 			continue;
- 		// . how int32_t has it been (in seconds)
+ 		// . how long has it been (in seconds)
 		// . !!!!!THIS IS IN SECONDS!!!!!!!!
 		int32_t diff = nowSynced - cr->m_dailyMergeStarted;
 		// crazy?

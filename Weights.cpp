@@ -183,7 +183,7 @@ void Weights::reset() {
 // phrase like like "spam-free email" we should demote the phrase "free email".
 // it splits a STRONG_CONNECTOR.
 
-// RULE #26 ("int32_t" phrases) (not implemented -- using PQR, post query rerank)
+// RULE #26 ("long" phrases) (not implemented -- using PQR, post query rerank)
 // if phrase is very popular we usually weight it high and the individual words
 // low. however, if the phrase term to the left or right of the phrase term
 // has a very similar count, we should cut each phrase term's weights in half
@@ -451,7 +451,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 	int64_t   h     = 0;
 
 	// . make the hash table
-	// . make it big enough so there are gaps, so chains are not too int32_t
+	// . make it big enough so there are gaps, so chains are not too long
 	int32_t       minBuckets = (int32_t)(nw * 1.5);
 	int32_t       nb         = 2 * getHighestLitBitValue ( minBuckets ) ;
 	int32_t       need       = nb * (8+4);
@@ -540,7 +540,7 @@ bool Weights::set3 ( Words *words , Bits *bits ) {
 			if ( demote >= 1.0 ) continue;
 			if ( demote <  0.0 ) demote = 0.0;
 
-			// . RULE #26 ("int32_t" phrases)
+			// . RULE #26 ("long" phrases)
 			// . if we got 3, 4 or 5 in our matching sequence
 			// . basically divide by the # of *phrase* terms
 			// . multiply by 1/(N-1) 

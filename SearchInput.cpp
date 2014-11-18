@@ -470,7 +470,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	if ( m_q.m_truncated && m_q.m_isBoolean ) {
 		g_errno = EQUERYTOOBIG;
-		g_msg = " (error: query is too int32_t)";
+		g_msg = " (error: query is too long)";
 		return false;
 	}
 

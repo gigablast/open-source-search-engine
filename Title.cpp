@@ -662,7 +662,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			break;
 		// skip if way too big!
 		if ( i >= max ) continue;
-		// if was too int32_t do not consider a title
+		// if was too long do not consider a title
 		if ( i - start > 300 ) continue;
 		// if not a back tag, that is bad too
 		//if ( ! WW->isBackTag(i) ) continue;

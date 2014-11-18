@@ -367,7 +367,7 @@ class UdpSlot {
 	int64_t      m_startTime;
 
 	// when the request/reply was read, we set this to the current time so
-	// we can measure how int32_t it sits in the queue until the handler
+	// we can measure how long it sits in the queue until the handler
 	// or callback is called
 	int64_t      m_queuedTime;
 

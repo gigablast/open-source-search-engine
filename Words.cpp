@@ -1212,7 +1212,7 @@ int32_t Words::getLanguage( Sections *sections ,
 				lasty = y;
 				foundone++;
 			}
-			// . if it can only beint32_t to one language
+			// . if it can only belong to one language
 			// . helps fix that fact that our unifiedDict is crummy
 			//   and identifes some words as being in a lot of languages
 			//   like "Pronto" as being in english and not giving

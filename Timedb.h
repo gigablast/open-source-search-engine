@@ -158,7 +158,7 @@ inline uint32_t getTimeScore ( //collnum_t collnum   ,
 	// bail if not there
 	if ( ! old ) {
 		// this happens when doing a clockset and we match the
-		// event's query terms but its been too int32_t and timedb
+		// event's query terms but its been too long and timedb
 		// does not have it anymore since we only like store
 		// a year out or so since spider time
 		//log("timedb: docid/eid not found d=%"UINT64" eid=%"INT32".",

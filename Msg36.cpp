@@ -79,7 +79,7 @@ bool Msg36::getTermFreq ( collnum_t collnum , // char      *coll       ,
 	// make a key from our termId, and if docId is provided, that too.
 	key144_t key ;
 	g_posdb.makeStartKey ( &key, termId , 0LL );
-	// . now what group do we beint32_t to?
+	// . now what group do we belong to?
 	// . groupMask has hi bits set before it sets low bits
 	//uint32_t groupId = key.n1 & g_hostdb.m_groupMask;
 	//uint32_t groupId;
@@ -350,7 +350,7 @@ void handleRequest36 ( UdpSlot *slot , int32_t netnice ) {
 		// no need to malloc since we have the tmp buf
 		char *reply = slot->m_tmpBuf;
 		*(int64_t *)reply = termFreq ;
-		// . send back the buffer, it now beint32_ts to the slot
+		// . send back the buffer, it now belongs to the slot
 		// . this list and all our local vars should be freed on return
 		g_udpServer.sendReply_ass ( reply , 8 , reply , 8 , slot );
 		return;

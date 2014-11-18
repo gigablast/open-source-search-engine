@@ -247,7 +247,7 @@ bool Linkdb::verify ( char *coll ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %"INT32" records in Linkdb , "
-		     "only %"INT32" beint32_t to our group.",count,got);
+		     "only %"INT32" belong to our group.",count,got);
 
 		/*
 		// repeat with log
@@ -6089,7 +6089,7 @@ int32_t Links::getLinkText2 ( int32_t i ,
 			QUICKPOLL(niceness);
 			// get the next node in line
 			XmlNode *nn = &xmlNodes[k];
-			// . break out if would be too int32_t
+			// . break out if would be too long
 			// . save room for terminating \0
 			//if (nn->m_node+nn->m_nodeLen-s > itemBufSize-1)break;
 			// break out if done

@@ -615,7 +615,7 @@ void handleRequest22 ( UdpSlot *slot , int32_t netnice ) {
 				   uk1               , // startKey
 				   uk2               , // endKey
 				   // use 0x7fffffff preceisely because it
-				   // will determine eactly how int32_t the
+				   // will determine eactly how long the
 				   // tree list needs to allocate in Msg5.cpp
 				   0x7fffffff        , // minRecSizes
 				   true              , // includeTree?

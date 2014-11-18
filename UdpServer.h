@@ -107,7 +107,7 @@ class UdpServer {
 	//   if you're using UdpProtocol, DnsProtocol, ...
 	// . "msgType" is used to route the request to handling functions
 	//   on the remote machine
-	// . backoff is how int32_t to wait for an ACK in ms before we resend
+	// . backoff is how long to wait for an ACK in ms before we resend
 	// . we double backoff each time we wait w/o getting any ACK
 	// . don't wait longer than maxWait for a resend
 	// . if we try to resend a request dgram MORE than "maxResends" times,
@@ -141,7 +141,7 @@ class UdpServer {
 	// . send a reply to the host specified in "slot"
 	// . slot is destroyed on error or completion of the send
 	// . the "msg" will be freed unless slot->m_sendBufAlloc is set to NULL
-	// . backoff is how int32_t to wait for an ACK in ms before we resend
+	// . backoff is how long to wait for an ACK in ms before we resend
 	// . we double backoff each time we wait w/o getting any ACK
 	// . don't wait longer than maxWait for a resend
 	void sendReply_ass (char     *msg        ,

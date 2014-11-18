@@ -93,7 +93,7 @@ bool Msg0::registerHandler ( ) {
 // . otherwise tries to get the list from the network
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-// . NOTE: i was having problems with queries being cached too int32_t, you
+// . NOTE: i was having problems with queries being cached too long, you
 //   see the cache here is a NETWORK cache, so when the machines that owns
 //   the list updates it on disk it can't flush our cache... so use a small
 //   maxCacheAge of like , 30 seconds or so...
@@ -1267,7 +1267,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 	if ( rdb ) rdb->sentReplyGet ( dataSize );
 	// TODO: can we free any memory here???
 
-	// keep track of how int32_t it takes to complete the send
+	// keep track of how long it takes to complete the send
 	st0->m_startTime = gettimeofdayInMilliseconds();
 	// debug point
 	int32_t oldSize = msg5->m_minRecSizes;

@@ -199,7 +199,7 @@ class Event {
 	uint32_t m_confirmedVenueContentHash32;
 
 	// index into Events::m_dates->m_datePtrs[] of the first date that
-	// beint32_ts to this event section
+	// belongs to this event section
 	//int32_t m_firstDatePtrNum;
 
 	// the first TOD date we use

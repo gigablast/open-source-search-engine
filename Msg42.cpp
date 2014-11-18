@@ -36,7 +36,7 @@ bool Msg42::getTermFreq ( char      *coll       ,
 	// if we have this termlist local then we can skip the network stuff
 	//if ( g_linkdb.isLocal ( termId ) ) { return getTermFreqLocally(); }
 
-	// . now what group do we beint32_t to?
+	// . now what group do we belong to?
 	// . groupMask has hi bits set before it sets low bits
 	//uint32_t groupId = key.n1 & g_hostdb.m_groupMask;
 	uint32_t groupId = g_linkdb.getGroupIdFromUrlHash(termId);
@@ -132,7 +132,7 @@ void handleRequest42 ( UdpSlot *slot , int32_t netnice ) {
 	// no need to malloc since we have the tmp buf
 	char *reply = slot->m_tmpBuf;
 	*(int64_t *)reply = termFreq ;
-	// . send back the buffer, it now beint32_ts to the slot
+	// . send back the buffer, it now belongs to the slot
 	// . this list and all our local vars should be freed on return
 	us->sendReply_ass ( reply , 8 , reply , 8 , slot );
 	return;

@@ -838,7 +838,7 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	r->m_proxyPort = prep->m_proxyPort;
 	// the id of this transaction for the LoadBucket
 	// need to save this so we can use it when we send a msg55 request
-	// out to tell host #0 how int32_t it took use to use this proxy, etc.
+	// out to tell host #0 how long it took use to use this proxy, etc.
 	r->m_lbId = prep->m_lbId;
 
 	// if this proxy ip seems banned, are there more proxies to try?
@@ -2789,7 +2789,7 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	int64_t last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 	// get time now
 	int64_t nowms = gettimeofdayInMilliseconds();
-	// how int32_t has it been since last download START time?
+	// how long has it been since last download START time?
 	int64_t waited = nowms - last;
 
 	int32_t crawlDelayMS = r->m_crawlDelayMS;

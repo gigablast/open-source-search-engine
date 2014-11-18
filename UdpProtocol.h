@@ -91,7 +91,7 @@ class UdpProtocol {
 	virtual bool  isNice ( const char *peek, int32_t peekSize ) {
 		return ( ntohl(*(int32_t *)peek) & 0x00200000 ); };
 
-	// . get the key of the slot this dgram beint32_ts to
+	// . get the key of the slot this dgram belongs to
 	// . ip is in network order BUT port is in host order
 	// . this dgram is one that we read, so flip weInitiated bit
 	// . this will make the key of a reply match the key of the request

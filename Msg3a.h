@@ -136,7 +136,7 @@ public:
 	// a multicast class to send the request, one for each split
 	Multicast  m_mcast[MAX_SHARDS];
 
-	// for timing how int32_t things take
+	// for timing how long things take
 	int64_t  m_startTime;
 
 	// this buffer should be big enough to hold all requests

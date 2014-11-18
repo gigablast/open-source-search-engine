@@ -2501,7 +2501,7 @@ bool RdbBase::verifyFileSharding ( ) {
 		if ( ++printed > 100 ) continue;
 
 		// avoid log spam... comment this out. nah print out 1st 100.
-		log ( "db: Found bad key in list beint32_ts to shard %"INT32"",
+		log ( "db: Found bad key in list belongs to shard %"INT32"",
 		      shardNum);
 	}
 
@@ -2518,7 +2518,7 @@ bool RdbBase::verifyFileSharding ( ) {
 
 	// tally it up
 	g_rebalance.m_numForeignRecs += count - got;
-	log ("db: Out of first %"INT32" records in %s for %s.%"INT32", only %"INT32" beint32_t "
+	log ("db: Out of first %"INT32" records in %s for %s.%"INT32", only %"INT32" belong "
 	     "to our group.",count,m_dbname,m_coll,(int32_t)m_collnum,got);
 	// exit if NONE, we probably got the wrong data
 	//if ( got == 0 ) log("db: Are you sure you have the "

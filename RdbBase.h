@@ -59,7 +59,7 @@ class RdbBase {
 	// . you can fix the dataSize of all records in this rdb by setting
 	//   "fixedDataSize"
 	// . if "maskKeyLowLong" we mask the lower int32_t of the key and then
-	//   compare that to the groupId to see if the record beint32_ts
+	//   compare that to the groupId to see if the record belongs
 	// . this is currently just used by Spiderdb
 	// . otherwise, we mask the high int32_t in the key
 	bool init ( char  *dir             , // working directory

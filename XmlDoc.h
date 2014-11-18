@@ -969,7 +969,7 @@ class XmlDoc {
 	// we we started spidering it, in milliseconds since the epoch
 	int64_t    m_startTime;
 
-	// when set() was called by Msg20.cpp so we can time how int32_t it took
+	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
 	int64_t    m_setTime;
 	int64_t    m_cpuSummaryStartTime;

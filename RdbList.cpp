@@ -663,7 +663,7 @@ bool RdbList::growList ( int32_t newSize ) {
 	return true;
 }
 
-// . TODO: check keys to make sure they beint32_t to this group!!
+// . TODO: check keys to make sure they belong to this group!!
 // . I had a problem where a foreign spider rec was in our spiderdb and
 //   i couldn't delete it because the del key would go to the foreign group!
 // . as a temp patch i added a msg1 force local group option
@@ -874,7 +874,7 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 	return true;
 }
 
-// . TODO: check keys to make sure they beint32_t to this group!!
+// . TODO: check keys to make sure they belong to this group!!
 // . I had a problem where a foreign spider rec was in our spiderdb and
 //   i couldn't delete it because the del key would go to the foreign group!
 // . as a temp patch i added a msg1 force local group option
@@ -1736,7 +1736,7 @@ void RdbList::merge_r ( RdbList **lists         ,
 	int64_t tt2 = getTagTypeFromStr( "sitepop");
 
 #ifdef ALLOW_SCALE
-	// remove keys that don't beint32_t -- for when scaling number of servers
+	// remove keys that don't belong -- for when scaling number of servers
 	uint32_t groupId ;
 	uint32_t myGroupId = g_hostdb.m_groupId;
 	//uint32_t groupMask = g_hostdb.m_groupMask;
@@ -1851,7 +1851,7 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// dangerous and i don't want to risk deleting data
 	//goto skipfilter;
 
-	// . filter out if does not beint32_t in our group
+	// . filter out if does not belong in our group
 	// . used when scaling number of servers
 	groupId = getGroupId ( rdbId , (key_t *)minKey );
 
@@ -2682,7 +2682,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	memcpy(k, minPtrLo, 6);
 	memcpy(&k[6], minPtrHi, 6);
 	groupId = getGroupId ( rdbId , &key );
-	// filter out if does not beint32_t in this group due to scaling servers
+	// filter out if does not belong in this group due to scaling servers
 	if ( groupId != myGroupId && doGroupMask ) { 
 		if ( g_conf.m_allowScale ) {
 			if ( filtered ) *filtered = *filtered + 1;
@@ -3198,7 +3198,7 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	memcpy(k, minPtrBase, 6);
 	memcpy(&k[6], minPtrHi, 6);
 	groupId = getGroupId ( RDB_POSDB , &key );
-	// filter out if does not beint32_t in this group due to scaling servers
+	// filter out if does not belong in this group due to scaling servers
 	if ( groupId != myGroupId && doGroupMask ) { 
 		if ( g_conf.m_allowScale ) {
 			if ( filtered ) *filtered = *filtered + 1;

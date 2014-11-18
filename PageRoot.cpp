@@ -2240,11 +2240,11 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	//	// get the url of a file of urls (ufu)
 	//	ufu = hr->getString ( "ufu" , &ufuLen , NULL );
 
-	// can't be too int32_t, that's obnoxious
+	// can't be too long, that's obnoxious
 	if ( urlLen > MAX_URL_LEN || ufuLen > MAX_URL_LEN ) {
 		g_errno = EBUFTOOSMALL;
-		g_msg = " (error: url too int32_t)";
-		return g_httpServer.sendErrorReply(sock,500,"url too int32_t");
+		g_msg = " (error: url too long)";
+		return g_httpServer.sendErrorReply(sock,500,"url too long");
 	}
 	// get the collection
 	//int32_t  collLen = 0;

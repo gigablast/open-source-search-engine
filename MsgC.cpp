@@ -52,7 +52,7 @@ bool MsgC::getIp(char  *hostname    , int32_t   hostnameLen ,
 	if ( hostnameLen >= 254 ) {
 		g_errno = EHOSTNAMETOOBIG;
 		log("dns: msgc: Asked to get IP of hostname over 253 "
-			   "characters int32_t.");
+			   "characters long.");
 		*ip = 0;
 		return true;
 	}

@@ -434,7 +434,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 	 // TcpServer should always give us a NULL terminated request
 	 if ( req[reqLen] != '\0' ) { char *xx = NULL; *xx = 0; }
 	 
-	 // how int32_t is the first line, the primary request
+	 // how long is the first line, the primary request
 	 // int32_t i;
 	 // for ( i = 0 ; i<reqLen && i<MAX_REQ_LEN && 
 	 //	       req[i]!='\n' && req[i]!='\r'; i++);
@@ -457,7 +457,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 
 	 int32_t cmdLen = 0;
 
-	 // or if first line too int32_t
+	 // or if first line too long
 	 //if ( i >= 1024 )  { g_errno = EBADREQUEST; return false; }
 	 // get the type, must be GET or HEAD
 	 if      ( strncmp ( req , "GET "  , 4 ) == 0 ) {
@@ -1382,7 +1382,7 @@ double HttpRequest::getDouble ( char *field , double defaultDouble ) {
 
 
 bool HttpRequest::hasField ( char *field ) {
-	// how int32_t is it?
+	// how long is it?
 	int32_t fieldLen = gbstrlen ( field );
 	// scan the field table directly
 	int32_t i = 0;
@@ -1397,7 +1397,7 @@ bool HttpRequest::hasField ( char *field ) {
 
 
 char *HttpRequest::getValue ( char *field , int32_t *len, int32_t *next ) {
-	// how int32_t is it?
+	// how long is it?
 	int32_t fieldLen = gbstrlen ( field );
 	// scan the field table directly
 	int32_t i = 0;

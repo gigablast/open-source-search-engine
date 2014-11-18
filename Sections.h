@@ -1010,7 +1010,7 @@ class Sections {
 		// if no match above, forget it
 		if ( m_tids[i] ) return false;
 		// otherwise, we are a punctuation "word"
-		// the bullet is 3 bytes int32_t
+		// the bullet is 3 bytes long
 		if ( m_wlens[i] < 3 ) return false;
 		// if not a bullet, skip it (&bull)
 		char *p    = m_wptrs[i];

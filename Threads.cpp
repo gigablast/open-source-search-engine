@@ -890,7 +890,7 @@ void ThreadQueue::bailOnReads ( ) {
 }
 
 // BigFile.cpp's readwriteWrapper_r() ThreadEntry::m_callback gets set to
-// ohcrap() because it was taking too int32_t to do its read and we prematurely
+// ohcrap() because it was taking too long to do its read and we prematurely
 // called its callback above in bailOnReads(). In that case we still have to 
 // free the disk read buffer which was never used. And doneWrapper() in
 // BigFile.cpp is never called.
@@ -1135,7 +1135,7 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 
 	//since we need finer grained control in loop, we no longer collect
 	//the callbacks, sort, then call them.  we now call them right away
-	//that way we can break out if we start taking too int32_t and 
+	//that way we can break out if we start taking too long and 
 	//give control back to udpserver.
 	return numCallbacks != 0;
 }
@@ -1515,7 +1515,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 
 	//since we need finer grained control in loop, we no longer collect
 	//the callbacks, sort, then call them.  we now call them right away
-	//that way we can break out if we start taking too int32_t and 
+	//that way we can break out if we start taking too long and 
 	//give control back to udpserver.
 	return numCallbacks != 0;
 
@@ -1825,7 +1825,7 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		}
 		// be lazy with this since it uses a significant amount of cpu
 		if ( now == -1LL ) now = gettimeofdayInMilliseconds();
-		// how int32_t has this entry been waiting in the queue to launch?
+		// how long has this entry been waiting in the queue to launch?
 		int64_t waited = now - m_entries[i].m_queuedTime ;
 		// adjust "waited" if it originally had a niceness of 1
 		if ( m_entries[i].m_niceness >= 1 ) {

@@ -2134,7 +2134,7 @@ class SummaryRec {
 	int32_t      m_numAccesses; 
 	// how much user was charged for all these accesses:
 	float     m_totalCost;
-	// how int32_t all replies took in milliseconds:
+	// how long all replies took in milliseconds:
 	int64_t m_totalProcessTime;
 	char      m_month;
 	char      m_day;

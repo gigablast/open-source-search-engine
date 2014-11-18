@@ -669,7 +669,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 		log(LOG_LOGIC,"udp: sendReply_ass: Callback is non-NULL.");
 		return;
 	}
-	// record some statistics on how int32_t these msg handlers are taking
+	// record some statistics on how long these msg handlers are taking
 	int64_t now = gettimeofdayInMillisecondsLocal();
 	// m_queuedTime should have been set before m_handlers[] was called
 	int32_t delta = now - slot->m_queuedTime;
@@ -685,7 +685,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	// MAX_BUCKETS is probably 16 and #define'd in Stats.h
 	if ( bucket >= MAX_BUCKETS ) bucket = MAX_BUCKETS-1;
 	g_stats.m_msgTotalHandlersByTime [slot->m_msgType][n][bucket]++;
-	// we have to use a different clock for measuring how int32_t to
+	// we have to use a different clock for measuring how long to
 	// send the reply now
 	slot->m_queuedTime = now;
 
@@ -960,7 +960,7 @@ bool UdpServer::sendPoll_ass ( bool allowResends , int64_t now ) {
 // . slot may have dgrams or ACKs to send
 // . sets g_errno to ETIMEDOUT if that slot is timed out as well as set
 //   that slot's m_doneSending to true
-// . let's send the int16_test first, but weight by how int32_t it's been waiting!
+// . let's send the int16_test first, but weight by how long it's been waiting!
 // . f(x) = a*(now - startTime) + b/msgSize
 // . verified that this is not interruptible
 UdpSlot *UdpServer::getBestSlotToSend ( int64_t now ) {
@@ -1709,7 +1709,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	return 1;
 	*/
 
-	// . if this slot has been waiting too int32_t then steal the token
+	// . if this slot has been waiting too long then steal the token
 	// . if when sender is ready receiver is not, this contention can
 	//   go one for over 10 seconds!
 	// . can we steal the token?
@@ -2070,11 +2070,11 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 		int64_t elapsed;
 		numCalled++;
 
-		// log how int32_t callback took
+		// log how long callback took
 		if(niceness > 0 && 
 		   (elapsed = gettimeofdayInMillisecondsLocal() - 
 		    startTime) > 5 ) {
-			//bail if we're taking too int32_t and we're a 
+			//bail if we're taking too long and we're a 
 			//low niceness request.  we can always come 
 			//back.
 			//TODO: call sigqueue if we need to
@@ -2476,7 +2476,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//	return;
 	//}
 	// . stats
-	// . time how int32_t for us to generate a reply
+	// . time how long for us to generate a reply
 	//slot->m_calledHandlerTime = gettimeofdayInMillisecondsLocal();
 	// debug msg
 	if ( g_conf.m_logDebugUdp )
@@ -2484,7 +2484,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		    "msgType=0x%hhx.", slot->m_transId , msgType );
 
 
-	// record some statistics on how int32_t this was waiting to be called
+	// record some statistics on how long this was waiting to be called
 	now = gettimeofdayInMillisecondsLocal();
 	delta = now - slot->m_queuedTime;
 	// sanity check
@@ -2506,7 +2506,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// time it
 	start = now; // gettimeofdayInMilliseconds();
 
-	// use this for recording how int32_t it takes to generate the reply
+	// use this for recording how long it takes to generate the reply
 	slot->m_queuedTime = now;
 
 	// . handler return value now obsolete
@@ -2609,7 +2609,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 			    elapsed,slot->m_msgType,(int32_t)slot->m_niceness);
 	}
 
-	// bitch if it blocked for too int32_t
+	// bitch if it blocked for too long
 	//took = gettimeofdayInMilliseconds() - start;
 	//mt = LOG_INFO;
 	//if ( took <= 50 ) mt = LOG_TIMING;
@@ -2823,10 +2823,10 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 		*/
 		// . deal w/ slots that are timed out
 		// . could be 1 of the 4 things:
-		// . 1. they take too int32_t to send their reply
-		// . 2. they take too int32_t to send their request
-		// . 3. they take too int32_t to ACK our reply 
-		// . 4. they take too int32_t to ACK our request
+		// . 1. they take too long to send their reply
+		// . 2. they take too long to send their request
+		// . 3. they take too long to ACK our reply 
+		// . 4. they take too long to ACK our request
 		// . only flag it if we haven't already...
 		if ( elapsed >= ((int64_t)slot->m_timeout) * 1000LL &&
 		     slot->m_errno != EUDPTIMEDOUT ) {
@@ -2838,7 +2838,7 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 			// keep going
 			continue;
 		}
-		// how int32_t since last send?
+		// how long since last send?
 		int64_t delta = now - slot->m_lastSendTime;
 		// if elapsed is negative, then someone changed the system
 		// clock on us, so it won't hurt to resend just to update

@@ -427,7 +427,7 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 			sb->printTimeAgo ( ago , now , true );
 		sb->safePrintf("</td>");
 
-		// how int32_t to download the test url?
+		// how long to download the test url?
 		if ( sp->m_lastDownloadTookMS != -1 )
 			sb->safePrintf("<td>%"INT32"ms</td>",
 				       (int32_t)sp->m_lastDownloadTookMS);
@@ -488,7 +488,7 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 
 	sp->m_isWaiting = false;
 
-	// ok, update how int32_t it took to do the download
+	// ok, update how long it took to do the download
 	int64_t nowms = gettimeofdayInMillisecondsLocal();
 	int64_t took = nowms - sp->m_lastDownloadTestAttemptMS;
 	sp->m_lastDownloadTookMS = (int32_t)took;

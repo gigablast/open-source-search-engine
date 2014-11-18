@@ -158,7 +158,7 @@ bool Ads::getAds ( char           *q         ,
         }
 	// bail if query too big
 	if ( qlen > MAX_AD_QUERY_LEN) {
-		log("query: Query length of %"INT32" is too int32_t to get "
+		log("query: Query length of %"INT32" is too long to get "
 		    "ads for.",qlen); 
 		return true;
 	}

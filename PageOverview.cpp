@@ -794,7 +794,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 				     "did not contain all the query terms.");
 			break;
 		case EQUERYTOOBIG:
-			p += sprintf(p,"s - Query was too int32_t.");
+			p += sprintf(p,"s - Query was too long.");
 			break;
 		case EQUERYTRUNCATED:
 			p += sprintf(p,"s - Query was truncated.");
@@ -1411,7 +1411,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "then you should adjust the time Gigablast waits between page requests to the\n"
 "same web server. To do this go to the \n"
 "<a href=\"/admin/spider\">Spider Controls</a> page for your collection and set\n"
-"the <b>same domain wait</b> and <b>same ip wait</b> values to how int32_t you want Gigablast to wait in between page requests to the same domain or the same IP address respectively. This value is in milliseconds (ms). There are 1000"
+"the <b>same domain wait</b> and <b>same ip wait</b> values to how long you want Gigablast to wait in between page requests to the same domain or the same IP address respectively. This value is in milliseconds (ms). There are 1000"
 "milliseconds in one second. That is, 1000 ms equals 1 second.\n"
 "You must then click on the\n"
 "<i>update</i> button at the bottom of that page to submit your new value.\n"
@@ -1463,7 +1463,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "<a name=\"spiderqueue\">\n"
 "<b>Spider Queues</b>\n"
 "<br><br>\n"
-"Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 7. Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it beint32_ts. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href=\"/admin/filters\"></a>URL filters</a> page.\n"
+"Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 7. Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it belongs. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href=\"/admin/filters\"></a>URL filters</a> page.\n"
 "<br><br>\n"
 "On the <a href=\"/admin/spider\">Spider Controls</a> page you can toggle the spidering of individual spider queues as well as link harvesting. More control on a per queue basis will be available soon, perhaps including the ability to assign a ruleset to a spider queue.\n"
 "<br><br>\n"
@@ -2122,7 +2122,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "This control covers some of the more popular "
 "characters sets in Asia, but if the character set is not recognized by "
 "Gigablast it will be indexed as if it were the Latin-1 character set. "
-"Likewise, all search queries are interpreted as beint32_ting to the Latin-1 "
+"Likewise, all search queries are interpreted as belonging to the Latin-1 "
 "character set."
 "<br><br>"
 "If Gigablast indexes a document as being from the Latin-1 character set "
@@ -2320,7 +2320,7 @@ z       122       7a                    {       123       7b\
 "<ul><li>Catdb is used to create a Web Directory based"
 " on DMOZ (www.dmoz.org).  The actual RDB known as"
 " <i>catdb</i> is a set of records containing the urls"
-" in the directory and which categories they beint32_t to."
+" in the directory and which categories they belong to."
 " Catdb is only required at spider time so that the"
 " url being spidered can be checked for category"
 " information.  Generating Catdb requires the"
@@ -2574,7 +2574,7 @@ z       122       7a                    {       123       7b\
 "</tr>\n"
 "<tr>\n"
 "<td>LIMIT</td>\n"
-"<td>Messages printed when a document was not indexed because the document quota specified in the ruleset was breeched. Also, urls that were truncated because they were too int32_t. Or a robots.txt file was too big and was truncated.</td>\n"
+"<td>Messages printed when a document was not indexed because the document quota specified in the ruleset was breeched. Also, urls that were truncated because they were too long. Or a robots.txt file was too big and was truncated.</td>\n"
 "</tr>\n"
 "<tr>\n"
 "<td>TIME</td>\n"
@@ -3015,7 +3015,7 @@ z       122       7a                    {       123       7b\
 "<tr><td><b>DNS</b></td><td>This is the client port we use locally when talking to the dns server.</td></tr>\n"
 "<tr><td><b>HTTP</b></td><td>This is the HTTP port used by the host. To avoid conflicts, hosts on the same computer must have different ports. Port numbers must be above 2000 or so, because only root has permission to use those ports.</td></tr>\n"
 "<tr><td><b>IDE</b></td><td>The IDE channel number that the host uses. Hosts on the same computer that share the same IDE bus must have this number be the same.</td></tr>\n"
-"<tr><td><b>GRP</b></td><td>The redundancy group number to which the host beint32_ts. Hosts that are mirror images (twins) of each other have the same redundancy group number.</td></tr>\n"
+"<tr><td><b>GRP</b></td><td>The redundancy group number to which the host belongs. Hosts that are mirror images (twins) of each other have the same redundancy group number.</td></tr>\n"
 "<tr><td><b>DIR</b></td><td>The working directory where the host stores all files related to the gb process.</td></tr>\n"
 "</table>\n"
 "\n"

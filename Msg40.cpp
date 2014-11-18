@@ -2498,7 +2498,7 @@ bool Msg40::gotSummary ( ) {
 
 	// if we do not have enough visible, try to get more
 	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail &&
-	     // do not spin too int32_t in this!
+	     // do not spin too long in this!
 	     // TODO: fix this better somehow later
 	     m_docsToGet <= 1000 &&
 	     // doesn't work on multi-coll just yet, it cores
@@ -2643,7 +2643,7 @@ bool Msg40::gotSummary ( ) {
 
 	// get time now
 	int64_t now = gettimeofdayInMilliseconds();
-	// . add the stat for how int32_t to get all the summaries
+	// . add the stat for how long to get all the summaries
 	// . use purple for tie to get all summaries
 	// . THIS INCLUDES Msg3a/Msg39 RECALLS!!!
 	// . can we subtract that?
@@ -3390,7 +3390,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 	//
 	// hash table for repeated fragment detection
 	//
-	// make it big enough so there are gaps, so chains are not too int32_t
+	// make it big enough so there are gaps, so chains are not too long
 	int32_t  minBuckets = (int32_t)(maxWords * 1.5);
 	if(minBuckets < 512) minBuckets = 512;
 	int32_t  numSlots   = 2 * getHighestLitBitValue ( minBuckets ) ;

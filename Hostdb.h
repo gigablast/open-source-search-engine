@@ -261,11 +261,11 @@ class Host {
 
 	char           m_repairMode;
 
-	// for timing how int32_t the msg39 takes from this host
+	// for timing how long the msg39 takes from this host
 	int32_t           m_splitsDone;
 	int64_t      m_splitTimes;
 
-	// . the hostdb to which this host beint32_ts!
+	// . the hostdb to which this host belongs!
 	// . getHost(ip,port) will return a Host ptr from either 
 	//   g_hostdb or g_hostdb2, so UdpServer.cpp needs to know which it
 	//   is from when making the UdpSlot key.

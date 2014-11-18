@@ -30,7 +30,7 @@ void testWinnerTreeKey ( ) ;
 //   for this many seconds
 // . i'd like to set back to 10 for speed... maybe even 5 or less
 // . back to 30 from 20 to try to fix crawls thinking they are done
-//   maybe because of the empty doledb logic taking too int32_t?
+//   maybe because of the empty doledb logic taking too long?
 //#define SPIDER_DONE_TIMER 30
 // try 45 to prevent false revivals
 //#define SPIDER_DONE_TIMER 45
@@ -401,7 +401,7 @@ int32_t SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 
 	sb->safePrintf("<tr bgcolor=#%s>\n",DARK_BLUE);
 
-	// how int32_t its been being spidered
+	// how long its been being spidered
 	if ( currentlySpidering ) {
 		sb->safePrintf(" <td><b>#</b></td>\n");
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
@@ -514,7 +514,7 @@ int32_t SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering)
 
 	sb->safePrintf("<tr bgcolor=#%s>\n",DARK_BLUE);
 
-	// how int32_t its been being spidered
+	// how long its been being spidered
 	if ( currentlySpidering ) {
 		sb->safePrintf(" <td><b>#</b></td>\n");
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
@@ -754,7 +754,7 @@ bool Spiderdb::verify ( char *coll ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %"INT32" records in spiderdb, "
-		     "only %"INT32" beint32_t to our shard.",count,got);
+		     "only %"INT32" belong to our shard.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
 					   "right "
@@ -1859,7 +1859,7 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// it! so wait 5 seconds for the doledb negative key to 
 	// be absorbed to prevent a url we just spidered from being
 	// re-spidered right away because of this sync issue.
-	// . if we wait too int32_t then the round end time, SPIDER_DONE_TIMER,
+	// . if we wait too long then the round end time, SPIDER_DONE_TIMER,
 	//   will kick in before us and end the round, then we end up
 	//   spidering a previously locked url right after and DOUBLE
 	//   increment the round!
@@ -2485,7 +2485,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 	///////
 	int64_t spiderTimeMS = spiderTimeMSArg;
 	int64_t lastDownloadTimeMS = lastDownloadTime ( firstIp );
-	// how int32_t to wait between downloads from same ip in milliseconds?
+	// how long to wait between downloads from same ip in milliseconds?
 	int32_t sameIpWaitTime = 250; // ms
 	if ( ufn >= 0 ) {
 		int32_t siwt = m_sc->m_cr->m_spiderIpWaits[ufn];
@@ -5138,7 +5138,7 @@ uint32_t getShardToSpider ( char *sr ) {
 }
 */
 
-// does this beint32_t in our spider cache?
+// does this belong in our spider cache?
 bool isAssignedToUs ( int32_t firstIp ) {
 	// sanity check... must be in our group.. we assume this much
 	//if ( g_spiderdb.getGroupId(firstIp) != g_hostdb.m_myHost->m_groupId){
@@ -9112,7 +9112,7 @@ static char *s_aggSites[] = {
 	"attinuptown.eventbrite.com",
 	"chocolateanddessertfantasy.eventbrite.com",
 	"colorado.ettractions.com",
-	"int32_tbeachstaterugby.webs.com",
+	"longbeachstaterugby.webs.com",
 	"volcano.oregonstate.edu",
 	"www.columbiaspacescience.org",
 	"www.eventful.com",
@@ -11678,7 +11678,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			char *pstart = p;
 			// make "p" point to one past the last char in string
 			while ( *p && ! is_wspace_a(*p) ) p++;
-			// how int32_t is the string to match?
+			// how long is the string to match?
 			int32_t plen = p - pstart;
 			// empty? that's kinda an error
 			if ( plen == 0 ) 
@@ -11714,7 +11714,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			char *pstart = p;
 			// make "p" point to one past the last char in string
 			while ( *p && ! is_wspace_a(*p) ) p++;
-			// how int32_t is the string to match?
+			// how long is the string to match?
 			int32_t plen = p - pstart;
 			// empty? that's kinda an error
 			if ( plen == 0 ) 
@@ -11751,7 +11751,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		char *pstart = p;
 		// make "p" point to one past the last char in string
 		while ( *p && ! is_wspace_a(*p) ) p++;
-		// how int32_t is the string to match?
+		// how long is the string to match?
 		int32_t plen = p - pstart;
 		// need something...
 		if ( plen <= 0 ) continue;

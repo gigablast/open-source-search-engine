@@ -50,7 +50,7 @@ public:
 
 class Fact {
 public:
-	// offset of the gigabit in m_gigabitBuf we beint32_t to
+	// offset of the gigabit in m_gigabitBuf we belong to
 	int32_t  m_gigabitOffset;
 	// . the sentence contaning the gigabit and a lot of the query terms
 	// . ptr refrences into Msg20Reply::ptr_gigabitSample buffers
@@ -320,7 +320,7 @@ class Msg40 {
 	// a multicast class to send the request
 	Multicast  m_mcast;
 
-	// for timing how int32_t to get all summaries
+	// for timing how long to get all summaries
 	int64_t  m_startTime;
 
 	// was Msg40 cached? if so, at what time?

@@ -1306,7 +1306,7 @@ class SpiderCache {
 
 	SpiderCache ( ) ;
 
-	// what SpiderColl does a SpiderRec with this key beint32_t?
+	// what SpiderColl does a SpiderRec with this key belong?
 	SpiderColl *getSpiderColl ( collnum_t collNum ) ;
 
 	SpiderColl *getSpiderCollIffNonNull ( collnum_t collNum ) ;

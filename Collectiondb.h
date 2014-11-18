@@ -777,7 +777,7 @@ class CollectionRec {
 	// same goes for max spiders per ip
 	int32_t      m_numRegExs6;
 	int32_t      m_spiderIpMaxSpiders [ MAX_FILTERS ];
-	// how int32_t to wait before respidering
+	// how long to wait before respidering
 	//int32_t      m_respiderWaits      [ MAX_FILTERS ];
 	//int32_t      m_numRegExs8;
 	// spidering on or off?
@@ -1053,7 +1053,7 @@ class CollectionRec {
 	//int32_t m_sameDomainWait;
 	//int32_t  m_maxSpidersPerDomain; 
 
-	// how int32_t a robots.txt can be in the cache (Msg13.cpp/Robotdb.cpp)
+	// how long a robots.txt can be in the cache (Msg13.cpp/Robotdb.cpp)
 	int32_t m_maxRobotsCacheAge;
 
 	//char m_orig [ MAX_PARMS ];

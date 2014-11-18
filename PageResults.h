@@ -41,7 +41,7 @@ public:
 	int32_t         m_errno;
 	Query        m_qq3;
         int32_t         m_numDocIds;
-	int64_t    m_took; // how int32_t it took to get the results
+	int64_t    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
 	char         m_qe[MAX_QUERY_LEN+1];

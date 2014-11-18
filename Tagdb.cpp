@@ -1975,7 +1975,7 @@ bool Tagdb::verify ( char *coll ) {
 	if ( got != count ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
-		log ("tagdb: Out of first %"INT32" records in %s, only %"INT32" beint32_t "
+		log ("tagdb: Out of first %"INT32" records in %s, only %"INT32" belong "
 		     "to our group.",count,rdbName,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("tagdb: Are you sure you have the "
@@ -3016,7 +3016,7 @@ void Msg8a::gotAllReplies ( ) {
 void TagRec::gotAllReplies ( ) {
 	// if any had an error, don't do anything
 	if ( m_errno ) return;
-	// time how int32_t this takes and log it
+	// time how long this takes and log it
 	int64_t startTime = gettimeofdayInMilliseconds();
 	// how many TagRecs we matched
 	int32_t n = 0;
@@ -3169,7 +3169,7 @@ void TagRec::gotAllReplies ( ) {
 		//
 
 		// always add the ST_SITE tag first from each tag so we know 
-		// what site the other tags beint32_t to
+		// what site the other tags belong to
 		//Tag *stag = gr->getTag ( ST_SITE );
 		Tag *stag = gr->getTag ( "site" );
 		// only add if non null

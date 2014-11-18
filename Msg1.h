@@ -1,7 +1,7 @@
 // Matt Wells, copyright Feb 2001
 
 // . add/delete an RdbList to/from a group
-// . RdbList can be hetergoneous: not all it's records may beint32_t to same group
+// . RdbList can be hetergoneous: not all it's records may belong to same group
 // . we only send to the next group when the group before is done sending
 // . we block/loop indefinitely if a host in the group cannot add the msg
 
@@ -52,7 +52,7 @@ class Msg1 {
 	//   since it's high int32_t is the spiderTime and low int32_t is the top
 	//   32 bits of the docId
 	// . i added "forceLocal" cuz we had a corrupt key in spiderdb which
-	//   made it beint32_t to a foreign group, and when we tried to delete it
+	//   made it belong to a foreign group, and when we tried to delete it
 	//   the delete key went elsewhere and we couldn't delete it!
 	// . deleteRecs will cause Rdb::deleteRec() to be called. if the rdb
 	//   does not support delbits in the keys use this.

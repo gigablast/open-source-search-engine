@@ -166,7 +166,7 @@ bool CommandUpdateSiteList ( char *rec ) {
 // . require user manually execute this to prevent us fucking up the data
 //   at first initially because of a bad hosts.conf file!!!
 // . maybe put a red 'A' in the hosts table on the web page to indicate
-//   we detected records that don't beint32_t to our shard so user knows to
+//   we detected records that don't belong to our shard so user knows to
 //   rebalance?
 // . we'll show it in a special msg box on all admin pages if required
 bool CommandRebalance ( char *rec ) {
@@ -378,7 +378,7 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 	char *collName = data;
 
 	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
-		log("crawlbot: collection name too int32_t");
+		log("crawlbot: collection name too long");
 		return true;
 	}
 
@@ -5946,7 +5946,7 @@ void Parms::init ( ) {
 	///////////
 	//
 	// DO NOT INSERT parms above here, unless you set
-	// m_obj = OBJ_COLL !!! otherwise it thinks it beint32_ts to
+	// m_obj = OBJ_COLL !!! otherwise it thinks it belongs to
 	// OBJ_CONF as used in the above parms.
 	//
 	///////////
@@ -8284,7 +8284,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Say yes here to make Gigablast check another Gigablast "
 		"cluster for title rec for related pages. Gigablast will "
 		"use the hosts2.conf file in the working directory to "
-		"tell it what hosts beint32_t to the other cluster.";
+		"tell it what hosts belong to the other cluster.";
 	m->m_cgi   = "erp"; // external related pages
 	m->m_off   = (char *)&cr.m_rp_getExternalPages - x;
 	//m->m_soff  = (char *)&si.m_rp_getExternalPages - y;
@@ -10052,7 +10052,7 @@ void Parms::init ( ) {
 	m->m_title = "rebalance shards";
 	m->m_desc  = "Tell all hosts to scan all records in all databases, "
 		"and move "
-		"records to the shard they beint32_t to. You only need to run "
+		"records to the shard they belong to. You only need to run "
 		"this if Gigablast tells you to, when you are changing "
 		"hosts.conf to add or remove more nodes/hosts.";
 	m->m_cgi   = "rebalance";
@@ -17948,7 +17948,7 @@ void Parms::init ( ) {
 		"link text from another collection into this one "
 		"when spidering urls. Gigablast will "
 		"use the hosts.conf file in the working directory to "
-		"tell it what hosts beint32_t to the cluster to import from. "
+		"tell it what hosts belong to the cluster to import from. "
 		"Gigablast "
 		"will use the \"update link votes frequency\" parm above "
 		"to determine if the info should be recomputed on the other "
@@ -18836,7 +18836,7 @@ void Parms::init ( ) {
 
 	m->m_title = "log limit breeches";
 	m->m_desc  = "Log it when document not added due to quota "
-		"breech. Log it when url is too int32_t and it gets "
+		"breech. Log it when url is too long and it gets "
 		"truncated.";
 	m->m_cgi   = "ll";
 	m->m_off   = (char *)&g_conf.m_logLimits - g;
@@ -19961,11 +19961,11 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	else if ( m->m_type == TYPE_CMD ) {
 		val = parmValString;
 		if ( val ) valSize = gbstrlen(val)+1;
-		// . addcoll collection can not be too int32_t
+		// . addcoll collection can not be too long
 		// . TODO: supply a Parm::m_checkValFunc to ensure val is
 		//   legitimate, and set g_errno on error
 		if ( strcmp(m->m_cgi,"addcoll") == 0 &&valSize-1>MAX_COLL_LEN){
-			log("admin: addcoll coll too int32_t");
+			log("admin: addcoll coll too long");
 			g_errno = ECOLLTOOBIG;
 			return false;
 		}
@@ -21947,7 +21947,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
 			  "<td>Matches if document quality less than 40 and "
-			  "beint32_ts to ruleset 22. Only for assinging to "
+			  "belongs to ruleset 22. Only for assinging to "
 			  "spider priority.</td></tr>"
 
 			  "<tr class=poo><td><nobr>"
@@ -21958,7 +21958,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
 			  "<td>Matches if document quality less than 40 and "
-			  "beint32_ts to ruleset 33. Only for assigning to "
+			  "belongs to ruleset 33. Only for assigning to "
 			  "spider priority or a banned ruleset.</td></tr>"
 			  */
 

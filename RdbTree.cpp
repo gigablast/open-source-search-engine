@@ -3030,7 +3030,7 @@ int32_t RdbTree::oldLoadBlock ( BigFile *f, int32_t remainingNodes , RdbMem *sta
 	//int32_t j ;
 	//for ( int32_t i = 0 ; i < n ; i++ ) {
 		//addNode ( m_keys[i] ,
-		// get the node number this beint32_ts in
+		// get the node number this belongs in
 		//j = slotNums[i];
 		// store it in that node number
 		//m_keys    [j] = keys    [i];

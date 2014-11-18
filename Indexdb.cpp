@@ -259,7 +259,7 @@ bool Indexdb::verify ( char *coll ) {
 		}
 	}
 	if ( got != count ) {
-		log ("db: Out of first %"INT32" records in indexdb, only %"INT32" beint32_t "
+		log ("db: Out of first %"INT32" records in indexdb, only %"INT32" belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
@@ -347,7 +347,7 @@ deepLoop:
 	if ( got != count ) {
 		BigFile *f = rdbBase->getFile(currentFile);
 		log ("db: File %s: Out of first %"INT32" records in indexdb, "
-		     "only %"INT32" beint32_t to our group.",
+		     "only %"INT32" belong to our group.",
 		     f->getFilename(),count,got );
 	}
 	//else

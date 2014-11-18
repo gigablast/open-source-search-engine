@@ -99,7 +99,7 @@ void File::set ( char *filename ) {
 		log ( LOG_LOGIC,"disk: Provided filename is NULL");
 		return;
 	}
-	// bail if too int32_t
+	// bail if too long
 	int32_t len = gbstrlen ( filename );
 	// account for terminating '\0'
 	if ( len + 1 >= MAX_FILENAME_LEN ) { 

@@ -109,7 +109,7 @@ class IndexTable {
 	//   getTopDocIds(), getNumTopDocIds() or getNumExactMatches()
 	void filterTopDocIds ( ) ;
 
-	// how int32_t to add the last batch of lists
+	// how long to add the last batch of lists
 	int64_t       m_addListsTime;
 	uint32_t   m_totalDocIds;
 	int32_t            m_numPanics;
@@ -117,7 +117,7 @@ class IndexTable {
 	int32_t            m_numPtrs; // in the beginning at least
 	int32_t            m_numLoops;
 
-	// how int32_t to get top docIds
+	// how long to get top docIds
 	int64_t       m_setTopDocIdsTime;
 
 	int64_t       m_estimatedTotalHits;

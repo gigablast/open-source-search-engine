@@ -1077,7 +1077,7 @@ bool Syncdb::verify ( char *coll ) {
 	}
 	if ( got != count ) {
 		log ("db: Out of first %"INT32" records in syncdb, "
-		     "only %"INT32" beint32_t to our group.",count,got);
+		     "only %"INT32" belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
 					   "right "

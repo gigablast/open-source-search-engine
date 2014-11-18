@@ -194,7 +194,7 @@ bool Titledb::verify ( char *coll ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %"INT32" records in titledb, "
-		     "only %"INT32" beint32_t to our shard. c=%s",count,got,coll);
+		     "only %"INT32" belong to our shard. c=%s",count,got,coll);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
@@ -216,7 +216,7 @@ bool Titledb::verify ( char *coll ) {
 		//if ( g_conf.m_bypassValidation ) return true;
 		//if ( g_conf.m_allowScale ) return true;
 		// don't exit any more, allow it, but do not delete
-		// recs that beint32_t to different shards when we merge now!
+		// recs that belong to different shards when we merge now!
 		log ( "db: db shards unbalanced. "
 		      "Click autoscale in master controls.");
 		//return false;

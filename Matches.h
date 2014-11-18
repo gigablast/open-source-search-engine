@@ -25,7 +25,7 @@
 typedef int32_t mf_t;
 
 // . values for Match::m_flags
-// . dictates the "match group" that the match beint32_ts to
+// . dictates the "match group" that the match belongs to
 #define MF_TITLEGEN                   0x0001 // in generated title?
 #define MF_TITLETAG                   0x0002
 #define MF_LINK                       0x0004 // in non-anomalous link text

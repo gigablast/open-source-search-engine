@@ -468,7 +468,7 @@ bool Language::loadSpellerDict( char *spellerBuf, int32_t spellerBufSize,
 
 	distributedPopFile.close();
 
-	// count the tuples that beint32_t to this language that come from
+	// count the tuples that belong to this language that come from
 	// the wordlist and query file (i.e. that are not negative )
 	p = spellerBuf;
 	while ( p < spellerBuf + spellerBufSize - 1){
@@ -495,13 +495,13 @@ bool Language::loadSpellerDict( char *spellerBuf, int32_t spellerBufSize,
 		if ( *phonet == '\0' )
 			continue;
 		uint64_t phonetKey = hash64Lower_utf8(phonet);
-		// check if this phonet beint32_ts to this host
+		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 
 		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
-		// check if this phrase beint32_ts to this language
+		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
 		if ( g_speller.getPhrasePopularity( phrase, h, false, 
 						    m_lang ) <= 0 )
@@ -558,13 +558,13 @@ bool Language::loadSpellerDict( char *spellerBuf, int32_t spellerBufSize,
 			continue;
 
 		uint64_t phonetKey = hash64Lower_utf8(phonet);
-		// check if this phonet beint32_ts to this host
+		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 
 		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
-		// check if this phrase beint32_ts to this language
+		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
 		if ( g_speller.getPhrasePopularity( phrase, h, false, 
 					  m_lang ) <= 0 )
@@ -690,7 +690,7 @@ bool Language::loadNarrow( char *spellerBuf, int32_t spellerBufSize,
 		return true;
 
 	// first find out how many phrases have more than 1 word
-	// count the tuples that beint32_t to this language that come from
+	// count the tuples that belong to this language that come from
 	// the wordlist and query file (i.e. that are not negative )
 	char *p = spellerBuf;
 	while ( p < spellerBuf + spellerBufSize - 1){
@@ -711,7 +711,7 @@ bool Language::loadNarrow( char *spellerBuf, int32_t spellerBufSize,
 
 		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
-		// check if this phrase beint32_ts to this language
+		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
 		if ( g_speller.
 		     getPhrasePopularity( phrase, h, false, m_lang ) <= 0 ){
@@ -724,7 +724,7 @@ bool Language::loadNarrow( char *spellerBuf, int32_t spellerBufSize,
 		}
 		uint64_t phonetKey = hash64Lower_utf8(phonet);
 
-		// check if this phonet beint32_ts to this host
+		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash ){
 			continue;
 		}
@@ -823,7 +823,7 @@ bool Language::loadNarrow( char *spellerBuf, int32_t spellerBufSize,
 
 		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
-		// check if this phrase beint32_ts to this language
+		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
 		if ( g_speller.
 		     getPhrasePopularity( phrase, h, false, m_lang ) <= 0 ){
@@ -836,7 +836,7 @@ bool Language::loadNarrow( char *spellerBuf, int32_t spellerBufSize,
 		}
 		uint64_t phonetKey = hash64Lower_utf8(phonet);
 
-		// check if this phonet beint32_ts to this host
+		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash ){
 			continue;
 		}
@@ -2609,7 +2609,7 @@ bool Language::generateDicts ( int32_t numWordsToDump , char *coll ) {
 	char dd[1024];
 	if ( gbstrlen ( g_hostdb.m_dir ) > 1000 ) {
 		g_errno = EBADENGINEER;
-		log("lang: Working directory %s is too int32_t.",
+		log("lang: Working directory %s is too long.",
 		    g_hostdb.m_dir);
 		return false;
 	}
@@ -3010,7 +3010,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			tmpp--;
 			// overwrite it, terminate with a \n
 			*tmpp = '\n';
-			// how int32_t is it? does not include terminating \n
+			// how long is it? does not include terminating \n
 			int32_t tmplen = tmpp - tmp;
 			// skip if nothing
 			if ( tmplen <= 0 ) 
@@ -3394,7 +3394,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			//tmpp--;
 			// overwrite it, terminate with a \n
 			*tmpp = '\n';
-			// how int32_t is it? does not include terminating \n
+			// how long is it? does not include terminating \n
 			int32_t tmplen = tmpp - tmp;
 			// skip if nothing
 			if ( tmplen <= 0 ) continue;
@@ -4720,7 +4720,7 @@ bool Language::genTopPopFile ( char *infile ){
 	int32_t count = 0;
 
 	// this loop goes through all the words and only adds those
-	// tuples into the distributed file that beint32_t to this host.
+	// tuples into the distributed file that belong to this host.
 	while ( fgets ( buf , 1024 , fdr ) ) {
 		// put the first TOP_POP_PHRASES words
 		if ( count++ >= TOP_POP_PHRASES )
@@ -4773,7 +4773,7 @@ bool Language::genDistributedPopFile ( char *infile, uint32_t myHash ){
 	int32_t count = 0;
 
 	// this loop goes through all the words and only adds those
-	// tuples into the distributed file that beint32_t to this host.
+	// tuples into the distributed file that belong to this host.
 	while ( fgets ( buf , 1024 , fdr ) ) {
 		// skip the first TOP_POP_PHRASES words because they shall be
 		// put in the top pop file

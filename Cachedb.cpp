@@ -139,7 +139,7 @@ bool Cachedb::verify ( char *coll ) {
 	}
 	if ( got != count ) {
 		log ("db: Out of first %"INT32" records in %s , "
-		     "only %"INT32" beint32_t to our group.",count,m_name,got);
+		     "only %"INT32" belong to our group.",count,m_name,got);
 
 		/*
 		// repeat with log

@@ -608,7 +608,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 		     // and in our group
 		     //h->m_groupId == g_hostdb.m_myHost->m_groupId ) {
 		     h->m_shardNum == getMyShardNum() ) {
-			// how int32_t dead for?
+			// how long dead for?
 			int64_t delta = nowms - h->m_timeOfDeath;
 			// we did it once, do not repeat
 			h->m_timeOfDeath = 0;

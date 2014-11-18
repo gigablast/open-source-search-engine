@@ -837,7 +837,7 @@ int32_t Speller::getWords ( const char *s ,
 	char *ww = (char *)s;
 	// count over it
 	while ( is_alnum ( *s ) ) s++;
-	// how int32_t is the word?
+	// how long is the word?
 	int32_t slen = s - wp [ nwp ];
 	// set length
 	wplen [ nwp ] = slen ;

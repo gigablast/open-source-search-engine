@@ -156,7 +156,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 // . this is called every 500ms from Process.cpp
 // . if all pings came in and all hosts have the same hosts.conf
 //   and if we detected any shard imbalance at startup we have to
-//   scan all rdbs for records that don't beint32_t to us and send them
+//   scan all rdbs for records that don't belong to us and send them
 //   where they should go
 void Rebalance::rebalanceLoop ( ) {
 
@@ -471,7 +471,7 @@ bool Rebalance::gotList ( ) {
 		//log("rebal: checking key %s",KEYSTR(m_nextKey,ks));
 		// count as scanned
 		m_scannedCount++;
-		// skip it if it beint32_ts with us
+		// skip it if it belongs with us
 		if ( shard == myShard ) continue;
 		// note it
 		//log("rebal: shard is %"INT32"",shard);

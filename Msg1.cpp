@@ -218,7 +218,7 @@ bool Msg1::addList ( RdbList      *list              ,
 	list->resetListPtr();
 	// is the request in transit? assume not (assume did not block)
 	if ( inTransit ) *inTransit = false;
-	// . not all records in the list may beint32_t to the same group
+	// . not all records in the list may belong to the same group
 	// . records should be sorted by key so we don't need to sort them
 	// . if this did not block, return true
 	if ( sendSomeOfList ( ) ) return true;
@@ -294,7 +294,7 @@ bool Msg1::sendSomeOfList ( ) {
 	*/
 	// point to start of data we're going to send
 	char *dataStart = m_list->getListPtr();
-	// how many records beint32_t to the same group as "firstKey"
+	// how many records belong to the same group as "firstKey"
 	//key_t key;
 	char key[MAX_KEY_BYTES];
 	while ( ! m_list->isExhausted() ) {
@@ -308,7 +308,7 @@ bool Msg1::sendSomeOfList ( ) {
 			log(LOG_LOGIC,"net: msg1: Got half bit. Bad "
 			    "engineer.");
 #endif
-		// . if key beint32_ts to same group as firstKey then continue
+		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
@@ -377,7 +377,7 @@ bool Msg1::sendSomeOfList ( ) {
 		// make the groupId local, our group
 		//groupId = g_hostdb.m_groupId;
 		// bitch about this to log it
-		log("net: Data does not beint32_t in shard %"UINT32", but adding "
+		log("net: Data does not belong in shard %"UINT32", but adding "
 		    "to %s anyway. Probable data corruption.",
 		    (uint32_t)shardNum,getDbnameFromId(m_rdbId));
 	}
@@ -459,7 +459,7 @@ bool Msg1::sendData ( uint32_t shardNum, char *listData , int32_t listSize) {
 	bool sendToSelf = true;
 	if ( shardNum == getMyShardNum() &&
 	     ! g_conf.m_interfaceMachine ) {
-		// get the rdb to which it beint32_ts, use Msg0::getRdb()
+		// get the rdb to which it belongs, use Msg0::getRdb()
 		Rdb *rdb = getRdbFromId ( (char) m_rdbId );
 		if ( ! rdb ) goto skip;
 		// key size
@@ -671,7 +671,7 @@ void handleRequest1 ( UdpSlot *slot , int32_t netnice ) {
 	char *pend = readBuf + readBufSize;
 	// extract rdbId
 	char rdbId = *p++;
-	// get the rdb to which it beint32_ts, use Msg0::getRdb()
+	// get the rdb to which it belongs, use Msg0::getRdb()
 	Rdb *rdb = getRdbFromId ( (char) rdbId );
 	if ( ! rdb ) { us->sendErrorReply ( slot, EBADRDBID ); return;}
 	// keep track of stats

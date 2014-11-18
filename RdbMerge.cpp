@@ -545,7 +545,7 @@ bool RdbMerge::dumpList ( ) {
 	}
 
 	// . set the list to only those records that should be in our group
-	// . filter the records that don't beint32_t in this group via groupId
+	// . filter the records that don't belong in this group via groupId
 	//filterList ( &m_list );
 
 	// keep track of how many dups we removed for indexdb
@@ -636,7 +636,7 @@ void RdbMerge::doneMerging ( ) {
 }
 
 // . do not call this if "list" is empty
-// . remove records whose keys don't beint32_t
+// . remove records whose keys don't belong
 // . when we split the db cuz we scaled to more groups this will rid us
 //   of data we no longer control
 // . a split is done by turning on the next bit in m_groupMask starting
@@ -699,14 +699,14 @@ void RdbMerge::filterList ( RdbList *list ) {
 	}			
 	// . TODO: each file should have a groupId/groupMask from when it
 	//         was formed so we can even avoid this check most of the time
-	// . now we must filter out records that don't beint32_t in spiderdb
+	// . now we must filter out records that don't belong in spiderdb
         // . changing the groupMask/groupId is somewhat rare so first
         //   do a check to see if anything needs to be nuked
         while ( (list->getCurrentKey().n0 & gmask) == gid ) 
                 if ( ! list->skipCurrentRecord () ) break;
         // return if nothing needs to be nuked
         if ( list->isExhausted() ) return;
-        // otherwise let's remove the records that don't beint32_t in this list
+        // otherwise let's remove the records that don't belong in this list
         char *addPtr = list->m_list;
         char *rec;
         int32_t  recSize;
@@ -714,11 +714,11 @@ void RdbMerge::filterList ( RdbList *list ) {
 	// reset m_listPtr since we're scanning again
         list->resetListPtr();
  loop:
-        // . skip over records that don't beint32_t in our group, groupId
+        // . skip over records that don't belong in our group, groupId
 	// . skipCurrentRecord() returns false if skipped to end of list
         while ( (list->getCurrentKey().n0 & gmask) != gid ) 
                 if ( ! list->skipCurrentRecord() ) goto done;
-        // now copy this record that does beint32_t to "addPtr"
+        // now copy this record that does belong to "addPtr"
         rec     = list->getCurrentRec    ();
         recSize = list->getCurrentRecSize();
         status  = list->skipCurrentRecord();

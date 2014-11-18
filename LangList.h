@@ -2,7 +2,7 @@
 // Author: Javier Olivares <jolivares@gigablast.com>
 //
 // . stores lists of common words for various languages
-// . used to determine what language a word/page beint32_ts to
+// . used to determine what language a word/page belongs to
 //
 
 #ifndef _LANGLIST_H_

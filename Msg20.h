@@ -374,7 +374,7 @@ public:
 	char       m_timeZoneOffset      ; // in hours
 	char       m_useDST              ; // does event place use dst?
 	int32_t       m_nextStart           ; // next occ starts at this time_t
-	int32_t       m_nextEnd             ; // end - start is how int32_t it is
+	int32_t       m_nextEnd             ; // end - start is how long it is
 	int32_t       m_prevStart           ;
 	int32_t       m_prevEnd             ;
 	int32_t       m_displayStartTime    ; // the event times to display

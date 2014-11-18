@@ -207,7 +207,7 @@ class Loop {
 		       void (* callback)(int fd , void *state ) ,
 		       int32_t niceness , int32_t tick = 0x7fffffff ) ;
 
-	// set how int32_t to pause waiting for singals (in milliseconds)
+	// set how long to pause waiting for singals (in milliseconds)
 	void setSigWaitTime ( int32_t ms ) ;
 
 	// now we use a linked list of pre-allocated slots to avoid a malloc

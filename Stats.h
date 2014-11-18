@@ -165,13 +165,13 @@ class Stats {
 
 	// use m_start so we know what msg stats to clear with memset
 	char      m_start;
-	// and stats for how int32_t to send a request or reply from
+	// and stats for how long to send a request or reply from
 	// start to finish. the first "2" is the niceness, 0 or 1, and
 	// the second "2" is 0 if sending a reply and 1 if sending a request.
 	int64_t m_msgTotalOfSendTimes    [MAX_MSG_TYPES][2][2];
 	int64_t m_msgTotalSent           [MAX_MSG_TYPES][2][2];
 	int64_t m_msgTotalSentByTime     [MAX_MSG_TYPES][2][2][MAX_BUCKETS];
-	// how int32_t we wait after receiving the request until handler is called
+	// how long we wait after receiving the request until handler is called
 	int64_t m_msgTotalOfQueuedTimes  [MAX_MSG_TYPES][2];
 	int64_t m_msgTotalQueued         [MAX_MSG_TYPES][2];
 	int64_t m_msgTotalQueuedByTime   [MAX_MSG_TYPES][2][MAX_BUCKETS];

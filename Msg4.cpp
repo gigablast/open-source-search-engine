@@ -415,7 +415,7 @@ bool storeList2 ( RdbList *list ,
 	while ( ! list->isExhausted() ) {
 		// get the key of the current record
 		list->getCurrentKey ( key );
-		// . if key beint32_ts to same group as firstKey then continue
+		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
@@ -509,7 +509,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 			 char       rdbId                    ,
 			 // Rebalance.cpp needs to add negative keys to
 			 // remove foreign records from where they no
-			 // longer beint32_t because of a new hosts.conf file.
+			 // longer belong because of a new hosts.conf file.
 			 // This will be -1 if not be overridden.
 			 int32_t       shardOverride ) {
 
@@ -641,7 +641,7 @@ bool Msg4::addMetaList2 ( ) {
 		p += ks;
 		// set this
 		//bool split = true; if ( nosplit ) split = false;
-		// . if key beint32_ts to same group as firstKey then continue
+		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
@@ -1260,7 +1260,7 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 	int32_t      recSize = *(int32_t      *)p; p += 4;
 	// int16_tcut
 	//UdpServer *us = &g_udpServer;
-	// . get the rdb to which it beint32_ts, use Msg0::getRdb()
+	// . get the rdb to which it belongs, use Msg0::getRdb()
 	// . do not call this for every rec if we do not have to
 	if ( rdbId != lastRdbId ) {
 		rdb = getRdbFromId ( (char) rdbId );

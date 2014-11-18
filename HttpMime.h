@@ -94,7 +94,7 @@ class HttpMime {
 	// . used to create a mime
 	// . if bytesToSend is < 0 that means send totalContentLen (all doc)
 	// . if lastModified is 0 we take the current time and use that
-	// . cacheTime is how int32_t for browser to cache this page in seconds
+	// . cacheTime is how long for browser to cache this page in seconds
 	// . a cacheTime of -2 means do not cache at all
 	// . a cacheTime of -1 means do not cache when moving forward,
 	//   but when hitting the back button, serve cached results

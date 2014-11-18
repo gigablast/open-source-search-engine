@@ -1008,7 +1008,7 @@ bool Multicast::sendToHost ( int32_t i ) {
 	//log("Multicast sent to hostId %"INT32", this=%"INT32", transId=%"INT32"", 
 	//    h->m_hostId, (int32_t)this , m_slots[i]->m_transId );
 	// . let's sleep so we have a chance to launch to another host in
-	//   the same group in case this guy takes too int32_t
+	//   the same group in case this guy takes too long
 	// . don't re-register if we already did
 	if ( m_registeredSleep ) return true;
 	// . otherwise register for sleep callback to try again
@@ -1031,7 +1031,7 @@ void sleepWrapper1 ( int bogusfd , void    *state ) {
 	// . we often send out 2+ requests and end up getting one reply before
 	//   the others and that results in us getting unwanted dgrams...
 	// . increasing this delay here results in fewer wasted requests but
-	//   if a host goes down you don't want a user to wait too int32_t
+	//   if a host goes down you don't want a user to wait too long
 	// . after a host goes down it's ping takes a few secs to decrease
 	// . if a host is shutdown properly it will broadcast a msg to
 	//   all hosts using Hostdb::broadcast() informing them that it's 
@@ -1399,7 +1399,7 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 		if ( g_errno == EBADENGINEER       ) sendToTwin = false;
 		if ( g_errno == EMISSINGQUERYTERMS ) sendToTwin = false;
 		if ( g_errno == EMSGTOOBIG         ) sendToTwin = false;
-		// "Argument list too int32_t"
+		// "Argument list too long"
 		if ( g_errno == 7                  ) sendToTwin = false;
 		// i guess msg50 calls msg25 with no ip sometimes?
 		if ( g_errno == EURLHASNOIP        ) sendToTwin = false;

@@ -433,7 +433,7 @@ class QueryTerm {
 
 	// the "number" of the query term used for evaluation boolean
 	// expressions in Expression::isTruth(). Basically just the
-	// QueryTermInfo for which this query term beint32_ts. each QueryTermInfo
+	// QueryTermInfo for which this query term belongs. each QueryTermInfo
 	// is like a single query term and all its synonyms, etc.
 	int32_t       m_bitNum;
 

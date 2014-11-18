@@ -361,7 +361,7 @@ bool Statsdb::addStat ( int32_t        niceness ,
 		//   were in progress at that second.
 		float fractionTime = ((float)(nextup - tx)) / dtms;
 
-		// . get the time point bucket in which this stat beint32_ts
+		// . get the time point bucket in which this stat belongs
 		// . every "second" in time has a bucket
 		uint32_t t1 = tx / 1000;
 

@@ -315,7 +315,7 @@ bool Posdb::verify ( char *coll ) {
 	if ( got != count ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
-		log ("db: Out of first %"INT32" records in posdb, only %"INT32" beint32_t "
+		log ("db: Out of first %"INT32" records in posdb, only %"INT32" belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "

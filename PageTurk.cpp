@@ -2676,7 +2676,7 @@ bool Msg1e::processLoop ( ) {
 	HashTableX *ht = &g_lockerTable;
 	// . make sure this is the url they had locked
 	// . prevents turk from turking a url they should not be
-	// . try to find the lock that beint32_ts to us
+	// . try to find the lock that belongs to us
 	int32_t tslot = ht->getSlot(&uh48);
 	// assume no lock
 	TurkLock *tk = NULL;
@@ -3219,7 +3219,7 @@ bool Msg1e::processLoop ( ) {
 		HashTableX *ht = &g_lockerTable;
 		// . make sure this is the url they had locked
 		// . prevents turk from turking a url they should not be
-		// . try to find the lock that beint32_ts to us
+		// . try to find the lock that belongs to us
 		int32_t tslot = ht->getSlot(&uh48);
 		// assume no lock
 		TurkLock *tk = NULL;

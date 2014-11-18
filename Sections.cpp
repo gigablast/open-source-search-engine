@@ -6276,7 +6276,7 @@ bool Sections::setSentFlagsPart2 ( ) {
 		int32_t na = si->m_alnumPosB - si->m_alnumPosA ;
 		// need at least two words
 		if ( na <= 1 ) continue;
-		// skip if too int32_t and not capitalized
+		// skip if too long and not capitalized
 		if ( na > 7 && (si->m_sentFlags & SENT_MIXED_CASE ) ) continue;
 		// get FIRST word in potential event title
 		int32_t i = si->m_senta;
@@ -6345,7 +6345,7 @@ int32_t hasTitleWords ( sentflags_t sflags ,
 
 	// need at least two alnum words
 	if ( alnumCount <= 0 ) return 0;
-	// skip if too int32_t and not capitalized
+	// skip if too long and not capitalized
 	if ( alnumCount > 7 && (sflags & SENT_MIXED_CASE ) ) return 0;
 
 	// sanity. we need s_pit to be initialized
@@ -7122,7 +7122,7 @@ int32_t hasTitleWords ( sentflags_t sflags ,
 		"|bowling",
 		"*$bowl", // orange bowl, super bowl
 		"|singing", // Children's+Choirs+Singing
-		"|sing along", // Messiah+Sing-Aint32_t
+		"|sing along", // Messiah+Sing-Along
 		"|singalong",
 		"^sing", // community sing
 		"$singers", // Lakeside+Singers+at+NCC
@@ -7459,7 +7459,7 @@ int32_t hasTitleWords ( sentflags_t sflags ,
 		"$polka", 
 		"$musical", // menopause the musical
 		"$swing",
-		"$miint32_ta", // type of dance
+		"$milonga", // type of dance
 		"$bachata",
 		"|salsa", // Salsa in New Mexico
 		"$tap",
@@ -11177,7 +11177,7 @@ Section *Sections::insertSubSection ( Section *parentArg , int32_t a , int32_t b
 	}
 
 	// . try using section before us if it is contained by "si"
-	// . like in the case when word #a beint32_ts to the root section
+	// . like in the case when word #a belongs to the root section
 	//   and there are thousands of child sections of the root before "a"
 	//   we really want to get the child section of the root before us
 	//   as the prev section, "si", otherwise the 2nd for loop below here
@@ -15803,7 +15803,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// breathe
 		QUICKPOLL(m_niceness);
 		// . if its a and us, skip
-		// . BUT if we are root then really this tag beint32_ts to
+		// . BUT if we are root then really this tag belongs to
 		//   our first child, so make an exception for root!
 		if ( i == a && m_tids[i] && (sk->m_parent) ) continue;
 
@@ -15819,7 +15819,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			if ( ws->m_parent->m_a != ws->m_a ) break;
 			if ( ws->m_parent == sk ) break;
 		}
-		// if it beint32_ts to another sections, print that section
+		// if it belongs to another sections, print that section
 		if ( ws != sk ) {
 			// print out this subsection
 			printSectionDiv ( ws , format ); // forProCog );
@@ -17033,7 +17033,7 @@ bool Sections::setTableRowsAndCols ( Section *tableSec ) {
 		for ( ; kid && kid->m_b <= maxb ; kid = kid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// skip if beint32_ts to another table already
+			// skip if belongs to another table already
 			if ( kid->m_tableSec &&
 			     tableSec->contains ( kid->m_tableSec) ) 
 				continue;
@@ -17193,7 +17193,7 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 		for ( ; kid && kid->m_b <= sn->m_b ; kid = kid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// skip if does not beint32_t to our table
+			// skip if does not belong to our table
 			if ( kid->m_tableSec &&
 			     kid->m_tableSec != sn->m_tableSec ) continue;
 			// set it
@@ -17247,7 +17247,7 @@ bool Sections::setTableHeaderBits ( Section *ts ) {
 		for ( ; kid && kid->m_b <= sn->m_b ; kid = kid->m_next ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// skip if does not beint32_t to our table
+			// skip if does not belong to our table
 			if ( kid->m_tableSec != ts ) continue;
 			// set his junk
 			//kid->m_colNum         = sn->m_colNum;
@@ -17441,7 +17441,7 @@ bool Sectiondb::verify ( char *coll ) {
 	}
 	if ( got != count ) {
 		log ("db: Out of first %"INT32" records in sectiondb, "
-		     "only %"INT32" beint32_t to our group.",count,got);
+		     "only %"INT32" belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "

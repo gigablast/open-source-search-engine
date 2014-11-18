@@ -1078,7 +1078,7 @@ void Blaster::gotDoc3 ( void *state, TcpSocket *s){
 		// The site name is in st->m_u2.getSite()
 		// But copy it because it is not nulled.
 		char tmp[1024];
-		//char site[1024];//how int32_t could a site be?
+		//char site[1024];//how long could a site be?
 		int32_t siteLen = 0;
 		char *site    = getHostFast(st->m_u2,&siteLen);
 		char c = site[siteLen];

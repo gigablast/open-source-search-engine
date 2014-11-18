@@ -3130,7 +3130,7 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 		"<boxMaxLon>-105.2018661</boxMaxLon>\n"
 		"\n"
 
-		"# This is how int32_t the search took in milliseconds\n"
+		"# This is how long the search took in milliseconds\n"
 		"<responseTime>0</responseTime>\n"
 		"\n"
 
@@ -3166,7 +3166,7 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 		"# This is the summary of the event\n"
 		"<eventDesc>\n"
 		"\t<![CDATA["
-		"\tNot just by cheering me on when I announce myself or the general radness I've come to expect from you, but the fact that there was a friggin' waiting list of teams to buy me drinks. All of you knew Vanilla Ice, which I suppose says something about the int32_tevity of crap."
+		"\tNot just by cheering me on when I announce myself or the general radness I've come to expect from you, but the fact that there was a friggin' waiting list of teams to buy me drinks. All of you knew Vanilla Ice, which I suppose says something about the longevity of crap."
 		"]]>\n"
 		"<![CDATA["
 		"Sorry Lauryn Hill, a white boy named Bob Van Winkle has stood the <font style=\"color:black;background-color:yellow\">test</font> of time better than you."
@@ -3185,7 +3185,7 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 		"</eventDateIntervalsUTC>\n"
 		"\n"
 
-		"# This is how int32_t until the next occurence of this event\n"
+		"# This is how long until the next occurence of this event\n"
 		"<eventCountdown>"
 		"<![CDATA[ in 5 hours 2 minutes on Thu, Mar 22 @ 9pm ]]>"
 		"</eventCountdown>\n"
@@ -3469,12 +3469,12 @@ bool HttpServer::processSquidProxyRequest ( TcpSocket *sock, HttpRequest *hr) {
 	// sanity
 	if ( hr->m_squidProxiedUrlLen > MAX_URL_LEN )
 		// what is ip lookup failure for proxy?
-		return sendErrorReply ( sock,500,"Url too int32_t (via Proxy)" );
+		return sendErrorReply ( sock,500,"Url too long (via Proxy)" );
 
 	int32_t maxRequestLen = MAX_URL_LEN + PADDING_SIZE;
 	if ( sock->m_readOffset >= maxRequestLen )
 		// what is ip lookup failure for proxy?
-		return sendErrorReply(sock,500,"Request too int32_t (via Proxy)");
+		return sendErrorReply(sock,500,"Request too long (via Proxy)");
 
 	SquidState *sqs;
 	try { sqs = new (SquidState) ; }

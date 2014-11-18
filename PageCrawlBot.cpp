@@ -1336,7 +1336,7 @@ char *getNewCollName ( ) { // char *token , int32_t tokenLen ) {
 	// include a +5 for "-test"
 	// include 16 for crawlid (16 char hex #)
 	//if ( tokenLen + 16 + 5>= MAX_COLL_LEN ) { char *xx=NULL;*xx=0;}
-	// ensure the crawlid is the full 16 characters int32_t so we
+	// ensure the crawlid is the full 16 characters long so we
 	// can quickly extricate the crawlid from the collection name
 	//memcpy ( s_collBuf, token, tokenLen );
 	//sprintf(s_collBuf + tokenLen ,"-%016"XINT64"",crawlId64);
@@ -2896,7 +2896,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	for ( int32_t i = 0 ; summary && i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
-		// must beint32_t to us
+		// must belong to us
 		if ( strcmp(cx->m_diffbotToken.getBufStart(),token) )
 			continue;
 
@@ -4310,7 +4310,7 @@ bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
-		// must beint32_t to us
+		// must belong to us
 		if ( strcmp(cx->m_diffbotToken.getBufStart(),token) )
 			continue;
 		// skip if collection we are putting alias on

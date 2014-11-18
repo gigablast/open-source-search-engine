@@ -194,7 +194,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	if ( g_conf.m_logTimingQuery ) m_debug = 1;
 
 
-	// time how int32_t it takes to get the term freqs
+	// time how long it takes to get the term freqs
 	if ( m_debug ) {
 		// show the query terms
 		printTerms ( );
@@ -340,7 +340,7 @@ bool Msg3a::gotCacheReply ( ) {
 		}
 	}
 
-	// time how int32_t to get each shard's docids
+	// time how long to get each shard's docids
 	if ( m_debug )
 		m_startTime = gettimeofdayInMilliseconds();
 
@@ -573,7 +573,7 @@ void gotReplyWrapper3a ( void *state , void *state2 ) {
 	Host *h = m->m_replyingHost;
 	// i guess h is NULL on error?
 	if ( h ) {
-		// how int32_t did it take from the launch of request until now
+		// how long did it take from the launch of request until now
 		// for host "h" to give us the docids?
 		int64_t delta = (endTime - m->m_replyLaunchTime);
 		// . sanity check
@@ -835,7 +835,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 // . sets g_errno and returns true on error
 bool Msg3a::mergeLists ( ) {
 
-	// time how int32_t the merge takes
+	// time how long the merge takes
 	if ( m_debug ) {
 		logf( LOG_DEBUG, "query: msg3a: --- Final DocIds --- " );
 		m_startTime = gettimeofdayInMilliseconds();
@@ -1263,7 +1263,7 @@ bool Msg3a::mergeLists ( ) {
  doneMerge:
 
 	if ( m_debug ) {
-		// show how int32_t it took
+		// show how long it took
 		logf( LOG_DEBUG,"query: msg3a: [%"PTRFMT"] merged %"INT32" docs from %"INT32" "
 		      "shards in %"UINT64" ms. "
 		      ,

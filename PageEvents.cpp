@@ -209,7 +209,7 @@ public:
 	char         m_doRobotChecking;
 	Query        m_qq3;
         int32_t         m_numDocIds;
-	int64_t    m_took; // how int32_t it took to get the results
+	int64_t    m_took; // how long it took to get the results
 	//SafeBuf      m_interestCookies;
 	char         m_needSave;
 	bool         m_didSave;
@@ -17253,11 +17253,11 @@ bool sendPageAddEvent ( TcpSocket *s , HttpRequest *r ) {
 						   "temporarily disabled");
 	}
 
-	// can't be too int32_t, that's obnoxious
+	// can't be too long, that's obnoxious
 	if ( urlLen > MAX_URL_LEN ) {
 		g_errno = EBUFTOOSMALL;
-		g_msg = " (error: url too int32_t)";
-		return g_httpServer.sendErrorReply(s,500,"url too int32_t");
+		g_msg = " (error: url too long)";
+		return g_httpServer.sendErrorReply(s,500,"url too long");
 	}
 
 	// get the collection
@@ -18483,7 +18483,7 @@ bool sendPageAbout2 ( State3 *st3 ) {
 		"<boxMaxLon>-105.2018661</boxMaxLon>\n"
 		"\n"
 
-		"# This is how int32_t the search took in milliseconds\n"
+		"# This is how long the search took in milliseconds\n"
 		"<responseTime>0</responseTime>\n"
 		"\n"
 
@@ -18519,7 +18519,7 @@ bool sendPageAbout2 ( State3 *st3 ) {
 		"# This is the summary of the event\n"
 		"<eventDesc>\n"
 		"\t<![CDATA["
-		"\tNot just by cheering me on when I announce myself or the general radness I've come to expect from you, but the fact that there was a friggin' waiting list of teams to buy me drinks. All of you knew Vanilla Ice, which I suppose says something about the int32_tevity of crap."
+		"\tNot just by cheering me on when I announce myself or the general radness I've come to expect from you, but the fact that there was a friggin' waiting list of teams to buy me drinks. All of you knew Vanilla Ice, which I suppose says something about the longevity of crap."
 		"]]>\n"
 		"<![CDATA["
 		"Sorry Lauryn Hill, a white boy named Bob Van Winkle has stood the <font style=\"color:black;background-color:yellow\">test</font> of time better than you."
@@ -18538,7 +18538,7 @@ bool sendPageAbout2 ( State3 *st3 ) {
 		"</eventDateIntervalsUTC>\n"
 		"\n"
 
-		"# This is how int32_t until the next occurence of this event\n"
+		"# This is how long until the next occurence of this event\n"
 		"<eventCountdown>"
 		"<![CDATA[ in 5 hours 2 minutes on Thu, Mar 22 @ 9pm ]]>"
 		"</eventCountdown>\n"

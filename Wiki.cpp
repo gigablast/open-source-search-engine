@@ -584,7 +584,7 @@ void Wiki::doneReadingWiki ( ) {
 		*eol = c;
 		if ( pp ) continue;
 		//
-		// BUT here we skip if too int32_t!
+		// BUT here we skip if too long!
 		// we don't want to send insanely int32_t queries to goog/yhoo
 		//
 		int32_t size =  w.getWord(nw-1) - w.getWord(0);

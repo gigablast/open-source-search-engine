@@ -1732,7 +1732,7 @@ void UdpSlot::readAck ( int sock , int32_t dgramNum , int64_t now ) {
 		if ( delta > 64000 ) delta = 64000;
 		int32_t bucket = getHighestLitBit ( (uint16_t)delta );
 		g_stats.m_msgTotalSentByTime [m_msgType][n][r][bucket]++;
-		// set the queued time for stats on how int32_t it sits in the
+		// set the queued time for stats on how long it sits in the
 		// queue.
 		m_queuedTime = now;
 	}

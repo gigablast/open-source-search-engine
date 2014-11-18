@@ -4571,7 +4571,7 @@ int32_t Operand::set ( int32_t a , int32_t b , QueryWord *qwords , int32_t level
 
 		// . does it have an unsigned phrase? or in phrase term bits
 		// . might have a phrase that's not a QueryTerm because
-		//   query is too int32_t
+		//   query is too long
 		if ( qw->m_phraseId && qw->m_queryPhraseTerm &&
 		     qw->m_phraseSign ) {
 			//qvec_t e =qw->m_queryPhraseTerm->m_explicitBit;
@@ -4585,7 +4585,7 @@ int32_t Operand::set ( int32_t a , int32_t b , QueryWord *qwords , int32_t level
 		if ( qw->m_ignoreWord ) continue;
 		// . OR in the word term bits
 		// . might be a word that's not a QueryTerm because
-		//   query is too int32_t
+		//   query is too long
 		if ( qw->m_queryWordTerm ) {
 			//qvec_t e = qw->m_queryWordTerm->m_explicitBit;
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;

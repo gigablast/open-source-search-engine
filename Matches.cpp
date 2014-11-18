@@ -66,7 +66,7 @@ bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , int32_t i ) {
 	// do not include if in a quote and does not start it!!
 	//if ( qw->m_inQuotes && i-1 != qw->m_quoteStart ) return false;
 	if ( qw->m_quoteStart >= 0 && qw->m_quoteStart != qwn ) return false;
-	// if query is too int32_t, a query word can be truncated!
+	// if query is too long, a query word can be truncated!
 	// this happens for some words if they are ignored, too!
 	if ( ! qw->m_queryWordTerm && ! qw->m_queryPhraseTerm ) return false;
 	// after a NOT operator?

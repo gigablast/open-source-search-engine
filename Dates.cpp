@@ -460,7 +460,7 @@
 
 // http://www.meetup.com/Ballroom-Dance-in-Albuquerque/
 // - has a list of languages (language menu)
-// - has a trademark blurb "trademarks beint32_t to their respective owners"
+// - has a trademark blurb "trademarks belong to their respective owners"
 // - has a "Read more" link that goes to another page at end of event desc.
 // * LANGUAGE MENU
 
@@ -689,7 +689,7 @@
 // - "Asst." should be in Abbreviations.h list so that "Asst. Organizers:"
 //   will be just one section, and will have tiny title and desc. score since
 //   prceeds a colon.
-// - "Trademarks beint32_t to their..." will have high SV_DUP count and therefore
+// - "Trademarks belong to their..." will have high SV_DUP count and therefore
 //   minimal title and desc. score.
 // - language names in a list should have minimal title and desc score.
 //   but probably no need to detect since SV_DUP will be high eventually.
@@ -1032,7 +1032,7 @@ apply to renegade links as well?
 //              * CLOCK DETECTION
 //              * RESPIDER TESTBED
 
-// http://www.dukecityfix.com/events/shelter-space-place-beint32_ting
+// http://www.dukecityfix.com/events/shelter-space-place-belonging
 //              has "808 park ave sw albuquerque" but no state. so we
 //              should assume its abq NM since that is the only city with that
 //              name.
@@ -1085,7 +1085,7 @@ apply to renegade links as well?
 // - streets like "3 Espacios"
 // - streets like "4 Barack"
 //              we need partition detection here. seems like all events are
-//              unclear on which addresses beint32_t to them!
+//              unclear on which addresses belong to them!
 //  - misses "opens on Dec 20th and runs through Feb 7th". needs to
 //           support "runs" so we can make that date a single range.
 
@@ -3287,7 +3287,7 @@ bool Dates::setPart1 ( //char       *u        ,
 	// . to ensure that the "qatest123" subdir re-injects docs exactly the
 	//   same, we need to use this date now
 	int32_t now = nd->m_spideredTime; 
-	// how int32_t has elapsed since we downloaded it last approx.?
+	// how long has elapsed since we downloaded it last approx.?
 	int32_t elapsed = 0; 
 	if ( od ) elapsed = now - od->m_spideredTime;
 	// sanity check.
@@ -6343,7 +6343,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     di->m_b+1 < nw &&
 		     ( strncasecmp("services",wptrs[di->m_b+1],8)==0 ||
 		       //strncasecmp("session" ,wptrs[di->m_b+1],7)==0 ||
-		       //strncasecmp("miint32_ta" ,wptrs[di->m_b+1],7)==0 ||
+		       //strncasecmp("milonga" ,wptrs[di->m_b+1],7)==0 ||
 		       //strncasecmp("special" ,wptrs[di->m_b+1],7)==0 ||
 		       // sunday school
 		       strncasecmp("school"  ,wptrs[di->m_b+1],6)==0 ) )
@@ -7332,7 +7332,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//
 	////////////////////
 	// 
-	// fixes "Tuseday Night Miint32_ta" so we set SF_RECURRING_DOW which
+	// fixes "Tuseday Night Milonga" so we set SF_RECURRING_DOW which
 	// means that it happens every tuesday night
 	for ( int32_t i = 0 ; i < m_numDatePtrs ; i++ ) {
 		// breathe
@@ -7697,7 +7697,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 	// now call it again and ignore tags this time
 	// only do this after we have implied sections
 	// otherwise we get bad pairing of dates from different sections
-	// that do not beint32_t together!
+	// that do not belong together!
 	// "Nov 13-15 (last showing) 1pm,3pm<br><br>Nov 25th no showing"
 	// ends up paring 1pm,3pm with Nov 25th!! which is wrong!!
 	// for http://www.glsc.org/visit/omnimax.php?id=45
@@ -10529,7 +10529,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 		// how'd this happen?
 		if ( ! ds ) continue;
 		// ok, now scan all dates in this section. they must all
-		// beint32_t to "di" in order for "di" to be tight.
+		// belong to "di" in order for "di" to be tight.
 		int32_t fdi = ds->m_firstDate;
 		// assume "di" is a tight date
 		bool tight = true;
@@ -10545,7 +10545,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 			if ( dj->m_a >= ds->m_b ) break;
 			// or telescope, stop
 			if ( dj->m_type == DT_TELESCOPE ) break;
-			// skip if beint32_ts to us
+			// skip if belongs to us
 			int32_t k; for ( k = 0 ; k < di->m_numPtrs ; k++ ) {
 				// did the date "dj" match one of our
 				// date components??? break if so
@@ -10789,7 +10789,7 @@ void Dates::setDateParentsRecursive ( Date *di , Date *parent ) {
 //   then outside those subsections you have a phone number. each of the
 //   tods technically owns the phone number, but when telescoping out the
 //   tod section you do not want to own necessarily any other phone number
-//   contained by the telescoped section because it might beint32_t to another
+//   contained by the telescoped section because it might belong to another
 //   tod or list of tods entirely! that is why we have to make a hash table
 //   for every item we want to compare, so we have getPhoneTable() etc. and
 //   those tables telescope out their items until they hit a TOD section.
@@ -12099,7 +12099,7 @@ int32_t Dates::isCompatible ( Date *di ,
 
 	// . if both have daynums, then do not allow
 	// . fixes peachpundit.com from telescoping its pubdate to the
-	//   tod range in the article, which beint32_ts to a month/daynum 
+	//   tod range in the article, which belongs to a month/daynum 
 	//   mentioned in the article.
 	// . crap this also breaks signmeup.com
 	// . this breaks thewoodencow.com because the store hours section
@@ -12216,7 +12216,7 @@ int32_t Dates::isCompatible ( Date *di ,
 	// stop Sep 1 - Sep 25 [[]] Wed - Sat [[]] noon - 5pm
 	// for thewoodencow.com.
 	// s3 is "Wed - Sat" section and acc1 is "noon - 5pm" section
-	// the "noon - 5pm" beint32_ts with "Sunday" not "Wed - Sat". these two
+	// the "noon - 5pm" belongs with "Sunday" not "Wed - Sat". these two
 	// critters are in different sections i think, so this fixes that.
 	//if ( s3 && (acc1 & acc3) == acc1 ) return 0;
 	// no, header can completely contain the last date's section because
@@ -14611,7 +14611,7 @@ bool Dates::makeCompounds ( Words *words ,
 
 			// assume not "onoing"
 			//bool ongoing = false;
-			// see if they beint32_t together
+			// see if they belong together
 			for ( ; a < b ; a++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);

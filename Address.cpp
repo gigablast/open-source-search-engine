@@ -2397,7 +2397,7 @@ bool Addresses::updateAddresses ( ) {
 
 	/////////////////////////////
 	//
-	// scan for lat/int32_t coordinates
+	// scan for lat/lon coordinates
 	//
 	/////////////////////////////
 
@@ -7247,7 +7247,7 @@ bool Addresses::set2 ( ) {
 			//   which are in the section of a different street,
 			//   so fix that with this logic.
 			// . basically expand the section around "i" and see
-			//   if it beint32_ts to street #X or to street #X-1.
+			//   if it belongs to street #X or to street #X-1.
 			//
 
 			// get prev street
@@ -7729,7 +7729,7 @@ bool Addresses::set2 ( ) {
 			break;
 		}
 
-		// forget it if too int32_t
+		// forget it if too long
 		if ( alnumCount >= MAX_ALNUMS_IN_NAME )
 			lasti = -1;
 
@@ -8164,7 +8164,7 @@ bool Addresses::set2 ( ) {
 				// and do not add this one
 				//isGood = false;
 			}
-			// too int32_t is bad
+			// too long is bad
 			if ( plen >= 200 )
 				isGood = false;
 			if ( ! pp->m_hash )
@@ -13157,7 +13157,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	double lat = m_latitude;
 	double lon = m_longitude;
 
-	// geocoder lat/int32_t
+	// geocoder lat/lon
 	lat = m_geocoderLat;
 	lon = m_geocoderLon;
 	pbuf->safePrintf("<td><nobr>");
@@ -13170,7 +13170,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 		pbuf->safePrintf("%f",lon);
 	pbuf->safePrintf("</nobr></td>\n");
 
-	// then lat/int32_t
+	// then lat/lon
 	lat = m_latitude;
 	lon = m_longitude;
 	pbuf->safePrintf("<td><nobr>");
@@ -13183,7 +13183,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 		pbuf->safePrintf("%f",lon);
 	pbuf->safePrintf("</nobr></td>\n");
 
-	// IMPORTED lat/int32_t
+	// IMPORTED lat/lon
 	lat = m_importedLatitude;
 	lon = m_importedLongitude;
 	pbuf->safePrintf("<td><nobr>");
@@ -17108,7 +17108,7 @@ char *getLatLonPtrFromStr ( char *data ) {
 }
 
 void getLatLonFromStr ( char *data, double *lat, double *lon ) {
-	// set lat int32_t
+	// set lat lon
 	*lat = NO_LATITUDE;
 	*lon = NO_LONGITUDE;
 	// now point to latitude,longitude
