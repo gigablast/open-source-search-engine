@@ -874,10 +874,11 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		log(LOG_LOGIC,"db: addFile: fileId collided."); return -1; }
 	// shift everyone up if we need to fit this file in the middle somewher
 	if ( i < m_numFiles ) {
-		memmove ( &m_files  [i+1] , &m_files  [i] ,(m_numFiles-i) *4 );
-		memmove ( &m_fileIds[i+1] , &m_fileIds[i] ,(m_numFiles-i) *4 );
-		memmove ( &m_fileIds2[i+1], &m_fileIds2[i],(m_numFiles-i) *4 );
-		memmove ( &m_maps   [i+1] , &m_maps   [i] ,(m_numFiles-i) *4 );
+		int32_t size = (m_numFiles-i)*sizeof(BigFile *);
+		memmove ( &m_files  [i+1] , &m_files  [i] , size);
+		memmove ( &m_fileIds[i+1] , &m_fileIds[i] , size);
+		memmove ( &m_fileIds2[i+1], &m_fileIds2[i], size);
+		memmove ( &m_maps   [i+1] , &m_maps   [i] , size);
 	}
 	// insert this file into position #i
 	m_fileIds  [i] = id;
