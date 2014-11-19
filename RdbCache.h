@@ -275,6 +275,7 @@ class RdbCache {
 	bool load ( char *dbname );
 	bool save ( bool useThreads );
 	bool save_r ( );
+	bool save2_r ( int fd );
 	void threadDone ( );
 	bool load   ( );
 	int32_t m_saveError;

@@ -1423,6 +1423,15 @@ bool RdbCache::save_r ( ) {
 	if ( fd < 0 )
 		return log("db: Had opening file to save cache to: %s.", 
 		    mstrerror(errno));
+
+	bool status = save2_r ( fd );
+	
+	close ( fd );
+
+	return status;
+}
+
+bool RdbCache::save2_r ( int fd ) {
 	int n;
 	int32_t off = 0;
 	// general info
@@ -1470,7 +1479,7 @@ bool RdbCache::save_r ( ) {
 	int32_t i = 0;
 	while ( i < m_numPtrsMax )
 		if ( ! saveSome_r ( fd, &i , &off) ) return false;
-	close ( fd ) ;
+	//close ( fd ) ;
 	return true;
 }
 
@@ -1481,6 +1490,7 @@ bool RdbCache::saveSome_r ( int fd , int32_t *iptr , int32_t *off ) {
 	char *bufEnd = buf + SAVEBUFSIZE;
 	// point to buf
 	char *bp = buf;
+	int32_t used = 0;
 	// make hash table ptrs relative to offset
 	for ( ; *iptr < m_numPtrsMax && bp + 4 < bufEnd ; *iptr = *iptr + 1 ) {
 		// resume at i
@@ -1509,8 +1519,15 @@ bool RdbCache::saveSome_r ( int fd , int32_t *iptr , int32_t *off ) {
 				   "engineer");
 		// store that as it is
 		*(int32_t *)bp = converted; bp += 4;
+		used++;
 		//n = pwrite ( fd ,&converted , 4 , off ) ; off += 4;
 		//if ( n != 4 ) return false;
+	}
+	if ( used != m_numPtrsUsed ) { 
+		log("cache: error saving cache. %"INT32" != %"INT32""
+		    , used , m_numPtrsUsed );
+		//char *xx=NULL;*xx=0; }
+		return false;
 	}
 	// now write it all at once
 	int32_t size = bp - buf;
@@ -1615,31 +1632,41 @@ bool RdbCache::load ( char *dbname ) {
 	if ( n != 4 ) return false;
 	n = f.read ( &m_threshold   , 4 , off ); off += 4;
 	if ( n != 4 ) return false;
-	// alloc for the hash table
-	m_ptrs = (char **) mcalloc (m_numPtrsMax * sizeof(char *),m_dbname);//"RdbCache5");
-	if ( ! m_ptrs ) return false;
-	// load 'em all in
-	int32_t total = sizeof(char *) * m_numPtrsMax ;
 
+	// load the OFFSETS into "fix"
+	int32_t total =  sizeof(int32_t) * m_numPtrsMax ;
 	SafeBuf fix;
 	fix.reserve ( total );
-
 	//n = f.read ( m_ptrs , total , off ); off += total;
 	n = f.read ( fix.getBufStart() , total , off ); off += total;
 	if ( n != total ) return false;
+	fix.setLength ( total );
 	int32_t *poff = (int32_t *)fix.getBufStart();
 
-	// convert back to absolute
+	// ptrs can be 8 bytes each, if we are 64-bit
+	m_ptrs = (char **) mcalloc (m_numPtrsMax * sizeof(char *),m_dbname);
+	if ( ! m_ptrs ) return false;
+
+
+	int32_t used = 0;
+
+	// convert offsets into pointers
 	for ( int32_t i = 0 ; i < m_numPtrsMax ; i++ , poff++ ) {
 		//uint32_t j = (SPTRTYPE) m_ptrs[i];
 		// is it a NULL?
 		//if ( j == -1 ) { m_ptrs[i] = NULL; continue; }
 		if ( *poff == -1 ) { m_ptrs[i] = NULL; continue; }
+		// sanity
+		if ( *poff >= m_numBufs * BUFSIZE ) { char *xx=NULL;*xx=0;}
 		// get buffer
 		int32_t bufNum = (*poff) / BUFSIZE;
 		char *p = m_bufs[bufNum] + (*poff) % BUFSIZE ;
 		// re-assign
 		m_ptrs[i] = p;
+		// count it
+		used++;
+		// see what is there
+		
 		// debug msg
 		//key_t kk = *(key_t *)p;
 		//log("loaded k.n1=%"UINT32" k.n0=%"UINT64"",kk.n1,kk.n0);
@@ -1648,6 +1675,11 @@ bool RdbCache::load ( char *dbname ) {
 		//	    kk.n1,kk.n0, 20+*(int32_t *)(p+sizeof(key_t)+4));
 		//else
 		//	log("loaded k.n1=%"UINT32" k.n0=%"UINT64"", kk.n1,kk.n0);
+	}
+	if ( used != m_numPtrsUsed ) { 
+		log("cache: error loading cache. %"INT32" != %"INT32""
+		    , used , m_numPtrsUsed );
+		return false;
 	}
 	m_needsSave = false;
 	return true;
