@@ -4026,6 +4026,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	return info;
 }
 
+/*
 static Inlink *s_orig;
 static Inlink  s_inlink;
 
@@ -4063,8 +4064,9 @@ Inlink *LinkInfo::getNextInlink ( Inlink *k ) {
 	// and return that
 	return &s_inlink;
 }
+*/
 
-Inlink *LinkInfo::getNextInlink2 ( Inlink *k ) {
+Inlink *LinkInfo::getNextInlink ( Inlink *k ) {
 	if ( this == NULL ) return NULL;
 	// if none, return NULL
 	if ( m_numStoredInlinks == 0 ) return NULL;
@@ -4080,7 +4082,9 @@ Inlink *LinkInfo::getNextInlink2 ( Inlink *k ) {
 	// get the inlink to return
 	Inlink *next = (Inlink *)((char *)k + size);
 	// return NULL if breached
-	if ( (char *)next >= ((char *)this)+m_lisize ) return NULL;
+	int64_t x = (char *)next - (char *)this;
+	// was that the end of them?
+	if ( x >= m_lisize ) return NULL;
 	// otherwise, we are still good
 	return next;
 }

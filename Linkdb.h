@@ -761,10 +761,9 @@ class LinkInfo {
 	void   updateStringPtrs ( );
 
 	// this returns a ptr to a static Inlink in some cases, so beware
-	class Inlink *getNextInlink ( class Inlink *k ) ;
+	//class Inlink *getNextInlink ( class Inlink *k ) ;
 
-	// do not call this one
-	class Inlink *getNextInlink2 ( class Inlink *k ) ;
+	class Inlink *getNextInlink ( class Inlink *k ) ;
 
 	bool getItemXml ( Xml *xml , int32_t niceness ) ;
 
