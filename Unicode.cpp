@@ -76,13 +76,15 @@ int gbiconv_close(iconv_t cd) {
 
 void gbiconv_reset(){
 	for (int32_t i=0;i<s_convTable.getNumSlots();i++){
-		int32_t key = *(int32_t *)s_convTable.getKey(i);
-		if (!key) continue;
-		iconv_t conv = (iconv_t)s_convTable.getValueFromSlot(i);
-		if (!conv) continue;
+		//int32_t key = *(int32_t *)s_convTable.getKey(i);
+		//if (!key) continue;
+		if ( ! s_convTable.m_flags[i] ) continue;
+		iconv_t *pconv = (iconv_t *)s_convTable.getValueFromSlot(i);
+		if (! pconv) continue;
+		iconv_t iconv = *pconv;
 		//logf(LOG_DEBUG, "iconv: freeing iconv: 0x%x", (int)iconv);
-		g_mem.rmMem((void*)conv, 52, "iconv");
-		libiconv_close(conv);
+		g_mem.rmMem((void*)iconv, 52, "iconv");
+		libiconv_close(iconv);
 	}
 	s_convTable.reset();
 }

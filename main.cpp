@@ -1029,11 +1029,15 @@ int main2 ( int argc , char *argv[] ) {
 		cmd = argv[1];
 	}
 
+	int32_t arch = 64;
+	if ( sizeof(char *) == 4 ) arch = 32;
+
 	// help
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
 		fprintf(stdout,"Gigablast Version: %s\n",getVersion());
+		fprintf(stdout,"Gigablast Architecture: %"INT32"-bit\n",arch);
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -3051,6 +3055,8 @@ int main2 ( int argc , char *argv[] ) {
 
 	// log the version
 	log(LOG_INIT,"conf: Gigablast Version: %s",getVersion());
+	log(LOG_INIT,"conf: Gigablast Architecture: %"INT32"-bit\n",arch);
+
 
 	// show current working dir
 	log("host: Working directory is %s",workingDir);
