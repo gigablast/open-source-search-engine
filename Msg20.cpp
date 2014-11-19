@@ -717,7 +717,7 @@ int32_t Msg20Reply::deserialize ( ) {
 		strPtr++;
 	}
 	// sanity
-	if ( ptr_linkInfo && ((LinkInfo *)ptr_linkInfo)->m_size !=
+	if ( ptr_linkInfo && ((LinkInfo *)ptr_linkInfo)->m_lisize !=
 		    size_linkInfo ) { 
 		log("xmldoc: deserialize msg20 reply corruption error");
 		log("xmldoc: DO YOU NEED TO NUKE CACHEDB.DAT?????");

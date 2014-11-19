@@ -3340,7 +3340,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 	//   and stale. Both are really only for BuzzLogic.
 	LinkInfo *info = (LinkInfo *)mr->ptr_linkInfo;//inlinks;
 	// sanity
-	if ( info && mr->size_linkInfo != info->m_size ){char *xx=NULL;*xx=0; }
+	if ( info && mr->size_linkInfo!=info->m_lisize ){char *xx=NULL;*xx=0; }
 	// NULLify if empty
 	if ( mr->size_linkInfo <= 0 ) info = NULL;
 	// do not both if none
@@ -7408,7 +7408,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , int32_t catId ,
 	sb->htmlEncode ( qstr , qlen , false );
 
 	// if it was an advanced search, this can be empty
-	if ( qlen == 0 && si->m_displayQuery )
+	if ( qlen == 0 && si && si->m_displayQuery )
 		sb->htmlEncode ( si->m_displayQuery );
 
 	sb->safePrintf ("\">"

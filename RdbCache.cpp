@@ -795,7 +795,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	if ( need >= m_totalBufSize )
 		return log(LOG_INFO,
 			   "db: Could not fit record of %"INT32" bytes into %s "
-			   "cache. Max size is %"INT64".",need,m_dbname,
+			   "cache. Max size is %"INT32".",need,m_dbname,
 			   m_totalBufSize);
 	if ( need >= BUFSIZE )
 		return log(LOG_INFO,

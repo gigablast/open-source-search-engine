@@ -2714,6 +2714,11 @@ int64_t Rdb::getNumGlobalRecs ( ) {
 // . return number of positive records - negative records
 int64_t Rdb::getNumTotalRecs ( bool useCache ) {
 
+	// are we catdb or statsdb? then we have no associated collections
+	// because we are used globally, by all collections
+	if ( m_isCollectionLess )
+		return m_collectionlessBase->getNumTotalRecs();
+
 	// this gets slammed w/ too many collections so use a cache...
 	//if ( g_collectiondb.m_numRecsUsed > 10 ) {
 	int32_t now = 0;

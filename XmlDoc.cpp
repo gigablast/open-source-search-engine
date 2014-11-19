@@ -3240,7 +3240,7 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 			len2 = k2->size_linkText - 1; // exclude \0
 			if ( len1 != len2 )
 				goto changed;
-			if ( memcmp(s1,s2,len1) != 0 )
+			if ( len1 > 0 && memcmp(s1,s2,len1) != 0 )
 				goto changed;
 		}
 		// no change in link text, look for change in page content now
@@ -13562,7 +13562,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( cr->m_isCustomCrawl ) {
 		m_linkInfo1Valid = true;
 		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
-		s_dummy2.m_size = sizeof(LinkInfo);
+		s_dummy2.m_lisize = sizeof(LinkInfo);
 		ptr_linkInfo1  = &s_dummy2;
 		size_linkInfo1 = sizeof(LinkInfo);
 		return ptr_linkInfo1;
@@ -13576,7 +13576,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( *ip == 0 || *ip == -1 ) {
 		m_linkInfo1Valid = true;
 		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
-		s_dummy2.m_size = sizeof(LinkInfo);
+		s_dummy2.m_lisize = sizeof(LinkInfo);
 		ptr_linkInfo1  = &s_dummy2;
 		size_linkInfo1 = sizeof(LinkInfo);
 		return ptr_linkInfo1;

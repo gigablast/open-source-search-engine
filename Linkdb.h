@@ -733,8 +733,8 @@ class LinkInfo {
 
  public:
 
-	int32_t   getStoredSize  ( ) { return m_size; };
-	int32_t   getSize        ( ) { return m_size; };
+	int32_t   getStoredSize  ( ) { return m_lisize; };
+	int32_t   getSize        ( ) { return m_lisize; };
 	time_t getLastUpdated ( ) { return m_lastUpdated; };
 
 	//int32_t   getNumTotalInlinks   ( ) { 
@@ -798,7 +798,8 @@ class LinkInfo {
 	char       m_numInlinksInternal;
 	char       m_reserved1; // was m_siteRootQuality
 	char       m_reserved2;
-	int32_t       m_size;
+	// includes Inlinks in m_buf[] below
+	int32_t       m_lisize;
 	time_t     m_lastUpdated;
 	// this is precisely how many inlinks we stored in m_buf[] below
 	int32_t       m_numStoredInlinks;//m_numTotalInlinks;
@@ -827,18 +828,20 @@ class LinkInfo {
 };
 
 
+#define MAXINLINKSTRINGBUFSIZE 2048
+
 class Inlink { // : public Msg {
 
  public:
 
-	int32_t  *getFirstSizeParm () { return &size_urlBuf; };
-	int32_t  *getLastSizeParm  () { return &size_rssItem; };
-	int32_t  *getFirstOffPtr   () { return &off_urlBuf; };
-	int32_t   getBaseSize      () { return sizeof(Inlink);};
-	char  *getStringBuf     () { return m_buf; };
+	//int32_t  *getFirstSizeParm () { return &size_urlBuf; };
+	//int32_t  *getLastSizeParm  () { return &size_rssItem; };
+	//int32_t  *getFirstOffPtr   () { return &off_urlBuf; };
+	//int32_t   getBaseSize      () { return sizeof(Inlink);};
+	//char  *getStringBuf     () { return m_buf; };
 
-	int32_t getBaseNumStrings() { 
-		return (char **)&size_urlBuf - (char **)&off_urlBuf; };
+	//int32_t getBaseNumStrings() { 
+	//	return (char **)&size_urlBuf - (char **)&off_urlBuf; };
 	
 	// zero ourselves out
 	void reset() ;
@@ -896,10 +899,10 @@ class Inlink { // : public Msg {
 	// . int32_t     m_reserved1           ;
 	// . how many strings do we have?
 	// . makes it easy to add new strings later
-	uint16_t   m_numStrings          ;
+	uint16_t   m_reserved_NumStrings          ;
 	// . and were our first string ptrs starts
 	// . allows us to set ourselves from an "old" Inlink 
-	uint16_t   m_firstStrPtrOffset   ;
+	uint16_t   m_reserved_FirstStrPtrOffset   ;
 
 	uint16_t   m_numOutlinks         ;
 	// i guess no need to store this stuff if we are storing the url
@@ -1029,7 +1032,7 @@ class Inlink { // : public Msg {
 	int32_t       size_templateVector   ;
 
 
-	char       m_buf[0]              ;
+	char       m_buf[MAXINLINKSTRINGBUFSIZE] ;
 };
 
 // . this function is normally called like "info = makeLinkInfo()"

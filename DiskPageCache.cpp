@@ -1194,7 +1194,10 @@ void DiskPageCache::writeToCache( int32_t bigOff, int32_t smallOff,  void *inBuf
 	memcpy(p + smallOff, inBuf, size);
 }
 
-void DiskPageCache::readFromCache( void *outBuf, int32_t bigOff, int32_t smallOff,
+// . store cached disk info into "outBuf". up to "size" bytes of it.
+void DiskPageCache::readFromCache( void *outBuf, 
+				   int32_t bigOff, 
+				   int32_t smallOff,
 				   int32_t size ){
 #ifdef GBUSESHM
 	if ( m_useSHM ) {

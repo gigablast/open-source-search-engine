@@ -708,7 +708,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 
 	// set up the hashtable if our first time
 	if ( ! g_lineTable.isInitialized() )
-		g_lineTable.set ( 8,4,256,NULL,0,false,MAX_NICENESS,"lht25");
+		g_lineTable.set ( 8,sizeof(Msg25Request *),256,
+				  NULL,0,false,MAX_NICENESS,"lht25");
 
 	// . if already working on this same request, wait for it, don't
 	//   overload server with duplicate requests
@@ -976,7 +977,8 @@ bool Msg25::getLinkInfo2( char      *site                ,
 	m_adBanTable.reset();
 	m_adBanTable.set(4,0,0,NULL,0,false,m_niceness,"adbans");
 
-	m_table.set (4,4,0,NULL,0,false,m_niceness,"msg25tab");
+	m_table.set (4,sizeof(NoteEntry *),0,
+		     NULL,0,false,m_niceness,"msg25tab");
 
 	QUICKPOLL(m_niceness);
 
@@ -3934,7 +3936,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	
 	// set our header
 	info->m_version                = 0;
-	info->m_size                   = need;
+	info->m_lisize                 = need;
 	info->m_lastUpdated            = lastUpdateTime;//getTimeGlobal();
 	// how many Inlinks we stored in info->m_buf[]
 	info->m_numStoredInlinks       = count;
@@ -4024,8 +4026,8 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	return info;
 }
 
-static Inlink  s_inlink;
 static Inlink *s_orig;
+static Inlink  s_inlink;
 
 // if we are an old version, we have to set s_inlink and return
 // a ptr to that
@@ -4037,16 +4039,16 @@ Inlink *LinkInfo::getNextInlink ( Inlink *k ) {
 	// if none, we are done
 	if ( ! p ) return p;
 	// sanity checks
-	if (p->m_numStrings==0 && p->m_firstStrPtrOffset){char *xx=NULL;*xx=0;}
-	if (p->m_numStrings && p->m_firstStrPtrOffset==0){char *xx=NULL;*xx=0;}
+	//if(p->m_numStrings==0&& p->m_firstStrPtrOffset){char *xx=NULL;*xx=0;}
+	//if(p->m_numStrings&& p->m_firstStrPtrOffset==0){char *xx=NULL;*xx=0;}
 	// fix this for the really old guy. we did not store these two
 	// things initially, but they should have been set to this...
 	// luckily, we had a "reserved1" int32_t...
-	if ( p->m_numStrings == 0 ) {
-		// urlBuf,linkText,surroudingText,rssItem
-		p->m_numStrings        = 4;
-		p->m_firstStrPtrOffset = 64;
-	}
+	// if ( p->m_numStrings == 0 ) {
+	// 	// urlBuf,linkText,surroudingText,rssItem
+	// 	p->m_numStrings        = 4;
+	// 	p->m_firstStrPtrOffset = 64;
+	// }
 	// MDW: now we just use offsets for 64bit conversion so no ptrs...
 	// if latest, return that
 	//if ( p->m_numStrings        == p->getBaseNumStrings() &&
@@ -4078,7 +4080,7 @@ Inlink *LinkInfo::getNextInlink2 ( Inlink *k ) {
 	// get the inlink to return
 	Inlink *next = (Inlink *)((char *)k + size);
 	// return NULL if breached
-	if ( (char *)next >= ((char *)this)+m_size ) return NULL;
+	if ( (char *)next >= ((char *)this)+m_lisize ) return NULL;
 	// otherwise, we are still good
 	return next;
 }
@@ -4337,9 +4339,9 @@ void Inlink::set ( Msg20Reply *r ) {
 
 	// . these two things are used for version-based deserializing
 	// . our current version has 5 strings
-	m_numStrings         = getBaseNumStrings();
+	//m_numStrings         = getBaseNumStrings();
 	// and our current string offset
-	m_firstStrPtrOffset  = (char *)getFirstOffPtr() - (char *)this;
+	//m_firstStrPtrOffset  = (char *)getFirstOffPtr() - (char *)this;
 
 	// set ourselves now
 	m_ip                 = r->m_ip;
@@ -4525,7 +4527,7 @@ int32_t Inlink::updateStringPtrs ( char *buf ) {
 
 void Inlink::reset ( ) {
 	// clear ourselves out
-	memset ( (char *)this,0,sizeof(Inlink) );
+	memset ( (char *)this,0,sizeof(Inlink) - MAXINLINKSTRINGBUFSIZE);
 }
 
 // . set a new Inlink from an older versioned Inlink
@@ -4534,14 +4536,17 @@ void Inlink::set2 ( Inlink *old ) {
 	// clear ouselves
 	reset();
 	// copy what is legit to us
-	int fullSize = sizeof(Inlink);
+	//int fullSize = sizeof(Inlink);
 	// add in the sizes of all strings
-	int32_t  *sizePtr = getFirstSizeParm(); // &size_qbuf;
-	int32_t  *sizeEnd = getLastSizeParm (); // &size_displayMetas;
-	for ( ; sizePtr <= sizeEnd ;  sizePtr++ ) 
-		fullSize += *sizePtr;
+	//int32_t  *sizePtr = getFirstSizeParm(); // &size_qbuf;
+	//int32_t  *sizeEnd = getLastSizeParm (); // &size_displayMetas;
+	//for ( ; sizePtr <= sizeEnd ;  sizePtr++ ) 
+	//	fullSize += *sizePtr;
+
+	int fullSize = old->getStoredSize();
 	// return how many bytes we processed
 	memcpy ( (char *)this , (char *)old , fullSize );
+
 	return;
 
 	// this old way is pre-64bit
@@ -4577,18 +4582,28 @@ void Inlink::set2 ( Inlink *old ) {
 int32_t Inlink::getStoredSize ( ) {
 	//int32_t size = (int32_t)sizeof(Msg);
 	//int32_t size = getBaseSize();
-	int32_t size = m_firstStrPtrOffset;
-	// add in string offsets AND size ptrs
-	size += 8 * m_numStrings;
+	int32_t size = sizeof(Inlink) -	MAXINLINKSTRINGBUFSIZE;
+
+	size += size_urlBuf;
+	size += size_linkText;
+	size += size_surroundingText;
+	size += size_rssItem;
+	size += size_categories;
+	size += size_gigabitQuery;
+	size += size_templateVector;
+
+	return size;
+	// add in string offsets AND size, 4 bytes each
+	//size += 8 * m_numStrings;
+	// start of first offset
+	// int32_t *sizePtr = &size_urlBuf;
+	// int32_t *sizeEnd = (int32_t *)((char *)this + sizeof(Inlink));
 	// add up string buffer sizes
 	//int32_t *sizePtr = getFirstSizeParm(); // &size_qbuf;
 	//int32_t *sizeEnd = getLastSizeParm (); // &size_displayMetas;
-	int32_t *sizePtr = 
-		(int32_t *)((char *)this + m_firstStrPtrOffset+4*m_numStrings);
-	int32_t *sizeEnd = sizePtr + m_numStrings;
-	for ( ; sizePtr < sizeEnd ; sizePtr++ )
-		size += *sizePtr;
-	return size;
+	//int32_t *sizePtr = 
+	//	(int32_t *)((char *)this + m_firstStrPtrOffset+4*m_numStrings);
+	//int32_t *sizeEnd = sizePtr + m_numStrings;
 }
 
 // . return ptr to the buffer we serialize into
@@ -4611,38 +4626,40 @@ char *Inlink::serialize ( int32_t *retSize     ,
 	// copy the easy stuff
 	char *p = buf;
 	char *pend = buf + need;
-	memcpy ( p , (char *)this , getBaseSize() );
-	p += getBaseSize();
-	// then store the strings!
-	int32_t  *sizePtr = getFirstSizeParm(); // &size_qbuf;
-	int32_t  *sizeEnd = getLastSizeParm (); // &size_displayMetas;
-	int32_t  *offPtr  = getFirstOffPtr  (); // &ptr_qbuf;
-	for ( ; sizePtr <= sizeEnd ;  ) {
-		if ( p > pend ) { char *xx=NULL;*xx=0; }
-		// if we are NULL, we are a "bookmark", so
-		// we alloc'd space for it, but don't copy into
-		// the space until after this call toe serialize()
-		// MDW: we can't use NULL now because we are offsets and 0 is 
-		// legit. because of the 64bit conversion.
-		// well if empty, *sizePtr will be 0... so we don't need this.
-		//if ( *offPtr == -1 ) goto skip;
-		// sanity check -- cannot copy onto ourselves
-		if ( p > m_buf+*offPtr && p < m_buf+*offPtr + *sizePtr ) {
-			char *xx = NULL; *xx = 0; }
-		// copy the string into the buffer
-		memcpy ( p , m_buf + *offPtr , *sizePtr );
-		//skip:
-		// . make it point into the buffer now
-		// . MDW: why? that is causing problems for the re-call in
-		//   Msg3a, it calls this twice with the same "m_r"
-		// . MDW: took out for 64bit
-		//if ( makePtrsRefNewBuf ) *offPtr = (p-buf);
-		// advance our destination ptr
-		p += *sizePtr;
-		// advance both ptrs to next string
-		sizePtr++;
-		offPtr++;
-	}
+	memcpy ( p , (char *)this , need );
+	p += need;
+
+	if ( p != pend ) { char *xx=NULL;*xx=0; }
+
+	// int32_t  *sizePtr = getFirstSizeParm(); // &size_qbuf;
+	// int32_t  *sizeEnd = getLastSizeParm (); // &size_displayMetas;
+	// int32_t  *offPtr  = getFirstOffPtr  (); // &ptr_qbuf;
+	// for ( ; sizePtr <= sizeEnd ;  ) {
+	// 	if ( p > pend ) { char *xx=NULL;*xx=0; }
+	// 	// if we are NULL, we are a "bookmark", so
+	// 	// we alloc'd space for it, but don't copy into
+	// 	// the space until after this call toe serialize()
+	// 	// MDW: we can't use NULL now because we are offsets and 0 is 
+	// 	// legit. because of the 64bit conversion.
+	// 	// well if empty, *sizePtr will be 0... so we don't need this.
+	// 	//if ( *offPtr == -1 ) goto skip;
+	// 	// sanity check -- cannot copy onto ourselves
+	// 	if ( p > m_buf+*offPtr && p < m_buf+*offPtr + *sizePtr ) {
+	// 		char *xx = NULL; *xx = 0; }
+	// 	// copy the string into the buffer
+	// 	memcpy ( p , m_buf + *offPtr , *sizePtr );
+	// 	//skip:
+	// 	// . make it point into the buffer now
+	// 	// . MDW: why? that is causing problems for the re-call in
+	// 	//   Msg3a, it calls this twice with the same "m_r"
+	// 	// . MDW: took out for 64bit
+	// 	//if ( makePtrsRefNewBuf ) *offPtr = (p-buf);
+	// 	// advance our destination ptr
+	// 	p += *sizePtr;
+	// 	// advance both ptrs to next string
+	// 	sizePtr++;
+	// 	offPtr++;
+	// }
 	return buf;
 }
 

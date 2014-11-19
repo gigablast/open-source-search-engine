@@ -334,7 +334,7 @@ class RdbCache {
 	char      *m_bufs     [32];
 	int32_t       m_bufSizes [32]; // size of the alloc'd space
 	int32_t       m_numBufs;
-	int64_t  m_totalBufSize;
+	int32_t  m_totalBufSize; // gbpwrite() assumes 32 bits
 	int32_t       m_offset; // where next rec is stored
 	int32_t       m_tail;   // next rec to delete
 
@@ -358,7 +358,7 @@ class RdbCache {
 	bool m_useDisk;  // load/save from disk?
 
 	// have we wrapped yet?
-	bool m_wrapped;
+	int8_t m_wrapped;
 
 	// keySize of cache keys in bytes
 	char m_cks;
