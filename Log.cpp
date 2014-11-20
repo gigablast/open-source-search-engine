@@ -288,7 +288,8 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// space pad
 	//while ( cc-- > 0 ) *p++ = ' ';
 	// ignore the label for now...
-	while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
+	// MDW... no i like it
+	//while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
 	// thread id if in "thread"
 	if ( pid != s_pid && s_pid != -1 ) {
 		//sprintf ( p , "[%"INT32"] " , (int32_t)getpid() );

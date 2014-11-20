@@ -540,6 +540,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	// . if we're blocking then do it now
 	// . this should return false and set g_errno on error, true otherwise
 	if ( ! isNonBlocking ) 	goto skipThread;
+	if ( g_threads.m_disabled ) goto skipThread;
+	if ( ! g_conf.m_useThreads ) goto skipThread;
+
 
 #ifdef ASYNCIO
 	goto skipThread;

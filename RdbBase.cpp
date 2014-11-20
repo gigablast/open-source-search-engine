@@ -376,7 +376,7 @@ bool RdbBase::init ( char  *dir            ,
 	}
 
 	// sanity check
-	if ( m_pc && m_pc->m_pageSize != m_pageSize ) { char *xx=NULL;*xx=0; }
+	if ( m_pc && m_pc->m_diskPageSize!=m_pageSize) { char *xx=NULL;*xx=0; }
 	// now fill up the page cache
 	// preload:
 	if ( ! preloadDiskPageCache ) return true;
@@ -2418,7 +2418,7 @@ void RdbBase::verifyDiskPageCache ( ) {
 	if ( !m_pc ) return;
 	for ( int32_t i = 0; i < m_numFiles; i++ ){
 		BigFile *f = m_files[i];
-		m_pc->verify(f);
+		m_pc->verifyData(f);
 	}
 }
 

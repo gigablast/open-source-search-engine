@@ -250,7 +250,7 @@ void RdbScan::gotList ( ) {
 	}
 	// this was bitching a lot when running on a multinode cluster,
 	// so i effectively disabled it by changing to _SANITYCHECK2_
-#ifdef _SANITYCHECK2_
+#ifdef SANITYCHECK2
 	// this first test, tests to make sure the read from cache worked
 	DiskPageCache *pc = m_file->getDiskPageCache();
 	if ( pc && ! g_errno ) {
@@ -295,7 +295,7 @@ void RdbScan::gotList ( ) {
 		pc->enableCache();
 		// . this test tests to make sure the page stores worked
 		// . go through each page in page cache and verify on disk
-		//pc->verify ( m_file );
+		pc->verifyData ( m_file );
 	}
  skip:
 #endif
