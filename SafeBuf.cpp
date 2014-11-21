@@ -1529,6 +1529,7 @@ bool SafeBuf::urlEncode (char *s , int32_t slen,
 		else          v += 'A' - 10;
 		pushChar(v);
 	}
+	nullTerm();
 	return true;
 }
 

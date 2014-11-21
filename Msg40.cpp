@@ -1180,7 +1180,9 @@ bool Msg40::reallocMsg20Buf ( ) {
 	if ( m_si->m_streamResults ) {
 		int32_t max = MAX_OUTSTANDING_MSG20S * 2;
 		if ( m_msg3a.m_numDocIds < max ) max = m_msg3a.m_numDocIds;
-		need = max * (4+sizeof(Msg20));
+		need = 0;
+		need += max * sizeof(Msg20 *);
+		need += max * sizeof(Msg20);
 		m_numMsg20s = max;
 	}
 
@@ -1193,7 +1195,8 @@ bool Msg40::reallocMsg20Buf ( ) {
 	// point to the mem
 	char *p = m_buf2;
 	// point to the array, then make p point to the Msg20 buffer space
-	m_msg20 = (Msg20 **)p; p += m_numMsg20s * sizeof(Msg20 *);
+	m_msg20 = (Msg20 **)p; 
+	p += m_numMsg20s * sizeof(Msg20 *);
 	// start free here
 	m_msg20StartBuf = p;
 	// set the m_msg20[] array to use this memory, m_buf20

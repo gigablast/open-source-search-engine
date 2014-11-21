@@ -2445,9 +2445,9 @@ static QATest s_qatests[] = {
 	 "Add Url some XML pages and test xml-ish queries. Test facets over "
 	 "xml docs."},
 
-	{qaimport,
-	 "importDataTest",
-	 "Test data import functionality. Test site clustering."},
+	// {qaimport,
+	//  "importDataTest",
+	//  "Test data import functionality. Test site clustering."},
 
 	{qainlinks,
 	 "inlinksTest",

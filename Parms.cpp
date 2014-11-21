@@ -5013,7 +5013,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Mem available to this process. May be exceeded due "
 		"to fragmentation.";
 	m->m_off   = (char *)&g_conf.m_maxMem - g;
-	m->m_def   = "4000000000";
+	m->m_def   = "8000000000";
 	m->m_cgi   = "maxmem";
 	m->m_obj   = OBJ_CONF;
 	m->m_page  = PAGE_NONE;

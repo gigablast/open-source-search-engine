@@ -250,7 +250,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// a tmp buffer
 	char tt [ MAX_LINE_LEN ];
 	char *p    = tt;
-	char *pend = tt + MAX_LINE_LEN;
+	//char *pend = tt + MAX_LINE_LEN;
 	/*
 	// print timestamp, hostid, type
 	if ( g_hostdb.m_numHosts <= 999 ) 
@@ -282,7 +282,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 
 	// msg resource
 	char *x = msg;
-	int32_t cc = 7;
+	//int32_t cc = 7;
 	// the first 7 bytes or up to the : must be ascii
 	//while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
 	// space pad
