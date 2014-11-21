@@ -51,7 +51,7 @@ public:
 	int32_t       m_turkIp;
 	int32_t       m_date1;
 	int32_t       m_date2;
-	//char       m_isRootAdmin;
+	//char       m_isMasterAdmin;
 	char       m_coll [ MAX_COLL_LEN + 1];
 	int32_t       m_collLen;
 	TcpSocket *m_socket;
@@ -1687,7 +1687,7 @@ public:
 	CaptchaState m_cst;
 	bool         m_isSuperTurk;
 	int64_t    m_tuid64;
-	//char         m_isRootAdmin;
+	//char         m_isMasterAdmin;
 	char         m_coll [ MAX_COLL_LEN + 1];
 	int32_t         m_collLen;
 	TcpSocket   *m_socket;
@@ -2027,7 +2027,7 @@ void doneReindexing ( void *state ) {
 bool presentTurkForm ( State61 *st ) {
 
 	// set stuff now
-	//st->m_isRootAdmin = isAdmin;
+	//st->m_isMasterAdmin = isAdmin;
 
 	// if g_errno was set then the last injection did not go through
 	// perhaps because of ENOMEM or the geocoder was down!

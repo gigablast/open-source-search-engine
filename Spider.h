@@ -951,7 +951,10 @@ class SpiderReply {
 // are we responsible for this ip?
 bool isAssignedToUs ( int32_t firstIp ) ;
 
+// key96_t:
 #define DOLEDBKEY key_t
+
+#define SPIDERDBKEY key128_t
 
 // . store urls that can be spidered right NOW in doledb
 // . SpiderLoop.cpp doles out urls from its local spiderdb into 

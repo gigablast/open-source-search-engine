@@ -1817,6 +1817,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		tmp.safePrintf("{\"response\":\"Successfully %s job.\"}",
 			       msg);
 		char *reply = tmp.getBufStart();
+		if ( ! reply ) {
+			if ( ! g_errno ) g_errno = ENOMEM;
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 		return g_httpServer.sendDynamicPage( socket,
 						     reply,
 						     gbstrlen(reply),
@@ -1885,7 +1889,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// i guess bail if not there?
 	if ( ! cr ) {
 		log("crawlbot: missing coll rec for coll %s",collName);
-		char *msg = "invalid or missing collection rec";
+		//char *msg = "invalid or missing collection rec";
+		char *msg = "Could not create job because missing seeds or "
+			"urls.";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
@@ -2542,7 +2548,8 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 	sb->safeUtf8ToJSON ( cx->m_diffbotUrlProcessRegEx.getBufStart() );
 	sb->safePrintf("\",\n");
 
-
+	sb->safePrintf("\"maxHops\":%"INT32",\n",
+		       (int32_t)cx->m_diffbotMaxHops);
 
 	char *token = cx->m_diffbotToken.getBufStart();
 	char *name = cx->m_diffbotCrawlName.getBufStart();
@@ -3703,9 +3710,17 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td>"
 			      "</tr>"
 
-
 			      "<tr>"
-			      "<td><b>Only Process If New:</b> "
+			      "<td><b>Max hopcount to seeds:</b> "
+			      "</td><td>"
+			      "<input type=text name=maxHops "
+			      "size=9 value=%"INT32"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+			      "<tr>"
+
+            "<td><b>Only Process If New:</b> "
 			      "</td><td>"
 			      "<input type=radio name=onlyProcessIfNew "
 			      "value=1%s> yes &nbsp; "
@@ -3812,6 +3827,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , rrr1.getBufStart()
 			      , rrr2.getBufStart()
+            
+            , cr->m_diffbotMaxHops
 
 			      , isNewYes
 			      , isNewNo

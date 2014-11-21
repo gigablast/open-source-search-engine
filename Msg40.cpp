@@ -1498,7 +1498,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//req.ptr_q2buf             = m_si->m_sbuf3.getBufStart();
 		//req.size_q2buf            = q3size;
 		
-		req.m_isRootAdmin             = m_si->m_isRootAdmin;
+		req.m_isMasterAdmin             = m_si->m_isMasterAdmin;
 
 		//req.m_rulesetFilter      = m_si->m_ruleset;
 
@@ -1569,7 +1569,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// let "ns" parm override
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
 
-		if(m_si->m_isRootAdmin && m_si->m_format == FORMAT_HTML )
+		if(m_si->m_isMasterAdmin && m_si->m_format == FORMAT_HTML )
 			req.m_getGigabitVector   = true;
 		else    req.m_getGigabitVector   = false;
 		req.m_flags              = 0;

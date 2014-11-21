@@ -930,7 +930,7 @@ bool RdbList::checkIndexList_r ( bool removeNegRecs , bool sleepOnProblem ) {
 
 
  loop:
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// if upper 6 bytes of current key matches upper 6 of
 	// the last key, then it must be a half key
 	if (!isHalfBitOn(p) && oldp && memcmp(p+(m_ks-6),oldp+(m_ks-6),6)==0){
@@ -1317,7 +1317,7 @@ bool RdbList::constrain ( char   *startKey    ,
 	char *savelistPtrHi = m_listPtrHi;
 	char *savelistPtrLo = m_listPtrLo;
 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	char lastKey[MAX_KEY_BYTES];
 	KEYMIN(lastKey,m_ks);
 #endif
@@ -1336,7 +1336,7 @@ bool RdbList::constrain ( char   *startKey    ,
 	while ( p < m_listEnd ) {
 		QUICKPOLL(niceness);
 		getKey(p,k); 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 		// check key order!
 		if ( KEYCMP(k,lastKey,m_ks)<= 0 ) { 
 			log("constrain: key=%s out of order",
@@ -1347,7 +1347,7 @@ bool RdbList::constrain ( char   *startKey    ,
 #endif
 		// stop if we are >= startKey
 		if ( KEYCMP(k,startKey,m_ks) >= 0 ) break;
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 		// debug msg
 		log("constrain: skipping key=%s rs=%"INT32"",
 		    KEYSTR(k,m_ks),getRecSize(p));
@@ -1420,7 +1420,7 @@ bool RdbList::constrain ( char   *startKey    ,
 	// sanity
 	//if ( p < m_list ) { char *xx=NULL;*xx=0; }
 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	log("constrain: hk=%s",KEYSTR(hintKey,m_ks));
 	log("constrain: hintOff=%"INT32"",hintOffset);
 #endif

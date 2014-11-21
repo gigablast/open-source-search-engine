@@ -101,6 +101,8 @@ class RdbMap {
 	// . if it's -1 then each record's data is of variable size
 	int32_t getFixedDataSize() { return m_fixedDataSize; };
 
+	void reduceMemFootPrint();
+
 	// . this is called automatically when close() is called
 	// . however, we may wish to call it externally to ensure no data loss
 	// . return false if any write failes
@@ -226,7 +228,7 @@ class RdbMap {
 	};
 	//void setKey               ( int32_t page , key_t &k ) { 
 	void setKey ( int32_t page , char *k ) { 
-		//#ifdef _SANITYCHECK_
+		//#ifdef GBSANITYCHECK
 		if ( page >= m_maxNumPages ) {
 			char *xx = NULL; *xx = 0;
 			log(LOG_LOGIC,"RdbMap::setKey: bad engineer");return; }
@@ -360,6 +362,8 @@ class RdbMap {
         //   writeMap() on close or destroy
 	// . NOTE: also used as the file size of the file we're mapping
 	int64_t m_offset;
+
+	long m_newPagesPerSegment;
 
 	// we keep global tallies on the number of non-deleted records
 	// and deleted records

@@ -1258,7 +1258,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	else if ( m_proto->useAcks() &&
 		  ! isLocal &&
 		  ! g_hostdb.isIpInNetwork ( ip ) &&
-		  ! g_conf.isRootIp ( ip ) &&
+		  ! g_conf.isMasterIp ( ip ) &&
 		  ! g_hostdb2.isIpInNetwork ( ip ) &&
 		  ! g_conf.isConnectIp ( ip ) ) {
 		// bitch, wait at least 5 seconds though

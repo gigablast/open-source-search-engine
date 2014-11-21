@@ -427,7 +427,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		// get the page range
 		//int32_t p1 = m_startpg [ i ];
 		//int32_t p2 = m_endpg   [ i ];
-		//#ifdef _SANITYCHECK_
+		//#ifdef GBSANITYCHECK
 		int32_t fn = m_fileNums[i];
 		// this can happen somehow!
 		if ( fn < 0 ) {
@@ -787,7 +787,7 @@ bool Msg3::doneScanning ( ) {
 
 	// this really slows things down because it blocks the cpu so
 	// leave it out for now
-#ifdef _SANITY_CHECK_
+#ifdef GBSANITYCHECK
 	// check for corruption here, do not do it again in Msg5 if we pass
 	if ( ! g_errno ) { // && g_conf.m_doErrorCorrection ) {
 		int32_t i;

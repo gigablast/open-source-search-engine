@@ -332,6 +332,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// make a new one
 			ji = addNewItem();
 			if ( ! ji ) return NULL;
+			// back up over negative sign?
+			if ( str > json && str[-1] == '-' ) str--;
 			// decode
 			//char c = str[slen];
 			//str[slen] = '\0';

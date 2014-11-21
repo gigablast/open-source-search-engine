@@ -12,7 +12,7 @@
 //#include "Indexdb.h"  // g_indexdb.getTruncationLimit()
 //#include "CollectionRec.h"
 
-//#define _SANITYCHECK_
+//#define GBSANITYCHECK
 
 //#define _TESTNEWALGO_ 1
 
@@ -261,7 +261,7 @@ bool Msg5::getList ( char     rdbId         ,
 	// get trunc limit by collection now, not just in g_conf
 	m_indexdbTruncationLimit = 0x7fffffff;
 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	log("msg5: sk=%s", KEYSTR(m_startKey,m_ks));
 	log("msg5: ek=%s", KEYSTR(m_endKey,m_ks));
 #endif
@@ -1256,7 +1256,7 @@ bool Msg5::gotList2 ( ) {
 	// . this totalSize is just to see if we should spawn a thread, really
 	//if ( totalSize > m_minRecSizes ) m_totalSize = m_minRecSizes;
 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// who uses this now?
 	//log("Msg5:: who is merging?????");
 	// timing debug
@@ -1566,7 +1566,7 @@ void Msg5::repairLists_r ( ) {
 		// this took like 50ms (-O3) on lenny on a 4meg list
 		bool status = m_listPtrs[i]->checkList_r(false,
 		 // sleep on corruption if doing a sanity check (core dumps)
-#ifdef _SANITYCHECK_							 
+#ifdef GBSANITYCHECK							 
 							 true
 #else
 		                                         false
@@ -1903,7 +1903,7 @@ bool Msg5::doneMerging ( ) {
 
 	// . scan merged list for problems
 	// . this caught an incorrectly set m_list->m_lastKey before
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	m_list->checkList_r ( false , true , m_rdbId );
 #endif
 

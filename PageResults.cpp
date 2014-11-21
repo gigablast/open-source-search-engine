@@ -782,7 +782,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		sb->safePrintf("      ");//,gi->m_numPages);
 		sb->safePrintf("</font>");
 		sb->safePrintf("</b>");
-		if ( si->m_isRootAdmin && 1 == 2 ) 
+		if ( si->m_isMasterAdmin && 1 == 2 ) 
 			sb->safePrintf("[%.0f]{%"INT32"}",
 				       gi->m_gbscore,
 				       gi->m_minPop);
@@ -1074,7 +1074,7 @@ static bool printGigabit ( State0 *st,
 	sb->safePrintf("(%"INT32")",gi->m_numPages);
 	sb->safePrintf("</font>");
 	sb->safePrintf("</b>");
-	if ( si->m_isRootAdmin ) 
+	if ( si->m_isMasterAdmin ) 
 		sb->safePrintf("[%.0f]{%"INT32"}",
 			      gi->m_gbscore,
 			      gi->m_minPop);
@@ -2548,8 +2548,8 @@ bool printSearchResultsHeader ( State0 *st ) {
         Query qq3;
 	Query *qq2;
 	bool firstIgnored;
-	//bool isAdmin = si->m_isRootAdmin;
-	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
+	//bool isAdmin = si->m_isMasterAdmin;
+	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	// otherwise, we had no error
@@ -3008,9 +3008,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	char abuf[300];
 	SafeBuf args(abuf,300);
 	// show banned?
-	if ( si->m_showBanned && ! si->m_isRootAdmin )
+	if ( si->m_showBanned && ! si->m_isMasterAdmin )
 		args.safePrintf("&sb=1");
-	if ( ! si->m_showBanned && si->m_isRootAdmin )
+	if ( ! si->m_showBanned && si->m_isMasterAdmin )
 		args.safePrintf("&sb=0");
 
 	//HttpRequest *hr = &st->m_hr;
@@ -3167,7 +3167,7 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf("<input name=c type=hidden value=\"%s\">",coll);
 	}
 
-	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
+	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	if ( isAdmin && banSites.length() > 0 )
@@ -3312,7 +3312,7 @@ bool printTimeAgo ( SafeBuf *sb, time_t ts , char *prefix , SearchInput *si ) {
 		sb->safePrintf ( " - %s: %"INT32" days ago",prefix,days);
 	// do not show if more than 1 wk old! we want to seem as
 	// fresh as possible
-	else if ( ts > 0 ) { // && si->m_isRootAdmin ) {
+	else if ( ts > 0 ) { // && si->m_isMasterAdmin ) {
 		struct tm *timeStruct = localtime ( &ts );
 		sb->safePrintf(" - %s: ",prefix);
 		char tmp[100];
@@ -3804,7 +3804,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// indent it if level is 2
 	bool indent = false;
 
-	bool isAdmin = (si->m_isRootAdmin || si->m_isCollAdmin);
+	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
 	//uint64_t lastSiteHash = siteHash;
@@ -7177,7 +7177,7 @@ bool printDMOZCrumb ( SafeBuf *sb , int32_t catId , bool xml ) {
 	//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
 	if (dirIndex < 0) dirIndex = 0;
 	//   display the directory bread crumb
-	//if( (si->m_cat_dirId > 0 && si->m_isRootAdmin && !si->m_isFriend)
+	//if( (si->m_cat_dirId > 0 && si->m_isMasterAdmin && !si->m_isFriend)
 	//     || (si->m_cat_sdir > 0 && si->m_cat_sdirt != 0) )
 	//	sb->safePrintf("<br><br>");
 	// int16_tcut. rtl=Right To Left language format.

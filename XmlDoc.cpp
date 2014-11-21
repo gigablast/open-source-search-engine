@@ -2161,7 +2161,75 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 						 true, // is request?
 						 parentDocId , 
 						 false );// isDel );
+	revisedReq->setDataSize();
 }
+
+void XmlDoc::getRebuiltSpiderRequest ( SpiderRequest *sreq ) {
+
+	// memset 0
+	sreq->reset();
+
+	// assume not valid
+	sreq->m_siteNumInlinks = -1;
+
+	if ( ! m_siteNumInlinksValid ) { char *xx=NULL;*xx=0; }
+
+	// how many site inlinks?
+	sreq->m_siteNumInlinks       = m_siteNumInlinks;
+	sreq->m_siteNumInlinksValid  = true;
+
+	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+	// set other fields besides key
+	sreq->m_firstIp              = m_firstIp;
+	sreq->m_hostHash32           = m_hostHash32a;
+	//sreq->m_domHash32            = m_domHash32;
+	//sreq->m_siteNumInlinks       = m_siteNumInlinks;
+	//sreq->m_pageNumInlinks     = m_pageNumInlinks;
+	sreq->m_hopCount             = m_hopCount;
+
+	sreq->m_parentHostHash32     = 0;//m_sreq.m_parentHostHash32;
+	sreq->m_parentDomHash32      = 0;//m_sreq.m_parentDomHash32;
+	sreq->m_parentSiteHash32     = 0;//m_sreq.m_parentSiteHash32;
+	sreq->m_parentFirstIp        = 0;//m_sreq.m_parentFirstIp;
+
+	Url *fu = getFirstUrl();
+
+	sreq->m_isNewOutlink         = 0;
+	sreq->m_isAddUrl             = 0;//m_isAddUrl;
+	sreq->m_isPingServer         = fu->isPingServer();
+	//sreq->m_isUrlPermalinkFormat = m_isUrlPermalinkFormat;
+
+	// transcribe from old spider rec, stuff should be the same
+	sreq->m_addedTime            = m_firstIndexedDate;
+	sreq->m_sameDom              = 0;//m_sreq.m_sameDom;
+	sreq->m_sameHost             = 0;//m_sreq.m_sameHost;
+	sreq->m_sameSite             = 0;//m_sreq.m_sameSite;
+	sreq->m_wasParentIndexed     = 0;//m_sreq.m_parentWasIndexed;
+	sreq->m_parentIsRSS          = 0;//m_sreq.m_parentIsRSS;
+	sreq->m_parentIsPermalink    = 0;//m_sreq.m_parentIsPermalink;
+	sreq->m_parentIsPingServer   = 0;//m_sreq.m_parentIsPingServer;
+
+	// validate the stuff so getUrlFilterNum() acks it
+	sreq->m_hopCountValid = 1;
+
+	// we need this now for ucp ucr upp upr new url filters that do
+	// substring matching on the url
+	if ( m_firstUrlValid )
+		strcpy(sreq->m_url,m_firstUrl.m_url);
+
+	// re-make the key since it contains m_firstIp
+	long long uh48 = fu->getUrlHash48();
+	// set the key properly to reflect the new "first ip" 
+	// since we shard spiderdb by that.
+	sreq->m_key = g_spiderdb.makeKey ( m_firstIp,//ip,
+					   uh48,
+					   true,//is req?
+					   0LL, // parentDocId , 
+					   false );//isDel
+	sreq->setDataSize();
+}
+
 
 ////////////////////////////////////////////////////////////////////
 //   THIS IS THE HEART OF HOW THE PARSER ADDS TO THE RDBS
@@ -2560,7 +2628,12 @@ bool XmlDoc::indexDoc2 ( ) {
 	// error?
 	if ( ! metaList ) {
 		// sanity check. g_errno must be set
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		if ( ! g_errno ) { 
+			log("build: Error UNKNOWN error spidering. setting "
+			    "to bad engineer.");
+			g_errno = EBADENGINEER;
+			//char *xx=NULL;*xx=0; }
+		}
 		log("build: Error spidering for doc %s: %s",
 		    m_firstUrl.m_url,mstrerror(g_errno));
 		return true;
@@ -20489,6 +20562,8 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		//	if ( hc != 0 ){ char *xx=NULL;*xx=0; }
 		//}
 
+		char *rec = p;
+
 		// set this
 		//bool split = true;
 		//if(rdbId == RDB_POSDB && g_posdb.isShardedByTermId(p) ) 
@@ -20517,6 +20592,15 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		// . negative keys have no data
 		// . this is not the case unfortunately
 		if ( del ) dataSize = 0;
+
+		// ensure spiderdb request recs have data/url in them
+		if ( (rdbId == RDB_SPIDERDB || rdbId == RDB2_SPIDERDB2) &&
+		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)rec ) &&
+		     ! forDelete &&
+		     ! del &&
+		     dataSize == 0 ) {
+			char *xx=NULL;*xx=0; }
+
 		// if variable read that in
 		if ( dataSize == -1 ) {
 			// -1 means to read it in
@@ -21568,10 +21652,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
 		// rdbid first
-		*m_p = RDB_SPIDERDB;
-		// use secondary?
-		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
-		m_p++;
+		*m_p++ = RDB_SPIDERDB;
 		// get this
 		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
@@ -22014,6 +22095,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//	odp = od->getDates();
 	//	if ( ! odp || odp==(void *)-1) return (char *)odp;
 	//}
+
+	// need firstip if adding a rebuilt spider request
+	if ( m_useSecondaryRdbs && ! m_isDiffbotJSONObject && m_useSpiderdb ) {
+		int32_t *fip = getFirstIp();
+		if ( ! fip || fip == (void *)-1 ) return (char *)fip;
+	}
+
 
 	// shit, we need a spider reply so that it will not re-add the
 	// spider request to waiting tree, we ignore docid-based
@@ -22552,6 +22640,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
 	     ! m_isDiffbotJSONObject )
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
+
+	// or if we are rebuilding spiderdb
+	else if (m_useSecondaryRdbs && !m_isDiffbotJSONObject && m_useSpiderdb)
+		needSpiderdb3 = sizeof(SpiderRequest) + m_firstUrl.m_ulen+1;
+
 	need += needSpiderdb3;
 
 	//int32_t needSpiderdb3 = 0;
@@ -22617,8 +22710,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     ! m_isImporting &&
 		     m_version >= 120 &&
 		     m_metaListCheckSum8 != currentMetaListCheckSum8 )
-			log("xmldoc: checksum parsing inconsistency for %s",
-			    m_firstUrl.getUrl());
+			log("xmldoc: checksum parsing inconsistency for %s "
+			    "%i != %i",
+			    m_firstUrl.getUrl(),
+			    (int)m_metaListCheckSum8,
+			    (int)currentMetaListCheckSum8);
 		// assign the new one, getTitleRecBuf() call below needs this
 		m_metaListCheckSum8 = currentMetaListCheckSum8;
 		m_metaListCheckSum8Valid = true;
@@ -23067,23 +23163,30 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		saved = m_p;
 		// store it here
 		SpiderRequest revisedReq;
+
+ 		// if doing a repair/rebuild of spiderdb...
+		if ( m_useSecondaryRdbs ) 
+			getRebuiltSpiderRequest ( &revisedReq );
+
 		// this fills it in
-		getRevisedSpiderRequest ( &revisedReq );
-
-		// sanity log
-		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
-
-		// sanity log
-		if ( m_firstIp == 0 || m_firstIp == -1 ) {
-			char *url = "unknown";
-			if ( m_sreqValid ) url = m_sreq.m_url;
-			log("build: error3 getting real firstip of %"INT32" for "
-			    "%s. not adding new request.",(int32_t)m_firstIp,url);
-			goto skipNewAdd2;
+		if ( ! m_useSecondaryRdbs ) {
+			getRevisedSpiderRequest ( &revisedReq );
+			// sanity log
+			if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+			// sanity log
+			if ( m_firstIp == 0 || m_firstIp == -1 ) {
+				char *url = "unknown";
+				if ( m_sreqValid ) url = m_sreq.m_url;
+				log("build: error3 getting real firstip of "
+				    "%"INT32" for %s. not adding new request.",
+				    (int32_t)m_firstIp,url);
+				goto skipNewAdd2;
+			}
 		}
 
 		// copy it
-		*m_p++ = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) *m_p++ = RDB2_SPIDERDB2;
+		else                      *m_p++ = RDB_SPIDERDB;
 		// store it back
 		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
@@ -24453,7 +24556,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( m_doingConsistencyCheck ) { char *xx=NULL;*xx=0; }
 
 	// do not do this if recycling content
-	if ( m_recycleContent ) return (char *)0x01;
+	// UNLESS REBUILDING...
+	if ( m_recycleContent && ! m_useSecondaryRdbs ) return (char *)0x01;
+
+
+	// for now skip in repair tool
+	if ( m_useSecondaryRdbs && ! g_conf.m_rebuildAddOutlinks )
+		return (char *)0x01;
+
 
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -25006,7 +25116,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// sanity check
 		if ( p + 1 + need > m_pend ) { char *xx=NULL;*xx=0; }
 		// store the rdbId
-		*p++ = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) *p++ = RDB2_SPIDERDB2;
+		else                      *p++ = RDB_SPIDERDB;
 		// print it for debug
 		if ( isTestColl ) {
 			SafeBuf tmp;
@@ -32795,6 +32906,8 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	//static int64_t s_facetPrefixHash = 0LL;
 	//if ( ! s_facetPrefixHash )
 	//	s_facetPrefixHash = hash64n ( "gbfacet" );
+
+	// this is case-sensitive
 	int64_t prefixHash = hash64n ( prefix );
 
 	// term is like something like "object.price" or whatever.
@@ -32888,6 +33001,99 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 			   bufLen,
 			   ph2, // prefixHash, // s_facetPrefixHash,
 			   &hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ,
+			   k) )
+		return false;
+
+	return true;
+}
+
+bool XmlDoc::hashFieldMatchTerm ( char *val , int32_t vlen , HashInfo *hi ) {
+
+	HashTableX *tt = hi->m_tt;
+
+	uint64_t val64 = hash64 ( val , vlen );
+
+	// term is like something like "object.price" or whatever.
+	// it is the json field itself, or the meta tag name, etc.
+	uint64_t middlePrefix = hash64n ( hi->m_prefix );
+
+        // hash "This is a new product." with "object.desc".
+        // "object.desc" (termId64) is case-sensitive.
+        uint64_t composite = hash64 ( val64 , middlePrefix );
+
+        // hash that with "gbfieldmatch"
+	char *prefix = "gbfieldmatch";
+	uint64_t prefixHash = hash64n ( prefix );
+	uint64_t ph2 = hash64 ( composite , prefixHash );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  false ) ; // shardByTermId? no, by docid.
+
+	HashTableX *dt = tt;//hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer for display on pageparser.cpp output
+	char buf[128];
+	int32_t bufLen ;
+	bufLen = sprintf(buf,"gbfieldmatch:%s:%"UINT64"",hi->m_prefix,val64);
+
+	// make a special hashinfo for this facet
+	HashInfo hi2;
+	hi2.m_tt = tt;
+	// the full prefix
+	char fullPrefix[64];
+	snprintf(fullPrefix,64,"%s:%s",prefix,hi->m_prefix);
+	hi2.m_prefix = fullPrefix;//"gbfacet";
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   ph2, // prefixHash, // s_facetPrefixHash,
+			   &hi2,
 			   0, // word#, i,
 			   0, // wordPos
 			   0,// densityRank , // 0-15
@@ -48759,7 +48965,6 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		}
 		
 
-
 		//
 		// for deduping search results we set m_contentHash32 here for
 		// diffbot json objects.
@@ -48783,6 +48988,11 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		// index like "title:whatever"
 		hi.m_prefix = name;
 		hashString ( val , vlen , &hi );
+
+		// hash gbfieldmatch:some.fieldInJson:"case-sens field Value"
+		if ( name ) 
+			hashFieldMatchTerm ( val , (int32_t)vlen , &hi );
+
 		// hash without the field name as well
 		hi.m_prefix = NULL;
 		hashString ( val , vlen , &hi );

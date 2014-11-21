@@ -249,8 +249,8 @@ void RdbScan::gotList ( ) {
 			      m_ks            );
 	}
 	// this was bitching a lot when running on a multinode cluster,
-	// so i effectively disabled it by changing to _SANITYCHECK2_
-#ifdef SANITYCHECK2
+	// so i effectively disabled it by changing to _GBSANITYCHECK2_
+#ifdef GBSANITYCHECK2
 	// this first test, tests to make sure the read from cache worked
 	DiskPageCache *pc = m_file->getDiskPageCache();
 	if ( pc && ! g_errno ) {

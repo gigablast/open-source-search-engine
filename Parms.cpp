@@ -234,7 +234,7 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 	for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
+		if ( m->m_page != PAGE_MASTERPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -263,7 +263,7 @@ bool CommandRemovePasswordRow ( char *rec ) {
 	for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
+		if ( m->m_page != PAGE_MASTERPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -1313,7 +1313,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_INJECT     ) tt = "Inject Url";
-	if ( page == PAGE_ROOTPASSWORDS ) tt = "Root Passwords";
+	if ( page == PAGE_MASTERPASSWORDS ) tt = "Master Passwords";
 	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
@@ -1325,7 +1325,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
 	//if ( page == PAGE_SYNC       ) tt = "Sync";
-	if ( page == PAGE_REPAIR     ) tt = "Repair Controls";
+	if ( page == PAGE_REPAIR     ) tt = "Rebuild Controls";
 	//if ( page == PAGE_ADFEED     ) tt = "Ad Feed Controls";
 
 	// special messages for spider controls
@@ -1343,7 +1343,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		char *coll = g_collectiondb.getDefaultColl(r);
 		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
-		bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+		bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
 		bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 	 	g_parms.printParms2 ( sb ,
 				      page ,
@@ -1353,7 +1353,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	 	 		      false , // isCrawlbot
 	 	 		      format ,
 	 	 		      NULL , // TcpSocket *sock
-				      isRootAdmin ,
+				      isMasterAdmin ,
 				      isCollAdmin ); 
 		return true;
 	}
@@ -1724,7 +1724,7 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	char *coll = g_collectiondb.getDefaultColl(r);
 	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
 
-	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
 	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 
 	//char *coll = r->getString ( "c"   );
@@ -1732,7 +1732,7 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// if "main" collection does not exist, try another
 	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
-	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isRootAdmin,isCollAdmin);
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isMasterAdmin,isCollAdmin);
 	return true;
 }
 
@@ -1746,7 +1746,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  bool isCrawlbot , 
 			  char format , // bool isJSON ,
 			  TcpSocket *sock ,
-			  bool isRootAdmin ,
+			  bool isMasterAdmin ,
 			  bool isCollAdmin ) {
 	bool status = true;
 	s_count = 0;
@@ -1761,7 +1761,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 
 	// page aliases
 	//if ( page == PAGE_COLLPASSWORDS )
-	//	page = PAGE_ROOTPASSWORDS;
+	//	page = PAGE_MASTERPASSWORDS;
 
 	if ( page == PAGE_COLLPASSWORDS2 )
 		page = PAGE_COLLPASSWORDS;
@@ -1878,7 +1878,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     false,
 						     isCrawlbot,
 						     format,
-						     isRootAdmin,
+						     isMasterAdmin,
 						     isCollAdmin,
 						     sock);
 			continue;
@@ -1901,7 +1901,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
 						   isCrawlbot,format,
-						   isRootAdmin,
+						   isMasterAdmin,
 						   isCollAdmin,
 						   sock);
 			}
@@ -1941,7 +1941,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			bool isCrawlbot ,
 			//bool isJSON ) {
 			char format ,
-			bool isRootAdmin ,
+			bool isMasterAdmin ,
 			bool isCollAdmin ,
 			TcpSocket *sock ) {
 	bool status = true;
@@ -2003,7 +2003,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_ROOTPASSWORDS ||
+		     page == PAGE_MASTERPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t<currentValue><![CDATA[");
@@ -2036,7 +2036,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_ROOTPASSWORDS ||
+		     page == PAGE_MASTERPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t\"currentValue\":\"");
@@ -2258,7 +2258,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 				// print users current ip if showing the list
 				// of "Master IPs" for admin access
-				if ( ( m->m_page == PAGE_ROOTPASSWORDS ||
+				if ( ( m->m_page == PAGE_MASTERPASSWORDS ||
 				       m->m_page == PAGE_COLLPASSWORDS ) &&
 				     sock &&
 				     m->m_title &&
@@ -2448,7 +2448,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// do not expose master passwords or IPs to non-root admins
 	else if ( ( m->m_flags & PF_PRIVATE ) && 
 		  m->m_obj == OBJ_CONF &&
-		  ! isRootAdmin )
+		  ! isMasterAdmin )
 		return true;
 
 	// do not expose master passwords or IPs to non-root admins
@@ -2635,9 +2635,18 @@ bool Parms::printParm ( SafeBuf* sb,
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
+
+
+			if ( cr && 
+			     (m->m_flags & PF_COLLDEFAULT) &&
+			     sx &&
+			     sx->length() <= 0 ) 
+				sb->dequote ( cr->m_coll,gbstrlen(cr->m_coll));
+
 			// if parm is OBJ_NONE there is no stored valued
-			if ( m->m_obj != OBJ_NONE )
+			else if ( m->m_obj != OBJ_NONE )
 				sb->dequote ( sx->getBufStart(), sx->length());
+
 			sb->safePrintf ("\">");
 		}
 	}
@@ -2809,10 +2818,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		// do not allow removal of last default url filters rule
 		//if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
 		char *suffix = "";
-		if ( m->m_page == PAGE_ROOTPASSWORDS &&
+		if ( m->m_page == PAGE_MASTERPASSWORDS &&
 		     m->m_type == TYPE_IP ) 
 			suffix = "ip";
-		if ( m->m_page == PAGE_ROOTPASSWORDS &&
+		if ( m->m_page == PAGE_MASTERPASSWORDS &&
 		     m->m_type == TYPE_STRINGNONEMPTY ) 
 			suffix = "pwd";
 		if ( show )
@@ -3639,6 +3648,7 @@ bool Parms::setFromFile ( void *THIS        ,
 
 	// backwards compatible hack for old <masterPassword> tags
 	for ( int32_t i = 1 ; i < numNodes ; i++ ) {
+		if ( objType != OBJ_CONF ) break;
 		XmlNode *pn = &xml.m_nodes[i-1];
 		XmlNode *xn = &xml.m_nodes[i];
 		// look for <masterPassword>
@@ -3657,6 +3667,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	}
 	// another backwards compatible hack for old masterIp tags
 	for ( int32_t i = 1 ; i < numNodes ; i++ ) {
+		if ( objType != OBJ_CONF ) break;
 		XmlNode *xn = &xml.m_nodes[i];
 		XmlNode *pn = &xml.m_nodes[i-1];
 		// look for <masterPassword>
@@ -4079,7 +4090,7 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 		//p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
 		// we can't do proper cdata and be backwards compatible
 		//sb->cdataEncode ( buf );//, blen );//, true ); // #?*
-		sb->htmlEncode ( buf );
+		if ( buf ) sb->htmlEncode ( buf );
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
@@ -6093,6 +6104,17 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
+	m++;
+  
+	m->m_cgi   = "maxHops";
+	m->m_xml   = "diffbotHopcount";
+	m->m_title = "diffbot max hopcount";
+	m->m_off   = (char *)&cr.m_diffbotMaxHops - x;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "-1";
 	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
@@ -9350,7 +9372,7 @@ void Parms::init ( ) {
 
 	m->m_title = "admin override";
 	m->m_desc  = "admin override";
-	m->m_off   = (char *)&si.m_isRootAdmin - y;
+	m->m_off   = (char *)&si.m_isMasterAdmin - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_cgi   = "admin";
@@ -9796,9 +9818,25 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "use collection passwords";
+	m->m_desc  = "Should collections have individual password settings "
+		"so different users can administrer different collections? "
+		"If not the only the master passwords and IPs will be able "
+		"to administer any collection.";
+	m->m_cgi   = "ucp";
+	m->m_off   = (char *)&g_conf.m_useCollectionPasswords - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "allow cloud users";
-	m->m_desc  = "Can guest users create a collection?";
+	m->m_desc  = "Can guest users create and administer "
+		"a collection? Limit: 1 "
+		"collection per IP address. This is mainly for doing "
+		"demos on the gigablast.com domain.";
 	m->m_cgi   = "acu";
 	m->m_off   = (char *)&g_conf.m_allowCloudUsers - g;
 	m->m_type  = TYPE_BOOL;
@@ -11056,7 +11094,7 @@ void Parms::init ( ) {
 
 	// this is ifdef'd out in Msg3.cpp for performance reasons,
 	// so do it here, too
-#ifdef _SANITY_CHECK_
+#ifdef GBSANITYCHECK
 	m->m_title = "max corrupted read retries";
 	m->m_desc  = "How many times to retry disk reads that had corrupted "
 		"data before requesting the list from a twin, and, if that "
@@ -12119,11 +12157,15 @@ void Parms::init ( ) {
 
 	m->m_title = "use threads for intersects and merges";
 	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
-		"Until pthreads is any good leave this off.";
+		"Default is now on in the event you have simultaneous queries "
+		"so one query does not hold back the other.";
+	        //"Until pthreads is any good leave this off.";
 	m->m_cgi   = "utfio";
 	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	// enable this in the event of multiple cores available and
+	// large simultaneous queries coming in
+	m->m_def   = "1";
 	m->m_flags = 0;//PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
@@ -16212,9 +16254,10 @@ void Parms::init ( ) {
 
 	m->m_title = "use proxies for spidering";
 	m->m_desc  = "If this is true Gigablast will use the proxies "
-		"listed on the <i>proxies</i> page for spidering for "
+		"listed on the <a href=/admin/proxies>proxies</a> page for "
+		"spidering for "
 		"this collection regardless whether the proxies are enabled "
-		"on the <i>proxies</i> page.";
+		"on the <a href=/admin/proxies>proxies</a> page.";
 	m->m_cgi   = "useproxies";
 	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
 	m->m_type  = TYPE_BOOL;
@@ -18155,10 +18198,10 @@ void Parms::init ( ) {
 	//  PAGE REPAIR CONTROLS
 	///////////////////////////////////////////
 
-	m->m_title = "repair mode enabled";
-	m->m_desc  = "If enabled, gigablast will repair the rdbs as "
+	m->m_title = "rebuild mode enabled";
+	m->m_desc  = "If enabled, gigablast will rebuild the rdbs as "
 		"specified by the parameters below. When a particular "
-		"collection is in repair mode, it can not spider or merge "
+		"collection is in rebuild mode, it can not spider or merge "
 		"titledb files.";
 	m->m_cgi   = "rme";
 	m->m_off   = (char *)&g_conf.m_repairingEnabled - g;
@@ -18169,21 +18212,35 @@ void Parms::init ( ) {
 	m->m_sync  = false;  // do not sync this parm
 	m++;
 
-	m->m_title = "collections to repair or rebuild";
-	m->m_desc  = "Comma or space separated list of the collections "
-		"to repair or rebuild.";
+	m->m_title = "collection to rebuild";
+	m->m_xml   = "collectionToRebuild";
+	m->m_desc  = "Name of collection to rebuild.";
+	// m->m_desc  = "Comma or space separated list of the collections "
+	// 	"to rebuild.";
 	m->m_cgi   = "rctr"; // repair collections to repair
 	m->m_off   = (char *)&g_conf.m_collsToRepair - g;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 1024;
+	m->m_type  = TYPE_SAFEBUF;//STRING;
+	//m->m_size  = 1024;
 	m->m_def   = "";
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_flags = PF_REQUIRED | PF_NOHTML;
+	m->m_flags = PF_REQUIRED;// | PF_COLLDEFAULT;//| PF_NOHTML;
 	m++;
 
-	m->m_title = "memory to use for repair";
+	m->m_title = "rebuild ALL collections";
+	m->m_desc  = "If enabled, gigablast will rebuild all collections.";
+	m->m_cgi   = "rac";
+	m->m_off   = (char *)&g_conf.m_rebuildAllCollections - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_REPAIR;
+	m->m_obj   = OBJ_CONF;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++;
+
+
+	m->m_title = "memory to use for rebuild";
 	m->m_desc  = "In bytes.";
 	m->m_cgi   = "rmtu"; // repair mem to use
 	m->m_off   = (char *)&g_conf.m_repairMem - g;
@@ -18195,9 +18252,9 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "max repair spiders";
-	m->m_desc  = "Maximum number of outstanding inject spiders for "
-		"repair.";
+	m->m_title = "max rebuild injections";
+	m->m_desc  = "Maximum number of outstanding injections for "
+		"rebuild.";
 	m->m_cgi   = "mrps";
 	m->m_off   = (char *)&g_conf.m_maxRepairSpiders - g;
 	m->m_type  = TYPE_LONG;
@@ -18220,16 +18277,20 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "keep new spiderdb recs";
-	m->m_desc  = "If enabled, gigablast will keep the new spiderdb "
-		"records when doing the full rebuild or the spiderdb "
-		"rebuild.";
-	m->m_cgi   = "rfrknsr";
-	m->m_off   = (char *)&g_conf.m_fullRebuildKeepNewSpiderRecs - g;
+	m->m_title = "add spiderdb recs of non indexed urls";
+	m->m_desc  = "If enabled, gigablast will add the spiderdb "
+		"records of unindexed urls "
+		"when doing the full rebuild or the spiderdb "
+		"rebuild. Otherwise, only the indexed urls will get "
+		"spiderdb records in spiderdb. This can be faster because "
+		"Gigablast does not have to do an IP lookup on every url "
+		"if its IP address is not in tagdb already.";
+	m->m_cgi   = "rfrknsx";
+	m->m_off   = (char *)&g_conf.m_rebuildAddOutlinks - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
 
@@ -18579,7 +18640,7 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 
 
-	m->m_title = "Root Passwords";
+	m->m_title = "Master Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
 		"to Gigablast and all collections.";
@@ -18592,7 +18653,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
-	m->m_page  = PAGE_ROOTPASSWORDS;
+	m->m_page  = PAGE_MASTERPASSWORDS;
 	//m->m_max   = MAX_MASTER_PASSWORDS;
 	//m->m_size  = PASSWORD_MAX_LEN+1;
 	//m->m_addin = 1; // "insert" follows?
@@ -18600,7 +18661,7 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "Root IPs";
+	m->m_title = "Master IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
@@ -18615,7 +18676,7 @@ void Parms::init ( ) {
 		"to Gigablast and all collections.";
 	m->m_cgi   = "masterips";
 	m->m_xml   = "masterIps";
-	m->m_page  = PAGE_ROOTPASSWORDS;
+	m->m_page  = PAGE_MASTERPASSWORDS;
 	m->m_off   = (char *)&g_conf.m_connectIps - g;
 	m->m_type  = TYPE_SAFEBUF;//IP;
 	m->m_def   = "";
@@ -18661,7 +18722,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_superTurksLen - g;
-	m->m_page = PAGE_ROOTPASSWORDS;
+	m->m_page = PAGE_MASTERPASSWORDS;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	*/
@@ -18694,7 +18755,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_usersLen - g;
-	m->m_page = PAGE_ROOTPASSWORDS;
+	m->m_page = PAGE_MASTERPASSWORDS;
 	m++;
 	*/
 
@@ -20102,7 +20163,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//	if ( ! cr ) log("parms: coll not found");
 	//}
 
-	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
 	
 	// does this user have permission to update the parms?
 	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr ) ;
@@ -20310,7 +20371,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//
 		// if this is the "delcoll" parm then "c" may have been
 		// excluded from http request, therefore isCollAdmin and
-		// isRootAdmin may be false, so see if they have permission
+		// isMasterAdmin may be false, so see if they have permission
 		// for the "val" collection for this one...
 		bool hasPerm = false;
 		if ( m->m_page == PAGE_DELCOLL &&
@@ -20323,7 +20384,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// allow it to add another.
 		if ( m->m_page == PAGE_ADDCOLL &&
 		     g_conf.m_allowCloudUsers &&
-		     ! isRootAdmin &&
+		     ! isMasterAdmin &&
 		     strcmp(m->m_cgi,"addcoll")==0 ) {
 			// see if user's c block has already added a collection
 			int32_t numAdded = 0;
@@ -20337,7 +20398,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		}
 
 		// master controls require root permission
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+		if ( m->m_obj == OBJ_CONF && ! isMasterAdmin ) {
 			log("parms: could not run root parm \"%s\" no perm.",
 			    m->m_title);
 			continue;
@@ -20462,7 +20523,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		bool hasPerm = false;
 
 		// master controls require root permission
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+		if ( m->m_obj == OBJ_CONF && ! isMasterAdmin ) {
 			log("parms: could not set root parm \"%s\" no perm.",
 			    m->m_title);
 			continue;
@@ -21695,7 +21756,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		     cr->m_regExs[occNum].getLength() == 0 )
 			updateCount = false;
 		// and for other pages, like master ips, skip if empty!
-		// PAGE_PASSWORDS, PAGE_ROOTPASSWORDS, ...
+		// PAGE_PASSWORDS, PAGE_MASTERPASSWORDS, ...
 		if ( parm->m_page != PAGE_FILTERS && ! changed )
 			updateCount = false;
 

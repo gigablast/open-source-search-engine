@@ -6936,7 +6936,8 @@ int32_t dumpSpiderdb ( char *coll,
 		if ( ! printStats ) {
 			printf( "offset=%"INT64" ",curOff);
 			g_spiderdb.print ( srec );
-			printf(" age=%"INT32"s",now-sreq->m_addedTime);
+
+			printf(" requestage=%"INT32"s",now-sreq->m_addedTime);
 			printf(" hadReply=%"INT32"",(int32_t)hadReply);
 
 			printf(" errcount=%"INT32"",(int32_t)s_lastErrCount);

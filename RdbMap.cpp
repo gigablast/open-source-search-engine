@@ -8,6 +8,7 @@ RdbMap::RdbMap() {
 	m_numSegments = 0;
 	m_numSegmentPtrs = 0;
 	m_numSegmentOffs = 0;
+	m_newPagesPerSegment = 0;
 	reset ( );
 }
 
@@ -55,10 +56,13 @@ bool RdbMap::close ( bool urgent ) {
 
 void RdbMap::reset ( ) {
 	m_generatingMap = false;
+	int32_t pps = PAGES_PER_SEGMENT;
+	if ( m_newPagesPerSegment > 0 ) pps = m_newPagesPerSegment;
+
 	for ( int32_t i = 0 ; i < m_numSegments; i++ ) {
 		//mfree(m_keys[i],sizeof(key_t)*PAGES_PER_SEGMENT,"RdbMap");
-		mfree(m_keys[i],m_ks*PAGES_PER_SEGMENT,"RdbMap");
-		mfree(m_offsets[i], 2*PAGES_PER_SEGMENT,"RdbMap");
+		mfree(m_keys[i],m_ks *pps,"RdbMap");
+		mfree(m_offsets[i], 2*pps,"RdbMap");
 		// set to NULL so we know if accessed illegally
 		m_keys   [i] = NULL;
 		m_offsets[i] = NULL;
@@ -70,6 +74,8 @@ void RdbMap::reset ( ) {
 	mfree(m_offsets,m_numSegmentOffs*sizeof(int16_t *),"MapPtrs");
 	m_numSegmentPtrs = 0;
 	m_numSegmentOffs = 0;
+
+	m_newPagesPerSegment = 0;
 
 	m_needToWrite     = false;
 	m_fileStartOffset = 0LL;
@@ -512,7 +518,7 @@ bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 	// we need to call writeMap() before we exit
 	m_needToWrite = true;
 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// debug
 	log("db: addmap k=%s keysize=%"INT32" offset=%"INT64" pagenum=%"INT32"",
 	    KEYSTR(key,m_ks),recSize,m_offset,pageNum);
@@ -520,7 +526,7 @@ bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 
 	// we now call RdbList::checkList_r() in RdbDump::dumpList()
 	// and that checks the order of the keys
-	//#ifdef _SANITYCHECK_
+	//#ifdef GBSANITYCHECK
 	// . sanity check
 	// . a key of 0 is valid, so watch out for m_lastKey's sake
 	//if ( key <= m_lastKey && (m_lastKey.n0!=0 || m_lastKey.n1!=0)) {
@@ -694,7 +700,7 @@ bool RdbMap::addList ( RdbList *list ) {
 	}
 	*/
 
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// print the last key from lasttime
 	log("map: lastkey=%s",KEYSTR(m_lastKey,m_ks));
 #endif
@@ -1237,8 +1243,26 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 	}
 	return true;
 }
-	
 
+// try to save memory when there are many collections with tiny files on disk
+void RdbMap::reduceMemFootPrint () {
+	if ( m_numSegments != 1 ) return;
+	if ( m_numPages >= 100 ) return;
+	//return;
+	char *oldKeys = m_keys[0];
+	short *oldOffsets = m_offsets[0];
+	int pps = m_numPages;
+	m_keys   [0] = (char *)mmalloc ( m_ks * pps , "RdbMap" );
+	m_offsets[0] = (short *)mmalloc ( 2 * pps , "RdbMap" );
+	// copy over
+	memcpy ( m_keys   [0] , oldKeys    , m_ks * pps );
+	memcpy ( m_offsets[0] , oldOffsets , 2    * pps );
+	int oldPPS = PAGES_PER_SEGMENT;
+	mfree ( oldKeys    , m_ks * oldPPS , "RdbMap" );
+	mfree ( oldOffsets ,    2 * oldPPS , "RdbMap" );
+	m_newPagesPerSegment = m_numPages;
+}
+	
 // . add "n" segments
 // . returns false and sets g_errno on error
 bool RdbMap::addSegment (  ) {

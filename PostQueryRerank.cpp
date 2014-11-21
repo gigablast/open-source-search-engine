@@ -170,6 +170,8 @@ bool PostQueryRerank::set2 ( int32_t resultsWanted ) {
 	return true;
 }
 
+#include "Sanity.h"
+
 // sets up PostQueryRerank for each page in m_maxResultsToRerank
 // returns false on error
 bool PostQueryRerank::preRerank ( ) {
@@ -190,7 +192,7 @@ bool PostQueryRerank::preRerank ( ) {
 		log( LOG_INFO, "pqr: no language set for sort. "
 		"language will not be reranked" );
 
-	SANITYCHECK( ! m_m20List );
+	GBASSERT( ! m_m20List );
 	m_m20List = (M20List*)mcalloc( sizeof(M20List) * m_maxResultsToRerank,
 				       "PostQueryRerank" );
 	if( ! m_m20List ) {
@@ -199,7 +201,7 @@ bool PostQueryRerank::preRerank ( ) {
 		g_errno = ENOMEM;
 		return(false);
 	}
-	SANITYCHECK( ! m_positionList );
+	GBASSERT( ! m_positionList );
 	m_positionList = (int32_t *)mcalloc( sizeof(int32_t) * m_maxResultsToRerank,
 					  "PQRPosList" );
 	if( ! m_positionList ) {
@@ -262,7 +264,7 @@ bool PostQueryRerank::preRerank ( ) {
 		sortArrItem->m_host         = 0; // to be filled in later
 
 		Msg20 *msg20 = sortArrItem->m_m20;
-		SANITYCHECK( msg20 && ! msg20->m_errno );
+		GBASSERT( msg20 && ! msg20->m_errno );
 
 		Msg20Reply *mr = msg20->m_r;
 
@@ -1863,7 +1865,7 @@ rscore_t PostQueryRerank::rerankOtherPagesFromSameHost ( rscore_t score,
 // setup	
 bool PostQueryRerank::preRerankCommonTopicsInDmoz( Msg20Reply *mr ) {
 	if ( m_si->m_cr->m_pqr_demFactComTopicInDmoz <= 0 ) return true;
-	//SANITYCHECK( msg20 );
+	//GBASSERT( msg20 );
 	if ( ! mr ) { char *xx=NULL;*xx=0; }
 
 	//log( LOG_DEBUG, "query:in PQR::preRerankCommonTopicsInDmoz() "

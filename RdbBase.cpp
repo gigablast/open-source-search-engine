@@ -754,6 +754,9 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	g_mem.m_maxMem = mm;
 	// sanity check
 	if ( id2 < 0 && m_isTitledb ) { char *xx = NULL; *xx = 0; }
+
+	CollectionRec *cr = NULL;
+
 	// set the data file's filename
 	char name[256];
 	// if we're converting, just add to m_filesIds and m_fileIds2
@@ -854,8 +857,10 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
+
 	if ( ! isNew ) log(LOG_DEBUG,"db: Added %s for collnum=%"INT32" pages=%"INT32"",
 			    name ,(int32_t)m_collnum,m->getNumPages());
+
 	// open this big data file for reading only
 	if ( ! isNew ) {
 		if ( mergeNum < 0 ) 
@@ -885,6 +890,11 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	m_fileIds2 [i] = id2;
 	m_files    [i] = f;
 	m_maps     [i] = m;
+
+	// to free up mem for diffbot's many collections...
+	cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! isNew && cr && cr->m_isCustomCrawl )
+		m->reduceMemFootPrint();
 
 	// are we resuming a killed merge?
 	if ( g_conf.m_readOnlyMode && ((id & 0x01)==0) ) {

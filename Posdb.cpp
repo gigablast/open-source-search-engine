@@ -754,8 +754,11 @@ bool PosdbTable::allocTopTree ( ) {
 		log("toptree: toptree: initializing %"INT32" nodes",nn);
 
 	// this actually sets the # of nodes to MORE than nn!!!
-	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) 
+	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
+		log("toptree: toptree: error allocating nodes: %s",
+		    mstrerror(g_errno));
 		return false;
+	}
 	// let's use nn*4 to try to get as many score as possible, although
 	// it may still not work!
 	int32_t xx = m_r->m_docsToGet ;
@@ -4372,8 +4375,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 		if (qt->m_fieldCode == FIELD_GBNUMBEREQUALINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
-		if (qt->m_fieldCode == FIELD_GBFIELDMATCH )
-			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		//if (qt->m_fieldCode == FIELD_GBFIELDMATCH )
+		//	qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 
 		if (qt->m_fieldCode == FIELD_GBFACETSTR )
@@ -4756,10 +4759,10 @@ inline bool isInRange( char *p , QueryTerm *qt ) {
 		return ( score2 == qt->m_qword->m_int );
 	}
 
-	if ( qt->m_fieldCode == FIELD_GBFIELDMATCH ) {
-		int32_t score2 = g_posdb.getInt ( p );
-		return ( score2 == qt->m_qword->m_int );
-	}
+	// if ( qt->m_fieldCode == FIELD_GBFIELDMATCH ) {
+	// 	int32_t score2 = g_posdb.getInt ( p );
+	// 	return ( score2 == qt->m_qword->m_int );
+	// }
 
 	// how did this happen?
 	char *xx=NULL;*xx=0;
@@ -4808,8 +4811,8 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 		isRangeTerm = true;
 	if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) 
 		isRangeTerm = true;
-	if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
-		isRangeTerm = true;
+	// if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
+	// 	isRangeTerm = true;
 
 	// . just scan each sublist vs. the docid list
 	// . a sublist is a termlist for a particular query term, for instance
@@ -7573,8 +7576,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			isRangeTerm = true;
 		if ( qt->m_fieldCode == FIELD_GBNUMBEREQUALINT ) 
 			isRangeTerm = true;
-		if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
-			isRangeTerm = true;
+		// if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
+		// 	isRangeTerm = true;
 
 		// . make it consistent with Query::isTruth()
 		// . m_bitNum is set above to the QueryTermInfo #

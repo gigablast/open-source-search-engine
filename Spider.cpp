@@ -89,6 +89,8 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 	sb->safePrintf("k=%s ",KEYSTR(this,
 				      getKeySizeFromRdbId(RDB_SPIDERDB)));
 
+	// indicate it's a request not a reply
+	sb->safePrintf("REQ ");
 	sb->safePrintf("uh48=%"UINT64" ",getUrlHash48());
 	// if negtaive bail early now
 	if ( (m_key.n0 & 0x01) == 0x00 ) {
@@ -207,11 +209,16 @@ int32_t SpiderReply::print ( SafeBuf *sbarg ) {
 	SafeBuf tmp;
 	if ( ! sb ) sb = &tmp;
 
-	sb->safePrintf("k.n1=0x%"XINT64" ",m_key.n1);
-	sb->safePrintf("k.n0=0x%"XINT64" ",m_key.n0);
+	//sb->safePrintf("k.n1=0x%llx ",m_key.n1);
+	//sb->safePrintf("k.n0=0x%llx ",m_key.n0);
+	sb->safePrintf("k=%s ",KEYSTR(this,sizeof(SPIDERDBKEY)));
+
+	// indicate it's a reply
+	sb->safePrintf("REP ");
 
 	sb->safePrintf("uh48=%"UINT64" ",getUrlHash48());
 	sb->safePrintf("parentDocId=%"UINT64" ",getParentDocId());
+
 
 	// if negtaive bail early now
 	if ( (m_key.n0 & 0x01) == 0x00 ) {
@@ -679,7 +686,10 @@ bool Spiderdb::init2 ( int32_t treeMem ) {
 			    0             , // maxCacheNodes               ,
 			    false         , // half keys?
 			    false         , // save cache?
-			    NULL          );// &m_pc 
+			    NULL          , // &m_pc 
+			    false         , // isTitledb?
+			    false         , // preload diskpagecache
+			    sizeof(key128_t));
 }
 
 /*
@@ -1265,16 +1275,16 @@ bool SpiderColl::load ( ) {
 	// a restart request from crawlbottesting for this collnum which
 	// calls Collectiondb::resetColl2() which calls deleteSpiderColl()
 	// on THIS spidercoll, but our m_loading flag is set
-	if (!m_sniTable.set   ( 4,8,5000,NULL,0,false,MAX_NICENESS,"snitbl") )
+	if (!m_sniTable.set   ( 4,8,0,NULL,0,false,MAX_NICENESS,"snitbl") )
 		return false;
-	if (!m_cdTable.set    (4,4,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
+	if (!m_cdTable.set    (4,4,0,NULL,0,false,MAX_NICENESS,"cdtbl"))
 		return false;
 	// doledb seems to have like 32000 entries in it
 	int32_t numSlots = 0; // was 128000
 	if(!m_doleIpTable.set(4,4,numSlots,NULL,0,false,MAX_NICENESS,"doleip"))
 		return false;
 	// this should grow dynamically...
-	if (!m_waitingTable.set (4,8,100,NULL,0,false,MAX_NICENESS,"waittbl"))
+	if (!m_waitingTable.set (4,8,16,NULL,0,false,MAX_NICENESS,"waittbl"))
 		return false;
 	// . a tree of keys, key is earliestSpiderTime|ip (key=12 bytes)
 	// . earliestSpiderTime is 0 if unknown

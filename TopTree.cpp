@@ -111,8 +111,15 @@ bool TopTree::setNumNodes ( int32_t docsWanted , bool doSiteClustering ) {
 	//int32_t vecSize = 0;
 	//if ( useSampleVectors ) vecSize = SAMPLE_VECTOR_SIZE ;
 	char *nn ;
+
 	int32_t oldsize = (m_numNodes+1) * ( sizeof(TopNode) );
 	int32_t newsize = (  numNodes+1) * ( sizeof(TopNode) );
+	// if they ask for to many, this can go negative
+	if ( newsize < 0 ) {
+		g_errno = ENOMEM;
+		return false;
+	}
+
 	bool updated = false;
 	if (! m_nodes) {
 		nn=(char *)mmalloc (newsize,"TopTree");

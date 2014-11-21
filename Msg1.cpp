@@ -300,7 +300,7 @@ bool Msg1::sendSomeOfList ( ) {
 	while ( ! m_list->isExhausted() ) {
 		//key = m_list->getCurrentKey();
 		m_list->getCurrentKey(key);
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 		// no half bits in here!
 		// debug point
 		if ( m_list->useHalfKeys() && 

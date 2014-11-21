@@ -110,7 +110,7 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) ;
 #define PG_NOAPI 0x01
 #define PG_STATUS 0x02
 #define PG_COLLADMIN 0x04
-#define PG_ROOTADMIN 0x08
+#define PG_MASTERADMIN 0x08
 
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
@@ -349,7 +349,7 @@ enum {
 	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
 	PAGE_COLLPASSWORDS2 ,//BASIC_SECURITY ,
-	PAGE_ROOTPASSWORDS , // 19
+	PAGE_MASTERPASSWORDS , // 19
 	PAGE_ADDCOLL     , //20	 
 	PAGE_DELCOLL     , 
 	PAGE_CLONECOLL   ,

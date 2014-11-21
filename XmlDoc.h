@@ -496,6 +496,7 @@ class XmlDoc {
 	void setCallback ( void *state, bool (*callback) (void *state) ) ;
 	bool addToSpiderdb ( ) ;
 	void getRevisedSpiderRequest ( class SpiderRequest *revisedReq );
+	void getRebuiltSpiderRequest ( class SpiderRequest *sreq ) ;
 	bool indexDoc ( );
 	bool indexDoc2 ( );
 	key_t *getTitleRecKey() ;
@@ -898,6 +899,8 @@ class XmlDoc {
 	bool hashFacet2 ( char *prefix,char *term,int32_t val32, HashTableX *dt,
 			  bool shardByTermId = false ) ;
 
+	// gbfieldmatch:
+	bool hashFieldMatchTerm ( char *val, int32_t vlen, class HashInfo *hi);
 
 	bool hashNumber ( char *beginBuf ,
 			  char *buf , 

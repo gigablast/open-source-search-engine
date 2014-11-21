@@ -230,7 +230,7 @@ void RdbDump::doneDumping ( ) {
 
 	// save the map to disk
 	m_map->writeMap();
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");
 	if ( ! m_map->verifyMap ( m_file ) ) {
@@ -384,7 +384,7 @@ bool RdbDump::dumpTree ( bool recall ) {
 		m_totalNegDumped += m_numNegRecs;
 		// . check the list we got from the tree for problems
 		// . ensures keys are ordered from lowest to highest as well
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 		log("dump: verifying list before dumping");
 		m_list->checkList_r ( false , // removeNegRecs?
 				      false , // sleep on problem?
@@ -465,7 +465,7 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 	if ( m_list->isEmpty() ) return true;
 	// we're now in dump mode again 
 	m_isDumping = true;
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// don't check list if we're dumping an unordered list from tree!
 	if ( m_orderedDump ) {
 		m_list->checkList_r ( false /*removedNegRecs?*/ );
@@ -585,7 +585,7 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 	// now write it to disk
 	m_buf          = m_list->getList    ();
 	m_bytesToWrite = m_list->getListSize();
-	//#ifdef _SANITYCHECK_
+	//#ifdef GBSANITYCHECK
 	//if (m_list->getListSize()!=m_list->getListEnd() - m_list->getList()){
 	//	log("RdbDump::dumpList: major problem here!");
 	//	sleep(50000);

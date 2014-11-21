@@ -1393,7 +1393,7 @@ bool RdbBucket::getList(RdbList* list,
 		else                   numPos++;
 		lastKey = currKey;
 
-#ifdef __SANITY_CHECK__
+#ifdef GBSANITYCHECK
 		//sanity, remove for production
 		if(startKey && KEYCMP(currKey, startKey, ks) < 0) {
 			log("db: key is outside the "

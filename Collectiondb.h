@@ -386,6 +386,9 @@ class CollectionRec {
 
 	// for regular crawls
 	bool rebuildUrlFilters2();
+  
+  // for diffbot crawl or bulk jobs
+  bool rebuildUrlFiltersDiffbot();
 
 	bool rebuildLangRules( char *lang , char *tld );
 
@@ -660,8 +663,11 @@ class CollectionRec {
 	// priority of urls being retried, usually higher than normal
 	//char  m_retryPriority; 
 
-	// new diffbot parms
-	SafeBuf m_diffbotToken;
+  /***** 
+   * !! Start Diffbot paramamters !! *
+   *****/
+  
+  SafeBuf m_diffbotToken;
 	SafeBuf m_diffbotCrawlName;
 	// email for emailing when crawl limit hit
 	SafeBuf m_notifyEmail;
@@ -690,14 +696,17 @@ class CollectionRec {
 	SafeBuf m_diffbotUrlProcessPattern;
 	// only CRAWL urls that match this pattern
 	SafeBuf m_diffbotUrlCrawlPattern;
-
+  
 	// regex support
 	SafeBuf m_diffbotUrlCrawlRegEx;
 	SafeBuf m_diffbotUrlProcessRegEx;
 	regex_t m_ucr;
 	regex_t m_upr;
-	int32_t    m_hasucr:1;
-	int32_t    m_hasupr:1;
+	int32_t m_hasucr:1;
+	int32_t m_hasupr:1;
+  
+	// only crawl pages within hopcount of a seed. 0 for no limit 
+	int32_t m_diffbotMaxHops;
 
 	char    m_diffbotOnlyProcessIfNewUrl;
 
@@ -740,7 +749,11 @@ class CollectionRec {
 	//bool m_doingCallbacks;
 	// for storing callbacks waiting in line for freshest crawl info
 	//SafeBuf m_callbackQueue;
-	
+
+  /***** 
+   * !! End of Diffbot paramamters !! *
+   *****/
+
 	// list of url patterns to be indexed.
 	SafeBuf m_siteListBuf;
 	char m_spiderToo;
