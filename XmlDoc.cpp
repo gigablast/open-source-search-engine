@@ -42470,6 +42470,10 @@ SafeBuf *XmlDoc::getMatchingQueriesScoredForFullQuery ( ) {
 	// . set the query class for msg3a
 	// . queryExpansion = true
 	m_query3a->set2 ( qstr , langId , true );
+
+	// a debug thing
+	m_query3a->m_containingParent = (void *)this;
+
 	// secret variable latchon
 	m_msg3a->m_hack = this;
 

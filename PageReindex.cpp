@@ -305,6 +305,9 @@ bool Msg1c::reindexQuery ( char *query ,
 	// langunknown?
 	m_qq.set2 ( query , langId , true ); // /*bool flag*/ );
 
+	// a debug thing
+	m_qq.m_containingParent = (void *)this;
+
 	//CollectionRec *cr = g_collectiondb.getRec ( collnum );
 
 	// sanity fix

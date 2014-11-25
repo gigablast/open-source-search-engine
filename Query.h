@@ -996,6 +996,8 @@ class Query {
 	bool m_hasSynonyms;
 
 	SafeBuf m_debugBuf;
+
+	void *m_containingParent;
 };
 /*
 class QueryScores {

@@ -30,6 +30,8 @@ void Query::constructor ( ) {
 	m_qwordsAllocSize      = 0;
 	//m_expressionsAllocSize = 0;
 	m_qwords               = NULL;
+	m_numTerms = 0;
+	m_containingParent = NULL;
 	//m_expressions          = NULL;
 	reset ( );
 }
@@ -43,6 +45,16 @@ Query::~Query ( ) {
 }
 
 void Query::reset ( ) {
+
+	// if Query::constructor() was called explicitly then we have to
+	// call destructors explicitly as well...
+	for ( long i = 0 ; i < m_numTerms ; i++ ) {
+	 	// get it
+		QueryTerm *qt = &m_qterms[i];
+		HashTableX *ht = &qt->m_facetHashTable;
+		ht->reset();
+	}
+
 	m_docIdRestriction = 0LL;
 	m_groupThatHasDocId = NULL;
 	m_bufLen      = 0;

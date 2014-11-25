@@ -1276,6 +1276,8 @@ int Mem::printMem ( ) {
 	// print out table sorted by sizes
 	for ( int32_t i = 0 ; i < np ; i++ ) {
 		int32_t a = p[i];
+		//if ( strcmp((char *)&s_labels[a*16],"umsg20") == 0 )
+		//	log("hey");
 		log(LOG_INFO,"mem: %05"INT32") %"INT32" 0x%"PTRFMT" %s", 
 		    i,s_sizes[a] , (PTRTYPE)s_mptrs[a] , &s_labels[a*16] );
 	}

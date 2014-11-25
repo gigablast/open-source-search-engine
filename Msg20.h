@@ -404,6 +404,8 @@ public:
 	int32_t       m_midDomHash          ; // set for m_getLinkText
 	int32_t       m_adIdHash            ; // set for m_getLinkText
 	int32_t       m_timeLinkSpam        ; // set for m_getLinkText
+	void         *m_parentOwner;
+	char          m_constructorId;
 	char       m_inlinkWeight        ; // set for m_getLinkText
 	char       m_isLinkSpam          ; // set for m_getLinkText
 	char       m_isAnomaly           ; // set for m_getLinkText
@@ -819,6 +821,9 @@ class Msg20 {
 	// used by MsgE to store its data
 	void *m_state2;
 	void *m_state3;
+
+	void *m_owningParent;
+	char m_constructedId;
 
 	// PostQueryRerank storage area for printing out in PageResults.cpp
 	float m_pqr_old_score        ;

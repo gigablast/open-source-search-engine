@@ -963,8 +963,11 @@ bool Msg3a::mergeLists ( ) {
 		// facethashlists from each shard into
 		//int64_t tid  = m_q->m_qterms[i].m_termId;
 		// we hold all the facet values
+		// m_q is a ptr to State0::m_si.m_q from PageResults.cpp
+		// and Msg40.cpp ultimately.
 		HashTableX *ht = &qt->m_facetHashTable;
-		// we have to manually cal this
+		// we have to manually call this because Query::constructor()
+		// might have been called explicitly
 		ht->constructor();
 		// 4 byte key, 4 byte score for counting facet values
 		if ( ! ht->set(4,sizeof(FacetEntry),

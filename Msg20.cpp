@@ -15,6 +15,8 @@ void Msg20::constructor () {
 	m_inProgress = false;
 	m_launched = false;
 	m_ii = -1;
+	m_owningParent = (void *)0x012345;
+	m_constructedId = 5;
 	reset();
 	m_mcast.constructor();
 }
@@ -24,6 +26,10 @@ void Msg20::destructor  () { reset(); m_mcast.destructor(); }
 #include "Process.h"
 
 void Msg20::freeReply() {
+
+	//log("msg20: freeing reply for msg20=0x%"PTRFMT" reply=0x%"PTRFMT"",
+	//    (PTRTYPE)this,(PTRTYPE)m_r);
+
 	if ( ! m_r ) return;
 	// sometimes the msg20 reply carries an merged bffer from
 	// msg40 that is a constructed ptr_eventSummaryLines from a
@@ -36,16 +42,25 @@ void Msg20::freeReply() {
 }
 
 void Msg20::reset() { 
+
+	//log("msg20: resetting msg20=0x%"PTRFMT" reply=0x%"PTRFMT"",
+	//    (PTRTYPE)this,(PTRTYPE)m_r);
+
+	if ( ! m_owningParent ) { char *xx=NULL;*xx=0; }
+
 	// not allowed to reset one in progress
 	if ( m_inProgress ) { 
 		// do not core on abrupt exits!
-		if (g_process.m_mode == EXIT_MODE ) return;
+		if (g_process.m_mode == EXIT_MODE ) {
+			log("msg20: msg20 not being freed because exiting.");
+			return;
+		}
 		// otherwise core
 		char *xx=NULL;*xx=0; 
 	}
 	m_launched = false;
 	if ( m_request && m_request   != m_requestBuf )
-		mfree ( m_request , m_requestSize  , "Msg20rb" );
+		mfree ( m_request , m_requestSize  , "Msg20rb1" );
 	freeReply();
 	//if ( m_r ) m_r->destructor();
 	//if ( m_r && m_ownReply ) //&& (char *)m_r != m_replyBuf )
@@ -109,6 +124,8 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 
 	// reset ourselves in case recycled
 	reset();
+
+	if ( ! m_owningParent ) { char *xx=NULL;*xx=0; }
 
 	// consider it "launched"
 	m_launched = true;
@@ -281,7 +298,7 @@ void Msg20::gotReply ( UdpSlot *slot ) {
 
 	// free our serialized request buffer to save mem
 	if ( m_request && m_request   != m_requestBuf ) {
-		mfree ( m_request , m_requestSize  , "Msg20rb" );
+		mfree ( m_request , m_requestSize  , "Msg20rb2" );
 		m_request = NULL;
 	}
 
@@ -313,7 +330,8 @@ void Msg20::gotReply ( UdpSlot *slot ) {
 	//if( rp != m_replyBuf )
 	relabel( rp , m_replyMaxSize, "Msg20-mcastGBR" );
 
-	// sanity check
+	// sanity check. make sure multicast is not going to free the
+	// slot's m_readBuf... we need to own it.
 	if ( freeit ) {
 		log(LOG_LOGIC,"query: msg20: gotReply: Bad engineer.");
 		char *xx = NULL; *xx = 0;
@@ -327,12 +345,22 @@ void Msg20::gotReply ( UdpSlot *slot ) {
 
 	// cast it
 	m_r = (Msg20Reply *)rp;
+
+	m_r->m_parentOwner = (void *)this;
+	m_r->m_constructorId = 2;
+
 	// reset this since constructor never called
 	m_r->m_tmp = 0;
 	// we own it now
 	m_ownReply = true;
 	// deserialize it, sets g_errno on error??? not yet TODO!
 	m_r->deserialize();
+
+	// log("msg20: got msg20=0x%"PTRFMT" msg20reply=0x%"PTRFMT" slot=0x%"PTRFMT" s_tmp=%i"
+	//     ,(PTRTYPE)this
+	//     ,(PTRTYPE)m_r
+	//     ,(PTRTYPE)slot
+	//     ,s_tmp);
 }
 
 // . this is called
@@ -355,6 +383,9 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 		g_udpServer.sendErrorReply ( slot , EBADREQUESTSIZE );
 		return;
 	}
+
+	//log("query: got umsg20 %i 0x%"PTRFMT"",slot->m_readBufMaxSize,
+	//    (PTRTYPE)slot->m_readBuf);
 
 	// parse the request
 	Msg20Request *req = (Msg20Request *)slot->m_readBuf;
@@ -473,6 +504,9 @@ Msg20Reply::Msg20Reply ( ) {
 	//ptr_eventSummaryLines = NULL;
 	m_tmp = 0;
 
+	m_parentOwner = NULL;
+	m_constructorId = 0;
+
 	// seems to be an issue... caused a core with bogus size_dbuf
 	int32_t *sizePtr = &size_tbuf;
 	int32_t *sizeEnd = &size_note;
@@ -570,6 +604,8 @@ int32_t Msg20::deserialize ( char *buf , int32_t bufSize ) {
 	if ( bufSize < (int32_t)sizeof(Msg20Reply) ) {
 		g_errno = ECORRUPTDATA; return -1; }
 	m_r = (Msg20Reply *)buf;
+	m_r->m_parentOwner = (void *)this;
+	m_r->m_constructorId = 1;
 	// do not free "buf"/"m_r"
 	m_ownReply = false;
 	return m_r->deserialize ( );

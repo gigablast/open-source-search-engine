@@ -706,6 +706,10 @@ bool Msg40::federatedLoop ( ) {
 		// launch a search request
 		m_num3aRequests++;
 		// this returns false if it would block and will call callback
+		// m_si is actually contained in State0 in PageResults.cpp
+		// and Msg40::m_si points to that. so State0's destructor
+		// should call SearchInput's destructor which calls
+		// Query's destructor to destroy &m_si->m_q here when done.
 		if(!mp->getDocIds(&mp->m_rrr,&m_si->m_q,this,gotDocIdsWrapper))
 			continue;
 		if ( g_errno && ! m_errno ) 
@@ -1060,6 +1064,9 @@ bool Msg40::reallocMsg20Buf ( ) {
 			p += sizeof(Msg20);
 			// init it
 			tmp[i]->constructor();
+			// set this now
+			tmp[i]->m_owningParent = (void *)this;
+			tmp[i]->m_constructedId = 1;
 			// count it
 			pcount++;
 			// skip it if it is a new docid, we do not have a Msg20
@@ -1209,6 +1216,9 @@ bool Msg40::reallocMsg20Buf ( ) {
 		m_msg20[i] = (Msg20 *)p;
 		// call its constructor
 		m_msg20[i]->constructor();
+		// set this now
+		m_msg20[i]->m_owningParent = (void *)this;
+		m_msg20[i]->m_constructedId = 2;
 		// point to the next Msg20
 		p += sizeof(Msg20);
 		// remember num to free in reset() function
@@ -5951,6 +5961,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 	return true;
 }
 
+// this is a safebuf of msg20s for doing facet string lookups
 Msg20 *Msg40::getUnusedMsg20 ( ) {
 
 	// make a safebuf of 50 of them if we haven't yet
@@ -5959,8 +5970,14 @@ Msg20 *Msg40::getUnusedMsg20 ( ) {
 			return NULL;
 		}
 		Msg20 *ma = (Msg20 *)m_unusedBuf.getBufStart();
-		for ( int32_t i = 0 ; i < (int32_t)MAX2 ; i++ )
+		for ( int32_t i = 0 ; i < (int32_t)MAX2 ; i++ ) {
 			ma[i].constructor();
+			ma[i].m_owningParent = (void *)this;
+			ma[i].m_constructedId = 3;
+			// if we don't update length then Msg40::resetBuf2() 
+			// will fail to call Msg20::destructor on them
+			m_unusedBuf.m_length += sizeof(Msg20);
+		}
 	}
 		
 
