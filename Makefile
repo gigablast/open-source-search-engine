@@ -5,7 +5,7 @@ CC=g++
 # remove dlstubs.o for CYGWIN
 OBJS =  UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
-	PageGet.o PageHosts.o PageIndexdb.o \
+	PageGet.o PageHosts.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
 	PageAddUrl.o PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
@@ -23,7 +23,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	RdbList.o RdbDump.o RdbCache.o Rdb.o RdbBase.o \
 	Query.o Phrases.o Multicast.o Msg9b.o\
 	Msg8b.o Msg5.o \
-	Msg39.o Msg37.o Msg36.o Msg3.o \
+	Msg39.o Msg3.o \
 	Msg22.o \
 	Msg20.o Msg2.o \
 	Msg1.o Msg35.o \

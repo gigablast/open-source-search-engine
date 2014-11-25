@@ -1006,6 +1006,38 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 
 }
 
+
+int RdbBuckets::getListSizeExact ( collnum_t collnum ,
+				   char *startKey, 
+				   char *endKey ) {
+
+	int numBytes = 0;
+
+	int32_t startBucket = getBucketNum(startKey, collnum);
+	if(startBucket > 0 && 
+	   bucketCmp(startKey, collnum, m_buckets[startBucket-1]) < 0)
+		startBucket--;
+
+	int32_t endBucket;
+	if(bucketCmp(endKey, collnum, m_buckets[startBucket]) <= 0)
+		endBucket = startBucket;
+	else 
+		endBucket = getBucketNum(endKey, collnum);
+
+	if(endBucket == m_numBuckets ||
+	   m_buckets[endBucket]->getCollnum() != collnum) endBucket--;
+
+	//log(LOG_WARN, "db numBuckets %"INT32" start %"INT32" end %"INT32"", 
+	//m_numBuckets, startBucket, endBucket);
+	if(m_buckets[endBucket]->getCollnum() != collnum) {
+		char* xx = NULL; *xx = 0; }
+
+	for( int32_t i = startBucket ; i <= endBucket ; i++)
+		numBytes += m_buckets[i]->getListSizeExact(startKey,endKey);
+	
+	return numBytes;
+}
+
 bool RdbBuckets::testAndRepair() {
 	if(!selfTest(true/*thorough*/, 
 		     false/*core on error*/)) {
@@ -1482,6 +1514,118 @@ bool RdbBucket::getList(RdbList* list,
 }
 
 
+
+int RdbBucket::getListSizeExact (char* startKey, char* endKey ) {
+
+	int32_t numRecs = 0;
+
+	sort();
+	//get our bounds within the bucket:
+	uint8_t ks = m_parent->getKeySize();
+	int32_t recSize = m_parent->getRecSize();
+	int32_t start = 0;
+	int32_t end = m_numKeys - 1;
+	char v;
+	char* kk = NULL;
+
+	int32_t low = 0;
+	int32_t high = m_numKeys - 1;
+	while(low <= high) {
+		int32_t delta = high - low;
+		start = low + (delta >> 1);
+		kk = m_keys + (recSize * start);
+		v = KEYCMP(startKey,kk,ks);
+		if(v < 0) {
+			high = start - 1;
+			continue;
+		}
+		else if(v > 0) {
+			low = start + 1;
+			continue;
+		}
+		else break;
+
+	}
+	//now back up or move forward s.t. startKey
+	//is <= start
+	while(start < m_numKeys) {
+		kk = m_keys + (recSize * start);
+		v = KEYCMP(startKey, kk, ks);
+		if(v > 0) start++;
+		else break;
+	}
+
+
+
+
+	low = start;
+	high = m_numKeys - 1;
+	while(low <= high) {
+		int32_t delta = high - low;
+		end = low + (delta >> 1);
+		kk = m_keys + (recSize * end);
+		v = KEYCMP(endKey,kk,ks);
+		if(v < 0) {
+			high = end - 1;
+			continue;
+		}
+		else if(v > 0) {
+			low = end + 1;
+			continue;
+		}
+		else break;
+
+	}
+	while(end > 0) {
+		kk = m_keys + (recSize * end);
+		v = KEYCMP(endKey, kk, ks);
+		if(v < 0) end--;
+		else break;
+	}
+
+
+	//keep track of our negative a positive recs
+	//int32_t numNeg = 0;
+	//int32_t numPos = 0;
+
+	int32_t fixedDataSize = m_parent->getFixedDataSize();
+
+	char* currKey = m_keys + (start * recSize);
+
+	//bail now if there is only one key and it is out of range.
+	if(start == end && 
+	   ((startKey && KEYCMP(currKey, startKey, ks) < 0) ||
+	    (endKey   && KEYCMP(currKey, endKey, ks) > 0))) {
+		return 0;
+	}
+
+	// MDW: are none negatives?
+	if ( fixedDataSize == 0 ) {
+		numRecs = (end - start) * ks;
+		return numRecs;
+	}
+
+	char* lastKey = NULL;
+	for(int32_t i = start; 
+	    i <= end ; //&& list->getListSize() < minRecSizes; 
+	    i++, currKey += recSize) {
+		// if ( fixedDataSize == 0 ) {
+		// 	numRecs++;
+		// } 
+		// else {
+		int32_t dataSize = fixedDataSize;
+		if ( fixedDataSize == -1 ) 
+			dataSize = *(int32_t*)(currKey+ks+sizeof(char*));
+		numRecs++;
+		//}
+		lastKey = currKey;
+	}
+
+	// success
+	return numRecs * ks ;
+}
+
+
 bool RdbBuckets::deleteList(collnum_t collnum, RdbList *list) {
 	if(list->getListSize() == 0) return true;
 
@@ -1713,6 +1857,11 @@ int64_t RdbBuckets::getListSize ( collnum_t collnum,
 
 
 	int32_t endBucket = getBucketNum(endKey, collnum);
+
+	// not sure if i should have added this: MDW
+	//if(bucketCmp(endKey, collnum, m_buckets[startBucket]) <= 0)
+	//	endBucket = startBucket;
+
 	if(endBucket == m_numBuckets ||
 	   m_buckets[endBucket]->getCollnum() != collnum) endBucket--;
 	//log(LOG_WARN, "db numBuckets %"INT32" start %"INT32" end %"INT32"", 

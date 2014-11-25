@@ -318,11 +318,11 @@ static WebPage s_pages[] = {
 	  sendPageGeneric , 0,NULL,NULL,
 	  PG_NOAPI},
 
-	{ PAGE_INDEXDB   , "admin/indexdb" , 0 , "indexdb"         ,  0 , 0,
-	  //USER_MASTER ,
-	  "indexdb",
-	  sendPageIndexdb  , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_MASTERADMIN},
+	// { PAGE_INDEXDB   , "admin/indexdb" , 0 , "indexdb"         ,  0 , 0,
+	//   //USER_MASTER ,
+	//   "indexdb",
+	//   sendPageIndexdb  , 0 ,NULL,NULL,
+	//   PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_TITLEDB   , "admin/titledb" , 0 , "titledb"         ,  0 , 0,
 	  //USER_MASTER , 
@@ -2393,7 +2393,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// ignore these for now
 		//if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;
-		if ( i == PAGE_INDEXDB ) continue;
+		//if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;
 		if ( i == PAGE_API ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;

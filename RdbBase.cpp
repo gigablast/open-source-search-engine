@@ -2287,6 +2287,12 @@ int64_t RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 		if ( KEYCMP(newGuy,max,m_ks)>0 ) KEYSET(max,newGuy,m_ks);
 	}
 
+	// debug
+	// log("PHASE1: sk=%s ek=%s bytes=%i"
+	//     ,KEYSTR(startKey,m_ks)
+	//     ,KEYSTR(endKey,m_ks)
+	//     ,(int)totalBytes);
+
 	// TODO: now get from the btree!
 	// before getting from the map (on disk IndexLists) get upper bound
 	// from the in memory b-tree
@@ -2296,11 +2302,31 @@ int64_t RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 					     startKey , endKey , NULL , NULL );
 	else n = m_buckets->getListSize ( m_collnum ,
 					  startKey , endKey , NULL , NULL );
+
+	// debug
+	// RdbList list;
+	// m_buckets->getList ( m_collnum,
+	// 		     startKey,
+	// 		     endKey,
+	// 		     10000000,
+	// 		     &list ,
+	// 		     NULL,
+	// 		     NULL,
+	// 		     true);
+	// g_posdb.printList ( list );
+
+
 	totalBytes += n;
 	//if ( minKey2 < *minKey ) *minKey = minKey2;
 	//if ( maxKey2 > *maxKey ) *maxKey = maxKey2;	
 	// ensure totalBytes >= 0
 	if ( totalBytes < 0 ) totalBytes = 0;
+
+	// debug
+	// log("PHASE2: sk=%s ek=%s bytes=%i"
+	//     ,KEYSTR(startKey,m_ks)
+	//     ,KEYSTR(endKey,m_ks)
+	//     ,(int)totalBytes);
 
 	return totalBytes;
 }

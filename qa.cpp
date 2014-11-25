@@ -600,6 +600,10 @@ bool qainject1 ( ) {
 		     return false;
 	}
 
+	// stop for now
+	//return true;
+
+
 	// 'washer & dryer' does some algorithmic synonyms 'washer and dryer'
 	if ( ! s_flags[15] ) {
 		s_flags[15] = true;

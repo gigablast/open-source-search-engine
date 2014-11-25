@@ -170,6 +170,8 @@ class Posdb {
 			 bool               isDelKey       );
 
 
+	int printList ( RdbList &list ) ;
+
 	// we map the 32bit score to like 7 bits here
 	void setMultiplierBits ( void *vkp , unsigned char mbits ) {
 		key144_t *kp = (key144_t *)vkp;

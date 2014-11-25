@@ -1400,6 +1400,7 @@ void setTermFreqWeights ( collnum_t collnum , // char *coll,
 	int64_t *termIds = q->getTermIds();
 	// just use rdbmap to estimate!
 	for ( int32_t i = 0 ; i < q->getNumTerms(); i++ ) {
+		// GET THE TERMFREQ for setting weights
 		int64_t tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
 		if ( termFreqs ) termFreqs[i] = tf;
 		float tfw = getTermFreqWeight(tf,numDocsInColl);

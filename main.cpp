@@ -5603,7 +5603,7 @@ bool registerMsgHandlers1(){
 	//Msg22 msg22;	if ( ! msg22.registerHandler () ) return false;
 	//Msg23 msg23;	if ( ! msg23.registerHandler () ) return false;
 	Msg2a msg2a;    if ( ! msg2a.registerHandler () ) return false;
-	Msg36 msg36;	if ( ! msg36.registerHandler () ) return false;
+	//Msg36 msg36;	if ( ! msg36.registerHandler () ) return false;
 	//Msg30 msg30;    if ( ! msg30.registerHandler () ) return false;
 	MsgC  msgC ;    if ( ! msgC.registerHandler  () ) return false;
 

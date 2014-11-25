@@ -60,6 +60,8 @@ public:
 
 	bool deleteList(RdbList *list);
 
+	int getListSizeExact ( char *startKey, char *endKey ) ;
+
 	//Save State
 	int64_t fastSave_r(int fd, int64_t offset);
 	int64_t fastLoad(BigFile *f, int64_t offset);
@@ -125,6 +127,9 @@ class RdbBuckets {
 				char *startKey, char *endKey, 
 				char *minKey, char *maxKey );
 
+	int getListSizeExact ( collnum_t collnum ,
+			       char *startKey, 
+			       char *endKey ) ;
 
 
 	bool addBucket (RdbBucket *newBucket, int32_t i);

@@ -491,10 +491,19 @@ int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 	// . colnum is 0 for now
 	int64_t val = g_termFreqCache.getLongLong2 ( collnum ,
 						       termId  , // key
-						       86400   , // maxage
+						       500   , // maxage secs
 						       true    );// promote?
+
+	// doint qa test?
+	bool qaTest = false;
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( cr && strcmp(cr->m_coll,"qatest123") == 0 )
+		qaTest = true;
+
+
 	// -1 means not found in cache. if found, return it though.
-	if ( val >= 0 ) {
+	// do not return even if found if we are doing a qa test.
+	if ( val >= 0 && ! qaTest ) {
 		//log("posdb: got %"INT64" in cache",val);
 		return val;
 	}
@@ -502,36 +511,83 @@ int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 	// establish the list boundary keys
 	key144_t startKey ;
 	key144_t endKey   ;
-	makeStartKey ( &startKey, termId );
-	makeEndKey   ( &endKey  , termId );
+	//makeStartKey ( &startKey, termId );
+	//makeEndKey   ( &endKey  , termId );
 	// . ask rdb for an upper bound on this list size
 	// . but actually, it will be somewhat of an estimate 'cuz of RdbTree
-	key144_t maxKey;
-	int64_t maxRecs;
+	//key144_t maxKey;
+	//int64_t maxRecs;
 	// . don't count more than these many in the map
 	// . that's our old truncation limit, the new stuff isn't as dense
 	//int32_t oldTrunc = 100000;
 	// turn this off for this
-	int64_t oldTrunc = -1;
+	//int64_t oldTrunc = -1;
 	// get maxKey for only the top "oldTruncLimit" docids because when
 	// we increase the trunc limit we screw up our extrapolation! BIG TIME!
-	maxRecs = m_rdb.getListSize(collnum,
-				    (char *)&startKey,
-				    (char *)&endKey,
-				    (char *)&maxKey,
-				    oldTrunc );
+	// maxRecs = m_rdb.getListSize(collnum,
+	// 			    (char *)&startKey,
+	// 			    (char *)&endKey,
+	// 			    (char *)&maxKey,
+	// 			    oldTrunc );
+
+	makeStartKey ( &startKey, termId );
+	makeEndKey   ( &endKey  , termId );
+
+	int64_t numBytes = 0;
+
+	// get the # more slowly but exact for qa tests so it agrees
+	// with the results of the last time we ran it
+	if ( qaTest )
+		// TODO: just get the actual list and count unique docids
+		// with a blocking msg5...
+		numBytes += m_rdb.m_buckets.getListSizeExact(collnum,
+							(char *)&startKey,
+							(char *)&endKey);
+	else
+		numBytes += m_rdb.m_buckets.getListSize(collnum,
+							(char *)&startKey,
+							(char *)&endKey,
+							NULL,NULL);
+
+
+
+	// convert from size in bytes to # of recs
+	numBytes /= sizeof(POSDBKEY);
+
+	// RdbList list;
+	// makeStartKey ( &startKey, termId );
+	// makeEndKey   ( &endKey  , termId );
+	// int numNeg = 0;
+	// int numPos = 0;
+	// m_rdb.m_buckets.getList ( collnum ,
+	// 			  (char *)&startKey,
+	// 			  (char *)&endKey,
+	// 			  -1 , // minrecsizes
+	// 			  &list,
+	// 			  &numPos,
+	// 			  &numNeg,
+	// 			  true );
+	// if ( numPos*18 != numBytes ) {
+	// 	char *xx=NULL;*xx=0; }
+
+
+	// and assume each shard has about the same #
+	numBytes *= g_hostdb.m_numShards;
+
 	// over all splits!
-	maxRecs *= g_hostdb.m_numShards;
+	//maxRecs *= g_hostdb.m_numShards;
 	// . assume about 8 bytes per key on average for posdb.
 	// . because of compression we got 12 and 6 byte keys in here typically
 	//   for a single termid
-	maxRecs /= 8;
+	//maxRecs /= 8;
+
 	// log it
-	//log("posdb: put %"INT64" in cache",maxRecs);
+	//log("posdb: approx=%"INT64" exact=%"INT64"",maxRecs,numBytes);
+
 	// now cache it. it sets g_errno to zero.
-	g_termFreqCache.addLongLong2 ( collnum, termId, maxRecs );
+	g_termFreqCache.addLongLong2 ( collnum, termId, numBytes );
 	// return it
-	return maxRecs;
+	return numBytes;//maxRecs;
 }
 
 //////////////////
@@ -7764,4 +7820,168 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		dcmp6 );
 
 	return true;
+}
+
+int Posdb::printList ( RdbList &list ) {
+	bool justVerify = false;
+	POSDBKEY lastKey;
+	// loop over entries in list
+	for ( list.resetListPtr() ; ! list.isExhausted() && ! justVerify ;
+	      list.skipCurrentRecord() ) {
+		key144_t k; list.getCurrentKey(&k);
+		// compare to last
+		char *err = "";
+		if ( KEYCMP((char *)&k,(char *)&lastKey,sizeof(key144_t))<0 ) 
+			err = " (out of order)";
+		lastKey = k;
+		// is it a delete?
+		char *dd = "";
+		if ( (k.n0 & 0x01) == 0x00 ) dd = " (delete)";
+		int64_t d = g_posdb.getDocId(&k);
+		uint8_t dh = g_titledb.getDomHash8FromDocId(d);
+		char *rec = list.m_listPtr;
+		int32_t recSize = 18;
+		if ( rec[0] & 0x04 ) recSize = 6;
+		else if ( rec[0] & 0x02 ) recSize = 12;
+		// alignment bits check
+		if ( recSize == 6  && !(rec[1] & 0x02) ) {
+			int64_t nd1 = g_posdb.getDocId(rec+6);
+			// seems like nd2 is it, so it really is 12 bytes but
+			// does not have the alignment bit set...
+			//int64_t nd2 = g_posdb.getDocId(rec+12);
+			//int64_t nd3 = g_posdb.getDocId(rec+18);
+			// what size is it really?
+			// seems like 12 bytes
+			//log("debug1: d=%"INT64" nd1=%"INT64" nd2=%"INT64" nd3=%"INT64"",
+			//d,nd1,nd2,nd3);
+			err = " (alignerror1)";
+			if ( nd1 < d ) err = " (alignordererror1)";
+			//char *xx=NULL;*xx=0;
+		}
+		if ( recSize == 12 && !(rec[1] & 0x02) )  {
+			//int64_t nd1 = g_posdb.getDocId(rec+6);
+			// seems like nd2 is it, so it really is 12 bytes but
+			// does not have the alignment bit set...
+			int64_t nd2 = g_posdb.getDocId(rec+12);
+			//int64_t nd3 = g_posdb.getDocId(rec+18);
+			// what size is it really?
+			// seems like 12 bytes
+			//log("debug1: d=%"INT64" nd1=%"INT64" nd2=%"INT64" nd3=%"INT64"",
+			//d,nd1,nd2,nd3);
+			//if ( nd2 < d ) { char *xx=NULL;*xx=0; }
+			//char *xx=NULL;*xx=0;
+			err = " (alignerror2)";
+			if ( nd2 < d ) err = " (alignorderrror2)";
+		}
+		// if it 
+		if ( recSize == 12 &&  (rec[7] & 0x02)) { 
+			//int64_t nd1 = g_posdb.getDocId(rec+6);
+			// seems like nd2 is it, so it really is 12 bytes but
+			// does not have the alignment bit set...
+			int64_t nd2 = g_posdb.getDocId(rec+12);
+			//int64_t nd3 = g_posdb.getDocId(rec+18);
+			// what size is it really?
+			// seems like 12 bytes really as well!
+			//log("debug2: d=%"INT64" nd1=%"INT64" nd2=%"INT64" nd3=%"INT64"",
+			//d,nd1,nd2,nd3);
+			//char *xx=NULL;*xx=0;
+			err = " (alignerror3)";
+			if ( nd2 < d ) err = " (alignordererror3)";
+		}
+		// if ( KEYCMP((char *)&k,(char *)&startKey,list.m_ks)<0 || 
+		//      KEYCMP((char *)&k,ek2,list.m_ks)>0){
+		// 	err = " (out of range)";
+		// }
+		//if ( err )
+		//	printf("%s",err );
+		//continue;
+		//if ( ! magicBit && recSize == 6 ) { char *xx=NULL;*xx=0; }
+		if ( 1==1 ) //termId < 0 )
+			//fprintf(stderr,
+			log(
+			       "k=%s "
+			       "tid=%015"UINT64" "
+			       "docId=%012"INT64" "
+
+			       "siterank=%02"INT32" "
+			       "langid=%02"INT32" "
+			       "pos=%06"INT32" "
+			       "hgrp=%02"INT32" "
+			       "spamrank=%02"INT32" "
+			       "divrank=%02"INT32" "
+			       "syn=%01"INT32" "
+			       "densrank=%02"INT32" "
+			       //"outlnktxt=%01"INT32" "
+			       "mult=%02"INT32" "
+
+			       "dh=0x%02"XINT32" "
+			       "rs=%"INT32"" //recSize
+			       "%s" // dd
+			       "%s" // err
+			       "\n" , 
+			       KEYSTR(&k,sizeof(key144_t)),
+			       (int64_t)g_posdb.getTermId(&k),
+			       d , 
+			       (int32_t)g_posdb.getSiteRank(&k),
+			       (int32_t)g_posdb.getLangId(&k),
+			       (int32_t)g_posdb.getWordPos(&k),
+			       (int32_t)g_posdb.getHashGroup(&k),
+			       (int32_t)g_posdb.getWordSpamRank(&k),
+			       (int32_t)g_posdb.getDiversityRank(&k),
+			       (int32_t)g_posdb.getIsSynonym(&k),
+			       (int32_t)g_posdb.getDensityRank(&k),
+			       //(int32_t)g_posdb.getIsOutlinkText(&k),
+			       (int32_t)g_posdb.getMultiplier(&k),
+			       
+			       (int32_t)dh, 
+			       recSize,
+			       dd ,
+			       err );
+		else
+			log(//fprintf(stderr,
+			       "k=%s "
+			       "tid=%015"UINT64" "
+			       "docId=%012"INT64" "
+
+			       "siterank=%02"INT32" "
+			       "langid=%02"INT32" "
+			       "pos=%06"INT32" "
+			       "hgrp=%02"INT32" "
+			       "spamrank=%02"INT32" "
+			       "divrank=%02"INT32" "
+			       "syn=%01"INT32" "
+			       "densrank=%02"INT32" "
+			       //"outlnktxt=%01"INT32" "
+			       "mult=%02"INT32" "
+			       //"senth32=0x%08"XINT32" "
+			       "recSize=%"INT32" "
+			       "dh=0x%02"XINT32"%s%s\n" , 
+			       KEYSTR(&k,sizeof(key144_t)),
+			       (int64_t)g_posdb.getTermId(&k),
+			       d , 
+			       (int32_t)g_posdb.getSiteRank(&k),
+			       (int32_t)g_posdb.getLangId(&k),
+			       (int32_t)g_posdb.getWordPos(&k),
+			       (int32_t)g_posdb.getHashGroup(&k),
+			       (int32_t)g_posdb.getWordSpamRank(&k),
+			       (int32_t)g_posdb.getDiversityRank(&k),
+			       (int32_t)g_posdb.getIsSynonym(&k),
+			       (int32_t)g_posdb.getDensityRank(&k),
+			       //(int32_t)g_posdb.getIsOutlinkText(&k),
+			       (int32_t)g_posdb.getMultiplier(&k),
+			       //(int32_t)g_posdb.getSectionSentHash32(&k),
+			       recSize,
+			       
+			       (int32_t)dh, 
+			       dd ,
+			       err );
+		continue;
+	}
+
+	// startKey = *(key144_t *)list.getLastKey();
+	// startKey += (uint32_t) 1;
+	// // watch out for wrap around
+	// if ( startKey < *(key144_t *)list.getLastKey() ) return;
+	// goto loop;
+	return 1;
 }

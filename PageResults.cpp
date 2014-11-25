@@ -2384,6 +2384,46 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf ("\"\n,");
 	}
 
+	// print individual query term info
+	if ( si->m_format == FORMAT_XML ) {
+		Query *q = &si->m_q;
+		sb->safePrintf("\t<queryInfo>\n");
+		sb->safePrintf("\t\t<fullQuery><![CDATA[");
+		sb->cdataEncode(q->m_orig);
+		sb->safePrintf("]]></fullQuery>\n");
+		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
+			sb->safePrintf("\t\t<term>\n");
+			QueryTerm *qt = &q->m_qterms[i];
+			sb->safePrintf("\t\t\t<termNum>%i</termNum>\n",i);
+			char *term = qt->m_term;
+			char c = term[qt->m_termLen];
+			term[qt->m_termLen] = '\0';
+			sb->safePrintf("\t\t\t<termStr><![CDATA[%s]]>"
+				       "</termStr>\n"
+				       ,qt->m_term);
+			term[qt->m_termLen] = c;
+			// syn?
+			QueryTerm *sq = qt->m_synonymOf;
+			if ( sq ) {
+				char *term = sq->m_term;
+				char c = term[sq->m_termLen];
+				term[sq->m_termLen] = '\0';
+				sb->safePrintf("\t\t\t<synonymOf>"
+					       "<![CDATA[%s]]>"
+					       "</synonymOf>\n"
+					       ,sq->m_term);
+				term[sq->m_termLen] = c;
+			}				
+			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
+				       ,tf);
+			sb->safePrintf("\t\t</term>\n");
+		}
+		sb->safePrintf("\t</queryInfo>\n");
+	}			
+
+
+
 
 	// when streaming results we lookup the facets last
 	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults ) 
