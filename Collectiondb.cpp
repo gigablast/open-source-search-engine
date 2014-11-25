@@ -155,9 +155,9 @@ bool Collectiondb::loadAllCollRecs ( ) {
 		if ( ! addExistingColl ( coll , collnum ) )
 			return false;
 		// swap it out if we got 100+ collections
-		// if ( count < 100 ) continue;
-		// CollectionRec *cr = getRec ( collnum );
-		// if ( cr ) cr->swapOut();
+		if ( count < 100 ) continue;
+		CollectionRec *cr = getRec ( collnum );
+		if ( cr ) cr->swapOut();
 	}
 	// if no existing recs added... add coll.main.0 always at startup
 	if ( m_numRecs == 0 ) {
