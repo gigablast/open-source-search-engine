@@ -212,12 +212,22 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.</b> For <u>Ubuntu</u> do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
+<b>1.0</b> For <u>64-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+
 <br><br>
-<b>1.1</b> For Ubuntu 14.04 LTS (released in Apr 17, 2014) you also need to do 
-an <b>apt-get install g++-multilib</b>
+
+<b>1.1</b> For <u>64-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+
 <br><br>
-<b>1.2.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
+
+<b>1.2</b> For <u>32-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
+
+<br><br>
+
+<b>1.3</b> For <u>32-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
+
+<br><br>
+<b>1.4.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
 <br><br>
 <b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br><br>
@@ -234,11 +244,12 @@ an <b>apt-get install g++-multilib</b>
 <br><br><a name=features></a>
 <h1>Features</h1>
 
-&lt;<i>Last Updated Sep 2014</i>&gt;
+&lt;<i>Last Updated Dec 2014</i>&gt;
 <br>
 
 <ul>
 <li> <b>The ONLY open source WEB search engine.</b> 
+<li> 64-bit architecture.
 <li> Scalable to thousands of servers. 
 <li> Has scaled to over 12 billion web pages on over 200 servers.
 <li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate. (Performance metrics can be made about ten times faster but I have not got around to it yet. Drive space usage will probably remain about the same because it is already pretty efficient.)

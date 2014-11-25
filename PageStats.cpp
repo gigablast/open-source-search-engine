@@ -804,6 +804,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	SafeBuf ubuf;
 	printUptime ( ubuf );
 
+	int arch = 32;
+	if ( __WORDSIZE == 64 ) arch = 64;
+	if ( __WORDSIZE == 128 ) arch = 128;
+
 	if ( format == FORMAT_HTML )
 		p.safePrintf (
 			      "<table %s>"
@@ -824,6 +828,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //"<tr class=poo><td><b>write signals</b></td><td>%"INT64"</td></tr>\n"
 			      "<tr class=poo><td><b>quickpolls</b></td><td>%"INT32"</td></tr>\n"
 			      "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
+			      "<tr class=poo><td><b>Gigablast Architecture</b></td><td>%i bit</td></tr>\n"
+			      
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
 			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%"INT32"</td>\n"
 			      "<tr class=poo><td><b>Index Shards</b></td><td>%"INT32"</td>\n"
@@ -849,6 +855,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //g_stats.m_writeSignals,
 			      g_numQuickPolls,
 			      kv , 
+			      arch,
 			      //GBPROJECTNAME,
 			      //GBVersion ,
 			      g_stats.m_parsingInconsistencies ,
@@ -874,6 +881,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "\t\t<kernelVersion><![CDATA[%s]]>"
 			      "</kernelVersion>\n"
 
+			      "\t\t<gigablastArchitecture><![CDATA[%i bit]]>"
+			      "</gigablastArchitecture>\n"
+
 			      "\t\t<parsingInconsistencies>%"INT32""
 			      "</parsingInconsistencies>\n"
 
@@ -891,6 +901,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      g_numAlarms,
 			      g_numQuickPolls,
 			      kv , 
+			      arch,
 			      g_stats.m_parsingInconsistencies ,
 			      (int32_t)g_hostdb.getNumShards(),
 			      (int32_t)g_hostdb.getNumHostsPerShard(),
@@ -918,6 +929,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.jsonEncode(kv);
 		p.safePrintf( "\",\n"
 
+			      "\t\t\"gigablastArchitecture\":\"%i bit\",\n"
 			      "\t\t\"parsingInconsistencies\":%"INT32",\n"
 
 			      "\t\t\"numShards\":%"INT32",\n"
@@ -929,6 +941,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "\t\t\"localTimeStr\":\"%s\",\n"
 			      "\t\t\"localTime\":%"INT32",\n"
 			      ,
+			      arch,
 			      g_stats.m_parsingInconsistencies ,
 			      (int32_t)g_hostdb.getNumShards(),
 			      (int32_t)g_hostdb.getNumHostsPerShard(),
