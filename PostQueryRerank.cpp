@@ -1086,7 +1086,7 @@ rscore_t PostQueryRerank::rerankSmallestCatIdHasSuperTopics ( rscore_t score,
 	}
 
 	// find smallest catid
-	int32_t minCatid = LONG_MAX;
+	int32_t minCatid = 0x7fffffff;//LONG_MAX;
 	int32_t numCatids = msg20->m_r->size_catIds / 4;
 	for ( int32_t i = 0; i < numCatids; i++ ) {
 		if ( msg20->m_r->ptr_catIds[i] < minCatid ) {

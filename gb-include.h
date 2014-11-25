@@ -8,27 +8,32 @@
 //#define memset memset_ass
 
 #include <inttypes.h>
-#define XINT32 PRIX32
-#define UINT32 PRIu32
-#define INT32  PRId32
+
+#define XINT32 "x"
+#define UINT32 "u"
+#define INT32  "d"
+#define PRIX32 "X"
 
 //#define XINT64 "llx"
 //#define UINT64 "llu"
 //#define INT64  "lli"
-#define XINT64 PRIX64
-#define UINT64 PRIu64
-#define INT64  PRId64
 
 #if __WORDSIZE == 64
-#define PTRTYPE uint64_t
+#define XINT64 "lx"
+#define UINT64 "lu"
+#define INT64  "ld"
+#define PTRTYPE  uint64_t
 #define SPTRTYPE int64_t
-#define PTRFMT  PRIX64
+#define PTRFMT  "lx"
 #endif
 
 #if __WORDSIZE == 32
-#define PTRTYPE uint32_t
+#define XINT64 "llx"
+#define UINT64 "llu"
+#define INT64  "lld"
+#define PTRTYPE  uint32_t
 #define SPTRTYPE int32_t
-#define PTRFMT  PRIX32
+#define PTRFMT  "lx"
 #endif
 
 #include <ctype.h>	// Log.h
