@@ -421,7 +421,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	// . init the quick cache
 	// . use 100k
 	if ( ! s_cacheInit && 
-	     c->init ( 100*1024      ,  // maxMem
+	     c->init ( 200*1024      ,  // maxMem
 		       sizeof(key_t) ,  // fixedDataSize (clusterdb rec)
 		       false         ,  // support lists
 		       10000         ,  // max recs
