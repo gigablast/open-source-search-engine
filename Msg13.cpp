@@ -601,7 +601,7 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 
 	if ( ! s_flag ) {
 		s_flag = true;
-		s_hammerCache.init ( 5000       , // maxcachemem,
+		s_hammerCache.init ( 15000       , // maxcachemem,
 				     8          , // fixed data size
 				     false      , // support lists?
 				     500        , // max nodes
@@ -887,6 +887,11 @@ void downloadTheDocForReals3a ( Msg13Request *r ) {
 
 void downloadTheDocForReals3b ( Msg13Request *r ) {
 
+	int64_t nowms = gettimeofdayInMilliseconds();
+
+	// assume no download start time
+	r->m_downloadStartTimeMS = 0;
+
 	// . store time now
 	// . no, now we store 0 to indicate in progress, then we
 	//   will overwrite it with a timestamp when the download completes
@@ -901,7 +906,6 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	}
 	else if ( ! r->m_skipHammerCheck ) {
 		// get time now
-		int64_t nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
 		log(LOG_DEBUG,
 		    "spider: adding new time to hammercache for %s %s = %"INT64"",
@@ -920,7 +924,7 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 		    "firstIp=%s "
 		    "url=%s "
 		    "to msg13::hammerCache",
-		    -1,
+		    0,//-1,
 		    iptoa(r->m_firstIp),
 		    r->ptr_url);
 
@@ -1011,6 +1015,9 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	if ( r->m_isSquidProxiedUrl && ! r->m_proxyIp )
 		fixGETorPOST ( exactRequest );
 
+	// indicate start of download so we can overwrite the 0 we stored
+	// into the hammercache
+	r->m_downloadStartTimeMS = nowms;
 
 	// . download it
 	// . if m_proxyIp is non-zero it will make requests like:
@@ -1347,18 +1354,30 @@ void gotHttpReply2 ( void *state ,
 
 	// get time now
 	int64_t nowms = gettimeofdayInMilliseconds();
+
+	// right now there is a 0 in there to indicate in-progress.
+	// so we must overwrite with either the download start time or the
+	// download end time.
+	int64_t timeToAdd = r->m_downloadStartTimeMS;
+	if ( r->m_crawlDelayFromEnd ) timeToAdd = nowms;
+
 	// . now store the current time in the cache
 	// . do NOT do this for robots.txt etc. where we skip hammer check
-	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck )
-		s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
-	// note it
-	if ( g_conf.m_logDebugSpider )
-		log("spider: adding final download end time of %"INT64" for "
-		    "firstIp=%s "
-		    "url=%s "
-		    "to msg13::hammerCache",
-		    nowms,iptoa(r->m_firstIp),r->ptr_url);
+	if ( ! r->m_skipHammerCheck ) 
+		s_hammerCache.addLongLong(0,r->m_firstIp,timeToAdd);
 
+	// note it
+	if ( g_conf.m_logDebugSpider && ! r->m_skipHammerCheck )
+		log(LOG_DEBUG,"spider: adding last download time "
+		    "of %"INT64" for firstIp=%s url=%s "
+		    "to msg13::hammerCache",
+		    timeToAdd,iptoa(r->m_firstIp),r->ptr_url);
+
+
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: got http reply for firstip=%s url=%s",
+		    iptoa(r->m_firstIp),r->ptr_url);
+	
 
 	// sanity. this was happening from iframe download
 	//if ( g_errno == EDNSTIMEDOUT ) { char *xx=NULL;*xx=0; }
@@ -2786,13 +2805,18 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// . make sure we are not hammering an ip
 	// . returns 0 if currently downloading a url from that ip
 	// . returns -1 if not found
-	int64_t last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
+	int64_t last = s_hammerCache.getLongLong(0,r->m_firstIp,-1,true);
 	// get time now
 	int64_t nowms = gettimeofdayInMilliseconds();
 	// how long has it been since last download START time?
 	int64_t waited = nowms - last;
 
 	int32_t crawlDelayMS = r->m_crawlDelayMS;
+
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: got timestamp of %"INT64" from "
+		    "hammercache (waited=%"INT64") for %s",last,waited,
+		    iptoa(r->m_firstIp));
 
 	// . if we got a proxybackoff base it on # of banned proxies for urlIp
 	// . try to be more sensitive for more sensitive website policies

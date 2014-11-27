@@ -2073,8 +2073,8 @@ bool SpiderColl::isInDupCache ( SpiderRequest *sreq , bool addToCache ) {
 	// init dup cache?
 	if ( ! m_dupCache.isInitialized() )
 		// use 50k i guess of 64bit numbers and linked list info
-		m_dupCache.init ( 50000, 
-				  4 , // fixeddatasize (don't really need this)
+		m_dupCache.init ( 90000, 
+				  8 , // fixeddatasize (don't really need this)
 				  false, // list support?
 				  5000, // maxcachenodes
 				  false, // usehalfkeys?
@@ -5257,7 +5257,7 @@ void SpiderLoop::startLoop ( ) {
 	m_lockTable.set ( 8,sizeof(UrlLock),0,NULL,0,false,MAX_NICENESS,
 			  "splocks", true ); // useKeyMagic? yes.
 
-	if ( ! m_lockCache.init ( 10000 , // maxcachemem
+	if ( ! m_lockCache.init ( 20000 , // maxcachemem
 				  4     , // fixedatasize
 				  false , // supportlists?
 				  1000  , // maxcachenodes

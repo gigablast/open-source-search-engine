@@ -152,6 +152,20 @@ bool RdbCache::init ( int32_t  maxMem        ,
 	// . make the 128MB buffers
 	// . if we do more than 128MB per buf then pthread_create() will fail
 	int32_t bufMem = m_maxMem - m_memAlloced;
+	if( bufMem <= 0 ) {
+		log("rdbcache: cache for %s does not have enough mem. fix "
+		    "by increasing maxmem or number of recs, etc.",m_dbname);
+		char *xx=NULL;*xx=0;
+	}
+	if ( bufMem  && m_fixedDataSize > 0 &&
+	     bufMem / m_fixedDataSize < maxRecs / 2 ) {
+		log("cache: warning. "
+		    "cache for %s can have %i ptrs but buf mem "
+		    "can only hold %i objects"
+		    ,m_dbname
+		    ,(int)maxRecs
+		    ,(int)(bufMem/m_fixedDataSize));
+	}
 	m_totalBufSize = 0LL;
 	m_offset       = 0LL;
 	while ( bufMem > 0 && m_numBufs < 32 ) {

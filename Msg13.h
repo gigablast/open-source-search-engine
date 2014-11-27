@@ -56,6 +56,8 @@ public:
 	char *m_proxiedUrl;
 	int32_t  m_proxiedUrlLen;
 
+	int64_t m_downloadStartTimeMS;
+
 	char  m_niceness;
 	int32_t  m_ifModifiedSince;
 	int32_t  m_maxCacheAge;
