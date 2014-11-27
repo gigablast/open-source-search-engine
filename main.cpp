@@ -3044,6 +3044,10 @@ int main2 ( int argc , char *argv[] ) {
 		g_mem.setPid();
 		g_threads.setPid();
 		g_log.setPid();
+
+		// if we do not do this we don't get sigalarms or quickpolls
+		// when running as 'gb -d'
+		g_loop.init();
 	}
 
 	// initialize threads down here now so it logs to the logfile and
