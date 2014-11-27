@@ -7704,7 +7704,7 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 	}
 
 	// sort them
-	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
 	// set up table to map field name to column for printing the json items
 	HashTableX *columnTable = &st->m_columnTable;
