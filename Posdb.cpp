@@ -827,6 +827,12 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( m_debug )
 		log("toptree: toptree: initializing %"INT64" nodes",nn);
 
+	if ( nn < m_r->m_docsToGet )
+		log("query: warning only getting up to %"INT64" docids "
+		    "even though %"INT32" requested!!"
+		    , nn
+		    , m_r->m_docsToGet );
+
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
 		log("toptree: toptree: error allocating nodes: %s",
