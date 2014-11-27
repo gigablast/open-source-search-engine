@@ -3888,7 +3888,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		return (bool)adds;
 	}
 
-	if ( g_conf.m_masterPwds.length() == 0 ) {
+	if ( g_conf.m_masterPwds.length() == 0 &&
+	     g_conf.m_connectIps.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
