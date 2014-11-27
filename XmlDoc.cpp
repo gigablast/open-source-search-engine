@@ -8718,6 +8718,28 @@ int64_t *XmlDoc::getExactContentHash64 ( ) {
 	char **u8 = getUtf8Content();
 	if ( ! u8 || u8 == (char **)-1) return (int64_t *)u8;
 
+
+	// if (m_docId==88581116800LL)
+	// 	log("got article1 diffbot");
+	// if (m_docId==201689682865LL)
+	// 	log("got article11 diffbot");
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// if we are diffbot, then do not quite do an exact content hash.
+	// there is a "url:" field in the json that changes. so we have
+	// to exclude that field. otherwise getDupList() spider time dedup
+	// detection will fail the TestDuplicateContent.testDuplicate smoketest
+	if ( cr->m_isCustomCrawl == 1 && m_isDiffbotJSONObject ) {
+		int32_t *ch32 = getContentHashJson32();
+		if ( ! ch32 || ch32 == (void *)-1 ) return (int64_t *)ch32;
+		m_exactContentHash64Valid = true;
+		m_exactContentHash64 = (uint64_t)(uint32_t)*ch32;
+		return &m_exactContentHash64;
+	}
+
+
 	unsigned char *p = (unsigned char *)*u8;
 
 	int32_t plen = size_utf8Content;
@@ -8790,7 +8812,9 @@ RdbList *XmlDoc::getDupList ( ) {
 	g_posdb.makeStartKey ( &sk,termId ,0);
 	g_posdb.makeEndKey   ( &ek,termId ,MAX_DOCID);
 	// note it
-	log("dup: check termid=%"UINT64"",(uint64_t)(termId&TERMID_MASK));
+	log(LOG_DEBUG,"build: check termid=%"UINT64" for docid %"UINT64""
+	    ,(uint64_t)(termId&TERMID_MASK)
+	    ,m_docId);
 	// assume valid now
 	m_dupListValid = true;
 	// this is a no-split lookup by default now
