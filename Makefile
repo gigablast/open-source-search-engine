@@ -153,7 +153,7 @@ vclean:
 	@echo ""
 	@echo "If make fails then run:"
 	@echo ""
-	@echo "sudo apt-get update ; apt-get install make g++ libssl-dev"
+	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev"
 	@echo ""
 	@echo "*****"
 	@echo ""
