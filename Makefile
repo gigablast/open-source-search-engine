@@ -148,6 +148,15 @@ utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest moni
 
 vclean:
 	rm -f Version.o
+	@echo ""
+	@echo "*****"
+	@echo ""
+	@echo "If make fails then run:"
+	@echo ""
+	@echo "sudo apt-get update ; apt-get install make g++ libssl-dev"
+	@echo ""
+	@echo "*****"
+	@echo ""
 
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
