@@ -175,12 +175,14 @@ bool Msg2::getLists ( ) {
 			int64_t docId1 = g_posdb.getDocId(ek);
 			log("query: reading termlist #%"INT32" "//from "
 			    //"distributed cache on host #%"INT32". "
-			    "termId=%"INT64". k=%s mr=%"INT32" (docid0=%"INT64" -"
+			    "termId=%"INT64". sk=%s ek=%s "
+			    "mr=%"INT32" (docid0=%"INT64" to "
 			    "docid1=%"INT64").",
 			    m_i,
 			    //hostId, 
 			    g_posdb.getTermId(sk),
 			    KEYSTR(sk,sizeof(POSDBKEY)),
+			    KEYSTR(ek,sizeof(POSDBKEY)),
 			    //sk->n2,
 			    //sk->n1,
 			    //(int32_t)sk->n0,

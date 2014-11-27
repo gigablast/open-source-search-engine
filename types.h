@@ -776,7 +776,18 @@ inline char KEYCMPNEGEQ ( char *k1, char *k2, char keySize ) {
 
 inline char *KEYSTR ( void *vk , int32_t ks ) {
 	char *k = (char *)vk;
-	static char tmp[128];
+	static char tmp1[128];
+	static char tmp2[128];
+	static char s_flip = 0;
+	char *tmp;
+	if ( s_flip == 0 ) {
+		tmp = tmp1;
+		s_flip = 1;
+	}
+	else {
+		tmp = tmp2;
+		s_flip = 0;
+	}
 	char *s = tmp;
 	*s++ = '0';
 	*s++ = 'x';

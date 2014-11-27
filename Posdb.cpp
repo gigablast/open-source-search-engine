@@ -767,10 +767,10 @@ bool PosdbTable::allocWhiteListTable ( ) {
 
 
 bool PosdbTable::allocTopTree ( ) {
-	int32_t nn1 = m_r->m_docsToGet;
-	int32_t nn2 = 0;
+	int64_t nn1 = m_r->m_docsToGet;
+	int64_t nn2 = 0;
 	// just add all up in case doing boolean OR or something
-	for ( int32_t k = 0 ; k < m_msg2->m_numLists;k++){//getNumLists() ; k++) {
+	for ( int32_t k = 0 ; k < m_msg2->m_numLists;k++){//getNumLists();k++){
 		// count
 		RdbList *list = m_msg2->getList(k);
 		// skip if null
@@ -785,10 +785,22 @@ bool PosdbTable::allocTopTree ( ) {
 		// the 6 byte termid out, so reduce by 6.
 		nn2 += list->m_listSize / ( sizeof(POSDBKEY) -6 );
 	}
+
+	// if doing docid range phases where we compute the winning docids
+	// for a range of docids to save memory, then we need to amp this up
+	if ( m_r->m_numDocIdSplits > 1 ) {
+		// how many docid range splits are we doing?
+		nn2 *= m_r->m_numDocIdSplits;
+		// just in case one split is not as big
+		nn2 *= 2;
+	}
+		
 	// do not go OOM just because client asked for 10B results and we
 	// only have like 100 results.
-	int32_t nn = nn1;
+	int64_t nn = nn1;
 	if ( nn2 < nn1 ) nn = nn2;
+
+	
 
 	// . do not alloc space for anything if all termlists are empty
 	// . before, even if nn was 0, top tree would alloc a bunch of nodes
@@ -800,14 +812,20 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( nn == 0 )
 		return true;
 
+	// always at least 100 i guess
+	if ( nn < 100 ) nn = 100;
+
 
 	if ( m_r->m_doSiteClustering ) nn *= 2;
         // limit to this regardless!
         //CollectionRec *cr = g_collectiondb.getRec ( m_coll );
         //if ( ! cr ) return false;
 
+	// limit to 2B docids i guess
+	if ( nn > 2000000000 ) nn = 2000000000;
+
 	if ( m_debug )
-		log("toptree: toptree: initializing %"INT32" nodes",nn);
+		log("toptree: toptree: initializing %"INT64" nodes",nn);
 
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {

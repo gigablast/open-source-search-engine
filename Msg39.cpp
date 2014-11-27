@@ -601,6 +601,14 @@ bool Msg39::getLists () {
 		//	docIdStart = 0;
 		//	docIdEnd   = MAX_DOCID;
 		//}
+		// debug
+		if ( m_debug )
+			log("query: setting sk/ek for docids %"INT64""
+			    " to %"INT64" for termid=%"INT64""
+			    , docIdStart
+			    , docIdEnd
+			    , tid
+			    );
 		// store now in qterm
 		g_posdb.makeStartKey ( sk , tid , docIdStart );
 		g_posdb.makeEndKey   ( ek , tid , docIdEnd   );
