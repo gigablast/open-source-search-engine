@@ -1303,7 +1303,11 @@ bool RdbList::constrain ( char   *startKey    ,
 	}
 
 	// sanity. hint key should be full key
-	if ( m_ks == 18 && hintKey && (hintKey[0]&0x06)){char *xx=NULL;*xx=0;}
+	if ( m_ks == 18 && hintKey && (hintKey[0]&0x06)){
+		g_errno = ECORRUPTDATA;
+		return log("db: Hint key is corrupt.");
+		//char *xx=NULL;*xx=0;}
+	}
 
 	if ( hintOffset > m_listSize ) { char *xx=NULL;*xx=0; }
 

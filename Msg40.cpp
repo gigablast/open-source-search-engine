@@ -659,6 +659,11 @@ bool Msg40::federatedLoop ( ) {
 	// prevent going OOM for type:article AND html
 	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
+
+	// special oom hack fix
+	if ( cr && cr->m_isCustomCrawl && numDocIdSplits < 4 ) 
+		numDocIdSplits = 4;
+
 	// for testing
 	//m_numDocIdSplits = 3;
 	//if ( ! g_conf.m_doDocIdRangeSplitting )
