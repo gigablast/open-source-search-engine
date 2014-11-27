@@ -220,7 +220,7 @@ For RedHat do a <b>yum install gcc-c++</b>
 
 <br><br>
 
-<b>1.2</b> For <u>32-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
+<b>1.2</b> For <u>32-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib g++-multilib <!--lib32stdc++6--></b>
 
 <br><br>
 
@@ -231,8 +231,13 @@ For RedHat do a <b>yum install gcc-c++</b>
 <br><br>
 <b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br><br>
-<b>3.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
+<b>3.0</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br><br>
+
+<b>3.1</b> Run <b>make clean ; make gb32</b> 
+to compile the 32-bit version of gb.
+<br><br>
+
 <b>4.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
 <br><br>
 <b>5.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.

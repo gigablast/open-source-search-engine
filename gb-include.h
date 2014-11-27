@@ -31,7 +31,7 @@
 #define XINT64 "llx"
 #define UINT64 "llu"
 #define INT64  "lld"
-#define PTRTYPE  uint32_t
+#define PTRTYPE  unsigned long //uint32_t
 #define SPTRTYPE int32_t
 #define PTRFMT  "lx"
 #endif
