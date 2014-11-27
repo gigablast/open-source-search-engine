@@ -996,7 +996,8 @@ void DiskPageCache::excisePage ( int32_t poff ) {
 	
 	// the memory page we are commandeering should no longer be 
 	// mapped to from its disk page
-	m_memOffFromDiskPage [ vfd ] [ diskPageNum ] = -1;
+	if ( m_memOffFromDiskPage [ vfd ] )
+		m_memOffFromDiskPage [ vfd ] [ diskPageNum ] = -1;
 }
 
 // . grow/shrink m_memOffFromDiskPage[] which maps vfd/page to a mem offset
