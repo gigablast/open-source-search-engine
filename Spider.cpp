@@ -3982,13 +3982,20 @@ bool SpiderColl::scanListForWinners ( ) {
 			// if we tried it before
 			sreq->m_hadReply = true;
 		}
-		// this is -1 on corruption
+		// . this is -1 on corruption
+		// . i've seen -31757, 21... etc for bad http replies
+		//   in the qatest123 doc cache... so turn off for that
 		if ( srep && srep->m_httpStatus >= 1000 ) {
-			log("spider: got corrupt 3 spiderReply in scan "
-			    "httpstatus=%"INT32" (cn=%"INT32")",
-			    (int32_t)srep->m_httpStatus,
-			    (int32_t)m_collnum);
-			srep = NULL;
+			static bool s_init = false;
+			if ( ! s_init ) {
+				s_init = true;
+				log("spider: got corrupt 3 spiderReply in "
+				    "scan httpstatus=%"INT32" (cn=%"INT32")",
+				    (int32_t)srep->m_httpStatus,
+				    (int32_t)m_collnum);
+			}
+			// don't nuke it just for that...
+			//srep = NULL;
 		}
 		// bad langid?
 		if ( srep && ! getLanguageAbbr (srep->m_langId) ) {
