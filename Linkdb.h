@@ -735,7 +735,7 @@ class LinkInfo {
 
 	int32_t   getStoredSize  ( ) { return m_lisize; };
 	int32_t   getSize        ( ) { return m_lisize; };
-	time_t getLastUpdated ( ) { return m_lastUpdated; };
+	time_t getLastUpdated ( ) { return (time_t)m_lastUpdated; };
 
 	//int32_t   getNumTotalInlinks   ( ) { 
 	//	if ( this == NULL ) return 0; return m_numTotalInlinks; };
@@ -799,7 +799,8 @@ class LinkInfo {
 	char       m_reserved2;
 	// includes Inlinks in m_buf[] below
 	int32_t       m_lisize;
-	time_t     m_lastUpdated;
+	// this is really a time_t but that changes and this can't change!
+	int32_t       m_lastUpdated;
 	// this is precisely how many inlinks we stored in m_buf[] below
 	int32_t       m_numStoredInlinks;//m_numTotalInlinks;
 	// . only valid if titleRec version >= 119, otherwise its always 0

@@ -35268,7 +35268,8 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 
 	//int32_t sni = info1->getNumGoodInlinks();
 
-	struct tm *timeStruct3 = gmtime ( &info1->m_lastUpdated );
+	time_t tlu = info1->getLastUpdated();
+	struct tm *timeStruct3 = gmtime ( &tlu );//info1->m_lastUpdated );
 	char tmp3[64];
 	strftime ( tmp3 , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct3 );
 
