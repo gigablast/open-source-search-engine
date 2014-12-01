@@ -97,7 +97,7 @@ else
 #
 # add -m32 flag to this line if you need to make a 32-bit gb.
 #
-CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+CPPFLAGS = -m64 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 #LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
@@ -165,7 +165,7 @@ cygwin:
 	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." gb
 
 gb32:
-	make DEFS="-m32 -D_REENTRANT_ $(CHECKFORMATSTRING) -I." LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
+	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
 
 #iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
 #	./parse_iana_charsets.pl < character-sets
