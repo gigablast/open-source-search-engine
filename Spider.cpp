@@ -2074,7 +2074,7 @@ bool SpiderColl::isInDupCache ( SpiderRequest *sreq , bool addToCache ) {
 	if ( ! m_dupCache.isInitialized() )
 		// use 50k i guess of 64bit numbers and linked list info
 		m_dupCache.init ( 90000, 
-				  8 , // fixeddatasize (don't really need this)
+				  4 , // fixeddatasize (don't really need this)
 				  false, // list support?
 				  5000, // maxcachenodes
 				  false, // usehalfkeys?

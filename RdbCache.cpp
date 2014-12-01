@@ -368,7 +368,8 @@ void RdbCache::addLong ( collnum_t collnum ,
 	// sanity check
 	if ( m_cks > (int32_t)sizeof(key_t) ) { char *xx = NULL; *xx = 0; }
 	addRecord ( collnum , (char *)&k , NULL , 0 , (char *)&value , 
-		    sizeof(char *), // 4 , now 8 for 64 bit archs
+		    // by long we really mean 32 bits!
+		    4,//sizeof(char *), // 4 , now 8 for 64 bit archs
 		    0 , // timestamp=now
 		    retRecPtr );
 	// clear error in case addRecord set it
