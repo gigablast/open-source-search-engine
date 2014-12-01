@@ -812,8 +812,11 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( nn == 0 )
 		return true;
 
-	// always at least 100 i guess
-	if ( nn < 100 ) nn = 100;
+	// always at least 100 i guess. why? it messes up the
+	// m_scoreInfoBuf capacity and it cores
+	//if ( nn < 100 ) nn = 100;
+	// but 30 is ok since m_scoreInfo buf uses 32
+	if ( nn < 30 ) nn = 30;
 
 
 	if ( m_r->m_doSiteClustering ) nn *= 2;
