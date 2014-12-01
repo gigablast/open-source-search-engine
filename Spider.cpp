@@ -1255,8 +1255,8 @@ bool SpiderColl::load ( ) {
 	int32_t maxMem = 15000;
 	int32_t maxNodes = 500;
 	if ( g_collectiondb.m_numRecsUsed > 500 ) {
-		maxMem = 1000;
 		maxNodes = 100;
+		maxMem = maxNodes * 16;
 	}
 
 	if ( ! m_lastDownloadCache.init ( maxMem     , // maxcachemem,
