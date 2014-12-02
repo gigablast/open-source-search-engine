@@ -873,50 +873,53 @@ class Inlink { // : public Msg {
 	// returns a ptr into a static buffer
 	char *getLinkTextAsUtf8 ( int32_t *len = NULL ) ;
 
-	int32_t       m_ip                  ;
-	int64_t  m_docId               ;
-	int32_t       m_firstSpidered       ;
-	int32_t       m_lastSpidered        ;
-	int32_t	   m_nextSpiderDate	 ;
+	int32_t       m_ip                  ; //0
+	int64_t  m_docId               ; // 4
+	int32_t       m_firstSpidered       ; // 12
+	int32_t       m_lastSpidered        ; // 16
+	int32_t	   m_nextSpiderDate	 ; // 20
 	// like in the titleRec, the lower 2 bits of the datedbDate have
 	// special meaning. 
 	// 0x00 --> datedb date extracted from content (pubdate)
 	// 0x01 --> datedb date based on estimated "modified" time (moddate)
 	// 0x10 --> datedb date is when same-site root was estimated to have
 	//          first added that url as an outlink (discoverdate) (TODO)
-	int32_t       m_datedbDate          ;
+	int32_t       m_datedbDate          ; // 24
 	// this date is used as the discovery date for purposes of computing
 	// LinkInfo::m_numInlinksFresh
-	int32_t       m_firstIndexedDate    ;
+	int32_t       m_firstIndexedDate    ; // 28
 	//int32_t       m_baseScore           ;
-	int32_t       m_pageNumInlinks      ;
-	int32_t       m_siteNumInlinks      ;
+	int32_t       m_pageNumInlinks      ; // 32
+	int32_t       m_siteNumInlinks      ; // 36
 	// record the word position we hashed this link text with
 	// so we can match it to the DocIdScoringInfo stuff
-	int32_t       m_wordPosStart;//reservedc;//pagePop             ;
-	int32_t       m_firstIp;//wordPosEnd;//reservedd;//sitePop             ;
+	int32_t       m_wordPosStart;//reservedc;//pagePop        // 40
+	int32_t       m_firstIp;//wordPosEnd;//reservedd;//sitePop // 44
 
 	// . int32_t     m_reserved1           ;
 	// . how many strings do we have?
 	// . makes it easy to add new strings later
-	uint16_t   m_reserved_NumStrings          ;
+	uint16_t   m_reserved_NumStrings          ; // 48
 	// . and were our first string ptrs starts
 	// . allows us to set ourselves from an "old" Inlink 
-	uint16_t   m_reserved_FirstStrPtrOffset   ;
+	uint16_t   m_reserved_FirstStrPtrOffset   ; // 50
 
-	uint16_t   m_numOutlinks         ;
+	uint16_t   m_numOutlinks         ; // 52
 	// i guess no need to store this stuff if we are storing the url
 	// in ptr_urlBuf below. we can call Url::set() then Url::getHostHash()
 	// NO, because the site is now only contained in the TagRec now and
 	// we compute the site in SiteGetter.cpp, so it is more complicated!!!
 	// we get the tag rec of each outlink, and get the site from that
 	// and hash that and store it here
-	int32_t       m_siteHash            ; // www.hompages.com/~fred/
+
+	// we got a 2 byte padding before this PADPADPADPADP
+
+	int32_t       m_siteHash            ; // www.hompages.com/~fred/ // 56
 	//int32_t     m_hostHash            ; // www.ibm.com
 	//int32_t     m_midDomHash          ; // the ibm in ibm.com
 
 	// single bit flags
-	uint16_t   m_isPermalink      : 1 ;
+	uint16_t   m_isPermalink      : 1 ; // 60
 	uint16_t   m_outlinkInContent : 1 ;
 	uint16_t   m_outlinkInComment : 1 ;
 	uint16_t   m_isReserved       : 1 ; // was u-n-i-c-o-d-e- bit
@@ -944,41 +947,68 @@ class Inlink { // : public Msg {
 	uint16_t   m_reserveda        : 1 ;
 	uint16_t   m_reservedb        : 1 ;
 
-	uint16_t   m_country             ;
-	uint8_t    m_language            ;
+	uint16_t   m_country             ; // 62
+	uint8_t    m_language            ; // 64
 	//char     m_docQuality          ;
-	char       m_siteRank;
+	char       m_siteRank; // 65
 	//char       m_ruleset             ;
-	char       m_hopcount            ;
-	char       m_linkTextScoreWeight ; // 0-100% (was m_inlinkWeight)
+	char       m_hopcount            ;  // 66
+	char       m_linkTextScoreWeight ; // 0-100% (was m_inlinkWeight) //67
 
 	char *getUrl ( ) { 
 		if ( size_urlBuf == 0 ) return NULL;
-		return m_buf + off_urlBuf; 
+		return m_buf ;//+ off_urlBuf; 
 	};
 	char *getLinkText ( ) { 
 		if ( size_linkText == 0 ) return NULL;
-		return m_buf + off_linkText; 
+		//return m_buf + off_linkText; 
+		return m_buf + 
+			size_urlBuf;
 	};
 	char *getSurroundingText ( ) { 
 		if ( size_surroundingText == 0 ) return NULL;
-		return m_buf + off_surroundingText; 
+		//return m_buf + off_surroundingText; 
+		return m_buf + 
+			size_urlBuf +
+			size_linkText;
 	};
 	char *getRSSItem ( ) { 
 		if ( size_rssItem == 0 ) return NULL;
-		return m_buf + off_rssItem; 
+		//return m_buf + off_rssItem; 
+		return m_buf + 
+			size_urlBuf +
+			size_linkText + 
+			size_surroundingText;
 	};
 	char *getCategories ( ) { 
 		if ( size_categories == 0 ) return NULL;
-		return m_buf + off_categories; 
+		//return m_buf + off_categories; 
+		return m_buf + 
+			size_urlBuf +
+			size_linkText + 
+			size_surroundingText +
+			size_rssItem;
 	};
 	char *getGigabitQuery ( ) { 
 		if ( size_gigabitQuery == 0 ) return NULL;
-		return m_buf + off_gigabitQuery; 
+		//return m_buf + off_gigabitQuery; 
+		return m_buf + 
+			size_urlBuf +
+			size_linkText + 
+			size_surroundingText +
+			size_rssItem +
+			size_categories;
 	};
 	char *getTemplateVector ( ) { 
 		if ( size_templateVector == 0 ) return NULL;
-		return m_buf + off_templateVector; 
+		//return m_buf + off_templateVector; 
+		return m_buf + 
+			size_urlBuf +
+			size_linkText + 
+			size_surroundingText +
+			size_rssItem +
+			size_categories +
+			size_gigabitQuery;
 	};
 		
 
@@ -990,7 +1020,7 @@ class Inlink { // : public Msg {
 	// . no need to store vector for voting deduping in here because
 	//   that use MsgE's Msg20Replies directly
 	// . this is just stuff we want in the title rec
-	int32_t    off_urlBuf            ;
+	int32_t    off_urlBuf            ; // 68
 	int32_t    off_linkText          ;
 	int32_t    off_surroundingText   ; // neighborhoods
 	// . this is the rss item that links to us
