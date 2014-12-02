@@ -1256,7 +1256,7 @@ bool SpiderColl::load ( ) {
 	int32_t maxNodes = 500;
 	if ( g_collectiondb.m_numRecsUsed > 500 ) {
 		maxNodes = 100;
-		maxMem = maxNodes * 16;
+		maxMem = maxNodes * 20;
 	}
 
 	if ( ! m_lastDownloadCache.init ( maxMem     , // maxcachemem,
@@ -1885,7 +1885,9 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	/////
 	if ( lock ) lock->m_spiderOutstanding = false;
 	// bitch if not in there
-	if ( !lock ) // &&g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
+	// when "rebuilding" (Rebuild.cpp) this msg gets triggered too much...
+	// so only show it when in debug mode.
+	if ( !lock && g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
 		logf(LOG_DEBUG,"spider: rdb: lockKey=%"UINT64" "
 		     "was not in lock table",lockKey);
 

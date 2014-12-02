@@ -152,7 +152,7 @@ void mutexUnlock ( ) {
 // there should not be too many mallocs any more
 // i boosted from 300k to 600k so we can get summaries for 150k results
 // for the csv download...
-#define DMEMTABLESIZE (1024*602)
+//#define DMEMTABLESIZE (1024*600)
 //#define DMEMTABLESIZE (1024*202)
 // and small for local machine
 //#define DMEMTABLESIZE (1024*50)
@@ -409,7 +409,7 @@ Mem::Mem() {
 	m_maxAlloc = 0;
 	m_maxAllocBy = "";
 	m_maxAlloced = 0;
-	m_memtablesize = DMEMTABLESIZE;
+	m_memtablesize = 0;//DMEMTABLESIZE;
  	m_stackStart = NULL;
 	// shared mem used
 	m_sharedUsed = 0LL;
@@ -608,6 +608,11 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	//}
 	// clear mem ptrs if this is our first call
 	if ( ! s_initialized ) {
+
+	  //m_memtablesize = 0;//DMEMTABLESIZE;
+	  // 4G/x = 600*1024 -> x = 4000000000.0/(600*1024) = 6510
+	  m_memtablesize = m_maxMem / 6510;
+
 		s_mptrs  = (void **)sysmalloc ( m_memtablesize*sizeof(void *));
 		s_sizes  = (int32_t  *)sysmalloc ( m_memtablesize*sizeof(int32_t  ));
 		s_labels = (char  *)sysmalloc ( m_memtablesize*16            );
