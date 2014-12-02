@@ -764,7 +764,10 @@ void DiskPageCache::addPage(int32_t vfd,
 			       sizeof(int32_t));
 
 		// did excise work?
-		if ( m_memOffFromDiskPage[oldVfd][oldDiskPage] != -1 ) {
+		// this cored here from m_memOffFroMDiskPage[oldVfd] being
+		// NULL, so how could that happen?
+		if ( m_memOffFromDiskPage[oldVfd] &&
+		     m_memOffFromDiskPage[oldVfd][oldDiskPage] != -1 ) {
 			char *xx=NULL;*xx=0; }
 		// did ex
 		// seg faultint here: mdw:
