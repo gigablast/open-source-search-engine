@@ -525,6 +525,12 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 
 	//validate();
 
+        //m_memtablesize = 0;//DMEMTABLESIZE;
+	  // 4G/x = 600*1024 -> x = 4000000000.0/(600*1024) = 6510
+	if ( ! s_initialized )
+		m_memtablesize = m_maxMem / 6510;
+
+
 	if ( (int32_t)m_numAllocated + 100 >= (int32_t)m_memtablesize ) { 
 		bool s_printed = false;
 		if ( ! s_printed ) {
@@ -608,10 +614,6 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	//}
 	// clear mem ptrs if this is our first call
 	if ( ! s_initialized ) {
-
-	  //m_memtablesize = 0;//DMEMTABLESIZE;
-	  // 4G/x = 600*1024 -> x = 4000000000.0/(600*1024) = 6510
-	  m_memtablesize = m_maxMem / 6510;
 
 		s_mptrs  = (void **)sysmalloc ( m_memtablesize*sizeof(void *));
 		s_sizes  = (int32_t  *)sysmalloc ( m_memtablesize*sizeof(int32_t  ));
