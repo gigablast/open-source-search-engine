@@ -2998,6 +2998,14 @@ bool Parms::removeParm ( int32_t i , int32_t an , char *THIS ) {
 	int32_t size = (num - an - 1 ) * m->m_size ;
 	// bury it
 	memcpy ( dst , src , size );
+
+	// and detach the buf on the tail so it doesn't core in Mem.cpp
+	// when it tries to free...
+	if ( m->m_type == TYPE_SAFEBUF ) {
+		SafeBuf *tail = (SafeBuf *)(pos + m->m_size * (num-1));
+		tail->detachBuf();
+	}
+
 	// dec the count
 	*(int32_t *)(pos-4) = (*(int32_t *)(pos-4)) - 1;
 	return true;
@@ -3183,6 +3191,8 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 		// this means that we can not use string POINTERS as parms!!
 		if ( ! isHtmlEncoded ) sb->safeMemcpy ( s , len ); 
 		else                   len = sb->htmlDecode (s,len,false,0);
+		// tag it
+		sb->setLabel ( "parm1" );
 		// ensure null terminated
 		sb->nullTerm();
 		// note it
@@ -4114,6 +4124,7 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 		char tmp[100];
 		strftime ( tmp , 100 , "%d %b %Y %H:%M UTC" , tp );
 		sb->safeStrcpy ( tmp );
+		sb->setLabel("parm3");
 	}
 	//p += gbstrlen ( p );
 	//return p;
@@ -21715,6 +21726,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			sb->safeStrcpy ( data ); // , dataSize );
 			// ensure null terminated
 			sb->nullTerm();
+			sb->setLabel("parm2");
 		}
 		//return true;
 		// sanity

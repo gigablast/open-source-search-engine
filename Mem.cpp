@@ -174,6 +174,7 @@ void operator delete (void *ptr) throw () {
 
 void operator delete [] ( void *ptr ) throw () {
 	// now just call this
+	// the 4 bytes are # of objects in the array
 	g_mem.gbfree ( ((char *)ptr-4) , -1 , NULL );
 }
 
@@ -527,8 +528,14 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 
         //m_memtablesize = 0;//DMEMTABLESIZE;
 	  // 4G/x = 600*1024 -> x = 4000000000.0/(600*1024) = 6510
-	if ( ! s_initialized )
-		m_memtablesize = m_maxMem / 6510;
+	// crap, g_hostdb.init() is called inmain.cpp before
+	// g_conf.init() which is needed to set g_conf.m_maxMem...
+	if ( ! s_initialized ) {
+		//m_memtablesize = m_maxMem / 6510;
+		// support 1.2M ptrs for now. good for about 8GB
+		m_memtablesize = 1200*1024;//m_maxMem / 6510;
+		//if ( m_maxMem < 8000000000 ) { char *xx=NULL;*xx=0; }
+	}
 
 
 	if ( (int32_t)m_numAllocated + 100 >= (int32_t)m_memtablesize ) { 
@@ -629,7 +636,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 			return;
 		}
 		s_initialized = true;
-		memset ( s_mptrs , 0 , 4 * m_memtablesize );
+		memset ( s_mptrs , 0 , sizeof(char *) * m_memtablesize );
 	}
 	// try to add ptr/size/note to leak-detecting table
 	if ( (int32_t)s_n > (int32_t)m_memtablesize ) {
