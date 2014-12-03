@@ -68,7 +68,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 	bufPtr += maxSyns * 8;
 
 	m_termPtrs = (char **)bufPtr;
-	bufPtr += maxSyns * 4;
+	bufPtr += maxSyns * sizeof(char *);
 
 	// we can't use m_termPtrs when we store a transformed word as the
 	// synonym into m_synWordBuf, because it can grow dynamically

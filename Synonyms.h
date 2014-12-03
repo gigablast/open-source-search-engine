@@ -20,7 +20,7 @@
 // per word!
 #define MAX_SYNS 64
 
-#define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4+4))
+#define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4+sizeof(char *)))
 
 int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
 
