@@ -5658,7 +5658,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 			memcpy ( newBuf , m_allocBuf , m_allocSize );
 			QUICKPOLL(niceness);
 			// update pointers to previous buffer
-			int32_t offset = newBuf - m_allocBuf;
+			int64_t offset = newBuf - m_allocBuf;
 			char *allocEnd = m_allocBuf + m_allocSize;
 			for (int32_t i = 0 ; i < m_numLinks ; i++ ) {
 				QUICKPOLL(niceness);

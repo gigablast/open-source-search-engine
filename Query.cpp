@@ -581,6 +581,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		qt->m_UORedTerm   = NULL;
 		qt->m_synonymOf = NULL;
 		qt->m_ignored   = 0;
+		qt->m_term      = NULL;
+		qt->m_termLen   = 0;
 		// assume not a repeat of another query term (set below)
 		qt->m_repeat    = false;
 		// stop word? no, we're a phrase term

@@ -12535,6 +12535,11 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// make it save to disk i guess
 		cr->m_needsSave = true;
 
+		// if spidering disabled in master controls then send no
+		// notifications
+		if ( ! g_conf.m_spideringEnabled )
+			continue;
+
 		// and we've examined at least one url. to prevent us from
 		// sending a notification if we haven't spidered anything
 		// because no seed urls have been added/injected.
