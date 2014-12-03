@@ -623,10 +623,15 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// if sender is asking for a new proxy and wants us to ban
 	// the previous proxy we sent for this urlIp...
 	if ( preq->m_banProxyIp ) {
+		// don't core if misses sanity. it seems we don't always
+		// NULLify these or something.
 		// these must match
-		char *xx;
-		if(preq->m_banProxyIp   != preq->m_proxyIp  ){xx=NULL;*xx=0;}
-		if(preq->m_banProxyPort != preq->m_proxyPort){xx=NULL;*xx=0;}
+		if(preq->m_banProxyIp   != preq->m_proxyIp  ||
+		   preq->m_banProxyPort != preq->m_proxyPort){
+			log("db: proxy: banproxyip != proxyip. mismatch!");
+			g_udpServer.sendErrorReply ( udpSlot , EBADENGINEER);
+			return;
+		}
 		// this will "return" the banned proxy
 		returnProxy ( preq , NULL );
 		// now add it to the banned table
