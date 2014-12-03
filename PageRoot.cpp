@@ -654,10 +654,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 		{"SEARCH","/"},
 
- 		{"DISCUSSIONS","/?searchtype=discussions"},
- 		{"PRODUCTS","/?searchtype=products"},
- 		{"ARTICLES","/?searchtype=articles"},
- 		{"IMAGES","/?searchtype=images"},
+ 		// {"DISCUSSIONS","/?searchtype=discussions"},
+ 		// {"PRODUCTS","/?searchtype=products"},
+ 		// {"ARTICLES","/?searchtype=articles"},
+ 		// {"IMAGES","/?searchtype=images"},
 
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
