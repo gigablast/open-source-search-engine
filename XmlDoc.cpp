@@ -2403,7 +2403,9 @@ bool XmlDoc::indexDoc ( ) {
 			goto skipNewAdd1;
 		}
 		// store the new request (store reply for this below)
-		m_metaList2.pushChar(RDB_SPIDERDB);
+		char rd = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
+		m_metaList2.pushChar(rd);
 		// store it here
 		SpiderRequest revisedReq;
 		// this fills it in
@@ -2416,22 +2418,32 @@ bool XmlDoc::indexDoc ( ) {
 
  skipNewAdd1:
 
-	////
-	//
-	// make these fake so getNewSpiderReply() below does not block
-	//
-	////
-	SpiderReply *nsr = getFakeSpiderReply (  );
-	// this can be NULL and g_errno set to ENOCOLLREC or something
-	if ( ! nsr )
-		return true;
+	SpiderReply *nsr = NULL;
 
-	//SafeBuf metaList;
-	if ( ! m_metaList2.pushChar(RDB_SPIDERDB) )
-		return true;
+	// if only rebuilding posdb do not rebuild spiderdb
+	if ( m_useSpiderdb ) {
 
-	if ( ! m_metaList2.safeMemcpy ( (char *)nsr , nsr->getRecSize() ) )
-		return true;
+		////
+		//
+		// make these fake so getNewSpiderReply() below does not block
+		//
+		////
+		nsr = getFakeSpiderReply (  );
+		// this can be NULL and g_errno set to ENOCOLLREC or something
+		if ( ! nsr )
+			return true;
+
+		//SafeBuf metaList;
+
+		char rd = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
+		if ( ! m_metaList2.pushChar( rd ) )
+			return true;
+
+		if ( ! m_metaList2.safeMemcpy ( (char *)nsr,nsr->getRecSize()))
+			return true;
+	}
+
 
 	m_msg4Launched = true;
 
@@ -2439,9 +2451,11 @@ bool XmlDoc::indexDoc ( ) {
 	logIt();
 
 	// log this for debug now
-	SafeBuf tmp;
-	nsr->print(&tmp);
-	log("xmldoc: added reply %s",tmp.getBufStart());
+	if ( nsr ) {
+		SafeBuf tmp;
+		nsr->print(&tmp);
+		log("xmldoc: added reply %s",tmp.getBufStart());
+	}
 
 	// clear g_errno
 	g_errno = 0;
@@ -20756,6 +20770,7 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		p += dataSize;
 		// ignore spiderdb recs for parsing consistency check
 		if ( rdbId == RDB_SPIDERDB ) continue;
+		if ( rdbId == RDB2_SPIDERDB2 ) continue;
 		// ignore tagdb as well!
 		if ( rdbId == RDB_TAGDB || rdbId == RDB2_TAGDB2 ) continue;
 		// skip revdb for now too
@@ -21356,7 +21371,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// request is not used again
 		//SpiderReply srep;
 		// store the rdbid
-		if ( ! m_zbuf.pushChar(RDB_SPIDERDB) ) 
+		char rd = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
+		if ( ! m_zbuf.pushChar(rd) ) 
 			return NULL;
 		// store that reply to indicate this spider request has
 		// been fulfilled!
@@ -21399,7 +21416,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		pd = g_titledb.getProbableDocId(parentUrl);
 		ksr.setKey ( m_sreq.m_firstIp, pd , false );
 		// store this
-		if ( ! m_zbuf.pushChar(RDB_SPIDERDB) ) 
+		if ( ! m_zbuf.pushChar(rd) ) 
 			return NULL;
 		// then the request
 		if ( ! m_zbuf.safeMemcpy(&ksr,ksr.getRecSize() ) )
@@ -21692,7 +21709,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
 		// rdbid first
-		*m_p++ = RDB_SPIDERDB;
+		char rd = RDB_SPIDERDB;
+		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
+		*m_p++ = rd;
 		// get this
 		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
@@ -22677,6 +22696,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     m_sreq.m_isInjecting &&
 	     m_sreq.m_fakeFirstIp &&
 	     ! m_sreq.m_forceDelete &&
+	     // do not rebuild spiderdb if only rebuilding posdb
+	     m_useSpiderdb &&
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
 	     ! m_isDiffbotJSONObject )
 		needSpiderdb3 = m_sreq.getRecSize() + 1;

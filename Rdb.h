@@ -44,18 +44,18 @@ enum {
 // . secondary rdbs for rebuilding done in PageRepair.cpp
 // . we add new recs into these guys and then make the original rdbs
 //   point to them when we are done.
-	RDB2_INDEXDB2,
-	RDB2_TITLEDB2, //21
+	RDB2_INDEXDB2,//21
+	RDB2_TITLEDB2, 
 	RDB2_SECTIONDB2,
 	RDB2_SPIDERDB2, 
 	RDB2_TFNDB2,
-	RDB2_CLUSTERDB2,
-	RDB2_DATEDB2, // 26
+	RDB2_CLUSTERDB2, // 26
+	RDB2_DATEDB2,
 	RDB2_LINKDB2,
 	RDB2_PLACEDB2,
 	RDB2_REVDB2,
-	RDB2_TAGDB2,
-	RDB2_POSDB2, // 31
+	RDB2_TAGDB2, // 31
+	RDB2_POSDB2,
 	RDB2_CATDB2,
 	RDB_END
 };
