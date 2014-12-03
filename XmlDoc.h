@@ -580,7 +580,7 @@ class XmlDoc {
 	char *getIsDup ( ) ;
 	char *isDupOfUs ( int64_t d ) ;
 	uint32_t *getGigabitVectorScorelessHash ( ) ;
-	int32_t *getGigabitHashes ( );
+	int32_t **getGigabitHashes ( );
 	char *getGigabitQuery ( ) ;
 	char *getMetaDescription( int32_t *mdlen ) ;
 	char *getMetaSummary ( int32_t *mslen ) ;

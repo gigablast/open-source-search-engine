@@ -8386,11 +8386,12 @@ float *XmlDoc::getTagSimilarity ( XmlDoc *xd2 ) {
 }
 
 float *XmlDoc::getGigabitSimilarity ( XmlDoc *xd2 ) {
-	int32_t *gv1 = getGigabitHashes();
-	if ( ! gv1 || gv1 == (int32_t *)-1 ) return (float *)gv1;
-	int32_t *gv2 = xd2->getGigabitHashes();
-	if ( ! gv2 || gv2 == (int32_t *)-1 ) return (float *)gv2;
-	m_gigabitSimilarity = computeSimilarity ( gv1, gv2, NULL, NULL, NULL ,
+	int32_t **gv1 = getGigabitHashes();
+	if ( ! gv1 || gv1 == (int32_t **)-1 ) return (float *)gv1;
+	int32_t **gv2 = xd2->getGigabitHashes();
+	if ( ! gv2 || gv2 == (int32_t **)-1 ) return (float *)gv2;
+	// *gv1 could be NULL if vec was empty in titlerec's ptr_gigabitHashes
+	m_gigabitSimilarity = computeSimilarity ( *gv1, *gv2, NULL, NULL, NULL,
 						  m_niceness );
 	// this means error, g_errno should be set
 	if ( m_gigabitSimilarity == -1.0 ) return NULL;
@@ -8507,6 +8508,9 @@ float computeSimilarity ( int32_t   *vec0 ,
 			  Query  *q    ,
 			  int32_t    niceness ,
 			  bool    dedupVectors ) {
+	static int32_t s_tmp = 0;
+	if ( ! vec0 ) vec0 = &s_tmp;
+	if ( ! vec1 ) vec1 = &s_tmp;
 	// if both empty, assume not similar at all
 	if ( *vec0 == 0 && *vec1 == 0 ) return 0;
 	// if either is empty, return 0 to be on the safe side
@@ -9110,13 +9114,13 @@ char *XmlDoc::isDupOfUs ( int64_t d ) {
 // hash a gigabit hash vector without its scores, also order independent
 uint32_t *XmlDoc::getGigabitVectorScorelessHash ( ) {
 	if ( m_gigabitVectorHashValid ) return &m_gigabitVectorHash;
-	int32_t *gbvec = getGigabitHashes();
-	if ( ! gbvec || gbvec == (int32_t *)-1 ) return (uint32_t *)gbvec;
+	int32_t **gbvec = getGigabitHashes();
+	if ( ! gbvec || gbvec == (int32_t **)-1 ) return (uint32_t *)gbvec;
 	uint32_t h = 0;
 	// this bad boy is NULL terminated
-	uint32_t *gbv = (uint32_t *)gbvec;
+	uint32_t *gbv = (uint32_t *)*gbvec;
 	// i guess zak likes the simple XOR'ing thing...
-	for ( int32_t i = 0; gbv[i] ; i++) h ^= gbv[i];
+	for ( int32_t i = 0; gbv && gbv[i] ; i++) h ^= gbv[i];
 	m_gigabitVectorHashValid = true;
 	m_gigabitVectorHash      = h;
 	return &m_gigabitVectorHash;
@@ -9127,15 +9131,16 @@ uint32_t *XmlDoc::getGigabitVectorScorelessHash ( ) {
 //   formed using the hashes of the top-scoring gigabits of the document, and
 //   therefore uses the words class
 // . sets g_errno and returns NULL on error
-int32_t *XmlDoc::getGigabitHashes ( ) {
+// . ptr_gigabitHashes can be NULL...
+int32_t **XmlDoc::getGigabitHashes ( ) {
 	// if it was already set, treat this as an accessor
-	if ( m_gigabitHashesValid ) return ptr_gigabitHashes;
+	if ( m_gigabitHashesValid ) return &ptr_gigabitHashes;
 	// this also sets the vector
 	char *gq = getGigabitQuery();
-	if ( ! gq || gq == (char *)-1) return (int32_t *)gq;
+	if ( ! gq || gq == (char *)-1) return (int32_t **)gq;
 	// it should be valid now!
 	if ( ! m_gigabitHashesValid ) { char *xx=NULL;*xx=0; }
-	return ptr_gigabitHashes;
+	return &ptr_gigabitHashes;
 }
 
 // . the new function to get gigabits
@@ -13626,8 +13631,19 @@ LinkInfo s_dummy2;
 // . returns NULL and sets g_errno on error
 // . returns -1 if blocked, will re-call m_callback
 LinkInfo *XmlDoc::getLinkInfo1 ( ) {
+
+	// sometimes it is NULL in title rec when setting from title rec
+	if ( m_linkInfo1Valid && ! ptr_linkInfo1 ) {
+		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
+		s_dummy2.m_lisize = sizeof(LinkInfo);
+		ptr_linkInfo1  = &s_dummy2;
+		size_linkInfo1 = sizeof(LinkInfo);
+	}
+
 	// return if we got it
-	if ( m_linkInfo1Valid ) return ptr_linkInfo1;
+	if ( m_linkInfo1Valid )
+		return ptr_linkInfo1;
+
 	// change status
 	setStatus ( "getting local inlinkers" );
 
