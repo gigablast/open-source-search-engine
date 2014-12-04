@@ -1,5 +1,8 @@
 SHELL = /bin/bash
 
+uname_m = $(shell uname -m)
+ARCH=$(uname_m)
+
 CC=g++
 
 # remove dlstubs.o for CYGWIN
@@ -83,19 +86,21 @@ ifeq ("titan","$(HOST)")
 # stack gets smashed like it normally would when it gets a seg fault signal.
 CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DTITAN
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
+
+# are we a 32-bit architecture? use different libraries then
+else ifeq ($(ARCH), i686)
+
+CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+
+else ifeq ($(ARCH), i386)
+
+CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+
 else
-# use -m32 to force 32-bit mode compilation.
-# you might have to do apt-get install gcc-multilib to ensure that -m32 works.
-# -m32 should use /usr/lib32/ as the library path.
-# i also provide 32-bit libraries for linking that are not so easy to get.
-#
-# mdw. 11/17/2013. i took out the -D_PTHREADS_ flag (and -lpthread).
-# trying to use good ole' clone() again because it seems the errno location
-# thing is fixed by just ignoring it.
 #
 # Use -Wpadded flag to indicate padded structures.
-#
-# add -m32 flag to this line if you need to make a 32-bit gb.
 #
 CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 #LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
@@ -154,10 +159,6 @@ vclean:
 	@echo "If make fails then first run:"
 	@echo ""
 	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev"
-	@echo ""
-	@echo "OR, if you are on a 32-bit OS/CPU, try:"
-	@echo ""
-	@echo "make gb32"
 	@echo ""
 	@echo "*****"
 	@echo ""

@@ -2420,6 +2420,9 @@ bool XmlDoc::indexDoc ( ) {
 		if ( ! m_metaList2.safeMemcpy (&revisedReq,
 					       revisedReq.getRecSize()))
 			return true;
+		// make sure to log the size of the spider request
+		m_addedSpiderRequestSize = revisedReq.getRecSize();
+		m_addedSpiderRequestSizeValid = true;
 	}
 
  skipNewAdd1:
@@ -2448,6 +2451,9 @@ bool XmlDoc::indexDoc ( ) {
 
 		if ( ! m_metaList2.safeMemcpy ( (char *)nsr,nsr->getRecSize()))
 			return true;
+
+		m_addedSpiderReplySize = nsr->getRecSize();
+		m_addedSpiderReplySizeValid = true;
 	}
 
 
@@ -19771,6 +19777,20 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("addlistsize=%05"INT32" ",(int32_t)0);
 
 
+	if ( m_addedSpiderRequestSizeValid )
+		sb->safePrintf("addspiderreqsize=%05"INT32" ",
+			       m_addedSpiderRequestSize);
+	else
+		sb->safePrintf("addspiderreqsize=%05"INT32" ",0);
+
+
+	if ( m_addedSpiderReplySizeValid )
+		sb->safePrintf("addspiderrepsize=%05"INT32" ",
+			       m_addedSpiderReplySize);
+	else
+		sb->safePrintf("addspiderrepsize=%05"INT32" ",0);
+
+
 	if ( size_imageData && m_imageDataValid ) {
 		// url is in data now
 		ThumbnailArray *ta = (ThumbnailArray *)ptr_imageData;
@@ -21724,6 +21744,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		int32_t newsrSize = newsr->getRecSize();
 		memcpy ( m_p , newsr , newsrSize );
 		m_p += newsrSize;
+		m_addedSpiderReplySize = newsrSize;
+		m_addedSpiderReplySizeValid = true;
 		// sanity check
 		if ( m_p - saved != needx ) { char *xx=NULL;*xx=0; }
 		// sanity check
@@ -23214,6 +23236,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		int32_t newsrSize = newsr->getRecSize();
 		memcpy ( m_p , newsr , newsrSize );
 		m_p += newsrSize;
+
+		m_addedSpiderReplySize = newsrSize;
+		m_addedSpiderReplySizeValid = true;
+
 		// sanity check - must not be a request, this is a reply
 		if ( g_spiderdb.isSpiderRequest( &newsr->m_key ) ) {
 			char *xx=NULL;*xx=0; }
@@ -23264,6 +23290,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_p += revisedReq.getRecSize();
 		// sanity check
 		if ( m_p - saved > needSpiderdb3 ) { char *xx=NULL;*xx=0; }
+
+		m_addedSpiderRequestSize = revisedReq.getRecSize();
+		m_addedSpiderRequestSizeValid = true;
+
 	}
 
  skipNewAdd2:

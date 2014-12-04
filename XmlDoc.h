@@ -1021,6 +1021,9 @@ class XmlDoc {
 	char *m_metaList;
 	int32_t  m_metaListSize;
 
+	int32_t m_addedSpiderRequestSize;
+	int32_t m_addedSpiderReplySize;
+
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
 	SafeBuf  m_kbuf;
@@ -1140,6 +1143,8 @@ class XmlDoc {
 	char     m_VALIDSTART;
 	// DO NOT add validity flags above this line!
 	char     m_metaListValid;
+	char     m_addedSpiderRequestSizeValid;
+	char     m_addedSpiderReplySizeValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
