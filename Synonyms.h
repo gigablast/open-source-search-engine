@@ -51,7 +51,7 @@ class Synonyms {
 	int32_t m_version; // titlerec version
 
 	//char    *m_langVec;
-	char     m_docLangId;
+	char     m_queryLangId;
 	class Words *m_words;
 
 	// temporarily store all synonyms here of the word for synonyms

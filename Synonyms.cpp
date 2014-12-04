@@ -39,7 +39,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 
 	// store these
 	m_words     = words;
-	m_docLangId = langId;
+	m_queryLangId = langId;
 	m_niceness = niceness;
 
 	// sanity check
@@ -122,7 +122,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 	char *ss = NULL;
 	char *savedss = NULL;
 	int64_t bwid;
-	char wikiLangId = m_docLangId;
+	char wikiLangId = m_queryLangId;
 	bool hadSpace ;
 	int32_t klen ;
 	int32_t baseNumAlnumWords;
@@ -134,9 +134,9 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 
 	/*
 	// if word only exists in one language, assume that language for word
-	// even if m_docLangId is langUnknown (0)
+	// even if m_queryLangId is langUnknown (0)
 	if ( ! ss &&
-	     ! m_docLangId &&
+	     ! m_queryLangId &&
 	     ! wikiLangId ) {
 		// get raw word id
 		bwid = m_words->m_wordIds[wordNum];
@@ -237,10 +237,10 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 	/*
 	if ( //numPresets == 0 &&
 	     ! ss &&
-	     m_docLangId != langEnglish &&
+	     m_queryLangId != langEnglish &&
 	     wikiLangId  != langEnglish &&
-	     m_docLangId &&
-	     g_speller.getSynsInEnglish(w,wlen,m_docLangId,langEnglish) ) {
+	     m_queryLangId &&
+	     g_speller.getSynsInEnglish(w,wlen,m_queryLangId,langEnglish) ) {
 		// try english
 		wikiLangId = langEnglish;
 		sourceId   = SOURCE_WIKTIONARY_EN;
@@ -258,7 +258,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 		int32_t count = 0;
 	addSynSet:
 		// do we have another set following this
-		char *next = g_wiktionary.getNextSynSet(bwid,m_docLangId,ss);
+		char *next = g_wiktionary.getNextSynSet(bwid,m_queryLangId,ss);
 		// if so, init the dedup table then
 		if ( next && ! dd ) {
 			dd = &dedup;
