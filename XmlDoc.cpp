@@ -21791,6 +21791,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_useTagdb = false;
 	}
 
+	if ( cr->m_isCustomCrawl )
+		m_useLinkdb = false;
+
 	// . should we recycle the diffbot reply for this url?
 	// . if m_diffbotOnlyProcessIfNewUrl is true then we want to keep
 	//   our existing diffbot reply, i.e. recycle it, even though we
@@ -22400,7 +22403,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// END the diffbot json object index hack
 	//
 	/////
-
 
 
 	//
