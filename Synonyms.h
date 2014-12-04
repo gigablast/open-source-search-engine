@@ -20,7 +20,8 @@
 // per word!
 #define MAX_SYNS 64
 
-#define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4+sizeof(char *)))
+// +1 for langid at end
+#define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4+sizeof(char *)+1))
 
 int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
 
@@ -68,6 +69,7 @@ class Synonyms {
 	int32_t       *m_numAlnumWords;
 	int32_t       *m_numAlnumWordsInBase;
 	char       *m_src;
+	uint8_t    *m_langIds;
 
 	int64_t *m_aidsPtr;
 	int64_t *m_wids0Ptr;
@@ -78,6 +80,7 @@ class Synonyms {
 	int32_t      *m_numAlnumWordsPtr;
 	int32_t      *m_numAlnumWordsInBasePtr;
 	char      *m_srcPtr;
+	uint8_t   *m_langIdsPtr;
 
 };
 

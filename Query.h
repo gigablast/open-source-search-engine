@@ -445,6 +445,12 @@ class QueryTerm {
 	// point to the posdblist that represents us
 	class RdbList   *m_posdbListPtr;
 
+	// languages query term is in. currently this is only valid for
+	// synonyms of other query terms. so we can show what language the
+	// synonym is for in the xml/json feed.
+	uint64_t m_langIdBits;
+	bool m_langIdBitsValid;
+
 	// the ()'s following an int/float facet term dictate the
 	// ranges for clustering the numeric values. like 
 	// gbfacetfloat:price:(0-10,10-20,...)

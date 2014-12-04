@@ -90,6 +90,10 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 	m_src = bufPtr;
 	bufPtr += maxSyns;
 
+	// langid bit vector. 64 bits means up to 64 langs
+	m_langIds = (uint8_t *)bufPtr;
+	bufPtr += maxSyns ;
+
 	if ( bufPtr > tmpBuf + TMPSYNBUFSIZE ) { char *xx=NULL;*xx=0; }
 
 	// cursors
@@ -102,6 +106,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 	m_termLensPtr = m_termLens;
 	m_numAlnumWordsPtr = m_numAlnumWords;
 	m_numAlnumWordsInBasePtr = m_numAlnumWordsInBase;
+	m_langIdsPtr = m_langIds;
 
 	
 	char *w    = m_words->m_words   [wordNum];
@@ -259,16 +264,27 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 			dd = &dedup;
 			dd->set ( 8,0,8,dbuf,512,false,m_niceness,"sddbuf");
 		}
+		// get lang, 2 chars, unless zh_ch
+		char *synLangAbbr = ss;
 		// skip over the pipe i guess
 		char *pipe = ss + 2;
 		// zh_ch?
 		if ( *pipe == '_' ) pipe += 3;
 		// sanity
 		if ( *pipe != '|' ) { char *xx=NULL;*xx=0; }
+
+		// is it "en" or "zh_ch" etc.
+		int synLangAbbrLen = pipe - ss;
+
 		// point to word list
 		char *p = pipe + 1;
 		// hash up the list of words, they are in utf8 and
 		char *e = p + 1;
+
+
+		char tmp[32];
+		int langId;
+
 		// save count in case we need to undo
 		//int32_t saved = m_numAlts[wordNum];
 	hashLoop:
@@ -301,6 +317,16 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 		// store source
 		*m_srcPtr++ = sourceId;
 
+		// store the lang as a bit in a bit vector for the query term
+		// so it can be from multiple langs.
+		if ( synLangAbbrLen > 30 ) { char *xx=NULL;*xx=0; }
+		memcpy ( tmp , synLangAbbr , synLangAbbrLen );
+		tmp[synLangAbbrLen] = '\0';
+		langId = getLangIdFromAbbr ( tmp ); // order is linear
+		if ( langId < 0 ) langId = 0;
+		*m_langIdsPtr = langId;
+
+
 		hadSpace = false;
 		klen = e - p;
 		for ( int32_t k = 0 ; k < klen ; k++ )
@@ -331,6 +357,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 
 		m_wids0Ptr++;
 		m_wids1Ptr++;
+		m_langIdsPtr++;
 		m_numAlnumWordsPtr++;
 
 		// how many words did we have to hash to find a synset?
@@ -403,6 +430,9 @@ bool Synonyms::addWithoutApostrophe ( int32_t wordNum , HashTableX *dt ) {
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
 
+	// no langs
+	*m_langIdsPtr++ = 0;
+
 	return true;
 }
 
@@ -458,6 +488,9 @@ bool Synonyms::addAmpPhrase ( int32_t wordNum , HashTableX *dt ) {
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
 
+	// no langs
+	*m_langIdsPtr++ = 0;
+
 	return true;
 }
 
@@ -506,6 +539,9 @@ bool Synonyms::addStripped ( char *w , int32_t wlen , HashTableX *dt ) {
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
+
+	// no langs
+	*m_langIdsPtr++ = 0;
 
 	m_synWordBuf.safeStrcpy(abuf);
 	m_synWordBuf.pushChar('\0');

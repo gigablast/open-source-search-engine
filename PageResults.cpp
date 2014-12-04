@@ -2391,6 +2391,14 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("\t\t<fullQuery><![CDATA[");
 		sb->cdataEncode(q->m_orig);
 		sb->safePrintf("]]></fullQuery>\n");
+		sb->safePrintf("\t\t<queryLanguageAbbr>"
+			       "<![CDATA[%s]]>"
+			       "</queryLanguageAbbr>\n"
+			       , getLangAbbr(si->m_queryLangId) );
+		sb->safePrintf("\t\t<queryLanguage>"
+			       "<![CDATA[%s]]>"
+			       "</queryLanguage>\n"
+			       , getLanguageString(si->m_queryLangId) );
 		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
 			sb->safePrintf("\t\t<term>\n");
 			QueryTerm *qt = &q->m_qterms[i];
@@ -2404,6 +2412,23 @@ bool printSearchResultsHeader ( State0 *st ) {
 			term[qt->m_termLen] = c;
 			// syn?
 			QueryTerm *sq = qt->m_synonymOf;
+			// what language did synonym come from?
+			if ( sq ) {
+				// language map from wiktionary
+				sb->safePrintf("\t\t\t<termLang>"
+					       "<![CDATA[");
+				bool first = true;
+				for ( int i = 0 ; i <= MAXLANGID ; i++ ) {
+					uint64_t bit = (uint64_t)1 << i;
+					if ( ! (qt->m_langIdBits&bit))continue;
+					char *str = getLangAbbr(i);
+					if ( ! first ) sb->pushChar(',');
+					first = false;
+					sb->safeStrcpy ( str );
+				}
+				sb->safePrintf("]]></termLang>\n");
+			}
+
 			if ( sq ) {
 				char *term = sq->m_term;
 				char c = term[sq->m_termLen];

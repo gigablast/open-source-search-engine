@@ -583,6 +583,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		qt->m_ignored   = 0;
 		qt->m_term      = NULL;
 		qt->m_termLen   = 0;
+		qt->m_langIdBitsValid = false;
+		qt->m_langIdBits      = 0;
 		// assume not a repeat of another query term (set below)
 		qt->m_repeat    = false;
 		// stop word? no, we're a phrase term
@@ -1232,7 +1234,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		char tmpBuf [ TMPSYNBUFSIZE ];
 		int32_t naids = syn.getSynonyms ( &words ,
 					       i ,
-					       m_langId ,
+						  // language of the query.
+						  // 0 means unknown. if this
+						  // is 0 we sample synonyms
+						  // from all languages.
+						  m_langId , 
 					       tmpBuf ,
 					       0 ); // m_niceness );
 		// if no synonyms, all done
@@ -1269,6 +1275,13 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			qt->m_leftPhraseTermNum  = -1;
 			qt->m_rightPhraseTerm    = NULL;
 			qt->m_leftPhraseTerm     = NULL;
+			// need this for displaying language of syn in
+			// the json/xml feed in PageResults.cpp
+			qt->m_langIdBitsValid = true;
+			int langId = syn.m_langIds[j];
+			uint64_t langBit = (uint64_t)1 << langId;
+			if ( langId >= 64 ) langBit = 0;
+			qt->m_langIdBits |= langBit;
 			// need this for Matches.cpp
 			qt->m_synWids0 = syn.m_wids0[j];
 			qt->m_synWids1 = syn.m_wids1[j];
