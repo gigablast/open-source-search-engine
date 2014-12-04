@@ -420,6 +420,8 @@ class CollectionRec {
 	bool swapOut();
 	bool m_swappedOut;
 
+	int64_t m_spiderCorruptCount;
+
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
 	//

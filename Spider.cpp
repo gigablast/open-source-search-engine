@@ -3953,8 +3953,11 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( sreq->m_url[0] != 'h' &&
 		     // might be a docid from a pagereindex.cpp
 		     ! is_digit(sreq->m_url[0]) ) { 
-			log("spider: got corrupt 1 spiderRequest in scan "
-			    "because url is %s (cn=%"INT32")",sreq->m_url,(int32_t)m_collnum);
+			if ( m_cr->m_spiderCorruptCount == 0 )
+				log("spider: got corrupt 1 spiderRequest in "
+				    "scan because url is %s (cn=%"INT32")"
+				    ,sreq->m_url,(int32_t)m_collnum);
+			m_cr->m_spiderCorruptCount++;
 			continue;
 		}
 
@@ -3988,14 +3991,13 @@ bool SpiderColl::scanListForWinners ( ) {
 		// . i've seen -31757, 21... etc for bad http replies
 		//   in the qatest123 doc cache... so turn off for that
 		if ( srep && srep->m_httpStatus >= 1000 ) {
-			static bool s_init = false;
-			if ( ! s_init ) {
-				s_init = true;
+			if ( m_cr->m_spiderCorruptCount == 0 ) {
 				log("spider: got corrupt 3 spiderReply in "
 				    "scan httpstatus=%"INT32" (cn=%"INT32")",
 				    (int32_t)srep->m_httpStatus,
 				    (int32_t)m_collnum);
 			}
+			m_cr->m_spiderCorruptCount++;
 			// don't nuke it just for that...
 			//srep = NULL;
 		}
