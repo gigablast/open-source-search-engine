@@ -1592,7 +1592,7 @@ int main2 ( int argc , char *argv[] ) {
 		if ( strcmp ( argv[cmdarg+1] , "start" ) == 0 ) {
 			return install ( ifk_proxy_start , proxyId );
 		}
-		if ( strcmp ( argv[cmdarg+1] , "kstart" ) == 0 ) {
+		if ( strcmp ( argv[cmdarg+1] , "dstart" ) == 0 ) {
 			return install ( ifk_proxy_kstart , proxyId );
 		}
 
@@ -2192,8 +2192,8 @@ int main2 ( int argc , char *argv[] ) {
 		//if ( hostId != -1 ) goto mainStart;
 		return install ( ifk_start2 , hostId );
 	}
-	//keep alive start
-	if ( strcmp ( cmd , "kstart" ) == 0 ) {	
+	//keep alive start... not!
+	if ( strcmp ( cmd , "dstart" ) == 0 ) {	
 		int32_t hostId = -1;
 		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
 		// might have a range
@@ -5086,42 +5086,43 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//	h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
+		  amp = "&";
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"ADDARGS='' ; "
-				"EXITSTATUS=1 ; "
-				"while [ \\$EXITSTATUS != 0 ]; do "
- 				"{ "
+				//"ADDARGS='' ; "
+				//"EXITSTATUS=1 ; "
+				// "while [ \\$EXITSTATUS != 0 ]; do "
+ 				// "{ "
 
 				// move the log file
-				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+				//"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
+				//"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
-				"./gb "//%"INT32" "
-				"\\$ADDARGS "
+				"./gb -d "//%"INT32" "
+				//"\\$ADDARGS "
 				//" ;"
-				" >& ./log%03"INT32" ;"
+				//" >& ./log%03"INT32" ;"
 
-				"EXITSTATUS=\\$? ; "
-				"ADDARGS='-r' ; "
-				"} " 
- 				"done >& /dev/null & \" %s",
+				//"EXITSTATUS=\\$? ; "
+				//"ADDARGS='-r' ; "
+				//"} " 
+ 				//"done >& /dev/null & \" %s",
+				"\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 
 				// for moving log file
-				h2->m_hostId   ,
-				h2->m_hostId   ,
+				// h2->m_hostId   ,
+				// h2->m_hostId   ,
 
 				//h2->m_dir      ,
 
 				// hostid is now inferred from path
 				//h2->m_hostId   ,
-				h2->m_hostId   ,
 				amp );
 
 			// log it
