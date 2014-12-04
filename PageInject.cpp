@@ -258,7 +258,7 @@ bool sendReply ( void *state ) {
 	
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
-	if ( url && gr->m_int16_tReply ) {
+	if ( url && gr->m_shortReply ) {
 		char buf[1024*32];
 		char *p = buf;
 		// return docid and hostid
@@ -634,7 +634,11 @@ bool Msg7::inject ( void *state ,
 			       gr->m_newOnly, // index iff new
 
 			       this ,
-			       doneInjectingWrapper9 ) )
+			       doneInjectingWrapper9 ,
+
+			       // extra shit
+			       gr->m_firstIndexed,
+			       gr->m_lastSpidered ) )
 		// we blocked...
 		return false;
 
@@ -1302,7 +1306,7 @@ bool ImportState::importLoop ( ) {
 	// gr->m_diffbotReply = NULL;
 	// gr->m_injectLinks = false;
 	// gr->m_spiderLinks = true;
-	// gr->m_int16_tReply = false;
+	// gr->m_shortReply = false;
 	// gr->m_newOnly = false;
 	// gr->m_deleteUrl = false;
 	// gr->m_recycle = true; // recycle content? or sitelinks?

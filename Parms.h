@@ -129,7 +129,7 @@ class GigablastRequest {
 	char *m_diffbotReply; // secret thing from dan
 	char  m_injectLinks;
 	char  m_spiderLinks;
-	char  m_int16_tReply;
+	char  m_shortReply;
 	char  m_newOnly;
 	char  m_deleteUrl;
 	char  m_recycle;
@@ -139,7 +139,13 @@ class GigablastRequest {
 	char  m_getSections;
 	char  m_gotSections;
 	int32_t  m_charset;
-	int32_t  m_hopCount;
+	int32_t  m_hopCount; // hopcount
+	// older ones
+	uint32_t m_firstIndexed; // firstimdexed
+	uint32_t m_lastSpidered; // lastspidered;
+
+
+
 
 
 	///////////

@@ -2359,7 +2359,10 @@ class XmlDoc {
 			 bool newOnly, // index iff new
 
 			 void *state,
-			 void (*callback)(void *state) );
+			 void (*callback)(void *state) ,
+
+			 uint32_t firstIndexedTime = 0,
+			 uint32_t lastSpideredDate = 0 );
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

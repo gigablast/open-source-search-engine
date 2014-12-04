@@ -14816,7 +14816,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_int16_tReply - (char *)&gr;
+	m->m_off   = (char *)&gr.m_shortReply - (char *)&gr;
 	m++;
 
 	m->m_title = "only inject content if new";
@@ -14887,6 +14887,28 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_hopCount - (char *)&gr;
+	m++;
+
+	m->m_title = "last spider time";
+	m->m_desc  = "Override last time spidered";
+	m->m_cgi   = "lastspidered";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN; // | PF_API
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_lastSpidered - (char *)&gr;
+	m++;
+
+	m->m_title = "first indexed";
+	m->m_desc  = "Override first indexed time";
+	m->m_cgi   = "firstindexed";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN; // | PF_API
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_firstIndexed - (char *)&gr;
 	m++;
 
 

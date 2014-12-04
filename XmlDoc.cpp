@@ -1973,7 +1973,10 @@ bool XmlDoc::injectDoc ( char *url ,
 			 bool newOnly, // index iff new
 
 			 void *state,
-			 void (*callback)(void *state) ) {
+			 void (*callback)(void *state) ,
+
+			 uint32_t firstIndexed,
+			 uint32_t lastSpidered ) {
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2007,6 +2010,9 @@ bool XmlDoc::injectDoc ( char *url ,
 	SpiderRequest sreq;
 	sreq.setFromInject ( cleanUrl );
 
+	if ( lastSpidered )
+		sreq.m_addedTime = lastSpidered;
+
 	if ( deleteUrl )
 		sreq.m_forceDelete = 1;
 
@@ -2035,7 +2041,7 @@ bool XmlDoc::injectDoc ( char *url ,
 		      deleteUrl, // false, // deleteFromIndex ,
 		      0,//forcedIp ,
 		      contentType ,
-		      0,//lastSpidered ,
+		      lastSpidered,//lastSpidered overide
 		      contentHasMime )) {
 		// g_errno should be set if that returned false
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -2058,15 +2064,15 @@ bool XmlDoc::injectDoc ( char *url ,
 	//if ( recycleContent ) m_recycleContent = true;
 
 	// othercrap
-	//if ( firstIndexed ) {
-	//	m_firstIndexedDate = firstIndexed;
-	//	m_firstIndexedDateValid = true;
-	//}
+	if ( firstIndexed ) {
+		m_firstIndexedDate = firstIndexed;
+		m_firstIndexedDateValid = true;
+	}
 
-	//if ( lastSpidered ) {
-	//	m_spideredTime      = lastSpidered;
-	//	m_spideredTimeValid = true;
-	//}
+	if ( lastSpidered ) {
+		m_spideredTime      = lastSpidered;
+		m_spideredTimeValid = true;
+	}
 
 	if ( hopCount != -1 ) {
 		m_hopCount = hopCount;
@@ -22697,7 +22703,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     m_sreq.m_fakeFirstIp &&
 	     ! m_sreq.m_forceDelete &&
 	     // do not rebuild spiderdb if only rebuilding posdb
-	     m_useSpiderdb &&
+	     // this is explicitly for injecting so we need to add
+	     // the spider request to spiderdb...
+	     //m_useSpiderdb &&
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
 	     ! m_isDiffbotJSONObject )
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
@@ -23229,7 +23237,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( m_useSecondaryRdbs ) 
 			getRebuiltSpiderRequest ( &revisedReq );
 
-		// this fills it in
+		// this fills it in for doing injections
 		if ( ! m_useSecondaryRdbs ) {
 			getRevisedSpiderRequest ( &revisedReq );
 			// sanity log
