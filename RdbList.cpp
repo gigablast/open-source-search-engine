@@ -1309,7 +1309,13 @@ bool RdbList::constrain ( char   *startKey    ,
 		//char *xx=NULL;*xx=0;}
 	}
 
-	if ( hintOffset > m_listSize ) { char *xx=NULL;*xx=0; }
+	if ( hintOffset > m_listSize ) { //char *xx=NULL;*xx=0; }
+		g_errno = ECORRUPTDATA;
+		return log("db: Hint offset %"INT32" > %"INT32" is corrupt."
+			   ,hintOffset,
+			   m_listSize);
+	}
+
 
 	// . no need to constrain if our keys are stricter
 	// . yes... need to set m_lastKey
