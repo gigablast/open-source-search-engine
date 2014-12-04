@@ -2470,14 +2470,14 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_spiderPriorities   [n] = 50;
 	n++;
 
-	m_regExs[n].set("hopcount==0 && iswww && isnew");
-	m_harvestLinks       [n] = 1;
-	m_spiderFreqs        [n] = 7; // 30 days default
-	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
-	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = 20;
-
+	// m_regExs[n].set("hopcount==0 && iswww && isnew");
+	// m_harvestLinks       [n] = 1;
+	// m_spiderFreqs        [n] = 7; // 30 days default
+	// m_maxSpidersPerRule  [n] = 9; // max spiders
+	// m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	// m_spiderIpWaits      [n] = 1000; // same ip wait
+	// m_spiderPriorities   [n] = 20;
+	// n++;
 
 
 
@@ -2740,8 +2740,8 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 
 
 
-	m_regExs[n].safePrintf("hopcount>=3 && tld==%s",tldStr);
 	m_regExs[n].reset();
+	m_regExs[n].safePrintf("hopcount>=3 && tld==%s",tldStr);
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
