@@ -2720,6 +2720,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       );
 	}
 
+	if ( si->m_format == FORMAT_HTML )
+		sb->safePrintf(" in %.02f seconds",((float)st->m_took)/1000.0);
+
+
 	//
 	// if query was a url print add url msg
 	//
