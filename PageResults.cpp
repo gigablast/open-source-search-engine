@@ -2406,9 +2406,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 			char *term = qt->m_term;
 			char c = term[qt->m_termLen];
 			term[qt->m_termLen] = '\0';
-			sb->safePrintf("\t\t\t<termStr><![CDATA[%s]]>"
-				       "</termStr>\n"
-				       ,qt->m_term);
+			sb->safePrintf("\t\t\t<termStr><![CDATA[");
+			sb->cdataEncode(qt->m_term);
+			sb->safePrintf("]]>"
+				       "</termStr>\n");
 			term[qt->m_termLen] = c;
 			// syn?
 			QueryTerm *sq = qt->m_synonymOf;
@@ -2445,6 +2446,70 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf("\t\t</term>\n");
 		}
 		sb->safePrintf("\t</queryInfo>\n");
+	}			
+
+	// print individual query term info
+	if ( si->m_format == FORMAT_JSON ) {
+		Query *q = &si->m_q;
+		sb->safePrintf("\"queryInfo\":{\n");
+		sb->safePrintf("\t\"fullQuery\":\"");
+		sb->jsonEncode(q->m_orig);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"queryLanguageAbbr\":\"");
+		sb->jsonEncode ( getLangAbbr(si->m_queryLangId) );
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"queryLanguage\":\"");
+		sb->jsonEncode ( getLanguageString(si->m_queryLangId) );
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"terms\":[\n");
+		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
+			sb->safePrintf("\t\t{\n");
+			QueryTerm *qt = &q->m_qterms[i];
+			sb->safePrintf("\t\t\"termNum\":%i,\n",i);
+			char *term = qt->m_term;
+			char c = term[qt->m_termLen];
+			term[qt->m_termLen] = '\0';
+			sb->safePrintf("\t\t\"termStr\":\"");
+			sb->jsonEncode (qt->m_term);
+			sb->safePrintf("\",\n");
+			term[qt->m_termLen] = c;
+			// syn?
+			QueryTerm *sq = qt->m_synonymOf;
+			// what language did synonym come from?
+			if ( sq ) {
+				// language map from wiktionary
+				sb->safePrintf("\t\t\"termLang\":\"");
+				bool first = true;
+				for ( int i = 0 ; i <= MAXLANGID ; i++ ) {
+					uint64_t bit = (uint64_t)1 << i;
+					if ( ! (qt->m_langIdBits&bit))continue;
+					char *str = getLangAbbr(i);
+					if ( ! first ) sb->pushChar(',');
+					first = false;
+					sb->jsonEncode ( str );
+				}
+				sb->safePrintf("\",\n");
+			}
+
+			if ( sq ) {
+				char *term = sq->m_term;
+				char c = term[sq->m_termLen];
+				term[sq->m_termLen] = '\0';
+				sb->safePrintf("\t\t\"synonymOf\":\"");
+				sb->jsonEncode(sq->m_term);
+				sb->safePrintf("\",\n");
+				term[sq->m_termLen] = c;
+			}				
+			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			sb->safePrintf("\t\t\"termFreq\":%"INT64"\n"
+				       ,tf);
+			sb->safePrintf("\t}");
+			if ( i + 1 < q->m_numTerms )
+				sb->pushChar(',');
+			sb->pushChar('\n');
+		}
+		sb->safePrintf("\t]\n"); // end "terms":[]
+		sb->safePrintf("},\n");
 	}			
 
 

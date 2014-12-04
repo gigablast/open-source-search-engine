@@ -1014,9 +1014,15 @@ int RdbBuckets::getListSizeExact ( collnum_t collnum ,
 	int numBytes = 0;
 
 	int32_t startBucket = getBucketNum(startKey, collnum);
+
+	// does this mean empty?
 	if(startBucket > 0 && 
 	   bucketCmp(startKey, collnum, m_buckets[startBucket-1]) < 0)
 		startBucket--;
+
+	if(startBucket == m_numBuckets ||
+	   m_buckets[startBucket]->getCollnum() != collnum) 
+		return 0;
 
 	int32_t endBucket;
 	if(bucketCmp(endKey, collnum, m_buckets[startBucket]) <= 0)
