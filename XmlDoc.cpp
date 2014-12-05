@@ -19114,37 +19114,36 @@ int8_t *XmlDoc::getHopCount ( ) {
 
 	setStatus ( "getting hop count" );
 
-  CollectionRec *cr = this->getCollRec();
-  if(cr) {
-    if(cr->m_isCustomCrawl){
-      // for diffbot collections, compute hopcount without casting
-      // site/rss to 0 hopcount -- copied from below
-      
-	    LinkInfo *info1 = getLinkInfo1();
-	    if ( ! info1 || info1 == (LinkInfo *)-1 ) return (int8_t *)info1;
-	    long origHopCount = -1;
-	    if ( m_sreqValid ) {
-        origHopCount = m_sreq.m_hopCount; 
-      }
-	    long hc = -1;
-	    if ( m_minInlinkerHopCount + 1 < hc && m_minInlinkerHopCount >= 0 )
-		    hc = m_minInlinkerHopCount + 1;
-	    if ( hc == -1 && m_minInlinkerHopCount >= 0 )
-		    hc = m_minInlinkerHopCount + 1;
-	    if ( origHopCount < hc && origHopCount >= 0 )
-	     	hc = origHopCount;
-	    if ( hc == -1 && origHopCount >= 0 )
-		    hc = origHopCount;
-	    if ( hc == -1 )
-	    	hc = 1;
-	    if ( hc > 0x7f ) hc = 0x7f;
-	    m_hopCountValid = true;
-	    m_hopCount      = hc;
+	CollectionRec *cr = this->getCollRec();
+	if(cr && cr->m_isCustomCrawl ) {
+		// for diffbot collections, compute hopcount without casting
+		// site/rss to 0 hopcount -- copied from below
+
+		LinkInfo *info1 = getLinkInfo1();
+		if (!info1 || info1 == (LinkInfo *)-1 ) return (int8_t *)info1;
+		long origHopCount = -1;
+		if ( m_sreqValid ) {
+			origHopCount = m_sreq.m_hopCount; 
+		}
+		long hc = -1;
+		if(m_minInlinkerHopCount+1 < hc && m_minInlinkerHopCount >= 0 )
+			hc = m_minInlinkerHopCount + 1;
+		if ( hc == -1 && m_minInlinkerHopCount >= 0 )
+			hc = m_minInlinkerHopCount + 1;
+		if ( origHopCount < hc && origHopCount >= 0 )
+			hc = origHopCount;
+		if ( hc == -1 && origHopCount >= 0 )
+			hc = origHopCount;
+		if ( hc == -1 )
+			hc = 1;
+		if ( hc > 0x7f ) hc = 0x7f;
+		m_hopCountValid = true;
+		m_hopCount      = hc;
 	
-      //printf("Custom hopcount: %d for url: %s", m_hopCount, this->ptr_firstUrl);
-      return &m_hopCount;
-    }
-  }
+		//printf("Custom hopcount: %d for url: %s", 
+		//m_hopCount, this->ptr_firstUrl);
+		return &m_hopCount;
+	}
 
 	// the unredirected url
 	Url *f = getFirstUrl();
@@ -25017,11 +25016,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			ksr.m_hopCount = m_hopCount;
 
 		// for diffbot custom crawls we keep the computed hopcount
-    if(!cr->m_isCustomCrawl) {
-      if ( issiteroot   ) ksr.m_hopCount = 0;
-		  if ( ispingserver ) ksr.m_hopCount = 0;
-		  //if ( isrss        ) ksr.m_hopCount = 0;
-    }
+		if ( ! cr->m_isCustomCrawl ) {
+			if ( issiteroot   ) ksr.m_hopCount = 0;
+			if ( ispingserver ) ksr.m_hopCount = 0;
+			//if ( isrss        ) ksr.m_hopCount = 0;
+		}
+
 		// validate it
 		ksr.m_hopCountValid = true;
 
