@@ -19121,11 +19121,11 @@ int8_t *XmlDoc::getHopCount ( ) {
 
 		LinkInfo *info1 = getLinkInfo1();
 		if (!info1 || info1 == (LinkInfo *)-1 ) return (int8_t *)info1;
-		long origHopCount = -1;
+		int32_t origHopCount = -1;
 		if ( m_sreqValid ) {
 			origHopCount = m_sreq.m_hopCount; 
 		}
-		long hc = -1;
+		int32_t hc = -1;
 		if(m_minInlinkerHopCount+1 < hc && m_minInlinkerHopCount >= 0 )
 			hc = m_minInlinkerHopCount + 1;
 		if ( hc == -1 && m_minInlinkerHopCount >= 0 )
