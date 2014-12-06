@@ -49,7 +49,7 @@ void HttpMime::reset ( ) {
 
 // . returns false if could not get a valid mime
 // . we need the url in case there's a Location: mime that's base-relative
-bool HttpMime::set ( char *buf , long bufLen , Url *url ) {
+bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	// reset some stuff
 	m_contentLen       = -1;
 	m_content          = NULL;
@@ -76,11 +76,11 @@ bool HttpMime::set ( char *buf , long bufLen , Url *url ) {
 }
 
 // . returns -1 if no boundary found
-long HttpMime::getMimeLen ( char *buf , long bufLen , long *bsize ) {
+int32_t HttpMime::getMimeLen ( char *buf , int32_t bufLen , int32_t *bsize ) {
 	// size of the boundary
 	*bsize = 0;
 	// find the boundary
-	long i;
+	int32_t i;
 	for ( i = 0 ; i < bufLen ; i++ ) {
 		// continue until we hit a \r or \n
 		if ( buf[i] != '\r' && buf[i] != '\n' ) continue;
@@ -109,7 +109,7 @@ long HttpMime::getMimeLen ( char *buf , long bufLen , long *bsize ) {
 }
 
 // returns false on bad mime
-bool HttpMime::parse ( char *mime , long mimeLen , Url *url ) {
+bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 	// reset locUrl to 0
 	m_locUrl.reset();
 	// return if we have no valid complete mime
@@ -136,7 +136,7 @@ bool HttpMime::parse ( char *mime , long mimeLen , Url *url ) {
 	while ( p < pend ) {
 		// compute the length of the string starting at p and ending
 		// at a \n or \r
-		long len = 0;
+		int32_t len = 0;
 		while ( &p[len] < pend && p[len]!='\n' && p[len]!='\r' ) len++;
 		// . if we could not find a \n or \r there was an error
 		// . MIMEs must always end in \n or \r
@@ -217,7 +217,7 @@ time_t atotime ( char *s ) {
 
 	// if first char is a num, it's type #4
 	if ( is_digit(*s) ) {
-		long num = atol(s);
+		int32_t num = atol(s);
 		// 2007-12-31
 		if ( num > 1900 ) return atotime5 ( s );
 		return atotime4 ( s );
@@ -275,7 +275,7 @@ time_t atotime1 ( char *s ) {
 	while ( isspace (*s) ) s++;
 	// convert local time to "utc" or whatever timezone "s" points to,
 	// which is usually gmt or utc
-	long tzoff = getTimeZone ( s ) ;
+	int32_t tzoff = getTimeZone ( s ) ;
 	if ( tzoff != BADTIMEZONE ) global += tzoff;
 	return global;
 
@@ -284,7 +284,7 @@ time_t atotime1 ( char *s ) {
 	// get time here locally
 	//time_t here = localtime(&utc);
 	// what is the diff?
-	//long delta = here - utc;
+	//int32_t delta = here - utc;
 	// modify our time to make it into utc
 	//return local - delta;
 }
@@ -319,7 +319,7 @@ time_t atotime2 ( char *s ) {
 	while ( isspace (*s) ) s++;
 	// convert local time to "utc" or whatever timezone "s" points to,
 	// which is usually gmt or utc
-	long tzoff = getTimeZone ( s ) ;
+	int32_t tzoff = getTimeZone ( s ) ;
 	if ( tzoff != BADTIMEZONE ) global += tzoff;
 	return global;
 }
@@ -382,7 +382,7 @@ time_t atotime4 ( char *s ) {
 	while ( isspace (*s) ) s++;
 	// convert local time to "utc" or whatever timezone "s" points to,
 	// which is usually gmt or utc
-	long tzoff = getTimeZone ( s ) ;
+	int32_t tzoff = getTimeZone ( s ) ;
 	if ( tzoff != BADTIMEZONE ) global += tzoff;
 	return global;
 }
@@ -392,7 +392,7 @@ time_t atotime5 ( char *s ) {
 	// this time structure, once filled, will help yield a time_t
 	struct tm t;
 	// YEAR
-	long y = atol ( s ) ;
+	int32_t y = atol ( s ) ;
 	// must be > 1900
 	if ( y < 1900 ) return -1;
 	if ( y > 2100 ) return -1;
@@ -431,7 +431,7 @@ time_t atotime5 ( char *s ) {
 
 // sunday=0, monday=1, tuesday=2, wednesday=3, thursday=4, friday=5, saturday=6
 // sun=0, mon=1, tue=2, wed=3, thu=4, fri=5, sat=6
-long getWeekday ( char *s ) {
+int32_t getWeekday ( char *s ) {
 
 	char a = tolower(s[0]);
 	char b = tolower(s[1]);
@@ -454,7 +454,7 @@ long getWeekday ( char *s ) {
 	return 0;
 }
 
-long getMonth ( char *s ) {
+int32_t getMonth ( char *s ) {
 
 	char a = tolower(s[0]);
 	char b = tolower(s[1]);
@@ -490,16 +490,16 @@ void getTime ( char *s , int *sec , int *min , int *hour ) {
 	*sec  = atol ( s );
 }
 
-long getContentTypeFromStr ( char *s ) {
+int32_t getContentTypeFromStr ( char *s ) {
 
-	long slen = gbstrlen(s);
+	int32_t slen = gbstrlen(s);
 
 	// trim off spaces at the end
 	char tmp[64];
 	if ( s[slen-1] == ' ' ) {
 		strncpy(tmp,s,63);
 		tmp[63] = '\0';
-		long newLen = gbstrlen(tmp);
+		int32_t newLen = gbstrlen(tmp);
 		s = tmp;
 		char *send = tmp + newLen;
 		for ( ; send>s && send[-1] == ' '; send-- );
@@ -508,8 +508,8 @@ long getContentTypeFromStr ( char *s ) {
 
 	
 	// -1 means unknown
-	//long ct = -1;
-	long ct = CT_UNKNOWN;
+	//int32_t ct = -1;
+	int32_t ct = CT_UNKNOWN;
 	// html
 	if      (!strcasecmp(s,"text/html"               ) ) ct = CT_HTML;
 	else if (!strcasecmp(s,"text/plain"              ) ) ct = CT_TEXT;
@@ -560,10 +560,10 @@ long getContentTypeFromStr ( char *s ) {
 }
 
 // . s is a NULL terminated string like "text/html"
-long HttpMime::getContentTypePrivate ( char *s ) {
+int32_t HttpMime::getContentTypePrivate ( char *s ) {
 	char *send = NULL;
 	char c;
-	long ct;
+	int32_t ct;
 	// skip spaces
 	while ( *s==' ' || *s=='\t' ) s++;
 	// find end of s
@@ -619,23 +619,23 @@ long HttpMime::getContentTypePrivate ( char *s ) {
 }
 
 // the table that maps a file extension to a content type
-static HashTable s_mimeTable;
+static HashTableX s_mimeTable;
 bool s_init = false;
 
 void resetHttpMime ( ) {
 	s_mimeTable.reset();
 }
 
-const char *HttpMime::getContentTypeFromExtension ( char *ext , long elen) {
+const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
 	// assume text/html if no extension provided
 	if ( ! ext || ! ext[0] ) return "text/html";
 	if ( elen <= 0 ) return "text/html";
 	// get hash for table look up
-	long key = hash32 ( ext , elen );
-	char *ptr = (char *)s_mimeTable.getValue ( key );
-	if ( ptr ) return ptr;
+	int32_t key = hash32 ( ext , elen );
+	char **pp = (char **)s_mimeTable.getValue ( &key );
 	// if not found in table, assume text/html
-	return "text/html";
+	if ( ! pp ) return "text/html";
+	return *pp;
 }
 
 
@@ -645,11 +645,11 @@ const char *HttpMime::getContentTypeFromExtension ( char *ext ) {
 	// assume text/html if no extension provided
 	if ( ! ext || ! ext[0] ) return "text/html";
 	// get hash for table look up
-	long key = hash32n ( ext );
-	char *ptr = (char *)s_mimeTable.getValue ( key );
-	if ( ptr ) return ptr;
+	int32_t key = hash32n ( ext );
+	char **pp = (char **)s_mimeTable.getValue ( &key );
 	// if not found in table, assume text/html
-	return "text/html";
+	if ( ! pp ) return "text/html";
+	return *pp;
 }
 
 const char *HttpMime::getContentEncodingFromExtension ( char *ext ) {
@@ -662,7 +662,7 @@ const char *HttpMime::getContentEncodingFromExtension ( char *ext ) {
 }
 
 // make a redirect mime
-void HttpMime::makeRedirMime ( char *redir , long redirLen ) {
+void HttpMime::makeRedirMime ( char *redir , int32_t redirLen ) {
 	char *p = m_buf;
 	memcpy ( p , "HTTP/1.0 302 RD\r\nLocation: " , 27 );
 	p += 27;
@@ -681,16 +681,16 @@ void HttpMime::makeRedirMime ( char *redir , long redirLen ) {
 }
 
 // a cacheTime of -1 means browser should not cache at all
-void HttpMime::makeMime  ( long    totalContentLen    , 
-			   long    cacheTime          ,
+void HttpMime::makeMime  ( int32_t    totalContentLen    , 
+			   int32_t    cacheTime          ,
 			   time_t  lastModified       ,
-			   long    offset             , 
-			   long    bytesToSend        ,
+			   int32_t    offset             , 
+			   int32_t    bytesToSend        ,
 			   char   *ext                ,
 			   bool    POSTReply          ,
 			   char   *contentType        ,
 			   char   *charset            ,
-			   long    httpStatus         ,
+			   int32_t    httpStatus         ,
 			   char   *cookie             ) {
 	// assume UTF-8
 	//if ( ! charset ) charset = "utf-8";
@@ -770,12 +770,12 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		if ( ! charset ) charset = "utf-8";
 		//sprintf ( m_buf , 
 		p += sprintf ( p,
-			  "HTTP/1.0 %li%s\r\n"
+			  "HTTP/1.0 %"INT32"%s\r\n"
 			  "Date: %s\r\n"
 			       //"P3P: CP=\"CAO PSA OUR\"\r\n"
 			  "Access-Control-Allow-Origin: *\r\n"
 			  "Server: Gigablast/1.0\r\n"
-			  "Content-Length: %li\r\n"
+			  "Content-Length: %"INT32"\r\n"
 			  //"Expires: Wed, 23 Dec 2003 10:23:01 GMT\r\n"
 			  //"Expires: -1\r\n"
 			  "Connection: Close\r\n"
@@ -799,10 +799,10 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		if ( ! charset ) charset = "utf-8";
 		//sprintf ( m_buf , 
 		p += sprintf( p,
-			      "HTTP/1.0 %li Partial content\r\n"
+			      "HTTP/1.0 %"INT32" Partial content\r\n"
 			      "%s"
-			      "Content-Length: %li\r\n"
-			      "Content-Range: %li-%li(%li)\r\n"// added "bytes"
+			      "Content-Length: %"INT32"\r\n"
+			      "Content-Range: %"INT32"-%"INT32"(%"INT32")\r\n"// added "bytes"
 			      "Connection: Close\r\n"
 			      //"P3P: CP=\"CAO PSA OUR\"\r\n"
 			      // for ajax support
@@ -831,7 +831,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		if ( httpStatus == 200 ) smsg = " OK";
 		//sprintf ( m_buf , 
 		p += sprintf( p,
-			      "HTTP/1.0 %li%s\r\n"
+			      "HTTP/1.0 %"INT32"%s\r\n"
 			      , httpStatus , smsg );
 		// if content length is not known, as in diffbot.cpp, then
 		// do not print it into the mime
@@ -841,7 +841,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 				       // change the length of the content 
 				       // should we insert a login bar in 
 				       // Proxy::storeLoginBar()
-				       "Content-Length: %04li\r\n"
+				       "Content-Length: %04"INT32"\r\n"
 				       , totalContentLen );
 		p += sprintf ( p ,
 			      "%s"
@@ -1063,11 +1063,13 @@ bool HttpMime::init ( ) {
 	// make sure only called once
 	s_init = true;
 	//s_mimeTable.set ( 256 );
-	s_mimeTable.setLabel("mimetbl");
+	//s_mimeTable.setLabel("mimetbl");
+	if ( ! s_mimeTable.set(4,sizeof(char *),256,NULL,0,false,1,"mimetbl"))
+		return false;
 	// set table from internal list
-	for ( unsigned long i = 0 ; i < sizeof(s_ext)/sizeof(char *) ; i+=2 ) {
-		long key = hash32n ( s_ext[i] );
-		if ( ! s_mimeTable.addKey ( key , (long)s_ext[i+1] ) ) 
+	for ( uint32_t i = 0 ; i < sizeof(s_ext)/sizeof(char *) ; i+=2 ) {
+		int32_t key = hash32n ( s_ext[i] );
+		if ( ! s_mimeTable.addKey ( &key , &s_ext[i+1] ) ) 
 			return log("HttpMime::init: failed to set table.");
 	}
 	// quick text
@@ -1077,11 +1079,11 @@ bool HttpMime::init ( ) {
 		return log("http: Failed to init mime table correctly.");
 	}
 	// a more thorough test
-	for ( unsigned long i = 0 ; i < sizeof(s_ext)/sizeof(char *) ; i+=2) {
+	for ( uint32_t i = 0 ; i < sizeof(s_ext)/sizeof(char *) ; i+=2) {
 		tt = getContentTypeFromExtension ( s_ext[i] );
 		if ( strcmp(tt,s_ext[i+1]) == 0 ) continue;
 		g_errno = EBADENGINEER;
-		return log("http: Failed to do mime table correctly. i=%li",i);
+		return log("http: Failed to do mime table correctly. i=%"INT32"",i);
 	}
 
 	// TODO: set it from a user supplied file here

@@ -9,11 +9,11 @@
 #include "RdbList.h"
 #include "HashTableX.h"
 
-extern long g_numCorrupt;
+extern int32_t g_numCorrupt;
 
 extern HashTableX g_waitingTable;
 
-extern long g_isDumpingRdbFromMain;
+extern int32_t g_isDumpingRdbFromMain;
 
 // this is used internally and by Msg0 for generating a cacheKey
 // to see if its request can be satisfied by any remote host without
@@ -23,18 +23,18 @@ extern long g_isDumpingRdbFromMain;
 void  makeCacheKey ( char *startKey     ,
 		     char *endKey       ,
 		     bool  includeTree  ,
-		     long  minRecSizes  ,
-		     long  startFileNum ,
-		     long  numFiles     ,
+		     int32_t  minRecSizes  ,
+		     int32_t  startFileNum ,
+		     int32_t  numFiles     ,
 		     char *cacheKeyPtr  ,
 		     char  keySize      ) ;
 
 inline key_t makeCacheKey ( key_t startKey     ,
 		     key_t endKey       ,
 		     bool  includeTree  ,
-		     long  minRecSizes  ,
-		     long  startFileNum ,
-		     long  numFiles     ) {
+		     int32_t  minRecSizes  ,
+		     int32_t  startFileNum ,
+		     int32_t  numFiles     ) {
 	key_t k;
 	makeCacheKey ( (char *)&startKey ,
 		       (char *)&endKey   ,
@@ -73,24 +73,24 @@ class Msg5 {
 		       //key_t      endKey        , 
 		       void      *startKey      , 
 		       void      *endKey        , 
-		       long       recSizes      , // requestd scan size(-1 all)
+		       int32_t       recSizes      , // requestd scan size(-1 all)
 		       bool       includeTree   ,
 		       bool       addToCache    ,
-		       long       maxCacheAge   , // in secs for cache lookup
-		       long       startFileNum  , // first file to scan
-		       long       numFiles      , // rel.to startFileNum,-1 all
+		       int32_t       maxCacheAge   , // in secs for cache lookup
+		       int32_t       startFileNum  , // first file to scan
+		       int32_t       numFiles      , // rel.to startFileNum,-1 all
 		       void      *state         , // for callback
 		       void     (* callback ) ( void    *state ,
 						RdbList *list  ,
 						Msg5    *msg5  ) ,
-		       long       niceness      ,
+		       int32_t       niceness      ,
 		       bool       doErrorCorrection  ,
 		       //key_t     *cacheKeyPtr  = NULL ,
 		       char      *cacheKeyPtr  = NULL ,
-		       long       retryNum     =  0  ,
-		       long       maxRetries   = -1  ,
+		       int32_t       retryNum     =  0  ,
+		       int32_t       maxRetries   = -1  ,
 		       bool       compensateForMerge = true ,
-		       long long      syncPoint = -1 ,
+		       int64_t      syncPoint = -1 ,
 		       class Msg5 *msg5b = NULL ,
 		       bool        isRealMerge = false ,
 		       bool        allowPageCache = true ,
@@ -105,23 +105,23 @@ class Msg5 {
 		       RdbList   *list          ,
 		       key_t      startKey      , 
 		       key_t      endKey        , 
-		       long       recSizes      , // requestd scan size(-1 all)
+		       int32_t       recSizes      , // requestd scan size(-1 all)
 		       bool       includeTree   ,
 		       bool       addToCache    ,
-		       long       maxCacheAge   , // in secs for cache lookup
-		       long       startFileNum  , // first file to scan
-		       long       numFiles      , // rel.to startFileNum,-1 all
+		       int32_t       maxCacheAge   , // in secs for cache lookup
+		       int32_t       startFileNum  , // first file to scan
+		       int32_t       numFiles      , // rel.to startFileNum,-1 all
 		       void      *state         , // for callback
 		       void     (* callback ) ( void    *state ,
 						RdbList *list  ,
 						Msg5    *msg5  ) ,
-		       long       niceness      ,
+		       int32_t       niceness      ,
 		       bool       doErrorCorrection  ,
 		       key_t     *cacheKeyPtr  = NULL ,
-		       long       retryNum     =  0  ,
-		       long       maxRetries   = -1  ,
+		       int32_t       retryNum     =  0  ,
+		       int32_t       maxRetries   = -1  ,
 		       bool       compensateForMerge = true ,
-		       long long      syncPoint = -1 ,
+		       int64_t      syncPoint = -1 ,
 		       class Msg5 *msg5b = NULL ,
 		       bool        isRealMerge = false ,
 		       bool        allowPageCache = true ,
@@ -152,7 +152,7 @@ class Msg5 {
 				 hitDisk        ); };
 
 	// need niceness to pass on to others
-	long getNiceness ( ) { return m_niceness; };
+	int32_t getNiceness ( ) { return m_niceness; };
 
 	// frees m_treeList, m_diskList (can be quite a lot of mem 2+ megs)
 	void reset();
@@ -175,7 +175,7 @@ class Msg5 {
 	bool doneMerging   ();
 
 	// how many dup keys removed from the IndexList merge, if any?
-	long getDupsRemoved ( ) { return m_dupsRemoved; };
+	int32_t getDupsRemoved ( ) { return m_dupsRemoved; };
 
 	// . when a list is bad we try to patch it by getting a list from
 	//   a host in our redundancy group
@@ -212,11 +212,11 @@ class Msg5 {
 	char      m_endKey[MAX_KEY_BYTES];
 	bool      m_includeTree;
 	bool      m_addToCache;
-	long      m_maxCacheAge;
+	int32_t      m_maxCacheAge;
 
-	long      m_numFiles;
-	long      m_startFileNum;
-	long      m_minRecSizes;
+	int32_t      m_numFiles;
+	int32_t      m_startFileNum;
+	int32_t      m_minRecSizes;
 	//RdbBase  *m_base;
 	//char     *m_coll;
 	char      m_rdbId;
@@ -225,27 +225,27 @@ class Msg5 {
 	// . gotLists() may modify these before reading more
 	//key_t     m_fileStartKey;
 	char      m_fileStartKey[MAX_KEY_BYTES];
-	long      m_newMinRecSizes;
-	long      m_round;
-	long      m_totalSize;
-	long      m_lastTotalSize;
-	long      m_treeMinRecSizes;
+	int32_t      m_newMinRecSizes;
+	int32_t      m_round;
+	int32_t      m_totalSize;
+	int32_t      m_lastTotalSize;
+	int32_t      m_treeMinRecSizes;
 	bool      m_readAbsolutelyNothing;
 
-	long      m_niceness;
+	int32_t      m_niceness;
 	// error correction stuff
 	bool      m_doErrorCorrection;
 	bool      m_hadCorruption;
-	//long long m_checkTime;
+	//int64_t m_checkTime;
 	class Msg0 *m_msg0;
 	
 	// for timing debug
-	long long m_startTime;
+	int64_t m_startTime;
 
 	// hold pointers to lists to merge
 	RdbList  *m_listPtrs [ MAX_RDB_FILES + 1 ]; // plus tree
-	//long      m_tfns     [ MAX_RDB_FILES + 1 ]; // plus tree
-	long      m_numListPtrs;
+	//int32_t      m_tfns     [ MAX_RDB_FILES + 1 ]; // plus tree
+	int32_t      m_numListPtrs;
 
 	//RdbList   m_tfndbList;
 
@@ -263,27 +263,27 @@ class Msg5 {
 	// info for truncating and passing to RdbList::indexMerge_r()
 	//key_t m_prevKey;
 	char  m_prevKey[MAX_KEY_BYTES];
-	long  m_prevCount;
+	int32_t  m_prevCount;
 
-	long  m_oldListSize;
+	int32_t  m_oldListSize;
 	
 	// how many dup keys removed from the IndexList merge, if any?
-	long  m_dupsRemoved;
+	int32_t  m_dupsRemoved;
 
 	bool m_compensateForMerge;
 
-	long m_maxRetries;
+	int32_t m_maxRetries;
 
-	//long long m_syncPoint;
+	//int64_t m_syncPoint;
 
-	long m_filtered;
+	int32_t m_filtered;
 
 	// used for reading a corresponding tfndb list for a titledb read
 	class Msg5 *m_msg5b;
 	bool        m_isRealMerge;
-	long long   m_time1;
+	int64_t   m_time1;
 
-	long m_indexdbTruncationLimit;
+	int32_t m_indexdbTruncationLimit;
 
 	char m_ks;
 
@@ -299,11 +299,11 @@ class Msg5 {
 	collnum_t m_collnum;
 	
 	// actually part of a different algo than m_waitingForList!
-	unsigned long long m_waitingKey;
+	uint64_t m_waitingKey;
 
 	// hack parms
 	void *m_parent;
-	long  m_i;
+	int32_t  m_i;
 };
 
 #endif

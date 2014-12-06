@@ -4,9 +4,9 @@
 #include "Domains.h"
 #include "Mem.h"
 
-char *getDomainOfIp ( char *host , long hostLen , long *dlen ) {
+char *getDomainOfIp ( char *host , int32_t hostLen , int32_t *dlen ) {
 	// get host length
-	//long hostLen = gbstrlen(host);
+	//int32_t hostLen = gbstrlen(host);
 	// if ip != 0 then host is a numeric ip, point to first 3 #'s
 	char *s = host + hostLen - 1;
 	while ( s > host && *s!='.' ) s--;
@@ -19,11 +19,11 @@ char *getDomainOfIp ( char *host , long hostLen , long *dlen ) {
 }
 
 
-char *getDomain ( char *host , long hostLen , char *tld , long *dlen ) {
+char *getDomain ( char *host , int32_t hostLen , char *tld , int32_t *dlen ) {
 	// assume no domain 
 	*dlen = 0;
 	// get host length
-	//long hostLen = gbstrlen(host);
+	//int32_t hostLen = gbstrlen(host);
 	// get the tld in host, if any, if not, it returns NULL
 	char *s = tld; // getTLD ( host , hostLen );
 	// return NULL if host contains no valid tld
@@ -48,7 +48,7 @@ char *getDomain ( char *host , long hostLen , char *tld , long *dlen ) {
 }
 
 // host must be NULL terminated
-char *getTLD ( char *host , long hostLen ) {
+char *getTLD ( char *host , int32_t hostLen ) {
 	// make "s" point to last period in the host
 	//char *s = host + gbstrlen(host) - 1;
 	char *hostEnd = host + hostLen;
@@ -94,11 +94,11 @@ char *getTLD ( char *host , long hostLen ) {
 
 //static TermTable  s_table(false);
 static HashTableX s_table;
-bool isTLD ( char *tld , long tldLen ) {
+bool isTLD ( char *tld , int32_t tldLen ) {
 
-	long pcount = 0;
+	int32_t pcount = 0;
 	// now they are random!
-	for ( long i = 0 ; i < tldLen ; i++ ) {
+	for ( int32_t i = 0 ; i < tldLen ; i++ ) {
 		// period count
 		if ( tld[i] == '.' ) { pcount++; continue; }
 		if ( ! is_alpha_a(tld[i]) ) return false;
@@ -821,17 +821,17 @@ bool isTLD ( char *tld , long tldLen ) {
 				     "tldtbl") ) 
 			return log("build: Could not init table of TLDs.");
 		// now add in all the stop words
-		long n = (long)sizeof(s_tlds)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_tlds)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char      *d    = s_tlds[i];
-			long       dlen = gbstrlen ( d );
-			long long  dh   = hash64Lower_a ( d , dlen );
+			int32_t       dlen = gbstrlen ( d );
+			int64_t  dh   = hash64Lower_a ( d , dlen );
 			if ( ! s_table.addKey (&dh,NULL) )
 				return log("build: dom table failed");
 		}
 		s_isInitialized = true;
 	} 
-	long long h = hash64Lower_a ( tld , tldLen ); // gbstrlen(tld));
+	int64_t h = hash64Lower_a ( tld , tldLen ); // gbstrlen(tld));
 	return s_table.isInTable ( &h );//getScoreFromTermId ( h );
 }		
 

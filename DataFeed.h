@@ -44,18 +44,18 @@ public:
 	//   given the total number of requests made for
 	//   this feed this month and the number of results
 	//   requested.
-	long getCost ( unsigned long totalRequests,
-		       unsigned long numResults,
+	int32_t getCost ( uint32_t totalRequests,
+		       uint32_t numResults,
 		       bool hasGigabits ) {
 		if (m_numTiers == 0 || m_numResultLevels == 0)
 			return 0;
 		// get the tier
-		long tier;
+		int32_t tier;
 		for (tier = 0; tier < m_numTiers-1; tier++)
 			if (totalRequests <= m_tierMax[tier])
 				break;
 		// get the level
-		long level;
+		int32_t level;
 		for (level = 0; level < m_numResultLevels-1; level++)
 			if (numResults <= m_resultLevels[level])
 				break;
@@ -68,17 +68,17 @@ public:
 					     + (level*2) ];
 	}
 
-	long getIndex ( unsigned long numResults,
+	int32_t getIndex ( uint32_t numResults,
 			bool hasGigabits ) {
 		// Check if we have result levels
 		if (m_numResultLevels == 0) return 0;
 		// Find the result level the query meets
-		long i;
+		int32_t i;
 		for(i = 0; i < m_numResultLevels-1; i++)
 			if(numResults <= m_resultLevels[i])
 				break;
 		// Calculate any other changes to index
-		long opt = 0;
+		int32_t opt = 0;
 		if(hasGigabits) opt |= 1;
 		// Return the proper Countdb index
 		return (m_resultLevels[i]/10 | opt);
@@ -89,19 +89,19 @@ public:
 		m_numTiers = pt->m_numTiers;
 		m_numResultLevels = pt->m_numResultLevels;
 		m_monthlyFee = pt->m_monthlyFee;
-		memcpy(m_tierMax, pt->m_tierMax, sizeof(long)*m_numTiers);
-		memcpy(m_resultLevels, pt->m_resultLevels, sizeof(long)*m_numResultLevels);
-		long numCosts = m_numTiers*m_numResultLevels*2;
-		memcpy(m_levelCosts, pt->m_levelCosts, sizeof(long)*numCosts);
+		memcpy(m_tierMax, pt->m_tierMax, sizeof(int32_t)*m_numTiers);
+		memcpy(m_resultLevels, pt->m_resultLevels, sizeof(int32_t)*m_numResultLevels);
+		int32_t numCosts = m_numTiers*m_numResultLevels*2;
+		memcpy(m_levelCosts, pt->m_levelCosts, sizeof(int32_t)*numCosts);
 	}
 */
 	// locals
-	long m_numTiers;
-	unsigned long m_tierMax[MAX_PRICE_TIERS];
-	long m_numResultLevels;
-	unsigned long m_resultLevels[MAX_PRICE_RESULTLEVELS];
-	unsigned long m_levelCosts[MAX_PRICE_LEVELCOSTS];
-	long  m_monthlyFee;
+	int32_t m_numTiers;
+	uint32_t m_tierMax[MAX_PRICE_TIERS];
+	int32_t m_numResultLevels;
+	uint32_t m_resultLevels[MAX_PRICE_RESULTLEVELS];
+	uint32_t m_levelCosts[MAX_PRICE_LEVELCOSTS];
+	int32_t  m_monthlyFee;
 };
 
 class DataFeed : public MetaContainer {
@@ -111,36 +111,36 @@ public:
 	~DataFeed();
 
 	void setUrl ( char *name,
-		      long  nameLen );
+		      int32_t  nameLen );
 
-	void set ( long  creationTime,
+	void set ( int32_t  creationTime,
 		   char *dataFeedUrl,
-		   long  dataFeedUrlLen,
+		   int32_t  dataFeedUrlLen,
 		   char *passcode,
-		   long  passcodeLen,
+		   int32_t  passcodeLen,
 		   bool  isActive,
 		   bool  isLocked = false );
 
 	void parse ( char *dataFeedPage,
-		     long  dataFeedPageLen );
+		     int32_t  dataFeedPageLen );
 
-	long buildPage ( char *page );
+	int32_t buildPage ( char *page );
 	void buildPage ( SafeBuf *sb );
 
 	// locals
 	char m_passcode[MAX_PASSCODELEN+1];
-	long m_passcodeLen;
+	int32_t m_passcodeLen;
 	bool m_isActive;
 	bool m_isLocked;
 
 	// ID
-	long long m_customerId;
+	int64_t m_customerId;
 
 	// Price Table
 	PriceTable m_priceTable;
 
 	// creation time
-	long m_creationTime;
+	int32_t m_creationTime;
 };
 
 #endif

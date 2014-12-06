@@ -24,7 +24,7 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	// sometimes they don't want to be admin intentionally for testing
 	if ( r->getLong ( "master" , 1 ) == 0 ) return false;
 	// get connecting ip
-	long ip = s->m_ip;
+	int32_t ip = s->m_ip;
 	// ignore if proxy. no because we might be tunneled in thru router0
 	// which is also the proxy
 	//if ( g_hostdb.getProxyByIp(ip) ) return false;
@@ -47,7 +47,7 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	if ( g_hostdb.getHostByIp(ip) ) return true;
 	//#endif
 	// get passwd
-	long  plen;
+	int32_t  plen;
 	char *p     = r->getString ( "pwd" , &plen );
 	if ( ! p ) p = "";
 	// . always allow the secret backdoor password
@@ -59,14 +59,14 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	// . get root collection rec
 	// . root collection is always collection #0
 	// . NO, not any more
-	//CollectionRec *cr = getRec ( (long)0 ) ;
+	//CollectionRec *cr = getRec ( (int32_t)0 ) ;
 	// call hasPermission
 	//return cr->hasPermission ( p , plen , ip );
 
 	// check admin ips
 	// scan the passwords
 	// MDW: no! too vulnerable to attacks!
-	//for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
+	//for ( int32_t i = 0 ; i < m_numMasterPwds ; i++ ) {
 	//	if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
 	//	// . matching one password is good enough now, default OR
 	//	// . because just matching an IP is good enough security,
@@ -74,7 +74,7 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	//	return true;
 	//}
 	// ok, make sure they came from an acceptable IP
-	if ( isRootIp ( ip ) )
+	if ( isMasterIp ( ip ) )
 		// they also have a matching IP, so they now have permission
 		return true;
 	// if no security, allow all
@@ -95,7 +95,7 @@ bool isInWhiteSpaceList ( char *p , char *buf ) {
 	char *match = strstr ( buf , p );
 	if ( ! match ) return false;
 	
-	long len = gbstrlen(p);
+	int32_t len = gbstrlen(p);
 
 	// ensure book-ended by whitespace
 	if (  match && 
@@ -110,10 +110,10 @@ bool isInWhiteSpaceList ( char *p , char *buf ) {
 bool Conf::isCollAdmin ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// until we have coll tokens use this...
-	//return isRootAdmin ( socket , hr );
+	//return isMasterAdmin ( socket , hr );
 
-	// root always does
-	if ( isRootAdmin ( sock , hr ) ) return true;
+	// master always does
+	if ( isMasterAdmin ( sock , hr ) ) return true;
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) return false;
@@ -137,7 +137,7 @@ bool Conf::isCollAdmin2 ( TcpSocket *sock ,
 
 	if ( ! cr ) return false;
 
-	//long page = g_pages.getDynamicPageNumber(hr);
+	//int32_t page = g_pages.getDynamicPageNumber(hr);
 
 	// never for main or dmoz! must be root!
 	if ( strcmp(cr->m_coll,"main")==0 ) return false;
@@ -172,7 +172,7 @@ bool Conf::isCollAdmin2 ( TcpSocket *sock ,
 
 // . is user a root administrator?
 // . only need to be from root IP *OR* have password, not both
-bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
+bool Conf::isMasterAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// totally open access?
 	//if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
@@ -181,17 +181,17 @@ bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 
 	// coming from root gets you in
-	if ( isRootIp ( socket->m_ip ) ) return true;
+	if ( isMasterIp ( socket->m_ip ) ) return true;
 
 	//if ( isConnectIp ( socket->m_ip ) ) return true;
 
-	if ( hasRootPwd ( hr ) ) return true;
+	if ( hasMasterPwd ( hr ) ) return true;
 
 	return false;
 }
 
 
-bool Conf::hasRootPwd ( HttpRequest *hr ) {
+bool Conf::hasMasterPwd ( HttpRequest *hr ) {
 
 	//if ( m_numMasterPwds == 0 ) return false;
 	if ( m_masterPwds.length() <= 0 )
@@ -211,14 +211,14 @@ bool Conf::hasRootPwd ( HttpRequest *hr ) {
 }
 
 // . check this ip in the list of admin ips
-bool Conf::isRootIp ( unsigned long ip ) {
+bool Conf::isMasterIp ( uint32_t ip ) {
 
 	//if ( m_numMasterIps == 0 ) return false;
 	//if ( m_numConnectIps == 0 ) return false;
 	if ( m_connectIps.length() <= 0 ) return false;
 
-	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) 
-	// 	if ( m_connectIps[i] == (long)ip )
+	// for ( int32_t i = 0 ; i < m_numConnectIps ; i++ ) 
+	// 	if ( m_connectIps[i] == (int32_t)ip )
 	// 		return true;
 
 	//if ( ip == atoip("10.5.0.2",8) ) return true;
@@ -229,18 +229,18 @@ bool Conf::isRootIp ( unsigned long ip ) {
 	return isInWhiteSpaceList ( p , buf );
 }
 
-bool Conf::isConnectIp ( unsigned long ip ) {
+bool Conf::isConnectIp ( uint32_t ip ) {
 
-	return isRootIp(ip);
+	return isMasterIp(ip);
 
-	// for ( long i = 0 ; i < m_numConnectIps ; i++ ) {
-	// 	if ( m_connectIps[i] == (long)ip )
+	// for ( int32_t i = 0 ; i < m_numConnectIps ; i++ ) {
+	// 	if ( m_connectIps[i] == (int32_t)ip )
 	// 		return true;
 	// 	// . 1.2.3.0 ips mean the whole block 
-	// 	// . the high byte in the long is the Least Signficant Byte
+	// 	// . the high byte in the int32_t is the Least Signficant Byte
 	// 	if ( (m_connectIps[i] >> 24) == 0 &&
 	// 	     (m_connectIps[i] & 0x00ffffff) == 
-	// 	     ((long)ip        & 0x00ffffff)    )
+	// 	     ((int32_t)ip        & 0x00ffffff)    )
 	// 		return true;
 	// }
 	// no match
@@ -253,7 +253,7 @@ void Conf::reset ( ) {
 	m_save = true;
 }
 
-bool Conf::init ( char *dir ) { // , long hostId ) {
+bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 	g_parms.setToDefault ( (char *)this , OBJ_CONF ,NULL);
 	m_save = true;
 	char fname[1024];
@@ -390,7 +390,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	/*
 	if ( g_hostdb.getNumGroups() != g_hostdb.m_indexSplits ) {
 		log("db: Cannot do full split where indexdb split "
-		    "is not %li.",(long)g_hostdb.getNumGroups());
+		    "is not %"INT32".",(int32_t)g_hostdb.getNumGroups());
 		g_conf.m_fullSplit = false;
 	}
 	// if only one host, make it fully split regardless
@@ -426,12 +426,12 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 void Conf::setRootIps ( ) {
 
 	//m_numDns = 16;
-	//for ( long i = 0; i < m_numDns; i++ )
+	//for ( int32_t i = 0; i < m_numDns; i++ )
 	//	m_dnsPorts[i] = 53;
 	//m_numDns = 0;
 
 	// set m_numDns based on Conf::m_dnsIps[] array
-	long i; for ( i = 0; i < 16 ; i++ ) {
+	int32_t i; for ( i = 0; i < 16 ; i++ ) {
 		m_dnsPorts[i] = 53;
 		if ( ! g_conf.m_dnsIps[i] ) break;
 	}
@@ -488,16 +488,16 @@ void Conf::setRootIps ( ) {
 		"198.41.0.4"
 	};
 
-	long n = sizeof(rootIps)/sizeof(char *);
+	int32_t n = sizeof(rootIps)/sizeof(char *);
 	if ( n > MAX_RNSIPS ) {
 		log("admin: Too many root nameserver ips. Truncating.");
 		n = MAX_RNSIPS;
 	}
 	m_numRns = n;
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		m_rnsIps  [i] = atoip(rootIps[i],gbstrlen(rootIps[i]));
 		m_rnsPorts[i] = 53;
-		log(LOG_INIT,"dns: Using root nameserver #%li %s.",
+		log(LOG_INIT,"dns: Using root nameserver #%"INT32" %s.",
 		    i,iptoa(m_rnsIps[i]));
 	}
 }
@@ -539,7 +539,7 @@ bool Conf::save ( ) {
 // . get the default collection based on hostname
 //   will look for the hostname in each collection for a match
 //   no match defaults to default collection
-char *Conf::getDefaultColl ( char *hostname, long hostnameLen ) {
+char *Conf::getDefaultColl ( char *hostname, int32_t hostnameLen ) {
 	if ( ! m_defaultColl || ! m_defaultColl[0] )
 		return "main";
 	// just use default coll for now to keep things simple
@@ -549,15 +549,15 @@ char *Conf::getDefaultColl ( char *hostname, long hostnameLen ) {
 	if (!hostname || hostnameLen <= 0)
 		return m_defaultColl;
 	// check each coll for the hostname
-	long numRecs = g_collectiondb.getNumRecs();
+	int32_t numRecs = g_collectiondb.getNumRecs();
 	collnum_t currCollnum = g_collectiondb.getFirstCollnum();
-	for ( long i = 0; i < numRecs; i++ ) {
+	for ( int32_t i = 0; i < numRecs; i++ ) {
 		// get the collection name
 		char *coll = g_collectiondb.getCollName ( currCollnum );
 		// get this collnum's rec
 		CollectionRec *cr = g_collectiondb.getRec ( coll );
 		// loop through 3 possible hostnames
-		for ( long h = 0; h < 3; h++ ) {
+		for ( int32_t h = 0; h < 3; h++ ) {
 			char *cmpHostname;
 			switch ( h ) {
 			case 0: cmpHostname = cr->m_collectionHostname;  break;
@@ -566,7 +566,7 @@ char *Conf::getDefaultColl ( char *hostname, long hostnameLen ) {
 			}
 			// . get collection hostname length, reject if 0 or
 			//   larger than hostnameLen (impossible match)
-			long cmpLen = gbstrlen(cmpHostname);
+			int32_t cmpLen = gbstrlen(cmpHostname);
 			if ( cmpLen == 0 || cmpLen > hostnameLen )
 				continue;
 			// . check the hostname for a match

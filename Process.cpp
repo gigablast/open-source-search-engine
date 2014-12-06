@@ -52,7 +52,7 @@
 
 // normally in seo.cpp, but here so it compiles
 SafeBuf    g_qbuf;
-long       g_qbufNeedSave = 0;
+int32_t       g_qbufNeedSave = 0;
 
 // for resetAll()
 //#include "Msg6.h"
@@ -71,8 +71,8 @@ extern void resetUnicode       ( );
 // our global instance
 Process g_process;
 
-//static long s_flag = 1;
-static long s_nextTime = 0;
+//static int32_t s_flag = 1;
+static int32_t s_nextTime = 0;
 
 char *g_files[] = {
 	//"gb.conf",
@@ -165,7 +165,7 @@ char *g_files[] = {
 	"libnetpbm.so.10",
 	"libpng12.so.0",
 	"libtiff.so.4",
-	"libz.so.1",
+	//"libz.so.1",
 	"LICENSE",
 	"pngtopnm",
 	"pnmscale",
@@ -209,10 +209,10 @@ char *g_files[] = {
 bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 
 	// sanirty
-	long slen = gbstrlen(srcDir);
+	int32_t slen = gbstrlen(srcDir);
 	if ( srcDir[slen-1] != '/' ) { char *xx=NULL;*xx=0; }
 
-	for ( long i = 0 ; i < (long)sizeof(g_files)/4 ; i++ ) {
+	for ( int32_t i = 0 ; i < (int32_t)sizeof(g_files)/4 ; i++ ) {
 		// terminate?
 		if ( ! g_files[i] ) break;
 		// skip subdir shit it won't work
@@ -269,7 +269,7 @@ bool Process::checkFiles ( char *dir ) {
 	//if ( ! g_conf.m_isLive ) return true;
 	bool needsFiles = false;
 
-	for ( long i = 0 ; i < (long)sizeof(g_files)/4 ; i++ ) {
+	for ( int32_t i = 0 ; i < (int32_t)sizeof(g_files)/4 ; i++ ) {
 		// terminate?
 		if ( ! g_files[i] ) break;
 		File f;
@@ -323,9 +323,9 @@ bool Process::checkFiles ( char *dir ) {
 
 	// . check for tagdb files tagdb0.xml to tagdb50.xml
 	// . MDW - i am phased these annoying files out 100%
-	//for ( long i = 0 ; i <= 50 ; i++ ) {
+	//for ( int32_t i = 0 ; i <= 50 ; i++ ) {
 	//	char tmp[100];
-	//	sprintf ( tmp , "tagdb%li.xml" , i );
+	//	sprintf ( tmp , "tagdb%"INT32".xml" , i );
 	//	File f;
 	//	f.set ( dir , tmp );
 	//	if ( ! f.doesExist() ) 
@@ -351,7 +351,7 @@ bool Process::checkFiles ( char *dir ) {
 	/*
 	File f;
 	f.set ("/proc/swaps");
-	long size = f.getFileSize() ;
+	int32_t size = f.getFileSize() ;
 	char *buf = (char *)mmalloc ( size+1, "S99" );
 	if ( ! buf ) return false;
 	if ( ! f.open ( O_RDONLY ) ) 
@@ -580,7 +580,7 @@ bool Process::init ( ) {
 }
 
 bool Process::isAnyTreeSaving ( ) {
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		if ( rdb->m_isCollectionLess ) continue;
 		if ( rdb->isSavingTree() ) return true;
@@ -605,7 +605,7 @@ void powerMonitorWrapper ( int fd , void *state ) {
 	// get our host
 	Host *me = g_hostdb.m_myHost;
 	// if we are not host #0 and host #0 is dead, we check it
-	if ( me->m_shardNum == 0 && g_hostdb.isDead((long)0) ) 
+	if ( me->m_shardNum == 0 && g_hostdb.isDead((int32_t)0) ) 
 		checkPower = true;
 	// if we are host #0 we always check it
 	if ( me->m_hostId == 0 ) checkPower = true;
@@ -670,13 +670,13 @@ bool Process::gotPower ( TcpSocket *s ) {
 
 	// point into buffer
 	char *buf     ;
-	long  bufSize ;
+	int32_t  bufSize ;
 
 	// assume power is on
-	long val = 0;
+	int32_t val = 0;
 	HttpMime mime;
 	char *content;
-	long  contentLen;
+	int32_t  contentLen;
 	char *p;
 	char *dataCtrTempStr;
 	char *roofTempStr;
@@ -866,8 +866,8 @@ void hdtempWrapper ( int fd , void *state ) {
 	// skip if exiting
 	if ( g_process.m_mode == EXIT_MODE ) return;
 	// current local time
-	long now = getTime();
-	// or if haven't waited long enough
+	int32_t now = getTime();
+	// or if haven't waited int32_t enough
 	if ( now < s_nextTime ) return;
 
 	// set it
@@ -901,7 +901,7 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 	// we are back
 	g_process.m_threadOut = false;
 	// current local time
-	long now = getTime();
+	int32_t now = getTime();
 	// if we had an error, do not schedule again for an hour
 	//if ( s_flag ) s_nextTime = now + 3600;
 	// reset it
@@ -909,9 +909,9 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 	// send email alert if too hot
 	Host *h = g_hostdb.m_myHost;
 	// get max temp
-	long max = 0;
-	for ( long i = 0 ; i < 4 ; i++ ) {
-		short t = h->m_hdtemps[i];
+	int32_t max = 0;
+	for ( int32_t i = 0 ; i < 4 ; i++ ) {
+		int16_t t = h->m_hdtemps[i];
 		if ( t > max ) max = t;
 	}
 	// . leave if ok
@@ -921,16 +921,16 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 	// . but this temp is probably the case temp that we are measuring
 	if ( max <= g_conf.m_maxHardDriveTemp ) return;
 	// leave if we already sent and alert within 5 mins
-	static long s_lasttime = 0;
+	static int32_t s_lasttime = 0;
 	if ( now - s_lasttime < 5*60 ) return;
 	// prepare msg to send
 	char msgbuf[1024];
 	Host *h0 = g_hostdb.getHost ( 0 );
 	snprintf(msgbuf, 1024,
-		 "hostid %li has overheated HD at %li C "
+		 "hostid %"INT32" has overheated HD at %"INT32" C "
 		 "cluster=%s (%s). Disabling spiders.",
 		 h->m_hostId,
-		 (long)max,
+		 (int32_t)max,
 		 g_conf.m_clusterName,
 		 iptoa(h0->m_ip));
 	// send it, force it, so even if email alerts off, it sends it
@@ -947,7 +947,7 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 
 
 // set Process::m_diskUsage
-float getDiskUsage ( long long *diskAvail ) {
+float getDiskUsage ( int64_t *diskAvail ) {
 
 	// first get disk usage now
 	char cmd[10048];
@@ -979,7 +979,7 @@ float getDiskUsage ( long long *diskAvail ) {
 		return -1.0; // unknown
 	}
 	char buf[2000];
-	long r = read ( fd , buf , 2000 );
+	int32_t r = read ( fd , buf , 2000 );
 	// did we get an error
 	if ( r <= 0 ) {
 		//m_errno = errno;
@@ -991,8 +991,8 @@ float getDiskUsage ( long long *diskAvail ) {
 	close ( fd );
 
 	float usage;
-	long long avail;
-	sscanf(buf,"%lli %f",&avail,&usage);
+	int64_t avail;
+	sscanf(buf,"%"INT64" %f",&avail,&usage);
 	// it is in KB so make it into bytes
 	if ( diskAvail ) *diskAvail = avail * 1000LL;
 	return usage;
@@ -1060,7 +1060,7 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 		return NULL;
 	}
 	char buf[2000];
-	long r = read ( fd , buf , 2000 );
+	int32_t r = read ( fd , buf , 2000 );
 	// maybe try the marvell option?
 	if ( r == 0 && s_parm[0]!='m' ) {
 		log("gb: smartctl did not work. Trying marvell option.");
@@ -1094,9 +1094,9 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 	// end
 	char *pend = buf + gbstrlen(buf);
 	// store the temps here
-	short *temp = g_hostdb.m_myHost->m_hdtemps;
+	int16_t *temp = g_hostdb.m_myHost->m_hdtemps;
 	// there are 4
-	short *tempEnd = temp + 4;
+	int16_t *tempEnd = temp + 4;
 
 	//
 	// parse output from smartctl
@@ -1139,9 +1139,9 @@ void Process::callHeartbeat () {
 }
 
 void heartbeatWrapper ( int fd , void *state ) {
-	static long long s_last = 0LL;
-	static long long s_lastNumAlarms = 0LL;
-	long long now = gettimeofdayInMilliseconds();
+	static int64_t s_last = 0LL;
+	static int64_t s_lastNumAlarms = 0LL;
+	int64_t now = gettimeofdayInMilliseconds();
 	if ( s_last == 0LL ) {
 		s_last = now;
 		s_lastNumAlarms = g_numAlarms;
@@ -1149,7 +1149,7 @@ void heartbeatWrapper ( int fd , void *state ) {
 	}
 	// . log when we've gone 100+ ms over our scheduled beat
 	// . this is a sign things are jammed up
-	long long elapsed = now - s_last;
+	int64_t elapsed = now - s_last;
 	if ( elapsed > 200 ) 
 		// now we print the # of elapsed alarms. that way we will
 		// know if the alarms were going off or not...
@@ -1157,8 +1157,8 @@ void heartbeatWrapper ( int fd , void *state ) {
 		// check the "cat /proc/<pid>/status | grep SigQ" output
 		// to see if its overflowed. hopefully i will fix this by
 		// queue the signals myself in Loop.cpp.
-		log("db: missed heartbeat by %lli ms. Num elapsed alarms = "
-		    "%li", elapsed-100,(long)(g_numAlarms - s_lastNumAlarms));
+		log("db: missed heartbeat by %"INT64" ms. Num elapsed alarms = "
+		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - s_lastNumAlarms));
 	s_last = now;
 	s_lastNumAlarms = g_numAlarms;
 
@@ -1218,7 +1218,7 @@ void diskHeartbeatWrapper ( int fd , void *state ) {
 */
 
 // called by PingServer.cpp only as of now
-long long Process::getTotalDocsIndexed() {
+int64_t Process::getTotalDocsIndexed() {
 	if ( m_totalDocsIndexed == -1LL ) {
 		Rdb *rdb = g_clusterdb.getRdb();
 		// useCache = true
@@ -1235,7 +1235,7 @@ void processSleepWrapper ( int fd , void *state ) {
 	if ( g_process.m_mode != NO_MODE   )                         return;
 
 	// update global rec count
-        static long s_rcount = 0;
+        static int32_t s_rcount = 0;
 	// every 2 seconds
 	if ( ++s_rcount >= 4 ) {
 		s_rcount = 0;
@@ -1277,7 +1277,7 @@ void processSleepWrapper ( int fd , void *state ) {
 	//if ( ! isClockInSync() && ! g_hostdb.m_myHost->m_isProxy ) return;
 
 	// get time the day started
-	long now;
+	int32_t now;
 	if ( g_hostdb.m_myHost->m_isProxy ) now = getTimeLocal();
 	else {
 		// need to be in sync with host #0's clock
@@ -1297,29 +1297,29 @@ void processSleepWrapper ( int fd , void *state ) {
 	//
 	
 	// get frequency in minutes
-	long freq = (long)g_conf.m_autoSaveFrequency ;
+	int32_t freq = (int32_t)g_conf.m_autoSaveFrequency ;
 	// convert into seconds
 	freq *= 60;
 	// how many seconds into the day has it been?
-	long offset   = now % (24*3600);
-	long dayStart = now - offset;
+	int32_t offset   = now % (24*3600);
+	int32_t dayStart = now - offset;
 	// how many times should we have autosaved so far for this day?
-	long autosaveCount = offset / freq;
+	int32_t autosaveCount = offset / freq;
 	// convert to when it should have been last autosaved
-	long nextLastSaveTime = (autosaveCount * freq) + dayStart;
+	int32_t nextLastSaveTime = (autosaveCount * freq) + dayStart;
 	
 	// if we already saved it for that time, bail
 	if ( g_process.m_lastSaveTime >= nextLastSaveTime ) return;
 	
-	//long long now = gettimeofdayInMillisecondsLocal();
+	//int64_t now = gettimeofdayInMillisecondsLocal();
 	// . get a snapshot of the load average...
 	// . MDW: disable for now. not really used...
 	//update_load_average(now);
 	// convert from minutes in milliseconds
-	//long long delta = (long long)g_conf.m_autoSaveFrequency * 60000LL;
+	//int64_t delta = (int64_t)g_conf.m_autoSaveFrequency * 60000LL;
 	// if power is off make this every 30 seconds temporarily!
 	//if ( ! g_process.m_powerIsOn ) delta = 30000;
-	// return if we have not waited long enough
+	// return if we have not waited int32_t enough
 	//if ( now - g_process.m_lastSaveTime < delta ) return;
 	// update
 	g_process.m_lastSaveTime = nextLastSaveTime;//now;
@@ -1349,8 +1349,8 @@ bool Process::shutdown ( bool urgent ,
 		if ( m_mode == EXIT_MODE )
 			return true;
 		// otherwise, log it!
-		log("process: shutdown called, but mode is %li",
-		    (long)m_mode);
+		log("process: shutdown called, but mode is %"INT32"",
+		    (int32_t)m_mode);
 		return true;
 	}
 
@@ -1460,9 +1460,9 @@ bool Process::shutdown2 ( ) {
 	if ( g_threads.amThread() ) return true;
 
 	if ( m_urgent )
-		log(LOG_INFO,"gb: Shutting down urgently. Try #%li.",m_try++);
+		log(LOG_INFO,"gb: Shutting down urgently. Try #%"INT32".",m_try++);
 	else
-		log(LOG_INFO,"gb: Shutting down. Try #%li.",m_try++);
+		log(LOG_INFO,"gb: Shutting down. Try #%"INT32".",m_try++);
 
 	// turn off statsdb so it does not try to add records for these writes
 	g_statsdb.m_disabled = true;
@@ -1530,7 +1530,7 @@ bool Process::shutdown2 ( ) {
 	if ( ! saveRdbMaps ( useThreads ) ) 
 		if ( ! m_urgent ) return false;
 
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	if ( m_firstShutdownTime == 0 ) m_firstShutdownTime = now;
 
 	// these udp servers will not read in new requests or allow
@@ -1617,12 +1617,12 @@ bool Process::shutdown2 ( ) {
 	g_threads.timedCleanUp(0x7fffffff,MAX_NICENESS);
 
 	// wait for all threads to complete...
-	long n = g_threads.getNumThreadsOutOrQueued() ;
+	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
 	//if ( n > 0 )
 	//	return log(LOG_INFO,
-	//		   "gb: Waiting for %li threads to complete.",n);
+	//		   "gb: Waiting for %"INT32" threads to complete.",n);
 
-	log(LOG_INFO,"gb: Has %li threads out.",n);
+	log(LOG_INFO,"gb: Has %"INT32" threads out.",n);
 
 
 	//ok, resetAll will close httpServer's socket so now is the time to 
@@ -1651,12 +1651,12 @@ bool Process::shutdown2 ( ) {
 
 void Process::disableTreeWrites ( ) {
 	// loop over all Rdbs
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->disableWrites();
 	}
 	// disable all spider trees and tables
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .disableWrites();
@@ -1668,12 +1668,12 @@ void Process::disableTreeWrites ( ) {
 
 void Process::enableTreeWrites ( ) {
 	// loop over all Rdbs
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->enableWrites();
 	}
 	// enable all waiting trees
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .enableWrites();
@@ -1686,7 +1686,7 @@ void Process::enableTreeWrites ( ) {
 // . calls callback when done saving
 bool Process::isRdbDumping ( ) {
 	// loop over all Rdbs and save them
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		if ( rdb->m_dump.m_isDumping ) return true;
 	}
@@ -1695,7 +1695,7 @@ bool Process::isRdbDumping ( ) {
 
 bool Process::isRdbMerging ( ) {
 	// loop over all Rdbs and save them
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		if ( rdb->isMerging() ) return true;
 	}
@@ -1710,7 +1710,7 @@ bool Process::saveRdbTrees ( bool useThread ) {
 	// turn off statsdb until everyone is done
 	//g_statsdb.m_disabled = true;
 	// loop over all Rdbs and save them
-	for ( long i = 0 ; ! m_calledSave && i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; ! m_calledSave && i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->saveTree ( useThread );
 	}
@@ -1732,7 +1732,7 @@ bool Process::saveRdbTrees ( bool useThread ) {
 	// quickly re-enable if statsdb tree does not need save any more
 	//if ( ! g_statsdb.m_rdb.needsSave() ) g_statsdb.m_disabled = false;
 	// check if any need to finish saving
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		//if ( rdb->needsSave ( ) ) return false;
 		// we disable the tree while saving so we can't really add recs
@@ -1760,7 +1760,7 @@ bool Process::saveRdbMaps ( bool useThread ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	useThread = false;
 	// loop over all Rdbs and save them
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->saveMaps ( useThread );
 	}
@@ -1776,7 +1776,7 @@ bool Process::saveRdbCaches ( bool useThread ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	//useThread = false;
 	// loop over all Rdbs and save them
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		// . returns true if cache does not need save
 		// . returns false if blocked and is saving
@@ -1820,7 +1820,7 @@ bool Process::saveBlockingFiles1 ( ) {
 	// QueryLogEntry::m_minTop50Score member and corresponding timestamp
 	if ( g_qbufNeedSave ) {
 		char fname[1024];
-		sprintf(fname,"querylog.host%li.dat",g_hostdb.m_hostId);
+		sprintf(fname,"querylog.host%"INT32".dat",g_hostdb.m_hostId);
 		g_qbuf.saveToFile(g_hostdb.m_dir,fname);
 		log("process: saving changes to %s",fname);
 		g_qbufNeedSave = false;
@@ -1864,7 +1864,7 @@ bool Process::saveBlockingFiles2 ( ) {
         Msg13::getHttpCacheRobots()->save( false ); // use threads?
 
         // save our caches
-        for ( long i = 0; i < MAX_GENERIC_CACHES; i++ ) {
+        for ( int32_t i = 0; i < MAX_GENERIC_CACHES; i++ ) {
                 if ( g_genericCache[i].useDisk() )
 			// do not use threads
 			g_genericCache[i].save( false );
@@ -1910,7 +1910,7 @@ void Process::resetAll ( ) {
 	g_hostdb2         .reset();
 	g_spiderLoop      .reset();
 
-	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->reset();
 	}
@@ -1942,7 +1942,7 @@ void Process::resetAll ( ) {
 	//g_pageTopDocs     .destruct();
 	//g_pageNetTest     .destructor();
 
-	for ( long i = 0; i < MAX_GENERIC_CACHES; i++ )
+	for ( int32_t i = 0; i < MAX_GENERIC_CACHES; i++ )
 		g_genericCache[i].reset();
 
 	// reset disk page caches
@@ -2056,7 +2056,7 @@ static void loadavg_callback(loadavg_state* state) {
 		s_st_lavg.bigfile.close();
 		s_st_lavg.bigfile.setNonBlocking();
 		s_st_lavg.bigfile.open(O_RDONLY);
-		log(LOG_INFO, "build: errno %ld reading /proc/loadavg",
+		log(LOG_INFO, "build: errno %"INT32" reading /proc/loadavg",
 			s_st_lavg.filestate.m_errno);
 		s_st_lavg.filestate.m_errno = 0;
 		return;
@@ -2132,24 +2132,24 @@ void Process::resetLoadAvg() {
 // copied from main.cpp dumpEvents() function
 //
 
-static long s_lastRunTime = 0;
+static int32_t s_lastRunTime = 0;
 
 void eventStatSleepWrapper ( void *state , int fd ) {
 
 	// why even register it if not host #0?
 	if ( g_hostdb.m_myHostId != 0 ) { char *xx=NULL;*xx=0; }
 	// local time. we are on host #0
-	long now = getTimeLocal();
+	int32_t now = getTimeLocal();
 	// wait at least one hour
 	if ( now - s_lastRunTime  < 3600 ) return;
 	// wait until midnight us time
-	long tod = now % 86400;
-	// or shortly after
+	int32_t tod = now % 86400;
+	// or int16_tly after
 	if ( tod > 1500 ) return;
 	// ok, execute it
 	s_lastRunTime = now;
 	// send to everyhost
-	for ( long i = 0 ;i < g_hostdb.m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ;i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = g_hostdb.getHost(i);
 		// reset his stats
 		h->m_eventStats.clear();
@@ -2175,7 +2175,7 @@ void gotStatReply ( UdpSlot *slot ) {
 	EventStats total;
 	total.clear();
 	
-	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = g_hostdb.getHost(i);
 		EventStats *es = &h->m_eventStats;
 		total.m_active += es->m_active;
@@ -2201,33 +2201,33 @@ void gotStatReply ( UdpSlot *slot ) {
 		      "\r\n"
 		      );
 
-	sb.safePrintf("total expired events %li\n\n", total.m_expired );
-	sb.safePrintf("total active events %li\n\n", total.m_active );
+	sb.safePrintf("total expired events %"INT32"\n\n", total.m_expired );
+	sb.safePrintf("total active events %"INT32"\n\n", total.m_active );
 
 	// print the stats now a
-	fprintf(stdout,"expired %li\n",expiredCount);
-	fprintf(stdout,"active %li\n",activeCount);
-	fprintf(stdout,"expired+active %li\n",expiredCount+activeCount);
-	fprintf(stdout,"activeresultset1 %li\n",activeResultSet1Count);
-	fprintf(stdout,"activeexperimental %li\n",activeExperimentalCount);
-	fprintf(stdout,"activeresultset1+activeexperimental %li\n",
+	fprintf(stdout,"expired %"INT32"\n",expiredCount);
+	fprintf(stdout,"active %"INT32"\n",activeCount);
+	fprintf(stdout,"expired+active %"INT32"\n",expiredCount+activeCount);
+	fprintf(stdout,"activeresultset1 %"INT32"\n",activeResultSet1Count);
+	fprintf(stdout,"activeexperimental %"INT32"\n",activeExperimentalCount);
+	fprintf(stdout,"activeresultset1+activeexperimental %"INT32"\n",
 		activeResultSet1Count+activeExperimentalCount);
-	fprintf(stdout,"activefacebook %li\n",facebookCount);
-	fprintf(stdout,"activebadgeocoder %li\n",badGeocoderCount);
+	fprintf(stdout,"activefacebook %"INT32"\n",facebookCount);
+	fprintf(stdout,"activebadgeocoder %"INT32"\n",badGeocoderCount);
 	// by country
 	fprintf(stdout,"active by country\n");
-	for ( long i = 0 ;i < 256 ; i++ ) {
+	for ( int32_t i = 0 ;i < 256 ; i++ ) {
 		if ( ! cctable[i] ) continue;
 		char *cs = getCountryCode ( (uint8_t)i );
 		if ( ! cs ) continue;
-		fprintf(stdout,"%s %li\n",cs,cctable[i]);
+		fprintf(stdout,"%s %"INT32"\n",cs,cctable[i]);
 	}
 
-	sb.safePrintf("%li of %li hosts reporting.\n\n",
+	sb.safePrintf("%"INT32" of %"INT32" hosts reporting.\n\n",
 		      s_numReplies, g_hostdb.m_numHosts );
 
 	// email that to mwells2@gigablast.com
-	long ip = atoip ( "10.5.54.47" ); // gk37, our mail server
+	int32_t ip = atoip ( "10.5.54.47" ); // gk37, our mail server
 	if ( ! ts->sendMsg ( ip,
 			     25, // smtp (send mail transfer protocol) port
 			     sb.getBufStart(),
@@ -2247,7 +2247,7 @@ void gotStatReply ( UdpSlot *slot ) {
 }
 
 // defined in XmlDoc.cpp:
-bool isExpired ( EventDisplay *ed , long nowUTC , long niceness );
+bool isExpired ( EventDisplay *ed , int32_t nowUTC , int32_t niceness );
 
 // defined in Address.cpp
 uint8_t getCountryIdFromAddrStr ( char *addr );
@@ -2255,7 +2255,7 @@ uint8_t getCountryIdFromAddrStr ( char *addr );
 // . host #0 call this around midnight on every host...
 // . dd is the stat dump
 // . returns the stats
-void handleRequestdd ( UdpSlot *slot , long netnice ) {
+void handleRequestdd ( UdpSlot *slot , int32_t netnice ) {
 
 	// set stats
 	EventStats es;
@@ -2294,18 +2294,18 @@ void handleRequestdd ( UdpSlot *slot , long netnice ) {
 	      list.skipCurrentRecord() ) {
 		key_t k       = list.getCurrentKey();
 		char *rec     = list.getCurrentRec();
-		long  recSize = list.getCurrentRecSize();
-		long long docId       = g_titledb.getDocIdFromKey ( k );
+		int32_t  recSize = list.getCurrentRecSize();
+		int64_t docId       = g_titledb.getDocIdFromKey ( k );
 		if ( k <= lastKey ) 
 			log("key out of order. "
-			    "lastKey.n1=%lx n0=%llx "
-			    "currKey.n1=%lx n0=%llx ",
+			    "lastKey.n1=%"XINT32" n0=%"XINT64" "
+			    "currKey.n1=%"XINT32" n0=%"XINT64" ",
 			    lastKey.n1,lastKey.n0,
 			    k.n1,k.n0);
 		lastKey = k;
 		// print deletes
 		if ( (k.n0 & 0x01) == 0) {
-			fprintf(stdout,"n1=%08lx n0=%016llx docId=%012lli "
+			fprintf(stdout,"n1=%08"XINT32" n0=%016"XINT64" docId=%012"INT64" "
 			       "(del)\n", 
 			       k.n1 , k.n0 , docId );
 			continue;
@@ -2335,13 +2335,13 @@ void handleRequestdd ( UdpSlot *slot , long netnice ) {
 			// skip this event display blob
 			p += ed->m_totalSize;
 			// ok, transform the offsets into ptrs
-			ed->m_desc  = (EventDesc *)((long)ed->m_desc  +
+			ed->m_desc  = (EventDesc *)((int32_t)ed->m_desc  +
 						    xd->ptr_eventData);
-			ed->m_addr  = (char *)((long)ed->m_addr  + 
+			ed->m_addr  = (char *)((int32_t)ed->m_addr  + 
 					       xd->ptr_eventData);
-			ed->m_int   = (long *)((long)ed->m_int   + 
+			ed->m_int   = (int32_t *)((int32_t)ed->m_int   + 
 					       xd->ptr_eventData);
-			ed->m_normDate=(char *)((long)ed->m_normDate + 
+			ed->m_normDate=(char *)((int32_t)ed->m_normDate + 
 						xd->ptr_eventData);
 			// do not repeat!
 			ed->m_eventFlags |= EV_DESERIALIZED;
@@ -2355,14 +2355,14 @@ void handleRequestdd ( UdpSlot *slot , long netnice ) {
 
 	}
 	startKey = *(key_t *)list.getLastKey();
-	startKey += (unsigned long) 1;
+	startKey += (uint32_t) 1;
 	// watch out for wrap around
 	if ( startKey >= *(key_t *)list.getLastKey() ) goto loop;
 
 }
 
 
-void addInEventStats ( EventDisplay *ed , EventStats *es , long nowUTC ) {
+void addInEventStats ( EventDisplay *ed , EventStats *es , int32_t nowUTC ) {
 
 	// count expired
 	if ( isExpired(ed,nowUTC,MAX_NICENESS)) {
@@ -2415,7 +2415,7 @@ void Process::checkFanSwitch ( ) {
 	// get our host
 	Host *me = g_hostdb.m_myHost;
 	// if we are not host #0 and host #0 is dead, we check it
-	if ( me->m_shardNum == 0 && g_hostdb.isDead((long)0) ) 
+	if ( me->m_shardNum == 0 && g_hostdb.isDead((int32_t)0) ) 
 		check = true;
 	// if we are host #0 we always check it
 	if ( me->m_hostId == 0 ) check = true;
@@ -2432,8 +2432,8 @@ void Process::checkFanSwitch ( ) {
 	if ( m_dataCtrTemp <= -99.0 ) return;
 
 	// for shits and giggles log it every 10 minutes
-	long now = getTimeLocal();
-	static long s_lastLogTime = 0;
+	int32_t now = getTimeLocal();
+	static int32_t s_lastLogTime = 0;
 	if ( s_lastLogTime - now > 60*10 ) {
 		s_lastLogTime = now;
 		log("powermo: dataCtrTemp=%.1f roofTemp=%.1f",
@@ -2521,15 +2521,15 @@ void Process::checkFanSwitch ( ) {
 	if ( m_desiredFanState ) {
 		// this turns it on
 		if ( !urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
-				  "command=1&time=%li",
-					getTimeGlobal()) )
+				  "command=1&time=%"UINT32"",
+					(uint32_t)getTimeGlobal()) )
 			return;
 	}
 	else {
 		// this turns it off
 		if ( !urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
-				  "command=0&time=%li",
-					getTimeGlobal()) )
+				  "command=0&time=%"UINT32"",
+					(uint32_t)getTimeGlobal()) )
 			return;
 	}
 
@@ -2543,7 +2543,7 @@ void Process::checkFanSwitch ( ) {
 	// mark the request as outstanding so we do not overlap it
 	m_fanReqOut = true;
 
-	log("process: trying to set fan state to %li",m_desiredFanState);
+	log("process: trying to set fan state to %"INT32"",m_desiredFanState);
 
 	// get it
 	bool status = g_httpServer.
@@ -2596,7 +2596,7 @@ bool Process::gotFanReply ( TcpSocket *s ) {
 	}
 	// point into buffer
 	char *buf     = s->m_readBuf;
-	long  bufSize = s->m_readOffset;
+	int32_t  bufSize = s->m_readOffset;
 
 	if ( ! buf ) {
 		log(LOG_INFO,"powermo: got empty fan state reply.");
@@ -2606,7 +2606,7 @@ bool Process::gotFanReply ( TcpSocket *s ) {
 	HttpMime mime;
 	mime.set ( buf , bufSize , NULL );
 	char *content    = buf     + mime.getMimeLen();
-	long  contentLen = bufSize - mime.getMimeLen();
+	int32_t  contentLen = bufSize - mime.getMimeLen();
 	content[contentLen]='\0';
 
 	// get the state of the power! (from old power switch)
@@ -2614,7 +2614,7 @@ bool Process::gotFanReply ( TcpSocket *s ) {
 
 	// get the state of the power! (from new power switch)
 	char *tag = "<outlet1_status>";
-	long tagLen = gbstrlen(tag);
+	int32_t tagLen = gbstrlen(tag);
 	char *p = strstr ( content, tag );
 	// panic?
 	if ( ! p ) {
@@ -2626,15 +2626,15 @@ bool Process::gotFanReply ( TcpSocket *s ) {
  
 	// . get the value
 	// . val is 0 if the fan power off, 1 if on?
-	long val = atoi ( p + tagLen );
+	int32_t val = atoi ( p + tagLen );
 
 	m_currentFanState = val;
 
 	if ( m_currentFanState == m_desiredFanState ) 
-		log("powermo: desired fan state, %li, achieved",
+		log("powermo: desired fan state, %"INT32", achieved",
 		    m_currentFanState);
 	else
-		log("powermo: fan state is %li, but needs to be %li",
+		log("powermo: fan state is %"INT32", but needs to be %"INT32"",
 		    m_currentFanState, 
 		    m_desiredFanState);
 

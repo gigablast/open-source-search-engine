@@ -17,17 +17,17 @@ int xmlTagCompare2(void *elt1, void *elt2);
 bool xmlWhitespaceNode(XmlNode *node);
 
 // 
-long editPath(char *seq1, char *seq2,
+int32_t editPath(char *seq1, char *seq2,
 	      const DiffOpt *opt,
-	      const long start1, const long start2,
-	      const long n1, const long n2,
-	      long *midX, long *midY, long *midLen);
+	      const int32_t start1, const int32_t start2,
+	      const int32_t n1, const int32_t n2,
+	      int32_t *midX, int32_t *midY, int32_t *midLen);
 
-long xmlEditPath(Xml *xml1, Xml* xml2, 
+int32_t xmlEditPath(Xml *xml1, Xml* xml2, 
 		 const DiffOpt *opt,
-		 const long start1, const long start2,
-		 const long n1, const long n2,
-		 long *midX, long *midY, long *midLen);
+		 const int32_t start1, const int32_t start2,
+		 const int32_t n1, const int32_t n2,
+		 int32_t *midX, int32_t *midY, int32_t *midLen);
 
 
 // Load 2 files into Xml classes and print the output from 
@@ -39,7 +39,7 @@ void diffXmlFiles(char *file1, char *file2, DiffOpt *opt){
 		fprintf(stderr, "error opening %s\n", file1);
 		return;
 	}
-	long contentLen1 =  lseek(fd, 0, SEEK_END);
+	int32_t contentLen1 =  lseek(fd, 0, SEEK_END);
 	if (contentLen1 < 0){
 		fprintf(stderr, "error seeking %s\n", file1);
 		close(fd);
@@ -47,17 +47,17 @@ void diffXmlFiles(char *file1, char *file2, DiffOpt *opt){
 	}
 	char *content1 = (char*)mmalloc(contentLen1+1, "xmldiff");
 	if (!content1){
-		fprintf(stderr, "can't alloc %ld bytes for %s\n",
+		fprintf(stderr, "can't alloc %"INT32" bytes for %s\n",
 		       contentLen1+1, file1);
 		close(fd);
 		return;		
 	}
 	content1[contentLen1] = '\0';
 	lseek(fd, 0, SEEK_SET);
-	long n = read(fd, content1, contentLen1);
+	int32_t n = read(fd, content1, contentLen1);
 	if (n && n != contentLen1){
 		fprintf(stderr, "error reading %s: "
-			"expected %ld bytes got %ld.\n"
+			"expected %"INT32" bytes got %"INT32".\n"
 			"(errno=%s)\n",
 			file1, contentLen1, n, strerror(errno));
 		return;
@@ -68,7 +68,7 @@ void diffXmlFiles(char *file1, char *file2, DiffOpt *opt){
 		fprintf(stderr, "error opening %s\n", file2);
 		return;
 	}
-	long contentLen2 =  lseek(fd, 0, SEEK_END);
+	int32_t contentLen2 =  lseek(fd, 0, SEEK_END);
 	if (contentLen2 < 0){
 		fprintf(stderr, "error seeking %s\n", file2);
 		close(fd);
@@ -76,7 +76,7 @@ void diffXmlFiles(char *file1, char *file2, DiffOpt *opt){
 	}
 	char *content2 = (char*)mmalloc(contentLen2+1, "xmldiff");
 	if (!content2){
-		fprintf(stderr, "can't alloc %ld bytes for %s\n",
+		fprintf(stderr, "can't alloc %"INT32" bytes for %s\n",
 		       contentLen2+1, file2);
 		close(fd);
 		return;		
@@ -86,7 +86,7 @@ void diffXmlFiles(char *file1, char *file2, DiffOpt *opt){
 	n = read(fd, content2, contentLen2);
 	if (n && n != contentLen2){
 		fprintf(stderr, "error reading %s: "
-			"expected %ld bytes got %ld.\n"
+			"expected %"INT32" bytes got %"INT32".\n"
 			"(errno=%s)\n",
 			file2, contentLen2, n, strerror(errno));
 		return;
@@ -106,9 +106,9 @@ void diffXmlFiles(char *file1, char *file2, DiffOpt *opt){
 		 contentLen2,
 		 false, 0, false,
 		 TITLEREC_CURRENT_VERSION);
-	//printf("%s: len=%ld, nodes=%ld\n", 
+	//printf("%s: len=%"INT32", nodes=%"INT32"\n", 
 	//       file1, contentLen1, xml1.getNumNodes());
-	//printf("%s: len=%ld, nodes=%ld\n", 
+	//printf("%s: len=%"INT32", nodes=%"INT32"\n", 
 	//       file2, contentLen2, xml2.getNumNodes());
 
 	printXmlDiff(&xml1,&xml2, opt);
@@ -130,23 +130,23 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 	
 	opt->m_eltSize = sizeof(XmlNode);
 
-	long seq1  [4096];
-	long seq2  [4096];
-	long seqLen[4096];
+	int32_t seq1  [4096];
+	int32_t seq2  [4096];
+	int32_t seqLen[4096];
 	SafeBuf buf;
-	//long numSeq = longestCommonSubsequence(seq1, seq2, seqLen,4096, 
+	//int32_t numSeq = longestCommonSubsequence(seq1, seq2, seqLen,4096, 
 	//				       &xml1-> &xml2->;
-	//printf("lcs length: %ld\n", numSeq);
+	//printf("lcs length: %"INT32"\n", numSeq);
 	
-	long numSeq = lcsXml(seq1, seq2, seqLen,4096, xml1, xml2, opt);
- 	//buf.safePrintf("LCS:\nlength: %ld\n", numSeq);
+	int32_t numSeq = lcsXml(seq1, seq2, seqLen,4096, xml1, xml2, opt);
+ 	//buf.safePrintf("LCS:\nlength: %"INT32"\n", numSeq);
 	
-//  	long start = -1;
-//  	for (long i=0;i<numSeq;i++){
-//  		long i1 = seq1[i];
-//  		long i2 = seq2[i];
-//  		long iLen = seqLen[i];
- 		//buf.safePrintf("node=(%ld, %ld) len=%ld\n", i1, i2, iLen);
+//  	int32_t start = -1;
+//  	for (int32_t i=0;i<numSeq;i++){
+//  		int32_t i1 = seq1[i];
+//  		int32_t i2 = seq2[i];
+//  		int32_t iLen = seqLen[i];
+ 		//buf.safePrintf("node=(%"INT32", %"INT32") len=%"INT32"\n", i1, i2, iLen);
 // 		if (xml1->isUnicode()) 
 // 			buf.utf16Encode(xml1->getNode(i1),
 // 					xml1->getNodeLen(i1));
@@ -167,18 +167,18 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 	//buf.safePrintf("\n");
 	//buf.safePrintf("DIFF:\n");
 	// Print Diff
-	long n1 = xml1->getNumNodes();
-	long n2 = xml2->getNumNodes();
-	long i = 0;
-	long j = 0;
-	long lastC = 0;
-	for (long seqi=0; i<n1 || j<n2 || seqi<numSeq ; seqi++){
+	int32_t n1 = xml1->getNumNodes();
+	int32_t n2 = xml2->getNumNodes();
+	int32_t i = 0;
+	int32_t j = 0;
+	int32_t lastC = 0;
+	for (int32_t seqi=0; i<n1 || j<n2 || seqi<numSeq ; seqi++){
 		// safe values
-		long a = n1;
-		long b = n2;
-		long len = 0;
-		long d = 0;
-		long numEdits = 0;
+		int32_t a = n1;
+		int32_t b = n2;
+		int32_t len = 0;
+		int32_t d = 0;
+		int32_t numEdits = 0;
 		// node before this common sequence
 		if (seqi<numSeq){
 			// stop at next common sequence
@@ -187,30 +187,30 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 			len = seqLen[seqi];
 			d = b-a;
 		}
-		//buf.safePrintf("***** COMMON SEQ %li: (%li-%li), (%li-%li) "
-		//	       "a=%li b=%li i=%li j=%li "
-		//	       "len=%li\n",
+		//buf.safePrintf("***** COMMON SEQ %"INT32": (%"INT32"-%"INT32"), (%"INT32"-%"INT32") "
+		//	       "a=%"INT32" b=%"INT32" i=%"INT32" j=%"INT32" "
+		//	       "len=%"INT32"\n",
 		//	       seqi, 
 		//	       a, a+len-1, b, b+len-1,
 		//	       a, b, i, j, len);
 
-		//buf.safePrintf("***** COMMON SEQ %li: "
-		//	       "(%li-%li), (%li-%li) *****\n",
+		//buf.safePrintf("***** COMMON SEQ %"INT32": "
+		//	       "(%"INT32"-%"INT32"), (%"INT32"-%"INT32") *****\n",
 		//	       seqi, 
 		//	       a, a+len-1, b, b+len-1);
 
 		if (i<a || j<b){
-			long editLoc = i;
+			int32_t editLoc = i;
 			// print location, in first file, 
 			// of the following edits
 			// but only if context tags have not caught up
 			if (editLoc > lastC){ 
 				char name[1024];
 				name[0] = '\0';
-				long namelen = 0;
+				int32_t namelen = 0;
 				//namelen = xml1->getCompoundName
 				//	(editLoc,name,1024);
-				buf.safePrintf("@@@ node %li: ",
+				buf.safePrintf("@@@ node %"INT32": ",
 					       editLoc);
 				if(xml1->isUnicode()) 
 					buf.utf16Encode(name,namelen);
@@ -221,12 +221,12 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 
 
 			// leading context
-			long c = i;
+			int32_t c = i;
 
 			// go back opt->m_context nodes, skipping empty tags, 
 			// go back as far as the first node, or
 			// the last node that was output as trailing context
-			for (long x=i-1, numTags = 0; 
+			for (int32_t x=i-1, numTags = 0; 
 			     x >= 0 && numTags < opt->m_context && x > lastC; 
 			     x--){
 				if (xmlWhitespaceNode(xml1->getNodePtr(x)))
@@ -238,15 +238,15 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 			
 			for ( ; c < i ; c++) {
 //  				char name[1024];
-//  				long namelen = xml1->getCompoundName
+//  				int32_t namelen = xml1->getCompoundName
 //  					(c,name,1024);
 // 				if (namelen)
-// 					buf.safePrintf("- %li: %s\n",c,name);
+// 					buf.safePrintf("- %"INT32": %s\n",c,name);
 				//buf.safePrintf("  (node %6li) \t| ", c);
 				if (xmlWhitespaceNode(xml1->getNodePtr(c))) 
 					continue;
 				char *s = xml1->getNode(c);
-				long slen = xml1->getNodeLen(c);
+				int32_t slen = xml1->getNodeLen(c);
 				if (xml1->isUnicode()) 
 					buf.utf16Encode(s,slen);
 				else	buf.latin1Encode(s,slen);
@@ -260,11 +260,11 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 		if (i<a){
 			buf.safePrintf("-------------------------\n");
 			//buf.safePrintf("<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-			//buf.safePrintf("- (node %6li-%li) \t| ", i,a-1);
-			buf.safePrintf("--- (node %li-%li)\n", i,a-1);
+			//buf.safePrintf("- (node %6li-%"INT32") \t| ", i,a-1);
+			buf.safePrintf("--- (node %"INT32"-%"INT32")\n", i,a-1);
 			while (i < a){
 				char *s = xml1->getNode(i);
-				long slen = xml1->getNodeLen(i);
+				int32_t slen = xml1->getNodeLen(i);
 				if (xml1->isUnicode()) 
 					buf.utf16Encode(s,slen);
 				else	buf.latin1Encode(s,slen);
@@ -280,11 +280,11 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 			buf.safePrintf("+++++++++++++++++++++++++\n");
 			//buf.safePrintf("-------------------------\n");
 			//buf.safePrintf(">>>>>>>>>>>>>>>>>>>>>>>>>\n");
-			//buf.safePrintf("+ (node %6li-%li) \t| ", j,b-1);
-			buf.safePrintf("+++ (node %li-%li)\n", j,b-1);
+			//buf.safePrintf("+ (node %6li-%"INT32") \t| ", j,b-1);
+			buf.safePrintf("+++ (node %"INT32"-%"INT32")\n", j,b-1);
 			while (j < b){
 					char *s = xml2->getNode(j);
-				long slen = xml2->getNodeLen(j);
+				int32_t slen = xml2->getNodeLen(j);
 				if (xml2->isUnicode()) 
 					buf.utf16Encode(s,slen);
 				else	buf.latin1Encode(s,slen);
@@ -296,21 +296,21 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 			buf.safePrintf("+++++++++++++++++++++++++\n");
 		}
 		
-		long c = a;
+		int32_t c = a;
 		//  skip if there were no diffs...sometimes we get
 		// 2 consecutive sequences of common nodes, dunno why 
 		if (numEdits == 0) goto skipTrail;
 		//buf.safePrintf("-------------------------\n");
 		if (lastC < a) lastC = a;
 		// trailing context
-		for ( long numTags = 0; 
+		for ( int32_t numTags = 0; 
 		      numTags < opt->m_context && c < a+len ; c++) {
 			lastC = c;
 			if (xmlWhitespaceNode(xml1->getNodePtr(c))) 
 				continue;
 			numTags++;
 			char *s = xml1->getNode(c);
-			long slen = xml1->getNodeLen(c);
+			int32_t slen = xml1->getNodeLen(c);
 			if (xml1->isUnicode()) 
 				buf.utf16Encode(s,slen);
 			else	buf.latin1Encode(s,slen);
@@ -318,7 +318,7 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 		buf.safePrintf("\n");
 	skipTrail:
 		if (opt->m_context <= 0)
-			buf.safePrintf("  (node %li-%li, %li-%li)\n", 
+			buf.safePrintf("  (node %"INT32"-%"INT32", %"INT32"-%"INT32")\n", 
 				       a, a+len-1, b, b+len-1);
 		// skip past common nodes
 		if (i == a) i+=len;
@@ -336,8 +336,8 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 // as X and Y nodes on a graph.  A vertical or horizontal edge between nodes
 // corresponds to adding or deleting an element, while a diagonal edge 
 // is a common element between the two. 
-// The shortest path from (0,0) to (n1, n2) corresponds to the (an)
-// optimal diff (shortest edit script) between the sequences, and the 
+// The int16_test path from (0,0) to (n1, n2) corresponds to the (an)
+// optimal diff (int16_test edit script) between the sequences, and the 
 // diagonal edges on that path represent a Longest Common Subsequence.
 
 // This recursive version finds a path forward from the start and backward 
@@ -349,23 +349,23 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 
 
 #if 0
-long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
-	    long *lcsBuf2,  // xml2 indexes of nodes in lcs
-	    long *lcsLenBuf, // number of consecutive nodes in each lcsBuf
-	    long lcsBufLen, // max number of sequence matches we can fit
+int32_t lcsXml(int32_t *lcsBuf1, // xml1 indexes of nodes in lcs
+	    int32_t *lcsBuf2,  // xml2 indexes of nodes in lcs
+	    int32_t *lcsLenBuf, // number of consecutive nodes in each lcsBuf
+	    int32_t lcsBufLen, // max number of sequence matches we can fit
 	    Xml *xml1, Xml *xml2, 
 	    const DiffOpt *opt,
-	    const long argStart1, const long argStart2, // index of start nodes
-	    const long argN1, const long argN2, // limit on number of nodes 
-	    const long rlevel){ 
+	    const int32_t argStart1, const int32_t argStart2, // index of start nodes
+	    const int32_t argN1, const int32_t argN2, // limit on number of nodes 
+	    const int32_t rlevel){ 
 	
 	// return value...length of overall lcs
-	long len = 0;
+	int32_t len = 0;
 	
-	long start1 = argStart1;
-	long start2 = argStart2;
-	long n1 = argN1;
-	long n2 = argN2;
+	int32_t start1 = argStart1;
+	int32_t start2 = argStart2;
+	int32_t n1 = argN1;
+	int32_t n2 = argN2;
 	
 	if (n1 < 0) n1 = xml1->getNumNodes() - start1;
 	if (n2 < 0) n2 = xml2->getNumNodes() - start2;
@@ -374,8 +374,8 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 	XmlNode *nodes2 = xml2->getNodes();
 	
 	if (opt->m_debug){
-		for (long i=0;i<rlevel;i++) printf("\t");
-		printf("lcsXml(%ld): [%ld - %ld] (%ld), [%ld - %ld] (%ld) \n",
+		for (int32_t i=0;i<rlevel;i++) printf("\t");
+		printf("lcsXml(%"INT32"): [%"INT32" - %"INT32"] (%"INT32"), [%"INT32" - %"INT32"] (%"INT32") \n",
 		       rlevel,
 		       start1, start1+n1-1, n1, 
 		       start2, start2+n2-1, n2);
@@ -383,13 +383,13 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 	if (lcsBufLen <= 0) return 0;
 	if (n1 <= 0 || n2 <= 0) return 0;
 
-	long *p1   = lcsBuf1;
-	long *p2   = lcsBuf2;
-	long *pLen = lcsLenBuf;
+	int32_t *p1   = lcsBuf1;
+	int32_t *p2   = lcsBuf2;
+	int32_t *pLen = lcsLenBuf;
 	
 	// First, find any common prefix
-	long prefixLen = 0;
-	for ( long i=0 ; i < n1 && i < n2 ; i++){
+	int32_t prefixLen = 0;
+	for ( int32_t i=0 ; i < n1 && i < n2 ; i++){
 		//if (xmlNodeCompare(xml1, start1 + i, 
 		//		   xml2, start2 + i, opt) != 0) 
 		if (xmlTagCompare(&nodes1[start1 + i], 
@@ -414,15 +414,15 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 	// optimization no further match possible
 	if (n1 <= 0 || n2 <= 0) {
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			printf("len=%ld\n",len);
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			printf("len=%"INT32"\n",len);
 		}
 		return len;
 	}
 
 	// find any common suffix too
-	long suffixLen = 0;
-	for ( long i=0 ; i < n1 && i < n2 ; i++){
+	int32_t suffixLen = 0;
+	for ( int32_t i=0 ; i < n1 && i < n2 ; i++){
 		//if (xmlNodeCompare(xml1, start1+n1-1 - i, 
 		//		   xml2, start2+n2-1 - i, opt) != 0) 
 		if (xmlTagCompare(&nodes1[start1+n1-1 - i], 
@@ -436,16 +436,16 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 		n2 -= suffixLen;
 	}
 	
-	long mid1=0, mid2=0, midLen=0;
-	long pathLen = 0;
+	int32_t mid1=0, mid2=0, midLen=0;
+	int32_t pathLen = 0;
 	// optimization: no possible matches
 	if (n1+n2 <= 3) 
 		pathLen = n1+n2;
 	else {
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			DPRINTF("editPath: [%ld - %ld] (%ld),  "
-				"[%ld - %ld] (%ld)\n", 
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			DPRINTF("editPath: [%"INT32" - %"INT32"] (%"INT32"),  "
+				"[%"INT32" - %"INT32"] (%"INT32")\n", 
 				start1, start1+n1, n1, 
 				start2, start2+n2, n2);
 		}
@@ -453,16 +453,16 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 				      start1, start2, n1, n2, 
 				      &mid1, &mid2, &midLen);
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			DPRINTF("editPath -> [%ld - %ld] (%ld),  "
-				"[%ld - %ld] (%ld)\n", 
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			DPRINTF("editPath -> [%"INT32" - %"INT32"] (%"INT32"),  "
+				"[%"INT32" - %"INT32"] (%"INT32")\n", 
 				mid1, mid1+midLen-1, midLen, 
 				mid2, mid2+midLen-1, midLen);
 		}
 	}
 	
 	If (pathLen < 0) {
-		log(LOG_WARN, "Diff: Error finding shortest diff");
+		log(LOG_WARN, "Diff: Error finding int16_test diff");
 		return -1;
 	}
 
@@ -474,16 +474,16 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 			*p2++   = start2+n2;
 			*pLen++ = suffixLen;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("suffix lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("suffix lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       start1, start1+n1-1, 
 				       start2, start2+n2-1);
 			}
 			len++;
 		} 
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			printf("len=%ld\n",len);
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			printf("len=%"INT32"\n",len);
 		}
 		return len;
 	}
@@ -492,10 +492,10 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 	if (pathLen > 1){
 		// Recurse on the first half
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
 			printf("Recurse left:\n");
 		}
-		long n = lcsXml(p1, p2,pLen,lcsBufLen-len, 
+		int32_t n = lcsXml(p1, p2,pLen,lcsBufLen-len, 
 				xml1, xml2, opt,
 				start1, start2, 
 				mid1-start1, mid2-start2,
@@ -507,8 +507,8 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 		pLen += n;
 		len += n;
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			printf("left len=%ld\n", n);
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			printf("left len=%"INT32"\n", n);
 		}
 		// add middle common sequence
 		if ( len < lcsBufLen && midLen > 0){
@@ -516,8 +516,8 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 			*p2++   = mid2;
 			*pLen++ = midLen;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("middle lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("middle lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       mid1, mid1+midLen-1, 
 				       mid2, mid2+midLen-1);
 			}
@@ -527,7 +527,7 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 		// Recurse on the second half
 		
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
 			printf("Recurse right:\n");
 		}
 		n = lcsXml(p1, p2,pLen,lcsBufLen-len, 
@@ -544,8 +544,8 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 			   
 		len += n;
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			printf("right len=%ld\n", n);
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			printf("right len=%"INT32"\n", n);
 		}
 	}
 	// edit path length of 1 or less means at most 1 node was 
@@ -571,7 +571,7 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 		// sanity check
 		if ( n1 != n2) {
 			log(LOG_WARN, "Diff: PANIC! Sequences do not match! "
-			    "n1=%ld n2=%ld", n1, n2);
+			    "n1=%"INT32" n2=%"INT32"", n1, n2);
 			char *xx = NULL; *xx=0;
 		}
 		if ( len < lcsBufLen && n1 > 0 && n2 > 0) {
@@ -579,8 +579,8 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 			*p2++   = start2;
 			*pLen++ = n1;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("end lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("end lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       start1, start1+n1-1, 
 				       start2, start2+n2-1);
 			}
@@ -593,22 +593,22 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 		*p2++   = start2+n2;
 		*pLen++ = suffixLen;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("suffix lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("suffix lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       start1, start1+n1-1, 
 				       start2, start2+n2-1);
 			}
 		len++;
 	} 
 	if (opt->m_debug){
-		for (long i=0;i<rlevel;i++) printf("\t");
-		printf("len=%ld\n",len);
+		for (int32_t i=0;i<rlevel;i++) printf("\t");
+		printf("len=%"INT32"\n",len);
 	}
 	return len;
 
 	// compact the sequences
-	long newLen = len;
-	for (long i=1, j=0;i<len;i++){
+	int32_t newLen = len;
+	for (int32_t i=1, j=0;i<len;i++){
 		if ( i <= j ) continue;
 		if ( lcsBuf1[i] != lcsBuf1[j] + lcsLenBuf[j] ||
 		     lcsBuf2[i] != lcsBuf2[j] + lcsLenBuf[j] ) {
@@ -626,24 +626,24 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 	return newLen;
 }
 #else
-long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
-	    long *lcsBuf2,  // xml2 indexes of nodes in lcs
-	    long *lcsLenBuf, // number of consecutive nodes in each lcsBuf
-	    long lcsBufLen, // max number of sequence matches we can fit
+int32_t lcsXml(int32_t *lcsBuf1, // xml1 indexes of nodes in lcs
+	    int32_t *lcsBuf2,  // xml2 indexes of nodes in lcs
+	    int32_t *lcsLenBuf, // number of consecutive nodes in each lcsBuf
+	    int32_t lcsBufLen, // max number of sequence matches we can fit
 	    Xml *xml1, Xml *xml2, 
 	    DiffOpt *opt,
-	    const long argStart1, 
-	    const long argStart2, // index of start nodes
-	    const long argN1, 
-	    const long argN2, // limit on number of nodes 
-	    const long rlevel){ 
+	    const int32_t argStart1, 
+	    const int32_t argStart2, // index of start nodes
+	    const int32_t argN1, 
+	    const int32_t argN2, // limit on number of nodes 
+	    const int32_t rlevel){ 
 	
 	XmlNode *nodes1 = xml1->getNodes();
 	XmlNode *nodes2 = xml2->getNodes();
-	long start1 = argStart1;
-	long start2 = argStart2;
-	long n1 = argN1;
-	long n2 = argN2;
+	int32_t start1 = argStart1;
+	int32_t start2 = argStart2;
+	int32_t n1 = argN1;
+	int32_t n2 = argN2;
 	if (n1<0) n1 = xml1->getNumNodes();
 	if (n2<0) n2 = xml2->getNumNodes();
 	
@@ -655,30 +655,30 @@ long lcsXml(long *lcsBuf1, // xml1 indexes of nodes in lcs
 }
 #endif
 
-long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
-			 long *outbuf2,  // xml2 indexes of nodes in lcs
-			 long *outlens, // number of consecutive nodes lcsBuf
-			 long outbuflen, // Size of output bufs (elts not bytes)
+int64_testCommonSubseq(int32_t *outbuf1, // out1 indexes of nodes in lcs
+			 int32_t *outbuf2,  // xml2 indexes of nodes in lcs
+			 int32_t *outlens, // number of consecutive nodes lcsBuf
+			 int32_t outbuflen, // Size of output bufs (elts not bytes)
 			 char *seq1, 
 			 char *seq2, 
 			 const DiffOpt *opt,
-			 const long argStart1,	 // index of first elements
-			 const long argStart2,
-			 const long argN1, // element count in seq 1 and seq2
-			 const long argN2, 
-			 const long rlevel){ 
+			 const int32_t argStart1,	 // index of first elements
+			 const int32_t argStart2,
+			 const int32_t argN1, // element count in seq 1 and seq2
+			 const int32_t argN2, 
+			 const int32_t rlevel){ 
 	
 	// return value...length of overall lcs
-	long len = 0;
+	int32_t len = 0;
 	
-	long start1 = argStart1;
-	long start2 = argStart2;
-	long n1 = argN1;
-	long n2 = argN2;
+	int32_t start1 = argStart1;
+	int32_t start2 = argStart2;
+	int32_t n1 = argN1;
+	int32_t n2 = argN2;
 	
 	if (opt->m_debug){
-		for (long i=0;i<rlevel;i++) printf("\t");
-		printf("longestCommonSubseq(%ld): [%ld , %ld] [%ld , %ld] \n",
+		for (int32_t i=0;i<rlevel;i++) printf("\t");
+		printf("longestCommonSubseq(%"INT32"): [%"INT32" , %"INT32"] [%"INT32" , %"INT32"] \n",
 		       rlevel,start1, start1+n1-1, start2, start2+n2-1);
 	}
 	// no space
@@ -686,13 +686,13 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 	// no input
 	if (n1 <= 0 || n2 <= 0) return 0;
 
-	long *p1   = outbuf1;
-	long *p2   = outbuf2;
-	long *pLen = outlens;
+	int32_t *p1   = outbuf1;
+	int32_t *p2   = outbuf2;
+	int32_t *pLen = outlens;
 	
 	// First, find any common prefix
-	long prefixLen = 0;
-	for ( long i=0 ; i < n1 && i < n2 ; i++){
+	int32_t prefixLen = 0;
+	for ( int32_t i=0 ; i < n1 && i < n2 ; i++){
 		char *e1 = seq1+(start1+i)*opt->m_eltSize;
 		char *e2 = seq2+(start2+i)*opt->m_eltSize;
 		if (opt->m_compare(e1, e2) != 0) 
@@ -705,8 +705,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 		*p2++   = start2;
 		*pLen++ = prefixLen;
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			printf("prefix lcs += (%ld-%ld),(%ld-%ld)\n",
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			printf("prefix lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 			       start1, start1+n1-1, 
 			       start2, start2+n2-1);
 		}
@@ -723,8 +723,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 	if (n1 <= 0 || n2 <= 0) return len;
 
 	// find any common suffix too
-	long suffixLen = 0;
-	for ( long i=0 ; i < n1 && i < n2 ; i++){
+	int32_t suffixLen = 0;
+	for ( int32_t i=0 ; i < n1 && i < n2 ; i++){
 		char *e1 = seq1+(start1+n1-1-i)*opt->m_eltSize;
 		char *e2 = seq2+(start2+n2-1-i)*opt->m_eltSize;
 		if (opt->m_compare(e1, e2) != 0) 
@@ -737,8 +737,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 		n2 -= suffixLen;
 	}
 	
-	long mid1=0, mid2=0, midLen=0;
-	long pathLen = 0;
+	int32_t mid1=0, mid2=0, midLen=0;
+	int32_t pathLen = 0;
 	if (n1+n2 <= 3) 
 		// No matches possible
 		pathLen = n1+n2;
@@ -747,7 +747,7 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 				   start1, start2, n1, n2, 
 				   &mid1, &mid2, &midLen);
 	if (pathLen < 0) {
-		log(LOG_WARN, "Diff: Error finding shortest diff");
+		log(LOG_WARN, "Diff: Error finding int16_test diff");
 		return -1;
 	}
 
@@ -759,8 +759,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 			*p2++   = start2+n2;
 			*pLen++ = suffixLen;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("suffix lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("suffix lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       start1, start1+n1-1, 
 				       start2, start2+n2-1);
 			}
@@ -773,10 +773,10 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 	if (pathLen > 1){
 		// Recurse on the first half
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
 			printf("Recurse left:\n");
 		}
-		long n = longestCommonSubseq(p1, p2,pLen,outbuflen-len, 
+		int32_t n = longestCommonSubseq(p1, p2,pLen,outbuflen-len, 
 					     seq1, seq2, opt,
 					     start1, start2, 
 					     mid1-start1, mid2-start2,
@@ -793,8 +793,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 			*p2++   = mid2;
 			*pLen++ = midLen;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("middle lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("middle lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       start1, start1+n1-1, 
 				       start2, start2+n2-1);
 			}
@@ -804,7 +804,7 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 		// Recurse on the second half
 		
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
 			printf("Recurse right:\n");
 		}
 		n = longestCommonSubseq(p1, p2,pLen,outbuflen-len, 
@@ -837,7 +837,7 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 		// sanity check
 		if ( n1 != n2) {
 			log(LOG_WARN, "Diff: PANIC! Sequences do not match! "
-			    "n1=%ld n2=%ld", n1, n2);
+			    "n1=%"INT32" n2=%"INT32"", n1, n2);
 			char *xx = NULL; *xx=0;
 		}
 		if ( len < outbuflen && n1 > 0 && n2 > 0) {
@@ -845,8 +845,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 			*p2++   = start2;
 			*pLen++ = n1;
 			if (opt->m_debug){
-				for (long i=0;i<rlevel;i++) printf("\t");
-				printf("end lcs += (%ld-%ld),(%ld-%ld)\n",
+				for (int32_t i=0;i<rlevel;i++) printf("\t");
+				printf("end lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 				       start1, start1+n1-1, 
 				       start2, start2+n2-1);
 			}
@@ -859,8 +859,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 		*p2++   = start2+n2;
 		*pLen++ = suffixLen;
 		if (opt->m_debug){
-			for (long i=0;i<rlevel;i++) printf("\t");
-			printf("suffix lcs += (%ld-%ld),(%ld-%ld)\n",
+			for (int32_t i=0;i<rlevel;i++) printf("\t");
+			printf("suffix lcs += (%"INT32"-%"INT32"),(%"INT32"-%"INT32")\n",
 			       start1, start1+n1-1, 
 			       start2, start2+n2-1);
 		}
@@ -868,8 +868,8 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 	} 
 	return len;
 	// compact the sequences
-	//long newLen = len;
-	//for (long i=1, j=0;i<len;i++){
+	//int32_t newLen = len;
+	//for (int32_t i=1, j=0;i<len;i++){
 	//	if ( i <= j ) continue;
 	//	if ( lcsBuf1[i] != lcsBuf1[j] + lcsLenBuf[j] ||
 	//	     lcsBuf2[i] != lcsBuf2[j] + lcsLenBuf[j] ) {
@@ -893,27 +893,27 @@ long longestCommonSubseq(long *outbuf1, // out1 indexes of nodes in lcs
 #define VSIZE (2*MAXD+1)
 
 
-// This will return the length of the shortest edit path between
+// This will return the length of the int16_test edit path between
 // xml1(start1, n1 nodes) and xml2(start2, n2 nodes), 
 // return the middle "snake" (matching nodes) in mid[XYUV] if one exists
-long xmlEditPath(Xml *xml1, Xml* xml2, 
+int32_t xmlEditPath(Xml *xml1, Xml* xml2, 
 		 const DiffOpt *opt,
-		 const long start1, const long start2,
-		 const long n1, const long n2,
-		 long *midX, long *midY, long *midLen){
+		 const int32_t start1, const int32_t start2,
+		 const int32_t n1, const int32_t n2,
+		 int32_t *midX, int32_t *midY, int32_t *midLen){
 	
 	XmlNode *nodes1 = xml1->getNodes();
 	XmlNode *nodes2 = xml2->getNodes();
 
-	long v1[VSIZE];
-	long v2[VSIZE];
+	int32_t v1[VSIZE];
+	int32_t v2[VSIZE];
 	
-	long delta = n1-n2;
+	int32_t delta = n1-n2;
 	// the algorithm terminates on a reverse iteration if the difference 
 	// in length is even
 	bool reverseFinish =  (delta % 2 == 0);
 
-	long maxD = n1+n2;
+	int32_t maxD = n1+n2;
 	// round up
 	if (maxD % 2) maxD++;
 	maxD /= 2;
@@ -922,32 +922,32 @@ long xmlEditPath(Xml *xml1, Xml* xml2,
 	v1[1] = 0;
 	v2[1] = n1;
 	*midLen = 0;
-	//DPRINTF("xmlEditPath: maxD:%ld delta:%ld "
-	//"s1:%ld s2:%ld n1:%ld n2:%ld\n", 
- 	DPRINTF2("xmlEditPath: maxD:%ld delta:%ld "
- 		"[%ld - %ld] (%ld),  "
- 		"[%ld - %ld] (%ld)\n", 
+	//DPRINTF("xmlEditPath: maxD:%"INT32" delta:%"INT32" "
+	//"s1:%"INT32" s2:%"INT32" n1:%"INT32" n2:%"INT32"\n", 
+ 	DPRINTF2("xmlEditPath: maxD:%"INT32" delta:%"INT32" "
+ 		"[%"INT32" - %"INT32"] (%"INT32"),  "
+ 		"[%"INT32" - %"INT32"] (%"INT32")\n", 
  		maxD, delta, 
 		start1, start1+n1-1, n1, 
 		start2, start2+n2-1, n2);
-	for (long d=0 ; d <= maxD ; d++ ){
-		DPRINTF2("D: %ld forward\n", d);
+	for (int32_t d=0 ; d <= maxD ; d++ ){
+		DPRINTF2("D: %"INT32" forward\n", d);
 		//find forward path
-		for (long k = -d ; k <= d ; k += 2) {
-			DPRINTF2("\tK: %ld\n", k);
+		for (int32_t k = -d ; k <= d ; k += 2) {
+			DPRINTF2("\tK: %"INT32"\n", k);
 			// get best endpoints of last iteration
-			long a = v1[IDX(VSIZE, k-1)];
-			long b = v1[IDX(VSIZE, k+1)];
+			int32_t a = v1[IDX(VSIZE, k-1)];
+			int32_t b = v1[IDX(VSIZE, k+1)];
 
-			long x;
+			int32_t x;
 			// select best path along diagonal k
 			if (k == -d || k != d && a < b)	x = b;
 			else x = a+1;
 
-			long y = x-k;
-//			DPRINTF2("\t\tx=%ld y=%ld\n",x,y);
-			long startX = x;
-			long startY = y;
+			int32_t y = x-k;
+//			DPRINTF2("\t\tx=%"INT32" y=%"INT32"\n",x,y);
+			int32_t startX = x;
+			int32_t startY = y;
 			// follow any matched nodes
 			while (x >=0 && x < n1 && 
 			       y >= 0 && y < n2 && 
@@ -957,7 +957,7 @@ long xmlEditPath(Xml *xml1, Xml* xml2,
 					      &nodes2[ y + start2 ] )){
 				x++;
 				y++;
-//				DPRINTF2("\t\tx=%ld y=%ld\n",x,y);
+//				DPRINTF2("\t\tx=%"INT32" y=%"INT32"\n",x,y);
 			}
 			// store best endpoint for this iteration
 			v1[IDX(VSIZE,k)] = x;
@@ -973,44 +973,44 @@ long xmlEditPath(Xml *xml1, Xml* xml2,
 			// out of range for overlap
 			if (k < delta-(d-1) || k > delta+(d-1)) continue;
 			// check for overlap with reverse path
-			long j = -k+delta;
-			long u = v2[IDX(VSIZE,j)];
-			long v = u + j - delta;
+			int32_t j = -k+delta;
+			int32_t u = v2[IDX(VSIZE,j)];
+			int32_t v = u + j - delta;
 			if (x-y != u-v || x < u) continue;
 
 			// found middle match...add the start offsets
-			DPRINTF2("FORWARD MATCH: x=%ld y=%ld u=%ld v=%ld\n", 
+			DPRINTF2("FORWARD MATCH: x=%"INT32" y=%"INT32" u=%"INT32" v=%"INT32"\n", 
 				x, y, u, v);
-			DPRINTF2("pathlen=%ld midX=%ld midY=%ld midLen=%ld\n",
+			DPRINTF2("pathlen=%"INT32" midX=%"INT32" midY=%"INT32" midLen=%"INT32"\n",
 				2*d-1,*midX, *midY, *midLen);
 			
 			// return length of SES
 			return 2*d-1;
 		}
-		DPRINTF2("D: %ld reverse\n",d);
+		DPRINTF2("D: %"INT32" reverse\n",d);
 		// find reverse path
-		for (long k = -d ; k <= d ; k += 2) {
-			DPRINTF2("\tK: %ld\n", k);
-			long a = v2[IDX(VSIZE, k-1)];
-			long b = v2[IDX(VSIZE, k+1)];
+		for (int32_t k = -d ; k <= d ; k += 2) {
+			DPRINTF2("\tK: %"INT32"\n", k);
+			int32_t a = v2[IDX(VSIZE, k-1)];
+			int32_t b = v2[IDX(VSIZE, k+1)];
 
-			long u;
+			int32_t u;
 			// select best path along diagonal k
 			if (k == -d || k != d && a > b)  u = b;
 			else                             u = a-1;
 
-			long v = u - delta + k;
+			int32_t v = u - delta + k;
 
-			DPRINTF2("\t\tu=%ld v=%ld\n",u,v);
+			DPRINTF2("\t\tu=%"INT32" v=%"INT32"\n",u,v);
 			// follow any matched nodes
-			long startU = u;
-			//long startV = v;
+			int32_t startU = u;
+			//int32_t startV = v;
 			while (u > 0 && v > 0 && 
 			       (!xmlTagCompare(&nodes1[ u-1 + start1 ], 
 					       &nodes2[ v-1 + start2 ]))){
 				u--;
 				v--;
-				DPRINTF2("\t\tu=%ld v=%ld\n",u,v);
+				DPRINTF2("\t\tu=%"INT32" v=%"INT32"\n",u,v);
 			}
 			v2[IDX(VSIZE,k)] = u;
 			// save last match
@@ -1022,20 +1022,20 @@ long xmlEditPath(Xml *xml1, Xml* xml2,
 			// only check if even
 			//if (delta % 2) continue; 
 			if (!reverseFinish) continue;
-			long j=-k+delta;
+			int32_t j=-k+delta;
 			// out of range for overlap
 			if (j < -d || j > d) continue;
 			// check for overlap with forward path
-			long x = v1[IDX(VSIZE,j)];
-			long y = x-j;
+			int32_t x = v1[IDX(VSIZE,j)];
+			int32_t y = x-j;
 			if (x-y != u-v || x < u) continue;
 
 			// found middle match...add the start offsets
-			DPRINTF2("REVERSE MATCH: pathlen=%ld "
-				"x=%ld y=%ld u=%ld v=%ld\n", 
+			DPRINTF2("REVERSE MATCH: pathlen=%"INT32" "
+				"x=%"INT32" y=%"INT32" u=%"INT32" v=%"INT32"\n", 
 				2*d, x, y, u, v);
 
-			DPRINTF2("pathlen=%ld midX=%ld midY=%ld midLen=%ld\n",
+			DPRINTF2("pathlen=%"INT32" midX=%"INT32" midY=%"INT32" midLen=%"INT32"\n",
 				2*d,*midX, *midY, *midLen);
 
 			// return length of SES
@@ -1046,24 +1046,24 @@ long xmlEditPath(Xml *xml1, Xml* xml2,
 	return -1;
 
 }
-// This will return the length of the shortest edit path between
+// This will return the length of the int16_test edit path between
 // xml1(start1, n1 nodes) and xml2(start2, n2 nodes), 
 // return the middle "snake" (matching nodes) in mid[XYUV] if one exists
-long editPath(char *seq1, char *seq2,
+int32_t editPath(char *seq1, char *seq2,
 	      const DiffOpt *opt,
-	      const long start1, const long start2,
-	      const long n1, const long n2,
-	      long *midX, long *midY, long *midLen){
+	      const int32_t start1, const int32_t start2,
+	      const int32_t n1, const int32_t n2,
+	      int32_t *midX, int32_t *midY, int32_t *midLen){
 	
-	long v1[VSIZE];
-	long v2[VSIZE];
+	int32_t v1[VSIZE];
+	int32_t v2[VSIZE];
 	
-	long delta = n1-n2;
+	int32_t delta = n1-n2;
 	// the algorithm terminates on a reverse iteration if the difference 
 	// in length is even
 	bool reverseFinish =  (delta % 2 == 0);
 
-	long maxD = n1+n2;
+	int32_t maxD = n1+n2;
 	// round up
 	if (maxD % 2) maxD++;
 	maxD /= 2;
@@ -1072,31 +1072,31 @@ long editPath(char *seq1, char *seq2,
 	v1[1] = 0;
 	v2[1] = n1;
 	*midLen = 0;
-	//DPRINTF("xmlEditPath: maxD:%ld delta:%ld s1:%ld s2:%ld n1:%ld n2:%ld\n", 
- 	DPRINTF2("xmlEditPath: maxD:%ld delta:%ld "
- 		"[%ld - %ld] (%ld),  "
- 		"[%ld - %ld] (%ld)\n", 
+	//DPRINTF("xmlEditPath: maxD:%"INT32" delta:%"INT32" s1:%"INT32" s2:%"INT32" n1:%"INT32" n2:%"INT32"\n", 
+ 	DPRINTF2("xmlEditPath: maxD:%"INT32" delta:%"INT32" "
+ 		"[%"INT32" - %"INT32"] (%"INT32"),  "
+ 		"[%"INT32" - %"INT32"] (%"INT32")\n", 
  		maxD, delta, 
  		start1, start1+n1-1, n1, 
  		start2, start2+n2-1, n2);
-	for (long d=0 ; d <= maxD ; d++ ){
-		DPRINTF2("D: %ld forward\n", d);
+	for (int32_t d=0 ; d <= maxD ; d++ ){
+		DPRINTF2("D: %"INT32" forward\n", d);
 		//find forward path
-		for (long k = -d ; k <= d ; k += 2) {
-			DPRINTF2("\tK: %ld\n", k);
+		for (int32_t k = -d ; k <= d ; k += 2) {
+			DPRINTF2("\tK: %"INT32"\n", k);
 			// get best endpoints of last iteration
-			long a = v1[IDX(VSIZE, k-1)];
-			long b = v1[IDX(VSIZE, k+1)];
+			int32_t a = v1[IDX(VSIZE, k-1)];
+			int32_t b = v1[IDX(VSIZE, k+1)];
 
-			long x;
+			int32_t x;
 			// select best path along diagonal k
 			if (k == -d || k != d && a < b)	x = b;
 			else x = a+1;
 
-			long y = x-k;
-			DPRINTF2("\t\tx=%ld y=%ld\n",x,y);
-			long startX = x;
-			long startY = y;
+			int32_t y = x-k;
+			DPRINTF2("\t\tx=%"INT32" y=%"INT32"\n",x,y);
+			int32_t startX = x;
+			int32_t startY = y;
 			// follow any matched nodes
 			while (x >=0 && x < n1 && 
 			       y >= 0 && y < n2 && 
@@ -1104,7 +1104,7 @@ long editPath(char *seq1, char *seq2,
 					       seq2+opt->m_eltSize*(y+start2))){
 				x++;
 				y++;
-//				DPRINTF2("\t\tx=%ld y=%ld\n",x,y);
+//				DPRINTF2("\t\tx=%"INT32" y=%"INT32"\n",x,y);
 			}
 			// store best endpoint for this iteration
 			v1[IDX(VSIZE,k)] = x;
@@ -1120,38 +1120,38 @@ long editPath(char *seq1, char *seq2,
 			// out of range for overlap
 			if (k < delta-(d-1) || k > delta+(d-1)) continue;
 			// check for overlap with reverse path
-			long j = -k+delta;
-			long u = v2[IDX(VSIZE,j)];
-			long v = u + j - delta;
+			int32_t j = -k+delta;
+			int32_t u = v2[IDX(VSIZE,j)];
+			int32_t v = u + j - delta;
 			if (x-y != u-v || x < u) continue;
 
 			// found middle match...add the start offsets
-			DPRINTF2("FORWARD MATCH: x=%ld y=%ld u=%ld v=%ld\n", 
+			DPRINTF2("FORWARD MATCH: x=%"INT32" y=%"INT32" u=%"INT32" v=%"INT32"\n", 
 				x, y, u, v);
-			DPRINTF2("pathlen=%ld midX=%ld midY=%ld midLen=%ld\n",
+			DPRINTF2("pathlen=%"INT32" midX=%"INT32" midY=%"INT32" midLen=%"INT32"\n",
 				2*d-1,*midX, *midY, *midLen);
 			
 			// return length of SES
 			return 2*d-1;
 		}
-		DPRINTF2("D: %ld reverse\n",d);
+		DPRINTF2("D: %"INT32" reverse\n",d);
 		// find reverse path
-		for (long k = -d ; k <= d ; k += 2) {
-			DPRINTF2("\tK: %ld\n", k);
-			long a = v2[IDX(VSIZE, k-1)];
-			long b = v2[IDX(VSIZE, k+1)];
+		for (int32_t k = -d ; k <= d ; k += 2) {
+			DPRINTF2("\tK: %"INT32"\n", k);
+			int32_t a = v2[IDX(VSIZE, k-1)];
+			int32_t b = v2[IDX(VSIZE, k+1)];
 
-			long u;
+			int32_t u;
 			// select best path along diagonal k
 			if (k == -d || k != d && a > b)  u = b;
 			else                             u = a-1;
 
-			long v = u - delta + k;
+			int32_t v = u - delta + k;
 
-			DPRINTF2("\t\tu=%ld v=%ld\n",u,v);
+			DPRINTF2("\t\tu=%"INT32" v=%"INT32"\n",u,v);
 			// follow any matched nodes
-			long startU = u;
-			//long startV = v;
+			int32_t startU = u;
+			//int32_t startV = v;
 			while (u > 0 && v > 0 && 
 			       !opt->m_compare(seq1+
 					       opt->m_eltSize*(u-1+start1),
@@ -1159,7 +1159,7 @@ long editPath(char *seq1, char *seq2,
 					       opt->m_eltSize*(v-1+start2))){
 				u--;
 				v--;
-				DPRINTF2("\t\tu=%ld v=%ld\n",u,v);
+				DPRINTF2("\t\tu=%"INT32" v=%"INT32"\n",u,v);
 			}
 			v2[IDX(VSIZE,k)] = u;
 			// save last match
@@ -1171,20 +1171,20 @@ long editPath(char *seq1, char *seq2,
 			// only check if even
 			//if (delta % 2) continue; 
 			if (!reverseFinish) continue;
-			long j=-k+delta;
+			int32_t j=-k+delta;
 			// out of range for overlap
 			if (j < -d || j > d) continue;
 			// check for overlap with forward path
-			long x = v1[IDX(VSIZE,j)];
-			long y = x-j;
+			int32_t x = v1[IDX(VSIZE,j)];
+			int32_t y = x-j;
 			if (x-y != u-v || x < u) continue;
 
 			// found middle match...add the start offsets
-			DPRINTF2("REVERSE MATCH: pathlen=%ld "
-				"x=%ld y=%ld u=%ld v=%ld\n", 
+			DPRINTF2("REVERSE MATCH: pathlen=%"INT32" "
+				"x=%"INT32" y=%"INT32" u=%"INT32" v=%"INT32"\n", 
 				2*d, x, y, u, v);
 
-			DPRINTF2("pathlen=%ld midX=%ld midY=%ld midLen=%ld\n",
+			DPRINTF2("pathlen=%"INT32" midX=%"INT32" midY=%"INT32" midLen=%"INT32"\n",
 				2*d,*midX, *midY, *midLen);
 
 			// return length of SES
@@ -1197,23 +1197,23 @@ long editPath(char *seq1, char *seq2,
 }
 
 
-int xmlNodeCompare(Xml *xml1, const long index1, 
-		   Xml *xml2, const long index2, 
+int xmlNodeCompare(Xml *xml1, const int32_t index1, 
+		   Xml *xml2, const int32_t index2, 
 		   const DiffOpt *opt){
 	// compare tag ids
-	const short id1 = xml1->getNodeId(index1);
-	const short id2 = xml2->getNodeId(index2);
+	const int16_t id1 = xml1->getNodeId(index1);
+	const int16_t id2 = xml2->getNodeId(index2);
 	if (id1 != id2) return id2 - id1;
 
 	// compare tag hashes 
-	const long h1 = (long) xml1->getNodeHash(index1);
-	const long h2 = (long) xml2->getNodeHash(index2);
+	const int32_t h1 = (int32_t) xml1->getNodeHash(index1);
+	const int32_t h2 = (int32_t) xml2->getNodeHash(index2);
 	
 	if (h1 != h2 || opt->m_tagOnly) 
 		return h2 - h1;
 
-	const long len1 = xml1->getNodeLen(index1);
-	const long len2 = xml2->getNodeLen(index2);
+	const int32_t len1 = xml1->getNodeLen(index1);
+	const int32_t len2 = xml2->getNodeLen(index2);
 	if (len1 != len2) return len2 - len1;
 	
 	const char *str1 = xml1->getNode(index1);
@@ -1224,7 +1224,7 @@ int xmlNodeCompare(Xml *xml1, const long index1,
 	return memcmp(str1,str2, len1);
 
 	//if (xml1->isUnicode() && xml2->isUnicode()){
-	//	long len = a >> 1;
+	//	int32_t len = a >> 1;
 	//	return ucStrCmp((UChar*)str1, len, (UChar*)str2, len);
 	//}
 }
@@ -1234,13 +1234,13 @@ int xmlTagCompare(void *elt1, void *elt2){
 	XmlNode *node1 = (XmlNode*)elt1;
 	XmlNode *node2 = (XmlNode*)elt2;
 	// compare tag ids
-	const short id1 = node1->getNodeId();
-	const short id2 = node2->getNodeId();
+	const int16_t id1 = node1->getNodeId();
+	const int16_t id2 = node2->getNodeId();
 	if (id1 != id2) return id2 - id1;
 	
 	// compare tag hashes 
-	const long long h1 = node1->getNodeHash();
-	const long long h2 = node2->getNodeHash();
+	const int64_t h1 = node1->getNodeHash();
+	const int64_t h2 = node2->getNodeHash();
 	return h2 - h1;
 }
 
@@ -1249,8 +1249,8 @@ int xmlTagCompare2(void *elt1, void *elt2){
 	XmlNode *node1 = (XmlNode*)elt1;
 	XmlNode *node2 = (XmlNode*)elt2;
 	// compare tag ids
-	const short id1 = node1->getNodeId();
-	const short id2 = node2->getNodeId();
+	const int16_t id1 = node1->getNodeId();
+	const int16_t id2 = node2->getNodeId();
 	if (id1 != id2) return id2 - id1;
 	
 	if (id1 == 0){ // text node
@@ -1271,12 +1271,12 @@ int xmlTagCompare2(void *elt1, void *elt2){
 
 	}
 	// compare tag hashes 
-	const long long h1 = node1->getNodeHash();
-	const long long h2 = node2->getNodeHash();
+	const int64_t h1 = node1->getNodeHash();
+	const int64_t h2 = node2->getNodeHash();
 	if (h1 != h2) return h2 - h1;
 
-	const long len1 = node1->getNodeLen();
-	const long len2 = node2->getNodeLen();
+	const int32_t len1 = node1->getNodeLen();
+	const int32_t len2 = node2->getNodeLen();
 	if (len1 != len2) return len2-len1;
 
 	return memcmp(node1->getNode(), node2->getNode(), node1->getNodeLen());

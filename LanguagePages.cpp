@@ -111,21 +111,21 @@ bool LanguagePages::setLanguageFooter(uint8_t lang,
 	return(true);
 }
 
-uint8_t *LanguagePages::getLanguagePage(uint8_t lang, long *len) {
+uint8_t *LanguagePages::getLanguagePage(uint8_t lang, int32_t *len) {
 	if(lang > MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_PageSize[lang];
 	return m_languagePages[lang];
 }
 
-uint8_t *LanguagePages::getLanguageHeader(uint8_t lang, long *len) {
+uint8_t *LanguagePages::getLanguageHeader(uint8_t lang, int32_t *len) {
 	if(lang > MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_HeaderSize[lang];
 	return m_languageHeaders[lang];
 }
 
-uint8_t *LanguagePages::getLanguageFooter(uint8_t lang, long *len) {
+uint8_t *LanguagePages::getLanguageFooter(uint8_t lang, int32_t *len) {
 	if(lang >= MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_FooterSize[lang];

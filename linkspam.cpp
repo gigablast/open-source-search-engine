@@ -11,7 +11,7 @@
 #include "matches2.h"
 #include "Categories.h"
 
-bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
+bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , int32_t linkNode ,
 		   char **note ) ;
 
 // . here's some additional things to mark it as a log page, but these
@@ -260,15 +260,15 @@ static Needle s_needles2[] = {
 // . otherwise, each outlink in "links" is assigned a "note" to indicate if 
 //   the outlink is a spam link or not
 // . returns true on success, false on error
-bool setLinkSpam ( long       ip                 ,
-		   long      *indCatIds          ,
-		   long       numIndCatIds       ,
+bool setLinkSpam ( int32_t       ip                 ,
+		   int32_t      *indCatIds          ,
+		   int32_t       numIndCatIds       ,
 		   Url       *linker             ,
-		   long       siteNumInlinks     ,
+		   int32_t       siteNumInlinks     ,
 		   Xml       *xml                ,
 		   Links     *links              ,
 		   bool       isContentTruncated ,
-		   long       niceness           ) {
+		   int32_t       niceness           ) {
 	// get our url
 	//Url *linker = tr->getUrl();
 	// it is critical to get inlinks from all pingserver xml
@@ -280,10 +280,10 @@ bool setLinkSpam ( long       ip                 ,
 	if ( isContentTruncated )
 		return links->setAllSpamBits("doc too big");
 	// get linker quality
-	//long q = tr->getDocQuality();
+	//int32_t q = tr->getDocQuality();
 	// do not allow .info or .biz to vote ever for now
 	char *tld    = linker->getTLD();
-	long  tldLen = linker->getTLDLen();
+	int32_t  tldLen = linker->getTLDLen();
 	if ( tldLen == 4 && strncmp ( tld, "info" , tldLen) == 0 && //q < 55 )
 	     siteNumInlinks < 20 )
 		return links->setAllSpamBits("low quality .info linker");
@@ -292,11 +292,11 @@ bool setLinkSpam ( long       ip                 ,
 		return links->setAllSpamBits("low quality .biz linker");
 
 	// if has an outlink to dmoz-identified porn, all outlinks are spam
-	long *ids  = indCatIds;//NULL
-	long  nids = numIndCatIds;//0;
+	int32_t *ids  = indCatIds;//NULL
+	int32_t  nids = numIndCatIds;//0;
 	//if ( tr ) ids  = tr->getIndCatids();
 	//if ( tr ) nids = tr->getNumIndCatids();
-	for ( long j = 0 ; j < nids ; j++ ) 
+	for ( int32_t j = 0 ; j < nids ; j++ ) 
 		if ( g_categories && g_categories->isIdAdult ( ids[j] ) )
 			return links->setAllSpamBits("dmoz porn");
 
@@ -304,7 +304,7 @@ bool setLinkSpam ( long       ip                 ,
 	// do we contain a dmoz subpath in our url? that would indicate that
 	// we are probably a dmoz mirror!
 	char *zstart = linker->getPath();
-	long  zlen   = linker->getPathLen();
+	int32_t  zlen   = linker->getPathLen();
 	char *zend   = zstart + zlen;
 	// start at the end of the path
 	char *z      = zend-1;
@@ -313,7 +313,7 @@ bool setLinkSpam ( long       ip                 ,
 	// make that the new end
 	zend = z + 1;
 	// need at least 2 path components before checking... keep count
-	long  zcount = 2;
+	int32_t  zcount = 2;
 	// begin the loop
 	while ( z > zstart ) {
 		// . backup until we hit the previous /
@@ -335,7 +335,7 @@ bool setLinkSpam ( long       ip                 ,
 	// guestbook in hostname - domain?
 	char *hd  = linker->getHost();
 	char *hd2 = linker->getDomain();
-	long  hdlen = hd2 - hd;
+	int32_t  hdlen = hd2 - hd;
 	if ( hd && hd2 && hdlen < 30 ) {
 		char c = hd[hdlen];
 		hd[hdlen] = '\0';
@@ -350,7 +350,7 @@ bool setLinkSpam ( long       ip                 ,
 	if ( linker->isCgi() )
 		return links->setAllSpamBits("path is cgi");
 
-	long plen = linker->getPathLen();
+	int32_t plen = linker->getPathLen();
 	// if the page has just one rel=nofollow tag then we know they
 	// are not a guestbook
 	//if ( links->hasRelNoFollow() ) plen = 0;
@@ -415,7 +415,7 @@ bool setLinkSpam ( long       ip                 ,
 	QUICKPOLL( niceness );
 
 	// does title contain "web statistics for"?
-	long  tlen ;
+	int32_t  tlen ;
 	char *title = xml->getString ( "title" , &tlen );
 	if ( title && tlen > 0 ) {
 		// normalize title into buffer, remove non alnum chars
@@ -453,9 +453,9 @@ bool setLinkSpam ( long       ip                 ,
 	/////////////////////////////////////////////////////
 
 	//char *haystack     = tr->getContent();
-	//long  haystackSize = tr->getContentLen();
+	//int32_t  haystackSize = tr->getContentLen();
 	char *haystack     = xml->getContent();
-	long  haystackSize = xml->getContentLen();
+	int32_t  haystackSize = xml->getContentLen();
 
 	// get our page quality, it serves as a threshold for some algos
 	//char quality = tr->getNewQuality();
@@ -473,7 +473,7 @@ bool setLinkSpam ( long       ip                 ,
 	// comment section. our link's position therefore needs to be known,
 	// that is why we pass in linkPos. 
 	// "n" is the number it matches.
-	long numNeedles1 = sizeof(s_needles1)/sizeof(Needle);
+	int32_t numNeedles1 = sizeof(s_needles1)/sizeof(Needle);
 	bool hadPreMatch;
 	getMatches2 ( s_needles1 ,
 		      numNeedles1      ,
@@ -491,7 +491,7 @@ bool setLinkSpam ( long       ip                 ,
 	// see if we got a hit
 	char *minPtr = NULL;
 	char *note   = NULL;
-	for ( long i = 0 ; i < numNeedles1 ; i++ ) {
+	for ( int32_t i = 0 ; i < numNeedles1 ; i++ ) {
 		// open.thumbshots.org needs multiple counts
 		if ( i == 0 && s_needles1[i].m_count < 5 ) continue;
 		// skip if no matches on this string
@@ -511,12 +511,12 @@ bool setLinkSpam ( long       ip                 ,
 	QUICKPOLL( niceness );
 
 	// convert the char ptr into a link node following it
-	long aa = 0;
+	int32_t aa = 0;
 	if ( minPtr ) aa = links->getNumLinks();
-	long mini = -1;
-	for ( long i = 0 ; i < aa ; i++ ) {
+	int32_t mini = -1;
+	for ( int32_t i = 0 ; i < aa ; i++ ) {
 		// get the link's char ptr into the content
-		long  linkNode = links->getNodeNum(i);
+		int32_t  linkNode = links->getNodeNum(i);
 		char *linkPos  = NULL;
 		if ( linkNode >= 0 ) linkPos = xml->getNode ( linkNode );
 		// now we can compare, if BEFORE this comment section
@@ -536,7 +536,7 @@ bool setLinkSpam ( long       ip                 ,
 	// now check outlinks on the page for these substrings
 	haystack     = links->getLinkBuf();
 	haystackSize = links->getLinkBufLen();
-	long numNeedles2 = sizeof(s_needles2)/sizeof(Needle);
+	int32_t numNeedles2 = sizeof(s_needles2)/sizeof(Needle);
 	getMatches2 ( s_needles2   , 
 		      numNeedles2  , 
 		      haystack     , 
@@ -551,7 +551,7 @@ bool setLinkSpam ( long       ip                 ,
 	QUICKPOLL( niceness );
 
 	// see if we got a hit
-	for ( long i = 0 ; i < numNeedles2 ; i++ ) {
+	for ( int32_t i = 0 ; i < numNeedles2 ; i++ ) {
 		// skip if did not match
 		if ( s_needles2[i].m_count <= 0 ) continue;
 		// the whole doc is considered link spam
@@ -568,10 +568,10 @@ bool setLinkSpam ( long       ip                 ,
 	//       name="comments_form" ...>
 	// <form method=POST 
 	//  action="http://peaceaction.org/wboard/wwwboard.cgi">
-	long nn = xml->getNumNodes();
+	int32_t nn = xml->getNumNodes();
 	bool gotTextArea = false;
 	bool gotSubmit   = false;
-	for ( long i=0; i < nn ; i++ ) {
+	for ( int32_t i=0; i < nn ; i++ ) {
 		// <textarea> tags are bad... but only if we have not
 		// matched "track" or whatever from above... check for that
 		// if you uncommment this... otherwise you disable all blogs!
@@ -585,7 +585,7 @@ bool setLinkSpam ( long       ip                 ,
 			if ( xml->getNodeId ( i ) == TAG_TEXTAREA ) 
 				gotTextArea = true;
 			// is it an <input> tag?
-			long len = 0;
+			int32_t len = 0;
 			if ( xml->getNodeId ( i ) == TAG_INPUT &&
 			     xml->getString(i,"submit",&len)) gotSubmit = true;
 		}
@@ -595,14 +595,14 @@ bool setLinkSpam ( long       ip                 ,
 			// <script src=blah.com/fileparse.js" 
 			// type="text/javascript"> is used to hide google
 			// ads, so don't allow those pages to vote either
-			long  slen; xml->getString(i,"src",&slen);
+			int32_t  slen; xml->getString(i,"src",&slen);
 			if ( slen > 0 ) { *note = "script src"; return true; }
 		}
 		*/
 		if ( xml->getNodeId ( i ) != TAG_FORM ) continue;
 			
 		// get the method field of this base tag
-		long  slen;
+		int32_t  slen;
 		char *s = (char *) xml->getString(i,"method",&slen);
 		// if not thee, skip it
 		if ( ! s || slen <= 0 ) continue;
@@ -648,8 +648,8 @@ bool setLinkSpam ( long       ip                 ,
 
 	// . if they link to any adult site, consider them link spam
 	// . just consider a 100 link radius around linkNode
-	long nl = links->getNumLinks();
-	for ( long i = 0 ; i < nl ; i++ ) {
+	int32_t nl = links->getNumLinks();
+	for ( int32_t i = 0 ; i < nl ; i++ ) {
 		// skip if this link is internal, we will add it to linkdb
 		// anyway... this will save us some processing time
 		if ( links->isInternalDom(i) ) continue;
@@ -658,7 +658,7 @@ bool setLinkSpam ( long       ip                 ,
 		char          *h     = uu.getUrl();
 		// include the trailing /
 		char          *hend  = uu.getHost() + uu.getHostLen() + 1;
-		unsigned long  hhash = hash32 ( h , hend - h );
+		uint32_t  hhash = hash32 ( h , hend - h );
 		if ( g_categories && g_categories->isInBadCat ( hhash ) ) {
 			links->setAllSpamBits("links to dmoz filth");
 			log(LOG_DEBUG,"build: %s is filthy.",uu.getUrl());
@@ -683,7 +683,7 @@ bool setLinkSpam ( long       ip                 ,
 		//if ( strncmp("http://www.reliant.com",uu.getUrl(),18)==0 )
 		//     log("hey");
 		// get the xml node of link #i
-		long xmlNode = links->getNodeNum ( i );
+		int32_t xmlNode = links->getNodeNum ( i );
 		if ( isLinkChain ( xml , linker, &uu, xmlNode, &np ))
 			links->setSpamBit ( np , i );
 		// take a break
@@ -695,20 +695,20 @@ bool setLinkSpam ( long       ip                 ,
 
 
 bool isLinkSpam ( Url *linker, 
-		  long ip ,
-		  long *indCatIds ,
-		  long  numIndCatIds ,
-		  long siteNumInlinks ,
+		  int32_t ip ,
+		  int32_t *indCatIds ,
+		  int32_t  numIndCatIds ,
+		  int32_t siteNumInlinks ,
 		  //TitleRec *tr, 
 		  Xml *xml, 
 		  Links *links ,
-		  long maxDocLen , 
+		  int32_t maxDocLen , 
 		  char **note , 
 		  Url *linkee , 
 		  // node position of the linkee in the linker's content
-		  long  linkNode ,
+		  int32_t  linkNode ,
 		  char *coll     ,
-		  long  niceness ) {
+		  int32_t  niceness ) {
 	// it is critical to get inlinks from all pingserver xml
 	// pages regardless if they are often large pages. we
 	// have to manually hard-code the ping servers in for now.
@@ -717,9 +717,9 @@ bool isLinkSpam ( Url *linker,
 	// because we only allow up to 10 to vote as a single voter
 	if ( linkee ) {
 		char *h1    = linkee->getHost();
-		long  h1len = linkee->getHostLen();
+		int32_t  h1len = linkee->getHostLen();
 		char *h2    = NULL;
-		long  h2len = 0;
+		int32_t  h2len = 0;
 		//if ( tr ) h2    = tr->getUrl()->getHost();
 		//if ( tr ) h2len = tr->getUrl()->getHostLen();
 		h2    = linker->getHost();
@@ -729,7 +729,7 @@ bool isLinkSpam ( Url *linker,
 	}
 	// do not allow .info or .biz to vote ever for now
 	char *tld    = linker->getTLD();
-	long  tldLen = linker->getTLDLen();
+	int32_t  tldLen = linker->getTLDLen();
 	if ( tldLen == 4 && strncmp ( tld, "info" , tldLen) == 0 ) {
 		*note = ".info tld";
 		return true;
@@ -738,7 +738,7 @@ bool isLinkSpam ( Url *linker,
 		*note = ".biz tld";
 		return true;
 	}
-	//long ip = tr->getIp();
+	//int32_t ip = tr->getIp();
 	char *ips = (char *)&ip;
 	if ( ips[0]==70 && ips[1]>=80 && ips[1]<=89 ) {
 		*note = "70.8*. ip";
@@ -795,7 +795,7 @@ bool isLinkSpam ( Url *linker,
 
 	// does the url of the linker have a dmoz path in it?
 	char *zstart = linker->getPath();
-	long  zlen   = linker->getPathLen();
+	int32_t  zlen   = linker->getPathLen();
 	char *zend   = zstart + zlen;
 	// start at the end of the path
 	char *z      = zend-1;
@@ -804,7 +804,7 @@ bool isLinkSpam ( Url *linker,
 	// make that the new end
 	zend = z + 1;
 	// need at least 2 path components before checking... keep count
-	long  zcount = 2;
+	int32_t  zcount = 2;
 	// begin the loop
 	while ( checkForDmoz && z > zstart ) {
 		// . backup until we hit the previous /
@@ -837,7 +837,7 @@ bool isLinkSpam ( Url *linker,
 	// guestbook in hostname - domain?
 	char *hd  = linker->getHost();
 	char *hd2 = linker->getDomain();
-	long  hdlen = hd2 - hd;
+	int32_t  hdlen = hd2 - hd;
 	if ( hd && hd2 && hdlen < 30 ) {
 		char c = hd[hdlen];
 		hd[hdlen] = '\0';
@@ -856,7 +856,7 @@ bool isLinkSpam ( Url *linker,
 	// breathe
 	QUICKPOLL(niceness);
 
-	long plen = linker->getPathLen();
+	int32_t plen = linker->getPathLen();
 
 	// if very spammy!!
 	// if ( spam
@@ -925,11 +925,11 @@ bool isLinkSpam ( Url *linker,
 
 	// scan through the content as fast as possible
 	char  *content    = xml->getContent(); 
-	long   contentLen = xml->getContentLen();
+	int32_t   contentLen = xml->getContentLen();
 
 
 	// does title contain "web statistics for"?
-	long  tlen ;
+	int32_t  tlen ;
 	char *title = xml->getString ( "title" , &tlen );
 	if ( title && tlen > 0 ) {
 		// normalize title into buffer, remove non alnum chars
@@ -967,7 +967,7 @@ bool isLinkSpam ( Url *linker,
 	/////////////////////////////////////////////////////
 
 	char *haystack     = content;
-	long  haystackSize = contentLen;
+	int32_t  haystackSize = contentLen;
 
 	// get our page quality, it serves as a threshold for some algos
 	//char quality = tr->getNewQuality();
@@ -985,8 +985,8 @@ bool isLinkSpam ( Url *linker,
 	// comment section. our link's position therefore needs to be known,
 	// that is why we pass in linkPos. 
 	// "n" is the number it matches.
-	long  n;
-	long numNeedles1 = sizeof(s_needles1)/sizeof(Needle);
+	int32_t  n;
+	int32_t numNeedles1 = sizeof(s_needles1)/sizeof(Needle);
 	bool hadPreMatch;
 	getMatches2 ( s_needles1       ,
 		      numNeedles1      ,
@@ -1002,8 +1002,8 @@ bool isLinkSpam ( Url *linker,
 	QUICKPOLL( niceness );
 
 	// see if we got a hit
-	for ( long i = 0 ; i < numNeedles1 ; i++ ) {
-		long need = 1;
+	for ( int32_t i = 0 ; i < numNeedles1 ; i++ ) {
+		int32_t need = 1;
 		// open.thumbshots.org needs multiple counts
 		if ( i == 0 ) need = 5;
 		if ( s_needles1[i].m_count < need ) continue;
@@ -1014,7 +1014,7 @@ bool isLinkSpam ( Url *linker,
 	// now check outlinks on the page for these substrings
 	haystack     = links->getLinkBuf();
 	haystackSize = links->getLinkBufLen();
-	long numNeedles2 = sizeof(s_needles2)/sizeof(Needle);
+	int32_t numNeedles2 = sizeof(s_needles2)/sizeof(Needle);
 	getMatches2 ( s_needles2   , 
 		      numNeedles2  , 
 		      haystack     , 
@@ -1029,8 +1029,8 @@ bool isLinkSpam ( Url *linker,
 	QUICKPOLL( niceness );
 
 	// see if we got a hit
-	for ( long i = 0 ; i < numNeedles2 ; i++ ) {
-		long need = 1;
+	for ( int32_t i = 0 ; i < numNeedles2 ; i++ ) {
+		int32_t need = 1;
 		// open.thumbshots.org needs multiple counts
 		//if ( i == 9 ) need = 5;
 		if ( s_needles2[i].m_count < need ) continue;
@@ -1048,10 +1048,10 @@ bool isLinkSpam ( Url *linker,
 	//       name="comments_form" ...>
 	// <form method=POST 
 	//  action="http://peaceaction.org/wboard/wwwboard.cgi">
-	long nn = xml->getNumNodes();
+	int32_t nn = xml->getNumNodes();
 	bool gotTextArea = false;
 	bool gotSubmit   = false;
-	for ( long i=0; i < nn ; i++ ) {
+	for ( int32_t i=0; i < nn ; i++ ) {
 		// <textarea> tags are bad... but only if we have not
 		// matched "track" or whatever from above... check for that
 		// if you uncommment this... otherwise you disable all blogs!
@@ -1065,7 +1065,7 @@ bool isLinkSpam ( Url *linker,
 			if ( xml->getNodeId ( i ) == TAG_TEXTAREA ) 
 				gotTextArea = true;
 			// is it an <input> tag?
-			long len = 0;
+			int32_t len = 0;
 			if ( xml->getNodeId ( i ) == TAG_INPUT &&
 			     xml->getString(i,"submit",&len)) gotSubmit = true;
 		}
@@ -1075,14 +1075,14 @@ bool isLinkSpam ( Url *linker,
 			// <script src=blah.com/fileparse.js" 
 			// type="text/javascript"> is used to hide google
 			// ads, so don't allow those pages to vote either
-			long  slen; xml->getString(i,"src",&slen);
+			int32_t  slen; xml->getString(i,"src",&slen);
 			if ( slen > 0 ) { *note = "script src"; return true; }
 		}
 		*/
 		if ( xml->getNodeId ( i ) != TAG_FORM ) continue;
 			
 		// get the method field of this base tag
-		long  slen;
+		int32_t  slen;
 		char *s = (char *) xml->getString(i,"method",&slen);
 		// if not thee, skip it
 		if ( ! s || slen <= 0 ) continue;
@@ -1132,11 +1132,11 @@ bool isLinkSpam ( Url *linker,
 
 	// . allow sites in dmoz to have it too
 	// . no, there are too many spam porn sites in dmoz
-	long *ids  = indCatIds;
-	long  nids = numIndCatIds;
+	int32_t *ids  = indCatIds;
+	int32_t  nids = numIndCatIds;
 	//if ( tr ) ids  = indCatIds;//tr->getIndCatids();
 	//if ( tr ) nids = numIndCatids;//tr->getNumIndCatids();
-	for ( long j = 0 ; j < nids ; j++ ) 
+	for ( int32_t j = 0 ; j < nids ; j++ ) 
 		if ( g_categories && g_categories->isIdAdult ( ids[j] ) ) {
 			*note = "dmoz porn"; 
 			return true;
@@ -1145,19 +1145,19 @@ bool isLinkSpam ( Url *linker,
 	QUICKPOLL( niceness );
 	// . if they link to any adult site, consider them link spam
 	// . just consider a 100 link radius around linkNode
-	long nl = links->getNumLinks();
-	long linkNum =links->findLinkNum(linkee->getUrl(),linkee->getUrlLen());
-	long i0 = linkNum - 100;
-	long i1 = linkNum + 100;
+	int32_t nl = links->getNumLinks();
+	int32_t linkNum =links->findLinkNum(linkee->getUrl(),linkee->getUrlLen());
+	int32_t i0 = linkNum - 100;
+	int32_t i1 = linkNum + 100;
 	if ( i0 < 0  ) i0 = 0;
 	if ( i1 > nl ) i1 = nl;
-	for ( long i = i0 ; i < i1 ; i++ ) {
+	for ( int32_t i = i0 ; i < i1 ; i++ ) {
 		if ( ! g_categories ) continue;
 		Url uu; uu.set ( links->getLink(i), links->getLinkLen(i) );
 		char *h    = uu.getUrl();
 		// include the trailing /
 		char *hend = uu.getHost() + uu.getHostLen() + 1;
-		unsigned long hhash = hash32 ( h , hend - h );
+		uint32_t hhash = hash32 ( h , hend - h );
 		if ( g_categories->isInBadCat ( hhash ) ) {
 			*note = "links to dmoz filth";
 			log(LOG_DEBUG,"build: %s is filthy.",uu.getUrl());
@@ -1183,12 +1183,12 @@ bool isLinkSpam ( Url *linker,
 	//if ( tr->getNumIndCatids() || tr->getNumCatids()   ) return false;
 
 	// init these before the loop
-	long  hlen  = linkee->getHostLen();
+	int32_t  hlen  = linkee->getHostLen();
 	char *host  = linkee->getHost();
 	char *uu    = linkee->getUrl();
 	char *uuend = host + hlen;
-	long  uulen = uuend - uu;
-	long  x     = linkNode;
+	int32_t  uulen = uuend - uu;
+	int32_t  x     = linkNode;
  loop:
 
 	QUICKPOLL( niceness );
@@ -1207,7 +1207,7 @@ bool isLinkSpam ( Url *linker,
 	//   not a link chain
 	for ( x++ ; x < nl ; x++ ) {
 		char *link    = links->getLink    (x);
-		long  linkLen = links->getLinkLen (x);
+		int32_t  linkLen = links->getLinkLen (x);
 		if ( ! link          ) continue;
 		if ( linkLen <= 0    ) continue;
 		if ( linkLen > uulen ) continue;
@@ -1228,7 +1228,7 @@ bool isLinkSpam ( Url *linker,
 //    outlinks in the chain
 // 4. this might hurt blogrolls, and resource pages, but such links
 //    are kind of low quality anyway.
-bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
+bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , int32_t linkNode ,
 		   char **note ) {
 
 	//log(LOG_DEBUG,"build: doing %s",linker->m_url);
@@ -1254,7 +1254,7 @@ bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
 	// these do not have constructors so we must reset them
 	leftUrl.reset();
 	rightUrl.reset();
-	long i ;
+	int32_t i ;
 	// . see if we are alone in a table or not
 	// . table must occur before/after our left/right neighbor link
 	bool tableLeft   = false;
@@ -1318,7 +1318,7 @@ bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
 		inLink = false;
 
 		// ok, get the url from this anchor tag
-		long  ulen = 0;
+		int32_t  ulen = 0;
 		char *u = (char *) xml->getString ( i, "href", &ulen );
 		// if we did not get one, that means it could have been
 		// malformed... like the href had a quote right b4 it
@@ -1389,7 +1389,7 @@ bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
 		// stop text here
 		//stopTextScan = i;
 		// ok, get the url
-		long  ulen = 0;
+		int32_t  ulen = 0;
 		char *u = (char *) xml->getString ( i, "href", &ulen );
 		// if we did not get one, that means it could have been
 		// malformed... like the href had a quote right b4 it
@@ -1430,21 +1430,21 @@ bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
 //if it is in a series of links without vertical space in the end of
 //the document, then we won't count it
 bool isLinkSpam2 ( Url *linkee, TitleRec *tr, Xml *xml, Links *links ,
-		   long maxDocLen ) {
-	long linkNum = links->findLinkNum(linkee->getUrl(), 
+		   int32_t maxDocLen ) {
+	int32_t linkNum = links->findLinkNum(linkee->getUrl(), 
 					  linkee->getUrlLen());
 	if(linkNum < 0) return false;
 
-	long thisXmlNode;
-	long nextXmlNode;
-	long numInARow = 1;
-	long needInARow = 3;
+	int32_t thisXmlNode;
+	int32_t nextXmlNode;
+	int32_t numInARow = 1;
+	int32_t needInARow = 3;
 
-	long thisLink = linkNum;
-	long nextLink = thisLink + 1;
-	short nodeId;
-	long i;
-	long len;
+	int32_t thisLink = linkNum;
+	int32_t nextLink = thisLink + 1;
+	int16_t nodeId;
+	int32_t i;
+	int32_t len;
 	char *c;
 	char *cend;
 
@@ -1510,7 +1510,7 @@ bool isLinkSpam2 ( Url *linkee, TitleRec *tr, Xml *xml, Links *links ,
 	goto goRight; 
 
  goLeft:
-	//log(LOG_WARN, "links: numinarow %li linkee %s , linker %s",
+	//log(LOG_WARN, "links: numinarow %"INT32" linkee %s , linker %s",
 	//numInARow, linkee->getUrl(), tr->getUrl()->getUrl());
 	if(numInARow >= needInARow) return true;
 
@@ -1618,8 +1618,8 @@ static Needle s_needles3[] = {
 // gives you where the comment section starts
 // looks for only the first comment section
 char *getCommentSection ( char *haystack     ,
-			  long  haystackSize ,
-			  long  niceness     ){
+			  int32_t  haystackSize ,
+			  int32_t  niceness     ){
 
 	// get our page quality, it serves as a threshold for some algos
 	//char quality = tr->getNewQuality();
@@ -1637,7 +1637,7 @@ char *getCommentSection ( char *haystack     ,
 	// comment section. our link's position therefore needs to be known,
 	// that is why we pass in linkPos. 
 	// "n" is the number it matches.
-	//long numNeedles1 = sizeof(s_needles3)/sizeof(Needle);
+	//int32_t numNeedles1 = sizeof(s_needles3)/sizeof(Needle);
 	return getMatches2 ( s_needles3  ,
 			     sizeof(s_needles3)/sizeof(Needle),
 			     haystack    ,

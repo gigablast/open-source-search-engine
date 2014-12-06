@@ -17,13 +17,13 @@
 
 struct CodeVal {
 	char  m_code[32];
-	long  m_ip;
-	long long  m_count;
-	long  m_outstanding;
-	long  m_maxEver;
-	long  m_maxOutstanding;
-	long long  m_bytesSent;
-	long long  m_bytesRead;
+	int32_t  m_ip;
+	int64_t  m_count;
+	int32_t  m_outstanding;
+	int32_t  m_maxEver;
+	int32_t  m_maxOutstanding;
+	int64_t  m_bytesSent;
+	int64_t  m_bytesRead;
 };
 
 class AutoBan {
@@ -40,9 +40,9 @@ class AutoBan {
 		unsigned char  m_flags;
 		unsigned char  m_minuteCount;
 		unsigned char  m_timesBanned;
-		long  m_dayCount;
-		long  m_minuteExpires;
-		long  m_dayExpires;
+		int32_t  m_dayCount;
+		int32_t  m_minuteExpires;
+		int32_t  m_dayExpires;
 	};
 
 
@@ -56,52 +56,52 @@ class AutoBan {
 	bool restore();
 
 
-	bool hasCode(char *code, long codeLen, long ip);
+	bool hasCode(char *code, int32_t codeLen, int32_t ip);
 
-	bool hasPerm(long ip, 
-		     char *code, long codeLen, 
-		     char *uip,  long uipLen,
+	bool hasPerm(int32_t ip, 
+		     char *code, int32_t codeLen, 
+		     char *uip,  int32_t uipLen,
 		     TcpSocket  *s,
 		     HttpRequest *r,
 		     SafeBuf *testBuf,
 		     bool justCheck ); // check, not incmreneting though
-	bool isBanned(unsigned long ip);
+	bool isBanned(uint32_t ip);
 
 
-	long getSlot(long ip);
-	bool addIp(long ip, char allow);
-	bool addKey(long ip, DetectVal* v);
+	int32_t getSlot(int32_t ip);
+	bool addIp(int32_t ip, char allow);
+	bool addKey(int32_t ip, DetectVal* v);
 	bool growTable();
 	bool printTable( TcpSocket *s , HttpRequest *r );
-	void removeIp(long ip);
+	void removeIp(int32_t ip);
 	void cleanHouse();
 	void setFromConf();
 
 	// . each client is now limited to a max oustanding requests
 	// . Proxy.cpp performs this limitation calculation
-	bool incRequestCount ( long h , long bytesRead );
-	void decRequestCount ( long h , long bytesSent );
+	bool incRequestCount ( int32_t h , int32_t bytesRead );
+	void decRequestCount ( int32_t h , int32_t bytesSent );
 
  protected:
-	long         *m_detectKeys;
+	int32_t         *m_detectKeys;
 	DetectVal    *m_detectVals;
 
 
-	long          m_tableSize;
-	long          m_numEntries;
+	int32_t          m_tableSize;
+	int32_t          m_numEntries;
 
 	bool setCodesFromConf();
 
 	// hash table for mapping client codes to various stats/counts,
 	// called "CodeVals"
-	HashTableT <long,CodeVal> m_ht;
+	HashTableT <int32_t,CodeVal> m_ht;
 
-	//long          *m_codeKeys;
+	//int32_t          *m_codeKeys;
 	//CodeVal       *m_codeVals;
 
-	long           m_codeResetTime;
-	//long           m_codeTabSize;
-	//long           m_numCodes;
+	int32_t           m_codeResetTime;
+	//int32_t           m_codeTabSize;
+	//int32_t           m_numCodes;
 
 };
 

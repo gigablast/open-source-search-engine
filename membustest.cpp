@@ -2,12 +2,12 @@
 
 #include <sys/time.h>  // gettimeofday()
 
-//static long long gettimeofdayInMilliseconds() ;
+//static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -18,12 +18,12 @@ int main ( int argc , char *argv[] ) {
 		return -1;
 	}
 
-	long nb = atoi(argv[1]);
+	int32_t nb = atoi(argv[1]);
 
-	long loops = 1;
+	int32_t loops = 1;
 	if ( argc >= 3 && argv[2][0]!='w' && argv[2][0]!='r' ) 
 		loops = atoi(argv[2]);
-	long count = loops;
+	int32_t count = loops;
 
 	bool readf = true;
 	if ( argc == 4 && argv[3][0] =='w' ) readf = false;
@@ -34,10 +34,10 @@ int main ( int argc , char *argv[] ) {
 		nb = 50;
 	}
 
-	long n = nb ; //* 1024 * 1024 ;
+	int32_t n = nb ; //* 1024 * 1024 ;
 
 	// make n divisble by 64
-	//long rem = n % 64;
+	//int32_t rem = n % 64;
 	//if ( rem > 0 ) n += 64 - rem;
 
 	// get some memory, 4 megs
@@ -46,12 +46,12 @@ int main ( int argc , char *argv[] ) {
 	char *bufStart = buf;
 	register char *bufEnd = buf + n;
 
-	//fprintf(stderr,"pre-reading %li NB \n",nb);
+	//fprintf(stderr,"pre-reading %"INT32" NB \n",nb);
 	// pre-read it so sbrk() can do its thing
-	for ( long i = 0 ; i < n ; i++ ) buf[i] = 1;
+	for ( int32_t i = 0 ; i < n ; i++ ) buf[i] = 1;
 
 	// time stamp
-	long long t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds();
 
 	// . time the read loop
 	// . each read should only be 2 assenbly movl instructions:
@@ -61,41 +61,41 @@ int main ( int argc , char *argv[] ) {
 	//   movl	4(%eax), %eax
 	//   ...
  loop:
-	register long c;
+	register int32_t c;
 
 	if ( readf ) {
 		while ( buf < bufEnd ) {
 			// repeat 16x for efficiency.limit comparison to bufEnd
-			c = *(long *)(buf+ 0);
-			c = *(long *)(buf+ 4);
-			c = *(long *)(buf+ 8);
-			c = *(long *)(buf+12);
-			c = *(long *)(buf+16);
-			c = *(long *)(buf+20);
-			c = *(long *)(buf+24);
-			c = *(long *)(buf+28);
-			c = *(long *)(buf+32);
-			c = *(long *)(buf+36);
-			c = *(long *)(buf+40);
-			c = *(long *)(buf+44);
-			c = *(long *)(buf+48);
-			c = *(long *)(buf+52);
-			c = *(long *)(buf+56);
-			c = *(long *)(buf+60);
+			c = *(int32_t *)(buf+ 0);
+			c = *(int32_t *)(buf+ 4);
+			c = *(int32_t *)(buf+ 8);
+			c = *(int32_t *)(buf+12);
+			c = *(int32_t *)(buf+16);
+			c = *(int32_t *)(buf+20);
+			c = *(int32_t *)(buf+24);
+			c = *(int32_t *)(buf+28);
+			c = *(int32_t *)(buf+32);
+			c = *(int32_t *)(buf+36);
+			c = *(int32_t *)(buf+40);
+			c = *(int32_t *)(buf+44);
+			c = *(int32_t *)(buf+48);
+			c = *(int32_t *)(buf+52);
+			c = *(int32_t *)(buf+56);
+			c = *(int32_t *)(buf+60);
 			buf += 64;
 		}
 	}
 	else {
 		while ( buf < bufEnd ) {
 			// repeat 8x for efficiency. limit comparison to bufEnd
-			*(long *)(buf+ 0) = 0;
-			*(long *)(buf+ 4) = 1;
-			*(long *)(buf+ 8) = 2;
-			*(long *)(buf+12) = 3;
-			*(long *)(buf+16) = 4;
-			*(long *)(buf+20) = 5;
-			*(long *)(buf+24) = 6;
-			*(long *)(buf+28) = 7;
+			*(int32_t *)(buf+ 0) = 0;
+			*(int32_t *)(buf+ 4) = 1;
+			*(int32_t *)(buf+ 8) = 2;
+			*(int32_t *)(buf+12) = 3;
+			*(int32_t *)(buf+16) = 4;
+			*(int32_t *)(buf+20) = 5;
+			*(int32_t *)(buf+24) = 6;
+			*(int32_t *)(buf+28) = 7;
 			buf += 32;
 		}
 	}
@@ -105,11 +105,11 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// completed
-	long long now = gettimeofdayInMilliseconds();
-	// multiply by 4 since these are longs
+	int64_t now = gettimeofdayInMilliseconds();
+	// multiply by 4 since these are int32_ts
 	char *op = "read";
 	if ( ! readf ) op = "wrote";
-	fprintf (stderr,"menbustest: %s %li bytes (x%li) in %llu ms\n",
+	fprintf (stderr,"menbustest: %s %"INT32" bytes (x%"INT32") in %"UINT64" ms\n",
 		 op , n , loops , now - t );
 	// stats
 	if ( now - t == 0 ) now++;

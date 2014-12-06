@@ -33,19 +33,19 @@ class Scores {
 	//bool set ( class Words *words , bool indexContentSectionsOnly );
 	bool set ( class Words    *words                     ,
 		   class Sections *sections                  ,
-		   long            titleRecVersion           ,
+		   int32_t            titleRecVersion           ,
 		   // this is true to zero-out terms in the menus, otherwise
 		   // we assign them a minimal score of 1
 		   bool            eliminateMenus            ,
 		   // provide it with a buffer to prevent a malloc
 		   char           *buf               = NULL  ,
-		   long            bufSize           = 0     ,
-		   long            minIndexableWords = -1    );
+		   int32_t            bufSize           = 0     ,
+		   int32_t            minIndexableWords = -1    );
 
 	//char  m_localBuf [ MAX_WORDS*8*10 ];
 	char  m_localBuf[SCORES_LOCALBUFSIZE];
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 	bool  m_needsFree;
 
  private:
@@ -53,48 +53,48 @@ class Scores {
 	// returns false and sets g_errno on error
 	bool set ( class Words    *words                   ,
 		   class Sections *sections                ,
-		   long            titleRecVersion         ,
+		   int32_t            titleRecVersion         ,
 		   bool            scoreBySection          ,
 		   bool            indexContentSectionOnly ,
-		   long            minSectionScore         ,
-		   long            minAvgWordScore         ,
-		   long            minIndexableWords       ,
+		   int32_t            minSectionScore         ,
+		   int32_t            minAvgWordScore         ,
+		   int32_t            minIndexableWords       ,
 		   // these are for weighting top part of news articles
-		   long            numTopWords             ,
+		   int32_t            numTopWords             ,
 		   float           topWordsWeight          ,
 		   float           topSentenceWeight       ,
-		   long            maxWordsInSentence      ,
+		   int32_t            maxWordsInSentence      ,
 		   char           *buf     = NULL          ,
-		   long            bufSize = 0             ) ;
+		   int32_t            bufSize = 0             ) ;
 
  public:
 	
-	long getMemUsed () { return m_bufSize; };
+	int32_t getMemUsed () { return m_bufSize; };
 
-	long getScore ( long i ) { return m_scores[i]; };
+	int32_t getScore ( int32_t i ) { return m_scores[i]; };
 
 	// private:
 
 	bool setScoresBySection ( class Words *words ,
 				  bool         indexContentSectionOnly ,
-				  long         minSectionScore         ,
-				  long         minAvgWordScore         );
+				  int32_t         minSectionScore         ,
+				  int32_t         minAvgWordScore         );
 
 	// percent to weight word scores by... actually from 0 to 128
 	// for speed reasons
-	long *m_scores;
-	//long *m_rerankScores;
+	int32_t *m_scores;
+	//int32_t *m_rerankScores;
 
 	// these are printed out by PageParser.cpp in TermTable.cpp
 	bool   m_scoreBySection          ;
 	bool   m_indexContentSectionOnly ;
-	long   m_minSectionScore         ;
-	long   m_minAvgWordScore         ;
-	long   m_minIndexableWords       ;
-	long   m_numTopWords             ;
+	int32_t   m_minSectionScore         ;
+	int32_t   m_minAvgWordScore         ;
+	int32_t   m_minIndexableWords       ;
+	int32_t   m_numTopWords             ;
 	float  m_topWordsWeight          ;
 	float  m_topSentenceWeight       ;
-	long   m_maxWordsInSentence      ;
+	int32_t   m_maxWordsInSentence      ;
 };
 
 #endif

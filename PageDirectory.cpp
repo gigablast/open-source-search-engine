@@ -12,7 +12,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) ;
 // . sets g_errno on error
 bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	// get the collection
-	long collLen = 0;
+	int32_t collLen = 0;
 	char *coll   = r->getString("c", &collLen, NULL);
 	if (!coll || collLen <= 0) {
 		coll    = g_conf.m_dirColl;
@@ -20,19 +20,19 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	}
 	// get the category
 	char *path    = r->getPath();
-	long  pathLen = r->getPathLen();
+	int32_t  pathLen = r->getPathLen();
 	// get the category id from the path
 	char decodedPath[MAX_HTTP_FILENAME_LEN+2];
 	// do not breach the buffer
 	if ( pathLen > MAX_HTTP_FILENAME_LEN ) pathLen = MAX_HTTP_FILENAME_LEN;
-	long decodedPathLen = urlDecode(decodedPath, path, pathLen);
+	int32_t decodedPathLen = urlDecode(decodedPath, path, pathLen);
 	decodedPath[decodedPathLen] = '\0';
 	// sanity check
 	if ( decodedPathLen > MAX_HTTP_FILENAME_LEN ) { char*xx=NULL;*xx=0;}
 	// remove cgi
-	long cgiPos = 0;
-	long cgiLen = 0;
-	for (long i = 0; i < decodedPathLen; i++) {
+	int32_t cgiPos = 0;
+	int32_t cgiLen = 0;
+	for (int32_t i = 0; i < decodedPathLen; i++) {
 		if (decodedPath[i] == '?') {
 			cgiPos = i+1;
 			cgiLen = decodedPathLen - cgiPos;
@@ -41,11 +41,11 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 		}
 	}
 	// look it up. returns catId <= 0 if dmoz not setup yet.
-	long catId = g_categories->getIdFromPath(decodedPath, decodedPathLen);
+	int32_t catId = g_categories->getIdFromPath(decodedPath, decodedPathLen);
 
 	SafeBuf sb;
 
-	long xml = r->getLong("xml",0);
+	int32_t xml = r->getLong("xml",0);
 
 	// if /Top print the directory homepage
 	if ( catId == 1 || catId <= 0 ) {
@@ -96,10 +96,10 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	// . make a new request for PageResults
 	//Url dirUrl;
 	char requestBuf[1024+MAX_COLL_LEN+128];
-	long requestBufSize = 1024+MAX_COLL_LEN+128;
+	int32_t requestBufSize = 1024+MAX_COLL_LEN+128;
 	//g_categories.createDirectorySearchUrl ( &dirUrl,
 	log("dmoz: creating search request");
-	long requestBufLen = g_categories->createDirSearchRequest(
+	int32_t requestBufLen = g_categories->createDirSearchRequest(
 						 requestBuf,
 						 requestBufSize,
 						 catId,
@@ -130,7 +130,7 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 						requestBufLen+1,
 						"PageDirectory" );
 		if (!reBuf) {
-			log("directory: Could not reallocate %li bytes for"
+			log("directory: Could not reallocate %"INT32" bytes for"
 			    //" m_readBuf", r->m_bufLen+1);
 			    " m_readBuf", requestBufLen+1);
 			return g_httpServer.sendErrorReply(s,500,

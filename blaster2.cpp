@@ -19,21 +19,21 @@ static void sleepWrapper ( int fd , void *state ) ;
 bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
 bool g_recoveryMode;
 
-static long  s_maxNumThreads = 1 ;
-static long  s_launched   = 0;
-static long  s_total      = 0;
+static int32_t  s_maxNumThreads = 1 ;
+static int32_t  s_launched   = 0;
+static int32_t  s_total      = 0;
 static char *s_p          = NULL;
 static char *s_pend       = NULL;
 static bool  s_portSwitch = 0;
-static long  s_wait;
-static long  s_lastTime   = 0;
-static long  s_printIt    = true;
+static int32_t  s_wait;
+static int32_t  s_lastTime   = 0;
+static int32_t  s_printIt    = true;
 static char  s_append[512];
 static SafeBuf s_words;
 static SafeBuf s_windices;
 static char *s_server = NULL;
-static long  s_numRandWords = 0;
-long getRandomWords(char *buf, char *bufend, long numWords);
+static int32_t  s_numRandWords = 0;
+int32_t getRandomWords(char *buf, char *bufend, int32_t numWords);
 bool getWords();
 
 
@@ -127,7 +127,7 @@ int main ( int argc , char *argv[] ) {
 		log("blaster::Dns client init failed" ); return 1; }
 	// . then webserver
 	// . server should listen to a socket and register with g_loop
-	for(long i = 0; i < 50; i++) {
+	for(int32_t i = 0; i < 50; i++) {
 		if ( ! g_httpServer.init( 8333 + i, 9334+i ) ) {
 			log("blaster::HttpServer init failed" ); 
 			//return 1; 
@@ -136,11 +136,11 @@ int main ( int argc , char *argv[] ) {
 	}
 	// set File class
 	char *fname = argv[1];
-	long fnameLen = gbstrlen(fname);
-	long fileSize = 0;
-	long bufSize = 0;
+	int32_t fnameLen = gbstrlen(fname);
+	int32_t fileSize = 0;
+	int32_t bufSize = 0;
 	char *buf = NULL;
-	long  n = 0;
+	int32_t  n = 0;
 
 	//should we generate random queries?
 	if(fnameLen > 2 && fname[0] == '-' && fname[1] == 'r') {
@@ -154,7 +154,7 @@ int main ( int argc , char *argv[] ) {
 		log("blaster server is %s", s_server);
 		//		char x[1024];
 		// 		while(1) {
-		// 			long l = getRandomWords(x, x + 1024, s_numRandWords);
+		// 			int32_t l = getRandomWords(x, x + 1024, s_numRandWords);
 		// 			*(x + l) = '\0';
 		// 			log("blaster: %s", x);
 		// 		}
@@ -192,7 +192,7 @@ int main ( int argc , char *argv[] ) {
 
 		// change \n to \0
 		//char *p = buf;
-		for ( long i = 0 ; i < bufSize ; i++ ) {
+		for ( int32_t i = 0 ; i < bufSize ; i++ ) {
 			if ( buf[i] != '\n' ) continue;
 			buf[i] = '\0';
 			n++;
@@ -201,18 +201,18 @@ int main ( int argc , char *argv[] ) {
 		f.close();
 	}
 	// log a msg
-	log(LOG_INIT,"blaster: read %li urls into memory", n );
+	log(LOG_INIT,"blaster: read %"INT32" urls into memory", n );
 
-	long linesToSkip = 0;
+	int32_t linesToSkip = 0;
 	if ( argc >=  5 ) {
 		linesToSkip = atoi ( argv[4] );
-		log (LOG_INIT,"blaster: skipping %li urls",linesToSkip);
+		log (LOG_INIT,"blaster: skipping %"INT32" urls",linesToSkip);
 	}
-	for ( long i = 0; i < linesToSkip && s_p < s_pend; i++ )
+	for ( int32_t i = 0; i < linesToSkip && s_p < s_pend; i++ )
 		s_p += gbstrlen(s_p) + 1;
 	
 	if ( argc == 6 ) {
-		long len  = gbstrlen ( argv[5] );
+		int32_t len  = gbstrlen ( argv[5] );
 		if ( len > 512 )
 			len = 512;
 		strncpy ( s_append , argv[5] , gbstrlen (argv[5]) );
@@ -256,21 +256,21 @@ void startSpidering ( ) {
 	// url class for parsing/normalizing url
 	Url u;
 	// count total urls done
-	static long long s_startTime = 0;
+	static int64_t s_startTime = 0;
 	// set startTime
 	if ( s_startTime == 0 ) s_startTime = gettimeofdayInMilliseconds();
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// elapsed time to do all urls
 	double took = (double)(now - s_startTime) / 1000.0 ;
 	// log this every 20 urls
 	if ( s_printIt && s_total > 0 && ( s_total % 20 ) == 0 ) {
-		logf(LOG_INFO,"did %li urls in %f seconds. %f urls per second."
-		    " threads now = %li.",
+		logf(LOG_INFO,"did %"INT32" urls in %f seconds. %f urls per second."
+		    " threads now = %"INT32".",
 		    s_total ,  took , ((double)s_total) / took, s_launched);
 		s_printIt = false;
 	}
-	// did we wait long enough?
+	// did we wait int32_t enough?
 	if ( now - s_lastTime < s_wait ) return;
 	s_lastTime = now;
 	// . use HttpServer.getDoc() to fetch it
@@ -285,11 +285,11 @@ void startSpidering ( ) {
 		char *t = NULL;
 
 		if(s_server) {
-			long len = gbstrlen(s_server);
+			int32_t len = gbstrlen(s_server);
 			memcpy ( p, s_server, len);
 			p += len;
 			p += getRandomWords(p, pend, s_numRandWords);
-			long appendLen = gbstrlen(s_append);
+			int32_t appendLen = gbstrlen(s_append);
 			if ( p + appendLen < pend ) {
 				memcpy ( p, s_append, gbstrlen(s_append) );
 				p += gbstrlen(s_append);
@@ -311,7 +311,7 @@ void startSpidering ( ) {
 			u.set ( url , gbstrlen(url) );
 			// set port if port switch is true
 			//if ( s_portSwitch ) {
-			//	long r = rand() % 32;
+			//	int32_t r = rand() % 32;
 			//	u.setPort ( 8000 + r );
 			//}
 			// save s_p
@@ -347,7 +347,7 @@ void startSpidering ( ) {
 	//if ( s_launched > 0 ) return;
 	if ( s_server || s_p < s_pend ) return;
 	// otherwise, we're all done
-	logf(LOG_INFO,"blaster: did %li urls in %f seconds. %f urls per "
+	logf(LOG_INFO,"blaster: did %"INT32" urls in %f seconds. %f urls per "
 	     "second.",
 	    s_total ,  took , ((double)s_total) / took );
 	// exit now
@@ -369,20 +369,20 @@ void gotDocWrapper ( void *state , TcpSocket *s ) {
 	// allow printing
 	s_printIt = true;
 	// get time now
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	// get hash
 	char *reply = s->m_readBuf ;
-	long  size  = s->m_readOffset;
+	int32_t  size  = s->m_readOffset;
 	HttpMime mime;
 	mime.set ( reply , size , NULL );
 	char *content    = reply + mime.getMimeLen();
-	long  contentLen = size  - mime.getMimeLen();
-	long status      = mime.getHttpStatus();
-	unsigned long h = hash32 ( content , contentLen );
+	int32_t  contentLen = size  - mime.getMimeLen();
+	int32_t status      = mime.getHttpStatus();
+	uint32_t h = hash32 ( content , contentLen );
 	char *p = mime.getMime();
 	char *pend = p + mime.getMimeLen();
 	char message[256];
-	long mlen = 0;
+	int32_t mlen = 0;
 
 	// parse status message out of response
 
@@ -398,17 +398,17 @@ void gotDocWrapper ( void *state , TcpSocket *s ) {
 
 	// log msg
 	if ( g_errno ) 
-		logf(LOG_INFO,"blaster: got doc (status=%li) (%li) (%lims) %s : "
+		logf(LOG_INFO,"blaster: got doc (status=%"INT32") (%"INT32") (%"INT32"ms) %s : "
 		     "%s", status,
 		      s->m_readOffset      , 
-		      (long)(now - s->m_startTime) , 
+		      (int32_t)(now - s->m_startTime) , 
 		      (char *)state        , 
 		      mstrerror(g_errno)   );
 	else
-		logf(LOG_INFO,"blaster: got doc (status=%li) (%li) (%lims) "
-		     "(hash=%lx) %s", status,
+		logf(LOG_INFO,"blaster: got doc (status=%"INT32") (%"INT32") (%"INT32"ms) "
+		     "(hash=%"XINT32") %s", status,
 		      s->m_readOffset      , 
-		      (long)(now - s->m_startTime) , 
+		      (int32_t)(now - s->m_startTime) , 
 		      h ,
 		      (char *)state        );
 
@@ -417,13 +417,13 @@ void gotDocWrapper ( void *state , TcpSocket *s ) {
 	startSpidering();
 }
 
-long getRandomWords(char *buf, char *bufend, long numWords) {
-	long totalWords = s_windices.length() / sizeof(long);
+int32_t getRandomWords(char *buf, char *bufend, int32_t numWords) {
+	int32_t totalWords = s_windices.length() / sizeof(int32_t);
 	char *p = buf;
 	while(1) {
-		long wordNum = rand() % totalWords;
-		long windex = *(long*)(&s_windices[wordNum*sizeof(long)]);
-		long wlen = gbstrlen(&s_words[windex]);
+		int32_t wordNum = rand() % totalWords;
+		int32_t windex = *(int32_t*)(&s_windices[wordNum*sizeof(int32_t)]);
+		int32_t wlen = gbstrlen(&s_words[windex]);
 		if(wlen + 1 + p >= bufend) return p - buf;
 		memcpy(p, &s_words[windex], wlen);
 		p += wlen;
@@ -442,14 +442,14 @@ bool getWords() {
 	}
 	char tmp[1024];
 	while ( fgets ( tmp , 1024 , fd ) ) {
-		long len = gbstrlen(tmp);
+		int32_t len = gbstrlen(tmp);
 		if(len > 2 && tmp[len-2] == 's' && tmp[len-3] == '\'') continue;
 		s_windices += s_words.length();
 		s_words.safeMemcpy(tmp, len-1); //copy in data minus the newline
 		s_words += '\0';
 	}
 	fclose ( fd );
-	log("blaster: read %li words, %li bytes in from dictionary.", 
-	    s_windices.length() / sizeof(long), s_words.length());
+	log("blaster: read %"INT32" words, %"INT32" bytes in from dictionary.", 
+	    s_windices.length() / sizeof(int32_t), s_words.length());
 	return true;
 }

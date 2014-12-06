@@ -27,11 +27,11 @@ public:
 
 	// . lookup word in language lists
 	// . returns false if unknown true if found and lang set
-	bool lookup ( long long      termId,
+	bool lookup ( int64_t      termId,
 		      unsigned char *lang   );
 	
-	char* getCountryFromTld(char* tld, long tldLen);
-	bool  isLangValidForTld(char* tld, long tldLen, unsigned char lang);
+	char* getCountryFromTld(char* tld, int32_t tldLen);
+	bool  isLangValidForTld(char* tld, int32_t tldLen, unsigned char lang);
 	bool  tldInit();
 
 	inline uint8_t catIdToLang(uint32_t catid);
@@ -41,7 +41,7 @@ public:
 
 private:
 	//TermTable langTable;
-	//HashTableT<long, short> m_tldToCountry;
+	//HashTableT<int32_t, int16_t> m_tldToCountry;
 	HashTableX m_langTable;
 	HashTableX m_tldToCountry;
 };

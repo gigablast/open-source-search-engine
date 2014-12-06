@@ -207,7 +207,7 @@ NodeType g_nodes[] = {
 // . called by Xml class
 // . returns the length of the node
 // . TODO: "node" is now guaranteed to be \0 terminated -- make this faster
-long XmlNode::set ( char *node , bool pureXml , long version ) {
+int32_t XmlNode::set ( char *node , bool pureXml , int32_t version ) {
 	// save head of node
 	m_node        = node;
 
@@ -216,9 +216,9 @@ long XmlNode::set ( char *node , bool pureXml , long version ) {
 	if ( ! s_check ) {
 		s_check = true;
 		// how many NodeTypes do we have in g_nodes?
-		static long nn = sizeof(g_nodes) / sizeof(NodeType);
+		static int32_t nn = sizeof(g_nodes) / sizeof(NodeType);
 		// set the hash table
-		for ( long i = 0 ; i < nn ; i++ ) {
+		for ( int32_t i = 0 ; i < nn ; i++ ) {
 			// sanity
 			if ( g_nodes[i].m_nodeId != i ) { char *xx=NULL;*xx=0;}
 		}
@@ -257,9 +257,9 @@ long XmlNode::set ( char *node , bool pureXml , long version ) {
 		m_node       = node;
 		m_hasBackTag = false;
 		m_hash       = 0;
-		long i = 0;
+		int32_t i = 0;
 		//char inCDATA = 0;
-		// inc i as long as it's NOT the beginning of a tag
+		// inc i as int32_t as it's NOT the beginning of a tag
 		while ( node[i] && 
 			(node[i] != '<' || ! isTagStart ( node+i)))//,versin)))
 			i++;
@@ -285,12 +285,12 @@ long XmlNode::set ( char *node , bool pureXml , long version ) {
 	// . get the node's name's length (i-1)
 	// . node name ends at non alnum char 
 	// . we can have hyphens in node name (TODO: even at beginning???)
-	long tagNameStart = 1;
+	int32_t tagNameStart = 1;
 	// . skip over backslash in the back tags
 	// . or skip over / or ? or ! now
 	// . tag names must start with a letter, fwiw
 	if ( ! is_alnum_a(node[tagNameStart]) /* == '/'*/ ) tagNameStart++;
-	long i = tagNameStart;
+	int32_t i = tagNameStart;
 	// skip i to end of tagName. this should only allow ascii chars
 	// to be "tag name chars"
 	for ( ; i < m_nodeLen && is_tagname_char(node[i]) ; i++ );
@@ -330,11 +330,11 @@ long XmlNode::set ( char *node , bool pureXml , long version ) {
 }
 
 // . return the length of a node starting at "node"
-long getTagLen ( char *node ) { // , long version ) {
+int32_t getTagLen ( char *node ) { // , int32_t version ) {
 	// see if it's not a node
 	//if ( node[0] != '<' ) return 0;
 	// skip over first <
-	long i ;
+	int32_t i ;
 	// . keep looping until we hit a < or > OR while we're in quotes
 	// . ignore < and > when they're in quotes
 	for ( i = 1 ; node[i] ; i++ ) {
@@ -362,7 +362,7 @@ long getTagLen ( char *node ) { // , long version ) {
 		// we can have double quotes within single quotes
 		if ( node [ i ] == '\"' ) {
 			// scan back looking for equal sign...
-			long k; for ( k = i - 1 ; k > 1 ; k-- ) {
+			int32_t k; for ( k = i - 1 ; k > 1 ; k-- ) {
 				if ( is_wspace_a(node[k]) ) continue;
 				break;
 			}
@@ -423,7 +423,7 @@ long getTagLen ( char *node ) { // , long version ) {
 	return i ;
 }
 
-long XmlNode::setCommentNode ( char *node ) {
+int32_t XmlNode::setCommentNode ( char *node ) {
 
 	m_nodeId      = TAG_COMMENT;
 	m_isBreaking  = true;
@@ -437,7 +437,7 @@ long XmlNode::setCommentNode ( char *node ) {
 	// . compute node length
 	// . TODO: do we have to deal with quotes????
 	// . TODO: what about nested comments?
-	long i;
+	int32_t i;
 	for ( i = 3 ; node[i] ; i++ ) {
 		if ( node[i]   !='>' ) continue;
 		if ( node[i-1] !='-' ) continue;
@@ -453,7 +453,7 @@ long XmlNode::setCommentNode ( char *node ) {
 }
 
 
-long XmlNode::setCommentNode2 ( char *node ) {
+int32_t XmlNode::setCommentNode2 ( char *node ) {
 
 	m_nodeId      = TAG_COMMENT;
 	m_isBreaking  = false;//true;
@@ -467,7 +467,7 @@ long XmlNode::setCommentNode2 ( char *node ) {
 	// . compute node length
 	// . TODO: do we have to deal with quotes????
 	// . TODO: what about nested comments?
-	long i;
+	int32_t i;
 	for ( i = 2 ; node[i] ; i++ ) {
 		// look for ending of ]> like for <![if gt IE 6]>
 		if ( node[i]   !='>' ) continue;
@@ -484,7 +484,7 @@ long XmlNode::setCommentNode2 ( char *node ) {
 	return i;
 }
 
-long XmlNode::setCDATANode ( char *node ) {
+int32_t XmlNode::setCDATANode ( char *node ) {
 
 	m_nodeId      = TAG_CDATA;
 	m_isBreaking  = true;
@@ -498,7 +498,7 @@ long XmlNode::setCDATANode ( char *node ) {
 	// . compute node length
 	// . TODO: do we have to deal with quotes????
 	// . TODO: what about nested comments?
-	long i;
+	int32_t i;
 	for ( i = 8 ; node[i] ; i++ ) {
 		// seems like just ]] is good enough! don't need "]]>"
 		//if ( node[i]   !='>' ) continue;
@@ -524,13 +524,13 @@ long XmlNode::setCDATANode ( char *node ) {
 
 // Return the value of the specified "field" within this node.
 // the case of "field" does not matter.
-char *XmlNode::getFieldValue ( char *field , long *valueLen ) {
+char *XmlNode::getFieldValue ( char *field , int32_t *valueLen ) {
 	// reset this to 0
 	*valueLen = 0;
 	// scan for the field name in our node
-	long flen = gbstrlen(field);
+	int32_t flen = gbstrlen(field);
 	char inQuotes = '\0';
-	long i;
+	int32_t i;
 
 	// scan the characters in the node, looking for the field name in ascii
 	for ( i = 1; i + flen < m_nodeLen ; i++ ) {
@@ -612,12 +612,12 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 		s_init = true;
 		s_ht.set ( 4 ,4,1024,s_buf,10000,false,0,"tagids");//niceness=0
 		// how many NodeTypes do we have in g_nodes?
-		static long nn = sizeof(g_nodes) / sizeof(NodeType);
+		static int32_t nn = sizeof(g_nodes) / sizeof(NodeType);
 		// set the hash table
-		for ( long i = 0 ; i < nn ; i++ ) {
+		for ( int32_t i = 0 ; i < nn ; i++ ) {
 			char *name = g_nodes[i].m_nodeName;
-			long  nlen = gbstrlen(name);
-			long long h = hash64Upper_a ( name,nlen,0LL );
+			int32_t  nlen = gbstrlen(name);
+			int64_t h = hash64Upper_a ( name,nlen,0LL );
 			NodeType *nt = &g_nodes[i];
 			if ( ! s_ht.addKey(&h,&nt) ) { 
 				char *xx=NULL;*xx=0; }
@@ -634,7 +634,7 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 	// facebook uses underscores like <start_time>
 	char *e = s; for ( ; *e && (is_alnum_a(*e) || *e=='-'|| *e=='_'); e++);
 	// hash it for lookup
-	long long h = hash64Upper_a ( s , e - s , 0 );
+	int64_t h = hash64Upper_a ( s , e - s , 0 );
 	// look it up
 	NodeType **ntp = (NodeType **)s_ht.getValue(&h);
 	// assume none
@@ -651,7 +651,7 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 // . 0 means not a node
 // . 1 means it's an xml node
 // . > 1 is reserved for pre-defined html nodes
-nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
+nodeid_t XmlNode::setNodeInfo ( int64_t  nodeHash ){//  , char *hasBackTag ,
 	                        //char      *isBreaking , char *isVisible ) {
 	/*
 	// sanity check
@@ -659,9 +659,9 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 	if ( ! s_init ) { 
 		s_init = true;
 		// how many NodeTypes do we have in g_nodes?
-		static long nn = sizeof(g_nodes) / sizeof(NodeType);
+		static int32_t nn = sizeof(g_nodes) / sizeof(NodeType);
 		// set the hash table
-		for ( long i = 0 ; i < nn ; i++ ) {
+		for ( int32_t i = 0 ; i < nn ; i++ ) {
 			// sanity check
 			if(g_nodes[i].m_nodeId != i ) { char *xx=NULL;*xx=0;}
 		}
@@ -674,22 +674,22 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 	// . we have 108 node names so we'll use 512 buckets
 	// . given the hash of your node name you can look it up in this table
 	static bool      s_isHashed = false;
-	static long long s_hash [512];
+	static int64_t s_hash [512];
 	static nodeid_t  s_num  [512];
 	// how many NodeTypes do we have in g_nodes?
-	static long      s_numNodeTypes = sizeof(g_nodes) / sizeof(NodeType);
+	static int32_t      s_numNodeTypes = sizeof(g_nodes) / sizeof(NodeType);
 	// we only need to fill in the hash table once since it's static
 	if ( s_isHashed ) goto ready;
 	// clear the hash table
 	memset ( s_hash , 0 , 8*512 );
 	// set the hash table
-	for ( long i = 0 ; i < s_numNodeTypes ; i++ ) {
-		long long h = hash64Upper_a ( g_nodes[i].m_nodeName, 
+	for ( int32_t i = 0 ; i < s_numNodeTypes ; i++ ) {
+		int64_t h = hash64Upper_a ( g_nodes[i].m_nodeName, 
 					    gbstrlen(g_nodes[i].m_nodeName),0LL);
-		//long b = (unsigned long long)h % 512;
-		long b = (unsigned long long)h & 511;
+		//int32_t b = (uint64_t)h % 512;
+		int32_t b = (uint64_t)h & 511;
 		// debug msg
-	     //fprintf(stderr,"node #%li has bucket #%li, hash =%lli\n",i,b,h);
+	     //fprintf(stderr,"node #%"INT32" has bucket #%"INT32", hash =%"INT64"\n",i,b,h);
 		while ( s_hash[b] ) if ( ++b == 512 ) b = 0;
 		s_hash [ b ] = h;
 		s_num  [ b ] = i;
@@ -699,8 +699,8 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 
  ready:
 	// look up nodeHash in hash table
-	//long b = (unsigned long long)nodeHash % 512;
-	long b = (unsigned long long)nodeHash & 511;
+	//int32_t b = (uint64_t)nodeHash % 512;
+	int32_t b = (uint64_t)nodeHash & 511;
 	while ( s_hash[b] ) {
 		if (   s_hash[b] == nodeHash ) break;
 		if ( ++b == 512 ) b = 0;
@@ -714,7 +714,7 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 		return 1; 
 	}
 	// otherwise extract the isBreaking and the nodeId from the hit bucket
-	long n = s_num[b];
+	int32_t n = s_num[b];
 	m_hasBackTag = g_nodes [ n ].m_hasBackTag;
 	m_isBreaking = g_nodes [ n ].m_isBreaking;
 	m_isVisible  = g_nodes [ n ].m_isVisible;
@@ -722,8 +722,8 @@ nodeid_t XmlNode::setNodeInfo ( long long  nodeHash ){//  , char *hasBackTag ,
 	return g_nodes [ n ].m_nodeId;
 }
 
-long getNumXmlNodes ( ) {
-	return (long)sizeof(g_nodes) / sizeof(XmlNode);
+int32_t getNumXmlNodes ( ) {
+	return (int32_t)sizeof(g_nodes) / sizeof(XmlNode);
 }
 
 #include "Words.h" // BACKBITCOMP

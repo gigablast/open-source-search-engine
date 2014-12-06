@@ -139,25 +139,25 @@ static char      *s_stopWords[] = {
 static HashTableX s_stopWordTable;
 static bool       s_stopWordsInitialized = false;
 
-bool initWordTable( HashTableX *table, char *words[], long size ,
+bool initWordTable( HashTableX *table, char *words[], int32_t size ,
 		    char *label ) {
 	// set up the hash table
 	if ( ! table->set ( 8,4,size * 2,NULL,0,false,0,label ) ) 
 		return log(LOG_INIT,"build: Could not init stop words "
 			   "table." );
 	// now add in all the stop words
-	long n = (long)size/ sizeof(char *); 
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)size/ sizeof(char *); 
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		char      *sw    = words[i];
-		long       swlen = gbstrlen ( sw );
-		long long  swh   = hash64Lower_utf8 ( sw , swlen );
-		//log("ii: #%li  %s",i,sw);
+		int32_t       swlen = gbstrlen ( sw );
+		int64_t  swh   = hash64Lower_utf8 ( sw , swlen );
+		//log("ii: #%"INT32"  %s",i,sw);
 		if ( ! table->addTerm (&swh,i+1) ) return false;
 	}
 	return true;
 }
 
-bool isStopWord ( char *s , long len , long long h ) {
+bool isStopWord ( char *s , int32_t len , int64_t h ) {
 	if ( ! s_stopWordsInitialized ) {
 		s_stopWordsInitialized = 
 			initWordTable(&s_stopWordTable, s_stopWords, 
@@ -173,7 +173,7 @@ bool isStopWord ( char *s , long len , long long h ) {
 	return s_stopWordTable.getScore ( &h );
 }		
 
-bool isStopWord2 ( long long *h ) {
+bool isStopWord2 ( int64_t *h ) {
 	if ( ! s_stopWordsInitialized ) {
 		s_stopWordsInitialized = 
 			initWordTable(&s_stopWordTable, s_stopWords, 
@@ -193,18 +193,18 @@ HashTableX s_table32;
 static bool s_init32 = false;
 
 // a 32-bit version
-bool isStopWord32 ( long h ) {
+bool isStopWord32 ( int32_t h ) {
 	if ( ! s_init32 ) {
 		s_init32 = true;
-		long size = sizeof(s_stopWords);
+		int32_t size = sizeof(s_stopWords);
 		if ( ! s_table32.set ( 4,0,size * 2,NULL,0,false,0,"stb32" ) ) 
 			return log("build: Could not init 32-bit stop words");
 		// now add in all the stop words
-		long n = (long)size/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)size/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char *sw    = s_stopWords[i];
-			long  swlen = gbstrlen ( sw );
-			long  swh   = hash32Lower_utf8 ( sw , swlen );
+			int32_t  swlen = gbstrlen ( sw );
+			int32_t  swh   = hash32Lower_utf8 ( sw , swlen );
 			if ( ! s_table32.addKey (&swh) ) {char *xx=NULL;*xx=0;}
 		}
 	}
@@ -1361,7 +1361,7 @@ static char      *s_queryStopWords[] = {
 	//"под",		// beneath
 	//"жизнь",	// life
 	//"будет",	// will
-	//"ж",		// short
+	//"ж",		// int16_t
 	//"тогда",	// then
 	//"кто",		// who
 	//"этот",		// this
@@ -1725,7 +1725,7 @@ static char      *s_queryStopWords[] = {
 static HashTableX s_queryStopWordTable;
 static bool       s_queryStopWordsInitialized = false;
 
-bool isQueryStopWord ( char *s , long len , long long h ) {
+bool isQueryStopWord ( char *s , int32_t len , int64_t h ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
@@ -1735,11 +1735,11 @@ bool isQueryStopWord ( char *s , long len , long long h ) {
 // 			return log(LOG_INIT,"query: Could not init query "
 // 				   "stop words table.");
 // 		// now add in all the stop words
-// 		long n = (long)sizeof(s_queryStopWords)/ sizeof(char *); 
-// 		for ( long i = 0 ; i < n ; i++ ) {
+// 		int32_t n = (int32_t)sizeof(s_queryStopWords)/ sizeof(char *); 
+// 		for ( int32_t i = 0 ; i < n ; i++ ) {
 // 			char      *sw    = s_queryStopWords[i];
-// 			long       swlen = gbstrlen ( sw );
-// 			long long  swh   = hash64Lower ( sw , swlen );
+// 			int32_t       swlen = gbstrlen ( sw );
+// 			int64_t  swh   = hash64Lower ( sw , swlen );
 // 			s_queryStopWordTable.addTerm (swh,i+1,i+1,true);
 // 			// . add w/o accent marks too!
 // 			// . skip "fЭr" though because fur is an eng. word
@@ -3186,7 +3186,7 @@ static char      *s_commonWords[] = {
 	"под",		// beneath
 	"жизнь",	// life
 	"будет",	// will
-	"ж",		// short
+	"ж",		// int16_t
 	"тогда",	// then
 	"кто",		// who
 	"этот",		// this
@@ -3563,7 +3563,7 @@ void resetStopWordTables() {
 }
 
 // used by Msg24.cpp for gigabits generation
-long isCommonWord ( long long h ) {
+int32_t isCommonWord ( int64_t h ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
@@ -3575,13 +3575,13 @@ long isCommonWord ( long long h ) {
 				   "query: Could not init common words "
 				   "table.");
 		// now add in all the stop words
-		long n = (long)sizeof(s_commonWords)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_commonWords)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char *sw    = s_commonWords[i];
-			long  swlen = gbstrlen ( sw );
-			//long  swh   = g_speller.hash32d ( sw , swlen );
+			int32_t  swlen = gbstrlen ( sw );
+			//int32_t  swh   = g_speller.hash32d ( sw , swlen );
 			// use the same algo that Words.cpp computeWordIds does
-			long long swh = hash64Lower_utf8 ( sw , swlen );
+			int64_t swh = hash64Lower_utf8 ( sw , swlen );
 			if ( ! s_commonWordTable.addTerm ( &swh,i+1 ) )
 				return false;
 			// . add w/o accent marks too!
@@ -3614,7 +3614,7 @@ static HashTableX s_verbTable;
 static bool       s_verbsInitialized = false;
 
 // used by Msg24.cpp for gigabits generation
-bool isVerb ( long long *hp ) {
+bool isVerb ( int64_t *hp ) {
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
 	if ( ! s_verbsInitialized ) {
@@ -3624,12 +3624,12 @@ bool isVerb ( long long *hp ) {
 			return log(LOG_INIT,
 				   "query: Could not init verbs table.");
 		// now add in all the stop words
-		long n = (long)sizeof(s_verbs)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_verbs)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char *sw    = s_verbs[i];
-			long  swlen = gbstrlen ( sw );
+			int32_t  swlen = gbstrlen ( sw );
 			// use the same algo that Words.cpp computeWordIds does
-			long long swh = hash64Lower_utf8 ( sw , swlen );
+			int64_t swh = hash64Lower_utf8 ( sw , swlen );
 			if ( ! s_verbTable.addKey ( &swh ) ) { 
 				char *xx=NULL;*xx=0; }
 		}
@@ -4010,13 +4010,13 @@ static char      *s_commonQueryWords[] = {
 // . h is the full wordid, not 48-bit termid
 // . you can now pass in a 32-bit word hash instead of 64 and it should
 //   still work!!!
-long isCommonQueryWordInEnglish ( long long h64 ) {
+int32_t isCommonQueryWordInEnglish ( int64_t h64 ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
 	if ( ! s_commonQueryWordsInitialized ) {
 		// set up the hash table
-		long ss = sizeof(s_commonQueryWords);
+		int32_t ss = sizeof(s_commonQueryWords);
 		if ( ! s_commonQueryWordTable.set (8,4,ss*2,
 						   NULL,0,false,0,
 						   "commonwrds") ) 
@@ -4024,13 +4024,13 @@ long isCommonQueryWordInEnglish ( long long h64 ) {
 				   "query: Could not init common words "
 				   "table.");
 		// now add in all the stop words
-		long n = (long)sizeof(s_commonQueryWords)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_commonQueryWords)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char *sw    = s_commonQueryWords[i];
-			long  swlen = gbstrlen ( sw );
-			//long  swh   = g_speller.hash32d ( sw , swlen );
+			int32_t  swlen = gbstrlen ( sw );
+			//int32_t  swh   = g_speller.hash32d ( sw , swlen );
 			// use the same algo that Words.cpp computeWordIds does
-			long long swh64 = hash64Lower_utf8 ( sw , swlen );
+			int64_t swh64 = hash64Lower_utf8 ( sw , swlen );
 			if ( ! s_commonQueryWordTable.addTerm ( &swh64,i+1 ) )
 				return false;
 			// if you pass in a 32-bit "h64" from hash32n()
@@ -4052,7 +4052,7 @@ long isCommonQueryWordInEnglish ( long long h64 ) {
 		}
 		s_commonQueryWordsInitialized = true;
 		// sanity test
-		long tid32 = hash32n("on");
+		int32_t tid32 = hash32n("on");
 		if ( !isCommonQueryWordInEnglish(tid32)){char *xx=NULL;*xx=0;}
 		tid32 = hash32n("web");
 		if ( !isCommonQueryWordInEnglish(tid32)){char *xx=NULL;*xx=0;}
@@ -4063,6 +4063,6 @@ long isCommonQueryWordInEnglish ( long long h64 ) {
 	//if ( len == 1 && is_alpha_a(*s) ) return true;
 
 	// get from table
-	return (long)s_commonQueryWordTable.getScore ( &h64 );
+	return (int32_t)s_commonQueryWordTable.getScore ( &h64 );
 }
 

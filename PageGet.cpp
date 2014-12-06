@@ -15,7 +15,7 @@
 
 // TODO: redirect to host that has the titleRec locally
 
-static bool sendErrorReply ( void *state , long err ) ;
+static bool sendErrorReply ( void *state , int32_t err ) ;
 static void processLoopWrapper ( void *state ) ;
 static bool processLoop ( void *state ) ;
 
@@ -24,10 +24,10 @@ public:
 	Msg22      m_msg22;
 	char m_format;
 	//TitleRec   m_tr;
-	long       m_niceness;
+	int32_t       m_niceness;
 	XmlDoc     m_xd;
 	char      *m_tr;
-	long       m_trSize;
+	int32_t       m_trSize;
 	uint8_t    m_langId;
 	//Msg8a      m_msg8a;
 	//SiteRec    m_sr;
@@ -36,19 +36,19 @@ public:
 	HttpRequest m_r;
 	char m_coll[MAX_COLL_LEN+2];
 	//CollectionRec *m_cr;
-	bool       m_isRootAdmin;
+	bool       m_isMasterAdmin;
 	bool       m_isLocal;
 	//bool       m_seq;
 	bool       m_rtq;
 	char       m_q[MAX_QUERY_LEN+1];
-	long       m_qlen;
+	int32_t       m_qlen;
 	char       m_boolFlag;
 	bool       m_printed;
-	long long  m_docId;
+	int64_t  m_docId;
 	bool       m_includeHeader;
 	bool       m_includeBaseHref;
 	bool       m_queryHighlighting;
-	long       m_strip;
+	int32_t       m_strip;
 	bool       m_clickAndScroll;
 	bool	   m_clickNScroll; // new click 'n' scroll
 	bool	   m_cnsPage;      // Are we in the click 'n' scroll page?
@@ -64,7 +64,7 @@ public:
 // . sets g_errno on error
 bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	// get the collection
-	long  collLen = 0;
+	int32_t  collLen = 0;
 	char *coll    = r->getString("c",&collLen);
 	if ( ! coll || ! coll[0] ) {
 		//coll    = g_conf.m_defaultColl;
@@ -95,7 +95,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	}
 	// . get fields from cgi field of the requested url
 	// . get the search query
-	long  qlen = 0;
+	int32_t  qlen = 0;
 	char *q = r->getString ( "q" , &qlen , NULL /*default*/);
 	// ensure query not too big
 	if ( qlen >= MAX_QUERY_LEN-1 ) { 
@@ -103,7 +103,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply (s,500 ,mstrerror(g_errno));
 	}
 	// the docId
-	long  long docId = r->getLongLong ( "d" , 0LL /*default*/ );
+	int64_t docId = r->getLongLong ( "d" , 0LL /*default*/ );
 	// get url
 	char *url = r->getString ( "u",NULL);
 
@@ -131,7 +131,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	mnew ( st , sizeof(State2) , "PageGet1" );
 	// save the socket and if Host: is local in the Http request Mime
 	st->m_socket   = s;
-	st->m_isRootAdmin  = g_conf.isCollAdmin ( s , r );
+	st->m_isMasterAdmin  = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal  = r->isLocal();
 	st->m_docId    = docId;
 	st->m_printed  = false;
@@ -180,7 +180,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	char useCache = r->getLong ( "usecache" ,  1 );
 	char rcache   = r->getLong ( "rcache"   ,  1 );
 	char wcache   = r->getLong ( "wcache"   ,  1 );
-	long cacheAge = r->getLong ( "cacheAge" , 60*60 ); // default one hour
+	int32_t cacheAge = r->getLong ( "cacheAge" , 60*60 ); // default one hour
 	if ( useCache == 0 ) { cacheAge = 0; wcache = 0; }
 	if ( rcache   == 0 )   cacheAge = 0; 
 	// . fetch the TitleRec
@@ -216,7 +216,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 }
 
 // returns true
-bool sendErrorReply ( void *state , long err ) {
+bool sendErrorReply ( void *state , int32_t err ) {
 	// ensure this is set
 	if ( ! err ) { char *xx=NULL;*xx=0; }
 	// get it
@@ -284,7 +284,7 @@ bool processLoop ( void *state ) {
 	// error?
 	if ( ! na ) return sendErrorReply ( st , g_errno );
 	// forbidden? allow turkeys through though...
-	if ( ! st->m_isRootAdmin && *na )
+	if ( ! st->m_isMasterAdmin && *na )
 		return sendErrorReply ( st , ENOCACHE );
 
 	SafeBuf *sb = &st->m_sb;
@@ -332,12 +332,12 @@ bool processLoop ( void *state ) {
 	// error?
 	if ( ! vi ) return sendErrorReply ( st , g_errno );
 	// banned?
-	if ( ! st->m_isRootAdmin && ! *vi ) return sendErrorReply (st,EDOCBANNED);
+	if ( ! st->m_isMasterAdmin && ! *vi ) return sendErrorReply (st,EDOCBANNED);
 	*/
 
 	// get the utf8 content
 	char **utf8 = xd->getUtf8Content();
-	//long   len  = xd->size_utf8Content - 1;
+	//int32_t   len  = xd->size_utf8Content - 1;
 	// wait if blocked???
 	if ( utf8 == (void *)-1 ) return false;
 	// strange
@@ -351,20 +351,20 @@ bool processLoop ( void *state ) {
 	// get this host
 	Host *h = g_hostdb.getHost ( g_hostdb.m_hostId );
 	if ( ! h ) {
-		log("pageget: hostid %li is bad",g_hostdb.m_hostId);
+		log("pageget: hostid %"INT32" is bad",g_hostdb.m_hostId);
 		return sendErrorReply(st,EBADENGINEER );
 	}
 
 
 	char *content    = xd->ptr_utf8Content;
-	long  contentLen = xd->size_utf8Content - 1;
+	int32_t  contentLen = xd->size_utf8Content - 1;
 
-	// shortcut
+	// int16_tcut
 	char strip = st->m_strip;
 
 	// alloc buffer now
 	//char *buf = NULL;
-	//long  bufMaxSize = 0;
+	//int32_t  bufMaxSize = 0;
 	//bufMaxSize = len + ( 32 * 1024 ) ;
 	//bufMaxSize = contentLen + ( 32 * 1024 ) ;
 	//buf        = (char *)mmalloc ( bufMaxSize , "PageGet2" );
@@ -376,7 +376,7 @@ bool processLoop ( void *state ) {
 
 	// for undoing the header
 	//char *start1 = p;
-	long startLen1 = sb->length();
+	int32_t startLen1 = sb->length();
 
 	// we are always utfu
 	if ( strip != 2 )
@@ -408,11 +408,11 @@ bool processLoop ( void *state ) {
 	if ( format == FORMAT_JSON ) sb->reset();
 
 	// for undoing the stuff below
-	long startLen2 = sb->length();//p;
+	int32_t startLen2 = sb->length();//p;
 
 	// query should be NULL terminated
 	char *q    = st->m_q;
-	long  qlen = st->m_qlen;
+	int32_t  qlen = st->m_qlen;
 
 	char styleTitle[128] =  "font-size:14px;font-weight:600;"
 				"color:#000000;";
@@ -496,12 +496,12 @@ bool processLoop ( void *state ) {
 		// Moved over from PageResults.cpp
 		sb->safePrintf( "</span> - <a href=\""
 			      "/get?"
-			      "q=%s&amp;c=%s&amp;rtq=%li&amp;"
-			      "d=%lli&amp;strip=1\""
+			      "q=%s&amp;c=%s&amp;rtq=%"INT32"&amp;"
+			      "d=%"INT64"&amp;strip=1\""
 			      " style=\"%s\">"
 			      "[stripped]</a>", 
 			      q , st->m_coll , 
-			      (long)st->m_rtq,
+			      (int32_t)st->m_rtq,
 			      st->m_docId, styleLink ); 
 
 		// a link to alexa
@@ -536,7 +536,7 @@ bool processLoop ( void *state ) {
 	}
 
 	// how much space left in p?
-	//long avail = bufEnd - p;
+	//int32_t avail = bufEnd - p;
 	// . make the url that we're outputting for (like in PageResults.cpp)
 	// . "thisUrl" is the baseUrl for click & scroll
 	char thisUrl[MAX_URL_LEN];
@@ -546,26 +546,26 @@ bool processLoop ( void *state ) {
 	// . construct the NAT mapped port
 	// . you should have used iptables to map port to the correct
 	//   internal ip:port
-	//unsigned long  ip   =g_conf.m_mainExternalIp  ; // h->m_externalIp;
-	//unsigned short port=g_conf.m_mainExternalPort;//h->m_externalHttpPort
+	//uint32_t  ip   =g_conf.m_mainExternalIp  ; // h->m_externalIp;
+	//uint16_t port=g_conf.m_mainExternalPort;//h->m_externalHttpPort
 	// local check
 	//if ( st->m_isLocal ) {
-	unsigned long  ip   = h->m_ip;
-	unsigned short port = h->m_httpPort;
+	uint32_t  ip   = h->m_ip;
+	uint16_t port = h->m_httpPort;
 	//}
-	//sprintf ( x , "http://%s:%li/get?q=" , iptoa ( ip ) , port );
+	//sprintf ( x , "http://%s:%"INT32"/get?q=" , iptoa ( ip ) , port );
 	// . we no longer put the port in here
 	// . but still need http:// since we use <base href=>
 	if (port == 80) sprintf(x,"http://%s/get?q=",iptoa(ip));
 	else            sprintf(x,"http://%s:%hu/get?q=",iptoa(ip),port);
 	x += gbstrlen ( x );
 	// the query url encoded
-	long elen = urlEncode ( x , thisUrlEnd - x , q , qlen );
+	int32_t elen = urlEncode ( x , thisUrlEnd - x , q , qlen );
 	x += elen;
 	// separate cgi vars with a &
-	//sprintf ( x, "&seq=%li&rtq=%lid=%lli",
-	//	  (long)st->m_seq,(long)st->m_rtq,st->m_msg22.getDocId());
-	sprintf ( x, "&d=%lli",st->m_docId );
+	//sprintf ( x, "&seq=%"INT32"&rtq=%"INT32"d=%"INT64"",
+	//	  (int32_t)st->m_seq,(int32_t)st->m_rtq,st->m_msg22.getDocId());
+	sprintf ( x, "&d=%"INT64"",st->m_docId );
 	x += gbstrlen(x);		
 	// set our query for highlighting
 	Query qq;
@@ -590,14 +590,14 @@ bool processLoop ( void *state ) {
 	// do the loop
 	//Scores ss;
 	//ss.set ( &qw , NULL );
-	//for ( long i = 0 ; i < qq.m_numWords ; i++ )
+	//for ( int32_t i = 0 ; i < qq.m_numWords ; i++ )
 	//	if ( ! m.matchWord ( &qq.m_qwords[i],i ) ) ss.m_scores[i] = 0;
 	// now set m.m_matches[] to those words in qw that match a query word
 	// or phrase in qq.
 	m.setQuery ( &qq );
 	//m.addMatches ( &qw , &ss , true );
 	m.addMatches ( &qw );
-	long hilen = 0;
+	int32_t hilen = 0;
 
 	// CNS: if ( ! st->m_clickNScroll ) {
 	// and highlight the matches
@@ -648,9 +648,9 @@ bool processLoop ( void *state ) {
 		sb->safePrintf("<url><![CDATA[");
 		sb->cdataEncode(xd->m_firstUrl.m_url);
 		sb->safePrintf("]]></url>\n");
-		sb->safePrintf("<docId>%llu</docId>\n",xd->m_docId);
-		sb->safePrintf("\t<cachedTimeUTC>%lu</cachedTimeUTC>\n",
-			      lastSpiderDate);
+		sb->safePrintf("<docId>%"UINT64"</docId>\n",xd->m_docId);
+		sb->safePrintf("\t<cachedTimeUTC>%"INT32"</cachedTimeUTC>\n",
+			       (int32_t)lastSpiderDate);
 		sb->safePrintf("\t<cachedTimeStr>%s</cachedTimeStr>\n",tbuf);
 	}
 
@@ -661,8 +661,9 @@ bool processLoop ( void *state ) {
 		sb->safePrintf("\t\"url\":\"");
 		sb->jsonEncode(xd->m_firstUrl.m_url);
 		sb->safePrintf("\",\n");
-		sb->safePrintf("\t\"docId\":%llu,\n",xd->m_docId);
-		sb->safePrintf("\t\"cachedTimeUTC\":%lu,\n",lastSpiderDate);
+		sb->safePrintf("\t\"docId\":%"UINT64",\n",xd->m_docId);
+		sb->safePrintf("\t\"cachedTimeUTC\":%"INT32",\n",
+			       (int32_t)lastSpiderDate);
 		sb->safePrintf("\t\"cachedTimeStr\":\"%s\",\n",tbuf);
 	}
 
@@ -727,7 +728,7 @@ bool processLoop ( void *state ) {
 			       "width=100%% "
 			       "color=#ffffff>" );
 
-		long printLinks = st->m_r.getLong("links",0);
+		int32_t printLinks = st->m_r.getLong("links",0);
 
 		if ( ! printDisclaimer && printLinks )
 			sb->safePrintf(//p += sprintf ( p , 
@@ -743,7 +744,7 @@ bool processLoop ( void *state ) {
 				       "color:#000000;\" "
 				       "href=\""
 				       "/get?"
-				       "c=%s&d=%lli&qh=0&cnsp=1&eb=%s\">"
+				       "c=%s&d=%"INT64"&qh=0&cnsp=1&eb=%s\">"
 				       "cached link</a>"
 				       " &nbsp; "
 				       "<a "
@@ -769,7 +770,7 @@ bool processLoop ( void *state ) {
 				       "&nbsp; "
 				       "<b>PAGE TITLE:</b> "
 				       );
-			long tlen = titleEnd - titleStart;
+			int32_t tlen = titleEnd - titleStart;
 			sb->safeMemcpy ( titleStart , tlen );
 			sb->safePrintf ( "</span></td></tr>" );
 		}
@@ -795,7 +796,7 @@ bool processLoop ( void *state ) {
 
 	if ( st->m_strip == 1 )
 		contentLen = stripHtml( content, contentLen, 
-					(long)xd->m_version, st->m_strip );
+					(int32_t)xd->m_version, st->m_strip );
 	// it returns -1 and sets g_errno on error, line OOM
 	if ( contentLen == -1 ) {
 		//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );	
@@ -876,13 +877,13 @@ bool processLoop ( void *state ) {
 	}
 
 	// calculate bufLen
-	//long bufLen = p - buf;
+	//int32_t bufLen = p - buf;
 
 	/*
 
 	  MDW: return the xml page as is now. 9/28/2014
 
-	long ct = xd->m_contentType;
+	int32_t ct = xd->m_contentType;
 
 	// now filter the entire buffer to escape out the xml tags
 	// so it is displayed nice

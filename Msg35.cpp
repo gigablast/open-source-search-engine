@@ -19,7 +19,7 @@ Msg35 g_msg35;
 static void gotReplyWrapper35           ( void *state , UdpSlot *slot ) ;
 static void gotReleaseTokenReplyWrapper ( void *state , UdpSlot *slot ) ;
 static void giveTokenReplyWrapper       ( void *state , UdpSlot *slot ) ;
-static void handleRequestWrapper35      ( UdpSlot *slot , long niceness ) ;
+static void handleRequestWrapper35      ( UdpSlot *slot , int32_t niceness ) ;
 static void sleepWrapper                ( int fd , void *state ) ;
 
 bool Msg35::registerHandler ( ) {
@@ -39,8 +39,8 @@ Msg35::Msg35 () {
 
 void Msg35::reset () {
 	// reset all client/server slots
-	for ( long i = 0 ; i < 64  ; i++ ) m_clientWaits[i].m_isEmpty = true;
-	for ( long i = 0 ; i < 512 ; i++ ) m_serverWaits[i].m_isEmpty = true;
+	for ( int32_t i = 0 ; i < 64  ; i++ ) m_clientWaits[i].m_isEmpty = true;
+	for ( int32_t i = 0 ; i < 512 ; i++ ) m_serverWaits[i].m_isEmpty = true;
 	m_topUsedClient = -1;
 	m_topUsedServer = -1;
 	m_serverTokeni  = -1;
@@ -73,7 +73,7 @@ bool Msg35::getToken ( void *state,
 	// . ensure not already registered
 	// . this can happen if a client's get request arrives before their
 	//   release request... so allow for that now
-	for ( long i = 0 ; i < 64 ; i++ ) {
+	for ( int32_t i = 0 ; i < 64 ; i++ ) {
 		if ( m_clientWaits[i].m_isEmpty        ) continue;
 		if ( m_clientWaits[i].m_state != state ) continue;
 		//g_errno = EBADENGINEER;
@@ -83,7 +83,7 @@ bool Msg35::getToken ( void *state,
 		break;
 	}
 	// get next available slot
-	long i;
+	int32_t i;
 	for ( i = 0 ; i < 64 ; i++ )
 		if ( m_clientWaits[i].m_isEmpty ) break;
 	// . if none empty bitch and return
@@ -96,12 +96,12 @@ bool Msg35::getToken ( void *state,
 	}
 	ClientWait *c = &m_clientWaits [ i ];
 	// get current time
-	long timestamp = getTimeGlobal();
+	int32_t timestamp = getTimeGlobal();
 	// the request is just the priority really
 	char *p = c->m_buf;
 	*p         = REQUEST_GETTOKEN ; p += 1;
-	*(long *)p = g_hostdb.m_hostId; p += 4;
-	*(long *)p = timestamp        ; p += 4;
+	*(int32_t *)p = g_hostdb.m_hostId; p += 4;
+	*(int32_t *)p = timestamp        ; p += 4;
 	*p         = priority         ; p += 1;
 	*p         = i;               ; p += 1; // client slot #
 	// . send to the governing host, he must be up
@@ -145,7 +145,7 @@ void gotReplyWrapper35 ( void *state , UdpSlot *slot ) {
 void Msg35::gotReply ( UdpSlot *slot ) {
 	// get the reply
 	char *reply     = slot->m_readBuf;
-	long  replySize = slot->m_readBufSize;
+	int32_t  replySize = slot->m_readBufSize;
 	// don't let UdpServer free the send buffer
 	slot->m_sendBufAlloc = NULL;
 	// bitch if bad reply
@@ -158,7 +158,7 @@ void Msg35::gotReply ( UdpSlot *slot ) {
 	}
 	// . sometimes we get it right away, without waiting
 	// . get the client #
-	long n = reply[0];
+	int32_t n = reply[0];
 	// -1 means we're waiting
 	if ( n == -1 ) return;
 	// debug msg
@@ -170,17 +170,17 @@ void Msg35::gotReply ( UdpSlot *slot ) {
 // . call this once the token manager says you've got the token
 // . returns false and sets g_errno on error, true otherwise
 // . m_callback should call releaseToken() when done with it
-bool Msg35::callCallback ( long n ) {
+bool Msg35::callCallback ( int32_t n ) {
 	// ensure legit
 	if ( n > m_topUsedClient || n < 0 ) {
 		g_errno = EBADREQUEST;
-		return log(LOG_LOGIC,"merge: msg35: Bad client slot = %li.",n);
+		return log(LOG_LOGIC,"merge: msg35: Bad client slot = %"INT32".",n);
 	}
 	// if we already got the token somewhere, that is a problem
 	if ( m_clientTokeni != -1 ) {
 		g_errno = EBADREQUEST;
 		return log(LOG_LOGIC,"merge: msg35: Manager tried to give "
-			   "token to client #%li, but #%li has it now.",
+			   "token to client #%"INT32", but #%"INT32" has it now.",
 			   n , m_clientTokeni );
 	}
 	// if we're empty, do not accept
@@ -206,7 +206,7 @@ bool Msg35::callCallback ( long n ) {
 
 
 Host *Msg35::getTokenManager ( ) {
-	//long numHosts;
+	//int32_t numHosts;
 	// take this out for now
 	/*
 	Host **hosts = g_hostdb.getTokenGroup ( g_hostdb.m_hostId, &numHosts);
@@ -225,16 +225,16 @@ Host *Msg35::getTokenManager ( ) {
 }
 
 /*
-Host **Msg35::getTokenGroup( long *numHosts ) {
+Host **Msg35::getTokenGroup( int32_t *numHosts ) {
 	static Host *s_hosts [ 16 ];
-	static long  s_numHosts = -1;
+	static int32_t  s_numHosts = -1;
 	// if we already made it, return it
 	if ( s_numHosts >= 0 ) { *numHosts = s_numHosts ; return s_hosts ; }
 	// otherwise, make the group that uses this token
-	long n;
+	int32_t n;
 	Host *g = g_hostdb.getGroup ( g_hostdb.m_groupId , &n );
 	s_numHosts = 0;
-	for ( long i = 0 ; i < n && s_numHosts + 1 < 16 ; i++ ) {
+	for ( int32_t i = 0 ; i < n && s_numHosts + 1 < 16 ; i++ ) {
 		s_hosts [ s_numHosts++ ] = &g[i] ;
 		// add ide sharer, if any
 		Host *s = g_hostdb.getSharer ( &g[i] );
@@ -263,7 +263,7 @@ void Msg35::releaseToken ( ) {
 	// . this returns NULL and sets g_errno on error
 	Host *h = getTokenManager ( );
 	// get the client Wait class #
-	long i = m_clientTokeni;
+	int32_t i = m_clientTokeni;
 	// if we don't have the token, nothing to release
 	if ( i < 0 ) { log(LOG_REMIND,"merge: msg35: releaseToken() called "
 			   "but token not in possession."); return ; }
@@ -324,12 +324,12 @@ void Msg35::gotReleaseTokenReply ( ) {
 //////////////////////////////////////////////////////////////////////
 
 // this routine handles some requests from clients and one from the manager
-void handleRequestWrapper35 ( UdpSlot *slot , long niceness ) {
+void handleRequestWrapper35 ( UdpSlot *slot , int32_t niceness ) {
 	g_msg35.handleRequest ( slot );
 }
 
 void Msg35::handleRequest ( UdpSlot *slot ) {
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 	char *request     = slot->m_readBuf;
 	// . get request code
 	// . REQUEST_GETTOKEN
@@ -340,7 +340,7 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 	// this is from manager to client, giving the token to the client
 	if ( requestSize == 2 && *request == REQUEST_GIVETOKEN ) {
 		// get the client #
-		long n = request[1];
+		int32_t n = request[1];
 		// debug msg
 		log(LOG_INFO,"merge: Received merge token after waiting.");
 		// . call the callback
@@ -356,12 +356,12 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 	// this is asking for the token, from the client to the manager
 	if ( requestSize == 11 && *request == REQUEST_GETTOKEN ) {
 		char *p          = request + 1;
-		long  hostId     = *(long *)p ; p += 4;
-		long  timestamp  = *(long *)p ; p += 4;
+		int32_t  hostId     = *(int32_t *)p ; p += 4;
+		int32_t  timestamp  = *(int32_t *)p ; p += 4;
 		char  priority   = *p         ; p += 1;
-		long  clientSlot = *p         ; p += 1;
+		int32_t  clientSlot = *p         ; p += 1;
 		// see if a repeat request
-		for ( long i = 0 ; i < m_topUsedServer ; i++ ) {
+		for ( int32_t i = 0 ; i < m_topUsedServer ; i++ ) {
 			ServerWait *s = &m_serverWaits[i];
 			if ( s->m_isEmpty                  ) continue;
 			if ( s->m_hostId     != hostId     ) continue;
@@ -382,7 +382,7 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 			return;
 		}
 		// add him to our queue
-		long w = addServerWait ( hostId , priority , clientSlot ,
+		int32_t w = addServerWait ( hostId , priority , clientSlot ,
 					 timestamp );
 		// return error if failed
 		if ( w < 0 ) {
@@ -408,7 +408,7 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 	// this is asking to release token, from the client to the manager
 	if ( requestSize == 1 && *request == REQUEST_RELEASETOKEN ) {
 		// TODO: mdw: ensure we think releaser has the token?
-		long w = m_serverTokeni;
+		int32_t w = m_serverTokeni;
 		// ensure someone is actually holding the token
 		if ( w < 0 ) {
 			log(LOG_LOGIC,"merge: msg35: Host released token "
@@ -431,12 +431,12 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 	// this is asking us to sync with the client, from client to manager
 	if ( requestSize >= 1 && *request == REQUEST_SYNC ) {
 		// get hostid of the requesting client
-		long hid = *(long *)(&request[1]);
+		int32_t hid = *(int32_t *)(&request[1]);
 		// mark the sync as received for this hostId so that once
 		// we get syncs from all hostids in our group we can give
 		// the token to one
 		if ( ! m_allReceived ) {
-			long numHosts;
+			int32_t numHosts;
 			//Host **h = g_hostdb.getTokenGroup (g_hostdb.m_hostId,
 			//				    &numHosts ) ;
 			Host **h = NULL;
@@ -447,34 +447,34 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 				char *xx = NULL; *xx = 0;
 				numHosts = 16;
 			}
-			long count = 0;
-			for ( long i = 0 ; i < numHosts ; i++ ) {
+			int32_t count = 0;
+			for ( int32_t i = 0 ; i < numHosts ; i++ ) {
 				if ( h[i]->m_hostId == hid ) m_flags[i] = true;
 				if ( m_flags[i] ) count++;
 			}
 			if ( count == numHosts ) m_allReceived = true;
 		}
 		// clear out all his token requests from our table
-		for ( long i = 0 ; i <= m_topUsedServer ; i++ )
+		for ( int32_t i = 0 ; i <= m_topUsedServer ; i++ )
 			if ( m_serverWaits[i].m_hostId == hid )
 				removeServerWait ( i );
 		// . client's version of who has the token relative to his tble
 		// . is -1 if nobody in his table has it
-		long clientTokeni = *(long *)(&request[5]);
+		int32_t clientTokeni = *(int32_t *)(&request[5]);
 		// does this guy think he has the token?
-		long newi = -1;
+		int32_t newi = -1;
 		// add the server waits back in for this hostid
 		char *p = &request[9];
 		char *pend = request + requestSize;
 		while ( p + 6 <= pend ) {
-			long timestamp  = *(long *)p ; p += 4;
+			int32_t timestamp  = *(int32_t *)p ; p += 4;
 			char priority   = *p         ; p += 1;
 			char clientSlot = *p         ; p += 1;
 			if ( clientSlot < 0 ) {
 				log(LOG_LOGIC,"merge: msg35: bad clientSlot.");
 				continue;
 			}
-			long a = addServerWait ( hid, priority, clientSlot ,
+			int32_t a = addServerWait ( hid, priority, clientSlot ,
 						 timestamp );
 			// if this request is reported by client to have the
 			// token now, then remember its slot # in OUR table,
@@ -485,12 +485,12 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 		// sanity check
 		if ( p != pend )
 			log(LOG_LOGIC,"merge: msg35: p != pend, bad engineer."
-			    "diff = %lu.",
-			    (unsigned long)pend - (unsigned long)p);
+			    "diff = %"INT32".",
+			    (int32_t)(pend - p));
 			
 		// . what HOSTID do we think has the token? 
 		// . set tokenHid to -1 if we don't think anybody has it
-		long tokenHid = -1;
+		int32_t tokenHid = -1;
 		if ( m_serverTokeni >= 0 ) 
 			tokenHid = m_serverWaits[m_serverTokeni].m_hostId;
 		// . if we do not think client has the token but he says he
@@ -498,7 +498,7 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 		// . if this info is not accurate it will be corrected in
 		//   call to sync()
 		if  ( tokenHid != hid && newi >= 0 ) {
-			log("merge: HostId #%li claims he "
+			log("merge: HostId #%"INT32" claims he "
 			    "has the merge token. Giving it to him.",hid);
 			m_serverTokeni = newi;
 			// always exit discrepancy mode on token re-assignment
@@ -520,10 +520,10 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 			if ( m_discrepancyHid >= 0 && 
 			     m_discrepancyHid != hid ) {
 				log(LOG_INFO,
-				    "merge: Host #%li says he "
+				    "merge: Host #%"INT32" says he "
 				    "does not have the merge token, "
 				    "but already in "
-				    "discrepancy mode for host #%li. "
+				    "discrepancy mode for host #%"INT32". "
 				    "Reassigning.", hid, m_discrepancyHid);
 				// we need to re-assign to prevent token lockup
 				m_discrepancyHid = hid;
@@ -531,7 +531,7 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 			// if we aren't already in discrepancy mode... enter it
 			else if ( m_discrepancyHid != hid ) {
 				log(LOG_INFO,"merge: Entering "
-				    "discrepancy mode for host #%li",hid);
+				    "discrepancy mode for host #%"INT32"",hid);
 				// this is >= 0 when in discrepancy mode
 				m_discrepancyHid = hid;
 			}
@@ -565,13 +565,13 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 
 	// bitch and return if a bad request
 	log(LOG_LOGIC, "merge: Received bad merge token related request "
-	    "of %li bytes.",requestSize );
+	    "of %"INT32" bytes.",requestSize );
 	g_udpServer.sendErrorReply ( slot , EBADREQUESTSIZE );
 }
 
-void Msg35::removeServerWait ( long i ) {
+void Msg35::removeServerWait ( int32_t i ) {
 	if ( i < 0 || i >= 512 ) {
-		log(LOG_LOGIC,"merge: msg35: removeServerWait: i=%li.",i);
+		log(LOG_LOGIC,"merge: msg35: removeServerWait: i=%"INT32".",i);
 		return;
 	}
 	ServerWait *s = &m_serverWaits [ i ];
@@ -581,9 +581,9 @@ void Msg35::removeServerWait ( long i ) {
 		m_topUsedServer--;
 }
 
-long Msg35::addServerWait ( long hostId , char priority , char clientSlot ,
-			    long timestamp ) {
-	long i;
+int32_t Msg35::addServerWait ( int32_t hostId , char priority , char clientSlot ,
+			    int32_t timestamp ) {
+	int32_t i;
 	for ( i = 0 ; i < 512 ; i++ )
 		if ( m_serverWaits[i].m_isEmpty ) break;
 	if ( i >= 512 ) {
@@ -623,14 +623,14 @@ void Msg35::giveToken ( ) {
 	if ( ! m_allReceived ) return;
 	// pick the highest priority, lowest time request to get the token
 	char maxPriority = -1;
-	long minTime     = 0x7fffffff;
-	long mini        = -1;
-	for ( long i = 0 ; i <= m_topUsedServer ; i++ ) {
+	int32_t minTime     = 0x7fffffff;
+	int32_t mini        = -1;
+	for ( int32_t i = 0 ; i <= m_topUsedServer ; i++ ) {
 		ServerWait *s = &m_serverWaits[i];
 		if ( s->m_isEmpty ) continue;
 		// debug msg
 		log(LOG_INFO,"merge: Queued merge token request: "
-		    "slot #%li hid=%li p=%i t=%li",
+		    "slot #%"INT32" hid=%"INT32" p=%i t=%"INT32"",
 		    i,s->m_hostId,s->m_priority,s->m_timestamp);
 		if ( s->m_priority <  maxPriority ) continue;
 		if ( s->m_priority == maxPriority &&
@@ -732,19 +732,19 @@ void Msg35::sync ( ) {
 	// request type identifier
 	*p++ = REQUEST_SYNC;
 	// store our hostid
-	*(long *)p = g_hostdb.m_hostId ; p += 4;
+	*(int32_t *)p = g_hostdb.m_hostId ; p += 4;
 	// then which one of our clientSlots has the token, if any
-	*(long *)p = m_clientTokeni  ; p += 4;
+	*(int32_t *)p = m_clientTokeni  ; p += 4;
 	// the sequence of ClientWaits, just the priority and slot #
-	for ( long i = 0 ; i <= m_topUsedClient && p + 5 < pend ; i++ ) {
+	for ( int32_t i = 0 ; i <= m_topUsedClient && p + 5 < pend ; i++ ) {
 		ClientWait *c = &m_clientWaits[i];
 		if ( c->m_isEmpty ) continue;
-		*(long *)p = c->m_timestamp; p += 4;
+		*(int32_t *)p = c->m_timestamp; p += 4;
 		*p         = c->m_priority ; p += 1;
 		*p         = (char)i       ; p += 1;
 		// debug msg
 		log(LOG_INFO,"merge: queued merge token request "
-		    "#%li priority=%li.", (long)p[-1],(long)p[-2]);
+		    "#%"INT32" priority=%"INT32".", (int32_t)p[-1],(int32_t)p[-2]);
 	}
 	// . the priority of this msg is low, use g_udpServer
         // . returns false and sets g_errno on error

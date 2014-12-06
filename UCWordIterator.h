@@ -6,26 +6,26 @@ class UCWordIterator {
 public:
 	UCWordIterator();
 	~UCWordIterator();
-	bool setText(UChar* s, long slen, long version);
+	bool setText(UChar* s, int32_t slen, int32_t version);
 	UChar *getText();
 	UChar32 currentCodePoint();
 
 	// Set index to beginning of text
-	long first();
+	int32_t first();
 	// find and return the index of the next word boundary
-	long next();
+	int32_t next();
 	// end of text index
-	long last();
+	int32_t last();
 
 	// current index
-	long current();
+	int32_t current();
 
 	bool done() { return m_done; };
 private:
 	UChar *m_text;
 	UChar *m_last;
 	bool m_done;
-	long m_textLen;
+	int32_t m_textLen;
 	UChar *m_current;
 	UChar *m_next;
 
@@ -37,6 +37,6 @@ private:
 	UCProps m_currentProps;
 	UCProps m_prevProps;
 	
-	long m_version; // titlerec version
+	int32_t m_version; // titlerec version
 };
 #endif

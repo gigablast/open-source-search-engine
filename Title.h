@@ -39,32 +39,32 @@ class Title {
 			class Words    *words         , 
 			class Sections *sections      ,
 			class Pos      *pos           ,
-			long            maxTitleChars ,
-			long            maxTitleWords ,
+			int32_t            maxTitleChars ,
+			int32_t            maxTitleWords ,
 			SafeBuf *pbuf,
 			Query          *q , // = NULL,
 			CollectionRec  *cr , // = NULL ,
-			long niceness );
+			int32_t niceness );
 
 
 	char *getTitle     ( ) { return m_title; };
-	long  getTitleLen ( ) { return m_titleBytes; }; // does NOT include \0
+	int32_t  getTitleLen ( ) { return m_titleBytes; }; // does NOT include \0
 
 
 	bool copyTitle ( class Words *words, class Pos *pos,
-			 long  t0, long  t1 , class Sections *sections );
+			 int32_t  t0, int32_t  t1 , class Sections *sections );
 
-	//long getTitleScore( Words *w, long t0, long t1, long *numFoundQTerms,
-	//		    long *alphaWordCount = NULL );
+	//int32_t getTitleScore( Words *w, int32_t t0, int32_t t1, int32_t *numFoundQTerms,
+	//		    int32_t *alphaWordCount = NULL );
 	
-	float getSimilarity ( Words  *w1 , long i0 , long i1 ,
-			      Words  *w2 , long t0 , long t1 );
+	float getSimilarity ( Words  *w1 , int32_t i0 , int32_t i1 ,
+			      Words  *w2 , int32_t t0 , int32_t t1 );
 
 	//static int cmpInLinkerScore(const void *A, const void *B);
 
 	char *m_title;
-	long  m_titleBytes; // in bytes. does NOT include \0
-	long  m_titleAllocSize;
+	int32_t  m_titleBytes; // in bytes. does NOT include \0
+	int32_t  m_titleAllocSize;
 	char  m_localBuf [ TITLE_LOCAL_SIZE ];
 	bool  m_htmlEncoded;
 	char  m_niceness;
@@ -73,11 +73,11 @@ class Title {
 	Query *m_query;
 
 
-	long  m_maxTitleChars;
-	long  m_maxTitleWords;
+	int32_t  m_maxTitleChars;
+	int32_t  m_maxTitleWords;
 
-	long m_titleTagStart ;
-	long m_titleTagEnd   ;
+	int32_t m_titleTagStart ;
+	int32_t m_titleTagEnd   ;
 
  private:
 
@@ -86,8 +86,8 @@ class Title {
 			 class Words    *words         , 
 			 class Sections *sections      , 
 			 class Pos      *pos           ,
-			 long            maxTitleChars ,
-			 long            maxTitleWords ,
+			 int32_t            maxTitleChars ,
+			 int32_t            maxTitleWords ,
 			 SafeBuf        *pbuf          ,
 			 Query          *q             ,
 			 CollectionRec  *cr            );

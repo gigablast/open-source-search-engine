@@ -1,11 +1,14 @@
 SHELL = /bin/bash
 
+uname_m = $(shell uname -m)
+ARCH=$(uname_m)
+
 CC=g++
 
 # remove dlstubs.o for CYGWIN
 OBJS =  UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
-	PageGet.o PageHosts.o PageIndexdb.o \
+	PageGet.o PageHosts.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
 	PageAddUrl.o PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
@@ -23,7 +26,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	RdbList.o RdbDump.o RdbCache.o Rdb.o RdbBase.o \
 	Query.o Phrases.o Multicast.o Msg9b.o\
 	Msg8b.o Msg5.o \
-	Msg39.o Msg37.o Msg36.o Msg3.o \
+	Msg39.o Msg3.o \
 	Msg22.o \
 	Msg20.o Msg2.o \
 	Msg1.o Msg35.o \
@@ -83,21 +86,32 @@ ifeq ("titan","$(HOST)")
 # stack gets smashed like it normally would when it gets a seg fault signal.
 CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DTITAN
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
-else
-# use -m32 to force 32-bit mode compilation.
-# you might have to do apt-get install gcc-multilib to ensure that -m32 works.
-# -m32 should use /usr/lib32/ as the library path.
-# i also provide 32-bit libraries for linking that are not so easy to get.
-#
-# mdw. 11/17/2013. i took out the -D_PTHREADS_ flag (and -lpthread).
-# trying to use good ole' clone() again because it seems the errno location
-# thing is fixed by just ignoring it.
-#
-CPPFLAGS = -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable
+
+# are we a 32-bit architecture? use different libraries then
+else ifeq ($(ARCH), i686)
+
+CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+
+else ifeq ($(ARCH), i386)
+
+CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+
+else
+#
+# Use -Wpadded flag to indicate padded structures.
+#
+CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # use this for compiling on CYGWIN: (only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
 #LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
+
+# apt-get install libssl-dev (to provide libssl and libcrypto)
+# to build static libiconv.a do a './configure --enable-static' then 'make'
+# in the iconv directory
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv64.a ./libz64.a
 
 endif
 
@@ -121,9 +135,9 @@ endif
 
 all: gb
 
-g8: gb
-	scp gb g8:/p/gb.new
-	ssh g8 'cd /p/ ; ./gb stop ; ./gb installgb ; sleep 4 ; ./gb start'
+#g8: gb
+#	scp gb g8:/p/gb.new
+#	ssh g8 'cd /p/ ; ./gb stop ; ./gb installgb ; sleep 4 ; ./gb start'
 
 utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest monitor seektest urlinfo treetest dnstest dmozparse gbtitletest
 
@@ -139,12 +153,24 @@ utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest moni
 
 vclean:
 	rm -f Version.o
+	@echo ""
+	@echo "*****"
+	@echo ""
+	@echo "If make fails then first run:"
+	@echo ""
+	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev"
+	@echo ""
+	@echo "*****"
+	@echo ""
 
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 cygwin:
 	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." gb
+
+gb32:
+	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
 
 #iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
 #	./parse_iana_charsets.pl < character-sets
@@ -412,8 +438,9 @@ neighborhood.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 TermTable.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
-#Summary.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+# why was this commented out?
+Summary.o:
+	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 Title.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
@@ -487,8 +514,9 @@ Msg6a.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -O3 -c $*.cpp 
 
 # Stupid gcc-2.95 stabs debug can't handle such a big file.
-geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
-	$(CC) $(DEFS) -m32 -Wall -pipe -c $*.cpp 
+# add -m32 flag to this line if you need to make a 32-bit gb.
+#geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
+#	$(CC) $(DEFS) -Wall -pipe -c $*.cpp 
 
 # dpkg-buildpackage calls 'make binary' to create the files for the deb pkg
 # which must all be stored in ./debian/gb/
@@ -518,6 +546,9 @@ install:
 
 .cpp.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
+
+.c.o:
+	$(CC) $(DEFS) $(CPPFLAGS) -c $*.c 
 
 #.cpp: $(OBJS)
 #	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)

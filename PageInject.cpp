@@ -141,10 +141,10 @@ bool sendReply ( void *state ) {
 	//if ( msg7->m_url[0] ) xd->logIt();
 
 	// msg7 has the docid for what we injected, iff g_errno is not set
-	//long long docId  = msg7->m_msg7.m_docId;
-	//long      hostId = msg7->m_msg7.m_hostId;
-	long long docId  = xd->m_docId;
-	long      hostId = 0;//msg7->m_msg7.m_hostId;
+	//int64_t docId  = msg7->m_msg7.m_docId;
+	//int32_t      hostId = msg7->m_msg7.m_hostId;
+	int64_t docId  = xd->m_docId;
+	int32_t      hostId = 0;//msg7->m_msg7.m_hostId;
 
 	// set g_errno to index code
 	if ( xd->m_indexCodeValid && xd->m_indexCode && ! g_errno )
@@ -157,7 +157,7 @@ bool sendReply ( void *state ) {
 		g_errno = EMISSINGINPUT;
 
 	if ( g_errno && g_errno != EDOCUNCHANGED ) {
-		long save = g_errno;
+		int32_t save = g_errno;
 		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
 		delete (msg7);
 		g_errno = save;
@@ -173,12 +173,12 @@ bool sendReply ( void *state ) {
 	// a success reply, include docid and url i guess
 	if ( format == FORMAT_XML ) {
 		am.safePrintf("<response>\n");
-		am.safePrintf("\t<statusCode>%li</statusCode>\n",
-			      (long)g_errno);
+		am.safePrintf("\t<statusCode>%"INT32"</statusCode>\n",
+			      (int32_t)g_errno);
 		am.safePrintf("\t<statusMsg><![CDATA[");
 		am.cdataEncode(mstrerror(g_errno));
 		am.safePrintf("]]></statusMsg>\n");
-		am.safePrintf("\t<docId>%lli</docId>\n",xd->m_docId);
+		am.safePrintf("\t<docId>%"INT64"</docId>\n",xd->m_docId);
 		if ( gr->m_getSections ) {
 			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
 			am.safePrintf("\t<htmlSrc><![CDATA[");
@@ -192,11 +192,11 @@ bool sendReply ( void *state ) {
 
 	if ( format == FORMAT_JSON ) {
 		am.safePrintf("{\"response\":{\n");
-		am.safePrintf("\t\"statusCode\":%li,\n",(long)g_errno);
+		am.safePrintf("\t\"statusCode\":%"INT32",\n",(int32_t)g_errno);
 		am.safePrintf("\t\"statusMsg\":\"");
 		am.jsonEncode(mstrerror(g_errno));
 		am.safePrintf("\",\n");
-		am.safePrintf("\t\"docId\":%lli,\n",xd->m_docId);
+		am.safePrintf("\t\"docId\":%"INT64",\n",xd->m_docId);
 		if ( gr->m_getSections ) {
 			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
 			am.safePrintf("\t\"htmlSrc\":\"");
@@ -263,10 +263,10 @@ bool sendReply ( void *state ) {
 		char *p = buf;
 		// return docid and hostid
 		if ( ! g_errno ) p += sprintf ( p , 
-					   "0,docId=%lli,hostId=%li," , 
+					   "0,docId=%"INT64",hostId=%"INT32"," , 
 					   docId , hostId );
 		// print error number here
-		else  p += sprintf ( p , "%li,0,0,", (long)g_errno );
+		else  p += sprintf ( p , "%"INT32",0,0,", (int32_t)g_errno );
 		// print error msg out, too or "Success"
 		p += sprintf ( p , "%s", mstrerror(g_errno));
 		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
@@ -300,7 +300,7 @@ bool sendReply ( void *state ) {
 	// clear g_errno, if any, so our reply send goes through
 	g_errno = 0;
 	// calculate buffer length
-	//long bufLen = p - buf;
+	//int32_t bufLen = p - buf;
 	// nuke state
 	mdelete ( msg7, sizeof(Msg7) , "PageInject" );
 	delete (msg7);
@@ -346,7 +346,7 @@ void doneInjectingWrapper9 ( void *state ) {
 
 	msg7->m_inUse = false;
 	
-	// shortcut
+	// int16_tcut
 	XmlDoc *xd = &msg7->m_xd;
 
 	GigablastRequest *gr = &msg7->m_gr;
@@ -389,7 +389,7 @@ void doneInjectingWrapper9 ( void *state ) {
 
 bool Msg7::inject ( char *coll ,
 		    char *proxiedUrl ,
-		    long  proxiedUrlLen ,
+		    int32_t  proxiedUrlLen ,
 		    char *content ,
 		    void *state ,
 		    void (*callback)(void *state) ) {
@@ -436,19 +436,19 @@ static void sendReply ( UdpSlot *slot ) {
 void doneInjectingWrapper10 ( void *state ) {
 	XmlDoc *xd = (XmlDoc *)state;
 	UdpSlot *slot = (UdpSlot *)xd->m_slot;
-	long err = g_errno;
+	int32_t err = g_errno;
 	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
 	delete (xd);
 	g_errno = err;
 	sendReply ( slot );
 }
 
-void handleRequest7 ( UdpSlot *slot , long netnice ) {
+void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 	//m_state = state;
 	//m_callback = callback;
 
-	// shortcut
+	// int16_tcut
 	XmlDoc *xd;
 	try { xd = new (XmlDoc); }
 	catch ( ... ) { 
@@ -462,9 +462,9 @@ void handleRequest7 ( UdpSlot *slot , long netnice ) {
 
 	//xd->reset();
 	char *titleRec = slot->m_readBuf;
-	long titleRecSize = slot->m_readBufSize;
+	int32_t titleRecSize = slot->m_readBufSize;
 
-	long collnum = *(long *)titleRec;
+	int32_t collnum = *(int32_t *)titleRec;
 
 	titleRec += 4;
 	titleRecSize -= 4;
@@ -509,7 +509,7 @@ void handleRequest7 ( UdpSlot *slot , long netnice ) {
 // . sets g_errno on error
 bool Msg7::inject ( void *state ,
 		    void (*callback)(void *state) 
-		    //long spiderLinksDefault ,
+		    //int32_t spiderLinksDefault ,
 		    //char *collOveride ) {
 		    ) {
 
@@ -526,7 +526,7 @@ bool Msg7::inject ( void *state ,
 	m_state = state;
 	m_callback = callback;
 
-	// shortcut
+	// int16_tcut
 	XmlDoc *xd = &m_xd;
 
 	if ( ! gr->m_url ) {
@@ -606,13 +606,13 @@ bool Msg7::inject ( void *state ,
 	// be injected, we must create unique urls for each item.
 	if ( delim && ! modifiedUrl ) {
 		// use hash of the content
-		long long ch64 = hash64n ( start , 0LL );
+		int64_t ch64 = hash64n ( start , 0LL );
 		// normalize it
 		Url u; u.set ( gr->m_url );
 		// reset it
 		m_injectUrlBuf.reset();
 		// by default append a -<ch64> to the provided url
-		m_injectUrlBuf.safePrintf("%s-%llu",u.getUrl(),ch64);
+		m_injectUrlBuf.safePrintf("%s-%"UINT64"",u.getUrl(),ch64);
 	}
 
 	// count them
@@ -634,7 +634,11 @@ bool Msg7::inject ( void *state ,
 			       gr->m_newOnly, // index iff new
 
 			       this ,
-			       doneInjectingWrapper9 ) )
+			       doneInjectingWrapper9 ,
+
+			       // extra shit
+			       gr->m_firstIndexed,
+			       gr->m_lastSpidered ) )
 		// we blocked...
 		return false;
 
@@ -766,7 +770,7 @@ bool Msg7::scrapeQuery ( ) {
 	// . xd will not reschedule the scraped url into spiderdb either
 	sreq.m_isScraping = 1;
 	sreq.m_fakeFirstIp = 1;
-	long firstIp = hash32n(ubuf);
+	int32_t firstIp = hash32n(ubuf);
 	if ( firstIp == 0 || firstIp == -1 ) firstIp = 1;
 	sreq.m_firstIp = firstIp;
 	// parent docid is 0
@@ -848,20 +852,20 @@ public:
 
 	// available msg7s to use
 	class Multicast *m_ptrs;
-	long   m_numPtrs;
+	int32_t   m_numPtrs;
 
 	// collection we are importing INTO
 	collnum_t m_collnum;
 
-	long long m_numIn;
-	long long m_numOut;
+	int64_t m_numIn;
+	int64_t m_numOut;
 
 	// bookmarking helpers
-	long long m_fileOffset;
-	long m_bfFileId;
+	int64_t m_fileOffset;
+	int32_t m_bfFileId;
 	BigFile m_bf;
 	bool m_loadedPlaceHolder;
-	long long m_bfFileSize;
+	int64_t m_bfFileSize;
 
 	class Multicast *getAvailMulticast();// Msg7();
 
@@ -888,7 +892,7 @@ ImportState::ImportState () {
 }
 
 void ImportState::reset() {
-	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numPtrs ; i++ ) {
 		Multicast *mcast = &m_ptrs[i];
 		mcast->destructor();
 		//m_ptrs[i] = NULL;
@@ -919,7 +923,7 @@ bool resumeImports ( ) {
 
 	if ( g_hostdb.m_hostId != 0 ) return true;
 
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		if ( ! cr->m_importEnabled ) continue;
@@ -930,8 +934,8 @@ bool resumeImports ( ) {
 		try { is = new (ImportState); }
 		catch ( ... ) { 
 			g_errno = ENOMEM;
-			log("PageInject: new(%li): %s", 
-			    (long)sizeof(ImportState),mstrerror(g_errno));
+			log("PageInject: new(%"INT32"): %s", 
+			    (int32_t)sizeof(ImportState),mstrerror(g_errno));
 			return false;
 		}
 		mnew ( is, sizeof(ImportState) , "isstate");
@@ -989,14 +993,14 @@ bool ImportState::setCurrentTitleFileAndOffset ( ) {
 	if ( ! dir.open() ) return false;
 
 	// assume none
-	long minFileId = -1;
+	int32_t minFileId = -1;
 
 	// getNextFilename() writes into this
 	char pattern[64]; strcpy ( pattern , "titledb*" );
 	char *filename;
 	while ( ( filename = dir.getNextFilename ( pattern ) ) ) {
 		// filename must be a certain length
-		long filenameLen = gbstrlen(filename);
+		int32_t filenameLen = gbstrlen(filename);
 		// we need at least "titledb0001.dat"
 		if ( filenameLen < 15 ) continue;
 		// ensure filename starts w/ our m_dbname
@@ -1012,7 +1016,7 @@ bool ImportState::setCurrentTitleFileAndOffset ( ) {
 		if ( ! isdigit(*(s+2)) ) continue;
 		if ( ! isdigit(*(s+3)) ) continue;
 		// convert digit to id
-		long id = atol(s);
+		int32_t id = atol(s);
 		// . do not accept files we've already processed
 		// . -1 means we haven't processed any yet
 		if ( m_bfFileId >= 0 && id <= m_bfFileId ) continue;
@@ -1031,7 +1035,7 @@ bool ImportState::setCurrentTitleFileAndOffset ( ) {
 			m_loadedPlaceHolder = true;
 			// get the placeholder
 			sscanf ( ff.getBufStart() 
-				 , "%llu,%lu"
+				 , "%"UINT64",%"INT32""
 				 , &m_fileOffset
 				 , &minFileId
 				 );
@@ -1044,7 +1048,7 @@ bool ImportState::setCurrentTitleFileAndOffset ( ) {
 	// set up s_bf then
 	//if ( m_bfFileId != minFileId ) {
 	SafeBuf tmp;
-	tmp.safePrintf("titledb%04li-000.dat"
+	tmp.safePrintf("titledb%04"INT32"-000.dat"
 		       //,dir.getDirname()
 		       ,minFileId);
 	m_bf.set ( dir.getDirname() ,tmp.getBufStart() );
@@ -1089,8 +1093,8 @@ bool ImportState::importLoop ( ) {
 
 	if ( ! cr || g_hostdb.m_hostId != 0 ) { 
 		// if coll was deleted!
-		log("import: collnum %li deleted while importing into",
-		    (long)m_collnum);
+		log("import: collnum %"INT32" deleted while importing into",
+		    (int32_t)m_collnum);
 		//if ( m_numOut > m_numIn ) return true;
 		// delete the entire import state i guess
 		// what happens if we have a msg7 reply come back in?
@@ -1103,7 +1107,7 @@ bool ImportState::importLoop ( ) {
  INJECTLOOP:
 
 	// stop if waiting on outstanding injects
-	long long out = m_numOut - m_numIn;
+	int64_t out = m_numOut - m_numIn;
 	if ( out >= cr->m_numImportInjects ) {
 		g_errno = 0;
 		return false;
@@ -1114,8 +1118,8 @@ bool ImportState::importLoop ( ) {
 		// wait for all to return
 		if ( out > 0 ) return false;
 		// then delete it
-		log("import: collnum %li import loop disabled",
-		    (long)m_collnum);
+		log("import: collnum %"INT32" import loop disabled",
+		    (int32_t)m_collnum);
 		mdelete ( this, sizeof(ImportState) , "impstate");
 		delete (this);
 		return true;
@@ -1127,7 +1131,7 @@ bool ImportState::importLoop ( ) {
 	// scan each titledb file scanning titledb0001.dat first,
 	// titledb0003.dat second etc.
 
-	//long long offset = -1;
+	//int64_t offset = -1;
 	// . when offset is too big for current m_bigFile file then
 	//   we go to the next and set offset to 0.
 	// . sets m_bf and m_fileOffset
@@ -1145,28 +1149,28 @@ bool ImportState::importLoop ( ) {
 		return true;
 	}
 
-	long long saved = m_fileOffset;
+	int64_t saved = m_fileOffset;
 
 	//Msg7 *msg7;
 	//GigablastRequest *gr;
 	//SafeBuf *sbuf = NULL;
 
-	long need = 12;
-	long dataSize = -1;
+	int32_t need = 12;
+	int32_t dataSize = -1;
 	//XmlDoc xd;
 	key_t tkey;
 	bool status;
 	SafeBuf tmp;
 	SafeBuf *sbuf = &tmp;
-	long long docId;
-	long shardNum;
-	long key;
+	int64_t docId;
+	int32_t shardNum;
+	int32_t key;
 	Multicast *mcast;
 	char *req;
-	long reqSize;
+	int32_t reqSize;
 
 	if ( m_fileOffset >= m_bfFileSize ) {
-		log("inject: import: done processing file %li %s",
+		log("inject: import: done processing file %"INT32" %s",
 		    m_bfFileId,m_bf.getFilename());
 		goto nextFile;
 	}
@@ -1202,7 +1206,7 @@ bool ImportState::importLoop ( ) {
 	need += 4; // collnum, first 4 bytes
 	if ( dataSize < 0 || dataSize > 500000000 ) {
 		log("main: could not scan in titledb rec of "
-		    "corrupt dataSize of %li. BAILING ENTIRE "
+		    "corrupt dataSize of %"INT32". BAILING ENTIRE "
 		    "SCAN of file %s",dataSize,m_bf.getFilename());
 		goto nextFile;
 	}
@@ -1232,7 +1236,7 @@ bool ImportState::importLoop ( ) {
 	sbuf->reserve ( need );
 
 	// collnum first 4 bytes
-	sbuf->pushLong( (long)m_collnum );
+	sbuf->pushLong( (int32_t)m_collnum );
 
 	// store title key
 	sbuf->safeMemcpy ( &tkey , sizeof(key_t) );
@@ -1327,7 +1331,7 @@ bool ImportState::importLoop ( ) {
 	shardNum = g_hostdb.getShardNumFromDocId ( docId );
 
 	// for selecting which host in the shard receives it
-	key = (long)docId;
+	key = (int32_t)docId;
 
 
 	m_numOut++;
@@ -1408,7 +1412,7 @@ void gotMulticastReplyWrapper ( void *state , void *state2 ) {
 
 	is->m_numIn++;
 
-	log("import: imported %lli docs (off=%lli)",
+	log("import: imported %"INT64" docs (off=%"INT64")",
 	    is->m_numIn,is->m_fileOffset);
 
 	if ( ! is->importLoop() ) return;
@@ -1438,23 +1442,23 @@ Multicast *ImportState::getAvailMulticast() { // Msg7 ( ) {
 
 	// each msg7 has an xmldoc doc in it
 	if ( ! m_ptrs ) {
-		long max = (long)MAXINJECTSOUT;
+		int32_t max = (int32_t)MAXINJECTSOUT;
 		m_ptrs=(Multicast *)mcalloc(sizeof(Multicast)* max,"sxdp");
 		if ( ! m_ptrs ) return NULL;
-		m_numPtrs = max;//(long)MAXINJECTSOUT;
-		for ( long i = 0 ; i < m_numPtrs ;i++ ) 
+		m_numPtrs = max;//(int32_t)MAXINJECTSOUT;
+		for ( int32_t i = 0 ; i < m_numPtrs ;i++ ) 
 			m_ptrs[i].constructor();
 	}
 
 	// respect the user limit for this coll
-	long long out = m_numOut - m_numIn;
+	int64_t out = m_numOut - m_numIn;
 	if ( out >= cr->m_numImportInjects ) {
 		g_errno = 0;
 		return NULL;
 	}
 
 	// find one not in use and return it
-	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numPtrs ; i++ ) {
 		// point to it
 		Multicast *mcast = &m_ptrs[i];
 		if ( mcast->m_inUse ) continue;
@@ -1469,7 +1473,7 @@ Multicast *ImportState::getAvailMulticast() { // Msg7 ( ) {
 
 void saveImportStates ( ) {
 	if ( g_hostdb.m_myHost->m_hostId != 0 ) return;
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		if ( ! cr->m_importEnabled ) continue;
@@ -1480,15 +1484,15 @@ void saveImportStates ( ) {
 // "xd" is the XmlDoc that just completed injecting
 void ImportState::saveFileBookMark ( ) { //Msg7 *msg7 ) {
 
-	long long minOff = -1LL;
-	long minFileId = -1;
+	int64_t minOff = -1LL;
+	int32_t minFileId = -1;
 
-	//long fileId  = msg7->m_hackFileId;
-	//long long fileOff = msg7->m_hackFileOff;
+	//int32_t fileId  = msg7->m_hackFileId;
+	//int64_t fileOff = msg7->m_hackFileOff;
 
 	// if there is one outstanding the preceeded us, we can't update
 	// the bookmark just yet.
-	for ( long i = 0 ; i < m_numPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numPtrs ; i++ ) {
 		Multicast *mcast = &m_ptrs[i];
 		if ( ! mcast->m_inUse ) continue;
 		if ( minOff == -1 ) {
@@ -1508,6 +1512,6 @@ void ImportState::saveFileBookMark ( ) { //Msg7 *msg7 ) {
 	char fname[256];
 	sprintf(fname,"%slasttitledbinjectinfo.dat",g_hostdb.m_dir);
 	SafeBuf ff;
-	ff.safePrintf("%llu,%lu",minOff,minFileId);//_fileOffset,m_bfFileId);
+	ff.safePrintf("%"INT64",%"INT32"",minOff,minFileId);//_fileOffset,m_bfFileId);
 	ff.save ( fname );
 }

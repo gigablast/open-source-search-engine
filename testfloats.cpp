@@ -4,10 +4,10 @@
 #include <sys/time.h>  // gettimeofday() 
 #include <stdio.h>
 
-long long gettod ( ) {
+int64_t gettod ( ) {
 	struct timeval tv;
 	gettimeofday ( &tv , 0 );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
@@ -18,50 +18,50 @@ int main ( int argc , char *argv[] ) {
 
 	printf("start float loop\n");
 	float z;
-	long long start = gettod();
-	for ( long i = 0 ; i < 10000000 ; i++ ) 
+	int64_t start = gettod();
+	for ( int32_t i = 0 ; i < 10000000 ; i++ ) 
 		z = x * y;
-	long long end = gettod();
-	printf("float muls took %llims\n",end-start);
+	int64_t end = gettod();
+	printf("float muls took %"INT64"ms\n",end-start);
 
-	long xi = 14598;
-	long yi = 134567;
-	long zi;
+	int32_t xi = 14598;
+	int32_t yi = 134567;
+	int32_t zi;
 	start = gettod();
-	for ( long i = 0 ; i < 10000000 ; i++ ) 
+	for ( int32_t i = 0 ; i < 10000000 ; i++ ) 
 		zi = xi * yi;
 	end = gettod();
-	printf("int muls took %llims\n",end-start);
+	printf("int muls took %"INT64"ms\n",end-start);
 
 
 
 
 	start = gettod();
-	for ( long i = 0 ; i < 10000000 ; i++ ) 
+	for ( int32_t i = 0 ; i < 10000000 ; i++ ) 
 		z = x + y;
 	end = gettod();
-	printf("float adds took %llims\n",end-start);
+	printf("float adds took %"INT64"ms\n",end-start);
 
 
 	start = gettod();
-	for ( long i = 0 ; i < 10000000 ; i++ ) 
+	for ( int32_t i = 0 ; i < 10000000 ; i++ ) 
 		zi = xi + yi;
 	end = gettod();
-	printf("int adds took %llims\n",end-start);
+	printf("int adds took %"INT64"ms\n",end-start);
 
 
 	start = gettod();
-	for ( long i = 0 ; i < 10000000 ; i++ ) 
+	for ( int32_t i = 0 ; i < 10000000 ; i++ ) 
 		z = x / y;
 	end = gettod();
-	printf("float divs took %llims\n",end-start);
+	printf("float divs took %"INT64"ms\n",end-start);
 
 
 	start = gettod();
-	for ( long i = 0 ; i < 10000000 ; i++ ) 
+	for ( int32_t i = 0 ; i < 10000000 ; i++ ) 
 		zi = xi / yi;
 	end = gettod();
-	printf("int divs took %llims\n",end-start);
+	printf("int divs took %"INT64"ms\n",end-start);
 
 
 

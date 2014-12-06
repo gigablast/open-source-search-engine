@@ -52,12 +52,12 @@ class Msg17 {
 	bool getFromCache ( char   cacheId ,
 			    key_t  key ,
 			    char **recPtr ,
-			    long  *recSize ,
+			    int32_t  *recSize ,
 			    collnum_t collnum,
 			    void  *state ,
 			    void (* callback) (void *state) ,
-			    long   niceness,
-			    long   timeout );
+			    int32_t   niceness,
+			    int32_t   timeout );
 
 	// make the key for retrieving or storing the serialized Msg40
 	key_t makeKey ( class Msg40 *msg40 ) ;
@@ -82,13 +82,13 @@ class Msg17 {
 	bool storeInCache ( char  cacheId ,
 			    key_t key ,
 			    char *recPtr ,
-			    long  recSize ,
+			    int32_t  recSize ,
 			    collnum_t collnum,
-			    long  niceness ,
-			    long  timeout );
+			    int32_t  niceness ,
+			    int32_t  timeout );
 
 	// keep public so wrappers can access
-	bool gotReply ( class UdpSlot *slot , char *cbuf , long cbufSize ,
+	bool gotReply ( class UdpSlot *slot , char *cbuf , int32_t cbufSize ,
 			bool includesCachedTime ) ;
 
 	void *m_state;
@@ -97,21 +97,21 @@ class Msg17 {
 	// request is just a key
 	key_t   m_key ;
 	char  **m_recPtr;
-	long   *m_recSize;
-	long    m_tmpRecSize;
+	int32_t   *m_recSize;
+	int32_t    m_tmpRecSize;
 	char    m_cacheId;
 
 	// store compressed replies in here to avoid additional calls to malloc
 	//char m_buf [ MSG17_BUF_SIZE ];
 	char *m_cbuf;
-	long  m_cbufSize;
+	int32_t  m_cbufSize;
 
 	// did we find it in the cache
 	bool m_found;
 
 	time_t m_cachedTimeDelta;
 
-	long m_niceness;
+	int32_t m_niceness;
 
 	// ptr to "it"
 	class Msg40 *m_msg40;
@@ -122,7 +122,7 @@ class Msg17 {
 // allow our cache to be used by PageStats.cpp to display its stats
 extern class RdbCache g_genericCache[MAX_GENERIC_CACHES];
 
-extern long *g_genericCacheMaxAge[MAX_GENERIC_CACHES] ;
+extern int32_t *g_genericCacheMaxAge[MAX_GENERIC_CACHES] ;
 
 // smaller than the above cache, 10% of it. used for saving network
 //extern class RdbCache g_genericCacheSmallLocal[MAX_GENERIC_CACHES];

@@ -15,34 +15,34 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 	g_pages.printAdminTop ( &p , s , r );
 	//p.incrementLength(sss - ss);
 	
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 
-	//p.safePrintf("the sizes are %li %li", g_conf.m_medReadSize ,g_conf.m_smaReadSize );
+	//p.safePrintf("the sizes are %"INT32" %"INT32"", g_conf.m_medReadSize ,g_conf.m_smaReadSize );
 
 	ThreadQueue* disk;
 	
 	ThreadQueue* queues = g_threads.getThreadQueues(); 
-	for ( long i = 0 ; i < g_threads.getNumThreadQueues(); i++ ) {
+	for ( int32_t i = 0 ; i < g_threads.getNumThreadQueues(); i++ ) {
 		ThreadQueue* q = &queues[i];
 
 		//if ( q->m_top <= 0 ) continue;
 
 
 
-		long loActive = q->m_loLaunched - q->m_loReturned;
-		long mdActive = q->m_mdLaunched - q->m_mdReturned;
-		long hiActive = q->m_hiLaunched - q->m_hiReturned;
-		long      total    = loActive + mdActive + hiActive;
+		int32_t loActive = q->m_loLaunched - q->m_loReturned;
+		int32_t mdActive = q->m_mdLaunched - q->m_mdReturned;
+		int32_t hiActive = q->m_hiLaunched - q->m_hiReturned;
+		int32_t      total    = loActive + mdActive + hiActive;
 		
 		p.safePrintf ( "<table %s>"
 			       "<tr class=hdrow><td colspan=\"11\">"
 			       //"<center>"
 				//"<font size=+1>"
 				"<b>Thread Type: %s"
-				"  (low: %li"
-				"  med: %li"
-				"  high: %li"
-				"  total: %li)</td></tr>",
+				"  (low: %"INT32""
+				"  med: %"INT32""
+				"  high: %"INT32""
+				"  total: %"INT32")</td></tr>",
 			       TABLE_STYLE,
 				q->getThreadType(), 
 				loActive, mdActive, 
@@ -65,7 +65,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			      , LIGHT_BLUE
 			      );
 
-		for ( long j = 0 ; j < q->m_top ; j++ ) {
+		for ( int32_t j = 0 ; j < q->m_top ; j++ ) {
 			ThreadEntry *t = &q->m_entries[j];
 			if(!t->m_isOccupied) continue;
 
@@ -80,17 +80,17 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			
 			if(t->m_isDone) {
 				p.safePrintf("<td><font color='red'><b>done</b></font></td>");
-				p.safePrintf("<td>%li</td>", t->m_niceness);
-				p.safePrintf("<td>%lli</td>", t->m_launchedTime - t->m_queuedTime); //queued
-				p.safePrintf("<td>%lli</td>", t->m_exitTime - t->m_launchedTime); //run time
-				p.safePrintf("<td>%lli</td>", now - t->m_exitTime); //cleanup
-				p.safePrintf("<td>%lli</td>", now - t->m_queuedTime); //total
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_callback));
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_startRoutine));
+				p.safePrintf("<td>%"INT32"</td>", t->m_niceness);
+				p.safePrintf("<td>%"INT64"</td>", t->m_launchedTime - t->m_queuedTime); //queued
+				p.safePrintf("<td>%"INT64"</td>", t->m_exitTime - t->m_launchedTime); //run time
+				p.safePrintf("<td>%"INT64"</td>", now - t->m_exitTime); //cleanup
+				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime); //total
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs) {
-					long long took = (t->m_exitTime - t->m_launchedTime);
+					int64_t took = (t->m_exitTime - t->m_launchedTime);
 					if(took <= 0) took = 1;
-					p.safePrintf("<td>%li/%li</td>", t->m_bytesToGo, t->m_bytesToGo);
+					p.safePrintf("<td>%"INT32"/%"INT32"</td>", t->m_bytesToGo, t->m_bytesToGo);
 					p.safePrintf("<td>%.2f kbps</td>", (float)t->m_bytesToGo/took);
 					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
 				}
@@ -102,17 +102,17 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			}
 			else if(t->m_isLaunched) {
 				p.safePrintf("<td><font color='red'><b>running</b></font></td>");
-				p.safePrintf("<td>%li</td>", t->m_niceness);
-				p.safePrintf("<td>%lli</td>", t->m_launchedTime - t->m_queuedTime);
+				p.safePrintf("<td>%"INT32"</td>", t->m_niceness);
+				p.safePrintf("<td>%"INT64"</td>", t->m_launchedTime - t->m_queuedTime);
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>--</td>");
-				p.safePrintf("<td>%lli</td>", now - t->m_queuedTime);
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_callback));
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_startRoutine));
+				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime);
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs ) {
-					long long took = (now - t->m_launchedTime);
+					int64_t took = (now - t->m_launchedTime);
 					if(took <= 0) took = 1;
-					p.safePrintf("<td>%c%c%c/%li</td>", '?','?','?',t->m_bytesToGo);
+					p.safePrintf("<td>%c%c%c/%"INT32"</td>", '?','?','?',t->m_bytesToGo);
 					p.safePrintf("<td>%.2f kbps</td>", 0.0);//(float)fs->m_bytesDone/took);
 					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
 				}
@@ -124,15 +124,15 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			}
 			else {
 				p.safePrintf("<td><font color='red'><b>queued</b></font></td>");
-				p.safePrintf("<td>%li</td>", t->m_niceness);
+				p.safePrintf("<td>%"INT32"</td>", t->m_niceness);
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>--</td>");
 				p.safePrintf("<td>--</td>");
-				p.safePrintf("<td>%lli</td>", now - t->m_queuedTime);
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_callback));
-				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((long)t->m_startRoutine));
+				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime);
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
+				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs) {
-					p.safePrintf("<td>0/%li</td>", t->m_bytesToGo);
+					p.safePrintf("<td>0/%"INT32"</td>", t->m_bytesToGo);
 					p.safePrintf("<td>--</td>");
 					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
 				}
@@ -152,16 +152,16 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 	}
 
 
-	long loActiveBig = disk->m_loLaunchedBig - disk->m_loReturnedBig;
-	long loActiveMed = disk->m_loLaunchedMed - disk->m_loReturnedMed;
-	long loActiveSma = disk->m_loLaunchedSma - disk->m_loReturnedSma;
-	long mdActiveBig = disk->m_mdLaunchedBig - disk->m_mdReturnedBig;
-	long mdActiveMed = disk->m_mdLaunchedMed - disk->m_mdReturnedMed;
-	long mdActiveSma = disk->m_mdLaunchedSma - disk->m_mdReturnedSma;
-	long hiActiveBig = disk->m_hiLaunchedBig - disk->m_hiReturnedBig;
-	long hiActiveMed = disk->m_hiLaunchedMed - disk->m_hiReturnedMed;
-	long hiActiveSma = disk->m_hiLaunchedSma - disk->m_hiReturnedSma;
-	long activeWrites = disk->m_writesLaunched - disk->m_writesReturned;
+	int32_t loActiveBig = disk->m_loLaunchedBig - disk->m_loReturnedBig;
+	int32_t loActiveMed = disk->m_loLaunchedMed - disk->m_loReturnedMed;
+	int32_t loActiveSma = disk->m_loLaunchedSma - disk->m_loReturnedSma;
+	int32_t mdActiveBig = disk->m_mdLaunchedBig - disk->m_mdReturnedBig;
+	int32_t mdActiveMed = disk->m_mdLaunchedMed - disk->m_mdReturnedMed;
+	int32_t mdActiveSma = disk->m_mdLaunchedSma - disk->m_mdReturnedSma;
+	int32_t hiActiveBig = disk->m_hiLaunchedBig - disk->m_hiReturnedBig;
+	int32_t hiActiveMed = disk->m_hiLaunchedMed - disk->m_hiReturnedMed;
+	int32_t hiActiveSma = disk->m_hiLaunchedSma - disk->m_hiReturnedSma;
+	int32_t activeWrites = disk->m_writesLaunched - disk->m_writesReturned;
 	p.safePrintf ( "<table %s>"
 		       "<tr class=hdrow><td colspan=\"5\">"
 		       , TABLE_STYLE );
@@ -176,13 +176,13 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 		       // 			       "<td>Size</td>"
 		       // 			       "</tr>"
 		       "<tr bgcolor=#%s>"
-		       "<td>Small</td> <td>%li</td><td>%li</td><td>%li</td>"
+		       "<td>Small</td> <td>%"INT32"</td><td>%"INT32"</td><td>%"INT32"</td>"
 		       "</tr>"
 		       "<tr bgcolor=#%s>"
-		       "<td>Medium</td> <td>%li</td><td>%li</td><td>%li</td>"
+		       "<td>Medium</td> <td>%"INT32"</td><td>%"INT32"</td><td>%"INT32"</td>"
 		       "</tr>"
 		       "<tr bgcolor=#%s>"
-		       "<td>Large</td> <td>%li</td><td>%li</td><td>%li</td>"
+		       "<td>Large</td> <td>%"INT32"</td><td>%"INT32"</td><td>%"INT32"</td>"
 		       "</tr>"
 		       "</table><br><br>",
 		       LIGHT_BLUE,
@@ -205,7 +205,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf ("<table %s>",TABLE_STYLE);
 	p.safePrintf ("<tr class=hdrow>"
-		      "<td><b>Active Write Threads</b></td><td>%li</td>"
+		      "<td><b>Active Write Threads</b></td><td>%"INT32"</td>"
 		      "</tr></table>",
 		      activeWrites);
 

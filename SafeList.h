@@ -142,7 +142,7 @@ template<typename Type> class SafeList {
 
 	SafeList() {
 		// Use SafeList64 for 64-bit architectures
-		assert( sizeof(long) == 4 );
+		assert( sizeof(int32_t) == 4 );
 		m_list 		   = NULL;
 		m_listAlloc	   = 0;
 		m_listSlab	   = 0;
@@ -158,7 +158,7 @@ template<typename Type> class SafeList {
 
 	SafeList( uint32_t numNodes ) {
 		// Use SafeList64 for 64-bit architectures
-		assert( sizeof(long) == 4 );
+		assert( sizeof(int32_t) == 4 );
 		m_list 		   = NULL;
 		m_listAlloc	   = 0;
 		m_listSlab	   = 0;

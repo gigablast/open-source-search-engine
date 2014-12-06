@@ -29,16 +29,16 @@ class TopNode {
 	// no longer needed, Msg3a does not need, it has already
 	//unsigned char  m_tier     ;
 	float          m_score    ;
-	long long      m_docId;
+	int64_t      m_docId;
 
 	// option for using int scores
-	long m_intScore;
+	int32_t m_intScore;
 	
 	// clustering info
-	//long           m_kid      ; // result from our same site below us
-	//unsigned long  m_siteHash ;
-	//unsigned long  m_contentHash ;
-	//long           m_rank        ;
+	//int32_t           m_kid      ; // result from our same site below us
+	//uint32_t  m_siteHash ;
+	//uint32_t  m_contentHash ;
+	//int32_t           m_rank        ;
 
 	// the lower 64 bits of the cluster rec, used by Msg51, the new
 	// class for doing site clustering
@@ -46,16 +46,16 @@ class TopNode {
 
 	// . for getting similarity between titleRecs
 	// . this is so big only include if we need it
-	//long           m_vector [ VECTOR_SIZE ];
+	//int32_t           m_vector [ VECTOR_SIZE ];
 
 	// tree info, indexes into m_nodes array
-	long m_parent;
-	long m_left;   // kid
-	long m_right;  // kid
+	int32_t m_parent;
+	int32_t m_left;   // kid
+	int32_t m_right;  // kid
 
-	//long long getDocId ( );
+	//int64_t getDocId ( );
 
-	//long long getDocIdForMsg3a ( );
+	//int64_t getDocIdForMsg3a ( );
 };
 
 class TopTree {
@@ -65,77 +65,77 @@ class TopTree {
 	// free mem
 	void reset();
 	// pre-allocate memory
-	bool setNumNodes ( long docsWanted , bool doSiteClustering );
+	bool setNumNodes ( int32_t docsWanted , bool doSiteClustering );
 	// . add a node
 	// . get an empty first, fill it in and call addNode(t)
-	long getEmptyNode ( ) { return m_emptyNode; };
+	int32_t getEmptyNode ( ) { return m_emptyNode; };
 	// . you can add a new node
 	// . it will NOT overwrite a node with same bscore/score/docid
 	// . it will NOT add if bscore/score/docid < m_tail node
 	//   otherwise it will remove m_tail node if 
 	//   m_numNodes == m_numUsedNodes
-	bool addNode ( TopNode *t , long tnn );
+	bool addNode ( TopNode *t , int32_t tnn );
 
-	long getLowNode  ( ) { return m_lowNode ; };
+	int32_t getLowNode  ( ) { return m_lowNode ; };
 	// . this is computed and stored on demand
 	// . WARNING: only call after all nodes have been added!
-	long getHighNode ( ) ;
+	int32_t getHighNode ( ) ;
 
 	float getMinScore ( ) {
 		if ( m_lowNode < 0 ) return -1.0;
 		return m_nodes[m_lowNode].m_score;
 	}
 
-	long getPrev ( long i );
-	long getNext ( long i );
+	int32_t getPrev ( int32_t i );
+	int32_t getNext ( int32_t i );
 
 	bool checkTree ( bool printMsgs ) ;
-	long computeDepth ( long i ) ;
+	int32_t computeDepth ( int32_t i ) ;
 
 	void deleteNodes ( );
 
-	bool hasDocId ( long long d );
+	bool hasDocId ( int64_t d );
 
-	TopNode *getNode ( long i ) { return &m_nodes[i]; }
+	TopNode *getNode ( int32_t i ) { return &m_nodes[i]; }
 
 	// ptr to the mem block
 	TopNode *m_nodes;
-	long     m_allocSize;
+	int32_t     m_allocSize;
 	// optional dedup vectors... very big, VECTOR_REC_SIZE-12 bytes each 
 	// (512) so we make this an option
-	//long    *m_sampleVectors; 
+	//int32_t    *m_sampleVectors; 
 	//bool     m_useSampleVectors;
 	// which is next to be used, after m_nextPtr
-	long m_numUsedNodes;
+	int32_t m_numUsedNodes;
 	// total count
-	long m_numNodes;
+	int32_t m_numNodes;
 	// the top of the tree
-	long m_headNode;
+	int32_t m_headNode;
 
 	// . always keep track of the high and low nodes
 	// . IndexTable.cpp likes to replace the low-scoring tail often 
 	// . Msg39.cpp likes to print out starting at the high-scorer
 	// . these are indices into m_nodes[] array
-	long m_lowNode;
-	long m_highNode;
+	int32_t m_lowNode;
+	int32_t m_highNode;
 
 	// use this to set "t" in call to addNode(t)
-	long m_emptyNode;
+	int32_t m_emptyNode;
 
 	bool m_pickRight;
 
 	float m_vcount  ;
-	long  m_cap     ;
+	int32_t  m_cap     ;
 	float m_partial ;
 	bool  m_doSiteClustering;
 	bool  m_useIntScores;
-	long  m_docsWanted;
-	long  m_ridiculousMax;
+	int32_t  m_docsWanted;
+	int32_t  m_ridiculousMax;
 	char  m_kickedOutDocIds;
-	//long long m_lastKickedOutDocId;
-	long  m_domCount[256];
+	//int64_t m_lastKickedOutDocId;
+	int32_t  m_domCount[256];
 	// the node with the minimum "score" for that domHash
-	long  m_domMinNode[256];
+	int32_t  m_domMinNode[256];
 
 	// an embedded RdbTree for limiting the storing of keys to X
 	// keys per domHash, where X is usually "m_ridiculousMax"
@@ -143,10 +143,10 @@ class TopTree {
 
  private:
 
-	void deleteNode  ( long i , uint8_t domHash ) ;
-	void setDepths   ( long i ) ;
-	long rotateLeft  ( long i ) ;
-	long rotateRight ( long i ) ;
+	void deleteNode  ( int32_t i , uint8_t domHash ) ;
+	void setDepths   ( int32_t i ) ;
+	int32_t rotateLeft  ( int32_t i ) ;
+	int32_t rotateRight ( int32_t i ) ;
 };
 
 #endif

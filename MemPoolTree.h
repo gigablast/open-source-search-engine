@@ -13,38 +13,38 @@ class MemKey : public key_t {
 	// . 1U000000 00000000 00000000 00000000  U = in use?
 	// . ssssssss ssssssss ssssssss ssssssss  s = size
 	// . ffffffff ffffffff ffffffff ffffffff  f = ptr into m_mem
-	void setSizeKey   ( long size , void *ptr , bool inUse ) {
+	void setSizeKey   ( int32_t size , void *ptr , bool inUse ) {
 		if ( inUse ) n1 = 0xc0000000;
 		else         n1 = 0x80000000;
-		// least significant long comes first
-		*(((long *)&n0)+0) = (long) ptr; 
-		*(((long *)&n0)+1) = (long) size;};
+		// least significant int32_t comes first
+		*(((int32_t *)&n0)+0) = (int32_t) ptr; 
+		*(((int32_t *)&n0)+1) = (int32_t) size;};
 	// . bitmap of "offset" key needed by MemPool::free()
 	// . 0U000000 00000000 00000000 00000000  U = in use? 
 	// . ffffffff ffffffff ffffffff ffffffff  f = ptr into m_mem
 	// . ssssssss ssssssss ssssssss ssssssss  s = size
-	void setOffsetKey ( void *ptr , long size , bool inUse ) {
+	void setOffsetKey ( void *ptr , int32_t size , bool inUse ) {
 		if ( inUse ) n1 = 0x40000000;
 		else         n1 = 0;
-		// least significant long comes first
-		*(((long *)&n0)+0) = (long) size; 
-		*(((long *)&n0)+1) = (long) ptr; };
+		// least significant int32_t comes first
+		*(((int32_t *)&n0)+0) = (int32_t) size; 
+		*(((int32_t *)&n0)+1) = (int32_t) ptr; };
 
 	bool  inUse      () { if (n1 & 0x40000000) return true; return false;};
 	bool  isSizeKey  () { if (n1 & 0x80000000) return true; return false;};
-	long  getSize    () {
+	int32_t  getSize    () {
 		if ( isSizeKey() ) return n0 >> 32;
 		else               return n0 & 0xffffffff; };
 	char *getOffset  () {
-		if ( isSizeKey() ) return (char *)(long)(n0 & 0xffffffff);
-		else               return (char *)(long)(n0 >> 32); };
+		if ( isSizeKey() ) return (char *)(int32_t)(n0 & 0xffffffff);
+		else               return (char *)(int32_t)(n0 >> 32); };
 	void  setInUse ( bool inuse ) {
 		if ( inuse ) n1 = 0x40000000;
 		else         n1 = 0;
 	};
 };
 
-// TODO: go back to using longs instead of MemNodes in case we get
+// TODO: go back to using int32_ts instead of MemNodes in case we get
 // 64bit ptrs, we'd use double the ram!!
 class MemNode {
  public:
@@ -65,7 +65,7 @@ class MemPoolTree {
 
 	// . pass in the chunk of memory we'll use
 	// . we grow our MemNode array from top down, like a stack
-	bool init ( char *mem , long memSize );
+	bool init ( char *mem , int32_t memSize );
 
 	// returns -1 and sets errno on error
 	MemNode *addNode ( MemKey &key );
@@ -88,28 +88,28 @@ class MemPoolTree {
 		MemNode *i = getNode ( key ); deleteNode(i); };
 
 	// get # of available nodes that are above m_floor
-	long getNumEmptyNodesAboveFloor ( ) {
-		return (long)((MemNode *)(m_mem+m_memSize) - m_floor) - 
+	int32_t getNumEmptyNodesAboveFloor ( ) {
+		return (int32_t)((MemNode *)(m_mem+m_memSize) - m_floor) - 
 			m_numUsedNodes; };
 
 	char *getFloor () { return (char *)m_floor; };
 
-	MemNode *addSizeNode   ( long size , void *ptr , bool occupied ) {
+	MemNode *addSizeNode   ( int32_t size , void *ptr , bool occupied ) {
 		if ( size <= 0 ) return (MemNode *)0x7fffffff;
 		MemKey k; k.setSizeKey ( size , ptr , occupied ) ;
 		return addNode ( k ); };
 
-	MemNode *addOffsetNode ( void *ptr , long size , bool occupied ) {
+	MemNode *addOffsetNode ( void *ptr , int32_t size , bool occupied ) {
 		if ( size <= 0 ) return (MemNode *)0x7fffffff;
 		MemKey k ; k.setOffsetKey ( ptr , size , occupied ) ;
 		return addNode ( k ); };
 
-	void deleteOffsetNode  ( void *ptr , long size , bool occupied ) {
+	void deleteOffsetNode  ( void *ptr , int32_t size , bool occupied ) {
 		if ( size <= 0 ) return;
 		MemKey k ; k.setOffsetKey ( ptr , size , occupied ) ;
 		deleteNode ( k ); };
 
-	void deleteSizeNode    ( long size , void *ptr , bool occupied ) {
+	void deleteSizeNode    ( int32_t size , void *ptr , bool occupied ) {
 		if ( size <= 0 ) return;
 		MemKey k ; k.setSizeKey ( size , ptr , occupied ) ;
 		deleteNode ( k ); };
@@ -121,14 +121,14 @@ class MemPoolTree {
 	MemNode * rotateLeft   ( MemNode *pivotNode  );
 
 	char    *m_mem;
-	long     m_memSize;
+	int32_t     m_memSize;
 	// switch between picking left and right kids to replace deleted nodes
 	// in order to keep the tree more balanced
 	char     m_pickRight;
 	// the node at the top of the tree
 	MemNode *m_headNode;
 	// how many are in use?
-	long     m_numUsedNodes ;
+	int32_t     m_numUsedNodes ;
 	// node of the next available/empty node
 	MemNode *m_nextNode;
 	// maximum node # that was ever used at some point in time

@@ -12,8 +12,8 @@ int main ( int argc , char *argv[] ) {
 		fprintf(stderr,"rescure [corefile] [offset] [size]\n");
 		exit(-1);
 	}
-	long coreOffset = atol(argv[2]);
-	long coreSize   = atol(argv[3]);
+	int32_t coreOffset = atol(argv[2]);
+	int32_t coreSize   = atol(argv[3]);
 	File f;
 	f.set ( argv[1] );
 	if ( ! f.open ( O_RDONLY ) ) {
@@ -23,17 +23,17 @@ int main ( int argc , char *argv[] ) {
 	// read whole file into memory
 	char *buf = (char *) malloc ( coreSize );
 	if ( ! buf ) {
-		fprintf(stderr,"could not alloc %li bytes", coreSize );
+		fprintf(stderr,"could not alloc %"INT32" bytes", coreSize );
 		exit(-1);
 	}
 	if ( f.read ( buf , coreSize , coreOffset ) < 0 ) {
-		fprintf(stderr,"could not read %li bytes", coreSize );
+		fprintf(stderr,"could not read %"INT32" bytes", coreSize );
 		exit(-1);
 	}
 	// now dump to separate file
 	f.close();
 	char name[64];
-	sprintf(name,"coreSeg.%li.%li", coreOffset, coreSize );
+	sprintf(name,"coreSeg.%"INT32".%"INT32"", coreOffset, coreSize );
 	f.set ( name );
 	f.open ( O_RDWR );
 	f.write ( buf , coreSize );

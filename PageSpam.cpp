@@ -15,7 +15,7 @@
 
 
 bool sendPageSpam ( TcpSocket *s , HttpRequest *r ) {
-	long  collLen = 0;
+	int32_t  collLen = 0;
 	char *coll  = r->getString ( "c" , &collLen  , NULL /*default*/);
 
 	// get collection rec
@@ -31,8 +31,8 @@ bool sendPageSpam ( TcpSocket *s , HttpRequest *r ) {
 	}
 
 
-// 	long  user   = g_pages.getUserType ( s , r );
-// 	long  pwdLen = 0;
+// 	int32_t  user   = g_pages.getUserType ( s , r );
+// 	int32_t  pwdLen = 0;
 // 	char *pwd   = r->getString ( "pwd" , &pwdLen, "");
 
 	SafeBuf sb;

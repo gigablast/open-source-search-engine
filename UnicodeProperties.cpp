@@ -5,25 +5,25 @@
 
 UCPropTable g_ucLowerMap(sizeof(UChar32), 9);
 UCPropTable g_ucUpperMap(sizeof(UChar32), 9);
-//UCPropTable g_ucCategory(sizeof(u_short), 8);
+//UCPropTable g_ucCategory(sizeof(u_int16_t), 8);
 UCPropTable g_ucProps(sizeof(UCProps), 8);
 UCPropTable g_ucScripts(sizeof(UCScript), 10);
-UCPropTable g_ucKDIndex(sizeof(long), 8);
+UCPropTable g_ucKDIndex(sizeof(int32_t), 8);
 // JAB: we now have Kompatible and Canonical decomposition
-UCPropTable g_ucCDIndex(sizeof(long), 8);
+UCPropTable g_ucCDIndex(sizeof(int32_t), 8);
 UCPropTable g_ucCombiningClass(sizeof(u_char), 9);
 
 // Kompatible Decomposition
 static char 	  *s_ucKDData = NULL;
-static u_long      s_ucKDDataSize = 0;
-static u_long      s_ucKDAllocSize = 0;
+static u_int32_t      s_ucKDDataSize = 0;
+static u_int32_t      s_ucKDAllocSize = 0;
 
 // JAB: Canonical Decomposition
 static char 	  *s_ucCDData = NULL;
-static u_long      s_ucCDDataSize = 0;
-static u_long      s_ucCDAllocSize = 0;
+static u_int32_t      s_ucCDDataSize = 0;
+static u_int32_t      s_ucCDAllocSize = 0;
 
-unsigned long calculateChecksum(char *buf, long bufLen);
+uint32_t calculateChecksum(char *buf, int32_t bufLen);
 char *g_ucScriptNames[] = {
 	"Common",
 	"Arabic",
@@ -85,8 +85,8 @@ bool saveUnicodeTable(UCPropTable *table, char *filename) {
 	size_t tableSize = table->getStoredSize();
 	char *buf = (char*)mmalloc(tableSize,"UP1");
 	if (!buf){
-		log(LOG_WARN, "uni: Couldn't allocate %d bytes "
-		       "for storing %s", tableSize,filename);
+		log(LOG_WARN, "uni: Couldn't allocate %"INT32" bytes "
+		    "for storing %s", (int32_t)tableSize,filename);
 		return false;
 	}
 	
@@ -122,7 +122,7 @@ bool saveUnicodeTable(UCPropTable *table, char *filename) {
 }
 
 
-bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum, unsigned long expectedChecksum) {
+bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum, uint32_t expectedChecksum) {
 
 	FILE *fp = fopen(filename, "r");
 	if (!fp) 
@@ -146,8 +146,8 @@ bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum, unsi
 			   "uni: error reading %s", filename);
 	}
 
-	unsigned long chksum = calculateChecksum(buf, fileSize);
-	//log(LOG_INFO, "uni: checksum for %s: %ld",
+	uint32_t chksum = calculateChecksum(buf, fileSize);
+	//log(LOG_INFO, "uni: checksum for %s: %"INT32"",
 	//    filename, chksum);
 	if (useChecksum && (expectedChecksum != chksum)) {
 		fclose(fp);
@@ -168,8 +168,8 @@ bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum, unsi
 }
 
 
-bool setKDValue(UChar32 c, UChar32* decomp, long decompCount, bool fullComp) {
-        unsigned long size = sizeof(decompCount) + 
+bool setKDValue(UChar32 c, UChar32* decomp, int32_t decompCount, bool fullComp) {
+        uint32_t size = sizeof(decompCount) + 
 		decompCount*sizeof(UChar32);
 		
 	if (s_ucKDDataSize+size > s_ucKDAllocSize){
@@ -181,11 +181,11 @@ bool setKDValue(UChar32 c, UChar32* decomp, long decompCount, bool fullComp) {
 					   "Out of Memory");
 			s_ucKDAllocSize = 4096;			
 			//dummy value for 0 index
-			*(long*)s_ucKDData = 0xffffffff;
-			s_ucKDDataSize = sizeof(long);
+			*(int32_t*)s_ucKDData = 0xffffffff;
+			s_ucKDDataSize = sizeof(int32_t);
 		}
 		else {
-			unsigned long newSize = s_ucKDAllocSize + 4096;
+			uint32_t newSize = s_ucKDAllocSize + 4096;
 			char *newBuf = (char*)mrealloc(s_ucKDData, 
 						       s_ucKDAllocSize,
 						       newSize, 
@@ -200,37 +200,37 @@ bool setKDValue(UChar32 c, UChar32* decomp, long decompCount, bool fullComp) {
 	}
 	// store fullComp flag in high bit of decompCount
 	if (fullComp) 
-		*(long*)(s_ucKDData+s_ucKDDataSize) = decompCount | 0x80000000;
+		*(int32_t*)(s_ucKDData+s_ucKDDataSize) = decompCount | 0x80000000;
 	else
-		*(long*)(s_ucKDData+s_ucKDDataSize) = decompCount;
+		*(int32_t*)(s_ucKDData+s_ucKDDataSize) = decompCount;
 
 	memcpy(s_ucKDData+s_ucKDDataSize+sizeof(decompCount), decomp, 
 	       decompCount*sizeof(UChar32));
-	long pos = s_ucKDDataSize;
+	int32_t pos = s_ucKDDataSize;
 	s_ucKDDataSize += size;
 	
 	return g_ucKDIndex.setValue(c, (void*)&pos);
 }
 
-UChar32 *getKDValue(UChar32 c, long *decompCount, bool *fullComp) {
+UChar32 *getKDValue(UChar32 c, int32_t *decompCount, bool *fullComp) {
 	*decompCount = 0;
 	if (fullComp) *fullComp = false;
-	long *pos = (long*)g_ucKDIndex.getValue(c);
+	int32_t *pos = (int32_t*)g_ucKDIndex.getValue(c);
 	if (!pos || !*pos) return NULL;
-	*decompCount = (*(long*)(&s_ucKDData[*pos])) & 0x7fffffff;
-	if (fullComp) *fullComp = (*(long*)(&s_ucKDData[*pos])) & 0x80000000;
-	return (UChar32*) (&s_ucKDData[*pos+sizeof(long)]);
+	*decompCount = (*(int32_t*)(&s_ucKDData[*pos])) & 0x7fffffff;
+	if (fullComp) *fullComp = (*(int32_t*)(&s_ucKDData[*pos])) & 0x80000000;
+	return (UChar32*) (&s_ucKDData[*pos+sizeof(int32_t)]);
 }
 
-long recursiveKDExpand(UChar32 c, UChar32 *buf, long bufSize) {
-	long decompCount = 0;
+int32_t recursiveKDExpand(UChar32 c, UChar32 *buf, int32_t bufSize) {
+	int32_t decompCount = 0;
 	UChar32 *decomp = getKDValue(c, &decompCount);
 	if (!decompCount) {
 		buf[0] = c;
 		return 1;
 	}
 
-	long decompIndex = 0;
+	int32_t decompIndex = 0;
 	for (int i=0;i<decompCount;i++) {
 		decompIndex += recursiveKDExpand(decomp[i], 
 						 buf+decompIndex,
@@ -240,8 +240,8 @@ long recursiveKDExpand(UChar32 c, UChar32 *buf, long bufSize) {
 }
 
 // JAB: lazy engineer cut-n-paste job
-bool setCDValue(UChar32 c, UChar32* decomp, long decompCount, bool fullComp) {
-        unsigned long size = sizeof(decompCount) + 
+bool setCDValue(UChar32 c, UChar32* decomp, int32_t decompCount, bool fullComp) {
+        uint32_t size = sizeof(decompCount) + 
 		decompCount*sizeof(UChar32);
 		
 	if (s_ucCDDataSize+size > s_ucCDAllocSize){
@@ -253,11 +253,11 @@ bool setCDValue(UChar32 c, UChar32* decomp, long decompCount, bool fullComp) {
 					   "Out of Memory");
 			s_ucCDAllocSize = 4096;			
 			//dummy value for 0 index
-			*(long*)s_ucCDData = 0xffffffff;
-			s_ucCDDataSize = sizeof(long);
+			*(int32_t*)s_ucCDData = 0xffffffff;
+			s_ucCDDataSize = sizeof(int32_t);
 		}
 		else {
-			unsigned long newSize = s_ucCDAllocSize + 4096;
+			uint32_t newSize = s_ucCDAllocSize + 4096;
 			char *newBuf = (char*)mrealloc(s_ucCDData, 
 						       s_ucCDAllocSize,
 						       newSize, 
@@ -272,37 +272,37 @@ bool setCDValue(UChar32 c, UChar32* decomp, long decompCount, bool fullComp) {
 	}
 	// store fullComp flag in high bit of decompCount
 	if (fullComp) 
-		*(long*)(s_ucCDData+s_ucCDDataSize) = decompCount | 0x80000000;
+		*(int32_t*)(s_ucCDData+s_ucCDDataSize) = decompCount | 0x80000000;
 	else
-		*(long*)(s_ucCDData+s_ucCDDataSize) = decompCount;
+		*(int32_t*)(s_ucCDData+s_ucCDDataSize) = decompCount;
 
 	memcpy(s_ucCDData+s_ucCDDataSize+sizeof(decompCount), decomp, 
 	       decompCount*sizeof(UChar32));
-	long pos = s_ucCDDataSize;
+	int32_t pos = s_ucCDDataSize;
 	s_ucCDDataSize += size;
 	
 	return g_ucCDIndex.setValue(c, (void*)&pos);
 }
 
 // JAB: lazy engineer cut-n-paste job
-UChar32 *getCDValue(UChar32 c, long *decompCount) {
+UChar32 *getCDValue(UChar32 c, int32_t *decompCount) {
 	*decompCount = 0;
-	long *pos = (long*)g_ucCDIndex.getValue(c);
+	int32_t *pos = (int32_t*)g_ucCDIndex.getValue(c);
 	if (!pos || !*pos) return NULL;
-	*decompCount = (*(long*)(&s_ucCDData[*pos])) & 0x7fffffff;
-	return (UChar32*) (&s_ucCDData[*pos+sizeof(long)]);
+	*decompCount = (*(int32_t*)(&s_ucCDData[*pos])) & 0x7fffffff;
+	return (UChar32*) (&s_ucCDData[*pos+sizeof(int32_t)]);
 }
 
 // JAB: lazy engineer cut-n-paste job
-long recursiveCDExpand(UChar32 c, UChar32 *buf, long bufSize) {
-	long decompCount = 0;
+int32_t recursiveCDExpand(UChar32 c, UChar32 *buf, int32_t bufSize) {
+	int32_t decompCount = 0;
 	UChar32 *decomp = getCDValue(c, &decompCount);
 	if (!decompCount) {
 		buf[0] = c;
 		return 1;
 	}
 
-	long decompIndex = 0;
+	int32_t decompIndex = 0;
 	for (int i=0;i<decompCount;i++) {
 		decompIndex += recursiveCDExpand(decomp[i], 
 						 buf+decompIndex,
@@ -331,8 +331,8 @@ bool saveKDecompTable(char *baseDir) {
 	size_t nwrite = fwrite(s_ucKDData, fileSize, 1, fp);
 	if (nwrite != 1) {
 		log(LOG_WARN, "uni: Error writing %s "
-		    "(filesize: %d)", 
-		    filename, fileSize);
+		    "(filesize: %"INT32")", 
+		    filename, (int32_t)fileSize);
 		fclose(fp);
 		return false;
 	}
@@ -362,8 +362,8 @@ bool saveCDecompTable(char *baseDir) {
 	size_t nwrite = fwrite(s_ucCDData, fileSize, 1, fp);
 	if (nwrite != 1) {
 		log(LOG_WARN, "uni: Error writing %s "
-		    "(filesize: %d)", 
-		    filename, fileSize);
+		    "(filesize: %"INT32")", 
+		    filename, (int32_t)fileSize);
 		fclose(fp);
 		return false;
 	}

@@ -15,22 +15,22 @@
 UdpProtocol g_dp;
 
 // the request handler
-static void handleRequest ( UdpSlot *slot  , long     niceness ) ;
+static void handleRequest ( UdpSlot *slot  , int32_t     niceness ) ;
 static void gotit         ( void    *state , UdpSlot *slot     ) ;
 
 // where we store the file contents, if any
 char s_buf [ 1024*1024 ];
-long s_n = 0;
+int32_t s_n = 0;
 
-long long s_startTime;
+int64_t s_startTime;
 
 bool mainShutdown ( bool urgent ) { return true; }
 
 int main ( int argc , char *argv[] ) {
 
 	// ip/port to ask for the file from
-	long           ip   = 0;
-	unsigned short port = 0;
+	int32_t           ip   = 0;
+	uint16_t port = 0;
 
 	// . filename may be supplied 
 	// . if so we send that file back to all who ask
@@ -143,7 +143,7 @@ int main ( int argc , char *argv[] ) {
 }
 
 
-void handleRequest ( UdpSlot *slot , long niceness ) {
+void handleRequest ( UdpSlot *slot , int32_t niceness ) {
 
 	log("got request of type 0x00");
 

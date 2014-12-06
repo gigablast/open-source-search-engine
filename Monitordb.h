@@ -22,7 +22,7 @@ class Monitordb {
 	void reset();
 
 	bool init    ( );
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 	bool verify  ( char *coll );
 	bool addColl ( char *coll, bool doVerify = true );
 

@@ -17,12 +17,12 @@ class Proxy {
 	
 	void reset();
 
-	bool initHttpServer ( unsigned short httpPort, 
-			      unsigned short httpsPort );
+	bool initHttpServer ( uint16_t httpPort, 
+			      uint16_t httpsPort );
 
-	bool initProxy ( long proxyId,
-			 unsigned short udpPort,
-			 unsigned short udpPort2,
+	bool initProxy ( int32_t proxyId,
+			 uint16_t udpPort,
+			 uint16_t udpPort2,
 			 UdpProtocol *dp );
 
 	bool handleRequest ( TcpSocket *s );
@@ -42,10 +42,10 @@ class Proxy {
 
 	//bool insertLoginBarDirective( SafeBuf *sb ) ;
 	char *storeLoginBar ( char *reply , 
-			      long replySize , 
-			      long replyAllocSize,
-			      long mimeLen,
-			      long *newReplySize ,
+			      int32_t replySize , 
+			      int32_t replyAllocSize,
+			      int32_t mimeLen,
+			      int32_t *newReplySize ,
 			      class HttpRequest *hr);//char *currentUrl );
 
 	//pages.getUser needs to know if we're proxy to display the admintop
@@ -55,25 +55,25 @@ class Proxy {
 	//bool   m_verifiedDataFeed;
 	// protected:
 	void printRequest (TcpSocket *s, HttpRequest *r,
-			   unsigned long long took = 0,
+			   uint64_t took = 0,
 			   char *content = NULL ,
-			   long contentLen = 0 );
+			   int32_t contentLen = 0 );
 	//HttpRequest  m_r;
 	//TcpSocket   *m_s;
-	long m_proxyId;
+	int32_t m_proxyId;
 	//number of requests outstanding per hosts
-	long m_numOutstanding[MAX_HOSTS];
+	int32_t m_numOutstanding[MAX_HOSTS];
 	//last host to which we sent the request
-	long m_lastHost;
+	int32_t m_lastHost;
 	//host to which we pass the index page and the addurl page
-	long m_mainHost;
+	int32_t m_mainHost;
 
 	// assume no more than 8 stripes for now
-	long m_stripeLastHostId   [MAX_STRIPES];
+	int32_t m_stripeLastHostId   [MAX_STRIPES];
 	// how many query terms are outstanding on this stripe
-	long m_termsOutOnStripe   [MAX_STRIPES];
-	long m_queriesOutOnStripe [MAX_STRIPES];
-	long m_nextStripe;
+	int32_t m_termsOutOnStripe   [MAX_STRIPES];
+	int32_t m_queriesOutOnStripe [MAX_STRIPES];
+	int32_t m_nextStripe;
 
 	////////
 	//
@@ -83,16 +83,16 @@ class Proxy {
 
 	class UserInfo *getUserInfoForFeedAccess ( class HttpRequest *hr );
 	bool hasAccessPermission ( class StateControl *stC );
-	long getAccessType ( HttpRequest *hr );
-	float getPrice ( long accessType ) ;
-	bool addAccessPoint ( class StateControl *stC ,long long nowms,
-				     long httpStatus );
+	int32_t getAccessType ( HttpRequest *hr );
+	float getPrice ( int32_t accessType ) ;
+	bool addAccessPoint ( class StateControl *stC ,int64_t nowms,
+				     int32_t httpStatus );
 	bool addAccessPoint2 ( class UserInfo *ui , 
 			       char accessType ,
-			       long long nowms ,
-			       long long startTime ) ;
-	class SummaryRec *getSummaryRec ( long userId32 , char accessType );
-	class UserInfo *getUserInfoFromId ( long userId32 ) ;
+			       int64_t nowms ,
+			       int64_t startTime ) ;
+	class SummaryRec *getSummaryRec ( int32_t userId32 , char accessType );
+	class UserInfo *getUserInfoFromId ( int32_t userId32 ) ;
 	class UserInfo *getLoggedInUserInfo2 ( HttpRequest *hr,
 					       TcpSocket *socket,
 					      SafeBuf *errmsg );
@@ -102,8 +102,8 @@ class Proxy {
 	bool printAccountingInfoPage ( class StateUser *su ,
 				       class SafeBuf *errmsg = NULL );
 	bool gotGif ( class StateUser *su );
-	bool printDepositTable ( SafeBuf *sb , long userId32 );
-	long getNextTransactionId ( ) ;
+	bool printDepositTable ( SafeBuf *sb , int32_t userId32 );
+	int32_t getNextTransactionId ( ) ;
 	bool hitCreditCard ( class StateUser *su );
 	bool gotDepositDoc ( class StateUser *su );
 	bool printEditForm ( class StateUser *su );

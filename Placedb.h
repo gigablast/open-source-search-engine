@@ -11,7 +11,7 @@ class Placedb {
   public:
 
 	bool init  ( ) ;
-	bool init2 ( long treeMem ) ;
+	bool init2 ( int32_t treeMem ) ;
 
 	// set up our private rdb
 	Rdb *getRdb  ( ) { return &m_rdb; };
@@ -28,18 +28,18 @@ class Placedb {
 	//
 
 	// hash of street, adm1, city and street number
-	long long getBigHash   ( key128_t *placedbKey ) {
+	int64_t getBigHash   ( key128_t *placedbKey ) {
 		return placedbKey->n1; };
 
-	long getStreetNumHash   ( key128_t *placedbKey ) {
+	int32_t getStreetNumHash   ( key128_t *placedbKey ) {
 		return placedbKey->n0 >> 39; };
 
 	// docid is top 38 bits
-	long long getDocId     ( key128_t *placedbKey ) {
+	int64_t getDocId     ( key128_t *placedbKey ) {
 		return  (placedbKey->n0 >> 1) & DOCID_MASK; };
 
 	// the hash of the place name with the street indicator(s)
-	//long getSmallHash ( key128_t *placedbKey ) {
+	//int32_t getSmallHash ( key128_t *placedbKey ) {
 	//	return (placedbKey->n0>>1)&0x1ffffff;};
 
 

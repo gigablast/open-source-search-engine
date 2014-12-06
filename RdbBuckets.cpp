@@ -24,12 +24,12 @@
 inline int KEYCMP12 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+4)) <
-	     (*(unsigned long long *)(k2+4)) ) return -1;
-	if ( (*(unsigned long long *)(k1+4)) > 
-	     (*(unsigned long long *)(k2+4)) ) return  1;
-	unsigned long k1n0 = ((*(unsigned long*)(k1)) & ~0x01UL);
-	unsigned long k2n0 = ((*(unsigned long*)(k2)) & ~0x01UL);
+	if ( (*(uint64_t *)(k1+4)) <
+	     (*(uint64_t *)(k2+4)) ) return -1;
+	if ( (*(uint64_t *)(k1+4)) > 
+	     (*(uint64_t *)(k2+4)) ) return  1;
+	uint32_t k1n0 = ((*(uint32_t*)(k1)) & ~0x01UL);
+	uint32_t k2n0 = ((*(uint32_t*)(k2)) & ~0x01UL);
 	if ( k1n0 < k2n0 ) return -1;
 	if ( k1n0 > k2n0 ) return  1;
 	return 0;
@@ -40,12 +40,12 @@ inline int KEYCMP12 ( const void *a, const void *b ) {
 inline int KEYCMP16 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+8)) <
-	     (*(unsigned long long *)(k2+8)) ) return -1;
-	if ( (*(unsigned long long *)(k1+8)) >
-	     (*(unsigned long long *)(k2+8)) ) return  1;
-	unsigned long long k1n0 = ((*(unsigned long long *)(k1)) & ~0x01ULL);
-	unsigned long long k2n0 = ((*(unsigned long long *)(k2)) & ~0x01ULL);
+	if ( (*(uint64_t *)(k1+8)) <
+	     (*(uint64_t *)(k2+8)) ) return -1;
+	if ( (*(uint64_t *)(k1+8)) >
+	     (*(uint64_t *)(k2+8)) ) return  1;
+	uint64_t k1n0 = ((*(uint64_t *)(k1)) & ~0x01ULL);
+	uint64_t k2n0 = ((*(uint64_t *)(k2)) & ~0x01ULL);
 	if ( k1n0 < k2n0 ) return -1;
 	if ( k1n0 > k2n0 ) return  1;
 	return 0;
@@ -54,16 +54,16 @@ inline int KEYCMP16 ( const void *a, const void *b ) {
 inline int KEYCMP18 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+10)) <
-	     (*(unsigned long long *)(k2+10)) ) return -1;
-	if ( (*(unsigned long long *)(k1+10)) >
-	     (*(unsigned long long *)(k2+10)) ) return  1;
-	if ( (*(unsigned long long *)(k1+2)) <
-	     (*(unsigned long long *)(k2+2)) ) return -1;
-	if ( (*(unsigned long long *)(k1+2)) >
-	     (*(unsigned long long *)(k2+2)) ) return  1;
-	unsigned short k1n0 = ((*(unsigned short *)(k1)) & 0xfffe);
-	unsigned short k2n0 = ((*(unsigned short *)(k2)) & 0xfffe);
+	if ( (*(uint64_t *)(k1+10)) <
+	     (*(uint64_t *)(k2+10)) ) return -1;
+	if ( (*(uint64_t *)(k1+10)) >
+	     (*(uint64_t *)(k2+10)) ) return  1;
+	if ( (*(uint64_t *)(k1+2)) <
+	     (*(uint64_t *)(k2+2)) ) return -1;
+	if ( (*(uint64_t *)(k1+2)) >
+	     (*(uint64_t *)(k2+2)) ) return  1;
+	uint16_t k1n0 = ((*(uint16_t *)(k1)) & 0xfffe);
+	uint16_t k2n0 = ((*(uint16_t *)(k2)) & 0xfffe);
 	if ( k1n0 < k2n0 ) return -1;
 	if ( k1n0 > k2n0 ) return  1;
 	return 0;
@@ -72,16 +72,16 @@ inline int KEYCMP18 ( const void *a, const void *b ) {
 inline int KEYCMP24 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long long *)(k1+16)) <
-	     (*(unsigned long long *)(k2+16)) ) return -1;
-	if ( (*(unsigned long long *)(k1+16)) >
-	     (*(unsigned long long *)(k2+16)) ) return  1;
-	if ( (*(unsigned long long *)(k1+8)) <
-	     (*(unsigned long long *)(k2+8)) ) return -1;
-	if ( (*(unsigned long long *)(k1+8)) >
-	     (*(unsigned long long *)(k2+8)) ) return  1;
-	unsigned long long k1n0 = ((*(unsigned long long *)(k1)) & ~0x01ULL);
-	unsigned long long k2n0 = ((*(unsigned long long *)(k2)) & ~0x01ULL);
+	if ( (*(uint64_t *)(k1+16)) <
+	     (*(uint64_t *)(k2+16)) ) return -1;
+	if ( (*(uint64_t *)(k1+16)) >
+	     (*(uint64_t *)(k2+16)) ) return  1;
+	if ( (*(uint64_t *)(k1+8)) <
+	     (*(uint64_t *)(k2+8)) ) return -1;
+	if ( (*(uint64_t *)(k1+8)) >
+	     (*(uint64_t *)(k2+8)) ) return  1;
+	uint64_t k1n0 = ((*(uint64_t *)(k1)) & ~0x01ULL);
+	uint64_t k2n0 = ((*(uint64_t *)(k2)) & ~0x01ULL);
 	if ( k1n0 < k2n0 ) return -1;
 	if ( k1n0 > k2n0 ) return  1;
 	return 0;
@@ -90,14 +90,14 @@ inline int KEYCMP24 ( const void *a, const void *b ) {
 inline int KEYCMP6 ( const void *a, const void *b ) {
 	char* k1 = (char*)a;
 	char* k2 = (char*)b;
-	if ( (*(unsigned long  *)(k1+2)) <
-	     (*(unsigned long  *)(k2+2)) ) return -1;
-	if ( (*(unsigned long  *)(k1+2)) >
-	     (*(unsigned long  *)(k2+2)) ) return  1;
-	if ( (*(unsigned short *)(k1+0)) <
-	     (*(unsigned short *)(k2+0)) ) return -1;
-	if ( (*(unsigned short *)(k1+0)) >
-	     (*(unsigned short *)(k2+0)) ) return  1;
+	if ( (*(uint32_t  *)(k1+2)) <
+	     (*(uint32_t  *)(k2+2)) ) return -1;
+	if ( (*(uint32_t  *)(k1+2)) >
+	     (*(uint32_t  *)(k2+2)) ) return  1;
+	if ( (*(uint16_t *)(k1+0)) <
+	     (*(uint16_t *)(k2+0)) ) return -1;
+	if ( (*(uint16_t *)(k1+0)) >
+	     (*(uint16_t *)(k2+0)) ) return  1;
 	return 0;
 }
 
@@ -141,13 +141,13 @@ void RdbBucket::reset() {
 	m_endKey = NULL;
 }
 
-long RdbBuckets::getMemAlloced () {
-	long alloced = sizeof(RdbBuckets) + m_masterSize + m_dataMemOccupied;
+int32_t RdbBuckets::getMemAlloced () {
+	int32_t alloced = sizeof(RdbBuckets) + m_masterSize + m_dataMemOccupied;
 	return alloced;
 }
 
 //includes data in the data ptrs
-long RdbBuckets::getMemOccupied() {
+int32_t RdbBuckets::getMemOccupied() {
 	return (m_numKeysApprox * m_recSize) + m_dataMemOccupied +
 		sizeof(RdbBuckets) + 
 		m_sortBufSize + 
@@ -155,7 +155,7 @@ long RdbBuckets::getMemOccupied() {
 }
 
 
-long RdbBuckets::getMemAvailable() {
+int32_t RdbBuckets::getMemAvailable() {
 	return m_maxMem - getMemOccupied();
 }
 
@@ -173,8 +173,8 @@ bool RdbBuckets::needsDump() {
 //be very conservative with this because if we say we can fit it
 //and we can't then we'll get a partial list added and we will
 //add the whole list again.
-bool RdbBuckets::hasRoom ( long numRecs ) {
-	long numBucketsRequired = (((numRecs / BUCKET_SIZE)+1) * 2);
+bool RdbBuckets::hasRoom ( int32_t numRecs ) {
+	int32_t numBucketsRequired = (((numRecs / BUCKET_SIZE)+1) * 2);
 	if(m_maxBucketsCapacity - m_numBuckets < numBucketsRequired) 
 		return false;
 	return true;
@@ -194,8 +194,8 @@ bool RdbBucket::sort() {
 	}
 
 	uint8_t ks = m_parent->getKeySize();
-	long recSize = m_parent->getRecSize();
-	long fixedDataSize = m_parent->getFixedDataSize();
+	int32_t recSize = m_parent->getRecSize();
+	int32_t fixedDataSize = m_parent->getFixedDataSize();
 	int (*cmpfn) (const void*, const void *) = NULL;
 	if ( ks == 18 ) cmpfn = KEYCMP18;
 	else if ( ks == 24 ) cmpfn = KEYCMP24;
@@ -207,7 +207,7 @@ bool RdbBucket::sort() {
 	char* mergeBuf  = m_parent->getSwapBuf();
 	if(!mergeBuf) {	char* xx = NULL; *xx = 0; }
 
-	long numUnsorted = m_numKeys - m_lastSorted;
+	int32_t numUnsorted = m_numKeys - m_lastSorted;
 	char *list1  = m_keys;
 	char *list2  = m_keys + (recSize*m_lastSorted);
 	char *list1end  = list2;
@@ -221,7 +221,7 @@ bool RdbBucket::sort() {
 	//g_loop.m_canQuickPoll = false;
 	//sort the unsorted portion
 	// turn off this way
-	long saved = g_niceness;
+	int32_t saved = g_niceness;
 	g_niceness = 0;
 	// . use merge sort because it is stable, and we need to always keep
 	// . the identical keys that were added last
@@ -237,9 +237,9 @@ bool RdbBucket::sort() {
 	char *p  = mergeBuf;
 	char v;
 	char *lastKey = NULL;
-	long br = 0; //bytesRemoved (abbreviated for column width)
-	long dso = ks + sizeof(char*);//datasize offset
-	long numNeg = 0;
+	int32_t br = 0; //bytesRemoved (abbreviated for column width)
+	int32_t dso = ks + sizeof(char*);//datasize offset
+	int32_t numNeg = 0;
 
 	while(1) {
 		if(list1 >= list1end) {
@@ -249,7 +249,7 @@ bool RdbBucket::sort() {
 					//this is a dup, we are removing data
 					if(fixedDataSize != 0) {
 					      if(fixedDataSize == -1) 
-					           br += *(long*)(lastKey+dso);
+					           br += *(int32_t*)(lastKey+dso);
 					      else br += fixedDataSize;
 					}
 					if ( KEYNEG(lastKey) ) numNeg++;
@@ -290,7 +290,7 @@ bool RdbBucket::sort() {
 				//this is a dup, we are removing data
 				if(fixedDataSize != 0) {
 					if(fixedDataSize == -1) 
-						br += *(long*)(lastKey+dso);
+						br += *(int32_t*)(lastKey+dso);
 					else br += fixedDataSize;
 				}
 				if ( KEYNEG(lastKey) ) numNeg++;
@@ -306,7 +306,7 @@ bool RdbBucket::sort() {
 			if(lastKey && KEYCMPNEGEQ(list2, lastKey, ks) == 0) {
 				if(fixedDataSize != 0) {
 					if(fixedDataSize == -1) 
-						br += *(long*)(lastKey+dso);
+						br += *(int32_t*)(lastKey+dso);
 					else br += fixedDataSize;
 				}
 				if ( KEYNEG(lastKey) ) numNeg++;
@@ -323,7 +323,7 @@ bool RdbBucket::sort() {
 	}
 
 	//we compacted out the dups, so reflect that here
-	long newNumKeys = (p - mergeBuf) / recSize;
+	int32_t newNumKeys = (p - mergeBuf) / recSize;
 	m_parent->updateNumRecs(newNumKeys - m_numKeys , - br, -numNeg);
 	m_numKeys = newNumKeys;
 
@@ -343,9 +343,9 @@ bool RdbBucket::sort() {
 RdbBucket* RdbBucket::split(RdbBucket* newBucket) {
 
 	//	log(LOG_WARN, "splitting bucket");
-	long b1NumKeys = m_numKeys >> 1; //m_numkeys / 2
-	long b2NumKeys = m_numKeys - b1NumKeys;
-	long recSize = m_parent->getRecSize();
+	int32_t b1NumKeys = m_numKeys >> 1; //m_numkeys / 2
+	int32_t b2NumKeys = m_numKeys - b1NumKeys;
+	int32_t recSize = m_parent->getRecSize();
 	//configure the new bucket
 	memcpy(newBucket->m_keys, 
 	       m_keys + (b1NumKeys*recSize),
@@ -364,10 +364,10 @@ RdbBucket* RdbBucket::split(RdbBucket* newBucket) {
 }
 
 
-bool RdbBucket::addKey(char *key , char *data , long dataSize) {
+bool RdbBucket::addKey(char *key , char *data , int32_t dataSize) {
 
 	uint8_t ks = m_parent->getKeySize();
-	long recSize = m_parent->getRecSize();
+	int32_t recSize = m_parent->getRecSize();
 	bool isNeg = KEYNEG(key);
 
 	char *newLoc = m_keys + (recSize * m_numKeys);
@@ -376,7 +376,7 @@ bool RdbBucket::addKey(char *key , char *data , long dataSize) {
 	if(data) {
 		*(char**)(newLoc + ks) = data;
 		if(m_parent->getFixedDataSize() == -1) {
-			*(long*)(newLoc + ks + sizeof(char*)) = (long)dataSize;
+			*(int32_t*)(newLoc + ks + sizeof(char*)) = (int32_t)dataSize;
 		}
 	}
 	
@@ -414,35 +414,35 @@ bool RdbBucket::addKey(char *key , char *data , long dataSize) {
 	return true;
 }
 
-char* RdbBucket::getKeyVal ( char *key , char **data , long* dataSize ) {
+char* RdbBucket::getKeyVal ( char *key , char **data , int32_t* dataSize ) {
 
 	sort();
-	long i = getKeyNumExact(key);
+	int32_t i = getKeyNumExact(key);
 	if(i < 0) return NULL;
 
-	long recSize = m_parent->getRecSize();
+	int32_t recSize = m_parent->getRecSize();
 	uint8_t ks = m_parent->getKeySize();
 	char* rec = m_keys + (recSize * i);
 
 	if(data) {
 		*data = rec + ks;
 		if(dataSize)
-			*dataSize = *(long*)*data + sizeof(char*);
+			*dataSize = *(int32_t*)*data + sizeof(char*);
 	}
 	return rec;
 }
 
-long RdbBucket::getKeyNumExact(char* key) {
+int32_t RdbBucket::getKeyNumExact(char* key) {
 
 	uint8_t ks = m_parent->getKeySize();
-	long recSize = m_parent->getRecSize();
-	long i = 0;
+	int32_t recSize = m_parent->getRecSize();
+	int32_t i = 0;
 	char v;
 	char* kk;
-	long low = 0;
-	long high = m_numKeys - 1;
+	int32_t low = 0;
+	int32_t high = m_numKeys - 1;
 	while(low <= high) {
-		long delta = high - low;
+		int32_t delta = high - low;
 		i = low + (delta >> 1);
 		kk = m_keys + (recSize * i);
 		v = KEYCMP(key,kk,ks);
@@ -467,36 +467,36 @@ bool RdbBucket::selfTest (char* prevKey) {
 	sort();
 	char* last = NULL;
 	char* kk = m_keys;
-	long recSize = m_parent->getRecSize();
-	long ks = m_parent->getKeySize();
+	int32_t recSize = m_parent->getRecSize();
+	int32_t ks = m_parent->getKeySize();
 
 	//ensure our first key is > the last guy's end key
 	if(prevKey != NULL && m_numKeys > 0) {
 		if(KEYCMP(prevKey, m_keys,ks) > 0) {
-			log(LOG_WARN, "db: bucket's first key: %016llx%08lx "
+			log(LOG_WARN, "db: bucket's first key: %016"XINT64"%08"XINT32" "
 			    "is less than last bucket's end key: "
-			    "%016llx%08lx!!!!!",
-			    *(long long*)(m_keys+(sizeof(long))), 
-			    *(long*)m_keys,
-			    *(long long*)(prevKey+(sizeof(long))), 
-			    *(long*)prevKey);
+			    "%016"XINT64"%08"XINT32"!!!!!",
+			    *(int64_t*)(m_keys+(sizeof(int32_t))), 
+			    *(int32_t*)m_keys,
+			    *(int64_t*)(prevKey+(sizeof(int32_t))), 
+			    *(int32_t*)prevKey);
 			//printBucket();
 			return false;
 			//char* xx = NULL; *xx = 0;
 		}
 	}
 
- 	for(long i = 0; i < m_numKeys; i++) {
-//log(LOG_WARN, "rdbbuckets last key: ""%016llx%08lx num keys: %li",
-//   *(long long*)(kk+(sizeof(long))), *(long*)kk, m_numKeys);
+ 	for(int32_t i = 0; i < m_numKeys; i++) {
+//log(LOG_WARN, "rdbbuckets last key: ""%016"XINT64"%08"XINT32" num keys: %"INT32"",
+//   *(int64_t*)(kk+(sizeof(int32_t))), *(int32_t*)kk, m_numKeys);
 		if(i > 0 && KEYCMP(last, kk, ks) > 0) {
 			log(LOG_WARN, "db: bucket's last key was out "
 			    "of order!!!!!"
-			    "key was: %016llx%08lx vs prev: %016llx%08lx"
-			    " num keys: %li"
-			    " ks=%li bucketNum=%li",
-			    *(long long*)(kk+(sizeof(long))), *(long*)kk, 
-			    *(long long*)(last+(sizeof(long))), *(long*)last, 
+			    "key was: %016"XINT64"%08"XINT32" vs prev: %016"XINT64"%08"XINT32""
+			    " num keys: %"INT32""
+			    " ks=%"INT32" bucketNum=%"INT32"",
+			    *(int64_t*)(kk+(sizeof(int32_t))), *(int32_t*)kk, 
+			    *(int64_t*)(last+(sizeof(int32_t))), *(int32_t*)last, 
 			    m_numKeys, ks, i);
 			return false;
 			//char* xx = NULL; *xx = 0;
@@ -508,7 +508,7 @@ bool RdbBucket::selfTest (char* prevKey) {
 }
 
 void RdbBuckets::printBuckets() {
- 	for(long i = 0; i < m_numBuckets; i++) {
+ 	for(int32_t i = 0; i < m_numBuckets; i++) {
 		m_buckets[i]->printBucket();
 	}
 }
@@ -516,11 +516,11 @@ void RdbBuckets::printBuckets() {
 
 void RdbBucket::printBucket() {
 	char* kk = m_keys;
-	long recSize = m_parent->getRecSize();
- 	for(long i = 0; i < m_numKeys;i++) {
- 		log(LOG_WARN, "rdbbuckets last key: ""%016llx%08lx num "
-		    "keys: %li",
- 		    *(long long*)(kk+(sizeof(long))), *(long*)kk, m_numKeys);
+	int32_t recSize = m_parent->getRecSize();
+ 	for(int32_t i = 0; i < m_numKeys;i++) {
+ 		log(LOG_WARN, "rdbbuckets last key: ""%016"XINT64"%08"XINT32" num "
+		    "keys: %"INT32"",
+ 		    *(int64_t*)(kk+(sizeof(int32_t))), *(int32_t*)kk, m_numKeys);
 		kk += recSize;
 	}
 }
@@ -541,7 +541,7 @@ RdbBuckets::RdbBuckets() {
 
 
 
-bool RdbBuckets::set ( long fixedDataSize , long maxMem, 
+bool RdbBuckets::set ( int32_t fixedDataSize , int32_t maxMem, 
 		       bool ownData ,
 		       char *allocName ,
 		       char rdbId,
@@ -557,7 +557,7 @@ bool RdbBuckets::set ( long fixedDataSize , long maxMem,
 	m_recSize = m_ks;
 	if(m_fixedDataSize != 0) {
 		m_recSize += sizeof(char*);
-		if(m_fixedDataSize == -1) m_recSize += sizeof(long);
+		if(m_fixedDataSize == -1) m_recSize += sizeof(int32_t);
 	}
 	m_numKeysApprox = 0;
 	m_numNegKeys = 0;
@@ -572,20 +572,20 @@ bool RdbBuckets::set ( long fixedDataSize , long maxMem,
 	m_masterPtr =  NULL;
 	m_maxMem = maxMem;
 
-	long perBucket = sizeof(RdbBucket*) + 
+	int32_t perBucket = sizeof(RdbBucket*) + 
 		sizeof(RdbBucket)
 		+ BUCKET_SIZE * m_recSize;
-	long overhead = m_sortBufSize +
+	int32_t overhead = m_sortBufSize +
 		BUCKET_SIZE * m_recSize + //swapbuf
 		sizeof(RdbBuckets); //thats us, silly
-	long avail = m_maxMem - overhead;
+	int32_t avail = m_maxMem - overhead;
 
 	m_maxBucketsCapacity = avail / perBucket;
 	if(m_maxBucketsCapacity <= 0) {
 		log("db: max memory for %s's buckets is way too small to"
-		    " accomodate even 1 bucket, reduce bucket size(%li) "
-		    "or increase max mem(%li)",
-		    m_dbname, (long)BUCKET_SIZE, m_maxMem);
+		    " accomodate even 1 bucket, reduce bucket size(%"INT32") "
+		    "or increase max mem(%"INT32")",
+		    m_dbname, (int32_t)BUCKET_SIZE, m_maxMem);
 		char *xx = NULL; *xx = 0;
 	}
 
@@ -595,8 +595,8 @@ bool RdbBuckets::set ( long fixedDataSize , long maxMem,
 	}
 	
 	// log("init: Successfully initialized buckets for %s, "
-	//     "keysize is %li, max mem is %li, datasize is %li",
-	//     m_dbname, (long)m_ks, m_maxMem, m_fixedDataSize);
+	//     "keysize is %"INT32", max mem is %"INT32", datasize is %"INT32"",
+	//     m_dbname, (int32_t)m_ks, m_maxMem, m_fixedDataSize);
 
 
 	/*
@@ -624,7 +624,7 @@ bool RdbBuckets::set ( long fixedDataSize , long maxMem,
 	k1.setMin();
 	k2.setMax();
 	RdbList list;
-	long np,nn;
+	int32_t np,nn;
 	b.getList ( cn,(char *)&k1,(char *)&k2,1000,&list,&np,&nn,false);
 	if ( np != 0 || nn != 1 ) { char *xx=NULL;*xx=0; }
 	// must be empty
@@ -646,7 +646,7 @@ void RdbBuckets::setNeedsSave(bool s) {
 
 
 void RdbBuckets::reset() {
-	for(long j = 0; j < m_numBuckets; j++) {
+	for(int32_t j = 0; j < m_numBuckets; j++) {
 		m_buckets[j]->reset();
 	}
 	if(m_masterPtr) mfree(m_masterPtr, m_masterSize, m_allocName );
@@ -665,7 +665,7 @@ void RdbBuckets::reset() {
 
 
 void RdbBuckets::clear() {
-	for(long j = 0; j < m_numBuckets; j++) {
+	for(int32_t j = 0; j < m_numBuckets; j++) {
 		m_buckets[j]->reset();
 	}
 	m_numBuckets = 0;
@@ -687,7 +687,7 @@ RdbBucket* RdbBuckets::bucketFactory() {
 	
 	RdbBucket *b;
 	if(m_firstOpenSlot > m_numBuckets) {
-		long i = 0;
+		int32_t i = 0;
 		for(; i < m_numBuckets; i++) {
 			if(m_bucketsSpace[i].getNumKeys() == 0) break;
 		}
@@ -703,7 +703,7 @@ RdbBucket* RdbBuckets::bucketFactory() {
 
 
 
-bool RdbBuckets::resizeTable(long numNeeded) {
+bool RdbBuckets::resizeTable(int32_t numNeeded) {
 	if(numNeeded == m_maxBuckets) return true;
 
 	if(numNeeded < INIT_SIZE) numNeeded = INIT_SIZE;
@@ -711,37 +711,37 @@ bool RdbBuckets::resizeTable(long numNeeded) {
 	if(numNeeded > m_maxBucketsCapacity) {
 		if(m_maxBucketsCapacity <= m_maxBuckets) {
 			log(LOG_INFO,
-			    "db: could not resize buckets currently have %li "
-			    "buckets, asked for %li, max number of buckets"
-			    " for %li bytes with keysize %li is %li",
-			    m_maxBuckets, numNeeded, m_maxMem, (long)m_ks,
+			    "db: could not resize buckets currently have %"INT32" "
+			    "buckets, asked for %"INT32", max number of buckets"
+			    " for %"INT32" bytes with keysize %"INT32" is %"INT32"",
+			    m_maxBuckets, numNeeded, m_maxMem, (int32_t)m_ks,
 			    m_maxBucketsCapacity);
 			g_errno = ENOMEM;
 			return false;
 		}
 		// log(LOG_INFO,
 		//     "db: scaling down request for buckets.  "
-		//     "Currently have %li "
-		//     "buckets, asked for %li, max number of buckets"
-		//     " for %li bytes is %li.",
+		//     "Currently have %"INT32" "
+		//     "buckets, asked for %"INT32", max number of buckets"
+		//     " for %"INT32" bytes is %"INT32".",
 		//     m_maxBuckets, numNeeded, m_maxMem, m_maxBucketsCapacity);
 
 		numNeeded = m_maxBucketsCapacity;
 	}
 
-	long perBucket = sizeof(RdbBucket*) + 
+	int32_t perBucket = sizeof(RdbBucket*) + 
 		sizeof(RdbBucket)
 		+ BUCKET_SIZE * m_recSize;
 
-	long tmpMaxBuckets = numNeeded;
-	long newMasterSize = tmpMaxBuckets * perBucket +
+	int32_t tmpMaxBuckets = numNeeded;
+	int32_t newMasterSize = tmpMaxBuckets * perBucket +
 		(BUCKET_SIZE * m_recSize) + /*swap buf*/
 		m_sortBufSize;         /*sort buf*/
 
 	if(newMasterSize > m_maxMem) {
 		log(LOG_WARN,
-		    "db: Buckets oops, trying to malloc more(%li) that max "
-		    "mem(%li), should've caught this earlier.",
+		    "db: Buckets oops, trying to malloc more(%"INT32") that max "
+		    "mem(%"INT32"), should've caught this earlier.",
 		    newMasterSize, m_maxMem);
 		char* xx = NULL; *xx = 0;
 	}
@@ -765,7 +765,7 @@ bool RdbBuckets::resizeTable(long numNeeded) {
 	p += tmpMaxBuckets * sizeof(RdbBucket);
 	if(p - tmpMasterPtr != newMasterSize) {char* xx = NULL; *xx = 0;}
 
-	for(long i = 0; i < m_numBuckets; i++) {
+	for(int32_t i = 0; i < m_numBuckets; i++) {
 		//copy them over one at a time so they
 		//will now be contiguous and consistent
 		//with the ptrs array.
@@ -777,14 +777,14 @@ bool RdbBuckets::resizeTable(long numNeeded) {
 		bucketMemPtr += (BUCKET_SIZE * m_recSize);
 	}
 	//now do the rest
-	for(long i = m_numBuckets; i < tmpMaxBuckets; i++) {
+	for(int32_t i = m_numBuckets; i < tmpMaxBuckets; i++) {
 		tmpBucketSpace[i].set(this, bucketMemPtr);
 		bucketMemPtr += (BUCKET_SIZE * m_recSize);
 	}
 	if(bucketMemPtr != m_swapBuf) {char* xx = NULL; *xx = 0;}
 
-// 	log(LOG_WARN, "new size = %li, old size = %li, newMemUsed = %li "
-// 	    "oldMemUsed = %li", 
+// 	log(LOG_WARN, "new size = %"INT32", old size = %"INT32", newMemUsed = %"INT32" "
+// 	    "oldMemUsed = %"INT32"", 
 // 	    numNeeded, m_maxBuckets, newMasterSize, m_masterSize);
 
 	if(m_masterPtr) mfree(m_masterPtr, m_masterSize, m_allocName);
@@ -800,9 +800,9 @@ bool RdbBuckets::resizeTable(long numNeeded) {
 
 
 
-long RdbBuckets::addNode (collnum_t collnum,
+int32_t RdbBuckets::addNode (collnum_t collnum,
 			  char *key,
-			  char *data , long dataSize ) {
+			  char *data , int32_t dataSize ) {
 
 	if(!m_isWritable || m_isSaving ) {
 		g_errno = EAGAIN;
@@ -811,12 +811,12 @@ long RdbBuckets::addNode (collnum_t collnum,
 
 	m_needsSave = true;
 
-	long i;
+	int32_t i;
 
 	i = getBucketNum(key, collnum);
 	if(i == m_numBuckets  ||
 	   m_buckets[i]->getCollnum() != collnum) {
-		long bucketsCutoff = (BUCKET_SIZE>>1);
+		int32_t bucketsCutoff = (BUCKET_SIZE>>1);
 		//when repairing the keys are added in order,
 		//so fill them up all of the way before moving
 		//on to the next one.
@@ -850,7 +850,7 @@ long RdbBuckets::addNode (collnum_t collnum,
 	//check if we are full
 	if(m_buckets[i]->getNumKeys() == BUCKET_SIZE) {
 		//split the bucket
-		long long t = gettimeofdayInMilliseconds();
+		int64_t t = gettimeofdayInMilliseconds();
 		m_buckets[i]->sort();
 		RdbBucket* newBucket = bucketFactory();
 		if(newBucket == NULL ) {
@@ -862,9 +862,9 @@ long RdbBuckets::addNode (collnum_t collnum,
 		addBucket(newBucket, i+1);
 		if(bucketCmp(key, collnum, m_buckets[i]) > 0) i++;
 		
-		long long took = gettimeofdayInMilliseconds() - t;
+		int64_t took = gettimeofdayInMilliseconds() - t;
 		if(took > 10) log(LOG_WARN, 
-				  "db: split bucket in %lli ms for %s",took, 
+				  "db: split bucket in %"INT64" ms for %s",took, 
 				  m_dbname);
 	}
 
@@ -874,11 +874,11 @@ long RdbBuckets::addNode (collnum_t collnum,
 }
 
 
-bool RdbBuckets::addBucket (RdbBucket* newBucket, long i) {
+bool RdbBuckets::addBucket (RdbBucket* newBucket, int32_t i) {
 
-	//long i = getBucketNum(newBucket->getEndKey(), newBucket->getCollnum());
+	//int32_t i = getBucketNum(newBucket->getEndKey(), newBucket->getCollnum());
 	m_numBuckets++;
-	long moveSize = (m_numBuckets - i)*sizeof(RdbBuckets*);
+	int32_t moveSize = (m_numBuckets - i)*sizeof(RdbBuckets*);
 	if(moveSize > 0)
 		memmove(&m_buckets[i+1], &m_buckets[i], moveSize);
 	m_buckets[i] = newBucket;
@@ -886,8 +886,9 @@ bool RdbBuckets::addBucket (RdbBucket* newBucket, long i) {
 }
 
 bool RdbBuckets::getList ( collnum_t collnum ,
-			   char *startKey, char *endKey, long minRecSizes ,
-			   RdbList *list , long *numPosRecs , long *numNegRecs,
+			   char *startKey, char *endKey, int32_t minRecSizes ,
+			   RdbList *list , int32_t *numPosRecs , 
+			   int32_t *numNegRecs,
 			   bool useHalfKeys ) {
 
 	if ( numNegRecs ) *numNegRecs = 0;
@@ -910,9 +911,9 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 	}
 	// bail if minRecSizes is 0
 	if ( minRecSizes == 0 ) return true;
-	if ( minRecSizes < 0 ) minRecSizes = LONG_MAX;
+	if ( minRecSizes < 0 ) minRecSizes = 0x7fffffff;//LONG_MAX;
 
-	long startBucket = getBucketNum(startKey, collnum);
+	int32_t startBucket = getBucketNum(startKey, collnum);
 	if(startBucket > 0 && 
 	   bucketCmp(startKey, collnum, m_buckets[startBucket-1]) < 0)
 		startBucket--;
@@ -923,25 +924,25 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 	   m_buckets[startBucket]->getCollnum() != collnum) return true;
 
 
-	long endBucket;
+	int32_t endBucket;
 	if(bucketCmp(endKey, collnum, m_buckets[startBucket]) <= 0)
 		endBucket = startBucket;
 	else endBucket = getBucketNum(endKey, collnum);
 	if(endBucket == m_numBuckets ||
 	   m_buckets[endBucket]->getCollnum() != collnum) endBucket--;
-	//log(LOG_WARN, "db numBuckets %li start %li end %li", 
+	//log(LOG_WARN, "db numBuckets %"INT32" start %"INT32" end %"INT32"", 
 	//m_numBuckets, startBucket, endBucket);
 	if(m_buckets[endBucket]->getCollnum() != collnum) {
 		char* xx = NULL; *xx = 0;
 	}
 
-	long growth = 0;
+	int32_t growth = 0;
 
 	if(startBucket == endBucket) {
 		growth = m_buckets[startBucket]->getNumKeys() * m_recSize;
 		if(growth > minRecSizes) growth = minRecSizes + m_recSize;
 		if(!list->growList(growth))
-			return log("db: Failed to grow list to %li bytes "
+			return log("db: Failed to grow list to %"INT32" bytes "
 				   "for storing "
 				   "records from buckets: %s.",
 				   growth,mstrerror(g_errno));
@@ -958,12 +959,12 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 	}
 
 	//reserve some space, it is an upper bound
-	for(long i = startBucket; i <= endBucket; i++) 
+	for(int32_t i = startBucket; i <= endBucket; i++) 
 		growth += m_buckets[i]->getNumKeys() * m_recSize;
 
 	if(growth > minRecSizes) growth = minRecSizes + m_recSize;
 	if(!list->growList(growth))
-		return log("db: Failed to grow list to %li bytes for storing "
+		return log("db: Failed to grow list to %"INT32" bytes for storing "
 			   "records from buckets: %s.",
 			   growth, mstrerror(g_errno));
 
@@ -979,7 +980,7 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 					    useHalfKeys))
 		return false;
 
-	long i = startBucket + 1;
+	int32_t i = startBucket + 1;
 	for(; i < endBucket && list->getListSize() < minRecSizes; i++) {
 		if(!m_buckets[i]->getList(list, 
 					  NULL, 
@@ -1005,6 +1006,44 @@ bool RdbBuckets::getList ( collnum_t collnum ,
 
 }
 
+
+int RdbBuckets::getListSizeExact ( collnum_t collnum ,
+				   char *startKey, 
+				   char *endKey ) {
+
+	int numBytes = 0;
+
+	int32_t startBucket = getBucketNum(startKey, collnum);
+
+	// does this mean empty?
+	if(startBucket > 0 && 
+	   bucketCmp(startKey, collnum, m_buckets[startBucket-1]) < 0)
+		startBucket--;
+
+	if(startBucket == m_numBuckets ||
+	   m_buckets[startBucket]->getCollnum() != collnum) 
+		return 0;
+
+	int32_t endBucket;
+	if(bucketCmp(endKey, collnum, m_buckets[startBucket]) <= 0)
+		endBucket = startBucket;
+	else 
+		endBucket = getBucketNum(endKey, collnum);
+
+	if(endBucket == m_numBuckets ||
+	   m_buckets[endBucket]->getCollnum() != collnum) endBucket--;
+
+	//log(LOG_WARN, "db numBuckets %"INT32" start %"INT32" end %"INT32"", 
+	//m_numBuckets, startBucket, endBucket);
+	if(m_buckets[endBucket]->getCollnum() != collnum) {
+		char* xx = NULL; *xx = 0; }
+
+	for( int32_t i = startBucket ; i <= endBucket ; i++)
+		numBytes += m_buckets[i]->getListSizeExact(startKey,endKey);
+	
+	return numBytes;
+}
+
 bool RdbBuckets::testAndRepair() {
 	if(!selfTest(true/*thorough*/, 
 		     false/*core on error*/)) {
@@ -1024,11 +1063,11 @@ bool RdbBuckets::repair() {
 		       "true number of keys.");
 	}
 
-	//long tmpMaxBuckets = m_maxBuckets;
-	long tmpMasterSize = m_masterSize;
+	//int32_t tmpMaxBuckets = m_maxBuckets;
+	int32_t tmpMasterSize = m_masterSize;
 	char *tmpMasterPtr = m_masterPtr;
 	RdbBucket **tmpBucketPtrs = m_buckets;
-	long tmpNumBuckets = m_numBuckets;
+	int32_t tmpNumBuckets = m_numBuckets;
 	m_masterPtr = NULL;
 	m_masterSize = 0;
 	m_numBuckets = 0;
@@ -1042,18 +1081,18 @@ bool RdbBuckets::repair() {
 
 	m_repairMode = true;
 
- 	for(long j = 0; j < tmpNumBuckets; j++) {
+ 	for(int32_t j = 0; j < tmpNumBuckets; j++) {
 		collnum_t collnum = tmpBucketPtrs[j]->getCollnum();
- 		for(long i = 0; i < tmpBucketPtrs[j]->getNumKeys(); i++) {
+ 		for(int32_t i = 0; i < tmpBucketPtrs[j]->getNumKeys(); i++) {
  			char* currRec = tmpBucketPtrs[j]->getKeys() + 
 				m_recSize * i;
  			char* data = NULL;
- 			long dataSize = m_fixedDataSize;
+ 			int32_t dataSize = m_fixedDataSize;
 			
  			if(m_fixedDataSize != 0) {
  				data = currRec + m_ks;
  				if(m_fixedDataSize == -1)
- 					dataSize = *(long*)(data + sizeof(char*));
+ 					dataSize = *(int32_t*)(data + sizeof(char*));
  			}
  			if(addNode(collnum, currRec, data, dataSize) < 0) {
  				log(LOG_WARN, "db: got unrepairable error in "
@@ -1067,7 +1106,7 @@ bool RdbBuckets::repair() {
 
 	if(tmpMasterPtr) mfree(tmpMasterPtr, tmpMasterSize, m_allocName);
 
- 	log("db: RdbBuckets repair for %li keys complete", m_numKeysApprox);
+ 	log("db: RdbBuckets repair for %"INT32" keys complete", m_numKeysApprox);
 	return true;
 }
 
@@ -1075,12 +1114,12 @@ bool RdbBuckets::repair() {
 
 bool RdbBuckets::selfTest(bool thorough, bool core) {
 	if(m_numBuckets == 0 && m_numKeysApprox != 0) return false;
-	long totalNumKeys = 0;
+	int32_t totalNumKeys = 0;
 	char* last = NULL;
 	collnum_t lastcoll = -1;
-	long numColls = 0;
+	int32_t numColls = 0;
 
-	for(long i = 0; i < m_numBuckets; i++) {
+	for(int32_t i = 0; i < m_numBuckets; i++) {
 		RdbBucket* b = m_buckets[i];
 		if(lastcoll != b->getCollnum()) {
 			last = NULL;
@@ -1096,16 +1135,16 @@ bool RdbBuckets::selfTest(bool thorough, bool core) {
 
 		totalNumKeys += b->getNumKeys();
 		char* kk = b->getEndKey();
-		//log(LOG_WARN, "rdbbuckets last key: ""%016llx%08lx "
-		//"num keys: %li",
-		//*(long long*)(kk+(sizeof(long))),*(long*)kk,b->getNumKeys());
+		//log(LOG_WARN, "rdbbuckets last key: ""%016"XINT64"%08"XINT32" "
+		//"num keys: %"INT32"",
+		//*(int64_t*)(kk+(sizeof(int32_t))),*(int32_t*)kk,b->getNumKeys());
 		if(i > 0 &&
 		   lastcoll == b->getCollnum() && 
 		   KEYCMPNEGEQ(last, kk,m_ks) >= 0) {
 			log(LOG_WARN, "rdbbuckets last key: "
-			    "%016llx%08lx num keys: %li",
-			    *(long long*)(kk+(sizeof(long))),
-			    *(long*)kk, b->getNumKeys());
+			    "%016"XINT64"%08"XINT32" num keys: %"INT32"",
+			    *(int64_t*)(kk+(sizeof(int32_t))),
+			    *(int32_t*)kk, b->getNumKeys());
 			log(LOG_WARN, "rdbbuckets last key was out "
 			    "of order!!!!!");
 			if(!core) return false;
@@ -1115,8 +1154,8 @@ bool RdbBuckets::selfTest(bool thorough, bool core) {
 		lastcoll = b->getCollnum();
 	}
 	if ( totalNumKeys != m_numKeysApprox )
-	log(LOG_WARN, "db have %li keys,  should have %li. "
-	    "%li buckets in %li colls for db %s", 
+	log(LOG_WARN, "db have %"INT32" keys,  should have %"INT32". "
+	    "%"INT32" buckets in %"INT32" colls for db %s", 
 	    totalNumKeys, m_numKeysApprox, m_numBuckets, 
 	    numColls, m_dbname);
 
@@ -1144,10 +1183,10 @@ char RdbBuckets::bucketCmp(char *akey, collnum_t acoll,
 
 
 
-long RdbBuckets::getBucketNum(char* key, collnum_t collnum) {
+int32_t RdbBuckets::getBucketNum(char* key, collnum_t collnum) {
 
 	if(m_numBuckets < 10) {
-		long i = 0;
+		int32_t i = 0;
 		for(; i < m_numBuckets; i++) {
 			RdbBucket* b = m_buckets[i];
 			char v = bucketCmp(key, collnum, b);
@@ -1157,13 +1196,13 @@ long RdbBuckets::getBucketNum(char* key, collnum_t collnum) {
 		}
 		return i;
 	}
-	long i = 0;
+	int32_t i = 0;
 	char v;
 	RdbBucket* b = NULL;
-	long low = 0;
-	long high = m_numBuckets - 1;
+	int32_t low = 0;
+	int32_t high = m_numBuckets - 1;
 	while(low <= high) {
-		long delta = high - low;
+		int32_t delta = high - low;
 		i = low + (delta >> 1);
 		b = m_buckets[i];
 		char v = bucketCmp(key, collnum, b);
@@ -1186,16 +1225,16 @@ long RdbBuckets::getBucketNum(char* key, collnum_t collnum) {
 
 
 bool RdbBuckets::collExists(collnum_t collnum) {
-	for(long i = 0; i < m_numBuckets; i++) {
+	for(int32_t i = 0; i < m_numBuckets; i++) {
 		if(m_buckets[i]->getCollnum() == collnum)return true;
 		if(m_buckets[i]->getCollnum() > collnum)  break;
 	}
 	return false;
 }
 
-long RdbBuckets::getNumKeys(collnum_t collnum) {
-	long numKeys = 0;
-	for(long i = 0; i < m_numBuckets; i++) {
+int32_t RdbBuckets::getNumKeys(collnum_t collnum) {
+	int32_t numKeys = 0;
+	for(int32_t i = 0; i < m_numBuckets; i++) {
 		if(m_buckets[i]->getCollnum() == collnum) 
 			numKeys += m_buckets[i]->getNumKeys();
 		if(m_buckets[i]->getCollnum() > collnum)  break;
@@ -1204,42 +1243,42 @@ long RdbBuckets::getNumKeys(collnum_t collnum) {
 }
 
 	
-long RdbBuckets::getNumKeys() {
+int32_t RdbBuckets::getNumKeys() {
 	return m_numKeysApprox;
 }
 
 
-// long RdbBuckets::getNumNegativeKeys ( collnum_t collnum ) {
+// int32_t RdbBuckets::getNumNegativeKeys ( collnum_t collnum ) {
 //  	return m_numNegKeys;
 // }
 
 
-// long RdbBuckets::getNumPositiveKeys ( collnum_t collnum ) {
+// int32_t RdbBuckets::getNumPositiveKeys ( collnum_t collnum ) {
 // 	return getNumKeys(collnum) - getNumNegativeKeys(collnum); 
 // }
 
 
-long RdbBuckets::getNumNegativeKeys ( ) {
+int32_t RdbBuckets::getNumNegativeKeys ( ) {
 	return m_numNegKeys;
 }
 
 
-long  RdbBuckets::getNumPositiveKeys ( ) {
+int32_t  RdbBuckets::getNumPositiveKeys ( ) {
 	return getNumKeys() - getNumNegativeKeys ( );
 }
 
 
 char* RdbBuckets::getKeyVal ( collnum_t collnum , char *key , 
-			      char **data , long* dataSize ) {
+			      char **data , int32_t* dataSize ) {
 
-	long i = getBucketNum(key, collnum);
+	int32_t i = getBucketNum(key, collnum);
 	if(i == m_numBuckets ||
 	   m_buckets[i]->getCollnum() != collnum ) return NULL;
 	return m_buckets[i]->getKeyVal(key, data, dataSize);
 }
 
 
-void RdbBuckets::updateNumRecs(long n, long bytes, long numNeg) {
+void RdbBuckets::updateNumRecs(int32_t n, int32_t bytes, int32_t numNeg) {
 	m_numKeysApprox += n;
 	m_dataMemOccupied += bytes;
 	m_numNegKeys += numNeg;
@@ -1251,9 +1290,9 @@ char *RdbBucket::getFirstKey() {
 	return m_keys;
 }
 
-long RdbBucket::getNumNegativeKeys ( ) {
-	long numNeg = 0;
-	long recSize = m_parent->getRecSize();
+int32_t RdbBucket::getNumNegativeKeys ( ) {
+	int32_t numNeg = 0;
+	int32_t recSize = m_parent->getRecSize();
 	char *currKey = m_keys;
 
 	char *lastKey = m_keys + (m_numKeys * recSize);
@@ -1269,24 +1308,24 @@ long RdbBucket::getNumNegativeKeys ( ) {
 bool RdbBucket::getList(RdbList* list, 
 			char* startKey, 
 			char* endKey,
-			long minRecSizes,
-			long *numPosRecs, 
-			long *numNegRecs, 
+			int32_t minRecSizes,
+			int32_t *numPosRecs, 
+			int32_t *numNegRecs, 
 			bool useHalfKeys) {
 
 	sort();
 	//get our bounds within the bucket:
 	uint8_t ks = m_parent->getKeySize();
-	long recSize = m_parent->getRecSize();
-	long start = 0;
-	long end = m_numKeys - 1;
+	int32_t recSize = m_parent->getRecSize();
+	int32_t start = 0;
+	int32_t end = m_numKeys - 1;
 	char v;
 	char* kk = NULL;
 	if(startKey) {
-		long low = 0;
-		long high = m_numKeys - 1;
+		int32_t low = 0;
+		int32_t high = m_numKeys - 1;
 		while(low <= high) {
-			long delta = high - low;
+			int32_t delta = high - low;
 			start = low + (delta >> 1);
 			kk = m_keys + (recSize * start);
 			v = KEYCMP(startKey,kk,ks);
@@ -1314,10 +1353,10 @@ bool RdbBucket::getList(RdbList* list,
 
 
 	if(endKey) {
-		long low = start;
-		long high = m_numKeys - 1;
+		int32_t low = start;
+		int32_t high = m_numKeys - 1;
 		while(low <= high) {
-			long delta = high - low;
+			int32_t delta = high - low;
 			end = low + (delta >> 1);
 			kk = m_keys + (recSize * end);
 			v = KEYCMP(endKey,kk,ks);
@@ -1342,14 +1381,14 @@ bool RdbBucket::getList(RdbList* list,
 	}
 	else end = m_numKeys - 1;
 
-	//log(LOG_WARN, "numKeys %li start %li end %li", 
+	//log(LOG_WARN, "numKeys %"INT32" start %"INT32" end %"INT32"", 
 	//m_numKeys, start, end);
 	
 	//keep track of our negative a positive recs
-	long numNeg = 0;
-	long numPos = 0;
+	int32_t numNeg = 0;
+	int32_t numPos = 0;
 
-	long fixedDataSize = m_parent->getFixedDataSize();
+	int32_t fixedDataSize = m_parent->getFixedDataSize();
 
 	char* currKey = m_keys + (start * recSize);
 
@@ -1363,7 +1402,7 @@ bool RdbBucket::getList(RdbList* list,
 	// 	if(startKey != NULL) list->setStartKey(currKey);
 
 	char* lastKey = NULL;
-	for(long i = start; 
+	for(int32_t i = start; 
 	    i <= end && list->getListSize() < minRecSizes; 
 	    i++, currKey += recSize) {
 		if ( fixedDataSize == 0 ) {
@@ -1375,9 +1414,9 @@ bool RdbBucket::getList(RdbList* list,
 					   mstrerror(g_errno));
 		} 
 		else {
-			long dataSize = fixedDataSize;
+			int32_t dataSize = fixedDataSize;
 			if ( fixedDataSize == -1 ) 
-				dataSize = *(long*)(currKey + 
+				dataSize = *(int32_t*)(currKey + 
 						    ks + sizeof(char*));
 			if ( ! list->addRecord ( currKey ,
 						 dataSize,
@@ -1392,24 +1431,24 @@ bool RdbBucket::getList(RdbList* list,
 		else                   numPos++;
 		lastKey = currKey;
 
-#ifdef __SANITY_CHECK__
+#ifdef GBSANITYCHECK
 		//sanity, remove for production
 		if(startKey && KEYCMP(currKey, startKey, ks) < 0) {
 			log("db: key is outside the "
 			    "keyrange given for getList."
 			    "  it is < startkey."
-			    "  %016llx%08lx %016llx%08lx."
-			    "  getting keys %li to %li for list"
-			    "bounded by %016llx%08lx %016llx%08lx",
-			    *(long long*)(startKey+(sizeof(long))),
-			    *(long*)startKey,
-			    *(long long*)(currKey+(sizeof(long))),
-			    *(long*)currKey,
+			    "  %016"XINT64"%08"XINT32" %016"XINT64"%08"XINT32"."
+			    "  getting keys %"INT32" to %"INT32" for list"
+			    "bounded by %016"XINT64"%08"XINT32" %016"XINT64"%08"XINT32"",
+			    *(int64_t*)(startKey+(sizeof(int32_t))),
+			    *(int32_t*)startKey,
+			    *(int64_t*)(currKey+(sizeof(int32_t))),
+			    *(int32_t*)currKey,
 			    start, end,
- 			    *(long long*)(startKey+(sizeof(long))),
-			    *(long*)startKey,
- 			    *(long long*)(endKey+(sizeof(long))),
-			    *(long*)endKey);
+ 			    *(int64_t*)(startKey+(sizeof(int32_t))),
+			    *(int32_t*)startKey,
+ 			    *(int64_t*)(endKey+(sizeof(int32_t))),
+			    *(int32_t*)endKey);
 
 			printBucket();
 			char* xx=NULL; *xx=0;
@@ -1418,18 +1457,18 @@ bool RdbBucket::getList(RdbList* list,
 			log("db: key is outside the "
 			    "keyrange given for getList."
 			    "  it is > endkey"
-			    "  %016llx%08lx %016llx%08lx."
-			    "  getting keys %li to %li for list"
-			    "bounded by %016llx%08lx %016llx%08lx",
-			    *(long long*)(currKey+(sizeof(long))),
-			    *(long*)currKey,
-			    *(long long*)(endKey+(sizeof(long))),
-			    *(long*)endKey,
+			    "  %016"XINT64"%08"XINT32" %016"XINT64"%08"XINT32"."
+			    "  getting keys %"INT32" to %"INT32" for list"
+			    "bounded by %016"XINT64"%08"XINT32" %016"XINT64"%08"XINT32"",
+			    *(int64_t*)(currKey+(sizeof(int32_t))),
+			    *(int32_t*)currKey,
+			    *(int64_t*)(endKey+(sizeof(int32_t))),
+			    *(int32_t*)endKey,
 			    start, end,
- 			    *(long long*)(startKey+(sizeof(long))),
-			    *(long*)startKey,
- 			    *(long long*)(endKey+(sizeof(long))),
-			    *(long*)endKey);
+ 			    *(int64_t*)(startKey+(sizeof(int32_t))),
+			    *(int32_t*)startKey,
+ 			    *(int64_t*)(endKey+(sizeof(int32_t))),
+			    *(int32_t*)endKey);
 
 			printBucket();
 			char* xx=NULL; *xx=0;
@@ -1481,6 +1520,118 @@ bool RdbBucket::getList(RdbList* list,
 }
 
 
+
+int RdbBucket::getListSizeExact (char* startKey, char* endKey ) {
+
+	int32_t numRecs = 0;
+
+	sort();
+	//get our bounds within the bucket:
+	uint8_t ks = m_parent->getKeySize();
+	int32_t recSize = m_parent->getRecSize();
+	int32_t start = 0;
+	int32_t end = m_numKeys - 1;
+	char v;
+	char* kk = NULL;
+
+	int32_t low = 0;
+	int32_t high = m_numKeys - 1;
+	while(low <= high) {
+		int32_t delta = high - low;
+		start = low + (delta >> 1);
+		kk = m_keys + (recSize * start);
+		v = KEYCMP(startKey,kk,ks);
+		if(v < 0) {
+			high = start - 1;
+			continue;
+		}
+		else if(v > 0) {
+			low = start + 1;
+			continue;
+		}
+		else break;
+
+	}
+	//now back up or move forward s.t. startKey
+	//is <= start
+	while(start < m_numKeys) {
+		kk = m_keys + (recSize * start);
+		v = KEYCMP(startKey, kk, ks);
+		if(v > 0) start++;
+		else break;
+	}
+
+
+
+
+	low = start;
+	high = m_numKeys - 1;
+	while(low <= high) {
+		int32_t delta = high - low;
+		end = low + (delta >> 1);
+		kk = m_keys + (recSize * end);
+		v = KEYCMP(endKey,kk,ks);
+		if(v < 0) {
+			high = end - 1;
+			continue;
+		}
+		else if(v > 0) {
+			low = end + 1;
+			continue;
+		}
+		else break;
+
+	}
+	while(end > 0) {
+		kk = m_keys + (recSize * end);
+		v = KEYCMP(endKey, kk, ks);
+		if(v < 0) end--;
+		else break;
+	}
+
+
+	//keep track of our negative a positive recs
+	//int32_t numNeg = 0;
+	//int32_t numPos = 0;
+
+	int32_t fixedDataSize = m_parent->getFixedDataSize();
+
+	char* currKey = m_keys + (start * recSize);
+
+	//bail now if there is only one key and it is out of range.
+	if(start == end && 
+	   ((startKey && KEYCMP(currKey, startKey, ks) < 0) ||
+	    (endKey   && KEYCMP(currKey, endKey, ks) > 0))) {
+		return 0;
+	}
+
+	// MDW: are none negatives?
+	if ( fixedDataSize == 0 ) {
+		numRecs = (end - start) * ks;
+		return numRecs;
+	}
+
+	char* lastKey = NULL;
+	for(int32_t i = start; 
+	    i <= end ; //&& list->getListSize() < minRecSizes; 
+	    i++, currKey += recSize) {
+		// if ( fixedDataSize == 0 ) {
+		// 	numRecs++;
+		// } 
+		// else {
+		int32_t dataSize = fixedDataSize;
+		if ( fixedDataSize == -1 ) 
+			dataSize = *(int32_t*)(currKey+ks+sizeof(char*));
+		numRecs++;
+		//}
+		lastKey = currKey;
+	}
+
+	// success
+	return numRecs * ks ;
+}
+
+
 bool RdbBuckets::deleteList(collnum_t collnum, RdbList *list) {
 	if(list->getListSize() == 0) return true;
 
@@ -1498,7 +1649,7 @@ bool RdbBuckets::deleteList(collnum_t collnum, RdbList *list) {
 	list->getStartKey ( startKey );
 	list->getEndKey   ( endKey   );
 
-	long startBucket = getBucketNum(startKey, collnum);
+	int32_t startBucket = getBucketNum(startKey, collnum);
 	if(startBucket > 0 && 
 	   bucketCmp(startKey, collnum, m_buckets[startBucket-1]) < 0)
 		startBucket--;
@@ -1509,28 +1660,28 @@ bool RdbBuckets::deleteList(collnum_t collnum, RdbList *list) {
 	   m_buckets[startBucket]->getCollnum() != collnum) return true;
 
 
-	long endBucket = getBucketNum(endKey, collnum);
+	int32_t endBucket = getBucketNum(endKey, collnum);
 	if(endBucket == m_numBuckets ||
 	   m_buckets[endBucket]->getCollnum() != collnum) endBucket--;
-	//log(LOG_WARN, "db numBuckets %li start %li end %li", 
+	//log(LOG_WARN, "db numBuckets %"INT32" start %"INT32" end %"INT32"", 
 	//  m_numBuckets, startBucket, endBucket);
 
 	list->resetListPtr();
-	for(long i= startBucket; i <= endBucket && !list->isExhausted(); i++) {
+	for(int32_t i= startBucket; i <= endBucket && !list->isExhausted(); i++) {
 		if(!m_buckets[i]->deleteList(list)) {
 			m_buckets[i]->reset();
 			m_buckets[i] = NULL;
 		}
 	}
-	long j = 0;
-	for(long i = 0; i < m_numBuckets; i++) 
+	int32_t j = 0;
+	for(int32_t i = 0; i < m_numBuckets; i++) 
 		if(m_buckets[i]) m_buckets[j++] = m_buckets[i];
 	m_numBuckets = j;
 
 	//did we delete the whole darn thing?  
 	if(m_numBuckets == 0) {
 		if(m_numKeysApprox != 0) {
-			log("db: bucket's number of keys is getting off by %li"
+			log("db: bucket's number of keys is getting off by %"INT32""
 			    " after deleting a list", m_numKeysApprox);
 			char *xx = NULL; *xx = 0;
 		}
@@ -1544,8 +1695,8 @@ bool RdbBucket::deleteList(RdbList *list) {
 
 	sort();
 	uint8_t ks = m_parent->getKeySize();
-	long recSize = m_parent->getRecSize();
-	long fixedDataSize = m_parent->getFixedDataSize();
+	int32_t recSize = m_parent->getRecSize();
+	int32_t fixedDataSize = m_parent->getFixedDataSize();
 	char v;
 
 	char *currKey = m_keys;
@@ -1553,9 +1704,9 @@ bool RdbBucket::deleteList(RdbList *list) {
 	char listkey[MAX_KEY_BYTES]; 
 
 	char *lastKey = m_keys + (m_numKeys * recSize);
-	long br = 0; //bytes removed
-	long dso = ks+sizeof(char*);//datasize offset
-	long numNeg = 0;
+	int32_t br = 0; //bytes removed
+	int32_t dso = ks+sizeof(char*);//datasize offset
+	int32_t numNeg = 0;
 
 	list->getCurrentKey(listkey);
 	while(currKey < lastKey) {  //&& !list->isExhausted()
@@ -1564,7 +1715,7 @@ bool RdbBucket::deleteList(RdbList *list) {
 		if(v == 0) {
 			if(fixedDataSize != 0) {
 				if(fixedDataSize == -1) 
-					br += *(long*)(currKey+dso);
+					br += *(int32_t*)(currKey+dso);
 				else br += fixedDataSize;
 			}
 			if(KEYNEG(currKey)) numNeg++;
@@ -1594,13 +1745,13 @@ bool RdbBucket::deleteList(RdbList *list) {
 	// . do we need to finish copying our list down to the 
 	// . vacated mem?
 	if(currKey < lastKey) {
-		long tmpSize = lastKey - currKey;
+		int32_t tmpSize = lastKey - currKey;
 		memcpy(p, currKey, tmpSize);
 		p += tmpSize;
 	}
 
 	if(p > m_keys) {	//do we have anything left?
-		long newNumKeys = (p - m_keys) / recSize;
+		int32_t newNumKeys = (p - m_keys) / recSize;
 		m_parent->updateNumRecs(newNumKeys - m_numKeys, - br, -numNeg);
 		m_numKeys = newNumKeys;
 		m_lastSorted = m_numKeys;
@@ -1622,9 +1773,9 @@ bool RdbBuckets::delColl(collnum_t collnum) {
 
 	m_needsSave = true;
 	RdbList list;
-	long minRecSizes = 1024*1024;
-	long numPosRecs  = 0;
-	long numNegRecs = 0;
+	int32_t minRecSizes = 1024*1024;
+	int32_t numPosRecs  = 0;
+	int32_t numNegRecs = 0;
 	while (1) {
 		if(!getList(collnum, KEYMIN(), KEYMAX(), minRecSizes ,
 			    &list , &numPosRecs , &numNegRecs, false )) {
@@ -1643,13 +1794,13 @@ bool RdbBuckets::delColl(collnum_t collnum) {
 	return true;
 }
 
-long RdbBuckets::addTree(RdbTree* rt) {
+int32_t RdbBuckets::addTree(RdbTree* rt) {
 
-	long n = rt->getFirstNode();
-	long count = 0;
+	int32_t n = rt->getFirstNode();
+	int32_t count = 0;
 	char* data = NULL;
 
-	long dataSize = m_fixedDataSize;
+	int32_t dataSize = m_fixedDataSize;
 
 	while ( n >= 0 ) {
 		if(m_fixedDataSize != 0) {
@@ -1665,7 +1816,7 @@ long RdbBuckets::addTree(RdbTree* rt) {
 		n = rt->getNextNode ( n );
 		count++;
 	}
-	log("db: added %li keys from tree to buckets for %s.",count, m_dbname);
+	log("db: added %"INT32" keys from tree to buckets for %s.",count, m_dbname);
 	return count;
 }
 
@@ -1695,14 +1846,14 @@ bool RdbBuckets::addList(RdbList* list, collnum_t collnum) {
 
 
 //return the total bytes of the list bookended by startKey and endKey
-long long RdbBuckets::getListSize ( collnum_t collnum,
+int64_t RdbBuckets::getListSize ( collnum_t collnum,
 				    char *startKey , char *endKey , 
 				    char *minKey , char *maxKey ) {
 
 	if ( minKey ) KEYSET ( minKey , endKey   , m_ks );
 	if ( maxKey ) KEYSET ( maxKey , startKey , m_ks );
 
-	long startBucket = getBucketNum(startKey, collnum);
+	int32_t startBucket = getBucketNum(startKey, collnum);
 	if(startBucket > 0 && 
 	   bucketCmp(startKey, collnum, m_buckets[startBucket-1]) < 0)
 		startBucket--;
@@ -1711,14 +1862,19 @@ long long RdbBuckets::getListSize ( collnum_t collnum,
 	   m_buckets[startBucket]->getCollnum() != collnum) return 0;
 
 
-	long endBucket = getBucketNum(endKey, collnum);
+	int32_t endBucket = getBucketNum(endKey, collnum);
+
+	// not sure if i should have added this: MDW
+	//if(bucketCmp(endKey, collnum, m_buckets[startBucket]) <= 0)
+	//	endBucket = startBucket;
+
 	if(endBucket == m_numBuckets ||
 	   m_buckets[endBucket]->getCollnum() != collnum) endBucket--;
-	//log(LOG_WARN, "db numBuckets %li start %li end %li", 
+	//log(LOG_WARN, "db numBuckets %"INT32" start %"INT32" end %"INT32"", 
 	//m_numBuckets, startBucket, endBucket);
 
-	long long retval = 0;
-	for(long i = startBucket; i <= endBucket; i++) {
+	int64_t retval = 0;
+	for(int32_t i = startBucket; i <= endBucket; i++) {
 		retval += m_buckets[i]->getNumKeys();
 	}
 	return retval * m_recSize;
@@ -1843,7 +1999,7 @@ bool RdbBuckets::fastSave_r() {
 	errno = 0;
 	// . save the header
 	// . force file head to the 0 byte in case offset was elsewhere
-	long long offset = 0;
+	int64_t offset = 0;
 
 	offset = fastSaveColl_r(fd, offset);
 	
@@ -1854,43 +2010,43 @@ bool RdbBuckets::fastSave_r() {
 	sprintf ( s2 , "%s/%s-buckets-saved.dat", m_dir , m_dbname );
 	::rename ( s , s2 ) ; //fuck yeah!
 	// info
-	log("db RdbBuckets saved %li keys, %lli bytes for %s",
+	log("db RdbBuckets saved %"INT32" keys, %"INT64" bytes for %s",
 	    getNumKeys(), offset, m_dbname);
 
 	return offset >= 0;
 }
 
-long long RdbBuckets::fastSaveColl_r(int fd, long long offset) {
+int64_t RdbBuckets::fastSaveColl_r(int fd, int64_t offset) {
 	if(m_numKeysApprox == 0) return offset;
-	long version = SAVE_VERSION;
-	long err = 0;
-	if ( pwrite ( fd , &version, sizeof(long) , offset ) != 4 ) err=errno;
-	offset += sizeof(long);
+	int32_t version = SAVE_VERSION;
+	int32_t err = 0;
+	if ( pwrite ( fd , &version, sizeof(int32_t) , offset ) != 4 ) err=errno;
+	offset += sizeof(int32_t);
 
-	if ( pwrite ( fd , &m_numBuckets, sizeof(long) , offset)!=4)err=errno; 
-	offset += sizeof(long);
-	if ( pwrite ( fd , &m_maxBuckets, sizeof(long) , offset)!=4)err=errno; 
-	offset += sizeof(long);
+	if ( pwrite ( fd , &m_numBuckets, sizeof(int32_t) , offset)!=4)err=errno; 
+	offset += sizeof(int32_t);
+	if ( pwrite ( fd , &m_maxBuckets, sizeof(int32_t) , offset)!=4)err=errno; 
+	offset += sizeof(int32_t);
 
 	if ( pwrite ( fd , &m_ks, sizeof(uint8_t) , offset ) != 1) err=errno; 
 	offset += sizeof(uint8_t);
-	if ( pwrite ( fd , &m_fixedDataSize,sizeof(long),offset)!=4) err=errno;
-	offset += sizeof(long);
-	if ( pwrite ( fd , &m_recSize, sizeof(long) , offset ) != 4) err=errno;
-	offset += sizeof(long);
-	if ( pwrite ( fd , &m_numKeysApprox,sizeof(long),offset) !=4)err=errno;
-	offset += sizeof(long);
-	if ( pwrite ( fd , &m_numNegKeys,sizeof(long),offset) != 4 ) err=errno;
-	offset += sizeof(long);
+	if ( pwrite ( fd , &m_fixedDataSize,sizeof(int32_t),offset)!=4) err=errno;
+	offset += sizeof(int32_t);
+	if ( pwrite ( fd , &m_recSize, sizeof(int32_t) , offset ) != 4) err=errno;
+	offset += sizeof(int32_t);
+	if ( pwrite ( fd , &m_numKeysApprox,sizeof(int32_t),offset) !=4)err=errno;
+	offset += sizeof(int32_t);
+	if ( pwrite ( fd , &m_numNegKeys,sizeof(int32_t),offset) != 4 ) err=errno;
+	offset += sizeof(int32_t);
 
-	if ( pwrite ( fd,&m_dataMemOccupied,sizeof(long),offset)!=4)err=errno;
-	offset += sizeof(long);
+	if ( pwrite ( fd,&m_dataMemOccupied,sizeof(int32_t),offset)!=4)err=errno;
+	offset += sizeof(int32_t);
 
-	long tmp = BUCKET_SIZE;
-	if ( pwrite ( fd , &tmp, sizeof(long) , offset ) != 4 ) err=errno;
-	offset += sizeof(long);
+	int32_t tmp = BUCKET_SIZE;
+	if ( pwrite ( fd , &tmp, sizeof(int32_t) , offset ) != 4 ) err=errno;
+	offset += sizeof(int32_t);
 
-	// 	long len = gbstrlen(m_dbname) + 1;
+	// 	int32_t len = gbstrlen(m_dbname) + 1;
 	// 	pwrite ( fd , &m_dbname, len , offset ); 
 	// 	offset += len;
 
@@ -1906,7 +2062,7 @@ long long RdbBuckets::fastSaveColl_r(int fd, long long offset) {
 		return -1;
 	}
 	// position to store into m_keys, ...
-	for (long i = 0; i < m_numBuckets; i++ ) {
+	for (int32_t i = 0; i < m_numBuckets; i++ ) {
 		offset = m_buckets[i]->fastSave_r(fd, offset);
 		// returns -1 on error
 		if ( offset < 0 ) {
@@ -1945,11 +2101,11 @@ bool RdbBuckets::fastLoad ( BigFile *f , char* dbname) {
 	log(LOG_INIT,"db: Loading %s.",f->getFilename());
 	// open it up
 	if ( ! f->open ( O_RDONLY ) ) return false;
-	long fsize = f->getFileSize();
+	int32_t fsize = f->getFileSize();
 	if ( fsize == 0 ) return true;
 
 	// init offset
-	long long offset = 0;
+	int64_t offset = 0;
 
 	offset = fastLoadColl(f, dbname, offset);
 
@@ -1962,15 +2118,15 @@ bool RdbBuckets::fastLoad ( BigFile *f , char* dbname) {
 }
 
 
-long long RdbBuckets::fastLoadColl( BigFile *f,
+int64_t RdbBuckets::fastLoadColl( BigFile *f,
 				    char *dbname,
-				    long long offset ) {
-	long maxBuckets;
-	long numBuckets;
-	long version;
+				    int64_t offset ) {
+	int32_t maxBuckets;
+	int32_t numBuckets;
+	int32_t version;
 
-	f->read  ( &version,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &version,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 	if(version > SAVE_VERSION) {
 		log("db: Failed to load buckets for %s: "
 		    "saved version is in the future or is corrupt, "
@@ -1979,40 +2135,40 @@ long long RdbBuckets::fastLoadColl( BigFile *f,
 		return -1;
 	}
 
-	f->read  ( &numBuckets,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &numBuckets,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	f->read  ( &maxBuckets,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &maxBuckets,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
 	f->read  ( &m_ks,sizeof(uint8_t), offset ); 
 	offset += sizeof(uint8_t);
 
-	f->read  ( &m_fixedDataSize,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_fixedDataSize,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	f->read  ( &m_recSize,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_recSize,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	f->read  ( &m_numKeysApprox,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_numKeysApprox,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	f->read  ( &m_numNegKeys,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_numNegKeys,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	f->read  ( &m_dataMemOccupied, sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_dataMemOccupied, sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	long bucketSize;
-	f->read  ( &bucketSize, sizeof(long), offset ); 
-	offset += sizeof(long);
+	int32_t bucketSize;
+	f->read  ( &bucketSize, sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
 
 	if(bucketSize != BUCKET_SIZE) {
 		log("db: It appears you have changed the bucket size "
 		    "please restart the old executable and dump "
-		    "buckets to disk. old=%li new=%li", 
-		    bucketSize, (long)BUCKET_SIZE);
+		    "buckets to disk. old=%"INT32" new=%"INT32"", 
+		    bucketSize, (int32_t)BUCKET_SIZE);
 		char *xx = NULL; *xx = 0;
 	}
 
@@ -2020,7 +2176,7 @@ long long RdbBuckets::fastLoadColl( BigFile *f,
 
 	if ( g_errno ) return -1;
 
-	for (long i = 0; i < numBuckets; i++ ) {
+	for (int32_t i = 0; i < numBuckets; i++ ) {
 		m_buckets[i] = bucketFactory();
 		if(m_buckets[i] == NULL) return -1;
 		offset = m_buckets[i]->fastLoad(f, offset);
@@ -2034,7 +2190,7 @@ long long RdbBuckets::fastLoadColl( BigFile *f,
 // max key size -- posdb, 18 bytes, so use 18 here
 #define BTMP_SIZE (BUCKET_SIZE*18+1000)
 
-long long RdbBucket::fastSave_r(int fd, long long offset) {
+int64_t RdbBucket::fastSave_r(int fd, int64_t offset) {
 
 	// first copy to a buf before saving so we can unlock!
 	char tmp[BTMP_SIZE];
@@ -2045,30 +2201,30 @@ long long RdbBucket::fastSave_r(int fd, long long offset) {
 	//pwrite ( fd , &m_collnum, sizeof(collnum_t) , offset ); 
 	//offset += sizeof(collnum_t);
 
-	memcpy ( p , &m_numKeys, sizeof(long) );
+	memcpy ( p , &m_numKeys, sizeof(int32_t) );
 	p += sizeof(m_numKeys);
-	//pwrite ( fd , &m_numKeys, sizeof(long) , offset ); 
+	//pwrite ( fd , &m_numKeys, sizeof(int32_t) , offset ); 
 	//offset += sizeof(m_numKeys);
 
-	memcpy ( p , &m_lastSorted, sizeof(long) ); 
+	memcpy ( p , &m_lastSorted, sizeof(int32_t) ); 
 	p += sizeof(m_lastSorted);
-	//pwrite ( fd , &m_lastSorted, sizeof(long) , offset ); 
+	//pwrite ( fd , &m_lastSorted, sizeof(int32_t) , offset ); 
 	//offset += sizeof(m_lastSorted);
 
-	long endKeyOffset = m_endKey - m_keys;
-	memcpy ( p , &endKeyOffset, sizeof(long) ); 
-	p += sizeof(long);
-	//pwrite ( fd , &endKeyOffset, sizeof(long) , offset ); 
-	//offset += sizeof(long);
+	int32_t endKeyOffset = m_endKey - m_keys;
+	memcpy ( p , &endKeyOffset, sizeof(int32_t) ); 
+	p += sizeof(int32_t);
+	//pwrite ( fd , &endKeyOffset, sizeof(int32_t) , offset ); 
+	//offset += sizeof(int32_t);
 	
-	long recSize = m_parent->getRecSize();
+	int32_t recSize = m_parent->getRecSize();
 	
 	memcpy ( p , m_keys, recSize*m_numKeys ); 
 	p += recSize*m_numKeys;
 	//pwrite ( fd , m_keys, recSize*m_numKeys , offset ); 
 	//offset += recSize*m_numKeys;
 
-	long size = p - tmp;
+	int32_t size = p - tmp;
 	if ( size > BTMP_SIZE ) { 
 		log("buckets: btmp_size too small. keysize>18 bytes?");
 		char *xx=NULL;*xx=0; 
@@ -2085,23 +2241,23 @@ long long RdbBucket::fastSave_r(int fd, long long offset) {
 	return offset + size;
 }
 
-long long RdbBucket::fastLoad(BigFile *f, long long offset) {
+int64_t RdbBucket::fastLoad(BigFile *f, int64_t offset) {
 	errno = 0;
 
 	f->read  ( &m_collnum,sizeof(collnum_t), offset ); 
 	offset += sizeof(collnum_t);
 
-	f->read  ( &m_numKeys,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_numKeys,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	f->read  ( &m_lastSorted,sizeof(long), offset ); 
-	offset += sizeof(long);
+	f->read  ( &m_lastSorted,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	long endKeyOffset;
-	f->read  ( &endKeyOffset,sizeof(long), offset ); 
-	offset += sizeof(long);
+	int32_t endKeyOffset;
+	f->read  ( &endKeyOffset,sizeof(int32_t), offset ); 
+	offset += sizeof(int32_t);
 
-	long recSize = m_parent->getRecSize();
+	int32_t recSize = m_parent->getRecSize();
 	
 	f->read  ( m_keys,recSize*m_numKeys, offset ); 
 	offset += recSize*m_numKeys;

@@ -7,16 +7,16 @@
 #include "HashTableX.h"
 
 // now address uses these
-time_t getYearMonthStart ( long y , long m ) ;
-time_t getDOWStart ( long y , long m, long dowArg, long count ) ;
-long getNumDaysInMonth ( long month , long year ) ; // leap year?
+time_t getYearMonthStart ( int32_t y , int32_t m ) ;
+time_t getDOWStart ( int32_t y , int32_t m, int32_t dowArg, int32_t count ) ;
+int32_t getNumDaysInMonth ( int32_t month , int32_t year ) ; // leap year?
 // dow is 0 to 6
-char *getDOWName ( long dow ) ;
+char *getDOWName ( int32_t dow ) ;
 // month is 0 to 11
-char *getMonthName ( long month ) ;
+char *getMonthName ( int32_t month ) ;
 
 
-typedef long long dateflags_t;
+typedef int64_t dateflags_t;
 
 // . values for Date::m_flags
 // . these are of type dateflags_t
@@ -117,10 +117,10 @@ typedef long long dateflags_t;
 
 // . returns the timestamp in seconds since the epoch
 // . returns 0 if no date found in the url itself
-long parseDateFromUrl ( char *url             ,
-			long *urlYear  = NULL ,
-			long *urlMonth = NULL ,
-			long *urlDay   = NULL );
+int32_t parseDateFromUrl ( char *url             ,
+			int32_t *urlYear  = NULL ,
+			int32_t *urlMonth = NULL ,
+			int32_t *urlDay   = NULL );
 
 
 // values for Date::m_type
@@ -196,23 +196,23 @@ typedef uint32_t suppflags_t;
 #define SF_ON_PRECEEDS    0x200000
 #define SF_SPECIAL_TOD    0x400000
 
-long getDOW  ( time_t t );
-long getYear ( time_t t );
+int32_t getDOW  ( time_t t );
+int32_t getYear ( time_t t );
 
-bool isTicketDate ( long a , long b , long long *wids , Bits *bits ,
-		    long niceness ) ;
+bool isTicketDate ( int32_t a , int32_t b , int64_t *wids , Bits *bits ,
+		    int32_t niceness ) ;
 
 class Date {
 
 public:
 
 	// word range relative to m_words Words.cpp class
-	long  m_a;
-	long  m_b;
+	int32_t  m_a;
+	int32_t  m_b;
 
 	// used by Events.cpp for event titles algo
-	long m_maxa;
-	long m_mina;
+	int32_t m_maxa;
+	int32_t m_mina;
 
 	// the types of Dates: (see #defines above)
 	// there are 8 bit flags. but only one bit is allowed to be set
@@ -232,30 +232,30 @@ public:
 	suppflags_t m_suppFlags;
 
 	// the numeric value of what we represent
-	long m_num;
+	int32_t m_num;
 
 	// . these two guys are used by Dates::getDateElements()
 	// . how many date elements we consist of
-	long m_numFlatPtrs;
+	int32_t m_numFlatPtrs;
 	// offset into Dates::m_cbuf of the list of those elements
-	long m_flatPtrsBufOffset;
+	int32_t m_flatPtrsBufOffset;
 	// the Dates class that contains us
 	class Dates *m_dates;
 
 	// the date # as added. used to set m_tmph now
-	unsigned long m_arrayNum;
+	uint32_t m_arrayNum;
 
 	// HACK: for 5pm - 2am, we now truncate to midnight so that
 	// "Saturday 5pm - 2am" does not have an interval that is really
 	// considered Friday night
-	long m_truncated;
+	int32_t m_truncated;
 
-	long m_penalty;
-	long m_tagHash;
-	long m_turkTagHash; // without tag attributes in the hash (xcpt class)
-	long m_dateTypeAndTagHash32;
-	long m_occNum;
-	long m_clockHash;
+	int32_t m_penalty;
+	int32_t m_tagHash;
+	int32_t m_turkTagHash; // without tag attributes in the hash (xcpt class)
+	int32_t m_dateTypeAndTagHash32;
+	int32_t m_occNum;
+	int32_t m_clockHash;
 
 	// if we are in a table, this is the table cell section which
 	// has m_headColSection and m_colNum, etc. set
@@ -266,11 +266,11 @@ public:
 
 	// for use by DT_COMPOUND types
 	char   m_month;
-	long   m_year;
+	int32_t   m_year;
 	char   m_dayNum;
 	// 1 through 7 = Sunday through Saturday
 	char   m_dow;
-	long   m_tod;
+	int32_t   m_tod;
 	time_t m_timestamp;
 
 	// for setting dowBits in Dates.cpp
@@ -278,15 +278,15 @@ public:
 	//char m_maxDow;
 	char m_dowBits;
 
-	long m_minYear;
-	long m_maxYear;
+	int32_t m_minYear;
+	int32_t m_maxYear;
 
 	char m_minDayNum;
 	char m_maxDayNum;
 
 	// in seconds
-	long m_minTod;
-	long m_maxTod;
+	int32_t m_minTod;
+	int32_t m_maxTod;
 
 	// . min pub date of the page that contains us
 	// . see Dates.cpp or XmlDoc.cpp for an explanation of this
@@ -296,23 +296,23 @@ public:
 	// sometimes an event date does not have a year, so we try to guess
 	// a range of years it could fall on. we look at the years of other
 	// dates on the page and use those to make a range of years.
-	//long m_minStartYear;
-	//long m_maxStartYear;
+	//int32_t m_minStartYear;
+	//int32_t m_maxStartYear;
 
 	// we guess the max year of a date that needs a year and does not have
 	// one, and we store the guess here
-	long m_maxYearGuess;
+	int32_t m_maxYearGuess;
 
 	// we scan for the min/max years on page from all event dates
 	// and then use that range to determine the year when other event dates
 	// occur, provided they have a dow/month/daynum (but no year) then
 	// we set this to that year.
-	long m_dowBasedYear;
+	int32_t m_dowBasedYear;
 
 	// convert years into time_t's. truncate m_maxStartFocus based on
 	// spideredTime.
-	long m_minStartFocus;
-	long m_maxStartFocus;
+	int32_t m_minStartFocus;
+	int32_t m_maxStartFocus;
 
 	// supplmenetal value for "first/second/fifth thursday"
 	char m_supp;
@@ -343,32 +343,32 @@ public:
 
 	// what sentence number are we in? Dates.cpp uses this to disqualify
 	// dates as headers if they are in the same sentence
-	//long m_sentenceId;
-	//long m_sentStart;
-	//long m_sentEnd;
+	//int32_t m_sentenceId;
+	//int32_t m_sentStart;
+	//int32_t m_sentEnd;
 
 	void *m_used;
 
-	long m_headerCount;
+	int32_t m_headerCount;
 
-	unsigned long m_tmph;
+	uint32_t m_tmph;
 
-	unsigned long m_ptrHash;
+	uint32_t m_ptrHash;
 
 	// . try to normalize so that two dates that represent the exact
 	//   same times will have the same m_dateHash
 	// . i.e. "11am = 11:00 AM", "3/3/11 = March 3rd 2011"
 	uint64_t m_dateHash64;
 
-	unsigned long long m_norepeatKey ;
-	long               m_norepeatResult ;
+	uint64_t m_norepeatKey ;
+	int32_t               m_norepeatResult ;
 
 	// usually the date ptr containing the tod, but in the case of
 	// burtstikilounge.com it is the daynum in that calendar layout.
 	// this is set late in the game in Events.cpp.
 	class Date *m_mostUniqueDatePtr;
 	// used for the above algo for setting m_mostUnqiueDatePtr
-	long m_usedCount;
+	int32_t m_usedCount;
 
 	// kinda like m_mostUniqueDatePtr, but we dedup our telescope
 	// components, using this as the base. part of normalization
@@ -379,16 +379,16 @@ public:
 	class Date *m_dateParent;
 
 	// used for re-sorting dates as part of printTextNorm() normalization
-	long m_groupNum;
+	int32_t m_groupNum;
 
 	// . this is used for COMPOUND dates
 	// . this is also used for lists and ranges of basic dates
 	// . leave this open-ended! so Dates::getMem() can alloc for the max
 	//   but we may actually end up using less!
-	long        m_numPtrs;
+	int32_t        m_numPtrs;
 	class Date *m_ptrs[];
 
-	void addPtr ( class Date *ptr , long i , class Dates *parent );
+	void addPtr ( class Date *ptr , int32_t i , class Dates *parent );
 
 	void printText ( class SafeBuf *sb , class Words *words ,
 			 bool inHtml = true ) ;
@@ -408,8 +408,8 @@ public:
 	void print ( class SafeBuf  *sb       ,
 		     class Sections *ss       ,
 		     class Words    *ww       ,
-		     long            siteHash ,
-		     long            num      ,
+		     int32_t            siteHash ,
+		     int32_t            num      ,
 		     class Date     *best     ,
 		     class Dates    *dates    );
 	
@@ -417,7 +417,7 @@ public:
 
 	bool addDoNotPrintDates ( class HashTableX *dnp );
 	bool addDoNotPrintRecursive ( datetype_t dt , class HashTableX *dnp ) ;
-	//long getTextOffset ( long num , long *retEndOff, class Words *words);
+	//int32_t getTextOffset ( int32_t num , int32_t *retEndOff, class Words *words);
 
 	// . is part of our compound date in this section?
 	// . flag which date types are in "si" and return that
@@ -426,7 +426,7 @@ public:
 	//   page.
 	//datetype_t getDateTypesInSection ( class Section *si );
 
-	//bool printNormalized2 ( class SafeBuf *sb , long nicess ,
+	//bool printNormalized2 ( class SafeBuf *sb , int32_t nicess ,
 	//			class Words *words );
 };
 
@@ -450,10 +450,10 @@ public:
 	Dates ();
 	~Dates ();
 
-	long getStoredSize ( );
-	static long getStoredSize ( char *p   );
-	long serialize     ( char *buf ); 
-	long deserialize   ( char *buf ); 
+	int32_t getStoredSize ( );
+	static int32_t getStoredSize ( char *p   );
+	int32_t serialize     ( char *buf ); 
+	int32_t deserialize   ( char *buf ); 
 
 	void reset();
 
@@ -467,9 +467,9 @@ public:
 	bool setPart1 ( Url *url ,//char             *url             ,
 			Url *redirUrl, // char             *redirUrl        ,
 			uint8_t           contentType     ,
-			long              ip              ,
-			long long         docId           ,
-			long              siteHash        ,
+			int32_t              ip              ,
+			int64_t         docId           ,
+			int32_t              siteHash        ,
 			class Xml        *xml             ,
 			class Words      *words           ,	
 			class Bits       *bits            ,	
@@ -483,18 +483,18 @@ public:
 			class XmlDoc     *nd              , // new XmlDoc
 			class XmlDoc     *od              , // old XmlDoc
 			char             *coll            ,
-			long              niceness        );
+			int32_t              niceness        );
 
 	bool addVotes ( class SectionVotingTable *nsvt ) ;
 
 	bool hasKitchenHours ( class Section *si ) ;
-	//bool isTicketDate ( long a , long b , long long *wids ) ;
-	bool isFuneralDate ( long a , long b ) ;
+	//bool isTicketDate ( int32_t a , int32_t b , int64_t *wids ) ;
+	bool isFuneralDate ( int32_t a , int32_t b ) ;
 	bool isCloseHeader ( class Section *si ) ;
 
 	bool setPart2 ( class Addresses *aa ,
-			long minPubDate ,
-			long maxPubDate ,
+			int32_t minPubDate ,
+			int32_t maxPubDate ,
 			// the old one - we read from that
 			//class SectionVotingTable *osvt ,
 			bool isXml ,
@@ -502,58 +502,58 @@ public:
 
 	bool getIntervals2 ( Date *dp , 
 			     SafeBuf *sb, 
-			     long year0 , 
-			     long year1,
+			     int32_t year0 , 
+			     int32_t year1,
 			     Date **closeDates ,
-			     long  numCloseDates ,
+			     int32_t  numCloseDates ,
 			     char  timeZone ,
 			     char  useDST ,
 			     class Words *words ) ;
 
-	long addIntervals ( class Date *di , char hflag , Interval *int3 ,
-			    long depth , class Date *orig );
-	long addIntervalsB ( class Date *di , char hflag , Interval *int3 ,
-			     long depth , class Date *orig );
-	bool addInterval  ( long a , long b , Interval *int3 , long *ni3 ,
-			    long depth , bool useDayShift = true ) ;
+	int32_t addIntervals ( class Date *di , char hflag , Interval *int3 ,
+			    int32_t depth , class Date *orig );
+	int32_t addIntervalsB ( class Date *di , char hflag , Interval *int3 ,
+			     int32_t depth , class Date *orig );
+	bool addInterval  ( int32_t a , int32_t b , Interval *int3 , int32_t *ni3 ,
+			    int32_t depth , bool useDayShift = true ) ;
 
-	bool addIntervalsForDOW ( long      num    ,
+	bool addIntervalsForDOW ( int32_t      num    ,
 				  class Interval *int3 ,
-				  long     *ni3    ,
-				  long      depth  ,
-				  long      year   ) ;
+				  int32_t     *ni3    ,
+				  int32_t      depth  ,
+				  int32_t      year   ) ;
 
 
-	long intersect ( Interval *int1 ,
+	int32_t intersect ( Interval *int1 ,
 			 Interval *int2 ,
 			 Interval *int3 ,
-			 long      ni1  ,
-			 long      ni2  ,
-			 long      depth );
-	long intersect2 ( Interval *int1 ,
+			 int32_t      ni1  ,
+			 int32_t      ni2  ,
+			 int32_t      depth );
+	int32_t intersect2 ( Interval *int1 ,
 			  Interval *int2 ,
 			  Interval *int3 ,
-			  long      ni1  ,
-			  long      ni2  ,
-			  long      depth );
-	long intersect3 ( Interval *int1 ,
+			  int32_t      ni1  ,
+			  int32_t      ni2  ,
+			  int32_t      depth );
+	int32_t intersect3 ( Interval *int1 ,
 			  Interval *int2 ,
 			  Interval *int3 ,
-			  long      ni1  ,
-			  long      ni2  ,
-			  long      depth ,
+			  int32_t      ni1  ,
+			  int32_t      ni2  ,
+			  int32_t      depth ,
 			  bool      subtractint2 ,
 			  bool      unionOp );
 
-	//time_t getYearMonthStart ( long y , long m );
+	//time_t getYearMonthStart ( int32_t y , int32_t m );
 
 	// 4th monday of May 2009, for instance, use a dowArg of 2 (monday)
 	// and a count of 4. returns a time_t
-	//time_t getDOWStart     ( long y , long m , long dowArg , long count);
+	//time_t getDOWStart     ( int32_t y , int32_t m , int32_t dowArg , int32_t count);
 
 
-	datetype_t getDateType ( long i , long *val , long *endWord ,
-				 long long *wids , long nw ,
+	datetype_t getDateType ( int32_t i , int32_t *val , int32_t *endWord ,
+				 int64_t *wids , int32_t nw ,
 				 bool onPreceeds ) ;
 
 	bool addRanges ( class Words *words ,
@@ -570,35 +570,35 @@ public:
 			     //bool dowTodOnly              , // = false );
 			     bool ignoreBreakingTags ); // = false
 
-	class Date *getMem ( long need );
+	class Date *getMem ( int32_t need );
 
 
 	class Date *addDate ( datetype_t  dt  , // DT_*
 			      dateflags_t tf  , // flags
-			      long        a   ,
-			      long        b   ,
-			      long        num );   // data
+			      int32_t        a   ,
+			      int32_t        b   ,
+			      int32_t        num );   // data
 	
 	// . must call set() above before calling this
 	// . mdw left off here
-	long getPubDate ( ) {
+	int32_t getPubDate ( ) {
 		return m_pubDate;
 		//if ( ! m_best ) return -1;
 		//if ( m_best->m_timestamp <= 0 ) {char*xx=NULL;*xx=0;}
 		//return m_best->m_timestamp;
 	};
 
-	long getRSSPublishDate ( class Inlink *k ) ;
+	int32_t getRSSPublishDate ( class Inlink *k ) ;
 
 	// returns -1 and sets g_errno on error
-	long isCompatible ( class Date *di, 
+	int32_t isCompatible ( class Date *di, 
 			    class Date *dp , 
 			    class HashTableX *ht ,
 			    class Date *DD ,
 			    bool  *hasMultipleHeaders );
 
 	// returns -1 and sets g_errno on error
-	long isCompatible2 ( Section *s1 , 
+	int32_t isCompatible2 ( Section *s1 , 
 			     Section *s2 , bool useXors );
 
 	//class Date *getFirstParentOfType( class Date *dd, 
@@ -608,45 +608,45 @@ public:
 	// XmlDoc::hash() calls this to index the Dates stored in the
 	// TitleRec. pages from the same site can use these special termlists
 	// to see if their tag hashes are likely indicative of a clock or not
-	bool hash ( long long         docId ,
+	bool hash ( int64_t         docId ,
 		    class HashTableX *tt    ,
 		    class XmlDoc     *xd    );
 
-	bool checkPunct ( long i , class Words *words , char *singleChar );
+	bool checkPunct ( int32_t i , class Words *words , char *singleChar );
 
 	// returns false and sets g_errno on error
 	bool parseDates ( class Words *w , dateflags_t defFlags ,
 			  class Bits *bits ,
 			  class Sections *sections ,
-			  long niceness ,
+			  int32_t niceness ,
 			  Url *url ,
 			  uint8_t contentType );
 	
 	bool m_bodySet ;
 
-	Date **getDateElements ( class Date *di, long *ne );
+	Date **getDateElements ( class Date *di, int32_t *ne );
 	bool addPtrToArray ( class Date *dp );
 	SafeBuf m_cbuf;
 
-	long getDateNum ( class Date *di ) ;
-	long printDateNeighborhood ( class Date *di , class Words *w ) ;
+	int32_t getDateNum ( class Date *di ) ;
+	int32_t printDateNeighborhood ( class Date *di , class Words *w ) ;
 	bool printDates ( class SafeBuf *sb ) ;
-	long printDates2 ( ) ;
+	int32_t printDates2 ( ) ;
 	// gdb can call this one:
-	long print ( class Date *d );
+	int32_t print ( class Date *d );
 
 	bool getDateOffsets ( Date *date ,
-			      long  num , 
-			      long *dateStartOff ,
-			      long *dateEndOff   ,
-			      long *dateSentStartOff ,
-			      long *dateSentEndOff ) ;
+			      int32_t  num , 
+			      int32_t *dateStartOff ,
+			      int32_t *dateEndOff   ,
+			      int32_t *dateSentStartOff ,
+			      int32_t *dateSentEndOff ) ;
 
 	// returns false and sets g_errno on error
-	long parseTimeOfDay3 ( class Words *w                 ,
-			       long         i                 ,
-			       long         niceness          , 
-			       long        *endWordNum        ,
+	int32_t parseTimeOfDay3 ( class Words *w                 ,
+			       int32_t         i                 ,
+			       int32_t         niceness          , 
+			       int32_t        *endWordNum        ,
 			       struct TimeZone **tzPtr         ,
 			       bool             monthPreceeds ,
 			       bool            *hadAmPM       ,
@@ -666,51 +666,51 @@ public:
 
 
 	void setMaxYearGuesses ( ) ;
-	long guessMaxYear ( long i ) ;
-	long calculateYearBasedOnDOW ( long minYear, long maxYear, 
+	int32_t guessMaxYear ( int32_t i ) ;
+	int32_t calculateYearBasedOnDOW ( int32_t minYear, int32_t maxYear, 
 				       class Date *di );
 
 	//bool printNormalized1 ( class SafeBuf *sb ,  
 	//			class Event *ev , 
-	//			long niceness ) ;
+	//			int32_t niceness ) ;
 
 	Date **m_datePtrs;// [ MAX_DATE_PTRS ];
-	long   m_numDatePtrs;
+	int32_t   m_numDatePtrs;
 
 	// just like m_datePtrs[] but we do not NULL out any entries
 	// just because they were used to make a compound, list or range date
 	Date **m_totalPtrs;// [ MAX_DATE_PTRS ];
-	long   m_numTotalPtrs;
+	int32_t   m_numTotalPtrs;
 	
 	// we now (re)alloc these on demand as well
-	long   m_maxDatePtrs;
+	int32_t   m_maxDatePtrs;
 
 	bool   m_overflowed;
 	bool   m_dateFormatPanic;
 	bool   m_calledParseDates;
 
-	long m_shiftDay;
+	int32_t m_shiftDay;
 
 	// memory pools for holding Dates and/or Date::m_ptrs lists
 	char *m_pools[MAX_POOLS];
-	long  m_numPools;
-	//long   m_numDates;
+	int32_t  m_numPools;
+	//int32_t   m_numDates;
 
 	char *m_coll;
 	//char *m_url;
 	//char *m_redirUrl;
 	Url *m_url;
 	Url *m_redirUrl;
-	long  m_siteHash;
+	int32_t  m_siteHash;
 	// the old xmldoc, NULL if did not exist
 	class XmlDoc *m_od;
 
 	char *m_current;
 	char *m_currentEnd;
 
-	//long  m_now;
+	//int32_t  m_now;
 	//bool  m_canHash;
-	//long  m_besti;
+	//int32_t  m_besti;
 
 	// the defacto pubdate
 	class Date *m_best;
@@ -718,35 +718,35 @@ public:
 
 	//wbit_t *m_bits;
 	class Bits *m_bits;
-	long  m_niceness;
+	int32_t  m_niceness;
 	dateflags_t m_dateFormat ;
 	//bool  m_gotDateFormatFromDisk ;
-	//long  m_urlDate    ;
-	//long  m_urlDateNum ;
-	long  m_urlMonth   ;
-	long  m_urlYear    ;
-	long  m_urlDay     ;
-	long  m_firstGood  ;
-	long  m_lastGood   ;
+	//int32_t  m_urlDate    ;
+	//int32_t  m_urlDateNum ;
+	int32_t  m_urlMonth   ;
+	int32_t  m_urlYear    ;
+	int32_t  m_urlDay     ;
+	int32_t  m_firstGood  ;
+	int32_t  m_lastGood   ;
 	// the new xml doc, used for XmlDoc::m_spideredTime
 	class XmlDoc *m_nd;
 
 	class Words    *m_words;
 	char          **m_wptrs;
-	long           *m_wlens;
-	long long      *m_wids;
+	int32_t           *m_wlens;
+	int64_t      *m_wids;
 	nodeid_t       *m_tids;
-	long            m_nw;
+	int32_t            m_nw;
 	class Sections *m_sections;
-	long long       m_docId;
-	long            m_spiderTime;
+	int64_t       m_docId;
+	int32_t            m_spiderTime;
 
 	class Addresses *m_addresses;
 
 	// . how much we have changed from the last time spidered
 	// . is a percentage and ranges from 0 to 100
 	// . will be 0 if first time spidered
-	long  m_changed;
+	int32_t  m_changed;
 
 	// like javascript, gif, jpeg, xml, html, etc.
 	uint8_t m_contentType;
@@ -757,8 +757,8 @@ public:
 	bool  m_badHtml;
 	bool  m_needQuickRespider;
 
-	long m_year0;
-	long m_year1;
+	int32_t m_year0;
+	int32_t m_year1;
 
 	class HashTableX *getSubfieldTable();
 	class HashTableX *getTODTable  () { return &m_tt; };
@@ -786,7 +786,7 @@ public:
 	// a field name that is duplicated in the document, and that that
 	// section contains.
 	HashTableX m_bitTable;
-	long       m_numLongs;
+	int32_t       m_numLongs;
 	//class SectionVotingTable *m_osvt;
 	HashTableX *m_rvt;
 	bool m_setDateHashes;
@@ -799,9 +799,9 @@ public:
 struct TimeZone {
 	char m_name[16];
 	// tzinfo:
-        long m_hourMod;
-        long m_minMod;
-        long m_modType;
+        int32_t m_hourMod;
+        int32_t m_minMod;
+        int32_t m_modType;
 };
 
 #define BADTIMEZONE 999999
@@ -809,17 +809,17 @@ struct TimeZone {
 // "s" is the timezone, like "EDT" and we return # of secs to add to UTC
 // to get the current time in that time zone.
 // returns BADTIMEZONE if "s" is unknown timezone
-long getTimeZone ( char *s ) ;
+int32_t getTimeZone ( char *s ) ;
 
 // . returns how many words starting at i are in the time zone
 // . 0 means not a timezone
-long getTimeZoneWord ( long i , long long *wids , long nw , 
-		       TimeZone **tzptr , long niceness );
+int32_t getTimeZoneWord ( int32_t i , int64_t *wids , int32_t nw , 
+		       TimeZone **tzptr , int32_t niceness );
 
-bool isDateType ( long long *pwid ) ;
+bool isDateType ( int64_t *pwid ) ;
 
 // returns false and sets g_errno on error
-bool getMonth ( long long wid , long *retMonth ) ;
+bool getMonth ( int64_t wid , int32_t *retMonth ) ;
 
 void resetDateTables ( );
 

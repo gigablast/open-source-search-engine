@@ -85,7 +85,7 @@ char* 	 getLanguageString ( unsigned char lang);
 char* 	 getNativeLanguageString ( unsigned char lang);
 char*    getLanguageAbbr ( unsigned char lang);
 unsigned char  getLanguageCharset ( unsigned char LangId );
-bool     isAdult( char *s, long slen, char **loc = NULL );
+bool     isAdult( char *s, int32_t slen, char **loc = NULL );
 //unsigned char getLanguageFromScript(UChar32 c);
 unsigned char getLanguageFromAbbr(char *abbr);
 unsigned char getLanguageFromAbbrN(char *abbr);

@@ -23,13 +23,13 @@ class Msg9b {
 	//   host/tagdb using msg1
 	bool addCatRecs  ( char *urls        ,
 			   char *coll        , 
-			   long  collLen     ,
-			   long  filenum     ,
+			   int32_t  collLen     ,
+			   int32_t  filenum     ,
 			   void *state       ,
 			   void (*callback)(void *state) ,
 			   unsigned char *numCatids ,
-			   long *catids    ,
-			   long niceness = MAX_NICENESS ,
+			   int32_t *catids    ,
+			   int32_t niceness = MAX_NICENESS ,
 			   bool deleteRecs = false );
 
 	// use this to convey our data
@@ -44,13 +44,13 @@ class Msg9b {
 	//we use these to store the passed in values from update
 	Url   m_url;
 	char *m_coll;
-	long  m_collLen;
-	long  m_filenum;
+	int32_t  m_collLen;
+	int32_t  m_filenum;
 	void *m_state;              
 	void (*m_callback)(void *state);
 	unsigned char *m_numCatids;
-	long *m_catids;
-	long m_niceness;
+	int32_t *m_catids;
+	int32_t m_niceness;
 };
 
 

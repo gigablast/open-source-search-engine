@@ -12,14 +12,14 @@ static int s_called = 0;
 static int  s_errno ;
 static int  s_errnos [ MAX_PID + 1 ];
 
-static long s_bad = 0;
-static long s_badPid = -1;
+static int32_t s_bad = 0;
+static int32_t s_badPid = -1;
 
 // WARNING: you MUST compile with -DREENTRANT for this to work
 int *__errno_location (void) {
-	long pid = (long) getpid();
+	int32_t pid = (int32_t) getpid();
 	s_called++;
-	if ( pid <= (long)MAX_PID ) return &s_errnos[pid];
+	if ( pid <= (int32_t)MAX_PID ) return &s_errnos[pid];
 	s_bad++;
 	s_badPid = pid;
 	return &s_errno; 

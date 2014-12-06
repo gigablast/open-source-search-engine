@@ -9,7 +9,7 @@ bool verifyCaptchaInput ( TcpSocket *socket ,
 			  void (callback)(void *state,TcpSocket *s) ) ;
 
 bool isSuperTurk ( char *turkUser ) ;
-bool isTurkBanned ( long long *tuid64 , long turkIp );
+bool isTurkBanned ( int64_t *tuid64 , int32_t turkIp );
 
 extern class HashTableX g_templateTable;
 

@@ -15,12 +15,12 @@ enum {
 	flFilterSpaces,
 };
 
-long elapsed_usec(const timeval* tv1, const timeval *tv2);
+int32_t elapsed_usec(const timeval* tv1, const timeval *tv2);
 void parse_doc_8859_1(char *s, int len, bool doHash = false,char *charset=NULL);
 //void parse_doc_utf8(char *s, int len, char *charset=NULL);
 void parse_doc_icu(char *s, int len, bool doHash=false,char *charset=NULL);
-long time_parser(void (*)(char*,int,bool,char*), char*, int, bool doHash=false,char *charset=NULL, int test_count = 1);
-//void PrintTokens(UChar **tokens, int num_tokens, long *toklen, bool ascii=false, bool html=false);
+int32_t time_parser(void (*)(char*,int,bool,char*), char*, int, bool doHash=false,char *charset=NULL, int test_count = 1);
+//void PrintTokens(UChar **tokens, int num_tokens, int32_t *toklen, bool ascii=false, bool html=false);
 // Read unicode from a file and parse into words
 
 // fake shutdown for Loop and Parms
@@ -145,11 +145,11 @@ int main(int argc, char *argv[])
 	       
 		//struct timeval tv1, tv2;
 		//struct timezone tz1, tz2;
-		long usec_elapsed;
+		int32_t usec_elapsed;
 //		int testnum;
 		
 		char ucBuf[128*1024];
-		long ucLen = ucToUnicode((UChar*)ucBuf,128*1024,
+		int32_t ucLen = ucToUnicode((UChar*)ucBuf,128*1024,
 					 file_buf,nread+1,"utf-8", 10);
 		ucLen <<= 1;
 
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 					   file_buf,nread,doHash,
 					   encoding,
 					   NUM_TEST_RUNS);
-		fprintf(stderr,"Document parsed (%s, hash=%s, filterSpaces=%s): %ld usec\n", 
+		fprintf(stderr,"Document parsed (%s, hash=%s, filterSpaces=%s): %"INT32" usec\n", 
 			parser_str, 
 			doHash?"true":"false",
 			doFilterSpaces?"true":"false",
@@ -168,15 +168,15 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-long time_parser(void (*parse_doc)(char*,int, bool,char*), char* buf, int len, bool doHash, char *charset, int test_count)
+int32_t time_parser(void (*parse_doc)(char*,int, bool,char*), char* buf, int len, bool doHash, char *charset, int test_count)
 {
 	struct timeval tv1, tv2;
 	struct timezone tz1, tz2;
 
-	long times[test_count];
-	long long total=0;
-	long max_time=-1;
-	long min_time=999999999;
+	int32_t times[test_count];
+	int64_t total=0;
+	int32_t max_time=-1;
+	int32_t min_time=999999999;
 	for (int i=0;i<test_count;i++ ){
 		gettimeofday(&tv1, &tz1);
 		parse_doc(buf,len, doHash,charset);
@@ -186,8 +186,8 @@ long time_parser(void (*parse_doc)(char*,int, bool,char*), char* buf, int len, b
 		if (times[i] < min_time) min_time = times[i];
 		if (times[i] > max_time) max_time = times[i];
 	}
-	long avg_time = total/test_count;
-	printf("Hash %s, count: %d, avg: %ld, min: %ld, max: %ld\n",
+	int32_t avg_time = total/test_count;
+	printf("Hash %s, count: %d, avg: %"INT32", min: %"INT32", max: %"INT32"\n",
 	       (doHash?"true":"false"),
 	       test_count, avg_time, min_time, max_time);
 	return avg_time;	
@@ -226,7 +226,7 @@ void parse_doc_icu(char *s, int len, bool doHash, char *charset){
 	//fprintf(stderr,"\nparse_doc_icu\n");	
 	// Extract text from (x)html
 	char *text_buf = (char*)malloc(64*1024);
-	long textLen = xml.getText(text_buf, 
+	int32_t textLen = xml.getText(text_buf, 
 				   64*1024, 
 				   0,
 				   99999999,
@@ -241,10 +241,10 @@ void parse_doc_icu(char *s, int len, bool doHash, char *charset){
 }
 
 /////////////////////////////////////////////////////////////////
-long elapsed_usec(const timeval* tv1, const timeval *tv2)
+int32_t elapsed_usec(const timeval* tv1, const timeval *tv2)
 {
-	long sec_elapsed = (tv2->tv_sec - tv1->tv_sec);
-	long usec_elapsed = tv2->tv_usec - tv1->tv_usec;
+	int32_t sec_elapsed = (tv2->tv_sec - tv1->tv_sec);
+	int32_t usec_elapsed = tv2->tv_usec - tv1->tv_usec;
 	if (usec_elapsed<0){
 		usec_elapsed += 1000000;
 		sec_elapsed -=1;
@@ -254,7 +254,7 @@ long elapsed_usec(const timeval* tv1, const timeval *tv2)
 }
 
 #if 0
-void PrintTokens(UChar **tokens, int num_tokens, long *toklen, bool ascii, bool html)
+void PrintTokens(UChar **tokens, int num_tokens, int32_t *toklen, bool ascii, bool html)
 {
 	if (html) printf("<html>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<head>\n<style> .token { border: 1px solid gray;background: #f0ffff;}</style>\n</head>\n<body>\n");
 	for (int i=0;i<num_tokens;i++){
@@ -274,7 +274,7 @@ void PrintTokens(UChar **tokens, int num_tokens, long *toklen, bool ascii, bool 
 			}
 			else{
 				char code_point[4];
-				int num_bytes = utf8_encode((u_long)tok[j],
+				int num_bytes = utf8_encode((u_int32_t)tok[j],
 							   code_point);
 				if (html){
 					if (code_point[0] == '<') printf("&lt;");

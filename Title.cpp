@@ -37,7 +37,7 @@
 
 
 /*
-static long isHeadlineClass(Xml *xml, Words *words, long wordIndex);
+static int32_t isHeadlineClass(Xml *xml, Words *words, int32_t wordIndex);
 
 // . List of title tags
 // . do not include bold cuz  
@@ -83,12 +83,12 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 		       Words    *words         ,
 		       Sections *sections      ,
 		       Pos      *pos           ,
-		       long      maxTitleChars ,
-		       long      maxTitleWords ,
+		       int32_t      maxTitleChars ,
+		       int32_t      maxTitleWords ,
 		       SafeBuf  *pbuf,
 		       Query    *q,
 		       CollectionRec *cr ,
-		       long niceness ) {
+		       int32_t niceness ) {
 
 	// if this is too big the "first line" algo can be huge!!!
 	// and really slow everything way down with a huge title candidate
@@ -102,7 +102,7 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	if ( maxTitleChars <= 0 ) return true;
 	if ( maxTitleWords <= 0 ) return true;
 
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	// . reset so matches.cpp using this does not core
 	// . assume no title tag
@@ -114,9 +114,9 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	char *val = NULL;
 	// look for the "title:" field in json then use that
 	SafeBuf jsonTitle;
-	long vlen = 0;
+	int32_t vlen = 0;
 	if ( xd->m_contentType == CT_JSON ) {
-		// shortcut
+		// int16_tcut
 		char *s = xd->ptr_utf8Content;
 		char *jt;
 		jt = getJSONFieldValue(s,"title",&vlen);
@@ -125,15 +125,15 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 			jsonTitle.nullTerm();
 		}
 		// if we got a product, try getting price
-		long oplen;
+		int32_t oplen;
 		char *op = getJSONFieldValue(s,"offerPrice",&oplen);
 		if ( op && oplen ) {
 			if ( ! is_digit(op[0]) ) { op++; oplen--; }
 			float price = atof2(op,oplen);
 			// print without decimal point if ends in .00
-			if ( (float)(long)price == price )
-				jsonTitle.safePrintf(", &nbsp; $%li",
-						     (long)price);
+			if ( (float)(int32_t)price == price )
+				jsonTitle.safePrintf(", &nbsp; $%"INT32"",
+						     (int32_t)price);
 			else
 				jsonTitle.safePrintf(", &nbsp; $%.02f",price);
 		}
@@ -178,8 +178,8 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 				  q ,
 				  cr );
 
-	long long took = gettimeofdayInMilliseconds() - startTime;
-	if ( took > 5 ) log("query: Title set took %lli ms for %s", took,
+	int64_t took = gettimeofdayInMilliseconds() - startTime;
+	if ( took > 5 ) log("query: Title set took %"INT64" ms for %s", took,
 			    xd->getFirstUrl()->getUrl());
 
 	return status;
@@ -206,11 +206,11 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 #define MAX_TIT_CANDIDATES 100
 
 // does word qualify as a subtitle delimeter?
-bool isWordQualified ( char *wp , long wlen ) {
+bool isWordQualified ( char *wp , int32_t wlen ) {
 	// must be punct word
 	if ( is_alnum_utf8(wp) ) return false;
 	// scan the chars
-	long x; for ( x = 0 ; x < wlen ; x++ ) {
+	int32_t x; for ( x = 0 ; x < wlen ; x++ ) {
 		if ( wp[x] == ' ' ) continue;
 		break;
 	}
@@ -232,8 +232,8 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			Words    *WW            ,
 			Sections *sections      ,
 			Pos      *POS           ,
-			long      maxTitleChars ,
-			long      maxTitleWords ,
+			int32_t      maxTitleChars ,
+			int32_t      maxTitleWords ,
 			SafeBuf  *pbuf,
 			Query    *q,
 			CollectionRec *cr     ) {
@@ -244,7 +244,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// assume no title
 	reset();
 
-	long NW = WW->getNumWords();
+	int32_t NW = WW->getNumWords();
 	if (pbuf) {
 		//pbuf->safePrintf("<div stype=\"border:1px solid black\">");
 		//pbuf->safePrintf("<b>***Finding Title***</b><br>\n");
@@ -280,15 +280,15 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// . allow up to 100 title CANDIDATES
 	// . "as" is the word # of the first word in the candidate
 	// . "bs" is the word # of the last word IN the candidate PLUS ONE
-	long   n = 0;
-	long   as      [MAX_TIT_CANDIDATES];
-	long   bs      [MAX_TIT_CANDIDATES];
+	int32_t   n = 0;
+	int32_t   as      [MAX_TIT_CANDIDATES];
+	int32_t   bs      [MAX_TIT_CANDIDATES];
 	float  scores  [MAX_TIT_CANDIDATES];
 	Words *cptrs   [MAX_TIT_CANDIDATES];
-	long   types   [MAX_TIT_CANDIDATES];
+	int32_t   types   [MAX_TIT_CANDIDATES];
 	char   htmlEnc [MAX_TIT_CANDIDATES];
-	long   numAlnum[MAX_TIT_CANDIDATES];
-	long   parent  [MAX_TIT_CANDIDATES];
+	int32_t   numAlnum[MAX_TIT_CANDIDATES];
+	int32_t   parent  [MAX_TIT_CANDIDATES];
 	// record the scoring algos effects
 	float  baseScore        [MAX_TIT_CANDIDATES];
 	float  noCapsBoost      [MAX_TIT_CANDIDATES];
@@ -296,23 +296,23 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	float  inCommonCandBoost[MAX_TIT_CANDIDATES];
 	float  inCommonBodyBoost[MAX_TIT_CANDIDATES];
 	// reset these
-	for ( long i = 0 ; i < MAX_TIT_CANDIDATES ; i++ )
+	for ( int32_t i = 0 ; i < MAX_TIT_CANDIDATES ; i++ )
 		// assume no parent
 		parent[i] = -1;
 
 	// xml and words class for each link info, rss item
 	Xml   tx[MAX_TIT_CANDIDATES];
 	Words tw[MAX_TIT_CANDIDATES];
-	long  ti = 0;
+	int32_t  ti = 0;
 
 	// restrict how many link texts and rss blobs we check for titles
 	// because title recs like www.google.com have hundreds and can
 	// really slow things down to like 50ms for title generation
-	long kcount = 0;
-	long rcount = 0;
+	int32_t kcount = 0;
+	int32_t rcount = 0;
 
 	// only allow 4 internal inlink titles
-	//long didHost = 0;
+	//int32_t didHost = 0;
 
 	LinkInfo *info = xd->getLinkInfo1();
 	// a flag to control subloop jumping
@@ -322,7 +322,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// the imported link info from another collection, linkInfo2...
  fooloop:
 
-	//long long x = gettimeofdayInMilliseconds();
+	//int64_t x = gettimeofdayInMilliseconds();
 
 	// . get every link text
 	// . TODO: repeat for linkInfo2, the imported link text
@@ -335,7 +335,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( k->size_rssItem > 10 && ++rcount >= 20 ) continue;
 		// set Url
 		Url u;
-		u.set ( k->ptr_urlBuf , k->size_urlBuf );
+		u.set ( k->getUrl() , k->size_urlBuf );
 		// is it the same host as us?
 		bool sh = true;
 		// the title url
@@ -353,15 +353,15 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			// set the words to it
 			//if ( ! k->setXmlFromLinkText ( &tx[ti] ) )
 			//	return false;
-			char *p    = k-> ptr_linkText;
-			long  plen = k->size_linkText - 1;
+			char *p    = k->getLinkText();
+			int32_t  plen = k->size_linkText - 1;
 			if ( ! verifyUtf8 ( p , plen ) ) {
 				log("title: set4 bad link text from url=%s",
-				    k->ptr_urlBuf);
+				    k->getUrl());
 				continue;
 			}
 			// now the words.
-			if ( ! tw[ti].set ( k->ptr_linkText   ,
+			if ( ! tw[ti].set ( k->getLinkText() ,
 					    k->size_linkText-1, // len
 					    TITLEREC_CURRENT_VERSION ,
 					    true              , // computeIds
@@ -396,7 +396,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// only one vote for this host
 		//if ( sh ) didHost++;
 		// get the word range
-		long tslen;
+		int32_t tslen;
 		bool isHtmlEnc;
 		char *ts = tx[ti].getRSSTitle ( &tslen , &isHtmlEnc );
 		// skip if not in the rss
@@ -430,7 +430,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( n + 30 >= MAX_TIT_CANDIDATES ) break;
 	}
 
-	//logf(LOG_DEBUG,"title: took1=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took1=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// process the imported link info
@@ -447,7 +447,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// . alloc for it
 	char *flags = NULL;
 	char  localBuf[10000];
-	long  need = WW->getNumWords();
+	int32_t  need = WW->getNumWords();
 	if ( need <= 10000 ) flags = (char *)localBuf;
 	else                 flags = (char *)mmalloc(need,"TITLEflags");
 	if ( ! flags ) return false;
@@ -460,7 +460,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// loop over all "words" in the html body
 	char inLink   = false;
 	char selfLink = false;
-	for ( long i = 0 ; i < NW ; i++ ) {
+	for ( int32_t i = 0 ; i < NW ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// if in a link that is not self link, cannot be in a candidate
@@ -472,9 +472,9 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// flag it
 		inLink = true;
 		// get the node in the xml
-		long xn = WW->m_nodes[i];
+		int32_t xn = WW->m_nodes[i];
 		// is it a self link?
-		long len;
+		int32_t len;
 		char *link = XML->getString(xn,"href",&len);
 		// . set the url class to this
 		// . TODO: use the base url in the doc
@@ -489,7 +489,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// if it is a selflink , check for an "onClock" tag in the
 		// anchor tag to fix that Mixx issue for:
 		// http://www.npr.org/templates/story/story.php?storyId=5417137
-		long  oclen;
+		int32_t  oclen;
 		char *oc = NULL;
 		if ( ! oc ) oc = XML->getString(xn,"onclick",&oclen);
 		if ( ! oc ) oc = XML->getString(xn,"onClick",&oclen);
@@ -497,7 +497,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( oc ) selfLink = false;
 		// if this <a href> link has a "title" attribute, use that
 		// instead! that thing is solid gold.
-		long  atlen;
+		int32_t  atlen;
 		char *atitle = XML->getString(xn,"title",&atlen);
 		// stop and use that, this thing is gold!
 		if ( ! atitle || atlen <= 0 ) continue;
@@ -534,16 +534,16 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( n + 20 >= MAX_TIT_CANDIDATES ) break;
 	}
 
-	//logf(LOG_DEBUG,"title: took2=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took2=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
-	//long long *wids = WW->getWordIds();
+	//int64_t *wids = WW->getWordIds();
 	// . find the last positive scoring guy
 	// . do not consider title candidates after "r" if "r" is non-zero
 	// . FIXES http://larvatusprodeo.net/2009/01/07/partisanship-politics-
 	//         and-participation/
 	/*
-	long r = NW - 1;
+	int32_t r = NW - 1;
 	if ( ! SS ) r = 0;
 	for ( ; r > 0 ; r-- ) {
 		// skip if no word
@@ -556,7 +556,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 
 	// . Sections class obsoletes Scores class
 	// . this sets r to -1 if no words in article
-	//long seca,secb;
+	//int32_t seca,secb;
 	//sections->getArticleRange ( &seca , &secb );
 
 	// do we have a valid article even?
@@ -565,7 +565,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	//if ( seca < secb ) validArticle = true;
 
 	// the candidate # of the title tag
-	long tti = -1;
+	int32_t tti = -1;
 
 	// if no "article content", ignore these tags
 	//if ( secb == -1 ) {
@@ -590,7 +590,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// the first word
 	char *wstart = NULL; if ( NW > 0 ) wstart = WW->getWord(0);
 	// loop over all "words" in the html body
-	for ( long i = 0 ; i < NW ; i++ ) {
+	for ( int32_t i = 0 ; i < NW ; i++ ) {
 		// come back up here if we encounter another "title-ish" tag
 		// within our first alleged "title-ish" tag
 	subloop:
@@ -623,9 +623,9 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// no words in links, unless it is a self link
 		if ( i < NW && (flags[i] & 0x02) ) continue;
 		// the start should be here
-		long start = -1;
+		int32_t start = -1;
 		// do not go too far
-		long max = i + 200;
+		int32_t max = i + 200;
 		// find the corresponding back tag for it
 		for (  ; i < NW && i < max ; i++ ) {
 			// hey we got it, BUT we got no alnum word first
@@ -731,14 +731,14 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( n + 10 >= MAX_TIT_CANDIDATES ) break;
 	}
 
-	//logf(LOG_DEBUG,"title: took3=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took3=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	/*
 	// add in the dmoz title
 	const unsigned char  numCatids     = xd->size_catIds/4;
 	//char         	    *dmozTitles    = xd->ptr_dmozTitles;
-	//long         	    *dmozTitleLens = tr->getDmozTitleLens();
+	//int32_t         	    *dmozTitleLens = tr->getDmozTitleLens();
 	// dmoz titles are always stored in UTF-8 format
 	Xml   dxml;
 	Words dwords;
@@ -779,14 +779,14 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	if ( xd->m_contentType == CT_UNKNOWN ) textDoc = true;
 	if ( xd->m_contentType == CT_TEXT    ) textDoc = true;
 	// make "i" point to first alphabetical word in the document
-	long i ; for ( i = 0 ; textDoc && i < NW && !WW->isAlpha(i) ; i++);
+	int32_t i ; for ( i = 0 ; textDoc && i < NW && !WW->isAlpha(i) ; i++);
 	// if we got a first alphabetical word, then assume that to be the
 	// start of our title
 	if ( textDoc && i < NW && n < MAX_TIT_CANDIDATES ) {
 		// first word in title is "t0"
-		long t0 = i;
+		int32_t t0 = i;
 		// find end of first line
-		long numWords = 0;
+		int32_t numWords = 0;
 		// set i to the end now. we MUST find a \n to terminate the
 		// title, otherwise we will not have a valid title
 		while (i < NW &&
@@ -797,7 +797,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			i++;
 		}
 		// "t1" is the end
-		long t1 = -1; 
+		int32_t t1 = -1; 
 		// we must have found our \n in order to set "t1"
 		if (i <= NW && numWords < maxTitleWords ) t1 = i;
 		// set the ptrs
@@ -812,7 +812,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if (t0 >= 0 && t1 > t0) n++;
 	}
 
-	//logf(LOG_DEBUG,"title: took4=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took4=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// now add the last url path to contain underscores or hyphens
@@ -830,7 +830,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// skip over /
 		if ( *p == '/' ) p--;
 		// now go back to next /
-		long count = 0;
+		int32_t count = 0;
 		for ( ; p >= pstart && *p !='/' ; p-- ) 
 			if ( *p == '_' || *p == '-' ) count++;
 		// did we get it?
@@ -860,7 +860,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	}
 
 	// save old n
-	long oldn = n;
+	int32_t oldn = n;
 	// . do not split titles if we are a root url
 	// . maps.yahoo.com was getting "Maps" for the title
 	Url *tu = xd->getFirstUrl();
@@ -896,10 +896,10 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	//rootTitleBufEnd = rootTitleBuf + gbstrlen(rootTitleBuf);
 
 	// convert into an array
-	long nr = 0;
+	int32_t nr = 0;
 	char *pr = rootTitleBuf;
 	char *rootTitles[20];
-	long  rootTitleLens[20];
+	int32_t  rootTitleLens[20];
 	// loop over each root title segment
 	for ( ; pr && pr < rootTitleBufEnd ; pr += gbstrlen(pr) + 1 ) {
 		// if we had a query...
@@ -939,27 +939,27 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// otherwise we don't get it as the title. so my question is are we
 	// going to have to do all the permutations at some point? for now
 	// let's just add in pairs...
-	for ( long i = 0 ; i < oldn && n + 3 < MAX_TIT_CANDIDATES ; i++ ) {
+	for ( int32_t i = 0 ; i < oldn && n + 3 < MAX_TIT_CANDIDATES ; i++ ) {
 		// stop if no root title segments
 		if ( nr <= 0 ) break;
 		// get the word info
 		Words *w = cptrs[i];
-		long   a = as[i];
-		long   b = bs[i];
+		int32_t   a = as[i];
+		int32_t   b = bs[i];
 		// init
-		long lasta = a;
+		int32_t lasta = a;
 		char prev  = false;
 		// char length in bytes
-		//long charlen = 1;
+		//int32_t charlen = 1;
 		// see how many we add
-		long added = 0;
+		int32_t added = 0;
 		char *skipTo = NULL;
 		bool qualified = true;
 		// . scan the words looking for a token
 		// . sometimes the candidates end in ": " so put in "k < b-1"
 		// . made this from k<b-1 to k<b to fix 
 		//   "Hot Tub Time Machine (2010) - IMDb" to strip IMDb
-		for ( long k = a ; k < b && n + 3 < MAX_TIT_CANDIDATES; k++){
+		for ( int32_t k = a ; k < b && n + 3 < MAX_TIT_CANDIDATES; k++){
 			// get word
 			char *wp = w->getWord(k);
 			// skip if not alnum
@@ -980,7 +980,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			// skip if in root title
 			if ( skipTo && wp < skipTo ) continue;
 			// does this match any root page title segments?
-			long j; 
+			int32_t j; 
 			for ( j = 0 ; j < nr ; j++ ) {
 				// . compare to root title
 				// . break out if we matched!
@@ -996,7 +996,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			// . skip over
 			skipTo = wp + rootTitleLens[j];
 			// must land on qualified punct then!!
-			long e = k+1;
+			int32_t e = k+1;
 			for ( ; e<b && w->m_words[e]<skipTo ; e++ );
 			// ok, word #e must be a qualified punct
 			if ( e<b &&
@@ -1066,25 +1066,25 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( added == 3 ) n--;
 	}
 
-	//logf(LOG_DEBUG,"title: took5=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took5=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 
 	// set base score
-	for ( long i = 0 ; i < n ; i++ ) baseScore[i] = scores[i];
+	for ( int32_t i = 0 ; i < n ; i++ ) baseScore[i] = scores[i];
 
 	// set # alnum words
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// point to the words
 		Words *w = cptrs[i];
 		// skip if got nuked above
 		if ( ! w ) continue;
 		// get the word boundaries
-		long a = as[i];
-		long b = bs[i];
-		long count = 0;
+		int32_t a = as[i];
+		int32_t b = bs[i];
+		int32_t count = 0;
 		// scan the words in this title candidate
-		for ( long j = a ; j < b ; j++ ) 
+		for ( int32_t j = a ; j < b ; j++ ) 
 			if ( w->isAlnum(j) ) count++;
 		// store it
 		numAlnum[i] = count;
@@ -1094,7 +1094,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// . now punish by 0.85 for every lower case non-stop word it has
 	// . reward by 1.1 if has a non-stopword in the query
 	//
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// point to the words
 		Words *w = cptrs[i];
 		// skip if got nuked above
@@ -1104,15 +1104,15 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// skip if empty
 		if ( w->getNumWords() <= 0 ) continue;
 		// get the word boundaries
-		long a = as[i];
-		long b = bs[i];
+		int32_t a = as[i];
+		int32_t b = bs[i];
 		// record the boosts
 		float ncb = 1.0;
 		float qtb = 1.0;
 		// a flag
 		char uncapped = false;
 		// scan the words in this title candidate
-		for ( long j = a ; j < b ; j++ ) {
+		for ( int32_t j = a ; j < b ; j++ ) {
 			// skip stop words
 			if ( w->isQueryStopWord(j) ) continue;
 			// punish if uncapitalized non-stopword
@@ -1121,7 +1121,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			if ( ! q ) continue;
 			// convert the word id into a term id
 			//int64_ttermid=g_indexdb.getTermId(0,w->getWordId(j));
-			long long wid = w->getWordId(j);
+			int64_t wid = w->getWordId(j);
 			// reward if in the query
 			if ( q->getWordNum(wid) >= 0 ) {
 				qtb       *= 1.5;
@@ -1138,7 +1138,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		}
 		// punish if a http:// title thingy
 		char *s    = wptrs[a];//w->getWord(a);
-		long  size = w->getStringSize(a,b);
+		int32_t  size = w->getStringSize(a,b);
 		if ( size > 9 && memcmp("http://",s,7)==0 )
 			ncb *= .10;
 		if ( size > 14 && memcmp("h\0t\0t\0p\0:\0/\0/",s,14)==0 )
@@ -1149,21 +1149,21 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		qtermsBoost[i]  = qtb;
 	}
 
-	//logf(LOG_DEBUG,"title: took6=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took6=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// . now compare each candidate to the other candidates
 	// . give a boost if matches
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// point to the words
 		Words *w1 = cptrs[i];
 		// skip if got nuked above
 		if ( ! w1 ) continue;
-		long   a1 = as   [i];
-		long   b1 = bs   [i];	
-		//long   nw1 = b1 - a1;
+		int32_t   a1 = as   [i];
+		int32_t   b1 = bs   [i];	
+		//int32_t   nw1 = b1 - a1;
 		// reset our array
-		//long found[512];
+		//int32_t found[512];
 		// sanity check
 		//if ( nw1 > 512 ) { char *xx=NULL;*xx=0; };
 		//memset ( found , 0 , 4*512);
@@ -1174,9 +1174,9 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		float iccb = 1.0;
 		// total boost
 		float total = 1.0;
-		//long count = 0;
+		//int32_t count = 0;
 		// to each other candidate
-		for ( long j = 0 ; j < n ; j++ ) {
+		for ( int32_t j = 0 ; j < n ; j++ ) {
 			// not to ourselves
 			if ( j == i ) continue;
 			// or our derivatives
@@ -1256,8 +1256,8 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			Words *w2 = cptrs[j];
 			// skip if got nuked above
 			if ( ! w2 ) continue;
-			long   a2 = as   [j];
-			long   b2 = bs   [j];
+			int32_t   a2 = as   [j];
+			int32_t   b2 = bs   [j];
 			// use body scores if we can
 			//Scores *scores1 = NULL;
 			//Scores *scores2 = NULL;
@@ -1270,27 +1270,27 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			// but we cannot have more than 1024 slots then
 			if ( ! ht.set ( 256 , hbuf,5000) ) return false;
 			// and table auto grows when 90% full, so limit us here
-			long count    = 0;
+			int32_t count    = 0;
 			// loop over all words in "w1" and hash them
-			for ( long k = a2 ; k < b2 && count<128; k++ ) {
+			for ( int32_t k = a2 ; k < b2 && count<128; k++ ) {
 				// the word id
-				long wid = (long) w2->m_wordIds[k] ;
+				int32_t wid = (int32_t) w2->m_wordIds[k] ;
 				// skip if not indexable
 				if ( wid == 0 ) continue;
 				// count it
 				count++;
 				// add to table
-				if ( ! ht.addKey ( (long)wid , 1 , NULL ) ) 
+				if ( ! ht.addKey ( (int32_t)wid , 1 , NULL ) ) 
 					return false;
 			}
 			// which words are found in another candidate
-			for ( long k = 0 ; k < nw1 ; k++ ) {
+			for ( int32_t k = 0 ; k < nw1 ; k++ ) {
 				// get word id
-				long wid = (long)w1->m_wordIds[a1 + k];
+				int32_t wid = (int32_t)w1->m_wordIds[a1 + k];
 				// skip if punct. set it to -1
 				if ( wid == 0LL ) { found[k] = -1; continue; }
 				// see if in table
-				long slot = ht.getSlot ( wid );
+				int32_t slot = ht.getSlot ( wid );
 				// this word was found in another candidate
 				if ( slot >= 0 ) found[k]++;
 			}
@@ -1304,8 +1304,8 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			// give a 1.1 boost per word i guess
 			//float boost = 1.0;
 			// get # of "matched words" in the two titles
-			//long nw1 = (long)(fp * (float)numAlnum[i]);
-			//for ( long v = 0 ; v < nw1 ; v++ )
+			//int32_t nw1 = (int32_t)(fp * (float)numAlnum[i]);
+			//for ( int32_t v = 0 ; v < nw1 ; v++ )
 			//	boost *= 1.1;
 			// custom boosting...
 			float boost = 1.0;
@@ -1339,7 +1339,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			//float boost = ((1.0 + fp)*(1.0 + fp));
 			// custom boosting!
 			if ( fp > 0.0 && g_conf.m_logDebugTitle )
-				logf(LOG_DEBUG,"title: i=%li j=%li fp=%.02f "
+				logf(LOG_DEBUG,"title: i=%"INT32" j=%"INT32" fp=%.02f "
 				     "b=%.02f", i,j,fp,boost);
 			// apply it
 			scores[i] *= boost;
@@ -1350,7 +1350,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		//   word twice!!
 		/*
 		float boost = 1.0;
-		for ( long k = 0 ; k < nw1 ; k++ ) {
+		for ( int32_t k = 0 ; k < nw1 ; k++ ) {
 			// skip punct
 			if ( found[k] == -1 ) continue;
 			// boost or punish
@@ -1364,20 +1364,20 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		inCommonCandBoost[i] = iccb;
 	}
 
-	//logf(LOG_DEBUG,"title: took7=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took7=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 
 	// loop over all n candidates
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// skip if not in the document body
 		if ( cptrs[i] != WW ) continue;
 		// point to the words
-		long       a1    = as   [i];
-		long       b1    = bs   [i];
+		int32_t       a1    = as   [i];
+		int32_t       b1    = bs   [i];
 		// . loop through this candidates words
 		// . TODO: use memset here?
-		for ( long j = a1 ; j <= b1 && j < NW ; j++ )
+		for ( int32_t j = a1 ; j <= b1 && j < NW ; j++ )
 			// flag it
 			flags[j] |= 0x01;
 	}
@@ -1385,7 +1385,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	Section **sp = NULL;
 	if ( sections ) sp = sections->m_sectionPtrs;
 
-	//logf(LOG_DEBUG,"title: took8=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took8=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	/*
@@ -1395,9 +1395,9 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// . hash each word in the document with a positive score
 	// . go up to the first 5000 "words"
 	// . hash up to 1000 "words"
-	HashTableT <long long,long> ht;
+	HashTableT <int64_t,int32_t> ht;
 	inLink = false;
-	for ( long i = 0 ; i < NW && i < 5000 ; i++ ) {
+	for ( int32_t i = 0 ; i < NW && i < 5000 ; i++ ) {
 		// see whose in a link tag
 		if ( tids[i] == TAG_A           ) inLink = true;
 		if ( tids[i] == (TAG_A | BACKBIT) ) inLink = false;
@@ -1433,23 +1433,23 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// free our stuff
 	if ( flags!=localBuf ) mfree (flags,need, "TITLEflags");
 
-	//logf(LOG_DEBUG,"title: took9=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took9=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// ok, now compare each candidate to that hash table
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// record the boost
 		float icbb = 1.0;
 		/*
 		  MDW: removed since SEC_ARTICLE was removed ----
 		// point to the words
 		Words     *w1    = cptrs[i];
-		long       a1    = as   [i];
-		long       b1    = bs   [i];
-		long       nw1   = w1->getNumWords();
-		long long *wids1 = w1->getWordIds ();
+		int32_t       a1    = as   [i];
+		int32_t       b1    = bs   [i];
+		int32_t       nw1   = w1->getNumWords();
+		int64_t *wids1 = w1->getWordIds ();
 		// loop through this candidates words
-		for ( long j = a1 ; j <= b1 && j < nw1 ; j++ ) {
+		for ( int32_t j = a1 ; j <= b1 && j < nw1 ; j++ ) {
 			// skip if not alnum
 			if ( wids1[j] == 0LL ) continue;
 			// is it in the positive scoring body?
@@ -1463,13 +1463,13 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		inCommonBodyBoost[i] = icbb;
 	}			
 
-	//logf(LOG_DEBUG,"title: took10=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took10=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// now get the highest scoring candidate title
 	float max    = -1.0;
-	long  winner = -1;
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t  winner = -1;
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// skip if got nuked
 		if ( ! cptrs[i] ) continue;
 		if ( winner != -1 && scores[i] <= max ) continue;
@@ -1485,7 +1485,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		winner = i;
 	}
 
-	//logf(LOG_DEBUG,"title: took11=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took11=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// if we are a root, always pick the title tag as the title
@@ -1514,8 +1514,8 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		if ( ! tp.set ( w , NULL ) ) return false;
 	}
 	// the string ranges from word #a up to and including word #b
-	long a = as[winner];
-	long b = bs[winner];
+	int32_t a = as[winner];
+	int32_t b = bs[winner];
 	// sanity check
 	if ( a < 0 || b > w->getNumWords() ) { char*xx=NULL;*xx=0; }
 	// save the title
@@ -1525,7 +1525,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// save these
 	m_htmlEncoded = htmlEnc [winner];
 
-	//logf(LOG_DEBUG,"title: took12=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took12=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// return now if no need to log this stuff
@@ -1553,7 +1553,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 			 
 
 	// print out all candidates
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		char *ts = "unknown";
 		if ( types[i] == TT_LINKTEXTLOCAL  ) ts = "local inlink text";
 		if ( types[i] == TT_LINKTEXTREMOTE ) ts = "remote inlink text";
@@ -1574,9 +1574,9 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// get the title
 		pbuf->safePrintf(
 				 "<tr>"
-				 "<td>#%li</td>"
+				 "<td>#%"INT32"</td>"
 				 "<td><nobr>%s</nobr></td>"
-				 "<td>%li</td>" 
+				 "<td>%"INT32"</td>" 
 				 "<td>%0.2f</td>" // baseScore
 				 "<td>%0.2f</td>"
 				 "<td>%0.2f</td>"
@@ -1595,15 +1595,15 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 				 scores[i]);
 		// ptrs
 		Words *w = cptrs[i];
-		long   a = as[i];
-		long   b = bs[i];
+		int32_t   a = as[i];
+		int32_t   b = bs[i];
 		// skip if no words
 		if ( w->getNumWords() <= 0 ) continue;
 		// the word ptrs
 		char **wptrs = w->getWordPtrs();
 		// string ptrs
 		char *ptr  = wptrs[a];//w->getWord(a);
-		long  size = w->getStringSize(a,b);
+		int32_t  size = w->getStringSize(a,b);
 		// it is utf8
 		pbuf->safeMemcpy ( ptr , size );
 		// end the line
@@ -1612,7 +1612,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 
 	pbuf->safePrintf("</table>\n<br>\n");
 
-	//logf(LOG_DEBUG,"title: took13=%lli",gettimeofdayInMilliseconds()-x);
+	//logf(LOG_DEBUG,"title: took13=%"INT64"",gettimeofdayInMilliseconds()-x);
 	//x = gettimeofdayInMilliseconds();
 
 	// log these for now
@@ -1627,8 +1627,8 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 // . Scores class applies to w1 only, use NULL if none
 // . use word popularity information for scoring rarer term matches more
 // . ONLY CHECKS FIRST 1000 WORDS of w2 for speed
-float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
-			     Words  *w2 , long t0 , long t1 ) {
+float Title::getSimilarity ( Words  *w1 , int32_t i0 , int32_t i1 ,
+			     Words  *w2 , int32_t t0 , int32_t t1 ) {
 	// if either empty, that's 0% contained
 	if ( w1->getNumWords() <= 0 ) return 0;
 	if ( w2->getNumWords() <= 0 ) return 0;
@@ -1649,28 +1649,28 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 	if ( ! pops1.set ( w1 , i0 , i1 ) ) return -1.0;
 	if ( ! pops2.set ( w2 , t0 , t1 ) ) return -1.0;
 	// now hash the words in w1, the needle in the haystack
-	long nw1 = w1->getNumWords();
+	int32_t nw1 = w1->getNumWords();
 	if ( i1 > nw1 ) i1 = nw1;
 	HashTable table;
-	//long *ss1 = NULL;
-	//long *ss2 = NULL;
+	//int32_t *ss1 = NULL;
+	//int32_t *ss2 = NULL;
 	//if ( scores1 ) ss1 = scores1->m_scores;
 	//if ( scores2 ) ss2 = scores2->m_scores;
 	// this augments the hash table
-	//long long lastWids[1024];
-	long long lastWid   = -1;
+	//int64_t lastWids[1024];
+	int64_t lastWid   = -1;
 	float     lastScore = 0.0;
 	// but we cannot have more than 1024 slots then
 	if ( ! table.set ( 1024 ) ) return -1.0;
 	// and table auto grows when 90% full, so limit us here
-	long count    = 0;
-	long maxCount = 20; // (1024 * 90) / 100 - 1;
+	int32_t count    = 0;
+	int32_t maxCount = 20; // (1024 * 90) / 100 - 1;
 	// sum up everything we add
 	float sum = 0.0;
 	// loop over all words in "w1" and hash them
-	for ( long i = i0 ; i < i1 ; i++ ) {
+	for ( int32_t i = i0 ; i < i1 ; i++ ) {
 		// the word id
-		long long wid = (long) w1->m_wordIds[i] ;
+		int64_t wid = (int32_t) w1->m_wordIds[i] ;
 		// skip if not indexable
 		if ( wid == 0 ) continue;
 		// or score is 0
@@ -1692,8 +1692,8 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// accumulate
 		sum += score;
 		// debug
-		//logf(LOG_DEBUG,"adding wid=%li score=%.02f sum=%.02f",
-		//     (long)wid,score,sum);
+		//logf(LOG_DEBUG,"adding wid=%"INT32" score=%.02f sum=%.02f",
+		//     (int32_t)wid,score,sum);
 		// accumulate for scoring phrases too! (adjacent words)
 		//psum += val;
 		// update the linked list
@@ -1701,7 +1701,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// prepare for next link, it may never come if we're last one!
 		//oldi = i;
 		// add to table
-		if ( ! table.addKey ( (long)wid , (long)score , NULL ) ) 
+		if ( ! table.addKey ( (int32_t)wid , (int32_t)score , NULL ) ) 
 			return -1.0;
 		// if no last wid, continue
 		if ( lastWid == -1LL ) {lastWid=wid;lastScore=score;continue; }
@@ -1715,13 +1715,13 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// accumulate
 		sum += phrScore;
 		// get the phrase id
-		long long pid = hash64 ( wid , lastWid );
+		int64_t pid = hash64 ( wid , lastWid );
 		// debug
 		//logf(LOG_DEBUG,
-		//     "adding pid=%li score=%.02f sum=%.02f",
-		//	     (long)pid,phrScore,sum);
+		//     "adding pid=%"INT32" score=%.02f sum=%.02f",
+		//	     (int32_t)pid,phrScore,sum);
 		// now add that
-		if ( ! table.addKey ( (long)pid , (long)phrScore , NULL ) )
+		if ( ! table.addKey ( (int32_t)pid , (int32_t)phrScore , NULL ) )
 			return -1.0;
 		// we are now the last wid
 		lastWid   = wid;
@@ -1741,9 +1741,9 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 	// reset
 	lastWid = -1LL;
 	// loop over all words in "w1" and hash them
-	for ( long i = t0 ; i < t1 ; i++ ) {
+	for ( int32_t i = t0 ; i < t1 ; i++ ) {
 		// the word id
-		long long wid = (long) w2->m_wordIds[i] ;
+		int64_t wid = (int32_t) w2->m_wordIds[i] ;
 		// skip if not indexable
 		if ( wid == 0 ) continue;
 		// or score is 0
@@ -1756,15 +1756,15 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// accumulate
 		sum += score;
 		// is it in table? 
-		long slot = table.getSlot ( (long)wid ) ;
+		int32_t slot = table.getSlot ( (int32_t)wid ) ;
 		// . if in table, add that up to "found"
 		// . we essentially find his wid AND our wid, so 2.0 times
 		if ( slot >= 0 ) found += 2.0 * score;
 		// use percent contained functionality now
 		//if ( slot >= 0 ) found += score;
 		// debug
-		//logf(LOG_DEBUG,"checking wid=%li score=%.02f sum=%.02f "
-		//   "found=%.02f slot=%li",   (long)wid,score,sum,found,slot);
+		//logf(LOG_DEBUG,"checking wid=%"INT32" score=%.02f sum=%.02f "
+		//   "found=%.02f slot=%"INT32"",   (int32_t)wid,score,sum,found,slot);
 		// now the phrase
 		if ( lastWid == -1LL ) {lastWid=wid;lastScore=score;continue;}
 		// . what was his val?
@@ -1775,9 +1775,9 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// accumulate
 		sum += phrScore;
 		// get the phrase id
-		long long pid = hash64 ( wid , lastWid );
+		int64_t pid = hash64 ( wid , lastWid );
 		// is it in table? 
-		slot = table.getSlot ( (long)pid ) ;
+		slot = table.getSlot ( (int32_t)pid ) ;
 		// . accumulate if in there
 		// . we essentially find his wid AND our wid, so 2.0 times
 		if ( slot >= 0 ) found += 2.0 * phrScore;
@@ -1788,9 +1788,9 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		lastScore = score;
 		// debug
 		//logf(LOG_DEBUG,
-		//     "checking pid=%li score=%.02f sum=%.02f found=%.02f "
-		//     "slot=%li",
-		//     (long)pid,phrScore,sum,found,slot);
+		//     "checking pid=%"INT32" score=%.02f sum=%.02f found=%.02f "
+		//     "slot=%"INT32"",
+		//     (int32_t)pid,phrScore,sum,found,slot);
 	}
 
 	// do not divide by zero
@@ -1806,15 +1806,15 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 // . copy just words in [t0,t1)
 // . returns false on error and sets g_errno
 bool Title::copyTitle ( Words *w , Pos *pos ,
-			long t0 , long t1 ,
+			int32_t t0 , int32_t t1 ,
 			Sections *sections ) {
 
 	// skip initial punct
-	//long long  *wids      = w->m_wordIds;
+	//int64_t  *wids      = w->m_wordIds;
 	//nodeid_t *tids      = w->m_tagIds;
 	char      **wp        = w->m_words;
-	long       *wlens     = w->m_wordLens;
-	long        nw        = w->m_numWords;
+	int32_t       *wlens     = w->m_wordLens;
+	int32_t        nw        = w->m_numWords;
 
 	// sanity check
 	if ( t1 < t0 ) { char *xx = NULL; *xx = 0; }
@@ -1828,11 +1828,11 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 	char *end = wp[t1-1] + wlens[t1-1] ;
 
 	// allocate title
-	long need = end - wp[t0];
+	int32_t need = end - wp[t0];
 
 	// . max bytes we'll need
 	// . no, all "chars" could be encoded so they take up like 5 bytes each
-	//long max = m_maxTitleChars;
+	//int32_t max = m_maxTitleChars;
 	// truncate the bytes to allocate if we can, based on m_maxTitleChars
 	//if ( need > max ) need = max;
 	// add 3 bytes for "..." and 1 for \0
@@ -1848,7 +1848,7 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 	// return false if could not alloc mem to hold the title
 	if ( ! m_title ) {
 		m_titleBytes = 0;
-		log("query: Could not alloc %li bytes for title.",need);
+		log("query: Could not alloc %"INT32" bytes for title.",need);
 		return false;
 	}
 	// save for freeing later
@@ -1883,7 +1883,7 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 	char *lastp = dst;//NULL;
 	// convert them always for now
 	bool convertHtmlEntities = true;
-	long charCount = 0;
+	int32_t charCount = 0;
 	// copy the node @p into "dst"
 	for ( ; src < srcEnd ; src += cs , dst += cs ) {
 		// get src size

@@ -25,8 +25,8 @@ void Vector::reset ( ) {
 // . used to compare documents
 // . "links" class must have been set with "setLinkHashes" set to true
 /*
-bool Vector::set ( Xml *xml , Links *links , Url *url , long linkNode ,
-		   char *buf , long bufSize ) {
+bool Vector::set ( Xml *xml , Links *links , Url *url , int32_t linkNode ,
+		   char *buf , int32_t bufSize ) {
 	// reset all
 	reset();
 	if ( ! links ) setPathComponentHashes ( url , buf , bufSize );
@@ -37,16 +37,16 @@ bool Vector::set ( Xml *xml , Links *links , Url *url , long linkNode ,
 }
 */
 
-bool Vector::setPathComponentHashes ( Url *url ){//,char *buf,long bufSize ) {
+bool Vector::setPathComponentHashes ( Url *url ){//,char *buf,int32_t bufSize ) {
 
 	reset();
 
 	m_numPairHashes = 0;
 	// use the provided buffer
-	//m_pairHashes = (unsigned long *)buf;
+	//m_pairHashes = (uint32_t *)buf;
 
 	char *p    = url->getPath();
-	long  plen = url->getPathLen();
+	int32_t  plen = url->getPathLen();
 	char *pend = p + plen;
 	// save ptr
 	char *last = p;
@@ -57,14 +57,14 @@ bool Vector::setPathComponentHashes ( Url *url ){//,char *buf,long bufSize ) {
 		// keep trucking if not an endpoint
 		if ( p < pend && *p != '/' ) continue;
 		// hash count
-		long k = 0;
+		int32_t k = 0;
 		// hash it
-		long h = 0;
+		int32_t h = 0;
 		for ( char *q = last ; q < p ; q++ ) {
 			// skip if not alnum
 			if ( ! is_alnum ( *q ) ) continue;
 			// otherwise, hash it (taken from hash.cpp)
-			h ^= (unsigned long)g_hashtab[(unsigned char)k++]
+			h ^= (uint32_t)g_hashtab[(unsigned char)k++]
 				[(int)to_lower((unsigned char)*q)];
 		}
 		// store that
@@ -84,20 +84,20 @@ bool Vector::setPathComponentHashes ( Url *url ){//,char *buf,long bufSize ) {
 	return true;
 }
 
-bool Vector::setTagPairHashes ( Xml *xml , // char *buf , long bufSize ,
-				long niceness ) {
+bool Vector::setTagPairHashes ( Xml *xml , // char *buf , int32_t bufSize ,
+				int32_t niceness ) {
 	// store the hashes here
-	unsigned long hashes [ 2000 ];
-	long          nh = 0;
+	uint32_t hashes [ 2000 ];
+	int32_t          nh = 0;
 	// go through each node
 	XmlNode *nodes = xml->getNodes    ();
-	long   n       = xml->getNumNodes ();
+	int32_t   n       = xml->getNumNodes ();
 
 	// start with the ith node
-	long i = 0;
+	int32_t i = 0;
 
-	unsigned long saved = 0;
-	unsigned long lastHash = 0;
+	uint32_t saved = 0;
+	uint32_t lastHash = 0;
 	// loop over the nodes
 	for ( ; i < n ; i++ ) {
 		// breathe a little
@@ -105,7 +105,7 @@ bool Vector::setTagPairHashes ( Xml *xml , // char *buf , long bufSize ,
 		// skip NON tags
 		if ( ! nodes[i].isTag() ) continue;
 		// use the tag id as the hash, its unique
-		unsigned long h = hash32 ( nodes[i].getNodeId() , 0 );
+		uint32_t h = hash32 ( nodes[i].getNodeId() , 0 );
 		// ensure hash is not 0, that has special meaning
 		if ( h == 0 ) h = 1;
 		// store in case we have only one hash
@@ -136,8 +136,8 @@ bool Vector::setTagPairHashes ( Xml *xml , // char *buf , long bufSize ,
 	// . now sort hashes to get the top MAX_PAIR_HASHES
 	gbsort ( hashes , nh , 4 , cmp );
 	// uniquify them
-	long d = 0;
-	for ( long j = 1 ; j < nh ; j++ ) { 
+	int32_t d = 0;
+	for ( int32_t j = 1 ; j < nh ; j++ ) { 
 		if ( hashes[j] == hashes[d] ) continue;
 		hashes[++d] = hashes[j];
 	}
@@ -152,7 +152,7 @@ bool Vector::setTagPairHashes ( Xml *xml , // char *buf , long bufSize ,
 	//	char *xx = NULL; *xx = 0;
 	//}
 	// use the provided buffer
-	//m_pairHashes = (unsigned long *)buf;
+	//m_pairHashes = (uint32_t *)buf;
 	QUICKPOLL ( 0 ) ;
 	// store the top MAX_PAIR_HASHES
 	memcpy ( m_pairHashes , hashes , nh * 4 );
@@ -162,20 +162,20 @@ bool Vector::setTagPairHashes ( Xml *xml , // char *buf , long bufSize ,
 
 // . hash all pairs of words (words that are adjacent only)
 // . get top X hashes to store as the word pair vector
-bool Vector::setPairHashes ( Words *words, long linkWordNum, long niceness ) {
+bool Vector::setPairHashes ( Words *words, int32_t linkWordNum, int32_t niceness ) {
 	// are we in a <a href> tag?
 	//bool inHref = false;
 	// store the hashes here
-	unsigned long hashes [ 3000 ];
-	long          nh = 0;
+	uint32_t hashes [ 3000 ];
+	int32_t          nh = 0;
 	// go through each word
-	long nw = words->getNumWords();
+	int32_t nw = words->getNumWords();
 
-	// shortcut
+	// int16_tcut
 	nodeid_t *tids = words->getTagIds();
 
 	// start with the ith word
-	long i = 0;
+	int32_t i = 0;
 	// linkNode starts pointing to a <a> tag so skip over that!
 	if ( linkWordNum >= 0 ) i = linkWordNum + 1;
 	// and advance i to the next anchor tag thereafter, we do not
@@ -185,7 +185,7 @@ bool Vector::setPairHashes ( Words *words, long linkWordNum, long niceness ) {
 		// keep going until we git a </a> or <a>
 		if ( (tids[i]&BACKBITCOMP) != TAG_A ) { i++; break; }
 
-	unsigned long saved = 0;
+	uint32_t saved = 0;
 	// loop over the nodes
 	for ( ; i < nw ; i++ ) {
 		// breathe a little
@@ -229,16 +229,16 @@ bool Vector::setPairHashes ( Words *words, long linkWordNum, long niceness ) {
 		if ( linkNode >= 0 ) {
 			char ttt[300];
 			char *pt = ttt;
-			long len = p - pstart;
+			int32_t len = p - pstart;
 			if ( len > 290 ) len = 290;
-			for ( long i = 0 ; i < len ; i++ ) 
+			for ( int32_t i = 0 ; i < len ; i++ ) 
 				if ( pstart[i] ) *pt++ = pstart[i];
 			*pt = '\0';
 			//memcpy ( ttt , pstart , len );
 			ttt[len] = '\0';
-			unsigned long hh = h;
+			uint32_t hh = h;
 			if ( lastHash && h != lastHash ) hh = h ^ lastHash;
-			log ("vec hash %li %s = %lu [%lu]",
+			log ("vec hash %"INT32" %s = %"UINT32" [%"UINT32"]",
 			     nh-1,ttt,h,hh);
 		}
 		*/
@@ -282,7 +282,7 @@ bool Vector::setPairHashes ( Words *words, long linkWordNum, long niceness ) {
 	//	char *xx = NULL; *xx = 0;
 	//}
 	// use the provided buffer
-	//m_pairHashes = (unsigned long *)buf;
+	//m_pairHashes = (uint32_t *)buf;
 	// store the top MAX_PAIR_HASHES
 	memcpy ( m_pairHashes , hashes , nh * 4 );
 	return true;
@@ -290,7 +290,7 @@ bool Vector::setPairHashes ( Words *words, long linkWordNum, long niceness ) {
 
 // sort in descending order
 int cmp ( const void *h1 , const void *h2 ) {
-	return *(unsigned long *)h2 - *(unsigned long *)h1;
+	return *(uint32_t *)h2 - *(uint32_t *)h1;
 }
 
 /*
@@ -300,14 +300,14 @@ int cmp ( const void *h1 , const void *h2 ) {
 // . "links" class must have been set with "setLinkHashes" set to true
 bool Vector::setLinkHashes ( Links *links , Url *url ) {
 	// get our url's domain hash
-	unsigned long h = hash32 ( url->getDomain() , url->getDomainLen() );
+	uint32_t h = hash32 ( url->getDomain() , url->getDomainLen() );
 	// how many links?
-	long n = links->getNumLinks();
+	int32_t n = links->getNumLinks();
 	// store hashes of all non-local links here
-	unsigned long hashes[3000];
-	long          nh  = 0;
+	uint32_t hashes[3000];
+	int32_t          nh  = 0;
 	// get top 20
-	for ( long i = 0 ; i < n && nh < 3000 ; i++ ) {
+	for ( int32_t i = 0 ; i < n && nh < 3000 ; i++ ) {
 		// skip if from same domain, we just want external links
 		if ( links->getLinkHash(i) == h ) continue;
 		// . save it
@@ -317,8 +317,8 @@ bool Vector::setLinkHashes ( Links *links , Url *url ) {
 	// sort hashes to get the top MAX_LINK_HASHES
 	gbsort ( hashes , nh , 4 , cmp );
 	// remove duplicate url hashes
-	long k = 0;
-	for ( long i = 1 ; i < nh ; i++ )
+	int32_t k = 0;
+	for ( int32_t i = 1 ; i < nh ; i++ )
 		if ( hashes[i] != hashes[k] ) hashes[++k] = hashes[i];
 	// possibly adjust the # of link hashes after de-duping them
 	nh = k;
@@ -335,18 +335,18 @@ bool Vector::setLinkHashes ( Links *links , Url *url ) {
 */
 
 /*
-long Vector::getStoredSize ( ) {
+int32_t Vector::getStoredSize ( ) {
 	return 4 + m_numPairHashes * 4 ;
 }
 
 // return bytes read from
-long Vector::set   ( char *buf , long bufMaxSize ) {
+int32_t Vector::set   ( char *buf , int32_t bufMaxSize ) {
 	char *p = buf;
-	m_numPairHashes  = *(long *)p; p += 4;
-	//m_numRemoteLinks = *(long *)p; p += 4;
+	m_numPairHashes  = *(int32_t *)p; p += 4;
+	//m_numRemoteLinks = *(int32_t *)p; p += 4;
 
 	//memcpy ( m_pairHashes , p , m_numPairHashes * 4 );
-	m_pairHashes = (unsigned long *)p;
+	m_pairHashes = (uint32_t *)p;
 	p += m_numPairHashes * 4;
 
 	// sanity check
@@ -355,13 +355,13 @@ long Vector::set   ( char *buf , long bufMaxSize ) {
 	return p - buf;
 }
 
-long Vector::set2  ( char *buf , long numPairHashes ) {
+int32_t Vector::set2  ( char *buf , int32_t numPairHashes ) {
 	char *p = buf;
 	m_numPairHashes  = numPairHashes;
-	//m_numRemoteLinks = *(long *)p; p += 4;
+	//m_numRemoteLinks = *(int32_t *)p; p += 4;
 
 	//memcpy ( m_pairHashes , p , m_numPairHashes * 4 );
-	m_pairHashes = (unsigned long *)p;
+	m_pairHashes = (uint32_t *)p;
 	p += m_numPairHashes * 4;
 
 	// sanity check
@@ -371,10 +371,10 @@ long Vector::set2  ( char *buf , long numPairHashes ) {
 }
 
 // return bytes stored
-long Vector::store ( char *buf , long bufMaxSize ) {
+int32_t Vector::store ( char *buf , int32_t bufMaxSize ) {
 	char *p = buf;
-	*(long *)p = m_numPairHashes;  p += 4;
-	// *(long *)p = m_numRemoteLinks; p += 4;
+	*(int32_t *)p = m_numPairHashes;  p += 4;
+	// *(int32_t *)p = m_numRemoteLinks; p += 4;
 
 	memcpy ( p , m_pairHashes , m_numPairHashes * 4 );
 	p += m_numPairHashes * 4;
@@ -384,23 +384,23 @@ long Vector::store ( char *buf , long bufMaxSize ) {
 */
 
 // return the percent similar
-long getSimilarity ( Vector *v0 , Vector *v1 ) {
+int32_t getSimilarity ( Vector *v0 , Vector *v1 ) {
 	// . the hashes are sorted
 	// . point each recs sample vector of termIds
-	// . we sorted them above as unsigned longs, so we must make sure
-	//   we use unsigned longs here, too
-	unsigned long *t0 = (unsigned long *)v0->m_pairHashes;
-	unsigned long *t1 = (unsigned long *)v1->m_pairHashes;
+	// . we sorted them above as uint32_ts, so we must make sure
+	//   we use uint32_ts here, too
+	uint32_t *t0 = (uint32_t *)v0->m_pairHashes;
+	uint32_t *t1 = (uint32_t *)v1->m_pairHashes;
 	// get the ends of each vector
-	unsigned long *end0 = t0 + v0->m_numPairHashes;
-	unsigned long *end1 = t1 + v1->m_numPairHashes;
+	uint32_t *end0 = t0 + v0->m_numPairHashes;
+	uint32_t *end1 = t1 + v1->m_numPairHashes;
 	// if both are empty, 100% similar
 	if ( t0 >= end0 && t1 >= end1 ) return 100;
 	// if either is empty, return 0 to be on the safe side
 	if ( t0 >= end0 ) return 0;
 	if ( t1 >= end1 ) return 0;
 	// count matches between the sample vectors
-	long count = 0;
+	int32_t count = 0;
  loop:
 	// each vector is sorted, so comparison is like a merge sort
 	if      ( *t0 < *t1 ) { if ( *++t0 == 0 ) goto done; }
@@ -417,11 +417,11 @@ long getSimilarity ( Vector *v0 , Vector *v1 ) {
 
  done:
 	// count total components in each sample vector
-	long total = 0;
+	int32_t total = 0;
 	total += v0->m_numPairHashes;
 	total += v1->m_numPairHashes;
 
-	long sim = (count * 2 * 100) / total;
+	int32_t sim = (count * 2 * 100) / total;
 	if ( sim > 100 ) sim = 100;
 	return sim;
 }
@@ -431,7 +431,7 @@ long getSimilarity ( Vector *v0 , Vector *v1 ) {
 // . returns -1 and sets g_errno on error
 // . is this page with repesentative vector, v, a link-farm brother of us?
 // . if removeMatches is true we remove matching word pairs from "v"
-long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
+int32_t Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 
 	// bail if we hashed nothing
 	if ( m_numPairHashes == 0 ) return 0;
@@ -440,30 +440,30 @@ long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 	char tbuf[8000];
 	HashTable ht;
 	// tbuf[] can do 1000 slots
-	long slots = 1000;
+	int32_t slots = 1000;
 	// avoid calling bzero on 8k if we have fewer things to hash
 	if ( m_numPairHashes * 2 < slots ) slots = m_numPairHashes * 2;
 	// initialize it to this many slots
 	if ( ! ht.set ( slots , tbuf , 8000 ) ) return -1;
 	// hash all word pair hashes into the table
-	for ( long i = 0 ; i < m_numPairHashes ; i++ ) 
+	for ( int32_t i = 0 ; i < m_numPairHashes ; i++ ) 
 		ht.addKey ( m_pairHashes [i], 1 );
 	// count matches
-	long c1 = 0;
+	int32_t c1 = 0;
 	// vars for hashing
-	long           n ;
-	unsigned long *h ;
+	int32_t           n ;
+	uint32_t *h ;
 	// . what word pairs does "v" have that we also have?
-	// . TODO: speed up by making hash table use long instead of long long
+	// . TODO: speed up by making hash table use int32_t instead of int64_t
 	n    = v->m_numPairHashes;
 	h    = v->m_pairHashes;
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// termNum into table
-		long slot = ht.getSlot ( h[i] );
+		int32_t slot = ht.getSlot ( h[i] );
 		// if empty...
 		if ( slot < 0 ) continue;
 		// get score
-		unsigned long score = ht.getValueFromSlot ( slot );
+		uint32_t score = ht.getValueFromSlot ( slot );
 		// don't count if empty
 		//if ( score == 0 ) continue;
 		// don't count if it was marked
@@ -475,10 +475,10 @@ long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 	}
 
 	// what external links does "v" have that we also have?
-	//long c2 = 0;
+	//int32_t c2 = 0;
 	//n    = v->m_numLinkHashes;
 	//h    = v->m_linkHashes;
-	//for ( long i = 0 ; i < n ; i++ ) 
+	//for ( int32_t i = 0 ; i < n ; i++ ) 
 	//	if ( m_table.getScoreFromTermId ( h[i] ) != 0 ) c2++;
 
 	// . chances of the doc having the same random word pair as us
@@ -492,10 +492,10 @@ long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 	// . "view ourselves" -->2,730
 
 	// convert # of matched word pairs to probability of link-spam brothers
-	long p1 = 0;
+	int32_t p1 = 0;
 
 	// get min # stored word pair hashes from each doc
-	long min = v->m_numPairHashes;
+	int32_t min = v->m_numPairHashes;
 	if ( m_numPairHashes < min ) min = m_numPairHashes;
 	
 	// . if all are shared, that's 100% probability,
@@ -526,7 +526,7 @@ long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 	return p1;
 
 	// 1% probability of spam for each common link above 8
-	//long p2 = (c2 - 5) * 5;
+	//int32_t p2 = (c2 - 5) * 5;
 	//if ( p2 < 0 ) p2 = 0;
 
 	// return the max of the 2 probabilities
@@ -536,8 +536,8 @@ long Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 
 
 uint32_t Vector::getVectorHash() {
-	unsigned long h = 0;
-	for(long i = 0; i < m_numPairHashes; i++) {
+	uint32_t h = 0;
+	for(int32_t i = 0; i < m_numPairHashes; i++) {
 		h ^= m_pairHashes[i];
 	}
 	return h;

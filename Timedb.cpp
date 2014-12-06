@@ -18,14 +18,14 @@ bool Timedb::init ( ) {
 	// bail if not indexing events
 	if ( ! g_conf.m_indexEventsOnly ) return true;
 
-	//long maxTreeMem = 1000000 ;
-	long maxTreeMem = g_conf.m_timedbMaxTreeMem ;
+	//int32_t maxTreeMem = 1000000 ;
+	int32_t maxTreeMem = g_conf.m_timedbMaxTreeMem ;
 
 	// . what's max # of tree nodes?
 	// . assume avg TimeRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	long nodeSize     = (sizeof(key128_t)+12+4) + sizeof(collnum_t);
-	long maxTreeNodes = maxTreeMem  / nodeSize;
+	int32_t nodeSize     = (sizeof(key128_t)+12+4) + sizeof(collnum_t);
+	int32_t maxTreeNodes = maxTreeMem  / nodeSize;
 
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
@@ -50,12 +50,12 @@ bool Timedb::init ( ) {
 		return false;
 
 	// test out makekey
-	long long docId = 0x34097534;
-	long eventId = 156;
+	int64_t docId = 0x34097534;
+	int32_t eventId = 156;
 	// shave off the SECONDS since makeKey does that
-	long stime = ((g_now / 1000)/60) * 60;
-	long etime = ((stime + 1000)/60) * 60;
-	long ntime = ((etime + 1301)/60) * 60;
+	int32_t stime = ((g_now / 1000)/60) * 60;
+	int32_t etime = ((stime + 1000)/60) * 60;
+	int32_t ntime = ((etime + 1301)/60) * 60;
 	key128_t k = g_timedb.makeKey(stime,docId,eventId,etime,ntime,false);
 	if ( g_timedb.getStartTime32    (&k) != stime ) { char *xx=NULL;*xx=0;}
 	if ( g_timedb.getEndTime32      (&k) != etime ) { char *xx=NULL;*xx=0;}
@@ -72,12 +72,12 @@ bool Timedb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Timedb::init2 ( long treeMem ) {
+bool Timedb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . assume avg TimeRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	long nodeSize     = (sizeof(key128_t)+12+4) + sizeof(collnum_t);
-	long maxTreeNodes = treeMem  / nodeSize;
+	int32_t nodeSize     = (sizeof(key128_t)+12+4) + sizeof(collnum_t);
+	int32_t maxTreeNodes = treeMem  / nodeSize;
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
 			    "timedbRebuild"            ,
@@ -124,7 +124,7 @@ bool Timedb::verify ( char *coll ) {
 	key128_t endKey;
 	startKey.setMin();
 	endKey.setMax();
-	//long minRecSizes = 64000;
+	//int32_t minRecSizes = 64000;
 
 	if ( ! msg5.getList ( RDB_TIMEDB   ,
 			      coll          ,
@@ -161,19 +161,19 @@ bool Timedb::verify ( char *coll ) {
 		//char *xx=NULL;*xx=0; }
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key128_t k ;
 		list.getCurrentKey(&k);
 		count++;
-		unsigned long groupId = getGroupId ( RDB_TIMEDB , &k );
+		uint32_t groupId = getGroupId ( RDB_TIMEDB , &k );
 		if ( groupId == g_hostdb.m_groupId ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in timedb, "
-		     "only %li belong to our group.",count,got);
+		log ("db: Out of first %"INT32" records in timedb, "
+		     "only %"INT32" belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
@@ -184,7 +184,7 @@ bool Timedb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 
-	log ( LOG_INFO, "db: Timedb passed verification successfully for %li"
+	log ( LOG_INFO, "db: Timedb passed verification successfully for %"INT32""
 			" recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -201,7 +201,7 @@ bool Timedb::verify ( char *coll ) {
 
 // all times are in UTC
 key128_t Timedb::makeKey ( time_t    startTime ,
-			   long long docId , 
+			   int64_t docId , 
 			   uint16_t  eventId ,
 			   time_t    endTime ,
 			   time_t    nextStartTime ,
@@ -238,13 +238,13 @@ key128_t Timedb::makeKey ( time_t    startTime ,
 
 	// sanity check. no old dates allowed! we can't go negative
 	if ( startTime < START2009 ) { 
-		log("timedb: starttime min breach %li",startTime);
+		log("timedb: starttime min breach %"INT32"",startTime);
 		startTime = START2009;
 		//char *xx=NULL;*xx=0; }
 	}
 	// don't want to breach our 26 bits either
 	if ( startTime > START2030 ) { 
-		log("timedb: starttime max breach %li",startTime);
+		log("timedb: starttime max breach %"INT32"",startTime);
 		startTime = START2030;
 		//char *xx=NULL;*xx=0; }
 	}
@@ -276,7 +276,7 @@ key128_t Timedb::makeKey ( time_t    startTime ,
 bool readTimeList ( collnum_t collnum ) ;
 
 // returns false if blocked, returns true and sets g_errno on error
-bool populateTable ( char *coll , long  date1 , long date2 ) {
+bool populateTable ( char *coll , int32_t  date1 , int32_t date2 ) {
 	// get it for that coll
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 	if ( ! cr ) return true;
@@ -319,7 +319,7 @@ bool initAllSortByDateTables ( ) {
 	// note it
 	log("timedb: initializing all sort by date tables");
 	// scan the colls to see if we can init one's table
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// get it for that coll
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -360,7 +360,7 @@ bool initSortByDateTable ( char *coll ) {
 	if ( cr->m_inProgress ) { char *xx=NULL;*xx=0; }
 	// core?
 	if ( ! isClockInSync() ) { char  *xx=NULL;*xx=0; }
-	// shortcut
+	// int16_tcut
 	HashTableX *ht = &cr->m_sortByDateTable;
 	// reset it
 	ht->reset();
@@ -376,8 +376,8 @@ bool initSortByDateTable ( char *coll ) {
 	// this might core because we are not sync'ed with host #0's clock
 	// when we first start up!
 	cr->m_lastUpdateTime = getTimeGlobal();
-	unsigned long date1 = START2009;
-	unsigned long date2 = START2030;
+	uint32_t date1 = START2009;
+	uint32_t date2 = START2030;
 	// if it blocked, that is error because threads are off!
 	if ( ! populateTable ( coll,date1, date2 ) ) {
 		char *xx=NULL;*xx=0; }
@@ -402,7 +402,7 @@ void updateTablesWrapper ( int fd , void *state ) {
 	// time now
 	time_t now = getTimeGlobal();
 	// scan the colls to see if we can update one
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// get it for that coll
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -443,7 +443,7 @@ bool readTimeList ( collnum_t collnum ) {
 loop:
 	// all done?
 	if ( ! cr->m_inProgress ) return true;
-	// shortcut
+	// int16_tcut
 	Msg5 *m5 = cr->m_msg5;
 	// use msg5 to get the list
 	if ( ! m5->getList ( RDB_TIMEDB    ,
@@ -478,7 +478,7 @@ loop:
 
 void gotTimeListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) {
 	// cast it
-	collnum_t collnum = (collnum_t)((unsigned long)state);
+	collnum_t collnum = (collnum_t)((uint32_t)state);
 	// process it
 	gotTimeList ( collnum );
 	// try to read more. return if it blocked
@@ -501,7 +501,7 @@ bool gotTimeList ( collnum_t collnum ) {
 	// get it for that coll
 	CollectionRec *cr = g_collectiondb.getRec(collnum);
 	if ( ! cr ) return true;
-	// shortcut
+	// int16_tcut
 	HashTableX *ht = &cr->m_sortByDateTable;
 	// get the list we read into
 	RdbList *list = &cr->m_timedbList;
@@ -524,14 +524,14 @@ bool gotTimeList ( collnum_t collnum ) {
 		list->getCurrentKey(&k);
 		// show it
 		//if ( g_conf.m_logDebugTimedb )
-		//	log("timedb: key.n1=0x%llx n0=0x%llx",
+		//	log("timedb: key.n1=0x%"XINT64" n0=0x%"XINT64"",
 		//	    k.n1,k.n0);
 		// use this
 		addTimedbKey ( &k , nowGlobal , ht );
 	}
 	// advance to next rec in timedb
 	cr->m_timedbStartKey = *(key128_t *)list->getLastKey();
-	cr->m_timedbStartKey += (unsigned long) 1;
+	cr->m_timedbStartKey += (uint32_t) 1;
 	// watch out for wrap around
 	if ( cr->m_timedbStartKey < *(key128_t *)list->getLastKey() ) {
 		cr->m_inProgress = false;
@@ -546,15 +546,15 @@ bool gotTimeList ( collnum_t collnum ) {
 }
 
 // returns false and sets g_errno on error
-bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
+bool addTimedbKey ( key128_t *kp , uint32_t nowGlobal , HashTableX *ht ) {
 	// get start time for this event time interval
-	unsigned long etime = g_timedb.getEndTime32 ( kp );
+	uint32_t etime = g_timedb.getEndTime32 ( kp );
 	// . skip if end time is in the past
 	// . no, add it anyway so we can show expired events in the
 	//   search results if you want to see them
 	//if ( etime < nowGlobal ) return true;
 	// get start time and next start time (0 means none)
-	unsigned long stime   = g_timedb.getStartTime32     ( kp );
+	uint32_t stime   = g_timedb.getStartTime32     ( kp );
 	uint64_t docId   = g_timedb.getDocId           ( kp );
 	uint16_t eventId = g_timedb.getEventId         ( kp );
 	// put eventid on at top
@@ -583,9 +583,9 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 		if ( isDelete ) {
 			if ( g_conf.m_logDebugTimedb )
 				log("timedb: missed delete "
-				    "key docid=%012llu evid=%03li "
-				    "start=%lu end=%lu nxtstr=%lu",
-				    docId,(long)eventId,stime,etime,
+				    "key docid=%012"UINT64" evid=%03"INT32" "
+				    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32"",
+				    docId,(int32_t)eventId,stime,etime,
 				    g_timedb.getNextStartTime32 ( kp ) );
 			return true;
 		}
@@ -596,10 +596,10 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 		ts.m_nextStartTime = g_timedb.getNextStartTime32 ( kp );
 		// note it for debug
 		if ( g_conf.m_logDebugTimedb )
-			log("timedb: adding key docid=%012llu evid=%03li "
-			    "start=%lu end=%lu nxtstr=%lu key=%llu",
-			    docId,(long)eventId,stime,etime,
-			    ts.m_nextStartTime,(unsigned long long)key64);
+			log("timedb: adding key docid=%012"UINT64" evid=%03"INT32" "
+			    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32" key=%"UINT64"",
+			    docId,(int32_t)eventId,stime,etime,
+			    ts.m_nextStartTime,(uint64_t)key64);
 		// otherwise, good to add it
 		return ht->addKey(&key64,&ts);
 	}
@@ -610,20 +610,20 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 		     old->m_startTime != stime ) {
 			if ( g_conf.m_logDebugTimedb )
 				log("timedb: unmatched delete "
-				    "key docid=%012llu evid=%03li "
-				    "start=%lu end=%lu nxtstr=%lu key=%llu",
-				    docId,(long)eventId,stime,etime,
+				    "key docid=%012"UINT64" evid=%03"INT32" "
+				    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32" key=%"UINT64"",
+				    docId,(int32_t)eventId,stime,etime,
 				    g_timedb.getNextStartTime32 ( kp ) ,
-				    (unsigned long long)key64);
+				    (uint64_t)key64);
 			return true;
 		}
 		// note it for debug
 		if ( g_conf.m_logDebugTimedb )
-			log("timedb: removing key docid=%012llu evid=%03li "
-			    "start=%lu end=%lu nxtstr=%lu key=%llu",
-			    docId,(long)eventId,stime,etime,
+			log("timedb: removing key docid=%012"UINT64" evid=%03"INT32" "
+			    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32" key=%"UINT64"",
+			    docId,(int32_t)eventId,stime,etime,
 			    g_timedb.getNextStartTime32 ( kp ) ,
-			    (unsigned long long)key64);
+			    (uint64_t)key64);
 		// . ok, nuke it i guess that was it
 		// . PROBLEM: revdb negative keys are added after the latest 
 		//   timedb keys for a doc, so if the best time was deleted
@@ -640,14 +640,14 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 	    old->m_startTime < stime ) {
 		// note that we failed
 		if ( g_conf.m_logDebugTimedb )
-			log("timedb: tossing key docid=%012llu evid=%03li "
-			    "start=%lu end=%lu nxtstr=%lu "
-			    "oldstart=%lu oldend=%lu key=%llu",
-			    docId,(long)eventId,stime,etime,
+			log("timedb: tossing key docid=%012"UINT64" evid=%03"INT32" "
+			    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32" "
+			    "oldstart=%"UINT32" oldend=%"UINT32" key=%"UINT64"",
+			    docId,(int32_t)eventId,stime,etime,
 			    g_timedb.getNextStartTime32 ( kp ) ,
 			    old->m_startTime,
 			    old->m_endTime,
-			    (unsigned long long)key64);
+			    (uint64_t)key64);
 		// then keep it
 		return true;
 	}
@@ -662,28 +662,28 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 	if ( old->m_startTime == stime && old->m_endTime < etime ) {
 		// note that we failed
 		if ( g_conf.m_logDebugTimedb )
-			log("timedb: tossing2 key docid=%012llu evid=%03li "
-			    "start=%lu end=%lu nxtstr=%lu "
-			    "oldstart=%lu oldend=%lu key=%llu",
-			    docId,(long)eventId,stime,etime,
+			log("timedb: tossing2 key docid=%012"UINT64" evid=%03"INT32" "
+			    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32" "
+			    "oldstart=%"UINT32" oldend=%"UINT32" key=%"UINT64"",
+			    docId,(int32_t)eventId,stime,etime,
 			    g_timedb.getNextStartTime32 ( kp ) ,
 			    old->m_startTime,
 			    old->m_endTime,
-			    (unsigned long long)key64);
+			    (uint64_t)key64);
 		// then keep it
 		return true;
 	}
 
 	// log the update
 	if ( g_conf.m_logDebugTimedb )
-		log("timedb: updating key docid=%012llu evid=%03li "
-		    "start=%lu end=%lu nxtstr=%lu oldstart=%lu oldend=%lu "
-		    "key=%llu",
-		    docId,(long)eventId,stime,etime,
+		log("timedb: updating key docid=%012"UINT64" evid=%03"INT32" "
+		    "start=%"UINT32" end=%"UINT32" nxtstr=%"UINT32" oldstart=%"UINT32" oldend=%"UINT32" "
+		    "key=%"UINT64"",
+		    docId,(int32_t)eventId,stime,etime,
 		    g_timedb.getNextStartTime32 ( kp ) ,
 		    old->m_startTime,
 		    old->m_endTime,
-		    (unsigned long long)key64);
+		    (uint64_t)key64);
 	// otherwise, we replace it
 	old->m_startTime     = stime;
 	old->m_endTime       = etime;
@@ -695,7 +695,7 @@ bool addTimedbKey ( key128_t *kp , unsigned long nowGlobal , HashTableX *ht ) {
 bool addTmpTimeList ( RdbList *list , 
 		      HashTableX *ht , 
 		      time_t fakeNowGlobal ,
-		      long niceness ) {
+		      int32_t niceness ) {
 	// need this
 	key128_t k;
 	// loop over entries in list
@@ -712,10 +712,10 @@ bool addTmpTimeList ( RdbList *list ,
 }
 
 bool compareTimeTables ( HashTableX *ht1 , HashTableX *ht2 , 
-			 unsigned long now ) {
+			 uint32_t now ) {
 
 	// scan all timeslots in ht1
-	for ( long i = 0 ; i < ht1->m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < ht1->m_numSlots ; i++ ) {
 		// skip if empty
 		if ( ! ht1->m_flags[i] ) continue;
 		// get it

@@ -23,8 +23,8 @@ class StateStatsdb {
 	// Original timestamp request data
  	time_t m_startDate;
 	time_t m_endDate;
-	long   m_datePeriod;
-	long   m_dateUnits;
+	int32_t   m_datePeriod;
+	int32_t   m_dateUnits;
 	// Timestamp data modified for the request
  	time_t m_startDateR;
 	time_t m_endDateR;
@@ -32,10 +32,10 @@ class StateStatsdb {
 	// For the auto-update AJAX script
 	bool m_autoUpdate;
 
-	long m_samples;
+	int32_t m_samples;
 
 	// Misc. request data
-	long m_hostId;
+	int32_t m_hostId;
 
 	// Request & build flags
 	bool m_dateLimit;
@@ -43,10 +43,10 @@ class StateStatsdb {
 	bool m_cacti;
 	bool m_now;
 
-	long m_niceness;
+	int32_t m_niceness;
 };
 
-static time_t genDate( char *date, long dateLen ) ;
+static time_t genDate( char *date, int32_t dateLen ) ;
 static void   sendReply ( void *st ) ;
 
 // . returns false if blocked, otherwise true
@@ -54,7 +54,7 @@ static void   sendReply ( void *st ) ;
 bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 	
 	char *cgi;
-	long cgiLen;
+	int32_t cgiLen;
 	StateStatsdb *st;
 	try { st = new StateStatsdb; }
 	catch ( ... ) {
@@ -180,7 +180,7 @@ void sendReply ( void *state ) {
 
 	// make the query string
 	char qs[1024];
-	sprintf(qs,"&date_period=%li&date_units=%li&samples=%li",
+	sprintf(qs,"&date_period=%"INT32"&date_units=%"INT32"&samples=%"INT32"",
 		st->m_datePeriod,
 		st->m_dateUnits,
 		st->m_samples);
@@ -232,7 +232,7 @@ void sendReply ( void *state ) {
 	g_statsdb.m_gw.purge();
 	g_statsdb.m_dupTable.reset();
 
-	//"<img src=\"/stats%li.gif\" height=%li width=%li "
+	//"<img src=\"/stats%"INT32".gif\" height=%"INT32" width=%"INT32" "
 	//"border=\"0px\">"
 	//st->m_hostId,
 	//g_statsdb.getImgHeight(),
@@ -287,7 +287,7 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 		"<tr>"
 		"<td>Moving Average Samples</td>"
 		"<td>"
-		"<input type=text name=samples length=20 value=\"%li\">"
+		"<input type=text name=samples length=20 value=\"%"INT32"\">"
 		"</td>"
 		"</tr>"
 		"<tr class=\"show\" id=\"e_date_start\">\n"
@@ -478,10 +478,10 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 	if ( st->m_hostId == -1 ) buf->safePrintf ( " selected " );
 	buf->safePrintf ( ">Sample</option>\n");
 
-	for (long i = 0; i < g_hostdb.getNumHosts(); i++) {
-		buf->safePrintf ( "<option value=\"%li\"", i );
+	for (int32_t i = 0; i < g_hostdb.getNumHosts(); i++) {
+		buf->safePrintf ( "<option value=\"%"INT32"\"", i );
 		if ( st->m_hostId == i ) buf->safePrintf ( " selected " );
-		buf->safePrintf ( ">Host %li</option>\n", i );
+		buf->safePrintf ( ">Host %"INT32"</option>\n", i );
 	}
 
 	// Print the statistic selector.
@@ -676,7 +676,7 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 
 }
 
-time_t genDate( char *date, long dateLen ) {
+time_t genDate( char *date, int32_t dateLen ) {
 
 	time_t result = -1;
 	// the date string should always be the same length

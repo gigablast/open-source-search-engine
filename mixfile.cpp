@@ -29,10 +29,10 @@ main ( int argc , char *argv[] ) {
         struct stat stats;
         stats.st_size = 0;
         stat ( fname , &stats );
-	long fileSize = stats.st_size;
+	int32_t fileSize = stats.st_size;
 
 	// store a \0 at the end
-	long bufSize = fileSize + 1;
+	int32_t bufSize = fileSize + 1;
 
 	// make buffer to hold all
 	char *buf = (char *) malloc ( bufSize );
@@ -43,7 +43,7 @@ main ( int argc , char *argv[] ) {
 	char *bufEnd = buf + bufSize;
 
 	// read em all in
-	long nr = read ( fd , buf , fileSize ) ;
+	int32_t nr = read ( fd , buf , fileSize ) ;
 	if ( nr != fileSize ) {
 		fprintf(stderr,"mixfile::read: %s %s",fname,strerror(errno));
 		exit(-1);
@@ -51,38 +51,38 @@ main ( int argc , char *argv[] ) {
 
 	close ( fd );
 
-	fprintf(stderr,"read %li bytes\n",nr);
+	fprintf(stderr,"read %"INT32" bytes\n",nr);
 
 	// store ptrs to each line
 	char *lines[100000];
 
 	// count lines in the file, which is now in memory, buf
-	long  n = 0;
+	int32_t  n = 0;
 
 	// set first line
 	lines[n++] = buf;
 
 	// set lines array
 	char *p = buf;
-	for ( long i = 0 ; i < bufSize ; i++ ) 
+	for ( int32_t i = 0 ; i < bufSize ; i++ ) 
 		if ( i > 0 && buf[i-1] == '\n' ) {
 			lines[n++] = &buf[i];
 			// set to a \0
 			buf[i-1] = '\0';
 		}
 
-	fprintf(stderr,"read %li lines\n",n);
+	fprintf(stderr,"read %"INT32" lines\n",n);
 
 	// mix the lines up
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// switch line #i with a random line
-		long j = rand() % n;
+		int32_t j = rand() % n;
 		char *tmp = lines[i];
 		lines[i]  = lines[j];
 		lines[j]  = tmp;
 	}
 
 	// output to stdout
-	for ( long i = 0 ; i < n ; i++ ) 
+	for ( int32_t i = 0 ; i < n ; i++ ) 
 		printf("%s\n", lines[i]);
 }

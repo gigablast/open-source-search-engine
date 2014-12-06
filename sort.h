@@ -18,14 +18,14 @@ extern void gbqsort(void *aa, size_t n, size_t es,
 extern void gbmergesort(void *base, size_t nmemb, size_t size,
 			int (*cmp)(const void *, const void *),
 			int niceness = 0,
-			char* bufSpace = NULL, long bufSpaceSize = 0);
+			char* bufSpace = NULL, int32_t bufSpaceSize = 0);
 
 //*****************************************************************************
 /* Copyright (C) 1999 Lucent Technologies */
 /* From 'Programming Pearls' by Jon Bentley */
 
 /* Lucent Technologies license: */
-/* You may use this code for any purpose, as long as you */
+/* You may use this code for any purpose, as int32_t as you */
 /* leave the copyright notice and book citation attached. */
 //*****************************************************************************
 

@@ -26,11 +26,11 @@ class Msg30 {
 	void    *m_state ;
 	void   (* m_callback)(void *state ) ;
 
-	long    m_requests;
-	long    m_replies;
+	int32_t    m_requests;
+	int32_t    m_replies;
 
 	char    m_sendBuf [ sizeof(CollectionRec) ];
-	long    m_sendBufSize;
+	int32_t    m_sendBufSize;
 };
 
 #endif

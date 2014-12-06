@@ -23,10 +23,10 @@ bool printFilledOutForm ( class State24 *st , char *coll );
 void gotSearchResults ( void *state ) ;
 // from PageEvents.cpp:
 bool printEventTitle ( SafeBuf &sb , Msg20Reply *mr , class State7 *st ) ;
-bool printEventSummary ( SafeBuf &sb , class Msg20Reply *mr , long width ,
-			 long minusFlags , long requiredFlags , 
+bool printEventSummary ( SafeBuf &sb , class Msg20Reply *mr , int32_t width ,
+			 int32_t minusFlags , int32_t requiredFlags , 
 			 class State7 *st , ExpandedResult *er ,
-			 long maxChars );
+			 int32_t maxChars );
 
 // from PageEvents.cpp:
 extern bool sendPageEvents2 ( TcpSocket *s ,
@@ -84,13 +84,13 @@ public:
 	// the location
 	SafeBuf m_eventWhere;
 	// radius from location in miles
-	long    m_eventRadius;
+	int32_t    m_eventRadius;
 
 	// then put the event search result pageget.cpp into the
 	// bottom right frame.
-	long long m_formDocId;
-	long      m_formEventId;
-	long      m_formClockSet;
+	int64_t m_formDocId;
+	int32_t      m_formEventId;
+	int32_t      m_formClockSet;
 
 	TcpSocket   *m_socket;
 	HttpRequest  m_hr;
@@ -105,7 +105,7 @@ public:
 	Msg20Request m_msg20Request;
 };
 
-static bool sendErrorReply ( void *state , long err ) {
+static bool sendErrorReply ( void *state , int32_t err ) {
 	// ensure this is set
 	if ( ! err ) { char *xx=NULL;*xx=0; }
 	// get it
@@ -169,18 +169,18 @@ bool sendPageSubmit ( TcpSocket *s , HttpRequest *hr ) {
 	if ( ! hr->isLocal() ) return sendErrorReply(st,ENOTLOCAL);
 
 	// get the collection
-	long collLen;
+	int32_t collLen;
 	char *coll = hr->getString ( "c" , &collLen ,NULL );
 	if ( ! coll ) coll = g_conf.m_defaultColl;
 	st->m_collnum = g_collectiondb.getCollnum ( coll );
 
 	// set query
-	long eqlen;
+	int32_t eqlen;
 	char *eq = hr->getString("q",&eqlen,NULL);
 	if ( eq ) st->m_eventQuery.set ( eq , 2 );
 
 	// form url
-	long fulen;
+	int32_t fulen;
 	char *fu = hr->getString("formurl",&fulen,NULL);
 	if ( fu ) st->m_formUrl.set(fu);
 
@@ -320,7 +320,7 @@ void gotTagRec24 ( void *state ) {
 	// parse these out of the url!
 	char *query = "";
 	char *location = "";
-	long  radius = 30;
+	int32_t  radius = 30;
 
 	// put in a div that scrolls like an iframe
 	sb->safePrintf("<iframe " //<div "
@@ -343,7 +343,7 @@ void gotTagRec24 ( void *state ) {
 	sb->urlEncode ( query );
 	sb->safePrintf("&wherebox=");
 	sb->urlEncode ( location );
-	sb->safePrintf("&radius=%li\">",radius);
+	sb->safePrintf("&radius=%"INT32"\">",radius);
 
 	sb->safePrintf("</iframe>");
 
@@ -366,9 +366,9 @@ void gotTagRec24 ( void *state ) {
 		       //   request form titan to gk144 though.
 		       "src=\"http://10.5.1.203:8000/?form=1&"
 		       "showform=1&"
-		       "formdocid=%lli&"
-		       "formeventid=%li&"
-		       "formclockset=%lu&"
+		       "formdocid=%"INT64"&"
+		       "formeventid=%"INT32"&"
+		       "formclockset=%"UINT32"&"
 		       "formurl="
 		       , st->m_formDocId
 		       , st->m_formEventId
@@ -446,7 +446,7 @@ bool gotMsg20Result ( void *state ) {
 	SpiderRequest sreq;
 	sreq.reset();
 	strcpy(sreq.m_url,st->m_formUrl.getUrl());
-	long firstIp = hash32n(sreq.m_url);
+	int32_t firstIp = hash32n(sreq.m_url);
 	sreq.setKey( firstIp, 0LL, false );
 	sreq.m_isPageParser  = 0; // was 1
 	sreq.m_isPageSubmit  = 1;
@@ -544,21 +544,21 @@ void processLoop24 ( void *state ) {
 	}
 
 	// this logic taken from Msg40.cpp!!
-	long ni = mr->size_eventDateIntervals/sizeof(Interval);
+	int32_t ni = mr->size_eventDateIntervals/sizeof(Interval);
 	Interval *ii = (Interval *)mr->ptr_eventDateIntervals;
-	long timeStart = 0;
-	long timeEnd   = 0;
-	for ( long j = 0 ; j < ni ; j++ ) {
+	int32_t timeStart = 0;
+	int32_t timeEnd   = 0;
+	for ( int32_t j = 0 ; j < ni ; j++ ) {
 		if ( mr->m_prevStart >= 0 &
-		     (unsigned long)ii[j].m_a <
-		     (unsigned long)mr->m_prevStart )
+		     (uint32_t)ii[j].m_a <
+		     (uint32_t)mr->m_prevStart )
 			continue;
 		if ( ii[j].m_a < st->m_formClockSet ) continue;
 		timeStart = ii[j].m_a;
 		timeEnd   = ii[j].m_b;
 		break;
 	}
-	long start1 = timeStart;
+	int32_t start1 = timeStart;
 	bool isDST1 = getIsDST (start1,mr->m_timeZoneOffset);
 	start1 += mr->m_timeZoneOffset * 3600;
 	if ( mr->m_useDST && isDST1 ) start1 += 3600;
@@ -614,13 +614,13 @@ void processLoop24 ( void *state ) {
 	//TagRec *gr = &fd->m_tagRec;
 
 	// print out each word
-	long nw = w->getNumWords();
+	int32_t nw = w->getNumWords();
 	char **wptrs = w->getWords();
-	long  *wlens = w->getWordLens();
-	long long *wids = w->getWordIds();
+	int32_t  *wlens = w->getWordLens();
+	int64_t *wids = w->getWordIds();
 	nodeid_t *tids = w->getTagIds();
 
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 
 		// if no event selected, skip all this!
 		//if ( ! mr ) {
@@ -652,7 +652,7 @@ void processLoop24 ( void *state ) {
 				sb->safeMemcpy ( wptrs[i], wlens[i] );
 				continue;
 			}
-			// shortcut
+			// int16_tcut
 			char *wend = wptrs[i] + wlens[i];
 			// skip action=
 			as += 7;
@@ -673,9 +673,9 @@ void processLoop24 ( void *state ) {
 					break;
 			}
 			// length of the original submission url
-			long origUrlLen = end - origUrl;
+			int32_t origUrlLen = end - origUrl;
 			// copy up until that
-			long leftLen = as - wptrs[i];
+			int32_t leftLen = as - wptrs[i];
 			sb->safeMemcpy ( wptrs[i] , leftLen );
 			// insert our url so form is submitted to us
 			sb->safePrintf("http://10.5.1.203:8000/");
@@ -693,7 +693,7 @@ void processLoop24 ( void *state ) {
 				Url uu;
 				uu.set ( fu );
 				char *us = uu.getUrl();
-				long  uslen = uu.getUrlLen();
+				int32_t  uslen = uu.getUrlLen();
 				// hack off filename, if there
 				uslen -= uu.getFilenameLen();
 				// then prepend to form url
@@ -761,7 +761,7 @@ void processLoop24 ( void *state ) {
 		// into a string
 		SafeBuf nb;
 		bool lastWasSpace = true;
-		for ( long j = ss->m_a ; j < ss->m_b ; j++ ) {
+		for ( int32_t j = ss->m_a ; j < ss->m_b ; j++ ) {
 			// punct?
 			if ( ! wids[j] ) {
 				if ( lastWasSpace ) continue;
@@ -796,7 +796,7 @@ void processLoop24 ( void *state ) {
 			continue;
 		}
 
-		long flags = 0;
+		int32_t flags = 0;
 
 		// look for indicative phrases
 		if ( ! strcasecmp(s,"venue name") ) flags = FI_VENUE;
@@ -805,7 +805,7 @@ void processLoop24 ( void *state ) {
 		if ( ! strcasecmp(s,"name") ) flags = FI_TITLE;
 		if ( ! strcasecmp(s,"title") ) flags = FI_TITLE;
 
-		if ( ! strcasecmp(s,"short description") ) flags = FI_DESC;
+		if ( ! strcasecmp(s,"int16_t description") ) flags = FI_DESC;
 		// mm/dd/yy
 		if ( ! strcasecmp(s,"start date") ) flags = FI_DATE_START;
 		// mm/dd/yy
@@ -876,47 +876,47 @@ void processLoop24 ( void *state ) {
 		}
 			
 		if ( flags == FI_DATE_START ) {
-			vbuf.safePrintf("%s %li"
+			vbuf.safePrintf("%s %"INT32""
 					, getMonthName(er.m_month1)
-					, (long)er.m_dayNum1
+					, (int32_t)er.m_dayNum1
 					);
 		}
 
 		if ( flags == FI_DATE_END ) {
-			vbuf.safePrintf("%s %li"
+			vbuf.safePrintf("%s %"INT32""
 					, getMonthName(er.m_month2)
-					, (long)er.m_dayNum2
+					, (int32_t)er.m_dayNum2
 					);
 		}
 
 		if ( flags == FI_TIME_START ) {
 			char *ampm = "am";
-			long h = er.m_hour1;
+			int32_t h = er.m_hour1;
 			if ( h == 12 ) ampm = "pm";
 			if ( h > 12 ) { ampm = "pm"; h -= 12; }
-			vbuf.safePrintf("%li:%02li %s"
-					, (long)h
-					, (long)er.m_min1
+			vbuf.safePrintf("%"INT32":%02"INT32" %s"
+					, (int32_t)h
+					, (int32_t)er.m_min1
 					, ampm
 					);
 		}
 
 		if ( flags == FI_TIME_END ) {
 			char *ampm = "am";
-			long h = er.m_hour2;
+			int32_t h = er.m_hour2;
 			if ( h == 12 ) ampm = "pm";
 			if ( h > 12 ) { ampm = "pm"; h -= 12; }
-			vbuf.safePrintf("%li:%02li %s"
-					, (long)h
-					, (long)er.m_min2
+			vbuf.safePrintf("%"INT32":%02"INT32" %s"
+					, (int32_t)h
+					, (int32_t)er.m_min2
 					, ampm
 					);
 		}
 
 		if ( flags == FI_URL ) {
 			// make event guru url
-			vbuf.safePrintf("http://www.eventguru.com/?id=%llu."
-					"%llu" 
+			vbuf.safePrintf("http://www.eventguru.com/?id=%"UINT64"."
+					"%"UINT64"" 
 					, mr->m_docId
 					, mr->m_eventHash64
 					);
@@ -968,7 +968,7 @@ void processLoop24 ( void *state ) {
 
 
 		char *val = vbuf.getBufStart();
-		long  vlen = vbuf.length();
+		int32_t  vlen = vbuf.length();
 		if ( vlen <= 0 ) val = NULL;
 
 		// if no value, just print the input tag with no value
@@ -1080,8 +1080,8 @@ bool sendPageFormProxy ( TcpSocket *s , HttpRequest *hr ) {
 	//formUrl = "http://www.itsatrip.org/events/submit.aspx";
 
 	char *req       = s->m_readBuf;
-	long  reqSize   = s->m_readOffset;
-	long  allocSize = s->m_readBufSize;
+	int32_t  reqSize   = s->m_readOffset;
+	int32_t  allocSize = s->m_readBufSize;
 
 	// make a state
 	State27 *st = NULL;
@@ -1179,7 +1179,7 @@ void gotImage ( void *state , TcpSocket *socket ) {
 		return;
 	}
 
-	// shortcut
+	// int16_tcut
 	SafeBuf *rb = &st->m_replyBuf;
 
 	HttpMime hm;
@@ -1191,7 +1191,7 @@ void gotImage ( void *state , TcpSocket *socket ) {
 		SafeBuf imgBuf;
 		imgBuf.safeMemcpy ( hm.getContent() , hm.getContentLen() );
 		char fn[128];
-		sprintf(fn,"/tmp/tmpimg%lu",getTimeLocal());
+		sprintf(fn,"/tmp/tmpimg%"UINT32"",getTimeLocal());
 		imgBuf.save ( "" , fn );
 		// convert it
 		char cmd[512];
@@ -1206,7 +1206,7 @@ void gotImage ( void *state , TcpSocket *socket ) {
 		// load it (tmp/tmpimgxxxxxx4.png)
 		imgBuf.purge();
 		char fn2[128];
-		sprintf(fn2,"/tmp/tmpimg%lu-4.png",getTimeLocal());
+		sprintf(fn2,"/tmp/tmpimg%"UINT32"-4.png",getTimeLocal());
 		imgBuf.load ( "" , fn2 );
 		// now insert that into the http reply
 		char *insertionPoint = strstr(rb->getBufStart(),"filename=\"");
@@ -1215,14 +1215,14 @@ void gotImage ( void *state , TcpSocket *socket ) {
 		// skip over filename=\"
 		insertionPoint += 10;
 		// put our junk there
-		long insertPos = insertionPoint - rb->getBufStart();
+		int32_t insertPos = insertionPoint - rb->getBufStart();
 		rb->insert("img.png", insertPos );
 		// find the \r\n\r\n after that point
 		char *imgData = strstr(rb->getBufStart()+insertPos,"\r\n\r\n");
 		imgData += 4;
-		long dataPos = imgData - rb->getBufStart();
+		int32_t dataPos = imgData - rb->getBufStart();
 		// note it
-		log("submit: inserting image of %li bytes",imgBuf.length());
+		log("submit: inserting image of %"INT32" bytes",imgBuf.length());
 		// then the image content
 		rb->insert2 ( imgBuf.getBufStart() , imgBuf.length(),dataPos );
 	}
@@ -1248,18 +1248,18 @@ void gotImage ( void *state , TcpSocket *socket ) {
 	ourPath += 1;
 	Url ff; ff.set(formUrl);
 	char *path = ff.getPath();
-	long  plen = ff.getPathLen();
+	int32_t  plen = ff.getPathLen();
 	rb->safeReplace ( path , plen , ourPath - rb->getBufStart() , 1 );
 
 	// replace "Host: 10.5.1.203:8000\r\n" with the right host
 	char *host = ff.getHost();
-	long  hlen = ff.getHostLen();
+	int32_t  hlen = ff.getHostLen();
 	char *hostLine = strstr(rb->getBufStart(),"Host: ");
 	hostLine += 6;
 	char *hostLineEnd = strstr(hostLine,"\r\n");
 	if ( ! hostLine || ! hostLineEnd){g_errno = EBADREPLY; goto hadError; }
-	long hostLinePos = hostLine - rb->getBufStart();
-	long hostLineLen = hostLineEnd - hostLine;
+	int32_t hostLinePos = hostLine - rb->getBufStart();
+	int32_t hostLineLen = hostLineEnd - hostLine;
 	rb->safeReplace ( host, hlen , hostLinePos, hostLineLen );
 
 	// remove stuff. otherwise we pass them in cookie from eventguru!
@@ -1280,8 +1280,8 @@ void gotImage ( void *state , TcpSocket *socket ) {
 	adjustContentLength ( rb );
 
 	char *req = rb->getBufStart();
-	long  allocated = rb->getCapacity();
-	long  reqSize = rb->length();
+	int32_t  allocated = rb->getCapacity();
+	int32_t  reqSize = rb->length();
 	rb->detachBuf();
 
 	// use this directly since we are just forwarding the request
@@ -1321,8 +1321,8 @@ void relayReply ( void *state , TcpSocket *subsock ) {
 	}
 	// return reply back as it is
 	char *reply     = subsock->m_readBuf;
-	long  replySize = subsock->m_readOffset;
-	//long  allocSize = subsock->m_readBufSize;
+	int32_t  replySize = subsock->m_readOffset;
+	//int32_t  allocSize = subsock->m_readBufSize;
 
 	// do not double free
 	//subsock->m_readBuf = NULL;
@@ -1336,7 +1336,7 @@ void relayReply ( void *state , TcpSocket *subsock ) {
 	char ttt[128+MAX_URL_LEN];
 	sprintf(ttt,"<base href=\"%s\">\n",formUrl);
 	char *cstart = strstr(st->m_relayBuf.getBufStart(),"\r\n\r\n");
-	long cpos;
+	int32_t cpos;
 	if ( cstart ) cstart += 4;
 	if ( cstart ) cpos = cstart - st->m_relayBuf.getBufStart();
 	// insert the base href tag!
@@ -1344,10 +1344,10 @@ void relayReply ( void *state , TcpSocket *subsock ) {
 	// re-set Content-Length
 	adjustContentLength ( &st->m_relayBuf );
 
-	// shortcuts
+	// int16_tcuts
 	char *relay = st->m_relayBuf.getBufStart();
-	long  relaySize = st->m_relayBuf.length();
-	long  relayAllocSize = st->m_relayBuf.getCapacity();
+	int32_t  relaySize = st->m_relayBuf.length();
+	int32_t  relayAllocSize = st->m_relayBuf.getCapacity();
 
 	// . let tcpserver free it when done transmitting it
 	// . detach after setting "relay" because it sets m_buf to null
@@ -1442,12 +1442,12 @@ void adjustContentLength ( SafeBuf *rb ) {
 	char *cs = strstr(start,"\r\n\r\n");
 	if ( ! cs ) return;
 	cs += 4;
-	long headerLen = cs - start;
-	//long clen = gbstrlen(cs);
-	long clen = rb->length() - headerLen;
+	int32_t headerLen = cs - start;
+	//int32_t clen = gbstrlen(cs);
+	int32_t clen = rb->length() - headerLen;
 	
 	// find length of number, nd = # of digits
-	long nd = 0;
+	int32_t nd = 0;
 	char *fe = f;
 	for ( ; *fe ; fe++ ) {
 		if ( ! is_digit(*fe) ) break;
@@ -1456,9 +1456,9 @@ void adjustContentLength ( SafeBuf *rb ) {
 
 	// write that out
 	char format[64];
-	sprintf(format,"%%0%lili",nd);
+	sprintf(format,"%%0%"INT32"li",nd);
 	char ttt[32];
-	long toPrint = sprintf(ttt,format,clen);
+	int32_t toPrint = sprintf(ttt,format,clen);
 	// just copy it over, padded with zeroes
 	memcpy ( f , ttt , toPrint );
 }

@@ -15,7 +15,7 @@
 
 static void gotDocWrapper( void *state , TcpSocket *s ) ;
 
-char *removeCDATA ( char *buf, long *bufLen ) {
+char *removeCDATA ( char *buf, int32_t *bufLen ) {
 	if(*bufLen >= 12 && strncasecmp(buf, "<![CDATA[", 9) == 0 ) {
 		buf     += 9;
 		*bufLen -= 12;
@@ -51,7 +51,7 @@ Ads::Ads(){
 
 
 Ads::~Ads() {
-        for(long i = 0; i < MAX_FEEDS; i++) {
+        for(int32_t i = 0; i < MAX_FEEDS; i++) {
                 if( m_buf[i] )
                         mfree( m_buf[i], m_bufLen[i], "Ads-fSktXml" );
                 m_bufLen[i] = 0   ;
@@ -144,9 +144,9 @@ Ads::~Ads() {
 //
 
 bool Ads::getAds ( char           *q         , 
-		   long            qlen      ,
-                   long            pageNum   ,
-                   long            queryIP   ,
+		   int32_t            qlen      ,
+                   int32_t            pageNum   ,
+                   int32_t            queryIP   ,
                    char           *coll      ,
                    void           *state     ,
                    void          (*callback)(void *state) ){
@@ -158,7 +158,7 @@ bool Ads::getAds ( char           *q         ,
         }
 	// bail if query too big
 	if ( qlen > MAX_AD_QUERY_LEN) {
-		log("query: Query length of %li is too long to get "
+		log("query: Query length of %"INT32" is too long to get "
 		    "ads for.",qlen); 
 		return true;
 	}
@@ -183,12 +183,12 @@ bool Ads::getAds ( char           *q         ,
                 // . an ad feed was specified, so use this one instead.
                 m_feedIndex = feedIndex - 1;
         */
-        long numPIAds = m_cr->m_adPINumAds;
-        long numBPIAds = m_cr->m_adPINumAds;
+        int32_t numPIAds = m_cr->m_adPINumAds;
+        int32_t numBPIAds = m_cr->m_adPINumAds;
 
         if(!m_cr->m_adSSSameasPI) {
                 size_t size = gbstrlen(m_cr->m_adCGI[0]);
-                if((long)size == gbstrlen(m_cr->m_adCGI[2]))
+                if((int32_t)size == gbstrlen(m_cr->m_adCGI[2]))
                         if(!memcmp(m_cr->m_adCGI[0], m_cr->m_adCGI[2], size))
                                 m_adSSSameasPI = true;
         }
@@ -197,7 +197,7 @@ bool Ads::getAds ( char           *q         ,
 
         if(!m_cr->m_adBSSSameasBPI) {
                 size_t size = gbstrlen(m_cr->m_adCGI[1]);
-                if((long)size == gbstrlen(m_cr->m_adCGI[3]))
+                if((int32_t)size == gbstrlen(m_cr->m_adCGI[3]))
                         if(!memcmp(m_cr->m_adCGI[1], m_cr->m_adCGI[3], size))
                                 m_adBSSSameasBPI = true;
         }
@@ -260,24 +260,24 @@ bool Ads::getAds ( char           *q         ,
 }
 
 
-bool Ads::getAd ( long            index     ,
+bool Ads::getAd ( int32_t            index     ,
                   char           *cgi       ,
-                  long            numAds    ) {
+                  int32_t            numAds    ) {
 
         char  tmp[1024] = {0};
-        long  clen      = gbstrlen(cgi);
+        int32_t  clen      = gbstrlen(cgi);
 
         // if there is no cgi string, bail
         if(clen <= 0)
                 return true;
         // if string is greater than buffer, bail
         if(clen > 1024) {
-                log("query: Ad Feed CGI string %li is > 1024.", index);
+                log("query: Ad Feed CGI string %"INT32" is > 1024.", index);
                 return true;
         }
 
         char *p    = tmp;
-        long  plen = htmlDecode(tmp, cgi, clen,false,0);
+        int32_t  plen = htmlDecode(tmp, cgi, clen,false,0);
 
         SafeBuf sb(1024);
 
@@ -288,7 +288,7 @@ bool Ads::getAd ( long            index     ,
                 if(p) {
                         p++;
                         if( beg != p )
-                                sb.safeMemcpy(beg, (long)(p-beg-1));
+                                sb.safeMemcpy(beg, (int32_t)(p-beg-1));
                         switch(*p) {
                                 // insert url encoded query
                                 case 'q':
@@ -296,11 +296,11 @@ bool Ads::getAd ( long            index     ,
                                         break;
                                 // insert page number
                                 case 'p':
-                                        sb.safePrintf("%ld", m_pageAds);
+                                        sb.safePrintf("%"INT32"", m_pageAds);
                                         break;
                                 // insert number of ads to return
                                 case 'n':
-                                        sb.safePrintf("%ld", numAds);
+                                        sb.safePrintf("%"INT32"", numAds);
                                         break;
                                 // insert querying IP
                                 case 'i':
@@ -317,14 +317,14 @@ bool Ads::getAd ( long            index     ,
                 }
                 else {
                         p = tmp;
-                        long len = plen - (beg-p);
+                        int32_t len = plen - (beg-p);
                         sb.safeMemcpy(beg, len);
                         sb.pushChar('\0');
                         break;
                 }
         }
 
-        log(LOG_DEBUG, "query: Ad feed request[%ld] url is: %s", 
+        log(LOG_DEBUG, "query: Ad feed request[%"INT32"] url is: %s", 
             index, sb.getBufStart());
 	// make it a url
         //m_url[index].set(sb.getBufStart(), sb.length(), false /*addWWW?*/);
@@ -370,7 +370,7 @@ void gotDocWrapper ( void *state , TcpSocket *s ) {
 }
 
 
-void Ads::gotDoc ( TcpSocket *ts, long index ) {
+void Ads::gotDoc ( TcpSocket *ts, int32_t index ) {
 
         m_numGotAds++;
 	// return if g_errno set
@@ -380,8 +380,8 @@ void Ads::gotDoc ( TcpSocket *ts, long index ) {
         }
 	// this is guaranteed now to be NULL terminated
 	char *p    = ts->m_readBuf;
-	long  plen = ts->m_readBufSize;
-	long  len  = ts->m_readOffset;
+	int32_t  plen = ts->m_readBufSize;
+	int32_t  len  = ts->m_readOffset;
 	if ( ! p || plen <= 0 ) {
 		log("query: Ad feed gave empty reply.");
 		return;
@@ -391,19 +391,19 @@ void Ads::gotDoc ( TcpSocket *ts, long index ) {
 	mime.set(p, len, NULL);//&m_url[index]);
 	
         if(mime.getHttpStatus() != 200) {
-                log("query: Ad feed returned %ld status, bailing.", 
+                log("query: Ad feed returned %"INT32" status, bailing.", 
                     mime.getHttpStatus());
                 return;
         }
 
 	char *content    = p + mime.getMimeLen();
-	long  contentLen = mime.getContentLen();
+	int32_t  contentLen = mime.getContentLen();
         if((contentLen == -1) && (len != 0))
                 contentLen = len - mime.getMimeLen();
 	
         log(LOG_DEBUG, "query: Ad feed response: %s", content);
 
-        short charset = get_iana_charset( mime.getCharset(), 
+        int16_t charset = get_iana_charset( mime.getCharset(), 
 					  mime.getCharsetLen() );
 	// sanity check
 	if ( charset != csUTF8 && charset != csASCII ) { char *xx=NULL;*xx=0; }
@@ -417,20 +417,20 @@ void Ads::gotDoc ( TcpSocket *ts, long index ) {
         char *urlStr      = m_cr->m_adUrlXml   [index];
         char *descStr     = m_cr->m_adDescXml  [index];
         char *linkStr     = m_cr->m_adLinkXml  [index];
-        long  rsltStrLen  = gbstrlen(rsltStr);
+        int32_t  rsltStrLen  = gbstrlen(rsltStr);
 
-	long      begPtr     = 0;
-	long      endPtr     = xml->getNumNodes();
+	int32_t      begPtr     = 0;
+	int32_t      endPtr     = xml->getNumNodes();
 
         char **titles    = m_titles   [index];
-        long  *titlesLen = m_titlesLen[index];
+        int32_t  *titlesLen = m_titlesLen[index];
         char **desc      = m_desc     [index];
-        long  *descLen   = m_descLen  [index];
+        int32_t  *descLen   = m_descLen  [index];
         char **sites     = m_sites    [index];
-        long  *sitesLen  = m_sitesLen [index];
+        int32_t  *sitesLen  = m_sitesLen [index];
         char **urls      = m_urls     [index];
-        long  *urlsLen   = m_urlsLen  [index];
-        long   numAds    = 0;
+        int32_t  *urlsLen   = m_urlsLen  [index];
+        int32_t   numAds    = 0;
 
 	while(begPtr < endPtr) {
 		// . We will loop until we are out of nodes and should break
@@ -459,7 +459,7 @@ void Ads::gotDoc ( TcpSocket *ts, long index ) {
 		// . increment number of ads found
                 numAds++;
 	}
-	log(LOG_DEBUG, "query: Ad feed[%ld] returned %ld ads on page %ld",
+	log(LOG_DEBUG, "query: Ad feed[%"INT32"] returned %"INT32" ads on page %"INT32"",
             index, numAds, m_pageAds); 
         // . let mem table know we stole the buffer as well
 	if( !relabel( p, plen, "Ads-sktXml" ) ) {
@@ -513,11 +513,11 @@ void Ads::selectDisplayAds( ) {
 
 
 void Ads::printAd( SafeBuf *sb    , 
-                   char *url      , long urlLen,
-                   char *title    , long titleLen,
-                   char *desc     , long descLen,
-                   char *site     , long siteLen,
-                   long  numCharPerLine ) {
+                   char *url      , int32_t urlLen,
+                   char *title    , int32_t titleLen,
+                   char *desc     , int32_t descLen,
+                   char *site     , int32_t siteLen,
+                   int32_t  numCharPerLine ) {
 	sb->safePrintf( "<a href=" );
 	sb->safeMemcpy (url, urlLen);
 	sb->safePrintf( "><b>" );
@@ -528,17 +528,17 @@ void Ads::printAd( SafeBuf *sb    ,
         sb->safePrintf( "<br>\n" );
 
 	sb->safePrintf( "<b>" );
-        long len        = siteLen;
-        long numToPrint = numCharPerLine;
-        long numSplits  = len / numCharPerLine;
-        long index      = 0;
+        int32_t len        = siteLen;
+        int32_t numToPrint = numCharPerLine;
+        int32_t numSplits  = len / numCharPerLine;
+        int32_t index      = 0;
         if(len % numCharPerLine)
                 numSplits++;
         if(numToPrint > len) 
                 numToPrint = len;
 	sb->safeMemcpy (site, numToPrint);
 
-        for(long i = 1; i < numSplits; i++) {
+        for(int32_t i = 1; i < numSplits; i++) {
                 sb->safePrintf("<br>");
                 index += numCharPerLine;
                 if(numCharPerLine*(i+1) > len) {
@@ -551,13 +551,13 @@ void Ads::printAd( SafeBuf *sb    ,
 }
 
 
-void Ads::printPaidInclusionAds(SafeBuf *sb, long numCharPerLine) {
-        long end = m_numAds[m_indexPIAds];
+void Ads::printPaidInclusionAds(SafeBuf *sb, int32_t numCharPerLine) {
+        int32_t end = m_numAds[m_indexPIAds];
         if((m_indexPIAds == PI_PRIMARY && m_adSSSameasPI  ) ||
            (m_indexPIAds == PI_BACKUP  && m_adBSSSameasBPI)   )
                 end = m_cr->m_adPINumAds;
 
-        for( long i = 0; i < end; i++) {
+        for( int32_t i = 0; i < end; i++) {
                 printAd(sb, 
                         m_urls  [m_indexPIAds][i], m_urlsLen  [m_indexPIAds][i],
                         m_titles[m_indexPIAds][i], m_titlesLen[m_indexPIAds][i],
@@ -569,9 +569,9 @@ void Ads::printPaidInclusionAds(SafeBuf *sb, long numCharPerLine) {
 }
 
 
-void Ads::printSkyscraperAds   (SafeBuf *sb, long numCharPerLine) {
-        long i = 0;
-        long end = m_numAds[m_indexSSAds];
+void Ads::printSkyscraperAds   (SafeBuf *sb, int32_t numCharPerLine) {
+        int32_t i = 0;
+        int32_t end = m_numAds[m_indexSSAds];
         if(m_indexSSAds == PI_PRIMARY || m_indexSSAds == PI_BACKUP) {
                 i = m_cr->m_adPINumAds;
                 end += i;
@@ -590,8 +590,8 @@ void Ads::printSkyscraperAds   (SafeBuf *sb, long numCharPerLine) {
 }
 
 /*
-long Ads::s_availableAds[16][MAX_AD_FEEDS] = {{0}};
-long Ads::s_numAvailableAds[16]            =  {0} ;
+int32_t Ads::s_availableAds[16][MAX_AD_FEEDS] = {{0}};
+int32_t Ads::s_numAvailableAds[16]            =  {0} ;
 
 
 void Ads::initCollAvailAds ( ) {
@@ -607,7 +607,7 @@ void Ads::setAvailableAds ( char *coll ) {
 
         s_numAvailableAds[cr->m_collnum] = 0;
 
-        for(long i = 0; i < MAX_AD_FEEDS; i++) {
+        for(int32_t i = 0; i < MAX_AD_FEEDS; i++) {
                 if(cr->m_adFeedEnable[i]) {
                         if(cr->m_adCGI[i][0] != '\0')
                                 s_availableAds[cr->m_collnum]
@@ -617,8 +617,8 @@ void Ads::setAvailableAds ( char *coll ) {
 }
 
 
-long Ads::getAdFeedIndex ( collnum_t cn ) {
-        static long count = 0;
+int32_t Ads::getAdFeedIndex ( collnum_t cn ) {
+        static int32_t count = 0;
         
         if(!s_numAvailableAds[cn])
                 return 0;

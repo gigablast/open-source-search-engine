@@ -5,16 +5,16 @@
 class Timer { 
 public:
         Timer () : m_start(0), m_end(0) {};
-	Timer ( long long startTime ) : m_start(startTime), m_end(0) {};
+	Timer ( int64_t startTime ) : m_start(startTime), m_end(0) {};
 	virtual ~Timer() {};
 
 	virtual void start () { m_start = gettimeofdayInMillisecondsLocal(); };
 	virtual void stop  () { m_end   = gettimeofdayInMillisecondsLocal(); };
 
-	long long getSpan () { return m_end-m_start; };
+	int64_t getSpan () { return m_end-m_start; };
 
-	long long m_start;
-	long long m_end;
+	int64_t m_start;
+	int64_t m_end;
 };
 
 class AutoTimer : public Timer {
@@ -60,10 +60,10 @@ public:
 	~AutoMicroTimer () {
 		stop();
 		if ( m_class ) 
-			log( LOG_TIMING, "%s: Took %llu microseconds for %s::%s",
+			log( LOG_TIMING, "%s: Took %"UINT64" microseconds for %s::%s",
 			     m_subtype, getSpan(), m_class, m_name );
 		else
-			log( LOG_TIMING, "%s: Took %llu microseconds for %s", 
+			log( LOG_TIMING, "%s: Took %"UINT64" microseconds for %s", 
 			     m_subtype, getSpan(), m_name );
 	};
 

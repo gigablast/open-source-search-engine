@@ -28,21 +28,21 @@ char getFormatFromRequest ( class HttpRequest *hr ) ;
 // . you can have Msg24 generate multiple sets of related topics in one call
 class TopicGroup {
  public:
-        long m_numTopics;
-        long m_maxTopics;
-        long m_docsToScanForTopics;
-        long m_minTopicScore;
-        long m_maxWordsPerTopic;
+        int32_t m_numTopics;
+        int32_t m_maxTopics;
+        int32_t m_docsToScanForTopics;
+        int32_t m_minTopicScore;
+        int32_t m_maxWordsPerTopic;
         char m_meta[32];
         char m_delimeter;
         bool m_useIdfForTopics;
         bool m_dedup;
-        long m_minDocCount ;
+        int32_t m_minDocCount ;
         bool m_ipRestrict ;
         char m_dedupSamplePercent; // -1 means no deduping
         bool m_topicRemoveOverlaps;
-        long m_topicSampleSize;
-        long m_topicMaxPunctLen;
+        int32_t m_topicSampleSize;
+        int32_t m_topicMaxPunctLen;
 };
 
 class SearchInput {
@@ -60,16 +60,16 @@ class SearchInput {
 			       class CollectionRec *cr ) ;
 	bool setQueryBuffers ( class HttpRequest *hr ) ;
 
-	//void setToDefaults ( class CollectionRec *cr , long niceness ) ;
-	void clear ( long niceness ) ;
+	//void setToDefaults ( class CollectionRec *cr , int32_t niceness ) ;
+	void clear ( int32_t niceness ) ;
 
 	// Msg40 likes to use this to pass the parms to a remote host
 	SearchInput      ( );
 	~SearchInput     ( );
 	void  reset                 ( );
-	long  getStoredSizeForMsg40 ( ) ;
-	//char *serializeForMsg40   ( long *size ) ;
-	//void  deserializeForMsg40 ( char *buf, long bufSize, bool ownBuf ) ;
+	int32_t  getStoredSizeForMsg40 ( ) ;
+	//char *serializeForMsg40   ( int32_t *size ) ;
+	//void  deserializeForMsg40 ( char *buf, int32_t bufSize, bool ownBuf ) ;
 	void  copy                  ( class SearchInput *si ) ;
 
 	// Language support for Msg40
@@ -77,7 +77,7 @@ class SearchInput {
 
 	//bool addFacebookInterests ( char *list ) ;
 	//bool addInterests ( char *list , char delim, bool hasNums ) ;
-	//bool addInterest (char *s, long slen, char valc, bool overwrite );
+	//bool addInterest (char *s, int32_t slen, char valc, bool overwrite );
 
 	///////////
 	//
@@ -91,7 +91,7 @@ class SearchInput {
 
 	TcpSocket   *m_sock;
 
-	long   m_niceness;                   // msg40
+	int32_t   m_niceness;                   // msg40
 
 	// array of collnum_t's to search... usually just one
 	SafeBuf m_collnumBuf;
@@ -99,7 +99,7 @@ class SearchInput {
 	collnum_t m_firstCollnum;
 
 	// reset this
-	long      m_numTopicGroups;   // msg40
+	int32_t      m_numTopicGroups;   // msg40
 
 	char          *m_displayQuery;     // pts into m_qbuf1
 	//class Hostdb  *m_hostdb;
@@ -117,7 +117,7 @@ class SearchInput {
 
 	Query         *m_q2;
 
-	char           m_isRootAdmin;
+	char           m_isMasterAdmin;
 	char           m_isCollAdmin;
 
 	// these are set from things above
@@ -126,7 +126,7 @@ class SearchInput {
 	SafeBuf m_sbuf2;
 	SafeBuf m_sbuf3;
 
-	long m_catId;
+	int32_t m_catId;
 	bool m_isRTL;
 
 	// make a cookie from parms with m_flags of PF_COOKIE set
@@ -134,14 +134,14 @@ class SearchInput {
 
 	// we convert m_defaultSortLang to this number, like langEnglish
 	// or langFrench or langUnknown...
-	long m_queryLangId;
+	int32_t m_queryLangId;
 
 	// can be 1 for FORMAT_HTML, 2 = FORMAT_XML, 3=FORMAT_JSON, 4=csv
-	long m_format;
+	int32_t m_format;
 
 	// used as indicator by SearchInput::makeKey() for generating a
 	// key by hashing the parms between m_START and m_END
-	long   m_START;
+	int32_t   m_START;
 
 
 	//////
@@ -177,9 +177,9 @@ class SearchInput {
 
 
 	// do not include these in makeKey()
-	long   m_numTopicsToDisplay;
-	long   m_refs_numToDisplay;
-	long   m_rp_numToDisplay;  
+	int32_t   m_numTopicsToDisplay;
+	int32_t   m_refs_numToDisplay;
+	int32_t   m_rp_numToDisplay;  
 
 	// these should all be hashed in makeKey()
 	//char  *m_rp_externalColl;            // msg40
@@ -204,14 +204,14 @@ class SearchInput {
 	// co-branding parms
 	char  *m_imgUrl;
 	char  *m_imgLink;
-	long   m_imgWidth;
-	long   m_imgHeight;
+	int32_t   m_imgWidth;
+	int32_t   m_imgHeight;
 
-	long   m_titleMaxLen;
+	int32_t   m_titleMaxLen;
 
 	// for limiting results by score in the widget
 	double    m_maxSerpScore;
-	long long m_minSerpDocId;
+	int64_t m_minSerpDocId;
 
 	float m_sameLangWeight;
 
@@ -222,13 +222,13 @@ class SearchInput {
 
 	// general parameters
         char   m_dedupURL;
-	long   m_percentSimilarSummary;   // msg40
+	int32_t   m_percentSimilarSummary;   // msg40
 	char   m_showBanned;
 	char   m_allowPunctInPhrase;
 	char   m_excludeLinkText;
 	char   m_excludeMetaText;
 	char   m_doBotDetection;
-	long   m_includeCachedCopy;
+	int32_t   m_includeCachedCopy;
 	char   m_getSectionVotingInfo;
 	char   m_familyFilter;            // msg40
 	//char   m_restrictIndexdbForQuery; // msg40
@@ -245,7 +245,7 @@ class SearchInput {
 
 	char   m_adFeedEnabled;
 
-	// intersection speed up shortcut? "&fi=1", defaults to on
+	// intersection speed up int16_tcut? "&fi=1", defaults to on
 	char   m_fastIntersection;
 
 	// stream results back on socket in streaming mode, usefule when 
@@ -253,7 +253,7 @@ class SearchInput {
 	char   m_streamResults;
 
 	// limit search results to pages spidered this many seconds ago
-	long   m_secsBack;
+	int32_t   m_secsBack;
 
 	// 0 relevance, 1 date, 2 reverse date
 	char   m_sortBy;
@@ -262,42 +262,42 @@ class SearchInput {
 
 	// . related topic (gigabits) parameters
 	// . TODO: prepend m_top_ to these var names
-	long   m_docsToScanForTopics;     // msg40
-	long   m_minTopicScore;           // msg40
-	long   m_minDocCount;             // msg40
-	long   m_dedupSamplePercent;      // msg40
-	long   m_maxWordsPerTopic;        // msg40
-	long   m_ipRestrictForTopics;     // msg40
+	int32_t   m_docsToScanForTopics;     // msg40
+	int32_t   m_minTopicScore;           // msg40
+	int32_t   m_minDocCount;             // msg40
+	int32_t   m_dedupSamplePercent;      // msg40
+	int32_t   m_maxWordsPerTopic;        // msg40
+	int32_t   m_ipRestrictForTopics;     // msg40
 	char   m_returnDocIdCount;        // msg40
 	char   m_returnDocIds;            // msg40
 	char   m_returnPops;              // msg40
 
 	// . reference page parameters
 	// . copied from CollectionRec.h
-	long   m_refs_numToGenerate;          // msg40
-	long   m_refs_docsToScan;             // msg40
-	long   m_refs_minQuality;             // msg40
-	long   m_refs_minLinksPerReference;   // msg40
-	long   m_refs_maxLinkers;             // msg40
+	int32_t   m_refs_numToGenerate;          // msg40
+	int32_t   m_refs_docsToScan;             // msg40
+	int32_t   m_refs_minQuality;             // msg40
+	int32_t   m_refs_minLinksPerReference;   // msg40
+	int32_t   m_refs_maxLinkers;             // msg40
 	float  m_refs_additionalTRFetch;      // msg40
-	long   m_refs_numLinksCoefficient;    // msg40
-	long   m_refs_qualityCoefficient;     // msg40
-	long   m_refs_linkDensityCoefficient; // msg40
+	int32_t   m_refs_numLinksCoefficient;    // msg40
+	int32_t   m_refs_qualityCoefficient;     // msg40
+	int32_t   m_refs_linkDensityCoefficient; // msg40
 	char   m_refs_multiplyRefScore;       // msg40
 
 	// . related page parameters
 	// . copied from CollectionRec.h
-	long   m_rp_numToGenerate;            // msg40
-	long   m_rp_numLinksPerDoc;           // msg40
-	long   m_rp_minQuality;               // msg40
-	long   m_rp_minScore;                 // msg40
-	long   m_rp_minLinks;                 // msg40
-	long   m_rp_numLinksCoeff;            // msg40
-	long   m_rp_avgLnkrQualCoeff;         // msg40
-	long   m_rp_qualCoeff;                // msg40
-	long   m_rp_srpLinkCoeff;             // msg40
-	long   m_rp_numSummaryLines;          // msg40
-	long   m_rp_titleTruncateLimit;       // msg40
+	int32_t   m_rp_numToGenerate;            // msg40
+	int32_t   m_rp_numLinksPerDoc;           // msg40
+	int32_t   m_rp_minQuality;               // msg40
+	int32_t   m_rp_minScore;                 // msg40
+	int32_t   m_rp_minLinks;                 // msg40
+	int32_t   m_rp_numLinksCoeff;            // msg40
+	int32_t   m_rp_avgLnkrQualCoeff;         // msg40
+	int32_t   m_rp_qualCoeff;                // msg40
+	int32_t   m_rp_srpLinkCoeff;             // msg40
+	int32_t   m_rp_numSummaryLines;          // msg40
+	int32_t   m_rp_titleTruncateLimit;       // msg40
 	char   m_rp_useResultsAsReferences;   // msg40
 	char   m_rp_getExternalPages;         // msg40
 
@@ -315,30 +315,30 @@ class SearchInput {
 	//char   m_getSitePops;
 
 	// search result knobs
-	long   m_realMaxTop;
+	int32_t   m_realMaxTop;
 
 	// general parameters
-	long   m_numLinesInSummary;           // msg40
-	long   m_summaryMaxWidth;             // msg40
-	long   m_summaryMaxNumCharsPerLine;
+	int32_t   m_numLinesInSummary;           // msg40
+	int32_t   m_summaryMaxWidth;             // msg40
+	int32_t   m_summaryMaxNumCharsPerLine;
 
-	long   m_docsWanted;                  // msg40
-	long   m_firstResultNum;              // msg40
-	long   m_boolFlag;                    // msg40
-	long   m_numResultsToImport;          // msg40
+	int32_t   m_docsWanted;                  // msg40
+	int32_t   m_firstResultNum;              // msg40
+	int32_t   m_boolFlag;                    // msg40
+	int32_t   m_numResultsToImport;          // msg40
 	float  m_importWeight;
-	long   m_numLinkerWeight;
-	long   m_minLinkersPerImportedResult; // msg40
+	int32_t   m_numLinkerWeight;
+	int32_t   m_minLinkersPerImportedResult; // msg40
 	char   m_doQueryHighlighting;         // msg40
 	char  *m_highlightQuery;
 	Query  m_hqq;
-	long   m_queryMatchOffsets;
-	long   m_summaryMode;
+	int32_t   m_queryMatchOffsets;
+	int32_t   m_summaryMode;
 
 	// are we doing a QA query for quality assurance consistency
 	char   m_qa;
 
-	long   m_docsToScanForReranking;
+	int32_t   m_docsToScanForReranking;
 	float  m_pqr_demFactSubPhrase;
 	float  m_pqr_demFactCommonInlinks;
 	float  m_pqr_demFactLocTitle;
@@ -351,8 +351,8 @@ class SearchInput {
 	// . buzz stuff (buzz)
 	// . these controls the set of results, so should be in the makeKey()
 	//   as it is, in between the start and end hash vars
-	long   m_displayInlinks;
-	long   m_displayOutlinks;
+	int32_t   m_displayInlinks;
+	int32_t   m_displayOutlinks;
 	char   m_displayTermFreqs;
 	char   m_justMarkClusterLevels;
 
@@ -361,12 +361,12 @@ class SearchInput {
 	// new sort/constrain by date stuff
 	char   m_useDateLists;
 
-	long   m_maxQueryTerms;
+	int32_t   m_maxQueryTerms;
 
 	// for the news collection really
 	char   m_considerTitlesFromBody;
-	long   m_maxClusterByTopicResults;
-	long   m_numExtraClusterByTopicResults;
+	int32_t   m_maxClusterByTopicResults;
+	int32_t   m_numExtraClusterByTopicResults;
 
 	// we do not do summary deduping, and other filtering with docids
 	// only, so can change the result and should be part of the key
@@ -378,7 +378,7 @@ class SearchInput {
 	// this should be part of the key because it will affect the results!
 	char   m_queryExpansion;
 
-	long   m_maxRealTimeInlinks;
+	int32_t   m_maxRealTimeInlinks;
 
 	////////
 	//
@@ -388,7 +388,7 @@ class SearchInput {
 
 	// . end the section we hash in SearchInput::makeKey()
 	// . we also hash displayMetas, TopicGroups and Query into the key
-	long   m_END_HASH;
+	int32_t   m_END_HASH;
 
 
 
@@ -400,10 +400,10 @@ class SearchInput {
 
 	// for selecting a language
 	//char   m_queryLang;
-	//long   m_gblang;
+	//int32_t   m_gblang;
 
 	// post query reranking
-	//long          m_docsToScanForReranking;
+	//int32_t          m_docsToScanForReranking;
 
 	//char  *m_url;
 	//SafeBuf m_whiteListBuf;
@@ -414,22 +414,22 @@ class SearchInput {
 
 
 	// for /get?d=xxxxx&strip=0&ih=1&qh=1
-	//long long m_docId;
-	//long      m_strip;
+	//int64_t m_docId;
+	//int32_t      m_strip;
 	//char      m_includeHeader;
 	//char      m_queryHighlighting; 
 	//char      m_doDateHighlighting;
-        //long      m_useAdFeedNum;
+        //int32_t      m_useAdFeedNum;
 
 	//char          *m_username;
 
 	// true if query is directly from an end-user
 	//char m_endUser;
 
-	//long           m_maxResults;       // msg40
+	//int32_t           m_maxResults;       // msg40
 
 	// a marker for SearchInput::test()
-	long      m_END_TEST;
+	int32_t      m_END_TEST;
 
 };
 

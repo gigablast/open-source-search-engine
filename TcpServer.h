@@ -56,16 +56,16 @@ class TcpServer {
 	// . getMsgSize is called to get the total size of an incoming msg
 	// . it returns -1 if it doesn't yet know
 	bool init ( void (* requestHandler)(TcpSocket *s) ,
-		    long (* getMsgSize    )(char *msg , long msgBytesRead,
+		    int32_t (* getMsgSize    )(char *msg , int32_t msgBytesRead,
 					    TcpSocket *s ),
-		    long (* getMsgPiece   )(TcpSocket *s ),
-		    short     port                        , 
-		    long     *maxSocketsPtr = NULL        , //MAX_TCP_SOCS def
+		    int32_t (* getMsgPiece   )(TcpSocket *s ),
+		    int16_t     port                        , 
+		    int32_t     *maxSocketsPtr = NULL        , //MAX_TCP_SOCS def
 		    bool      useSSL = false              );
-		    //long      maxReadBufSize = 128*1024  , 
-		    //long      maxSendBufSize = 128*1024  );
+		    //int32_t      maxReadBufSize = 128*1024  , 
+		    //int32_t      maxSendBufSize = 128*1024  );
 
-	bool testBind ( unsigned short port ) ;
+	bool testBind ( uint16_t port ) ;
 
 	// . returns false if blocked, true otherwise
 	// . sets errno on error
@@ -75,28 +75,28 @@ class TcpServer {
 	// . callback is also called on error
 	// . default timeout of 60 secs of no read OR no write
 	bool sendMsg ( char  *hostname ,
-		       long   hostnameLen ,
-		       short  port     ,
+		       int32_t   hostnameLen ,
+		       int16_t  port     ,
 		       char  *sendBuf  ,
-		       long   sendBufSize ,
-		       long   sendBufUsed ,
-		       long   msgTotalSize ,
+		       int32_t   sendBufSize ,
+		       int32_t   sendBufUsed ,
+		       int32_t   msgTotalSize ,
 		       void  *state    ,
 		       void  (* callback )( void *state, TcpSocket *s ) ,
-		       long   timeout   , // 60*1000 
-		       long   maxTextDocLen ,  // -1 for no max
-		       long   maxOtherDocLen );
+		       int32_t   timeout   , // 60*1000 
+		       int32_t   maxTextDocLen ,  // -1 for no max
+		       int32_t   maxOtherDocLen );
 
 	bool sendMsg ( char *url ,
 		       char  *sendBuf  ,
-		       long   sendBufSize ,
-		       long   sendBufUsed ,
-		       long   msgTotalSize ,
+		       int32_t   sendBufSize ,
+		       int32_t   sendBufUsed ,
+		       int32_t   msgTotalSize ,
 		       void  *state    ,
 		       void  (* callback )( void *state, TcpSocket *s ) ,
-		       long   timeout   , // 60*1000 
-		       long   maxTextDocLen ,  // -1 for no max
-		       long   maxOtherDocLen );
+		       int32_t   timeout   , // 60*1000 
+		       int32_t   maxTextDocLen ,  // -1 for no max
+		       int32_t   maxOtherDocLen );
 		       
 
 	bool sendChunk ( class TcpSocket *s ,
@@ -116,17 +116,17 @@ class TcpServer {
 	// . after completion/done this will call reseTcpSocket()
 	// . upon successful transmision of "msg" we shift socket into readMode
 	// . default timeout of 60 secs of no read OR no write
-	bool sendMsg ( long   ip      ,
-		       short  port    ,
+	bool sendMsg ( int32_t   ip      ,
+		       int16_t  port    ,
 		       char  *sendBuf  ,
-		       long   sendBufSize ,
-		       long   sendBufUsed ,
-		       long   msgTotalSize ,
+		       int32_t   sendBufSize ,
+		       int32_t   sendBufUsed ,
+		       int32_t   msgTotalSize ,
 		       void   *state   ,
 		       void  (* callback )( void *state , TcpSocket *s ) ,
-		       long   timeout   , // 60*1000 
-		       long   maxTextDocLen ,  // -1 for no max
-		       long   maxOtherDocLen ,
+		       int32_t   timeout   , // 60*1000 
+		       int32_t   maxTextDocLen ,  // -1 for no max
+		       int32_t   maxOtherDocLen ,
 		       bool   useHttpTunnel = false );
 
 	// . send request over an available (pre-connected) TcpSocket
@@ -135,14 +135,14 @@ class TcpServer {
 	// . default timeout of 60 secs of no read OR no write
 	bool sendMsg ( TcpSocket *s            , 
 		       char      *sendBuf  ,
-		       long       sendBufSize ,
-		       long       sendBufUsed ,
-		       long       msgTotalSize ,
+		       int32_t       sendBufSize ,
+		       int32_t       sendBufUsed ,
+		       int32_t       msgTotalSize ,
 		       void      *state        ,
 		       void      (* callback )( void *state , TcpSocket *s ),
-		       long       timeout = 60*1000 ,
-		       long       maxTextDocLen = -1 , // -1 for no max
-		       long       maxOtherDocLen = -1 );
+		       int32_t       timeout = 60*1000 ,
+		       int32_t       maxTextDocLen = -1 , // -1 for no max
+		       int32_t       maxOtherDocLen = -1 );
 
 	// . the following public funcs are public so C wrappers can call them
 	// . you should not call them
@@ -150,13 +150,13 @@ class TcpServer {
 	// . we use this as a callback called by DnsServer
 	// . gotta keep this public cuz getIpWrapper() calls it
 	// . returns true if didn't block when sending msg (using sendRequest)
-	bool       gotTcpServerIp ( class TcpState *tst , long ip );
+	bool       gotTcpServerIp ( class TcpState *tst , int32_t ip );
 
 	// get a TcpSocket from a socket descriptor
 	TcpSocket *getSocket          ( int sd ) ;
 
-	long       readSocket         ( TcpSocket *s );
-	long       writeSocket        ( TcpSocket *s );
+	int32_t       readSocket         ( TcpSocket *s );
+	int32_t       writeSocket        ( TcpSocket *s );
 	void       readTimeoutPoll    ( ) ;
 
 	TcpSocket *acceptSocket       ( ) ;
@@ -171,7 +171,7 @@ class TcpServer {
 	void       recycleSocket      ( TcpSocket *s ) ;
 
 	// only wrappers should call this 
-	long       connectSocket      ( TcpSocket *s ) ;
+	int32_t       connectSocket      ( TcpSocket *s ) ;
 
 	// set from init() to handle incoming requests
 	void (* m_requestHandler)(TcpSocket *s) ;
@@ -182,10 +182,10 @@ class TcpServer {
 
 	// private:
 
-	TcpSocket *getAvailableSocket ( long ip, short port ) ;
+	TcpSocket *getAvailableSocket ( int32_t ip, int16_t port ) ;
 	TcpSocket *getNewSocket       ( ) ;
-	TcpSocket *wrapSocket         ( int sd , long niceness, bool incoming);
-	bool       closeLeastUsed     ( long maxIdleTime = -1 ) ;
+	TcpSocket *wrapSocket         ( int sd , int32_t niceness, bool incoming);
+	bool       closeLeastUsed     ( int32_t maxIdleTime = -1 ) ;
 	bool       setTotalToRead     ( TcpSocket *s ) ;
 
 	int sslHandshake ( TcpSocket *s ) ;
@@ -200,27 +200,27 @@ class TcpServer {
         //   one alloc() and forget about having to do more...
 	// . up to 128 bytes of the reply can be stored in a static buffer
 	//   contained in TcpSocket, until we need to alloc...
-	//	virtual long getMsgSize ( char *buf , long bufSize ) ;
+	//	virtual int32_t getMsgSize ( char *buf , int32_t bufSize ) ;
 
 	int         m_sock ;  // for listening for connections
-	short       m_port ;  // for listening for connections
+	int16_t       m_port ;  // for listening for connections
 
 	// handlers set in the init() routine
 
 	// ptrs to our TcpSockets 1-1 w/ real sockets
 	TcpSocket *m_tcpSockets [ MAX_TCP_SOCKS ];
-	long       m_lastFilled;
-	long       m_numUsed;
+	int32_t       m_lastFilled;
+	int32_t       m_numUsed;
 	// # used for incoming connections
-	long       m_numIncomingUsed;
+	int32_t       m_numIncomingUsed;
 	// let's have them all pre-allocated, it's only ~1.1MB...
 	TcpSocket  m_actualSockets [ MAX_TCP_SOCKS ];
 
 
 	// . how many socket descriptors can we use simultaneously?
 	// . just applies to incoming sockets
-	long       m_dummy;
-	long      *m_maxSocketsPtr;
+	int32_t       m_dummy;
+	int32_t      *m_maxSocketsPtr;
        
 	bool m_doReadRateTimeouts;
 
@@ -228,12 +228,12 @@ class TcpServer {
 	
 	// . we don't wanna use too much memory reading/sending a big msg
 	//   so we have a limit on our buffer sizes (set with set())
-	//long        m_maxReadBufSize;
-	//long        m_maxSendBufSize;
+	//int32_t        m_maxReadBufSize;
+	//int32_t        m_maxSendBufSize;
 
 	// these callbacks should be set in init()
-	long (* m_getMsgSize    )(char *msg , long msgBytesRead, TcpSocket *s);
-	long (* m_getMsgPiece   )(TcpSocket *s );
+	int32_t (* m_getMsgSize    )(char *msg , int32_t msgBytesRead, TcpSocket *s);
+	int32_t (* m_getMsgPiece   )(TcpSocket *s );
 
 	// flag to specify SSL or not
 	bool m_useSSL;
@@ -244,8 +244,8 @@ class TcpServer {
 	// ready to go or not
 	bool m_ready;
 
-	long m_numOpen;
-	long m_numClosed;
+	int32_t m_numOpen;
+	int32_t m_numClosed;
 };
 
 #endif

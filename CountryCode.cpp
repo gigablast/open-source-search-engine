@@ -9,9 +9,9 @@
 
 // record for unified language/country hash table
 typedef union catcountryrec_t {
-	long lval;
+	int32_t lval;
 	struct {
-		unsigned short country;
+		uint16_t country;
 		uint8_t lang;
 	} sval;
 } catcountryrec_t;
@@ -296,10 +296,10 @@ uint8_t getCountryId ( char *cc ) {
 		// hash them up
 		ht.set ( 4 , 1 , -1,buf,2000,false,MAX_NICENESS,"ctryids");
 		// now add in all the country codes
-		long n = (long) sizeof(s_countryCode) / sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t) sizeof(s_countryCode) / sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char *s    = (char *)s_countryCode[i];
-			//long  slen = gbstrlen ( s );
+			//int32_t  slen = gbstrlen ( s );
 			// sanity check
 			if ( !s[0] || !s[1] || s[2]) { char *xx=NULL;*xx=0; }
 			// map it to a 4 byte key
@@ -320,7 +320,7 @@ uint8_t getCountryId ( char *cc ) {
 	tmp[1]=to_lower_a(cc[1]);
 	tmp[2]=0;
 	tmp[3]=0;
-	long slot = ht.getSlot ( tmp );
+	int32_t slot = ht.getSlot ( tmp );
 	if ( slot < 0 ) return 0;
 	void *val = ht.getValueFromSlot ( slot );
 	return *(uint8_t *)val ;
@@ -1101,7 +1101,7 @@ CountryCode::~CountryCode() {
 
 // this is initializing, not resetting - mdw
 void CountryCode::init(void) {
-	unsigned short idx;
+	uint16_t idx;
 	if(m_init) {
 		m_abbrToName.reset();
 		m_abbrToIndex.reset();
@@ -1235,9 +1235,9 @@ int CountryCode::createHashTable(void) {
 
 	char tmpbuf[2048];
 	HashTable ht;
-	unsigned long long entries = 0UL;
-	long catid;
-	long numcats = g_categories->m_numCats;
+	uint64_t entries = 0UL;
+	int32_t catid;
+	int32_t numcats = g_categories->m_numCats;
 	catcountryrec_t ccr;
 	SafeBuf sb(tmpbuf, 2048);
 
@@ -1247,13 +1247,13 @@ int CountryCode::createHashTable(void) {
 		log( "cat: Could not allocate memory for table.\n");
 		return(0);
 	}
-	for(long idx = 0; idx < numcats; idx++) {
+	for(int32_t idx = 0; idx < numcats; idx++) {
 		catid = g_categories->m_cats[idx].m_catid;
 		sb.reset();
 		g_categories->printPathFromId(&sb, catid, true);
 		if(!sb.getBufStart()) continue;
 		if(!(numcats % 1000))
-			log( "init: %ld/%ld Generated %llu so far...\n",
+			log( "init: %"INT32"/%"INT32" Generated %"UINT64" so far...\n",
 					numcats,
 					idx,
 					entries);
@@ -1265,15 +1265,15 @@ int CountryCode::createHashTable(void) {
 			char *xx = NULL; *xx = 0;
 		}
 		if(!ht.addKey(catid, ccr.lval)) {
-			log( "init: Could not add %ld (%ld)\n", catid, ccr.lval);
+			log( "init: Could not add %"INT32" (%"INT32")\n", catid, ccr.lval);
 			continue;
 		}
 		entries++;
 	}
 
 	ht.save(g_hostdb.m_dir, "catcountry.dat");
-	log( "Added %llu country entries from DMOZ to %s/catcountry.dat.\n", entries,g_hostdb.m_dir);
-	log( "Slots %ld, Used Slots %ld.\n", ht.getNumSlots(), ht.getNumSlotsUsed());
+	log( "Added %"UINT64" country entries from DMOZ to %s/catcountry.dat.\n", entries,g_hostdb.m_dir);
+	log( "Slots %"INT32", Used Slots %"INT32".\n", ht.getNumSlots(), ht.getNumSlotsUsed());
 
 	freeRegexTable();
 	return(1);
@@ -1295,23 +1295,23 @@ int CountryCode::getNumCodes(void) {
 	return(s_numCountryCodes);
 }
 
-unsigned short CountryCode::getCountryFromDMOZ(long catid) {
+uint16_t CountryCode::getCountryFromDMOZ(int32_t catid) {
 	if(!m_init) return(0);
 	catcountryrec_t ccr;
 	ccr.lval = 0L;
 	if(s_catToCountry.getNumSlotsUsed() < 1) return(0);
-	long slot = s_catToCountry.getSlot((long)catid);
+	int32_t slot = s_catToCountry.getSlot((int32_t)catid);
 	if(slot < 0) return(0);
 	ccr.lval = s_catToCountry.getValueFromSlot(slot);
 	return(ccr.sval.country);
 }
 
-uint8_t CountryCode::getLanguageFromDMOZ(long catid) {
+uint8_t CountryCode::getLanguageFromDMOZ(int32_t catid) {
 	if(!m_init) return(0);
 	catcountryrec_t ccr;
 	ccr.lval = 0L;
 	if(s_catToCountry.getNumSlotsUsed() < 1) return(0);
-	long slot = s_catToCountry.getSlot((long)catid);
+	int32_t slot = s_catToCountry.getSlot((int32_t)catid);
 	if(slot < 0) return(0);
 	ccr.lval = s_catToCountry.getValueFromSlot(slot);
 	return(ccr.sval.lang);
@@ -1344,29 +1344,29 @@ const char *CountryCode::getName(int index) {
 
 int CountryCode::getIndexOfAbbr(const char *abbr) {
 	if(!m_init) return(0);
-	unsigned short idx;
+	uint16_t idx;
 	if(!abbr) return(0);
 	idx = abbr[0];
 	idx = idx << 8;
 	idx |= abbr[1];
-	long slot = m_abbrToIndex.getSlot(idx);
+	int32_t slot = m_abbrToIndex.getSlot(idx);
 	if(slot < 0) return(0);
 	return(m_abbrToIndex.getValueFromSlot(slot));
 }
 
-long CountryCode::getNumEntries(void) {
+int32_t CountryCode::getNumEntries(void) {
 	if(!m_init) return(0);
 	return(s_catToCountry.getNumSlotsUsed());
 }
 
 void CountryCode::debugDumpNumbers(void) {
-	long slot;
+	int32_t slot;
 	catcountryrec_t ccr;
 	for(slot = 0; slot < s_catToCountry.getNumSlotsUsed(); slot++) {
 		ccr.lval = 0L;
 		ccr.lval = s_catToCountry.getValueFromSlot(slot);
 		if(ccr.lval)
-			log( "Slot %ld has lang %d, country %d (%ld)\n",
+			log( "Slot %"INT32" has lang %d, country %d (%"INT32")\n",
 					slot, ccr.sval.lang, ccr.sval.country, ccr.lval);
 	}
 }

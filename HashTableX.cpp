@@ -41,13 +41,13 @@ HashTableX::~HashTableX ( ) {
 }
 
 // returns false and sets errno on error
-bool HashTableX::set ( long  ks              ,
-		       long  ds              ,
-		       long  initialNumTerms , 
+bool HashTableX::set ( int32_t  ks              ,
+		       int32_t  ds              ,
+		       int32_t  initialNumTerms , 
 		       char *buf             , 
-		       long  bufSize         ,
+		       int32_t  bufSize         ,
 		       bool  allowDups       ,
-		       long  niceness        ,
+		       int32_t  niceness        ,
 		       char *allocName       ,
 		       // in general you want keymagic to ensure your
 		       // keys are "random" for good hashing. it doesn't
@@ -62,14 +62,14 @@ bool HashTableX::set ( long  ks              ,
 	m_isSaving  = false;
 	m_maxSlots  = 0x7fffffffffffffffLL;
 	// fi it so when you first call addKey() it does not grow your table!
-	if ( initialNumTerms < 32 ) initialNumTerms = 32;
-	// sanity check. assume min keysize of 4 because we do *(long *)key
+	//if ( initialNumTerms < 32 ) initialNumTerms = 32;
+	// sanity check. assume min keysize of 4 because we do *(int32_t *)key
 	// logic below!!
 	if ( ks <  4 ) { char *xx=NULL;*xx=0; }
 	if ( ds <  0 ) { char *xx=NULL;*xx=0; }
 	// auto?
 	if ( initialNumTerms == -1 ) {
-		long slotSize = ks + ds + 1;
+		int32_t slotSize = ks + ds + 1;
 		initialNumTerms = bufSize / slotSize;
 		initialNumTerms /= 2; // fix it to not exceed bufSize
 	}
@@ -111,7 +111,7 @@ void HashTableX::clear ( ) {
 }	 
 
 // #n is the slot
-long HashTableX::getNextSlot ( long n , void *key ) {
+int32_t HashTableX::getNextSlot ( int32_t n , void *key ) {
 	if ( n < 0 ) return -1;
  loop:
 	// inc it
@@ -119,7 +119,7 @@ long HashTableX::getNextSlot ( long n , void *key ) {
 	// this is set to 0x01 if non-empty
 	if ( m_flags [ n ] == 0   ) return -1;
 	// if key matches return it
-	if ( *(long *)(m_keys + m_ks * n) == *(long *)key  &&
+	if ( *(int32_t *)(m_keys + m_ks * n) == *(int32_t *)key  &&
 	     ( memcmp (m_keys + m_ks * n, key, m_ks ) == 0 ) )
 		return n;
 	// loop up
@@ -127,10 +127,10 @@ long HashTableX::getNextSlot ( long n , void *key ) {
 }
 
 // how many slots have this key
-long HashTableX::getCount ( void *key ) {
-	long n = getSlot ( key );
+int32_t HashTableX::getCount ( void *key ) {
+	int32_t n = getSlot ( key );
 	if ( n < 0 ) return 0;
-	long count = 1;
+	int32_t count = 1;
 	if ( ! m_allowDups ) return count;
  loop:
 	// inc it
@@ -138,7 +138,7 @@ long HashTableX::getCount ( void *key ) {
 	// this is set to 0x01 if non-empty
 	if ( m_flags [ n ] == 0   ) return count;
 	// count it if key matches
-	if ( *(long *)(m_keys + m_ks * n) == *(long *)key  &&
+	if ( *(int32_t *)(m_keys + m_ks * n) == *(int32_t *)key  &&
 	     ( memcmp (m_keys + m_ks * n, key, m_ks ) == 0 ) )
 		count++;
 	// loop up
@@ -147,10 +147,10 @@ long HashTableX::getCount ( void *key ) {
 
 // . returns the slot number for "key"
 // . returns -1 if key not in hash table
-long HashTableX::getOccupiedSlotNum ( void *key ) {
+int32_t HashTableX::getOccupiedSlotNum ( void *key ) {
 	if ( m_numSlots <= 0 ) return -1;
 
-        long n = *(unsigned long *)(((char *)key)+m_maskKeyOffset);
+        int32_t n = *(uint32_t *)(((char *)key)+m_maskKeyOffset);
 
 	// use magic to "randomize" key a little
 	if ( m_useKeyMagic ) 
@@ -159,12 +159,12 @@ long HashTableX::getOccupiedSlotNum ( void *key ) {
 	// mask on the lower 32 bits i guess
         n &= m_mask;
 
-        long count = 0;
+        int32_t count = 0;
         while ( count++ < m_numSlots ) {
 		// this is set to 0x01 if non-empty
 		if ( m_flags [ n ] == 0   ) return -1;
 		// get the key there
-		if ( *(long *)(m_keys + m_ks * n) == *(long *)key  &&
+		if ( *(int32_t *)(m_keys + m_ks * n) == *(int32_t *)key  &&
 		     ( memcmp (m_keys + m_ks * n, key, m_ks ) == 0 ) )
 			return n;
 		// advance otherwise
@@ -183,7 +183,7 @@ bool HashTableX::addKey ( void *key ) {
 
 // . returns false and sets g_errno on error, returns true otherwise
 // . adds scores if termId already exists in table
-bool HashTableX::addKey ( void *key , void *val , long *slot ) {
+bool HashTableX::addKey ( void *key , void *val , int32_t *slot ) {
 	// if saving, try again later
 	if ( m_isSaving || ! m_isWritable ) { 
 		g_errno = ETRYAGAIN; 
@@ -193,7 +193,7 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 	if ( m_ks <= 0 ){ char *xx=NULL; *xx=0; }
 
 	if ( ! m_allowGrowth && m_numSlotsUsed + 1 > m_numSlots ) {
-		log("hashtable: hit max ceiling of hashtable of %li slots. "
+		log("hashtable: hit max ceiling of hashtable of %"INT32" slots. "
 		    "and can not grow because in thread.",m_numSlotsUsed);
 		return false;
 	}
@@ -203,14 +203,14 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 	// doesn't return such big numbers!
 	if ( (m_numSlots < 20 || 2 * m_numSlotsUsed >= m_numSlots) &&
 	     m_numSlots < m_maxSlots ) {
-		long long growTo = ((long long)m_numSlots * 150LL )/100LL+20LL;
+		int64_t growTo = ((int64_t)m_numSlots * 150LL )/100LL+20LL;
 		if ( growTo > m_maxSlots ) growTo = m_maxSlots;
-		if ( ! setTableSize ( (long)growTo , NULL , 0 ) ) return false;
+		if ( ! setTableSize ( (int32_t)growTo , NULL , 0 ) ) return false;
 	}
 
-        //long n=(*(unsigned long *)(((char *)key)+m_maskKeyOffset)) & m_mask;
+        //int32_t n=(*(uint32_t *)(((char *)key)+m_maskKeyOffset)) & m_mask;
 
-        long n = *(unsigned long *)(((char *)key)+m_maskKeyOffset);
+        int32_t n = *(uint32_t *)(((char *)key)+m_maskKeyOffset);
 
 	// use magic to "randomize" key a little
 	if ( m_useKeyMagic ) 
@@ -219,7 +219,7 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 	// mask on the lower 32 bits i guess
         n &= m_mask;
 
-        long count = 0;
+        int32_t count = 0;
 	m_needsSave = true;
         while ( count++ < m_numSlots ) {
 		// this is set to 0x00 if empty
@@ -227,7 +227,7 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 		// breathe
 		//QUICKPOLL(m_niceness);
 		// use "n" if key matches
-		if ( *(long *)(m_keys + m_ks * n) == *(long *)key  &&
+		if ( *(int32_t *)(m_keys + m_ks * n) == *(int32_t *)key  &&
 		     // if we are a 4 byte key no need to do the memcmp
 		     (m_ks==4||memcmp (m_keys + m_ks * n, key, m_ks )==0) ) {
 			// if allow dups is true it must also match the data
@@ -271,14 +271,14 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 // patch the hole so chaining still works
 bool HashTableX::removeKey ( void *key ) {
 	// returns -1 if key not in hash table
-	long n = getOccupiedSlotNum(key);
+	int32_t n = getOccupiedSlotNum(key);
 	if ( n >= 0 ) return removeSlot ( n );
 	return true;
 }
 
 // . patch the hole so chaining still works
 // . returns false and sets g_errno on error
-bool HashTableX::removeSlot ( long n ) {
+bool HashTableX::removeSlot ( int32_t n ) {
 	if ( n < 0 ) return true;
 	// skip if already empty
 	if ( m_flags [ n ] == 0 ) return true;
@@ -314,13 +314,13 @@ bool HashTableX::removeSlot ( long n ) {
 // . set table size to "n" slots
 // . rehashes the termId/score pairs into new table
 // . returns false and sets errno on error
-bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
+bool HashTableX::setTableSize ( int32_t oldn , char *buf , int32_t bufSize ) {
 	// don't change size if we do not need to
 	if ( oldn == m_numSlots ) return true;
 
-	long long n = (long long)oldn;
+	int64_t n = (int64_t)oldn;
 	// make it a power of 2 for speed if small
-	n = getHighestLitBitValueLL((unsigned long long)oldn * 2LL -1);
+	n = getHighestLitBitValueLL((uint64_t)oldn * 2LL -1);
 	// sanity check, must be less than 1B
 	if ( n > 1000000000 ) { char *xx=NULL;*xx=0; }
 	// limit...
@@ -330,13 +330,13 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 	// sanity check
 	if ( n < oldn ) { char *xx = NULL; *xx = 0; }
 	// do we have a buf?
-	long need = (m_ks+m_ds+1) * n;
+	int32_t need = (m_ks+m_ds+1) * n;
 	// sanity check, buf should also meet what we need
 	if ( buf && bufSize < need ) { char *xx = NULL; *xx = 0; }
 
 	// we grow kinda slow, it slows things down, so note it
-	long long startTime =0LL;
-	long old = -1;
+	int64_t startTime =0LL;
+	int32_t old = -1;
 	if ( m_numSlots > 2000 ) {
 		startTime = gettimeofdayInMilliseconds();
 		old = m_numSlots;
@@ -345,7 +345,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 	// if we should not free note that
 	bool  savedDoFree  = m_doFree ;
 	char *savedBuf     = m_buf;
-	long  savedBufSize = m_bufSize;
+	int32_t  savedBufSize = m_bufSize;
 
 	// use what they gave us if we can
 	m_buf    = buf;
@@ -374,18 +374,18 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 	memset ( m_flags , 0 , n );
 
 	// rehash the slots if we had some
-	long ns = m_numSlots; if ( ! m_keys ) ns = 0;
+	int32_t ns = m_numSlots; if ( ! m_keys ) ns = 0;
 
 	// update these for the new empty table
 	m_numSlots = n;
 	m_mask     = n - 1;
 
-	long oldUsed = m_numSlotsUsed;
+	int32_t oldUsed = m_numSlotsUsed;
 	// reset this before re-adding all of them
 	m_numSlotsUsed = 0;
 
 	// loop over results in old table, if any
-	for ( long i = 0 ; i < ns ; i++ ) {
+	for ( int32_t i = 0 ; i < ns ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// skip the empty slots 
@@ -394,7 +394,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 		if ( m_ks == sizeof(key144_t) )
 			// use this special adder that hashes it up better!
 			addTerm144 ( (key144_t *)(oldKeys + m_ks * i) ,
-				     *(long *)(oldVals + m_ds * i) );
+				     *(int32_t *)(oldVals + m_ds * i) );
 		else
 			addKey ( oldKeys + m_ks * i , oldVals + m_ds * i );
 	}
@@ -404,10 +404,10 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 		if ( m_allocName ) name = m_allocName;
 		//if ( name && strcmp(name,"HashTableX")==0 )
 		//	log("hey");
-		long long now = gettimeofdayInMilliseconds();
-		logf(LOG_DEBUG,"table: grewtable %s from %li to %li slots "
-		     "in %lli ms (this=0x%lx) (used=%li)",  
-		     name,old,m_numSlots ,now - startTime,(long)this,oldUsed);
+		int64_t now = gettimeofdayInMilliseconds();
+		logf(LOG_DEBUG,"table: grewtable %s from %"INT32" to %"INT32" slots "
+		     "in %"INT64" ms (this=0x%"PTRFMT") (used=%"INT32")",  
+		     name,old,m_numSlots ,now - startTime,(PTRTYPE)this,oldUsed);
 	}
 
 	// free the old guys
@@ -422,7 +422,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 
 bool HashTableX::load ( char *dir , char *filename ,  SafeBuf *fillBuf ) {
 	char *tbuf = NULL;
-	long  tsize = 0;
+	int32_t  tsize = 0;
 	bool status = load ( dir , filename , &tbuf, &tsize );
 	if ( ! status ) return false;
 	// assign to safebuf. own buf = true
@@ -431,7 +431,7 @@ bool HashTableX::load ( char *dir , char *filename ,  SafeBuf *fillBuf ) {
 }
 
 // both return false and set g_errno on error, true otherwise
-bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
+bool HashTableX::load ( char *dir, char *filename, char **tbuf, int32_t *tsize ) {
 	File f;
 	f.set ( dir , filename );
 	if ( ! f.doesExist() ) return false;
@@ -439,24 +439,24 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
 	if ( ! pdir ) pdir = "";
 	//log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
 	if ( ! f.open ( O_RDONLY) ) return false;
-	long numSlots;
-	long numSlotsUsed;
-	long off = 0;
+	int32_t numSlots;
+	int32_t numSlotsUsed;
+	int32_t off = 0;
 	if ( ! f.read ( &numSlots     , 4 , off ) ) return false;
 	off += 4;
 	if ( ! f.read ( &numSlotsUsed , 4 , off ) ) return false;
 	off += 4;
-	long ks;
+	int32_t ks;
 	if ( ! f.read ( &ks         , 4 , off ) ) return false;
 	off += 4;
-	long ds;
+	int32_t ds;
 	if ( ! f.read ( &ds         , 4 , off ) ) return false;
 	off += 4;
 
 	// bogus key size?
 	if ( ks <= 0 ) {
 		log("htable: reading hashtable from %s%s: "
-		    "bogus keysize of %li",
+		    "bogus keysize of %"INT32"",
 		    dir,filename,ks );
 		return false;
 	}
@@ -499,8 +499,8 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
         // close the file, we are done
         f.close();
 	m_needsSave = false;
-	long totalMem = *tsize+m_numSlots*(m_ks+m_ds);
-	log(LOG_INFO,"admin: Loaded hashtablex from %s%s %li total mem",
+	int32_t totalMem = *tsize+m_numSlots*(m_ks+m_ds);
+	log(LOG_INFO,"admin: Loaded hashtablex from %s%s %"INT32" total mem",
 	    pdir,filename, totalMem);
         return true;
 }
@@ -551,7 +551,7 @@ bool HashTableX::fastSave ( bool useThread ,
 			    char *dir , 
 			    char *filename , 
 			    char *tbuf, 
-			    long tsize ,
+			    int32_t tsize ,
 			    void *state ,
 			    void (* callback)(void *state) ) {
 	if ( g_conf.m_readOnlyMode ) return true;
@@ -605,7 +605,7 @@ bool HashTableX::fastSave ( bool useThread ,
 bool HashTableX::save ( char *dir , 
 			char *filename , 
 			char *tbuf, 
-			long tsize ) {
+			int32_t tsize ) {
 
 	//if ( ! m_needsSave ) return true;
 	//if ( m_isSaving ) return true;
@@ -625,10 +625,10 @@ bool HashTableX::save ( char *dir ,
 
 	//log(LOG_INFO,"db: Saving hashtablex to %s",s);
 
-	long numSlots     = m_numSlots;
-	long numSlotsUsed = m_numSlotsUsed;
-	long off = 0;
-	long err;
+	int32_t numSlots     = m_numSlots;
+	int32_t numSlotsUsed = m_numSlotsUsed;
+	int32_t off = 0;
+	int32_t err;
 
 	err = pwrite ( fd,  &numSlots     , 4 , off ) ; off += 4;
 	if ( err == -1 ) return log("htblx: write error");
@@ -673,7 +673,7 @@ bool HashTableX::save ( char *dir ,
 }
 
 // how many bytes are required to serialize this hash table?
-long HashTableX::getStoredSize() {
+int32_t HashTableX::getStoredSize() {
 	// see serialize() function below to explain this
 	return 4 + 4 + 1 + 2 + 1 + m_numSlotsUsed*(m_ks+m_ds);
 }
@@ -682,11 +682,11 @@ long HashTableX::getStoredSize() {
 // . returns ptr to buf used
 // . set size of buf allocated and used
 // . returns -1 on error
-char *HashTableX::serialize ( long *bufSize ) {
-	long need = getStoredSize();
+char *HashTableX::serialize ( int32_t *bufSize ) {
+	int32_t need = getStoredSize();
 	char *buf = (char *)mmalloc ( need , m_allocName );
 	if ( ! buf ) return (char *)-1;
-	long used = serialize ( buf , need );
+	int32_t used = serialize ( buf , need );
 	// ensure it matches
 	if ( used != need ) { char *xx=NULL;*xx=0; }
 	// store it
@@ -694,21 +694,21 @@ char *HashTableX::serialize ( long *bufSize ) {
 	return buf;
 }
 
-// shortcut
-long HashTableX::serialize ( SafeBuf *sb ) {
-	long nb = serialize ( sb->getBuf() , sb->getAvail() );
+// int16_tcut
+int32_t HashTableX::serialize ( SafeBuf *sb ) {
+	int32_t nb = serialize ( sb->getBuf() , sb->getAvail() );
 	// update sb
 	sb->incrementLength ( nb );
 	return nb;
 }
 
 // returns # bytes written into "buf"
-long HashTableX::serialize ( char *buf , long bufSize ) {
-	// shortcuts
+int32_t HashTableX::serialize ( char *buf , int32_t bufSize ) {
+	// int16_tcuts
 	char *p    = buf;
 	//char *pend = buf + bufSize;
 	// how much for table?
-	long need = m_numSlotsUsed * (m_ks+m_ds);
+	int32_t need = m_numSlotsUsed * (m_ks+m_ds);
 	// and # of slots
 	need += 4;
 	// and # of slots used
@@ -725,19 +725,19 @@ long HashTableX::serialize ( char *buf , long bufSize ) {
 	if ( m_ks > 127 || m_ds > 512 ) { char *xx=NULL;*xx=0; }
 
 	// store # slots total
-	*(long *)p = m_numSlots; p += 4;	
+	*(int32_t *)p = m_numSlots; p += 4;	
 	// store # slots
-	*(long *)p = m_numSlotsUsed; p += 4;
+	*(int32_t *)p = m_numSlotsUsed; p += 4;
 	// store key size
 	*(char *)p = m_ks; p += 1;
 	// store data size
-	*(short *)p = m_ds; p += 2;
+	*(int16_t *)p = m_ds; p += 2;
 	// flags
 	*(char *)p = m_allowDups; p += 1;	
 	// sanity check
-	long used = 0;
+	int32_t used = 0;
 	// store keys that are valid
-	for ( long i = 0 ; i < m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
 		// skip if empty
 		if ( m_flags[i] == 0 ) continue;
 		// sanity check count
@@ -750,7 +750,7 @@ long HashTableX::serialize ( char *buf , long bufSize ) {
 	// sanity check
 	if ( used != m_numSlotsUsed ) { char *xx=NULL; *xx=0; }
 	// store data that is valid
-	for ( long i = 0 ; i < m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
 		// skip if empty
 		if ( m_flags[i] == 0 ) continue;
 		// store key
@@ -763,22 +763,22 @@ long HashTableX::serialize ( char *buf , long bufSize ) {
 }
 
 // inflate it. returns false with g_errno set on error
-bool HashTableX::deserialize ( char *buf , long bufSize , long niceness ) {
+bool HashTableX::deserialize ( char *buf , int32_t bufSize , int32_t niceness ) {
 	// clear it
 	reset();
 
-	// shortcuts
+	// int16_tcuts
 	char *p    = buf;
 	//char *pend = buf + bufSize;
 
 	// get stuff
-	long numSlots = *(long *)p; p += 4;
+	int32_t numSlots = *(int32_t *)p; p += 4;
 	// how may slots to add?
-	long numSlotsUsed = *(long *)p; p += 4;
+	int32_t numSlotsUsed = *(int32_t *)p; p += 4;
 	// key size
-	long ks = *(char *)p; p += 1;
+	int32_t ks = *(char *)p; p += 1;
 	// data size
-	long ds = *(short *)p; p += 2;
+	int32_t ds = *(int16_t *)p; p += 2;
 	// flags (allowDups)
 	bool allowDups = *(char *)p; p += 1;
 
@@ -811,10 +811,10 @@ bool HashTableX::deserialize ( char *buf , long bufSize , long niceness ) {
 
 // . see how optimal the hashtable is
 // . return max number of consectuive filled slots/buckets
-long HashTableX::getLongestString () {
-	long count = 0;
-	long max = 0;
-	for ( long i = 0 ; i < m_numSlots ; i++ ) {
+int32_t HashTableX::getLongestString () {
+	int32_t count = 0;
+	int32_t max = 0;
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
 		if ( ! m_flags[i] ) { count = 0; continue; }
 		// inc it
 		count++;
@@ -825,14 +825,14 @@ long HashTableX::getLongestString () {
 		
 // . how many keys are dups
 // . returns -1 on error
-long HashTableX::getNumDups() {
+int32_t HashTableX::getNumDups() {
 	if ( ! m_allowDups ) return 0;
 	HashTableX tmp;
 	if ( ! tmp.set ( m_ks, 0, m_numSlots, NULL , 0 , false , m_niceness,
 			 "htxtmp") )
 		return -1;
 	// put into that table
-	for ( long i = 0 ; i < m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
 		// skip empty bucket
 		if ( ! m_flags[i] ) continue;
 		// get the key
@@ -841,45 +841,45 @@ long HashTableX::getNumDups() {
 		if ( ! tmp.addKey ( kp ) ) return -1;
 	}
 	// the unqieus
-	long uniques = tmp.m_numSlotsUsed;
+	int32_t uniques = tmp.m_numSlotsUsed;
 	// the dups
-	long dups = m_numSlotsUsed - uniques;
+	int32_t dups = m_numSlotsUsed - uniques;
 	// that's it
 	return dups;
 }
 
 // return 32-bit checksum of keys in table
-long HashTableX::getKeyChecksum32 () {
-	long checksum = 0;
-	for ( long i = 0 ; i < m_numSlots ; i++ ) {
+int32_t HashTableX::getKeyChecksum32 () {
+	int32_t checksum = 0;
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
 		// skip empty bucket
 		if ( ! m_flags[i] ) continue;
 		// get the key
 		char *kp = (char *)getKeyFromSlot(i);
 		// do it
 		if ( m_ks == 18 ) {
-			checksum ^= *(long *)(kp);
-			checksum ^= *(long *)(kp+4);
-			checksum ^= *(long *)(kp+8);
-			checksum ^= *(long *)(kp+12);
-			checksum ^= *(short *)(kp+16);
+			checksum ^= *(int32_t *)(kp);
+			checksum ^= *(int32_t *)(kp+4);
+			checksum ^= *(int32_t *)(kp+8);
+			checksum ^= *(int32_t *)(kp+12);
+			checksum ^= *(int16_t *)(kp+16);
 			continue;
 		}
 		if ( m_ks == 28 ) {
-			checksum ^= *(long *)(kp);
-			checksum ^= *(long *)(kp+4);
-			checksum ^= *(long *)(kp+8);
-			checksum ^= *(long *)(kp+12);
-			checksum ^= *(long *)(kp+16);
-			checksum ^= *(long *)(kp+20);
-			checksum ^= *(long *)(kp+24);
+			checksum ^= *(int32_t *)(kp);
+			checksum ^= *(int32_t *)(kp+4);
+			checksum ^= *(int32_t *)(kp+8);
+			checksum ^= *(int32_t *)(kp+12);
+			checksum ^= *(int32_t *)(kp+16);
+			checksum ^= *(int32_t *)(kp+20);
+			checksum ^= *(int32_t *)(kp+24);
 			continue;
 		}
 		if ( m_ks == 16 ) {
-			checksum ^= *(long *)(kp);
-			checksum ^= *(long *)(kp+4);
-			checksum ^= *(long *)(kp+8);
-			checksum ^= *(long *)(kp+12);
+			checksum ^= *(int32_t *)(kp);
+			checksum ^= *(int32_t *)(kp+4);
+			checksum ^= *(int32_t *)(kp+8);
+			checksum ^= *(int32_t *)(kp+12);
 			continue;
 		}
 		// unsupported key size

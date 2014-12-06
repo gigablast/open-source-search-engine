@@ -25,10 +25,10 @@
 // . declare useful subroutines
 // . "buf" is the mime + content, the whole HTTP reply gigabot received
 // . "mime" is just the mime of the HTTP reply, the top portion of "buf"
-long getMimeLen     ( char *buf  , long bufLen  ) ;
-char getContentType ( char *mime , long mimeLen ) ;
-int  filterContent  ( char *buf  , long bufLen  , long mimeLen , char ctype ,
-		      long  id ) ;
+int32_t getMimeLen     ( char *buf  , int32_t bufLen  ) ;
+char getContentType ( char *mime , int32_t mimeLen ) ;
+int  filterContent  ( char *buf  , int32_t bufLen  , int32_t mimeLen , char ctype ,
+		      int32_t  id ) ;
 
 // . returns -1 on error, 0 on success
 // . reads HTTP reply from filename given as argument, filters it, 
@@ -80,15 +80,15 @@ int main ( int argc , char *argv[] ) {
 	//sleep(45);
 
 	//srand(time(NULL));
-	//long i = rand() % 30;
-	//fprintf(stderr,"sleep(%li)\n",i);
+	//int32_t i = rand() % 30;
+	//fprintf(stderr,"sleep(%"INT32")\n",i);
 	//sleep(i);
 
 	// if nothing came in then nothing goes out, we're done
 	if ( n == 0 ) { free ( buf ) ; return 0; }
 
 	// get the end of the mime of this HTTP reply
-	long mimeLen = getMimeLen ( buf , n );
+	int32_t mimeLen = getMimeLen ( buf , n );
 
 	// if it is -1, no mime boundary was found, so return an error
 	if ( mimeLen < 0 ) {
@@ -100,7 +100,7 @@ int main ( int argc , char *argv[] ) {
 	// . get the id from the input filename
 	// . use that for out tmp files as well so parent caller can remove
 	//   our cruft if we core
-	long id ;
+	int32_t id ;
 	char *p = argv[1];
 	// get id in the file
 	while ( *p && ! isdigit(*p) ) p++;
@@ -126,7 +126,7 @@ int main ( int argc , char *argv[] ) {
 
 	// if not filtered, write the input to stdout unaltered
 	// no! make it 0 bytes!
-	//long w = fwrite ( buf , 1 , n , stdout );
+	//int32_t w = fwrite ( buf , 1 , n , stdout );
 	//if ( w == n ) { free ( buf ) ; return 0; }
 	free ( buf );
 	return 0;
@@ -138,11 +138,11 @@ int main ( int argc , char *argv[] ) {
 
 
 // returns -1 if no boundary found
-long getMimeLen ( char *buf , long bufLen ) {
+int32_t getMimeLen ( char *buf , int32_t bufLen ) {
 	// size of the boundary
-	long bsize = 0;
+	int32_t bsize = 0;
 	// find the boundary
-	long i;
+	int32_t i;
 	for ( i = 0 ; i < bufLen ; i++ ) {
 		// continue until we hit a \r or \n
 		if ( buf[i] != '\r' && buf[i] != '\n' ) continue;
@@ -171,7 +171,7 @@ long getMimeLen ( char *buf , long bufLen ) {
 }
 
 // get content-type
-char getContentType ( char *mime , long mimeLen ) {
+char getContentType ( char *mime , int32_t mimeLen ) {
 	// temp null terminate so we can call strstr
 	char c = mime [ mimeLen ];
 	mime [ mimeLen ] = '\0';
@@ -216,7 +216,7 @@ char getContentType ( char *mime , long mimeLen ) {
 	return CT_UNKNOWN;
 }
 
-int filterContent ( char *buf , long n , long mimeLen , char ctype , long id) {
+int filterContent ( char *buf , int32_t n , int32_t mimeLen , char ctype , int32_t id) {
 	// write mime to stdout unaltered
 	int w = fwrite ( buf , 1 , mimeLen , stdout );
 	if ( w != mimeLen ) {
@@ -232,7 +232,7 @@ int filterContent ( char *buf , long n , long mimeLen , char ctype , long id) {
 
 	// save the content to a file so pdftohtml,etc. can work with it
 	char in[64];
-	sprintf ( in , "%s/content.%li", wdir , id ); // (long)getpid() );
+	sprintf ( in , "%s/content.%"INT32"", wdir , id ); // (int32_t)getpid() );
 
 	//fprintf(stderr,"in=%s\n",in);
 
@@ -241,7 +241,7 @@ int filterContent ( char *buf , long n , long mimeLen , char ctype , long id) {
 		fprintf(stderr,"gbfilter: open: %s\n",strerror(errno)); 
 		return -1;
 	}
-	long b = n - mimeLen ;
+	int32_t b = n - mimeLen ;
 	if ( write ( fd , buf + mimeLen , b ) != b ) {
 		close ( fd );
 		fprintf(stderr,"gbfilter: write: %s\n",strerror(errno)); 

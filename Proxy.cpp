@@ -32,31 +32,31 @@ static void uncountStripe ( class StateControl *stC ) ;
 static bool sendPageAccount ( class TcpSocket *s , class HttpRequest *r ) ;
 
 struct StateControl{
-	long m_userId32;
+	int32_t m_userId32;
 	float m_price;
-	long m_accessType;
+	int32_t m_accessType;
 
-	long m_pageNum;
+	int32_t m_pageNum;
 	bool m_isYippySearch;
-	long long m_start;
-	long m_reqNum;
+	int64_t m_start;
+	int32_t m_reqNum;
 	SafeBuf m_sb;
 	TcpSocket *m_s;
-	long long m_startTime;
+	int64_t m_startTime;
 	bool m_isQuery;
-	unsigned long m_hash;
-	long m_hostId;
-	long m_raw;
-	long m_stripe        ;
-	long m_numQueryTerms ;
+	uint32_t m_hash;
+	int32_t m_hostId;
+	int32_t m_raw;
+	int32_t m_stripe        ;
+	int32_t m_numQueryTerms ;
 	// hash32() of "code"
-	long m_ch;
+	int32_t m_ch;
 	UdpSlot *m_slot;
 	char    *m_slotReadBuf;
-	long     m_slotReadBufMaxSize;
-	//long     m_forward;
-	long     m_retries;
-	long long     m_timeout;
+	int32_t     m_slotReadBufMaxSize;
+	//int32_t     m_forward;
+	int32_t     m_retries;
+	int64_t     m_timeout;
 	HttpRequest m_hr;
 	Host *m_forwardHost;
 	float m_pending;
@@ -70,10 +70,10 @@ struct StateControl{
 class UserInfo {
 public:
 	// unique userid
-	long m_userId32; 
+	int32_t m_userId32; 
 	// outstanding requests costs this much
 	float m_pending;
-	long m_signUpDate;
+	int32_t m_signUpDate;
 	// strings include terminating \0
 	char m_login[32];
 	char m_password[32];
@@ -97,12 +97,12 @@ public:
 	char m_zip[20];
 
 	// session info:
-	long long m_lastSessionId64;
-	long m_lastActionTime;
-	long m_lastLoginIP;
+	int64_t m_lastSessionId64;
+	int32_t m_lastActionTime;
+	int32_t m_lastLoginIP;
 	float m_accountBalance;
 
-	long m_flags;
+	int32_t m_flags;
 };
 
 // values for SummaryRec::m_accessType
@@ -122,9 +122,9 @@ static void freeStateControl ( StateControl *stC );
 Proxy::Proxy() {
 	m_proxyId = -1;
 	m_proxyRunning = false;
-	for (long i =0; i < MAX_HOSTS; i++)
+	for (int32_t i =0; i < MAX_HOSTS; i++)
 		m_numOutstanding[i] = 0;
-	for ( long i = 0 ; i < MAX_STRIPES ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_STRIPES ; i++ ) {
 		m_termsOutOnStripe   [i] = 0;
 		m_queriesOutOnStripe [i] = 0;
 		m_stripeLastHostId   [i] = -1;
@@ -146,8 +146,8 @@ Proxy::~Proxy() {
 	*/
 }
 
-bool Proxy::initHttpServer ( unsigned short httpPort, 
-			unsigned short httpsPort ) {
+bool Proxy::initHttpServer ( uint16_t httpPort, 
+			uint16_t httpsPort ) {
 	if ( ! g_httpServer.init( httpPort, httpsPort, 
 				  proxyHandlerWrapper ) ) {
 		return false;
@@ -155,8 +155,8 @@ bool Proxy::initHttpServer ( unsigned short httpPort,
 	return true;
 }
 
-bool Proxy::initProxy ( long proxyId, unsigned short udpPort,
-			unsigned short udpPort2,UdpProtocol *dp ) {
+bool Proxy::initProxy ( int32_t proxyId, uint16_t udpPort,
+			uint16_t udpPort2,UdpProtocol *dp ) {
 	// let's ensure our core file can dump
 	struct rlimit lim;
 	lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
@@ -298,7 +298,7 @@ void proxyHandlerWrapper ( TcpSocket *s ){
 	g_proxy.handleRequest (s);
 }
 
-static long s_yippySearchesOut = 0;
+static int32_t s_yippySearchesOut = 0;
 
 bool Proxy::handleRequest (TcpSocket *s){
 
@@ -313,7 +313,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 	/*
 	char buf[MAX_REQ_LEN+10];
-	long bufSize = s->m_readOffset;
+	int32_t bufSize = s->m_readOffset;
 	if ( bufSize > MAX_REQ_LEN - 1 )
 		bufSize = MAX_REQ_LEN - 1;
 	memcpy( buf, s->m_readBuf, bufSize );
@@ -339,9 +339,9 @@ bool Proxy::handleRequest (TcpSocket *s){
 		return false;
 	}
 
-	bool isAdmin = g_conf.isRootAdmin(s,&hr);
+	bool isAdmin = g_conf.isMasterAdmin(s,&hr);
 
-	long redirLen = hr.getRedirLen() ;
+	int32_t redirLen = hr.getRedirLen() ;
 	char *redir = NULL;
 	if(redirLen > 0) redir = hr.getRedir();
 
@@ -407,7 +407,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		m.makeRedirMime (redir,redirLen);
 		// . move the reply to a send buffer
 		// . don't make sendBuf bigger than g_httpMaxSendBufSize
-		long sendBufSize = m.getMimeLen();
+		int32_t sendBufSize = m.getMimeLen();
 		if ( sendBufSize > g_conf.m_httpMaxSendBufSize ) 
 			sendBufSize = g_conf.m_httpMaxSendBufSize;
 		char *sendBuf    = (char *) mmalloc (sendBufSize,"HttpServer");
@@ -440,9 +440,9 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 	// . just requesting a static file, like rants.html or logo.gif?
 	// . if so just handle that as a normal html/image file
-	long n = g_pages.getDynamicPageNumber ( &hr );
+	int32_t n = g_pages.getDynamicPageNumber ( &hr );
 	char *path = hr.getPath();
-	//long pathLen = hr.getPathLen();
+	//int32_t pathLen = hr.getPathLen();
 
 	// serve events on the gigablast.com domain:
 	if ( path && strncmp(path,"/events",7) == 0 )
@@ -470,7 +470,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// . i am changing this so that if &forward=<hostid> is in the url then
 
 	//   the proxy forwards the control page request to the given hostid
-	long forward = hr.getLong("forward",-1);
+	int32_t forward = hr.getLong("forward",-1);
 
 	bool handleIt = true;
 	if ( forward != -1       ) handleIt = false;
@@ -484,7 +484,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// and should go to the backend for adding the url. but we can
 	// handle the shell, just the add url page html including the ajax
 	// script.
-	long cgiId = hr.getLong("id",0);
+	int32_t cgiId = hr.getLong("id",0);
 	if ( n == PAGE_ADDURL && cgiId ) handleIt = false;
 
 	// send this to gk144 
@@ -521,7 +521,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 	// log the request iff filename does not end in .gif .jpg .
 	char *f = NULL;
-	long  flen = 0;
+	int32_t  flen = 0;
 	if ( isEventGuru ) {
 		f     = hr.getFilename();
 		flen  = hr.getFilenameLen();
@@ -554,7 +554,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 	// get the server this socket uses
 	TcpServer *tcp = s->m_this;
-	long max;
+	int32_t max;
 	if ( tcp == &g_httpServer.m_ssltcp ) max = g_conf.m_httpsMaxSockets;
 	else                                 max = g_conf.m_httpMaxSockets;
 
@@ -575,9 +575,9 @@ bool Proxy::handleRequest (TcpSocket *s){
 		//
 		// if we are gk267 then redirect to https://www2.gigablast.com/
 		//
-		static long s_ip2 = 0;
+		static int32_t s_ip2 = 0;
 		if ( ! s_ip2 ) s_ip2 = atoip("10.5.56.77");
-		if ( (long)g_hostdb.m_myIp == s_ip2 )
+		if ( (int32_t)g_hostdb.m_myIp == s_ip2 )
 			redir = "https://www2.gigablast.com/";
 		redirLen = gbstrlen(redir);
 		goto redirect;
@@ -597,7 +597,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	}
 
 	// limit yippy's "GET /search" requests to 50 out...
-	long ymax = 150; // 150;//50;//25; 300 for one process is good
+	int32_t ymax = 150; // 150;//50;//25; 300 for one process is good
 	ymax = g_conf.m_maxYippyOut;
 	bool isYippySearch = false;
 	if ( g_isYippy && ! strncmp(path,"/search?",8) )
@@ -607,7 +607,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// with those requests with the anti-bot code below
 	bool isYippyToolBarRequest = false;
 	if ( g_isYippy && isYippySearch ) {
-		long iflen;
+		int32_t iflen;
 		char *ifs = hr.getString("input-form",&iflen,NULL);
 		if ( ! ifs ) isYippyToolBarRequest = true;
 	}
@@ -618,14 +618,14 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// enforce the open socket quota iff not admin and not from intranet
 	if ( ! isAdmin && tcp->m_numIncomingUsed >= max && 
 	     !tcp->closeLeastUsed()) {
-		static long s_last = 0;
-		static long s_count = 0;
-		long now = getTimeLocal();
+		static int32_t s_last = 0;
+		static int32_t s_count = 0;
+		int32_t now = getTimeLocal();
 		if ( now - s_last < 5 ) 
 			s_count++;
 		else {
 			log("query: Too many sockets open. Sending 500 "
-			    "http status code to %s. (msgslogged=%li)[2]",
+			    "http status code to %s. (msgslogged=%"INT32")[2]",
 			    iptoa(s->m_ip),s_count);
 			s_count = 0;
 			s_last = now;
@@ -643,7 +643,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		// log a note
 		//
 		bool banned = false;
-		long yqLen;
+		int32_t yqLen;
 		char *yq = hr.getString("query",&yqLen,NULL);
 		if ( ! yq ) yq = "";
 		if( ! isYippyToolBarRequest &&
@@ -662,15 +662,15 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 
 		if ( ! banned ) {
-			static long s_last = 0;
-			static long s_count = 0;
-			long now = getTimeLocal();
+			static int32_t s_last = 0;
+			static int32_t s_count = 0;
+			int32_t now = getTimeLocal();
 			if ( now - s_last < 5 ) 
 				s_count++;
 			else {
 				log("query: Too many oustanding yippy search "
-				    "requests, %li. closing socket on %s. "
-				    "(repeats=%li)",
+				    "requests, %"INT32". closing socket on %s. "
+				    "(repeats=%"INT32")",
 				    ymax,
 				    iptoa(s->m_ip),s_count);
 				s_count = 0;
@@ -689,13 +689,13 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// who dare accesses us?  manually or automatically...
 	//
 	/////
-	long USERID32 = 0;
+	int32_t USERID32 = 0;
 	UserInfo *UI = NULL;
 
 	//
 	// the type of thing being accessed...
 	//
-	long accessType = getAccessType ( &hr );
+	int32_t accessType = getAccessType ( &hr );
 
 	//
 	// the cost of the accesses in USD
@@ -712,19 +712,19 @@ bool Proxy::handleRequest (TcpSocket *s){
 	//////////
 
 	// did they provide an access code?
-	long codeLen = 0;
+	int32_t codeLen = 0;
 	char *code = hr.getString("code", &codeLen, NULL);
 	// only feed access supplies a userid in the http get request
-	long userId32b = hr.getLong("userid",0);
+	int32_t userId32b = hr.getLong("userid",0);
 	// if there is a code but no userid, it might be an old style
 	// request from client, etc... so search for those guys by
 	// code...
 	if ( code && userId32b == 0 ) {
 		// get the userid from the provided code...
-		long nu = m_userInfoBuf.length()/sizeof(UserInfo);
+		int32_t nu = m_userInfoBuf.length()/sizeof(UserInfo);
 		if ( nu > 10 ) nu = 10;
 		UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-		for ( long i =0 ; i < nu ; i++ ) {
+		for ( int32_t i =0 ; i < nu ; i++ ) {
 			UserInfo *ui = &uis[i];
 			if ( strcmp ( ui->m_xmlFeedCode,code) ) continue;
 			userId32b = ui->m_userId32;
@@ -799,9 +799,9 @@ bool Proxy::handleRequest (TcpSocket *s){
 	char testBufSpace[2048];
 	SafeBuf testBuf(testBufSpace, 2048);
 	if ( doAutoBan ) {
-		long uipLen;
+		int32_t uipLen;
 		char *uip = hr.getString("uip", &uipLen, NULL);
-                long  ip  = s->m_ip;
+                int32_t  ip  = s->m_ip;
 		bool good = g_autoBan.hasPerm(ip, 
 					      NULL,0,//code, codeLen, 
 					      uip, uipLen, 
@@ -812,7 +812,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// special yippy logging case
 	if ( banned && isYippySearch ) {
 		// log it
-		long yqLen;
+		int32_t yqLen;
 		char *yq = hr.getString("query",&yqLen,NULL);
 		if ( ! yq ) yq = "";
 		log("proxy: got banned search req %s (%s)",
@@ -833,7 +833,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		}
 		printRequest(s, &hr);
 		//g_stats.m_numSuccess++;
-		long rawFormat = hr.getLong("xml", 0); // was "raw"
+		int32_t rawFormat = hr.getLong("xml", 0); // was "raw"
 		// support old raw=9 crap as well
 		rawFormat = hr.getLong("raw",rawFormat);
 		if ( rawFormat > 0 )
@@ -849,7 +849,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	}
 
 	// hash the code
-	long ch3 = 0; if ( code ) ch3 = hash32n ( code );
+	int32_t ch3 = 0; if ( code ) ch3 = hash32n ( code );
 	
 	// . increment their "outstanding requests" count
 	// . customers now have a limit of outstanding requests to
@@ -858,13 +858,13 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// . if autoban is off we still increment these counts, so if autoban
 	//   gets turned on the counts will be unaffected
 	/*
-	long bytesReceived = hr.getRequestLen();
+	int32_t bytesReceived = hr.getRequestLen();
 	bool overLimit = g_autoBan.incRequestCount ( ch3 , bytesReceived );
 	if ( g_conf.m_doAutoBan && overLimit ) {
 		g_msg = " (error: too many outstanding requests)";
 		printRequest ( s , &hr );
 		// get how many bytes were sent out
-		long bs;
+		int32_t bs;
 		bool st = g_httpServer.sendErrorReply(s,500,g_msg,&bs);
 		g_autoBan.decRequestCount ( ch3 , bs );
 		return st;
@@ -875,11 +875,11 @@ bool Proxy::handleRequest (TcpSocket *s){
 	if ( err2 ) {
 	hadError2:
 		g_errno = ENOMEM;
-		log("proxy: new(%i): %s",sizeof(StateControl),
+		log("proxy: new(%i): %s",(int32_t)sizeof(StateControl),
 		    mstrerror(g_errno));
 		g_msg = " (error: out of memory.)";
 		printRequest(s, &hr);
-		long bs;
+		int32_t bs;
 		bool st;
 		st=g_httpServer.sendErrorReply(s,500,mstrerror(g_errno),&bs);
 		g_autoBan.decRequestCount ( ch3 , bs );
@@ -934,22 +934,22 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 	// log it
 	if ( isYippySearch ) {
-		long yqLen;
+		int32_t yqLen;
 		char *yq = hr.getString("query",&yqLen,NULL);
 		if ( ! yq ) yq = "";
 		log("proxy: got ok search req %s (%s)",  iptoa(s->m_ip),yq);
 	}
 
 	// yippy tcp proxy?
-	long x;
+	int32_t x;
 	char *sendBuf      ;
-	long  sendBufSize  ;
-	long  sendBufUsed  ;
-	long  msgTotalSize ;
-	long  timeout      ;
+	int32_t  sendBufSize  ;
+	int32_t  sendBufUsed  ;
+	int32_t  msgTotalSize ;
+	int32_t  timeout      ;
 	if ( g_isYippy ) {
 		// make it sticky, based on ip
-		unsigned long iph = hash32((char *)&stC->m_s->m_ip,4);
+		uint32_t iph = hash32((char *)&stC->m_s->m_ip,4);
 		x = iph % 4;
 		char *hn[] = { "10.36.14.4" , // teaski1
 			       "10.36.14.5" , // teaski2
@@ -964,17 +964,17 @@ bool Proxy::handleRequest (TcpSocket *s){
 		sendBufSize  = sb->length();
 		sendBufUsed  = sb->length();
 		msgTotalSize = sb->length();
-		// make it a long time so we are less likely to overload
+		// make it a int32_t time so we are less likely to overload
 		// the teaski servers, wait for reply from reach one...
 		timeout      = 60 * 1000; // in milliseconds
 		// note it
 		//log("proxy: sending request \"%s\" to %s",sendBuf,host);
-		static long s_reqNum = 0;
+		static int32_t s_reqNum = 0;
 		stC->m_reqNum = s_reqNum;
 		s_reqNum++;
 		stC->m_start = gettimeofdayInMilliseconds();
 		// debug log debug
-		//log("proxy: forwarding reqNum=%li from %s to %s",
+		//log("proxy: forwarding reqNum=%"INT32" from %s to %s",
 		//    stC->m_reqNum,iptoa(stC->m_s->m_ip),host);
 		// only allow so many outstanding to avoid overloading
 		// the teaski servers
@@ -1030,7 +1030,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	  no longer - flurbit root page is the search page...
 	else if ( n == PAGE_ADDURL || pathLen == 1 || 
 	     ( pathLen == 11 && strncmp ( path , "/index.html" ,11 ) == 0 ) ){
-		long numTries = 0;
+		int32_t numTries = 0;
 		while ( g_hostdb.isDead(m_mainHost) && 
 			numTries++ < g_hostdb.getNumHosts() ){
 			m_mainHost++;
@@ -1055,16 +1055,16 @@ bool Proxy::handleRequest (TcpSocket *s){
 	// . default timeout to 8 seconds
 	stC->m_timeout = 8 * 1000;
 	// set the timeout
-	long  firstResult = hr.getLong("s", 0);
-	long  docsWanted  = hr.getLong("n", 10);
+	int32_t  firstResult = hr.getLong("s", 0);
+	int32_t  docsWanted  = hr.getLong("n", 10);
 	// how many docsids request? first 4 bytes of request.
-	long  rr          = hr.getLong("rerank",-1);
+	int32_t  rr          = hr.getLong("rerank",-1);
 	// . how many milliseconds of waiting before we re-route?
 	// . 100 ms per doc wanted, but if they all end up 
 	//   clustering then docsWanted is no indication of the
 	//   actual number of titleRecs (or title keys) read
 	// . it may take a while to do dup removal on 1 million docs
-	long long wait = 5000 + 100  * (docsWanted+firstResult);
+	int64_t wait = 5000 + 100  * (docsWanted+firstResult);
 	// those big UOR queries should not get re-routed all the time
 	wait += 1000 * stC->m_numQueryTerms;
 	// a min of 8 seconds is good
@@ -1147,7 +1147,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 	// . for every tool we ask "Are you sure? [yes] [no]" 1 or 0
 	// . must be confirmed
-	long confirmed = hr.getLong("confirmed",0);
+	int32_t confirmed = hr.getLong("confirmed",0);
 	if ( msg.length() == 0 && confirmed != 1 ) {
 		// make another onclick ajax event
 		msg.safePrintf("<b>Are you sure you want to add this url "
@@ -1161,10 +1161,10 @@ bool Proxy::handleRequest (TcpSocket *s){
 				,toolPrice);
 		char *urlToAdd = hr.getString("u",NULL);
 		msg.urlEncode ( urlToAdd );
-		unsigned long h32 = hash32n(urlToAdd);
+		uint32_t h32 = hash32n(urlToAdd);
 		if ( h32 == 0 ) h32 = 1;
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		msg.safePrintf( "&id=%lu&rand=%llu&confirmed=1';\n"
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
+		msg.safePrintf( "&id=%"UINT32"&rand=%"UINT64"&confirmed=1';\n"
 				 "client.open('GET', url );\n"
 				 "client.send();\n"
 				 "\">"
@@ -1209,24 +1209,24 @@ bool Proxy::forwardRequest ( StateControl *stC ) {
 
 	TcpSocket *s = stC->m_s;
 
-	//log (LOG_DEBUG,"query: proxy: (hash=%lu) %s from "
-	//     "hostId #%li, port %i", stC->m_hash, hr.getRequest(), 
+	//log (LOG_DEBUG,"query: proxy: (hash=%"UINT32") %s from "
+	//     "hostId #%"INT32", port %i", stC->m_hash, hr.getRequest(), 
 	//     h->m_hostId,h->m_httpPort);
 
 	// if sending to the temporary network, add one to port
-	long port = h->m_httpPort;
+	int32_t port = h->m_httpPort;
 	if ( g_conf.m_useTmpCluster ) port += 1;
 
 	// put ip at end of request
 	char *req     = s->m_readBuf;
-	long  reqSize = s->m_readOffset;
+	int32_t  reqSize = s->m_readOffset;
 	// but then TcpServer.cpp leaves some room for a \0 and ip
 	char *p = req + reqSize;
 	// NULL terminate it
 	*p = '\0';
 	p += 1;
 	// then add in ip
-	*(long *)p = s->m_ip;
+	*(int32_t *)p = s->m_ip;
 	p += 4;
 
 	bool isQCProxy = (g_hostdb.m_myHost->m_type & HT_QCPROXY);
@@ -1244,9 +1244,9 @@ bool Proxy::forwardRequest ( StateControl *stC ) {
 	if ( h->m_isProxy ) { char *xx=NULL;*xx=0; }
 
 	// if we are a QUERY COMPRESSION proxy send to the specified address
-	long dstIp   = h->m_ip;
-	long dstPort = h->m_port;
-	long dstId   = h->m_hostId;
+	int32_t dstIp   = h->m_ip;
+	int32_t dstPort = h->m_port;
+	int32_t dstId   = h->m_hostId;
 	if ( isQCProxy ) {
 		dstIp   = g_hostdb.m_myHost->m_forwardIp;
 		dstPort = g_hostdb.m_myHost->m_forwardPort;
@@ -1257,7 +1257,7 @@ bool Proxy::forwardRequest ( StateControl *stC ) {
 	// . only precise=1 uses new engine.
 	HttpRequest *hr = &stC->m_hr;
 	bool sendToNewEngine = false;
-	long precise = hr->getLong("precise",-1);
+	int32_t precise = hr->getLong("precise",-1);
 	if ( precise == 1 ) sendToNewEngine = true;
 	// or if precise not given, an no code, send to new engine
 	if ( precise == -1 && ! stC->m_ch ) sendToNewEngine = true;
@@ -1384,7 +1384,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	StateControl *stC = (StateControl *) state;
 
 	char *reply = slot->m_readBuf;
-	long  size  = slot->m_readBufSize;
+	int32_t  size  = slot->m_readBufSize;
 
 	char *req = slot->m_sendBufAlloc;
 
@@ -1409,9 +1409,9 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		uncountStripe ( stC );
 		// pick another host! should NEVER return NULL
 		Host *h = pickBestHost ( stC );
-		log("proxy: hostid #%li timed out. req=%s Rerouting "
+		log("proxy: hostid #%"INT32" timed out. req=%s Rerouting "
 		    "forward request "
-		    "to hostid #%li instead.",stC->m_hostId,
+		    "to hostid #%"INT32" instead.",stC->m_hostId,
 		    req,//stC->m_s->m_readBuf,
 		    h->m_hostId);
 		// . try a resend!
@@ -1443,7 +1443,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	//if ( s->m_readOffset < 0 ) { char *xx=NULL;*xx=0; }
 	if ( slot->m_readBufSize < 0 ) { char *xx=NULL;*xx=0; }
 
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 
 	//m_numOutstanding[stC->m_hostId]--;
 	//if ( s->m_readOffset == 0 ){
@@ -1459,7 +1459,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		return;
 	}
 
-	unsigned long long took = nowms - stC->m_startTime;
+	uint64_t took = nowms - stC->m_startTime;
 
 	// if reply was compressed then uncompress it
 	if ( doUncompress ) {
@@ -1468,11 +1468,11 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		// parse it up
 		unsigned char *p = (unsigned char *)reply;
 		// get the sizes
-		long need  = *(long *)p; p += 4; // uncompressed total size
-		long size1 = *(long *)p; p += 4; // size of compressed mime
-		long size2 = *(long *)p; p += 4; // size of compressed content
+		int32_t need  = *(int32_t *)p; p += 4; // uncompressed total size
+		int32_t size1 = *(int32_t *)p; p += 4; // size of compressed mime
+		int32_t size2 = *(int32_t *)p; p += 4; // size of compressed content
 		// note it
-		//logf(LOG_DEBUG,"proxy: uncompressing from %li to %li",
+		//logf(LOG_DEBUG,"proxy: uncompressing from %"INT32" to %"INT32"",
 		//     size1+size2+12,need);
 		// make the decompressed buf
 		unsigned char *dbuf = (unsigned char *)mmalloc ( need,"pdbuf");
@@ -1480,14 +1480,14 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		if ( ! dbuf ) goto hadError;
 		unsigned char *dptr = dbuf;
 
-		unsigned long bytes1 = dend - dptr;
+		uint32_t bytes1 = dend - dptr;
 		// ucompress the http mime
 		int err1 = gbuncompress (dptr , &bytes1, p , size1 );
 		p += size1;
 		dptr += bytes1;
 
 		if ( size2 ) {
-			unsigned long bytes2 = dend - dptr;
+			uint32_t bytes2 = dend - dptr;
 			// uncompress the http content
 			int err2 = gbuncompress ( dptr , &bytes2, p , size2 );
 			p += size2;
@@ -1532,9 +1532,9 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		if ( stC->m_isQuery ) {
 			g_stats.logAvgQueryTime(stC->m_startTime);
 			// i dont check if query is raw or not
-			long color = 0x00b58869;
+			int32_t color = 0x00b58869;
 			if ( stC->m_raw ) color = 0x00753d30;
-			long long nowms = gettimeofdayInMilliseconds();
+			int64_t nowms = gettimeofdayInMilliseconds();
 			// . add the stat
 			// . use brown for the stat
 			g_stats.addStat_r ( 0               ,
@@ -1566,11 +1566,11 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		return;
 	}
 	//char *reply = s->m_readBuf;
-	//long size = s->m_readOffset;
+	//int32_t size = s->m_readOffset;
 	HttpMime mime;
 	// re-store original mime from uncompressed mime
 	mime.set ( reply, size, NULL);
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 )
 		g_msg = " (error: unknown.)";
 
@@ -1584,9 +1584,9 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	if ( stC->m_isQuery && httpStatus == 200 ){
 		g_stats.logAvgQueryTime(stC->m_startTime);
 		// i dont check if query is raw or not
-		long color = 0x00b58869;
+		int32_t color = 0x00b58869;
 		if ( stC->m_raw ) color = 0x00753d30;
-		long long nowms = gettimeofdayInMilliseconds();
+		int64_t nowms = gettimeofdayInMilliseconds();
 		// . add the stat
 		// . use brown for the stat
 		g_stats.addStat_r ( 0               ,
@@ -1605,10 +1605,10 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 		/*m_numSuccess++;
 		m_totalQueryTime += took;
 		if ( m_numSuccess % 20 == 0 ){
-			long avgTime = m_totalQueryTime / m_numSuccess;
-			log ( LOG_INFO,"proxy: did the last %li successful "
-			      "queries in %llu ms, latency %li ms. Total "
-			      "queries %li",
+			int32_t avgTime = m_totalQueryTime / m_numSuccess;
+			log ( LOG_INFO,"proxy: did the last %"INT32" successful "
+			      "queries in %"UINT64" ms, latency %"INT32" ms. Total "
+			      "queries %"INT32"",
 			      m_numSuccess,m_totalQueryTime,avgTime,
 			      m_numQueries );
 		}
@@ -1627,13 +1627,13 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	r.set(stC->m_s->m_readBuf, stC->m_s->m_readOffset, stC->m_s);
 
 	/*	if ( g_conf.m_logQueryTimes )
-		logf( LOG_TIMING,"query: proxy: got back %li bytes page "
-		      "with status %li for request %s in %li ms",
+		logf( LOG_TIMING,"query: proxy: got back %"INT32" bytes page "
+		      "with status %"INT32" for request %s in %"INT32" ms",
 		      size, stC->m_hash, httpStatus, r.getRequest(), took  );*/
 
 	//char *content = s->m_readBuf + mime.getMimeLen();
 	char *content    = reply + mime.getMimeLen();
-	long  contentLen = size  - mime.getMimeLen();
+	int32_t  contentLen = size  - mime.getMimeLen();
 
 	printRequest(stC->m_s, &r, took, content,contentLen);
 
@@ -1695,7 +1695,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	//   and add any common elements to every page...
 	// . make a new reply to send back...
 	// . it may free the old "reply" or it may set newReply=reply...
-	long newReplySize = size;
+	int32_t newReplySize = size;
 	char *newReply = reply;
 
 	// make sure it is HTTP/1.0 not HTTP/1.1
@@ -1756,7 +1756,7 @@ void freeStateControl ( StateControl *stC ){
 	if ( stC->m_slot && ! g_isYippy ) {
 		// save reply so we can free it when this state is freed
 		char *reply = stC->m_slotReadBuf;
-		long  size  = stC->m_slotReadBufMaxSize;
+		int32_t  size  = stC->m_slotReadBufMaxSize;
 		if ( reply ) mfree ( reply , size , "proxy" );
 		// do not double free!
 		stC->m_slotReadBuf = NULL;
@@ -1768,7 +1768,7 @@ void freeStateControl ( StateControl *stC ){
 
 void uncountStripe ( StateControl *stC ) {
 	// if stripe is -1, it was not a search query request
-	long stripe = stC->m_stripe;
+	int32_t stripe = stC->m_stripe;
 	if ( stripe < 0 ) return;
 	// a more refined load balancing act
 	g_proxy.m_termsOutOnStripe[stripe] -= stC->m_numQueryTerms;
@@ -1783,15 +1783,15 @@ void uncountStripe ( StateControl *stC ) {
 Host *Proxy::pickBestHost( StateControl *stC ) {
 
 	// sanity check, for m_stripeLastHostId array size, which is only 8 now
-	long numStripes = g_hostdb.getNumStripes();
+	int32_t numStripes = g_hostdb.getNumStripes();
 	if ( numStripes > MAX_STRIPES ) { char*xx=NULL;*xx=0; }
 
 	// see which stripes have non-dead hosts!
 	char stripeDead[MAX_STRIPES];
 	bool allDead = true;
 	memset ( stripeDead , 1 , MAX_STRIPES );
-	long nh = g_hostdb.getNumHosts();
-	for ( long i = 0 ; i < nh ; i++ ) {
+	int32_t nh = g_hostdb.getNumHosts();
+	for ( int32_t i = 0 ; i < nh ; i++ ) {
 		Host *h = g_hostdb.getHost(i);
 		if ( g_hostdb.isDead ( h ) ) continue;
 		// hey, we are not all dead!
@@ -1803,22 +1803,22 @@ Host *Proxy::pickBestHost( StateControl *stC ) {
 	// . get the stripe with the least # of outstanding query terms
 	// . in the event of a tie, give each stripe an equal shot so we
 	//   balance out the wear-n-tear on the drives.
-	//long mini = m_nextStripe;
-	//long min  = m_termsOutOnStripe[mini];
+	//int32_t mini = m_nextStripe;
+	//int32_t min  = m_termsOutOnStripe[mini];
 	//bool tied = false;
 
 	// start at this stripe
-	long ns = m_nextStripe;
+	int32_t ns = m_nextStripe;
 
-	long min ;
-	long minns = -1;
-	for ( long i = 0 ; i < numStripes ; i++ ) {
+	int32_t min ;
+	int32_t minns = -1;
+	for ( int32_t i = 0 ; i < numStripes ; i++ ) {
 		// get stripe number
 		if ( ++ns >= numStripes ) ns = 0;
 		// skip if whole stripe is dead, and other stripes are not dead
 		if ( stripeDead[ns] && ! allDead ) continue;
 		// how loaded is this stripe?
-		long termsOut = m_termsOutOnStripe[ns];
+		int32_t termsOut = m_termsOutOnStripe[ns];
 		// skip if his load is tied or higher than our current winner
 		if ( minns != -1 && termsOut >= min ) continue;
 		// got a new winner
@@ -1833,9 +1833,9 @@ Host *Proxy::pickBestHost( StateControl *stC ) {
 	if ( ++m_nextStripe >= numStripes ) m_nextStripe = 0;
 
 	// find the next host in line for stripe #minns
-	long bestHostId = m_stripeLastHostId[minns];
+	int32_t bestHostId = m_stripeLastHostId[minns];
 	// count iterations
-	//long count = 0;
+	//int32_t count = 0;
  loop:
 	// inc it, wrap it
 	if ( ++bestHostId >= g_hostdb.getNumHosts() ) bestHostId = 0;
@@ -1874,13 +1874,13 @@ Host *Proxy::pickBestHost( StateControl *stC ) {
 
 /*
 Host *Proxy::pickBestHost( ) {
-	long  bestHost = m_lastHost;
+	int32_t  bestHost = m_lastHost;
 	bestHost++;
 	if ( bestHost >= g_hostdb.getNumHosts() )
 		bestHost = 0;
 	//check if the host is dead. if dead cycle through for a live host
 	//Also check if it has got outstanding requests
-	long numTried = 0;
+	int32_t numTried = 0;
 	while ((m_numOutstanding[bestHost]>0 || g_hostdb.isDead(bestHost)) &&
 	       numTried < 10 ){
 		bestHost++;
@@ -1905,16 +1905,16 @@ Host *Proxy::pickBestHost( ) {
 */
 
 void Proxy::printRequest(TcpSocket *s, HttpRequest *r, 
-			 unsigned long long took ,
+			 uint64_t took ,
 			 char *content,
-			 long contentLen ) {
+			 int32_t contentLen ) {
 	//LOG THE REQUEST
 	/*
 	// . if it is a post request, log the posted data, too
 	char cgi[20058];
 	cgi[0] = '\0';
 	if ( r->isPOSTRequest() ) {
-		long  plen = r->m_cgiBufLen;
+		int32_t  plen = r->m_cgiBufLen;
 		if (  plen >= 20052 ) plen = 20052;
 		char *pp1 = cgi ;
 		char *pp2 = r->m_cgiBuf;
@@ -1924,7 +1924,7 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 		// . now it also converts ='s to 0's, so flip flop back
 		//   and forth
 		char dd = '=';
-		for ( long i = 0 ; i < plen ; i++ , pp1++, pp2++ ) {
+		for ( int32_t i = 0 ; i < plen ; i++ , pp1++, pp2++ ) {
 			if ( *pp2 == '\0' ) { 
 				*pp1 = dd;
 				if ( dd == '=' ) dd = '&';
@@ -1957,7 +1957,7 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 	// fix cookie for logging
 	char cbuf[5000];
 	char *pc  = r->m_cookiePtr;
-	long  pclen = r->m_cookieLen;
+	int32_t  pclen = r->m_cookieLen;
 	if ( pclen >= 4998 ) pclen = 4998;
 	char *pcend = r->m_cookiePtr + pclen;
 	char *dst = cbuf;
@@ -1979,7 +1979,7 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 	*/
 
 	char *req = s->m_readBuf;
-	//long  reqLen = s->m_readOffset;
+	//int32_t  reqLen = s->m_readOffset;
 
 	logf (LOG_INFO,"http: %s %s %s %s",
 	      bufTime,iptoa(s->m_ip),req,//r->getRequest(),
@@ -1988,11 +1988,11 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 
 	//reset g_msg
 	g_msg = "";
-	if ( (long)took < g_conf.m_logQueryTimeThreshold ) return;
+	if ( (int32_t)took < g_conf.m_logQueryTimeThreshold ) return;
 
 	if ( ! g_conf.m_logQueryReply || ! content || contentLen <= 0 ) {
-		logf (LOG_INFO,"http: Took %llu ms "
-		      "(len=%li bytes) "
+		logf (LOG_INFO,"http: Took %"UINT64" ms "
+		      "(len=%"INT32" bytes) "
 		      "for request %s",
 		      took, contentLen, r->getRequest());
 		return;
@@ -2003,7 +2003,7 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 	char *p = (char *)mmalloc ( contentLen+1,"proxycont");
 	if ( ! p ) return;
 
-	for ( long i = 0 ; i < contentLen ; i++ ) {
+	for ( int32_t i = 0 ; i < contentLen ; i++ ) {
 		if ( content[i] && ! is_binary_a(content[i]) ) { 
 			p[i]=content[i]; continue; }
 		// fix 0's and binary stuff
@@ -2012,8 +2012,8 @@ void Proxy::printRequest(TcpSocket *s, HttpRequest *r,
 	// null terminate
 	p[contentLen]=0;
 
-	logf (LOG_INFO,"http: Took %llu ms "
-	      "(len=%li bytes) "
+	logf (LOG_INFO,"http: Took %"UINT64" ms "
+	      "(len=%"INT32" bytes) "
 	      "for request %s reply=%s",
 	      took, contentLen, r->getRequest(),content);
 
@@ -2035,8 +2035,8 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 	
 	// get the reply from the teaski machine
 	char *reply = s->m_readBuf;
-	long replySize = s->m_readOffset;
-	//long long took = gettimeofdayInMilliseconds() - stC->m_start;
+	int32_t replySize = s->m_readOffset;
+	//int64_t took = gettimeofdayInMilliseconds() - stC->m_start;
 
 	if ( ! reply ) {
 		g_errno = EBADREPLY;
@@ -2057,8 +2057,8 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 		    ipbuf2,
 		    creq );
 		// debug log debug
-		//log("proxy: returning reply to %s replysize=%li "
-		//    "reqnum=%li (took=%llims)",
+		//log("proxy: returning reply to %s replysize=%"INT32" "
+		//    "reqnum=%"INT32" (took=%"INT64"ms)",
 		//    iptoa(stC->m_s->m_ip),
 		//    replySize,stC->m_reqNum,took);
 		g_httpServer.sendErrorReply(stC->m_s,500,mstrerror(g_errno));
@@ -2071,8 +2071,8 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 		log("proxy: got error in reply from %s. err=%s",
 		    iptoa(s->m_ip),mstrerror(g_errno));
 		// debug log debug
-		//log("proxy: returning reply to %s replysize=%li "
-		//    "reqnum=%li (took=%llims) (err=%s)",
+		//log("proxy: returning reply to %s replysize=%"INT32" "
+		//    "reqnum=%"INT32" (took=%"INT64"ms) (err=%s)",
 		//    iptoa(stC->m_s->m_ip),
 		//    replySize,stC->m_reqNum,took,mstrerror(g_errno));
 		g_httpServer.sendErrorReply(stC->m_s,500,mstrerror(g_errno));
@@ -2082,7 +2082,7 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 
 	/*
 	// debug log debug
-	long max;
+	int32_t max;
 	char c;
 	if ( reply ) {
 		max = 1500;
@@ -2093,11 +2093,11 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 		reply[max] = 0;
 	}
 
-	//log("proxy: returning reply back to client. size=%li reply=%s",
+	//log("proxy: returning reply back to client. size=%"INT32" reply=%s",
 	//    replySize,reply);
 
-	log("proxy: returning  reqNum=%li for  %s replysize=%li "
-	    "(took=%llims)",
+	log("proxy: returning  reqNum=%"INT32" for  %s replysize=%"INT32" "
+	    "(took=%"INT64"ms)",
 	    stC->m_reqNum,
 	    iptoa(stC->m_s->m_ip),
 	    replySize,took);
@@ -2128,17 +2128,17 @@ void gotTcpReplyWrapper ( void *state , TcpSocket *s ) {
 // every day has a summary rec
 class SummaryRec {
  public:
-	long      m_userId32;
+	int32_t      m_userId32;
 	char      m_accessType;
 	// how many times this access type was done:
-	long      m_numAccesses; 
+	int32_t      m_numAccesses; 
 	// how much user was charged for all these accesses:
 	float     m_totalCost;
 	// how long all replies took in milliseconds:
-	long long m_totalProcessTime;
+	int64_t m_totalProcessTime;
 	char      m_month;
 	char      m_day;
-	short     m_year;
+	int16_t     m_year;
 };
 
 #define DRF_DEPOSIT 1
@@ -2148,13 +2148,13 @@ class SummaryRec {
 // every time a deposit or withdrawal is made we have one of these
 class DepositRec {
 public:
-	long      m_userId32;
+	int32_t      m_userId32;
 	float     m_depositAmount;
-	long      m_depositDate;
+	int32_t      m_depositDate;
 	// . use transactionid for doing CREDITs back to user
-	// . i've seen it > 5B so use a long long
-	long long m_authorizeNetTransactionId;
-	long      m_flags;
+	// . i've seen it > 5B so use a int64_t
+	int64_t m_authorizeNetTransactionId;
+	int32_t      m_flags;
 };
 
 
@@ -2167,7 +2167,7 @@ UserInfo *Proxy::getUserInfoForFeedAccess ( HttpRequest *hr ) {
 	//char *user = hr->getString("user",NULL);
 	// we also store the username along with session id
 	//if ( ! user ) user = r->getStringFromCookie("user",NULL);
-	long userId32 = hr->getLong("userid",0);
+	int32_t userId32 = hr->getLong("userid",0);
 
 	char *code = hr->getString("code",NULL);
 
@@ -2179,9 +2179,9 @@ UserInfo *Proxy::getUserInfoForFeedAccess ( HttpRequest *hr ) {
 	// results and not the userid
 	if ( ! userId32 && code ) {
 		UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-		long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
-		for ( long i = 0 ; i < ni && i < 5 ; i++ ) {
-			// shortcut
+		int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+		for ( int32_t i = 0 ; i < ni && i < 5 ; i++ ) {
+			// int16_tcut
 			UserInfo *ui = &uis[i];
 			// must be an "old" user like others
 			if ( ! (ui->m_flags & (UIF_OLDUSER|UIF_ADMIN))) 
@@ -2201,7 +2201,7 @@ UserInfo *Proxy::getUserInfoForFeedAccess ( HttpRequest *hr ) {
 	
 	// if user name has no record, that's permission denied
 	if ( ! ui ) {
-		log("proxy: user not found for userid=%li",userId32);
+		log("proxy: user not found for userid=%"INT32"",userId32);
 		g_errno = EPERMDENIED;
 		return NULL;
 	}
@@ -2209,7 +2209,7 @@ UserInfo *Proxy::getUserInfoForFeedAccess ( HttpRequest *hr ) {
 	// codes must match, too!
 	if ( ! code || strcmp(code,ui->m_xmlFeedCode) ) {
 		g_errno = EPERMDENIED;
-		log("proxy: permission denied for userid=%li code=%s",
+		log("proxy: permission denied for userid=%"INT32" code=%s",
 		    userId32,code);
 		return NULL;
 	}
@@ -2217,15 +2217,15 @@ UserInfo *Proxy::getUserInfoForFeedAccess ( HttpRequest *hr ) {
 	return ui;
 }
 
-long Proxy::getAccessType ( HttpRequest *hr ) {
+int32_t Proxy::getAccessType ( HttpRequest *hr ) {
 
 	char *path    = hr->getPath();
-	long  pathLen = hr->getPathLen();
+	int32_t  pathLen = hr->getPathLen();
 
 	char c = path[pathLen];
 	path[pathLen] = '\0';
 
-	long accessType = 0;
+	int32_t accessType = 0;
 
 	if ( strncmp(path,"/addurl",7) == 0 ) {
 		// assume old
@@ -2279,7 +2279,7 @@ long Proxy::getAccessType ( HttpRequest *hr ) {
 }
 
 // in dollars!
-float Proxy::getPrice ( long accessType ) {
+float Proxy::getPrice ( int32_t accessType ) {
 
 	if ( accessType == 0 )
 		return 0.0;
@@ -2326,8 +2326,8 @@ float Proxy::getPrice ( long accessType ) {
 // . now they must have "&user=username&code=sdfsdfdfs"
 // . processTime is in milliseconds (ms)
 bool Proxy::addAccessPoint ( StateControl *stC , 
-			     long long nowms ,
-			     long httpStatus ) {
+			     int64_t nowms ,
+			     int32_t httpStatus ) {
 
 	HttpRequest *hr = &stC->m_hr;
 
@@ -2347,7 +2347,7 @@ bool Proxy::addAccessPoint ( StateControl *stC ,
 
 	// error getting results? do not charge for it then...
 	if ( httpStatus != 200 ) {
-		log("proxy: got http reply error status=%li",httpStatus);
+		log("proxy: got http reply error status=%"INT32"",httpStatus);
 		return true;
 	}
 
@@ -2364,8 +2364,8 @@ bool Proxy::addAccessPoint ( StateControl *stC ,
 
 bool Proxy::addAccessPoint2 ( UserInfo *ui , 
 			      char accessType ,
-			      long long nowms ,
-			      long long startTime ) {
+			      int64_t nowms ,
+			      int64_t startTime ) {
 
 
 	if ( ! ui ) {
@@ -2383,7 +2383,7 @@ bool Proxy::addAccessPoint2 ( UserInfo *ui ,
 	// the account balance of course
 	ui->m_accountBalance -= price;
 
-	long long processTime = nowms - startTime; // stC->m_startTime;
+	int64_t processTime = nowms - startTime; // stC->m_startTime;
 
 	// increment counters, all else should be fixed by getSummaryRec()
 	sr->m_numAccesses++;
@@ -2415,31 +2415,31 @@ bool Proxy::addAccessPoint2 ( UserInfo *ui ,
 // . use Proxy::m_sumBuf to hold the summary recs
 // . one summaryrec per day/user/accesstype tuple so they can see how many 
 //   queries they did of each type per day
-SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
+SummaryRec *Proxy::getSummaryRec ( int32_t userId32 , char accessType ) {
 
 	// . get epoch time utc. make sure proxy time is always in sync.
 	// . add that to Process.cpp to check to make sure time sync server
 	//   process is running!
-	long now = getTimeLocal();
+	int32_t now = getTimeLocal();
 
-	static long s_nextDay   = -1;
-	static long s_thisDay   =  0;
-	static long s_thisMonth =  0;
-	static long s_thisYear  =  0;
+	static int32_t s_nextDay   = -1;
+	static int32_t s_thisDay   =  0;
+	static int32_t s_thisMonth =  0;
+	static int32_t s_thisYear  =  0;
 
 	if ( s_nextDay == -1 || now > s_nextDay ) {
-		struct tm *timeStruct = gmtime ( &now );
+		struct tm *timeStruct = gmtime ( (time_t *)&now );
 		s_thisDay   = timeStruct->tm_mday;
 		s_thisMonth = timeStruct->tm_mon+1; // 0..11 so make it 1..12
 		s_thisYear  = timeStruct->tm_year + 1900;
-		long elapsed = timeStruct->tm_min * 60 + timeStruct->tm_sec;
-		long left = 86400 - elapsed;
+		int32_t elapsed = timeStruct->tm_min * 60 + timeStruct->tm_sec;
+		int32_t left = 86400 - elapsed;
 		s_nextDay   = now + left;
 	}
 
 	// make a unique key for this summary rec, one per day per user
-	unsigned long long h64 = (unsigned long)userId32;
-	unsigned long t = s_thisYear;
+	uint64_t h64 = (uint32_t)userId32;
+	uint32_t t = s_thisYear;
 	t <<= 16;
 	t |= s_thisMonth;
 	t <<= 8;
@@ -2450,8 +2450,8 @@ SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
 	h64 |= t;
 
 	// use hashtable of summary rec ptrs
-	long *sumOffPtr;
-	sumOffPtr = (long *)m_srht.getValue ( &h64 );
+	int32_t *sumOffPtr;
+	sumOffPtr = (int32_t *)m_srht.getValue ( &h64 );
 	//SummaryRec **srp = (SummaryRec **)m_srht.getValue ( &h64 );
 
 	// if there, return it!
@@ -2487,7 +2487,7 @@ SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
 	// advance it
 	m_sumBuf.incrementLength ( sizeof(SummaryRec) );
 
-	long sumOff = (long)(((char *)sr) - m_sumBuf.getBufStart());
+	int32_t sumOff = (int32_t)(((char *)sr) - m_sumBuf.getBufStart());
 
 	// hash it
 	if ( ! m_srht.addKey ( &h64 , &sumOff ) )
@@ -2506,12 +2506,12 @@ SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
 
 class StateUser {
 public:
-	//long m_errno;
+	//int32_t m_errno;
 	TcpSocket *m_socket;
 	//Msg0 m_msg0;
 	//Msg4 m_msg4;
-	long long m_sessionId64;
-	long m_userId32;
+	int64_t m_sessionId64;
+	int32_t m_userId32;
 	//HttpRequest m_hr;
 	SafeBuf m_sb;
 	SafeBuf m_sb2;
@@ -2521,17 +2521,17 @@ public:
 	float m_deposit; // dollar amount
 	float m_refund;  // dollar amount (95%)
 	float m_refundFee; // 5%
-	long long m_refundTransId;
+	int64_t m_refundTransId;
 	//bool m_doWithdraw;
 	//float m_deposit;
 	// authorize.net's reply
 	TcpSocket *m_docSocket;
 	HttpRequest m_hr;
-	long m_submittingNewUser;
+	int32_t m_submittingNewUser;
 	// is this really the admin logged in as another user?
-	bool m_isRootAdmin;
-	long long m_adminSessId;
-	long m_adminId;
+	bool m_isMasterAdmin;
+	int64_t m_adminSessId;
+	int32_t m_adminId;
 
 	// for holding error msg and pointing m_depositErr to it
 	SafeBuf m_tmpBuf1;
@@ -2577,12 +2577,12 @@ public:
 	char *m_phoneError;
 	char *m_termsError;
 
-	//long m_transactionId;
+	//int32_t m_transactionId;
 
-	long  m_error;
+	int32_t  m_error;
 };
 
-char *getAccessTypeString ( long at ) {
+char *getAccessTypeString ( int32_t at ) {
 	if ( at == AT_SEARCHFEED_OLD ) 
 		return "fast search feed";
 	if ( at == AT_SEARCHFEED_NEW ) 
@@ -2603,9 +2603,9 @@ void gotGifWrapper ( void *su ) {
 }
 
 // userId32 is always < 0x7fffffff to avoid sign bit issues
-UserInfo *Proxy::getUserInfoFromId ( long userId32 ) {
+UserInfo *Proxy::getUserInfoFromId ( int32_t userId32 ) {
 	UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-	long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+	int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
 	// we added 1 to the userid32 to avoid using 0
 	if ( userId32-1 >= ni ) return NULL;
 	if ( userId32-1 < 0 ) return NULL;
@@ -2621,8 +2621,8 @@ UserInfo *Proxy::getLoggedInUserInfo2 ( HttpRequest *hr ,
 	char *password = hr->getString("password",NULL);
 
 	// userid32 is used with sessionid
-	long long sessionId64 = hr->getLongLongFromCookie("sessionid",0LL);
-	long userId32 = hr->getLongFromCookie("userid",0);
+	int64_t sessionId64 = hr->getLongLongFromCookie("sessionid",0LL);
+	int32_t userId32 = hr->getLongFromCookie("userid",0);
 
 	// if supplying "user", then they must also supply "pwd"!
 	if ( ! password ) login = NULL;
@@ -2633,14 +2633,14 @@ UserInfo *Proxy::getLoggedInUserInfo2 ( HttpRequest *hr ,
 	// let this override in case sessionid expires
 	if ( login ) sessionId64 = 0LL;
 
-	long now = getTimeLocal();
+	int32_t now = getTimeLocal();
 
 	// try to match user password or session id
 	UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-	long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+	int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
 	UserInfo *ui;
-	long i; for ( i = 0 ; i < ni ; i++ ) {
-		// shortcut
+	int32_t i; for ( i = 0 ; i < ni ; i++ ) {
+		// int16_tcut
 		ui = &uis[i];
 		// login with existing session id?
 		if ( sessionId64 ) {
@@ -2670,11 +2670,11 @@ UserInfo *Proxy::getLoggedInUserInfo2 ( HttpRequest *hr ,
 		if ( strcmp ( ui->m_password, password ) ) break;
 		// ok, i guess password matched, set a session id
 		// assign a sessionid now. make it always positive!
-		long long1 = rand() % 0x7fffffff;
-		long long2 = rand() % 0x7fffffff;
-		unsigned long long newSessionId64 = long1;
+		int32_t num1 = rand() % 0x7fffffff;
+		int32_t num2 = rand() % 0x7fffffff;
+		uint64_t newSessionId64 = num1;
 		newSessionId64 <<= 32;
-		newSessionId64 |= long2;
+		newSessionId64 |= num2;
 		// ensure not 0
 		if ( newSessionId64 == 0 ) newSessionId64 = 1;
 		// add this session if to rec and re-add
@@ -2702,7 +2702,7 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 	// reset shit
 	su->m_userId32 = -1;
 	su->m_sessionId64 = 0;
-	su->m_isRootAdmin = false;
+	su->m_isMasterAdmin = false;
 	su->m_adminSessId = 0LL;
 	su->m_adminId = 0;
 
@@ -2715,7 +2715,7 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 	su->m_sessionId64 = ui->m_lastSessionId64;
 
 	// are they really the admin, logged in as a user?
-	long long asi = hr->getLongLongFromCookie("adminsessid",0LL);
+	int64_t asi = hr->getLongLongFromCookie("adminsessid",0LL);
 	if ( ! asi ) return ui;
 
 	// admin IP be local ip for security!
@@ -2723,16 +2723,16 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 
 	// see if it matches
 	UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-	long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
-	long i; for ( i = 0 ; i < ni ; i++ ) {
-		// shortcut
+	int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+	int32_t i; for ( i = 0 ; i < ni ; i++ ) {
+		// int16_tcut
 		UserInfo *ui = &uis[i];
 		// skip if not admin
 		if ( ! ( ui->m_flags & UIF_ADMIN ) ) continue;
 		// check it
 		if ( ui->m_lastSessionId64 != asi ) continue;
 		// got a match
-		su->m_isRootAdmin = true;
+		su->m_isMasterAdmin = true;
 		// save the underlying admin user info
 		su->m_adminSessId = asi;
 		su->m_adminId = ui->m_userId32;
@@ -2741,7 +2741,7 @@ UserInfo *Proxy::getLoggedInUserInfo ( StateUser *su , SafeBuf *errmsg ) {
 	return ui;
 }
 
-void removeSpaceTrails ( char *s , long maxBytes ) {
+void removeSpaceTrails ( char *s , int32_t maxBytes ) {
 	//char *end = s + gbstrlen(s) - 1;
 	//while ( *end == ' ' ) {
 	//	*end = '\0';
@@ -2767,9 +2767,9 @@ void removeSpaceTrails ( char *s , long maxBytes ) {
 
 bool Proxy::doesUsernameExist ( char *user ) {
 	UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-	long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
-	long i; for ( i = 0 ; i < ni ; i++ ) {
-		// shortcut
+	int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+	int32_t i; for ( i = 0 ; i < ni ; i++ ) {
+		// int16_tcut
 		UserInfo *ui = &uis[i];
 		// skip if no match
 		if ( strcmp ( ui->m_login , user ) ) continue;
@@ -2782,7 +2782,7 @@ void setFieldErrors ( StateUser *su ) {
 
 	// is this submitting a new user?
 	HttpRequest *hr = &su->m_hr;
-	long new1 = hr->getLong("new",0);
+	int32_t new1 = hr->getLong("new",0);
 
 	// check email address format
 	bool hadAt = false;
@@ -2805,7 +2805,7 @@ void setFieldErrors ( StateUser *su ) {
 		su->m_error = 1;
 	}
 	// check phone #
-	long numDigits = 0;
+	int32_t numDigits = 0;
 	bool hadAlpha = false;
 	bool badPhoneChar = false;
 	for ( char *p = su->m_phone ; *p ; p++ ) {
@@ -2888,9 +2888,9 @@ void setFieldErrors ( StateUser *su ) {
 		su->m_error = 1;
 	}
 	// MM/YY
-	long digitsBefore = 0;
+	int32_t digitsBefore = 0;
 	bool hadSlash = false;
-	long digitsAfter = 0;
+	int32_t digitsAfter = 0;
 	bool badExpChar = false;
 	for ( char *p = su->m_exp ; *p ; p++ ) {
 		if ( ! is_digit(*p) && *p != '/' )
@@ -2910,10 +2910,10 @@ void setFieldErrors ( StateUser *su ) {
 			"number";
 		su->m_error = 1;
 	}
-	long elen = 0;
+	int32_t elen = 0;
 	if ( su->m_exp ) elen = gbstrlen(su->m_exp);
 	if ( ! su->m_expError[0] && elen >= 4 ) {
-		long yy = atoi(su->m_exp + elen-2);
+		int32_t yy = atoi(su->m_exp + elen-2);
 		if ( yy < 13 ) {
 			su->m_expError = "Expiration year can not be "
 				"before 2013";
@@ -3099,12 +3099,12 @@ bool printLogoutPage ( StateUser *su ) {
 	// disguise, then redirect back to our main page. but if we are
 	// the admin and NOT logged in as someone else, then log us out
 	// as normal!
-	if ( su->m_isRootAdmin && su->m_adminSessId != su->m_sessionId64 ) {
+	if ( su->m_isMasterAdmin && su->m_adminSessId != su->m_sessionId64 ) {
 		sb.reset();
 		sb.safePrintf("<META HTTP-EQUIV=refresh "
 			      "content=\"0;URL=/account\">");
-		cb.safePrintf("Set-Cookie: sessionid=%lli;\r\n"
-			      "Set-Cookie: userid=%li;\r\n"
+		cb.safePrintf("Set-Cookie: sessionid=%"INT64";\r\n"
+			      "Set-Cookie: userid=%"INT32";\r\n"
 			      , su->m_adminSessId
 			      , su->m_adminId );
 	}
@@ -3147,8 +3147,8 @@ bool sendRedirect ( StateUser *su ) {
 
 	// getLoggedInUserId should have set the sessionId64
 	SafeBuf cb;
-	cb.safePrintf("Set-Cookie: sessionid=%lli;\r\n"
-		      "Set-Cookie: userid=%li;\r\n"
+	cb.safePrintf("Set-Cookie: sessionid=%"INT64";\r\n"
+		      "Set-Cookie: userid=%"INT32";\r\n"
 		      ,su->m_sessionId64
 		      ,su->m_userId32);
 	char *cookiePtr = NULL;
@@ -3198,7 +3198,7 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *hr2 ) {
 	if ( err5 ) {
 	hadError5:
 		g_errno = ENOMEM;
-		log("proxy: new(%i): %s",sizeof(StateUser),mstrerror(g_errno));
+		log("proxy: new(%"INT32"): %s",(int32_t)sizeof(StateUser),mstrerror(g_errno));
 		g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
 		return true;
 	}
@@ -3297,13 +3297,13 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *hr2 ) {
 	removeSpaceTrails ( su->m_zip,30);
 
 	// are we dealing with a form submission?
-	long submit = hr->getLong("submitted",0);
+	int32_t submit = hr->getLong("submitted",0);
 
-	long new1 = hr->getLong("new",0);
+	int32_t new1 = hr->getLong("new",0);
 	
-	long edit = hr->getLong("edit",0);
+	int32_t edit = hr->getLong("edit",0);
 
-	long logout = hr->getLong("logout",0);
+	int32_t logout = hr->getLong("logout",0);
 
 	if ( new1 ) edit = 0;
 
@@ -3403,8 +3403,8 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *hr2 ) {
 	if ( new1 && ! submit ) {
 		su->m_deposit = MINCHARGE;
 		// make a random number for the search feed code
-		long rc = rand() & 0x7fffffff;
-		sprintf(su->m_tmpBuf2,"%li",rc);
+		int32_t rc = rand() & 0x7fffffff;
+		sprintf(su->m_tmpBuf2,"%"INT32"",rc);
 		su->m_fc = su->m_tmpBuf2;
 	}
 
@@ -3482,14 +3482,14 @@ void gotDepositDocWrapper ( void *st , TcpSocket *ts ) {
 }
 
 /*
-long Proxy::getNextTransactionId ( ) {
+int32_t Proxy::getNextTransactionId ( ) {
 	// make sure s_lastTransId is set to our last transaction id PLUS one!
-	static long s_lastTransId = -1;
+	static int32_t s_lastTransId = -1;
 
 	if ( s_lastTransId == -1 ) {
-		long nd = m_depositBuf.length() / sizeof(DepositRec);
+		int32_t nd = m_depositBuf.length() / sizeof(DepositRec);
 		DepositRec *drs = (DepositRec *)m_depositBuf.getBufStart();
-		for ( long i = 0 ; i < nd ; i++ ) {
+		for ( int32_t i = 0 ; i < nd ; i++ ) {
 			DepositRec *dr = &drs[i];
 			if ( dr->m_transactionId > s_lastTransId )
 				s_lastTransId = dr->m_transactionId;
@@ -3498,7 +3498,7 @@ long Proxy::getNextTransactionId ( ) {
 		s_lastTransId++;
 	}
 
-	long save = s_lastTransId;
+	int32_t save = s_lastTransId;
 	s_lastTransId++;
 	return save;
 }
@@ -3515,7 +3515,7 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 	//HttpRequest *hr = &su->m_hr;
 
 	// ensure plenty room
-	long need = sizeof(DepositRec) * 10;
+	int32_t need = sizeof(DepositRec) * 10;
 	// on error, set the m_authNetMsg
 	if ( ! m_depositBuf.reserve ( need ) ) 
 		return gotDepositDoc(su);
@@ -3543,12 +3543,12 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 	// see (List of API Fields at end)
 
 	url.safePrintf("x_card_num=%s"
-		       //"&x_cust_id=%li"
+		       //"&x_cust_id=%"INT32""
 		       "&x_customer_ip=%s"
 		       "&x_delim_data=1" // must be 1 for AIM
 		       "&x_description=gigablast.com+search+engine+services"
-		       //"&x_invoice_num=%li"
-		       "&x_email_customer=1" // %li"
+		       //"&x_invoice_num=%"INT32""
+		       "&x_email_customer=1" // %"INT32""
 		       "&x_version=3.0"
 		       "&x_currency_code=USD"
 		       "&x_recurring_billing=0"
@@ -3573,11 +3573,11 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 			       // this is kinda bogus since we do not see it
 			       // has refunding original transactions but 
 			       // rather getting a withdrawal
-			       "&x_trans_id=%lli"
+			       "&x_trans_id=%"INT64""
 
 			       // do we need x_split_tender_id ???
 			       // use that INSTEAD of x_trans_id...
-			       //"&x_split_tender_id=%lli"
+			       //"&x_split_tender_id=%"INT64""
 
 			       "&x_amount=%.02f"
 			       , su->m_refundTransId
@@ -3658,10 +3658,10 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 	return true;
 }
 
-long long rand63 ( ) {
-	unsigned long r1 = rand();
-	unsigned long r2 = rand();
-	unsigned long long r = r1;
+int64_t rand63 ( ) {
+	uint32_t r1 = rand();
+	uint32_t r2 = rand();
+	uint64_t r = r1;
 	r <<= 32;
 	r |= r2;
 	r &= 0x7fffffffffffffffLL;
@@ -3670,10 +3670,10 @@ long long rand63 ( ) {
 
 // . parse a field out of an authorize.net reply	
 // . first fieldNum is 0
-char *getField ( char *docHTML , long fieldNum , long *replyMsgLen ) {
+char *getField ( char *docHTML , int32_t fieldNum , int32_t *replyMsgLen ) {
 
 	char *p = docHTML;
-	long numCommas = 0;
+	int32_t numCommas = 0;
 	for ( ; *p ; p++ ) {
 		if ( *p == ',' ) numCommas++;
 		if ( numCommas == fieldNum ) { p++; break; }
@@ -3683,7 +3683,7 @@ char *getField ( char *docHTML , long fieldNum , long *replyMsgLen ) {
 	// find next comma
 	char *next = strchr ( p , ',' );
 	// not there?
-	long plen;
+	int32_t plen;
 	if ( ! next ) plen = gbstrlen(p);
 	else          plen = next - p;
 	// use that
@@ -3713,7 +3713,7 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	// parse reply
 	TcpSocket *ts = su->m_docSocket;
 	char *reply = ts->m_readBuf;
-	long replySize = ts->m_readOffset;
+	int32_t replySize = ts->m_readOffset;
 	HttpMime mime;
 	Url redirUrl;
 	mime.set ( reply , replySize , &redirUrl );
@@ -3721,15 +3721,15 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	// log it
 	log("proxy: authorize.net reply: %s",reply);
 
-	long status = mime.getHttpStatus();
+	int32_t status = mime.getHttpStatus();
 
 	if ( status != 200 ) {
-		log("proxy: bad authorize.net mime stats = %li",status);
+		log("proxy: bad authorize.net mime stats = %"INT32"",status);
 		su->m_error = 1;
 		su->m_authNetMsg.safePrintf("Error communicating with "
 					    "authorize.net to charge "
 					    "credit card. HTTP status "
-					    "%li",status);
+					    "%"INT32"",status);
 		// there was an error - redisplay the new user form
 		if ( su->m_submittingNewUser ) return printEditForm ( su );
 		// otherwise, we were making another deposit
@@ -3738,7 +3738,7 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 
 	// get msg
 	char *docHTML = reply + mime.getMimeLen();
-	//long docLen = replySize - mime.getMimeLen();
+	//int32_t docLen = replySize - mime.getMimeLen();
 
 	// a,b,c,ERRMSG,...
 	// see http://developer.authorize.net/guides/AIM/wwhelp/wwhimpl/js/html/wwhelp.htm
@@ -3747,10 +3747,10 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	// 2: declined
 	// 3: error
 	// 4: held for review
-	long returnCode = atol(docHTML);
+	int32_t returnCode = atol(docHTML);
 
 	// show it has msg
-	long replyMsgLen = 0;
+	int32_t replyMsgLen = 0;
 	char *replyMsg = getField ( docHTML , 3 , &replyMsgLen );
 
 
@@ -3761,8 +3761,8 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	su->m_authNetMsg.safeMemcpy ( replyMsg , replyMsgLen );
 
 	// get the reason code
-	long scLen; char *scPtr = getField(docHTML,2,&scLen);
-	long rc = 0; if ( scPtr ) rc = atol2(scPtr,scLen);
+	int32_t scLen; char *scPtr = getField(docHTML,2,&scLen);
+	int32_t rc = 0; if ( scPtr ) rc = atol2(scPtr,scLen);
 	if ( returnCode != 1 && su->m_refund != 0.0 && rc == 54 ) 
 		// if this happens consider issuing a void and we can
 		// save the credit card processing fees!!!
@@ -3784,7 +3784,7 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 
 	// ensure userid32 unique!
 	if ( su->m_submittingNewUser ) {
-		long numUsers = m_userInfoBuf.length() / sizeof(UserInfo) ;
+		int32_t numUsers = m_userInfoBuf.length() / sizeof(UserInfo) ;
 		su->m_userId32 = numUsers + 1;
 	}
 
@@ -3796,17 +3796,17 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	else                       amount =        su->m_deposit;
 
 	// log it for posterity
-	log("proxy: successfully charged $%.02f to userid %li"
+	log("proxy: successfully charged $%.02f to userid %"INT32""
 	    ,amount
 	    ,su->m_userId32
 	    );
 
 
-	long need = sizeof(DepositRec) * 2;
+	int32_t need = sizeof(DepositRec) * 2;
 	if ( ! m_depositBuf.reserve (need) ) {
 		su->m_error = 1;
 		su->m_authNetMsg.safePrintf("Error adding deposit to buf. "
-					    "userid32=%lu amt=$%.02f"
+					    "userid32=%"UINT32" amt=$%.02f"
 					    ,su->m_userId32
 					    ,amount);
 		char *xx=NULL;*xx=0; 
@@ -3815,25 +3815,25 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	// good, now add it to buffer
 	DepositRec dr;
 	memset ( &dr , 0 , sizeof(DepositRec) );
-	long now = getTimeLocal();
+	int32_t now = getTimeLocal();
 	if ( su->m_userId32 <= 0 ) { char *xx=NULL;*xx=0; }
 	dr.m_userId32 = su->m_userId32;
 	dr.m_depositDate   = now;
 
 	//
 	// . we need this for doing CREDITs/withdrawals back to the user
-	// . i've seen this # > 5B so use a long long
+	// . i've seen this # > 5B so use a int64_t
 	//
-	long tlen;
+	int32_t tlen;
 	char *tid = getField(docHTML,6,&tlen);
 	if ( tid ) {
 		char c = tid[tlen];
 		tid[tlen] = '\0';
-		long long transId = atoll(tid);
+		int64_t transId = atoll(tid);
 		tid[tlen] = c;
 		// the authorize.net transaction id
 		dr.m_authorizeNetTransactionId = transId;
-		log("proxy: got transactionid=%lli",transId);
+		log("proxy: got transactionid=%"INT64"",transId);
 	}
 	
 	// if depositing...
@@ -3904,7 +3904,7 @@ bool Proxy::gotDepositDoc ( StateUser *su ) {
 	u2.m_lastLoginIP = su->m_socket->m_ip;
 
 	// note this as well
-	log ("proxy: successfully added userid %li to userbuf",su->m_userId32);
+	log ("proxy: successfully added userid %"INT32" to userbuf",su->m_userId32);
 
 	// store it
 	if ( ! m_userInfoBuf.safeMemcpy ( &u2 , sizeof(UserInfo) ) )
@@ -3939,13 +3939,13 @@ bool Proxy::printEditForm ( StateUser *su ) {
 	TcpSocket *s = su->m_socket;
 
 	// print form to add new user? or submitting new user info?
-	long new1 = hr->getLong("new",0);
+	int32_t new1 = hr->getLong("new",0);
 
 	// print form to edit user? or did they submit their edits?
-	long edit = hr->getLong("edit",0);
+	int32_t edit = hr->getLong("edit",0);
 
 	// are we dealing with a form submission?
-	long submit = hr->getLong("submitted",0);
+	int32_t submit = hr->getLong("submitted",0);
 
 	// get the user we are editing into "ui"
 	UserInfo *ui = NULL;
@@ -4280,12 +4280,12 @@ bool Proxy::loadUserBufs ( ) {
 	// scan users and zero out m_pending, we might have shutdown before
 	// the operation could complete so do not charge for it
 	UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-	long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
-	long i; for ( i = 0 ; i < ni ; i++ ) {
-		// shortcut
+	int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+	int32_t i; for ( i = 0 ; i < ni ; i++ ) {
+		// int16_tcut
 		UserInfo *ui = &uis[i];
 		if ( ui->m_pending == 0.0 ) continue;
-		log("proxy: erasing pending=%.02f for uid=%li",
+		log("proxy: erasing pending=%.02f for uid=%"INT32"",
 		    ui->m_pending,ui->m_userId32);
 		ui->m_pending = 0.0;
 	}
@@ -4294,21 +4294,21 @@ bool Proxy::loadUserBufs ( ) {
 	// make the hashtable for summaryrecs
 	//
 	m_srht.reset();
-	long ns = m_sumBuf.length() / sizeof(SummaryRec);
+	int32_t ns = m_sumBuf.length() / sizeof(SummaryRec);
 	SummaryRec *ss = (SummaryRec *)m_sumBuf.getBufStart();
-	long needSlots = ns * 2;
+	int32_t needSlots = ns * 2;
 	if ( ! m_srht.set(8,4,needSlots,NULL,0,false,0,"srectbl") ) {
 		log("proxy: failed to alloc srht");
 		return false;
 	}
-	for ( long i = 0 ; i < ns ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < ns ; i++ ) {
+		// int16_tcut
 		SummaryRec *sr = &ss[i];
 		// get the offset
-		long sumOff = ((char *)sr) - m_sumBuf.getBufStart();
+		int32_t sumOff = ((char *)sr) - m_sumBuf.getBufStart();
 		// make key
-		unsigned long long h64 = (unsigned long)sr->m_userId32;
-		unsigned long t = sr->m_year;
+		uint64_t h64 = (uint32_t)sr->m_userId32;
+		uint32_t t = sr->m_year;
 		t <<= 16;
 		t |= sr->m_month; // 1..12
 		t <<= 8;
@@ -4325,13 +4325,13 @@ bool Proxy::loadUserBufs ( ) {
 	}
 	// if first time, then initialize with records for our old clients
 	// like existing clients
-	long nr = m_userInfoBuf.length() / sizeof(UserInfo);
+	int32_t nr = m_userInfoBuf.length() / sizeof(UserInfo);
 	if ( nr >= 5 ) return true;
 
 	// clear it all
 	m_userInfoBuf.reset();
 
-	long userId = 1;
+	int32_t userId = 1;
 
 	// matt wells, admin login
 	UserInfo ui;
@@ -4479,7 +4479,7 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 
 		       "<tr>"
 		       "<td><nobr>User ID</nobr></td>"
-		       "<td>%li</td>"
+		       "<td>%"INT32"</td>"
 		       "<td>See the <a href=/searchfeed.html>XML Search "
 		       "Feed</a> page or the <a href=/seoapi.html>SEO API</a> "
 		       "page for details on using this.</td>"
@@ -4551,7 +4551,7 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	// the admin can credit the account if he receives a wire or a check
 	// from a user...
 	/*
-	if ( su->m_isRootAdmin )
+	if ( su->m_isMasterAdmin )
 		sb->safePrintf("<br>"
 			       "<font color=red>"
 			       "Record Wire of "
@@ -4603,10 +4603,10 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	printDepositTable ( sb , ui->m_userId32 );
 
 
-	long cutoff;
+	int32_t cutoff;
 	bool printedSomething;
 	SummaryRec *srs = (SummaryRec *)m_sumBuf.getBufStart();
-	long nsr = m_sumBuf.length() / sizeof(SummaryRec);
+	int32_t nsr = m_sumBuf.length() / sizeof(SummaryRec);
 
 
 	///////////////
@@ -4619,11 +4619,11 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	sb->safePrintf ( "<br>");
 	sb->safePrintf ( "<hr>");
 	sb->safePrintf ( "<br>");
-	long now = getTimeLocal();
-	struct tm *timeStruct = gmtime ( &now );
-	long currentMonth = timeStruct->tm_mon+1; // 1 to 12
-	long currentYear  = timeStruct->tm_year+1900;
-	long currentDay   = timeStruct->tm_mday;
+	int32_t now = getTimeLocal();
+	struct tm *timeStruct = gmtime ( (time_t *)&now );
+	int32_t currentMonth = timeStruct->tm_mon+1; // 1 to 12
+	int32_t currentYear  = timeStruct->tm_year+1900;
+	int32_t currentDay   = timeStruct->tm_mday;
 	static char *s_mnames[12] = {
 		"January",
 		"February",
@@ -4638,9 +4638,9 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 		"November",
 		"December"
 	};
-	long month = hr->getLong("month",currentMonth);
-	long year  = hr->getLong("year",currentYear);
-	long day   = hr->getLong("day",currentDay);
+	int32_t month = hr->getLong("month",currentMonth);
+	int32_t year  = hr->getLong("year",currentYear);
+	int32_t day   = hr->getLong("day",currentDay);
 	if ( month < 1 ) month = 1;
 	if ( month > 12 ) month = 12;
 	if ( day < 1 ) day = 1;
@@ -4651,7 +4651,7 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 		       "<td colspan=2>"
 			"<b>"
 			//"<center>"
-		       "Daily Breakdown for %s %li"
+		       "Daily Breakdown for %s %"INT32""
 			//"</center>"
 			"</b>"
 		       "</td>"
@@ -4671,9 +4671,9 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 			);
 	// scan daily transactions for that month and this user
 	//SummaryRec *srs = (SummaryRec *)m_sumBuf.getBufStart();
-	//long nsr = m_sumBuf.length() / sizeof(SummaryRec);
+	//int32_t nsr = m_sumBuf.length() / sizeof(SummaryRec);
 	printedSomething = false;
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		SummaryRec *sr = &srs[i];
 		if ( sr->m_userId32 != ui->m_userId32 ) continue;
 		//if ( sr->m_day   != day   ) continue;
@@ -4683,14 +4683,14 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 		// they should be in order by date...
 		printedSomething = true;
 		sb->safePrintf("<tr>"
-			       //"<td>%02li/%02li</td>"
-			       "<td>%02li</td>"
+			       //"<td>%02"INT32"/%02"INT32"</td>"
+			       "<td>%02"INT32"</td>"
 			       "<td>$%.02f</td>"
-			       "<td>%li</td>"
+			       "<td>%"INT32"</td>"
 			       "<td>%s</td>" // "new search feed", etc.
 			       "</tr>\n"
-			       //, (long)sr->m_month
-			       , (long)sr->m_day
+			       //, (int32_t)sr->m_month
+			       , (int32_t)sr->m_day
 			       , sr->m_totalCost
 			       , sr->m_numAccesses
 			       , as
@@ -4738,8 +4738,8 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	//   for this user
 	// . scan daily transactions for that month and this user
 	// . go out 20 years for each access type
-	long numCursors = (MAX_ACCESS_TYPE+1) * 20 * 12;
-	long need = numCursors * sizeof(SummaryRec);
+	int32_t numCursors = (MAX_ACCESS_TYPE+1) * 20 * 12;
+	int32_t need = numCursors * sizeof(SummaryRec);
 	char tmp[need];
 	SafeBuf ss(tmp,need);
 	// reset to all zeros
@@ -4748,11 +4748,11 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	SummaryRec *cursors = (SummaryRec *)ss.getBufStart();
 	// . maybe just make a hash key of each summary rec based on
 	//   it's month and year and access type
-	for ( long i = 0 ; i < nsr ; i++ ) {
+	for ( int32_t i = 0 ; i < nsr ; i++ ) {
 		SummaryRec *sr = &srs[i];
 		if ( sr->m_userId32 != ui->m_userId32 ) continue;
 		// we go out 20 years
-		long index = (long)sr->m_accessType * (12*20);
+		int32_t index = (int32_t)sr->m_accessType * (12*20);
 		index += (sr->m_year - 2013) * 12;
 		// we use 1..12 for month range, so subtract 1
 		index += sr->m_month - 1;
@@ -4770,8 +4770,8 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	}
 	printedSomething = false;
 	// now print out the cursors for each month in reverse!
-	for ( long i = numCursors - 1 ; i >= 0 ; i-- ) {
-		// shortcut
+	for ( int32_t i = numCursors - 1 ; i >= 0 ; i-- ) {
+		// int16_tcut
 		SummaryRec *cursor = &cursors[i];
 		// 0 is not a valid access type
 		if ( cursor->m_accessType == 0 ) continue;
@@ -4779,21 +4779,21 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 		char *as = getAccessTypeString(cursor->m_accessType);
 		printedSomething = true;
 		sb->safePrintf("<tr>"
-			       "<td>%02li/%04li</td>"
+			       "<td>%02"INT32"/%04"INT32"</td>"
 			       "<td><nobr>%s</nobr></td>"
-			       "<td>%li</td>"
+			       "<td>%"INT32"</td>"
 			       "<td>$%.02f</td>"
 			       "<td>$%.05f</td>"// price per access
-			       "<td>%lims</td>"
+			       "<td>%"INT32"ms</td>"
 			       "</td>"
-			       , (long)cursor->m_month
-			       , (long)cursor->m_year
+			       , (int32_t)cursor->m_month
+			       , (int32_t)cursor->m_year
 			       , as
 			       , cursor->m_numAccesses
 			       , cursor->m_totalCost
 			       , cursor->m_totalCost / 
 			       (float)cursor->m_numAccesses
-			       , (long)(cursor->m_totalProcessTime /
+			       , (int32_t)(cursor->m_totalProcessTime /
 					(float)cursor->m_numAccesses)
 			       );
 	}
@@ -4830,8 +4830,8 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 	timeStruct2.tm_hour = 0;
 	timeStruct2.tm_sec  = 0;
 	time_t t1 = mktime ( &timeStruct2 ); // utc i guess
-	long nextYear = year;
-	long nextMonth = month;
+	int32_t nextYear = year;
+	int32_t nextMonth = month;
 	if ( nextMonth >= 13 ) {
 		nextMonth = 1;
 		nextYear++;
@@ -4876,17 +4876,17 @@ bool Proxy::gotGif ( StateUser *su ) {
 	// make a cookie in case they just logged in through this page!
 	// otherwise the login doesn't "stick"
 	SafeBuf cb;
-	cb.safePrintf("Set-Cookie: sessionid=%lli;\r\n"
-		      "Set-Cookie: userid=%li;\r\n"
+	cb.safePrintf("Set-Cookie: sessionid=%"INT64";\r\n"
+		      "Set-Cookie: userid=%"INT32";\r\n"
 		      ,su->m_sessionId64
-		      ,(long)su->m_userId32);
+		      ,(int32_t)su->m_userId32);
 
 	// if admin logs in as another user by clicking on their login name
 	// in the users table, we still need to know that it is the admin,
 	// so use this special cookie
 	UserInfo *ui = getUserInfoFromId ( su->m_userId32 );
 	if ( ui && (ui->m_flags & UIF_ADMIN) )
-		cb.safePrintf("Set-Cookie: adminsessid=%lli;\r\n"
+		cb.safePrintf("Set-Cookie: adminsessid=%"INT64";\r\n"
 			      ,su->m_sessionId64);
 
 	char *cookiePtr = NULL;
@@ -4913,8 +4913,8 @@ bool Proxy::gotGif ( StateUser *su ) {
 }
 
 
-bool Proxy::printDepositTable ( SafeBuf *sb , long userId32 ) {
-	long nd = m_depositBuf.length() / sizeof(DepositRec);
+bool Proxy::printDepositTable ( SafeBuf *sb , int32_t userId32 ) {
+	int32_t nd = m_depositBuf.length() / sizeof(DepositRec);
 	DepositRec *drs = (DepositRec *)m_depositBuf.getBufStart();
 
 	UserInfo *ui = getUserInfoFromId ( userId32 );	
@@ -4933,22 +4933,22 @@ bool Proxy::printDepositTable ( SafeBuf *sb , long userId32 ) {
 		       
 		       "</tr>"
 		       );
-	for ( long i = nd - 1 ; i >= 0 ; i-- ) {
+	for ( int32_t i = nd - 1 ; i >= 0 ; i-- ) {
 		DepositRec *dr = &drs[i];
 		if ( dr->m_userId32 != userId32 ) continue;
 		// convert timestamp to month/day/year in utc
 		time_t tt = dr->m_depositDate;//getTimeLocal();
 		struct tm *timeStruct = gmtime ( &tt );
 		sb->safePrintf("<tr><td>"
-			       "%li/%li/%li %li:%02li"
+			       "%"INT32"/%"INT32"/%"INT32" %"INT32":%02"INT32""
 			       "</td>"
-			       , (long)(timeStruct->tm_mon + 1) // month 0..11
-			       , (long)timeStruct->tm_mday //day of month 1..31
-			       , (long)(timeStruct->tm_year+1900) // year
-			       , (long)(timeStruct->tm_hour)
-			       , (long)(timeStruct->tm_min)
+			       , (int32_t)(timeStruct->tm_mon + 1) // month 0..11
+			       , (int32_t)timeStruct->tm_mday //day of month 1..31
+			       , (int32_t)(timeStruct->tm_year+1900) // year
+			       , (int32_t)(timeStruct->tm_hour)
+			       , (int32_t)(timeStruct->tm_min)
 			       );
-		//sb->safePrintf("<td>%li</td>",dr->m_transactionId);
+		//sb->safePrintf("<td>%"INT32"</td>",dr->m_transactionId);
 		char *bs1 = "<font color=green>";
 		char *bs2 = "</font>";
 		// is it a withdrawl?
@@ -4962,7 +4962,7 @@ bool Proxy::printDepositTable ( SafeBuf *sb , long userId32 ) {
 		if ( dr->m_flags == DRF_WITHDRAW_FEE ) desc = "withdraw fee";
 		sb->safePrintf("<td>%s%.02f%s</td>"
 			       "<td>%s</td>"
-			       "<td>%lli</td>"
+			       "<td>%"INT64"</td>"
 			       , bs1 
 			       , dr->m_depositAmount 
 			       , bs2 
@@ -4979,7 +4979,7 @@ bool Proxy::printDepositTable ( SafeBuf *sb , long userId32 ) {
 		// there is a 5% refund charge
 		//refundAmt *= 0.95;
 		sb->safePrintf("<td><a href=/account?refund=%.02f&"
-			       "transid=%lli>refund"
+			       "transid=%"INT64">refund"
 			       "</a></td>"
 			       , refundAmt 
 			       , dr->m_authorizeNetTransactionId
@@ -4997,14 +4997,14 @@ bool Proxy::printDepositTable ( SafeBuf *sb , long userId32 ) {
 // put a 100 byte directive into th src
 bool Proxy::insertLoginBarDirective ( SafeBuf *sb ) {
 	if ( ! sb->reserve(BARSIZE) ) return false;
-	long len = sb->length();
+	int32_t len = sb->length();
 	//sb.safePrintf("<div style=display:none>%%login%%</div>");
 	char *dir = "%%login%%";
-	long dlen = gbstrlen(dir);
+	int32_t dlen = gbstrlen(dir);
 	sb->safeMemcpy(dir,dlen);
-	long inserted = sb->length() - len;
+	int32_t inserted = sb->length() - len;
 	// make directive exactly 180 bytes...
-	long remain = BARSIZE - inserted;
+	int32_t remain = BARSIZE - inserted;
 	memset (sb->getBuf() , ' ' , remain );
 	sb->incrementLength ( remain );
 	return true;
@@ -5012,11 +5012,11 @@ bool Proxy::insertLoginBarDirective ( SafeBuf *sb ) {
 */
 
 char *Proxy::storeLoginBar ( char *reply , 
-			     long replySize , 
-			     long replyAllocSize,
-			     long mimeLen,
-			     //long userId32 ,
-			     long *newReplySize ,
+			     int32_t replySize , 
+			     int32_t replyAllocSize,
+			     int32_t mimeLen,
+			     //int32_t userId32 ,
+			     int32_t *newReplySize ,
 			     HttpRequest *hr ) {
 
 	// assume new reply identical to old reply
@@ -5026,14 +5026,14 @@ char *Proxy::storeLoginBar ( char *reply ,
 	// did mime have error in reply?
 	// if so, do not insert login bar
 	if ( strcmp(reply,"HTTP/1.0 ") == 0 ) {
-		long httpStatus = atol2(reply+9,3);
+		int32_t httpStatus = atol2(reply+9,3);
 		if ( httpStatus != 200 ) return reply;
 	}
 
 	// userid is in cookie
-	long userId32 = hr->getLongFromCookie("userid",0);
+	int32_t userId32 = hr->getLongFromCookie("userid",0);
 	UserInfo *ui = getUserInfoFromId ( userId32 );
-	long long sessionId64 = hr->getLongLongFromCookie("sessionid",0);
+	int64_t sessionId64 = hr->getLongLongFromCookie("sessionid",0);
 	if ( ui && ui->m_lastSessionId64 != sessionId64 ) ui = NULL;
 
 
@@ -5050,12 +5050,12 @@ char *Proxy::storeLoginBar ( char *reply ,
 	// if too small, just return the original reply
 	char *content = reply + mimeLen;
 	char *contentEnd = reply + replySize;
-	long contentLen = contentEnd - content;
+	int32_t contentLen = contentEnd - content;
 	if ( contentLen < 20 ) return newReply;
 
 	// find <body tag in the reply
 	char *p = content;
-	long maxLen = 3000;
+	int32_t maxLen = 3000;
 	if ( contentLen < maxLen ) maxLen = contentLen;
 	char *pend = content + maxLen;
 	// not necessarily \0 terminated, so do not over-scan
@@ -5108,7 +5108,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	}
 
 	// how much do we need?
-	long need = replySize + ib.length();
+	int32_t need = replySize + ib.length();
 	// a \0 terminating i guess
 	//need++;
 
@@ -5143,7 +5143,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	if ( ! mp ) mp = strnstr(newReply,"Content-length:",*newReplySize);
 	if ( ! mp ) {
 		log("proxy: fuck, no content-length: in mime");
-		long len = *newReplySize;
+		int32_t len = *newReplySize;
 		if ( len > 300 ) len = 300;
 		len--;
 		if ( len <= 0 ) {
@@ -5165,7 +5165,8 @@ char *Proxy::storeLoginBar ( char *reply ,
 	mp += 16;
 	// store our new content length as ascii into test buf
 	char test[64];
-	long len = sprintf(test,"%li",(long)(newReplySize-mimeLen));
+
+	int32_t len =sprintf(test,"%"INT32"",(int32_t)(*newReplySize-mimeLen));
 	// find end
 	char *end = mp;
 	while ( *end && is_digit(*end) ) end++;
@@ -5192,9 +5193,9 @@ void Proxy::printUsers ( SafeBuf *sb ) {
 			);
 
 	UserInfo *uis = (UserInfo *)m_userInfoBuf.getBufStart();
-	long ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
-	long i; for ( i = 0 ; i < ni ; i++ ) {
-		// shortcut
+	int32_t ni = m_userInfoBuf.length() / sizeof(UserInfo) ;
+	int32_t i; for ( i = 0 ; i < ni ; i++ ) {
+		// int16_tcut
 		UserInfo *ui = &uis[i];
 		// begin new row?
 		if ( i % 5 == 0 ) {
@@ -5205,7 +5206,7 @@ void Proxy::printUsers ( SafeBuf *sb ) {
 		// but if admin we should still have set our cookie
 		// adminsessid to our current session id so we know we are
 		// also the admin!
-		sb->safePrintf("<td><nobr>%li. "
+		sb->safePrintf("<td><nobr>%"INT32". "
 			       "<a href=/account?login=%s&password=%s>"
 			       "%s</a></nobr></td>"
 			       ,i

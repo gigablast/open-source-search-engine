@@ -45,12 +45,12 @@ bool Msg28::massConfig ( char  *requestBuf              ,
 // interval [hostId,hostId2]
 bool Msg28::massConfig ( TcpSocket   *s                       ,
 			 HttpRequest *r                       ,
-			 long         hostId                  ,
+			 int32_t         hostId                  ,
 			 void        *state                   ,
 			 void     (* callback) (void *state ) ,
 			 bool         ourselvesLast           ,
 			 bool         sendToProxy             ,
-			 long         hostId2                 ) {
+			 int32_t         hostId2                 ) {
 
 	m_ourselvesLast = ourselvesLast;
 	m_state         = state;
@@ -65,7 +65,7 @@ bool Msg28::massConfig ( TcpSocket   *s                       ,
 	m_bufSize = s->m_readOffset + 250 ;
 	m_buf = (char *)mmalloc (m_bufSize,"Msg28");
 	if ( ! m_buf ) {
-		log("admin: Could not allocate %li bytes to forward config "
+		log("admin: Could not allocate %"INT32" bytes to forward config "
 		    "request.",m_bufSize);
 		return true;
 	}
@@ -84,7 +84,7 @@ bool Msg28::massConfig ( TcpSocket   *s                       ,
 	char *cc = p;
 	sprintf ( p , "username=msg28&cast=0&" );
 	p += gbstrlen ( p );
-	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
+	for ( int32_t i = 0 ; i < r->getNumFields() ; i++ ) {
 		// skip cast
 		if ( strcmp ( r->getField(i) , "cast" ) == 0 ) continue;
 		// but keep everything else
@@ -106,7 +106,7 @@ bool Msg28::massConfig ( TcpSocket   *s                       ,
 	*p = '\0';
 	m_bufLen = p - m_buf;
 	// store content-length
-	sprintf ( sizep , "%07li" , (long)(p - cc) );
+	sprintf ( sizep , "%07"INT32"" , (int32_t)(p - cc) );
 	// recover the lost char from the sprintf's \0
 	*(sizep+7) = '\r';
 
@@ -131,13 +131,13 @@ bool Msg28::massConfig ( TcpSocket   *s                       ,
 
 	if ( hostId2 >= m_numHosts ) {
 		g_errno = EBADENGINEER;
-		log("admin: Second hostid is %li, but we only have %li hosts.",
+		log("admin: Second hostid is %"INT32", but we only have %"INT32" hosts.",
 		    hostId2,m_numHosts);
 		return true;
 	}
 	if ( hostId >= m_numHosts ) {
 		g_errno = EBADENGINEER;
-		log("admin: Hostid is %li, but we only have %li hosts.",
+		log("admin: Hostid is %"INT32", but we only have %"INT32" hosts.",
 		    hostId,m_numHosts);
 		return true;
 	}
@@ -167,15 +167,15 @@ bool Msg28::doSendLoop ( ) {
 	//if ( m_hostId >= 0 && m_numRequests >= MAX_OUT_MSG28 ) return true;
 	if ( m_hostId>=0 && m_numRequests>=1 && m_hostId2 == -1) return true;
 	// nothing to do if we sent a request to each host
-	//long numHosts = g_hostdb.getNumHosts();
+	//int32_t numHosts = g_hostdb.getNumHosts();
 	if ( m_numRequests >= m_sendTotal ) return true;
 	// send to ourselves last iff m_ourselvesLast is true
-	long total = m_numHosts ;
+	int32_t total = m_numHosts ;
 	if ( m_ourselvesLast ) total++;
 	// . now send it to all! allow up to 16 outstanding requests.
 	// . only allow 1 outstanding, and do ourselves last in case of
 	//   save & exit...
-	for ( long i = m_i ; i < total && 
+	for ( int32_t i = m_i ; i < total && 
 		      m_numRequests - m_numReplies < MAX_OUT_MSG28 ; i++ ){
 		// skip it for next call, but stick to the last host, that's us
 		if ( i != m_numHosts ) m_i++;
@@ -221,9 +221,9 @@ bool Msg28::doSendLoop ( ) {
 				h = g_hostdb.getProxy ( m_hostId );
 		}
 		// debug
-		log(LOG_INIT,"admin: sending to hostid #%li.",h->m_hostId);
-		// timeout is shorter if host is dead
-		long timeout = 30000; // 30 seconds
+		log(LOG_INIT,"admin: sending to hostid #%"INT32".",h->m_hostId);
+		// timeout is int16_ter if host is dead
+		int32_t timeout = 30000; // 30 seconds
 		// only 7 seconds if it is dead seemingly
 		if ( g_hostdb.isDead ( h ) ) timeout = 7000;
 		//	continue;
@@ -243,8 +243,8 @@ bool Msg28::doSendLoop ( ) {
 				    100*1024     ,   // maxTextDocLen
 				    100*1024     )){ // maxOtherDocLen
 			log("admin: Could not send configuration request "
-			    "to hostId #%li (%s:%li): %s.",h->m_hostId,
-			    iptoa(h->m_ip),(long)h->m_port,mstrerror(g_errno));
+			    "to hostId #%"INT32" (%s:%"INT32"): %s.",h->m_hostId,
+			    iptoa(h->m_ip),(int32_t)h->m_port,mstrerror(g_errno));
 			g_errno = 0;//return true;
 			m_numReplies++;
 		}
@@ -271,13 +271,13 @@ void gotReply ( void *state , TcpSocket *s ) {
 	Host *h = g_hostdb.getTcpHost ( s->m_ip , s->m_port );
 	//if (THIS->m_sendToProxy)
 	//	h = g_hostdb.getProxyFromTcpPort ( s->m_ip , s->m_port );
-	log(LOG_INIT,"admin: got reply from hostid #%li.",h->m_hostId);
+	log(LOG_INIT,"admin: got reply from hostid #%"INT32".",h->m_hostId);
 	//slot->m_readBufSize,h->m_hostId);
 	// log errors
 	if ( g_errno ) {
 		if ( h ) log("admin: Error broadcasting config request to "
-			     "hostid #%li (%s:%li): %s.",
-			     h->m_hostId,iptoa(h->m_ip),(long)s->m_port,
+			     "hostid #%"INT32" (%s:%"INT32"): %s.",
+			     h->m_hostId,iptoa(h->m_ip),(int32_t)s->m_port,
 			     mstrerror(g_errno));
 		else     log("admin: Error broadcasting config request: "
 			     "%s.",mstrerror(g_errno));

@@ -30,9 +30,9 @@ class Test {
 	bool m_isRunning;
 
 	// how many urls we added to spiderdb via msg4
-	long m_urlsAdded;
+	int32_t m_urlsAdded;
 
-	long m_urlsIndexed;
+	int32_t m_urlsIndexed;
 
 	//bool m_spiderLinks;
 	bool m_bypassMenuElimination;
@@ -40,13 +40,13 @@ class Test {
 	// are still in a loop adding urls to spiderdb via msg4?
 	bool m_isAdding;
 
-	long long m_testStartTime;
+	int64_t m_testStartTime;
 	
 	// this is set to the errno if any error encounted during the test
-	long m_errno ;
+	int32_t m_errno ;
 
 	// unique test id
-	long m_runId ;
+	int32_t m_runId ;
 
 	char *m_coll ;
 

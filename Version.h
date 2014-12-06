@@ -1,7 +1,7 @@
 #ifndef GBVERSION2_H
 #define GBVERSION2_H
 
-long getVersionSize () ;
+int32_t getVersionSize () ;
 char *getVersion ( ) ;
 
 #endif

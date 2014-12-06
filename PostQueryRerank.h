@@ -13,15 +13,15 @@ struct M20List;
 
 // type for saving Msg20s from results prior to first result
 struct savedM20Data {
-	long score;
+	int32_t score;
 	int tier;
-	long long docId;
+	int64_t docId;
 	char clusterLevel;
 };
 
 
 struct ComTopInDmozRec {
-	long cnt;      // count of pages with this same topic
+	int32_t cnt;      // count of pages with this same topic
 	float demFact; // decay factor for this topic
 };
 
@@ -39,7 +39,7 @@ public:
 	~PostQueryRerank ( );
 
 	bool set1 ( Msg40 *, SearchInput * );
-	bool set2 ( long resultsNeeded );
+	bool set2 ( int32_t resultsNeeded );
 
 	bool isEnabled ( ) { return m_enabled; };
 
@@ -54,7 +54,7 @@ private:
 				      float factor,
 				      char *method, char *reason ) {
 		//log( LOG_DEBUG, "query: rerankLowerDemotesMore -- "
-		//     "score:%ld, value:%3.3f, maxValue:%3.3f, factor:%3.3f AWL",
+		//     "score:%"INT32", value:%3.3f, maxValue:%3.3f, factor:%3.3f AWL",
 		//     score, value, maxValue, factor );
 
 		if ( value >= maxValue ) return score;
@@ -78,7 +78,7 @@ private:
 				       float factor,
 				       char *method, char *reason ) {
 		//log( LOG_DEBUG, "query: rerankHigherDemotesMore -- "
-		//     "score:%ld, value:%3.3f, maxValue:%3.3f, factor:%3.3f AWL",
+		//     "score:%"INT32", value:%3.3f, maxValue:%3.3f, factor:%3.3f AWL",
 		//     score, value, maxValue, factor );
 
 		rscore_t temp = score;
@@ -100,7 +100,7 @@ private:
 	rscore_t rerankAssignPenalty ( rscore_t score, float factor,
 				   char *method, char *reason ) {
 		//log( LOG_DEBUG, "query: rerankAssignPenalty -- "
-		//     "score:%ld, factor:%3.3f AWL",
+		//     "score:%"INT32", factor:%3.3f AWL",
 		//     score, factor );
 
 		rscore_t temp = score;
@@ -129,19 +129,19 @@ private:
 	inline 
 	rscore_t rerankPathsInUrl ( rscore_t score,
 				char *url,
-				long urlLen );
+				int32_t urlLen );
 	inline 
 	rscore_t rerankNoCatId ( rscore_t score,
-			     long numCatIds,
-			     long numIndCatIds );
+			     int32_t numCatIds,
+			     int32_t numIndCatIds );
 	rscore_t rerankSmallestCatIdHasSuperTopics ( rscore_t score,
 						 Msg20 *msg20 );
 	inline 
 	rscore_t rerankPageSize ( rscore_t score,
-			      long docLen );
-	//bool getLocation ( char *resBuf, long resBufLen,
-	//		   long *resLen, long *resPop,
-	//		   char *buf, long bufLen);
+			      int32_t docLen );
+	//bool getLocation ( char *resBuf, int32_t resBufLen,
+	//		   int32_t *resLen, int32_t *resPop,
+	//		   char *buf, int32_t bufLen);
 	//bool preRerankNonLocationSpecificQueries ( );
 	//rscore_t rerankNonLocationSpecificQueries ( rscore_t score,
 	//					Msg20 *msg20 );
@@ -167,7 +167,7 @@ private:
 			      float maxScore);
 	inline
 	rscore_t rerankInSection( rscore_t score,
-			      long summaryScore,
+			      int32_t summaryScore,
 			      float maxScore);
 	
 	inline
@@ -182,11 +182,11 @@ private:
 	SearchInput *m_si;
 
 	bool m_enabled;
-	long m_maxResultsToRerank;
+	int32_t m_maxResultsToRerank;
 
-	long     m_numToSort;
+	int32_t     m_numToSort;
 	M20List *m_m20List;
-	long    *m_positionList;
+	int32_t    *m_positionList;
 
 	// Urls for pqrqttiu, pqrfsh and clustering
 	Url *m_pageUrl;
@@ -196,19 +196,19 @@ private:
 	//HashTableT<uint64_t, bool> m_ignoreLocs;
 
 	// for rerankOtherPagesFromSameHost
-        HashTableT<uint64_t, long> m_hostCntTable;
+        HashTableT<uint64_t, int32_t> m_hostCntTable;
 
 	// for rerankCommonTopicsInDmoz
-	HashTableT<long, ComTopInDmozRec> m_dmozTable;
+	HashTableT<int32_t, ComTopInDmozRec> m_dmozTable;
 
 	// for rerankDatedbDate
 	time_t m_now;
 
 	char m_buf[PQR_BUF_SIZE];
-	long  m_maxUrlLen;
+	int32_t  m_maxUrlLen;
 	char *m_cvtUrl;
 
-	long m_maxCommonInlinks;
+	int32_t m_maxCommonInlinks;
 };
 
 #endif // _POSTQUERYRERANK_H_

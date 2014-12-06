@@ -4,14 +4,14 @@
 #include "Unicode.h"
 // based on http://www.unicode.org/reports/tr15/Normalizer.java
 
-//static long decompose(UChar *outBuf, long outBufSize, 
-//		      UChar *inBuf, long inBufSize, bool decodeEntities) ;
-//static long compose(UChar *buf, long bufSize, bool strip) ;
+//static int32_t decompose(UChar *outBuf, int32_t outBufSize, 
+//		      UChar *inBuf, int32_t inBufSize, bool decodeEntities) ;
+//static int32_t compose(UChar *buf, int32_t bufSize, bool strip) ;
 //static UChar32 ucGetComposition(UChar32 c1, UChar32 c2) ;
 
 /*
-long ucNormalizeNFKC(UChar *outBuf, long outBufSize,
-		     UChar *inBuf, long inBufSize, bool strip) {
+int32_t ucNormalizeNFKC(UChar *outBuf, int32_t outBufSize,
+		     UChar *inBuf, int32_t inBufSize, bool strip) {
 #if 0
 	UChar *p = inBuf;
 	UChar *q = NULL;
@@ -35,24 +35,24 @@ long ucNormalizeNFKC(UChar *outBuf, long outBufSize,
 	if (p > inBuf) utf16Prev(p, &p);
 	if (i > outBuf) utf16Prev(i, &i);
 	//printf("new p: %d\n", p - inBuf);
-	long plen = p - inBuf + inBufSize; 
-	long ilen = i - outBuf + outBufSize; 
-	//log("UCNormalizer: Actually normalizing %ld chars", inBufSize);
-	long decompLen = decompose(i, ilen, p, plen);
+	int32_t plen = p - inBuf + inBufSize; 
+	int32_t ilen = i - outBuf + outBufSize; 
+	//log("UCNormalizer: Actually normalizing %"INT32" chars", inBufSize);
+	int32_t decompLen = decompose(i, ilen, p, plen);
 #endif
-	long decompLen = decompose(outBuf, outBufSize, inBuf, inBufSize, true);
+	int32_t decompLen = decompose(outBuf, outBufSize, inBuf, inBufSize, true);
 	return compose(outBuf, decompLen, strip);
 }
 
-long ucNormalizeNFKD(UChar *outBuf, long outBufSize,
-		     UChar *inBuf, long inBufSize) {
+int32_t ucNormalizeNFKD(UChar *outBuf, int32_t outBufSize,
+		     UChar *inBuf, int32_t inBufSize) {
 
-	long decompLen = decompose(outBuf, outBufSize, inBuf, inBufSize, true);
+	int32_t decompLen = decompose(outBuf, outBufSize, inBuf, inBufSize, true);
 	return decompLen;
 }
 
-static long decompose(UChar *outBuf, long outBufSize, 
-		      UChar *inBuf, long inBufSize, bool decodeEntities) {
+static int32_t decompose(UChar *outBuf, int32_t outBufSize, 
+		      UChar *inBuf, int32_t inBufSize, bool decodeEntities) {
 
 	UChar *p = inBuf;
 	UChar *q = outBuf;
@@ -63,7 +63,7 @@ static long decompose(UChar *outBuf, long outBufSize,
 		else
 			c = utf16Decode(p, &p);
 		UChar32 decomp[32];
-		long decompLen = recursiveKDExpand(c, decomp, 32);
+		int32_t decompLen = recursiveKDExpand(c, decomp, 32);
 		for (int i=0 ; i < decompLen && (q<outBuf+outBufSize); i++) {
 			UChar32 d = decomp[i];
 			unsigned char cc = ucCombiningClass(d);
@@ -79,7 +79,7 @@ static long decompose(UChar *outBuf, long outBufSize,
 					qq = qprev;
 				}
 				if (qq < q){ // move chars out of the way
-					long cSize = utf16Size(c);
+					int32_t cSize = utf16Size(c);
 					memmove(qq+cSize, qq, (q-qq) << 1 );
 				}
 				q += utf16Encode(d, qq);
@@ -91,7 +91,7 @@ static long decompose(UChar *outBuf, long outBufSize,
 	return q - outBuf;
 }
 
-static long compose(UChar *buf, long bufSize, bool strip) {
+static int32_t compose(UChar *buf, int32_t bufSize, bool strip) {
 	UChar *p = buf; // read cursor
 	UChar *s = buf; //starter position
 	if (!buf || !bufSize) return 0;
@@ -135,13 +135,13 @@ bool initCompositionTable(){
 		//    "initializing Full Composition table");
 		// set up the hash table
 		//if ( ! s_compositions.set ( 8,4,16384 ) )
-		if (!s_compositions.set(8,4,65536,s_compBuf,(long)COMPBUFSIZE,
+		if (!s_compositions.set(8,4,65536,s_compBuf,(int32_t)COMPBUFSIZE,
 					false,0,"uccomptbl" ))
 			return log("conf: Could not init table of "
 				   "HTML entities.");
 		// now add in all the composition pairs
-		for (long i = 0; i < 0xF0000; i++) {
-			long mapCount;
+		for (int32_t i = 0; i < 0xF0000; i++) {
+			int32_t mapCount;
 			bool fullComp;
 			UChar32 *map = getKDValue(i, &mapCount, &fullComp);
 			//printf("U+%04x fullComp: %s\n",
@@ -152,12 +152,12 @@ bool initCompositionTable(){
 				//return
 				log(LOG_WARN, "conf: "
 				    "UCNormalizer: bad canonical "
-				    "decomposition for %04lx (count: %ld)", 
+				    "decomposition for %04"XINT32" (count: %"INT32")", 
 				    i, mapCount);
 				continue;
 			}
 			
-			long long h = ((long long)map[0] << 32) | map[1];
+			int64_t h = ((int64_t)map[0] << 32) | map[1];
 			//if ( ! s_compositions.addTerm( &h, i) ) 
 			//	return log("conf: bad init comp table");
 			if ( ! s_compositions.addKey ( &h, &i) ) 
@@ -170,7 +170,7 @@ bool initCompositionTable(){
 
 /*
 static UChar32 ucGetComposition(UChar32 c1, UChar32 c2) {
-	long long h = ((long long)c1 << 32) | c2;
+	int64_t h = ((int64_t)c1 << 32) | c2;
 	return (UChar32) s_compositions.getScoreFromTermId( h );
 }
 */

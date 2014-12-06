@@ -17,19 +17,19 @@
 
 typedef struct elf_internal_ehdr {
 	unsigned char	e_ident[EI_NIDENT];   	/* ELF "magic number" */
-	unsigned long	e_entry;	/* Entry point virtual address */
-	unsigned long	e_phoff;	/* Program header table file offset */
-	unsigned long   e_shoff;     	/* Section header table file offset */
-	unsigned long   e_version;     	/* Identifies object file version */
-	unsigned long	e_flags;       	/* Processor-specific flags */
-	unsigned short	e_type;	       	/* Identifies object file type */
-	unsigned short	e_machine;     	/* Specifies required architecture */
-	unsigned short	e_ehsize;      	/* ELF header size in bytes */
-	unsigned short	e_phentsize;   	/* Program header table entry size */
-	unsigned short	e_phnum;       	/* Program header table entry count */
-	unsigned short	e_shentsize;   	/* Section header table entry size */
-	unsigned short	e_shnum;       	/* Section header table entry count */
-	unsigned short	e_shstrndx;    	/* Section header string table index */
+	uint32_t	e_entry;	/* Entry point virtual address */
+	uint32_t	e_phoff;	/* Program header table file offset */
+	uint32_t   e_shoff;     	/* Section header table file offset */
+	uint32_t   e_version;     	/* Identifies object file version */
+	uint32_t	e_flags;       	/* Processor-specific flags */
+	uint16_t	e_type;	       	/* Identifies object file type */
+	uint16_t	e_machine;     	/* Specifies required architecture */
+	uint16_t	e_ehsize;      	/* ELF header size in bytes */
+	uint16_t	e_phentsize;   	/* Program header table entry size */
+	uint16_t	e_phnum;       	/* Program header table entry count */
+	uint16_t	e_shentsize;   	/* Section header table entry size */
+	uint16_t	e_shnum;       	/* Section header table entry count */
+	uint16_t	e_shstrndx;    	/* Section header string table index */
 } Elf_Internal_Ehdr;
 
 
@@ -53,13 +53,13 @@ typedef struct {
 typedef struct elf_internal_shdr {
 	unsigned int	sh_name;       	/* Section name, index in string tbl */
 	unsigned int	sh_type;       	/* Type of section */
-	unsigned long	sh_flags;      	/* Miscellaneous section attributes */
-	unsigned long    sh_addr;      	/* Section virtual addr at execution */
-	unsigned long	sh_size;       	/* Size of section in bytes */
-	unsigned long	sh_entsize;    	/* Entry size if section holds table */
-	unsigned long	sh_link;       	/* Index of another section */
-	unsigned long	sh_info;       	/* Additional section information */
-	long int	sh_offset;     	/* Section file offset */
+	uint32_t	sh_flags;      	/* Miscellaneous section attributes */
+	uint32_t    sh_addr;      	/* Section virtual addr at execution */
+	uint32_t	sh_size;       	/* Size of section in bytes */
+	uint32_t	sh_entsize;    	/* Entry size if section holds table */
+	uint32_t	sh_link;       	/* Index of another section */
+	uint32_t	sh_info;       	/* Additional section information */
+	int32_t 	sh_offset;     	/* Section file offset */
 	unsigned int	sh_addralign;  	/* Section alignment */
 	
 	/* The internal rep also has some cached info associated with it. 
@@ -81,12 +81,12 @@ typedef struct {
 } Elf32_External_Shdr;
 
 typedef struct elf_internal_sym {
-	unsigned long st_value;        	/* Value of the symbol */
-	unsigned long st_size;	        /* Associated symbol size */
-	unsigned long	st_name;       	/* Symbol name, index in string tbl */
+	uint32_t st_value;        	/* Value of the symbol */
+	uint32_t st_size;	        /* Associated symbol size */
+	uint32_t	st_name;       	/* Symbol name, index in string tbl */
 	unsigned char	st_info;       	/* Type and binding attributes */
 	unsigned char	st_other;      	/* No defined meaning, 0 */
-	unsigned short st_shndx;       	/* Associated section index */
+	uint16_t st_shndx;       	/* Associated section index */
 } Elf_Internal_Sym;
 
 typedef struct {
@@ -100,30 +100,30 @@ typedef struct {
 
 struct FnInfo {
 	char m_fnName[256];
-	unsigned long m_timesCalled;
-	unsigned long m_totalTimeTaken;
-	unsigned long m_maxTimeTaken;
-	unsigned long m_numCalledFromThread;
-	unsigned long m_maxBlockedTime;
+	uint32_t m_timesCalled;
+	uint32_t m_totalTimeTaken;
+	uint32_t m_maxTimeTaken;
+	uint32_t m_numCalledFromThread;
+	uint32_t m_maxBlockedTime;
 	const char   *m_lastQpoll; 
 	const char   *m_prevQpoll; 
 	
 
-	long long     m_startTimeLocal;
-	long long     m_startTime;
-	long long     m_lastPauseTime;
-	long          m_inFunction;
+	int64_t     m_startTimeLocal;
+	int64_t     m_startTime;
+	int64_t     m_lastPauseTime;
+	int32_t          m_inFunction;
 };
 
 
 struct QuickPollInfo {
 	const char *m_caller;
-	long        m_lineno;
+	int32_t        m_lineno;
 	const char *m_last;
-	long        m_lastlineno;
-	long        m_timeAcc;
-	long        m_maxTime;
-	long        m_times;
+	int32_t        m_lastlineno;
+	int32_t        m_timeAcc;
+	int32_t        m_maxTime;
+	int32_t        m_times;
 };
 
 struct HitEntry {
@@ -165,18 +165,18 @@ class Profiler {
 	bool reset();
 	bool init();
 
-	bool addQuickPoll(long long took, const char* caller);
-	bool startTimer(long address, const char* caller);
-	bool pause(const char *caller, long lineno, long took);
+	bool addQuickPoll(int64_t took, const char* caller);
+	bool startTimer(int32_t address, const char* caller);
+	bool pause(const char *caller, int32_t lineno, int32_t took);
 	bool unpause();
 
 	//This function should get the function name from nm / addr2line
-	bool endTimer(long address, 
+	bool endTimer(int32_t address, 
 		      const char *caller,
 		      bool isThread=false);
 
 	bool printInfo(SafeBuf *sb,
-		       //long user, 
+		       //int32_t user, 
 		       char *username,
 		       char *pwd, 
 		       char *coll, 
@@ -185,7 +185,7 @@ class Profiler {
 		       int qpreset,
 		       int profilerreset);
 	bool printRealTimeInfo(SafeBuf *sb,
-			       //long user,
+			       //int32_t user,
 			       char *username,
 			       char *pwd,
 			       char *coll,
@@ -193,7 +193,7 @@ class Profiler {
 			       int realTimeShowAll);
 	void resetLastQpoll() {m_lastQpoll = "main loop"; m_lastQpollLine =0;}
 
-	char *getFnName(unsigned long address,long *nameLen=NULL);
+	char *getFnName(PTRTYPE address,int32_t *nameLen=NULL);
 
 	//Functions for reading the symbol table of gb,
 	//which is a 32-bit ELF file. These functions are 
@@ -232,25 +232,25 @@ protected:
 
 	bool getFileHeader (FILE * file);
 
-	//bool fnReset (HashTableT<unsigned long, FnInfo*> *m_fn);
+	//bool fnReset (HashTableT<uint32_t, FnInfo*> *m_fn);
 	
 	FILE *m_file;
 	char *m_stringTable;
-	long m_stringTableSize;
+	int32_t m_stringTableSize;
 
 	Elf_Internal_Ehdr       m_elfHeader;
 	Elf_Internal_Shdr*     m_sectionHeaders;
 
 	Elf_Internal_Sym* get32bitElfSymbols (FILE *file,
-					      unsigned long offset,
-					      unsigned long number);
+					      uint32_t offset,
+					      uint32_t number);
 
-	unsigned long getByte (unsigned char * field,int size);
+	uint32_t getByte (unsigned char * field,int size);
 
-	//HashTableT<unsigned long, FnInfo> m_fn;
-	//HashTableT<unsigned long, FnInfo> m_fnTmp[11];
-	//HashTableT<unsigned long, FnInfo*> m_activeFns;
-	//HashTableT<unsigned long, QuickPollInfo*> m_quickpolls;
+	//HashTableT<uint32_t, FnInfo> m_fn;
+	//HashTableT<uint32_t, FnInfo> m_fnTmp[11];
+	//HashTableT<uint32_t, FnInfo*> m_activeFns;
+	//HashTableT<uint32_t, QuickPollInfo*> m_quickpolls;
 
 	HashTableX m_fn;
 	HashTableX m_fnTmp[11];
@@ -258,11 +258,11 @@ protected:
 	HashTableX m_quickpolls;
 
 	const char* m_lastQpoll;
-	long m_lastQpollLine;
+	int32_t m_lastQpollLine;
 	QuickPollInfo m_quickPollInfos[512];
-	long          m_lastQPUsed;
+	int32_t          m_lastQPUsed;
 	
-	unsigned long long m_fnTime[11];
+	uint64_t m_fnTime[11];
 private:
 	// Realtime profiler stuff
 	uint32_t getFuncBaseAddr(const uint32_t address);

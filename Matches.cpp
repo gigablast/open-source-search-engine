@@ -32,7 +32,7 @@ void Matches::reset   ( ) {
 	//m_maxNQT     = -1;
 	m_numAlnums  = 0;
 	// free all the classes' buffers
-	for ( long i = 0 ; i < m_numMatchGroups ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numMatchGroups ; i++ ) {
 		m_wordsArray   [i].reset();
 		//m_sectionsArray[i].reset();
 		m_posArray     [i].reset();
@@ -45,7 +45,7 @@ void Matches::reset   ( ) {
 	//m_matchesQuery = false;
 }
 
-bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , long i ) {
+bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , int32_t i ) {
 	// . skip if negative sign
 	// . no, we need to match negative words/phrases now so we can
 	//   big hack them out...
@@ -62,7 +62,7 @@ bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , long i ) {
 	// take this out for now so we highlight for title: terms
 	if ( qw->m_fieldCode && qw->m_fieldCode != FIELD_TITLE ) return false;
 	// what word # are we?
-	long qwn = qw - m_q->m_qwords;
+	int32_t qwn = qw - m_q->m_qwords;
 	// do not include if in a quote and does not start it!!
 	//if ( qw->m_inQuotes && i-1 != qw->m_quoteStart ) return false;
 	if ( qw->m_quoteStart >= 0 && qw->m_quoteStart != qwn ) return false;
@@ -85,13 +85,13 @@ bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , long i ) {
 class QueryMatch {
 public:
 	// range in Query::m_qwords [m_a,m_b]
-	long m_a;
-	long m_b;
-	long m_score; // lowest of the term freqs
+	int32_t m_a;
+	int32_t m_b;
+	int32_t m_score; // lowest of the term freqs
 };
 
 void Matches::setQuery ( Query *q ) { 
-	//long    qtableScores   [ MAX_QUERY_TERMS * 2 ];
+	//int32_t    qtableScores   [ MAX_QUERY_TERMS * 2 ];
 	reset();
 	// save it
 	m_q       = q;
@@ -103,14 +103,17 @@ void Matches::setQuery ( Query *q ) {
 
 	//memset ( m_foundNegTermVector, 0, m_q->getNumTerms() );
 
+	// this is word based. these are each 1 byte
+	memset ( m_qwordFlags  , 0 , m_q->m_numWords * sizeof(mf_t));
+
 	// # of WORDS in the query
-	long nqt = m_q->m_numTerms;
+	int32_t nqt = m_q->m_numTerms;
 
 	// how many query words do we have that can be matched?
-	long numToMatch = 0;
-	for ( long i = 0 ; i < nqt ; i++ ) {
+	int32_t numToMatch = 0;
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
 		// rest this
-		m_qwordFlags[i] = 0;
+		//m_qwordFlags[i] = 0;
 		// get query word #i
 		//QueryWord *qw = &m_q->m_qwords[i];
 		QueryTerm *qt = &m_q->m_qterms[i];
@@ -125,8 +128,8 @@ void Matches::setQuery ( Query *q ) {
 		// don't breach. MDW: i made this >= from > (2/11/09)
 		if ( numToMatch < MAX_QUERY_WORDS_TO_MATCH ) continue;
 		// note it
-		log("matches: hit %li max query words to match limit",
-		    (long)MAX_QUERY_WORDS_TO_MATCH);
+		log("matches: hit %"INT32" max query words to match limit",
+		    (int32_t)MAX_QUERY_WORDS_TO_MATCH);
 		break;
 	}
 
@@ -134,10 +137,10 @@ void Matches::setQuery ( Query *q ) {
 	if ( numToMatch < 256 ) numToMatch = 256;
 
 	// keep number of slots in hash table a power of two for fast hashing
-	m_numSlots = getHighestLitBitValue ( (unsigned long)(numToMatch * 3));
+	m_numSlots = getHighestLitBitValue ( (uint32_t)(numToMatch * 3));
 	// make the hash mask
-	unsigned long mask = m_numSlots - 1;
-	long          n;
+	uint32_t mask = m_numSlots - 1;
+	int32_t          n;
 	// sanity check
 	if ( m_numSlots > MAX_QUERY_WORDS_TO_MATCH * 3 ) {
 		char *xx = NULL; *xx = 0; }
@@ -148,14 +151,14 @@ void Matches::setQuery ( Query *q ) {
 	//memset ( m_qtableNegIds, 0 , m_numNegTerms  );
 
 	// alternate colors for highlighting
-	long colorNum = 0;
+	int32_t colorNum = 0;
 
-	//long negIds = 0;
+	//int32_t negIds = 0;
 	// . hash all the query terms into the hash table
 	// . the term's score should be 100 for a very rare term,
 	//   and 1 for a stop word.
 	//m_maxNQT = nqt;
-	for ( long i = 0 ; i < nqt ; i++ ) {
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
 		// get query word #i
 		//QueryWord *qw = &m_q->m_qwords[i];
 		QueryTerm *qt = &m_q->m_qterms[i];
@@ -168,7 +171,7 @@ void Matches::setQuery ( Query *q ) {
 		// get the word it is from
 		QueryWord *qw = qt->m_qword;
 		// get word #
-		long qwn = qw - q->m_qwords;
+		int32_t qwn = qw - q->m_qwords;
 		// assign color # for term highlighting with different colors
 		qw->m_colorNum = colorNum++;
 		// do not overfill table
@@ -177,7 +180,7 @@ void Matches::setQuery ( Query *q ) {
 			break; 
 		}
 		// this should be equivalent to the word id
-		long long qid = qt->m_rawTermId;//qw->m_rawWordId;
+		int64_t qid = qt->m_rawTermId;//qw->m_rawWordId;
 
 		// but NOT for 'cheatcodes.com'
 		if ( qt->m_isPhrase ) qid = qw->m_rawWordId;
@@ -190,7 +193,7 @@ void Matches::setQuery ( Query *q ) {
 			qid = qt->m_synWids0;
 
 		// put in hash table
-		n = ((unsigned long)qid) & mask;
+		n = ((uint32_t)qid) & mask;
 		// chain to an empty slot
 		while ( m_qtableIds[n] && m_qtableIds[n] != qid ) 
 			if ( ++n >= m_numSlots ) n = 0;
@@ -219,10 +222,10 @@ void Matches::setQuery ( Query *q ) {
 		// we need this for the 'cheat codes' query as well so it
 		// highlights 'cheatcodes'
 		//
-		long long pid = qw->m_rawPhraseId;
+		int64_t pid = qw->m_rawPhraseId;
 		if ( pid == 0 ) continue;
 		// put in hash table
-		n = ((unsigned long)pid) & mask;
+		n = ((uint32_t)pid) & mask;
 		// chain to an empty slot
 		while ( m_qtableIds[n] && m_qtableIds[n] != pid ) 
 			if ( ++n >= m_numSlots ) n = 0;
@@ -235,7 +238,7 @@ void Matches::setQuery ( Query *q ) {
 
 	/*
 	// set what bits we need to match
-	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		// get it
 		QueryTerm *qt = &m_q->m_qterms[i];			
 		// get its explicit bit
@@ -272,7 +275,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		    Pos      *bodyPos    ,
 		    Xml      *bodyXml    ,
 		    Title    *tt         ,
-		    long      niceness   ) {
+		    int32_t      niceness   ) {
 
 	// don't reset query info!
 	reset();
@@ -295,7 +298,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 			    false      , // exclQTOnlyinAnchTxt,
 			    0          , // qvec_t  reqMask      ,
 			    0          , // qvec_t  negMask      ,
-			    1          , // long    diversityWeight,
+			    1          , // int32_t    diversityWeight,
 			    xd->m_docId,
 			    MF_BODY        ) )
 		return false;
@@ -319,8 +322,8 @@ bool Matches::set ( XmlDoc   *xd         ,
 
 	// also use the title from the title tag, because sometimes 
 	// it does not equal "tt->getTitle()"
-	long  a     = tt->m_titleTagStart;
-	long  b     = tt->m_titleTagEnd;
+	int32_t  a     = tt->m_titleTagStart;
+	int32_t  b     = tt->m_titleTagEnd;
 	char *start = NULL;
 	char *end   = NULL;
 	if ( a >= 0 && b >= 0 && b>a ) {
@@ -337,8 +340,8 @@ bool Matches::set ( XmlDoc   *xd         ,
 	// add in dmoz stuff
 	char *dt     = xd->ptr_dmozTitles;
 	char *ds     = xd->ptr_dmozSumms;
-	long  nd     = xd->size_catIds / 4;
-	for ( long i = 0 ; i < nd ; i++ ) {
+	int32_t  nd     = xd->size_catIds / 4;
+	for ( int32_t i = 0 ; i < nd ; i++ ) {
 		// sanity check
 		if ( ! dt[0] ) break;
 		// add each dmoz title
@@ -364,17 +367,17 @@ bool Matches::set ( XmlDoc   *xd         ,
 	}
 
 	// now add in the meta tags
-	long     n     = bodyXml->getNumNodes();
+	int32_t     n     = bodyXml->getNumNodes();
 	XmlNode *nodes = bodyXml->getNodes();
 	// find the first meta summary node
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// continue if not a meta tag
 		if ( nodes[i].m_nodeId != 68 ) continue;
 		// only get content for <meta name=..> not <meta http-equiv=..>
-		long tagLen;
+		int32_t tagLen;
 		char *tag = bodyXml->getString ( i , "name" , &tagLen );
 		// is it an accepted meta tag?
-		long flag = 0;
+		int32_t flag = 0;
 		if (tagLen== 7&&strncasecmp(tag,"keyword"    , 7)== 0)
 			flag = MF_METAKEYW;
 		if (tagLen== 7&&strncasecmp(tag,"summary"    , 7)== 0)
@@ -385,7 +388,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 			flag = MF_METADESC;
 		if ( ! flag ) continue;
 		// get the content
-		long len;
+		int32_t len;
 		char *s = bodyXml->getString ( i , "content" , &len );
 		if ( ! s || len <= 0 ) continue;
 		// wordify
@@ -412,7 +415,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		mf_t flags = MF_LINK;
 		//if ( k->m_isAnomaly ) flags = MF_ALINK;
 		// add it in
-		if ( ! addMatches ( k->ptr_linkText      ,
+		if ( ! addMatches ( k->getLinkText() ,
 				    k->size_linkText - 1 ,
 				    flags                ,
 				    xd->m_docId          ,
@@ -426,7 +429,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		flags = MF_HOOD;
 		//if ( k->m_isAnomaly ) flags = MF_AHOOD;
 		// add it in
-		if ( ! addMatches ( k->ptr_surroundingText      ,
+		if ( ! addMatches ( k->getSurroundingText() ,
 				    k->size_surroundingText - 1 ,
 				    flags                       ,
 				    xd->m_docId                 ,
@@ -439,7 +442,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 
 		// add rss description
 		bool isHtmlEncoded;
-		long rdlen;
+		int32_t rdlen;
 		char *rd = rxml.getRSSDescription ( &rdlen , &isHtmlEncoded );
 		if ( ! addMatches ( rd               ,
 				    rdlen            ,
@@ -449,7 +452,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 			return false;
 
 		// add rss title
-		long rtlen;
+		int32_t rtlen;
 		char *rt = rxml.getRSSTitle       ( &rtlen , &isHtmlEncoded );
 		if ( ! addMatches ( rt               ,
 				    rtlen            ,
@@ -477,23 +480,23 @@ bool Matches::set ( XmlDoc   *xd         ,
 
 	// . add in match bits from query!
 	// . used for the BIG HACK
-	for( long i = 0; i < q->m_numTerms ; i++ ) {
+	for( int32_t i = 0; i < q->m_numTerms ; i++ ) {
 		// get it
 		QueryTerm *qt = &q->m_qterms[i];			
 
 		bool   isNeg = qt->m_termSign == '-';
 		qvec_t ebit  = qt->m_explicitBit;
 		// save it
-		long fc = qt->m_fieldCode;
+		int32_t fc = qt->m_fieldCode;
 		// . length stops at space for fielded terms
 		// . get word
 		QueryWord *w = qt->m_qword;
 		// get word index
-		long wi = w - q->m_qwords;
+		int32_t wi = w - q->m_qwords;
 		// point to word
 		char *qw = q->m_qwords[wi].m_word;
 		// total length
-		long qwLen = 0;
+		int32_t qwLen = 0;
 		// keep including more words until not in field anymore
 		for ( ; wi < q->m_numWords ; wi++ ) {
 			if ( q->m_qwords[wi].m_fieldCode != fc ) break;
@@ -503,13 +506,13 @@ bool Matches::set ( XmlDoc   *xd         ,
 		if( !qw || !qwLen )
 			return log( "query: Error, no query word found!" );
 		char tmp[512];
-		//long tmpLen;
+		//int32_t tmpLen;
 		//tmpLen = utf16ToUtf8( tmp, 512, qw, qwLen );
-		long tmpLen = qwLen;
+		int32_t tmpLen = qwLen;
 		if ( tmpLen > 500 ) tmpLen = 500;
 		memcpy ( tmp , qw , tmpLen );
 		tmp[tmpLen] = '\0';
-		log(LOG_DEBUG,"query: term#=%li fieldLen=%li:%s",i,tmpLen,tmp);
+		log(LOG_DEBUG,"query: term#=%"INT32" fieldLen=%"INT32":%s",i,tmpLen,tmp);
 
 		if ( fc == FIELD_GBLANG ) {
 			char lang = atoi( tmp );
@@ -575,13 +578,13 @@ bool Matches::set ( XmlDoc   *xd         ,
 			bool  fail = false;
 			Url  *turl   = xd->getFirstUrl();
 			char *ttld   = turl->getTLD();
-			long  ttlen  = turl->getTLDLen();
+			int32_t  ttlen  = turl->getTLDLen();
 			char *tdom   = turl->getDomain();
-			long  tdlen  = turl->getDomainLen();
+			int32_t  tdlen  = turl->getDomainLen();
 			char *thost  = turl->getHost();
-			long  thlen  = turl->getHostLen();
+			int32_t  thlen  = turl->getHostLen();
 			char *tpath  = turl->getPath();
-			long  tplen  = turl->getPathLen();
+			int32_t  tplen  = turl->getPathLen();
 			//bool  hasWWW = turl->isHostWWW();
 			log( LOG_DEBUG, "query: TitleRec "
 			     "Site=%s", tdom );
@@ -598,12 +601,12 @@ bool Matches::set ( XmlDoc   *xd         ,
 				// false --> add www?
 				qurl.set( tmp, tmpLen, false);//hasWWW );
 				char *qdom  = qurl.getDomain();
-				long  qdlen = qurl.
+				int32_t  qdlen = qurl.
 					getDomainLen();
 				char *qhost = qurl.getHost();
-				long  qhlen = qurl.getHostLen();
+				int32_t  qhlen = qurl.getHostLen();
 				char *qpath = qurl.getPath();
-				long  qplen = qurl.getPathLen();
+				int32_t  qplen = qurl.getPathLen();
 				
 				if(tdlen != qdlen || 
 				   strncmp(tdom, qdom, qdlen))
@@ -642,10 +645,10 @@ bool Matches::set ( XmlDoc   *xd         ,
 				m_explicitsMatched |= ebit;
 		}
 		else if ( fc == FIELD_IP ) {
-			long  ip = *xd->getIp();
+			int32_t  ip = *xd->getIp();
 			char *oip = iptoa( ip );
 			log(LOG_DEBUG, "query: TitleRec Ip=%s", oip );
-			long olen = gbstrlen(oip);
+			int32_t olen = gbstrlen(oip);
 			bool matched = false;
 			if (olen>=tmpLen && strncmp(oip,tmp,tmpLen)==0 )
 				matched = true;
@@ -669,15 +672,15 @@ bool Matches::set ( XmlDoc   *xd         ,
 
 		else if ( fc == FIELD_URL ) {
 			char *url  = xd->getFirstUrl()->getUrl();
-			long  slen = xd->getFirstUrl()->getUrlLen();
+			int32_t  slen = xd->getFirstUrl()->getUrlLen();
 			Url u;
 			// do not force add the "www." cuz titleRec does not
 			u.set( tmp, tmpLen, false );//true );
 			char * qs  = u.getUrl();
-			long   qsl = u.getUrlLen();
+			int32_t   qsl = u.getUrlLen();
 			log( LOG_DEBUG, "query: TitleRec Url=%s",  url );
 			if( qsl > slen ) qsl = slen;
-			long result = strncmp( url, qs, qsl );
+			int32_t result = strncmp( url, qs, qsl );
 			if( q->m_isBoolean){
 				if (result) 
 					m_explicitsMatched |= ebit;
@@ -711,7 +714,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 	// need to set Query::m_bmap before calling getBitScore()
 	if ( ! m_q->m_bmapIsSet ) m_q->setBitMap();
 	// if boolean, do the truth table
-	long bitScore = m_q->getBitScore ( matched );
+	int32_t bitScore = m_q->getBitScore ( matched );
 	// assume we are missing some. if false, may still be in the results
 	// if we have rat=0 (Require All Terms = false)
 	m_hasAllQueryTerms = false;
@@ -732,19 +735,19 @@ bool Matches::set ( XmlDoc   *xd         ,
 }
 
 bool Matches::addMatches ( char      *s         ,
-			   long       slen      ,
+			   int32_t       slen      ,
 			   mf_t       flags     ,
-			   long long  docId     ,
-			   long       niceness  ) {
+			   int64_t  docId     ,
+			   int32_t       niceness  ) {
 
 	// . do not breach
 	// . happens a lot with a lot of link info text
 	if ( m_numMatchGroups >= MAX_MATCHGROUPS ) {
 		// . log it
 		// . often we have a ton of inlink text!!
-		//log("matches: could not add matches1 for docid=%lli because "
-		//    "already have %li matchgroups",docId,
-		//    (long)MAX_MATCHGROUPS);
+		//log("matches: could not add matches1 for docid=%"INT64" because "
+		//    "already have %"INT32" matchgroups",docId,
+		//    (int32_t)MAX_MATCHGROUPS);
 		return true;
 	}
 
@@ -773,9 +776,9 @@ bool Matches::addMatches ( char      *s         ,
 	if ( ! pb->set ( wp , sp ) )
 		return false;
 	// record the start
-	long startNumMatches = m_numMatches;
+	int32_t startNumMatches = m_numMatches;
 	// sometimes it returns true w/o incrementing this
-	long n = m_numMatchGroups;
+	int32_t n = m_numMatchGroups;
 	// . add all the Match classes from this match group
 	// . this increments m_numMatchGroups on success
 	bool status = addMatches ( wp   ,
@@ -813,7 +816,7 @@ bool Matches::getMatchGroup ( mf_t       matchFlag ,
 			      Pos      **pp        ,
 			      Sections **sp        ) {
 
-	for ( long i = 0 ; i < m_numMatchGroups ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numMatchGroups ; i++ ) {
 		// must be the type we want
 		if ( m_flags[i] != matchFlag ) continue;
 		// get it
@@ -836,13 +839,13 @@ bool Matches::addMatches ( Words    *words               ,
 			   Sections *sections            ,
 			   Bits     *bits                ,
 			   Pos      *pos                 ,
-			   long      fieldCode           , // of words,0=none
+			   int32_t      fieldCode           , // of words,0=none
 			   bool      allowPunctInPhrase  ,
 			   bool      exclQTOnlyinAnchTxt ,
 			   qvec_t    reqMask             ,
 			   qvec_t    negMask             ,
-			   long      diversityWeight     ,
-			   long long docId               ,
+			   int32_t      diversityWeight     ,
+			   int64_t docId               ,
 			   mf_t      flags               ) { 
 
 	// if no query term, bail.
@@ -853,13 +856,13 @@ bool Matches::addMatches ( Words    *words               ,
 	if ( m_numMatchGroups >= MAX_MATCHGROUPS ) {
 		// . log it
 		// . often we have a ton of inlink text!!
-		//log("matches: could not add matches2 for docid=%lli because "
-		//    "already have %li matchgroups",docId,
-		//    (long)MAX_MATCHGROUPS);
+		//log("matches: could not add matches2 for docid=%"INT64" because "
+		//    "already have %"INT32" matchgroups",docId,
+		//    (int32_t)MAX_MATCHGROUPS);
 		return true;
 	}
 
-	// shortcut
+	// int16_tcut
 	Section *sp = NULL;
 	if ( sections ) sp = sections->m_sections;
 
@@ -879,28 +882,28 @@ bool Matches::addMatches ( Words    *words               ,
 	m_flags       [ m_numMatchGroups ] = flags;
 	m_numMatchGroups++;
 
-	long long *pids = NULL;
+	int64_t *pids = NULL;
 	if ( phrases ) pids = phrases->getPhraseIds2();
 
 	// set convenience vars
-	unsigned long  mask    = m_numSlots - 1;
-	long long     *wids    = words->getWordIds();
-	long          *wlens   = words->getWordLens();
+	uint32_t  mask    = m_numSlots - 1;
+	int64_t     *wids    = words->getWordIds();
+	int32_t          *wlens   = words->getWordLens();
 	char         **wptrs   = words->getWords();
 	// swids = word ids where accent marks, etc. are stripped 
-	//long long     *swids   = words->getStripWordIds();
+	//int64_t     *swids   = words->getStripWordIds();
 	nodeid_t      *tids    = words->getTagIds();
-	long           nw      = words->m_numWords;
-	//long          *wscores = NULL;
+	int32_t           nw      = words->m_numWords;
+	//int32_t          *wscores = NULL;
 	//if ( scores )  wscores = scores->m_scores;
-	long           n;//,n2 ;
-	long           matchStack = 0;
-	long long      nextMatchWordIdMustBeThis = 0;
-	long           nextMatchWordPos = 0;
-	long           lasti   = -3;
+	int32_t           n;//,n2 ;
+	int32_t           matchStack = 0;
+	int64_t      nextMatchWordIdMustBeThis = 0;
+	int32_t           nextMatchWordPos = 0;
+	int32_t           lasti   = -3;
 	//bool           inAnchTag = false;
 
-	long dist = 0;
+	int32_t dist = 0;
 
 	// . every tag increments "dist" by a value
 	// . rather than use a switch/case statement, which does a binary
@@ -909,7 +912,7 @@ bool Matches::addMatches ( Words    *words               ,
 	static char   s_tableInit = false;
 	static int8_t s_tab[512];
 	if ( getNumXmlNodes() > 512 ) { char *xx=NULL;*xx=0; }
-	for ( long i = 0 ; ! s_tableInit && i < 128 ; i++ ) {
+	for ( int32_t i = 0 ; ! s_tableInit && i < 128 ; i++ ) {
 		char step = 0;
 		if ( i == TAG_TR    ) step = 2;
 		if ( i == TAG_P     ) step = 10;
@@ -934,20 +937,20 @@ bool Matches::addMatches ( Words    *words               ,
 	s_tableInit = true;
 
 	// google seems to index SEC_MARQUEE so i took that out of here
-	long badFlags =SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_IN_TITLE;
+	int32_t badFlags =SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_IN_TITLE;
 
-	//long anum;
-	//long long *aids;
-	//long j;
-	long qwn;
-	long numQWords;
-	long numWords;
+	//int32_t anum;
+	//int64_t *aids;
+	//int32_t j;
+	int32_t qwn;
+	int32_t numQWords;
+	int32_t numWords;
 
 	//
 	// . set m_matches[] array
 	// . loop over all words in the document
 	//
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		//if      (tids && (tids[i]            ) == TAG_A) 
 		//	inAnchTag = true;
 		//else if (tids && (tids[i]&BACKBITCOMP) == TAG_A) 
@@ -958,7 +961,7 @@ bool Matches::addMatches ( Words    *words               ,
 
 		//if ( addToMatches && tids && tids[i] ){
 		if ( tids && tids[i] ){
-			long tid = tids[i] & BACKBITCOMP;
+			int32_t tid = tids[i] & BACKBITCOMP;
 			// accumulate distance
 			dist += s_tab[tid];
 			// monitor boundaries so that the proximity algo
@@ -989,7 +992,7 @@ bool Matches::addMatches ( Words    *words               ,
 		// . BUT if score is -1 that means it is in a <select> or
 		//   a <marquee> tag (see Scores.cpp)
 		// . FIX: neg word terms cannot be in quotes!!
-		//for( long j = 0; j < m_numNegTerms; j++ ) {
+		//for( int32_t j = 0; j < m_numNegTerms; j++ ) {
 		//	if(     wids[i] == m_qtableNegIds[j] 
 		//	    || swids[i] == m_qtableNegIds[j] ) 
 		//		m_foundNegTermVector[j] = 1;
@@ -1007,8 +1010,8 @@ bool Matches::addMatches ( Words    *words               ,
 
 		// . does it match a query term?
 		// . hash to the slot in the hash table
-		n = ((unsigned long)wids[i]) & mask;
-		//n2 = swids[i]?((unsigned long)swids[i]) & mask:n;
+		n = ((uint32_t)wids[i]) & mask;
+		//n2 = swids[i]?((uint32_t)swids[i]) & mask:n;
 	chain1:
 		// skip if slot is empty (doesn't match query term)
 		//if ( ! m_qtableIds[n] && ! m_qtableIds[n2]) continue;
@@ -1032,11 +1035,11 @@ bool Matches::addMatches ( Words    *words               ,
 		     wptrs[i][wlens[i]-2] == '\'' &&
 		     to_lower_a(wptrs[i][wlens[i]-1]) == 's' ) {
 			// move 's from word hash... very tricky
-			long long nwid = wids[i];
+			int64_t nwid = wids[i];
 			// undo hash64Lower_utf8 in hash.h
 			nwid ^= g_hashtab[wlens[i]-1][(uint8_t)'s'];
 			nwid ^= g_hashtab[wlens[i]-2][(uint8_t)'\''];
-			n = ((unsigned long)nwid) & mask;
+			n = ((uint32_t)nwid) & mask;
 		chain2:
 			if ( ! m_qtableIds[n] ) goto tryPhrase2;
 			if ( (m_qtableIds[n] != nwid) ) {
@@ -1053,7 +1056,7 @@ bool Matches::addMatches ( Words    *words               ,
 	tryPhrase2:
 		// try phrase first
 		if ( pids && pids[i] ) {
-			n = ((unsigned long)pids[i]) & mask;
+			n = ((uint32_t)pids[i]) & mask;
 		chain3:
 			if ( ! m_qtableIds[n] ) continue;
 			if ( (m_qtableIds[n] != pids[i]) ) {
@@ -1221,8 +1224,8 @@ bool Matches::addMatches ( Words    *words               ,
 		//   compute the termFreq for our matching quote
 		// . MDW: WHAT IS THIS?????
 		/*
-		//long long  max = -1;
-		for ( long j = qwn ; j < qwn + numQWords && 
+		//int64_t  max = -1;
+		for ( int32_t j = qwn ; j < qwn + numQWords && 
 			      // if the word is repeated twice in two different
 			      // phrases, qwn sometimes ends up in the later,
 			      // phrase which may have less words in it than
@@ -1233,8 +1236,8 @@ bool Matches::addMatches ( Words    *words               ,
 			// does it have a query word or phrase term?
 			QueryTerm *qt1 = qw->m_queryWordTerm ;
 			QueryTerm *qt2 = qw->m_queryPhraseTerm;
-			long qtn1 = -1;
-			long qtn2 = -1;
+			int32_t qtn1 = -1;
+			int32_t qtn2 = -1;
 			if ( qt1 ) qtn1 = qt1 - m_q->m_qterms;
 			if ( qt2 ) qtn2 = qt2 - m_q->m_qterms;
 
@@ -1274,7 +1277,7 @@ bool Matches::addMatches ( Words    *words               ,
 		if ( max < -1 ) {
 			log("query: found neg word in doc! should be taken "
 			    "care of in summary and doc should not be "
-			    "displayed! query=%s docId=%lli",
+			    "displayed! query=%s docId=%"INT64"",
 			    m_q->m_orig, docId);
 			return false;
 		}
@@ -1282,7 +1285,7 @@ bool Matches::addMatches ( Words    *words               ,
 		if ( m_tscores && max == -1 ) { 
 			g_errno = EBADENGINEER;
 			log("query: bad matches error. fix me! query=%s "
-			    "docId=%lli", m_q->m_orig, docId);
+			    "docId=%"INT64"", m_q->m_orig, docId);
 			return false;
 			char *xx = NULL; *xx = 0; 
 		}
@@ -1322,7 +1325,7 @@ bool Matches::addMatches ( Words    *words               ,
 		// their explicit bits. fixes www.gmail.com query which
 		// matches query words, and we assume it is in quotes...
 		/*
-		for ( long qi = qwn ; qi < qwn + numQWords ; qi++ ) {
+		for ( int32_t qi = qwn ; qi < qwn + numQWords ; qi++ ) {
 			// get it
 			QueryWord *ww = &m_q->m_qwords[qi];
 			// incorporate the explicit bit of this term
@@ -1352,23 +1355,23 @@ bool Matches::addMatches ( Words    *words               ,
 		//if ( m_explicitsMatched & m_matchableRequiredBits ) {
 		//	log(LOG_DEBUG,
 		//	    "query: found all query terms for big hack after "
-		//	    "%li matches. docId=%lli", m_numMatches, docId);
+		//	    "%"INT32" matches. docId=%"INT64"", m_numMatches, docId);
 		//	break;
 		//}
 		//bool hadPhrases ;
 		//bool hadWords   ;
-		//long matchedBits = getTermsFound2 (&hadPhrases,&hadWords);
+		//int32_t matchedBits = getTermsFound2 (&hadPhrases,&hadWords);
 		//if ( (matchedBits & reqMask) == reqMask && 
 		//     !(matchedBits & negMask) ) {
 		//	log("query: found all query terms for big hack after "
-		//	    "%li matches. docId=%lli", m_numMatches, docId);
+		//	    "%"INT32" matches. docId=%"INT64"", m_numMatches, docId);
 		//	break;
 		//}
 		// don't breech MAX_MATCHES_FOR_BIG_HACK
 		if ( m_numMatches < MAX_MATCHES_FOR_BIG_HACK ) continue;
 		
-		log("query: Exceed match buffer of %li matches. docId=%lli",
-		    (long)MAX_MATCHES_FOR_BIG_HACK, docId);
+		log("query: Exceed match buffer of %"INT32" matches. docId=%"INT64"",
+		    (int32_t)MAX_MATCHES_FOR_BIG_HACK, docId);
 		break;
 	}
 
@@ -1380,21 +1383,21 @@ bool Matches::addMatches ( Words    *words               ,
 }
 
 // . word #i in the doc matches slot #n in the hash table
-long Matches::getNumWordsInMatch ( Words *words     ,
-				   long   wn        , 
-				   long   n         , 
-				   long  *numQWords ,
-				   long  *qwn       ,
+int32_t Matches::getNumWordsInMatch ( Words *words     ,
+				   int32_t   wn        , 
+				   int32_t   n         , 
+				   int32_t  *numQWords ,
+				   int32_t  *qwn       ,
 				   bool   allowPunctInPhrase ) {
 
 	// is it a two-word synonym?
 	if ( m_qtableFlags[n] & 0x08 ) {
 		// get the word following this
-		long long wid2 = 0LL;
+		int64_t wid2 = 0LL;
 		if ( wn+2 < words->m_numWords ) wid2 = words->m_wordIds[wn+2];
 		// scan the synonyms...
-		long long *wids = words->m_wordIds;
-		for ( long k = 0 ; k < m_q->m_numTerms ; k++ ) {
+		int64_t *wids = words->m_wordIds;
+		for ( int32_t k = 0 ; k < m_q->m_numTerms ; k++ ) {
 			QueryTerm *qt = &m_q->m_qterms[k];
 			if ( ! qt->m_synonymOf ) continue;
 			if ( qt->m_synWids0 != wids[wn] ) continue;
@@ -1405,7 +1408,7 @@ long Matches::getNumWordsInMatch ( Words *words     ,
 	}
 
 	// save the first word in the doc that we match first
-	long wn0 = wn;
+	int32_t wn0 = wn;
 
 	// CAUTION: the query "business development center" (in quotes)
 	// would match a doc with "business development" and 
@@ -1415,23 +1418,23 @@ long Matches::getNumWordsInMatch ( Words *words     ,
 	if ( ! (m_qtableFlags[n] & 0x02) ) { *numQWords = 1; return 1; }
 
 	// get word ids array for the doc
-	long long  *wids   = words->getWordIds();
-	//long long  *swids  = words->getStripWordIds();
+	int64_t  *wids   = words->getWordIds();
+	//int64_t  *swids  = words->getStripWordIds();
 	char      **ws     = words->getWords();
-	long       *wl     = words->getWordLens();
+	int32_t       *wl     = words->getWordLens();
 	//the word we match in the query appears in quotes in the query
-	long k     = -1;
-	long count = 0;
-	long nw    = words->m_numWords;
+	int32_t k     = -1;
+	int32_t count = 0;
+	int32_t nw    = words->m_numWords;
 
 	// loop through all the quotes in the query and find
 	// which one we match, if any. we will have to advance the
 	// query word and doc word simultaneously and make sure they
 	// match as we advance. 
-	long nqw = m_q->m_numWords;
+	int32_t nqw = m_q->m_numWords;
 	// do not look through more words than were hashed, wastes time
 	//if ( nqw >= m_maxNQW && m_maxNQW > 0 ) nqw = m_maxNQW;
-	long j;
+	int32_t j;
 	for ( j = 0 ; j < nqw ; j++ ) {
 		// get ith query word
 		QueryWord *qw = &m_q->m_qwords[j];
@@ -1493,7 +1496,7 @@ long Matches::getNumWordsInMatch ( Words *words     ,
 				else if( wl[wn] > 2 ) {
 					// . increment until we find no space
 					// . increment by 2 since its utf16
-					for( long i = 0; i < wl[wn]; i+=2 )
+					for( int32_t i = 0; i < wl[wn]; i+=2 )
 						// . if its not a space, its punc
 						if( ws[wn][i] != ' ' ) {
 							count=0; break;
@@ -1564,13 +1567,13 @@ long Matches::getNumWordsInMatch ( Words *words     ,
 }
 
 /*
-long Matches::getTermsFound ( bool  *hadPhrases , 
+int32_t Matches::getTermsFound ( bool  *hadPhrases , 
 			      bool  *hadWords   ) {
 	*hadPhrases = true;
 	*hadWords   = true;
-	long n      = m_q->getNumTerms();
-	long count  = 0;
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n      = m_q->getNumTerms();
+	int32_t count  = 0;
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// do not count query stop words if not in quotes
 		//if ( m_q->m_qterms[i].m_isQueryStopWord &&
 		//     ! m_q->m_qterms[i].m_inQuotes        ) 
@@ -1586,12 +1589,12 @@ long Matches::getTermsFound ( bool  *hadPhrases ,
 
 // new version for explicit bit mask
 /*
-unsigned long Matches::getTermsFound2(bool *hadPhrases, bool *hadWords) {
+uint32_t Matches::getTermsFound2(bool *hadPhrases, bool *hadWords) {
 	*hadPhrases = true;
 	*hadWords   = true;
-	long n      = m_q->getNumTerms();
-	//long count  = 0;
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n      = m_q->getNumTerms();
+	//int32_t count  = 0;
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
 		if (qt->m_fieldCode) continue;
 		if (qt->m_isPhrase && qt->m_termSign == 0) continue;
@@ -1616,27 +1619,27 @@ void Matches::setSubPhraseDetection() {
 	m_leftDiversity = 0;
 	m_rightDiversity = 0;
 
-	long long h = hash64LowerE("www",3);
+	int64_t h = hash64LowerE("www",3);
 	m_pre.addKey(h, LONG_MIN);
 }
 */
 
 void Matches::detectSubPhrase(Words* words, 
-			      long matchWordNum,
-			      long numMatchedWords,
-			      long queryWordNum ,
-			      long diversityWeight ) {
+			      int32_t matchWordNum,
+			      int32_t numMatchedWords,
+			      int32_t queryWordNum ,
+			      int32_t diversityWeight ) {
 
-	long       nw        = words->getNumWords();
-	long long *wids      = words->getWordIds();
+	int32_t       nw        = words->getNumWords();
+	int64_t *wids      = words->getWordIds();
 
 	// . Hash the preceding word
-	long prevWord = matchWordNum - 2;
+	int32_t prevWord = matchWordNum - 2;
 	//skip entities
 	while(prevWord > 0 && wids[prevWord] == 0) prevWord--;
 
-	long long wid;
-	long slot;
+	int64_t wid;
+	int32_t slot;
 	if(prevWord < 0 || wids[prevWord] == 0) {
 		//word begins this section
 		m_leftDiversity += diversityWeight;
@@ -1646,7 +1649,7 @@ void Matches::detectSubPhrase(Words* words,
 		//prev word is valid and is not prev query word
 		wid = wids[prevWord];
 		slot = m_pre.getSlot(wid);
-		long val;
+		int32_t val;
 		if(slot == -1) {
 			m_pre.addKey(wid, 1);
 			m_leftDiversity += diversityWeight;
@@ -1660,8 +1663,8 @@ void Matches::detectSubPhrase(Words* words,
 
 	// . Hash the trailing word
 	//n words + n-1 punctuation separators.
-	long nextWord = matchWordNum + 2 * numMatchedWords ;
-	long nextQueryWord = queryWordNum + numMatchedWords;
+	int32_t nextWord = matchWordNum + 2 * numMatchedWords ;
+	int32_t nextQueryWord = queryWordNum + numMatchedWords;
 
 
 	//skip entities
@@ -1676,7 +1679,7 @@ void Matches::detectSubPhrase(Words* words,
 		//next word is valid and is not the next query word
 		wid = wids[nextWord]; 
 		slot = m_post.getSlot(wid);
-		long val;
+		int32_t val;
 		if(slot == -1) {
 			m_post.addKey(wid, 1);
 			m_rightDiversity += diversityWeight;
@@ -1701,7 +1704,7 @@ float Matches::getDiversity() {
 /*
 bool Matches::negTermsFound ( ) {
 
-	for( long i = 0; i < m_numNegTerms; i++ ) {
+	for( int32_t i = 0; i < m_numNegTerms; i++ ) {
 		if( m_foundNegTermVector[i] ) return true;
 	}
 	
@@ -1729,13 +1732,13 @@ bool MatchOffsets::set(Xml * xml, Words *words, Matches *matches,
 	m_numMatches = 0;
 	m_numAlnums  = matches->m_numAlnums;
 	if (offsetType == OFFSET_WORDS){
-		for (long i = 0; i < matches->m_numMatches ; i++ ) {
+		for (int32_t i = 0; i < matches->m_numMatches ; i++ ) {
 			m_queryWords[i] = matches->m_matches[i].m_qwordNum;
 			m_matchOffsets[i] = matches->m_matches[i].m_wordNum;
 			m_numMatches++;
 			// look for breaking tags
 			if (i == matches->m_numMatches-1) continue;
-			for (long j= matches->m_matches[i].m_wordNum+1;
+			for (int32_t j= matches->m_matches[i].m_wordNum+1;
 			     j < matches->m_matches[i+1].m_wordNum;
 			     j++){
 				nodeid_t tag =words->m_tagIds[j] & BACKBITCOMP;
@@ -1749,8 +1752,8 @@ bool MatchOffsets::set(Xml * xml, Words *words, Matches *matches,
 	}
 	else if ( offsetType == OFFSET_BYTES ){
 		// Latin-1 offset
-		for (long i = 0; i < matches->m_numMatches ; i++ ) {
-			long wordOffset = matches->m_matches[i].m_wordNum;
+		for (int32_t i = 0; i < matches->m_numMatches ; i++ ) {
+			int32_t wordOffset = matches->m_matches[i].m_wordNum;
 			m_queryWords[i] = matches->m_matches[i].m_qwordNum;
 			m_matchOffsets[i] = 
 				words->m_words[wordOffset] - 
@@ -1759,7 +1762,7 @@ bool MatchOffsets::set(Xml * xml, Words *words, Matches *matches,
 			// look for breaking tags
 			if (i == matches->m_numMatches-1) 
 				continue;
-			for (long j= matches->m_matches[i].m_wordNum+1;
+			for (int32_t j= matches->m_matches[i].m_wordNum+1;
 			     j < matches->m_matches[i+1].m_wordNum;
 			     j++){
 				nodeid_t tag =words->m_tagIds[j] & BACKBITCOMP;
@@ -1777,7 +1780,7 @@ bool MatchOffsets::set(Xml * xml, Words *words, Matches *matches,
 	return true;
 }
 
-long MatchOffsets::getStoredSize() {
+int32_t MatchOffsets::getStoredSize() {
 	return m_numMatches * 5 
 		+ 4 //numMatches
 		+ m_numBreaks * 4
@@ -1786,41 +1789,41 @@ long MatchOffsets::getStoredSize() {
 		+ 4;//numAlnums
 }
 
-long MatchOffsets::serialize(char *buf, long bufsize){
+int32_t MatchOffsets::serialize(char *buf, int32_t bufsize){
 	//if (m_numMatches == 0 ) return 0;
-	long need = getStoredSize();
+	int32_t need = getStoredSize();
 	if ( need > bufsize ) { 
 		g_errno = EBUFTOOSMALL; 
 		log(LOG_LOGIC,"query: matchoffsets: serialize Buf too small.");
 		return -1; 
 	}
 	char *p = buf;
-	*(long*) p = need; p += 4;
-	*(long*) p = m_numMatches; p += 4;
-	*(long*) p = m_numAlnums; p += 4;
+	*(int32_t*) p = need; p += 4;
+	*(int32_t*) p = m_numMatches; p += 4;
+	*(int32_t*) p = m_numAlnums; p += 4;
 	memcpy(p, m_queryWords, m_numMatches); p += m_numMatches;
 	memcpy(p, m_matchOffsets, m_numMatches*4); p += m_numMatches*4;
-	*(long*) p = m_numBreaks; p += 4;
+	*(int32_t*) p = m_numBreaks; p += 4;
 	memcpy(p, m_breakOffsets, m_numBreaks*4); p += m_numBreaks*4;
 	
 	return p - buf;
 }
 
-long MatchOffsets::deserialize(char *buf, long bufsize){
+int32_t MatchOffsets::deserialize(char *buf, int32_t bufsize){
 	//if (bufsize == 0 ) return 0;
 	char *p = buf;
-	long need = *(long*) p ; p += 4;
+	int32_t need = *(int32_t*) p ; p += 4;
 	if (bufsize < need) {
 		g_errno = EBUFTOOSMALL; 
 		log(LOG_LOGIC,"query: matchoffsets: deserialize "
 		    "buf too small.");
 		return -1; 
 	}
-	m_numMatches = *(long*) p ; p += 4;
-	m_numAlnums  = *(long*) p ; p += 4;
+	m_numMatches = *(int32_t*) p ; p += 4;
+	m_numAlnums  = *(int32_t*) p ; p += 4;
 	memcpy(m_queryWords, p, m_numMatches); p += m_numMatches;
 	memcpy(m_matchOffsets, p, m_numMatches*4); p += m_numMatches*4;
-	m_numBreaks = *(long*) p ; p += 4;
+	m_numBreaks = *(int32_t*) p ; p += 4;
 	memcpy(m_breakOffsets, p, m_numBreaks*4); p += m_numBreaks*4;
 	
 	return p - buf;

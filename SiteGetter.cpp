@@ -86,10 +86,10 @@ SiteGetter::~SiteGetter ( ) {
 // . TODO: consider setting "state" to null if your url host has tons of inlinx
 bool SiteGetter::getSite ( char   *url      ,
 			   TagRec *gr       ,
-			   long    timestamp,
+			   int32_t    timestamp,
 			   //char   *coll     ,
 			   collnum_t collnum,
-			   long    niceness ,
+			   int32_t    niceness ,
 			   //bool    addTags  ,
 			   void   *state    ,
 			   void (* callback)(void *state) ) {
@@ -143,8 +143,8 @@ bool SiteGetter::getSite ( char   *url      ,
 	// check the current tag for an age
 	Tag *tag = gr->getTag("sitepathdepth");
 	// if there and the age is young, skip it
-	long age = -1;
-	//long now = getTimeGlobal();
+	int32_t age = -1;
+	//int32_t now = getTimeGlobal();
 	//if ( tag ) age = now - tag->m_timestamp;
 	// to parse conssitently for the qa test "qatest123" coll use 
 	// "timestamp" as the "current time"
@@ -259,11 +259,11 @@ top:
 	// hash the prefix first to match XmlDoc::hashNoSplit()
 	char *prefix = "siteterm";
 	// hash that and we will incorporate it to match XmlDoc::hashNoSplit()
-	long long ph = hash64 ( prefix , gbstrlen(prefix) );
+	int64_t ph = hash64 ( prefix , gbstrlen(prefix) );
 	// . this should match basically what is in XmlDoc.cpp::hash()
 	// . and this now does not include pages that have no outlinks 
 	//   "underneath" them.
-	long long termId = hash64 ( host , pend - host , ph ) & TERMID_MASK;
+	int64_t termId = hash64 ( host , pend - host , ph ) & TERMID_MASK;
 
 	// get all pages that have this as their termid!
 	key144_t start ;
@@ -276,19 +276,19 @@ top:
 	//   because it is too bushy to be anything else
 	// . i'd say 100 nodes is good enough to qualify as a homestead site
 
-	long minRecSizes = 5000000;
+	int32_t minRecSizes = 5000000;
 	// get the group this list is in
-	//unsigned long gid ;
+	//uint32_t gid ;
 	//gid = getGroupId ( RDB_POSDB , (char *)&start , false ); //split?
-	//unsigned long shardNum ;
+	//uint32_t shardNum ;
 	//shardNum = getShardNum( RDB_POSDB , (char *)&start , false ); //split?
 
 	// i guess this is split by termid and not docid????
-	long shardNum = g_hostdb.getShardNumByTermId ( &start );
+	int32_t shardNum = g_hostdb.getShardNumByTermId ( &start );
 
 	// we need a group #. the column #.
-	//long split = g_hostdb.getGroupNum ( gid );
-	// shortcut
+	//int32_t split = g_hostdb.getGroupNum ( gid );
+	// int16_tcut
 	Msg0 *m = &m_msg0;
 	// get the list. returns false if blocked.
 	if ( ! m->getList ( -1                 , // hostId
@@ -366,7 +366,7 @@ bool SiteGetter::gotSiteList ( ) {
 		return true;
 	}
 	// how many urls at this path depth?
-	long count = ( m_list.getListSize() - 6 ) / 6;
+	int32_t count = ( m_list.getListSize() - 6 ) / 6;
 	// if we do not have enough to quality this as a subsite path depth
 	// try the next
 	if ( count < 100 ) { 
@@ -447,7 +447,7 @@ bool SiteGetter::setSite ( ) {
 
 	// . get the host of our normalized url
 	// . assume the hostname is the site
-	long hostLen;
+	int32_t hostLen;
 	char *host = ::getHost ( m_url , &hostLen );
 
 	// no, assume domain since Tagdb.cpp adds the domain as the value
@@ -523,7 +523,7 @@ bool SiteGetter::setSite ( ) {
 	//   make it a string so tagdb likes it
 	// . this could be -1 which indicates to use hostname!
 	char buf[12];
-	sprintf ( buf , "%li",m_sitePathDepth);
+	sprintf ( buf , "%"INT32"",m_sitePathDepth);
 
 	// sanity check
 	if ( m_timestamp == 0 ) { char *xx=NULL;*xx=0; }
@@ -542,7 +542,7 @@ bool SiteGetter::setSite ( ) {
 			    gbstrlen(buf)+1   );// dateSize (includes \0)
 
 	// we apply the sitepathdepth tag to tag for this subdomain
-	long hlen; char *host = getHostFast ( m_url , &hlen );
+	int32_t hlen; char *host = getHostFast ( m_url , &hlen );
 
 	// null term temporarily
 	char c = host[hlen];
@@ -595,7 +595,7 @@ bool SiteGetter::setRecognizedSite ( ) {
 	char *path = p;
 
 	// convenience vars
-	long  len = 0;
+	int32_t  len = 0;
 
 	// . deal with site indicators
 	// . these are applied to all domains uniformly
@@ -672,7 +672,7 @@ bool SiteGetter::setRecognizedSite ( ) {
 	//
 	// popular homesteads
 	//
-	long depth = 0;
+	int32_t depth = 0;
 	// term host
 	char c = *path;
 	*path = '\0';

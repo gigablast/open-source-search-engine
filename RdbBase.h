@@ -39,7 +39,7 @@
 #include "RdbMem.h"
 
 // how many rdbs are in "urgent merge" mode?
-extern long g_numUrgentMerges;
+extern int32_t g_numUrgentMerges;
 
 extern RdbMerge g_merge;
 extern RdbMerge g_merge2;
@@ -58,25 +58,25 @@ class RdbBase {
 	//   the RdbTree (our unbalanced btree) to disk
 	// . you can fix the dataSize of all records in this rdb by setting
 	//   "fixedDataSize"
-	// . if "maskKeyLowLong" we mask the lower long of the key and then
+	// . if "maskKeyLowLong" we mask the lower int32_t of the key and then
 	//   compare that to the groupId to see if the record belongs
 	// . this is currently just used by Spiderdb
-	// . otherwise, we mask the high long in the key
+	// . otherwise, we mask the high int32_t in the key
 	bool init ( char  *dir             , // working directory
 		    char  *dbname          , // "indexdb","tagdb",...
 		    bool   dedup           , //= true ,
-		    long   fixedDataSize   , //= -1   ,
-		    //unsigned long   groupMask       , //=  0   ,
-		    //unsigned long   groupId         , //=  0   ,
-		    long   minToMerge      , //, //=  2   ,
-		    //long   maxTreeMem      , //=  1024*1024*32 ,
-		    //long   maxTreeNodes    ,
+		    int32_t   fixedDataSize   , //= -1   ,
+		    //uint32_t   groupMask       , //=  0   ,
+		    //uint32_t   groupId         , //=  0   ,
+		    int32_t   minToMerge      , //, //=  2   ,
+		    //int32_t   maxTreeMem      , //=  1024*1024*32 ,
+		    //int32_t   maxTreeNodes    ,
 		    //bool   isTreeBalanced  ,
-		    //long   maxCacheMem     , //=  1024*1024*5 );
-		    //long   maxCacheNodes   ,
+		    //int32_t   maxCacheMem     , //=  1024*1024*5 );
+		    //int32_t   maxCacheNodes   ,
 		    bool   useHalfKeys     ,
 		    char   keySize         ,
-		    long   pageSize        ,
+		    int32_t   pageSize        ,
 		    char                *coll    ,
 		    collnum_t            collnum ,
 		    RdbTree             *tree    ,
@@ -111,7 +111,7 @@ class RdbBase {
 	// . caller should retry later on g_errno of ENOMEM or ETRYAGAIN
 	// . returns the node # in the tree it added the record to
 	// . key low bit must be set (otherwise it indicates a delete)
-	//bool addRecord ( key_t &key, char *data, long dataSize );
+	//bool addRecord ( key_t &key, char *data, int32_t dataSize );
 
 	// returns false if no room in tree or m_mem for a list to add
 	//bool hasRoom ( RdbList *list );
@@ -125,7 +125,7 @@ class RdbBase {
 
 	// . add a record without any data, just a key (faster)
 	// . returns the node # in the tree it added the record to
-	//long addKey ( key_t &key );
+	//int32_t addKey ( key_t &key );
 
 	// . uses the bogus data pointed to by "m_dummy" for record's data
 	// . we clear the key low bit to signal a delete
@@ -135,20 +135,20 @@ class RdbBase {
 	// TODO: this needs to support
 	// . we split our data over rdbs across the network based on masks
 	// . we now just use g_conf.m_groupMask, g_hostdb.m_groupId, ...
-	//long getGroupId ( key_t &key ) { return (key.n1 & m_groupMask); };
-	//unsigned long getGroupMask ( ) { return m_groupMask; };
-	//unsigned long getGroupId   ( ) { return m_groupId  ; };
+	//int32_t getGroupId ( key_t &key ) { return (key.n1 & m_groupMask); };
+	//uint32_t getGroupMask ( ) { return m_groupMask; };
+	//uint32_t getGroupId   ( ) { return m_groupId  ; };
 
 	// . when a slot's key is ANDed with "groupMask" the result must equal
 	//   "groupId" in order to be in this database
 	// . used to split data across multiple rdbs
-	//void setMask ( unsigned long groupMask , unsigned long groupId );
+	//void setMask ( uint32_t groupMask , uint32_t groupId );
 
 	// get the directory name where this rdb stores it's files
 	char *getDir ( ) { return m_dir.getDirname(); };
 	char *getStripeDir ( ) { return g_conf.m_stripeDir; };
 
-	long getFixedDataSize ( ) { return m_fixedDataSize; };
+	int32_t getFixedDataSize ( ) { return m_fixedDataSize; };
 
 	bool useHalfKeys ( ) { return m_useHalfKeys; };
 
@@ -158,83 +158,83 @@ class RdbBase {
 	RdbMap   **getMaps  ( ) { return m_maps; };
 	BigFile  **getFiles ( ) { return m_files; };
 
-	BigFile   *getFile   ( long n ) { return m_files   [n]; };
-	long       getFileId ( long n ) { return m_fileIds [n]; };
-	long       getFileId2( long n ) { return m_fileIds2[n]; };
-	RdbMap    *getMap    ( long n ) { return m_maps    [n]; };
+	BigFile   *getFile   ( int32_t n ) { return m_files   [n]; };
+	int32_t       getFileId ( int32_t n ) { return m_fileIds [n]; };
+	int32_t       getFileId2( int32_t n ) { return m_fileIds2[n]; };
+	RdbMap    *getMap    ( int32_t n ) { return m_maps    [n]; };
 
-	long getFileNumFromId  ( long id  ) ; // for converting old titledbs
-	long getFileNumFromId2 ( long id2 ) ; // map tfn to real file num (rfn)
+	int32_t getFileNumFromId  ( int32_t id  ) ; // for converting old titledbs
+	int32_t getFileNumFromId2 ( int32_t id2 ) ; // map tfn to real file num (rfn)
 
 	//RdbMem    *getRdbMem () { return &m_mem; };
 
-	float getPercentNegativeRecsOnDisk ( long long *totalArg ) ;
+	float getPercentNegativeRecsOnDisk ( int64_t *totalArg ) ;
 
 	// how much mem is alloced for our maps?
-	long long getMapMemAlloced ();
+	int64_t getMapMemAlloced ();
 
-	long       getNumFiles ( ) { return m_numFiles; };
+	int32_t       getNumFiles ( ) { return m_numFiles; };
 
 	// sum of all parts of all big files
-	long      getNumSmallFiles ( ) ;
-	long long getDiskSpaceUsed ( );
+	int32_t      getNumSmallFiles ( ) ;
+	int64_t getDiskSpaceUsed ( );
 
 	// returns -1 if variable (variable dataSize)
-	long getRecSize ( ) {
+	int32_t getRecSize ( ) {
 		if ( m_fixedDataSize == -1 ) return -1;
 		//return sizeof(key_t) + m_fixedDataSize; };
 		return m_ks + m_fixedDataSize; };
 
 	// use the maps and tree to estimate the size of this list
-	//long getListSize ( key_t startKey ,key_t endKey , key_t *maxKey ,
-	long long getListSize ( char *startKey ,char *endKey , char *maxKey ,
-			        long long oldTruncationLimit ) ;
+	//int32_t getListSize ( key_t startKey ,key_t endKey , key_t *maxKey ,
+	int64_t getListSize ( char *startKey ,char *endKey , char *maxKey ,
+			        int64_t oldTruncationLimit ) ;
 
 	// positive minus negative
-	long long getNumTotalRecs ( ) ;
+	int64_t getNumTotalRecs ( ) ;
 
-	long long getNumRecsOnDisk ( );
+	int64_t getNumRecsOnDisk ( );
 
-	long long getNumGlobalRecs ( );
+	int64_t getNumGlobalRecs ( );
 
 	/*
 	// used for keeping track of stats
 	void      didSeek       (            ) { m_numSeeks++; };
-	void      didRead       ( long bytes ) { m_numRead += bytes; };
-	long long getNumSeeks   (            ) { return m_numSeeks; };
-	long long getNumRead    (            ) { return m_numRead ; };
+	void      didRead       ( int32_t bytes ) { m_numRead += bytes; };
+	int64_t getNumSeeks   (            ) { return m_numSeeks; };
+	int64_t getNumRead    (            ) { return m_numRead ; };
 
 	// net stats for "get" requests
-	void      readRequestGet ( long bytes ) { 
+	void      readRequestGet ( int32_t bytes ) { 
 		m_numReqsGet++    ; m_numNetReadGet += bytes; };
-	void      sentReplyGet     ( long bytes ) {
+	void      sentReplyGet     ( int32_t bytes ) {
 		m_numRepliesGet++ ; m_numNetSentGet += bytes; };
-	long long getNumRequestsGet ( ) { return m_numReqsGet;    };
-	long long getNetReadGet     ( ) { return m_numNetReadGet; };
-	long long getNumRepliesGet  ( ) { return m_numRepliesGet; };
-	long long getNetSentGet     ( ) { return m_numNetSentGet; };
+	int64_t getNumRequestsGet ( ) { return m_numReqsGet;    };
+	int64_t getNetReadGet     ( ) { return m_numNetReadGet; };
+	int64_t getNumRepliesGet  ( ) { return m_numRepliesGet; };
+	int64_t getNetSentGet     ( ) { return m_numNetSentGet; };
 
 	// net stats for "add" requests
-	void      readRequestAdd ( long bytes ) { 
+	void      readRequestAdd ( int32_t bytes ) { 
 		m_numReqsAdd++    ; m_numNetReadAdd += bytes; };
-	void      sentReplyAdd     ( long bytes ) {
+	void      sentReplyAdd     ( int32_t bytes ) {
 		m_numRepliesAdd++ ; m_numNetSentAdd += bytes; };
-	long long getNumRequestsAdd ( ) { return m_numReqsAdd;    };
-	long long getNetReadAdd     ( ) { return m_numNetReadAdd; };
-	long long getNumRepliesAdd  ( ) { return m_numRepliesAdd; };
-	long long getNetSentAdd     ( ) { return m_numNetSentAdd; };
+	int64_t getNumRequestsAdd ( ) { return m_numReqsAdd;    };
+	int64_t getNetReadAdd     ( ) { return m_numNetReadAdd; };
+	int64_t getNumRepliesAdd  ( ) { return m_numRepliesAdd; };
+	int64_t getNetSentAdd     ( ) { return m_numNetSentAdd; };
 
 	// used by main.cpp to periodically save us if we haven't dumped
 	// in a while
-	long long getLastWriteTime   ( ) { return m_lastWrite; };
+	int64_t getLastWriteTime   ( ) { return m_lastWrite; };
 	*/
 	
 	// private:
 
-	void attemptMerge ( long niceness , bool forceMergeAll , 
+	void attemptMerge ( int32_t niceness , bool forceMergeAll , 
 			    bool doLog = true ,
 			    // -1 means to not override it
-			    long minToMergeOverride = -1 );
+			    int32_t minToMergeOverride = -1 );
 
 	bool gotTokenForDump  ( ) ;
 	void gotTokenForMerge ( ) ;
@@ -251,7 +251,7 @@ class RdbBase {
 
 	// . write out tree to a file with keys in order
 	// . only shift.cpp/reindex.cpp programs set niceness to 0
-	//bool dumpTree ( long niceness ); //= MAX_NICENESS );
+	//bool dumpTree ( int32_t niceness ); //= MAX_NICENESS );
 
 	// . set the m_files, m_fileMaps, m_fileIds arrays and m_numFiles
 	bool setFiles ( ) ;
@@ -269,10 +269,10 @@ class RdbBase {
 	// . add a (new) file to the m_files/m_maps/m_fileIds arrays
 	// . both return array position we added it to
 	// . both return -1 and set errno on error
-	long addFile     ( long fileId, bool isNew, long mergeNum, long id2 ,
+	int32_t addFile     ( int32_t fileId, bool isNew, int32_t mergeNum, int32_t id2 ,
 			   bool converting = false ) ;
-	long addNewFile  ( long id2 ) ;
-	//long getAvailId2 ( ); // used only by titledb
+	int32_t addNewFile  ( int32_t id2 ) ;
+	//int32_t getAvailId2 ( ); // used only by titledb
 
 	// used by the high priority udp server to suspend merging for ALL
 	// rdb's since we share a common merge class, s_merge
@@ -290,23 +290,23 @@ class RdbBase {
 
 	// used for translating titledb file # 255 (as read from new tfndb)
 	// into the real file number
-	long getNewestFileNum ( ) { return m_numFiles - 1; };
+	int32_t getNewestFileNum ( ) { return m_numFiles - 1; };
 
 	// Msg22 needs the merge info so if the title file # of a read we are
 	// doing is being merged, we have to include the start merge file num
-	long      getMergeStartFileNum ( ) { return m_mergeStartFileNum; };
-	long      getMergeNumFiles     ( ) { return m_numFilesToMerge; };
+	int32_t      getMergeStartFileNum ( ) { return m_mergeStartFileNum; };
+	int32_t      getMergeNumFiles     ( ) { return m_numFilesToMerge; };
 
 	// used by Sync.cpp to convert a file name to a file number in m_files
-	long getFileNumFromName ( char *filename );
+	int32_t getFileNumFromName ( char *filename );
 
 	// bury m_files[] in [a,b)
-	void buryFiles ( long a , long b );
+	void buryFiles ( int32_t a , int32_t b );
 
 	void doneWrapper2 ( ) ;
 	void doneWrapper4 ( ) ;
-	long m_x;
-	long m_a;
+	int32_t m_x;
+	int32_t m_a;
 
 	// PageRepair indirectly calls this to move the map and data of this
 	// rdb into the trash subdir after renaming them, because they will
@@ -324,8 +324,8 @@ class RdbBase {
 	// keep a copy of these here so merge can use them to kick out
 	// records whose key when, ANDed w/ m_groupMask, equals
 	// m_groupId
-	//unsigned long  m_groupMask;
-	//unsigned long  m_groupId;
+	//uint32_t  m_groupMask;
+	//uint32_t  m_groupId;
 
 	// . we try to minimize the number of files to minimize disk seeks
 	// . records that end up as not found will hit all these files
@@ -336,20 +336,20 @@ class RdbBase {
 	// . filenames should include the directory (full filenames)
 	// . TODO: RdbMgr should control what rdb gets merged?
 	BigFile  *m_files     [ MAX_RDB_FILES ];
-	long      m_fileIds   [ MAX_RDB_FILES ];
-	long      m_fileIds2  [ MAX_RDB_FILES ]; // for titledb/tfndb linking
+	int32_t      m_fileIds   [ MAX_RDB_FILES ];
+	int32_t      m_fileIds2  [ MAX_RDB_FILES ]; // for titledb/tfndb linking
 	RdbMap   *m_maps      [ MAX_RDB_FILES ];
-	long      m_numFiles;
+	int32_t      m_numFiles;
 
 	// this class contains a ptr to us
 	class Rdb           *m_rdb;
 
 	bool      m_dedup;
-	long      m_fixedDataSize;
+	int32_t      m_fixedDataSize;
 
 	Dir       m_dir;
 	char      m_dbname [32];
-	long      m_dbnameLen;
+	int32_t      m_dbnameLen;
 
 	char      *m_coll;
 	collnum_t  m_collnum;
@@ -379,33 +379,33 @@ class RdbBase {
 	//void     *m_closeState; 
 	//void    (* m_closeCallback) (void *state );
 
-	long      m_maxTreeMem ; // max mem tree can use, dump at 90% of this
+	int32_t      m_maxTreeMem ; // max mem tree can use, dump at 90% of this
 
-	long      m_minToMergeArg;
-	long      m_minToMerge;  // need at least this many files b4 merging
-	long      m_absMaxFiles;
-	long      m_numFilesToMerge   ;
-	long      m_mergeStartFileNum ;
+	int32_t      m_minToMergeArg;
+	int32_t      m_minToMerge;  // need at least this many files b4 merging
+	int32_t      m_absMaxFiles;
+	int32_t      m_numFilesToMerge   ;
+	int32_t      m_mergeStartFileNum ;
 
 	// a dummy data string for deleting records when m_fixedDataSize > 0
 	//char     *m_dummy;
-	//long      m_dummySize ; // size of that dummy data
-	//long      m_delRecSize; // size of the whole delete record
+	//int32_t      m_dummySize ; // size of that dummy data
+	//int32_t      m_delRecSize; // size of the whole delete record
 
 	/*
 	// for keeping stats
-	long long m_numSeeks;
-	long long m_numRead;
+	int64_t m_numSeeks;
+	int64_t m_numRead;
 	// network request/reply info for get requests
-	long long m_numReqsGet    ;
-	long long m_numNetReadGet ;
-	long long m_numRepliesGet ; 
-	long long m_numNetSentGet ;
+	int64_t m_numReqsGet    ;
+	int64_t m_numNetReadGet ;
+	int64_t m_numRepliesGet ; 
+	int64_t m_numNetSentGet ;
 	// network request/reply info for add requests
-	long long m_numReqsAdd    ;
-	long long m_numNetReadAdd ;
-	long long m_numRepliesAdd ; 
-	long long m_numNetSentAdd ;
+	int64_t m_numReqsAdd    ;
+	int64_t m_numNetReadAdd ;
+	int64_t m_numRepliesAdd ; 
+	int64_t m_numNetSentAdd ;
 	*/
 
 	// should our next merge in waiting force itself?
@@ -414,14 +414,14 @@ class RdbBase {
 	// do we need to dump to disk?
 	//bool      m_needsSave;
 
-	// . when we dump list to an rdb file, can we use short keys?
+	// . when we dump list to an rdb file, can we use int16_t keys?
 	// . currently exclusively used by indexdb
 	bool      m_useHalfKeys;
 
 	// key size
 	char      m_ks;
 	
-	long      m_pageSize;
+	int32_t      m_pageSize;
 
 	// are we waiting on another merge/dump to complete before our turn?
 	bool      m_inWaiting;
@@ -448,8 +448,8 @@ class RdbBase {
 	bool      m_hasMergeFile;
 
 	// rec counts for files being merged
-	long long m_numPos ;
-	long long m_numNeg ;
+	int64_t m_numPos ;
+	int64_t m_numNeg ;
 
 	// so only one save thread launches at a time
 	//bool m_isSaving;
@@ -458,7 +458,7 @@ class RdbBase {
 
 	bool m_isTitledb;
 
-	long m_numThreads;
+	int32_t m_numThreads;
 
 	bool m_isUnlinking;
 	
@@ -467,12 +467,12 @@ class RdbBase {
 
 	//BigFile m_dummyFile;
 
-	long long m_lastWrite;
+	int64_t m_lastWrite;
 
 	char m_doLog;
 };
 
-extern long g_numThreads;
+extern int32_t g_numThreads;
 
 extern char g_dumpMode;
 

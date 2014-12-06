@@ -48,21 +48,21 @@ class HttpRequest {
 	// . use size -1 for GET whole doc requests
 	// . fill in your own offset/size for partial GET requests
 	// . returns false and sets errno on error
-	bool set ( char *url , long offset = 0 , long size = -1 ,
+	bool set ( char *url , int32_t offset = 0 , int32_t size = -1 ,
 		   time_t ifModifiedSince = 0 , char *userAgent = NULL ,
 		   char *proto = "HTTP/1.0" ,
 		   bool doPost = false ,
 		   char *cookie = NULL ,
 		   char *additionalHeader = NULL , // does not incl \r\n
-		   long postContentLen = -1 , // for content-length of POST
-		   long proxyIp = 0 );
+		   int32_t postContentLen = -1 , // for content-length of POST
+		   int32_t proxyIp = 0 );
 
 	// use this
 	SafeBuf m_reqBuf;
 	bool    m_reqBufValid;
 
 	// get the request length
-	long getRequestLen() { return m_reqBuf.length(); };//m_bufLen; };
+	int32_t getRequestLen() { return m_reqBuf.length(); };//m_bufLen; };
 
 	// . get the outgoing request we made by calling set() above
 	// . OR get the first line of an incoming request
@@ -101,12 +101,12 @@ class HttpRequest {
 	// . parse an incoming request
 	// . returns false and set errno on error
 	// . may alloc mem for m_cgiBuf to hold cgi vars from GET or POST op
-	bool set ( char *req , long reqSize , TcpSocket *s );
+	bool set ( char *req , int32_t reqSize , TcpSocket *s );
 
 	// for gigablast's own rendering of squid
 	bool m_isSquidProxyRequest;
 	char *m_squidProxiedUrl;
-	long m_squidProxiedUrlLen;
+	int32_t m_squidProxiedUrlLen;
 
 	// is it this type of request?
 	bool isGETRequest  () { return (m_requestType == 0); };
@@ -114,14 +114,14 @@ class HttpRequest {
 	bool isPOSTRequest () { return (m_requestType == 2); };
 
 	char *getFilename    () { return m_filename; };
-	long  getFilenameLen () { return m_filenameLen; };
-	long  getFileOffset  () { return m_fileOffset; };
-	long  getFileSize    () { return m_fileSize; };
+	int32_t  getFilenameLen () { return m_filenameLen; };
+	int32_t  getFileOffset  () { return m_fileOffset; };
+	int32_t  getFileSize    () { return m_fileSize; };
 
 	char *getHost        () { return m_host;    };
-	long  getHostLen     () { return m_hostLen; };
+	int32_t  getHostLen     () { return m_hostLen; };
 	//bool  isLocal        () { return m_isLocal; };
-	//bool  isAdmin        () { return m_isRootAdmin; };
+	//bool  isAdmin        () { return m_isMasterAdmin; };
 	bool  isLocal        () { return m_isLocal; };
 
 	// is this the admin of a collection?
@@ -131,25 +131,25 @@ class HttpRequest {
 	//   because it's already decoded
 	// . this is so Mark doesn't have to url encode his injected content
 	char *getUnencodedContent    ( ) { return m_ucontent; };
-	long  getUnencodedContentLen ( ) { return m_ucontentLen; };
+	int32_t  getUnencodedContentLen ( ) { return m_ucontentLen; };
 	
 	// . for parsing the terms in a cgi url
 	// . the returned string is NOT NULL terminated
-	char      *getString   ( char *field, long *len = NULL,
-				 char *defaultString = NULL , long *next=NULL);
+	char      *getString   ( char *field, int32_t *len = NULL,
+				 char *defaultString = NULL , int32_t *next=NULL);
 	bool       getBool     ( char *field, bool defaultBool );
-	long       getLong     ( char *field, long defaultLong           );
-	long long  getLongLong ( char *field, long long defaultLongLong    );
+	int32_t       getLong     ( char *field, int32_t defaultLong           );
+	int64_t  getLongLong ( char *field, int64_t defaultLongLong    );
 	float      getFloat    ( char *field, double defaultFloat );
 	double     getDouble   ( char *field, double defaultDouble );
 
 	float      getFloatFromCookie    ( char *field, float def );
-	long       getLongFromCookie    ( char *field, long def );
-	long long  getLongLongFromCookie( char *field, long long def );
+	int32_t       getLongFromCookie    ( char *field, int32_t def );
+	int64_t  getLongLongFromCookie( char *field, int64_t def );
 	bool       getBoolFromCookie    ( char *field, bool def );
-	char      *getStringFromCookie  ( char *field, long *len = NULL,
+	char      *getStringFromCookie  ( char *field, int32_t *len = NULL,
 					  char *defaultString = NULL , 
-					  long *next=NULL);
+					  int32_t *next=NULL);
 	
 
 	bool hasField ( char *field );
@@ -158,7 +158,7 @@ class HttpRequest {
 
 	// are we a redir? if so return non-NULL
 	char      *getRedir    ( ) { return m_redir;    };
-	long       getRedirLen ( ) { return m_redirLen; };
+	int32_t       getRedirLen ( ) { return m_redirLen; };
 
 	HttpRequest();
 	HttpRequest( const HttpRequest &a );
@@ -166,7 +166,7 @@ class HttpRequest {
 	void reset();
 
 	char *getPath    ( ) { return m_path; };
-	long  getPathLen ( ) { return m_plen; };
+	int32_t  getPathLen ( ) { return m_plen; };
 
 	bool isMSIE ( ) { return m_isMSIE; };
 
@@ -174,57 +174,57 @@ class HttpRequest {
 
 	// . get value of cgi "field" term in the requested filename
 	// . you know GET /myfile.html?q=123&name=nathaniel
-	char *getValue ( char *field , long *len=NULL, long *next=NULL) ;
+	char *getValue ( char *field , int32_t *len=NULL, int32_t *next=NULL) ;
 
 	// get value of the ith field
-	char *getValue ( long i, long *len = NULL);
+	char *getValue ( int32_t i, int32_t *len = NULL);
 
 	// get the ith cgi parameter name, return NULL if none
-	long  getNumFields   ( ) { return m_numFields; };
-	char *getField    ( long i ) {
+	int32_t  getNumFields   ( ) { return m_numFields; };
+	char *getField    ( int32_t i ) {
 		if ( i >= m_numFields ) return NULL; return m_fields[i]; };
-	long  getFieldLen ( long i ) {
+	int32_t  getFieldLen ( int32_t i ) {
 		if ( i >= m_numFields ) return 0   ; return m_fieldLens[i]; };
 
 	// . s is a cgi string
 	// . either the stuff after the '?' in a url
 	// . or the content in a POST operation
 	// . returns false and sets errno on error
-	bool addCgi ( char *s , long slen );
+	bool addCgi ( char *s , int32_t slen );
 
 	// . parse cgi field terms into m_fields,m_fieldLens,m_fieldValues
 	// . "s" should point to cgi string right after the '?' if it exists
 	// . s should have had all it's &'s replaced with /0's
 	// . slen should include the last \0
-	void parseFields ( char *s , long slen ) ;
-	void parseFieldsMultipart ( char *s , long slen ) ;
-	void addExtraParms(char *s, long slen);
+	void parseFields ( char *s , int32_t slen ) ;
+	void parseFieldsMultipart ( char *s , int32_t slen ) ;
+	void addExtraParms(char *s, int32_t slen);
 	// . decodes "s/slen" and stores into "dest"
 	// . returns the number of bytes stored into "dest"
 	// . converts %3A, %2F, etc to their appropriate chars
-	long decode ( char *dest , char *s , long slen );
+	int32_t decode ( char *dest , char *s , int32_t slen );
 
 	// 0 for GET, 1 for HEAD
 	char  m_requestType;
 
 	// we decode the filename into this buffer (no cgi)
 	char  m_filename[MAX_HTTP_FILENAME_LEN];
-	long  m_filenameLen;  // excludes ?cgistuff
+	int32_t  m_filenameLen;  // excludes ?cgistuff
 
 	// the TcpSocket::m_readBuf basically
 	//char *m_origReq;
-	//long  m_origReqLen;
+	//int32_t  m_origReqLen;
 
 	// if request is like "GET /poo?foo=bar"
 	// then origUrlRequest is "/poo?foo=bar"
 	// references into TcpSocket::m_readBuf
 	char *m_origUrlRequest;
-	long  m_origUrlRequestLen;
+	int32_t  m_origUrlRequestLen;
 
 
 	// virtual host in the Host: field of the mime
 	char  m_host[256];
-	long  m_hostLen;
+	int32_t  m_hostLen;
 
 	// are we coming from a local machine? 
 	bool  m_isLocal;
@@ -233,68 +233,68 @@ class HttpRequest {
 	bool m_isMSIE;
 
 	// does the connecting machine have admin privledges?
-	//bool  m_isRootAdmin;
+	//bool  m_isMasterAdmin;
 
 	// . decoded cgi data stored here 
 	// . this just points into TcpSocket::m_readBuf
 	// . now it points into m_reqBuf.m_buf[]
 	char *m_cgiBuf       ;
-	long  m_cgiBufLen    ;
-	long  m_cgiBufMaxLen ;
+	int32_t  m_cgiBufLen    ;
+	int32_t  m_cgiBufMaxLen ;
 
 	// partial GET file read info
-	long  m_fileOffset;
-	long  m_fileSize;
+	int32_t  m_fileOffset;
+	int32_t  m_fileSize;
 
 	// we use this buf to make requests from a url and to hold incoming
 	// requests
 	//char  m_buf[MAX_REQ_LEN];
-	//long  m_bufLen;
+	//int32_t  m_bufLen;
 
 	// . cgi field term info stored in here
 	// . set by parseFields()
 	char *m_fields      [ MAX_CGI_PARMS ];
-	long  m_fieldLens   [ MAX_CGI_PARMS ];
+	int32_t  m_fieldLens   [ MAX_CGI_PARMS ];
 	char *m_fieldValues [ MAX_CGI_PARMS ];
-	long  m_numFields;
-	//long  getNumCgiParms ( ) { return m_numFields; };
-	//char *getCgiParm     ( long i , long *len ) { 
+	int32_t  m_numFields;
+	//int32_t  getNumCgiParms ( ) { return m_numFields; };
+	//char *getCgiParm     ( int32_t i , int32_t *len ) { 
 	//	*len = m_fieldLens[i]; return m_fields[i]; };
-	//char *getCgiValue    ( long i ) { return m_fieldValues[i]; };
+	//char *getCgiValue    ( int32_t i ) { return m_fieldValues[i]; };
 
-	long m_userIP;
+	int32_t m_userIP;
 	bool m_isSSL;
 
 	// . ptr to the thing we're getting in the request
 	// . used by PageAddUrl4.cpp
 	char *m_path;
-	long  m_plen;
+	int32_t  m_plen;
 
 	char  m_redir[128];
-	long  m_redirLen;
+	int32_t  m_redirLen;
 
 	// referer, NULL terminated, from Referer: field in MIME
 	char  m_ref [ 256 ];
-	long  m_refLen;
+	int32_t  m_refLen;
 
 	// NULL terminated User-Agent: field in MIME
 	char  m_userAgent[128];
 
 	// this points into m_cgiBuf
 	char *m_ucontent;
-	long  m_ucontentLen;
+	int32_t  m_ucontentLen;
 
 	// buffer for the cookie
 	//char  m_cookieBuf[1024];
-	//long  m_cookieBufLen;
+	//int32_t  m_cookieBufLen;
 	char *m_cookiePtr;
-	long  m_cookieLen;
+	int32_t  m_cookieLen;
 
 	char *m_metaCookie;
 
 	// buffer for adding extra parms
 	char *m_cgiBuf2;
-	long  m_cgiBuf2Size;
+	int32_t  m_cgiBuf2Size;
 };
 
 const int HTTP_REQUEST_DEFAULT_REQUEST_VERSION = 2;

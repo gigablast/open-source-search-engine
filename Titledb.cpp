@@ -14,18 +14,18 @@ void Titledb::reset() { m_rdb.reset(); }
 bool Titledb::init ( ) {
 
 	// key sanity tests
-	long long uh48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
-	long long docId = 123456789;
+	int64_t uh48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
+	int64_t docId = 123456789;
 	key_t k = makeKey(docId,uh48,false);
 	if ( getDocId(&k) != docId ) { char *xx=NULL;*xx=0;}
 	if ( getUrlHash48(&k) != uh48 ) { char *xx=NULL;*xx=0;}
 
-	char *url = "http://.ezinemark.com/long-island-child-custody-attorneys-new-york-visitation-lawyers-melville-legal-custody-law-firm-45f00bbed18.html";
+	char *url = "http://.ezinemark.com/int32_t-island-child-custody-attorneys-new-york-visitation-lawyers-melville-legal-custody-law-firm-45f00bbed18.html";
 	Url uu;
 	uu.set(url);
 	char *d1 = uu.getDomain();
-	long  dlen1 = uu.getDomainLen();
-	long dlen2 = 0;
+	int32_t  dlen1 = uu.getDomainLen();
+	int32_t dlen2 = 0;
 	char *d2 = getDomFast ( url , &dlen2 );
 	if ( dlen1 != dlen2 ) { char *xx=NULL;*xx=0; }
 	// another one
@@ -38,25 +38,25 @@ bool Titledb::init ( ) {
 	if ( dlen1 != dlen2 ) { char *xx=NULL;*xx=0; }
 
 
-	long long maxMem = 200000000; // 200MB
+	int64_t maxMem = 200000000; // 200MB
 
 	// . what's max # of tree nodes?
 	// . assume avg TitleRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	long maxTreeNodes  = maxMem  / (1*1024);
+	int32_t maxTreeNodes  = maxMem  / (1*1024);
 
 	// . we now use a disk page cache for titledb as opposed to the
 	//   old rec cache. i am trying to do away with the Rdb::m_cache rec
 	//   cache in favor of cleverly used disk page caches, because
 	//   the rec caches are not real-time and get stale.
 	// . just hard-code 30MB for now
-	long pcmem    = 30000000; // = g_conf.m_titledbMaxDiskPageCacheMem;
+	int32_t pcmem    = 30000000; // = g_conf.m_titledbMaxDiskPageCacheMem;
 	// fuck that we need all the mem!
 	//pcmem = 0;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-	long pageSize = GB_INDEXDB_PAGE_SIZE;
+	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
 	if ( ! m_pc.init ( "titledb",
@@ -66,7 +66,7 @@ bool Titledb::init ( ) {
 		return log("db: Titledb init failed.");
 
 	// each entry in the cache is usually just a single record, no lists
-	//long maxCacheNodes = g_conf.m_titledbMaxCacheMem / (10*1024);
+	//int32_t maxCacheNodes = g_conf.m_titledbMaxCacheMem / (10*1024);
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
 			    "titledb"                   ,
@@ -98,11 +98,11 @@ bool Titledb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Titledb::init2 ( long treeMem ) {
+bool Titledb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . assume avg TitleRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	long maxTreeNodes  = treeMem / (1*1024);
+	int32_t maxTreeNodes  = treeMem / (1*1024);
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
 			    "titledbRebuild"            ,
@@ -148,7 +148,7 @@ bool Titledb::verify ( char *coll ) {
 	key_t endKey;
 	startKey.setMin();
 	endKey.setMax();
-	//long minRecSizes = 64000;
+	//int32_t minRecSizes = 64000;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 
 	if ( ! msg5.getList ( RDB_TITLEDB   ,
@@ -177,15 +177,15 @@ bool Titledb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		// skip negative keys
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
-		//unsigned long groupId = getGroupId ( RDB_TITLEDB , &k );
+		//uint32_t groupId = getGroupId ( RDB_TITLEDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;
 		uint32_t shardNum = getShardNum ( RDB_TITLEDB, &k );
 		if ( shardNum == getMyShardNum() ) got++;
@@ -193,8 +193,8 @@ bool Titledb::verify ( char *coll ) {
 	if ( got != count ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
-		log ("db: Out of first %li records in titledb, "
-		     "only %li belong to our shard. c=%s",count,got,coll);
+		log ("db: Out of first %"INT32" records in titledb, "
+		     "only %"INT32" belong to our shard. c=%s",count,got,coll);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
@@ -206,10 +206,10 @@ bool Titledb::verify ( char *coll ) {
 		for ( list.resetListPtr() ; ! list.isExhausted() ;
 		      list.skipCurrentRecord() ) {
 			key_t k = list.getCurrentKey();
-			//unsigned long groupId = getGroupId ( RDB_TITLEDB,&k);
-			//long groupNum = g_hostdb.getGroupNum(groupId);
-			long shardNum = getShardNum ( RDB_TITLEDB, &k );
-			log("db: docid=%lli shard=%li",
+			//uint32_t groupId = getGroupId ( RDB_TITLEDB,&k);
+			//int32_t groupNum = g_hostdb.getGroupNum(groupId);
+			int32_t shardNum = getShardNum ( RDB_TITLEDB, &k );
+			log("db: docid=%"INT64" shard=%"INT32"",
 			    getDocId(&k),shardNum);
 		}
 		g_threads.enableThreads();
@@ -223,7 +223,7 @@ bool Titledb::verify ( char *coll ) {
 		return true;
 	}
 
-	log ( LOG_DEBUG, "db: Titledb passed verification successfully for %li"
+	log ( LOG_DEBUG, "db: Titledb passed verification successfully for %"INT32""
 			" recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -235,9 +235,9 @@ bool Titledb::verify ( char *coll ) {
 // . we put a domain hash in the docId to ease site clustering
 // . returns false and sets errno on error
 /*
-unsigned long long Titledb::getProbableDocId ( char *url ) {
+uint64_t Titledb::getProbableDocId ( char *url ) {
 	// just hash the whole collection/url
-	long long docId ;
+	int64_t docId ;
 	docId = 0; // hash64  ( coll , collLen );
 	docId = hash64b ( url , docId );
 	// top 8 bits of docId is always hash of the ip
@@ -251,7 +251,7 @@ unsigned long long Titledb::getProbableDocId ( char *url ) {
 	//   lower 8 bits making the docid seems like from a different site
 	// . 00000000 00000000 00000000 00dddddd
 	// . dddddddd dddddddd hhhhhhhh dddddddd
-	//long long h2 = (h << 8);
+	//int64_t h2 = (h << 8);
 	// . clear all but lower 38 bits, then clear 8 bits for h2
 	docId &= DOCID_MASK; 
 	//docId |= h2;
@@ -261,7 +261,7 @@ unsigned long long Titledb::getProbableDocId ( char *url ) {
 }
 */
 
-bool Titledb::isLocal ( long long docId ) {
+bool Titledb::isLocal ( int64_t docId ) {
 	// shift it up (64 minus 38) bits so we can mask it
 	//key_t key = makeTitleRecKey ( docId , false /*isDelKey?*/ );
 	// mask upper bits of the top 4 bytes
@@ -272,12 +272,12 @@ bool Titledb::isLocal ( long long docId ) {
 // . make the key of a TitleRec from a docId
 // . remember to set the low bit so it's not a delete
 // . hi bits are set in the key
-key_t Titledb::makeKey ( long long docId, long long uh48, bool isDel ){
+key_t Titledb::makeKey ( int64_t docId, int64_t uh48, bool isDel ){
 	key_t key ;
 	// top bits are the docid so generic getGroupId() works!
-	key.n1 = (unsigned long)(docId >> 6); // (NUMDOCIDBITS-32));
+	key.n1 = (uint32_t)(docId >> 6); // (NUMDOCIDBITS-32));
 
-	long long n0 = (unsigned long long)(docId&0x3f);
+	int64_t n0 = (uint64_t)(docId&0x3f);
 	// sanity check
 	if ( uh48 & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
 	// make room for uh48

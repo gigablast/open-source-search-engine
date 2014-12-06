@@ -29,15 +29,15 @@
 class Gigabit {
 public:
 	char *m_term;
-	long  m_termLen;
-	long long m_termId64;
+	int32_t  m_termLen;
+	int64_t m_termId64;
 	float m_gbscore;
-	long m_minPop;
-	long m_numWords;
-	long  m_numPages;
-	long long m_lastDocId;
+	int32_t m_minPop;
+	int32_t m_numWords;
+	int32_t  m_numPages;
+	int64_t m_lastDocId;
 	// the wordids of the words in the gigabit (m_numWords of them)
-	long long m_wordIds[MAX_GIGABIT_WORDS];
+	int64_t m_wordIds[MAX_GIGABIT_WORDS];
 };
 
 
@@ -51,19 +51,19 @@ public:
 class Fact {
 public:
 	// offset of the gigabit in m_gigabitBuf we belong to
-	long  m_gigabitOffset;
+	int32_t  m_gigabitOffset;
 	// . the sentence contaning the gigabit and a lot of the query terms
 	// . ptr refrences into Msg20Reply::ptr_gigabitSample buffers
 	char *m_fact;
-	long  m_factLen;
+	int32_t  m_factLen;
 	float m_gigabitModScore;
 	float m_queryScore;
 	float m_maxGigabitModScore; // gigabitscore * #pagesItIsOn
-	long  m_numGigabits;
+	int32_t  m_numGigabits;
 	char m_printed;
 	class Gigabit *m_gigabitPtrs[MAX_GIGABIT_PTRS];
-	long  m_numQTerms;
-	long long m_docId; // from where it came
+	int32_t  m_numQTerms;
+	int64_t m_docId; // from where it came
 	Msg20Reply *m_reply; // reply from where it came
 	// for deduping sentences
 	char  m_dedupVector[SAMPLE_VECTOR_SIZE]; // 128
@@ -72,15 +72,15 @@ public:
 
 class GigabitInfo {
  public:
-        long       m_pts;
+        int32_t       m_pts;
         uint32_t   m_hash;
-        long       m_pop;
-        long       m_count;
-        long       m_numDocs;
-        long long  m_lastDocId;
-        long       m_currentDocCount;
+        int32_t       m_pop;
+        int32_t       m_count;
+        int32_t       m_numDocs;
+        int64_t  m_lastDocId;
+        int32_t       m_currentDocCount;
         char      *m_ptr;
-        long       m_len;
+        int32_t       m_len;
 };
 
 
@@ -136,94 +136,94 @@ class Msg40 {
 	bool gotDocIds        ( ) ;
 	bool launchMsg20s     ( bool recalled ) ;
 	class Msg20 *getAvailMsg20();
-	class Msg20 *getCompletedSummary ( long ix );
+	class Msg20 *getCompletedSummary ( int32_t ix );
 	bool getSummaries     ( ) ;
 	bool gotSummary       ( ) ;
 	bool reallocMsg20Buf ( ) ;
 	//bool printLocalTime ( class SafeBuf *sb );
-	void uncluster ( long m ) ;
+	void uncluster ( int32_t m ) ;
 	// serialization routines used for caching Msg40s by Msg17
-	long  getStoredSize ( ) ;
-	long  serialize     ( char *buf , long bufLen ) ;
-	long  deserialize   ( char *buf , long bufLen ) ;
+	int32_t  getStoredSize ( ) ;
+	int32_t  serialize     ( char *buf , int32_t bufLen ) ;
+	int32_t  deserialize   ( char *buf , int32_t bufLen ) ;
 
 
 	// see Msg51.h for CR_* values of crId
-	long getFilterStats ( long crId ) { return m_filterStats[crId]; };
-	long getNumCensored         ( ) { return m_filterStats[CR_DIRTY]; };
+	int32_t getFilterStats ( int32_t crId ) { return m_filterStats[crId]; };
+	int32_t getNumCensored         ( ) { return m_filterStats[CR_DIRTY]; };
 
-	long getNumTopicGroups      ( ) { return m_si->m_numTopicGroups; };
+	int32_t getNumTopicGroups      ( ) { return m_si->m_numTopicGroups; };
 
 	// . estimated # of total hits
 	// . this is now an EXACT count... since we read all posdb termlists
-	long long getNumTotalHits (){return m_msg3a.m_numTotalEstimatedHits; }
+	int64_t getNumTotalHits (){return m_msg3a.m_numTotalEstimatedHits; }
 
 	// . we copy query and coll to our own local buffer
 	// . these routines give us back our inputted parameters we saved
 	char *getQuery              ( ) { return m_si->m_q.getQuery(); };
-	long  getQueryLen           ( ) { return m_si->m_q.getQueryLen(); };
+	int32_t  getQueryLen           ( ) { return m_si->m_q.getQueryLen(); };
 	//char *getColl               ( ) { return m_si->m_coll2; };
-	//long  getCollLen            ( ) { return m_si->m_collLen2; };
-	long  getDocsWanted         ( ) { return m_si->m_docsWanted; };
-	long  getFirstResultNum     ( ) { return m_si->m_firstResultNum; };
+	//int32_t  getCollLen            ( ) { return m_si->m_collLen2; };
+	int32_t  getDocsWanted         ( ) { return m_si->m_docsWanted; };
+	int32_t  getFirstResultNum     ( ) { return m_si->m_firstResultNum; };
 
-	long  getNumResults (        ){return m_msg3a.m_numDocIds; };
-	long  getNumDocIds  (        ){return m_msg3a.m_numDocIds; };
+	int32_t  getNumResults (        ){return m_msg3a.m_numDocIds; };
+	int32_t  getNumDocIds  (        ){return m_msg3a.m_numDocIds; };
 
-	char   getClusterLevel(long i){return m_msg3a.m_clusterLevels[i];};
+	char   getClusterLevel(int32_t i){return m_msg3a.m_clusterLevels[i];};
 
-	long long getDocId  ( long i ){return m_msg3a.m_docIds[i]; };
-	long long *getDocIds(        ){return m_msg3a.m_docIds; };
-	double  getScore  ( long i ){return m_msg3a.m_scores[i]; };
-	class DocIdScore *getScoreInfo(long i){
+	int64_t getDocId  ( int32_t i ){return m_msg3a.m_docIds[i]; };
+	int64_t *getDocIds(        ){return m_msg3a.m_docIds; };
+	double  getScore  ( int32_t i ){return m_msg3a.m_scores[i]; };
+	class DocIdScore *getScoreInfo(int32_t i){
 		if ( ! m_msg3a.m_scoreInfos ) return NULL;
 		return m_msg3a.m_scoreInfos[i];
 	}
-	//LinkInfo *getLinkInfo( long i){return m_msg20[i]->m_linkInfo; }
+	//LinkInfo *getLinkInfo( int32_t i){return m_msg20[i]->m_linkInfo; }
 	bool  moreResultsFollow ( )   {return m_moreToCome; };
 	time_t getCachedTime ( )      {return m_cachedTime; };
 
 	/*
-	char *getTopicPtr   ( long i ){return m_gigabitInfos[i].m_ptr; };
-	long  getTopicLen   ( long i ){return m_gigabitInfos[i].m_len; };
-	long  getTopicScore ( long i ){return m_gigabitInfos[i].m_pts; };
-	char  getTopicGid   ( long i ){return 0; }; // temporarily
-	long  getNumTopics  (        ){return m_numGigabitInfos; };
+	char *getTopicPtr   ( int32_t i ){return m_gigabitInfos[i].m_ptr; };
+	int32_t  getTopicLen   ( int32_t i ){return m_gigabitInfos[i].m_len; };
+	int32_t  getTopicScore ( int32_t i ){return m_gigabitInfos[i].m_pts; };
+	char  getTopicGid   ( int32_t i ){return 0; }; // temporarily
+	int32_t  getNumTopics  (        ){return m_numGigabitInfos; };
 	// advanced gigabit/topic attributes
-	long getTopicDocIdCount(long i){return m_gigabitInfos[i].m_numDocs; };
-	long       getTopicPop(long  i){return m_gigabitInfos[i].m_pop; };
+	int32_t getTopicDocIdCount(int32_t i){return m_gigabitInfos[i].m_numDocs; };
+	int32_t       getTopicPop(int32_t  i){return m_gigabitInfos[i].m_pop; };
 	// intersectGigabits() in Msg40.cpp fills these in when we call it
 	// from Msg40.cpp
 	GigabitInfo m_gigabitInfos[50];
-	long m_numGigabitInfos;
+	int32_t m_numGigabitInfos;
 	*/
 
-	long getNumGigabits (){return m_gigabitBuf.length()/sizeof(Gigabit);};
-	Gigabit *getGigabit ( long i ) {
+	int32_t getNumGigabits (){return m_gigabitBuf.length()/sizeof(Gigabit);};
+	Gigabit *getGigabit ( int32_t i ) {
 		Gigabit *gbs = (Gigabit *)m_gigabitBuf.getBufStart();
 		return &gbs[i];
 	};
 
-        long long *getDocIdPtr() { return m_msg3a.m_docIds; }
+        int64_t *getDocIdPtr() { return m_msg3a.m_docIds; }
 
 	// Msg39 and all Msg20s must use the same clock timestamp
 	time_t m_nowUTC;
 
-	long m_lastHeartbeat;
+	int32_t m_lastHeartbeat;
 
-	bool printSearchResult9 ( long ix , long *numPrintedSoFar ,
+	bool printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 				  class Msg20Reply *mr ) ;
 
 	SafeBuf m_unusedBuf;
-	long m_numMsg20sOut ;
-	long m_numMsg20sIn  ;
-	long m_j ;
-	long m_i ;
+	int32_t m_numMsg20sOut ;
+	int32_t m_numMsg20sIn  ;
+	int32_t m_j ;
+	int32_t m_i ;
 	bool m_doneWithLookup;
 	HashTableX m_facetTextTable;
 	SafeBuf m_facetTextBuf;
 	bool m_firstTime;
-	long m_omitCount;
+	int32_t m_omitCount;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;
 	bool printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );
@@ -235,62 +235,62 @@ class Msg40 {
 
 	HashTableX m_columnTable;
 	bool printCSVHeaderRow ( class SafeBuf *sb );
-	bool printJsonItemInCSV ( class State0 *st , long ix );
-	long m_numCSVColumns;
+	bool printJsonItemInCSV ( class State0 *st , int32_t ix );
+	int32_t m_numCSVColumns;
 
 
 	HashTableX m_dedupTable;
 
-	long m_msg3aRecallCnt;
+	int32_t m_msg3aRecallCnt;
 	// this goes into msg3a now so we can send multiple msg3as out,
 	// 1 per collection
 	//Msg39Request m_r;
 
-	long       m_docsToGet;
-	long       m_docsToGetVisible;
+	int32_t       m_docsToGet;
+	int32_t       m_docsToGetVisible;
 
 	// incoming parameters 
 	void       *m_state;
 	void      (* m_callback ) ( void *state );
 
-	long m_needFirstReplies;
+	int32_t m_needFirstReplies;
 
 	// max outstanding msg20s
-	//long       m_maxOutstanding;
+	//int32_t       m_maxOutstanding;
 
 	// # of contiguous msg20 replies we have received (no gaps)
-	//long       m_numContiguous;
+	//int32_t       m_numContiguous;
 	// of thos contiguous results, how many are visible? (unfiltered,.etc)
-	//long       m_visibleContiguous;
+	//int32_t       m_visibleContiguous;
 
 	// . do not uncluster more than this many docids! it slows things down.
 	// . kind of a HACK until we do it right
-	long       m_unclusterCount;
+	int32_t       m_unclusterCount;
 
 	// how many of the m_numContiguous have been checked for dups?
-	//long       m_numChecked;
+	//int32_t       m_numChecked;
 
 	// do we have enough visible docids? stop launch msg20s when we do
 	//bool       m_gotEnough;
 
 	// a bunch of msg20's for getting summaries/titles/...
 	Msg20    **m_msg20; 
-	long       m_numMsg20s;
+	int32_t       m_numMsg20s;
 
 	char      *m_msg20StartBuf;
-	long       m_numToFree;
+	int32_t       m_numToFree;
 
 	bool m_hadPrintError ;
-	long m_numPrinted    ;
+	int32_t m_numPrinted    ;
 	bool m_printedHeader ;
 	bool m_printedTail   ;
 	bool m_lastChunk     ;
-	long m_sendsOut      ;
-	long m_sendsIn       ;
-	long m_printi        ;
-	long m_numDisplayed  ;
-	long m_numPrintedSoFar;
-	long m_socketHadError;
+	int32_t m_sendsOut      ;
+	int32_t m_sendsIn       ;
+	int32_t m_printi        ;
+	int32_t m_numDisplayed  ;
+	int32_t m_numPrintedSoFar;
+	int32_t m_socketHadError;
 
 
 	// use msg3a to get docIds
@@ -299,21 +299,21 @@ class Msg40 {
 	// use this for getting compressed, cached images of ourselves
 	Msg17      m_msg17;
 	char      *m_cachePtr;
-	long       m_cacheSize;
+	int32_t       m_cacheSize;
 
-	//long m_maxDocIdsToCompute;
+	//int32_t m_maxDocIdsToCompute;
 
 	// count summary replies (msg20 replies) we get
-	long       m_numRequests;
-	long       m_numReplies;
+	int32_t       m_numRequests;
+	int32_t       m_numReplies;
 
 	// we launched all docids from 0 to m_maxiLaunched
-	//long       m_maxiLaunched;
+	//int32_t       m_maxiLaunched;
 
 	// true if more results follow these
 	bool       m_moreToCome;
 
-	long m_lastProcessedi;
+	int32_t m_lastProcessedi;
 
 	bool m_didSummarySkip;
 
@@ -321,7 +321,7 @@ class Msg40 {
 	Multicast  m_mcast;
 
 	// for timing how long to get all summaries
-	long long  m_startTime;
+	int64_t  m_startTime;
 
 	// was Msg40 cached? if so, at what time?
 	bool       m_cachedResults;
@@ -333,18 +333,18 @@ class Msg40 {
 	// references
 	//Msg1a m_msg1a;
 	
-	long m_tasksRemaining;
+	int32_t m_tasksRemaining;
 
 
 	// buffer we deserialize from, allocated by Msg17, but we free it
 	char *m_buf;
-	long  m_bufMaxSize;
+	int32_t  m_bufMaxSize;
 
 	// for holding the msg20s
 	char *m_buf2;
-	long  m_bufMaxSize2;
+	int32_t  m_bufMaxSize2;
 
-	long  m_errno;
+	int32_t  m_errno;
 
 	// was family filter on and query had dirty words?
 	bool m_queryCensored;
@@ -353,24 +353,24 @@ class Msg40 {
 	bool m_removedDupContent;
 
 	// up to 30 different CR_ values in Msg51.h
-	long       m_filterStats[30];
+	int32_t       m_filterStats[30];
 
 	SearchInput   *m_si;
 
 
 	// for topic clustering, saved from CollectionRec
-	long       m_topicSimilarCutoff;
-	long       m_docsToScanForTopics;
+	int32_t       m_topicSimilarCutoff;
+	int32_t       m_docsToScanForTopics;
 
 	// Msg2b for generating a directory
 	//Msg2b  m_msg2b;
 
 	bool mergeDocIdsIntoBaseMsg3a();
-	long m_numCollsToSearch;
+	int32_t m_numCollsToSearch;
 	class Msg3a **m_msg3aPtrs;
 	SafeBuf m_msg3aPtrBuf;
-	long m_num3aRequests;
-	long m_num3aReplies;
+	int32_t m_num3aRequests;
+	int32_t m_num3aReplies;
 	collnum_t m_firstCollnum;
 
 	PostQueryRerank m_postQueryRerank;

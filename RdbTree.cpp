@@ -48,12 +48,12 @@ RdbTree::~RdbTree ( ) {
 #include <asm/page.h> // PAGE_SIZE
 
 // return #of bytes scanned for timing purposes
-long RdbTree::scanMem ( ) {
+int32_t RdbTree::scanMem ( ) {
 	// ahh.. just scan the whole thing to keep it simple
 	char *p    ;
 	char *pend ;
 	char  c;
-	long  size = 0; // count number of bytes scanned
+	int32_t  size = 0; // count number of bytes scanned
 	// keys
 	p = (char *)m_keys ; pend = p + m_numNodes * m_ks;
 	size += pend - p;
@@ -63,19 +63,19 @@ long RdbTree::scanMem ( ) {
 	size += pend - p;
 	if ( p ) while ( p < pend ) { c = *p; p += PAGE_SIZE; }
 	// sizes
-	p = (char *)m_sizes ; pend = p + m_numNodes * sizeof(long);
+	p = (char *)m_sizes ; pend = p + m_numNodes * sizeof(int32_t);
 	size += pend - p;
 	if ( p ) while ( p < pend ) { c = *p; p += PAGE_SIZE; }
 	// left
-	p = (char *)m_left ; pend = p + m_numNodes * sizeof(long);
+	p = (char *)m_left ; pend = p + m_numNodes * sizeof(int32_t);
 	size += pend - p;
 	if ( p ) while ( p < pend ) { c = *p; p += PAGE_SIZE; }
 	// right
-	p = (char *)m_right ; pend = p + m_numNodes * sizeof(long);
+	p = (char *)m_right ; pend = p + m_numNodes * sizeof(int32_t);
 	size += pend - p;
 	if ( p ) while ( p < pend ) { c = *p; p += PAGE_SIZE; }
 	// parents
-	p = (char *)m_parents ; pend = p + m_numNodes * sizeof(long);
+	p = (char *)m_parents ; pend = p + m_numNodes * sizeof(int32_t);
 	size += pend - p;
 	if ( p ) while ( p < pend ) { c = *p; p += PAGE_SIZE; }
 	// depth
@@ -87,10 +87,10 @@ long RdbTree::scanMem ( ) {
 */
 
 // "memMax" includes records plus the overhead
-bool RdbTree::set ( long fixedDataSize , 
-		    long maxNumNodes   ,
+bool RdbTree::set ( int32_t fixedDataSize , 
+		    int32_t maxNumNodes   ,
 		    bool doBalancing   , 
-		    long memMax        ,
+		    int32_t memMax        ,
 		    bool ownData       ,
 		    char *allocName    ,
 		    bool dataInPtrs    ,
@@ -114,7 +114,7 @@ bool RdbTree::set ( long fixedDataSize ,
 
 	m_dbname[0] = '\0';
 	if ( dbname ) {
-		long dlen = strlen(dbname);
+		int32_t dlen = strlen(dbname);
 		if ( dlen > 30 ) dlen = 30;
 		memcpy(m_dbname,dbname,dlen);
 		m_dbname[dlen] = '\0';
@@ -137,7 +137,7 @@ bool RdbTree::set ( long fixedDataSize ,
 	// . compute each node's memory overhead
 	// . size of a key/left/right/parent
 	m_overhead = (m_ks + 4*3 );
-	// include collection number, currently an unsigned short
+	// include collection number, currently an uint16_t
 	m_overhead += sizeof(collnum_t);
 	// if we're a non-zero data length include a dataptr (-1 means variabl)
 	if ( m_fixedDataSize !=  0 ) m_overhead += 4;
@@ -184,8 +184,8 @@ void RdbTree::reset ( ) {
 	// do not require saving after a reset
 	m_needsSave = false;
 	// now free all the overhead structures of this tree
-	long n = m_numNodes;
-	// free array of collectio numbers (shorts for now)
+	int32_t n = m_numNodes;
+	// free array of collectio numbers (int16_ts for now)
 	if ( m_collnums) mfree ( m_collnums, sizeof(collnum_t) *n,m_allocName);
 	// free the array of keys
 	if ( m_keys  ) mfree ( m_keys  , m_ks      * n , m_allocName ); 
@@ -239,14 +239,14 @@ void RdbTree::delColl ( collnum_t collnum ) {
 // . this just makes all the nodes available for occupation (liberates them)
 // . it does not free this tree's control structures
 // . returns # of occupied nodes we liberated
-long RdbTree::clear ( ) {
+int32_t RdbTree::clear ( ) {
 
 	if ( m_numUsedNodes > 0 ) m_needsSave = true;
 	// the liberation count
-	long count = 0;
+	int32_t count = 0;
 	// liberate all of our nodes
-	long dataSize = m_fixedDataSize;
-	for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
+	int32_t dataSize = m_fixedDataSize;
+	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// skip node if parents is -2 (unoccupied)
 		if ( m_parents[i] == -2 ) continue;
 		// we no longer count the overhead of this node as occupied
@@ -276,11 +276,11 @@ long RdbTree::clear ( ) {
 
 
 	// clear tree counts for all collections!
-	long nc = g_collectiondb.m_numRecs;
+	int32_t nc = g_collectiondb.m_numRecs;
 	// BUT only if we are an Rdb::m_tree!!!
 	if ( m_rdbId == -1 ) nc = 0;
 	// otherwise, we overwrite stuff in CollectionRec we shouldn't
-	for ( long i = 0 ; i < nc ; i++ ) {
+	for ( int32_t i = 0 ; i < nc ; i++ ) {
 		CollectionRec *cr = g_collectiondb.getRec(i);
 		if ( ! cr ) continue;
 		if ( m_rdbId < 0 ) continue;
@@ -294,8 +294,8 @@ long RdbTree::clear ( ) {
 
 // . used by cache 
 // . wrapper for getNode()
-long RdbTree::getNode ( collnum_t collnum , char *key ) { // key_t &key ) { 
-	long i = m_headNode;
+int32_t RdbTree::getNode ( collnum_t collnum , char *key ) { // key_t &key ) { 
+	int32_t i = m_headNode;
 	// get the node (about 4 cycles per loop, 80cycles for 1 million items)
 	while ( i != -1 ) {
 		if ( collnum < m_collnums[i] ) { i = m_left [i]; continue;}
@@ -317,12 +317,12 @@ long RdbTree::getNode ( collnum_t collnum , char *key ) { // key_t &key ) {
 // . TODO: keep a m_lastStartNode and start from that since it tends to only
 //         increase startKey via Msg3. if the key at m_lastStartNode is <=
 //         the provided key then we did well.
-long RdbTree::getNextNode ( collnum_t collnum , char *key ) { //key_t &key ) {
+int32_t RdbTree::getNextNode ( collnum_t collnum , char *key ) { //key_t &key ) {
 	// return -1 if no non-empty nodes in the tree
 	if ( m_headNode < 0 ) return -1;
 	// get the node (about 4 cycles per loop, 80cycles for 1 million items)
-	long parent;
-	long i = m_headNode ;
+	int32_t parent;
+	int32_t i = m_headNode ;
 	// . set i tom_hint if it's < key
 	// . this helps out severly unbalanced trees made by spiderdb
 	// . it may hurt other guys a bit though
@@ -348,19 +348,19 @@ long RdbTree::getNextNode ( collnum_t collnum , char *key ) { //key_t &key ) {
 	return getNextNode ( parent );
 }
 
-long RdbTree::getFirstNode ( ) {
+int32_t RdbTree::getFirstNode ( ) {
 	//key_t k;  k.n0 = 0LL; k.n1 = 0;
 	char *k = KEYMIN();
 	return getNextNode ( 0 , k );
 }
 
-long RdbTree::getFirstNode2 ( collnum_t collnum ) {
+int32_t RdbTree::getFirstNode2 ( collnum_t collnum ) {
 	//key_t k;  k.n0 = 0LL; k.n1 = 0;
 	char *k = KEYMIN();
 	return getNextNode ( collnum , k );
 }
 
-long RdbTree::getLastNode ( ) {
+int32_t RdbTree::getLastNode ( ) {
 	//key_t k;  k.setMax();
 	char *k = KEYMAX();
 	return getPrevNode ( (collnum_t)0x7fff , k );
@@ -368,12 +368,12 @@ long RdbTree::getLastNode ( ) {
 
 // . get the node whose key is <= "key"
 // . returns -1 if none
-long RdbTree::getPrevNode ( collnum_t collnum , char *key ) { // key_t &key ) {
+int32_t RdbTree::getPrevNode ( collnum_t collnum , char *key ) { // key_t &key ) {
 	// return -1 if no non-empty nodes in the tree
 	if ( m_headNode < 0  ) return -1;
 	// get the node (about 4 cycles per loop, 80cycles for 1 million items)
-	long parent;
-	long i = m_headNode ;
+	int32_t parent;
+	int32_t i = m_headNode ;
 	while ( i != -1 ) {
 		parent = i;
 		if ( collnum < m_collnums[i] ) { i = m_left [i]; continue;}
@@ -391,7 +391,7 @@ long RdbTree::getPrevNode ( collnum_t collnum , char *key ) { // key_t &key ) {
 }
 
 char *RdbTree::getData ( collnum_t collnum , char *key ) { // key_t &key ) {
-	long n = getNode ( collnum , key ); if ( n < 0 ) return NULL;
+	int32_t n = getNode ( collnum , key ); if ( n < 0 ) return NULL;
 	return m_data[n];
 };
 
@@ -400,7 +400,7 @@ char *RdbTree::getData ( collnum_t collnum , char *key ) { // key_t &key ) {
 // . 24 cycles to get the first kid
 // . averages around 50 cycles per call probably
 // . 8 cycles are spent entering/exiting this subroutine (inline it? TODO)
-long RdbTree::getNextNode ( long i ) {
+int32_t RdbTree::getNextNode ( int32_t i ) {
 	// cruise the kids if we have a right one
 	if ( m_right[i] >= 0 ) {
 		// go to the right kid
@@ -411,7 +411,7 @@ long RdbTree::getNextNode ( long i ) {
 		return i;
 	}
 	// now keep getting parents until one has a key bigger than i's key
-	long p = m_parents[i];
+	int32_t p = m_parents[i];
 	// if parent is negative we're done
 	if ( p < 0 ) return -1;
 	// if we're the left kid of the parent, then the parent is the
@@ -429,7 +429,7 @@ long RdbTree::getNextNode ( long i ) {
 }
 
 // . "i" is the next node number
-long RdbTree::getPrevNode ( long i ) {
+int32_t RdbTree::getPrevNode ( int32_t i ) {
 	// cruise the kids if we have a left one
 	if ( m_left[i] >= 0 ) {
 		// go to the left kid
@@ -440,7 +440,7 @@ long RdbTree::getPrevNode ( long i ) {
 		return i;
 	}
 	// now keep getting parents until one has a key bigger than i's key
-	long p = m_parents[i];
+	int32_t p = m_parents[i];
 	// if we're the right kid of the parent, then the parent is the
 	// next least node
 	if ( m_right[p] == i ) return p;
@@ -456,8 +456,8 @@ long RdbTree::getPrevNode ( long i ) {
 }
 
 // . get the node with the lowest key
-long RdbTree::getLowestNode ( ) {
-	long i = m_headNode;
+int32_t RdbTree::getLowestNode ( ) {
+	int32_t i = m_headNode;
 	while ( m_left[i] != -1 ) i = m_left [ i ];
 	return i;
 }
@@ -470,8 +470,8 @@ long RdbTree::getLowestNode ( ) {
 // . negative dataSizes should be interpreted as 0
 // . probably about 120 cycles per add means we can add 2 million per sec
 // . NOTE: does not check to see if it will exceed m_maxMem
-long RdbTree::addNode ( collnum_t collnum , 
-			char *key , char *data , long dataSize ) {
+int32_t RdbTree::addNode ( collnum_t collnum , 
+			char *key , char *data , int32_t dataSize ) {
 	// cannot add if saving, tell them to try again later
 	if ( m_isSaving ) { g_errno = ETRYAGAIN; return -1; }
 	// nor if not writable
@@ -490,7 +490,7 @@ long RdbTree::addNode ( collnum_t collnum ,
 
 	// sanity check, break if 0 > titleRec > 100MB, it's probably corrupt
 	//if ( m_dbname && m_dbname[0]=='t' && dataSize >= 4 && 
-	//     (*((long *)data) > 100000000 || *((long *)data) < 0 ) ) {
+	//     (*((int32_t *)data) > 100000000 || *((int32_t *)data) < 0 ) ) {
 	//	char *xx = NULL; *xx = 0; }
 	// sanity check (MDW)
 	//if ( dataSize == 0 && (*key & 0x01) && m_dbname[0] != 'c' && 
@@ -503,10 +503,10 @@ long RdbTree::addNode ( collnum_t collnum ,
 	// . we now use RdbMem class so this isn't necessary
 	//if ( m_memOccupied + dataSize > m_maxMem){g_errno=ENOMEM; return -1;}
 	// set up vars
-	long iparent ;
-	long rightGuy;
+	int32_t iparent ;
+	int32_t rightGuy;
 	// this is -1 iff there are no nodes used in the tree
-	long i = m_headNode;
+	int32_t i = m_headNode;
 	// disable mem protection
 	char undo ;
 	if ( m_useProtection ) { 
@@ -539,8 +539,8 @@ long RdbTree::addNode ( collnum_t collnum ,
 	// debug msg
 	//if ( m_dbname && m_dbname[0]=='t' && dataSize >= 4 )
 	//	logf(LOG_DEBUG,
-	//	     "adding node #%li with data ptr at %lx "
-	//	     "and data size of %li into a list.",
+	//	     "adding node #%"INT32" with data ptr at %"XINT32" "
+	//	     "and data size of %"INT32" into a list.",
 	//	     i,data,dataSize);
 	// if we're the first node we become the head node and our parent is -1
 	if ( m_numUsedNodes == 0 ) {
@@ -659,7 +659,7 @@ long RdbTree::addNode ( collnum_t collnum ,
 		}
 	}
 	// debug2 msg
-	// fprintf(stderr,"+ #%li %lli %li\n",i,key.n0,iparent);
+	// fprintf(stderr,"+ #%"INT32" %"INT64" %"INT32"\n",i,key.n0,iparent);
 	// if we don't have to balance return i now
 	if ( m_doBalancing ) {
 		// our depth is now 1 since we're a leaf node
@@ -684,7 +684,7 @@ long RdbTree::addNode ( collnum_t collnum ,
 		return i;
 	}
 	// get dataSize
-	long oldDataSize = m_fixedDataSize;
+	int32_t oldDataSize = m_fixedDataSize;
 	// if datasize was 0 cuz it was a negative key, fix that for
 	// calculating m_memOccupied
 	if ( m_fixedDataSize >= 0 ) dataSize = m_fixedDataSize;
@@ -706,12 +706,12 @@ long RdbTree::addNode ( collnum_t collnum ,
 	return i;
 }
 
-//long RdbTree::deleteNode  ( collnum_t collnum , key_t &key , bool freeData ){
-long RdbTree::deleteNode  ( collnum_t collnum , char *key , bool freeData ) {
-	long node = getNode ( collnum , key );
+//int32_t RdbTree::deleteNode  ( collnum_t collnum , key_t &key , bool freeData ){
+int32_t RdbTree::deleteNode  ( collnum_t collnum , char *key , bool freeData ) {
+	int32_t node = getNode ( collnum , key );
 	// debug
-	//log("db: deleting n1=%llx n0=%llx node=%li.",
-	//    *(long long *)(key+8), *(long long *)(key+0),node);
+	//log("db: deleting n1=%"XINT64" n0=%"XINT64" node=%"INT32".",
+	//    *(int64_t *)(key+8), *(int64_t *)(key+0),node);
 	if ( node == -1 ) return -1;
 	deleteNode(node,freeData); 
 	return node;
@@ -733,9 +733,9 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 	// protect it all from writes again
 	if ( m_useProtection ) unprotect ( );
 
-	long node = getNextNode ( collnum , startKey );
+	int32_t node = getNextNode ( collnum , startKey );
 	while ( node >= 0 ) {
-		//long next = getNextNode ( node );
+		//int32_t next = getNextNode ( node );
 		if ( m_collnums[node] != collnum ) break;
 		//if ( m_keys    [node] > endKey   ) return;
 		if ( KEYCMP(m_keys,node,endKey,0,m_ks) > 0 ) break;
@@ -753,7 +753,7 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 // . deletes node i from the tree
 // . i's parent should point to i's left or right kid
 // . if i has no parent then his left or right kid becomes the new top node
-void RdbTree::deleteNode ( long i , bool freeData ) {
+void RdbTree::deleteNode ( int32_t i , bool freeData ) {
 	// sanity check
 	if ( ! m_isWritable ) {
 		log("db: Can not delete record from tree because "
@@ -776,14 +776,14 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	m_needsSave = true;
 	// debug step -- check chain from iparent down making sure that
 	// just debug2 after every 10 deletes for speed
-	//static long ttt = 0;
+	//static int32_t ttt = 0;
 	//if ( ttt++ == 100 ) { printTree(); ttt = 0; }
 	// we have one less occupied node
 	m_memOccupied -= m_overhead;
 	// . free it now iff "freeIt" is true (default is true)
 	// . m_data can be a NULL array if m_fixedDataSize is fixed to 0
 	if ( /*freeData &&*/ m_data ) {
-		long dataSize = m_fixedDataSize;
+		int32_t dataSize = m_fixedDataSize;
 		if ( dataSize == -1 ) dataSize = m_sizes[i];
 		if ( m_ownData ) mfree ( m_data [i] , dataSize ,m_allocName);
 		m_memAlloced  -= dataSize;
@@ -802,10 +802,10 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	//m_headNode,m_numUsedNodes,i);
 	//printTree();
 	// parent of i
-	long iparent ;
-	long jparent ;
+	int32_t iparent ;
+	int32_t jparent ;
 	// j will be the node that replace node #i
-	long j = i;
+	int32_t j = i;
 	// . now find a node to replace node #i
 	// . get a node whose key is just to the right or left of i's key
 	// . get i's right kid
@@ -875,7 +875,7 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// debug step -- check chain from iparent down making sure that
 	//printTree();
 	// debug2 msg
-	//fprintf(stderr,"- #%li %lli %li\n",i,m_keys[i].n0,iparent);
+	//fprintf(stderr,"- #%"INT32" %"INT64" %"INT32"\n",i,m_keys[i].n0,iparent);
 	// . reset the depths starting at iparent and going up until unchanged
 	// . will balance at pivot nodes that need it
 	if ( m_doBalancing ) setDepths ( iparent );
@@ -989,7 +989,7 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// all kids don't have -2 for their parent... seems to be a rare bug
 	//printTree();
 	// debug msg
-	//fprintf(stderr,"- #%li %lli %li\n",i,m_keys[i].n0,iparent);
+	//fprintf(stderr,"- #%"INT32" %"INT64" %"INT32"\n",i,m_keys[i].n0,iparent);
 	// return if we don't have to balance
 	if ( ! m_doBalancing ) {
 		// protect it all from writes again
@@ -1000,7 +1000,7 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// up to i decreases the total depth, in which case setDepths() fixes
 	m_depth [ j ] = m_depth [ i ];
 	// debug msg
-	//fprintf(stderr,"... replaced %li it with %li (-1 means none)\n",i,j);
+	//fprintf(stderr,"... replaced %"INT32" it with %"INT32" (-1 means none)\n",i,j);
 	// . recalculate depths starting at old parent of j
 	// . stops at the first node to have the correct depth
 	// . will balance at pivot nodes that need it
@@ -1014,10 +1014,10 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	if ( m_useProtection && undo ) protect ( );
 }
 
-bool RdbTree::deleteKeys ( collnum_t collnum , char *keys , long numKeys ) {
+bool RdbTree::deleteKeys ( collnum_t collnum , char *keys , int32_t numKeys ) {
 	// make a fake list
 	RdbList list;
-	long size = m_ks * numKeys;
+	int32_t size = m_ks * numKeys;
 	list.set ( keys  ,
 		   size  ,
 		   keys  ,
@@ -1053,7 +1053,7 @@ bool RdbTree::deleteList ( collnum_t collnum ,
 	if ( m_doBalancing ) m_doBalancing = doBalancing;
 	// disable mem protection
 	if ( m_useProtection ) unprotect ( );
-	//long  dataSize;
+	//int32_t  dataSize;
  top:
 	//key      = list->getCurrentKey      ( );
 	list->getCurrentKey ( key );
@@ -1087,11 +1087,11 @@ void RdbTree::deleteOrderedList ( collnum_t collnum ,
 	// bail if list is empty now
 	if ( list->isEmpty() ) return;
 
-	//long  dataSize;
+	//int32_t  dataSize;
 	//key = list->getCurrentKey      ( );
 	list->getCurrentKey ( key );
 	// get the node whose keys is just <= key
-	long node = getPrevNode ( collnum , key );
+	int32_t node = getPrevNode ( collnum , key );
 	// preserve state of balance
 	bool balanced = m_doBalancing;
 	// possibly turn off balancing (only turn on/off if it's already on)
@@ -1150,14 +1150,14 @@ bool RdbTree::fixTree ( ) {
 	// on error, fix the linked list
 	//log("RdbTree::fixTree: tree was corrupted on disk?");
 	log("db: Trying to fix tree for %s.",m_dbname);
-	log("db: %li occupied nodes and %li empty "
-	    "of top %li nodes.",
+	log("db: %"INT32" occupied nodes and %"INT32" empty "
+	    "of top %"INT32" nodes.",
 	    m_numUsedNodes , m_minUnusedNode - m_numUsedNodes ,
 	    m_minUnusedNode );
 
 	// loop through our nodes
-	long n = m_minUnusedNode;
-	long count = 0;
+	int32_t n = m_minUnusedNode;
+	int32_t count = 0;
 	// "clear" the tree as far as addNode() is concerned
 	m_headNode      = -1;
 	m_numUsedNodes  =  0;
@@ -1166,14 +1166,14 @@ bool RdbTree::fixTree ( ) {
 	m_nextNode      =  0;
 	m_minUnusedNode =  0; 
 	//CollectionRec *recs = g_collectiondb.m_recs;
-	long           max  = g_collectiondb.m_numRecs;
-	log("db: Valid collection numbers range from 0 to %li.",max);
+	int32_t           max  = g_collectiondb.m_numRecs;
+	log("db: Valid collection numbers range from 0 to %"INT32".",max);
 	// now re-add the old nods to the tree, they should not be overwritten
 	// by addNode()
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// speed update
 		if ( (i % 100000) == 0 ) 
-			log("db: Fixing node #%li of %li.",i,n);
+			log("db: Fixing node #%"INT32" of %"INT32".",i,n);
 		// skip if empty
 		if ( m_parents[i] <= -2 ) continue;
 		collnum_t cn = m_collnums[i];
@@ -1195,7 +1195,7 @@ bool RdbTree::fixTree ( ) {
 		count++;
 	}
 
-	log("db: Fix tree removed %li nodes for %s.",n - count,m_dbname);
+	log("db: Fix tree removed %"INT32" nodes for %s.",n - count,m_dbname);
 	// esure it is still good
 	if ( ! checkTree ( false , true ) )
 		return log("db: Fix tree failed.");
@@ -1218,7 +1218,7 @@ bool RdbTree::checkTree ( bool printMsgs , bool doChainTest ) {
 
 bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 
-	long hkp = 0;
+	int32_t hkp = 0;
 	char useHalfKeys = false;
 
 	// these guy always use a collnum of 0
@@ -1232,7 +1232,7 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 	if ( !strcmp(m_dbname,"tfndb"  ) ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"linkdb" ) ) useHalfKeys = true;
 	// now check parent kid correlations
-	for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
+	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// this thing blocks for 1.5 secs for indexdb
 		// so do some quick polls!
 		QUICKPOLL(MAX_NICENESS);
@@ -1264,14 +1264,14 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 				   "db: Tree left kid < -1.");
 		if ( m_left[i] >= m_numNodes )
 			return log(
-				   "db: Tree left kid is %li >= %li.",
+				   "db: Tree left kid is %"INT32" >= %"INT32".",
 				   m_left[i],m_numNodes);
 		if ( m_right[i] < -1 )
 			return log(
 				   "db: Tree right kid < -1.");
 		if ( m_right[i] >= m_numNodes )
 			return log(
-				   "db: Tree left kid is %li >= %li.",
+				   "db: Tree left kid is %"INT32" >= %"INT32".",
 				   m_right[i],m_numNodes);
 		// check left kid
 		if ( m_left[i] >= 0 && m_parents[m_left[i]] != i ) 
@@ -1297,16 +1297,16 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		//g_loop.quickPoll(1, __PRETTY_FUNCTION__, __LINE__);
 	}
 	if ( hkp > 0 ) 
-	       return log("db: Had %li half key bits on for %s.",hkp,m_dbname);
+	       return log("db: Had %"INT32" half key bits on for %s.",hkp,m_dbname);
 	// now return if we aren't doing active balancing
 	if ( ! m_depth ) return true;
 	// debug -- just always return now
-	if ( printMsgs )logf(LOG_DEBUG,"***m_headNode=%li, m_numUsedNodes=%li",
+	if ( printMsgs )logf(LOG_DEBUG,"***m_headNode=%"INT32", m_numUsedNodes=%"INT32"",
 			      m_headNode,m_numUsedNodes);
 	//CollectionRec *recs = g_collectiondb.m_recs;
-	long           max  = g_collectiondb.m_numRecs;
+	int32_t           max  = g_collectiondb.m_numRecs;
 	// verify that parent links correspond to kids
-	for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
+	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// this thing blocks for 1.5 secs for indexdb
 		// so do some quick polls!
 		QUICKPOLL(MAX_NICENESS);
@@ -1319,22 +1319,22 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		// we do not want to delete these nodes from the tree yet
 		// in case the collection was accidentally removed.
 		//if ( ! recs[cn] )
-		//	return log("db: Got bad collnum tree. %li.",cn);
-		long P = m_parents [i];
+		//	return log("db: Got bad collnum tree. %"INT32".",cn);
+		int32_t P = m_parents [i];
 		if ( P == -2 ) continue; // deleted node
 		if ( P == -1 && i != m_headNode ) 
-			return log("db: Tree node %li has "
+			return log("db: Tree node %"INT32" has "
 				   "no parent.",i);
 		// check kids
 		if ( P>=0 && m_left[P] != i && m_right[P] != i ) 
-			return log("db: Tree kids of node # %li "
+			return log("db: Tree kids of node # %"INT32" "
 				    "disowned him.",i);
 		//g_loop.quickPoll(1, __PRETTY_FUNCTION__, __LINE__);
 		// speedy tests continue
 		if ( ! doChainTest ) continue;
 		// ensure i goes back to head node
-		long j = i;
-		long loopCount = 0;
+		int32_t j = i;
+		int32_t loopCount = 0;
 		while ( j >= 0 ) { 
 			if ( j == m_headNode ) break;
 			// sanity -- loop check
@@ -1344,14 +1344,14 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		}
 		if ( j != m_headNode ) 
 			return log(
-				   "db: Node # %li does not lead back to "
+				   "db: Node # %"INT32" does not lead back to "
 				   "head node.",i);
 		if ( printMsgs ) {
 		        char *k = &m_keys[i*m_ks];
-			logf(LOG_DEBUG,"***node=%li left=%li rght=%li "
-			    "prnt=%li, depth=%li c=%li key=%s",
+			logf(LOG_DEBUG,"***node=%"INT32" left=%"INT32" rght=%"INT32" "
+			    "prnt=%"INT32", depth=%"INT32" c=%"INT32" key=%s",
 			    i,m_left[i],m_right[i],m_parents[i],
-			    (long)m_depth[i],(long)m_collnums[i],
+			    (int32_t)m_depth[i],(int32_t)m_collnums[i],
 			     KEYSTR(k,m_ks));
 			// assume linkdb
 			//key192_t *kp = (key192_t *)k;
@@ -1359,10 +1359,10 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 			//if ( hc ) { char *xx=NULL;*xx=0; }
 		}
 		//ensure depth
-		long newDepth = computeDepth ( i );
+		int32_t newDepth = computeDepth ( i );
 		if ( m_depth[i] != newDepth ) 
-			return log("db: Tree node # %li's depth "
-				   "should be %li.",i,newDepth);
+			return log("db: Tree node # %"INT32"'s depth "
+				   "should be %"INT32".",i,newDepth);
 	}
 	if ( printMsgs ) logf(LOG_DEBUG,"---------------");
 	// no problems found
@@ -1371,23 +1371,23 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 
 // . grow tree to "n" nodes
 // . this will now actually grow from a current size to a new one
-bool RdbTree::growTree ( long nn , long niceness ) {
+bool RdbTree::growTree ( int32_t nn , int32_t niceness ) {
 	// if we're that size, bail
 	if ( m_numNodes == nn ) return true;
 
 	// old number of nodes
-	long on = m_numNodes;
+	int32_t on = m_numNodes;
 	// some quick type info
-	long   k = m_ks;
-	long   d = sizeof(char *);
+	int32_t   k = m_ks;
+	int32_t   d = sizeof(char *);
 
 	//key_t *kp = NULL;
 	char  *kp = NULL;
-	long  *lp = NULL;
-	long  *rp = NULL;
-	long  *pp = NULL;
+	int32_t  *lp = NULL;
+	int32_t  *rp = NULL;
+	int32_t  *pp = NULL;
 	char **dp = NULL;
-	long  *sp = NULL;
+	int32_t  *sp = NULL;
 	char  *tp = NULL;
 	collnum_t *cp = NULL;
 
@@ -1395,20 +1395,20 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 	if ( m_useProtection ) unprotect ( );
 
 	// do the reallocs
-	long cs = sizeof(collnum_t);
+	int32_t cs = sizeof(collnum_t);
 	cp =(collnum_t *)mrealloc (m_collnums, on*cs,nn*cs,m_allocName);
 	if ( ! cp ) goto error;
 	QUICKPOLL(niceness);
 	kp = (char  *) mrealloc ( m_keys    , on*k , nn*k , m_allocName );
 	if ( ! kp ) goto error;
 	QUICKPOLL(niceness);
-	lp = (long  *) mrealloc ( m_left    , on*4 , nn*4 , m_allocName );
+	lp = (int32_t  *) mrealloc ( m_left    , on*4 , nn*4 , m_allocName );
 	if ( ! lp ) goto error;
 	QUICKPOLL(niceness);
-	rp = (long  *) mrealloc ( m_right   , on*4 , nn*4 , m_allocName );
+	rp = (int32_t  *) mrealloc ( m_right   , on*4 , nn*4 , m_allocName );
 	if ( ! rp ) goto error;
 	QUICKPOLL(niceness);
-	pp = (long  *) mrealloc ( m_parents , on*4 , nn*4 , m_allocName );
+	pp = (int32_t  *) mrealloc ( m_parents , on*4 , nn*4 , m_allocName );
 	if ( ! pp ) goto error;
 	QUICKPOLL(niceness);
 
@@ -1419,7 +1419,7 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 		QUICKPOLL(niceness);
 	}
 	if ( m_fixedDataSize == -1 ) {
-		sp =(long  *)mrealloc (m_sizes , on*4,nn*4,m_allocName);
+		sp =(int32_t  *)mrealloc (m_sizes , on*4,nn*4,m_allocName);
 		if ( ! sp ) goto error;
 		QUICKPOLL(niceness);
 	}
@@ -1444,8 +1444,8 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 	m_memAlloced += m_overhead * nn;
 	// bitch an exit if too much
 	if ( m_memAlloced > m_maxMem )
-		return log("db: Trying to grow tree for %s to %li, but max is "
-			   "%li. Consider changing gb.conf.",
+		return log("db: Trying to grow tree for %s to %"INT32", but max is "
+			   "%"INT32". Consider changing gb.conf.",
 			   m_dbname,m_memAlloced , m_maxMem );
 	// base mem is mem that cannot be freed
 	m_baseMem = m_overhead * nn ;
@@ -1459,7 +1459,7 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 
  error:
 	char  *kk ;
-	long  *x  ;
+	int32_t  *x  ;
 	char  *s  ;
 	char **p  ;
 	collnum_t *ss;
@@ -1478,19 +1478,19 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 		QUICKPOLL(niceness);
 	}
 	if ( lp ) {
-		x = (long *)mrealloc ( lp , nn*4 , on*4 , m_allocName );
+		x = (int32_t *)mrealloc ( lp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_left = x;
 		QUICKPOLL(niceness);
 	}
 	if ( rp ) {
-		x = (long *)mrealloc ( rp , nn*4 , on*4 , m_allocName );
+		x = (int32_t *)mrealloc ( rp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_right = x;
 		QUICKPOLL(niceness);
 	}
 	if ( pp ) {
-		x = (long *)mrealloc ( pp , nn*4 , on*4 , m_allocName );
+		x = (int32_t *)mrealloc ( pp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_parents = x;
 		QUICKPOLL(niceness);
@@ -1502,7 +1502,7 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 		QUICKPOLL(niceness);
 	}
 	if ( sp && m_fixedDataSize == -1 ) {
-		x = (long *)mrealloc ( sp , nn*4 , on*4 , m_allocName );
+		x = (int32_t *)mrealloc ( sp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_sizes = x;
 		QUICKPOLL(niceness);
@@ -1514,13 +1514,13 @@ bool RdbTree::growTree ( long nn , long niceness ) {
 		QUICKPOLL(niceness);
 	}
 
-	return log("db: Failed to grow tree for %s from %li to %li bytes: %s.",
+	return log("db: Failed to grow tree for %s from %"INT32" to %"INT32" bytes: %s.",
 		   m_dbname,on,nn,mstrerror(g_errno));
 }
 
 void RdbTree::protect ( int prot ) {
 	// old number of nodes
-	long on = m_numNodes;
+	int32_t on = m_numNodes;
 	gbmprotect ( m_collnums , on*sizeof(collnum_t) , prot );
 	gbmprotect ( m_keys     , on*m_ks, prot );
 	gbmprotect ( m_left     , on*4  , prot );
@@ -1531,34 +1531,34 @@ void RdbTree::protect ( int prot ) {
 	if ( m_depth ) gbmprotect ( m_depth , on   , prot );
 }
 
-void RdbTree::gbmprotect ( void *p , long size , int prot ) {
+void RdbTree::gbmprotect ( void *p , int32_t size , int prot ) {
 	if ( ! p || size <= 0 ) return;
 	// align on page
 	//p = (p + PAGESIZE) & (PAGESIZE-1);
 	char *np = ((char *)p + (8*1024));
 	// mask out lower bits
-	np = (char *)((unsigned long)np & ~((8*1024)-1));
+	np = (char *)((PTRTYPE)np & ~((8*1024)-1));
 	size -= (np-(char *)p);
 	if ( size <= 0 ) return;
 	// align size, too
-	long nsize = size & (~(8*1024-1));
+	int32_t nsize = size & (~(8*1024-1));
 	if ( nsize <= 0 ) return;
 	if ( mprotect ( np , nsize , prot ) == -1 )
-		log("db: mprotect (size=%li): %s.",nsize,mstrerror(errno));
+		log("db: mprotect (size=%"INT32"): %s.",nsize,mstrerror(errno));
 	//if ( prot == (PROT_READ | PROT_WRITE) )
-	//	log("db: unprotect: 0x%lx size=%li",(long)np,nsize);
+	//	log("db: unprotect: 0x%"XINT32" size=%"INT32"",(int32_t)np,nsize);
 	//else
-	//	log("db: protect: 0x%lx size=%li",(long)np,nsize);
+	//	log("db: protect: 0x%"XINT32" size=%"INT32"",(int32_t)np,nsize);
 }
 
-long RdbTree::getMemOccupiedForList2 ( collnum_t collnum  ,
+int32_t RdbTree::getMemOccupiedForList2 ( collnum_t collnum  ,
 				       char      *startKey ,
 				       char      *endKey   ,
-				       long      minRecSizes ,
-				       long      niceness ) {
-	long ne = 0;
-	long size = 0;
-	long i = getNextNode ( collnum , startKey ) ;
+				       int32_t      minRecSizes ,
+				       int32_t      niceness ) {
+	int32_t ne = 0;
+	int32_t size = 0;
+	int32_t i = getNextNode ( collnum , startKey ) ;
 	while ( i  >= 0 ) {
 		// breathe now... crap what if niceness 0 add to this tree?
 		// can that happen?
@@ -1587,8 +1587,8 @@ long RdbTree::getMemOccupiedForList2 ( collnum_t collnum  ,
 	return size;
 }
 
-long RdbTree::getMemOccupiedForList ( ) {
-	long mem = 0;
+int32_t RdbTree::getMemOccupiedForList ( ) {
+	int32_t mem = 0;
 	if ( m_fixedDataSize >= 0 ) {
 		mem += m_numUsedNodes * m_ks;
 		mem += m_numUsedNodes * m_fixedDataSize;
@@ -1596,7 +1596,7 @@ long RdbTree::getMemOccupiedForList ( ) {
 	}
 	// get total mem used by occupied nodes
 	mem  = getMemOccupied() ;
-	// remove left/right/parent for each used node (3 longs)
+	// remove left/right/parent for each used node (3 int32_ts)
 	mem -= m_overhead * m_numUsedNodes;
 	// but do include the key in the list, even though it's in the overhead
 	mem += m_ks * m_numUsedNodes;
@@ -1614,13 +1614,13 @@ long RdbTree::getMemOccupiedForList ( ) {
 // . if this turns out to be bottleneck we can use hardcore RdbGet later
 // . RdbDump should use this
 bool RdbTree::getList ( collnum_t collnum ,
-			char *startKey, char *endKey, long minRecSizes ,
-			RdbList *list , long *numPosRecs , long *numNegRecs ,
+			char *startKey, char *endKey, int32_t minRecSizes ,
+			RdbList *list , int32_t *numPosRecs , int32_t *numNegRecs ,
 			bool useHalfKeys ,
-			long niceness ) {
+			int32_t niceness ) {
 	// reset the counts of positive and negative recs
-	long numNeg = 0;
-	long numPos = 0;
+	int32_t numNeg = 0;
+	int32_t numPos = 0;
 	if ( numNegRecs ) *numNegRecs = 0;
 	if ( numPosRecs ) *numPosRecs = 0;
 	// set *lastKey in case we have no nodes in the list
@@ -1645,7 +1645,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	if ( m_numUsedNodes == 0 ) return true;
 
 	// get first node >= startKey
-	long node = getNextNode ( collnum , startKey );
+	int32_t node = getNextNode ( collnum , startKey );
 	if ( node < 0 ) return true;
 	// if it's already beyond endKey, give up
 	//if ( m_keys [ node ] > endKey ) return true;
@@ -1653,19 +1653,19 @@ bool RdbTree::getList ( collnum_t collnum ,
 	// or if we hit a different collection number
 	if ( m_collnums [ node ] > collnum ) return true;
 	// save lastNode for setting *lastKey
-	long lastNode = -1;
+	int32_t lastNode = -1;
 	// . how much space would whole tree take if we stored it in a list?
 	// . this includes records that are deletes
 	// . caller will often say give me 500MB for a fixeddatasize list
 	//   that is heavily constrained by keys...
-	long growth = getMemOccupiedForList ( );
+	int32_t growth = getMemOccupiedForList ( );
 
 	// do not allocate whole tree's worth of space if we have a fixed
 	// data size and a finite minRecSizes
 	if ( m_fixedDataSize >= 0 && minRecSizes >= 0 ) {
 		// only assign if we require less than minRecSizes of growth
 		// because some callers set minRecSizes to 500MB!!
-		long ng = minRecSizes + m_fixedDataSize + m_ks ;
+		int32_t ng = minRecSizes + m_fixedDataSize + m_ks ;
 		if ( ng < growth && ng > minRecSizes ) growth = ng;
 	}
 
@@ -1694,15 +1694,15 @@ bool RdbTree::getList ( collnum_t collnum ,
 	//}
 	// debug msg
 	//if ( growth > 1000 )
-	//	log (LOG_DEBUG,"db: RdbTree::getList: growth=%li. "
-	//	     "minRecSizes=%li db=%s.",growth,minRecSizes,m_dbname);
+	//	log (LOG_DEBUG,"db: RdbTree::getList: growth=%"INT32". "
+	//	     "minRecSizes=%"INT32" db=%s.",growth,minRecSizes,m_dbname);
 
 	// grow the list now
 	if ( ! list->growList ( growth ) ) 
-		return log("db: Failed to grow list to %li bytes for storing "
+		return log("db: Failed to grow list to %"INT32" bytes for storing "
 			   "records from tree: %s.",growth,mstrerror(g_errno));
 	// similar to above algorithm but we have data along with the keys
-	long dataSize;
+	int32_t dataSize;
 
 	// if a niceness 0 msg4 tries to add to the tree, return ETRYAGAIN
 	// if it is hitting this quickpoll. increment it as a count in
@@ -1740,7 +1740,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 
 			// node #1518 and #1565 are the key ones
 			//if ( m_ks == 18 ) {
-			//	log("tree: adding node %li k=%s",node,
+			//	log("tree: adding node %"INT32" k=%s",node,
 			//	    KEYSTR((unsigned char *)&m_keys[node*m_ks],
 			//		   m_ks));
 			//}
@@ -1779,8 +1779,8 @@ bool RdbTree::getList ( collnum_t collnum ,
 			// sanity check, break if 0 > titleRec > 100MB, 
 			// it's probably corrupt
 			//if (m_dbname && m_dbname[0]=='t' && dataSize >= 4 && 
-			//     (*((long *)m_data[node]) > 100000000 || 
-			//      *((long *)m_data[node]) < 0 ) ) {
+			//     (*((int32_t *)m_data[node]) > 100000000 || 
+			//      *((int32_t *)m_data[node]) < 0 ) ) {
 			//	char *xx = NULL; *xx = 0; }
 			// add the key and data
 			if ( ! list->addRecord ( key,//&m_keys[node*m_ks] ,
@@ -1798,14 +1798,14 @@ bool RdbTree::getList ( collnum_t collnum ,
 			     m_dbname[0]=='t' && 
 			     m_dbname[1] == 'a' && 
 			     dataSize >= 4 ) {
-				long back = dataSize + m_ks + 4;
+				int32_t back = dataSize + m_ks + 4;
 				char *rec = list->m_list+list->m_listSize-back;
 				Tag *tag = (Tag *)rec;
 				logf(LOG_DEBUG,
 				     "tree: "
-				     "getting node #%li with data ptr at %lu "
-				     "and data size of %li into a list.",
-				     node,(long)m_data[node],dataSize);
+				     "getting node #%"INT32" with data ptr at %"UINT32" "
+				     "and data size of %"INT32" into a list.",
+				     node,(int32_t)m_data[node],dataSize);
 				// detect tagdb corruption
 				if ( tag->m_bufSize < 0 ||
 				     tag->m_bufSize > 3000 ) {
@@ -1839,7 +1839,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	// . if "node" is < 0 then we can keep endKey set high the way it is
 	//if ( node >= 0 ) {
 	//key_t newEndKey = m_keys[node];
-	//newEndKey -= (unsigned long) 1 ;
+	//newEndKey -= (uint32_t) 1 ;
 	//list->set ( startKey , newEndKey );
 	//}
 	// record the last key inserted into the list
@@ -1861,7 +1861,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 		//   tree, then it's ok because we'd annihilate him anyway,
 		//   so we might as well ignore him
 		//if (((newEndKey.n0) & 0x01) == 0x00 ) 
-		//	newEndKey += (unsigned long)1;
+		//	newEndKey += (uint32_t)1;
 		// we are little endian
 		if ( KEYNEG(newEndKey,0,m_ks) ) KEYADD(newEndKey,1,m_ks);
 		// if we're using half keys set his half key bit
@@ -1896,8 +1896,8 @@ bool RdbTree::getList ( collnum_t collnum ,
 // . "*lastNode" is last node # in the list
 // . we set *lastNode to -1 if that's all folks
 /*
-bool RdbTree::getListUnordered ( long startNode , long minRecSizes ,
-				 RdbList *list  , long *nextNode ) {
+bool RdbTree::getListUnordered ( int32_t startNode , int32_t minRecSizes ,
+				 RdbList *list  , int32_t *nextNode ) {
 	// assume no nodes from startNode onward in this tree
 	*nextNode = -1;
 	// reset the list
@@ -1908,17 +1908,17 @@ bool RdbTree::getListUnordered ( long startNode , long minRecSizes ,
 	// . grow list to minRecSizes or size of tree, whichever is smallest
 	// . how much space would whole tree take if we stored it in a list?
 	// . this includes records that are deletes
-	long growth = getMemOccupiedForList ( );
+	int32_t growth = getMemOccupiedForList ( );
 	// don't grow more than we need to
 	if ( minRecSizes < growth ) growth = minRecSizes;
 	// grow the list now
 	if ( ! list->growList ( growth ) ) 
-		return log("db: Failed to grow list to %li bytes for storing "
+		return log("db: Failed to grow list to %"INT32" bytes for storing "
 			   "records from tree: %s.",growth,mstrerror(g_errno));
 	// mdw fixed, this. it was node = 0 so we couldn't dump all of tree!!!
-	long node = startNode ;
+	int32_t node = startNode ;
 
-	long  dataSize;
+	int32_t  dataSize;
 	char *data;
 
 	while ( node < m_minUnusedNode ) {
@@ -1956,7 +1956,7 @@ bool RdbTree::getListUnordered ( long startNode , long minRecSizes ,
 //   in [startKey, endKey] in this tree
 // . if the count is < 200 it returns an EXACT count
 // . right now it only works for dataless nodes (keys only)
-long RdbTree::getListSize ( collnum_t collnum ,
+int32_t RdbTree::getListSize ( collnum_t collnum ,
 			    //key_t  startKey , key_t endKey  , 
 			    //key_t *minKey   , key_t *maxKey ) {
 			    char *startKey , char *endKey  , 
@@ -1967,11 +1967,11 @@ long RdbTree::getListSize ( collnum_t collnum ,
 	if ( minKey ) KEYSET ( minKey , endKey   , m_ks );
 	if ( maxKey ) KEYSET ( maxKey , startKey , m_ks );
 	// get order of a key as close to startKey as possible
-	long order1 = getOrderOfKey ( collnum , startKey , minKey );
+	int32_t order1 = getOrderOfKey ( collnum , startKey , minKey );
 	// get order of a key as close to endKey as possible
-	long order2 = getOrderOfKey ( collnum , endKey , maxKey );
+	int32_t order2 = getOrderOfKey ( collnum , endKey , maxKey );
 	// how many recs?
-	long size = order2 - order1;
+	int32_t size = order2 - order1;
 	// . if enough, return
 	// . NOTE minKey/maxKey may be < or > startKey/endKey
 	// . return an estimated list size
@@ -1979,7 +1979,7 @@ long RdbTree::getListSize ( collnum_t collnum ,
 	// . otherwise, count exactly
 	// . reset size and get the initial node
 	size = 0;
-	long n = getPrevNode ( collnum , startKey );
+	int32_t n = getPrevNode ( collnum , startKey );
 	// return 0 if no nodes in that key range
 	if ( n < 0 ) return 0;
 	// skip to next node if this one is < startKey
@@ -2003,15 +2003,15 @@ long RdbTree::getListSize ( collnum_t collnum ,
 // . *retKey is the key that has the returned order
 // . *retKey gets as close to "key" as it can
 // . returns # of NODES
-//long RdbTree::getOrderOfKey ( collnum_t collnum , key_t key , key_t *retKey){
-long RdbTree::getOrderOfKey ( collnum_t collnum , char *key , char *retKey ) {
+//int32_t RdbTree::getOrderOfKey ( collnum_t collnum , key_t key , key_t *retKey){
+int32_t RdbTree::getOrderOfKey ( collnum_t collnum , char *key , char *retKey ) {
 	if ( m_numUsedNodes <= 0 ) return 0;
-	long i     = m_headNode;
+	int32_t i     = m_headNode;
 	// estimate the depth of tree if not balanced
-	long d     = getTreeDepth()   ;
+	int32_t d     = getTreeDepth()   ;
 	// TODO: WARNING: ensure d-1 not >= 32 !!!!!!!!!!!!!!!!!
-	long step  = 1 << (d-1);
-	long order = step;
+	int32_t step  = 1 << (d-1);
+	int32_t order = step;
 	while ( i != -1 ) {
 		//if ( retKey ) *retKey = m_keys[i];
 		if ( retKey ) KEYSET ( retKey , &m_keys[i*m_ks] , m_ks );
@@ -2033,21 +2033,21 @@ long RdbTree::getOrderOfKey ( collnum_t collnum , char *key , char *retKey ) {
 		break;
         }
 	// normalize order since tree probably has less then 2^d nodes
-	long long normOrder = 
-		(long long) order          * 
-		(long long) m_numUsedNodes / 
-		(long long) ((1 << d) -1)  ;
-	return (long) normOrder;
+	int64_t normOrder = 
+		(int64_t) order          * 
+		(int64_t) m_numUsedNodes / 
+		(int64_t) ((1 << d) -1)  ;
+	return (int32_t) normOrder;
 }
 
-long RdbTree::getTreeDepth ( ) {
+int32_t RdbTree::getTreeDepth ( ) {
 	// no problem if we're balanced
 	if ( m_doBalancing ) return m_depth [ m_headNode ];
 	// . otherwise compute: take log2(m_numUsedNodes)
 	// . get highest bit on in m_numUsedNodes
-	long n = m_numUsedNodes;
-	long depth = 0;
-	for ( long i = 0 ; i < 32; i++ ) {
+	int32_t n = m_numUsedNodes;
+	int32_t depth = 0;
+	for ( int32_t i = 0 ; i < 32; i++ ) {
 		if ( n & 0x01 ) depth = i;
 		n >>= 1;
 	}
@@ -2057,28 +2057,28 @@ long RdbTree::getTreeDepth ( ) {
 
 // . recompute depths of nodes starting at i and ascending the tree
 // . call rotateRight/Left() when depth of children differs by 2 or more
-void RdbTree::setDepths ( long i ) {
+void RdbTree::setDepths ( int32_t i ) {
 
 	// inc the depth of all parents if it changes for them
 	while ( i >= 0 ) {
 		// . compute the new depth for node i
 		// . get depth of left kid
 		// . left/rightDepth is depth of subtree on left/right
-		long leftDepth  = 0;
-		long rightDepth = 0;
+		int32_t leftDepth  = 0;
+		int32_t rightDepth = 0;
 		if ( m_left [i] >= 0 ) leftDepth  = m_depth [ m_left [i] ] ;
 		if ( m_right[i] >= 0 ) rightDepth = m_depth [ m_right[i] ] ;
 		// . get the new depth for node i
 		// . add 1 cuz we include ourself in our m_depth
-		long newDepth ;
+		int32_t newDepth ;
 		if ( leftDepth > rightDepth ) newDepth = leftDepth  + 1;
 		else                          newDepth = rightDepth + 1;
 		// if the depth did not change for i then we're done
-		long oldDepth = m_depth[i] ;
+		int32_t oldDepth = m_depth[i] ;
 		// set our new depth
 		m_depth[i] = newDepth;
 		// diff can be -2, -1, 0, +1 or +2
-		long diff = leftDepth - rightDepth;
+		int32_t diff = leftDepth - rightDepth;
 		// . if it's -1, 0 or 1 then we don't need to balance
 		// . if rightside is deeper rotate left, i is the pivot
 		// . otherwise, rotate left
@@ -2089,7 +2089,7 @@ void RdbTree::setDepths ( long i ) {
 		// . i may have change if we rotated, but same logic applies
 		if ( m_depth[i] == oldDepth ) break;
 		// debug msg
-		//fprintf (stderr,"changed node %li's depth from %li to %li\n",
+		//fprintf (stderr,"changed node %"INT32"'s depth from %"INT32" to %"INT32"\n",
 		//i,oldDepth,newDepth);
 		// get his parent to continue the ascension
 		i = m_parents [ i ];
@@ -2132,39 +2132,39 @@ void RdbTree::setDepths ( long i ) {
 // . the parameter "i" is the node # for A in the illustration above
 // . return the node # that replaced A so the balance() routine can continue
 // . TODO: check our depth modifications below
-long RdbTree::rotateRight ( long i ) {
-	//fprintf(stderr,"rotateRight: pivot = %li\n",i);
+int32_t RdbTree::rotateRight ( int32_t i ) {
+	//fprintf(stderr,"rotateRight: pivot = %"INT32"\n",i);
 	return rotate ( i , m_left , m_right );
 }
 
 // . i just swapped left with m_right
-long RdbTree::rotateLeft ( long i ) {
-	//fprintf(stderr,"rotateLeft: pivot = %li\n",i);
+int32_t RdbTree::rotateLeft ( int32_t i ) {
+	//fprintf(stderr,"rotateLeft: pivot = %"INT32"\n",i);
 	return rotate ( i , m_right , m_left );
 }
 
-long RdbTree::rotate ( long i , long *left , long *right ) {
+int32_t RdbTree::rotate ( int32_t i , int32_t *left , int32_t *right ) {
 	// i's left kid's right kid takes his place
-	long A = i;
-	long N = left  [ A ];
-	long W = left  [ N ];
-	long X = right [ N ];
-	long Q = -1;
-	long T = -1;
+	int32_t A = i;
+	int32_t N = left  [ A ];
+	int32_t W = left  [ N ];
+	int32_t X = right [ N ];
+	int32_t Q = -1;
+	int32_t T = -1;
 	if ( X >= 0 ) {
 		Q = left  [ X ];
 		T = right [ X ];
 	}
 	// let AP be A's parent
-	long AP = m_parents [ A ];
+	int32_t AP = m_parents [ A ];
 	// whose the bigger subtree, W or X? (depth includes W or X itself)
-	long Wdepth = 0;
-	long Xdepth = 0;
+	int32_t Wdepth = 0;
+	int32_t Xdepth = 0;
 	if ( W >= 0 ) Wdepth = m_depth[W];
 	if ( X >= 0 ) Xdepth = m_depth[X];
 	// debug msg
-	//fprintf(stderr,"A=%li AP=%li N=%li W=%li X=%li Q=%li T=%li "
-	//"Wdepth=%li Xdepth=%li\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
+	//fprintf(stderr,"A=%"INT32" AP=%"INT32" N=%"INT32" W=%"INT32" X=%"INT32" Q=%"INT32" T=%"INT32" "
+	//"Wdepth=%"INT32" Xdepth=%"INT32"\n",A,AP,N,W,X,Q,T,Wdepth,Xdepth);
 	// goto Xdeeper if X is deeper
 	if ( Wdepth < Xdepth ) goto Xdeeper;
 	// N's parent becomes A's parent
@@ -2180,7 +2180,7 @@ long RdbTree::rotate ( long i , long *left , long *right ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node from %li to %li\n",
+		//fprintf(stderr,"changing head node from %"INT32" to %"INT32"\n",
 		//m_headNode,N);
 		m_headNode = N;
 	}
@@ -2216,7 +2216,7 @@ long RdbTree::rotate ( long i , long *left , long *right ) {
 	}
 	// if A had no parent, it was the headNode
 	else {
-		//fprintf(stderr,"changing head node2 from %li to %li\n",
+		//fprintf(stderr,"changing head node2 from %"INT32" to %"INT32"\n",
 		//m_headNode,X);
 		m_headNode = X;
 	}
@@ -2240,9 +2240,9 @@ long RdbTree::rotate ( long i , long *left , long *right ) {
 
 // . depth of subtree with i as the head node
 // . includes i, so minimal depth is 1
-long RdbTree::computeDepth ( long i ) {
-	long leftDepth  = 0;
-	long rightDepth = 0;
+int32_t RdbTree::computeDepth ( int32_t i ) {
+	int32_t leftDepth  = 0;
+	int32_t rightDepth = 0;
 	if ( m_left [i] >= 0 ) leftDepth  = m_depth [ m_left [i] ] ;
 	if ( m_right[i] >= 0 ) rightDepth = m_depth [ m_right[i] ] ;
 	// . get the new depth for node i
@@ -2256,17 +2256,17 @@ long RdbTree::computeDepth ( long i ) {
 // . will take care of positive/negative key annihilations
 // . returns false and sets g_errno on error
 /*
-bool RdbTree::addSortedKeys ( key_t *keys , long numKeys ) {
+bool RdbTree::addSortedKeys ( key_t *keys , int32_t numKeys ) {
 	// do we have enough room?
 	if ( m_numUsedNodes + numKeys >= m_numNodes) { 
 		g_errno = ENOMEM; return false; }
 	// add one key at a time
-	long x = 0;
+	int32_t x = 0;
 	// some vars
 	key_t k;
-	long  iparent ;
-	long  rightGuy;
-	long  i;
+	int32_t  iparent ;
+	int32_t  rightGuy;
+	int32_t  i;
  loop:
 	// bail if x is exhausted
 	if ( x >= numKeys ) return true;
@@ -2346,11 +2346,11 @@ bool RdbTree::addSortedKeys ( key_t *keys , long numKeys ) {
 
 // how balanced is this tree? = #nodes w/ right kids / # node w/ left
 // the multiplied by 100. invereted to make smaller than 100.
-long RdbTree::getBalancePercent() {
+int32_t RdbTree::getBalancePercent() {
 	// count nodes w/ left kids and nodes w/ right kids
-	long numRight = 0;
-	long numLeft  = 0;
-	for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
+	int32_t numRight = 0;
+	int32_t numLeft  = 0;
+	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// skip nuked nodes
 		if ( m_parents[i] == -2 ) continue;
 		if ( m_left[i]  >= 0 ) numLeft++;
@@ -2361,7 +2361,7 @@ long RdbTree::getBalancePercent() {
 	numLeft++;
 	// . the ratio
 	// . flip if top heavy
-	long p;
+	int32_t p;
 	if ( numLeft < numRight ) p = (numLeft  * 100) / numRight;
 	else                      p = (numRight * 100) / numLeft;
 	// return the percent. from 0 to 100%.
@@ -2490,8 +2490,8 @@ bool RdbTree::fastSave_r() {
 	errno = 0;
 	// . save the header
 	// . force file head to the 0 byte in case offset was elsewhere
-	long long offset = 0;
-	long long br = 0;
+	int64_t offset = 0;
+	int64_t br = 0;
 	br += pwrite ( fd , &m_numNodes       , 4 , offset ); offset += 4;
 	br += pwrite ( fd , &m_fixedDataSize  , 4 , offset ); offset += 4;
 	br += pwrite ( fd , &m_numUsedNodes   , 4 , offset ); offset += 4;
@@ -2510,12 +2510,12 @@ bool RdbTree::fastSave_r() {
 			   m_dbname,mstrerror(errno));
 	}
 	// position to store into m_keys, ...
-	long start = 0;
+	int32_t start = 0;
 	// save tree in block units
 	while ( start < m_minUnusedNode ) {
 		// . returns number of nodes, starting at node #i, saved
 		// . returns -1 and sets errno on error
-		long bytesWritten =  fastSaveBlock_r ( fd , start , offset ) ;
+		int32_t bytesWritten =  fastSaveBlock_r ( fd , start , offset ) ;
 		// returns -1 on error
 		if ( bytesWritten < 0 ) {
 			close ( fd );
@@ -2537,25 +2537,25 @@ bool RdbTree::fastSave_r() {
 	sprintf ( s2 , "%s/%s-saved.dat", m_dir , m_dbname );
 	::rename ( s , s2 ) ;
 	// info
-	//log(0,"RdbTree::fastSave: saved %li nodes", m_numUsedNodes );
+	//log(0,"RdbTree::fastSave: saved %"INT32" nodes", m_numUsedNodes );
 	return true;
 }
 
 // return bytes written
-long RdbTree::fastSaveBlock_r ( int fd , long start , long long offset ) {
+int32_t RdbTree::fastSaveBlock_r ( int fd , int32_t start , int64_t offset ) {
 	// save offset
-	long long oldOffset = offset;
+	int64_t oldOffset = offset;
 	// . just save each one right out, even if empty
 	//   because the empty's have a linked list in m_right[]
 	// . set # n
-	long n = BLOCK_SIZE;
+	int32_t n = BLOCK_SIZE;
 	// don't over do it
 	if ( start + n > m_minUnusedNode ) n = m_minUnusedNode - start;
 	// debug msg
-	//log("writing block at %lli, %li nodes",
+	//log("writing block at %"INT64", %"INT32" nodes",
 	//     f->m_currentOffset, n);
 	errno = 0;
-	long long br = 0;
+	int64_t br = 0;
 	// write the block
 	br += pwrite ( fd,&m_collnums[start], n * sizeof(collnum_t) , offset );
 	offset += n * sizeof(collnum_t);
@@ -2573,7 +2573,7 @@ long RdbTree::fastSaveBlock_r ( int fd , long start , long long offset ) {
 		br +=pwrite(fd,&m_data[start],n * 4 , offset ); offset +=n*4;}
 	// bitch on error
 	if ( br != offset - oldOffset ) 
-	  return log("db: Failed to save tree3 for %s (%lli!=%lli): %s.",
+	  return log("db: Failed to save tree3 for %s (%"INT64"!=%"INT64"): %s.",
 				m_dbname,
 		     br,offset,
 		     mstrerror(errno)) - 1;
@@ -2582,11 +2582,11 @@ long RdbTree::fastSaveBlock_r ( int fd , long start , long long offset ) {
 	if ( m_fixedDataSize == 0 || m_dataInPtrs ) return offset - oldOffset ;
 
 	// debug count
-	//long count = 0;
+	//int32_t count = 0;
 	// define ending node for all loops
-	long end = start + n ;
+	int32_t end = start + n ;
 	// now we have to dump out all the records
-	for ( long i = start ; i < end ; i++ ) {
+	for ( int32_t i = start ; i < end ; i++ ) {
 		// skip if empty
 		if ( m_parents[i] == -2 ) continue;
 		// write variable sized nodes
@@ -2601,7 +2601,7 @@ long RdbTree::fastSaveBlock_r ( int fd , long start , long long offset ) {
 		offset += m_fixedDataSize;
 	}
 	// debug
-	//log("wrote %li bytes of raw rec data", count);
+	//log("wrote %"INT32" bytes of raw rec data", count);
 	// . don't close cuz needs to stay open for the rename
 	//   from *-saving.dat to *-saved.dat
 	// . close it
@@ -2620,11 +2620,11 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	log(LOG_INIT,"db: Loading %s.",f->getFilename());
 	// open it up
 	if ( ! f->open ( O_RDONLY ) ) return log("db: open failed");
-	long fsize = f->getFileSize();
+	int32_t fsize = f->getFileSize();
 	// init offset
-	long long offset = 0;
+	int64_t offset = 0;
 	// 16 byte header
-	long header = 4*6 + sizeof(m_doBalancing) + sizeof(m_ownData);
+	int32_t header = 4*6 + sizeof(m_doBalancing) + sizeof(m_ownData);
 	// file size must be a min of "header"
 	if ( fsize < header ) { f->close(); g_errno=EBADFILE; return false; }
 
@@ -2632,9 +2632,9 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	m_isLoading = true;
 
 	// get # of nodes in the tree
-	long n , fixedDataSize , numUsedNodes ;
+	int32_t n , fixedDataSize , numUsedNodes ;
 	bool doBalancing , ownData ;
-	long headNode , nextNode , minUnusedNode;
+	int32_t headNode , nextNode , minUnusedNode;
 	// force file head to the 0 byte in case offset was elsewhere
 	f->read  ( &n              , 4 , offset ); offset += 4;
 	f->read  ( &fixedDataSize  , 4 , offset ); offset += 4;
@@ -2659,8 +2659,8 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 			   "the code and is not reflected in this file.");
 	}
 	// make sure size it right again
-	long nodeSize    = (sizeof(collnum_t)+m_ks+4+4+4);
-	long minFileSize = header + minUnusedNode * nodeSize;
+	int32_t nodeSize    = (sizeof(collnum_t)+m_ks+4+4+4);
+	int32_t minFileSize = header + minUnusedNode * nodeSize;
 	if ( doBalancing         ) minFileSize += minUnusedNode     ;
 	if ( fixedDataSize == -1 ) minFileSize += minUnusedNode * 4 ;
 	//if ( fixedDataSize > 0 ) minFileSize += minUnusedNode *fixedDataSize;
@@ -2668,7 +2668,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	if ( fixedDataSize == 0 && fsize != minFileSize ) {
 		g_errno = EBADFILE;
 		log(
-		    "db: File size of %s is %li, should be %li. File may be "
+		    "db: File size of %s is %"INT32", should be %"INT32". File may be "
 		    "corrupted.",
 		    f->getFilename(),fsize,minFileSize);
 		f->close();
@@ -2679,7 +2679,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	if ( fsize < minFileSize ) {
 		g_errno = EBADFILE;
 		log(
-		    "db: File size of %s is %li, should >= %li. File may be "
+		    "db: File size of %s is %"INT32", should >= %"INT32". File may be "
 		    "corrupted.",
 		    f->getFilename(),fsize,minFileSize);
 		f->close();
@@ -2698,7 +2698,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 		}
 	}
 	// we'll read this many
-	long start = 0;
+	int32_t start = 0;
 
 	if ( m_useProtection ) unprotect();
 
@@ -2710,7 +2710,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 		// . returns next place to start scan
 		// . incs m_numPositive/NegativeKeys and m_numUsedNodes 
 		// . incs m_memAlloced and m_memOccupied
-		long bytesRead =  fastLoadBlock ( f             , 
+		int32_t bytesRead =  fastLoadBlock ( f             , 
 						  start         , 
 						  minUnusedNode , 
 						  stack         ,
@@ -2719,7 +2719,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 			f->close();
 			if ( m_useProtection ) protect();
 			g_errno = errno;
-			log("db: bytesRead = %li",bytesRead);
+			log("db: bytesRead = %"INT32"",bytesRead);
 			m_isLoading = false;
 			return false;
 		}
@@ -2733,7 +2733,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 
 	// print corruption
 	if ( m_corrupt ) 
-		log("admin: Loaded %li corrupted recs in tree for %s.",
+		log("admin: Loaded %"INT32" corrupted recs in tree for %s.",
 		    m_corrupt,m_dbname);
 
 	// re-enable protection
@@ -2745,7 +2745,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	m_nextNode      = nextNode;
 	m_minUnusedNode = minUnusedNode;
 	// info
-	//log(0,"RdbTree::fastLoad: loaded %li nodes", m_numUsedNodes );
+	//log(0,"RdbTree::fastLoad: loaded %"INT32" nodes", m_numUsedNodes );
 	// close it
 	//f->close();
 	// check it
@@ -2755,9 +2755,9 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	/*
 	if ( m_fixedDataSize == -1 ) {
 		log("REMOVING 0 SIZE NODES FROM SPIDERDB/SITEDB/TITLEDB");
-		long count = 0;
+		int32_t count = 0;
 	again:
-		for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
+		for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 			if ( m_parents[i] == -2 ) continue;
 			if ( m_sizes[i] != 0 ) continue;
 			if ( (m_keys[i].n0 & 0x01) == 0x00 ) continue;
@@ -2768,7 +2768,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 			//deleteNode ( i , true ); // freeData?
 			//goto again;
 		}
-		log("REMOVED %li",count);
+		log("REMOVED %"INT32"",count);
 		if ( ! checkTree( false ) ) return fixTree ( );
 	}
 	*/
@@ -2780,18 +2780,18 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 
 // . return bytes loaded
 // . returns -1 and sets g_errno on error
-long RdbTree::fastLoadBlock ( BigFile   *f          , 
-			      long       start      , 
-			      long       totalNodes , 
+int32_t RdbTree::fastLoadBlock ( BigFile   *f          , 
+			      int32_t       start      , 
+			      int32_t       totalNodes , 
 			      RdbMem    *stack      ,
-			      long long  offset     ) {
+			      int64_t  offset     ) {
 	// set # ndoes to read
-	long n = totalNodes - start;
+	int32_t n = totalNodes - start;
 	if ( n > BLOCK_SIZE ) n = BLOCK_SIZE;
 	// debug msg
-	//log("reading block at %lli, %li nodes",
+	//log("reading block at %"INT64", %"INT32" nodes",
 	//     f->m_currentOffset, n );
-	long long oldOffset = offset;
+	int64_t oldOffset = offset;
 	// . copy them in
 	// . start reading at beginning of file
 	f->read ( &m_collnums[start], n * sizeof(collnum_t) , offset ); 
@@ -2815,15 +2815,15 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 		return -1;
 	}
 	// get valid collnum ranges
-	long max  = g_collectiondb.m_numRecs;
+	int32_t max  = g_collectiondb.m_numRecs;
 	// sanity check
 	//if ( max >= MAX_COLLS ) { char *xx = NULL; *xx = 0; }
 	// define ending node for all loops
-	long end = start + n ;
-	// shortcut
+	int32_t end = start + n ;
+	// int16_tcut
 	CollectionRec **recs = g_collectiondb.m_recs;
 	// store into tree in the appropriate nodes
-	for ( long i = start ; i < end ; i++ ) {
+	for ( int32_t i = start ; i < end ; i++ ) {
 		// skip if empty
 		if ( m_parents[i] == -2 ) continue;
 		// watch out for bad collnums... corruption...
@@ -2862,13 +2862,13 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// bail now if we can 
 	if ( m_fixedDataSize == 0 || m_dataInPtrs ) return offset - oldOffset ;
 	// how much should we read?
-	long bufSize = 0;
+	int32_t bufSize = 0;
 	if ( m_fixedDataSize == -1 ) {
-		for ( long i = start ; i < end ; i++ ) 
+		for ( int32_t i = start ; i < end ; i++ ) 
 			if ( m_parents[i] != -2 ) bufSize += m_sizes[i];
 	}
 	else if ( m_fixedDataSize > 0 ) {
-		for ( long i = start ; i < end ; i++ ) 
+		for ( int32_t i = start ; i < end ; i++ ) 
 			if ( m_parents[i] != -2 ) bufSize += m_fixedDataSize;
 	}
 	// get space
@@ -2876,13 +2876,13 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	char *dummy = NULL;
 	char *buf = (char *) stack->allocData ( dummy , bufSize , 0 );
 	if ( ! buf ) {
-	        log("db: Failed to allocate %li bytes to read %s. "
+	        log("db: Failed to allocate %"INT32" bytes to read %s. "
 		    "Increase tree size for it in gb.conf.",
 		    bufSize,f->getFilename());
 		return -1;
 	}
 	// debug
-	//log("reading %li bytes of raw rec data", bufSize );
+	//log("reading %"INT32" bytes of raw rec data", bufSize );
 	// establish end point
 	char *bufEnd = buf + bufSize;
 	// . read all into that buf
@@ -2893,8 +2893,8 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// advance file offset
 	offset += bufSize;
 	// part it out now
-	long  size = m_fixedDataSize;
-	for ( long i = start ; i < end ; i++ ) {
+	int32_t  size = m_fixedDataSize;
+	for ( int32_t i = start ; i < end ; i++ ) {
 		// skip unused
 		if ( m_parents[i] == -2 ) continue;
 		// get size of his data if it's variable
@@ -2903,7 +2903,7 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 		if ( buf + size > bufEnd ) {
 			g_errno = EBADFILE;
 			log("db: Encountered record with corrupted "
-			    "size parameter of %li in %s.", 
+			    "size parameter of %"INT32" in %s.", 
 			    size,f->getFilename());
 			return -1;
 		}
@@ -2924,16 +2924,16 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 	log(LOG_INFO,"db: Loading %s.",f->getFilename());
 	// open it up
 	if ( ! f->open ( O_RDONLY ) ) return false;
-	long fsize = f->getFileSize();
+	int32_t fsize = f->getFileSize();
 	// 16 byte header
-	long header = 4*6 + sizeof(m_doBalancing) + sizeof(m_ownData);
+	int32_t header = 4*6 + sizeof(m_doBalancing) + sizeof(m_ownData);
 	// file size must be a min of "header"
 	if ( fsize < header ) { g_errno = EBADFILE; return false; }
 	// get # of nodes in the tree
-	long n , fixedDataSize , numUsedNodes ;
+	int32_t n , fixedDataSize , numUsedNodes ;
 	bool doBalancing , ownData ;
-	long headNode , nextNode , minUnusedNode;
-	long long offset = 0;
+	int32_t headNode , nextNode , minUnusedNode;
+	int64_t offset = 0;
 	f->read  ( &n              , 4 , offset ); offset += 4 ;
 	f->read  ( &fixedDataSize  , 4 , offset ); offset += 4 ;
 	f->read  ( &numUsedNodes   , 4 , offset ); offset += 4 ;
@@ -2952,7 +2952,7 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 	     m_ownData       != ownData        ) 
 		return log("RdbTree::fastLoad: bad parms");
 	// make sure size it right again
-	long minFileSize = header + numUsedNodes * (m_ks+4+4+4+4);
+	int32_t minFileSize = header + numUsedNodes * (m_ks+4+4+4+4);
 	if ( doBalancing         ) minFileSize += numUsedNodes     ;
 	if ( fixedDataSize == -1 ) minFileSize += numUsedNodes * 4 ;
 	// does it fit?
@@ -2974,7 +2974,7 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 	// read block by block
 	while ( numUsedNodes > 0 ) {
 		// returns next place to start scan
-		long bytesRead = oldLoadBlock (f, numUsedNodes, stack,offset);
+		int32_t bytesRead = oldLoadBlock (f, numUsedNodes, stack,offset);
 		if ( bytesRead < 0 ) return false;
 		// advance file offset
 		offset += bytesRead;
@@ -2986,7 +2986,7 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 	//m_nextNode      = nextNode;
 	//m_minUnusedNode = minUnusedNode;
 	// info
-	//log(0,"RdbTree::fastLoad: loaded %li nodes", m_numUsedNodes );
+	//log(0,"RdbTree::fastLoad: loaded %"INT32" nodes", m_numUsedNodes );
 	// close it
 	f->close();
 
@@ -2995,23 +2995,23 @@ bool RdbTree::oldLoad ( BigFile *f , RdbMem *stack ) {
 	return true;
 }
 
-long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
-			     long long offset ){
+int32_t RdbTree::oldLoadBlock ( BigFile *f, int32_t remainingNodes , RdbMem *stack,
+			     int64_t offset ){
 	// save offset
-	long long oldOffset = offset;
+	int64_t oldOffset = offset;
 	// array for holding shit
-	long  slotNums [ BLOCK_SIZE ];
+	int32_t  slotNums [ BLOCK_SIZE ];
 	key_t keys     [ BLOCK_SIZE ];
-	long  left     [ BLOCK_SIZE ];
-	long  right    [ BLOCK_SIZE ];
-	long  parents  [ BLOCK_SIZE ];
+	int32_t  left     [ BLOCK_SIZE ];
+	int32_t  right    [ BLOCK_SIZE ];
+	int32_t  parents  [ BLOCK_SIZE ];
 	char  depth    [ BLOCK_SIZE ];
-	long  sizes    [ BLOCK_SIZE ];
+	int32_t  sizes    [ BLOCK_SIZE ];
 	// set # ndoes to read
-	long n = remainingNodes;
+	int32_t n = remainingNodes;
 	if ( n > BLOCK_SIZE ) n = BLOCK_SIZE;
 	// debug msg
-	//log("reading block at %lli, %li nodes",
+	//log("reading block at %"INT64", %"INT32" nodes",
 	//     f->m_currentOffset, remainingNodes);
 	// copy them in
 	f->read (  slotNums, n * 4 , offset ); offset += n * 4;
@@ -3027,8 +3027,8 @@ long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
 	// return false on read error
 	if ( g_errno ) return -1;
 	// store into tree in the appropriate nodes
-	//long j ;
-	//for ( long i = 0 ; i < n ; i++ ) {
+	//int32_t j ;
+	//for ( int32_t i = 0 ; i < n ; i++ ) {
 		//addNode ( m_keys[i] ,
 		// get the node number this belongs in
 		//j = slotNums[i];
@@ -3047,16 +3047,16 @@ long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
 	//}
 	// bail now if we can 
 	if ( m_fixedDataSize == 0 ) {
-		for ( long i = 0 ; i < n ; i++ ) 
+		for ( int32_t i = 0 ; i < n ; i++ ) 
 			addNode ( keys[i] , NULL , 0 );
 		return offset - oldOffset;
 	}
 
 
 	// how much should we read?
-	long bufSize = 0;
+	int32_t bufSize = 0;
 	if ( m_fixedDataSize == -1 ) 
-		for ( long i = 0 ; i < n ; i++ ) bufSize += sizes[i];
+		for ( int32_t i = 0 ; i < n ; i++ ) bufSize += sizes[i];
 	else
 		bufSize = m_fixedDataSize * n;
 	// get space
@@ -3073,8 +3073,8 @@ long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
 	// advance file offset
 	offset += bufSize;
 	// part it out now
-	long  size = m_fixedDataSize;
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t  size = m_fixedDataSize;
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get slot num
 		//k = slotNums[i];
 		// get size of his data if it's variable
@@ -3103,11 +3103,11 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 	if ( m_rdbId < 0 ) return;
 
 	// the liberation count
-	long count = 0;
+	int32_t count = 0;
 	collnum_t collnum;
-	long max = g_collectiondb.m_numRecs;
+	int32_t max = g_collectiondb.m_numRecs;
 
-	for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
+	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// skip node if parents is -2 (unoccupied)
 		if ( m_parents[i] == -2 ) continue;
 		// is collnum valid?
@@ -3129,7 +3129,7 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 
 	// print it
 	if ( count == 0 ) return;
-	log(LOG_LOGIC,"db: Removed %li records from %s tree for invalid "
+	log(LOG_LOGIC,"db: Removed %"INT32" records from %s tree for invalid "
 	    "collection number %i.",count,m_dbname,collnum);
 	//log(LOG_LOGIC,"db: Records not actually removed for safety. Except "
 	//    "for those with negative colnums.");
@@ -3142,7 +3142,7 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 	     "memory, too.");
 }
 
-long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
+int32_t  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
 	// fix for statsdb or other collectionless rdbs
 	if ( m_rdbId < 0 ) return m_numNegativeKeys;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
@@ -3151,7 +3151,7 @@ long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) {
 	return cr->m_numNegKeysInTree[(unsigned char)m_rdbId]; 
 }
 
-long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
+int32_t  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
 	// fix for statsdb or other collectionless rdbs
 	if ( m_rdbId < 0 ) return m_numPositiveKeys;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
@@ -3175,7 +3175,7 @@ void RdbTree::setNumKeys ( CollectionRec *cr ) {
 	cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
 
 
-	for ( long i = 0 ; i < m_numNodes ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numNodes ; i++ ) {
 		//QUICKPOLL(niceness);
 		// skip if empty
 		if ( m_parents[i] == -2 ) continue;

@@ -61,15 +61,15 @@ class Msg20Request {
 		m_titleMaxLen        = 64  ;
 		m_summaryMaxLen      = 512 ;
 		// reset ptr sizes
-		long size = m_buf - (char *)&size_qbuf;
+		int32_t size = m_buf - (char *)&size_qbuf;
 		memset ( &size_qbuf , 0 , size );
 	};
 
-	long  getStoredSize ( );
-	char *serialize     ( long *sizePtr     ,
+	int32_t  getStoredSize ( );
+	char *serialize     ( int32_t *sizePtr     ,
 			      char *userBuf     ,
-			      long  userBufSize ) ;
-	long  deserialize   ( );
+			      int32_t  userBufSize ) ;
+	int32_t  deserialize   ( );
 
 	char       m_version                   ; // non-zero default
 	char       m_numSummaryLines           ; // non-zero default
@@ -78,54 +78,54 @@ class Msg20Request {
 	bool       m_getHeaderTag              ;
 	void      *m_state                     ;
 	void      *m_state2                    ; // used by Msg25.cpp
-	long       m_j                         ; // used by Msg25.cpp
+	int32_t       m_j                         ; // used by Msg25.cpp
 	bool    (* m_callback)( void *m_state );
 	void    (* m_callback2)( void *m_state );
-	long long  m_docId                     ;
+	int64_t  m_docId                     ;
 	Hostdb    *m_hostdb                    ;
-	long       m_niceness                  ;
+	int32_t       m_niceness                  ;
 	char       m_boolFlag                  ;
-	long       m_titleMaxLen               ;
-	long       m_summaryMaxLen             ;
-	long       m_summaryMaxNumCharsPerLine ;
-	long       m_maxNumCharsPerLine        ;
-	long       m_bigSampleRadius           ;
-	long       m_bigSampleMaxLen           ;
-	long       m_maxCacheAge               ;
-	long       m_maxLinks                  ;
-	long       m_discoveryDate             ;
+	int32_t       m_titleMaxLen               ;
+	int32_t       m_summaryMaxLen             ;
+	int32_t       m_summaryMaxNumCharsPerLine ;
+	int32_t       m_maxNumCharsPerLine        ;
+	int32_t       m_bigSampleRadius           ;
+	int32_t       m_bigSampleMaxLen           ;
+	int32_t       m_maxCacheAge               ;
+	int32_t       m_maxLinks                  ;
+	int32_t       m_discoveryDate             ;
 
 	// special shit so we can remove an inlinker to a related docid
 	// if they also link to the main url we are processing seo for.
 	// set both of these to 0 to disregard.
-	long m_ourHostHash32;
-	long m_ourDomHash32;
+	int32_t m_ourHostHash32;
+	int32_t m_ourDomHash32;
 	
 	FacetValHash_t m_facetValHash;
 
 	char       m_justGetFacets : 1         ;
 
 	// for sending msg20 request to another network
-	//long       m_hostIP;
-	//long       m_hostUDPPort;
+	//int32_t       m_hostIP;
+	//int32_t       m_hostUDPPort;
 
 	// if titleRec not from this ruleset, return g_errno = EDOCFILTERED
-	//long       m_rulesetFilter             ;
+	//int32_t       m_rulesetFilter             ;
 	// add this many seconds to clock to simulate event search going
 	// forward or backward in time
-	long       m_clockOff;
+	int32_t       m_clockOff;
 	// we force the clock time to this if "clockset" is a non-zero cgi parm
 	time_t     m_clockSet;
 	// pass in the same time in UTC we used for the intersection algo
 	time_t     m_nowUTC;
-	long       m_turkIp;
+	int32_t       m_turkIp;
 	// language the query is in (ptr_qbuf)
 	uint8_t    m_langId;
 	// . if not 0 then return the event from the docid with that eventId
 	// . include the title and text of the event, and the address
 	//   serialized using Address::serialize(), and all the start dates
 	//   from now onward
-	long       m_eventId                   ;
+	int32_t       m_eventId                   ;
 	// we now use the numeric collection # and not the ptr_coll
 	collnum_t  m_collnum;
 	// set this to true when you pass in m_eventIdBits...
@@ -178,7 +178,7 @@ class Msg20Request {
 	char       m_getTurkForm               :1;
 	char       m_showTurkInstructions      :1;
 	char       m_isTurkSpecialQuery        :1;
-	char       m_isRootAdmin                   :1;
+	char       m_isMasterAdmin                   :1;
 	// . this is for buzz.
 	// . this says to compute the <absScore2> tag in their xml feed.
 	// . the document receives a score of 0 if it does not match the query
@@ -204,18 +204,18 @@ class Msg20Request {
 	//   from the above parms
 	// . add new size_* parms after size_qbuf and before size_displayMetas
 	//   so that serialize()/deserialize() still work
-	long       size_qbuf         ;
-	long       size_hqbuf        ;
-	//long       size_q2buf        ;
-	long       size_turkUser     ;
-	long       size_ubuf         ; // url buffer
-	long       size_rubuf        ; // redirect url buffer
-	long       size_termFreqs    ;
-	long       size_affWeights   ;
-	long       size_linkee       ; // size includes terminating \0
-	//long       size_coll         ; // size includes terminating \0
-	//long       size_imgUrl       ;
-	long       size_displayMetas ; // size includes terminating \0
+	int32_t       size_qbuf         ;
+	int32_t       size_hqbuf        ;
+	//int32_t       size_q2buf        ;
+	int32_t       size_turkUser     ;
+	int32_t       size_ubuf         ; // url buffer
+	int32_t       size_rubuf        ; // redirect url buffer
+	int32_t       size_termFreqs    ;
+	int32_t       size_affWeights   ;
+	int32_t       size_linkee       ; // size includes terminating \0
+	//int32_t       size_coll         ; // size includes terminating \0
+	//int32_t       size_imgUrl       ;
+	int32_t       size_displayMetas ; // size includes terminating \0
 
 	char       m_buf[0] ;
 };
@@ -223,22 +223,22 @@ class Msg20Request {
 // the Msg20Reply::ptr_eventSummaryLines is a list of these classes
 class SummaryLine {
  public:
-	long  m_totalSize;
-	//long  m_pageOff;
-	long  m_pageOff1;
-	long  m_pageOff2;
-	long  m_firstDatePageOff;
+	int32_t  m_totalSize;
+	//int32_t  m_pageOff;
+	int32_t  m_pageOff1;
+	int32_t  m_pageOff2;
+	int32_t  m_firstDatePageOff;
 	// so we know if two summary lines are adjacent. then we do not
 	// insert the "..." between them when displaying.
-	long  m_alnumPosA;
-	long  m_alnumPosB;
+	int32_t  m_alnumPosA;
+	int32_t  m_alnumPosB;
 	// copied from EventDesc::m_dflags. might also include some tags
 	// that we add in XmlDoc::getEventSummary(), like EDF_TRUNCATED
-	long  m_flags;
+	int32_t  m_flags;
 	// if two summary lines are adjacent then do not print the ... between
 	// in the serps, will look cleaner...
-	//long  m_alnumWordA;
-	//long  m_alnumWordB;
+	//int32_t  m_alnumWordA;
+	//int32_t  m_alnumWordB;
 	char  m_buf[0];
 };
 
@@ -257,13 +257,13 @@ public:
 	void reset() { memset ( (char *)this,0,sizeof(Msg20Reply) ); };
 
 	// how many bytes if we had to serialize it?
-	long getStoredSize() ;
+	int32_t getStoredSize() ;
 
-	long  deserialize ( ) ;
-	long  serialize ( char *buf , long bufSize );
+	int32_t  deserialize ( ) ;
+	int32_t  serialize ( char *buf , int32_t bufSize );
 
-	char *getAttendeeUrl ( long i ) { return ""; };
-	char *getLikerUrl    ( long i ) { return ""; };
+	char *getAttendeeUrl ( int32_t i ) { return ""; };
+	char *getLikerUrl    ( int32_t i ) { return ""; };
 
 	bool  sendReply ( class XmlDoc *xd ) ;
 
@@ -284,7 +284,7 @@ public:
 	// a new one for getting the display contents sequentially used 
 	// by Msg24.cpp. this routine is the exclusive user of the "next"
 	// variable which must be set to "ptr_dbuf" when first called.
-	char *getNextDisplayBuf ( long *len , char **next ) { 
+	char *getNextDisplayBuf ( int32_t *len , char **next ) { 
 		if ( ! *next                       ) return NULL;
 		if ( *next >= (char *)ptr_dbuf + size_dbuf ) return NULL;
 		char *s = *next;
@@ -294,31 +294,31 @@ public:
 	};
 
 	char       m_version             ;
-	long       m_ip                  ;
-	long       m_firstIp             ;
-	long       m_wordPosStart        ;
-	long long  m_domHash             ;
-	long long  m_docId               ;
-	long long  m_urlHash48           ;
+	int32_t       m_ip                  ;
+	int32_t       m_firstIp             ;
+	int32_t       m_wordPosStart        ;
+	int64_t  m_domHash             ;
+	int64_t  m_docId               ;
+	int64_t  m_urlHash48           ;
 	uint64_t   m_eventHash64         ;
-	long       m_eventId             ;
+	int32_t       m_eventId             ;
 	uint64_t   m_eventDateHash64     ;
 	uint32_t   m_adch32              ; // event address/data content hash
 	uint32_t   m_adth32              ; // event address/data tag hash
-	long       m_firstSpidered       ;
-	long       m_lastSpidered        ;
-	long       m_lastModified        ;
-	long       m_datedbDate          ;
-	long       m_firstIndexedDate    ; // for the url/document as a whole
-	long       m_discoveryDate       ; // for the inlink in question...
-	long       m_numAlnumWords       ;
-	//long       m_numAttendees        ;
-	//long       m_numLikers           ;
+	int32_t       m_firstSpidered       ;
+	int32_t       m_lastSpidered        ;
+	int32_t       m_lastModified        ;
+	int32_t       m_datedbDate          ;
+	int32_t       m_firstIndexedDate    ; // for the url/document as a whole
+	int32_t       m_discoveryDate       ; // for the inlink in question...
+	int32_t       m_numAlnumWords       ;
+	//int32_t       m_numAttendees        ;
+	//int32_t       m_numLikers           ;
         bool       m_datedbDateIsEstimated;
-	long       m_errno               ; // LinkInfo uses it for LinkTextRepl
+	int32_t       m_errno               ; // LinkInfo uses it for LinkTextRepl
 	collnum_t  m_collnum             ; // collection # we came from
 	char       m_sumFromDmoz         ; // unused
-	long       m_hostHash            ;
+	int32_t       m_hostHash            ;
 	char       m_noArchive           ;
 	char       m_contentType         ;
 	//char       m_docQuality          ;
@@ -336,30 +336,30 @@ public:
 	uint8_t    m_summaryLanguage     ;
 	uint16_t   m_country             ;
 	uint16_t   m_computedCountry     ;
-	short      m_charset             ;
+	int16_t      m_charset             ;
 	// for use by caller
 	class Msg20Reply *m_nextMerged   ;
-	//long     m_numCatIds           ; // use size_catIds
-	//long     m_numIndCatIds        ; // use size_indCatIds
-	long       m_contentLen          ; // was m_docLen
-	long       m_contentHash32       ;  // for deduping diffbot json objects streaming
-	//long     m_docSummaryScore     ;
-	//long     m_inSectionScore      ;
+	//int32_t     m_numCatIds           ; // use size_catIds
+	//int32_t     m_numIndCatIds        ; // use size_indCatIds
+	int32_t       m_contentLen          ; // was m_docLen
+	int32_t       m_contentHash32       ;  // for deduping diffbot json objects streaming
+	//int32_t     m_docSummaryScore     ;
+	//int32_t     m_inSectionScore      ;
 	//float      m_proximityScore      ;
-	//long       m_ruleset             ;
-	long       m_pageNumInlinks      ;
-	long       m_pageNumGoodInlinks  ;
-	long       m_pageNumUniqueIps    ; // includes our own inlinks
-	long       m_pageNumUniqueCBlocks; // includes our own inlinks
-	long       m_pageInlinksLastUpdated;
+	//int32_t       m_ruleset             ;
+	int32_t       m_pageNumInlinks      ;
+	int32_t       m_pageNumGoodInlinks  ;
+	int32_t       m_pageNumUniqueIps    ; // includes our own inlinks
+	int32_t       m_pageNumUniqueCBlocks; // includes our own inlinks
+	int32_t       m_pageInlinksLastUpdated;
 	
-	long       m_siteNumInlinks      ; // GOOD inlinks!
-	long       m_siteNumInlinksTotal ; // TOTAL inlinks
-	long       m_siteNumUniqueIps    ;
-	long       m_siteNumUniqueCBlocks;
+	int32_t       m_siteNumInlinks      ; // GOOD inlinks!
+	int32_t       m_siteNumInlinksTotal ; // TOTAL inlinks
+	int32_t       m_siteNumUniqueIps    ;
+	int32_t       m_siteNumUniqueCBlocks;
 
-	long       m_numOutlinks         ; // replaced m_linkCount
-	long       m_tmp                 ; // used by Msg40.cpp for event merge
+	int32_t       m_numOutlinks         ; // replaced m_linkCount
+	int32_t       m_tmp                 ; // used by Msg40.cpp for event merge
 	//float      m_diversity           ;
 	uint32_t   m_tagVectorHash       ; // zak's hash of html template
 	uint32_t   m_gigabitVectorHash   ; // zak's hash of the gigabits
@@ -369,16 +369,16 @@ public:
 	double     m_eventGeocoderLon    ;
 	uint64_t   m_eventAddressHash64  ; // event address hash
 	uint64_t   m_eventTitleHash64    ; // event title hash
-	long       m_eventTitleOff       ; // offset of first word in title
+	int32_t       m_eventTitleOff       ; // offset of first word in title
 	evflags_t  m_eventFlags          ;
 	char       m_timeZoneOffset      ; // in hours
 	char       m_useDST              ; // does event place use dst?
-	long       m_nextStart           ; // next occ starts at this time_t
-	long       m_nextEnd             ; // end - start is how long it is
-	long       m_prevStart           ;
-	long       m_prevEnd             ;
-	long       m_displayStartTime    ; // the event times to display
-	long       m_displayEndTime      ;
+	int32_t       m_nextStart           ; // next occ starts at this time_t
+	int32_t       m_nextEnd             ; // end - start is how long it is
+	int32_t       m_prevStart           ;
+	int32_t       m_prevEnd             ;
+	int32_t       m_displayStartTime    ; // the event times to display
+	int32_t       m_displayEndTime      ;
 
 	double     m_balloonLat;
 	double     m_balloonLon;
@@ -390,20 +390,22 @@ public:
 	uint32_t   m_timeIntervalHash;
 
 	// these are just storage for LinkInfo::set() to use
-	//long       m_linkTextScoreWeight ;
-	long       m_linkTextNumWords    ;
-	//long       m_linkTextLinkerQualityBoost ;
-	//long       m_linkTextNumWordsBoost    ;
-	//long       m_linkTextBaseScore   ;
+	//int32_t       m_linkTextScoreWeight ;
+	int32_t       m_linkTextNumWords    ;
+	//int32_t       m_linkTextLinkerQualityBoost ;
+	//int32_t       m_linkTextNumWordsBoost    ;
+	//int32_t       m_linkTextBaseScore   ;
 	char      *m_linkTextNote        ;
 
-	//long       m_pagePop             ; // set for m_computeLinkInfo
-	//long     m_siteRootPagePop     ; // set for m_computeLinkInfo
-	//long     m_siteRootNumInlinks  ; // set for m_computeLinkInfo
-	//long       m_sitePop             ; // set for m_computeLinkInfo
-	long       m_midDomHash          ; // set for m_getLinkText
-	long       m_adIdHash            ; // set for m_getLinkText
-	long       m_timeLinkSpam        ; // set for m_getLinkText
+	//int32_t       m_pagePop             ; // set for m_computeLinkInfo
+	//int32_t     m_siteRootPagePop     ; // set for m_computeLinkInfo
+	//int32_t     m_siteRootNumInlinks  ; // set for m_computeLinkInfo
+	//int32_t       m_sitePop             ; // set for m_computeLinkInfo
+	int32_t       m_midDomHash          ; // set for m_getLinkText
+	int32_t       m_adIdHash            ; // set for m_getLinkText
+	int32_t       m_timeLinkSpam        ; // set for m_getLinkText
+	void         *m_parentOwner;
+	char          m_constructorId;
 	char       m_inlinkWeight        ; // set for m_getLinkText
 	char       m_isLinkSpam          ; // set for m_getLinkText
 	char       m_isAnomaly           ; // set for m_getLinkText
@@ -445,8 +447,8 @@ public:
 	char       *ptr_numMatchedQueryWords ;
 	char       *ptr_matchedTypes         ;
 
-	long       *ptr_catIds               ;
-	long       *ptr_indCatIds            ;
+	int32_t       *ptr_catIds               ;
+	int32_t       *ptr_indCatIds            ;
 	//char     *ptr_dmozTitleLens        ;
 	char       *ptr_dmozTitles           ;
 	//char     *ptr_dmozSummLens         ;
@@ -470,16 +472,16 @@ public:
 	// . these are used only by Msg25 to compute LinkInfo
 	// . Msg25 will call Msg20 on the docid of a potentially good inlinker
 	//   instead of calling the now obsolete Msg23::getLinkText()
-	long       *ptr_vector1              ; // set for m_getLinkText
-	long       *ptr_vector2              ; // set for m_getLinkText
-	long       *ptr_vector3              ; // set for m_getLinkText
+	int32_t       *ptr_vector1              ; // set for m_getLinkText
+	int32_t       *ptr_vector2              ; // set for m_getLinkText
+	int32_t       *ptr_vector3              ; // set for m_getLinkText
 	char       *ptr_linkText             ; // set for m_getLinkText
 	char       *ptr_surroundingText      ; // set for m_getLinkText
 	char       *ptr_linkUrl              ; // what we link to
 	char       *ptr_rssItem              ; // set for m_getLinkText
 	char       *ptr_categories           ;
 	char       *ptr_gigabitQuery         ; // , separated list of gigabits
-	long       *ptr_gigabitScores        ; // 1-1 with the terms in query
+	int32_t       *ptr_gigabitScores        ; // 1-1 with the terms in query
 	char       *ptr_content              ; // page content in utf8
 	char       *ptr_sectionVotingInfo    ; // in JSON
 	char       *ptr_tr                   ; // like just using msg22
@@ -519,96 +521,96 @@ public:
 	//   so that serialize()/deserialize() still work
 	// . string sizes of the strings we store into m_buf[]
 	// . wordCountBuf is an exact word count 1-1 with each "range"
-	long       size_tbuf                 ;
-	long       size_htag                 ;
-	long       size_ubuf                 ;
-	long       size_rubuf                ;
-	long       size_displaySum           ;
-	long       size_dedupSum             ;
-	long       size_dbuf                 ;
-	//long     size_sbuf                 ;
-	long       size_gigabitSample        ; // includes \0
-	long       size_obuf                 ;
-	long       size_mbuf                 ;
-	long       size_vbuf                 ;
-	long       size_tvbuf                ;
-	long       size_gbvecbuf             ;
-	long       size_imgUrl               ; // youtube/metacafe vid thumb
-	long       size_imgData              ;
-	long       size_facetBuf             ;
-	//long       size_eventEnglishTime     ;
-	//long       size_eventDateIntervals   ;
-	long       size_likedbList           ;
+	int32_t       size_tbuf                 ;
+	int32_t       size_htag                 ;
+	int32_t       size_ubuf                 ;
+	int32_t       size_rubuf                ;
+	int32_t       size_displaySum           ;
+	int32_t       size_dedupSum             ;
+	int32_t       size_dbuf                 ;
+	//int32_t     size_sbuf                 ;
+	int32_t       size_gigabitSample        ; // includes \0
+	int32_t       size_obuf                 ;
+	int32_t       size_mbuf                 ;
+	int32_t       size_vbuf                 ;
+	int32_t       size_tvbuf                ;
+	int32_t       size_gbvecbuf             ;
+	int32_t       size_imgUrl               ; // youtube/metacafe vid thumb
+	int32_t       size_imgData              ;
+	int32_t       size_facetBuf             ;
+	//int32_t       size_eventEnglishTime     ;
+	//int32_t       size_eventDateIntervals   ;
+	int32_t       size_likedbList           ;
 
-	long       size_matchedQueryWords    ;
-	long       size_numMatchedQueryWords ;
-	long       size_matchedTypes         ;
+	int32_t       size_matchedQueryWords    ;
+	int32_t       size_numMatchedQueryWords ;
+	int32_t       size_matchedTypes         ;
 
-	long       size_catIds               ;
-	long       size_indCatIds            ;
-	//long     size_dmozTitleLens        ;
-	long       size_dmozTitles           ;
-	//long     size_dmozSummLens         ;
-	long       size_dmozSumms            ;
-	//long     size_dmozAnchorLens       ;
-	long       size_dmozAnchors          ;
-	//long     size_tagRec               ;
-	long       size_site                 ;
-	long       size_gbAdIds              ;
-	long       size_summLocs             ;
-	long       size_summLocsPops         ;
+	int32_t       size_catIds               ;
+	int32_t       size_indCatIds            ;
+	//int32_t     size_dmozTitleLens        ;
+	int32_t       size_dmozTitles           ;
+	//int32_t     size_dmozSummLens         ;
+	int32_t       size_dmozSumms            ;
+	//int32_t     size_dmozAnchorLens       ;
+	int32_t       size_dmozAnchors          ;
+	//int32_t     size_tagRec               ;
+	int32_t       size_site                 ;
+	int32_t       size_gbAdIds              ;
+	int32_t       size_summLocs             ;
+	int32_t       size_summLocsPops         ;
 
-	long       size_linkInfo;//inlinks              ;
-	long       size_outlinks             ;
+	int32_t       size_linkInfo;//inlinks              ;
+	int32_t       size_outlinks             ;
 
-	long       size_vector1              ;
-	long       size_vector2              ;
-	long       size_vector3              ;
-	long       size_linkText             ;
-	long       size_surroundingText      ;
-	long       size_linkUrl              ;
-	long       size_rssItem              ;
-	long       size_categories           ;
-	long       size_gigabitQuery         ;
-	long       size_gigabitScores        ;
-	long       size_content              ; // page content in utf8
-	long       size_sectionVotingInfo    ; // in json, includes \0
-	long       size_tr                   ;
-	long       size_tlistBuf             ;
-	long       size_tiBuf                ;
-	long       size_templateVector       ;
+	int32_t       size_vector1              ;
+	int32_t       size_vector2              ;
+	int32_t       size_vector3              ;
+	int32_t       size_linkText             ;
+	int32_t       size_surroundingText      ;
+	int32_t       size_linkUrl              ;
+	int32_t       size_rssItem              ;
+	int32_t       size_categories           ;
+	int32_t       size_gigabitQuery         ;
+	int32_t       size_gigabitScores        ;
+	int32_t       size_content              ; // page content in utf8
+	int32_t       size_sectionVotingInfo    ; // in json, includes \0
+	int32_t       size_tr                   ;
+	int32_t       size_tlistBuf             ;
+	int32_t       size_tiBuf                ;
+	int32_t       size_templateVector       ;
 
-	//long       size_eventSummaryLines    ;
-	//long       size_eventAddr            ;
-	//long       size_eventTagsFromContent ;
-	//long       size_eventTagsFromTagdb   ;
-	//long       size_eventBestPlaceName   ;
+	//int32_t       size_eventSummaryLines    ;
+	//int32_t       size_eventAddr            ;
+	//int32_t       size_eventTagsFromContent ;
+	//int32_t       size_eventTagsFromTagdb   ;
+	//int32_t       size_eventBestPlaceName   ;
 
-	//long       size_turkForm             ;
+	//int32_t       size_turkForm             ;
 
 	// CAUTION: do not add any parms below size_note!!!
-	long       size_note                 ;
+	int32_t       size_note                 ;
 
 	// . this is the "string buffer" and it is a variable size
 	// . this whole class is cast to a udp reply, so the size of "buf"
 	//   depends on the size of that udp reply
 	char       m_buf[0];
 
-	long      getNumCatIds    (){return size_catIds/4; };
-	long      getNumIndCatIds (){return size_indCatIds/4; };
-	long      getCatId        (long i){return ((long *)ptr_catIds)[i]; };
-	long      getIndCatId     (long i){return ((long *)ptr_indCatIds)[i];};
+	int32_t      getNumCatIds    (){return size_catIds/4; };
+	int32_t      getNumIndCatIds (){return size_indCatIds/4; };
+	int32_t      getCatId        (int32_t i){return ((int32_t *)ptr_catIds)[i]; };
+	int32_t      getIndCatId     (int32_t i){return ((int32_t *)ptr_indCatIds)[i];};
 
-	//long      getDmozTitleLen    (long i){
-	//	return ((long *)ptr_dmozTitleLens)[i];};
-	//long      getDmozSummLen     (long i){
-	//	return ((long *)ptr_dmozSummLens)[i]; };
-	//long      getDmozAnchorLen   (long i){
-	//	return (long)((uint8_t *)ptr_dmozAnchorLens)[i];};
-	//long   *getCatIds       (){return (long *)ptr_catIds; };
-	//long   *getIndCatIds    (){return (long *)ptr_indCatIds; };
-	//long   *getTitleLens    (){return (long *)ptr_dmozTitleLens;};
-	//long   *getSummLens     (){return (long *)ptr_dmozSummLens; };
+	//int32_t      getDmozTitleLen    (int32_t i){
+	//	return ((int32_t *)ptr_dmozTitleLens)[i];};
+	//int32_t      getDmozSummLen     (int32_t i){
+	//	return ((int32_t *)ptr_dmozSummLens)[i]; };
+	//int32_t      getDmozAnchorLen   (int32_t i){
+	//	return (int32_t)((uint8_t *)ptr_dmozAnchorLens)[i];};
+	//int32_t   *getCatIds       (){return (int32_t *)ptr_catIds; };
+	//int32_t   *getIndCatIds    (){return (int32_t *)ptr_indCatIds; };
+	//int32_t   *getTitleLens    (){return (int32_t *)ptr_dmozTitleLens;};
+	//int32_t   *getSummLens     (){return (int32_t *)ptr_dmozSummLens; };
 	//uint8_t*getAnchorLens   (){return(uint8_t *)ptr_dmozAnchorLens;};
 };
 
@@ -625,7 +627,7 @@ class Msg20 {
 
 	// "m_request = r->serialize(&m_requestSize,m_requestBuf)"
 	char  *m_request;
-	long   m_requestSize;
+	int32_t   m_requestSize;
 	char   m_requestBuf[MAX_MSG20_REQUEST_SIZE];
 
 	// this is cast to m_replyPtr
@@ -633,34 +635,34 @@ class Msg20 {
 	// m_replyPtr pts to either m_replyBuf or to mem allocated from the
 	// udp server to hold the reply.
 	//char  *m_replyPtr;
-	long   m_replySize;
-	long   m_replyMaxSize;
+	int32_t   m_replySize;
+	int32_t   m_replyMaxSize;
 	//char   m_replyBuf[MSG20_MAX_REPLY_SIZE];
 	// i guess Msg40.cpp looks at this flag
 	char   m_gotReply;
 	// set if we had an error
-	long   m_errno;
+	int32_t   m_errno;
 
-	long long getRequestDocId () { return m_requestDocId; };
-	long long m_requestDocId;
+	int64_t getRequestDocId () { return m_requestDocId; };
+	int64_t m_requestDocId;
 
 	// and this is copied from the msg20request
-	long m_eventId;
+	int32_t m_eventId;
 
 	// when we merge two msg20 replies in Msg40.cpp keep track of the
 	// event ids via this bit vector so if the click on the [cached] page
 	// link we can highlight the relevant event sections.
 	//EventIdBits m_eventIdBits;
 
-	long getStoredSize ( ) { return m_r->getStoredSize(); };
+	int32_t getStoredSize ( ) { return m_r->getStoredSize(); };
 	// . return how many bytes we serialize into "buf"
 	// . sets g_errno and returns -1 on error
-	long serialize ( char *buf , long bufSize ) {
+	int32_t serialize ( char *buf , int32_t bufSize ) {
 		return m_r->serialize ( buf , bufSize ); };
 	// . this is destructive on the "buf". it converts offs to ptrs
 	// . sets m_r to the modified "buf" when done
 	// . sets g_errno and returns -1 on error, otherwise # of bytes deseril
-	long deserialize ( char *buf , long bufSize ) ;
+	int32_t deserialize ( char *buf , int32_t bufSize ) ;
 	// Msg40 caches each Msg20Reply when it caches the page of results, so,
 	// to keep the size of the cached Msg40 down, we do not cache certain
 	// things. so we have to "clear" these guys out before caching.
@@ -696,33 +698,33 @@ class Msg20 {
 	char          *getVectorRec     () { return NULL; };
 	char          *getGigabitVector () {return m_r->ptr_gbvecbuf;}
 	uint64_t      *getSummaryLocs   () { return (uint64_t*)m_r->ptr_summLocs;}
-	long          *getSummaryLocsPops() {return (long *)m_r->ptr_summLocsPops;}
-	long           getSummaryLen    () { return m_r->size_sum;  };
-	long           getDisplayBufLen () { return m_r->size_dbuf; };
-	long           getBigSampleLen  () { return m_r->size_sbuf; };
-	long           getTitleLen      () { return m_r->size_tbuf; };
-	long           getUrlSize       () { return m_r->size_ubuf; };
-	long           getRedirUrlSize  () { return m_r->size_rubuf; };
-	long           getNumSummaryLocs() { return m_r->size_summLocs/sizeof(uint64_t); }
-	long           getNumSummaryLocsPops() { return m_r->size_summLocs/sizeof(long); }
+	int32_t          *getSummaryLocsPops() {return (int32_t *)m_r->ptr_summLocsPops;}
+	int32_t           getSummaryLen    () { return m_r->size_sum;  };
+	int32_t           getDisplayBufLen () { return m_r->size_dbuf; };
+	int32_t           getBigSampleLen  () { return m_r->size_sbuf; };
+	int32_t           getTitleLen      () { return m_r->size_tbuf; };
+	int32_t           getUrlSize       () { return m_r->size_ubuf; };
+	int32_t           getRedirUrlSize  () { return m_r->size_rubuf; };
+	int32_t           getNumSummaryLocs() { return m_r->size_summLocs/sizeof(uint64_t); }
+	int32_t           getNumSummaryLocsPops() { return m_r->size_summLocs/sizeof(int32_t); }
 
-	long           getUrlLen        () { return m_r->size_ubuf-1; };
-	long           getRedirUrlLen   () { return m_r->size_rubuf-1; };
-        long           getOutlinksBufLen() { return m_r->size_obuf; };
-        long           getLinksBufLen   () { return m_r->size_obuf; };
-        long           getMatchOffBufLen () { return m_r->size_mbuf; };
-	long           getDocLen        () { return m_r->m_contentLen;  };
-	long           getContentLen    () { return m_r->m_contentLen;  };
+	int32_t           getUrlLen        () { return m_r->size_ubuf-1; };
+	int32_t           getRedirUrlLen   () { return m_r->size_rubuf-1; };
+        int32_t           getOutlinksBufLen() { return m_r->size_obuf; };
+        int32_t           getLinksBufLen   () { return m_r->size_obuf; };
+        int32_t           getMatchOffBufLen () { return m_r->size_mbuf; };
+	int32_t           getDocLen        () { return m_r->m_contentLen;  };
+	int32_t           getContentLen    () { return m_r->m_contentLen;  };
 	bool           isSumFromDmoz    () { return m_r->m_sumFromDmoz; };
-	long           getIp            () { return m_r->m_ip; };
-	long long      getDomainHash    () { return m_r->m_domHash; };
+	int32_t           getIp            () { return m_r->m_ip; };
+	int64_t      getDomainHash    () { return m_r->m_domHash; };
 	unsigned char  getLanguage      () { return m_r->m_language; };
 	unsigned char  getSummaryLanguage() { return m_r->m_summaryLanguage; };
-	unsigned short getCountry       () { return m_r->m_country; };
-	unsigned short getComputedCountry(){ return m_r->m_computedCountry; }
-	short          getCharset       () { return m_r->m_charset; };
+	uint16_t getCountry       () { return m_r->m_country; };
+	uint16_t getComputedCountry(){ return m_r->m_computedCountry; }
+	int16_t          getCharset       () { return m_r->m_charset; };
 	char           getUrlFilterNum  () { return m_r->m_urlFilterNum; }
-	long long      getDocId         () { return m_r->m_docId; };
+	int64_t      getDocId         () { return m_r->m_docId; };
 	time_t         getFirstSpidered () { return m_r->m_firstSpidered; };
 	time_t         getLastSpidered  () { return m_r->m_lastSpidered; };
 	time_t	       getNextSpiderDate() { return m_r->m_nextSpiderDate; };
@@ -730,15 +732,15 @@ class Msg20 {
 	time_t         getDatedbDate    () { return m_r->m_datedbDate;   };
         bool           getDatedbDateIsEstimated () { 
 		return m_r->m_datedbDateIsEstimated; };
-	long           getRuleset       () { return m_r->m_ruleset; };
-	long           getHostHash      () { return m_r->m_hostHash; };
+	int32_t           getRuleset       () { return m_r->m_ruleset; };
+	int32_t           getHostHash      () { return m_r->m_hostHash; };
 	// if this is true, do not display a [cached] link for this result
 	char           getNoArchive     () { return m_r->m_noArchive; };
 	// content-type codes are in HttpMime.h (CT_HTML, CT_PDF, ...)
 	char           getContentType   () { return m_r->m_contentType; };
 	unsigned char  getQuality       () { return m_r->m_docQuality; };
 	unsigned char  getDocQuality    () { return m_r->m_docQuality; };
-	//long         getNumOutlinks   () { return m_r->m_numOutlinks; };
+	//int32_t         getNumOutlinks   () { return m_r->m_numOutlinks; };
 	bool           isBanned         () { return m_r->m_isBanned; };
 	bool           isNormalized     () { return m_r->m_isNormalized; } ;
 	bool           hasAllQueryTerms () { return m_r->m_hasAllQueryTerms; };
@@ -754,21 +756,21 @@ class Msg20 {
 		return m_r->m_flags3 & FLAG3_DATEDB_DATE_IS_ESTIMATED; };
 
 	float     getProximityScore () {return m_r->m_proximityScore;};
-	long      getInSectionScore () {return m_r->m_inSectionScore;};
-	long      getSummaryScore   () {return m_r->m_docSummaryScore; };
+	int32_t      getInSectionScore () {return m_r->m_inSectionScore;};
+	int32_t      getSummaryScore   () {return m_r->m_docSummaryScore; };
 
 	TagRec   *getTagRec         (){return (TagRec *)m_r->ptr_tagRec; };
-	long      getTagRecSize     (){return m_r->size_tagRec; };
-	long      getNumCatids      (){return m_r->size_catids/4; };
-	long      getNumIndCatids   (){return m_r->size_indCatids/4; };
-	long     *getDmozCatIds     (){return (long *)m_r->ptr_catids; };
-	long     *getDmozCatids     (){return (long *)m_r->ptr_catids; };
-	long     *getDmozIndCatIds  (){return (long *)m_r->ptr_indCatids; };
-	long     *getDmozIndCatids  (){return (long *)m_r->ptr_indCatids; };
+	int32_t      getTagRecSize     (){return m_r->size_tagRec; };
+	int32_t      getNumCatids      (){return m_r->size_catids/4; };
+	int32_t      getNumIndCatids   (){return m_r->size_indCatids/4; };
+	int32_t     *getDmozCatIds     (){return (int32_t *)m_r->ptr_catids; };
+	int32_t     *getDmozCatids     (){return (int32_t *)m_r->ptr_catids; };
+	int32_t     *getDmozIndCatIds  (){return (int32_t *)m_r->ptr_indCatids; };
+	int32_t     *getDmozIndCatids  (){return (int32_t *)m_r->ptr_indCatids; };
 	char     *getDmozTitles     (){return m_r->ptr_dmozTitles; };
-	long     *getDmozTitleLens  (){return (long *)m_r->ptr_dmozTitleLens;};
+	int32_t     *getDmozTitleLens  (){return (int32_t *)m_r->ptr_dmozTitleLens;};
 	char     *getDmozSumms      (){return m_r->ptr_dmozSumms; };
-	long     *getDmozSummLens   (){return (long *)m_r->ptr_dmozSummLens; };
+	int32_t     *getDmozSummLens   (){return (int32_t *)m_r->ptr_dmozSummLens; };
 	char     *getDmozAnchors    (){return m_r->ptr_dmozAnchors; };
 	uint8_t  *getDmozAnchorLens (){
 		return(uint8_t *)m_r->ptr_dmozAnchorLens;};
@@ -777,12 +779,12 @@ class Msg20 {
 	uint32_t  getGigabitVectorHash() {return m_r->m_gigabitVectorHash; }
 
 	char*     getAdIds            () {return m_r->ptr_gbAdIds;}
-	long      getAdIdsSize        () {return m_r->size_gbAdIds;}
+	int32_t      getAdIdsSize        () {return m_r->size_gbAdIds;}
 	*/
-	static long getApproxLinkCount(char* content, long contentLen);
-	//static long getLinkHashes(Links& ln, char* buf, long bufSize);
+	static int32_t getApproxLinkCount(char* content, int32_t contentLen);
+	//static int32_t getLinkHashes(Links& ln, char* buf, int32_t bufSize);
 
-	//char *getNextDisplayBuf ( long *len , char **next ) { 
+	//char *getNextDisplayBuf ( int32_t *len , char **next ) { 
 	//	return m_r->getNextDisplayBuf(len,next); };
 
 	// for sending the request
@@ -799,8 +801,9 @@ class Msg20 {
 	void freeReply   ();
 	void reset       ();
 
-	long m_hack;
-	long m_ii;
+	void *m_hack;
+	int32_t m_hack2;
+	int32_t m_ii;
 
 	// is the reply in progress? if msg20 has not launched a request
 	// this is false. if msg20 received its reply, this is false. 
@@ -818,6 +821,9 @@ class Msg20 {
 	// used by MsgE to store its data
 	void *m_state2;
 	void *m_state3;
+
+	void *m_owningParent;
+	char m_constructedId;
 
 	// PostQueryRerank storage area for printing out in PageResults.cpp
 	float m_pqr_old_score        ;

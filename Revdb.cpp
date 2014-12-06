@@ -12,14 +12,14 @@ void Revdb::reset() { m_rdb.reset(); }
 // init our rdb
 bool Revdb::init ( ) {
 
-	long long maxTreeMem = 200000000;
+	int64_t maxTreeMem = 200000000;
 	// . what's max # of tree nodes?
 	// . assume avg RevRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	long maxTreeNodes  = maxTreeMem  / (1*1024);
+	int32_t maxTreeNodes  = maxTreeMem  / (1*1024);
 
 	// each entry in the cache is usually just a single record, no lists
-	long maxCacheNodes = 0;//g_conf.m_revdbMaxCacheMem / (10*1024);
+	int32_t maxCacheNodes = 0;//g_conf.m_revdbMaxCacheMem / (10*1024);
 
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
@@ -43,11 +43,11 @@ bool Revdb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Revdb::init2 ( long treeMem ) {
+bool Revdb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . assume avg RevRec size (compressed html doc) is about 1k we get:
 	// . NOTE: overhead is about 32 bytes per node
-	long maxTreeNodes  = treeMem / (1*1024);
+	int32_t maxTreeNodes  = treeMem / (1*1024);
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
 			    "revdbRebuild"            ,
@@ -91,7 +91,7 @@ bool Revdb::verify ( char *coll ) {
 	key_t endKey;
 	startKey.setMin();
 	endKey.setMax();
-	//long minRecSizes = 64000;
+	//int32_t minRecSizes = 64000;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 
 	if ( ! msg5.getList ( RDB_REVDB   ,
@@ -120,20 +120,20 @@ bool Revdb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		//unsigned long groupId = getGroupId ( RDB_REVDB , &k );
+		//uint32_t groupId = getGroupId ( RDB_REVDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;
-		unsigned long shardNum = getShardNum( RDB_REVDB , &k );
+		uint32_t shardNum = getShardNum( RDB_REVDB , &k );
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in revdb, "
-		     "only %li belong to our group.",count,got);
+		log ("db: Out of first %"INT32" records in revdb, "
+		     "only %"INT32" belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
@@ -144,7 +144,7 @@ bool Revdb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 
-	log ( LOG_INFO, "db: Revdb passed verification successfully for %li"
+	log ( LOG_INFO, "db: Revdb passed verification successfully for %"INT32""
 			" recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -154,16 +154,16 @@ bool Revdb::verify ( char *coll ) {
 // . make the key of a RevRec from a docId
 // . remember to set the low bit so it's not a delete
 // . hi bits are set in the key
-key_t Revdb::makeKey ( long long docId, bool isDel ){
+key_t Revdb::makeKey ( int64_t docId, bool isDel ){
 	key_t key ;
 	key.n1 = 0;
 	// shift up for delbit
-	key.n0 = ((unsigned long long)docId) << 1;
+	key.n0 = ((uint64_t)docId) << 1;
 	// final del bit
 	if ( ! isDel ) key.n0 |= 0x01;
 	return key;
 };
 
-long long Revdb::getDocId ( key_t *k ) {
+int64_t Revdb::getDocId ( key_t *k ) {
 	return (k->n0 >> 1);
 }

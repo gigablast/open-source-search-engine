@@ -33,35 +33,35 @@ class RdbDump {
         bool set  ( //char      *coll          ,
 		   collnum_t collnum ,
 		    BigFile   *file          ,
-		    long       id2           , // in Rdb::m_files[] array
+		    int32_t       id2           , // in Rdb::m_files[] array
 		    bool       isTitledb     , // are we dumping TitleRecs?
 		    RdbBuckets *buckets      , // optional buckets to dump
 		    RdbTree   *tree          , // optional tree to dump
 		    RdbMap    *map           ,
 		    RdbCache  *cache         , // for caching dumped tree
-		    long       maxBufSize    ,
+		    int32_t       maxBufSize    ,
 		    bool       orderedDump   , // dump in order of keys?
 		    bool       dedup         , // for merging tree into cache
-		    long       niceness      ,
+		    int32_t       niceness      ,
 		    void      *state         ,
 		    void     (* callback ) ( void *state ) ,
 		    bool       useHalfKeys   ,
-		    long long  startOffset   ,
+		    int64_t  startOffset   ,
 		    //key_t      prevLastKey   ,
 		    char      *prevLastKey   ,
 		    char       keySize       ,
 		    class DiskPageCache *pc  ,
-		    long long  maxFileSize   ,
+		    int64_t  maxFileSize   ,
 		    class Rdb    *rdb        );
 
 	// a niceness of 0 means to block on the dumping
-	long getNiceness() { return m_niceness; };
+	int32_t getNiceness() { return m_niceness; };
 
 	// . dump the tree to the file
 	// . returns false if blocked, true otherwise
 	bool dumpTree ( bool recall );
 
-	bool dumpList ( RdbList *list , long niceness , bool isRecall );
+	bool dumpList ( RdbList *list , int32_t niceness , bool isRecall );
 
 	void doneDumping ( );
 
@@ -74,7 +74,7 @@ class RdbDump {
 	// . overriden in LdbDumper to pass an LdbFile casted as an RdbFile
 	// . this override makes the file's getSlot() return LdbSlots
 	//   which can be appropriately added to an RdbTable or LdbTable
-	bool load ( class Rdb *rdb , long fixedDataSize , BigFile *file ,
+	bool load ( class Rdb *rdb , int32_t fixedDataSize , BigFile *file ,
 		    class DiskPageCache *pc );
 
 	// . calls the callback specified in set() when done
@@ -108,22 +108,22 @@ class RdbDump {
 	RdbBuckets  *m_buckets       ;
 	RdbMap      *m_map           ;
 	RdbCache    *m_cache         ;
-	long         m_maxBufSize    ;
+	int32_t         m_maxBufSize    ;
 	bool         m_orderedDump   ;
 	bool         m_dedup         ; // used for merging/adding tree to cache
 	void        *m_state         ;
 	void       (*m_callback)(void *state ) ;
-	long long    m_offset        ;
+	int64_t    m_offset        ;
 
 	BigFile  *m_file          ;
-	long      m_id2           ; // secondary id of file we are dumping to
+	int32_t      m_id2           ; // secondary id of file we are dumping to
 	RdbList  *m_list          ; // holds list to dump
 	RdbList   m_ourList       ; // we use for dumping a tree, point m_list
 	char     *m_buf           ; // points into list
 	char     *m_verifyBuf     ;
-	long      m_verifyBufSize ;
-	long      m_bytesToWrite  ;
-	long      m_bytesWritten  ;
+	int32_t      m_verifyBufSize ;
+	int32_t      m_bytesToWrite  ;
+	int32_t      m_bytesWritten  ;
 	char      m_addToMap      ;
 
 	//key_t     m_firstKeyInQueue;
@@ -134,7 +134,7 @@ class RdbDump {
 	//key_t     m_prevLastKey   ;
 	char      m_prevLastKey[MAX_KEY_BYTES];
 
-	long      m_nextNode      ;
+	int32_t      m_nextNode      ;
 	//key_t     m_nextKey       ;
 	char      m_nextKey[MAX_KEY_BYTES];
 	bool      m_rolledOver    ; // true if m_nextKey rolls back to 0
@@ -147,19 +147,19 @@ class RdbDump {
 	FileState m_fstate;
 
 	// a niceness of 0 means the dump will block, otherwise, will not
-	long      m_niceness;
+	int32_t      m_niceness;
 
 	bool      m_useHalfKeys;
 	bool      m_hacked;
 	bool      m_hacked12;
 
-	long      m_totalPosDumped;
-	long      m_totalNegDumped;
+	int32_t      m_totalPosDumped;
+	int32_t      m_totalNegDumped;
 
 	// recall info
-	long long m_t1;
-	long      m_numPosRecs;
-	long      m_numNegRecs;
+	int64_t m_t1;
+	int32_t      m_numPosRecs;
+	int32_t      m_numNegRecs;
 
 	// are we dumping a list of TitleRecs?
 	bool m_isTitledb;
@@ -191,10 +191,10 @@ class RdbDump {
 
 	char m_ks;
 
-	long m_deduped1;
-	long m_deduped2;
-	long m_deduped3;
-	long m_unforced;
+	int32_t m_deduped1;
+	int32_t m_deduped2;
+	int32_t m_deduped3;
+	int32_t m_unforced;
 };
 
 #endif

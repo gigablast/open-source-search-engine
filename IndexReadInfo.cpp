@@ -13,12 +13,12 @@ IndexReadInfo::IndexReadInfo() {
 // . sets startKey/endKey for each list, too
 // . startKey set passed endKey to indicate no reading
 void IndexReadInfo::init ( Query *q , 
-			   long long *termFreqs ,
-			   long docsWanted , char callNum ,
-			   long stage0 ,
-			   long *tierStage,
+			   int64_t *termFreqs ,
+			   int32_t docsWanted , char callNum ,
+			   int32_t stage0 ,
+			   int32_t *tierStage,
 			   bool useDateLists , bool sortByDate , 
-			   unsigned long date1 , unsigned long date2 ,
+			   uint32_t date1 , uint32_t date2 ,
 			   bool isDebug ) {
 	// save ptr but don't copy
 	m_q            = q;
@@ -33,7 +33,7 @@ void IndexReadInfo::init ( Query *q ,
 	// . now set m_includeList array
 	// . set to false if we determine termId to be ousted due to dpf
 	// . loop over each termId in the query
-	for ( long i = 0 ; i < m_q->getNumTerms() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_q->getNumTerms() ; i++ ) {
 		// ignore some
 		//m_ignore   [i] = m_q->m_ignore[i];
 		// no need to gen keys if ignored
@@ -57,7 +57,7 @@ void IndexReadInfo::init ( Query *q ,
 			g_indexdb.makeEndKey   ( m_q->getTermId(i) );
 	}
 	// no negatives
-	for ( long i = 0; i < MAX_TIERS; i++ ){
+	for ( int32_t i = 0; i < MAX_TIERS; i++ ){
 		if ( tierStage[i] < 0 ) 
 			tierStage[i] = 0;
 	}
@@ -74,7 +74,7 @@ void IndexReadInfo::init ( Query *q ,
 		m_stage[0] = stage0 * m_hks + 6;
 
 	// for all the other stages just get the same tier size
-	for ( long i = 1; i < MAX_TIERS; i++ ){
+	for ( int32_t i = 1; i < MAX_TIERS; i++ ){
 		// adjust for dateLists, proportionally
 		if ( m_useDateLists )
 			m_stage[i] = (tierStage[i] * (16-6)) / (12-6);
@@ -95,10 +95,10 @@ void IndexReadInfo::init ( Query *q ,
 	// . this assumes no dependence between the words
 	// . So let's just start off reading 10,000, then 30k more then 60k
 	// . So we break up our 100k truncation limit that way
-	long toRead = m_stage[(int)callNum]; 
+	int32_t toRead = m_stage[(int)callNum]; 
 
-	long long def = getStage0Default() ;
-	long long *tf = termFreqs ;
+	int64_t def = getStage0Default() ;
+	int64_t *tf = termFreqs ;
 	
 	// . ...but if we're only reading 1 list...
 	// . keys are 6 bytes each, first key is 12 bytes
@@ -115,7 +115,7 @@ void IndexReadInfo::init ( Query *q ,
 	//   10 to Next 10
 	//if ( m_q->getNumTerms() <= 1 ) toRead = docsWanted * 6 + 6;
 	// now loop through all non-ignored lists
-	for ( long i = 0 ; i < m_numLists ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numLists ; i++ ) {
 		// ignore lists that should be
 		if ( m_ignore[i] ) { m_readSizes[i]=0; continue; }
 		// don't include excluded lists in this calculation
@@ -138,19 +138,19 @@ void IndexReadInfo::init ( Query *q ,
 		// . when user specifies the s0=X cgi parm and X is like 4M
 		//   try to avoid allocating so much space when we do not need
 		// . mark is using s0 to get exact hit counts
-		long long max = tf[i] * m_hks+m_hks +GB_INDEXDB_PAGE_SIZE*10 ;
+		int64_t max = tf[i] * m_hks+m_hks +GB_INDEXDB_PAGE_SIZE*10 ;
 		if ( max < def ) max = def;
 		if ( m_readSizes[i] > max ) m_readSizes[i] = max;
 		// debug msg
 		if ( m_isDebug || g_conf.m_logDebugQuery )
 			logf ( LOG_DEBUG,"query: ReadInfo: "
-			       "newreadSizes[%li]=%li",i,
+			       "newreadSizes[%"INT32"]=%"INT32"",i,
 			       m_readSizes[i] );
 
 		// sanity check
 		if ( m_readSizes[i] > ( 500 * 1024 * 1024 ) || 
 		     m_readSizes[i] < 0 ){
-			log( "minRecSize = %li", m_readSizes[i] );
+			log( "minRecSize = %"INT32"", m_readSizes[i] );
 			char *xx=NULL; *xx=0;
 		}
 	}
@@ -158,25 +158,25 @@ void IndexReadInfo::init ( Query *q ,
 	return;
 }
 
-long IndexReadInfo::getStage0Default ( ) { return STAGE0; }
+int32_t IndexReadInfo::getStage0Default ( ) { return STAGE0; }
 
 // . updates m_readSizes
 // . sets m_isDone to true if all lists are exhausted 
-void IndexReadInfo::update ( IndexList *lists, long numLists,
+void IndexReadInfo::update ( IndexList *lists, int32_t numLists,
 			     char callNum ) {
 	// loop over all lists and update m_startKeys[i]
-	for ( long i = 0 ; i < numLists ; i++ ) {
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
 		// ignore lists that should be
 		if ( m_ignore[i] ) continue;
 		// . how many docIds did we read into this list?
 		// . double the size since the lists are compress to half now
-		//long docsRead = lists[i].getListSize() / 6 ;
+		//int32_t docsRead = lists[i].getListSize() / 6 ;
 		// . remove the endKey put at the end by RdbList::appendLists()
 		// . iff we did NOT do a merge
 		//if ( ! didMerge && docsRead > 0 ) docsRead--;
 		// debug
-		//log("startKey for list #%li is n1=%lx,n0=%llx "
-		//     "(docsRead=%li)",
+		//log("startKey for list #%"INT32" is n1=%"XINT32",n0=%"XINT64" "
+		//     "(docsRead=%"INT32")",
 		//     i,m_startKeys[i].n1,m_startKeys[i].n0,docsRead);
 		// . if we read less than supposed to, this list is exhausted 
 		//   so we set m_ignore[i] to true so we don't read again
@@ -196,7 +196,7 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 		//	m_startKeys [i] = m_endKeys [i] ;
 		// point to last compressed 6 byte key in list
 		char *list     = (char *)lists[i].getList();
-		long  listSize =         lists[i].getListSize();
+		int32_t  listSize =         lists[i].getListSize();
 		// don't seg fault
 		if ( listSize < m_hks ) {
 			m_ignore [i] = true;
@@ -217,14 +217,14 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 		//memcpy ( &startKey , lastPart , 6 );
 		memcpy ( startKey , lastPart , m_hks );
 		// debug msg
-		//log("pre-startKey for list #%li is n1=%lx,n0=%llx",
+		//log("pre-startKey for list #%"INT32" is n1=%"XINT32",n0=%"XINT64"",
 		//     i,startKey.n1,startKey.n0);
 		// sanity checks
 		//if ( startKey < m_startKeys[i] ) {
 		if ( KEYCMP(startKey,&m_startKeys[i*m_ks],m_ks)<0 ) {
 			log("query: bad startKey. "
-			    "a.n1=%016llx a.n0=%016llx < "
-			    "b.n1=%016llx b.n0=%016llx" ,
+			    "a.n1=%016"XINT64" a.n0=%016"XINT64" < "
+			    "b.n1=%016"XINT64" b.n0=%016"XINT64"" ,
 			    KEY1(startKey,m_ks),
 			    KEY0(startKey     ),
 			    KEY1(&m_startKeys[i*m_ks],m_ks),
@@ -236,10 +236,10 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 		//m_startKeys[i] = startKey;
 		KEYSET(&m_startKeys[i*m_ks],startKey,m_ks);
 		// add 1 to startKey
-		//m_startKeys[i] += (unsigned long) 1;
+		//m_startKeys[i] += (uint32_t) 1;
 		KEYADD(&m_startKeys[i*m_ks],1,m_ks);
 		// debug msg
-		//log("NOW startKey for list #%li is n1=%lx,n0=%llx",
+		//log("NOW startKey for list #%"INT32" is n1=%"XINT32",n0=%"XINT64"",
 		//     i,m_startKeys[i].n1,m_startKeys[i].n0);
 		// . increase termFreqs if we read more than was estimated
 		// . no! just changes # of total results when clicking Next 10
@@ -247,7 +247,7 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 		//	m_q->m_termFreqs[i] = docsRead;
 	}
 	// break if a list can read more, if it can read more, that is
-	long i;
+	int32_t i;
 	for ( i = 0 ; i < numLists ; i++ ) if ( ! m_ignore[i] ) break;
 	// if all lists are exhausted, set m_isDone
 	if ( i >= numLists ) { m_isDone = true; return; }
@@ -259,7 +259,7 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 	// . that doesn't take into account phrases though...
 	// . let's just do it this way
 	// loop over all lists and update m_startKeys[i] and m_totalDocsRead
-	for ( long i = 0 ; i < numLists ; i++ ) {
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
 		// ignore lists that should be
 		if ( m_ignore[i] ) continue;
 		// update each list's docs to read
@@ -271,7 +271,7 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 		else                                 
 		m_readSizes[i] = m_stage2;*/
 		// debug msg
-		log("newreadSizes[%li]=%li",i,m_readSizes[i]);
+		log("newreadSizes[%"INT32"]=%"INT32"",i,m_readSizes[i]);
 	}
 }
 
@@ -279,17 +279,17 @@ void IndexReadInfo::update ( IndexList *lists, long numLists,
 // . updates m_readSizes
 // . sets m_isDone to true if all lists are exhausted 
 // . used by virtual split in msg3b to check if we're done or not.
-void IndexReadInfo::update ( long long *termFreqs,
-			     long numLists,
+void IndexReadInfo::update ( int64_t *termFreqs,
+			     int32_t numLists,
 			     char callNum ) {
 	// loop over all lists and update m_startKeys[i]
-	for ( long i = 0 ; i < numLists ; i++ ) {
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
 		// ignore lists that should be
 		if ( m_ignore[i] ) continue;
 		// . how many bytes did we read ? Since these are
 		// . half keys, multiply termFreqs by 6 and add 6 for the
 		// . first key which is full 12 bytes
-		long long listSize = termFreqs[i] * 6 + 6;
+		int64_t listSize = termFreqs[i] * 6 + 6;
 
 		if ( listSize < m_readSizes[i] ) {
 			m_ignore [i] = true;
@@ -310,7 +310,7 @@ void IndexReadInfo::update ( long long *termFreqs,
 		}
 	}
 	// break if a list can read more, if it can read more, that is
-	long i;
+	int32_t i;
 	for ( i = 0 ; i < numLists ; i++ ) if ( ! m_ignore[i] ) break;
 	// if all lists are exhausted, set m_isDone
 	if ( i >= numLists ) { m_isDone = true; return; }
@@ -322,9 +322,9 @@ void IndexReadInfo::update ( long long *termFreqs,
 	// . that doesn't take into account phrases though...
 	// . let's just do it this way
 	// loop over all lists and update m_startKeys[i] and m_totalDocsRead
-	for ( long i = 0 ; i < numLists ; i++ ) {
+	for ( int32_t i = 0 ; i < numLists ; i++ ) {
 		// debug msg
-		//log("oldreadSizes[%li]=%li",i,m_readSizes[i]);
+		//log("oldreadSizes[%"INT32"]=%"INT32"",i,m_readSizes[i]);
 		// update each list's docs to read if we're not on the last 
 		// tier
 		if ( !m_ignore[i] && callNum < MAX_TIERS && 
@@ -339,6 +339,6 @@ void IndexReadInfo::update ( long long *termFreqs,
 		// debug msg
 		if ( m_isDebug || g_conf.m_logDebugQuery )
 			logf ( LOG_DEBUG,"query: ReadInfo: "
-			       "newreadSizes[%li]=%li",i,m_readSizes[i] );
+			       "newreadSizes[%"INT32"]=%"INT32"",i,m_readSizes[i] );
 	}
 }

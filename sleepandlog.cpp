@@ -7,22 +7,22 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static long long gettimeofdayInMilliseconds() ;
+static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	return(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	return(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 }
 
 int main ( int argc , char *argv[] ) {
-	long long last = -1LL;
+	int64_t last = -1LL;
  loop:
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	char *msg;
-	long long diff = now - last;
+	int64_t diff = now - last;
 	if ( last != -1LL && diff >= 2000 ) 
-		fprintf (stderr,"last=%lli now=%lli diff=%lli\n", 
+		fprintf (stderr,"last=%"INT64" now=%"INT64" diff=%"INT64"\n", 
 			 last,now,diff);
 	last = now;
 	sleep(1);

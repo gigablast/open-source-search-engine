@@ -53,8 +53,8 @@ Parms g_parms;
 // new functions to extricate info from parm recs
 //
 
-long getDataSizeFromParmRec ( char *rec ) {
-	return *(long *)(rec+sizeof(key96_t));
+int32_t getDataSizeFromParmRec ( char *rec ) {
+	return *(int32_t *)(rec+sizeof(key96_t));
 }
 
 char *getDataFromParmRec ( char *rec ) {
@@ -67,32 +67,32 @@ collnum_t getCollnumFromParmRec ( char *rec ) {
 }
 
 // for parms that are arrays...
-short getOccNumFromParmRec ( char *rec ) {
+int16_t getOccNumFromParmRec ( char *rec ) {
 	key96_t *k = (key96_t *)rec;
-	return (short)((k->n0>>16));
+	return (int16_t)((k->n0>>16));
 }
 
 Parm *getParmFromParmRec ( char *rec ) {
 	key96_t *k = (key96_t *)rec;
-	long cgiHash32 = (k->n0 >> 32);
+	int32_t cgiHash32 = (k->n0 >> 32);
 	return g_parms.getParmFast2 ( cgiHash32 );
 }
 
-long getHashFromParmRec ( char *rec ) {
+int32_t getHashFromParmRec ( char *rec ) {
 	key96_t *k = (key96_t *)rec;
-	long cgiHash32 = (k->n0 >> 32);
+	int32_t cgiHash32 = (k->n0 >> 32);
 	return cgiHash32;
 }
 
 // . occNum is index # for parms that are arrays. it is -1 if not used.
 // . collnum is -1 for g_conf, which is not a collrec
 // . occNUm is -1 for a non-array parm
-key96_t makeParmKey ( collnum_t collnum , Parm *m , short occNum ) {
+key96_t makeParmKey ( collnum_t collnum , Parm *m , int16_t occNum ) {
 	key96_t k;
 	k.n1 = collnum;
-	k.n0 = (unsigned long)m->m_cgiHash; // 32 bit
+	k.n0 = (uint32_t)m->m_cgiHash; // 32 bit
 	k.n0 <<= 16;
-	k.n0 |= (unsigned short)occNum;
+	k.n0 |= (uint16_t)occNum;
 	// blanks
 	k.n0 <<= 16;
 	// delbit. 1 means positive key
@@ -137,16 +137,16 @@ bool CommandUpdateSiteList ( char *rec ) {
 		return true;
 	}
 	// sanity
-	long dataSize = getDataSizeFromParmRec ( rec );
+	int32_t dataSize = getDataSizeFromParmRec ( rec );
 	if ( dataSize < 0 ) {
-		log("parms: bad site list size = %li bad!",dataSize);
+		log("parms: bad site list size = %"INT32" bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
 	// need this
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) {
-		log("parms: no cr for collnum %li to update",(long)collnum);
+		log("parms: no cr for collnum %"INT32" to update",(int32_t)collnum);
 		return true;
 	}
 	// get the sitelist
@@ -183,9 +183,9 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 		return true;
 	}
 	// sanity
-	long dataSize = getDataSizeFromParmRec ( rec );
+	int32_t dataSize = getDataSizeFromParmRec ( rec );
 	if ( dataSize <= 1 ) {
-		log("parms: insert row data size = %li bad!",dataSize);
+		log("parms: insert row data size = %"INT32" bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -193,9 +193,9 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = atol(data);//*(long *)data;
+	int32_t rowNum = atol(data);//*(int32_t *)data;
 	// scan all parms for url filter parms
-	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
 		if ( m->m_page != PAGE_FILTERS ) continue;
@@ -219,9 +219,9 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 	//	return true;
 	//}
 	// sanity
-	long dataSize = getDataSizeFromParmRec ( rec );
+	int32_t dataSize = getDataSizeFromParmRec ( rec );
 	if ( dataSize <= 1 ) {
-		log("parms: insert row data size = %li bad!",dataSize);
+		log("parms: insert row data size = %"INT32" bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -229,12 +229,12 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 	//CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = atol(data);
+	int32_t rowNum = atol(data);
 	// scan all parms for url filter parms
-	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
+		if ( m->m_page != PAGE_MASTERPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -250,20 +250,20 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 
 bool CommandRemovePasswordRow ( char *rec ) {
 	// sanity
-	long dataSize = getDataSizeFromParmRec ( rec );
+	int32_t dataSize = getDataSizeFromParmRec ( rec );
 	if ( dataSize <= 1 ) {
-		log("parms: insert row data size = %li bad!",dataSize);
+		log("parms: insert row data size = %"INT32" bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = atol(data);
+	int32_t rowNum = atol(data);
 	// scan all parms for url filter parms
-	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
-		if ( m->m_page != PAGE_ROOTPASSWORDS ) continue;
+		if ( m->m_page != PAGE_MASTERPASSWORDS ) continue;
 		// must be an array!
 		if ( ! m->isArray() ) continue;
 		// sanity check
@@ -286,9 +286,9 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 		return true;
 	}
 	// sanity
-	long dataSize = getDataSizeFromParmRec ( rec );
+	int32_t dataSize = getDataSizeFromParmRec ( rec );
 	if ( dataSize <= 1 ) {
-		log("parms: insert row data size = %li bad!",dataSize);
+		log("parms: insert row data size = %"INT32" bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -296,9 +296,9 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = atol(data);
+	int32_t rowNum = atol(data);
 	// scan all parms for url filter parms
-	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
 		// parm must be a url filters parm
 		if ( m->m_page != PAGE_FILTERS ) continue;
@@ -322,7 +322,7 @@ bool CommandCloneColl ( char *rec ) {
 	// . data is the collnum in ascii.
 	// . from "&restart=467" for example
 	char *data = rec + sizeof(key96_t) + 4;
-	long dataSize = *(long *)(rec + sizeof(key96_t));
+	int32_t dataSize = *(int32_t *)(rec + sizeof(key96_t));
 	//if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
 	// copy parm settings from this collection name
 	char *srcColl = data;
@@ -341,8 +341,8 @@ bool CommandCloneColl ( char *rec ) {
 		return log("parms: invalid coll %s to clone from",
 			   srcColl);
 	if ( ! dstRec ) 
-		return log("parms: invalid collnum %li to clone to",
-			   (long)dstCollnum);
+		return log("parms: invalid collnum %"INT32" to clone to",
+			   (int32_t)dstCollnum);
 
 	log ("parms: cloning parms from collection %s to %s",
 	      srcRec->m_coll,dstRec->m_coll);
@@ -370,7 +370,7 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 	}
 
 	char *data = rec + sizeof(key96_t) + 4;
-	long dataSize = *(long *)(rec + sizeof(key96_t));
+	int32_t dataSize = *(int32_t *)(rec + sizeof(key96_t));
 	// collection name must be at least 2 bytes (includes \0)
 	if ( dataSize <= 1 ) { char *xx=NULL;*xx=0; }
 
@@ -454,8 +454,8 @@ bool CommandForceNextSpiderRound ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
-		log("parms: bad collnum %li for restart spider round",
-		    (long)collnum);
+		log("parms: bad collnum %"INT32" for restart spider round",
+		    (int32_t)collnum);
 		return true;
 	}
 
@@ -463,12 +463,14 @@ bool CommandForceNextSpiderRound ( char *rec ) {
 	// by 4 bytes of datasize then the data... which is an ascii string
 	// in our case...
 	char *data = getDataFromParmRec ( rec );
-	long roundStartTime;
-	long newRoundNum;
+	uint32_t roundStartTime;
+	int32_t newRoundNum;
 	// see the HACK: in Parms::convertHttpRequestToParmList() where we
 	// construct this data in response to a "roundStart" cmd. we used
 	// sprintf() so it's natural to use sscanf() to parse it out.
-	sscanf ( data , "%lu,%li", &roundStartTime,&newRoundNum);
+	sscanf ( data , "%"UINT32",%"INT32"", 
+		 &roundStartTime,
+		 &newRoundNum);
 
 	cr->m_spiderRoundStartTime = roundStartTime;
 	cr->m_spiderRoundNum = newRoundNum;
@@ -497,14 +499,14 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 	// . data is the collnum in ascii.
 	// . from "&restart=467" for example
 	char *data = rec + sizeof(key96_t) + 4;
-	long dataSize = *(long *)(rec + sizeof(key96_t));
+	int32_t dataSize = *(int32_t *)(rec + sizeof(key96_t));
 	if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
 	collnum_t oldCollnum = atol(data);
 
 	if ( oldCollnum < 0 || 
 	     oldCollnum >= g_collectiondb.m_numRecs ||
 	     ! g_collectiondb.m_recs[oldCollnum] ) {
-		log("parms: invalid collnum %li to restart",(long)oldCollnum);
+		log("parms: invalid collnum %"INT32" to restart",(int32_t)oldCollnum);
 		return true;
 	}
 
@@ -555,14 +557,14 @@ bool CommandResetColl ( char *rec , WaitEntry *we ) {
 	// . data is the collnum in ascii.
 	// . from "&restart=467" for example
 	char *data = rec + sizeof(key96_t) + 4;
-	long dataSize = *(long *)(rec + sizeof(key96_t));
+	int32_t dataSize = *(int32_t *)(rec + sizeof(key96_t));
 	if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
 	collnum_t oldCollnum = atol(data);
 
 	if ( oldCollnum < 0 || 
 	     oldCollnum >= g_collectiondb.m_numRecs ||
 	     ! g_collectiondb.m_recs[oldCollnum] ) {
-		log("parms: invalid collnum %li to reset",(long)oldCollnum);
+		log("parms: invalid collnum %"INT32" to reset",(int32_t)oldCollnum);
 		return true;
 	}
 
@@ -754,10 +756,10 @@ bool CommandClearKernelError ( char *rec ) {
 	return true;
 }
 
-bool CommandPowerNotice ( long hasPower ) {
+bool CommandPowerNotice ( int32_t hasPower ) {
 
-	//long hasPower = r->getLong("haspower",-1);
-	log("powermo: received haspower=%li",hasPower);
+	//int32_t hasPower = r->getLong("haspower",-1);
+	log("powermo: received haspower=%"INT32"",hasPower);
 	if ( hasPower != 0 && hasPower != 1 ) return true;
 
 	// did power state change? if not just return true
@@ -774,7 +776,7 @@ bool CommandPowerNotice ( long hasPower ) {
 	// now it is off
 	log("powermo: power was lost");
 	// . SpiderLoop.cpp will not launch any more spiders as
-	//   long as the power is off
+	//   int32_t as the power is off
 	// . autosave should kick in every 30 seconds
 	g_process.m_powerIsOn = false;
 	// note the autosave
@@ -797,7 +799,7 @@ bool CommandPowerNotice ( long hasPower ) {
 
 	char tmp[128];
 	Host *h0 = g_hostdb.getHost ( 0 );
-	long ip0 = 0;
+	int32_t ip0 = 0;
 	if ( h0 ) ip0 = h0->m_ip;
 	sprintf(tmp,"%s: POWER IS OFF",iptoa(ip0));
 
@@ -833,8 +835,8 @@ bool CommandInSync ( char *rec ) {
 //////////////////////
 
 
-static bool printDropDown   ( long n , SafeBuf* sb, char *name, 
-			      long selet , 
+static bool printDropDown   ( int32_t n , SafeBuf* sb, char *name, 
+			      int32_t selet , 
 			      bool includeMinusOne ,
 			      bool includeMinusTwo ) ;
 
@@ -872,10 +874,10 @@ public:
 		}
 	}
 
-	void addInStrings( const uint16_t *data, long cnt, long size ) {
+	void addInStrings( const uint16_t *data, int32_t cnt, int32_t size ) {
 		while ( cnt ) {
 			const uint16_t *origData = data;
-			long len = gbstrlen((char *)data);
+			int32_t len = gbstrlen((char *)data);
 
 			// if an odd len of data, add first byte, 
 			// then do rest below
@@ -929,17 +931,17 @@ Parms::Parms ( ) {
 }
 
 void Parms::detachSafeBufs ( CollectionRec *cr ) {
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
 		if ( m->m_type != TYPE_SAFEBUF ) continue;
 		if ( m->m_obj != OBJ_COLL ) continue;
 		if ( m->m_off < 0 ) continue;
-		long max = 1;
+		int32_t max = 1;
 		// this will be zero if not an array.
 		// othewise it is the # of elements in the array
 		if ( m->m_size > max ) max = m->m_size;
 		// an array of safebufs? m->m_size will be > 1 then.
-		for ( long j = 0 ; j < max ; j++ ) {
+		for ( int32_t j = 0 ; j < max ; j++ ) {
 			// get it
 			SafeBuf *sb = (SafeBuf *)((char *)cr + m->m_off +
 						  j*sizeof(SafeBuf));
@@ -948,10 +950,10 @@ void Parms::detachSafeBufs ( CollectionRec *cr ) {
 	}
 }
 /*
-unsigned long Parms::calcChecksum() {
+uint32_t Parms::calcChecksum() {
 	Checksum cs;
 
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
 		if ( m->m_obj == OBJ_SI ) continue;
 		if ( m->m_off < 0 ) continue;
@@ -961,7 +963,7 @@ unsigned long Parms::calcChecksum() {
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if ( m->m_type == TYPE_LONG_CONST ) continue;
 
-		long size = 0;
+		int32_t size = 0;
 		if ( m->m_type == TYPE_CHECKBOX       ) size = 1;
 		if ( m->m_type == TYPE_CHAR           ) size = 1;
 		if ( m->m_type == TYPE_CHAR2          ) size = 1;
@@ -988,7 +990,7 @@ unsigned long Parms::calcChecksum() {
 
 
 		// if we have an array
-		long cnt = 1;
+		int32_t cnt = 1;
 		if (m->m_fixed > 0) {
 			size *= m->m_fixed;
 			cnt = m->m_fixed;
@@ -1051,21 +1053,21 @@ unsigned long Parms::calcChecksum() {
 */
 
 // from Pages.cpp
-bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) ;
 
 // returns false and sets g_errno on error
 bool Parms::setGigablastRequest ( TcpSocket *socket ,
 				  HttpRequest *hrArg ,
 				  GigablastRequest *gr ) {
 	// get the page from the path... like /sockets --> PAGE_SOCKETS
-	long page = g_pages.getDynamicPageNumber ( hrArg );
+	int32_t page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
 
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
-		log("admin: THIS is null for page %li.",page);
+		log("admin: THIS is null for page %"INT32".",page);
 		return false;
 	}
 
@@ -1083,7 +1085,7 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	HttpRequest *hr = &gr->m_hr;
 
 	// need this
-	long obj = OBJ_GBREQUEST;
+	int32_t obj = OBJ_GBREQUEST;
 
 	//
 	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
@@ -1097,12 +1099,12 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 		page = PAGE_ADDURL2;
 
 	// loop through cgi parms
-	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
+	for ( int32_t i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
 		char *field = hr->getField    ( i );
-		//long  flen  = hr->getFieldLen ( i );
+		//int32_t  flen  = hr->getFieldLen ( i );
 		// find in parms list
-		long  j;
+		int32_t  j;
 		Parm *m;
 		for ( j = 0 ; j < m_numParms ; j++ ) {
 			// get it
@@ -1165,7 +1167,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	SafeBuf *sb = &stackBuf;
 
-	long page = g_pages.getDynamicPageNumber ( r );
+	int32_t page = g_pages.getDynamicPageNumber ( r );
 
 	char format = r->getReplyFormat();
 
@@ -1231,7 +1233,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	
 	// do not show the parms and their current values unless showsettings=1
 	// was explicitly given for the xml/json feeds
-	long show = 1;
+	int32_t show = 1;
 	if ( format != FORMAT_HTML )
 	 	show = r->getLong("show",0);
 	if ( show )
@@ -1266,9 +1268,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 
-	long page = g_pages.getDynamicPageNumber ( r );
+	int32_t page = g_pages.getDynamicPageNumber ( r );
 
-	long  fromIp   = s->m_ip;
+	int32_t  fromIp   = s->m_ip;
 
 	char format = r->getReplyFormat();
 	/*
@@ -1311,7 +1313,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_INJECT     ) tt = "Inject Url";
-	if ( page == PAGE_ROOTPASSWORDS ) tt = "Root Passwords";
+	if ( page == PAGE_MASTERPASSWORDS ) tt = "Master Passwords";
 	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
@@ -1323,7 +1325,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
 	//if ( page == PAGE_SYNC       ) tt = "Sync";
-	if ( page == PAGE_REPAIR     ) tt = "Repair Controls";
+	if ( page == PAGE_REPAIR     ) tt = "Rebuild Controls";
 	//if ( page == PAGE_ADFEED     ) tt = "Ad Feed Controls";
 
 	// special messages for spider controls
@@ -1341,17 +1343,17 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		char *coll = g_collectiondb.getDefaultColl(r);
 		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
-		bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+		bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
 		bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 	 	g_parms.printParms2 ( sb ,
 				      page ,
 	 	 		      cr ,
-	 	 		      1 , // long nc , # cols?
-	 	 		      1 , // long pd , print desc?
+	 	 		      1 , // int32_t nc , # cols?
+	 	 		      1 , // int32_t pd , print desc?
 	 	 		      false , // isCrawlbot
 	 	 		      format ,
 	 	 		      NULL , // TcpSocket *sock
-				      isRootAdmin ,
+				      isMasterAdmin ,
 				      isCollAdmin ); 
 		return true;
 	}
@@ -1465,7 +1467,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 			  //"</font>"
 			  "</td></tr>\n" , DARK_BLUE);
 		
-		for ( long i = RDB_START ; i < RDB_END ; i++ ) {
+		for ( int32_t i = RDB_START ; i < RDB_END ; i++ ) {
 			Rdb *r = getRdbFromId ( i );
 			if ( ! r ) continue;
 			float pd = g_sync.getPercentDone ( i );
@@ -1487,14 +1489,14 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 }
 
 /*
-char *printDropDown ( long n , char *p, char *pend, char *name, long select,
+char *printDropDown ( int32_t n , char *p, char *pend, char *name, int32_t select,
 		      bool includeMinusOne ,
 		      bool includeMinusTwo ) {
 	// begin the drop down menu
 	sprintf ( p , "<select name=%s>", name );
 	p += gbstrlen ( p );
 	char *s;
-	long i = -1;
+	int32_t i = -1;
 	if ( includeMinusOne ) i = -1;
 	// . by default, minus 2 includes minus 3, the new "FILTERED" priority
 	// . it is link "BANNED" but does not mean the url is low quality necessarily
@@ -1503,13 +1505,13 @@ char *printDropDown ( long n , char *p, char *pend, char *name, long select,
 		if ( i == select ) s = " selected";
 		else               s = "";
 		if      ( i == -3 ) 
-			sprintf (p,"<option value=%li%s>FILTERED",i,s);
+			sprintf (p,"<option value=%"INT32"%s>FILTERED",i,s);
 		else if ( i == -2 ) 
-			sprintf (p,"<option value=%li%s>BANNED",i,s);
+			sprintf (p,"<option value=%"INT32"%s>BANNED",i,s);
 		else if ( i == -1 ) 
-			sprintf (p,"<option value=%li%s>undefined",i,s);
+			sprintf (p,"<option value=%"INT32"%s>undefined",i,s);
 		else    
-			sprintf (p,"<option value=%li%s>%li",i,s,i);
+			sprintf (p,"<option value=%"INT32"%s>%"INT32"",i,s,i);
 		p += gbstrlen ( p );
 	}
 	sprintf ( p , "</select>" );
@@ -1546,7 +1548,7 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 
 	// wtf?
 	if ( ! p ) return true;
-	// print out. cgi is "dapi%li".
+	// print out. cgi is "dapi%"INT32"".
 	sb->safePrintf("<select name=%s>\n",name);
 	// print "none" as the first option
 	//char *sel = "";
@@ -1589,12 +1591,12 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 }
 */
 
-bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
+bool printDropDown ( int32_t n , SafeBuf* sb, char *name, int32_t select,
 		     bool includeMinusOne ,
 		     bool includeMinusTwo ) {	// begin the drop down menu
 	sb->safePrintf ( "<select name=%s>", name );
 	char *s;
-	long i = -1;
+	int32_t i = -1;
 	if ( includeMinusOne ) i = -1;
 	// . by default, minus 2 includes minus 3, the new "FILTERED" priority
 	// . it is link "BANNED" but does not mean the url is low quality necessarily
@@ -1603,15 +1605,15 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		if ( i == select ) s = " selected";
 		else               s = "";
 		if      ( i == -3 ) 
-			sb->safePrintf ("<option value=%li%s>DELETE",i,s);
+			sb->safePrintf ("<option value=%"INT32"%s>DELETE",i,s);
 		else if ( i == -2 ) 
-			//sb->safePrintf ("<option value=%li%s>BANNED",i,s);
+			//sb->safePrintf ("<option value=%"INT32"%s>BANNED",i,s);
 			continue;
 		else if ( i == -1 ) 
-			//sb->safePrintf ("<option value=%li%s>undefined",i,s);
+			//sb->safePrintf ("<option value=%"INT32"%s>undefined",i,s);
 			continue;
 		else    
-			sb->safePrintf ("<option value=%li%s>%li",i,s,i);
+			sb->safePrintf ("<option value=%"INT32"%s>%"INT32"",i,s,i);
 	}
 	sb->safePrintf ( "</select>" );
 	return true;
@@ -1645,8 +1647,8 @@ bool printDropDownProfile ( SafeBuf* sb, char *name, CollectionRec *cr ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
 	//char *items[] = {"custom","web","news","chinese","shallow"};
-	long nd = sizeof(g_drops)/sizeof(DropLangs);
-	for ( long i = 0 ; i < nd ; i++ ) {
+	int32_t nd = sizeof(g_drops)/sizeof(DropLangs);
+	for ( int32_t i = 0 ; i < nd ; i++ ) {
 		//if ( i == select ) s = " selected";
 		//else               s = "";
 		char *x = cr->m_urlFiltersProfile.getBufStart();
@@ -1663,10 +1665,10 @@ bool printDropDownProfile ( SafeBuf* sb, char *name, CollectionRec *cr ) {
 }
 
 /*
-char *printCheckBoxes ( long n , char *p, char *pend, char *name, char *array){
-	for ( long i = 0 ; i < n ; i++ ) {
+char *printCheckBoxes ( int32_t n , char *p, char *pend, char *name, char *array){
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		if ( i > 0 ) 
-			sprintf (p, "<input type=checkbox value=1 name=%s%li",
+			sprintf (p, "<input type=checkbox value=1 name=%s%"INT32"",
 				 name,i);
 		else
 			sprintf (p, "<input type=checkbox value=1 name=%s",
@@ -1676,7 +1678,7 @@ char *printCheckBoxes ( long n , char *p, char *pend, char *name, char *array){
 			sprintf ( p , " checked");
 			p += gbstrlen ( p );
 		}
-		sprintf ( p , ">%li &nbsp;" , i );
+		sprintf ( p , ">%"INT32" &nbsp;" , i );
 		p += gbstrlen ( p );
 		//if i is single digit, add another nbsp so that everything's 
 		//aligned
@@ -1692,10 +1694,10 @@ char *printCheckBoxes ( long n , char *p, char *pend, char *name, char *array){
 }
 */
 
-bool printCheckBoxes ( long n , SafeBuf* sb, char *name, char *array){
-	for ( long i = 0 ; i < n ; i++ ) {
+bool printCheckBoxes ( int32_t n , SafeBuf* sb, char *name, char *array){
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		if ( i > 0 ) 
-			sb->safePrintf ("<input type=checkbox value=1 name=%s%li",
+			sb->safePrintf ("<input type=checkbox value=1 name=%s%"INT32"",
 					name,i);
 		else
 			sb->safePrintf ("<input type=checkbox value=1 name=%s",
@@ -1703,7 +1705,7 @@ bool printCheckBoxes ( long n , SafeBuf* sb, char *name, char *array){
 		if ( array[i] ) {
 			sb->safePrintf ( " checked");
 		}
-		sb->safePrintf ( ">%li &nbsp;" , i );
+		sb->safePrintf ( ">%"INT32" &nbsp;" , i );
 		//if i is single digit, add another nbsp so that everything's 
 		//aligned
 		if ( i < 10 )
@@ -1716,13 +1718,13 @@ bool printCheckBoxes ( long n , SafeBuf* sb, char *name, char *array){
 }
 
 bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
-	long  page = g_pages.getDynamicPageNumber ( r );
-	long nc = r->getLong("nc",1);
-	long pd = r->getLong("pd",1);
+	int32_t  page = g_pages.getDynamicPageNumber ( r );
+	int32_t nc = r->getLong("nc",1);
+	int32_t pd = r->getLong("pd",1);
 	char *coll = g_collectiondb.getDefaultColl(r);
 	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
 
-	bool isRootAdmin = g_conf.isRootAdmin ( s , r );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
 	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
 
 	//char *coll = r->getString ( "c"   );
@@ -1730,21 +1732,21 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// if "main" collection does not exist, try another
 	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
-	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isRootAdmin,isCollAdmin);
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s,isMasterAdmin,isCollAdmin);
 	return true;
 }
 
-static long s_count = 0;
+static int32_t s_count = 0;
 
 bool Parms::printParms2 ( SafeBuf* sb , 
-			  long page , 
+			  int32_t page , 
 			  CollectionRec *cr , 
-			  long nc ,
-			  long pd , 
+			  int32_t nc ,
+			  int32_t pd , 
 			  bool isCrawlbot , 
 			  char format , // bool isJSON ,
 			  TcpSocket *sock ,
-			  bool isRootAdmin ,
+			  bool isMasterAdmin ,
 			  bool isCollAdmin ) {
 	bool status = true;
 	s_count = 0;
@@ -1759,7 +1761,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 
 	// page aliases
 	//if ( page == PAGE_COLLPASSWORDS )
-	//	page = PAGE_ROOTPASSWORDS;
+	//	page = PAGE_MASTERPASSWORDS;
 
 	if ( page == PAGE_COLLPASSWORDS2 )
 		page = PAGE_COLLPASSWORDS;
@@ -1774,7 +1776,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	}
 
 	// find in parms list
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *m = &m_parms[i];
 		// make sure we got the right parms for what we want
@@ -1811,12 +1813,12 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		if ( m->m_obj == OBJ_GBREQUEST )
 			THIS = (char *)&gr;
 		// might have an array, do not exceed the array size
-		long  jend = m->m_max;
-		long  size = jend ;
+		int32_t  jend = m->m_max;
+		int32_t  size = jend ;
 		char *ss   = ((char *)THIS + m->m_off - 4);
 		if ( m->m_type == TYPE_MONOD2 ) ss = NULL;
 		if ( m->m_type == TYPE_MONOM2 ) ss = NULL;
-		if ( m->m_max > 1 && ss ) size = *(long *)ss;
+		if ( m->m_max > 1 && ss ) size = *(int32_t *)ss;
 		if ( size < jend        ) jend = size;
 		// toggle background color on group boundaries...
 		if ( m->m_group == 1 ) {
@@ -1865,10 +1867,10 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		// if m_rowid of consecutive parms are the same then they
 		// are all printed in the same row, otherwise the inner loop
 		// has no effect
-		long rowid = m_parms[i].m_rowid;
+		int32_t rowid = m_parms[i].m_rowid;
 		// if not part of a complex row, just print this array right up
 		if ( rowid == -1 ) {
-			for ( long j = 0 ; j < size ; j++ )
+			for ( int32_t j = 0 ; j < size ; j++ )
 				status &=printParm ( sb,NULL,&m_parms[i],i,
 						     j, jend, (char *)THIS,
 						     coll,NULL,
@@ -1876,7 +1878,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     false,
 						     isCrawlbot,
 						     format,
-						     isRootAdmin,
+						     isMasterAdmin,
 						     isCollAdmin,
 						     sock);
 			continue;
@@ -1885,12 +1887,12 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		if ( i > 0 && m_parms[i-1].m_rowid == rowid ) continue;
 
 		// otherwise print everything in the row
-		for ( long j = 0 ; j < size ; j++ ) {
+		for ( int32_t j = 0 ; j < size ; j++ ) {
 			// flip j if in this page
-			long newj = j;
+			int32_t newj = j;
 			//if ( m->m_page == PAGE_PRIORITIES )
 			//	newj = size - 1 - j;
-			for ( long k = i ; 
+			for ( int32_t k = i ; 
 			      k < m_numParms && 
 				      m_parms[k].m_rowid == rowid;  
 			      k++ ) {
@@ -1899,7 +1901,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
 						   isCrawlbot,format,
-						   isRootAdmin,
+						   isMasterAdmin,
 						   isCollAdmin,
 						   sock);
 			}
@@ -1923,23 +1925,23 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 
 
 bool Parms::printParm ( SafeBuf* sb,
-			//long  user ,
+			//int32_t  user ,
 			char *username,
 			Parm *m    , 
-			long  mm   , // m = &m_parms[mm]
-			long  j    ,
-			long  jend ,
+			int32_t  mm   , // m = &m_parms[mm]
+			int32_t  j    ,
+			int32_t  jend ,
 			char *THIS ,
 			char *coll ,
 			char *pwd  ,
 			char *bg   ,
-			long  nc   , // # column?
-			long  pd   , // print description
+			int32_t  nc   , // # column?
+			int32_t  pd   , // print description
 			bool lastRow ,
 			bool isCrawlbot ,
 			//bool isJSON ) {
 			char format ,
-			bool isRootAdmin ,
+			bool isMasterAdmin ,
 			bool isCollAdmin ,
 			TcpSocket *sock ) {
 	bool status = true;
@@ -1977,7 +1979,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) return true;
 	}
 
-	long page = m->m_page;
+	int32_t page = m->m_page;
 
 	if ( format == FORMAT_XML ) {
 		sb->safePrintf ( "\t<parm>\n");
@@ -2001,7 +2003,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_ROOTPASSWORDS ||
+		     page == PAGE_MASTERPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t<currentValue><![CDATA[");
@@ -2034,7 +2036,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     page == PAGE_SPIDER ||
 		     page == PAGE_SPIDERPROXIES ||
 		     page == PAGE_FILTERS ||
-		     page == PAGE_ROOTPASSWORDS ||
+		     page == PAGE_MASTERPASSWORDS ||
 		     page == PAGE_REPAIR ||
 		     page == PAGE_LOG ) {
 			sb->safePrintf ( "\t\t\"currentValue\":\"");
@@ -2072,7 +2074,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// . if an array, passed our end, this is the blank line at the end
 	// . USE THIS EMPTY/DEFAULT LINE TO ADD NEW DATA TO AN ARRAY
-	// . make at least as big as a long long
+	// . make at least as big as a int64_t
 	if ( j >= jend ) s = "\0\0\0\0\0\0\0\0";
 	// delimit each cgi var if we need to
 	if ( m->m_cgi && gbstrlen(m->m_cgi) > 45 ) {
@@ -2081,7 +2083,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	char cgi[64];
 	if ( m->m_cgi ) {
-		if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
+		if ( j > 0 ) sprintf ( cgi , "%s%"INT32"" , m->m_cgi , j );
 		else         sprintf ( cgi , "%s"    , m->m_cgi     );
 		// let's try dropping the index # and just doing dup parms
 		//sprintf ( cgi , "%s"    , m->m_cgi     );
@@ -2108,7 +2110,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
 
-	long firstRow = 0;
+	int32_t firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
 	// . make title and description header of that table
@@ -2136,9 +2138,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf (  "<td><b>#</b></td>\n" );
 		}
 		// print all headers
-		for ( long k = mm ; 
+		for ( int32_t k = mm ; 
 		      k<m_numParms && m_parms[k].m_rowid==m->m_rowid; k++ ) {
-			// parm shortcut
+			// parm int16_tcut
 			Parm *mk = &m_parms[k];
 			// not if printing json
 			//if ( format != FORMAT_HTML )continue;//isJSON )
@@ -2165,7 +2167,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			     mk->m_page == PAGE_FILTERS ) {
 				sb->safePrintf("<a href=# "
 					       "onclick=\"checkAll(this, "
-					       "'id_%s', %li);\">",
+					       "'id_%s', %"INT32");\">",
 					       m_parms[k].m_cgi, m->m_max);
 			}
 			sb->safePrintf ( "<b>%s</b>", m_parms[k].m_title );
@@ -2177,7 +2179,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			     m_parms[k].m_type == TYPE_CHECKBOX)
 				sb->safePrintf("<br><a href=# "
 					       "onclick=\"checkAll(this, "
-					       "'id_%s', %li);\">(toggle)</a>",
+					       "'id_%s', %"INT32");\">(toggle)</a>",
 					       m_parms[k].m_cgi, m->m_max);
 			*/
 			sb->safePrintf ("</td>\n");
@@ -2195,7 +2197,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( firstInRow ) {
 			sb->safePrintf ( "<tr bgcolor=#%s><td>" , bg );
 		}
-		sb->safePrintf ( "<td width=%li%%>" , 100/nc/2 );
+		sb->safePrintf ( "<td width=%"INT32"%%>" , 100/nc/2 );
 	}
 
 	// if parm value is not defaut, use orange!
@@ -2237,9 +2239,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			// parm is too advanced to display
 			sb->safePrintf ( "<td " );
 			if ( m->m_colspan > 0 )
-				sb->safePrintf ( "colspan=%li ",
-						 (long)m->m_colspan);
-			sb->safePrintf ( "width=%li%%>"//"<td width=78%%>
+				sb->safePrintf ( "colspan=%"INT32" ",
+						 (int32_t)m->m_colspan);
+			sb->safePrintf ( "width=%"INT32"%%>"//"<td width=78%%>
 					 "<b>%s</b><br><font size=1>",
 					 3*100/nc/2/4, m->m_title );
 
@@ -2256,7 +2258,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 				// print users current ip if showing the list
 				// of "Master IPs" for admin access
-				if ( ( m->m_page == PAGE_ROOTPASSWORDS ||
+				if ( ( m->m_page == PAGE_MASTERPASSWORDS ||
 				       m->m_page == PAGE_COLLPASSWORDS ) &&
 				     sock &&
 				     m->m_title &&
@@ -2288,7 +2290,7 @@ bool Parms::printParm ( SafeBuf* sb,
 								  false);
 				}
 			}
-			sb->safePrintf ( "</font></td>\n<td%s width=%li%%>" , 
+			sb->safePrintf ( "</font></td>\n<td%s width=%"INT32"%%>" , 
 				  color , 100/nc/2/4 );
 		}
 	}
@@ -2305,7 +2307,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		// for this same row, silly
 		if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
 			sb->safePrintf ( "<tr bgcolor=#%s>"
-					 "<td>%li</td>\n<td>", 
+					 "<td>%"INT32"</td>\n<td>", 
 					 bgc,
 					 j );//j+1
 		else if ( firstInRow ) 
@@ -2315,7 +2317,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td>" );
 	}
 
-	//long cast = m->m_cast;
+	//int32_t cast = m->m_cast;
 	//if ( g_proxy.isProxy() ) cast = 0;
 
 	// print the input box
@@ -2328,7 +2330,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		// if cast=1, command IS broadcast to all hosts
 		else 
 			sb->safePrintf ( "<b><a href=\"/%s?c=%s&"
-					 "%s=%s\">" // &cast=%li\">"
+					 "%s=%s\">" // &cast=%"INT32"\">"
 					 "<center>%s</center></a></b>", 
 					 g_pages.getPath(m->m_page),coll,
 					 cgi,v,//cast,
@@ -2354,9 +2356,9 @@ bool Parms::printParm ( SafeBuf* sb,
 		// just show the parm name and value if printing in json
 		// if ( format == FORMAT_JSON ) { // isJSON ) {
 		// 	if ( ! lastRow ) {
-		// 		long val = 0;
+		// 		int32_t val = 0;
 		// 		if ( *s ) val = 1;
-		// 		sb->safePrintf("\"%s\":%li,\n",cgi,val);
+		// 		sb->safePrintf("\"%s\":%"INT32",\n",cgi,val);
 		// 	}
 		// }
 		//sb->safePrintf("<center><nobr>");
@@ -2415,10 +2417,10 @@ bool Parms::printParm ( SafeBuf* sb,
 			       );
 	}
 	else if ( t == TYPE_CHAR )
-		sb->safePrintf ("<input type=text name=%s value=\"%li\" "
-				"size=3>",cgi,(long)(*s));
+		sb->safePrintf ("<input type=text name=%s value=\"%"INT32"\" "
+				"size=3>",cgi,(int32_t)(*s));
 	/*	else if ( t == TYPE_CHAR2 )
-		sprintf (p,"<input type=text name=%s value=\"%li\" "
+		sprintf (p,"<input type=text name=%s value=\"%"INT32"\" "
 		"size=3>",cgi,*(char*)s);*/
 	else if ( t == TYPE_PRIORITY ) 
 		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s , 
@@ -2426,7 +2428,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_PRIORITY2 ) {
 		// just show the parm name and value if printing in json
 		// if ( format==FORMAT_JSON) // isJSON )
-		// 	sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
+		// 	sb->safePrintf("\"%s\":%"INT32",\n",cgi,(int32_t)*(char *)s);
 		// else
 		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
 				true , true );
@@ -2446,7 +2448,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// do not expose master passwords or IPs to non-root admins
 	else if ( ( m->m_flags & PF_PRIVATE ) && 
 		  m->m_obj == OBJ_CONF &&
-		  ! isRootAdmin )
+		  ! isMasterAdmin )
 		return true;
 
 	// do not expose master passwords or IPs to non-root admins
@@ -2469,7 +2471,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		// if cast=0 it will be executed, otherwise it will be
 		// broadcasted with cast=1 to all hosts and they will all
 		// execute it
-		sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=1\">" // cast=%li
+		sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=1\">" // cast=%"INT32"
 			  "<center>%s</center></a></b>",
 			  g_pages.getPath(m->m_page),coll,
 			  cgi,m->m_title);
@@ -2490,26 +2492,26 @@ bool Parms::printParm ( SafeBuf* sb,
 					"size=12>",cgi);
 		else
 			sb->safePrintf ("<input type=text name=%s value=\"%s\" "
-					"size=12>",cgi,iptoa(*(long *)s));
+					"size=12>",cgi,iptoa(*(int32_t *)s));
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
 		// if ( format == FORMAT_JSON ) // isJSON )
-		// 	sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+		// 	sb->safePrintf("\"%s\":%"INT32",\n",cgi,*(int32_t *)s);
 		// else
 		sb->safePrintf ("<input type=text name=%s "
-				"value=\"%li\" "
+				"value=\"%"INT32"\" "
 				// 3 was ok on firefox but need 6
 				// on chrome
-				"size=6>",cgi,*(long *)s);
+				"size=6>",cgi,*(int32_t *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
-		sb->safePrintf ("%li",*(long *)s);
+		sb->safePrintf ("%"INT32"",*(int32_t *)s);
 	else if ( t == TYPE_LONG_LONG )
-		sb->safePrintf ("<input type=text name=%s value=\"%lli\" "
-				"size=12>",cgi,*(long long *)s);
+		sb->safePrintf ("<input type=text name=%s value=\"%"INT64"\" "
+				"size=12>",cgi,*(int64_t *)s);
 	else if ( t == TYPE_STRING || t == TYPE_STRINGNONEMPTY ) {
-		long size = m->m_size;
+		int32_t size = m->m_size;
 		// give regular expression box on url filters page more room
 		//if ( m->m_page == PAGE_FILTERS ) {
 		//	if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
@@ -2517,7 +2519,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		//else {
 		if ( size > 20 ) size = 20;
 		//}
-		sb->safePrintf ("<input type=text name=%s size=%li value=\"",
+		sb->safePrintf ("<input type=text name=%s size=%"INT32" value=\"",
 				cgi,size);
 
 		// if it has PF_DEFAULTCOLL flag set then use the coll
@@ -2556,7 +2558,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	*/
 	else if ( t == TYPE_CHARPTR ) {
-		long size = m->m_size;
+		int32_t size = m->m_size;
 		char *sp = NULL;
 		if ( s && *s ) sp = *(char **)s;
 		if ( ! sp ) sp = "";
@@ -2568,7 +2570,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ("</textarea>");
 		}
 		else {
-			sb->safePrintf ("<input type=text name=%s size=%li "
+			sb->safePrintf ("<input type=text name=%s size=%"INT32" "
 					"value=\"",cgi,size);
 			// if it has PF_DEFAULTCOLL flag set then use the coll
 			if ( cr && (m->m_flags & PF_COLLDEFAULT) )
@@ -2579,7 +2581,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 	}
 	else if ( t == TYPE_SAFEBUF ) {
-		long size = m->m_size;
+		int32_t size = m->m_size;
 		// give regular expression box on url filters page more room
 		if ( m->m_page == PAGE_FILTERS ) {
 			//if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
@@ -2627,15 +2629,24 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ("</textarea>");
 		}
 		else {
-			sb->safePrintf ("<input type=text name=%s size=%li "
+			sb->safePrintf ("<input type=text name=%s size=%"INT32" "
 					"value=\"",
 					cgi,size);
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
+
+
+			if ( cr && 
+			     (m->m_flags & PF_COLLDEFAULT) &&
+			     sx &&
+			     sx->length() <= 0 ) 
+				sb->dequote ( cr->m_coll,gbstrlen(cr->m_coll));
+
 			// if parm is OBJ_NONE there is no stored valued
-			if ( m->m_obj != OBJ_NONE )
+			else if ( m->m_obj != OBJ_NONE )
 				sb->dequote ( sx->getBufStart(), sx->length());
+
 			sb->safePrintf ("\">");
 		}
 	}
@@ -2652,7 +2663,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_CONSTANT ) 
 		sb->safePrintf ("%s",m->m_title);
 	else if ( t == TYPE_MONOD2 )
-		sb->safePrintf ("%li",j / 2 );
+		sb->safePrintf ("%"INT32"",j / 2 );
 	else if ( t == TYPE_MONOM2 ) {
 		/*
 		if ( m->m_page == PAGE_PRIORITIES ) {
@@ -2661,14 +2672,14 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		else
 		*/
-			sb->safePrintf ("%li",j % 2 );
+			sb->safePrintf ("%"INT32"",j % 2 );
 	}
 	else if ( t == TYPE_RULESET ) ;
 		// subscript is already included in "cgi"
 		//g_pages.printRulesetDropDown ( sb         ,
 		//			       user       ,
 		//			       cgi        ,
-		//			       *(long *)s ,  // selected  
+		//			       *(int32_t *)s ,  // selected  
 		//			       -1         ); // subscript
 	else if ( t == TYPE_TIME ) {
 		//time is stored as a string
@@ -2693,20 +2704,20 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 
 	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
-		// time is stored as long
-		long ct = *(long *)s;
+		// time is stored as int32_t
+		int32_t ct = *(int32_t *)s;
 		// get the time struct
 		struct tm *tp = gmtime ( (time_t *)&ct ) ;
 		// set the "selected" month for the drop down
 		char *ss[12];
-		for ( long i = 0 ; i < 12 ; i++ ) ss[i]="";
-		long month = tp->tm_mon;
+		for ( int32_t i = 0 ; i < 12 ; i++ ) ss[i]="";
+		int32_t month = tp->tm_mon;
 		if ( month < 0 || month > 11 ) month = 0; // Jan
 		ss[month] = " selected";
 		// print the date in the input forms
 		sb->safePrintf(
 			"<input type=text name=%sday "
-			"size=2 value=%li> "
+			"size=2 value=%"INT32"> "
 			"<select name=%smon>"
 			"<option value=0%s>Jan"
 			"<option value=1%s>Feb"
@@ -2721,32 +2732,32 @@ bool Parms::printParm ( SafeBuf* sb,
 			"<option value=10%s>Nov"
 			"<option value=11%s>Dec"
 			"</select>\n"
-			"<input type=text name=%syr size=4 value=%li>"
+			"<input type=text name=%syr size=4 value=%"INT32">"
 			"<br>"
 			"<input type=text name=%shr size=2 "
-			"value=%02li>h " 
+			"value=%02"INT32">h " 
 			"<input type=text name=%smin size=2 "
-			"value=%02li>m " 
+			"value=%02"INT32">m " 
 			"<input type=text name=%ssec size=2 "
-			"value=%02li>s" ,
+			"value=%02"INT32">s" ,
 			cgi    ,
-			(long)tp->tm_mday ,
+			(int32_t)tp->tm_mday ,
 			cgi    ,
 			ss[0],ss[1],ss[2],ss[3],ss[4],ss[5],ss[6],ss[7],ss[8],
 			ss[9],ss[10],ss[11],
 			cgi    ,
-			(long)tp->tm_year + 1900 ,
+			(int32_t)tp->tm_year + 1900 ,
 			cgi    , 
-			(long)tp->tm_hour ,
+			(int32_t)tp->tm_hour ,
 			cgi    , 
-			(long)tp->tm_min  ,
+			(int32_t)tp->tm_min  ,
 			cgi    ,
-			(long)tp->tm_sec  );
+			(int32_t)tp->tm_sec  );
 		/*
 		if ( t == TYPE_DATE2 ) {
 			p += gbstrlen ( p );
-			// a long after the long is used for this
-			long ct = *(long *)(THIS+m->m_off+4);
+			// a int32_t after the int32_t is used for this
+			int32_t ct = *(int32_t *)(THIS+m->m_off+4);
 			char *ss = "";
 			if ( ct ) ss = " checked";
 			sprintf ( p , "<br><input type=checkbox "
@@ -2758,8 +2769,8 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_SITERULE ) {
 		// print the siterec rules as a drop down
 		char *ss[5];
-		for ( long i = 0; i < 5; i++ ) ss[i] = "";
-		long v = *(long*)s;
+		for ( int32_t i = 0; i < 5; i++ ) ss[i] = "";
+		int32_t v = *(int32_t*)s;
 		if ( v < 0 || v > 4 ) v = 0;
 		ss[v] = " selected";
 		sb->safePrintf ( "<select name=%s>"
@@ -2781,7 +2792,7 @@ bool Parms::printParm ( SafeBuf* sb,
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
 				 // "j" is the row #
-				 "insert=%li\">insert</td>\n",coll,j );
+				 "insert=%"INT32"\">insert</td>\n",coll,j );
 	}
 
 	// does next guy start a new row?
@@ -2799,7 +2810,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		bool show = true;
 		//if ( j >= jend )  show = false;
 		// get # of rows
-		long *nr = (long *)((char *)THIS + m->m_off - 4);
+		int32_t *nr = (int32_t *)((char *)THIS + m->m_off - 4);
 		// are we the last row?
 		bool lastRow = false;
 		// yes, if this is true
@@ -2807,17 +2818,17 @@ bool Parms::printParm ( SafeBuf* sb,
 		// do not allow removal of last default url filters rule
 		//if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
 		char *suffix = "";
-		if ( m->m_page == PAGE_ROOTPASSWORDS &&
+		if ( m->m_page == PAGE_MASTERPASSWORDS &&
 		     m->m_type == TYPE_IP ) 
 			suffix = "ip";
-		if ( m->m_page == PAGE_ROOTPASSWORDS &&
+		if ( m->m_page == PAGE_MASTERPASSWORDS &&
 		     m->m_type == TYPE_STRINGNONEMPTY ) 
 			suffix = "pwd";
 		if ( show )
 			sb->safePrintf ("<td><a href=\"?c=%s&" // cast=1&"
 					//"rm_%s=1\">"
 					// remove=<rownum>
-					"remove%s=%li\">"
+					"remove%s=%"INT32"\">"
 					"remove</a></td>\n",coll,//cgi );
 					suffix,
 					j); // j is row #
@@ -2832,7 +2843,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 /*
 // get the object of our desire
-char *Parms::getTHIS ( HttpRequest *r , long page ) {
+char *Parms::getTHIS ( HttpRequest *r , int32_t page ) {
 	// if not master controls, must be a collection rec
 	//if ( page < PAGE_CGIPARMS ) return (char *)&g_conf;
 	char *coll = r->getString ( "c" );
@@ -2855,10 +2866,10 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 			     TcpSocket* s,
 			     CollectionRec *newcr ,
 			     char *THIS ,
-			     long objType ) {
+			     int32_t objType ) {
 
 	// get the page from the path... like /sockets --> PAGE_SOCKETS
-	//long page = g_pages.getDynamicPageNumber ( r );
+	//int32_t page = g_pages.getDynamicPageNumber ( r );
 
 	// use convertHttpRequestToParmList() for these because they
 	// are persistent records that are updated on every shard.
@@ -2880,11 +2891,11 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	//setToDefault ( THIS , objType , cr );
 
 	// loop through cgi parms
-	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
+	for ( int32_t i = 0 ; i < r->getNumFields() ; i++ ) {
 		// get cgi parm name
 		char *field = r->getField    ( i );
 		// find in parms list
-		long  j;
+		int32_t  j;
 		Parm *m;
 		for ( j = 0 ; j < m_numParms ; j++ ) {
 			// get it
@@ -2918,25 +2929,25 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 }
 
 
-bool Parms::insertParm ( long i , long an ,  char *THIS ) {
+bool Parms::insertParm ( int32_t i , int32_t an ,  char *THIS ) {
 	Parm *m = &m_parms[i];
 	// . shift everyone above down
-	// . first long at offset is always the count
+	// . first int32_t at offset is always the count
 	//   for arrays
 	char *pos =  (char *)THIS + m->m_off ;
-	long  num = *(long *)(pos - 4);
+	int32_t  num = *(int32_t *)(pos - 4);
 	// ensure we are valid
 	if ( an >= num || an < 0 ) {
 		log("admin: Invalid insertion of element "
-		    "%li in array of size %li for \"%s\".",
+		    "%"INT32" in array of size %"INT32" for \"%s\".",
 		    an,num,m->m_title);
 		return false;
 	}
 	// also ensure that we have space to put the parm in, because in
 	// case of URl filters, it is bounded by MAX_FILTERS
 	if ( num >= MAX_FILTERS ){
-		log("admin: Invalid insert of element %li, array is full "
-		    "in size %li for \"%s\".",an, num, m->m_title);
+		log("admin: Invalid insert of element %"INT32", array is full "
+		    "in size %"INT32" for \"%s\".",an, num, m->m_title);
 		return false;
 	}
 	// point to the place where the element is to be inserted
@@ -2946,30 +2957,30 @@ bool Parms::insertParm ( long i , long an ,  char *THIS ) {
 	char *dst = pos + m->m_size * ( an + 1 );
 
 	// how much to move
-	long size = ( num - an ) * m->m_size ;
+	int32_t size = ( num - an ) * m->m_size ;
 	// move them
 	memmove ( dst , src , size );
 	// if the src was a TYPE_SAFEBUF clear it so we don't end up doing
 	// a double free, etc.!
 	memset ( src , 0 , m->m_size );
 	// inc the count
-	*(long *)(pos-4) = (*(long *)(pos-4)) + 1;
+	*(int32_t *)(pos-4) = (*(int32_t *)(pos-4)) + 1;
 	// put the defaults in the inserted line
 	setParm ( (char *)THIS , m , i , an , m->m_def , false ,false );
 	return true;
 }
 
-bool Parms::removeParm ( long i , long an , char *THIS ) {
+bool Parms::removeParm ( int32_t i , int32_t an , char *THIS ) {
 	Parm *m = &m_parms[i];
 	// . shift everyone above down
-	// . first long at offset is always the count
+	// . first int32_t at offset is always the count
 	//   for arrays
 	char *pos =  (char *)THIS + m->m_off ;
-	long  num = *(long *)(pos - 4);
+	int32_t  num = *(int32_t *)(pos - 4);
 	// ensure we are valid
 	if ( an >= num || an < 0 ) {
 		log("admin: Invalid removal of element "
-		    "%li in array of size %li for \"%s\".",
+		    "%"INT32" in array of size %"INT32" for \"%s\".",
 		    an,num,m->m_title);
 		return false;
 	}
@@ -2984,15 +2995,23 @@ bool Parms::removeParm ( long i , long an , char *THIS ) {
 	// then point to the good stuf
 	char *src = pos + m->m_size * (an+1);
 	// how much to bury it with
-	long size = (num - an - 1 ) * m->m_size ;
+	int32_t size = (num - an - 1 ) * m->m_size ;
 	// bury it
 	memcpy ( dst , src , size );
+
+	// and detach the buf on the tail so it doesn't core in Mem.cpp
+	// when it tries to free...
+	if ( m->m_type == TYPE_SAFEBUF ) {
+		SafeBuf *tail = (SafeBuf *)(pos + m->m_size * (num-1));
+		tail->detachBuf();
+	}
+
 	// dec the count
-	*(long *)(pos-4) = (*(long *)(pos-4)) - 1;
+	*(int32_t *)(pos-4) = (*(int32_t *)(pos-4)) - 1;
 	return true;
 }
 
-void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
+void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 		      bool isHtmlEncoded , bool fromRequest ) {
 
 	if ( fromRequest ) { char *xx=NULL;*xx=0; }
@@ -3045,7 +3064,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	if ( m->m_max > 1 && m->m_rowid >= 0 && mm > 0 &&
 	     m_parms[mm-1].m_rowid == m->m_rowid ) {
 		char *pos =  (char *)THIS + m_parms[mm-1].m_off - 4 ;
-		long maxcount = *(long *)pos;
+		int32_t maxcount = *(int32_t *)pos;
 		if ( j >= maxcount ) {
 			log("admin: parm before \"%s\" is limiting us",
 			    m_parms[mm-1].m_title);
@@ -3062,7 +3081,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		// . array count is 4 bytes before the array
 		char *pos =  (char *)THIS + m->m_off - 4 ;
 		// set the count to it if it is bigger than current count
-		if ( j + 1 > *(long *)pos ) *(long *)pos = j + 1;
+		if ( j + 1 > *(int32_t *)pos ) *(int32_t *)pos = j + 1;
 	}
 
 	char  t   = m->m_type;
@@ -3097,10 +3116,10 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		log(LOG_LOGIC, "conf: Parms: TYPE_CMD is not a cgi var.");
 		return;	}
 	else if ( t == TYPE_DATE2 || t == TYPE_DATE ) {
-		long v = (long)atotime ( s ); 
-		if ( fromRequest && *(long *)(THIS + m->m_off + 4*j) == v ) 
+		int32_t v = (int32_t)atotime ( s ); 
+		if ( fromRequest && *(int32_t *)(THIS + m->m_off + 4*j) == v ) 
 			return;
-		*(long *)(THIS + m->m_off + 4*j) = v;
+		*(int32_t *)(THIS + m->m_off + 4*j) = v;
 		if ( v < 0 ) log("conf: Date for <%s> of \""
 				 "%s\" is not in proper format like: "
 				 "01 Jan 1980 22:45",m->m_xml,s);
@@ -3128,39 +3147,39 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		newVal = *(double *)(THIS + m->m_off + 4*j);
 		goto changed; }
 	else if ( t == TYPE_IP ) {
-		if ( fromRequest && *(long *)(THIS + m->m_off + 4*j) == 
-		     (long)atoip (s,gbstrlen(s) ) ) 
+		if ( fromRequest && *(int32_t *)(THIS + m->m_off + 4*j) == 
+		     (int32_t)atoip (s,gbstrlen(s) ) ) 
 			return;
-		*(long *)(THIS + m->m_off + 4*j) = (long)atoip (s,gbstrlen(s) ); 
+		*(int32_t *)(THIS + m->m_off + 4*j) = (int32_t)atoip (s,gbstrlen(s) ); 
 		goto changed; }
 	else if ( t == TYPE_LONG || t == TYPE_LONG_CONST || t == TYPE_RULESET||
 		  t == TYPE_SITERULE ) {
-		long v = atol ( s );
+		int32_t v = atol ( s );
 		// min is considered valid if >= 0
 		if ( m->m_min >= 0 && v < m->m_min ) v = m->m_min;
-		if ( fromRequest && *(long *)(THIS + m->m_off + 4*j) == v ) 
+		if ( fromRequest && *(int32_t *)(THIS + m->m_off + 4*j) == v ) 
 			return;
-		if ( fromRequest)oldVal=(float)*(long *)(THIS + m->m_off +4*j);
-		*(long *)(THIS + m->m_off + 4*j) = v;
-		newVal = (float)*(long *)(THIS + m->m_off + 4*j);
+		if ( fromRequest)oldVal=(float)*(int32_t *)(THIS + m->m_off +4*j);
+		*(int32_t *)(THIS + m->m_off + 4*j) = v;
+		newVal = (float)*(int32_t *)(THIS + m->m_off + 4*j);
 		goto changed; }
 	else if ( t == TYPE_LONG_LONG ) {
 		if ( fromRequest &&
-		     *(unsigned long long *)(THIS + m->m_off+8*j)==
+		     *(uint64_t *)(THIS + m->m_off+8*j)==
 		     strtoull(s,NULL,10))
 			return;
-		*(long long *)(THIS + m->m_off + 8*j) = strtoull(s,NULL,10);
+		*(int64_t *)(THIS + m->m_off + 8*j) = strtoull(s,NULL,10);
 		goto changed; }
 	// like TYPE_STRING but dynamically allocates
 	else if ( t == TYPE_SAFEBUF ) {
-		long len = gbstrlen(s);
+		int32_t len = gbstrlen(s);
 		// no need to truncate since safebuf is dynamic
 		//if ( len >= m->m_size ) len = m->m_size - 1; // truncate!!
 		//char *dst = THIS + m->m_off + m->m_size*j ;
 		// point to the safebuf, in the case of an array of
 		// SafeBufs "j" is the # in the array, starting at 0
 		SafeBuf *sb = (SafeBuf *)(THIS+m->m_off+(j*sizeof(SafeBuf)) );
-		long oldLen = sb->length();
+		int32_t oldLen = sb->length();
 		// why was this commented out??? we need it now that we
 		// send email alerts when parms change!
 		if ( fromRequest &&
@@ -3172,6 +3191,8 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		// this means that we can not use string POINTERS as parms!!
 		if ( ! isHtmlEncoded ) sb->safeMemcpy ( s , len ); 
 		else                   len = sb->htmlDecode (s,len,false,0);
+		// tag it
+		sb->setLabel ( "parm1" );
 		// ensure null terminated
 		sb->nullTerm();
 		// note it
@@ -3186,20 +3207,20 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		// . might have to set length
 		// . used for CollectionRec::m_htmlHeadLen and m_htmlTailLen
 		//if ( m->m_plen >= 0 ) 
-		//	*(long *)(THIS + m->m_plen) = len ;
+		//	*(int32_t *)(THIS + m->m_plen) = len ;
 		goto changed; 
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      || 
 		  t == TYPE_STRINGNONEMPTY ||
 		  t == TYPE_TIME            ) {
-		long len = gbstrlen(s);
+		int32_t len = gbstrlen(s);
 		if ( len >= m->m_size ) len = m->m_size - 1; // truncate!!
 		char *dst = THIS + m->m_off + m->m_size*j ;
 		// why was this commented out??? we need it now that we
 		// send email alerts when parms change!
 		if ( fromRequest &&
-		     ! isHtmlEncoded && (long)gbstrlen(dst) == len &&
+		     ! isHtmlEncoded && (int32_t)gbstrlen(dst) == len &&
 		     memcmp ( dst , s , len ) == 0 ) 
 			return;
 		// this means that we can not use string POINTERS as parms!!
@@ -3209,7 +3230,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		// . might have to set length
 		// . used for CollectionRec::m_htmlHeadLen and m_htmlTailLen
 		if ( m->m_plen >= 0 ) 
-			*(long *)(THIS + m->m_plen) = len ;
+			*(int32_t *)(THIS + m->m_plen) = len ;
 		goto changed; }
  changed:
 	// tell gigablast the value is EXPLICITLY given -- no longer based
@@ -3230,7 +3251,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	// note it in the log
 	log("admin: parm \"%s\" changed value",m->m_title);
 
-	long long nowms = gettimeofdayInMillisecondsLocal();
+	int64_t nowms = gettimeofdayInMillisecondsLocal();
 
 	// . note it in statsdb
 	// . record what parm change and from/to what value
@@ -3260,7 +3281,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 
 	char tmp[1024];
 	Host *h0 = g_hostdb.getHost ( 0 );
-	long ip0 = 0;
+	int32_t ip0 = 0;
 	if ( h0 ) ip0 = h0->m_ip;
 	sprintf(tmp,"%s: parm \"%s\" changed value",iptoa(ip0),m->m_title);
 	g_pingServer.sendEmail ( NULL  , // Host ptr
@@ -3272,14 +3293,14 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 				 true  );// force it? even if disabled?
 
 	// now the spider collection can just check the collection rec
-	//long long nowms = gettimeofdayInMilliseconds();
+	//int64_t nowms = gettimeofdayInMilliseconds();
 	//((CollectionRec *)THIS)->m_lastUpdateTime = nowms;
 
 	return;
 }
 
-Parm *Parms::getParmFromParmHash ( long parmHash ) {
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+Parm *Parms::getParmFromParmHash ( int32_t parmHash ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
 		if ( m->m_hash != parmHash ) continue;
 		return m;
@@ -3301,7 +3322,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 	//	memset ( cr->m_spiderDiffbotApiNum , 0 , MAX_FILTERS);
 	//}
 
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
 		if ( m->m_obj != objType ) continue;
 		if ( m->m_obj == OBJ_NONE ) continue;
@@ -3321,7 +3342,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		//}
 		// sanity check, make sure it does not overflow
 		if ( m->m_obj == OBJ_COLL &&
-		     m->m_off > (long)sizeof(CollectionRec)){
+		     m->m_off > (int32_t)sizeof(CollectionRec)){
 			log(LOG_LOGIC,"admin: Parm in Parms.cpp should use "
 			    "OBJ_COLL not OBJ_CONF");
 			char *xx = NULL; *xx = 0;
@@ -3358,7 +3379,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		}
 		// these are special, fixed size arrays
 		if ( m->m_fixed > 0 ) {
-			for ( long k = 0 ; k < m->m_fixed ; k++ ) {
+			for ( int32_t k = 0 ; k < m->m_fixed ; k++ ) {
 				setParm(THIS,m,i,k,m->m_def,false/*not enc.*/,
 					false);
 				//m->m_orig = 0; // set in setToDefaults()
@@ -3371,9 +3392,9 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		// otherwise, array is not fixed size
 		char *s = THIS + m->m_off ;
 		// set count to 1 if a default is present
-		//if (   m->m_def[0] ) *(long *)(s-4) = 1;
-		//else                 *(long *)(s-4) = 0;
-		*(long *)(s-4) = 0;
+		//if (   m->m_def[0] ) *(int32_t *)(s-4) = 1;
+		//else                 *(int32_t *)(s-4) = 0;
+		*(int32_t *)(s-4) = 0;
 	}
 }
 
@@ -3418,14 +3439,14 @@ bool Parms::setFromFile ( void *THIS        ,
 
  skip:
 	*/
-	long  vlen;
+	int32_t  vlen;
 	char *v ;
 	//char  c ;
-	long numNodes  = xml.getNumNodes();
-	long numNodes2 = m_xml2.getNumNodes();
+	int32_t numNodes  = xml.getNumNodes();
+	int32_t numNodes2 = m_xml2.getNumNodes();
 
 	// now set THIS based on the parameters in the xml file
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *m = &m_parms[i];
 		if ( m->m_obj != objType ) continue;
@@ -3450,13 +3471,13 @@ bool Parms::setFromFile ( void *THIS        ,
 		// we did not get one from first xml file yet
 		bool first = true;
 		// array count
-		long j = 0;
+		int32_t j = 0;
 		// node number
-		long nn = 0;
+		int32_t nn = 0;
 		// a tmp thingy
 		char tt[1];
-		long nb;
-		long newnn;
+		int32_t nb;
+		int32_t newnn;
 	loop:
 		if ( m->m_obj == OBJ_NONE ) { char *xx=NULL;*xx=0; }
 		// get xml node number of m->m_xml in the "xml" file
@@ -3473,7 +3494,7 @@ bool Parms::setFromFile ( void *THIS        ,
 #endif
 
 		// debug
-		//log("%s --> %li",m->m_xml,nn);
+		//log("%s --> %"INT32"",m->m_xml,nn);
 		// try default xml file if none, but only if first try
 		if ( newnn < 0 && first ) goto try2; 
 		// it is valid, use it
@@ -3496,7 +3517,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		     m->m_type == TYPE_SAFEBUF        ||
 		     m->m_type == TYPE_STRINGNONEMPTY   ) {
 			char *oldv    = v;
-			long  oldvlen = vlen;
+			int32_t  oldvlen = vlen;
 			// if next guy is NOT a tag node, try the next one
 			if ( v[0] != '<' && nn + 2 < numNodes ) {
 				v    = xml.getNode    ( nn + 2 );
@@ -3591,7 +3612,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		     m->m_type == TYPE_STRINGBOX      ||
 		     m->m_type == TYPE_STRINGNONEMPTY   ) {
 			char *oldv    = v;
-			long  oldvlen = vlen;
+			int32_t  oldvlen = vlen;
 			// reset if not a tag node
 			if ( v[0] != '<' && nn + 2 < numNodes2 ) {
 				v    = m_xml2.getNode    ( nn + 2 );
@@ -3636,7 +3657,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	}
 
 	// backwards compatible hack for old <masterPassword> tags
-	for ( long i = 1 ; i < numNodes ; i++ ) {
+	for ( int32_t i = 1 ; i < numNodes ; i++ ) {
 		if ( objType != OBJ_CONF ) break;
 		XmlNode *pn = &xml.m_nodes[i-1];
 		XmlNode *xn = &xml.m_nodes[i];
@@ -3648,14 +3669,14 @@ bool Parms::setFromFile ( void *THIS        ,
 		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
 		// otherwise append to buf
 		char *text = xn->m_node + 9;
-		long  tlen = xn->m_nodeLen - 12;
+		int32_t  tlen = xn->m_nodeLen - 12;
 		g_conf.m_masterPwds.safeMemcpy(text,tlen);
 		// a \n
 		g_conf.m_masterPwds.pushChar('\n');
 		g_conf.m_masterPwds.nullTerm();
 	}
 	// another backwards compatible hack for old masterIp tags
-	for ( long i = 1 ; i < numNodes ; i++ ) {
+	for ( int32_t i = 1 ; i < numNodes ; i++ ) {
 		if ( objType != OBJ_CONF ) break;
 		XmlNode *xn = &xml.m_nodes[i];
 		XmlNode *pn = &xml.m_nodes[i-1];
@@ -3667,7 +3688,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
 		// otherwise append to buf
 		char *text = xn->m_node + 9;
-		long  tlen = xn->m_nodeLen - 12;
+		int32_t  tlen = xn->m_nodeLen - 12;
 		// otherwise append to buf
 		g_conf.m_connectIps.safeMemcpy(text,tlen);
 		// a \n
@@ -3699,10 +3720,10 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, SafeBuf *sb ) {
 	// File f;
 	// f.set ( filename );
 	// is it too big?
-	// long fsize = f.getFileSize();
+	// int32_t fsize = f.getFileSize();
 	// if ( fsize > bufSize ) {
-	// 	log ("conf: File size of %s is %li, must be "
-	// 	     "less than %li.",f.getFilename(),fsize,bufSize );
+	// 	log ("conf: File size of %s is %"INT32", must be "
+	// 	     "less than %"INT32".",f.getFilename(),fsize,bufSize );
 	// 	char *xx = NULL; *xx = 0;
 	// }
 	// open it for reading
@@ -3711,7 +3732,7 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, SafeBuf *sb ) {
 	// 	return log("conf: Could not open %s: %s.",
 	// 	    filename,mstrerror(g_errno));
 	// // read in the file
-	// long numRead = f.read ( buf , bufSize , 0 /*offset*/ );
+	// int32_t numRead = f.read ( buf , bufSize , 0 /*offset*/ );
 	// f.close ( );
 	// if ( numRead != fsize )
 	//       return log ("conf: Could not read %s : %s.",
@@ -3743,7 +3764,7 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, SafeBuf *sb ) {
 		*d++ = *s++;
 	}
 	*d = '\0';
-	long bufSize = d - buf;
+	int32_t bufSize = d - buf;
 	// . set to xml
 	// . use version of 0
 	return xml->set ( buf     , 
@@ -3768,16 +3789,16 @@ bool Parms::saveToXml ( char *THIS , char *f , char objType ) {
 	SafeBuf sb;
 	//char *p    = buf;
 	//char *pend = buf + MAX_CONF_SIZE;
-	long  len ;
-	//long  n   ;
+	int32_t  len ;
+	//int32_t  n   ;
 	File  ff  ;
-	long  j   ;
-	long  count;
+	int32_t  j   ;
+	int32_t  count;
 	char *s;
 	CollectionRec *cr = NULL;
 	if ( THIS != (char *)&g_conf ) cr = (CollectionRec *)THIS;
 	// now set THIS based on the parameters in the xml file
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *m = &m_parms[i];
 		if ( m->m_obj != objType ) continue;
@@ -3822,12 +3843,12 @@ bool Parms::saveToXml ( char *THIS , char *f , char objType ) {
 		s = (char *)THIS + m->m_off ;
 		// if array, count can be 0 or more than 1
 		count = 1;
-		if ( m->m_max   > 1 ) count = *(long *)(s-4);
+		if ( m->m_max   > 1 ) count = *(int32_t *)(s-4);
 		if ( m->m_fixed > 0 ) count = m->m_fixed;
 		// sanity check
 		if ( count > 100000 ) {
 			log(LOG_LOGIC,"admin: Outrageous array size in for "
-			    "parameter %s. Does the array max size long "
+			    "parameter %s. Does the array max size int32_t "
 			    "preceed it in the conf class?",m->m_title);
 			exit(-1);
 		}
@@ -3973,13 +3994,13 @@ skip2:
  hadError:
 	return log("admin: Error writing to %s: %s",f,mstrerror(g_errno));
 
-	//File bigger than %li bytes."
+	//File bigger than %"INT32" bytes."
 	//	   "  Please increase #define in Parms.cpp.",
-	//	   (long)MAX_CONF_SIZE);
+	//	   (int32_t)MAX_CONF_SIZE);
 }
 
 Parm *Parms::getParm ( char *cgi ) {
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		if ( ! m_parms[i].m_cgi ) continue ;
 		if (   m_parms[i].m_cgi[0] != cgi[0] ) continue;
 		if (   m_parms[i].m_cgi[1] != cgi[1] ) continue;
@@ -3990,8 +4011,8 @@ Parm *Parms::getParm ( char *cgi ) {
 }
 
 /*
-Parm *Parms::getParm2 ( char *cgi , long cgiLen ) {
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+Parm *Parms::getParm2 ( char *cgi , int32_t cgiLen ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		if ( ! m_parms[i].m_cgi ) continue ;
 		if (   m_parms[i].m_cgi[0] != cgi[0] ) continue;
 		if (   cgiLen >=2 && m_parms[i].m_cgi[1] != cgi[1] ) continue;
@@ -4010,7 +4031,7 @@ Parm *Parms::getParm2 ( char *cgi , long cgiLen ) {
 
 Parm *Parms::getParm ( char *cgi ) {
 	// make the hash table for the first call
-	static long  s_phtable [ PHTABLE_SIZE ];
+	static int32_t  s_phtable [ PHTABLE_SIZE ];
 	static Parm *s_phparm  [ PHTABLE_SIZE ];
 	static bool  s_init = false;
 	// do not re-make the table if we already did
@@ -4018,10 +4039,10 @@ Parm *Parms::getParm ( char *cgi ) {
 	// ok, now make the table
 	s_init = true;
 	memset ( s_phparm , 0 , PHTABLE_SIZE );
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		if ( ! m_parms[i].m_cgi ) continue ;
-		long h = hash32 ( m_parms[i].m_cgi );
-		long n = h % PHTABLE_SIZE;
+		int32_t h = hash32 ( m_parms[i].m_cgi );
+		int32_t n = h % PHTABLE_SIZE;
 	while ( s_phparm[n] ) {
 		// . sanity check
 			// . we don't have that many parms, they should never 
@@ -4038,8 +4059,8 @@ Parm *Parms::getParm ( char *cgi ) {
 	}
 skipMakeTable:
 	// look up in table
-	long h = hash32 ( cgi );
-	long n = h % PHTABLE_SIZE;
+	int32_t h = hash32 ( cgi );
+	int32_t n = h % PHTABLE_SIZE;
 	// while bucket is occupied and does not equal our hash... chain
 	while ( s_phparm[n] && s_phtable[n] != h ) 
 		if (++n >= PHTABLE_SIZE) n = 0;
@@ -4061,31 +4082,31 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 	     t == TYPE_PRIORITY_BOXES || t == TYPE_RETRIES        ||
 	     t == TYPE_RETRIES        || t == TYPE_FILTER         ||
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
-		sb->safePrintf("%li",(long)*s);
+		sb->safePrintf("%"INT32"",(int32_t)*s);
 	else if ( t == TYPE_FLOAT )
 		sb->safePrintf("%f",*(float *)s);
 	else if ( t == TYPE_IP ) 
-		sb->safePrintf("%s",iptoa(*(long *)s));
+		sb->safePrintf("%s",iptoa(*(int32_t *)s));
 	else if ( t == TYPE_LONG || t == TYPE_LONG_CONST || t == TYPE_RULESET||
 		  t == TYPE_SITERULE ) 
-		sb->safePrintf("%li",*(long *)s);
+		sb->safePrintf("%"INT32"",*(int32_t *)s);
 	else if ( t == TYPE_LONG_LONG )
-		sb->safePrintf("%lli",*(long long *)s);
+		sb->safePrintf("%"INT64"",*(int64_t *)s);
 	else if ( t == TYPE_SAFEBUF ) {
 		SafeBuf *sb2 = (SafeBuf *)s;
 		char *buf = sb2->getBufStart();
-		//long blen = 0;
+		//int32_t blen = 0;
 		//if ( buf ) blen = gbstrlen(buf);
 		//p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
 		// we can't do proper cdata and be backwards compatible
 		//sb->cdataEncode ( buf );//, blen );//, true ); // #?*
-		sb->htmlEncode ( buf );
+		if ( buf ) sb->htmlEncode ( buf );
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
 		  t == TYPE_STRINGNONEMPTY ||
 		  t == TYPE_TIME) {
-		//long slen = gbstrlen ( s );
+		//int32_t slen = gbstrlen ( s );
 		// this returns the length of what was written, it may
 		// not have converted everything if pend-p was too small...
 		//p += saftenTags2 ( p , pend - p , s , len );
@@ -4095,14 +4116,15 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 		sb->htmlEncode ( s );
 	}
 	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
-		// time is stored as long
-		long ct = *(long *)s;
+		// time is stored as int32_t
+		int32_t ct = *(int32_t *)s;
 		// get the time struct
 		struct tm *tp = localtime ( (time_t *)&ct ) ;
 		// set the "selected" month for the drop down
 		char tmp[100];
 		strftime ( tmp , 100 , "%d %b %Y %H:%M UTC" , tp );
 		sb->safeStrcpy ( tmp );
+		sb->setLabel("parm3");
 	}
 	//p += gbstrlen ( p );
 	//return p;
@@ -4110,8 +4132,8 @@ bool Parms::getParmHtmlEncoded ( SafeBuf *sb , Parm *m , char *s ) {
 }
 /*
 // returns the size needed to serialize parms
-long Parms::getStoredSize() {
-	long size = 0;
+int32_t Parms::getStoredSize() {
+	int32_t size = 0;
 
 	// calling serialize with no ptr gets size
 	serialize( NULL, &size );
@@ -4124,7 +4146,7 @@ long Parms::getStoredSize() {
 // . if buf is not NULL, *bufSize must specify the size of buf
 // . on exit *buf is filled with serialized parms
 // . on exit *bufSize is set to the actual len of *buf 
-bool Parms::serialize( char *buf, long *bufSize ) {
+bool Parms::serialize( char *buf, int32_t *bufSize ) {
 	g_errno = 0;
  	if ( ! bufSize ) {
 		g_errno = EBADENGINEER;
@@ -4143,7 +4165,7 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 
 	// now the parms
 	struct SerParm *sp = NULL;
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
 		
 		// ignore these:
@@ -4157,7 +4179,7 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 		if ( ! m->m_sync ) continue;  // parm is not to be synced
 
 		// determine the size of the parm value
-		long size = 0;
+		int32_t size = 0;
 		if ( m->m_type == TYPE_CHAR           ) size = 1;
 		if ( m->m_type == TYPE_CHAR2          ) size = 1;
 		if ( m->m_type == TYPE_CHECKBOX       ) size = 1;
@@ -4184,7 +4206,7 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 
 		// . set size to the total size of array
 		// . set cnt to the number of itmes
-		long cnt = 1;
+		int32_t cnt = 1;
 		if (m->m_fixed > 0) {
 			size *= m->m_fixed;
 			cnt = m->m_fixed;
@@ -4238,9 +4260,9 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 // . if sizeChk is true then we do not serialize, but just get the
 //   bytes required if we did serialize
 // . serialize parm into *p, the cursor i guess, buf end is "end"
-bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
-			       long size, long cnt, 
-			       bool sizeChk, long *bufSz ) {
+bool Parms::serializeConfParm( Parm *m, int32_t i, char **p, char *end,
+			       int32_t size, int32_t cnt, 
+			       bool sizeChk, int32_t *bufSz ) {
 	SerParm *sp = NULL;
 
 	// safebuf not supported here yet, but it for coll recs below
@@ -4259,8 +4281,8 @@ bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 			sp->cnt = cnt;      // # of strings
 			// if an array, get num of member
 			if ( cnt > 1 ) {
-				sp->off = m->m_off - sizeof(long);
-				sp->num = *(long *)((char *)&g_conf 
+				sp->off = m->m_off - sizeof(int32_t);
+				sp->num = *(int32_t *)((char *)&g_conf 
 					 + sp->off);
 			}
 			else {
@@ -4271,10 +4293,10 @@ bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 			sVal = sp->val;
 		}
 		char *sConf = (char *)&g_conf + m->m_off;
-		long totLen = 0;
-		long tcnt = cnt;
+		int32_t totLen = 0;
+		int32_t tcnt = cnt;
 		while ( tcnt ) {
-			long len = gbstrlen( sConf );
+			int32_t len = gbstrlen( sConf );
 			if ( ! sizeChk ) {
 				// copy the parm value
 				if ( sVal + len > end ) 
@@ -4303,8 +4325,8 @@ bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 			sp->cnt = cnt;     // num of items
 			// if array, get num of member
 			if ( cnt > 1 ) {
-				sp->off = m->m_off - sizeof(long);
-				sp->num = *(long *)((char *)&g_conf 
+				sp->off = m->m_off - sizeof(int32_t);
+				sp->num = *(int32_t *)((char *)&g_conf 
 					 + sp->off);
 			}
 			else {
@@ -4331,9 +4353,9 @@ bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 //   bytes required if we did serialize
 // . serialize parm into *p, the cursor i guess, buf end is "end"
 bool Parms::serializeCollParm( CollectionRec *cr,
-			       Parm *m, long i, char **p, char *end,
-			       long size, long cnt,
-			       bool sizeChk, long *bufSize) {
+			       Parm *m, int32_t i, char **p, char *end,
+			       int32_t size, int32_t cnt,
+			       bool sizeChk, int32_t *bufSize) {
 	SerParm *sp = NULL;
 
 	if (m->m_type == TYPE_STRING || 
@@ -4354,9 +4376,9 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 				// it preceeds the value of the first element
 				// as can be seen infor parms in 
 				// CollectionRec.h.
-				sp->off = m->m_off - sizeof(long);
+				sp->off = m->m_off - sizeof(int32_t);
 				// store the # of then into "num"
-				sp->num = *(long *)((char *)cr + sp->off);
+				sp->num = *(int32_t *)((char *)cr + sp->off);
 			}
 			else {
 				sp->off = 0;
@@ -4366,12 +4388,12 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 		}
 		// point to the actual parm itself
 		char *sColl = (char *)cr + m->m_off;
-		long totLen = 0;
+		int32_t totLen = 0;
 		// "cnt" is how many elements in the array
-		long tcnt = cnt;
+		int32_t tcnt = cnt;
 		while ( tcnt ) {
 			// the  length of the string
-			long len;
+			int32_t len;
 			// the string
 			char *pstr;
 			// if a safebuf, point to string it has
@@ -4419,8 +4441,8 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 			sp->cnt = cnt;  // num of items
 			// get num of member
 			if ( cnt > 1 ) {
-				sp->off = m->m_off - sizeof(long);
-				sp->num = *(long *)((char *)cr + sp->off);
+				sp->off = m->m_off - sizeof(int32_t);
+				sp->num = *(int32_t *)((char *)cr + sp->off);
 			}
 			else {
 				sp->off = 0;
@@ -4449,8 +4471,8 @@ void Parms::deserialize( char *buf ) {
 	bool confChgd = false;
 
 	SerParm *sp = (SerParm *)p;
-	long numLooped = 0;
-	const long MAX_LOOP = (long)(MAX_PARMS*1.5);
+	int32_t numLooped = 0;
+	const int32_t MAX_LOOP = (int32_t)(MAX_PARMS*1.5);
 	// if one of these is non-zero, we're still working
 	while ( (sp->obj || sp->size || sp->cnt) && 
 		(sp->obj > 0 && sp->size > 0 && sp->cnt > 0) &&
@@ -4497,7 +4519,7 @@ void Parms::deserialize( char *buf ) {
 	}
 
 	// if we changed a CollectionRec, we need to save it
-	long j = g_collectiondb.getFirstCollnum ();
+	int32_t j = g_collectiondb.getFirstCollnum ();
 	while ( j >= 0 ) {
 		CollectionRec *cr = g_collectiondb.getRec( j );
 		if ( cr->m_needsSave ) {
@@ -4512,7 +4534,7 @@ void Parms::deserialize( char *buf ) {
 
 void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 				 bool *confChgd ) {
-	if ( m->m_off + sp->size > (long)sizeof(g_conf) || 
+	if ( m->m_off + sp->size > (int32_t)sizeof(g_conf) || 
 	     m->m_off + sp->size < 0 ){
 		log(LOG_WARN, "admin: deserializing parm would overflow "
 		    "the collection rec!");
@@ -4521,12 +4543,12 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 	if ( sp->size == 0 ) { // string
 		char *sVal = sp->val;
 		char *sConf = (char *)&g_conf + m->m_off;
-		long totLen = 0;
+		int32_t totLen = 0;
 		bool goodParm = true;
-		long tcnt = sp->cnt;
+		int32_t tcnt = sp->cnt;
 		while ( tcnt ) {
 			goodParm = (goodParm && 0 == strcmp( sVal, sConf ));
-			long len = gbstrlen( sVal );
+			int32_t len = gbstrlen( sVal );
 			totLen += len + 1;
 			// inc ser value by len of str + NULL
 			sVal += len + 1;
@@ -4547,7 +4569,7 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 		while ( tcnt ) {
 			// copy an array value to this parm
 			strcpy( sConf, sVal );
-			long len = gbstrlen( sVal );
+			int32_t len = gbstrlen( sVal );
 			totLen += len + 1; // incl the NULL
 			// inc conf ptr by size of strings
 			sConf += m->m_size;
@@ -4558,13 +4580,13 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 		
 		// set num of member
 		if ( sp->off ) {
-			long *tmp = (long *)((char *)&g_conf + sp->off);
+			int32_t *tmp = (int32_t *)((char *)&g_conf + sp->off);
 			*tmp = sp->num;
 		}
 		
 		// log the changed parm
 		log( LOG_INFO, "admin: Parm "
-		     "#%li \"%s\" (\"%s\") in conf "
+		     "#%"INT32" \"%s\" (\"%s\") in conf "
 		     "changed on sync.", 
 		     sp->i, m->m_cgi, m->m_title );
 		
@@ -4584,14 +4606,14 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 
 			// set num of member
 			if ( sp->off ) {             
-				long *tmp = (long *)((char *)&g_conf 
+				int32_t *tmp = (int32_t *)((char *)&g_conf 
 						     + sp->off);
 				*tmp = sp->num;
 			}
 			
 			// log the changed parm
 			log( LOG_INFO, "admin: Parm "
-			     "#%li \"%s\" (\"%s\") in conf "
+			     "#%"INT32" \"%s\" (\"%s\") in conf "
 			     "changed on sync.", 
 			     sp->i, m->m_cgi, m->m_title );
 			
@@ -4604,7 +4626,7 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 
 void Parms::deserializeCollParm( CollectionRec *cr,
 				 Parm *m, SerParm *sp, char **p ) {
-	if ( m->m_off + sp->size > (long)sizeof(CollectionRec) || 
+	if ( m->m_off + sp->size > (int32_t)sizeof(CollectionRec) || 
 	     m->m_off + sp->size < 0 ) {
 		log(LOG_WARN, "admin: deserializing parm would overflow "
 		    "the collection rec!");
@@ -4613,8 +4635,8 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 	if ( sp->size == 0 ) { // strings
 		char *sVal = sp->val; // the sent string buffer i guess
 		char *sColl = (char *)cr + m->m_off; // what we have
-		long totLen = 0;
-		long tcnt = sp->cnt; // # of strings
+		int32_t totLen = 0;
+		int32_t tcnt = sp->cnt; // # of strings
 		bool goodParm = true;
 		while ( tcnt ) {
 
@@ -4630,7 +4652,7 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 			// set goodParm to true if unchanged
 			goodParm= (goodParm && 0 == strcmp(sVal, pstr));
 			// get length of what was sent to us
-			long len = gbstrlen( sVal );
+			int32_t len = gbstrlen( sVal );
 			totLen += len + 1; //incl NULL
 			// this is a list of strings with \0s (sent to us)
 			sVal += len + 1;   //incl NULL
@@ -4671,7 +4693,7 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 				strcpy( sColl, sVal );
 			}
 			// get length of string we copied
-			long len = gbstrlen( sVal );
+			int32_t len = gbstrlen( sVal );
 			totLen += len + 1; // +the NULL
 			// . inc conf ptr by size 
 			//   of strings
@@ -4685,13 +4707,13 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 		
 		// set num of member
 		if ( sp->off ) {
-			long *tmp = (long *)((char *)cr + sp->off);
+			int32_t *tmp = (int32_t *)((char *)cr + sp->off);
 			*tmp = sp->num;
 		}
 		
 		// log the changed parm
 		log( LOG_INFO, "admin: Parm "
-		     "#%li \"%s\" (\"%s\") in "
+		     "#%"INT32" \"%s\" (\"%s\") in "
 		     "collection \"%s\" "
 		     "changed on sync.", 
 		     sp->i, m->m_cgi, m->m_title,
@@ -4713,13 +4735,13 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 			
 			// set num of member
 			if ( sp->off ) {
-				long *tmp = (long *)((char *)cr + sp->off);
+				int32_t *tmp = (int32_t *)((char *)cr + sp->off);
 				*tmp = sp->num;
 			}
 			
 			// log the changed parm
 			log( LOG_INFO, "admin: Parm "
-			     "#%li \"%s\" (\"%s\") "
+			     "#%"INT32" \"%s\" (\"%s\") "
 			     "in collection \"%s\" "
 			     "changed on sync.", 
 			     sp->i, m->m_cgi, 
@@ -4742,7 +4764,7 @@ void Parms::init ( ) {
 	s_init = true ;
 
 	// default all
-	for ( long i = 0 ; i < MAX_PARMS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_PARMS ; i++ ) {
 		m_parms[i].m_parmNum= i;
 		m_parms[i].m_hash   = 0         ;
 		m_parms[i].m_title  = ""         ; // for detecting if not set
@@ -4770,7 +4792,7 @@ void Parms::init ( ) {
 		m_parms[i].m_group  =  1 ; // start of a new group of controls?
 		m_parms[i].m_priv   =  0 ; // is it private?
 		m_parms[i].m_save   =  1 ; // save to xml file?
-		m_parms[i].m_min    = -1 ; // min value (for long parms)
+		m_parms[i].m_min    = -1 ; // min value (for int32_t parms)
 		// search fields
 		//m_parms[i].m_sparm  = 0;
 		//m_parms[i].m_scmd   = NULL;//"/search";
@@ -4793,7 +4815,7 @@ void Parms::init ( ) {
 	}
 
 	// inherit perms from page
-	//for ( long i = 1 ; i < MAX_PARMS ; i++ ) 
+	//for ( int32_t i = 1 ; i < MAX_PARMS ; i++ ) 
 	//	if ( m_parms[i].m_page )
 	//		m_parms[i].m_perms = m_parms[i-1].m_perms;
 
@@ -5013,7 +5035,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Mem available to this process. May be exceeded due "
 		"to fragmentation.";
 	m->m_off   = (char *)&g_conf.m_maxMem - g;
-	m->m_def   = "4000000000";
+	m->m_def   = "8000000000";
 	m->m_cgi   = "maxmem";
 	m->m_obj   = OBJ_CONF;
 	m->m_page  = PAGE_NONE;
@@ -6096,10 +6118,10 @@ void Parms::init ( ) {
 	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
   
-	m->m_cgi   = "diffbotHopcount";
+	m->m_cgi   = "maxHops";
 	m->m_xml   = "diffbotHopcount";
 	m->m_title = "diffbot max hopcount";
-	m->m_off   = (char *)&cr.m_diffbotHopcount - x;
+	m->m_off   = (char *)&cr.m_diffbotMaxHops - x;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
@@ -9361,7 +9383,7 @@ void Parms::init ( ) {
 
 	m->m_title = "admin override";
 	m->m_desc  = "admin override";
-	m->m_off   = (char *)&si.m_isRootAdmin - y;
+	m->m_off   = (char *)&si.m_isMasterAdmin - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_cgi   = "admin";
@@ -9807,9 +9829,25 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "use collection passwords";
+	m->m_desc  = "Should collections have individual password settings "
+		"so different users can administrer different collections? "
+		"If not the only the master passwords and IPs will be able "
+		"to administer any collection.";
+	m->m_cgi   = "ucp";
+	m->m_off   = (char *)&g_conf.m_useCollectionPasswords - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "allow cloud users";
-	m->m_desc  = "Can guest users create a collection?";
+	m->m_desc  = "Can guest users create and administer "
+		"a collection? Limit: 1 "
+		"collection per IP address. This is mainly for doing "
+		"demos on the gigablast.com domain.";
 	m->m_cgi   = "acu";
 	m->m_off   = (char *)&g_conf.m_allowCloudUsers - g;
 	m->m_type  = TYPE_BOOL;
@@ -10305,7 +10343,7 @@ void Parms::init ( ) {
 	m->m_title = "max heartbeat delay in milliseconds";
 	m->m_desc  = "If a heartbeat is delayed this many milliseconds "
 		"dump a core so we can see where the CPU was. "
-		"Logs 'db: missed heartbeat by %lli ms'. "
+		"Logs 'db: missed heartbeat by %"INT64" ms'. "
 		"Use 0 or less to disable.";
 	m->m_cgi   = "mhdms";
 	m->m_off   = (char *)&g_conf.m_maxHeartbeatDelay - g;
@@ -10320,8 +10358,8 @@ void Parms::init ( ) {
 	m->m_desc  = "If a call to a message callback or message handler "
 		"in the udp server takes more than this many milliseconds, "
 		"then log it. "
-		"Logs 'udp: Took %lli ms to call callback for msgType="
-		"0x%hhx niceness=%li'. "
+		"Logs 'udp: Took %"INT64" ms to call callback for msgType="
+		"0x%hhx niceness=%"INT32"'. "
 		"Use -1 or less to disable the logging.";
 	m->m_cgi   = "mdch";
 	m->m_off   = (char *)&g_conf.m_maxCallbackDelay - g;
@@ -10600,7 +10638,7 @@ void Parms::init ( ) {
 	//m->m_title = "max query time";
 	//m->m_desc  = "When computing the avgerage query latency "
 	//	"truncate query latency times to this so that "
-	//	"a single insanely long query latency time does "
+	//	"a single insanely int32_t query latency time does "
 	//	"not trigger the alarm. This is in seconds.";
 	//m->m_cgi   = "mqlr";
 	//m->m_off   = (char *)&g_conf.m_maxQueryTime - g;
@@ -11067,7 +11105,7 @@ void Parms::init ( ) {
 
 	// this is ifdef'd out in Msg3.cpp for performance reasons,
 	// so do it here, too
-#ifdef _SANITY_CHECK_
+#ifdef GBSANITYCHECK
 	m->m_title = "max corrupted read retries";
 	m->m_desc  = "How many times to retry disk reads that had corrupted "
 		"data before requesting the list from a twin, and, if that "
@@ -12130,11 +12168,15 @@ void Parms::init ( ) {
 
 	m->m_title = "use threads for intersects and merges";
 	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
-		"Until pthreads is any good leave this off.";
+		"Default is now on in the event you have simultaneous queries "
+		"so one query does not hold back the other.";
+	        //"Until pthreads is any good leave this off.";
 	m->m_cgi   = "utfio";
 	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	// enable this in the event of multiple cores available and
+	// large simultaneous queries coming in
+	m->m_def   = "1";
 	m->m_flags = 0;//PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
@@ -12981,7 +13023,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "same ip wait (ms)";
-	m->m_desc  = "Wait at least this long before downloading urls from "
+	m->m_desc  = "Wait at least this int32_t before downloading urls from "
 		"the same IP address.";
 	m->m_cgi   = "xg";
 	m->m_xml   = "spiderIpWait";
@@ -13051,7 +13093,7 @@ void Parms::init ( ) {
 	//m->m_xml   = "filterRuleset";
 	//m->m_max   = MAX_FILTERS;
 	//m->m_off   = (char *)cr.m_rulesets - x;
-	//m->m_type  = TYPE_RULESET; // long with dropdown of rulesets
+	//m->m_type  = TYPE_RULESET; // int32_t with dropdown of rulesets
 	//m->m_page  = PAGE_FILTERS;
 	//m->m_rowid = 1;
 	//m->m_addin = 1; // "insert" follows?
@@ -13107,7 +13149,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "frsd";
 	m->m_xml   = "filterRulesetDefault";
 	m->m_off   = (char *)&cr.m_defaultSiteFileNum - x;
-	m->m_type  = TYPE_RULESET; // long with dropdown of rulesets
+	m->m_type  = TYPE_RULESET; // int32_t with dropdown of rulesets
 	m->m_def   = "0";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 2;
@@ -13291,7 +13333,7 @@ void Parms::init ( ) {
 
 
 	m->m_title = "same ip wait (ms)";
-	m->m_desc  = "Wait at least this long before downloading urls from "
+	m->m_desc  = "Wait at least this int32_t before downloading urls from "
 		"the same IP address.";
 	m->m_cgi   = "xg";
 	m->m_xml   = "spiderPrioritySameIpWait";
@@ -13306,7 +13348,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "same domain wait (ms)";
-	m->m_desc  = "Wait at least this long before downloading urls from "
+	m->m_desc  = "Wait at least this int32_t before downloading urls from "
 		"the same domain.";
 	m->m_cgi   = "xh";
 	m->m_xml   = "spiderPrioritySameDomainWait";
@@ -13500,7 +13542,7 @@ void Parms::init ( ) {
 // 	m->m_sparm = 0;
 // 	m++;
 
-// 	m->m_title = "long links";
+// 	m->m_title = "int32_t links";
 // 	m->m_desc  = "Links to urls which are > 128 chars.  ";
 // 	m->m_cgi   = "spamctrlk";
 // 	m->m_off   = (char *)&cr.m_spamTests[LINKS_OVER_128_CHARS] - x;
@@ -13728,7 +13770,7 @@ void Parms::init ( ) {
 // 	m->m_sparm = 0;
 // 	m++;
 
-// 	m->m_title = "max points for long links";
+// 	m->m_title = "max points for int32_t links";
 // 	m->m_desc  = "Max points for Links to urls which are > 128 chars.  ";
 // 	m->m_cgi   = "spammaxk";
 // 	m->m_off   = (char *)&cr.m_spamMaxes[LINKS_OVER_128_CHARS] - x;
@@ -14016,7 +14058,7 @@ void Parms::init ( ) {
 		" which are determined to be low quality.";
 	m->m_cgi   = "";
 	m->m_off   = (char *)&cr.m_qualityAgentBanRuleset - x;
-	m->m_type  = TYPE_RULESET; // long with dropdown of rulesets
+	m->m_type  = TYPE_RULESET; // int32_t with dropdown of rulesets
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "30";
@@ -14766,8 +14808,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
 	m++;
 	
-	m->m_title = "short reply";
-	m->m_desc  = "Should the injection response be short and simple?";
+	m->m_title = "int16_t reply";
+	m->m_desc  = "Should the injection response be int16_t and simple?";
 	m->m_cgi   = "quick";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
@@ -14845,6 +14887,28 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_hopCount - (char *)&gr;
+	m++;
+
+	m->m_title = "last spider time";
+	m->m_desc  = "Override last time spidered";
+	m->m_cgi   = "lastspidered";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN; // | PF_API
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_lastSpidered - (char *)&gr;
+	m++;
+
+	m->m_title = "first indexed";
+	m->m_desc  = "Override first indexed time";
+	m->m_cgi   = "firstindexed";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN; // | PF_API
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_firstIndexed - (char *)&gr;
 	m++;
 
 
@@ -16223,9 +16287,10 @@ void Parms::init ( ) {
 
 	m->m_title = "use proxies for spidering";
 	m->m_desc  = "If this is true Gigablast will use the proxies "
-		"listed on the <i>proxies</i> page for spidering for "
+		"listed on the <a href=/admin/proxies>proxies</a> page for "
+		"spidering for "
 		"this collection regardless whether the proxies are enabled "
-		"on the <i>proxies</i> page.";
+		"on the <a href=/admin/proxies>proxies</a> page.";
 	m->m_cgi   = "useproxies";
 	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
 	m->m_type  = TYPE_BOOL;
@@ -18166,10 +18231,10 @@ void Parms::init ( ) {
 	//  PAGE REPAIR CONTROLS
 	///////////////////////////////////////////
 
-	m->m_title = "repair mode enabled";
-	m->m_desc  = "If enabled, gigablast will repair the rdbs as "
+	m->m_title = "rebuild mode enabled";
+	m->m_desc  = "If enabled, gigablast will rebuild the rdbs as "
 		"specified by the parameters below. When a particular "
-		"collection is in repair mode, it can not spider or merge "
+		"collection is in rebuild mode, it can not spider or merge "
 		"titledb files.";
 	m->m_cgi   = "rme";
 	m->m_off   = (char *)&g_conf.m_repairingEnabled - g;
@@ -18180,21 +18245,35 @@ void Parms::init ( ) {
 	m->m_sync  = false;  // do not sync this parm
 	m++;
 
-	m->m_title = "collections to repair or rebuild";
-	m->m_desc  = "Comma or space separated list of the collections "
-		"to repair or rebuild.";
+	m->m_title = "collection to rebuild";
+	m->m_xml   = "collectionToRebuild";
+	m->m_desc  = "Name of collection to rebuild.";
+	// m->m_desc  = "Comma or space separated list of the collections "
+	// 	"to rebuild.";
 	m->m_cgi   = "rctr"; // repair collections to repair
 	m->m_off   = (char *)&g_conf.m_collsToRepair - g;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 1024;
+	m->m_type  = TYPE_SAFEBUF;//STRING;
+	//m->m_size  = 1024;
 	m->m_def   = "";
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_flags = PF_REQUIRED | PF_NOHTML;
+	m->m_flags = PF_REQUIRED;// | PF_COLLDEFAULT;//| PF_NOHTML;
 	m++;
 
-	m->m_title = "memory to use for repair";
+	m->m_title = "rebuild ALL collections";
+	m->m_desc  = "If enabled, gigablast will rebuild all collections.";
+	m->m_cgi   = "rac";
+	m->m_off   = (char *)&g_conf.m_rebuildAllCollections - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_REPAIR;
+	m->m_obj   = OBJ_CONF;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++;
+
+
+	m->m_title = "memory to use for rebuild";
 	m->m_desc  = "In bytes.";
 	m->m_cgi   = "rmtu"; // repair mem to use
 	m->m_off   = (char *)&g_conf.m_repairMem - g;
@@ -18206,9 +18285,9 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "max repair spiders";
-	m->m_desc  = "Maximum number of outstanding inject spiders for "
-		"repair.";
+	m->m_title = "max rebuild injections";
+	m->m_desc  = "Maximum number of outstanding injections for "
+		"rebuild.";
 	m->m_cgi   = "mrps";
 	m->m_off   = (char *)&g_conf.m_maxRepairSpiders - g;
 	m->m_type  = TYPE_LONG;
@@ -18231,16 +18310,20 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "keep new spiderdb recs";
-	m->m_desc  = "If enabled, gigablast will keep the new spiderdb "
-		"records when doing the full rebuild or the spiderdb "
-		"rebuild.";
-	m->m_cgi   = "rfrknsr";
-	m->m_off   = (char *)&g_conf.m_fullRebuildKeepNewSpiderRecs - g;
+	m->m_title = "add spiderdb recs of non indexed urls";
+	m->m_desc  = "If enabled, gigablast will add the spiderdb "
+		"records of unindexed urls "
+		"when doing the full rebuild or the spiderdb "
+		"rebuild. Otherwise, only the indexed urls will get "
+		"spiderdb records in spiderdb. This can be faster because "
+		"Gigablast does not have to do an IP lookup on every url "
+		"if its IP address is not in tagdb already.";
+	m->m_cgi   = "rfrknsx";
+	m->m_off   = (char *)&g_conf.m_rebuildAddOutlinks - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
 
@@ -18590,7 +18673,7 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 
 
-	m->m_title = "Root Passwords";
+	m->m_title = "Master Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
 		"to Gigablast and all collections.";
@@ -18603,7 +18686,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
-	m->m_page  = PAGE_ROOTPASSWORDS;
+	m->m_page  = PAGE_MASTERPASSWORDS;
 	//m->m_max   = MAX_MASTER_PASSWORDS;
 	//m->m_size  = PASSWORD_MAX_LEN+1;
 	//m->m_addin = 1; // "insert" follows?
@@ -18611,7 +18694,7 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "Root IPs";
+	m->m_title = "Master IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
@@ -18626,7 +18709,7 @@ void Parms::init ( ) {
 		"to Gigablast and all collections.";
 	m->m_cgi   = "masterips";
 	m->m_xml   = "masterIps";
-	m->m_page  = PAGE_ROOTPASSWORDS;
+	m->m_page  = PAGE_MASTERPASSWORDS;
 	m->m_off   = (char *)&g_conf.m_connectIps - g;
 	m->m_type  = TYPE_SAFEBUF;//IP;
 	m->m_def   = "";
@@ -18672,7 +18755,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_superTurksLen - g;
-	m->m_page = PAGE_ROOTPASSWORDS;
+	m->m_page = PAGE_MASTERPASSWORDS;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	*/
@@ -18705,7 +18788,7 @@ void Parms::init ( ) {
 	m->m_perms = PAGE_MASTER;
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_usersLen - g;
-	m->m_page = PAGE_ROOTPASSWORDS;
+	m->m_page = PAGE_MASTERPASSWORDS;
 	m++;
 	*/
 
@@ -19396,25 +19479,25 @@ void Parms::init ( ) {
 	static char s_tbuf [ 18000 ];
 	char *p    = s_tbuf;
 	char *pend = s_tbuf + 18000;
-	long  size;
+	int32_t  size;
 	char  t;
 
 	// . set hashes of title
 	// . used by Statsdb.cpp for identifying a parm
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		if ( ! m_parms[i].m_title ) continue;
 		m_parms[i].m_hash = hash32n ( m_parms[i].m_title );
 	}
 
 	// cgi hashes
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		if ( ! m_parms[i].m_cgi ) continue;
 		m_parms[i].m_cgiHash = hash32n ( m_parms[i].m_cgi );
 	}
 
 	// sanity check: ensure all cgi parms are different
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
-	for ( long j = 0 ; j < m_numParms ; j++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t j = 0 ; j < m_numParms ; j++ ) {
 		if ( j == i             ) continue;
 		if ( m_parms[i].m_type == TYPE_BOOL2 ) continue;
 		if ( m_parms[j].m_type == TYPE_BOOL2 ) continue;
@@ -19434,8 +19517,8 @@ void Parms::init ( ) {
 		if ( ! m_parms[i].m_cgi ) continue;
 		if ( ! m_parms[j].m_cgi ) continue;
 		// gotta be on same page now i guess
-		long obj1 = m_parms[i].m_obj;
-		long obj2 = m_parms[j].m_obj;
+		int32_t obj1 = m_parms[i].m_obj;
+		int32_t obj2 = m_parms[j].m_obj;
 		if ( obj1 != OBJ_COLL && obj1 != OBJ_CONF ) continue;
 		if ( obj2 != OBJ_COLL && obj2 != OBJ_CONF ) continue;
 		//if ( m_parms[i].m_page != m_parms[j].m_page ) continue;
@@ -19450,26 +19533,26 @@ void Parms::init ( ) {
 		// upload file buttons are always dup of another parm
 		if ( m_parms[j].m_type == TYPE_FILEUPLOADBUTTON )
 			continue;
-		log(LOG_LOGIC,"conf: Cgi parm for #%li \"%s\" "
-		    "matches #%li \"%s\". Exiting.",
+		log(LOG_LOGIC,"conf: Cgi parm for #%"INT32" \"%s\" "
+		    "matches #%"INT32" \"%s\". Exiting.",
 		    i,m_parms[i].m_cgi,j,m_parms[j].m_cgi);
 		exit(-1);
 	}
 	}
 
-	long mm = (long)sizeof(CollectionRec);
-	if ( (long)sizeof(Conf)        > mm ) mm = (long)sizeof(Conf);
-	if ( (long)sizeof(SearchInput) > mm ) mm = (long)sizeof(SearchInput);
+	int32_t mm = (int32_t)sizeof(CollectionRec);
+	if ( (int32_t)sizeof(Conf)        > mm ) mm = (int32_t)sizeof(Conf);
+	if ( (int32_t)sizeof(SearchInput) > mm ) mm = (int32_t)sizeof(SearchInput);
 	// . set size of each parm based on its type
 	// . also do page and obj inheritance
 	// . also do sanity checking
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		// sanity check
 		if ( m_parms[i].m_off   > mm ||
 		     //m_parms[i].m_soff  > mm ||
 		     m_parms[i].m_smaxc > mm   ) {
-			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s."
-			    " (%li,%li,%li). Did you FORGET to include "
+			log(LOG_LOGIC,"conf: Bad offset in parm #%"INT32" %s."
+			    " (%"INT32",%"INT32",%"INT32"). Did you FORGET to include "
 			    "an & before the cr.myVariable when setting "
 			    "m_off for this parm? Or subtract  'x' instead "
 			    "of 'g' or vice versa.",
@@ -19482,10 +19565,10 @@ void Parms::init ( ) {
 		}
 		// do not allow numbers in cgi parms, they are used for
 		// denoting array indices
-		long j = 0;
+		int32_t j = 0;
 		for ( ; m_parms[i].m_cgi && m_parms[i].m_cgi[j] ; j++ ) {
 			if ( is_digit ( m_parms[i].m_cgi[j] ) ) {
-				log(LOG_LOGIC,"conf: Parm #%li \"%s\" has "
+				log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has "
 				    "number in cgi name.", 
 				    i,m_parms[i].m_title);
 				exit(-1);
@@ -19510,7 +19593,7 @@ void Parms::init ( ) {
 		// if its a fixed size then make sure m_size is not set
 		if ( m_parms[i].m_fixed > 0 ) {
 			if ( m_parms[i].m_size != 0 ) {
-				log(LOG_LOGIC,"conf: Parm #%li \"%s\" is "
+				log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" is "
 				    "fixed but size is not 0.", 
 				    i,m_parms[i].m_title);
 				exit(-1);
@@ -19522,7 +19605,7 @@ void Parms::init ( ) {
 		size = 0;
 		t = m_parms[i].m_type;
 		if ( t == -1 ) {
-			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no type.",
+			log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has no type.",
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
@@ -19560,7 +19643,7 @@ void Parms::init ( ) {
 		     t != TYPE_CHARPTR &&
 		     t != TYPE_MONOD2   &&
 		     t != TYPE_MONOM2     ) {
-			log(LOG_LOGIC,"conf: Size of parm #%li \"%s\" "
+			log(LOG_LOGIC,"conf: Size of parm #%"INT32" \"%s\" "
 			    "not set.", i,m_parms[i].m_title);
 			exit(-1);
 		}
@@ -19577,42 +19660,42 @@ void Parms::init ( ) {
 		if ( t == TYPE_SAFEBUF  ) continue;
 		// search parms do not need an offset
 		if ( m_parms[i].m_off == -1 ){//&& m_parms[i].m_sparm == 0 ) {
-			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no offset.",
+			log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has no offset.",
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
 		if ( m_parms[i].m_off < -1 ) {
-			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has bad offset "
-			    "of %li.", i,m_parms[i].m_title,m_parms[i].m_off);
+			log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has bad offset "
+			    "of %"INT32".", i,m_parms[i].m_title,m_parms[i].m_off);
 			exit(-1);
 		}
-		if ( m->m_obj == OBJ_CONF && m->m_off >= (long)sizeof(Conf) ) {
+		if ( m->m_obj == OBJ_CONF && m->m_off >= (int32_t)sizeof(Conf) ) {
 			log("admin: Parm %s has bad m_off value.",m->m_title);
 			char *xx = NULL; *xx = 0;
 		}
-		if (m->m_obj==OBJ_COLL&&m->m_off>=(long)sizeof(CollectionRec)){
+		if (m->m_obj==OBJ_COLL&&m->m_off>=(int32_t)sizeof(CollectionRec)){
 			log("admin: Parm %s has bad m_off value.",m->m_title);
 			char *xx = NULL; *xx = 0;
 		}
 		if ( m->m_off >= 0 && 
 		     m->m_obj == OBJ_SI && 
-		     m->m_off >= (long)sizeof(SearchInput)){
+		     m->m_off >= (int32_t)sizeof(SearchInput)){
 			log("admin: Parm %s has bad m_off value.",m->m_title);
 			char *xx = NULL; *xx = 0;
 		}
 
 		if ( m_parms[i].m_page == -1 ) {
-			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no page.",
+			log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has no page.",
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
 		if ( m_parms[i].m_obj == -1 ) {
-			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no object.",
+			log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has no object.",
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
 		//if ( ! m_parms[i].m_title[0] ) {
-		//	log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no title.",
+		//	log(LOG_LOGIC,"conf: Parm #%"INT32" \"%s\" has no title.",
 		//	    i,m_parms[i].m_cgi);
 		//	exit(-1);
 		//}
@@ -19626,7 +19709,7 @@ void Parms::init ( ) {
 			exit(-1);
 		}
 		m_parms[i].m_xml = p;
-		for ( long k = 0 ; tt[k] ; k++ ) {
+		for ( int32_t k = 0 ; tt[k] ; k++ ) {
 			if ( ! is_alnum_a(tt[k]) ) continue;
 			if ( k > 0 && tt[k-1]==' ') *p++ = to_upper_a(tt[k]);
 			else                        *p++ = tt[k];
@@ -19635,14 +19718,14 @@ void Parms::init ( ) {
 	}
 
 	// set m_searchParms
-	long n = 0;
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	int32_t n = 0;
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		//if ( ! m_parms[i].m_sparm ) continue;
 		if ( m_parms[i].m_obj != OBJ_SI ) continue;
 		m_searchParms[n++] = &m_parms[i];
 		// sanity check
 		if ( m_parms[i].m_off == -1 ) {
-			log(LOG_LOGIC,"conf: SEARCH Parm #%li \"%s\" has "
+			log(LOG_LOGIC,"conf: SEARCH Parm #%"INT32" \"%s\" has "
 			    "m_off < 0 (offset into SearchInput).",
 			    i,m_parms[i].m_title);
 			exit(-1);
@@ -19667,10 +19750,10 @@ void Parms::init ( ) {
 
 void Parms::overlapTest ( char step ) {
 
-	long start = 0;
+	int32_t start = 0;
 	if ( step == -1 ) start = m_numParms - 1;
 
-	//log("conf: Using step=%li",(long)step);
+	//log("conf: Using step=%"INT32"",(int32_t)step);
 
 	SearchInput   tmpsi;
 	GigablastRequest tmpgr;
@@ -19678,7 +19761,7 @@ void Parms::overlapTest ( char step ) {
 	Conf          tmpconf;
 	char          b;
 	char *p1 , *p2;
-	long i;
+	int32_t i;
 	// sanity check: ensure parms do not overlap
 	for ( i = start ; i < m_numParms && i >= 0 ; i += step ) {
 
@@ -19701,20 +19784,20 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_obj == OBJ_GBREQUEST   ) p1 = (char *)&tmpgr;
 		if ( p1 ) p1 += m_parms[i].m_off;
 		p2 = NULL;
-		long size = m_parms[i].m_size;
+		int32_t size = m_parms[i].m_size;
 		// use i now
 		b = (char)i;
 		// string box type is a pointer!!
 		if ( p1 ) memset ( p1 , b , size );
-		//log("conf: setting %li bytes for %s at 0x%lx char=0x%hhx",
-		//    size,m_parms[i].m_title,(long)p1,b);
+		//log("conf: setting %"INT32" bytes for %s at 0x%"XINT32" char=0x%hhx",
+		//    size,m_parms[i].m_title,(int32_t)p1,b);
 		// search input uses character ptrs!!
 		if ( m_parms[i].m_type == TYPE_STRINGBOX ) size = 4;
 		if ( m_parms[i].m_type == TYPE_STRING    ) size = 4;
 		if ( m_parms[i].m_fixed > 0 ) size *= m_parms[i].m_fixed ;
 		if ( p2 ) memset ( p2 , b , size );
-		//log("conf: setting %li bytes for %s at 0x%lx char=0x%hhx "
-		//    "i=%li",   size,m_parms[i].m_title,(long)p2,b,i);
+		//log("conf: setting %"INT32" bytes for %s at 0x%"XINT32" char=0x%hhx "
+		//    "i=%"INT32"",   size,m_parms[i].m_title,(int32_t)p2,b,i);
 	}
 
 	//
@@ -19723,10 +19806,10 @@ void Parms::overlapTest ( char step ) {
 	if ( step == -1 ) b--;
 	else              b = 0;
 	char *objStr = "none";
-	long  obj;
+	int32_t  obj;
 	char  infringerB;
-	long  j;
-	long savedi = -1;
+	int32_t  j;
+	int32_t savedi = -1;
 
 	for ( i = 0 ; i < m_numParms ; i++ ) {
 
@@ -19749,13 +19832,13 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_obj == OBJ_GBREQUEST ) p1 = (char *)&tmpgr;
 		if ( p1 ) p1 += m_parms[i].m_off;
 		p2 = NULL;
-		long size = m_parms[i].m_size;
+		int32_t size = m_parms[i].m_size;
 		b = (char) i;
 		// save it
 		obj = m_parms[i].m_obj;
 
-		//log("conf: testing %li bytes for %s at 0x%lx char=0x%hhx "
-		//    "i=%li", size,m_parms[i].m_title,(long)p1,b,i);
+		//log("conf: testing %"INT32" bytes for %s at 0x%"XINT32" char=0x%hhx "
+		//    "i=%"INT32"", size,m_parms[i].m_title,(int32_t)p1,b,i);
 
 		for ( j = 0 ; p1 && j < size ; j++ ) {
 			if ( p1[j] == b ) continue;
@@ -19785,8 +19868,8 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_fixed > 0 ) size *= m_parms[i].m_fixed ;
 		objStr = "SearchInput.h";
 
-		//log("conf: testing %li bytes for %s at 0x%lx char=0x%hhx "
-		//    "i=%li",  size,m_parms[i].m_title,(long)p2,b,i);
+		//log("conf: testing %"INT32" bytes for %s at 0x%"XINT32" char=0x%hhx "
+		//    "i=%"INT32"",  size,m_parms[i].m_title,(int32_t)p2,b,i);
 
 		for ( j = 0 ; p2 && j < size ; j++ ) {
 			if ( p2[j] == b ) continue;
@@ -19802,8 +19885,8 @@ void Parms::overlapTest ( char step ) {
 	return;
 
  error:
-	log("conf: Had a parm value collision. Parm #%li "
-	    "\"%s\" (size=%li) in %s has overlapped with another parm. "
+	log("conf: Had a parm value collision. Parm #%"INT32" "
+	    "\"%s\" (size=%"INT32") in %s has overlapped with another parm. "
 	    "Your TYPE_* for this parm or a neighbor of it "
 	    "does not agree with what you have declared it as in the *.h "
 	    "file.",i,m_parms[i].m_title,m_parms[i].m_size,objStr);
@@ -19826,8 +19909,8 @@ void Parms::overlapTest ( char step ) {
 		// NOTE: these need to be fixed!!!
 		b = (char) i;
 		if ( b == infringerB )
-			log("conf: possible overlap with parm #%li in %s "
-			    "\"%s\" (size=%li) "
+			log("conf: possible overlap with parm #%"INT32" in %s "
+			    "\"%s\" (size=%"INT32") "
 			    "xml=%s "
 			    "desc=\"%s\"",
 			    i,objStr,m_parms[i].m_title,
@@ -19850,10 +19933,10 @@ bool Parm::getValueAsBool ( SearchInput *si ) {
 	return *(bool *)p;
 }
 
-long Parm::getValueAsLong ( SearchInput *si ) {
+int32_t Parm::getValueAsLong ( SearchInput *si ) {
 	if ( m_obj != OBJ_SI ) { char *xx=NULL;*xx=0; }
 	char *p = (char *)si + m_off;
-	return *(long *)p;
+	return *(int32_t *)p;
 }
 
 char *Parm::getValueAsString ( SearchInput *si ) {
@@ -19871,7 +19954,7 @@ char *Parm::getValueAsString ( SearchInput *si ) {
 bool Parms::addNewParmToList1 ( SafeBuf *parmList ,
 				collnum_t collnum ,
 				char *parmValString ,
-				long  occNum ,
+				int32_t  occNum ,
 				char *parmName ) {
 	// get the parm descriptor
 	Parm *m = getParmFast1 ( parmName , NULL );
@@ -19881,21 +19964,21 @@ bool Parms::addNewParmToList1 ( SafeBuf *parmList ,
 
 // . make a parm rec using the prodivded string
 // . used to convert http requests into a parmlist
-// . string could be a float or long or long long in ascii, as well as a string
+// . string could be a float or int32_t or int64_t in ascii, as well as a string
 // . returns false w/ g_errno set on error
 bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 				collnum_t collnum , 
 				char *parmValString ,
-				long occNum ,
+				int32_t occNum ,
 				Parm *m ) {
 	// get value
 	char *val = NULL;
-	long valSize = 0;
+	int32_t valSize = 0;
 
 	//char buf[2+MAX_COLL_LEN];
 
-	long val32;
-	long long val64;
+	int32_t val32;
+	int64_t val64;
 	char val8;
 	float valf;
 
@@ -19908,7 +19991,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	if ( collnum != -1 ) {
 		CollectionRec *cr = g_collectiondb.getRec ( collnum );
 		if ( cr ) obj = (char *)cr;
-		//	log("parms: no coll rec for %li",(long)collnum);
+		//	log("parms: no coll rec for %"INT32"",(int32_t)collnum);
 		//	return false;
 		//}
 		//obj = (char *)cr;
@@ -20024,7 +20107,7 @@ bool Parms::addCurrentParmToList1 ( SafeBuf *parmList ,
 	collnum_t collnum = -1;
 	if ( cr ) collnum = cr->m_collnum;
 	// get the parm descriptor
-	long occNum;
+	int32_t occNum;
 	Parm *m = getParmFast1 ( parmName , &occNum );
 	if ( ! m ) return log("parms: got bogus parm1 %s",parmName );
 	return addCurrentParmToList2 ( parmList , collnum, -1 , m );
@@ -20034,7 +20117,7 @@ bool Parms::addCurrentParmToList1 ( SafeBuf *parmList ,
 // . parm class itself already helps us reference the binary parm value
 bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 				    collnum_t collnum , 
-				    long occNum ,
+				    int32_t occNum ,
 				    Parm *m ) {
 
 	char *obj = NULL;
@@ -20050,7 +20133,7 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 	char *data = obj + m->m_off;
 	// Parm::m_size is the max string size
-	long dataSize = m->m_size;
+	int32_t dataSize = m->m_size;
 	if ( occNum > 0 ) data += occNum * m->m_size;
 
 	if ( m->m_type == TYPE_STRING || 
@@ -20083,7 +20166,7 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 		//}
 	}
 
-	//long occNum = -1;
+	//int32_t occNum = -1;
 	key96_t key = makeParmKey ( collnum , m ,  occNum );
 
 	// then key
@@ -20103,7 +20186,7 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 // returns false and sets g_errno on error
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
-					  long page , TcpSocket *sock ) {
+					  int32_t page , TcpSocket *sock ) {
 
 	// false = useDefaultRec?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
@@ -20113,7 +20196,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//	if ( ! cr ) log("parms: coll not found");
 	//}
 
-	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
 	
 	// does this user have permission to update the parms?
 	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr ) ;
@@ -20148,7 +20231,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	// &c= or a &name=/&token= pair.
 	char oldCollName[MAX_COLL_LEN+1];
 	oldCollName[0] = '\0';
-	if ( cr ) sprintf(oldCollName,"%li",(long)cr->m_collnum);
+	if ( cr ) sprintf(oldCollName,"%"INT32"",(int32_t)cr->m_collnum);
 
 
 	////////
@@ -20204,8 +20287,8 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			return false;
 		}
 		// log it for now
-		log("parms: trying to add custom crawl (%li)",
-		    (long)parmCollnum);
+		log("parms: trying to add custom crawl (%"INT32")",
+		    (int32_t)parmCollnum);
 		// formulate name
 		char newName[MAX_COLL_LEN+1];
 		snprintf(newName,MAX_COLL_LEN,"%s-%s",token,name);
@@ -20221,13 +20304,13 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	}
 
 	// loop through cgi parms
-	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
+	for ( int32_t i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
 		char *field = hr->getField    ( i );
 		// get value of the cgi field
 		char *val  = hr->getValue   (i);
 		// convert field to parm
-		long occNum;
+		int32_t occNum;
 		// parm names can be shared across pages, like "c"
 		// for search, addurl, inject, etc.
 		Parm *m = getParmFast1 ( field , &occNum );
@@ -20264,7 +20347,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			//
 			// sanity. if all are full! we hit our limit of
 			// 32k collections. should increase collnum_t from
-			// short to long...
+			// int16_t to int32_t...
 			if ( parmCollnum == -1 ) {
 				g_errno = EBADENGINEER;
 				return false;
@@ -20280,13 +20363,13 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		if ( cr && strcmp(m->m_cgi,"roundStart") == 0 ) {
 			// use the current time so anything spidered before
 			// this time (the round start time) will be respidered
-			//sprintf(tmp,"%lu",getTimeGlobalNoCore());
+			//sprintf(tmp,"%"UINT32"",getTimeGlobalNoCore());
 			//val = tmp;
 			char tmpVal[64];
 			// use the same round start time for all shards
 			sprintf(tmpVal,
-				"%lu,%li"
-				,getTimeGlobalNoCore()
+				"%"UINT32",%"INT32""
+				,(uint32_t)getTimeGlobalNoCore()
 				,cr->m_spiderRoundNum+1
 				);
 			// . also add command to reset crawl/process counts
@@ -20321,7 +20404,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//
 		// if this is the "delcoll" parm then "c" may have been
 		// excluded from http request, therefore isCollAdmin and
-		// isRootAdmin may be false, so see if they have permission
+		// isMasterAdmin may be false, so see if they have permission
 		// for the "val" collection for this one...
 		bool hasPerm = false;
 		if ( m->m_page == PAGE_DELCOLL &&
@@ -20334,10 +20417,10 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// allow it to add another.
 		if ( m->m_page == PAGE_ADDCOLL &&
 		     g_conf.m_allowCloudUsers &&
-		     ! isRootAdmin &&
+		     ! isMasterAdmin &&
 		     strcmp(m->m_cgi,"addcoll")==0 ) {
 			// see if user's c block has already added a collection
-			long numAdded = 0;
+			int32_t numAdded = 0;
 			if ( numAdded >= 1 ) {
 				g_errno = ENOPERM;
 				log("parms: already added a collection from "
@@ -20348,7 +20431,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		}
 
 		// master controls require root permission
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+		if ( m->m_obj == OBJ_CONF && ! isMasterAdmin ) {
 			log("parms: could not run root parm \"%s\" no perm.",
 			    m->m_title);
 			continue;
@@ -20388,7 +20471,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	// html should really transmit them as =0 if they are unchecked!!
 	// "fe" is a url filter expression for the first row.
 	//if ( hr->hasField("fe") && page == PAGE_FILTERS && cr ) {
-	//	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+	//	for ( int32_t i = 0 ; i < cr->m_numRegExs ; i++ ) {
 	//		//cr->m_harvestLinks  [i] = 0;
 	//		//cr->m_spidersEnabled[i] = 0;
 	//		if ( ! addNewParmToList2 ( parmList ,
@@ -20408,7 +20491,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//
 	if ( sock && page == PAGE_ADDCOLL ) {
 		char *ipStr = iptoa(sock->m_ip);
-		long occNum;
+		int32_t occNum;
 		Parm *um = getParmFast1 ( "userip" , &occNum); // NULL = occNum
 		if ( ! addNewParmToList2 ( parmList ,
 					   // HACK! operate on the to-be-added
@@ -20427,7 +20510,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//
 	
 	// loop through cgi parms
-	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
+	for ( int32_t i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
 		char *field = hr->getField    ( i );
 		// get value of the cgi field
@@ -20439,7 +20522,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//if ( strcmp(field,"fe") == 0 ) occNum++;
 
 		// convert field to parm
-		long occNum;
+		int32_t occNum;
 		Parm *m = getParmFast1 ( field , &occNum );
 
 		//
@@ -20473,7 +20556,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		bool hasPerm = false;
 
 		// master controls require root permission
-		if ( m->m_obj == OBJ_CONF && ! isRootAdmin ) {
+		if ( m->m_obj == OBJ_CONF && ! isMasterAdmin ) {
 			log("parms: could not set root parm \"%s\" no perm.",
 			    m->m_title);
 			continue;
@@ -20494,7 +20577,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		char tmp[24];
 		if ( strcmp(field,"roundStart")==0 && 
 		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) 
-			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
+			sprintf(tmp,"%"UINT32"",(int32_t)getTimeGlobalNoCore()+0);
 			val = tmp;
 		}
 		*/
@@ -20515,21 +20598,22 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	return true;
 }
 
-Parm *Parms::getParmFast2 ( long cgiHash32 ) {
+Parm *Parms::getParmFast2 ( int32_t cgiHash32 ) {
 	static HashTableX s_pht;
-	static char s_phtBuf[25000];
+	static char s_phtBuf[26700];
 	static bool s_init = false;
 
 	if ( ! s_init ) {
 		// init hashtable
-		s_pht.set ( 4,4, 2048, s_phtBuf,25000, false,0,"phttab" );
+		s_pht.set ( 4,sizeof(char *),2048,s_phtBuf,26700,
+			    false,0,"phttab" );
 		// reduce hash collisions:
 		s_pht.m_useKeyMagic = true;
 		// wtf?
 		if ( m_numParms <= 0 ) init();
 		if ( m_numParms <= 0 ) { char *xx=NULL;*xx=0; }
 		// fill up hashtable
-		for ( long i = 0 ; i < m_numParms ; i++ ) {
+		for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 			// get it
 			Parm *parm = &m_parms[i];
 			// skip parms that are not for conf or coll lest
@@ -20543,7 +20627,7 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 			// skip if no cgi
 			if ( ! parm->m_cgi ) continue;
 			// get its hash of its cgi
-			long ph32 = parm->m_cgiHash;
+			int32_t ph32 = parm->m_cgiHash;
 			// sanity!
 			if ( s_pht.isInTable ( &ph32 ) ) {
 				// get the dup guy
@@ -20554,7 +20638,7 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 				if ( dup->m_off == parm->m_off )
 					continue;
 				// otherwise bitch about it and drop core
-				log("parms: dup parm h32=%li "
+				log("parms: dup parm h32=%"INT32" "
 				    "\"%s\" vs \"%s\"",
 				    ph32, dup->m_title,parm->m_title);
 				char *xx=NULL;*xx=0;
@@ -20572,10 +20656,10 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 }
 
 
-Parm *Parms::getParmFast1 ( char *cgi , long *occNum ) {
-	// strip off the %li for things like 'fe3' for example
+Parm *Parms::getParmFast1 ( char *cgi , int32_t *occNum ) {
+	// strip off the %"INT32" for things like 'fe3' for example
 	// because that is the occurence # for parm arrays.
-	long clen = gbstrlen(cgi);
+	int32_t clen = gbstrlen(cgi);
 
 	char *d = NULL;
 
@@ -20585,7 +20669,7 @@ Parm *Parms::getParmFast1 ( char *cgi , long *occNum ) {
 		d++;
 	}
 
-	long h32;
+	int32_t h32;
 
 	// assume not an array
 	if ( occNum ) *occNum = -1;
@@ -20617,28 +20701,28 @@ Parm *Parms::getParmFast1 ( char *cgi , long *occNum ) {
 class ParmNode {
 public:
 	SafeBuf m_parmList;
-	long m_numRequests;
-	long m_numReplies;
-	long m_numGoodReplies;
-	long m_numHostsTotal;
+	int32_t m_numRequests;
+	int32_t m_numReplies;
+	int32_t m_numGoodReplies;
+	int32_t m_numHostsTotal;
 	class ParmNode *m_prevNode;
 	class ParmNode *m_nextNode;
-	long long m_parmId;
+	int64_t m_parmId;
 	bool m_calledCallback;
-	long m_startTime;
+	int32_t m_startTime;
 	void *m_state;
 	void (* m_callback)(void *state);
 	bool m_sendToGrunts;
 	bool m_sendToProxies;
-	long m_hostId; // -1 means send parm update to all hosts
+	int32_t m_hostId; // -1 means send parm update to all hosts
 	// . if not -1 then [m_hostId,m_hostId2] is a range
 	// . used by main.cpp cmd line cmds like 'gb stop 3-5'
-	long m_hostId2; 
+	int32_t m_hostId2; 
 };
 
 static ParmNode *s_headNode = NULL;
 static ParmNode *s_tailNode = NULL;
-static long long s_parmId = 0LL;
+static int64_t s_parmId = 0LL;
 
 // . will send the parm update request to each host and retry forever, 
 //   until dead hosts come back up
@@ -20651,9 +20735,9 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 				bool sendToGrunts ,
 				bool sendToProxies ,
 				// this is -1 if sending to all hosts
-				long hostId ,
+				int32_t hostId ,
 				// this is not -1 if its range [hostId,hostId2]
-				long hostId2 ) {
+				int32_t hostId2 ) {
 
 	// empty list?
 	if ( parmList->getLength() <= 0 ) return true;
@@ -20729,7 +20813,7 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 void tryToCallCallbacks ( ) {
 
 	ParmNode *pn = s_headNode;
-	long now = getTimeLocal();
+	int32_t now = getTimeLocal();
 
 	for ( ; pn ; pn = pn->m_nextNode ) {
 		// skip if already called callback
@@ -20753,9 +20837,9 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	slot->m_sendBufAlloc = NULL;
 
 	// in case host table is dynamically modified, go by #
-	Host *h = g_hostdb.getHost((long)state);
+	Host *h = g_hostdb.getHost((int32_t)(PTRTYPE)state);
 
-	long parmId = h->m_currentParmIdInProgress;
+	int32_t parmId = h->m_currentParmIdInProgress;
 
 	ParmNode *pn = h->m_currentNodePtr;
 
@@ -20768,7 +20852,7 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 
 	// this is usually timeout on a dead host i guess
 	if ( g_errno ) {
-		log("parms: got parm update reply from host #%li: %s",
+		log("parms: got parm update reply from host #%"INT32": %s",
 		    h->m_hostId,mstrerror(g_errno));
 	}
 
@@ -20882,10 +20966,10 @@ bool Parms::doParmSendingLoop ( ) {
 	// do not re-register
 	s_registeredSleep = true;
 
-	long now = getTimeLocal();
+	int32_t now = getTimeLocal();
 
 	// try to send a parm update request to each host
-	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		// get it
 		Host *h = g_hostdb.getHost(i);
 		// skip ourselves, host #0. we now send to ourselves
@@ -20947,7 +21031,7 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 
 		// debug log
-		log("parms: sending parm request to hostid %li",h->m_hostId);
+		log("parms: sending parm request to hostid %"INT32"",h->m_hostId);
 
 		// count it
 		pn->m_numRequests++;
@@ -20960,7 +21044,7 @@ bool Parms::doParmSendingLoop ( ) {
 						 h->m_port, // port
 						 h->m_hostId ,
 						 NULL, // retslot
-						 (void *)h->m_hostId , // state
+						 (void *)(PTRTYPE)h->m_hostId , // state
 						 gotParmReplyWrapper ,
 						 30 , // timeout secs
 						 -1 , // backoff
@@ -21004,11 +21088,11 @@ void handleRequest3fLoop ( void *weArg ) {
 	// process them
 	char *p = we->m_parmPtr;
 	for ( ; p < we->m_parmEnd ; ) {
-		// shortcut
+		// int16_tcut
 		char *rec = p;
 		// get size
-		long dataSize = *(long *)(rec+sizeof(key96_t));
-		long recSize = sizeof(key96_t) + 4 + dataSize;
+		int32_t dataSize = *(int32_t *)(rec+sizeof(key96_t));
+		int32_t recSize = sizeof(key96_t) + 4 + dataSize;
 		// skip it
 		p += recSize;
 
@@ -21016,9 +21100,9 @@ void handleRequest3fLoop ( void *weArg ) {
 		Parm *parm = getParmFromParmRec ( rec );
 
 		if ( ! parm ) {
-			long h32 = getHashFromParmRec(rec);
-			log("parms: unknown parm sent to us hash=%li",h32);
-			for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+			int32_t h32 = getHashFromParmRec(rec);
+			log("parms: unknown parm sent to us hash=%"INT32"",h32);
+			for ( int32_t i = 0 ; i < g_parms.m_numParms ; i++ ) {
 				Parm *x = &g_parms.m_parms[i];
 				if ( x->m_cgiHash != h32 ) continue;
 				log("parms: unknown parm=%s",x->m_title);
@@ -21065,7 +21149,7 @@ void handleRequest3fLoop ( void *weArg ) {
 			we->m_collnum = getCollnumFromParmRec ( rec );
 
 		// see if our spider round changes
-		long oldRound; 
+		int32_t oldRound; 
 		if ( we->m_collnum >= 0 && ! cx ) {
 			cx = g_collectiondb.getRec ( we->m_collnum );
 			// i guess coll might gotten deleted! so check cx
@@ -21159,7 +21243,7 @@ void handleRequest3fLoop ( void *weArg ) {
 
 // . host #0 is requesting that we update some parms
 // . the readbuf in the request is the list of the parms
-void handleRequest3f ( UdpSlot *slot , long niceness ) {
+void handleRequest3f ( UdpSlot *slot , int32_t niceness ) {
 
 	// sending to host #0 is not right...
 	//if ( g_hostdb.m_hostId == 0 ) { char *xx=NULL;*xx=0; }
@@ -21167,8 +21251,8 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	char *parmRecs = slot->m_readBuf;
 	char *parmEnd  = parmRecs + slot->m_readBufSize;
 
-	log("parms: got parm update request. size=%li.",
-	    (long)(parmEnd-parmRecs));
+	log("parms: got parm update request. size=%"INT32".",
+	    (int32_t)(parmEnd-parmRecs));
 
 	// make a new waiting entry
 	WaitEntry *we ;
@@ -21252,7 +21336,7 @@ bool Parms::syncParmsWithHost0 ( ) {
 
 	// allow udpserver to free it
 	char *request = sendBuf.getBufStart();
-	long  requestLen = sendBuf.length();
+	int32_t  requestLen = sendBuf.length();
 	sendBuf.detachBuf();
 
 	Host *h = g_hostdb.getHost(0);
@@ -21287,7 +21371,7 @@ bool Parms::syncParmsWithHost0 ( ) {
 //   uses 0x3f, so this just returns and empty reply on success
 // . sends CMD "addcoll" and "delcoll" cmd parms as well
 // . include an "insync" command parm as last parm
-void handleRequest3e ( UdpSlot *slot , long niceness ) {
+void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 
 	// right now we must be host #0
 	if ( g_hostdb.m_hostId != 0 ) { 
@@ -21300,7 +21384,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 	//
 	// 0. scan our collections and clear a flag
 	//
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// skip if empty
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -21309,7 +21393,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 	}
 
 	Host *host = slot->m_host;
-	long hostId = -1;
+	int32_t hostId = -1;
 	if ( host ) hostId = host->m_hostId;
 
 	SafeBuf replyBuf;
@@ -21328,7 +21412,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		// sanity check. -1 means g_conf. i guess.
 		if ( c < -1 ) { char *xx=NULL;*xx=0; }
 		// and parm hash
-		long long h64 = *(long long *)p;
+		int64_t h64 = *(int64_t *)p;
 		p += 8;
 		// if we being host #0 do not have this collnum tell 
 		// him to delete it!
@@ -21336,8 +21420,8 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		if ( c >= 0 ) cr = g_collectiondb.getRec ( c );
 		if ( c >= 0 && ! cr ) {
 			// note in log
-			logf(LOG_INFO,"sync: telling host #%li to delete "
-			     "collnum %li", hostId,(long)c);
+			logf(LOG_INFO,"sync: telling host #%"INT32" to delete "
+			     "collnum %"INT32"", hostId,(int32_t)c);
 			// add the parm rec as a parm cmd
 			if (! g_parms.addNewParmToList1( &replyBuf,
 							 c,
@@ -21355,12 +21439,12 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		// c is -1 for g_conf
 		if ( ! g_parms.addAllParmsToList ( &tmp, c ) ) goto hadError;
 		// get checksum of that
-		long long m64 = hash64 ( tmp.getBufStart(),tmp.length() );
+		int64_t m64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// if match, keep chugging, that's in sync
 		if ( h64 == m64 ) continue;
 		// note in log
-		logf(LOG_INFO,"sync: sending all parms for collnum %li "
-		     "to host #%li", (long)c, hostId);
+		logf(LOG_INFO,"sync: sending all parms for collnum %"INT32" "
+		     "to host #%"INT32"", (int32_t)c, hostId);
 		// otherwise, send him the list
 		if ( ! replyBuf.safeMemcpy ( &tmp ) ) goto hadError;
 	}
@@ -21368,7 +21452,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 	//
 	// 3. now if he's missing one of our collections tell him to add it
 	//
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// skip if empty
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -21380,8 +21464,8 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		if ( cr->m_isCustomCrawl == 1 ) cmdStr = "addCrawl";
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// note in log
-		logf(LOG_INFO,"sync: telling host #%li to add "
-		     "collnum %li", hostId,(long)cr->m_collnum);
+		logf(LOG_INFO,"sync: telling host #%"INT32" to add "
+		     "collnum %"INT32"", hostId,(int32_t)cr->m_collnum);
 		// add the parm rec as a parm cmd
 		if ( ! g_parms.addNewParmToList1 ( &replyBuf,
 						   (collnum_t)i,
@@ -21400,7 +21484,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		goto hadError;
 
 	// this should at least have the in sync command
-	log("parms: sending %li bytes of parms to sync to host #%li",
+	log("parms: sending %"INT32" bytes of parms to sync to host #%"INT32"",
 	    replyBuf.length(),hostId);
 
 	// . use the broadcast call here so things keep their order!
@@ -21431,7 +21515,7 @@ bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 	SafeBuf tmp;
 
 	// first do g_conf, collnum -1!
-	for ( long i = -1 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = -1 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// skip if empty
 		if ( i >=0 && ! g_collectiondb.m_recs[i] ) continue;
 		// clear since last time
@@ -21443,7 +21527,7 @@ bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 		if ( ! hashList->safeMemcpy ( &i , sizeof(collnum_t) ) )
 			return false;
 		// hash that shit
-		long long h64 = hash64 ( tmp.getBufStart(),tmp.length() );
+		int64_t h64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// and store it
 		if ( ! hashList->pushLongLong ( h64 ) )
 			return false;
@@ -21451,7 +21535,7 @@ bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 	return true;
 }
 
-long Parm::getNumInArray ( collnum_t collnum ) {
+int32_t Parm::getNumInArray ( collnum_t collnum ) {
 	char *obj = (char *)&g_conf;
 	if ( m_obj == OBJ_COLL ) {
 		CollectionRec *cr = g_collectiondb.getRec ( collnum );
@@ -21459,7 +21543,7 @@ long Parm::getNumInArray ( collnum_t collnum ) {
 		obj = (char *)cr;
 	}
 	// # in array is before it
-	return *(long *)(obj+m_off-4);
+	return *(int32_t *)(obj+m_off-4);
 }
 
 // . we use this for syncing parms between hosts
@@ -21469,7 +21553,7 @@ long Parm::getNumInArray ( collnum_t collnum ) {
 bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 
 	// loop over parms
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *parm = &m_parms[i];
 		// skip comments
@@ -21496,8 +21580,8 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 			char *xx=NULL; *xx=0;
 		}
 
-		long occNum = -1;
-		long maxOccNum = 0;
+		int32_t occNum = -1;
+		int32_t maxOccNum = 0;
 
 		if ( parm->isArray() ) {
 			maxOccNum = parm->getNumInArray(collnum) ;
@@ -21515,13 +21599,13 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 			  //
 			  // use this to debug parm list checksums being off
 			  //
-			long long h64 ;
+			int64_t h64 ;
 			h64 = hash64 ( parmList->getBufStart(),
 				       parmList->length() );
 			// note it for debugging hash
 			SafeBuf xb;
 			parm->printVal ( &xb ,collnum,occNum);
-			log("parms: adding (h=%llx) parm %s = %s",
+			log("parms: adding (h=%"XINT64") parm %s = %s",
 			    h64,parm->m_title,xb.getBufStart());
 			*/
 		}
@@ -21561,12 +21645,12 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// all parm rec data for TYPE_CMD should be ascii/utf8 chars
 		// and should be \0 terminated
 		char *data = getDataFromParmRec ( rec );
-		long dataSize = getDataSizeFromParmRec ( rec );
+		int32_t dataSize = getDataSizeFromParmRec ( rec );
 		if ( dataSize == 0 ) data = NULL;
 		log("parmdb: running function for "
-		    "parm \"%s\" (collnum=%li) args=\"%s\""
+		    "parm \"%s\" (collnum=%"INT32") args=\"%s\""
 		    , parm->m_title
-		    , (long)collnum
+		    , (int32_t)collnum
 		    , data 
 		    );
 
@@ -21598,8 +21682,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		if ( ! cr ) {
 			char *ps = "unknown parm";
 			if ( parm ) ps = parm->m_title;
-			log("parmdb: invalid collnum %li for parm \"%s\"",
-			    (long)collnum,ps);
+			log("parmdb: invalid collnum %"INT32" for parm \"%s\"",
+			    (int32_t)collnum,ps);
 			g_errno = ENOCOLLREC;
 			return true;
 		}
@@ -21615,21 +21699,21 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	else                           base = &g_conf;
 
 	if ( ! base ) {
-		log("parms: no collrec (%li) to change parm",(long)collnum);
+		log("parms: no collrec (%"INT32") to change parm",(int32_t)collnum);
 		g_errno = ENOCOLLREC;
 		return true;
 	}
 		
-	long occNum = getOccNumFromParmRec ( rec );
+	int32_t occNum = getOccNumFromParmRec ( rec );
 
 	// get data
-	long dataSize = *(long *)(rec+sizeof(key96_t));
+	int32_t dataSize = *(int32_t *)(rec+sizeof(key96_t));
 	char *data = rec+sizeof(key96_t)+4;
 
 	// point to where to copy the data into collrect
 	char *dst = (char *)base + parm->m_off;
 	// point to count in case it is an array
-	long *countPtr = NULL;
+	int32_t *countPtr = NULL;
 	// array?
 	if ( parm->isArray() ) {
 		if ( occNum < 0 ) {
@@ -21637,7 +21721,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			return false;
 		}
 		// point to count in case it is an array
-		countPtr = (long *)(dst - 4);
+		countPtr = (int32_t *)(dst - 4);
 		// now point "dst" to the occNum-th element
 		dst += parm->m_size * occNum;
 	}
@@ -21664,6 +21748,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			sb->safeStrcpy ( data ); // , dataSize );
 			// ensure null terminated
 			sb->nullTerm();
+			sb->setLabel("parm2");
 		}
 		//return true;
 		// sanity
@@ -21690,10 +21775,10 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	//   for this parm might have been zero! so we gotta update its
 	//   "count" in that scenario even though the parm val was unchanged.
 	if ( parm->isArray() ) {
-		// the long before the array is the # of elements
-		long currentCount = *countPtr;
+		// the int32_t before the array is the # of elements
+		int32_t currentCount = *countPtr;
 		// update our # elements in our array if this is bigger
-		long newCount = occNum + 1;
+		int32_t newCount = occNum + 1;
 		bool updateCount = false;
 		if ( newCount > currentCount ) updateCount = true;
 		// do not update counts if we are url filters
@@ -21705,7 +21790,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		     cr->m_regExs[occNum].getLength() == 0 )
 			updateCount = false;
 		// and for other pages, like master ips, skip if empty!
-		// PAGE_PASSWORDS, PAGE_ROOTPASSWORDS, ...
+		// PAGE_PASSWORDS, PAGE_MASTERPASSWORDS, ...
 		if ( parm->m_page != PAGE_FILTERS && ! changed )
 			updateCount = false;
 
@@ -21720,11 +21805,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	// show it
 	log("parms: updating parm \"%s\" "
-	    "(%s[%li]) (collnum=%li) from \"%s\" -> \"%s\"",
+	    "(%s[%"INT32"]) (collnum=%"INT32") from \"%s\" -> \"%s\"",
 	    parm->m_title,
 	    parm->m_cgi,
 	    occNum,
-	    (long)collnum,
+	    (int32_t)collnum,
 	    val1.getBufStart(),
 	    val2.getBufStart());
 
@@ -21743,7 +21828,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	if ( base == cr && dst == (char *)&cr->m_spideringEnabled )
 		cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
 	if ( base == &g_conf && dst == (char *)&g_conf.m_spideringEnabled ){
-		for(long i = 0;i<g_collectiondb.m_numRecs;i++){
+		for(int32_t i = 0;i<g_collectiondb.m_numRecs;i++){
 			CollectionRec *cr = g_collectiondb.m_recs[i];
 			if ( ! cr ) continue;
 			cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
@@ -21757,7 +21842,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	return true;
 }
 
-bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
+bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , int32_t occNum ) {
 
 	CollectionRec *cr = NULL;
 	if ( collnum >= 0 ) cr = g_collectiondb.getRec ( collnum );
@@ -21770,7 +21855,7 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 	else                     base = (char *)&g_conf;
 
 	if ( ! base ) {
-		log("parms: no collrec (%li) to change parm",(long)collnum);
+		log("parms: no collrec (%"INT32") to change parm",(int32_t)collnum);
 		g_errno = ENOCOLLREC;
 		return true;
 	}
@@ -21800,19 +21885,19 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 		return sb->safePrintf("%s",val);
 
 	if ( m_type == TYPE_LONG || m_type == TYPE_LONG_CONST ) 
-		return sb->safePrintf("%li",*(long *)val);
+		return sb->safePrintf("%"INT32"",*(int32_t *)val);
 
 	if ( m_type == TYPE_DATE ) 
-		return sb->safePrintf("%li",*(long *)val);
+		return sb->safePrintf("%"INT32"",*(int32_t *)val);
 
 	if ( m_type == TYPE_DATE2 ) 
-		return sb->safePrintf("%li",*(long *)val);
+		return sb->safePrintf("%"INT32"",*(int32_t *)val);
 
 	if ( m_type == TYPE_FLOAT ) 
 		return sb->safePrintf("%f",*(float *)val);
 
 	if ( m_type == TYPE_LONG_LONG ) 
-		return sb->safePrintf("%lli",*(long long *)val);
+		return sb->safePrintf("%"INT64"",*(int64_t *)val);
 
 	if ( m_type == TYPE_CHARPTR ) {
 		if ( val ) return sb->safePrintf("%s",val);
@@ -21831,7 +21916,7 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 		return sb->safePrintf("CMD");
 
 	if ( m_type == TYPE_IP )
-		return sb->safePrintf("%s",iptoa(*(long *)val) );
+		return sb->safePrintf("%s",iptoa(*(int32_t *)val) );
 
 	log("parms: missing parm type!!");
 
@@ -21857,7 +21942,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			u.set ( testUrl , gbstrlen(testUrl) );
 			//since we don't know the doc's quality, sfn, or
 			//other stuff, just give default values
-			long n = cr->getRegExpNum ( &u    , 
+			int32_t n = cr->getRegExpNum ( &u    , 
 						    false ,  // links2gb?
 						    false ,  // searchboxToGB
 						    false ,  // onsite?
@@ -21882,7 +21967,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 						    false , // parentIsPermlnk
 						    false );// isIndexed?
 			if ( n == -1 ) sprintf ( matchString , "default" );
-			else           sprintf ( matchString, "%li", n+1 );
+			else           sprintf ( matchString, "%"INT32"", n+1 );
 		}
 		// test table
 		sb.safePrintf (
@@ -22303,7 +22388,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "If the url has an inlinker which contains the "
 			  "given substring, then this rule is matched. "
 			  "We use this like <i>inlink=www.weblogs.com/"
-			  "shortChanges.xml</i> to detect if a page is in "
+			  "int16_tChanges.xml</i> to detect if a page is in "
 			  "the ping server or not, and if it is, then we "
 			  "assign it to a slower-spidering queue, because "
 			  "we can reply on the ping server for updates. Saves "
@@ -22446,7 +22531,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "for lang== Filter</b>"
 			  "</td></tr>",
 			  TABLE_STYLE );
-		for ( long i = 0 ; i < 256 ; i++ ) {
+		for ( int32_t i = 0 ; i < 256 ; i++ ) {
 			char *lang1 = getLanguageAbbr   ( i );
 			char *lang2 = getLanguageString ( i );
 			if ( ! lang1 ) continue;
@@ -22466,7 +22551,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 
 	// now set THIS based on the parameters in the xml file
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numParms ; i++ ) {
 
 		// get it
 		Parm *m = &m_parms[i];
@@ -22504,11 +22589,11 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 		//
 
 		// for arrays only
-		long *srcNum = (long *)(src-4);
-		long *dstNum = (long *)(dst-4);
+		int32_t *srcNum = (int32_t *)(src-4);
+		int32_t *dstNum = (int32_t *)(dst-4);
 
 		// array can have multiple values
-		for ( long j = 0 ; j < *srcNum ; j++ ) {
+		for ( int32_t j = 0 ; j < *srcNum ; j++ ) {
 
 			if ( m->m_type == TYPE_SAFEBUF ) {
 				SafeBuf *a = (SafeBuf *)src;

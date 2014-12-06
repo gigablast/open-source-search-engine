@@ -33,28 +33,28 @@ class Tfndb {
 	bool init ( );
 
 	// init the rebuild/secondary rdb, used by PageRepair.cpp
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 
 	Rdb *getRdb  ( ) { return &m_rdb; };
 
-	key_t makeKey (long long docId, long long uh48,long tfn,bool isDelete);
+	key_t makeKey (int64_t docId, int64_t uh48,int32_t tfn,bool isDelete);
 
-	key_t makeMinKey ( long long docId ) {
+	key_t makeMinKey ( int64_t docId ) {
 		return makeKey ( docId ,0, 0 , true ); };
 
-	key_t makeMaxKey ( long long docId ) {
+	key_t makeMaxKey ( int64_t docId ) {
 		return makeKey ( docId , 0x0000ffffffffffffLL,0xff, false ); };
 
-	long long getDocId ( key_t *k ) { 
-		long long d = k->n1;
+	int64_t getDocId ( key_t *k ) { 
+		int64_t d = k->n1;
 		d <<= 6;
 		d |= k->n0>>58;
 		return d;
 	};
 
-	long getTfn ( key_t *k ) { return ((k->n0) >>2) & 0xff; };
+	int32_t getTfn ( key_t *k ) { return ((k->n0) >>2) & 0xff; };
 
-	long long getUrlHash48 ( key_t *k ) {
+	int64_t getUrlHash48 ( key_t *k ) {
 		return ((k->n0>>10) & 0x0000ffffffffffffLL); };
 
 	DiskPageCache *getDiskPageCache() { return &m_pc; };

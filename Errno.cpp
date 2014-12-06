@@ -24,7 +24,7 @@ case 	ENOSITEDEFAULT   : return "Could not get the default tagdb record";
 case 	EBADREPLYSIZE    : return "Reply is wrong length";
 case 	EBADREPLY        : return "Something is wrong with reply";
 case 	EREPLYTOOSMALL   : return "Reply is too small";
-case 	EREQUESTTOOSHORT : return "Request length too short";
+case 	EREQUESTTOOSHORT : return "Request length too int16_t";
 case 	EBADREQUESTSIZE  : return "Request length not correct";
 case 	EBADREQUEST      : return "Bad request";
 case 	ENOTSUPPORTED    : return "Operation not yet supported";

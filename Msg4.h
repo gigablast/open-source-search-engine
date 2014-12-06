@@ -28,7 +28,7 @@ class Msg4 {
 		       char    *coll                   ,
 		       void    *state                  ,
 		       void  (* callback)(void *state) ,
-		       long     niceness               ,
+		       int32_t     niceness               ,
 		       bool     forceLocal = false     ,
 		       bool     splitList  = true      );
 
@@ -37,7 +37,7 @@ class Msg4 {
 		       collnum_t  collnum                ,
 		       void      *state                  ,
 		       void    (* callback)(void *state) ,
-		       long       niceness               ,
+		       int32_t       niceness               ,
 		       bool       forceLocal = false     ,
 		       bool       splitList  = true      );
 
@@ -48,11 +48,11 @@ class Msg4 {
 	// (rdbId | 0x08) then rdb record [if nosplit]
 	// (rdbId | 0x00) then rdb record [if split  ]
 	bool addMetaList ( char *metaList                 ,
-			   long  metaListSize             ,
+			   int32_t  metaListSize             ,
 			   char *coll                     ,
 			   void *state                    ,
 			   void (* callback)(void *state) ,
-			   long  niceness                 ,
+			   int32_t  niceness                 ,
 			   char  rdbId = -1               );
 
 
@@ -60,20 +60,20 @@ class Msg4 {
 			   collnum_t  collnum                  ,
 			   void      *state                    ,
 			   void      (* callback)(void *state) ,
-			   long       niceness                 ,
+			   int32_t       niceness                 ,
 			   char       rdbId = -1               ,
-			   long       shardOverride = -1       );
+			   int32_t       shardOverride = -1       );
 
 	// this one is faster...
 	// returns false if blocked
 	bool addMetaList ( char      *metaList                 ,
-			   long       metaListSize             ,
+			   int32_t       metaListSize             ,
 			   collnum_t  collnum                  ,
 			   void      *state                    ,
 			   void      (* callback)(void *state) ,
-			   long       niceness                 ,
+			   int32_t       niceness                 ,
 			   char       rdbId = -1               ,
-			   long       shardOverride = -1       );
+			   int32_t       shardOverride = -1       );
 
 	bool addMetaList2 ( );
 
@@ -86,7 +86,7 @@ class Msg4 {
 	// following injections
 	bool flush ( void *state                    ,
 		     void (* callback)(void *state) ,
-		     long  niceness                 );
+		     int32_t  niceness                 );
 
 	// private:
 
@@ -98,12 +98,12 @@ class Msg4 {
 	char      m_rdbId;
 	char      m_inUse;
 	collnum_t m_collnum;
-	long      m_niceness;
+	int32_t      m_niceness;
 
-	long m_shardOverride;
+	int32_t m_shardOverride;
 
 	char *m_metaList     ;
-	long  m_metaListSize ;
+	int32_t  m_metaListSize ;
 	char *m_currentPtr   ; // into m_metaList
 
 	// the linked list for waiting in line

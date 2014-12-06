@@ -23,7 +23,7 @@ bool allExit ( ) { return true; };
 
 bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
 
-//long g_qbufNeedSave = false;
+//int32_t g_qbufNeedSave = false;
 //SafeBuf g_qbuf;
 
 bool g_recoveryMode;
@@ -66,45 +66,45 @@ using namespace std;
 
 // struct for a link list hash table
 struct HashLink {
-	long  m_keyOffset;
-	long  m_keyLen;
-	long  m_data;
+	int32_t  m_keyOffset;
+	int32_t  m_keyLen;
+	int32_t  m_data;
 	HashLink *m_next;
 };
 
 // another hash, for urls
 struct UrlHashLink {
-	unsigned long long m_key;
-	//unsigned long      m_key2;
-	//long m_urlOffset;
-	//long m_urlLen;
-	long m_index;
+	uint64_t m_key;
+	//uint32_t      m_key2;
+	//int32_t m_urlOffset;
+	//int32_t m_urlLen;
+	int32_t m_index;
 	UrlHashLink *m_next;
 };
 
 // structure to store url info
 struct UrlInfo {
-	//unsigned long long m_hash;
-	//short m_urlLen;
-	//long  m_urlOffset;
+	//uint64_t m_hash;
+	//int16_t m_urlLen;
+	//int32_t  m_urlOffset;
 	unsigned char m_numCatids;
-	//long m_catids[MAX_URL_CATIDS];
-	long *m_catids;
+	//int32_t m_catids[MAX_URL_CATIDS];
+	int32_t *m_catids;
 	char  m_changed;
 };
 
 // struct for storing categories and their related info
 struct RdfCat {
-	long   m_catid;
-	long   m_parentid;
-	//short  m_numSymParents;
-	//long  *m_symParents;
-	long   m_nameOffset;
-	short  m_nameLen;
-	unsigned long  m_structureOffset;
-	unsigned long  m_contentOffset;
-	unsigned long  m_catHash;
-	long   m_numUrls;
+	int32_t   m_catid;
+	int32_t   m_parentid;
+	//int16_t  m_numSymParents;
+	//int32_t  *m_symParents;
+	int32_t   m_nameOffset;
+	int16_t  m_nameLen;
+	uint32_t  m_structureOffset;
+	uint32_t  m_contentOffset;
+	uint32_t  m_catHash;
+	int32_t   m_numUrls;
 };
 
 // hash tables
@@ -112,16 +112,16 @@ HashLink *hashTable[HASHTABLE_SIZE];
 UrlHashLink *urlHashTable[URLHASHTABLE_SIZE];
 // url buffer
 char    *urlBuffer     = NULL;
-long     urlBufferSize = 0;
-long     urlBufferLen  = 0;
+int32_t     urlBufferSize = 0;
+int32_t     urlBufferLen  = 0;
 // url info array
 UrlInfo *urlInfos      = NULL;
-long     urlInfosSize  = 0;
-long     numUrlInfos   = 0;
+int32_t     urlInfosSize  = 0;
+int32_t     numUrlInfos   = 0;
 // categories
 RdfCat *rdfCats     = NULL;
-long    rdfCatsSize = 0;
-long    numRdfCats  = 0;
+int32_t    rdfCatsSize = 0;
+int32_t    numRdfCats  = 0;
 // rdf file stream
 //ifstream  rdfStream;
 int       rdfStream;
@@ -134,24 +134,24 @@ char     *rdfEnd     = NULL;
 int       outStream;
 int       outStream2;
 // offset into the file
-unsigned long      currOffset = 0;
+uint32_t      currOffset = 0;
 // cat name buffer
 char     *nameBuffer     = NULL;
-long      nameBufferSize = 0;
-long      nameBufferLen  = 0;
+int32_t      nameBufferSize = 0;
+int32_t      nameBufferLen  = 0;
 // catid buffer
 char      catidBuffer[MAX_CATID_LEN+1];
-long      catidLen = 0;
+int32_t      catidLen = 0;
 // tag buffer
 char      tagRecfer[MAX_TAG_LEN+1];
-long      tagLen = 0;
+int32_t      tagLen = 0;
 
 bool mainShutdown ( bool urgent ) { return true; }
 
 // increment the ptr into the file, possibly reading the next chunk
-char* incRdfPtr( long skip = 1 ) {
-	long n;
-	for (long i = 0; i < skip; i++) {
+char* incRdfPtr( int32_t skip = 1 ) {
+	int32_t n;
+	for (int32_t i = 0; i < skip; i++) {
 		rdfPtr++;
 		currOffset++;
 		// pull the next chunk if we're at the end
@@ -173,10 +173,10 @@ char* incRdfPtr( long skip = 1 ) {
 }
 
 // parse the rdf file up past a given start tag
-long rdfParse ( char *tagName ) {
+int32_t rdfParse ( char *tagName ) {
 	//bool inQuote = false;
 	do {
-		long matchPos = 0;
+		int32_t matchPos = 0;
 		// move to the next tag
 		// . quotes are no longer escaped out in the newer
 		//   dmoz files in oct 2013... so take that out. i do
@@ -210,7 +210,7 @@ long rdfParse ( char *tagName ) {
 }
 
 // move to the next tag in the file
-long rdfNextTag ( ) {
+int32_t rdfNextTag ( ) {
 	//bool inQuote = false;
 	// move to the next tag
 	while (*rdfPtr != '<' ) { // || inQuote ) {
@@ -251,10 +251,10 @@ int catcomp ( const void *c1, const void *c2 ) {
 }
 
 // hash a string
-unsigned long catHash ( char *key, long keyLen ) {
+uint32_t catHash ( char *key, int32_t keyLen ) {
 	// simple hash
-	unsigned long hash = 0;
-	for (long i = 0; i < keyLen; i++)
+	uint32_t hash = 0;
+	for (int32_t i = 0; i < keyLen; i++)
 		hash ^= key[i]*i;
 	return (hash % HASHTABLE_SIZE);
 }
@@ -265,13 +265,13 @@ unsigned long catHash ( char *key, long keyLen ) {
 
 // init the hash table
 void initHashTable ( ) {
-	for (long i = 0; i < HASHTABLE_SIZE; i++)
+	for (int32_t i = 0; i < HASHTABLE_SIZE; i++)
 		hashTable[i] = NULL;
 }
 
 // clear the hash table
 void clearHashTable ( ) {
-	for (long i = 0; i < HASHTABLE_SIZE; i++) {
+	for (int32_t i = 0; i < HASHTABLE_SIZE; i++) {
 		while (hashTable[i]) {
 			HashLink *next = hashTable[i]->m_next;
 			free(hashTable[i]);
@@ -282,9 +282,9 @@ void clearHashTable ( ) {
 }
 
 // add a string to a hash table with the given data
-long addCatHash ( long keyOffset, long keyLen, long data ) {
+int32_t addCatHash ( int32_t keyOffset, int32_t keyLen, int32_t data ) {
 	// get the hash value
-	unsigned long hashKey = catHash(&nameBuffer[keyOffset], keyLen);
+	uint32_t hashKey = catHash(&nameBuffer[keyOffset], keyLen);
 	// get the first node
 	HashLink **currLink = &hashTable[hashKey];
 	// go to the first empty node
@@ -302,9 +302,9 @@ long addCatHash ( long keyOffset, long keyLen, long data ) {
 }
 
 // get the data in the hash using a string key
-long getCatHash ( char *key, long keyLen ) {
+int32_t getCatHash ( char *key, int32_t keyLen ) {
 	// get the hash value
-	unsigned long hashKey = catHash(key, keyLen);
+	uint32_t hashKey = catHash(key, keyLen);
 	// get the first node
 	HashLink *currLink = hashTable[hashKey];
 	// go to the correct node
@@ -321,13 +321,13 @@ long getCatHash ( char *key, long keyLen ) {
 
 // init the hash table
 void initUrlHashTable ( ) {
-	for (long i = 0; i < URLHASHTABLE_SIZE; i++)
+	for (int32_t i = 0; i < URLHASHTABLE_SIZE; i++)
 		urlHashTable[i] = NULL;
 }
 
 // clear the hash table
 void clearUrlHashTable ( ) {
-	for (long i = 0; i < URLHASHTABLE_SIZE; i++) {
+	for (int32_t i = 0; i < URLHASHTABLE_SIZE; i++) {
 		while (urlHashTable[i]) {
 			UrlHashLink *next = urlHashTable[i]->m_next;
 			free(urlHashTable[i]);
@@ -338,14 +338,14 @@ void clearUrlHashTable ( ) {
 }
 
 // add a url hash to the hash table with the given index
-long addUrlHash ( unsigned long long key,
-		  //unsigned long      key2,
-		  long index ) {
-		  //long index,
-		  //long urlOffset,
-		  //long urlLen ) {
+int32_t addUrlHash ( uint64_t key,
+		  //uint32_t      key2,
+		  int32_t index ) {
+		  //int32_t index,
+		  //int32_t urlOffset,
+		  //int32_t urlLen ) {
 	// get the hash value
-	unsigned long hashKey = (key%(unsigned long long)URLHASHTABLE_SIZE);
+	uint32_t hashKey = (key%(uint64_t)URLHASHTABLE_SIZE);
 	// get the first node
 	UrlHashLink **currLink = &urlHashTable[hashKey];
 	// go to the first empty node
@@ -365,13 +365,13 @@ long addUrlHash ( unsigned long long key,
 }
 
 // get the index in the hash using hash key
-long getUrlHash ( unsigned long long key ) {
-		  //unsigned long      key2 ) {
-		  //unsigned long      key2,
-		  //long urlOffset,
-		  //long urlLen ) {
+int32_t getUrlHash ( uint64_t key ) {
+		  //uint32_t      key2 ) {
+		  //uint32_t      key2,
+		  //int32_t urlOffset,
+		  //int32_t urlLen ) {
 	// get the hash value
-	unsigned long hashKey = (key%(unsigned long long)URLHASHTABLE_SIZE);
+	uint32_t hashKey = (key%(uint64_t)URLHASHTABLE_SIZE);
 	// get the first node
 	UrlHashLink *currLink = urlHashTable[hashKey];
 	// go to the correct node
@@ -391,10 +391,10 @@ long getUrlHash ( unsigned long long key ) {
 
 
 // do a binary search to get a cat from an id
-long getIndexFromId ( long catid ) {
-	long low  = 0;
-	long high = numRdfCats-1;
-	long currCat;
+int32_t getIndexFromId ( int32_t catid ) {
+	int32_t low  = 0;
+	int32_t high = numRdfCats-1;
+	int32_t currCat;
 	// binary search
 	//while (rdfCats[currCat].m_catid != catid) {
 	while (low <= high) {
@@ -409,9 +409,9 @@ long getIndexFromId ( long catid ) {
 		else
 			low  = currCat+1;
 	}
-	//printf("catid %li not found. sanity checking.\n",catid);
+	//printf("catid %"INT32" not found. sanity checking.\n",catid);
 	// sanity check our algo
-	//for ( long i = 0 ; i < numRdfCats ; i++ ) {
+	//for ( int32_t i = 0 ; i < numRdfCats ; i++ ) {
 	//	if ( rdfCats[i].m_catid == catid ) { char *xx=NULL;*xx=0;}
 	//}
 	// not found
@@ -419,25 +419,25 @@ long getIndexFromId ( long catid ) {
 }
 
 // print cat information
-void printCats ( long start, long end ) {
-	for (long i = start; i < end; i++) {
-		printf("Cat %li:\n", i);
-		printf("  CatID: %li\n", rdfCats[i].m_catid);
+void printCats ( int32_t start, int32_t end ) {
+	for (int32_t i = start; i < end; i++) {
+		printf("Cat %"INT32":\n", i);
+		printf("  CatID: %"INT32"\n", rdfCats[i].m_catid);
 		printf("  Name:  ");
-		for (long n = rdfCats[i].m_nameOffset;
+		for (int32_t n = rdfCats[i].m_nameOffset;
 			  n < rdfCats[i].m_nameOffset + rdfCats[i].m_nameLen; n++)
 			printf("%c", nameBuffer[n]);
 		printf("\n");
-		printf("  Name Offset:      %li\n", rdfCats[i].m_nameOffset);
-		printf("  Structure Offset: %li\n", rdfCats[i].m_structureOffset);
-		printf("  Content Offset:   %li\n", rdfCats[i].m_contentOffset);
-		printf("  Parent:           %li\n", rdfCats[i].m_parentid);
+		printf("  Name Offset:      %"INT32"\n", rdfCats[i].m_nameOffset);
+		printf("  Structure Offset: %"INT32"\n", rdfCats[i].m_structureOffset);
+		printf("  Content Offset:   %"INT32"\n", rdfCats[i].m_contentOffset);
+		printf("  Parent:           %"INT32"\n", rdfCats[i].m_parentid);
 		printf("\n");
 	}
 }
 
 // parse out the next catid
-long parseNextCatid() {
+int32_t parseNextCatid() {
 	// parse for <catid, this will be the next cat
 	if (rdfParse("catid") == -1)
 		return -1;
@@ -459,7 +459,7 @@ long parseNextCatid() {
 }
 
 // fill the next quoted string in the name buffer
-long fillNextString() {
+int32_t fillNextString() {
 	// get the next string, skip to the next quote
 	while (*rdfPtr != '"') {
 		if (!incRdfPtr())
@@ -470,14 +470,14 @@ long fillNextString() {
 		return -1;
 	// . pointing at the string now
 	//   dump it in the buffer
-	long nameLen = 0;
+	int32_t nameLen = 0;
 	while (*rdfPtr != '"') {
 		// make sure there's room in the buffer
 		if (nameBufferLen+nameLen >= nameBufferSize) {
 			nameBufferSize += NAME_BUFFER_SIZE;
 			nameBuffer = (char*)realloc((void*)nameBuffer,
 						    sizeof(char)*nameBufferSize);
-			printf("nameBuffer: %li bytes\n", nameBufferSize);
+			printf("nameBuffer: %"INT32" bytes\n", nameBufferSize);
 			if (!nameBuffer)
 				return -2;
 		}
@@ -495,7 +495,7 @@ long fillNextString() {
 }
 
 // fill the next quoted url in the name buffer
-long fillNextUrl() {
+int32_t fillNextUrl() {
 	// get the next string, skip to the next quote
 	while (*rdfPtr != '"') {
 		if (!incRdfPtr())
@@ -506,14 +506,14 @@ long fillNextUrl() {
 		return -1;
 	// . pointing at the string now
 	//   dump it in the buffer
-	long urlLen = 0;
+	int32_t urlLen = 0;
 	while (*rdfPtr != '"') {
 		// make sure there's room in the buffer
 		if (urlBufferLen+urlLen+10 >= urlBufferSize) {
 			urlBufferSize += URL_BUFFER_SIZE;
 			urlBuffer = (char*)realloc((void*)urlBuffer,
 						    sizeof(char)*urlBufferSize);
-			printf("urlBuffer: %li bytes\n", urlBufferSize);
+			printf("urlBuffer: %"INT32" bytes\n", urlBufferSize);
 			if (!urlBuffer)
 				return -2;
 		}
@@ -531,17 +531,17 @@ long fillNextUrl() {
 }
 
 // check the url for all valid characters
-bool isGoodUrl ( char *url, long urlLen ) {
+bool isGoodUrl ( char *url, int32_t urlLen ) {
 	// . all we're going to check for right now are
 	//   characters that show up as spaces
 	if ( urlLen <= 0 )
 		return false;
-	for (long i = 0; i < urlLen; i++) {
+	for (int32_t i = 0; i < urlLen; i++) {
 		if (is_wspace_a(url[i]))
 			return false;
 	}
 	// check for [prot]://[url]
-	long bef   = 0;
+	int32_t bef   = 0;
 	char *p    = url;
 	char *pend = url + urlLen;
 	while ( p < pend && *p != ':' ) {
@@ -555,9 +555,9 @@ bool isGoodUrl ( char *url, long urlLen ) {
 }
 
 // print the category path
-long printCatPath ( char *str, long catid, bool raw ) {
-	long catIndex;
-	long parentId;
+int32_t printCatPath ( char *str, int32_t catid, bool raw ) {
+	int32_t catIndex;
+	int32_t parentId;
 	char *p = str;
 	// get the index
 	catIndex = getIndexFromId(catid);
@@ -592,7 +592,7 @@ long printCatPath ( char *str, long catid, bool raw ) {
 		else      p += sprintf(p, "/");
 	}
 	// print this category name
-	long nameLen = rdfCats[catIndex].m_nameLen;
+	int32_t nameLen = rdfCats[catIndex].m_nameLen;
 	memcpy ( p,
 		 &nameBuffer[rdfCats[catIndex].m_nameOffset],
 		 nameLen );
@@ -603,9 +603,9 @@ long printCatPath ( char *str, long catid, bool raw ) {
 	return (p - str);
 }
 
-long fixUrl ( char *url, long urlLen ) {
-	long slashi = 0;
-	long newUrlLen = urlLen;
+int32_t fixUrl ( char *url, int32_t urlLen ) {
+	int32_t slashi = 0;
+	int32_t newUrlLen = urlLen;
 	// check for a bad protocol, something:
 	while (url[slashi] != ':') {
 		slashi++;
@@ -668,7 +668,7 @@ long fixUrl ( char *url, long urlLen ) {
 	// mdw, sep 2013, no because there is twitter.com/#!/ronpaul
 	// and others...
 	/*
-	for (long i = 0; i < newUrlLen; i++) {
+	for (int32_t i = 0; i < newUrlLen; i++) {
 		if (url[i] == '#') {
 			newUrlLen = i;
 			break;
@@ -683,13 +683,13 @@ long fixUrl ( char *url, long urlLen ) {
 }
 
 // properly read from file
-long fileRead ( int fileid, void *buf, size_t count ) {
+int32_t fileRead ( int fileid, void *buf, size_t count ) {
 	char *p = (char*)buf;
-	long n = 0;
-	unsigned long sizeRead = 0;
+	int32_t n = 0;
+	uint32_t sizeRead = 0;
 	while ( sizeRead < count ) {
 		n = read ( fileid, p, count - sizeRead );
-		if ( n <= 0 || n > (long)count )
+		if ( n <= 0 || n > (int32_t)count )
 			return n;
 		sizeRead += n;
 		p += n;
@@ -698,13 +698,13 @@ long fileRead ( int fileid, void *buf, size_t count ) {
 }
 
 // properly write to file
-long fileWrite ( int fileid, void *buf, size_t count ) {
+int32_t fileWrite ( int fileid, void *buf, size_t count ) {
 	char *p = (char*)buf;
-	long n = 0;
-	unsigned long sizeWrote = 0;
+	int32_t n = 0;
+	uint32_t sizeWrote = 0;
 	while ( sizeWrote < count ) {
 		n = write ( fileid, p, count - sizeWrote );
-		if ( n <= 0 || n > (long)count )
+		if ( n <= 0 || n > (int32_t)count )
 			return n;
 		sizeWrote += n;
 		p += n;
@@ -736,7 +736,7 @@ void writeMetaTags ( int outStream2 ) {
 		"but use hash of the subdomain as the ip -->\n"
 		"<meta name=usefakeips content=1>\n"
 		;
-	long len = gbstrlen(str);
+	int32_t len = gbstrlen(str);
 	if ( write ( outStream2, str , len ) != len )
 		printf("Error writing to outStream2b\n");
 }
@@ -746,34 +746,34 @@ void writeMetaTags ( int outStream2 ) {
 
 // main parser
 int main ( int argc, char *argv[] ) {
-	long n;
-	long t = 0;
-	long ti = 0;
-	long m = 0;
-	long newNameBufferSize = 0;
-	long newOffset = 0;
+	int32_t n;
+	int32_t t = 0;
+	int32_t ti = 0;
+	int32_t m = 0;
+	int32_t newNameBufferSize = 0;
+	int32_t newOffset = 0;
 	char filename[1256];
-	long urlTxtCount = 0;
-	long urlTxtFile  = 0;
+	int32_t urlTxtCount = 0;
+	int32_t urlTxtFile  = 0;
 	Url normUrl;
 	char decodedUrl[MAX_URL_LEN];
 	char htmlDecoded[MAX_HTTP_FILENAME_LEN];
-	//long numSymParents = 0;
-	//long endpos;
+	//int32_t numSymParents = 0;
+	//int32_t endpos;
 	// url diff stuff
-	long  numUpdateIndexes = 0;
-	long *updateIndexes    = NULL;
-	long  currUrl = 0;
-	long  currDiffIndex = 0;
+	int32_t  numUpdateIndexes = 0;
+	int32_t *updateIndexes    = NULL;
+	int32_t  currUrl = 0;
+	int32_t  currDiffIndex = 0;
 	// options
 	bool splitUrls = false;
 	char mode = MODE_NONE;
-	long totalNEC = 0;
+	int32_t totalNEC = 0;
 	char *dir="";
 	bool firstTime;
 
 	// check the options and mode
-	for (long i = 0; i < argc; i++) {
+	for (int32_t i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "-s") == 0)
 			splitUrls = true;
 		else if (strcmp(argv[i], "urldump") == 0)
@@ -903,9 +903,9 @@ int main ( int argc, char *argv[] ) {
 		if (rdfParse("Topic") == -1)
 			goto fileEnd;
 		// the offset for this cat is 6 chars back
-		unsigned long catOffset = currOffset - 6;
+		uint32_t catOffset = currOffset - 6;
 		// get the topic name, preserve it on the buffer
-		long nameOffset = nameBufferLen;
+		int32_t nameOffset = nameBufferLen;
 		// the name inserted by this function into "nameBuffer"
 		// does not seem to contain "Top/" at the beginning.
 		// it is from structure.rdf.u8, but it seems to be there!
@@ -913,7 +913,7 @@ int main ( int argc, char *argv[] ) {
 		// so it is just the last word in the directory to save
 		// mem. then we print out all the parent names to
 		// reconstruct.
-		long nameLen    = fillNextString();
+		int32_t nameLen    = fillNextString();
 		if (nameLen == -1)
 			goto fileEnd;
 		if (nameLen == -2) {
@@ -941,7 +941,7 @@ int main ( int argc, char *argv[] ) {
 				       0);
 
 		// parse the catid
-		long catid = parseNextCatid();
+		int32_t catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd;
 
@@ -968,7 +968,7 @@ int main ( int argc, char *argv[] ) {
 			rdfCatsSize += CAT_BUFFER_SIZE;
 			rdfCats = (RdfCat*)realloc((void*)rdfCats,
 						   sizeof(RdfCat)*rdfCatsSize);
-			printf("rdfCats: %li bytes\n", rdfCatsSize);
+			printf("rdfCats: %"INT32" bytes\n", rdfCatsSize);
 			if (!rdfCats) {
 				printf("Out of Memory\n");
 				goto errExit1;
@@ -981,7 +981,7 @@ int main ( int argc, char *argv[] ) {
 		}
 		// debug
 		//printf("gbcat=");
-		//for ( long i = 0 ; i < nameLen ; i++ )
+		//for ( int32_t i = 0 ; i < nameLen ; i++ )
 		//	printf("%c",htmlDecoded[i]);
 		//printf("\n");
 		// fill it
@@ -1005,13 +1005,13 @@ fileEnd:
 	// dump out categories for category dump
 	if ( mode == MODE_CATDUMP ) {
 		char catTemp[16384];
-		for ( long i = 0; i < numRdfCats; i++ ) {
-			//for (long n = rdfCats[i].m_nameOffset;
+		for ( int32_t i = 0; i < numRdfCats; i++ ) {
+			//for (int32_t n = rdfCats[i].m_nameOffset;
 			//  	  n < rdfCats[i].m_nameOffset +
 			//	      rdfCats[i].m_nameLen; n++)
 			//	printf("%c", nameBuffer[n]);
 			//printf("\n");
-			long encLen = urlEncode(catTemp, 16383,
+			int32_t encLen = urlEncode(catTemp, 16383,
 					&nameBuffer[rdfCats[i].m_nameOffset],
 					rdfCats[i].m_nameLen);
 			catTemp[encLen] = '\0';
@@ -1061,7 +1061,7 @@ fileEnd:
 		// parse the next catid in the file, sequentially
 		//if ( currOffset == 545468935 )
 		//	printf("shit\n");
-		long catid = parseNextCatid();
+		int32_t catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd1;
 nextChildTag:
@@ -1069,7 +1069,7 @@ nextChildTag:
 		if (rdfNextTag() == -1)
 			goto fileEnd1;
 		// check it for one of the tags we're looking for
-		long parentType;
+		int32_t parentType;
 		if ( tagLen == 6 &&
 		     strncmp ( tagRecfer, "/Topic", 6 ) == 0 )
 			continue;
@@ -1099,7 +1099,7 @@ nextChildTag:
 		// will only reach here if we're at a child cat
 		// get the name, use the end of nameBuffer
 		char *childName    = &nameBuffer[nameBufferLen];
-		long childNameLen  = fillNextString();
+		int32_t childNameLen  = fillNextString();
 		if (childNameLen == -1)
 			goto fileEnd1;
 		if (childNameLen == -2) {
@@ -1118,7 +1118,7 @@ nextChildTag:
 
 		// debug log
 		//if ( currOffset >= 506362430 ) // 556362463
-		//	printf("off=%li\n",currOffset);
+		//	printf("off=%"INT32"\n",currOffset);
 		// debug point
 		//if ( currOffset == 545467573 )
 		//	printf("GOT DEBUG POINT before giant skip\n");
@@ -1136,15 +1136,15 @@ nextChildTag:
 		//if (strcmp(childName,"Top/World/Català/Arts") == 0 )
 		//	printf("hey\n");
 		// get the catid for the child
-		long childid = getCatHash(childName, childNameLen);
+		int32_t childid = getCatHash(childName, childNameLen);
 		// get the cat for this id
-		long cat = getIndexFromId(childid);
+		int32_t cat = getIndexFromId(childid);
 		// make sure we have a match
 		if (cat == -1) {
 			// debug. why does Top/World/Catala/Arts
 			// not have a parent??
 			printf("Warning: Child Topic Not Found: ");
-			for (long i = 0; i < childNameLen; i++)
+			for (int32_t i = 0; i < childNameLen; i++)
 				printf("%c", childName[i]);
 			printf("\n");
 			m++;
@@ -1163,9 +1163,9 @@ nextChildTag:
 //		else if (parentType == 2) {
 //			// grow the buffer
 //			rdfCats[cat].m_numSymParents++;
-//			rdfCats[cat].m_symParents = (long*)realloc(
+//			rdfCats[cat].m_symParents = (int32_t*)realloc(
 //					rdfCats[cat].m_symParents,
-//					sizeof(long)*rdfCats[cat].m_numSymParents);
+//					sizeof(int32_t)*rdfCats[cat].m_numSymParents);
 //			if (!rdfCats[cat].m_symParents) {
 //				printf("Out of Memory!\n");
 //				goto errExit1;
@@ -1181,9 +1181,9 @@ nextChildTag:
 
 fileEnd1:
 	printf("Completed Structure:\n");
-	printf("  Total Topics:                  %li\n", numRdfCats);
-	printf("  Topics with Parents:           %li\n", t);
-	printf("  Topics Linked but Nonexistent: %li\n", m);
+	printf("  Total Topics:                  %"INT32"\n", numRdfCats);
+	printf("  Topics with Parents:           %"INT32"\n", t);
+	printf("  Topics Linked but Nonexistent: %"INT32"\n", m);
 
 	if ( t != numRdfCats ) {
 		printf("\n"
@@ -1192,7 +1192,7 @@ fileEnd1:
 		       "   in order to get their proper hash\n");
 	}
 
-	//printf("  Number of Symbolic Links:      %li\n", numSymParents);
+	//printf("  Number of Symbolic Links:      %"INT32"\n", numSymParents);
 	printf("\n");
 
 	// clear the hash table
@@ -1205,7 +1205,7 @@ fileEnd1:
 	printf("Truncating Category Names...\n");
 	// . truncate the category names to the last directory
 	//   also calculate the size of the truncated buffer
-	for (long i = 0; i < numRdfCats; i++) {
+	for (int32_t i = 0; i < numRdfCats; i++) {
 		// find the position of the last /
 		newOffset = rdfCats[i].m_nameOffset +
 				 rdfCats[i].m_nameLen - 1;
@@ -1221,8 +1221,8 @@ fileEnd1:
 	printf("Creating Category Hashes...\n");
 	// make the hashes
 	char rawPath[4096];
-	long rawPathLen;
-	for (long i = 0; i < numRdfCats; i++) {
+	int32_t rawPathLen;
+	for (int32_t i = 0; i < numRdfCats; i++) {
 		// get the hash of the path
 		rawPathLen = printCatPath(rawPath, rdfCats[i].m_catid, true);
 		// crap, this rawpath contains "Top/" in the beginning
@@ -1232,7 +1232,7 @@ fileEnd1:
 		// fix. so that xyz/Arts does not just hash "Arts"
 		// because it has no parent...
 		if ( rdfCats[i].m_parentid == 0 ) {
-			printf("Missing parent for catid %li. Will be "
+			printf("Missing parent for catid %"INT32". Will be "
 			       "excluded from DMOZ so we avoid hash "
 			       "collisions.\n",rdfCats[i].m_catid);
 		}
@@ -1241,7 +1241,7 @@ fileEnd1:
 		// print this shit out to find the collisions
 		//
 		continue;
-		printf("hash32=%lu catid=%li parentid=%li path=%s\n",
+		printf("hash32=%"UINT32" catid=%"INT32" parentid=%"INT32" path=%s\n",
 		       rdfCats[i].m_catHash,
 		       rdfCats[i].m_catid,
 		       rdfCats[i].m_parentid,
@@ -1266,25 +1266,25 @@ fileEnd1:
 	printf("\nOpened %s for writing.\n", filename);
 
 	// write the size of the truncated name buffer
-	//outStream.write((char*)&newNameBufferSize, sizeof(long));
-	if (write(outStream, &newNameBufferSize, sizeof(long)) !=
-			sizeof(long)) {
+	//outStream.write((char*)&newNameBufferSize, sizeof(int32_t));
+	if (write(outStream, &newNameBufferSize, sizeof(int32_t)) !=
+			sizeof(int32_t)) {
 		printf("Error writing to %s\n", filename);
 		goto errExit;
 	}
 	// write the number of cats
-	//outStream.write((char*)&numRdfCats, sizeof(long));
-	if (write(outStream, &numRdfCats, sizeof(long)) !=
-			sizeof(long)) {
+	//outStream.write((char*)&numRdfCats, sizeof(int32_t));
+	if (write(outStream, &numRdfCats, sizeof(int32_t)) !=
+			sizeof(int32_t)) {
 		printf("Error writing to %s\n", filename);
 		goto errExit;
 	}
 	// write the number of symbolic parents
-	//outStream.write((char*)&numSymParents, sizeof(long));
+	//outStream.write((char*)&numSymParents, sizeof(int32_t));
 	// write the truncated buffer and further reassign the offsets
 	newOffset = 0;
-	for (long i = 0; i < numRdfCats; i++) {
-		long writeSize = rdfCats[i].m_nameLen;
+	for (int32_t i = 0; i < numRdfCats; i++) {
+		int32_t writeSize = rdfCats[i].m_nameLen;
 		//outStream.write((char*)&nameBuffer[rdfCats[i].m_nameOffset],
 		//		sizeof(char)*rdfCats[i].m_nameLen);
 		if ( write ( outStream, &nameBuffer[rdfCats[i].m_nameOffset],
@@ -1398,7 +1398,7 @@ contentParse:
 		// if we're doing a diffurldump, load up the diff file first
 		if ( mode == MODE_DIFFURLDUMP ) {
 			char diffUrl[MAX_URL_LEN*2];
-			long numRemoveUrls = 0;
+			int32_t numRemoveUrls = 0;
 			// open the new diff file
 			//ifstream diffInStream;
 			int diffInStream;
@@ -1414,24 +1414,24 @@ contentParse:
 	
 			// read in the number of urls to update/add
 			//diffInStream.read((char*)&numUpdateIndexes,
-			//		sizeof(long));
+			//		sizeof(int32_t));
 			if ( fileRead ( diffInStream,
 					 &numUpdateIndexes,
-					 sizeof(long) ) != sizeof(long) ) {
+					 sizeof(int32_t) ) != sizeof(int32_t) ) {
 				printf("Error Reading %s\n", filename);
 				goto errExit;
 			}
 			// read in the number of urls to remove
-			//diffInStream.read((char*)&numRemoveUrls, sizeof(long));
+			//diffInStream.read((char*)&numRemoveUrls, sizeof(int32_t));
 			if ( fileRead ( diffInStream,
 					 &numRemoveUrls,
-					 sizeof(long) ) != sizeof(long) ) {
+					 sizeof(int32_t) ) != sizeof(int32_t) ) {
 				printf("Error Reading %s\n", filename);
 				goto errExit;
 			}
 			// create the buffer for the update/add indexes
-			updateIndexes = (long*)malloc(
-					sizeof(long)*numUpdateIndexes);
+			updateIndexes = (int32_t*)malloc(
+					sizeof(int32_t)*numUpdateIndexes);
 			if ( !updateIndexes ) {
 				printf("Out of Memory!\n");
 				//diffInStream.clear();
@@ -1440,15 +1440,15 @@ contentParse:
 				goto errExit;
 			}
 			// read in the update/add indexes
-			//for ( long i = 0; i < numUpdateIndexes &&
+			//for ( int32_t i = 0; i < numUpdateIndexes &&
 			//	  	diffInStream.good(); i++ ) {
-			for ( long i = 0; i < numUpdateIndexes; i++ ) {
+			for ( int32_t i = 0; i < numUpdateIndexes; i++ ) {
 				//diffInStream.read((char*)&updateIndexes[i],
-				//	  	sizeof(long));
-				long n = fileRead ( diffInStream,
+				//	  	sizeof(int32_t));
+				int32_t n = fileRead ( diffInStream,
 						&updateIndexes[i],
-						sizeof(long) );
-				if ( n < 0 || n > (long)sizeof(long) ) {
+						sizeof(int32_t) );
+				if ( n < 0 || n > (int32_t)sizeof(int32_t) ) {
 					printf("Error Reading%s\n", filename);
 					goto errExit;
 				}
@@ -1456,20 +1456,20 @@ contentParse:
 					break;
 			}
 			// read in the urls to remove
-			//for ( long i = 0; i < numRemoveUrls &&
+			//for ( int32_t i = 0; i < numRemoveUrls &&
 			//	  	diffInStream.good(); i++ ) {
-			for ( long i = 0; i < numRemoveUrls; i++ ) {
-				short urlLen;
+			for ( int32_t i = 0; i < numRemoveUrls; i++ ) {
+				int16_t urlLen;
 				//diffInStream.read((char*)&urlLen,
-				//		sizeof(short));
+				//		sizeof(int16_t));
 				if ( fileRead(diffInStream, &urlLen,
-					  sizeof(short)) != sizeof(short) ) {
+					  sizeof(int16_t)) != sizeof(int16_t) ) {
 					printf("Error reading diffInStream\n");
 					goto errExit;
 				}
 				if ( urlLen <= 0 ) {
-					printf("WARNING: Found %li length"
-					       "url exiting!", (long)urlLen);
+					printf("WARNING: Found %"INT32" length"
+					       "url exiting!", (int32_t)urlLen);
 					//diffInStream.clear();
 					//diffInStream.close();
 					close(diffInStream);
@@ -1506,7 +1506,7 @@ contentParse:
 					printf("Completed Writing File.\n");
 					// write another file for the urls
 					urlTxtFile++;
-					sprintf(filename, "html/%s.%li",
+					sprintf(filename, "html/%s.%"INT32"",
 						URLTEXT_OUTPUT_FILE,
 						urlTxtFile);
 					//outStream2.open(filename,
@@ -1552,9 +1552,9 @@ contentParse:
 		printf("Opened %s for writing.\n", filename);
 
 		// store a space for the number of urls at the start of the file
-		//outStream.write((char*)&numUrlInfos, sizeof(long));
-		if ( write(outStream, &numUrlInfos, sizeof(long)) !=
-				sizeof(long) ) {
+		//outStream.write((char*)&numUrlInfos, sizeof(int32_t));
+		if ( write(outStream, &numUrlInfos, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing to %s", filename);
 			goto errExit;
 		}
@@ -1567,12 +1567,12 @@ contentParse:
 		if (rdfParse("Topic") == -1)
 			goto fileEnd2;
 		// the offset for this cat is 6 chars back
-		unsigned long catOffset = currOffset - 6;
+		uint32_t catOffset = currOffset - 6;
 		// parse the next catid
-		long catid = parseNextCatid();
+		int32_t catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd2;
-		long cat;
+		int32_t cat;
 		// skip ahead for url dump
 		if ( mode == MODE_URLDUMP || mode == MODE_DIFFURLDUMP )
 			goto nextLink;
@@ -1583,7 +1583,7 @@ contentParse:
 		cat = getIndexFromId(catid);
 		if (cat == -1) {
 			totalNEC++;
-			printf("Warning: Nonexistent Category, %li, found in "
+			printf("Warning: Nonexistent Category, %"INT32", found in "
 			       "Content\n", catid );
 			continue;
 		}
@@ -1622,8 +1622,8 @@ nextLink:
 hashLink:
 		// . hash the link with the catid
 		// get the link url
-		long  urlOffset = urlBufferLen;
-		short urlLen    = fillNextUrl();
+		int32_t  urlOffset = urlBufferLen;
+		int16_t urlLen    = fillNextUrl();
 		if (urlLen == -1)
 			goto fileEnd2;
 		if (urlLen == -2) {
@@ -1668,7 +1668,7 @@ hashLink:
 			urlBufferSize += URL_BUFFER_SIZE;
 			urlBuffer = (char*)realloc((void*)urlBuffer,
 						    sizeof(char)*urlBufferSize);
-			printf("urlBuffer: %li bytes\n", urlBufferSize);
+			printf("urlBuffer: %"INT32" bytes\n", urlBufferSize);
 			if (!urlBuffer)
 				goto errExit1;
 		}
@@ -1683,21 +1683,21 @@ hashLink:
 		// if good, add it to the buffer and add the cat
 		//urlBufferLen += urlLen;
 		// get the hash value
-		unsigned long long urlHash =
+		uint64_t urlHash =
 			hash64Lower_a(&urlBuffer[urlOffset], urlLen, 0);
-		//unsigned long urlHash2 =
+		//uint32_t urlHash2 =
 		//	hash32Lower(&urlBuffer[urlOffset], urlLen, 0);
 		// see if it's already indexed
-		//long urlIndex = getUrlHash(urlHash, urlOffset, urlLen);
-		//long urlIndex = getUrlHash(urlHash, urlHash2);
-		//long urlIndex = getUrlHash(urlHash, urlHash2
+		//int32_t urlIndex = getUrlHash(urlHash, urlOffset, urlLen);
+		//int32_t urlIndex = getUrlHash(urlHash, urlHash2);
+		//int32_t urlIndex = getUrlHash(urlHash, urlHash2
 		//			   urlOffset, urlLen);
-		long urlIndex = getUrlHash(urlHash);
+		int32_t urlIndex = getUrlHash(urlHash);
 		if (urlIndex == -1) {
 			if ( mode == MODE_URLDUMP ||
 			     mode == MODE_DIFFURLDUMP ) {
 				//outStream2.write((char*)&urlLen,
-				//		   sizeof(short));
+				//		   sizeof(int16_t));
 				if ( mode != MODE_DIFFURLDUMP ||
 				     currUrl == updateIndexes[currDiffIndex] ) {
 					//outStream2.write(&urlBuffer[urlOffset],
@@ -1734,11 +1734,11 @@ hashLink:
 					// write another file for the urls
 					urlTxtFile++;
 					if ( mode == MODE_URLDUMP )
-						sprintf(filename, "html/%s.%li",
+						sprintf(filename, "html/%s.%"INT32"",
 							URLTEXT_OUTPUT_FILE,
 							urlTxtFile);
 					else
-						sprintf(filename, "html/%s.%li",
+						sprintf(filename, "html/%s.%"INT32"",
 							DIFFURLTEXT_OUTPUT_FILE,
 							urlTxtFile);
 					//outStream2.open(filename,
@@ -1761,9 +1761,9 @@ hashLink:
 			}
 			else {
 				// write the url to the content file
-				//outStream.write((char*)&urlLen, sizeof(short));
-				if ( write(outStream, &urlLen, sizeof(short)) !=
-						sizeof(short) ) {
+				//outStream.write((char*)&urlLen, sizeof(int16_t));
+				if ( write(outStream, &urlLen, sizeof(int16_t)) !=
+						sizeof(int16_t) ) {
 					printf("Error writing to outStream");
 					goto errExit1;
 				}
@@ -1780,8 +1780,8 @@ hashLink:
 				urlInfosSize += URLINFO_BUFFER_SIZE;
 				urlInfos = (UrlInfo*)realloc((void*)urlInfos,
 					      sizeof(UrlInfo)*urlInfosSize);
-				printf("urlInfos: %li bytes\n",
-				       urlInfosSize*sizeof(UrlInfo));
+				printf("urlInfos: %"INT32" bytes\n",
+				      (int32_t)(urlInfosSize*sizeof(UrlInfo)));
 				if (!urlInfos) {
 					printf("Out of Memory!\n");
 					goto errExit1;
@@ -1793,7 +1793,7 @@ hashLink:
 			//urlInfos[numUrlInfos].m_urlOffset = urlOffset;
 			urlInfos[numUrlInfos].m_numCatids = 1;
 			urlInfos[numUrlInfos].m_catids = 
-				(long*)malloc(sizeof(long));
+				(int32_t*)malloc(sizeof(int32_t));
 			if (!urlInfos[numUrlInfos].m_catids) {
 				printf("Out of memory!\n");
 				goto errExit1;
@@ -1818,16 +1818,16 @@ hashLink:
 		}
 		else {
 			// make sure we aren't duping the catid
-			for (long i = 0; 
+			for (int32_t i = 0; 
 			          i < urlInfos[urlIndex].m_numCatids; i++)
 				if (urlInfos[urlIndex].m_catids[i] == catid)
 					goto nextLink;
 			// add the catid
-			long numCatids = urlInfos[urlIndex].m_numCatids;
+			int32_t numCatids = urlInfos[urlIndex].m_numCatids;
 			//if (numCatids < MAX_URL_CATIDS) {
-				urlInfos[urlIndex].m_catids = (long*)realloc(
+				urlInfos[urlIndex].m_catids = (int32_t*)realloc(
 					urlInfos[urlIndex].m_catids,
-					sizeof(long) *
+					sizeof(int32_t) *
 					(urlInfos[urlIndex].m_numCatids+1));
 				if (!urlInfos[urlIndex].m_catids) {
 					printf("Out of Memory!\n");
@@ -1848,7 +1848,7 @@ hashLink:
 			goto nextLink;
 
 		// increment the url count for this cat and its parents
-		long currIndex = getIndexFromId(catid);
+		int32_t currIndex = getIndexFromId(catid);
 		while (currIndex >= 0) {
 			rdfCats[currIndex].m_numUrls++;
 			// the new dmoz files have catids whose parents
@@ -1883,12 +1883,12 @@ fileEnd2:
 	}
 
 	printf("Completed Content:\n");
-	printf("  Total Links:              %li\n", numUrlInfos);
-	printf("  Duplicated Links:         %li\n", m);
-	printf("  Max Link Duplicated:      %li\n", t);
-	printf("  Nonexistant Categories:   %li\n", totalNEC );
+	printf("  Total Links:              %"INT32"\n", numUrlInfos);
+	printf("  Duplicated Links:         %"INT32"\n", m);
+	printf("  Max Link Duplicated:      %"INT32"\n", t);
+	printf("  Nonexistant Categories:   %"INT32"\n", totalNEC );
 	//printf("    ");
-	//for (long i = 0; i < urlInfos[ti].m_urlLen; i++)
+	//for (int32_t i = 0; i < urlInfos[ti].m_urlLen; i++)
 	//	printf("%c", urlBuffer[urlInfos[ti].m_urlOffset + i]);
 	printf("\n");
 	printf("\n");
@@ -1902,24 +1902,24 @@ fileEnd2:
 	if ( mode == MODE_UPDATE ) {
 	//if ( false ) {
 		// fill the buffers
-		long currUrl = 0;
-		long urlp    = 0;
-		long catidp  = 0;
+		int32_t currUrl = 0;
+		int32_t urlp    = 0;
+		int32_t catidp  = 0;
 		bool oldErr  = false;
-		long oldNumUrls;
+		int32_t oldNumUrls;
 		char *oldUrls = NULL;
-		long oldUrlsBufferSize = OLDURL_BUFFER_SIZE;
-		unsigned long long *oldUrlHashes;
+		int32_t oldUrlsBufferSize = OLDURL_BUFFER_SIZE;
+		uint64_t *oldUrlHashes;
 		char *removeOldUrl;
 		//char oldUrl[MAX_URL_LEN*2];
-		long *oldCatids = NULL;
-		long oldCatidsBufferSize = OLDCATID_BUFFER_SIZE;
+		int32_t *oldCatids = NULL;
+		int32_t oldCatidsBufferSize = OLDCATID_BUFFER_SIZE;
 		unsigned char *oldNumCatids = NULL;
-		long numUpdateUrls = numUrlInfos;
-		long numRemoveUrls = 0;
-		long numChangedUrls = 0;
-		long updateIndexesWritten = 0;
-		long numIdsToUpdate = 0;
+		int32_t numUpdateUrls = numUrlInfos;
+		int32_t numRemoveUrls = 0;
+		int32_t numChangedUrls = 0;
+		int32_t updateIndexesWritten = 0;
+		int32_t numIdsToUpdate = 0;
 
 		// load the content and url files
 		// url info (content) file
@@ -1932,9 +1932,9 @@ fileEnd2:
 			goto oldErrExit;
 		}
 		// read in the number of urls
-		//rdfStream.read((char*)&oldNumUrls, sizeof(long));
-		if (fileRead(rdfStream, &oldNumUrls, sizeof(long)) !=
-				sizeof(long)) {
+		//rdfStream.read((char*)&oldNumUrls, sizeof(int32_t));
+		if (fileRead(rdfStream, &oldNumUrls, sizeof(int32_t)) !=
+				sizeof(int32_t)) {
 			printf("Error Reading %s\n", filename);
 			goto oldErrExit;
 		}
@@ -1945,8 +1945,8 @@ fileEnd2:
 			printf("Out of Memory!\n");
 			goto oldErrExit;
 		}
-		oldUrlHashes = (unsigned long long*)malloc (
-				sizeof(long long)*oldNumUrls );
+		oldUrlHashes = (uint64_t*)malloc (
+				sizeof(int64_t)*oldNumUrls );
 		if (!oldUrlHashes) {
 			printf("Out of Memory!\n");
 			goto oldErrExit;
@@ -1956,7 +1956,7 @@ fileEnd2:
 			printf("Out of Memory!\n");
 			goto oldErrExit;
 		}
-		oldCatids = (long*)malloc(sizeof(long)*oldCatidsBufferSize);
+		oldCatids = (int32_t*)malloc(sizeof(int32_t)*oldCatidsBufferSize);
 		if (!oldCatids) {
 			printf("Out of Memory!\n");
 			goto oldErrExit;
@@ -1971,10 +1971,10 @@ fileEnd2:
 		//while ( rdfStream.good() && currUrl < oldNumUrls ) {
 		while ( currUrl < oldNumUrls ) {
 			// read the next url
-			short urlLen = 0;
-			//rdfStream.read((char*)&urlLen, sizeof(short));
-			long n = fileRead(rdfStream, &urlLen, sizeof(short));
-			if ( n < 0 || n > (long)sizeof(short) ) {
+			int16_t urlLen = 0;
+			//rdfStream.read((char*)&urlLen, sizeof(int16_t));
+			int32_t n = fileRead(rdfStream, &urlLen, sizeof(int16_t));
+			if ( n < 0 || n > (int32_t)sizeof(int16_t) ) {
 				printf("Error Reading %s\n",filename);
 				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
@@ -2000,9 +2000,9 @@ fileEnd2:
 			//char *url = &m_urls[urlp];
 			//rdfStream.read(&oldUrls[urlp], urlLen);
 			if (urlLen <= 0) {
-				printf("WARNING: FOUND %li LENGTH URL, "
+				printf("WARNING: FOUND %"INT32" LENGTH URL, "
 				       "WILL BE SKIPPED (1)\n",
-				       (long)urlLen );
+				       (int32_t)urlLen );
 			}
 			n = fileRead(rdfStream, &oldUrls[urlp], urlLen);
 			if ( n < 0 || n > urlLen ) {
@@ -2021,9 +2021,9 @@ fileEnd2:
 			removeOldUrl[currUrl] = 0;
 			// increment the buffer pointer
 			if (urlLen <= 0) {
-				printf("WARNING: FOUND %li LENGTH URL, "
+				printf("WARNING: FOUND %"INT32" LENGTH URL, "
 				       "WILL BE SKIPPED (2)\n",
-				       (long)urlLen );
+				       (int32_t)urlLen );
 			}
 			urlp += urlLen;
 			//urlLen = fixUrl(oldUrl, urlLen);
@@ -2038,7 +2038,7 @@ fileEnd2:
 			// get the number of catids
 			oldNumCatids[currUrl] = 0;
 			//rdfStream.read((char*)&oldNumCatids[currUrl], 1);
-			long n = fileRead(rdfStream, &oldNumCatids[currUrl], 1);
+			int32_t n = fileRead(rdfStream, &oldNumCatids[currUrl], 1);
 			if ( n < 0 || n > 1 ) {
 				printf("Error Reading %s\n",filename);
 				//CONTENT_OUTPUT_FILE);
@@ -2049,9 +2049,9 @@ fileEnd2:
 			// make sure there's room
 			if ( catidp + oldNumCatids[currUrl] + 1 >=
 					oldCatidsBufferSize ) {
-				long *re_catids = (long*)realloc(
+				int32_t *re_catids = (int32_t*)realloc(
 					oldCatids,
-					sizeof(long)*(oldCatidsBufferSize+
+					sizeof(int32_t)*(oldCatidsBufferSize+
 						OLDCATID_BUFFER_SIZE) );
 				if (!re_catids) {
 					printf("Out of Memory!\n");
@@ -2061,8 +2061,8 @@ fileEnd2:
 				oldCatidsBufferSize += OLDCATID_BUFFER_SIZE;
 			}
 			//rdfStream.read((char*)&oldCatids[catidp],
-			//	sizeof(long)*oldNumCatids[currUrl]);
-			long readSize = sizeof(long)*oldNumCatids[currUrl];
+			//	sizeof(int32_t)*oldNumCatids[currUrl]);
+			int32_t readSize = sizeof(int32_t)*oldNumCatids[currUrl];
 			n = fileRead(rdfStream, &oldCatids[catidp], readSize);
 			if ( n < 0 || n > readSize ) {
 				printf("Error Reading %s\n",filename);
@@ -2078,9 +2078,9 @@ fileEnd2:
 
 		// now check the old urls against the new for changes
 		catidp = 0;
-		for ( long i = 0; i < oldNumUrls; i++ ) {
+		for ( int32_t i = 0; i < oldNumUrls; i++ ) {
 			// check the new url hash for the old url
-			long n = oldNumCatids[i];
+			int32_t n = oldNumCatids[i];
 			// skip bad urls
 			if ( oldUrlHashes[i] == 0 ) {
 				printf("WARNING: FOUND 0 LENGTH URL, "
@@ -2088,7 +2088,7 @@ fileEnd2:
 				catidp += n;
 				continue;
 			}
-			long urlIndex = getUrlHash(oldUrlHashes[i]);
+			int32_t urlIndex = getUrlHash(oldUrlHashes[i]);
 			// check for a removed url
 			if ( urlIndex == -1 ) {
 				removeOldUrl[i] = 1;
@@ -2100,9 +2100,9 @@ fileEnd2:
 			if ( urlInfos[urlIndex].m_numCatids != n )
 				goto oldIsDifferent;
 			// check if all the catids match
-			for ( long co = 0; co < n; co++ ) {
+			for ( int32_t co = 0; co < n; co++ ) {
 				bool catMatch = false;
-				for ( long cn = 0; cn < n; cn++ ) {
+				for ( int32_t cn = 0; cn < n; cn++ ) {
 					if ( urlInfos[urlIndex].m_catids[cn] ==
 					     oldCatids[catidp + co] ) {
 						catMatch = true;
@@ -2123,10 +2123,10 @@ oldIsDifferent:
 			numChangedUrls++;
 			continue;
 		}
-		printf("  Urls to Update:    %li\n", numChangedUrls);
-		printf("  Urls to Add:       %li\n",
+		printf("  Urls to Update:    %"INT32"\n", numChangedUrls);
+		printf("  Urls to Add:       %"INT32"\n",
 			numUpdateUrls - numChangedUrls);
-		printf("  Urls to Remove:    %li\n", numRemoveUrls);
+		printf("  Urls to Remove:    %"INT32"\n", numRemoveUrls);
 
 		//
 		// . write out the diff file, contains new and changed urls and
@@ -2146,62 +2146,62 @@ oldIsDifferent:
 		printf("\nOpened %s for writing.\n", filename);
 
 		// write out the number of urls to update/add
-		//outStream.write(&numUpdateUrls, sizeof(long));
-		if ( write(outStream, &numUpdateUrls, sizeof(long)) !=
-				sizeof(long) ) {
+		//outStream.write(&numUpdateUrls, sizeof(int32_t));
+		if ( write(outStream, &numUpdateUrls, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing to %s\n", filename);
 			goto oldErrExit;
 		}
 		// write out the number of urls to delete
-		//outStream.write(&numRemoveUrls, sizeof(long));
-		if ( write(outStream, &numRemoveUrls, sizeof(long)) !=
-				sizeof(long) ) {
+		//outStream.write(&numRemoveUrls, sizeof(int32_t));
+		if ( write(outStream, &numRemoveUrls, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing to %s\n", filename);
 			goto oldErrExit;
 		}
 		// write out the urls to update/add
-		for ( long i = 0; i < numUrlInfos; i++ ) {
+		for ( int32_t i = 0; i < numUrlInfos; i++ ) {
 			if ( urlInfos[i].m_changed == 0 ) {
 				continue;
 			}
 			// write the changed url info
 			//outStream.write((char*)&urlInfos[i].m_urlLen,
-			//		sizeof(short));
+			//		sizeof(int16_t));
 			//outStream.write(&urlBuffer[urlInfos[i].m_urlOffset],
 			//		sizeof(char)*urlInfos[i].m_urlLen);
 			//outStream.write((char*)&urlInfos[i].m_numCatids,
 			//		sizeof(char));
 			//outStream.write((char*)urlInfos[i].m_catids,
-			//		sizeof(long)*urlInfos[i].m_numCatids);
-			//outStream.write((char*)&i, sizeof(long));
-			if ( write(outStream, &i, sizeof(long)) !=
-					sizeof(long) ) {
+			//		sizeof(int32_t)*urlInfos[i].m_numCatids);
+			//outStream.write((char*)&i, sizeof(int32_t));
+			if ( write(outStream, &i, sizeof(int32_t)) !=
+					sizeof(int32_t) ) {
 				printf("Error writing to outStream\n");
 				goto oldErrExit;
 			}
 			updateIndexesWritten++;
 			numIdsToUpdate += urlInfos[i].m_numCatids;
 		}
-		printf ( "Wrote %li urls and %li catids to update/add.\n",
+		printf ( "Wrote %"INT32" urls and %"INT32" catids to update/add.\n",
 			 updateIndexesWritten, numIdsToUpdate );
 		if ( updateIndexesWritten != numUpdateUrls )
-			printf ( "WARNING: Wrote %li Update Indexes, Should be"
-				 "%li!", updateIndexesWritten, numUpdateUrls );
+			printf ( "WARNING: Wrote %"INT32" Update Indexes, Should be"
+				 "%"INT32"!", updateIndexesWritten, numUpdateUrls );
 		// write out the urls to delete
 		urlp = 0;
-		for ( long i = 0; i < oldNumUrls; i++ ) {
-			short oldUrlLen = gbstrlen(&oldUrls[urlp]);
+		for ( int32_t i = 0; i < oldNumUrls; i++ ) {
+			int16_t oldUrlLen = gbstrlen(&oldUrls[urlp]);
 			if ( removeOldUrl[i] == 0 ) {
 				urlp += oldUrlLen + 1;
 				continue;
 			}
 			// write the url to remove
 			if ( oldUrlLen <= 0 )
-				printf("WARNING: ATTEMPTING TO WRITE %li "
-				       "LENGTH URL.\n", (long)oldUrlLen );
-			//outStream.write((char*)&oldUrlLen, sizeof(short));
-			if ( write(outStream, &oldUrlLen, sizeof(short)) !=
-					sizeof(short) ) {
+				printf("WARNING: ATTEMPTING TO WRITE %"INT32" "
+				       "LENGTH URL.\n", (int32_t)oldUrlLen );
+			//outStream.write((char*)&oldUrlLen, sizeof(int16_t));
+			if ( write(outStream, &oldUrlLen, sizeof(int16_t)) !=
+					sizeof(int16_t) ) {
 				printf("Error writing to outStream\n");
 				goto oldErrExit;
 			}
@@ -2269,60 +2269,60 @@ oldGoodExit:
 
 	// write the cats
 	//outStream.write((char*)rdfCats, sizeof(RdfCat)*numRdfCats);
-	for (long i = 0; i < numRdfCats; i++) {
-		//outStream.write((char*)&rdfCats[i].m_catid, sizeof(long));
-		if ( write(outStream, &rdfCats[i].m_catid, sizeof(long)) !=
-				sizeof(long) ) {
+	for (int32_t i = 0; i < numRdfCats; i++) {
+		//outStream.write((char*)&rdfCats[i].m_catid, sizeof(int32_t));
+		if ( write(outStream, &rdfCats[i].m_catid, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
-		//outStream.write((char*)&rdfCats[i].m_parentid, sizeof(long));
-		if ( write(outStream, &rdfCats[i].m_parentid, sizeof(long)) !=
-				sizeof(long) ) {
+		//outStream.write((char*)&rdfCats[i].m_parentid, sizeof(int32_t));
+		if ( write(outStream, &rdfCats[i].m_parentid, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
-		//outStream.write((char*)&rdfCats[i].m_numSymParents, sizeof(short));
-		//outStream.write((char*)&rdfCats[i].m_nameOffset, sizeof(long));
-		if ( write(outStream, &rdfCats[i].m_nameOffset, sizeof(long)) !=
-				sizeof(long) ) {
+		//outStream.write((char*)&rdfCats[i].m_numSymParents, sizeof(int16_t));
+		//outStream.write((char*)&rdfCats[i].m_nameOffset, sizeof(int32_t));
+		if ( write(outStream, &rdfCats[i].m_nameOffset, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
-		//outStream.write((char*)&rdfCats[i].m_nameLen, sizeof(short));
-		if ( write(outStream, &rdfCats[i].m_nameLen, sizeof(short)) !=
-				sizeof(short) ) {
+		//outStream.write((char*)&rdfCats[i].m_nameLen, sizeof(int16_t));
+		if ( write(outStream, &rdfCats[i].m_nameLen, sizeof(int16_t)) !=
+				sizeof(int16_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
-		//outStream.write((char*)&rdfCats[i].m_structureOffset, sizeof(long));
+		//outStream.write((char*)&rdfCats[i].m_structureOffset, sizeof(int32_t));
 		if ( write(outStream, &rdfCats[i].m_structureOffset,
-			   sizeof(long)) != sizeof(long) ) {
+			   sizeof(int32_t)) != sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
-		//outStream.write((char*)&rdfCats[i].m_contentOffset, sizeof(long));
+		//outStream.write((char*)&rdfCats[i].m_contentOffset, sizeof(int32_t));
 		if ( write(outStream, &rdfCats[i].m_contentOffset,
-			   sizeof(long)) != sizeof(long) ) {
+			   sizeof(int32_t)) != sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
-		//outStream.write((char*)&rdfCats[i].m_numUrls, sizeof(long));
-		if ( write(outStream, &rdfCats[i].m_numUrls, sizeof(long)) !=
-				sizeof(long) ) {
+		//outStream.write((char*)&rdfCats[i].m_numUrls, sizeof(int32_t));
+		if ( write(outStream, &rdfCats[i].m_numUrls, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
 	}
 	// write the symbolic parents
-	//for (long i = 0; i < numRdfCats; i++)
-	//	for (long s = 0; s < rdfCats[i].m_numSymParents; s++)
-	//		outStream.write((char*)&rdfCats[i].m_symParents[s], sizeof(long));
+	//for (int32_t i = 0; i < numRdfCats; i++)
+	//	for (int32_t s = 0; s < rdfCats[i].m_numSymParents; s++)
+	//		outStream.write((char*)&rdfCats[i].m_symParents[s], sizeof(int32_t));
 	// write the cat hashes
-	for (long i = 0; i < numRdfCats; i++) {
-		//outStream.write((char*)&rdfCats[i].m_catHash, sizeof(long));
-		if ( write(outStream, &rdfCats[i].m_catHash, sizeof(long)) !=
-				sizeof(long) ) {
+	for (int32_t i = 0; i < numRdfCats; i++) {
+		//outStream.write((char*)&rdfCats[i].m_catHash, sizeof(int32_t));
+		if ( write(outStream, &rdfCats[i].m_catHash, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			printf("Error writing cats to outStream.\n");
 			goto errExit;
 		}
@@ -2354,8 +2354,8 @@ oldGoodExit:
 	//outStream.seekp(0);
 	lseek(outStream, 0, SEEK_SET);
 	// write the number of urls at the start of the file
-	//outStream.write((char*)&numUrlInfos, sizeof(long));
-	if ( write(outStream, &numUrlInfos, sizeof(long)) != sizeof(long) ) {
+	//outStream.write((char*)&numUrlInfos, sizeof(int32_t));
+	if ( write(outStream, &numUrlInfos, sizeof(int32_t)) != sizeof(int32_t) ) {
 		printf("Error writing to outStream\n");
 		goto errExit;
 	}
@@ -2363,9 +2363,9 @@ oldGoodExit:
 	//outStream.seekp(endpos);
 	lseek(outStream, 0, SEEK_END);
 	// write the urls
-	for (long i = 0; i < numUrlInfos; i++) {
-		//outStream.write((char*)&urlInfos[i].m_hash, sizeof(long long));
-		//outStream.write((char*)&urlInfos[i].m_urlLen, sizeof(short));
+	for (int32_t i = 0; i < numUrlInfos; i++) {
+		//outStream.write((char*)&urlInfos[i].m_hash, sizeof(int64_t));
+		//outStream.write((char*)&urlInfos[i].m_urlLen, sizeof(int16_t));
 		//outStream.write(&urlBuffer[urlInfos[i].m_urlOffset],
 		//		sizeof(char)*urlInfos[i].m_urlLen);
 		//outStream.write((char*)&urlInfos[i].m_numCatids, sizeof(char));
@@ -2374,9 +2374,9 @@ oldGoodExit:
 			printf("Error writing to outStream\n");
 			goto errExit;
 		}
-		//outStream.write((char*)urlInfos[i].m_catids, sizeof(long)*
+		//outStream.write((char*)urlInfos[i].m_catids, sizeof(int32_t)*
 		//		urlInfos[i].m_numCatids);
-		long writeSize = sizeof(long)*urlInfos[i].m_numCatids;
+		int32_t writeSize = sizeof(int32_t)*urlInfos[i].m_numCatids;
 		if ( write(outStream, urlInfos[i].m_catids, writeSize) !=
 				writeSize ) {
 			printf("Error writing to outStream\n");
@@ -2396,7 +2396,7 @@ goodEnd:
 	if (urlBuffer)
 		free(urlBuffer);
 	if (urlInfos) {
-		for (long i = 0; i < numUrlInfos; i++) {
+		for (int32_t i = 0; i < numUrlInfos; i++) {
 			if (urlInfos[i].m_catids)
 				free(urlInfos[i].m_catids);
 		}
@@ -2423,7 +2423,7 @@ errExit:
 	if (urlBuffer)
 		free(urlBuffer);
 	if (urlInfos) {
-		for (long i = 0; i < numUrlInfos; i++) {
+		for (int32_t i = 0; i < numUrlInfos; i++) {
 			if (urlInfos[i].m_catids)
 				free(urlInfos[i].m_catids);
 		}

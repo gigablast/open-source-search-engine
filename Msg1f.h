@@ -18,8 +18,8 @@ class Msg1f {
 	
 	static bool init();
 
-	static bool getLog(long hostId, 
-			   long numBytes, 
+	static bool getLog(int32_t hostId, 
+			   int32_t numBytes, 
 			   void *state, 
 			   void ( *callback) (void *state, UdpSlot* slot));
 

@@ -39,33 +39,33 @@ class Cachedb {
 	void reset();
 
 	bool init    ( );
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 	bool verify  ( char *coll );
 	bool addColl ( char *coll, bool doVerify = true );
 
 	char getTypeFromKey ( char *key ) { return key[3]; }
 
 	// url and content hashes are the args
-	key_t makeStartKey ( long uh32 , long ch32 ) {
+	key_t makeStartKey ( int32_t uh32 , int32_t ch32 ) {
 		key_t k;
-		k.n1 = (unsigned long)uh32;
+		k.n1 = (uint32_t)uh32;
 		// clear hi bit, set hi bit when storing query results
 		// not not these
 		//k.n1 &= 0x7fffffff;
-		k.n0 = (unsigned long)ch32;
+		k.n0 = (uint32_t)ch32;
 		k.n0 <<= 32;
 		// del key
 		k.n0 &= 0xfffffffffffffffeLL;
 		return k;
 	};
 
-	key_t makeEndKey ( long uh32 , long ch32 ) {
+	key_t makeEndKey ( int32_t uh32 , int32_t ch32 ) {
 		key_t k;
-		k.n1 = (unsigned long)uh32;
+		k.n1 = (uint32_t)uh32;
 		// clear hi bit, set hi bit when storing query results
 		// not not these
 		//k.n1 &= 0x7fffffff;
-		k.n0 = (unsigned long)ch32;
+		k.n0 = (uint32_t)ch32;
 		// max object type i guess
 		k.n0 <<= 8;
 		k.n0 |= 0xff;
@@ -75,27 +75,27 @@ class Cachedb {
 		return k;
 	};
 
-	key_t makeStartKey2 ( long uh32 , long ch32 , long objectType ) {
+	key_t makeStartKey2 ( int32_t uh32 , int32_t ch32 , int32_t objectType ) {
 		key_t k = makeKey ( uh32 , ch32 , objectType );
 		// del key
 		k.n0 &= 0xfffffffffffffffeLL;
 		return k;
 	};
 
-	key_t makeEndKey2 ( long uh32 , long ch32 , long objectType ) {
+	key_t makeEndKey2 ( int32_t uh32 , int32_t ch32 , int32_t objectType ) {
 		key_t k = makeKey ( uh32 , ch32 , objectType );
 		// not a del key
 		k.n0 |= 0x01;
 		return k;
 	};
 
-	key_t makeKey ( long uh32 , long ch32 , uint8_t objectType ) {
+	key_t makeKey ( int32_t uh32 , int32_t ch32 , uint8_t objectType ) {
 		key_t k;
-		k.n1 = (unsigned long)uh32;
+		k.n1 = (uint32_t)uh32;
 		// clear hi bit, set hi bit when storing query results
 		// not not these
 		//k.n1 &= 0x7fffffff;
-		k.n0 = (unsigned long)ch32;
+		k.n0 = (uint32_t)ch32;
 		k.n0 <<= 8;
 		k.n0 |= objectType; // 1 byte
 		k.n0 <<= 24;

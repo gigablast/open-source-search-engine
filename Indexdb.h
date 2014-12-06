@@ -46,7 +46,7 @@ class Indexdb {
 	bool init ( );
 
 	// init the rebuild/secondary rdb, used by PageRepair.cpp
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 
 	bool setGroupIdTable();
 
@@ -60,39 +60,39 @@ class Indexdb {
 	// . get start/end keys for IndexList from a termId
 	// . keys correspond to the start/end of the IndexList for this termId
 	// . NOTE: score is complemented when stored in the key
-	key_t makeStartKey ( long long termId );
-	key_t makeEndKey   ( long long termId );
+	key_t makeStartKey ( int64_t termId );
+	key_t makeEndKey   ( int64_t termId );
 
 	// . make a 12-byte key from all these components
 	// . since it is 12 bytes, the big bit will be set
-	key_t makeKey ( long long          termId   , 
+	key_t makeKey ( int64_t          termId   , 
 			unsigned char      score    , 
-			unsigned long long docId    , 
+			uint64_t docId    , 
 			bool               isDelKey );
 
-	key_t makeFirstKey ( long long termId ) {
+	key_t makeFirstKey ( int64_t termId ) {
 		return makeKey ( termId , 255 , 0LL , true ); };
-	key_t makeLastKey  ( long long termId ) {
+	key_t makeLastKey  ( int64_t termId ) {
 		return makeKey ( termId , 0   , DOCID_MASK , false ); };
 
 	// get a termId from a prefixHash and termHash
-	long long getTermId ( long long prefixHash , long long termHash ) {
+	int64_t getTermId ( int64_t prefixHash , int64_t termHash ) {
 		return hash64 ( prefixHash , termHash ) & TERMID_MASK;};
 
 	// extract the termId from a key
-	long long getTermId ( key_t *k ) {
-		long long termId = 0LL;
+	int64_t getTermId ( key_t *k ) {
+		int64_t termId = 0LL;
 		memcpy ( &termId , ((char *)k) + 6 , 6 );
 		return termId ;
 	};
-	long long getTermId ( key_t k ) { return getTermId ( &k ); };
+	int64_t getTermId ( key_t k ) { return getTermId ( &k ); };
 
-	long long getDocId ( key_t k ) {
+	int64_t getDocId ( key_t k ) {
 		char *rec = (char *)&k;
-		return ((*(unsigned long long *)(rec)) >> 2) & DOCID_MASK; };
+		return ((*(uint64_t *)(rec)) >> 2) & DOCID_MASK; };
 
-	long long getDocId ( key_t *k ) {
-		return ((*(unsigned long long *)(k)) >> 2) & DOCID_MASK; };
+	int64_t getDocId ( key_t *k ) {
+		return ((*(uint64_t *)(k)) >> 2) & DOCID_MASK; };
 
 	unsigned char getScore ( key_t k ) {
 		char *rec = (char *)&k;
@@ -101,31 +101,31 @@ class Indexdb {
 	unsigned char getScore ( char *k ) {return ~k[5]; };
 
 	/*
-	unsigned long getGroupId ( long long termId, long long docId ) {
+	uint32_t getGroupId ( int64_t termId, int64_t docId ) {
 		if ( g_conf.m_fullSplit )
 			return g_titledb.getGroupId ( docId );
 //#ifdef SPLIT_INDEXDB
 		if ( g_conf.m_indexdbSplit > 1 ) {
-			unsigned long groupId = (unsigned long)(termId >> 16);
+			uint32_t groupId = (uint32_t)(termId >> 16);
 			groupId >>= m_groupIdShift;
-			unsigned long offset = docId & DOCID_OFFSET_MASK;
+			uint32_t offset = docId & DOCID_OFFSET_MASK;
 			return m_groupIdTable[groupId+(offset*m_numGroups)];
 		}
 //#else
 		else
-			return (unsigned long)(termId >> 16) &
+			return (uint32_t)(termId >> 16) &
 				g_hostdb.m_groupMask;
 //#endif
 	} 
 
-	unsigned long getGroupIdFromKey ( key_t *k ) {
+	uint32_t getGroupIdFromKey ( key_t *k ) {
 		if ( g_conf.m_fullSplit )
 			return g_titledb.getGroupId ( getDocId( k) );
 //#ifdef SPLIT_INDEXDB
 		if ( g_conf.m_indexdbSplit > 1 ) {
-			unsigned long groupId = k->n1 & g_hostdb.m_groupMask;
+			uint32_t groupId = k->n1 & g_hostdb.m_groupMask;
 			groupId >>= m_groupIdShift;
-			unsigned long offset = (k->n0 >> 2) & DOCID_OFFSET_MASK;
+			uint32_t offset = (k->n0 >> 2) & DOCID_OFFSET_MASK;
 			return m_groupIdTable[groupId+(offset*m_numGroups)];
 		}
 //#else
@@ -139,21 +139,21 @@ class Indexdb {
 	// are not split by docid into multiple groups. reduces disk seeks
 	// while spidering, cuz we use such terms for deduping and for
 	// doing quotas.
-	unsigned long getNoSplitGroupId ( key_t *k ) {
+	uint32_t getNoSplitGroupId ( key_t *k ) {
 		// keep it simple now
 		return k->n1 & g_hostdb.m_groupMask;
-		//unsigned long bgid = getBaseGroupId(k);
+		//uint32_t bgid = getBaseGroupId(k);
 		//return getSplitGroupId(bgid,0);
 	}
 	*/
 
 	/*
-	unsigned long getBaseGroupId ( key_t *k ) {
+	uint32_t getBaseGroupId ( key_t *k ) {
 		return k->n1 & g_hostdb.m_groupMask;
 	}
 
-	unsigned long getSplitGroupId ( unsigned long baseGroupId,
-					unsigned long offset ) {
+	uint32_t getSplitGroupId ( uint32_t baseGroupId,
+					uint32_t offset ) {
 		if ( g_hostdb.m_numShards <= 1 ) return 0;
 		baseGroupId >>= m_groupIdShift;
 		return m_groupIdTable[baseGroupId+(offset*m_numGroups)];
@@ -164,9 +164,9 @@ class Indexdb {
 	// . accesses RdbMap to estimate size of the indexList for this termId
 	// . returns a pretty tight upper bound if indexList not truncated
 	// . if truncated, it's does linear interpolation (use exponential!)
-	long long getTermFreq ( collnum_t collnum , long long termId ) ;
+	int64_t getTermFreq ( collnum_t collnum , int64_t termId ) ;
 
-	//long getTruncationLimit ( ){return g_conf.m_indexdbTruncationLimit;};
+	//int32_t getTruncationLimit ( ){return g_conf.m_indexdbTruncationLimit;};
 
 	//RdbCache *getCache ( ) { return &m_rdb.m_cache; };
 	Rdb      *getRdb   ( ) { return &m_rdb; };
@@ -180,10 +180,10 @@ class Indexdb {
 //#ifdef SPLIT_INDEXDB
 	// . groupId Table, for getting the correct group id based
 	//   on type bits of termId and lower bits of docId
-	unsigned long *m_groupIdTable;
-	long m_groupIdTableSize;
-	long m_groupIdShift;
-	long m_numGroups;
+	uint32_t *m_groupIdTable;
+	int32_t m_groupIdTableSize;
+	int32_t m_groupIdShift;
+	int32_t m_numGroups;
 //#endif
 };
 

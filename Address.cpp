@@ -10,7 +10,7 @@ class Address *g_address; // for debug
 //
 // if you have "in <city/adm1 name>" in same sentence as street then
 // require that that item be a city/adm1 in any address you try to do.
-// i would set "long long inPrepPhrase" to be the city/adm1 place hash. 
+// i would set "int64_t inPrepPhrase" to be the city/adm1 place hash. 
 // so if it is not zero, check for it. but add it with addProperPlaces()
 // first to see if it added anything!! then we can 
 //
@@ -75,33 +75,33 @@ class Address *g_address; // for debug
 #include "sort.h"
 #include "HttpServer.h"
 
-//#define CF_UNIQUE (((unsigned long long)1LL)<<63)
+//#define CF_UNIQUE (((uint64_t)1LL)<<63)
 
 bool getBestLatLon ( RdbList *list      ,
 		     double  *bestLat   ,
 		     double  *bestLon   ,
-		     long    *numVotes  ,
-		     long     niceness  ,
-		     long     winnerSnh ) ;
+		     int32_t    *numVotes  ,
+		     int32_t     niceness  ,
+		     int32_t     winnerSnh ) ;
 char *getLatLonPtrFromStr ( char *data ) ;
 void getLatLonFromStr ( char *data , double *lat , double *lon);
 char *getStateAbbr ( uint64_t bit ) ;
-long long getWordXorHash ( char *s ) ;
-long long getWordXorHash2 ( char *s ) ;
-long getStateOffset ( long long *h ) ;
+int64_t getWordXorHash ( char *s ) ;
+int64_t getWordXorHash2 ( char *s ) ;
+int32_t getStateOffset ( int64_t *h ) ;
 class StateDesc *getStateDescFromBits ( uint64_t bit ) ;
 // returns 0 if not a state:
-uint64_t getStateBitFromHash ( long long *h ) ;
-static bool setHashes ( class Place *p , Words *ww , long niceness ) ;
+uint64_t getStateBitFromHash ( int64_t *h ) ;
+static bool setHashes ( class Place *p , Words *ww , int32_t niceness ) ;
 
 static bool    addIndicator ( char *s     , char bit , float boost );
-static bool    addIndicator ( long long h , char bit , float boost );
-//static void  printAddress ( class Address *A , class SafeBuf *pbuf , long i);
+static bool    addIndicator ( int64_t h , char bit , float boost );
+//static void  printAddress ( class Address *A , class SafeBuf *pbuf , int32_t i);
 static void    printPlaces  ( PlaceMem *pm , SafeBuf *pbuf ,
 			      class Sections *sections ,
 			      class Address *base ) ;
 static bool getZipLatLon ( char  *zip    ,
-			   long   zipLen ,
+			   int32_t   zipLen ,
 			   float *zipLat ,
 			   float *zipLon ) ;
 
@@ -110,54 +110,54 @@ static bool getZipLatLon ( char  *zip    ,
 //
 static bool generatePlacesFile ( ) ;
 static bool loadPlaces ( ) ;
-class PlaceDesc *getState_new ( uint64_t pd64 , uint8_t crid , long niceness );
-PlaceDesc *getState2_new ( char *state , uint8_t crid , long niceness ) ;
+class PlaceDesc *getState_new ( uint64_t pd64 , uint8_t crid , int32_t niceness );
+PlaceDesc *getState2_new ( char *state , uint8_t crid , int32_t niceness ) ;
 class PlaceDesc *getCity_new ( uint64_t ch64 , 
 			       char *stateAbbr ,
 			       uint8_t crid ,
-			       long niceness ) ;
+			       int32_t niceness ) ;
 class PlaceDesc *getCity2_new ( char *city ,
 				char *stateAbbr ,
 				uint8_t crid ,
-				long niceness ) ;
+				int32_t niceness ) ;
 PlaceDesc *getCity3_new ( uint64_t ch64 , 
 			  uint64_t stateHash64,
 			  uint8_t crid ,
-			  long niceness ) ;
-bool getLongestPlaceName_new ( long i,
-			       long alnumPos,
+			  int32_t niceness ) ;
+bool getLongestPlaceName_new ( int32_t i,
+			       int32_t alnumPos,
 			       Words *w,
 			       // must match! PDF_CITY|STATE|COUNTRY
 			       uint8_t placeType,
 			       uint8_t crid, // can be CRID_ANY
 			       char *stateAbbr, // can be NULL
 			       uint64_t *placeHash64,
-			       long *placeAlnumA,
-			       long *placeAlnumB,
-			       long *placeA,
-			       long *placeB ,
+			       int32_t *placeAlnumA,
+			       int32_t *placeAlnumB,
+			       int32_t *placeA,
+			       int32_t *placeB ,
 			       // set to most popular match
 			       PlaceDesc **pdp ) ;
-bool getZip_new ( long a , 
-		  long alnumPos , 
+bool getZip_new ( int32_t a , 
+		  int32_t alnumPos , 
 		  Words *words ,
 		  uint64_t *zipHash64 ,
 		  uint64_t *zipCityHash64 ,
 		  uint64_t *zipStateHash64 ,
-		  long *zipAlnumA,
-		  long *zipAlnumB,
-		  long *zipA,
-		  long *zipB ,
+		  int32_t *zipAlnumA,
+		  int32_t *zipAlnumB,
+		  int32_t *zipA,
+		  int32_t *zipB ,
 		  float *zipLat,
 		  float *zipLon) ;
 
-PlaceDesc *getMostPopularPlace_new ( long long cityHash64, 
+PlaceDesc *getMostPopularPlace_new ( int64_t cityHash64, 
 				     uint8_t crid ,
 				     uint8_t placeType,
-				     long niceness );
+				     int32_t niceness );
 
 char *g_pbuf = NULL;
-long  g_pbufSize = 0;
+int32_t  g_pbufSize = 0;
 HashTableX g_nameTable;
 
 char *PlaceDesc::getOfficialName ( ) {
@@ -194,7 +194,7 @@ static HashTableX g_aliases;
 static HashTableX g_zips;
 
 char *g_cityBuf     = NULL;
-long  g_cityBufSize = 0;
+int32_t  g_cityBufSize = 0;
 
 // . NOW each slot in the g_cities has a ptr to a CityDesc in SafeBuf g_cityBuf
 // . so now we can put all the alternate names and aliases into the same table
@@ -209,7 +209,7 @@ public:
 };
 
 //bool setFromStr(Address *a,char *s,pbits_t flags , 
-//		Place *places , long *np , long maxPlaces, long niceness );
+//		Place *places , int32_t *np , int32_t maxPlaces, int32_t niceness );
 
 static uint64_t  getAddressHash ( Place *street ,
 				  Place *city   ,
@@ -244,9 +244,9 @@ public:
 	// a single byte country id (converted to from a 2 char country id)
 	//uint8_t m_crid;
 	// hash of the city it is in
-	long long m_cityHash;
+	int64_t m_cityHash;
 	// offset into g_cityBuf of the city name
-	long m_cityOffset;
+	int32_t m_cityOffset;
 	// now we use the adm1 bits since US-only now
 	uint64_t m_adm1Bits;
 	// lat/lon of centroid. for sorting by dist when user's zip is known
@@ -334,7 +334,7 @@ static StateDesc s_states[] = {
 #include "StopWords.h"
 static HashTableX s_doyTable;
 static bool       s_doyInit = false;
-long getDayOfWeek ( long long h ) {
+int32_t getDayOfWeek ( int64_t h ) {
 	if ( ! s_doyInit ) {
 		s_doyInit = initWordTable(&s_doyTable, s_days ,sizeof(s_days),
 					  "doytbl");
@@ -342,7 +342,7 @@ long getDayOfWeek ( long long h ) {
 	} 
 	// . get from table
 	// . score should be 1 for sunday i guess
-	long score = s_doyTable.getScore ( &h );
+	int32_t score = s_doyTable.getScore ( &h );
 	// make it 0-6
 	score = (score-1) % 7;
 	// that's it
@@ -440,200 +440,200 @@ void Addresses::reset ( ) {
 	m_uniqueStreetHashes = 0;
 }
 
-static long long h_court;
-static long long h_i;
-static long long h_interstate;
-static long long h_page    ;
-static long long h_corner  ;
-static long long h_between ;
-static long long h_btwn    ;
-static long long h_bet     ;
-static long long h_streets ;
-static long long h_sts     ;
-static long long h_at      ;
-static long long h_come    ;
-static long long h_is      ;
-static long long h_located ;
-static long long h_intersection;
-static long long h_law     ;
-static long long h_address ;
-static long long h_added   ;
-static long long h_copy    ;
-static long long h_search  ;
-static long long h_find    ;
-static long long h_go      ;
-static long long h_town    ;
-static long long h_city    ;
-static long long h_street  ;
-static long long h_telephone; 
-static long long h_tel       ;
-static long long h_ph       ;
-static long long h_fax      ;
-static long long h_where   ;
-static long long h_location;
-static long long h_venue   ;
-static long long h_map     ;
-static long long h_office  ;
-static long long h_center  ;
-static long long h_mailing ;
-static long long h_mail    ;
-static long long h_snail   ;
-static long long h_edit    ;
-static long long h_email   ;
-static long long h_phone   ;
-static long long h_inc     ;
-static long long h_llc     ;
-static long long h_review  ;
-static long long h_reviews ;
-static long long h_write   ;
-static long long h_add          ; 
-static long long h_view         ; 
-static long long h_favorites    ; 
-static long long h_more         ; 
-static long long h_info         ; 
-static long long h_information  ; 
-static long long h_the          ; 
-static long long h_in           ; 
-static long long h_a            ; 
-static long long h_paseo        ; 
-static long long h_de           ; 
-static long long h_del          ; 
-static long long h_all          ; 
-static long long h_rights       ; 
-static long long h_reserved     ; 
-static long long h_contact      ; 
-static long long h_us           ; 
-static long long h_by           ; 
-static long long h_of           ; 
-static long long h_for          ; 
-static long long h_arrangements ; 
-static long long h_arranged     ; 
-static long long h_sponsored    ; 
-static long long h_to        ; 
-static long long h_every     ; 
-static long long h_p         ; 
-static long long h_b         ; 
-static long long h_hwy       ; 
-static long long h_state     ; 
-static long long h_county    ; 
-static long long h_cnty      ; 
-static long long h_cty       ; 
-static long long h_road      ; 
-static long long h_route     ; 
-static long long h_rte       ; 
-static long long h_rt        ; 
-static long long h_highway   ; 
-static long long h_hiway     ; 
-static long long h_cr        ; 
-static long long h_o         ;
-static long long h_po        ;
-static long long h_post      ;
-static long long h_box       ;
-static long long h_top       ; 
-static long long h_one       ; 
-static long long h_noon      ; 
-static long long h_midnight  ; 
-static long long h_daily     ; 
-static long long h_st        ; 
-static long long h_nd        ; 
-static long long h_rd        ; 
-static long long h_th        ; 
-static long long h_away      ; 
-static long long h_results   ; 
-static long long h_days      ; 
-static long long h_blocks    ; 
-static long long h_block     ; 
-static long long h_miles     ; 
-static long long h_mile      ; 
-static long long h_year      ;
-static long long h_years     ;
-static long long h_yr        ;
-static long long h_yrs       ;
-static long long h_hours     ; 
-static long long h_hrs       ; 
-static long long h_hour      ; 
-static long long h_hr        ; 
-static long long h_mi        ; 
-static long long h_kilometers; 
-static long long h_km        ; 
-static long long h_copyright ; 
-static long long h_and       ; 
-static long long h_or        ; 
-static long long h_suite     ; 
-static long long h_ste       ; 
-static long long h_bldg      ; 
-static long long h_bld       ; 
-static long long h_building  ; 
-static long long h_unit      ; 
-static long long h_room      ; 
-static long long h_pier      ; 
-static long long h_rm        ; 
-static long long h_run ;
-static long long h_ne        ; 
-static long long h_nw        ; 
-static long long h_se        ; 
-static long long h_sw        ; 
-static long long h_n         ; 
-static long long h_s         ; 
-static long long h_e         ; 
-static long long h_w         ; 
-static long long h_north;
-static long long h_northeast;
-static long long h_northwest;
-static long long h_east;
-static long long h_west;
-static long long h_south;
-static long long h_southeast;
-static long long h_southwest;
-static long long h_heart ;
-static long long h_core  ;
-static long long h_least ;
-static long long h_most  ;
-static long long h_this  ;
-static long long h_appeared  ;
-static long long h_role  ;
-static long long h_studied;
-static long long h_prize;
-static long long h_finish;
-static long long h_door;
-static long long h_entrance;
-static long long h_area;
-static long long h_left  ;
-static long long h_right ;
-static long long h_stare  ;
-static long long h_sea  ;
-static long long h_discount  ;
-static long long h_discounted  ;
-static long long h_www;
-static long long h_gaze   ;
-static long long h_look  ;
-static long long h_looking;
-static long long h_be ;
-static long long h_determined ;
-static long long h_call ;
-static long long h_details;
-static long long h_tba;
-static long long h_avenue;
-static long long h_ave;
-static long long h_register;
-static long long h_sign;
-static long long h_up;
-static long long h_signup;
-static long long h_tickets;
-static long long h_purchase;
-static long long h_get;
-static long long h_enroll;
-static long long h_buy;
-static long long h_presale ;
-static long long h_pre ;
-static long long h_sale ;
-static long long h_on ;
-static long long h_sales ;
-static long long h_end ;
-static long long h_begin ;
-static long long h_start ;
-static long long h_am;
-static long long h_fm;
+static int64_t h_court;
+static int64_t h_i;
+static int64_t h_interstate;
+static int64_t h_page    ;
+static int64_t h_corner  ;
+static int64_t h_between ;
+static int64_t h_btwn    ;
+static int64_t h_bet     ;
+static int64_t h_streets ;
+static int64_t h_sts     ;
+static int64_t h_at      ;
+static int64_t h_come    ;
+static int64_t h_is      ;
+static int64_t h_located ;
+static int64_t h_intersection;
+static int64_t h_law     ;
+static int64_t h_address ;
+static int64_t h_added   ;
+static int64_t h_copy    ;
+static int64_t h_search  ;
+static int64_t h_find    ;
+static int64_t h_go      ;
+static int64_t h_town    ;
+static int64_t h_city    ;
+static int64_t h_street  ;
+static int64_t h_telephone; 
+static int64_t h_tel       ;
+static int64_t h_ph       ;
+static int64_t h_fax      ;
+static int64_t h_where   ;
+static int64_t h_location;
+static int64_t h_venue   ;
+static int64_t h_map     ;
+static int64_t h_office  ;
+static int64_t h_center  ;
+static int64_t h_mailing ;
+static int64_t h_mail    ;
+static int64_t h_snail   ;
+static int64_t h_edit    ;
+static int64_t h_email   ;
+static int64_t h_phone   ;
+static int64_t h_inc     ;
+static int64_t h_llc     ;
+static int64_t h_review  ;
+static int64_t h_reviews ;
+static int64_t h_write   ;
+static int64_t h_add          ; 
+static int64_t h_view         ; 
+static int64_t h_favorites    ; 
+static int64_t h_more         ; 
+static int64_t h_info         ; 
+static int64_t h_information  ; 
+static int64_t h_the          ; 
+static int64_t h_in           ; 
+static int64_t h_a            ; 
+static int64_t h_paseo        ; 
+static int64_t h_de           ; 
+static int64_t h_del          ; 
+static int64_t h_all          ; 
+static int64_t h_rights       ; 
+static int64_t h_reserved     ; 
+static int64_t h_contact      ; 
+static int64_t h_us           ; 
+static int64_t h_by           ; 
+static int64_t h_of           ; 
+static int64_t h_for          ; 
+static int64_t h_arrangements ; 
+static int64_t h_arranged     ; 
+static int64_t h_sponsored    ; 
+static int64_t h_to        ; 
+static int64_t h_every     ; 
+static int64_t h_p         ; 
+static int64_t h_b         ; 
+static int64_t h_hwy       ; 
+static int64_t h_state     ; 
+static int64_t h_county    ; 
+static int64_t h_cnty      ; 
+static int64_t h_cty       ; 
+static int64_t h_road      ; 
+static int64_t h_route     ; 
+static int64_t h_rte       ; 
+static int64_t h_rt        ; 
+static int64_t h_highway   ; 
+static int64_t h_hiway     ; 
+static int64_t h_cr        ; 
+static int64_t h_o         ;
+static int64_t h_po        ;
+static int64_t h_post      ;
+static int64_t h_box       ;
+static int64_t h_top       ; 
+static int64_t h_one       ; 
+static int64_t h_noon      ; 
+static int64_t h_midnight  ; 
+static int64_t h_daily     ; 
+static int64_t h_st        ; 
+static int64_t h_nd        ; 
+static int64_t h_rd        ; 
+static int64_t h_th        ; 
+static int64_t h_away      ; 
+static int64_t h_results   ; 
+static int64_t h_days      ; 
+static int64_t h_blocks    ; 
+static int64_t h_block     ; 
+static int64_t h_miles     ; 
+static int64_t h_mile      ; 
+static int64_t h_year      ;
+static int64_t h_years     ;
+static int64_t h_yr        ;
+static int64_t h_yrs       ;
+static int64_t h_hours     ; 
+static int64_t h_hrs       ; 
+static int64_t h_hour      ; 
+static int64_t h_hr        ; 
+static int64_t h_mi        ; 
+static int64_t h_kilometers; 
+static int64_t h_km        ; 
+static int64_t h_copyright ; 
+static int64_t h_and       ; 
+static int64_t h_or        ; 
+static int64_t h_suite     ; 
+static int64_t h_ste       ; 
+static int64_t h_bldg      ; 
+static int64_t h_bld       ; 
+static int64_t h_building  ; 
+static int64_t h_unit      ; 
+static int64_t h_room      ; 
+static int64_t h_pier      ; 
+static int64_t h_rm        ; 
+static int64_t h_run ;
+static int64_t h_ne        ; 
+static int64_t h_nw        ; 
+static int64_t h_se        ; 
+static int64_t h_sw        ; 
+static int64_t h_n         ; 
+static int64_t h_s         ; 
+static int64_t h_e         ; 
+static int64_t h_w         ; 
+static int64_t h_north;
+static int64_t h_northeast;
+static int64_t h_northwest;
+static int64_t h_east;
+static int64_t h_west;
+static int64_t h_south;
+static int64_t h_southeast;
+static int64_t h_southwest;
+static int64_t h_heart ;
+static int64_t h_core  ;
+static int64_t h_least ;
+static int64_t h_most  ;
+static int64_t h_this  ;
+static int64_t h_appeared  ;
+static int64_t h_role  ;
+static int64_t h_studied;
+static int64_t h_prize;
+static int64_t h_finish;
+static int64_t h_door;
+static int64_t h_entrance;
+static int64_t h_area;
+static int64_t h_left  ;
+static int64_t h_right ;
+static int64_t h_stare  ;
+static int64_t h_sea  ;
+static int64_t h_discount  ;
+static int64_t h_discounted  ;
+static int64_t h_www;
+static int64_t h_gaze   ;
+static int64_t h_look  ;
+static int64_t h_looking;
+static int64_t h_be ;
+static int64_t h_determined ;
+static int64_t h_call ;
+static int64_t h_details;
+static int64_t h_tba;
+static int64_t h_avenue;
+static int64_t h_ave;
+static int64_t h_register;
+static int64_t h_sign;
+static int64_t h_up;
+static int64_t h_signup;
+static int64_t h_tickets;
+static int64_t h_purchase;
+static int64_t h_get;
+static int64_t h_enroll;
+static int64_t h_buy;
+static int64_t h_presale ;
+static int64_t h_pre ;
+static int64_t h_sale ;
+static int64_t h_on ;
+static int64_t h_sales ;
+static int64_t h_end ;
+static int64_t h_begin ;
+static int64_t h_start ;
+static int64_t h_am;
+static int64_t h_fm;
 
 // . first identifies all the "Places" using the rules above
 // . then clusters the "Places" together into an "Address"
@@ -645,23 +645,23 @@ bool Addresses::set ( Sections  *sections    ,
 		      Bits      *bits        ,
 		      TagRec    *gr          ,
 		      Url       *url         ,
-		      long long  docId       ,
+		      int64_t  docId       ,
 		      //char      *coll        ,
 		      collnum_t collnum ,
-		      long       domHash32   ,
-		      long       ip          ,
-		      //long       tagPairHash ,
-		      long       niceness    ,
+		      int32_t       domHash32   ,
+		      int32_t       ip          ,
+		      //int32_t       tagPairHash ,
+		      int32_t       niceness    ,
 		      SafeBuf   *pbuf        ,
 		      void      *state       ,
 		      void     (*callback) (void *state) ,
 		      uint8_t    contentType ,
 		      // from XmlDoc::ptr_addressReply in a title rec
 		      //char      *addressReply      ,
-		      //long       addressReplySize  ,
+		      //int32_t       addressReplySize  ,
 		      //bool       addressReplyValid ,
 		      char      *siteTitleBuf     ,
-		      long       siteTitleBufSize ,
+		      int32_t       siteTitleBufSize ,
 		      XmlDoc    *xd ) {
 
 	reset();
@@ -702,7 +702,7 @@ bool Addresses::set ( Sections  *sections    ,
 	if ( ! s_setHashes ) {
 		// flag it
 		s_setHashes = true;
-		// shortcuts
+		// int16_tcuts
 		h_i    = hash64n ("i");
 		h_court      = hash64n ("court");
 		h_interstate = hash64n ("interstate");
@@ -953,7 +953,7 @@ bool Addresses::set ( Sections  *sections    ,
 	// returns true with g_errno set on error
 	if ( ! pt.set ( 8,4,256,NULL,0,false,m_niceness) ) return true;
 
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// get it
 		Address *a = &m_addresses[i];
 		// must be inlined
@@ -963,7 +963,7 @@ bool Addresses::set ( Sections  *sections    ,
 		// must not have a place name in place of the street name
 		if ( a->m_street.m_flags2 & PLF2_IS_NAME ) continue;
 		// hash into table only if valid
-		long long h1 = a->m_name1.m_hash;
+		int64_t h1 = a->m_name1.m_hash;
 		// adjust it since setHashes() xors in 0x123456 for street
 		// names that are actually place names in disguise
 		h1 ^= 0x123456;
@@ -975,7 +975,7 @@ bool Addresses::set ( Sections  *sections    ,
 		if ( a->m_name1.m_strlen && ! pt.addKey ( (char *)&h1, &a ) ) 
 			return true;
 		// same for second place name
-		long long h2 = a->m_name2.m_hash;
+		int64_t h2 = a->m_name2.m_hash;
 		// adjust it since setHashes() xors in 0x123456 for street
 		// names that are actually place names in disguise
 		h2 ^= 0x123456;
@@ -990,7 +990,7 @@ bool Addresses::set ( Sections  *sections    ,
 
 	// now scan our addresses that have a place name in place of
 	// the street name and see if we can get a match
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// get it
 		Address *a = &m_addresses[i];
 		// we want a place name in place of the street name now
@@ -998,21 +998,21 @@ bool Addresses::set ( Sections  *sections    ,
 		// . USE the STREET here, not the name
 		// . it should already have had the 0x123456 xor'ed in
 		//   in the logic below because PLF2_IS_NAME is set.
-		long long h1 = a->m_street.m_hash;
+		int64_t h1 = a->m_street.m_hash;
 		// incorporate the adm1 and city and ctry
 		h1 = hash64 ( a->m_city.m_hash , h1 );
 		h1 = hash64 ( a->m_adm1.m_hash , h1 );
 		h1 = hash64 ( a->m_ctry.m_hash , h1 );
 		// note it
-		//logf(LOG_DEBUG,"add: lookuphash=%llx",a->m_street.m_hash);
+		//logf(LOG_DEBUG,"add: lookuphash=%"XINT64"",a->m_street.m_hash);
 		// test that
 		//if ( a->m_street.m_hash == 0x14a2446f2d5a2647LL ) {
 		//	setHashes ( &a->m_street );
-		//	logf(LOG_DEBUG,"Add: had=%llx",a->m_street.m_hash);
+		//	logf(LOG_DEBUG,"Add: had=%"XINT64"",a->m_street.m_hash);
 		//}
 		// get hash of street, i.e. hash of name
 		// see if we have that in the table
-		long slot = pt.getSlot ( &h1 );
+		int32_t slot = pt.getSlot ( &h1 );
 		// skip if not there
 		if ( slot < 0 ) continue;
 		// kewl, we got a match, get the matching address
@@ -1021,7 +1021,7 @@ bool Addresses::set ( Sections  *sections    ,
 		// . now use it, i.e. replace ourselves with its info
 		// . this logic is from above.
 		//
-		// shortcuts
+		// int16_tcuts
 		Place *name1  = &a->m_name1;
 		Place *street = &a->m_street;
 		// street name was name1
@@ -1064,7 +1064,7 @@ bool Addresses::set ( Sections  *sections    ,
 	try { m_msg2c = new (Msg2c); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("addr: msg2c: new(%i): %s", sizeof(Msg2c), 
+		log("addr: msg2c: new(%"INT32"): %s", (int32_t)sizeof(Msg2c), 
 		    mstrerror(g_errno));
 		// return true on error with g_errno set
 		return true;
@@ -1073,7 +1073,7 @@ bool Addresses::set ( Sections  *sections    ,
 
 	// use niceness 0 if we are a turk injecting
 	/*
-	long niceness2 = m_niceness;
+	int32_t niceness2 = m_niceness;
 	if ( m_xd->m_oldsrValid &&
 	     m_xd->m_oldsr.m_isInjecting &&
 	     m_xd->m_oldsr.m_isPageInject )
@@ -1148,8 +1148,8 @@ bool Addresses::updateAddresses ( ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// parse this reply
-		long  addrNum   = *(long *)p; p += 4;
-		long  replySize = *(long *)p; p += 4;
+		int32_t  addrNum   = *(int32_t *)p; p += 4;
+		int32_t  replySize = *(int32_t *)p; p += 4;
 		char *reply     = p; p += replySize;
 		// sanity check
 		if ( addrNum >= m_am.getNumPtrs() ) { char *xx=NULL;*xx=0;}
@@ -1160,13 +1160,13 @@ bool Addresses::updateAddresses ( ) {
 		// a bunch of suites in 500 marquette ave.
 		//if ( replySize > 3000 ) { char *xx=NULL;*xx=0; }
 		if ( replySize > 5000 ) 
-			logf(LOG_DEBUG,"addr: got large addr reply of %li "
+			logf(LOG_DEBUG,"addr: got large addr reply of %"INT32" "
 			     "bytes",replySize);
 		// sanity check
 		if ( replySize < 0 ) { char *xx=NULL;*xx=0; }
 		// sanity check
 		if ( p > pend ) { char *xx=NULL;*xx=0; }
-		// shortcut
+		// int16_tcut
 		Address *a = (Address *)m_am.getPtr(addrNum);
 		// make sure never got a reply for this
 		if ( a->m_flags & AF_GOT_REPLY ) { char *xx=NULL;*xx=0; }
@@ -1177,7 +1177,7 @@ bool Addresses::updateAddresses ( ) {
 		// . both reply types now have this same header
 		char *p = reply; // + 1;
 		// # of voters for the following lat/lon
-		long numVotes = *(long *)p; p += 4;
+		int32_t numVotes = *(int32_t *)p; p += 4;
 		// then the lat lon
 		double lat = *(double *)p; p += sizeof(double);
 		double lon = *(double *)p; p += sizeof(double);
@@ -1210,13 +1210,13 @@ bool Addresses::updateAddresses ( ) {
 			// assume no best
 			a->m_bestPlacedbName = NULL;
 			// max score
-			long max = 0;
+			int32_t max = 0;
 			// set the best one
 			for ( ; ; str += gbstrlen(str) + 1 ) {
 				// stop if that was it
 				if ( str >= replyEnd ) break;
 				// get score
-				long vote = *(long *)str;
+				int32_t vote = *(int32_t *)str;
 				// skip vote
 				str += 4;
 				// skip if not max
@@ -1243,7 +1243,7 @@ bool Addresses::updateAddresses ( ) {
 		// parse out street from reply (name1;name2;suite;street;...)
 		char *sp = p; // reply;
 		// reset  count
-		long scount = 0;
+		int32_t scount = 0;
 		char *replyEnd = reply+replySize;
 		// advance
 		for ( ; sp < replyEnd && scount < 3 ; sp++ )
@@ -1269,7 +1269,7 @@ bool Addresses::updateAddresses ( ) {
 			return false;
 		}
 
-		// shortcuts
+		// int16_tcuts
 		//Place *name1  = a->m_name1;
 		//Place *street = a->m_street;
 		// now we just ptr swap
@@ -1326,7 +1326,7 @@ bool Addresses::updateAddresses ( ) {
 	// . auto verify place names if in <eventVenue> tag
 	// . supports injection of our xml format
 	//
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -1341,7 +1341,7 @@ bool Addresses::updateAddresses ( ) {
 		// set this too!
 		if ( aa->m_name2 ) aa->m_name2->m_unverifiedAddress = aa;
 		// get word pos
-		long a = name1->m_a;
+		int32_t a = name1->m_a;
 		// skip if not in doc
 		if ( a < 0 ) continue;
 		// get section its in
@@ -1368,7 +1368,7 @@ bool Addresses::updateAddresses ( ) {
 
 	/*
 	// loop over all addresses
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// get address
 		Address *a = &m_addresses[i];
 		// get the reply byte
@@ -1394,18 +1394,18 @@ bool Addresses::updateAddresses ( ) {
 	setAmbiguousFlags();
 
 	// keep count if unique street hashes
-	long count = 0;
+	int32_t count = 0;
 	// keep a table
 	char tmp[5000];
 	HashTableX ds; ds.set(8,0,300,tmp,5000,false,m_niceness,"addr-strhsh");
 	// count how many distinct street hashes we have
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get address
 		Address *a = (Address *)m_am.getPtr(i);//&m_addresses[i];
 		// get street hash
-		long long sh = a->m_street->m_hash;
+		int64_t sh = a->m_street->m_hash;
 		// skip if already got
 		if ( ds.isInTable ( &sh ) ) continue;
 		// add it. i guess ignore if on error
@@ -1416,8 +1416,8 @@ bool Addresses::updateAddresses ( ) {
 	// set it
 	m_uniqueStreetHashes = count;
 
-	// shortcuts
-	long x , y;
+	// int16_tcuts
+	int32_t x , y;
 	wbit_t *bits = m_bits->m_bits;
 	unsigned char vflags = 0;
 	vflags |= AF_VERIFIED_STREET;
@@ -1427,7 +1427,7 @@ bool Addresses::updateAddresses ( ) {
 	// now that we have verified the addresses, set the D_IS_IN_ADDRESS
 	// bit for those words in verified addresses... but only for
 	// words in verified portions or any portion of an inlined address
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -1532,9 +1532,9 @@ bool Addresses::updateAddresses ( ) {
 	nt1.set ( 8,8,256,ntbuf1,5000,true,m_niceness,"addr-nt1");
 	//nt2.set ( 8,4,256,ntbuf2,5000,true,m_niceness);
 	nt3.set ( 8,4,256,ntbuf3,5000,true,m_niceness,"addr-nt3");
-	long goodCount = 0;
+	int32_t goodCount = 0;
 	// hash words of the addresses
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -1578,7 +1578,7 @@ bool Addresses::updateAddresses ( ) {
 		// count 
 		goodCount++;
 
-		uint64_t v = ((uint64_t)((unsigned long)ad));
+		uint64_t v = ((uint64_t)((uint32_t)(PTRTYPE)ad)); // WRONG!MDW
 
 		// . hash place name 1
 		// . use "0" for the name number
@@ -1614,7 +1614,7 @@ bool Addresses::updateAddresses ( ) {
 			// hash that
 			Words tmp;
 			if ( ! tmp.set9 ( s, m_niceness ) ) return false;
-			long nw = tmp.m_numWords;
+			int32_t nw = tmp.m_numWords;
 			if ( ! hashPlaceName (&nt1,&tmp,0,nw,v|(count<<32)) ) 
 				return false;
 			// skip that and the \0
@@ -1622,7 +1622,7 @@ bool Addresses::updateAddresses ( ) {
 		}
 
 		// hash their street hash and street num hash
-		long long ch = 0;
+		int64_t ch = 0;
 		ch ^= ad->m_street->m_hash;
 		ch ^= ad->m_street->m_streetNumHash;
 		ch ^= ad->m_street->m_streetIndHash;
@@ -1667,7 +1667,7 @@ bool Addresses::updateAddresses ( ) {
 	// no! scan the streets since maybe alias did not pair up with
 	// a city/adm1 and make it into the m_addresses[] array
 	//
-	for ( long i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -1681,7 +1681,7 @@ bool Addresses::updateAddresses ( ) {
 		// other is not!
 		if ( ! isName ) {
 			// make special hash
-			long long ch = 0;
+			int64_t ch = 0;
 			ch ^= street->m_hash;
 			ch ^= street->m_streetNumHash;
 			ch ^= street->m_streetIndHash;
@@ -1737,8 +1737,8 @@ bool Addresses::updateAddresses ( ) {
 		//   ... so i hope commenting this out is ok
 		//if ( ! afterAt ) continue;
 		// grabs its name
-		long a = street->m_a;
-		long b = street->m_b;
+		int32_t a = street->m_a;
+		int32_t b = street->m_b;
 		// . are we after at?
 		// . this also includes being after "location: " and some
 		//   other strong place indicators
@@ -1746,9 +1746,9 @@ bool Addresses::updateAddresses ( ) {
 		// reset mt
 		mt.clear();
 		// count its words
-		long need = 0;
+		int32_t need = 0;
 		// scan its words
-		for ( long k = a ; k < b ; k++ ) {
+		for ( int32_t k = a ; k < b ; k++ ) {
 			// skip if not word
 			if ( ! m_wids[k] ) continue;
 			// . we do not need to match an initial the
@@ -1758,7 +1758,7 @@ bool Addresses::updateAddresses ( ) {
 			// count it
 			need++;
 			// get possible candidates
-			long slot1 = nt1.getSlot ( &m_wids[k] );
+			int32_t slot1 = nt1.getSlot ( &m_wids[k] );
 			// if no match, forget it! we need to match
 			// all our words
 			//if ( slot1 < 0 ) break;
@@ -1770,7 +1770,7 @@ bool Addresses::updateAddresses ( ) {
 				// lower 32 bits is the address ptr
 				Address *cand = (Address *)(val & 0xffffffff);
 				// upper 32 bits is the name number
-				long nn = (val >> 32);
+				int32_t nn = (val >> 32);
 				// sanity check
 				if ( nn < 0     ) { char *xx=NULL;*xx=0; }
 				if ( nn > 10000 ) { char *xx=NULL;*xx=0; }
@@ -1793,26 +1793,26 @@ bool Addresses::updateAddresses ( ) {
 				// so let them ride.
 
 				// store in match table, add one point
-				if(!mt.addTerm((long long *)&val))return false;
+				if(!mt.addTerm((int64_t *)&val))return false;
 			}
 		}
 		
 		// scan match table for best matches
-		long dups = 0;
+		int32_t dups = 0;
 		Address *best = NULL;
-		long bestScore = 0;
+		int32_t bestScore = 0;
 		Section *bestContainer = NULL;
-		long bestnn = -1;
-		// shortcut
+		int32_t bestnn = -1;
+		// int16_tcut
 		char vmask1 = 0;
 		vmask1 |= AF_VERIFIED_PLACE_NAME_1;
 		vmask1 |= AF_VERIFIED_PLACE_NAME_2;
 		vmask1 |= AF_VERIFIED_STREET;
-		for ( long y = 0 ; y < mt.m_numSlots ; y++ ) {
+		for ( int32_t y = 0 ; y < mt.m_numSlots ; y++ ) {
 			// skip if empty bucket/slot
 			if ( ! mt.m_flags[y] ) continue;
 			// get score
-			long score = mt.getScoreFromSlot ( y );
+			int32_t score = mt.getScoreFromSlot ( y );
 			// need to match all of our words
 			if ( score < need ) continue;
 			// skip if not max
@@ -1821,7 +1821,7 @@ bool Addresses::updateAddresses ( ) {
 			//Address *matcher = *( Address **)mt.getKey ( y );
 			uint64_t v = *(uint64_t *)mt.getKey ( y );
 			// get name number
-			long nn = v>>32;
+			int32_t nn = v>>32;
 			// sanity check
 			if ( nn < 0 || nn > 10000 ) { char *xx=NULL;*xx=0; }
 			// get matching address
@@ -1898,8 +1898,8 @@ bool Addresses::updateAddresses ( ) {
 		//   partial alias
 		if ( ! afterAt ) {
 			// get alnum words in best
-			//long aw1 = 0;
-			//long aw2 = 0;
+			//int32_t aw1 = 0;
+			//int32_t aw2 = 0;
 			Place *n1 = best->m_name1;
 			Place *n2 = best->m_name2;
 			//if ( n1 ) aw1 = n1->m_alnumB - n1->m_alnumA;
@@ -1908,7 +1908,7 @@ bool Addresses::updateAddresses ( ) {
 			// we don't know which one we matched! yes we do,
 			// its # "nn-2" in the string
 			char *ps = NULL;
-			long  pslen;
+			int32_t  pslen;
 			if ( bestnn == 0 ) {ps=n1->m_str; pslen=n1->m_strlen;}
 			if ( bestnn == 1 ) {ps=n2->m_str; pslen=n2->m_strlen;}
 			// subtract 
@@ -1925,7 +1925,7 @@ bool Addresses::updateAddresses ( ) {
 				// point to it
 				char *wp = s;
 				// get this
-				long slen = gbstrlen(s);
+				int32_t slen = gbstrlen(s);
 				// skip that and the \0
 				s += slen + 1 ;
 				// skip if not 0
@@ -1941,8 +1941,8 @@ bool Addresses::updateAddresses ( ) {
 			Words tmp;
 			if ( ! tmp.setx (ps,pslen,m_niceness)) return false;
 			// count the alnumwords, but ignore "the"
-			long aw = 0;
-			for (long x=0;x<tmp.m_numWords;x++) {
+			int32_t aw = 0;
+			for (int32_t x=0;x<tmp.m_numWords;x++) {
 				if ( ! tmp.m_wordIds[x] ) continue;
 				if ( tmp.m_wordIds[x] == h_the) continue;
 				aw++;
@@ -1953,18 +1953,18 @@ bool Addresses::updateAddresses ( ) {
 			if ( ! fullMatch ) continue;
 		}
 
-		// shortcut
+		// int16_tcut
 		char vmask2 = 0;
 		vmask2 |= AF_VERIFIED_PLACE_NAME_1;
 		vmask2 |= AF_VERIFIED_PLACE_NAME_2;
 		vmask2 |= AF_VERIFIED_STREET;
 		Address *ak = NULL;
 		// might not be ordered by position
-		long k = 0;
+		int32_t k = 0;
 		// get the min position right above us
-		long abovePos = -1;
+		int32_t abovePos = -1;
 		Address *above = NULL;
-		long belowPos = -1;
+		int32_t belowPos = -1;
 		Address *below = NULL;
 		// now the winner must also be the first verified address
 		// above or below us!!!
@@ -2048,7 +2048,7 @@ bool Addresses::updateAddresses ( ) {
 	// set m_alias for intersections
 	//
 	////////////////////////////////
-	for ( long i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2076,11 +2076,11 @@ bool Addresses::updateAddresses ( ) {
 		// try prev first
 		Place *first = prev;
 		// declare up here
-		long a;
-		long b;
+		int32_t a;
+		int32_t b;
 		bool good;
-		long long commonIds[32];
-		long nc;
+		int64_t commonIds[32];
+		int32_t nc;
 		// loop over both
 	subloop:
 		// need a street above us to be alias of
@@ -2095,7 +2095,7 @@ bool Addresses::updateAddresses ( ) {
 		// forget it if too big
 		if ( b - a > 200 ) continue;
 		// scan to make sure only good words in between
-		long j; for ( j = a ; j < b ; j++ ) {
+		int32_t j; for ( j = a ; j < b ; j++ ) {
 			// skip if not wid
 			if ( ! m_wids[j] ) continue;
 			// must be special word
@@ -2123,9 +2123,9 @@ bool Addresses::updateAddresses ( ) {
 						commonIds , 
 						32 ,
 						m_niceness );
-			for ( long k = 0 ; k < nc ; k++ ) {
+			for ( int32_t k = 0 ; k < nc ; k++ ) {
 				// get it
-				long long cid = commonIds[k];
+				int64_t cid = commonIds[k];
 				// skip if indicator, must be non-indicator
 				IndDesc *id;
 				id = (IndDesc *)g_indicators.getValue(&cid);
@@ -2160,7 +2160,7 @@ bool Addresses::updateAddresses ( ) {
 	// fixes "14th and Curtis, Denver CO" on denver.org
 	// which is a proper address and has the full address next to it
 	//
-	for ( long i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2192,9 +2192,9 @@ bool Addresses::updateAddresses ( ) {
 		HashTableX cmp;
 		cmp.set(8,0,32,cmpbuf,1024,false,m_niceness,"strtcmp");
 		// see if matches one non-indicator in street
-		for ( long j = first->m_a ; j < first->m_b ; j++ ) {
+		for ( int32_t j = first->m_a ; j < first->m_b ; j++ ) {
 			// get it
-			long long h = m_wids[j];
+			int64_t h = m_wids[j];
 			// skip punct
 			if ( ! h ) continue;
 			// skip if indicator
@@ -2205,9 +2205,9 @@ bool Addresses::updateAddresses ( ) {
 		// assume intersection does not match any words
 		bool matched = false;
 		// now compare to our intersection streets
-		for ( long j = street->m_a ; j < street->m_b ; j++ ) {
+		for ( int32_t j = street->m_a ; j < street->m_b ; j++ ) {
 			// get it
-			long long h = m_wids[j];
+			int64_t h = m_wids[j];
 			// skip punct
 			if ( ! h ) continue;
 			// skip if indicator
@@ -2247,7 +2247,7 @@ bool Addresses::updateAddresses ( ) {
 	//   we need to set D_IS_IN_ADDRESS[_NAME] for it...
 	// . this fixes the aliased streets and names in ceder.net from
 	//   being event titles...
-	for ( long i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -2262,8 +2262,8 @@ bool Addresses::updateAddresses ( ) {
 		if ( isName ) flag = D_IS_IN_VERIFIED_ADDRESS_NAME;
 		else          flag = D_IS_IN_ADDRESS;
 		// set bits for alias
-		long x = street->m_a;
-		long y = street->m_b;
+		int32_t x = street->m_a;
+		int32_t y = street->m_b;
 		if ( y > m_nw ) { char *xx=NULL;*xx=0; }
 		for ( ; x >= 0 && x < m_nw && x < y ; x++ ) 
 			bits[x] |= flag;
@@ -2276,13 +2276,13 @@ bool Addresses::updateAddresses ( ) {
 	//
 	////////////////////////////////
 	m_numNonDupAddresses = 0;
-	for ( long i = 0 ; i < m_am.getNumPtrs() - 1 ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() - 1 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
 		Address *aa = (Address *)m_am.getPtr(i);//&m_addresses[i];
 		// get street position
-		long a = aa->m_street->m_a;
+		int32_t a = aa->m_street->m_a;
 		// sanity check
 		if ( a < 0 ) continue;
 		// get section
@@ -2303,7 +2303,7 @@ bool Addresses::updateAddresses ( ) {
 	m_numVenues = 0;
 	// what are the addresses of this website? (assuming this website
 	// is essentially the website of a venue or physical place)
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -2328,8 +2328,8 @@ bool Addresses::updateAddresses ( ) {
 		// temp null term
 		char c1;
 		char c2;
-		long plen1;
-		long plen2;
+		int32_t plen1;
+		int32_t plen2;
 		if ( p1 ) plen1 = ad->m_name1->m_strlen;
 		if ( p2 ) plen2 = ad->m_name2->m_strlen;
 		char *saved1 = NULL;
@@ -2384,7 +2384,7 @@ bool Addresses::updateAddresses ( ) {
 		if ( saved2 ) *saved2 = c2;
 	}
 
-	//long imax = m_nw;
+	//int32_t imax = m_nw;
 	// skip if no streets... no might add a lat/lon "street" below
 	//if ( m_sm.getNumPtrs() <= 0 ) imax = 0;
 
@@ -2397,7 +2397,7 @@ bool Addresses::updateAddresses ( ) {
 
 	/////////////////////////////
 	//
-	// scan for lat/long coordinates
+	// scan for lat/lon coordinates
 	//
 	/////////////////////////////
 
@@ -2421,7 +2421,7 @@ bool Addresses::updateAddresses ( ) {
 	//    ... &POI1lat=039396979&POI1lng=-076564398&POI1name=Baynesville+..
 
 	// www.yellowbook.com
-	//   /listing-map.png?lat=35.0981&amp;long=-106.6694
+	//   /listing-map.png?lat=35.0981&amp;int32_t=-106.6694
 
 	// yelp.com
 	//   use "center=" cgi parm on maps.google.com
@@ -2437,14 +2437,14 @@ bool Addresses::updateAddresses ( ) {
 	p = m_words->getContent();
 
 	// must be latitude then longitude, in that order
-	long lastScore = -1;
+	int32_t lastScore = -1;
 	double lastVal ;
 	char *lastPos = NULL;
 	char  lastType;
 	char *lastAddedPos = NULL;
-	long  lastAddedWord = -1;
-	long  lastAddedWordDist;
-	long  lastAddedCharDist;
+	int32_t  lastAddedWord = -1;
+	int32_t  lastAddedWordDist;
+	int32_t  lastAddedCharDist;
 	bool  addedSomething = false;
 
 	if ( ! p ) p = "\0";
@@ -2472,8 +2472,8 @@ bool Addresses::updateAddresses ( ) {
 		// negative sign?
 		if ( p>bufStart && p[-1] == '-' ) start--;
 		// reset counts
-		long digitCount = 0;
-		long decimalCount = 0;
+		int32_t digitCount = 0;
+		int32_t decimalCount = 0;
 		// do not scan so far
 		char *pmax = p + 20;
 		if ( pmax > bufEnd ) pmax = bufEnd;
@@ -2506,10 +2506,10 @@ bool Addresses::updateAddresses ( ) {
 		// fix switchboard.com stuff which has no decimal pt
 		if ( decimalCount == 0 ) {
 			// how many digits to left of decimal
-			long left = 3;
+			int32_t left = 3;
 			// make a divisor
 			double ddd = 1;
-			for ( long vv = 0 ; vv<digitCount-left; vv++)
+			for ( int32_t vv = 0 ; vv<digitCount-left; vv++)
 				ddd *= 10;
 			// fix it
 			dval /= ddd;
@@ -2570,7 +2570,7 @@ bool Addresses::updateAddresses ( ) {
 		//if ( needLat && type == 2 ) continue;
 
 		// get word position for this function
-		long wn2 = m_words->getWordAt ( start );
+		int32_t wn2 = m_words->getWordAt ( start );
 		// sanity check
 		if ( wn2 < 0 ) { char *xx=NULL;*xx=0; }
 		// find nearest place. the associated place must be a verified
@@ -2596,7 +2596,7 @@ bool Addresses::updateAddresses ( ) {
 		// are we from google maps url?
 		//  src="http://maps.google.com/maps/ms?ie=UTF8&amp;hl=en&amp;msa=0&amp;msid=104870349047867594566.0004626e9d41225400a1c&amp;ll=40.761325,-73.977642&amp;sp...
 		// compute the score of the lat/lon pair
-		long score = -1;
+		int32_t score = -1;
 		bool inFormat = false;
 		// . ll=lat,lon
 		// . this is the center of the map and almost always not
@@ -2658,7 +2658,7 @@ bool Addresses::updateAddresses ( ) {
 
 		// save that
 		char   *savePos   = lastPos;
-		long    saveScore = lastScore;
+		int32_t    saveScore = lastScore;
 		char    saveType  = lastType;
 		double  saveVal   = lastVal;
 
@@ -2685,7 +2685,7 @@ bool Addresses::updateAddresses ( ) {
 		if ( saveScore < 0 ) continue;
 
 		// get word # and associated place of previous lat/lon #
-		long wn1 = m_words->getWordAt ( savePos );//start );
+		int32_t wn1 = m_words->getWordAt ( savePos );//start );
 		if ( wn1 < 0 ) { char *xx=NULL;*xx=0; }
 		// find nearest place. the associated place must be a verified
 		// place name or a true street.
@@ -2694,7 +2694,7 @@ bool Addresses::updateAddresses ( ) {
 
 		// super crazy? try to fiz graffiti.org which pairs together
 		// to bogus numbers that are really far apart
-		long wordDist = wn2 - wn1;
+		int32_t wordDist = wn2 - wn1;
 		if ( wordDist > 30 ) 
 			continue;
 
@@ -2703,7 +2703,7 @@ bool Addresses::updateAddresses ( ) {
 		// has multiple lat/lon pairs all that had a different #
 		// of chars between them, but this will make their distances
 		// equal where they should be now
-		long dist = 0;
+		int32_t dist = 0;
 		bool inalnum = false;
 		bool inpunct = false;
 		for ( char *d = savePos ; d < start ; d++ ) {
@@ -2811,8 +2811,8 @@ bool Addresses::updateAddresses ( ) {
 			retAddr->m_street = pp;
 			pp->m_str    = savePos;//start;
 			pp->m_strlen = p - savePos;//start;
-			long long h1 = *(long long *)&retAddr->m_latitude;
-			long long h2 = *(long long *)&retAddr->m_longitude;
+			int64_t h1 = *(int64_t *)&retAddr->m_latitude;
+			int64_t h2 = *(int64_t *)&retAddr->m_longitude;
 			pp->m_hash = hash64h ( h1 , h2 );
 			pp->m_bits = 0; // |= PLF_FROMTAG;//|PLF_FROMTITLE;
 			pp->m_a = wn1;
@@ -2859,7 +2859,7 @@ bool Addresses::updateAddresses ( ) {
 			score = saveScore;
 
 		// get our distance
-		//long dist = start - savePos;
+		//int32_t dist = start - savePos;
 
 		// if we are know to be right, and it wasn't we can override
 		// it without triggering the ambiguous flag
@@ -2910,7 +2910,7 @@ bool Addresses::updateAddresses ( ) {
 	// blank out the lat/lon if we do not have both for an address
 	//
 	////////////////////////////////
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -2940,9 +2940,9 @@ bool Addresses::updateAddresses ( ) {
 	char datbuf[2000];
 	dat.set ( 16 , 8 , 32 , datbuf , 2000 , false ,m_niceness,"latlontbl");
 	Coordinate nukeList[5000];
-	long nc = 0;
+	int32_t nc = 0;
 	// scan the addresses and hash the lat/lon of each one
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -2956,11 +2956,11 @@ bool Addresses::updateAddresses ( ) {
 		cc.lat = ad->m_latitude;
 		cc.lon = ad->m_longitude;
 		// get it as a hash
-		//long long h1 = *(long long *)((double *)&ad->m_latitude);
-		//long long h2 = *(long long *)((double *)&ad->m_latitude);
-		//long long h = hash64 ( h1 , h2 );
+		//int64_t h1 = *(int64_t *)((double *)&ad->m_latitude);
+		//int64_t h2 = *(int64_t *)((double *)&ad->m_latitude);
+		//int64_t h = hash64 ( h1 , h2 );
 		//double pr = ad->m_latitude*ad->m_longitude;
-		//long long h = *(long long *) &pr;
+		//int64_t h = *(int64_t *) &pr;
 		// mix it up some more
 		//h = hash64 ( h , h1 );
 		//h = hash64 ( h , h2 );
@@ -2977,7 +2977,7 @@ bool Addresses::updateAddresses ( ) {
 		// hash it in "Dup Address Table"
 		if ( ! dat.addKey ( &cc , &ad->m_hash ) ) return false;
 	}
-	for ( long i = 0 ; nc > 0 && i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; nc > 0 && i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -2985,7 +2985,7 @@ bool Addresses::updateAddresses ( ) {
 		// skip if its a plain lat/lon address
 		if ( ad->m_flags3 & AF2_LATLON ) continue;
 		// see if in nuke like
-		for ( long j = 0 ; j < nc ; j++ ) {
+		for ( int32_t j = 0 ; j < nc ; j++ ) {
 			QUICKPOLL(m_niceness);
 			if ( nukeList[j].lat != ad->m_latitude  ) continue;
 			if ( nukeList[j].lon != ad->m_longitude ) continue;
@@ -3008,7 +3008,7 @@ bool Addresses::updateAddresses ( ) {
 	nt4.set ( 8,4,256,ntbuf4,5000,false,m_niceness,"nt4addr");
 	nt5.set ( 8,4,256,ntbuf5,5000,false,m_niceness,"nt5addr");
 	// hash words of the addresses
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -3026,7 +3026,7 @@ bool Addresses::updateAddresses ( ) {
 			// return false if error adding
 			if ( ! nt5.addKey(&ad->m_hash,&ad) ) return false;
 	}
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -3053,7 +3053,7 @@ bool Addresses::updateAddresses ( ) {
 	// . set AF2_LATLONDUP for dup lat/lons like stubhub has
 	//
 	///////////////////////////////
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -3061,7 +3061,7 @@ bool Addresses::updateAddresses ( ) {
 		// skip if its a plain lat/lon address
 		if ( !(ad->m_flags3 & AF2_LATLON) ) continue;
 		// see if in matches another
-		for ( long j = i+1 ; j < m_am.getNumPtrs() ; j++ ) {
+		for ( int32_t j = i+1 ; j < m_am.getNumPtrs() ; j++ ) {
 			QUICKPOLL(m_niceness);
 			Address *aj = (Address *)m_am.getPtr(j);
 			// must also be lat/lon
@@ -3103,7 +3103,7 @@ bool Addresses::updateAddresses ( ) {
 	//   as a competing address.
 	//
 	///////////////////////////////
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -3128,7 +3128,7 @@ bool Addresses::updateAddresses ( ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get it
-			long pi = sk->m_firstPlaceNum;
+			int32_t pi = sk->m_firstPlaceNum;
 			bool hitRealStreet = false;
 			// . scan places in this section
 			// . just like Events.cpp address assigning algo does
@@ -3186,7 +3186,7 @@ bool Addresses::updateAddresses ( ) {
 	//
 	////////////////////////////////
 	/*
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get address
@@ -3206,7 +3206,7 @@ bool Addresses::updateAddresses ( ) {
 	//
 	////////////////////
 	/*
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3233,7 +3233,7 @@ bool Addresses::updateAddresses ( ) {
 		// combine the two hashes
 		uint32_t cityStateHash = hash32h(cityHash32,adm1Hash32);
 		// get timezone
-		long slot = g_timeZones.getSlot ( &cityStateHash );
+		int32_t slot = g_timeZones.getSlot ( &cityStateHash );
 		// call it 0 if not good
 		aa->m_timeZoneOffset = 0;
 		// otherwise, set m_timeZoneOffset appropriately
@@ -3261,7 +3261,7 @@ bool Addresses::updateAddresses ( ) {
 	//
 	////////////////////
 	m_numValid = 0;
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3310,10 +3310,10 @@ bool Addresses::setGeocoderLatLons ( void *state,
 	m_state    = state;
 
 	// store candidates to select from here
-	long cands[MAX_GEOCODERS];
-	long nc = 0;
+	int32_t cands[MAX_GEOCODERS];
+	int32_t nc = 0;
 	// select a geocoder by IP
-	for ( long i = 0 ; i < MAX_GEOCODERS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_GEOCODERS ; i++ ) {
 		// check ip
 		if ( ! g_conf.m_geocoderIps[i] ) continue;
 		// add to candidates
@@ -3322,9 +3322,9 @@ bool Addresses::setGeocoderLatLons ( void *state,
 	// if none, bail, we do not do this
 	if ( nc <= 0 ) return true;
 
-	long need = 0;
+	int32_t need = 0;
 	// loop over each valid address we and add to request size
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3344,9 +3344,9 @@ bool Addresses::setGeocoderLatLons ( void *state,
 			continue;
 		}
 		// check the cache first!!! used by Repair.cpp to speed up!!
-		long long key64 = aa->m_hash;
+		int64_t key64 = aa->m_hash;
 		double *recs;
-		long    recSize;
+		int32_t    recSize;
 		bool inCache = m_latLonCache.getRecord ( (collnum_t) 0,
 							 (char *)&key64 ,
 							 (char **)&recs ,
@@ -3388,7 +3388,7 @@ bool Addresses::setGeocoderLatLons ( void *state,
 	// make the url
 	char *p = requestBuf;
 	// select a geocoder randomly
-	long r = rand() % nc;
+	int32_t r = rand() % nc;
 	// to request manually:
 	// http://10.5.66.11:5678/json/+2935-D+Louisiana+NE,+Albuquerque,+NM
 	// http://10.5.66.11:5678/txt/+2935-D+Louisiana+NE,+Albuquerque,+NM
@@ -3400,10 +3400,10 @@ bool Addresses::setGeocoderLatLons ( void *state,
 		     "\r\n",
 		     iptoa(cands[r]));
 
-	long num = 1;
+	int32_t num = 1;
 	char *contentStart = p;
 	// loop over each valid address we and add to request size
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3417,7 +3417,7 @@ bool Addresses::setGeocoderLatLons ( void *state,
 		// for debugging
 		//char *start = p;
 		// request needs street,state,city (and zip if there)
-		p += sprintf(p,"addr%li=",num++);
+		p += sprintf(p,"addr%"INT32"=",num++);
 		memcpy(p,aa->m_street->m_str,aa->m_street->m_strlen);
 		p += aa->m_street->m_strlen;
 		*p++ = ',';
@@ -3427,7 +3427,7 @@ bool Addresses::setGeocoderLatLons ( void *state,
 			p += aa->m_city->m_strlen;
 		}
 		else if ( aa->m_zip ) {
-			long clen = strlen(aa->m_zip->m_cityStr);
+			int32_t clen = strlen(aa->m_zip->m_cityStr);
 			memcpy(p,aa->m_zip->m_cityStr,clen);
 			p += clen;
 		}
@@ -3445,7 +3445,7 @@ bool Addresses::setGeocoderLatLons ( void *state,
 		// zip if we got it, seems to help geocoder sometimes
 		if ( aa->m_zip ) {
 			*p++ = ' ';
-			long zlen = aa->m_zip->m_strlen;
+			int32_t zlen = aa->m_zip->m_strlen;
 			memcpy(p,aa->m_zip->m_str,zlen);
 			p += zlen;
 		}
@@ -3460,13 +3460,13 @@ bool Addresses::setGeocoderLatLons ( void *state,
 	char *qq = strstr(requestBuf,"xxxxxx");
 	if ( ! qq ) { char *xx=NULL;*xx=0; }
 	if ( p-contentStart > 999999 ) { char *xx=NULL;*xx=0; }
-	sprintf(qq,"%06li",(long)(p-contentStart));
+	sprintf(qq,"%06"INT32"",(int32_t)(p-contentStart));
 	qq[6]='\r'; // sprintf might have written a \0, so put \r back
 
 	// finish it
 	//p += sprintf(p," HTTP/1.0\r\n\r\n");
 	// size of it
-	long reqLen = p - requestBuf;
+	int32_t reqLen = p - requestBuf;
 	// sanity
 	if ( reqLen >= need ) { char *xx=NULL;*xx=0; }
 	// send it off to get back xml reply
@@ -3503,8 +3503,8 @@ bool Addresses::processGeocoderReply ( TcpSocket *s ) {
 	}
 	// get reply
 	char *reply      = s->m_readBuf;
-	//long  replyAlloc = s->m_readBufSize;
-	//long  replySize  = s->m_readOffset;
+	//int32_t  replyAlloc = s->m_readBufSize;
+	//int32_t  replySize  = s->m_readOffset;
 
 	// same for an empty reply
 	if ( ! reply || s->m_readBufSize == 0 ) {
@@ -3517,9 +3517,9 @@ bool Addresses::processGeocoderReply ( TcpSocket *s ) {
 	// breathe
 	QUICKPOLL(m_niceness);
 
-	long num = 0;
+	int32_t num = 0;
 	// loop over each valid address we and add to request size
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe 
 		QUICKPOLL(m_niceness);
 		// get it
@@ -3534,21 +3534,21 @@ bool Addresses::processGeocoderReply ( TcpSocket *s ) {
 		num++;
 		// make the tag name
 		char tagName[32];
-		sprintf(tagName,"<addr%li>",num);
+		sprintf(tagName,"<addr%"INT32">",num);
 		// ok now get that reply
 		char *p = strstr(reply,tagName);
 		// not found?
 		if ( ! p ) {
-			log("addr: missing geocoder reply for addr #%li",num);
+			log("addr: missing geocoder reply for addr #%"INT32"",num);
 			continue;
 		}
 		// get end tag of it
 		char endTagName[32];
-		sprintf(endTagName,"</addr%li>",num);
+		sprintf(endTagName,"</addr%"INT32">",num);
 		char *end = strstr(p,endTagName);
 		// strange!
 		if ( ! end ) {
-			log("addr: missing geocoder endtag for addr #%li",num);
+			log("addr: missing geocoder endtag for addr #%"INT32"",num);
 			continue;
 		}
 		// tmp shutoff
@@ -3648,13 +3648,13 @@ void Address::getLatLon( double *lat, double *lon ) {
 
 bool hashPlaceName ( HashTableX *nt1,
 		     Words *words,
-		     long a ,
-		     long b ,
+		     int32_t a ,
+		     int32_t b ,
 		     uint64_t v ) {
 
-	long long *wids = words->m_wordIds;
+	int64_t *wids = words->m_wordIds;
 	// hash
-	for ( long k = a ; k < b ; k++ ) {
+	for ( int32_t k = a ; k < b ; k++ ) {
 		// skip if not word
 		if ( ! wids[k] ) continue;
 		// add it
@@ -3666,25 +3666,25 @@ bool hashPlaceName ( HashTableX *nt1,
 
 
 // returns -1 and sets g_errno on error
-long getCommonWordIds ( long a1 , long b1 ,
-			long a2 , long b2 ,
-			long long *wids      ,
-			long long *commonIds ,
-			long max ,
-			long niceness ) {
-	long nc = 0;
+int32_t getCommonWordIds ( int32_t a1 , int32_t b1 ,
+			int32_t a2 , int32_t b2 ,
+			int64_t *wids      ,
+			int64_t *commonIds ,
+			int32_t max ,
+			int32_t niceness ) {
+	int32_t nc = 0;
 	HashTableX ht;
 	char sbuf[640];
 	ht.set ( 8,0,64,sbuf,640,false,niceness,"cmmnwrds");
 	// hash first round
-	for ( long i = a1 ; i < b1 ; i++ ) {
+	for ( int32_t i = a1 ; i < b1 ; i++ ) {
 		// skip if not word
 		if ( ! wids[i] ) continue;
 		// add it otherwise
 		if ( ! ht.addKey ( &wids[i] ) ) return -1;
 	}
 	// now check the other guy
-	for ( long i = a2 ; i < b2 ; i++ ) {
+	for ( int32_t i = a2 ; i < b2 ; i++ ) {
 		// skip if not word
 		if ( ! wids[i] ) continue;
 		// add it otherwise
@@ -3699,24 +3699,24 @@ long getCommonWordIds ( long a1 , long b1 ,
 }
 
 
-Place *Addresses::getAssociatedPlace ( long i ) {
+Place *Addresses::getAssociatedPlace ( int32_t i ) {
 	// get smallest section containing word #i
 	Section *si = m_sections->m_sectionPtrs[i];
 	// scan addresses also in this section
 	for ( ; si ; si = si->m_parent ) {
 		// key mixing now
-		//long key = hash32h((long)si,456789);
+		//int32_t key = hash32h((int32_t)si,456789);
 		// ok, now telescope our section out until we
 		// find the address
-		//long slot = pt->getSlot ( &key );
+		//int32_t slot = pt->getSlot ( &key );
 		// get it
-		long pi = si->m_firstPlaceNum;
+		int32_t pi = si->m_firstPlaceNum;
 		// telescope if none
 		//if ( slot < 0 ) continue;
 		if ( pi < 0 ) continue;
 		// count them
-		//long count = 0;
-		long long lasth = 0LL;
+		//int32_t count = 0;
+		int64_t lasth = 0LL;
 		Place *lastpp = NULL;
 		// . scan the addresses in section "si"
 		// . the places in m_sorted[] are streets or are verfied
@@ -3738,7 +3738,7 @@ Place *Addresses::getAssociatedPlace ( long i ) {
 			// to an address whose street is 2823 2nd St NW. as
 			// are all the places around this url's only pair of
 			// valid lat/lon coordinates.
-			long long h = pp->m_hash;
+			int64_t h = pp->m_hash;
 			if ( aa ) h = aa->m_street->m_hash;
 			// compare to last h
 			if ( lasth && h != lasth ) { lastpp = NULL; break; }
@@ -3803,11 +3803,11 @@ static char      *s_lcWords[] = {
 
 
 // returns false with g_errno set on error
-bool setHashes ( Place *p , Words *ww , long niceness ) {
+bool setHashes ( Place *p , Words *ww , int32_t niceness ) {
 
 	//Words *ww = m_words;
-	long a = p->m_a;
-	long b = p->m_b;
+	int32_t a = p->m_a;
+	int32_t b = p->m_b;
 
 	// adm1 hash is just hash of the two letters
 	if ( p->m_type == PT_STATE ) {
@@ -3838,26 +3838,26 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 		b = ww->m_numWords;
 	}
 
-	long long *wids  = ww->m_wordIds;
-	long      *wlens = ww->m_wordLens;
+	int64_t *wids  = ww->m_wordIds;
+	int32_t      *wlens = ww->m_wordLens;
 	char     **wptrs = ww->m_words;
-	long       nw    = ww->m_numWords;
+	int32_t       nw    = ww->m_numWords;
 
 	// the straight up hash
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// hash of the non indicator alpha words in street name
-	long long h1  = 0;
+	int64_t h1  = 0;
 	// . includes hash of directional indicators
 	// . we only use this if street name is a directional indicator
-	long long h2  = 0;
-	long long h2b = 0;
-	long long h3  = 0;
-	long long h4  = 0;
+	int64_t h2  = 0;
+	int64_t h2b = 0;
+	int64_t h3  = 0;
+	int64_t h4  = 0;
 	// word id of previous word
-	long long pi  = 0LL;
+	int64_t pi  = 0LL;
 
-	long alphaCount = 0;
-	long long prevIndId = 0LL;
+	int32_t alphaCount = 0;
+	int64_t prevIndId = 0LL;
 
 	// to fix the street that is "25 School" we cannot map "school"
 	// to h_zero
@@ -3868,7 +3868,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 	p->m_simpleHash32 = 0;
 
 	// loop over words
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		// skip if not alnum word
 		if ( ! wids[i] ) continue;
 		// make a simple hash so setting the EV_STORE_HOURS flag
@@ -3880,7 +3880,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 		if ( p->m_simpleHash32 == 0 )
 			p->m_simpleHash32 = 123456;
 		// get synonym of word id
-		long long *swid = getSynonymWord ( &wids[i] , &pi , isStreet );
+		int64_t *swid = getSynonymWord ( &wids[i] , &pi , isStreet );
 		// word id of previous word
 		pi = wids[i];
 		
@@ -3895,7 +3895,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 		// is street a place name in disguise? if so, continue
 		if ( p->m_flags2 & PLF2_IS_NAME ) continue;
 
-		// shortcut
+		// int16_tcut
 		bool isNum = ww->isNum2(i);
 		// count it
 		if ( ! isNum ) alphaCount++;
@@ -3997,7 +3997,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 	// . we now fixed getAddressHash() so this logic is not needed
 	//if ( p->m_type == PT_CITY ) { // && (p->m_flags & PF_IS_ALIAS) ) {
 	//	// convert hash to alias hash
-	//	long long *newh = (long long *)g_aliases.getValue ( &h );
+	//	int64_t *newh = (int64_t *)g_aliases.getValue ( &h );
 	//	// set that to h now
 	//	if ( newh ) p->m_hash = *newh;
 	//	// could not find this city in the table... strange
@@ -4040,7 +4040,7 @@ bool setHashes ( Place *p , Words *ww , long niceness ) {
 	if ( to_lower_a(wptrs[a][0])!='p' )  return true;
 
 	// assume none
-	long k = -1;
+	int32_t k = -1;
 
 	// "p o box 123"
 	if ( a + 6 < nw &&
@@ -4099,13 +4099,13 @@ bool Addresses::set2 ( ) {
 
 	bool printed = false;
 
-	// shortcuts
-	long       nw = m_words->getNumWords();
+	// int16_tcuts
+	int32_t       nw = m_words->getNumWords();
 	// msg13 provides a NULL sections ptr. it can't set them for speed!
 	// it is the spider compression proxy...
 	Section  **sp = NULL;
 	if ( m_sections ) sp = m_sections->m_sectionPtrs;
-	// shortcut
+	// int16_tcut
 	//Sections *ss = m_sections;
 	// reset # of addresses we got
 	//m_na = 0;
@@ -4129,14 +4129,14 @@ bool Addresses::set2 ( ) {
 	// . get up to 10 addresses from the contact info 
 	Address da[10];
 	// init
-	long dc = 0;
+	int32_t dc = 0;
 	// first address is the empty one
 	memset ( &da[0] , 0 , sizeof(Address) );
 	// skip it 
 	dc++;
 
 	// get contact info addresses, use their city/state for our addresses
-	long tt = getTagTypeFromStr ( "contactaddress" );
+	int32_t tt = getTagTypeFromStr ( "contactaddress" );
 	Tag *tag = NULL;
 	// . taken from TagRec::getTag() function
 	// . Msg13.cpp does not have tag..
@@ -4231,7 +4231,7 @@ bool Addresses::set2 ( ) {
 	// . if section flag is one of these, ignore the words in it
 	// . google seems to index marquee, so i took SEC_MARQUEE out
 	// . SEC_HIDDEN applies to text and tags in style=display:none tags.
-	long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_HIDDEN|
+	int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_HIDDEN|
 		SEC_NOSCRIPT;
 
 	//
@@ -4243,7 +4243,7 @@ bool Addresses::set2 ( ) {
 	// fill this array
 	//Place streets[MAX_STREETS];
 	//Place *streets = m_streets;
-	//long qx = 0;
+	//int32_t qx = 0;
 
 	// the copyright symbol in utf8 (see Entities.cpp for the code)
 	char copy[3];
@@ -4251,31 +4251,31 @@ bool Addresses::set2 ( ) {
 	copy[1] = 0xa9;
 	copy[2] = 0x00;
 
-	// shortcuts
+	// int16_tcuts
 	Words     *ww    = m_words;
-	long long *wids  = ww->getWordIds();
+	int64_t *wids  = ww->getWordIds();
 	char     **wptrs = ww->getWordPtrs();
-	long      *wlens = ww->getWordLens();
+	int32_t      *wlens = ww->getWordLens();
 	nodeid_t   *tids = ww->getTagIds();
 	// . if section flag is one of these, ignore the words in it
 	// . google seems to index marquee, so i took SEC_MARQUEE out
 	// . SEC_HIDDEN applies to text and tags in style=display:none tags.
-	//long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_HIDDEN|
+	//int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_HIDDEN|
 	//	SEC_NOSCRIPT;
-	// shortcut
+	// int16_tcut
 	wbit_t *bits = NULL;
 	if ( m_bits ) bits = m_bits->m_bits;
 
 	// does the word "at" preceed the potential address?
 	//bool atPreceeds = false;
 	// reset this position
-	long alnumPos = -1;
+	int32_t alnumPos = -1;
 	// "b" of last street added
-	long lastb = -1;
+	int32_t lastb = -1;
 	// previous word id
-	long long savedPrevWid = 0LL;
+	int64_t savedPrevWid = 0LL;
 	// scan the entire document
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// debug
@@ -4294,7 +4294,7 @@ bool Addresses::set2 ( ) {
 		// stop if streets are maxed
 		//if ( m_ns >= MAX_STREETS ) break;
 		// record
-		long long prevWid = savedPrevWid;
+		int64_t prevWid = savedPrevWid;
 		// and update
 		savedPrevWid = wids[i];
 		// it's an alnum OR has "  &  " (see above)
@@ -4312,9 +4312,9 @@ bool Addresses::set2 ( ) {
 		     // http://www.unm.edu/~willow/homeless/services.html
 		     to_lower_a(wptrs[i][0])=='b'  ) {
 			// assume none
-			long j = -1;
+			int32_t j = -1;
 			// the hash
-			//long long poh = 0LL;
+			//int64_t poh = 0LL;
 			// "box 123"
 			if ( i + 2 < nw &&
 			     wids[i  ] == h_box &&
@@ -4366,9 +4366,9 @@ bool Addresses::set2 ( ) {
 			}
 			// skip if no good
 			if ( j < 0 ) continue;
-			// shortcuts
-			long a = i;
-			long b = j+1;
+			// int16_tcuts
+			int32_t a = i;
+			int32_t b = j+1;
 			// add the street
 			Place *street = (Place *)m_sm.getMem(sizeof(Place));
 			if ( ! street ) return false;
@@ -4402,7 +4402,7 @@ bool Addresses::set2 ( ) {
 			// set its m_hash member
 			setHashes ( street , m_words , m_niceness );
 			// set some bits
-			for ( long k = a ; bits && k < b ; k++ )
+			for ( int32_t k = a ; bits && k < b ; k++ )
 				bits[k] |= D_IS_IN_STREET;
 			// advance
 			//m_ns++;
@@ -4421,9 +4421,9 @@ bool Addresses::set2 ( ) {
 		if ( wids[i] == h_and || hasAmp ) {
 		//if ( m_words->hasChar(i,'&') ) {
 			// save it
-			long old = m_sm.getNumPtrs();
+			int32_t old = m_sm.getNumPtrs();
 			// use this
-			long alnumPosArg = alnumPos;
+			int32_t alnumPosArg = alnumPos;
 			// modify alnumPos if we are amp so it doesn't double
 			// count the word before the ampersand!
 			if ( hasAmp ) alnumPosArg++;
@@ -4432,15 +4432,15 @@ bool Addresses::set2 ( ) {
 				return false;
 			/*
 			// show it
-			long a = i - 8;
-			long b = i + 8;
+			int32_t a = i - 8;
+			int32_t b = i + 8;
 			if ( a < 0 ) a = 0;
 			if ( m_ns != old ) {
 				a = m_streets[m_ns-1].m_a;
 				b = m_streets[m_ns-1].m_b;
 			}
 			char *str = m_wptrs[a];
-			long ss = m_words->getStringSize ( a , b );
+			int32_t ss = m_words->getStringSize ( a , b );
 			SafeBuf pp;
 			char c = str[ss];
 			str[ss] = 0;
@@ -4450,7 +4450,7 @@ bool Addresses::set2 ( ) {
 			str[ss] = c;
 			*/
 			//m_ns = m_ns;
-			long ns = m_sm.getNumPtrs();
+			int32_t ns = m_sm.getNumPtrs();
 			// if no intersection added, keep on going
 			if ( ns == old ) continue;
 			// keep going if not a street before it either
@@ -4564,34 +4564,34 @@ bool Addresses::set2 ( ) {
 		// never start with "At"
 		//if ( wids[i] == h_at ) { atPreceeds = true; continue; }
 		// count the number of numbers
-		long nums = 0;
+		int32_t nums = 0;
 		// are we delimeted on the left end?
 		//bool leftEnd  = false;
 		// keep an accumulative hash of all the wids in the phrase
 		bool firstWasDir    =  false; // 1st word is a direction?
 		bool hadCornerDir   =  false;
 		char uc             = -1; // are we capitalized?
-		long alphaCount     =  0;
-		long indCountStreet =  0;
-		long indCountDir    =  0;
-		long stopCount      =  0;
-		long numCount       =  0;
+		int32_t alphaCount     =  0;
+		int32_t indCountStreet =  0;
+		int32_t indCountDir    =  0;
+		int32_t stopCount      =  0;
+		int32_t numCount       =  0;
 		bool firstWordIsNum =  false;
 		bool lastWasNum     = false;
 		bool lastWasDir     = false;
-		long commaCount     =  0;
-		long alnumsInPhrase =  0;
-		long long lastIndStreetHash = 0LL;
+		int32_t commaCount     =  0;
+		int32_t alnumsInPhrase =  0;
+		int64_t lastIndStreetHash = 0LL;
 		// hash of the non indicator alpha words in street name
-		//long long h1             =  0;
+		//int64_t h1             =  0;
 		// . includes hash of directional indicators
 		// . we only use this if street name is a directional indicator
-		//long long h2             =  0;
-		//long long h2b            =  0;
-		//long long h3             =  0;
-		//long long h4             =  0;
+		//int64_t h2             =  0;
+		//int64_t h2b            =  0;
+		//int64_t h3             =  0;
+		//int64_t h4             =  0;
 		// word id of previous word
-		//long long pi = 0LL;
+		//int64_t pi = 0LL;
 		// punct right before us is a left bookend
 		//if ( i-1 >= 0 && wlens[i-1] >= 2 ) leftEnd = true;
 		//if ( i-1 >= 0 && wptrs[i-1][0] != ' ' && 
@@ -4610,17 +4610,17 @@ bool Addresses::set2 ( ) {
 		// need a delimeter on the left
 		//if ( ! leftEnd ) { atPreceeds = false; continue; }
 		// save it
-		long ns_stack = m_sm.getNumPtrs();//m_ns;
+		int32_t ns_stack = m_sm.getNumPtrs();//m_ns;
 		// a flag for "1025 1/2 Lomas Blvd NE..."
-		long fractionj = -1;
+		int32_t fractionj = -1;
 		// "620-624 Central Ave SW." (El Rey) ?
 		bool hasRange = false;
 		// fix for "4909-15 Hawkins NE" for ceder.net
 		bool hasHyphenAddress = false;
 		// reset this
-		long lastSpecialj = -1;
+		int32_t lastSpecialj = -1;
 		// loop over it
-		for ( long j = i ; j < nw ; j++ ) {
+		for ( int32_t j = i ; j < nw ; j++ ) {
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// we can never contain a tag
@@ -4728,7 +4728,7 @@ bool Addresses::set2 ( ) {
 					continue;
 				}
 				// sequence of whitespace is ok
-				long k;	for(k=0;k<wlens[j];k++)
+				int32_t k;	for(k=0;k<wlens[j];k++)
 					if(!is_wspace_a(wptrs[j][k])) break;
 				if(k==wlens[j]) continue;
 				// '/' is ok if part of a fraction!
@@ -4930,7 +4930,7 @@ bool Addresses::set2 ( ) {
 			// assume not
 			bool isDir = false;
 			bool isStreetInd = false;
-			// shortcut
+			// int16_tcut
 			bool isNum = ww->isNum2(j);
 			// set "lastWasNum"
 			if ( isNum ) lastWasNum = true;
@@ -4982,15 +4982,15 @@ bool Addresses::set2 ( ) {
 					// if word was not a number before us
 					if ( j != i ) break;
 					if ( wptrs[j+1][0]==',') break;
-					long a = ww->getAsLong(j);
-					long b = ww->getAsLong(j+2);
+					int32_t a = ww->getAsLong(j);
+					int32_t b = ww->getAsLong(j+2);
 					if ( a >= b ) break;
 					if ( b - a > 10 ) break;
 					// i guess it is ok now
 					hasRange = true;
 				}
 				// no years.
-				long n = ww->getAsLong(j);
+				int32_t n = ww->getAsLong(j);
 				// possible possessive year?
 				if ( n>=1980 && n<=2030 && 
 				     j+1<nw && wptrs[j+1][0]=='\'')
@@ -5091,7 +5091,7 @@ bool Addresses::set2 ( ) {
 					ok = true;
 				// get next alnum word, should be
 				// the "th" in "4 th street" for example
-				long nn = i + 2;
+				int32_t nn = i + 2;
 				if ( nn<nw &&  tids[nn] ) nn++;
 				if ( nn<nw && !wids[nn] ) nn++;
 				if ( nn<nw && wids[nn]==h_st )	ok = true;
@@ -5184,7 +5184,7 @@ bool Addresses::set2 ( ) {
 				break;
 
 			// get synonym of word id
-			//long long *swid = getSynonymWord ( &wids[j] , &pi );
+			//int64_t *swid = getSynonymWord ( &wids[j] , &pi );
 			// word id of previous word
 			//pi = wids[j];
 			// this too
@@ -5327,7 +5327,7 @@ bool Addresses::set2 ( ) {
 			     // for for "77kkob am abq nm" (radio station fix)
 			     wids[j] != h_am &&
 			     wids[j] != h_fm ) {
-				long follows = cityAdm1Follows(j+2);
+				int32_t follows = cityAdm1Follows(j+2);
 				// good then
 				if ( follows ) goodStreet = true;
 				// error? this can never happen...
@@ -5336,7 +5336,7 @@ bool Addresses::set2 ( ) {
 				// thinks that the city is "York!" for
 				// local.botw.org
 				if ( follows ) {
-					long f2 = cityAdm1Follows(j);
+					int32_t f2 = cityAdm1Follows(j);
 					// this can never happen... comment out
 					//if ( f2 == -1 ) return false;
 					if ( f2 ) goodStreet = false;
@@ -5448,10 +5448,10 @@ bool Addresses::set2 ( ) {
 			// . like "501 Copper Ave" vs "501 Copper Ave. NW"
 			//if ( ns > 0 && i == streets[ns-1].m_a ) ns--;
 			// length of current street (place)
-			//long plen = (wptrs[j] + wlens[j]) - wptrs[i];
-			// short cut
-			long a = i;
-			long b = j+1;
+			//int32_t plen = (wptrs[j] + wlens[j]) - wptrs[i];
+			// int16_t cut
+			int32_t a = i;
+			int32_t b = j+1;
 
 			// fix "corrales bosque gallery 
 			//      4685 Corrales Rd. *in* Corrales NM"
@@ -5461,7 +5461,7 @@ bool Addresses::set2 ( ) {
 			}
 
 			// length of current street (place)
-			long plen = (wptrs[b-1] + wlens[b-1]) - wptrs[a];
+			int32_t plen = (wptrs[b-1] + wlens[b-1]) - wptrs[a];
 
 			// add the street
 			Place *street = (Place *)m_sm.getMem(sizeof(Place));
@@ -5504,13 +5504,13 @@ bool Addresses::set2 ( ) {
 			//   to m_places[] below because this bit was getting
 			//   set -- i.e. we don't take cities from street names
 			if ( lastSpecialj==-1 || lastSpecialj==j ) {
-				for ( long k = a ; bits && k < b ; k++ )
+				for ( int32_t k = a ; bits && k < b ; k++ )
 					bits[k] |= D_IS_IN_STREET;
 			}
 
 			// this is a hack
 			if ( lastSpecialj >= 0 && lastSpecialj != j ) {
-				long    ns = m_sm.getNumPtrs();
+				int32_t    ns = m_sm.getNumPtrs();
 				Place  *ps = (Place *)m_sm.getPtr(ns-2);
 				ps    ->m_flags2 |= PLF2_COLLISION;
 				street->m_flags2 |= PLF2_COLLISION;
@@ -5549,14 +5549,14 @@ bool Addresses::set2 ( ) {
 
 	// for setting Place
 	alnumPos = -1;
-	long ignoreUntil = -1;
-	long lastCityAlnumB = -1;
-	long long prevWid = 0LL;
+	int32_t ignoreUntil = -1;
+	int32_t lastCityAlnumB = -1;
+	int64_t prevWid = 0LL;
 	bool inCityIndicator = false;
 	bool inStateIndicator = false;
 
 	// scan the entire document
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// a tag?
@@ -5593,20 +5593,20 @@ bool Addresses::set2 ( ) {
 		if ( i < ignoreUntil ) continue;
 
 		// get it
-		long long lastWid = prevWid;
+		int64_t lastWid = prevWid;
 		// update it
 		prevWid = m_wids[i];
 
 		// must be a zip
 		if ( is_digit(m_wptrs[i][0]) ) {
-			// shortcut
+			// int16_tcut
 			// this crashed for h=70799779105646092LL
 			// word="60527"
-			long long h = m_wids[i];
+			int64_t h = m_wids[i];
 			// 5 digits
 			if ( m_wlens[i] != 5 ) continue;
 			// check for zip code
-			long slot = g_zips.getSlot(&h);
+			int32_t slot = g_zips.getSlot(&h);
 			// skip if not
 			if ( slot < 0 ) continue;
 			// make sure only one! US-only for now...
@@ -5709,7 +5709,7 @@ bool Addresses::set2 ( ) {
 		if ( sp && (sp[i]->m_flags & SEC_IN_TITLE) ) inTitle = true;
 
 		if ( pc ) {
-			// shortcut
+			// int16_tcut
 			Place *p = (Place *)m_pm.getMem(sizeof(Place));
 			if ( ! p ) return false;
 			// ok, good to add
@@ -5721,7 +5721,7 @@ bool Addresses::set2 ( ) {
 		}
 
 		if ( ps ) {
-			// shortcut
+			// int16_tcut
 			Place *p = (Place *)m_pm.getMem(sizeof(Place));
 			if ( ! p ) return false;
 			// ok, good to add
@@ -6046,16 +6046,16 @@ bool Addresses::set2 ( ) {
 	alnumPos = -1;
 	// set if at preceeds the name
 	bool atFlag = false;
-	long long lastWid = 0LL;
+	int64_t lastWid = 0LL;
 	// do not do this if we are javascript
-	long ni = nw;
+	int32_t ni = nw;
 	if ( m_contentType == CT_JS ) ni = 0;
 	// do not do this if called from msg13
 	if ( ! m_sections ) ni = 0;
 	// the first word in a td table cell
-	long firstWordInCell;
+	int32_t firstWordInCell;
 	// first we identify the candidate place names
-	for ( long i = 0 ; i < ni ; i++ ) {
+	for ( int32_t i = 0 ; i < ni ; i++ ) {
 		// skip tags
 		if ( tids[i] ) { 
 			// input tags reset at tag, like
@@ -6098,7 +6098,7 @@ bool Addresses::set2 ( ) {
 		// and update to the new one
 		atFlag = false;
 		// save this
-		long long savedWid = lastWid;
+		int64_t savedWid = lastWid;
 		// update it now
 		lastWid = wids[i];
 		// do not start with a date
@@ -6278,21 +6278,21 @@ bool Addresses::set2 ( ) {
 		//if ( m_ns >= MAX_STREETS ) break;
 		// ok, we got a candidate, reset this
 		lastWasBreak = 0;
-		//long long h = 0LL;
-		long long pi = 0LL;
+		//int64_t h = 0LL;
+		int64_t pi = 0LL;
 		bool prevUpper = false;
 		bool prevAdded = false; // added prev to the street array?
 		// count em
-		long alphaCount = 0;
-		long numCount   = 0;
+		int32_t alphaCount = 0;
+		int32_t numCount   = 0;
 		// subalnum count
-		long subAlnumCount = 0;
-		long long h = 0LL;
-		long long lastWid2 = 0LL;
+		int32_t subAlnumCount = 0;
+		int64_t h = 0LL;
+		int64_t lastWid2 = 0LL;
 		// . now make a hash of all substrings of the following words
 		//   for lookup into namedb
 		// . ADD CANDIDATE
-		for ( long j = i ; j < nw ; j++ ) {
+		for ( int32_t j = i ; j < nw ; j++ ) {
 			// tags stop our train
 			if ( tids[j] ) break;
 			// or if ventures into a street from above
@@ -6336,7 +6336,7 @@ bool Addresses::set2 ( ) {
 			// . convert place name word into base word
 			// . synonyms
 			// . converts 4th to fourth, theatre to theater, etc.
-			//long long *hw = getSynonymWord ( &wids[j] , &pi );
+			//int64_t *hw = getSynonymWord ( &wids[j] , &pi );
 			// wordid of previous word
 			pi = wids[j];
 			// shift and store
@@ -6344,9 +6344,9 @@ bool Addresses::set2 ( ) {
 			// xor it in
 			h ^= wids[j];
 			// save it
-			long long savedWid2 = lastWid2;
+			int64_t savedWid2 = lastWid2;
 			lastWid2 = wids[j];
-			// do not shorten "Center of Arts" to "Center" because
+			// do not int16_ten "Center of Arts" to "Center" because
 			// it is causing the "Performing Arts Center of the 
 			// the Steinbeck Institute of Art" to be an alias for
 			// "San Jose Performing Arts Center" because 
@@ -6479,7 +6479,7 @@ bool Addresses::set2 ( ) {
 	// i.e. "call for location"
 	// This will cause Events.cpp to set the EV_UNKNOWN_LOCATION bit!!!
 	//
-	long b2;
+	int32_t b2;
 	bool add = false;
 	alnumPos = -1;
 	// do not do this if we are javascript
@@ -6488,7 +6488,7 @@ bool Addresses::set2 ( ) {
 	// do not do this if we have no sections -- call from msg13
 	if ( ! m_sections ) ni = 0;
 	// loop over every word
-	for ( long i = 0 ; i < ni ; i++ ) {
+	for ( int32_t i = 0 ; i < ni ; i++ ) {
 		// skip if not word
 		if ( ! wids[i] ) continue;
 		// skip if in script section or whatever to keep alnumPos right
@@ -6609,13 +6609,13 @@ bool Addresses::set2 ( ) {
 	/////////////////////////////
 	// do not do this logic if we are javascript because we do not set
 	// SEC_SENTENCE if the file is javascript
-	long imax = m_sm.getNumPtrs();//m_ns;
+	int32_t imax = m_sm.getNumPtrs();//m_ns;
 	if ( m_contentType == CT_JS ) imax = 0;
 
 	//
 	// if it is a place to buy tickets or register for an event then
 	// let's set this flag so Events.cpp can ignore it!
-	for ( long i = 0 ; i < imax ; i++ ) {
+	for ( int32_t i = 0 ; i < imax ; i++ ) {
 		// not for msg13's call
 		if ( ! m_sections ) break;
 		// get the street that we center the address around
@@ -6636,8 +6636,8 @@ bool Addresses::set2 ( ) {
 		//   Sections::addSentences() to deal with sentences that
 		//   unevenly span multiple sections like in aliconference.com
 		//   and abqtango.com
-		long a = ss->m_senta;
-		long b = ss->m_sentb;
+		int32_t a = ss->m_senta;
+		int32_t b = ss->m_sentb;
 		// use this i guess
 		if ( isTicketDate ( a , b , m_wids , m_bits , m_niceness ) ) 
 			street->m_flags2 |= PLF2_TICKET_PLACE;
@@ -6645,7 +6645,7 @@ bool Addresses::set2 ( ) {
 		// assume not
 		bool reg = false;
 		// now scan forward from there
-		for ( long j = a ; j < b ; j++ ) {
+		for ( int32_t j = a ; j < b ; j++ ) {
 			// skip punct words
 			if ( ! m_wids[j] ) continue;
 			// is it register?
@@ -6692,7 +6692,7 @@ bool Addresses::set2 ( ) {
 	// . if streets are adjacent in one continuous mass, then treat as
 	//   a single street for these purposes
 	/*
-	for ( long X = 0 ; X < ns ; X++ ) {
+	for ( int32_t X = 0 ; X < ns ; X++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get the street that we center the address around
@@ -6722,15 +6722,15 @@ bool Addresses::set2 ( ) {
 	//
 
 	// . make a 5 lists, one for each place type, to hold all the 
-	//   Places in the shortlist[] array we just created
+	//   Places in the int16_tlist[] array we just created
 	// . include Places in the tagRec and title as well
 	// . use a NULL ptr to indicate "no place"
 	// . then do a 6-way nested loop over all the combos
-	Place *pname   [10]; long nn = 0;
-	Place *padm1   [MAX_ADM1  ]; long na = 0;
-	Place *pcity   [MAX_CITIES]; long nc = 0;
-	Place *pzip    [MAX_ZIPS]; long nz = 0;
-	Place *psuite  [10]; long nu = 0;
+	Place *pname   [10]; int32_t nn = 0;
+	Place *padm1   [MAX_ADM1  ]; int32_t na = 0;
+	Place *pcity   [MAX_CITIES]; int32_t nc = 0;
+	Place *pzip    [MAX_ZIPS]; int32_t nz = 0;
+	Place *psuite  [10]; int32_t nu = 0;
 	// each latlon might be tethered to a street address already
 	// topologically speaking. we need to telescope it out and
 	// tether it to the first street we hit. including afterats and
@@ -6738,10 +6738,10 @@ bool Addresses::set2 ( ) {
 	// that we never recognize. and intead we tether it to a brother
 	// brother city/state when we shouldn't.
 	//Place *latlon  [MAX_LATLONS];
-	//Place *pctry   [10]; long ny = 0;
+	//Place *pctry   [10]; int32_t ny = 0;
 	
 	//Place places [ MAX_PLACES ];
-	//long np = 0;
+	//int32_t np = 0;
 
 	// sanity check
 	//if ( 500 > MAX_PLACES ) { char *xx=NULL;*xx=0; }
@@ -6752,15 +6752,15 @@ bool Addresses::set2 ( ) {
 	
 	/*
 	// add in default adm1/city/zip from title
-	long a = 0;
-	long b = 0;
-	long tapos = 0;
+	int32_t a = 0;
+	int32_t b = 0;
+	int32_t tapos = 0;
 	if ( ss ) {
 		a     = ss->m_titleStart;
 		tapos = ss->m_titleStartAlnumPos;
 	}
 	if ( ss ) b = ss->m_titleEnd  ;
-	// limit those nasty long titles
+	// limit those nasty int32_t titles
 	if ( b > a + 30 ) b = a + 30;
 
 	// add proper places from title into "places" array
@@ -6776,9 +6776,9 @@ bool Addresses::set2 ( ) {
 	*/
 
 	// save for popping
-	//long np_stack = m_np;
+	//int32_t np_stack = m_np;
 	
-	// shortcut
+	// int16_tcut
 	char **w = wptrs;
 
 	HashTableX dat;
@@ -6787,11 +6787,11 @@ bool Addresses::set2 ( ) {
 	// . set up the base array of all states
 	// . "bn" = baseNum
 	// . TODO: make sure state we select is not in a street!
-	long bn = 0;
+	int32_t bn = 0;
 	// alway have a NULL
 	padm1 [ bn++ ] = NULL;
 	// then
-	for ( long i = 0 ; i < m_npSaved ; i++ ) {
+	for ( int32_t i = 0 ; i < m_npSaved ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get city, state or zip
@@ -6820,11 +6820,11 @@ bool Addresses::set2 ( ) {
 
 
 	// "X" loops over all the streets we have
-	for ( long X = 0 ; X < m_sm.getNumPtrs() ; X++ ) {
+	for ( int32_t X = 0 ; X < m_sm.getNumPtrs() ; X++ ) {
 		// get the street that we center the address around
 		Place *street = (Place *)m_sm.getPtr(X);
 		// debug
-		//logf(LOG_DEBUG,"events: ****** X=%li *****",X);
+		//logf(LOG_DEBUG,"events: ****** X=%"INT32" *****",X);
 		// reset these
 		nc = 0;
 		na = bn;
@@ -6852,19 +6852,19 @@ bool Addresses::set2 ( ) {
 		//
 		// search for a suite name BEFORE the street
 		//
-		long k = street->m_a - 1 ;
+		int32_t k = street->m_a - 1 ;
 		// re-set this
 		alnumPos = street->m_alnumA ;
 		// start of it
-		long ak = -1;
+		int32_t ak = -1;
 		// flag init
 		bool gotSuiteBefore = 0;
 		// ptr
 		Place *suiteBefore = NULL;
 		// suite hash
-		long long suh = 0LL;
+		int64_t suh = 0LL;
 		// start alnumPos
-		long akPos = -1;
+		int32_t akPos = -1;
 		// now scan for suite, stop after hitting our first alnum word
 		for ( ; k >= 0 ; k-- ) {
 			// breathe
@@ -6930,7 +6930,7 @@ bool Addresses::set2 ( ) {
 			// point to it
 			suiteBefore = pp;
 			// length
-			long plen = wptrs[k]-wptrs[ak]+wlens[k];
+			int32_t plen = wptrs[k]-wptrs[ak]+wlens[k];
 			// point to the suite
 			char *ps = wptrs[ak];
 			// skip over initial comma
@@ -6968,8 +6968,8 @@ bool Addresses::set2 ( ) {
 		// suite hash
 		suh = 0LL;
 		// remember start of suite
-		long startk        = -1;
-		long startAlnumPos = -1;
+		int32_t startk        = -1;
+		int32_t startAlnumPos = -1;
 		char got = 0;
 		// point to next street
 		Place *next = NULL;
@@ -7048,7 +7048,7 @@ bool Addresses::set2 ( ) {
 				suh ^= wids[k];
 			}
 			// length
-			long plen = wptrs[k]-wptrs[startk]+wlens[k];
+			int32_t plen = wptrs[k]-wptrs[startk]+wlens[k];
 			// sanity check. i've seen this happen before,
 			// on http://cruises.priceline.com/promotion/price
 			// line/lm/default.asp for the $339 price, so let's
@@ -7091,8 +7091,8 @@ bool Addresses::set2 ( ) {
 		if ( nu <= 0 ) psuite [nu++] = NULL;
 
 		// "end" is the word # of first word in the street address
-		long end      = street->m_a;
-		long endAlnum = street->m_alnumA;
+		int32_t end      = street->m_a;
+		int32_t endAlnum = street->m_alnumA;
 		// but if we had a suite before... skip over it
 		if ( gotSuiteBefore ) {
 			end      = suiteBefore->m_a;
@@ -7106,20 +7106,20 @@ bool Addresses::set2 ( ) {
 		///////////////////////
 
 		// start at word before word # end
-		long i = end - 1;
+		int32_t i = end - 1;
 		// start here
-		long pa2 = m_am.getNumPtrs() - 1; // m_na - 1;
+		int32_t pa2 = m_am.getNumPtrs() - 1; // m_na - 1;
 		// save start of place array
-		long savednp = m_pm.getNumPtrs();//m_np;
+		int32_t savednp = m_pm.getNumPtrs();//m_np;
 		// save start of name array
-		long savednn = nn;
+		int32_t savednn = nn;
 		// init
 		Address *preva = NULL;
 		// assign
 		if ( pa2 >= 0 ) preva = (Address *)m_am.getPtr(pa2);
 				
 		// count how many place names we add
-		long pcount = 0;
+		int32_t pcount = 0;
 
 		////
 		//
@@ -7135,7 +7135,7 @@ bool Addresses::set2 ( ) {
 	redo:
 
 		// set this
-		long mini = -1;
+		int32_t mini = -1;
 		// get the prev address b boundard
 		if ( preva ) mini = preva->m_street->m_b;
 		// if preva was inlined, use zip or adm1 then
@@ -7148,9 +7148,9 @@ bool Addresses::set2 ( ) {
 				mini = preva->m_city->m_b;
 		}
 
-		long parensCount = 0;
+		int32_t parensCount = 0;
 		// keep an ongoing hash of alnum words in the name
-		//long long h = 0LL;
+		//int64_t h = 0LL;
 		// backup until we hit an alnum
 		for ( ; i >= 0 ; i-- ) {
 
@@ -7309,20 +7309,20 @@ bool Addresses::set2 ( ) {
 		}
 
 		// set that as our right side
-		long righti = i;
+		int32_t righti = i;
 		// reset this count
-		long alnumCount = 0;
-		long alphaCount = 0;
+		int32_t alnumCount = 0;
+		int32_t alphaCount = 0;
 		// reset this
-		long atPos = -1;
+		int32_t atPos = -1;
 		bool atCityName = false;
-		long atAlnumCount = -1;
+		int32_t atAlnumCount = -1;
 		// reset this
 		bool hadUpper = false;
 		bool hadLower = false;
 		bool hadAnd   = false;
 		// save last good i
-		long lasti = -1;
+		int32_t lasti = -1;
 		bool isUpper;
 		bool isLower;
 		// . ok, go backwards up to 15 alnum words from there
@@ -7678,19 +7678,19 @@ bool Addresses::set2 ( ) {
 			// a string of nothing but \n and ' ' is allowed
 			// and i see that in quite a few pages. microsoft
 			// front page had this issue as i remember...
-			long ampCount = 0;
-			long comCount = 0;
+			int32_t ampCount = 0;
+			int32_t comCount = 0;
 			// "Dr. Smith, Obstetrician / Gynecologist"
-			long slashCount = 0;
+			int32_t slashCount = 0;
 			// period is ok "Moving Co., Inc."
-			long kstart   = 0;
+			int32_t kstart   = 0;
 			if ( w[i][0]=='.'&&
 			     (is_wspace_a(w[i][1]) ||w[i][1]==',') &&
 			     i-1>=0 && wids[i-1] &&
 			     ( isAbbr(wids[i-1]) || wlens[i-1]==1 ) )
 				kstart++;
 			// ok now do the loop
-			long k ; for ( k = kstart ; k < wlens[i] ; k++ ) {
+			int32_t k ; for ( k = kstart ; k < wlens[i] ; k++ ) {
 				// "B & B Plumbing"
 				if ( w[i][k] == '&' ) {
 					if ( ++ampCount >= 2 ) break;
@@ -8071,13 +8071,13 @@ bool Addresses::set2 ( ) {
 			// point to it
 			char *p = wptrs[lasti];
 			// length
-			long plen = (wptrs[righti]+wlens[righti])-wptrs[lasti];
+			int32_t plen = (wptrs[righti]+wlens[righti])-wptrs[lasti];
 			// set end
 			char *pend = p + plen;
 			// end on period if we had it
 			if ( *pend == '.' ) pend++;
 			// include terminating ')' if any
-			long parens = 0;
+			int32_t parens = 0;
 			// start scan
 			for ( char *s = p ; s < pend ; s++ ) {
 				if ( *s == '(' ) parens++;
@@ -8095,7 +8095,7 @@ bool Addresses::set2 ( ) {
 			// note it if crazy...
 			if ( plen >= 200 ) 
 				// note it
-				log("addr: got place name of %li chars long",
+				log("addr: got place name of %"INT32" chars int32_t",
 				    plen);
 			// sanity check
 			//if ( m_np >= MAX_PLACES ) { char *xx=NULL;*xx=0; }
@@ -8103,7 +8103,7 @@ bool Addresses::set2 ( ) {
 			Place *pp = (Place *)m_pm.getMem(sizeof(Place));
 			if ( ! pp ) return false;
 			// set the type
-			long ptype = 0;
+			int32_t ptype = 0;
 			if ( pcount == 0 ) ptype = PT_NAME_1;
 			if ( pcount == 1 ) ptype = PT_NAME_2;
 			if ( ptype  == 0 ) { char *xx=NULL;*xx=0; }
@@ -8122,9 +8122,9 @@ bool Addresses::set2 ( ) {
 			pp->m_bits    = 0;//PLF_INFILE;
 			pp->m_flags2  = 0;
 			// reset hash
-			//long long h = 0LL;
+			//int64_t h = 0LL;
 			// word if of previous word
-			//long long pi = 0LL;
+			//int64_t pi = 0LL;
 			// we WERE looping backwards, so we need to
 			// compute the hash here
 			setHashes ( pp , m_words , m_niceness );
@@ -8134,7 +8134,7 @@ bool Addresses::set2 ( ) {
 			// get previous two places, see if city/state
 			Place *prev1 = NULL;
 			Place *prev2 = NULL;
-			long   np = m_pm.getNumPtrs();
+			int32_t   np = m_pm.getNumPtrs();
 			if ( np >= 2 ) {
 				prev1 = (Place *)m_pm.getPtr(np-1);
 				prev2 = (Place *)m_pm.getPtr(np-2);
@@ -8181,7 +8181,7 @@ bool Addresses::set2 ( ) {
 				//m_np++;
 			}
 			/*
-			for ( long k = pp->m_a ; k < pp->m_b ; k++ ) {
+			for ( int32_t k = pp->m_a ; k < pp->m_b ; k++ ) {
 				// skip if not word
 				if ( ! wids[k] ) continue;
 				// . do not add the first word if its "The" 
@@ -8192,7 +8192,7 @@ bool Addresses::set2 ( ) {
 				// . convert place name word into base word
 				// . synonyms
 				// . converts 4th to fourth, etc.
-				long long *hw = getSynonymWord (&wids[k],&pi);
+				int64_t *hw = getSynonymWord (&wids[k],&pi);
 				// set previous id
 				pi = wids[k];
 				// ignore it if returned 0 (ignore) (school)
@@ -8240,12 +8240,12 @@ bool Addresses::set2 ( ) {
 		// 
 		// start looking for city/state here
 		Place *xstreet  = (Place *)m_sm.getPtr(X);
-		long start      = xstreet->m_b;
-		long startAlnum = xstreet->m_alnumB;
+		int32_t start      = xstreet->m_b;
+		int32_t startAlnum = xstreet->m_alnumB;
 		// as = "After Street"
-		long as = X + 1; 
-		// shortcut
-		long ns = m_sm.getNumPtrs();
+		int32_t as = X + 1; 
+		// int16_tcut
+		int32_t ns = m_sm.getNumPtrs();
 		// scan the streets after street #X
 		for ( ; as < ns ; as++ ) {
 			// get that
@@ -8274,7 +8274,7 @@ bool Addresses::set2 ( ) {
 			start += 2;
 		}
 		// do not scan past this then
-		long max = nw;
+		int32_t max = nw;
 		if ( as < m_sm.getNumPtrs() ) max = sss->m_a;
 
 		// NO NO we had "124 ST BTWN 5 AVE AND MT MORRIS PARK WEST"
@@ -8314,15 +8314,15 @@ bool Addresses::set2 ( ) {
 
 		// check before the street, too, but stay in the sentence!
 		if ( nn >= 1 ) {
-			long na = pname[0]->m_a;
-			long nb = pname[0]->m_b;
+			int32_t na = pname[0]->m_a;
+			int32_t nb = pname[0]->m_b;
 			np=addProperPlaces(na,nb,15,places,
 					   MAX_PLACES,np,0,
 					   pname[0]->m_alnumA - 1,-1);
 		}
 		if ( nn >= 2 ) {
-			long na = pname[1]->m_a;
-			long nb = pname[1]->m_b;
+			int32_t na = pname[1]->m_a;
+			int32_t nb = pname[1]->m_b;
 			np=addProperPlaces(na,nb,15,places,
 					   MAX_PLACES,np,0,
 					   pname[1]->m_alnumA - 1,-1);
@@ -8353,8 +8353,8 @@ bool Addresses::set2 ( ) {
 
 		// might not have a sentence if we are CT_JAVASCRIPT content
 		// type, sense we avoid sentence setting for those doc types
-		long sa = 0;
-		long sb = 0;
+		int32_t sa = 0;
+		int32_t sb = 0;
 		// scan the first and last word of the senentce this street
 		// is in. MAY ACTUALLY BE OUTSIDE of the "ss" section because
 		// of the new logic in Sections::addSentences() which allows
@@ -8364,10 +8364,10 @@ bool Addresses::set2 ( ) {
 		// init this
 		bool hasRequiredPlace = false;
 		// set this. does it matter???
-		long alnumPos = 0;//ss->m_alnumA - 1;
+		int32_t alnumPos = 0;//ss->m_alnumA - 1;
 		bool afterIn = false;
 		// scan the sentence
-		for ( long i = sa ; i < sb ; i++ ) {
+		for ( int32_t i = sa ; i < sb ; i++ ) {
 			// skip if not alnum word
 			if ( ! m_wids[i] ) continue;
 			// count it
@@ -8385,8 +8385,8 @@ bool Addresses::set2 ( ) {
 			// require it be capitalized
 			if ( ! m_words->isCapitalized(i) ) continue;
 			// find the end of it
-			long j = i + 1;
-			long lastj = j;
+			int32_t j = i + 1;
+			int32_t lastj = j;
 			// loop until we hit something lowercase or number
 			for ( ; j < sb ; j++ ) {
 				// stop on tag
@@ -8414,14 +8414,14 @@ bool Addresses::set2 ( ) {
 				if ( p < pend ) break;
 			}
 			// save
-			long oldnp = np;
+			int32_t oldnp = np;
 			// reset
 			np = addProperPlaces(i,i+1,8,places,
 					     MAX_PLACES,np,0,
 					     alnumPos-1,
 					     lastj);
 			// set the required bit
-			for ( long k = oldnp ; k < np ; k++ )
+			for ( int32_t k = oldnp ; k < np ; k++ )
 				// set this bit
 				places[k].m_bits |= PLF2_REQUIRED;
 			// must contain a required bit?
@@ -8437,7 +8437,7 @@ bool Addresses::set2 ( ) {
 		// loop over them all and get all the possible combinations
 		// of Place types, Place::m_type.
 		//
-		for ( long i = 0 ; i < np ; i++ ) {
+		for ( int32_t i = 0 ; i < np ; i++ ) {
 			// get it
 			Place *pi = &places[i];
 			// sanity check
@@ -8473,10 +8473,10 @@ bool Addresses::set2 ( ) {
 		// . we note the telescope depth of each city/state/zip place 
 		//   we encounter so that we prefer the city topologically
 		//   closest to us
-		long sa = xstreet->m_a;
+		int32_t sa = xstreet->m_a;
 		if ( sa < 0 ) { char *xx=NULL;*xx=0; }
 
-		// shortcut
+		// int16_tcut
 		Place *st = xstreet;//&streets[X];
 
 		// are we a street or place name in the title?
@@ -8485,15 +8485,15 @@ bool Addresses::set2 ( ) {
 			streetInTitle = (sp[st->m_a]->m_flags & SEC_IN_TITLE);
 
 		Section *ss = NULL;
-		long senta = -1;
-		long sentb = -1;
+		int32_t senta = -1;
+		int32_t sentb = -1;
 		if ( m_sections ) {
 			ss = m_sections->m_sectionPtrs[street->m_a];
 			senta = ss->m_senta;
 			sentb = ss->m_sentb;
 		}
 
-		long maxZips = nz + 1;
+		int32_t maxZips = nz + 1;
 		bool hasRequiredCity  = false;
 		bool hasRequiredState = false;
 
@@ -8502,7 +8502,7 @@ bool Addresses::set2 ( ) {
 		// set pcity[], array of potential cities for this street
 		//
 		////////////
-		for ( long i = 0 ; i < m_npSaved ; i++ ) {
+		for ( int32_t i = 0 ; i < m_npSaved ; i++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			// get city, state or zip
@@ -8550,11 +8550,11 @@ bool Addresses::set2 ( ) {
 				// if it is us already, skip for sure
 				if ( pp && *pp == p ) continue;
 				// if we are not near street, skip us
-				long dist1 = p->m_alnumA - st->m_alnumA;
-				long dist2 = p->m_alnumA - st->m_alnumB;
+				int32_t dist1 = p->m_alnumA - st->m_alnumA;
+				int32_t dist2 = p->m_alnumA - st->m_alnumB;
 				if ( dist1 < 0 ) dist1 *= -1;
 				if ( dist2 < 0 ) dist2 *= -1;
-				long mdist = dist1;
+				int32_t mdist = dist1;
 				if ( dist2 < mdist ) mdist = dist2;
 				if ( mdist > 10 && ! inSent ) continue;
 				// sanity
@@ -8693,30 +8693,30 @@ bool Addresses::set2 ( ) {
 		//
 
 		// adjust nc
-		//long fakena = na + dc;
+		//int32_t fakena = na + dc;
 
 		// . now the heavily nested loop (BIG LOOP)
 		// . first over addresses to inherit from
 		// . default addresses (from tagdb rec - contact info)
 		// . TODO: fix this i1 < 2 HACK!
-		for ( long i1 = 0 ; i1 < dc && i1 < 2 ; i1++ ) {
+		for ( int32_t i1 = 0 ; i1 < dc && i1 < 2 ; i1++ ) {
 		// loop over default address again, but ignore city and
 		// just use the adm1 (state).
 		// should fix "913 W. Alameda - Santa Fe" which has no state,
 		// but "Albuquerque, New Mexico" is in the tag!
-		for ( long i1b = 0 ; i1b < 2 /*3*/ ; i1b++ ) {
+		for ( int32_t i1b = 0 ; i1b < 2 /*3*/ ; i1b++ ) {
 		// adm1 
-		for ( long i2 = 0 ; i2 < na ; i2++ ) {
+		for ( int32_t i2 = 0 ; i2 < na ; i2++ ) {
 		// city
-		for ( long i3 = 0 ; i3 < nc ; i3++ ) {
+		for ( int32_t i3 = 0 ; i3 < nc ; i3++ ) {
 		// ctry
-		//for ( long i4 = 0 ; i4 < ny ; i4++ ) {
+		//for ( int32_t i4 = 0 ; i4 < ny ; i4++ ) {
 		// zip
-		for ( long i5 = 0 ; i5 < nz ; i5++ ) {
+		for ( int32_t i5 = 0 ; i5 < nz ; i5++ ) {
 		// suite
-		for ( long i6 = 0 ; i6 < nu ; i6++ ) {
+		for ( int32_t i6 = 0 ; i6 < nu ; i6++ ) {
 		// place name
-		//for ( long i7 = 0 ; i7 < nn ; i7++ ) {
+		//for ( int32_t i7 = 0 ; i7 < nn ; i7++ ) {
 
 			// breathe
 			QUICKPOLL(m_niceness);
@@ -8724,7 +8724,7 @@ bool Addresses::set2 ( ) {
 			// we only use i1b for default addresses in da[]
 			if ( i1b > 0 && i1 == 0 ) continue;
 
-			// shortcuts
+			// int16_tcuts
 			Place   *adm1   =  padm1  [i2];
 			//Place *ctry   =  pctry  [i4];
 			Place   *zip    =  pzip   [i5];
@@ -8874,7 +8874,7 @@ bool Addresses::set2 ( ) {
 			if ( zip && adm1 && adm1->m_adm1Bits!=zip->m_adm1Bits)
 				zip = NULL;//continue;
 			//if ( adm1->m_crid   !=zip->m_crid    )continue;
-			// cut the long long to a long for this compare
+			// cut the int64_t to a int32_t for this compare
 			if ( zip && city && city->m_hash != zip->m_cityHash ) 
 				zip = NULL;//continue;
 			*/
@@ -8902,8 +8902,8 @@ bool Addresses::set2 ( ) {
 			//}
 
 
-			//log("events: i1=%li i2=%li i3=%li i4=%li "
-			//    "i5=%li i6=%li i7=%li",
+			//log("events: i1=%"INT32" i2=%"INT32" i3=%"INT32" i4=%"INT32" "
+			//    "i5=%"INT32" i6=%"INT32" i7=%"INT32"",
 			//    i1,i2,i3,i4,i5,i6,i7);
 
 			// clear
@@ -8969,7 +8969,7 @@ bool Addresses::set2 ( ) {
 	char subuf[2000];
 	// set allowDups to true!!!!
 	su.set ( 8 , 8 , 0 , subuf , 2000 , true , m_niceness );
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -8977,13 +8977,13 @@ bool Addresses::set2 ( ) {
 		// skip if not inlined
 		if ( ! ( a->m_flags & AF_INLINED ) ) continue;
 		// get street hash
-		long long sh = a->m_street->m_hash;
+		int64_t sh = a->m_street->m_hash;
 		// get city hash
-		long long ch = a->m_city.m_hash;
+		int64_t ch = a->m_city.m_hash;
 		// hash it. return false with g_errno set on error
 		if ( ! su.addKey ( &sh , &ch ) ) return false;
 	}
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -8991,11 +8991,11 @@ bool Addresses::set2 ( ) {
 		// skip if not inlined
 		if ( ! ( a->m_flags & AF_INLINED ) ) continue;
 		// get street hash
-		long long sh = a->m_street->m_hash;
+		int64_t sh = a->m_street->m_hash;
 		// how many different cities have this same street?
-		long slot = su.getSlot ( &sh );
+		int32_t slot = su.getSlot ( &sh );
 		// reset count
-		long count = 0;
+		int32_t count = 0;
 		// multiple places might have this hash
 		for ( ; slot>=0 ; slot = su.getNextSlot ( slot , &sh ) ) {
 			// count it
@@ -9017,7 +9017,7 @@ bool Addresses::set2 ( ) {
 	//
 	setAmbiguousFlags();
 
-	//log("events: combos=%li",combos);
+	//log("events: combos=%"INT32"",combos);
 	//char *xx=NULL;*xx=0;
 	//log("events: sleeping 3 seconds. waiting for possible Ctrl-C");
 	//sleep(3);
@@ -9025,15 +9025,15 @@ bool Addresses::set2 ( ) {
 	return true;
 }
 
-Place *getZipPlace ( long a , long alnumPos , Words *words ) {
+Place *getZipPlace ( int32_t a , int32_t alnumPos , Words *words ) {
 	// must be a number
 	if ( ! is_digit(words->m_words[a][0]) ) return NULL;
 	// return this if we got one
 	static Place p;
 	// make hash
-	long long h = 0 ^ words->m_wordIds[a];
+	int64_t h = 0 ^ words->m_wordIds[a];
 	// check for zip code
-	long slot = g_zips.getSlot(&h);
+	int32_t slot = g_zips.getSlot(&h);
 	// skip if not
 	if ( slot < 0 ) return NULL;
 	// get the place
@@ -9056,33 +9056,33 @@ Place *getZipPlace ( long a , long alnumPos , Words *words ) {
 	return &p;
 }
 
-Place *getCityPlace ( long a , long alnumPos , Words *words ) {
+Place *getCityPlace ( int32_t a , int32_t alnumPos , Words *words ) {
 	// return this if we got one
 	static Place p;
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
-	long count = 0;
+	int32_t count = 0;
 	// record start
-	long startAlnumPos = alnumPos;
+	int32_t startAlnumPos = alnumPos;
 	// fix this
 	alnumPos--;
 	// return this
 	Place *retp = NULL;
 	// for some filtering
 	static bool s_flag = false;
-	static long long h_university;
-	static long long h_of;
+	static int64_t h_university;
+	static int64_t h_of;
 	if ( ! s_flag ) {
 		s_flag = true;
 		h_university = hash64n("university");
 		h_of         = hash64n("of");
 	}
-	// shortcut
-	long nw = words->m_numWords;
-	long wcount = 0;
+	// int16_tcut
+	int32_t nw = words->m_numWords;
+	int32_t wcount = 0;
 	// loop over words in [a,b)
-	for ( long k = a ; k < nw ; k++ ) {
+	for ( int32_t k = a ; k < nw ; k++ ) {
 		// or 15 words is good enough too!
 		if ( ++wcount >= 20 ) break;
 		// skip if not alnum
@@ -9092,9 +9092,9 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 		// only up to 4 words in a city name
 		if ( ++count >= 5 ) break;
 		// get the hash of potential place name
-		long long wid = words->m_wordIds[k];
-		// shortcut
-		long  wlen = words->m_wordLens[k];
+		int64_t wid = words->m_wordIds[k];
+		// int16_tcut
+		int32_t  wlen = words->m_wordLens[k];
 		char *wptr = words->m_words[k];
 		// if it ended in apostrophe s then fix that
 		if ( wlen > 2 &&
@@ -9107,7 +9107,7 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 		// hash it into our ongoing hash
 		h ^= wid; // words->m_wordIds[k];
 		// might be alias
-		//long long *ah1 = (long long *) g_aliases.getValue(&h); 
+		//int64_t *ah1 = (int64_t *) g_aliases.getValue(&h); 
 		//if ( ah1 ) h = *ah1;
 		// ignore "University" if "of" follows
 		if ( h == h_university && 
@@ -9120,9 +9120,9 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 		// check for "county" (santa fe county is not a city name)
 		if ( k + 2 < nw && words->m_wordIds[k+2] == h_county ) 
 			return NULL;
-		// shortcuts
+		// int16_tcuts
 		char **wptrs = words->getWords();
-		long  *wlens = words->getWordLens();
+		int32_t  *wlens = words->getWordLens();
 		// set the place
 		p.m_adm1Bits  = cd->m_adm1Bits;
 		p.m_type      = PT_CITY;
@@ -9156,21 +9156,21 @@ Place *getCityPlace ( long a , long alnumPos , Words *words ) {
 	return retp;
 }
 
-Place *getStatePlace ( long a , long alnumPos , Words *words ) {
+Place *getStatePlace ( int32_t a , int32_t alnumPos , Words *words ) {
 	// return this if we got one
 	static Place p;
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
-	long count = 0;
+	int32_t count = 0;
 	// record start
-	long startAlnumPos = alnumPos;
+	int32_t startAlnumPos = alnumPos;
 	// fix this
 	alnumPos--;
-	// shortcut
-	long nw = words->getNumWords();
+	// int16_tcut
+	int32_t nw = words->getNumWords();
 	// loop over words in [a,b)
-	for ( long k = a ; k < nw ; k++ ) {
+	for ( int32_t k = a ; k < nw ; k++ ) {
 		// skip if not alnum
 		if ( ! words->isAlnum(k) ) continue;
 		// count it
@@ -9178,9 +9178,9 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 		// only up to 3 words "district of columbia"
 		if ( ++count >= 4 ) break;
 		// get the hash of potential place name
-		long long wid = words->m_wordIds[k];
-		// shortcut
-		long  wlen = words->m_wordLens[k];
+		int64_t wid = words->m_wordIds[k];
+		// int16_tcut
+		int32_t  wlen = words->m_wordLens[k];
 		char *wptr = words->m_words[k];
 		// if it ended in apostrophe s then fix that
 		if ( wlen > 2 &&
@@ -9193,14 +9193,14 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 		// hash it into our ongoing hash
 		h ^= wid; // words->m_wordIds[k];
 		// get it
-		long pos = getStateOffset ( &h );
+		int32_t pos = getStateOffset ( &h );
 		// skip if not a state
 		if ( pos < 0 ) continue;
-		// shortcuts
+		// int16_tcuts
 		char **wptrs = words->getWords();
-		long  *wlens = words->getWordLens();
+		int32_t  *wlens = words->getWordLens();
 		// otherwise, set it
-		long long stateBit = 1LL << pos;
+		int64_t stateBit = 1LL << pos;
 		p.m_adm1Bits = stateBit;
 		p.m_type     = PT_STATE;
 		p.m_a        = a;
@@ -9222,17 +9222,17 @@ Place *getStatePlace ( long a , long alnumPos , Words *words ) {
 
 // . returns -1 and sets g_errno on error
 // . returns false if not city/state combo, true otherwise
-long Addresses::isCityState3 ( long long h1 , long long h2 ) {
+int32_t Addresses::isCityState3 ( int64_t h1 , int64_t h2 ) {
 
-	long long nh1 = h1;
-	long long nh2 = h2;
+	int64_t nh1 = h1;
+	int64_t nh2 = h2;
 
 	// we now put the aliases into g_cities as if they were their own
 	// cities!
 	// convert aliases -- only for cities methinks
-	//long long *ah1 = (long long *) g_aliases.getValue(&h1);
+	//int64_t *ah1 = (int64_t *) g_aliases.getValue(&h1);
 	//if ( ah1 ) nh1 = *ah1;
-	//long long *ah2 = (long long *) g_aliases.getValue(&h2);
+	//int64_t *ah2 = (int64_t *) g_aliases.getValue(&h2);
 	//if ( ah2 ) nh2 = *ah2;
 
 	// get the places
@@ -9266,11 +9266,11 @@ long Addresses::isCityState3 ( long long h1 , long long h2 ) {
 }
 
 // words range is [a,b)
-bool Addresses::isCityName ( long a , long b ) {
+bool Addresses::isCityName ( int32_t a , int32_t b ) {
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// loop over words in [a,b)
-	for ( long k = a ; k < b ; k++ ) {
+	for ( int32_t k = a ; k < b ; k++ ) {
 		// skip if not alnum
 		if ( ! m_words->isAlnum(k) ) continue;
 		// mix it up
@@ -9279,20 +9279,20 @@ bool Addresses::isCityName ( long a , long b ) {
 		h ^= m_wids[k];
 	}
 	// might be alias
-	//long long *ah1 = (long long *) g_aliases.getValue(&h);	
+	//int64_t *ah1 = (int64_t *) g_aliases.getValue(&h);	
 	//if ( ah1 ) h = *ah1;
 	// get it
 	return g_cities.isInTable(&h);
 }
 
 // words range is [a,b)
-bool Addresses::isStateName ( long a ) {
+bool Addresses::isStateName ( int32_t a ) {
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
-	long count = 0;
+	int32_t count = 0;
 	// loop over words in [a,b)
-	for ( long k = a ; k < m_nw ; k++ ) {
+	for ( int32_t k = a ; k < m_nw ; k++ ) {
 		// skip if not alnum
 		if ( ! m_words->isAlnum(k) ) continue;
 		// only up to "district of columbia"
@@ -9312,14 +9312,14 @@ bool Addresses::isStateName ( long a ) {
 bool Addresses::isCityState ( Section *si ) {
 
 	// skip if too many words
-	long na = si->m_lastWordPos - si->m_firstWordPos;
+	int32_t na = si->m_lastWordPos - si->m_firstWordPos;
 	if ( na <= 0    ) return false;
 	if ( na >= 2*10 ) return false;
 
-	long a = si->m_a;
-	long b = si->m_lastWordPos + 1;
+	int32_t a = si->m_a;
+	int32_t b = si->m_lastWordPos + 1;
 
-	long lastb = isCityState2 ( a , b );
+	int32_t lastb = isCityState2 ( a , b );
 
 	if ( lastb <= 0 ) return false;
 	if ( lastb == si->m_lastWordPos ) return true;
@@ -9328,14 +9328,14 @@ bool Addresses::isCityState ( Section *si ) {
 
 // . returns -1 and sets g_errno on error
 // . returns 0 or 1 otherwise
-long Addresses::cityAdm1Follows ( long a ) {
+int32_t Addresses::cityAdm1Follows ( int32_t a ) {
 	// returns -1 if does not follow
 	if ( isCityState2 ( a , m_nw ) < 0 ) return 0;
 	// it did follow
 	return 1;
 }
 
-long Addresses::isCityState2 ( long a , long b ) {
+int32_t Addresses::isCityState2 ( int32_t a , int32_t b ) {
 
 	// m must lie on a punt word or tag
 	for ( ; a < b ; a++ ) {
@@ -9350,7 +9350,7 @@ long Addresses::isCityState2 ( long a , long b ) {
 	Place *cp = getCityPlace ( a , 0 , m_words );
 	if ( ! cp ) return -1;
 	// point to start of state
-	long sta = cp->m_b;
+	int32_t sta = cp->m_b;
 	for ( ; sta < b ; sta++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
@@ -9372,7 +9372,7 @@ long Addresses::isCityState2 ( long a , long b ) {
 void Addresses::setAmbiguousFlags ( ) {
 
 	// clear those flags first
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		Address *ai = (Address *)m_am.getPtr(i);
 		ai->m_flags &= ~AF_AMBIGUOUS;
 	}
@@ -9384,7 +9384,7 @@ void Addresses::setAmbiguousFlags ( ) {
 	// . only add in addresses that are definitive
 	// . must have zip code, must not have another address with the same
 	//   street address
-	for ( long i = 0 ; i < m_am.getNumPtrs() - 1 ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() - 1 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// get it
@@ -9392,14 +9392,14 @@ void Addresses::setAmbiguousFlags ( ) {
 		// do not do fake street names
 		if ( a->m_street->m_a < 0 ) continue;
 		// reset verified counts
-		long verified1 = 0;
-		long verified2 = 0;
-		long verified3 = 0;
-		long verified4 = 0;
+		int32_t verified1 = 0;
+		int32_t verified2 = 0;
+		int32_t verified3 = 0;
+		int32_t verified4 = 0;
 		// count dups, addresses using the same street
-		long dups = 0;
+		int32_t dups = 0;
 		// do we have other verified addresses using this street?
-		for ( long j = i ; j < m_am.getNumPtrs() ; j++ ) {
+		for ( int32_t j = i ; j < m_am.getNumPtrs() ; j++ ) {
 			// get one before us
 			Address *b = (Address *)m_am.getPtr(j);
 			// stop when street is different
@@ -9418,7 +9418,7 @@ void Addresses::setAmbiguousFlags ( ) {
 		}
 
 		// loop over all the dups
-		for ( long j = i ; dups >= 2 && j < m_am.getNumPtrs() ; j++ ) {
+		for ( int32_t j = i ; dups >= 2 && j < m_am.getNumPtrs() ; j++ ) {
 			// get one before us
 			Address *b = (Address *)m_am.getPtr(j);
 			// stop when street is different
@@ -10054,14 +10054,14 @@ static bool s_synInit = false;
 // . 4th --> fourth
 // . theatre --> theater
 // . school --> {0}
-long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
+int64_t *getSynonymWord ( int64_t *h, int64_t *prevId, bool isStreet ) {
 
-	static long long h_cafeteria;
-	static long long h_auditorium;
-	static long long h_school;
-	static long long h_library;
-	static long long h_zero;
-	static long long h_the;
+	static int64_t h_cafeteria;
+	static int64_t h_auditorium;
+	static int64_t h_school;
+	static int64_t h_library;
+	static int64_t h_zero;
+	static int64_t h_the;
 	// set syn table?
 	if ( ! s_synInit ) {
 		// init it
@@ -10069,16 +10069,16 @@ long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
 			// core dump if this fails
 			char *xx=NULL;*xx=0;}
 		// stock it
-		long n = (long)sizeof(s_synList)/ sizeof(SynTwin);
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_synList)/ sizeof(SynTwin);
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// breathe
 			//QUICKPOLL ( m_niceness );
 			char      *s1   = s_synList[i].m_s1;
 			char      *s2   = s_synList[i].m_s2;
-			long       len1 = gbstrlen ( s1 );
-			long       len2 = gbstrlen ( s2 );
-			long long  sh1  = hash64Lower_utf8 ( s1 , len1 );
-			long long  sh2  = hash64Lower_utf8 ( s2 , len2 );
+			int32_t       len1 = gbstrlen ( s1 );
+			int32_t       len2 = gbstrlen ( s2 );
+			int64_t  sh1  = hash64Lower_utf8 ( s1 , len1 );
+			int64_t  sh2  = hash64Lower_utf8 ( s2 , len2 );
 			// skip if the same
 			if ( sh1 == sh2 ) continue;
 			// sanity check
@@ -10114,13 +10114,13 @@ long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
 	// TODO: uncomment this later and replace h_the logic above
 	if ( *h == h_the && *prevId == 0LL ) return &h_zero;
 
-	long long *p = (long long *)s_syn.getValue64 ( *h );
+	int64_t *p = (int64_t *)s_syn.getValue64 ( *h );
 
 	// check city aliases table. we no longer store city aliases
 	// in the synonym list
 	// . no! might have "SF Smith" not "Santa Fe Smith"
 	//if ( ! p ) {
-	//	long long *ah1 = (long long *) g_aliases.getValue(h);
+	//	int64_t *ah1 = (int64_t *) g_aliases.getValue(h);
 	//	if ( ah1 ) return ah1;
 	//}
 
@@ -10131,7 +10131,7 @@ long long *getSynonymWord ( long long *h, long long *prevId, bool isStreet ) {
 	return p;
 }
 
-void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
+void Addresses::print ( SafeBuf *pbuf , int64_t uh64 ) {
 
 	// print the streets first
 	printPlaces( &m_sm , pbuf , m_sections , NULL);//&m_addresses[0] );
@@ -10178,7 +10178,7 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 	pbuf->safePrintf ( hdrFormat , "Invalid Addresses" );
 
 	// print the final winning addresses
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10205,11 +10205,11 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 	pbuf->safePrintf("<a name=events>\n");
 
 	// Spider.cpp when storing parse.* file will also store an
-	// abbreviate file called parse-shortdisplay.* consisting only
+	// abbreviate file called parse-int16_tdisplay.* consisting only
 	// of these div tags for rendering within the qa.html file! that
 	// way the qa person can easily check/uncheck all the checkboxes
 	// right in the qa.html file
-	pbuf->safePrintf("<div class=shortdisplay>\n");
+	pbuf->safePrintf("<div class=int16_tdisplay>\n");
 
 	// print checkbox to indicate if events are wrong
 	pbuf->safePrintf ( "<!--ignore-->" // ignore for Test.cpp diff
@@ -10219,7 +10219,7 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 			   "<span class=validated "
 			   "style=background-color:#9090e0>"
 			   "<input type=checkbox "
-			   "onclick=\"senddiv(this,'%lli');\" "
+			   "onclick=\"senddiv(this,'%"INT64"');\" "
 			   "unchecked>"
 			   "<div class=validated style=display:inline>"
 			   " Has <b>address</b> parsing issue. Flag to fix."
@@ -10235,7 +10235,7 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 
 	// . first print only the INLINED (valid) addresses
 	// . i guess if they are verified that is considered valid too!
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// get it
 		Address *aa = (Address *)m_am.getPtr(i);
 		// is inlined or verified?
@@ -10253,7 +10253,7 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 		aa->print2 ( i,pbuf , uh64 );//&m_addresses[0]);
 	}
 	pbuf->safePrintf("</table>\n");
-	pbuf->safePrintf("</div class=shortdisplay>\n");
+	pbuf->safePrintf("</div class=int16_tdisplay>\n");
 	pbuf->safePrintf("<i>NOTE: a name must be VERIFIED before it will "
 			 "be a KEY in placedb. So you generally need two "
 			 "places inlining the same name before that will "
@@ -10265,32 +10265,32 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 // . looks up each word/phrase in our table of known places
 // . table incudes cities, countries, states (adm1), counties, zipcodes
 /*
-long Addresses::addProperPlaces ( long    a             ,
-				  long    b             , 
-				  long    maxAlnumCount ,
+int32_t Addresses::addProperPlaces ( int32_t    a             ,
+				  int32_t    b             , 
+				  int32_t    maxAlnumCount ,
 				  Place  *places        , 
-				  long    maxPlaces     ,
-				  long    np            ,
+				  int32_t    maxPlaces     ,
+				  int32_t    np            ,
 				  pbits_t flags         ,
 				  // this count excludes "a"?
-				  long    alnumPos ,
-				  long    forcedEnd ) {
-	// shortcuts
+				  int32_t    alnumPos ,
+				  int32_t    forcedEnd ) {
+	// int16_tcuts
 	Words     *ww    = m_words;
-	long       nw    = ww->getNumWords();
-	long long *wids  = ww->getWordIds();
+	int32_t       nw    = ww->getNumWords();
+	int64_t *wids  = ww->getWordIds();
 	char     **wptrs = ww->getWordPtrs();
-	long      *wlens = ww->getWordLens();
+	int32_t      *wlens = ww->getWordLens();
 	nodeid_t   *tids = ww->getTagIds();
 	// "4 miles" and "miles" does not mean "miles, california", the city
-	long long h_miles     = hash64 ( "miles",5);
-	long long h_mi        = hash64 ( "mi",2);
-	long long h_kilometers= hash64 ( "kilometers",10);
-	long long h_km        = hash64 ( "km",2);
+	int64_t h_miles     = hash64 ( "miles",5);
+	int64_t h_mi        = hash64 ( "mi",2);
+	int64_t h_kilometers= hash64 ( "kilometers",10);
+	int64_t h_km        = hash64 ( "km",2);
 	// reset this count again
-	long alnumCount = 0;
+	int32_t alnumCount = 0;
 	// after the street is an optional city
-	for ( long j = a ; j<b && alnumCount<maxAlnumCount ; j++ ) {
+	for ( int32_t j = a ; j<b && alnumCount<maxAlnumCount ; j++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// skip if not alnum
@@ -10315,15 +10315,15 @@ long Addresses::addProperPlaces ( long    a             ,
 		// try just doing caps only for now
 		if ( is_lower_utf8(wptrs[j]) ) continue;
 		// do not skip too far
-		long max = j + 6;
+		int32_t max = j + 6;
 		// truncate?
 		if ( max > nw ) max = nw;
 		// init hash
-		long long h = 0LL;
+		int64_t h = 0LL;
 		// the alnumcount for this
-		long subcount = 0;
+		int32_t subcount = 0;
 		// scan for city/adm1/zip after this street address
-		for ( long k = j ; k < max ; k++ ) {
+		for ( int32_t k = j ; k < max ; k++ ) {
 			// stop if tag
 			if ( tids[k] ) {
 				// skip non-breaking tags
@@ -10349,13 +10349,13 @@ long Addresses::addProperPlaces ( long    a             ,
 			// hash it into our ongoing hash
 			h ^= wids[k];
 			// look it up
-			long slot = g_cities.getSlot(&h);
+			int32_t slot = g_cities.getSlot(&h);
 			// length
-			long plen = (wptrs[k] + wlens[k]) - wptrs[j];
+			int32_t plen = (wptrs[k] + wlens[k]) - wptrs[j];
 			// skip otherwise
 			if ( forcedEnd >= 0 && k < forcedEnd ) continue;
 			// clear this
-			//long cityCount = 0;
+			//int32_t cityCount = 0;
 			// init
 			Place *pp;
 			// multiple places might have this hash
@@ -10365,7 +10365,7 @@ long Addresses::addProperPlaces ( long    a             ,
 					getValueFromSlot(slot);
 
 				// it might be an alias to another slot!
-				long slot2 = -1;
+				int32_t slot2 = -1;
 				if ( pd->m_bits & PLF_ALIAS ) {
 					// get the slot we alias
 					slot2 = pd->getSlot();
@@ -10403,7 +10403,7 @@ long Addresses::addProperPlaces ( long    a             ,
 				// . that way when we lookup this place in
 				//   placedb it will use the right hash
 				if ( slot2 >= 0 )
-		  pp->m_hash = *(long long *)g_cities.getKeyFromSlot(slot2);
+		  pp->m_hash = *(int64_t *)g_cities.getKeyFromSlot(slot2);
 
 				pp->m_adm1[0] = pd->m_adm1[0];
 				pp->m_adm1[1] = pd->m_adm1[1];
@@ -10529,7 +10529,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 			     // after all such streets.
 			     // "abq conv ctr 401 2nd st nw po box 1293 abq nm"
 			     // http://www.yelp.com/biz/pizza-9-albuquerque too
-			     long     startAlnum ,
+			     int32_t     startAlnum ,
 			     char     flags3     ,
 			     Address **retAddr   ) {
 
@@ -10617,11 +10617,11 @@ bool Addresses::addAddress ( Place   *name1   ,
 		return true;
 
 	static bool hset = false;
-	static long long h_zip;
-	static long long h_code;
-	static long long h_postal;
-	static long long h_zipcode;
-	static long long h_usa;
+	static int64_t h_zip;
+	static int64_t h_code;
+	static int64_t h_postal;
+	static int64_t h_zipcode;
+	static int64_t h_usa;
 	if ( ! hset ) {
 		hset      = true;
 		h_zip     = hash64n("zip");
@@ -10634,15 +10634,15 @@ bool Addresses::addAddress ( Place   *name1   ,
 	//
 	// set zipAlnumA
 	//
-	long zipAlnumA ;
+	int32_t zipAlnumA ;
 	if ( zip ) zipAlnumA = zip->m_alnumA;
 	// scan to left of zip to change zipAlnumA to allow for acceptable
 	// words in between it
-	long zipa = -1; if ( zip ) zipa = zip->m_a - 1;
-	long mini = zipa - 10;
+	int32_t zipa = -1; if ( zip ) zipa = zip->m_a - 1;
+	int32_t mini = zipa - 10;
 	if ( mini < 0 ) mini = 0;
-	long count = 0;
-	for ( long i = zipa ; i >= mini ; i-- ) {
+	int32_t count = 0;
+	for ( int32_t i = zipa ; i >= mini ; i-- ) {
 		if ( ! m_wids[i] ) continue;
 		if ( m_wids[i] == h_zip     ) count++;
 		else if ( m_wids[i] == h_code    ) count++;
@@ -10748,7 +10748,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	//www.dukecityfix.com/xn/detail/1233957:Event:391851?xg_source=activity
 	bool gotColon = false;
 	bool gotWord  = false;
-	long x;
+	int32_t x;
 	if ( city ) x = city->m_a - 1;
 	// only loop if city not inlined from above
 	for ( ;  city && ! cityInline && x >= street->m_alnumB ; x-- ) {
@@ -10780,7 +10780,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 
 	// assume we have no city right after the street...
 	x = 0;
-	long xend = -1;
+	int32_t xend = -1;
 	char c = 0;
 	// also allow something like "123 main st (downtown mall) las cruces"
 	// to fix http://www.newmexico.org/calendar/events/index.php?com=
@@ -10896,12 +10896,12 @@ bool Addresses::addAddress ( Place   *name1   ,
 	// Seattle, WA 98195
 	// gets "University" as a city in "Washington" state!
 	if ( adm1 ) {
-		long ab = adm1->m_b;
-		long long *wids  = m_words->getWordIds();
+		int32_t ab = adm1->m_b;
+		int64_t *wids  = m_words->getWordIds();
 		char     **wptrs = m_words->getWordPtrs();
-		long      *wlens = m_words->getWordLens();
+		int32_t      *wlens = m_words->getWordLens();
 		nodeid_t   *tids = m_words->getTagIds();
-		long          nw = m_words->getNumWords();
+		int32_t          nw = m_words->getNumWords();
 		if ( inlined && ab-1>= 0 && ab+1 < nw && ! tids[ab] && 
 		     ! wids[ab] &&
 		     wlens[ab]==1 &&
@@ -10938,7 +10938,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 
 
 	// . now compare to other address with this same street
-	for ( long i = m_am.getNumPtrs() - 1 ; i >= 0 ; i-- ) {
+	for ( int32_t i = m_am.getNumPtrs() - 1 ; i >= 0 ; i-- ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -10974,7 +10974,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	//   are removed. in the case of a tie we keep all of them.
 	// . we only do this comparison to addresses that have the same
 	//   address hash, 
-	long score = 0;
+	int32_t score = 0;
 	// inlining always trumps all others
 	//if ( inlined ) score += 10000;
 	// and then if all else is equal, having a zip is better than just
@@ -10991,7 +10991,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	Address *dst = NULL;
 
 	// now compare to other address with this same address hash
-	for ( long i = m_am.getNumPtrs() - 1 ; i >= 0 ; i-- ) {
+	for ( int32_t i = m_am.getNumPtrs() - 1 ; i >= 0 ; i-- ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// get it
@@ -11100,7 +11100,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	// set m_b for the address so we can use it when as a boundary
 	// for harvesting place names for following addresses above
 	/*
-	long max = -1;
+	int32_t max = -1;
 	if ( dst->m_street->m_b     > max ) max = dst->m_street->m_b;
 	if ( dst->m_adm1->m_b       > max && inlined ) max = dst->m_adm1->m_b;
 	if ( dst->m_city->m_b       > max && inlined ) max = dst->m_city->m_b;
@@ -11121,8 +11121,8 @@ bool Addresses::addAddress ( Place   *name1   ,
 	dst->m_ip        = m_ip;
 
 	// get the section containing all components
-	long a = dst->m_street->m_a;
-	long b = dst->m_street->m_b;
+	int32_t a = dst->m_street->m_a;
+	int32_t b = dst->m_street->m_b;
 	// increase address range? 
 	if ( suite && suite->m_a < a ) a = suite->m_a;
 	if ( suite && suite->m_b > b ) b = suite->m_b;
@@ -11162,7 +11162,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	// advance m_na iff we did not overwrite a previous address
 	//m_na++;
 
-	//log("addr: u=%s addr # = %li",m_url->m_url,m_na-1);
+	//log("addr: u=%s addr # = %"INT32"",m_url->m_url,m_na-1);
 	// uncomment this for debug to the log
 	//dst->print ( );
 		
@@ -11174,7 +11174,7 @@ uint64_t  getAddressHash ( Place *street ,
 			   Place *adm1   ,
 			   Place *zip    ) {
 
-	long long ch = 0;
+	int64_t ch = 0;
 	ch ^= street->m_hash;
 	ch ^= street->m_streetNumHash;
 	ch ^= street->m_streetIndHash;
@@ -11185,7 +11185,7 @@ uint64_t  getAddressHash ( Place *street ,
 	else if ( city && city->m_adm1[0] ) adm1Str = city->m_adm1;
 	else               { char *xx=NULL;*xx=0; }
 	// xor in adm1
-	//ch ^= (long long)*((uint16_t *)adm1Str);
+	//ch ^= (int64_t)*((uint16_t *)adm1Str);
 	// and city hash
 	uint64_t cityHash = 0;
 	if      ( city ) cityHash = city->m_hash;
@@ -11203,10 +11203,10 @@ uint64_t  getAddressHash ( Place *street ,
 
 bool setFromStr ( Address *a, char *s, pbits_t flags , 
 		  PlaceMem *pm ,
-		  long niceness ) {
+		  int32_t niceness ) {
 	// clear it up
 	a->reset();
-	// shortcuts
+	// int16_tcuts
 	//Place *city = NULL;
 	//Place *adm1 = NULL;
 	a->m_latitude  = NO_LATITUDE;
@@ -11216,7 +11216,7 @@ bool setFromStr ( Address *a, char *s, pbits_t flags ,
 	// ctry is always empty, because its always the US
 	// name1;name2;suite;street;city;adm1;zip;ctry;domhash;ip;origurl;lat;lon;addrHash\0
 	// . loop it
-	for ( long i = 0 ; i <= 13 ; i++ , s++ ) {
+	for ( int32_t i = 0 ; i <= 13 ; i++ , s++ ) {
 		// stop if no more fields
 		if ( ! *s ) break;
 		// save it
@@ -11229,7 +11229,7 @@ bool setFromStr ( Address *a, char *s, pbits_t flags ,
 			a->m_domHash32 = 0;
 			// panic if none!
 			if ( *start == ';' ) { char *xx=NULL;*xx=0;}//continue;
-			a->m_domHash32 = (unsigned long)atoll(start);
+			a->m_domHash32 = (uint32_t)atoll(start);
 			continue;
 		}
 		// ip?
@@ -11288,7 +11288,7 @@ bool setFromStr ( Address *a, char *s, pbits_t flags ,
 		// ptr to a place
 		//Place *p = NULL;
 		// get length of place
-		long slen = s - start;
+		int32_t slen = s - start;
 		// skip if empty
 		if ( slen <= 0 ) continue;
 		// do not breach
@@ -11299,7 +11299,7 @@ bool setFromStr ( Address *a, char *s, pbits_t flags ,
 		// advance np
 		//*np = *np + 1;
 		// pt = "place type"
-		long pt;
+		int32_t pt;
 		if ( i == 0 ) { a->m_name1  = p; pt = PT_NAME_1;}
 		if ( i == 1 ) { a->m_name2  = p; pt = PT_NAME_2;}
 		if ( i == 2 ) { a->m_suite  = p; pt = PT_SUITE;}
@@ -11398,12 +11398,12 @@ bool setFromStr ( Address *a, char *s, pbits_t flags ,
 			// i guess just use "version" of 0
 			if ( ! w.set (p->m_str , p->m_strlen,0,true,niceness)) 
 				return false;
-			// shortcut
-			long long *wids = w.getWordIds();
+			// int16_tcut
+			int64_t *wids = w.getWordIds();
 			// zero out the hash
-			long long h = 0LL;
+			int64_t h = 0LL;
 			// loop em
-			for ( long j = 0 ; j < w.m_numWords ; j++ ) {
+			for ( int32_t j = 0 ; j < w.m_numWords ; j++ ) {
 				// skip if not alnum
 				if ( ! wids[j] ) continue;
 				// mix it up
@@ -11485,9 +11485,9 @@ void setFromStr2 ( char  *addr   ,
 		   double *lon    ) {
 	// use this
 	static char s_addr[2048];
-	//long alen = gbstrlen(addr);
+	//int32_t alen = gbstrlen(addr);
 	//char *aend = addr + alen;
-	//long  *tzoff  ) {
+	//int32_t  *tzoff  ) {
 	if ( name1  ) *name1  = NULL;
 	if ( name2  ) *name2  = NULL;
 	if ( suite  ) *suite  = NULL;
@@ -11500,7 +11500,7 @@ void setFromStr2 ( char  *addr   ,
 	if ( lat    ) *lat    = 999.00;
 
 	// breach check
-	long len = gbstrlen(addr);
+	int32_t len = gbstrlen(addr);
 	if ( len + 1 > 2048 ) {
 		log("addr: address is too big to parse");
 		return;
@@ -11544,7 +11544,7 @@ void setFromStr2 ( char  *addr   ,
 // . assume we are in greenwhich england (timezone=+0)
 // . BUT apply the american daylight start/end times
 // . currently in affect from 2nd sunday in march to first sunday in nov @ 2am
-void getDSTInterval ( long year , long *a , long *b ) {
+void getDSTInterval ( int32_t year , int32_t *a , int32_t *b ) {
 	// find the 2nd sunday in march for this year
 	*a = getDOWStart ( year, 3, 1, 2); // 3=march 1=sunday, 2=2nd
 	// 2am?
@@ -11556,9 +11556,9 @@ void getDSTInterval ( long year , long *a , long *b ) {
 }
 // . nowUTC is # secs elapsed since epoch in UTC (no DST)
 // . currently in affect from 2nd sunday in march to first sunday in nov @ 2am
-bool getIsDST ( long nowUTC , char timezone2 ) {
+bool getIsDST ( int32_t nowUTC , char timezone2 ) {
 	// mod the time
-	long mod = nowUTC ;
+	time_t mod = (time_t)nowUTC ;
 	// add if known
 	if ( timezone2 != UNKNOWN_TIMEZONE ) {
 		// sanity check, make sure its the offset, not in seconds
@@ -11569,7 +11569,7 @@ bool getIsDST ( long nowUTC , char timezone2 ) {
 	// get DOW now
 	struct tm *timeStruct = gmtime ( &mod );
 	// certain months are always dst. jan = 0. goes from 0 to 11.
-	long mon = timeStruct->tm_mon;
+	int32_t mon = timeStruct->tm_mon;
 	// feb=1,mar=2,apr=3,may=4,jun=5,jul=6,aug=7,sep=8,oct=9,nov=10,dec=11
 	if ( mon >= 3 && mon <= 9 ) return true;
 	// not in dec
@@ -11577,9 +11577,9 @@ bool getIsDST ( long nowUTC , char timezone2 ) {
 	// not in jan or feb
 	if ( mon >= 0 && mon <= 1 ) return false;
 	// get dow. 0 to 6. 0 being sunday.
-	long dow = timeStruct->tm_wday;
+	int32_t dow = timeStruct->tm_wday;
 	// what # of dow are we? i.e. xth monday, where x=dowCount
-	long dowCount = 1 + timeStruct->tm_mday / 7;
+	int32_t dowCount = 1 + timeStruct->tm_mday / 7;
 	// for march, if we are the 2nd dow, and not sunday, return true
 	if ( mon == 2 ) {
 		if ( dowCount <= 1 ) return false;
@@ -11630,7 +11630,7 @@ bool getCityLatLonFromAddrStr ( char *addr , double *lat , double *lon ) {
 uint32_t getCityIdFromAddr ( char *addr ) {
 	// get city and adm1 from address
 	char *p = addr;
-	long semiCount = 0;
+	int32_t semiCount = 0;
 	char *adm1 = NULL;
 	char *city = NULL;
 	for ( ; ; p++ ) {
@@ -11674,7 +11674,7 @@ uint32_t getCityIdFromAddr ( char *addr ) {
 	// fix Denver's so we do not return unknown timezone
 	if ( semi1[-1]=='s' && semi1[-2]=='\'' ) semi1[-2]='\0';
 	// get city hash
-	long long h = getWordXorHash(city);
+	int64_t h = getWordXorHash(city);
 	// TODO: make state into two letter abbr?
 	//if ( gbstrlen(adm1) != 2 ) { char *xx=NULL;*xx=0; }
 	// use this now
@@ -11730,7 +11730,7 @@ char getTimeZoneFromAddr ( char *addr , char *useDST ) {
 	if ( lon == NO_LATITUDE ) return UNKNOWN_TIMEZONE;
 	// ASSUME THEY USE DST! WE DON'T KNOW REALLY!!
 	if ( useDST ) *useDST = 1;
-	return  (char)(long)(lon / (360.0/24.0));
+	return  (char)(int32_t)(lon / (360.0/24.0));
 }	
 
 
@@ -11742,7 +11742,7 @@ char getTimeZoneFromAddr ( char *addr , char *useDST ) {
 
 	// get city and adm1 from address
 	char *p = addr;
-	long semiCount = 0;
+	int32_t semiCount = 0;
 	char *adm1 = NULL;
 	char *city = NULL;
 	for ( ; ; p++ ) {
@@ -11786,12 +11786,12 @@ char getTimeZoneFromAddr ( char *addr , char *useDST ) {
 char getTimeZone2 ( char *city , char *state , char *useDST ) {
 	// get the words
 	//Words ww; ww.set3 ( city );
-	// shortcut
-	//long long *wids = ww.m_wordIds;
+	// int16_tcut
+	//int64_t *wids = ww.m_wordIds;
 	// limit hash
-	//long count = 0;
+	//int32_t count = 0;
 	// get city hash
-	long long h = getWordXorHash(city);
+	int64_t h = getWordXorHash(city);
 	// TODO: make state into two letter abbr?
 	// crap, if state is taken from class ZipDesc it is only
 	// 2 letters and has no \0 in it
@@ -11804,7 +11804,7 @@ char getTimeZone2 ( char *city , char *state , char *useDST ) {
 
 char getTimeZone3 ( uint32_t cid32 , char *useDST ) {
 	// now lookup timezone
-	long slot = g_timeZones.getSlot ( &cid32 );//&cityStateHash );
+	int32_t slot = g_timeZones.getSlot ( &cid32 );//&cityStateHash );
 	// return 0 if not found
 	if ( slot < 0 ) {
 		log("addr: gettimezone3: unknown timezone");
@@ -11826,15 +11826,15 @@ char getTimeZone3 ( uint32_t cid32 , char *useDST ) {
 // . for now just get the closest city to the user and use that timezone
 // . this is not 100% accurate but should be like 99.9%
 // . no, just use the GeoCityLite.dat call, that returns the city/state already
-char getTimeZoneFromUserIP ( long uip , long niceness , char *useDST ) {
+char getTimeZoneFromUserIP ( int32_t uip , int32_t niceness , char *useDST ) {
 	double lat;
 	double lon;
 	double radius;
 	char *city,*state,*ctry;
 	// use this by default
-	//long ip = r->m_userIP;
+	//int32_t ip = r->m_userIP;
 	// ip for testing?
-	//long iplen;
+	//int32_t iplen;
 	//char *ips = r->getString("uip",&iplen);
 	//if ( ips ) ip = atoip(ips);
 	// returns true if found in db
@@ -11858,7 +11858,7 @@ char getTimeZoneFromUserIP ( long uip , long niceness , char *useDST ) {
 }
 
 // used by SearchInput.cpp to get timezone of the user from user's lat/lon 
-char getTimeZoneFromLatLon ( float lat,float lon,long niceness,char *useDST ) {
+char getTimeZoneFromLatLon ( float lat,float lon,int32_t niceness,char *useDST ) {
 	// get nearest city/state
 	float distInMilesSquared = 0.0;
 	uint32_t cid32 = getNearestCityId ( lat , lon , niceness , 
@@ -11869,10 +11869,10 @@ char getTimeZoneFromLatLon ( float lat,float lon,long niceness,char *useDST ) {
 	return getTimeZone3 ( cid32 , useDST );
 }
 
-static long *s_latList = NULL;
-static long  s_latListSize = 0;
-//static long *s_lonList = NULL;
-static long       s_ni  = 0;
+static int32_t *s_latList = NULL;
+static int32_t  s_latListSize = 0;
+//static int32_t *s_lonList = NULL;
+static int32_t       s_ni  = 0;
 
 // . we need a list of the city ids sorted by lat, and a list sorted by lon
 // . then we do b-stepping on each list
@@ -11884,7 +11884,7 @@ static long       s_ni  = 0;
 // . then lookup cityid in g_timezones to get timezone
 uint32_t getNearestCityId ( float lat , 
 			    float lon , 
-			    long niceness ,
+			    int32_t niceness ,
 			    float *distInMilesSquared ) {
 
 	// radius is 5 miles, put miles into degrees
@@ -11893,13 +11893,13 @@ uint32_t getNearestCityId ( float lat ,
 
  tryagain:
 
-	long step = s_ni / 2;
+	int32_t step = s_ni / 2;
 	// get lat boundaries using bstep
-	long start = s_ni / 2;
+	int32_t start = s_ni / 2;
 	// do the bstepping
 	for ( ; ; ) {
 		// get that city
-		long citySlot = s_latList[start];
+		int32_t citySlot = s_latList[start];
 		// get csd
 		csd = (CityStateDesc *)g_timeZones.getValueFromSlot(citySlot);
 		if ( ! csd ) { char *xx=NULL;*xx=0; }
@@ -11929,42 +11929,42 @@ uint32_t getNearestCityId ( float lat ,
 	//getCityRange ( s_latList , lat , radius , &lata , &latb );
 	//getCityRange ( s_lonList , lon , radius , &lona , &lonb );
 	// now take intersection of the ranges
-	//long numCities = lata - latb;
+	//int32_t numCities = lata - latb;
 	//HashTableX ih;
 	//if(! ih.set ( 4 , 0 , numCities , ihbuf, 3000 , false , niceness )){
 	//	char *xx=NULL;*xx=0; }
 
-	long lata = start;
-	long latb = start;
-	long count = 0;
+	int32_t lata = start;
+	int32_t latb = start;
+	int32_t count = 0;
 	// TODO: do b-step on these too, takes like 3500 iterations for
 	//       both of these loops
 	// adjust lata/latb until just out of range
 	for ( ; lata > 0 ; lata-- ) {
 		// get csd
-		long slot = s_latList[lata];
+		int32_t slot = s_latList[lata];
 		csd = (CityStateDesc *)g_timeZones.getValueFromSlot(slot);
 		if ( csd->m_latitude < lat - radius ) break;
 		count++;
 	}
 	for ( ; latb < s_ni ; latb++ ) {
 		// get csd
-		long slot = s_latList[latb];
+		int32_t slot = s_latList[latb];
 		csd = (CityStateDesc *)g_timeZones.getValueFromSlot(slot);
 		if ( csd->m_latitude > lat + radius ) break;
 		count++;
 	}
 
 	float min = -1.0;
-	long  minSlot = -1;
+	int32_t  minSlot = -1;
 	// add in the lat cities
-	for ( long i = lata ; i <= latb ; i++ ) {
+	for ( int32_t i = lata ; i <= latb ; i++ ) {
 		// break?
 		if ( i >= s_ni ) break;
 		// breathe
 		QUICKPOLL(niceness);
 		// get that city
-		long citySlot = s_latList[i];
+		int32_t citySlot = s_latList[i];
 		// get cd
 		CityStateDesc *csd;
 		csd = (CityStateDesc *)g_timeZones.getValueFromSlot(citySlot);
@@ -12000,8 +12000,8 @@ uint32_t getNearestCityId ( float lat ,
 
 
 int latcmp ( const void *arg1 , const void *arg2 ) {
-	long slot1 = *(long *)arg1;
-	long slot2 = *(long *)arg2;
+	int32_t slot1 = *(int32_t *)arg1;
+	int32_t slot2 = *(int32_t *)arg2;
 	// get the addresses
 	CityStateDesc *cd1;
 	CityStateDesc *cd2;
@@ -12026,23 +12026,23 @@ int latcmp ( const void *arg1 , const void *arg2 ) {
 // . 4 bytes per entry, we are talking 1.2MB for both lists
 bool initCityLists ( ) {
 	// scan city table
-	long ns = g_timeZones.m_numSlots;
+	int32_t ns = g_timeZones.m_numSlots;
 	// need this
-	long used = g_timeZones.m_numSlotsUsed;
+	int32_t used = g_timeZones.m_numSlotsUsed;
 	// how much space to alloc?
-	long need = used * 4;
+	int32_t need = used * 4;
 	// alloc it
 	char *space = (char *)mmalloc(need,"latlist");
 	if ( ! space ) return false;
 	char *p = space;
-	s_latList = (long *)p;
+	s_latList = (int32_t *)p;
 	s_latListSize = need;
 	//p += 4 * used;
 	//s_lonList = (CityDesc **)p;
 	// reset
 	s_ni = 0;
 	// scan the slots
-	for ( long i = 0 ; i < ns ; i++ ) {
+	for ( int32_t i = 0 ; i < ns ; i++ ) {
 		// skip empties
 		if ( ! g_timeZones.m_flags[i] ) continue;
 		// get it
@@ -12079,7 +12079,7 @@ char Address::getTimeZone ( char *useDST ) {
 	else if ( m_flags3 & AF2_LATLON ) {
 		// ASSUME THEY USE IT! WE DON'T KNOW REALLY!!
 		if ( useDST ) *useDST = 1;
-		char timeZone = (char)(long)(m_longitude / (360.0/24.0));
+		char timeZone = (char)(int32_t)(m_longitude / (360.0/24.0));
 		if ( timeZone < -12 || timeZone > 12 ) { char *xx=NULL;*xx=0;}
 		return timeZone;
 	}
@@ -12099,7 +12099,7 @@ char Address::getTimeZone ( char *useDST ) {
 	//uint32_t cid32 = (uint32_t)m_cityId64;
 	
 	// now lookup timezone
-	long slot = g_timeZones.getSlot ( &m_cityId32 );
+	int32_t slot = g_timeZones.getSlot ( &m_cityId32 );
 	// return 0 if not found
 	if ( slot < 0 ) {
 		// nte it
@@ -12124,11 +12124,11 @@ char Address::getTimeZone ( char *useDST ) {
 }
 
 /*
-bool Addresses::addToTagRec ( TagRec *gr , long ip , long timestamp ,
-			      char *origUrl , long maxAddrBytes ,
+bool Addresses::addToTagRec ( TagRec *gr , int32_t ip , int32_t timestamp ,
+			      char *origUrl , int32_t maxAddrBytes ,
 			      char *tagName ) {
 	// inherit Places that all the Addresses in the list agree on
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// get it
 		Address *ai = (Address *)m_am.getPtr(i);
 		// do not add this to tagdb if not inlined!
@@ -12142,8 +12142,8 @@ bool Addresses::addToTagRec ( TagRec *gr , long ip , long timestamp ,
 }
 
 // can xmldoc use this for venue addresses?
-bool Address::addToTagRec ( TagRec *gr , long ip , long timestamp ,
-			    char *origUrl , long maxAddrBytes ,
+bool Address::addToTagRec ( TagRec *gr , int32_t ip , int32_t timestamp ,
+			    char *origUrl , int32_t maxAddrBytes ,
 			    char *tagName ) {
 
 	//
@@ -12155,7 +12155,7 @@ bool Address::addToTagRec ( TagRec *gr , long ip , long timestamp ,
 	char buf[5003];
 	// . size includes the terminating \0
 	// . include the Address::m_hash for deduping in XmlDoc.cpp
-	long size = serialize ( buf , 5000 , origUrl , false , true );
+	int32_t size = serialize ( buf , 5000 , origUrl , false , true );
 	// returns -1 and sets g_errno on error
 	if ( size < 0 ) return false;
 
@@ -12165,17 +12165,17 @@ bool Address::addToTagRec ( TagRec *gr , long ip , long timestamp ,
 	char *end1 = buf + size - 1;
 	for ( ; end1 > buf && *end1 != ';' ; end1-- ) ;
 	// the length without that
-	long len1 = end1 - buf;
+	int32_t len1 = end1 - buf;
 
 	//
 	// how many address bytes are we using currently? only need to 
 	// compute this if we have a limit, i.e. "maxAddrBytes" >= 0
 	//
 	// count those bytes
-	long used = 0;
+	int32_t used = 0;
 	if ( maxAddrBytes >= 0 ) {
 		// our tag type
-		long tt = getTagTypeFromStr ( tagName );//"contactaddress" );
+		int32_t tt = getTagTypeFromStr ( tagName );//"contactaddress" );
 		// taken from TagRec::getTag() function
 		Tag *tag = gr->getFirstTag();
 		// loop over all contact info addresses in the TagRec
@@ -12189,7 +12189,7 @@ bool Address::addToTagRec ( TagRec *gr , long ip , long timestamp ,
 			char *end2 = tag->m_data + tag->m_dataSize - 1;
 			for ( ; end2 > tag->m_data && *end2 != ';' ; end2-- ) ;
 			// get lengths
-			long len2 = end2 - tag->m_data;
+			int32_t len2 = end2 - tag->m_data;
 			// is it a dup?
 			if ( len1 != len2 ) continue;
 			if ( memcmp(tag->m_data, buf, len1 ) ) continue;
@@ -12201,7 +12201,7 @@ bool Address::addToTagRec ( TagRec *gr , long ip , long timestamp ,
 	if ( maxAddrBytes >= 0 && used + size > maxAddrBytes ) return true;
 
 	// store it
-	//long now = getTimeGlobal();
+	//int32_t now = getTimeGlobal();
 	// returns false and sets g_errno on error
 	return gr->addTag (tagName,timestamp,"xmldoc",ip,buf,size);
 }
@@ -12212,7 +12212,7 @@ bool Address::addToTagRec ( TagRec *gr , long ip , long timestamp ,
 // . uint32_t getCityHash32 ( char *addr , uint32_t *adm1Hash ) {
 uint64_t getHashFromAddr ( char *addr ) {
 	char *p = addr;
-	long semiCount = 0;
+	int32_t semiCount = 0;
 	for ( ; *p ; p++ ) {
 		// skip if not border
 		if ( *p != ';' ) continue;
@@ -12238,8 +12238,8 @@ uint64_t getHashFromAddr ( char *addr ) {
 // . used by Address::serialize
 // . filter out back to back spaces
 // . covert \n and \t to ' '
-long memcpy2 ( char *dst , char *src , long bytes , bool filterCommas ,
-	       long dstMaxBytes ) {
+int32_t memcpy2 ( char *dst , char *src , int32_t bytes , bool filterCommas ,
+	       int32_t dstMaxBytes ) {
 	char *srcEnd = src + bytes;
 	// do not start with a space, so set this to 1
 	char lastWasSpace = 1;
@@ -12296,9 +12296,9 @@ long memcpy2 ( char *dst , char *src , long bytes , bool filterCommas ,
 }
 
 // "olen" is length of origUrl to be stored
-long Address::getStoredSize ( long ulen , bool includeHash ) {
+int32_t Address::getStoredSize ( int32_t ulen , bool includeHash ) {
 	// how much buffer space do we need?
-	long need = 0;
+	int32_t need = 0;
 	if ( m_name1  ) need += m_name1 ->m_strlen + 1;
 	if ( m_name2  ) need += m_name2 ->m_strlen + 1;
 	if ( m_suite  ) need += m_suite ->m_strlen + 1;
@@ -12337,13 +12337,13 @@ long Address::getStoredSize ( long ulen , bool includeHash ) {
 
 bool Address::serializeVerified ( SafeBuf *sb ) {
 	// get min # of bytes needed
-	long need = getStoredSize ( 0 , false );
+	int32_t need = getStoredSize ( 0 , false );
 	// make room
 	if ( ! sb->reserve ( need ) ) return false;
 	// store it here
 	char *buf = sb->getBuf();
 	// do it
-	long written = serialize ( buf , need , NULL , true , false );
+	int32_t written = serialize ( buf , need , NULL , true , false );
 	// sanity check
 	if ( written > need ) { char *xx=NULL;*xx=0; }
 	// update it
@@ -12355,7 +12355,7 @@ bool Address::serializeVerified ( SafeBuf *sb ) {
 // . returns -1 and sets g_errno on error
 // . name1;name2;suite;street;city;adm1;zip;country;domHash32;ipStr;url;lat;lon;addHash
 // . setfromstr() above
-long Address::serialize ( char *buf , long bufSize , char *origUrl ,
+int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 			  bool verifiedOnly , bool includeHash ) {
 
 	char *p    = buf;
@@ -12367,17 +12367,17 @@ long Address::serialize ( char *buf , long bufSize , char *origUrl ,
 	char *o = origUrl;
 	for ( ; o && *o && *o !=';' ; o++ );
 	// truncate this if we should
-	long olen = o - origUrl; // gbstrlen(origUrl);
+	int32_t olen = o - origUrl; // gbstrlen(origUrl);
 	bool trunc = false;
 	if ( olen > 128 ) { olen = 96; trunc = true; }
 	// if a semicolon kicked us out, we were truncated as well
 	else if ( o && *o == ';' ) trunc = true;
 	// include ...
-	long extra = 0;
+	int32_t extra = 0;
 	if ( trunc ) extra = 3;
 
 	// how much buffer space do we need?
-	long need = getStoredSize( olen + extra , includeHash );
+	int32_t need = getStoredSize( olen + extra , includeHash );
 
 	// silenty ignore overflow errors
 	if ( need > bufSize ) return -1;
@@ -12455,7 +12455,7 @@ long Address::serialize ( char *buf , long bufSize , char *origUrl ,
 	else if ( m_flags3 & AF2_LATLON ) {
 		if ( pd ) {
 			char *str = pd->m_officialNameOffset + g_pbuf;
-			long slen = gbstrlen(str);
+			int32_t slen = gbstrlen(str);
 			// limit to 64 since that is getStoredSize() number
 			if ( slen > 64 ) slen = 64;
 			memcpy ( p , str ,slen );
@@ -12539,7 +12539,7 @@ long Address::serialize ( char *buf , long bufSize , char *origUrl ,
 	// sanity check
 	if ( m_domHash32 == 0 ) { char *xx=NULL;*xx=0; }
 	// serialize 32-bit domain hash
-	p += sprintf( p , "%lu", m_domHash32 );
+	p += sprintf( p , "%"UINT32"", m_domHash32 );
 	*p++ = ';';
 
 	// sanity check
@@ -12570,24 +12570,24 @@ long Address::serialize ( char *buf , long bufSize , char *origUrl ,
 	if ( includeHash ) {
 		*p++ = ';';
 		// finally the address hash in ascii
-		p += sprintf ( p , "%llu" , m_hash );
+		p += sprintf ( p , "%"UINT64"" , m_hash );
 	}
 
 	// . then timezone off, a single signed byte really
 	// . we add 100 to this to signify that it does NOT use DST
-	//p += sprintf(p,"%li", (long)m_timeZoneOffset);
+	//p += sprintf(p,"%"INT32"", (int32_t)m_timeZoneOffset);
 
 	*p++ = '\0';
 
 	// count the semicolons to make sure data did not insert extra ones
 	char *s = buf;
-	long semiCount = 0;
-	long semiNeed = 12;
+	int32_t semiCount = 0;
+	int32_t semiNeed = 12;
 	if ( includeHash ) semiNeed++;
 	for ( ; *s ; s++ ) if ( *s == ';' ) semiCount++;
 	if ( semiCount != semiNeed ) { char *xx=NULL;*xx=0; }
 
-	long size = p - buf;
+	int32_t size = p - buf;
 	// sanity check
 	if ( size > bufSize ) { char *xx=NULL;*xx=0; }
 	// all done
@@ -12595,11 +12595,11 @@ long Address::serialize ( char *buf , long bufSize , char *origUrl ,
 }
 
 
-long Address::print ( ) {
+int32_t Address::print ( ) {
 	return print2 ( 0,NULL,0);
 }
 
-long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) { 
+int32_t Address::print2 ( int32_t i , SafeBuf *pbuf , int64_t uh64 ) { 
 
 	// print out each candidate for debug
 	SafeBuf sb;
@@ -12622,19 +12622,19 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		// dump it
 		// . for the sake of doing delta diffs in Test.cpp
 		//   eliminate the number!
-		//pbuf->safePrintf ( "<td>%li/%li</td>", num ,m_street.m_a);
+		//pbuf->safePrintf ( "<td>%"INT32"/%"INT32"</td>", num ,m_street.m_a);
 		//if ( m_street.m_a >= 0 )
-		//	pbuf->safePrintf ( "<td>%li</td>", m_street.m_a);
+		//	pbuf->safePrintf ( "<td>%"INT32"</td>", m_street.m_a);
 		//else
-		long napos = -1;
+		int32_t napos = -1;
 		if ( m_name1 ) napos = m_name1->m_a;
 
-		long stra = -1;
+		int32_t stra = -1;
 		if ( m_street ) stra = m_street->m_a;
-		pbuf->safePrintf ( "<td>%li/%li</td>", napos,stra );
+		pbuf->safePrintf ( "<td>%"INT32"/%"INT32"</td>", napos,stra );
 		
 		//pbuf->safePrintf ( "<td>%.06f</td>", m_score );
-		//pbuf->safePrintf("<td>0x%lx</td>", m_section->m_tagHash);
+		//pbuf->safePrintf("<td>0x%"XINT32"</td>", m_section->m_tagHash);
 
 		printEssentials ( pbuf , false , uh64 );
 
@@ -12649,7 +12649,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		else
 			pbuf->safePrintf("notinlined ");
 		if ( m_alias )
-			pbuf->safePrintf("alias[a=%li] ",
+			pbuf->safePrintf("alias[a=%"INT32"] ",
 					 m_alias->m_street->m_a);
 
 		if ( m_flags3 & AF2_HAS_REQUIRED_CITY )
@@ -12702,11 +12702,11 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 
 		// print the address ptr, but make it an offset so
 		// it doesn't show up on the test qa run diffs
-		//long offset = this - base;
-		long offset = i;
-		pbuf->safePrintf("<td>%lu</td>",(long)offset);
+		//int32_t offset = this - base;
+		int32_t offset = i;
+		pbuf->safePrintf("<td>%"UINT32"</td>",(int32_t)offset);
 
-		pbuf->safePrintf("<td><nobr>0x%llx (%li)</nobr></td>",
+		pbuf->safePrintf("<td><nobr>0x%"XINT64" (%"INT32")</nobr></td>",
 				 m_hash,m_score2);
 
 
@@ -12738,7 +12738,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		else if ( m_flags3 & AF2_LATLON );
 		else  { char *xx=NULL;*xx=0; }
 		// city
-		long long cityHash = 0LL;
+		int64_t cityHash = 0LL;
 		if      ( m_city ) cityHash = m_city->m_hash;
 		else if ( m_zip  ) cityHash = m_zip->m_cityHash;
 		else if ( m_flags3 & AF2_LATLON );
@@ -12746,27 +12746,27 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		uint32_t cityId = getCityId32(cityHash,adm1Str);
 		// ripped from XmlDoc.cpp placedb logic
 		key128_t *k2      = &m_placedbKey;
-		long long bigHash = g_placedb.getBigHash       ( k2 );
-		long long docId   = g_placedb.getDocId         ( k2 );
-		long      snh     = g_placedb.getStreetNumHash ( k2 );
-		long long nh1 = 0;
-		long long nh2 = 0;
+		int64_t bigHash = g_placedb.getBigHash       ( k2 );
+		int64_t docId   = g_placedb.getDocId         ( k2 );
+		int32_t      snh     = g_placedb.getStreetNumHash ( k2 );
+		int64_t nh1 = 0;
+		int64_t nh2 = 0;
 		if ( m_name1 ) nh1 = m_name1->m_hash;
 		if ( m_name2 ) nh2 = m_name2->m_hash;
-		long long strh = 0LL;
+		int64_t strh = 0LL;
 		if ( m_street ) strh = m_street->m_hash;
 		pbuf->safePrintf("<td><nobr>"
-				 "k.n1=0x%16llx n0=0x%16llx "
-				 //"addrhash=0x%llx "
-				 "bigHash64=0x%016llx "
-				 "docId=%llu "
-				 "streetNumHash25=0x%08lx "
-				 "cityHash=0x%016llx "
-				 "cityId=0x08%lx "
-				 "streetHash=0x%016llx "
-				 "adm1Hash=0x%04lx "
-				 "name1Hash=0x%016llx "
-				 "name2Hash=0x%016llx "
+				 "k.n1=0x%16"XINT64" n0=0x%16"XINT64" "
+				 //"addrhash=0x%"XINT64" "
+				 "bigHash64=0x%016"XINT64" "
+				 "docId=%"UINT64" "
+				 "streetNumHash25=0x%08"XINT32" "
+				 "cityHash=0x%016"XINT64" "
+				 "cityId=0x08%"XINT32" "
+				 "streetHash=0x%016"XINT64" "
+				 "adm1Hash=0x%04"XINT32" "
+				 "name1Hash=0x%016"XINT64" "
+				 "name2Hash=0x%016"XINT64" "
 				 "</nobr>"
 				 "</td>"
 				 ,
@@ -12776,9 +12776,9 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 				 docId,
 				 snh ,
 				 cityHash,//m_city->m_hash,
-				 (long)cityId,
+				 (int32_t)cityId,
 				 strh, // m_street->m_hash,
-				 (long)*(uint16_t *)adm1Str,
+				 (int32_t)*(uint16_t *)adm1Str,
 				 nh1,nh2
 				 );
 		
@@ -12826,7 +12826,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		sb.safeMemcpy(m_name2->m_str,m_name2->m_strlen);
 	}
 	if ( m_street ) {
-		sb.safePrintf(" street[%li]=",m_street->m_a);
+		sb.safePrintf(" street[%"INT32"]=",m_street->m_a);
 		sb.safeMemcpy(m_street->m_str,m_street->m_strlen);
 	}
 	//if ( m_zip ) {
@@ -12838,11 +12838,11 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 		sb.safeMemcpy(m_suite->m_str,m_suite->m_strlen);
 	}
 	if ( m_city ) {
-		sb.safePrintf(" city[%li]=",m_city->m_a);
+		sb.safePrintf(" city[%"INT32"]=",m_city->m_a);
 		sb.safeMemcpy(m_city->m_str,m_city->m_strlen);
 	}
 	if ( m_adm1 ) {
-		sb.safePrintf(" adm1[%li]=",m_adm1->m_a);
+		sb.safePrintf(" adm1[%"INT32"]=",m_adm1->m_a);
 		sb.safeMemcpy(m_adm1->m_str,m_adm1->m_strlen);
 		sb.pushChar('|');
 		sb.safeMemcpy(m_adm1->m_adm1,2);//str,m_adm1->m_strlen);
@@ -12860,7 +12860,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 	//	sb.safeMemcpy(m_ctry->m_str,m_ctry->m_strlen);
 	//}
 
-	sb.safePrintf(" score2=%li",m_score2);
+	sb.safePrintf(" score2=%"INT32"",m_score2);
 
 	sb.safePrintf(" flags=");
 	if ( (m_flags) & AF_INLINED )
@@ -12887,7 +12887,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 	if ( m_street && (m_street->m_flags2 & PLF2_AFTER_AT ))
 		sb.safePrintf("afterat ");
 
-	//sb.safePrintf(" a=%li b=%li",m_a,m_b);
+	//sb.safePrintf(" a=%"INT32" b=%"INT32"",m_a,m_b);
 
 	// null term
 	sb.safeMemcpy ( "\0",1 );
@@ -12901,7 +12901,7 @@ long Address::print2 ( long i , SafeBuf *pbuf , long long uh64 ) {
 }
 
 void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
-				long long uh64 ) {
+				int64_t uh64 ) {
 
 
 	pbuf->safePrintf ( "<td><nobr>");
@@ -12918,7 +12918,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 			 "<!--ignore-->" // ignore for Test.cpp diff
 			 "<span class=validated>"
 			 "<input type=checkbox "
-			 "onclick=\"senddiv(this,'%lli');\" "
+			 "onclick=\"senddiv(this,'%"INT64"');\" "
 			 "unchecked> "
 			 "<div class=validated style=\"display:none\">",
 			 // this must be unsigned
@@ -12951,7 +12951,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 		pbuf->pushChar(';');
 		// now print adm1 abbr
 		char *as = NULL;
-		long aslen = 2;
+		int32_t aslen = 2;
 		// mdw mdw
 		if ( m_adm1 )
 			as = m_adm1->m_adm1;
@@ -12989,7 +12989,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 
 
 	// set these
-	long  nameLen1 = 0;
+	int32_t  nameLen1 = 0;
 	char *name1 = NULL;
 	if ( m_name1 ) {
 		name1    = m_name1->m_str;
@@ -13019,7 +13019,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	pbuf->safePrintf("</nobr></td>\n");
 
 
-	long nameLen2 = 0;
+	int32_t nameLen2 = 0;
 	char *name2 = NULL;
 	if ( m_name2 ) {
 		nameLen2 = m_name2->m_strlen;
@@ -13040,7 +13040,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	pbuf->safePrintf("</nobr></td>\n");
 
 
-	long  suiteLen = 0;
+	int32_t  suiteLen = 0;
 	char *suite = NULL;
 	if ( m_suite ) {
 		suiteLen = m_suite->m_strlen;
@@ -13059,7 +13059,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	pbuf->safePrintf("</nobr></td>\n");
 
 
-	long streetLen = 0;
+	int32_t streetLen = 0;
 	char *street = NULL;
 	if ( m_street ) {
 		streetLen = m_street->m_strlen;
@@ -13080,7 +13080,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	pbuf->safePrintf("</nobr></td>\n");
 
 
-	long cityLen = 0;
+	int32_t cityLen = 0;
 	char *city = NULL;
 	if ( m_city ) {
 		cityLen = m_city->m_strlen;
@@ -13100,7 +13100,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 
 
 	
-	long adm1Len = 0;
+	int32_t adm1Len = 0;
 	char *adm1 = NULL;
 	if ( m_adm1 ) {
 		adm1Len = 2;//m_adm1->m_strlen;
@@ -13119,7 +13119,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	pbuf->safePrintf("</nobr></td>\n");
 
 
-	long zipLen = 0;
+	int32_t zipLen = 0;
 	char *zip = NULL;
 	if ( m_zip ) {
 		zipLen = m_zip->m_strlen;
@@ -13157,7 +13157,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 	double lat = m_latitude;
 	double lon = m_longitude;
 
-	// geocoder lat/long
+	// geocoder lat/lon
 	lat = m_geocoderLat;
 	lon = m_geocoderLon;
 	pbuf->safePrintf("<td><nobr>");
@@ -13170,7 +13170,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 		pbuf->safePrintf("%f",lon);
 	pbuf->safePrintf("</nobr></td>\n");
 
-	// then lat/long
+	// then lat/lon
 	lat = m_latitude;
 	lon = m_longitude;
 	pbuf->safePrintf("<td><nobr>");
@@ -13183,17 +13183,17 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 		pbuf->safePrintf("%f",lon);
 	pbuf->safePrintf("</nobr></td>\n");
 
-	// IMPORTED lat/long
+	// IMPORTED lat/lon
 	lat = m_importedLatitude;
 	lon = m_importedLongitude;
 	pbuf->safePrintf("<td><nobr>");
 	if ( lat != NO_LATITUDE && lat != AMBIG_LATITUDE ) 
-		pbuf->safePrintf("%f (%li)",lat,m_importedVotes);
+		pbuf->safePrintf("%f (%"INT32")",lat,m_importedVotes);
 	pbuf->safePrintf("</nobr></td>\n");
 
 	pbuf->safePrintf("<td><nobr>");
 	if ( lon != NO_LONGITUDE && lon != AMBIG_LONGITUDE )
-		pbuf->safePrintf("%f (%li)",lon,m_importedVotes);
+		pbuf->safePrintf("%f (%"INT32")",lon,m_importedVotes);
 	pbuf->safePrintf("</nobr></td>\n");
 }
 			
@@ -13231,13 +13231,13 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 				       "</tr>\n" );
 
 	// just streets really, or fake streets
-	for ( long i = 0 ; i < pm->getNumPtrs() ; i++ ) { // np
+	for ( int32_t i = 0 ; i < pm->getNumPtrs() ; i++ ) { // np
 		Place *pi = (Place *)pm->getPtr(i);
 		char *p    = pi->m_str;
 		char *pend = p + pi->m_strlen;
 		char c = *pend;
 		*pend = 0;
-		long flags = pi->m_bits;
+		int32_t flags = pi->m_bits;
 		char fbuf[1000];
 		char *f = fbuf;
 		// skip if filtered out from the city/adm1 loop above
@@ -13320,7 +13320,7 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 		if ( pi->m_unverifiedAddress )
 			f += sprintf(f,"inunverifiedaddress ");
 		if ( pi->m_alias )
-			f += sprintf(f,"alias[a=%li] ",
+			f += sprintf(f,"alias[a=%"INT32"] ",
 				     pi->m_alias->m_street->m_a);
 
 		if ( flags & PLF_INFILE ) 
@@ -13365,21 +13365,21 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 
 		*f = '\0';
 
-		// shortcut
+		// int16_tcut
 		Section **sp = sections->m_sectionPtrs;
 		// get section
 		Section *sn = NULL;
 		if ( pi->m_a >= 0 ) sn = sp [ pi->m_a ];
-		long depth = -1;
+		int32_t depth = -1;
 		if ( sn ) depth = sn->m_depth;
 		// sectio number
-		long secNum = -1;
-		long parentSecNum = -1;
-		if ( sn ) secNum = (long)(sn - sp[0]);
+		int32_t secNum = -1;
+		int32_t parentSecNum = -1;
+		if ( sn ) secNum = (int32_t)(sn - sp[0]);
 		Section *parent = NULL;
 		if ( sn ) parent = sn->m_parent;
-		if ( parent ) parentSecNum = (long)(parent - sp[0]);
-		long secHash = 0;
+		if ( parent ) parentSecNum = (int32_t)(parent - sp[0]);
+		int32_t secHash = 0;
 		if ( sn ) secHash = sn->m_turkTagHash32;
 		// print the address we are in or the address we alias
 		Address *myaddr = NULL;
@@ -13388,7 +13388,7 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 		// make it relative so qa test run diff is ok
 		// MDW: might need to store the off in m_addressOff/m_aliasOff
 		// or something.. keep an eye on this
-		long myoff = i;//myaddr - base;
+		int32_t myoff = i;//myaddr - base;
 		if ( myaddr == NULL ) myoff = -1;
 		// sanity check
 		// no, we now allow a full address like
@@ -13399,7 +13399,7 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 
 		if ( pbuf ) {
 			pbuf->safePrintf ( "<tr>"
-					   //"<td>%li</td>"
+					   //"<td>%"INT32"</td>"
 					   "<td><nobr>" );
 			// print it right. niceness = 0
 			pbuf->htmlEncode ( p , gbstrlen(p) , true,0);
@@ -13408,16 +13408,16 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 					   //"<td>%.02f</td>"
 
 					   "<td><nobr>%s</nobr></td>"
-					   "<td>0x%llx</td>"
-					   "<td>%li</td>"
-					   "<td>%li</td>"
-					   "<td>%li</td>"
-					   "<td>%li</td>"
-					   "<td>%li</td>"
-					   //"<td>%li</td>"
-					   //"<td>%li</td>"
-					   //"<td>%li</td>"
-					   "<td>0x%lx</td>"
+					   "<td>0x%"XINT64"</td>"
+					   "<td>%"INT32"</td>"
+					   "<td>%"INT32"</td>"
+					   "<td>%"INT32"</td>"
+					   "<td>%"INT32"</td>"
+					   "<td>%"INT32"</td>"
+					   //"<td>%"INT32"</td>"
+					   //"<td>%"INT32"</td>"
+					   //"<td>%"INT32"</td>"
+					   "<td>0x%"XINT32"</td>"
 					   "</tr>\n" , 
 					   //i,
 					  //p,
@@ -13426,20 +13426,20 @@ void printPlaces ( PlaceMem *pm , SafeBuf *pbuf , Sections *sections,
 
 					   fbuf  ,
 					   pi->m_hash ,//m_hash
-					   (long)myoff,
-					   (long)pi->m_a ,
-					   (long)pi->m_b ,
-					   (long)pi->m_alnumA ,
-					   (long)pi->m_alnumB ,
-					   //(long)depth ,
+					   (int32_t)myoff,
+					   (int32_t)pi->m_a ,
+					   (int32_t)pi->m_b ,
+					   (int32_t)pi->m_alnumA ,
+					   (int32_t)pi->m_alnumB ,
+					   //(int32_t)depth ,
 					   //secNum,
 					   //parentSecNum,
 					   secHash);
 		}
 		else
-			logf(LOG_DEBUG,"events: place #%li \"%s\" "
-			     "flags=%s alnuma=%li alnumb=%li "
-			     //"taghash=0x%lx"
+			logf(LOG_DEBUG,"events: place #%"INT32" \"%s\" "
+			     "flags=%s alnuma=%"INT32" alnumb=%"INT32" "
+			     //"taghash=0x%"XINT32""
 			     ,  
 			     i,p,
 			     //pi->m_score,
@@ -13475,7 +13475,7 @@ public:
 	// these are relative to the aliases as far as computing the best/
 	// default state that contains it. right now we just set santa fe
 	// down to 99 so that "sf" maps to "san francisco" by default.
-	long  m_pop;
+	int32_t  m_pop;
 };
 
 static AliasDesc s_cityList[] = {
@@ -13625,7 +13625,7 @@ static AliasDesc s_cityList[] = {
 
 bool addCity ( uint64_t ch64 , 
 	       char *adm1 ,
-	       long pop ,
+	       int32_t pop ,
 	       HashTableX *maxPops ) {
 
 	// see if already in the table
@@ -13636,9 +13636,9 @@ bool addCity ( uint64_t ch64 ,
 	// same city name, check his city pop
 	//
 	// get the last max popularity for this state
-	long *v=(long *)maxPops->getValue(&ch64);
+	int32_t *v=(int32_t *)maxPops->getValue(&ch64);
 	// save it into "lastPop" in case *v changes
-	long lastPop = -1;
+	int32_t lastPop = -1;
 	if ( v ) lastPop = *v;
 	// update pop with ours if bigger
 	if ( v && pop > *v ) *v = pop;
@@ -13656,7 +13656,7 @@ bool addCity ( uint64_t ch64 ,
 	// get our state
 	StateDesc *sd = getStateDesc ( adm1 );
 	// get our state index
-	long stateIndex = sd - s_states;
+	int32_t stateIndex = sd - s_states;
 	
 	// update most popular state index?
 	if ( cdp && pop > lastPop ) {
@@ -13687,7 +13687,7 @@ bool addCity ( uint64_t ch64 ,
 bool addAlias ( char *alias , 
 		char *adm1Str , 
 		uint64_t ch64 , 
-		long pop ,
+		int32_t pop ,
 		HashTableX *maxPops ) {
 	// sanity check
 	if ( is_upper_a(adm1Str[0]) ) { char *xx=NULL;*xx=0; }
@@ -13765,7 +13765,7 @@ bool initPlaceDescTable ( ) {
 	/*
 	if ( g_indicators.load ( g_hostdb.m_dir , "indicators.dat" ) ) {
 		loadedIndicators = true;
-		long long h = hash64 ( "highway" , 7 );
+		int64_t h = hash64 ( "highway" , 7 );
 		// test the indicators
 		if ( g_indicators.getSlot ( &h ) < 0 ){char *xx=NULL;*xx=0; }
 		// test the indicators
@@ -14002,7 +14002,7 @@ bool initPlaceDescTable ( ) {
 	addIndicator ( "parlor"       , IND_NAME , 1.0 );	
 	addIndicator ( "studio"       , IND_NAME , 1.0 );	
 	addIndicator ( "studios"       , IND_NAME , 1.0 );	
-	// albuquerque publishing co., short for "company"
+	// albuquerque publishing co., int16_t for "company"
 	addIndicator ( "co"       , IND_NAME , 0.9 );
 	addIndicator ( "bureau"   , IND_NAME , 1.0 );	
 	addIndicator ( "estates"   , IND_NAME , 1.0 );	
@@ -14285,7 +14285,7 @@ bool initPlaceDescTable ( ) {
 
 	// zip codes reference city strings stored in this buffer
 	char *cityBuf     = NULL;
-	long  cityBufSize = 0;
+	int32_t  cityBufSize = 0;
 	// load zip code table
 	bool loadedZips = false;
 	if ( g_zips.load ( g_hostdb.m_dir,"zips.dat",&cityBuf,&cityBufSize)) {
@@ -14293,7 +14293,7 @@ bool initPlaceDescTable ( ) {
 		//if ( g_zips.m_numSlotsUsed != 89471 ) { char*xx=NULL;*xx=0;}
 		if ( g_zips.m_numSlotsUsed != 43595 ) { char*xx=NULL;*xx=0;}
 		loadedZips = true;
-		long long h = hash64 ( "87109" , 5 );
+		int64_t h = hash64 ( "87109" , 5 );
 		// test the zips table
 		if ( g_zips.getSlot ( &h ) < 0 ){char *xx=NULL;*xx=0; }
 		// . assign it
@@ -14305,16 +14305,16 @@ bool initPlaceDescTable ( ) {
 	// . quickly set the states
 	// . map each name of a state to its index into s_states[] array
 	g_states.set ( 8 , 4 , 256 , NULL , 0 , false , 0 ,"adm1tbl");
-	long size = sizeof(s_states);
+	int32_t size = sizeof(s_states);
 	// item count
-	long n = (long)size/ sizeof(StateDesc); 
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)size/ sizeof(StateDesc); 
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get it
 		StateDesc *sd = &s_states[i];
 		// get hash of abbr
-		long long h = hash64n ( sd->m_adm1 );
+		int64_t h = hash64n ( sd->m_adm1 );
 		// make the value
-		//long val = 0;
+		//int32_t val = 0;
 		// shift up
 		//val <<= 8;
 		// or in the position
@@ -14375,9 +14375,9 @@ bool initPlaceDescTable ( ) {
 		loadedZips = false;
 	}
 
-	long vv = 185747;
+	int32_t vv = 185747;
 	if ( g_timeZones.m_numSlotsUsed && g_timeZones.m_numSlotsUsed!=vv){
-		log("places: bad timezones.dat file %li != %li",
+		log("places: bad timezones.dat file %"INT32" != %"INT32"",
 		    g_timeZones.m_numSlotsUsed,vv);
 		return false;
 	}
@@ -14402,7 +14402,7 @@ bool initPlaceDescTable ( ) {
 	// load the aliases
 	if ( loadedZips && g_aliases.load ( g_hostdb.m_dir , "aliases.dat")){
 		// match this
-		long na = 11663;//11462;
+		int32_t na = 11663;//11462;
 		// sanity check
 		if ( g_aliases.m_numSlotsUsed != na){char*xx=NULL;*xx=0;}
 	}
@@ -14426,14 +14426,14 @@ bool initPlaceDescTable ( ) {
 	// try to load the binary hash table first
 	if ( loadedZips && g_cities.load ( g_hostdb.m_dir , "cities.dat" ) ) {
 		// sanity check
-		long nc = 123347; // 123141;
+		int32_t nc = 123347; // 123141;
 		if ( g_cities.m_numSlotsUsed != nc){char*xx=NULL;*xx=0;}
 		// another test
 		char *str;
 		//char *str = "nm";
 		//str = "madrid";
-		//long long h = hash64 (str,gbstrlen(str));
-		long long h = 0;
+		//int64_t h = hash64 (str,gbstrlen(str));
+		int64_t h = 0;
 		//h =  hash64 ("santa",5);
 		//h ^= hash64 ("n",1);
 		h =  hash64n ("jemez");
@@ -14461,7 +14461,7 @@ bool initPlaceDescTable ( ) {
 
 
 		// make sure we got madrid nm
-		//long slot = g_cities.getSlot ( &h );
+		//int32_t slot = g_cities.getSlot ( &h );
 
 		//if ( slot < 0 ) { char *xx=NULL;*xx=0; }
 
@@ -14472,16 +14472,16 @@ bool initPlaceDescTable ( ) {
 		if ( ! ( cd->m_adm1Bits & abits ) ) { char *xx=NULL;*xx=0;}
 
 		// check city ids
-		long long abqh1 = getWordXorHash("abq");
-		long long abqh2 = getWordXorHash("albuquerque");
+		int64_t abqh1 = getWordXorHash("abq");
+		int64_t abqh2 = getWordXorHash("albuquerque");
 		uint32_t cid1 = getCityId32(abqh1,"nm");
 		uint32_t cid2 = getCityId32(abqh2,"nm");
 		if ( cid1 != cid2 ) { char *xx=NULL;*xx=0; }
 
 		// get nm
-		long long hnm = getWordXorHash("new mexico");
+		int64_t hnm = getWordXorHash("new mexico");
 		// get state descriptor
-		long pos = getStateOffset ( &hnm );
+		int32_t pos = getStateOffset ( &hnm );
 		// sanity
 		if ( pos < 0 ) { char *xx=NULL;*xx=0; }
 		// make bit mask
@@ -14511,21 +14511,21 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		*/
 		// now hash for zip code
 		//h = hash64Lower_a("BC",2);
-		//long long h1 = hash64("n",1);
-		//long long h2 = hash64("m",1);
-		//long long h3 = (h1<<1LL) ^ h2;
+		//int64_t h1 = hash64("n",1);
+		//int64_t h2 = hash64("m",1);
+		//int64_t h3 = (h1<<1LL) ^ h2;
 
 		char *zstr = "87102";
 		h = hash64 ( zstr,gbstrlen(zstr));
 		//h = hash64 ("78404",5);
 		//slot = g_cities.getSlot ( &h );
-		long slot = g_zips.getSlot ( &h );
+		int32_t slot = g_zips.getSlot ( &h );
 
 		//char *city="Corpus Christi";
 		char *city="Albuquerque";
-		long long ch = hash64Lower_utf8(city,gbstrlen(city));
-		//long ch = (long)(th64&0xffffffff);
-		log("places: %s hash = %llu",city,ch);
+		int64_t ch = hash64Lower_utf8(city,gbstrlen(city));
+		//int32_t ch = (int32_t)(th64&0xffffffff);
+		log("places: %s hash = %"UINT64"",city,ch);
 		// a nested loop
 		for ( ; slot >= 0 ; slot = g_zips.getNextSlot(slot,&h)) {
 			// get the place
@@ -14537,15 +14537,15 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 			if ( ! sd ) { char *xx=NULL;*xx=0; }
 			//if(!is_ascii(zd->m_adm1[0]) ) {char *xx=NULL;*xx=0;}
 			// print it
-			log("places: h=%s cityhash=%llu adm1=%s "//adm1=%c%c "
-			    "pd=0x%lx",
+			log("places: h=%s cityhash=%"UINT64" adm1=%s "//adm1=%c%c "
+			    "pd=0x%"PTRFMT"",
 			    zstr,
 			    zd->m_cityHash,
 			    sd->m_name1,
 			    //zd->m_adm1[0],
 			    //zd->m_adm1[1],
 			    //g_countryCode.getName(zd->m_crid-1),
-			    (long)zd);
+			    (PTRTYPE)zd);
 			if ( zd->m_cityHash != ch ) { char*xx=NULL;*xx=0; }
 		}
 		// exit until we get "nm" and "bc" for british columbia!!!
@@ -14665,11 +14665,11 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	popTable.set ( 4,4,30000,NULL,0,false,0,"poptab");
 
 
-	long badEntry = 0;
+	int32_t badEntry = 0;
 
-	long line = 0;
+	int32_t line = 0;
 
-	//long MAX = 0;
+	//int32_t MAX = 0;
 
 	// . go through the places in allCountries.txt
 	// . format described in /gb/geo/geonames/readme.txt
@@ -14687,7 +14687,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		// tmp debug for postalCodes.txt
 		//break;
 		// length of line, including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// sanity check
 		if ( wlen >= 9000 ) { char *xx=NULL;*xx=0; }
 		// skip if empty
@@ -14701,8 +14701,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 
 		// log it
 		if ( (line % 10000) == 0 )
-			log(LOG_INFO,"places: read line #%li out of "
-			    "6,900,574 (%li places added)",line,
+			log(LOG_INFO,"places: read line #%"INT32" out of "
+			    "6,900,574 (%"INT32" places added)",line,
 			    g_cities.m_numSlotsUsed);
 		line++;
 
@@ -14733,9 +14733,9 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		double latitude = 0.0;
 		double longitude = 0.0;
 		// population of the city/place
-		long pop = 0;
+		int32_t pop = 0;
 		// count tabs
-		long tabs = 0;
+		int32_t tabs = 0;
 		// point to the beginning of the line
 		char *p = buf;
 		char tzoff = 0;
@@ -15068,7 +15068,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		//if ( useDST == 0 ) tzoff += 100;
 
 		// already in there?
-		long slot = g_timeZones.getSlot ( &cid32 );
+		int32_t slot = g_timeZones.getSlot ( &cid32 );
 		if ( slot >= 0 ) {
 			CityStateDesc *csd ;
 			csd = (CityStateDesc *)g_timeZones.
@@ -15076,13 +15076,13 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 			char tv = csd->m_timeZoneOffset;
 			if ( tv != tzoff ) { 
 				log("places: bad city timezone "
-				    "csh=%lu z: %s",
-				    (unsigned long)cid32,
+				    "csh=%"UINT32" z: %s",
+				    (uint32_t)cid32,
 				    name);
 				//char *xx=NULL;*xx=0; }
 			}
 			// get the pop from this
-			long cpop = *(long *)popTable.getValue ( &cid32 );
+			int32_t cpop = *(int32_t *)popTable.getValue ( &cid32 );
 			// if already in there, and this has more pop,
 			// then use it!
 			if ( pop > cpop ) {
@@ -15120,7 +15120,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		// now add the alternate names of this city
 		// as aliases, not just to g_cities, but also to
 		// g_aliases
-		long len = gbstrlen(name);
+		int32_t len = gbstrlen(name);
 		if ( strncmp(name,"Township of ",12) == 0 )
 			addAlias ( name + 12,adm1,h,pop,&maxPops);
 		if ( strncmp(name,"Town of ",8) == 0 )
@@ -15151,13 +15151,13 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	/*
 	// now scan each city in g_cities and set their CF_SINGLE_STATE
 	// flag if they only have one state
-	for ( long i = 0 ; i < g_cities.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < g_cities.m_numSlots ; i++ ) {
 		// skip empty slots
 		if ( ! g_cities.m_flags[i] ) continue;
 		// get the data value
 		uint64_t *bv = (uint64_t *)g_cities.getValueFromSlot(i);
 		// count bits on
-		long nb = getNumBitsOn(*bv);
+		int32_t nb = getNumBitsOn(*bv);
 		// sanity check
 		if ( nb == 0 ) { char *xx=NULL;*xx=0; }
 		// if only 1 set this flag
@@ -15168,8 +15168,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	// close that file
 	fclose(fd);
 
-	//logf(LOG_INFO,"places: allCountries.txt had %li bad entries.",
-	logf(LOG_INFO,"places: places.txt had %li bad entries.",
+	//logf(LOG_INFO,"places: allCountries.txt had %"INT32" bad entries.",
+	logf(LOG_INFO,"places: places.txt had %"INT32" bad entries.",
 	     badEntry);
 
 	// reset for this file
@@ -15215,7 +15215,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	// . format described in /gb/geo/geonames/readme.txt
 	while ( fgets ( buf , 10000 , fd ) ) {
 		// length of line, including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// sanity check
 		if ( wlen >= 9000 ) { char *xx=NULL;*xx=0; }
 		// skip if empty
@@ -15225,8 +15225,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 
 		// log it
 		if ( (line % 10000) == 0 )
-			log(LOG_INFO,"places: read postal line #%li out of "
-			    "848,226 (%li places added)",line,
+			log(LOG_INFO,"places: read postal line #%"INT32" out of "
+			    "848,226 (%"INT32" places added)",line,
 			    g_cities.m_numSlotsUsed);
 		line++;
 
@@ -15238,7 +15238,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		a1[0] = a1[1] = 0;
 
 		// count tabs
-		long tabs = 0;
+		int32_t tabs = 0;
 		// point to the beginning of the line
 		char *p = buf;
 		// isoalte the zip code
@@ -15377,17 +15377,17 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		/*
 		// try to convert it
 		PlaceDesc *tpd ;
-		long ss;
-		long long th;
-		long long *twids;
+		int32_t ss;
+		int64_t th;
+		int64_t *twids;
 		Words tw;
 
 		// make a city hash that would match Place::m_hash
-		//long long cityHash = hashStringXor ( cityName );
+		//int64_t cityHash = hashStringXor ( cityName );
 
-		//long long tmpHash ;
+		//int64_t tmpHash ;
 		//tmpHash = hash64Lower_utf8 ( cityName , gbstrlen(cityName) ) ;
-		//long cityHash = (long)(ch & 0xffffffff);
+		//int32_t cityHash = (int32_t)(ch & 0xffffffff);
 		//if ( strncmp(cityName,"Budlake",7)==0 ) 
 		//	log("hey");
 		if ( ! legit ) {
@@ -15400,7 +15400,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		redo:
 			if ( ! use ) { char *xx=NULL;*xx=0; }
 			// hash the name
-			long long uh = hashStringXor ( use );
+			int64_t uh = hashStringXor ( use );
 			// see if we got it
 			City *c = (City *) g_cities.getValue ( &uh );
 			// set adm1 i guess
@@ -15432,7 +15432,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		}
 		*/
 
-		static long s_printed = 0;
+		static int32_t s_printed = 0;
 		// sanity  check
 		if ( ! legit ) {
 			if ( ++s_printed < 100 )
@@ -15453,11 +15453,11 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 
 		if ( ! a1name ) continue;
 		// hash the proper name of the adm1
-		long long HH = getWordXorHash ( a1name );
+		int64_t HH = getWordXorHash ( a1name );
 		// skip if empty
 		if ( HH == 0 ) continue;
 		// now get state
-		long pos = getStateOffset ( &HH );
+		int32_t pos = getStateOffset ( &HH );
 		// skip if could not match it to an adm1 in allCountries.txt
 		// by the full name of the adm1
 		if ( pos < 0 ) { char *xx=NULL;*xx=0; }//continue;
@@ -15478,15 +15478,15 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		if ( ! zd.m_cityHash ) { char *xx=NULL;*xx=0; }
 
 		// offset to current position
-		long cityOffset = sb.length();
+		int32_t cityOffset = sb.length();
 		// store it
-		long cityNameLen = gbstrlen(cityName);
+		int32_t cityNameLen = gbstrlen(cityName);
 		sb.safeMemcpy ( cityName , cityNameLen );
 		sb.safeMemcpy ( "\0", 1 ); // null terminate
 		// update zd
 		zd.m_cityOffset = cityOffset;
 
-		long long zh = getWordXorHash ( zip );
+		int64_t zh = getWordXorHash ( zip );
 		// skip if bad
 		if ( ! zh ) { badEntry++; continue; }
 
@@ -15520,7 +15520,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	// go through the zipcodes in zipcode.csv, one per line
 	while ( fgets ( buf , 10000 , fd ) ) {
 		// length of line, including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// sanity check
 		if ( wlen >= 9000 ) { char *xx=NULL;*xx=0; }
 		// skip if empty
@@ -15529,12 +15529,12 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		buf[wlen-1]='\0';
 		// log it
 		if ( (line % 10000) == 0 )
-			log(LOG_INFO,"places: read line #%li",line);
+			log(LOG_INFO,"places: read line #%"INT32"",line);
 		line++;
 		// for debug
 		char *p = buf;
 		// lat is after 7th quote, lon is after 9th quote
-		long qcount = 0;
+		int32_t qcount = 0;
 		float latitude = 999.0;
 		float longitude = 999.0;
 		char *zip = NULL;
@@ -15552,7 +15552,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		if ( zip[6] != '\"' ) zip[6] = '\0';
 		else { char *xx=NULL;*xx=0; }
 		// look it up
-		long long zh = getWordXorHash ( zip );
+		int64_t zh = getWordXorHash ( zip );
 		// skip if bad
 		ZipDesc *zd = (ZipDesc *)g_zips.getValue ( &zh );
 		// must be there
@@ -15569,8 +15569,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	// 
 	// scan all zips and make sure all have lat/lon
 	//
-	long missed = 0;
-	for ( long i = 0 ; i < g_zips.m_numSlotsUsed ; i++ ) {
+	int32_t missed = 0;
+	for ( int32_t i = 0 ; i < g_zips.m_numSlotsUsed ; i++ ) {
 		// skip i fempty bucket
 		if ( ! g_zips.m_flags[i] ) continue;
 		// get it
@@ -15580,20 +15580,20 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		     zd->m_longitude == 999.0    ) 
 			missed++;
 	}
-	logf(LOG_INFO,"places: missed lat/lon for %li zipcodes",missed);
+	logf(LOG_INFO,"places: missed lat/lon for %"INT32" zipcodes",missed);
 
 
-	logf(LOG_INFO,"places: postalCodes.txt had %li bad entries.",
+	logf(LOG_INFO,"places: postalCodes.txt had %"INT32" bad entries.",
 	     badEntry);
 
 	/*
 	// convert the indicator count table into g_indicators for IND_NAME
 	// and add them into g_indicators now
-	for ( long i = 0 ; i < ct.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < ct.m_numSlots ; i++ ) {
 		// skip if empty
 		if ( ct.m_flags[i] == 0 ) continue;
 		// this is a count table
-		long count = *(long *)ct.getValueFromSlot ( i );
+		int32_t count = *(int32_t *)ct.getValueFromSlot ( i );
 		// skip if not popular
 		if ( count < MIN_POP_COUNT ) continue;
 		// skip for now
@@ -15602,12 +15602,12 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		//float boost = 1.0 + (9.0 * (float)count / (float)MAX);
 		//float boost = 1.00;
 		// increment for every count
-		//for ( long j = 10 ; j < count ; j++ )
+		//for ( int32_t j = 10 ; j < count ; j++ )
 		//	boost *= 1.002;
 		// limit it to 1.5 for now...
 		//if ( boost > 1.5 ) boost = 1.5;
 		// get wid
-		//long long *wid = (long long *)ct.getKey ( i );
+		//int64_t *wid = (int64_t *)ct.getKey ( i );
 		// . add it
 		// . use a boost of just 0.25 for now
 		//if(! addIndicator ( *wid , IND_NAME , 0.25 ) ) // boost ) ) 
@@ -15630,8 +15630,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 
 	// . abbreviations for popular cities
 	// . now we use the s_cityList array
-	long ncl = (long)sizeof(s_cityList)/ sizeof(AliasDesc);
-	for ( long i = 0 ; i < ncl ; i++ ) {
+	int32_t ncl = (int32_t)sizeof(s_cityList)/ sizeof(AliasDesc);
+	for ( int32_t i = 0 ; i < ncl ; i++ ) {
 		char      *s1   = s_cityList[i].m_s1;
 		char      *s2   = s_cityList[i].m_s2;
 		// use this now
@@ -15671,7 +15671,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 			// get this
 			StateDesc *tsd = getStateDesc(ss);
 			// convert to index
-			long si = tsd - &s_states[0];
+			int32_t si = tsd - &s_states[0];
 			// sanity
 			if ( si < 0 ) { char *xx=NULL;*xx=0; }
 			// store it
@@ -15711,7 +15711,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	logf(LOG_INFO,"places: saving zips.dat");
 
 	char *tbuf     = sb.getBufStart();
-	long  tbufSize = sb.length();
+	int32_t  tbufSize = sb.length();
 	if ( ! g_zips.save ( g_hostdb.m_dir , "zips.dat",tbuf,tbufSize ) )
 		return log("places: failed to save zips.dat");
 
@@ -15766,11 +15766,11 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 // . "boost" is how much to boost the Place's score by if it has this indicator
 bool addIndicator ( char *s , char bit , float indScore ) {
 	// hash it
-	long long h = hash64Lower_utf8 ( s , gbstrlen(s) );
+	int64_t h = hash64Lower_utf8 ( s , gbstrlen(s) );
 	return addIndicator ( h , bit , indScore );
 }
 
-bool addIndicator ( long long h , char bit , float indScore ) {
+bool addIndicator ( int64_t h , char bit , float indScore ) {
 	// plaza is two types of indicator, street and name
 	IndDesc *pid = (IndDesc *)g_indicators.getValue (&h);
 	// if there, augment the bits
@@ -15788,7 +15788,7 @@ bool addIndicator ( long long h , char bit , float indScore ) {
 }
 
 // "baseScore" should be event id
-bool Address::hash ( long        baseScore ,
+bool Address::hash ( int32_t        baseScore ,
 		     HashTableX *dt        ,
 		     uint32_t    date      ,
 		     Words      *words     , 
@@ -15796,16 +15796,16 @@ bool Address::hash ( long        baseScore ,
 		     SafeBuf    *pbuf      ,
 		     HashTableX *wts       ,
 		     SafeBuf    *wbuf      ,
-		     long        version   ,
-		     long        niceness  ) {
+		     int32_t        version   ,
+		     int32_t        niceness  ) {
 	return true;
 }
 
 
 // . returns false and sets g_errno on error
-bool Addresses::hashForPlacedb ( long long   docId    ,
-				 long        siteHash32 ,
-				 long        ip       ,
+bool Addresses::hashForPlacedb ( int64_t   docId    ,
+				 int32_t        siteHash32 ,
+				 int32_t        ip       ,
 				 HashTableX *dt       ) {
 	
 	// sanity check
@@ -15818,7 +15818,7 @@ bool Addresses::hashForPlacedb ( long long   docId    ,
 	//if ( ! dt->m_allowDups ) { char *xx=NULL;*xx=0; }
 
 	// now create the meta rdb list
-	for ( long i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < m_am.getNumPtrs() ; i++ ) {
 		// breathe
 		QUICKPOLL ( dt->m_niceness );
 		// get it
@@ -15861,7 +15861,7 @@ bool Addresses::hashForPlacedb ( long long   docId    ,
 		// reset it to all 0s
 		memset ( buf , 0 , 513 );
 		// convert to semicolon format 
-		long size = a->serialize ( buf , 511 , NULL , false , false);
+		int32_t size = a->serialize ( buf , 511 , NULL , false , false);
 		// skip on error, probably > 511 bytes!
 		if ( size < 0 ) continue;
 		// make the key for this address
@@ -15927,7 +15927,7 @@ bool Addresses::hashForPlacedb ( long long   docId    ,
 // . "streetname" should exclude any indicators
 // . we determine the group responsible for this key by the 64 bit hash (H)
 //   alone... see Hostdb::getGroupId()
-key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
+key128_t Address::makePlacedbKey (int64_t docId,bool useName1,bool useName2){
 
 	// the key we are setting
 	key128_t k;
@@ -15938,10 +15938,10 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	if ( m_cityId32 == 0 ) { char *xx=NULL;*xx=0; }
 
 	// save for sanity check. mask it to 25 bits
-	long snh = m_street->m_streetNumHash & 0x01ffffff;
+	int32_t snh = m_street->m_streetNumHash & 0x01ffffff;
 
 	// add in street name (not including indicators)
-	long long h = m_street->m_hash;
+	int64_t h = m_street->m_hash;
 	// . use place name 1 instead of street name?
 	// . we use this for when "Tingley Colesium" is given and no street!
 	if ( useName1 || useName2 ) {
@@ -15960,7 +15960,7 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	}
 
 	// country id
-	//h = hash64 ( (long long)m_adm1.m_crid , h );
+	//h = hash64 ( (int64_t)m_adm1.m_crid , h );
 	// adm1
 	// get the two-letter state abbreviation code (nm = new mexico)
 	char *adm1Str = NULL;
@@ -15969,9 +15969,9 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	// unique cities like "Albuquerque" imply a state
 	//else if ( m_city && m_city->m_adm1[0] ) adm1Str = m_city->m_adm1;
 	else               { char *xx=NULL;*xx=0; }
-	h = hash64 ( (long long)(*(uint16_t *)adm1Str) , h );
+	h = hash64 ( (int64_t)(*(uint16_t *)adm1Str) , h );
 	// city
-	long long cityHash = 0LL;
+	int64_t cityHash = 0LL;
 	if      ( m_city ) cityHash = m_city->m_hash;
 	else if ( m_zip  ) cityHash = m_zip->m_cityHash;
 	else              { char *xx=NULL;*xx=0; }
@@ -15979,15 +15979,15 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	uint64_t cid64 = (uint64_t)getCityId32 ( cityHash , adm1Str );
 	// incorporate that into "h"
 	h = hash64 ( cid64 , h );
-	// store that in most signficant long long
+	// store that in most signficant int64_t
 	k.n1 = h;
 
 	// street hash
-	long long n0 = snh;
+	int64_t n0 = snh;
 	// shift up for docid
 	n0 <<= 38;
 	// sanity
-	if ( (long)NUMDOCIDBITS != 38 ) { char *xx=NULL;*xx=0; }
+	if ( (int32_t)NUMDOCIDBITS != 38 ) { char *xx=NULL;*xx=0; }
 	// put that in
 	n0 |= docId;
 	// empty bit for del bit
@@ -16007,9 +16007,9 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 
 /*
 // similar to Address::serialize()
-long long Address::makeAddressVotingTableKey ( ) {
+int64_t Address::makeAddressVotingTableKey ( ) {
 
-	long long h = 0LL;
+	int64_t h = 0LL;
 	Place *d = NULL;
 
 	// incorporate place name into the hash
@@ -16086,10 +16086,10 @@ void Msg2c::reset() {
 	m_replies = 0;
 	// all done if never initialized the multicasts
 	if ( ! m_initializedInUse ) return;
-	// shortcut
-	long max = (long)MAX_ADDR_REQUESTS_OUT;
+	// int16_tcut
+	int32_t max = (int32_t)MAX_ADDR_REQUESTS_OUT;
 	// call DEstructors on multicasts
-	for ( long i = 0 ; i < max ; i++ ) {
+	for ( int32_t i = 0 ; i < max ; i++ ) {
 		QUICKPOLL(m_niceness);
 		m_mcasts[i].destructor();
 	}
@@ -16105,9 +16105,9 @@ void Msg2c::reset() {
 bool Msg2c::verifyAddresses ( Addresses  *aa         ,
 			      //char       *coll       ,
 			      collnum_t collnum ,
-			      long        domHash32  ,
-			      long        ip         ,
-			      long        niceness   ,
+			      int32_t        domHash32  ,
+			      int32_t        ip         ,
+			      int32_t        niceness   ,
 			      void       *state      ,
 			      void     (* callback)(void *state ) ) {
 	
@@ -16143,7 +16143,7 @@ bool Msg2c::verifyAddresses ( Addresses  *aa         ,
 }
 
 // keep tabs on total out
-static long s_totalOut = 0;
+static int32_t s_totalOut = 0;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno and returns true on error
@@ -16151,11 +16151,11 @@ bool Msg2c::launchRequests ( ) {
 	// clear it
 	g_errno = 0;
 	// how many max can be out?
-	long maxOut = (long)MAX_ADDR_REQUESTS_OUT;
+	int32_t maxOut = (int32_t)MAX_ADDR_REQUESTS_OUT;
 	// but be careful
 	if ( s_totalOut >= 200 ) maxOut = 1;
 	// we are only built for one at a time since request buffer is static
-	//if ( (long)MAX_ADDR_REQUESTS != 1 ) { char *xx=NULL;*xx=0; }
+	//if ( (int32_t)MAX_ADDR_REQUESTS != 1 ) { char *xx=NULL;*xx=0; }
  loop:
 	// all done?
 	if ( m_i == m_addresses->m_am.getNumPtrs() ) 
@@ -16201,16 +16201,16 @@ bool Msg2c::launchRequests ( ) {
 	//}
 
 	// max size of request
-	//long max = 1024;
+	//int32_t max = 1024;
 	// request is startKey,endKey,pihash,niceness,coll
 	//char *requestBuf = a->m_requestBuf;
 
 	// prepare to get a request buf if we haven't already
 	if ( ! m_initializedInUse ) {
-		long max = (long)MAX_ADDR_REQUESTS_OUT;
+		int32_t max = (int32_t)MAX_ADDR_REQUESTS_OUT;
 		memset(m_inUse,0,max);
 		// call constructors on multicasts
-		for ( long i = 0 ; i < max ; i++ ) {
+		for ( int32_t i = 0 ; i < max ; i++ ) {
 			QUICKPOLL(m_niceness);
 			m_mcasts[i].constructor();
 		}
@@ -16218,9 +16218,9 @@ bool Msg2c::launchRequests ( ) {
 		m_initializedInUse = true;
 	}
 	// get a request buf, assume none (-1)
-	long reqBufNum = -1;
+	int32_t reqBufNum = -1;
 	// scan what we got
-	for ( long i = 0 ; i < MAX_ADDR_REQUESTS_OUT ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_ADDR_REQUESTS_OUT ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if in use
@@ -16249,15 +16249,15 @@ bool Msg2c::launchRequests ( ) {
 	// store placedbKey
 	*(key128_t *)p = a->m_placedbKey; p += sizeof(key128_t);
 	// site hash
-	*(long *)p = m_domHash32; p += 4;
-	*(long *)p = m_ip       ; p += 4;
+	*(int32_t *)p = m_domHash32; p += 4;
+	*(int32_t *)p = m_ip       ; p += 4;
 	// niceness, 1 byte
 	*(char *)p = m_niceness; p += 1;
 	// is the street really a place name in disguise? ("Tingley Colesium")
 	char isName = ( a->m_street->m_flags2 & PLF2_IS_NAME ) ;
 	*(char *)p = isName  ; p += 1;
 	// collection
-	//long collSize = gbstrlen(m_coll) + 1;
+	//int32_t collSize = gbstrlen(m_coll) + 1;
 	//memcpy ( p , m_coll , collSize );
 	//p += collSize;
 	*(collnum_t *)p = m_collnum;
@@ -16268,7 +16268,7 @@ bool Msg2c::launchRequests ( ) {
 	// . like ";;5815 Wyoming Blvd NE;Albuquerque;nm;87109;;..."(see below)
 	// . returns -1 and sets g_errno on error
 	// . returns # of bytes written, including null terminator
-	long written = a->serialize ( p , pend - p , NULL , false , false );
+	int32_t written = a->serialize ( p , pend - p , NULL , false , false );
 	// error?
 	if ( written == -1 ) { 
 		m_errno = g_errno; 
@@ -16284,15 +16284,15 @@ bool Msg2c::launchRequests ( ) {
 	if ( p[-1] != '\0' ) { char *xx=NULL;*xx=0; }
 
 	// size of it
-	long requestSize = p - requestBuf;
+	int32_t requestSize = p - requestBuf;
 	// sanity check for breach
 	if ( requestSize > REQBUFSIZE ) { char *xx=NULL;*xx=0; }
 
 	// . get group to handle it
 	// . each group is responsible for a specific streetname/ctry/city/adm1
 	// . Hostdb.cpp::getGroupId()
-	//unsigned long gid = getGroupId(RDB_PLACEDB,(char *)&a->m_placedbKey);
-	unsigned long shardNum;
+	//uint32_t gid = getGroupId(RDB_PLACEDB,(char *)&a->m_placedbKey);
+	uint32_t shardNum;
 	shardNum = getShardNum (RDB_PLACEDB,(char *)&a->m_placedbKey);
 
 	// . pick a host within that group based on docid
@@ -16300,13 +16300,13 @@ bool Msg2c::launchRequests ( ) {
 	// . but i would like to cache this using a biased cache
 	// . so we need to divide based on streetname hash
 	// . that is the most significant 16 bits of the placedb key
-	long  numHosts = g_hostdb.getNumHostsPerShard();
-	long  hostNum  = a->m_street->m_hash % numHosts;
+	int32_t  numHosts = g_hostdb.getNumHostsPerShard();
+	int32_t  hostNum  = a->m_street->m_hash % numHosts;
 	Host *group    = g_hostdb.getShard ( shardNum );
 	// get host # "hostNum" in group "group" to send our request to
 	Host *h        = &group [ hostNum ];
 
-	//long addrNum = m_i - 1;
+	//int32_t addrNum = m_i - 1;
 
 	// launch it
 	//Multicast *m = &m_mcast;
@@ -16361,9 +16361,9 @@ void gotMsg2cReplyWrapper ( void *state , void *state2 ) {
 	// point to the address we were working for
 	Address *a = (Address *)state2;
 	// what address # was it matching?
-	long addrNum = a->m_addrNum;
+	int32_t addrNum = a->m_addrNum;
 	// and the reply buffer num for making available again
-	long reqBufNum = a->m_reqBufNum;
+	int32_t reqBufNum = a->m_reqBufNum;
 	// sanity
 	if ( reqBufNum<0 || reqBufNum>=MAX_ADDR_REQUESTS_OUT ) {
 		char *xx=NULL; *xx=0; }
@@ -16372,7 +16372,7 @@ void gotMsg2cReplyWrapper ( void *state , void *state2 ) {
 
 	// test it
 	Multicast *m = &THIS->m_mcasts[reqBufNum];
-	long replySize , replyMaxSize; bool freeIt;
+	int32_t replySize , replyMaxSize; bool freeIt;
 	char *r = m->getBestReply (&replySize,&replyMaxSize,&freeIt);
 
 	// store reply into our cache
@@ -16389,7 +16389,7 @@ void gotMsg2cReplyWrapper ( void *state , void *state2 ) {
 	// test it
 	//if ( r && replySize != 1 ) { char *xx=NULL; *xx=0; }
 	// show it
-	//log("addr: got reply=%li replyaddr=0x%lx",(long)*r,(long)r);
+	//log("addr: got reply=%"INT32" replyaddr=0x%"XINT32"",(int32_t)*r,(int32_t)r);
 	// launchGetRequests() returns false if still waiting for replies...
 	if ( ! THIS->launchRequests() ) return;
 	// set g_errno for the callback
@@ -16402,14 +16402,14 @@ void gotMsg2cReplyWrapper ( void *state , void *state2 ) {
 
 // we then call Addresses::updateAddresses() to modify our m_addresses[]
 // array with these replies!
-bool Addresses::addToReplyBuf ( char *reply , long replySize , long addrNum ) {
+bool Addresses::addToReplyBuf ( char *reply , int32_t replySize , int32_t addrNum ) {
 	// if nothing found in placedb lookup we get  a 0 byte reply
 	if ( replySize == 0 ) return true;
 	// sanity
 	if ( addrNum < 0 || addrNum >= m_am.getNumPtrs()){char *xx=NULL;*xx=0;}
 	// if no room, make it 1.5 times bigger
 	if ( m_sb.m_length + replySize+4+4 > m_sb.m_capacity &&
-	     ! m_sb.reserve ( (long)(m_sb.m_capacity * 1.5 + 1000 ) ) ) {
+	     ! m_sb.reserve ( (int32_t)(m_sb.m_capacity * 1.5 + 1000 ) ) ) {
 		log("addr: addtoreplybuf: %s",mstrerror(g_errno));
 		return false;
 	}
@@ -16425,25 +16425,25 @@ class State2c {
 public:
 	UdpSlot *m_slot;
 	Msg5 m_msg5;
-	long m_votesForStreet;
-	long m_votesForStreetNum;
-	long m_votesForPlaceName1;
-	long m_votesForPlaceName2;
+	int32_t m_votesForStreet;
+	int32_t m_votesForStreetNum;
+	int32_t m_votesForPlaceName1;
+	int32_t m_votesForPlaceName2;
 	RdbList m_list;
-	long m_domHash32;
-	long m_ip;
+	int32_t m_domHash32;
+	int32_t m_ip;
 	key128_t m_placedbKey;
-	long     m_niceness;
+	int32_t     m_niceness;
 	// is the street really a place name in disguise? (Tingley Colesium)
 	char     m_isName;
 	// point to the serialize Address (semicolon separated, null term'd)
 	char *m_addrStr;
 };
 
-void handleRequest2c ( UdpSlot *slot , long nicenessWTF ) {
+void handleRequest2c ( UdpSlot *slot , int32_t nicenessWTF ) {
 	// get the request
 	char *request     = slot->m_readBuf;
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 	// overflow protection for corrupt requests
 	if ( requestSize < 4 ) {
 		g_errno = EBUFTOOSMALL;
@@ -16460,7 +16460,7 @@ void handleRequest2c ( UdpSlot *slot , long nicenessWTF ) {
 	try { st = new (State2c); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		log("msg2c: new(%i): %s", sizeof(State2c), mstrerror(g_errno));
+		log("msg2c: new(%"INT32"): %s", (int32_t)sizeof(State2c), mstrerror(g_errno));
 		return g_udpServer.sendErrorReply ( slot, g_errno );
 	}
 	mnew ( st , sizeof(State2c) , "hndl2c" );
@@ -16486,14 +16486,14 @@ void handleRequest2c ( UdpSlot *slot , long nicenessWTF ) {
 	endKey  .n0  = 0xffffffffffffffffLL;
 
 	// domhash
-	st->m_domHash32 = *(long *)p; p += 4;
-	st->m_ip        = *(long *)p; p += 4;
+	st->m_domHash32 = *(int32_t *)p; p += 4;
+	st->m_ip        = *(int32_t *)p; p += 4;
 	// get niceness
-	//long niceness = *(char *)p; p++;
+	//int32_t niceness = *(char *)p; p++;
 	// skip still though!!
 	p++;
 	// this was messing up our niceness conversion algo
-	long niceness = slot->m_niceness;
+	int32_t niceness = slot->m_niceness;
 	// is the street really a place name in disguise? (Tingley Colesium)
 	st->m_isName    = *(char *)p; p++;
 	// save it
@@ -16558,8 +16558,8 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 
 	// get our street num hash
 	key128_t *pk = &st->m_placedbKey;
-	long long myBigHash       = g_placedb.getBigHash(pk);
-	long      myStreetNumHash = g_placedb.getStreetNumHash(pk);
+	int64_t myBigHash       = g_placedb.getBigHash(pk);
+	int32_t      myStreetNumHash = g_placedb.getStreetNumHash(pk);
 
 	// point to the place name
 	char *pn1 = st->m_addrStr;
@@ -16572,10 +16572,10 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 	// skip leading "the"
 	if ( ! strncasecmp ( pn1, "the ", 4) ) pn1 += 4;
 	// get niceness
-	long niceness = st->m_niceness;
-	// make a vector of "longs" from the place name
-	long myvbuf1[50];
-	long mynv1 = makeSimpleWordVector ( pn1 , myvbuf1 , 50*4,niceness ) ;
+	int32_t niceness = st->m_niceness;
+	// make a vector of "int32_ts" from the place name
+	int32_t myvbuf1[50];
+	int32_t mynv1 = makeSimpleWordVector ( pn1 , myvbuf1 , 50*4,niceness ) ;
 	if ( mynv1 == -1 ) goto hadError;
 
 	// do the same for the second name
@@ -16589,8 +16589,8 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 	// skip leading "the"
 	if ( ! strncasecmp ( pn2, "the ", 4) ) pn2 += 4;
 	// make vector of secondary place name
-	long myvbuf2[50];
-	long mynv2 = makeSimpleWordVector ( pn2 , myvbuf2 , 50*4,niceness ) ;
+	int32_t myvbuf2[50];
+	int32_t mynv2 = makeSimpleWordVector ( pn2 , myvbuf2 , 50*4,niceness ) ;
 	if ( mynv2 == -1 ) goto hadError;
 
 	//log("build: matching %s",pn1);
@@ -16611,9 +16611,9 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 	// the original one byte reply of flags...
 	// now we also store the best lat and lon which are the two doubles,
 	// and the 4 bytes before for the # of votes for that lat/lon
-	long need = 1 + 4 + sizeof(double)*2;
+	int32_t need = 1 + 4 + sizeof(double)*2;
 
-	// shortcut
+	// int16_tcut
 	RdbList *list = &st->m_list;
 
 	while ( ! list->isExhausted() ) {
@@ -16628,7 +16628,7 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		// cast it
 		Address a2; 
 		//Place places2[10];
-		//long np2 = 0;
+		//int32_t np2 = 0;
 		PlaceMem pm;
 		char tmpbuf[7024];
 		pm.init ( 5000 ,10,10,tmpbuf,7024,0 );
@@ -16648,7 +16648,7 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		st->m_votesForStreet++;
 
 		// get the street num hash of that record
-		long snh = g_placedb.getStreetNumHash ( &k );
+		int32_t snh = g_placedb.getStreetNumHash ( &k );
 		// . does it match our street number?
 		// . i.e. the "15110" in "15110 Wyoming blvd"
 		if ( snh != myStreetNumHash ) continue;
@@ -16670,8 +16670,8 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		// skip leading "the"
 		if ( ! strncasecmp ( pn1, "the ", 4) ) pn1 += 4;
 		// make its place name into a vector
-		long vbuf1[50];
-		long nvbuf1 ;
+		int32_t vbuf1[50];
+		int32_t nvbuf1 ;
 		nvbuf1 = makeSimpleWordVector(pn1,vbuf1,50*4,st->m_niceness);
 		if ( nvbuf1 == -1 )
 			goto hadError;
@@ -16686,8 +16686,8 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		// skip leading "the"
 		if ( ! strncasecmp ( pn2, "the ", 4) ) pn2 += 4;
 		// make vector of secondary place name
-		long vbuf2[50];
-		long nvbuf2;
+		int32_t vbuf2[50];
+		int32_t nvbuf2;
 		nvbuf2 = makeSimpleWordVector (pn2,vbuf2,50*4,st->m_niceness);
 		if ( nvbuf2 == -1) 
 			goto hadError;
@@ -16733,8 +16733,8 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		// each place name of each placedb record. this allows us
 		// to ultimately set Address::m_placedbName1 and 2.
 		//
-		long h1 = hash32 ( (char *)vbuf1 , nvbuf1 * 4 , 0 );
-		long h2 = hash32 ( (char *)vbuf2 , nvbuf2 * 4 , 0 );
+		int32_t h1 = hash32 ( (char *)vbuf1 , nvbuf1 * 4 , 0 );
+		int32_t h2 = hash32 ( (char *)vbuf2 , nvbuf2 * 4 , 0 );
 
 		// . update max buf if its a new string
 		// . include one byte for the \0
@@ -16809,14 +16809,14 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 	// so that we do not trust the one on our page necessarily
 	double lat;
 	double lon;
-	long   numVotes;
+	int32_t   numVotes;
 	// need the street number hash so we only get lat/lon coords from
 	// addresses with the same street number as well as street
 	if ( ! getBestLatLon ( list , &lat, &lon , &numVotes, niceness , 
 			       myStreetNumHash ) )
 		goto hadError;
 	// add that in
-	*(long   *)rptr = numVotes; rptr += 4;
+	*(int32_t   *)rptr = numVotes; rptr += 4;
 	*(double *)rptr = lat; rptr += sizeof(double);
 	*(double *)rptr = lon; rptr += sizeof(double);
 
@@ -16824,22 +16824,22 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 	*rptr = flags; rptr++;
 
 	// . now we store all the alternative place names and their vote count,
-	//   as long as it was 2 or more. so scan the score table to find
+	//   as int32_t as it was 2 or more. so scan the score table to find
 	//   the hashes of the winners, then lookup the hashes of the winners
 	//   in the ptr table, ptrTable, to get the string to send back.
 	// . we set Address::m_placedbNames to this string above when we
 	//   process this reply
-	for ( long i = 0 ; i < vt.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < vt.m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// skip emptyies
 		if ( vt.isEmpty(i) ) continue;
 		// get score
-		long score = vt.getScoreFromSlot ( i );
+		int32_t score = vt.getScoreFromSlot ( i );
 		// skip if too small
 		if ( score <= 1 ) continue;
 		// get key
-		long key = *(long *)vt.getKeyFromSlot ( i );
+		int32_t key = *(int32_t *)vt.getKeyFromSlot ( i );
 		// grab string
 		char *str = *(char **)ptrTable.getValue ( &key );
 		// must be there
@@ -16847,11 +16847,11 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		// skip if empty string... was it just "the "???
 		if ( ! *str ) continue;
 		// store score first
-		*(long *)rptr = score;
+		*(int32_t *)rptr = score;
 		// skip it
 		rptr += 4;
 		// get length
-		long len = gbstrlen(str);
+		int32_t len = gbstrlen(str);
 		// store in reply buf, include \0
 		memcpy ( rptr , str , len + 1 );
 		// skip over
@@ -16860,7 +16860,7 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		if ( rptr > rend ) { char *xx=NULL;*xx=0; }
 	}
 	// the reply size may be less than what we allocated
-	long replySize = rptr - reply;
+	int32_t replySize = rptr - reply;
 
 	// set it
 	//if ( st->m_votes ) *reply = 1;
@@ -16876,18 +16876,18 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 // like "Tingley Colesium", so this sends back the address
 void sendBackAddress ( State2c *st ) {
 
-	// shortcut
+	// int16_tcut
 	RdbList *list = &st->m_list;
 	// winning street address
 	char *winner = NULL;
-	long  winnerSnh = 0;
+	int32_t  winnerSnh = 0;
 	// and max count
-	long max = 0;
+	int32_t max = 0;
 	// get this
 	UdpSlot *slot = st->m_slot;
 	// set myBigHash for comparing
 	key128_t *pk = &st->m_placedbKey;
-	long long myBigHash = g_placedb.getBigHash(pk);
+	int64_t myBigHash = g_placedb.getBigHash(pk);
 
 	// set up a little voting table
 	char vbuf[30000];
@@ -16920,7 +16920,7 @@ void sendBackAddress ( State2c *st ) {
 		// everyone agrees on the same street address
 
 		// get the street num hash of that record
-		long snh = g_placedb.getStreetNumHash ( &k );
+		int32_t snh = g_placedb.getStreetNumHash ( &k );
 		// get his vote count, we take the max
 		if ( ! vt.addTerm32 ( &snh ) ) {
 			// all done with this
@@ -16933,7 +16933,7 @@ void sendBackAddress ( State2c *st ) {
 		// does this guy have a latitude/longitude in him?
 		char *pp = data;
 		// count out like 9 semicolons to see
-		long scount = 0;
+		int32_t scount = 0;
 		for ( ; scount < 10 ; pp++ )
 			if ( *pp == ';' ) scount++;
 		// check it out
@@ -16941,7 +16941,7 @@ void sendBackAddress ( State2c *st ) {
 		// bad?
 		if ( scount < 5 ) { char *xx=NULL;*xx=0; }
 		// get his count
-		long score = vt.getScore32 ( &snh );
+		int32_t score = vt.getScore32 ( &snh );
 		// new max?
 		if ( score < max ) continue;
 		// on tie, pref if has lat/lon
@@ -16955,7 +16955,7 @@ void sendBackAddress ( State2c *st ) {
 	// for looping again, reset this, but only if we had a winner
 	double bestLat;
 	double bestLon;
-	long   numVotes;
+	int32_t   numVotes;
 	if ( winner && ! getBestLatLon ( list, 
 					 &bestLat, 
 					 &bestLon, 
@@ -16984,11 +16984,11 @@ void sendBackAddress ( State2c *st ) {
 		return;
 	}
 
-	long wlen = gbstrlen(winner);
+	int32_t wlen = gbstrlen(winner);
 	// hos can this be?
 	if ( wlen <= 1 ) { char *xx=NULL;*xx=0; }
 	// send winner back. add in extra for lat/lon
-	long need = wlen + 48;
+	int32_t need = wlen + 48;
 	// use the slot's tmp buf to hold the reply if we can
 	char *reply = slot->m_tmpBuf;
 	// make buf if we need to
@@ -17003,15 +17003,15 @@ void sendBackAddress ( State2c *st ) {
 	}
 	// now store here
 	char *p = reply;
-	*(long   *)p = numVotes; p += 4;
+	*(int32_t   *)p = numVotes; p += 4;
 	*(double *)p = bestLat ; p += sizeof(double);
 	*(double *)p = bestLon ; p += sizeof(double);
 	// how much to copy, include \0
-	long bytes = wlen + 1;
+	int32_t bytes = wlen + 1;
 	// copy over all but lat and lon if there, includes last ';'
 	memcpy ( p , winner , bytes ); p += bytes;
 	// how big is reply?
-	long replySize = p - reply;
+	int32_t replySize = p - reply;
 	// sanity check
 	if ( replySize > need ) { char *xx=NULL;*xx=0; }
 	// free it last since winner points into it
@@ -17025,13 +17025,13 @@ void sendBackAddress ( State2c *st ) {
 bool getBestLatLon ( RdbList *list      ,
 		     double  *bestLat   ,
 		     double  *bestLon   ,
-		     long    *numVotes  ,
-		     long     niceness  ,
-		     long     winnerSnh ) {
+		     int32_t    *numVotes  ,
+		     int32_t     niceness  ,
+		     int32_t     winnerSnh ) {
 	// reset ptr, since we did a loop above with it
 	list->resetListPtr();
 	// no best now
-	long bestScore = 0;
+	int32_t bestScore = 0;
 	*bestLat = NO_LATITUDE;
 	*bestLon = NO_LONGITUDE;
 	*numVotes = 0;
@@ -17046,13 +17046,13 @@ bool getBestLatLon ( RdbList *list      ,
 		// get it
 		char *data = list->getCurrentData();
 		// need this now
-		//long dataSize = list->getCurrentDataSize();
+		//int32_t dataSize = list->getCurrentDataSize();
 		// get the key
 		key128_t k; list->getCurrentKey(&k);
 		// skip it
 		list->skipCurrentRecord();
 		// get the street num hash of that record
-		long snh = g_placedb.getStreetNumHash ( &k );
+		int32_t snh = g_placedb.getStreetNumHash ( &k );
 		// skip if not winner
 		if ( winnerSnh && snh != winnerSnh ) continue;
 		// grab it from the string (TODO: use this for above too!)
@@ -17065,14 +17065,14 @@ bool getBestLatLon ( RdbList *list      ,
 		// sanity check
 		if ( sizeof(double) != 8 ) { char *xx=NULL;*xx=0; }
 		// get hash for them
-		long long h1 = *(long long *)&lat;
-		long long h2 = *(long long *)&lon;
-		long long h = (h1<<1) ^ h2;
+		int64_t h1 = *(int64_t *)&lat;
+		int64_t h2 = *(int64_t *)&lon;
+		int64_t h = (h1<<1) ^ h2;
 		// add to table
 		if ( ! gpsTable.addTerm ( &h ) ) 
 			return false;
 		// get score
-		long score = gpsTable.getScore ( &h );
+		int32_t score = gpsTable.getScore ( &h );
 		// skip if not best
 		if ( score <= bestScore ) continue;
 		// otherwise set it
@@ -17086,7 +17086,7 @@ bool getBestLatLon ( RdbList *list      ,
 
 uint8_t getCountryIdFromAddrStr ( char *addr ) {
 	char *p = addr;
-	long scount = 0;
+	int32_t scount = 0;
 	for ( ; scount < 7 ; p++ )
 		if ( *p == ';' ) scount++;
 	// empty? assume US then
@@ -17100,7 +17100,7 @@ char *getLatLonPtrFromStr ( char *data ) {
 	// now point to latitude,longitude
 	// skip city,state,zip,something,hash,ip
 	char *latitudePtr = data;
-	long scount = 0;
+	int32_t scount = 0;
 	for ( ; scount < 11 ; latitudePtr++ )
 		if ( *latitudePtr == ';' ) scount++;
 	// pts past that ';'
@@ -17108,7 +17108,7 @@ char *getLatLonPtrFromStr ( char *data ) {
 }
 
 void getLatLonFromStr ( char *data, double *lat, double *lon ) {
-	// set lat long
+	// set lat lon
 	*lat = NO_LATITUDE;
 	*lon = NO_LONGITUDE;
 	// now point to latitude,longitude
@@ -17152,8 +17152,8 @@ int streetcmp ( const void *arg1 , const void *arg2 ) {
 	Place *street1 = *(Place **)arg1;
 	Place *street2 = *(Place **)arg2;
 	// get word position
-	long a1 = street1->m_a;
-	long a2 = street2->m_a;
+	int32_t a1 = street1->m_a;
+	int32_t a2 = street2->m_a;
 	// if tied, prefer the one whose m_address is set! that means
 	// it came from a inlined or verified address
 	if ( a1 == a2 ) {
@@ -17192,7 +17192,7 @@ bool Addresses::setFirstPlaceNums ( ) {
 	// case if PLF2_IS_NAME addresses, their place name 1 position
 	//Place **sorted = (Place **)sbuf;
 	// how much space do we need?
-	long need = (m_am.getNumPtrs() + m_sm.getNumPtrs())* 4;
+	int32_t need = (m_am.getNumPtrs() + m_sm.getNumPtrs())* 4;
 	// alloc if we need to
 	m_sorted = (Place **)mmalloc(need,"getaddrtab");
 	if ( ! m_sorted ) return false;
@@ -17208,8 +17208,8 @@ bool Addresses::setFirstPlaceNums ( ) {
 	// add streets from m_streets[]
 	//
 	//////////////////////////////////
-	long lasta1 = -1;
-	for ( long i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
+	int32_t lasta1 = -1;
+	for ( int32_t i = 0 ; i < m_sm.getNumPtrs() ; i++ ) {
 		// give up control
 		QUICKPOLL(m_niceness);
 		// get streets #i
@@ -17268,8 +17268,8 @@ bool Addresses::setFirstPlaceNums ( ) {
 		// disqualify the event if this is the best address for it!
 		//if ( street->m_flags2 & PLF2_IS_POBOX ) continue;
 		// get the street name word range
-		long a1 = street->m_a;
-		long b1 = street->m_b;
+		int32_t a1 = street->m_a;
+		int32_t b1 = street->m_b;
 		// sanity check
 		if ( a1 < 0 || b1 < 0 ) { char *xx=NULL;*xx=0; }
 		// stop dups
@@ -17298,8 +17298,8 @@ bool Addresses::setFirstPlaceNums ( ) {
 	//   is really the place name of a street name here
 	//
 	///////////////////////////////////////
-	long numSorted3 = 0;
-	for ( long i = 0 ; i < m_numSorted - 1 ; i++ ) {
+	int32_t numSorted3 = 0;
+	for ( int32_t i = 0 ; i < m_numSorted - 1 ; i++ ) {
 		// give up control
 		QUICKPOLL(m_niceness);
 		// get address #i
@@ -17343,7 +17343,7 @@ bool Addresses::setFirstPlaceNums ( ) {
 	m_numSorted = numSorted3;
 
 	// clear all in case of re-call
-	for ( long i = 0 ; i < m_sections->m_numSections ; i++ ) {
+	for ( int32_t i = 0 ; i < m_sections->m_numSections ; i++ ) {
 		QUICKPOLL ( m_niceness );
 		Section *sn = &m_sections->m_sections[i];
 		sn->m_firstPlaceNum = -1;
@@ -17354,14 +17354,14 @@ bool Addresses::setFirstPlaceNums ( ) {
 	// loop over streets in sorted[] and hash their sections
 	//
 	///////////////////////////////
-	long lasta = -1;
-	for ( long i = 0 ; i < m_numSorted ; i++ ) {
+	int32_t lasta = -1;
+	for ( int32_t i = 0 ; i < m_numSorted ; i++ ) {
 		// give up control
 		QUICKPOLL(m_niceness);
 		// get address #i
 		Place *street = m_sorted[i];
 		// get word position, word #a
-		long a = street->m_a;
+		int32_t a = street->m_a;
 		if ( a == lasta ) continue;
 		lasta = a;
 		if ( a < 0 ) { char *xx=NULL;*xx=0; }
@@ -17379,24 +17379,24 @@ bool Addresses::setFirstPlaceNums ( ) {
 
 		// dbug
 		/*
-		long b = street->m_b;
+		int32_t b = street->m_b;
 		SafeBuf tmp;
 		char *start = m_wptrs[a];
 		char *end = m_wptrs[b-1]+m_words->m_wordLens[b-1];
 		tmp.safeMemcpy(start,end-start);
 		tmp.pushChar(0);
 		Section **sp = m_sections->m_sectionPtrs;
-		long sa = -1;
-		long aa = -1;
+		int32_t sa = -1;
+		int32_t aa = -1;
 		if ( street->m_address ) sa = street->m_address->m_street->m_a;
 		if ( street->m_alias ) sa = street->m_alias->m_street->m_a;
-		log("dbug: (a=%li,b=%li) sec=%lx %s addr=%li alias=%li "
+		log("dbug: (a=%"INT32",b=%"INT32") sec=%"XINT32" %s addr=%"INT32" alias=%"INT32" "
 		    "url=%s",
 		    a,b,
-		    (long)sp[a],
+		    (int32_t)sp[a],
 		    tmp.getBufStart() ,
-		    (long)sa,//street->m_address,
-		    (long)aa,//street->m_alias, 
+		    (int32_t)sa,//street->m_address,
+		    (int32_t)aa,//street->m_alias, 
 		    m_url->m_url);
 		*/
 	}
@@ -17406,7 +17406,7 @@ bool Addresses::setFirstPlaceNums ( ) {
 
 // . returns false and sets g_errno on error
 // . "i" is the word position of "and" or "&"
-bool Addresses::addIntersection ( long i , long alnumPos ) {
+bool Addresses::addIntersection ( int32_t i , int32_t alnumPos ) {
 
 	//if ( m_ns >= MAX_STREETS ) return true;
 
@@ -17418,26 +17418,26 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	//
 	//////////
 
-	long good1 = -1;
-	long j1 = i;
-	long numPos1 = -1;
-	long lastBeforeNum1 = -1;
-	long routePos1 = -1;
-	long ap1 = alnumPos;
-	long dirCount1 = 0;
-	long wcount1 = 0;
-	long icount1 = 0;
+	int32_t good1 = -1;
+	int32_t j1 = i;
+	int32_t numPos1 = -1;
+	int32_t lastBeforeNum1 = -1;
+	int32_t routePos1 = -1;
+	int32_t ap1 = alnumPos;
+	int32_t dirCount1 = 0;
+	int32_t wcount1 = 0;
+	int32_t icount1 = 0;
 	bool firstWord = true;
-	long long lastWid1 = 0LL;
+	int64_t lastWid1 = 0LL;
 	bool explicit1 = false;
 	bool hadPage1 = false;
 	bool lastWasStreetInd = false;
 	bool badLeftStreetEnd = false;
 
 	// do not back up past this
-	long minj = i - 14; if ( minj < 0 ) minj = 0;
+	int32_t minj = i - 14; if ( minj < 0 ) minj = 0;
 	// now back up to the left, see if that is a street
-	for ( long j = i - 1 ; j >= minj ; j-- ) {
+	for ( int32_t j = i - 1 ; j >= minj ; j-- ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// count it
@@ -17578,9 +17578,9 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	}
 
 	// scan to left looking for "corner of" etc
-	long minsj = j1 - 10; if ( minsj < 0 ) minsj = 0;
+	int32_t minsj = j1 - 10; if ( minsj < 0 ) minsj = 0;
 	bool hadOf = false;
-	for ( long sj = j1 - 1 ; sj > minsj ; sj-- ) {
+	for ( int32_t sj = j1 - 1 ; sj > minsj ; sj-- ) {
 		// skip tags etc
 		if ( ! m_wids[sj] ) continue;
 		// of is ok
@@ -17621,23 +17621,23 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	//////////
 
 	bool good2 = false;
-	long icount2 = 0;
-	long dirCount2 = 0;
-	long wcount2 = 0;
-	long j2 = i;
+	int32_t icount2 = 0;
+	int32_t dirCount2 = 0;
+	int32_t wcount2 = 0;
+	int32_t j2 = i;
 	bool hadStreetInd = false;
 	bool hadDirInd = false;
-	long numPos2 = -1;
-	long lastBeforeNum2 = -1;
-	long routePos2 = -1;
-	long ap2 = alnumPos;
+	int32_t numPos2 = -1;
+	int32_t lastBeforeNum2 = -1;
+	int32_t routePos2 = -1;
+	int32_t ap2 = alnumPos;
 	bool hadCornerDirInd2 = false;
 	bool firstWord2 = true;
 
 	// do not exceed this
-	long maxj = i + 14; if ( maxj > m_nw ) maxj = m_nw;
+	int32_t maxj = i + 14; if ( maxj > m_nw ) maxj = m_nw;
 	// need a street to the right as well
-	for ( long j = i + 1 ; j < maxj ; j++ ) {
+	for ( int32_t j = i + 1 ; j < maxj ; j++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// count it
@@ -17759,8 +17759,8 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	// need to have a "good" street name in there
 	if ( ! explicit1 && ! good2 ) return true;
 
-	long a = j1;
-	long b = j2+1;
+	int32_t a = j1;
+	int32_t b = j2+1;
 
 	// . no starting/ending with stop word
 	// . i-25 is exception!
@@ -17768,8 +17768,8 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	if ( m_wids[j2] != h_i && m_words->isStopWord(j2) ) return true;
 
 	// count alnums from a to b
-	long ac = 0;
-	for ( long i = a ; i < b ; i++ ) 
+	int32_t ac = 0;
+	for ( int32_t i = a ; i < b ; i++ ) 
 		if ( m_wids[i] ) ac++;
 
 	// add the INTERSECTION
@@ -17800,7 +17800,7 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 	// . TODO: do we need this???? mdw
 	//if ( uc == 1 ) m_street->m_bits |= PLF_HAS_UPPER;
 	// set some bits
-	for ( long k = a ; m_bits && k < b ; k++ )
+	for ( int32_t k = a ; m_bits && k < b ; k++ )
 		m_bits->m_bits[k] |= D_IS_IN_STREET;
 	// point to next street
 	//m_ns++;
@@ -17809,7 +17809,7 @@ bool Addresses::addIntersection ( long i , long alnumPos ) {
 
 // . returns false and sets g_errno on error
 // . sets *good to true when we have a completed street
-bool Addresses::isInStreet ( long j ) {
+bool Addresses::isInStreet ( int32_t j ) {
 	// we can never contain a tag
 	if ( m_tids[j] ) {
 		// skip if <sup>
@@ -17891,7 +17891,7 @@ bool Addresses::isInStreet ( long j ) {
 		//	return true;
 		//}
 		// sequence of whitespace is ok
-		long k;	for(k=0;k<m_wlens[j];k++)
+		int32_t k;	for(k=0;k<m_wlens[j];k++)
 			if(!is_wspace_a(m_wptrs[j][k])) break;
 		if(k==m_wlens[j]) return true;
 		// '/' is ok if part of a fraction!
@@ -17960,9 +17960,9 @@ bool Addresses::isInStreet ( long j ) {
 	if ( m_wids[j] == h_intersection )
 		return false;
 
-	long long postWid = 0LL;
-	long maxj = j+15; if ( j > m_nw ) j = m_nw;
-	for ( long pi = j + 1 ; pi < maxj ; pi++ ) {
+	int64_t postWid = 0LL;
+	int32_t maxj = j+15; if ( j > m_nw ) j = m_nw;
+	for ( int32_t pi = j + 1 ; pi < maxj ; pi++ ) {
 		if ( ! m_wids[pi] ) continue;
 		postWid = m_wids[pi];
 		break;
@@ -17987,7 +17987,7 @@ uint64_t getAdm1Bits ( char *stateAbbr ) {
 	// do not core!
 	if ( ! sdp ) return 0;
 	// get position in the s_states[] array
-	long pos = (long)((*sdp) - s_states);
+	int32_t pos = (int32_t)((*sdp) - s_states);
 	// that is the shifter
 	return (1LL << pos);
 }
@@ -18019,7 +18019,7 @@ public:
 	// two letter, upper case countrycode includes \0
 	char *m_countryCode[3];
 	// country population, up to 4B
-	unsigned long  m_population;
+	uint32_t  m_population;
 	// centroid
 	float m_latitude;
 	float m_longitude;
@@ -18059,17 +18059,17 @@ bool setCountryTable ( ) {
 }
 
 // access g_countries table to find it
-CountryDesc *getCountryDesc ( long long wid ) {
+CountryDesc *getCountryDesc ( int64_t wid ) {
 	return NULL;
 }
 
 // two letter country code
 CountryDesc *getCountryDesc ( char *countryCode ) {
-	long long wid = hash64Lower_a ( countryCode , 2 );
+	int64_t wid = hash64Lower_a ( countryCode , 2 );
 	return getCountryDesc ( wid );
 }
 
-Place *getCountryPlace ( long a , long alnumPos , Words *words ) {
+Place *getCountryPlace ( int32_t a , int32_t alnumPos , Words *words ) {
 	return NULL;
 }
 */
@@ -18081,33 +18081,33 @@ StateDesc *getStateDesc ( char *stateAbbr ) {
 	return *sdp;
 }
 
-StateDesc *getStateDescByNum ( long i ) {
+StateDesc *getStateDescByNum ( int32_t i ) {
 	// sto breach;
-	if ( i >= (long)sizeof(s_states)/ (long)sizeof(StateDesc)) return NULL;
+	if ( i >= (int32_t)sizeof(s_states)/ (int32_t)sizeof(StateDesc)) return NULL;
 	if ( i < 0 ) return NULL;
 	return &s_states[i];
 }
 
 
-inline long getStateOffset ( long long *h ) {
+inline int32_t getStateOffset ( int64_t *h ) {
 	StateDesc **sdp = (StateDesc **)g_states.getValue(h);
 	if ( ! sdp ) return -1;
 	// return the POSITION though
-	return (long)((*sdp) - s_states);
+	return (int32_t)((*sdp) - s_states);
 }
 
 // from hash of state
-uint64_t getStateBitFromHash ( long long *h ) {
-	long pos = getStateOffset ( h );
+uint64_t getStateBitFromHash ( int64_t *h ) {
+	int32_t pos = getStateOffset ( h );
 	if ( pos < 0 ) return 0;
 	return (1LL << pos);
 }
 
 StateDesc *getStateDescFromBits ( uint64_t bit ) {
-	long size = sizeof(s_states);
+	int32_t size = sizeof(s_states);
 	// item count
-	long n = (long)size/ sizeof(char *); 
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)size/ sizeof(char *); 
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get it
 		StateDesc *sd = &s_states[i];
 		// check bits
@@ -18122,27 +18122,27 @@ char *getStateAbbr ( uint64_t bit ) {
 	// clear the unique bit
 	//bit &= ~ CF_UNIQUE;
 	// use this for speed
-	long pos = getBitPosLL((uint8_t *)&bit);
+	int32_t pos = getBitPosLL((uint8_t *)&bit);
 	// must be there
 	return s_states[pos].m_adm1;
 }
 
-long long getWordXorHash2 ( char *s , long slen ) {
+int64_t getWordXorHash2 ( char *s , int32_t slen ) {
 	// tmp save
 	char c = s[slen];
 	s[slen] = '\0';
-	long long h = getWordXorHash(s);
+	int64_t h = getWordXorHash(s);
 	// put back
 	s[slen] = c;
 	return h;
 }
 
-long long getWordXorHash ( char *s ) {
+int64_t getWordXorHash ( char *s ) {
 	Words tmp;
 	tmp.set9 ( s , 0 );
-	long long *wids = tmp.m_wordIds;
+	int64_t *wids = tmp.m_wordIds;
 	uint64_t h = 0LL;
-	for ( long i = 0 ; i < tmp.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < tmp.m_numWords ; i++ ) {
 		if ( !wids[i] ) continue;
 		// make it
 		h <<= 1LL;
@@ -18167,7 +18167,7 @@ static const char * _mk_NA( const char * p ){
 //   and re-code into gb. BUT do indeed keep the GeoLiteCity.dat file
 //   that is only 28MB so we should load it up at start time
 // . put our api code into here down below
-bool getIPLocation ( long    ip     ,
+bool getIPLocation ( int32_t    ip     ,
 		     double  *lat    ,
 		     double  *lon    ,
 		     double  *radius ,
@@ -18175,7 +18175,7 @@ bool getIPLocation ( long    ip     ,
 		     char  **state ,
 		     char  **ctry  ,
 		     char   *buf   ,
-		     long    bufSize ) {
+		     int32_t    bufSize ) {
 
 	//static int    s_i  = 0;
 
@@ -18192,7 +18192,7 @@ bool getIPLocation ( long    ip     ,
 	     // 192.168.x.x is local
 	     (sip[0]==(char)192 && sip[1]==(char)168) ||
 	     // 127.0.0.1
-	     ip==(long)16777343 ) {
+	     ip==(int32_t)16777343 ) {
 		char *p = buf;
 		*city = p;
 		p += sprintf ( p , "Albuquerque" );
@@ -18229,7 +18229,7 @@ bool getIPLocation ( long    ip     ,
 	//uint32_t ipnum = GeoIP_lokupaddress(hostname);
 
 	// put in network byte order, host to network
-	long ipnum = htonl ( ip );
+	int32_t ipnum = htonl ( ip );
 	// temp
 	//ipnum = ip;
 
@@ -18241,13 +18241,14 @@ bool getIPLocation ( long    ip     ,
 	log("geoip: "
 	    //"%s: %s, %s, %s, %s, %f, %f, %d", 
 	    "%s, %s, %s, %s, %f, %f, %d", 
-	    //GeoIPDBDescription[(unsigned long)s_gi->databaseType], 
+	    //GeoIPDBDescription[(uint32_t)s_gi->databaseType], 
 	    gir->country_code, 
 	    _mk_NA(gir->region), 
 	    _mk_NA(gir->city), 
 	    _mk_NA(gir->postal_code),
 	    // %d
-	    gir->latitude, gir->longitude, //gir->metro_code,
+	    gir->latitude, 
+	    gir->longitude, //gir->metro_code,
 	    gir->area_code);
 
 	// transfer
@@ -18258,7 +18259,7 @@ bool getIPLocation ( long    ip     ,
 
 	// city and state
 	char *p = buf;
-	long len ;
+	int32_t len ;
 
 	// bogus?
 	if ( ! gir->country_code ) return false;
@@ -18279,7 +18280,7 @@ bool getIPLocation ( long    ip     ,
 	if ( len == 0 ) return false;
 	//memcpy ( p , gir->region , len + 1 );
 	// make it all lowercase so we don't core anywhere
-	long written = to_lower_alnum_a(gir->region,len,p);
+	int32_t written = to_lower_alnum_a(gir->region,len,p);
 	// sanity
 	if ( written != len ) { char *xx=NULL;*xx=0; }
 	// skip over what we stored
@@ -18287,7 +18288,7 @@ bool getIPLocation ( long    ip     ,
 	// null term
 	*p++ = '\0';
 	// get len
-	//long plen = gbstrlen(p);
+	//int32_t plen = gbstrlen(p);
 	//p += len + 1;
 
 	*city = p;
@@ -18314,7 +18315,7 @@ bool getIPLocation ( long    ip     ,
 
 bool getLatLon ( uint32_t cityId , double *lat , double *lon ) {
 	// now lookup timezone
-	long slot = g_timeZones.getSlot ( &cityId );
+	int32_t slot = g_timeZones.getSlot ( &cityId );
 	// return 0 if not found
 	if ( slot < 0 ) return false;
 	// otherwise, set m_timeZoneOffset appropriately
@@ -18339,8 +18340,8 @@ float getLatLonSpecial ( char *p ,
 	// negative sign?
 	if ( p>bufStart && p[-1] == '-' ) start--;
 	// reset counts
-	long digitCount = 0;
-	long decimalCount = 0;
+	int32_t digitCount = 0;
+	int32_t decimalCount = 0;
 	// do not scan so far
 	char *pmax = p + 20;
 	if ( pmax > bufEnd ) pmax = bufEnd;
@@ -18371,10 +18372,10 @@ float getLatLonSpecial ( char *p ,
 	// fix switchboard.com stuff which has no decimal pt
 	if ( decimalCount == 0 ) {
 		// how many digits to left of decimal
-		long left = 3;
+		int32_t left = 3;
 		// make a divisor
 		double ddd = 1;
-		for ( long vv = 0 ; vv<digitCount-left; vv++)
+		for ( int32_t vv = 0 ; vv<digitCount-left; vv++)
 			ddd *= 10;
 		// fix it
 		dval /= ddd;
@@ -18446,10 +18447,10 @@ bool printTesterPage ( SafeBuf &sb ) {
 
 	sb.safePrintf("<table>");
 
-	long count = 0;
-	long n = sizeof(s_tests)/sizeof(char *);
+	int32_t count = 0;
+	int32_t n = sizeof(s_tests)/sizeof(char *);
 	bool firstRow = true;
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		if ( count %4 == 0 ) {
 			if ( ! firstRow )
 				sb.safePrintf("</tr>");
@@ -18459,8 +18460,8 @@ bool printTesterPage ( SafeBuf &sb ) {
 		count++;
 		sb.safePrintf("<td>");
 		// print map
-		long width = 200;
-		long height = 200;
+		int32_t width = 200;
+		int32_t height = 200;
 		// get stuff
 		float radius;
 		char *where = s_tests[i];
@@ -18478,7 +18479,7 @@ bool printTesterPage ( SafeBuf &sb ) {
 		char useDST;
 		uint8_t ipCrid = CRID_US;
 		char gbwhereBuf[512];
-		long gbwhereBufSize = 500;
+		int32_t gbwhereBufSize = 500;
 		getLatLonFromUserInput ( &radius,
 					 where ,
 					 &cityLat ,
@@ -18502,7 +18503,7 @@ bool printTesterPage ( SafeBuf &sb ) {
 		// get most accurate lat/lon
 		float lat = NO_LATITUDE;
 		float lon = NO_LONGITUDE;
-		long zoom = 0; // world
+		int32_t zoom = 0; // world
 		if ( countryLat != NO_LATITUDE && countryLon != NO_LONGITUDE) {
 			lat = countryLat;
 			lon = countryLon;
@@ -18531,9 +18532,9 @@ bool printTesterPage ( SafeBuf &sb ) {
 	
 		sb.safePrintf ( "<img src=\""
 				"http://maps.google.com/maps/api/staticmap?"
-				"size=%lix%li&maptype=roadmap&sensor=false" ,
+				"size=%"INT32"x%"INT32"&maptype=roadmap&sensor=false" ,
 				width, height );
-		sb.safePrintf("&zoom=%li"
+		sb.safePrintf("&zoom=%"INT32""
 			      "&markers="
 			      "size:medium"
 			      "%%7Ccolor:%s"
@@ -18592,7 +18593,7 @@ bool getLatLonFromUserInput ( float  *radius,
 			      // country of search based on ip (two letters)
 			      uint8_t ipCrid,
 			      char   *gbwhereBuf ,
-			      long    gbwhereBufSize ) {
+			      int32_t    gbwhereBufSize ) {
 
 	// convert "where" string into a cityId32 so we can convert
 	// to a lat/lon by calling getLatLon(cityId)
@@ -18609,45 +18610,45 @@ bool getLatLonFromUserInput ( float  *radius,
 	//*radius = 20.0 / 69.0;
 
 	// start at -1
-	long alnumPos = -1;
+	int32_t alnumPos = -1;
 
 	//char    *adm1Str = NULL;
 
-	long cityA  = -1;
-	long cityB  = -1;
-	long stateA = -1;
-	long stateB = -1;
-	long zipA   = -1;
-	long zipB   = -1;
-	long countryA = -1;
-	long countryB = -1;
+	int32_t cityA  = -1;
+	int32_t cityB  = -1;
+	int32_t stateA = -1;
+	int32_t stateB = -1;
+	int32_t zipA   = -1;
+	int32_t zipB   = -1;
+	int32_t countryA = -1;
+	int32_t countryB = -1;
 
-	long cityAlnumA  = -1;
-	long cityAlnumB  = -1;
-	long stateAlnumA = -1;
-	long stateAlnumB = -1;
-	long zipAlnumA   = -1;
-	long zipAlnumB   = -1;
-	long countryAlnumA = -1;
-	long countryAlnumB = -1;
+	int32_t cityAlnumA  = -1;
+	int32_t cityAlnumB  = -1;
+	int32_t stateAlnumA = -1;
+	int32_t stateAlnumB = -1;
+	int32_t zipAlnumA   = -1;
+	int32_t zipAlnumB   = -1;
+	int32_t countryAlnumA = -1;
+	int32_t countryAlnumB = -1;
 
-	long finalCityA  = -1;
-	long finalCityB  = -1;
-	long finalStateA = -1;
-	long finalStateB = -1;
-	long finalCountryA = -1;
-	long finalCountryB = -1;
-	long finalZipA  = -1;
-	long finalZipB  = -1;
+	int32_t finalCityA  = -1;
+	int32_t finalCityB  = -1;
+	int32_t finalStateA = -1;
+	int32_t finalStateB = -1;
+	int32_t finalCountryA = -1;
+	int32_t finalCountryB = -1;
+	int32_t finalZipA  = -1;
+	int32_t finalZipB  = -1;
 
-	// shortcuts
-	long long *wids = w.getWordIds();
+	// int16_tcuts
+	int64_t *wids = w.getWordIds();
 	char **wptrs = w.getWords();
-	long  *wlens = w.getWordLens();
+	int32_t  *wlens = w.getWordLens();
 
 	// set lastWidPos
-	long long lastWidPos = w.m_numWords;
-	for ( long i = 0 ; i < w.m_numWords ; i++ )
+	int64_t lastWidPos = w.m_numWords;
+	for ( int32_t i = 0 ; i < w.m_numWords ; i++ )
 		if ( wids[i] ) lastWidPos = i;
 
 	char *bufStart = where;
@@ -18665,13 +18666,13 @@ bool getLatLonFromUserInput ( float  *radius,
 	*zipLat  = NO_LATITUDE;
 	*zipLon  = NO_LONGITUDE;
 
-	//long totalAlnums = w.getNumAlnumWords ();
+	//int32_t totalAlnums = w.getNumAlnumWords ();
 
 	// for numeric entries like 58.xxxx -128.yyyy
 	bool hasLat = false;
 	bool hasLon = false;
 
-	long ignoreUntil;
+	int32_t ignoreUntil;
 
 
 	// do a initial loop looking for the country to use, otherwise,
@@ -18680,7 +18681,7 @@ bool getLatLonFromUserInput ( float  *radius,
 	alnumPos = -1;
 	ignoreUntil = -1;
 	PlaceDesc *finalCountryDesc = NULL;
-	for ( long i = 0 ; i < w.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < w.m_numWords ; i++ ) {
 		// skip if punct
 		if ( ! wids[i] ) continue;
 		// alnum pos count
@@ -18724,7 +18725,7 @@ bool getLatLonFromUserInput ( float  *radius,
 	alnumPos = -1;
 	ignoreUntil = -1;
 	PlaceDesc *finalStateDesc = NULL;
-	for ( long i = 0 ; i < w.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < w.m_numWords ; i++ ) {
 		// skip if punct
 		if ( ! wids[i] ) continue;
 		// alnum pos count
@@ -18866,7 +18867,7 @@ bool getLatLonFromUserInput ( float  *radius,
 	alnumPos = -1;
 	ignoreUntil = -1;
 	PlaceDesc *finalCityDesc = NULL;
-	for ( long i = 0 ; i < w.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < w.m_numWords ; i++ ) {
 		// skip if punct
 		if ( ! wids[i] ) continue;
 		// alnum pos count
@@ -18906,10 +18907,10 @@ bool getLatLonFromUserInput ( float  *radius,
 		// 'tokyo' city in the US at all.
 		// crap, then this gets georgia this city in jamaica
 		PlaceDesc *crd2 = NULL;
-		long city2A;
-		long city2B;
-		long city2AlnumA;
-		long city2AlnumB;
+		int32_t city2A;
+		int32_t city2B;
+		int32_t city2AlnumA;
+		int32_t city2AlnumB;
 		getLongestPlaceName_new   ( i,
 					    alnumPos,
 					    &w,
@@ -19074,7 +19075,7 @@ bool getLatLonFromUserInput ( float  *radius,
 
 	// and a 4th loop to get the zip code
 	alnumPos = -1;
-	for ( long i = 0 ; i < w.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < w.m_numWords ; i++ ) {
 		// skip if punct
 		if ( ! wids[i] ) continue;
 		// alnum pos count
@@ -19111,7 +19112,7 @@ bool getLatLonFromUserInput ( float  *radius,
 	// loop for numeric lat/lon
 	alnumPos = -1;
 	ignoreUntil = -1;
-	for ( long i = 0 ; i < w.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < w.m_numWords ; i++ ) {
 		// skip if punct
 		if ( ! wids[i] ) continue;
 		// ignore
@@ -19179,7 +19180,7 @@ bool getLatLonFromUserInput ( float  *radius,
 			finalStateDesc = 
 	*/
 
-	long nw = w.getNumWords();
+	int32_t nw = w.getNumWords();
 	// was it just a city name by itself?
 	bool onlyCity = ( ( finalCityA == 0  || finalCityA == 1    ) &&
 			  ( finalCityB == nw || finalCityB == nw-1 )  );
@@ -19273,7 +19274,7 @@ bool getLatLonFromUserInput ( float  *radius,
 	char *pend = p + gbwhereBufSize - 1; // room for \0
 	bool  gotStuff = false;
 	bool  firstOne = true;
-	for ( long i = 0 ; p && i < w.m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; p && i < w.m_numWords ; i++ ) {
 		// count it?
 		if ( wids[i] ) alnumPos++;
 		// skip punct
@@ -19452,11 +19453,11 @@ bool getCityLatLonFromAddress ( Address *aa , double *lat , double *lon ) {
 }
 
 // . like ";;5815 Wyoming Blvd NE;Albuquerque;87109;NM;;;" ???
-char *getZipPtrFromStr ( char *data , long *zipLen ) {
+char *getZipPtrFromStr ( char *data , int32_t *zipLen ) {
 	// now point to latitude,longitude
 	// skip city,state,zip,something,hash,ip
 	char *zipPtr = data;
-	long scount = 0;
+	int32_t scount = 0;
 	for ( ; scount < 6 ; zipPtr++ )
 		if ( *zipPtr == ';' ) scount++;
 	// get length
@@ -19468,7 +19469,7 @@ char *getZipPtrFromStr ( char *data , long *zipLen ) {
 }
 
 bool getZipLatLon ( char  *zip    ,
-		    long   zipLen ,
+		    int32_t   zipLen ,
 		    float *zipLat ,
 		    float *zipLon ) {
 	// assume none
@@ -19477,7 +19478,7 @@ bool getZipLatLon ( char  *zip    ,
 	// only 5 digits i guess
 	if ( zipLen != 5 ) return false;
 	// hash it
-	long long zh = getWordXorHash2(zip,zipLen);
+	int64_t zh = getWordXorHash2(zip,zipLen);
 	// get it
 	ZipDesc *zd = (ZipDesc *)g_zips.getValue(&zh);
 	// mine it
@@ -19490,7 +19491,7 @@ bool getZipLatLon ( char  *zip    ,
 bool getZipLatLonFromStr ( char  *addrStr ,
 			   float *zipLat  ,
 			   float *zipLon  ) {
-	long zipLen;
+	int32_t zipLen;
 	char *zip = getZipPtrFromStr ( addrStr , &zipLen );
 	return getZipLatLon ( zip , zipLen , zipLat, zipLon );
 }
@@ -19509,12 +19510,12 @@ bool getZipLatLonFromAddress ( Address *aa   ,
 
 // if you just want to call setStr() and have it use stack mem to
 // store up to 10 places, then init the PlaceMem with this very quickly
-void PlaceMem::init ( long  poolSize         , 
-		      long  initNumPoolPtrs  ,
-		      long  initNumPlacePtrs ,
+void PlaceMem::init ( int32_t  poolSize         , 
+		      int32_t  initNumPoolPtrs  ,
+		      int32_t  initNumPlacePtrs ,
 		      char *stackMem         , 
-		      long  stackMemSize     ,
-		      long  niceness         ) { 
+		      int32_t  stackMemSize     ,
+		      int32_t  niceness         ) { 
 	m_stack                 = stackMem;
 	m_stackSize             = stackMemSize;
 	m_initNumPoolPtrs       = initNumPoolPtrs;
@@ -19532,7 +19533,7 @@ void PlaceMem::init ( long  poolSize         ,
 
 // . returns NULL and sets g_errno on error
 // . stores ptr to the returned mem in m_placePtrs[placeNum]
-void *PlaceMem::getMem ( long need ) {
+void *PlaceMem::getMem ( int32_t need ) {
 	// sanity
 	if ( need > m_poolSize ) { char *xx=NULL;*xx=0; }
  top:
@@ -19541,13 +19542,13 @@ void *PlaceMem::getMem ( long need ) {
 		// do we need to realloc m_placePtrs?
 		if ( m_numPlacePtrs + 1 > m_numPlacePtrsAllocated ) {
 			if ( m_stack ) { char *xx=NULL;*xx=0; }
-			long   oldSize  =m_numPlacePtrsAllocated * 4;
-			long   newAlloc =m_numPlacePtrsAllocated + 2000;
+			int32_t   oldSize  =m_numPlacePtrsAllocated * 4;
+			int32_t   newAlloc =m_numPlacePtrsAllocated + 2000;
 			if ( m_numPlacePtrsAllocated == 0 )
 				newAlloc = m_initNumPlacePtrs;
 			char **newPtrs = (char **)mmalloc(newAlloc*4,"pptbl");
 			if ( ! newPtrs ) return NULL;
-			for ( long i = 0 ; i < m_numPlacePtrs ; i++ ) {
+			for ( int32_t i = 0 ; i < m_numPlacePtrs ; i++ ) {
 				// breathe
 				QUICKPOLL(m_niceness);
 				newPtrs[i] = m_placePtrs[i];
@@ -19574,7 +19575,7 @@ void *PlaceMem::getMem ( long need ) {
 	// try to use stack
 	if ( m_stack && m_numPoolPtrsAllocated == 0 ) {
 		// compute min size for stack...
-		long need = 0;
+		int32_t need = 0;
 		need += m_initNumPoolPtrs  * 4 ;
 		need += m_initNumPlacePtrs * 4 ;
 		need += m_poolSize;
@@ -19603,8 +19604,8 @@ void *PlaceMem::getMem ( long need ) {
 
 	// add a new pool
 	if ( m_numPoolsAllocated + 1 > m_numPoolPtrsAllocated ) {
-		long   oldSize  = m_numPoolPtrsAllocated * 4;
-		long   newAlloc = m_numPoolPtrsAllocated + 100;
+		int32_t   oldSize  = m_numPoolPtrsAllocated * 4;
+		int32_t   newAlloc = m_numPoolPtrsAllocated + 100;
 		if ( m_numPoolPtrsAllocated == 0 )
 			newAlloc = m_initNumPoolPtrs;
 		char **newPtrs = (char **)mmalloc(newAlloc*4,"pptbl2");
@@ -19617,7 +19618,7 @@ void *PlaceMem::getMem ( long need ) {
 
 	// if we had called setNumPtrs() or rewind() the next pool might
 	// already be allocated, so if that is true, use it!
-	long poolNum = m_cursorPoolNum + 1;
+	int32_t poolNum = m_cursorPoolNum + 1;
 
 	// sanity check
 	if ( poolNum > m_numPoolsAllocated ) { char *xx=NULL;*xx=0; }
@@ -19665,7 +19666,7 @@ void PlaceMem::reset ( ) {
 	// do not core
 	if ( m_stack ) return;
 	// free everything
-	for ( long i = 0 ; i < m_numPoolsAllocated; i++ ) {
+	for ( int32_t i = 0 ; i < m_numPoolsAllocated; i++ ) {
 		QUICKPOLL(m_niceness);
 		mfree( m_poolPtrs[i] , m_poolSize, "pool3");
 		m_poolPtrs[i] = NULL;
@@ -19687,7 +19688,7 @@ void PlaceMem::reset ( ) {
 // . sometimes we remove the last X Places we added above when we realized
 //   something was bogus
 // . pass in ptr to first Place ptr to be nuked
-void PlaceMem::setNumPtrs ( long newNumPtrs ) {
+void PlaceMem::setNumPtrs ( int32_t newNumPtrs ) {
 	// return if no change requested
 	if ( newNumPtrs == m_numPlacePtrs ) return;
 	// sanity check
@@ -19749,7 +19750,7 @@ void resetAddressTables ( ) {
 //   cityHash64 and see which has one of the state codes in that list.
 
 // If user enters 'germany' or 'republic of chad'
-// PlaceDesc *getCountryPlace ( long a, long alnumPos, Words *w );
+// PlaceDesc *getCountryPlace ( int32_t a, int32_t alnumPos, Words *w );
 
 // need this
 // PlaceDesc *getCountryDescFromId ( uint8_t crid );
@@ -19856,18 +19857,18 @@ bool generatePlacesFile ( ) {
 		buf[gbstrlen(buf)-1]='\0';
 		// parse it up. timezonestr\ttzoff1|tzoffdst
 		char  timeZoneStr[64]; // Europe/Andorra
-		long  off1;
-		long  off2; // dst
+		int32_t  off1;
+		int32_t  off2; // dst
 		sscanf ( buf , 
 			 "%s\t" // timezone name
-			 "%li\t" // off1
-			 "%li" // off2
+			 "%"INT32"\t" // off1
+			 "%"INT32"" // off2
 			 , timeZoneStr
 			 , &off1
 			 , &off2
 			 );
 		// make a table
-		long long tzh64 = getWordXorHash ( timeZoneStr );
+		int64_t tzh64 = getWordXorHash ( timeZoneStr );
 		// make the value
 		TZVal tzval;
 		tzval.m_tzoff = off1;
@@ -19895,7 +19896,7 @@ bool generatePlacesFile ( ) {
 	nameBuf.safePrintf("unknown name");
 	nameBuf.pushChar('\0');
 
-	long zero = 0;
+	int32_t zero = 0;
 
 	// reserve 100MB
 	SafeBuf placeBuf;
@@ -19924,14 +19925,14 @@ bool generatePlacesFile ( ) {
 		buf[gbstrlen(buf)-1]='\0';
 		// parse it up. id|name|lat|lon|abbr
 		/*
-		long  geoId;
+		int32_t  geoId;
 		char  name[512];
 		float lat;
 		float lon;
 		char  code     [16];
 		char  countryAbbr[32];
 		char  stateAbbr[32];
-		long  population = 0;
+		int32_t  population = 0;
 		char  timeZoneStr[64]; // Europe/Andorra
 		*/
 		// convert all tabs to \0
@@ -19939,7 +19940,7 @@ bool generatePlacesFile ( ) {
 		for ( ; *p ; p++ ) if ( *p == '\t' ) *p = '\0';
 		// see /geo/geonames/index.html for format description
 		p = buf;
-		long geoId = atol(p); p += strlen(p) + 1;
+		int32_t geoId = atol(p); p += strlen(p) + 1;
 		//if ( geoId == 1850147 )
 		//	log("hey");
 		char *officialName = p; p += strlen(p) + 1; // official name
@@ -19976,7 +19977,7 @@ bool generatePlacesFile ( ) {
 		p += strlen(p)+1; // adm2
 		p += strlen(p)+1; // adm3
 		p += strlen(p)+1; // adm4
-		long population = atol(p); p += strlen(p)+1;
+		int32_t population = atol(p); p += strlen(p)+1;
 		p += strlen(p)+1; // elevation
 		p += strlen(p)+1; // avg elevation
 		char *timeZoneStr = p; p += strlen(p)+1;
@@ -19988,7 +19989,7 @@ bool generatePlacesFile ( ) {
 
 		// skip if no timezone for now
 		if ( ! timeZoneStr[0] ) {
-			log("places: no timezone for geoid=%li name=%s",
+			log("places: no timezone for geoid=%"INT32" name=%s",
 			    geoId,officialName);
 			continue;
 		}
@@ -19996,7 +19997,7 @@ bool generatePlacesFile ( ) {
 		// reserve space
 		//placeBuf.reserve ( 1024 );
 		// not allowed to grow since we use dedup table now
-		if ( placeBuf.getAvail() < (long)sizeof(PlaceDesc) ) {
+		if ( placeBuf.getAvail() < (int32_t)sizeof(PlaceDesc) ) {
 			char *xx=NULL;*xx=0;}
 
 		// make a new country desc
@@ -20056,7 +20057,7 @@ bool generatePlacesFile ( ) {
 		pd->m_population = population;
 		// skip over it (not allowed to grow anymore!)
 		//placeBuf.advance ( sizeof(PlaceDesc) );
-		placeBuf.m_length += (long)sizeof(PlaceDesc);
+		placeBuf.m_length += (int32_t)sizeof(PlaceDesc);
 		// . point to that. we'll store <adm1>,<name> in there now
 		// . we need to somehow append alternate names later
 		//pd->m_data = placeBuf.getBuf();
@@ -20089,12 +20090,12 @@ bool generatePlacesFile ( ) {
 		//   the PlaceDesc.
 		places.addKey(&geoId,&pd);
 		// store OFFSETS in nametable
-		long placeDescOffset = (char *)pd - placeBuf.getBufStart();
+		int32_t placeDescOffset = (char *)pd - placeBuf.getBufStart();
 
 		// we need to add the official name here because it's not
 		// always in alternateNames.txt... 
 		uint64_t nh64a = getWordXorHash ( officialName );
-		uint64_t dedupKeya = nh64a ^ (unsigned long)placeDescOffset;
+		uint64_t dedupKeya = nh64a ^ (uint32_t)placeDescOffset;
 		// skip if in there
 		if ( ! dedup.isInTable(&dedupKeya) ) {
 			// make this name's hash point to its PlaceDesc
@@ -20111,9 +20112,9 @@ bool generatePlacesFile ( ) {
 		// a place name, based on getNearestCity_new()
 		if ( ! dedup.isInTable ( &exactHash64 ) ) {
 			// nameBuf
-			long nameOffset = nameBuf.length();
+			int32_t nameOffset = nameBuf.length();
 			// store it
-			long olen = gbstrlen(officialName);
+			int32_t olen = gbstrlen(officialName);
 			nameBuf.safeMemcpy ( officialName , olen );
 			nameBuf.pushChar('\0');
 			// store offset
@@ -20124,7 +20125,7 @@ bool generatePlacesFile ( ) {
 		else {
 			// i guess we already added this name before so
 			// point to where we added it
-			long off = *(long *)dedup.getValue ( &exactHash64 );
+			int32_t off = *(int32_t *)dedup.getValue ( &exactHash64 );
 			// use that then
 			pd->m_officialNameOffset = off;
 		}
@@ -20134,7 +20135,7 @@ bool generatePlacesFile ( ) {
 		// is not given in the alternateNames.txt file either!!!!
 		//
 		uint64_t nh64b = getWordXorHash ( asciiName );
-		uint64_t dedupKeyb = nh64b ^ (unsigned long)placeDescOffset;
+		uint64_t dedupKeyb = nh64b ^ (uint32_t)placeDescOffset;
 		// skip if in there
 		if ( ! dedup.isInTable(&dedupKeyb) ) {
 			// make this name's hash point to its PlaceDesc
@@ -20154,7 +20155,7 @@ bool generatePlacesFile ( ) {
 		// does this convert to lowercase? yes... it should
 		uint64_t nh64c = getWordXorHash ( stateAbbr );
 		// make another dedupkey
-		uint64_t dedupKeyc = nh64c ^ (unsigned long)placeDescOffset;
+		uint64_t dedupKeyc = nh64c ^ (uint32_t)placeDescOffset;
 		// check that as well
 		if ( dedup.isInTable(&dedupKeyc) ) continue;
 		if ( ! g_nameTable.addKey ( &nh64c , &placeDescOffset ) ) 
@@ -20184,11 +20185,11 @@ bool generatePlacesFile ( ) {
 		// parse it up. id|name|lat|lon|abbr
 		p = buf;
 		p += strlen(p) + 1; // some number
-		long geoId = atol(p); p += strlen(p) + 1;
+		int32_t geoId = atol(p); p += strlen(p) + 1;
 		p += strlen(p) + 1; // langIdStr
 		char *altName = p; p += strlen(p) + 1; 
 		p += strlen(p) + 1; // is preferred name
-		p += strlen(p) + 1; // is short ?name
+		p += strlen(p) + 1; // is int16_t ?name
 		// now hash up that name
 		uint64_t nh64d = getWordXorHash ( altName );
 		// find the place desc for it
@@ -20199,9 +20200,9 @@ bool generatePlacesFile ( ) {
 		// cast it otherwise
 		PlaceDesc *pd = *ppd;
 		// store OFFSETS in nametable
-		long placeDescOffset = (char *)pd - placeBuf.getBufStart();
+		int32_t placeDescOffset = (char *)pd - placeBuf.getBufStart();
 		// do not add dup combos
-		uint64_t dedupKeyd = nh64d ^ (unsigned long)placeDescOffset;
+		uint64_t dedupKeyd = nh64d ^ (uint32_t)placeDescOffset;
 		if ( dedup.isInTable ( &dedupKeyd ) ) continue;
 		// use that
 		if ( ! g_nameTable.addKey ( &nh64d , &placeDescOffset ) ) 
@@ -20216,8 +20217,8 @@ bool generatePlacesFile ( ) {
 
 	// . add in state aliases for states in the US
 	// . "wash" = "washington" "ore = oregeon" etc.
-	long n = (long)sizeof(s_states)/ sizeof(StateDesc);
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)sizeof(s_states)/ sizeof(StateDesc);
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get it
 		StateDesc *sd = &s_states[i];
 		// skip if none
@@ -20232,14 +20233,14 @@ bool generatePlacesFile ( ) {
 		// make key (d.c. colo. n.m.)
 		uint64_t anh64 = getWordXorHash ( sd->m_name2 );
 		// store OFFSETS in nametable
-		long offset = (char *)pd - placeBuf.getBufStart();
+		int32_t offset = (char *)pd - placeBuf.getBufStart();
 		// add the alias
 		if ( ! g_nameTable.addKey ( &anh64 , &offset ) ) return false;
 	}
 
 	// add our CITY aliases i.e. "abq" or "nyc" for cities in the US
-	n = (long)sizeof(s_cityList)/ sizeof(AliasDesc);
-	for ( long i = 0 ; i < n ; i++ ) {
+	n = (int32_t)sizeof(s_cityList)/ sizeof(AliasDesc);
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get it
 		AliasDesc *ad = &s_cityList[i];
 		// get the PlaceDesc. this will scan all the matches and
@@ -20250,13 +20251,13 @@ bool generatePlacesFile ( ) {
 		// make key (d.c. colo. n.m.)
 		uint64_t ach64 = getWordXorHash ( ad->m_s1 );
 		// store OFFSETS in nametable
-		long offset = (char *)pd - placeBuf.getBufStart();
+		int32_t offset = (char *)pd - placeBuf.getBufStart();
 		// add the alias
 		if ( ! g_nameTable.addKey ( &ach64 , &offset ) ) return false;
 	}
 
 	// size of placeBuf
-	long placeBufLength = placeBuf.length();
+	int32_t placeBufLength = placeBuf.length();
 	// concatenate nameBuf to placeBuf for saving to disk
 	if ( ! placeBuf.cat ( nameBuf ) ) return false;
 	// adjust all PlaceDesc::m_officialNameOffset vars to compensate for 
@@ -20270,7 +20271,7 @@ bool generatePlacesFile ( ) {
 	PlaceDesc *pd2 = getCity2_new ( "abq", "nm", CRID_US,0);
 	if ( ! pd2 ) { char *xx=NULL;*xx=0; }
 
-	long long ph64 = getWordXorHash ( "Tokyo" );
+	int64_t ph64 = getWordXorHash ( "Tokyo" );
 	pd2 = getMostPopularPlace_new ( ph64 ,CRID_ANY ,PDF_CITY,0 );
 	if ( ! pd2 ) { char *xx=NULL;*xx=0; }
 
@@ -20300,14 +20301,14 @@ bool generatePlacesFile ( ) {
 }
 
 // get the state in this country
-PlaceDesc *getState_new ( uint64_t pd64 , uint8_t crid , long niceness ) {
-	long slot = g_nameTable.getSlot ( &pd64 );
+PlaceDesc *getState_new ( uint64_t pd64 , uint8_t crid , int32_t niceness ) {
+	int32_t slot = g_nameTable.getSlot ( &pd64 );
 	// scan the slots
 	for ( ; slot >= 0 ; slot = g_nameTable.getNextSlot(slot,&pd64) ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// get the placedesc
-		long offset = *(long *)g_nameTable.getValueFromSlot(slot);
+		int32_t offset = *(int32_t *)g_nameTable.getValueFromSlot(slot);
 		PlaceDesc *pd = (PlaceDesc *)(g_pbuf + offset);
 		// skip if not a state
 		if ( ! (pd->m_flags & PDF_STATE ) ) continue;
@@ -20320,7 +20321,7 @@ PlaceDesc *getState_new ( uint64_t pd64 , uint8_t crid , long niceness ) {
 }
 
 // get the state in this country
-PlaceDesc *getState2_new ( char *state , uint8_t crid , long niceness ) {
+PlaceDesc *getState2_new ( char *state , uint8_t crid , int32_t niceness ) {
 	uint64_t sh64 = getWordXorHash ( state );
 	return getState_new ( sh64, crid,niceness);
 }
@@ -20328,19 +20329,19 @@ PlaceDesc *getState2_new ( char *state , uint8_t crid , long niceness ) {
 PlaceDesc *getCity_new ( uint64_t ch64 , 
 			 char *stateAbbr ,
 			 uint8_t crid ,
-			 long niceness ) {
+			 int32_t niceness ) {
 
 	// sanity
 	if ( ! is_lower_a(stateAbbr[0]) ) { char *xx=NULL;*xx=0; }
 	if ( ! is_lower_a(stateAbbr[1]) ) { char *xx=NULL;*xx=0; }
 
-	long slot = g_nameTable.getSlot ( &ch64 );
+	int32_t slot = g_nameTable.getSlot ( &ch64 );
 	// scan the slots
 	for ( ; slot >= 0 ; slot = g_nameTable.getNextSlot(slot,&ch64) ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// get the placedesc
-		long offset = *(long *)g_nameTable.getValueFromSlot(slot);
+		int32_t offset = *(int32_t *)g_nameTable.getValueFromSlot(slot);
 		PlaceDesc *pd = (PlaceDesc *)(g_pbuf + offset);
 		// skip if not a city
 		if ( ! (pd->m_flags & PDF_CITY ) ) continue;
@@ -20358,7 +20359,7 @@ PlaceDesc *getCity_new ( uint64_t ch64 ,
 PlaceDesc *getCity2_new ( char *city ,
 			  char *stateAbbr ,
 			  uint8_t crid ,
-			  long niceness ) {
+			  int32_t niceness ) {
 	uint64_t ch64 = getWordXorHash ( city );
 	return getCity_new ( ch64, stateAbbr,crid,niceness);
 }
@@ -20366,15 +20367,15 @@ PlaceDesc *getCity2_new ( char *city ,
 PlaceDesc *getCity3_new ( uint64_t ch64 , 
 			  uint64_t stateHash64,
 			  uint8_t crid ,
-			  long niceness ) {
+			  int32_t niceness ) {
 
-	long slot1 = g_nameTable.getSlot ( &ch64 );
+	int32_t slot1 = g_nameTable.getSlot ( &ch64 );
 	// scan the slots
 	for ( ; slot1 >= 0 ; slot1 = g_nameTable.getNextSlot(slot1,&ch64) ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// get the placedesc
-		long offset1 = *(long *)g_nameTable.getValueFromSlot(slot1);
+		int32_t offset1 = *(int32_t *)g_nameTable.getValueFromSlot(slot1);
 		PlaceDesc *pd1 = (PlaceDesc *)(g_pbuf + offset1);
 		// skip if not a city
 		if ( ! (pd1->m_flags & PDF_CITY ) ) continue;
@@ -20382,14 +20383,14 @@ PlaceDesc *getCity3_new ( uint64_t ch64 ,
 		if ( crid != CRID_ANY && pd1->m_crid != crid ) continue;
 		// see if we got a state that matches "stateHash64" and
 		// "pd->m_adm1"
-		long slot2 = g_nameTable.getSlot ( &stateHash64 );
+		int32_t slot2 = g_nameTable.getSlot ( &stateHash64 );
 		for ( ; slot2 >= 0 ; 
 		      slot2=g_nameTable.getNextSlot(slot2,&stateHash64)) {
 			// breathe
 			QUICKPOLL(niceness);
 			// get the placedesc
-			long offset2;
-			offset2 = *(long *)g_nameTable.getValueFromSlot(slot2);
+			int32_t offset2;
+			offset2 = *(int32_t *)g_nameTable.getValueFromSlot(slot2);
 			PlaceDesc *pd2 = (PlaceDesc *)(g_pbuf + offset2);
 			// skip if not a city
 			if ( ! (pd2->m_flags & PDF_CITY ) ) continue;
@@ -20406,44 +20407,44 @@ PlaceDesc *getCity3_new ( uint64_t ch64 ,
 }
 
 
-bool getLongestPlaceName_new ( long a,
-			       long alnumPos,
+bool getLongestPlaceName_new ( int32_t a,
+			       int32_t alnumPos,
 			       Words *words,
 			       // must match! PDF_CITY|STATE|COUNTRY
 			       uint8_t placeType,
 			       uint8_t crid,
 			       char *stateAbbr,
 			       uint64_t *placeHash64,
-			       long *placeAlnumA,
-			       long *placeAlnumB,
-			       long *placeA,
-			       long *placeB ,
+			       int32_t *placeAlnumA,
+			       int32_t *placeAlnumB,
+			       int32_t *placeA,
+			       int32_t *placeB ,
 			       // set to most popular match
 			       PlaceDesc **pdp ) {
 	// assume none
 	if ( placeHash64 ) *placeHash64 = 0LL;
 	// init hash to zero
-	long long h = 0LL;
+	int64_t h = 0LL;
 	// max count
-	long count = 0;
+	int32_t count = 0;
 	// record start
-	long startAlnumPos = alnumPos;
+	int32_t startAlnumPos = alnumPos;
 	// fix this
 	alnumPos--;
 	// for some filtering
 	static bool s_flag = false;
-	static long long h_university;
-	static long long h_of;
+	static int64_t h_university;
+	static int64_t h_of;
 	if ( ! s_flag ) {
 		s_flag = true;
 		h_university = hash64n("university");
 		h_of         = hash64n("of");
 	}
-	// shortcut
-	long nw = words->m_numWords;
-	long wcount = 0;
+	// int16_tcut
+	int32_t nw = words->m_numWords;
+	int32_t wcount = 0;
 	// loop over words in [a,b)
-	for ( long k = a ; k < nw ; k++ ) {
+	for ( int32_t k = a ; k < nw ; k++ ) {
 		// or 15 words is good enough too!
 		if ( ++wcount >= 20 ) break;
 		// skip if not alnum
@@ -20453,9 +20454,9 @@ bool getLongestPlaceName_new ( long a,
 		// only up to 4 words in a place name
 		if ( ++count >= 5 ) break;
 		// get the hash of potential place name
-		long long wid = words->m_wordIds[k];
-		// shortcut
-		long  wlen = words->m_wordLens[k];
+		int64_t wid = words->m_wordIds[k];
+		// int16_tcut
+		int32_t  wlen = words->m_wordLens[k];
 		char *wptr = words->m_words[k];
 		// if it ended in apostrophe s then fix that
 		if ( wlen > 2 &&
@@ -20481,9 +20482,9 @@ bool getLongestPlaceName_new ( long a,
 			if ( placeHash64 ) *placeHash64 = 0LL;
 			return true;
 		}
-		// shortcuts
+		// int16_tcuts
 		//char **wptrs = words->getWords();
-		//long  *wlens = words->getWordLens();
+		//int32_t  *wlens = words->getWordLens();
 		// set the place
 		*placeA = a;
 		*placeB = k+1;
@@ -20501,16 +20502,16 @@ PlaceDesc *getPlaceDesc ( uint64_t placeHash64 ,
 			  uint8_t placeType ,
 			  uint8_t crid,
 			  char *stateAbbr,
-			  long niceness ) {
-	long maxPop = -1;
+			  int32_t niceness ) {
+	int32_t maxPop = -1;
 	PlaceDesc *best = NULL;
-	long slot = g_nameTable.getSlot ( &placeHash64 );
+	int32_t slot = g_nameTable.getSlot ( &placeHash64 );
 	// scan the slots
 	for ( ; slot >= 0 ; slot = g_nameTable.getNextSlot(slot,&placeHash64)){
 		// breathe
 		QUICKPOLL(niceness);
 		// get the placedesc
-		long offset = *(long *)g_nameTable.getValueFromSlot(slot);
+		int32_t offset = *(int32_t *)g_nameTable.getValueFromSlot(slot);
 		PlaceDesc *pd = (PlaceDesc *)(g_pbuf + offset);
 		// skip if not the right type of place
 		if ( ! (pd->m_flags & placeType ) ) continue;
@@ -20529,16 +20530,16 @@ PlaceDesc *getPlaceDesc ( uint64_t placeHash64 ,
 	return best;
 }
 
-bool getZip_new ( long a , 
-		  long alnumPos , 
+bool getZip_new ( int32_t a , 
+		  int32_t alnumPos , 
 		  Words *words ,
 		  uint64_t *zipHash64 ,
 		  uint64_t *zipCityHash64 ,
 		  uint64_t *zipStateHash64 ,
-		  long *zipAlnumA,
-		  long *zipAlnumB,
-		  long *zipA,
-		  long *zipB,
+		  int32_t *zipAlnumA,
+		  int32_t *zipAlnumB,
+		  int32_t *zipA,
+		  int32_t *zipB,
 		  float *zipLat,
 		  float *zipLon ) {
 	// assume none
@@ -20546,9 +20547,9 @@ bool getZip_new ( long a ,
 	// must be a number
 	if ( ! is_digit(words->m_words[a][0]) ) return true;
 	// make hash
-	long long h = 0 ^ words->m_wordIds[a];
+	int64_t h = 0 ^ words->m_wordIds[a];
 	// check for zip code
-	long slot = g_zips.getSlot(&h);
+	int32_t slot = g_zips.getSlot(&h);
 	// skip if not
 	if ( slot < 0 ) return true;
 	// get the place
@@ -20567,19 +20568,19 @@ bool getZip_new ( long a ,
 	return true;
 }
 
-PlaceDesc *getMostPopularPlace_new ( long long placeHash64, 
+PlaceDesc *getMostPopularPlace_new ( int64_t placeHash64, 
 				     uint8_t crid ,
 				     uint8_t placeType,
-				     long niceness ) {
-	long maxPop = -1;
+				     int32_t niceness ) {
+	int32_t maxPop = -1;
 	PlaceDesc *best = NULL;
-	long slot = g_nameTable.getSlot ( &placeHash64 );
+	int32_t slot = g_nameTable.getSlot ( &placeHash64 );
 	// scan the slots
 	for ( ; slot >= 0; slot = g_nameTable.getNextSlot(slot,&placeHash64)){
 		// breathe
 		QUICKPOLL(niceness);
 		// get the placedesc
-		long offset = *(long *)g_nameTable.getValueFromSlot(slot);
+		int32_t offset = *(int32_t *)g_nameTable.getValueFromSlot(slot);
 		PlaceDesc *pd = (PlaceDesc *)(g_pbuf + offset);
 		// skip if not a the right type of place
 		if ( ! (pd->m_flags & placeType ) ) continue;
@@ -20600,9 +20601,9 @@ PlaceDesc *getMostPopularPlace_new ( long long placeHash64,
 // . copied from getNearestCity() function above
 //
 
-//static long *s_latList2 = NULL;
-//static long  s_latListSize2 = 0;
-//static long  s_ni2 = 0;
+//static int32_t *s_latList2 = NULL;
+//static int32_t  s_latListSize2 = 0;
+//static int32_t  s_ni2 = 0;
 static SafeBuf s_cityLatList;
 
 
@@ -20616,7 +20617,7 @@ static SafeBuf s_cityLatList;
 // . then lookup cityid in g_timezones to get timezone
 PlaceDesc *getNearestCity_new ( float  lat , 
 				float  lon , 
-				long   niceness ,
+				int32_t   niceness ,
 				float *distInMilesSquared ) {
 
 	// . radius is 10 miles, put miles into degrees
@@ -20625,18 +20626,18 @@ PlaceDesc *getNearestCity_new ( float  lat ,
 	float radius = 10.0 / 69.0;
 	PlaceDesc *pd = NULL;
 	// how many cities we got?
-	long  ni      = s_cityLatList.length() / 4;
-	long *latList = (long *)s_cityLatList.getBufStart();
+	int32_t  ni      = s_cityLatList.length() / 4;
+	int32_t *latList = (int32_t *)s_cityLatList.getBufStart();
 
  tryagain:
 
-	long step = ni / 2;
+	int32_t step = ni / 2;
 	// get lat boundaries using bstep
-	long start = ni / 2;
+	int32_t start = ni / 2;
 	// do the bstepping
 	for ( ; ; ) {
 		// get that city
-		long cityOffset = latList[start];
+		int32_t cityOffset = latList[start];
 		// get PlaceDesc
 		pd = (PlaceDesc *)(g_pbuf + cityOffset);
 		// increase resolution for next round
@@ -20654,20 +20655,20 @@ PlaceDesc *getNearestCity_new ( float  lat ,
 		if ( step <= 0 ) break;
 	}
 
-	long lata = start;
-	long latb = start;
-	long count = 0;
+	int32_t lata = start;
+	int32_t latb = start;
+	int32_t count = 0;
 	// TODO: do b-step on these too, takes like 3500 iterations for
 	//       both of these loops
 	// adjust lata/latb until just out of range
 	for ( ; lata > 0 ; lata-- ) {
-		long cityOffset = latList[lata];
+		int32_t cityOffset = latList[lata];
 		pd = (PlaceDesc *)(g_pbuf + cityOffset);
 		if ( pd->m_lat < lat - radius ) break;
 		count++;
 	}
 	for ( ; latb < ni ; latb++ ) {
-		long cityOffset = latList[latb];
+		int32_t cityOffset = latList[latb];
 		pd = (PlaceDesc *)(g_pbuf + cityOffset);
 		if ( pd->m_lat > lat + radius ) break;
 		count++;
@@ -20680,13 +20681,13 @@ PlaceDesc *getNearestCity_new ( float  lat ,
 	float min1 = -1.0;
 	PlaceDesc *minpd1 = NULL;
 	// add in the lat cities
-	for ( long i = lata ; i <= latb ; i++ ) {
+	for ( int32_t i = lata ; i <= latb ; i++ ) {
 		// break?
 		if ( i >= ni ) break;
 		// breathe
 		QUICKPOLL(niceness);
 		// get that city
-		long cityOffset = latList[i];
+		int32_t cityOffset = latList[i];
 		pd = (PlaceDesc *)(g_pbuf + cityOffset);
 		// sanity check
 		if ( cityOffset > g_pbufSize ) { char *xx=NULL;*xx=0; }
@@ -20712,13 +20713,13 @@ PlaceDesc *getNearestCity_new ( float  lat ,
 	float min2 = -1.0;
 	PlaceDesc *minpd2 = NULL;
 	// add in the lat cities
-	for ( long i = lata ; i <= latb ; i++ ) {
+	for ( int32_t i = lata ; i <= latb ; i++ ) {
 		// break?
 		if ( i >= ni ) break;
 		// breathe
 		QUICKPOLL(niceness);
 		// get that city
-		long cityOffset = latList[i];
+		int32_t cityOffset = latList[i];
 		pd = (PlaceDesc *)(g_pbuf + cityOffset);
 		// just compute distance
 		float latDiff = pd->m_lat - lat;
@@ -20778,8 +20779,8 @@ PlaceDesc *getNearestCity_new ( float  lat ,
 
 
 int latcmp_new ( const void *arg1 , const void *arg2 ) {
-	long off1 = *(long *)arg1;
-	long off2 = *(long *)arg2;
+	int32_t off1 = *(int32_t *)arg1;
+	int32_t off2 = *(int32_t *)arg2;
 	// get the addresses
 	PlaceDesc *cd1;
 	PlaceDesc *cd2;
@@ -20842,18 +20843,18 @@ bool initCityLists_new ( ) {
 	}
 
 	// count how many cities we got
-	long cityCount = 0;
+	int32_t cityCount = 0;
 	for ( ; pd < pdend ; pd++ ) 
 		if ( pd->m_flags & PDF_CITY ) cityCount++;
 
 	// . alloc for the "ptrs" which will really be offsets into g_pbuf
 	// . use offsets so we can save/load to/from disk easily
-	long need = cityCount * 4;
+	int32_t need = cityCount * 4;
 	// alloc it
 	if ( ! s_cityLatList.reserve ( need ) ) return false;
 	// point into it so we can fill it up
-	long *latList = (long *)s_cityLatList.getBufStart();
-	long nc = 0;
+	int32_t *latList = (int32_t *)s_cityLatList.getBufStart();
+	int32_t nc = 0;
 
 	pd = (PlaceDesc *)g_pbuf;
 	// scan the cities again
@@ -20861,7 +20862,7 @@ bool initCityLists_new ( ) {
 		// skip if not city
 		if ( ! (pd->m_flags & PDF_CITY ) ) continue;
 		// get offset
-		long cityOffset = ((char *)pd) - g_pbuf;
+		int32_t cityOffset = ((char *)pd) - g_pbuf;
 		// add to the list
 		latList[nc++] = cityOffset;
 	}

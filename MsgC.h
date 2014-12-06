@@ -32,18 +32,18 @@ class MsgC {
 	// Don't bother about dnsState, only Msg14 used to use it, and now 
 	// since we are not using getIp in Msg16 anymore, it is useless.
 	// returns false if blocked, true otherwise
-	bool getIp(char  *hostname    , long   hostnameLen ,
-		   long  *ip ,
+	bool getIp(char  *hostname    , int32_t   hostnameLen ,
+		   int32_t  *ip ,
 		   void  *state ,
-		   void (* callback) ( void *state , long ip ),
-		   long  niceness = 2,
+		   void (* callback) ( void *state , int32_t ip ),
+		   int32_t  niceness = 2,
 		   bool  forwardToProxy = false );
 	// register our request handle with g_udp server
 	bool registerHandler ( );
 
-	long gotReply();
+	int32_t gotReply();
 
-	void (*m_callback) (void *state ,long ip);
+	void (*m_callback) (void *state ,int32_t ip);
 
 	// used by MsgE to store its data
 	void *m_state2;
@@ -53,10 +53,10 @@ class MsgC {
 	Multicast m_mcast;
 	Url   m_u;	
 	char  m_request[MAX_URL_LEN];
-	long *m_ipPtr;
+	int32_t *m_ipPtr;
 	// for proxy forwarding:
 	UdpSlot *m_slot;
-	long     m_tmpIp;
+	int32_t     m_tmpIp;
 	bool     m_forwardToProxy;
 };
 

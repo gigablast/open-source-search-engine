@@ -12,7 +12,7 @@
 #include <ctype.h>
 
 /*
-static void handleRequestSpeller ( UdpSlot *slot , long netnice );
+static void handleRequestSpeller ( UdpSlot *slot , int32_t netnice );
 
 static void gotSpellerReplyWrapper (void *state, void *state2);
 
@@ -27,7 +27,7 @@ bool Speller::registerHandler ( ) {
 // . handle a request to get a linkInfo for a given docId/url/collection
 // . returns false if slot should be nuked and no reply sent
 // . sometimes sets g_errno on error
-void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
+void handleRequestSpeller ( UdpSlot *slot , int32_t netnice ) {
 	// The request is the string to be spellchecked, null ended
 	char *request = slot->m_readBuf;
 
@@ -37,10 +37,10 @@ void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
 
 	// is it found in dict or pop words
 	bool found;
-	long score;
+	int32_t score;
 	char reco[MAX_PHRASE_LEN];
-	long pop;
-	long long start = gettimeofdayInMilliseconds();
+	int32_t pop;
+	int64_t start = gettimeofdayInMilliseconds();
 	bool recommendation = g_speller.m_language[langEnglish].
 		getRecommendation( request, gbstrlen(request), 
 				   reco, MAX_PHRASE_LEN, 
@@ -49,22 +49,22 @@ void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
 
 	log ( LOG_DEBUG,"speller: %s --> %s", request, reco );
 
-	long numNarrow = 0;
+	int32_t numNarrow = 0;
 	char narrow[MAX_NARROW_SEARCHES * MAX_PHRASE_LEN];
-	long narrowPops[MAX_NARROW_SEARCHES];
+	int32_t narrowPops[MAX_NARROW_SEARCHES];
 	//if ( narrowP )
 	//	numNarrow = g_speller.m_language[langEnglish].
 	//		narrowPhrase ( request, narrow, narrowPops,
 	//			       MAX_NARROW_SEARCHES );
 	
 	// calculate total reply size
-	// long replySize = found + recommendation + score + pop + reco
-	long replySize = sizeof(bool) + sizeof(bool) + 4 + 4 + 
+	// int32_t replySize = found + recommendation + score + pop + reco
+	int32_t replySize = sizeof(bool) + sizeof(bool) + 4 + 4 + 
 		gbstrlen(reco) + 1;
 
 	if ( narrowP ){
 		replySize += 4; // numPhrases 
-		for ( long i = 0; i < numNarrow; i++ )
+		for ( int32_t i = 0; i < numNarrow; i++ )
 			replySize += 4 + gbstrlen(&narrow[i*MAX_FRAG_SIZE]) + 1;
 	}
 
@@ -84,18 +84,18 @@ void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
 	p += sizeof(bool);
 
 	// store the score and pop
-	*(long *) p = score; p += 4;
-	*(long *) p = pop; p += 4;
+	*(int32_t *) p = score; p += 4;
+	*(int32_t *) p = pop; p += 4;
 
 	// store the recommendation
 	strcpy( p, reco );
 	p += gbstrlen(reco) + 1;
 	if ( narrowP ){
 		// store the number of narrow phrases found
-		*(long *) p = numNarrow;
+		*(int32_t *) p = numNarrow;
 		p += 4;
-		for ( long i = 0; i < numNarrow; i++ ){
-			*(long *)p = narrowPops[i];
+		for ( int32_t i = 0; i < numNarrow; i++ ){
+			*(int32_t *)p = narrowPops[i];
 			p += 4;
 			strcpy(p, &narrow[i * MAX_FRAG_SIZE]);
 			p += gbstrlen(&narrow[i * MAX_FRAG_SIZE]) + 1;
@@ -107,9 +107,9 @@ void handleRequestSpeller ( UdpSlot *slot , long netnice ) {
 		char *xx = NULL; *xx = 0;
 	}
 
-	long long end = gettimeofdayInMilliseconds();
+	int64_t end = gettimeofdayInMilliseconds();
 	if ( end - start > 1 )
-		log (LOG_INFO,"speller: took %lli ms to spellcheck "
+		log (LOG_INFO,"speller: took %"INT64" ms to spellcheck "
 		     "fragment %s", end-  start, request);
 	g_udpServer.sendReply_ass ( reply   ,
 				    replySize, 
@@ -159,11 +159,11 @@ bool Speller::init(){
 	return true;
 
 	/*
-	long myHash = g_hostdb.m_hostId % 
+	int32_t myHash = g_hostdb.m_hostId % 
 		( m_hostsPerSplit * g_hostdb.m_indexSplits );
 	myHash /= g_hostdb.m_indexSplits;
 
-	//for ( long i = 0; i < MAX_LANGUAGES; i++ )
+	//for ( int32_t i = 0; i < MAX_LANGUAGES; i++ )
 	m_language[langEnglish].init ( m_unifiedBuf.getBufStart(), 
 				       m_unifiedBuf.length(),
 				       langEnglish, 
@@ -181,7 +181,7 @@ void Speller::reset(){
 	
 	m_unifiedDict.reset();
 	/*
-	for(long i = 0; i < MAX_LANGUAGES; i++) 
+	for(int32_t i = 0; i < MAX_LANGUAGES; i++) 
 		m_language[i].reset();
 	*/
 
@@ -204,7 +204,7 @@ void Speller::test ( char *ff ) {
 	// go through the words in dict/words
 	while ( fgets ( buf , MAX_FRAG_SIZE , fd ) ) {
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		buf[wlen-1]='\0';
@@ -263,11 +263,11 @@ bool Speller::canStart( QueryWord *qw ) {
 bool Speller::getRecommendation ( Query *q, 
 				  bool   spellcheck,
 				  char  *dst, // recommendation destination
-				  long   dstLen, // recommendation max len
+				  int32_t   dstLen, // recommendation max len
 				  bool   narrowSearch,
 				  char  *narrow, // narrow search
-				  long   narrowLen,  // narrow search len
-				  long  *numNarrows, // num narrows found
+				  int32_t   narrowLen,  // narrow search len
+				  int32_t  *numNarrows, // num narrows found
 				  void  *state, 
 				  void (*callback)(void *state) ){
 	*dst = '\0';
@@ -276,7 +276,7 @@ bool Speller::getRecommendation ( Query *q,
 	if ( !spellcheck )
 		return true;
 
-	// don't spellcheck queries that are more than MAX_FRAG_SIZE long.
+	// don't spellcheck queries that are more than MAX_FRAG_SIZE int32_t.
 	if ( q->getQueryLen() >= MAX_FRAG_SIZE )
 		return true;
 
@@ -309,9 +309,9 @@ bool Speller::getRecommendation ( Query *q,
 	// . each fragment is a string of words
 	// . quotes and field names will separate fragments
 	// . TODO: make field data in its own fragment
-	long nqw = q->m_numWords;
+	int32_t nqw = q->m_numWords;
 
-	for ( long i = 0 ; i < nqw ; i++ ) {
+	for ( int32_t i = 0 ; i < nqw ; i++ ) {
 		// get a word in the Query to start a fragment with
 		QueryWord *qw = &q->m_qwords[i];
 		// can he start the phrase?
@@ -324,8 +324,8 @@ bool Speller::getRecommendation ( Query *q,
 		// . get the following words that can be in a fragment
 		//   that starts with word #i
 		// . start of the frag
-		long  endQword = i;
-		long  startQword = i;
+		int32_t  endQword = i;
+		int32_t  startQword = i;
 		for ( ; i < nqw ; i++ ) {
 			// . skip if we should
 			// . keep punct, however
@@ -392,12 +392,12 @@ bool Speller::getRecommendation ( StateFrag *st ){
 	
 	// normalize this fragment and store in "dst"
 	bool wasAlnum = true;
-	for ( long i = st->m_startQword; i <= st->m_endQword; i++ ){
+	for ( int32_t i = st->m_startQword; i <= st->m_endQword; i++ ){
 		// start of each word
 		st->m_wp[i] = dst;
 		char *p = st->m_q->m_qwords[i].m_word;
-		long  plen = st->m_q->m_qwords[i].m_wordLen;
-		for ( long j = 0; dst-st->m_dst <MAX_FRAG_SIZE&&j<plen;j++ ) {
+		int32_t  plen = st->m_q->m_qwords[i].m_wordLen;
+		for ( int32_t j = 0; dst-st->m_dst <MAX_FRAG_SIZE&&j<plen;j++ ) {
 			if ( !getClean_utf8(p+j) ) 
 				continue;
 			// skip back to back punct/spaces
@@ -417,7 +417,7 @@ bool Speller::getRecommendation ( StateFrag *st ){
 	    st->m_dst);
 
 	// give each word in the phrase a chance to start the subphrase
-	long maxPhrase = st->m_endQword - st->m_startQword;
+	int32_t maxPhrase = st->m_endQword - st->m_startQword;
 	if ( maxPhrase > MAX_WORDS_PER_PHRASE )
 		maxPhrase = MAX_WORDS_PER_PHRASE;
 
@@ -446,7 +446,7 @@ bool Speller::launchReco(StateFrag *st){
 			// don't do this phrase if we have found even one
 			// word in the phrase
 			bool found = false;
-			for ( long k = st->m_pPosn; 
+			for ( int32_t k = st->m_pPosn; 
 			      k <= st->m_pPosn + st->m_pLen; k++ ) {
 				if ( st->m_isfound[k] ){
 					found = true;
@@ -491,7 +491,7 @@ bool Speller::launchReco(StateFrag *st){
 			if ( isAdult(st->m_a, gbstrlen(st->m_a), &adultLoc) &&
 			     ( adultLoc == st->m_a || *(adultLoc-1) == ' ' ) ){
 				// mark as found
-				for ( long k = st->m_pPosn; 
+				for ( int32_t k = st->m_pPosn; 
 				      k <= st->m_pPosn + st->m_pLen; k++ )
 					st->m_isfound[k] = true;
 				*(st->m_b) = st->m_c;
@@ -500,12 +500,12 @@ bool Speller::launchReco(StateFrag *st){
 			// if the phrase is in dict or in the top pop words,
 			// phrase is found. Don't check if we are narrowing 
 			// the phrase because we need to multicast anyways
-			unsigned long long h ;
+			uint64_t h ;
 			h = hash64d(st->m_a, gbstrlen(st->m_a) );
 			if ( !st->m_narrowPhrase && 
 			     getPhrasePopularity( st->m_a, h, false ) > 0 ){
 				// mark as found
-				for ( long k = st->m_pPosn; 
+				for ( int32_t k = st->m_pPosn; 
 				      k <= st->m_pPosn + st->m_pLen; k++ )
 					st->m_isfound[k] = true;
 				*(st->m_b) = st->m_c;
@@ -533,14 +533,14 @@ bool Speller::launchReco(StateFrag *st){
 	st->m_numReplies = 0;
 
 
-	long hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
+	int32_t hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
 	// don't send to twins...
 	hostsPerSplit /= g_hostdb.m_numHostsPerShard;
-	long mySplit = g_hostdb.m_hostId % g_hostdb.m_indexSplits;
+	int32_t mySplit = g_hostdb.m_hostId % g_hostdb.m_indexSplits;
 
-	long key = st->m_q->getQueryHash();//0;
-	long timeout = 30;
-	long niceness = 0;
+	int32_t key = st->m_q->getQueryHash();//0;
+	int32_t timeout = 30;
+	int32_t niceness = 0;
 	char request[MAX_FRAG_SIZE + 4];
 	char *p = request;
 	*(bool *)p = st->m_narrowPhrase;
@@ -548,10 +548,10 @@ bool Speller::launchReco(StateFrag *st){
 	strcpy ( p, st->m_a );
 	// send the null end too
 	p += gbstrlen(st->m_a)+1;
-	long plen = p - request;
-	for ( long i = 0; i < hostsPerSplit; i++ ){
+	int32_t plen = p - request;
+	for ( int32_t i = 0; i < hostsPerSplit; i++ ){
 		// get the hostId of the host we're sending to
-		unsigned long hostId = 
+		uint32_t hostId = 
 			mySplit + ( i * g_hostdb.m_indexSplits );
 		Host *h = g_hostdb.getHost(hostId);
 		st->m_mcast[i].reset();
@@ -624,29 +624,29 @@ void gotSpellerReplyWrapper( void *state, void *state2 ){
 }
 
 bool Speller::gotSpellerReply( StateFrag *st ){
-	long minScore = LARGE_SCORE;
-	long maxPop = -1;
+	int32_t minScore = LARGE_SCORE;
+	int32_t maxPop = -1;
 	char *bestReco = NULL;
 
 	char *reply[MAX_UNIQUE_HOSTS_PER_SPLIT];
-	long  replySize[MAX_UNIQUE_HOSTS_PER_SPLIT];
-	long  replyMaxSize[MAX_UNIQUE_HOSTS_PER_SPLIT];
+	int32_t  replySize[MAX_UNIQUE_HOSTS_PER_SPLIT];
+	int32_t  replyMaxSize[MAX_UNIQUE_HOSTS_PER_SPLIT];
 	bool  freeit;
 	bool  found = false; //phrase was found in dict or pop words
-	long hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
+	int32_t hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
 	// don't send to twins...
 	hostsPerSplit /= g_hostdb.m_numHostsPerShard;
 
-	long  numNarrowPhrases[MAX_UNIQUE_HOSTS_PER_SPLIT];
+	int32_t  numNarrowPhrases[MAX_UNIQUE_HOSTS_PER_SPLIT];
 	char *narrowPtrs[MAX_UNIQUE_HOSTS_PER_SPLIT];
 
 	// init narrowSearch arrays
-	for ( long i = 0; i < MAX_UNIQUE_HOSTS_PER_SPLIT; i++ ){
+	for ( int32_t i = 0; i < MAX_UNIQUE_HOSTS_PER_SPLIT; i++ ){
 		numNarrowPhrases[i] = 0;
 		narrowPtrs[i] = NULL;
 	}
 
-	for ( long i = 0; i < hostsPerSplit; i++ ){
+	for ( int32_t i = 0; i < hostsPerSplit; i++ ){
 		reply[i] = st->m_mcast[i].getBestReply( &replySize[i] ,
 							&replyMaxSize[i] ,
 							&freeit );
@@ -672,14 +672,14 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 		if ( !recommendation && !st->m_narrowPhrase )
 			continue;
 
-		long score = *(long *)p;
+		int32_t score = *(int32_t *)p;
 		p += 4;
-		long pop = *(long *)p;
+		int32_t pop = *(int32_t *)p;
 		p += 4;
 
 		if ( recommendation ){
 			log ( LOG_DEBUG,"speller: Received reco %s, "
-			      "score=%li, pop=%li", p, score, pop );
+			      "score=%"INT32", pop=%"INT32"", p, score, pop );
 
 			// we have a recommendation with score and pop
 			// choose the one with the lowest score, and if the
@@ -696,7 +696,7 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 
 		p += gbstrlen(p) + 1;
 		if ( st->m_narrowPhrase ){
-			numNarrowPhrases[i] = *(long *)p;
+			numNarrowPhrases[i] = *(int32_t *)p;
 			p += 4;
 			narrowPtrs[i] = p;
 		}
@@ -704,16 +704,16 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 	
 	// merge all the narrow results
 	if ( st->m_narrowPhrase ){
-		long currPhrase[MAX_UNIQUE_HOSTS_PER_SPLIT];
-		for ( long i = 0; i < MAX_UNIQUE_HOSTS_PER_SPLIT; i++ )
+		int32_t currPhrase[MAX_UNIQUE_HOSTS_PER_SPLIT];
+		for ( int32_t i = 0; i < MAX_UNIQUE_HOSTS_PER_SPLIT; i++ )
 			currPhrase[i] = 0;
-		for ( long i = 0; i < MAX_NARROW_SEARCHES; i++ ){
-			long maxHost = -1;
-			long maxPop = 0;
-			for ( long j = 0; j < hostsPerSplit; j++ ){
+		for ( int32_t i = 0; i < MAX_NARROW_SEARCHES; i++ ){
+			int32_t maxHost = -1;
+			int32_t maxPop = 0;
+			for ( int32_t j = 0; j < hostsPerSplit; j++ ){
 				if ( numNarrowPhrases[j] <= currPhrase[j] )
 					continue;
-				long pop = *(long *)narrowPtrs[j];
+				int32_t pop = *(int32_t *)narrowPtrs[j];
 				if ( pop <= maxPop )
 					continue;
 				maxPop = pop;
@@ -741,7 +741,7 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 	// dictionary or pop words then mark all the
 	// words that fall under the phrase as found
 	if ( found || bestReco ){
-		for ( long k = st->m_pPosn; 
+		for ( int32_t k = st->m_pPosn; 
 		      k <= st->m_pLen + st->m_pPosn; k++ )
 			st->m_isfound[k] = true;
 		st->m_numFound += st->m_pLen + 1;
@@ -753,20 +753,20 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 		st->m_recommended = true;
 		// insert our recommendation into the phrase to get a new one
 		char *s1    = st->m_wp[st->m_startQword];
-		long  slen1 = st->m_a - st->m_wp[st->m_startQword];
+		int32_t  slen1 = st->m_a - st->m_wp[st->m_startQword];
 		char *s2    = bestReco;
-		long  slen2 = gbstrlen(bestReco);
+		int32_t  slen2 = gbstrlen(bestReco);
 		char *s3    = st->m_b ;
 		// store the difference in length between the reco and the 
 		// original string
-		long  diff = slen2 - ( st->m_b - st->m_a );
-		long  slen3 = st->m_wp[st->m_endQword] + 
+		int32_t  diff = slen2 - ( st->m_b - st->m_a );
+		int32_t  slen3 = st->m_wp[st->m_endQword] + 
 			st->m_wplen[st->m_endQword] - st->m_b;
 
 		if ( slen3 < 0 )
 			slen3 = 0;
 
-		long  tlen = slen1 + slen2 + slen3 ;
+		int32_t  tlen = slen1 + slen2 + slen3 ;
 		if ( tlen > MAX_FRAG_SIZE ){
 			log(LOG_LOGIC,"speller: buf too small. Fix me 3.");
 			// blocked
@@ -793,14 +793,14 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 		// the pointers might have to be changed if the 
 		// recommendation was not of the same length as the words
 		if ( diff != 0 ){
-			for ( long k = st->m_pLen+st->m_pPosn+1; 
+			for ( int32_t k = st->m_pLen+st->m_pPosn+1; 
 			      k <= st->m_endQword; k++ )
 				st->m_wp[k] += diff;
 		}
 	}
 
 	// don't forget to free the replies
-	for ( long i = 0; i < hostsPerSplit; i++ )
+	for ( int32_t i = 0; i < hostsPerSplit; i++ )
 		if ( reply[i] && replyMaxSize[i] > 0 )
 			mfree( reply[i], replyMaxSize[i], "SpellerReplyBuf" );
 	
@@ -821,11 +821,11 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 // . break a NULL-terminated string down into a list of ptrs to the words
 // . return the number of words stored into "wp"
 /*
-long Speller::getWords ( const char *s ,
+int32_t Speller::getWords ( const char *s ,
 			 char *wp     [MAX_FRAG_SIZE] ,
-			 long  wplen  [MAX_FRAG_SIZE] ,
+			 int32_t  wplen  [MAX_FRAG_SIZE] ,
 			 bool *isstop                   ) {
-	long nwp = 0;
+	int32_t nwp = 0;
  loop:
 	// skip initial punct
 	while ( *s && ! is_alnum ( *s ) ) s++;
@@ -838,13 +838,13 @@ long Speller::getWords ( const char *s ,
 	// count over it
 	while ( is_alnum ( *s ) ) s++;
 	// how long is the word?
-	long slen = s - wp [ nwp ];
+	int32_t slen = s - wp [ nwp ];
 	// set length
 	wplen [ nwp ] = slen ;
 	// is it a stop word?
 	if ( isstop ) {
 		// TODO: make the stop words utf8!!!
-		long long h = hash64Lower_utf8 ( ww , slen ) ;
+		int64_t h = hash64Lower_utf8 ( ww , slen ) ;
 		bool stop = ::isStopWord       ( ww , slen , h ) ;
 		// BUT ok if Capitalized or number
 		if ( stop ) {
@@ -872,9 +872,9 @@ void Speller::gotFrags( void *state ){
 	// . each fragment is a string of words
 	// . quotes and field names will separate fragments
 	// . TODO: make field data in its own fragment
-	long nqw = q->m_numWords;
-	long currFrag = 0;
-	for ( long i = 0 ; i < nqw ; i++ ) {
+	int32_t nqw = q->m_numWords;
+	int32_t currFrag = 0;
+	for ( int32_t i = 0 ; i < nqw ; i++ ) {
 		// get a word in the Query to start a fragment with
 		QueryWord *qw = &q->m_qwords[i];
 		// if he has a phraseSign, put it right away
@@ -887,7 +887,7 @@ void Speller::gotFrags( void *state ){
 		if ( !canStart( qw )) {
 			// copy to rp and get next word
 			char *w    = qw->m_word;
-			long  wlen = qw->m_wordLen;
+			int32_t  wlen = qw->m_wordLen;
 			if ( dptr + wlen >= st->m_dend ) { 
 				g_errno = EBUFTOOSMALL; continue; }
 			// watch out for LeFtP and RiGhP
@@ -907,7 +907,7 @@ void Speller::gotFrags( void *state ){
 		// . get the following words that can be in a fragment
 		//   that starts with word #i
 		// . start of the frag
-		long  endQword = i;
+		int32_t  endQword = i;
 		for ( ; i < nqw ; i++ ) {
 			// . skip if we should
 			// . keep punct, however
@@ -948,7 +948,7 @@ void Speller::gotFrags( void *state ){
 				recommendation = true;
 		}
 		// copy over all the narrow searches that can fit
-		for ( long j = 0; j < stFrag->m_numNarrowPhrases; j++ ){
+		for ( int32_t j = 0; j < stFrag->m_numNarrowPhrases; j++ ){
 			// don't breech
 			if ( nptr +gbstrlen(stFrag->m_narrowPhrases[j]) >
 			     st->m_nend )
@@ -966,23 +966,23 @@ void Speller::gotFrags( void *state ){
 	if ( !recommendation )
 		*st->m_dst = '\0';
 	
-	long long now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds();
 	if ( now - st->m_start > 50 )
-		log(LOG_INFO,"speller: Took %lli ms to spell check %s",
+		log(LOG_INFO,"speller: Took %"INT64" ms to spell check %s",
 		    now - st->m_start, st->m_q->getQuery() );
 	return;
 }
 */
 
 
-bool Speller::generateDicts ( long numWordsToDump , char *coll ){
+bool Speller::generateDicts ( int32_t numWordsToDump , char *coll ){
 	m_language[2].setLang(2);
 	//m_language[2].generateDicts ( numWordsToDump, coll );
 	return false;
 }
 
 char *Speller::getRandomWord() {
-	long offset = rand() % m_unifiedBuf.length();//Size;
+	int32_t offset = rand() % m_unifiedBuf.length();//Size;
 	// find nearest \0
 	char *p = m_unifiedBuf.getBufStart() + offset;
 	// backup until we hit \0
@@ -1032,20 +1032,20 @@ bool Speller::loadUnifiedDict() {
 		if ( ! g_conf.m_isLive ) return true;
 
 		// the size
-		long long h1 = m_unifiedDict.getNumSlotsUsed();
-		long long h2 = m_unifiedBuf .length();
-		long long h = hash64 ( h1 , h2 );
+		int64_t h1 = m_unifiedDict.getNumSlotsUsed();
+		int64_t h2 = m_unifiedBuf .length();
+		int64_t h = hash64 ( h1 , h2 );
 		char *tail1 = (char *)m_unifiedDict.m_keys;
 		char *tail2 = m_unifiedBuf.getBufStart()+h2-1000;
 		h = hash64 ( tail1 , 1000 , h );
 		h = hash64 ( tail2 , 1000 , h );
-		//long long n = 8346765853685546681LL;
-		long long n = -14450509118443930LL;
+		//int64_t n = 8346765853685546681LL;
+		int64_t n = -14450509118443930LL;
 		if ( h != n ) {
 			log("gb: unifiedDict-buf.txt or "
 			    "unifiedDict-map.dat "
 			    "checksum is not approved for "
-			    "live service (%lli != %lli)" ,h,n);
+			    "live service (%"INT64" != %"INT64")" ,h,n);
 			//return false;
 		}
 
@@ -1123,7 +1123,7 @@ bool Speller::loadUnifiedDict() {
 		char *end = p;
 		for ( ; *end && *end != '\n' ; end++ ) ;
 		// so hash it up
-		long long wid = hash64d ( word , end - word );
+		int64_t wid = hash64d ( word , end - word );
 		// debug point
 		//if ( wid == 5000864073612302341LL )
 		//	log("download");
@@ -1136,7 +1136,7 @@ bool Speller::loadUnifiedDict() {
 	//
 	// scan unifiedDict.txt file
 	//
-	long totalCollisions = 0;
+	int32_t totalCollisions = 0;
 	uint64_t atline = 0;
 	p = start;
 	while ( p < end ) {
@@ -1157,7 +1157,7 @@ bool Speller::loadUnifiedDict() {
 		if(gbstrlen(phrase) < 1) {
 			log(LOG_WARN,
 				"spell: Got zero length entry in unifiedDict "
-			    "at line %llu, skipping\n",
+			    "at line %"UINT64", skipping\n",
 				atline);
 			p += gbstrlen(p) + 1;
 			continue;
@@ -1168,7 +1168,7 @@ bool Speller::loadUnifiedDict() {
 		if(gbstrlen(phrase) == 1 && (phrase[0] < 'a')) {
 			log(LOG_WARN,
 				"spell: Got questionable entry in "
-			    "unifiedDict at line %llu, skipping: %s\n",
+			    "unifiedDict at line %"UINT64", skipping: %s\n",
 				atline,p);
 			p += gbstrlen(p) + 1;
 			continue;
@@ -1185,7 +1185,7 @@ bool Speller::loadUnifiedDict() {
 		*p = '\0';
 		p++;
 
-		unsigned long long key = hash64d(phrase,gbstrlen(phrase));
+		uint64_t key = hash64d(phrase,gbstrlen(phrase));
 
 		// make sure we haven't added this word/phrase yet
 		if ( m_unifiedDict.isInTable ( &key ) ) {
@@ -1195,7 +1195,7 @@ bool Speller::loadUnifiedDict() {
 		}
 
 		// reset lang vector
-		long long pops[MAX_LANGUAGES];
+		int64_t pops[MAX_LANGUAGES];
 		memset ( pops , 0 , MAX_LANGUAGES * 8 );
 
 		// see how many langs this key is in in unifiedDict.txt file
@@ -1203,16 +1203,16 @@ bool Speller::loadUnifiedDict() {
 		getPhraseLanguages2 ( phraseRec , pops );
 
 		// make all pops positive if it has > 1 lang already
-		//long count = 0;
-		//for ( long i = 0 ; i < MAX_LANGUAGES ; i++ )
+		//int32_t count = 0;
+		//for ( int32_t i = 0 ; i < MAX_LANGUAGES ; i++ )
 		//	if ( pops[i] ) count++;
 
-		long imax = MAX_LANGUAGES;
+		int32_t imax = MAX_LANGUAGES;
 		//if ( count <= 1 ) imax = 0;
 		// assume none are in official dict
 		// seems like nanny messed things up, so undo that
 		// and set it negative if in wiktionary in loop below
-		for ( long i = 0 ; i < imax ; i++ )
+		for ( int32_t i = 0 ; i < imax ; i++ )
 			// HOWEVER, if it is -1 leave it be, i think it
 			// was probably correct in that case for some reason.
 			// Wiktionary fails to get a TON of forms for
@@ -1232,7 +1232,7 @@ bool Speller::loadUnifiedDict() {
 		//	log("hey");
 
 		// now add in from wiktionary
-		long slot = wkfMap.getSlot ( &key );
+		int32_t slot = wkfMap.getSlot ( &key );
 		for ( ; slot >= 0 ; slot = wkfMap.getNextSlot(slot,&key) ) {
 			uint8_t langId = *(char *)wkfMap.getDataFromSlot(slot);
 			if ( langId == langUnknown ) continue;
@@ -1247,19 +1247,19 @@ bool Speller::loadUnifiedDict() {
 		}
 
 		// save the offset
-		long offset = m_unifiedBuf.length();
+		int32_t offset = m_unifiedBuf.length();
 
 		// print the word/phrase and its phonet, if any
 		m_unifiedBuf.safePrintf("%s\t%s\t",phrase,phonet);
 
-		long count = 0;
+		int32_t count = 0;
 		// print the languages and their popularity scores
-		for ( long i = 0 ; i < MAX_LANGUAGES ; i++ ) {
+		for ( int32_t i = 0 ; i < MAX_LANGUAGES ; i++ ) {
 			if ( pops[i] == 0 ) continue;
 			// skip "unknown" what does that really mean?
 			if ( i == 0 ) continue;
-			m_unifiedBuf.safePrintf("%li\t%li\t",
-						i,(long)pops[i]);
+			m_unifiedBuf.safePrintf("%"INT32"\t%"INT32"\t",
+						i,(int32_t)pops[i]);
 			count++;
 		}
 		// if none, revert
@@ -1282,7 +1282,7 @@ bool Speller::loadUnifiedDict() {
 		p += gbstrlen(p) + 1;
 	}
 
-	log (LOG_WARN,"spell: got %li TOTAL collisions in unified dict",
+	log (LOG_WARN,"spell: got %"INT32" TOTAL collisions in unified dict",
 	     totalCollisions);
 
 
@@ -1315,7 +1315,7 @@ bool Speller::loadUnifiedDict() {
 			log("speller: bad format in wiktionary-lang.txt");
 			char *xx=NULL;*xx=0;
 		}
-		long wordLen = p - word;
+		int32_t wordLen = p - word;
 		// wiktinary has like prefixes ending in minus. skip!
 		if ( word[wordLen-1] == '-' ) continue;
 		// suffix in wiktionary? skip
@@ -1324,7 +1324,7 @@ bool Speller::loadUnifiedDict() {
 		if ( word[0] == '.' ) continue;
 
 		// hash the word
-		long long key = hash64d ( word , wordLen );
+		int64_t key = hash64d ( word , wordLen );
 
 		// skip if we did it in the above loop
 		if ( m_unifiedDict.isInTable ( &key ) ) continue;
@@ -1334,11 +1334,11 @@ bool Speller::loadUnifiedDict() {
 		if ( ! dedup.addKey ( &key ) ) return false;
 
 		// reset lang vector
-		long long pops[MAX_LANGUAGES];
+		int64_t pops[MAX_LANGUAGES];
 		memset ( pops , 0 , MAX_LANGUAGES * 8 );
 
 		// now add in from wiktionary map
-		long slot = wkfMap.getSlot ( &key );
+		int32_t slot = wkfMap.getSlot ( &key );
 		for ( ; slot >= 0 ; slot = wkfMap.getNextSlot(slot,&key) ) {
 			uint8_t langId = *(char *)wkfMap.getDataFromSlot(slot);
 			if ( langId == langUnknown ) continue;
@@ -1350,7 +1350,7 @@ bool Speller::loadUnifiedDict() {
 
 		
 		// save the offset
-		long offset = m_unifiedBuf.length();
+		int32_t offset = m_unifiedBuf.length();
 
 		// . print the word/phrase and its phonet, if any
 		// . phonet is unknown here...
@@ -1358,14 +1358,14 @@ bool Speller::loadUnifiedDict() {
 		m_unifiedBuf.safeMemcpy ( word, wordLen );
 		m_unifiedBuf.safePrintf("\t\t");//word,phonet); 
 
-		long count = 0;
+		int32_t count = 0;
 		// print the languages and their popularity scores
-		for ( long i = 0 ; i < MAX_LANGUAGES ; i++ ) {
+		for ( int32_t i = 0 ; i < MAX_LANGUAGES ; i++ ) {
 			if ( pops[i] == 0 ) continue;
 			// skip "unknown" what does that really mean?
 			if ( i == 0 ) continue;
-			m_unifiedBuf.safePrintf("%li\t%li\t",
-						i,(long)pops[i]);
+			m_unifiedBuf.safePrintf("%"INT32"\t%"INT32"\t",
+						i,(int32_t)pops[i]);
 			count++;
 		}
 		// if none, revert
@@ -1412,7 +1412,7 @@ bool Speller::loadUnifiedDict() {
 
 // in case the language is unknown, just give the pop of the
 // first found language
-long Speller::getPhrasePopularity ( char *str, unsigned long long h,
+int32_t Speller::getPhrasePopularity ( char *str, uint64_t h,
 				    bool checkTitleRecDict,
 				    unsigned char langId ){
 	//char *xx=NULL;*xx=0;
@@ -1432,11 +1432,11 @@ long Speller::getPhrasePopularity ( char *str, unsigned long long h,
 
 	// what up with this?
 	//if ( !s ) return 0;
-	long slot = m_unifiedDict.getSlot(&h);
+	int32_t slot = m_unifiedDict.getSlot(&h);
 	// if not in dictionary assume 0 popularity
 	if ( slot == -1 ) return 0;
 	//char *p = *(char **)m_unifiedDict.getValueFromSlot(slot);
-	long offset =  *(long *)m_unifiedDict.getValueFromSlot(slot);
+	int32_t offset =  *(int32_t *)m_unifiedDict.getValueFromSlot(slot);
 	char *p = m_unifiedBuf.getBufStart() + offset;
 	char *pend = p + gbstrlen(p);
 
@@ -1447,13 +1447,13 @@ long Speller::getPhrasePopularity ( char *str, unsigned long long h,
 	while ( *p != '\t' ) p++;
 	p++;
 
-	long max = 0;
+	int32_t max = 0;
 
 	// the tuples are in ascending order of the langid
 	// get to the right language
 	while ( p < pend ){
 
-		long currLang = atoi(p);
+		int32_t currLang = atoi(p);
 
 		// the the pops are sorted by langId, return 0 if the lang
 		// was not found
@@ -1464,7 +1464,7 @@ long Speller::getPhrasePopularity ( char *str, unsigned long long h,
 		while ( *p != '\t' ) p++;
 		p++;
 
-		long score = atoi(p);
+		int32_t score = atoi(p);
 
 		// i think negative scores mean it is only from titlerec and
 		// not in any of the dictionaries.
@@ -1498,9 +1498,9 @@ long Speller::getPhrasePopularity ( char *str, unsigned long long h,
 // TODO: chatswingers.com NOT identified as porn because it is split as 
 // 'chats' and 'wingers'.
 
-bool Speller::canSplitWords( char *s, long slen, bool *isPorn, 
+bool Speller::canSplitWords( char *s, int32_t slen, bool *isPorn, 
 			     char *splitWords,
-			     unsigned char langId, long encodeType ){
+			     unsigned char langId, int32_t encodeType ){
 	//char *xx=NULL;*xx=0;
 
 	*isPorn = false;
@@ -1510,7 +1510,7 @@ bool Speller::canSplitWords( char *s, long slen, bool *isPorn,
 	*splitWords = '\0';
 
 	// this is the current word we're on
-	long curr = 0;
+	int32_t curr = 0;
 	index[curr++] = s;
 	index[curr] = s + slen;
 	while ( curr > 0 ){
@@ -1524,7 +1524,7 @@ bool Speller::canSplitWords( char *s, long slen, bool *isPorn,
 			// finished making a sequence of words
 			if ( *isPorn || nextWord == s + slen ){
 				char *p = splitWords;
-				for ( long k = 1; k < curr; k++ ){
+				for ( int32_t k = 1; k < curr; k++ ){
 					memcpy (p, index[k - 1], 
 						index[k] - index[k - 1]);
 					p += index[k] - index[k - 1];
@@ -1548,11 +1548,11 @@ bool Speller::canSplitWords( char *s, long slen, bool *isPorn,
 }
 
 bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
-			unsigned char langId, long encodeType ){
+			unsigned char langId, int32_t encodeType ){
 	//char *xx=NULL;*xx=0;
 
 	char *loc = NULL;
-	long slen = send - s;
+	int32_t slen = send - s;
 	// check if there is an adult word in there
 	// NOTE: The word 'adult' gives a lot of false positives, so even 
 	// though it is in the isAdult() list, skip it.
@@ -1713,8 +1713,8 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 
 		// check if the word has popularity. if it is in the 
 		// unifiedDict, then it is considered to be a word
-		unsigned long long h = hash64d(s, a-s);//a - s, encodeType);
-		long pop = getPhrasePopularity(s, h, false, langId);
+		uint64_t h = hash64d(s, a-s);//a - s, encodeType);
+		int32_t pop = getPhrasePopularity(s, h, false, langId);
 
 		// continue if did not find it
 		if ( pop <= 0 )
@@ -1727,9 +1727,9 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 }	
 
 //similar to one above but using recursion
-/*bool Speller::canSplitWords( char *s, long slen, bool *isPorn, 
+/*bool Speller::canSplitWords( char *s, int32_t slen, bool *isPorn, 
   char *splitWords,
-  unsigned char langId, long encodeType ){
+  unsigned char langId, int32_t encodeType ){
 
   if ( slen == 0 )
   return true;
@@ -1757,8 +1757,8 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 
   // check if the word has popularity. if it is in the 
   // unifiedDict, then it is considered to be a word
-  unsigned long long h = hash64d(s, a - s, encodeType);
-  long pop = getPhrasePopularity(s, h, false, langId);
+  uint64_t h = hash64d(s, a - s, encodeType);
+  int32_t pop = getPhrasePopularity(s, h, false, langId);
 
   // continue if did not find it
   if ( pop <= 0 )
@@ -1778,10 +1778,10 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 
 bool Speller::createUnifiedDict (){
 	// first get all the tuples from wordlist and query file
-	//HashTableT <unsigned long long, char*> ht[MAX_LANGUAGES];
+	//HashTableT <uint64_t, char*> ht[MAX_LANGUAGES];
 	HashTableX ht[MAX_LANGUAGES];
 	char ff[1024];
-	for ( long i = 0; i < MAX_LANGUAGES; i++ ){
+	for ( int32_t i = 0; i < MAX_LANGUAGES; i++ ){
 		ht[i].set ( 8,4,0,NULL,0,false,0,"cud");
 		sprintf ( ff , "%sdict/%s/%s.wl.phonet", g_hostdb.m_dir,
 			  getLanguageAbbr(i), getLanguageAbbr(i) );
@@ -1791,8 +1791,8 @@ bool Speller::createUnifiedDict (){
 			  getLanguageAbbr(i), getLanguageAbbr(i) );
 		populateHashTable(ff, &ht[i], i);
 
-		for ( long j = 0; j < NUM_CHARS; j++ ){
-			sprintf ( ff , "%sdict/%s/%s.dict.%li", g_hostdb.m_dir,
+		for ( int32_t j = 0; j < NUM_CHARS; j++ ){
+			sprintf ( ff , "%sdict/%s/%s.dict.%"INT32"", g_hostdb.m_dir,
 				  getLanguageAbbr(i), getLanguageAbbr(i), j );
 			populateHashTable(ff, &ht[i], i);
 		}
@@ -1813,18 +1813,18 @@ bool Speller::createUnifiedDict (){
 
 	log(LOG_INIT,"spell: Making %s.", ff );
 
-	//HashTableT <unsigned long long, long> phrases;
+	//HashTableT <uint64_t, int32_t> phrases;
 	HashTableX phrases;
 	phrases.set(8,4,0,NULL,0,false,0,"phud");
 	char buf[1024];
-	for ( long  i = 0; i < MAX_LANGUAGES; i++ ){
+	for ( int32_t  i = 0; i < MAX_LANGUAGES; i++ ){
 		// get each slot
-		for ( long j = 0; j < ht[i].getNumSlots(); j++ ){
-			unsigned long long key = *(unsigned long long *)ht[i].getKey(j);
+		for ( int32_t j = 0; j < ht[i].getNumSlots(); j++ ){
+			uint64_t key = *(uint64_t *)ht[i].getKey(j);
 			if ( key == 0 )
 				continue;
 			// if key is already found
-			long slot = phrases.getSlot(&key);
+			int32_t slot = phrases.getSlot(&key);
 			if ( slot != -1 )
 				continue;
 
@@ -1850,14 +1850,14 @@ bool Speller::createUnifiedDict (){
 				fromTitleRec = true;
 			}
 
-			for ( long k = 0; k < MAX_LANGUAGES; k++ ){
+			for ( int32_t k = 0; k < MAX_LANGUAGES; k++ ){
 				slot = ht[k].getSlot(&key);
 				if ( slot == -1 )
 					continue;
 				char *val = *(char **)ht[k].getValueFromSlot(slot);
-				long pop = atoi(val);
+				int32_t pop = atoi(val);
 				if ( fromTitleRec ) pop *= -1;
-				sprintf(p,"\t%li\t%li",k,pop);
+				sprintf(p,"\t%"INT32"\t%"INT32"",k,pop);
 				p += gbstrlen(p);
 			}
 			// write out the trailing \n as well
@@ -1865,11 +1865,11 @@ bool Speller::createUnifiedDict (){
 			p++;
 			*p = '\0';
 			p++;
-			long bufLen = gbstrlen(buf);
-			long wn = write ( fdw , buf , bufLen ) ;
+			int32_t bufLen = gbstrlen(buf);
+			int32_t wn = write ( fdw , buf , bufLen ) ;
 			if ( wn != bufLen )
 				return log("lang:  write: %s",strerror(errno));
-			long val = 1;
+			int32_t val = 1;
 			phrases.addKey(&key, &val);
 		}
 	}
@@ -1888,9 +1888,9 @@ bool Speller::populateHashTable( char *ff, HashTableX *htable,
 	}
 	
 	// get file size
-	long fileSize = f.getFileSize() ;
+	int32_t fileSize = f.getFileSize() ;
 
-	long bufSize = fileSize + 1;
+	int32_t bufSize = fileSize + 1;
 	char *buf = (char *) mmalloc(bufSize, "SpellerTmpBuf");
 	if (!buf)
 		return false;
@@ -1898,7 +1898,7 @@ bool Speller::populateHashTable( char *ff, HashTableX *htable,
 		log("spell: read: %s", mstrerror(g_errno));
 		return false;
 	}
-	for ( long i = 0; i < bufSize; i++ ){
+	for ( int32_t i = 0; i < bufSize; i++ ){
 		if ( buf[i] == '\n' )
 			buf[i] = '\0';
 	}
@@ -1906,7 +1906,7 @@ bool Speller::populateHashTable( char *ff, HashTableX *htable,
 	char *p = buf;
 	while ( p < buf + fileSize ){
 		char *tuple = p;
-		long score = atoi(p);
+		int32_t score = atoi(p);
 		// many scores in dict have a pop of 0. ignore them
 		if ( score <= 0 ){
 			p += gbstrlen(p) + 1;
@@ -1919,8 +1919,8 @@ bool Speller::populateHashTable( char *ff, HashTableX *htable,
 		char *phrase = p;
 		while ( *p != '\t' && *p != '\0' )
 			p++;
-		unsigned long long key = hash64d(phrase, p-phrase );
-		long slot = htable->getSlot(&key);
+		uint64_t key = hash64d(phrase, p-phrase );
+		int32_t slot = htable->getSlot(&key);
 		if ( slot == -1 )
 			htable->addKey(&key,&tuple);
 		p += gbstrlen(p) + 1;
@@ -1935,24 +1935,24 @@ char *Speller::getPhraseRecord(char *phrase, int len ) {
 	//char *xx=NULL;*xx=0;
 	if ( !phrase ) return NULL;
 	//char *rv = NULL;
-	long long h = hash64d(phrase, len);
-	long slot = m_unifiedDict.getSlot(&h);
-	//log("speller: h=%llu len=%i slot=%li",h,len,slot);
+	int64_t h = hash64d(phrase, len);
+	int32_t slot = m_unifiedDict.getSlot(&h);
+	//log("speller: h=%"UINT64" len=%i slot=%"INT32"",h,len,slot);
 	if ( slot < 0 ) return NULL;
 	//rv = *(char **)m_unifiedDict.getValueFromSlot(slot);
-	long offset =  *(long *)m_unifiedDict.getValueFromSlot(slot);
+	int32_t offset =  *(int32_t *)m_unifiedDict.getValueFromSlot(slot);
 	char *p = m_unifiedBuf.getBufStart() + offset;
 	return p;
 }
 
 /*
-uint8_t Speller::getUniqueLang ( long long *wid ) {
-	long slot = m_unifiedDict.getSlot(wid);
+uint8_t Speller::getUniqueLang ( int64_t *wid ) {
+	int32_t slot = m_unifiedDict.getSlot(wid);
 	if (slot < 0) return langUnknown;
 	//char *p = *(char **)m_unifiedDict.getValueFromSlot(slot);
-	long offset =  *(long *)m_unifiedDict.getValueFromSlot(slot);
+	int32_t offset =  *(int32_t *)m_unifiedDict.getValueFromSlot(slot);
 	char *p = m_unifiedBuf.getBufStart() + offset;
-	long langId = langUnknown;
+	int32_t langId = langUnknown;
 	char langCount = 0;
 	// skip over word
 	for ( ; *p && *p != '\t' ; ) p++;
@@ -2006,10 +2006,10 @@ uint8_t Speller::getUniqueLang ( long long *wid ) {
 }
 */
 
-long long Speller::getLangBits64 ( long long *wid ) {
-	long slot = m_unifiedDict.getSlot(wid);
+int64_t Speller::getLangBits64 ( int64_t *wid ) {
+	int32_t slot = m_unifiedDict.getSlot(wid);
 	if (slot < 0) return 0LL;
-	long offset =  *(long *)m_unifiedDict.getValueFromSlot(slot);
+	int32_t offset =  *(int32_t *)m_unifiedDict.getValueFromSlot(slot);
 	char *p = m_unifiedBuf.getBufStart() + offset;
 	// skip over word
 	for ( ; *p && *p != '\t' ; ) p++;
@@ -2024,7 +2024,7 @@ long long Speller::getLangBits64 ( long long *wid ) {
 	// skip tab
 	p++;
 	// init
-	long long bits = 0LL;
+	int64_t bits = 0LL;
 	// loop over langid/pop pairs
 	while ( *p ) {
 		// get langid
@@ -2064,16 +2064,16 @@ long long Speller::getLangBits64 ( long long *wid ) {
 }
 
 /*
-long long *Speller::getPhraseLanguages(char *phrase, int len ) {
+int64_t *Speller::getPhraseLanguages(char *phrase, int len ) {
 	//char *xx=NULL;*xx=0;
 
 	char *phraseRec = getPhraseRecord(phrase, len );
 	if(!phraseRec) return(NULL);
-	long long *rv = (long long *)mmalloc(sizeof(long long) * MAX_LANGUAGES,
+	int64_t *rv = (int64_t *)mmalloc(sizeof(int64_t) * MAX_LANGUAGES,
 					     "PhraseRec");
 	if(!rv) return(NULL);
 	if(!getPhraseLanguages(phrase, len, rv)) {
-		mfree(rv, sizeof(long long) * MAX_LANGUAGES,
+		mfree(rv, sizeof(int64_t) * MAX_LANGUAGES,
 		      "PhraseRec");
 		return(NULL);
 	}
@@ -2082,7 +2082,7 @@ long long *Speller::getPhraseLanguages(char *phrase, int len ) {
 */
  
 bool Speller::getPhraseLanguages(char *phrase, int len,
-				 long long *array) {
+				 int64_t *array) {
 	//char *xx=NULL;*xx=0;
 
 	char *phraseRec = getPhraseRecord(phrase, len);
@@ -2090,10 +2090,10 @@ bool Speller::getPhraseLanguages(char *phrase, int len,
 	return getPhraseLanguages2 ( phraseRec,array );
 }
 
-bool Speller::getPhraseLanguages2 (char *phraseRec , long long *array) {
+bool Speller::getPhraseLanguages2 (char *phraseRec , int64_t *array) {
 
-	long long l = 0;
-	memset(array, 0, sizeof(long long)*MAX_LANGUAGES);
+	int64_t l = 0;
+	memset(array, 0, sizeof(int64_t)*MAX_LANGUAGES);
 
 	while(*phraseRec) {
 		l = 0;
@@ -2104,7 +2104,7 @@ bool Speller::getPhraseLanguages2 (char *phraseRec , long long *array) {
 
 		if(!*phraseRec) break;
 
-		long long l = atoi(phraseRec);
+		int64_t l = atoi(phraseRec);
 		// l = abs(l); // not using score method anymore, so this is moot.
 
 		// skip to next delimiter
@@ -2133,7 +2133,7 @@ bool Speller::getPhraseLanguages2 (char *phraseRec , long long *array) {
 }
 
 bool Speller::getSynsInEnglish ( char *w , 
-				 long wlen ,
+				 int32_t wlen ,
 				 char nativeLang ,
 				 char wikiLang ) {
 	// no digits please!
@@ -2155,7 +2155,7 @@ bool Speller::getSynsInEnglish ( char *w ,
 		// end of line?
 		if ( !*p ) return inEnglish;
 		// get language id
-		long l = atoi(p);
+		int32_t l = atoi(p);
 		// english?
 		//if ( l == langEnglish ) inEnglish = true;
 		//if ( l > langEnglish && ! inEnglish ) return false;
@@ -2188,8 +2188,8 @@ bool Speller::getSynsInEnglish ( char *w ,
 }
 
 /*
-static inline int s_findMaxVal(long long *vals, int numVals) {
-	long long max, oldmax, val;
+static inline int s_findMaxVal(int64_t *vals, int numVals) {
+	int64_t max, oldmax, val;
 	if(!vals) return(0);
 	max = oldmax = INT_MIN;
 	val = 0;
@@ -2208,7 +2208,7 @@ char Speller::getPhraseLanguage(char *phrase, int len) {
 	//char *xx=NULL;*xx=0;
 
 	char lang;
-	long long *langs = getPhraseLanguages(phrase, len);
+	int64_t *langs = getPhraseLanguages(phrase, len);
 	if(!langs) return(0);
 	lang = s_findMaxVal(langs, MAX_LANGUAGES);
 	if ( lang < 0 ) { char *xx=NULL;*xx=0; }
@@ -2226,25 +2226,25 @@ void Speller::dictLookupTest ( char *ff ){
 		    "reading: %s.", ff,strerror(errno));
 		return;
 	}
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 	char buf[1026];
-	long count = 0;
+	int32_t count = 0;
 	// go through the words
 	while ( fgets ( buf , MAX_FRAG_SIZE , fd ) ) {
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		buf[wlen-1]='\0';
-		unsigned long long h = hash64d ( buf, gbstrlen(buf));
-		long pop = g_speller.getPhrasePopularity(buf, h, true);
+		uint64_t h = hash64d ( buf, gbstrlen(buf));
+		int32_t pop = g_speller.getPhrasePopularity(buf, h, true);
 		if ( pop < 0 ){
 			char *xx = NULL; *xx = 0;
 		}
 		count++;
 	}
-	log ( LOG_WARN,"speller: dictLookupTest took %lli ms to do "
-	      "%li words. Compare against 46-66ms taken for dict/words file.",
+	log ( LOG_WARN,"speller: dictLookupTest took %"INT64" ms to do "
+	      "%"INT32" words. Compare against 46-66ms taken for dict/words file.",
 	      gettimeofdayInMilliseconds() - start, count );
 	fclose(fd);
 }

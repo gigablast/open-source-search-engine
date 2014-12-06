@@ -12,7 +12,7 @@
 typedef uint32_t FacetValHash_t;
 
 bool verifyUtf8 ( char *txt ) ;
-bool verifyUtf8 ( char *txt , long tlen ) ;
+bool verifyUtf8 ( char *txt , int32_t tlen ) ;
 
 bool print96  ( char     *k  ) ;
 bool print96  ( key_t    *kp ) ;
@@ -21,32 +21,32 @@ bool print128 ( key128_t *kp ) ;
 
 
 // print it to stdout for debugging Dates.cpp
-long printTime ( long ttt );
+int32_t printTime ( int32_t ttt );
 time_t mktime_utc ( struct tm *ttt ) ;
 
 class SafeBuf;
 // seems like this should be defined, but it isn't
-long strnlen ( const char *s , long maxLen );
+int32_t strnlen ( const char *s , int32_t maxLen );
 // this too
-char *strncasestr( char *haystack, long haylen, char *needle);
+char *strncasestr( char *haystack, int32_t haylen, char *needle);
 
 // this is also done below
-char *strnstr2( char *haystack, long haylen, char *needle);
+char *strnstr2( char *haystack, int32_t haylen, char *needle);
 
-// just like sprintf(s,"%llu",n), but we insert commas
-long ulltoa ( char *s , unsigned long long n ) ;
+// just like sprintf(s,"%"UINT64"",n), but we insert commas
+int32_t ulltoa ( char *s , uint64_t n ) ;
 
 // . convert < to &lt; and > to &gt and & to &amp;
 // . store "t" into "s"
 // . returns bytes stored into "s"
 // . NULL terminates "s"
-long saftenTags ( char *s , long slen , char *t , long tlen ) ;
+int32_t saftenTags ( char *s , int32_t slen , char *t , int32_t tlen ) ;
 
 // . basically just converts "'s to &#34;'s
 // . store "src" into "dest" and return bytes stored
 // . does not do bounds checking in "dest"
 // . used to encode things as form input variables, like query in HttpPage0.cpp
-long dequote       ( char *dest , char *dend , char *src , long srcLen ) ;
+int32_t dequote       ( char *dest , char *dend , char *src , int32_t srcLen ) ;
 
 // . entity-ize a string so it's safe for html output
 // . converts "'s to &#34;'s, &'s to &amps; <'s the &lt; and >'s to &gt;
@@ -54,32 +54,32 @@ long dequote       ( char *dest , char *dend , char *src , long srcLen ) ;
 // . does not do bounds checking on "dest"
 // . encode t into s
 char *htmlEncode ( char *s , char *send , char *t , char *tend ,
-		   bool pound = false , long niceness = 0) ;
+		   bool pound = false , int32_t niceness = 0) ;
 bool htmlEncode ( SafeBuf* s , char *t , char *tend , 
-		  bool pound = false , long niceness = 0 );
+		  bool pound = false , int32_t niceness = 0 );
 
 // . like above but src is NULL terminated
 // . returns length of string stored into "dest"
 // . decode html entities like &amp; and &gt;
-long htmlDecode    ( char *dst, char *src, long srcLen, 
+int32_t htmlDecode    ( char *dst, char *src, int32_t srcLen, 
 		     bool doSpecial ,//=false);
-		     long niceness);
+		     int32_t niceness);
 
-long cdataDecode ( char *dst , char *src , long niceness ) ;
+int32_t cdataDecode ( char *dst , char *src , int32_t niceness ) ;
 
 // . convert " to %22 , & to %26, is that it?
 // . urlEncode() stores the encoded, NULL-terminated URL in "dest"
 // . requestPath leaves \0 and ? characters intact, for encoding requests
-long urlEncode     ( char *dest , long destLen , char *src , long srcLen ,
+int32_t urlEncode     ( char *dest , int32_t destLen , char *src , int32_t srcLen ,
 		     bool  requestPath = false ) ;
 // determine the length of the encoded url, does NOT include NULL
-long urlEncodeLen  ( char *s , long slen , bool requestPath = false ) ;
+int32_t urlEncodeLen  ( char *s , int32_t slen , bool requestPath = false ) ;
 // decode a url -- decode ALL %XX's
-long urlDecode ( char *dest , char *t , long tlen ) ;
+int32_t urlDecode ( char *dest , char *t , int32_t tlen ) ;
 // . normalize the encoding
 // . like urlDecode() but only decodes chars that should not have been encoded
 // . also, will encode characters that should have been encoded
-long urlNormCode ( char *dest , long destLen , char *src , long srcLen ) ;
+int32_t urlNormCode ( char *dest , int32_t destLen , char *src , int32_t srcLen ) ;
 
 bool is_digit(unsigned char c) ;
 
@@ -88,91 +88,91 @@ bool is_hex ( char s ) ;
 bool is_urlchar(char s);
 
 // convert hex digit to value
-long htob ( char s ) ;
+int32_t htob ( char s ) ;
 char btoh ( char s ) ;
 // convert hex ascii string into binary
-void hexToBin ( char *src , long srcLen , char *dst );
+void hexToBin ( char *src , int32_t srcLen , char *dst );
 // convert binary number of size srcLen bytes into hex string in "dst"
-void binToHex ( unsigned char *src , long srcLen , char *dst );
+void binToHex ( unsigned char *src , int32_t srcLen , char *dst );
 
 // the _a suffix denotes an ascii string
-bool is_lower2_a  (char *s,long len) ;
+bool is_lower2_a  (char *s,int32_t len) ;
 bool is_lower1_a  (char *s) ;
-bool is_ascii2    (char *s,long len) ;
-bool is_alnum2_a  (char *s,long len) ;
+bool is_ascii2    (char *s,int32_t len) ;
+bool is_alnum2_a  (char *s,int32_t len) ;
 bool has_alpha_a  (char *s , char *send ) ;
 bool has_alpha_utf8(char *s, char *send ) ;
-bool is_alpha2_a  (char *s,long len) ;
-bool is_num       (char *s,long len) ;
-bool is_upper2_a  (char *s,long len) ;
-bool is_cap_a     (char *s,long len) ;
-bool is_cap_utf8  (char *s,long len) ;
+bool is_alpha2_a  (char *s,int32_t len) ;
+bool is_num       (char *s,int32_t len) ;
+bool is_upper2_a  (char *s,int32_t len) ;
+bool is_cap_a     (char *s,int32_t len) ;
+bool is_cap_utf8  (char *s,int32_t len) ;
 
 bool is_vowel_a ( char s );
-bool has_vowel_a ( char *s , long slen );
+bool has_vowel_a ( char *s , int32_t slen );
 
 // does it have at least one upper case character in it?
-bool has_upper_a  (char *s,long len) ;
-bool has_binary_a (char *s,long len) ;
-void to_lower3_a  (char *s,long len, char *buf) ;
+bool has_upper_a  (char *s,int32_t len) ;
+bool has_binary_a (char *s,int32_t len) ;
+void to_lower3_a  (char *s,int32_t len, char *buf) ;
 
 void to_lower1            (char *s) ;
-long to_lower_alnum       (char *s,long len, char *buf) ;
-long to_lower_utf8        (char *dst , char *src ) ;
-long to_lower_utf8        (char *dst , char *dstEnd, char *src ) ;
-long to_lower_utf8        (char *dst , char *dstEnd, char *src, char *srcEnd) ;
-long to_lower_utf8_32     (char *src ) ;
-long to_cap_alnum         (char *s,long len, char *buf) ;
-long to_alnum             (char *s,long len, char *buf) ;
-void to_upper3_a          (char *s,long len, char *buf) ;
-void to_cap               (char *s,long len, char *buf) ;
+int32_t to_lower_alnum       (char *s,int32_t len, char *buf) ;
+int32_t to_lower_utf8        (char *dst , char *src ) ;
+int32_t to_lower_utf8        (char *dst , char *dstEnd, char *src ) ;
+int32_t to_lower_utf8        (char *dst , char *dstEnd, char *src, char *srcEnd) ;
+int32_t to_lower_utf8_32     (char *src ) ;
+int32_t to_cap_alnum         (char *s,int32_t len, char *buf) ;
+int32_t to_alnum             (char *s,int32_t len, char *buf) ;
+void to_upper3_a          (char *s,int32_t len, char *buf) ;
+void to_cap               (char *s,int32_t len, char *buf) ;
 
 // . approximate # of non-punct words
 // . s must be NULL terminated
 // . used by LinkInfo.cpp to weight link text based on # of words
-long getNumWords ( char *s );
+int32_t getNumWords ( char *s );
 
 // true if character should be stripped from the end/beginning of the title
 // error! make a map of this
 bool is_title_junk(char c) ;
 
 // . get the # of words in this string
-long      getNumWords ( char *s , long len, long titleVersion ) ;
-long      atol2       ( const char *s, long len ) ;
-long long atoll1      ( const char *s ) ;
-long long atoll2      ( const char *s, long len ) ;
-double    atof2       ( const char *s, long len ) ;
-double    atod2       (       char *s, long len ) ;
-bool      atob        ( const char *s, long len ) ;
+int32_t      getNumWords ( char *s , int32_t len, int32_t titleVersion ) ;
+int32_t      atol2       ( const char *s, int32_t len ) ;
+int64_t atoll1      ( const char *s ) ;
+int64_t atoll2      ( const char *s, int32_t len ) ;
+double    atof2       ( const char *s, int32_t len ) ;
+double    atod2       (       char *s, int32_t len ) ;
+bool      atob        ( const char *s, int32_t len ) ;
 
 // like strstr but haystack need not be NULL terminated
-char *strncasestr ( char *haystack , char *needle , long haystackSize ) ;
+char *strncasestr ( char *haystack , char *needle , int32_t haystackSize ) ;
 char *strncasestr ( char *haystack , char *needle , 
-		    long haystackSize, long needleSize ) ;
-char *strnstr ( char *haystack , char *needle , long haystackSize ) ;
+		    int32_t haystackSize, int32_t needleSize ) ;
+char *strnstr ( char *haystack , char *needle , int32_t haystackSize ) ;
 
 // independent of case
 char *gb_strcasestr ( char *haystack , char *needle );
-char *gb_strncasestr ( char *haystack , long haystackSize , char *needle ) ;
+char *gb_strncasestr ( char *haystack , int32_t haystackSize , char *needle ) ;
 
 // updates our static var, s_adjustment to keep our clock in sync to hostId #0
-void settimeofdayInMillisecondsGlobal ( long long newTime ) ;
+void settimeofdayInMillisecondsGlobal ( int64_t newTime ) ;
 
 // convert global to local time in milliseconds
-long long globalToLocalTimeMilliseconds ( long long global ) ;
-long long localToGlobalTimeMilliseconds ( long long local  ) ;
+int64_t globalToLocalTimeMilliseconds ( int64_t global ) ;
+int64_t localToGlobalTimeMilliseconds ( int64_t local  ) ;
 // the same thing but in seconds
-long      globalToLocalTimeSeconds      ( long      global ) ;
-long      localToGlobalTimeSeconds      ( long      local  ) ;
+int32_t      globalToLocalTimeSeconds      ( int32_t      global ) ;
+int32_t      localToGlobalTimeSeconds      ( int32_t      local  ) ;
 
 // we now default this to local time to avoid jumpiness associated with
 // having to sync with host #0. most routines calling this usually are just
 // taking deltas. 
-long long gettimeofdayInMillisecondsGlobal() ; // synced with host #0
-long long gettimeofdayInMillisecondsGlobalNoCore() ; // synced with host #0
-long long gettimeofdayInMillisecondsSynced() ; // synced with host #0
-long long gettimeofdayInMillisecondsLocal () ;// this is local now
-long long gettimeofdayInMilliseconds() ;// this is local now
+int64_t gettimeofdayInMillisecondsGlobal() ; // synced with host #0
+int64_t gettimeofdayInMillisecondsGlobalNoCore() ; // synced with host #0
+int64_t gettimeofdayInMillisecondsSynced() ; // synced with host #0
+int64_t gettimeofdayInMillisecondsLocal () ;// this is local now
+int64_t gettimeofdayInMilliseconds() ;// this is local now
 uint64_t gettimeofdayInMicroseconds(void) ;
 
 // . get time in seconds since epoch
@@ -183,7 +183,7 @@ time_t getTimeGlobal (); // synced with host #0's system clock
 time_t getTimeGlobalNoCore (); // synced with host #0's system clock
 time_t getTimeSynced (); // synced with host #0's system clock
 
-long stripHtml( char *content, long contentLen, long version, long strip );
+int32_t stripHtml( char *content, int32_t contentLen, int32_t version, int32_t strip );
 
 extern const char g_map_is_vowel[];
 extern const unsigned char g_map_to_lower[];
@@ -209,7 +209,7 @@ extern const char g_map_is_tagname_char[];
 extern const char g_map_is_tag_control_char[];
 
 //extern bool      g_clockInSync;
-extern long long g_adjustment;
+extern int64_t g_adjustment;
 
 bool isClockInSync();
 
@@ -245,7 +245,7 @@ bool saveTimeAdjustment ( ) ;
 
 inline bool is_upper_utf8 ( char *s );
 
-inline bool has_vowel_a ( char *s , long slen ) {
+inline bool has_vowel_a ( char *s , int32_t slen ) {
 	char *send = s + slen;
 	for ( ; s < send ; s++ )
 		if ( is_vowel_a(*s) ) return true;
@@ -263,7 +263,7 @@ inline bool is_hex ( char s ) {
 */
 
 // convert hex digit to value
-inline long htob ( char s ) {
+inline int32_t htob ( char s ) {
 	if ( is_digit(s) ) return s - '0';
 	if ( s >= 'a'  && s <= 'f' ) return (s - 'a') + 10;
 	if ( s >= 'A'  && s <= 'F' ) return (s - 'A') + 10;
@@ -277,8 +277,8 @@ inline char btoh ( char s ) {
 }
 
 // have to put an extra "s" on function name to avoid macro conflict
-inline bool is_lower_as(char *s,long len) {
-	for (long i=0;i<len;i++)
+inline bool is_lower_as(char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++)
 		if (!is_lower_a(s[i]))
 			return false;
 	return true;
@@ -286,57 +286,57 @@ inline bool is_lower_as(char *s,long len) {
 
 // have to put an extra "s" on function name to avoid macro conflict
 inline bool is_lower_as(char *s) {
-	for (long i=0;s[i];i++)
+	for (int32_t i=0;s[i];i++)
 		if (!is_lower_a(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_ascii2_a(char *s,long len) {
-	for (long i=0;i<len;i++)
+inline bool is_ascii2_a(char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++)
 		if (!is_ascii(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_alnum2_a(char *s,long len) {
-	for (long i=0;i<len;i++)
+inline bool is_alnum2_a(char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++)
 		if (!is_alnum_a(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_alpha2_a(char *s,long len) {
-	for (long i=0;i<len;i++)
+inline bool is_alpha2_a(char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++)
 		if (!is_alpha_a(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_num(char *s,long len) {
-	for (long i=0;i<len;i++)
+inline bool is_num(char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++)
 		if (!is_digit(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_upper2_a (char *s,long len) {
-	for (long i=0;i<len;i++)
+inline bool is_upper2_a (char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++)
 		if (!is_upper_a(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_cap_a (char *s,long len) {
+inline bool is_cap_a (char *s,int32_t len) {
 	if (!is_upper_a(s[0]))
 		return false;
-	for (long i=1;i<len;i++)
+	for (int32_t i=1;i<len;i++)
 		if (!is_lower_a(s[i]))
 			return false;
 	return true;
 }
 
-inline bool is_cap_utf8 (char *s,long len) {
+inline bool is_cap_utf8 (char *s,int32_t len) {
 	if ( ! is_upper_utf8 ( s ) ) return false;
 	char *send = s + len;
 	for ( ; s < send ; s += getUtf8CharSize ( s ) ) 
@@ -345,64 +345,64 @@ inline bool is_cap_utf8 (char *s,long len) {
 }
 
 // does it have at least one upper case character in it?
-inline bool has_upper_a (char *s,long len) {
-		for (long i=0;i<len;i++) 
+inline bool has_upper_a (char *s,int32_t len) {
+		for (int32_t i=0;i<len;i++) 
 			if ( is_upper_a(s[i])) 
 				return true;
 	return false;
 }
 
 // does it have at least one binary character in it?
-inline bool has_binary_a (char *s,long len) {
-	for (long i=0;i<len;i++) 
+inline bool has_binary_a (char *s,int32_t len) {
+	for (int32_t i=0;i<len;i++) 
 		if ( is_binary_a(s[i])) 
 			return true;
 	return false;
 }
 
-inline void to_lower3_a(char *s,long len, char *buf) {
-	for (long i=0;i<len ;i++)
+inline void to_lower3_a(char *s,int32_t len, char *buf) {
+	for (int32_t i=0;i<len ;i++)
 		buf[i]=to_lower_a((unsigned char)s[i]);
 }
 
 inline void to_lower1_a(char *s) {
-	for (long i=0;s[i] ;i++)
+	for (int32_t i=0;s[i] ;i++)
 		s[i]=to_lower_a((unsigned char)s[i]);
 }
 
-inline long to_lower_alnum_a(char *s,long len, char *buf) {
-	long j=0;
-	for (long i=0;i<len ;i++)
+inline int32_t to_lower_alnum_a(char *s,int32_t len, char *buf) {
+	int32_t j=0;
+	for (int32_t i=0;i<len ;i++)
 		if (is_alnum_a(s[i]))
 			buf[j++]=to_lower_a((unsigned char)s[i]);
 	return j;
 }
 
-inline long to_cap_alnum_a(char *s,long len, char *buf) {
+inline int32_t to_cap_alnum_a(char *s,int32_t len, char *buf) {
 	buf[0] = to_upper_a(s[0]);
-	long j=1;
-	for (long i=1;i<len ;i++)
+	int32_t j=1;
+	for (int32_t i=1;i<len ;i++)
 		if (is_alnum_a(s[i]))
 			buf[j++]=to_lower_a((unsigned char)s[i]);
 	return j;
 }
 
-inline long to_alnum_a(char *s,long len, char *buf) {
-	long j=0;
-	for (long i=0;i<len ;i++)
+inline int32_t to_alnum_a(char *s,int32_t len, char *buf) {
+	int32_t j=0;
+	for (int32_t i=0;i<len ;i++)
 		if (is_alnum_a(s[i]))
 			buf[j++]=s[i];
 	return j;
 }
 
-inline void to_upper3_a(char *s,long len, char *buf) {
-	for (long i=0;i<len;i++)
+inline void to_upper3_a(char *s,int32_t len, char *buf) {
+	for (int32_t i=0;i<len;i++)
 		buf[i]=to_upper_a(s[i]);
 }
 
-inline void to_cap_a(char *s,long len, char *buf) {
+inline void to_cap_a(char *s,int32_t len, char *buf) {
 	buf[0]=to_upper_a(s[0]);
-	for (long i=1;i<len;i++)
+	for (int32_t i=1;i<len;i++)
 		buf[i]=to_lower_a(s[i]);
 }
 
@@ -488,7 +488,7 @@ inline bool is_wspace_utf8 ( char *src ) {
 // . returns bytes stored into "dst" from "src"
 // . just do one character, which may be from 1 to 4 bytes
 // . TODO: make a native utf8 to_lower to avoid converting to a code point
-inline long to_lower_utf8 ( char *dst , char *src ) {
+inline int32_t to_lower_utf8 ( char *dst , char *src ) {
 	// if in ascii do it quickly
 	if ( is_ascii3(*src) ) { *dst = to_lower_a ( *src ); return 1; }
 	// convert to a code point
@@ -499,10 +499,10 @@ inline long to_lower_utf8 ( char *dst , char *src ) {
 	return utf8Encode ( y , dst );
 }
 
-// store answer in the long and return that!
-inline long to_lower_utf8_32 ( char *src ) {
+// store answer in the int32_t and return that!
+inline int32_t to_lower_utf8_32 ( char *src ) {
 	// if in ascii do it quickly
-	if ( is_ascii3(*src) ) return (long) to_lower_a ( *src );
+	if ( is_ascii3(*src) ) return (int32_t) to_lower_a ( *src );
 	// convert to a code point
 	UChar32 x = utf8Decode(src);
 	// covert to lower
@@ -511,7 +511,7 @@ inline long to_lower_utf8_32 ( char *src ) {
 	return y;
 }
 
-inline long to_upper_utf8 ( char *dst , char *src ) {
+inline int32_t to_upper_utf8 ( char *dst , char *src ) {
 	// if in ascii do it quickly
 	if ( is_ascii3(*src) ) { *dst = to_upper_a ( *src ); return 1; }
 	// convert to a code point
@@ -522,7 +522,7 @@ inline long to_upper_utf8 ( char *dst , char *src ) {
 	return utf8Encode ( y , dst );
 }
 
-inline long to_lower_utf8 (char *dst, char *dstEnd, char *src, char *srcEnd ){
+inline int32_t to_lower_utf8 (char *dst, char *dstEnd, char *src, char *srcEnd ){
 	char *dstart = dst;
 	for ( ; src < srcEnd ; src += getUtf8CharSize((uint8_t *)src) )
 		dst += to_lower_utf8 ( dst , src );
@@ -530,7 +530,7 @@ inline long to_lower_utf8 (char *dst, char *dstEnd, char *src, char *srcEnd ){
 	return dst - dstart;
 }
 
-inline long to_lower_utf8 (char *dst, char *dstEnd, char *src ){
+inline int32_t to_lower_utf8 (char *dst, char *dstEnd, char *src ){
 	char *dstart = dst;
 	for ( ; *src ; src += getUtf8CharSize((uint8_t *)src) )
 		dst += to_lower_utf8 ( dst , src );
@@ -538,22 +538,22 @@ inline long to_lower_utf8 (char *dst, char *dstEnd, char *src ){
 	return dst - dstart;
 }
 
-void getCalendarFromMs(long long ms, 
-		       long* days, 
-		       long* hours, 
-		       long* minutes, 
-		       long* secs,
-		       long* msecs);
+void getCalendarFromMs(int64_t ms, 
+		       int32_t* days, 
+		       int32_t* hours, 
+		       int32_t* minutes, 
+		       int32_t* secs,
+		       int32_t* msecs);
 
 //inline 
-//long u16UrlEncode(char *d, long dlen, char *s, long slen, 
+//int32_t u16UrlEncode(char *d, int32_t dlen, char *s, int32_t slen, 
 //		  bool requestPath = false){
 //	char u8Buf[2048];
-//	long u8Len = utf16ToUtf8(u8Buf, 2048, s, slen);
+//	int32_t u8Len = utf16ToUtf8(u8Buf, 2048, s, slen);
 //	return urlEncode(d, dlen, u8Buf, u8Len, requestPath);
 //}
 
-unsigned long calculateChecksum(char *buf, long bufLen);
+uint32_t calculateChecksum(char *buf, int32_t bufLen);
 char* getNextNum(char* input, char** numPtr);
 
 // use ucIsAlnum instead...
@@ -566,7 +566,7 @@ inline bool ucIsWordChar(UChar32 c) {
 }
 
 // don't allow "> in our input boxes
-long cleanInput(char *outbuf, long outbufSize, char *inbuf, long inbufLen);
+int32_t cleanInput(char *outbuf, int32_t outbufSize, char *inbuf, int32_t inbufLen);
 
 // not in math.h?
 inline double round(double x) {
@@ -575,12 +575,12 @@ inline double round(double x) {
 
 // like strcpy but return the length and always null terminates
 // dst should be of size maxDstLen + 1
-inline long setstr ( char *dst,
-                     long  maxDstLen,
+inline int32_t setstr ( char *dst,
+                     int32_t  maxDstLen,
                      char *src,
-                     long  srcLen ) {
+                     int32_t  srcLen ) {
         // get the proper length
-        long dstLen = srcLen;
+        int32_t dstLen = srcLen;
         if ( srcLen > maxDstLen ) dstLen = maxDstLen;
         // copy the string
         memcpy ( dst, src, dstLen );
@@ -594,24 +594,24 @@ inline long setstr ( char *dst,
 // these three functions replace the Msg.cpp/.h class
 //
 // actually "lastParm" point to the thing right after the lastParm
-long getMsgStoredSize ( long baseSize, 
-			long *firstSizeParm, 
-			long *lastSizeParm ) ;
+int32_t getMsgStoredSize ( int32_t baseSize, 
+			int32_t *firstSizeParm, 
+			int32_t *lastSizeParm ) ;
 // . return ptr to the buffer we serialize into
 // . return NULL and set g_errno on error
-char *serializeMsg ( long  baseSize ,
-		     long *firstSizeParm ,
-		     long *lastSizeParm ,
+char *serializeMsg ( int32_t  baseSize ,
+		     int32_t *firstSizeParm ,
+		     int32_t *lastSizeParm ,
 		     char **firstStrPtr ,
 		     void *thisPtr     ,
-		     long *retSize     ,
+		     int32_t *retSize     ,
 		     char *userBuf     ,
-		     long  userBufSize ,
+		     int32_t  userBufSize ,
 		     bool  makePtrsRefNewBuf ) ;
 // convert offsets back into ptrs
-long deserializeMsg ( long  baseSize ,
-		      long *firstSizeParm ,
-		      long *lastSizeParm ,
+int32_t deserializeMsg ( int32_t  baseSize ,
+		      int32_t *firstSizeParm ,
+		      int32_t *lastSizeParm ,
 		      char **firstStrPtr ,
 		      char *stringBuf ) ;
 

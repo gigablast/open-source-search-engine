@@ -20,17 +20,17 @@ class Pops {
 	// . set m_pops to the popularity of each word in "words"
 	// . m_pops[] is 1-1 with the words in "words"
 	// . must have computed the word ids (words->m_wordIds must be valid)
-	bool set ( class Words *words, long a, long b );
+	bool set ( class Words *words, int32_t a, int32_t b );
 
 	// from 1 (min) to 1000 (max popularity)
-	long *getPops ( ) { return m_pops; };
+	int32_t *getPops ( ) { return m_pops; };
 
 	// from 0.0 to 1.0
-	float getNormalizedPop ( long i ) { 
+	float getNormalizedPop ( int32_t i ) { 
 		return (float)m_pops[i]/(float)MAX_POP; };
 
-	long *m_pops;
-	long  m_popsSize; // in bytes
+	int32_t *m_pops;
+	int32_t  m_popsSize; // in bytes
 	char  m_localBuf [ POPS_BUF_SIZE ];
 };
 

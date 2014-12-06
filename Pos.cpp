@@ -20,9 +20,9 @@ void Pos::reset() {
 
 // . the interval is half-open [a,b)
 // . do not print out any alnum word with negative score
-long Pos::filter( char *p, char *pend, class Words *words, long a, 
-		  long b, Sections *sections ) {
-	long plen = 0;
+int32_t Pos::filter( char *p, char *pend, class Words *words, int32_t a, 
+		  int32_t b, Sections *sections ) {
+	int32_t plen = 0;
 	set ( words , sections , p , pend, &plen , a , b );
 	return plen;
 }
@@ -37,21 +37,21 @@ bool Pos::set ( Words  *words  ,
 		Sections *sections ,
 		char   *f   ,
 		char   *fend,
-		long   *len ,
-		long    a   , 
-		long    b   ,
+		int32_t   *len ,
+		int32_t    a   , 
+		int32_t    b   ,
 		char   *buf ,
-		long    bufSize ) {
+		int32_t    bufSize ) {
 
 	// free m_buf in case this is a second call
 	if ( ! f ) reset();
 
-	long        nw    = words->getNumWords();
-	long       *wlens = words->m_wordLens;
+	int32_t        nw    = words->getNumWords();
+	int32_t       *wlens = words->m_wordLens;
 	nodeid_t   *tids  = words->getTagIds(); // m_tagIds;
 	char      **wp    = words->m_words;
-	//long       *ss    = NULL;
-	//long long  *wids  = words->m_wordIds;
+	//int32_t       *ss    = NULL;
+	//int64_t  *wids  = words->m_wordIds;
 	//if ( scores ) ss  = scores->m_scores;
 
 	// save start point for filtering
@@ -61,7 +61,7 @@ bool Pos::set ( Words  *words  ,
 	if ( b == -1 ) b = nw;
 
 	// alloc array if need to
-	long need = (nw+1) * 4;
+	int32_t need = (nw+1) * 4;
 
 	// do not destroy m_pos/m_numWords if only filtering into a buffer
 	if ( f ) goto skip;
@@ -78,33 +78,33 @@ bool Pos::set ( Words  *words  ,
 	// bail on error
 	if ( ! m_buf ) return false;
 	m_bufSize = need;
-	m_pos      = (long *)m_buf;
+	m_pos      = (int32_t *)m_buf;
 	m_numWords = nw;
 
  skip:
 	// this is the CHARACTER count. 
-	long pos = 0;
+	int32_t pos = 0;
 	bool trunc = false;
 	char *p , *pend;
 	//char *nextp;
-	//long  skip;
+	//int32_t  skip;
 
 	char* lastBreak = NULL;
 	// utf8 char
-	//long c;
+	//int32_t c;
 	// its size in bytes
 	//char cs;
 
-	// shortcut
+	// int16_tcut
 	//Section **sp = NULL;
 	//if ( sections ) sp = sections->m_sectionPtrs;
 
-	//long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_MARQUEE;
+	//int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_MARQUEE;
 
 	// flag for stopping back-to-back spaces. only count those as one char.
 	bool lastSpace = false;
- 	long maxCharSize = 4; // we are utf8 
-	for ( long i = a ; i < b ; i++ ) {
+ 	int32_t maxCharSize = 4; // we are utf8 
+	for ( int32_t i = a ; i < b ; i++ ) {
 		if (trunc) break;
 		// set pos for the ith word to "pos"
 		if ( ! f ) m_pos[i] = pos;

@@ -33,7 +33,7 @@ class Catdb  {
 	// . TODO: specialized cache because to store pre-parsed tagdb recs
 	// . TODO: have m_useSeals parameter???
 	bool init  ( );
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 	
 	bool verify ( char *coll );
 
@@ -49,23 +49,23 @@ class Catdb  {
 	void listSearch ( RdbList *list,
 			  key_t    exactKey,
 			  char   **data,
-			  long    *dataSize );
+			  int32_t    *dataSize );
 
 
 	// . get the serialized SiteRec from an RdbList of SiteRecs
 	//   that is the best match for "url"
-	char *getRec ( RdbList *list , Url *url , long *recSize ,char* coll, 
-		       long collLen ) ;
+	char *getRec ( RdbList *list , Url *url , int32_t *recSize ,char* coll, 
+		       int32_t collLen ) ;
 
 	// . find the indirect matches in the list which match a sub path
 	//   of the url
-	long  getIndirectMatches ( RdbList  *list ,
+	int32_t  getIndirectMatches ( RdbList  *list ,
 				   Url      *url ,
 				   char    **matchRecs ,
-				   long     *matchRecSizes ,
-				   long      maxMatches,
+				   int32_t     *matchRecSizes ,
+				   int32_t      maxMatches,
 				   char     *coll,
-				   long      collLen );
+				   int32_t      collLen );
 
 	// . get the keys of all the possible site records for this url
 	// . see below for the search order of the sub-urls
@@ -79,7 +79,7 @@ class Catdb  {
 	// normalize a url, no www.
 	void normalizeUrl ( Url *srcUrl, Url *dstUrl );
 
-	//long getGroupId ( key_t *key ) {
+	//int32_t getGroupId ( key_t *key ) {
 	//	return key->n1 & g_hostdb.m_groupMask;
 	//}
 
@@ -87,7 +87,7 @@ class Catdb  {
 	// for doing binary search on the list
 	char *moveToCorrectKey ( char *listPtr,
 				 RdbList *list,
-				 unsigned long domainHash );
+				 uint32_t domainHash );
 
 	// . we use the cache in here also for caching tagdb records
 	//   and "not-founds" stored remotely (net cache)

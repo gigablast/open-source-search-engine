@@ -19,11 +19,11 @@ char  g_name[64];
 
 char *g_hosts[5000];
 char *g_ips  [5000];
-long  g_numHosts = 0;
+int32_t  g_numHosts = 0;
 
 void setHosts () ;
 void add      ( char *s );
-void add      ( char *prefix , long num );
+void add      ( char *prefix , int32_t num );
 
 void setS99Local             ();
 void setEtcHosts             ();
@@ -205,7 +205,7 @@ void setKnownHosts () {
 		return;
 	}
 	// generate known_hosts
-	for ( long i = 0 ; i < g_numHosts ; i++ ) 
+	for ( int32_t i = 0 ; i < g_numHosts ; i++ ) 
 		fprintf(fd,"%s,%s ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA8BS6BJTV3Ial3aiX0aMp3fCA"
 			"e+cW23fk7E4lmrPJqcR0bYZR9yyvM3B0MdI2UWxo+NQ102gXprStZfvgKff0yZpdl0+hNfnseJiOE4OA"
 			"BvwMKI8PIHKC35Oru+9DE2ITyEgUrriTig51JT9KCfHk6LaqLM83+yr8+Mr63LDSEI0=\n" ,
@@ -272,7 +272,7 @@ void setKnownHosts () {
 		return;
 	}
 	// generate known_hosts
-	for ( long i = 0 ; i < g_numHosts ; i++ ) 
+	for ( int32_t i = 0 ; i < g_numHosts ; i++ ) 
 		fprintf(fd,"%s,%s ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA8BS6BJTV3Ial3aiX0aMp3fCA"
 			"e+cW23fk7E4lmrPJqcR0bYZR9yyvM3B0MdI2UWxo+NQ102gXprStZfvgKff0yZpdl0+hNfnseJiOE4OA"
 			"BvwMKI8PIHKC35Oru+9DE2ITyEgUrriTig51JT9KCfHk6LaqLM83+yr8+Mr63LDSEI0=\n" ,
@@ -297,7 +297,7 @@ void setKnownHosts () {
 	}
 	// . print each hostname into "ALL"
 	// . they include titan, etc. too!
-	for ( long i = 0 ; i < g_numHosts ; i++ ) {
+	for ( int32_t i = 0 ; i < g_numHosts ; i++ ) {
 		// skip if internal
 		if ( strstr(g_hosts[i],"i") ) continue;
 		if ( ! getIp(g_hosts[i]) ) continue;
@@ -563,27 +563,27 @@ void setHosts () {
 	add("10.5.1.24 galileo\n");
 
 	// g
-	for ( long i = 0 ; i <= 18 ; i++ )
+	for ( int32_t i = 0 ; i <= 18 ; i++ )
 		add("g",i);
 
 	// gb
-	for ( long i = 0 ; i <= 17 ; i++ ) 
+	for ( int32_t i = 0 ; i <= 17 ; i++ ) 
 		add("gb",i);
 	
 	// gf
-	for ( long i = 0 ; i <= 49 ; i++ ) 
+	for ( int32_t i = 0 ; i <= 49 ; i++ ) 
 		add("gf",i);
 	
 	// gk
-	for ( long i = 0 ; i <= 271 ; i++ )
+	for ( int32_t i = 0 ; i <= 271 ; i++ )
 		add("gk",i);
 	
 	// ss
-	for ( long i = 0 ; i <= 147 ; i++ )
+	for ( int32_t i = 0 ; i <= 147 ; i++ )
 		add("ss",i);
 	
 	// sp
-	for ( long i = 0 ; i <= 13 ; i++ ) 
+	for ( int32_t i = 0 ; i <= 13 ; i++ ) 
 		add("sp",i);
 
 }
@@ -621,21 +621,21 @@ void add ( char *s ) {
 }
 
 // add as a partial
-void add ( char *prefix , long num ) {
+void add ( char *prefix , int32_t num ) {
 
 	// make the hostname
 	char buf[64];
-	sprintf ( buf , "%s%li" , prefix , num );
+	sprintf ( buf , "%s%"INT32"" , prefix , num );
 	// get ip
 	char *ips = getIp ( buf ) ;
 	// make another buf
 	char buf2[128];
 	// store that
-	sprintf ( buf2 , "10.5.%s %s%li" , ips , prefix , num );
+	sprintf ( buf2 , "10.5.%s %s%"INT32"" , ips , prefix , num );
 	// add it
 	add ( buf2 );
 	// store the eth1 too
-	sprintf ( buf2 , "10.6.%s %si%li" , ips , prefix , num );
+	sprintf ( buf2 , "10.6.%s %si%"INT32"" , ips , prefix , num );
 	// add it
 	add ( buf2 );
 }	
@@ -692,7 +692,7 @@ void setEtcHosts () {
 	//
 
 	// just loop over hosts now
-	for ( long i = 0; i < g_numHosts ; i++ )
+	for ( int32_t i = 0; i < g_numHosts ; i++ )
 		fprintf(fd,"%s %s\n",g_ips[i],g_hosts[i]);
 
 	fclose(fd);
@@ -770,7 +770,7 @@ char *getIp ( char *name ) {
 		return NULL;
 	}
 	// convert to num
-	long num = atoi(p);
+	int32_t num = atoi(p);
 	// eth0 is always 10.5.*.*
 	// ss         = 10.5.50.*
 	// g/gb/gf/sp = 10.5.52.*
@@ -779,7 +779,7 @@ char *getIp ( char *name ) {
 
 	// eth1 is the same, but 10.6.*.*
 
-	long big = -1;
+	int32_t big = -1;
 	if ( name[0] =='s' && name[1] == 's' )
 		big = 50;
 	if ( name[0] =='g' && name[1] == 'k' && num <= 199 )
@@ -807,6 +807,6 @@ char *getIp ( char *name ) {
 		exit(-1);
 	}
 	static char s_buf[200];
-	sprintf ( s_buf ,"%li.%li",big,10+num);
+	sprintf ( s_buf ,"%"INT32".%"INT32"",big,10+num);
 	return s_buf;
 }

@@ -20,7 +20,7 @@
 // that needs to be done
 class ClientWait {
  public:
-	long  m_timestamp;
+	int32_t  m_timestamp;
 	char  m_priority;
 	char  m_buf[12];
 	bool  m_isEmpty;
@@ -32,12 +32,12 @@ class ClientWait {
 // . these should be one-to-one with all the ClientWaits in a group
 class ServerWait {
  public:
-	long  m_timestamp ;
+	int32_t  m_timestamp ;
 	char  m_priority  ;
 	char  m_buf[12];
 	bool  m_isEmpty;
-	long  m_hostId;
-	long  m_clientSlot;
+	int32_t  m_hostId;
+	int32_t  m_clientSlot;
 };
 
 class Msg35 {
@@ -56,15 +56,15 @@ class Msg35 {
 		       char priority);
 
 
-	bool callCallback ( long n );
+	bool callCallback ( int32_t n );
 	void gotReply ( UdpSlot *slot ) ;
 	Host *getTokenManager ( ) ;
-	Host **getTokenGroup( long *numHosts ) ;
+	Host **getTokenGroup( int32_t *numHosts ) ;
 	void releaseToken ( ) ;
 	void gotReleaseTokenReply ( ) ;
-	void removeServerWait ( long i ) ;
-	long addServerWait ( long hostId , char priority , char clientNum ,
-			     long timestamp ) ;
+	void removeServerWait ( int32_t i ) ;
+	int32_t addServerWait ( int32_t hostId , char priority , char clientNum ,
+			     int32_t timestamp ) ;
 	void handleRequest ( UdpSlot *slot );
 	void giveToken ( ) ;
 	void sync ( ) ;
@@ -86,7 +86,7 @@ class Msg35 {
 	//   have to keep asking for his load. that will save us a bit of time
 	//   since then we'll probably only have one host left in the group
 	//   so we don't even have to make any decision.
-	//bool getLoad ( unsigned long groupId ,
+	//bool getLoad ( uint32_t groupId ,
 	//               void *state, (*callback )(void *state ));
 
 	// private:
@@ -94,24 +94,24 @@ class Msg35 {
 	// . this Msg35 class should be declared static (only one instance)
 	// . m_callbacks[m_tokeni] is the callback we called to give the token
 	// . use -1 for none
-	long m_clientTokeni;
+	int32_t m_clientTokeni;
 
 	// we may try to get the token multiple times for multiple writes so 
 	// we need to remember the callbacks and states to call when we
 	// do get the token
 	ClientWait m_clientWaits[64];
-	long  m_topUsedClient;
+	int32_t  m_topUsedClient;
 	char  m_syncBuf [ 1 + 4 + 4 + 64*(4+1+1) ];
 
 	// . the managing host needs to store requests in a queue
 	// . satisfy higher priority requests (dumps) before lower (merges)
 	ServerWait m_serverWaits[512];
-	long  m_topUsedServer;
+	int32_t  m_topUsedServer;
 
 	// . the managing host needs to know who currently has the token
 	// . use -1 if nobody has it
 	// . if that host goes down then pass token to someone else
-	long m_serverTokeni;
+	int32_t m_serverTokeni;
 
 	// who in our group has sent us a SYNC
 	bool m_flags [ 16 ];
@@ -123,7 +123,7 @@ class Msg35 {
 	// SYNC says he STILL does not have it then we believe him and 
 	// unassign the token. m_discrepancyHid is the hostId of the host
 	// claiming the discrepancy.
-	long m_discrepancyHid;
+	int32_t m_discrepancyHid;
 };
 
 extern class Msg35 g_msg35;

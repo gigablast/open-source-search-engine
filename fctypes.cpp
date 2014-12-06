@@ -18,23 +18,23 @@ bool isClockInSync() {
 
 bool print96 ( char *k ) {
         key_t *kp = (key_t *)k;
-        printf("n1=0x%lx n0=0x%llx\n",(long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%"XINT32" n0=0x%"XINT64"\n",(int32_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
 bool print96 ( key_t *kp ) {
-        printf("n1=0x%lx n0=0x%llx\n",(long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%"XINT32" n0=0x%"XINT64"\n",(int32_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
 bool print128 ( char *k ) {
         key128_t *kp = (key128_t *)k;
-        printf("n1=0x%llx n0=0x%llx\n",(long long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%"XINT64" n0=0x%"XINT64"\n",(int64_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
 bool print128 ( key128_t *kp ) {
-        printf("n1=0x%llx n0=0x%llx\n",(long long)kp->n1,(long long)kp->n0);
+        printf("n1=0x%"XINT64" n0=0x%"XINT64"\n",(int64_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
@@ -855,16 +855,16 @@ const char g_map_is_vowel[] = {
 */
 
 // seems like this should be defined, but it isn't
-long strnlen ( const char *s , long maxLen ) {
-	long i ;
+int32_t strnlen ( const char *s , int32_t maxLen ) {
+	int32_t i ;
 	for ( i = 0 ; i < maxLen ; i++ ) if ( ! s[i] ) return i;
 	return i;
 }
 
-char *strncasestr( char *haystack, long haylen, char *needle){
-	long matchLen = 0;
-	long needleLen = gbstrlen(needle);
-	for (long i = 0; i < haylen;i++){
+char *strncasestr( char *haystack, int32_t haylen, char *needle){
+	int32_t matchLen = 0;
+	int32_t needleLen = gbstrlen(needle);
+	for (int32_t i = 0; i < haylen;i++){
 		char c1 = to_lower_a(haystack[i]);
 		char c2 = to_lower_a(needle[matchLen]);
 		if ( c1 != c2 ){
@@ -882,10 +882,10 @@ char *strncasestr( char *haystack, long haylen, char *needle){
 	return NULL;
 }
 
-char *strnstr2( char *haystack, long haylen, char *needle){
-	long matchLen = 0;
-	long needleLen = gbstrlen(needle);
-	for (long i = 0; i < haylen;i++){
+char *strnstr2( char *haystack, int32_t haylen, char *needle){
+	int32_t matchLen = 0;
+	int32_t needleLen = gbstrlen(needle);
+	for (int32_t i = 0; i < haylen;i++){
 		char c1 = (haystack[i]);
 		char c2 = (needle[matchLen]);
 		if ( c1 != c2 ){
@@ -904,11 +904,11 @@ char *strnstr2( char *haystack, long haylen, char *needle){
 }
 
 // . get the # of words in this string
-long getNumWords ( char *s , long len, long titleVersion ) {
+int32_t getNumWords ( char *s , int32_t len, int32_t titleVersion ) {
 
-	long wordCount = 0;
+	int32_t wordCount = 0;
 	bool inWord   = false;
-	for ( long i = 0 ; i < len ; i++ ) {
+	for ( int32_t i = 0 ; i < len ; i++ ) {
 		if ( ! is_alnum_a ( s[i] ) && s[i]!='\'' ) {
 			inWord = false;
 			continue;
@@ -924,16 +924,16 @@ long getNumWords ( char *s , long len, long titleVersion ) {
 // . this stores a "n" into "s" and returns the # of bytes written into "s"
 // . it also puts commas into the number
 // . it now also NULL terminates bytes written into "s"
-long ulltoa ( char *s , unsigned long long n ) {
+int32_t ulltoa ( char *s , uint64_t n ) {
 	// if n is zero, it's easy
 	if ( n == 0LL ) { *s++='0'; *s='\0'; return 1; }
 	// a hunk is a number in [0,999]
-	long hunks[10]; 
-	long lastHunk = -1;
+	int32_t hunks[10]; 
+	int32_t lastHunk = -1;
 	// . get the hunks
 	// . the first hunk we get is called the "lowest hunk"
 	// . "lastHunk" is called the "highest hunk"
-	for ( long i = 0 ; i < 10 ; i++ ) {
+	for ( int32_t i = 0 ; i < 10 ; i++ ) {
 		hunks[i] = n % 1000;
 		n /= 1000;
 		if ( hunks[i] != 0 ) lastHunk = i;
@@ -941,10 +941,10 @@ long ulltoa ( char *s , unsigned long long n ) {
 	// remember start of buf for calculating # bytes written
 	char *start = s;
 	// print the hunks separated by comma
-	for ( long i = lastHunk ; i >= 0 ; i-- ) {
+	for ( int32_t i = lastHunk ; i >= 0 ; i-- ) {
 		// pad all hunks except highest hunk with zeroes
-		if ( i != lastHunk ) sprintf ( s , "%03li" , hunks[i] );
-		else                 sprintf ( s , "%li" , hunks[i] );
+		if ( i != lastHunk ) sprintf ( s , "%03"INT32"" , hunks[i] );
+		else                 sprintf ( s , "%"INT32"" , hunks[i] );
 		s += gbstrlen(s);
 		// comma after all hunks but lowest hunk
 		if ( i != 0 ) *s++ = ',';
@@ -956,7 +956,7 @@ long ulltoa ( char *s , unsigned long long n ) {
 }
 
 /*
-long atol2 ( const char *s, long len ) {
+int32_t atol2 ( const char *s, int32_t len ) {
 	char tmp[32];
 	if ( len > 30 ) len = 30;
 	memcpy ( tmp , s , len );
@@ -965,14 +965,14 @@ long atol2 ( const char *s, long len ) {
 }
 */
 
-long atol2 ( const char *s, long len ) {
+int32_t atol2 ( const char *s, int32_t len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) s++;
 	// return 0 if all spaces
 	if ( s == end ) return 0;
-	long i   = 0;
-	long val = 0;
+	int32_t i   = 0;
+	int32_t val = 0;
 	bool negative = false;
 	if ( s[0] == '-' ) { negative = true; i++; }
 	while ( i < len && is_digit(s[i]) ) val = val * 10 + ( s[i++] - '0' );
@@ -980,18 +980,18 @@ long atol2 ( const char *s, long len ) {
 	return val;
 }
 
-long long atoll1 ( const char *s ) {
+int64_t atoll1 ( const char *s ) {
 	return atoll ( s );
 }
 
-long long atoll2 ( const char *s, long len ) {
+int64_t atoll2 ( const char *s, int32_t len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) s++;
 	// return 0 if all spaces
 	if ( s == end ) return 0;
-	long i   = 0;
-	long long val = 0LL;
+	int32_t i   = 0;
+	int64_t val = 0LL;
 	bool negative = false;
 	if ( s[0] == '-' ) { negative = true; i++; }
 	while ( i < len && is_digit(s[i]) ) val = val * 10LL + ( s[i++] - '0');
@@ -999,7 +999,7 @@ long long atoll2 ( const char *s, long len ) {
 	return val;
 }
 
-double atof2 ( const char *s, long len ) {
+double atof2 ( const char *s, int32_t len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) { s++; len--; }
@@ -1025,7 +1025,7 @@ double atof2 ( const char *s, long len ) {
 	return atof ( tmpBuf );
 }
 
-double atod2 ( char *s, long len ) {
+double atod2 ( char *s, int32_t len ) {
 	// point to end
 	char *end = s + len;
 	// null term temp
@@ -1039,7 +1039,7 @@ double atod2 ( char *s, long len ) {
 }
 
 
-bool atob ( const char *s, long len ) {
+bool atob ( const char *s, int32_t len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) s++;
@@ -1053,21 +1053,21 @@ bool atob ( const char *s, long len ) {
 }
 
 // hexadecimal ascii to key_t
-long long htolonglong ( const char *s, long len ) {
+int64_t htoint32_tint32_t ( const char *s, int32_t len ) {
 	// skip over spaces
 	const char *end = s + len;
 	while ( s < end && is_wspace_a ( *s ) ) s++;
 	// return 0 if all spaces
 	if ( s == end ) return 0;
-	long i   = 0;
-	long long val = 0;
+	int32_t i   = 0;
+	int64_t val = 0;
 	while ( i < len && is_hex(s[i]) )
 		val = val * 16 + htob ( s[i++] );
 	return val;
 }
 
 // convert hex ascii string into binary at "dst"
-void hexToBin ( char *src , long srcLen , char *dst ) {
+void hexToBin ( char *src , int32_t srcLen , char *dst ) {
 	char *srcEnd = src + srcLen;
 	for ( ; src && src < srcEnd ; ) {
 		*dst  = htob(*src++);
@@ -1079,7 +1079,7 @@ void hexToBin ( char *src , long srcLen , char *dst ) {
 	if ( src != srcEnd ) { char *xx=NULL;*xx=0; }
 }
 
-void binToHex ( unsigned char *src , long srcLen , char *dst ) {
+void binToHex ( unsigned char *src , int32_t srcLen , char *dst ) {
 	unsigned char *srcEnd = src + srcLen;
 	for ( ; src && src < srcEnd ; ) {
 		*dst++ = btoh(*src>>4);
@@ -1095,10 +1095,10 @@ void binToHex ( unsigned char *src , long srcLen , char *dst ) {
 
 // . like strstr but haystack may not be NULL terminated
 // . needle, however, IS null terminated
-char *strncasestr ( char *haystack , char *needle , long haystackSize ) {
-	long needleSize = gbstrlen(needle);
-	long n = haystackSize - needleSize ;
-	for ( long i = 0 ; i <= n ; i++ ) {
+char *strncasestr ( char *haystack , char *needle , int32_t haystackSize ) {
+	int32_t needleSize = gbstrlen(needle);
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
 		// keep looping if first chars do not match
 		if ( to_lower_a(haystack[i]) != to_lower_a(needle[0]) ) 
 			continue;
@@ -1114,9 +1114,9 @@ char *strncasestr ( char *haystack , char *needle , long haystackSize ) {
 // . like strstr but haystack may not be NULL terminated
 // . needle, however, IS null terminated
 char *strncasestr ( char *haystack , char *needle , 
-		    long haystackSize, long needleSize ) {
-	long n = haystackSize - needleSize ;
-	for ( long i = 0 ; i <= n ; i++ ) {
+		    int32_t haystackSize, int32_t needleSize ) {
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
 		// keep looping if first chars do not match
 		if ( to_lower_a(haystack[i]) != to_lower_a(needle[0]) ) 
 			continue;
@@ -1129,10 +1129,10 @@ char *strncasestr ( char *haystack , char *needle ,
 	return NULL;
 }
 
-char *strnstr ( char *haystack , char *needle , long haystackSize ) {
-	long needleSize = gbstrlen(needle);
-	long n = haystackSize - needleSize ;
-	for ( long i = 0 ; i <= n ; i++ ) {
+char *strnstr ( char *haystack , char *needle , int32_t haystackSize ) {
+	int32_t needleSize = gbstrlen(needle);
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
 		// keep looping if first chars do not match
 		if ( haystack[i] != needle[0] ) continue;
 		// if needle was only 1 char it's a match
@@ -1146,10 +1146,10 @@ char *strnstr ( char *haystack , char *needle , long haystackSize ) {
 
 // independent of case
 char *gb_strcasestr ( char *haystack , char *needle ) {
-	long needleSize   = gbstrlen(needle);
-	long haystackSize = gbstrlen(haystack);
-	long n = haystackSize - needleSize ;
-	for ( long i = 0 ; i <= n ; i++ ) {
+	int32_t needleSize   = gbstrlen(needle);
+	int32_t haystackSize = gbstrlen(haystack);
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
 		// keep looping if first chars do not match
 		if ( to_lower_a(haystack[i]) != to_lower_a(needle[0]) ) 
 			continue;
@@ -1163,7 +1163,7 @@ char *gb_strcasestr ( char *haystack , char *needle ) {
 }
 
 
-char *gb_strncasestr ( char *haystack , long haystackSize , char *needle ) {
+char *gb_strncasestr ( char *haystack , int32_t haystackSize , char *needle ) {
 	// temp term
 	char c = haystack[haystackSize];
 	haystack[haystackSize] = '\0';
@@ -1176,7 +1176,7 @@ char *gb_strncasestr ( char *haystack , long haystackSize , char *needle ) {
 // . store "t" into "s"
 // . returns bytes stored into "s"
 // . NULL terminates "s" if slen > 0
-long saftenTags ( char *s , long slen , char *t , long tlen ) {
+int32_t saftenTags ( char *s , int32_t slen , char *t , int32_t tlen ) {
 	char *start = s ;
 	// bail if slen is 0
 	if ( slen <= 0 ) return 0;
@@ -1212,8 +1212,8 @@ long saftenTags ( char *s , long slen , char *t , long tlen ) {
 //   UnicodeData.txt:22E7;GREATER-THAN BUT NOT EQUIVALENT TO;Sm;0;ON;;;;;Y;
 //   UnicodeData.txt:E0026;TAG AMPERSAND;Cf;0;BN;;;;;N;;;;;
 //   UnicodeData.txt:235E;APL FUNCTIONAL SYMBOL QUOTE QUAD;So;0;L;;;;;N;;;;; 
-long htmlDecode ( char *dst , char *src , long srcLen , bool doSpecial ,
-		  long niceness ) {
+int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
+		  int32_t niceness ) {
 	if ( srcLen == 0 ) return 0;
 	char *start  = dst;
 	char *srcEnd = src + srcLen;
@@ -1238,7 +1238,7 @@ long htmlDecode ( char *dst , char *src , long srcLen , bool doSpecial ,
 		// store decoded entity char into dst[j]
 		uint32_t c;
 		// "skip" is how many bytes the entites was in "src"
-		long skip = getEntity_a (src, srcEnd-src, &c );
+		int32_t skip = getEntity_a (src, srcEnd-src, &c );
 		// ignore the "entity" if it was invalid
 		if ( skip == 0 ) { *dst++ = *src++ ; continue; }
 		// force this now always since some tags contain &quot;
@@ -1306,7 +1306,7 @@ long htmlDecode ( char *dst , char *src , long srcLen , bool doSpecial ,
 		// . otherwise it was a legit entity
 		// . store it into "dst" in utf8 format
 		// . "numBytes" is how many bytes it stored into 'dst"
-		long numBytes = utf8Encode ( c , dst );
+		int32_t numBytes = utf8Encode ( c , dst );
 		// sanity check. do not eat our tail if dst == src
 		if ( numBytes > skip ) { char *xx=NULL;*xx=0; }
 		// advance dst ptr
@@ -1320,7 +1320,7 @@ long htmlDecode ( char *dst , char *src , long srcLen , bool doSpecial ,
 }
 
 // cdata 
-long cdataDecode ( char *dst , char *src , long niceness ) {
+int32_t cdataDecode ( char *dst , char *src , int32_t niceness ) {
 	if ( ! src ) return 0;
 	char *start  = dst;
 	for ( ; *src ; ) {
@@ -1354,7 +1354,7 @@ long cdataDecode ( char *dst , char *src , long niceness ) {
 // . make something safe as an form input value by translating the quotes
 // . store "t" into "s" and return bytes stored
 // . does not do bounds checking
-long dequote ( char *s , char *send , char *t , long tlen ) {
+int32_t dequote ( char *s , char *send , char *t , int32_t tlen ) {
 	char *start = s;
 	char *tend = t + tlen;
 	for ( ; t < tend && s < send ; t++ ) {
@@ -1375,7 +1375,7 @@ long dequote ( char *s , char *send , char *t , long tlen ) {
 	return s - start;
 }
 
-bool dequote ( SafeBuf* sb , char *t , long tlen ) {
+bool dequote ( SafeBuf* sb , char *t , int32_t tlen ) {
 	char *tend = t + tlen;
 	for ( ; t < tend; t++ ) {
 		if ( *t == '"' ) {
@@ -1388,7 +1388,7 @@ bool dequote ( SafeBuf* sb , char *t , long tlen ) {
 	return true;
 }
 
-//long dequote ( char *s , char *t ) {
+//int32_t dequote ( char *s , char *t ) {
 //	return dequote ( s , t , gbstrlen ( t ) );
 //}
 
@@ -1396,7 +1396,7 @@ bool dequote ( SafeBuf* sb , char *t , long tlen ) {
 // . store "t" into "s" and return bytes stored
 // . does bounds checking
 char *htmlEncode ( char *s , char *send , char *t , char *tend , bool pound ,
-		   long niceness ) {
+		   int32_t niceness ) {
 	for ( ; t < tend ; t++ ) {
 		QUICKPOLL(niceness);
 		if ( s + 7 >= send ) { *s = '\0'; return s; }
@@ -1449,7 +1449,7 @@ char *htmlEncode ( char *s , char *send , char *t , char *tend , bool pound ,
 // . entity-ize a string so it's safe for html output
 // . store "t" into "s" and return true on success
 bool htmlEncode ( SafeBuf* s , char *t , char *tend , bool pound ,
-		  long niceness ) {
+		  int32_t niceness ) {
 	for ( ; t < tend ; t++ ) {
 		QUICKPOLL(niceness);
 		if ( *t == '"' ) {
@@ -1493,7 +1493,7 @@ bool htmlEncode ( SafeBuf* s , char *t , char *tend , bool pound ,
 // . used by HttPage2 (cached web page) to encode the query into a url
 // . used by PageRoot to do likewise
 // . returns bytes written into "d" not including terminating \0
-long urlEncode ( char *d , long dlen , char *s , long slen, bool requestPath ) {
+int32_t urlEncode ( char *d , int32_t dlen , char *s , int32_t slen, bool requestPath ) {
 	char *dstart = d;
 	// subtract 1 to make room for a terminating \0
 	char *dend = d + dlen - 1;
@@ -1546,8 +1546,8 @@ long urlEncode ( char *d , long dlen , char *s , long slen, bool requestPath ) {
 }
 
 // determine the length of the encoded url, does NOT include NULL
-long urlEncodeLen ( char *s , long slen , bool requestPath ) {
-	long  dLen = 0;
+int32_t urlEncodeLen ( char *s , int32_t slen , bool requestPath ) {
+	int32_t  dLen = 0;
 	char *send = s + slen;
 	for ( ; s < send ; s++ ) {
 		if ( *s == '\0' && requestPath ) {
@@ -1586,9 +1586,9 @@ long urlEncodeLen ( char *s , long slen , bool requestPath ) {
 
 // . decodes "s/slen" and stores into "dest"
 // . returns the number of bytes stored into "dest"
-long urlDecode ( char *dest , char *s , long slen ) {
-	long j = 0;
-	for ( long i = 0 ; i < slen ; i++ ) {
+int32_t urlDecode ( char *dest , char *s , int32_t slen ) {
+	int32_t j = 0;
+	for ( int32_t i = 0 ; i < slen ; i++ ) {
 		if ( s[i] == '+' ) { dest[j++]=' '; continue; }
 		dest[j++] = s[i];
 		if ( s[i]  != '%'  ) continue;
@@ -1607,7 +1607,7 @@ long urlDecode ( char *dest , char *s , long slen ) {
 
 // . like above, but only decodes chars that should not have been encoded
 // . will also encode binary chars
-long urlNormCode ( char *d , long dlen , char *s , long slen ) {
+int32_t urlNormCode ( char *d , int32_t dlen , char *s , int32_t slen ) {
 	// save start of detination buffer for returning the length
 	char *dstart = d;
 	// subtract 1 for NULL termination
@@ -1669,8 +1669,8 @@ long urlNormCode ( char *d , long dlen , char *s , long slen ) {
 }
 
 // approximate # of non-punct words
-long getNumWords ( char *s ) {
-	long count = 0;
+int32_t getNumWords ( char *s ) {
+	int32_t count = 0;
  loop:
 	// skip punct
 	while ( ! is_alnum_a(*s) ) s++;
@@ -1690,30 +1690,30 @@ long getNumWords ( char *s ) {
 	goto loop;
 }
 
-static long long s_adjustment = 0;
+static int64_t s_adjustment = 0;
 
-long long globalToLocalTimeMilliseconds ( long long global ) {
+int64_t globalToLocalTimeMilliseconds ( int64_t global ) {
 	// sanity check
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Converting global time but clock not in sync.");
 	return global - s_adjustment;
 }
 
-long long localToGlobalTimeMilliseconds ( long long local ) {
+int64_t localToGlobalTimeMilliseconds ( int64_t local ) {
 	// sanity check
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Converting global time but clock not in sync.");
 	return local + s_adjustment;
 }
 
-long globalToLocalTimeSeconds ( long global ) {
+int32_t globalToLocalTimeSeconds ( int32_t global ) {
 	// sanity check
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Converting global time but clock not in sync.");
 	return global - (s_adjustment/1000);
 }
 
-long localToGlobalTimeSeconds ( long local ) {
+int32_t localToGlobalTimeSeconds ( int32_t local ) {
 	// sanity check
 	//if ( ! g_clockInSync ) 
 	//	log("gb: Converting global time but clock not in sync.");
@@ -1729,8 +1729,8 @@ static bool s_hasFileName = false;
 // returns false and sets g_errno on error
 bool setTimeAdjustmentFilename ( char *dir, char *filename ) {
 	s_hasFileName = true;
-	long len1 = gbstrlen(dir);
-	long len2 = gbstrlen(filename);
+	int32_t len1 = gbstrlen(dir);
+	int32_t len2 = gbstrlen(filename);
 	if ( len1 + len2 > 1000 ) { char *xx=NULL;*xx=0; }
 	sprintf(s_tafile,"%s/%s",dir,filename);
 	return true;
@@ -1760,12 +1760,12 @@ bool loadTimeAdjustment ( ) {
 	}
 	close(fd);
 	// parse the text line
-	long long stampTime = 0LL;
-	long long clockAdj  = 0LL;
-	sscanf ( rbuf , "%llu %lli", &stampTime, &clockAdj );
+	int64_t stampTime = 0LL;
+	int64_t clockAdj  = 0LL;
+	sscanf ( rbuf , "%"UINT64" %"INT64"", &stampTime, &clockAdj );
 	// get stamp age
-	long long local = gettimeofdayInMillisecondsLocal();
-	long long stampAge = local - stampTime;
+	int64_t local = gettimeofdayInMillisecondsLocal();
+	int64_t stampAge = local - stampTime;
 	// if too old forget about it
 	if ( stampAge > 2*86400 ) return true;
 	// update adjustment
@@ -1775,7 +1775,7 @@ bool loadTimeAdjustment ( ) {
 	// and really slow down loadups
 	g_clockInSync = true;
 	// note it
-	log("util: loaded %s and put clock in sync. age=%llu adj=%lli",
+	log("util: loaded %s and put clock in sync. age=%"UINT64" adj=%"INT64"",
 	    s_tafile,stampAge,clockAdj);
 	return true;
 }
@@ -1788,9 +1788,9 @@ bool saveTimeAdjustment ( ) {
 	// must be in sync!
 	if ( ! g_clockInSync ) return true;
 	// store it
-	long long local = gettimeofdayInMillisecondsLocal();
+	int64_t local = gettimeofdayInMillisecondsLocal();
 	char wbuf[1024];
-	sprintf (wbuf,"%llu %lli\n",local,s_adjustment);
+	sprintf (wbuf,"%"UINT64" %"INT64"\n",local,s_adjustment);
 	// write it out
 	int fd = open ( s_tafile , O_CREAT|O_RDWR|O_TRUNC , 00666 );
 	if ( fd < 0 ) {
@@ -1799,7 +1799,7 @@ bool saveTimeAdjustment ( ) {
 		return false;
 	}
 	// how many bytes to write?
-	long len = gbstrlen(wbuf);
+	int32_t len = gbstrlen(wbuf);
 	// read in max bytes
 	int nw = write ( fd , wbuf , len );
 	if ( nw != len ) {
@@ -1817,22 +1817,22 @@ bool saveTimeAdjustment ( ) {
 }
 
 // a "fake" settimeofdayInMilliseconds()
-void settimeofdayInMillisecondsGlobal ( long long newTime ) {
+void settimeofdayInMillisecondsGlobal ( int64_t newTime ) {
 	// can't do this in sig handler
 	if ( g_inSigHandler ) return;
 	// this isn't async signal safe...
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// bail if no change... UNLESS we need to sync clock!!
 	if ( s_adjustment == newTime - now && g_clockInSync ) return;
 	// log it, that way we know if there is another issue
 	// with flip-flopping (before we synced with host #0 and also
 	// with proxy #0)
-	long long delta = s_adjustment - (newTime - now) ;
+	int64_t delta = s_adjustment - (newTime - now) ;
 	if ( delta > 100 || delta < -100 )
 		logf(LOG_INFO,"gb: Updating clock adjustment from "
-		     "%lli ms to %lli ms", s_adjustment , newTime - now );
+		     "%"INT64" ms to %"INT64" ms", s_adjustment , newTime - now );
 	// set adjustment
 	s_adjustment = newTime - now;
 	// return?
@@ -1851,25 +1851,25 @@ void settimeofdayInMillisecondsGlobal ( long long newTime ) {
 	//initAllSortByDateTables ( );
 }
 
-long getTimeGlobal() {
+time_t getTimeGlobal() {
 	return gettimeofdayInMillisecondsSynced() / 1000;
 }
 
-long getTimeGlobalNoCore() {
+time_t getTimeGlobalNoCore() {
 	return gettimeofdayInMillisecondsGlobalNoCore() / 1000;
 }
 
-long getTimeSynced() {
+time_t getTimeSynced() {
 	return gettimeofdayInMillisecondsSynced() / 1000;
 }
 
-long long gettimeofdayInMillisecondsGlobal() {
+int64_t gettimeofdayInMillisecondsGlobal() {
 	return gettimeofdayInMillisecondsSynced();
 }
 
 #include "Threads.h"
 
-long long gettimeofdayInMillisecondsSynced() {
+int64_t gettimeofdayInMillisecondsSynced() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_nowGlobal;
 	// i find that a pthread can call this function even though
@@ -1886,7 +1886,7 @@ long long gettimeofdayInMillisecondsSynced() {
 	// this isn't async signal safe...
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
 	// adjust from Msg0x11 time adjustments
@@ -1896,7 +1896,7 @@ long long gettimeofdayInMillisecondsSynced() {
 	return now;
 }
 
-long long gettimeofdayInMillisecondsGlobalNoCore() {
+int64_t gettimeofdayInMillisecondsGlobalNoCore() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_nowGlobal;
 	// i find that a pthread can call this function even though
@@ -1910,7 +1910,7 @@ long long gettimeofdayInMillisecondsGlobalNoCore() {
 	// this isn't async signal safe...
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
 	// adjust from Msg0x11 time adjustments
@@ -1920,7 +1920,7 @@ long long gettimeofdayInMillisecondsGlobalNoCore() {
 	return now;
 }
 
-long long gettimeofdayInMillisecondsLocal() {
+int64_t gettimeofdayInMillisecondsLocal() {
 	return gettimeofdayInMilliseconds();
 }
 
@@ -1931,7 +1931,7 @@ uint64_t gettimeofdayInMicroseconds(void) {
 }
 
 // "local" means the time on this machine itself, NOT a timezone thing.
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_now;
 	// i find that a pthread can call this function even though
@@ -1943,7 +1943,7 @@ long long gettimeofdayInMilliseconds() {
 	//g_loop.disableTimer();
 	gettimeofday ( &tv , NULL );
 	//g_loop.enableTimer();
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
 	// adjust from Msg0x11 time adjustments
@@ -1969,14 +1969,14 @@ time_t getTimeLocal () {
 	if ( g_inSigHandler && ! g_threads.amThread() ) { 
 		char *xx = NULL; *xx = 0; }
 	// get time now
-	unsigned long now = gettimeofdayInMilliseconds() / 1000;
+	uint32_t now = gettimeofdayInMilliseconds() / 1000;
 	// and adjust it
 	//now += s_adjustment / 1000;
 	return (time_t)now;
 }
 
 // . make it so we can display the ascii string on an html browser
-long saftenTags2 ( char *s , long slen , char *t , long tlen ) {
+int32_t saftenTags2 ( char *s , int32_t slen , char *t , int32_t tlen ) {
 	char *start = s ;
 	// bail if slen is 0
 	if ( slen <= 0 ) return 0;
@@ -2016,19 +2016,19 @@ long saftenTags2 ( char *s , long slen , char *t , long tlen ) {
 	return s - start;
 }
 
-void getCalendarFromMs(long long ms, 
-		       long* days, 
-		       long* hours, 
-		       long* minutes, 
-		       long* secs,
-		       long* msecs) {
-	long s =     1000;
-	long m = s * 60;
-	long h = m * 60;
-	long d = h * 24;
+void getCalendarFromMs(int64_t ms, 
+		       int32_t* days, 
+		       int32_t* hours, 
+		       int32_t* minutes, 
+		       int32_t* secs,
+		       int32_t* msecs) {
+	int32_t s =     1000;
+	int32_t m = s * 60;
+	int32_t h = m * 60;
+	int32_t d = h * 24;
 
 	*days = ms / d;
-	long long tmp = ms % d;
+	int64_t tmp = ms % d;
 	*hours = tmp / h;
 	tmp = tmp % h;
 	*minutes = tmp / m;
@@ -2038,14 +2038,14 @@ void getCalendarFromMs(long long ms,
 	*msecs = tmp % s;
 }
 
-unsigned long calculateChecksum(char *buf, long bufLen){
-	unsigned long sum = 0;
-	for(long i = 0; i < bufLen>>2;i++)
-		sum += ((unsigned long*)buf)[i];
+uint32_t calculateChecksum(char *buf, int32_t bufLen){
+	uint32_t sum = 0;
+	for(int32_t i = 0; i < bufLen>>2;i++)
+		sum += ((uint32_t*)buf)[i];
 	return sum;
 }
 
-bool anchorIsLink( char *tag, long tagLen){
+bool anchorIsLink( char *tag, int32_t tagLen){
 	if (strncasestr(tag, tagLen, "href")) return true;
 	if (strncasestr(tag, tagLen, "onclick")) return true;
 	return false;
@@ -2088,7 +2088,7 @@ char* getNextNum(char* input, char** numPtr) {
 
 // returns length of stripped content, but will set g_errno and return -1
 // on error
-long stripHtml( char *content, long contentLen, long version, long strip ) {
+int32_t stripHtml( char *content, int32_t contentLen, int32_t version, int32_t strip ) {
 	if ( !strip ) {
 		log( LOG_WARN, "query: html stripping not required!" );
 		return contentLen;
@@ -2112,22 +2112,22 @@ long stripHtml( char *content, long contentLen, long version, long strip ) {
 	//	return tmpXml.getText( content, contentLen );
 
 	// go tag by tag
-	long     n       = tmpXml.getNumNodes();
+	int32_t     n       = tmpXml.getNumNodes();
 	XmlNode *nodes   = tmpXml.getNodes();
 	// Xml class may have converted to utf16
 	content    = tmpXml.getContent();
 	contentLen = tmpXml.getContentLen();
 	char    *x       = content;
 	char    *xend    = content + contentLen;
-	long     stackid = -1;
-	long     stackc  =  0;
+	int32_t     stackid = -1;
+	int32_t     stackc  =  0;
 	char     skipIt  =  0;
 	// . hack COL tag to NOT require a back tag
 	// . do not leave it that way as it could mess up our parsing
 	//g_nodes[25].m_hasBackTag = 0;
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get id of this node
-		long id = nodes[i].m_nodeId;
+		int32_t id = nodes[i].m_nodeId;
 		
 		// if strip is 4, just remove the script tag
 		if( strip == 4 ){
@@ -2158,13 +2158,13 @@ long stripHtml( char *content, long contentLen, long version, long strip ) {
 			}
 		}
 		// get it
-		long fk;
+		int32_t fk;
 		if   ( strip == 1 ) fk = g_nodes[id].m_filterKeep1;
 		else                fk = g_nodes[id].m_filterKeep2;
 		// if tag is <link ...> only keep it if it has
 		// rel="stylesheet" or rel=stylesheet
 		if ( strip == 2 && id == 62 ) { // <link> tag id
-			long   fflen;
+			int32_t   fflen;
 			char *ff = nodes[i].getFieldValue ( "rel" , &fflen );
 			if ( ff && fflen == 10 &&
 			     strncmp(ff,"stylesheet",10) == 0 )
@@ -2198,7 +2198,7 @@ long stripHtml( char *content, long contentLen, long version, long strip ) {
 		continue;
 	keepit:
 		// replace images with their alt text
-		long vlen;
+		int32_t vlen;
 		char *v;
 		if ( id == 54 ) {
 			v = nodes[i].getFieldValue("alt", &vlen );
@@ -2249,11 +2249,11 @@ bool is_urlchar(char s) {
 	return false;
 }
 // don't allow "> in our input boxes
-long cleanInput(char *outbuf, long outbufSize, char *inbuf, long inbufLen){
+int32_t cleanInput(char *outbuf, int32_t outbufSize, char *inbuf, int32_t inbufLen){
 	char *p = outbuf;
-	long numQuotes=0;
-	long lastQuote = 0;
-	for (long i=0;i<inbufLen;i++){
+	int32_t numQuotes=0;
+	int32_t lastQuote = 0;
+	for (int32_t i=0;i<inbufLen;i++){
 		if (p-outbuf >= outbufSize-1) break;
 			
 		if (inbuf[i] == '"'){
@@ -2279,14 +2279,14 @@ long cleanInput(char *outbuf, long outbufSize, char *inbuf, long inbufLen){
 // serialize/deserialize everytime we compile gb it seems
 //
 
-long getMsgStoredSize ( long baseSize, 
-			long *firstSizeParm, 
-			long *lastSizeParm ) {
-	//long size = (long)sizeof(Msg);
-	long size = baseSize;//getBaseSize();
+int32_t getMsgStoredSize ( int32_t baseSize, 
+			int32_t *firstSizeParm, 
+			int32_t *lastSizeParm ) {
+	//int32_t size = (int32_t)sizeof(Msg);
+	int32_t size = baseSize;//getBaseSize();
 	// add up string buffer sizes
-	long *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
-	long *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displayMeta
+	int32_t *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
+	int32_t *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displayMeta
 	for ( ; sizePtr <= sizeEnd ; sizePtr++ )
 		size += *sizePtr;
 	return size;
@@ -2294,19 +2294,19 @@ long getMsgStoredSize ( long baseSize,
 
 // . return ptr to the buffer we serialize into
 // . return NULL and set g_errno on error
-char *serializeMsg ( long  baseSize ,
-		     long *firstSizeParm ,
-		     long *lastSizeParm ,
+char *serializeMsg ( int32_t  baseSize ,
+		     int32_t *firstSizeParm ,
+		     int32_t *lastSizeParm ,
 		     char **firstStrPtr ,
 		     void *thisPtr ,
-		     long *retSize     ,
+		     int32_t *retSize     ,
 		     char *userBuf     ,
-		     long  userBufSize ,
+		     int32_t  userBufSize ,
 		     bool  makePtrsRefNewBuf ) {
 	// make a buffer to serialize into
 	char *buf  = NULL;
-	//long  need = getStoredSize();
-	long need = getMsgStoredSize(baseSize,firstSizeParm,lastSizeParm);
+	//int32_t  need = getStoredSize();
+	int32_t need = getMsgStoredSize(baseSize,firstSizeParm,lastSizeParm);
 	// big enough?
 	if ( need <= userBufSize ) buf = userBuf;
 	// alloc if we should
@@ -2320,8 +2320,8 @@ char *serializeMsg ( long  baseSize ,
 	memcpy ( p , (char *)thisPtr , baseSize );//getBaseSize() );
 	p += baseSize; // getBaseSize();
 	// then store the strings!
-	long  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
-	long  *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displayMet
+	int32_t  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
+	int32_t  *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displayMet
 	char **strPtr  = firstStrPtr;//getFirstStrPtr  (); // &ptr_qbuf;
 	for ( ; sizePtr <= sizeEnd ;  ) {
 		// if we are NULL, we are a "bookmark", so
@@ -2348,16 +2348,16 @@ char *serializeMsg ( long  baseSize ,
 }
 
 // convert offsets back into ptrs
-long deserializeMsg ( long  baseSize ,
-		      long *firstSizeParm ,
-		      long *lastSizeParm ,
+int32_t deserializeMsg ( int32_t  baseSize ,
+		      int32_t *firstSizeParm ,
+		      int32_t *lastSizeParm ,
 		      char **firstStrPtr ,
 		      char *stringBuf ) {
 	// point to our string buffer
 	char *p = stringBuf;//getStringBuf(); // m_buf;
 	// then store the strings!
-	long  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
-	long  *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displayMet
+	int32_t  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
+	int32_t  *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displayMet
 	char **strPtr  = firstStrPtr;//getFirstStrPtr  (); // &ptr_qbuf;
 	for ( ; sizePtr <= sizeEnd ;  ) {
 		// convert the offset to a ptr
@@ -2377,7 +2377,7 @@ long deserializeMsg ( long  baseSize ,
 }
 
 // print it to stdout for debugging Dates.cpp
-long printTime ( long ttt ) {
+int32_t printTime ( time_t ttt ) {
 	//char *s = ctime(&ttt);
 	// print in UTC!
 	char *s = asctime ( gmtime(&ttt) );
@@ -2396,7 +2396,7 @@ time_t mktime_utc ( struct tm *ttt ) {
 	/*
 	// sanity check
 	static char s_mm = 1;
-	static long s_localOff;
+	static int32_t s_localOff;
 	if ( s_mm ) {
 		s_mm = 0;
 		struct tm ff;
@@ -2406,8 +2406,8 @@ time_t mktime_utc ( struct tm *ttt ) {
 		ff.tm_hour = 0;
 		ff.tm_min  = 0;
 		ff.tm_sec  = 0;
-		long qq = mktime ( &ff );
-		//fprintf(stderr,"qq=%li\n",qq);
+		int32_t qq = mktime ( &ff );
+		//fprintf(stderr,"qq=%"INT32"\n",qq);
 		// . set this then
 		// . we subtract s_localOff to further mktime() returns to
 		//   get it into utc
@@ -2417,12 +2417,12 @@ time_t mktime_utc ( struct tm *ttt ) {
 	}
 	*/
 	// see what our timezone is!
-	//fprintf(stderr,"%li=tz\n",timezone);
+	//fprintf(stderr,"%"INT32"=tz\n",timezone);
 	// mod that
 	return local - timezone;
 }
 
-bool verifyUtf8 ( char *txt , long tlen ) {
+bool verifyUtf8 ( char *txt , int32_t tlen ) {
 	if ( ! txt  || tlen <= 0 ) return true;
 	char size;
 	char *p = txt;
@@ -2449,7 +2449,7 @@ bool verifyUtf8 ( char *txt , long tlen ) {
 }
 
 bool verifyUtf8 ( char *txt ) {
-	long tlen = gbstrlen(txt);
+	int32_t tlen = gbstrlen(txt);
 	return verifyUtf8(txt,tlen);
 }
 

@@ -65,15 +65,15 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 class PatternData {
 public:
 	// hash of the subdomain or domain for this line in sitelist
-	long m_thingHash32;
+	int32_t m_thingHash32;
 	// ptr to the line in CollectionRec::m_siteListBuf
-	long m_patternStrOff;
+	int32_t m_patternStrOff;
 	// offset of the url path in the pattern, 0 means none
-	short m_pathOff; 
-	short m_pathLen;
+	int16_t m_pathOff; 
+	int16_t m_pathLen;
 	// offset into buffer. for 'tag:shallow site:walmart.com' type stuff
-	long  m_tagOff;
-	short m_tagLen;
+	int32_t  m_tagOff;
+	int16_t m_tagLen;
 };
 
 
@@ -121,13 +121,19 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	char *op = cr->m_siteListBuf.getBufStart();
 
 	// scan and hash each line in it
-	for ( ; *op ; op++ ) {
+	for ( ; ; ) {
+		// done?
+		if ( ! *op ) break;
+		// skip spaces
+		if ( is_wspace_a(*op) ) op++;
+		// done?
+		if ( ! *op ) break;
 		// get end
 		char *s = op;
 		// skip to end of line marker
 		for ( ; *op && *op != '\n' ; op++ ) ;
 		// keep it simple
-		long h32 = hash32 ( s , op - s );
+		int32_t h32 = hash32 ( s , op - s );
 		// for deduping
 		if ( ! dedup.addKey ( &h32 ) ) return true;
 	}
@@ -176,9 +182,9 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	// completely empty?
 	if ( ! pn ) return true;
 
-	long lineNum = 1;
+	int32_t lineNum = 1;
 
-	long added = 0;
+	int32_t added = 0;
 
 	Url u;
 
@@ -200,7 +206,7 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		if ( *pn == '\n' ) pn++;
 
 		// make hash of the line
-		long h32 = hash32 ( s , pe - s );
+		int32_t h32 = hash32 ( s , pe - s );
 
 		bool seedMe = true;
 		bool isUrl = true;
@@ -226,7 +232,7 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		//}
 
 		char *tag = NULL;
-		long tagLen = 0;
+		int32_t tagLen = 0;
 
 	innerLoop:
 
@@ -283,7 +289,7 @@ bool updateSiteListBuf ( collnum_t collnum ,
 			goto innerLoop;
 		}
 
-		long slen = pe - s;
+		int32_t slen = pe - s;
 
 		// empty line?
 		if ( slen <= 0 ) 
@@ -326,12 +332,12 @@ bool updateSiteListBuf ( collnum_t collnum ,
 
 		// error? skip it then...
 		if ( u.getHostLen() <= 0 ) {
-			log("basic: error on line #%li in sitelist",lineNum);
+			log("basic: error on line #%"INT32" in sitelist",lineNum);
 			continue;
 		}
 
 		// is fake ip assigned to us?
-		long firstIp = getFakeIpForUrl2 ( &u );
+		int32_t firstIp = getFakeIpForUrl2 ( &u );
 
 		if ( ! isAssignedToUs( firstIp ) ) continue;
 
@@ -410,7 +416,7 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		}
 
 		// add to new dt
-		long domHash32 = u.getDomainHash32();
+		int32_t domHash32 = u.getDomainHash32();
 		if ( ! dt->addKey ( &domHash32 , &pd ) )
 			return true;
 
@@ -421,12 +427,12 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	// go back to a high niceness
 	dt->m_niceness = MAX_NICENESS;
 
-	//long siteListLen = gbstrlen(siteList);
+	//int32_t siteListLen = gbstrlen(siteList);
 	//cr->m_siteListBuf.safeMemcpy ( siteList , siteListLen + 1 );
 
 	if ( ! addSeeds ) return true;
 
-	log("spider: adding %li seed urls",added);
+	log("spider: adding %"INT32" seed urls",added);
 
 	// use spidercoll to contain this msg4 but if in use it
 	// won't be able to be deleted until it comes back..
@@ -500,7 +506,7 @@ char *getMatchingUrlPattern ( SpiderColl *sc ,
 	// this table maps a 32-bit domain hash of a domain to a
 	// patternData class. only for those urls that have firstIps that
 	// we handle.
-	long slot = dt->getSlot ( &sreq->m_domHash32 );
+	int32_t slot = dt->getSlot ( &sreq->m_domHash32 );
 
 	char *buf = cr->m_siteListBuf.getBufStart();
 
@@ -615,10 +621,10 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 	SafeBuf msgBuf;
 	char *status = "";
-	long max = 1000000;
+	int32_t max = 1000000;
 	if ( cr->m_siteListBuf.length() > max ) {
 		msgBuf.safePrintf( "<font color=red><b>"
-				   "Site list is over %li bytes large, "
+				   "Site list is over %"INT32" bytes large, "
 				   "too many to "
 				   "display on this web page. Please use the "
 				   "file upload feature only for now."
@@ -1003,7 +1009,7 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       // preserve the relative scroll position so we
 		       // do not jerk around since we might have added 
 		       // "added" new results to the top.
-		       "sd.scrollTop += added*%li;"
+		       "sd.scrollTop += added*%"INT32";"
 
 		       // try to scroll out new results if we are
 		       // still at the top of the scrollbar and
@@ -1011,7 +1017,7 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       "if(oldpos==0)widget123_scroll();}\n\n"
 
 		       // for preserving scrollbar position
-		       ,(long)RESULT_HEIGHT +2*PADDING
+		       ,(int32_t)RESULT_HEIGHT +2*PADDING
 
 		       );
 
@@ -1070,8 +1076,8 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 
 	//sb->safePrintf ( "</script>\n\n" );
 
-	long widgetWidth = 300;
-	long widgetHeight = 500;
+	int32_t widgetWidth = 300;
+	int32_t widgetHeight = 500;
 
 	// make the ajax url that gets the search results
 	SafeBuf ub;
@@ -1084,8 +1090,8 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		      "&dr=0" // no deduping
 			      // 10 results at a time
 		      "&n=10"
-		      "&widgetheight=%li"
-		      "&widgetwidth=%li"
+		      "&widgetheight=%"INT32""
+		      "&widgetwidth=%"INT32""
 		      , cr->m_coll
 		      , widgetHeight
 		      , widgetWidth
@@ -1104,7 +1110,7 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       // we call this (see PageResults.cpp) so that
 		       // we do not register multiple timeouts
 		       "if ( ! force ) "
-		       "setTimeout('widget123_reload(0)',%li);"
+		       "setTimeout('widget123_reload(0)',%"INT32");"
 
 		       // get the query box
 		       "var qb=document.getElementById(\"qbox\");"
@@ -1184,12 +1190,12 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       // not initiated on that call since we had to
 		       // set force=1 to load in case the query box
 		       // was currently visible.
-		       "setTimeout('widget123_reload(0)',%li);"
+		       "setTimeout('widget123_reload(0)',%"INT32");"
 
 		       //, widgetHeight
-		       , (long)DEFAULT_WIDGET_RELOAD
+		       , (int32_t)DEFAULT_WIDGET_RELOAD
 		       , ub.getBufStart()
-		       , (long)DEFAULT_WIDGET_RELOAD
+		       , (int32_t)DEFAULT_WIDGET_RELOAD
 		       );
 
 	//
@@ -1209,7 +1215,7 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       "\"widget123_scrolldiv\");"
 		       "if ( sd ) {"
 		       "var pos=parseInt(sd.scrollTop);"
-		       "if (pos < (sd.scrollHeight-%li)) "
+		       "if (pos < (sd.scrollHeight-%"INT32")) "
 		       "return;"
 		       "}"
 
@@ -1272,22 +1278,22 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 		       "client.onreadystatechange="
 		       "widget123_handler_append;"
 
-		       //"alert('appending scrollTop='+sd.scrollTop+' scrollHeight='+sd.scrollHeight+' 5results=%li'+u);"
+		       //"alert('appending scrollTop='+sd.scrollTop+' scrollHeight='+sd.scrollHeight+' 5results=%"INT32"'+u);"
 		       "client.open('GET',u);"
 		       "client.send();"
 		       "}\n\n"
 
 		       "</script>\n\n"
 
-		       // if (pos < (sd.scrollHeight-%li)) return...
+		       // if (pos < (sd.scrollHeight-%"INT32")) return...
 		       // once user scrolls down to within last 5
 		       // results then try to append to the results.
-		       , widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING)
+		       , widgetHeight +5*((int32_t)RESULT_HEIGHT+2*PADDING)
 
 
 		       , ub.getBufStart()
 
-		       //,widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING
+		       //,widgetHeight +5*((int32_t)RESULT_HEIGHT+2*PADDING
 		       );
 
 
@@ -1303,7 +1309,7 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 	sb->safePrintf("<div id=widget123 "
 		       "style=\"border:2px solid black;"
 		       "position:relative;border-radius:10px;"
-		       "width:%lipx;height:%lipx;\">"
+		       "width:%"INT32"px;height:%"INT32"px;\">"
 		       , widgetWidth
 		       , widgetHeight
 		       );
@@ -1406,7 +1412,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<TR><TD valign=top>");
 	}
 
-	long savedLen1, savedLen2;
+	int32_t savedLen1, savedLen2;
 
 	//
 	// widget
@@ -1445,10 +1451,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ! seedStr ) seedStr = "";
 
 		SafeBuf tmp;
-		long crawlStatus = -1;
+		int32_t crawlStatus = -1;
 		getSpiderStatusMsg ( cr , &tmp , &crawlStatus );
 		CrawlInfo *ci = &cr->m_localCrawlInfo;
-		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+		int32_t sentAlert = (int32_t)ci->m_sentCrawlDoneAlert;
 		if ( sentAlert ) sentAlert = 1;
 
 		//sb.safePrintf(
@@ -1468,7 +1474,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 			      "<tr>"
 			      "<td><b>Crawl Status Code:</td>"
-			      "<td>%li</td>"
+			      "<td>%"INT32"</td>"
 			      "</tr>"
 
 			      "<tr>"
@@ -1478,7 +1484,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 			      //"<tr>"
 			      //"<td><b>Rounds Completed:</td>"
-			      //"<td>%li</td>"
+			      //"<td>%"INT32"</td>"
 			      //"</tr>"
 
 			      "<tr>"
@@ -1490,29 +1496,29 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // this will  have to be in crawlinfo too!
 			      //"<tr>"
 			      //"<td><b>pages indexed</b>"
-			      //"<td>%lli</td>"
+			      //"<td>%"INT64"</td>"
 			      //"</tr>"
 
 			      "<tr>"
 			      "<td><b><nobr>URLs Harvested</b> "
 			      "(may include dups)</nobr></td>"
-			      "<td>%lli</td>"
+			      "<td>%"INT64"</td>"
      
 			      "</tr>"
 
 			      //"<tr>"
 			      //"<td><b>URLs Examined</b></td>"
-			      //"<td>%lli</td>"
+			      //"<td>%"INT64"</td>"
 			      //"</tr>"
 
 			      "<tr>"
 			      "<td><b>Page Crawl Attempts</b></td>"
-			      "<td>%lli</td>"
+			      "<td>%"INT64"</td>"
 			      "</tr>"
 
 			      "<tr>"
 			      "<td><b>Page Crawl Successes</b></td>"
-			      "<td>%lli</td>"
+			      "<td>%"INT64"</td>"
 			      "</tr>"
 			      , crawlStatus
 			      , tmp.getBufStart()
@@ -1531,7 +1537,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		//
 		// begin status code breakdown
 		//
-		for ( long i = 0 ; i < 65536 ; i++ ) {
+		for ( int32_t i = 0 ; i < 65536 ; i++ ) {
 			if ( g_stats.m_allErrorsNew[i] == 0 &&
 			     g_stats.m_allErrorsOld[i] == 0 )
 				continue;
@@ -1547,7 +1553,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 				       "%s"
 				       "</a>"
 				       "</b></td>"
-				       "<td>%lli</td>"
+				       "<td>%"INT64"</td>"
 				       "</tr>\n" ,
 				       mstrerror(i),
 				       g_stats.m_allErrorsNew[i] +
@@ -1560,7 +1566,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 		char tmp3[64];
 		struct tm *timeStruct;
-		timeStruct = localtime((time_t *)&cr->m_diffbotCrawlStartTime);
+		time_t tt = (time_t)cr->m_diffbotCrawlStartTime;
+		timeStruct = localtime(&tt);
 		// Jan 01 1970 at 10:30:00
 		strftime ( tmp3,64 , "%b %d %Y at %H:%M:%S",timeStruct);
 		sb.safePrintf("<tr><td><b>Collection Created</b></td>"

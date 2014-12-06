@@ -24,15 +24,15 @@ class Rebalance {
 	bool saveRebalanceFile ( ) ;
 
 	//bool m_inRebalanceLoop;
-	long m_numForeignRecs;
-	long long m_rebalanceCount;
-	long long m_scannedCount;
+	int32_t m_numForeignRecs;
+	int64_t m_rebalanceCount;
+	int64_t m_scannedCount;
 
-	long m_rdbNum;
+	int32_t m_rdbNum;
 	collnum_t m_collnum;
 	collnum_t m_lastCollnum;
 	class Rdb *m_lastRdb;
-	long m_lastPercent;
+	int32_t m_lastPercent;
 	char m_nextKey[MAX_KEY_BYTES];
 	char m_endKey[MAX_KEY_BYTES];
 	bool m_needsRebalanceValid;
@@ -40,7 +40,7 @@ class Rebalance {
 	bool m_warnedUser;
 	bool m_userApproved;
 	bool m_isScanning;
-	long m_blocked;
+	int32_t m_blocked;
 	bool m_allowSave;
 
 	bool m_registered;

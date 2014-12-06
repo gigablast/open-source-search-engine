@@ -34,12 +34,12 @@ bool RdbMerge::merge ( char     rdbId        ,
 		       collnum_t collnum,
 		       BigFile *target       , 
 		       RdbMap  *targetMap    ,
-		       long     id2          , // target's secondary id
-		       long     startFileNum , 
-		       long     numFiles     ,
-		       long     niceness     ,
+		       int32_t     id2          , // target's secondary id
+		       int32_t     startFileNum , 
+		       int32_t     numFiles     ,
+		       int32_t     niceness     ,
 		       class DiskPageCache *pc   ,
-		       long long maxTargetFileSize ,
+		       int64_t maxTargetFileSize ,
 		       char     keySize      ) {
 	// reset ourselves
 	reset();
@@ -86,7 +86,7 @@ bool RdbMerge::merge ( char     rdbId        ,
 		log(LOG_INIT,"db: Resuming a killed merge.");
 		//m_startKey = m_targetMap->getLastKey();
 		m_targetMap->getLastKey(m_startKey);
-		//m_startKey += (unsigned long) 1;
+		//m_startKey += (uint32_t) 1;
 		KEYADD(m_startKey,1,m_ks);
 		// if power goes out and we are not doing synchronous writes
 		// then we could have completely lost some data and unlinked
@@ -98,20 +98,20 @@ bool RdbMerge::merge ( char     rdbId        ,
 		/*
 		RdbMap  **maps  = rdb->getMaps();
 		BigFile **files = rdb->getFiles();
-		for ( long i=m_startFileNum;i<m_startFileNum+m_numFiles;i++){
-			long long minOff = 0LL;
-			long k = 0;
+		for ( int32_t i=m_startFileNum;i<m_startFileNum+m_numFiles;i++){
+			int64_t minOff = 0LL;
+			int32_t k = 0;
 			while ( k < files[i]->m_maxParts &&
 				!   files[i]->m_files[k]    ) {
 				k++;
 				minOff += MAX_PART_SIZE;
 			}
-			long pn0 = maps[i]->getPage ( m_startKey );
-			long pn  = pn0;
+			int32_t pn0 = maps[i]->getPage ( m_startKey );
+			int32_t pn  = pn0;
 			while ( maps[i]->getAbsoluteOffset(pn) < minOff ) pn++;
 			if ( pn != pn0 ) {
 				log("db: Lost data during merge. Starting "
-				    "merge at page number %li from %li for "
+				    "merge at page number %"INT32" from %"INT32" for "
 				    "file.",pn,pn0);
 				m_startKey = maps[i]->getKey ( pn );
 			}
@@ -156,8 +156,8 @@ void getLockWrapper ( int fd , void *state ) {
 // . sets g_errno on error
 bool RdbMerge::gotLock ( ) {
 	// get total recSizes of files we're merging
-	//long totalSize = 0;
-	//for ( long i=m_startFileNum ; i < m_startFileNum + m_numFiles ; i++ )
+	//int32_t totalSize = 0;
+	//for ( int32_t i=m_startFileNum ; i < m_startFileNum + m_numFiles ; i++ )
 	//totalSize += m_base->m_files[i]->getSize();
 	// . grow the map now so it doesn't have to keep growing dynamically
 	//   which wastes memory
@@ -171,7 +171,7 @@ bool RdbMerge::gotLock ( ) {
 	// . get last mapped offset
 	// . this may actually be smaller than the file's actual size
 	//   but the excess is not in the map, so we need to do it again
-	long long startOffset = m_targetMap->getFileSize();
+	int64_t startOffset = m_targetMap->getFileSize();
 
 	// if startOffset is > 0 use the last key as RdbDump:m_prevLastKey
 	// so it can compress the next key it dumps providee m_useHalfKeys
@@ -306,12 +306,12 @@ bool RdbMerge::getNextList ( ) {
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 	// . if a contributor has just surpassed a "part" in his BigFile
 	//   then we can delete that part from the BigFile and the map
-	for ( long i = m_startFileNum ; i < m_startFileNum + m_numFiles; i++ ){
+	for ( int32_t i = m_startFileNum ; i < m_startFileNum + m_numFiles; i++ ){
 		RdbMap    *map    = base->m_maps[i];
-		long       page   = map->getPage ( m_startKey );
-		long long  offset = map->getAbsoluteOffset ( page );
+		int32_t       page   = map->getPage ( m_startKey );
+		int64_t  offset = map->getAbsoluteOffset ( page );
 		BigFile   *file   = base->m_files[i];
-		long       part   = file->getPartNum ( offset ) ;
+		int32_t       part   = file->getPartNum ( offset ) ;
 		if ( part == 0 ) continue;
 		// i've seen this bug happen if we chop a part off on our
 		// last dump and the merge never completes for some reason...
@@ -328,7 +328,7 @@ bool RdbMerge::getNextList ( ) {
 		if ( ! map->chopHead ( MAX_PART_SIZE ) ) {
 			// we had an error!
 			log("db: Failed to remove data from map for "
-			    "%s.part%li.",
+			    "%s.part%"INT32".",
 			    file->getFilename(),part);
 			return true;
 		}
@@ -339,7 +339,7 @@ bool RdbMerge::getNextList ( ) {
 		if ( ! file->chopHead ( part - 1 , chopWrapper , this ) ) 
 			m_numThreads++;
 		if ( ! g_errno ) continue;
-		log("db: Failed to unlink file %s.part%li.",
+		log("db: Failed to unlink file %s.part%"INT32".",
 		    file->getFilename(),part);
 		return true;
 	}
@@ -376,19 +376,19 @@ bool RdbMerge::getAnotherList ( ) {
 
 	/*
 	if ( m_rdbId == RDB_TITLEDB ) { // && m_rdbId == RDB_TFNDB ) {
-		//long long docId1 = g_titledb.getDocIdFromKey ( m_startKey );
-	       long long docId1=g_titledb.getDocIdFromKey((key_t *)m_startKey);
-		//long long docId2 = g_titledb.getDocIdFromKey ( m_endKey );
+		//int64_t docId1 = g_titledb.getDocIdFromKey ( m_startKey );
+	       int64_t docId1=g_titledb.getDocIdFromKey((key_t *)m_startKey);
+		//int64_t docId2 = g_titledb.getDocIdFromKey ( m_endKey );
 		// tfndb is pretty much uniformly distributed
 		RdbBase *ubase = getRdbBase(RDB_TFNDB,m_coll);
 		if ( ! ubase ) return true;
-		long long space    = ubase->getDiskSpaceUsed();
-		//long long readSize = (space * (docId2-docId1)) / DOCID_MASK;
-		long long bufSize  = g_conf.m_mergeBufSize;
+		int64_t space    = ubase->getDiskSpaceUsed();
+		//int64_t readSize = (space * (docId2-docId1)) / DOCID_MASK;
+		int64_t bufSize  = g_conf.m_mergeBufSize;
 		// for now force to 100k
 		bufSize = 100000;
 		if ( bufSize > space ) bufSize = space;
-		long long docId3   = (long long) (((double)bufSize /
+		int64_t docId3   = (int64_t) (((double)bufSize /
 						  (double)space) *
 			(double)DOCID_MASK  + docId1);
 		// constrain newEndKey based on docId3
@@ -400,11 +400,11 @@ bool RdbMerge::getAnotherList ( ) {
 			key_t nk = g_titledb.makeLastKey(docId3);
 			KEYSET(newEndKey,(char *)&nk,m_ks);
 		}
-		//log(LOG_DEBUG,"build: remapping endkey from %lx.%llx to "
-		//    "%lx.%llx to avoid big tfndb read.",
+		//log(LOG_DEBUG,"build: remapping endkey from %"XINT32".%"XINT64" to "
+		//    "%"XINT32".%"XINT64" to avoid big tfndb read.",
 		//    m_endKey.n1,m_endKey.n0, newEndKey.n1,newEndKey.n0);
-		log(LOG_DEBUG,"build: remapping endkey from %llx.%llx to "
-		    "%llx.%llx to avoid big tfndb read.",
+		log(LOG_DEBUG,"build: remapping endkey from %"XINT64".%"XINT64" to "
+		    "%"XINT64".%"XINT64" to avoid big tfndb read.",
 		    KEY1(m_endKey,m_ks),KEY0(m_endKey),
 		    KEY1(newEndKey,m_ks),KEY0(newEndKey));
 	}
@@ -427,7 +427,7 @@ bool RdbMerge::getAnotherList ( ) {
 	//   because each read gives a EFILCLOSED error.
 	//   so to fix it we allow one retry for each file in the read plus
 	//   the original retry of 25
-	long nn = base->getNumFiles();
+	int32_t nn = base->getNumFiles();
 	if ( m_numFiles > 0 && m_numFiles < nn ) nn = m_numFiles;
 	// don't access any biased page caches
 	bool usePageCache = true;
@@ -437,7 +437,7 @@ bool RdbMerge::getAnotherList ( ) {
 	// . see if ths helps fix WD corruption... i doubt it
 	usePageCache = false;
 	// for now force to 100k
-	long bufSize = 100000; // g_conf.m_mergeBufSize , // minRecSizes
+	int32_t bufSize = 100000; // g_conf.m_mergeBufSize , // minRecSizes
 	// get it
 	return m_msg5.getList ( m_rdbId        ,
 				m_collnum           ,
@@ -563,7 +563,7 @@ bool RdbMerge::dumpList ( ) {
 	// not on reading less than minRecSizes to determine when to stop
 	// doing the merge.
 	m_list.getEndKey(m_startKey) ;
-	//m_startKey += (unsigned long)1;
+	//m_startKey += (uint32_t)1;
 	KEYADD(m_startKey,1,m_ks);
 
 	/////
@@ -581,8 +581,8 @@ bool RdbMerge::dumpList ( ) {
 	// debug msg
 	log(LOG_DEBUG,"db: Dumping list.");
 	// debug msg
-	//fprintf(stderr,"list startKey.n1=%lu,n0=%llu, endKey.n1=%lu,n0=%llu,"
-	//	" size=%li\n", 
+	//fprintf(stderr,"list startKey.n1=%"UINT32",n0=%"UINT64", endKey.n1=%"UINT32",n0=%"UINT64","
+	//	" size=%"INT32"\n", 
 	//	m_list.getStartKey().n1, 
 	//	m_list.getStartKey().n0, 
 	//	m_list.getLastKey().n1, 
@@ -598,7 +598,7 @@ bool RdbMerge::dumpList ( ) {
 
 void RdbMerge::doneMerging ( ) {
 	// save this
-	long saved = g_errno;
+	int32_t saved = g_errno;
 	// let RdbDump free its m_verifyBuf buffer if it existed
 	m_dump.reset();
 	// debug msg
@@ -647,8 +647,8 @@ void RdbMerge::doneMerging ( ) {
 /*
 void RdbMerge::filterList ( RdbList *list ) {
 	// set these for ease of use
-	unsigned long gid   = g_hostdb.m_groupId;
-	unsigned long gmask = g_hostdb.m_groupMask;
+	uint32_t gid   = g_hostdb.m_groupId;
+	uint32_t gmask = g_hostdb.m_groupMask;
 	// return if no mask specified
 	if ( gmask == 0  ) return;
 	// return if list is empty
@@ -659,10 +659,10 @@ void RdbMerge::filterList ( RdbList *list ) {
 	key_t firstKey = list->getFirstKey();
 	// reset the list ptr since we might scan records in the list
 	list->resetListPtr();
-	// . spiderdb masks on the key's low long because it stores
-	//   a timestamp for ordering it's urls in the high long
-	// . every other db masks on the high long
-	// . it's easy to mask on the high long cuz we're sorted by that!
+	// . spiderdb masks on the key's low int32_t because it stores
+	//   a timestamp for ordering it's urls in the high int32_t
+	// . every other db masks on the high int32_t
+	// . it's easy to mask on the high int32_t cuz we're sorted by that!
 	if ( m_rdb != g_spiderdb.getRdb() ) {
 		// determine if firstKey and lastKey are in our group now
 		//
@@ -690,7 +690,7 @@ void RdbMerge::filterList ( RdbList *list ) {
 		while ( (list->getCurrentKey().n1 & gmask) != gid )
 			list->skipCurrentRecord();
 		// get size of list/recs we haven't visited yet
-		long backSize = list->m_listEnd - list->m_listPtr ;
+		int32_t backSize = list->m_listEnd - list->m_listPtr ;
 		// have those bury what we did visit
 		memmove ( list->m_list , list->m_listPtr , backSize );
 		list->m_listSize = backSize;
@@ -709,7 +709,7 @@ void RdbMerge::filterList ( RdbList *list ) {
         // otherwise let's remove the records that don't belong in this list
         char *addPtr = list->m_list;
         char *rec;
-        long  recSize;
+        int32_t  recSize;
         bool  status;
 	// reset m_listPtr since we're scanning again
         list->resetListPtr();
