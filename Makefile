@@ -438,8 +438,9 @@ neighborhood.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 TermTable.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
-#Summary.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+# why was this commented out?
+Summary.o:
+	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 Title.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 

@@ -65,8 +65,8 @@ void markOut ( char *content , char *needle ) {
 	// a consistent LENGTH if we had 10 hits vs 9... making the hash 
 	// different
 
-	// space out digits
-	for ( ; *s && is_digit(*s); s++ ) *s = ' ';
+	// space out digits. including decimal point.
+	for ( ; *s && (is_digit(*s)||*s=='.'); s++ ) *s = ' ';
 
 	// loop for more for the "rand64=" thing
 	content = s;
@@ -172,6 +172,9 @@ void processReply ( char *reply , int32_t replyLen ) {
 	// take out <responseTimeMS>
 	markOut ( content , "<currentTimeUTC>");
 	markOut ( content , "<responseTimeMS>");
+
+	// ...from an index of about 429 pages in 0.91 seconds in collection...
+	markOut ( content , " pages in ");
 
 	// until i figure this one out, take it out
 	markOut ( content , "<docsInCollection>");
@@ -533,7 +536,11 @@ bool qainject1 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+				,
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -708,6 +715,8 @@ bool qainject1 ( ) {
 	return true;
 }
 
+//static int32_t s_savedAutoSaveFreq = 0;
+
 bool qainject2 ( ) {
 
 	//if ( ! s_callback ) s_callback = qainject2;
@@ -718,6 +727,8 @@ bool qainject2 ( ) {
 	//static bool s_x1 = false;
 	if ( ! s_flags[0] ) {
 		s_flags[0] = true;
+		//s_savedAutoSaveFreq = g_conf.m_autoSaveFrequency;
+		//g_conf.m_autoSaveFrequency = 0;
 		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
 			return false;
 	}
@@ -738,7 +749,12 @@ bool qainject2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		// can't turn off spiders because we need for query reindex
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+				,
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -818,7 +834,17 @@ bool qainject2 ( ) {
 	// mdw: query DELETE test
 	//
 	 if ( ! s_flags[30] ) {
+
+
 	 	s_flags[30] = true;
+
+		// log("qa: SUCCESSFULLY COMPLETED "
+		// 	"QA INJECT TEST 2 *** FAKE");
+		// //if ( s_callback == qainject ) exit(0);
+		// g_conf.m_autoSaveFrequency = s_savedAutoSaveFreq;
+		// return true;
+
+
 	 	if ( ! getUrl ( "/admin/reindex"
 				"?c=qatest123"
 				"&format=xml"
@@ -874,6 +900,7 @@ bool qainject2 ( ) {
 		log("qa: SUCCESSFULLY COMPLETED "
 			"QA INJECT TEST 2");
 		//if ( s_callback == qainject ) exit(0);
+		//g_conf.m_autoSaveFrequency = s_savedAutoSaveFreq;
 		return true;
 	}
 

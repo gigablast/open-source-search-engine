@@ -461,7 +461,79 @@ static bool s_cacheInit = false;
 
 // . accesses RdbMap to estimate size of the indexList for this termId
 // . returns an UPPER BOUND
+// . because this is over POSDB now and not indexdb, a document is counted
+//   once for every occurence of term "termId" it has... :{
 int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
+
+	// establish the list boundary keys
+	key144_t startKey ;
+	key144_t endKey   ;
+	makeStartKey ( &startKey, termId );
+	makeEndKey   ( &endKey  , termId );
+
+
+	// doint qa test?
+	bool qaTest = false;
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( cr && strcmp(cr->m_coll,"qatest123") == 0 )
+		qaTest = true;
+
+	// if so, use the exact size
+	if ( qaTest ) {
+		Msg5 msg5;
+		RdbList list;
+		g_threads.disableThreads();
+		msg5.getList ( RDB_POSDB   ,
+			       collnum      ,
+			      &list         ,
+			       &startKey      ,
+			       &endKey        ,
+			      64000000      , // minRecSizes   ,
+			      true          , // includeTree   ,
+			      false         , // add to cache?
+			      0             , // max cache age
+			      0             , // startFileNum  ,
+			      -1            , // numFiles      ,
+			      NULL          , // state
+			      NULL          , // callback
+			      0             , // niceness
+			      false         , // err correction?
+			      NULL          ,
+			      0             ,
+			      -1            ,
+			      true          ,
+			      -1LL          ,
+			       NULL        , // msg5b ptr
+			       true          );
+		// re-enable threads
+		g_threads.enableThreads();
+		//int64_t numBytes = list.getListSize();
+		// see how many diff docids we have... easier to debug this
+		// loop over entries in list
+		int64_t docId = 0;
+		int64_t count = 0;
+		for ( list.resetListPtr() ; ! list.isExhausted() ;
+		      list.skipCurrentRecord() ) {
+			key144_t k; list.getCurrentKey(&k);
+			// is it a delete?
+			if ( (k.n0 & 0x01) == 0x00 ) continue;
+			int64_t d = g_posdb.getDocId(&k);
+			if ( d == docId ) continue;
+			docId = d;
+			count++;
+		}		
+		// convert to # keys, approx. just an estimate since
+		// some keys are compressed...
+		// none except first key are full size. they are all just
+		// 12 bytes etc.
+		int64_t numKeys = count;
+		if ( numKeys < 0 ) numKeys = 0;
+		// and assume each shard has about the same #
+		numKeys *= g_hostdb.m_numShards;
+		return numKeys;
+	}
+ 
+	
 
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
@@ -494,11 +566,6 @@ int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 						       500   , // maxage secs
 						       true    );// promote?
 
-	// doint qa test?
-	bool qaTest = false;
-	CollectionRec *cr = g_collectiondb.getRec ( collnum );
-	if ( cr && strcmp(cr->m_coll,"qatest123") == 0 )
-		qaTest = true;
 
 
 	// -1 means not found in cache. if found, return it though.
@@ -508,51 +575,44 @@ int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 		return val;
 	}
 
-	// establish the list boundary keys
-	key144_t startKey ;
-	key144_t endKey   ;
-	//makeStartKey ( &startKey, termId );
-	//makeEndKey   ( &endKey  , termId );
 	// . ask rdb for an upper bound on this list size
 	// . but actually, it will be somewhat of an estimate 'cuz of RdbTree
-	//key144_t maxKey;
+	key144_t maxKey;
 	//int64_t maxRecs;
 	// . don't count more than these many in the map
 	// . that's our old truncation limit, the new stuff isn't as dense
 	//int32_t oldTrunc = 100000;
 	// turn this off for this
-	//int64_t oldTrunc = -1;
+	int64_t oldTrunc = -1;
 	// get maxKey for only the top "oldTruncLimit" docids because when
 	// we increase the trunc limit we screw up our extrapolation! BIG TIME!
-	// maxRecs = m_rdb.getListSize(collnum,
-	// 			    (char *)&startKey,
-	// 			    (char *)&endKey,
-	// 			    (char *)&maxKey,
-	// 			    oldTrunc );
+	int64_t maxRecs = m_rdb.getListSize(collnum,
+					    (char *)&startKey,
+					    (char *)&endKey,
+					    (char *)&maxKey,
+					    oldTrunc );
 
-	makeStartKey ( &startKey, termId );
-	makeEndKey   ( &endKey  , termId );
 
 	int64_t numBytes = 0;
 
 	// get the # more slowly but exact for qa tests so it agrees
 	// with the results of the last time we ran it
-	if ( qaTest )
-		// TODO: just get the actual list and count unique docids
-		// with a blocking msg5...
-		numBytes += m_rdb.m_buckets.getListSizeExact(collnum,
-							(char *)&startKey,
-							(char *)&endKey);
-	else
-		numBytes += m_rdb.m_buckets.getListSize(collnum,
-							(char *)&startKey,
-							(char *)&endKey,
-							NULL,NULL);
+	// if ( qaTest )
+	// 	// TODO: just get the actual list and count unique docids
+	// 	// with a blocking msg5...
+	// 	numBytes += m_rdb.m_buckets.getListSizeExact(collnum,
+	// 						(char *)&startKey,
+	// 						(char *)&endKey);
+	// else
+	numBytes += m_rdb.m_buckets.getListSize(collnum,
+						(char *)&startKey,
+						(char *)&endKey,
+						NULL,NULL);
 
 
 
 	// convert from size in bytes to # of recs
-	numBytes /= sizeof(POSDBKEY);
+	maxRecs += numBytes / sizeof(POSDBKEY);
 
 	// RdbList list;
 	// makeStartKey ( &startKey, termId );
@@ -570,9 +630,10 @@ int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 	// if ( numPos*18 != numBytes ) {
 	// 	char *xx=NULL;*xx=0; }
 
+	
 
 	// and assume each shard has about the same #
-	numBytes *= g_hostdb.m_numShards;
+	maxRecs *= g_hostdb.m_numShards;
 
 	// over all splits!
 	//maxRecs *= g_hostdb.m_numShards;
@@ -585,9 +646,9 @@ int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 	//log("posdb: approx=%"INT64" exact=%"INT64"",maxRecs,numBytes);
 
 	// now cache it. it sets g_errno to zero.
-	g_termFreqCache.addLongLong2 ( collnum, termId, numBytes );
+	g_termFreqCache.addLongLong2 ( collnum, termId, maxRecs );
 	// return it
-	return numBytes;//maxRecs;
+	return maxRecs;
 }
 
 //////////////////
@@ -820,6 +881,7 @@ bool PosdbTable::allocTopTree ( ) {
 
 
 	if ( m_r->m_doSiteClustering ) nn *= 2;
+
         // limit to this regardless!
         //CollectionRec *cr = g_collectiondb.getRec ( m_coll );
         //if ( ! cr ) return false;
@@ -832,7 +894,8 @@ bool PosdbTable::allocTopTree ( ) {
 
 	if ( nn < m_r->m_docsToGet )
 		log("query: warning only getting up to %"INT64" docids "
-		    "even though %"INT32" requested!!"
+		    "even though %"INT32" requested because termlist "
+		    "sizes are so small!!"
 		    , nn
 		    , m_r->m_docsToGet );
 
@@ -844,10 +907,10 @@ bool PosdbTable::allocTopTree ( ) {
 	}
 	// let's use nn*4 to try to get as many score as possible, although
 	// it may still not work!
-	int32_t xx = m_r->m_docsToGet ;
+	int32_t xx = nn;//m_r->m_docsToGet ;
 	// try to fix a core of growing this table in a thread when xx == 1
 	if ( xx < 32 ) xx = 32;
-	if ( m_r->m_doSiteClustering ) xx *= 4;
+	//if ( m_r->m_doSiteClustering ) xx *= 4;
 	m_maxScores = xx;
 	// for seeing if a docid is in toptree. niceness=0.
 	//if ( ! m_docIdTable.set(8,0,xx*4,NULL,0,false,0,"dotb") )

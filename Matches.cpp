@@ -103,6 +103,9 @@ void Matches::setQuery ( Query *q ) {
 
 	//memset ( m_foundNegTermVector, 0, m_q->getNumTerms() );
 
+	// this is word based. these are each 1 byte
+	memset ( m_qwordFlags  , 0 , m_q->m_numWords * sizeof(mf_t));
+
 	// # of WORDS in the query
 	int32_t nqt = m_q->m_numTerms;
 
@@ -110,7 +113,7 @@ void Matches::setQuery ( Query *q ) {
 	int32_t numToMatch = 0;
 	for ( int32_t i = 0 ; i < nqt ; i++ ) {
 		// rest this
-		m_qwordFlags[i] = 0;
+		//m_qwordFlags[i] = 0;
 		// get query word #i
 		//QueryWord *qw = &m_q->m_qwords[i];
 		QueryTerm *qt = &m_q->m_qterms[i];

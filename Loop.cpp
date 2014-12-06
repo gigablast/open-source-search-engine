@@ -2547,22 +2547,24 @@ void Loop::disableTimer() {
 }
 
 int gbsystem(char *cmd ) {
-	if ( ! g_conf.m_runAsDaemon )
-		setitimer(ITIMER_REAL, &g_loop.m_noInterrupt, NULL);
+	// if ( ! g_conf.m_runAsDaemon )
+	// 	setitimer(ITIMER_REAL, &g_loop.m_noInterrupt, NULL);
+	g_loop.disableTimer();
 	log("gb: running system(\"%s\")",cmd);
 	int ret = system(cmd);
-	if ( ! g_conf.m_runAsDaemon )
-		setitimer(ITIMER_REAL, &g_loop.m_realInterrupt, NULL);
+	g_loop.enableTimer();
+	// if ( ! g_conf.m_runAsDaemon )
+	// 	setitimer(ITIMER_REAL, &g_loop.m_realInterrupt, NULL);
 	return ret;
 }
 	
 
-// void Loop::enableTimer() {
-// 	m_canQuickPoll = true;
-// 	//	logf(LOG_WARN, "xxx enabling");
-// 	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
-// 	//setitimer(ITIMER_REAL, &m_quickInterrupt, NULL);
-// }
+void Loop::enableTimer() {
+	m_canQuickPoll = true;
+	//	logf(LOG_WARN, "xxx enabling");
+	setitimer(ITIMER_VIRTUAL, &m_quickInterrupt, NULL);
+	setitimer(ITIMER_REAL, &m_realInterrupt, NULL);
+}
 
 
 

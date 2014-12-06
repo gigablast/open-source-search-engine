@@ -30169,7 +30169,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . no! think about it -- this can be huge for pages like
 	//   google.com!!!
 	LinkInfo *info1 = ptr_linkInfo1;
-	if ( info1 && m_req->m_getLinkInfo ) {
+	if ( info1 ) { // && m_req->m_getLinkInfo ) {
 		reply->m_pageNumInlinks        = info1->m_totalInlinkingDocIds;
 		reply->m_pageNumGoodInlinks     = info1->m_numGoodInlinks;
 		reply->m_pageNumUniqueIps       = info1->m_numUniqueIps;

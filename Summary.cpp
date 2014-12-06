@@ -158,6 +158,7 @@ bool Summary::set2 ( Xml      *xml                ,
 
 	// query terms
 	int32_t numTerms = q->getNumTerms();
+
 	// . compute our word weights wrt each query. words which are more rare
 	//   have a higher weight. We use this to weight the terms importance 
 	//   when generating the summary.
@@ -193,6 +194,15 @@ bool Summary::set2 ( Xml      *xml                ,
 	else {
 		for ( int32_t i = 0 ; i < q->m_numWords; i++ )
 			m_wordWeights[i] = 1.0;
+	}
+
+	if ( g_conf.m_logDebugSummary ) {
+		for ( int32_t i = 0 ; i < q->m_numWords; i++ ) {
+			int64_t tf = -1;
+			if ( termFreqs ) tf = termFreqs[i];
+			log("sum: u=%s wordWeights[%"INT32"]=%f tf=%"INT64"",
+			    f->m_url,i,m_wordWeights[i],tf);
+		}
 	}
 
 	// convenience
@@ -802,8 +812,9 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 	wordCount = 0;
 
 	// for debug
-	char buf[5000];
-	char *xp = buf;
+	//char buf[5000];
+	//char *xp = buf;
+	SafeBuf xp;
 
 	// wtf?
 	if ( b > nw ) b = nw;
@@ -819,8 +830,8 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 				char *c = words->m_words[i]+k;
 				cs = getUtf8CharSize(c);
 				if ( is_binary_utf8 ( c ) ) continue;
-				memcpy ( xp , c , cs );
-				xp += cs;
+				xp.safeMemcpy ( c , cs );
+				xp.nullTerm();
 			}
 		}
 
@@ -830,7 +841,7 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 		// don't count just numeric words
 		if ( words->isNum(i) ) continue;
 		// check if there is a url. best way to check for '://'
-		if ( !wids[i] ){
+		if ( wids && !wids[i] ){
 			char *wrd = words->m_words[i];
 			int32_t  wrdLen = words->m_wordLens[i];
 			if ( wrdLen == 3 &&
@@ -859,8 +870,7 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 
 		// print the score, "t"
 		if ( g_conf.m_logDebugSummary ) {
-			sprintf ( xp ,"(%"INT32")",t);
-			xp += gbstrlen(xp);
+			xp.safePrintf("(%"INT32")",t);
 		}
 
 		// skip if not wid
@@ -900,8 +910,8 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 		score += t;
 
 		if ( g_conf.m_logDebugSummary ) {
-			sprintf ( xp ,"[%"INT32"]",t);
-			xp += gbstrlen(xp);
+			xp.safePrintf ("[%"INT32"]{qwn=%"INT32",ww=%f}",t,qwn,
+				       m_wordWeights[qwn]);
 		}
 
 		// inc the query word count for this window
@@ -940,7 +950,8 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 	// show it
 	if ( g_conf.m_logDebugSummary )
 		logf(LOG_DEBUG,"score=%08"INT32" prescore=%08"INT32" a=%05"INT32" b=%05"INT32" %s",
-		     (int32_t)score,oldScore,(int32_t)a,(int32_t)b,buf);
+		     (int32_t)score,oldScore,(int32_t)a,(int32_t)b,
+		     xp.getBufStart());
 
 	// set lasta, besta, bestb
 	*lasta = a;
