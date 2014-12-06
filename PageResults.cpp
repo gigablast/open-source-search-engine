@@ -2449,7 +2449,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}			
 
 	// print individual query term info
-	if ( si->m_format == FORMAT_JSON ) {
+	if ( si->m_format == FORMAT_JSON && st->m_header ) {
 		Query *q = &si->m_q;
 		sb->safePrintf("\"queryInfo\":{\n");
 		sb->safePrintf("\t\"fullQuery\":\"");
