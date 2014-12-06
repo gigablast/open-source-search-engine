@@ -313,6 +313,7 @@ typedef enum {
 	ifk_installconf2 ,
 	ifk_installcat2 ,
 	ifk_kstart ,
+	ifk_dstart ,
 	ifk_installnewcat2 ,
 	ifk_dumpmissing ,
 	ifk_removedocids ,
@@ -2202,10 +2203,10 @@ int main2 ( int argc , char *argv[] ) {
 			int32_t h2 = -1;
 			sscanf ( argv[cmdarg+1],"%"INT32"-%"INT32"",&h1,&h2);
 			if ( h1 != -1 && h2 != -1 && h1 <= h2 )
-				return install ( ifk_kstart , h1, 
+				return install ( ifk_dstart , h1, 
 						 NULL,NULL,h2 );
 		}
-		return install ( ifk_kstart , hostId );
+		return install ( ifk_dstart , hostId );
 	}
 	if ( strcmp ( cmd , "kstop" ) == 0 ) {	
 		//same as stop, here for consistency
@@ -5070,7 +5071,67 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
-		else if ( installFlag == ifk_kstart ) {
+		else if ( installFlag == ifk_dstart ) {
+			//keepalive
+			// . save old log now, too
+			//char tmp2[1024];
+			//tmp2[0]='\0';
+			// let's do this for everyone now
+			//if ( h2->m_hostId == 0 )
+			// we do not run as daemon so keepalive loop will
+			// work properly...
+			//sprintf(tmp2,
+			//	"mv ./log%03"INT32" ./log%03"INT32"-`date '+"
+			//	"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
+			//	h2->m_hostId   ,
+			//	h2->m_hostId   );
+			// . assume conf file name gbHID.conf
+			// . assume working dir ends in a '/'
+			//to test add: ulimit -t 10; to the ssh cmd
+			sprintf(tmp,
+				"ssh %s \"cd %s ; ulimit -c unlimited; "
+				"export MALLOC_CHECK_=0;"
+				"cp -f gb gb.oldsave ; "
+				"mv -f gb.installed gb ; "
+				"ADDARGS='' ; "
+				"EXITSTATUS=1 ; "
+				 "while [ \\$EXITSTATUS != 0 ]; do "
+ 				 "{ "
+
+				// move the log file
+				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
+				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+
+				"./gb "//%"INT32" "
+				"\\$ADDARGS "
+				" ;"
+				" >& ./log%03"INT32" ;"
+
+				"EXITSTATUS=\\$? ; "
+				"ADDARGS='-r' ; "
+				"} " 
+ 				"done >& /dev/null & \" %s",
+				//"\" %s",
+				iptoa(h2->m_ip),
+				h2->m_dir      ,
+
+				// for moving log file
+				 h2->m_hostId   ,
+				 h2->m_hostId   ,
+
+				//h2->m_dir      ,
+
+				// hostid is now inferred from path
+				h2->m_hostId   ,
+				amp );
+
+			// log it
+			//log(LOG_INIT,"admin: %s", tmp);
+			fprintf(stdout,"admin: %s\n", tmp);
+			// execute it
+			system ( tmp );
+		}
+		else if ( installFlag == ifk_dstart ) {
 			//keepalive
 			// . save old log now, too
 			//char tmp2[1024];
