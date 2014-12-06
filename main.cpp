@@ -5071,7 +5071,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
-		else if ( installFlag == ifk_dstart ) {
+		else if ( installFlag == ifk_kstart ) {
 			//keepalive
 			// . save old log now, too
 			//char tmp2[1024];
@@ -5093,7 +5093,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"ADDARGS='' ; "
+				"ADDARGS='' "
 				"EXITSTATUS=1 ; "
 				 "while [ \\$EXITSTATUS != 0 ]; do "
  				 "{ "
@@ -5104,7 +5104,6 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 
 				"./gb "//%"INT32" "
 				"\\$ADDARGS "
-				" ;"
 				" >& ./log%03"INT32" ;"
 
 				"EXITSTATUS=\\$? ; "
