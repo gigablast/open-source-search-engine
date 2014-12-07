@@ -16952,13 +16952,15 @@ void Parms::init ( ) {
 
 	m->m_title = "posdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many posdb data files "
-		"are on disk.";
+		"are on disk. Raise this while doing massive injections "
+		"and not doing much querying. Then when done injecting "
+		"keep this low to make queries fast.";
 	m->m_cgi   = "mpftm";
 	m->m_off   = (char *)&cr.m_posdbMinFilesToMerge - x;
 	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
