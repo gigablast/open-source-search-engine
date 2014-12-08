@@ -2419,7 +2419,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				sb->safePrintf("\t\t\t<termLang>"
 					       "<![CDATA[");
 				bool first = true;
-				for ( int i = 0 ; i <= MAXLANGID ; i++ ) {
+				for ( int i = 0 ; i < langLast ; i++ ) {
 					uint64_t bit = (uint64_t)1 << i;
 					if ( ! (qt->m_langIdBits&bit))continue;
 					char *str = getLangAbbr(i);
@@ -2480,7 +2480,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				// language map from wiktionary
 				sb->safePrintf("\t\t\"termLang\":\"");
 				bool first = true;
-				for ( int i = 0 ; i <= MAXLANGID ; i++ ) {
+				for ( int i = 0 ; i < langLast ; i++ ) {
 					uint64_t bit = (uint64_t)1 << i;
 					if ( ! (qt->m_langIdBits&bit))continue;
 					char *str = getLangAbbr(i);
