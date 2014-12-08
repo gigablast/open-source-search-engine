@@ -1173,6 +1173,16 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char guide = r->getLong("guide",0);
 
+
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! g_conf.m_allowCloudUsers &&
+	     ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		char *msg = "NO PERMISSION";
+		return g_httpServer.sendDynamicPage (s, msg,gbstrlen(msg));
+	}
+
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
 	//
@@ -2616,9 +2626,12 @@ bool Parms::printParm ( SafeBuf* sb,
 		// 	}
 		// }
 		if ( m->m_flags & PF_TEXTAREA ) {
+			int rows = 10;
+			if ( m->m_flags & PF_SMALLTEXTAREA )
+				rows = 4;
 			sb->safePrintf ("<textarea id=tabox "
-					"name=%s rows=10 cols=80>",
-					cgi);
+					"name=%s rows=%i cols=80>",
+					cgi,rows);
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
@@ -18692,7 +18705,7 @@ void Parms::init ( ) {
 	//m->m_max   = MAX_MASTER_PASSWORDS;
 	//m->m_size  = PASSWORD_MAX_LEN+1;
 	//m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 
@@ -18720,7 +18733,7 @@ void Parms::init ( ) {
 	//m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_obj   = OBJ_CONF;
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 	// m->m_title = "remove connect ip";
@@ -18816,7 +18829,11 @@ void Parms::init ( ) {
 	m->m_title = "Collection Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
-		"to the controls for just this collection.";
+		"to the controls for just this collection. The master "
+		"password and IPs are controled through the "
+		"<i>master passwords</i> link under the ADVANCED controls "
+		"tab. The master passwords or IPs have administrative "
+		"access to all collections.";
 	m->m_cgi   = "collpwd";
 	m->m_xml   = "collectionPasswords";
 	m->m_obj   = OBJ_COLL;
@@ -18824,7 +18841,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
 	m->m_page  = PAGE_COLLPASSWORDS;
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 	m->m_title = "Collection IPs";
@@ -18838,7 +18855,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
 	m->m_page  = PAGE_COLLPASSWORDS;
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 

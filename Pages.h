@@ -111,6 +111,7 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) ;
 #define PG_STATUS 0x02
 #define PG_COLLADMIN 0x04
 #define PG_MASTERADMIN 0x08
+#define PG_ACTIVE      0x10
 
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
