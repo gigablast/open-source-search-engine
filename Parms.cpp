@@ -1179,10 +1179,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! g_conf.m_allowCloudUsers &&
 	     ! isMasterAdmin &&
 	     ! isCollAdmin ) {
-		return g_httpServer.sendDynamicPage (s,
-						     "",
-						     0);
-
+		char *msg = "NO PERMISSION";
+		return g_httpServer.sendDynamicPage (s, msg,gbstrlen(msg));
 	}
 
 	//
