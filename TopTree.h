@@ -53,6 +53,10 @@ class TopNode {
 	int32_t m_left;   // kid
 	int32_t m_right;  // kid
 
+	// so we can quickly remove its scoring info from the scoreinfo
+	// buf and replace with new docid's scoring info
+	//int64_t m_scoreInfoBufOffset;
+
 	//int64_t getDocId ( );
 
 	//int64_t getDocIdForMsg3a ( );
@@ -130,7 +134,7 @@ class TopTree {
 	bool  m_doSiteClustering;
 	bool  m_useIntScores;
 	int32_t  m_docsWanted;
-	int32_t  m_ridiculousMax;
+	int64_t  m_ridiculousMax;
 	char  m_kickedOutDocIds;
 	//int64_t m_lastKickedOutDocId;
 	int32_t  m_domCount[256];

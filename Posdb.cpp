@@ -7276,7 +7276,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		dcs.m_numRequiredTerms = m_numQueryTermInfos;
 		dcs.m_docLang = docLang;
 		// ensure enough room we can't allocate in a thread!
-		if ( m_scoreInfoBuf.getAvail() < (int32_t)sizeof(DocIdScore)+1) { 
+		if ( m_scoreInfoBuf.getAvail()<(int32_t)sizeof(DocIdScore)+1){
 			char *xx=NULL;*xx=0; }
 		// if same as last docid, overwrite it since we have a higher
 		// siterank or langid i guess
@@ -7315,10 +7315,25 @@ void PosdbTable::intersectLists10_r ( ) {
 		//   getTermPairScoreForAny() function
 		//
 		//////////////////////////////
-		
+
+		// the top tree remains persistent between docid ranges.
+		// and so does the score buf. so we must replace scores
+		// if the docid gets replaced by a better scoring docid
+		// from a following docid range of different docids.
+		// However, scanning the docid scor buffer each time is 
+		// really slow, so we need to get the kicked out docid
+		// from the top tree and use that to store its offset
+		// into m_scoreInfoBuf so we can remove it.
+
+		DocIdScore *si;
+
+		// only kick out docids from the score buffer when there
+		// is no room left...
+		if ( m_scoreInfoBuf.getAvail() >= (int)sizeof(DocIdScore ) )
+			goto advance;
+
 		sx = m_scoreInfoBuf.getBufStart();
 		sxEnd = sx + m_scoreInfoBuf.length();
-		DocIdScore *si;
 		// if we have not supplanted anyone yet, be on our way
 		for ( ; sx < sxEnd ; sx += sizeof(DocIdScore) ) {
 			si = (DocIdScore *)sx;
@@ -7331,6 +7346,11 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( sx >= sxEnd ) goto advance;
 		// must be there!
 		if ( ! si ) { char *xx=NULL;*xx=0; }
+
+		// note it because it is slow
+		log("query: kicking out docid %"INT64" from score buf",
+		    si->m_docId);
+
 		// get his single and pair offsets
 		pairOffset   = si->m_pairsOffset;
 		pairSize     = si->m_numPairs * sizeof(PairScore);
