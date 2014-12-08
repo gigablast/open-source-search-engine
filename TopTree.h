@@ -53,6 +53,10 @@ class TopNode {
 	int32_t m_left;   // kid
 	int32_t m_right;  // kid
 
+	// so we can quickly remove its scoring info from the scoreinfo
+	// buf and replace with new docid's scoring info
+	//int64_t m_scoreInfoBufOffset;
+
 	//int64_t getDocId ( );
 
 	//int64_t getDocIdForMsg3a ( );
