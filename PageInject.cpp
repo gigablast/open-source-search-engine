@@ -119,6 +119,15 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	if ( ! gr->m_url || gr->m_url[0] == '\0' ) 
 		return sendReply ( msg7 );
 
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
+	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		g_errno = ENOPERM;
+		return sendReply ( msg7 );
+	}
+
 	// call sendReply() when inject completes
 	if ( ! msg7->inject ( msg7 , sendReplyWrapper ) )
 		return false;

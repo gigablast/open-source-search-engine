@@ -70,12 +70,12 @@ static WebPage s_pages[] = {
 	{ PAGE_ROOT      , "index.html"    , 0 , "root" , 0 , 0 ,
 	  "search page to query",
 	  sendPageRoot   , 0 ,NULL,NULL,
-	  PG_NOAPI},
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_RESULTS   , "search"        , 0 , "search" , 0 , 0 ,
 	  "search results page",
 	  sendPageResults, 0 ,NULL,NULL,
-	  0},
+	  PG_ACTIVE},
 
 	//{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
 	//  "widget page",
@@ -86,26 +86,26 @@ static WebPage s_pages[] = {
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  "Page where you can add url for spidering",
 	  sendPageAddUrl, 0 ,NULL,NULL,
-	  PG_NOAPI},
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "gets cached web page",
 	  sendPageGet  , 0 ,NULL,NULL,
-	  0},
+	  PG_ACTIVE},
 
 	{ PAGE_LOGIN     , "login"         , 0 , "login" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	 "login",
 	 sendPageLogin, 0 ,NULL,NULL,
-	  PG_NOAPI},
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_DIRECTORY , "dir"           , 0 , "directory" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "directory",
 	  // until api is ready, take this out of the menu
 	  sendPageDirectory , 0 ,NULL,NULL,
-	  PG_NOAPI},
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_REPORTSPAM , "reportspam"   , 0 , "report spam" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN |  USER_PROXY | USER_CLIENT 
@@ -120,11 +120,11 @@ static WebPage s_pages[] = {
 	// use post now for the "site list" which can be big
 	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, M_POST , 
 	  "basic settings", sendPageGeneric , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_COLLADMIN},
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
 	  "basic status", sendPageBasicStatus  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_COLLADMIN},
+	  PG_STATUS|PG_COLLADMIN|PG_ACTIVE},
 
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,
@@ -133,47 +133,47 @@ static WebPage s_pages[] = {
 	{ PAGE_COLLPASSWORDS,
 	  "admin/collectionpasswords", 0,"collection passwords",0,0,
 	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_COLLADMIN},
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
 	  "basic search", sendPageRoot  , 0 ,NULL,NULL,
-	  PG_NOAPI},
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "hosts status", sendPageHosts    , 0 ,NULL,NULL,
-	  PG_STATUS|PG_MASTERADMIN},
+	  PG_STATUS|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_MASTERADMIN},
+	  PG_MASTERADMIN|PG_ACTIVE},
 
 	// use POST for html head/tail and page root html. might be large.
 	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls", sendPageGeneric  , 0 ,NULL,NULL,
-	  0},
+	  PG_ACTIVE},
 
 	// use post now for the "site list" which can be big
 	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
 	  "spider controls", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_COLLADMIN},
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_SPIDERPROXIES,"admin/proxies"   , 0 , "proxies" ,  1 , 0,
 	  "proxies", sendPageGeneric  , 0,NULL,NULL,
-	  PG_MASTERADMIN } ,
+	  PG_MASTERADMIN|PG_ACTIVE } ,
 
 	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "log controls", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_MASTERADMIN},
+	  PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_COLLPASSWORDS2,//BASIC_SECURITY, 
 	  "admin/collectionpasswords2", 0,"collection passwords",0,0,
 	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_COLLADMIN|PG_NOAPI},
+	  PG_COLLADMIN|PG_NOAPI|PG_ACTIVE},
 
 
 	{ PAGE_MASTERPASSWORDS, "admin/masterpasswords", 
@@ -181,85 +181,85 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY ,
 	  "master passwords", 
 	  sendPageGeneric , 0 ,NULL,NULL,
-	  PG_MASTERADMIN},
+	  PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection",
 	  sendPageAddColl  , 0 ,NULL,NULL,
-	  PG_MASTERADMIN},
+	  PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
 	  //USER_MASTER , 
 	  "delete a collection",
 	  sendPageDelColl  , 0 ,NULL,NULL,
-	  PG_COLLADMIN},
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_CLONECOLL, "admin/clonecoll" , 0 , "clone collection" ,  1 ,0,
 	  //USER_MASTER , 
 	  "clone one collection's settings to another",
 	  sendPageCloneColl  , 0 ,NULL,NULL,
-	  PG_MASTERADMIN},
+	  PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_REPAIR    , "admin/rebuild"   , 0 , "rebuild" ,  1 , 0 ,
 	  "rebuild data",
 	  //USER_MASTER ,
 	  sendPageGeneric , 0 ,NULL,NULL,
-	  PG_MASTERADMIN },
+	  PG_MASTERADMIN |PG_ACTIVE},
 
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
 	  "prioritize urls for spidering",
 	  sendPageGeneric  , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_COLLADMIN},
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" , 0,M_MULTI ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
 	  sendPageInject   , 2 ,NULL,NULL,
-	  0} ,
+	  PG_ACTIVE} ,
 
 	// this is the addurl page the the admin!
 	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
 	  "add url page for admin",
 	  sendPageAddUrl2   , 0 ,NULL,NULL,
-	  PG_COLLADMIN},
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER, 
 	  "query delete/reindex",
 	  sendPageReindex  , 0 ,NULL,NULL,
-	  PG_COLLADMIN},
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "general statistics",
 	  sendPageStats    , 0 ,NULL,NULL,
-	  PG_STATUS|PG_MASTERADMIN},
+	  PG_STATUS|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
 	  "query stats graph",
 	  sendPageGraph  , 2  ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "function performance graph",
 	  sendPagePerf     , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "sockets",
 	  sendPageSockets  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
 	  //USER_MASTER ,  
 	  "logview",
 	  sendPageLogView  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 //	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
 //	  //USER_MASTER , 
@@ -276,13 +276,13 @@ static WebPage s_pages[] = {
 	  //USER_MASTER , 
 	  "profiler",
 	  sendPageProfiler   , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_MASTERADMIN},
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads",
 	  sendPageThreads  , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
@@ -299,7 +299,7 @@ static WebPage s_pages[] = {
 	{ PAGE_QA , "admin/qa"         , 0 , "qa" , 0 , 0 ,
 	  "quality assurance", 
 	  sendPageQA , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_MASTERADMIN},
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_IMPORT , "admin/import"         , 0 , "import" , 0 , 0 ,
 	  "import documents from another cluster", 
@@ -310,7 +310,7 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_ADMIN , 
 	  "api",  
 	  sendPageAPI , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_COLLADMIN},
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
@@ -334,13 +334,13 @@ static WebPage s_pages[] = {
 	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
 	  "simplified spider controls",
 	  sendPageCrawlbot , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_MASTERADMIN},
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "spider queue",
 	  sendPageSpiderdb , 0 ,NULL,NULL,
-	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN},
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
@@ -379,19 +379,19 @@ static WebPage s_pages[] = {
 	  //USER_MASTER ,
 	  "page parser",
 	  sendPageParser   , 2 ,NULL,NULL,
-	  PG_NOAPI|PG_COLLADMIN},
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "add/remove/get tags for sites/urls",
 	  sendPageTagdb ,  0 ,NULL,NULL,
-	  PG_NOAPI|PG_COLLADMIN},	  
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},	  
 
 	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb",
 	  sendPageCatdb    , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_MASTERADMIN},
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
@@ -621,6 +621,22 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	//if ( ! publicPage && ! isMasterAdmin && ! guest )
 	//	return sendPageLogin ( s , r );
 
+	g_errno = 0;
+
+	WebPage *pg = &s_pages[page];
+
+	// for pages like autoban that no longer show in the menu,
+	// just return error right away to avoid having to deal with
+	// permissions issues/bugs
+	if ( ! publicPage && 
+	     ! isMasterAdmin && 
+	     ! (pg->m_pgflags & PG_ACTIVE) ) {
+		return g_httpServer.sendErrorReply ( s , 505 , 
+						     "Page not active");
+	}
+
+
+
 	if ( page == PAGE_CRAWLBOT && ! isMasterAdmin )
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
@@ -705,9 +721,6 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	//	return sendPageLogin ( s , r, "Access Denied. No permission.");
 	//}
 
-	g_errno = 0;
-
-	WebPage *pg = &s_pages[page];
 
 	// now we require a username for all "admin" type pages
 	/*bool  pub = pg->m_perm & USER_PUBLIC;
@@ -3888,6 +3901,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		return (bool)adds;
 	}
 
+	bool printedMaster = false;
 	if ( g_conf.m_masterPwds.length() == 0 &&
 	     g_conf.m_connectIps.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
@@ -3900,11 +3914,13 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
 		mb->safePrintf("%s",boxEnd);
+		printedMaster = true;
 	}
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
 	if ( cr &&
+	     ! printedMaster &&
 	     g_conf.m_useCollectionPasswords &&
 	     cr->m_collectionPasswords.length() == 0 && 
 	     cr->m_collectionIps.length() == 0 ) {
@@ -3913,10 +3929,14 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("URGENT. Please specify a COLLECTION password "
 			       "or IP address in the "
-			       "<a href=/admin/collectionpasswords>"
+			       "<a href=/admin/collectionpasswords?c=%s>"
 			       "password</a> "
 			       "table. Right now anybody might be able "
-			       "to access the Gigablast admin controls.");
+			       "to access the Gigablast admin controls "
+			       "for the <b>%s</b> collection."
+			       , cr->m_coll
+			       , cr->m_coll
+			       );
 		mb->safePrintf("%s",boxEnd);
 	}
 

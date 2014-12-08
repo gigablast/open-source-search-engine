@@ -50,6 +50,19 @@ bool sendPageCatdb ( TcpSocket *s , HttpRequest *r ) {
 						    "password is incorrect");
 	}
 	*/
+
+
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		g_errno = ENOPERM;
+		g_httpServer.sendErrorReply(s,g_errno,mstrerror(g_errno));
+		return true;
+	}
+
+
 	// get the collection
 	int32_t collLen = 0;
 	char *coll   = r->getString("c", &collLen, NULL);

@@ -2614,6 +2614,17 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 		return true;
 	}
 
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
+	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		g_errno = ENOPERM;
+		g_httpServer.sendErrorReply(sock,g_errno,mstrerror(g_errno));
+		return true;
+	}
+
+
 	// set m_doTest
 	for ( int32_t i = 0 ; submit && i < n ; i++ ) {
 		QATest *qt = &s_qatests[i];

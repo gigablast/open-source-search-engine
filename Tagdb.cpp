@@ -4344,6 +4344,15 @@ bool sendReply ( void *state ) {
 
 	if ( ! st->m_adding ) return sendReply2 ( st );
 
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		g_errno = ENOPERM;
+		return sendReply2 ( st );
+	}
+
 	//char *nuke = r->getString ("nuke" ,NULL );
 
 	TagRec *newtr = &st->m_newtr;

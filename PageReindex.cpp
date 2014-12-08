@@ -99,6 +99,18 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 		return true;
 	}
 
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		g_errno = ENOPERM;
+		doneReindexing ( st );
+		return true;
+	}
+	
+
+
 	int32_t langId = getLangIdFromAbbr ( gr->m_qlang );
 
 	// let msg1d do all the work now
