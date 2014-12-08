@@ -72,15 +72,19 @@ bool TopTree::setNumNodes ( int32_t docsWanted , bool doSiteClustering ) {
 	//m_lastKickedOutDocId = -1LL;
 	
 	// how many nodes to we need to accomodate "docsWanted" docids?
-	m_ridiculousMax = docsWanted * 2;
+	// we boost it up here for domain/host counting for site clustering.
+	m_ridiculousMax = (int64_t)docsWanted * 2;
 	if ( m_ridiculousMax < 50 ) m_ridiculousMax = 50;
-	int32_t numNodes = m_ridiculousMax * 256;
+	int64_t numNodes = m_ridiculousMax * 256;
 	// i would say limit it to 100,000 nodes regarless
 	if ( numNodes > MAXDOCIDSTOCOMPUTE ) numNodes = MAXDOCIDSTOCOMPUTE;
 	// craziness overflow?
 	if ( numNodes < 0 ) numNodes = MAXDOCIDSTOCOMPUTE;
 	// amp it up last minute, after we set numNodes, if we need to
 	if ( ! m_doSiteClustering ) m_ridiculousMax = 0x7fffffff;
+
+	// if not doing siteclustering... don't use 5gb of ram!
+	if ( ! m_doSiteClustering ) numNodes = m_docsWanted;
 
 	// how many docids do we have, not FULLY counting docids from
 	// "dominating" domains? aka the "variety count"
@@ -112,8 +116,8 @@ bool TopTree::setNumNodes ( int32_t docsWanted , bool doSiteClustering ) {
 	//if ( useSampleVectors ) vecSize = SAMPLE_VECTOR_SIZE ;
 	char *nn ;
 
-	int32_t oldsize = (m_numNodes+1) * ( sizeof(TopNode) );
-	int32_t newsize = (  numNodes+1) * ( sizeof(TopNode) );
+	int64_t oldsize = (m_numNodes+1) * ( sizeof(TopNode) );
+	int64_t newsize = (  numNodes+1) * ( sizeof(TopNode) );
 	// if they ask for to many, this can go negative
 	if ( newsize < 0 ) {
 		g_errno = ENOMEM;
@@ -129,7 +133,7 @@ bool TopTree::setNumNodes ( int32_t docsWanted , bool doSiteClustering ) {
 		nn=(char *)mrealloc(m_nodes,oldsize,newsize,"TopTree");
 		updated = true;
 	}
-	if ( ! nn ) return log("query: Can not allocate %"INT32" bytes for "
+	if ( ! nn ) return log("query: Can not allocate %"INT64" bytes for "
 			       "holding resulting docids.",  newsize);
 	// save this for freeing
 	m_allocSize = newsize;

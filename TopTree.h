@@ -130,7 +130,7 @@ class TopTree {
 	bool  m_doSiteClustering;
 	bool  m_useIntScores;
 	int32_t  m_docsWanted;
-	int32_t  m_ridiculousMax;
+	int64_t  m_ridiculousMax;
 	char  m_kickedOutDocIds;
 	//int64_t m_lastKickedOutDocId;
 	int32_t  m_domCount[256];
