@@ -3998,7 +3998,7 @@ struct QueryField g_fields[] = {
 	{"gbdocspiderdate",
 	 FIELD_GENERIC,
 	 false,
-	 "gbspiderdate:1400081479",
+	 "gbdocspiderdate:1400081479",
 	 "Matches documents that have "
 	 "that spider date timestamp (UTC). Does not include the "
 	 "special spider status documents. This is the time the document "
