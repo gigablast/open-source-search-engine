@@ -49096,10 +49096,20 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		// sortby and constrain by it in the search results
 		if ( name && strcasecmp(name,"date") == 0 ) {
 			// this is in HttpMime.cpp
-			time_t tt = atotime1 ( val );
+			int64_t tt = atotime1 ( val );
+			// we can't store 64-bit dates... so truncate to -2147483648
+			// which is Dec 13 1901. so we don't quite get the 1898 date
+			// for the new york times dbpedia entry. maybe if we added
+			// an extra termlist for more precision to indicate century or
+			// something.
+			if ( tt && tt < (int32_t)0x80000000 )
+				tt = (int32_t)0x80000000;
+			// likewise, we can't be too big, passed 2038
+			if ( tt && tt > 0x7fffffff )
+				tt = (int32_t)0x7fffffff;
 			if ( tt ) {
 				// print out the time_t in ascii
-				vlen = sprintf(tbuf,"%"UINT32"",(uint32_t)tt);
+				vlen = sprintf(tbuf,"%"INT32"",(int32_t)tt);
 				// and point to it for hashing/indexing
 				val = tbuf;
 			}
