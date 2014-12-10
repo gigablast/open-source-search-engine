@@ -324,6 +324,9 @@ public:
 	};
 
 
+	// hack off trailing 0's
+	bool printFloatPretty ( float f ) ;
+
 	bool  pushPtr  ( void *ptr );
 	bool  pushLong (int32_t i);
 	bool  pushLongLong (int64_t i);

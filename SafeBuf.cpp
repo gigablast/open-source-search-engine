@@ -229,6 +229,40 @@ bool SafeBuf::pushFloat ( float i) {
 	return true;
 }
 
+// hack off trailing 0's
+bool SafeBuf::printFloatPretty ( float f ) {
+
+	if ( m_length + 20 > m_capacity && ! reserve(20) )
+		return false;
+
+	char *p = m_buf + m_length;
+
+	int len =  sprintf(p,"%f",f);
+
+	// need a decimal point to truncate trailing 0's
+	char *ss = strstr(p,".");
+	if ( ! ss ) {
+		m_length += len;
+		return true;
+	}
+
+	// hack off trailing zeros
+	char *e = p + len - 1;
+
+	for ( ; e > p ; e-- ) {
+		if ( e[0] == '.' ) {
+			e[0] = '\0';
+			break;
+		}
+		if ( e[0] != '0' ) break;
+		e[0] = '\0';
+	}
+
+	m_length += e - p;
+	return true;
+}
+
+
 bool SafeBuf::pushDouble ( double i) {
 	if ( m_length + (int32_t)sizeof(double) > m_capacity ) 
 		if(!reserve(sizeof(double)))

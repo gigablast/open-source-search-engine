@@ -6297,19 +6297,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		termBuf.nullTerm();
 		char *term = termBuf.getBufStart();
 
-		char tmp[64];
+		char tmp9[128];
+		SafeBuf sb9(tmp9,128);
 
 		QueryWord *qw= qt->m_qword;
 
 			
-		if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
-			sprintf(tmp,"%"INT32"",(int32_t)*fvh);
-			text = tmp;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT && qw->m_numFacetRanges == 0 ) {
+			sb9.safePrintf("%"INT32"",(int32_t)*fvh);
+			text = sb9.getBufStart();
 		}
 
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
-			sprintf(tmp,"%f",*(float *)fvh);
-			text = tmp;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT && qw->m_numFacetRanges == 0 ) {
+			sb9.printFloatPretty ( *(float *)fvh );
+			text = sb9.getBufStart();
 		}
 
 		int32_t k2 = -1;
@@ -6321,11 +6322,11 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				continue;
 			if ( *(int32_t *)fvh >= qw->m_facetRangeIntB[k])
 				continue;
-			sprintf(tmp,"[%"INT32"-%"INT32")"
-				,qw->m_facetRangeIntA[k]
-				,qw->m_facetRangeIntB[k]
-				);
-			text = tmp;
+			sb9.safePrintf("[%"INT32"-%"INT32")"
+				       ,qw->m_facetRangeIntA[k]
+				       ,qw->m_facetRangeIntB[k]
+				       );
+			text = sb9.getBufStart();
 			k2 = k;
 		}
 
@@ -6336,11 +6337,13 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				continue;
 			if ( *(float *)fvh >= qw->m_facetRangeFloatB[k])
 				continue;
-			sprintf(tmp,"[%f-%f)"
-				,qw->m_facetRangeFloatA[k]
-				,qw->m_facetRangeFloatB[k]
-				);
-			text = tmp;
+			sb9.pushChar('[');
+			sb9.printFloatPretty(qw->m_facetRangeFloatA[k]);
+			sb9.pushChar('-');
+			sb9.printFloatPretty(qw->m_facetRangeFloatB[k]);
+			sb9.pushChar(')');
+			sb9.nullTerm();
+			text = sb9.getBufStart();
 			k2 = k;
 		}
 
