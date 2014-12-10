@@ -951,16 +951,16 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 			//   call to sigqueue(), 
 			int32_t status =  pthread_join ( t->m_joinTid , NULL );
 			if ( status != 0 ) {
-				log("threads: pthread_join %"INT32" = %s (%"INT32")",
-				    (int32_t)t->m_joinTid,mstrerror(status),
+				log("threads: pthread_join %"INT64" = %s (%"INT32")",
+				    (int64_t)t->m_joinTid,mstrerror(status),
 				    status);
 			}
 			// debug msg
 			if ( g_conf.m_logDebugThread )
 				log(LOG_DEBUG,"thread: joined1 with "
 				    "t=0x%"PTRFMT" "
-				    "jointid=0x%"XINT32".",
-				    (PTRTYPE)t,(int32_t)t->m_joinTid);
+				    "jointid=0x%"XINT64".",
+				    (PTRTYPE)t,(int64_t)t->m_joinTid);
 		}
 		
 #else
@@ -1284,16 +1284,16 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 			int32_t status =  pthread_join ( t->m_joinTid , NULL );
 			if ( status != 0 ) {
 				log("threads: "
-				    "pthread_join2 %"INT32" = %s (%"INT32")",
-				    (int32_t)t->m_joinTid,mstrerror(status),
+				    "pthread_join2 %"INT64" = %s (%"INT32")",
+				    (int64_t)t->m_joinTid,mstrerror(status),
 				    status);
 			}
 			// debug msg
 			if ( g_conf.m_logDebugThread )
 				log(LOG_DEBUG,"thread: joined2 with "
 				    "t=0x%"PTRFMT" "
-				    "jointid=0x%"XINT32".",
-				    (PTRTYPE)t,(int32_t)t->m_joinTid);
+				    "jointid=0x%"XINT64".",
+				    (PTRTYPE)t,(int64_t)t->m_joinTid);
 		}
 #else
 
@@ -2291,8 +2291,8 @@ int startUp ( void *state ) {
 	// debug
 	if ( g_conf.m_logDebugThread ) 
 		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] "
-		    "in startup pid=%"INT32" pppid=%"INT32"",
-		    (PTRTYPE)t,(int32_t)getpidtid(),(int32_t)getppid());
+		    "in startup pid=%"INT64" pppid=%"INT32"",
+		    (PTRTYPE)t,(int64_t)getpidtid(),(int32_t)getppid());
 	// debug msg
 	//fprintf(stderr,"new thread tid=%"INT32" pid=%"INT32"\n",
 	//	(int32_t)t->m_tid,(int32_t)t->m_pid);
@@ -2351,8 +2351,8 @@ int startUp ( void *state ) {
 	if ( g_conf.m_logDebugThread ) {
 
 		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] "
-		    "done with startup pid=%"INT32"",
-		    (PTRTYPE)t,(int32_t)getpidtid());
+		    "done with startup pid=%"INT64"",
+		    (PTRTYPE)t,(int64_t)getpidtid());
 	}
 
 	// . now mark thread as ready for removal
@@ -2387,7 +2387,7 @@ int startUp ( void *state ) {
 	// on 64bit arch pthread_t is 64bit and pid_t is 32bit
 	// i dont think this makes sense with pthreads any more, they don't
 	// use pid_t they use pthread_t
-	sigqueue ( (pid_t)s_pid, SIGCHLD, svt ) ;
+	sigqueue ( (pid_t)(int64_t)s_pid, SIGCHLD, svt ) ;
 
 	return 0;
 }

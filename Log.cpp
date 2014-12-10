@@ -293,7 +293,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// thread id if in "thread"
 	if ( pid != s_pid && s_pid != (pthread_t)-1 ) {
 		//sprintf ( p , "[%"INT32"] " , (int32_t)getpid() );
-		sprintf ( p , "[%"UINT32"] " , (uint32_t)pid );
+		sprintf ( p , "[%"UINT64"] " , (uint64_t)pid );
 		p += gbstrlen ( p );
 	}
 	// then message itself

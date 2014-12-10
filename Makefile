@@ -170,7 +170,8 @@ gb: vclean $(OBJS) main.o $(LIBFILES)
 # 1. LIBS  > zlib-devel: Gzip de/compression library (development)
 # 2. LIBS  > libiconv: GNU character set conversion library and utlities
 
-# 3. NET   > openssl: A general purpose cryptographt toolkit with TLS impl...
+# 3. DEVEL > openssl: cygwin32-openssl: OpenSSL for Cygwin 32bit toolchain
+
 # 3. NET   > openssl: A general purpose cryptographt toolkit with TLS impl...
 
 # 4. DEVEL > mingw-pthreads: Libpthread for MinGW.org Wind32 toolchain
