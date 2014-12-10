@@ -5,7 +5,7 @@ Profiler::Profiler(){return;}
 Profiler::~Profiler(){return;}
 bool Profiler::reset(){return true;}
 bool Profiler::init(){return true;}
-char *Profiler::getFnName(uint32_t address,int32_t *nameLen){return NULL;}
+char *Profiler::getFnName(PTRTYPE address,int32_t *nameLen){return NULL;}
 void Profiler::stopRealTimeProfiler(const bool keepData){return;}
 void Profiler::cleanup(){return;}
 bool Profiler:: readSymbolTable(){return true;}

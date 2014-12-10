@@ -28,8 +28,8 @@ static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 char      *g_dbuf          = NULL;
 int32_t       g_dbufSize       = 0;
 
-// main process id
-static pid_t s_pid = -1;
+// main process id. pthread_t is 64 bit and pid_t is 32 bit on 64 bit oses
+static pthread_t s_pid = (pthread_t)-1;
 
 void Log::setPid ( ) {
 	s_pid = getpidtid();
@@ -246,7 +246,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// chop off any spaces at the end of the msg.
 	while ( is_wspace_a ( msg [ msgLen - 1 ] ) && msgLen > 0 ) msgLen--;
 	// get this pid
-	pid_t pid = getpidtid();
+	pthread_t pid = getpidtid();
 	// a tmp buffer
 	char tt [ MAX_LINE_LEN ];
 	char *p    = tt;
@@ -291,7 +291,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// MDW... no i like it
 	//while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
 	// thread id if in "thread"
-	if ( pid != s_pid && s_pid != -1 ) {
+	if ( pid != s_pid && s_pid != (pthread_t)-1 ) {
 		//sprintf ( p , "[%"INT32"] " , (int32_t)getpid() );
 		sprintf ( p , "[%"UINT32"] " , (uint32_t)pid );
 		p += gbstrlen ( p );
