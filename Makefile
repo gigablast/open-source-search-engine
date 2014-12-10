@@ -104,10 +104,6 @@ else
 #
 CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 #LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
-# use this for compiling on CYGWIN: (only for 32bit cygwin right now and
-# you have to install the packages that have these libs.
-#LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
-
 # apt-get install libssl-dev (to provide libssl and libcrypto)
 # to build static libiconv.a do a './configure --enable-static' then 'make'
 # in the iconv directory
@@ -166,8 +162,21 @@ vclean:
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
+
+# use this for compiling on CYGWIN: (only for 32bit cygwin right now and
+# you have to install the packages that have these libs.
+# you have to get these packages from cygwin:
+# 1. LIBS  > zlib-devel: Gzip de/compression library (development)
+# 2. LIBS  > libiconv: GNU character set conversion library and utlities
+# 3. NET   > openssl: A general purpose cryptographt toolkit with TLS impl...
+# 4. DEVEL > mingw-pthreads: Libpthread for MinGW.org Wind32 toolchain
+# 5. DEVEL > gcc-g++: GNU Compiler Collection (C++)
+# 6. DEVEL > make: The GNU version of the 'make' utility
+# 7. DEVEL > git: Distributed version control system
 cygwin:
-	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." gb
+	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." LIBS=" -lz -lm -lpthread -lssl -lcrypto -liconv" gb
+
+
 
 gb32:
 	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
@@ -595,7 +604,7 @@ master-rpm:
 
 # DEBIAN PACKAGE SECTION BEGIN
 
-# need to do 'apt-get intall dh-make'
+# need to do 'apt-get install dh-make'
 # deb-master
 master-deb:
 # need to change in changelog too!! dont' forget!!!
