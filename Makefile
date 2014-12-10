@@ -169,7 +169,10 @@ gb: vclean $(OBJS) main.o $(LIBFILES)
 # you have to get these packages from cygwin:
 # 1. LIBS  > zlib-devel: Gzip de/compression library (development)
 # 2. LIBS  > libiconv: GNU character set conversion library and utlities
+
 # 3. NET   > openssl: A general purpose cryptographt toolkit with TLS impl...
+# 3. NET   > openssl: A general purpose cryptographt toolkit with TLS impl...
+
 # 4. DEVEL > mingw-pthreads: Libpthread for MinGW.org Wind32 toolchain
 # 5. DEVEL > gcc-g++: GNU Compiler Collection (C++)
 # 6. DEVEL > make: The GNU version of the 'make' utility
