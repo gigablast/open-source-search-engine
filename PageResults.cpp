@@ -2407,7 +2407,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			char c = term[qt->m_termLen];
 			term[qt->m_termLen] = '\0';
 			sb->safePrintf("\t\t\t<termStr><![CDATA[");
-			sb->cdataEncode(qt->m_term);
+			char *printTerm = qt->m_term;
+			if ( is_wspace_a(term[0])) printTerm++;
+			sb->cdataEncode(printTerm);
 			sb->safePrintf("]]>"
 				       "</termStr>\n");
 			term[qt->m_termLen] = c;
@@ -2434,15 +2436,24 @@ bool printSearchResultsHeader ( State0 *st ) {
 				char *term = sq->m_term;
 				char c = term[sq->m_termLen];
 				term[sq->m_termLen] = '\0';
+				char *printTerm = term;
+				if ( is_wspace_a(term[0])) printTerm++;
 				sb->safePrintf("\t\t\t<synonymOf>"
 					       "<![CDATA[%s]]>"
 					       "</synonymOf>\n"
-					       ,sq->m_term);
+					       ,printTerm);
 				term[sq->m_termLen] = c;
 			}				
 			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
 			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
 				       ,tf);
+			sb->safePrintf("\t\t\t<termId48>%"INT64"</termId48>\n"
+				       ,qt->m_termId);
+			sb->safePrintf("\t\t\t<termId64>%"UINT64"</termId64>\n"
+				       ,qt->m_rawTermId);
+			QueryWord *qw = qt->m_qword;
+			sb->safePrintf("\t\t\t<prefixHash64>%"UINT64"</prefixHash64>\n"
+				       ,qw->m_prefixHash);
 			sb->safePrintf("\t\t</term>\n");
 		}
 		sb->safePrintf("\t</queryInfo>\n");

@@ -394,8 +394,8 @@ IndexTable.o:
 IndexTable2.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
-Posdb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+#Posdb.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # Query::setBitScores() needs this optimization
 #Query.o:
