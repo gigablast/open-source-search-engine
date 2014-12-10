@@ -163,7 +163,8 @@ gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 
-# use this for compiling on CYGWIN: (only for 32bit cygwin right now and
+# use this for compiling on CYGWIN: 
+# only for 32bit cygwin right now and
 # you have to install the packages that have these libs.
 # you have to get these packages from cygwin:
 # 1. LIBS  > zlib-devel: Gzip de/compression library (development)
@@ -173,6 +174,7 @@ gb: vclean $(OBJS) main.o $(LIBFILES)
 # 5. DEVEL > gcc-g++: GNU Compiler Collection (C++)
 # 6. DEVEL > make: The GNU version of the 'make' utility
 # 7. DEVEL > git: Distributed version control system
+# 8. EDITORS > emacs
 cygwin:
 	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." LIBS=" -lz -lm -lpthread -lssl -lcrypto -liconv" gb
 

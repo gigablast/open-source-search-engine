@@ -3010,7 +3010,7 @@ void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
  loop:
 	// include space so it won't match anything in url
 	char *needle = "Proxy-Authorization: ";
-	char *s = strcasestr ( squidProxiedReqBuf , needle );
+	char *s = gb_strcasestr ( squidProxiedReqBuf , needle );
 	if ( ! s ) return;
 	// find next \r\n
 	char *end = strstr ( s , "\r\n");
