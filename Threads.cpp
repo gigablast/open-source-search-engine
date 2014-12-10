@@ -32,7 +32,7 @@ pthread_attr_t s_attr;
 // main process id (or thread id if using pthreads)
 //static pid_t  s_pid    = (pid_t) -1;
 // on 64-bit architectures pthread_t is 64 bit and pid_t is 32 bit:
-static pthread_t  s_pid    = (pid_t) -1;
+static pthread_t  s_pid    = (pthread_t) -1;
 
 //pid_t getpidtid() {
 // on 64-bit architectures pthread_t is 64 bit and pid_t is 32 bit:
@@ -185,7 +185,8 @@ Threads::Threads ( ) {
 void Threads::setPid ( ) {
 	// set s_pid to the main process id
 #ifdef PTHREADS
-	s_pid = (pid_t)pthread_self();
+	// on 64bit arch pid is 32 bit and pthread_t is 64 bit
+	s_pid = (pthread_t)pthread_self();
 	//log(LOG_INFO,
 	//    "threads: main process THREAD id = %"UINT32"",(int32_t unsigned)s_pid);
 	pthread_t tid = pthread_self();
@@ -2383,7 +2384,10 @@ int startUp ( void *state ) {
 	//fprintf(stderr,"threads sending SIGCHLD\n");
 
 	// try a sigchld now! doesn't it already do this? no...
-	sigqueue ( s_pid, SIGCHLD, svt ) ;
+	// on 64bit arch pthread_t is 64bit and pid_t is 32bit
+	// i dont think this makes sense with pthreads any more, they don't
+	// use pid_t they use pthread_t
+	sigqueue ( (pid_t)s_pid, SIGCHLD, svt ) ;
 
 	return 0;
 }
