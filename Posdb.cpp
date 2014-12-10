@@ -1008,6 +1008,10 @@ bool PosdbTable::allocTopTree ( ) {
 		// causes a core!
 		if ( slots  < 32 ) slots = 32;
 
+		// if we already initialized table for previous docid range phase
+		// do not clear it out!
+		if ( qt->m_facetHashTable.getNumSlots() > 0 ) continue;
+
 		// limit this bitch to 10 million otherwise this gets huge!
 		// like over 28 million i've seen and it goes oom
 		if ( slots > 2000000 ) {
@@ -5472,8 +5476,13 @@ void PosdbTable::intersectLists10_r ( ) {
 		// if first time init facet hash table so empty facet ranges
 		// will still print out but with 0 documents
 		//
+
+		// skip if we already initialized it from a previous docid range phase
+		// so we do not reset the data between phases!!!
+		HashTableX *ft = &qt->m_facetHashTable;
+		if ( ft->m_numSlotsUsed > 0 ) continue;
+		
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges ; k ++ ) {
-			HashTableX *ft = &qt->m_facetHashTable;
 			FacetEntry *fe;
 			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
 				float val32 = qw->m_facetRangeFloatA[k];
@@ -7207,23 +7216,37 @@ void PosdbTable::intersectLists10_r ( ) {
 		// range, and do the counts on that! this is
 		// the HISTOGRAM logic. that way if we have 1M results
 		// and each page has its own price, we won't have 1M facets!
+		bool found = false;
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges ; k ++ ) {
 			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
 				if ( *fp < qw->m_facetRangeFloatA[k])continue;
 				if ( *fp >=qw->m_facetRangeFloatB[k])continue;
 				val32=*(int32_t *)(&qw->m_facetRangeFloatA[k]);
+				found = true;
 				break;
 			}
 			// otherwise it was like a 'gbfacetint:gbhopcount' qry
 			if ( val32 <  qw->m_facetRangeIntA[k] ) continue;
 			if ( val32 >= qw->m_facetRangeIntB[k] ) continue;
 			val32 = qw->m_facetRangeIntA[k];
+			found = true;
 			break;
 		}
-						
+				
+		// bucket range voting?
+		if ( qw->m_numFacetRanges > 0 && found ) {
+			// get it
+			HashTableX *ft = &qt->m_facetHashTable;
+			FacetEntry *fe;
+			fe=(FacetEntry *)ft->getValue(&val32);
+			if ( ! fe ) { char *xx=NULL;*xx=0; }
+			fe->m_count++;
+			fe->m_docId = m_docId;
+		}
+
 		// don't allow the same docid to vote on the
 		// same value twice!
-		if ( val32 != lastVal || firstTime ) {
+		if ( qw->m_numFacetRanges <= 0 && ( val32 != lastVal || firstTime ) ) {
 			// add it
 			//qt->m_facetHashTable.addTerm32(&val32
 			// get it
@@ -7233,8 +7256,13 @@ void PosdbTable::intersectLists10_r ( ) {
 			// debug 
 			//log("facets: got entry for key=%"UINT32" d=%"UINT64"",
 			//    val32,m_docId);
-			// if not there, init it
+			// if not there, init it... but NOT if doing ranges
+			// because we already initialized the ranges above
+			// so there is already one bucket for each range specified,
+			// and your
 			if ( ! fe ) {
+				// sanity check
+				if ( qw->m_numFacetRanges > 0 ) { char *xx=NULL;*xx=0; }
 				FacetEntry ff;
 				ff.m_count = 1;
 				ff.m_docId = m_docId;
@@ -7245,6 +7273,8 @@ void PosdbTable::intersectLists10_r ( ) {
 				fe->m_count++;
 			}
 		}
+
+
 		// to avoid dupage...
 		lastVal = val32;
 		// skip over 6 or 12 byte key
@@ -7253,7 +7283,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		firstTime = false;
 		}
 	}
-
 
  skipFacetCheck:
 

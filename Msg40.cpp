@@ -241,7 +241,19 @@ bool Msg40::getResults ( SearchInput *si      ,
 	m_cachedResults  = false;
 
 	// bail now if 0 requested!
-	if ( m_si->m_docsWanted == 0 ) return true;
+	// crap then we don't stream anything if in streaming mode.
+	if ( m_si->m_docsWanted == 0 ) {
+		log("msg40: setting streamresults to false. n=0.");
+		m_si->m_streamResults = false;
+		return true;
+	}
+
+	// or if no query terms
+	if ( m_si->m_q.m_numTerms <= 0 ) {
+		log("msg40: setting streamresults to false. numTerms=0.");
+		m_si->m_streamResults = false;
+		return true;
+	}
 
 	// . do this now in case results were cached.
 	// . set SearchInput class instance, m_si
@@ -429,11 +441,27 @@ bool Msg40::getResults ( SearchInput *si      ,
 			return false;
 		// reset g_errno, we're just a cache
 		g_errno = 0;
-		return gotCacheReply();
+		bool status = gotCacheReply();
+
+		if ( status && m_si->m_streamResults ) {
+			log("msg40: setting streamresults to false. "
+			    "was in cache.");
+			m_si->m_streamResults = false;
+		}
+
+		return status;
 	}
 
 	// keep going
-	return prepareToGetDocIds ( );
+	bool status = prepareToGetDocIds ( );
+
+	if ( status && m_si->m_streamResults ) {
+		log("msg40: setting streamresults to false. "
+		    "prepare did not block.");
+		m_si->m_streamResults = false;
+	}
+
+	return status;
 }
 
 /*
@@ -1508,8 +1536,8 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 			req.size_hqbuf = gbstrlen(req.ptr_hqbuf)+1;
 		}
 
-		int32_t q3size = m_si->m_sbuf3.length()+1;
-		if ( q3size == 1 ) q3size = 0;
+		//int32_t q3size = m_si->m_sbuf3.length()+1;
+		//if ( q3size == 1 ) q3size = 0;
 		//req.ptr_q2buf             = m_si->m_sbuf3.getBufStart();
 		//req.size_q2buf            = q3size;
 		
@@ -6297,19 +6325,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		termBuf.nullTerm();
 		char *term = termBuf.getBufStart();
 
-		char tmp[64];
+		char tmp9[128];
+		SafeBuf sb9(tmp9,128);
 
 		QueryWord *qw= qt->m_qword;
 
 			
-		if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
-			sprintf(tmp,"%"INT32"",(int32_t)*fvh);
-			text = tmp;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT && qw->m_numFacetRanges == 0 ) {
+			sb9.safePrintf("%"INT32"",(int32_t)*fvh);
+			text = sb9.getBufStart();
 		}
 
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
-			sprintf(tmp,"%f",*(float *)fvh);
-			text = tmp;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT && qw->m_numFacetRanges == 0 ) {
+			sb9.printFloatPretty ( *(float *)fvh );
+			text = sb9.getBufStart();
 		}
 
 		int32_t k2 = -1;
@@ -6321,11 +6350,11 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				continue;
 			if ( *(int32_t *)fvh >= qw->m_facetRangeIntB[k])
 				continue;
-			sprintf(tmp,"[%"INT32"-%"INT32")"
-				,qw->m_facetRangeIntA[k]
-				,qw->m_facetRangeIntB[k]
-				);
-			text = tmp;
+			sb9.safePrintf("[%"INT32"-%"INT32")"
+				       ,qw->m_facetRangeIntA[k]
+				       ,qw->m_facetRangeIntB[k]
+				       );
+			text = sb9.getBufStart();
 			k2 = k;
 		}
 
@@ -6336,11 +6365,13 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				continue;
 			if ( *(float *)fvh >= qw->m_facetRangeFloatB[k])
 				continue;
-			sprintf(tmp,"[%f-%f)"
-				,qw->m_facetRangeFloatA[k]
-				,qw->m_facetRangeFloatB[k]
-				);
-			text = tmp;
+			sb9.pushChar('[');
+			sb9.printFloatPretty(qw->m_facetRangeFloatA[k]);
+			sb9.pushChar('-');
+			sb9.printFloatPretty(qw->m_facetRangeFloatB[k]);
+			sb9.pushChar(')');
+			sb9.nullTerm();
+			text = sb9.getBufStart();
 			k2 = k;
 		}
 

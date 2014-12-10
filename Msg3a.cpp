@@ -915,6 +915,8 @@ bool Msg3a::mergeLists ( ) {
 	key_t         *ksPtr [MAX_SHARDS];
 	int64_t     *diEnd [MAX_SHARDS];
 	for ( int32_t j = 0; j < m_numHosts ; j++ ) {
+		// how does this happen?
+		if ( j >= MAX_SHARDS ) { char *xx=NULL;*xx=0; }
 		Msg39Reply *mr =m_reply[j];
 		// if we have gbdocid:| in query this could be NULL
 		if ( ! mr ) {

@@ -2408,6 +2408,10 @@ bool Query::setQWords ( char boolFlag ,
 			int32_t lastColonLen = -1;
 			int32_t colonCount = 0;
 			int32_t firstComma = -1;
+			// are we a facet term?
+			bool isFacetNumTerm = false;
+			if ( fieldCode == FIELD_GBFACETINT   ) isFacetNumTerm = true;
+			if ( fieldCode == FIELD_GBFACETFLOAT ) isFacetNumTerm = true;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2423,16 +2427,20 @@ bool Query::setQWords ( char boolFlag ,
 						firstColonLen = wlen;
 					colonCount++;
 				}
+
 				// hit a comma in something like
 				// gbfacetfloat:price,0-1,1-2.5,2.5-10
-				if ( w[wlen]==',' && firstComma == -1 )
+				if ( w[wlen]==',' && isFacetNumTerm && firstComma == -1 )
 					firstComma = wlen;
+
 				wlen++;
 			}
 			// ignore following words until we hit a space
 			ignoreTilSpace = true;
-			// the hash
-			uint64_t wid = hash64 ( w , wlen, 0LL );
+			// the hash. keep it case insensitive. only
+			// the fieldmatch stuff should be case-sensitive. this may change
+			// later.
+			uint64_t wid = hash64Lower_utf8 ( w , wlen, 0LL );
 
 			//
 			// BEGIN FACET RANGE LISTS
@@ -2443,7 +2451,9 @@ bool Query::setQWords ( char boolFlag ,
 			     ( fieldCode == FIELD_GBFACETINT ||
 			       fieldCode == FIELD_GBFACETFLOAT ) )
 				// hash the "price" not the following range lst
-				wid = hash64 ( w , firstComma );
+				// crap, since this uses the gbsortby: termlists it is
+				// NOT case-sensitive
+				wid = hash64Lower_utf8 ( w , firstComma );
 			// now store the range list so we can 
 			// fill up the buckets below
 			char *s = w + firstComma + 1;
@@ -2493,6 +2503,8 @@ bool Query::setQWords ( char boolFlag ,
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+				// save that
+				char *cma = s;
 				// skip hyphen
 				s++;
 				// must be a digit or . or -
@@ -2500,14 +2512,17 @@ bool Query::setQWords ( char boolFlag ,
 				     s[0] != '.' &&
 				     s[0] != '-' )
 					break;
+				// save that
+				char *sav2 = s;
+				// advance to comma etc.
+				for ( ; s < send && *s != ',' ; s++ );
+				char *cma2 = s;
 				// if under max, add it
 				if ( nr < MAX_FACET_RANGES ) {
-					qw->m_facetRangeFloatA [nr] =atof(sav);
-					qw->m_facetRangeFloatB [nr] =atof(s);
+					qw->m_facetRangeFloatA [nr] =atof2(sav,cma-sav);
+					qw->m_facetRangeFloatB [nr] =atof2(sav2,cma2-sav2);
 					qw->m_numFacetRanges = ++nr;
 				}
-				// skip to comma or end
-				for ( ; s < send && *s != ',' ; s++ );
 				// skip that
 				if ( *s != ',' ) break;
 				// SKIP COMMA
@@ -2523,6 +2538,7 @@ bool Query::setQWords ( char boolFlag ,
 			// i've decided not to make 
 			// gbsortby:products.offerPrice 
 			// gbmin:price:1.23 case insensitive
+			// too late... we have to support what we have
 			if ( fieldCode == FIELD_GBSORTBYFLOAT ||
 			     fieldCode == FIELD_GBREVSORTBYFLOAT ||
 			     fieldCode == FIELD_GBSORTBYINT ||
@@ -2541,6 +2557,7 @@ bool Query::setQWords ( char boolFlag ,
 				// seen in XmlDoc.cpp::hashFacet2().
 				// the other fields are hashed in 
 				// XmlDoc.cpp::hashNumber3().
+				// CASE SENSITIVE!!!!
 				wid = hash64 ( w , firstColonLen , 0LL);
 				// if it is like
 				// gbfieldmatch:tag.uri:"http://xyz.com/poo"
@@ -3431,8 +3448,8 @@ struct QueryField g_fields[] = {
 	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
 	 "Matches all the meta tag or JSON or XML fields that have "
 	 "the name \"strings.vendor\" and contain the exactly provided "
-	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
-	 "sensitive and includes punctuation, so it's exact match. In "
+	 "value, in this case, <i>My Vendor Inc.</i>. This is CASE "
+	 "SENSITIVE and includes punctuation, so it's exact match. In "
 	 "general, it should be a very short termlist, so it should be fast.",
 	 "Advanced Query Operators",
 	 QTF_BEGINNEWTABLE },
@@ -3998,7 +4015,7 @@ struct QueryField g_fields[] = {
 	{"gbdocspiderdate",
 	 FIELD_GENERIC,
 	 false,
-	 "gbspiderdate:1400081479",
+	 "gbdocspiderdate:1400081479",
 	 "Matches documents that have "
 	 "that spider date timestamp (UTC). Does not include the "
 	 "special spider status documents. This is the time the document "
@@ -4047,7 +4064,7 @@ struct QueryField g_fields[] = {
 	 "gbfacetstr:color",
 	 "Returns facets in "
 	 "the search results "
-	 "by their color field.",
+	 "by their color field. <i>color</i> is case INsensitive.",
 	 "Facet Related Query Operators",
 	 QTF_BEGINNEWTABLE},
 
@@ -4061,7 +4078,7 @@ struct QueryField g_fields[] = {
 	 "<i>{ \"product\":{\"color\":\"red\"}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;color&gt;red&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", 
+	 "</i>. <i>product.color</i> is case INsensitive.", 
 	 NULL,
 	 0},
 
@@ -4070,7 +4087,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbfacetstr:gbtagsite cat",
 	 "Returns facets from the site names of all pages "
-	 "that contain the word 'cat' or 'cats', etc."
+	 "that contain the word 'cat' or 'cats', etc. <i>gbtagsite</i> is case insensitive."
 	 ,
 	 NULL,
 	 0},
@@ -4082,7 +4099,7 @@ struct QueryField g_fields[] = {
 	 "<i>{ \"product\":{\"cores\":10}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;cores&gt;10&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", 
+	 "</i>. <i>product.cores</i> is case INsensitive.", 
 	 NULL,
 	 0},
 
@@ -4090,7 +4107,8 @@ struct QueryField g_fields[] = {
 	 "gbfacetint:gbhopcount",
 	 "Returns facets in "
 	 "of the <i>gbhopcount</i> field over the documents so you can "
-	 "search the distribution of hopcounts over the index.",
+	 "search the distribution of hopcounts over the index. <i>gbhopcount</i> is "
+	 "case INsensitive.",
 	 NULL,
 	 0},
 
@@ -4098,14 +4116,15 @@ struct QueryField g_fields[] = {
 	 "gbfacetint:size,0-10,10-20,30-100,100-200,200-1000,1000-10000",
 	 "Returns facets in "
 	 "of the <i>size</i> field (either in json, field or a meta tag) "
-	 "and cluster the results into the specified ranges.",
+	 "and cluster the results into the specified ranges. <i>size</i> is "
+	 "case INsensitive.",
 	 NULL,
 	 0},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
 	 "gbfacetint:gbsitenuminlinks",
 	 "Returns facets based on # of site inlinks the site of each "
-	 "result has.",
+	 "result has. <i>gbsitenuminlinks</i> is case INsensitive.",
 	 NULL,
 	 0},
 
@@ -4116,13 +4135,14 @@ struct QueryField g_fields[] = {
 	 "<i>{ \"product\":{\"weight\":1.45}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", 
+	 "</i>. <i>product.weight</i> is case INsensitive.", 
 	 NULL,
 	 0},
 
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
 	 "gbfacetfloat:product.price,0-1.5,1.5-5,5.0-20,20-100.0",
-	 "Similar to above but cluster the pricess into the specified ranges.",
+	 "Similar to above but cluster the pricess into the specified ranges. "
+	 "<i>product.price</i> is case insensitive.",
 	 NULL,
 	 0},
 
