@@ -607,7 +607,8 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 
 	 bool multipart = false;
 	 if ( m_requestType == 2 ) { // is POST?
-		 char *cd =strcasestr(req,"Content-Type: multipart/form-data");
+		 char *cd ;
+		 cd = gb_strcasestr(req,"Content-Type: multipart/form-data");
 		 if ( cd ) multipart = true;
 	 }
 

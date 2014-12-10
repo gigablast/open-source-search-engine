@@ -16990,7 +16990,7 @@ void *filterStartWrapper_r ( void *state , ThreadEntry *te ) {
 // sets m_errno on error
 void XmlDoc::filterStart_r ( bool amThread ) {
 	// get thread id
-	int32_t id = getpidtid();
+	pthread_t id = getpidtid();
 	// sanity check
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 	// int16_tcut
@@ -17004,11 +17004,11 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken
 	char in[1024];
-	snprintf(in,1023,"%s/in.%"INT32"", g_hostdb.m_dir , id );
+	snprintf(in,1023,"%s/in.%"INT64"", g_hostdb.m_dir , (int64_t)id );
 	unlink ( in );
 	// collect the output from the filter from this file
 	char out[1024];
-	snprintf ( out , 1023,"%s/out.%"INT32"", g_hostdb.m_dir , id );
+	snprintf ( out , 1023,"%s/out.%"INT64"", g_hostdb.m_dir, (int64_t)id );
 	unlink ( out );
 	// ignore errno from those unlinks
 	errno = 0;
