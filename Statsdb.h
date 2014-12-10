@@ -185,7 +185,7 @@ class StatKey {
 	uint32_t m_zero;
 	uint32_t m_labelHash;
 	// force to 32-bit even though time_t is 64-bit on 64-bit systems
-	uint32_t m_time1;
+	int32_t m_time1;
 };
 
 class StatData {
