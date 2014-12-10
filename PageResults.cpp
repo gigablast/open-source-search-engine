@@ -2512,8 +2512,19 @@ bool printSearchResultsHeader ( State0 *st ) {
 				term[sq->m_termLen] = c;
 			}				
 			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
-			sb->safePrintf("\t\t\"termFreq\":%"INT64"\n"
+			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
 				       ,tf);
+
+			sb->safePrintf("\t\t\"termId48\":%"INT64",\n"
+				       ,qt->m_termId);
+			sb->safePrintf("\t\t\"termId64\":%"UINT64",\n"
+				       ,qt->m_rawTermId);
+
+			// don't end last query term attr on a omma
+			QueryWord *qw = qt->m_qword;
+			sb->safePrintf("\t\t\"prefixHash64\":%"UINT64"\n"
+				       ,qw->m_prefixHash);
+
 			sb->safePrintf("\t}");
 			if ( i + 1 < q->m_numTerms )
 				sb->pushChar(',');
