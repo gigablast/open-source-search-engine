@@ -275,6 +275,16 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 
 	m_phase = 0;
 
+	// if ( m_r->m_docsToGet <= 0 ) {
+	// 	estimateHitsAndSendReply ( );
+	// 	return;
+	// }
+
+	// if ( m_tmpq.m_numTerms <= 0 ) {
+	// 	estimateHitsAndSendReply ( );
+	// 	return;
+	// }
+
 	// . otherwise, to prevent oom, split up docids into ranges
 	//   and get winners of each range.
 	//if ( ! doDocIdSplitLoop() ) return;
