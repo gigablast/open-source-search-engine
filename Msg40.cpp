@@ -6519,7 +6519,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				       , count );
 
 			// if it's a # then we print stats after
-			if ( isString )
+			if ( isString || fe->m_count == 0 )
 				sb->safePrintf("\n");
 			else
 				sb->safePrintf(",\n");

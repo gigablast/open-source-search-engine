@@ -7284,7 +7284,6 @@ void PosdbTable::intersectLists10_r ( ) {
 			//qt->m_facetHashTable.addTerm32(&val32
 			// get it
 			HashTableX *ft = &qt->m_facetHashTable;
-			FacetEntry *fe;
 			fe=(FacetEntry *)ft->getValue(&val32);
 			// debug 
 			//log("facets: got entry for key=%"UINT32" "
@@ -7299,7 +7298,11 @@ void PosdbTable::intersectLists10_r ( ) {
 					char *xx=NULL;*xx=0; }
 				memset ( &ff , 0 , sizeof(FacetEntry) );
 				fe = &ff;
-				ft->addKey(&val32,fe);
+				int32_t slot;
+				ft->addKey(&val32,fe,&slot);
+				// now point to what we added since
+				// we increment count below, add min/max, etc.
+				fe = (FacetEntry *)ft->getValueFromSlot(slot);
 			}
 		}
 
