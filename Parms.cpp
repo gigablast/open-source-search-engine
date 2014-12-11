@@ -171,6 +171,9 @@ bool CommandUpdateSiteList ( char *rec ) {
 // . we'll show it in a special msg box on all admin pages if required
 bool CommandRebalance ( char *rec ) {
 	g_rebalance.m_userApproved = true;
+	// force this to on so it goes through
+	g_rebalance.m_numForeignRecs = 1;
+	g_rebalance.m_needsRebalanceValid = false;
 	return true;
 }
 
@@ -16934,15 +16937,18 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	//m->m_title = "tagdb min files to merge";
-	//m->m_desc  = "Merge is triggered when this many linkdb data files "
-	//	"are on disk.";
-	//m->m_cgi   = "mtftm";
-	//m->m_off   = (char *)&cr.m_tagdbMinFilesToMerge - x;
-	//m->m_def   = "2"; 
-	//m->m_type  = TYPE_LONG;
-	//m->m_group = 0;
-	//m++;
+	m->m_title = "tagdb min files to merge";
+	m->m_desc  = "Merge is triggered when this many linkdb data files "
+		"are on disk.";
+	m->m_cgi   = "mtftgm";
+	m->m_off   = (char *)&cr.m_tagdbMinFilesToMerge - x;
+	m->m_def   = "2"; 
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 	// this is overridden by collection
 	m->m_title = "titledb min files needed to trigger to merge";

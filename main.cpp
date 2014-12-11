@@ -5092,11 +5092,13 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
-				"mv -f gb.installed gb ; "
 				"ADDARGS='' "
 				"EXITSTATUS=1 ; "
 				 "while [ \\$EXITSTATUS != 0 ]; do "
  				 "{ "
+
+				// in case gb was updated...
+				"mv -f gb.installed gb ; "
 
 				// move the log file
 				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
