@@ -12182,7 +12182,8 @@ void Parms::init ( ) {
 	m->m_title = "use threads for intersects and merges";
 	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
 		"Default is now on in the event you have simultaneous queries "
-		"so one query does not hold back the other.";
+		"so one query does not hold back the other. There seems "
+		"to be a bug so leave this ON for now.";
 	        //"Until pthreads is any good leave this off.";
 	m->m_cgi   = "utfio";
 	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
@@ -16917,17 +16918,21 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "linkdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many linkdb data files "
-		"are on disk.";
+		"are on disk. Raise this when initially growing an index "
+		"in order to keep merging down.";
 	m->m_cgi   = "mlkftm";
 	m->m_off   = (char *)&cr.m_linkdbMinFilesToMerge - x;
-	m->m_def   = "4";
+	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
 	m++;
-	*/
 
 	//m->m_title = "tagdb min files to merge";
 	//m->m_desc  = "Merge is triggered when this many linkdb data files "
