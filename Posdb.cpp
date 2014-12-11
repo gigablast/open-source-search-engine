@@ -7190,7 +7190,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		     qt->m_fieldCode != FIELD_GBFACETINT &&
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
-		char *p    = miniMergedList[i];
+		char *p2    = miniMergedList[i];
 		//char *pend = miniMergedEnd [i];
 		//
 		// just grab the first value i guess...
@@ -7202,12 +7202,15 @@ void PosdbTable::intersectLists10_r ( ) {
 		// the same gbxpathsitehash...
 		bool firstTime = true;
 		//int32_t lastVal;
+
+
+		// loop over entire termlist
 		for ( ; ; ) {
 
 		// do not breach sublist
-		if ( p >= miniMergedEnd[i] ) break;
+		if ( p2 >= miniMergedEnd[i] ) break;
 		// break if 12 byte key: another docid!
-		if ( ! firstTime && !(p[0] & 0x04) ) break;
+		if ( ! firstTime && !(p2[0] & 0x04) ) break;
 
 		// . first key is the full size
 		// . uses the w,G,s,v and F bits to hold this
@@ -7215,7 +7218,16 @@ void PosdbTable::intersectLists10_r ( ) {
 		//   can be any val, like now SectionStats is 
 		//   using it for the innerHtml sentence 
 		//   content hash32
-		int32_t val32 = g_posdb.getFacetVal32 ( p );
+		int32_t val32 = g_posdb.getFacetVal32 ( p2 );
+
+		// PREADVANCE "p"
+		// to avoid dupage...
+		//lastVal = val32;
+		// skip over 6 or 12 byte key
+		if ( firstTime ) p2 += 12;
+		else             p2 += 6;
+		firstTime = false;
+
 
 		float *fp = (float *)&val32;
 
@@ -7336,12 +7348,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		}
 	
 
-		// to avoid dupage...
-		//lastVal = val32;
-		// skip over 6 or 12 byte key
-		if ( firstTime ) p += 12;
-		else             p += 6;
-		firstTime = false;
 		}
 	}
 

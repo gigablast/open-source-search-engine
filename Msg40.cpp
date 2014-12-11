@@ -6413,12 +6413,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				       "\t\t<docCount>%"INT32""
 				       "</docCount>\n"
 				       ,count);
-			// some stats now
+			// some stats now for floats
 			if ( isFloat && fe->m_count ) {
 				sb->safePrintf("\t\t<average>");
-				float sum = *(float *)&fe->m_sum;
-				float avg = sum/(float)fe->m_count;
-				sb->printFloatPretty ( avg );
+				double sum = *(double *)&fe->m_sum;
+				double avg = sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
 				sb->safePrintf("\t\t</average>\n");
 				sb->safePrintf("\t\t<min>");
 				float min = *(float *)&fe->m_min;
@@ -6429,8 +6429,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				sb->printFloatPretty ( max );
 				sb->safePrintf("</max>\n");
 			}
-
-
+			// some stats now for ints
+			if ( isInt && fe->m_count ) {
+				sb->safePrintf("\t\t<average>");
+				int64_t sum = fe->m_sum;
+				double avg = (double)sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf("\t\t</average>\n");
+				sb->safePrintf("\t\t<min>");
+				int32_t min = fe->m_min;
+				sb->safePrintf("%"INT32"</min>\n",min);
+				sb->safePrintf("\t\t<max>");
+				int32_t max = fe->m_max;
+				sb->safePrintf("%"INT32"</max>\n",max);
+			}
 			sb->safePrintf("\t</facet>\n");
 			continue;
 		}
@@ -6501,8 +6513,49 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
 			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32"\n"
-				       "}\n,\n", count);
+				       "\t\"docCount\":%"INT32""
+				       , count );
+
+			// if it's a # then we print stats after
+			if ( isString )
+				sb->safePrintf("\n");
+			else
+				sb->safePrintf(",\n");
+				
+
+			// some stats now for floats
+			if ( isFloat && fe->m_count ) {
+				sb->safePrintf("\t\"average\":");
+				double sum = *(double *)&fe->m_sum;
+				double avg = sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"min\":");
+				float min = *(float *)&fe->m_min;
+				sb->printFloatPretty ( min );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"max\":");
+				float max = *(float *)&fe->m_max;
+				sb->printFloatPretty ( max );
+				sb->safePrintf("\n");
+			}
+			// some stats now for ints
+			if ( isInt && fe->m_count ) {
+				sb->safePrintf("\t\"average\":");
+				int64_t sum = fe->m_sum;
+				double avg = (double)sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"min\":");
+				int32_t min = fe->m_min;
+				sb->safePrintf("%"INT32",\n",min);
+				sb->safePrintf("\t\"max\":");
+				int32_t max = fe->m_max;
+				sb->safePrintf("%"INT32"\n",max);
+			}
+
+			sb->safePrintf("}\n,\n" );
+
 			continue;
 		}
 
