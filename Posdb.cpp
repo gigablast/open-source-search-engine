@@ -989,7 +989,10 @@ bool PosdbTable::allocTopTree ( ) {
 		// how big?
 		int64_t total = m_msg2->m_lists[i].getListSize();
 		// skip if empty
-		if ( total == 0 ) continue;
+		if ( total == 0 ) {
+			log("query: empty facets for term #%i",i);
+			continue;
+		}
 		// need this
 		QueryWord *qw = qt->m_qword;
 		// we got facet terms
@@ -1019,6 +1022,9 @@ bool PosdbTable::allocTopTree ( ) {
 			    "for query term %s",qt->m_term);
 			slots = 20000000;
 		}
+
+		log("query: using %i slots for query term #%i",slots,i);
+
 		// . each site hash is 4 bytes
 		// . we have to store each unique val in here for transmitting
 		//   back to msg3a so it can merge them and compute the final
@@ -5480,8 +5486,18 @@ void PosdbTable::intersectLists10_r ( ) {
 		// skip if we already initialized it from a previous docid range phase
 		// so we do not reset the data between phases!!!
 		HashTableX *ft = &qt->m_facetHashTable;
+
 		if ( ft->m_numSlotsUsed > 0 ) continue;
-		
+
+		log("posdb: init %i facet ranges for query term #%i",
+		    (int)qw->m_numFacetRanges,(int)i);
+
+		// prevent core
+		if ( ft->m_numSlots == 0 ) {
+			log("posdb: facet table for term #%i is uninit",i);
+			continue;
+		}
+
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges ; k ++ ) {
 			FacetEntry *fe;
 			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {

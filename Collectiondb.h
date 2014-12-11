@@ -586,7 +586,7 @@ class CollectionRec {
 	//int32_t m_clusterdbMinFilesToMerge ;
 	//int32_t m_datedbMinFilesToMerge ;
 	//int32_t m_linkdbMinFilesToMerge ;
-	//int32_t m_tagdbMinFilesToMerge ;
+	int32_t m_tagdbMinFilesToMerge ;
 
 	//char  m_spiderdbRootUrlPriority   ; // 0-(MAX_SPIDER_PRIORITIES-1)
 	//char  m_spiderdbAddUrlPriority    ;
