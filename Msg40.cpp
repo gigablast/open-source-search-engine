@@ -6350,6 +6350,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 		int32_t k2 = -1;
 
+		// get the facet range that this FacetEntry represents (int)
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges; k++ ) {
 			if ( qt->m_fieldCode != FIELD_GBFACETINT )
 				break;
@@ -6365,6 +6366,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			k2 = k;
 		}
 
+		// get the facet range that this FacetEntry represents (float)
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges; k++ ) {
 			if ( qt->m_fieldCode != FIELD_GBFACETFLOAT )
 				break;
@@ -6589,22 +6591,22 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT &&
 			  qw->m_numFacetRanges > 0 ) {
-			float min = qw->m_facetRangeIntA[k2];
-			float max = qw->m_facetRangeIntB[k2];
+			float min = qw->m_facetRangeFloatA[k2];
+			float max = qw->m_facetRangeFloatB[k2];
 			if ( min == max )
 				newStuff.safePrintf("prepend="
 						    "gbequalfloat%%3A%s%%3A%f+"
 						    ,term
 						    ,*(float *)fvh);
 			else
-				newStuff.safePrintf("prepend="
-						    "gbminfloat%%3A%s%%3A%f+"
-						    "gbmaxfloat%%3A%s%%3A%f+"
-						    ,term
-						    ,min
-						    ,term
-						    ,max
-						    );
+			newStuff.safePrintf("prepend="
+					    "gbminfloat%%3A%s%%3A%f+"
+					    "gbmaxfloat%%3A%s%%3A%f+"
+					    ,term
+					    ,min
+					    ,term
+					    ,max
+					    );
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 			newStuff.safePrintf("prepend="
