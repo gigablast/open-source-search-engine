@@ -6135,7 +6135,8 @@ void Msg40::lookupFacets2 ( ) {
 			// skip empty slots
 			if ( ! fht->m_flags[m_j] ) continue;
 			// get hash of the facet value
-			FacetValHash_t fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
+			FacetValHash_t fvh ;
+			fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
 			//int32_t count = *(int32_t *)fht->getValFromSlot(j);
 			// get the docid as well
 			FacetEntry *fe =(FacetEntry *)fht->getValFromSlot(m_j);
@@ -6287,7 +6288,11 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	HttpRequest *hr = &m_si->m_hr;
 	bool firstTime = true;
 	bool isString = false;
+	bool isFloat  = false;
+	bool isInt = false;
 	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFloat = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETINT   ) isInt = true;
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
@@ -6331,12 +6336,14 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		QueryWord *qw= qt->m_qword;
 
 			
-		if ( qt->m_fieldCode == FIELD_GBFACETINT && qw->m_numFacetRanges == 0 ) {
+		if ( qt->m_fieldCode == FIELD_GBFACETINT && 
+		     qw->m_numFacetRanges == 0 ) {
 			sb9.safePrintf("%"INT32"",(int32_t)*fvh);
 			text = sb9.getBufStart();
 		}
 
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT && qw->m_numFacetRanges == 0 ) {
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT 
+		     && qw->m_numFacetRanges == 0 ) {
 			sb9.printFloatPretty ( *(float *)fvh );
 			text = sb9.getBufStart();
 		}
@@ -6405,7 +6412,26 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->safePrintf("</value>\n"
 				       "\t\t<docCount>%"INT32""
 				       "</docCount>\n"
-				       "\t</facet>\n",count);
+				       ,count);
+			// some stats now
+			if ( isFloat && fe->m_count ) {
+				sb->safePrintf("\t\t<average>");
+				float sum = *(float *)&fe->m_sum;
+				float avg = sum/(float)fe->m_count;
+				sb->printFloatPretty ( avg );
+				sb->safePrintf("\t\t</average>\n");
+				sb->safePrintf("\t\t<min>");
+				float min = *(float *)&fe->m_min;
+				sb->printFloatPretty ( min );
+				sb->safePrintf("</min>\n");
+				sb->safePrintf("\t\t<max>");
+				float max = *(float *)&fe->m_max;
+				sb->printFloatPretty ( max );
+				sb->safePrintf("</max>\n");
+			}
+
+
+			sb->safePrintf("\t</facet>\n");
 			continue;
 		}
 

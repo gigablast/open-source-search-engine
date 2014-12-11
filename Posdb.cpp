@@ -7201,7 +7201,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// it might have multiple sections that have
 		// the same gbxpathsitehash...
 		bool firstTime = true;
-		int32_t lastVal;
+		//int32_t lastVal;
 		for ( ; ; ) {
 
 		// do not breach sublist
@@ -7221,6 +7221,10 @@ void PosdbTable::intersectLists10_r ( ) {
 
 		QueryWord *qw = qt->m_qword;
 
+		int32_t rangeVal32  = 0;
+
+		FacetEntry ff;
+		FacetEntry *fe = NULL;
 
 		//
 		// CONDENSE THE FACETS
@@ -7237,14 +7241,15 @@ void PosdbTable::intersectLists10_r ( ) {
 			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
 				if ( *fp < qw->m_facetRangeFloatA[k])continue;
 				if ( *fp >=qw->m_facetRangeFloatB[k])continue;
-				val32=*(int32_t *)(&qw->m_facetRangeFloatA[k]);
+				rangeVal32 = *(int32_t *)
+					(&qw->m_facetRangeFloatA[k]);
 				found = true;
 				break;
 			}
 			// otherwise it was like a 'gbfacetint:gbhopcount' qry
 			if ( val32 <  qw->m_facetRangeIntA[k] ) continue;
 			if ( val32 >= qw->m_facetRangeIntB[k] ) continue;
-			val32 = qw->m_facetRangeIntA[k];
+			rangeVal32 = qw->m_facetRangeIntA[k];
 			found = true;
 			break;
 		}
@@ -7253,16 +7258,16 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( qw->m_numFacetRanges > 0 && found ) {
 			// get it
 			HashTableX *ft = &qt->m_facetHashTable;
-			FacetEntry *fe;
-			fe=(FacetEntry *)ft->getValue(&val32);
+			fe=(FacetEntry *)ft->getValue(&rangeVal32);
 			if ( ! fe ) { char *xx=NULL;*xx=0; }
-			fe->m_count++;
-			fe->m_docId = m_docId;
+			//fe->m_count++;
+			//fe->m_docId = m_docId;
 		}
 
 		// don't allow the same docid to vote on the
 		// same value twice!
-		if ( qw->m_numFacetRanges <= 0 && ( val32 != lastVal || firstTime ) ) {
+		if ( qw->m_numFacetRanges <= 0 ) {
+		//     ( val32 != lastVal || firstTime ) ) {
 			// add it
 			//qt->m_facetHashTable.addTerm32(&val32
 			// get it
@@ -7270,29 +7275,69 @@ void PosdbTable::intersectLists10_r ( ) {
 			FacetEntry *fe;
 			fe=(FacetEntry *)ft->getValue(&val32);
 			// debug 
-			//log("facets: got entry for key=%"UINT32" d=%"UINT64"",
-			//    val32,m_docId);
+			//log("facets: got entry for key=%"UINT32" "
+			//d=%"UINT64"",  val32,m_docId);
 			// if not there, init it... but NOT if doing ranges
 			// because we already initialized the ranges above
-			// so there is already one bucket for each range specified,
-			// and your
+			// so there is already one bucket for each range 
+			// specified, and your
 			if ( ! fe ) {
 				// sanity check
-				if ( qw->m_numFacetRanges > 0 ) { char *xx=NULL;*xx=0; }
-				FacetEntry ff;
-				ff.m_count = 1;
-				ff.m_docId = m_docId;
-				ft->addKey(&val32,&ff);
-			}
-			// only one vote per docid
-			else if ( fe->m_docId != (int64_t)m_docId ) {
-				fe->m_count++;
+				if ( qw->m_numFacetRanges > 0 ) { 
+					char *xx=NULL;*xx=0; }
+				memset ( &ff , 0 , sizeof(FacetEntry) );
+				fe = &ff;
+				ft->addKey(&val32,fe);
 			}
 		}
 
+		// not in a provided range? or val32==lastVal
+		if ( ! fe ) continue;
+
+		// only one vote per docid per facet entry
+		if ( fe->m_docId == (int64_t)m_docId ) continue;
+
+		fe->m_docId = m_docId;
+		fe->m_count++;
+
+		// first time? then init min/max and set sum to 0
+		if ( fe->m_count == 1 ) {
+			// set initial float stats
+			if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
+				*((double *)&fe->m_sum) = 0.0;
+				*((float *)&fe->m_min) = *fp;
+				*((float *)&fe->m_max) = *fp;
+			}
+			// and initial int stats
+			else {
+				fe->m_sum = 0;
+				fe->m_min = val32;
+				fe->m_max = val32;
+			}
+		}
+
+		// handle float stats
+		if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
+			double sum = *((double *)&fe->m_sum);
+			sum += *fp;
+			*((double *)&fe->m_sum) = sum;
+			if ( *fp < *((float *)&fe->m_min) )
+				*((float *)&fe->m_min) = *fp;
+			if ( *fp > *((float *)&fe->m_max) )
+				*((float *)&fe->m_max) = *fp;
+		}
+		// and int stats
+		else {
+			fe->m_sum += val32;
+			if ( val32 < fe->m_min )
+				fe->m_min = val32;
+			if ( val32 > fe->m_max )
+				fe->m_max = val32;
+		}
+	
 
 		// to avoid dupage...
-		lastVal = val32;
+		//lastVal = val32;
 		// skip over 6 or 12 byte key
 		if ( firstTime ) p += 12;
 		else             p += 6;
