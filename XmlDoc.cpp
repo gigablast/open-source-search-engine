@@ -29461,9 +29461,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// caller shouldhave the callback set
 	if ( ! m_callback1 && ! m_callback2 ) { char *xx=NULL;*xx=0; }
 
-	char safeStack[100000];
-	safeStack[0] = 0;
-	safeStack[90000] = 0;
+	//char safeStack[100000];
+	//safeStack[0] = 0;
+	//safeStack[90000] = 0;
 
 	// int16_tcut
 	Msg20Reply *reply = &m_reply;
@@ -29651,16 +29651,19 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// lookup the tagdb rec fresh if setting for a summary. that way we
 	// can see if it is banned or not. but for getting m_getTermListBuf
 	// and stuff above, skip the tagrec lookup!
-	if ( m_req ) m_tagRecDataValid = false;
+	// save some time when SPIDERING/BUILDING by skipping fresh
+	// tagdb lookup and using tags in titlerec
+	if ( m_req && ! m_req->m_getLinkText && ! m_checkedUrlFilters ) 
+		m_tagRecDataValid = false;
 
 	// set and validate member vars
 	//if ( ! m_setFromTitleRec ) 
 	//	// return NULL with g_errno set on error
 	//	if ( ! set ( tr , NULL , m_niceness ) ) return NULL;
 
-	// set the tag rec
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+
 	//reply-> ptr_tagRec = (char *)gr;
 	//reply->size_tagRec = gr->getSize();
 
@@ -30183,6 +30186,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// breathe
 	QUICKPOLL ( m_niceness );
 
+	// getLinkText is true if we are getting the anchor text for a
+	// supplied url as part of the SPIDER process..
 	// this was done by Msg23 before
 	if ( ! m_req->m_getLinkText ) {
 		m_replyValid = true;
