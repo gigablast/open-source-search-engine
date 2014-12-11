@@ -3596,8 +3596,9 @@ struct QueryField g_fields[] = {
 	{"type", 
 	 FIELD_TYPE, 
 	 false,
-	 "type:pdf",
-	 "Matches all documents that are PDFs. Other possible types include "
+	 "type:json",
+	 "Matches all documents that are in JSON format. "
+	 "Other possible types include "
 	 "<i>html, text, xml, pdf, doc, xls, ppt, ps, css, json, status.</i> "
 	 "<i>status</i> matches special documents that are stored every time "
 	 "a url is spidered so you can see all the spider attempts and when "
@@ -3608,7 +3609,7 @@ struct QueryField g_fields[] = {
 	{"filetype", 
 	 FIELD_TYPE, 
 	 false,
-	 "filetype:pdf",
+	 "filetype:json",
 	 "Same as type: above.",
 	 NULL,
 	0},
@@ -3670,12 +3671,12 @@ struct QueryField g_fields[] = {
 	{"gbcharset", 
 	 FIELD_CHARSET, 
 	 false,
-	 "gbcharset:utf-8",
-	 "Matches all documents originally in the Utf-8 charset. "
+	 "gbcharset:windows-1252",
+	 "Matches all documents originally in the Windows-1252 charset. "
 	 "Available character sets are listed in the <i>iana_charset.cpp</i> "
 	 "file in the open source distribution. There are a lot. Some "
 	 "more popular ones are: <i>us, latin1, iso-8859-1, csascii, ascii, "
-	 "latin2, latin3, latin4, greek, shift_jis.",
+	 "latin2, latin3, latin4, greek, utf-8, shift_jis.",
 	 NULL,
 	 0},
 
@@ -3830,7 +3831,7 @@ struct QueryField g_fields[] = {
 	{"gbsortby", 
 	 FIELD_GBSORTBYFLOAT, 
 	 false,
-	 "dog gbsortbyint:gbspiderdate",
+	 "dog gbsortbyint:gbdocspiderdate",
 	 "Sort the documents that contain 'dog' by "
 	 "the date they were last spidered, with the newest "
 	 "on top.",
@@ -3840,7 +3841,7 @@ struct QueryField g_fields[] = {
 	{"gbrevsortby", 
 	 FIELD_GBREVSORTBYFLOAT, 
 	 false,
-	 "dog gbrevsortbyint:gbspiderdate",
+	 "dog gbrevsortbyint:gbdocspiderdate",
 	 "Sort the documents that contain 'dog' by "
 	 "the date they were last spidered, but with the "
 	 "oldest on top.",
@@ -3866,7 +3867,7 @@ struct QueryField g_fields[] = {
 	{"gbsortbyint", 
 	 FIELD_GBSORTBYINT, 
 	 false,
-	 "gbsortbyint:gbspiderdate",
+	 "gbsortbyint:gbdocspiderdate",
 	 "Sort all documents by the date they were spidered/downloaded.",
 	 NULL,
 	 0},
@@ -3899,7 +3900,7 @@ struct QueryField g_fields[] = {
 	{"gbrevsortbyint", 
 	 FIELD_GBREVSORTBYINT, 
 	 false,
-	 "gbrevsortbyint:gbspiderdate",
+	 "gbrevsortbyint:gbdocspiderdate",
 	 "Sort all documents by the date they were spidered/downloaded "
 	 "but with the oldest on top.",
 	 NULL,
