@@ -7336,7 +7336,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// handle float stats
 		if ( qw->m_fieldCode == FIELD_GBFACETFLOAT ) {
 			double sum = *((double *)&fe->m_sum);
-			sum += *fp;
+			sum += *fp; //(double)
 			*((double *)&fe->m_sum) = sum;
 			if ( *fp < *((float *)&fe->m_min) )
 				*((float *)&fe->m_min) = *fp;
