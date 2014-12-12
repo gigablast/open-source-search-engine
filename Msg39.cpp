@@ -1499,15 +1499,11 @@ void Msg39::estimateHitsAndSendReply ( ) {
 				FacetEntry *fe;
 				fe = (FacetEntry *)ft->getValFromSlot(k);
 				// sanity
-<<<<<<< HEAD
 				// no, count can be zero if its a range facet
 				// that was never added to. we add those
 				// empty FaceEntries only for range facets
 				// in Posdb.cpp
 				//if(fe->m_count == 0 ) { char *xx=NULL;*xx=0;}
-=======
-				//if ( fe->m_count ==0) { char *xx=NULL;*xx=0;}
->>>>>>> diffbot
 				memcpy ( p , fe , sizeof(FacetEntry) );
 				p += sizeof(FacetEntry);
 				// do not breach
