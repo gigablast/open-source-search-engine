@@ -1088,7 +1088,7 @@ bool qaSyntax ( ) {
 		s_flags[s_i+10] = true;
 		SafeBuf tmp;
 		tmp.safePrintf( "/search?c=qatest123&"
-				"qa=2&"
+				"qa=3&"
 				"qlang=en&"
 				"icc=1&"
 				"format=json&"

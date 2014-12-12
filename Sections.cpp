@@ -1470,7 +1470,8 @@ bool Sections::set ( Words     *w                       ,
 		// because first word was "<title>". then every word in
 		// the doc got SEC_IN_TITLE set and did not get hashed
 		// in XmlDoc::hashBody()... NOR in XmlDoc::hashTitle()!!!
-		//sn->m_tagId = tid;
+		if ( sn != rootSection ) // || tid != TAG_TITLE ) 
+			sn->m_tagId = tid;
 
 
 		//

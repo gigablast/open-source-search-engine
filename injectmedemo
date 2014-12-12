@@ -1,0 +1,600 @@
++++URL: http://hsxa.ece.wisc.edu/
+HTTP/1.1 200 OK
+Date: Fri, 10 Feb 2006 19:15:25 GMT
+Server: Apache/2.0.50 (Unix) mod_ssl/2.0.50 OpenSSL/0.9.7d
+Last-Modified: Thu, 05 May 2005 22:44:34 GMT
+ETag: "255ebab-297-b7ae9880"
+Accept-Ranges: bytes
+Keep-Alive: timeout=15
+Connection: Keep-Alive
+Content-Type: text/html
+
+<html>
+<title>sample doc 1</title>
+This document has both cats and dogs in it.
+</html>
+
++++URL: http://www.afrikaschule.de.vu/
+HTTP/1.1 200 OK
+Date: Fri, 10 Feb 2006 19:15:29 GMT
+Server: Apache/1.3.27 (Linux/SuSE) mod_fastcgi/2.4.2 FrontPage/4.0.4.3 PHP/4.4.1 mod_perl/1.27 mod_ssl/2.8.12 OpenSSL/0.9.6i
+Last-Modified: Wed, 18 May 2005 17:16:49 GMT
+ETag: "925b7-776-428b7881"
+Accept-Ranges: bytes
+Keep-Alive: timeout=1, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+<html>
+<title>sample doc 2</title>
+Now here we have just cat singular and dog as well.
+</html>
+
++++URL: http://www.mp3.com/page1
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<html>
+<title>sample doc 3</title>
+This has mp3 and take and five.
+</html>
+
+
++++URL: http://www.mp3.com/page2
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<html>
+<title>sample doc 3</title>
+This has mp3 and take five the phrase.
+</html>
+
+
++++URL: http://www.bmx.com/page1
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<html>
+<title>sample doc 4</title>
+This new game I played is about bmx racing.
+</html>
+
++++URL: http://www.bmx.com/page2
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<html>
+<title>sample doc 5</title>
+I am totally into real-life bmx racing.
+</html>
+
+
+
++++URL: http://www.john.com/page1
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>testing 1</title>
+john smith and bob dole walk into a bar.
+
++++URL: http://www.john.com/page2
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>testing 2</title>
+john smith and dole bob are here.
+
+
++++URL: http://www.john.com/page3
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>testing 3</title>
+smith john and dole bob are here.
+
+
+
+
++++URL: http://www.json.com/page1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"document":{
+"foo":"bar",
+"title":"papers"
+}
+}
+
++++URL: http://www.json.com/page2
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"document":{
+"foo":"bar",
+"title":"boxes"
+}
+}
+
+
++++URL: http://www.fields.com/page1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"strings":{
+"foo":"bar",
+"vendor":"Uncle Leroy"
+}
+}
+
++++URL: http://www.fields.com/page2
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"strings":{
+"foo":"bar",
+"vendor":"My Vendor Inc."
+}
+}
+
+
++++URL: http://www.fields.com/page3
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"strings":{
+"foo":"bar",
+"vendor":"my vendor inc."
+}
+}
+
++++URL: http://www.abc.com/page.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>ABC.COM</title>
+A wonderful web page.
+
+
++++URL: http://www.somewhere.com/foo.doc
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Extension is a word document</title>
+This url ends in the word document extension.
+
+
++++URL: http://www.linker.com/page1
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>We link to gigablast.</title>
+<a href=http://www.gigablast.com/foo.html>link is here</a>.
+
++++URL: http://www.linker.com/page1
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>We link to gigablast on another page.</title>
+<a href=http://www.gigablast.com/bar.html>another link is here</a>.
+
+
++++URL: http://abc.mysite.com/page1
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>A page on mysite.com</title>
+Used to test the site: query operator.
+
+
++++URL: http://abc.mysite.com/dir1/dir2/somepage.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Another page on mysite.com</title>
+Used to test the site: query operator with subdirectories.
+
+
++++URL: http://www.feline.com/
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>A page about cats and perhaps some food</title>
+Used to test the title: query operator.
+
+
++++URL: http://www.feline.com/page2
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>A page about cat food only</title>
+Used to test the title: query operator with quotes.
+
+
++++URL: http://www.naughty.com/
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>A naught adult content document</title>
+Fuck, shit does the adult content detector work?
+
+
+
++++URL: http://www.imagesrc.com/
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Has an image.</title>
+<img src=site.com/image.jpg> What a nice image that is. This is for
+testing the gbimage: query operator.
+
+
++++URL: http://www.somezip.com/
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Has a zipcode meta tag.</title>
+<meta name=zipcode value=90210>
+This zipcode is for beverly hills, CA.
+
+
++++URL: http://www.somezip.com/
+HTTP/1.1 200 OK
+
+<title>Windows-1252 charset</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="author" content="Daniell Haug">
+For testing gbcharset:latin1 even though gigablast converts everything to utf-8 we do index the original charset.
+
+
++++URL: http://www.deutsch.com/
+HTTP/1.1 200 OK
+
+<title>Deutschland</title>
+Gerne sind wir Ihnen bei der Planung Ihres Besuches am Geburtsort des Entdeckers der Röntgenstrahlen behilflich.
+
+(gblang:de)
+
++++URL: http://www.pathlen.com/subdir1/subdir2/leaf.html
+HTTP/1.1 200 OK
+
+<title>For testing the gbpathdepth:3 query</title>
+This should match it.
+
+
++++URL: http://www.oldstuff.com/oldpage.cgi
+HTTP/1.1 200 OK
+
+<title>Old school style</title>
+Should match the gbiscgi:1 query operator.
+
+
++++URL: http://www.allforms.com/
+HTTP/1.1 200 OK
+
+<title>Has some forms</title>
+<form method=get action=domain.com/process.php>
+Let's test the gbsubmiturl: query operator.
+</form>
+
+
++++URL: http://www.jsoncams.com/page1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+"title":"A nice camera for sale.",
+"price":599.99
+"color":"red"
+}
+
++++URL: http://www.jsoncams.com/page2
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+"title":"An ok camera for sale.",
+"price":350.00,
+"color":"red"
+}
+
++++URL: http://www.jsoncams.com/page3
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+"title":"Two bad cameras for sale.",
+"price":199.00
+"color":"black"
+}
+
+
++++URL: http://www.jsoncams.com/page4
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"A nice camera for sale.",
+"price":599.99,
+"color":"red"
+}}
+
++++URL: http://www.jsoncams.com/page5
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"An ok camera for sale.",
+"price":350.00,
+"color":"red"
+}}
+
++++URL: http://www.jsoncams.com/page6
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"Two bad cameras for sale for cheap.",
+"price":99.00,
+"description":"put desc here.",
+"color":"black"		   
+}}
+
+
++++URL: http://www.bigairline.com/foo1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+"Description":"Hires pilots to fly planes.",
+"Employees":630
+}
+
+
++++URL: http://www.smallairline.com/foo1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+"Description":"Hires pilots to fly planes.",
+"Employees":44
+}
+
++++URL: http://www.bigcompany.com/page1.html
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"Company":{
+"Description":"A big company.",
+"Employees":1920
+}}
+
+
++++URL: http://www.smallcompany.com/page1.html
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"Company":{
+"Description":"A small company.",
+"Employees":13
+}}
+
+
++++URL: http://www.products.com/page1.html
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"product":{
+"Description":"A cheap harmonica.",
+"price":1.23
+}}
+
+
++++URL: http://www.cpus.com/page1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"CPU #1",
+"cores":4
+}}
+
+
++++URL: http://www.cpus.com/page2
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"CPU #2",
+"cores":8
+}}
+
++++URL: http://www.cpus.com/page3
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"CPU #3",
+"cores":4
+}}
+
++++URL: http://www.cpus.com/page4
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"CPU #4",
+"cores":1
+}}
+
+
++++URL: http://www.buildings.com/page1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #1",
+"size":7
+}}
+
++++URL: http://www.buildings.com/page2
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #2",
+"size":9
+}}
+
++++URL: http://www.buildings.com/page3
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #3",
+"size":25
+}}
+
++++URL: http://www.buildings.com/page4
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #4",
+"size":1500
+}}
+
+
++++URL: http://www.buildings.com/page5
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #5",
+"size":1000
+}}
+
++++URL: http://www.buildings.com/page6
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #6",
+"size":10000
+}}
+
++++URL: http://www.buildings.com/page7
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"BLDG #7",
+"size":10001
+}}
+
+
++++URL: http://www.chickens.com/page1
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"chicken #1",
+"weight":"1.5"
+}}
+
+
++++URL: http://www.chickens.com/page2
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"chicken #2",
+"weight":"1.8"
+"price":4.99
+}}
+
+
++++URL: http://www.chickens.com/page3
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "product":{
+{
+"title":"chicken #3",
+"weight":"2.3333333333333333333333333333333333333333333"
+}}
+
+
++++URL: http://www.abc.com/page.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>A special web page</title>
+Test the url2: operator.
+
+
++++URL: http://mysite.com/special/dog/page1.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>A special web page, again</title>
+Test the site2: operator. And the inurl2: operator.
+
+
+
++++URL: http://www.boolean.com/page1.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Test bool ops - pigs only</title>
+This is just about pigs.
+
+
++++URL: http://www.boolean.com/page2.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Test bool ops - cat dog only</title>
+Only about the famous cat dog.
+
+
++++URL: http://www.boolean.com/page3.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Test bool ops - dog only</title>
+Only about a little dog.
+
++++URL: http://www.boolean.com/page4.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Test bool ops - cat and pig only</title>
+Just cat and pig I'm afraid.
+
+
++++URL: http://www.boolean.com/page5.html
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<title>Test bool ops - only cat</title>
+Did we do this one already?
+
+
+
+
