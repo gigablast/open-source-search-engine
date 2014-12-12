@@ -1478,7 +1478,8 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			*(int64_t *)p = qt->m_termId;
 			p += 8;
 			int32_t used = ft->getNumSlotsUsed();
-			if ( used > (int32_t)MAX_FACETS ) used = (int32_t)MAX_FACETS;
+			if ( used > (int32_t)MAX_FACETS ) 
+				used = (int32_t)MAX_FACETS;
 			// store count
 			*(int32_t *)p = used;
 			p += 4;
@@ -1498,7 +1499,11 @@ void Msg39::estimateHitsAndSendReply ( ) {
 				FacetEntry *fe;
 				fe = (FacetEntry *)ft->getValFromSlot(k);
 				// sanity
-				if ( fe->m_count == 0 ) { char *xx=NULL;*xx=0;}
+				// no, count can be zero if its a range facet
+				// that was never added to. we add those
+				// empty FaceEntries only for range facets
+				// in Posdb.cpp
+				//if(fe->m_count == 0 ) { char *xx=NULL;*xx=0;}
 				memcpy ( p , fe , sizeof(FacetEntry) );
 				p += sizeof(FacetEntry);
 				// do not breach

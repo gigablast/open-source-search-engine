@@ -713,6 +713,13 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// for things like "word", a single word in quotes.
 		if ( qw->m_quoteStart >= 0 && qw->m_phraseId ) continue;
 
+		// if we are not start of quote and NOT in a phrase we
+		// must be the tailing word i guess.
+		// fixes '"john smith" -"bob dole"' from having
+		// smith and dole as query terms.
+		if ( qw->m_quoteStart >= 0 && qw->m_quoteStart != i )
+			continue;
+
 		// ignore if weight is absolute zero
 		if ( qw->m_userWeight == 0   && 
 		     qw->m_userType   == 'a'  ) continue;
@@ -1219,6 +1226,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( qw->m_inQuotes ) continue;
 		// skip if has plus sign in front
 		if ( qw->m_wordSign == '+' ) continue;
+		// not '-' either i guess
+		if ( qw->m_wordSign == '-' ) continue;
 		// no url: stuff, maybe only title
 		if ( qw->m_fieldCode &&
 		     qw->m_fieldCode != FIELD_TITLE &&

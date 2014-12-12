@@ -424,8 +424,8 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		       //"<input type=checkbox name=xml value=1> "
 		       "<select name=ctype>\n"
 		       "<option value=%"INT32" selected>HTML</option>\n"
-		       "<option value=%"INT32" selected>XML</option>\n"
-		       "<option value=%"INT32" selected>JSON</option>\n"
+		       "<option value=%"INT32">XML</option>\n"
+		       "<option value=%"INT32">JSON</option>\n"
 		       "</select>\n"
 
 		  "</td>"

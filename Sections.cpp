@@ -1465,8 +1465,12 @@ bool Sections::set ( Words     *w                       ,
 			sn->m_baseHash = 2;
 			//char *xx=NULL;*xx=0; }
 		}
-		// set this now too
-		sn->m_tagId = tid;
+		// set this now too WHY? should already be set!!! was
+		// causing the root section to become a title section
+		// because first word was "<title>". then every word in
+		// the doc got SEC_IN_TITLE set and did not get hashed
+		// in XmlDoc::hashBody()... NOR in XmlDoc::hashTitle()!!!
+		//sn->m_tagId = tid;
 
 
 		//

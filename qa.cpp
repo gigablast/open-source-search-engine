@@ -86,7 +86,7 @@ int32_t qa_hash32 ( char *s ) {
 	return h;
 }
 
-#define MAXFLAGS 50
+#define MAXFLAGS 100
 
 class QATest {
 public:
@@ -907,6 +907,215 @@ bool qainject2 ( ) {
 
 	return true;
 }
+
+
+bool qaSyntax ( ) {
+
+	//
+	// delete the 'qatest123' collection
+	//
+	//static bool s_x1 = false;
+	if ( ! s_flags[0] ) {
+		s_flags[0] = true;
+		//s_savedAutoSaveFreq = g_conf.m_autoSaveFrequency;
+		//g_conf.m_autoSaveFrequency = 0;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	//
+	// add the 'qatest123' collection
+	//
+	//static bool s_x2 = false;
+	if ( ! s_flags[1] ) {
+		s_flags[1] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// turn off images thumbnails
+	if ( ! s_flags[2] ) {
+		s_flags[2] = true;
+		// can't turn off spiders because we need for query reindex
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+				,
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	
+	//
+	// try delimeter based injecting
+	//
+	//static bool s_y2 = false;
+	if ( ! s_flags[3] ) {
+		s_flags[3] = true;
+		SafeBuf sb;
+		// delim=+++URL:
+		sb.safePrintf("&c=qatest123&deleteurl=0&"
+			      "delim=%%2B%%2B%%2BURL%%3A&format=xml&u=xyz.com&"
+			      "hasmime=1&content=");
+		// use injectme3 file
+		SafeBuf ubuf;
+		ubuf.load("./injectmedemo");
+		sb.urlEncode(ubuf.getBufStart());
+		sb.nullTerm();
+		if ( ! getUrl ( "/admin/inject",
+				// check reply, seems to have only a single 
+				// docid in it
+				-1970198487, sb.getBufStart()) )
+			return false;
+	}
+
+	// now query check
+	//static bool s_y4 = false;
+	if ( ! s_flags[4] ) {
+		wait(1.5);
+		s_flags[4] = true;
+		return false;
+	}
+
+	//
+	// now run a bunch of queries
+	//
+	static int s_i = 0;
+	static char *s_q[] ={"cat dog",
+			     "+cat",
+			     "mp3 \"take five\"",
+			     "\"john smith\" -\"bob dole\"",
+			     "bmx -game",
+			     "cat | dog",
+			     "document.title:paper",
+
+			     "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
+			     "url:www.abc.com/page.html",
+			     "ext:doc",
+			     "link:www.gigablast.com/foo.html",
+			     "sitelink:abc.foobar.com",
+			     "site:mysite.com",
+			     "ip:1.2.3.4",
+			     "ip:1.2.3",
+			     "inurl:dog",
+			     "suburl:dog",
+			     "title:\"cat food\"",
+			     "title:cat",
+			     "gbinrss:1",
+			     "type:json",
+			     "filetype:json",
+			     "gbisadult:1",
+			     "gbimage:site.com/image.jpg",
+			     "gbhasthumbnail:1",
+			     "gbtagsitenuminlinks:0",
+			     "gbzip:90210",
+			     "gbcharset:windows-1252",
+			     "gblang:de",
+			     "gbpathdepth:3",
+			     "gbhopcount:2",
+			     "gbhasfilename:1",
+			     "gbiscgi:1",
+			     "gbhasext:1",
+			     "gbsubmiturl:domain.com/process.php",
+			     "gbparenturl:www.xyz.com/abc.html",
+
+			     "cameras gbsortbyfloat:price",
+			     "cameras gbsortbyfloat:product.price",
+			     "cameras gbrevsortbyfloat:product.price",
+			     "pilots gbsortbyint:employees",
+			     "gbsortbyint:gbspiderdate",
+			     "gbsortbyint:company.employees",
+			     "gbsortbyint:gbsitenuminlinks",
+			     "gbrevsortbyint:gbspiderdate",
+			     "cameras gbminfloat:price:109.99",
+			     "cameras gbminfloat:product.price:109.99",
+			     "cameras gbmaxfloat:price:109.99",
+			     "gbequalfloat:product.price:1.23",
+			     "gbminint:gbspiderdate:1391749680",
+			     "gbmaxint:company.employees:20",
+			     "gbequalint:company.employees:13",
+
+			     "gbdocspiderdate:1400081479",
+			     "gbspiderdate:1400081479",
+			     "gbdocindexdate:1400081479",
+			     "gbindexdate:1400081479",
+
+			     "gbfacetstr:color",
+			     "gbfacetstr:product.color",
+			     "gbfacetstr:gbtagsite cat",
+			     "gbfacetint:product.cores",
+			     "gbfacetint:gbhopcount",
+			     "gbfacetint:size,0-10,10-20,30-100,100-200,200-1000,1000-10000",
+			     "gbfacetint:gbsitenuminlinks",
+			     "gbfacetfloat:product.weight",
+			     "gbfacetfloat:product.price,0-1.5,1.5-5,5.0-20,20-100.0",
+			     "gbcountry:us",
+			     "gbpermalink:1",
+			     "gbdocid:123456",
+
+			     "gbstatus:0",
+			     "gbstatusmsg:tcp",
+			     "url2:www.abc.com/page.html",
+			     "site2:mysite.com",
+			     "ip2:1.2.3.4",
+			     "inurl2:dog",
+			     "gbpathdepth2:2",
+			     "gbhopcount2:3",
+			     "gbhasfilename2:1",
+			     "gbiscgi2:1",
+			     "gbhasext2:1",
+
+			     "cat AND dog",
+			     "cat OR dog",
+			     "cat dog OR pig",
+			     "\"cat dog\" OR pig",
+			     "title:\"cat dog\" OR pig",
+			     "cat OR dog OR pig",
+			     "cat OR dog AND pig",
+			     "cat AND NOT dog",
+			     "cat AND NOT (dog OR pig)",
+			     "(cat OR dog) AND NOT (cat AND dog)",
+
+			     NULL
+	};
+
+	if ( ! s_flags[s_i+10] && s_q[s_i] ) {
+		s_flags[s_i+10] = true;
+		SafeBuf tmp;
+		tmp.safePrintf( "/search?c=qatest123&"
+				"qa=2&"
+				"qlang=en&"
+				"icc=1&"
+				"format=json&"
+				"q=");
+		tmp.urlEncode ( s_q[s_i] );
+		tmp.nullTerm();
+		// point to next query
+		s_i++;
+		if ( ! getUrl ( tmp.getBufStart() , -1804253505 ) )
+			return false;
+	}
+
+
+	//static bool s_fee2 = false;
+	if ( ! s_flags[5] ) {
+		s_flags[5] = true;
+		log("qa: SUCCESSFULLY COMPLETED "
+			"QA SYNTAX TEST");
+		//if ( s_callback == qainject ) exit(0);
+		//g_conf.m_autoSaveFrequency = s_savedAutoSaveFreq;
+		return true;
+	}
+
+
+	return true;
+}
+
 
 bool qaimport () {
 
@@ -2486,7 +2695,11 @@ static QATest s_qatests[] = {
 
 	{qareindex,
 	 "queryReindexTest",
-	 "Test query reindex function. Ensure changed docs are updated."}
+	 "Test query reindex function. Ensure changed docs are updated."},
+
+	{qaSyntax,
+	 "querySyntaxTest",
+	 "Test the queries in the syntax.html page and inject injectmedemo."}
 
 };
 

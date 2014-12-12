@@ -552,7 +552,7 @@ class CollectionRec {
 	float			m_languageUnknownWeight;
 	float			m_languageWeightFactor;
 	char			m_enableLanguageSorting;
-	char 			m_defaultSortLanguage[6];
+	char 			m_defaultSortLanguage2[6];
 	char 			m_languageMethodWeights[10];
 	int32_t 			m_languageBailout;
 	int32_t 			m_languageThreshold;
