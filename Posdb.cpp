@@ -5504,8 +5504,9 @@ void PosdbTable::intersectLists10_r ( ) {
 				float val32 = qw->m_facetRangeFloatA[k];
 				fe=(FacetEntry *)ft->getValue(&val32);
 				FacetEntry ff;
-				ff.m_count = 0;
-				ff.m_docId = m_docId;
+				memset ( &ff , 0 , sizeof(FacetEntry) );
+				// ff.m_count = 0;
+				// ff.m_docId = m_docId;
 				ft->addKey(&val32,&ff);
 				continue;
 			}
@@ -5514,8 +5515,9 @@ void PosdbTable::intersectLists10_r ( ) {
 				int32_t val32 = qw->m_facetRangeIntA[k];
 				fe=(FacetEntry *)ft->getValue(&val32);
 				FacetEntry ff;
-				ff.m_count = 0;
-				ff.m_docId = m_docId;
+				memset ( &ff , 0 , sizeof(FacetEntry) );
+				// ff.m_count = 0;
+				// ff.m_docId = m_docId;
 				ft->addKey(&val32,&ff);
 				continue;
 			}
