@@ -1087,6 +1087,10 @@ bool Repair::loop ( void *state ) {
 	// . titledb scan
 	// . build g_checksumdb2, g_spiderdb2, g_clusterdb2, g_tfndb2
  loop1:
+
+	if ( g_process.m_mode == EXIT_MODE )
+		return true;
+
 	if ( m_stage == STAGE_TITLEDB_0  ) {
 		m_stage++;
 		if ( ! scanRecs()       ) return false;
