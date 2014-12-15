@@ -13658,12 +13658,25 @@ LinkInfo s_dummy2;
 // . returns -1 if blocked, will re-call m_callback
 LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 
+	if ( m_linkInfo1Valid && ptr_linkInfo1 )
+		return ptr_linkInfo1;
+
+	// just return nothing if not doing link voting
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+	// to keep things fast we avoid getting link info for some collections
+	if ( ! m_linkInfo1Valid && ! cr->m_getLinkInfo ) {
+		ptr_linkInfo1 = NULL;
+		m_linkInfo1Valid = true;
+	}
+
 	// sometimes it is NULL in title rec when setting from title rec
 	if ( m_linkInfo1Valid && ! ptr_linkInfo1 ) {
 		memset ( &s_dummy2 , 0 , sizeof(LinkInfo) );
 		s_dummy2.m_lisize = sizeof(LinkInfo);
 		ptr_linkInfo1  = &s_dummy2;
 		size_linkInfo1 = sizeof(LinkInfo);
+		return ptr_linkInfo1;
 	}
 
 	// return if we got it
@@ -13672,9 +13685,6 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 
 	// change status
 	setStatus ( "getting local inlinkers" );
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	XmlDoc **od = getOldXmlDoc ( );
 	if ( ! od || od == (XmlDoc **)-1 ) return (LinkInfo *)od;
@@ -13805,7 +13815,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		//	onlyNeedGoodInlinks = false;
 		//}
 
-		// call it
+		// call it. this is defined in Linkdb.cpp
 		char *url = getFirstUrl()->getUrl();
 		if ( ! getLinkInfo ( &m_tmpBuf12,
 				     &m_mcast12,

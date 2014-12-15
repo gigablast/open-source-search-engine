@@ -10288,11 +10288,18 @@ void Parms::init ( ) {
 
         m->m_title = "ask for gzipped docs when downloading";
         m->m_desc  = "If this is true, gb will send Accept-Encoding: gzip "
-		"to web servers when doing http downloads.";
+		"to web servers when doing http downloads. It does have "
+		"a tendency to cause out-of-memory errors when you enable "
+		"this, so until that is fixed better, it's probably a good "
+		"idea to leave this disabled.";
         m->m_cgi   = "afgdwd";
         m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
         m->m_type  = TYPE_BOOL;
-        m->m_def   = "1";
+	// keep this default off because it seems some pages are huge
+	// uncomressed causing OOM errors and possibly corrupting stuff?
+	// not sure exactly, but i don't like going OOM. so maybe until
+	// that is fixed leave this off.
+        m->m_def   = "0";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
         m++;
@@ -17015,12 +17022,17 @@ void Parms::init ( ) {
 	m->m_title = "enable link voting";
 	m->m_desc  = "If this is true Gigablast will "
 		"index hyper-link text and use hyper-link "
-		"structures to boost the quality of indexed documents.";
+		"structures to boost the quality of indexed documents. "
+		"You can disable this when doing a ton of injections to "
+		"keep things fast. Then do a posdb (index) rebuild "
+		"after re-enabling this when you are done injecting. Or "
+		"if you simply do not want link voting this will speed up"
+		"your injections and spidering a bit.";
 	m->m_cgi   = "glt";
 	m->m_off   = (char *)&cr.m_getLinkInfo - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_CLONE|PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
