@@ -131,7 +131,7 @@ bool Linkdb::init ( ) {
 			    0        , // fixeddatasize is 0 since no data
 			    // keep it high since we are mostly ssds now and
 			    // the reads are small...
-			    6,//g_conf.m_linkdbMinFilesToMerge ,
+			    -1,//g_conf.m_linkdbMinFilesToMerge ,
 			    // fix this to 15 and rely on the page cache of
 			    // just the satellite files and the daily merge to
 			    // keep things fast.

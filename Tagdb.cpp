@@ -1845,7 +1845,7 @@ bool Tagdb::init ( ) {
 			    "tagdb"                     ,
 			    true                       , // dedup same keys?
 			    -1                         , // fixed record size
-			    2,//g_conf.m_tagdbMinFilesToMerge   ,
+			    -1,//g_conf.m_tagdbMinFilesToMerge   ,
 			    g_conf.m_tagdbMaxTreeMem  ,
 			    maxTreeNodes               ,
 			    // now we balance so Sync.cpp can ordered huge list

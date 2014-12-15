@@ -6135,7 +6135,8 @@ void Msg40::lookupFacets2 ( ) {
 			// skip empty slots
 			if ( ! fht->m_flags[m_j] ) continue;
 			// get hash of the facet value
-			FacetValHash_t fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
+			FacetValHash_t fvh ;
+			fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
 			//int32_t count = *(int32_t *)fht->getValFromSlot(j);
 			// get the docid as well
 			FacetEntry *fe =(FacetEntry *)fht->getValFromSlot(m_j);
@@ -6287,7 +6288,11 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	HttpRequest *hr = &m_si->m_hr;
 	bool firstTime = true;
 	bool isString = false;
+	bool isFloat  = false;
+	bool isInt = false;
 	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFloat = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETINT   ) isInt = true;
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
@@ -6331,18 +6336,21 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		QueryWord *qw= qt->m_qword;
 
 			
-		if ( qt->m_fieldCode == FIELD_GBFACETINT && qw->m_numFacetRanges == 0 ) {
+		if ( qt->m_fieldCode == FIELD_GBFACETINT && 
+		     qw->m_numFacetRanges == 0 ) {
 			sb9.safePrintf("%"INT32"",(int32_t)*fvh);
 			text = sb9.getBufStart();
 		}
 
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT && qw->m_numFacetRanges == 0 ) {
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT 
+		     && qw->m_numFacetRanges == 0 ) {
 			sb9.printFloatPretty ( *(float *)fvh );
 			text = sb9.getBufStart();
 		}
 
 		int32_t k2 = -1;
 
+		// get the facet range that this FacetEntry represents (int)
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges; k++ ) {
 			if ( qt->m_fieldCode != FIELD_GBFACETINT )
 				break;
@@ -6358,6 +6366,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			k2 = k;
 		}
 
+		// get the facet range that this FacetEntry represents (float)
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges; k++ ) {
 			if ( qt->m_fieldCode != FIELD_GBFACETFLOAT )
 				break;
@@ -6405,7 +6414,38 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->safePrintf("</value>\n"
 				       "\t\t<docCount>%"INT32""
 				       "</docCount>\n"
-				       "\t</facet>\n",count);
+				       ,count);
+			// some stats now for floats
+			if ( isFloat && fe->m_count ) {
+				sb->safePrintf("\t\t<average>");
+				double sum = *(double *)&fe->m_sum;
+				double avg = sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf("\t\t</average>\n");
+				sb->safePrintf("\t\t<min>");
+				float min = *(float *)&fe->m_min;
+				sb->printFloatPretty ( min );
+				sb->safePrintf("</min>\n");
+				sb->safePrintf("\t\t<max>");
+				float max = *(float *)&fe->m_max;
+				sb->printFloatPretty ( max );
+				sb->safePrintf("</max>\n");
+			}
+			// some stats now for ints
+			if ( isInt && fe->m_count ) {
+				sb->safePrintf("\t\t<average>");
+				int64_t sum = fe->m_sum;
+				double avg = (double)sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf("\t\t</average>\n");
+				sb->safePrintf("\t\t<min>");
+				int32_t min = fe->m_min;
+				sb->safePrintf("%"INT32"</min>\n",min);
+				sb->safePrintf("\t\t<max>");
+				int32_t max = fe->m_max;
+				sb->safePrintf("%"INT32"</max>\n",max);
+			}
+			sb->safePrintf("\t</facet>\n");
 			continue;
 		}
 
@@ -6475,8 +6515,49 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
 			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32"\n"
-				       "}\n,\n", count);
+				       "\t\"docCount\":%"INT32""
+				       , count );
+
+			// if it's a # then we print stats after
+			if ( isString || fe->m_count == 0 )
+				sb->safePrintf("\n");
+			else
+				sb->safePrintf(",\n");
+				
+
+			// some stats now for floats
+			if ( isFloat && fe->m_count ) {
+				sb->safePrintf("\t\"average\":");
+				double sum = *(double *)&fe->m_sum;
+				double avg = sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"min\":");
+				float min = *(float *)&fe->m_min;
+				sb->printFloatPretty ( min );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"max\":");
+				float max = *(float *)&fe->m_max;
+				sb->printFloatPretty ( max );
+				sb->safePrintf("\n");
+			}
+			// some stats now for ints
+			if ( isInt && fe->m_count ) {
+				sb->safePrintf("\t\"average\":");
+				int64_t sum = fe->m_sum;
+				double avg = (double)sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"min\":");
+				int32_t min = fe->m_min;
+				sb->safePrintf("%"INT32",\n",min);
+				sb->safePrintf("\t\"max\":");
+				int32_t max = fe->m_max;
+				sb->safePrintf("%"INT32"\n",max);
+			}
+
+			sb->safePrintf("}\n,\n" );
+
 			continue;
 		}
 
@@ -6510,22 +6591,22 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT &&
 			  qw->m_numFacetRanges > 0 ) {
-			float min = qw->m_facetRangeIntA[k2];
-			float max = qw->m_facetRangeIntB[k2];
+			float min = qw->m_facetRangeFloatA[k2];
+			float max = qw->m_facetRangeFloatB[k2];
 			if ( min == max )
 				newStuff.safePrintf("prepend="
 						    "gbequalfloat%%3A%s%%3A%f+"
 						    ,term
 						    ,*(float *)fvh);
 			else
-				newStuff.safePrintf("prepend="
-						    "gbminfloat%%3A%s%%3A%f+"
-						    "gbmaxfloat%%3A%s%%3A%f+"
-						    ,term
-						    ,min
-						    ,term
-						    ,max
-						    );
+			newStuff.safePrintf("prepend="
+					    "gbminfloat%%3A%s%%3A%f+"
+					    "gbmaxfloat%%3A%s%%3A%f+"
+					    ,term
+					    ,min
+					    ,term
+					    ,max
+					    );
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 			newStuff.safePrintf("prepend="

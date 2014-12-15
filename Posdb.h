@@ -402,6 +402,11 @@ class FacetEntry {
  public:
 	int32_t m_count;
 	int64_t m_docId;
+
+	// cast as double/floats for floats:
+	int64_t m_sum;
+	int32_t m_max;
+	int32_t m_min;
 };
 
 

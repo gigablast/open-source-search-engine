@@ -129,6 +129,9 @@ char *Rebalance::getNeedsRebalance ( ) {
 
 	m_collnum = cn;
 	//m_collnum = 4695; //debug skip
+
+	//m_collnum = 18101; // just global index for now
+
 	// we are valid now either way
 	m_needsRebalanceValid = true;
 	// assume ok
@@ -201,6 +204,9 @@ void Rebalance::scanLoop ( ) {
 		// skip if none... like statsdb, i guess don't rebalance!!
 		if ( ! cr ) continue;
 
+		// only global index for now
+		//if ( m_collnum != 18101 ) continue;
+
 		// new?
 		//if ( m_lastCollnum != m_collnum ) {
 		//	log("rebal: rebalancing %s", cr->m_coll);
@@ -217,6 +223,8 @@ void Rebalance::scanLoop ( ) {
 			if ( ! rdb->isInitialized() ) continue;
 			// skip statsdb, do not rebalance that
 			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
+			// only tagdb for now
+			//if ( rdb->m_rdbId != RDB_TAGDB ) continue;
 			// log it as well
 			if ( m_lastRdb != rdb ) {
 				log("rebal: scanning %s (%"INT32") [%s]",

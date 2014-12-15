@@ -435,18 +435,28 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	//char *qs1 = getLangAbbr(m_queryLang);
 
-	log("query: using default lang of %s",m_defaultSortLang);
+	// this parm is in Parms.cpp and should be set
+	char *langAbbr = m_defaultSortLang;
+
+	// if &qlang was not given explicitly fall back to coll rec
+	if ( cr && ! langAbbr )
+		langAbbr = cr->m_defaultSortLanguage2;
+
+	// if no coll rec use language unknown
+	if ( ! langAbbr )
+		langAbbr = "xx";
+
+	log("query: using default lang of %s", langAbbr );
 
 	// get code
-	m_queryLangId = getLangIdFromAbbr ( m_defaultSortLang );
+	m_queryLangId = getLangIdFromAbbr ( langAbbr );
 
 	// allow for 'xx', which means langUnknown
-	if ( m_defaultSortLang && 
-	     m_defaultSortLang[0] && 
-	     m_defaultSortLang[0]!='x' && 
-	     m_queryLangId == langUnknown )
-		log("query: qlang of \"%s\" is NOT SUPPORTED",
-		    m_defaultSortLang);
+	if ( m_queryLangId == langUnknown &&
+	     langAbbr &&
+	     langAbbr[0] &&
+	     langAbbr[0]!='x' )
+		log("query: qlang of \"%s\" is NOT SUPPORTED",langAbbr);
 
 	// . the query to use for highlighting... can be overriden with "hq"
 	// . we need the language id for doing synonyms

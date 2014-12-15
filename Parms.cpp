@@ -171,6 +171,9 @@ bool CommandUpdateSiteList ( char *rec ) {
 // . we'll show it in a special msg box on all admin pages if required
 bool CommandRebalance ( char *rec ) {
 	g_rebalance.m_userApproved = true;
+	// force this to on so it goes through
+	g_rebalance.m_numForeignRecs = 1;
+	g_rebalance.m_needsRebalanceValid = false;
 	return true;
 }
 
@@ -6912,7 +6915,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_defaultSortLang - y;
 	m->m_type  = TYPE_CHARPTR;
 	//m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
-	m->m_def   = "xx";//_US";
+	m->m_def   = NULL;//"xx";//_US";
 	m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;
@@ -12182,7 +12185,8 @@ void Parms::init ( ) {
 	m->m_title = "use threads for intersects and merges";
 	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
 		"Default is now on in the event you have simultaneous queries "
-		"so one query does not hold back the other.";
+		"so one query does not hold back the other. There seems "
+		"to be a bug so leave this ON for now.";
 	        //"Until pthreads is any good leave this off.";
 	m->m_cgi   = "utfio";
 	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
@@ -14942,7 +14946,11 @@ void Parms::init ( ) {
 		"it consist of multiple documents separated by this "
 		"delimeter. Each such item will be injected as an "
 		"independent document. Some possible delimeters: "
-		"<i>========</i> or <i>&lt;doc&gt;</i>";
+		"<i>========</i> or <i>&lt;doc&gt;</i>. If you set "
+		"<i>hasmime</i> above to true then Gigablast will check "
+		"for a url after the delimeter and use that url as the "
+		"injected url. Otherwise it will append numbers to the "
+		"url you provide above.";
 	m->m_cgi   = "delim";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
@@ -15327,7 +15335,7 @@ void Parms::init ( ) {
 		"abbreviations at the bottom of the "
 		"<a href=/admin/filters>url filters</a> page.";
 	m->m_cgi   = "qlang";
-	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
+	m->m_off   = (char *)&cr.m_defaultSortLanguage2 - x;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
@@ -16917,27 +16925,34 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "linkdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many linkdb data files "
-		"are on disk.";
+		"are on disk. Raise this when initially growing an index "
+		"in order to keep merging down.";
 	m->m_cgi   = "mlkftm";
 	m->m_off   = (char *)&cr.m_linkdbMinFilesToMerge - x;
-	m->m_def   = "4";
+	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
 	m++;
-	*/
 
-	//m->m_title = "tagdb min files to merge";
-	//m->m_desc  = "Merge is triggered when this many linkdb data files "
-	//	"are on disk.";
-	//m->m_cgi   = "mtftm";
-	//m->m_off   = (char *)&cr.m_tagdbMinFilesToMerge - x;
-	//m->m_def   = "2"; 
-	//m->m_type  = TYPE_LONG;
-	//m->m_group = 0;
-	//m++;
+	m->m_title = "tagdb min files to merge";
+	m->m_desc  = "Merge is triggered when this many linkdb data files "
+		"are on disk.";
+	m->m_cgi   = "mtftgm";
+	m->m_off   = (char *)&cr.m_tagdbMinFilesToMerge - x;
+	m->m_def   = "2"; 
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 	// this is overridden by collection
 	m->m_title = "titledb min files needed to trigger to merge";

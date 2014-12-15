@@ -1467,8 +1467,8 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	//	m_minToMerge = g_conf.m_statsdbMinFilesToMerge;
 	if ( m_rdb == g_syncdb.getRdb() )
 		m_minToMerge = g_syncdb.m_rdb.m_minToMerge;
-	//if ( cr && m_rdb == g_linkdb.getRdb() )
-	//	m_minToMerge = cr->m_linkdbMinFilesToMerge;
+	if ( cr && m_rdb == g_linkdb.getRdb() )
+		m_minToMerge = cr->m_linkdbMinFilesToMerge;
 	if ( cr && m_rdb == g_cachedb.getRdb() )
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_serpdb.getRdb() )
@@ -1476,7 +1476,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	if ( cr && m_rdb == g_monitordb.getRdb() )
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_tagdb.getRdb() )
-		m_minToMerge = 2;//cr->m_tagdbMinFilesToMerge;
+		m_minToMerge = cr->m_tagdbMinFilesToMerge;
 
 	// if we are reblancing this coll then keep merges tight so all
 	// the negative recs annihilate with the positive recs to free
