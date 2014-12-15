@@ -201,11 +201,12 @@ static WebPage s_pages[] = {
 	  sendPageCloneColl  , 0 ,NULL,NULL,
 	  PG_MASTERADMIN|PG_ACTIVE},
 
+	// let's replace this with query reindex for the most part
 	{ PAGE_REPAIR    , "admin/rebuild"   , 0 , "rebuild" ,  1 , 0 ,
 	  "rebuild data",
 	  //USER_MASTER ,
 	  sendPageGeneric , 0 ,NULL,NULL,
-	  PG_MASTERADMIN |PG_ACTIVE},
+	  PG_MASTERADMIN },//|PG_ACTIVE},
 
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
 	  "prioritize urls for spidering",
@@ -272,11 +273,12 @@ static WebPage s_pages[] = {
 	  sendPageAutoban   , 0 ,NULL,NULL,
 	  PG_NOAPI|PG_MASTERADMIN},
 
+	// deactivate until works on 64-bit... mdw 12/14/14
 	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 ,M_POST,
 	  //USER_MASTER , 
 	  "profiler",
 	  sendPageProfiler   , 0 ,NULL,NULL,
-	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
+	  PG_NOAPI|PG_MASTERADMIN},//|PG_ACTIVE},
 
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
