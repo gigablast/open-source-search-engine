@@ -558,7 +558,9 @@ int main2 ( int argc , char *argv[] ) {
 
 			"dsh <CMD>\n"
 			"\trun this command on the primary IPs of "
-			"all active hosts in hosts.conf. Example: "
+			"all active hosts in hosts.conf. It will be "
+			"executed in the gigablast working directory on "
+			"each host. Example: "
 			"gb dsh 'ps auxw; uptime'\n\n"
 
 			/*
