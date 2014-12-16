@@ -207,7 +207,8 @@ void RdbDump::doneDumping ( ) {
 	m_isDumping = false;
 	// print stats
 	log(LOG_INFO,
-	    "db: Dumped %"INT32" positive and %"INT32" negative recs. Total = %"INT32".",
+	    "db: Dumped %"INT32" positive and %"INT32" negative recs. "
+	    "Total = %"INT32".",
 	     m_totalPosDumped , m_totalNegDumped ,
 	     m_totalPosDumped + m_totalNegDumped );
 
@@ -335,7 +336,14 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// "lastKey" is set to the last key in the list
 	//else {
 	{
+
+		// can we remove neg recs?
+		// class RdbBase *base = m_rdb->getBase(m_collnum);
+		// bool removeNegRecs = false;
+		// if ( base->m_numFiles <= 0 ) removeNegRecs = true;
+
 		if ( recall ) goto skip;
+
 		// debug msg
 		//log("RdbDump:: getting list");
 		m_t1 = gettimeofdayInMilliseconds();
@@ -359,6 +367,11 @@ bool RdbDump::dumpTree ( bool recall ) {
 					   &m_numNegRecs   ,
 					   m_useHalfKeys );
 
+
+		// don't dump out any neg recs if it is our first time dumping
+		// to a file for this rdb/coll. TODO: implement this later.
+		//if ( removeNegRecs )
+		//	m_list.removeNegRecs();
 
 // 		if(!m_list->checkList_r ( false , // removeNegRecs?
 // 					 false , // sleep on problem?

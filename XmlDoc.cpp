@@ -1671,6 +1671,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	// these members are automatically validated
 	m_ipValid                     = true;
 	m_spideredTimeValid           = true;
+	m_indexedTimeValid            = true;
+
 	m_pubDateValid                = true;
 	m_firstIndexedValid   	      = true;
 	m_outlinksAddedDateValid      = true;
@@ -2068,7 +2070,7 @@ bool XmlDoc::injectDoc ( char *url ,
 	// . can also use XmlDoc::m_loadFromOldTitleRec flag
 	//if ( recycleContent ) m_recycleContent = true;
 
-	// othercrap
+	// othercrap. used for importing from titledb of another coll/cluster.
 	if ( firstIndexed ) {
 		m_firstIndexedDate = firstIndexed;
 		m_firstIndexedDateValid = true;
@@ -20747,6 +20749,23 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 			// alignment bit set or cleared
 			if ( ! ( p[1] & 0x02 ) ) { char *xx=NULL;*xx=0; }
 			if (   ( p[7] & 0x02 ) ) { char *xx=NULL;*xx=0; }
+			int64_t docId = g_posdb.getDocId(p);
+			if ( docId != m_docId && !cr->m_indexSpiderReplies) { 
+				log("xmldoc: %"INT64" != %"INT64""
+				    , docId
+				    , m_docId );
+				char *xx=NULL;*xx=0;
+			}
+			// else
+			// 	log("xmldoc: %"INT64" == %"INT64""
+			// 	    , docId
+			// 	    , m_docId );
+
+			// uint64_t termId = g_posdb.getTermId(p);
+			// if ( termId == 59194288760543LL ) {
+			// 	log("xmldoc: debug");
+			// 	//char *xx=NULL;*xx=0;
+			// }
 		}
 		else if ( rdbId == RDB_DATEDB  ) ks = 16;
 		else ks = getKeySizeFromRdbId ( rdbId );

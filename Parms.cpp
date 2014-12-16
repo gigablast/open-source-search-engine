@@ -17661,14 +17661,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
-	m->m_title = "index spider replies";
-	m->m_desc  = "Index the spider replies of every url the spider "
+	m->m_title = "index spider status documents";
+	m->m_desc  = "Index a spider status \"document\" "
+		"for every url the spider "
 		"attempts to spider. Search for them using special "
 		"query operators like type:status or gberrorstr:success or "
-		"stats:gberrornum to get a histogram. They will not otherwise "
-		"show up in the search results. This will not work for "
-		"diffbot crawlbot collections yet until it has proven "
-		"more stable.";
+		"stats:gberrornum to get a histogram. "
+		"See <a href=/syntax.html>syntax</a> page for more examples. "
+		"They will not otherwise "
+		"show up in the search results.";
+	//      "This will not work for "
+	// 	"diffbot crawlbot collections yet until it has proven "
+	// 	"more stable.";
 	m->m_cgi   = "isr";
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;

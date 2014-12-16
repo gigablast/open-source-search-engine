@@ -1648,9 +1648,12 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// . we don't want any positive recs to go un annhilated
 	// . but don't worry about this check if start and end keys are equal
 	//if ( m_startKey != m_endKey && (m_endKey.n0 & 0x01) == 0x00 )
+	// . MDW: this happens during the qainject1() qatest in qa.cpp that
+	//   deletes all the urls then does a dump of just negative keys.
+	//   so let's comment it out for now
 	if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
-		log(LOG_LOGIC,"db: rdblist: merge_r: Illegal endKey for "
-		    "merging. fixing.");
+		// log(LOG_LOGIC,"db: rdblist: merge_r: Illegal endKey for "
+		//     "merging rdb=%s. fixing.",getDbnameFromId(rdbId));
 		// make it legal so it will be read first NEXT time
 		KEYSUB(m_endKey,1,m_ks);
 	}
@@ -3039,12 +3042,15 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	// . we don't want any positive recs to go un annhilated
 	// . but don't worry about this check if start and end keys are equal
 	//if ( m_startKey != m_endKey && (m_endKey.n0 & 0x01) == 0x00 )
-	if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
-		log(LOG_LOGIC,"db: rdblist: posdbMerge_r: Illegal endKey for "
-		    "merging");
-		// this happens when dumping datedb... wtf?
-		//char *xx=NULL;*xx=0;
-	}
+	// . MDW: this happens during the qainject1() qatest in qa.cpp that
+	//   deletes all the urls then does a dump of just negative keys.
+	//   so let's comment it out for now
+	// if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
+	// 	log(LOG_LOGIC,"db: rdblist: posdbMerge_r: Illegal endKey for "
+	// 	    "merging");
+	// 	// this happens when dumping datedb... wtf?
+	// 	//char *xx=NULL;*xx=0;
+	// }
 	// bail if nothing requested
 	if ( minRecSizes == 0 ) return true;
 

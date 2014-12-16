@@ -537,6 +537,11 @@ bool qainject1 ( ) {
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
 		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
 				// turn off use robots to avoid that
 				// xyz.com/robots.txt redir to seekseek.com
 				"&obeyRobots=0"
@@ -701,6 +706,92 @@ bool qainject1 ( ) {
 				-1672870556 ) )
 			return false;
 	}
+
+
+	// force a dump of posdb and other rdbs from mem to disk
+	if ( ! s_flags[18] ) {
+		s_flags[18] = true;
+		if ( ! getUrl ( "/admin/master?c=qatest123&dump=1",
+				-1672870556 ) )
+			return false;
+	}
+
+
+	if ( ! s_flags[21] ) {
+		wait(2.0);
+		s_flags[21] = true;
+		return false;
+	}
+
+
+	// ensure no posdb files on disk!
+	if ( ! s_flags[19] ) {
+		s_flags[19] = true;
+		// just use a msg5 to ensure posdb is empty
+		Msg5 msg5;
+		RdbList list;
+		key144_t startKey;
+		key144_t endKey;
+		startKey.setMin();
+		endKey.setMax();
+		CollectionRec *cr = g_collectiondb.getRec("qatest123");
+		g_threads.disableThreads();
+		if ( ! msg5.getList ( RDB_POSDB  ,
+				      cr->m_collnum  ,
+				      &list         ,
+				      (char *)&startKey      ,
+				      (char *)&endKey        ,
+				      64000         , // minRecSizes   ,
+				      true          , // includeTree   ,
+				      false         , // add to cache?
+				      0             , // max cache age
+				      0             , // startFileNum  ,
+				      -1            , // numFiles      ,
+				      NULL          , // state
+				      NULL          , // callback
+				      0             , // niceness
+				      false         , // err correction?
+				      NULL          ,
+				      0             ,
+				      -1            ,
+				      true          ,
+				      -1LL          ,
+				      NULL , // &msg5b        ,
+				      true          )) {
+			log("qa: HEY! it did not block");
+			char *xx=NULL;*xx=0;
+		}
+		g_threads.enableThreads();
+		if ( list.m_listSize ) {
+			log("qa: failed qa test of posdb0001.dat. "
+			    "has %i bytes of positive keys! coring.",
+			    (int)list.m_listSize);
+			char *xx=NULL;*xx=0;
+		}
+
+
+		/*
+		  MDW: can't use this since we currently just dump out all
+		  the negative recs to first file. i started to modify
+		  RdbDump.cpp to call RdbList::removeNegRecs() when it was
+		  dumping the first file for this coll/rdb but then decided
+		  not to follow through with it for now.
+		SafeBuf sb;
+		CollectionRec *cr = g_collectiondb.getRec("qatest123");
+		sb.safePrintf("%s/coll.qatest123.%i/posdb0001.dat"
+			      , g_hostdb.m_dir
+			      , (int)cr->m_collnum
+			      );
+		File ff;
+		ff.set ( sb.getBufStart() );
+		if ( ff.doesExist() ) {
+			log("qa: failed qa test of posdb0001.dat. coring.");
+			char *xx=NULL;*xx=0;
+		}
+		*/
+	}
+
+	
 
 	//static bool s_fee2 = false;
 	if ( ! s_flags[13] ) {
