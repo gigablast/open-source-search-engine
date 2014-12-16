@@ -3424,12 +3424,14 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	//
 	// if they did not EXPLICITLY provide a url crawl pattern or
 	// url crawl regex then restrict to seeds to prevent from spidering
-	// the entire internet
-	if ( ! ucp && ! m_hasucr ) { // m_restrictDomain ) {
-		m_regExs[i].set("!isonsamedomain && !ismanualadd");
-		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-		i++;
-	}
+	// the entire internet.
+	//if ( ! ucp && ! m_hasucr ) { // m_restrictDomain ) {
+	// MDW: even if they supplied a crawl pattern let's restrict to seed
+	// domains 12/15/14
+	m_regExs[i].set("!isonsamedomain && !ismanualadd");
+	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	i++;
+	//}
 
 	bool ucpHasPositive = false;
 	// . scan them to see if all patterns start with '!' or not
