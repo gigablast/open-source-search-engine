@@ -874,6 +874,7 @@ bool XmlDoc::set1 ( char    *url         ,
 	m_pbuf     = pbuf;
 	m_niceness = niceness;
 	m_version  = TITLEREC_CURRENT_VERSION;
+	m_versionValid = true;
 
 	// sanity check
 	if ( m_niceness == 0 ) { char *xx=NULL; *xx=0; }
@@ -1357,6 +1358,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		//setSpideredTime();
 	}
 
+	// now query reindex can specify a recycle content option so it
+	// can replace the rebuild tool. try to recycle on global index.
+	if ( m_sreqValid )
+		m_recycleContent = m_sreq.m_recycleContent;
 
 	return true;
 }
@@ -2376,6 +2381,11 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	if ( g_errno == ENOTITLEREC ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
@@ -3283,14 +3293,23 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	// . is a non-canonical page that have <link ahref=xxx rel=canonical>
 	// . also sets m_canonicanlUrl.m_url to it if we are not
 	// . returns NULL if we are the canonical url
-	Url **canon = getCanonicalRedirUrl();
-	if ( ! canon || canon == (void *)-1 ) return (int32_t *)canon;
-	// if there is one then we are it's leaf, it is the primary page
-	// so we should not index ourselves
-	if ( *canon ) {
-		m_indexCode = EDOCNONCANONICAL;
-		m_indexCodeValid = true;
-		return &m_indexCode;
+	// . do not do this check if the page was injected
+	bool checkCanonical = true;
+	if ( m_wasInjected ) checkCanonical = false;
+	// do not do canonical deletion if recycling content either i guess
+	if ( m_sreqValid && m_sreq.m_recycleContent ) checkCanonical = false;
+	// do not delete from being canonical if doing a query reindex
+	if ( m_sreqValid && m_sreq.m_isPageReindex ) checkCanonical = false;
+	if ( checkCanonical ) {
+		Url **canon = getCanonicalRedirUrl();
+		if ( ! canon || canon == (void *)-1 ) return (int32_t *)canon;
+		// if there is one then we are it's leaf, it is the primary 
+		// page so we should not index ourselves
+		if ( *canon ) {
+			m_indexCode = EDOCNONCANONICAL;
+			m_indexCodeValid = true;
+			return &m_indexCode;
+		}
 	}
 
 	// was page unchanged since last time we downloaded it?
@@ -3298,6 +3317,14 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	if ( ! pod || pod == (XmlDoc **)-1 ) return (int32_t *)pod;
 	XmlDoc *od = NULL;
 	if ( *pod ) od = *pod;
+
+	// if recycling content is true you gotta have an old title rec.
+	if ( ! od && m_recycleContent ) {
+		m_indexCode = ENOTITLEREC;
+		m_indexCodeValid = true;
+		return &m_indexCode;
+	}
+
 	bool check = true;
 	if ( ! od ) check = false;
 	// do not do this logic for diffbot because it might want to get
@@ -3312,12 +3339,19 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 		check = false;
 	if ( m_sreqValid && m_sreq.m_ignoreDocUnchangedError )
 		check = false;
+	// or if recycling content turn this off as well! otherwise 
+	// it will always be 100% the same
+	if ( m_recycleContent )
+		check = false;
+
 	if ( check ) {
 		// check inlinks now too!
 		LinkInfo  *info1 = getLinkInfo1 ();
-		if ( ! info1 || info1 == (LinkInfo *)-1 ) return (int32_t *)info1;
+		if ( ! info1 || info1 == (LinkInfo *)-1 ) 
+			return (int32_t *)info1;
 		LinkInfo  *info2 = od->getLinkInfo1 ();
-		if ( ! info2 || info2 == (LinkInfo *)-1 ) return (int32_t *)info2;
+		if ( ! info2 || info2 == (LinkInfo *)-1 ) 
+			return (int32_t *)info2;
 		Inlink *k1 = NULL;
 		Inlink *k2 = NULL;
 		char *s1, *s2;
@@ -3460,6 +3494,15 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	//m_indexCodeValid = true;
 	//m_indexCode      = 0;
 
+	// fix query reindex on global-index from coring because 
+	// the spider request is null
+	if ( m_isDiffbotJSONObject ) {
+		m_indexCode      = 0;
+		m_indexCodeValid = true;
+		return &m_indexCode;
+	}
+
+	
 	// this needs to be last!
 	int32_t *priority = getSpiderPriority();
 	if ( ! priority || priority == (void *)-1) {
@@ -10805,6 +10848,14 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 		return &m_rootDoc;
 	}
 
+	// or recycling content like for query reindex. keep it fast.
+	if ( ! *rtr && m_recycleContent ) {
+		m_rootDoc = NULL;
+		m_rootDocValid = true;
+		return &m_rootDoc;
+	}
+
+
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
@@ -13732,7 +13783,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	}
 
 	//link info generation requires an IP for internal/external computation
-	// UNLESS we are from getSpiderReplyMetaList2() ... so handle
+	// UNLESS we are from getSpiderStatusDocMetaList2() ... so handle
 	// -1 above!
 	//if ( *ip == -1 || *ip == 0 ) { char *xx=NULL;*xx=0; }
 
@@ -14379,6 +14430,11 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	// don't recycle if specfically asked to reindex though
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
 		m_recycleDiffbotReply = false;
+
+	// unless the 'recycle content' checkbox was checked when doing
+	// the query (page) reindex...
+	if ( m_sreqValid && m_sreq.m_recycleContent )
+	 	m_recycleDiffbotReply = true;
 
 
 	m_recycleDiffbotReplyValid = true;
@@ -15293,6 +15349,25 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	setStatus("getting http reply2");
 
+
+	// if recycle is set then NEVER download if doing query reindex
+	// but if doing an injection then i guess we can download.
+	// do not even do ip lookup if no old titlerec, which is how we
+	// ended up here...
+	if ( m_recycleContent && m_sreqValid && m_sreq.m_isPageReindex ) {
+		g_errno = ENOTITLEREC;
+		return NULL;
+	}
+
+	// doing a query reindex on diffbot objects does not have a
+	// valid spider request, only sets m_recycleContent to true
+	// in reindexJSONObjects()/redoJSONObjects()
+	if ( m_recycleContent && m_isDiffbotJSONObject ) {
+		g_errno = ENOTITLEREC;
+		return NULL;
+	}
+	
+
 	// get ip
 	int32_t *ip = getIp();
 	if ( ! ip || ip == (int32_t *)-1 ) return (char **)ip;
@@ -15378,6 +15453,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// if we didn't block getting the lock, keep going
 	setStatus ( "getting web page" );
+
 
 	// sanity check
 	if ( ! m_masterLoop ) { char *xx=NULL;*xx=0; }
@@ -19299,7 +19375,8 @@ char *XmlDoc::getSpiderLinks ( ) {
 	setStatus ( "getting spider links flag");
 
 	// do not add links now if doing the parser test
-	if ( g_conf.m_testParserEnabled ) {
+	if ( g_conf.m_testParserEnabled ||
+	     m_isDiffbotJSONObject ) {
 		m_spiderLinks  = false;
 		m_spiderLinks2 = false;
 		m_spiderLinksValid = true;
@@ -19830,6 +19907,13 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			       m_addedSpiderReplySize);
 	else
 		sb->safePrintf("addspiderrepsize=%05"INT32" ",0);
+
+
+	if ( m_addedStatusDocSizeValid )
+		sb->safePrintf("addstatusdocsize=%05"INT32" ",
+			       m_addedStatusDocSize);
+	else
+		sb->safePrintf("addstatusdocsize=%05"INT32" ",0);
 
 
 	if ( size_imageData && m_imageDataValid ) {
@@ -21108,13 +21192,25 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	return doesStringContainPattern ( m_content , p );
 }
 
+int32_t *XmlDoc::reindexJSONObjects ( int32_t *newTitleHashes,
+				      int32_t numNewHashes ) {
+	return redoJSONObjects (newTitleHashes,numNewHashes,false );
+}
+
+int32_t *XmlDoc::nukeJSONObjects ( int32_t *newTitleHashes , 
+				   int32_t numNewHashes ) {
+	return redoJSONObjects (newTitleHashes,numNewHashes,true );
+}
+
 // . returns ptr to status
 // . diffbot uses this to remove the indexed json pages associated with
 //   a url. each json object is basically its own url. a json object
 //   url is the parent page's url with a -diffbotxyz-%"UINT32" appended to it
 //   where %"INT32" is the object # starting at 0 and incrementing from there.
 // . XmlDoc::m_diffbotJSONCount is how many json objects the parent url had.
-int32_t *XmlDoc::nukeJSONObjects ( int32_t *newTitleHashes , int32_t numNewHashes ) {
+int32_t *XmlDoc::redoJSONObjects ( int32_t *newTitleHashes , 
+				   int32_t numNewHashes ,
+				   bool deleteFromIndex ) {
 	// use this
 	static int32_t s_return = 1;
 	// if none, we are done
@@ -21123,7 +21219,9 @@ int32_t *XmlDoc::nukeJSONObjects ( int32_t *newTitleHashes , int32_t numNewHashe
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
-	if ( ! cr->m_isCustomCrawl ) return &s_return;
+	// i was trying to re-index some diffbot json docs in the global
+	// index but it wasn't set as custom crawl
+	//if ( ! cr->m_isCustomCrawl ) return &s_return;
 
 	// already did it?
 	if ( m_joc >= m_diffbotJSONCount ) return &s_return;
@@ -21162,7 +21260,10 @@ int32_t *XmlDoc::nukeJSONObjects ( int32_t *newTitleHashes , int32_t numNewHashe
 		int32_t th32 = oldTitleHashes[m_joc];
 		// . if still in the new diffbot reply, do not DELETE!!!
 		// . if there was no title, it uses hash of entire object
-		if ( dedup.isInTable(&th32) ) { m_joc++; continue; }
+		if ( deleteFromIndex && dedup.isInTable(&th32) ) { 
+			m_joc++; 
+			continue; 
+		}
 		// if m_dx has no url set, call set4 i guess
 		if ( ! m_dx->m_firstUrlValid ) {
 			// make the fake url for this json object for indexing
@@ -21187,12 +21288,18 @@ int32_t *XmlDoc::nukeJSONObjects ( int32_t *newTitleHashes , int32_t numNewHashe
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
-			m_dx->m_deleteFromIndex = true;
+			// are we doing a query reindex or a nuke?
+			m_dx->m_deleteFromIndex = deleteFromIndex;//true;
+			// do not try to download this url
+			if ( ! deleteFromIndex )
+				m_dx->m_recycleContent = true;
 			// we need this because only m_dx->m_oldDoc will
 			// load from titledb and have it set
 			m_dx->m_isDiffbotJSONObject = true;
 			// for debug
-			log("xmldoc: nuking %s",fakeUrl.getBufStart());
+			char *str = "reindexing";
+			if ( deleteFromIndex ) str = "nuking";
+			log("xmldoc: %s %s",str,fakeUrl.getBufStart());
 		}
 
 		// when the indexdoc completes, or if it blocks, call us!
@@ -21686,7 +21793,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//   doc as a whole
 
 		// i guess it is safe to do this after getting the spiderreply
-		SafeBuf *spiderReplyMetaList = NULL;
+		SafeBuf *spiderStatusDocMetaList = NULL;
 		if ( cr->m_indexSpiderReplies && 
 		     m_useSpiderdb &&
 		     // doing it for diffbot throws off smoketests.
@@ -21694,13 +21801,19 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     // the smoketests
 		     ! cr->m_isCustomCrawl ) {
 			// get the spiderreply ready to be added
-			spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
+			spiderStatusDocMetaList = 
+				getSpiderStatusDocMetaList ( newsr );
 			// error?
-			if ( ! spiderReplyMetaList ) return NULL;
+			if ( ! spiderStatusDocMetaList ) return NULL;
 			// blocked?
-			if (spiderReplyMetaList==(void *)-1) return (char *)-1;
+			if (spiderStatusDocMetaList==(void *)-1) 
+				return (char *)-1;
 			// need to alloc space for it too
-			needx += spiderReplyMetaList->length();
+			int32_t len = spiderStatusDocMetaList->length();
+			needx += len;
+			// this too
+			m_addedStatusDocSize = len;
+			m_addedStatusDocSizeValid = true;
 		}
 
 		// doledb key?
@@ -21721,11 +21834,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		char *saved = m_p;
 
 		// first store spider reply "document"
-		if ( spiderReplyMetaList ) {
+		if ( spiderStatusDocMetaList ) {
 			memcpy ( m_p,
-				 spiderReplyMetaList->getBufStart(),
-				 spiderReplyMetaList->length() );
-			m_p += spiderReplyMetaList->length();
+				 spiderStatusDocMetaList->getBufStart(),
+				 spiderStatusDocMetaList->length() );
+			m_p += spiderStatusDocMetaList->length();
 		}
 
 		/*
@@ -21864,17 +21977,30 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	bool *recycle = getRecycleDiffbotReply();
 	if ( ! recycle || recycle == (void *)-1) return (char *)recycle;
 	// in that case inherit this from the old doc...
-	if ( od && *recycle && cr->m_isCustomCrawl ) {
+	if ( od && *recycle && od->m_diffbotJSONCount &&
+	     // only call this once otherwise we double stock
+	     // m_diffbotTitleHashBuf
+	     m_diffbotJSONCount == 0 ) {//cr->m_isCustomCrawl){
 		m_diffbotJSONCount          = od->m_diffbotJSONCount;
 		m_sentToDiffbot             = od->m_sentToDiffbot;
 		m_gotDiffbotSuccessfulReply = od->m_gotDiffbotSuccessfulReply;
 		// copy title hashes info. it goes hand in hand with the
 		// NUMBER of diffbot items we have.
-		if(!m_diffbotTitleHashBuf.
-		   safeMemcpy(&od->m_diffbotTitleHashBuf) )
+		int nh = 0;
+		int32_t *ohbuf = od->getDiffbotTitleHashes ( &nh );
+		if ( ! m_diffbotTitleHashBuf.safeMemcpy ( ohbuf , nh*4 ) )
 			return NULL;
 		ptr_linkInfo2 =(LinkInfo *)m_diffbotTitleHashBuf.getBufStart();
 		size_linkInfo2=m_diffbotTitleHashBuf.length();
+	}
+	// but we might have to call reindexJSONObjects() multiple times if
+	// it would block
+	if ( od && *recycle && od->m_diffbotJSONCount ) {
+		// similar to od->nukeJSONObjects
+		int32_t *ohbuf =(int32_t *)m_diffbotTitleHashBuf.getBufStart();
+		int32_t nh     =m_diffbotTitleHashBuf.length() / 4;
+		int32_t *status = reindexJSONObjects( ohbuf , nh );
+		if ( ! status || status == (void *)-1) return (char *)status;
 	}
 
 
@@ -21893,7 +22019,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// you have to be a diffbot crawl to do this
 	// no, not if you have th diffbot api url set... so take this out
 	//if ( ! cr->m_isCustomCrawl ) nukeJson = false;
-	// do not remove old json objects if pageparser.cpp test
+	// do not remove old diffbot json objects if pageparser.cpp test
 	// because that can not change the index, etc.
 	if ( getIsPageParser() ) nukeJson = false;
 
@@ -21901,9 +22027,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// it should only nuke/delete the json items that we LOST,
 		// so if we still have the title hash in our latest 
 		// diffbot reply, then do not nuke that json item, which
-		// will have a url ending in -diffboyxyz%"UINT32" (where %"UINT32" 
-		// is the json item title hash). This will download the
-		// diffbot reply if not already there.
+		// will have a url ending in -diffboyxyz%"UINT32" 
+		// (where %"UINT32" is the json item title hash). 
+		// This will download the diffbot reply if not already there.
 		int32_t numHashes;
 		int32_t *th = getDiffbotTitleHashes(&numHashes);
 		if ( ! th && ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -22244,16 +22370,17 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 	// i guess it is safe to do this after getting the spiderreply
-	SafeBuf *spiderReplyMetaList = NULL;
+	SafeBuf *spiderStatusDocMetaList = NULL;
 	if ( cr->m_indexSpiderReplies && 
 	     m_useSpiderdb &&
 	     // doing it for diffbot throws off smoketests
 	     ! cr->m_isCustomCrawl ) {
 		// get the spiderreply ready to be added to the rdbs w/ msg4
-		spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
+		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
 		// block?
-		if ( ! spiderReplyMetaList||spiderReplyMetaList == (void *)-1)
-			return (char *)spiderReplyMetaList;
+		if ( ! spiderStatusDocMetaList ||
+		     spiderStatusDocMetaList == (void *)-1)
+			return (char *)spiderStatusDocMetaList;
 	}
 
 
@@ -22539,8 +22666,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// if indexing the spider reply as well under a different docid
 	// there is no reason we can't toss it into our meta list here
-	if ( spiderReplyMetaList )
-		need += spiderReplyMetaList->length();
+	if ( spiderStatusDocMetaList )
+		need += spiderStatusDocMetaList->length();
 
 	// now we use revdb
 	// before hashing the old doc into it
@@ -23403,13 +23530,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// search index of spider replies! (NEW!)
 	//
 	// . index spider reply with separate docid so they are all searchable.
-	// . see getSpiderReplyMetaList() function to see what we index
+	// . see getSpiderStatusDocMetaList() function to see what we index
 	//   and the titlerec we create for it
-	if ( spiderReplyMetaList ) {
+	if ( spiderStatusDocMetaList ) {
 		memcpy ( m_p , 
-			 spiderReplyMetaList->getBufStart() ,
-			 spiderReplyMetaList->length() );
-		m_p += spiderReplyMetaList->length();
+			 spiderStatusDocMetaList->getBufStart() ,
+			 spiderStatusDocMetaList->length() );
+		m_p += spiderStatusDocMetaList->length();
 	}
 
 	/*
@@ -26495,18 +26622,18 @@ int32_t XmlDoc::getBoostFromSiteNumInlinks ( int32_t inlinks ) {
 	return boost1;
 }
 
-// . this is kinda hacky because it uses a int16_t XmlDoc on the stack
+// . this is kinda hacky because it uses a short XmlDoc on the stack
 // . no need to hash this stuff for regular documents since all the terms
 //   are fielded by gberrorstr, gberrornum or gbisreply.
 // . normally we might use a separate xmldoc class for this but i wanted
 //   something more lightweight
-SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
+SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ) {
 
 	// set status for this
 	setStatus ( "getting spider reply meta list");
 
-	if ( m_spiderReplyMetaListValid )
-		return &m_spiderReplyMetaList;
+	if ( m_spiderStatusDocMetaListValid )
+		return &m_spiderStatusDocMetaList;
 
 	// if docid based do not hash a spider reply. docid-based spider
 	// requests are added to spiderdb from the query reindex tool.
@@ -26515,8 +26642,8 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// MDW: i disagree, i want to see when these get updated! 9/6/2014
 	//if ( m_setFromDocId || ! m_useSpiderdb ) {
 	if ( ! m_useSpiderdb ) {
-		m_spiderReplyMetaListValid = true;
-		return &m_spiderReplyMetaList;
+		m_spiderStatusDocMetaListValid = true;
+		return &m_spiderStatusDocMetaList;
 	}
 
 	// we double add regular html urls in a query reindex because the
@@ -26527,8 +26654,8 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// you want.
 	// MDW: likewise, take this out, i want these recorded as well..
 	// if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
-	// 	m_spiderReplyMetaListValid = true;
-	// 	return &m_spiderReplyMetaList;
+	// 	m_spiderStatusDocMetaListValid = true;
+	// 	return &m_spiderStatusDocMetaList;
 	// }
 
 	// . fake this out so we do not core
@@ -26548,7 +26675,7 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 		m_siteNumInlinksValid = true;
 	}
 
-	SafeBuf *mbuf = getSpiderReplyMetaList2 ( reply );
+	SafeBuf *mbuf = getSpiderStatusDocMetaList2 ( reply );
 
 	if ( forcedLangId )
 		m_langIdValid = false;
@@ -26560,7 +26687,8 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	return mbuf;
 }
 
-SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {	
+// the spider status doc
+SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {	
 
 	setStatus ( "making spider reply meta list");
 
@@ -26584,15 +26712,15 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
 	// reset just in case
-	m_spiderReplyMetaList.reset();
+	m_spiderStatusDocMetaList.reset();
 
 	// sanity
 	if ( *uqd <= 0 || *uqd > MAX_DOCID ) { 
 		log("xmldoc: avail docid = %"INT64". could not index spider "
 		    "reply or %s",*uqd,m_firstUrl.m_url);
 		//char *xx=NULL;*xx=0; }
-		m_spiderReplyMetaListValid = true;
-		return &m_spiderReplyMetaList;
+		m_spiderStatusDocMetaListValid = true;
+		return &m_spiderStatusDocMetaList;
 	}
 
 	// the posdb table
@@ -26640,11 +26768,11 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	bool ok = false;
 	if ( m_indexCode ) ok = true;
 	// scan the keys in tt and make sure the termid fo
-	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
+	addTable144 ( &tt4 , *uqd , &m_spiderStatusDocMetaList );
 	int32_t recSize = 0;
 	int32_t rcount = 0;
-	char *p = m_spiderReplyMetaList.getBufStart();
-	char *pend =m_spiderReplyMetaList.getBuf();
+	char *p = m_spiderStatusDocMetaList.getBufStart();
+	char *pend =m_spiderStatusDocMetaList.getBuf();
 	for ( ; p < pend ; p += recSize ) {
 		// get rdbid, RDB_POSDB
 		uint8_t rdbId = *p & 0x7f;
@@ -26706,12 +26834,12 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	hashDateNumbers ( &tt4 , true );
 
 	// store keys in safebuf then to make our own meta list
-	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
+	addTable144 ( &tt4 , *uqd , &m_spiderStatusDocMetaList );
 
 	// debug this shit
 	//SafeBuf tmpsb;
-	//printMetaList ( m_spiderReplyMetaList.getBufStart() ,
-	//		m_spiderReplyMetaList.getBuf(),
+	//printMetaList ( m_spiderStatusDocMetaList.getBufStart() ,
+	//		m_spiderStatusDocMetaList.getBuf(),
 	//		&tmpsb );
 	//logf(LOG_DEBUG,"%s\n",tmpsb.getBufStart());
 
@@ -26784,17 +26912,17 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 		return NULL;
 
 	// concat titleRec to our posdb key records
-	if ( ! m_spiderReplyMetaList.pushChar((char)RDB_TITLEDB) )
+	if ( ! m_spiderStatusDocMetaList.pushChar((char)RDB_TITLEDB) )
 		return NULL;
-	if ( ! m_spiderReplyMetaList.cat(titleRecBuf) ) 
+	if ( ! m_spiderStatusDocMetaList.cat(titleRecBuf) ) 
 		return NULL;
 
 	// return the right val
 	m_dist = savedDist;
 
 	// ok, good to go, ready to add to posdb and titledb
-	m_spiderReplyMetaListValid = true;
-	return &m_spiderReplyMetaList;
+	m_spiderStatusDocMetaListValid = true;
+	return &m_spiderStatusDocMetaList;
 }
 
 // returns false and sets g_errno on error
@@ -32438,7 +32566,8 @@ bool XmlDoc::hashWords3 ( //int32_t        wordStart ,
 	//	return true;
 
 	Sections *sections = sectionsArg;
-	// for getSpiderReplyMetaList() we don't use sections it'll mess us up
+	// for getSpiderStatusDocMetaList() we don't use sections it'll
+	// mess us up
 	if ( ! hi->m_useSections ) sections = NULL;
 
 	// int16_tcuts

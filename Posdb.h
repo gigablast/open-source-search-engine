@@ -678,6 +678,10 @@ class PosdbTable {
 	int32_t m_sortByTermNum;
 	int32_t m_sortByTermNumInt;
 
+	// fix core with these two
+	int32_t m_sortByTermInfoNum;
+	int32_t m_sortByTermInfoNumInt;
+
 	// for gbmin:price:1.99
 	int32_t m_minScoreTermNum;
 	int32_t m_maxScoreTermNum;

@@ -408,6 +408,9 @@ bool Msg1c::gotList ( ) {
 
 	m_sb.setLabel("reiadd");
 
+	State13 *st = (State13 *)m_state;
+	GigablastRequest *gr = &st->m_gr;
+
 	m_numDocIdsAdded = 0;
 	//int32_t count = 0;
 	// list consists of docIds, loop through each one
@@ -445,6 +448,9 @@ bool Msg1c::gotList ( ) {
 		sr.m_probDocId      = docId;
 		// use test-parser not test-spider
 		sr.m_useTestSpiderDir = 0;
+		// now you can recycle content instead of re-downloading it
+		// for every docid
+		sr.m_recycleContent = gr->m_recycleContent;
 		// if this is zero we end up getting deduped in
 		// dedupSpiderList() if there was a SpiderReply whose
 		// spider time was > 0

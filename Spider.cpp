@@ -12871,23 +12871,6 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 					       "in spider controls.");
 	}
 
-	if ( ! g_conf.m_spideringEnabled ) {
-		*status = SP_ADMIN_PAUSED;
-		return msg->safePrintf("All crawling temporarily paused "
-				       "by root administrator for "
-				       "maintenance.");
-	}
-
-	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
-	// host's counts tallied into it, which could make a difference on
-	// whether we have exceed a maxtocrawl limit or some such, so wait...
-	if ( ! s_countsAreValid ) {
-		*status = SP_ADMIN_PAUSED;
-		return msg->safePrintf("All crawling temporarily paused "
-				       "because a shard is down.");
-	}
-
-
 	// if spiderdb is empty for this coll, then no url
 	// has been added to spiderdb yet.. either seed or spot
 	//CrawlInfo *cg = &cx->m_globalCrawlInfo;
@@ -12937,6 +12920,25 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Job round completed.");
 	}
+
+
+	if ( ! g_conf.m_spideringEnabled ) {
+		*status = SP_ADMIN_PAUSED;
+		return msg->safePrintf("All crawling temporarily paused "
+				       "by root administrator for "
+				       "maintenance.");
+	}
+
+	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
+	// host's counts tallied into it, which could make a difference on
+	// whether we have exceed a maxtocrawl limit or some such, so wait...
+	if ( ! s_countsAreValid ) {
+		*status = SP_ADMIN_PAUSED;
+		return msg->safePrintf("All crawling temporarily paused "
+				       "because a shard is down.");
+	}
+
+
 
 	// otherwise in progress?
 	*status = SP_INPROGRESS;

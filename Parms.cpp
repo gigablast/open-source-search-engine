@@ -6534,6 +6534,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_REDBOX;
 	m++;
 
+	m->m_title = "show errors";
+	m->m_desc  = "Show errors from generating search result summaries "
+		"rather than just hide the docid. Useful for debugging.";
+	m->m_cgi   = "showerrors";
+	m->m_off   = (char *)&si.m_showErrors - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "site cluster";
 	m->m_desc  = "Should search results be site clustered? This "
 		"limits each site to appearing at most twice in the "
@@ -15122,6 +15134,23 @@ void Parms::init ( ) {
 	m->m_def   = "xx";
 	m->m_flags = PF_API ;
 	m++;
+
+
+	m->m_title = "recycle content";
+	m->m_desc  = "If you check this box then Gigablast will not "
+		"re-download the content, but use the content that was "
+		"stored in the cache from last time. Useful for rebuilding "
+		"the index to pick up new inlink text or fresher "
+		"sitenuminlinks counts which influence ranking.";
+	m->m_cgi   = "qrecycle";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_REINDEX;
+	m->m_off   = (char *)&gr.m_recycleContent - (char *)&gr;
+	m++;
+
 
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "

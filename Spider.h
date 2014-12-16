@@ -549,7 +549,7 @@ class SpiderRequest {
 	/* char    m_onlyDoNotAddLinksLinks        :1; // max hopcount 1 */
 	/* char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2 */
 	char    m_ignoreDocUnchangedError:1;//reserved2a:1;
-	char    m_reserved2b:1;
+	char    m_recycleContent:1;//m_reserved2b:1;
 	char    m_reserved2c:1;
 	char    m_reserved2d:1;
 

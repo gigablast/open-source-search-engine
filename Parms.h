@@ -188,7 +188,7 @@ class GigablastRequest {
 	int32_t  m_ern;
 	char *m_qlang;
         bool  m_forceDel;
-
+	char  m_recycleContent;
 	// useful bufs to copy data over
 	SafeBuf m_tmpBuf1;
 	SafeBuf m_tmpBuf2;
