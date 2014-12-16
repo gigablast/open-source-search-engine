@@ -534,7 +534,8 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 		url.set ( r->ptr_url );
 		// . never download /master urls from ips of hosts in cluster
 		// . TODO: FIX! the pages might be in another cluster!
-		if ( ( strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
+		// . pages are now /admin/* not any /master/* any more.
+		if ( ( //strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
 		       strncasecmp ( url.getPath() , "/admin/"  , 7 ) == 0 )) {
 			log("spider: Got request to download possible "
 			    "gigablast control page %s. Sending back "
