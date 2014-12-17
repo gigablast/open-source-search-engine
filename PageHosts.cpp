@@ -1406,7 +1406,7 @@ skipReplaceHost:
 
 		  "<tr class=poo>"
 		  "<td><nobr>O (status flag)</nobr></td>"
-		  "<td>Indicates # of time we ran out of memory."
+		  "<td>Indicates # of times we ran out of memory."
 		  "</td>"
 		  "</tr>\n"
 
