@@ -270,6 +270,7 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 newmemloop:
 	//void *mem = s_pool.malloc ( size );
 	if ( ! mem && size > 0 ) {
+		g_mem.m_outOfMems++;
 		g_errno = errno;
 		log("mem: new(%"INT32"): %s",(int32_t)size,mstrerror(g_errno));
 		//if ( unlock ) mutexUnlock();
@@ -358,6 +359,7 @@ newmemloop:
 	//void *mem = s_pool.malloc ( size );
 	if ( ! mem && size > 0 ) {
 		g_errno = errno;
+		g_mem.m_outOfMems++;
 		log("mem: new(%"UINT32"): %s",
 		    (uint32_t)size, mstrerror(g_errno));
 		//if ( unlock ) mutexUnlock();
@@ -414,6 +416,8 @@ Mem::Mem() {
  	m_stackStart = NULL;
 	// shared mem used
 	m_sharedUsed = 0LL;
+	// count how many allocs/news failed
+	m_outOfMems = 0;
 }
 
 Mem::~Mem() {
@@ -1373,6 +1377,7 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 	int32_t memLoop = 0;
 mallocmemloop:
 	if ( ! mem && size > 0 ) {
+		g_mem.m_outOfMems++;
 		// try to free temp mem. returns true if it freed some.
 		if ( freeCacheMem() ) goto retry;
 		g_errno = errno;
@@ -1535,6 +1540,7 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	mem = (char *)mmalloc ( newSize , note );
 	// bail on error
 	if ( ! mem ) {
+		g_mem.m_outOfMems++;
 		// restore the original buf we tried to grow
 		addMem ( ptr , oldSize , note , 0 );
 		errno = g_errno = ENOMEM;

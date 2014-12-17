@@ -911,7 +911,7 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 	// get max temp
 	int32_t max = 0;
 	for ( int32_t i = 0 ; i < 4 ; i++ ) {
-		int16_t t = h->m_hdtemps[i];
+		int16_t t = h->m_pingInfo.m_hdtemps[i];
 		if ( t > max ) max = t;
 	}
 	// . leave if ok
@@ -1094,7 +1094,7 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 	// end
 	char *pend = buf + gbstrlen(buf);
 	// store the temps here
-	int16_t *temp = g_hostdb.m_myHost->m_hdtemps;
+	int16_t *temp = g_hostdb.m_myHost->m_pingInfo.m_hdtemps;
 	// there are 4
 	int16_t *tempEnd = temp + 4;
 

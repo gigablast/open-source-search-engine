@@ -755,7 +755,7 @@ bool CommandReloadLanguagePages ( char *rec ) {
 }
 
 bool CommandClearKernelError ( char *rec ) {
-	g_hostdb.m_myHost->m_kernelErrors = 0;
+	g_hostdb.m_myHost->m_pingInfo.m_kernelErrors = 0;
 	return true;
 }
 
@@ -9906,7 +9906,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "ms";
 	m->m_off   = (char *)&g_conf.m_httpMaxSockets - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
+	// up this some, am seeing sockets closed because of using gb
+	// as a cache...
+	m->m_def   = "300";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
