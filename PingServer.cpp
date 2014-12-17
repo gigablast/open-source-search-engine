@@ -403,7 +403,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	//char *request = h->m_requestBuf;
 	//char *p       = h->m_requestBuf;
 
-	PingInfo *pi = &h->m_pingInfo;//RequestBuf;
+	// we send our stats to host "h"
+	PingInfo *pi = &me->m_pingInfo;//RequestBuf;
 
 	pi->m_numCorruptDiskReads = g_numCorrupt;
 	pi->m_numOutOfMems = g_mem.m_outOfMems;
@@ -422,7 +423,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// the error has been fixed. So just consider this host as dead unless
 	// gb is restarted and the problem is fixed
 	//*p = me->m_kernelErrors; p++;
-	pi->m_kernelErrors = me->m_pingInfo.m_kernelErrors;
+	//pi->m_kernelErrors = me->m_pingInfo.m_kernelErrors;
 
 	//if ( me->m_kernelErrors ){
 	//char *xx = NULL; *xx = 0;
@@ -438,7 +439,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	// our cpu usage
 	//*(float *)p = me->m_cpuUsage ; p += sizeof(float); // 4 bytes
-	pi->m_cpuUsage = me->m_pingInfo.m_cpuUsage;
+	//pi->m_cpuUsage = me->m_pingInfo.m_cpuUsage;
 
 	// our num recs, docsIndexed
 	//*(int32_t*)p = (int32_t)g_clusterdb.getRdb()->getNumTotalRecs();
@@ -495,10 +496,12 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	//*(collnum_t *)p = cn ; p += sizeof(collnum_t);
 	pi->m_dailyMergeCollnum = cn;
 
+	pi->m_hostId = me->m_hostId;
+
 	// store hd temps
 	// memcpy ( p , me->m_hdtemps , 4 * 2 );
 	// p += 4 * 2;
-	memcpy ( &pi->m_hdtemps , me->m_pingInfo.m_hdtemps , 4 * 2 );
+	//memcpy ( &pi->m_hdtemps , me->m_pingInfo.m_hdtemps , 4 * 2 );
 
 	// store the gbVersionStrBuf now, just a date with a \0 included
 	char *v = getVersion();
@@ -929,6 +932,11 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 	if ( requestSize == sizeof(PingInfo)){
 		//MAX_PING_SIZE
 		//14+4+4+4+4+sizeof(collnum_t)+1 ) {
+
+		// sanity
+		PingInfo *pi2 = (PingInfo *)request;
+		if ( pi2->m_hostId != h->m_hostId ) { 
+			char *xx=NULL;*xx=0; }
 
 		// now we just copy the class
 		memcpy ( &h->m_pingInfo , request , requestSize );

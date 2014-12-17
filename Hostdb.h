@@ -83,7 +83,9 @@ public:
 
 class PingInfo {
  public:
+	// m_lastPing MUST be on top for now...
 	int64_t m_lastPing;
+	int32_t m_hostId;
 	int32_t m_loadAvg;
 	float m_percentMemUsed;
 	float m_cpuUsage;
@@ -178,7 +180,7 @@ class Host {
 	//int32_t          m_slowDiskReads;
 
 	// doc count
-	int32_t          m_docsIndexed;
+	//int32_t          m_docsIndexed;
 	int32_t          m_urlsIndexed;
 
 	int32_t          m_eventsIndexed;

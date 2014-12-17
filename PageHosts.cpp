@@ -655,7 +655,7 @@ skipReplaceHost:
 
 			sb.safePrintf("\t\t<docsIndexed>%"INT32""
 				      "</docsIndexed>\n",
-				      h->m_docsIndexed);
+				      h->m_pingInfo.m_totalDocsIndexed);
 
 			sb.safePrintf("\t\t<percentMemUsed>%.1f%%"
 				      "</percentMemUsed>",
@@ -756,7 +756,7 @@ skipReplaceHost:
 				      h->m_pingInfo.m_slowDiskReads);
 
 			sb.safePrintf("\t\t\"docsIndexed\":%"INT32",\n",
-				      h->m_docsIndexed);
+				      h->m_pingInfo.m_totalDocsIndexed);
 
 			sb.safePrintf("\t\t\"percentMemUsed\":\"%.1f%%\",\n",
 				      h->m_pingInfo.m_percentMemUsed); // float
@@ -899,7 +899,7 @@ skipReplaceHost:
 			  fb.getBufStart(),//flagString,
 
 			  h->m_pingInfo.m_slowDiskReads,
-			  h->m_docsIndexed,
+			  h->m_pingInfo.m_totalDocsIndexed,
 
 			  fontTagFront,
 			  h->m_pingInfo.m_percentMemUsed, // float
@@ -1326,7 +1326,7 @@ skipReplaceHost:
 
 		  "<tr class=poo>"
 		  "<td>ping1 age</td>"
-		  "<td>How int32_t ago the last ping request was sent to "
+		  "<td>How long ago the last ping request was sent to "
 		  "this host. Let's us know how fresh the ping time is."
 		  "</td>"
 		  "</tr>\n"
@@ -1405,7 +1405,7 @@ skipReplaceHost:
 		  "</tr>\n"
 
 		  "<tr class=poo>"
-		  "<td>O (status flag)</td>"
+		  "<td><nobr>O (status flag)</nobr></td>"
 		  "<td>Indicates # of time we ran out of memory."
 		  "</td>"
 		  "</tr>\n"

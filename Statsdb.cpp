@@ -257,9 +257,9 @@ void Statsdb::addDocsIndexed ( ) {
 	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		// must have something
-		if ( h->m_docsIndexed <= 0 ) return;
+		if ( h->m_pingInfo.m_totalDocsIndexed <= 0 ) return;
 		// add it up
-		total += h->m_docsIndexed;
+		total += h->m_pingInfo.m_totalDocsIndexed;
 	}
 	// divide by # of groups
 	total /= g_hostdb.getNumShards();

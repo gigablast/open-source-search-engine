@@ -1703,7 +1703,7 @@ int32_t Hostdb::getAliveIp ( Host *h ) {
 int64_t Hostdb::getNumGlobalRecs ( ) {
 	int64_t n = 0;
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
-		n += getHost ( i )->m_docsIndexed;
+		n += getHost ( i )->m_pingInfo.m_totalDocsIndexed;
 	return n / m_numHostsPerShard;
 }
 
@@ -1783,7 +1783,7 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	//oldHost->m_percentMemUsed      = 0;
 	oldHost->m_firstOOMTime        = 0;
 	//oldHost->m_cpuUsage            = 0;
-	oldHost->m_docsIndexed         = 0;
+	oldHost->m_pingInfo.m_totalDocsIndexed         = 0;
 	oldHost->m_eventsIndexed       = 0;
 	//oldHost->m_slowDiskReads       = 0;
 	//oldHost->m_kernelErrors        = 0;
