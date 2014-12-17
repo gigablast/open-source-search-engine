@@ -200,7 +200,8 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       //"<td><b>ETRYAGAINS recvd</td>"
+			       "<td><b>try agains recvd</td>"
+
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
 			       "<b>dgrams resent</a></td>"
 
@@ -492,22 +493,27 @@ skipReplaceHost:
 				fb.safePrintf("<font color=red><b>"
 					      "C"
 					      "<sup>%"INT32"</sup>"
-					      "</font>"
+					      "</b></font>"
 					      , n );
 			n = h->m_pingInfo.m_numOutOfMems;
 			if ( n )
 				fb.safePrintf("<font color=red><b>"
 					      "O"
 					      "<sup>%"INT32"</sup>"
-					      "</font>"
+					      "</b></font>"
 					      , n );
 			n = h->m_pingInfo.m_socketsClosedFromHittingLimit;
 			if ( n )
 				fb.safePrintf("<font color=red><b>"
 					      "K"
 					      "<sup>%"INT32"</sup>"
-					      "</font>"
+					      "</b></font>"
 					      , n );
+			if ( ! isClockInSync() )
+				fb.safePrintf("<font color=red><b>"
+					      "N"
+					      "</b></font>"
+					      );
 		}
 
 		// recovery mode? reocvered from coring?
@@ -615,11 +621,13 @@ skipReplaceHost:
 			  MDW: take out for new stuff
 			sb.safePrintf("\t\t<errorReplies>%"INT32"</errorReplies>\n",
 				      h->m_errorReplies);
+			*/
 
 			sb.safePrintf("\t\t<errorTryAgains>%"INT32""
 				      "</errorTryAgains>\n",
 				      h->m_etryagains);
 
+			/*
 			sb.safePrintf("\t\t<dgramsTo>%"INT64"</dgramsTo>\n",
 				      h->m_dgramsTo);
 			sb.safePrintf("\t\t<dgramsFrom>%"INT64"</dgramsFrom>\n",
@@ -721,10 +729,11 @@ skipReplaceHost:
 			/*
 			sb.safePrintf("\t\t\"errorReplies\":%"INT32",\n",
 				      h->m_errorReplies);
-
+			*/
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
 				      h->m_etryagains);
 
+			/*
 			sb.safePrintf("\t\t\"dgramsTo\":%"INT64",\n",
 				      h->m_dgramsTo);
 			sb.safePrintf("\t\t\"dgramsFrom\":%"INT64",\n",
@@ -818,8 +827,10 @@ skipReplaceHost:
 
 			  // error replies
 			  //"<td>%"INT32"</td>"
+
 			  // etryagains
-			  //"<td>%"INT32"</td>"
+			  "<td>%"INT32"</td>"
+
 			  // # dgrams sent to
 			  //"<td>%"INT64"</td>"
 			  // # dgrams recvd from
@@ -888,7 +899,7 @@ skipReplaceHost:
 
 
 			  // h->m_errorReplies,
-			  // h->m_etryagains,
+			  h->m_etryagains,
 			  // h->m_dgramsTo,
 			  // h->m_dgramsFrom,
 
@@ -1223,11 +1234,12 @@ skipReplaceHost:
 		  "to a request to retrieve or insert data."
 		  "</td>"
 		  "</tr>\n"
-
+		  */
 
 		  "<tr class=poo>"
-		  "<td>ETRYAGAINS recvd</td>"
-		  "<td>How many ETRYAGAIN were received in response to a "
+		  "<td>try agains recvd</td>"
+		  "<td>How many ETRYAGAIN errors "
+		  "were received in response to a "
 		  "request to add data. Usually because the host's memory "
 		  "is full and it is dumping its data to disk. This number "
 		  "can be high if the host if failing to dump the data "
@@ -1236,6 +1248,7 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  /*
 		  "<tr class=poo>"
 		  "<td>dgrams to</td>"
 		  "<td>How many datagrams were sent to the host from the "
@@ -1407,6 +1420,16 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td><nobr>O (status flag)</nobr></td>"
 		  "<td>Indicates # of times we ran out of memory."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td><nobr>N (status flag)</nobr></td>"
+		  "<td>Indicates host's clock is NOT in sync with host #0. "
+		  "Gigablast should automatically sync on startup, "
+		  "so this would be a problem "
+		  "if it does not go away. Hosts need to have their clocks "
+		  "in sync before they can add data to their index."
 		  "</td>"
 		  "</tr>\n"
 

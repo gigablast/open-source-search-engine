@@ -813,7 +813,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 	*(int32_t *)h->m_tmpBuf = *pingPtr;
 
 
-	if ( g_udpServer.sendRequest ((char *)&h->m_pingInfo,//RequestBuf,
+	if ( g_udpServer.sendRequest (h->m_tmpBuf,//RequestBuf,
 				      //h->m_requestBuf ,
 				       4               , // 4 byte request
 				       0x11          ,

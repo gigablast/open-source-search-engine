@@ -1796,6 +1796,8 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	//}
 	// we now call getTimeGlobal() so we need to be in sync with host #0
 	if ( ! isClockInSync () ) {
+		// log("rdb: can not add data because clock not in sync with "
+		//     "host #0. issuing try again reply.");
 		g_errno = ETRYAGAIN; 
 		return false;
 	}

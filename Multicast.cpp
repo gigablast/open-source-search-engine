@@ -445,6 +445,7 @@ void Multicast::gotReply2 ( UdpSlot *slot ) {
 	}
 	// don't log ETRYAGAIN, may come across as bad when it is normal
 	if ( m_errnos[i] == ETRYAGAIN ) logIt = false;
+	//logIt = true;
 	// log a failure msg
 	if ( logIt ) { // m_errnos[i] != ETRYAGAIN ) {
 		Host *h = m_hostdb->getHost ( slot->m_ip ,slot->m_port );
