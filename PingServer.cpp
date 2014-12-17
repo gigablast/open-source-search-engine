@@ -271,15 +271,15 @@ void PingServer::sendPingsToAll ( ) {
 }
 
 
-class HostStatus {
-public:
-	int64_t m_lastPing;
-	char m_repairMode;
-	char m_kernelError;
-	char m_loadAvg;
-	char m_percentMemUsed;
+// class HostStatus {
+// public:
+// 	int64_t m_lastPing;
+// 	char m_repairMode;
+// 	char m_kernelError;
+// 	char m_loadAvg;
+// 	char m_percentMemUsed;
 
-};
+// };
 
 // ping host #i
 void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
@@ -809,7 +809,8 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 
 	// send back what his ping was so he knows
 	//*(int32_t *)h->m_requestBuf = *pingPtr;
-	h->m_pingInfo.m_lastPing = *pingPtr;
+	//h->m_pingInfo.m_lastPing = *pingPtr;
+	*(int32_t *)h->m_tmpBuf = *pingPtr;
 
 
 	if ( g_udpServer.sendRequest ((char *)&h->m_pingInfo,//RequestBuf,

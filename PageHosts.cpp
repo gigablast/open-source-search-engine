@@ -630,7 +630,7 @@ skipReplaceHost:
 				      "</numCorruptDiskReads>\n"
 				      ,h->m_pingInfo.m_numCorruptDiskReads);
 			sb.safePrintf("\t\t<numOutOfMems>%"INT32""
-				      "</numCorruptDiskReads>\n"
+				      "</numOutOfMems>\n"
 				      ,h->m_pingInfo.m_numOutOfMems);
 			sb.safePrintf("\t\t<numClosedSockets>%"INT32""
 				      "</numClosedSockets>\n"
