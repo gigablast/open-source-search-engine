@@ -486,6 +486,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_dailyMerge.m_mergeMode    == 0 ) flags |= PFLAG_MERGEMODE0;
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;
+	if ( ! isClockInSync() ) flags |= PFLAG_OUTOFSYNC;
 
 	//*(int32_t *)p = flags; p += 4; // 4 bytes
 	pi->m_flags = flags;

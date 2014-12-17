@@ -155,7 +155,7 @@ skipReplaceHost:
 			       "<tr><td colspan=%s><center>"
 			       //"<font size=+1>"
 			       "<b>Hosts "
-			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&reset=1\">"
+			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&resetstats=1\">"
 			       "reset)</b>"
 			       //"</font>"
 			       "</td></tr>" 
@@ -291,15 +291,19 @@ skipReplaceHost:
 	// loop through each host we know and print it's stats
 	int32_t nh = g_hostdb.getNumHosts();
 	// should we reset resends, errorsRecvd and ETRYAGAINS recvd?
-	if ( r->getLong("reset",0) ) {
+	if ( r->getLong("resetstats",0) ) {
 		for ( int32_t i = 0 ; i < nh ; i++ ) {
 			// get the ith host (hostId)
 			Host *h = g_hostdb.getHost ( i );
-			h->m_totalResends   = 0;
+			h->m_pingInfo.m_totalResends   = 0;
 			h->m_errorReplies = 0;
-			h->m_etryagains   = 0;
+			h->m_pingInfo.m_etryagains   = 0;
 			h->m_dgramsTo     = 0;
 			h->m_dgramsFrom   = 0;
+			h->m_splitTimes = 0;
+			h->m_splitsDone = 0;
+			h->m_pingInfo.m_slowDiskReads =0;
+			
 		}
 	}
 
@@ -509,7 +513,7 @@ skipReplaceHost:
 					      "<sup>%"INT32"</sup>"
 					      "</b></font>"
 					      , n );
-			if ( ! isClockInSync() )
+			if ( flags & PFLAG_OUTOFSYNC )
 				fb.safePrintf("<font color=red><b>"
 					      "N"
 					      "</b></font>"
@@ -615,7 +619,7 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<gbVersion>%s</gbVersion>\n",vbuf);
 
 			sb.safePrintf("\t\t<resends>%"INT32"</resends>\n",
-				      h->m_totalResends);
+				      h->m_pingInfo.m_totalResends);
 
 			/*
 			  MDW: take out for new stuff
@@ -625,7 +629,7 @@ skipReplaceHost:
 
 			sb.safePrintf("\t\t<errorTryAgains>%"INT32""
 				      "</errorTryAgains>\n",
-				      h->m_etryagains);
+				      h->m_pingInfo.m_etryagains);
 
 			/*
 			sb.safePrintf("\t\t<dgramsTo>%"INT64"</dgramsTo>\n",
@@ -724,14 +728,14 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"gbVersion\":\"%s\",\n",vbuf);
 
 			sb.safePrintf("\t\t\"resends\":%"INT32",\n",
-				      h->m_totalResends);
+				      h->m_pingInfo.m_totalResends);
 
 			/*
 			sb.safePrintf("\t\t\"errorReplies\":%"INT32",\n",
 				      h->m_errorReplies);
 			*/
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
-				      h->m_etryagains);
+				      h->m_pingInfo.m_etryagains);
 
 			/*
 			sb.safePrintf("\t\t\"dgramsTo\":%"INT64",\n",
@@ -895,11 +899,11 @@ skipReplaceHost:
 			  vbuf,//hdbuf,
 			  vbuf2,
 
-			  h->m_totalResends,
+			  h->m_pingInfo.m_totalResends,
 
 
 			  // h->m_errorReplies,
-			  h->m_etryagains,
+			  h->m_pingInfo.m_etryagains,
 			  // h->m_dgramsTo,
 			  // h->m_dgramsFrom,
 
@@ -1606,8 +1610,10 @@ int flagSort    ( const void *i1, const void *i2 ) {
 int resendsSort  ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_totalResends > h2->m_totalResends ) return -1;
-	if ( h1->m_totalResends < h2->m_totalResends ) return  1;
+	if ( h1->m_pingInfo.m_totalResends > h2->m_pingInfo.m_totalResends ) 
+		return -1;
+	if ( h1->m_pingInfo.m_totalResends < h2->m_pingInfo.m_totalResends ) 
+		return  1;
 	return 0;
 }
 
@@ -1622,8 +1628,8 @@ int errorsSort   ( const void *i1, const void *i2 ) {
 int tryagainSort ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_etryagains > h2->m_etryagains ) return -1;
-	if ( h1->m_etryagains < h2->m_etryagains ) return  1;
+	if ( h1->m_pingInfo.m_etryagains>h2->m_pingInfo.m_etryagains)return -1;
+	if ( h1->m_pingInfo.m_etryagains<h2->m_pingInfo.m_etryagains)return  1;
 	return 0;
 }
 

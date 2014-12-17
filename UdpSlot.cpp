@@ -516,7 +516,7 @@ void UdpSlot::prepareForResend ( int64_t now , bool resendAll ) {
 	// update stats for this host for the PageHosts.cpp table
 	Host *h = m_host;
 	if ( ! h && m_hostId >= 0 ) h = g_hostdb.getHost ( m_hostId );
-	if ( h                    ) h->m_totalResends += cleared; //++;
+	if ( h                    ) h->m_pingInfo.m_totalResends += cleared;
 	// . set the resend time based on m_resendCount and m_niceness
 	// . this typically doubles m_resendTime with each resendCount
 	setResendTime ();

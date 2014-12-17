@@ -1794,8 +1794,8 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_pingShotgun         = g_conf.m_deadHostTimeout;
 	oldHost->m_emailCode           = 0;
 	oldHost->m_wasAlive            = false;
-	oldHost->m_etryagains          = 0;
-	oldHost->m_totalResends        = 0;
+	oldHost->m_pingInfo.m_etryagains          = 0;
+	oldHost->m_pingInfo.m_totalResends        = 0;
 	oldHost->m_errorReplies        = 0;
 	oldHost->m_dgramsTo            = 0;
 	oldHost->m_dgramsFrom          = 0;
