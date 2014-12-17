@@ -22022,6 +22022,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// but we might have to call reindexJSONObjects() multiple times if
 	// it would block
 	if ( od && *recycle && 
+	     // only reindex if it is a query reindex i guess otherwise
+	     // just leave it alone
+	     m_sreqValid && m_sreq.m_isPageReindex &&
 	     od->m_diffbotJSONCount &&
 	     size_linkInfo2 ) {
 		// similar to od->nukeJSONObjects
