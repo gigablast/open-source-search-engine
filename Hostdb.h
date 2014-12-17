@@ -143,7 +143,7 @@ class Host {
 
 	// his checksum of his hosts.conf so we can ensure we have the
 	// same hosts.conf file! 0 means not legit.
-	int32_t m_hostsConfCRC;
+	//int32_t m_hostsConfCRC;
 
 	// used by Process.cpp to do midnight stat dumps and emails
 	EventStats m_eventStats;

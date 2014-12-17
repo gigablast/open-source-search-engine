@@ -471,15 +471,15 @@ skipReplaceHost:
 		//*fs = '\0';
 
 		// does its hosts.conf file disagree with ours?
-		if ( h->m_hostsConfCRC &&
+		if ( h->m_pingInfo.m_hostsConfCRC &&
 		     format == FORMAT_HTML &&
-		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+		     h->m_pingInfo.m_hostsConfCRC != g_hostdb.getCRC() )
 			fb.safePrintf("<font color=red><b title=\"Hosts.conf "
 				      "in disagreement with ours.\">H"
 				      "</b></font>");
-		if ( h->m_hostsConfCRC &&
+		if ( h->m_pingInfo.m_hostsConfCRC &&
 		     format != FORMAT_HTML &&
-		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+		     h->m_pingInfo.m_hostsConfCRC != g_hostdb.getCRC() )
 			fb.safePrintf("Hosts.conf in disagreement with ours");
 
 		int32_t flags = h->m_pingInfo.m_flags;
@@ -491,21 +491,21 @@ skipReplaceHost:
 			if ( n )
 				fb.safePrintf("<font color=red><b>"
 					      "C"
-					      "<super>%"INT32"</super>"
+					      "<sup>%"INT32"</sup>"
 					      "</font>"
 					      , n );
 			n = h->m_pingInfo.m_numOutOfMems;
 			if ( n )
 				fb.safePrintf("<font color=red><b>"
 					      "O"
-					      "<super>%"INT32"</super>"
+					      "<sup>%"INT32"</sup>"
 					      "</font>"
 					      , n );
 			n = h->m_pingInfo.m_socketsClosedFromHittingLimit;
 			if ( n )
 				fb.safePrintf("<font color=red><b>"
 					      "K"
-					      "<super>%"INT32"</super>"
+					      "<sup>%"INT32"</sup>"
 					      "</font>"
 					      , n );
 		}
@@ -538,7 +538,7 @@ skipReplaceHost:
 		// if it has spiders going on say "S" with # as the superscript
 		if ((flags & PFLAG_HASSPIDERS) && format == FORMAT_HTML )
 			fb.safePrintf ( "<span title=\"Spidering\">S"
-					"<super>%"INT32"</super>"
+					"<sup>%"INT32"</sup>"
 					"</span>"
 					,h->m_pingInfo.m_currentSpiders
 					);

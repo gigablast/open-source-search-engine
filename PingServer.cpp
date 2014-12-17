@@ -1074,9 +1074,9 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 			ps->m_numHostsDead++;
 
 		// skip if not received yet
-		if ( ! h->m_hostsConfCRC ) continue;
+		if ( ! h->m_pingInfo.m_hostsConfCRC ) continue;
 		// badness?
-		if ( h->m_hostsConfCRC != g_hostdb.m_crc ) {
+		if ( h->m_pingInfo.m_hostsConfCRC != g_hostdb.m_crc ) {
 			ps->m_hostsConfInDisagreement = true;
 			break;
 		}
