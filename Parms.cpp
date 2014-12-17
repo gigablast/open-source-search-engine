@@ -755,7 +755,7 @@ bool CommandReloadLanguagePages ( char *rec ) {
 }
 
 bool CommandClearKernelError ( char *rec ) {
-	g_hostdb.m_myHost->m_kernelErrors = 0;
+	g_hostdb.m_myHost->m_pingInfo.m_kernelErrors = 0;
 	return true;
 }
 
@@ -6534,6 +6534,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_REDBOX;
 	m++;
 
+	m->m_title = "show errors";
+	m->m_desc  = "Show errors from generating search result summaries "
+		"rather than just hide the docid. Useful for debugging.";
+	m->m_cgi   = "showerrors";
+	m->m_off   = (char *)&si.m_showErrors - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "site cluster";
 	m->m_desc  = "Should search results be site clustered? This "
 		"limits each site to appearing at most twice in the "
@@ -9894,7 +9906,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "ms";
 	m->m_off   = (char *)&g_conf.m_httpMaxSockets - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
+	// up this some, am seeing sockets closed because of using gb
+	// as a cache...
+	m->m_def   = "300";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -15123,6 +15137,23 @@ void Parms::init ( ) {
 	m->m_flags = PF_API ;
 	m++;
 
+
+	m->m_title = "recycle content";
+	m->m_desc  = "If you check this box then Gigablast will not "
+		"re-download the content, but use the content that was "
+		"stored in the cache from last time. Useful for rebuilding "
+		"the index to pick up new inlink text or fresher "
+		"sitenuminlinks counts which influence ranking.";
+	m->m_cgi   = "qrecycle";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_REINDEX;
+	m->m_off   = (char *)&gr.m_recycleContent - (char *)&gr;
+	m++;
+
+
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "
 		"reindex them.";
@@ -17632,14 +17663,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
-	m->m_title = "index spider replies";
-	m->m_desc  = "Index the spider replies of every url the spider "
+	m->m_title = "index spider status documents";
+	m->m_desc  = "Index a spider status \"document\" "
+		"for every url the spider "
 		"attempts to spider. Search for them using special "
 		"query operators like type:status or gberrorstr:success or "
-		"stats:gberrornum to get a histogram. They will not otherwise "
-		"show up in the search results. This will not work for "
-		"diffbot crawlbot collections yet until it has proven "
-		"more stable.";
+		"stats:gberrornum to get a histogram. "
+		"See <a href=/syntax.html>syntax</a> page for more examples. "
+		"They will not otherwise "
+		"show up in the search results.";
+	//      "This will not work for "
+	// 	"diffbot crawlbot collections yet until it has proven "
+	// 	"more stable.";
 	m->m_cgi   = "isr";
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;

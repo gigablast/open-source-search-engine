@@ -169,6 +169,9 @@ class Mem {
 	// currently used mem (estimate)
 	int64_t m_used;
 
+	// count how many allocs/news failed
+	int32_t m_outOfMems;
+
 	int32_t          m_numAllocated;
 	int64_t     m_numTotalAllocated;
 	uint32_t m_memtablesize;

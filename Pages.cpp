@@ -3946,7 +3946,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	int32_t out = 0;
 	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
-		if ( h->m_diskUsage < 98.0 ) continue;
+		if ( h->m_pingInfo.m_diskUsage < 98.0 ) continue;
 		out++;
 	}
 	if ( out > 0 ) {
@@ -3967,7 +3967,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		// count if not dead
 		Host *h1 = &g_hostdb.m_hosts[i-1];
 		Host *h2 = &g_hostdb.m_hosts[i];
-		if (!strcmp(h1->m_gbVersionStrBuf,h2->m_gbVersionStrBuf))
+		if (!strcmp(h1->m_pingInfo.m_gbVersionStr,
+			    h2->m_pingInfo.m_gbVersionStr))
 			continue;
 		sameVersions = false;
 		break;

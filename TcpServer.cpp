@@ -1109,8 +1109,23 @@ bool TcpServer::closeLeastUsed ( int32_t maxIdleTime ) {
 	if ( biggestHogNdx == -1 ) return false;
 	// get the socket we're closing
 	TcpSocket *s = m_tcpSockets[ indices[biggestHogNdx] ];
-	log(LOG_WARN, "tcp: closing least used! sd=%"INT32" idle=%"INT64"ms", 
-	    (int32_t)s->m_sd, nowms - s->m_lastActionTime);
+	// show a little req buffer
+	char *req = s->m_readBuf;
+	char tmp[128];
+	tmp[0] = '\0';
+	if ( req ) {
+		int reqLen = s->m_readOffset;
+		if ( reqLen > 120 ) reqLen = 120;
+		if ( reqLen < 0 ) reqLen = 0;
+		strncpy (tmp,req,reqLen);
+		tmp[reqLen] = '\0';
+	}
+	nowms = gettimeofdayInMilliseconds();
+	log(LOG_WARN, "tcp: closing least used! sd=%"INT32" idle=%"INT64"ms "
+	    "readbuf=%s" 
+	    , (int32_t)s->m_sd
+	    , nowms - s->m_lastActionTime
+	    , tmp );
 	// set g_errno? i guess to zero
 	g_errno = 0;
 	// call the callback of the socket we're destroying (if exists)

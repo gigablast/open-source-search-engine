@@ -807,7 +807,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		m_hosts[i].m_dir[wdirlen] = '\0';
 		
 		// reset this
-		m_hosts[i].m_lastPing = 0LL;
+		m_hosts[i].m_pingInfo.m_lastPing = 0LL;
 		// and don't send emails on him until we got a good ping
 		m_hosts[i].m_emailCode = -2;
 		// we do not know if it is in sync
@@ -817,8 +817,8 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		// so UdpServer.cpp knows if we are in g_hostdb or g_hostdb2
 		m_hosts[i].m_hostdb = this;
 		// reset these
-		m_hosts[i].m_flags    = 0;
-		m_hosts[i].m_cpuUsage = 0.0;
+		m_hosts[i].m_pingInfo.m_flags    = 0;
+		m_hosts[i].m_pingInfo.m_cpuUsage = 0.0;
 		m_hosts[i].m_loadAvg  = 0.0;
 		// point to next one
 		i++;
@@ -1703,7 +1703,7 @@ int32_t Hostdb::getAliveIp ( Host *h ) {
 int64_t Hostdb::getNumGlobalRecs ( ) {
 	int64_t n = 0;
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
-		n += getHost ( i )->m_docsIndexed;
+		n += getHost ( i )->m_pingInfo.m_totalDocsIndexed;
 	return n / m_numHostsPerShard;
 }
 
@@ -1767,25 +1767,29 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_hostdb      = spareHost->m_hostdb;
 	oldHost->m_inProgress1 = spareHost->m_inProgress1;
 	oldHost->m_inProgress2 = spareHost->m_inProgress2;
-	oldHost->m_lastPing    = spareHost->m_lastPing; // last ping timestamp
+
+	// last ping timestamp
+	oldHost->m_pingInfo.m_lastPing    = spareHost->m_pingInfo.m_lastPing; 
 
 	// and the new spare gets a new hostid too
 	spareHost->m_hostId = spareHostId;
+
+	memset ( &oldHost->m_pingInfo , 0 , sizeof(PingInfo) );
 
 	// reset these stats
 	oldHost->m_pingMax             = 0;
 	oldHost->m_gotPingReply        = false;
 	oldHost->m_loadAvg             = 0;
-	oldHost->m_percentMemUsed      = 0;
+	//oldHost->m_percentMemUsed      = 0;
 	oldHost->m_firstOOMTime        = 0;
-	oldHost->m_cpuUsage            = 0;
-	oldHost->m_docsIndexed         = 0;
+	//oldHost->m_cpuUsage            = 0;
+	oldHost->m_pingInfo.m_totalDocsIndexed         = 0;
 	oldHost->m_eventsIndexed       = 0;
-	oldHost->m_slowDiskReads       = 0;
-	oldHost->m_kernelErrors        = 0;
+	//oldHost->m_slowDiskReads       = 0;
+	//oldHost->m_kernelErrors        = 0;
 	oldHost->m_kernelErrorReported = false;
-	oldHost->m_flags               = 0;
-	oldHost->m_dailyMergeCollnum   = 0;
+	//oldHost->m_flags               = 0;
+	//oldHost->m_dailyMergeCollnum   = 0;
 	oldHost->m_ping                = g_conf.m_deadHostTimeout;
 	oldHost->m_pingShotgun         = g_conf.m_deadHostTimeout;
 	oldHost->m_emailCode           = 0;
@@ -1798,10 +1802,10 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_repairMode          = 0;
 	oldHost->m_splitsDone          = 0;
 	oldHost->m_splitTimes          = 0;
-	oldHost->m_hdtemps[0]          = 0;
-	oldHost->m_hdtemps[1]          = 0;
-	oldHost->m_hdtemps[2]          = 0;
-	oldHost->m_hdtemps[3]          = 0;
+	// oldHost->m_hdtemps[0]          = 0;
+	// oldHost->m_hdtemps[1]          = 0;
+	// oldHost->m_hdtemps[2]          = 0;
+	// oldHost->m_hdtemps[3]          = 0;
 
 	// . just swap ips and ports and directories
 	// . first store all the old info so we can put it away

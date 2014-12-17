@@ -2091,6 +2091,10 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 			return 0;
 		}
 
+		// this is no longer needed since ppl use gb to spider 
+		// internal intranets now, not just the web. however, be
+		// careful we don't spider sensitive gb info as a proxy!!!
+		/*
 		unsigned char *ipstr = (unsigned char *)&ip;
 		if ( (int32_t)ip == 0x0100007f || // aotip("127.0.0.1")
 		     (ipstr[0]==192 && ipstr[1]==168) ||
@@ -2103,6 +2107,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 			addToCache ( ds->m_hostnameKey , 0 );
 			return 0;
 		}
+		*/
 
 		// debug msg
 		//fprintf(stderr,".... got ip=%s for %s\n",iptoa(ip),hostname);

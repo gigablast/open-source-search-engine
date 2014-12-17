@@ -654,10 +654,13 @@ class Msg20 {
 	// link we can highlight the relevant event sections.
 	//EventIdBits m_eventIdBits;
 
-	int32_t getStoredSize ( ) { return m_r->getStoredSize(); };
+	int32_t getStoredSize ( ) { 
+		if ( ! m_r ) return 0; 
+		return m_r->getStoredSize(); };
 	// . return how many bytes we serialize into "buf"
 	// . sets g_errno and returns -1 on error
 	int32_t serialize ( char *buf , int32_t bufSize ) {
+		if ( ! m_r ) return 0;
 		return m_r->serialize ( buf , bufSize ); };
 	// . this is destructive on the "buf". it converts offs to ptrs
 	// . sets m_r to the modified "buf" when done
@@ -667,9 +670,9 @@ class Msg20 {
 	// to keep the size of the cached Msg40 down, we do not cache certain
 	// things. so we have to "clear" these guys out before caching.
 	//void clearBigSample () { m_r->clearBigSample(); };
-	void clearOutlinks  () { m_r->clearOutlinks (); };
-	void clearLinks     () { m_r->clearOutlinks (); };
-	void clearVectors   () { m_r->clearVectors  (); };
+	void clearOutlinks  () { if ( m_r ) m_r->clearOutlinks (); };
+	void clearLinks     () { if ( m_r ) m_r->clearOutlinks (); };
+	void clearVectors   () { if ( m_r ) m_r->clearVectors  (); };
 	// copy "src" to ourselves
 	void copyFrom ( class Msg20 *src ) ;
 

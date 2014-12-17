@@ -3210,11 +3210,19 @@ bool printSearchResultsTail ( State0 *st ) {
 		SafeBuf newUrl4;
 		replaceParm2 ( "s=0", &newUrl4 , newUrl3.getBufStart(),
 			     newUrl3.length());
+		// show errors
+		SafeBuf newUrl5;
+		replaceParm2 ( "showerrors=1", 
+			       &newUrl5 , 
+			       newUrl4.getBufStart(),
+			       newUrl4.length());
+		
 		
 		sb->safePrintf("<center>"
 			       "<i>"
 			       "%"INT32" results were omitted because they "
-			       "were considered duplicates, banned, <br>"
+			       "were considered duplicates, banned, errors "
+			       "<br>"
 			       "or "
 			       "from the same site as other results. "
 			       "<a href=%s>Click here to show all results</a>."
@@ -3222,7 +3230,7 @@ bool printSearchResultsTail ( State0 *st ) {
 			       "</center>"
 			       "<br><br>"
 			       , msg40->m_omitCount
-			       , newUrl4.getBufStart() );
+			       , newUrl5.getBufStart() );
 	}
 
 
@@ -3817,7 +3825,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// . sometimes the msg20reply is NULL so prevent it coring
 	// . i think this happens if all hosts in a shard are down or timeout
 	//   or something
-	if ( ! mr ) return false;
+	if ( ! mr ) {
+		sb->safePrintf("<i>getting summary for docid %"INT64" had "
+			       "error: %s</i><br><br>"
+			       ,d,mstrerror(m20->m_errno));
+		return true;
+	}
 
 	// . if section voting info was request, display now, it's in json
 	// . so if in csv it will mess things up!!!

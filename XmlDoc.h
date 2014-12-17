@@ -506,9 +506,9 @@ class XmlDoc {
 	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
-	SafeBuf *getSpiderReplyMetaList ( class SpiderReply *reply ) ;
-	SafeBuf *getSpiderReplyMetaList2 ( class SpiderReply *reply ) ;
-	SafeBuf m_spiderReplyMetaList;
+	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ) ;
+	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
+	SafeBuf m_spiderStatusDocMetaList;
 	char *getIsAdult ( ) ;
 	int32_t **getIndCatIds ( ) ;
 	int32_t **getCatIds ( ) ;
@@ -1023,6 +1023,7 @@ class XmlDoc {
 
 	int32_t m_addedSpiderRequestSize;
 	int32_t m_addedSpiderReplySize;
+	int32_t m_addedStatusDocSize;
 
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
@@ -1145,6 +1146,7 @@ class XmlDoc {
 	char     m_metaListValid;
 	char     m_addedSpiderRequestSizeValid;
 	char     m_addedSpiderReplySizeValid;
+	char     m_addedStatusDocSizeValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
@@ -1418,7 +1420,7 @@ class XmlDoc {
 	bool m_newTermInfoBufValid;
 	bool m_summaryValid;
 	bool m_gsbufValid;
-	bool m_spiderReplyMetaListValid;
+	bool m_spiderStatusDocMetaListValid;
 	bool m_isCompromisedValid;
 	bool m_isNoArchiveValid;
 	//bool m_isVisibleValid;
@@ -1710,7 +1712,13 @@ class XmlDoc {
 	int32_t *getDiffbotTitleHashes ( int32_t *numHashes ) ;
 	char *hashJSONFields ( HashTableX *table );
 	char *hashXMLFields ( HashTableX *table );
-	int32_t *nukeJSONObjects ( int32_t *newTitleHashes , int32_t numNewHashes ) ;
+	int32_t *reindexJSONObjects ( int32_t *newTitleHashes , 
+				      int32_t numNewHashes ) ;
+	int32_t *nukeJSONObjects ( int32_t *newTitleHashes , 
+				   int32_t numNewHashes ) ;
+	int32_t *redoJSONObjects ( int32_t *newTitleHashes , 
+				   int32_t numNewHashes ,
+				   bool deleteFromIndex ) ;
 
 	int32_t m_joc;
 	SafeBuf m_diffbotTitleHashBuf;

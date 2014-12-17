@@ -1722,7 +1722,8 @@ bool gotSummaryWrapper ( void *state ) {
 	THIS->m_numReplies++;
 	// log every 1000 i guess
 	if ( (THIS->m_numReplies % 1000) == 0 )
-		log("msg40: got %"INT32" summaries out of %"INT32"",THIS->m_numReplies,
+		log("msg40: got %"INT32" summaries out of %"INT32"",
+		    THIS->m_numReplies,
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
 	if ( ! THIS->gotSummary ( ) ) return false;
@@ -1917,7 +1918,8 @@ bool Msg40::gotSummary ( ) {
 		     mr->m_contentType != CT_STATUS &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
 			//if ( g_conf.m_logDebugQuery )
-			log("msg40: dup sum #%"INT32" (%"UINT32")(d=%"INT64")",m_printi,
+			log("msg40: dup sum #%"INT32" (%"UINT32")"
+			    "(d=%"INT64")",m_printi,
 			    mr->m_contentHash32,mr->m_docId);
 			// make it available to be reused
 			m20->reset();
@@ -2275,11 +2277,13 @@ bool Msg40::gotSummary ( ) {
 			logf( LOG_DEBUG, "query: result %"INT32" (docid=%"INT64") had "
 			     "an error (%s) and will not be shown.", i,
 			      m_msg3a.m_docIds[i],  mstrerror(m->m_errno));
-			*level = CR_ERROR_SUMMARY;
-			//m_visibleContiguous--; 
 			// update our m_errno while here
 			if ( ! m_errno ) m_errno = m->m_errno;
-			continue;
+			if ( ! m_si->m_showErrors ) {
+				*level = CR_ERROR_SUMMARY;
+				//m_visibleContiguous--; 
+				continue;
+			}
 		}
 		// a special case
 		if ( mr && mr->m_errno == CR_RULESET_FILTERED ) {
@@ -2293,9 +2297,10 @@ bool Msg40::gotSummary ( ) {
 			//m_visibleContiguous--;
 			continue;
 		}
-		if ( ! m_si->m_showBanned && mr->m_isBanned ) {
+		if ( ! m_si->m_showBanned && mr && mr->m_isBanned ) {
 			if ( m_si->m_debug || g_conf.m_logDebugQuery )
-			logf ( LOG_DEBUG, "query: result %"INT32" (docid=%"INT64") is "
+			logf ( LOG_DEBUG, "query: result %"INT32" "
+			       "(docid=%"INT64") is "
 			       "banned and will not be shown.", i, 
 			       m_msg3a.m_docIds[i] );
 			*level = CR_BANNED_URL;
@@ -2303,20 +2308,21 @@ bool Msg40::gotSummary ( ) {
 			continue;
 		}
 		// filter out urls with <![CDATA in them
-		if ( strstr(mr->ptr_ubuf, "<![CDATA[") ) {
+		if ( mr && strstr(mr->ptr_ubuf, "<![CDATA[") ) {
 			*level = CR_BAD_URL;
                         //m_visibleContiguous--;
 			continue;
 		}
 		// also filter urls with ]]> in them
-		if ( strstr(mr->ptr_ubuf, "]]>") ) {
+		if ( mr && strstr(mr->ptr_ubuf, "]]>") ) {
 			*level = CR_BAD_URL;
                         //m_visibleContiguous--;
 			continue;
 		}
-		if( ! mr->m_hasAllQueryTerms ) {
+		if( mr && ! mr->m_hasAllQueryTerms ) {
 			if ( m_si->m_debug || g_conf.m_logDebugQuery )
-			logf( LOG_DEBUG, "query: result %"INT32" (docid=%"INT64") is "
+			logf( LOG_DEBUG, "query: result %"INT32" "
+			      "(docid=%"INT64") is "
 			      "missing query terms and will not be"
 			      " shown.", i, m_msg3a.m_docIds[i] );
 			*level = CR_MISSING_TERMS;
@@ -3404,6 +3410,9 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		// . the sample is a bunch of text snippets surrounding the
 		//   query terms in the doc in the search results
 		Msg20Reply *reply = thisMsg20->getReply();
+		// if m_si->m_showErrors then reply can be NULL if the
+		// titleRec was not found
+		if ( ! reply ) continue;
 		char *sample = reply->ptr_gigabitSample;
 		int32_t  slen   = reply->size_gigabitSample;
 		// but if doing metas, get the display content as the sample
@@ -3905,6 +3914,9 @@ bool hashSample ( Query *q,
 	//		   "topic generation.");
 
 	Msg20Reply *reply = thisMsg20->getReply();
+	// if m_si->m_showErrors is true then reply can be NULL
+	// if titleRec was not found
+	if ( ! reply ) return true;
 	// get the ith big sample
 	char *bigSampleBuf = reply->ptr_gigabitSample;
 	int32_t  bigSampleLen = reply->size_gigabitSample;
@@ -5353,6 +5365,9 @@ bool Msg40::computeFastFacts ( ) {
 		Msg20* thisMsg20 = m_msg20[i];
 		// must be there! wtf?
 		Msg20Reply *reply = thisMsg20->getReply();
+		// if m_si->m_showErrors is true then reply can be NULL
+		// if titleRec was not found
+		if ( ! reply ) return true;
 		// get sample. sample uses \0 as delimeters between excerpts
 		char *p    =     reply-> ptr_gigabitSample;
 		char *pend = p + reply->size_gigabitSample; // includes \0
@@ -5737,7 +5752,12 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 
 		Msg20 *m20 = getCompletedSummary(i);
 		if ( ! m20 ) break;
-		if ( m20->m_errno ) continue;
+
+		// unless they specified &showerrors=1 do not show
+		// doc not found errors from a bad title rec lookup
+		if ( m20->m_errno && ! m_si->m_showErrors ) 
+			continue;
+
 		if ( ! m20->m_r ) { char *xx=NULL;*xx=0; }
 
 		Msg20Reply *mr = m20->m_r;

@@ -1127,9 +1127,11 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	// . this is KINDA like a 100 point sample, but it has crazy decay
 	//   logic built into it
 	if ( ! g_inWaitState )
-		h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 100;
+		h->m_pingInfo.m_cpuUsage = 
+			.99 * h->m_pingInfo.m_cpuUsage + .01 * 100;
 	else
-		h->m_cpuUsage = .99 * h->m_cpuUsage + .01 * 000;
+		h->m_pingInfo.m_cpuUsage = 
+			.99 * h->m_pingInfo.m_cpuUsage + .01 * 000;
 }
 
 static sigset_t s_rtmin;

@@ -1131,13 +1131,14 @@ void handleRequest4 ( UdpSlot *slot , int32_t netnice ) {
 	if ( ! g_pingServer.m_hostsConfInAgreement ) {
 		// . if we do not know the sender's hosts.conf crc, wait 4 it
 		// . this is 0 if not received yet
-		if ( ! slot->m_host->m_hostsConfCRC ) {
+		if ( ! slot->m_host->m_pingInfo.m_hostsConfCRC ) {
 			g_errno = EWAITINGTOSYNCHOSTSCONF;
 			us->sendErrorReply ( slot , g_errno );
 			return;
 		}
 		// compare our hosts.conf to sender's otherwise
-		if ( slot->m_host->m_hostsConfCRC != g_hostdb.getCRC() ) {
+		if ( slot->m_host->m_pingInfo.m_hostsConfCRC != 
+		     g_hostdb.getCRC() ) {
 			g_errno = EBADHOSTSCONF;
 			us->sendErrorReply ( slot , g_errno );
 			return;

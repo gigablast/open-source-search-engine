@@ -143,6 +143,14 @@ class HashTableX {
 
 
 	bool addTerm144 ( key144_t *kp , int32_t score = 1 ) {
+
+		// debug XmlDoc.cpp's hash table
+		//int64_t termId = ((key144_t *)kp)->n2 >> 16;
+		//if ( termId == 59194288760543LL ) {
+		//	log("got it");
+		//	char *xx=NULL;*xx=0;
+		//}
+
 		// grow it!
 		if ( (m_numSlots < 20 || 4 * m_numSlotsUsed >= m_numSlots) &&
 		     m_numSlots < m_maxSlots ) {

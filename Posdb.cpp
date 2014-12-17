@@ -4353,12 +4353,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		qti->m_quotedStartId = qw->m_quoteStart;
 		// is it gbsortby:?
 		if ( qt->m_fieldCode == FIELD_GBSORTBYFLOAT ||
-		     qt->m_fieldCode == FIELD_GBREVSORTBYFLOAT )
+		     qt->m_fieldCode == FIELD_GBREVSORTBYFLOAT ) {
 			m_sortByTermNum = i;
+			m_sortByTermInfoNum = nrg;
+		}
 
 		if ( qt->m_fieldCode == FIELD_GBSORTBYINT ||
 		     qt->m_fieldCode == FIELD_GBREVSORTBYINT ) {
 			m_sortByTermNumInt = i;
+			m_sortByTermInfoNumInt = nrg;
 			// tell topTree to use int scores
 			m_topTree->m_useIntScores = true;
 		}
@@ -7083,14 +7086,14 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	if ( m_sortByTermNum >= 0 ) {
 		// no term?
-		if ( ! miniMergedList[m_sortByTermNum] ) goto advance;
-		score = g_posdb.getFloat ( miniMergedList[m_sortByTermNum] );
+		if ( ! miniMergedList[m_sortByTermInfoNum] ) goto advance;
+		score = g_posdb.getFloat (miniMergedList[m_sortByTermInfoNum]);
 	}
 
 	if ( m_sortByTermNumInt >= 0 ) {
 		// no term?
-		if ( ! miniMergedList[m_sortByTermNumInt] ) goto advance;
-		intScore = g_posdb.getInt( miniMergedList[m_sortByTermNumInt]);
+		if ( ! miniMergedList[m_sortByTermInfoNumInt] ) goto advance;
+	       intScore=g_posdb.getInt(miniMergedList[m_sortByTermInfoNumInt]);
 		// do this so hasMaxSerpScore below works, although
 		// because of roundoff errors we might lose a docid
 		// through the cracks in the widget.
