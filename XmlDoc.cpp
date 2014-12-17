@@ -21997,6 +21997,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! recycle || recycle == (void *)-1) return (char *)recycle;
 	// in that case inherit this from the old doc...
 	if ( od && *recycle && od->m_diffbotJSONCount &&
+	     // somehow i am seeing that this is empty!
+	     // this is how many title hashes of diffbot replies we've
+	     // stored in the old doc's titlerec. if these are not equal
+	     // and we call reindexJSONObjects() below then it cores
+	     // in redoJSONObjects().
+	     od->size_linkInfo2/4 == od->m_diffbotJSONCount &&
 	     // only call this once otherwise we double stock
 	     // m_diffbotTitleHashBuf
 	     m_diffbotJSONCount == 0 ) {//cr->m_isCustomCrawl){
@@ -22011,10 +22017,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			return NULL;
 		ptr_linkInfo2 =(LinkInfo *)m_diffbotTitleHashBuf.getBufStart();
 		size_linkInfo2=m_diffbotTitleHashBuf.length();
+
 	}
 	// but we might have to call reindexJSONObjects() multiple times if
 	// it would block
-	if ( od && *recycle && od->m_diffbotJSONCount ) {
+	if ( od && *recycle && 
+	     od->m_diffbotJSONCount &&
+	     size_linkInfo2 ) {
 		// similar to od->nukeJSONObjects
 		int32_t *ohbuf =(int32_t *)m_diffbotTitleHashBuf.getBufStart();
 		int32_t nh     =m_diffbotTitleHashBuf.length() / 4;
