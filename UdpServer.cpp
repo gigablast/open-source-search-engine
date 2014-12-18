@@ -2026,7 +2026,8 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 			h = g_hostdb.getHost ( slot->m_hostId );
 		if ( h ) {
 			h->m_errorReplies++;
-			if ( g_errno == ETRYAGAIN ) h->m_etryagains++;
+			if ( g_errno == ETRYAGAIN ) 
+				h->m_pingInfo.m_etryagains++;
 		}
 
 		//int32_t cbAddr = (int32_t)slot->m_callback;

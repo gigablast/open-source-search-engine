@@ -699,6 +699,12 @@ bool Msg4::addMetaList2 ( ) {
 			// . point to next record
 			// . will point past records if no more left!
 			m_currentPtr = p; // += recSize;
+			// debug log
+			// int off = (int)(m_currentPtr-m_metaList);
+			// log("msg4: cpoff=%i",off);
+			// if ( off == 5271931 )
+			// 	log("msg4: hey");
+			// debug
 			// get next rec
 			continue;
 		}
@@ -996,7 +1002,7 @@ void gotReplyWrapper4 ( void *state , void *state2 ) {
 
 	returnMulticast ( mcast );
 
-	storeLineWaiters ( );
+	storeLineWaiters ( ); // try to launch more msg4 requests in waiting
 
 	//
 	// now if all buffers are empty, let any flush request know that
@@ -1080,7 +1086,7 @@ void storeLineWaiters ( ) {
 	// now were we waiting on a multicast to return in order to send
 	// another request?  return if not.
 	if ( ! msg4 ) return;
-	// grab the first Msg4 in line
+	// grab the first Msg4 in line. ret fls if blocked adding more of list.
 	if ( ! msg4->addMetaList2 ( ) ) return;
 	// hey, we were able to store that Msg4's list, remove him
 	s_msg4Head = msg4->m_next;

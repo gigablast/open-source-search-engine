@@ -51,6 +51,7 @@ enum {
 #define PFLAG_REBALANCING    0x20
 #define PFLAG_FOREIGNRECS    0x40
 #define PFLAG_RECOVERYMODE   0x80
+#define PFLAG_OUTOFSYNC      0x100
 
 // added slow disk reads to it, 4 bytes (was 52)
 // 21 bytes for the gbversion (see getVersionSize())
@@ -98,6 +99,9 @@ class PingInfo {
 	int32_t m_numCorruptDiskReads;
 	int32_t m_numOutOfMems;
 	int32_t m_socketsClosedFromHittingLimit;
+
+	int32_t m_totalResends;
+	int32_t m_etryagains;
 
 	int16_t m_currentSpiders;
 	collnum_t m_dailyMergeCollnum;
@@ -199,6 +203,9 @@ class Host {
 
 	// last time g_hostdb.ping(i) was called for this host in milliseconds.
 	//int64_t      m_lastPing;
+
+	char m_tmpBuf[4];
+
 	// . first time we sent an unanswered ping request to this host
 	// . used so we can determine when to send an email alert
 	int64_t      m_startTime;
@@ -257,9 +264,9 @@ class Host {
 	// eth0 and eth1 of this host
 	char           m_shotgunBit;
 	// how many ETRYAGAINs we received as replies from this host
-	int32_t           m_etryagains;
+	//int32_t           m_etryagains;
 	// how many resends total we had to do to this host
-	int32_t           m_totalResends;
+	//int32_t           m_totalResends;
 	// how many total error replies we got from this host
 	int32_t           m_errorReplies;
 

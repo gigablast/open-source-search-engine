@@ -796,6 +796,15 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			fieldStart = pw;
 		}
 
+
+		// skip if it is punct. fixes queries like
+		// "(this OR that)" from including '(' or from including
+		// a space.
+		if ( fieldStart >-1 &&
+		     m_qwords[fieldStart].m_isPunct && 
+		     fieldStart+1<m_numWords )
+			fieldStart++;
+
 		if (fieldStart > -1) {
 			pw = i;
 			while (pw < m_numWords && m_qwords[pw].m_fieldCode)

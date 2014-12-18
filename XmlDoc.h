@@ -326,7 +326,7 @@ class XmlDoc {
 	uint16_t  m_isRSS:1;
 	uint16_t  m_isPermalink:1;
 	uint16_t  m_isAdult:1;
-	uint16_t  m_wasInjected:1;//eliminateMenus:1;
+	uint16_t  m_wasContentInjected:1;//eliminateMenus:1;
 	uint16_t  m_spiderLinks:1;
 	uint16_t  m_isContentTruncated:1;
 	uint16_t  m_isLinkSpam:1;
@@ -1385,7 +1385,7 @@ class XmlDoc {
 	bool m_hasUseFakeIpsMetaTagValid;
 	bool m_outlinkIsIndexedVectorValid;
 	bool m_isSiteRootValid;
-	bool m_wasInjectedValid;
+	bool m_wasContentInjectedValid;
 	bool m_outlinkHopCountVectorValid;
 	//bool m_isSpamValid;
 	bool m_isFilteredValid;

@@ -271,15 +271,15 @@ void PingServer::sendPingsToAll ( ) {
 }
 
 
-class HostStatus {
-public:
-	int64_t m_lastPing;
-	char m_repairMode;
-	char m_kernelError;
-	char m_loadAvg;
-	char m_percentMemUsed;
+// class HostStatus {
+// public:
+// 	int64_t m_lastPing;
+// 	char m_repairMode;
+// 	char m_kernelError;
+// 	char m_loadAvg;
+// 	char m_percentMemUsed;
 
-};
+// };
 
 // ping host #i
 void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
@@ -486,6 +486,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_dailyMerge.m_mergeMode    == 0 ) flags |= PFLAG_MERGEMODE0;
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;
+	if ( ! isClockInSync() ) flags |= PFLAG_OUTOFSYNC;
 
 	//*(int32_t *)p = flags; p += 4; // 4 bytes
 	pi->m_flags = flags;
@@ -809,10 +810,11 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 
 	// send back what his ping was so he knows
 	//*(int32_t *)h->m_requestBuf = *pingPtr;
-	h->m_pingInfo.m_lastPing = *pingPtr;
+	//h->m_pingInfo.m_lastPing = *pingPtr;
+	*(int32_t *)h->m_tmpBuf = *pingPtr;
 
 
-	if ( g_udpServer.sendRequest ((char *)&h->m_pingInfo,//RequestBuf,
+	if ( g_udpServer.sendRequest (h->m_tmpBuf,//RequestBuf,
 				      //h->m_requestBuf ,
 				       4               , // 4 byte request
 				       0x11          ,

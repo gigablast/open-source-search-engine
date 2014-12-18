@@ -111,7 +111,7 @@ XmlDoc::XmlDoc() {
 	for ( int32_t i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
 	m_contentInjected = false;
-	m_wasInjected = false;
+	m_wasContentInjected = false;
 	//m_coll  = NULL;
 	m_ubuf = NULL;
 	m_pbuf = NULL;
@@ -544,7 +544,7 @@ void XmlDoc::reset ( ) {
 	// reset this
 	m_contentInjected = false;
 	m_rawUtf8ContentValid = false;
-	m_wasInjected = false;
+	m_wasContentInjected = false;
 
 	m_rootDoc = NULL;
 
@@ -1192,7 +1192,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		//m_utf8ContentValid         = true;
 
 		m_contentInjected     = true;
-		m_wasInjected         = true;
+		m_wasContentInjected         = true;
 		m_contentType         = contentType;
 		m_contentTypeValid    = true;
 		// use this ip as well for now to avoid ip lookup
@@ -3081,11 +3081,11 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 
 	// if this is an injection and "newonly" is not zero then we
 	// only want to do the injection if the url is "new", meaning not
-	// already indexed. "m_wasInjected" will be true if this is
+	// already indexed. "m_wasContentInjected" will be true if this is
 	// an injection. "m_newOnly" will be true if the injector only
 	// wants to proceed with the injection if this url is not already
 	// indexed.
-	if ( m_wasInjected && m_newOnly ) {
+	if ( m_wasContentInjected && m_newOnly ) {
 		XmlDoc **pod = getOldXmlDoc ( );
 		if ( ! pod || pod == (XmlDoc **)-1 ) return (int32_t *)pod;
 		XmlDoc *od = *pod;
@@ -3093,7 +3093,7 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 		// then abandon this injection. it was spidered the old
 		// fashioned way and we want to preserve it and NOT overwrite
 		// it with this injection.
-		if ( od && ! od->m_wasInjected ) {
+		if ( od && ! od->m_wasContentInjected ) {
 			m_indexCode = EABANDONED;
 			m_indexCodeValid = true;
 			return &m_indexCode;
@@ -3102,7 +3102,7 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 		// in the special case that m_newOnly is "2". otherwise
 		// if m_newOnly is 1 then we will overwrite any existing
 		// titlerecs that were injected themselves.
-		if ( od && od->m_wasInjected && m_newOnly == 2 ) {
+		if ( od && od->m_wasContentInjected && m_newOnly == 2 ) {
 			m_indexCode = EABANDONED;
 			m_indexCodeValid = true;
 			return &m_indexCode;
@@ -3297,7 +3297,8 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	// . returns NULL if we are the canonical url
 	// . do not do this check if the page was injected
 	bool checkCanonical = true;
-	if ( m_wasInjected ) checkCanonical = false;
+	if ( m_wasContentInjected ) checkCanonical = false;
+	if ( m_isInjecting && m_isInjectingValid ) checkCanonical = false;
 	// do not do canonical deletion if recycling content either i guess
 	if ( m_sreqValid && m_sreq.m_recycleContent ) checkCanonical = false;
 	// do not delete from being canonical if doing a query reindex
@@ -15679,7 +15680,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//	isTestColl = false;
 
 	// sanity check. keep injections fast. no downloading!
-	if ( m_wasInjected ) { 
+	if ( m_wasContentInjected ) { 
 		log("xmldoc: url injection failed! error!");
 		char *xx=NULL;*xx=0; 
 	}
@@ -17556,7 +17557,7 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 	}
 
 	// do not do iframe expansion in order to keep injections fast
-	if ( m_wasInjected ) {
+	if ( m_wasContentInjected ) {
 		m_expandedUtf8Content     = m_rawUtf8Content;
 		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
 		m_expandedUtf8ContentValid = true;
@@ -20030,13 +20031,14 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("hasrssitem=1 ");
 
 	// was the content itself injected?
-	if ( m_wasInjected ) // m_sreqValid && m_sreq.m_isInjecting )
+	if ( m_wasContentInjected )
 		sb->safePrintf("contentinjected=1 ");
 	else
 		sb->safePrintf("contentinjected=0 ");
 
 	// might have just injected the url and downloaded the content?
-	if ( m_sreqValid && m_sreq.m_isInjecting )
+	if ( (m_sreqValid && m_sreq.m_isInjecting) || 
+	     (m_isInjecting && m_isInjectingValid) )
 		sb->safePrintf("urlinjected=1 ");
 	else
 		sb->safePrintf("urlinjected=0 ");
@@ -21997,6 +21999,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! recycle || recycle == (void *)-1) return (char *)recycle;
 	// in that case inherit this from the old doc...
 	if ( od && *recycle && od->m_diffbotJSONCount &&
+	     // somehow i am seeing that this is empty!
+	     // this is how many title hashes of diffbot replies we've
+	     // stored in the old doc's titlerec. if these are not equal
+	     // and we call reindexJSONObjects() below then it cores
+	     // in redoJSONObjects().
+	     od->size_linkInfo2/4 == od->m_diffbotJSONCount &&
 	     // only call this once otherwise we double stock
 	     // m_diffbotTitleHashBuf
 	     m_diffbotJSONCount == 0 ) {//cr->m_isCustomCrawl){
@@ -22011,10 +22019,16 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			return NULL;
 		ptr_linkInfo2 =(LinkInfo *)m_diffbotTitleHashBuf.getBufStart();
 		size_linkInfo2=m_diffbotTitleHashBuf.length();
+
 	}
 	// but we might have to call reindexJSONObjects() multiple times if
 	// it would block
-	if ( od && *recycle && od->m_diffbotJSONCount ) {
+	if ( od && *recycle && 
+	     // only reindex if it is a query reindex i guess otherwise
+	     // just leave it alone
+	     m_sreqValid && m_sreq.m_isPageReindex &&
+	     od->m_diffbotJSONCount &&
+	     size_linkInfo2 ) {
 		// similar to od->nukeJSONObjects
 		int32_t *ohbuf =(int32_t *)m_diffbotTitleHashBuf.getBufStart();
 		int32_t nh     =m_diffbotTitleHashBuf.length() / 4;
@@ -37232,7 +37246,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	if ( now-timestamp > 10*86400 ) addRootLang = true;
 	// injects do not download the root doc for speed reasons, so do not 
 	// bother for them unless the doc itself is the root.
-	if ( m_wasInjected && !*isRoot ) addRootLang = false;
+	if ( m_wasContentInjected && !*isRoot ) addRootLang = false;
 	// . get the two letter (usually) language code from the id
 	// . i think the two chinese languages are 5 letters
 	if ( addRootLang ) {
@@ -37352,7 +37366,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	// or if it is 10 days old or more
 	if ( now-timestamp > 10*86400 ) addRootTitle = true;
 	// but not if injected
-	if ( m_wasInjected && ! *isRoot ) addRootTitle = false;
+	if ( m_wasContentInjected && ! *isRoot ) addRootTitle = false;
 	// add it then
 	if ( addRootTitle &&
 	     ! tbuf->addTag(mysite,"roottitles",now,"xmldoc",

@@ -435,7 +435,11 @@ bool Msg1c::gotList ( ) {
 		// url is a docid!
 		sprintf ( sr.m_url , "%"UINT64"" , docId );
 		// make a fake first ip
-		int32_t firstIp = (docId & 0xffffffff);
+		// use only 64k values so we don't stress doledb/waittrees/etc.
+		// for large #'s of docids
+		int32_t firstIp = (docId & 0x0000ffff);
+		// 0 is not a legit val. it'll core below.
+		if ( firstIp == 0 ) firstIp = 1;
 		// use a fake ip
 		sr.m_firstIp        =  firstIp;//nowGlobal;
 		// we are not really injecting...
