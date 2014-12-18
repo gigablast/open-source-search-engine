@@ -766,7 +766,8 @@ bool qainject1 ( ) {
 			log("qa: failed qa test of posdb0001.dat. "
 			    "has %i bytes of positive keys! coring.",
 			    (int)list.m_listSize);
-			char *xx=NULL;*xx=0;
+			//char *xx=NULL;*xx=0;
+			exit(0);
 		}
 
 
