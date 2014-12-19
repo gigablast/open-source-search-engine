@@ -1137,7 +1137,20 @@ bool gotResults ( void *state ) {
 			log("res: socket still in streaming mode. wtf?");
 			st->m_socket->m_streamingMode = false;
 		}
-		log("msg40: done streaming. nuking state.");
+		log("msg40: done streaming. nuking state=%"PTRFMT" q=%s. "
+		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
+		    "numrequests=%i numreplies=%i "
+		    ,(PTRTYPE)st
+		    ,si->m_q.m_orig
+
+		    , msg40->m_numMsg20sIn
+		    , msg40->m_numMsg20sOut
+		    , msg40->m_sendsIn
+		    , msg40->m_sendsOut
+		    , msg40->m_numRequests
+		    , msg40->m_numReplies
+
+		    );
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
 		return true;

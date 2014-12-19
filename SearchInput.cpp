@@ -438,6 +438,12 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// this parm is in Parms.cpp and should be set
 	char *langAbbr = m_defaultSortLang;
 
+	// Parms.cpp sets it to an empty string, so make that null
+	// if Parms.cpp set it to NULL it seems it comes out as "(null)"
+	// i guess because we sprintf it or something.
+	if ( langAbbr && langAbbr[0] == '\0' )
+		langAbbr = NULL;
+
 	// if &qlang was not given explicitly fall back to coll rec
 	if ( cr && ! langAbbr )
 		langAbbr = cr->m_defaultSortLanguage2;
@@ -456,7 +462,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	     langAbbr &&
 	     langAbbr[0] &&
 	     langAbbr[0]!='x' )
-		log("query: qlang of \"%s\" is NOT SUPPORTED",langAbbr);
+		log("query: qlang of \"%s\" is NOT SUPPORTED. using "
+		    "langUnknown, \"xx\".",langAbbr);
 
 	// . the query to use for highlighting... can be overriden with "hq"
 	// . we need the language id for doing synonyms

@@ -6927,7 +6927,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_defaultSortLang - y;
 	m->m_type  = TYPE_CHARPTR;
 	//m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
-	m->m_def   = NULL;//"xx";//_US";
+	m->m_def   = "";//"xx";//_US";
 	m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;

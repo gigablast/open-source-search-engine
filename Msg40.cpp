@@ -1741,6 +1741,8 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	Msg40 *THIS = (Msg40 *)state;
 	// the send completed, count it
 	THIS->m_sendsIn++;
+	// debug
+	//g_errno = ETCPTIMEDOUT;
 	// socket error? if client closes the socket midstream we get one.
 	if ( g_errno ) {
 		THIS->m_socketHadError = g_errno;
