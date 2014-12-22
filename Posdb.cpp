@@ -1032,7 +1032,12 @@ bool PosdbTable::allocTopTree ( ) {
 		//   stats. it has to be done at the aggregator node.
 		if ( ! qt->m_facetHashTable.set ( 4,sizeof(FacetEntry),
 						  slots,NULL,0,false,
-						  0,"qfht" ) )
+						  0,"qfht" 
+						  // use magic b/c keys seems
+						  // pretty similar in the 
+						  // lower bits sometimes
+						  , true
+						  ) )
 			return false;
 		// make it nongrowable because we'll be in a thread
 		qt->m_facetHashTable.setNonGrow();
