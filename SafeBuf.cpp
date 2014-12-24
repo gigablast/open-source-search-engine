@@ -248,17 +248,21 @@ bool SafeBuf::printFloatPretty ( float f ) {
 
 	// hack off trailing zeros
 	char *e = p + len - 1;
+	int plen = len;
 
 	for ( ; e > p ; e-- ) {
 		if ( e[0] == '.' ) {
-			e[0] = '\0';
+			//e[0] = '\0';
+			plen--;
 			break;
 		}
 		if ( e[0] != '0' ) break;
-		e[0] = '\0';
+		//e[0] = '\0';
+		plen--;
 	}
 
-	m_length += e - p;
+	m_length += plen;//e - p;
+	p[plen] = '\0';
 	return true;
 }
 
