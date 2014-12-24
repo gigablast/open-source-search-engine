@@ -2238,6 +2238,12 @@ void TcpServer::readTimeoutPoll ( ) {
 		int64_t elapsed = now - s->m_lastActionTime;
 		if ( ! timeOut && elapsed < s->m_timeout) continue;
 
+		if ( s->m_streamingMode ) {
+			log("tcp: not timing out streaming socket fd=%"INT32"",
+			    s->m_sd);
+			continue;
+		}
+
 		//log("tcp: timeout=%"INT32" fd=%"INT32"",sockTimeout,s->m_sd);
 
 		// uncomment this if you want to close a socket if they havent 
