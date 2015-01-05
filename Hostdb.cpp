@@ -807,7 +807,8 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		m_hosts[i].m_dir[wdirlen] = '\0';
 		
 		// reset this
-		m_hosts[i].m_pingInfo.m_lastPing = 0LL;
+		//m_hosts[i].m_pingInfo.m_lastPing = 0LL;
+		m_hosts[i].m_lastPing = 0LL;
 		// and don't send emails on him until we got a good ping
 		m_hosts[i].m_emailCode = -2;
 		// we do not know if it is in sync
@@ -1769,7 +1770,8 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_inProgress2 = spareHost->m_inProgress2;
 
 	// last ping timestamp
-	oldHost->m_pingInfo.m_lastPing    = spareHost->m_pingInfo.m_lastPing; 
+	//oldHost->m_pingInfo.m_lastPing    = spareHost->m_pingInfo.m_lastPing; 
+	oldHost->m_lastPing    = spareHost->m_lastPing; 
 
 	// and the new spare gets a new hostid too
 	spareHost->m_hostId = spareHostId;

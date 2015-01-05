@@ -352,7 +352,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// only ping a host once every 5 seconds tops
 	//if ( now - h->m_lastPing < 5000 ) return;
 	// stamp it
-	h->m_pingInfo.m_lastPing = nowmsLocal;
+	//h->m_pingInfo.m_lastPing = nowmsLocal;
+	h->m_lastPing = nowmsLocal;
 	// count it
 	s_outstandingPings++;
 	// consider it in progress
@@ -413,7 +414,9 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	// store the last ping we got from it first
 	//*(int64_t *)p = h->m_lastPing; p += sizeof(int64_t);
-	pi->m_lastPing = h->m_pingInfo.m_lastPing;
+
+	// i don't think this should be in pinginfo
+	//pi->m_lastPing = h->m_pingInfo.m_lastPing;
 
 	// let the receiver know our repair mode
 	//*p = g_repairMode; p++;
@@ -498,6 +501,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	pi->m_dailyMergeCollnum = cn;
 
 	pi->m_hostId = me->m_hostId;
+
+	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
 
 	// store hd temps
 	// memcpy ( p , me->m_hdtemps , 4 * 2 );
