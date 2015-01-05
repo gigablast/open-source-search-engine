@@ -154,6 +154,9 @@ class Log {
 	char   *m_hostname;
 	int     m_port;
 
+	int64_t m_logFileSize;
+	bool makeNewLogFile ( );
+
 	char         *m_errorMsg      [ MAX_LOG_MSGS ];
 	int16_t     m_errorMsgLen   [ MAX_LOG_MSGS ];
 	int64_t     m_errorTime     [ MAX_LOG_MSGS ];

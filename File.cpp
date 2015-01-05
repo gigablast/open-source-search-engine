@@ -612,6 +612,23 @@ bool File::closeLeastUsed () {
 	return true;
 }	
 
+int64_t getFileSize ( char *filename ) {
+
+	FILE *fd = fopen ( filename , "r" );
+	if ( ! fd ) {
+		//log("disk: error getFileSize(%s) : %s",
+		//    filename , strerror(g_errno));
+		return 0;//-1;
+	}
+
+	fseek(fd,0,SEEK_END);
+	int64_t fileSize = ftell ( fd );
+
+	fclose ( fd );
+
+	return fileSize;
+}
+
 // . returns -2 on error
 // . returns -1 if does not exist
 // . otherwise returns file size in bytes
@@ -624,19 +641,7 @@ int32_t File::getFileSize ( ) {
 
         //int status = stat ( m_filename , &stats );
 
-	FILE *fd = fopen ( m_filename , "r" );
-	if ( ! fd ) {
-		log("disk: error getFileSize(%s) : %s",
-		    m_filename , strerror(g_errno));
-		return -1;
-	}
-
-	fseek(fd,0,SEEK_END);
-	int32_t fileSize = ftell ( fd );
-
-	fclose ( fd );
-
-	return fileSize;
+	return ::getFileSize ( m_filename );
 
         // return the size if the status was ok
         //if ( status == 0 ) return stats.st_size;
