@@ -21112,7 +21112,8 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 
 		// debug log
-		log("parms: sending parm request to hostid %"INT32"",h->m_hostId);
+		log(LOG_INFO,"parms: sending parm request "
+		    "to hostid %"INT32"",h->m_hostId);
 
 		// count it
 		pn->m_numRequests++;

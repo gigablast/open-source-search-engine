@@ -5622,7 +5622,8 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		// i guess we can print "Next 10" link
 		m_moreToCome = true;
 		// hide if above limit
-		log("msg40: hiding above docsWanted #%"INT32" (%"UINT32")(d=%"INT64")",
+		log(LOG_INFO,"msg40: hiding above docsWanted "
+		    "#%"INT32" (%"UINT32")(d=%"INT64")",
 		    m_printi,mr->m_contentHash32,mr->m_docId);
 		// do not exceed what the user asked for
 		return true;
@@ -5641,8 +5642,8 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		m_hadPrintError = true;
 	}
 
-
-	log("msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
+	
+	log(LOG_INFO,"msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
 	    m_printi,mr->m_contentHash32,mr->m_docId);
 
 	// count it

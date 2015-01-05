@@ -14306,7 +14306,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		cr->m_localCrawlInfo.m_pageProcessSuccessesThisRound++;
 		cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound++;
 		// log it
-		log("build: processed page %s (pageLen=%"INT32")",
+		log(LOG_INFO,
+		    "build: processed page %s (pageLen=%"INT32")",
 		    THIS->m_firstUrl.m_url,
 		    pageLen);
 		// changing status, resend local crawl info to all
@@ -15216,7 +15217,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( cr->m_isCustomCrawl ==1 && ! m_downloadStatusValid ) { 
 		char *xx=NULL;*xx=0; }
 
-	log("diffbot: getting %s headers=%s",m_diffbotUrl.getBufStart(),
+	log(LOG_INFO,
+	    "diffbot: getting %s headers=%s",m_diffbotUrl.getBufStart(),
 	    additionalHeaders);
 
 	if ( ! g_httpServer.getDoc ( m_diffbotUrl.getBufStart() ,
@@ -22613,7 +22615,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// we successfully index the json object, skip to next one
 		m_diffbotObj += gbstrlen(m_diffbotObj) + 1;
 		// but gotta set this crap back
-		log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
+		log(LOG_INFO,"diffbot: resetting %s",m_dx->m_firstUrl.m_url);
 		// clear for next guy if there is one. clears 
 		// m_dx->m_contentValid so the set4() can be called again above
 		m_dx->reset();

@@ -452,7 +452,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	if ( ! langAbbr )
 		langAbbr = "xx";
 
-	log("query: using default lang of %s", langAbbr );
+	log(LOG_INFO,"query: using default lang of %s", langAbbr );
 
 	// get code
 	m_queryLangId = getLangIdFromAbbr ( langAbbr );
@@ -475,7 +475,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_hqq.set2 ( m_query , m_queryLangId , true );
 
 	// log it here
-	log("query: got query %s (len=%i)"
+	log(LOG_INFO,
+	    "query: got query %s (len=%i)"
 	    ,m_sbuf1.getBufStart()
 	    ,m_sbuf1.length());
 

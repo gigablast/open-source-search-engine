@@ -5393,7 +5393,7 @@ void doneSendingNotification ( void *state ) {
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	char *coll = "lostcoll";
 	if ( cr ) coll = cr->m_coll;
-	log("spider: done sending notifications for coll=%s", coll);
+	log(LOG_INFO,"spider: done sending notifications for coll=%s", coll);
 
 	// all done if collection was deleted from under us
 	if ( ! cr ) return;
@@ -5538,7 +5538,9 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// wtf? caller must set this
 	if ( ! cr->m_spiderStatus ) { char *xx=NULL; *xx=0; }
 
-	log("spider: sending notification for crawl status %"INT32" in coll %s. "
+	log(LOG_INFO,
+	    "spider: sending notification for crawl status %"INT32" in "
+	    "coll %s. "
 	    //"current sent state is %"INT32""
 	    ,(int32_t)cr->m_spiderStatus
 	    ,cr->m_coll
@@ -12485,7 +12487,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( hadUrlsReady &&
 		     // and it no longer does now...
 		     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
-			log("spider: all %"INT32" hosts report %s (%"INT32") has no "
+			log(LOG_INFO,
+			    "spider: all %"INT32" hosts report "
+			    "%s (%"INT32") has no "
 			    "more urls ready to spider",
 			    s_replies,cr->m_coll,(int32_t)cr->m_collnum);
 			// set crawl end time
@@ -12718,7 +12722,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
 		     spiderDoneTimer ) {
 			// this is the MOST IMPORTANT variable so note it
-			log("spider: coll %s has no more urls to spider",
+			log(LOG_INFO,
+			    "spider: coll %s has no more urls to spider",
 			    cr->m_coll);
 			// assume our crawl on this host is completed i guess
 			ci->m_hasUrlsReadyToSpider = 0;

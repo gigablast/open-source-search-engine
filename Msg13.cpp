@@ -990,7 +990,8 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	if ( r->m_proxyIp ) {
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
-		log("sproxy: got proxy %s:%"INT32" and agent=\"%s\" to spider "
+		log(LOG_INFO,
+		    "sproxy: got proxy %s:%"INT32" and agent=\"%s\" to spider "
 		    "%s %s (numBannedProxies=%"INT32")",
 		    iptoa(r->m_proxyIp),
 		    (int32_t)r->m_proxyPort,
@@ -2847,7 +2848,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   which will store maybe a -1 if currently downloading...
 	if ( queueIt ) {
 		// debug
-		log("spider: adding %s to crawldelayqueue cd=%"INT32"ms",
+		log(LOG_INFO,
+		    "spider: adding %s to crawldelayqueue cd=%"INT32"ms",
 		    r->ptr_url,crawlDelayMS);
 		// save this
 		//r->m_udpSlot = slot; // this is already saved!

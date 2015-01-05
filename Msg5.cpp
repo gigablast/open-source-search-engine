@@ -897,7 +897,7 @@ bool Msg5::needsRecall ( ) {
 	// so common for doledb because of key annihilations
 	if ( m_rdbId == RDB_DOLEDB && m_round < 10 ) logIt = false;
 	if ( logIt )
-		logf(LOG_DEBUG,"db: Reading %"INT32" again from %s (need %"INT32" total "
+		log("db: Reading %"INT32" again from %s (need %"INT32" total "
 		     "got %"INT32" totalListSizes=%"INT32" sk=%s) "
 		     "cn=%"INT32" this=0x%"PTRFMT" round=%"INT32".", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
