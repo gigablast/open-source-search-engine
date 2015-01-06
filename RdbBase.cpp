@@ -879,17 +879,22 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		log(LOG_LOGIC,"db: addFile: fileId collided."); return -1; }
 	// shift everyone up if we need to fit this file in the middle somewher
 	if ( i < m_numFiles ) {
-		int32_t size = (m_numFiles-i)*sizeof(BigFile *);
-		memmove ( &m_files  [i+1] , &m_files  [i] , size);
-		memmove ( &m_fileIds[i+1] , &m_fileIds[i] , size);
-		memmove ( &m_fileIds2[i+1], &m_fileIds2[i], size);
-		memmove ( &m_maps   [i+1] , &m_maps   [i] , size);
+		int nn = m_numFiles-i;
+		memmove ( &m_files  [i+1] , &m_files[i],nn*sizeof(BigFile *));
+		memmove ( &m_fileIds[i+1] , &m_fileIds[i],nn*sizeof(int32_t));
+		memmove ( &m_fileIds2[i+1], &m_fileIds2[i],nn*sizeof(int32_t));
+		memmove ( &m_maps   [i+1] , &m_maps   [i],nn*sizeof(RdbMap *));
 	}
+
 	// insert this file into position #i
 	m_fileIds  [i] = id;
 	m_fileIds2 [i] = id2;
 	m_files    [i] = f;
 	m_maps     [i] = m;
+
+	// debug point
+	//log("map #0 is %s ptr=%llx (nf=%i)",
+	//    m_maps[0]->getFilename(),(long long)m_maps[0],m_numFiles);
 
 	// to free up mem for diffbot's many collections...
 	cr = g_collectiondb.getRec ( m_collnum );
@@ -2446,8 +2451,13 @@ void RdbBase::closeMaps ( bool urgent ) {
 }
 
 void RdbBase::saveMaps ( bool useThread ) {
-	for ( int32_t i = 0 ; i < m_numFiles ; i++ )
+	for ( int32_t i = 0 ; i < m_numFiles ; i++ ) {
+		if ( ! m_maps[i] ) {
+			log("base: map for file #%i is null",i);
+			continue;
+		}
 		m_maps[i]->writeMap ( );
+	}
 }
 
 void RdbBase::verifyDiskPageCache ( ) {
