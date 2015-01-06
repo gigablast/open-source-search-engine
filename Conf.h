@@ -829,7 +829,7 @@ class Conf {
 	char  m_rebuildRoots      ;
 	char  m_rebuildNonRoots   ;
 
-	char  m_rebuildSkipSitedbLookup ;
+	//char  m_rebuildSkipSitedbLookup ;
 
 	// for caching the qualities of urls (see Msg20.cpp)
 	int32_t  m_maxQualityCacheAge ;

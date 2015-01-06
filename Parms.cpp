@@ -18406,7 +18406,13 @@ void Parms::init ( ) {
 
 	m->m_title = "recycle link info";
 	m->m_desc  = "If enabled, gigablast will recycle the link info "
-		"when rebuilding titledb.";
+		"when rebuilding titledb. The link info is basically just "
+		"the link text. The siterank, which is determined by the "
+		"number of inlinks to a site, is stored/cached in tagdb "
+		"so that is a separate item. If you want to pick up new "
+		"link text you will want to set this to <i>NO</i> and "
+		"make sure to rebuild titledb, since that stores the "
+		"link text.";
 	m->m_cgi   = "rrli"; // repair full rebuild
 	m->m_off   = (char *)&g_conf.m_rebuildRecycleLinkInfo - g;
 	m->m_type  = TYPE_BOOL;
@@ -18637,10 +18643,13 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	/*
 	m->m_title = "skip tagdb lookup";
-	m->m_desc  = "When rebuilding spiderdb and scanning it for new spiderdb "
-		"records, should a tagdb lookup be performed? Runs much much "
-		"faster without it. Will also keep the original doc quality and "
+	m->m_desc  = "When rebuilding spiderdb and scanning it for new "
+		"spiderdb records, should a tagdb lookup be performed? "
+		"Runs much much "
+		"faster without it. Will also keep the original doc quality "
+		"and "
 		"spider priority in tact.";
 	m->m_cgi   = "rssl";
 	m->m_off   = (char *)&g_conf.m_rebuildSkipSitedbLookup - g;
@@ -18650,6 +18659,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
+	*/
 
 	///////////////////////////////////////////
 	//          END PAGE REPAIR              //
