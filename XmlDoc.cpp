@@ -37251,10 +37251,14 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	if ( m_wasContentInjected && !*isRoot ) addRootLang = false;
 	// . get the two letter (usually) language code from the id
 	// . i think the two chinese languages are 5 letters
-	if ( addRootLang ) {
-		char *newrl = getLanguageAbbr( *rl );
+	char *newrl = NULL;
+	if ( addRootLang ) 
+		// i've seen this return NULL because *rl is a corrupt 215
+		// for some reason
+		newrl = getLanguageAbbr( *rl );
+
+	if ( newrl )
 		tbuf->addTag3(mysite,"rootlang",now,"xmldoc",*ip,newrl,rdbId);
-	}
 
 	//
 	// add hascontactinfo if we need to
