@@ -387,6 +387,7 @@ int main ( int argc , char *argv[] ) {
 int main2 ( int argc , char *argv[] ) {
 
 	g_conf.m_runAsDaemon = false;
+	g_conf.m_logToFile = false;
 
 #ifndef CYGWIN
 	// appears that linux 2.4.17 kernel would crash with this?
@@ -1092,6 +1093,8 @@ int main2 ( int argc , char *argv[] ) {
 
 	// run as daemon? then we have to fork
 	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
+
+	if ( strcmp ( cmd , "-l" ) == 0 ) g_conf.m_logToFile = true;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
@@ -5106,9 +5109,14 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
 				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
-				"./gb "//%"INT32" "
+				// indicate -l so we log to a logfile
+				"./gb -l "//%"INT32" "
 				"\\$ADDARGS "
-				" >& ./log%03"INT32" ;"
+
+				// no longer log to stderr so we can
+				// do log file rotation
+				//" >& ./log%03"INT32""
+				" ;"
 
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
@@ -5125,7 +5133,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				//h2->m_dir      ,
 
 				// hostid is now inferred from path
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
 				amp );
 
 			// log it

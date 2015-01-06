@@ -103,6 +103,8 @@ class Conf {
 	char m_save;
 
 	bool m_runAsDaemon;
+
+	bool m_logToFile;
 	
 	bool m_isLocal;
 

@@ -1190,7 +1190,8 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 	sprintf ( m_httpRootDir , "%shtml/" , m_dir );
 	sprintf ( m_logFilename , "%slog%03"INT32"", m_dir , m_hostId );
 
-	if ( ! g_conf.m_runAsDaemon )
+	if ( ! g_conf.m_runAsDaemon &&
+	     ! g_conf.m_logToFile )
 		sprintf(m_logFilename,"/dev/stderr");
 
 
