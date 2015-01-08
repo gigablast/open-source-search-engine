@@ -1238,10 +1238,10 @@ static char *s_badExtensions[] = {
         "bmp",
         "bz2",
         //"c",
-        "cc",
+        //"cc",// c source code, allow
         "ccad",
         "cdf",
-        "class",
+        //"class",// text source code file usually, allow
         "cpio",
         "cpt",
         //"csh",
@@ -1259,7 +1259,7 @@ static char *s_badExtensions[] = {
         "etx",
         "exe",
         "ez",
-        "f",
+        //"f", // ambigous
         "f90",
         "fli",
         "gif",
@@ -1286,7 +1286,7 @@ static char *s_badExtensions[] = {
         "lha",
         "lsp",
         "lzh",
-        "m",
+        //"m", // ambiguous
         "man",
         "me",
         "mesh",
@@ -1329,13 +1329,14 @@ static char *s_badExtensions[] = {
         "rm",
         "roff",
         "rpm",
+	"deb", // debian/ubuntu package file
         "rtf",
         "rtx",
         "scm",
         "set",
         "sgm",
         "sgml",
-        "sh",
+        //"sh", // shells are text files
         "shar",
         "silo",
         "sit",
@@ -1355,7 +1356,7 @@ static char *s_badExtensions[] = {
         "sv4cpio",
         "sv4crc",
         "swf",
-        "t",
+        //"t", // ambiguous ... Mr.T.
         "tar",
         "tcl",
         "tex",
