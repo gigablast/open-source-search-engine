@@ -3239,13 +3239,19 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (int32_t *)cu;
 
-	bool badExt = cu->isBadExtension ( m_version );
-	if ( badExt && ! info1->hasLinkText() && 
-	     ( ! info2 || ! info2->hasLinkText() ) ) {
-		m_indexCode      = EDOCBADCONTENTTYPE;
-		m_indexCodeValid = true;
-		return &m_indexCode;
-	}
+	// take this check out because it is hurting
+	// http://community.spiceworks.com/profile/show/Mr.T
+	// because 't' was in the list of bad extensions.
+	// now we use the url filters table to exclude the extensions we want.
+	// and we use the 'ismedia' directive to exclude common media 
+	// extensions. having this check here is no longer needed and confusing
+	// bool badExt = cu->isBadExtension ( m_version );
+	// if ( badExt && ! info1->hasLinkText() && 
+	//      ( ! info2 || ! info2->hasLinkText() ) ) {
+	// 	m_indexCode      = EDOCBADCONTENTTYPE;
+	// 	m_indexCodeValid = true;
+	// 	return &m_indexCode;
+	// }
 
 	int16_t *hstatus = getHttpStatus();
 	if ( ! hstatus || hstatus == (void *)-1 ) return (int32_t *)hstatus;
