@@ -30070,6 +30070,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( ! m_req->m_onlyNeedGoodInlinks )
 		getThatTitle = true;
 
+	// ... no more seo so stop it... disable this for sp
+	if ( m_req->m_getLinkText )
+	        getThatTitle = false;
+
 	if ( getThatTitle ) {
 		Title *ti = getTitle();
 		if ( ! ti || ti == (Title *)-1 ) return (Msg20Reply *)ti;
@@ -30191,7 +30195,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 
 	// get full image url. but not if we already have a thumbnail...
-	if ( ! reply->ptr_imgUrl && ! reply->ptr_imgData ) { 
+	if ( ! reply->ptr_imgUrl&&!reply->ptr_imgData&&!m_req->m_getLinkText){
 		// && m_req->m_getImageUrl ) {
 		char **iu = getImageUrl();
 		if ( ! iu || iu == (char **)-1 ) return (Msg20Reply *)iu;
@@ -30782,7 +30786,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	QUICKPOLL ( m_niceness );
 
 	// get title? its slow because it sets the sections class
-	if ( m_req->m_titleMaxLen > 0 && ! reply->ptr_tbuf ) {
+	if ( m_req->m_titleMaxLen > 0 && ! reply->ptr_tbuf &&
+	     // don't get it anymore if getting link info because it
+	     // is slow...
+	     getThatTitle ) {
 		Title *ti = getTitle();
 		if ( ! ti || ti == (Title *)-1 ) return (Msg20Reply *)ti;
 		char *tit = ti->getTitle();
