@@ -10588,6 +10588,7 @@ uint8_t *XmlDoc::getRootLangId ( ) {
 }
 
 XmlDoc **XmlDoc::getOldXmlDoc ( ) {
+
 	if ( m_oldDocValid ) return &m_oldDoc;
 
 	// note it

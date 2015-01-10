@@ -3240,7 +3240,7 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 		     memcmp ( dst , s , len ) == 0 ) 
 			return;
 		// this means that we can not use string POINTERS as parms!!
-		if ( ! isHtmlEncoded ) memcpy ( dst , s , len ); 
+		if ( ! isHtmlEncoded ) {memcpy ( dst , s , len ); }
 		else                   len = htmlDecode (dst , s,len,false,0);
 		dst[len] = '\0';
 		// . might have to set length
