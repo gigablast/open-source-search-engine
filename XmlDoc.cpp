@@ -1873,10 +1873,10 @@ void XmlDoc::setStatus ( char *s ) {
 	if ( s == s_last ) return;
 
 	bool timeIt = false;
-	if ( m_sreqValid &&
-	     m_sreq.m_isInjecting &&
-	     m_sreq.m_isPageInject ) 
-		timeIt = true;
+	// if ( m_sreqValid &&
+	//      m_sreq.m_isInjecting &&
+	//      m_sreq.m_isPageInject ) 
+	// 	timeIt = true;
 	if ( g_conf.m_logDebugBuildTime )
 		timeIt = true;
 
@@ -1885,7 +1885,7 @@ void XmlDoc::setStatus ( char *s ) {
 		int64_t now = gettimeofdayInMillisecondsLocal();
 		if ( s_lastTimeStart == 0LL ) s_lastTimeStart = now;
 		int32_t took = now - s_lastTimeStart;
-		if ( took > 100 )
+		//if ( took > 100 )
 			log("xmldoc: %s (xd=0x%"PTRFMT" "
 			    "u=%s) took %"INT32"ms",
 			    s_last,
@@ -13724,6 +13724,12 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( m_linkInfo1Valid && ptr_linkInfo1 )
 		return ptr_linkInfo1;
 
+	// at least get our firstip so if cr->m_getLinkInfo is false
+	// then getRevisedSpiderReq() will not core because it is invalid
+	int32_t *ip = getFirstIp();
+	if ( ! ip || ip == (int32_t *)-1 ) return (LinkInfo *)ip;
+	
+
 	// just return nothing if not doing link voting
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -13755,8 +13761,6 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( ! sni || sni == (int32_t *)-1 ) return (LinkInfo *)sni;
 	//int32_t *fip = getFirstIp();
 	//if ( ! fip || fip == (int32_t *)-1 ) return (LinkInfo *)fip;
-	int32_t *ip = getFirstIp();
-	if ( ! ip || ip == (int32_t *)-1 ) return (LinkInfo *)ip;
 	int64_t *d = getDocId();
 	if ( ! d || d == (int64_t *)-1 ) return (LinkInfo *)d;
 	// sanity check. error?
@@ -30582,47 +30586,50 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// breathe
 	QUICKPOLL( m_niceness );
 
-	//if ( cr->m_doLinkSpamCheck ) {
-	// reset to NULL to avoid gbstrlen segfault
-	char *note = NULL;
-	// need this
-	if ( ! m_xmlValid ) { char *xx=NULL;*xx=0; }
-	// time it
-	//int64_t start = gettimeofdayInMilliseconds();
+	if ( ! m_req->m_doLinkSpamCheck ) 
+		reply->m_isLinkSpam = false;
 
-	Url linkeeUrl;
-	linkeeUrl.set ( m_req->ptr_linkee );
+	if ( m_req->m_doLinkSpamCheck ) {
+		// reset to NULL to avoid gbstrlen segfault
+		char *note = NULL;
+		// need this
+		if ( ! m_xmlValid ) { char *xx=NULL;*xx=0; }
+		// time it
+		//int64_t start = gettimeofdayInMilliseconds();
 
-	// get it. does not block.
-	reply->m_isLinkSpam = ::isLinkSpam ( linker , 
-					     m_ip ,
-					     ptr_indCatIds ,
-					     size_indCatIds / 4 ,
-					     m_siteNumInlinks,
-					     &m_xml, 
-					     links,
-					     MAXDOCLEN,//150000,//maxDocLen , 
-					     &note , 
-					     &linkeeUrl , // url ,
-					     linkNode , 
-					     cr->m_coll ,
-					     m_niceness );
-	// store it
-	if ( note ) {
-		// include the \0
-		reply->ptr_note  = note;
-		reply->size_note = gbstrlen(note)+1;
+		Url linkeeUrl;
+		linkeeUrl.set ( m_req->ptr_linkee );
+
+		// get it. does not block.
+		reply->m_isLinkSpam = ::isLinkSpam ( linker , 
+						     m_ip ,
+						     ptr_indCatIds ,
+						     size_indCatIds / 4 ,
+						     m_siteNumInlinks,
+						     &m_xml, 
+						     links,
+						     MAXDOCLEN,//150000,
+						     &note , 
+						     &linkeeUrl , // url ,
+						     linkNode , 
+						     cr->m_coll ,
+						     m_niceness );
+		// store it
+		if ( note ) {
+			// include the \0
+			reply->ptr_note  = note;
+			reply->size_note = gbstrlen(note)+1;
+		}
+		// log the reason why it is a log page
+		if ( reply->m_isLinkSpam )
+			log(LOG_DEBUG,"build: linker %s: %s.",
+			    linker->getUrl(),note);
+		// sanity
+		if ( reply->m_isLinkSpam && ! note )
+			log("linkspam: missing note for d=%"INT64"!",m_docId);
+		// store times... nah, might have yielded cpu!
+		reply->m_timeLinkSpam = 0;
 	}
-	// log the reason why it is a log page
-	if ( reply->m_isLinkSpam )
-		log(LOG_DEBUG,"build: linker %s: %s.",
-		    linker->getUrl(),note);
-	// sanity
-	if ( reply->m_isLinkSpam && ! note )
-		log("linkspam: missing note for d=%"INT64"!",m_docId);
-	// store times... nah, might have yielded cpu!
-	reply->m_timeLinkSpam = 0;
-	//}
 
 	// breathe
 	QUICKPOLL(m_niceness);
