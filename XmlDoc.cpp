@@ -31382,6 +31382,8 @@ char *XmlDoc::getHighlightedSummary ( ) {
 // skip directly to just the query terms in the document and save time.
 // We may have to reset the Scores array here if we want to use it ltr.
 // 
+// aka getGigabitSample.  get gigabit sample
+// 
 SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 
 	if ( m_gsbufValid ) return &m_gsbuf;
@@ -31409,6 +31411,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 	reply.setLabel("gbtrepbuf");
 	// m_contentLen is invalid, don't use that here use size_utf8Content
 	if ( ! reply.reserve ( size_utf8Content + 1000 ) ) return NULL;
+	// scan the sections of the document
 	for ( ; sp ; sp = sp->m_next ) {
 		QUICKPOLL(m_niceness);
 		// do not allow menu crap
@@ -31496,6 +31499,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 
 		//int32_t off = reply.length();
 
+		// filter out tags and \n's and \r's and store into "reply"
 		if ( ! reply.safePrintFilterTagsAndLines ( p , e-p ,false ) )
 			return NULL;
 
@@ -31509,7 +31513,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		//		reply.pushChar('.');
 		//}
 
-		// too huge?
+		// too huge? if # of ALNUM words > 70 it's too big.
 		bool isHuge = false;
 		if ( naw > 70 ) isHuge = true;
 
