@@ -1251,9 +1251,10 @@ override that switch.
 
 <br>
 
-<b>Spider Optimizations:</b>
+<b>Spidering and Indexing Optimizations:</b>
 <ul>
 <!--<li> Set <b>restrict indexdb for spidering</b> on the -->
+<li> Disable <b>link voting</b> or <b>link spam checking</b> in the spider controls if you do not care about it. This is also useful when doing millions of injections and doing an indexdb rebuild using the rebuild tool later to pick up the link text.
 <li> Disable dup checking. Gigablast will not allow any duplicate pages
 from the same domain into the index when this is enabled. This means that
 Gigablast must do about one disk seek for every URL indexed to verify it is

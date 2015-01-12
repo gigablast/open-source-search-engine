@@ -3435,10 +3435,12 @@ bool Addresses::setGeocoderLatLons ( void *state,
 		else { char *xx=NULL; *xx=0; }
 		*p++ = ' ';
 		// get state abbr
-		if      ( aa->m_adm1 ) 
+		if      ( aa->m_adm1 ) {
 			memcpy(p,aa->m_adm1->m_adm1,2);
-		else if ( aa->m_zip ) 
+		}
+		else if ( aa->m_zip )  {
 			memcpy(p,aa->m_zip->m_adm1,2);
+		}
 		else if ( aa->m_flags3 & AF2_LATLON );
 		else { char *xx=NULL;*xx=0; }
 		p += 2;

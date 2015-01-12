@@ -1,5 +1,5 @@
-#ifndef __GB_INCLUDE_H__
-#define __GB_INCLUDE_H__
+#ifndef GB_INCLUDE_H
+#define GB_INCLUDE_H
 
 // fix on 64-bit architectures so sizeof(uint96_t) is 12, not 16!
 //#pragma pack(0)

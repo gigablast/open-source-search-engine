@@ -648,7 +648,7 @@ int32_t Xml::getText ( char  *buf             ,
 			// store it as-is if not filtering or not html entity
 			//simplecopy:
 			// if more than 1 byte in char, use memcpy
-			if ( cs > 1 ) memcpy ( dst , src , cs );
+			if ( cs > 1 ) {memcpy ( dst , src , cs );}
 			else          *dst = *src;
 		}
 		// continue looping over nodes (text and tag nodes)
@@ -764,7 +764,7 @@ int32_t Xml::getMetaContent (char *buf, int32_t bufLen, char *field, int32_t fie
 				continue;
 			}
 			// if more than 1 byte in char, use memcpy
-			if ( cs > 1 ) memcpy ( dst , src , cs );
+			if ( cs > 1 ) {memcpy ( dst , src , cs );}
 			else          *dst = *src;
 			dst += cs;
 		}

@@ -572,7 +572,7 @@ void DiskPageCache::addPages ( int32_t vfd,
 	// sometimes the file got unlinked on us
 	if ( ! m_memOffFromDiskPage[vfd] ) return;
 	// for some reason profiler cores all the time in here
-	if ( g_profiler.m_realTimeProfilerRunning ) return;
+	//if ( g_profiler.m_realTimeProfilerRunning ) return;
 
 	// . "diskPageNum" is the first DISK page #
 	// . "offset" is the offset on disk the data was read from
@@ -627,7 +627,7 @@ char *DiskPageCache::getMemPtrFromMemOff ( int32_t off ) {
 
 	// for some reason profiler cores all the time in here
 	// and m_numPageSets is 0 like we got reset
-	if ( g_profiler.m_realTimeProfilerRunning ) return NULL;
+	//if ( g_profiler.m_realTimeProfilerRunning ) return NULL;
 
 	// get set number
 	int32_t sn = off / m_maxPageSetSize ;

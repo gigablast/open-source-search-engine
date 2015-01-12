@@ -3029,6 +3029,12 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	if ( m_isPopulating ) return;
 	// skip if in repair mode
 	if ( g_repairMode ) return;
+
+	// let's skip if spiders off so we can inject/popoulate the index quick
+	// since addSpiderRequest() calls addToWaitingTree() which then calls
+	// this. 
+	if ( ! g_conf.m_spideringEnabled ) return;
+
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
 	// Doledb::m_rdb::addRecord() below
