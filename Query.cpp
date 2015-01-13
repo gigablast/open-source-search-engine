@@ -3798,6 +3798,35 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
+	{"gbcountry",
+	 FIELD_GBCOUNTRY,
+	 false,
+	 "gbcountry:us",
+	 "Matches documents determined by Gigablast to be from the United "
+	 "States. See the country abbreviations in the CountryCode.cpp "
+	 "open source distribution. Some more popular examples include: "
+	 "de, fr, uk, ca, cn.",
+	 NULL,
+	 0} ,
+
+// mdw
+
+	{"gbpermalink",
+	 FIELD_GBPERMALINK,
+	 false,
+	 "gbpermalink:1",
+	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
+	 "to match documents that are NOT permalinks.",
+	 NULL,
+	0},
+
+	{"gbdocid",
+	 FIELD_GBDOCID,
+	 false,
+	 "gbdocid:123456",
+	 "Matches the document with the docid 123456",
+	 NULL,
+	 0},
 
 
 
@@ -4132,6 +4161,18 @@ struct QueryField g_fields[] = {
 	 0},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:gbtagsitenuminlinks",
+	 "Returns facets in "
+	 "of the <i>sitenuminlinks</i> field for the tag <i>sitenuminlinks</i>"
+	 "in the tag for each site. Any numeric tag in tagdb can be "
+	 "facetizeed "
+	 "in this manner so you can add your own facets this way on a per "
+	 "site or per url basis by making tagdb entries. Case Insensitive.",
+	 NULL,
+	 0},
+
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
 	 "gbfacetint:size,0-10,10-20,30-100,100-200,200-1000,1000-10000",
 	 "Returns facets in "
 	 "of the <i>size</i> field (either in json, field or a meta tag) "
@@ -4166,35 +4207,6 @@ struct QueryField g_fields[] = {
 	 0},
 
 
-	{"gbcountry",
-	 FIELD_GBCOUNTRY,
-	 false,
-	 "gbcountry:us",
-	 "Matches documents determined by Gigablast to be from the United "
-	 "States. See the country abbreviations in the CountryCode.cpp "
-	 "open source distribution. Some more popular examples include: "
-	 "de, fr, uk, ca, cn.",
-	 NULL,
-	 0} ,
-
-// mdw
-
-	{"gbpermalink",
-	 FIELD_GBPERMALINK,
-	 false,
-	 "gbpermalink:1",
-	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
-	 "to match documents that are NOT permalinks.",
-	 NULL,
-	0},
-
-	{"gbdocid",
-	 FIELD_GBDOCID,
-	 false,
-	 "gbdocid:123456",
-	 "Matches the document with the docid 123456",
-	 NULL,
-	 0},
 
 	//
 	// spider status docs queries

@@ -3164,9 +3164,10 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		if ( ! d || d[0] == '\0' ) d = "&nbsp;";
 		sb.safePrintf("<tr bgcolor=%s>"
 			      "<td><nobr><a href=\"%s/search?c=%s&q="
+			      , bgcolor
 			      , host
 			      , qc
-			      , bgcolor );
+			      );
 		sb.urlEncode ( f->example );
 		sb.safePrintf("\">");
 		sb.safePrintf("%s</a></nobr></td>"

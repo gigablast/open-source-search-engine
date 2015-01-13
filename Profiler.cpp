@@ -1412,6 +1412,9 @@ Profiler::checkMissedQuickPoll( FrameTrace *frame,
 	if(ptr) ++ptr[1];
 }
 
+// from memcpy.cpp
+extern int g_inMemCpy;
+
 void
 Profiler::getStackFrame(int sig) {
 

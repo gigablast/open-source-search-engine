@@ -6139,7 +6139,6 @@ void PosdbTable::intersectLists10_r ( ) {
 			// int16_tcuts
 			register char *xc    = qti->m_cursor[j];
 			register char *xcEnd = qti->m_newSubListEnd[j];
-			// 
 			// exhausted? (we can't make cursor NULL because
 			// getMaxPossibleScore() needs the last ptr)
 			// must match docid
@@ -6714,11 +6713,23 @@ void PosdbTable::intersectLists10_r ( ) {
 	// skip if not part of score
 	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) continue;
 
+	// // get the query term info
+	// QueryTermInfo *qtix = &qip[i];
+	// QueryTerm     *qti  = &m_q->m_qterms[qtix->m_qtermNum];
+
 	// and pair it with each other possible query term
 	for ( int32_t j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 		// skip if not part of score
 		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
 			continue;
+
+		// // skip if not in same field
+		// QueryTermInfo *qtjy = &qip[j];
+		// QueryTerm     *qtj  = &m_q->m_qterms[qtjy->m_qtermNum];
+
+		// if ( qti->m_fieldCode != qtj->m_fieldCode )
+		// 	continue;
+
 		// but if they are in the same wikipedia phrase
 		// then try to keep their positions as in the query.
 		// so for 'time enough for love' ideally we want
@@ -6796,6 +6807,14 @@ void PosdbTable::intersectLists10_r ( ) {
 		// skip if to the left of a pipe operator
 		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
 			continue;
+
+		// skip if in a field. although should make exception
+		// for title:
+		//QueryTermInfo *qtix = &qip[i];
+		//QueryTerm     *qti  = &m_q->m_qterms[qtix->m_qtermNum];
+		//if ( qti->m_fieldCode )
+		//	continue;
+
 		// sometimes there is no wordpos subtermlist for this docid
 		// because it just has the bigram, like "streetlight" and not
 		// the word "light" by itself for the query 'street light'
@@ -7013,11 +7032,22 @@ void PosdbTable::intersectLists10_r ( ) {
 	// skip if to the left of a pipe operator
 	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) continue;
 
+	// get the query term info
+	// QueryTermInfo *qtix = &qip[i];
+	// QueryTerm     *qti  = &m_q->m_qterms[qtix->m_qtermNum];
+
 	for ( int32_t j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 
 		// skip if to the left of a pipe operator
 		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
 			continue;
+
+		// skip if not in same field
+		// QueryTermInfo *qtjy = &qip[j];
+		// QueryTerm     *qtj  = &m_q->m_qterms[qtjy->m_qtermNum];
+
+		// if ( qti->m_fieldCode != qtj->m_fieldCode )
+		// 	continue;
 
 		//
 		// get score for term pair from non-body occuring terms
@@ -7457,8 +7487,10 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( ! si ) { char *xx=NULL;*xx=0; }
 
 		// note it because it is slow
-		log("query: kicking out docid %"INT64" from score buf",
-		    si->m_docId);
+		// this is only used if getting score info, which is
+		// not default when getting an xml or json feed
+		//log("query: kicking out docid %"INT64" from score buf",
+		//    si->m_docId);
 
 		// get his single and pair offsets
 		pairOffset   = si->m_pairsOffset;
