@@ -152,7 +152,7 @@ void allExitWrapper ( int fd , void *state ) ;
 
 void rmTest();
 
-int g_inMemCpy=0;
+int g_inMemcpy=0;
 
 //#ifndef _LARS_
 static void dumpTitledb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree,

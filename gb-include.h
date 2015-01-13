@@ -7,9 +7,15 @@
 //#define gbmemcpy memcpy_ass
 //#define memset memset_ass
 
-extern int g_inMemCpy;
+extern int g_inMemcpy;
 
-#define gbmemcpy(xx,yy,zz) {g_inMemCpy=1;memcpy(xx,yy,zz);g_inMemCpy=0;}
+//#define gbmemcpy(xx,yy,zz) {g_inMemcpy=1;memcpy(xx,yy,zz);g_inMemcpy=0;}
+
+// use bcopy() since when doing real-time profiling in Profiler.cpp
+// it interrupts the code with a signal and then calls backtrace() which
+// itself calls memcpy(). so if it interrupted the code in an memcpy()
+// it causes a segfault because memcpy() is not async safe.
+#define gbmemcpy(xx,yy,zz) {bcopy(yy,xx,zz); }
 
 #include <inttypes.h>
 

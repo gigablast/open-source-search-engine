@@ -1412,14 +1412,19 @@ Profiler::checkMissedQuickPoll( FrameTrace *frame,
 	if(ptr) ++ptr[1];
 }
 
-// from memcpy.cpp
-extern int g_inMemCpy;
+// from gb-include.h
+extern int g_inMemcpy;
 
 void
 Profiler::getStackFrame(int sig) {
 
-	// prevent cores
-	if ( g_inMemCpy ) return;
+	// prevent cores.
+	// TODO: hack this to a function somehow...
+	// we set this to positive values when calling library functions like
+	// zlib's inflate/deflate that call memcpy() so we can't measure
+	// those in the profiler unfortunately unless we put a hack in here
+	// somewhere. but for now just ignore.
+	if ( g_inMemcpy ) return;
 
 	void *trace[32];
 	uint32_t numFrames = backtrace(trace, 32);

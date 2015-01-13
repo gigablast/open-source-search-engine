@@ -48,6 +48,8 @@
 #include "PingServer.h"
 #include "Parms.h"
 
+extern int g_inMemcpy;
+
 #define MAXDOCLEN (1024*1024)
 
 HashTableX *g_ct = NULL;
@@ -32126,8 +32128,16 @@ int gbuncompress ( unsigned char *dest      ,
 	stream.zalloc = malloc_replace;//zliballoc;
 	stream.zfree  = free_replace;//zlibfree;
 	
+	// this calls memcpy so make sure Profiler.cpp doesn't crash
+	// since when it calls backtrace() that calls memcpy() too
+	// and it's not async safe
+	g_inMemcpy = 2;
+
 	//we can be gzip or deflate 
 	err = inflateInit2(&stream, 47);
+
+	g_inMemcpy = 0;
+
 	if (err != Z_OK) return err;
 	
 	err = inflate(&stream, Z_FINISH);
@@ -32205,7 +32215,15 @@ int gbcompress ( unsigned char *dest      ,
 	//setQuickPoll ( (char *)&g_loop.m_needsToQuickPoll, deflateQuickPoll);
 #endif
 
+	// this calls memcpy so make sure Profiler.cpp doesn't crash
+	// since when it calls backtrace() that calls memcpy() too
+	// and it's not async safe
+	g_inMemcpy = 3;
+
 	err = deflate(&stream, Z_FINISH);
+
+	g_inMemcpy = 0;
+
 	if (err != Z_STREAM_END) {
 		deflateEnd(&stream);
 		return err == Z_OK ? Z_BUF_ERROR : err;
