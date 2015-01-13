@@ -121,7 +121,7 @@ void RdbBucket::reBuf(char* newbuf) {
 		m_keys = newbuf;
 		return;
 	}
-	memcpy(newbuf, m_keys, m_numKeys * m_parent->getRecSize());
+	gbmemcpy(newbuf, m_keys, m_numKeys * m_parent->getRecSize());
 	if(m_endKey) m_endKey = newbuf + (m_endKey - m_keys);
 	m_keys = newbuf;
 }
@@ -255,7 +255,7 @@ bool RdbBucket::sort() {
 					if ( KEYNEG(lastKey) ) numNeg++;
 					p = lastKey;
 				}
-				memcpy(p, list2, recSize);
+				gbmemcpy(p, list2, recSize);
 				lastKey = p;
 				p += recSize;
 				list2 += recSize;
@@ -266,7 +266,7 @@ bool RdbBucket::sort() {
 		if(list2 >= list2end) {
 			// . if all that is left is list 1 just copy it into 
 			// . place, since it is already deduped
-			memcpy(p, list1, list1end - list1);
+			gbmemcpy(p, list1, list1end - list1);
 			p += list1end - list1;
 			break;
 		}
@@ -279,7 +279,7 @@ bool RdbBucket::sort() {
 				list1 += recSize;
 				continue;
 			}
-			memcpy(p, list1, recSize);
+			gbmemcpy(p, list1, recSize);
 			lastKey = p;
 			p += recSize;
 			list1 += recSize;
@@ -297,7 +297,7 @@ bool RdbBucket::sort() {
 				p = lastKey;
 			}
 
-			memcpy(p, list2, recSize);
+			gbmemcpy(p, list2, recSize);
 			lastKey = p;
 			p += recSize;
 			list2 += recSize;
@@ -314,7 +314,7 @@ bool RdbBucket::sort() {
 			}
 
 			//found dup, take list2's
- 			memcpy(p, list2, recSize);
+ 			gbmemcpy(p, list2, recSize);
 			lastKey = p;
  			p += recSize;
  			list2 += recSize;
@@ -347,7 +347,7 @@ RdbBucket* RdbBucket::split(RdbBucket* newBucket) {
 	int32_t b2NumKeys = m_numKeys - b1NumKeys;
 	int32_t recSize = m_parent->getRecSize();
 	//configure the new bucket
-	memcpy(newBucket->m_keys, 
+	gbmemcpy(newBucket->m_keys, 
 	       m_keys + (b1NumKeys*recSize),
 	       b2NumKeys * recSize);
 	newBucket->m_numKeys = b2NumKeys;
@@ -371,7 +371,7 @@ bool RdbBucket::addKey(char *key , char *data , int32_t dataSize) {
 	bool isNeg = KEYNEG(key);
 
 	char *newLoc = m_keys + (recSize * m_numKeys);
-	memcpy(newLoc, key, ks);
+	gbmemcpy(newLoc, key, ks);
 	
 	if(data) {
 		*(char**)(newLoc + ks) = data;
@@ -393,7 +393,7 @@ bool RdbBucket::addKey(char *key , char *data , int32_t dataSize) {
 		if(v == 0) {
 			// . just replace the old key if we were the same,
 			// . don't inc num keys
-			memcpy(m_endKey, newLoc, recSize);
+			gbmemcpy(m_endKey, newLoc, recSize);
 			if(KEYNEG(m_endKey)) {
 				if(isNeg) return true;
 				else m_parent->updateNumRecs(0, 0, -1);
@@ -770,7 +770,7 @@ bool RdbBuckets::resizeTable(int32_t numNeeded) {
 		//will now be contiguous and consistent
 		//with the ptrs array.
 		tmpBucketPtrs[i] = &tmpBucketSpace[i];
-		memcpy(&tmpBucketSpace[i],
+		gbmemcpy(&tmpBucketSpace[i],
 		       m_buckets[i],
 		       sizeof(RdbBucket));
 		tmpBucketSpace[i].reBuf(bucketMemPtr);
@@ -1730,7 +1730,7 @@ bool RdbBucket::deleteList(RdbList *list) {
 		else if (v < 0) {
 			// . copy this key into place, it was not in the 
 			// . delete list
-			if(p != currKey) memcpy(p, currKey, recSize);
+			if(p != currKey) gbmemcpy(p, currKey, recSize);
 			p += recSize;
 			currKey += recSize;
 		} 
@@ -1746,7 +1746,7 @@ bool RdbBucket::deleteList(RdbList *list) {
 	// . vacated mem?
 	if(currKey < lastKey) {
 		int32_t tmpSize = lastKey - currKey;
-		memcpy(p, currKey, tmpSize);
+		gbmemcpy(p, currKey, tmpSize);
 		p += tmpSize;
 	}
 
@@ -2196,30 +2196,30 @@ int64_t RdbBucket::fastSave_r(int fd, int64_t offset) {
 	char tmp[BTMP_SIZE];
 	char *p = tmp;
 
-	memcpy ( p , &m_collnum, sizeof(collnum_t) );
+	gbmemcpy ( p , &m_collnum, sizeof(collnum_t) );
 	p += sizeof(collnum_t);
 	//pwrite ( fd , &m_collnum, sizeof(collnum_t) , offset ); 
 	//offset += sizeof(collnum_t);
 
-	memcpy ( p , &m_numKeys, sizeof(int32_t) );
+	gbmemcpy ( p , &m_numKeys, sizeof(int32_t) );
 	p += sizeof(m_numKeys);
 	//pwrite ( fd , &m_numKeys, sizeof(int32_t) , offset ); 
 	//offset += sizeof(m_numKeys);
 
-	memcpy ( p , &m_lastSorted, sizeof(int32_t) ); 
+	gbmemcpy ( p , &m_lastSorted, sizeof(int32_t) ); 
 	p += sizeof(m_lastSorted);
 	//pwrite ( fd , &m_lastSorted, sizeof(int32_t) , offset ); 
 	//offset += sizeof(m_lastSorted);
 
 	int32_t endKeyOffset = m_endKey - m_keys;
-	memcpy ( p , &endKeyOffset, sizeof(int32_t) ); 
+	gbmemcpy ( p , &endKeyOffset, sizeof(int32_t) ); 
 	p += sizeof(int32_t);
 	//pwrite ( fd , &endKeyOffset, sizeof(int32_t) , offset ); 
 	//offset += sizeof(int32_t);
 	
 	int32_t recSize = m_parent->getRecSize();
 	
-	memcpy ( p , m_keys, recSize*m_numKeys ); 
+	gbmemcpy ( p , m_keys, recSize*m_numKeys ); 
 	p += recSize*m_numKeys;
 	//pwrite ( fd , m_keys, recSize*m_numKeys , offset ); 
 	//offset += recSize*m_numKeys;

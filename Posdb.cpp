@@ -1622,9 +1622,9 @@ void PosdbTable::intersectLists9_r ( ) {
 		char *p = list->m_list;
 		// remember to swap back when done!!
 		char ttt[10];
-		memcpy ( ttt   , p       , 12 );
-		memcpy ( p     , p + 12 , 6   );
-		memcpy ( p + 6 , ttt     , 12 );
+		gbmemcpy ( ttt   , p       , 12 );
+		gbmemcpy ( p     , p + 12 , 6   );
+		gbmemcpy ( p + 6 , ttt     , 12 );
 		// point to the low "hks" bytes now
 		p += 6;
 		// turn half bit on
@@ -2079,7 +2079,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		// it's 6 bytes, otherwise 12
 		if ( docId != prevDocId ) {
 			// TODO: make this not use memset
-			//memcpy ( mptr , nwp[mink] , 12 );
+			//gbmemcpy ( mptr , nwp[mink] , 12 );
 			*(int64_t *)mptr = *(int64_t *)nwp[mink];
 			*(int32_t *)(mptr+8) = *(int32_t *)(nwp[mink]+8);
 			// set the synbit so we know if its a synonym of term
@@ -2514,7 +2514,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		//char ks = g_posdb.getKeySize(nwp[mink]);
 		// if the first key in our merged list store the docid crap
 		if ( isFirstKey ) {
-			memcpy ( mptr , nwp[mink] , 12 );
+			gbmemcpy ( mptr , nwp[mink] , 12 );
 			// sanity check! make sure these not being used...
 			//if ( mptr[2] & 0x03 ) { char *xx=NULL;*xx=0; }
 			// wipe out its syn bits and re-use our way
@@ -5592,9 +5592,9 @@ void PosdbTable::intersectLists10_r ( ) {
 		char *p = list->m_list;
 		// remember to swap back when done!!
 		char ttt[12];
-		memcpy ( ttt   , p       , 12 );
-		memcpy ( p     , p + 12 , 6   );
-		memcpy ( p + 6 , ttt     , 12 );
+		gbmemcpy ( ttt   , p       , 12 );
+		gbmemcpy ( p     , p + 12 , 6   );
+		gbmemcpy ( p + 6 , ttt     , 12 );
 		// point to the low "hks" bytes now
 		p += 6;
 		// turn half bit on. first key is now 12 bytes!!
@@ -6560,7 +6560,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// if the first key in our merged list store the docid crap
 		if ( isFirstKey ) {
 			// store a 12 byte key in the merged list buffer
-			memcpy ( mptr , nwp[mink] , 12 );
+			gbmemcpy ( mptr , nwp[mink] , 12 );
 			// sanity check! make sure these not being used...
 			//if ( mptr[2] & 0x03 ) { char *xx=NULL;*xx=0; }
 			// wipe out its syn bits and re-use our way
@@ -7990,7 +7990,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// shift up
 			docId <<= 2;
 			// a 6 byte key means you pass
-			memcpy ( dst , &docId , 6 );
+			gbmemcpy ( dst , &docId , 6 );
 			dst += 6;
 			continue;
 		}
@@ -8008,7 +8008,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// shift up
 			docId <<= 2;
 			// a 6 byte key means you pass
-			memcpy ( dst , &docId , 6 );
+			gbmemcpy ( dst , &docId , 6 );
 			// test it
 			int64_t d2;
 			d2 = *(uint32_t *)(dst+1);

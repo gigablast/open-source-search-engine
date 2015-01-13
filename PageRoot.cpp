@@ -565,7 +565,7 @@ bool expandHtml (  SafeBuf& sb,
 				//p += gbstrlen ( p );	
 				sb.safePrintf("<input type=hidden name=c "
 					      "value=\"");
-				//memcpy ( p , coll , collLen );
+				//gbmemcpy ( p , coll , collLen );
 				//p += collLen;
 				sb.safeMemcpy(coll, collLen);
 				//sprintf ( p , "\">\n");
@@ -2155,7 +2155,7 @@ bool printTopDirectory ( SafeBuf& sb , char format ) {
 	//if (pend - p <= topListLen+1)
 	//	return p;
 	// copy it in
-	//memcpy(p, topList, topListLen);
+	//gbmemcpy(p, topList, topListLen);
 	//p += topListLen;
 	//*p = '\0';
 	//return p;
@@ -2394,7 +2394,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// save the "ufu" (url of file of urls)
 	st1->m_ufu[0] = '\0';
 	st1->m_ufuLen  = ufuLen;
-	memcpy ( st1->m_ufu , ufu , ufuLen );
+	gbmemcpy ( st1->m_ufu , ufu , ufuLen );
 	st1->m_ufu[ufuLen] = '\0';
 
 	st1->m_doTuringTest = cr->m_doTuringTest;

@@ -1158,7 +1158,7 @@ int32_t stripAccentMarks (char *outbuf, int32_t outbufsize,
 		// if the same, leave it! it had no accent marks or other
 		// modifiers...
 		if ( klen <= 1 ) {
-			memcpy ( dst , s , cs );
+			gbmemcpy ( dst , s , cs );
 			dst += cs;
 			continue;
 		}

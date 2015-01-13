@@ -398,7 +398,7 @@ bool Statsdb::addStat ( int32_t        niceness ,
 
 			// save this
 			int32_t saved = g_errno;
-			// need to add using rdb so it can memcpy the data
+			// need to add using rdb so it can gbmemcpy the data
 			if ( ! m_rdb.addRecord ( (collnum_t)0 ,
 						 (char *)&sk,
 						 (char *)&tmp,

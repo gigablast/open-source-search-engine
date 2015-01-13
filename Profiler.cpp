@@ -1414,6 +1414,10 @@ Profiler::checkMissedQuickPoll( FrameTrace *frame,
 
 void
 Profiler::getStackFrame(int sig) {
+
+	// prevent cores
+	if ( g_inMemCpy ) return;
+
 	void *trace[32];
 	uint32_t numFrames = backtrace(trace, 32);
 	if(numFrames < 3) return;

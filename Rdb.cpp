@@ -149,7 +149,7 @@ bool Rdb::init ( char          *dir                  ,
 	m_isCollectionLess = isCollectionLess;
 	// save the dbname NULL terminated into m_dbname/m_dbnameLen
 	m_dbnameLen = gbstrlen ( dbname );
-	memcpy ( m_dbname , dbname , m_dbnameLen );
+	gbmemcpy ( m_dbname , dbname , m_dbnameLen );
 	m_dbname [ m_dbnameLen ] = '\0';
 	// store the other parameters for initializing each Rdb
 	m_dedup            = dedup;

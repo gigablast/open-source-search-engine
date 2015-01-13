@@ -504,7 +504,7 @@ bool Msg39::doDocIdSplitLoop ( ) {
 	//   BUT only do this if we are in a "full split" config, because that
 	//   way we can guarantee all clusterdb recs are local (on this host)
 	//   and should be in the page cache. the page cache should do ultra
-	//   quick lookups and no memcpy()'s for this operation. it should
+	//   quick lookups and no gbmemcpy()'s for this operation. it should
 	//   be <<1ms to lookup thousands of docids.
 	// . when doing innerLoopSiteClustering we always use top tree now
 	//   because our number of "top docids" can be somewhat unpredictably 
@@ -655,7 +655,7 @@ bool Msg39::getLists () {
 			if ( ttlen > 254 ) ttlen = 254;
 			if ( ttlen < 0   ) ttlen = 0;
 			// old:painful: convert each term from unicode to ascii
-			memcpy ( tt , m_tmpq.getTerm(i) , ttlen );
+			gbmemcpy ( tt , m_tmpq.getTerm(i) , ttlen );
 			*/
 			int32_t isSynonym = 0;
 			QueryTerm *st = qt->m_synonymOf;
@@ -1142,7 +1142,7 @@ bool Msg39::addedLists ( ) {
 	//   BUT only do this if we are in a "full split" config, because that
 	//   way we can guarantee all clusterdb recs are local (on this host)
 	//   and should be in the page cache. the page cache should do ultra
-	//   quick lookups and no memcpy()'s for this operation. it should
+	//   quick lookups and no gbmemcpy()'s for this operation. it should
 	//   be <<1ms to lookup thousands of docids.
 	// . when doing innerLoopSiteClustering we always use top tree now
 	//   because our number of "top docids" can be somewhat unpredictably 
@@ -1504,7 +1504,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 				// empty FaceEntries only for range facets
 				// in Posdb.cpp
 				//if(fe->m_count == 0 ) { char *xx=NULL;*xx=0;}
-				memcpy ( p , fe , sizeof(FacetEntry) );
+				gbmemcpy ( p , fe , sizeof(FacetEntry) );
 				p += sizeof(FacetEntry);
 				// do not breach
 				if ( ++count >= (int32_t)MAX_FACETS ) break;

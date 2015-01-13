@@ -175,7 +175,7 @@ void SearchInput::test ( ) {
 }
 
 void SearchInput::copy ( class SearchInput *si ) {
-	memcpy ( (char *)this , (char *)si , sizeof(SearchInput) );
+	gbmemcpy ( (char *)this , (char *)si , sizeof(SearchInput) );
 }
 
 class SearchInput *g_si = NULL;
@@ -644,7 +644,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		m_sbuf1.safeStrcpy ( "site:" );
 		//p += ucToUtf8(p, pend-p,s, len, csStr, 0,0);
 		m_sbuf1.safeMemcpy ( s , len );
-		//memcpy ( p , s , len     ); p += len;
+		//gbmemcpy ( p , s , len     ); p += len;
 		// *p++ = ' ';
 		m_sbuf1.pushChar(' ');
 		s = t;
@@ -798,9 +798,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	// if ( m_url && m_url[0] ) {
 	// 	//if ( p > pstart ) *p++ = ' ';
 	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-	// 	//memcpy ( p , "+url:" , 5 ); p += 5;
+	// 	//gbmemcpy ( p , "+url:" , 5 ); p += 5;
 	// 	m_sbuf1.safeStrcpy ( "+url:");
-	// 	//memcpy ( p , m_url , m_urlLen ); p += m_urlLen;
+	// 	//gbmemcpy ( p , m_url , m_urlLen ); p += m_urlLen;
 	// 	m_sbuf1.safeStrcpy ( m_url );
 	// }
 	// append url: term
@@ -826,13 +826,13 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//p += ucToUtf8(p, pend-p, m_query, m_queryLen, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_query );
-		//memcpy ( p  , m_query , m_queryLen ); p  += m_queryLen;
+		//gbmemcpy ( p  , m_query , m_queryLen ); p  += m_queryLen;
 		// add to spell checked buf, too		
 		//if ( p2 > pstart2 ) *p2++ = ' ';
 		if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		//p2 +=ucToUtf8(p2, pend2-p2, m_query, m_queryLen, csStr, 0,0);
 		m_sbuf2.safeStrcpy ( m_query );
-		//memcpy ( p2 , m_query , m_queryLen ); p2 += m_queryLen;
+		//gbmemcpy ( p2 , m_query , m_queryLen ); p2 += m_queryLen;
 	}
 	// if ( m_query2 && m_query2[0] ) {
 	// 	//if ( p3 > pstart3 ) *p3++ = ' ';
@@ -862,7 +862,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		}
 		//p += ucToUtf8(p, pend-p, m_quote1, m_quoteLen1, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_quote1 );
-		//memcpy ( p , m_quote1 , m_quoteLen1 ); p += m_quoteLen1 ;
+		//gbmemcpy ( p , m_quote1 , m_quoteLen1 ); p += m_quoteLen1 ;
 		//*p++ = '\"';
 		m_sbuf1.safeStrcpy("\"");
 		// add to spell checked buf, too
@@ -872,7 +872,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		//*p2++ = '\"';
 		//p2+=ucToUtf8(p2, pend2-p2, m_quote1, m_quoteLen1, csStr,0,0);
 		m_sbuf2.safeStrcpy ( m_quote1 );
-		//memcpy ( p2 , m_quote1 , m_quoteLen1 ); p2 += m_quoteLen1 ;
+		//gbmemcpy ( p2 , m_quote1 , m_quoteLen1 ); p2 += m_quoteLen1 ;
 		//*p2++ = '\"';
 		m_sbuf2.safeStrcpy("\"");
 	}
@@ -899,7 +899,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		//m_sbuf1.safeStrcpy("+\"");
 		//p += ucToUtf8(p, pend-p, m_quote2, m_quoteLen2, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_quote2 );
-		//memcpy ( p , m_quote2 , m_quoteLen2 ); p += m_quoteLen2 ;
+		//gbmemcpy ( p , m_quote2 , m_quoteLen2 ); p += m_quoteLen2 ;
 		//*p++ = '\"';
 		m_sbuf1.safeStrcpy("\"");
 		// add to spell checked buf, too
@@ -910,7 +910,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		//m_sbuf2.safeStrcpy("+\"");
 		//p2+=ucToUtf8(p2, pend2-p2, m_quote2, m_quoteLen2, csStr,0,0);
 		m_sbuf2.safeStrcpy ( m_quote2 );
-		//memcpy ( p2 , m_quote2 , m_quoteLen2 ); p2 += m_quoteLen2 ;
+		//gbmemcpy ( p2 , m_quote2 , m_quoteLen2 ); p2 += m_quoteLen2 ;
 		//*p2++ = '\"';
 		m_sbuf2.safeStrcpy("\"");
 	}
@@ -1047,7 +1047,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//char *str = "gbkeyword:numinlinks";
 		//int32_t  len = gbstrlen(str);
-		//memcpy ( p , str , len );
+		//gbmemcpy ( p , str , len );
 		//p += len;
 		m_sbuf1.safePrintf ( "gbkeyword:numinlinks");
 	}

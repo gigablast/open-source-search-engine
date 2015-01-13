@@ -9,7 +9,7 @@
 /*
 int64_t TopNode::getDocId ( ) {
 	int64_t d;
-	memcpy ( &d , m_docIdPtr , 6 );
+	gbmemcpy ( &d , m_docIdPtr , 6 );
 	d >>= 2;
 	d &= DOCID_MASK;
 	return d;
@@ -18,7 +18,7 @@ int64_t TopNode::getDocId ( ) {
 
 int64_t TopNode::getDocIdForMsg3a ( ){
 	int64_t d;
-	memcpy ( &d , m_docIdPtr , 6 );
+	gbmemcpy ( &d , m_docIdPtr , 6 );
 	//	d >>= 2;
 	d &= DOCID_MASK;
 	return d;

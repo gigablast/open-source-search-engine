@@ -1460,5 +1460,5 @@ void adjustContentLength ( SafeBuf *rb ) {
 	char ttt[32];
 	int32_t toPrint = sprintf(ttt,format,clen);
 	// just copy it over, padded with zeroes
-	memcpy ( f , ttt , toPrint );
+	gbmemcpy ( f , ttt , toPrint );
 }

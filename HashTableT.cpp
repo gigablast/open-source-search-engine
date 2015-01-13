@@ -97,8 +97,8 @@ bool HashTableT<Key_t, Val_t>::copy(HashTableT<Key_t, Val_t>* src) {
 	// maybe this should be a member copy, but that's a LOT slower and
 	//  bitwise should work with everything we're using the HashTableT 
 	//  for so far
-	memcpy(newKeys, src->m_keys, keySize);
-	memcpy(newVals, src->m_vals, valSize);
+	gbmemcpy(newKeys, src->m_keys, keySize);
+	gbmemcpy(newVals, src->m_vals, valSize);
 	reset();
 	m_keys = newKeys;
 	m_vals = newVals;
@@ -397,9 +397,9 @@ int32_t HashTableT<Key_t, Val_t>::deserialize(char* s) {
 		return p - s;
 	}
 
-	memcpy((char*)m_keys, p, sizeof(Key_t) * numSlots);
+	gbmemcpy((char*)m_keys, p, sizeof(Key_t) * numSlots);
 	p += sizeof(Key_t) * numSlots;
-	memcpy((char*)m_vals, p, sizeof(Val_t) * numSlots);
+	gbmemcpy((char*)m_vals, p, sizeof(Val_t) * numSlots);
 	p += sizeof(Val_t) * numSlots;
 	m_numSlotsUsed = numSlotsUsed;
 	return p - s;

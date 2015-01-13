@@ -686,10 +686,10 @@ bool Images::downloadImages () {
 		// now copy the data over sequentially
 		char *p = ti->m_buf;
 		// the image url
-		memcpy(p,m_imageUrl.getUrl(),urlSize);
+		gbmemcpy(p,m_imageUrl.getUrl(),urlSize);
 		p += urlSize;
 		// the image thumbnail data
-		memcpy(p,m_imgData,m_thumbnailSize);
+		gbmemcpy(p,m_imgData,m_thumbnailSize);
 		p += m_thumbnailSize;
 		// update buf length of course
 		m_imageBuf.setLength ( p - m_imageBuf.getBufStart() );

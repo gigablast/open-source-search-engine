@@ -119,7 +119,7 @@ class Titledb {
 	// . dptr is a char ptr to the docid
 	// . used by IndexTable2.cpp
 	// . "dptr" is pointing into a 6-byte indexdb key
-	// . see IndexTable2.cpp, grep for memcpy() to see
+	// . see IndexTable2.cpp, grep for gbmemcpy() to see
 	//   how the docid is parsed out of this key (or see
 	//   Indexdb.h)
 	// . return  ((*((uint16_t *)dptr)) >> 8) & 0xff; }

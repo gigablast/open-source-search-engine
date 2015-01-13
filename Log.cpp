@@ -571,11 +571,11 @@ void Log::printBuf ( ) {
 	}
 	// first 4 bytes are the size of the string arguments
 	int32_t stringSizes;
-	memcpy ( (char *)&stringSizes , p , 4 );
+	gbmemcpy ( (char *)&stringSizes , p , 4 );
 	p += 4;
 	// then the type of the msg
 	int32_t type;
-	memcpy ( (char *)&type , p , 4 );
+	gbmemcpy ( (char *)&type , p , 4 );
 	p += 4;
 	// then the format string
 	char *format = p;
@@ -601,11 +601,11 @@ void Log::printBuf ( ) {
 	}
 	// get time
 	int64_t now ;
-	memcpy ( (char *)&now , p , 8 );
+	gbmemcpy ( (char *)&now , p , 8 );
 	p += 8;
 	// get size of args
 	int32_t apsize ;
-	memcpy ( (char *)&apsize , p , 4 );
+	gbmemcpy ( (char *)&apsize , p , 4 );
 	p += 4;
 	// dword align
 	int32_t rem = ((PTRTYPE)p) % 4;

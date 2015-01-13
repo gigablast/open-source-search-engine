@@ -191,16 +191,16 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	char s [ MAX_URL_LEN ];
 	int32_t len = tlen;
 	// store filtered url into s
-	memcpy ( s , t , tlen );
+	gbmemcpy ( s , t , tlen );
 	s[len]='\0';
 
 	// make http:////www.xyz.com into http://www.xyz.com
 	// if ( len > 14 && s[7]=='/' && ! strncasecmp ( s , "http:////" ,9) ){
-	// 	memcpy (s+7,s+9,len-9+1);
+	// 	gbmemcpy (s+7,s+9,len-9+1);
 	// 	len -= 2;
 	// }
 	// if ( len > 14 && s[8]=='/' && ! strncasecmp ( s ,"https:////",10)){
-	// 	memcpy (s+8,s+10,len-9+1);
+	// 	gbmemcpy (s+8,s+10,len-9+1);
 	// 	len -= 2;
 	// }
 
@@ -443,7 +443,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	*/
 	// otherwise we had no syntactically correct protocol
 	else {
-		memcpy ( m_url,"http://" , 7 );
+		gbmemcpy ( m_url,"http://" , 7 );
 		m_scheme = m_url;
 		m_slen   = 4;
 		m_ulen   = 7;
@@ -468,7 +468,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . common mistake: if hostname has no '.' in it append a ".com"
 	// . now that we use hosts in /etc/hosts we no longer do this
 	//if ( m_hlen > 0 && strchr ( m_host ,'.' ) == NULL ) {
-	//	memcpy ( &m_host[m_hlen] , ".com" , 4 );
+	//	gbmemcpy ( &m_host[m_hlen] , ".com" , 4 );
 	//	m_hlen += 4;
 	//}
 	// advance m_ulen to end of hostname
@@ -514,7 +514,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . let's only add "www." if there's only 1 period, ok?
 	if ( ! m_ip && addWWW && m_host == m_domain  && strchr(m_host,'.') ) {
 		memmove ( m_host + 4 , m_host , m_hlen );
-		memcpy ( m_host , "www." , 4 );
+		gbmemcpy ( m_host , "www." , 4 );
 		if ( m_domain ) m_domain += 4;
 		if ( m_tld    ) m_tld    += 4;
 		m_ulen += 4;
@@ -616,7 +616,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . the query is anything after the path that starts with ?
 	// . NOTE: we ignore strings beginning with '#' (page relative anchors)
 	if ( i < len && s[i] != '#' ) {
-		//memcpy ( m_url + m_ulen , s + i , len - i );
+		//gbmemcpy ( m_url + m_ulen , s + i , len - i );
 		//remove back to back &'s in the cgi query
 		//http://www.nyasatimes.com/national/politics/160.html?print&&&
 		char *kstart = s + i;
@@ -651,7 +651,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	if ( anchorLen > 0 &&
 	     m_ulen + anchorLen + 2 < MAX_URL_LEN ) {
 		m_anchor = &m_url[m_ulen+1];
-		memcpy(&m_url[m_ulen+1], &t[anchorPos], anchorLen);
+		gbmemcpy(&m_url[m_ulen+1], &t[anchorPos], anchorLen);
 		m_url[m_ulen+1+anchorLen] = '\0';
 	}
  done:
@@ -971,11 +971,11 @@ bool Url::isSpam() {
 	char s [ MAX_URL_LEN ];
 	// don't store the .com or .org while searching for isSpam
 	int32_t  slen = m_hlen - m_tldLen - 1;
-	memcpy ( s , m_host , slen );
+	gbmemcpy ( s , m_host , slen );
 	if ( ! m_domain ) return false;
 	if ( ! m_dlen   ) return false;
 	//int32_t  len = m_dlen;
-	//memcpy ( s , m_domain , len );
+	//gbmemcpy ( s , m_domain , len );
 	// if tld is gov or edu or org, not porn
 	if ( m_tldLen >= 3 && strncmp ( m_tld , "edu" , 3 )==0 ) return false;
 	if ( m_tldLen >= 3 && strncmp ( m_tld , "gov" , 3 )==0 ) return false;

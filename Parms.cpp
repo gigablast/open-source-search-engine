@@ -2704,8 +2704,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			strncpy ( s, "00:00", 5 );
 		char hr[3];
 		char min[3];
-		memcpy ( hr, s, 2 );
-		memcpy ( min, s + 3, 2 );
+		gbmemcpy ( hr, s, 2 );
+		gbmemcpy ( min, s + 3, 2 );
 		hr[2] = '\0';
 		min[2] = '\0';
 		// print the time in the input forms
@@ -3013,7 +3013,7 @@ bool Parms::removeParm ( int32_t i , int32_t an , char *THIS ) {
 	// how much to bury it with
 	int32_t size = (num - an - 1 ) * m->m_size ;
 	// bury it
-	memcpy ( dst , src , size );
+	gbmemcpy ( dst , src , size );
 
 	// and detach the buf on the tail so it doesn't core in Mem.cpp
 	// when it tries to free...
@@ -3240,7 +3240,7 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 		     memcmp ( dst , s , len ) == 0 ) 
 			return;
 		// this means that we can not use string POINTERS as parms!!
-		if ( ! isHtmlEncoded ) memcpy ( dst , s , len ); 
+		if ( ! isHtmlEncoded ) {gbmemcpy ( dst , s , len ); }
 		else                   len = htmlDecode (dst , s,len,false,0);
 		dst[len] = '\0';
 		// . might have to set length
@@ -3380,7 +3380,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 			if ( ! argcr ) { char *xx=NULL;*xx=0; }
 			char *def = m->m_defOff+(char *)argcr;
 			char *dst = (char *)THIS + m->m_off;
-			memcpy ( dst , def , m->m_size );
+			gbmemcpy ( dst , def , m->m_size );
 			continue;
 		}
 		// leave arrays empty, set everything else to default
@@ -3900,10 +3900,10 @@ skip2:
 			d++; 
 		}
 		if ( ! *d ) last = d;
-		//memcpy ( p , "# " , 2 ); 
+		//gbmemcpy ( p , "# " , 2 ); 
 		//p += 2;
 		sb.safeMemcpy("# ",2);
-		//memcpy ( p , start , last - start );
+		//gbmemcpy ( p , start , last - start );
 		//p += last - start;
 		sb.safeMemcpy(start,last-start);
 		//*p++='\n';
@@ -4353,7 +4353,7 @@ bool Parms::serializeConfParm( Parm *m, int32_t i, char **p, char *end,
 			// copy the parm's whole value
 			if ( sp->val + size > end )
 				return true; // overflow
-			memcpy( sp->val, 
+			gbmemcpy( sp->val, 
 				(char *)&g_conf + m->m_off, size );
 			// inc by tot size if array
 			*p += sizeof( *sp ) + size; 
@@ -4467,7 +4467,7 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 			// copy whole value
 			if ( sp->val + size > end )
 				return true;
-			memcpy( sp->val, 
+			gbmemcpy( sp->val, 
 				(char *)cr + m->m_off, 
 				size );
 			// inc by whole size of value
@@ -4617,7 +4617,7 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 					       sp->size ) );
 		if ( ! goodParm ) {
 			// copy the new parm to m's loc
-			memcpy( (char *)&g_conf + m->m_off, sp->val, 
+			gbmemcpy( (char *)&g_conf + m->m_off, sp->val, 
 				sp->size );
 
 			// set num of member
@@ -4745,7 +4745,7 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 
 		if ( 0 != memcmp( sp->val, (char *)cr + m->m_off, sp->size) ) {
 			// copy the new value
-			memcpy( (char *)cr + m->m_off, 
+			gbmemcpy( (char *)cr + m->m_off, 
 				sp->val,
 				sp->size );
 			
@@ -21850,7 +21850,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	}
 	else {
 		// and copy the data into collrec or g_conf
-		memcpy ( dst , data , dataSize );
+		gbmemcpy ( dst , data , dataSize );
 	}
 
 	SafeBuf val2;
@@ -22671,7 +22671,7 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 			}
 			else {
 				// this should work for most types
-				memcpy ( dst , src , m->m_size );
+				gbmemcpy ( dst , src , m->m_size );
 			}
 			continue;
 		}
@@ -22696,7 +22696,7 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 			}
 			else {
 				// this should work for most types
-				memcpy ( dst , src , m->m_size );
+				gbmemcpy ( dst , src , m->m_size );
 			}
 
 			src += m->m_size;

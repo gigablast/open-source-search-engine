@@ -589,7 +589,7 @@ void handleRequest22 ( UdpSlot *slot , int32_t netnice ) {
 	       // then dataSize
 	       *(int32_t *)p = dataSize; p += 4;
 	       // then the data
-	       memcpy ( p , data , dataSize ); p += dataSize;
+	       gbmemcpy ( p , data , dataSize ); p += dataSize;
 	       // send off the record
 	       us->sendReply_ass (buf, need,buf, need,slot);
 	       // don't forget to free the state
@@ -976,7 +976,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// otherwise, alloc space for the reply
 			reply = (char *)mmalloc (recSize, "Msg22");
 			if ( ! reply ) goto hadError;
-			memcpy ( reply , rec , recSize );
+			gbmemcpy ( reply , rec , recSize );
 		}
 		// otherwise we send back the whole list!
 		else {

@@ -1338,7 +1338,7 @@ char *getNewCollName ( ) { // char *token , int32_t tokenLen ) {
 	//if ( tokenLen + 16 + 5>= MAX_COLL_LEN ) { char *xx=NULL;*xx=0;}
 	// ensure the crawlid is the full 16 characters long so we
 	// can quickly extricate the crawlid from the collection name
-	//memcpy ( s_collBuf, token, tokenLen );
+	//gbmemcpy ( s_collBuf, token, tokenLen );
 	//sprintf(s_collBuf + tokenLen ,"-%016"XINT64"",crawlId64);
 	sprintf(s_collBuf ,"%016"XINT64"",crawlId64);
 	return s_collBuf;

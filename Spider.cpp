@@ -3797,7 +3797,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// count it
 		recCount++;
 		// sanity
-		memcpy ( (char *)&finalKey , rec , sizeof(key128_t) );
+		gbmemcpy ( (char *)&finalKey , rec , sizeof(key128_t) );
 		// skip to next guy
 		list->skipCurrentRecord();
 		// negative? wtf?
@@ -4453,7 +4453,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// sanity check
 		if ( rsize > (int32_t)MAX_BEST_REQUEST_SIZE){char *xx=NULL;*xx=0;}
 		// now store this SpiderRequest for adding to doledb
-		memcpy ( m_bestRequestBuf , winReq, rsize );
+		gbmemcpy ( m_bestRequestBuf , winReq, rsize );
 		// point to that
 		m_bestRequest = (SpiderRequest *)m_bestRequestBuf;
 		// set this
@@ -4504,7 +4504,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	if ( srep ) { // && ! m_isReadDone ) {
 		int32_t rsize = srep->getRecSize();
 		if ( rsize > (int32_t)MAX_SP_REPLY_SIZE ) { char *xx=NULL;*xx=0; }
-		memcpy ( m_lastReplyBuf, srep, rsize );
+		gbmemcpy ( m_lastReplyBuf, srep, rsize );
 		m_lastReplyValid = true;
 	}
 
@@ -4849,7 +4849,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	int32_t recSize = m_bestRequest->getRecSize();
 	*(int32_t *)p = recSize;
 	p += 4;
-	memcpy ( p , m_bestRequest , recSize );
+	gbmemcpy ( p , m_bestRequest , recSize );
 	p += recSize;
 	// sanity check
 	if ( p - m_doleBuf > (int32_t)MAX_DOLEREC_SIZE ) { char *xx=NULL;*xx=0; }
@@ -12357,7 +12357,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
 
 		if ( cia )
-			memcpy ( &cia[h->m_hostId] , ptr , sizeof(CrawlInfo));
+			gbmemcpy ( &cia[h->m_hostId] , ptr , sizeof(CrawlInfo));
 		
 		// debug
 		// log("spd: got ci from host %"INT32" downloads=%"INT64", replies=%"INT32"",
@@ -12506,7 +12506,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
 		// in between packets received.
-		//memcpy ( &cr->m_globalCrawlInfo , 
+		//gbmemcpy ( &cr->m_globalCrawlInfo , 
 		//	 &cr->m_tmpCrawlInfo ,
 		//	 sizeof(CrawlInfo) );
 

@@ -65,9 +65,9 @@ inline void swap_10(uint8_t* pi, uint8_t* pj) {
 	if (pi == pj)
 		return;
 	uint8_t		tmp[10];
-	memcpy(tmp, pi, 10);
-	memcpy(pi, pj, 10);
-	memcpy(pj, tmp, 10);
+	gbmemcpy(tmp, pi, 10);
+	gbmemcpy(pi, pj, 10);
+	gbmemcpy(pj, tmp, 10);
 }
 
 inline void siftup_10_1_5(uint8_t* arr, int32_t u) {

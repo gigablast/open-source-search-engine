@@ -162,7 +162,7 @@ bool SafeBuf::safeMemcpy(char *s, int32_t len) {
 	if ( m_length + len > m_capacity ) {
 		if ( ! reserve(m_length+len) ) return false;
 	}
-	memcpy(m_buf + m_length, s, len);
+	gbmemcpy(m_buf + m_length, s, len);
 	m_length = m_length + len; // tmp-1;
 	// this should not hurt anything
 	//m_buf[m_length] = '\0';
@@ -179,7 +179,7 @@ bool SafeBuf::safeMemcpy_nospaces(char *s, int32_t len) {
 		if ( is_wspace_a(s[i]) ) continue;
 		m_buf[m_length++] = s[i];
 	}
-	//memcpy(m_buf + m_length, s, len);
+	//gbmemcpy(m_buf + m_length, s, len);
 	//m_length = tmp-1;
 	// this should not hurt anything
 	m_buf[m_length] = '\0';
@@ -389,7 +389,7 @@ bool SafeBuf::reserve(int32_t i , char *label, bool clearIt ) {
 			}
 			log(LOG_DEBUG, "query: safebuf switching to heap: %"INT32"",
 			    m_capacity);
-			memcpy(m_buf, tmpBuf, m_length);
+			gbmemcpy(m_buf, tmpBuf, m_length);
 			// reset to 0's?
 			if ( clearIt ) {
 				int32_t clearSize = m_capacity - tmpCap;
@@ -706,7 +706,7 @@ bool SafeBuf::replace ( char *src , char *dst ) {
 				      0 );
 	}
 	for ( char *p = strstr ( m_buf , src ) ; p ; p = strstr(p+len1,src ) )
-		memcpy ( p , dst , len2 );
+		gbmemcpy ( p , dst , len2 );
 	return true;
 }
 
@@ -746,7 +746,7 @@ bool SafeBuf::safeReplace ( char *s, int32_t len, int32_t pos, int32_t replaceLe
 	}
 	// replace
 	char *p = m_buf + pos;
-	memcpy(p, s, len);
+	gbmemcpy(p, s, len);
 	m_length = newLen;
 	// silent terminating \0
 	m_buf[m_length] = '\0';
@@ -811,7 +811,7 @@ bool SafeBuf::safeReplace2 ( char *s, int32_t slen,
 		// check all chars now
 		if ( slen >= 3 && strncmp(p,s,slen) ) continue;
 		// undo copy
-		memcpy ( dst , t , tlen );
+		gbmemcpy ( dst , t , tlen );
 		// advance for that
 		dst += tlen - 1;
 		p   += slen - 1;
@@ -1227,7 +1227,7 @@ bool  SafeBuf::htmlEncode(char *s, int32_t lenArg, bool encodePoundSign ,
 	}
 
 	if ( truncate ) {
-		memcpy ( t , "... " , 4 );
+		gbmemcpy ( t , "... " , 4 );
 		t += 4;
 	}
 
@@ -1771,7 +1771,7 @@ bool SafeBuf::safePrintFilterTagsAndLines ( char *p , int32_t plen ,
 		// . if only 1 byte, done
 		if ( size == 1 ) { *dst++ = *p; continue; }
 		// might consist of multiple bytes in utf8
-		memcpy ( dst , p , size );
+		gbmemcpy ( dst , p , size );
 		dst += size;
 	}
 	// sanity scan
@@ -1828,7 +1828,7 @@ void SafeBuf::filterTags ( ) {
 		// . if only 1 byte, done
 		if ( size == 1 ) { *dst++ = *p; continue; }
 		// might consist of multiple bytes in utf8
-		memcpy ( dst , p , size );
+		gbmemcpy ( dst , p , size );
 		dst += size;
 	}
 	// update length now
@@ -1939,20 +1939,20 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) {
 		QUICKPOLL(niceness);
 		// make > into &gt; then break out
 		if ( inXmlTag && *p == '>' ) {
-			memcpy ( dst , "&gt;", 4 );
+			gbmemcpy ( dst , "&gt;", 4 );
 			dst += 4;
 			inXmlTag = false;
 			continue;
 		}
 		// translate \n to br for xml docs
 		if ( *p == '\n' ) {
-			memcpy ( dst , "<br>", 4 );
+			gbmemcpy ( dst , "<br>", 4 );
 			dst += 4;
 			continue;
 		}
 		// translate \n to br for xml docs
 		if ( *p == '\t' ) {
-			memcpy ( dst , "&nbsp;&nbsp;&nbsp;", 18 );
+			gbmemcpy ( dst , "&nbsp;&nbsp;&nbsp;", 18 );
 			dst += 18;
 			continue;
 		}
@@ -1973,7 +1973,7 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) {
 			continue;
 		}
 		// ok, it's an xml tag so use &lt;
-		memcpy ( dst, "&lt;", 4 );
+		gbmemcpy ( dst, "&lt;", 4 );
 		dst += 4;
 		inXmlTag = true;
 	}
@@ -2058,13 +2058,13 @@ bool SafeBuf::truncateLongWords ( char *s , int32_t srcLen , int32_t minmax ) {
 			// if we had a nice break point at "src" or int16_tly
 			// thereafter, then break right after that!
 			if ( *x && x < xend ) {
-				memcpy ( dst , src , x - src );
+				gbmemcpy ( dst , src , x - src );
 				dst += x - src;
 				src = x;
 			}
 
 
-			memcpy ( dst , "... " , 4 );
+			gbmemcpy ( dst , "... " , 4 );
 			dst += 4;
 			// skip until space or tag
 			for ( ; *src ; src++ ) {
@@ -2091,7 +2091,7 @@ bool SafeBuf::truncateLongWords ( char *s , int32_t srcLen , int32_t minmax ) {
 			*dst++ = *src;
 			continue;
 		}
-		memcpy ( dst , src , size );
+		gbmemcpy ( dst , src , size );
 		dst += size;
 	}
 	// remove trailing space in case we ended in "... "
@@ -2461,7 +2461,7 @@ bool SafeBuf::convertJSONtoXML ( int32_t niceness , int32_t startConvertPos ) {
 	char *dst = dbuf.m_buf;
 
 	// copy over the mime verbatim
-	memcpy ( dst , m_buf , startConvertPos );
+	gbmemcpy ( dst , m_buf , startConvertPos );
 	dst += startConvertPos;
 
 	// skip data header, should point to { then
@@ -2491,7 +2491,7 @@ bool SafeBuf::convertJSONtoXML ( int32_t niceness , int32_t startConvertPos ) {
 		if ( *src == '{' ) {
 			if ( level == 0 ) {
 				startEvent = true;
-				memcpy(dst,"<event>\n",8);
+				gbmemcpy(dst,"<event>\n",8);
 				dst += 8;
 			}
 			level++;
@@ -2503,7 +2503,7 @@ bool SafeBuf::convertJSONtoXML ( int32_t niceness , int32_t startConvertPos ) {
 		if ( *src == '}' ) {
 			level--;
 			if ( level == 0 ) {
-				memcpy(dst,"</event>\n",9);
+				gbmemcpy(dst,"</event>\n",9);
 				dst += 9;
 			}
 			src++;
@@ -2548,7 +2548,7 @@ bool SafeBuf::convertJSONtoXML ( int32_t niceness , int32_t startConvertPos ) {
 				nlen = 10;
 			}
 
-			memcpy ( dst , name , nlen );
+			gbmemcpy ( dst , name , nlen );
 			dst += nlen;
 			*dst++ = '>';
 
@@ -2586,12 +2586,12 @@ bool SafeBuf::convertJSONtoXML ( int32_t niceness , int32_t startConvertPos ) {
 			}
 			// ok, that's the value
 			int32_t vlen = vend - val;
-			memcpy ( dst , val , vlen );
+			gbmemcpy ( dst , val , vlen );
 			dst += vlen;
 			// name end tag
-			memcpy ( dst , "</" , 2 );
+			gbmemcpy ( dst , "</" , 2 );
 			dst += 2;
-			memcpy ( dst , name , nlen );
+			gbmemcpy ( dst , name , nlen );
 			dst += nlen;
 			*dst++ = '>';
 			*dst++ = '\n';
@@ -2996,7 +2996,7 @@ bool SafeBuf::linkify ( int32_t niceness , int32_t startPos ) {
 	char *dst = dbuf.m_buf;
 
 	// copy header over
-	memcpy ( dst , src , startPos );
+	gbmemcpy ( dst , src , startPos );
 	// update them
 	src += startPos;
 	dst += startPos;
@@ -3048,17 +3048,17 @@ bool SafeBuf::linkify ( int32_t niceness , int32_t startPos ) {
 			continue;
 		}
 		// then store the link
-		memcpy ( dst , "<a target=_parent href=\"", 24 );
+		gbmemcpy ( dst , "<a target=_parent href=\"", 24 );
 		dst += 24;
-		memcpy ( dst , start , size );
+		gbmemcpy ( dst , start , size );
 		dst += size;
-		memcpy ( dst, "\">" , 2);
+		gbmemcpy ( dst, "\">" , 2);
 		dst += 2;
 		// print the link text
-		memcpy ( dst , start , size );
+		gbmemcpy ( dst , start , size );
 		dst += size;
 		// the ending anchor
-		memcpy ( dst , "</a>" , 4 );
+		gbmemcpy ( dst , "</a>" , 4 );
 		dst += 4;
 		// and skip the src ahead now too, after the link
 		src += size;
@@ -3109,20 +3109,20 @@ bool SafeBuf::brify ( char *s , int32_t slen , int32_t niceness ) {
 		QUICKPOLL(niceness);
 		// make > into &gt; then break out
 		if ( inXmlTag && *p == '>' ) {
-			memcpy ( dst , "&gt;", 4 );
+			gbmemcpy ( dst , "&gt;", 4 );
 			dst += 4;
 			inXmlTag = false;
 			continue;
 		}
 		// translate \n to br for xml docs
 		if ( *p == '\n' ) {
-			memcpy ( dst , "<br>", 4 );
+			gbmemcpy ( dst , "<br>", 4 );
 			dst += 4;
 			continue;
 		}
 		// translate \n to br for xml docs
 		if ( *p == '\t' ) {
-			memcpy ( dst , "&nbsp;&nbsp;&nbsp;", 18 );
+			gbmemcpy ( dst , "&nbsp;&nbsp;&nbsp;", 18 );
 			dst += 18;
 			continue;
 		}
@@ -3143,7 +3143,7 @@ bool SafeBuf::brify ( char *s , int32_t slen , int32_t niceness ) {
 			continue;
 		}
 		// ok, it's an xml tag so use &lt;
-		memcpy ( dst, "&lt;", 4 );
+		gbmemcpy ( dst, "&lt;", 4 );
 		dst += 4;
 		inXmlTag = true;
 	}

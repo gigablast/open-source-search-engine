@@ -150,7 +150,7 @@ class DnsProtocol : public UdpProtocol {
 				 bool    hadError    ,
 				 int32_t    niceness    ) {
 		//if ( msgSize > maxDgramSize ) msgSize = maxDgramSize;
-		//memcpy ( dgram , msg , msgSize );
+		//gbmemcpy ( dgram , msg , msgSize );
 		//return msgSize;
 		return;
 	}

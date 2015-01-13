@@ -664,10 +664,10 @@ const char *HttpMime::getContentEncodingFromExtension ( char *ext ) {
 // make a redirect mime
 void HttpMime::makeRedirMime ( char *redir , int32_t redirLen ) {
 	char *p = m_buf;
-	memcpy ( p , "HTTP/1.0 302 RD\r\nLocation: " , 27 );
+	gbmemcpy ( p , "HTTP/1.0 302 RD\r\nLocation: " , 27 );
 	p += 27;
 	if ( redirLen > 600 ) redirLen = 600;
-	memcpy ( p , redir , redirLen );
+	gbmemcpy ( p , redir , redirLen );
 	p += redirLen;
 	*p++ = '\r';
 	*p++ = '\n';

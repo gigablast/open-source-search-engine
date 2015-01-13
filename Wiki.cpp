@@ -593,7 +593,7 @@ void Wiki::doneReadingWiki ( ) {
 		// get ptr to it
 		char *wptr = w.getWord ( 0 );
 		// copy that
-		memcpy ( m_randPhrase , wptr , size );
+		gbmemcpy ( m_randPhrase , wptr , size );
 		// NULL terminate
 		m_randPhrase[size] = '\0';
 		// all done

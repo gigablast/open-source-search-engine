@@ -228,15 +228,15 @@ bool HttpServer::getDoc ( char   *url      ,
 		req = (char *) mmalloc( need ,"HttpServer");
 		char *p = req;
 		if ( req && sb.length() ) {
-			memcpy ( p , sb.getBufStart() , sb.length() );
+			gbmemcpy ( p , sb.getBufStart() , sb.length() );
 			p += sb.length();
 		}
 		if ( req ) {
-			memcpy ( p , r.getRequest() , reqSize );
+			gbmemcpy ( p , r.getRequest() , reqSize );
 			p += reqSize;
 		}
 		if ( req && pcLen ) {
-			memcpy ( p , postContent , pcLen );
+			gbmemcpy ( p , postContent , pcLen );
 			p += pcLen;
 		}
 		reqSize = p - req;
@@ -810,7 +810,7 @@ void HttpServer::requestHandler ( TcpSocket *s ) {
 	char stackMem[1024];
 	int32_t maxLen = s->m_readOffset;
 	if ( maxLen > 1020 ) maxLen = 1020;
-	memcpy(stackMem,s->m_readBuf,maxLen);
+	gbmemcpy(stackMem,s->m_readBuf,maxLen);
 	stackMem[maxLen] = '\0';
 
 	// . sendReply returns false if blocked, true otherwise
@@ -1442,7 +1442,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		delete (f); 
 		return sendErrorReply(s,500,mstrerror(g_errno));
 	}
-	memcpy ( sendBuf , m.getMime() , mimeLen );
+	gbmemcpy ( sendBuf , m.getMime() , mimeLen );
 	// save sd
 	int sd = s->m_sd;
 	// . send it away
@@ -1594,7 +1594,7 @@ bool HttpServer::sendReply2 ( char *mime,
 	// if we are a proxy, and not a compression proxy, then just forward
 	// the blob as-is if it is a "ZET" (GET-compressed=ZET)
 	else if ( (ht & HT_PROXY) && (*rb == 'Z') ) {
-		memcpy ( sendBuf , content, contentLen );
+		gbmemcpy ( sendBuf , content, contentLen );
 		// sanity check
 		if ( sendBufSize != contentLen ) { char *xx=NULL;*xx=0; }
 		// note it
@@ -1602,10 +1602,10 @@ bool HttpServer::sendReply2 ( char *mime,
 	}
 	else {
 		// copy mime into sendBuf first
-		memcpy ( p , mime , mimeLen );
+		gbmemcpy ( p , mime , mimeLen );
 		p += mimeLen;
 		// then the page
-		memcpy ( p , content, contentLen );
+		gbmemcpy ( p , content, contentLen );
 		p += contentLen;
 		// sanity check
 		if ( sendBufSize != contentLen+mimeLen) { char *xx=NULL;*xx=0;}
@@ -2051,7 +2051,7 @@ bool HttpServer::sendQueryErrorReply( TcpSocket *s , int32_t error ,
 		tcp->destroySocket ( s );
 		return true;
 	}
-	memcpy ( sendBuf , msg , msgSize );
+	gbmemcpy ( sendBuf , msg , msgSize );
 	// erase g_errno for sending
 	g_errno = 0;
 	// . this returns false if blocked, true otherwise
@@ -2713,7 +2713,7 @@ bool HttpServer::sendDynamicPage ( TcpSocket *s           ,
 	// if we are a proxy, and not a compression proxy, then just forward
 	// the blob as-is if it is a "ZET" (GET-compressed=ZET)
 	else if ( (ht & HT_PROXY) && *rb == 'Z' ) {
-		memcpy ( sendBuf , page , pageLen );
+		gbmemcpy ( sendBuf , page , pageLen );
 		// sanity check
 		if ( sendBufSize != pageLen ) { char *xx=NULL;*xx=0; }
 		// note it
@@ -2721,10 +2721,10 @@ bool HttpServer::sendDynamicPage ( TcpSocket *s           ,
 	}
 	else {
 		// copy mime into sendBuf first
-		memcpy ( p , m.getMime() , mimeLen );
+		gbmemcpy ( p , m.getMime() , mimeLen );
 		p += mimeLen;
 		// then the page
-		memcpy ( p , page , pageLen );
+		gbmemcpy ( p , page , pageLen );
 		p += pageLen;
 		// sanity check
 		if ( sendBufSize != pageLen+mimeLen ) { char *xx=NULL;*xx=0;}
@@ -2850,7 +2850,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// sometimes they are missing Content-Length:
 	if ( ptr1 ) {
 		// copy ptr1 to src
-		memcpy ( pnew, src, ptr1 - src );
+		gbmemcpy ( pnew, src, ptr1 - src );
 		pnew += ptr1 - src;
 		src  += ptr1 - src;
 		// store either the new content encoding or new length
@@ -2864,7 +2864,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 
 	if ( ptr2 ) {
 		// copy ptr2 to src
-		memcpy ( pnew , src , ptr2 - src );
+		gbmemcpy ( pnew , src , ptr2 - src );
 		pnew += ptr2 - src;
 		src  += ptr2 - src;
 		// now insert the new shit
@@ -2877,7 +2877,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	}
 
 	// copy the rest
-	memcpy ( pnew , src , mimeEnd - src );
+	gbmemcpy ( pnew , src , mimeEnd - src );
 	pnew += mimeEnd - src;
 	src  += mimeEnd - src;
 
@@ -2893,7 +2893,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// 	return s;
 	// }
 		
-	// memcpy(pnew, pold, restLen);
+	// gbmemcpy(pnew, pold, restLen);
  	// pold += restLen;
  	// pnew += restLen;
 
@@ -3348,16 +3348,16 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 	// < as &lt; and > as &gt;
 	for ( ; *src ; src++ ) {
 		if ( *src == '#' ) {
-			memcpy ( dst,"<font color=gray>",17);
+			gbmemcpy ( dst,"<font color=gray>",17);
 			dst += 17;
 			inFont = true;
 		}
 		if ( *src == '<' ) {
-			memcpy ( dst , "&lt;",4);
+			gbmemcpy ( dst , "&lt;",4);
 			dst += 4;
 			// boldify start tags
 			//if ( src[1] != '/' && src[1] !='!' ) {
-			//	memcpy(dst,"<b>",3);
+			//	gbmemcpy(dst,"<b>",3);
 			//	dst += 3;
 			//	inBold = true;
 			//}
@@ -3366,21 +3366,21 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 		else if ( *src == '>' ) {
 			// end bold tags
 			if ( inBold ) {
-				memcpy(dst,"</b>",4);
+				gbmemcpy(dst,"</b>",4);
 				dst += 4;
 				inBold = false;
 			}
-			memcpy ( dst , "&gt;",4);
+			gbmemcpy ( dst , "&gt;",4);
 			dst += 4;
 			continue;
 		}
 		else if ( *src == '\n' ) {
 			if ( inFont ) {
-				memcpy(dst,"</font>",7);
+				gbmemcpy(dst,"</font>",7);
 				dst += 7;
 				inFont = false;
 			}
-			memcpy ( dst , "<br>",4);
+			gbmemcpy ( dst , "<br>",4);
 			dst += 4;
 			continue;
 		}
@@ -3559,7 +3559,7 @@ void gotSquidProxiedUrlIp ( void *state , int32_t ip ) {
 	// char *proxiedReqBuf = r->ptr_url;
 
 	// // store into there
-	// memcpy ( proxiedReqBuf,
+	// gbmemcpy ( proxiedReqBuf,
 	// 	 sqs->m_sock->m_readBuf,
 	// 	 // include +1 for the terminating \0
 	// 	 sqs->m_sock->m_readOffset + 1);

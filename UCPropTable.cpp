@@ -59,7 +59,7 @@ bool UCPropTable::setValue(u_int32_t c, void* value) {
 		
 		memset(m_data[prefix], '\0', m_tableSize);
 	}
-	memcpy(m_data[prefix] +key*m_valueSize, value, m_valueSize);
+	gbmemcpy(m_data[prefix] +key*m_valueSize, value, m_valueSize);
 	return true;
 	
 }
@@ -95,7 +95,7 @@ size_t UCPropTable::serialize(char *buf, size_t bufSize) {
 		for (u_int32_t i=0; i<m_numTables ; i++) {
 			if (m_data[i]) {
 				*(u_int32_t*)p = i; p += sizeof(u_int32_t);
-				memcpy(p, m_data[i], m_tableSize);
+				gbmemcpy(p, m_data[i], m_tableSize);
 				p += m_tableSize;
 			}
 		}
@@ -146,7 +146,7 @@ size_t UCPropTable::deserialize(char *buf, size_t bufSize) {
 			mmalloc(m_tableSize, "UCPropTable");
 		if (m_data[prefix] == NULL) 
 			return log(LOG_WARN, "UCPropTable: out of memory");
-		memcpy(m_data[prefix], p, m_tableSize); p += m_tableSize;
+		gbmemcpy(m_data[prefix], p, m_tableSize); p += m_tableSize;
 		//printf ("Read %d bytes after table %d\n", p-buf, prefix);
 	}
 	// shouldn't get here

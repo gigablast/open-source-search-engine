@@ -92,7 +92,7 @@ void HttpRequest::reset() {
 
 // returns false with g_errno set on error
 bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
-	memcpy ( this , r , sizeof(HttpRequest) );
+	gbmemcpy ( this , r , sizeof(HttpRequest) );
 	// do not copy this over though in that way
 	m_reqBuf.m_capacity = 0;
 	m_reqBuf.m_length = 0;
@@ -104,7 +104,7 @@ bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 		// if he's on the stack, that's a problem!
 		if ( r->m_reqBuf.m_usingStack ) { char *xx=NULL;*xx=0; }
 		// copy the safebuf member var directly
-		memcpy ( &m_reqBuf , &r->m_reqBuf , sizeof(SafeBuf) );
+		gbmemcpy ( &m_reqBuf , &r->m_reqBuf , sizeof(SafeBuf) );
 		// do not let it free anything
 	        r->m_reqBuf.m_usingStack = true;
 		// that's it!
@@ -728,7 +728,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 // truncate if too big
 		 if ( m_hostLen >= 255 ) m_hostLen = 254;
 		 // copy into hostname
-		 memcpy ( m_host , s , m_hostLen );
+		 gbmemcpy ( m_host , s , m_hostLen );
 	 }
 	 // NULL terminate it
 	 m_host [ m_hostLen ] = '\0';
@@ -756,7 +756,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 // truncate if too big
 		 if ( m_refLen >= 255 ) m_refLen = 254;
 		 // copy into m_ref
-		 memcpy ( m_ref , s , m_refLen );
+		 gbmemcpy ( m_ref , s , m_refLen );
 	 }
 	 // NULL terminate it
 	 m_ref [ m_refLen ] = '\0';
@@ -784,7 +784,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 // truncate if too big
 		 if ( len > 127 ) len = 127;
 		 // copy into m_userAgent
-		 memcpy ( m_userAgent , s , len );
+		 gbmemcpy ( m_userAgent , s , len );
 	 }
 	 // NULL terminate it
 	 m_userAgent [ len ] = '\0';
@@ -818,7 +818,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 // trunc if too big
 		 //if (m_cookieBufLen > 1023) m_cookieBufLen = 1023;
 		 // copy into m_cookieBuf
-		 //memcpy(m_cookieBuf, s, m_cookieBufLen);
+		 //gbmemcpy(m_cookieBuf, s, m_cookieBufLen);
 	 }
 	 // NULL terminate it
 	 if ( m_cookiePtr ) m_cookiePtr[m_cookieLen] = '\0';
@@ -1003,13 +1003,13 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 }
 		 char *p = newBuf;
 		 if (m_cgiBuf2Size) {
-			 memcpy(newBuf, m_cgiBuf2, m_cgiBuf2Size);
+			 gbmemcpy(newBuf, m_cgiBuf2, m_cgiBuf2Size);
 			 p += m_cgiBuf2Size-1;
 			 mfree(m_cgiBuf2, m_cgiBuf2Size, "extraParms");
 			 m_cgiBuf2 = NULL;
 			 m_cgiBuf2Size = 0;
 		 }
-		 memcpy(p, buf, bufLen);
+		 gbmemcpy(p, buf, bufLen);
 		 m_cgiBuf2 = newBuf;
 		 m_cgiBuf2Size = newSize;
 		 p += bufLen;
@@ -1096,7 +1096,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 	 // ensure no overflow (add 1 cuz we NULL terminate it)
 	 //if ( m_cgiBufLen>=1023) { g_errno = EBUFTOOSMALL;return false;}
 	 // copy cgi string into m_cgiBuf
-	 //memcpy ( m_cgiBuf , s , slen );
+	 //gbmemcpy ( m_cgiBuf , s , slen );
 	 // NULL terminate and include it in the length
 	 //m_cgiBuf [ m_cgiBufLen++ ] = '\0';
 	 m_cgiBuf [ slen ] = '\0';

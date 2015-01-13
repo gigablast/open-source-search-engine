@@ -94,7 +94,7 @@ bool Msg20::registerHandler ( ) {
 
 // copy "src" to ourselves
 void Msg20::copyFrom ( Msg20 *src ) {
-	memcpy ( this , src , sizeof(Msg20) );
+	gbmemcpy ( this , src , sizeof(Msg20) );
 	// if the Msg20Reply was actually in src->m_replyBuf[] we have to
 	// re-serialize into our this->m_replyBuf[] in order for the ptrs
 	// to be correct
@@ -639,7 +639,7 @@ char *Msg20Request::serialize ( int32_t *retSize     ,
 	*retSize = need;
 	// copy the easy stuff
 	char *p = buf;
-	memcpy ( p , (char *)this , sizeof(Msg20Request) );
+	gbmemcpy ( p , (char *)this , sizeof(Msg20Request) );
 	p += (int32_t)sizeof(Msg20Request);
 	// then store the strings!
 	int32_t  *sizePtr = &size_qbuf;
@@ -650,7 +650,7 @@ char *Msg20Request::serialize ( int32_t *retSize     ,
 		if ( p > *strPtr && p < *strPtr + *sizePtr ) {
 			char *xx = NULL; *xx = 0; }
 		// copy the string into the buffer
-		memcpy ( p , *strPtr , *sizePtr );
+		gbmemcpy ( p , *strPtr , *sizePtr );
 		// advance our destination ptr
 		p += *sizePtr;
 		// advance both ptrs to next string
@@ -700,7 +700,7 @@ int32_t Msg20Reply::getStoredSize ( ) {
 int32_t Msg20Reply::serialize ( char *buf , int32_t bufSize ) {
 	// copy the easy stuff
 	char *p = buf;
-	memcpy ( p , (char *)this , sizeof(Msg20Reply) );
+	gbmemcpy ( p , (char *)this , sizeof(Msg20Reply) );
 	p += (int32_t)sizeof(Msg20Reply);
 	// then store the strings!
 	int32_t  *sizePtr = &size_tbuf;
@@ -711,7 +711,7 @@ int32_t Msg20Reply::serialize ( char *buf , int32_t bufSize ) {
 		// sometimes the ptr is NULL but size is positive
 		// so watch out for that
 		if ( *strPtr ) {
-			memcpy ( p , *strPtr , *sizePtr );
+			gbmemcpy ( p , *strPtr , *sizePtr );
 			// advance our destination ptr
 			p += *sizePtr;
 		}

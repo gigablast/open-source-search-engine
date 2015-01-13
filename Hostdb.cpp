@@ -501,7 +501,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 			return false;
 		}
 		// copy it
-		memcpy ( h->m_hostname , host , hlen );
+		gbmemcpy ( h->m_hostname , host , hlen );
 		// null term it
 		h->m_hostname[hlen] = '\0';
 		// need this for hashing
@@ -575,7 +575,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		}
 		// a direct ip address?
 		if ( hostname2 ) {
-			memcpy ( h->m_hostname2,hostname2,hlen2);
+			gbmemcpy ( h->m_hostname2,hostname2,hlen2);
 			h->m_hostname2[hlen2] = '\0';
 			ip2 = atoip ( h->m_hostname2 );
 		}
@@ -696,7 +696,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 			while ( *n && *n != '\n' && n < pend ) n++;
 			int32_t noteSize = n - p;
 			if ( noteSize > 127 ) noteSize = 127;
-			memcpy(h->m_note, p, noteSize);
+			gbmemcpy(h->m_note, p, noteSize);
 			*p++ = '\0'; // NULL terminate for atoip
 		}
 		else
@@ -803,7 +803,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 
 		// copy it over
 		//strcpy ( m_hosts[i].m_dir , wdir );
-		memcpy(m_hosts[i].m_dir, wdir, wdirlen);
+		gbmemcpy(m_hosts[i].m_dir, wdir, wdirlen);
 		m_hosts[i].m_dir[wdirlen] = '\0';
 		
 		// reset this
@@ -1723,7 +1723,7 @@ bool Hostdb::setNote ( int32_t hostId, char *note, int32_t noteLen ) {
 	if ( !h ) return true;
 	//h->m_note[0] = ' ';
 	//h->m_note[1] = '#';
-	memcpy(h->m_note, note, noteLen);
+	gbmemcpy(h->m_note, note, noteLen);
 	h->m_note[noteLen] = '\0';
 	// write this hosts conf out
 	return saveHostsConf();
@@ -1736,7 +1736,7 @@ bool Hostdb::setSpareNote ( int32_t spareId, char *note, int32_t noteLen ) {
 	if ( !h ) return true;
 	//h->m_note[0] = ' ';
 	//h->m_note[1] = '#';
-	memcpy(h->m_note, note, noteLen);
+	gbmemcpy(h->m_note, note, noteLen);
 	h->m_note[noteLen] = '\0';
 	// write this hosts conf out
 	return saveHostsConf();
@@ -1753,9 +1753,9 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 
 
 	Host tmp;
-	memcpy ( &tmp , oldHost , sizeof(Host) );
-	memcpy ( oldHost , spareHost , sizeof(Host) );
-	memcpy ( spareHost , &tmp , sizeof(Host) );
+	gbmemcpy ( &tmp , oldHost , sizeof(Host) );
+	gbmemcpy ( oldHost , spareHost , sizeof(Host) );
+	gbmemcpy ( spareHost , &tmp , sizeof(Host) );
 
 	// however, these values need to change
 	oldHost->m_hostId      = origHostId;
@@ -1826,9 +1826,9 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	char oldSwitchId  = oldHost->m_switchId;
 	uint16_t oldDnsPort = oldHost->m_dnsClientPort;
 	char oldDir[128];
-	memcpy(oldDir, oldHost->m_dir, 128);
+	gbmemcpy(oldDir, oldHost->m_dir, 128);
 	char oldNote[128];
-	memcpy(oldNote, oldHost->m_note, 128);
+	gbmemcpy(oldNote, oldHost->m_note, 128);
 	// . now copy in the spare's info
 	oldHost->m_ip = spareHost->m_ip;
 	oldHost->m_ipShotgun = spareHost->m_ipShotgun;
@@ -1842,8 +1842,8 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_ideChannel = spareHost->m_ideChannel;
 	oldHost->m_switchId  = spareHost->m_switchId;
 	oldHost->m_dnsClientPort = spareHost->m_dnsClientPort;
-	memcpy(oldHost->m_dir, spareHost->m_dir, 128);
-	memcpy(oldHost->m_note, spareHost->m_note, 128);
+	gbmemcpy(oldHost->m_dir, spareHost->m_dir, 128);
+	gbmemcpy(oldHost->m_note, spareHost->m_note, 128);
 	// . now store the old info off
 	spareHost->m_ip = oldIp;
 	spareHost->m_ipShotgun = oldIp2;
@@ -1857,8 +1857,8 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	spareHost->m_ideChannel = oldIdeChannel;
 	spareHost->m_switchId  = oldSwitchId;
 	spareHost->m_dnsClientPort = oldDnsPort;
-	memcpy(spareHost->m_dir, oldDir, 128);
-	memcpy(spareHost->m_note, oldNote, 128);
+	gbmemcpy(spareHost->m_dir, oldDir, 128);
+	gbmemcpy(spareHost->m_note, oldNote, 128);
 	*/
 	// write this hosts conf out
 	saveHostsConf();

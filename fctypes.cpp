@@ -959,7 +959,7 @@ int32_t ulltoa ( char *s , uint64_t n ) {
 int32_t atol2 ( const char *s, int32_t len ) {
 	char tmp[32];
 	if ( len > 30 ) len = 30;
-	memcpy ( tmp , s , len );
+	gbmemcpy ( tmp , s , len );
 	tmp [ len ] = '\0';
 	return atol ( s );
 }
@@ -1225,7 +1225,7 @@ int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
 		// all entities must start with '&'
 		if ( *src != '&' ) { 
 			if ( size == 1 ) { *dst++ = *src++; continue; }
-			memcpy ( dst , src , size );
+			gbmemcpy ( dst , src , size );
 			src += size;
 			dst += size;
 			continue;
@@ -1259,8 +1259,8 @@ int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
 				dst++;
 				src += skip;
 				continue;
-				memcpy(dst,"+!-",3);
-				//memcpy(dst,"<gb",3); 
+				gbmemcpy(dst,"+!-",3);
+				//gbmemcpy(dst,"<gb",3); 
 				dst += 3; 
 				src += skip;
 				continue;
@@ -1273,8 +1273,8 @@ int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
 				dst++;
 				src += skip;
 				continue;
-				//memcpy(dst,"gb>",3); 
-				memcpy(dst,"-!+",3); 
+				//gbmemcpy(dst,"gb>",3); 
+				gbmemcpy(dst,"-!+",3); 
 				dst += 3; 
 				src += skip;
 				continue;
@@ -1335,14 +1335,14 @@ int32_t cdataDecode ( char *dst , char *src , int32_t niceness ) {
 		     src[3] != 'g' ||
 		     src[4] != 't' ) {
 			if ( size == 1 ) { *dst++ = *src++; continue; }
-			memcpy ( dst , src , size );
+			gbmemcpy ( dst , src , size );
 			src += size;
 			dst += size;
 			continue;
 			//*dst++ = *src++; continue; }
 		}
 		// make it ]]>
-		memcpy ( dst , "]]>" , 3 );
+		gbmemcpy ( dst , "]]>" , 3 );
 		src += 5;
 		dst += 3;
 	}
@@ -2205,7 +2205,7 @@ int32_t stripHtml( char *content, int32_t contentLen, int32_t version, int32_t s
 			// try title if no alt text
 			if ( ! v )
 				v = nodes[i].getFieldValue("title", &vlen );
-			if ( v ) { memcpy ( x, v, vlen ); x += vlen; }
+			if ( v ) { gbmemcpy ( x, v, vlen ); x += vlen; }
 			continue;
 		}
 		// remove background image from body,table,td tags
@@ -2215,7 +2215,7 @@ int32_t stripHtml( char *content, int32_t contentLen, int32_t version, int32_t s
 			if ( v ) v[-4] = 'x';
 		}
 		// store it
-		memcpy ( x , nodes[i].m_node , nodes[i].m_nodeLen );
+		gbmemcpy ( x , nodes[i].m_node , nodes[i].m_nodeLen );
 		x += nodes[i].m_nodeLen;
 		// sanity check
 		if ( x > xend ) { char *xx=NULL;*xx=0;}
@@ -2317,7 +2317,7 @@ char *serializeMsg ( int32_t  baseSize ,
 	*retSize = need;
 	// copy the easy stuff
 	char *p = buf;
-	memcpy ( p , (char *)thisPtr , baseSize );//getBaseSize() );
+	gbmemcpy ( p , (char *)thisPtr , baseSize );//getBaseSize() );
 	p += baseSize; // getBaseSize();
 	// then store the strings!
 	int32_t  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
@@ -2332,7 +2332,7 @@ char *serializeMsg ( int32_t  baseSize ,
 		if ( p > *strPtr && p < *strPtr + *sizePtr ) {
 			char *xx = NULL; *xx = 0; }
 		// copy the string into the buffer
-		memcpy ( p , *strPtr , *sizePtr );
+		gbmemcpy ( p , *strPtr , *sizePtr );
 	skip:
 		// . make it point into the buffer now
 		// . MDW: why? that is causing problems for the re-call in

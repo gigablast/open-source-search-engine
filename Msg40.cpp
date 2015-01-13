@@ -732,7 +732,7 @@ bool Msg40::federatedLoop ( ) {
 		// assign it
 		m_msg3aPtrs[i] = mp;
 		// assign the request for it
-		memcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
+		gbmemcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
 		// then customize it to just search this collnum
 		mp->m_rrr.m_collnum = cp[i];
 
@@ -3562,7 +3562,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		int32_t len   = master->getTermLen(i);
 		char ff[1024];
 		if ( len > 1020 ) len = 1020;
-		memcpy ( ff , ptr , len );
+		gbmemcpy ( ff , ptr , len );
 		ff[len] = '\0';
 		// we can have html entities in here now
 		//if ( ! is_alnum(ff[0]) ) { char *xx = NULL; *xx = 0; }
@@ -4114,7 +4114,7 @@ bool hashSample ( Query *q,
 			// sanity
 			if ( gc->m_numWords > MAX_GIGABIT_WORDS ) { 
 				char*xx=NULL;*xx=0;}
-			memcpy((char *)gbit.m_wordIds,
+			gbmemcpy((char *)gbit.m_wordIds,
 			       (char *)gc->m_wordIds,
 			       gc->m_numWords * 8 );
 			if ( ! master->addKey ( &termId64, &gbit ) )
@@ -5590,7 +5590,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	// make last int32_t a 0 so Clusterdb::getSimilarity() likes it
 	vbuf.pushLong(0);
 	// now store it in the Fact struct
-	memcpy ( fact.m_dedupVector , vbuf.getBufStart(), vbuf.length() );
+	gbmemcpy ( fact.m_dedupVector , vbuf.getBufStart(), vbuf.length() );
 
 
 	// otherwise, add it

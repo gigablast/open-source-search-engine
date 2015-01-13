@@ -116,13 +116,13 @@ bool RdbTree::set ( int32_t fixedDataSize ,
 	if ( dbname ) {
 		int32_t dlen = strlen(dbname);
 		if ( dlen > 30 ) dlen = 30;
-		memcpy(m_dbname,dbname,dlen);
+		gbmemcpy(m_dbname,dbname,dlen);
 		m_dbname[dlen] = '\0';
 	}
 
 	// a malloc tag, must be LESS THAN 16 bytes including the NULL
 	char *p = m_memTag;
-	memcpy  ( p , "RdbTree" , 7 ); p += 7;
+	gbmemcpy  ( p , "RdbTree" , 7 ); p += 7;
 	if ( dbname ) strncpy ( p , dbname    , 8 ); p += 8;
 	*p++ = '\0';
 	// set rdbid

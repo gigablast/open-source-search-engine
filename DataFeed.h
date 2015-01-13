@@ -89,10 +89,10 @@ public:
 		m_numTiers = pt->m_numTiers;
 		m_numResultLevels = pt->m_numResultLevels;
 		m_monthlyFee = pt->m_monthlyFee;
-		memcpy(m_tierMax, pt->m_tierMax, sizeof(int32_t)*m_numTiers);
-		memcpy(m_resultLevels, pt->m_resultLevels, sizeof(int32_t)*m_numResultLevels);
+		gbmemcpy(m_tierMax, pt->m_tierMax, sizeof(int32_t)*m_numTiers);
+		gbmemcpy(m_resultLevels, pt->m_resultLevels, sizeof(int32_t)*m_numResultLevels);
 		int32_t numCosts = m_numTiers*m_numResultLevels*2;
-		memcpy(m_levelCosts, pt->m_levelCosts, sizeof(int32_t)*numCosts);
+		gbmemcpy(m_levelCosts, pt->m_levelCosts, sizeof(int32_t)*numCosts);
 	}
 */
 	// locals

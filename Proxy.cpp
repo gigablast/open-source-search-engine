@@ -316,7 +316,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	int32_t bufSize = s->m_readOffset;
 	if ( bufSize > MAX_REQ_LEN - 1 )
 		bufSize = MAX_REQ_LEN - 1;
-	memcpy( buf, s->m_readBuf, bufSize );
+	gbmemcpy( buf, s->m_readBuf, bufSize );
 	buf[bufSize] = '\0';
 	*/
 
@@ -414,7 +414,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		if ( ! sendBuf ) 
 			return g_httpServer.sendErrorReply(s,500,
 							   mstrerror(g_errno));
-		memcpy ( sendBuf , m.getMime() , sendBufSize );
+		gbmemcpy ( sendBuf , m.getMime() , sendBufSize );
 		// . send it away
 		// . this returns false if blocked, true otherwise
 		// . this sets g_errno on error
@@ -1639,7 +1639,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 
 	/*
 	char charset[1024];
-	memcpy ( charset, mime.getCharset(), mime.getCharsetLen() );
+	gbmemcpy ( charset, mime.getCharset(), mime.getCharsetLen() );
 	charset[mime.getCharsetLen()] = '\0';
 
 	char *contentType;

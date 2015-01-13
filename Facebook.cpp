@@ -526,7 +526,7 @@ bool Msgfb::gotFBAccessToken ( TcpSocket *s ) {
 		for ( ; *p && *p != '&' ;p++ );
 		int32_t len = p - start;
 		if ( len > MAX_TOKEN_LEN ) { char *xx=NULL;*xx=0; }
-		memcpy ( m_accessToken , start , len );
+		gbmemcpy ( m_accessToken , start , len );
 		m_accessToken [ len ] = '\0';
 	}
 
@@ -4120,7 +4120,7 @@ bool Msgfc::addLikedbTag ( int64_t userId ,
 					 eventHash64     ,
 					 value );
 	// add to list otherwise
-	memcpy ( p , recs , size );
+	gbmemcpy ( p , recs , size );
 	p += size;
 	count += 2;
 	
@@ -4488,7 +4488,7 @@ bool Msgfb::gotAppAccessToken ( TcpSocket *s ) {
 		for ( ; *p && *p != '&' ;p++ );
 		int32_t len = p - start;
 		if ( len > MAX_TOKEN_LEN ) { char *xx=NULL;*xx=0; }
-		memcpy ( s_appAccessToken , start , len );
+		gbmemcpy ( s_appAccessToken , start , len );
 		s_appAccessToken [ len ] = '\0';
 	}
 
@@ -4799,9 +4799,9 @@ bool Emailer::getMailServerIP ( EmailState *es ) {
 	// get the ip. use kinda a fake hostname to pass into MsgC
 	// so that it understands its a special MX record lookup
 	char *dst = es->m_emailSubdomain;
-	memcpy ( dst , "gbmxrec-" , 8 );
+	gbmemcpy ( dst , "gbmxrec-" , 8 );
 	dst += 8;
-	memcpy ( dst , dom , domLen );
+	gbmemcpy ( dst , dom , domLen );
 	dst += domLen;
 	*dst = '\0';
 
@@ -5751,8 +5751,8 @@ bool loadQueryLoopState ( ) {
 	s_ptr1 = *(int32_t *)p; p += 4;
 	s_ptr2 = *(int32_t *)p; p += 4;
 	g_n1   = *(int32_t *)p; p += 4;
-	memcpy ( g_fbq1   , p , g_n1 * 4 ); p += g_n1 * 4;
-	memcpy ( g_colls1 , p , g_n1 * 4 ); p += g_n1 * 4;
+	gbmemcpy ( g_fbq1   , p , g_n1 * 4 ); p += g_n1 * 4;
+	gbmemcpy ( g_colls1 , p , g_n1 * 4 ); p += g_n1 * 4;
 	if ( p >= pend ) goto done;
 	s_ptr3 = *(int32_t *)p; p += 4;
 	if ( p >= pend ) goto done;

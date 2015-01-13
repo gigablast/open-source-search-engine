@@ -200,7 +200,7 @@ bool Catdb::verify ( char *coll ) {
 void Catdb::normalizeUrl ( Url *srcUrl, Url *dstUrl ) {
 	char urlStr[MAX_URL_LEN];
 	int32_t urlStrLen = srcUrl->getUrlLen();
-	memcpy(urlStr, srcUrl->getUrl(), urlStrLen);
+	gbmemcpy(urlStr, srcUrl->getUrl(), urlStrLen);
 	// fix the url
 	urlStrLen = g_categories->fixUrl(urlStr, urlStrLen);
 	// create the normalized url
@@ -477,7 +477,7 @@ int32_t  Catdb::getIndirectMatches ( RdbList  *list ,
 	Url   partialUrl;
 	key_t partialUrlKey;
 	// start with the whole url...include real catid in indirect
-	memcpy(path, url->getUrl(), url->getUrlLen());
+	gbmemcpy(path, url->getUrl(), url->getUrlLen());
 	pathLen = url->getUrlLen();
 	// loop looking for partial matches
 	char *data       = NULL;
@@ -516,10 +516,10 @@ int32_t  Catdb::getIndirectMatches ( RdbList  *list ,
 				//char msg[4096];
 				//char *mp = msg;
 				//mp += sprintf(mp, "For ");
-				//memcpy(mp, url->getUrl(), url->getUrlLen());
+				//gbmemcpy(mp, url->getUrl(), url->getUrlLen());
 				//mp += url->getUrlLen();
 				//mp += sprintf(mp, " , got Indirect: ");
-				//memcpy(mp, x, xlen);
+				//gbmemcpy(mp, x, xlen);
 				//mp += xlen;
 				//*mp = '\0';
 				//log ( LOG_INFO, "tagdb: %s", msg );

@@ -110,7 +110,7 @@ void File::set ( char *filename ) {
 	// if we already had another file open then we must close it first.
 	if ( m_vfd >= 0 ) close();
 	// copy into m_filename and NULL terminate
-	memcpy ( m_filename , filename , len );
+	gbmemcpy ( m_filename , filename , len );
 	m_filename [ len ] = '\0';
 	// TODO: make this a bool returning function if ( ! m_filename ) g_log
 }

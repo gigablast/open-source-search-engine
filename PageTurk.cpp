@@ -158,7 +158,7 @@ bool sendPageTurkStats ( TcpSocket *s , HttpRequest *r ) {
 
 	char *coll    = cr->m_coll;
 	int32_t  collLen = gbstrlen ( coll );
-	memcpy ( st->m_coll , coll , collLen );
+	gbmemcpy ( st->m_coll , coll , collLen );
 	st->m_coll [ collLen ] = '\0';
 	st->m_collLen=collLen;
 
@@ -1880,7 +1880,7 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 	// get collection name and its length
 	char *coll    = cr->m_coll;
 	int32_t  collLen = gbstrlen ( coll );
-	memcpy ( st->m_coll , coll , collLen );
+	gbmemcpy ( st->m_coll , coll , collLen );
 	st->m_coll [ collLen ] = '\0';
 	st->m_collLen=collLen;
 

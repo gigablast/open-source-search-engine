@@ -196,7 +196,7 @@ bool Pos::set ( Words  *words  ,
 					else if ( cs == 1 )
 						*f++ = *p;
 					else {
-						memcpy(f,p,cs);
+						gbmemcpy(f,p,cs);
 						f += cs;
 					}
 				}

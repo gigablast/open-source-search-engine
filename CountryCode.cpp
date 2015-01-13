@@ -1219,7 +1219,7 @@ uint8_t s_getLangIdxFromDMOZ(char *topic, int len) {
 	int limit = len;
 	if(limit > 2047) limit = 2047;
 	memset(buf, 0, 2048);
-	memcpy(buf, topic, limit);
+	gbmemcpy(buf, topic, limit);
 	if(gbstrlen(buf) < 1) return(0);
 	for(int x = 2; x < langTagalog; x++) {
 		if(x == 5) continue;
@@ -1323,7 +1323,7 @@ int CountryCode::lookupCountryFromDMOZTopic(const char *catname, int len) {
 	if(!s_countryRegex) return(0);
 	char buf[2049];
 	if(len > 2047) len = 2047;
-	memcpy(buf, catname, len);
+	gbmemcpy(buf, catname, len);
 	buf[len+1] = 0;
 	if(gbstrlen(buf) < 1) return(0);
 	for(int x = 1; x < s_numCountryCodes; x++)

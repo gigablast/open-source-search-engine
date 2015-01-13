@@ -774,7 +774,7 @@ bool storeRec ( collnum_t      collnum ,
 		
 		if(s_hostBufs[hostId]) {
 			//if the old buf was too small, resize
-			memcpy( buf, s_hostBufs[hostId], 
+			gbmemcpy( buf, s_hostBufs[hostId], 
 				*(int32_t*)(s_hostBufs[hostId])); 
 			mfree ( s_hostBufs[hostId], 
 				s_hostBufSizes[hostId] , "Msg4b" );
@@ -818,7 +818,7 @@ bool storeRec ( collnum_t      collnum ,
 	*(collnum_t *)p = collnum; p += sizeof(collnum_t);
 	*(char      *)p = rdbId  ; p += 1;
 	*(int32_t      *)p = recSize; p += 4;
-	memcpy ( p , rec , recSize ); p += recSize;
+	gbmemcpy ( p , rec , recSize ); p += recSize;
 	// update buffer used
 	*(int32_t *)buf = used + (p - start);
 	// all done, did not "block"

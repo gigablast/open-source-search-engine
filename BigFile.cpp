@@ -966,7 +966,7 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 
 	// save this shit on the stack in case fstate gets pull from under us
 	FileState tmp;
-	memcpy ( &tmp , orig , sizeof(FileState ));
+	gbmemcpy ( &tmp , orig , sizeof(FileState ));
 	FileState *fstate = &tmp;
 
 	// lead Threads::bailOnReads() know we can be bailed on now since

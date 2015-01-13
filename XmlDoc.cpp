@@ -1286,7 +1286,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	m_sreqValid    = true;
 
 	// store the whole rec, key+dataSize+data, in case it disappears.
-	memcpy ( &m_sreq , sreq , sreq->getRecSize() );
+	gbmemcpy ( &m_sreq , sreq , sreq->getRecSize() );
 
 	// set m_collnum etc.
 	if ( ! setCollNum ( coll ) ) 
@@ -1439,7 +1439,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// store the whole rec, key+dataSize+data, in case it disappears.
 	if ( sreq ) {
-		memcpy ( &m_sreq , sreq , sreq->getRecSize() );
+		gbmemcpy ( &m_sreq , sreq , sreq->getRecSize() );
 		m_sreqValid = true;
 	}
 
@@ -1566,7 +1566,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	}
 
 	// set our easy stuff
-	memcpy ( (void *)this , m_ubuf , headerSize );
+	gbmemcpy ( (void *)this , m_ubuf , headerSize );
 
 	// NOW set the XmlDoc::ptr_* and XmlDoc::size_* members
 	// like in Msg.cpp and Msg20Reply.cpp
@@ -1741,7 +1741,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_diffbotTitleHashBufValid = true;
 
 	// set "m_oldTagRec" from ptr_tagRecData
-	//memcpy ( &m_oldTagRec     , ptr_tagRecData , size_tagRecData );
+	//gbmemcpy ( &m_oldTagRec     , ptr_tagRecData , size_tagRecData );
 	//m_oldTagRecValid = true;
 
 	// there was no issue indexing it...
@@ -1755,7 +1755,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_downloadEndTimeValid = true;
 
 	// make a copy for new tag rec too, this one we modify
-	//memcpy ( &m_newTagRec     , ptr_tagRecData , size_tagRecData );
+	//gbmemcpy ( &m_newTagRec     , ptr_tagRecData , size_tagRecData );
 
 	// set "m_siteNumInlinks" from m_oldTagRec
 	//Tag *tag = m_oldTagRec.getTag("sitenuminlinks");
@@ -2149,7 +2149,7 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 	if ( ! m_sreq.m_fakeFirstIp ) { char *xx=NULL;*xx=0; }
 
 	// copy it over from our current spiderrequest
-	memcpy ( revisedReq , &m_sreq , m_sreq.getRecSize() );
+	gbmemcpy ( revisedReq , &m_sreq , m_sreq.getRecSize() );
 
 	// this must be valid for us of course
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
@@ -3975,7 +3975,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	// serialize into it
 	char *p = ubuf;
 	// copy our crap into there
-	memcpy ( p , &m_headerSize , m_headerSize );
+	gbmemcpy ( p , &m_headerSize , m_headerSize );
 	// skip it
 	p += m_headerSize;
 	// reset data ptrs
@@ -3995,7 +3995,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 		*(int32_t *)p = *ps;
 		p += 4;
 		// then the data
-		memcpy ( p , *pd , *ps );
+		gbmemcpy ( p , *pd , *ps );
 		// skip *ps bytes we wrote. should include a \0
 		p += *ps;
 	}
@@ -6823,7 +6823,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// must have had a network error or something
 		if ( ! stats ) continue;
 		// copy
-		memcpy ( &si->m_stats , stats, sizeof(SectionStats) );
+		gbmemcpy ( &si->m_stats , stats, sizeof(SectionStats) );
 	}
 
 	//
@@ -6853,7 +6853,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 				break;
 
 			// copy it to parent with the same inner html hash
-			memcpy (&p->m_stats,&sx->m_stats,sizeof(SectionStats));
+			gbmemcpy (&p->m_stats,&sx->m_stats,sizeof(SectionStats));
 		}
 	}
 
@@ -8029,7 +8029,7 @@ int32_t *XmlDoc::getTagPairHashVector ( ) {
 	// truncate to MAX_PAIR_HASHES MINUS 1 so we can put a 0 at the end
 	if ( nh > MAX_TAG_PAIR_HASHES-1 ) nh = MAX_TAG_PAIR_HASHES-1;
 	// store the top MAX_PAIR_HASHES
-	memcpy ( m_tagPairHashVec , hashes , nh * 4 );
+	gbmemcpy ( m_tagPairHashVec , hashes , nh * 4 );
 	// null term it. all vectors need this so computeSimilarity() works
 	m_tagPairHashVec [ nh++ ] = 0;
 	m_tagPairHashVecValid = true;
@@ -8136,14 +8136,14 @@ int32_t *XmlDoc::getSummaryVector ( ) {
 	int32_t need = tlen + 1 + slen + 1;
 	if ( ! sb.reserve ( need ) ) return NULL;
 
-	//memcpy ( p , ti->m_title , len );
+	//gbmemcpy ( p , ti->m_title , len );
 	//p += len;
 	sb.safeMemcpy ( ti->m_title , tlen );
 	// space separting the title from summary
 	if ( tlen > 0 ) sb.pushChar(' ');
 
 	//if ( len > avail ) len = avail - 10;
-	//memcpy ( p , s->m_summary , len );
+	//gbmemcpy ( p , s->m_summary , len );
 	//p += len;
 	sb.safeMemcpy ( s->m_summary , slen );
 	// null terminate it
@@ -8449,7 +8449,7 @@ int32_t XmlDoc::computeVector ( Sections *sections, Words *words, uint32_t *vec 
 	// null terminate
 	d [ nd++ ] = 0;
 	// store in our sample vector
-	memcpy ( vec , d , nd * 4 );
+	gbmemcpy ( vec , d , nd * 4 );
 	// return size in bytes
 	return nd * 4;
 }
@@ -9332,11 +9332,11 @@ char *XmlDoc::getGigabitQuery ( ) {
 		// quote it
 		*p++ = '\"';
 		// write into buffer
-		memcpy ( p , gi->m_ptr , gi->m_len );
+		gbmemcpy ( p , gi->m_ptr , gi->m_len );
 		// finish quote
 		*p++ = '\"';
 		// separate terms just in case
-		//memcpy ( p , " , ", 4 ); 
+		//gbmemcpy ( p , " , ", 4 ); 
 		//p += 4;
 		*p++ = ',';
 	}
@@ -9721,7 +9721,7 @@ int32_t intersectGigabits ( Msg20       **mp          ,   // search results
 		// get it
 		GigabitInfo *gi = array[i];
 		// copy it
-		memcpy ( &top[i] , gi , sizeof(GigabitInfo) );
+		gbmemcpy ( &top[i] , gi , sizeof(GigabitInfo) );
 	}
 	// return how many we copied
 	return numTop;
@@ -9752,11 +9752,11 @@ bool addGigabit ( HashTableX *ht         ,
 	if ( slot < 0 ) {
 		// . add key to a new slot, set "gi" to the value ptr
 		// . use NULL for the GigabitInfo ptr temporarily so it should
-		//   not memcpy into the slot
+		//   not gbmemcpy into the slot
 		if ( ! ht->addKey ( &h , NULL , &slot ) ) return false;
 		// get data ptr to the bogus data
 		gi = (GigabitInfo *)ht->getValueFromSlot ( slot );
-		// . set all the stuff now. this way avoids a memcpy...
+		// . set all the stuff now. this way avoids a gbmemcpy...
 		// . every wiki title should have a popularity i guess...
 		// . "pop" is # of docs out of 10,000 that have this phrase?
 		int32_t pop = g_speller.getPhrasePopularity(s,h,true,langId);
@@ -11934,7 +11934,7 @@ char *XmlDoc::getEmailBuf ( ) {
 			// ensure minimal space
 			if ( p + wlens[j] + 1 >= pend ) break;
 			// write out wids
-			memcpy ( p , wptrs[j] , wlens[j] );
+			gbmemcpy ( p , wptrs[j] , wlens[j] );
 			p += wlens[j];
 		}
 		// NULL term it
@@ -11964,7 +11964,7 @@ char *XmlDoc::getEmailBuf ( ) {
 		// comma?
 		if ( eptr > m_emailBuf ) *eptr++ = ','; 
 		// store it
-		memcpy (eptr , buf , blen );
+		gbmemcpy (eptr , buf , blen );
 		// advance
 		eptr += blen;
 		// limit it
@@ -12075,7 +12075,7 @@ char *XmlDoc::getEmailBuf ( ) {
 			// write out wids
 			if ( wids[j] == h_at  ) {*p++ = '@'; continue;}
 			if ( wids[j] == h_dot ) {*p++ = '.'; continue;}
-			memcpy ( p , wptrs[j] , wlens[j] );
+			gbmemcpy ( p , wptrs[j] , wlens[j] );
 			p += wlens[j];
 		}
 		// NULL term it
@@ -12113,7 +12113,7 @@ char *XmlDoc::getEmailBuf ( ) {
 		// comma?
 		if ( eptr > m_emailBuf ) *eptr++ = ','; 
 		// store it
-		memcpy (eptr , buf , blen );
+		gbmemcpy (eptr , buf , blen );
 		// advance
 		eptr += blen;
 		// limit it
@@ -12232,7 +12232,7 @@ char *XmlDoc::getEmailBuf ( ) {
 		// comma?
 		if ( eptr > m_emailBuf ) *eptr++ = ','; 
 		// store it
-		memcpy (eptr , buf , blen );
+		gbmemcpy (eptr , buf , blen );
 		// advance
 		eptr += blen;
 		// limit it
@@ -12307,7 +12307,7 @@ char *XmlDoc::getEmailBuf ( ) {
 			// comma?
 			if ( eptr > m_emailBuf ) *eptr++ = ','; 
 			// store it
-			memcpy (eptr , buf , blen );
+			gbmemcpy (eptr , buf , blen );
 			// advance
 			eptr += blen;
 			// do not double store
@@ -13489,7 +13489,7 @@ bool *XmlDoc::getIsAllowed ( ) {
 	if ( ! cu || cu == (void *)-1 ) return (bool *)cu;
 	// sanity
 	if ( ! cu->getHost() ) { char *xx=NULL;*xx=0; }
-	memcpy ( p , cu->getHost() , cu->getHostLen() );
+	gbmemcpy ( p , cu->getHost() , cu->getHostLen() );
 	p += cu->getHostLen();
 	int32_t port = cu->getPort();
 	// 80 is the default port
@@ -16500,9 +16500,9 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 			char foob[MAX_URL_LEN*2];
 			char *pf = foob;
 			int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
-			memcpy(foob,cu->getUrl(),cuBytes);
+			gbmemcpy(foob,cu->getUrl(),cuBytes);
 			pf += cuBytes;
-			memcpy ( pf , decoded , decBytes );
+			gbmemcpy ( pf , decoded , decBytes );
 			pf += decBytes;
 			*pf = '\0';
 			m_metaRedirUrl.set(foob);
@@ -18233,7 +18233,7 @@ char **XmlDoc::getUtf8Content ( ) {
 			continue;
 		}
 		// otherwise, just copy it
-		memcpy(dst,p,size);
+		gbmemcpy(dst,p,size);
 		dst += size;
 	}
 	// null term
@@ -20415,7 +20415,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		char k[MAX_KEY_BYTES];
 		if ( ks > MAX_KEY_BYTES ) { char *xx=NULL;*xx=0; }
 		//k.setMin();
-		memcpy ( &k , p , ks );
+		gbmemcpy ( &k , p , ks );
 		// is it a negative key?
 		char neg = false;
 		if ( ! ( p[0] & 0x01 ) ) neg = true;
@@ -20880,7 +20880,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		else             del = true;
 		// convert into a key128_t, the biggest possible key
 		char k[16];
-		memcpy ( &k , p , ks );
+		gbmemcpy ( &k , p , ks );
 		// skip it
 		p += ks;
 		// flip this
@@ -20934,7 +20934,7 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		// zero out
 		KEYMIN(k,MAX_KEY_BYTES);
 		//k.setMin();
-		memcpy ( k , p , ks );
+		gbmemcpy ( k , p , ks );
 		// skip it
 		p += ks;
 		// if negative, no data size allowed -- no
@@ -21607,7 +21607,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			log("build: doing query reindex but diffbot api "
 			    "url is not set in spider controls");
 		// just copy original request
-		memcpy ( &ksr , &m_sreq , m_sreq.getRecSize() );
+		gbmemcpy ( &ksr , &m_sreq , m_sreq.getRecSize() );
 		// do not spider links, it's a page reindex of a multidoc url
 		ksr.m_avoidSpiderLinks = 1;
 		// avoid EDOCUNCHANGED
@@ -21871,7 +21871,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 		// first store spider reply "document"
 		if ( spiderStatusDocMetaList ) {
-			memcpy ( m_p,
+			gbmemcpy ( m_p,
 				 spiderStatusDocMetaList->getBufStart(),
 				 spiderStatusDocMetaList->length() );
 			m_p += spiderStatusDocMetaList->length();
@@ -21920,7 +21920,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//key_t fakeKey;
 		//fakeKey.n1 = 0;
 		//fakeKey.n0 = m_docId;
-		//memcpy ( m_p , &fakeKey , sizeof(key_t) );
+		//gbmemcpy ( m_p , &fakeKey , sizeof(key_t) );
 		//m_p += sizeof(key_t);
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
@@ -21932,7 +21932,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
 		int32_t newsrSize = newsr->getRecSize();
-		memcpy ( m_p , newsr , newsrSize );
+		gbmemcpy ( m_p , newsr , newsrSize );
 		m_p += newsrSize;
 		m_addedSpiderReplySize = newsrSize;
 		m_addedSpiderReplySizeValid = true;
@@ -22220,7 +22220,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
 		int32_t newsrSize = newsr->getRecSize();
-		memcpy ( m_p , newsr , newsrSize );
+		gbmemcpy ( m_p , newsr , newsrSize );
 		m_p += newsrSize;
 		// sanity check
 		if ( m_p - saved != needx ) { char *xx=NULL;*xx=0; }
@@ -23127,7 +23127,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// if getting an "oldList" to do incremental posdb updates
 		// then do not include the data portion of the title rec
 		if ( forDelete ) tsize = sizeof(key_t);
-		memcpy ( m_p , nd->m_titleRecBuf.getBufStart() , tsize );
+		gbmemcpy ( m_p , nd->m_titleRecBuf.getBufStart() , tsize );
 		// make it a negative key
 		//if ( forDelete ) *m_p = *m_p & 0xfe;
 		m_p += tsize;//nd->m_titleRecSize;
@@ -23401,7 +23401,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// get key size
 		int32_t ks = getKeySizeFromRdbId(rdbId);
 		// copy that over
-		memcpy ( m_p , x , ks );
+		gbmemcpy ( m_p , x , ks );
 		// skip that
 		m_p += ks;
 		x   += ks;
@@ -23450,7 +23450,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
 		int32_t newsrSize = newsr->getRecSize();
-		memcpy ( m_p , newsr , newsrSize );
+		gbmemcpy ( m_p , newsr , newsrSize );
 		m_p += newsrSize;
 
 		m_addedSpiderReplySize = newsrSize;
@@ -23501,7 +23501,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( m_useSecondaryRdbs ) *m_p++ = RDB2_SPIDERDB2;
 		else                      *m_p++ = RDB_SPIDERDB;
 		// store it back
-		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
+		gbmemcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
 		m_p += revisedReq.getRecSize();
 		// sanity check
@@ -23560,10 +23560,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . store into tagdb even if indexCode is set!
 	if ( ntb && m_useTagdb && ! forDelete ) { 
 		// ntb is a safebuf of Tags, which are already Rdb records
-		// so just memcpy them directly over
+		// so just gbmemcpy them directly over
 		char *src     = ntb->getBufStart();
 		int32_t  srcSize = ntb->length();
-		memcpy ( m_p , src , srcSize );
+		gbmemcpy ( m_p , src , srcSize );
 		m_p += srcSize;
 	}
 	// sanity check
@@ -23581,7 +23581,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . see getSpiderStatusDocMetaList() function to see what we index
 	//   and the titlerec we create for it
 	if ( spiderStatusDocMetaList ) {
-		memcpy ( m_p , 
+		gbmemcpy ( m_p , 
 			 spiderStatusDocMetaList->getBufStart() ,
 			 spiderStatusDocMetaList->length() );
 		m_p += spiderStatusDocMetaList->length();
@@ -23723,7 +23723,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_p++;
 		// store the spider rec
 		int32_t size = m_sreq.getRecSize();
-		memcpy ( m_p , &m_sreq , size );
+		gbmemcpy ( m_p , &m_sreq , size );
 		// set this one bit 
 		SpiderRequest *rr = (SpiderRequest *)m_p;
 		rr->m_readd = 1;
@@ -23929,7 +23929,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 				// point to where key will be stored in new lst
 				char *nk = nptr;
 				// store the new key in the new meta list
-				memcpy ( nptr , key , ks );
+				gbmemcpy ( nptr , key , ks );
 				// advance ptr
 				nptr += ks;
 				// get disocvery time of old key from last time
@@ -23969,7 +23969,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			// ok, it is not already in an rdb, so add it
 			*nptr++ = byte;
 			// store key
-			memcpy ( nptr, key , ks );
+			gbmemcpy ( nptr, key , ks );
 			// skip over it
 			nptr += ks;
 			// store data size. BUT not if negative key!
@@ -23979,7 +23979,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			}
 			// store data
 			if ( ds ) {
-				memcpy ( nptr , data , ds );
+				gbmemcpy ( nptr , data , ds );
 				nptr += ds;
 			}
 		}
@@ -23998,7 +23998,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			// sanity test - no negative keys
 			if ( (rec[1] & 0x01) == 0x00 ) { char *xx=NULL;*xx=0;}
 			// copy the rdbId byte and key
-			memcpy ( nptr , rec , 1 + ks );
+			gbmemcpy ( nptr , rec , 1 + ks );
 			// skip over rdbid
 			nptr++;
 			// make it a negative key by clearing lsb
@@ -24017,7 +24017,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 				// if zero, set it to now!
 				//g_linkdb.setLostDate_uk(realRec,now);
 				// copy the rdbId byte and key
-				memcpy ( nptr , rec , 1 + ks );
+				gbmemcpy ( nptr , rec , 1 + ks );
 				// set it in there now
 				g_linkdb.setLostDate_uk(nptr+1,now);
 				// carry it through on revdb, do not delete
@@ -25447,7 +25447,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			    "%s",tmp.getBufStart());
 		}
 		// store the spider rec
-		memcpy ( p , &ksr , need );
+		gbmemcpy ( p , &ksr , need );
 		// skip it
 		p += need;
 		// count it
@@ -25611,7 +25611,7 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 		*m_p++ = useRdbId; // (useRdbId | f);
 		// store it
 		// *(key128_t *)m_p = *k; does this work?
-		memcpy ( m_p , k , sizeof(key128_t) );
+		gbmemcpy ( m_p , k , sizeof(key128_t) );
 		// all keys must be positive at this point
 		if ( ! ( m_p[0] & 0x01 ) ) { char *xx=NULL;*xx=0; }
 		// or if getting for incremental indexing and this is
@@ -25642,7 +25642,7 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 			m_p += 4;
 		}
 		// store possible accompanying date of the rdb record
-		memcpy (m_p,val, ds );
+		gbmemcpy (m_p,val, ds );
 		// skip it
 		m_p += ds;
 	}
@@ -25696,7 +25696,7 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , int64_t docId , SafeBuf *buf ) {
 		// store rdbid
 		*p++ = rdbId; // (rdbId | f);
 		// store it as is
-		memcpy ( p , kp , sizeof(key144_t) );
+		gbmemcpy ( p , kp , sizeof(key144_t) );
 		// sanity check
 		//int64_t final = hash64n("products.offerprice",0);
 		//int64_t prefix = hash64n("gbsortby",0);
@@ -25787,7 +25787,7 @@ bool XmlDoc::addTable224 ( HashTableX *tt1 ) {
 		// store rdbid
 		*m_p++ = rdbId; // (rdbId | f);
 		// store it as is
-		memcpy ( m_p , kp , sizeof(key224_t) );
+		gbmemcpy ( m_p , kp , sizeof(key224_t) );
 		// advance over it
 		m_p += sizeof(key224_t);
 	}
@@ -26082,7 +26082,7 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 		*m_p++ = (rdbId | f);
 		// store it
 		// *(key128_t *)m_p = *k; does this work?
-		memcpy ( m_p , k , sizeof(key128_t) );
+		gbmemcpy ( m_p , k , sizeof(key128_t) );
 		// all keys must be positive at this point
 		if ( ! ( m_p[0] & 0x01 ) ) { char *xx=NULL;*xx=0; }
 		// clear the del bit if we are an unmatched key and "del"
@@ -26114,7 +26114,7 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 			m_p += 4;
 		}
 		// store possible accompanying date of the rdb record
-		memcpy (m_p,val, ds );
+		gbmemcpy (m_p,val, ds );
 		// skip it
 		m_p += ds;
 	}
@@ -26835,7 +26835,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		char k[MAX_KEY_BYTES];
 		if ( ks > MAX_KEY_BYTES ) { char *xx=NULL;*xx=0; }
 		//k.setMin();
-		memcpy ( &k , p , ks );
+		gbmemcpy ( &k , p , ks );
 		// is it a negative key?
 		char neg = false;
 		if ( ! ( p[0] & 0x01 ) ) neg = true;
@@ -26903,7 +26903,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	// header info stuff
 	int32_t hsize = (char *)&ptr_firstUrl - (char *)this;
 	if ( hsize > 2048 ) { char *xx=NULL;*xx=0; }
-	memcpy ( xdhead , (char *)this , hsize );
+	gbmemcpy ( xdhead , (char *)this , hsize );
 
 	// override spider time in case we had error to be consistent
 	// with the actual SpiderReply record
@@ -27779,9 +27779,9 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 		// write http://www.whatever.com/path into buf
 		char buf[MAX_URL_LEN+10];
 		char *p = buf;
-		memcpy ( p , "http://" , 7 ); p += 7;
-		memcpy ( p , name          , nameLen      ); p += nameLen;
-		memcpy ( p , fu->getPath() , len          ); p += len;
+		gbmemcpy ( p , "http://" , 7 ); p += 7;
+		gbmemcpy ( p , name          , nameLen      ); p += nameLen;
+		gbmemcpy ( p , fu->getPath() , len          ); p += len;
 		*p = '\0';
 		// update hash parms
 		hi.m_prefix    = "site";
@@ -30572,7 +30572,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( rssItemLen > MAX_RSSITEM_SIZE-2 ) rssItemLen = MAX_RSSITEM_SIZE-2;
 	char rssItemBuf[MAX_RSSITEM_SIZE];
 	if ( rssItemLen > 0) {
-		memcpy ( rssItemBuf, rssItem , rssItemLen );
+		gbmemcpy ( rssItemBuf, rssItem , rssItemLen );
 		// NULL terminate it
 		rssItemBuf[rssItemLen] = 0;
 	}
@@ -30954,10 +30954,10 @@ char **XmlDoc::getImageUrl() {
 		// make the url
 		//m_imageUrl = m_imageUrlBuf;
 		//char    *p = m_imageUrlBuf;
-		//memcpy ( p , "http://s2.mcstatic.com/thumb/" , 29 );
+		//gbmemcpy ( p , "http://s2.mcstatic.com/thumb/" , 29 );
 		//p += 29;
 		//p += sprintf ( p , "%"INT32"" , id );
-		//memcpy ( p , ".jpg\0" , 5 );
+		//gbmemcpy ( p , ".jpg\0" , 5 );
 		//p += 5;
 		m_imageUrlBuf.safePrintf("http://s2.mcstatic."
 					 "com/thumb/%"INT32".jpg", id);
@@ -32335,7 +32335,7 @@ bool storeTerm ( char       *s        ,
 	if ( weights ) ti.m_weight = (float)wscores[i] / (float)DW;
 
 	if ( weights ) 
-		memcpy ( &ti.m_rv, rv , MAX_RULES*sizeof(float));
+		gbmemcpy ( &ti.m_rv, rv , MAX_RULES*sizeof(float));
 
 	// no, because if this is zero we force it up to 1!
 	//if ( weights ) 
@@ -32745,7 +32745,7 @@ bool XmlDoc::hashWords3 ( //int32_t        wordStart ,
 			char buf[1000];
 			int32_t len = wlens[i];
 			if ( len > 900 ) len = 900;
-			memcpy(buf,wptrs[i],len);
+			gbmemcpy(buf,wptrs[i],len);
 			buf[len]='\0';
 			log("seopipe: wptr=%s pos[%"INT32"]=%"INT32"",buf,i,wposvec[i]);
 		}
@@ -36707,7 +36707,7 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	}
 
 	// copy that over in case root is destroyed
-	memcpy ( m_rootTitleBuf , src , srcSize );
+	gbmemcpy ( m_rootTitleBuf , src , srcSize );
 	m_rootTitleBufSize = srcSize;
 
 	// sanity check, must include the null ni the size
@@ -36801,7 +36801,7 @@ char **XmlDoc::getFilteredRootTitleBuf ( ) {
 			// flag it
 			lastWasPunct = false;
 			// copy it over
-			memcpy ( dst , src , size );
+			gbmemcpy ( dst , src , size );
 			// skip what we copied
 			dst += size;
 			continue;
@@ -36820,7 +36820,7 @@ char **XmlDoc::getFilteredRootTitleBuf ( ) {
 	int32_t  strSize = dst - m_filteredRootTitleBuf;
 
 	// copy that over in case root is destroyed
-	memcpy ( m_filteredRootTitleBuf , str , strSize );
+	gbmemcpy ( m_filteredRootTitleBuf , str , strSize );
 	m_filteredRootTitleBufSize = strSize;
 
 	// sanity check, must include the null ni the size
@@ -36890,7 +36890,7 @@ char **XmlDoc::getTitleBuf ( ) {
 
 	// sanity check
 	if ( m_setFromTitleRec ) { 
-		memcpy(m_titleBuf, ptr_rootTitleBuf, size_rootTitleBuf );
+		gbmemcpy(m_titleBuf, ptr_rootTitleBuf, size_rootTitleBuf );
 		m_titleBufSize  = size_rootTitleBuf;
 		m_titleBufValid = true;
 		return (char **)&m_titleBuf;
@@ -36947,7 +36947,7 @@ char **XmlDoc::getTitleBuf ( ) {
 	// set this
 	char *pend = tmp + 1024;
 	// add that in
-	memcpy ( ptmp, title, tlen); ptmp += tlen;
+	gbmemcpy ( ptmp, title, tlen); ptmp += tlen;
 	// null terminate it
 	*ptmp++ = '\0';
 
@@ -37048,7 +37048,7 @@ char **XmlDoc::getTitleBuf ( ) {
 		// skip if too big
 		if ( bk[i].m_textLen + 1 > pend - ptmp ) continue;
 		// store it
-		memcpy ( ptmp , bk[i].m_text , bk[i].m_textLen );
+		gbmemcpy ( ptmp , bk[i].m_text , bk[i].m_textLen );
 		// advance
 		ptmp += bk[i].m_textLen;
 		// null terminate it
@@ -37059,7 +37059,7 @@ char **XmlDoc::getTitleBuf ( ) {
 	int32_t size = ptmp - tmp;
 	if ( size > ROOT_TITLE_BUF_MAX ) { char *xx=NULL;*xx=0; }
 
-	memcpy ( m_titleBuf , tmp , ptmp - tmp );
+	gbmemcpy ( m_titleBuf , tmp , ptmp - tmp );
 	m_titleBufSize = size;
 	m_titleBufValid = true;
 	// ensure null terminated
@@ -44732,7 +44732,7 @@ bool XmlDoc::scoreDocIdRestrictedQueries ( Msg99Reply **replyPtrs ,
 		// then langid
 		*bp = m_langId;	bp++;
 		// then the coll
-		memcpy ( bp , cr->m_coll , collLen );
+		gbmemcpy ( bp , cr->m_coll , collLen );
 		bp += collLen;
 		*bp++ = '\0';
 		// sanity!
@@ -44740,7 +44740,7 @@ bool XmlDoc::scoreDocIdRestrictedQueries ( Msg99Reply **replyPtrs ,
 		// the size of the termlist buf
 		*(int32_t *)bp = tsize; bp += 4;
 		// then the termlistbuf that has all the termlists forour docid
-		memcpy ( bp , termListBuf->getBufStart(), tsize ); bp += tsize;
+		gbmemcpy ( bp , termListBuf->getBufStart(), tsize ); bp += tsize;
 		// update bin's cursor
 		bin->m_cursor = bp - bin->m_buf;
 		// for breach detection. send off Bin when breach happens.
@@ -45164,7 +45164,7 @@ SafeBuf *XmlDoc::getTermIdSortedPosdbListBuf ( ) {
 		// skip negative keys
 		if ( (key[0] & 0x01) == 0x00 ) continue;
 		// add to new buf now
-		memcpy ( dst , key , sizeof(POSDBKEY) );
+		gbmemcpy ( dst , key , sizeof(POSDBKEY) );
 		// advance
 		dst += sizeof(POSDBKEY);
 	}
@@ -46572,7 +46572,7 @@ SafeBuf *XmlDoc::getWordPosSortedPosdbListBuf ( ) {
 		// skip negative keys
 		if ( (key[0] & 0x01) == 0x00 ) continue;
 		// add to new buf now
-		memcpy ( dst , key , sizeof(POSDBKEY) );
+		gbmemcpy ( dst , key , sizeof(POSDBKEY) );
 		// advance
 		dst += sizeof(POSDBKEY);
 	}

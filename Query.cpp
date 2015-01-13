@@ -156,7 +156,7 @@ bool Query::set2 ( char *query        ,
 	// save original query
 	
 	m_origLen = queryLen;
-	memcpy ( m_orig , query , queryLen );
+	gbmemcpy ( m_orig , query , queryLen );
 	m_orig [ m_origLen ] = '\0';
 
 	log(LOG_DEBUG, "query: set called = %s", m_orig);
@@ -218,15 +218,15 @@ bool Query::set2 ( char *query        ,
 		}
 		// translate ( and )
 		if ( boolFlag == 1 && query[i] == '(' ) {
-			memcpy ( p , " LeFtP " , 7 ); p += 7;
+			gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
 			continue;
 		}
 		if ( boolFlag == 1 && query[i] == ')' ) {
-			memcpy ( p , " RiGhP " , 7 ); p += 7;
+			gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
 			continue;
 		}
 		if ( query[i] == '|' ) {
-			memcpy ( p , " PiiPE " , 7 ); p += 7;
+			gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
 			continue;
 		}
 		// translate [#a] [#r] [#ap] [#rp] [] [p] to operators
@@ -682,7 +682,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		}
 		// debug
 		//char tmp[1024];
-		//memcpy ( tmp , qt->m_term , qt->m_termLen );
+		//gbmemcpy ( tmp , qt->m_term , qt->m_termLen );
 		//tmp [ qt->m_termLen ] = 0;
 		//logf(LOG_DEBUG,"got term %s (%"INT32")",tmp,qt->m_termLen);
 		// otherwise, add it
@@ -903,7 +903,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		}
 		// debug
 		//char tmp[1024];
-		//memcpy ( tmp , qt->m_term , qt->m_termLen );
+		//gbmemcpy ( tmp , qt->m_term , qt->m_termLen );
 		//tmp [ qt->m_termLen ] = 0;
 		//logf(LOG_DEBUG,"got term %s (%"INT32")",tmp,qt->m_termLen);
 		n++;
@@ -1842,7 +1842,7 @@ void Query::addCompoundTerms ( ) {
 		}
 		if (!numUORComponents) continue;
 		// copy it
-		memcpy ( &m_qterms[n] , &m_qterms[i] , sizeof(QueryTerm) );
+		gbmemcpy ( &m_qterms[n] , &m_qterms[i] , sizeof(QueryTerm) );
 		// get term's length
 		//char *beg = m_qterms[i].m_term;
 		//char *end = m_qterms[j-1].m_term + m_qterms[j-1].m_termLen;
@@ -2252,7 +2252,7 @@ bool Query::setQWords ( char boolFlag ,
 			else          fieldSign = m_qwords[j].m_wordSign;
 			// debug msg
 			//char ttt[128];
-			//memcpy ( ttt , field , fieldLen );
+			//gbmemcpy ( ttt , field , fieldLen );
 			//ttt[fieldLen] = '\0';
 			//log("field name = %s", ttt);
 			// . is it recognized field name,like "title" or "url"?
@@ -4444,7 +4444,7 @@ void Query::printQueryTerms(){
 		if ( ttlen > 254 ) ttlen = 254;
 		if ( ttlen < 0   ) ttlen = 0;
 		// this is utf8
-		memcpy ( tt , getTerm(i) , ttlen );
+		gbmemcpy ( tt , getTerm(i) , ttlen );
 		tt[ttlen]='\0';
 		if ( c == '\0' ) c = ' ';
 		logf(LOG_DEBUG, "query: Query Term #%"INT32" "

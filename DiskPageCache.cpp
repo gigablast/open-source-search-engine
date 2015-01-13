@@ -264,7 +264,7 @@ bool DiskPageCache::init ( const char *dbname ,
 
 	// a malloc tag, must be LESS THAN 16 bytes including the NULL
 	char *p = m_memTag;
-	memcpy  ( p , "pgcache-" , 8 ); p += 8;
+	gbmemcpy  ( p , "pgcache-" , 8 ); p += 8;
 	if ( dbname ) strncpy ( p , dbname    , 8 ); 
 	// so we know what db we are caching for
 	m_dbname = p;
@@ -489,7 +489,7 @@ void DiskPageCache::getPages   ( int32_t       vfd         ,
 		// . start reading at an offset of "HEADERSIZE+start1" into
 		//   the memory page
 		readFromCache(bufPtr, poff, HEADERSIZE + start1 , size);
-		//memcpy ( bufPtr , s + HEADERSIZE + start1 , size );
+		//gbmemcpy ( bufPtr , s + HEADERSIZE + start1 , size );
 		bufPtr       += size;
 		*newOffset   += size;
 		*newNumBytes -= size;
@@ -529,7 +529,7 @@ void DiskPageCache::getPages   ( int32_t       vfd         ,
 		promotePage ( s , poff , false );
 		// don't store more than asked for
 		if ( bufEnd - size < bufPtr ) size = bufEnd - bufPtr;
-		memcpy ( bufEnd - size , s + HEADERSIZE + start2 , size );
+		gbmemcpy ( bufEnd - size , s + HEADERSIZE + start2 , size );
 		bufEnd       -= size;
 		*newNumBytes -= size;
 		// return if we got it all
@@ -826,7 +826,7 @@ void DiskPageCache::addPage(int32_t vfd,
 	// disk data because it is not aligned perfectly with the mem page.
 	writeToCache( poff, HEADERSIZE + skip, pageData, size);
 
-	//memcpy ( p + HEADERSIZE + skip , page , size );
+	//gbmemcpy ( p + HEADERSIZE + skip , page , size );
 
 	// transform mem ptr to memory offset
 	//if ( !m_useRAMDisk && ! m_useSHM ) {
@@ -904,7 +904,7 @@ void DiskPageCache::enhancePage (int32_t poff, char *page, int32_t size,
 			return;
 		}
 		writeToCache(poff, HEADERSIZE + skip , page , diff);
-		//memcpy ( p + HEADERSIZE + skip , page , diff );
+		//gbmemcpy ( p + HEADERSIZE + skip , page , diff );
 		psize += diff;
 		pskip -= diff;
 		writeToCache(poff, OFF_SIZE, &psize, sizeof(int32_t));
@@ -921,7 +921,7 @@ void DiskPageCache::enhancePage (int32_t poff, char *page, int32_t size,
 	// we don't want any holes...
 	if ( diff > size ) return;
 	writeToCache(poff, HEADERSIZE + pend, page + size - diff, diff);
-	//memcpy ( p + HEADERSIZE + pend , page + size - diff , diff );
+	//gbmemcpy ( p + HEADERSIZE + pend , page + size - diff , diff );
 	int32_t tmp = psize+diff;
 	writeToCache(poff, OFF_SIZE, &tmp, sizeof(int32_t));
 	//*(int32_t *)(p+OFF_SIZE) = (int32_t)psize + diff;
@@ -1437,7 +1437,7 @@ void DiskPageCache::writeToCache( int32_t memOff,
 			//	     (int32_t)shmid);
 		}
 		// store it into the cache
-		memcpy ( mem + poff , inBuf , size );
+		gbmemcpy ( mem + poff , inBuf , size );
 		return;
 	}
 #endif
@@ -1453,7 +1453,7 @@ void DiskPageCache::writeToCache( int32_t memOff,
 
 	*/
 	char *p = getMemPtrFromMemOff ( memOff );
-	memcpy(p + memPageOff, inBuf, size);
+	gbmemcpy(p + memPageOff, inBuf, size);
 }
 
 // . store cached disk info into "outBuf". up to "size" bytes of it.
@@ -1507,7 +1507,7 @@ void DiskPageCache::readFromCache( void *outBuf,
 			//	     (int32_t)shmid);
 		}
 		// store it in outBuf
-		memcpy ( outBuf , mem + poff , size );
+		gbmemcpy ( outBuf , mem + poff , size );
 		return;
 	}
 #endif
@@ -1524,7 +1524,7 @@ void DiskPageCache::readFromCache( void *outBuf,
 	*/
 	// the old fashioned way
 	char *p = getMemPtrFromMemOff ( memOff );
-	memcpy(outBuf, p + pageOffset, bytesToCopy );
+	gbmemcpy(outBuf, p + pageOffset, bytesToCopy );
 }
 
 // lastly, we need some way to "force" a merge at around midnight when traffic

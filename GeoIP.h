@@ -242,7 +242,7 @@ GEOIP_API const char * GeoIP_region_name_by_code(const char *country_code, const
 GEOIP_API const char * GeoIP_time_zone_by_country_and_region(const char *country_code, const char *region_code);
 
 #ifdef BSD
-#define memcpy(dest, src, n) bcopy(src, dest, n)
+#define gbmemcpy(dest, src, n) bcopy(src, dest, n)
 #endif
 
 #ifdef __cplusplus

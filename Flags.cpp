@@ -44,7 +44,7 @@ bool Flags::resize( int32_t size ) {
 		// copy as many of old flags over as possible
 		int32_t min = m_numFlags;
 		if ( min > size ) min = size;
-		memcpy( newFlags, m_flags, min*sizeof(char) );
+		gbmemcpy( newFlags, m_flags, min*sizeof(char) );
 		mfree( m_flags, m_numFlags*sizeof(char), "Flags" );
 		m_flags = NULL;
 		// find new values for member variables

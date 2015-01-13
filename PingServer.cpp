@@ -432,7 +432,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	//char *xx = NULL; *xx = 0;
 	//}
 	int32_t l_loadavg = (int32_t) (g_process.getLoadAvg() * 100.0);
-	//memcpy(p, &l_loadavg, sizeof(int32_t));	p += sizeof(int32_t);
+	//gbmemcpy(p, &l_loadavg, sizeof(int32_t));	p += sizeof(int32_t);
 	pi->m_loadAvg = l_loadavg ;
 
 	// then our percent mem used
@@ -505,17 +505,17 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
 
 	// store hd temps
-	// memcpy ( p , me->m_hdtemps , 4 * 2 );
+	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );
 	// p += 4 * 2;
-	//memcpy ( &pi->m_hdtemps , me->m_pingInfo.m_hdtemps , 4 * 2 );
+	//gbmemcpy ( &pi->m_hdtemps , me->m_pingInfo.m_hdtemps , 4 * 2 );
 
 	// store the gbVersionStrBuf now, just a date with a \0 included
 	char *v = getVersion();
 	int32_t vsize = getVersionSize(); // 21 bytes
-	// memcpy ( p , v , vsize );
+	// gbmemcpy ( p , v , vsize );
 	// p += vsize;
 	if ( vsize != 21 ) { char *xx=NULL;*xx=0; }
-	memcpy ( pi->m_gbVersionStr , v , vsize );
+	gbmemcpy ( pi->m_gbVersionStr , v , vsize );
 
 	// int32_t requestSize = sizeof(PingRequest);//p - request;
 
@@ -946,7 +946,7 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 			char *xx=NULL;*xx=0; }
 
 		// now we just copy the class
-		memcpy ( &h->m_pingInfo , request , requestSize );
+		gbmemcpy ( &h->m_pingInfo , request , requestSize );
 
 		/*
 		char* p = request + 10;
@@ -996,12 +996,12 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 		p += sizeof(collnum_t);
 		
 		// the 4 hd temps
-		memcpy ( h->m_hdtemps , p , 4 * 2 );
+		gbmemcpy ( h->m_hdtemps , p , 4 * 2 );
 		p += 4 * 2;
 
 		// at the end the gbverstionstrbuf
 		int32_t vsize = getVersionSize(); // 21
-		memcpy ( h->m_gbVersionStrBuf , p , vsize );
+		gbmemcpy ( h->m_gbVersionStrBuf , p , vsize );
 		p += vsize;
 		*/
 
@@ -1564,13 +1564,13 @@ bool PingServer::sendEmail ( Host *h            ,
 		char hr[3],min[3];
 		hr[2] = '\0';
 		min[2] = '\0';
-		memcpy ( hr, g_conf.m_delayEmailsAfter, 2 );
+		gbmemcpy ( hr, g_conf.m_delayEmailsAfter, 2 );
 		deaHr = atoi(hr);
-		memcpy ( min, g_conf.m_delayEmailsAfter + 3, 2 );
+		gbmemcpy ( min, g_conf.m_delayEmailsAfter + 3, 2 );
 		deaMin = atoi(min);
-		memcpy ( hr, g_conf.m_delayEmailsBefore, 2 );
+		gbmemcpy ( hr, g_conf.m_delayEmailsBefore, 2 );
 		debHr = atoi(hr);
-		memcpy ( min, g_conf.m_delayEmailsBefore + 3, 2 );
+		gbmemcpy ( min, g_conf.m_delayEmailsBefore + 3, 2 );
 		debMin = atoi(min);
 		//get the current time. use getTime() because
 		//then it is sync'ed with host 0's time.
@@ -2244,8 +2244,8 @@ bool pageSprintPCS2 ( void *state , TcpSocket *s) {
 	if ( ! ss ) { char *xx = NULL; *xx = 0; }
 	ss += 8; // points to right after the space
 	// insert the cookie
-	memcpy ( ss+cookieLen , ss , pend - ss );
-	memcpy ( ss , cookie , cookieLen );
+	gbmemcpy ( ss+cookieLen , ss , pend - ss );
+	gbmemcpy ( ss , cookie , cookieLen );
 	pend += cookieLen;
 
 	// replace xxx
@@ -2472,7 +2472,7 @@ bool PingServer::broadcastShutdownNotes ( bool    sendEmailAlert          ,
 		// request will be freed by UdpServer
 		//char *r = (char *) mmalloc ( 4 , "PingServer" );
 		//if ( ! r ) return true;
-		//memcpy ( r , (char *)(&h->m_hostId) , 4 );
+		//gbmemcpy ( r , (char *)(&h->m_hostId) , 4 );
 		// send it right now
 		if ( g_udpServer.sendRequest ( s_buf         ,
 						5             , // rqstSz

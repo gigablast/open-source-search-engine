@@ -1025,7 +1025,7 @@ bool Addresses::set ( Sections  *sections    ,
 		Place *name1  = &a->m_name1;
 		Place *street = &a->m_street;
 		// street name was name1
-		memcpy ( name1 , street , sizeof(Place) );
+		gbmemcpy ( name1 , street , sizeof(Place) );
 		// and set the street to what it should be
 		street->m_str    = ma->m_street.m_str;
 		street->m_strlen = ma->m_street.m_strlen;
@@ -1284,7 +1284,7 @@ bool Addresses::updateAddresses ( ) {
 		if ( ! street ) return false; 
 		a->m_street = street;
 		// street name was name1
-		//memcpy ( name1 , street , sizeof(Place) );
+		//gbmemcpy ( name1 , street , sizeof(Place) );
 		// and set the street to what it should be
 		street->m_str    = sp;
 		street->m_strlen = spend - sp;
@@ -3418,27 +3418,29 @@ bool Addresses::setGeocoderLatLons ( void *state,
 		//char *start = p;
 		// request needs street,state,city (and zip if there)
 		p += sprintf(p,"addr%"INT32"=",num++);
-		memcpy(p,aa->m_street->m_str,aa->m_street->m_strlen);
+		gbmemcpy(p,aa->m_street->m_str,aa->m_street->m_strlen);
 		p += aa->m_street->m_strlen;
 		*p++ = ',';
 		*p++ = ' ';
 		if ( aa->m_city ) {
-			memcpy(p,aa->m_city->m_str,aa->m_city->m_strlen);
+			gbmemcpy(p,aa->m_city->m_str,aa->m_city->m_strlen);
 			p += aa->m_city->m_strlen;
 		}
 		else if ( aa->m_zip ) {
 			int32_t clen = strlen(aa->m_zip->m_cityStr);
-			memcpy(p,aa->m_zip->m_cityStr,clen);
+			gbmemcpy(p,aa->m_zip->m_cityStr,clen);
 			p += clen;
 		}
 		else if ( aa->m_flags3 & AF2_LATLON );
 		else { char *xx=NULL; *xx=0; }
 		*p++ = ' ';
 		// get state abbr
-		if      ( aa->m_adm1 ) 
-			memcpy(p,aa->m_adm1->m_adm1,2);
-		else if ( aa->m_zip ) 
-			memcpy(p,aa->m_zip->m_adm1,2);
+		if      ( aa->m_adm1 ) {
+			gbmemcpy(p,aa->m_adm1->m_adm1,2);
+		}
+		else if ( aa->m_zip )  {
+			gbmemcpy(p,aa->m_zip->m_adm1,2);
+		}
 		else if ( aa->m_flags3 & AF2_LATLON );
 		else { char *xx=NULL;*xx=0; }
 		p += 2;
@@ -3446,7 +3448,7 @@ bool Addresses::setGeocoderLatLons ( void *state,
 		if ( aa->m_zip ) {
 			*p++ = ' ';
 			int32_t zlen = aa->m_zip->m_strlen;
-			memcpy(p,aa->m_zip->m_str,zlen);
+			gbmemcpy(p,aa->m_zip->m_str,zlen);
 			p += zlen;
 		}
 		*p++ = '&';
@@ -5713,7 +5715,7 @@ bool Addresses::set2 ( ) {
 			Place *p = (Place *)m_pm.getMem(sizeof(Place));
 			if ( ! p ) return false;
 			// ok, good to add
-			memcpy ( p , pc , sizeof(Place) );
+			gbmemcpy ( p , pc , sizeof(Place) );
 			// set PLF_FROMTITLE bit
 			if ( inTitle ) p->m_bits |= PLF_FROMTITLE;
 			// if last word was in,set this
@@ -5725,7 +5727,7 @@ bool Addresses::set2 ( ) {
 			Place *p = (Place *)m_pm.getMem(sizeof(Place));
 			if ( ! p ) return false;
 			// ok, good to add
-			memcpy ( p , ps , sizeof(Place) );
+			gbmemcpy ( p , ps , sizeof(Place) );
 			// set PLF_FROMTITLE bit
 			if ( inTitle ) p->m_bits |= PLF_FROMTITLE;
 			// if last word was in,set this
@@ -11507,7 +11509,7 @@ void setFromStr2 ( char  *addr   ,
 	}
 
 	// copy into our static buffer
-	memcpy ( s_addr , addr , len+1 );
+	gbmemcpy ( s_addr , addr , len+1 );
 
 	// parse it in our static buffer so we do not destroy it
 	char *p = s_addr;
@@ -12288,7 +12290,7 @@ int32_t memcpy2 ( char *dst , char *src , int32_t bytes , bool filterCommas ,
 		// everything else
 		if( cs == 1 ) { *dst++ = *src; continue; }
 		// otherwise characters is > 1 byte
-		memcpy ( dst , src , cs );
+		gbmemcpy ( dst , src , cs );
 		dst += cs;
 	}
 	// return bytes written
@@ -12441,7 +12443,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 		// append the adm1 code
 		//if ( d->m_adm1[0] ) {
 		//	*p++ = '(';
-		//	memcpy(p,d->m_adm1,2);
+		//	gbmemcpy(p,d->m_adm1,2);
 		//	p += 2;
 		//	*p++ = ')';
 		//}
@@ -12458,7 +12460,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 			int32_t slen = gbstrlen(str);
 			// limit to 64 since that is getStoredSize() number
 			if ( slen > 64 ) slen = 64;
-			memcpy ( p , str ,slen );
+			gbmemcpy ( p , str ,slen );
 			p += slen;
 		}
 	}
@@ -12479,7 +12481,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 		// append the adm1 code
 		//if ( d->m_adm1[0] ) {
 		//	*p++ = '(';
-		//	memcpy(p,d->m_adm1,2);
+		//	gbmemcpy(p,d->m_adm1,2);
 		//	p += 2;
 		//	*p++ = ')';
 		//}
@@ -12495,7 +12497,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 	else if ( m_flags3 & AF2_LATLON ) {
 		// this is the nearest city's state based on our lat/lon
 		if ( pd && pd->m_adm1[0] && pd->m_adm1[1] ) {
-			memcpy ( p , pd->m_adm1 ,2 );
+			gbmemcpy ( p , pd->m_adm1 ,2 );
 			p += 2;
 		}
 	}
@@ -12513,7 +12515,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 		// append the adm1 code
 		//if ( d->m_adm1[0] ) {
 		//	*p++ = '(';
-		//	memcpy(p,d->m_adm1,2);
+		//	gbmemcpy(p,d->m_adm1,2);
 		//	p += 2;
 		//	*p++ = ')';
 		//}
@@ -12523,13 +12525,13 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 	// use country code from "crid"
 	//char *cn = (char *)g_countryCode.getAbbr(m_adm1->m_crid-1);
 	//if ( cn ) { 
-	//	memcpy(p,cn,gbstrlen(cn));
+	//	gbmemcpy(p,cn,gbstrlen(cn));
 	//	p += gbstrlen(cn);
 	//}
 	if ( m_flags3 & AF2_LATLON ) {
 		if ( pd && pd->m_crid ) {
 			char *cc = getCountryCode(pd->m_crid);
-			memcpy ( p , cc , 2 );
+			gbmemcpy ( p , cc , 2 );
 			p += 2;
 		}
 	}
@@ -15783,7 +15785,7 @@ bool addIndicator ( int64_t h , char bit , float indScore ) {
 	// set bit, should only be one
 	id.m_bit = bit;
 	id.m_indScore = indScore;
-	// add it. should memcpy "pd"
+	// add it. should gbmemcpy "pd"
 	return g_indicators.addKey ( &h , &id ) ;
 }
 
@@ -16258,7 +16260,7 @@ bool Msg2c::launchRequests ( ) {
 	*(char *)p = isName  ; p += 1;
 	// collection
 	//int32_t collSize = gbstrlen(m_coll) + 1;
-	//memcpy ( p , m_coll , collSize );
+	//gbmemcpy ( p , m_coll , collSize );
 	//p += collSize;
 	*(collnum_t *)p = m_collnum;
 	p += sizeof(collnum_t);
@@ -16853,7 +16855,7 @@ void gotList2c ( void *state , RdbList *xxx , Msg5 *yyy ) {
 		// get length
 		int32_t len = gbstrlen(str);
 		// store in reply buf, include \0
-		memcpy ( rptr , str , len + 1 );
+		gbmemcpy ( rptr , str , len + 1 );
 		// skip over
 		rptr += len + 1;
 		// sanity check
@@ -17009,7 +17011,7 @@ void sendBackAddress ( State2c *st ) {
 	// how much to copy, include \0
 	int32_t bytes = wlen + 1;
 	// copy over all but lat and lon if there, includes last ';'
-	memcpy ( p , winner , bytes ); p += bytes;
+	gbmemcpy ( p , winner , bytes ); p += bytes;
 	// how big is reply?
 	int32_t replySize = p - reply;
 	// sanity check
@@ -18267,7 +18269,7 @@ bool getIPLocation ( int32_t    ip     ,
 	if ( ctry ) *ctry = p;
 
 	//len = gbstrlen(gir->country_code);
-	//memcpy ( p , gir->country_code , len + 1 );
+	//gbmemcpy ( p , gir->country_code , len + 1 );
 	p[0] = gir->country_code[0];
 	p[1] = gir->country_code[1];
 	p += 2;
@@ -18278,7 +18280,7 @@ bool getIPLocation ( int32_t    ip     ,
 	if ( gir->region ) len = gbstrlen(gir->region);
 	// bogus?
 	if ( len == 0 ) return false;
-	//memcpy ( p , gir->region , len + 1 );
+	//gbmemcpy ( p , gir->region , len + 1 );
 	// make it all lowercase so we don't core anywhere
 	int32_t written = to_lower_alnum_a(gir->region,len,p);
 	// sanity
@@ -18296,7 +18298,7 @@ bool getIPLocation ( int32_t    ip     ,
 	if ( gir->city ) len = gbstrlen(gir->city);
 	// bogus?
 	if ( len == 0 ) return false;
-	memcpy ( p , gir->city , len );
+	gbmemcpy ( p , gir->city , len );
 	p += len;
 	*p++ = '\0';
 
@@ -19323,19 +19325,19 @@ bool getLatLonFromUserInput ( float  *radius,
 			// mark it
 			gotStuff = true;
 			// use gbstate:
-			memcpy ( p , "gbeventstatecode:", 17 );
+			gbmemcpy ( p , "gbeventstatecode:", 17 );
 			p += 17;
 			// special treatment. a state abbr is always 2 chars
-			memcpy ( p , finalStateDesc->m_adm1 , 2 );
+			gbmemcpy ( p , finalStateDesc->m_adm1 , 2 );
 			p += 2;
 			// store the country as well for that state whether
 			// it was entered or not! because some states are
 			// reduced to their numeric code like "08" and
 			// many countries have that same code!
 			char *cc = getCountryCode(finalStateDesc->m_crid);
-			memcpy ( p , " gbeventcountrycode:", 20 ); 
+			gbmemcpy ( p , " gbeventcountrycode:", 20 ); 
 			p += 20;
-			memcpy ( p , cc , 2 );
+			gbmemcpy ( p , cc , 2 );
 			p += 2;
 			// also set the timezone
 			*timeZone2 = finalStateDesc->m_timeZoneOffset;
@@ -19371,9 +19373,9 @@ bool getLatLonFromUserInput ( float  *radius,
 			gotStuff = true;
 			// special treatment. a country abbr is always 2 chars
 			char *cc = getCountryCode(finalCountryDesc->m_crid);
-			memcpy ( p , "gbeventcountrycode:", 19 ); 
+			gbmemcpy ( p , "gbeventcountrycode:", 19 ); 
 			p += 19;
-			memcpy ( p , cc , 2 );
+			gbmemcpy ( p , cc , 2 );
 			p += 2;
 			ignoreUntil = finalCountryB;
 			continue;
@@ -19392,11 +19394,11 @@ bool getLatLonFromUserInput ( float  *radius,
 		// mark it
 		gotStuff = true;
 		// field header
-		memcpy ( p , "gbwhere:", 8 );
+		gbmemcpy ( p , "gbwhere:", 8 );
 		// advance
 		p += 8;
 		// otherwise store into buffer as is
-		memcpy ( p , wptrs[i] , wlens[i] );
+		gbmemcpy ( p , wptrs[i] , wlens[i] );
 		// advance ptr cursor
 		p += wlens[i];
 	}
@@ -19555,7 +19557,7 @@ void *PlaceMem::getMem ( int32_t need ) {
 				// to be safe to avoid bad mem writes
 				m_placePtrs[i] = NULL;
 			}
-			//memcpy ( newPtrs, m_placePtrs , m_numPlacePtrs*4);
+			//gbmemcpy ( newPtrs, m_placePtrs , m_numPlacePtrs*4);
 			mfree  ( m_placePtrs , oldSize     , "pptbl");
 			m_placePtrs             = newPtrs;
 			m_numPlacePtrsAllocated = newAlloc;
@@ -19610,7 +19612,7 @@ void *PlaceMem::getMem ( int32_t need ) {
 			newAlloc = m_initNumPoolPtrs;
 		char **newPtrs = (char **)mmalloc(newAlloc*4,"pptbl2");
 		if ( ! newPtrs ) return NULL;
-		memcpy ( newPtrs    , m_poolPtrs , m_numPoolsAllocated*4 );
+		gbmemcpy ( newPtrs    , m_poolPtrs , m_numPoolsAllocated*4 );
 		mfree  ( m_poolPtrs , oldSize    , "pptbl2");
 		m_poolPtrs             = newPtrs;
 		m_numPoolPtrsAllocated = newAlloc;

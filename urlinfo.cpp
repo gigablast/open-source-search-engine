@@ -85,7 +85,7 @@ int main ( int argc , char *argv[] ) {
 	char out[1024*4];
 	char *p = out;
 	p += sprintf(p,"tld: ");
-	memcpy ( p, u.getTLD(),u.getTLDLen());
+	gbmemcpy ( p, u.getTLD(),u.getTLDLen());
 	p += u.getTLDLen();
 	char c = *p;
 	*p = '\0';
@@ -97,7 +97,7 @@ int main ( int argc , char *argv[] ) {
 	p = out;
 	sprintf ( p , "dom: ");
 	p += gbstrlen ( p );
-	memcpy ( p , u.getDomain() , u.getDomainLen() );
+	gbmemcpy ( p , u.getDomain() , u.getDomainLen() );
 	p += u.getDomainLen();
 	c = *p;
 	*p = '\0';
@@ -107,7 +107,7 @@ int main ( int argc , char *argv[] ) {
 	p = out;
 	sprintf ( p , "host: ");
 	p += gbstrlen ( p );
-	memcpy ( p , u.getHost() , u.getHostLen() );
+	gbmemcpy ( p , u.getHost() , u.getHostLen() );
 	p += u.getHostLen();
 	c = *p;
 	*p = '\0';
@@ -154,12 +154,12 @@ int main ( int argc , char *argv[] ) {
 	p = out;
 
 	p += sprintf ( p , "path: " );
-	memcpy ( p , u.getPath(), u.getPathLen() );
+	gbmemcpy ( p , u.getPath(), u.getPathLen() );
 	p += u.getPathLen();
 
 	if ( u.getFilename() ) {
 		p += sprintf ( p , "\nfilename: " );
-		memcpy ( p , u.getFilename(), u.getFilenameLen() );
+		gbmemcpy ( p , u.getFilename(), u.getFilenameLen() );
 		p += u.getFilenameLen();
 		*p = '\0';
 		printf("%s\n", out );

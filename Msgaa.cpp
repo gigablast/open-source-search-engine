@@ -127,7 +127,7 @@ rename msgaa to Site.
 	char *p = m_qbuf;
 	strcpy ( p , "site:" );
 	p += 5;
-	memcpy ( p , m_url->getHost() , m_url->getHostLen() );
+	gbmemcpy ( p , m_url->getHost() , m_url->getHostLen() );
 	p += m_url->getHostLen();
 	// sort them by the random score term, gbrandscore (see XmlDoc.cpp)
 	p += sprintf (p ,

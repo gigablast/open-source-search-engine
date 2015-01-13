@@ -372,7 +372,7 @@ bool Summary::set2 ( Xml      *xml                ,
 			maxb     = b;
 			maxScore = score;
 			// save this too
-			memcpy ( maxGotIt , gotIt , m_q->m_numWords );
+			gbmemcpy ( maxGotIt , gotIt , m_q->m_numWords );
 
 		}
 	
@@ -432,7 +432,7 @@ bool Summary::set2 ( Xml      *xml                ,
 			if ( p + 4 + 2 > pend ) break;
 			// space first?
 			if ( p > m_summary ) *p++ = ' ';
-			memcpy ( p , "... " , 4 );
+			gbmemcpy ( p , "... " , 4 );
 			p += 4;
 		}
 
@@ -499,7 +499,7 @@ bool Summary::set2 ( Xml      *xml                ,
 		// to add an ellipsis
 		if ( needEllipsis ) {
 			if ( p + 4 + 2 > pend ) break;
-			memcpy ( p , " ..." , 4 );
+			gbmemcpy ( p , " ..." , 4 );
 			p += 4;
 		}
 
@@ -1084,7 +1084,7 @@ bool Summary::getDefaultSummary ( Xml    *xml,
 		if ( len > 0 && p + 3 + 2 < pend ){
 			// space first?
 			if ( p > m_summary ) *p++ = ' ';
-			memcpy ( p , "..." , 3 );
+			gbmemcpy ( p , "..." , 3 );
 			p += 3;
 		}
 		// NULL terminate
@@ -1698,7 +1698,7 @@ bool Summary::set1 ( char      *doc                ,
 		else if ( left > oldright ) {
 			int32_t size = oldright - oldleft;
 			if ( p + size + 1 < docEnd ) {
-				memcpy ( p , oldleft , size );
+				gbmemcpy ( p , oldleft , size );
 				p += size ;
 				*p++ = '\0';
 			}
@@ -1715,7 +1715,7 @@ bool Summary::set1 ( char      *doc                ,
 	if ( oldright != (char *)0x7fffffff ) {
 		int32_t size = oldright - oldleft;
 		if ( p + size + 1 < docEnd ) {
-			memcpy ( p , oldleft , size );
+			gbmemcpy ( p , oldleft , size );
 			p += size ;
 			*p++ = '\0';
 		}

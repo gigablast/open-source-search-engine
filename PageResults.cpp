@@ -5222,12 +5222,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	char dbuf [ MAX_URL_LEN ];
 	int32_t dlen = uu.getDomainLen();
 	if ( si->m_format == FORMAT_HTML ) {
-		memcpy ( dbuf , uu.getDomain() , dlen );
+		gbmemcpy ( dbuf , uu.getDomain() , dlen );
 		dbuf [ dlen ] = '\0';
 		// newspaperarchive urls have no domain
 		if ( dlen == 0 ) {
 			dlen = uu.getHostLen();
-			memcpy ( dbuf , uu.getHost() , dlen );
+			gbmemcpy ( dbuf , uu.getHost() , dlen );
 			dbuf [ dlen ] = '\0';
 		}
 	}
@@ -5266,7 +5266,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			      , dbuf );
 		//banSites->safePrintf("%s+", dbuf);
 		dlen = uu.getHostLen();
-		memcpy ( dbuf , uu.getHost() , dlen );
+		gbmemcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
 			      " <a style=color:green; href=\"/admin/tagdb?"
@@ -5803,7 +5803,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	else if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
 		char hbuf [ MAX_URL_LEN ];
 		int32_t hlen = uu.getHostLen();
-		memcpy ( hbuf , uu.getHost() , hlen );
+		gbmemcpy ( hbuf , uu.getHost() , hlen );
 		hbuf [ hlen ] = '\0';
 		sb->safePrintf (" - <nobr><a href=\"/search?"
 			       "q=%%2Bsite%%3A%s+%s&sc=0&c=%s\">"

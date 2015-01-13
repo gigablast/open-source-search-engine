@@ -84,7 +84,7 @@ class HttpRequest {
 	// this is NULL terminated too
 	char *getUserAgent () { return m_userAgent; };
 
-	// just does a simply memcpy() operation, since it should be pointing
+	// just does a simply gbmemcpy() operation, since it should be pointing
 	// into the TcpSocket's buffer which is safe until after reply is sent
 	// . returns false and sets g_errno on error, true otherwise
 	bool copy ( class HttpRequest *r , bool steal = false ) ;

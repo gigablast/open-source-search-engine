@@ -1,11 +1,15 @@
-#ifndef __GB_INCLUDE_H__
-#define __GB_INCLUDE_H__
+#ifndef GB_INCLUDE_H
+#define GB_INCLUDE_H
 
 // fix on 64-bit architectures so sizeof(uint96_t) is 12, not 16!
 //#pragma pack(0)
 
-//#define memcpy memcpy_ass
+//#define gbmemcpy memcpy_ass
 //#define memset memset_ass
+
+extern int g_inMemCpy;
+
+#define gbmemcpy(xx,yy,zz) {g_inMemCpy=1;memcpy(xx,yy,zz);g_inMemCpy=0;}
 
 #include <inttypes.h>
 

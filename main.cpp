@@ -152,6 +152,8 @@ void allExitWrapper ( int fd , void *state ) ;
 
 void rmTest();
 
+int g_inMemCpy=0;
+
 //#ifndef _LARS_
 static void dumpTitledb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree,
 			   int64_t docId , char justPrintDups ,
@@ -7077,14 +7079,14 @@ int32_t dumpSpiderdb ( char *coll,
 
 		// otherwise add it, it is a new never-before-seen domain
 		//char poo[999];
-		//memcpy ( poo , dom , domLen );
+		//gbmemcpy ( poo , dom , domLen );
 		//poo[domLen]=0;
 		//fprintf(stderr,"new dom %s hash=%"INT32"\n",dom,domHash);
 		// store the count of urls followed by the domain
 		char *ptr = buf + bufOff;
 		*(int32_t *)ptr = 1;
 		ptr += 4;
-		memcpy ( ptr , dom , domLen );
+		gbmemcpy ( ptr , dom , domLen );
 		ptr += domLen;
 		*ptr = '\0';
 		// use an ip of 1 if it is 0 so it hashes right
@@ -10580,7 +10582,7 @@ bool gbgunzip (char *filename) {
 			   "file, not a .gz:%s",
 			   filename);
 
-	memcpy(outfile, filename, outfilelen);
+	gbmemcpy(outfile, filename, outfilelen);
 	outfile[outfilelen] = '\0';
 
 	//open our input and output files right away
@@ -10682,7 +10684,7 @@ bool bucketstest ( char* dbname ) {
 	for ( int32_t i = 0 ; i < 1000 ; i++ ) {
 		int32_t j = (rand() % numKeys) * keySize;
 		int32_t m = (rand() % numKeys) * keySize;
-		memcpy((char*)&k[j], (char*)&k[m], keySize);
+		gbmemcpy((char*)&k[j], (char*)&k[m], keySize);
 		KEYXOR((char*)&k[j],0x01);
 	}
 
@@ -11751,7 +11753,7 @@ void dumpSectiondb(char *coll,int32_t startFileNum,int32_t numFiles,
 		// no longer a first key
 		firstKey = false;
 		// copy it
-		memcpy ( &lastk , k , sizeof(key128_t) );
+		gbmemcpy ( &lastk , k , sizeof(key128_t) );
 		int32_t shardNum =  getShardNum (RDB_SECTIONDB,k);
 		//int32_t groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
@@ -11877,7 +11879,7 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 		// no longer a first key
 		firstKey = false;
 		// copy it
-		memcpy ( &lastk , k , sizeof(key_t) );
+		gbmemcpy ( &lastk , k , sizeof(key_t) );
 		// point to the data
 		char  *p       = data;
 		char  *pend    = data + size;
@@ -12881,7 +12883,7 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 		goto loop;
 	}
 	// new top?
-	if ( size == ks ) { memcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
+	if ( size == ks ) { gbmemcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
 	// warning msg
 	if ( ! haveTop && ! warned ) {
 		warned = true;
@@ -12889,8 +12891,8 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 	}
 	// make the key
 	char tmp [ MAX_KEY_BYTES ];
-	memcpy ( tmp , p , ks-6 );
-	memcpy ( tmp + ks-6 , top , 6 );
+	gbmemcpy ( tmp , p , ks-6 );
+	gbmemcpy ( tmp + ks-6 , top , 6 );
 	// print the key
 	if ( ks == 12 )
 		fprintf(stdout,"%08"INT64") %08"XINT32" %016"XINT64"\n",
@@ -14777,7 +14779,7 @@ void doInject ( int fd , void *state ) {
 			char *xx=NULL;*xx=0;
 			/*
 			// stick mime in there
-			memcpy ( rp , mimePtr , m.getMimeLen() );
+			gbmemcpy ( rp , mimePtr , m.getMimeLen() );
 			// skip that
 			rp += m.getMimeLen();
 			// turn \n\n into \r\n\r\n
@@ -14813,7 +14815,7 @@ void doInject ( int fd , void *state ) {
 		}
 
 		// store the content after the &ucontent
-		memcpy ( rp , contentPtr , contentPtrLen );
+		gbmemcpy ( rp , contentPtr , contentPtrLen );
 		rp += contentPtrLen;
 
 		s_off += contentPtrLen;
@@ -17427,7 +17429,7 @@ char *getcwd2 ( char *arg2 ) {
 		if (p[0] != '.' || p[1] !='.' ) continue;
 		// if .. is at start of string
 		if ( p == arg ) {
-			memcpy ( arg , p+2,gbstrlen(p+2)+1);
+			gbmemcpy ( arg , p+2,gbstrlen(p+2)+1);
 			goto again;
 		}
 		// find previous /
@@ -17436,7 +17438,7 @@ char *getcwd2 ( char *arg2 ) {
 		slash--;
 		for ( ; slash > arg && *slash != '/' ; slash-- );
 		if ( slash<arg) slash=arg;
-		memcpy(slash,p+2,gbstrlen(p+2)+1);
+		gbmemcpy(slash,p+2,gbstrlen(p+2)+1);
 		goto again;
 		// if can't back up anymore...
 	}
@@ -17488,11 +17490,11 @@ char *getcwd2 ( char *arg2 ) {
 	// if "arg" is a RELATIVE path then append it
 	if ( arg && arg[0]!='/' ) {
 		if ( arg[0]=='.' && arg[1]=='/' ) {
-			memcpy ( end , arg+2 , alen -2 );
+			gbmemcpy ( end , arg+2 , alen -2 );
 			end += alen - 2;
 		}
 		else {
-			memcpy ( end , arg , alen );
+			gbmemcpy ( end , arg , alen );
 			end += alen;
 		}
 		*end = '\0';

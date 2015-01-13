@@ -143,7 +143,7 @@ class TagRec {
 	//int32_t  getDataSize () { return m_dataSize; };
 
 	//void  copy        (class TagRec *tp ) {
-	//	memcpy ( this , (void *)tp , tp->getSize() ); };
+	//	gbmemcpy ( this , (void *)tp , tp->getSize() ); };
 
 	// includes the 4 byte "header" which consists of the first 2 bytes
 	// being the size of the actual tag buffer and the second two bytes

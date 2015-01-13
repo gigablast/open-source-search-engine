@@ -424,9 +424,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// if ( cpcrec ) {
 	// 	// copy it, but not the timedb hashtable, etc.
 	// 	int32_t size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
-	// 	// JAB: bad memcpy - no donut!
+	// 	// JAB: bad gbmemcpy - no donut!
 	// 	// this is not how objects are supposed to be copied!!!
-	// 	memcpy ( cr , cpcrec , size);
+	// 	gbmemcpy ( cr , cpcrec , size);
 	// }
 
 	// set coll id and coll name for coll id #i
@@ -1869,7 +1869,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 	if ( sb.fillFromFile ( tmp1 ) > 0 )
 		//m_localCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
-		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
+		gbmemcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
 
 	if ( ! g_conf.m_doingCommandLine )
@@ -1917,7 +1917,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 	if ( sb.fillFromFile ( tmp1 ) > 0 )
 		//m_globalCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
-		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
+		gbmemcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
 	if ( ! g_conf.m_doingCommandLine )
 		log("coll: Loaded %s (%"INT32") global hasurlsready=%"INT32"",

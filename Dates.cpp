@@ -23287,7 +23287,7 @@ int32_t Dates::addIntervals ( Date       *di     ,
 	// copy into this buffer
 	Interval buf[MAX_INTERVALS];
 	if ( ni > MAX_INTERVALS ) ni = MAX_INTERVALS;
-	memcpy(buf,retInt,ni*sizeof(Interval));
+	gbmemcpy(buf,retInt,ni*sizeof(Interval));
 
 	// store here
 	Interval *dst = retInt;
@@ -23636,7 +23636,7 @@ int32_t Dates::addIntervalsB ( Date       *di     ,
 		// we are already using that as the accumulator, return now
 		if ( int1 == retInt ) return ni1;
 		// ok, do the copy
-		memcpy ( retInt , int1 , ni1 * sizeof(Interval) );
+		gbmemcpy ( retInt , int1 , ni1 * sizeof(Interval) );
 		// return how many intervals are in "retInt"
 		return ni1;
 	}
@@ -24674,11 +24674,11 @@ int32_t Dates::intersect3 ( Interval *int1 ,
 		//return p3-int3;
 	}
 	if ( p1 >= p1end ) {
-		//memcpy ( p3 , p2 , (p2end - p2) * sizeof(Interval)  );
+		//gbmemcpy ( p3 , p2 , (p2end - p2) * sizeof(Interval)  );
 		//p3 += p2end - p2;
 		if ( unionOp ) {
 			if ( p3 + (p2end - p2) > p3max ) goto overflow;
-			memcpy ( p3 , p2 , (p2end - p2) * sizeof(Interval)  );
+			gbmemcpy ( p3 , p2 , (p2end - p2) * sizeof(Interval)  );
 			p3 += p2end - p2;
 		}
 		return p3-int3;
@@ -24689,12 +24689,12 @@ int32_t Dates::intersect3 ( Interval *int1 ,
 		// then the rest of p1 survives
 		if ( subtractint2 ) {
 			if ( p3 + (p1end - p1) > p3max ) goto overflow;
-			memcpy ( p3 , p1 , (p1end - p1) * sizeof(Interval)  );
+			gbmemcpy ( p3 , p1 , (p1end - p1) * sizeof(Interval)  );
 			p3 += p1end - p1;
 		}
 		else if ( unionOp ) {
 			if ( p3 + (p1end - p1) > p3max ) goto overflow;
-			memcpy ( p3 , p1 , (p1end - p1) * sizeof(Interval)  );
+			gbmemcpy ( p3 , p1 , (p1end - p1) * sizeof(Interval)  );
 			p3 += p1end - p1;
 		}
 		return p3-int3;
@@ -26632,9 +26632,9 @@ bool Dates::printNormalizedTime ( Date *dx ,
 		struct tm1;
 		struct tm2;
 		ts = gmtime ( &ii->m_a );
-		memcpy ( &tm1 , ts , sizeof(tm) );
+		gbmemcpy ( &tm1 , ts , sizeof(tm) );
 		ts = gmtime ( &ii->m_b );
-		memcpy ( &tm2 , ts , sizeof(tm) );
+		gbmemcpy ( &tm2 , ts , sizeof(tm) );
 		// just copy it
 		cd[i]->m_year1 = tm1->tm_year + 1900;
 		cd[i]->m_year2 = tm2->tm_year + 1900;

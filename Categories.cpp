@@ -124,25 +124,25 @@ int32_t Categories::loadCategories ( char *filename ) {
 		return 1;
 	}
 	char *p = tempBuffer;
-	memcpy ( m_nameBuffer, p, m_nameBufferSize );
+	gbmemcpy ( m_nameBuffer, p, m_nameBufferSize );
 	p += m_nameBufferSize;
 	
 	// read and fill the cats
 	for (int32_t i = 0; i < m_numCats; i++) {
 		
-		memcpy(&m_cats[i].m_catid, p, sizeof(int32_t));
+		gbmemcpy(&m_cats[i].m_catid, p, sizeof(int32_t));
 		p += sizeof(int32_t);
-		memcpy(&m_cats[i].m_parentid, p, sizeof(int32_t));
+		gbmemcpy(&m_cats[i].m_parentid, p, sizeof(int32_t));
 		p += sizeof(int32_t);
-		memcpy(&m_cats[i].m_nameOffset, p, sizeof(int32_t));
+		gbmemcpy(&m_cats[i].m_nameOffset, p, sizeof(int32_t));
 		p += sizeof(int32_t);
-		memcpy(&m_cats[i].m_nameLen, p, sizeof(int16_t));
+		gbmemcpy(&m_cats[i].m_nameLen, p, sizeof(int16_t));
 		p += sizeof(int16_t);
-		memcpy(&m_cats[i].m_structureOffset, p, sizeof(int32_t));
+		gbmemcpy(&m_cats[i].m_structureOffset, p, sizeof(int32_t));
 		p += sizeof(int32_t);
-		memcpy(&m_cats[i].m_contentOffset, p, sizeof(int32_t));
+		gbmemcpy(&m_cats[i].m_contentOffset, p, sizeof(int32_t));
 		p += sizeof(int32_t);
-		memcpy(&m_cats[i].m_numUrls, p, sizeof(int32_t));
+		gbmemcpy(&m_cats[i].m_numUrls, p, sizeof(int32_t));
 		p += sizeof(int32_t);
 		
 		/*
@@ -205,7 +205,7 @@ int32_t Categories::loadCategories ( char *filename ) {
 		}
 		*/
 		
-		memcpy(&m_catHash[i].m_hash, p, sizeof(int32_t));
+		gbmemcpy(&m_catHash[i].m_hash, p, sizeof(int32_t));
 		p += sizeof(int32_t);
 		
 		// assign the index
@@ -951,13 +951,13 @@ nextTag:
 	/*
 	urlStrLen = htmlDecode(decodedUrl, urlStr, urlStrLen,false,
 			       niceness);
-	memcpy(urlStr, decodedUrl, urlStrLen);
+	gbmemcpy(urlStr, decodedUrl, urlStrLen);
 
 	normUrl.set(urlStr, urlStrLen, true);
 	g_catdb.normalizeUrl(&normUrl, &normUrl);
 	// copy it back
 	urlStrLen = normUrl.getUrlLen();
-	memcpy(urlStr, normUrl.getUrl(), urlStrLen);
+	gbmemcpy(urlStr, normUrl.getUrl(), urlStrLen);
 	// make sure there's a trailing / on root urls
 	// and no www.
 	//urlStrLen = fixUrl(urlStr, urlStrLen);
@@ -1011,7 +1011,7 @@ nextTag:
 		if (urlAnchor) {
 			if (urlAnchorLen > maxAnchorLen)
 				urlAnchorLen = maxAnchorLen;
-			memcpy(anchor, urlAnchor, urlAnchorLen);
+			gbmemcpy(anchor, urlAnchor, urlAnchorLen);
 			*anchorLen = urlAnchorLen;
 		}
 		else
@@ -1062,11 +1062,11 @@ bool Categories::getTitleAndSummary ( char  *urlOrig,
 	char* p;
 	uint32_t readSize;
 	// fix the original url
-	//memcpy(url, urlOrig, urlOrigLen);
+	//gbmemcpy(url, urlOrig, urlOrigLen);
 	//urlLen = fixUrl(url, urlOrigLen);
 	normUrl.set(urlOrig, urlOrigLen, true);
 	g_catdb.normalizeUrl(&normUrl, &normUrl);
-	memcpy(url, normUrl.getUrl(), normUrl.getUrlLen());
+	gbmemcpy(url, normUrl.getUrl(), normUrl.getUrlLen());
 	urlLen = normUrl.getUrlLen();
 	// lookup the index for this catid
 	catIndex = getIndexFromId(catid);
@@ -1146,7 +1146,7 @@ nextTag:
 		// html decode the url
 		urlStrLen = htmlDecode(decodedUrl, urlStr, urlStrLen,false,
 				       niceness);
-		memcpy(urlStr, decodedUrl, urlStrLen);
+		gbmemcpy(urlStr, decodedUrl, urlStrLen);
 		// normalize with Url
 		//normUrl.set(urlStr, urlStrLen, false, false, false, true);
 		normUrl.set(urlStr, urlStrLen, true);
@@ -1163,7 +1163,7 @@ nextTag:
 		}
 		// copy it back
 		urlStrLen = normUrl.getUrlLen();
-		memcpy(urlStr, normUrl.getUrl(), urlStrLen);
+		gbmemcpy(urlStr, normUrl.getUrl(), urlStrLen);
 		// make sure there's a trailing / on root urls
 		// and no www.
 		//urlStrLen = fixUrl(urlStr, urlStrLen);
@@ -1208,7 +1208,7 @@ foundTag:
 		if (urlAnchor) {
 			if (urlAnchorLen > maxAnchorLen)
 				urlAnchorLen = maxAnchorLen;
-			memcpy(anchor, urlAnchor, urlAnchorLen);
+			gbmemcpy(anchor, urlAnchor, urlAnchorLen);
 			*anchorLen = urlAnchorLen;
 		}
 		else
@@ -1357,7 +1357,7 @@ nextTag:
 				 catStrLen ,
 				 false,
 				 0);
-	memcpy(catStr, htmlDecoded, catStrLen);
+	gbmemcpy(catStr, htmlDecoded, catStrLen);
 	// reset this offset
 	nameStart = 0;
 	nameLen = catStrLen;
@@ -1432,10 +1432,10 @@ nextTag:
 	cat->m_nameLen = nameLen;
 	cat->m_type = currType;
 	p = cat->m_buf;
-	memcpy ( p , catStr + prefixStart , prefixLen );
+	gbmemcpy ( p , catStr + prefixStart , prefixLen );
 	p += prefixLen;
 	*p++ = '\0';
-	memcpy ( p , catStr + nameStart , nameLen );
+	gbmemcpy ( p , catStr + nameStart , nameLen );
 	p += nameLen;
 	*p++ = '\0';
 
@@ -1446,13 +1446,13 @@ nextTag:
 	subCats[numSubCats].m_prefixOffset = catp;
 	subCats[numSubCats].m_prefixLen    = prefixLen;
 	if (prefixLen > 0) {
-		memcpy(&((*catBuffer)[catp]), &catStr[prefixStart], prefixLen);
+		gbmemcpy(&((*catBuffer)[catp]), &catStr[prefixStart], prefixLen);
 		catp += prefixLen;
 	}
 	subCats[numSubCats].m_nameOffset   = catBuf->length();//catp;
 	subCats[numSubCats].m_nameLen      = nameLen;
 	if (nameLen > 0) {
-		memcpy(&((*catBuffer)[catp]), &catStr[nameStart], nameLen);
+		gbmemcpy(&((*catBuffer)[catp]), &catStr[nameStart], nameLen);
 		catp += nameLen;
 	}
 	subCats[numSubCats].m_type         = currType;
@@ -1520,7 +1520,7 @@ int32_t Categories::createDirSearchRequest ( char *requestBuf,
 		     , catid
 		     , catid);
 	// coll
-	memcpy(p, coll, collLen);
+	gbmemcpy(p, coll, collLen);
 	p += collLen;
 	// add extra cgi if we have it and have room
 	if ( cgi && cgiLen > 0 && p + cgiLen + 76 < pend ) {
@@ -1543,13 +1543,13 @@ int32_t Categories::createDirSearchRequest ( char *requestBuf,
 			}
 		}
 		else {
-			memcpy(p, cgi, cgiLen);
+			gbmemcpy(p, cgi, cgiLen);
 			p += cgiLen;
 		}
 	}
 	// hostname
 	p += sprintf(p, " HTTP/1.0\r\nHost: http://");
-	memcpy(p, hostname, hostnameLen);
+	gbmemcpy(p, hostname, hostnameLen);
 	p += hostnameLen;
 	// rest of the request
 	p += sprintf(p, "\r\n"
