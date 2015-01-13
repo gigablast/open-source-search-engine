@@ -2460,9 +2460,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
 			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
 				       ,tf);
-			sb->safePrintf("\t\t\t<termId48>%"INT64"</termId48>\n"
+			sb->safePrintf("\t\t\t<termHash48>%"INT64"</termHash48>\n"
 				       ,qt->m_termId);
-			sb->safePrintf("\t\t\t<termId64>%"UINT64"</termId64>\n"
+			sb->safePrintf("\t\t\t<termHash64>%"UINT64"</termHash64>\n"
 				       ,qt->m_rawTermId);
 			QueryWord *qw = qt->m_qword;
 			sb->safePrintf("\t\t\t<prefixHash64>%"UINT64"</prefixHash64>\n"
@@ -2528,9 +2528,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
 				       ,tf);
 
-			sb->safePrintf("\t\t\"termId48\":%"INT64",\n"
+			sb->safePrintf("\t\t\"termHash48\":%"INT64",\n"
 				       ,qt->m_termId);
-			sb->safePrintf("\t\t\"termId64\":%"UINT64",\n"
+			sb->safePrintf("\t\t\"termHash64\":%"UINT64",\n"
 				       ,qt->m_rawTermId);
 
 			// don't end last query term attr on a omma

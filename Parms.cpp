@@ -18404,10 +18404,10 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "recycle link info";
-	m->m_desc  = "If enabled, gigablast will recycle the link info "
-		"when rebuilding titledb. The link info is basically just "
-		"the link text. The siterank, which is determined by the "
+	m->m_title = "recycle link text";
+	m->m_desc  = "If enabled, gigablast will recycle the link text "
+		"when rebuilding titledb. "
+		"The siterank, which is determined by the "
 		"number of inlinks to a site, is stored/cached in tagdb "
 		"so that is a separate item. If you want to pick up new "
 		"link text you will want to set this to <i>NO</i> and "
