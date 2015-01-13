@@ -8957,6 +8957,27 @@ char *XmlDoc::getIsDup ( ) {
 		m_isDupValid = true;
 		return &m_isDup;
 	}
+
+	// BUT if we are already indexed and a a crawlbot/bulk diffbot job
+	// then do not kick us out just because another indexed doc is
+	// a dup of us because it messes up the TestOnlyProcessIfNew smoketests
+	// because in the 2nd round we end up deleting article1.html after 
+	// indexing it in the first round, then we add article11.html's 
+	// diffbot reply in the 2nd round because article1.html and its
+	// diffbot reply was deleted. thereby giving it a new timestamp and
+	// makeing the smoke fail.
+	if ( cr->m_isCustomCrawl ) {
+		char *isIndexed = getIsIndexed();
+		if ( ! isIndexed || isIndexed == (char *)-1) 
+			return (char *)isIndexed;
+		if ( *isIndexed ) {
+			m_isDupValid = true;
+			return &m_isDup;
+		}
+	}
+
+
+
 	//we need both vectors to be non-empty
 	//uint64_t *tv = getTagPairHash();
 	//if ( ! tv || tv == (uint64_t *)-1) return (char *)tv;
