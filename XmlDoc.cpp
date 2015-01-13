@@ -31413,6 +31413,16 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		return &m_gsbuf;
 	}
 
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (SafeBuf *)ct;
+
+
+	// if it is json then only return the json fields that are strings
+	// and json decode them... separate each field with a \0.
+	if ( *ct == CT_JSON ) 
+		return getSampleForGigabitsJSON();
+
+
 	Words *ww = getWords();
 	if ( ! ww || ww == (Words *)-1 ) return (SafeBuf *)ww;
 
@@ -31657,6 +31667,144 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 	// success
 	return &m_gsbuf;
 }
+
+// if it is json then only return the json fields that are strings
+// and json decode them... separate each field with a \0.
+SafeBuf *XmlDoc::getSampleForGigabitsJSON ( ) {
+
+	SafeBuf tmp;
+
+	// use new json parser
+	Json *jp = getParsedJson();
+	if ( ! jp || jp == (void *)-1 ) return (SafeBuf *)jp;
+	JsonItem *ji = jp->getFirstItem();
+	for ( ; ji ; ji = ji->m_next ) {
+		QUICKPOLL(m_niceness);
+		// skip if not string
+		if ( ji->m_type != JT_STRING )
+			continue;
+		// store field value
+		char *val = ji->getValue();
+		int valLen = ji->getValueLen();
+		// if it contains html then skip it as a gigabit candidate.
+		// otherwise our fast facts end up including html tags in them
+		// in computeFastFacts() in Msg40.cpp
+		int i; 
+		for ( i = 0 ; i < valLen ; i++ ) 
+			if ( val[i] == '<' ) break;
+		if ( i < valLen ) continue;
+
+		if ( ! tmp.pushChar('\n') )
+			return NULL;
+		// if ( ! tmp.safePrintf("<p>"))
+		// 	return NULL;
+
+
+		// decode the json
+		//SafeBuf xx;
+		if ( ! tmp.safeDecodeJSONToUtf8(val,valLen,m_niceness))
+			return NULL;
+
+		// escape out the html
+		// if ( ! tmp.htmlEncode ( xx.getBufStart() ))
+		// 	return NULL;
+
+		// two new lines
+		if ( ! tmp.safePrintf("<hr>"))
+			return NULL;
+		if ( ! tmp.pushChar('\n') )
+			return NULL;
+		if ( ! tmp.pushChar('\n') )
+			return NULL;
+		if ( ! tmp.pushChar('\n') )
+			return NULL;
+	}
+
+	if ( ! tmp.nullTerm() )
+		return NULL;
+
+	Xml xml;
+	if ( ! xml.set ( tmp.getBufStart() ,
+			 tmp.length() ,
+			 false      ,  // ownData?
+			 0          ,  // allocSize
+			 false      ,  // pure xml?
+			 m_version  ,
+			 false      ,  // setParentsArg? 
+			 m_niceness ,
+			 CT_HTML ) ) // *ct ) )
+	     return NULL;
+	Words ww;
+	if ( ! ww.set ( &xml , true  , m_niceness ) ) return NULL;
+	Bits bb;
+	if ( ! bb.set ( &ww ,0 ,m_niceness ) ) return NULL;
+	Phrases pp;
+	if ( ! pp.set ( &ww , &bb , true,false,0,m_niceness) ) return NULL;
+	// this uses the sectionsReply to see which sections are 
+	// "text", etc. rather than compute it expensively
+	Sections sec;
+	if ( !sec.set ( &ww      ,
+			&pp    ,
+			&bb          ,
+			getFirstUrl() ,
+			0,//*d            ,
+			0,//*sh64         ,    // 64 bits
+			"",//cr->m_coll        ,    
+			m_niceness    ,
+			NULL,//m_masterState ,    // state
+			NULL,//m_masterLoop  ,    // callback
+			CT_JSON, // *ct           ,
+			NULL,//&m_dates      ,
+			NULL          ,    // sd // sections data
+			true          ,    // sections data valid?
+			NULL          ,    // sv // for m_nsvt
+			NULL          ,    // buf
+			0             )) { // bufSize
+		return NULL;
+	}
+
+
+	// now add each sentence section into the buffer
+	// scan the sentences if we got those
+	char **wptrs = ww.getWords();
+	int32_t  *wlens = ww.getWordLens();
+	Section *ss = sec.m_firstSent;
+	for ( ; ss ; ss = ss->m_nextSent ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// count of the alnum words in sentence
+		int32_t count = ss->m_alnumPosB - ss->m_alnumPosA;
+		// start with one word!
+		count--;
+		// how can it be less than one alnum word
+		if ( count < 0 ) continue;
+		// store it
+		char *wp1 = wptrs[ss->m_senta];
+		char *wp2 = wptrs[ss->m_sentb-1] + wlens[ss->m_sentb-1];
+
+		bool gotTerm = (wp2[0]=='.' || wp2[0]=='?' || wp2[0]=='!' ) ;
+
+		//if ( ! gotTerm ) continue;
+
+		if ( ! m_gsbuf.safeMemcpy ( wp1 , wp2 - wp1 ) )
+			return NULL;
+
+		// puncty?
+		if ( gotTerm && ! m_gsbuf.pushChar(wp2[0]))
+			return NULL;
+		
+		// to indicate end of header or sentence, in order to
+		// qualify as a fast fact, we must add a '*'. see 
+		// PageResults.cpp, search for ''*''
+		if ( gotTerm && ! m_gsbuf.pushChar('*') )
+			return NULL;
+		if ( ! m_gsbuf.pushChar('\0') )
+			return NULL;
+	}
+	m_gsbufValid = true;
+	return &m_gsbuf;
+}
+
 
 // . good sites sometimes have hacked pages
 // . try to identify those

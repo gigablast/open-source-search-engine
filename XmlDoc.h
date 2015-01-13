@@ -829,6 +829,7 @@ class XmlDoc {
 	class Summary *getSummary () ;
 	char *getHighlightedSummary ();
 	SafeBuf *getSampleForGigabits ( ) ;
+	SafeBuf *getSampleForGigabitsJSON ( ) ;
 	char *getIsCompromised ( ) ;
 	char *getIsNoArchive ( ) ;
 	int32_t *getUrlFilterNum();
