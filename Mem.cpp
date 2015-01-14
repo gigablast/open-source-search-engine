@@ -1821,6 +1821,8 @@ void memset_nice( register void *dest , register const char c , int32_t len ,
 // . TODO: avoid byteCopy by copying remnant bytes
 // . ass = async signal safe, dumb ass
 // . NOTE: src/dest should not overlap in this version of gbmemcpy
+// . MDW: i replaced this is a #define bcopy in gb-include.h
+/*
 void memcpy_ass ( register void *dest2, register const void *src2, int32_t len ) {
 	// for now keep it simple!!
 	len--;
@@ -1828,6 +1830,7 @@ void memcpy_ass ( register void *dest2, register const void *src2, int32_t len )
 		((char *)dest2)[len] = ((char *)src2)[len]; 
 		len--; 
 	}
+*/
 	/*
 	// debug test
 	//gbmemcpy ( dest2 , src2 , len );
@@ -1863,7 +1866,7 @@ void memcpy_ass ( register void *dest2, register const void *src2, int32_t len )
 	len--;
 	while ( len >= 0 ) { dest2[len] = src2[len]; len--; }
 	*/
-}
+//}
 
 // Check the current stack usage
 int32_t Mem::checkStackSize() {

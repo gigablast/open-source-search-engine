@@ -17,6 +17,11 @@ extern int g_inMemcpy;
 // it causes a segfault because memcpy() is not async safe.
 #define gbmemcpy(xx,yy,zz) {bcopy(yy,xx,zz); }
 
+// i guess use bcopy for this now too!
+#define memcpy_ass(xx,yy,zz) {bcopy(yy,xx,zz); }
+
+
+
 #include <inttypes.h>
 
 #define XINT32 "x"
