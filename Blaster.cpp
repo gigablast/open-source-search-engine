@@ -523,7 +523,7 @@ void Blaster::gotDoc1( void *state, TcpSocket *s){
 	// null character there. So as a precaution, just allocating the
 	// max buf size.
 	st->m_buf1=(char*) mcalloc(s->m_readBufSize,"Blaster5");
-	memcpy(st->m_buf1,s->m_readBuf,s->m_readOffset);
+	gbmemcpy(st->m_buf1,s->m_readBuf,s->m_readOffset);
 	//st->m_buf1=(char*) mdup(s->m_readBuf,s->m_readOffset,"Blaster5");
 	st->m_buf1Len=s->m_readOffset;
 	st->m_buf1MaxLen=s->m_readBufSize;

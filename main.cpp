@@ -152,6 +152,8 @@ void allExitWrapper ( int fd , void *state ) ;
 
 void rmTest();
 
+int g_inMemcpy=0;
+
 //#ifndef _LARS_
 static void dumpTitledb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree,
 			   int64_t docId , char justPrintDups ,
@@ -387,6 +389,7 @@ int main ( int argc , char *argv[] ) {
 int main2 ( int argc , char *argv[] ) {
 
 	g_conf.m_runAsDaemon = false;
+	g_conf.m_logToFile = false;
 
 #ifndef CYGWIN
 	// appears that linux 2.4.17 kernel would crash with this?
@@ -1092,6 +1095,8 @@ int main2 ( int argc , char *argv[] ) {
 
 	// run as daemon? then we have to fork
 	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
+
+	if ( strcmp ( cmd , "-l" ) == 0 ) g_conf.m_logToFile = true;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
@@ -5106,9 +5111,14 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
 				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
-				"./gb "//%"INT32" "
+				// indicate -l so we log to a logfile
+				"./gb -l "//%"INT32" "
 				"\\$ADDARGS "
-				" >& ./log%03"INT32" ;"
+
+				// no longer log to stderr so we can
+				// do log file rotation
+				//" >& ./log%03"INT32""
+				" ;"
 
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
@@ -5125,7 +5135,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				//h2->m_dir      ,
 
 				// hostid is now inferred from path
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
 				amp );
 
 			// log it
@@ -7069,14 +7079,14 @@ int32_t dumpSpiderdb ( char *coll,
 
 		// otherwise add it, it is a new never-before-seen domain
 		//char poo[999];
-		//memcpy ( poo , dom , domLen );
+		//gbmemcpy ( poo , dom , domLen );
 		//poo[domLen]=0;
 		//fprintf(stderr,"new dom %s hash=%"INT32"\n",dom,domHash);
 		// store the count of urls followed by the domain
 		char *ptr = buf + bufOff;
 		*(int32_t *)ptr = 1;
 		ptr += 4;
-		memcpy ( ptr , dom , domLen );
+		gbmemcpy ( ptr , dom , domLen );
 		ptr += domLen;
 		*ptr = '\0';
 		// use an ip of 1 if it is 0 so it hashes right
@@ -10572,7 +10582,7 @@ bool gbgunzip (char *filename) {
 			   "file, not a .gz:%s",
 			   filename);
 
-	memcpy(outfile, filename, outfilelen);
+	gbmemcpy(outfile, filename, outfilelen);
 	outfile[outfilelen] = '\0';
 
 	//open our input and output files right away
@@ -10674,7 +10684,7 @@ bool bucketstest ( char* dbname ) {
 	for ( int32_t i = 0 ; i < 1000 ; i++ ) {
 		int32_t j = (rand() % numKeys) * keySize;
 		int32_t m = (rand() % numKeys) * keySize;
-		memcpy((char*)&k[j], (char*)&k[m], keySize);
+		gbmemcpy((char*)&k[j], (char*)&k[m], keySize);
 		KEYXOR((char*)&k[j],0x01);
 	}
 
@@ -11743,7 +11753,7 @@ void dumpSectiondb(char *coll,int32_t startFileNum,int32_t numFiles,
 		// no longer a first key
 		firstKey = false;
 		// copy it
-		memcpy ( &lastk , k , sizeof(key128_t) );
+		gbmemcpy ( &lastk , k , sizeof(key128_t) );
 		int32_t shardNum =  getShardNum (RDB_SECTIONDB,k);
 		//int32_t groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
@@ -11869,7 +11879,7 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 		// no longer a first key
 		firstKey = false;
 		// copy it
-		memcpy ( &lastk , k , sizeof(key_t) );
+		gbmemcpy ( &lastk , k , sizeof(key_t) );
 		// point to the data
 		char  *p       = data;
 		char  *pend    = data + size;
@@ -12873,7 +12883,7 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 		goto loop;
 	}
 	// new top?
-	if ( size == ks ) { memcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
+	if ( size == ks ) { gbmemcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
 	// warning msg
 	if ( ! haveTop && ! warned ) {
 		warned = true;
@@ -12881,8 +12891,8 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 	}
 	// make the key
 	char tmp [ MAX_KEY_BYTES ];
-	memcpy ( tmp , p , ks-6 );
-	memcpy ( tmp + ks-6 , top , 6 );
+	gbmemcpy ( tmp , p , ks-6 );
+	gbmemcpy ( tmp + ks-6 , top , 6 );
 	// print the key
 	if ( ks == 12 )
 		fprintf(stdout,"%08"INT64") %08"XINT32" %016"XINT64"\n",
@@ -13141,6 +13151,8 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		//	printf("%s",err );
 		//continue;
 		//if ( ! magicBit && recSize == 6 ) { char *xx=NULL;*xx=0; }
+		int32_t facetVal32 = g_posdb.getFacetVal32 ( &k );
+
 		if ( termId < 0 )
 			printf(
 			       "k=%s "
@@ -13198,6 +13210,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 			       //"outlnktxt=%01"INT32" "
 			       "mult=%02"INT32" "
 			       //"senth32=0x%08"XINT32" "
+			       "[facetval=%"INT32"] "
 			       "recSize=%"INT32" "
 			       "dh=0x%02"XINT32"%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
@@ -13214,6 +13227,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 			       //(int32_t)g_posdb.getIsOutlinkText(&k),
 			       (int32_t)g_posdb.getMultiplier(&k),
 			       //(int32_t)g_posdb.getSectionSentHash32(&k),
+			       facetVal32,
 			       recSize,
 			       
 			       (int32_t)dh, 
@@ -14769,7 +14783,7 @@ void doInject ( int fd , void *state ) {
 			char *xx=NULL;*xx=0;
 			/*
 			// stick mime in there
-			memcpy ( rp , mimePtr , m.getMimeLen() );
+			gbmemcpy ( rp , mimePtr , m.getMimeLen() );
 			// skip that
 			rp += m.getMimeLen();
 			// turn \n\n into \r\n\r\n
@@ -14805,7 +14819,7 @@ void doInject ( int fd , void *state ) {
 		}
 
 		// store the content after the &ucontent
-		memcpy ( rp , contentPtr , contentPtrLen );
+		gbmemcpy ( rp , contentPtr , contentPtrLen );
 		rp += contentPtrLen;
 
 		s_off += contentPtrLen;
@@ -17419,7 +17433,7 @@ char *getcwd2 ( char *arg2 ) {
 		if (p[0] != '.' || p[1] !='.' ) continue;
 		// if .. is at start of string
 		if ( p == arg ) {
-			memcpy ( arg , p+2,gbstrlen(p+2)+1);
+			gbmemcpy ( arg , p+2,gbstrlen(p+2)+1);
 			goto again;
 		}
 		// find previous /
@@ -17428,7 +17442,7 @@ char *getcwd2 ( char *arg2 ) {
 		slash--;
 		for ( ; slash > arg && *slash != '/' ; slash-- );
 		if ( slash<arg) slash=arg;
-		memcpy(slash,p+2,gbstrlen(p+2)+1);
+		gbmemcpy(slash,p+2,gbstrlen(p+2)+1);
 		goto again;
 		// if can't back up anymore...
 	}
@@ -17480,11 +17494,11 @@ char *getcwd2 ( char *arg2 ) {
 	// if "arg" is a RELATIVE path then append it
 	if ( arg && arg[0]!='/' ) {
 		if ( arg[0]=='.' && arg[1]=='/' ) {
-			memcpy ( end , arg+2 , alen -2 );
+			gbmemcpy ( end , arg+2 , alen -2 );
 			end += alen - 2;
 		}
 		else {
-			memcpy ( end , arg , alen );
+			gbmemcpy ( end , arg , alen );
 			end += alen;
 		}
 		*end = '\0';

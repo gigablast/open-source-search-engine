@@ -320,7 +320,7 @@ int32_t Synonyms::getSynonyms ( Words *words ,
 		// store the lang as a bit in a bit vector for the query term
 		// so it can be from multiple langs.
 		if ( synLangAbbrLen > 30 ) { char *xx=NULL;*xx=0; }
-		memcpy ( tmp , synLangAbbr , synLangAbbrLen );
+		gbmemcpy ( tmp , synLangAbbr , synLangAbbrLen );
 		tmp[synLangAbbrLen] = '\0';
 		langId = getLangIdFromAbbr ( tmp ); // order is linear
 		if ( langId < 0 ) langId = 0;

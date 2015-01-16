@@ -112,10 +112,10 @@ int32_t Msg2b::serialize ( char *buf, int32_t bufLen ) {
 	*(int32_t *)p = m_numSubCats;   p += sizeof(int32_t);
 	*(int32_t *)p = m_catBufferLen; p += sizeof(int32_t);
 	// sub cats
-	memcpy(p, m_subCats, sizeof(SubCategory)*m_numSubCats);
+	gbmemcpy(p, m_subCats, sizeof(SubCategory)*m_numSubCats);
 	p += sizeof(SubCategory)*m_numSubCats;
 	// cat buffer
-	memcpy(p, m_catBuffer, m_catBufferLen);
+	gbmemcpy(p, m_catBuffer, m_catBufferLen);
 	p += m_catBufferLen;
 	// sanity check
 	if (p - buf != storedSize) {

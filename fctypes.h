@@ -583,7 +583,7 @@ inline int32_t setstr ( char *dst,
         int32_t dstLen = srcLen;
         if ( srcLen > maxDstLen ) dstLen = maxDstLen;
         // copy the string
-        memcpy ( dst, src, dstLen );
+        gbmemcpy ( dst, src, dstLen );
         // NULL terminate
         dst[dstLen] = '\0';
         // return the proper length

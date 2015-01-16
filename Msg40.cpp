@@ -732,7 +732,7 @@ bool Msg40::federatedLoop ( ) {
 		// assign it
 		m_msg3aPtrs[i] = mp;
 		// assign the request for it
-		memcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
+		gbmemcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
 		// then customize it to just search this collnum
 		mp->m_rrr.m_collnum = cp[i];
 
@@ -1741,6 +1741,11 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	Msg40 *THIS = (Msg40 *)state;
 	// the send completed, count it
 	THIS->m_sendsIn++;
+	// error?
+	if ( THIS->m_sendsIn > THIS->m_sendsOut )
+		log("msg40: sendsin > sendsout");
+	// debug
+	//g_errno = ETCPTIMEDOUT;
 	// socket error? if client closes the socket midstream we get one.
 	if ( g_errno ) {
 		THIS->m_socketHadError = g_errno;
@@ -3330,7 +3335,7 @@ bool isSubDom(char *s , int32_t len) {
 //////////////////////////////////
 
 
-bool hashSample ( Query *q, 
+bool hashGigabitSample ( Query *q, 
 		  HashTableX *master, 
 		  TopicGroup *tg ,
 		  SafeBuf *vecBuf,
@@ -3537,9 +3542,12 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		numDocsProcessed++;
 		// . hash it into the master table
 		// . this may alloc st->m_mem, so be sure to free below
-		hashSample ( q,
+		hashGigabitSample ( q,
 			     &master, 
 			     tg ,
+				    // vecbuf is an ongoing accumulation
+				    // of wordid vectors from the samples
+				    // we let into the master hash table.
 			     &vecBuf,
 			     thisMsg20,
 			     &repeatTable,
@@ -3557,7 +3565,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		int32_t len   = master->getTermLen(i);
 		char ff[1024];
 		if ( len > 1020 ) len = 1020;
-		memcpy ( ff , ptr , len );
+		gbmemcpy ( ff , ptr , len );
 		ff[len] = '\0';
 		// we can have html entities in here now
 		//if ( ! is_alnum(ff[0]) ) { char *xx = NULL; *xx = 0; }
@@ -3900,7 +3908,10 @@ void hashExcerpt ( Query *q ,
 
 // . returns false and sets g_errno on error
 // . here's the tricky part
-bool hashSample ( Query *q, 
+// . this compates thisMsg20->getReply()->ptr_gigabitSample excerpts
+//   to all from other docids and this docids that we have accumulated
+//   because they are distinct enough.
+bool hashGigabitSample ( Query *q, 
 		  HashTableX *master, 
 		  TopicGroup *tg ,
 		  SafeBuf *vecBuf,
@@ -3969,10 +3980,13 @@ bool hashSample ( Query *q,
 	//
 
 
-	// hash each excerpt
+	// hash each \0 separated excerpt in bigSampleBuf
 	char *p    = bigSampleBuf;
 	// most samples are under 5k, i've seend a 32k sample take 11ms!
 	char *pend = p + bigSampleLen;
+
+	// compile all \0 terminated excerpts into a single vector for this
+	// docid
 	while ( p < pend ) {
 		// debug
 		//log("docId=%"INT64" EXCERPT=%s",docId,p);
@@ -3980,9 +3994,14 @@ bool hashSample ( Query *q,
 		// parse into words
 		Words ww;
 		ww.setx ( p, plen, 0);// niceness
+		// save it
+		//log("gbits: getting sim for %s",p);
 		// advance to next excerpt
 		p += plen + 1;
 		// p is only non-NULL if we are doing it the old way
+		// 'tg' indicates where the gigabits came from, like the
+		// body, or a particular meta tag.
+		// 'repeatTable' is for counting the same word
 		hashExcerpt ( q, 
 			      &localGigabitTable, 
 			      ww,
@@ -3990,13 +4009,19 @@ bool hashSample ( Query *q,
 			      repeatTable , 
 			      thisMsg20 ,
 			      debugGigabits );
-		// skip if not deduping
+		// . skip if not deduping
+		// . if a sample is too similar to another sample then we
+		//   do not allow its gigabits to vote. its considered too
+		//   spammy.
 		if ( tg->m_dedupSamplePercent <= 0 ) continue;
 		// make a vector out of words
 		int64_t *wids = ww.getWordIds();
 		int32_t nw = ww.getNumWords();
+		// put all the words from this sample into simTable hash table
+		// and just make vbuf a list of the unique wordIds from all
+		// gigabit samples this docid provides.
 		for ( int32_t i = 0 ; i < nw ; i++ ) {
-			// make it this
+			// convert word to a number
 			uint32_t widu = (uint64_t)(wids[i]);
 			// donot allow this! zero is a vector terminator
 			if ( widu == 0 ) widu = 1;
@@ -4015,6 +4040,11 @@ bool hashSample ( Query *q,
 	vbuf.truncLen(((int32_t)SAMPLE_VECTOR_SIZE) - 4);
 	// make last int32_t a 0
 	vbuf.pushLong(0);
+	// now vbuf is a fairly decent vector of words that represent
+	// the gigabit sample for this docid. see if it is already
+	// too similar to ones we've stored in "vecBuf" which has all the
+	// saples from all the other docids that were considered 
+	// mutually distinct enough.
 
 	// . compute the fingerprint/similarirtyVector from this table
 	//   the same way we do for documents for deduping them at query time
@@ -4027,7 +4057,7 @@ bool hashSample ( Query *q,
 		// point to it
 		char *v1 = vbuf.getBufStart();
 		// get # stored so far
-		int32_t numVecs = vecBuf->length() / (int32_t)SAMPLE_VECTOR_SIZE;
+		int32_t numVecs = vecBuf->length()/(int32_t)SAMPLE_VECTOR_SIZE;
 		char *v2 = vecBuf->getBufStart();
 		// see if our vector is too similar
 		for ( int32_t i = 0 ; i < numVecs ; i++ ) {
@@ -4038,12 +4068,22 @@ bool hashSample ( Query *q,
 			// return true if too similar to another sample we did
 			if ( ss >= tg->m_dedupSamplePercent ) { // 80 ) {
 				localGigabitTable.reset();
-				log(LOG_DEBUG,"gbits: removed dup sample.");
+				// log(LOG_DEBUG,"gbits: removed dup sample "
+				//     "\"%s\" too similar to sample #%i"
+				//     , bigSampleBuf
+				//     , i
+				//     );
 				return true;
 			}
 		}
-		// add our vector to the array
+		// this docid sample as considered unique enough with respect
+		// to the other samples from other docids, so add the
+		// wordids to our list to dedup the next excerpts
 		vecBuf->safeMemcpy(v1,(int32_t)SAMPLE_VECTOR_SIZE);
+
+		// log(LOG_DEBUG,"gbits: adding unique sample #%i %s "
+		//     ,numVecs,bigSampleBuf);
+
 	}
 
 	//log("TOOK %"INT64" ms plen=%"INT32"",gettimeofdayInMilliseconds()-start,
@@ -4109,7 +4149,7 @@ bool hashSample ( Query *q,
 			// sanity
 			if ( gc->m_numWords > MAX_GIGABIT_WORDS ) { 
 				char*xx=NULL;*xx=0;}
-			memcpy((char *)gbit.m_wordIds,
+			gbmemcpy((char *)gbit.m_wordIds,
 			       (char *)gc->m_wordIds,
 			       gc->m_numWords * 8 );
 			if ( ! master->addKey ( &termId64, &gbit ) )
@@ -5585,7 +5625,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	// make last int32_t a 0 so Clusterdb::getSimilarity() likes it
 	vbuf.pushLong(0);
 	// now store it in the Fact struct
-	memcpy ( fact.m_dedupVector , vbuf.getBufStart(), vbuf.length() );
+	gbmemcpy ( fact.m_dedupVector , vbuf.getBufStart(), vbuf.length() );
 
 
 	// otherwise, add it
@@ -5617,7 +5657,8 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		// i guess we can print "Next 10" link
 		m_moreToCome = true;
 		// hide if above limit
-		log("msg40: hiding above docsWanted #%"INT32" (%"UINT32")(d=%"INT64")",
+		log(LOG_INFO,"msg40: hiding above docsWanted "
+		    "#%"INT32" (%"UINT32")(d=%"INT64")",
 		    m_printi,mr->m_contentHash32,mr->m_docId);
 		// do not exceed what the user asked for
 		return true;
@@ -5636,8 +5677,8 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		m_hadPrintError = true;
 	}
 
-
-	log("msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
+	
+	log(LOG_INFO,"msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
 	    m_printi,mr->m_contentHash32,mr->m_docId);
 
 	// count it

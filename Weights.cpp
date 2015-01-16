@@ -1684,7 +1684,7 @@ bool Weights::set1 ( Words    *words              ,
 		m_pw[i]  = m_ww[i]; 
 		// debug purposes
 		if ( m_rvw ) {
-			memcpy ( &m_rvp[i*MAX_RULES] , 
+			gbmemcpy ( &m_rvp[i*MAX_RULES] , 
 				 &m_rvw[i*MAX_RULES] ,
 				 MAX_RULES * sizeof(float) );
 		}
@@ -1774,7 +1774,7 @@ bool Weights::set1 ( Words    *words              ,
 	m_pw[i] = m_ww[i];
 	// debug purposes
 	if ( m_rvw ) 
-		memcpy ( &m_rvp[i*MAX_RULES] , 
+		gbmemcpy ( &m_rvp[i*MAX_RULES] , 
 			 &m_rvw[i*MAX_RULES] ,
 			 MAX_RULES * sizeof(float) );
 
@@ -2257,7 +2257,7 @@ void Weights::setPunctWeights ( int32_t k , char *s , int32_t len ) {
 		char dbuf[256];
 		int32_t dlen = len;
 		if ( dlen > 100 ) dlen = 100;
-		memcpy ( dbuf , s , dlen );
+		gbmemcpy ( dbuf , s , dlen );
 		dbuf[dlen]=0;
 		logf(LOG_DEBUG,"build: missed \"%s\"",dbuf);
 		*/

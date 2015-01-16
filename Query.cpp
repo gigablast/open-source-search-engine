@@ -156,7 +156,7 @@ bool Query::set2 ( char *query        ,
 	// save original query
 	
 	m_origLen = queryLen;
-	memcpy ( m_orig , query , queryLen );
+	gbmemcpy ( m_orig , query , queryLen );
 	m_orig [ m_origLen ] = '\0';
 
 	log(LOG_DEBUG, "query: set called = %s", m_orig);
@@ -218,15 +218,15 @@ bool Query::set2 ( char *query        ,
 		}
 		// translate ( and )
 		if ( boolFlag == 1 && query[i] == '(' ) {
-			memcpy ( p , " LeFtP " , 7 ); p += 7;
+			gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
 			continue;
 		}
 		if ( boolFlag == 1 && query[i] == ')' ) {
-			memcpy ( p , " RiGhP " , 7 ); p += 7;
+			gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
 			continue;
 		}
 		if ( query[i] == '|' ) {
-			memcpy ( p , " PiiPE " , 7 ); p += 7;
+			gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
 			continue;
 		}
 		// translate [#a] [#r] [#ap] [#rp] [] [p] to operators
@@ -682,7 +682,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		}
 		// debug
 		//char tmp[1024];
-		//memcpy ( tmp , qt->m_term , qt->m_termLen );
+		//gbmemcpy ( tmp , qt->m_term , qt->m_termLen );
 		//tmp [ qt->m_termLen ] = 0;
 		//logf(LOG_DEBUG,"got term %s (%"INT32")",tmp,qt->m_termLen);
 		// otherwise, add it
@@ -903,7 +903,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		}
 		// debug
 		//char tmp[1024];
-		//memcpy ( tmp , qt->m_term , qt->m_termLen );
+		//gbmemcpy ( tmp , qt->m_term , qt->m_termLen );
 		//tmp [ qt->m_termLen ] = 0;
 		//logf(LOG_DEBUG,"got term %s (%"INT32")",tmp,qt->m_termLen);
 		n++;
@@ -1842,7 +1842,7 @@ void Query::addCompoundTerms ( ) {
 		}
 		if (!numUORComponents) continue;
 		// copy it
-		memcpy ( &m_qterms[n] , &m_qterms[i] , sizeof(QueryTerm) );
+		gbmemcpy ( &m_qterms[n] , &m_qterms[i] , sizeof(QueryTerm) );
 		// get term's length
 		//char *beg = m_qterms[i].m_term;
 		//char *end = m_qterms[j-1].m_term + m_qterms[j-1].m_termLen;
@@ -2252,7 +2252,7 @@ bool Query::setQWords ( char boolFlag ,
 			else          fieldSign = m_qwords[j].m_wordSign;
 			// debug msg
 			//char ttt[128];
-			//memcpy ( ttt , field , fieldLen );
+			//gbmemcpy ( ttt , field , fieldLen );
 			//ttt[fieldLen] = '\0';
 			//log("field name = %s", ttt);
 			// . is it recognized field name,like "title" or "url"?
@@ -3798,6 +3798,35 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
+	{"gbcountry",
+	 FIELD_GBCOUNTRY,
+	 false,
+	 "gbcountry:us",
+	 "Matches documents determined by Gigablast to be from the United "
+	 "States. See the country abbreviations in the CountryCode.cpp "
+	 "open source distribution. Some more popular examples include: "
+	 "de, fr, uk, ca, cn.",
+	 NULL,
+	 0} ,
+
+// mdw
+
+	{"gbpermalink",
+	 FIELD_GBPERMALINK,
+	 false,
+	 "gbpermalink:1",
+	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
+	 "to match documents that are NOT permalinks.",
+	 NULL,
+	0},
+
+	{"gbdocid",
+	 FIELD_GBDOCID,
+	 false,
+	 "gbdocid:123456",
+	 "Matches the document with the docid 123456",
+	 NULL,
+	 0},
 
 
 
@@ -4132,6 +4161,18 @@ struct QueryField g_fields[] = {
 	 0},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:gbtagsitenuminlinks",
+	 "Returns facets in "
+	 "of the <i>sitenuminlinks</i> field for the tag <i>sitenuminlinks</i>"
+	 "in the tag for each site. Any numeric tag in tagdb can be "
+	 "facetizeed "
+	 "in this manner so you can add your own facets this way on a per "
+	 "site or per url basis by making tagdb entries. Case Insensitive.",
+	 NULL,
+	 0},
+
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
 	 "gbfacetint:size,0-10,10-20,30-100,100-200,200-1000,1000-10000",
 	 "Returns facets in "
 	 "of the <i>size</i> field (either in json, field or a meta tag) "
@@ -4166,35 +4207,6 @@ struct QueryField g_fields[] = {
 	 0},
 
 
-	{"gbcountry",
-	 FIELD_GBCOUNTRY,
-	 false,
-	 "gbcountry:us",
-	 "Matches documents determined by Gigablast to be from the United "
-	 "States. See the country abbreviations in the CountryCode.cpp "
-	 "open source distribution. Some more popular examples include: "
-	 "de, fr, uk, ca, cn.",
-	 NULL,
-	 0} ,
-
-// mdw
-
-	{"gbpermalink",
-	 FIELD_GBPERMALINK,
-	 false,
-	 "gbpermalink:1",
-	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
-	 "to match documents that are NOT permalinks.",
-	 NULL,
-	0},
-
-	{"gbdocid",
-	 FIELD_GBDOCID,
-	 false,
-	 "gbdocid:123456",
-	 "Matches the document with the docid 123456",
-	 NULL,
-	 0},
 
 	//
 	// spider status docs queries
@@ -4444,7 +4456,7 @@ void Query::printQueryTerms(){
 		if ( ttlen > 254 ) ttlen = 254;
 		if ( ttlen < 0   ) ttlen = 0;
 		// this is utf8
-		memcpy ( tt , getTerm(i) , ttlen );
+		gbmemcpy ( tt , getTerm(i) , ttlen );
 		tt[ttlen]='\0';
 		if ( c == '\0' ) c = ' ';
 		logf(LOG_DEBUG, "query: Query Term #%"INT32" "

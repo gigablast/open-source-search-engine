@@ -214,8 +214,8 @@ void IndexReadInfo::update ( IndexList *lists, int32_t numLists,
 		char *startKey = &m_startKeys[i*m_ks];
 		// . load lastPart into lower 6 bytes of "startKey"
 		// . little endian
-		//memcpy ( &startKey , lastPart , 6 );
-		memcpy ( startKey , lastPart , m_hks );
+		//gbmemcpy ( &startKey , lastPart , 6 );
+		gbmemcpy ( startKey , lastPart , m_hks );
 		// debug msg
 		//log("pre-startKey for list #%"INT32" is n1=%"XINT32",n0=%"XINT64"",
 		//     i,startKey.n1,startKey.n0);

@@ -57,7 +57,7 @@ bool LanguagePages::setLanguagePage(uint8_t lang,
 			(uint8_t *)mmalloc(uint8strlen(pageText) + 1, "langPage");
 		if(!m_languagePages[lang]) return(false);
 		memset(m_languagePages[lang], 0, uint8strlen(pageText) + 1);
-		memcpy(m_languagePages[lang], pageText, uint8strlen(pageText));
+		gbmemcpy(m_languagePages[lang], pageText, uint8strlen(pageText));
 	} else {
 		m_languagePages[lang] = pageText;
 	}
@@ -80,7 +80,7 @@ bool LanguagePages::setLanguageHeader(uint8_t lang,
 			(uint8_t *)mmalloc(uint8strlen(pageText) + 1, "langHeader");
 		if(!m_languageHeaders[lang]) return(false);
 		memset(m_languageHeaders[lang], 0, uint8strlen(pageText) + 1);
-		memcpy(m_languageHeaders[lang], pageText, uint8strlen(pageText));
+		gbmemcpy(m_languageHeaders[lang], pageText, uint8strlen(pageText));
 	} else {
 		m_languageHeaders[lang] = pageText;
 	}
@@ -103,7 +103,7 @@ bool LanguagePages::setLanguageFooter(uint8_t lang,
 			(uint8_t *)mmalloc(uint8strlen(pageText) + 1, "langFooter");
 		if(!m_languageFooters[lang]) return(false);
 		memset(m_languageFooters[lang], 0, uint8strlen(pageText) + 1);
-		memcpy(m_languageFooters[lang], pageText, uint8strlen(pageText));
+		gbmemcpy(m_languageFooters[lang], pageText, uint8strlen(pageText));
 	} else {
 		m_languageFooters[lang] = pageText;
 	}

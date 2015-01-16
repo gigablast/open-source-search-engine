@@ -41,7 +41,7 @@ typedef uint32_t score_t;
 // . works for both docid ptrs from m_topTree and m_topDocIdPtrs[]
 inline int64_t getDocIdFromPtr ( char *docIdPtr ) {
 	int64_t d;
-	memcpy ( &d , docIdPtr , 6 );
+	gbmemcpy ( &d , docIdPtr , 6 );
 	d >>= 2;
 	d &= DOCID_MASK;
 	return d;

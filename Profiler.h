@@ -263,7 +263,7 @@ protected:
 	int32_t          m_lastQPUsed;
 	
 	uint64_t m_fnTime[11];
-private:
+ public://private:
 	// Realtime profiler stuff
 	uint32_t getFuncBaseAddr(const uint32_t address);
 	uint32_t getFuncBaseAddr(const char *funcName);

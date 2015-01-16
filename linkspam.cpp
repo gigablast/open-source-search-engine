@@ -320,7 +320,7 @@ bool setLinkSpam ( int32_t       ip                 ,
 		for ( z-- ; z > zstart && *z != '/' ; z-- );
 		// debug
 		//char tmp[2000];
-		//memcpy(tmp,z,zend-z);
+		//gbmemcpy(tmp,z,zend-z);
 		//tmp[zend-z]=0;
 		//log("build: path=%s",tmp);
 		// look it up
@@ -811,7 +811,7 @@ bool isLinkSpam ( Url *linker,
 		for ( z-- ; z > zstart && *z != '/' ; z-- );
 		// debug
 		//char tmp[2000];
-		//memcpy(tmp,z,zend-z);
+		//gbmemcpy(tmp,z,zend-z);
 		//tmp[zend-z]=0;
 		//log("build: path=%s",tmp);
 		// look it up

@@ -98,12 +98,12 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 		*p      = (char)niceness        ; p++;
 		*p      = (char)useCanonicalName; p++;
 		// coll
-		//memcpy(p, m_coll, m_collLen);
+		//gbmemcpy(p, m_coll, m_collLen);
 		//p      += m_collLen;
 		//*p      = '\0';
 		//p++;
 		// url
-		memcpy(p, m_url->getUrl(), m_url->getUrlLen());
+		gbmemcpy(p, m_url->getUrl(), m_url->getUrlLen());
 		 p     += m_url->getUrlLen();
 		*p      = '\0';
 		p++;
@@ -476,17 +476,17 @@ void gotCatRecWrapper ( void *state ) { // , CatRec *catrec ) {
 		}
 	}
 	p = data;
-	memcpy(p, &catrec->m_dataSize, 4);
+	gbmemcpy(p, &catrec->m_dataSize, 4);
 	p += 4;
-	memcpy(p, catrec->m_data, catrec->m_dataSize);
+	gbmemcpy(p, catrec->m_data, catrec->m_dataSize);
 	p += catrec->m_dataSize;
-	memcpy(p, &catrec->m_gotByIp, 1);
+	gbmemcpy(p, &catrec->m_gotByIp, 1);
 	p++;
-	memcpy(p, &catrec->m_hadRec, 1);
+	gbmemcpy(p, &catrec->m_hadRec, 1);
 	p++;
-	memcpy(p, &catrec->m_numIndCatids, 4);
+	gbmemcpy(p, &catrec->m_numIndCatids, 4);
 	p += 4;
-	memcpy(p, catrec->m_indCatids, catrec->m_numIndCatids*4);
+	gbmemcpy(p, catrec->m_indCatids, catrec->m_numIndCatids*4);
 	p += catrec->m_numIndCatids*4;
 
 	// sanity check

@@ -57,14 +57,14 @@ void test0 ( int arg ) {
 		key_t firstKey;
 		firstKey.n0 = 1LL;
 		firstKey.n1 = 0;
-		memcpy ( p , &firstKey , 12 );
+		gbmemcpy ( p , &firstKey , 12 );
 		p += 12;
 		// random docIds
 		for ( int32_t i = 0 ; i < nk ; i++ ) {
 			int32_t toAdd = rand() % 65536 + 2;
 			value += toAdd;
 			*(char *)&value |= 0x03;
-			memcpy ( p , &value , 6 );
+			gbmemcpy ( p , &value , 6 );
 			p += 6;
 		}
 		// sort em up

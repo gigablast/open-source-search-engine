@@ -1458,12 +1458,12 @@ skipReplaceHost:
 int32_t generatePingMsg( Host *h, int64_t nowms, char *buf ) {
         int32_t ping = h->m_ping;
         // show ping age first
-        int32_t pingAge = nowms- h->m_pingInfo.m_lastPing;
+        int32_t pingAge = nowms- h->m_lastPing;
         // if host is us, we don't ping ourselves
         if ( h->m_hostId == g_hostdb.m_hostId && h == g_hostdb.m_myHost) 
                 pingAge = 0; 
         // if last ping is still 0, we haven't pinged it yet
-        if ( h->m_pingInfo.m_lastPing == 0 ) pingAge = 0;
+        if ( h->m_lastPing == 0 ) pingAge = 0;
         // ping to string
         sprintf ( buf , "%"INT32"ms", ping );
         // ping time ptr
@@ -1578,10 +1578,10 @@ int slowDiskSort    ( const void *i1, const void *i2 ) {
 int pingAgeSort    ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	PingInfo *p1 = &h1->m_pingInfo;
-	PingInfo *p2 = &h2->m_pingInfo;
-	if ( p1->m_lastPing > p2->m_lastPing ) return -1;
-	if ( p1->m_lastPing < p2->m_lastPing ) return  1;
+	//PingInfo *p1 = &h1->m_pingInfo;
+	//PingInfo *p2 = &h2->m_pingInfo;
+	if ( h1->m_lastPing > h2->m_lastPing ) return -1;
+	if ( h1->m_lastPing < h2->m_lastPing ) return  1;
 	return 0;
 }
 

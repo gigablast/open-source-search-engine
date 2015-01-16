@@ -78,7 +78,7 @@ bool MsgC::getIp(char  *hostname    , int32_t   hostnameLen ,
 	if ( g_conf.m_useEtcHosts && g_dns.isInFile ( key , ip ))return 1;
 	// debug msg
 	//char tmp[2048];
-	//memcpy ( tmp , hostname , hostnameLen );
+	//gbmemcpy ( tmp , hostname , hostnameLen );
 	//tmp [ hostnameLen ] = '\0';
 	// . try getting from the cache first
 	// . this returns true if was in the cache and sets *ip to the ip

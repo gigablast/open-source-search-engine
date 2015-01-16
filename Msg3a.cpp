@@ -1351,12 +1351,12 @@ int32_t Msg3a::serialize   ( char *buf , char *bufEnd ) {
 	// estimated # of total hits
 	*(int32_t *)p = m_numTotalEstimatedHits; p += 8;
 	// store each docid, 8 bytes each
-	memcpy ( p , m_docIds , m_numDocIds * 8 ); p += m_numDocIds * 8;
+	gbmemcpy ( p , m_docIds , m_numDocIds * 8 ); p += m_numDocIds * 8;
 	// store scores
-	memcpy ( p , m_scores , m_numDocIds * sizeof(double) );
+	gbmemcpy ( p , m_scores , m_numDocIds * sizeof(double) );
 	p +=  m_numDocIds * sizeof(double) ;
 	// store cluster levels
-	memcpy ( p , m_clusterLevels , m_numDocIds ); p += m_numDocIds;
+	gbmemcpy ( p , m_clusterLevels , m_numDocIds ); p += m_numDocIds;
 	// sanity check
 	if ( p > pend ) { char *xx = NULL ; *xx = 0; }
 	// return how much we did

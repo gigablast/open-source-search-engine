@@ -169,7 +169,7 @@ inline bool parseTLD(DnsState* ds, char* buf, int32_t* len) {
 			if (cend - cbeg > *len - 1)
 				return false;
 			*len = cend - cbeg;
-			memcpy(buf, cbeg, *len);
+			gbmemcpy(buf, cbeg, *len);
 			buf[*len] = '\0';
 			for (curs = buf; *curs; curs++)
 				*curs = to_lower_a(*curs);
@@ -187,7 +187,7 @@ inline uint32_t TLDIPKey(char* buf, int32_t len) {
 	key = 0;
 	if (len > 4)
 		len = 4;
-	memcpy(&key, buf, len);
+	gbmemcpy(&key, buf, len);
 	return key;
 }
 
@@ -253,7 +253,7 @@ static void setTLDIP(	DnsState*	ds,
 		return;
 	}
 	char			tld[64];
-	memcpy(tld, buf, len);
+	gbmemcpy(tld, buf, len);
 	tld[len] = '\0';
 	if (cached == NULL) {
 		uint32_t	key	=	TLDIPKey(buf, len);
@@ -267,7 +267,7 @@ static void setTLDIP(	DnsState*	ds,
 	}
 	else if (cached->expiry <= now) {
 		// JAB: non-const cast...
-		memcpy((TLDIPEntry*) cached, tldip, sizeof(TLDIPEntry));
+		gbmemcpy((TLDIPEntry*) cached, tldip, sizeof(TLDIPEntry));
 		log(LOG_DEBUG, "dns: TLD .%s NS cache update", buf);
 		dumpTLDIP(tld, tldip);
 	}
@@ -315,7 +315,7 @@ bool Dns::getIp ( char *hostname ,
 	}
 	// debug msg
 	char tmp[256];
-	memcpy ( tmp , hostname , hostnameLen );
+	gbmemcpy ( tmp , hostname , hostnameLen );
 	tmp [ hostnameLen ] = '\0';
 
 	log(LOG_DEBUG, "dns: hostname '%s'", tmp);
@@ -610,7 +610,7 @@ bool Dns::getIp ( char *hostname ,
 	ds->m_callback    = callback;	
 	int32_t newlen = hostnameLen;
 	if ( newlen > 127 ) newlen = 127;
-	memcpy ( ds->m_hostname , hostname , newlen );
+	gbmemcpy ( ds->m_hostname , hostname , newlen );
 	ds->m_hostname [ newlen ] = '\0';
 
 	// copy the sendBuf cuz we need it in gotIp() to ensure hostnames match
@@ -629,7 +629,7 @@ bool Dns::getIp ( char *hostname ,
 		// this will fill in depth 1 in the query,
 		// if we have the nameservers cached...
 		log(LOG_DEBUG,"dns: hostname %s", ds->m_hostname);
-		memcpy(ds->m_dnsIps[0],g_conf.m_rnsIps, g_conf.m_numRns * 4);
+		gbmemcpy(ds->m_dnsIps[0],g_conf.m_rnsIps, g_conf.m_numRns * 4);
 		ds->m_numDnsIps[0] = g_conf.m_numRns;
 		ds->m_numDnsNames[0] = 0;
 		ds->m_rootTLD[0] = true;
@@ -637,7 +637,7 @@ bool Dns::getIp ( char *hostname ,
 		// if a TLD is cached, copy it to depth 1
 		const TLDIPEntry*	tldip	=	getTLDIP(ds);
 		if (tldip) {
-			memcpy( ds->m_dnsIps[1],
+			gbmemcpy( ds->m_dnsIps[1],
 				tldip->TLDIP,
 				tldip->numTLDIPs * sizeof(uint32_t));
 			ds->m_numDnsIps[1] = tldip->numTLDIPs;
@@ -649,7 +649,7 @@ bool Dns::getIp ( char *hostname ,
 	}
 	// otherwise, use the local bind9 servers
 	else {
-		//memcpy(ds->m_dnsIps[0],g_conf.m_dnsIps,g_conf.m_numDns * 4);
+		//gbmemcpy(ds->m_dnsIps[0],g_conf.m_dnsIps,g_conf.m_numDns * 4);
 		int32_t numDns = 0;
 		for ( int32_t i = 0; i < MAX_DNSIPS; i++ ) {
 			if ( g_conf.m_dnsIps[i] == 0 ) continue;
@@ -1555,7 +1555,7 @@ char *getRRName ( char *rr , char *dgram, char *end ) {
 			return NULL;
 		}
 		// copy the hostname
-		memcpy ( dst , p+1 , *p );
+		gbmemcpy ( dst , p+1 , *p );
 		dst += *p;
 		*dst++ = '.';
 		p += ((u_char)*p) + 1;
@@ -1961,7 +1961,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 					return -1;
 				}
 				// copy the hostname
-				memcpy ( dst , p+1 , *p );
+				gbmemcpy ( dst , p+1 , *p );
 				dst += *p;
 				*dst++ = '.';
 				p += ((u_char)*p) + 1;
@@ -2021,7 +2021,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 				const TLDIPEntry*	cached;
 				if ( g_conf.m_askRootNameservers && 
 				    (cached = getTLDIP(ds))) {
-					memcpy( ds->m_dnsIps[d],
+					gbmemcpy( ds->m_dnsIps[d],
 						cached->TLDIP,
 						cached->numTLDIPs *
 						sizeof(uint32_t));
@@ -2033,7 +2033,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 
 				} 
 				else if ( g_conf.m_askRootNameservers ) {
-					memcpy ( ds->m_dnsIps[d],
+					gbmemcpy ( ds->m_dnsIps[d],
 						 g_conf.m_rnsIps,
 						 g_conf.m_numRns * 4);
 					ds->m_numDnsIps[d] = g_conf.m_numRns;
@@ -2044,7 +2044,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 				}
 				// otherwise, use the local bind9 servers
 				else {
-					memcpy ( ds->m_dnsIps[d],
+					gbmemcpy ( ds->m_dnsIps[d],
 						 g_conf.m_dnsIps,
 						 g_conf.m_numDns * 4);
 					ds->m_numDnsIps[d] = g_conf.m_numDns;
@@ -2079,7 +2079,7 @@ int32_t Dns::gotIp ( UdpSlot *slot , DnsState *ds ) {
 		// . now "s" should pt to the resource data, hopefully the ip
 		// . add another ip to our array and inc numIps
 		// . ips should be in network order
-		uint32_t ip ; memcpy ( (char *)&ip , rr , 4 );
+		uint32_t ip ; gbmemcpy ( (char *)&ip , rr , 4 );
 
 		// verisign's ip is a does not exist
 		if ( (int32_t)ip == 0x0b6e5e40) { //atoip ( "64.94.110.11",12)) {
@@ -2307,7 +2307,7 @@ bool Dns::extractHostname ( char *dgram    ,
 		if ( i   + len >= 255 ) { g_errno = EBADREPLY; return false; }
 		if ( src + len >= end ) { g_errno = EBADREPLY; return false; }
 		// copy to hostname
-		memcpy ( &hostname[i] , record + 1 , len );
+		gbmemcpy ( &hostname[i] , record + 1 , len );
 		// if we had a ptr then just add 2
 		if ( times > 0 ) record += 2;
 		else             record += 1 + len;

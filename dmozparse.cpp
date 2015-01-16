@@ -593,7 +593,7 @@ int32_t printCatPath ( char *str, int32_t catid, bool raw ) {
 	}
 	// print this category name
 	int32_t nameLen = rdfCats[catIndex].m_nameLen;
-	memcpy ( p,
+	gbmemcpy ( p,
 		 &nameBuffer[rdfCats[catIndex].m_nameOffset],
 		 nameLen );
 	p += nameLen;
@@ -622,10 +622,10 @@ int32_t fixUrl ( char *url, int32_t urlLen ) {
 		// fix news: to news://
 		if (strncasecmp(url, "news:", 5) == 0) {
 			char newsFix[1024];
-			memcpy(newsFix, url, newUrlLen);
-			memcpy(url, newsFix, 5);
-			memcpy(&url[5], "//", 2);
-			memcpy(&url[7], &newsFix[5], newUrlLen - 5);
+			gbmemcpy(newsFix, url, newUrlLen);
+			gbmemcpy(url, newsFix, 5);
+			gbmemcpy(&url[5], "//", 2);
+			gbmemcpy(&url[7], &newsFix[5], newUrlLen - 5);
 			newUrlLen += 2;
 		}
 		// otherwise throw it out
@@ -636,7 +636,7 @@ int32_t fixUrl ( char *url, int32_t urlLen ) {
 	// . jump over http:// if it starts with http://http://
 	// . generic for any protocol
 	char prot[1024];
-	memcpy(prot, url, slashi);
+	gbmemcpy(prot, url, slashi);
 	prot[slashi] = '\0';
 	sprintf(prot, "%s%s", prot, prot);
 	while ( newUrlLen > slashi*2 &&
@@ -927,7 +927,7 @@ int main ( int argc, char *argv[] ) {
 				printf("Encountered zero length name");
 				continue;
 			}
-			memcpy(nameBuffer+nameOffset,"Top\0",4);
+			gbmemcpy(nameBuffer+nameOffset,"Top\0",4);
 			nameLen = 3;
 			firstTime = false;
 		}
@@ -955,11 +955,11 @@ int main ( int argc, char *argv[] ) {
 		// i think, so fix it here.
 		if ( catid == 2 ) {
 			nameLen = 3;
-			memcpy(&nameBuffer[nameOffset],"Top",nameLen); 
+			gbmemcpy(&nameBuffer[nameOffset],"Top",nameLen); 
 			nameBufferLen += nameLen;
 		}
 		else {
-			memcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
+			gbmemcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
 			nameBufferLen  += nameLen;
 		}
 		// . fill the current cat
@@ -1114,7 +1114,7 @@ nextChildTag:
 					    childNameLen ,
 					    false,
 					    0);
-		memcpy(childName, htmlDecoded, childNameLen);
+		gbmemcpy(childName, htmlDecoded, childNameLen);
 
 		// debug log
 		//if ( currOffset >= 506362430 ) // 556362463
@@ -1645,7 +1645,7 @@ hashLink:
 		if ( strchr ( decodedUrl , '#' ) )
 			goto nextLink;
 
-		memcpy(&urlBuffer[urlOffset], decodedUrl, urlLen);
+		gbmemcpy(&urlBuffer[urlOffset], decodedUrl, urlLen);
 		// fix up bad urls
 		urlLen = fixUrl(&urlBuffer[urlOffset], urlLen);
 		if (urlLen == 0)
@@ -1672,7 +1672,7 @@ hashLink:
 			if (!urlBuffer)
 				goto errExit1;
 		}
-		memcpy(&urlBuffer[urlOffset], normUrl.getUrl(), urlLen);
+		gbmemcpy(&urlBuffer[urlOffset], normUrl.getUrl(), urlLen);
 		// run it through the fixer once more
 		urlLen = fixUrl(&urlBuffer[urlOffset], urlLen);
 		if (urlLen == 0)

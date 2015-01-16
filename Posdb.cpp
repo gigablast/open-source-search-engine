@@ -1032,7 +1032,12 @@ bool PosdbTable::allocTopTree ( ) {
 		//   stats. it has to be done at the aggregator node.
 		if ( ! qt->m_facetHashTable.set ( 4,sizeof(FacetEntry),
 						  slots,NULL,0,false,
-						  0,"qfht" ) )
+						  0,"qfht" 
+						  // use magic b/c keys seems
+						  // pretty similar in the 
+						  // lower bits sometimes
+						  , true
+						  ) )
 			return false;
 		// make it nongrowable because we'll be in a thread
 		qt->m_facetHashTable.setNonGrow();
@@ -1617,9 +1622,9 @@ void PosdbTable::intersectLists9_r ( ) {
 		char *p = list->m_list;
 		// remember to swap back when done!!
 		char ttt[10];
-		memcpy ( ttt   , p       , 12 );
-		memcpy ( p     , p + 12 , 6   );
-		memcpy ( p + 6 , ttt     , 12 );
+		gbmemcpy ( ttt   , p       , 12 );
+		gbmemcpy ( p     , p + 12 , 6   );
+		gbmemcpy ( p + 6 , ttt     , 12 );
 		// point to the low "hks" bytes now
 		p += 6;
 		// turn half bit on
@@ -2074,7 +2079,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		// it's 6 bytes, otherwise 12
 		if ( docId != prevDocId ) {
 			// TODO: make this not use memset
-			//memcpy ( mptr , nwp[mink] , 12 );
+			//gbmemcpy ( mptr , nwp[mink] , 12 );
 			*(int64_t *)mptr = *(int64_t *)nwp[mink];
 			*(int32_t *)(mptr+8) = *(int32_t *)(nwp[mink]+8);
 			// set the synbit so we know if its a synonym of term
@@ -2509,7 +2514,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		//char ks = g_posdb.getKeySize(nwp[mink]);
 		// if the first key in our merged list store the docid crap
 		if ( isFirstKey ) {
-			memcpy ( mptr , nwp[mink] , 12 );
+			gbmemcpy ( mptr , nwp[mink] , 12 );
 			// sanity check! make sure these not being used...
 			//if ( mptr[2] & 0x03 ) { char *xx=NULL;*xx=0; }
 			// wipe out its syn bits and re-use our way
@@ -4334,6 +4339,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	//for ( int32_t i = 0 ; i < m_msg2->getNumLists() ; i++ ) {
 	for ( int32_t i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
+
+		// default this to off
+		qt->m_queryTermInfoNum = -1;
+
 		if ( ! qt->m_isRequired ) continue;
 		// set this stff
 		QueryWord     *qw =   qt->m_qword;
@@ -4343,6 +4352,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		// and set it
 		qti->m_qt            = qt;
 		qti->m_qtermNum      = i;
+		// and vice versa
+		qt->m_queryTermInfoNum = nrg;
 		// this is not good enough, we need to count 
 		// non-whitespace punct as 2 units not 1 unit
 		// otherwise qdist gets thrown off and our phrasing fails.
@@ -5587,9 +5598,9 @@ void PosdbTable::intersectLists10_r ( ) {
 		char *p = list->m_list;
 		// remember to swap back when done!!
 		char ttt[12];
-		memcpy ( ttt   , p       , 12 );
-		memcpy ( p     , p + 12 , 6   );
-		memcpy ( p + 6 , ttt     , 12 );
+		gbmemcpy ( ttt   , p       , 12 );
+		gbmemcpy ( p     , p + 12 , 6   );
+		gbmemcpy ( p + 6 , ttt     , 12 );
 		// point to the low "hks" bytes now
 		p += 6;
 		// turn half bit on. first key is now 12 bytes!!
@@ -6134,7 +6145,6 @@ void PosdbTable::intersectLists10_r ( ) {
 			// int16_tcuts
 			register char *xc    = qti->m_cursor[j];
 			register char *xcEnd = qti->m_newSubListEnd[j];
-			// 
 			// exhausted? (we can't make cursor NULL because
 			// getMaxPossibleScore() needs the last ptr)
 			// must match docid
@@ -6555,7 +6565,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// if the first key in our merged list store the docid crap
 		if ( isFirstKey ) {
 			// store a 12 byte key in the merged list buffer
-			memcpy ( mptr , nwp[mink] , 12 );
+			gbmemcpy ( mptr , nwp[mink] , 12 );
 			// sanity check! make sure these not being used...
 			//if ( mptr[2] & 0x03 ) { char *xx=NULL;*xx=0; }
 			// wipe out its syn bits and re-use our way
@@ -6709,11 +6719,23 @@ void PosdbTable::intersectLists10_r ( ) {
 	// skip if not part of score
 	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) continue;
 
+	// // get the query term info
+	// QueryTermInfo *qtix = &qip[i];
+	// QueryTerm     *qti  = &m_q->m_qterms[qtix->m_qtermNum];
+
 	// and pair it with each other possible query term
 	for ( int32_t j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 		// skip if not part of score
 		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
 			continue;
+
+		// // skip if not in same field
+		// QueryTermInfo *qtjy = &qip[j];
+		// QueryTerm     *qtj  = &m_q->m_qterms[qtjy->m_qtermNum];
+
+		// if ( qti->m_fieldCode != qtj->m_fieldCode )
+		// 	continue;
+
 		// but if they are in the same wikipedia phrase
 		// then try to keep their positions as in the query.
 		// so for 'time enough for love' ideally we want
@@ -6791,6 +6813,14 @@ void PosdbTable::intersectLists10_r ( ) {
 		// skip if to the left of a pipe operator
 		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
 			continue;
+
+		// skip if in a field. although should make exception
+		// for title:
+		//QueryTermInfo *qtix = &qip[i];
+		//QueryTerm     *qti  = &m_q->m_qterms[qtix->m_qtermNum];
+		//if ( qti->m_fieldCode )
+		//	continue;
+
 		// sometimes there is no wordpos subtermlist for this docid
 		// because it just has the bigram, like "streetlight" and not
 		// the word "light" by itself for the query 'street light'
@@ -7008,11 +7038,22 @@ void PosdbTable::intersectLists10_r ( ) {
 	// skip if to the left of a pipe operator
 	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) continue;
 
+	// get the query term info
+	// QueryTermInfo *qtix = &qip[i];
+	// QueryTerm     *qti  = &m_q->m_qterms[qtix->m_qtermNum];
+
 	for ( int32_t j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 
 		// skip if to the left of a pipe operator
 		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
 			continue;
+
+		// skip if not in same field
+		// QueryTermInfo *qtjy = &qip[j];
+		// QueryTerm     *qtj  = &m_q->m_qterms[qtjy->m_qtermNum];
+
+		// if ( qti->m_fieldCode != qtj->m_fieldCode )
+		// 	continue;
 
 		//
 		// get score for term pair from non-body occuring terms
@@ -7195,7 +7236,11 @@ void PosdbTable::intersectLists10_r ( ) {
 		     qt->m_fieldCode != FIELD_GBFACETINT &&
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
-		char *p2    = miniMergedList[i];
+		// get the queryterminfo class for this query term
+		int qti = qt->m_queryTermInfoNum;
+		// use that, because miniMergedLists are the synonym lists
+		// merged from multiple terms.
+		char *p2    = miniMergedList[qti];
 		//char *pend = miniMergedEnd [i];
 		//
 		// just grab the first value i guess...
@@ -7452,8 +7497,10 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( ! si ) { char *xx=NULL;*xx=0; }
 
 		// note it because it is slow
-		log("query: kicking out docid %"INT64" from score buf",
-		    si->m_docId);
+		// this is only used if getting score info, which is
+		// not default when getting an xml or json feed
+		//log("query: kicking out docid %"INT64" from score buf",
+		//    si->m_docId);
 
 		// get his single and pair offsets
 		pairOffset   = si->m_pairsOffset;
@@ -7985,7 +8032,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// shift up
 			docId <<= 2;
 			// a 6 byte key means you pass
-			memcpy ( dst , &docId , 6 );
+			gbmemcpy ( dst , &docId , 6 );
 			dst += 6;
 			continue;
 		}
@@ -8003,7 +8050,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// shift up
 			docId <<= 2;
 			// a 6 byte key means you pass
-			memcpy ( dst , &docId , 6 );
+			gbmemcpy ( dst , &docId , 6 );
 			// test it
 			int64_t d2;
 			d2 = *(uint32_t *)(dst+1);

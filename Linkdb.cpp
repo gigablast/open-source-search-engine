@@ -813,15 +813,15 @@ void Msg25Request::serialize ( ) {
 
 	char *p = m_buf;
 
-	memcpy ( p , ptr_url , size_url );
+	gbmemcpy ( p , ptr_url , size_url );
 	ptr_url = (char *)(p - m_buf);
 	p += size_url;
 
-	memcpy ( p , ptr_site , size_site );
+	gbmemcpy ( p , ptr_site , size_site );
 	ptr_site = (char *)(p - m_buf);
 	p += size_site;
 
-	memcpy ( p , ptr_oldLinkInfo , size_oldLinkInfo );
+	gbmemcpy ( p , ptr_oldLinkInfo , size_oldLinkInfo );
 	ptr_oldLinkInfo = (char *)(p - m_buf);
 	p += size_oldLinkInfo;
 }
@@ -1064,7 +1064,7 @@ bool Msg25::doReadLoop ( ) {
 	// resume from where we left off?
 	if ( m_round > 0 ) 
 		//startKey = m_nextKey;
-		memcpy ( &startKey , &m_nextKey , LDBKS );
+		gbmemcpy ( &startKey , &m_nextKey , LDBKS );
 
 	// but new links: algo does not need internal links with no link test
 	// see Links.cpp::hash() for score table
@@ -1478,7 +1478,7 @@ bool Msg25::sendRequests ( ) {
 			// is it expired?
 			lostDate = g_linkdb.getLostDate_uk(&key);
 			// update this
-			memcpy ( &m_nextKey  , &key , LDBKS );
+			gbmemcpy ( &m_nextKey  , &key , LDBKS );
 			//if ( ip32+1 < ip32 ) { char *xx=NULL;*xx=0; }
 			// skip to next ip!
 			//g_linkdb.setIp32_uk ( &m_nextKey , ip32+1 );
@@ -1504,7 +1504,7 @@ bool Msg25::sendRequests ( ) {
 			// is it expired?
 			lostDate = g_linkdb.getLostDate_uk(&key);
 			// update this
-			memcpy ( &m_nextKey  , &key , LDBKS );
+			gbmemcpy ( &m_nextKey  , &key , LDBKS );
 			//if ( ip32+1 < ip32 ) { char *xx=NULL;*xx=0; }
 			// skip to next ip!
 			//g_linkdb.setIp32_uk ( &m_nextKey , ip32+1 );
@@ -3302,7 +3302,7 @@ bool Msg25::addNote ( char *note , int32_t noteLen , int64_t docId ) {
 		e->m_docIds[0] =  docId;
 		e->m_docIds[1] = -1LL;
 		// store note into the buffer, NULL terminated
-		memcpy ( p , note , noteLen ); p += noteLen;
+		gbmemcpy ( p , note , noteLen ); p += noteLen;
 		*p++ = '\0';
 		// add to the table
 		int32_t slot = -1;
@@ -3392,13 +3392,13 @@ bool Msg25::getPageLinkInfo2 ( Url       *url                ,
 	// make a Msg25 request for fresh link info
 	char *p = m_request;
 	// store url
-	memcpy ( p , url->getUrl() , url->getUrlLen() );
+	gbmemcpy ( p , url->getUrl() , url->getUrlLen() );
 	// skip over url
 	p += url->getUrlLen();
 	// store \0
 	*p++ = '\0';
 	// store remote coll
-	memcpy ( p , remoteColl , remoteCollLen );
+	gbmemcpy ( p , remoteColl , remoteCollLen );
 	// skip over it
 	p += remoteCollLen;
 	// store \0
@@ -4144,7 +4144,7 @@ bool Inlink::setXmlFromLinkText ( Xml *xml ) {
 	// sanity check
 	if ( len > 900 ) { char *xx=NULL;*xx=0; }
 	// copy
-	memcpy ( buf , ptr_linkText , size_linkText );
+	gbmemcpy ( buf , ptr_linkText , size_linkText );
 	// ensure null termination
 	buf [ size_linkText     ] = '\0';
 	buf [ size_linkText + 1 ] = '\0';
@@ -4391,37 +4391,37 @@ void Inlink::set ( Msg20Reply *r ) {
 	char *p = m_buf;
 
 	off_urlBuf = poff;
-	memcpy ( p , r->ptr_ubuf , r->size_ubuf );
+	gbmemcpy ( p , r->ptr_ubuf , r->size_ubuf );
 	poff += r->size_ubuf;
 	p    += r->size_ubuf;
 
 	off_linkText = poff;
-	memcpy ( p , r->ptr_linkText , r->size_linkText );
+	gbmemcpy ( p , r->ptr_linkText , r->size_linkText );
 	poff += r->size_linkText;
 	p    += r->size_linkText;
 
 	off_surroundingText = poff;
-	memcpy ( p , r->ptr_surroundingText , r->size_surroundingText );
+	gbmemcpy ( p , r->ptr_surroundingText , r->size_surroundingText );
 	poff += r->size_surroundingText;
 	p    += r->size_surroundingText;
 
 	off_rssItem = poff;
-	memcpy ( p , r->ptr_rssItem , r->size_rssItem );
+	gbmemcpy ( p , r->ptr_rssItem , r->size_rssItem );
 	poff += r->size_rssItem;
 	p    += r->size_rssItem;
 
 	off_categories = poff;
-	memcpy ( p , r->ptr_categories , r->size_categories );
+	gbmemcpy ( p , r->ptr_categories , r->size_categories );
 	poff += r->size_categories;
 	p    += r->size_categories;
 
 	off_gigabitQuery = poff;
-	memcpy ( p , r->ptr_gigabitQuery , r->size_gigabitQuery );
+	gbmemcpy ( p , r->ptr_gigabitQuery , r->size_gigabitQuery );
 	poff += r->size_gigabitQuery;
 	p    += r->size_gigabitQuery;
 
 	off_templateVector = poff;
-	memcpy ( p , r->ptr_templateVector , r->size_templateVector );
+	gbmemcpy ( p , r->ptr_templateVector , r->size_templateVector );
 	poff += r->size_templateVector;
 	p    += r->size_templateVector;
 	
@@ -4549,13 +4549,13 @@ void Inlink::set2 ( Inlink *old ) {
 
 	int fullSize = old->getStoredSize();
 	// return how many bytes we processed
-	memcpy ( (char *)this , (char *)old , fullSize );
+	gbmemcpy ( (char *)this , (char *)old , fullSize );
 
 	return;
 
 	// this old way is pre-64bit
 	/*
-	memcpy ( (char *)this , (char *)old , old->m_firstStrPtrOffset );
+	gbmemcpy ( (char *)this , (char *)old , old->m_firstStrPtrOffset );
 	// set our offset to the string ptrs
 	m_firstStrPtrOffset = (char *)&ptr_urlBuf - (char *)this;
 	// and our base
@@ -4563,11 +4563,11 @@ void Inlink::set2 ( Inlink *old ) {
 	// now copy over string ptrs
 	char *dst = (char *)this +      m_firstStrPtrOffset;
 	char *src = (char *)old  + old->m_firstStrPtrOffset;
-	memcpy ( dst , src , old->m_numStrings * 4 );
+	gbmemcpy ( dst , src , old->m_numStrings * 4 );
 	// and the sizes
 	dst += 4 * m_numStrings ;
 	src += 4 * old->m_numStrings ;
-	memcpy ( dst , src , old->m_numStrings * 4 );
+	gbmemcpy ( dst , src , old->m_numStrings * 4 );
 	// sanity tests. make sure they match up
 	//if ( old->ptr_urlBuf  != ptr_urlBuf  ) { char *xx=NULL;*xx=0; }
 	//if ( old->ptr_rssItem != ptr_rssItem ) { char *xx=NULL;*xx=0; }
@@ -4630,7 +4630,7 @@ char *Inlink::serialize ( int32_t *retSize     ,
 	// copy the easy stuff
 	char *p = buf;
 	char *pend = buf + need;
-	memcpy ( p , (char *)this , need );
+	gbmemcpy ( p , (char *)this , need );
 	p += need;
 
 	if ( p != pend ) { char *xx=NULL;*xx=0; }
@@ -4651,7 +4651,7 @@ char *Inlink::serialize ( int32_t *retSize     ,
 	// 	if ( p > m_buf+*offPtr && p < m_buf+*offPtr + *sizePtr ) {
 	// 		char *xx = NULL; *xx = 0; }
 	// 	// copy the string into the buffer
-	// 	memcpy ( p , m_buf + *offPtr , *sizePtr );
+	// 	gbmemcpy ( p , m_buf + *offPtr , *sizePtr );
 	// 	//skip:
 	// 	// . make it point into the buffer now
 	// 	// . MDW: why? that is causing problems for the re-call in
@@ -5452,28 +5452,28 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 		if ( p > newBuf + newAllocSize ) { char *xx = NULL; *xx = 0; }
 
 		if (m_linkBuf){
-			memcpy(newLinkPtrs, m_linkPtrs, 
+			gbmemcpy(newLinkPtrs, m_linkPtrs, 
 			       m_numLinks * sizeof(char*));
 			QUICKPOLL(niceness);
-			memcpy(newLinkLens, m_linkLens, 
+			gbmemcpy(newLinkLens, m_linkLens, 
 			       m_numLinks * sizeof(int32_t));
 			QUICKPOLL(niceness);
-			memcpy(newLinkNodes, m_linkNodes, 
+			gbmemcpy(newLinkNodes, m_linkNodes, 
 			       m_numLinks * sizeof(int32_t));
 			QUICKPOLL(niceness);
-			memcpy(newLinkHashes, m_linkHashes,
+			gbmemcpy(newLinkHashes, m_linkHashes,
 			       m_numLinks * sizeof(uint64_t));
 			QUICKPOLL(niceness);
-			memcpy(newHostHashes, m_hostHashes,
+			gbmemcpy(newHostHashes, m_hostHashes,
 			       m_numLinks * sizeof(uint64_t));
 			QUICKPOLL(niceness);
-			memcpy(newDomHashes, m_domHashes,
+			gbmemcpy(newDomHashes, m_domHashes,
 			       m_numLinks * sizeof(int32_t));
 			QUICKPOLL(niceness);
-			memcpy(newLinkFlags, m_linkFlags,
+			gbmemcpy(newLinkFlags, m_linkFlags,
 			       m_numLinks * sizeof(linkflags_t));
 			QUICKPOLL(niceness);
-			memcpy(newSpamNotes,m_spamNotes,
+			gbmemcpy(newSpamNotes,m_spamNotes,
 			       m_numLinks * sizeof(char *));
 			int32_t oldSize = getLinkBufferSize(m_allocLinks);
 			mfree(m_linkBuf, oldSize, "Links");
@@ -5655,7 +5655,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 		QUICKPOLL(niceness);
 		if ( m_allocBuf ) {
 			QUICKPOLL(niceness);
-			memcpy ( newBuf , m_allocBuf , m_allocSize );
+			gbmemcpy ( newBuf , m_allocBuf , m_allocSize );
 			QUICKPOLL(niceness);
 			// update pointers to previous buffer
 			int64_t offset = newBuf - m_allocBuf;
@@ -5690,7 +5690,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 	m_linkLens    [ m_numLinks ] = url.getUrlLen();
 	m_linkNodes   [ m_numLinks ] = nodeNum;
 	// serialize the normalized link into the buffer 
-	memcpy ( m_bufPtr , url.getUrl(), url.getUrlLen() );
+	gbmemcpy ( m_bufPtr , url.getUrl(), url.getUrlLen() );
 	m_bufPtr += url.getUrlLen();
 	QUICKPOLL(niceness);
 
@@ -6060,12 +6060,12 @@ int32_t Links::getLinkText2 ( int32_t i ,
 	int32_t rss = m_xml->isRSSFeed();
 	if ( rss == 1 ) {
 		//del = "item";
-		memcpy(del, "item\0", 5);
+		gbmemcpy(del, "item\0", 5);
 		dlen = 4;
 	}
 	else if ( rss == 2 ) {
 		//del = "entry";
-		memcpy(del, "entry\0", 6);
+		gbmemcpy(del, "entry\0", 6);
 		dlen = 5;
 	}
 	// if rss or atom page, return the whole xml <item> or <entry>
@@ -6399,7 +6399,7 @@ void Links::removeExternalLinks ( ) {
 		// skip if not internal (by hostname)
 		if ( ! isInternalHost(i) ) continue;
 		// copy it over
-		memcpy ( p , m_linkPtrs[i] , m_linkLens[i] );
+		gbmemcpy ( p , m_linkPtrs[i] , m_linkLens[i] );
 		// add it back
 		m_linkPtrs  [j] = p;
 		m_linkLens  [j] = m_linkLens  [i];

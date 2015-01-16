@@ -140,9 +140,9 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 		//s->m_readBufSize = r->m_bufLen+1;
 		s->m_readBufSize = requestBufLen+1;
 	}
-	//memcpy(s->m_readBuf, r->m_buf, r->m_bufLen);
+	//gbmemcpy(s->m_readBuf, r->m_buf, r->m_bufLen);
 	//s->m_readBuf[r->m_bufLen] = '\0';
-	memcpy(s->m_readBuf, requestBuf, requestBufLen);
+	gbmemcpy(s->m_readBuf, requestBuf, requestBufLen);
 	s->m_readBuf[requestBufLen] = '\0';
 	// create the new search request
 	//if (!r->set(s->m_readBuf, r->m_bufLen, s))

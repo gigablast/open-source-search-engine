@@ -86,7 +86,7 @@ bool sendPageCatdb ( TcpSocket *s , HttpRequest *r ) {
 	st->m_r.copy(r);
 	// copy collection
 	if (collLen > MAX_COLL_LEN) collLen = MAX_COLL_LEN - 1;
-	memcpy(st->m_coll, coll, collLen);
+	gbmemcpy(st->m_coll, coll, collLen);
 	st->m_coll[collLen] = '\0';
 	st->m_collLen = collLen;
 	// defaults

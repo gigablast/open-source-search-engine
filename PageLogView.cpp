@@ -163,7 +163,7 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 			sprintf(filtbuf, "fs%"INT32"", i);
 			st->m_filterStr[i] = r->getString(filtbuf, &len, "");
 			if(len != 0) {
-				memcpy(st->m_lastPtr, st->m_filterStr[i], len);
+				gbmemcpy(st->m_lastPtr, st->m_filterStr[i], len);
 				st->m_filterStr[i] = st->m_lastPtr;
 				st->m_lastPtr += len;
 				*(st->m_lastPtr) = '\0';
@@ -257,7 +257,7 @@ void gotRemoteLogWrapper(void *state, UdpSlot *slot) {
 			   st->m_readBufSize + st->m_readBuf)
 				goto noRoom;
 
-			memcpy(st->m_lastPtr, 
+			gbmemcpy(st->m_lastPtr, 
 			       nextLine + 1, 
 			       segSize);
 			st->m_readBufPtrs[st->m_numSlots] = st->m_lastPtr;

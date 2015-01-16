@@ -119,10 +119,10 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	st->m_docId  = r->getLongLong ("d", 0LL );
 	st->m_score  = r->getLong ("score", 0 );
 	// copy query/collection
-	memcpy ( st->m_query , query , queryLen );
+	gbmemcpy ( st->m_query , query , queryLen );
 	st->m_queryLen = queryLen;
 	st->m_query [ queryLen ] ='\0';
-	//memcpy ( st->m_coll , coll , collLen );
+	//gbmemcpy ( st->m_coll , coll , collLen );
 	//st->m_collLen  = collLen;
 	//st->m_coll [ collLen ] ='\0';
 	st->m_coll = coll;
@@ -237,14 +237,14 @@ loop:
 	int32_t ks;
 
 	if ( st->m_useDatedb ) {
-		memcpy ( startKey , &s16 , 16 );
-		memcpy ( endKey   , &e16 , 16 );
+		gbmemcpy ( startKey , &s16 , 16 );
+		gbmemcpy ( endKey   , &e16 , 16 );
 		rdbId = RDB_DATEDB;
 		ks = 16;
 	}
 	else {
-		memcpy ( startKey , &s12 , 12 );
-		memcpy ( endKey   , &e12 , 12 );
+		gbmemcpy ( startKey , &s12 , 12 );
+		gbmemcpy ( endKey   , &e12 , 12 );
 		rdbId = RDB_INDEXDB;
 		ks = 12;
 	}

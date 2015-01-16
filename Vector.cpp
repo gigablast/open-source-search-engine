@@ -155,7 +155,7 @@ bool Vector::setTagPairHashes ( Xml *xml , // char *buf , int32_t bufSize ,
 	//m_pairHashes = (uint32_t *)buf;
 	QUICKPOLL ( 0 ) ;
 	// store the top MAX_PAIR_HASHES
-	memcpy ( m_pairHashes , hashes , nh * 4 );
+	gbmemcpy ( m_pairHashes , hashes , nh * 4 );
 	return true;
 }
 
@@ -234,7 +234,7 @@ bool Vector::setPairHashes ( Words *words, int32_t linkWordNum, int32_t niceness
 			for ( int32_t i = 0 ; i < len ; i++ ) 
 				if ( pstart[i] ) *pt++ = pstart[i];
 			*pt = '\0';
-			//memcpy ( ttt , pstart , len );
+			//gbmemcpy ( ttt , pstart , len );
 			ttt[len] = '\0';
 			uint32_t hh = h;
 			if ( lastHash && h != lastHash ) hh = h ^ lastHash;
@@ -284,7 +284,7 @@ bool Vector::setPairHashes ( Words *words, int32_t linkWordNum, int32_t niceness
 	// use the provided buffer
 	//m_pairHashes = (uint32_t *)buf;
 	// store the top MAX_PAIR_HASHES
-	memcpy ( m_pairHashes , hashes , nh * 4 );
+	gbmemcpy ( m_pairHashes , hashes , nh * 4 );
 	return true;
 }
 
@@ -329,7 +329,7 @@ bool Vector::setLinkHashes ( Links *links , Url *url ) {
 	// save it
 	m_numPairHashes = nh;
 	// store the top MAX_LINK_HASHES
-	memcpy ( m_pairHashes , hashes , nh * 4 );
+	gbmemcpy ( m_pairHashes , hashes , nh * 4 );
 	return true;
 }
 */
@@ -345,7 +345,7 @@ int32_t Vector::set   ( char *buf , int32_t bufMaxSize ) {
 	m_numPairHashes  = *(int32_t *)p; p += 4;
 	//m_numRemoteLinks = *(int32_t *)p; p += 4;
 
-	//memcpy ( m_pairHashes , p , m_numPairHashes * 4 );
+	//gbmemcpy ( m_pairHashes , p , m_numPairHashes * 4 );
 	m_pairHashes = (uint32_t *)p;
 	p += m_numPairHashes * 4;
 
@@ -360,7 +360,7 @@ int32_t Vector::set2  ( char *buf , int32_t numPairHashes ) {
 	m_numPairHashes  = numPairHashes;
 	//m_numRemoteLinks = *(int32_t *)p; p += 4;
 
-	//memcpy ( m_pairHashes , p , m_numPairHashes * 4 );
+	//gbmemcpy ( m_pairHashes , p , m_numPairHashes * 4 );
 	m_pairHashes = (uint32_t *)p;
 	p += m_numPairHashes * 4;
 
@@ -376,7 +376,7 @@ int32_t Vector::store ( char *buf , int32_t bufMaxSize ) {
 	*(int32_t *)p = m_numPairHashes;  p += 4;
 	// *(int32_t *)p = m_numRemoteLinks; p += 4;
 
-	memcpy ( p , m_pairHashes , m_numPairHashes * 4 );
+	gbmemcpy ( p , m_pairHashes , m_numPairHashes * 4 );
 	p += m_numPairHashes * 4;
 
 	return p - buf;

@@ -437,7 +437,7 @@ bool SiteGetter::setSite ( ) {
 			return true;
 		}
 		// get the data, including terminating \0
-		memcpy ( m_site , tag->getTagData() , m_siteLen + 1 );
+		gbmemcpy ( m_site , tag->getTagData() , m_siteLen + 1 );
 		// sanity check - must include the \0
 		if (m_site[m_siteLen]!= '\0') {char*xx=NULL;*xx=0;}
 		// all done
@@ -465,11 +465,11 @@ bool SiteGetter::setSite ( ) {
 	char *x = m_site;
 	// check it
 	if ( ! m_hasSubdomain ) {
-		memcpy ( x , "www.", 4 );
+		gbmemcpy ( x , "www.", 4 );
 		x += 4;
 	}
 	// save it
-	memcpy ( x , host , hostLen );
+	gbmemcpy ( x , host , hostLen );
 	x += hostLen;
 
 	m_siteLen = x - m_site;
@@ -647,11 +647,11 @@ bool SiteGetter::setRecognizedSite ( ) {
 		char *x = m_site;
 		// store www first if its a domain only url
 		if ( ! m_hasSubdomain ) {
-			memcpy ( x , "www." , 4 );
+			gbmemcpy ( x , "www." , 4 );
 			x += 4;
 		}
 		// store it
-		memcpy ( x , host , p - host );
+		gbmemcpy ( x , host , p - host );
 		x += p - host;
 		// set the length of it
 		m_siteLen = x - m_site;
@@ -695,11 +695,11 @@ bool SiteGetter::setRecognizedSite ( ) {
 		char *x = m_site;
 		// store www first if its a domain only url
 		if ( ! m_hasSubdomain ) {
-			memcpy ( x , "www." , 4 );
+			gbmemcpy ( x , "www." , 4 );
 			x += 4;
 		}
 		// store it
-		memcpy ( x , host , path - host );
+		gbmemcpy ( x , host , path - host );
 		x += path - host;
 		m_siteLen = x - m_site;
 		m_site [ m_siteLen ] = '\0';

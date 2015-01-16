@@ -1298,7 +1298,7 @@ bool PostQueryRerank::preRerankNonLocationSpecificQueries ( ) {
 		     qw->m_queryPhraseTerm->m_underNOT ) continue;
 
 		// else, append word + space to buf
-		memcpy( p, qw->m_word, qw->m_wordLen );
+		gbmemcpy( p, qw->m_word, qw->m_wordLen );
 		p += qw->m_wordLen;
 		*p++ = ' ';
 	}

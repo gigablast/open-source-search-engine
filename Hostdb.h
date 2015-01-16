@@ -85,7 +85,10 @@ public:
 class PingInfo {
  public:
 	// m_lastPing MUST be on top for now...
-	int64_t m_lastPing;
+	//int64_t m_lastPing;
+	// this timestamp MUST be on top because we set requestSize to 8
+	// and treat it like an old 8-byte ping in PingServer.cpp
+	int64_t m_localHostTimeMS;
 	int32_t m_hostId;
 	int32_t m_loadAvg;
 	float m_percentMemUsed;
@@ -202,7 +205,7 @@ class Host {
 	//collnum_t      m_dailyMergeCollnum;
 
 	// last time g_hostdb.ping(i) was called for this host in milliseconds.
-	//int64_t      m_lastPing;
+	int64_t      m_lastPing;
 
 	char m_tmpBuf[4];
 

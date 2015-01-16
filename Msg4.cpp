@@ -774,7 +774,7 @@ bool storeRec ( collnum_t      collnum ,
 		
 		if(s_hostBufs[hostId]) {
 			//if the old buf was too small, resize
-			memcpy( buf, s_hostBufs[hostId], 
+			gbmemcpy( buf, s_hostBufs[hostId], 
 				*(int32_t*)(s_hostBufs[hostId])); 
 			mfree ( s_hostBufs[hostId], 
 				s_hostBufSizes[hostId] , "Msg4b" );
@@ -818,7 +818,7 @@ bool storeRec ( collnum_t      collnum ,
 	*(collnum_t *)p = collnum; p += sizeof(collnum_t);
 	*(char      *)p = rdbId  ; p += 1;
 	*(int32_t      *)p = recSize; p += 4;
-	memcpy ( p , rec , recSize ); p += recSize;
+	gbmemcpy ( p , rec , recSize ); p += recSize;
 	// update buffer used
 	*(int32_t *)buf = used + (p - start);
 	// all done, did not "block"
@@ -1287,21 +1287,37 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 		//	return true;
 		//}
 		// an uninitialized secondary rdb? it will have a keysize
-		// if 0 if its never been intialized from the repair page
+		// of 0 if its never been intialized from the repair page.
+		// don't core any more, we probably restarted this shard
+		// and it needs to wait for host #0 to syncs its
+		// g_conf.m_repairingEnabled to '1' so it can start its
+		// Repair.cpp repairWrapper() loop and init the secondary
+		// rdbs so "rdb" here won't be NULL any more.
 		if ( rdb && rdb->m_ks <= 0 ) {
-			log("msg4: oops. got an rdbId key for a secondary "
-			    "rdb and not in repair mode! fix xmldoc!");
-			char *xx=NULL;*xx=0;
+			time_t currentTime = getTime();
+			static time_t s_lastTime = 0;
+			if ( currentTime > s_lastTime + 10 ) {
+				s_lastTime = currentTime;
+				log("msg4: oops. got an rdbId key for a "
+				    "secondary "
+				    "rdb and not in repair mode. waiting to "
+				    "be in repair mode.");
+				g_errno = ETRYAGAIN;
+				return false;
+				//char *xx=NULL;*xx=0;
+			}
 		}
 		if ( ! rdb ) {
 			if ( slot ) 
-				log("msg4: rdbId of %"INT32" unrecognized from "
-				    "hostip=%s. "
+				log("msg4: rdbId of %"INT32" unrecognized "
+				    "from hostip=%s. "
 				    "dropping WHOLE request", (int32_t)rdbId,
 				    iptoa(slot->m_ip));
 			else
 				log("msg4: rdbId of %"INT32" unrecognized. "
 				    "dropping WHOLE request", (int32_t)rdbId);
+			g_errno = ETRYAGAIN;
+			return false;
 			// drop it for now!!
 			//if ( p < pend ) goto loop;
 			// all done
@@ -1334,7 +1350,11 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 	// sanity check
 	if ( rdb->getKeySize() == 0 ) {
 		log("seems like a stray /e/repair-addsinprogress.dat file "
-		    "rdbId=%"INT32". not in repair mode. dropping.",(int32_t)rdbId);
+		    "rdbId=%"INT32". waiting to be in repair mode."
+		    ,(int32_t)rdbId);
+		    //not in repair mode. dropping.",(int32_t)rdbId);
+		g_errno = ETRYAGAIN;
+		return false;
 		char *xx=NULL;*xx=0;
 		// drop it for now!!
 		p += recSize;

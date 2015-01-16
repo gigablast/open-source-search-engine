@@ -82,7 +82,7 @@ class Indexdb {
 	// extract the termId from a key
 	int64_t getTermId ( key_t *k ) {
 		int64_t termId = 0LL;
-		memcpy ( &termId , ((char *)k) + 6 , 6 );
+		gbmemcpy ( &termId , ((char *)k) + 6 , 6 );
 		return termId ;
 	};
 	int64_t getTermId ( key_t k ) { return getTermId ( &k ); };

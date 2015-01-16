@@ -817,7 +817,7 @@ bool Loop::init ( ) {
 	//   handling a SIGIO signal, so don't worry about that
 	// . what sigs should be blocked when in our handler? the same
 	//   sigs we are handling i guess
-	memcpy ( &sa2.sa_mask , &sigs , sizeof(sigs) );
+	gbmemcpy ( &sa2.sa_mask , &sigs , sizeof(sigs) );
 	sa2.sa_flags = SA_SIGINFO ; //| SA_ONESHOT;
 	// call this function
 	sa2.sa_sigaction = sigHandlerQueue_r;
@@ -969,6 +969,32 @@ void sigpwrHandler ( int x , siginfo_t *info , void *y ) {
 	g_loop.m_shutdown = 3;
 }
 
+#include <execinfo.h>
+void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
+
+	int arch = 32;
+	if ( __WORDSIZE == 64 ) arch = 64;
+	if ( __WORDSIZE == 128 ) arch = 128;
+	// right now only works for 32 bit
+	if ( arch != 32 ) return;
+
+	logf(LOG_DEBUG,"gb: seg fault. printing stack trace.");
+
+	static void *s_bt[200];
+	int sz = backtrace(s_bt, 200);
+	//char **strings = backtrace_symbols(s_bt, sz);
+	for( int i = 0; i < sz; ++i) {
+		unsigned long long ba;
+		ba = g_profiler.getFuncBaseAddr((PTRTYPE)s_bt[i]);
+		//sigsegv_outp("%s", strings[i]);
+		logf(LOG_DEBUG,"[0x%llx->0x%llx] %s"
+		     ,(unsigned long long)s_bt[i]
+		     ,ba
+		     ,g_profiler.getFnName(ba,0));
+	}
+}
+
+
 // TODO: if we get a segfault while saving, what then?
 void sigbadHandler ( int x , siginfo_t *info , void *y ) {
 
@@ -997,6 +1023,11 @@ void sigbadHandler ( int x , siginfo_t *info , void *y ) {
 		log("loop: sigbadhandler. shutdown already called.");
 		return;
 	}
+
+	// unwind
+	printStackTrace( x , info , y );
+
+
 	// if we're a thread, let main process know to shutdown
 	g_loop.m_shutdown = 2;
 	log("loop: sigbadhandler. trying to save now. mode=%"INT32"",
@@ -1825,9 +1856,9 @@ void Loop::doPoll ( ) {
 	fd_set readfds;
 	fd_set writefds;
 	fd_set exceptfds;
-	memcpy ( &readfds, &s_selectMaskRead , sizeof(fd_set) );
-	memcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
-	//memcpy ( &exceptfds, &s_selectMaskExcept , sizeof(fd_set) );
+	gbmemcpy ( &readfds, &s_selectMaskRead , sizeof(fd_set) );
+	gbmemcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
+	//gbmemcpy ( &exceptfds, &s_selectMaskExcept , sizeof(fd_set) );
 
 	// what is the point of fds for writing... its for when we
 	// get a new socket via accept() it is read for writing...

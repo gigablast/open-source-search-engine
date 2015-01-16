@@ -927,7 +927,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 			removeIp(ip);
 			char *beginning;
 			char ipbuf[64];//gotta NULL terminate for strstr
-			memcpy(ipbuf, clear, clearLen);
+			gbmemcpy(ipbuf, clear, clearLen);
 			ipbuf[clearLen] = '\0';
 			beginning = findToken(g_conf.m_banIps, ipbuf, 
 					      clearLen);
@@ -955,7 +955,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
  		if(ip) {
 			char *beginning;
 			char ipbuf[64];//gotta NULL terminate for strstr
-			memcpy(ipbuf, allow, allowLen);
+			gbmemcpy(ipbuf, allow, allowLen);
 			ipbuf[allowLen] = '\0';
 			beginning = findToken(g_conf.m_allowIps, ipbuf, 
 					      allowLen);
@@ -966,7 +966,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 				if(p - g_conf.m_allowIps + allowLen + 2 
 				   < AUTOBAN_TEXT_SIZE) {
 					*p++ = '\n';
-					memcpy(p, ipbuf,allowLen);
+					gbmemcpy(p, ipbuf,allowLen);
 					*(p + allowLen) = '\0';
 				}
 				else {
@@ -1005,7 +1005,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
  		if(ip) {
 			char *beginning;
 			char ipbuf[64];//gotta NULL terminate for strstr
-			memcpy(ipbuf, deny, denyLen);
+			gbmemcpy(ipbuf, deny, denyLen);
 			ipbuf[denyLen] = '\0';
 			beginning = findToken(g_conf.m_banIps, ipbuf, denyLen);
 			if(!beginning) {
@@ -1015,7 +1015,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 				if(p - g_conf.m_banIps + denyLen + 2 < 
 				   AUTOBAN_TEXT_SIZE) {
 					*p++ = '\n';
-					memcpy(p, ipbuf,denyLen);
+					gbmemcpy(p, ipbuf,denyLen);
 					*(p + denyLen) = '\0';
 				}
 				else {
@@ -1063,7 +1063,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 			validCodesLen = 0;
 		}
 		else {
-			memcpy(g_conf.m_validCodes, validCodes, validCodesLen);
+			gbmemcpy(g_conf.m_validCodes, validCodes, validCodesLen);
 			g_conf.m_validCodes[validCodesLen] = '\0';
 			trimWhite(g_conf.m_validCodes);
 			setCodesFromConf();
@@ -1097,7 +1097,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 				removeIp(m_detectKeys[i]);
 			}
 		}
-		memcpy(g_conf.m_banIps, banIps, banIpsLen);
+		gbmemcpy(g_conf.m_banIps, banIps, banIpsLen);
 		g_conf.m_banIps[banIpsLen] = '\0';
 		changed = true;
 	}
@@ -1121,7 +1121,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 				removeIp(m_detectKeys[i]);
 			}
 		}
-		memcpy(g_conf.m_allowIps, allowIps, allowIpsLen);
+		gbmemcpy(g_conf.m_allowIps, allowIps, allowIpsLen);
 		g_conf.m_allowIps[allowIpsLen] = '\0';
 		changed = true;
 	}

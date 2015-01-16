@@ -144,7 +144,7 @@ class Datedb {
 	// extract the termId from a key
 	int64_t getTermId ( key128_t *k ) {
 		int64_t termId = 0LL;
-		memcpy ( &termId , ((char *)k) + 10 , 6 );
+		gbmemcpy ( &termId , ((char *)k) + 10 , 6 );
 		return termId ;
 	};
 

@@ -154,7 +154,7 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 			m_titleAllocSize = m_titleBytes+1;
 		}
 		m_title = dst;
-		memcpy ( dst , val , m_titleBytes );
+		gbmemcpy ( dst , val , m_titleBytes );
 		dst[m_titleBytes] = '\0';
 		return true;
 	}
@@ -1897,20 +1897,20 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 		// encode it as an html entity if asked to
 		if ( *src == '<' && convertHtmlEntities ) {
 			if ( dst + 4 >= dstEnd ) break;
-			memcpy ( dst , "&lt;" , 4 );
+			gbmemcpy ( dst , "&lt;" , 4 );
 			dst += 4 - cs;
 			continue;
 		}
 		// encode it as an html entity if asked to
 		if ( *src == '>' && convertHtmlEntities ) {
 			if ( dst + 4 >= dstEnd ) break;
-			memcpy ( dst , "&gt;" , 4 );
+			gbmemcpy ( dst , "&gt;" , 4 );
 			dst += 4 - cs;
 			continue;
 		}
-		// if more than 1 byte in char, use memcpy
+		// if more than 1 byte in char, use gbmemcpy
 		if ( cs == 1 ) *dst = *src;
-		else           memcpy ( dst , src , cs );
+		else           gbmemcpy ( dst , src , cs );
 	}
 
 	// null term always
@@ -1919,11 +1919,11 @@ bool Title::copyTitle ( Words *w , Pos *pos ,
 	// do not split a word in the middle!
 	if ( src < srcEnd ) { 
 		if ( lastp ) {
-			memcpy ( lastp , "...\0" , 4 );
+			gbmemcpy ( lastp , "...\0" , 4 );
 			dst = lastp + 3;
 		}
 		else {
-			memcpy ( dst   , "...\0" , 4 );
+			gbmemcpy ( dst   , "...\0" , 4 );
 			dst += 3;
 		}
 	}

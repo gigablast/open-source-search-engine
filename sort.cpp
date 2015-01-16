@@ -684,8 +684,8 @@ int main(int argc, char* argv[])
 			exit(2);
 		}
 		//fprintf(stderr, "%d: read block\n", i);
-		memcpy(block2, block1, sizeof(block2));
-		memcpy(block3, block1, sizeof(block3));
+		gbmemcpy(block2, block1, sizeof(block2));
+		gbmemcpy(block3, block1, sizeof(block3));
 		p1 = block1;
 		p2 = block2;
 		p3 = block3;

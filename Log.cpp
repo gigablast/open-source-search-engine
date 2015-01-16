@@ -61,6 +61,34 @@ void Log::reset ( ) {
 #endif
 }
 
+// for example, RENAME log000 to log000-2013_11_04-18:19:32
+bool renameCurrentLogFile ( ) {
+	File f;
+	char tmp[16];
+	sprintf(tmp,"log%03"INT32"",g_hostdb.m_hostId);
+	f.set ( g_hostdb.m_dir , tmp );
+	// make new filename like log000-2013_11_04-18:19:32
+	time_t now = getTimeLocal();
+	tm *tm1 = gmtime((const time_t *)&now);
+	char tmp2[64];
+	strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
+	SafeBuf newName;
+	if ( ! newName.safePrintf ( "%slog%03"INT32"-%s",
+				    g_hostdb.m_dir,
+				    g_hostdb.m_hostId,
+				    tmp2 ) ) {
+		fprintf(stderr,"log rename failed\n");
+		return false;
+	}
+	// rename log000 to log000-2013_11_04-18:19:32
+	if ( f.doesExist() ) {
+		//fprintf(stdout,"renaming file\n");
+		f.rename ( newName.getBufStart() );
+	}
+	return true;
+}
+
+
 bool Log::init ( char *filename ) {
 	// set the main process id
 	//s_pid = getpidtid();
@@ -89,30 +117,12 @@ bool Log::init ( char *filename ) {
 	// RENAME log000 to log000-2013_11_04-18:19:32
 	//
 	if ( g_conf.m_runAsDaemon ) {
-		File f;
-		char tmp[16];
-		sprintf(tmp,"log%03"INT32"",g_hostdb.m_hostId);
-		f.set ( g_hostdb.m_dir , tmp );
-		// make new filename like log000-2013_11_04-18:19:32
-		time_t now = getTimeLocal();
-		tm *tm1 = gmtime((const time_t *)&now);
-		char tmp2[64];
-		strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
-		SafeBuf newName;
-		if ( ! newName.safePrintf ( "%slog%03"INT32"-%s",
-					    g_hostdb.m_dir,
-					    g_hostdb.m_hostId,
-					    tmp2 ) ) {
-			fprintf(stderr,"log rename failed\n");
-			return false;
-		}
-		// rename log000 to log000-2013_11_04-18:19:32
-		if ( f.doesExist() ) {
-			//fprintf(stdout,"renaming file\n");
-			f.rename ( newName.getBufStart() );
-		}
+		// returns false on error
+		if ( ! renameCurrentLogFile() ) return false;
 	}
 
+	// get size of current file. getFileSize() is defined in File.h.
+	m_logFileSize = getFileSize ( m_filename );
 
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
@@ -207,6 +217,10 @@ bool Log::shouldLog ( int32_t type , char *msg ) {
 	return true;
 }
 
+// 1GB max log file size
+#define MAXLOGFILESIZE 1000000000
+// for testing:
+//#define MAXLOGFILESIZE 3000
 
 bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 		 bool forced ) {
@@ -346,14 +360,22 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 		if ( *ttp == '\t' ) *ttp = ' ';
 	}
 
+	// . if filesize would be too big then make a new log file
+	// . should make a new m_fd
+	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE )
+		makeNewLogFile();
+
 	if ( m_fd >= 0 ) {
 		write ( m_fd , tt , tlen );
 		write ( m_fd , "\n", 1 );
+		m_logFileSize += tlen + 1;
 	}
 	else {
 		// print it out for now
 		fprintf ( stderr, "%s\n", tt );
 	}
+
+
 
 	// set the stuff in the array
 	m_errorMsg      [m_numErrors] = msg;
@@ -367,6 +389,28 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// unlock for threads
 	pthread_mutex_unlock ( &s_lock );
 #endif
+	return false;
+}
+
+bool Log::makeNewLogFile ( ) {
+	// . rename old log file like log000 to log000-2013_11_04-18:19:32
+	// . returns false on error
+	if ( ! renameCurrentLogFile() ) return false;
+	// close old fd
+	if ( m_fd >= 0 ) ::close ( m_fd );
+	// invalidate
+	m_fd = -1;
+	// reset
+	m_logFileSize = 0;
+	// open it for appending.
+	// create with -rw-rw-r-- permissions if it's not there.
+	m_fd = open ( m_filename , 
+		      O_APPEND | O_CREAT | O_RDWR , 
+		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+	if ( m_fd >= 0 ) return true;
+	// bitch to stderr and return false on error
+	fprintf(stderr,"could not open new log file %s for appending\n",
+		m_filename);
 	return false;
 }
 
@@ -527,11 +571,11 @@ void Log::printBuf ( ) {
 	}
 	// first 4 bytes are the size of the string arguments
 	int32_t stringSizes;
-	memcpy ( (char *)&stringSizes , p , 4 );
+	gbmemcpy ( (char *)&stringSizes , p , 4 );
 	p += 4;
 	// then the type of the msg
 	int32_t type;
-	memcpy ( (char *)&type , p , 4 );
+	gbmemcpy ( (char *)&type , p , 4 );
 	p += 4;
 	// then the format string
 	char *format = p;
@@ -557,11 +601,11 @@ void Log::printBuf ( ) {
 	}
 	// get time
 	int64_t now ;
-	memcpy ( (char *)&now , p , 8 );
+	gbmemcpy ( (char *)&now , p , 8 );
 	p += 8;
 	// get size of args
 	int32_t apsize ;
-	memcpy ( (char *)&apsize , p , 4 );
+	gbmemcpy ( (char *)&apsize , p , 4 );
 	p += 4;
 	// dword align
 	int32_t rem = ((PTRTYPE)p) % 4;

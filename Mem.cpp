@@ -710,7 +710,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	int32_t len = gbstrlen(note);
 	if ( len > 15 ) len = 15;
 	char *here = &s_labels [ h * 16 ];
-	memcpy ( here , note , len );
+	gbmemcpy ( here , note , len );
 	// make sure NULL terminated
 	here[len] = '\0';
 	// unlock for threads
@@ -901,7 +901,7 @@ bool Mem::lblMem( void *mem, int32_t size, const char *note ) {
 			int32_t len = gbstrlen(note);
 			if ( len > 15 ) len = 15;
 			char *here = &s_labels [ h * 16 ];
-			memcpy ( here , note , len );
+			gbmemcpy ( here , note , len );
 			// make sure NULL terminated
 			here[len] = '\0';
 			val = true;
@@ -1062,7 +1062,7 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 		s_mptrs[k] = (void *)mem;
 		s_sizes[k] = s_sizes[h];
 		s_isnew[k] = s_isnew[h];
-		memcpy(&s_labels[k*16],&s_labels[h*16],16);
+		gbmemcpy(&s_labels[k*16],&s_labels[h*16],16);
 		// try next bucket now
 		h++;
 		// wrap if we need to
@@ -1507,7 +1507,7 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	mem = (char *)mmalloc ( newSize , note );
 	if ( ! mem ) return NULL;
 	// copy over to it
-	memcpy ( mem , ptr , oldSize );
+	gbmemcpy ( mem , ptr , oldSize );
 	// free the old
 	mfree ( ptr , oldSize , note );
 	// done
@@ -1547,10 +1547,10 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 		return NULL;
 	}
 	// log a note
-	log(LOG_INFO,"mem: had to use malloc/memcpy instead of "
+	log(LOG_INFO,"mem: had to use malloc/gbmemcpy instead of "
 	    "realloc.");
 	// copy over to it
-	memcpy ( mem , ptr , oldSize );
+	gbmemcpy ( mem , ptr , oldSize );
 	// we already called rmMem() so don't double call
 	sysfree ( (char *)ptr - UNDERPAD );	
 	// free the old. this was coring because it was double calling rmMem()
@@ -1562,7 +1562,7 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 char *Mem::dup ( const void *data , int32_t dataSize , const char *note ) {
 	// keep it simple
 	char *mem = (char *)mmalloc ( dataSize , note );
-	if ( mem ) memcpy ( mem , data , dataSize );
+	if ( mem ) gbmemcpy ( mem , data , dataSize );
 	return mem;
 }
 
@@ -1820,7 +1820,9 @@ void memset_nice( register void *dest , register const char c , int32_t len ,
 
 // . TODO: avoid byteCopy by copying remnant bytes
 // . ass = async signal safe, dumb ass
-// . NOTE: src/dest should not overlap in this version of memcpy
+// . NOTE: src/dest should not overlap in this version of gbmemcpy
+// . MDW: i replaced this is a #define bcopy in gb-include.h
+/*
 void memcpy_ass ( register void *dest2, register const void *src2, int32_t len ) {
 	// for now keep it simple!!
 	len--;
@@ -1828,9 +1830,10 @@ void memcpy_ass ( register void *dest2, register const void *src2, int32_t len )
 		((char *)dest2)[len] = ((char *)src2)[len]; 
 		len--; 
 	}
+*/
 	/*
 	// debug test
-	//memcpy ( dest2 , src2 , len );
+	//gbmemcpy ( dest2 , src2 , len );
 	//return;
 	// the end for the fast copy by word with partially unrolled loop
 	register int32_t *dest = (int32_t *)dest2;
@@ -1863,7 +1866,7 @@ void memcpy_ass ( register void *dest2, register const void *src2, int32_t len )
 	len--;
 	while ( len >= 0 ) { dest2[len] = src2[len]; len--; }
 	*/
-}
+//}
 
 // Check the current stack usage
 int32_t Mem::checkStackSize() {

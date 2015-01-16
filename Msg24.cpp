@@ -225,17 +225,17 @@ bool Msg24::generateTopics ( char       *coll                ,
 	//*(int32_t *)p = maxWordsPerPhrase ; p += 4;
 	// store topic group information
 	*(int32_t *)p = numTopicGroups; p += 4;
-	memcpy ( p , topicGroups , size ); p += size;
+	gbmemcpy ( p , topicGroups , size ); p += size;
 	// then coll
-	memcpy ( p , coll , collLen ); p += collLen ;
+	gbmemcpy ( p , coll , collLen ); p += collLen ;
 	*p++ = '\0';
 	// then query
-	memcpy ( p , query , queryLen ); p += queryLen;
+	gbmemcpy ( p , query , queryLen ); p += queryLen;
 	*p++ = '\0';
 	// then docids
-	memcpy ( p , docIds , numDocIds * 8 ); p += numDocIds * 8;
+	gbmemcpy ( p , docIds , numDocIds * 8 ); p += numDocIds * 8;
 	// then cluster levels
-	memcpy ( p , clusterLevels , numDocIds ); p += numDocIds ;
+	gbmemcpy ( p , clusterLevels , numDocIds ); p += numDocIds ;
 	// how big is it?
 	//m_requestSize = p - m_request;
 	// sanity check
@@ -393,14 +393,14 @@ void handleRequest24 ( UdpSlot *slot , int32_t netnice ) {
 	// get topic group information
 	st->m_numTopicGroups = *(int32_t *)p ; p += 4;
 	int32_t size = sizeof(TopicGroup) * st->m_numTopicGroups ;
-	memcpy ( st->m_topicGroups , p , size ); p += size;
+	gbmemcpy ( st->m_topicGroups , p , size ); p += size;
 	// then coll
 	st->m_coll = p; p += strlen(p) + 1;
 	// . then the query, a NULL terminated string
 	// . store it in state
 	int32_t qlen = strlen ( p );
 	if ( qlen > MAX_QUERY_LEN ) qlen = MAX_QUERY_LEN;
-	memcpy ( st->m_query , p , qlen );
+	gbmemcpy ( st->m_query , p , qlen );
 	st->m_query [ qlen ] = '\0';
 	st->m_queryLen = qlen;
 	p += qlen + 1;
@@ -459,7 +459,7 @@ void handleRequest24 ( UdpSlot *slot , int32_t netnice ) {
 		int32_t tlen = strlen ( t->m_meta );
 		if ( p + tlen + 1 >= pend ) break;
 		if ( i > 0 ) *p++ = ' ';
-		memcpy ( p , t->m_meta , tlen );
+		gbmemcpy ( p , t->m_meta , tlen );
 		p += tlen;
 	}
 	//int32_t dbufLen = p - dbuf;
@@ -1040,7 +1040,7 @@ bool getTopics ( State24       *st        ,
 		int32_t len   = master->getTermLen(i);
 		char ff[1024];
 		if ( len > 1020 ) len = 1020;
-		memcpy ( ff , ptr , len );
+		gbmemcpy ( ff , ptr , len );
 		ff[len] = '\0';
 		// we can have html entities in here now
 		//if ( ! is_alnum(ff[0]) ) { char *xx = NULL; *xx = 0; }
@@ -1795,7 +1795,7 @@ bool getTopics ( State24       *st        ,
 		else        ppops [j] = 0;
 		ndocids [j] = 0;
 		dptrs   [j] = NULL; // dummy placeholder
-		memcpy ( ptext , ptrs[i] , lens[i] ); ptext += lens[i];
+		gbmemcpy ( ptext , ptrs[i] , lens[i] ); ptext += lens[i];
 		//if ( hashes && j < GIGABITS_IN_VECTOR )
 		//	hashes[j] = hash32Lower (ptrs[i],lens[i]);
 		*ptext++ = '\0';
@@ -1857,7 +1857,7 @@ bool getTopics ( State24       *st        ,
 		*(int32_t *)p = scores[i]; p += 4;
 		*(int32_t *)p = lens  [i]; p += 4;
 		*(char *)p = gid      ; p += 1;
-		memcpy ( p , ptrs[i] , lens[i] ); p += lens[i];
+		gbmemcpy ( p , ptrs[i] , lens[i] ); p += lens[i];
 		*p++ = '\0';
 	}
 	*/
@@ -3129,25 +3129,25 @@ int32_t Msg24::serialize ( char *buf , int32_t bufLen ) {
 	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
 		*(int32_t *)p = m_topicPtrs[i] - base; p += 4; }
 	// then the scores
-	memcpy ( p , m_topicScores   , m_numTopics * 4 ); p += m_numTopics * 4;
-	memcpy ( p , m_topicLens     , m_numTopics * 4 ); p += m_numTopics * 4;
-	memcpy ( p , m_topicNumDocIds, m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicScores   , m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicLens     , m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicNumDocIds, m_numTopics * 4 ); p += m_numTopics * 4;
 	// these m_topicDocIds, are just essentially placeholders for ptrs
 	// to the docids, just like the topic ptrs above, but these call all
 	// be NULL if we didn't get back the list of docids for each gigabit
 	p += m_numTopics * 4;
 	// then the popularity rating of each topic
-	memcpy ( p , m_topicPops     , m_numTopics * 4 ); p += m_numTopics * 4;
-	memcpy ( p , m_topicGids     , m_numTopics     ); p += m_numTopics;
+	gbmemcpy ( p , m_topicPops     , m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicGids     , m_numTopics     ); p += m_numTopics;
 	// then the text
 	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
-		memcpy ( p , m_topicPtrs[i] , m_topicLens[i] ) ;
+		gbmemcpy ( p , m_topicPtrs[i] , m_topicLens[i] ) ;
 		p += m_topicLens[i];
 		*p++ = '\0';
 	}
 	// and one array of docids per topic
 	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
-		memcpy ( p , m_topicDocIds[i] , m_topicNumDocIds[i] * 8 );
+		gbmemcpy ( p , m_topicDocIds[i] , m_topicNumDocIds[i] * 8 );
 		p += m_topicNumDocIds[i] * 8;
 		// sanity check
 		//for ( int32_t k = 0 ; k < m_topicNumDocIds[i] ; k++ )
@@ -3284,13 +3284,13 @@ bool Msg24::generateTopicsLocal ( char       *coll                ,
 	st.m_numRequests      = numMsg20s;
 	st.m_numReplies       = numMsg20s;
 
-	memcpy ( st.m_query , query , queryLen );
+	gbmemcpy ( st.m_query , query , queryLen );
 	st.m_query [ queryLen ] = '\0';
 	st.m_queryLen = queryLen;
 	st.m_qq.set ( st.m_query , st.m_queryLen , NULL , 0, 2 , true );
 
 	st.m_numTopicGroups   = m_numTopicGroups;
-	memcpy(st.m_topicGroups, m_topicGroups, 
+	gbmemcpy(st.m_topicGroups, m_topicGroups, 
 	       sizeof(TopicGroup) * m_numTopicGroups);
 	st.m_maxCacheAge      = 0;
 	st.m_addToCache       = false;

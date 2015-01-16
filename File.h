@@ -31,6 +31,8 @@
 #include "Mem.h"             // for g_mem
 #include "Loop.h"            // for g_loop.setNonBlocking(int fd)
 
+int64_t getFileSize ( char *filename ) ;
+
 // for avoiding unlink/opens that mess up our threaded read
 int32_t getCloseCount_r ( int fd );
 

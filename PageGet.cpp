@@ -612,7 +612,7 @@ bool processLoop ( void *state ) {
 				 (char *)thisUrl );// base url for ClcknScrll
 		//p += hilen;
 		// now an hr
-		//memcpy ( p , "</span></table></table>\n" , 24 );   p += 24;
+		//gbmemcpy ( p , "</span></table></table>\n" , 24 );   p += 24;
 		sb->safeStrcpy("</span></table></table>\n");
 	}
 

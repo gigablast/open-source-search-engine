@@ -636,13 +636,13 @@ void IndexTable::addLists_r (IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS],
 		char *p = lists[j][i].getList();
 		// remember to swap back when done!!
 		//char ttt[6];
-		//memcpy ( ttt   , p     , 6 );
-		//memcpy ( p     , p + 6 , 6 );
-		//memcpy ( p + 6 , ttt   , 6 );
+		//gbmemcpy ( ttt   , p     , 6 );
+		//gbmemcpy ( p     , p + 6 , 6 );
+		//gbmemcpy ( p + 6 , ttt   , 6 );
 		char ttt[10];
-		memcpy ( ttt   , p       , hks );
-		memcpy ( p     , p + hks , 6   );
-		memcpy ( p + 6 , ttt     , hks );
+		gbmemcpy ( ttt   , p       , hks );
+		gbmemcpy ( p     , p + hks , 6   );
+		gbmemcpy ( p + 6 , ttt     , hks );
 		// point to the low "hks" bytes now
 		p += 6;
 		// turn half bit on
@@ -806,9 +806,9 @@ swapBack:
 		//char *p = lists[j][i].getList();
 		// remember to swap back when done!!
 		//char ttt[6];
-		//memcpy ( ttt   , p     , 6 );
-		//memcpy ( p     , p + 6 , 6 );
-		//memcpy ( p + 6 , ttt   , 6 );
+		//gbmemcpy ( ttt   , p     , 6 );
+		//gbmemcpy ( p     , p + 6 , 6 );
+		//gbmemcpy ( p + 6 , ttt   , 6 );
 		// turn half bit off again 
 		//*p &= 0xfd;
 	}
@@ -1110,9 +1110,9 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 			// this is now done in addLists_r()
 			// remember to swap back when done!!
 			//char ttt[6];
-			//memcpy ( ttt   , p     , 6 );
-			//memcpy ( p     , p + 6 , 6 );
-			//memcpy ( p + 6 , ttt   , 6 );
+			//gbmemcpy ( ttt   , p     , 6 );
+			//gbmemcpy ( p     , p + 6 , 6 );
+			//gbmemcpy ( p + 6 , ttt   , 6 );
 			// point to the low 6 bytes now
 			p += 6;
 			// turn half bit on
@@ -1470,7 +1470,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		nnstart = nn;
 		// debug point
 		//int64_t ddd ;
-		//memcpy ( &ddd , ptrs[i] , 6 );
+		//gbmemcpy ( &ddd , ptrs[i] , 6 );
 		//ddd >>= 2;
 		//ddd &= DOCID_MASK;
 		//if ( ddd == 261380478983LL )
@@ -1586,7 +1586,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		if ( /*! rat &&*/ explicitBits[nn] & ebits ) {
 			// no point in logging since in thread!
 			//int64_t dd ;
-			//memcpy ( &dd , ptrs[i] , 6 );
+			//gbmemcpy ( &dd , ptrs[i] , 6 );
 			//dd >>= 2;
 			//dd &= DOCID_MASK;
 			//fprintf(stderr,"got dup score for docid=%"INT64"\n",dd);
@@ -2203,7 +2203,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 			if ( (*(unsigned char *)(tdp2[i]    ) & 0xfc) >
 			     (*(unsigned char *)(minp) & 0xfc) ) continue;
 		gotIt:
-			memcpy ( &topd[mini] , tdp2[i] , 6 );
+			gbmemcpy ( &topd[mini] , tdp2[i] , 6 );
 			topd[mini] >>= 2;
 			topd[mini] &= DOCID_MASK;
 			topp[mini] = tdp2        [i];
@@ -2253,7 +2253,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	// . the m_topDocIdPtrs array is score/docid 6 byte combos
 	else if ( ! rat ) {
 		for ( int32_t i = 0 ; i < numTopDocIds ; i++ ) {
-			memcpy ( &topd[i] , topp[i] , 6 );
+			gbmemcpy ( &topd[i] , topp[i] , 6 );
 			topd[i] >>= 2;
 			topd[i] &= DOCID_MASK;
 		}
@@ -2571,7 +2571,7 @@ skip:
 	char           explicits [ MAX_RESULTS * MAX_TIERS ];
 	int32_t           scores    [ MAX_RESULTS * MAX_TIERS ];
 	char           tiers     [ MAX_RESULTS * MAX_TIERS ];
-	// use memcpy for speed reasons
+	// use gbmemcpy for speed reasons
 	for ( int32_t i = 0 ; i < m_numTiers ; i++ ) {
 		// how many top docIds in this one?
 		int32_t nt = m_numTopDocIds[i];
@@ -2587,11 +2587,11 @@ skip:
 		//if ( m_numExactExplicitMatches[i] < 10 && i != m_numTiers-1)
 		//	continue;
 		// store all top docIds from all tiers into "docIds"
-		memcpy ( & docIds    [ nn ] , &m_topDocIds   [i] , nt * 8 );
+		gbmemcpy ( & docIds    [ nn ] , &m_topDocIds   [i] , nt * 8 );
 		// also save the bit scores, for sorting
-		memcpy ( & scores    [ nn ] , &m_topScores   [i] , nt * 4 );
-		memcpy ( & bitScores [ nn ] , &m_topBitScores[i] , nt );
-		memcpy ( & explicits [ nn ] , &m_topExplicits[i] , nt );
+		gbmemcpy ( & scores    [ nn ] , &m_topScores   [i] , nt * 4 );
+		gbmemcpy ( & bitScores [ nn ] , &m_topBitScores[i] , nt );
+		gbmemcpy ( & explicits [ nn ] , &m_topExplicits[i] , nt );
 		memset ( & tiers     [ nn ] , i                  , nt );
 		// inc the count
 		nn += nt;

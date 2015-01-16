@@ -667,7 +667,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		"<title>Poo</title>\n"
 			  ;
 	readSize = gbstrlen(hack);
-	memcpy(buf,hack,readSize+1);
+	gbmemcpy(buf,hack,readSize+1);
 	*/
 
 	//
@@ -688,7 +688,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		     to_lower_a(p[9]) == 'b' &&
 		     !strncasecmp(p ,"form of|abbreviation|",21) )
 			// overwrite the pipe with a space
-			memcpy(p    ,"abbreviated  form of|",21);
+			gbmemcpy(p    ,"abbreviated  form of|",21);
 	}
 
 
@@ -740,7 +740,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		     p[1] == 'i' &&
 		     p[2] == 'm' &&
 		     !strncmp(p ,"diminutive=",11) ) {
-			memcpy(p,"diminut of|",11);
+			gbmemcpy(p,"diminut of|",11);
 			p += 11;
 			continue;
 		}
@@ -841,7 +841,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		     p[1] == 'a' &&
 		     p[2] == 's' &&
 		     p[3] == 'e' ) {
-			memcpy ( p , "form" , 4 );
+			gbmemcpy ( p , "form" , 4 );
 			mangled = true;
 		}
 
@@ -910,7 +910,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		if ( ! strncasecmp(p-12 ,"alternative form of",19) ) 
 			name = p + 7;
 		if ( mangled )
-			memcpy ( p , "case" , 4 );
+			gbmemcpy ( p , "case" , 4 );
 		// skip if no match
 		if ( ! name ) continue;
 
@@ -961,7 +961,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 			continue;
 		// now store a new form
 		char *dst = lineStart;
-		memcpy(dst,"# {{form|",9);
+		gbmemcpy(dst,"# {{form|",9);
 		dst += 9;
 		// point to name
 		//char *name = p + 22;
@@ -976,7 +976,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 			      *name != '|' ; name++ ) 
 			*dst++ = *name;
 		// close it up
-		memcpy(dst,"}}",2);
+		gbmemcpy(dst,"}}",2);
 		dst += 2;
 		// panic
 		if ( dst > lineEnd ) { char *xx=NULL;*xx=0; }
@@ -1823,7 +1823,7 @@ bool Wiktionary::addWord ( char *word ,
 		*/
 		// make the data
 		char data[9];
-		memcpy ( data , &wid , 8 );
+		gbmemcpy ( data , &wid , 8 );
 		data[8] = langId;
 		// . add that. allowDups. so you should be able to get all the
 		//   forms by just looking at the base form
@@ -1850,12 +1850,12 @@ bool Wiktionary::addWord ( char *word ,
 		if ( pop > 32000 ) pop = 32000;
 		// make the data
 		char data[8];
-		memcpy ( data , &baseForm , 6 );
-		memcpy ( data + 8 , &pop , 2 );
+		gbmemcpy ( data , &baseForm , 6 );
+		gbmemcpy ( data + 8 , &pop , 2 );
 		*/
 		// make the data
 		char data[9];
-		memcpy ( data , &baseForm , 8 );
+		gbmemcpy ( data , &baseForm , 8 );
 		data[8] = langId;
 		// . map the base form to itself as well! so compile() works
 		//   so if we have the word "jumping" an alt for is "jump"

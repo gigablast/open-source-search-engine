@@ -695,7 +695,7 @@ time_t genDate( char *date, int32_t dateLen ) {
 
 	char tmp[18];
 	char *p = tmp;
-	memcpy( p, date, dateLen );
+	gbmemcpy( p, date, dateLen );
 
 	p[2]  = '\0';
 	p[5]  = '\0';
@@ -724,7 +724,7 @@ time_t genDate( char *date, int32_t dateLen ) {
 	else if ( !nowDST.tm_isdst && resultDST.tm_isdst )
 		tmBuild.tm_hour--;
 
-	memcpy( p, date, dateLen );
+	gbmemcpy( p, date, dateLen );
 	p[16] = '\0';
 	log ( LOG_DEBUG, "stats: user string        [%s]", p );
 	log ( LOG_DEBUG, "stats: user provided time [%s]", ctime( &result ) );

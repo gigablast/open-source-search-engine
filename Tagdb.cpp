@@ -105,17 +105,17 @@ void Tag::set ( char *site ,
 	//	if ( ulen > 7 ) ulen = 7;
 	//}
 	//memset ( m_user , 0    , 8    );
-	//memcpy ( m_user , user , ulen );
+	//gbmemcpy ( m_user , user , ulen );
 	char *p = m_buf;
 	// store size (includes \0)
 	*p++ = userLen + 1;
 	// then user name
-	memcpy ( p , user , userLen );
+	gbmemcpy ( p , user , userLen );
 	p += userLen;
 	// then \0
 	*p++ = '\0';
 	// store data now too
-	memcpy ( p , data , dataSize );
+	gbmemcpy ( p , data , dataSize );
 	p += dataSize;
 	// NULL terminate if they did not! now all tag are strings and must
 	// be NULL terminated.
@@ -228,13 +228,13 @@ int32_t Tag::setFromBuf ( char *p , char *pend ) {
 	// sanity. username total buf space including \0 <= 8
 	if ( userLen > 126 ) userLen = 126;
 	// copy it over into us
-	//memcpy ( m_user , user , userLen );
+	//gbmemcpy ( m_user , user , userLen );
 	// NULL terminate
 	//m_user[userLen] = '\0';
 	// first byte is username size
 	*dst++ = userLen+1;
 	// then the username
-	memcpy ( dst , user , userLen );
+	gbmemcpy ( dst , user , userLen );
 	dst += userLen;
 	// and finall null termination
 	*dst++ = '\0';
@@ -335,7 +335,7 @@ int32_t Tag::setDataFromBuf ( char *p , char *pend ) {
 	// skip over username in the buffer to point to where to put tag data
 	char *dst = m_buf + *m_buf + 1;
 	// stop at space of 
-	memcpy(dst,p,pend-p);
+	gbmemcpy(dst,p,pend-p);
 	// advance
 	dst += (pend-p);
 	// update
@@ -672,7 +672,7 @@ int32_t TagRec::getLong ( int32_t         tagType   ,
 		// if only a single byte.need to preserve negatives (twos comp)
 		//if      ( size == 1 ) score = (int32_t)tag->m_data[0];
 		//else if ( size == 2 ) score = (int32_t)*((int16_t *)tag->m_data);
-		//else    memcpy ( &score , tag->m_data , size );
+		//else    gbmemcpy ( &score , tag->m_data , size );
 		// bookmark, et al
 		if ( bookmark  ) *bookmark  = tag;
 		if ( timestamp ) *timestamp = tag->m_timestamp;
@@ -711,7 +711,7 @@ int64_t TagRec::getLongLong ( char        *tagTypeStr,
 		// now everything is a string
 		score = atoll2(data,dataSize);
 		// store it
-		//memcpy ( &score , tag->m_data , size );
+		//gbmemcpy ( &score , tag->m_data , size );
 		// bookmark, et al
 		if ( bookmark  ) *bookmark  = tag;
 		if ( timestamp ) *timestamp = tag->m_timestamp;
@@ -811,9 +811,9 @@ bool TagRec::addTag ( char        *tagTypeStr,
 		if ( ulen > 7 ) ulen = 7;
 	}
 	memset ( tag->m_user , 0    , 8    );
-	memcpy ( tag->m_user , user , ulen );
+	gbmemcpy ( tag->m_user , user , ulen );
 	// store data now too
-	memcpy ( tag->m_data , data , dataSize );
+	gbmemcpy ( tag->m_data , data , dataSize );
 	// NULL terminate if they did not! now all tag are strings and must
 	// be NULL terminated.
 	if ( data && tag->m_data[dataSize-1] ) {
@@ -887,7 +887,7 @@ bool TagRec::addTag ( Tag *TAG ) {
 		return false;
 	}
 	// store it
-	memcpy ( p , TAG , need );
+	gbmemcpy ( p , TAG , need );
 	// update our counters
 	m_numTags++;
 	m_dataSize += need;
@@ -963,7 +963,7 @@ bool TagRec::removeTag ( Tag *rmTag ) {
 		// byte to move
 		int32_t move = pend - src;
 		// it does match, so replace it!
-		memcpy ( dst , src , move );
+		gbmemcpy ( dst , src , move );
 		// decrement counts
 		m_numTags--;
 		m_dataSize -= size;
@@ -2316,28 +2316,28 @@ bool Tagdb::convert ( char *coll ) {
 			// make a 5 byte thingy
 			char tmp[5];
 			tmp[0] = prehashCount1;
-			memcpy ( tmp+1 , &prehash1, 4 );
+			gbmemcpy ( tmp+1 , &prehash1, 4 );
 			newgr.addTag ( ST_CLOCK,now,"conv",0,tmp,5);
 		}
 		if ( gotPrehash2 && gotPrehashCount2 ) {
 			// make a 5 byte thingy
 			char tmp[5];
 			tmp[0] = prehashCount2;
-			memcpy ( tmp+1 , &prehash2, 4 );
+			gbmemcpy ( tmp+1 , &prehash2, 4 );
 			newgr.addTag ( ST_CLOCK,now,"conv",0,tmp,5);
 		}
 		if ( gotPrehash3 && gotPrehashCount3 ) {
 			// make a 5 byte thingy
 			char tmp[5];
 			tmp[0] = prehashCount3;
-			memcpy ( tmp+1 , &prehash3, 4 );
+			gbmemcpy ( tmp+1 , &prehash3, 4 );
 			newgr.addTag ( ST_CLOCK,now,"conv",0,tmp,5);
 		}
 		if ( gotPrehash4 && gotPrehashCount4 ) {
 			// make a 5 byte thingy
 			char tmp[5];
 			tmp[0] = prehashCount4;
-			memcpy ( tmp+1 , &prehash4, 4 );
+			gbmemcpy ( tmp+1 , &prehash4, 4 );
 			newgr.addTag ( ST_CLOCK,now,"conv",0,tmp,5);
 		}
 
@@ -2682,7 +2682,7 @@ bool Msg8a::getTagRec ( Url   *url ,
 	u    += plen;
 	ulen -= plen;
 	// copy over url without the protocol thingy (http://)
-	//memcpy ( p , u , ulen ); 
+	//gbmemcpy ( p , u , ulen ); 
 	// get the domain
 	m_dom = url->getDomain();
 	// if none, bad!
@@ -3436,7 +3436,7 @@ bool Msg9a::addTags ( char    *sites                  ,
 		// first niceness
 		*p = niceness; p++;
 		// then coll
-		memcpy ( p , coll , collLen ); p += collLen;
+		gbmemcpy ( p , coll , collLen ); p += collLen;
 		// NULL term
 		*p++ = '\0';
 		// add flag first
@@ -3453,7 +3453,7 @@ bool Msg9a::addTags ( char    *sites                  ,
 		// . get the size
 		int32_t size = tagRec->getSize();
 		// add in tagRec
-		memcpy ( p , tagRec , size );
+		gbmemcpy ( p , tagRec , size );
 		// cat it to p
 		TagRec *newgr = (TagRec *)p;
 		// NULL terminate it temporarily
@@ -3582,7 +3582,7 @@ bool Msg9a::addTags ( char    *dumpFile               ,
 		// then niceness
 		*t++ = (char)MAX_NICENESS;
 		// then coll
-		memcpy ( t , coll , collLen ); t += collLen;
+		gbmemcpy ( t , coll , collLen ); t += collLen;
 		// null temrinate
 		*t++ = '\0';
 		// then the 1 byte flag (0 means add?)
@@ -3911,7 +3911,7 @@ void gotList ( void *state , RdbList *xxx , Msg5 *yyy ) {
 	accRec->reset();
 	// copy it to our accumulator rec which has room to grow, the list
 	// does not
-	memcpy ( (char *)accRec , rec , recSize );
+	gbmemcpy ( (char *)accRec , rec , recSize );
 	// free that list buffer now, we copied it into a larger buffer
 	st->m_list.reset();
 
@@ -4363,7 +4363,7 @@ bool sendReply ( void *state ) {
 	// add it into gr
 	//gr->addTags ( &newtr );
 	// copy it over to our state
-	//memcpy ( gr , &newtr , newtr.getSize() );
+	//gbmemcpy ( gr , &newtr , newtr.getSize() );
 
 	// debug
 	// this doesn't work because we do not set TagRec::m_listPtrs[0]

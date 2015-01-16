@@ -445,7 +445,7 @@ bool TcpServer::sendMsg ( char  *hostname ,
 	// register this mem with g_mem
 	mnew ( tst , sizeof(TcpState) , "TcpServer" );
 	// fill up our temporary state structure
-	memcpy ( tst->m_hostname , h , hlen );
+	gbmemcpy ( tst->m_hostname , h , hlen );
 	// NULL terminate the hostname in tst
 	tst->m_hostname [ hlen ] = '\0';
 	// set the other members of tst
@@ -1533,7 +1533,7 @@ bool TcpServer::setTotalToRead ( TcpSocket *s ) {
 		//s->m_readBuf = NULL;
 		newBuf = (char *)mmalloc(size,"TcpServerR2");
 		// copy over from tmpBuf if we have to
-		if ( newBuf ) memcpy (newBuf, s->m_readBuf, s->m_readBufSize);
+		if ( newBuf ) gbmemcpy (newBuf, s->m_readBuf, s->m_readBufSize);
 	}
 	// otherwise, it's bigger than our 10k buffer and we gotta realloc
 	else 
@@ -2237,6 +2237,12 @@ void TcpServer::readTimeoutPoll ( ) {
 		// go back to top because delete might have shrunk table.
 		int64_t elapsed = now - s->m_lastActionTime;
 		if ( ! timeOut && elapsed < s->m_timeout) continue;
+
+		if ( s->m_streamingMode ) {
+			log("tcp: not timing out streaming socket fd=%"INT32"",
+			    s->m_sd);
+			continue;
+		}
 
 		//log("tcp: timeout=%"INT32" fd=%"INT32"",sockTimeout,s->m_sd);
 

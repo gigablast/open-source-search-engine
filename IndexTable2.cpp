@@ -448,8 +448,8 @@ void IndexTable2::setAffWeights ( Msg39Request *r ) {
 		m_freqWeights[i] = tfWeightsQS [m_imap[i]];
 		m_affWeights [i] = affWeightsQS[m_imap[i]];
 	}
-	//memcpy ( m_freqWeights , tfWeights  , nqt * sizeof(float) );
-	//memcpy ( m_affWeights  , affWeights , nqt * sizeof(float) );
+	//gbmemcpy ( m_freqWeights , tfWeights  , nqt * sizeof(float) );
+	//gbmemcpy ( m_affWeights  , affWeights , nqt * sizeof(float) );
 
 	// do not compute them ourselves again
 	m_computedAffWeights = true;
@@ -561,8 +561,8 @@ bool IndexTable2::recompute ( Msg39Request *r ) {
 
 	// retrieve the imap
 	m_nb = s_recs[i].m_nb;
-	memcpy ( m_blocksize , s_recs[i].m_blocksize , m_nb * 4 );
-	memcpy ( m_imap      , s_recs[i].m_imap      , m_ni * 4 );
+	gbmemcpy ( m_blocksize , s_recs[i].m_blocksize , m_nb * 4 );
+	gbmemcpy ( m_imap      , s_recs[i].m_imap      , m_ni * 4 );
 
 	// fill in the related stuff
 	setStuffFromImap();
@@ -731,7 +731,7 @@ bool IndexTable2::cacheIntersectionForRecompute ( Msg39Request *r ) {
 	//if ( ! data ) return false;
 
 	// hopefully this is super fast
-	//memcpy ( data , keepStart , keepSize );
+	//gbmemcpy ( data , keepStart , keepSize );
 
 	// save the termlists since m_tmpDocIdPtrs2[] references into them
 	for ( int32_t j = 0 ; j < m_numLists ; j++ ) {
@@ -762,8 +762,8 @@ bool IndexTable2::cacheIntersectionForRecompute ( Msg39Request *r ) {
 	if ( ! m_imapIsValid ) { char *xx=NULL;*xx=0;}
 	// store the imap in case it changes
 	s_recs[i].m_nb = m_nb;
-	memcpy ( s_recs[i].m_blocksize , m_blocksize , m_nb * 4 );
-	memcpy ( s_recs[i].m_imap      , m_imap      , m_ni * 4 );
+	gbmemcpy ( s_recs[i].m_blocksize , m_blocksize , m_nb * 4 );
+	gbmemcpy ( s_recs[i].m_imap      , m_imap      , m_ni * 4 );
 	//m_ni = m_q->getImap ( m_sizes , m_imap , m_blocksize , &m_nb );
 
 
@@ -1606,9 +1606,9 @@ void IndexTable2::addLists_r ( int32_t *totalListSizes , float sortByDateWeight 
 		char *p = m_lists[i].getList();
 		// remember to swap back when done!!
 		char ttt[10];
-		memcpy ( ttt   , p       , hks );
-		memcpy ( p     , p + hks , 6   );
-		memcpy ( p + 6 , ttt     , hks );
+		gbmemcpy ( ttt   , p       , hks );
+		gbmemcpy ( p     , p + hks , 6   );
+		gbmemcpy ( p + 6 , ttt     , hks );
 		// point to the low "hks" bytes now
 		p += 6;
 		// turn half bit on
@@ -1784,9 +1784,9 @@ swapBack:
 		//char *p = m_lists[i].getList();
 		// swap back
 		//char ttt[10];
-		//memcpy ( ttt   , p       , hks );
-		//memcpy ( p     , p + hks , 6   );
-		//memcpy ( p + 6 , ttt     , hks );
+		//gbmemcpy ( ttt   , p       , hks );
+		//gbmemcpy ( p     , p + hks , 6   );
+		//gbmemcpy ( p + 6 , ttt     , hks );
 		// turn half bit off
 		//*p &= ~0x02;
 	}
@@ -2623,7 +2623,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 		// debug point
 		/*
 		int64_t ddd ;
-		memcpy ( &ddd , ptrs[i] , 6 );
+		gbmemcpy ( &ddd , ptrs[i] , 6 );
 		ddd >>= 2;
 		ddd &= DOCID_MASK;
 		if ( ddd == 7590103015LL )
@@ -2736,7 +2736,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 		if ( explicitBits[nn] & ebits ) {
 			// no point in logging since in thread!
 			//int64_t dd ;
-			//memcpy ( &dd , ptrs[i] , 6 );
+			//gbmemcpy ( &dd , ptrs[i] , 6 );
 			//dd >>= 2;
 			//dd &= DOCID_MASK;
 			//fprintf(stderr,"got dup score for docid=%"INT64"\n",dd);
@@ -2968,7 +2968,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 			// some of the phrase term vector components may
 			// be non-zero when they should be zero! fix this
 			// below when computing the final winners in done:.
-			memcpy ( &m_tmpScoresVec2[nqt*newTmpDocIds2] ,
+			gbmemcpy ( &m_tmpScoresVec2[nqt*newTmpDocIds2] ,
 				 &scoresVec      [nqt*i            ] , 
 				 nqt                                 );
 			// like we have a score vector, one score per query 
@@ -3165,7 +3165,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 		// store the ptr to the docid
 		m_tmpDocIdPtrs2[j] = docIdPtrs[i];
 		// store the score vector
-		memcpy ( &m_tmpScoresVec2[j * nqt], &scoresVec[nqt*i], nqt);
+		gbmemcpy ( &m_tmpScoresVec2[j * nqt], &scoresVec[nqt*i], nqt);
 		// store this too
 		if ( m_searchingEvents ) {
 			m_tmpEventIds2[j] = eventIds[i];
@@ -3318,7 +3318,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 			//   loop above instead of two
 			m_tmpDocIdPtrs2 [ lastGuy ] = 
 				m_tmpDocIdPtrs2 [ newTmpDocIds2 ];
-			memcpy(&m_tmpScoresVec2[lastGuy*nqt],
+			gbmemcpy(&m_tmpScoresVec2[lastGuy*nqt],
 			       &m_tmpScoresVec2[newTmpDocIds2*nqt],
 			       nqt);
 			if ( m_searchingEvents ) {
@@ -4047,7 +4047,7 @@ void IndexTable2::hashTmpDocIds2 ( uint32_t  *maxDocId     ,
 			// hold ptr to our stuff
 			docIdPtrs    [ nn ] = m_tmpDocIdPtrs2[i];
 			// store score
-			memcpy ( &scoresVec [nn * nqt] ,
+			gbmemcpy ( &scoresVec [nn * nqt] ,
 				 &m_tmpScoresVec2[i * nqt],
 				 nqt );
 			// and this vector
@@ -5054,7 +5054,7 @@ void IndexTable2::computeWeightedScores ( int32_t            numDocIds    ,
 	for ( int32_t i = 0; i < numDocIds; i++ ) {
 		//if ( flags[i] == 0 ) continue;
 		int64_t d = 0;
-		memcpy(&d, docIdPtrs[i], 6);
+		gbmemcpy(&d, docIdPtrs[i], 6);
 		d >>= 2;
 		d &= DOCID_MASK;
 		// log the score vec and the final score

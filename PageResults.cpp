@@ -1137,7 +1137,20 @@ bool gotResults ( void *state ) {
 			log("res: socket still in streaming mode. wtf?");
 			st->m_socket->m_streamingMode = false;
 		}
-		log("msg40: done streaming. nuking state.");
+		log("msg40: done streaming. nuking state=%"PTRFMT" q=%s. "
+		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
+		    "numrequests=%i numreplies=%i "
+		    ,(PTRTYPE)st
+		    ,si->m_q.m_orig
+
+		    , msg40->m_numMsg20sIn
+		    , msg40->m_numMsg20sOut
+		    , msg40->m_sendsIn
+		    , msg40->m_sendsOut
+		    , msg40->m_numRequests
+		    , msg40->m_numReplies
+
+		    );
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
 		return true;
@@ -2447,9 +2460,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
 			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
 				       ,tf);
-			sb->safePrintf("\t\t\t<termId48>%"INT64"</termId48>\n"
+			sb->safePrintf("\t\t\t<termHash48>%"INT64"</termHash48>\n"
 				       ,qt->m_termId);
-			sb->safePrintf("\t\t\t<termId64>%"UINT64"</termId64>\n"
+			sb->safePrintf("\t\t\t<termHash64>%"UINT64"</termHash64>\n"
 				       ,qt->m_rawTermId);
 			QueryWord *qw = qt->m_qword;
 			sb->safePrintf("\t\t\t<prefixHash64>%"UINT64"</prefixHash64>\n"
@@ -2515,9 +2528,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
 				       ,tf);
 
-			sb->safePrintf("\t\t\"termId48\":%"INT64",\n"
+			sb->safePrintf("\t\t\"termHash48\":%"INT64",\n"
 				       ,qt->m_termId);
-			sb->safePrintf("\t\t\"termId64\":%"UINT64",\n"
+			sb->safePrintf("\t\t\"termHash64\":%"UINT64",\n"
 				       ,qt->m_rawTermId);
 
 			// don't end last query term attr on a omma
@@ -5209,12 +5222,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	char dbuf [ MAX_URL_LEN ];
 	int32_t dlen = uu.getDomainLen();
 	if ( si->m_format == FORMAT_HTML ) {
-		memcpy ( dbuf , uu.getDomain() , dlen );
+		gbmemcpy ( dbuf , uu.getDomain() , dlen );
 		dbuf [ dlen ] = '\0';
 		// newspaperarchive urls have no domain
 		if ( dlen == 0 ) {
 			dlen = uu.getHostLen();
-			memcpy ( dbuf , uu.getHost() , dlen );
+			gbmemcpy ( dbuf , uu.getHost() , dlen );
 			dbuf [ dlen ] = '\0';
 		}
 	}
@@ -5253,7 +5266,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			      , dbuf );
 		//banSites->safePrintf("%s+", dbuf);
 		dlen = uu.getHostLen();
-		memcpy ( dbuf , uu.getHost() , dlen );
+		gbmemcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
 			      " <a style=color:green; href=\"/admin/tagdb?"
@@ -5790,7 +5803,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	else if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
 		char hbuf [ MAX_URL_LEN ];
 		int32_t hlen = uu.getHostLen();
-		memcpy ( hbuf , uu.getHost() , hlen );
+		gbmemcpy ( hbuf , uu.getHost() , hlen );
 		hbuf [ hlen ] = '\0';
 		sb->safePrintf (" - <nobr><a href=\"/search?"
 			       "q=%%2Bsite%%3A%s+%s&sc=0&c=%s\">"

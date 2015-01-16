@@ -35,12 +35,12 @@ bool Msg30::update ( CollectionRec *rec      ,
 	if ( deleteIt ) {
 		// include the terminating \0
 		m_sendBufSize = gbstrlen ( rec->m_coll ) + 1;
-		memcpy ( m_sendBuf , rec->m_coll , m_sendBufSize );
+		gbmemcpy ( m_sendBuf , rec->m_coll , m_sendBufSize );
 	}
 	else {
 		// serialize the rec into m_sendBuf
 		m_sendBufSize = sizeof(CollectionRec);
-		memcpy ( m_sendBuf , rec , sizeof(CollectionRec) );
+		gbmemcpy ( m_sendBuf , rec , sizeof(CollectionRec) );
 	}
 	// reset some parms
 	m_requests = 0;
@@ -129,7 +129,7 @@ void handleRequest30 ( UdpSlot *slot , int32_t niceness ) {
 		return;
 	}
 	// set to what it should be
-	memcpy ( nr , cr , sizeof(CollectionRec) );
+	gbmemcpy ( nr , cr , sizeof(CollectionRec) );
 	// always return a reply immediately, even though list not loaded yet
 	g_udpServer.sendReply_ass ( NULL , 0 , NULL , 0 , slot );
 }

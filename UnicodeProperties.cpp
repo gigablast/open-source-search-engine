@@ -204,7 +204,7 @@ bool setKDValue(UChar32 c, UChar32* decomp, int32_t decompCount, bool fullComp) 
 	else
 		*(int32_t*)(s_ucKDData+s_ucKDDataSize) = decompCount;
 
-	memcpy(s_ucKDData+s_ucKDDataSize+sizeof(decompCount), decomp, 
+	gbmemcpy(s_ucKDData+s_ucKDDataSize+sizeof(decompCount), decomp, 
 	       decompCount*sizeof(UChar32));
 	int32_t pos = s_ucKDDataSize;
 	s_ucKDDataSize += size;
@@ -276,7 +276,7 @@ bool setCDValue(UChar32 c, UChar32* decomp, int32_t decompCount, bool fullComp) 
 	else
 		*(int32_t*)(s_ucCDData+s_ucCDDataSize) = decompCount;
 
-	memcpy(s_ucCDData+s_ucCDDataSize+sizeof(decompCount), decomp, 
+	gbmemcpy(s_ucCDData+s_ucCDDataSize+sizeof(decompCount), decomp, 
 	       decompCount*sizeof(UChar32));
 	int32_t pos = s_ucCDDataSize;
 	s_ucCDDataSize += size;
