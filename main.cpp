@@ -15067,6 +15067,12 @@ void doInjectWarc ( int64_t fsize ) {
 		goto loop;
 	}
 
+	char *warcDateStr = strstr(warcHeader,"WARC-Date:");
+	if ( warcDateStr ) warcDateStr += 10;
+	for(;is_wspace_a(*warcDateStr);warcDateStr++);
+	// convert to timestamp
+	int64_t warcTime = 0;
+	if ( warcDateStr ) warcTime = atotime ( warcDateStr );
 
 	// set the url now
 	char *url = strstr(warcHeader,"WARC-Target-URI:");
@@ -15136,12 +15142,20 @@ void doInjectWarc ( int64_t fsize ) {
 		       "spiderlinks=0&"
 		       "quick=1&" // quick reply
 		       "dontlog=1&"
+			      
+		       "lastspidered=%"INT64"&"
+		       "firstindexed=%"INT64"&"
+
 		       "delete=0&"
 		       "ip=%s&"
 		       //"recycle=%"INT32"&"
 		       //"delete=%"INT32"&"
 		       "u="
 		       ,s_coll
+
+		       ,warcTime
+		       ,warcTime
+		       
 		       ,ipStr
 		       //recycle,
 		       );
