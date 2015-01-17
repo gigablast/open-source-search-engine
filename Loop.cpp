@@ -1154,6 +1154,8 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	// . for computing cpu usage
 	// . if idling we will be in sigtimedwait() at the lowest level
 	Host *h = g_hostdb.m_myHost;
+	// if doing injects...
+	if ( ! h ) return;
 	// . i guess this means we were doing something... (otherwise idle)
 	// . this is KINDA like a 100 point sample, but it has crazy decay
 	//   logic built into it

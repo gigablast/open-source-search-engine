@@ -337,9 +337,10 @@ int collcopy ( char *newHostsConf , char *coll , int32_t collnum ) ;
 bool doCmd ( const char *cmd , int32_t hostId , char *filename , bool sendToHosts,
 	     bool sendToProxies, int32_t hostId2=-1 );
 int injectFile ( char *filename , char *ips , 
-		 int64_t startDocId ,
-		 int64_t endDocId ,
-		 bool isDelete ) ;
+		 //int64_t startDocId ,
+		 //int64_t endDocId ,
+		 //bool isDelete ) ;
+		 char *coll );
 int injectFileTest ( int32_t  reqLen  , int32_t hid ); // generates the file
 void membustest ( int32_t nb , int32_t loops , bool readf ) ;
 
@@ -471,7 +472,12 @@ int main2 ( int argc , char *argv[] ) {
 
 			"start [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
-			"[hostId], if specified, using an ssh command.\n\n"
+			"[hostId], if specified, using an ssh command. Runs "
+			"each gb process in a keepalive loop under bash.\n\n"
+
+			"start <hostId1-hostId2>\n"
+			"\tLike above but just start gb on the supplied "
+			"range of hostIds.\n\n"
 
 			/*
 			"kstart [hostId]\n"
@@ -485,16 +491,14 @@ int main2 ( int argc , char *argv[] ) {
 			"\tsaves and exits for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
+			"stop <hostId1-hostId2>\n"
+			"\ttell gb to save and exit on the given range of "
+			"hostIds.\n\n"
+
 			"save [hostId]\n"
 			"\tjust saves for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
-			"start <hostId1-hostId2>\n"
-			"\trun gb on the specified range of hostIds in "
-			"a keepalive loop.\n\n"
-
-			"stop <hostId1-hostId2>\n"
-			"\ttell gb to exit on the given range of hostIds.\n\n"
 
 			/*
 			"tmpstart [hostId]\n"
@@ -700,19 +704,22 @@ int main2 ( int argc , char *argv[] ) {
 			"current cluster. Remote network must have "
 			"called \"gb ddump\" twice in a row just before to "
 			"ensure all of its data is on disk.\n\n"
-
+			*/
 
 
 			// gb inject <file> <ip:port> [startdocid]
 			// gb inject titledb <newhosts.conf> [startdocid]
-			"inject <file> <ip:port> [startdocid]\n"
-			"\tInject all documents in <file> into the host "
-			"at ip:port. "
-			"Each document "
-			"must be preceeded by a valid HTTP mime with "
-			"a Content-Length: field. "
+			"inject <filename> "
+			"<ip:port> [collection]\n"
+			"\tInject all documents in <filename> into the gb "
+			"host at ip:port. File must be in WARC format. "
+			"Uses collection of 'main' if not specified."
+			// "Each document listed in the file "
+			// "must be preceeded by a valid HTTP mime with "
+			// "a Content-Length: field. WARC files are also ok."
 			"\n\n"
 
+			/*
 			"inject titledb-<DIR> <newhosts.conf> [startdocid]\n"
 			"\tInject all pages from all the titledb "
 			"files in the <DIR> directory into the appropriate "
@@ -1446,11 +1453,13 @@ int main2 ( int argc , char *argv[] ) {
 			goto printHelp;
 		char *file = argv[cmdarg+1];
 		char *ips  = argv[cmdarg+2];
-		int64_t startDocId = 0LL;
-		int64_t endDocId   = DOCID_MASK;
-		if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
-		if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
-		injectFile ( file , ips , startDocId , endDocId , false );
+		char *coll = argv[cmdarg+3];
+		// int64_t startDocId = 0LL;
+		// int64_t endDocId   = DOCID_MASK;
+		// if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
+		// if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
+		//injectFile ( file , ips , startDocId , endDocId , false );
+		injectFile ( file , ips , coll );
 		return 0;
 	}
 
@@ -1980,6 +1989,7 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 	*/
+	/*
 	if ( strcmp ( cmd , "reject"  ) == 0 ) {
 		if ( argc != cmdarg+3 && 
 		     argc != cmdarg+4 &&
@@ -1994,6 +2004,7 @@ int main2 ( int argc , char *argv[] ) {
 		injectFile ( file , ips , startDocId , endDocId , true );
 		return 0;
 	}
+	*/
 	// gb dsh
 	if ( strcmp ( cmd , "dsh" ) == 0 ) {	
 		// get hostId to install TO (-1 means all)
@@ -14225,12 +14236,14 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 	char *ips = iptoa(h->m_ip);
 
 	// now inject the file
-	return injectFile ( filename , ips , 0 , MAX_DOCID , false );
+	//return injectFile ( filename , ips , 0 , MAX_DOCID , false );
+	return injectFile ( filename , ips , "main");
 }
 
 //#define MAX_INJECT_SOCKETS 10
 #define MAX_INJECT_SOCKETS 1
 static void doInject ( int fd , void *state ) ;
+static void doInjectWarc ( int64_t fsize );
 static void injectedWrapper ( void *state , TcpSocket *s ) ;
 static TcpServer s_tcp;
 static File      s_file;
@@ -14244,6 +14257,8 @@ static int32_t      s_maxSockets = MAX_INJECT_SOCKETS;
 static int32_t      s_outstanding = 0;
 static bool s_isDelete;
 static int32_t s_injectTitledb;
+static int32_t s_injectWarc;
+static char *s_coll = NULL;
 static key_t s_titledbKey;
 static char *s_req  [MAX_INJECT_SOCKETS];
 static int64_t s_docId[MAX_INJECT_SOCKETS];
@@ -14251,9 +14266,14 @@ static char s_init5 = false;
 static int64_t s_endDocId;
 
 int injectFile ( char *filename , char *ips , 
-		 int64_t startDocId ,
-		 int64_t endDocId ,
-		 bool isDelete ) {
+		 //int64_t startDocId ,
+		 //int64_t endDocId ,
+		 //bool isDelete ) {
+		 char *coll ) {
+
+	bool isDelete = false;
+	int64_t startDocId = 0LL;
+	int64_t endDocId = MAX_DOCID;
 
 	g_mem.init ( 4000000000LL );
 
@@ -14288,7 +14308,7 @@ int injectFile ( char *filename , char *ips ,
 		port = atoi(colon+1);
 	}
 	int32_t ip = 0;
-	// is ip field a hosts.conf instead?
+	// is ip field a hosts.conf instead? that means to round robin.
 	if ( strstr(ips,".conf") ) {
 		if ( ! s_hosts2.init ( 0 ) ) { // ips , 0 ) ) {
 			fprintf(stderr,"failed to load %s",ips);
@@ -14313,6 +14333,7 @@ int injectFile ( char *filename , char *ips ,
 	}
 
 	s_injectTitledb = false;
+
 	//char *coll = "main";
 	if ( strncmp(filename,"titledb",7) == 0 ) {
 		//int32_t hostId = 0;
@@ -14435,6 +14456,16 @@ int injectFile ( char *filename , char *ips ,
 				   "for reading.", filename) - 1;
 		s_off = 0;
 	}
+
+	// this might be a compressed warc like .warc.gz
+	s_injectWarc = false;
+	int flen = gbstrlen(filename);
+	if ( flen>5 && strcasecmp(filename+flen-5,".warc")==0 ) {
+		s_injectWarc = true;
+	}
+
+	s_coll = coll;
+
 	// register sleep callback to get started
 	if ( ! g_loop.registerSleepCallback(1, NULL, doInject) )
 		return log("build: inject: Loop init failed.")-1;
@@ -14451,11 +14482,21 @@ void doInject ( int fd , void *state ) {
 		g_loop.unregisterSleepCallback ( NULL, doInject );
 	}
 	
+	// turn off threads so this happens right away
+	g_conf.m_useThreads = false;
+
 	int64_t fsize ;
 	if ( ! s_injectTitledb ) fsize = s_file.getFileSize();
 
-	// turn off threads so this happens right away
-	g_conf.m_useThreads = false;
+	// just repeat the function separately. i guess we'd repeat
+	// some code but for simplicity i think it is worth it. and we
+	// should probably phase out the ++++URL: format thing.
+	if ( s_injectWarc ) {
+		doInjectWarc ( fsize );
+		return;
+	}
+
+
 
  loop:
 
@@ -14893,11 +14934,295 @@ void doInject ( int fd , void *state ) {
 	goto loop;
 }
 
+
+// 10MB per warc rec max
+#define MAXWARCRECSIZE 10*1024*1024
+
+void doInjectWarc ( int64_t fsize ) {
+
+ loop:
+
+	// are we done?
+	if ( s_off >= fsize ) { 
+		log("inject: done parsing file");
+		g_loop.reset();  
+		exit(0); 
+	}
+
+	// read 1MB of data into this buf to get the first WARC record
+	// it must be < 1MB or we faulter.
+	static char *s_buf = NULL;
+	if ( ! s_buf ) {
+		int64_t need = MAXWARCRECSIZE + 1;
+		s_buf = (char *)mmalloc ( need ,"sibuf");
+	}
+	if ( ! s_buf ) {
+		log("inject: failed to alloc buf");
+		exit(0);
+	}
+
+	int32_t maxToRead = MAXWARCRECSIZE;
+	int32_t toRead = maxToRead;
+	if ( s_off + toRead > fsize ) toRead = fsize - s_off;
+	int32_t bytesRead = s_file.read ( s_buf , toRead , s_off ) ;
+	if ( bytesRead != toRead ) {
+		log("inject: read of %s failed at offset "
+		    "%"INT64"", s_file.getFilename(), s_off);
+		exit(0);
+	}
+	// null term what we read
+	s_buf[bytesRead] = '\0';
+
+	// if not enough to constitute a WARC record probably just new lines
+	if( toRead < 20 ) {
+		log("inject: done processing file");
+		exit(0);
+	}
+
+	// mark the end of what we read
+	//char *fend = buf + toRead;
+
+	// point to what we read
+	char *pbuf = s_buf;
+
+	// find "WARC/1.0" or whatever
+	for ( ; *pbuf && strncmp(pbuf,"WARC/",5) ; pbuf++ );
+	// none?
+	if ( ! *pbuf ) {
+		log("inject: could not find WARC/1 header start");
+		exit(0);
+	}
+
+	char *warcHeader = pbuf;
+
+	// find end of warc mime HEADER not the content
+	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
+	if ( ! warcHeaderEnd ) {
+		log("inject: could not find end of WARC header.");
+		exit(0);
+	}
+	// \0 term for strstrs below
+	*warcHeaderEnd = '\0';
+	//warcHeaderEnd += 4;
+
+	char *warcContent = warcHeaderEnd + 4;
+
+	// get WARC-Type:
+	// revisit  (if url was already done before)
+	// request (making a GET or DNS request)
+	// response (reponse to a GET or dns request)
+	// warcinfo (crawling parameters, robots: obey, etc)
+	// metadata (fetchTimeMs: 263, hopsFromSeed:P,outlink:)
+	char *warcType = strstr(warcHeader,"WARC-Type:");
+	if ( ! warcType ) {
+		log("inject: could not find WARC-Type:");
+		exit(0);
+	}
+	warcType += 10;
+	for ( ; is_wspace_a(*warcType); warcType++ );
+
+	// get Content-Type: 
+	// application/warc-fields (fetch time, hops from seed)
+	// application/http; msgtype=request  (the GET request)
+	// application/http; msgtype=response (the GET reply)
+	char *warcConType = strstr(warcHeader,"Content-Type:");
+	if ( ! warcConType ) {
+		log("inject: could not find Content-Type:");
+		exit(0);
+	}
+	warcConType += 13;
+	for ( ; is_wspace_a(*warcConType); warcConType++ );
+			
+
+	// get Content-Length: of WARC header for its content
+	char *warcContentLenStr = strstr(warcHeader,"Content-Length:");
+	if ( ! warcContentLenStr ) {
+		log("inject: could not find WARC "
+		    "Content-Length:");
+		exit(0);
+	}
+	warcContentLenStr += 15;
+	for(;is_wspace_a(*warcContentLenStr);warcContentLenStr++);
+
+	// get warc content len
+	int64_t warcContentLen = atoll(warcContentLenStr);
+
+	char *warcContentEnd = warcContent + warcContentLen;
+
+	// advance this for next read from the file
+	s_off += (warcContentEnd - s_buf);
+
+
+	// if WARC-Type: is not response, skip it. so if it
+	// is a revisit then skip it i guess.
+	if ( strncmp ( warcType,"response", 8 ) ) {
+		// read another warc record
+		goto loop;
+	}
+
+	// warcConType needs to be 
+	// application/http; msgtype=response
+	if ( strncmp(warcConType,"application/http; msgtype=response", 34) ) {
+		// read another warc record
+		goto loop;
+	}
+
+
+	// set the url now
+	char *url = strstr(warcHeader,"WARC-Target-URI:");
+	if ( url ) url += 16;
+	// skip spaces
+	for ( ; url && is_wspace_a(*url) ; url++ );
+	if ( ! url ) {
+		log("inject: could not find WARC-Target-URI:");
+		exit(0);
+	}
+	// find end of it
+	char *urlEnd = url;
+	for (;urlEnd&&*urlEnd&&is_urlchar(*urlEnd);urlEnd++);
+
+	// null term url
+	//char c = *urlEnd;
+	*urlEnd = '\0';
+	// log it
+	log("inject: injecting WARC url %s",url);
+
+
+	char *httpReply = warcContent;
+	int64_t httpReplySize = warcContentLen;
+
+	// sanity check
+	char *bufEnd = s_buf + MAXWARCRECSIZE;
+	if ( httpReply + httpReplySize >= bufEnd ) {
+		int needMore = httpReply + httpReplySize - bufEnd;
+		log("inject: not reading enough content to inject "
+		    "url %s . increase MAXWARCRECSIZE by %"INT32" more",url,
+		    needMore);
+		exit(0);
+	}
+
+	// put it back
+	//*urlEnd = c;
+
+
+	// should be a mime that starts with GET or POST
+	// HttpMime m;
+	// if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
+	// 	if ( httpReplySize > 128 ) httpReplySize = 128;
+	// 	httpReply [ httpReplySize ] = '\0';
+	// 	log("build: inject: Failed to set mime at offset "
+	// 	    "%"INT64" where request=%s",s_off,httpReply);
+	// 	exit(0);
+	// }
+
+	SafeBuf req;
+
+	// a different format?
+	char *ipStr = "1.2.3.4";
+	req.safePrintf(
+		       "POST /admin/inject HTTP/1.0\r\n"
+		       "Content-Length: 000000000\r\n"//bookmrk
+		       "Content-Type: text/html\r\n"
+		       "Connection: Close\r\n"
+		       "\r\n"
+		       // we need this ?
+		       "?"
+		       "c=%s&"
+		       // do parsing consistency testing (slower!)
+		       //"dct=1&"
+		       "hasmime=1&"
+		       // prevent looking up firstips
+		       // on all outlinks for speed:
+		       "spiderlinks=0&"
+		       "quick=1&" // quick reply
+		       "dontlog=1&"
+		       "delete=0&"
+		       "ip=%s&"
+		       //"recycle=%"INT32"&"
+		       //"delete=%"INT32"&"
+		       "u="
+		       ,s_coll
+		       ,ipStr
+		       //recycle,
+		       );
+
+	// url encode the url
+	req.urlEncode ( url );
+	// finish it up
+	req.safePrintf("&content=");
+	// store the content after the &ucontent
+	req.urlEncode ( httpReply , httpReplySize );
+	req.nullTerm();
+
+
+	// replace 00000 with the REAL content length
+	char *start = strstr(req.getBufStart(),"c=");
+	int32_t realContentLen = gbstrlen(start);
+	char *ptr = req.getBufStart() ;
+	// find start of the 9 zeroes
+	while ( *ptr != '0' || ptr[1] !='0' ) ptr++;
+	// store length there
+	sprintf ( ptr , "%09"UINT32"" , realContentLen );
+	// remove the \0
+	ptr += strlen(ptr); *ptr = '\r';
+
+
+	int32_t ip = s_ip;
+	int32_t port = s_port;
+
+	// try hosts.conf
+	if ( ip == 0 ) {
+		// round robin over hosts in s_hosts2
+		if ( s_rrn >= s_hosts2.getNumHosts() ) s_rrn = 0;
+		Host *h = s_hosts2.getHost ( s_rrn );
+		ip = h->m_ip;
+		port = h->m_httpPort;
+		s_rrn++;
+	}
+
+
+	// now inject it
+	bool status = s_tcp.sendMsg ( ip   ,
+				      port ,
+				      req.getBufStart()    ,
+				      req.getCapacity(),
+				      req.length(),
+				      req.length(),
+				      NULL   ,
+				      injectedWrapper ,
+				      9999*60*1000      , // timeout, 60days
+				      -1              , // maxTextDocLen
+				      -1              );// maxOtherDocLen
+	// launch another if blocked
+	if ( ! status ) {
+		// let injectedWrapper() below free it
+		req.detachBuf();
+		//int32_t nh = g_hostdb.getNumHosts();
+		//nh = (nh * 15) / 10;
+		//if ( nh > MAX_INJECT_SOCKETS - 10 ) 
+		//	nh = MAX_INJECT_SOCKETS - 10;
+		//if ( nh < 5 ) nh = 5;
+		// limit to one socket right now
+		//if ( ++s_outstanding < 1 ) goto loop;
+		if ( ++s_outstanding < MAX_INJECT_SOCKETS ) goto loop;
+		return;
+	}
+		
+	if ( g_errno ) {
+		// let tcpserver.cpp free it
+		req.detachBuf();
+		log("build: inject had error: %s.",mstrerror(g_errno));
+	}
+	// loop if not
+	goto loop;
+}
+
+
 void injectedWrapper ( void *state , TcpSocket *s ) {
 	s_outstanding--;
 	// errno?
 	if ( g_errno ) {
-		log("build: inject: Got server error: %s.",
+		log("inject: Got server error: %s.",
 		    mstrerror(g_errno));
 		doInject(0,NULL);
 		return;
@@ -14948,7 +15273,7 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 
 	// get return code
 	char *reply = s->m_readBuf;
-	logf(LOG_INFO,"build: inject: return=\n%s",reply);
+	logf(LOG_INFO,"inject: reply=\"%s\"",reply);
 	doInject(0,NULL);
 }
 
