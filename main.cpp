@@ -14935,8 +14935,8 @@ void doInject ( int fd , void *state ) {
 }
 
 
-// 10MB per warc rec max
-#define MAXWARCRECSIZE 10*1024*1024
+// 100MB per warc rec max
+#define MAXWARCRECSIZE 100*1024*1024
 
 void doInjectWarc ( int64_t fsize ) {
 
