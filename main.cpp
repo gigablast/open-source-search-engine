@@ -14186,7 +14186,7 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 	char *content = p;
 	sprintf ( p , 
 		  "u=%"UINT32".injecttest.com&c=&"
-		  "delete=0&ip=4.5.6.7&iplookups=0&"
+		  "deleteurl=0&ip=4.5.6.7&iplookups=0&"
 		  "dedup=1&rs=7&"
 		  "quick=1&hasmime=1&ucontent="
 		  "HTTP 200\r\n"
@@ -14808,7 +14808,7 @@ void doInject ( int fd , void *state ) {
 			      "dontlog=1&"
 			      "ip=%s&"
 			      //"recycle=%"INT32"&"
-			      "delete=%"INT32"&"
+			      "deleteurl=%"INT32"&"
 			      "u=",
 			      ipStr,
 			      //recycle,
@@ -15141,12 +15141,12 @@ void doInjectWarc ( int64_t fsize ) {
 		       // on all outlinks for speed:
 		       "spiderlinks=0&"
 		       "quick=1&" // quick reply
-		       "dontlog=1&"
+		       "dontlog=0&"
 			      
 		       "lastspidered=%"INT64"&"
 		       "firstindexed=%"INT64"&"
 
-		       "delete=0&"
+		       "deleteurl=0&"
 		       "ip=%s&"
 		       //"recycle=%"INT32"&"
 		       //"delete=%"INT32"&"
