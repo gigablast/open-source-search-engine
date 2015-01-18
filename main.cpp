@@ -14240,8 +14240,8 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 	return injectFile ( filename , ips , "main");
 }
 
-//#define MAX_INJECT_SOCKETS 10
-#define MAX_INJECT_SOCKETS 1
+#define MAX_INJECT_SOCKETS 10
+//#define MAX_INJECT_SOCKETS 1
 static void doInject ( int fd , void *state ) ;
 static void doInjectWarc ( int64_t fsize );
 static void injectedWrapper ( void *state , TcpSocket *s ) ;
