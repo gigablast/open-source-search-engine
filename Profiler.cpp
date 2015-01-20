@@ -51,6 +51,9 @@ Profiler::Profiler() :
 	SafeBuf newf;
 	newf.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
 	unlink ( newf.getBufStart() );
+	//newf.reset();
+	// newf.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
+	// unlink ( newf.getBufStart() );
 }
 
 Profiler::~Profiler() {//reset();
@@ -78,7 +81,7 @@ bool Profiler::reset(){
 bool Profiler::init() {
 	m_lastQPUsed = 0;
 	// realTimeProfilerData.set(4,8,0,NULL,0,false,0,"rtprof");
-        m_quickpolls.set(4,4,0,NULL,0,false,0,"qckpllcnt");
+        //m_quickpolls.set(4,4,0,NULL,0,false,0,"qckpllcnt");
 	// for (int32_t i=0;i<11;i++)
 	// 	//m_fnTmp[i].set(256);
 	// 	if ( ! m_fnTmp[i].set(4,sizeof(FnInfo),256,NULL,0,false,0,
@@ -93,8 +96,8 @@ bool Profiler::init() {
 	// if ( ! m_ipCountTable.set(8,4,1024*1024,NULL,0,false,0,"proftbl") )
 	// 	return false;
 	// do not breach
-	if ( ! m_quickpollMissBuf.reserve ( 20000 ) )
-		return false;
+	// if ( ! m_quickpollMissBuf.reserve ( 20000 ) )
+	// 	return false;
 
 	if ( ! m_ipBuf.reserve ( 5000000 ) )
 		return false;
@@ -1496,9 +1499,19 @@ Profiler::getStackFrame(int sig) {
 		*/
 	}
 
+	// a secret # to indicate missed quickpoll
+	if ( g_niceness != 0 &&
+	     g_loop.m_needsToQuickPoll &&
+	     ! g_loop.m_inQuickPoll )
+		g_profiler.m_ipBuf.pushLongLong(0x123456789LL);
+
 	// indicate end of call stack path
 	g_profiler.m_ipBuf.pushLongLong(0LL);//addr);
 
+
+	return;
+
+	/*
 	// if we are in need of a quickpoll store it here
 	if( g_niceness == 0 ) return;
 	// !g_loop.m_canQuickPoll || 
@@ -1506,17 +1519,23 @@ Profiler::getStackFrame(int sig) {
 	if ( g_loop.m_inQuickPoll ) return;
 
 	// do not breach
-	if ( g_profiler.m_quickpollMissBuf.m_length + 8 >= 
+	if ( g_profiler.m_quickpollMissBuf.m_length + 8*32 >= 
 	     g_profiler.m_quickpollMissBuf.m_capacity )
 		return;
 
 	// store address in need of quickpolls
-	g_profiler.m_quickpollMissBuf.
-		pushLongLong((uint64_t)trace[numFrames-1] );
+	//g_profiler.m_quickpollMissBuf.
+	//	pushLongLong((uint64_t)trace[2] );
+	for ( int32_t i = 2 ; i < numFrames && i <= 4 ; i++ ) {
+		// even if we are 32-bit, make this 64-bit for ease
+		uint64_t addr = (uint64_t)trace[i];
+		// the call stack path for profiling the worst paths
+		g_profiler.m_quickpollMissBuf.pushLongLong(addr);
+	}
 
 	// all done
 	return;
-
+	*/
 
 	const void *stackPtr = trace[2];
 	uint32_t baseAddress = g_profiler.getFuncBaseAddr((PTRTYPE)stackPtr);
@@ -1682,6 +1701,7 @@ class PathBucket {
 public:
 	char *m_pathStackPtr;
 	int32_t m_calledTimes;
+	int32_t m_missedQuickPolls;
 };
        
 
@@ -1806,7 +1826,9 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		if ( *(long long *)ip == 0 ) continue;
 		char tmp[64];
 		int tlen = sprintf(tmp, "0x%llx\n", *(long long *)ip);
-		write ( fd , tmp , tlen );
+		int nw = write ( fd , tmp , tlen );
+		if ( nw != tlen )
+			log("profiler: write failed");
 	}
 	::close(fd);
 	SafeBuf cmd;
@@ -1870,16 +1892,23 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	ip = (char *)m_ipBuf.getBufStart();
 	ipEnd = (char *)m_ipBuf.getBufEnd();
 	char *firstOne = NULL;
+	bool missedQuickPoll = false;
 	uint64_t hhh = 0LL;
-	uint64_t lastAddr64 = 0LL;
 	HashTableX pathTable;
 	pathTable.set ( 8,sizeof(PathBucket),1024,NULL,0,false,0,"pbproftb");
 	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
 		if ( ! firstOne ) firstOne = ip;
 		uint64_t addr64 = *(uint64_t *)ip;
-		hhh ^= addr64;
+		// this means a missed quickpoll
+		if ( addr64 == 0x123456789LL ) {
+			missedQuickPoll = true;
+			continue;
+		}
 		// end of a stack
-		if ( addr64 != 0LL ) { lastAddr64 = addr64; continue; }
+		if ( addr64 != 0LL ) { 
+			hhh ^= addr64;
+			continue;
+		}
 		// remove the last one though, because that is the line #
 		// of the innermost function and we don't want to include it
 		//hhh ^= lastAddr64;
@@ -1887,18 +1916,24 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		PathBucket *pb = (PathBucket *)pathTable.getValue ( &hhh );
 		if ( pb ) {
 			pb->m_calledTimes++;
+			if ( missedQuickPoll )
+				pb->m_missedQuickPolls++;
 			firstOne = NULL;
 			hhh = 0LL;
+			missedQuickPoll = false;
 			continue;
 		}
 		// make a new one
 		PathBucket npb;
 		npb.m_pathStackPtr = firstOne;
 		npb.m_calledTimes  = 1;
+		if ( missedQuickPoll ) npb.m_missedQuickPolls = 1;
+		else 		       npb.m_missedQuickPolls = 0;
 		pathTable.addKey ( &hhh , &npb );
 		// start over for next path
 		firstOne = NULL;
 		hhh = 0LL;
+		missedQuickPoll = false;
 	}
 
 	// now make a buffer of pointers to the pathbuckets in the table
@@ -1948,7 +1983,14 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 			sb->pushChar('\n');
 		}
 		// the count
-		sb->safePrintf("<b>%i</b>\n<hr>",(int)pb->m_calledTimes);
+		sb->safePrintf("<b>%i</b>",(int)pb->m_calledTimes);
+
+		if ( pb->m_missedQuickPolls )
+			sb->safePrintf(" <b><font color=red>(missed "
+				       "%i quickpolls)</font></b>",
+				       (int)pb->m_missedQuickPolls);
+
+		sb->safePrintf("\n-----------------------------\n");
 	}
 	
 
@@ -1980,6 +2022,68 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 			       );
 	}
 	*/
+
+
+	/*
+	// do new missed quickpolls
+	sb->safePrintf("<br><br><table %s>",TABLE_STYLE);
+	sb->safePrintf("<tr class=hdrow>"
+		       "<td colspan=7>"
+		       "<b>Top 100 Missed QuickPolls "
+		       );
+	ip = (char *)m_quickpollMissBuf.getBufStart();
+	ipEnd = (char *)m_quickpollMissBuf.getBufEnd();
+	ff.reset();
+	ff.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
+	filename = ff.getBufStart();
+	fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	if ( fd < 0 ) {
+		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
+			       ,ff.getBufStart(),strerror(errno));
+		return false;
+	}
+	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
+		// 0 marks end of call stack
+		if ( *(long long *)ip == 0 ) continue;
+		char tmp[64];
+		int tlen = sprintf(tmp, "0x%llx\n", *(long long *)ip);
+		int nw = write ( fd , tmp , tlen );
+		if ( nw != tlen )
+			log("profiler: write failed");
+	}
+	::close(fd);
+	cmd.reset();
+	newf.reset();
+	newf.safePrintf("%strash/output.txt",g_hostdb.m_dir);
+	// print the addr again somehow so we know
+	cmd.safePrintf("addr2line  -a -s -p -C -f -e ./gb < %s | "
+		       "sort | uniq -c | sort -rn > %s"
+		       ,filename,newf.getBufStart());
+	gbsystem ( cmd.getBufStart() );
+	out.reset();
+	out.load ( newf.getBufStart());
+	x = out.getBufStart();
+	lineCount = 0;
+	for ( ; *x ; x++ ) {
+		if ( *x != '\n' ) continue;
+		if ( ++lineCount >= 100 ) break;
+	}
+	c = *x;
+	*x = '\0';
+	sb->safePrintf("<tr><td colspan=10>"
+		       "<pre>"
+		       "%s"
+		       "</pre>"
+		       "</td>"
+		       "</tr>"
+		       "</table>"
+		       , out.getBufStart() 
+		       );
+
+	*x = c;
+	*/
+
+
 
 	g_profiler.startRealTimeProfiler();	
 

@@ -254,7 +254,7 @@ protected:
 
 	// IP (Instruction Pointer) addresses, force to 64 bits
 	//HashTableX m_ipCountTable;
-	SafeBuf m_quickpollMissBuf;
+	//SafeBuf m_quickpollMissBuf;
 	SafeBuf m_ipBuf;
 
 	HashTableX m_fn;
