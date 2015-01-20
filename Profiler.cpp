@@ -1438,6 +1438,16 @@ extern int g_inMemcpy;
 void
 Profiler::getStackFrame(int sig) {
 
+	// need to interrupt every 1ms to set this to true
+	g_clockNeedsUpdate = true;
+
+	// profile once every 5ms, not every 1ms
+	static int32_t s_count = 0;
+
+	if ( ++s_count != 5 ) return;
+
+	s_count = 0;
+
 	// prevent cores.
 	// TODO: hack this to a function somehow...
 	// we set this to positive values when calling library functions like
@@ -1566,9 +1576,10 @@ Profiler::startRealTimeProfiler() {
 	//signal(SIGVTALRM, Profiler::getStackFrame);
 	signal(SIGALRM, Profiler::getStackFrame);
 	value.it_interval.tv_sec = 0;
-	value.it_interval.tv_usec = 5000;
+	// 1000 microseconds is 1 millisecond
+	value.it_interval.tv_usec = 1000;
 	value.it_value.tv_sec = 0;
-	value.it_value.tv_usec = 5000;
+	value.it_value.tv_usec = 1000;
 	setitimer( which, &value, &ovalue );
 	m_realTimeProfilerRunning = true;
 }

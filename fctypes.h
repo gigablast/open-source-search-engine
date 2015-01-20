@@ -7,6 +7,8 @@
 #include <math.h>      // floor()
 #include "Unicode.h"
 
+extern bool g_clockNeedsUpdate;
+
 // we have to leave this as 32 bits for now because the termlists store
 // the hash value as 32 bits in posdb
 typedef uint32_t FacetValHash_t;
