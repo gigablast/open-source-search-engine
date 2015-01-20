@@ -252,6 +252,11 @@ protected:
 	//HashTableT<uint32_t, FnInfo*> m_activeFns;
 	//HashTableT<uint32_t, QuickPollInfo*> m_quickpolls;
 
+	// IP (Instruction Pointer) addresses, force to 64 bits
+	//HashTableX m_ipCountTable;
+	SafeBuf m_quickpollMissBuf;
+	SafeBuf m_ipBuf;
+
 	HashTableX m_fn;
 	HashTableX m_fnTmp[11];
 	HashTableX m_activeFns;

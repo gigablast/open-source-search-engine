@@ -48,6 +48,9 @@ Profiler::Profiler() :
 	m_frameTraces(NULL),
 	m_numUsedFrameTraces(0)
 {
+	SafeBuf newf;
+	newf.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
+	unlink ( newf.getBufStart() );
 }
 
 Profiler::~Profiler() {//reset();
@@ -74,16 +77,29 @@ bool Profiler::reset(){
 
 bool Profiler::init() {
 	m_lastQPUsed = 0;
-	realTimeProfilerData.set(4,8,0,NULL,0,false,0,"rtprof");
+	// realTimeProfilerData.set(4,8,0,NULL,0,false,0,"rtprof");
         m_quickpolls.set(4,4,0,NULL,0,false,0,"qckpllcnt");
-	for (int32_t i=0;i<11;i++)
-		//m_fnTmp[i].set(256);
-		if ( ! m_fnTmp[i].set(4,sizeof(FnInfo),256,NULL,0,false,0,
-				      "fntmp"))
-			return false;
-	if ( ! m_activeFns.set(4,4,256,NULL,0,false,0,"activefns") )
+	// for (int32_t i=0;i<11;i++)
+	// 	//m_fnTmp[i].set(256);
+	// 	if ( ! m_fnTmp[i].set(4,sizeof(FnInfo),256,NULL,0,false,0,
+	// 			      "fntmp"))
+	// 		return false;
+	// if ( ! m_activeFns.set(4,4,256,NULL,0,false,0,"activefns") )
+	// 	return false;
+	// if ( ! m_fn.set(4,sizeof(FnInfo),65536,NULL,0,false,0,"fntbl") )
+	// 	return false;
+
+	// init Instruction Ptr address count table
+	// if ( ! m_ipCountTable.set(8,4,1024*1024,NULL,0,false,0,"proftbl") )
+	// 	return false;
+	// do not breach
+	if ( ! m_quickpollMissBuf.reserve ( 20000 ) )
 		return false;
-	return m_fn.set(4,sizeof(FnInfo),65536,NULL,0,false,0,"fntbl");
+
+	if ( ! m_ipBuf.reserve ( 5000000 ) )
+		return false;
+
+	return true;
 }
 
 
@@ -1222,9 +1238,10 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 					     coll,
 					     realTimeSortMode,
 					     realTimeShowAll);
-		g_profiler.printInfo(&sb,username,NULL,coll,sorts,sort10, qpreset,
-				     profilerreset);
+		// g_profiler.printInfo(&sb,username,NULL,coll,sorts,sort10, qpreset,
+		// 		     profilerreset);
 	}
+
 	return g_httpServer.sendDynamicPage ( s , (char*) sb.getBufStart() ,
 						sb.length() ,-1 , false);
 }
@@ -1426,9 +1443,81 @@ Profiler::getStackFrame(int sig) {
 	// somewhere. but for now just ignore.
 	if ( g_inMemcpy ) return;
 
+	//void *trace[32];
+
+	// the innermost line number
+	// if ( g_profiler.m_ipLineBuf.m_length + 8 >= 
+	//      g_profiler.m_ipLineBuf.m_capacity )
+	// 	return;
+
+	// the lines calling functions
+	// if ( g_profiler.m_ipPathBuf.m_length + 8*32 >= 
+	//      g_profiler.m_ipPathBuf.m_capacity )
+	// 	return;
+
+	// the lines calling functions
+	if ( g_profiler.m_ipBuf.m_length + 8*32 >= 
+	     g_profiler.m_ipBuf.m_capacity )
+	 	return;
+
+	// support 64-bit
 	void *trace[32];
-	uint32_t numFrames = backtrace(trace, 32);
+	int32_t numFrames = backtrace((void **)trace, 32);
 	if(numFrames < 3) return;
+
+	// the individual line for profiling the worst individual functions.
+	// we'll have to remove line #'s from the output of addr2line
+	// using awk i guess.
+	//g_profiler.m_ipLineBuf.pushLongLong((uint64_t)trace[2]);
+
+	// now just store the Instruction Ptrs into a count hashtable
+	for ( int32_t i = 2 ; i < numFrames && i <= 4 ; i++ ) {
+
+		// even if we are 32-bit, make this 64-bit for ease
+		uint64_t addr = (uint64_t)trace[i];
+
+		// the call stack path for profiling the worst paths
+		g_profiler.m_ipBuf.pushLongLong(addr);
+		continue;
+		// just store lowest addr for now
+		//break;
+		/*
+		int32_t slot = g_profiler.m_ipCountTable.getSlot ( &addr );
+		if ( slot < 0 ) {
+			int32_t val = 1;
+			g_profiler.m_ipCountTable.addKey ( &addr , &val );
+			continue;
+		}
+		// update existing
+		uint32_t *val;
+		val=(uint32_t *)g_profiler.
+			m_ipCountTable.getValueFromSlot(slot);
+		*val = *val + 1;
+		*/
+	}
+
+	// indicate end of call stack path
+	g_profiler.m_ipBuf.pushLongLong(0LL);//addr);
+
+	// if we are in need of a quickpoll store it here
+	if( g_niceness == 0 ) return;
+	// !g_loop.m_canQuickPoll || 
+	if ( ! g_loop.m_needsToQuickPoll ) return;
+	if ( g_loop.m_inQuickPoll ) return;
+
+	// do not breach
+	if ( g_profiler.m_quickpollMissBuf.m_length + 8 >= 
+	     g_profiler.m_quickpollMissBuf.m_capacity )
+		return;
+
+	// store address in need of quickpolls
+	g_profiler.m_quickpollMissBuf.
+		pushLongLong((uint64_t)trace[numFrames-1] );
+
+	// all done
+	return;
+
+
 	const void *stackPtr = trace[2];
 	uint32_t baseAddress = g_profiler.getFuncBaseAddr((PTRTYPE)stackPtr);
 	uint32_t *ptr;	
@@ -1588,6 +1677,22 @@ Profiler::sortRealTimeData(const uint8_t type, const uint32_t num) {
 	}
 }
 
+
+class PathBucket {
+public:
+	char *m_pathStackPtr;
+	int32_t m_calledTimes;
+};
+       
+
+int cmpPathBucket (const void *A, const void *B) {
+	const PathBucket *a = *(const PathBucket **)A;
+	const PathBucket *b = *(const PathBucket **)B;
+	if      ( a->m_calledTimes < b->m_calledTimes ) return  1;
+	else if ( a->m_calledTimes > b->m_calledTimes ) return -1;
+	return 0;
+}
+
 bool
 Profiler::printRealTimeInfo(SafeBuf *sb,
 			    //int32_t user,
@@ -1608,6 +1713,8 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		return true;
 	}
 	stopRealTimeProfiler(true);
+
+	/*
 	if(hitEntries)
 		mfree(hitEntries, sizeof(HitEntry)*rtNumEntries, "hitEntries");
 	//rtNumEntries = 0;
@@ -1630,6 +1737,255 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		startRealTimeProfiler();
 		return true;
 	}
+	*/
+
+
+	sb->safePrintf("<table %s>",TABLE_STYLE);
+	// char *showMessage;
+	// int rtall;
+	// if(realTimeShowAll) {
+	// 	showMessage = "(show only 10)";
+	// 	rtall = 0;
+	// } else {
+	// 	showMessage = "(show all)";
+	// 	rtall = 1;
+	// }
+	sb->safePrintf("<tr class=hdrow>"
+		       "<td colspan=7>"
+			 "<b>Top 100 Profiled Line Numbers "
+		       //"<a href=\"/admin/profiler?c=%s"
+		       // "&rtall=%i\">%s</a>"
+		       //,coll,
+		       // rtall, showMessage);
+		       );
+	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
+		       "(Stop)</a></b></td></tr>\n",
+		       coll);
+	/*
+	rtall = !rtall;
+
+	sb->safePrintf("<tr><td><b>"
+		       "Function</b></td>");
+
+	sb->safePrintf("<td><b><a href=/admin/profiler?rtsort=2&c=%s&"
+		       "&rtall=%i>"
+		       "Hits per Func</b></a></td>",coll,rtall);
+
+	sb->safePrintf("<td><b><a href=/admin/profiler?rtsort=0&c=%s&"
+		       "&rtall=%i>"
+		       "Missed QUICKPOLL calls<br>per Func</b></a></td>",
+		       coll,rtall);
+
+	sb->safePrintf("<td><b><a href=/admin/profiler?rtsort=1&c=%s&"
+		       "&rtall=%i>"
+		       "Base Address</b></a></td>",coll,rtall);
+
+	sb->safePrintf("<td><b>Hits per Line</b></td>"
+
+		       "<td><b>Line Address</b></td>"
+
+		       "<td><b>Missed QUICKPOLL calls<br>"
+		       "per Line</b></td></tr>");
+	*/
+
+	// system call to get the function names and line numbers
+	// just dump the buffer
+	char *ip = (char *)m_ipBuf.getBufStart();
+	char *ipEnd = (char *)m_ipBuf.getBufEnd();
+	SafeBuf ff;
+	ff.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
+	char *filename = ff.getBufStart();
+	int fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	if ( fd < 0 ) {
+		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
+			       ,ff.getBufStart(),strerror(errno));
+		return false;
+	}
+	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
+		// 0 marks end of call stack
+		if ( *(long long *)ip == 0 ) continue;
+		char tmp[64];
+		int tlen = sprintf(tmp, "0x%llx\n", *(long long *)ip);
+		write ( fd , tmp , tlen );
+	}
+	::close(fd);
+	SafeBuf cmd;
+	SafeBuf newf;
+	newf.safePrintf("%strash/output.txt",g_hostdb.m_dir);
+	// print the addr again somehow so we know
+	cmd.safePrintf("addr2line  -a -s -p -C -f -e ./gb < %s | "
+		       "sort | uniq -c | sort -rn > %s"
+		       ,filename,newf.getBufStart());
+	gbsystem ( cmd.getBufStart() );
+
+	SafeBuf out;
+	out.load ( newf.getBufStart());
+
+	// restrict to top 100 lines
+	char *x = out.getBufStart();
+	int lineCount = 0;
+	for ( ; *x ; x++ ) {
+		if ( *x != '\n' ) continue;
+		if ( ++lineCount >= 100 ) break;
+	}
+	char c = *x;
+	*x = '\0';
+
+	sb->safePrintf("<tr><td colspan=10>"
+		       "<pre>"
+		       "%s"
+		       "</pre>"
+		       "</td>"
+		       "</tr>"
+		       "</table>"
+		       , out.getBufStart() 
+		       );
+
+	*x = c;
+
+	// now each function is in outbuf with the addr, so make a map
+	// and use that map to display the top paths below. we hash the addrs
+	// in each callstack together and the count those hashes to get
+	// the top winners. and then convert the top winners to the
+	// function names.
+	char *p = out.getBufStart();
+	HashTableX map;
+	map.set ( 8,8,1024,NULL,0,false,0,"pmtb");
+	for ( ; *p ; ) {
+		// get addr
+		uint64_t addr64;
+		sscanf ( p , "%*i %lx ", &addr64 );
+		// skip if 0
+		if ( addr64 ) {
+			// record it
+			int64_t off = p - out.getBufStart();
+			map.addKey ( &addr64 , &off );
+		}
+		// skip to next line
+		for ( ; *p && *p !='\n' ; p++ );
+		if ( *p ) p++;
+	}
+
+	// now scan m_ipBuf (Instruction Ptr Buf) and make the callstack hashes
+	ip = (char *)m_ipBuf.getBufStart();
+	ipEnd = (char *)m_ipBuf.getBufEnd();
+	char *firstOne = NULL;
+	uint64_t hhh = 0LL;
+	uint64_t lastAddr64 = 0LL;
+	HashTableX pathTable;
+	pathTable.set ( 8,sizeof(PathBucket),1024,NULL,0,false,0,"pbproftb");
+	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
+		if ( ! firstOne ) firstOne = ip;
+		uint64_t addr64 = *(uint64_t *)ip;
+		hhh ^= addr64;
+		// end of a stack
+		if ( addr64 != 0LL ) { lastAddr64 = addr64; continue; }
+		// remove the last one though, because that is the line #
+		// of the innermost function and we don't want to include it
+		//hhh ^= lastAddr64;
+		// it's the end, so add it into table
+		PathBucket *pb = (PathBucket *)pathTable.getValue ( &hhh );
+		if ( pb ) {
+			pb->m_calledTimes++;
+			firstOne = NULL;
+			hhh = 0LL;
+			continue;
+		}
+		// make a new one
+		PathBucket npb;
+		npb.m_pathStackPtr = firstOne;
+		npb.m_calledTimes  = 1;
+		pathTable.addKey ( &hhh , &npb );
+		// start over for next path
+		firstOne = NULL;
+		hhh = 0LL;
+	}
+
+	// now make a buffer of pointers to the pathbuckets in the table
+	SafeBuf sortBuf;
+	for ( int32_t i = 0 ; i < pathTable.m_numSlots ; i++ ) {
+		// skip empty slots
+		if ( ! pathTable.m_flags[i] ) continue;
+		// get the bucket
+		PathBucket *pb = (PathBucket *)pathTable.getValueFromSlot(i);
+		// store the ptr
+		sortBuf.safeMemcpy ( &pb , sizeof(PathBucket *) );
+	}
+	// now sort it up
+	int32_t count = sortBuf.length() / sizeof(PathBucket *);
+	qsort(sortBuf.getBufStart(),count,sizeof(PathBucket *),cmpPathBucket);
+
+
+	// show profiled paths
+	sb->safePrintf("<br><br><table %s>",TABLE_STYLE);
+	sb->safePrintf("<tr class=hdrow>"
+		       "<td colspan=7>"
+		       "<b>Top 50 Profiled Paths</b>"
+		       "</td></tr>"
+		       "<tr><td colspan=10><pre>");
+
+	// now print the top 50 out
+	char *sp = sortBuf.getBufStart();
+	char *spend = sp + sortBuf.length();
+	int toPrint = 50;
+	for ( ; sp < spend && toPrint > 0 ; sp += sizeof(PathBucket *) ) {
+		toPrint--;
+		PathBucket *pb = *(PathBucket **)sp;
+		// get the callstack into m_ipBuf
+		uint64_t *cs = (uint64_t *)pb->m_pathStackPtr;
+		// scan those
+		for ( ; *cs ; cs++ ) {
+			// lookup this addr
+			long *outOffPtr = (long *)map.getValue ( cs );
+			if ( ! outOffPtr ) { 
+				sb->safePrintf("        UNKNOWN\n");
+				continue;
+			}
+			// print that line out until \n
+			char *a = out.getBufStart() + *outOffPtr;
+			for ( ; *a && *a != '\n' ; a++ )
+				sb->pushChar(*a);
+			sb->pushChar('\n');
+		}
+		// the count
+		sb->safePrintf("<b>%i</b>\n<hr>",(int)pb->m_calledTimes);
+	}
+	
+
+	sb->safePrintf("</pre></td></tr></table>");
+
+
+	/*
+	for ( int i = 0 ; i < m_ipCountTable.m_numSlots ; i++ ) {
+		if ( ! m_ipCountTable.m_flags[i] ) continue;
+		int32_t *count = (int32_t *)m_ipCountTable.getValueFromSlot(i);
+		uint64_t *addr = (uint64_t *)m_ipCountTable.getKeyFromSlot(i);
+		// show the row
+		sb->safePrintf("<tr>"
+			       "<td>0x%llx</td>" // func
+			       "<td>%i</td>" // hits
+			       "<td>%i</td>" // missed quickpolls
+			       "<td>%i</td>" // base addr
+			       "<td>%i</td>" // hits per line
+			       "<td>%i</td>" // line addr
+			       "<td>%i</td>" // missed quickpoll calls
+			       
+			       ,(long long)*addr
+			       ,*count
+			       , 0
+			       , 0
+			       , 0
+			       , 0
+			       , 0
+			       );
+	}
+	*/
+
+	g_profiler.startRealTimeProfiler();	
+
+	return true;
+		/*
+
 	hitEntries = (HitEntry *)mmalloc(sizeof(HitEntry) * rtNumEntries,
 					"hiEntries");
 	memset(hitEntries, 0, sizeof(HitEntry) * rtNumEntries);
@@ -1787,6 +2143,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	sb->safePrintf("</pre>");
 	g_profiler.startRealTimeProfiler();	
 	return true;
+		*/
 }
 
 void
