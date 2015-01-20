@@ -3295,6 +3295,7 @@ bool sendNotification ( EmailInfo *ei ) {
 				   , uu.getPath()
 				   );
 		fullReq.safeMemcpy ( uu.getHost() , uu.getHostLen() );
+		fullReq.safePrintf("\r\n");
 		// make custom headers
 		fullReq.safePrintf ("X-Crawl-Name: %s\r\n"
 				    // last \r\n is added in HttpRequest.cpp

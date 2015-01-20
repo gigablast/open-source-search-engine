@@ -13151,6 +13151,8 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		//	printf("%s",err );
 		//continue;
 		//if ( ! magicBit && recSize == 6 ) { char *xx=NULL;*xx=0; }
+		int32_t facetVal32 = g_posdb.getFacetVal32 ( &k );
+
 		if ( termId < 0 )
 			printf(
 			       "k=%s "
@@ -13208,6 +13210,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 			       //"outlnktxt=%01"INT32" "
 			       "mult=%02"INT32" "
 			       //"senth32=0x%08"XINT32" "
+			       "[facetval=%"INT32"] "
 			       "recSize=%"INT32" "
 			       "dh=0x%02"XINT32"%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
@@ -13224,6 +13227,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 			       //(int32_t)g_posdb.getIsOutlinkText(&k),
 			       (int32_t)g_posdb.getMultiplier(&k),
 			       //(int32_t)g_posdb.getSectionSentHash32(&k),
+			       facetVal32,
 			       recSize,
 			       
 			       (int32_t)dh, 
