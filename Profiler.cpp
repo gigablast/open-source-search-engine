@@ -75,6 +75,9 @@ bool Profiler::reset(){
 	m_addressMap = NULL;
 	m_activeFns.reset();
 	m_quickpolls.reset();
+
+	m_ipBuf.purge();
+
 	return true;
 }
 
