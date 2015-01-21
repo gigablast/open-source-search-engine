@@ -3208,8 +3208,10 @@ bool Query::setQWords ( char boolFlag ,
 		// . do not worry about keepAllSingles because we turn
 		//   this into a phrase below!
 		// . if ( ! keepAllSingles &&
-		if ( ( qw->m_leftConnected || qw->m_rightConnected ) )
-			qw->m_ignoreWord = IGNORE_CONNECTED;
+		// . MDW: no longer do this. but we should consider them
+		//   wikibigrams for proximity weighting
+		// if ( ( qw->m_leftConnected || qw->m_rightConnected ) )
+		// 	qw->m_ignoreWord = IGNORE_CONNECTED;
 		// . ignore and/or between quoted phrases, save user from 
 		//   themselves (they meant AND/OR)
 		if ( ! keepAllSingles && qw->m_isQueryStopWord &&
@@ -3433,6 +3435,42 @@ bool Query::setQWords ( char boolFlag ,
 		qw->m_numWordsInWikiPhrase = wk_nwk;
 		// set loop parm
 		upTo = i + nwk;
+	}
+
+
+	// consider terms strongly connected like wikipedia title phrases
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+		// get ith word
+		QueryWord *qw1 = &m_qwords[i];
+		// must not already be in a wikiphrase
+		//if ( qw1->m_wikiPhraseId > 0 ) continue;
+		// what query word # is that?
+		int32_t qwn = qw1 - m_qwords;
+		// get the next alnum word after that
+		// assume its the last word in our bigram phrase
+		QueryWord *qw2 = &m_qwords[qwn+2];
+		// must be in same wikiphrase
+		if ( qw2->m_wikiPhraseId > 0 ) continue;
+
+		// if there is a strong connector like the . in 'dmoz.org'
+		// then consider it a wiki bigram too
+		if ( ! qw1->m_rightConnected ) continue;
+		if ( ! qw2->m_leftConnected  ) continue;
+
+		// fix 'rdf.org.dumps' so org.dumps gets same
+		// wikiphraseid as rdf.org
+		int id;
+		if ( qw1->m_wikiPhraseId ) id = qw1->m_wikiPhraseId;
+		else id = ++wkid;
+
+		// store it
+		qw1->m_wikiPhraseId = id;
+		qw1->m_wikiPhraseStart = i;
+		qw1->m_numWordsInWikiPhrase = 2;
+
+		qw2->m_wikiPhraseId = id;
+		qw2->m_wikiPhraseStart = i;
+		qw2->m_numWordsInWikiPhrase = 2;
 	}
 
 	// all done
