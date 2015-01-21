@@ -2375,9 +2375,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	// visible window... so just try 1000px max
 	sb->safePrintf("<div style=max-width:800px;>");
 
-	int arch = 32;
-	if ( __WORDSIZE == 64 ) arch = 64;
-	if ( __WORDSIZE == 128 ) arch = 128;
+	// int arch = 32;
+	// if ( __WORDSIZE == 64 ) arch = 64;
+	// if ( __WORDSIZE == 128 ) arch = 128;
 
 	//int32_t matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//int32_t matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
@@ -2400,8 +2400,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			continue;
 
 		// profiler.cpp only works for 32-bit elf headers right now
-		if ( i == PAGE_PROFILER && arch != 32 )
-			continue;
+		//if ( i == PAGE_PROFILER && arch != 32 )
+		//	continue;
 
 		// is this page basic?
 		bool pageBasic = false;

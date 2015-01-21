@@ -211,7 +211,7 @@ class Profiler {
 						const uint32_t stackPtr,
 						uint32_t *ptr);
 
-	static void getStackFrame(int sig);
+	void getStackFrame(int sig);
 
 	void startRealTimeProfiler();
 
@@ -222,6 +222,8 @@ class Profiler {
 	FrameTrace *getNewFrameTrace(const uint32_t addr);
 
 	bool m_realTimeProfilerRunning;
+
+	SafeBuf m_ipBuf;
 
 protected:
 	bool processSymbolTable (FILE *file);
@@ -251,6 +253,10 @@ protected:
 	//HashTableT<uint32_t, FnInfo> m_fnTmp[11];
 	//HashTableT<uint32_t, FnInfo*> m_activeFns;
 	//HashTableT<uint32_t, QuickPollInfo*> m_quickpolls;
+
+	// IP (Instruction Pointer) addresses, force to 64 bits
+	//HashTableX m_ipCountTable;
+	//SafeBuf m_quickpollMissBuf;
 
 	HashTableX m_fn;
 	HashTableX m_fnTmp[11];

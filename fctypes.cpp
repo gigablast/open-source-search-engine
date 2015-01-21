@@ -10,6 +10,8 @@
 
 static bool g_clockInSync = false;
 
+bool g_clockNeedsUpdate = true;
+
 bool isClockInSync() { 
 	if ( g_hostdb.m_initialized && g_hostdb.m_hostId == 0 ) return true;
 	return g_clockInSync; 
@@ -1938,6 +1940,14 @@ int64_t gettimeofdayInMilliseconds() {
 	// a signal handler is underway in the main thread!
 	if ( g_inSigHandler && ! g_threads.amThread() ) { 
 		char *xx = NULL; *xx = 0; }
+
+	// the real tiem sigalrm interrupt in Loop.cpp sets this to
+	// true once per millisecond
+	if ( ! g_clockNeedsUpdate )
+		return g_now;
+
+	g_clockNeedsUpdate = false;
+
 	// this isn't async signal safe...
 	struct timeval tv;
 	//g_loop.disableTimer();
