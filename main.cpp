@@ -14940,60 +14940,92 @@ void doInject ( int fd , void *state ) {
 
 void doInjectWarc ( int64_t fsize ) {
 
+	static char *s_buf = NULL;
+
+	static bool s_hasMoreToRead;
+
+	static char *s_pbuf = NULL;
+	static char *s_pbufEnd = NULL;
+
+	bool needReadMore = false;
+	if ( ! s_pbuf ) needReadMore = true;
+
+
+ readMore:
+
+	if ( needReadMore ) {
+
+		log("inject: reading %"INT64" bytes more of warc file"
+		    ,(int64_t)MAXWARCRECSIZE);
+
+		// are we done?
+		if ( s_off >= fsize ) { 
+			log("inject: done parsing file");
+			g_loop.reset();  
+			exit(0); 
+		}
+
+		// read 1MB of data into this buf to get the first WARC record
+		// it must be < 1MB or we faulter.
+		if ( ! s_buf ) {
+			int64_t need = MAXWARCRECSIZE + 1;
+			s_buf = (char *)mmalloc ( need ,"sibuf");
+		}
+		if ( ! s_buf ) {
+			log("inject: failed to alloc buf");
+			exit(0);
+		}
+
+		int32_t maxToRead = MAXWARCRECSIZE;
+		int32_t toRead = maxToRead;
+		s_hasMoreToRead = true;
+		if ( s_off + toRead > fsize ) {
+			toRead = fsize - s_off;
+			s_hasMoreToRead = false;
+		}
+		int32_t bytesRead = s_file.read ( s_buf , toRead , s_off ) ;
+		if ( bytesRead != toRead ) {
+			log("inject: read of %s failed at offset "
+			    "%"INT64"", s_file.getFilename(), s_off);
+			exit(0);
+		}
+		// null term what we read
+		s_buf[bytesRead] = '\0';
+
+		// if not enough to constitute a WARC record probably just new lines
+		if( toRead < 20 ) {
+			log("inject: done processing file");
+			exit(0);
+		}
+
+		// mark the end of what we read
+		//char *fend = buf + toRead;
+
+		// point to what we read
+		s_pbuf = s_buf;
+		s_pbufEnd = s_buf + bytesRead;
+	}
+
  loop:
 
-	// are we done?
-	if ( s_off >= fsize ) { 
-		log("inject: done parsing file");
-		g_loop.reset();  
-		exit(0); 
-	}
+	char *realStart = s_pbuf;
 
-	// read 1MB of data into this buf to get the first WARC record
-	// it must be < 1MB or we faulter.
-	static char *s_buf = NULL;
-	if ( ! s_buf ) {
-		int64_t need = MAXWARCRECSIZE + 1;
-		s_buf = (char *)mmalloc ( need ,"sibuf");
+	// need at least say 100k for warc header
+	if ( s_pbuf + 100000 > s_pbufEnd && s_hasMoreToRead )  {
+		needReadMore = true;
+		goto readMore;
 	}
-	if ( ! s_buf ) {
-		log("inject: failed to alloc buf");
-		exit(0);
-	}
-
-	int32_t maxToRead = MAXWARCRECSIZE;
-	int32_t toRead = maxToRead;
-	if ( s_off + toRead > fsize ) toRead = fsize - s_off;
-	int32_t bytesRead = s_file.read ( s_buf , toRead , s_off ) ;
-	if ( bytesRead != toRead ) {
-		log("inject: read of %s failed at offset "
-		    "%"INT64"", s_file.getFilename(), s_off);
-		exit(0);
-	}
-	// null term what we read
-	s_buf[bytesRead] = '\0';
-
-	// if not enough to constitute a WARC record probably just new lines
-	if( toRead < 20 ) {
-		log("inject: done processing file");
-		exit(0);
-	}
-
-	// mark the end of what we read
-	//char *fend = buf + toRead;
-
-	// point to what we read
-	char *pbuf = s_buf;
 
 	// find "WARC/1.0" or whatever
-	for ( ; *pbuf && strncmp(pbuf,"WARC/",5) ; pbuf++ );
+	char *whp = s_pbuf;
+	for ( ; *whp && strncmp(whp,"WARC/",5) ; whp++ );
 	// none?
-	if ( ! *pbuf ) {
+	if ( ! *whp ) {
 		log("inject: could not find WARC/1 header start");
 		exit(0);
 	}
 
-	char *warcHeader = pbuf;
+	char *warcHeader = whp;
 
 	// find end of warc mime HEADER not the content
 	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
@@ -15049,8 +15081,25 @@ void doInjectWarc ( int64_t fsize ) {
 
 	char *warcContentEnd = warcContent + warcContentLen;
 
+	uint64_t oldOff = s_off;
+
+	uint64_t recSize = (warcContentEnd - realStart); 
+
+	// point to end of this warc record
+	s_pbuf += recSize;
+
+	// if we fall outside of the current read buf then re-read
+	if ( s_pbuf > s_pbufEnd ) {
+		if ( ! s_hasMoreToRead ) {
+			log("inject: warc file exceeded file length.");
+			exit(0);
+		}
+		needReadMore = true;
+		goto readMore;
+	}
+
 	// advance this for next read from the file
-	s_off += (warcContentEnd - s_buf);
+	s_off += recSize; // (warcContentEnd - realStart);//s_buf);
 
 
 	// if WARC-Type: is not response, skip it. so if it
@@ -15098,9 +15147,9 @@ void doInjectWarc ( int64_t fsize ) {
 	int64_t httpReplySize = warcContentLen;
 
 	// sanity check
-	char *bufEnd = s_buf + MAXWARCRECSIZE;
-	if ( httpReply + httpReplySize >= bufEnd ) {
-		int needMore = httpReply + httpReplySize - bufEnd;
+	//char *bufEnd = s_buf + MAXWARCRECSIZE;
+	if ( httpReply + httpReplySize >= s_pbufEnd ) {
+		int needMore = httpReply + httpReplySize - s_pbufEnd;
 		log("inject: not reading enough content to inject "
 		    "url %s . increase MAXWARCRECSIZE by %"INT32" more",url,
 		    needMore);
@@ -15112,14 +15161,27 @@ void doInjectWarc ( int64_t fsize ) {
 
 
 	// should be a mime that starts with GET or POST
-	// HttpMime m;
-	// if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
-	// 	if ( httpReplySize > 128 ) httpReplySize = 128;
+	HttpMime m;
+	if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
+	  // 	if ( httpReplySize > 128 ) httpReplySize = 128;
 	// 	httpReply [ httpReplySize ] = '\0';
 	// 	log("build: inject: Failed to set mime at offset "
 	// 	    "%"INT64" where request=%s",s_off,httpReply);
+		log("inject: failed to set http mime at %"INT64" in file"
+		    ,oldOff);
+		goto loop;
 	// 	exit(0);
-	// }
+	}
+
+	// check content type
+	int ct = m.getContentType();
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON ) {
+		goto loop;
+	}
+
 
 	SafeBuf req;
 

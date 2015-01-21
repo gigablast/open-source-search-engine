@@ -113,7 +113,7 @@ class File {
 	// . returns -1 on error
 	// . otherwise returns file size in bytes
 	// . returns 0 if does not exist
-	int32_t getFileSize ( );
+	int64_t getFileSize ( );
 
 	// . when was it last touched?
 	time_t getLastModifiedTime ( );
