@@ -14511,6 +14511,8 @@ int32_t *XmlDoc::getDiffbotTitleHashes ( int32_t *numHashes ) {
 	int32_t plen;
 
 	for ( ; p < pend ; p += plen + 1 ) {
+		// breathe some in case diffbot reply is 250MB
+		QUICKPOLL(m_niceness);
 		// set this
 		plen = gbstrlen(p);
 		// get title from it
