@@ -48,9 +48,9 @@ Profiler::Profiler() :
 	m_frameTraces(NULL),
 	m_numUsedFrameTraces(0)
 {
-	SafeBuf newf;
-	newf.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
-	unlink ( newf.getBufStart() );
+	// SafeBuf newf;
+	// newf.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
+	// unlink ( newf.getBufStart() );
 	//newf.reset();
 	// newf.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
 	// unlink ( newf.getBufStart() );
@@ -102,7 +102,8 @@ bool Profiler::init() {
 	// if ( ! m_quickpollMissBuf.reserve ( 20000 ) )
 	// 	return false;
 
-	if ( ! m_ipBuf.reserve ( 5000000 ) )
+	if ( m_ipBuf.m_capacity <= 0 &&
+	     ! m_ipBuf.reserve ( 5000000 , "profbuf" ) )
 		return false;
 
 	return true;
@@ -1235,7 +1236,10 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 			      "Enable it in MasterControls.</center></b></font>");
 	else {
 		if(g_profiler.m_realTimeProfilerRunning) {
-			if(stopRt) g_profiler.stopRealTimeProfiler();
+			if(stopRt) {
+				g_profiler.stopRealTimeProfiler();
+				g_profiler.m_ipBuf.purge();
+			}
 		} else if(startRt)   g_profiler.startRealTimeProfiler();
 				
 		g_profiler.printRealTimeInfo(&sb,
@@ -1567,36 +1571,46 @@ Profiler::getStackFrame(int sig) {
 void
 Profiler::startRealTimeProfiler() {
 	log(LOG_INIT, "admin: starting real time profiler");
-	if(!m_frameTraces) {
-		m_frameTraces = (FrameTrace *)mmalloc(
-			sizeof(FrameTrace) * MAX_FRAME_TRACES, "FrameTraces");
-		memset(m_frameTraces, 0, sizeof(FrameTrace) * MAX_FRAME_TRACES);
-		m_numUsedFrameTraces = 0;
-		m_rootFrame = &m_frameTraces[m_numUsedFrameTraces++];
-	}
+	// if(!m_frameTraces) {
+	// 	m_frameTraces = (FrameTrace *)mmalloc(
+	// 		sizeof(FrameTrace) * MAX_FRAME_TRACES, "FrameTraces");
+	// 	memset(m_frameTraces, 0, sizeof(FrameTrace) * MAX_FRAME_TRACES);
+	// 	m_numUsedFrameTraces = 0;
+	// 	m_rootFrame = &m_frameTraces[m_numUsedFrameTraces++];
+	// }
+	init();
+	m_realTimeProfilerRunning = true;
+	// now Loop.cpp will call g_profiler.getStackFrame()
+	return;
+
 	struct itimerval value, ovalue;
 	int which = ITIMER_REAL;
 	//signal(SIGVTALRM, Profiler::getStackFrame);
-	signal(SIGALRM, Profiler::getStackFrame);
+	//signal(SIGALRM, Profiler::getStackFrame);
 	value.it_interval.tv_sec = 0;
 	// 1000 microseconds is 1 millisecond
 	value.it_interval.tv_usec = 1000;
 	value.it_value.tv_sec = 0;
 	value.it_value.tv_usec = 1000;
 	setitimer( which, &value, &ovalue );
-	m_realTimeProfilerRunning = true;
 }
 
 void
 Profiler::stopRealTimeProfiler(const bool keepData) {
 	log(LOG_INIT, "admin: stopping real time profiler");
+	m_realTimeProfilerRunning = false;
+
+	return;
+
+
 	struct itimerval value;
 	int which = ITIMER_REAL;
+	// call the handler in Loop.cpp again
+	//signal(SIGALRM,sigalrmHandler);
 	getitimer( which, &value );
 	value.it_value.tv_sec = 0;
 	value.it_value.tv_usec = 0;
 	setitimer( which, &value, NULL );
-	m_realTimeProfilerRunning = false;
 	if(!keepData && m_frameTraces) {
 		mfree( 	m_frameTraces,
 			sizeof(FrameTrace) * MAX_FRAME_TRACES,
@@ -1793,7 +1807,8 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		       // rtall, showMessage);
 		       );
 	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
-		       "(Stop)</a></b></td></tr>\n",
+		       "(Stop)</a> [Click refresh to get latest profile "
+		       "stats]</b></td></tr>\n",
 		       coll);
 	/*
 	rtall = !rtall;
@@ -1825,10 +1840,11 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	// system call to get the function names and line numbers
 	// just dump the buffer
 	char *ip = (char *)m_ipBuf.getBufStart();
-	char *ipEnd = (char *)m_ipBuf.getBufEnd();
+	char *ipEnd = (char *)m_ipBuf.getBuf();
 	SafeBuf ff;
 	ff.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
 	char *filename = ff.getBufStart();
+	unlink ( filename );
 	int fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
 	if ( fd < 0 ) {
 		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
@@ -1904,7 +1920,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 
 	// now scan m_ipBuf (Instruction Ptr Buf) and make the callstack hashes
 	ip = (char *)m_ipBuf.getBufStart();
-	ipEnd = (char *)m_ipBuf.getBufEnd();
+	ipEnd = (char *)m_ipBuf.getBuf();
 	char *firstOne = NULL;
 	bool missedQuickPoll = false;
 	uint64_t hhh = 0LL;
@@ -2046,7 +2062,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		       "<b>Top 100 Missed QuickPolls "
 		       );
 	ip = (char *)m_quickpollMissBuf.getBufStart();
-	ipEnd = (char *)m_quickpollMissBuf.getBufEnd();
+	ipEnd = (char *)m_quickpollMissBuf.getBuf();
 	ff.reset();
 	ff.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
 	filename = ff.getBufStart();

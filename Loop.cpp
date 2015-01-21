@@ -1167,6 +1167,9 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	else
 		h->m_pingInfo.m_cpuUsage = 
 			.99 * h->m_pingInfo.m_cpuUsage + .01 * 000;
+
+	if ( g_profiler.m_realTimeProfilerRunning )
+		g_profiler.getStackFrame(0);
 }
 
 static sigset_t s_rtmin;
