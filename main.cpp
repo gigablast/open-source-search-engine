@@ -15094,6 +15094,11 @@ void doInjectWarc ( int64_t fsize ) {
 			log("inject: warc file exceeded file length.");
 			exit(0);
 		}
+		if ( recSize > MAXWARCRECSIZE ) {
+			log("inject: skipping warc file of %"INT64" "
+			    "bytes which is too big",recSize);
+			s_off += recSize;
+		}
 		needReadMore = true;
 		goto readMore;
 	}
