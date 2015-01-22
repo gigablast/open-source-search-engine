@@ -258,7 +258,7 @@ to compile the 32-bit version of gb.
 <li> Scalable to thousands of servers. 
 <li> Has scaled to over 12 billion web pages on over 200 servers.
 <li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate. (Performance metrics can be made about ten times faster but I have not got around to it yet. Drive space usage will probably remain about the same because it is already pretty efficient.)
-<li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
+<li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages. That is 28.6K of disk per HTML web page.
 <li>Spider rate is around 1 page per second per core. So a dual quad core can spider and index 8 pages per second which is 691,200 pages per day.
 <li> 4GB of RAM required per Gigablast instance. (instance = process)
 <li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a>

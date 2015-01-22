@@ -6580,6 +6580,7 @@ void Parms::init ( ) {
 		"So documents must be exactly the same for the most part.";
 	m->m_cgi   = "dr"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_doDupContentRemoval - y;
+	m->m_defOff= (char *)&cr.m_dedupResultsByDefault - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 1;
