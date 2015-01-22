@@ -1491,7 +1491,7 @@ Profiler::getStackFrame(int sig) {
 	//g_profiler.m_ipLineBuf.pushLongLong((uint64_t)trace[2]);
 
 	// now just store the Instruction Ptrs into a count hashtable
-	for ( int32_t i = 2 ; i < numFrames && i <= 4 ; i++ ) {
+	for ( int32_t i = 2 ; i < numFrames  ; i++ ) {
 
 		// even if we are 32-bit, make this 64-bit for ease
 		uint64_t addr = (uint64_t)trace[i];
