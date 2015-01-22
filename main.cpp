@@ -1042,6 +1042,10 @@ int main2 ( int argc , char *argv[] ) {
 		cmd = argv[1];
 	}
 
+	char *cmd2 = "";
+	if ( argc >= 3 )
+		cmd2 = argv[1];
+
 	int32_t arch = 64;
 	if ( sizeof(char *) == 4 ) arch = 32;
 
@@ -1099,11 +1103,14 @@ int main2 ( int argc , char *argv[] ) {
 	//unclean shutdown.
 	g_recoveryMode = false;
 	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
+	if ( strcmp ( cmd2 , "-r" ) == 0 ) g_recoveryMode = true;
 
 	// run as daemon? then we have to fork
 	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
+	if ( strcmp ( cmd2 , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
 
 	if ( strcmp ( cmd , "-l" ) == 0 ) g_conf.m_logToFile = true;
+	if ( strcmp ( cmd2 , "-l" ) == 0 ) g_conf.m_logToFile = true;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
