@@ -1033,6 +1033,8 @@ bool qaSyntax ( ) {
 		s_flags[2] = true;
 		// can't turn off spiders because we need for query reindex
 		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// index spider reply status docs
+				"&isr=1"
 				// turn off use robots to avoid that
 				// xyz.com/robots.txt redir to seekseek.com
 				"&obeyRobots=0"
@@ -1742,7 +1744,10 @@ bool qaspider1 ( ) {
 	// set max spiders to 1 for consistency!
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// so site2:www.walmart.com works
+                                "&isr=1"
+				,
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2330,7 +2335,10 @@ bool qajson ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+				// index spider replies status docs
+				"&isr=1"
+				,
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -3017,7 +3025,9 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) {
 
 	sb.safePrintf("\n<table %s>\n",TABLE_STYLE);
 	sb.safePrintf("<tr class=hdrow><td colspan=2>"
-		      "<center><b>QA Tests</b></center>"
+		      "<center><b>QA Tests "
+		      "(ensure spidering enabled in master controls before "
+		      "running these)</b></center>"
 		      "</td></tr>");
 
 	// header row
