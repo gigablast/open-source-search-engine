@@ -3965,8 +3965,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		if ( out == 1 ) s = " is";
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" host%s over 98%% disk usage. "
-			       "See the <a href=/admin/hosts>"
-			       "hosts</a> table.",out,s);
+			       "See the <a href=/admin/hosts?c=%s>"
+			       "hosts</a> table.",out,s,cr->m_coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -3987,10 +3987,33 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("One or more hosts have different gb versions. "
-			       "See the <a href=/admin/hosts>hosts</a> "
-			       "table.");
+			       "See the <a href=/admin/hosts?c=%s>hosts</a> "
+			       "table.",cr->m_coll);
 		mb->safePrintf("%s",boxEnd);
 	}
+
+	
+	int jammedHosts = 0;
+	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
+		Host *h = &g_hostdb.m_hosts[i];
+		if ( g_hostdb.isDead( h ) ) continue;
+		if ( h->m_pingInfo.m_udpSlotsInUse > 400 ) jammedHosts++;
+	}
+	if ( jammedHosts > 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		char *s = "s are";
+		if ( out == 1 ) s = " is";
+		mb->safePrintf("%s",box);
+		mb->safePrintf("%"INT32" host%s jammed with "
+			       "over %"INT32" outstanding "
+			       "udp transactions. "
+			       "See <a href=/admin/sockets?c=%s>sockets</a>"
+			       " table.",jammedHosts,s,400,cr->m_coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
 
 
 
@@ -4069,8 +4092,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
-			       "<a href=/admin/host>hosts table</a>.",
-			       ps->m_numHostsDead ,s );
+			       "<a href=/admin/host?c=%s>hosts table</a>.",
+			       ps->m_numHostsDead ,s ,cr->m_coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4081,7 +4104,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("All Threads are disabled. "
 			       "Might hurt performance for doing system "
 			       "calls which call 3rd party executables and "
-			       "can take a int32_t time to run, like pdf2html.");
+			       "can take a int32_t time to run, "
+			       "like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4103,7 +4127,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "Might hurt performance because these "
 			       "are calls to "
 			       "3rd party executables and "
-			       "can take a int32_t time to run, like pdf2html.");
+			       "can take a int32_t time to run, "
+			       "like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
