@@ -2157,6 +2157,14 @@ bool qaspider2 ( ) {
 	}
 
 
+	if ( ! s_flags[12] ) {
+		s_flags[12] = true;
+		if ( ! getUrl ( "/search?json=1&q=ibm.com&qlang=xx&"
+				"c=qatest123" , 999 ) )
+			return false;
+	}
+
+
 	// delete the collection
 	//static bool s_fee = false;
 	// if ( ! s_flags[12] ) {
