@@ -4390,40 +4390,108 @@ void Inlink::set ( Msg20Reply *r ) {
 	int32_t poff = 0;
 	char *p = m_buf;
 
+	int32_t need = 
+		r->size_ubuf + 
+		r->size_linkText +
+		r->size_surroundingText +
+		r->size_rssItem +
+		r->size_categories +
+		r->size_gigabitQuery +
+		r->size_templateVector;
+
+	char *pend = p + need;
+	// -10 to add \0's for remaining guys in case of breach
+	pend -= 10;
+
+
+	size_urlBuf           = r->size_ubuf;
+	size_linkText         = r->size_linkText;
+	size_surroundingText  = r->size_surroundingText;
+	size_rssItem          = r->size_rssItem;
+	size_categories       = r->size_categories;
+	size_gigabitQuery     = r->size_gigabitQuery;
+	size_templateVector   = r->size_templateVector;
+
+
+	/////////////
+
 	off_urlBuf = poff;
-	gbmemcpy ( p , r->ptr_ubuf , r->size_ubuf );
-	poff += r->size_ubuf;
-	p    += r->size_ubuf;
+	gbmemcpy ( p , r->ptr_ubuf , size_urlBuf );
+	poff += size_urlBuf;
+	p    += size_urlBuf;
+
+	/////////////
 
 	off_linkText = poff;
-	gbmemcpy ( p , r->ptr_linkText , r->size_linkText );
-	poff += r->size_linkText;
-	p    += r->size_linkText;
+	gbmemcpy ( p , r->ptr_linkText , size_linkText );
+	poff += size_linkText;
+	p    += size_linkText;
+
+	/////////////
 
 	off_surroundingText = poff;
-	gbmemcpy ( p , r->ptr_surroundingText , r->size_surroundingText );
-	poff += r->size_surroundingText;
-	p    += r->size_surroundingText;
+	if ( p + r->size_surroundingText < pend ) {
+		gbmemcpy (p,r->ptr_surroundingText , size_surroundingText );
+	}
+	else {
+		size_surroundingText = 1;
+		*p = '\0';
+	}
+	poff += size_surroundingText;
+	p    += size_surroundingText;
+
+	/////////////
 
 	off_rssItem = poff;
-	gbmemcpy ( p , r->ptr_rssItem , r->size_rssItem );
-	poff += r->size_rssItem;
-	p    += r->size_rssItem;
+	if ( p + r->size_rssItem < pend ) {
+		gbmemcpy ( p , r->ptr_rssItem , size_rssItem );
+	}
+	else {
+		size_rssItem = 1;
+		*p = '\0';
+	}
+	poff += size_rssItem;
+	p    += size_rssItem;
+
+	/////////////
 
 	off_categories = poff;
-	gbmemcpy ( p , r->ptr_categories , r->size_categories );
-	poff += r->size_categories;
-	p    += r->size_categories;
+	if ( p + r->size_categories < pend ) {
+		gbmemcpy ( p , r->ptr_categories , size_categories );
+	}
+	else {
+		size_categories = 1;
+		*p = '\0';
+	}
+	poff += size_categories;
+	p    += size_categories;
 
+	/////////////
+	
 	off_gigabitQuery = poff;
-	gbmemcpy ( p , r->ptr_gigabitQuery , r->size_gigabitQuery );
-	poff += r->size_gigabitQuery;
-	p    += r->size_gigabitQuery;
+	if ( p + r->size_gigabitQuery < pend ) {
+		gbmemcpy ( p , r->ptr_gigabitQuery , size_gigabitQuery );
+	}
+	else {
+		size_gigabitQuery = 1;
+		*p = '\0';
+	}
+	poff += size_gigabitQuery;
+	p    += size_gigabitQuery;
+
+	/////////////
 
 	off_templateVector = poff;
-	gbmemcpy ( p , r->ptr_templateVector , r->size_templateVector );
-	poff += r->size_templateVector;
-	p    += r->size_templateVector;
+	if ( p + r->size_templateVector < pend ) {
+		gbmemcpy (p , r->ptr_templateVector , size_templateVector );
+	}
+	else {
+		size_templateVector = 1;
+		*p = '\0';
+	}
+	poff += size_templateVector;
+	p    += size_templateVector;
+
 	
 	/*
 	  MDW: take this out for 64 bit offset-only conversion
@@ -4436,13 +4504,7 @@ void Inlink::set ( Msg20Reply *r ) {
 	ptr_templateVector    = r->ptr_templateVector;
 	*/
 
-	size_urlBuf           = r->size_ubuf;
-	size_linkText         = r->size_linkText;
-	size_surroundingText  = r->size_surroundingText;
-	size_rssItem          = r->size_rssItem;
-	size_categories       = r->size_categories;
-	size_gigabitQuery     = r->size_gigabitQuery;
-	size_templateVector   = r->size_templateVector;
+
 }
 
 // Msg25 calls this to make a "fake" msg20 reply for recycling Inlinks
