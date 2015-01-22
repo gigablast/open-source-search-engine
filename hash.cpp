@@ -54,7 +54,7 @@ bool hashinit () {
 // TODO: ensure this wraps over properly
 unsigned char hash8 ( char *s , int32_t len ) {
 	unsigned char h = 0;
-	int32_t i = 0;
+	register int32_t i = 0;
 	while ( i < len ) {
 		h ^= (unsigned char) g_hashtab [(unsigned char)i]
 			[(unsigned char)s[i]];
@@ -65,7 +65,7 @@ unsigned char hash8 ( char *s , int32_t len ) {
 
 uint16_t hash16 ( char *s , int32_t len ) {
 	uint16_t h = 0;
-	int32_t i = 0;
+	register int32_t i = 0;
 	while ( i < len ) {
 		h ^= (uint16_t) g_hashtab [(unsigned char)i]
 			[(unsigned char)s[i]];
@@ -76,7 +76,7 @@ uint16_t hash16 ( char *s , int32_t len ) {
 
 uint32_t hash32n ( char *s ) {
 	uint32_t h = 0;
-	int32_t i = 0;
+	register int32_t i = 0;
 	while ( s[i] ) {
 		h ^= (uint32_t) g_hashtab [(unsigned char)i]
 			[(unsigned char)s[i]];
@@ -87,7 +87,7 @@ uint32_t hash32n ( char *s ) {
 
 uint64_t hash64n ( char *s, uint64_t startHash ) {
 	uint64_t h = startHash;
-	for ( int32_t i = 0 ; s[i] ; i++ )
+	for ( register int32_t i = 0 ; s[i] ; i++ )
 		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
 	return h;
 }
@@ -95,7 +95,7 @@ uint64_t hash64n ( char *s, uint64_t startHash ) {
 uint64_t hash64n_nospaces ( char *s, int32_t len ) {
 	uint64_t h = 0LL;
 	int32_t k = 0;
-	for ( int32_t i = 0 ; i<len ; i++ ) {
+	for ( register int32_t i = 0 ; i<len ; i++ ) {
 		if ( s[i] == ' ' ) continue;
 		h ^= g_hashtab [(unsigned char)k] [(unsigned char)s[i]];
 		k++;
@@ -105,7 +105,7 @@ uint64_t hash64n_nospaces ( char *s, int32_t len ) {
 
 uint32_t hash32 ( char *s, int32_t len, uint32_t startHash ) {
 	uint32_t h = startHash;
-	int32_t i = 0;
+	register int32_t i = 0;
 	while ( i < len ) {
 		h ^= (uint32_t) g_hashtab [(unsigned char)i]
 			[(unsigned char)s[i]];
@@ -116,7 +116,7 @@ uint32_t hash32 ( char *s, int32_t len, uint32_t startHash ) {
 
 uint32_t hash32Lower_a ( char *s,int32_t len,uint32_t startHash){
 	uint32_t h = startHash;
-	int32_t i = 0;
+	register int32_t i = 0;
 	while ( i < len ) {
 		h ^= (uint32_t) g_hashtab [(unsigned char)i] 
 			[(unsigned char)to_lower_a(s[i])];
