@@ -2003,7 +2003,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 			// lookup this addr
 			long *outOffPtr = (long *)map.getValue ( cs );
 			if ( ! outOffPtr ) { 
-				sb->safePrintf("        UNKNOWN\n");
+				sb->safePrintf("        [0x%"XINT64"]\n",*cs);
 				continue;
 			}
 			// print that line out until \n
