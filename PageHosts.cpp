@@ -1462,6 +1462,12 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  "<tr class=poo>"
+		  "<td><nobr>U (status flag)</nobr></td>"
+		  "<td>Indicates the number of active UDP transactions "
+		  "the slot is either intiating or receiving."
+		  "</td>"
+		  "</tr>\n"
 
 		  ,
 		  TABLE_STYLE
