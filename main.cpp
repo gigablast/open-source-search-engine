@@ -1044,7 +1044,7 @@ int main2 ( int argc , char *argv[] ) {
 
 	char *cmd2 = "";
 	if ( argc >= 3 )
-		cmd2 = argv[1];
+		cmd2 = argv[2];
 
 	int32_t arch = 64;
 	if ( sizeof(char *) == 4 ) arch = 32;
