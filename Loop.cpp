@@ -929,9 +929,10 @@ bool Loop::init ( ) {
 
 
 	m_realInterrupt.it_value.tv_sec = 0;
-	m_realInterrupt.it_value.tv_usec = 10 * 1000;
+	// 1000 microseconds in a millisecond
+	m_realInterrupt.it_value.tv_usec = 1 * 1000;
 	m_realInterrupt.it_interval.tv_sec = 0;
-	m_realInterrupt.it_interval.tv_usec = 10 * 1000;
+	m_realInterrupt.it_interval.tv_usec = 1 * 1000;
 
 
  	m_noInterrupt.it_value.tv_sec = 0;
@@ -1148,12 +1149,17 @@ void sigvtalrmHandler ( int x , siginfo_t *info , void *y ) {
 
 void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 
+	// so we don't call gettimeofday() thousands of times a second...
+	g_clockNeedsUpdate = true;
+
 	// stats
 	g_numAlarms++;
 	// . see where we are in the code
 	// . for computing cpu usage
 	// . if idling we will be in sigtimedwait() at the lowest level
 	Host *h = g_hostdb.m_myHost;
+	// if doing injects...
+	if ( ! h ) return;
 	// . i guess this means we were doing something... (otherwise idle)
 	// . this is KINDA like a 100 point sample, but it has crazy decay
 	//   logic built into it
@@ -1163,6 +1169,9 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	else
 		h->m_pingInfo.m_cpuUsage = 
 			.99 * h->m_pingInfo.m_cpuUsage + .01 * 000;
+
+	if ( g_profiler.m_realTimeProfilerRunning )
+		g_profiler.getStackFrame(0);
 }
 
 static sigset_t s_rtmin;

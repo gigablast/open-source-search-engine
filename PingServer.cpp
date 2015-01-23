@@ -504,6 +504,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
 
+	pi->m_udpSlotsInUse = g_udpServer.getNumUsedSlots();
+
 	// store hd temps
 	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );
 	// p += 4 * 2;

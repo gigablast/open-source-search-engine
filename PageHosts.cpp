@@ -553,6 +553,25 @@ skipReplaceHost:
 					,h->m_pingInfo.m_currentSpiders
 					);
 
+		if ( format == FORMAT_HTML ) {
+			char *f1 = "";
+			char *f2 = "";
+			if ( h->m_pingInfo.m_udpSlotsInUse > 200 ) {
+				f1 = "<b><font color=red>";
+				f2 = "</font></b>";
+			}
+			fb.safePrintf("<span title=\"udpSlotsInUse\">"
+				      "%s"
+				      "U"
+				      "<sup>%"INT32"</sup>"
+				      "%s"
+				      "</span>"
+				      ,f1
+				      ,h->m_pingInfo.m_udpSlotsInUse
+				      ,f2
+				      );
+		}
+
 		if ((flags & PFLAG_HASSPIDERS) && format != FORMAT_HTML )
 			fb.safePrintf ( "Spidering");
 
@@ -630,6 +649,10 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<errorTryAgains>%"INT32""
 				      "</errorTryAgains>\n",
 				      h->m_pingInfo.m_etryagains);
+
+			sb.safePrintf("\t\t<udpSlotsInUse>%"INT32""
+				      "</udpSlotsInUse>\n",
+				      h->m_pingInfo.m_udpSlotsInUse);
 
 			/*
 			sb.safePrintf("\t\t<dgramsTo>%"INT64"</dgramsTo>\n",
@@ -736,6 +759,8 @@ skipReplaceHost:
 			*/
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
 				      h->m_pingInfo.m_etryagains);
+			sb.safePrintf("\t\t\"udpSlotsInUse\":%"INT32",\n",
+				      h->m_pingInfo.m_udpSlotsInUse);
 
 			/*
 			sb.safePrintf("\t\t\"dgramsTo\":%"INT64",\n",
@@ -1437,6 +1462,12 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  "<tr class=poo>"
+		  "<td><nobr>U (status flag)</nobr></td>"
+		  "<td>Indicates the number of active UDP transactions "
+		  "the slot is either intiating or receiving."
+		  "</td>"
+		  "</tr>\n"
 
 		  ,
 		  TABLE_STYLE

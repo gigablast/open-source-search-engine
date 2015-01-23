@@ -4339,6 +4339,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	//for ( int32_t i = 0 ; i < m_msg2->getNumLists() ; i++ ) {
 	for ( int32_t i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
+
+		// default this to off
+		qt->m_queryTermInfoNum = -1;
+
 		if ( ! qt->m_isRequired ) continue;
 		// set this stff
 		QueryWord     *qw =   qt->m_qword;
@@ -4348,6 +4352,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		// and set it
 		qti->m_qt            = qt;
 		qti->m_qtermNum      = i;
+		// and vice versa
+		qt->m_queryTermInfoNum = nrg;
 		// this is not good enough, we need to count 
 		// non-whitespace punct as 2 units not 1 unit
 		// otherwise qdist gets thrown off and our phrasing fails.
@@ -7230,7 +7236,11 @@ void PosdbTable::intersectLists10_r ( ) {
 		     qt->m_fieldCode != FIELD_GBFACETINT &&
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
 			continue;
-		char *p2    = miniMergedList[i];
+		// get the queryterminfo class for this query term
+		int qti = qt->m_queryTermInfoNum;
+		// use that, because miniMergedLists are the synonym lists
+		// merged from multiple terms.
+		char *p2    = miniMergedList[qti];
 		//char *pend = miniMergedEnd [i];
 		//
 		// just grab the first value i guess...

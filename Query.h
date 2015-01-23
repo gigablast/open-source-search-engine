@@ -537,6 +537,10 @@ class QueryTerm {
 	// for scoring summary sentences from XmlDoc::getEventSummary()
 	float m_score;
 
+	// a queryTermInfo class is multiple "related"/synonym terms.
+	// we have an array of these we set in Posdb.cpp:setQueryTermInfo().
+	int m_queryTermInfoNum;
+
 	// facet support in Posdb.cpp for compiling the data and we'll
 	// send this back via Msg39Reply::ptr_facetHashList which will be
 	// 1-1 with the query terms.
