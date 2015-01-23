@@ -1906,7 +1906,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	for ( ; *p ; ) {
 		// get addr
 		uint64_t addr64;
-		sscanf ( p , "%*i %"PTRFMT" ", &addr64 );
+		sscanf ( p , "%*i %"XINT64" ", &addr64 );
 		// skip if 0
 		if ( addr64 ) {
 			// record it
