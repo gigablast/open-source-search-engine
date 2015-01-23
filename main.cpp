@@ -3522,10 +3522,10 @@ int main2 ( int argc , char *argv[] ) {
 	//	return 1;
 	//}
 
-	if(!g_profiler.init()) {
-		log("profiler: init failed.");
-	}
-	g_profiler.readSymbolTable();
+	// if(!g_profiler.init()) {
+	// 	log("profiler: init failed.");
+	// }
+	// g_profiler.readSymbolTable();
 
 	//exit(0);
 	// diff with indexdb in sync/ dir

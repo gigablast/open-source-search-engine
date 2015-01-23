@@ -9309,6 +9309,13 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 		goto tryagain;
 	}
 		
+	// fix &s= replaceing &sb=
+	if ( found && found[cgiLen] != '=' ) {
+		// try again
+		p = found + 1;
+		goto tryagain;
+	}
+
 
 	// if no collision, just append it
 	if ( ! found ) {

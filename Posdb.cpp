@@ -7230,8 +7230,8 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	// scan each facet termlist and update
 	// QueryTerm::m_facetHashTable/m_dt
-	for ( int32_t i = 0 ; i < m_q->m_numTerms ; i++ ) {
-		QueryTerm *qt = &m_q->m_qterms[i];
+	for ( int32_t j = 0 ; j < m_q->m_numTerms ; j++ ) {
+		QueryTerm *qt = &m_q->m_qterms[j];
 		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
 		     qt->m_fieldCode != FIELD_GBFACETINT &&
 		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
@@ -7258,7 +7258,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		for ( ; ; ) {
 
 		// do not breach sublist
-		if ( p2 >= miniMergedEnd[i] ) break;
+		if ( p2 >= miniMergedEnd[qti] ) break;
 		// break if 12 byte key: another docid!
 		if ( ! firstTime && !(p2[0] & 0x04) ) break;
 

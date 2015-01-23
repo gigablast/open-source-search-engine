@@ -1490,11 +1490,15 @@ Profiler::getStackFrame(int sig) {
 	// using awk i guess.
 	//g_profiler.m_ipLineBuf.pushLongLong((uint64_t)trace[2]);
 
-	// now just store the Instruction Ptrs into a count hashtable
+	// . now just store the Instruction Ptrs into a count hashtable
+	// . skip ahead 2 to avoid the sigalrm function handler
 	for ( int32_t i = 2 ; i < numFrames  ; i++ ) {
 
 		// even if we are 32-bit, make this 64-bit for ease
-		uint64_t addr = (uint64_t)trace[i];
+		uint64_t addr = (uint64_t)(PTRTYPE)trace[i];
+
+		//if ( addr > 0xf0000000 )
+		//log("profiler: %i) addr = %llx",i,(unsigned long long)addr);
 
 		// the call stack path for profiling the worst paths
 		g_profiler.m_ipBuf.pushLongLong(addr);
@@ -1906,7 +1910,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	for ( ; *p ; ) {
 		// get addr
 		uint64_t addr64;
-		sscanf ( p , "%*i %lx ", &addr64 );
+		sscanf ( p , "%*i %"XINT64" ", &addr64 );
 		// skip if 0
 		if ( addr64 ) {
 			// record it
