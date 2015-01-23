@@ -6374,9 +6374,9 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf1,tfw1);
-	// insamewikiphrase?
-	sb->safePrintf("<td>%s %"INT32"/%.01f</td>",
-		      wp,ps->m_qdist,wiw);
+	// inSamePhraseId distInQuery phraseWeight
+	sb->safePrintf("<td>%s</td><td>%"INT32"</td><td>%.01f</td>"
+		       ,wp,ps->m_qdist,wiw);
 	// end the row
 	sb->safePrintf("</tr>");
 	//
@@ -6455,9 +6455,9 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf2,tfw2);
-	// insamewikiphrase?
-	sb->safePrintf("<td>%s/%"INT32" %.01f</td>",
-		      wp,ps->m_qdist,wiw);
+	// inSamePhraseId distInQuery phraseWeight
+	sb->safePrintf("<td>%s</td><td>%"INT32"</td><td>%.01f</td>"
+		       ,wp,ps->m_qdist,wiw);
 	// end the row
 	sb->safePrintf("</tr>");
 	sb->safePrintf("<tr><td ");
@@ -6596,8 +6596,11 @@ bool printScoresHeader ( SafeBuf *sb ) {
 		      //"<td>diversityRank</td>"
 		      "<td>density</td>"
 		      "<td>spam</td>"
-		      "<td>inlnkPR</td>" // nlinkSiteRank</td>"
+		      "<td>inlinkPR</td>" // nlinkSiteRank</td>"
 		      "<td>termFreq</td>"
+		       "<td>inSamePhrase</td>"
+		       "<td>distInQuery</td>"
+		       "<td>phraseWeight</td>"
 		      "</tr>\n" 
 		      );
 	return true;

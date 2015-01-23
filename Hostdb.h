@@ -106,6 +106,8 @@ class PingInfo {
 	int32_t m_totalResends;
 	int32_t m_etryagains;
 
+	int32_t m_udpSlotsInUse;
+
 	int16_t m_currentSpiders;
 	collnum_t m_dailyMergeCollnum;
 	int16_t m_hdtemps[4];

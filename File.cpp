@@ -632,7 +632,7 @@ int64_t getFileSize ( char *filename ) {
 // . returns -2 on error
 // . returns -1 if does not exist
 // . otherwise returns file size in bytes
-int32_t File::getFileSize ( ) {
+int64_t File::getFileSize ( ) {
 
 	// allow the substitution of another filename
         //struct stat stats;

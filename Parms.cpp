@@ -6580,6 +6580,7 @@ void Parms::init ( ) {
 		"So documents must be exactly the same for the most part.";
 	m->m_cgi   = "dr"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_doDupContentRemoval - y;
+	m->m_defOff= (char *)&cr.m_dedupResultsByDefault - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 1;
@@ -12289,7 +12290,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "fw";
 	m->m_off   = (char *)&g_conf.m_flushWrites - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
@@ -17683,7 +17684,7 @@ void Parms::init ( ) {
 	// and we add gbdocspidertime and gbdocindextime terms so you
 	// can use those to sort regular docs and not have spider reply
 	// status docs in the serps.
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
