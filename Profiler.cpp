@@ -1494,7 +1494,7 @@ Profiler::getStackFrame(int sig) {
 	for ( int32_t i = 2 ; i < numFrames  ; i++ ) {
 
 		// even if we are 32-bit, make this 64-bit for ease
-		uint64_t addr = (uint64_t)trace[i];
+		uint64_t addr = (uint64_t)(PTRTYPE)trace[i];
 
 		// the call stack path for profiling the worst paths
 		g_profiler.m_ipBuf.pushLongLong(addr);
