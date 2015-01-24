@@ -1594,7 +1594,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		if ( docCount <= 50 ) m_topScore50 = t->m_score;
 		
 		if ( m_debug ) {
-			log(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
+			logf(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 			    "%03"INT32") docId=%012"UINT64" sum=%.02f",
 			    (PTRTYPE)this, docCount,
 			    t->m_docId,t->m_score);
