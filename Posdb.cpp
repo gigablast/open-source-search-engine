@@ -850,6 +850,10 @@ bool PosdbTable::allocTopTree ( ) {
 	// if doing docid range phases where we compute the winning docids
 	// for a range of docids to save memory, then we need to amp this up
 	if ( m_r->m_numDocIdSplits > 1 ) {
+		// if 1 split has only 1 docid the other splits
+		// might have 10 then this doesn't work, so make it
+		// a min of 100.
+		if ( nn2 < 100 ) nn2 = 100;		
 		// how many docid range splits are we doing?
 		nn2 *= m_r->m_numDocIdSplits;
 		// just in case one split is not as big
@@ -895,9 +899,11 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( nn < m_r->m_docsToGet )
 		log("query: warning only getting up to %"INT64" docids "
 		    "even though %"INT32" requested because termlist "
-		    "sizes are so small!!"
+		    "sizes are so small!! splits=%"INT32""
 		    , nn
-		    , m_r->m_docsToGet );
+		    , m_r->m_docsToGet 
+		    , (int32_t)m_r->m_numDocIdSplits
+		    );
 
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
